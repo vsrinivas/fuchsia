@@ -43,6 +43,8 @@ class Object {
 class Piece {
  public:
   Piece() = default;
+  Piece(const Piece&) = delete;
+  Piece& operator=(const Piece&) = delete;
   virtual ~Piece() = default;
 
   // Returns the identifier of this storage object.
@@ -56,8 +58,6 @@ class Piece {
   // |references|. Does not clear |references|. Does not add tree-level
   // references (use |Object::AppendReferences| instead).
   virtual Status AppendReferences(ObjectReferencesAndPriority* references) const = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Piece);
 };
 
 }  // namespace storage

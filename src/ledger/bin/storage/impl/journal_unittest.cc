@@ -34,7 +34,8 @@ class JournalTest : public ledger::TestWithEnvironment {
                       CommitPruningPolicy::NEVER),
         object_identifier_(page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
             0u, MakeObjectDigest("value"))) {}
-
+  JournalTest(const JournalTest&) = delete;
+  JournalTest& operator=(const JournalTest&) = delete;
   ~JournalTest() override = default;
 
   // Test:
@@ -86,8 +87,6 @@ class JournalTest : public ledger::TestWithEnvironment {
   std::unique_ptr<JournalImpl> journal_;
 
   std::unique_ptr<const Commit> first_commit_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(JournalTest);
 };
 
 TEST_F(JournalTest, CommitEmptyJournal) {

@@ -64,7 +64,8 @@ class PageDbTest : public ledger::TestWithEnvironment {
                       CommitPruningPolicy::NEVER),
         page_db_(&environment_, page_storage_.GetObjectIdentifierFactory(),
                  GetLevelDb(dispatcher(), base_path.SubPath("page_db"))) {}
-
+  PageDbTest(const PageDbTest&) = delete;
+  PageDbTest& operator=(const PageDbTest&) = delete;
   ~PageDbTest() override = default;
 
   // Test:
@@ -102,8 +103,6 @@ class PageDbTest : public ledger::TestWithEnvironment {
   ledger::DetachedPath base_path;
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageDbTest);
 };
 
 TEST_F(PageDbTest, HeadCommits) {
