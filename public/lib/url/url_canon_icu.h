@@ -28,7 +28,7 @@ class URL_EXPORT ICUCharsetConverter : public CharsetConverter {
 
   virtual void ConvertFromUTF16(const base::char16* input,
                                 int input_len,
-                                CanonOutput* output) OVERRIDE;
+                                CanonOutput* output) override;
 
  private:
   // The ICU converter, not owned by this class.

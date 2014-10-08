@@ -41,7 +41,7 @@ class URL_EXPORT StdStringCanonOutput : public CanonOutput {
   // Must be called after writing has completed but before the string is used.
   void Complete();
 
-  virtual void Resize(int sz) OVERRIDE;
+  virtual void Resize(int sz) override;
 
  protected:
   std::string* str_;
