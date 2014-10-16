@@ -621,23 +621,13 @@ void DoExtractFileName(const CHAR* spec,
     return;
   }
 
-  // Search backwards for a parameter, which is a normally unused field in a
-  // URL delimited by a semicolon. We parse the parameter as part of the
-  // path, but here, we don't want to count it. The last semicolon is the
-  // parameter. The path should start with a slash, so we don't need to check
-  // the first one.
+  // Extract the filename range from the path which is between
+  // the last slash and the following semicolon.
   int file_end = path.end();
-  for (int i = path.end() - 1; i > path.begin; i--) {
+  for (int i = path.end() - 1; i >= path.begin; i--) {
     if (spec[i] == ';') {
       file_end = i;
-      break;
-    }
-  }
-
-  // Now search backwards from the filename end to the previous slash
-  // to find the beginning of the filename.
-  for (int i = file_end - 1; i >= path.begin; i--) {
-    if (IsURLSlash(spec[i])) {
+    } else if (IsURLSlash(spec[i])) {
       // File name is everything following this character to the end
       *file_name = MakeRange(i + 1, file_end);
       return;

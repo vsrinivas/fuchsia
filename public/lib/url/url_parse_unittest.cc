@@ -4,16 +4,9 @@
 
 #include "url/url_parse.h"
 
-#include "base/basictypes.h"
+#include "base/macros.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/url_parse.h"
-
-// Some implementations of base/basictypes.h may define ARRAYSIZE.
-// If it's not defined, we define it to the ARRAYSIZE_UNSAFE macro
-// which is in our version of basictypes.h.
-#ifndef ARRAYSIZE
-#define ARRAYSIZE ARRAYSIZE_UNSAFE
-#endif
 
 // Interesting IE file:isms...
 //
@@ -201,7 +194,7 @@ TEST(URLParser, CountCharactersBefore) {
     {"file:///c:/foo", Parsed::HOST, true, 7},
     {"file:///c:/foo", Parsed::PATH, true, 7},
   };
-  for (size_t i = 0; i < ARRAYSIZE(count_cases); i++) {
+  for (size_t i = 0; i < arraysize(count_cases); i++) {
     int length = static_cast<int>(strlen(count_cases[i].url));
 
     // Simple test to distinguish file and standard URLs.
@@ -505,11 +498,16 @@ TEST(URLParser, ExtractFileName) {
     {"http://www.google.com/foo/bar.html#ref", "bar.html"},
     {"http://www.google.com/search/;param", ""},
     {"http://www.google.com/foo/bar.html;param#ref", "bar.html"},
-    {"http://www.google.com/foo/bar.html;foo;param#ref", "bar.html;foo"},
+    {"http://www.google.com/foo/bar.html;foo;param#ref", "bar.html"},
     {"http://www.google.com/foo/bar.html?query#ref", "bar.html"},
+    {"http://www.google.com/foo;/bar.html", "bar.html"},
+    {"http://www.google.com/foo;/", ""},
+    {"http://www.google.com/foo;", "foo"},
+    {"http://www.google.com/;", ""},
+    {"http://www.google.com/foo;bar;html", "foo"},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(file_cases); i++) {
+  for (size_t i = 0; i < arraysize(file_cases); i++) {
     const char* url = file_cases[i].input;
     int len = static_cast<int>(strlen(url));
 

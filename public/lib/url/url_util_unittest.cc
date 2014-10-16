@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/macros.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/url_canon.h"
 #include "url/url_canon_stdstring.h"
@@ -159,7 +160,7 @@ TEST(URLUtilTest, DecodeURLEscapeSequences) {
     {"%e4%bd%a0%e5%a5%bd", "\xe4\xbd\xa0\xe5\xa5\xbd"},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE_UNSAFE(decode_cases); i++) {
+  for (size_t i = 0; i < arraysize(decode_cases); i++) {
     const char* input = decode_cases[i].input;
     RawCanonOutputT<base::char16> output;
     DecodeURLEscapeSequences(input, strlen(input), &output);
@@ -209,7 +210,7 @@ TEST(URLUtilTest, TestEncodeURIComponent) {
      "pqrstuvwxyz%7B%7C%7D~%7F"},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE_UNSAFE(encode_cases); i++) {
+  for (size_t i = 0; i < arraysize(encode_cases); i++) {
     const char* input = encode_cases[i].input;
     RawCanonOutputT<char> buffer;
     EncodeURIComponent(input, strlen(input), &buffer);
@@ -274,7 +275,7 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
       "javascript:alert('foo#badfrag" },
   };
 
-  for (size_t i = 0; i < ARRAYSIZE_UNSAFE(resolve_non_standard_cases); i++) {
+  for (size_t i = 0; i < arraysize(resolve_non_standard_cases); i++) {
     const ResolveRelativeCase& test_data = resolve_non_standard_cases[i];
     Parsed base_parsed;
     ParsePathURL(test_data.base, strlen(test_data.base), false, &base_parsed);

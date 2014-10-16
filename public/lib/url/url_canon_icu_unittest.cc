@@ -10,13 +10,6 @@
 #include "url/url_canon_stdstring.h"
 #include "url/url_test_utils.h"
 
-// Some implementations of base/basictypes.h may define ARRAYSIZE.
-// If it's not defined, we define it to the ARRAYSIZE_UNSAFE macro
-// which is in our version of basictypes.h.
-#ifndef ARRAYSIZE
-#define ARRAYSIZE ARRAYSIZE_UNSAFE
-#endif
-
 namespace url {
 
 using test_utils::WStringToUTF16;
@@ -61,7 +54,7 @@ TEST(URLCanonIcuTest, ICUCharsetConverter) {
       "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(icu_cases); i++) {
+  for (size_t i = 0; i < arraysize(icu_cases); i++) {
     UConvScoper conv(icu_cases[i].encoding);
     ASSERT_TRUE(conv.converter() != NULL);
     ICUCharsetConverter converter(conv.converter());
@@ -118,7 +111,7 @@ TEST(URLCanonIcuTest, QueryWithConverter) {
       "?q=Chinese%26%2365319%3B"},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(query_cases); i++) {
+  for (size_t i = 0; i < arraysize(query_cases); i++) {
     Component out_comp;
 
     UConvScoper conv(query_cases[i].encoding);

@@ -12,13 +12,6 @@
 #include "url/url_parse.h"
 #include "url/url_test_utils.h"
 
-// Some implementations of base/basictypes.h may define ARRAYSIZE.
-// If it's not defined, we define it to the ARRAYSIZE_UNSAFE macro
-// which is in our version of basictypes.h.
-#ifndef ARRAYSIZE
-#define ARRAYSIZE ARRAYSIZE_UNSAFE
-#endif
-
 namespace url {
 
 using test_utils::WStringToUTF16;
@@ -123,7 +116,7 @@ TEST(URLCanonTest, DoAppendUTF8) {
     {0x10FFFF, "\xF4\x8F\xBF\xBF"},
   };
   std::string out_str;
-  for (size_t i = 0; i < ARRAYSIZE(utf_cases); i++) {
+  for (size_t i = 0; i < arraysize(utf_cases); i++) {
     out_str.clear();
     StdStringCanonOutput output(&out_str);
     AppendUTF8Value(utf_cases[i].input, &output);
@@ -182,7 +175,7 @@ TEST(URLCanonTest, UTF) {
   };
 
   std::string out_str;
-  for (size_t i = 0; i < ARRAYSIZE(utf_cases); i++) {
+  for (size_t i = 0; i < arraysize(utf_cases); i++) {
     if (utf_cases[i].input8) {
       out_str.clear();
       StdStringCanonOutput output(&out_str);
@@ -899,7 +892,7 @@ TEST(URLCanonTest, UserInfo) {
     {"ftp://me\\mydomain:pass@foo.com/", "", Component(0, -1), Component(0, -1), true},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(user_info_cases); i++) {
+  for (size_t i = 0; i < arraysize(user_info_cases); i++) {
     int url_len = static_cast<int>(strlen(user_info_cases[i].input));
     Parsed parsed;
     ParseStandardURL(user_info_cases[i].input, url_len, &parsed);
@@ -968,7 +961,7 @@ TEST(URLCanonTest, Port) {
     {"80", PORT_UNSPECIFIED, ":80", Component(1, 2), true},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(port_cases); i++) {
+  for (size_t i = 0; i < arraysize(port_cases); i++) {
     int url_len = static_cast<int>(strlen(port_cases[i].input));
     Component in_comp(0, url_len);
     Component out_comp;
@@ -1152,7 +1145,7 @@ TEST(URLCanonTest, Query) {
     {"q=\"asdf\"", L"q=\"asdf\"", "?q=%22asdf%22"},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(query_cases); i++) {
+  for (size_t i = 0; i < arraysize(query_cases); i++) {
     Component out_comp;
 
     if (query_cases[i].input8) {
@@ -1309,7 +1302,7 @@ TEST(URLCanonTest, CanonicalizeStandardURL) {
     {"wss://foo:815/", "wss://foo:815/", true},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(cases); i++) {
+  for (size_t i = 0; i < arraysize(cases); i++) {
     int url_len = static_cast<int>(strlen(cases[i].input));
     Parsed parsed;
     ParseStandardURL(cases[i].input, url_len, &parsed);
@@ -1648,7 +1641,7 @@ TEST(URLCanonTest, CanonicalizeFileURL) {
 #endif  // _WIN32
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(cases); i++) {
+  for (size_t i = 0; i < arraysize(cases); i++) {
     int url_len = static_cast<int>(strlen(cases[i].input));
     Parsed parsed;
     ParseFileURL(cases[i].input, url_len, &parsed);
@@ -1691,7 +1684,7 @@ TEST(URLCanonTest, CanonicalizeFileSystemURL) {
     {"filesystem:File:///temporary/Bob?qUery#reF", "filesystem:file:///temporary/Bob?qUery#reF", true},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(cases); i++) {
+  for (size_t i = 0; i < arraysize(cases); i++) {
     int url_len = static_cast<int>(strlen(cases[i].input));
     Parsed parsed;
     ParseFileSystemURL(cases[i].input, url_len, &parsed);
@@ -1726,7 +1719,7 @@ TEST(URLCanonTest, CanonicalizePathURL) {
     {":\":This /is interesting;?#", ":\":This /is interesting;?#"},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(path_cases); i++) {
+  for (size_t i = 0; i < arraysize(path_cases); i++) {
     int url_len = static_cast<int>(strlen(path_cases[i].input));
     Parsed parsed;
     ParsePathURL(path_cases[i].input, url_len, true, &parsed);
@@ -1780,7 +1773,7 @@ TEST(URLCanonTest, CanonicalizeMailtoURL) {
   Parsed parsed;
   Parsed out_parsed;
 
-  for (size_t i = 0; i < ARRAYSIZE(cases); i++) {
+  for (size_t i = 0; i < arraysize(cases); i++) {
     int url_len = static_cast<int>(strlen(cases[i].input));
     if (i == 8) {
       // The 9th test case purposely has a '\0' in it -- don't count it
@@ -2043,7 +2036,7 @@ TEST(URLCanonTest, ResolveRelativeURL) {
     {"about:blank", false, false, "content://content.Provider/", true, false, true, ""},
   };
 
-  for (size_t i = 0; i < ARRAYSIZE(rel_cases); i++) {
+  for (size_t i = 0; i < arraysize(rel_cases); i++) {
     const RelativeCase& cur_case = rel_cases[i];
 
     Parsed parsed;
