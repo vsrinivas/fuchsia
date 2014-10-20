@@ -40,7 +40,7 @@ int FileDoDriveSpec(const CHAR* spec, int begin, int end,
 
   // Normalize Windows drive letters to uppercase
   if (spec[after_slashes] >= 'a' && spec[after_slashes] <= 'z')
-    output->push_back(spec[after_slashes] - 'a' + 'A');
+    output->push_back(static_cast<char>(spec[after_slashes] - 'a' + 'A'));
   else
     output->push_back(static_cast<char>(spec[after_slashes]));
 

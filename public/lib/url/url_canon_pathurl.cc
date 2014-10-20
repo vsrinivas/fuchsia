@@ -19,13 +19,13 @@ namespace {
 template<typename CHAR, typename UCHAR>
 bool DoCanonicalizePathComponent(const CHAR* source,
                                  const Component& component,
-                                 CHAR seperator,
+                                 char separator,
                                  CanonOutput* output,
                                  Component* new_component) {
   bool success = true;
   if (component.is_valid()) {
-    if (seperator)
-      output->push_back(seperator);
+    if (separator)
+      output->push_back(separator);
     // Copy the path using path URL's more lax escaping rules (think for
     // javascript:). We convert to UTF-8 and escape non-ASCII, but leave all
     // ASCII characters alone. This helps readability of JavaStript.
@@ -64,7 +64,7 @@ bool DoCanonicalizePathURL(const URLComponentSource<CHAR>& source,
   // We allow path URLs to have the path, query and fragment components, but we
   // will canonicalize each of the via the weaker path URL rules.
   success &= DoCanonicalizePathComponent<CHAR, UCHAR>(
-      source.path, parsed.path, 0, output, &new_parsed->path);
+      source.path, parsed.path, '\0', output, &new_parsed->path);
   success &= DoCanonicalizePathComponent<CHAR, UCHAR>(
       source.query, parsed.query, '?', output, &new_parsed->query);
   success &= DoCanonicalizePathComponent<CHAR, UCHAR>(

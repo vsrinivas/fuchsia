@@ -41,13 +41,13 @@ class CanonOutputT {
 
   // Accessor for returning a character at a given position. The input offset
   // must be in the valid range.
-  inline char at(int offset) const {
+  inline T at(int offset) const {
     return buffer_[offset];
   }
 
   // Sets the character at the given position. The given position MUST be less
   // than the length().
-  inline void set(int offset, int ch) {
+  inline void set(int offset, T ch) {
     buffer_[offset] = ch;
   }
 
