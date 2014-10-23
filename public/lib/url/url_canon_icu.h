@@ -24,11 +24,11 @@ class URL_EXPORT ICUCharsetConverter : public CharsetConverter {
   // be managed by the creator such that it is alive as long as this is.
   ICUCharsetConverter(UConverter* converter);
 
-  virtual ~ICUCharsetConverter();
+  ~ICUCharsetConverter() override;
 
-  virtual void ConvertFromUTF16(const base::char16* input,
-                                int input_len,
-                                CanonOutput* output) override;
+  void ConvertFromUTF16(const base::char16* input,
+                        int input_len,
+                        CanonOutput* output) override;
 
  private:
   // The ICU converter, not owned by this class.

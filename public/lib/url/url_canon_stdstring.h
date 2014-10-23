@@ -36,12 +36,12 @@ namespace url {
 class URL_EXPORT StdStringCanonOutput : public CanonOutput {
  public:
   StdStringCanonOutput(std::string* str);
-  virtual ~StdStringCanonOutput();
+  ~StdStringCanonOutput() override;
 
   // Must be called after writing has completed but before the string is used.
   void Complete();
 
-  virtual void Resize(int sz) override;
+  void Resize(int sz) override;
 
  protected:
   std::string* str_;
