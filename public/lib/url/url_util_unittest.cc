@@ -234,7 +234,7 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
       // URL doesn't alter the authority section.
     {"scheme://Authority/", "../path", true, "scheme://Authority/path"},
       // A non-standard hierarchical base is resolved with path URL
-      // canoncialization rules.
+      // canonicalization rules.
     {"data:/Blah:Blah/", "file.html", true, "data:/Blah:Blah/file.html"},
     {"data:/Path/../part/part2", "file.html", true,
       "data:/Path/../part/file.html"},
