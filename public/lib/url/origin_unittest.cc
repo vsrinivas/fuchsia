@@ -26,6 +26,11 @@ TEST(OriginTest, constructValidOrigin) {
   EXPECT_EQ("http://example.com:8080", origin.string());
 }
 
+TEST(OriginTest, constructValidFileOrigin) {
+  Origin origin("file://");
+  EXPECT_EQ("file://", origin.string());
+}
+
 TEST(OriginTest, constructValidOriginWithoutPort) {
   Origin origin("wss://example2.com");
   EXPECT_EQ("wss://example2.com", origin.string());

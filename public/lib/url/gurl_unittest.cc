@@ -343,6 +343,10 @@ TEST(GURLTest, GetAsReferrer) {
     {"http://:pass@www.google.com", "http://www.google.com/"},
     {"http://:@www.google.com", "http://www.google.com/"},
     {"http://www.google.com/temp/foo?q#b", "http://www.google.com/temp/foo?q"},
+    {"not a url", ""},
+    {"unknown-scheme://foo.html", ""},
+    {"file:///tmp/test.html", ""},
+    {"https://www.google.com", "https://www.google.com/"},
   };
   for (size_t i = 0; i < arraysize(cases); i++) {
     GURL url(cases[i].input);

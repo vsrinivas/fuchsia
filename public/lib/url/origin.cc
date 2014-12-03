@@ -13,7 +13,7 @@ Origin::Origin() : string_("null") {}
 Origin::Origin(const std::string& origin) : string_(origin) {
   DCHECK(origin == "null" || MatchPattern(origin, "?*://?*"));
   DCHECK_GT(origin.size(), 0u);
-  DCHECK_NE(origin[origin.size() - 1], '/');
+  DCHECK(origin == "file://" || origin[origin.size() - 1] != '/');
 }
 
 }  // namespace url

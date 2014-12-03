@@ -198,7 +198,8 @@ class URL_EXPORT GURL {
 
   // A helper function to return a GURL stripped from the elements that are not
   // supposed to be sent as HTTP referrer: username, password and ref fragment.
-  // For invalid URLs the original URL will be returned.
+  // For invalid URLs or URLs that no valid referrers, an empty URL will be
+  // returned.
   GURL GetAsReferrer() const;
 
   // Returns true if the scheme for the current URL is a known "standard"

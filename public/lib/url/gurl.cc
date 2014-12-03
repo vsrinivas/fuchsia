@@ -322,8 +322,10 @@ GURL GURL::GetOrigin() const {
 }
 
 GURL GURL::GetAsReferrer() const {
-  if (!is_valid_ ||
-      (!has_ref() && !has_username() && !has_password()))
+  if (!is_valid_ || !SchemeIsHTTPOrHTTPS())
+    return GURL();
+
+  if (!has_ref() && !has_username() && !has_password())
     return GURL(*this);
 
   url::Replacements<char> replacements;
