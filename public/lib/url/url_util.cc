@@ -238,15 +238,16 @@ bool DoResolveRelative(const char* base_spec,
     Parsed base_parsed_authority;
     ParseStandardURL(base_spec, base_spec_len, &base_parsed_authority);
     if (base_parsed_authority.host.is_nonempty()) {
+      RawCanonOutputT<char> temporary_output;
       bool did_resolve_succeed =
           ResolveRelativeURL(base_spec, base_parsed_authority, false, relative,
-                             relative_component, charset_converter, output,
-                             output_parsed);
+                             relative_component, charset_converter,
+                             &temporary_output, output_parsed);
       // The output_parsed is incorrect at this point (because it was built
       // based on base_parsed_authority instead of base_parsed) and needs to be
       // re-created.
-      ParsePathURL(output->data(), output->length(), true,
-                   output_parsed);
+      DoCanonicalize(temporary_output.data(), temporary_output.length(), true,
+                     charset_converter, output, output_parsed);
       return did_resolve_succeed;
     }
   } else if (is_relative) {

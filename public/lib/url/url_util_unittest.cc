@@ -295,4 +295,25 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
   }
 }
 
+TEST(URLUtilTest, TestNoRefComponent) {
+  // The hash-mark must be ignored when mailto: scheme is
+  // parsed, even if the url has a base and relative part.
+  const char* base = "mailto://to/";
+  const char* rel = "any#body";
+
+  Parsed base_parsed;
+  ParsePathURL(base, strlen(base), false, &base_parsed);
+
+  std::string resolved;
+  StdStringCanonOutput output(&resolved);
+  Parsed resolved_parsed;
+
+  bool valid = ResolveRelative(base, strlen(base),
+                               base_parsed, rel,
+                               strlen(rel), NULL, &output,
+                               &resolved_parsed);
+  EXPECT_TRUE(valid);
+  EXPECT_FALSE(resolved_parsed.ref.is_valid());
+}
+
 }  // namespace url
