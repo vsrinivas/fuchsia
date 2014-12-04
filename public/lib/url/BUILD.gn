@@ -60,9 +60,7 @@ component("url") {
   configs += [ ":url_icu_config" ]
 
   if (is_win) {
-    cflags = [
-      "/wd4267", # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-    ]
+    cflags = [ "/wd4267" ]  # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
   }
 
   deps = [
@@ -124,12 +122,8 @@ if (!is_android) {
     ]
 
     if (use_icu_alternatives_on_android) {
-      sources -= [
-        "url_canon_icu_unittest.cc",
-      ]
-      deps -= [
-        "//third_party/icu:icuuc",
-      ]
+      sources -= [ "url_canon_icu_unittest.cc" ]
+      deps -= [ "//third_party/icu:icuuc" ]
     }
   }
 }
