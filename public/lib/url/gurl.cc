@@ -177,6 +177,22 @@ const std::string& GURL::spec() const {
   return EmptyStringForGURL();
 }
 
+bool GURL::operator==(const GURL& other) const {
+  return spec_ == other.spec_;
+}
+
+bool GURL::operator!=(const GURL& other) const {
+  return spec_ != other.spec_;
+}
+
+bool GURL::operator<(const GURL& other) const {
+  return spec_ < other.spec_;
+}
+
+bool GURL::operator>(const GURL& other) const {
+  return spec_ > other.spec_;
+}
+
 GURL GURL::Resolve(const std::string& relative) const {
   return ResolveWithCharsetConverter(relative, NULL);
 }
