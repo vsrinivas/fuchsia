@@ -154,7 +154,7 @@ class RawCanonOutputT : public CanonOutputT<T> {
       delete[] this->buffer_;
   }
 
-  virtual void Resize(int sz) {
+  void Resize(int sz) override {
     T* new_buf = new T[sz];
     memcpy(new_buf, this->buffer_,
            sizeof(T) * (this->cur_len_ < sz ? this->cur_len_ : sz));
