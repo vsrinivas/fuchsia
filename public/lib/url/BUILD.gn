@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//testing/test.gni")
 import("//url/config.gni")
 
 # Sets the USE_ICU_ALTERNATIVES_ON_ANDROID define based on the build flag.
