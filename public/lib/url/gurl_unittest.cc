@@ -281,6 +281,9 @@ TEST(GURLTest, Resolve) {
     const char* expected;
   } resolve_cases[] = {
     {"http://www.google.com/", "foo.html", true, "http://www.google.com/foo.html"},
+    {"http://www.google.com/foo/", "bar", true, "http://www.google.com/foo/bar"},
+    {"http://www.google.com/foo/", "/bar", true, "http://www.google.com/bar"},
+    {"http://www.google.com/foo", "bar", true, "http://www.google.com/bar"},
     {"http://www.google.com/", "http://images.google.com/foo.html", true, "http://images.google.com/foo.html"},
     {"http://www.google.com/blah/bloo?c#d", "../../../hello/./world.html?a#b", true, "http://www.google.com/hello/world.html?a#b"},
     {"http://www.google.com/foo#bar", "#com", true, "http://www.google.com/foo#com"},
