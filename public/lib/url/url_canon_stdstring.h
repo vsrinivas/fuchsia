@@ -12,6 +12,7 @@
 #include <string>
 
 #include "base/compiler_specific.h"
+#include "base/strings/string_piece.h"
 #include "url/url_canon.h"
 #include "url/url_export.h"
 
@@ -48,35 +49,35 @@ class URL_EXPORT StdStringCanonOutput : public CanonOutput {
 };
 
 // An extension of the Replacements class that allows the setters to use
-// standard strings.
+// StringPieces (implicitly allowing strings or char*s).
 //
-// The strings passed as arguments are not copied and must remain valid until
-// this class goes out of scope.
+// The contents of the StringPieces are not copied and must remain valid until
+// the StringPieceReplacements object goes out of scope.
 template<typename STR>
-class StdStringReplacements : public Replacements<typename STR::value_type> {
+class StringPieceReplacements : public Replacements<typename STR::value_type> {
  public:
-  void SetSchemeStr(const STR& s) {
+  void SetSchemeStr(const base::BasicStringPiece<STR>& s) {
     this->SetScheme(s.data(), Component(0, static_cast<int>(s.length())));
   }
-  void SetUsernameStr(const STR& s) {
+  void SetUsernameStr(const base::BasicStringPiece<STR>& s) {
     this->SetUsername(s.data(), Component(0, static_cast<int>(s.length())));
   }
-  void SetPasswordStr(const STR& s) {
+  void SetPasswordStr(const base::BasicStringPiece<STR>& s) {
     this->SetPassword(s.data(), Component(0, static_cast<int>(s.length())));
   }
-  void SetHostStr(const STR& s) {
+  void SetHostStr(const base::BasicStringPiece<STR>& s) {
     this->SetHost(s.data(), Component(0, static_cast<int>(s.length())));
   }
-  void SetPortStr(const STR& s) {
+  void SetPortStr(const base::BasicStringPiece<STR>& s) {
     this->SetPort(s.data(), Component(0, static_cast<int>(s.length())));
   }
-  void SetPathStr(const STR& s) {
+  void SetPathStr(const base::BasicStringPiece<STR>& s) {
     this->SetPath(s.data(), Component(0, static_cast<int>(s.length())));
   }
-  void SetQueryStr(const STR& s) {
+  void SetQueryStr(const base::BasicStringPiece<STR>& s) {
     this->SetQuery(s.data(), Component(0, static_cast<int>(s.length())));
   }
-  void SetRefStr(const STR& s) {
+  void SetRefStr(const base::BasicStringPiece<STR>& s) {
     this->SetRef(s.data(), Component(0, static_cast<int>(s.length())));
   }
 };

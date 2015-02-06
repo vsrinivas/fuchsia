@@ -18,8 +18,8 @@
 
 class URL_EXPORT GURL {
  public:
-  typedef url::StdStringReplacements<std::string> Replacements;
-  typedef url::StdStringReplacements<base::string16> ReplacementsW;
+  typedef url::StringPieceReplacements<std::string> Replacements;
+  typedef url::StringPieceReplacements<base::string16> ReplacementsW;
 
   // Creates an empty, invalid URL.
   GURL();
