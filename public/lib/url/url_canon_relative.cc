@@ -170,8 +170,8 @@ bool DoIsRelativeURL(const char* base,
 // up until and including the last slash. There should be a slash in the
 // range, if not, nothing will be copied.
 //
-// The input is assumed to be canonical, so we search only for exact slashes
-// and not backslashes as well. We also know that it's ASCII.
+// For stardard URLs the input should be canonical, but when resolving relative
+// URLs on a non-standard base (like "data:") the input can be anything.
 void CopyToLastSlash(const char* spec,
                      int begin,
                      int end,
@@ -179,7 +179,7 @@ void CopyToLastSlash(const char* spec,
   // Find the last slash.
   int last_slash = -1;
   for (int i = end - 1; i >= begin; i--) {
-    if (spec[i] == '/') {
+    if (spec[i] == '/' || spec[i] == '\\') {
       last_slash = i;
       break;
     }
