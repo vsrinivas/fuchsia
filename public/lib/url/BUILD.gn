@@ -58,11 +58,11 @@ component("url") {
 
   defines = [ "URL_IMPLEMENTATION" ]
 
-  configs += [
-    ":url_icu_config",
-    # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-    "//build/config/compiler:no_size_t_to_int_warning",
-  ]
+  configs += [ ":url_icu_config" ]
+
+  if (is_win) {
+    cflags = [ "/wd4267" ]  # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
+  }
 
   deps = [
     "//base",
@@ -101,14 +101,18 @@ if (!is_android) {
       "url_util_unittest.cc",
     ]
 
-    # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-    configs += [ "//build/config/compiler:no_size_t_to_int_warning" ]
-
     #if (is_posix && !is_mac && !is_ios) {
     #  if (use_allocator!="none") {
     #    deps += "//base/allocator"
     #  }
     #}
+
+    if (is_win) {
+      cflags = [
+        # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
+        "/wd4267",
+      ]
+    }
 
     deps = [
       ":url",
