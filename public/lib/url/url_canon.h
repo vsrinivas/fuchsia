@@ -734,8 +734,8 @@ class Replacements {
   // Returns a pointer to a static empty string that is used as a placeholder
   // to indicate a component should be deleted (see below).
   const CHAR* Placeholder() {
-    static const CHAR empty_string = 0;
-    return &empty_string;
+    static const CHAR empty_cstr = 0;
+    return &empty_cstr;
   }
 
   // We support three states:
