@@ -33,28 +33,6 @@
       'defines': [
         'URL_IMPLEMENTATION',
       ],
-      'conditions': [
-        ['use_icu_alternatives_on_android==1', {
-          'sources!': [
-            'url_canon_icu.cc',
-            'url_canon_icu.h',
-          ],
-          'dependencies!': [
-            '../third_party/icu/icu.gyp:icui18n',
-            '../third_party/icu/icu.gyp:icuuc',
-          ],
-        }],
-        ['use_icu_alternatives_on_android==1 and OS=="android"', {
-          'dependencies': [
-            'url_java',
-            'url_jni_headers',
-          ],
-          'sources': [
-            'url_canon_icu_alternatives_android.cc',
-            'url_canon_icu_alternatives_android.h',
-          ],
-        }],
-      ],
       # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
       'msvs_disabled_warnings': [4267, ],
     },
@@ -84,23 +62,13 @@
             ],
           }
         ],
-        ['use_icu_alternatives_on_android==1',
-          {
-            'sources!': [
-              'url_canon_icu_unittest.cc',
-            ],
-            'dependencies!': [
-              '../third_party/icu/icu.gyp:icuuc',
-            ],
-          }
-        ],
       ],
       # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
       'msvs_disabled_warnings': [4267, ],
     },
   ],
   'conditions': [
-    ['use_icu_alternatives_on_android==1 and OS=="android"', {
+    ['OS=="android"', {
       'targets': [
         {
           'target_name': 'url_jni_headers',
@@ -123,6 +91,35 @@
             '../base/base.gyp:base',
           ],
           'includes': [ '../build/java.gypi' ],
+        },
+        {
+          # Same as url_lib but using ICU alternatives on Android.
+          'target_name': 'url_lib_use_icu_alternatives_on_android',
+          'type': '<(component)',
+          'dependencies': [
+            '../base/base.gyp:base',
+            '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
+            'url_java',
+            'url_jni_headers',
+          ],
+          'sources': [
+            '<@(gurl_sources)',
+            'url_canon_icu_alternatives_android.cc',
+            'url_canon_icu_alternatives_android.h',
+          ],
+          'sources!': [
+            'url_canon_icu.cc',
+            'url_canon_icu.h',
+          ],
+          'direct_dependent_settings': {
+            'include_dirs': [
+              '..',
+            ],
+          },
+          'defines': [
+            'URL_IMPLEMENTATION',
+            'USE_ICU_ALTERNATIVES_ON_ANDROID=1',
+          ],
         },
       ],
     }],
