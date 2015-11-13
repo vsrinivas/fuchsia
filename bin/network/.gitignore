@@ -1,0 +1,20 @@
+# commonly generated files
+*.pyc
+*~
+.*.sw?
+.DS_Store
+.classpath
+.cproject
+.gdb_history
+.gdbinit
+.landmines
+.project
+.pub
+.pydevproject
+.checkstyle
+cscope.*
+mojo_shell.trace
+Session.vim
+tags
+Thumbs.db
+v8.log
