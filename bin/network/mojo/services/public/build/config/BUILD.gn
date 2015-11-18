@@ -1,0 +1,22 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The absolute path to the directory containing the Mojo services produced
+# out of Chromium.
+mojo_services_root = get_path_info("../../..", "abspath")
+
+# NOTE: This config name must be in sync with the name of the config used by
+# services that developed out of the Mojo repo so that Chromium's services'
+# BUILD.gn files can work seamlessly in Chromium and when pulled into Mojo or a
+# client repo.
+config("mojo_services") {
+  include_dirs = [
+    # Include paths in Chromium Mojo services' client-side code are specified
+    # relative to the directory holding the services' client-side code.
+    mojo_services_root,
+
+    # The same goes for files generated from mojoms.
+    root_gen_dir + mojo_services_root,
+  ]
+}

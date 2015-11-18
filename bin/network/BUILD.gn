@@ -1,0 +1,5 @@
+group("root") {
+  deps = [
+    "//mojo/services/network",
+  ]
+}
