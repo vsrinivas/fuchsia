@@ -260,33 +260,53 @@ MojoResult URLLoaderImpl::HTTPClient<T>::SendBody()
 {
   if (response_buf_.size() > 0) {
     uint32_t size = response_buf_.size();
-
-    void *buf;
-    uint32_t num_bytes;
-    MojoResult result = BeginWriteDataRaw(response_body_stream_.get(),
-                                          &buf, &num_bytes,
-                                          MOJO_WRITE_DATA_FLAG_NONE);
-    if (result != MOJO_RESULT_OK) {
-      std::cout << "Warning: SendBody: BeginWriteDataRAW: result="
-                << result << std::endl;
-      // TODO(toshik): how to handle this?
-      response_body_stream_.reset();
-      response_buf_.consume(size);
-      return result;
-    }
-
-    if (num_bytes < size) {
-      std::cout << "Error: SendBody: Not enough buf (" << num_bytes << " < "
-                << size << ")" << std::endl;
-      size = num_bytes;
-      // TODO(toshik): need to handle buffer-full
-    }
-
+    uint32_t done = 0;
     std::istream response_stream(&response_buf_);
-    response_stream.read((char*)buf, size);
+    while (done < size) {
+      uint32_t todo = size - done;
+      void *buf;
+      uint32_t num_bytes;
+      MojoResult result = BeginWriteDataRaw(response_body_stream_.get(),
+                                            &buf, &num_bytes,
+                                            MOJO_WRITE_DATA_FLAG_NONE);
+      if (result != MOJO_RESULT_OK) {
+        std::cout << "Warning: SendBody: BeginWriteDataRAW: result="
+                  << result << std::endl;
+        // TODO(toshik): how to handle this?
+        response_body_stream_.reset();
+        response_buf_.consume(size);
+        return result;
+      }
 
-    EndWriteDataRaw(response_body_stream_.get(), size);
+      if (num_bytes < todo)
+        todo = num_bytes;
 
+      if (todo) {
+        response_stream.read((char*)buf, todo);
+      }
+      EndWriteDataRaw(response_body_stream_.get(), todo);
+      done += todo;
+
+      if (done < size) {
+        // TODO(johngro): I am a very evil man.
+        //
+        // Why this exists and what we should do about it:
+        //
+        // Ideally, we'd like to register a callback that means "tell me when
+        // I can write N bytes to the data pipe," but Mojo doesn't support that
+        // behavior today.  As such, we have two options - we can just call
+        // BeginWriteDataRaw and it can tell us how many bytes it actually
+        // wrote, or we can register an AsyncWaiter for Writable.  Both methods
+        // respond when _any_ amount of bytes can be written.
+        //
+        // In the very short term (this week), we need to hack this to work,
+        // hence the blocking sleep behavior.  In the less-short term, we'll
+        // move this to an AsyncWaiter so we can participate in the main message
+        // loop and avoid blocking _everything_.  In the longer term, we want a
+        // callback that's aware of how many bytes we can write.
+        usleep(1000);
+      }
+    }
     response_buf_.consume(size);
   }
 
