@@ -269,6 +269,11 @@ MojoResult URLLoaderImpl::HTTPClient<T>::SendBody()
       MojoResult result = BeginWriteDataRaw(response_body_stream_.get(),
                                             &buf, &num_bytes,
                                             MOJO_WRITE_DATA_FLAG_NONE);
+      if (result == MOJO_RESULT_SHOULD_WAIT) {
+        // TODO(toshik): we should handle this condition with AsyncWaiter
+        usleep(1000);
+        continue;
+      }
       if (result != MOJO_RESULT_OK) {
         std::cout << "Warning: SendBody: BeginWriteDataRAW: result="
                   << result << std::endl;
