@@ -22,6 +22,25 @@ class NetworkServiceImpl : public NetworkService {
 
   // NetworkService methods:
   void CreateURLLoader(InterfaceRequest<URLLoader> loader) override;
+  void GetCookieStore(ScopedMessagePipeHandle cookie_store) override;
+  void CreateWebSocket(ScopedMessagePipeHandle socket) override;
+  void CreateTCPBoundSocket(
+      NetAddressPtr local_address,
+      ScopedMessagePipeHandle bound_socket,
+      const CreateTCPBoundSocketCallback& callback) override;
+  void CreateTCPConnectedSocket(
+      NetAddressPtr remote_address,
+      ScopedDataPipeConsumerHandle send_stream,
+      ScopedDataPipeProducerHandle receive_stream,
+      ScopedMessagePipeHandle client_socket,
+      const CreateTCPConnectedSocketCallback& callback) override;
+  void CreateUDPSocket(ScopedMessagePipeHandle socket) override;
+  void CreateHttpServer(NetAddressPtr local_address,
+                        ScopedMessagePipeHandle delegate,
+                        const CreateHttpServerCallback& callback) override;
+  void RegisterURLLoaderInterceptor(
+      ScopedMessagePipeHandle factory) override;
+  void CreateHostResolver(ScopedMessagePipeHandle host_resolver) override;
 
  private:
   StrongBinding<NetworkService> binding_;

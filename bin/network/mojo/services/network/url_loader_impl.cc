@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/logging.h"
+
 #include "mojo/services/network/url_loader_impl.h"
 #include "mojo/services/network/http_client.h"
 #include "mojo/services/network/network_error.h"
+#include "mojo/services/network/net_adapters.h"
 
 #include <memory>
 
@@ -14,12 +17,6 @@
 #include <string>
 
 namespace mojo {
-
-NetworkErrorPtr MakeNetworkError(int error_code) {
-  NetworkErrorPtr error = NetworkError::New();
-  error->code = error_code;
-  return error.Pass();
-}
 
 URLLoaderImpl::URLLoaderImpl(InterfaceRequest<URLLoader> request)
   : binding_(this, request.Pass()), responded_(false)
@@ -42,15 +39,16 @@ void URLLoaderImpl::Start(URLRequestPtr request,
 
 void URLLoaderImpl::FollowRedirect(
     const Callback<void(URLResponsePtr)>& callback) {
-
+  NOTIMPLEMENTED();
   callback_ = callback;
+  SendError(ERR_NOT_IMPLEMENTED);
 }
 
 void URLLoaderImpl::QueryStatus(
     const Callback<void(URLLoaderStatusPtr)>& callback) {
   URLLoaderStatusPtr status(URLLoaderStatus::New());
-
-  /* TODO(toshik): fill status */
+  NOTIMPLEMENTED();
+  status->error = MakeNetworkError(ERR_NOT_IMPLEMENTED);
   callback.Run(status.Pass());
 }
 

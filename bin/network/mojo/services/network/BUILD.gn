@@ -33,6 +33,8 @@ source_set("sources") {
     "url_loader_impl.h",
     "http_client.h",
     "network_error.h",
+    "net_adapters.cc",
+    "net_adapters.h",
   ]
 
   include_dirs = [ "//third_party/asio/asio/include" ]
@@ -47,6 +49,7 @@ source_set("sources") {
   deps = [
     "//base",
     "//mojo/services/network/interfaces",
+    "//third_party/mojo/src/mojo/public/interfaces/network",
     "//third_party/mojo/src/mojo/public/cpp/application",
     "//third_party/mojo/src/mojo/public/cpp/application:standalone",
     "//third_party/mojo/src/mojo/public/cpp/bindings",
@@ -72,6 +75,8 @@ source_set("sources_secure") {
     "url_loader_impl.h",
     "http_client.h",
     "network_error.h",
+    "net_adapters.cc",
+    "net_adapters.h",
   ]
 
   include_dirs = [ "//third_party/asio/asio/include" ]
@@ -86,6 +91,7 @@ source_set("sources_secure") {
   deps = [
     "//base",
     "//mojo/services/network/interfaces",
+    "//third_party/mojo/src/mojo/public/interfaces/network",
     "//third_party/mojo/src/mojo/public/cpp/application",
     "//third_party/mojo/src/mojo/public/cpp/application:standalone",
     "//third_party/mojo/src/mojo/public/cpp/bindings",
