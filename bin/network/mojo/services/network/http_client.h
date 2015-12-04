@@ -240,7 +240,8 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(const asio::error_code& err)
       std::cout << "Error: ReadStatusLine: Invalid response\n";
       return;
     }
-    if (status_code_ != 200 && status_code_ != 301 && status_code_ != 302) {
+    if (!(status_code_ >= 200 && status_code_ <= 299) &&
+        status_code_ != 301 && status_code_ != 302) {
       // TODO(toshik): handle more status codes
       std::cout << "Error: ReadStatusLine: Status code ";
       std::cout << status_code_ << "\n";
