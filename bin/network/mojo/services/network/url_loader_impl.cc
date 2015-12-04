@@ -123,6 +123,14 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       break;
     }
 
+    std::cout << "URL: " << host << path << std::endl;
+    if (host == "tq.mojoapps.io") {
+      std::cout << "rewrote tq.mojoapp.io" << std::endl;
+      host = "tq-server";
+      port = "80";
+      proto = "http";
+    }
+
     if (redirect) {
       io_service.reset();
       redirect = false;
