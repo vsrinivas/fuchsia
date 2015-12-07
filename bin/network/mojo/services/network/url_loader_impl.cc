@@ -9,9 +9,6 @@
 #include "mojo/services/network/network_error.h"
 #include "mojo/services/network/net_adapters.h"
 
-#include <memory>
-
-#include <iostream>
 #include <istream>
 #include <ostream>
 #include <string>
@@ -118,14 +115,14 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
     std::string proto, host, port, path;
 
     if (!ParseURL(url, proto, host, port, path)) {
-      std::cout << "url parse error" << std::endl;
+      LOG(ERROR) << "url parse error";
       error_code = ERR_INVALID_ARGUMENT;
       break;
     }
 
-    std::cout << "URL: " << host << path << std::endl;
+    LOG(INFO) << "URL: " << host << path;
     if (host == "tq.mojoapps.io") {
-      std::cout << "rewrote tq.mojoapp.io" << std::endl;
+      LOG(INFO) << "rewrote tq.mojoapp.io";
       host = "tq-server";
       port = "80";
       proto = "http";
@@ -138,8 +135,8 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 
 #ifndef NETWORK_SERVICE_USE_HTTPS
     if (proto == "https") {
-      std::cerr << "WARNING: network_service was built without HTTPS; "
-        "Forcing HTTP instead." << std::endl;
+      LOG(WARNING) << "network_service was built without HTTPS; "
+        "Forcing HTTP instead.";
       proto = "http";
       if (port == "443" || port == "https" || port == "") {
         port = "80";
@@ -168,7 +165,6 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
         url = c.redirect_location_;
-        std::cout << "Redirecting to: " << url << std::endl;
       }
     } else {
       // unknown protocol

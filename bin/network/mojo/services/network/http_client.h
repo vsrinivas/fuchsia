@@ -5,7 +5,8 @@
 #ifndef MOJO_SERVICES_NETWORK_HTTP_CLIENT_H_
 #define MOJO_SERVICES_NETWORK_HTTP_CLIENT_H_
 
-#include <iostream>
+#include "base/logging.h"
+
 #include "mojo/services/network/network_error.h"
 
 #include <asio.hpp>
@@ -141,7 +142,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(const asio::error_code& 
                         std::bind(&HTTPClient<ssl_socket_t>::OnConnect, this,
                                   std::placeholders::_1));
   } else {
-    std::cout << "Error: Resolve(SSL): " << err.message() << "\n";
+    LOG(ERROR) << "Resolve(SSL): " << err.message();
   }
 }
 
@@ -155,7 +156,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(
                           std::bind(&HTTPClient<nonssl_socket_t>::OnConnect, this,
                                     std::placeholders::_1));
   } else {
-    std::cout << "Error: Resolve(NonSSL): " << err.message() << "\n";
+    LOG(ERROR) << "Resolve(NonSSL): " << err.message();
   }
 }
 
@@ -168,7 +169,7 @@ bool URLLoaderImpl::HTTPClient<T>::OnVerifyCertificate(bool preverified,
   char subject_name[256];
   X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
   X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-  std::cout << "Verifying " << subject_name << "\n";
+  LOG(INFO) << "Verifying " << subject_name;
 
 #ifdef NETWORK_SERVICE_HTTPS_CERT_HACK
   preverified = true;
@@ -184,7 +185,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnConnect(const asio::error_code& 
                             std::bind(&HTTPClient<ssl_socket_t>::OnHandShake, this,
                                       std::placeholders::_1));
   } else {
-    std::cout << "Error: Connect(SSL): " << err.message() << "\n";
+    LOG(ERROR) << "Connect(SSL): " << err.message();
   }
 }
 
@@ -196,7 +197,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(const asio::error_cod
                       std::bind(&HTTPClient<nonssl_socket_t>::OnWriteRequest, this,
                                 std::placeholders::_1));
   } else {
-    std::cout << "Error: Connect(NonSSL): " << err.message() << "\n";
+    LOG(ERROR) << "Connect(NonSSL): " << err.message();
   }
 }
 
@@ -208,7 +209,7 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err)
                       std::bind(&HTTPClient<T>::OnWriteRequest, this,
                                 std::placeholders::_1));
   } else {
-    std::cout << "Error: HandShake: " << err.message() << "\n";
+    LOG(ERROR) << "HandShake: " << err.message();
   }
 }
 
@@ -223,7 +224,7 @@ void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err)
                            std::bind(&HTTPClient<T>::OnReadStatusLine, this,
                                      std::placeholders::_1));
   } else {
-    std::cout << "Error: WriteRequest: " << err.message() << "\n";
+    LOG(ERROR) << "WriteRequest: " << err.message();
   }
 }
 
@@ -237,14 +238,13 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(const asio::error_code& err)
     std::string status_message;
     std::getline(response_stream, status_message_);
     if (!response_stream || http_version_.substr(0, 5) != "HTTP/") {
-      std::cout << "Error: ReadStatusLine: Invalid response\n";
+      LOG(ERROR) << "ReadStatusLine: Invalid response\n";
       return;
     }
     if (!(status_code_ >= 200 && status_code_ <= 299) &&
         status_code_ != 301 && status_code_ != 302) {
       // TODO(toshik): handle more status codes
-      std::cout << "Error: ReadStatusLine: Status code ";
-      std::cout << status_code_ << "\n";
+      LOG(ERROR) << "ReadStatusLine: Status code " << status_code_;
       return;
     }
 
@@ -252,70 +252,52 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(const asio::error_code& err)
                            std::bind(&HTTPClient<T>::OnReadHeaders, this,
                                      std::placeholders::_1));
   } else {
-    std::cout << "Error: ReadStatusLine: " << err << "\n";
+    LOG(ERROR) << "ReadStatusLine: " << err;
   }
 }
 
 template<typename T>
 MojoResult URLLoaderImpl::HTTPClient<T>::SendBody()
 {
-  if (response_buf_.size() > 0) {
-    uint32_t size = response_buf_.size();
-    uint32_t done = 0;
+  uint32_t size = response_buf_.size();
+
+  if (size > 0) {
     std::istream response_stream(&response_buf_);
-    while (done < size) {
+    uint32_t done = 0;
+    do {
       uint32_t todo = size - done;
       void *buf;
       uint32_t num_bytes;
+
       MojoResult result = BeginWriteDataRaw(response_body_stream_.get(),
                                             &buf, &num_bytes,
                                             MOJO_WRITE_DATA_FLAG_NONE);
       if (result == MOJO_RESULT_SHOULD_WAIT) {
-        // TODO(toshik): we should handle this condition with AsyncWaiter
-        usleep(1000);
-        continue;
+        result = Wait(response_body_stream_.get(),
+                      MOJO_HANDLE_SIGNAL_WRITABLE,
+                      MOJO_DEADLINE_INDEFINITE,
+                      nullptr);
+        if (result == MOJO_RESULT_OK)
+          continue; // retry now that the data pipe is ready
       }
       if (result != MOJO_RESULT_OK) {
-        std::cout << "Warning: SendBody: BeginWriteDataRAW: result="
-                  << result << std::endl;
-        // TODO(toshik): how to handle this?
-        response_body_stream_.reset();
-        response_buf_.consume(size);
+        // If the other end closes the data pipe,
+        // MOJO_RESULT_FAILED_PRECONDITION can happen.
+        if (result != MOJO_RESULT_FAILED_PRECONDITION)
+          LOG(ERROR) << "SendBody: result=" << result;
         return result;
       }
 
       if (num_bytes < todo)
         todo = num_bytes;
 
-      if (todo) {
+      if (todo)
         response_stream.read((char*)buf, todo);
-      }
+
       EndWriteDataRaw(response_body_stream_.get(), todo);
       done += todo;
-
-      if (done < size) {
-        // TODO(johngro): I am a very evil man.
-        //
-        // Why this exists and what we should do about it:
-        //
-        // Ideally, we'd like to register a callback that means "tell me when
-        // I can write N bytes to the data pipe," but Mojo doesn't support that
-        // behavior today.  As such, we have two options - we can just call
-        // BeginWriteDataRaw and it can tell us how many bytes it actually
-        // wrote, or we can register an AsyncWaiter for Writable.  Both methods
-        // respond when _any_ amount of bytes can be written.
-        //
-        // In the very short term (this week), we need to hack this to work,
-        // hence the blocking sleep behavior.  In the less-short term, we'll
-        // move this to an AsyncWaiter so we can participate in the main message
-        // loop and avoid blocking _everything_.  In the longer term, we want a
-        // callback that's aware of how many bytes we can write.
-        usleep(1000);
-      }
-    }
-    response_buf_.consume(size);
+    } while (done < size);
   }
-
   return MOJO_RESULT_OK;
 }
 
@@ -351,7 +333,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err)
         ParseHeaderField(header, name, value);
         if (name == "Location") {
           redirect_location_ = value;
-          std::cout << "Redirecting to " << redirect_location_ << "\n";
+          LOG(INFO) << "Redirecting to " << redirect_location_;
         }
       }
     } else {
@@ -376,8 +358,10 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err)
 
       loader_->SendResponse(response.Pass());
 
-      if (SendBody() != MOJO_RESULT_OK)
+      if (SendBody() != MOJO_RESULT_OK) {
+        response_body_stream_.reset();
         return;
+      }
 
       asio::async_read(socket_, response_buf_,
                        asio::transfer_at_least(1),
@@ -385,24 +369,19 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err)
                                  std::placeholders::_1));
     }
   } else {
-    std::cout << "Error: ReadHeaders: " << err << "\n";
+    LOG(ERROR) << "ReadHeaders: " << err;
   }
 }
 
 template<typename T>
 void URLLoaderImpl::HTTPClient<T>::OnReadBody(const asio::error_code& err)
 {
-  if (!err) {
-    if (SendBody() != MOJO_RESULT_OK)
-      return;
-
+  if (!err && SendBody() == MOJO_RESULT_OK) {
     asio::async_read(socket_, response_buf_,
                      asio::transfer_at_least(1),
                      std::bind(&HTTPClient<T>::OnReadBody, this,
                                std::placeholders::_1));
   } else {
-    // std::cout << "Error: " << err << std::endl;
-    // TODO(toshi): handle EOF error
     response_body_stream_.reset();
   }
 }
