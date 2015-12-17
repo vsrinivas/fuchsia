@@ -12,6 +12,8 @@
 #include <istream>
 #include <ostream>
 #include <string>
+#include <vector>
+#include <memory>
 
 namespace mojo {
 
@@ -106,6 +108,21 @@ bool URLLoaderImpl::ParseURL(const std::string& url, std::string& proto,
 
 void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   std::string url(request->url);
+  std::string method(request->method);
+  std::map<std::string, std::string> extra_headers;
+  std::vector<std::unique_ptr<UploadElementReader>> element_readers;
+
+  if (request->headers) {
+    for (size_t i = 0; i < request->headers.size(); ++i)
+      extra_headers[request->headers[i]->name] = request->headers[i]->value;
+  }
+
+  if (request->body) {
+    for (size_t i = 0; i < request->body.size(); ++i)
+      element_readers.push_back(
+          std::unique_ptr<UploadElementReader>(
+              new UploadElementReader(request->body[i].Pass())));
+  }
 
   asio::io_service io_service;
   bool redirect = false;
@@ -149,8 +166,14 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       asio::ssl::context ctx(asio::ssl::context::sslv23);
       ctx.set_default_verify_paths();
 
-      HTTPClient<asio::ssl::stream<tcp::socket>>
-        c(this, io_service, ctx, host, port, path);
+      HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
+      MojoResult result = c.CreateRequest(host, path, method,
+                                          extra_headers, element_readers);
+      if (result != MOJO_RESULT_OK) {
+        error_code = ERR_INVALID_ARGUMENT;
+        break;
+      }
+      c.Start(host, port);
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
@@ -159,7 +182,14 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       }
 #endif
     } else if (proto == "http") {
-      HTTPClient<tcp::socket> c(this, io_service, host, port, path);
+      HTTPClient<tcp::socket> c(this, io_service);
+      MojoResult result = c.CreateRequest(host, path, method,
+                                          extra_headers, element_readers);
+      if (result != MOJO_RESULT_OK) {
+        error_code = ERR_INVALID_ARGUMENT;
+        break;
+      }
+      c.Start(host, port);
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {

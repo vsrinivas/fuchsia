@@ -35,6 +35,8 @@ source_set("sources") {
     "network_error.h",
     "net_adapters.cc",
     "net_adapters.h",
+    "upload_element_reader.cc",
+    "upload_element_reader.h",
   ]
 
   include_dirs = [ "//third_party/asio/asio/include" ]
@@ -77,6 +79,8 @@ source_set("sources_secure") {
     "network_error.h",
     "net_adapters.cc",
     "net_adapters.h",
+    "upload_element_reader.cc",
+    "upload_element_reader.h",
   ]
 
   include_dirs = [ "//third_party/asio/asio/include" ]

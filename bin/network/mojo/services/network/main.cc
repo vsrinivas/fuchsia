@@ -9,6 +9,7 @@
 #include "network_service_delegate.h"
 
 MojoResult MojoMain(MojoHandle shell_handle) {
-  mojo::ApplicationRunner runner(new NetworkServiceDelegate);
+  mojo::ApplicationRunner runner(
+      std::unique_ptr<NetworkServiceDelegate>(new NetworkServiceDelegate()));
   return runner.Run(shell_handle);
 }

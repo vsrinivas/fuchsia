@@ -12,7 +12,6 @@
 namespace mojo {
 
 class URLLoaderImpl : public URLLoader {
-
  public:
   URLLoaderImpl(InterfaceRequest<URLLoader> request);
   ~URLLoaderImpl() override;
