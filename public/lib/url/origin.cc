@@ -4,14 +4,15 @@
 
 #include "url/origin.h"
 
-#include "base/strings/string_util.h"
+#include "base/logging.h"
+#include "base/strings/pattern.h"
 
 namespace url {
 
 Origin::Origin() : string_("null") {}
 
 Origin::Origin(const std::string& origin) : string_(origin) {
-  DCHECK(origin == "null" || MatchPattern(origin, "?*://?*"));
+  DCHECK(origin == "null" || base::MatchPattern(origin, "?*://?*"));
   DCHECK_GT(origin.size(), 0u);
   DCHECK(origin == "file://" || origin[origin.size() - 1] != '/');
 }
