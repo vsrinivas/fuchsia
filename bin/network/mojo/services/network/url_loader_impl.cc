@@ -142,17 +142,6 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       redirect = false;
     }
 
-#ifndef NETWORK_SERVICE_USE_HTTPS
-    if (proto == "https") {
-      LOG(WARNING) << "network_service was built without HTTPS; "
-        "Forcing HTTP instead.";
-      proto = "http";
-      if (port == "443" || port == "https" || port == "") {
-        port = "80";
-      }
-    }
-#endif
-
     if (proto == "https") {
 #ifdef NETWORK_SERVICE_USE_HTTPS
       asio::ssl::context ctx(asio::ssl::context::sslv23);
@@ -172,6 +161,11 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
         redirect = true;
         url = c.redirect_location_;
       }
+#else
+      LOG(INFO) << "https is not built-in. "
+        "please build with NETWORK_SERVICE_USE_HTTPS";
+      error_code = ERR_INVALID_ARGUMENT;
+      break;
 #endif
     } else if (proto == "http") {
       HTTPClient<tcp::socket> c(this, io_service);
