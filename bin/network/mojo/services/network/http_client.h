@@ -7,7 +7,7 @@
 
 #include "base/logging.h"
 
-#include "mojo/services/network/network_error.h"
+#include "mojo/services/network/net_errors.h"
 #include "mojo/services/network/upload_element_reader.h"
 
 #include <asio.hpp>
@@ -61,6 +61,9 @@ class URLLoaderImpl::HTTPClient {
                         std::string* value);
   void OnReadHeaders(const asio::error_code& err);
   void OnReadBody(const asio::error_code& err);
+
+  void SendResponse(URLResponsePtr response);
+  void SendError(int error_code);
 
  public:
   unsigned int status_code_;
@@ -191,6 +194,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::
                                   std::placeholders::_1));
   } else {
     LOG(ERROR) << "Resolve(SSL): " << err.message();
+    SendError(net::ERR_NAME_NOT_RESOLVED);
   }
 }
 
@@ -205,6 +209,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
                                     std::placeholders::_1));
   } else {
     LOG(ERROR) << "Resolve(NonSSL): " << err.message();
+    SendError(net::ERR_NAME_NOT_RESOLVED);
   }
 }
 
@@ -234,6 +239,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::
                                       std::placeholders::_1));
   } else {
     LOG(ERROR) << "Connect(SSL): " << err.message();
+    SendError(net::ERR_CONNECTION_FAILED);
   }
 }
 
@@ -247,6 +253,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
                                 std::placeholders::_1));
   } else {
     LOG(ERROR) << "Connect(NonSSL): " << err.message();
+    SendError(net::ERR_CONNECTION_FAILED);
   }
 }
 
@@ -258,6 +265,7 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
                                 std::placeholders::_1));
   } else {
     LOG(ERROR) << "HandShake: " << err.message();
+    SendError(net::ERR_SSL_HANDSHAKE_NOT_COMPLETED);
   }
 }
 
@@ -272,6 +280,8 @@ void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err) {
                                      std::placeholders::_1));
   } else {
     LOG(ERROR) << "WriteRequest: " << err.message();
+    // TODO(toshik): better error code?
+    SendError(net::ERR_FAILED);
   }
 }
 
@@ -286,12 +296,14 @@ void URLLoaderImpl::HTTPClient<T>::
     std::getline(response_stream, status_message_);
     if (!response_stream || http_version_.substr(0, 5) != "HTTP/") {
       LOG(ERROR) << "ReadStatusLine: Invalid response\n";
+      SendError(net::ERR_INVALID_RESPONSE);
       return;
     }
     if (!(status_code_ >= 200 && status_code_ <= 299) &&
         status_code_ != 301 && status_code_ != 302) {
       // TODO(toshik): handle more status codes
       LOG(ERROR) << "ReadStatusLine: Status code " << status_code_;
+      SendError(net::ERR_NOT_IMPLEMENTED);
       return;
     }
 
@@ -425,8 +437,21 @@ void URLLoaderImpl::HTTPClient<T>::OnReadBody(const asio::error_code& err) {
                      std::bind(&HTTPClient<T>::OnReadBody, this,
                                std::placeholders::_1));
   } else {
+    // EOF is handled here.
+    // TODO(toshik): print the error code if it is unexpected.
+    // LOG(INFO) << "OnReadBody: " << err.message();
     response_body_stream_.reset();
   }
+}
+
+template<typename T>
+void URLLoaderImpl::HTTPClient<T>::SendResponse(URLResponsePtr response) {
+  loader_->SendResponse(std::move(response));
+}
+
+template<typename T>
+void URLLoaderImpl::HTTPClient<T>::SendError(int error_code) {
+  loader_->SendError(error_code);
 }
 
 } // namespace mojo

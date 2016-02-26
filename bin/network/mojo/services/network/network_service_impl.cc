@@ -5,7 +5,7 @@
 #include "base/logging.h"
 
 #include "mojo/services/network/network_service_impl.h"
-#include "mojo/services/network/network_error.h"
+#include "mojo/services/network/net_errors.h"
 #include "mojo/services/network/net_adapters.h"
 
 #include "mojo/services/network/url_loader_impl.h"
@@ -38,7 +38,7 @@ void NetworkServiceImpl::CreateTCPBoundSocket(
     ScopedMessagePipeHandle bound_socket,
     const CreateTCPBoundSocketCallback& callback) {
   NOTIMPLEMENTED();
-  callback.Run(MakeNetworkError(ERR_NOT_IMPLEMENTED), nullptr);
+  callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::CreateTCPConnectedSocket(
@@ -48,7 +48,7 @@ void NetworkServiceImpl::CreateTCPConnectedSocket(
     ScopedMessagePipeHandle client_socket,
     const CreateTCPConnectedSocketCallback& callback) {
   NOTIMPLEMENTED();
-  callback.Run(MakeNetworkError(ERR_NOT_IMPLEMENTED), nullptr);
+  callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::CreateUDPSocket(ScopedMessagePipeHandle request) {
@@ -60,7 +60,7 @@ void NetworkServiceImpl::CreateHttpServer(
     ScopedMessagePipeHandle delegate,
     const CreateHttpServerCallback& callback) {
   NOTIMPLEMENTED();
-  callback.Run(MakeNetworkError(ERR_NOT_IMPLEMENTED), nullptr);
+  callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::RegisterURLLoaderInterceptor(

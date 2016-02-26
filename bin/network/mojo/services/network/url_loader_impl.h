@@ -40,8 +40,6 @@ class URLLoaderImpl : public URLLoader {
   // bool auto_follow_redirects_;
   URLLoaderStatusPtr last_status_;
   Binding<URLLoader> binding_;
-
-  bool responded_;
 };
 
 }  // namespace mojo

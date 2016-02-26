@@ -6,7 +6,7 @@
 
 #include "mojo/services/network/url_loader_impl.h"
 #include "mojo/services/network/http_client.h"
-#include "mojo/services/network/network_error.h"
+#include "mojo/services/network/net_errors.h"
 #include "mojo/services/network/net_adapters.h"
 
 #include <istream>
@@ -18,7 +18,7 @@
 namespace mojo {
 
 URLLoaderImpl::URLLoaderImpl(InterfaceRequest<URLLoader> request)
-  : binding_(this, request.Pass()), responded_(false)
+  : binding_(this, request.Pass())
 {
   binding_.set_connection_error_handler([this]() { OnConnectionError(); });
 }
@@ -40,14 +40,14 @@ void URLLoaderImpl::FollowRedirect(
     const Callback<void(URLResponsePtr)>& callback) {
   NOTIMPLEMENTED();
   callback_ = callback;
-  SendError(ERR_NOT_IMPLEMENTED);
+  SendError(net::ERR_NOT_IMPLEMENTED);
 }
 
 void URLLoaderImpl::QueryStatus(
     const Callback<void(URLLoaderStatusPtr)>& callback) {
   URLLoaderStatusPtr status(URLLoaderStatus::New());
   NOTIMPLEMENTED();
-  status->error = MakeNetworkError(ERR_NOT_IMPLEMENTED);
+  status->error = MakeNetworkError(net::ERR_NOT_IMPLEMENTED);
   callback.Run(status.Pass());
 }
 
@@ -70,7 +70,6 @@ void URLLoaderImpl::SendResponse(URLResponsePtr response) {
   Callback<void(URLResponsePtr)> callback;
   std::swap(callback_, callback);
   callback.Run(response.Pass());
-  responded_ = true;
 }
 
 bool URLLoaderImpl::ParseURL(const std::string& url, std::string& proto,
@@ -126,14 +125,13 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 
   asio::io_service io_service;
   bool redirect = false;
-  int error_code = ERR_UNEXPECTED;
 
   do {
     std::string proto, host, port, path;
 
     if (!ParseURL(url, proto, host, port, path)) {
       LOG(ERROR) << "url parse error";
-      error_code = ERR_INVALID_ARGUMENT;
+      SendError(net::ERR_INVALID_ARGUMENT);
       break;
     }
 
@@ -151,7 +149,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       MojoResult result = c.CreateRequest(host, path, method,
                                           extra_headers, element_readers);
       if (result != MOJO_RESULT_OK) {
-        error_code = ERR_INVALID_ARGUMENT;
+        SendError(net::ERR_INVALID_ARGUMENT);
         break;
       }
       c.Start(host, port);
@@ -164,7 +162,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 #else
       LOG(INFO) << "https is not built-in. "
         "please build with NETWORK_SERVICE_USE_HTTPS";
-      error_code = ERR_INVALID_ARGUMENT;
+      SendError(net::ERR_INVALID_ARGUMENT);
       break;
 #endif
     } else if (proto == "http") {
@@ -172,7 +170,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       MojoResult result = c.CreateRequest(host, path, method,
                                           extra_headers, element_readers);
       if (result != MOJO_RESULT_OK) {
-        error_code = ERR_INVALID_ARGUMENT;
+        SendError(net::ERR_INVALID_ARGUMENT);
         break;
       }
       c.Start(host, port);
@@ -184,13 +182,11 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       }
     } else {
       // unknown protocol
-      error_code = ERR_INVALID_ARGUMENT;
+      LOG(ERROR) << "unknown protocol";
+      SendError(net::ERR_INVALID_ARGUMENT);
       break;
     }
   } while (redirect);
-
-  if (!responded_)
-    SendError(error_code);
 }
 
 }  // namespace mojo
