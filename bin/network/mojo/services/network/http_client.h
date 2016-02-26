@@ -23,7 +23,8 @@ typedef tcp::socket nonssl_socket_t;
 template<typename T>
 class URLLoaderImpl::HTTPClient {
 
-  static_assert(std::is_same<T, ssl_socket_t>::value || std::is_same<T, nonssl_socket_t>::value,
+  static_assert(std::is_same<T, ssl_socket_t>::value ||
+                std::is_same<T, nonssl_socket_t>::value,
                 "requires either ssl_socket_t or nonssl_socket_t");
 
  public:
@@ -40,9 +41,10 @@ class URLLoaderImpl::HTTPClient {
 
   MojoResult CreateRequest(const std::string& server, const std::string& path,
                            const std::string& method,
-                           const std::map<std::string, std::string>& extra_headers,
-                           const std::vector<
-                               std::unique_ptr<UploadElementReader>>& element_readers);
+                           const std::map<std::string,
+                           std::string>& extra_headers,
+                           const std::vector<std::unique_ptr<
+                           UploadElementReader>>& element_readers);
   void Start(const std::string& server, const std::string& port);
 
  private:
@@ -55,7 +57,8 @@ class URLLoaderImpl::HTTPClient {
   void OnWriteRequest(const asio::error_code& err);
   void OnReadStatusLine(const asio::error_code& err);
   MojoResult SendBody();
-  void ParseHeaderField(const std::string& header, std::string& name, std::string& value);
+  void ParseHeaderField(const std::string& header, std::string* name,
+                        std::string* value);
   void OnReadHeaders(const asio::error_code& err);
   void OnReadBody(const asio::error_code& err);
 
@@ -90,38 +93,43 @@ bool URLLoaderImpl::HTTPClient<T>::IsMethodAllowed(const std::string& method) {
 }
 
 template<>
-void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(const asio::error_code& err,
-                              tcp::resolver::iterator endpoint_iterator);
+void URLLoaderImpl::HTTPClient<ssl_socket_t>::
+    OnResolve(const asio::error_code& err,
+              tcp::resolver::iterator endpoint_iterator);
 template<>
-void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(const asio::error_code& err,
-                              tcp::resolver::iterator endpoint_iterator);
+void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
+    OnResolve(const asio::error_code& err,
+              tcp::resolver::iterator endpoint_iterator);
 template<>
-void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnConnect(const asio::error_code& err);
+void URLLoaderImpl::HTTPClient<ssl_socket_t>::
+    OnConnect(const asio::error_code& err);
 template<>
-void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(const asio::error_code& err);
+void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
+    OnConnect(const asio::error_code& err);
 
 template<>
-URLLoaderImpl::HTTPClient<ssl_socket_t>::HTTPClient(URLLoaderImpl* loader,
-                                                    asio::io_service& io_service,
-                                                    asio::ssl::context& context)
-  : loader_(loader),
-    resolver_(io_service),
-    socket_(io_service, context) {}
+URLLoaderImpl::HTTPClient<ssl_socket_t>::
+    HTTPClient(URLLoaderImpl* loader, asio::io_service& io_service,
+           asio::ssl::context& context)
+      : loader_(loader),
+        resolver_(io_service),
+        socket_(io_service, context) {}
 
 template<>
-URLLoaderImpl::HTTPClient<nonssl_socket_t>::HTTPClient(URLLoaderImpl* loader,
-                                                       asio::io_service& io_service)
-  : loader_(loader),
-    resolver_(io_service),
-    socket_(io_service) {}
+URLLoaderImpl::HTTPClient<nonssl_socket_t>::
+    HTTPClient(URLLoaderImpl* loader, asio::io_service& io_service)
+      : loader_(loader),
+        resolver_(io_service),
+        socket_(io_service) {}
 
 template<typename T>
-MojoResult URLLoaderImpl::HTTPClient<T>::CreateRequest(const std::string& server,
-                                                       const std::string& path,
-                                                       const std::string& method,
-                                            const std::map<std::string, std::string>& extra_headers,
-                           const std::vector<std::unique_ptr<UploadElementReader>>& element_readers)
-{
+MojoResult URLLoaderImpl::HTTPClient<T>::
+    CreateRequest(const std::string& server,
+                  const std::string& path,
+                  const std::string& method,
+                  const std::map<std::string, std::string>& extra_headers,
+                  const std::vector<std::unique_ptr<
+                      UploadElementReader>>& element_readers) {
   if (!IsMethodAllowed(method)) {
     LOG(ERROR) << "Method " << method << " is not allowed";
     return MOJO_RESULT_INVALID_ARGUMENT;
@@ -169,12 +177,13 @@ void URLLoaderImpl::HTTPClient<T>::Start(const std::string& server,
 }
 
 template<>
-void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(const asio::error_code& err,
-                                                        tcp::resolver::iterator endpoint_iterator)
-{
+void URLLoaderImpl::HTTPClient<ssl_socket_t>::
+    OnResolve(const asio::error_code& err,
+              tcp::resolver::iterator endpoint_iterator) {
   if (!err) {
     socket_.set_verify_mode(asio::ssl::verify_peer);
-    socket_.set_verify_callback(std::bind(&HTTPClient<ssl_socket_t>::OnVerifyCertificate,
+    socket_.set_verify_callback(std::bind(&HTTPClient<ssl_socket_t>::
+                                          OnVerifyCertificate,
                                           this, std::placeholders::_1,
                                           std::placeholders::_2));
     asio::async_connect(socket_.lowest_layer(), endpoint_iterator,
@@ -186,12 +195,13 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(const asio::error_code& 
 }
 
 template<>
-void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(const asio::error_code& err,
-                                                          tcp::resolver::iterator endpoint_iterator)
-{
+void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
+    OnResolve(const asio::error_code& err,
+              tcp::resolver::iterator endpoint_iterator) {
   if (!err) {
       asio::async_connect(socket_, endpoint_iterator,
-                          std::bind(&HTTPClient<nonssl_socket_t>::OnConnect, this,
+                          std::bind(&HTTPClient<nonssl_socket_t>:: OnConnect,
+                                    this,
                                     std::placeholders::_1));
   } else {
     LOG(ERROR) << "Resolve(NonSSL): " << err.message();
@@ -199,9 +209,8 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(const asio::error_cod
 }
 
 template<typename T>
-bool URLLoaderImpl::HTTPClient<T>::OnVerifyCertificate(bool preverified,
-                                                       asio::ssl::verify_context& ctx)
-{
+bool URLLoaderImpl::HTTPClient<T>::
+    OnVerifyCertificate(bool preverified, asio::ssl::verify_context& ctx) {
   // TODO(toshik): RFC 2818 describes the steps involved in doing this for
   // HTTPS.
   char subject_name[256];
@@ -216,11 +225,12 @@ bool URLLoaderImpl::HTTPClient<T>::OnVerifyCertificate(bool preverified,
 }
 
 template<>
-void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnConnect(const asio::error_code& err)
-{
+void URLLoaderImpl::HTTPClient<ssl_socket_t>::
+    OnConnect(const asio::error_code& err) {
   if (!err) {
     socket_.async_handshake(asio::ssl::stream_base::client,
-                            std::bind(&HTTPClient<ssl_socket_t>::OnHandShake, this,
+                            std::bind(&HTTPClient<ssl_socket_t>::OnHandShake,
+                                      this,
                                       std::placeholders::_1));
   } else {
     LOG(ERROR) << "Connect(SSL): " << err.message();
@@ -228,11 +238,12 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnConnect(const asio::error_code& 
 }
 
 template<>
-void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(const asio::error_code& err)
-{
+void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
+    OnConnect(const asio::error_code& err) {
   if (!err) {
     asio::async_write(socket_, request_bufs_,
-                      std::bind(&HTTPClient<nonssl_socket_t>::OnWriteRequest, this,
+                      std::bind(&HTTPClient<nonssl_socket_t>::OnWriteRequest,
+                                this,
                                 std::placeholders::_1));
   } else {
     LOG(ERROR) << "Connect(NonSSL): " << err.message();
@@ -240,8 +251,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(const asio::error_cod
 }
 
 template<typename T>
-void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err)
-{
+void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
   if (!err) {
     asio::async_write(socket_, request_bufs_,
                       std::bind(&HTTPClient<T>::OnWriteRequest, this,
@@ -252,8 +262,7 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err)
 }
 
 template<typename T>
-void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err)
-{
+void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err) {
   if (!err) {
     // TODO(toshik): The response_ streambuf will automatically grow
     // The growth may be limited by passing a maximum size to the
@@ -267,8 +276,8 @@ void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err)
 }
 
 template<typename T>
-void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(const asio::error_code& err)
-{
+void URLLoaderImpl::HTTPClient<T>::
+    OnReadStatusLine(const asio::error_code& err) {
   if (!err) {
     std::istream response_stream(&response_buf_);
     response_stream >> http_version_;
@@ -295,8 +304,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(const asio::error_code& err)
 }
 
 template<typename T>
-MojoResult URLLoaderImpl::HTTPClient<T>::SendBody()
-{
+MojoResult URLLoaderImpl::HTTPClient<T>::SendBody() {
   uint32_t size = response_buf_.size();
 
   if (size > 0) {
@@ -341,22 +349,21 @@ MojoResult URLLoaderImpl::HTTPClient<T>::SendBody()
 
 template<typename T>
 void URLLoaderImpl::HTTPClient<T>::ParseHeaderField(const std::string& header,
-                                                    std::string& name,
-                                                    std::string& value)
-{
-  std::string::const_iterator name_end = std::find(header.begin(), header.end(), ':');
-  name = std::string(header.begin(), name_end);
+                                                    std::string* name,
+                                                    std::string* value) {
+  std::string::const_iterator name_end = std::find(header.begin(), header.end(),
+                                                   ':');
+  *name = std::string(header.begin(), name_end);
 
   std::string::const_iterator value_begin =
     std::find_if(name_end + 1, header.end(), [](int c) { return c != ' '; });
   std::string::const_iterator value_end =
     std::find_if(name_end + 1, header.end(), [](int c) { return c == '\r'; });
-  value = std::string(value_begin, value_end);
+  *value = std::string(value_begin, value_end);
 }
 
 template<typename T>
-void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err)
-{
+void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
   if (!err) {
     std::istream response_stream(&response_buf_);
     std::string header;
@@ -367,7 +374,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err)
       while (std::getline(response_stream, header) && header != "\r") {
         HttpHeaderPtr hdr = HttpHeader::New();
         std::string name, value;
-        ParseHeaderField(header, name, value);
+        ParseHeaderField(header, &name, &value);
         if (name == "Location") {
           redirect_location_ = value;
           LOG(INFO) << "Redirecting to " << redirect_location_;
@@ -383,17 +390,17 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err)
       while (std::getline(response_stream, header) && header != "\r") {
         HttpHeaderPtr hdr = HttpHeader::New();
         std::string name, value;
-        ParseHeaderField(header, name, value);
+        ParseHeaderField(header, &name, &value);
         hdr->name = name;
         hdr->value = value;
-        response->headers.push_back(hdr.Pass());
+        response->headers.push_back(std::move(hdr));
       }
 
       DataPipe data_pipe;
-      response_body_stream_ = data_pipe.producer_handle.Pass();
-      response->body = data_pipe.consumer_handle.Pass();
+      response_body_stream_ = std::move(data_pipe.producer_handle);
+      response->body = std::move(data_pipe.consumer_handle);
 
-      loader_->SendResponse(response.Pass());
+      loader_->SendResponse(std::move(response));
 
       if (SendBody() != MOJO_RESULT_OK) {
         response_body_stream_.reset();
@@ -411,8 +418,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err)
 }
 
 template<typename T>
-void URLLoaderImpl::HTTPClient<T>::OnReadBody(const asio::error_code& err)
-{
+void URLLoaderImpl::HTTPClient<T>::OnReadBody(const asio::error_code& err) {
   if (!err && SendBody() == MOJO_RESULT_OK) {
     asio::async_read(socket_, response_buf_,
                      asio::transfer_at_least(1),
@@ -428,8 +434,8 @@ void URLLoaderImpl::HTTPClient<T>::OnReadBody(const asio::error_code& err)
 #if defined(ASIO_NO_EXCEPTIONS)
 // ASIO doesn't provide this if exception is not enabled
 template <typename Exception>
-void asio::detail::throw_exception(const Exception& e)
-{
+void asio::detail::throw_exception(const Exception& e) {
+  LOG(ERROR) << "Exception occurred: " << e.what();
 }
 #endif
 
