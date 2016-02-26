@@ -137,14 +137,6 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       break;
     }
 
-    LOG(INFO) << "URL: " << host << path;
-    if (host == "tq.mojoapps.io") {
-      LOG(INFO) << "rewrote tq.mojoapp.io";
-      host = "tq-server";
-      port = "80";
-      proto = "http";
-    }
-
     if (redirect) {
       io_service.reset();
       redirect = false;
