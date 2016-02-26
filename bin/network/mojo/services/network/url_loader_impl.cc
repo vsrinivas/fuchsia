@@ -72,41 +72,8 @@ void URLLoaderImpl::SendResponse(URLResponsePtr response) {
   callback.Run(response.Pass());
 }
 
-bool URLLoaderImpl::ParseURL(const std::string& url, std::string& proto,
-                             std::string& host, std::string& port,
-                             std::string& path) {
-  std::string delim("://");
-  std::string::const_iterator proto_end =
-    std::search(url.begin(), url.end(), delim.begin(), delim.end());
-  if (proto_end == url.end()) {
-    return false;
-  }
-  proto.assign(url.begin(), proto_end);
-
-  std::string::const_iterator host_start = proto_end + delim.length();
-  std::string::const_iterator path_start = std::find(host_start, url.end(), '/');
-  std::string::const_iterator host_end = std::find(host_start, path_start, ':');
-  host.assign(host_start, host_end);
-
-  if (host_end != path_start)
-    port.assign(host_end + 1, path_start);
-  else
-    port = proto;
-
-  if (path_start != url.end())
-    path.assign(path_start, url.end());
-  else
-    path.assign("/");
-
-  if (proto.length() == 0 || host.length() == 0 || port.length() == 0 ||
-      path.length() == 0)
-    return false;
-
-  return true;
-}
-
 void URLLoaderImpl::StartInternal(URLRequestPtr request) {
-  std::string url(request->url);
+  std::string url_str(request->url);
   std::string method(request->method);
   std::map<std::string, std::string> extra_headers;
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
@@ -126,38 +93,42 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   asio::io_service io_service;
   bool redirect = false;
 
+  std::unique_ptr<URL> url(new URL(url_str));
+  if (!url->IsParsed()) {
+    LOG(ERROR) << "url parse error";
+    SendError(net::ERR_INVALID_ARGUMENT);
+    return;
+  }
+
   do {
-    std::string proto, host, port, path;
-
-    if (!ParseURL(url, proto, host, port, path)) {
-      LOG(ERROR) << "url parse error";
-      SendError(net::ERR_INVALID_ARGUMENT);
-      break;
-    }
-
     if (redirect) {
       io_service.reset();
       redirect = false;
     }
 
-    if (proto == "https") {
+    if (url->Proto() == "https") {
 #ifdef NETWORK_SERVICE_USE_HTTPS
       asio::ssl::context ctx(asio::ssl::context::sslv23);
       ctx.set_default_verify_paths();
 
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
-      MojoResult result = c.CreateRequest(host, path, method,
+      MojoResult result = c.CreateRequest(url->Host(), url->Path(), method,
                                           extra_headers, element_readers);
       if (result != MOJO_RESULT_OK) {
         SendError(net::ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(host, port);
+      c.Start(url->Host(), url->Port());
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url = c.redirect_location_;
+        url.reset(new URL(c.redirect_location_));
+        if (!url->IsParsed()) {
+          LOG(ERROR) << "url parse error";
+          SendError(net::ERR_INVALID_RESPONSE);
+          break;
+        }
       }
 #else
       LOG(INFO) << "https is not built-in. "
@@ -165,20 +136,25 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       SendError(net::ERR_INVALID_ARGUMENT);
       break;
 #endif
-    } else if (proto == "http") {
+    } else if (url->Proto() == "http") {
       HTTPClient<tcp::socket> c(this, io_service);
-      MojoResult result = c.CreateRequest(host, path, method,
+      MojoResult result = c.CreateRequest(url->Host(), url->Path(), method,
                                           extra_headers, element_readers);
       if (result != MOJO_RESULT_OK) {
         SendError(net::ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(host, port);
+      c.Start(url->Host(), url->Port());
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url = c.redirect_location_;
+        url.reset(new URL(c.redirect_location_));
+        if (!url->IsParsed()) {
+          LOG(ERROR) << "url parse error";
+          SendError(net::ERR_INVALID_RESPONSE);
+          break;
+        }
       }
     } else {
       // unknown protocol

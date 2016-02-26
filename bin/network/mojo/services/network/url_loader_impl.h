@@ -9,6 +9,8 @@
 #include "mojo/services/network/interfaces/url_loader.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 
+#include "mojo/services/network/url.h"
+
 namespace mojo {
 
 class URLLoaderImpl : public URLLoader {
@@ -32,8 +34,6 @@ class URLLoaderImpl : public URLLoader {
   void SendError(int error_code);
   void FollowRedirectInternal();
   void SendResponse(URLResponsePtr response);
-  bool ParseURL(const std::string& url, std::string& scheme, std::string& host,
-                std::string& port, std::string& path);
   void StartInternal(URLRequestPtr request);
 
   Callback<void(URLResponsePtr)> callback_;

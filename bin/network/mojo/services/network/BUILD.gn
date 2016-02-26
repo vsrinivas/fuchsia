@@ -34,6 +34,8 @@ source_set("sources") {
     "network_service_impl.h",
     "upload_element_reader.cc",
     "upload_element_reader.h",
+    "url.cc",
+    "url.h",
     "url_loader_impl.cc",
     "url_loader_impl.h",
   ]
