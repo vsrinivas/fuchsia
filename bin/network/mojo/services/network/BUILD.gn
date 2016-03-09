@@ -7,61 +7,15 @@ if (is_android) {
 # TODO(toshik)
 } else {
   mojo_native_application("network") {
-    output_name = "network_service"
-    deps = [
-      ":sources",
-    ]
-  }
-  mojo_native_application("network_secure") {
     output_name = "network_service-secure"
     deps = [
-      ":sources_secure",
+      ":sources",
     ]
   }
 }
 
 source_set("sources") {
-  defines = []
-
-  sources = [
-    "main.cc",
-    "network_service_delegate.cc",
-    "network_service_delegate.h",
-    "network_service_impl.cc",
-    "network_service_impl.h",
-    "url_loader_impl.cc",
-    "url_loader_impl.h",
-    "http_client.h",
-    "network_error.h",
-    "net_adapters.cc",
-    "net_adapters.h",
-    "upload_element_reader.cc",
-    "upload_element_reader.h",
-  ]
-
-  include_dirs = [ "//third_party/asio/asio/include" ]
-
-  defines += [
-    "ASIO_STANDALONE",
-    "ASIO_NO_EXCEPTIONS",
-    "ASIO_NO_TYPEID",
-    "ASIO_HAS_STD_SYSTEM_ERROR",
-  ]
-
-  deps = [
-    "//base",
-    "//mojo/services/network/interfaces",
-    "//third_party/mojo/src/mojo/public/interfaces/network",
-    "//third_party/mojo/src/mojo/public/cpp/application",
-    "//third_party/mojo/src/mojo/public/cpp/application:standalone",
-    "//third_party/mojo/src/mojo/public/cpp/bindings",
-    "//third_party/mojo/src/mojo/public/cpp/system",
-    "//third_party/mojo/src/mojo/public/cpp/utility",
-    "//third_party/boringssl:boringssl",
-  ]
-}
-
-source_set("sources_secure") {
+# if you don't need HTTPS, comment out NETWORK_SERVICE_USE_HTTPS in |defines| below.
   defines = [
     "NETWORK_SERVICE_USE_HTTPS",
     "NETWORK_SERVICE_HTTPS_CERT_HACK",
