@@ -16,7 +16,6 @@
 package file
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -26,9 +25,6 @@ import (
 const (
 	defaultBlockSize int64 = 512
 )
-
-// ErrInvalid indicates that an invalid argument was provided to a function.
-var ErrInvalid = errors.New("invalid argument")
 
 // File represents a block device backed by a file on a traditional file system.
 type File struct {
