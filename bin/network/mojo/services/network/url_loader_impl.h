@@ -9,8 +9,6 @@
 #include "mojo/services/network/interfaces/url_loader.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 
-#include "mojo/services/network/url.h"
-
 namespace mojo {
 
 class URLLoaderImpl : public URLLoader {

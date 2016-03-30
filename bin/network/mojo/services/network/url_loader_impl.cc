@@ -9,6 +9,8 @@
 #include "mojo/services/network/net_errors.h"
 #include "mojo/services/network/net_adapters.h"
 
+#include "url/gurl.h"
+
 #include <istream>
 #include <ostream>
 #include <string>
@@ -93,8 +95,8 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   asio::io_service io_service;
   bool redirect = false;
 
-  std::unique_ptr<URL> url(new URL(url_str));
-  if (!url->IsParsed()) {
+  GURL url(url_str);
+  if (!url.is_valid()) {
     LOG(ERROR) << "url parse error";
     SendError(net::ERR_INVALID_ARGUMENT);
     return;
@@ -106,25 +108,25 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       redirect = false;
     }
 
-    if (url->Proto() == "https") {
+    if (url.SchemeIs("https")) {
 #ifdef NETWORK_SERVICE_USE_HTTPS
       asio::ssl::context ctx(asio::ssl::context::sslv23);
       ctx.set_default_verify_paths();
 
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
-      MojoResult result = c.CreateRequest(url->Host(), url->Path(), method,
+      MojoResult result = c.CreateRequest(url.host(), url.path(), method,
                                           extra_headers, element_readers);
       if (result != MOJO_RESULT_OK) {
         SendError(net::ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(url->Host(), url->Port());
+      c.Start(url.host(), url.has_port() ? url.port() : "https");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url.reset(new URL(c.redirect_location_));
-        if (!url->IsParsed()) {
+        url = GURL(c.redirect_location_);
+        if (!url.is_valid()) {
           LOG(ERROR) << "url parse error";
           SendError(net::ERR_INVALID_RESPONSE);
           break;
@@ -136,21 +138,21 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       SendError(net::ERR_INVALID_ARGUMENT);
       break;
 #endif
-    } else if (url->Proto() == "http") {
+    } else if (url.SchemeIs("http")) {
       HTTPClient<tcp::socket> c(this, io_service);
-      MojoResult result = c.CreateRequest(url->Host(), url->Path(), method,
+      MojoResult result = c.CreateRequest(url.host(), url.path(), method,
                                           extra_headers, element_readers);
       if (result != MOJO_RESULT_OK) {
         SendError(net::ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(url->Host(), url->Port());
+      c.Start(url.host(), url.has_port() ? url.port() : "http");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url.reset(new URL(c.redirect_location_));
-        if (!url->IsParsed()) {
+        url = GURL(c.redirect_location_);
+        if (!url.is_valid()) {
           LOG(ERROR) << "url parse error";
           SendError(net::ERR_INVALID_RESPONSE);
           break;
