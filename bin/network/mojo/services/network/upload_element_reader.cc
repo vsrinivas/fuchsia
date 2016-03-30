@@ -4,6 +4,7 @@
 
 #include "base/logging.h"
 
+#include "mojo/public/cpp/system/wait.h"
 #include "mojo/services/network/upload_element_reader.h"
 
 namespace mojo {
