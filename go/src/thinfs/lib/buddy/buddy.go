@@ -20,8 +20,8 @@ import (
 	"encoding/binary"
 	"errors"
 
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 	"github.com/golang/glog"
-	"thinfs/bitops"
 )
 
 var (
