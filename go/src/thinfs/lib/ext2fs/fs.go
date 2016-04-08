@@ -29,6 +29,10 @@ import (
 	"github.com/golang/glog"
 )
 
+func init() {
+	C.initialize_ext2_error_table()
+}
+
 // FS represents an ext2 file system.
 type FS struct {
 	fs C.ext2_filsys
@@ -41,26 +45,28 @@ func New(path string) (*FS, error) {
 	p := C.CString(path)
 	defer C.free(unsafe.Pointer(p))
 
-	if err := check(C.ext2fs_open(p, 0, 0, 0, C.unix_io_manager, &f.fs)); err != nil {
+	if err := check(C.ext2fs_open(p, 0, 0, 0, ioManager, &f.fs)); err != nil {
 		return nil, fmt.Errorf("error opening ext2 file system: %v", err)
 	}
-
-	// Populate the inode bitmap so that we know which inodes are in use.
-	if err := check(C.ext2fs_read_inode_bitmap(f.fs)); err != nil {
-		return nil, fmt.Errorf("error reading inode bitmap: %v", err)
-	}
-
-	// Populate the block bitmap so that we know which blocks are in use.
-	if err := check(C.ext2fs_read_block_bitmap(f.fs)); err != nil {
-		return nil, fmt.Errorf("error reading block bitmap: %v", err)
-	}
-
-	runtime.SetFinalizer(f, func() {
+	runtime.SetFinalizer(f, func(*FS) {
 		glog.Errorf("File system image at %s became unreachable before it was closed\n", path)
 		if err := f.Close(); err != nil {
 			glog.Errorf("Error closing file system at %s: %v", path, err)
 		}
 	})
+
+	// Populate the inode bitmap so that we know which inodes are in use.
+	if err := check(C.ext2fs_read_inode_bitmap(f.fs)); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("error reading inode bitmap: %v", err)
+	}
+
+	// Populate the block bitmap so that we know which blocks are in use.
+	if err := check(C.ext2fs_read_block_bitmap(f.fs)); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("error reading block bitmap: %v", err)
+	}
+
 	return f, nil
 }
 
