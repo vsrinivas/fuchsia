@@ -22,10 +22,6 @@ import (
 	"github.com/golang/glog"
 )
 
-const (
-	defaultBlockSize int64 = 512
-)
-
 // File represents a block device backed by a file on a traditional file system.
 type File struct {
 	f         *os.File
@@ -48,8 +44,9 @@ func getSize(f *os.File, info os.FileInfo) int64 {
 
 // New creates and returns a new File, using f as the backing store.  The size of the
 // block device represented by the returned File will be the size of f.  New will
-// not close f if any errors occur.
-func New(f *os.File) (*File, error) {
+// not close f if any errors occur.  If there is an error, it will be of type
+// *os.PathError.
+func New(f *os.File, blockSize int64) (*File, error) {
 	info, err := f.Stat()
 	if err != nil {
 		return nil, &os.PathError{
@@ -70,7 +67,7 @@ func New(f *os.File) (*File, error) {
 		f:         f,
 		info:      info,
 		size:      size,
-		blockSize: defaultBlockSize,
+		blockSize: blockSize,
 	}, nil
 }
 
