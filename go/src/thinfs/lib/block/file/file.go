@@ -30,7 +30,20 @@ const (
 type File struct {
 	f         *os.File
 	info      os.FileInfo
-	blocksize int64
+	size      int64
+	blockSize int64
+}
+
+func getSize(f *os.File, info os.FileInfo) int64 {
+	if info.Mode()&os.ModeDevice != 0 {
+		if size, err := ioctlBlockGetSize(f.Fd()); err == nil {
+			return size
+		}
+	}
+
+	// If the file is a block device but the ioctl failed for some reason or if the file is a
+	// regular file, just fall back to using the size reported by Stat().
+	return info.Size()
 }
 
 // New creates and returns a new File, using f as the backing store.  The size of the
@@ -39,37 +52,42 @@ type File struct {
 func New(f *os.File) (*File, error) {
 	info, err := f.Stat()
 	if err != nil {
-		err := &os.PathError{
+		return nil, &os.PathError{
 			Op:   "New",
 			Path: f.Name(),
 			Err:  err,
 		}
-		return nil, err
 	}
 
+	size := getSize(f, info)
 	if glog.V(2) {
 		glog.Info("File name: ", info.Name())
-		glog.Info("     size: ", info.Size())
+		glog.Info("     size: ", size)
 		glog.Info("     mode: ", info.Mode())
 	}
 
-	return &File{f, info, defaultBlockSize}, nil
+	return &File{
+		f:         f,
+		info:      info,
+		size:      size,
+		blockSize: defaultBlockSize,
+	}, nil
 }
 
 // BlockSize returns the size in bytes of the smallest block that can be written by the File.
 // The return value is undefined after Close() is called.
 func (f *File) BlockSize() int64 {
-	return f.blocksize
+	return f.blockSize
 }
 
 // Size returns the fixed size of the File in bytes.  The return value is undefined after Close()
 // is called.
 func (f *File) Size() int64 {
-	return f.info.Size()
+	return f.size
 }
 
 func (f *File) check(p []byte, off int64, op string) error {
-	if off%f.blocksize != 0 {
+	if off%f.blockSize != 0 {
 		return &os.PathError{
 			Op:   op,
 			Path: f.info.Name(),
@@ -77,7 +95,7 @@ func (f *File) check(p []byte, off int64, op string) error {
 		}
 	}
 
-	if int64(len(p))%f.blocksize != 0 {
+	if int64(len(p))%f.blockSize != 0 {
 		return &os.PathError{
 			Op:   op,
 			Path: f.info.Name(),
@@ -85,7 +103,7 @@ func (f *File) check(p []byte, off int64, op string) error {
 		}
 	}
 
-	if off+int64(len(p)) > f.info.Size() {
+	if off+int64(len(p)) > f.Size() {
 		return &os.PathError{
 			Op:   op,
 			Path: f.info.Name(),
@@ -129,7 +147,26 @@ func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
 // Flush forces any writes that have been cached in memory to be committed to persistent storage.
 // Returns an error, if any.
 func (f *File) Flush() error {
+	if glog.V(2) {
+		glog.Infof("Syncing file %s\n", f.info.Name())
+	}
+
 	return f.f.Sync()
+}
+
+// Discard marks the address range [off, off+size) as being unused, allowing it to be reclaimed by
+// the device for other purposes.  Both off and size must be multiples of Blocksize().  Returns an
+// error, if any.
+func (f *File) Discard(off, len int64) error {
+	if glog.V(2) {
+		glog.Infof("Discarding data in range [%v, %v)\n", off, off+len)
+	}
+
+	if f.info.Mode()&os.ModeDevice != 0 {
+		return ioctlBlockDiscard(f.f.Fd(), uint64(off), uint64(len))
+	}
+
+	return fallocate(f.f.Fd(), off, len)
 }
 
 // Close calls Flush() and then closes the device, rendering it unusable for I/O.  It returns an error,
@@ -137,6 +174,10 @@ func (f *File) Flush() error {
 func (f *File) Close() error {
 	if err := f.Flush(); err != nil {
 		return err
+	}
+
+	if glog.V(2) {
+		glog.Infof("Closing file %s\n", f.info.Name())
 	}
 
 	return f.f.Close()
