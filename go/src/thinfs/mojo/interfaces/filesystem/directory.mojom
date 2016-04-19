@@ -1,0 +1,131 @@
+// Copyright 2016 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+[DartPackage="fuchsia_filesystem"]
+module fuchsia.filesystem;
+
+import "interfaces/errors.mojom";
+import "interfaces/filesystem/common.mojom";
+import "interfaces/filesystem/file.mojom";
+
+// Used to describe the entries in a Directory.
+enum FileType {
+  // Used to indicate special files like symbolic links.
+  UNKNOWN = 0,
+
+  // A logical array of bytes.
+  REGULAR_FILE = 1,
+
+  // A logical set of files.
+  DIRECTORY = 2,
+};
+
+// DirectoryEntries are returned by calling Read() on a Directory.  |type| may
+// be any of the FileType enums.  The UNKNOWN FileType is used for special files
+// like symbolic links.
+struct DirectoryEntry {
+  FileType type;
+  string name;
+};
+
+// Directory describes the interface to a logical directory on a file system,
+// providing operations such as reading/writing files and creating/deleting
+// files and directories within it.  Operations on a single Directory handle
+// are guaranteed to be performed in the order they were received.
+interface Directory {
+  // Read returns the contents of "this" directory.  The ordering of the returned
+  // contents is not guaranteed to be consistent between multiple invocations of
+  // Read even if the directory was not modified in the interim.
+  Read() => (array<DirectoryEntry>? contents, errors.Error err);
+
+  // ReadTo writes the contents of "this" directory to |src|.  ReadTo may return
+  // before all contents of the directory have been written to |src|.  If any items
+  // are added or removed from the directory while the operation is running, it is
+  // undefined whether the added/removed items will appear in the stream.  However,
+  // items that were present in the directory throughout the lifetime of the operation
+  // are guaranteed to appear in the stream and items that were not present in the
+  // directory at any point in the lifetime of the operation are guaranteed to not
+  // appear in the stream.  Furthermore, the ordering of the contents is not
+  // guaranteed to be the same between multiple invocations of ReadTo even if the
+  // directory was not modified in the interim.  Clients may wish to use this function
+  // to read the contents of very large directories.
+  ReadTo(handle<data_pipe_producer> src) => (errors.Error err);
+
+  // OpenFile opens a file in "this" directory.  |path| must be a utf8 string.
+  // The contents of |path| will first be cleaned according to the following rules:
+  //
+  //     1. Replace multiple slashes with a single slash.
+  //     2. Eliminate each . path name element (the current directory).
+  //     3. Eliminate each inner .. path name element (the parent directory)
+  //        along with the non-.. element that precedes it.
+  //     4. Eliminate .. elements that begin a rooted path:
+  //        that is, replace "/.." by "/" at the beginning of a path.
+  //
+  // The cleaned |path| will then be interpreted as being rooted in "this" directory.
+  // Any cleaned |path|s that begin with "../" will be considered invalid.
+  //
+  // |flags| should be a bitwise-OR of OpenFlags.  If |path| does not exist and
+  // the CREATE flag is provided, the client must have write permission for the
+  // directory.  If both the CREATE and the EXCLUSIVE flags are provided and the
+  // file already exists, OpenFile will return an error.  Additionally, a client
+  // must have write permissions for the directory in order to open a file with
+  // write permissions.
+  OpenFile(string path, File& file, OpenFlags flags) => (errors.Error err);
+
+  // OpenDirectory opens a directory in "this" directory.  See the documentation
+  // for OpenFile for the restrictions on |path| and |flags|.
+  OpenDirectory(string path, Directory& dir, OpenFlags flags) => (errors.Error err);
+
+  // Rename renames the file or directory in |from| to |to|.  Both |from| and |to|
+  // will be interpreted relative to "this" directory.  The operation will fail
+  // if |to| already exists.  The client must have write permissions for the
+  // directory.  See the documentation for OpenFile for the restrictions on the
+  // |from| and |to| paths.
+  Rename(string from, string to) => (errors.Error err);
+
+  // Barrier enforces an ordering constraint on the operations that occur before
+  // or after the barrier that modify the files/directories pointed to by the
+  // entries in |paths|.  All operations issued before the barrier are guaranteed
+  // to persist to stable storage before any operations that are issued after the
+  // barrier.  See OpenFile for the restrictions on the contents of |paths|.  If
+  // |paths| is omitted, the barrier will recursively apply to all the contents of
+  // the directory.  One useful application of Barrier() is for atomically creating
+  // a file with preset contents: create a temporary file, fill it with the contents,
+  // issue a Barrier() call with the path to the temporary file in the arguments, and
+  // finally Rename the temporary file to the real name.  If the file is renamed, then
+  // it is guaranteed that the contents of the file were persisted to stable storage.
+  // This ensures that a power loss will not leave the file system in a state where
+  // the real file exists but does not have any contents.  Clients must have write
+  // permissions to issue a Barrier().
+  Barrier(array<string>? paths) => (errors.Error err);
+
+  // Delete deletes the file or directory pointed to by |path|, which will be
+  // interpreted relative to "this" directory.  Delete will remove the file or
+  // directory from the directory but the disk space will not be freed until the
+  // last open handle pointing to the deleted file or directory is closed.  The client
+  // must have write permission for the directory.  Delete will fail if |path|
+  // points to a non-empty directory.  See the documentation for OpenFile for the
+  // restrictions on |path|.
+  Delete(string path) => (errors.Error err);
+
+  // Clone creates a new handle pointing to "this" directory with the same
+  // permissions as the client's handle.
+  Clone(Directory& dir) => (errors.Error err);
+
+  // Reopen creates a new handle pointing to "this" directory with the provided
+  // flags.  This operation can only be used to reduce the permissions provided
+  // by the handle.  For example, a client cannot use Reopen to create a handle
+  // with read/write access to the directory on a handle with read-only access.
+  Reopen(Directory& dir, OpenFlags flags) => (errors.Error err);
+};
