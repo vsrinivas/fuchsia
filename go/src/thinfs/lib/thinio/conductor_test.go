@@ -59,6 +59,10 @@ func (s sliceDevice) Flush() error {
 	return nil
 }
 
+func (s sliceDevice) Discard(off, len int64) error {
+	return nil
+}
+
 func (s sliceDevice) Close() error {
 	return nil
 }
