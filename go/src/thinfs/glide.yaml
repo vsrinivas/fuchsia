@@ -1,3 +1,6 @@
-package: thinfs
+package: fuchsia.googlesource.com/thinfs
 import:
 - package: github.com/golang/glog
+- package: github.com/pkg/errors
+excludeDirs:
+- mojo
