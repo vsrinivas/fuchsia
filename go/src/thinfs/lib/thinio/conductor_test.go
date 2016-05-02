@@ -16,56 +16,12 @@ package thinio
 
 import (
 	"bytes"
-	"errors"
 	"math/rand"
 	"testing"
 	"time"
+
+	"fuchsia.googlesource.com/thinfs/lib/block/fake"
 )
-
-var (
-	errShortRead  = errors.New("short read")
-	errShortWrite = errors.New("short write")
-)
-
-type sliceDevice []byte
-
-func (s sliceDevice) BlockSize() int64 {
-	return 512
-}
-
-func (s sliceDevice) Size() int64 {
-	return int64(len(s))
-}
-
-func (s sliceDevice) ReadAt(p []byte, off int64) (int, error) {
-	n := copy(p, s[off:])
-	if n < len(p) {
-		return n, errShortRead
-	}
-
-	return n, nil
-}
-
-func (s sliceDevice) WriteAt(p []byte, off int64) (int, error) {
-	n := copy(s[off:], p)
-	if n < len(p) {
-		return n, errShortWrite
-	}
-
-	return n, nil
-}
-
-func (s sliceDevice) Flush() error {
-	return nil
-}
-
-func (s sliceDevice) Discard(off, len int64) error {
-	return nil
-}
-
-func (s sliceDevice) Close() error {
-	return nil
-}
 
 const (
 	cacheSize  = 256 * 1024       // 256K
@@ -84,7 +40,7 @@ func setUp(t *testing.T) (*Conductor, []byte, *rand.Rand) {
 	dev := make([]byte, deviceSize)
 	r.Read(dev)
 
-	c := NewConductor(sliceDevice(dev), cacheSize)
+	c := NewConductor(fake.Device(dev), cacheSize)
 
 	return c, dev, r
 }
