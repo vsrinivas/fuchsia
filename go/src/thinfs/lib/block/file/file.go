@@ -44,9 +44,10 @@ func getSize(f *os.File, info os.FileInfo) int64 {
 
 // New creates and returns a new File, using f as the backing store.  The size of the
 // block device represented by the returned File will be the size of f.  New will
-// not close f if any errors occur.  If there is an error, it will be of type
-// *os.PathError.
-func New(f *os.File, blockSize int64) (*File, error) {
+// not close f if any errors occur.  New will also attempt to detect the block size for
+// f and will use defaultBlockSize if it is unable to do so.  If there is an error, it will
+// be of type *os.PathError.
+func New(f *os.File, defaultBlockSize int64) (*File, error) {
 	info, err := f.Stat()
 	if err != nil {
 		return nil, &os.PathError{
@@ -57,10 +58,18 @@ func New(f *os.File, blockSize int64) (*File, error) {
 	}
 
 	size := getSize(f, info)
+	blockSize := defaultBlockSize
+	if info.Mode()&os.ModeDevice != 0 {
+		if ssz, err := ioctlBlockGetSectorSize(f.Fd()); err == nil {
+			blockSize = ssz
+		}
+	}
+
 	if glog.V(2) {
-		glog.Info("File name: ", info.Name())
-		glog.Info("     size: ", size)
-		glog.Info("     mode: ", info.Mode())
+		glog.Info("File name:      ", info.Name())
+		glog.Info("     size:      ", size)
+		glog.Info("     mode:      ", info.Mode())
+		glog.Info("     blocksize: ", blockSize)
 	}
 
 	return &File{

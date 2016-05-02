@@ -45,6 +45,15 @@ func ioctlBlockDiscard(fd uintptr, off, len uint64) error {
 	return nil
 }
 
+func ioctlBlockGetSectorSize(fd uintptr) (int64, error) {
+	var sectorSize C.int
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, C.BLKSSZGET, uintptr(unsafe.Pointer(&sectorSize))); err != 0 {
+		return 0, err
+	}
+
+	return int64(sectorSize), nil
+}
+
 func fallocate(fd uintptr, off, len int64) error {
 	return syscall.Fallocate(int(fd), C.FALLOC_FL_PUNCH_HOLE|C.FALLOC_FL_KEEP_SIZE, off, len)
 }

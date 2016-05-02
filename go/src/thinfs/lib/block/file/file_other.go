@@ -26,6 +26,10 @@ func ioctlBlockDiscard(fd uintptr, off, size uint64) error {
 	return syscall.EOPNOTSUPP
 }
 
+func ioctlBlockGetSectorSize(fd uintptr) (int64, error) {
+	return 0, syscall.EOPNOTSUPP
+}
+
 func fallocate(fd uintptr, off, len int64) error {
 	return syscall.EOPNOTSUPP
 }
