@@ -16,7 +16,6 @@
 
 package ext2fs
 
-// #cgo pkg-config: com_err ext2fs
 // #include "manager_fuchsia.h"
 // #include <stdlib.h>
 // #include <ext2fs.h>
@@ -29,7 +28,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/lib/block/file"
+	"fuchsia.googlesource.com/thinfs/lib/block"
 	"fuchsia.googlesource.com/thinfs/lib/handle"
 	"fuchsia.googlesource.com/thinfs/lib/thinio"
 	"github.com/golang/glog"
@@ -83,8 +82,9 @@ func fuchsiaOpen(name *C.char, flags C.int, channel *C.io_channel) C.errcode_t {
 		return C.EXT2_ET_BAD_DEVICE_NAME
 	}
 
+	path := C.GoString(name)
 	if glog.V(1) {
-		glog.Infof("Opening file system at %s\n", C.GoString(name))
+		glog.Infof("Opening file system at %s\n", path)
 	}
 
 	var io C.io_channel
@@ -123,30 +123,18 @@ func fuchsiaOpen(name *C.char, flags C.int, channel *C.io_channel) C.errcode_t {
 		return convertError(err)
 	}
 
-	// TODO(chirantan): Eventually this will need to be a real block device.
-	var openFlags int
-	if flags&C.IO_FLAG_RW != 0 {
-		openFlags = os.O_RDWR
-	} else {
-		openFlags = os.O_RDONLY
-	}
-
-	if flags&C.IO_FLAG_EXCLUSIVE != 0 {
-		openFlags |= os.O_EXCL
-	}
-
-	f, err := os.OpenFile(C.GoString(name), openFlags, os.ModePerm)
+	h, err := strconv.ParseInt(path, 0, 64)
 	if err != nil {
-		return handleError(err)
+		handleError(err)
+		return C.EXT2_ET_BAD_DEVICE_NAME
 	}
-
-	dev, err := file.New(f, int64(io.block_size))
+	dev, err := handle.Value(uintptr(h))
 	if err != nil {
-		f.Close()
-		return handleError(err)
+		handleError(err)
+		return C.EXT2_ET_BAD_DEVICE_NAME
 	}
 
-	priv.conductor = thinio.NewConductor(dev, defaultCacheSize)
+	priv.conductor = thinio.NewConductor(dev.(block.Device), defaultCacheSize)
 	*channel = io
 	return 0
 }
