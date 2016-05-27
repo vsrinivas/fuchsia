@@ -15,6 +15,10 @@
 // Package ext2fs provides a cgo wrapper around libext2fs from the e2fsprogs library.
 package ext2fs
 
+//go:generate ./build_libs.sh
+
+// #cgo CFLAGS: -I${SRCDIR}/third_party/e2fsprogs/lib/et -I${SRCDIR}/third_party/e2fsprogs/lib/ext2fs
+// #cgo LDFLAGS: -L${SRCDIR}/third_party/e2fsprogs/lib -lext2fs -lcom_err
 // #include <ext2fs.h>
 // #include <ext2_io.h>
 // #include <stdlib.h>
