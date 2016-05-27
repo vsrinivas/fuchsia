@@ -95,6 +95,7 @@ type Device struct {
 	proxy     *block.Device_Proxy
 	blocksize int64
 	size      int64
+	caps      block.Capabilities
 	err       error
 }
 
@@ -103,7 +104,7 @@ func New(ptr block.Device_Pointer) (*Device, error) {
 	proxy := block.NewDeviceProxy(ptr, bindings.GetAsyncWaiter())
 	blocksize, outErr, err := proxy.BlockSize()
 	if err != nil {
-		return nil, errors.Wrap(err, "proxy error")
+		return nil, errors.Wrap(err, "proxy error while calling BlockSize")
 	}
 
 	if err := convertError(outErr); err != nil {
@@ -112,18 +113,34 @@ func New(ptr block.Device_Pointer) (*Device, error) {
 
 	size, outErr, err := proxy.Size()
 	if err != nil {
-		return nil, errors.Wrap(err, "proxy error")
+		return nil, errors.Wrap(err, "proxy error while calling Size()")
 	}
 
 	if err := convertError(outErr); err != nil {
 		return nil, errors.Wrap(err, "unable to fetch device size")
 	}
 
+	caps, outErr, err := proxy.GetCapabilities()
+	if err != nil {
+		return nil, errors.Wrap(err, "proxy error while calling GetCapabilities")
+	}
+
+	if err := convertError(outErr); err != nil {
+		return nil, errors.Wrap(err, "unable to fetch device capabilities")
+	}
+
 	return &Device{
 		proxy:     proxy,
 		blocksize: blocksize,
 		size:      size,
+		caps:      caps,
 	}, nil
+}
+
+// GetCapabilities returns the capabilities associated with the client's handle
+// to the block device.
+func (d *Device) GetCapabilities() block.Capabilities {
+	return d.caps
 }
 
 // BlockSize implements thinfs/lib/block.Device.BlockSize for Device.
@@ -171,7 +188,7 @@ func (d *Device) ReadAt(p []byte, off int64) (int, error) {
 	}
 
 	if err := convertError(outErr); err != nil {
-		return n, errors.Wrap(err, fmt.Sprintf("unable to read %v bytes from offset %v", len(p), off))
+		return n, errors.Wrapf(err, "unable to read %v bytes from offset %v", len(p), off)
 	}
 
 	return n, nil
@@ -199,7 +216,7 @@ func (d *Device) WriteAt(p []byte, off int64) (int, error) {
 	}
 
 	if err := convertError(outErr); err != nil {
-		return n, errors.Wrap(err, fmt.Sprintf("unable to write %v bytes to offset %v", len(p), off))
+		return n, errors.Wrapf(err, "unable to write %v bytes to offset %v", len(p), off)
 	}
 
 	return n, nil
@@ -246,7 +263,7 @@ func (d *Device) Discard(off, len int64) error {
 	}
 
 	if err := convertError(outErr); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("unable to discard %v bytes from offset %v", len, off))
+		return errors.Wrapf(err, "unable to discard %v bytes from offset %v", len, off)
 	}
 
 	return nil
