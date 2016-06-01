@@ -91,13 +91,13 @@ size_t cbuf_write_etc(cbuf_t *cbuf, const void *_buf, size_t len, uint32_t flags
         pos += write_len;
     }
 
+    int signalled = 0;
     if (cbuf->head != cbuf->tail)
-        event_signal(&cbuf->event, false);
+        signalled = event_signal(&cbuf->event, false);
 
     spin_unlock_irqrestore(&cbuf->lock, state);
 
-    // XXX convert to only rescheduling if
-    if (flags & CBUF_WRITE_FLAG_CANRESCHEDULE)
+    if ((flags & CBUF_WRITE_FLAG_CANRESCHEDULE) && (signalled > 0))
         thread_preempt();
 
     return pos;
@@ -206,6 +206,7 @@ size_t cbuf_write_char(cbuf_t *cbuf, char c, bool canreschedule)
     spin_lock_irqsave(&cbuf->lock, state);
 
     size_t ret = 0;
+    int signalled = 0;
     if (cbuf_space_avail(cbuf) > 0) {
         cbuf->buf[cbuf->head] = c;
 
@@ -213,10 +214,13 @@ size_t cbuf_write_char(cbuf_t *cbuf, char c, bool canreschedule)
         ret = 1;
 
         if (cbuf->head != cbuf->tail)
-            event_signal(&cbuf->event, canreschedule);
+            signalled = event_signal(&cbuf->event, false);
     }
 
     spin_unlock_irqrestore(&cbuf->lock, state);
+
+    if (canreschedule && (signalled > 0))
+        thread_preempt();
 
     return ret;
 }
