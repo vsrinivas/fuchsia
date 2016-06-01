@@ -4,26 +4,30 @@
 
 #include "mojo/services/network/network_service_delegate.h"
 
-#include "mojo/public/cpp/application/application_connection.h"
+#include "mojo/public/cpp/application/service_provider_impl.h"
 
 NetworkServiceDelegate::NetworkServiceDelegate() {}
 
 NetworkServiceDelegate::~NetworkServiceDelegate() {}
 
-void NetworkServiceDelegate::Initialize(mojo::ApplicationImpl* app) {
+void NetworkServiceDelegate::OnInitialize() {
 }
 
-bool NetworkServiceDelegate::ConfigureIncomingConnection(
-    mojo::ApplicationConnection* connection) {
-  connection->AddService(this);
+bool NetworkServiceDelegate::OnAcceptConnection(
+    mojo::ServiceProviderImpl* service_provider_impl) {
+  service_provider_impl->AddService<mojo::NetworkService>(
+      [this](const mojo::ConnectionContext& connection_context,
+             mojo::InterfaceRequest<mojo::NetworkService> request) {
+        new mojo::NetworkServiceImpl(request.Pass());
+      });
   return true;
 }
 
-void NetworkServiceDelegate::Quit() {
+void NetworkServiceDelegate::OnQuit() {
 }
 
 void NetworkServiceDelegate::Create(
-    mojo::ApplicationConnection* connection,
+    const mojo::ConnectionContext& connection,
     mojo::InterfaceRequest<mojo::NetworkService> request) {
-  new mojo::NetworkServiceImpl(request.Pass(), connection);
+  new mojo::NetworkServiceImpl(request.Pass());
 }

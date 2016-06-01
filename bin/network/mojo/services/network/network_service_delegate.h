@@ -6,28 +6,25 @@
 #define MOJO_SERVICES_NETWORK_NETWORK_SERVICE_DELEGATE_H_
 
 #include "mojo/services/network/network_service_impl.h"
-#include "mojo/public/cpp/application/application_delegate.h"
-#include "mojo/public/cpp/application/application_impl.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
-#include "mojo/public/cpp/application/interface_factory.h"
+#include "mojo/public/cpp/application/application_impl_base.h"
+#include "mojo/public/cpp/application/connection_context.h"
 
-class NetworkServiceDelegate
-    : public mojo::ApplicationDelegate,
-      public mojo::InterfaceFactory<mojo::NetworkService> {
+class NetworkServiceDelegate : public mojo::ApplicationImplBase {
  public:
   NetworkServiceDelegate();
   ~NetworkServiceDelegate() override;
 
  private:
-  // mojo::ApplicationDelegate implementation.
-  void Initialize(mojo::ApplicationImpl* app) override;
-  bool ConfigureIncomingConnection(
-      mojo::ApplicationConnection* connection) override;
-  void Quit() override;
+  // mojo::ApplicationImplBase implementation.
+  void OnInitialize() override;
+  bool OnAcceptConnection(
+      mojo::ServiceProviderImpl* service_provider_impl) override;
+  void OnQuit() override;
 
-  // mojo::InterfaceFactory<mojo::NetworkService> implementation.
-  void Create(mojo::ApplicationConnection* connection,
-              mojo::InterfaceRequest<mojo::NetworkService> request) override;
+  // Creates a content handler for the given connection (context and request).
+  void Create(const mojo::ConnectionContext& connection,
+              mojo::InterfaceRequest<mojo::NetworkService> request);
 
   DISALLOW_COPY_AND_ASSIGN(NetworkServiceDelegate);
 };

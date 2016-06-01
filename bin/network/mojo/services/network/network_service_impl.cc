@@ -9,12 +9,11 @@
 #include "mojo/services/network/net_adapters.h"
 
 #include "mojo/services/network/url_loader_impl.h"
-#include "mojo/public/cpp/application/application_connection.h"
+#include "mojo/public/cpp/application/service_provider_impl.h"
 
 namespace mojo {
 
-NetworkServiceImpl::NetworkServiceImpl(InterfaceRequest<NetworkService> request,
-                                       ApplicationConnection* connection)
+NetworkServiceImpl::NetworkServiceImpl(InterfaceRequest<NetworkService> request)
     : binding_(this, request.Pass()) {
 }
 

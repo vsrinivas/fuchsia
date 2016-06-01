@@ -16,8 +16,7 @@ class ApplicationConnection;
 
 class NetworkServiceImpl : public NetworkService {
  public:
-  NetworkServiceImpl(InterfaceRequest<NetworkService> request,
-                     ApplicationConnection* connection);
+  NetworkServiceImpl(InterfaceRequest<NetworkService> request);
   ~NetworkServiceImpl() override;
 
   // NetworkService methods:

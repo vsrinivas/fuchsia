@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include "mojo/public/c/system/main.h"
-#include "mojo/public/cpp/application/application_connection.h"
-#include "mojo/public/cpp/application/application_runner.h"
+#include "mojo/public/cpp/application/service_provider_impl.h"
+#include "mojo/public/cpp/application/run_application.h"
 
 #include "network_service_delegate.h"
 
 MojoResult MojoMain(MojoHandle shell_handle) {
-  mojo::ApplicationRunner runner(
-      std::unique_ptr<NetworkServiceDelegate>(new NetworkServiceDelegate()));
-  return runner.Run(shell_handle);
+  NetworkServiceDelegate network_service_delegate;
+  return mojo::RunApplication(shell_handle, &network_service_delegate);
 }
