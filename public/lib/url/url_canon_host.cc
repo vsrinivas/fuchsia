@@ -34,7 +34,7 @@ namespace {
 // NOTE: I didn't actually test all the control characters. Some may be
 // disallowed in the input, but they are all accepted escaped except for 0.
 // I also didn't test if characters affecting HTML parsing are allowed
-// unescaped, eg. (") or (#), which would indicate the beginning of the path.
+// unescaped, e.g. (") or (#), which would indicate the beginning of the path.
 // Surprisingly, space is accepted in the input and always escaped.
 
 // This table lists the canonical version of all characters we allow in the
@@ -316,11 +316,11 @@ void DoHost(const CHAR* spec,
   }
 
   if (!success) {
-    // Canonicalization failed.  Set BROKEN to notify the caller.
+    // Canonicalization failed. Set BROKEN to notify the caller.
     host_info->family = CanonHostInfo::BROKEN;
   } else {
     // After all the other canonicalization, check if we ended up with an IP
-    // address.  IP addresses are small, so writing into this temporary buffer
+    // address. IP addresses are small, so writing into this temporary buffer
     // should not cause an allocation.
     RawCanonOutput<64> canon_ip;
     CanonicalizeIPAddress(output->data(),
@@ -328,7 +328,7 @@ void DoHost(const CHAR* spec,
                           &canon_ip, host_info);
 
     // If we got an IPv4/IPv6 address, copy the canonical form back to the
-    // real buffer.  Otherwise, it's a hostname or broken IP, in which case
+    // real buffer. Otherwise, it's a hostname or broken IP, in which case
     // we just leave it in place.
     if (host_info->IsIPAddress()) {
       output->set_length(output_begin);

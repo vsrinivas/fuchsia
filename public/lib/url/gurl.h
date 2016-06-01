@@ -10,11 +10,12 @@
 
 #include "base/memory/scoped_ptr.h"
 #include "base/strings/string16.h"
+#include "base/strings/string_piece.h"
+#include "url/third_party/mozilla/url_parse.h"
 #include "url/url_canon.h"
 #include "url/url_canon_stdstring.h"
 #include "url/url_constants.h"
 #include "url/url_export.h"
-#include "url/url_parse.h"
 
 class URL_EXPORT GURL {
  public:
@@ -91,7 +92,7 @@ class URL_EXPORT GURL {
 
   // Returns the potentially invalid spec for a the URL. This spec MUST NOT be
   // modified or sent over the network. It is designed to be displayed in error
-  // messages to the user, as the apperance of the spec may explain the error.
+  // messages to the user, as the appearance of the spec may explain the error.
   // If the spec is valid, the valid spec will be returned.
   //
   // The returned string is guaranteed to be valid UTF-8.
@@ -124,9 +125,8 @@ class URL_EXPORT GURL {
   // pages.
   //
   // It may be impossible to resolve the URLs properly. If the input is not
-  // "standard" (SchemeIsStandard() == false) and the input looks relative, we
-  // can't resolve it. In these cases, the result will be an empty, invalid
-  // GURL.
+  // "standard" (IsStandard() == false) and the input looks relative, we can't
+  // resolve it. In these cases, the result will be an empty, invalid GURL.
   //
   // The result may also be a nonempty, invalid URL if the input has some kind
   // of encoding error. In these cases, we will try to construct a "good" URL
@@ -136,20 +136,6 @@ class URL_EXPORT GURL {
   // will be the empty URL.
   GURL Resolve(const std::string& relative) const;
   GURL Resolve(const base::string16& relative) const;
-
-  // Like Resolve() above but takes a character set encoder which will be used
-  // for any query text specified in the input. The charset converter parameter
-  // may be NULL, in which case it will be treated as UTF-8.
-  //
-  // TODO(brettw): These should be replaced with versions that take something
-  // more friendly than a raw CharsetConverter (maybe like an ICU character set
-  // name).
-  GURL ResolveWithCharsetConverter(
-      const std::string& relative,
-      url::CharsetConverter* charset_converter) const;
-  GURL ResolveWithCharsetConverter(
-      const base::string16& relative,
-      url::CharsetConverter* charset_converter) const;
 
   // Creates a new GURL by replacing the current URL's components with the
   // supplied versions. See the Replacements class in url_canon.h for more.
@@ -194,10 +180,11 @@ class URL_EXPORT GURL {
   // returned.
   GURL GetAsReferrer() const;
 
-  // Returns true if the scheme for the current URL is a known "standard"
-  // scheme. Standard schemes have an authority and a path section. This
-  // includes file: and filesystem:, which some callers may want to filter out
-  // explicitly by calling SchemeIsFile[System].
+  // Returns true if the scheme for the current URL is a known "standard-format"
+  // scheme. A standard-format scheme adheres to what RFC 3986 calls "generic
+  // URI syntax" (https://tools.ietf.org/html/rfc3986#section-3). This includes
+  // file: and filesystem:, which some callers may want to filter out explicitly
+  // by calling SchemeIsFile[System].
   bool IsStandard() const;
 
   // Returns true if the given parameter (should be lower-case ASCII to match
@@ -223,10 +210,32 @@ class URL_EXPORT GURL {
     return SchemeIs(url::kFileSystemScheme);
   }
 
-  // If the scheme indicates a secure connection
+  // Returns true if the scheme indicates a secure connection.
+  //
+  // NOTE: This function is deprecated. You probably want
+  // |SchemeIsCryptographic| (if you just want to know if a scheme uses TLS for
+  // network transport) or Chromium's |IsOriginSecure| for a higher-level test
+  // about an origin's security. See those functions' documentation for more
+  // detail.
+  //
+  // TODO(palmer): Audit callers and change them to |SchemeIsCryptographic| or
+  // |IsOriginSecure|, as appropriate. Then remove |SchemeIsSecure|.
+  // crbug.com/362214
   bool SchemeIsSecure() const {
     return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme) ||
-        (SchemeIsFileSystem() && inner_url() && inner_url()->SchemeIsSecure());
+           (SchemeIsFileSystem() && inner_url() &&
+            inner_url()->SchemeIsSecure());
+  }
+
+  // Returns true if the scheme indicates a network connection that uses TLS or
+  // some other cryptographic protocol (e.g. QUIC) for security.
+  //
+  // This function is a not a complete test of whether or not an origin's code
+  // is minimally trustworthy. For that, see Chromium's |IsOriginSecure| for a
+  // higher-level and more complete semantics. See that function's documentation
+  // for more detail.
+  bool SchemeIsCryptographic() const {
+    return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme);
   }
 
   // Returns true if the scheme is "blob".
@@ -235,13 +244,12 @@ class URL_EXPORT GURL {
   }
 
   // The "content" of the URL is everything after the scheme (skipping the
-  // scheme delimiting colon). It is an error to get the origin of an invalid
-  // URL. The result will be an empty string.
+  // scheme delimiting colon). It is an error to get the content of an invalid
+  // URL: the result will be an empty string.
   std::string GetContent() const;
 
   // Returns true if the hostname is an IP address. Note: this function isn't
   // as cheap as a simple getter because it re-parses the hostname to verify.
-  // This currently identifies only IPv4 addresses (bug 822685).
   bool HostIsIPAddress() const;
 
   // Getters for various components of the URL. The returned string will be
@@ -274,8 +282,8 @@ class URL_EXPORT GURL {
     return ComponentString(parsed_.ref);
   }
 
-  // Existance querying. These functions will return true if the corresponding
-  // URL component exists in this URL. Note that existance is different than
+  // Existence querying. These functions will return true if the corresponding
+  // URL component exists in this URL. Note that existence is different than
   // being nonempty. http://www.google.com/? has a query that just happens to
   // be empty, and has_query() will return true.
   bool has_scheme() const {
@@ -288,7 +296,7 @@ class URL_EXPORT GURL {
     return parsed_.password.len >= 0;
   }
   bool has_host() const {
-    // Note that hosts are special, absense of host means length 0.
+    // Note that hosts are special, absence of host means length 0.
     return parsed_.host.len > 0;
   }
   bool has_port() const {
@@ -310,7 +318,7 @@ class URL_EXPORT GURL {
   // values defined in Parsed for ExtractPort.
   int IntPort() const;
 
-  // Returns the port number of the url, or the default port number.
+  // Returns the port number of the URL, or the default port number.
   // If the scheme has no concept of port (or unknown default) returns
   // PORT_UNSPECIFIED.
   int EffectiveIntPort() const;
@@ -324,29 +332,21 @@ class URL_EXPORT GURL {
   std::string PathForRequest() const;
 
   // Returns the host, excluding the square brackets surrounding IPv6 address
-  // literals.  This can be useful for passing to getaddrinfo().
+  // literals. This can be useful for passing to getaddrinfo().
   std::string HostNoBrackets() const;
 
   // Returns true if this URL's host matches or is in the same domain as
-  // the given input string. For example if this URL was "www.google.com",
-  // this would match "com", "google.com", and "www.google.com
-  // (input domain should be lower-case ASCII to match the canonicalized
-  // scheme). This call is more efficient than getting the host and check
+  // the given input string. For example, if the hostname of the URL is
+  // "www.google.com", this will return true for "com", "google.com", and
+  // "www.google.com".
+  //
+  // The input domain should be lower-case ASCII to match the canonicalized
+  // scheme. This call is more efficient than getting the host and check
   // whether host has the specific domain or not because no copies or
   // object constructions are done.
-  //
-  // If function DomainIs has parameter domain_len, which means the parameter
-  // lower_ascii_domain does not gurantee to terminate with NULL character.
-  bool DomainIs(const char* lower_ascii_domain, int domain_len) const;
+  bool DomainIs(base::StringPiece lower_ascii_domain) const;
 
-  // If function DomainIs only has parameter lower_ascii_domain, which means
-  // domain string should be terminate with NULL character.
-  bool DomainIs(const char* lower_ascii_domain) const {
-    return DomainIs(lower_ascii_domain,
-                    static_cast<int>(strlen(lower_ascii_domain)));
-  }
-
-  // Swaps the contents of this GURL object with the argument without doing
+  // Swaps the contents of this GURL object with |other|, without doing
   // any memory allocations.
   void Swap(GURL* other);
 
@@ -363,8 +363,8 @@ class URL_EXPORT GURL {
 
  private:
   // Variant of the string parsing constructor that allows the caller to elect
-  // retain trailing whitespace, if any, on the passed URL spec but only  if the
-  // scheme is one that allows trailing whitespace. The primary use-case is
+  // retain trailing whitespace, if any, on the passed URL spec, but only if
+  // the scheme is one that allows trailing whitespace. The primary use-case is
   // for data: URLs. In most cases, you want to use the single parameter
   // constructor above.
   enum RetainWhiteSpaceSelector { RETAIN_TRAILING_PATH_WHITEPACE };

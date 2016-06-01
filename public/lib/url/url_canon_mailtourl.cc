@@ -55,7 +55,7 @@ bool DoCanonicalizeMailtoURL(const URLComponentSource<CHAR>& source,
     new_parsed->path.reset();
   }
 
-  // Query -- always use the default utf8 charset converter.
+  // Query -- always use the default UTF8 charset converter.
   CanonicalizeQuery(source.query, parsed.query, NULL,
                     output, &new_parsed->query);
 

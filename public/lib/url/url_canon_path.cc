@@ -173,7 +173,7 @@ void BackUpToPreviousSlash(int path_begin_in_output,
 // copied to the output.
 //
 // We do not collapse multiple slashes in a row to a single slash. It seems
-// no web browsers do this, and we don't want incompababilities, even though
+// no web browsers do this, and we don't want incompatibilities, even though
 // it would be correct for most systems.
 template<typename CHAR, typename UCHAR>
 bool DoPartialPath(const CHAR* spec,
@@ -200,7 +200,7 @@ bool DoPartialPath(const CHAR* spec,
         // Needs special handling of some sort.
         int dotlen;
         if ((dotlen = IsDot(spec, i, end)) > 0) {
-          // See if this dot was preceeded by a slash in the output. We
+          // See if this dot was preceded by a slash in the output. We
           // assume that when canonicalizing paths, they will always
           // start with a slash and not a dot, so we don't have to
           // bounds check the output.
@@ -230,7 +230,7 @@ bool DoPartialPath(const CHAR* spec,
                 break;
             }
           } else {
-            // This dot is not preceeded by a slash, it is just part of some
+            // This dot is not preceded by a slash, it is just part of some
             // file name.
             output->push_back('.');
             i += dotlen - 1;

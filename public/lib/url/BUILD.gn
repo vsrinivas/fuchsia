@@ -24,6 +24,8 @@ component("url") {
     "gurl.h",
     "origin.cc",
     "origin.h",
+    "scheme_host_port.cc",
+    "scheme_host_port.h",
     "third_party/mozilla/url_parse.cc",
     "third_party/mozilla/url_parse.h",
     "url_canon.h",
@@ -91,10 +93,20 @@ component("url") {
 
 # TODO(dpranke): crbug.com/360936. Get this to build and run on Android.
 if (!is_android) {
+  # TODO(GYP): Delete this after we've converted everything to GN.
+  # The _run targets exist only for compatibility w/ GYP.
+  group("url_unittests_run") {
+    testonly = true
+    deps = [
+      ":url_unittests",
+    ]
+  }
+
   test("url_unittests") {
     sources = [
       "gurl_unittest.cc",
       "origin_unittest.cc",
+      "scheme_host_port_unittest.cc",
       "url_canon_icu_unittest.cc",
       "url_canon_unittest.cc",
       "url_parse_unittest.cc",

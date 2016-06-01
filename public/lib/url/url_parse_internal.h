@@ -7,11 +7,11 @@
 
 // Contains common inline helper functions used by the URL parsing routines.
 
-#include "url/url_parse.h"
+#include "url/third_party/mozilla/url_parse.h"
 
 namespace url {
 
-// We treat slashes and backslashes the same for IE compatability.
+// We treat slashes and backslashes the same for IE compatibility.
 inline bool IsURLSlash(base::char16 ch) {
   return ch == '/' || ch == '\\';
 }

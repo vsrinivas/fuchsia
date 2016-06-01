@@ -19,7 +19,7 @@ namespace url {
 namespace test_utils {
 
 // Converts a UTF-16 string from native wchar_t format to char16, by
-// truncating the high 32 bits.  This is not meant to handle true UTF-32
+// truncating the high 32 bits. This is not meant to handle true UTF-32
 // encoded strings.
 inline base::string16 WStringToUTF16(const wchar_t* src) {
   base::string16 str;
@@ -30,7 +30,7 @@ inline base::string16 WStringToUTF16(const wchar_t* src) {
   return str;
 }
 
-// Converts a string from UTF-8 to UTF-16
+// Converts a string from UTF-8 to UTF-16.
 inline base::string16 ConvertUTF8ToUTF16(const std::string& src) {
   int length = static_cast<int>(src.length());
   EXPECT_LT(length, 1024);
@@ -39,7 +39,7 @@ inline base::string16 ConvertUTF8ToUTF16(const std::string& src) {
   return base::string16(output.data(), output.length());
 }
 
-// Converts a string from UTF-16 to UTF-8
+// Converts a string from UTF-16 to UTF-8.
 inline std::string ConvertUTF16ToUTF8(const base::string16& src) {
   std::string str;
   StdStringCanonOutput output(&str);

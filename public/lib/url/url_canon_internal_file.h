@@ -113,15 +113,15 @@ static bool DoCanonicalizeFileURL(const URLComponentSource<CHAR>& source,
   new_parsed->path.begin = output->length();
   output->push_back('/');
 
-  // Copies and normalizes the "c:" at the beginning, if present.
+  // Copy and normalize the "c:" at the beginning, if present.
   int after_drive = FileDoDriveSpec(source.path, parsed.path.begin,
                                     parsed.path.end(), output);
 
-  // Copies the rest of the path
+  // Copy the rest of the path.
   FileDoPath<CHAR, UCHAR>(source.path, after_drive, parsed.path.end(), output);
   new_parsed->path.len = output->length() - new_parsed->path.begin;
 
-  // Things following the path we can use the standard canonicalizers for.
+  // For things following the path, we can use the standard canonicalizers.
   success &= URLCanonInternal<CHAR, UCHAR>::DoQuery(
       source.query, parsed.query, output, &new_parsed->query);
   success &= URLCanonInternal<CHAR, UCHAR>::DoRef(

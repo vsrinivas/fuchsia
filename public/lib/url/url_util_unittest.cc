@@ -4,9 +4,9 @@
 
 #include "base/macros.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "url/third_party/mozilla/url_parse.h"
 #include "url/url_canon.h"
 #include "url/url_canon_stdstring.h"
-#include "url/url_parse.h"
 #include "url/url_test_utils.h"
 #include "url/url_util.h"
 
@@ -44,7 +44,7 @@ TEST(URLUtilTest, FindAndCompareScheme) {
   EXPECT_FALSE(FindAndCompareScheme("", 0, "", &found_scheme));
   EXPECT_TRUE(found_scheme == Component());
 
-  // When there is a whitespace char in scheme, it should canonicalize the url
+  // When there is a whitespace char in scheme, it should canonicalize the URL
   // before comparison.
   const char whtspc_str[] = " \r\n\tjav\ra\nscri\tpt:alert(1)";
   EXPECT_TRUE(FindAndCompareScheme(whtspc_str,
@@ -305,8 +305,8 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
 }
 
 TEST(URLUtilTest, TestNoRefComponent) {
-  // The hash-mark must be ignored when mailto: scheme is
-  // parsed, even if the url has a base and relative part.
+  // The hash-mark must be ignored when mailto: scheme is parsed,
+  // even if the URL has a base and relative part.
   const char* base = "mailto://to/";
   const char* rel = "any#body";
 

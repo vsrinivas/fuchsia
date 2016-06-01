@@ -95,9 +95,9 @@ bool DoScheme(const CHAR* spec,
   // The output scheme starts from the current position.
   out_scheme->begin = output->length();
 
-  // Danger: it's important that this code does not strip any characters: it
-  // only emits the canonical version (be it valid or escaped) of each of
-  // the input characters. Stripping would put it out of sync with
+  // Danger: it's important that this code does not strip any characters;
+  // it only emits the canonical version (be it valid or escaped) for each
+  // of the input characters. Stripping would put it out of sync with
   // FindAndCompareScheme, which could cause some security checks on
   // schemes to be incorrect.
   bool success = true;
@@ -218,7 +218,7 @@ bool DoPort(const CHAR* spec,
   char buf[buf_size];
   WritePortInt(buf, buf_size, port_num);
 
-  // Append the port number to the output, preceeded by a colon.
+  // Append the port number to the output, preceded by a colon.
   output->push_back(':');
   out_port->begin = output->length();
   for (int i = 0; i < buf_size && buf[i]; i++)

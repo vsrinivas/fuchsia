@@ -17,14 +17,14 @@ namespace url {
 namespace {
 
 // Firefox does a case-sensitive compare (which is probably wrong--Mozilla bug
-// 379034), whereas IE is case-insensetive.
+// 379034), whereas IE is case-insensitive.
 //
 // We choose to be more permissive like IE. We don't need to worry about
 // unescaping or anything here: neither IE or Firefox allow this. We also
 // don't have to worry about invalid scheme characters since we are comparing
 // against the canonical scheme of the base.
 //
-// The base URL should always be canonical, therefore is ASCII.
+// The base URL should always be canonical, therefore it should be ASCII.
 template<typename CHAR>
 bool AreSchemesEqual(const char* base,
                      const Component& base_scheme,
@@ -82,7 +82,7 @@ bool DoIsRelativeURL(const char* base,
 
 #ifdef WIN32
   // We special case paths like "C:\foo" so they can link directly to the
-  // file on Windows (IE compatability). The security domain stuff should
+  // file on Windows (IE compatibility). The security domain stuff should
   // prevent a link like this from actually being followed if its on a
   // web page.
   //
@@ -91,22 +91,22 @@ bool DoIsRelativeURL(const char* base,
   // is a file and the answer will still be correct.
   //
   // We require strict backslashes when detecting UNC since two forward
-  // shashes should be treated a a relative URL with a hostname.
+  // slashes should be treated a a relative URL with a hostname.
   if (DoesBeginWindowsDriveSpec(url, begin, url_len) ||
       DoesBeginUNCPath(url, begin, url_len, true))
     return true;
 #endif  // WIN32
 
   // See if we've got a scheme, if not, we know this is a relative URL.
-  // BUT: Just because we have a scheme, doesn't make it absolute.
+  // BUT, just because we have a scheme, doesn't make it absolute.
   // "http:foo.html" is a relative URL with path "foo.html". If the scheme is
-  // empty, we treat it as relative (":foo") like IE does.
+  // empty, we treat it as relative (":foo"), like IE does.
   Component scheme;
   const bool scheme_is_empty =
       !ExtractScheme(url, url_len, &scheme) || scheme.len == 0;
   if (scheme_is_empty) {
     if (url[begin] == '#') {
-      // |url| is a bare fragement (e.g. "#foo"). This can be resolved against
+      // |url| is a bare fragment (e.g. "#foo"). This can be resolved against
       // any base. Fall-through.
     } else if (!is_base_hierarchical) {
       // Don't allow relative URLs if the base scheme doesn't support it.
@@ -145,7 +145,7 @@ bool DoIsRelativeURL(const char* base,
   int colon_offset = scheme.end();
 
   // If it's a filesystem URL, the only valid way to make it relative is not to
-  // supply a scheme.  There's no equivalent to e.g. http:index.html.
+  // supply a scheme. There's no equivalent to e.g. http:index.html.
   if (CompareSchemeComponent(url, scheme, kFileSystemScheme))
     return true;
 
@@ -394,7 +394,7 @@ bool DoResolveRelativeHost(const char* base_url,
                             query_converter, output, out_parsed);
 }
 
-// Resolves a relative URL that happens to be an absolute file path.  Examples
+// Resolves a relative URL that happens to be an absolute file path. Examples
 // include: "//hostname/path", "/c:/foo", and "//hostname/c:/foo".
 template<typename CHAR>
 bool DoResolveAbsoluteFile(const CHAR* relative_url,
@@ -460,7 +460,7 @@ bool DoResolveRelativeURL(const char* base_url,
   // how strict the UNC finder is).
   //
   // We also allow Windows absolute drive specs on any scheme (for example
-  // "c:\foo") like IE does. There must be no preceeding slashes in this
+  // "c:\foo") like IE does. There must be no preceding slashes in this
   // case (we reject anything like "/c:/foo") because that should be treated
   // as a path. For file URLs, we allow any number of slashes since that would
   // be setting the path.

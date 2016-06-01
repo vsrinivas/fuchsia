@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "url/url_parse.h"
+#include "url/third_party/mozilla/url_parse.h"
 
 #include "base/macros.h"
 #include "testing/gtest/include/gtest/gtest.h"
-#include "url/url_parse.h"
+#include "url/third_party/mozilla/url_parse.h"
 
 // Interesting IE file:isms...
 //
@@ -90,13 +90,13 @@ struct FileSystemURLParseCase {
 bool ComponentMatches(const char* input,
                       const char* reference,
                       const Component& component) {
-  // If the component is nonexistant (length == -1), it should begin at 0.
+  // If the component is nonexistent (length == -1), it should begin at 0.
   EXPECT_TRUE(component.len >= 0 || component.len == -1);
 
   // Begin should be valid.
   EXPECT_LE(0, component.begin);
 
-  // A NULL reference means the component should be nonexistant.
+  // A NULL reference means the component should be nonexistent.
   if (!reference)
     return component.len == -1;
   if (component.len < 0)
@@ -345,7 +345,7 @@ static PathURLParseCase path_cases[] = {
 
 TEST(URLParser, PathURL) {
   // Declared outside for loop to try to catch cases in init() where we forget
-  // to reset something that is reset by the construtor.
+  // to reset something that is reset by the constructor.
   Parsed parsed;
   for (size_t i = 0; i < arraysize(path_cases); i++) {
     const char* url = path_cases[i].input;
@@ -356,7 +356,7 @@ TEST(URLParser, PathURL) {
     EXPECT_TRUE(ComponentMatches(url, path_cases[i].path, parsed.GetContent()))
         << i;
 
-    // The remaining components are never used for path urls.
+    // The remaining components are never used for path URLs.
     ExpectInvalidComponent(parsed.username);
     ExpectInvalidComponent(parsed.password);
     ExpectInvalidComponent(parsed.host);
@@ -537,7 +537,7 @@ static bool NthParameterIs(const char* url,
     Component key, value;
     if (!ExtractQueryKeyValue(url, &query, &key, &value)) {
       if (parameter >= i && !expected_key)
-        return true;  // Expected nonexistant key, got one.
+        return true;  // Expected nonexistent key, got one.
       return false;  // Not enough keys.
     }
 
@@ -613,7 +613,7 @@ static MailtoURLParseCase mailto_cases[] = {
 
 TEST(URLParser, MailtoUrl) {
   // Declared outside for loop to try to catch cases in init() where we forget
-  // to reset something that is reset by the construtor.
+  // to reset something that is reset by the constructor.
   Parsed parsed;
   for (size_t i = 0; i < arraysize(mailto_cases); ++i) {
     const char* url = mailto_cases[i].input;
@@ -625,7 +625,7 @@ TEST(URLParser, MailtoUrl) {
     EXPECT_TRUE(ComponentMatches(url, mailto_cases[i].query, parsed.query));
     EXPECT_EQ(PORT_UNSPECIFIED, port);
 
-    // The remaining components are never used for mailto urls.
+    // The remaining components are never used for mailto URLs.
     ExpectInvalidComponent(parsed.username);
     ExpectInvalidComponent(parsed.password);
     ExpectInvalidComponent(parsed.port);
@@ -645,7 +645,7 @@ static FileSystemURLParseCase filesystem_cases[] = {
 
 TEST(URLParser, FileSystemURL) {
   // Declared outside for loop to try to catch cases in init() where we forget
-  // to reset something that is reset by the construtor.
+  // to reset something that is reset by the constructor.
   Parsed parsed;
   for (size_t i = 0; i < arraysize(filesystem_cases); i++) {
     const FileSystemURLParseCase* parsecase = &filesystem_cases[i];
@@ -667,7 +667,7 @@ TEST(URLParser, FileSystemURL) {
       int port = ParsePort(url, parsed.inner_parsed()->port);
       EXPECT_EQ(parsecase->inner_port, port);
 
-      // The remaining components are never used for filesystem urls.
+      // The remaining components are never used for filesystem URLs.
       ExpectInvalidComponent(parsed.inner_parsed()->query);
       ExpectInvalidComponent(parsed.inner_parsed()->ref);
     }
@@ -676,7 +676,7 @@ TEST(URLParser, FileSystemURL) {
     EXPECT_TRUE(ComponentMatches(url, parsecase->query, parsed.query));
     EXPECT_TRUE(ComponentMatches(url, parsecase->ref, parsed.ref));
 
-    // The remaining components are never used for filesystem urls.
+    // The remaining components are never used for filesystem URLs.
     ExpectInvalidComponent(parsed.username);
     ExpectInvalidComponent(parsed.password);
     ExpectInvalidComponent(parsed.host);

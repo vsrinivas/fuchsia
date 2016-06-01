@@ -45,14 +45,15 @@ TEST(GURLTest, Types) {
   EXPECT_EQ("something:///HOSTNAME.com/",
             TypesTestCase("something:///HOSTNAME.com/"));
 
-  // In the reverse, known schemes should always trigger standard URL handling.
+  // Conversely, URLs with known schemes should always trigger standard URL
+  // handling.
   EXPECT_EQ("http://hostname.com/", TypesTestCase("http:HOSTNAME.com"));
   EXPECT_EQ("http://hostname.com/", TypesTestCase("http:/HOSTNAME.com"));
   EXPECT_EQ("http://hostname.com/", TypesTestCase("http://HOSTNAME.com"));
   EXPECT_EQ("http://hostname.com/", TypesTestCase("http:///HOSTNAME.com"));
 
 #ifdef WIN32
-  // URLs that look like absolute Windows drive specs.
+  // URLs that look like Windows absolute path specs.
   EXPECT_EQ("file:///C:/foo.txt", TypesTestCase("c:\\foo.txt"));
   EXPECT_EQ("file:///Z:/foo.txt", TypesTestCase("Z|foo.txt"));
   EXPECT_EQ("file://server/foo.txt", TypesTestCase("\\\\server\\foo.txt"));
@@ -60,7 +61,7 @@ TEST(GURLTest, Types) {
 #endif
 }
 
-// Test the basic creation and querying of components in a GURL. We assume
+// Test the basic creation and querying of components in a GURL. We assume that
 // the parser is already tested and works, so we are mostly interested if the
 // object does the right thing with the results.
 TEST(GURLTest, Components) {
@@ -175,7 +176,7 @@ TEST(GURLTest, Assign) {
   EXPECT_EQ("", invalid2.ref());
 }
 
-// This is a regression test for http://crbug.com/309975 .
+// This is a regression test for http://crbug.com/309975.
 TEST(GURLTest, SelfAssign) {
   GURL a("filesystem:http://example.com/temporary/");
   // This should not crash.
@@ -245,9 +246,9 @@ TEST(GURLTest, IsValid) {
 }
 
 TEST(GURLTest, ExtraSlashesBeforeAuthority) {
-  // According to RFC3986, the hier-part for URI with an authority must use only
-  // two slashes, GURL intentionally just ignores slashes more than 2 and parses
-  // the following part as an authority.
+  // According to RFC3986, the hierarchical part for URI with an authority
+  // must use only two slashes; GURL intentionally just ignores extra slashes
+  // if there are more than 2, and parses the following part as an authority.
   GURL url("http:///host");
   EXPECT_EQ("host", url.host());
   EXPECT_EQ("/", url.path());
@@ -378,7 +379,7 @@ TEST(GURLTest, GetWithEmptyPath) {
 }
 
 TEST(GURLTest, Replacements) {
-  // The url canonicalizer replacement test will handle most of these case.
+  // The URL canonicalizer replacement test will handle most of these case.
   // The most important thing to do here is to check that the proper
   // canonicalizer gets called based on the scheme of the input.
   struct ReplaceCase {
@@ -395,7 +396,7 @@ TEST(GURLTest, Replacements) {
   } replace_cases[] = {
     {"http://www.google.com/foo/bar.html?foo#bar", NULL, NULL, NULL, NULL, NULL, "/", "", "", "http://www.google.com/"},
     {"http://www.google.com/foo/bar.html?foo#bar", "javascript", "", "", "", "", "window.open('foo');", "", "", "javascript:window.open('foo');"},
-    {"file:///C:/foo/bar.txt", "http", NULL, NULL, "www.google.com", "99", "/foo","search", "ref", "http://www.google.com:99/foo?search#ref"},
+    {"file:///C:/foo/bar.txt", "http", NULL, NULL, "www.google.com", "99", "/foo", "search", "ref", "http://www.google.com:99/foo?search#ref"},
 #ifdef WIN32
     {"http://www.google.com/foo/bar.html?foo#bar", "file", "", "", "", "", "c:\\", "", "", "file:///C:/"},
 #endif
@@ -435,7 +436,7 @@ TEST(GURLTest, ClearFragmentOnDataUrl) {
 
   EXPECT_EQ("data: one ? two ", url_no_ref.spec());
 
-  // Importing a parsed url via this constructor overload will retain trailing
+  // Importing a parsed URL via this constructor overload will retain trailing
   // whitespace.
   GURL import_url(url_no_ref.spec(),
                   url_no_ref.parsed_for_possibly_invalid_spec(),
@@ -561,43 +562,56 @@ TEST(GURLTest, HostNoBrackets) {
 }
 
 TEST(GURLTest, DomainIs) {
-  const char google_domain[] = "google.com";
+  GURL url_1("http://google.com/foo");
+  EXPECT_TRUE(url_1.DomainIs("google.com"));
 
-  GURL url_1("http://www.google.com:99/foo");
-  EXPECT_TRUE(url_1.DomainIs(google_domain));
+  // Subdomain and port are ignored.
+  GURL url_2("http://www.google.com:99/foo");
+  EXPECT_TRUE(url_2.DomainIs("google.com"));
 
-  GURL url_2("http://google.com:99/foo");
-  EXPECT_TRUE(url_2.DomainIs(google_domain));
+  // Different top-level domain.
+  GURL url_3("http://www.google.com.cn/foo");
+  EXPECT_FALSE(url_3.DomainIs("google.com"));
 
-  GURL url_3("http://google.com./foo");
-  EXPECT_TRUE(url_3.DomainIs(google_domain));
+  // Different host name.
+  GURL url_4("http://www.iamnotgoogle.com/foo");
+  EXPECT_FALSE(url_4.DomainIs("google.com"));
 
-  GURL url_4("http://google.com/foo");
-  EXPECT_FALSE(url_4.DomainIs("google.com."));
+  // The input must be lower-cased otherwise DomainIs returns false.
+  GURL url_5("http://www.google.com/foo");
+  EXPECT_FALSE(url_5.DomainIs("Google.com"));
 
-  GURL url_5("http://google.com./foo");
-  EXPECT_TRUE(url_5.DomainIs("google.com."));
+  // If the URL is invalid, DomainIs returns false.
+  GURL invalid_url("google.com");
+  EXPECT_FALSE(invalid_url.is_valid());
+  EXPECT_FALSE(invalid_url.DomainIs("google.com"));
+}
 
-  GURL url_6("http://www.google.com./foo");
-  EXPECT_TRUE(url_6.DomainIs(".com."));
+TEST(GURLTest, DomainIsTerminatingDotBehavior) {
+  // If the host part ends with a dot, it matches input domains
+  // with or without a dot.
+  GURL url_with_dot("http://www.google.com./foo");
+  EXPECT_TRUE(url_with_dot.DomainIs("google.com"));
+  EXPECT_TRUE(url_with_dot.DomainIs("google.com."));
+  EXPECT_TRUE(url_with_dot.DomainIs(".com"));
+  EXPECT_TRUE(url_with_dot.DomainIs(".com."));
 
-  GURL url_7("http://www.balabala.com/foo");
-  EXPECT_FALSE(url_7.DomainIs(google_domain));
+  // But, if the host name doesn't end with a dot and the input
+  // domain does, then it's considered to not match.
+  GURL url_without_dot("http://google.com/foo");
+  EXPECT_FALSE(url_without_dot.DomainIs("google.com."));
 
-  GURL url_8("http://www.google.com.cn/foo");
-  EXPECT_FALSE(url_8.DomainIs(google_domain));
+  // If the URL ends with two dots, it doesn't match.
+  GURL url_with_two_dots("http://www.google.com../foo");
+  EXPECT_FALSE(url_with_two_dots.DomainIs("google.com"));
+}
 
-  GURL url_9("http://www.iamnotgoogle.com/foo");
-  EXPECT_FALSE(url_9.DomainIs(google_domain));
+TEST(GURLTest, DomainIsWithFilesystemScheme) {
+  GURL url_1("filesystem:http://www.google.com:99/foo/");
+  EXPECT_TRUE(url_1.DomainIs("google.com"));
 
-  GURL url_10("http://www.iamnotgoogle.com../foo");
-  EXPECT_FALSE(url_10.DomainIs(".com"));
-
-  GURL url_11("filesystem:http://www.google.com:99/foo/");
-  EXPECT_TRUE(url_11.DomainIs(google_domain));
-
-  GURL url_12("filesystem:http://www.iamnotgoogle.com/foo/");
-  EXPECT_FALSE(url_12.DomainIs(google_domain));
+  GURL url_2("filesystem:http://www.iamnotgoogle.com/foo/");
+  EXPECT_FALSE(url_2.DomainIs("google.com"));
 }
 
 // Newlines should be stripped from inputs.
@@ -640,6 +654,31 @@ TEST(GURLTest, SchemeIsBlob) {
   EXPECT_TRUE(GURL("BLOB://BAR/").SchemeIsBlob());
   EXPECT_TRUE(GURL("blob://bar/").SchemeIsBlob());
   EXPECT_FALSE(GURL("http://bar/").SchemeIsBlob());
+}
+
+TEST(GURLTest, ContentAndPathForNonStandardURLs) {
+  struct TestCase {
+    const char* url;
+    const char* expected;
+  } cases[] = {
+      {"null", ""},
+      {"not-a-standard-scheme:this is arbitrary content",
+       "this is arbitrary content"},
+      {"view-source:http://example.com/path", "http://example.com/path"},
+      {"blob:http://example.com/GUID", "http://example.com/GUID"},
+      {"blob://http://example.com/GUID", "//http://example.com/GUID"},
+      {"blob:http://user:password@example.com/GUID",
+       "http://user:password@example.com/GUID"},
+
+      // TODO(mkwst): This seems like a bug. https://crbug.com/513600
+      {"filesystem:http://example.com/path", "/"},
+  };
+
+  for (const auto& test : cases) {
+    GURL url(test.url);
+    EXPECT_EQ(test.expected, url.path()) << test.url;
+    EXPECT_EQ(test.expected, url.GetContent()) << test.url;
+  }
 }
 
 }  // namespace url

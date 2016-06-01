@@ -4,9 +4,10 @@
 
 #include "url/url_canon_ip.h"
 
+#include <stdint.h>
 #include <stdlib.h>
+#include <limits>
 
-#include "base/basictypes.h"
 #include "base/logging.h"
 #include "url/url_canon_internal.h"
 
@@ -92,7 +93,7 @@ bool DoFindIPv4Components(const CHAR* spec,
 template<typename CHAR>
 CanonHostInfo::Family IPv4ComponentToNumber(const CHAR* spec,
                                             const Component& component,
-                                            uint32* number) {
+                                            uint32_t* number) {
   // Figure out the base
   SharedCharTypes base;
   int base_prefix_len = 0;  // Size of the prefix for this base.
@@ -118,7 +119,7 @@ CanonHostInfo::Family IPv4ComponentToNumber(const CHAR* spec,
     base_prefix_len++;
 
   // Put the component, minus any base prefix, into a NULL-terminated buffer so
-  // we can call the standard library.  Because leading zeros have already been
+  // we can call the standard library. Because leading zeros have already been
   // discarded, filling the entire buffer is guaranteed to trigger the 32-bit
   // overflow check.
   const int kMaxComponentLen = 16;
@@ -133,7 +134,7 @@ CanonHostInfo::Family IPv4ComponentToNumber(const CHAR* spec,
     if (!IsCharOfType(input, base))
       return CanonHostInfo::NEUTRAL;
 
-    // Fill the buffer, if there's space remaining.  This check allows us to
+    // Fill the buffer, if there's space remaining. This check allows us to
     // verify that all characters are numeric, even those that don't fit.
     if (dest_i < kMaxComponentLen)
       buf[dest_i++] = input;
@@ -143,14 +144,14 @@ CanonHostInfo::Family IPv4ComponentToNumber(const CHAR* spec,
 
   // Use the 64-bit strtoi so we get a big number (no hex, decimal, or octal
   // number can overflow a 64-bit number in <= 16 characters).
-  uint64 num = _strtoui64(buf, NULL, BaseForType(base));
+  uint64_t num = _strtoui64(buf, NULL, BaseForType(base));
 
   // Check for 32-bit overflow.
-  if (num > kuint32max)
+  if (num > std::numeric_limits<uint32_t>::max())
     return CanonHostInfo::BROKEN;
 
-  // No overflow.  Success!
-  *number = static_cast<uint32>(num);
+  // No overflow. Success!
+  *number = static_cast<uint32_t>(num);
   return CanonHostInfo::IPV4;
 }
 
@@ -167,10 +168,10 @@ CanonHostInfo::Family DoIPv4AddressToNumber(const CHAR* spec,
 
   // Convert existing components to digits. Values up to
   // |existing_components| will be valid.
-  uint32 component_values[4];
+  uint32_t component_values[4];
   int existing_components = 0;
 
-  // Set to true if one or more components are BROKEN.  BROKEN is only
+  // Set to true if one or more components are BROKEN. BROKEN is only
   // returned if all components are IPV4 or BROKEN, so, for example,
   // 12345678912345.de returns NEUTRAL rather than broken.
   bool broken = false;
@@ -198,7 +199,7 @@ CanonHostInfo::Family DoIPv4AddressToNumber(const CHAR* spec,
   // First, process all components but the last, while making sure each fits
   // within an 8-bit field.
   for (int i = 0; i < existing_components - 1; i++) {
-    if (component_values[i] > kuint8max)
+    if (component_values[i] > std::numeric_limits<uint8_t>::max())
       return CanonHostInfo::BROKEN;
     address[i] = static_cast<unsigned char>(component_values[i]);
   }
@@ -209,7 +210,7 @@ CanonHostInfo::Family DoIPv4AddressToNumber(const CHAR* spec,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
-  uint32 last_value = component_values[existing_components - 1];
+  uint32_t last_value = component_values[existing_components - 1];
 #if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 9) || __GNUC__ > 4)
 #pragma GCC diagnostic pop
 #endif
@@ -440,11 +441,12 @@ bool CheckIPv6ComponentsSize(const IPv6Parsed& parsed,
   return true;
 }
 
-// Converts a hex comonent into a number. This cannot fail since the caller has
+// Converts a hex component into a number. This cannot fail since the caller has
 // already verified that each character in the string was a hex digit, and
 // that there were no more than 4 characters.
-template<typename CHAR>
-uint16 IPv6HexComponentToNumber(const CHAR* spec, const Component& component) {
+template <typename CHAR>
+uint16_t IPv6HexComponentToNumber(const CHAR* spec,
+                                  const Component& component) {
   DCHECK(component.len <= 4);
 
   // Copy the hex string into a C-string.
@@ -455,7 +457,7 @@ uint16 IPv6HexComponentToNumber(const CHAR* spec, const Component& component) {
 
   // Convert it to a number (overflow is not possible, since with 4 hex
   // characters we can at most have a 16 bit number).
-  return static_cast<uint16>(_strtoui64(buf, NULL, 16));
+  return static_cast<uint16_t>(_strtoui64(buf, NULL, 16));
 }
 
 // Converts an IPv6 address to a 128-bit number (network byte order), returning
@@ -497,7 +499,7 @@ bool DoIPv6AddressToNumber(const CHAR* spec,
     // Append the hex component's value.
     if (i != ipv6_parsed.num_hex_components) {
       // Get the 16-bit value for this hex component.
-      uint16 number = IPv6HexComponentToNumber<CHAR>(
+      uint16_t number = IPv6HexComponentToNumber<CHAR>(
           spec, ipv6_parsed.hex_components[i]);
       // Append to |address|, in network byte order.
       address[cur_index_in_address++] = (number & 0xFF00) >> 8;
@@ -576,7 +578,7 @@ bool DoCanonicalizeIPv6Address(const CHAR* spec,
       }
     }
 
-    // No invalid characters.  Could still be IPv4 or a hostname.
+    // No invalid characters. Could still be IPv4 or a hostname.
     host_info->family = CanonHostInfo::NEUTRAL;
     return false;
   }

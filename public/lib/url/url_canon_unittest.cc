@@ -6,10 +6,10 @@
 
 #include "base/macros.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "url/third_party/mozilla/url_parse.h"
 #include "url/url_canon.h"
 #include "url/url_canon_internal.h"
 #include "url/url_canon_stdstring.h"
-#include "url/url_parse.h"
 #include "url/url_test_utils.h"
 
 namespace url {
@@ -38,7 +38,7 @@ struct DualComponentCase {
   bool expected_success;
 };
 
-// Test cases for CanonicalizeIPAddress().  The inputs are identical to
+// Test cases for CanonicalizeIPAddress(). The inputs are identical to
 // DualComponentCase, but the output has extra CanonHostInfo fields.
 struct IPAddressCase {
   const char* input8;
@@ -127,7 +127,7 @@ TEST(URLCanonTest, DoAppendUTF8) {
 
 #if defined(GTEST_HAS_DEATH_TEST)
 // TODO(mattm): Can't run this in debug mode for now, since the DCHECK will
-// cause the Chromium stacktrace dialog to appear and hang the test.
+// cause the Chromium stack trace dialog to appear and hang the test.
 // See http://crbug.com/49580.
 #if defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON)
 #define MAYBE_DoAppendUTF8Invalid DoAppendUTF8Invalid
@@ -157,10 +157,10 @@ TEST(URLCanonTest, UTF) {
   } utf_cases[] = {
       // Valid canonical input should get passed through & escaped.
     {"\xe4\xbd\xa0\xe5\xa5\xbd", L"\x4f60\x597d", true, "%E4%BD%A0%E5%A5%BD"},
-      // Test a characer that takes > 16 bits (U+10300 = old italic letter A)
+      // Test a character that takes > 16 bits (U+10300 = old italic letter A)
     {"\xF0\x90\x8C\x80", L"\xd800\xdf00", true, "%F0%90%8C%80"},
-      // Non-shortest-form UTF-8 are invalid. The bad char should be replaced
-      // with the invalid character (EF BF DB in UTF-8).
+      // Non-shortest-form UTF-8 characters are invalid. The bad character
+      // should be replaced with the invalid character (EF BF DB in UTF-8).
     {"\xf0\x84\xbd\xa0\xe5\xa5\xbd", NULL, false, "%EF%BF%BD%E5%A5%BD"},
       // Invalid UTF-8 sequences should be marked as invalid (the first
       // sequence is truncated).
@@ -259,7 +259,7 @@ TEST(URLCanonTest, Scheme) {
     EXPECT_EQ(scheme_cases[i].expected_component.begin, out_comp.begin);
     EXPECT_EQ(scheme_cases[i].expected_component.len, out_comp.len);
 
-    // Now try the wide version
+    // Now try the wide version.
     out_str.clear();
     StdStringCanonOutput output2(&out_str);
 
@@ -275,7 +275,7 @@ TEST(URLCanonTest, Scheme) {
     EXPECT_EQ(scheme_cases[i].expected_component.len, out_comp.len);
   }
 
-  // Test the case where the scheme is declared nonexistant, it should be
+  // Test the case where the scheme is declared nonexistent, it should be
   // converted into an empty scheme.
   Component out_comp;
   out_str.clear();
@@ -638,7 +638,7 @@ TEST(URLCanonTest, IPv4) {
     {"0.0.0xFFFF", L"0.0.0xFFFF", "0.0.255.255", Component(0, 11), CanonHostInfo::IPV4, 3, "0000FFFF"},
     {"0.0xFFFFFF", L"0.0xFFFFFF", "0.255.255.255", Component(0, 13), CanonHostInfo::IPV4, 2, "00FFFFFF"},
     {"0xFFFFFFFF", L"0xFFFFFFFF", "255.255.255.255", Component(0, 15), CanonHostInfo::IPV4, 1, "FFFFFFFF"},
-      // Old trunctations tests.  They're all "BROKEN" now.
+      // Old trunctations tests. They're all "BROKEN" now.
     {"276.256.0xf1a2.077777", L"276.256.0xf1a2.077777", "", Component(), CanonHostInfo::BROKEN, -1, ""},
     {"192.168.0.257", L"192.168.0.257", "", Component(), CanonHostInfo::BROKEN, -1, ""},
     {"192.168.0xa20001", L"192.168.0xa20001", "", Component(), CanonHostInfo::BROKEN, -1, ""},
@@ -754,16 +754,17 @@ TEST(URLCanonTest, IPv6) {
 
     {"[2001:db8::1]", L"[2001:db8::1]", "[2001:db8::1]", Component(0,13), CanonHostInfo::IPV6, -1, "20010DB8000000000000000000000001"},
 
-      // Can only have one "::" contraction in an IPv6 string literal.
+    // Can only have one "::" contraction in an IPv6 string literal.
     {"[2001::db8::1]", L"[2001::db8::1]", "", Component(), CanonHostInfo::BROKEN, -1, ""},
-      // No more than 2 consecutive ':'s.
+    // No more than 2 consecutive ':'s.
     {"[2001:db8:::1]", L"[2001:db8:::1]", "", Component(), CanonHostInfo::BROKEN, -1, ""},
     {"[:::]", L"[:::]", "", Component(), CanonHostInfo::BROKEN, -1, ""},
-      // Non-IP addresses due to invalid characters.
+    // Non-IP addresses due to invalid characters.
     {"[2001::.com]", L"[2001::.com]", "", Component(), CanonHostInfo::BROKEN, -1, ""},
-      // If there are not enough components, the last one should fill them out.
+    // If there are not enough components, the last one should fill them out.
     // ... omitted at this time ...
-      // Too many components means not an IP address.  Similarly with too few if using IPv4 compat or mapped addresses.
+    // Too many components means not an IP address. Similarly, with too few
+    // if using IPv4 compat or mapped addresses.
     {"[::192.168.0.0.1]", L"[::192.168.0.0.1]", "", Component(), CanonHostInfo::BROKEN, -1, ""},
     {"[::ffff:192.168.0.0.1]", L"[::ffff:192.168.0.0.1]", "", Component(), CanonHostInfo::BROKEN, -1, ""},
     {"[1:2:3:4:5:6:7:8:9]", L"[1:2:3:4:5:6:7:8:9]", "", Component(), CanonHostInfo::BROKEN, -1, ""},
@@ -887,7 +888,7 @@ TEST(URLCanonTest, UserInfo) {
     {"http://user:pass@/", "user:pass@", Component(0, 4), Component(5, 4), true},
     {"http://%2540:bar@domain.com/", "%2540:bar@", Component(0, 5), Component(6, 3), true },
 
-      // IE7 compatability: old versions allowed backslashes in usernames, but
+      // IE7 compatibility: old versions allowed backslashes in usernames, but
       // IE7 does not. We disallow it as well.
     {"ftp://me\\mydomain:pass@foo.com/", "", Component(0, -1), Component(0, -1), true},
   };
@@ -943,7 +944,7 @@ TEST(URLCanonTest, Port) {
   // buffer. The parser unit tests will test scanning the number correctly.
   //
   // Note that the CanonicalizePort will always prepend a colon to the output
-  // to separate it from the colon that it assumes preceeds it.
+  // to separate it from the colon that it assumes precedes it.
   struct PortCase {
     const char* input;
     int default_port;
@@ -1329,7 +1330,7 @@ TEST(URLCanonTest, ReplaceStandardURL) {
     {"http://a:b@google.com:22/foo;bar?baz@cat", "https", "me", "pw", "host.com", "99", "/path", "query", "ref", "https://me:pw@host.com:99/path?query#ref"},
       // Replace nothing
     {"http://a:b@google.com:22/foo?baz@cat", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, "http://a:b@google.com:22/foo?baz@cat"},
-      // Replace scheme with filesystem.  The result is garbage, but you asked
+      // Replace scheme with filesystem. The result is garbage, but you asked
       // for it.
     {"http://a:b@google.com:22/foo?baz@cat", "filesystem", NULL, NULL, NULL, NULL, NULL, NULL, NULL, "filesystem://a:b@google.com:22/foo?baz@cat"},
   };
@@ -1594,7 +1595,7 @@ TEST(URLCanonTest, CanonicalizeFileURL) {
     {"file:", "file:///", true, Component(), Component(7, 1)},
     {"file:UNChost/path", "file://unchost/path", true, Component(7, 7), Component(14, 5)},
       // CanonicalizeFileURL supports absolute Windows style paths for IE
-      // compatability. Note that the caller must decide that this is a file
+      // compatibility. Note that the caller must decide that this is a file
       // URL itself so it can call the file canonicalizer. This is usually
       // done automatically as part of relative URL resolving.
     {"c:\\foo\\bar", "file:///C:/foo/bar", true, Component(), Component(7, 11)},
@@ -1605,7 +1606,7 @@ TEST(URLCanonTest, CanonicalizeFileURL) {
     {"\\\\server\\file", "file://server/file", true, Component(7, 6), Component(13, 5)},
     {"/\\server/file", "file://server/file", true, Component(7, 6), Component(13, 5)},
       // We should preserve the number of slashes after the colon for IE
-      // compatability, except when there is none, in which case we should
+      // compatibility, except when there is none, in which case we should
       // add one.
     {"file:c:foo/bar.html", "file:///C:/foo/bar.html", true, Component(), Component(7, 16)},
     {"file:/\\/\\C:\\\\//foo\\bar.html", "file:///C:////foo/bar.html", true, Component(), Component(7, 19)},
@@ -1807,7 +1808,7 @@ TEST(URLCanonTest, CanonicalizeMailtoURL) {
 
 TEST(URLCanonTest, _itoa_s) {
   // We fill the buffer with 0xff to ensure that it's getting properly
-  // null-terminated.  We also allocate one byte more than what we tell
+  // null-terminated. We also allocate one byte more than what we tell
   // _itoa_s about, and ensure that the extra byte is untouched.
   char buf[6];
   memset(buf, 0xff, sizeof(buf));
@@ -1846,7 +1847,7 @@ TEST(URLCanonTest, _itoa_s) {
 
 TEST(URLCanonTest, _itow_s) {
   // We fill the buffer with 0xff to ensure that it's getting properly
-  // null-terminated.  We also allocate one byte more than what we tell
+  // null-terminated. We also allocate one byte more than what we tell
   // _itoa_s about, and ensure that the extra byte is untouched.
   base::char16 buf[6];
   const char fill_mem = 0xff;
@@ -2022,7 +2023,7 @@ TEST(URLCanonTest, ResolveRelativeURL) {
       // which is what is required.
     {"file:///foo.txt", true, true, "//host:80/bar.txt", true, true, false, "file://host:80/bar.txt"},
       // Filesystem URL tests; filesystem URLs are only valid and relative if
-      // they have no scheme, e.g. "./index.html".  There's no valid equivalent
+      // they have no scheme, e.g. "./index.html". There's no valid equivalent
       // to http:index.html.
     {"filesystem:http://host/t/path", true, false, "filesystem:http://host/t/path2", true, false, false, NULL},
     {"filesystem:http://host/t/path", true, false, "filesystem:https://host/t/path2", true, false, false, NULL},
@@ -2090,10 +2091,10 @@ TEST(URLCanonTest, ResolveRelativeURL) {
   }
 }
 
-// It used to be when we did a replacement with a long buffer of UTF-16
-// characters, we would get invalid data in the URL. This is because the buffer
-// it used to hold the UTF-8 data was resized, while some pointers were still
-// kept to the old buffer that was removed.
+// It used to be the case that when we did a replacement with a long buffer of
+// UTF-16 characters, we would get invalid data in the URL. This is because the
+// buffer that it used to hold the UTF-8 data was resized, while some pointers
+// were still kept to the old buffer that was removed.
 TEST(URLCanonTest, ReplacementOverflow) {
   const char src[] = "file:///C:/foo/bar";
   int src_len = static_cast<int>(strlen(src));
@@ -2101,7 +2102,7 @@ TEST(URLCanonTest, ReplacementOverflow) {
   ParseFileURL(src, src_len, &parsed);
 
   // Override two components, the path with something short, and the query with
-  // sonething long enough to trigger the bug.
+  // something long enough to trigger the bug.
   Replacements<base::char16> repl;
   base::string16 new_query;
   for (int i = 0; i < 4800; i++)

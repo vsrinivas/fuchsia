@@ -80,7 +80,7 @@ void RunConverter(const char* spec,
 }
 
 // Runs the converter with the given UTF-16 input. We don't have to do
-// anything, but this overriddden function allows us to use the same code
+// anything, but this overridden function allows us to use the same code
 // for both UTF-8 and UTF-16 input.
 void RunConverter(const base::char16* spec,
                   const Component& query,

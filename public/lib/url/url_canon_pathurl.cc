@@ -14,7 +14,7 @@ namespace url {
 namespace {
 
 // Canonicalize the given |component| from |source| into |output| and
-// |new_component|. If |separator| is non-zero, it is pre-pended to |ouput|
+// |new_component|. If |separator| is non-zero, it is pre-pended to |output|
 // prior to the canonicalized component; i.e. for the '?' or '#' characters.
 template<typename CHAR, typename UCHAR>
 bool DoCanonicalizePathComponent(const CHAR* source,

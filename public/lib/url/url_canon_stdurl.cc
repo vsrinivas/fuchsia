@@ -169,7 +169,7 @@ bool ReplaceStandardURL(const char* base,
 }
 
 // For 16-bit replacements, we turn all the replacements into UTF-8 so the
-// regular codepath can be used.
+// regular code path can be used.
 bool ReplaceStandardURL(const char* base,
                         const Parsed& base_parsed,
                         const Replacements<base::char16>& replacements,
