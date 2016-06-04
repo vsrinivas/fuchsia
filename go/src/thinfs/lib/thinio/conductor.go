@@ -342,15 +342,11 @@ func (c *Conductor) Flush() error {
 	return nil
 }
 
-// Close calls Flush and then closes the Conductor as well as the underlying block.Device,
-// rendering them unusable for I/O.  Returns an error, if any. Future operations on the
-// Conductor will return ErrClosed.
+// Close closes the Conductor as well as the underlying block.Device, rendering them unusable
+// for I/O.  Returns an error, if any. Future operations on the Conductor will return ErrClosed.
+// Callers must call Flush before calling Close to ensure that all pending changes have been
+// flushed to stable storage.
 func (c *Conductor) Close() error {
-	if len(c.errs) > 0 {
-		return c.errs[0]
-	}
-
-	c.Flush()
 	if len(c.errs) > 0 {
 		return c.errs[0]
 	}
