@@ -165,6 +165,8 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
         return "ethernet";
     case MX_PROTOCOL_BLUETOOTH_HCI:
         return "bluetooth-hci";
+    case MX_PROTOCOL_TPM:
+        return "tpm";
     default:
         snprintf(buf, PNMAX, "proto-%08x", id);
         return buf;

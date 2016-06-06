@@ -107,6 +107,7 @@ static inline void panic(void) {
 #define MX_PROTOCOL_USB_DEVICE 'pUDV'
 #define MX_PROTOCOL_ETHERNET 'pETH'
 #define MX_PROTOCOL_BLUETOOTH_HCI 'pBTH'
+#define MX_PROTOCOL_TPM 'pTPM'
 
 #define BUILTIN_DRIVER       \
     __ALIGNED(sizeof(void*)) \
