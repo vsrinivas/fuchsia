@@ -15,13 +15,20 @@
 #include <trace.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
+#include <kernel/event.h>
+#include <kernel/mp.h>
+#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
+#include <kernel/timer.h>
 
 #define LOCAL_TRACE 0
 
 #if WITH_SMP
 /* a global state structure, aligned on cpu cache line to minimize aliasing */
-struct mp_state mp __CPU_ALIGN;
+struct mp_state mp __CPU_ALIGN = {
+    .unplug_lock = MUTEX_INITIAL_VALUE(mp.unplug_lock),
+    .ipi_task_lock = SPIN_LOCK_INITIAL_VALUE,
+};
 
 /* Helpers used for implementing mp_sync */
 struct mp_sync_context;
@@ -153,6 +160,8 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
     bool ints_disabled = arch_ints_disabled();
     /* wait for all other CPUs to be done with the context */
     while (1) {
+        /* See comment in mp_unplug_trampoline about related CPU hotplug
+         * guarantees. */
         mp_cpu_mask_t outstanding = atomic_load_relaxed(
                 (int *)&sync_context.outstanding_cpus);
         mp_cpu_mask_t online = mp_get_online_mask();
@@ -187,6 +196,115 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
     spin_unlock_irqrestore(&mp.ipi_task_lock, irqstate);
 }
 
+static void mp_unplug_trampoline(void) __NO_RETURN;
+static void mp_unplug_trampoline(void) {
+    /* release the thread lock that was implicitly held across the reschedule */
+    spin_unlock(&thread_lock);
+
+    /* do *not* enable interrupts, we want this CPU to never receive another
+     * interrupt */
+
+    thread_t *ct = get_current_thread();
+    event_t *unplug_done = ct->arg;
+
+    mp_set_curr_cpu_active(false);
+
+    /* Note that before this invocation, but after we stopped accepting
+     * interrupts, we may have received a synchronous task to perform.
+     * Clearing this flag will cause the mp_sync_exec caller to consider
+     * this CPU done.  If this CPU comes back online before other all
+     * of the other CPUs finish their work (very unlikely, since tasks
+     * should be quick), then this CPU may execute the task. */
+    mp_set_curr_cpu_online(false);
+
+    /* flush all of our caches */
+    arch_flush_state_and_halt(unplug_done);
+}
+
+/* Unplug the given cpu.  Blocks until the CPU is removed.
+ *
+ * This should be called in a thread context
+ */
+status_t mp_unplug_cpu(uint cpu_id) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+
+    thread_t *t = NULL;
+    status_t status = ERR_GENERIC;
+
+    mutex_acquire(&mp.unplug_lock);
+
+    if (!mp_is_cpu_online(cpu_id)) {
+        /* Cannot unplug offline CPU */
+        status = ERR_OFFLINE;
+        goto cleanup_mutex;
+    }
+
+    /* Create a thread for the unplug.  We will cause the target CPU to
+     * context switch to this thread.  After this happens, it should no
+     * longer be accessing system state and can be safely shut down.
+     *
+     * This thread is pinned to the target CPU and set to run with the
+     * highest priority.  This should cause it to pick up the thread
+     * immediately (or very soon, if for some reason there is another
+     * HIGHEST_PRIORITY task scheduled in between when we resume the
+     * thread and when the CPU is woken up).
+     */
+    event_t unplug_done = EVENT_INITIAL_VALUE(unplug_done, false, 0);
+    t = thread_create_etc(
+            NULL,
+            "unplug_thread",
+            NULL,
+            &unplug_done,
+            HIGHEST_PRIORITY,
+            NULL,
+            4096,
+            mp_unplug_trampoline);
+    if (t == NULL) {
+        status = ERR_NO_MEMORY;
+        goto cleanup_mutex;
+    }
+
+    status = platform_mp_prep_cpu_unplug(cpu_id);
+    if (status != NO_ERROR) {
+        goto cleanup_thread;
+    }
+
+    /* Pin to the target CPU */
+    thread_set_pinned_cpu(t, cpu_id);
+    /* Set real time to cancel the pre-emption timer */
+    thread_set_real_time(t);
+
+    status = thread_detach_and_resume(t);
+    if (status != NO_ERROR) {
+        goto cleanup_thread;
+    }
+
+    /* Wait for the unplug thread to get scheduled on the target */
+    do {
+        status = event_wait(&unplug_done);
+    } while (status < 0);
+
+    /* Now that the CPU is no longer processing tasks, move all of its timers */
+    timer_transition_off_cpu(cpu_id);
+
+    status = platform_mp_cpu_unplug(cpu_id);
+    if (status != NO_ERROR) {
+        /* Do not cleanup the unplug thread in this case.  We have successfully
+         * unplugged the CPU from the scheduler's perspective, but the platform
+         * may have failed to shut down the CPU */
+        goto cleanup_mutex;
+    }
+
+    /* Fall through.  Since the thread is scheduled, it should not be in any
+     * queues.  Since the CPU running this thread is now shutdown, we can just
+     * erase the thread's existence. */
+cleanup_thread:
+    thread_forget(t);
+cleanup_mutex:
+    mutex_release(&mp.unplug_lock);
+    return status;
+}
+
 void mp_set_curr_cpu_online(bool online)
 {
     if (online) {
@@ -194,6 +312,7 @@ void mp_set_curr_cpu_online(bool online)
     } else {
         atomic_and((volatile int *)&mp.online_cpus, ~(1U << arch_curr_cpu_num()));
     }
+
 }
 
 void mp_set_curr_cpu_active(bool active)
@@ -234,5 +353,10 @@ enum handler_return mp_mbx_reschedule_irq(void)
 
     return (mp.active_cpus & (1U << cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
+
+__WEAK status_t arch_mp_prep_cpu_unplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
+__WEAK status_t arch_mp_cpu_unplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
+__WEAK status_t platform_mp_prep_cpu_unplug(uint cpu_id) { return arch_mp_prep_cpu_unplug(cpu_id); }
+__WEAK status_t platform_mp_cpu_unplug(uint cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
 
 #endif

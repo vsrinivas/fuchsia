@@ -21,8 +21,9 @@
 #include <dev/interrupt_event.h>
 #include <dev/pcie.h>
 #include <dev/uart.h>
-#include <arch/x86.h>
 #include <arch/mmu.h>
+#include <arch/mp.h>
+#include <arch/x86.h>
 #include <malloc.h>
 #include <string.h>
 #include <assert.h>
@@ -238,6 +239,12 @@ void platform_init_smp(void)
 
     x86_init_smp(apic_ids, num_cpus);
     free(apic_ids);
+}
+
+status_t platform_mp_prep_cpu_unplug(uint cpu_id)
+{
+    // TODO: Make sure the IOAPIC and PCI have nothing for this CPU
+    return arch_mp_prep_cpu_unplug(cpu_id);
 }
 #endif
 

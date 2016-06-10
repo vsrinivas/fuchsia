@@ -144,11 +144,22 @@ notenoughargs:
 usage:
         printf("usage:\n");
         printf("%s features\n", argv[0].str);
+        printf("%s unplug <cpu_id>\n", argv[0].str);
         return ERR_GENERIC;
     }
 
     if (!strcmp(argv[1].str, "features")) {
         x86_feature_debug();
+    } else if (!strcmp(argv[1].str, "unplug")) {
+        if (argc < 3) {
+            printf("specify a cpu_id\n");
+            goto usage;
+        }
+        status_t status = ERR_NOT_SUPPORTED;
+#if WITH_SMP
+        status = mp_unplug_cpu(argv[2].u);
+#endif
+        printf("CPU %lu unplugged: %d\n", argv[2].u, status);
     } else {
         printf("unknown command\n");
         goto usage;
@@ -159,6 +170,6 @@ usage:
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
-STATIC_COMMAND("cpu", "cpu info commands", &cmd_cpu)
+STATIC_COMMAND("cpu", "cpu test commands", &cmd_cpu)
 #endif
 STATIC_COMMAND_END(cpu);

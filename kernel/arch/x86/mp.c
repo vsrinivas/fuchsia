@@ -24,6 +24,7 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
 #include <dev/interrupt.h>
+#include <kernel/event.h>
 
 struct x86_percpu bp_percpu = {
     .cpu_num = 0,
@@ -223,5 +224,48 @@ enum handler_return x86_ipi_reschedule_handler(void)
 {
     //TRACEF("rescheduling on cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
     return mp_mbx_reschedule_irq();
+}
+
+status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
+    if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
+        return ERR_INVALID_ARGS;
+    }
+    return NO_ERROR;
+}
+
+status_t arch_mp_cpu_unplug(uint cpu_id)
+{
+    /* we do not allow unplugging the bootstrap processor */
+    if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
+        return ERR_INVALID_ARGS;
+    }
+
+    uint32_t dst_apic_id = ap_percpus[cpu_id - 1].apic_id;
+    if (dst_apic_id == INVALID_APIC_ID) {
+        /* This is a transient state that can occur during CPU onlining */
+        return ERR_BUSY;
+    }
+
+    apic_send_ipi(0, dst_apic_id, DELIVERY_MODE_INIT);
+    return NO_ERROR;
+}
+
+/* Used to suspend work on a CPU until it is further shutdown */
+void arch_flush_state_and_halt(event_t *flush_done)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    // Enter no-fill cache mode (see Intel 3A section 11.5.3)
+    uint32_t cr0 = x86_get_cr0();
+    cr0 |= X86_CR0_CD;
+    cr0 &= ~X86_CR0_NW;
+    x86_set_cr0(cr0);
+
+    __asm__ volatile("wbinvd" : : : "memory");
+
+    event_signal(flush_done, false);
+    while (1) {
+        __asm__ volatile("cli; hlt" : : : "memory");
+    }
 }
 #endif

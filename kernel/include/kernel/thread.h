@@ -43,6 +43,7 @@ enum thread_state {
 };
 
 typedef int (*thread_start_routine)(void *arg);
+typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
 
 /* thread local storage */
 enum thread_tls_list {
@@ -166,9 +167,10 @@ thread_t *thread_create_idle_thread(uint cpu_num);
 void thread_set_name(const char *name);
 void thread_set_priority(int priority);
 thread_t *thread_create(const char *name, thread_start_routine entry, void *arg, int priority, size_t stack_size);
-thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, size_t stack_size);
+thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
 status_t thread_resume(thread_t *);
 void thread_exit(int retcode) __NO_RETURN;
+void thread_forget(thread_t *);
 void thread_sleep(lk_time_t delay);
 status_t thread_detach(thread_t *t);
 status_t thread_join(thread_t *t, int *retcode, lk_time_t timeout);

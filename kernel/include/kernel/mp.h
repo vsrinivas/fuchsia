@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <kernel/mutex.h>
 #include <kernel/thread.h>
 
 __BEGIN_CDECLS;
@@ -41,6 +42,8 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context);
 void mp_set_curr_cpu_online(bool online);
 void mp_set_curr_cpu_active(bool active);
 
+status_t mp_unplug_cpu(uint cpu_id);
+
 /* called from arch code during reschedule irq */
 enum handler_return mp_mbx_reschedule_irq(void);
 /* called from arch code during generic task irq */
@@ -69,18 +72,26 @@ struct mp_state {
     /* list of outstanding tasks for CPUs to execute.  Should only be
      * accessed with the ipi_task_lock held */
     struct list_node ipi_task_list[SMP_MAX_CPUS];
+
+    /* lock for serializing CPU unplug operations */
+    mutex_t unplug_lock;
 };
 
 extern struct mp_state mp;
 
 static inline int mp_is_cpu_active(uint cpu)
 {
-    return mp.active_cpus & (1 << cpu);
+    return atomic_load((int *)&mp.active_cpus) & (1 << cpu);
 }
 
 static inline int mp_is_cpu_idle(uint cpu)
 {
     return mp.idle_cpus & (1 << cpu);
+}
+
+static inline int mp_is_cpu_online(uint cpu)
+{
+    return mp.online_cpus & (1 << cpu);
 }
 
 /* must be called with the thread lock held */
@@ -101,7 +112,7 @@ static inline mp_cpu_mask_t mp_get_idle_mask(void)
 
 static inline mp_cpu_mask_t mp_get_active_mask(void)
 {
-    return mp.active_cpus;
+    return atomic_load((int *)&mp.active_cpus);
 }
 
 static inline mp_cpu_mask_t mp_get_online_mask(void)
@@ -144,6 +155,7 @@ static inline enum handler_return mp_mbx_generic_irq(void) { return INT_NO_RESCH
 // only one cpu exists in UP and if you're calling these functions, it's active...
 static inline int mp_is_cpu_active(uint cpu) { return 1; }
 static inline int mp_is_cpu_idle(uint cpu) { return (get_current_thread()->flags & THREAD_FLAG_IDLE) != 0; }
+static inline int mp_is_cpu_online(uint cpu) { return 1; }
 
 static inline void mp_set_cpu_idle(uint cpu) {}
 static inline void mp_set_cpu_busy(uint cpu) {}

@@ -60,7 +60,7 @@ status_t UserThread::Initialize(utils::StringPiece name) {
 
     // create an underlying LK thread
     thread_t* lkthread = thread_create_etc(&thread_, full_name, StartRoutine, this, LOW_PRIORITY,
-                                           NULL, DEFAULT_STACK_SIZE);
+                                           NULL, DEFAULT_STACK_SIZE, NULL);
 
     if (!lkthread) {
         TRACEF("error creating thread\n");

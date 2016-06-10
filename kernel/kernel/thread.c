@@ -128,11 +128,13 @@ static void initial_thread_func(void)
  * This function creates a new thread.  The thread is initially suspended, so you
  * need to call thread_resume() to execute it.
  *
- * @param  name        Name of thread
- * @param  entry       Entry point of thread
- * @param  arg         Arbitrary argument passed to entry()
- * @param  priority    Execution priority for the thread.
- * @param  stack_size  Stack size for the thread.
+ * @param  name            Name of thread
+ * @param  entry           Entry point of thread
+ * @param  arg             Arbitrary argument passed to entry()
+ * @param  priority        Execution priority for the thread.
+ * @param  stack_size      Stack size for the thread.
+ * @param  alt_trampoline  If not NULL, an alternate trampoline for the thread
+ *                         to start on.
  *
  * Thread priority is an integer from 0 (lowest) to 31 (highest).  Some standard
  * prioritys are defined in <kernel/thread.h>:
@@ -149,7 +151,13 @@ static void initial_thread_func(void)
  *
  * @return  Pointer to thread object, or NULL on failure.
  */
-thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, size_t stack_size)
+thread_t *thread_create_etc(
+        thread_t *t,
+        const char *name,
+        thread_start_routine entry, void *arg,
+        int priority,
+        void *stack, size_t stack_size,
+        thread_trampoline_routine alt_trampoline)
 {
     unsigned int flags = 0;
 
@@ -208,8 +216,12 @@ thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine 
     for (i=0; i < MAX_TLS_ENTRY; i++)
         t->tls[i] = current_thread->tls[i];
 
+    if (likely(alt_trampoline == NULL)) {
+        alt_trampoline = initial_thread_func;
+    }
+
     /* set up the initial stack frame */
-    arch_thread_initialize(t, (vaddr_t)&initial_thread_func);
+    arch_thread_initialize(t, (vaddr_t)alt_trampoline);
 
     /* add it to the global thread list */
     THREAD_LOCK(state);
@@ -221,7 +233,7 @@ thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine 
 
 thread_t *thread_create(const char *name, thread_start_routine entry, void *arg, int priority, size_t stack_size)
 {
-    return thread_create_etc(NULL, name, entry, arg, priority, NULL, stack_size);
+    return thread_create_etc(NULL, name, entry, arg, priority, NULL, stack_size, NULL);
 }
 
 /**
@@ -430,6 +442,34 @@ void thread_exit(int retcode)
     thread_resched();
 
     panic("somehow fell through thread_exit()\n");
+}
+
+/**
+ * @brief Remove this thread from the scheduler, discarding
+ * its execution state.
+ *
+ * This is almost certainly not the function you want.  In the general case,
+ * this is incredibly unsafe.
+ *
+ * This will free any resources allocated by thread_create.
+ */
+void thread_forget(thread_t *t)
+{
+    THREAD_LOCK(state);
+
+    __UNUSED thread_t *current_thread = get_current_thread();
+    DEBUG_ASSERT(current_thread != t);
+
+    list_delete(&t->thread_list_node);
+    THREAD_UNLOCK(state);
+
+    DEBUG_ASSERT(!list_in_list(&t->queue_node));
+
+    if (t->flags & THREAD_FLAG_FREE_STACK && t->stack)
+        free(t->stack);
+
+    if (t->flags & THREAD_FLAG_FREE_STRUCT)
+        free(t);
 }
 
 __NO_RETURN static int idle_thread_routine(void *arg)
@@ -957,7 +997,8 @@ thread_t *thread_create_idle_thread(uint cpu_num)
             idle_thread(cpu_num), name,
             idle_thread_routine, NULL,
             IDLE_PRIORITY,
-            NULL, DEFAULT_STACK_SIZE);
+            NULL, DEFAULT_STACK_SIZE,
+            NULL);
     if (t == NULL) {
         return t;
     }

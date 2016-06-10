@@ -284,6 +284,39 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
     return ret;
 }
 
+void timer_transition_off_cpu(uint old_cpu)
+{
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&timer_lock, state);
+    uint cpu = arch_curr_cpu_num();
+
+    timer_t *old_head = list_peek_head_type(&timers[old_cpu].timer_queue, timer_t, node);
+
+    timer_t *entry = NULL, *tmp_entry = NULL;
+    /* Move all timers from old_cpu to this cpu */
+    list_for_every_entry_safe(&timers[old_cpu].timer_queue, entry, tmp_entry, timer_t, node) {
+        list_delete(&entry->node);
+        insert_timer_in_queue(cpu, entry);
+    }
+
+#if PLATFORM_HAS_DYNAMIC_TIMER
+    timer_t *new_head = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+    if (new_head != old_head) {
+        lk_time_t now = current_time();
+        lk_time_t delay = 0;
+        if (TIME_LT(now, new_head->scheduled_time)) {
+            delay = new_head->scheduled_time - now;
+        }
+
+        /* we just modified the head of the timer queue */
+        LTRACEF("setting new timer for %u msecs\n", delay);
+        platform_set_oneshot_timer(timer_tick, NULL, delay);
+    }
+#endif
+
+    spin_unlock_irqrestore(&timer_lock, state);
+}
+
 void timer_init(void)
 {
     timer_lock = SPIN_LOCK_INITIAL_VALUE;

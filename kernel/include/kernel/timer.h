@@ -53,6 +53,8 @@ void timer_set_oneshot(timer_t *, lk_time_t delay, timer_callback, void *arg);
 void timer_set_periodic(timer_t *, lk_time_t period, timer_callback, void *arg);
 void timer_cancel(timer_t *);
 
+void timer_transition_off_cpu(uint old_cpu);
+
 __END_CDECLS;
 
 #endif

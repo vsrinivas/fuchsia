@@ -51,6 +51,13 @@ void arch_clean_invalidate_cache_range(addr_t start, size_t len);
 void arch_invalidate_cache_range(addr_t start, size_t len);
 void arch_sync_cache_range(addr_t start, size_t len);
 
+/* Used to suspend work on a CPU until it is further shutdown.
+ * This will only be invoked with interrupts disabled.  This function
+ * must not re-enter the scheduler.
+ * flush_done should be signaled after state is flushed. */
+typedef struct event event_t;
+void arch_flush_state_and_halt(event_t *flush_done) __NO_RETURN;
+
 void arch_idle(void);
 
 /* function to call in spinloops to idle */
