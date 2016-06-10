@@ -54,6 +54,7 @@ void timer_set_periodic(timer_t *, lk_time_t period, timer_callback, void *arg);
 void timer_cancel(timer_t *);
 
 void timer_transition_off_cpu(uint old_cpu);
+void timer_thaw_percpu(void);
 
 __END_CDECLS;
 

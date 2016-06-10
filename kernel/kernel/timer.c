@@ -317,6 +317,31 @@ void timer_transition_off_cpu(uint old_cpu)
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
+/* This function is to be invoked after resume on each CPU that may have
+ * had timers still on it, in order to restart hardware timers. */
+void timer_thaw_percpu(void)
+{
+#if PLATFORM_HAS_DYNAMIC_TIMER
+    DEBUG_ASSERT(arch_ints_disabled());
+    spin_lock(&timer_lock);
+
+    uint cpu = arch_curr_cpu_num();
+
+    timer_t *t = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+    if (t) {
+        lk_time_t now = current_time();
+        lk_time_t delay = 0;
+        if (TIME_LT(now, t->scheduled_time)) {
+            delay = t->scheduled_time - now;
+        }
+        LTRACEF("rescheduling timer for %u msecs\n", delay);
+        platform_set_oneshot_timer(timer_tick, NULL, delay);
+    }
+
+    spin_unlock(&timer_lock);
+#endif
+}
+
 void timer_init(void)
 {
     timer_lock = SPIN_LOCK_INITIAL_VALUE;

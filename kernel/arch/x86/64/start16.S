@@ -6,6 +6,7 @@
 
 # This file provides real-mode entry points for
 # 1) secondary CPU initialization
+# 2) suspend-to-RAM wakeup
 
 #include <asm.h>
 #include <arch/x86/bootstrap16.h>
@@ -141,6 +142,57 @@ FUNCTION(_x86_secondary_cpu_long_mode_entry)
 0:
     hlt
     jmp 0b
+
+# Get the cpu into 64-bit mode with interrupts disabled and no TSS
+FUNCTION(_x86_suspend_wakeup)
+    # Retrieve the new PML4 address before our data page becomes unreachable
+    mov BCD_PHYS_KERNEL_PML4_OFFSET(%esi), %ecx
+
+    # Stash register pointer so that we can read it after we change
+    # address spaces
+    mov RED_REGISTERS_OFFSET(%esi), %rdi
+
+    # Switch out of the copied code page and into the kernel's
+    # version of it
+    mov  $.Lwakeup_highaddr, %rbx
+    jmp  *%rbx
+.Lwakeup_highaddr:
+    # Switch to the kernel's PML4
+    mov %rcx, %cr3
+    # As of this point, %esi is invalid
+
+    # Reload the GDT with one based off of non-identity mapping
+    lgdt _gdtr
+
+    # Zero our data segments
+    xor %eax, %eax
+    mov %eax, %ds
+    mov %eax, %es
+    mov %eax, %fs
+    mov %eax, %gs
+    mov %eax, %ss
+
+    # Load the IDT
+    lidt _idtr
+
+    mov 8(%rdi), %rsi
+    mov 16(%rdi), %rbp
+    mov 24(%rdi), %rbx
+    mov 32(%rdi), %rdx
+    mov 40(%rdi), %rcx
+    mov 48(%rdi), %rax
+    mov 56(%rdi), %r8
+    mov 64(%rdi), %r9
+    mov 72(%rdi), %r10
+    mov 80(%rdi), %r11
+    mov 88(%rdi), %r12
+    mov 96(%rdi), %r13
+    mov 104(%rdi), %r14
+    mov 112(%rdi), %r15
+    mov 120(%rdi), %rsp
+
+    # Restore RIP
+    jmp *128(%rdi)
 
 DATA(x86_bootstrap16_end)
     nop

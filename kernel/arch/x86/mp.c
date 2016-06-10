@@ -22,8 +22,10 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
+#include <arch/x86/tsc.h>
 #include <dev/interrupt.h>
 #include <kernel/event.h>
+#include <kernel/timer.h>
 
 struct x86_percpu bp_percpu = {
     .cpu_num = 0,
@@ -102,6 +104,10 @@ void x86_init_percpu(uint8_t cpu_num)
     idt_load(&percpu->idt);
 
     x86_initialize_percpu_tss();
+
+    // Apply any timestamp counter adjustment to keep a continuous clock across
+    // suspend/resume.
+    x86_tsc_adjust();
 
 #if ARCH_X86_64
     /* load the syscall entry point */

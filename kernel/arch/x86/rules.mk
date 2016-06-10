@@ -83,6 +83,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/mp.c \
 	$(LOCAL_DIR)/registers.c \
 	$(LOCAL_DIR)/thread.c \
+	$(LOCAL_DIR)/tsc.c \
 	$(LOCAL_DIR)/user_copy.c \
 
 ifeq ($(SUBARCH),x86-64)
@@ -100,9 +101,10 @@ KERNEL_DEFINES += \
 	SMP_MAX_CPUS=16
 MODULE_SRCS += \
 	$(SUBARCH_DIR)/bootstrap16.c \
+	$(SUBARCH_DIR)/smp.c \
 	$(SUBARCH_DIR)/start16.S \
-	$(SUBARCH_DIR)/uspace_entry.S \
-	$(SUBARCH_DIR)/smp.c
+	$(SUBARCH_DIR)/suspend.S \
+	$(SUBARCH_DIR)/uspace_entry.S
 endif # SUBARCH x86-64
 ifeq ($(SUBARCH),x86-32)
 KERNEL_DEFINES += \
