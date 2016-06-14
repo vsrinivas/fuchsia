@@ -6,9 +6,10 @@
 
 #include <assert.h>
 #include <err.h>
+#include <arch/ops.h>
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <kernel/mp.h>
 #include <kernel/vm/vm_object.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
@@ -56,6 +57,14 @@ int sys_nanosleep(mx_time_t nanoseconds) {
 
     thread_sleep(t);
     return 0;
+}
+
+uint sys_num_cpus(void) {
+    return arch_max_num_cpus();
+}
+
+uint sys_num_idle_cpus(void) {
+    return __builtin_popcount(mp.idle_cpus);
 }
 
 uint64_t sys_current_time() {

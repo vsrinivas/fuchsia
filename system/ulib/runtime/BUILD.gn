@@ -33,6 +33,7 @@ source_set("runtime") {
     "strstatus.c",
     "thread.c",
     "tls.c",
+    "sysinfo.c",
   ]
   deps = [
     "//system/ulib/magenta",
