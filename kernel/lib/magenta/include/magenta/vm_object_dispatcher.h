@@ -21,6 +21,7 @@ public:
 
     ~VmObjectDispatcher() final;
     void Close(Handle* handle) final;
+    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_VMEM; }
     VmObjectDispatcher* get_vm_object_dispatcher() final { return this; }
 
     mx_ssize_t Read(void* user_data, mx_size_t length, uint64_t offset);

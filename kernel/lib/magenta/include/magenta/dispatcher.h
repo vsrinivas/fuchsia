@@ -40,6 +40,8 @@ public:
 
     virtual void Close(Handle* handle) = 0;
 
+    virtual mx_obj_type_t GetType() const = 0;
+
     virtual status_t UserSignal(uint32_t set_mask, uint32_t clear_mask) {
         return ERR_NOT_SUPPORTED;
     }

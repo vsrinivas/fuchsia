@@ -56,6 +56,7 @@ public:
 
     ~PciDeviceDispatcher() final;
     void Close(Handle* handle) final;
+    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PCI_DEVICE; }
     PciDeviceDispatcher* get_pci_device_dispatcher() final { return this; }
 
     void ReleaseDevice();

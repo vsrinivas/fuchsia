@@ -25,9 +25,10 @@ public:
 
     ~MessagePipeDispatcher() final;
     void Close(Handle* handle) final;
-    Waiter* BeginWait(event_t* event, Handle* handle, mx_signals_t signals) final;
+    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_MESSAGE_PIPE; }
     MessagePipeDispatcher* get_message_pipe_dispatcher() final { return this; }
 
+    Waiter* BeginWait(event_t* event, Handle* handle, mx_signals_t signals) final;
     status_t BeginRead(uint32_t* message_size, uint32_t* handle_count);
     status_t AcceptRead(utils::Array<uint8_t>* data, utils::Array<Handle*>* handles);
     status_t Write(utils::Array<uint8_t> data, utils::Array<Handle*> handles);

@@ -20,6 +20,7 @@ public:
 
     ~EventDispatcher() final;
     void Close(Handle* handle) final;
+    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_EVENT; }
     EventDispatcher* get_event_dispatcher() final { return this; }
 
 

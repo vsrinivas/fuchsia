@@ -1,0 +1,16 @@
+import("//build/config.gni")
+import("//system/utest/test.gni")
+
+test("handle-info") {
+  output_name = "handle-info-test"
+  defines = kernel_defines
+  sources = [
+    "handle-info.c",
+  ]
+  deps = [
+    "//external/ulib/musl",
+    "//system/ulib/magenta",
+    "//system/ulib/mxio",
+    "//system/ulib/runtime",
+  ]
+}

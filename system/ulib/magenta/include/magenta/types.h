@@ -108,6 +108,35 @@ typedef struct mx_process_info {
     int return_code;
 } mx_process_info_t;
 
+// Valid topics for _magenta_handle_get_info.
+#define MX_INFO_HANDLE_VALID 0
+#define MX_INFO_HANDLE_BASIC 1
+
+typedef enum {
+    MX_OBJ_TYPE_NONE            = 0,
+    MX_OBJ_TYPE_PROCESS         = 1,
+    MX_OBJ_TYPE_THREAD          = 2,
+    MX_OBJ_TYPE_VMEM            = 3,
+    MX_OBJ_TYPE_MESSAGE_PIPE    = 4,
+    MX_OBJ_TYPE_EVENT           = 5,
+    MX_OBJ_TYPE_LOG             = 6,
+    MX_OBJ_TYPE_INTERRUPT       = 7,
+    MX_OBJ_TYPE_IOMAP           = 8,
+    MX_OBJ_TYPE_PCI_DEVICE      = 9,
+    MX_OBJ_TYPE_PCI_INT         = 10,
+} mx_obj_type_t;
+
+typedef enum {
+    MX_OBJ_PROP_NONE            = 0,
+    MX_OBJ_PROP_WAITABLE        = 1,
+} mx_obj_props_t;
+
+typedef struct handle_basic_info {
+    mx_rights_t rights;
+    uint32_t type;                // mx_obj_type_t;
+    uint32_t props;               // mx_obj_props_t;
+} handle_basic_info_t;
+
 // Info returned to dev manager for PCIe devices when probing.
 typedef struct mx_pcie_get_nth_info {
     uint16_t vendor_id;

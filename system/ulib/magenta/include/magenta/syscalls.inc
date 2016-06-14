@@ -65,6 +65,7 @@ MAGENTA_SYSCALL_DEF(5, 6, 42, mx_status_t, handle_wait_one, mx_handle_t handle, 
 MAGENTA_SYSCALL_DEF(6, 8, 43, mx_status_t, handle_wait_many, uint32_t count, const mx_handle_t* handles,
                const mx_signals_t* signals, mx_time_t timeout, mx_signals_t* satisfied_signals,
                mx_signals_t* satisfiable_signals)
+MAGENTA_SYSCALL_DEF(4, 4, 44, mx_ssize_t, handle_get_info, mx_handle_t handle, uint32_t topic, void* info, mx_size_t info_size)
 
 /* Generic object operations */
 MAGENTA_SYSCALL_DEF(3, 3, 46, mx_status_t, object_signal, mx_handle_t handle, uint32_t set_mask, uint32_t clear_mask)

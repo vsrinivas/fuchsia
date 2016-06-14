@@ -18,8 +18,9 @@ public:
                            utils::RefPtr<Dispatcher>* out_dispatcher,
                            mx_rights_t* out_rights);
 
-    ~IoMappingDispatcher() override;
-    void Close(Handle* handle) override;
+    ~IoMappingDispatcher();
+    void Close(Handle* handle);
+    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_IOMAP; }
     IoMappingDispatcher* get_io_mapping_dispatcher() final { return this; }
 
     bool    closed() const;

@@ -270,6 +270,39 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value) {
     return dup_hv;
 }
 
+mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, mx_size_t info_size) {
+    auto up = UserProcess::GetCurrent();
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_BAD_HANDLE;
+
+    if (topic == MX_INFO_HANDLE_VALID)
+        return NO_ERROR;
+
+    if (topic == MX_INFO_HANDLE_BASIC) {
+        if (!_info)
+            return ERR_INVALID_ARGS;
+
+        if (info_size < sizeof(handle_basic_info_t))
+            return ERR_NOT_ENOUGH_BUFFER;
+
+        handle_basic_info_t info = {
+            rights,
+            dispatcher->GetType(),
+            MX_OBJ_PROP_NONE,     // TODO(cpu): Return MX_OBJ_PROP_WAITABLE when appropiate.
+        };
+
+        if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+
+        return sizeof(handle_basic_info_t);
+    } else {
+        return ERR_INVALID_ARGS;
+    }
+}
+
 mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _num_bytes,
                              mx_handle_t* _handles, uint32_t* _num_handles, uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p flags 0x%x\n",

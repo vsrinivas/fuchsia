@@ -24,6 +24,7 @@ public:
 
     ~PciInterruptDispatcher() final;
     void Close(Handle* handle) final;
+    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PCI_INT; }
     PciInterruptDispatcher* get_pci_interrupt_dispatcher() final { return this; }
 
     status_t InterruptWait();
