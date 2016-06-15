@@ -28,6 +28,28 @@
 #include "controller.h"
 #include "slave.h"
 
+// Time out after 2 seconds.
+static const uint64_t timeout_ns = 2 * 1000 * 1000 * 1000;
+
+//TODO We should be using interrupts and yielding during long operations, but
+//the plumbing isn't all there for that apparently.
+#define DO_UNTIL(condition, action)                                           \
+    ({                                                                        \
+        const uint64_t _wait_for_base_time = _magenta_current_time();         \
+        uint64_t _wait_for_last_time = _wait_for_base_time;                   \
+        int _wait_for_condition_value = !!(condition);                        \
+        while (!_wait_for_condition_value) {                                  \
+               _wait_for_condition_value = !!(condition);                     \
+               if (_wait_for_last_time - _wait_for_base_time > timeout_ns)    \
+                   break;                                                     \
+               _wait_for_last_time = _magenta_current_time();                 \
+               {action;}                                                       \
+        }                                                                     \
+        _wait_for_condition_value;                                            \
+    })
+
+#define WAIT_FOR(condition) DO_UNTIL(condition, )
+
 // Implement the device protocol for the slave devices.
 
 static mx_status_t intel_broadwell_serialio_i2c_slave_open(mx_device_t* dev,
@@ -52,9 +74,26 @@ static mx_protocol_device_t intel_broadwell_serialio_i2c_slave_device_proto = {
 
 // Implement the functionality of the i2c slave devices.
 
+static int bus_is_idle(intel_broadwell_serialio_i2c_device_t *controller) {
+    uint32_t i2c_sta = *REG32(&controller->regs->i2c_sta);
+    return !(i2c_sta & (0x1 << I2C_STA_CA)) &&
+           (i2c_sta & (0x1 << I2C_STA_TFCE));
+}
+
+static int stop_detected(intel_broadwell_serialio_i2c_device_t *controller) {
+    return *REG32(&controller->regs->raw_intr_stat) &
+           (0x1 << INTR_STOP_DETECTION);
+}
+
+static int rx_fifo_empty(intel_broadwell_serialio_i2c_device_t *controller) {
+    return !(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE));
+}
+
 static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
-    mx_device_t* dev, i2c_slave_segment_t* segments, int segment_count) {
-    intel_broadwell_serialio_i2c_slave_device_t* slave =
+    mx_device_t *dev, i2c_slave_segment_t *segments, int segment_count) {
+    mx_status_t status = NO_ERROR;
+
+    intel_broadwell_serialio_i2c_slave_device_t *slave =
         get_intel_broadwell_serialio_i2c_slave_device(dev);
 
     if (!dev->parent) {
@@ -80,12 +119,10 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
 
     mxr_mutex_lock(&controller->mutex);
 
-    // Wait for the bus to become idle.
-    uint32_t i2c_sta;
-    do {
-        i2c_sta = *REG32(&controller->regs->i2c_sta);
-    } while ((i2c_sta & (0x1 << I2C_STA_CA)) ||
-             !(i2c_sta & (0x1 << I2C_STA_TFCE)));
+    if (!WAIT_FOR(bus_is_idle(controller))) {
+        status = ERR_TIMED_OUT;
+        goto fail;
+    }
 
     // Set the target adress value and width.
     RMWREG32(&controller->regs->ctl, CTL_ADDRESSING_MODE, 1, ctl_addr_mode_bit);
@@ -144,26 +181,28 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
         segments++;
     }
 
-    while (*REG32(&controller->regs->raw_intr_stat) & INTR_STOP_DETECTION) {
-        // Read the data_cmd register to pull data out of the RX FIFO.
-        *REG32(&controller->regs->clr_stop_det);
+    // Clear out the stop detect interrupt signal.
+    if (!DO_UNTIL(!stop_detected(controller),
+                  *REG32(&controller->regs->clr_stop_det))) {
+        status = ERR_TIMED_OUT;
+        goto fail;
     }
 
-    // Wait for the bus to become idle.
-    do {
-        i2c_sta = *REG32(&controller->regs->i2c_sta);
-    } while ((i2c_sta & (0x1 << I2C_STA_CA)) ||
-             !(i2c_sta & (0x1 << I2C_STA_TFCE)));
-    while ((*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_CA)) ||
-           !(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_TFCE))) {
-        ;
+    if (!WAIT_FOR(bus_is_idle(controller))) {
+        status = ERR_TIMED_OUT;
+        goto fail;
     }
 
-    while (*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE))
-        *REG32(&controller->regs->data_cmd);
+    // Read the data_cmd register to pull data out of the RX FIFO.
+    if (!DO_UNTIL(rx_fifo_empty(controller),
+                  *REG32(&controller->regs->data_cmd))) {
+        status = ERR_TIMED_OUT;
+        goto fail;
+    }
 
+fail:
     mxr_mutex_unlock(&controller->mutex);
-    return NO_ERROR;
+    return status;
 }
 
 // Implement the char protocol for the slave devices.
