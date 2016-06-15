@@ -1,6 +1,7 @@
-#include "syscall.h"
 #include <unistd.h>
 
 pid_t getpid(void) {
-    return __syscall(SYS_getpid);
+    // TODO: Return constant for now as there is no use
+    // of exposing process ID for now
+    return 2;
 }
