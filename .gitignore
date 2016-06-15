@@ -8,7 +8,6 @@ local.mk
 cscope.*
 doit
 t
-tagit
 blk.bin
 /gn
 *.dSYM
