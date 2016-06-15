@@ -1,0 +1,18 @@
+source_set("termios") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "cfgetospeed.c",
+    "cfmakeraw.c",
+    "cfsetospeed.c",
+    "tcdrain.c",
+    "tcflow.c",
+    "tcflush.c",
+    "tcgetattr.c",
+    "tcgetsid.c",
+    "tcsendbreak.c",
+    "tcsetattr.c",
+  ]
+}

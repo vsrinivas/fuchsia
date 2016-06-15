@@ -1,0 +1,13 @@
+Source: https://chromium.googlesource.com/chromium/src/base
+Commit Hash: 8dd3b80be263c2da37d1b2c5854865b97202b263
+License: BSD-style
+
+Modifications:
+- Removed dependency on base/logging.h
+- Updated include references
+- Changed namespace from base to safeint
+- Added rules.mk
+- Moved headers into include path
+- Reanmed safe_numerics_unittest.cc to safe_numerics_unittest.cpp
+- Wired safe_numerics_unittest.cpp into unittest system
+- Removed all float stuff

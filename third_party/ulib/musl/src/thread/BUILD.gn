@@ -1,0 +1,165 @@
+source_set("thread") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__timedwait.c",
+    "__tls_get_addr.c",
+    "__wait.c",
+    "call_once.c",
+    "cnd_broadcast.c",
+    "cnd_destroy.c",
+    "cnd_init.c",
+    "cnd_signal.c",
+    "cnd_timedwait.c",
+    "cnd_wait.c",
+    "lock_ptc.c",
+    "mtx_destroy.c",
+    "mtx_init.c",
+    "mtx_lock.c",
+    "mtx_timedlock.c",
+    "mtx_trylock.c",
+    "mtx_unlock.c",
+    "pthread_atfork.c",
+    "pthread_attr_destroy.c",
+    "pthread_attr_get.c",
+    "pthread_attr_init.c",
+    "pthread_attr_setdetachstate.c",
+    "pthread_attr_setguardsize.c",
+    "pthread_attr_setinheritsched.c",
+    "pthread_attr_setschedparam.c",
+    "pthread_attr_setschedpolicy.c",
+    "pthread_attr_setscope.c",
+    "pthread_attr_setstack.c",
+    "pthread_attr_setstacksize.c",
+
+    #"pthread_barrier_destroy.c",
+    "pthread_barrier_init.c",
+
+    #"pthread_barrier_wait.c",
+    "pthread_barrierattr_destroy.c",
+    "pthread_barrierattr_init.c",
+    "pthread_cancel.c",
+    "pthread_cleanup_push.c",
+    "pthread_cond_broadcast.c",
+    "pthread_cond_destroy.c",
+    "pthread_cond_init.c",
+    "pthread_cond_signal.c",
+    "pthread_cond_timedwait.c",
+    "pthread_cond_wait.c",
+    "pthread_condattr_destroy.c",
+    "pthread_condattr_init.c",
+    "pthread_condattr_setclock.c",
+    "pthread_create.c",
+    "pthread_detach.c",
+    "pthread_equal.c",
+    "pthread_getattr_np.c",
+    "pthread_getconcurrency.c",
+    "pthread_getcpuclockid.c",
+    "pthread_getschedparam.c",
+    "pthread_getspecific.c",
+    "pthread_join.c",
+    "pthread_key_create.c",
+    "pthread_kill.c",
+    "pthread_mutex_consistent.c",
+    "pthread_mutex_destroy.c",
+    "pthread_mutex_getprioceiling.c",
+    "pthread_mutex_init.c",
+    "pthread_mutex_lock.c",
+    "pthread_mutex_setprioceiling.c",
+    "pthread_mutex_timedlock.c",
+    "pthread_mutex_trylock.c",
+    "pthread_mutex_unlock.c",
+    "pthread_mutexattr_destroy.c",
+    "pthread_mutexattr_init.c",
+    "pthread_mutexattr_setprotocol.c",
+    "pthread_mutexattr_setrobust.c",
+    "pthread_mutexattr_settype.c",
+
+    #"pthread_once.c",
+    "pthread_rwlock_destroy.c",
+    "pthread_rwlock_init.c",
+    "pthread_rwlock_rdlock.c",
+    "pthread_rwlock_timedrdlock.c",
+    "pthread_rwlock_timedwrlock.c",
+    "pthread_rwlock_tryrdlock.c",
+    "pthread_rwlock_trywrlock.c",
+    "pthread_rwlock_unlock.c",
+    "pthread_rwlock_wrlock.c",
+    "pthread_rwlockattr_destroy.c",
+    "pthread_rwlockattr_init.c",
+    "pthread_self.c",
+    "pthread_setcancelstate.c",
+    "pthread_setcanceltype.c",
+    "pthread_setconcurrency.c",
+    "pthread_setschedparam.c",
+    "pthread_setschedprio.c",
+    "pthread_setspecific.c",
+    "pthread_sigmask.c",
+    "pthread_spin_destroy.c",
+    "pthread_spin_init.c",
+    "pthread_spin_lock.c",
+    "pthread_spin_trylock.c",
+    "pthread_spin_unlock.c",
+    "pthread_testcancel.c",
+    "sem_destroy.c",
+    "sem_getvalue.c",
+    "sem_init.c",
+    "sem_open.c",
+    "sem_post.c",
+    "sem_timedwait.c",
+    "sem_trywait.c",
+    "sem_unlink.c",
+    "sem_wait.c",
+    "thrd_create.c",
+    "thrd_exit.c",
+    "thrd_join.c",
+    "thrd_sleep.c",
+    "thrd_yield.c",
+    "tls.c",
+    "tss_create.c",
+    "tss_delete.c",
+    "tss_set.c",
+    "vmlock.c",
+  ]
+
+  if (target_cpu == "arm") {
+    sources += [
+      "arm/__unmapself.s",
+      "arm/atomics.s",
+      "arm/clone.s",
+      "arm/syscall_cp.s",
+    ]
+  } else if (target_cpu == "arm64") {
+    sources += [
+      "aarch64/__unmapself.s",
+      "aarch64/clone.s",
+      "aarch64/syscall_cp.s",
+    ]
+  } else if (target_cpu == "x64") {
+    sources += [
+      "x86_64/clone.s",
+      "x86_64/syscall_cp.s",
+    ]
+  } else {
+    sources += [
+      "__unmapself.c",
+      "clone.c",
+      "syscall_cp.c",
+    ]
+    deps = [
+      ":thread_no_stack_protector",
+    ]
+  }
+}
+
+if (target_cpu != "arm" && target_cpu != "arm64" && target_cpu != "x64") {
+  source_set("thread_no_stack_protector") {
+    visibility = [ ":thread" ]
+    configs = [ "//gnbuild:no_stack_protector" ]
+    sources = [
+      "__set_thread_area.c",
+    ]
+  }
+}

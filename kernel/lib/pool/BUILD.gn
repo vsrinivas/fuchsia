@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_pool_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("pool") {
+  public_configs = [ ":_pool_config" ]
+  public = [
+    "include/lib/pool.h",
+  ]
+  sources = [
+    "pool.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

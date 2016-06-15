@@ -1,0 +1,21 @@
+source_set("mman") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "madvise.c",
+    "mincore.c",
+    "mlock.c",
+    "mlockall.c",
+    "mmap.c",
+    "mprotect.c",
+    "mremap.c",
+    "msync.c",
+    "munlock.c",
+    "munlockall.c",
+    "munmap.c",
+    "posix_madvise.c",
+    "shm_open.c",
+  ]
+}

@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+assert(target_cpu == "x64")
+
+module("pc-uefi") {
+  sources = [
+    "config.c",
+    "debug.c",
+    "pixel2_quirks.c",
+  ]
+  deps = [
+    "//kernel/dev/broadwell_chipset_config",
+    "//kernel/dev/i915",
+    "//kernel/dev/pcie",
+    "//kernel/dev/thermal/intel_pch_thermal",
+    "//kernel/lib/libc",
+    "//third_party/lib/acpica",
+  ]
+}

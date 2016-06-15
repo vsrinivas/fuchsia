@@ -1,0 +1,17 @@
+source_set("sched") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "affinity.c",
+    "sched_cpucount.c",
+    "sched_get_priority_max.c",
+    "sched_getparam.c",
+    "sched_getscheduler.c",
+    "sched_rr_get_interval.c",
+    "sched_setparam.c",
+    "sched_setscheduler.c",
+    "sched_yield.c",
+  ]
+}

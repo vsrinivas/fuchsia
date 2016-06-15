@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+HASH=
+
+# hashes saved from
+#
+# https://chromium.googlesource.com/chromium/buildtools/+/master/linux64/clang-format.sha1
+# https://chromium.googlesource.com/chromium/buildtools/+/master/mac/clang-format.sha1
+
+case `uname` in
+Linux)
+    HASH=8b68e8093516183b8f38626740eeaff97f112f7e
+    ;;
+Darwin)
+    HASH=afe0942b94fe33619361efe1510ae081c3070dc1
+    ;;
+*)
+    echo "OS not understood"
+    exit 1
+esac
+
+if [ -f clang-format ]; then
+    echo "clang-format already exists in local directory"
+    exit 1
+fi
+
+# fetch clang-format into the local directory
+curl https://storage.googleapis.com/chromium-clang-format/$HASH > clang-format.fetch &&
+chmod +x clang-format.fetch &&
+mv clang-format.fetch clang-format

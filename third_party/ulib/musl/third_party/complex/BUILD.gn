@@ -1,0 +1,23 @@
+source_set("complex") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__cexp.c",
+    "__cexpf.c",
+    "catan.c",
+    "catanf.c",
+    "catanl.c",
+    "ccosh.c",
+    "ccoshf.c",
+    "cexp.c",
+    "cexpf.c",
+    "csinh.c",
+    "csinhf.c",
+    "csqrt.c",
+    "csqrtf.c",
+    "ctanh.c",
+    "ctanhf.c",
+  ]
+}

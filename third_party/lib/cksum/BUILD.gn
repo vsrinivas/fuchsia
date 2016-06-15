@@ -1,0 +1,22 @@
+import("//gnbuild/config.gni")
+
+config("_cksum_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+  defines = [ "WITH_LIB_CKSUM=1" ]
+}
+
+module("cksum") {
+  public_configs = [ ":_cksum_config" ]
+  configs -= [ "//gnbuild:strict_compiler_flags" ]
+  sources = [
+    "adler32.c",
+    "crc16.c",
+    "crc32.c",
+    "debug.c",
+  ]
+  deps = [
+    "//kernel/lib/console",
+    "//kernel/lib/libc",
+  ]
+}

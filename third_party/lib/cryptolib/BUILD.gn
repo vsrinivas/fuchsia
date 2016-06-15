@@ -1,0 +1,14 @@
+config("_cryptolib_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("cryptolib") {
+  public_configs = [ ":_cryptolib_config" ]
+  sources = [
+    "cryptolib.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

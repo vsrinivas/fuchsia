@@ -1,0 +1,28 @@
+source_set("passwd") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "fgetgrent.c",
+    "fgetpwent.c",
+    "fgetspent.c",
+    "getgr_a.c",
+    "getgr_r.c",
+    "getgrent.c",
+    "getgrent_a.c",
+    "getgrouplist.c",
+    "getpw_a.c",
+    "getpw_r.c",
+    "getpwent.c",
+    "getpwent_a.c",
+    "getspent.c",
+    "getspnam.c",
+    "getspnam_r.c",
+    "lckpwdf.c",
+    "nscd_query.c",
+    "putgrent.c",
+    "putpwent.c",
+    "putspent.c",
+  ]
+}

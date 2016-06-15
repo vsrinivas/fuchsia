@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+if [ ! -f ".clang-format" ]; then 
+  echo "local .clang-format not found. aborting"
+  exit 0
+fi
+
+# There might be more than one clang-format tool, specially if chromium's
+# depot tools are in the path. Try to use the system one.
+
+CLANGFMT=/usr/bin/clang-format
+
+if [ ! -f $CLANGFMT ]; then
+  # try local dir
+  CLANGFMT=./clang-format
+fi
+if [ ! -f $CLANGFMT ]; then
+  echo "$CLANGFMT not found. Go to http://llvm.org/releases/ to get it."
+  exit 0
+fi
+
+$CLANGFMT -i -style=file $@
+

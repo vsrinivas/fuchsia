@@ -1,0 +1,12 @@
+Source: https://acpica.org/sites/acpica/files/acpica-unix2-20160108.tar.gz
+SHA256: dfdb4dd7d35ccb8866dc5028a05330f622fc2742073ed25b4d57362f1317724e
+License: Dual-licensed GPLv2/BSD
+Version: 20160108
+
+Modifications:
+- Added README.fuchsia
+- Added rules.mk
+- Added LICENSE containing copy of source license banner
+- Added source/include/platform/acmagenta.h
+- Modified source/include/platform/acenv.h to use acmagenta.h
+- Added source/os_specific/service_layers/osmagenta.c

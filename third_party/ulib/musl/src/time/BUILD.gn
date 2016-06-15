@@ -1,0 +1,49 @@
+source_set("time") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__asctime.c",
+    "__map_file.c",
+    "__month_to_secs.c",
+    "__secs_to_tm.c",
+    "__tm_to_secs.c",
+    "__tz.c",
+    "__year_to_secs.c",
+    "asctime.c",
+    "asctime_r.c",
+    "clock.c",
+    "clock_getcpuclockid.c",
+    "clock_getres.c",
+    "clock_gettime.c",
+    "clock_nanosleep.c",
+    "clock_settime.c",
+    "ctime.c",
+    "ctime_r.c",
+    "difftime.c",
+    "ftime.c",
+    "getdate.c",
+    "gettimeofday.c",
+    "gmtime.c",
+    "gmtime_r.c",
+    "localtime.c",
+    "localtime_r.c",
+    "mktime.c",
+    "nanosleep.c",
+    "strftime.c",
+    "strptime.c",
+    "time.c",
+    "timegm.c",
+
+    #"timer_create.c",
+    #"timer_delete.c",
+    "timer_getoverrun.c",
+    "timer_gettime.c",
+    "timer_settime.c",
+    "times.c",
+    "timespec_get.c",
+    "utime.c",
+    "wcsftime.c",
+  ]
+}

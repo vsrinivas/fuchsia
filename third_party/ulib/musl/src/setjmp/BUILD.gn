@@ -1,0 +1,25 @@
+source_set("setjmp") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = []
+  if (target_cpu == "arm") {
+    sources += [
+      "arm/longjmp.s",
+      "arm/setjmp.s",
+    ]
+  } else if (target_cpu == "arm64") {
+    sources += [
+      "aarch64/longjmp.s",
+      "aarch64/setjmp.s",
+    ]
+  } else if (target_cpu == "x64") {
+    # Defined in //third_party
+  } else {
+    sources += [
+      "longjmp.c",
+      "setjmp.c",
+    ]
+  }
+}

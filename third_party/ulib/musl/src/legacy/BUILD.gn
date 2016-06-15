@@ -1,0 +1,24 @@
+source_set("legacy") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "cuserid.c",
+    "daemon.c",
+    "err.c",
+    "euidaccess.c",
+    "ftw.c",
+    "futimes.c",
+    "getdtablesize.c",
+    "getloadavg.c",
+    "getpagesize.c",
+    "getpass.c",
+    "getusershell.c",
+    "isastream.c",
+    "lutimes.c",
+    "ulimit.c",
+    "utmpx.c",
+    "valloc.c",
+  ]
+}

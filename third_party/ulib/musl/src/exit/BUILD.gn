@@ -1,0 +1,18 @@
+source_set("exit") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "_Exit.c",
+    "abort.c",
+    "assert.c",
+    "at_quick_exit.c",
+    "atexit.c",
+    "exit.c",
+    "quick_exit.c",
+  ]
+  if (target_cpu == "arm") {
+    sources += [ "arm/__aeabi_atexit.c" ]
+  }
+}

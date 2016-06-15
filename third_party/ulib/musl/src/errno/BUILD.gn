@@ -1,0 +1,10 @@
+source_set("errno") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__errno_location.c",
+    "strerror.c",
+  ]
+}

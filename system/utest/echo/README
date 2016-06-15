@@ -1,0 +1,15 @@
+This is a simple example of reading/writing mojo messages adhering to the Echo
+protocol: https://github.com/domokit/mojo/blob/master/examples/echo/echo.mojom.
+The program assumes that it starts up with a handle value to a message pipe and
+that something on the other end of that message pipe is sending some number of
+Echo calls along the pipe. The program:
+*) waits for the message pipe to be readable
+*) reads an incoming message
+*) validates that it seems sane
+*) formats a reply message
+*) sends the reply
+*) goes back to waiting
+
+until the message pipe peer is closed or any other error is encountered. The
+serialization/deserialization is hand written as we don't have code generation
+for mojom set up for C yet.

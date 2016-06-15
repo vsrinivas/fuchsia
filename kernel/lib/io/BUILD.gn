@@ -1,0 +1,35 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//gnbuild/config.gni")
+
+config("_io_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+  defines = [ "WITH_LIB_IO=1" ]
+}
+
+module("io") {
+  public_configs = [ ":_io_config" ]
+  public = [
+    "include/lib/io.h",
+  ]
+  include_dirs = [
+    "//kernel/lib/heap/include",
+    "//kernel/lib/libc/include",
+  ]
+  sources = [
+    "console.c",
+    "io.c",
+  ]
+  if (enable_debuglog) {
+    # TODO(phosek): only console.c depends on debuglog, we should move it to
+    # a separate source_set to break up the dependency
+    deps = [
+      "//kernel/lib/debuglog",
+    ]
+  }
+}

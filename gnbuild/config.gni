@@ -1,0 +1,131 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+declare_args() {
+  # Use linebuffer for debug output.
+  enable_debug_linebuffer = true
+
+  # Debug output verbosity.
+  debug_level = 2
+
+  # Predefines used by the kernel.
+  kernel_defines = []
+}
+
+# TODO(phosek): toolchain configuration could be moved to a separate file
+if (is_clang) {
+  default_toolprefix = ""
+} else if (target_cpu == "arm") {
+  default_toolprefix = "arm-eabi-"
+} else if (target_cpu == "arm64") {
+  default_toolprefix = "aarch64-elf-"
+} else if (target_cpu == "x64") {
+  default_toolprefix = "x86_64-elf-"
+} else {
+  assert(false, "Target CPU not supported")
+}
+
+declare_args() {
+  # Toolchain prefix.
+  toolprefix = default_toolprefix
+}
+
+# Support for SMP.
+enable_smp = false
+
+# Support for virtual memory.
+enable_vm = true
+
+# Support for Intel HDA QEMU quirks.
+enable_intel_hda_qemu_quirks = false
+
+# Support for PCIe.
+enable_pcie = true
+
+# Support for application shell.
+enable_shell = false
+
+# Kernel console.
+enable_console = true
+
+# Support for debug log.
+enable_debuglog = true
+
+# Support for partitioning.
+enable_partition = false
+
+# Support for kernel log.
+enable_klog = true
+
+# The heap implementation used.
+heap_implementation = "miniheap"
+
+# Magenta.
+enable_magenta = true
+
+# Support for user boot.
+enable_userboot = true
+
+if (target_cpu == "x64") {
+  enable_vm = true
+  enable_smp = true
+  enable_debug_linebuffer = true
+  heap_implementation = "cmpctmalloc"
+  embed_user_bootfs = true
+  if (target_platform == "qemu") {
+    enable_intel_hda_qemu_quirks = true
+  }
+
+  # TODO(phosek): Turn these into a config in arch/x86
+  kernel_defines = [
+    "MEMBASE=0",
+    "KERNEL_ASPACE_BASE=0xffffff8000000000",
+    "KERNEL_ASPACE_SIZE=0x0000008000000000",
+    "KERNEL_BASE=0xffffffff80000000",
+    "KERNEL_LOAD_OFFSET=0x00100000",
+    "KERNEL_SIZE=0x40000000",
+    "USER_ASPACE_BASE=0x0000000001000000",
+    "USER_ASPACE_SIZE=0x00007fffff000000",
+    "HEADER_LOAD_OFFSET=0x00010000",
+    "PHYS_HEADER_LOAD_OFFSET=0x00002000",
+  ]
+} else if (target_cpu == "arm") {
+  enable_vm = true
+  enable_smp = true
+  enable_debug_linebuffer = true
+  heap_implementation = "cmpctmalloc"
+  embed_user_bootfs = true
+
+  # TODO(phosek): Turn these into a config in arch/arm
+  kernel_defines = [
+    "MEMBASE=0x40000000",
+    "MEMSIZE=0x08000000",
+    "KERNEL_ASPACE_BASE=0x40000000",
+    "KERNEL_ASPACE_SIZE=0xc0000000",
+    "KERNEL_BASE=0x80000000",
+    "KERNEL_LOAD_OFFSET=0x10000",
+  ]
+} else if (target_cpu == "arm64") {
+  enable_vm = true
+  enable_smp = true
+  enable_debug_linebuffer = true
+  heap_implementation = "cmpctmalloc"
+  embed_user_bootfs = true
+
+  # TODO(phosek): Turn these into a config in arch/arm64
+  kernel_defines = [
+    "MEMBASE=0x40000000",
+    "MEMSIZE=0x08000000",
+    "KERNEL_ASPACE_BASE=0xffff000000000000",
+    "KERNEL_ASPACE_SIZE=0x0001000000000000",
+    "USER_ASPACE_BASE=0x0000000001000000",
+    "USER_ASPACE_SIZE=0x0000fffffe000000",
+    "KERNEL_BASE=0xffff000000000000",
+    "KERNEL_LOAD_OFFSET=0x10000",
+  ]
+} else {
+  assert(false, "Target CPU not supported")
+}

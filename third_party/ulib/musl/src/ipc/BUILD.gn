@@ -1,0 +1,21 @@
+source_set("ipc") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "ftok.c",
+    "msgctl.c",
+    "msgget.c",
+    "msgrcv.c",
+    "msgsnd.c",
+    "semctl.c",
+    "semget.c",
+    "semop.c",
+    "semtimedop.c",
+    "shmat.c",
+    "shmctl.c",
+    "shmdt.c",
+    "shmget.c",
+  ]
+}

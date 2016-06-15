@@ -1,0 +1,55 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+module("string") {
+  sources = [
+    "bcopy.c",
+    "bzero.c",
+    "memchr.c",
+    "memcmp.c",
+    "memcpy.c",
+    "memmove.c",
+    "memset.c",
+    "strcat.c",
+    "strchr.c",
+    "strcmp.c",
+    "strcoll.c",
+    "strcpy.c",
+    "strdup.c",
+    "strerror.c",
+    "strlcat.c",
+    "strlcpy.c",
+    "strlen.c",
+    "strncat.c",
+    "strncmp.c",
+    "strncpy.c",
+    "strnicmp.c",
+    "strnlen.c",
+    "strpbrk.c",
+    "strrchr.c",
+    "strspn.c",
+    "strstr.c",
+    "strtok.c",
+    "strxfrm.c",
+  ]
+  include_dirs = [
+    "//kernel/lib/libc/include",
+    "//kernel/lib/heap/include",
+  ]
+  if (target_cpu == "arm") {
+    sources -= [
+      "bcopy.c",
+      "bzero.c",
+      "memcpy.c",
+      "memmove.c",
+      "memset.c",
+    ]
+    sources += [
+      "arch/arm/arm/memcpy.S",
+      "arch/arm/arm/memset.S",
+    ]
+  }
+}

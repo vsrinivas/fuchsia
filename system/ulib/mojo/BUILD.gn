@@ -1,0 +1,45 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+config("_mojo_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+source_set("mojo") {
+  public_configs = [ ":_mojo_config" ]
+  public = [
+    "include/mojo/mojo_string.h",
+    "include/mojo/mojo_futex.h",
+    "include/mojo/mojo_types.h",
+    "include/mojo/mojo_process.h",
+    "include/mojo/mojo_message_pipe.h",
+    "include/mojo/mojo_events.h",
+    "include/mojo/mojo_threads.h",
+    "include/mojo/mojo_interrupt.h",
+    "include/mojo/mojo.h",
+  ]
+  sources = [
+    "mojo.c",
+    "mojo_strerror.c",
+  ]
+  deps = [
+    "//system/ulib/magenta",
+    "//system/ulib/runtime",
+    "//third_party/ulib/musl",
+  ]
+  public_deps = [
+    "//system/ulib/global",
+  ]
+}

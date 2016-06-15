@@ -1,0 +1,157 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+function HELP {
+    echo "help:"
+    echo "-a <arch>           : arm32, arm64, or x86-64"
+    echo "-b                  : build first"
+    echo "-d                  : run with emulated disk"
+    echo "-g                  : use graphical console"
+    echo "-k                  : use KVM"
+    echo "-m <memory in MB>   : default 512MB"
+    echo "-n                  : run with emulated nic"
+    echo "-o <dir>            : build directory"
+    echo "-r                  : run release build"
+    echo "-u                  : use uniprocessor"
+    echo "-v                  : use vnc based display"
+    echo "-h for help"
+    echo "all arguments after -- are passed to qemu directly"
+    exit 1
+}
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+ARCH=
+BUILD=0
+DISK=0
+BUILDDIR=
+GRAPHICS=0
+DO_KVM=0
+MEMSIZE=512
+NET=0
+UP=0
+RELEASE=0
+VNC=0
+
+while getopts a:bdgkm:no:ruvh FLAG; do
+    case $FLAG in
+        a) ARCH=$OPTARG;;
+        b) BUILD=1;;
+        d) DISK=1;;
+        g) GRAPHICS=1;;
+        k) DO_KVM=1;;
+        m) MEMSIZE=$OPTARG;;
+        n) NET=1;;
+        o) BUILDDIR=$OPTARG;;
+        r) RELEASE=1;;
+        u) UP=1;;
+        v) VNC=1;;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+    esac
+done
+shift $((OPTIND-1))
+
+# arch argument is non optional
+if [ "$ARCH" == "" ]; then
+    echo must specify arch
+    HELP
+fi
+
+PROJECT=magenta-qemu-$ARCH
+
+# build the project if asked for
+if [ "$BUILD" -eq 1 ]; then
+    if [ "$RELEASE" -eq 1 ]; then
+        $DIR/make-release $PROJECT || exit 1
+    else
+        $DIR/make-parallel $PROJECT || exit 1
+    fi
+fi
+
+# append the release path if requested
+if [ "$RELEASE" -eq 1 ]; then
+    PROJECT=$PROJECT-release
+fi
+
+if [ "$BUILDDIR" == "" ]; then
+  BUILDDIR=build-$PROJECT
+fi
+
+# construct the args for qemu
+ARGS=" -m $MEMSIZE"
+if [ "$VNC" -eq 1 ]; then
+    ARGS+=" -vnc :0"
+fi
+
+if [ "$GRAPHICS" -eq 0 ]; then
+    ARGS+=" -nographic"
+else
+    ARGS+=" -serial stdio"
+    if [ "$ARCH" != "x86-64" ]; then
+        # PC already has a vga framebuffer
+        ARGS+=" -device virtio-gpu-device"
+    fi
+fi
+
+if [ "$DISK" -eq 1 ]; then
+    # virtio based block device
+    if [ "$ARCH" == "x86-64" ]; then
+        ARGS+=" -drive file=blk.bin,if=virtio,format=raw"
+    else
+        ARGS+=" -drive if=none,file=blk.bin,id=blk,format=raw -device virtio-blk-device,drive=blk"
+    fi
+fi
+
+if [ "$NET" -eq 1 ]; then
+    # virtio based network interface
+    if [ "$ARCH" == "x86-64" ]; then
+        ARGS+=" -netdev type=user,hostname=qemu,id=net0 -device virtio-net-pci,netdev=net0"
+    else
+        ARGS+=" -netdev user,id=vmnic,hostname=qemu -device virtio-net-device,netdev=vmnic"
+    fi
+fi
+case $ARCH in
+    arm32)
+        QEMU=qemu-system-arm
+        ARGS+=" -machine virt -cpu cortex-a15 -kernel $BUILDDIR/lk.elf"
+        if [ "$UP" -eq 0 ]; then
+          ARGS+=" -smp cores=2,sockets=1"
+        fi
+        ;;
+    arm64)
+        QEMU=qemu-system-aarch64
+        ARGS+=" -machine virt -cpu cortex-a53 -kernel $BUILDDIR/lk.elf"
+        if [ "$UP" -eq 0 ]; then
+          ARGS+=" -smp cores=2,sockets=1"
+        fi
+        ;;
+    x86-64)
+        QEMU=qemu-system-x86_64
+        ARGS+=" -machine q35 -kernel $BUILDDIR/lk.bin"
+        if [ "$UP" -eq 0 ]; then
+          ARGS+=" -smp cores=2,threads=2,sockets=1"
+        fi
+        if [ $DO_KVM -ne 0 ]; then
+          ARGS+=" -enable-kvm -cpu host"
+        else
+          ARGS+=" -cpu Haswell,+smap"
+        fi
+        ;;
+    *)
+        echo unsupported arch
+        HELP
+        ;;
+esac
+
+# run qemu
+echo $QEMU $ARGS $@
+$QEMU $ARGS $@
+

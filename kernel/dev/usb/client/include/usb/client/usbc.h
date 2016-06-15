@@ -1,0 +1,69 @@
+// Copyright 2016 The Fuchsia Authors
+// Copyright (c) 2008 Travis Geiselbrecht
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#ifndef __DEV_USBC_H
+#define __DEV_USBC_H
+
+#include <compiler.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <hw/usb.h>
+
+__BEGIN_CDECLS
+
+void usbc_init(void);
+
+typedef uint ep_t;
+
+typedef enum {
+    USB_IN = 0,
+    USB_OUT
+} ep_dir_t;
+
+struct usbc_transfer;
+typedef status_t (*ep_callback)(ep_t endpoint, struct usbc_transfer *transfer);
+
+typedef struct usbc_transfer {
+    ep_callback callback;
+    status_t result;
+    void *buf;
+    size_t buflen;
+    uint bufpos;
+    void *extra; // extra pointer to store whatever you want
+} usbc_transfer_t;
+
+enum {
+    USB_TRANSFER_RESULT_OK = 0,
+    USB_TRANSFER_RESULT_ERR = -1,
+    USB_TRANSFER_RESULT_CANCELLED = -2,
+};
+
+status_t usbc_setup_endpoint(ep_t ep, ep_dir_t dir, uint width);
+status_t usbc_queue_rx(ep_t ep, usbc_transfer_t *transfer);
+status_t usbc_queue_tx(ep_t ep, usbc_transfer_t *transfer);
+
+status_t usbc_set_active(bool active);
+void usbc_set_address(uint8_t address);
+
+/* called back from within a callback to handle setup responses */
+void usbc_ep0_ack(void);
+void usbc_ep0_stall(void);
+void usbc_ep0_send(const void *buf, size_t len, size_t maxlen);
+void usbc_ep0_recv(void *buf, size_t len, ep_callback);
+
+bool usbc_is_highspeed(void);
+
+static inline void usbc_dump_transfer(const usbc_transfer_t *t)
+{
+    printf("usb transfer %p: cb %p buf %p, buflen %zd, bufpos %u, result %d\n", t, t->callback, t->buf, t->buflen, t->bufpos, t->result);
+}
+
+__END_CDECLS
+
+#endif
+

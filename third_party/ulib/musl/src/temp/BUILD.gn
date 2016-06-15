@@ -1,0 +1,15 @@
+source_set("temp") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__randname.c",
+    "mkdtemp.c",
+    "mkostemp.c",
+    "mkostemps.c",
+    "mkstemp.c",
+    "mkstemps.c",
+    "mktemp.c",
+  ]
+}

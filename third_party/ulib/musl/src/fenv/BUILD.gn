@@ -1,0 +1,23 @@
+source_set("fenv") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__flt_rounds.c",
+    "fegetexceptflag.c",
+    "feholdexcept.c",
+    "fesetexceptflag.c",
+    "fesetround.c",
+    "feupdateenv.c",
+  ]
+  if (target_cpu == "arm") {
+    sources += [ "arm/fenv.c" ]
+  } else if (target_cpu == "arm64") {
+    sources += [ "aarch64/fenv.s" ]
+  } else if (target_cpu == "x64") {
+    sources += [ "x86_64/fenv.s" ]
+  } else {
+    sources += [ "fenv.c" ]
+  }
+}

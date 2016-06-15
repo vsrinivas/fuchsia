@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+case `uname` in
+Linux)
+    N=`cat /proc/cpuinfo | grep processor | wc -l`
+    PARALLEL=-j`expr $N + $N`
+    ;;
+Darwin)
+    PARALLEL=-j`sysctl -n hw.ncpu`
+    ;;
+*)
+    PARALLEL=-j8
+    ;;
+esac
+
+make $PARALLEL "$@"

@@ -1,0 +1,53 @@
+config("_libm_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("libm") {
+  public_configs = [ ":_libm_config" ]
+  cflags = [
+    "-Wno-unused-variable",
+    "-Wno-sign-compare",
+    "-Wno-parentheses",
+  ]
+  sources = [
+    "e_acos.c",
+    "e_acosf.c",
+    "e_asin.c",
+    "e_asinf.c",
+    "e_atan2.c",
+    "e_exp.c",
+    "e_fmod.c",
+    "e_log.c",
+    "e_pow.c",
+    "e_powf.c",
+    "e_sqrt.c",
+    "e_sqrtf.c",
+    "k_cos.c",
+    "k_rem_pio2.c",
+    "k_sin.c",
+    "k_tan.c",
+    "s_atan.c",
+    "s_ceil.c",
+    "s_ceilf.c",
+    "s_copysign.c",
+    "s_copysignf.c",
+    "s_cos.c",
+    "s_cosf.c",
+    "s_fabs.c",
+    "s_fabsf.c",
+    "s_floor.c",
+    "s_floorf.c",
+    "s_round.c",
+    "s_scalbn.c",
+    "s_scalbnf.c",
+    "s_sin.c",
+    "s_sinf.c",
+    "s_tan.c",
+    "s_tanf.c",
+    "s_trunc.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

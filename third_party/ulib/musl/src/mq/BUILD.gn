@@ -1,0 +1,18 @@
+source_set("mq") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "mq_close.c",
+    "mq_getattr.c",
+    "mq_notify.c",
+    "mq_open.c",
+    "mq_receive.c",
+    "mq_send.c",
+    "mq_setattr.c",
+    "mq_timedreceive.c",
+    "mq_timedsend.c",
+    "mq_unlink.c",
+  ]
+}

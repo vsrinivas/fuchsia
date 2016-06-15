@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_unittest_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("unittest") {
+  public_configs = [ ":_unittest_config" ]
+  public = [
+    "include/unittest.h",
+  ]
+  sources = [
+    "all_tests.c",
+    "unittest.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

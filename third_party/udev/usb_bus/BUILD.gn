@@ -1,0 +1,16 @@
+source_set("usb_bus") {
+  sources = [
+    "generic_hub.c",
+    "usb_bus.c",
+    "usb_device.c",
+    "usb_device.h",
+    "usb_hub.c",
+    "usb_private.h",
+  ]
+  deps = [
+    "//system/ulib/ddk",
+    "//system/ulib/magenta",
+    "//system/ulib/mxu",
+    "//third_party/ulib/musl",
+  ]
+}

@@ -1,0 +1,11 @@
+source_set("crypt") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "crypt.c",
+    "crypt_r.c",
+    "encrypt.c",
+  ]
+}

@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_cbuf_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("cbuf") {
+  public_configs = [ ":_cbuf_config" ]
+  public = [
+    "include/lib/cbuf.h",
+  ]
+  sources = [
+    "cbuf.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

@@ -1,0 +1,52 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+module("tests") {
+  configs += [ "//kernel/kernel:enable_vm" ]
+  cflags = [
+    "-Wno-format",
+    "-fno-builtin",
+  ]
+  include_dirs = [ "include" ]
+  public = [
+    "include/app/tests.h",
+  ]
+  sources = [
+    "arena_tests.cpp",
+    "auto_call_tests.cpp",
+    "benchmarks.c",
+    "cache_tests.c",
+    "clock_tests.c",
+    "fibo.c",
+    "float.c",
+    "float_instructions.S",
+    "float_test_vec.c",
+    "forward_tests.cpp",
+    "hash_tests.cpp",
+    "list_tests.cpp",
+    "mem_tests.c",
+    "port_tests.c",
+    "printf_tests.c",
+    "ref_call_counter.cpp",
+    "ref_call_counter.h",
+    "ref_counted_tests.cpp",
+    "ref_ptr_tests.cpp",
+    "sync_ipi_tests.c",
+    "tests.c",
+    "thread_tests.c",
+    "unique_ptr_tests.cpp",
+    "unittests.c",
+    "vm_tests.cpp",
+  ]
+  deps = [
+    "//kernel/lib/console",
+    "//kernel/lib/crypto",
+    "//kernel/lib/libc",
+    "//kernel/lib/unittest",
+    "//kernel/lib/utils",
+    "//third_party/lib/safeint",
+  ]
+}

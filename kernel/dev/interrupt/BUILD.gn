@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_interrupt_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("interrupt") {
+  public_configs = [ ":_interrupt_config" ]
+  public = [
+    "include/dev/interrupt.h",
+    "include/dev/interrupt_event.h",
+  ]
+  sources = [
+    "interrupt_event.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

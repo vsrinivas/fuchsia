@@ -1,0 +1,14 @@
+source_set("multibyte") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "c16rtomb.c",
+    "c32rtomb.c",
+    "mbrtoc16.c",
+    "mbrtoc32.c",
+    "mbstowcs.c",
+    "wcstombs.c",
+  ]
+}

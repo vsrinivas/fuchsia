@@ -1,0 +1,22 @@
+config("_safeint_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("safeint") {
+  public_configs = [ ":_safeint_config" ]
+  public = [
+    "include/safeint/safe_conversions.h",
+    "include/safeint/safe_conversions_impl.h",
+    "include/safeint/safe_math.h",
+    "include/safeint/safe_math_impl.h",
+  ]
+  sources = [
+    "safe_numerics_unittest.cpp",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+    "//kernel/lib/unittest",
+    "//kernel/lib/utils",
+  ]
+}

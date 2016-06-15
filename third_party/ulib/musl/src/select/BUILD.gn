@@ -1,0 +1,11 @@
+source_set("select") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "poll.c",
+    "pselect.c",
+    "select.c",
+  ]
+}

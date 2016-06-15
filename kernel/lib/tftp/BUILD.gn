@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_tftp_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("tftp") {
+  public_configs = [ ":_tftp_config" ]
+  public = [
+    "include/lib/tftp.h",
+  ]
+  sources = [
+    "tftp.c",
+  ]
+  deps = [
+    "//kernel/lib/minip",
+  ]
+}

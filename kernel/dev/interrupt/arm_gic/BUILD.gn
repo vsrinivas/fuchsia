@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_arm_gic_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+  defines = [ "WITH_DEV_INTERRUPT_ARM_GIC=1" ]
+}
+
+module("arm_gic") {
+  public_configs = [ ":_arm_gic_config" ]
+  include_dirs = [
+    "//kernel/platform/qemu-virt/include",
+    "//kernel/dev/interrupt/include",
+  ]
+  sources = [
+    "arm_gic.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

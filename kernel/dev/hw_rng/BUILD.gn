@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_hw_rng_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("hw_rng") {
+  public_configs = [ ":_hw_rng_config" ]
+  public = [
+    "include/dev/hw_rng.h",
+  ]
+  sources = [
+    "debug.c",
+  ]
+  deps = [
+    "//kernel/lib/console",
+    "//kernel/lib/libc",
+  ]
+}

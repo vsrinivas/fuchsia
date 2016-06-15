@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+# Copyright (c) 2008 Travis Geiselbrecht
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+function HELP {
+    echo "help:"
+    echo "-f                  : Exit on first failure"
+    echo "-r                  : Also build release mode builds"
+    echo "-h for help"
+    exit 1
+}
+
+FAIL_FAST=0
+DO_RELEASE=0
+
+while getopts fhr FLAG; do
+    case $FLAG in
+        f) FAIL_FAST=1;;
+        h) HELP;;
+        r) DO_RELEASE=1;;
+        \?)
+            echo unrecognized option
+            HELP
+    esac
+done
+shift $((OPTIND-1))
+
+# build everything in the projects directory
+PROJECTS=`echo kernel/project/*.mk | xargs -n1 basename | sed 's/\.mk//'`
+FAILED=""
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+for p in $PROJECTS; do
+  if ! nice $DIR/make-parallel $p; then
+    FAILED="$FAILED $p"
+    if [ "$FAIL_FAST" -eq 1 ]; then
+      break
+    fi
+  fi
+  if [ "$DO_RELEASE" -eq 1 ]; then
+    if ! nice $DIR/make-release $p; then
+      FAILED="$FAILED $p-release"
+      if [ "$FAIL_FAST" -eq 1 ]; then
+        break
+      fi
+    fi
+  fi
+done
+
+if [ "$FAILED" != "" ]; then
+  echo
+  echo some projects have failed to build:
+  echo $FAILED
+fi

@@ -1,0 +1,10 @@
+source_set("regex") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "fnmatch.c",
+    "glob.c",
+  ]
+}

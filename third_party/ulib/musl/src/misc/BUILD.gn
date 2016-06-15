@@ -1,0 +1,45 @@
+source_set("misc") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "a64l.c",
+    "basename.c",
+    "dirname.c",
+    "ffs.c",
+    "ffsl.c",
+    "ffsll.c",
+    "forkpty.c",
+    "get_current_dir_name.c",
+    "getauxval.c",
+    "getdomainname.c",
+    "gethostid.c",
+    "getopt.c",
+    "getopt_long.c",
+    "getpriority.c",
+    "getresgid.c",
+    "getresuid.c",
+    "getrlimit.c",
+    "getrusage.c",
+    "getsubopt.c",
+    "initgroups.c",
+    "ioctl.c",
+    "issetugid.c",
+    "lockf.c",
+    "login_tty.c",
+    "mntent.c",
+    "nftw.c",
+    "openpty.c",
+    "ptsname.c",
+    "pty.c",
+    "realpath.c",
+    "setdomainname.c",
+    "setpriority.c",
+    "setrlimit.c",
+    "syscall.c",
+    "syslog.c",
+    "uname.c",
+    "wordexp.c",
+  ]
+}

@@ -1,0 +1,28 @@
+source_set("stdlib") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "abs.c",
+    "atof.c",
+    "atoi.c",
+    "atol.c",
+    "atoll.c",
+    "bsearch.c",
+    "div.c",
+    "ecvt.c",
+    "fcvt.c",
+    "gcvt.c",
+    "imaxabs.c",
+    "imaxdiv.c",
+    "labs.c",
+    "ldiv.c",
+    "llabs.c",
+    "lldiv.c",
+    "strtod.c",
+    "strtol.c",
+    "wcstod.c",
+    "wcstol.c",
+  ]
+}

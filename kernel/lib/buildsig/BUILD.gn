@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_buildsig_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("buildsig") {
+  public_configs = [ ":_buildsig_config" ]
+  public = [
+    "include/lib/buildsig.h",
+  ]
+  sources = [
+    "buildsig.c",
+  ]
+  deps = [
+    "//kernel/lib/console",
+    "//kernel/lib/version",
+  ]
+}

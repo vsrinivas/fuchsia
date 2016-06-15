@@ -1,0 +1,105 @@
+source_set("crt") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "..:musl_config" ]
+  cflags = []
+  cflags += [
+    "-DCRT",
+    "-fno-stack-protector",
+  ]
+  sources = [
+    "Scrt1.c",
+    "crt1.c",
+    "rcrt1.c",
+  ]
+  if (target_cpu == "arm") {
+    sources += [
+      "arm/crti.s",
+      "arm/crtn.s",
+    ]
+  } else if (target_cpu == "arm64") {
+    sources += [
+      "aarch64/crti.s",
+      "aarch64/crtn.s",
+    ]
+  } else if (target_cpu == "x64") {
+    sources += [
+      "x86_64/crti.s",
+      "x86_64/crtn.s",
+    ]
+  } else {
+    sources += [
+      "crti.c",
+      "crtn.c",
+    ]
+  }
+}
+
+template("copy_objects") {
+  assert(defined(invoker.input_dir), "input_dir must be defined")
+  assert(defined(invoker.output_dir), "output_dir must be defined")
+  object_prefix = ""
+  if (defined(invoker.object_prefix)) {
+    object_prefix = invoker.object_prefix
+  }
+  foreach(file, invoker.sources) {
+    copy("copy_${file}") {
+      sources = [
+        rebase_path("${invoker.input_dir}/${object_prefix}${file}",
+                    "",
+                    target_out_dir),
+      ]
+      outputs = [
+        "${invoker.output_dir}/${file}",
+      ]
+      deps = [
+        ":crt",
+      ]
+    }
+  }
+  group(target_name) {
+    deps = [
+      ":crt",
+    ]
+    foreach(file, invoker.sources) {
+      deps += [ ":copy_${file}" ]
+    }
+  }
+}
+
+copy_objects("copy_crt_objects") {
+  sources = [
+    "Scrt1.o",
+    "crt1.o",
+    "rcrt1.o",
+  ]
+  object_prefix = "crt."
+  input_dir = "."
+  output_dir = "${root_out_dir}/lib"
+}
+
+copy_objects("copy_crt_arch_objects") {
+  sources = [
+    "crti.o",
+    "crtn.o",
+  ]
+  object_prefix = "crt."
+  if (target_cpu == "arm") {
+    input_dir = "arm"
+  } else if (target_cpu == "arm64") {
+    input_dir = "aarch64"
+  } else if (target_cpu == "x64") {
+    input_dir = "x86_64"
+  } else {
+    input_dir = "."
+  }
+  output_dir = "${root_out_dir}/lib"
+}
+
+group("install") {
+  deps = [
+    ":copy_crt_arch_objects",
+    ":copy_crt_objects",
+  ]
+}

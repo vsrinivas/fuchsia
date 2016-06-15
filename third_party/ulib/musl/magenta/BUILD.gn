@@ -1,0 +1,15 @@
+source_set("magenta") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "..:musl_config" ]
+  sources = [
+    "debug.c",
+    "io.c",
+    "io.h",
+    "linuxisms.c",
+    "new.cpp",
+    "new.h",
+    "pure_virtual.c",
+  ]
+}

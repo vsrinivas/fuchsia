@@ -1,0 +1,22 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+module("dev") {
+  sources = [
+    "class/block_api.c",
+    "class/fb_api.c",
+    "class/i2c_api.c",
+    "class/netif_api.c",
+    "class/spi_api.c",
+    "class/uart_api.c",
+    "dev.c",
+    "driver.c",
+  ]
+  deps = [
+    "//kernel/lib/gfxconsole",
+    "//kernel/lib/libc",
+  ]
+}

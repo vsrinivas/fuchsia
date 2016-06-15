@@ -1,0 +1,48 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+group("qemu-virt") {
+  deps = [
+    "//kernel/dev/intel_hda",
+  ]
+}
+
+if (target_cpu == "arm") {
+  group("qemu-virt-a15") {
+    deps = [
+      ":qemu-virt",
+      "//kernel/platform/qemu-virt",
+      "//kernel/target/qemu-virt",
+    ]
+  }
+}
+
+if (target_cpu == "arm64") {
+  group("qemu-virt-a53") {
+    deps = [
+      ":qemu-virt",
+      "//kernel/platform/qemu-virt",
+      "//kernel/target/qemu-virt",
+    ]
+  }
+}
+
+if (target_cpu == "x64") {
+  group("pc-x86") {
+    deps = [
+      ":qemu-virt",
+      "//kernel/platform/pc",
+      "//kernel/target/pc-x86",
+    ]
+  }
+
+  group("pc-uefi") {
+    deps = [
+      "//kernel/platform/pc",
+      "//kernel/target/pc-uefi",
+    ]
+  }
+}

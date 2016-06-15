@@ -1,0 +1,66 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+assert(target_cpu == "x64")
+
+import("//gnbuild/config.gni")
+import("//gnbuild/generate_ld_script.gni")
+
+module("x86") {
+  configs += [
+    "//kernel/kernel:enable_vm",
+    "//kernel/lib/console:enable_console",
+    "//kernel/lib/magenta:enable_magenta",
+  ]
+  include_dirs = [
+    "//kernel/lib/heap/include",
+    "//kernel/lib/io/include",
+    "//kernel/lib/libc/include",
+    "//kernel/lib/magenta/include",
+    "//kernel/lib/user_copy/include",
+    "//system/ulib/magenta/include",
+    "//kernel/dev/interrupt/include",
+  ]
+
+  # These defines would be ideally defined as a config, but they're currently
+  # also shared by the ld script target and as such has to be defined as
+  # variable.
+  defines = kernel_defines
+  sources = [
+    "64/ap_start.S",
+    "64/asm.S",
+    "64/exceptions.S",
+    "64/ops.S",
+    "64/smp.c",
+    "64/start.S",
+    "64/syscall.S",
+    "64/user_copy.S",
+    "64/uspace_entry.S",
+    "arch.c",
+    "cache.c",
+    "descriptor.c",
+    "faults.c",
+    "feature.c",
+    "fpu.c",
+    "gdt.S",
+    "header.S",
+    "idt.c",
+    "ioapic.c",
+    "ioport.c",
+    "lapic.c",
+    "mmu.cpp",
+    "mmu_mem_types.c",
+    "mp.c",
+    "thread.c",
+    "user_copy.c",
+  ]
+}
+
+generate_ld_script("kernel_ld") {
+  input = "64/kernel.ld"
+  output = "${root_gen_dir}/kernel.ld"
+  defines = kernel_defines
+}

@@ -1,0 +1,11 @@
+source_set("aio") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "aio.c",
+    "aio_suspend.c",
+    "lio_listio.c",
+  ]
+}

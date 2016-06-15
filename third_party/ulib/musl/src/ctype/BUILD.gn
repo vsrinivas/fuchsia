@@ -1,0 +1,45 @@
+source_set("ctype") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__ctype_b_loc.c",
+    "__ctype_get_mb_cur_max.c",
+    "__ctype_tolower_loc.c",
+    "__ctype_toupper_loc.c",
+    "isalnum.c",
+    "isalpha.c",
+    "isascii.c",
+    "isblank.c",
+    "iscntrl.c",
+    "isdigit.c",
+    "isgraph.c",
+    "islower.c",
+    "isprint.c",
+    "ispunct.c",
+    "isspace.c",
+    "isupper.c",
+    "iswalnum.c",
+    "iswalpha.c",
+    "iswblank.c",
+    "iswcntrl.c",
+    "iswctype.c",
+    "iswdigit.c",
+    "iswgraph.c",
+    "iswlower.c",
+    "iswprint.c",
+    "iswpunct.c",
+    "iswspace.c",
+    "iswupper.c",
+    "iswxdigit.c",
+    "isxdigit.c",
+    "toascii.c",
+    "tolower.c",
+    "toupper.c",
+    "towctrans.c",
+    "wcswidth.c",
+    "wctrans.c",
+    "wcwidth.c",
+  ]
+}

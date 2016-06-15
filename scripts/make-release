@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# make a release build
+#
+# release builds are regular builds with DEBUG=0 and the -release suffix added to the build dir
+DEBUG=0 BUILDDIR_SUFFIX=-release $DIR/make-parallel "$@"

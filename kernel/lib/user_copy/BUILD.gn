@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_user_copy_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("user_copy") {
+  public_configs = [ ":_user_copy_config" ]
+  include_dirs = [
+    "//kernel/lib/heap/include",
+    "//kernel/lib/io/include",
+    "//kernel/lib/libc/include",
+  ]
+  public = [
+    "include/lib/user_copy.h",
+  ]
+  sources = [
+    "user_copy.c",
+  ]
+}

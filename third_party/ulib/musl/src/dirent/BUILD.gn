@@ -1,0 +1,21 @@
+source_set("dirent") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__getdents.c",
+    "alphasort.c",
+    "closedir.c",
+    "dirfd.c",
+    "fdopendir.c",
+    "opendir.c",
+    "readdir.c",
+    "readdir_r.c",
+    "rewinddir.c",
+    "scandir.c",
+    "seekdir.c",
+    "telldir.c",
+    "versionsort.c",
+  ]
+}

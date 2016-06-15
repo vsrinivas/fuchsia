@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_arm_gicv2m_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("arm_gicv2m") {
+  public_configs = [ ":_arm_gicv2m_config" ]
+  include_dirs = [
+    "//kernel/platform/qemu-virt/include",
+    "//kernel/dev/interrupt/include",
+  ]
+  sources = [
+    "arm_gicv2m.c",
+    "arm_gicv2m_msi.c",
+  ]
+  deps = [
+    "//kernel/dev/interrupt/arm_gic",
+    "//kernel/dev/pcie",
+    "//kernel/lib/libc",
+    "//kernel/lib/pow2_range_allocator",
+  ]
+}

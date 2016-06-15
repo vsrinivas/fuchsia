@@ -1,0 +1,17 @@
+source_set("malloc") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__brk.c",
+    "aligned_alloc.c",
+    "calloc.c",
+    "expand_heap.c",
+    "lite_malloc.c",
+    "malloc.c",
+    "malloc_usable_size.c",
+    "memalign.c",
+    "posix_memalign.c",
+  ]
+}

@@ -1,0 +1,56 @@
+source_set("signal") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "block.c",
+    "getitimer.c",
+    "kill.c",
+    "killpg.c",
+    "psiginfo.c",
+    "psignal.c",
+    "raise.c",
+    "setitimer.c",
+    "sigaction.c",
+    "sigaddset.c",
+    "sigaltstack.c",
+    "sigandset.c",
+    "sigdelset.c",
+    "sigemptyset.c",
+    "sigfillset.c",
+    "sighold.c",
+    "sigignore.c",
+    "siginterrupt.c",
+    "sigisemptyset.c",
+    "sigismember.c",
+    "siglongjmp.c",
+    "signal.c",
+    "sigorset.c",
+    "sigpause.c",
+    "sigpending.c",
+    "sigprocmask.c",
+    "sigqueue.c",
+    "sigrelse.c",
+    "sigrtmax.c",
+    "sigrtmin.c",
+    "sigset.c",
+    "sigsetjmp_tail.c",
+    "sigsuspend.c",
+    "sigtimedwait.c",
+    "sigwait.c",
+    "sigwaitinfo.c",
+  ]
+
+  if (target_cpu == "x64") {
+    sources += [
+      "x86_64/restore.s",
+      "x86_64/sigsetjmp.s",
+    ]
+  } else {
+    sources += [
+      "restore.c",
+      "sigsetjmp.c",
+    ]
+  }
+}

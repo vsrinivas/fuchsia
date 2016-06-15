@@ -1,0 +1,14 @@
+source_set("fcntl") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "creat.c",
+    "fcntl.c",
+    "open.c",
+    "openat.c",
+    "posix_fadvise.c",
+    "posix_fallocate.c",
+  ]
+}

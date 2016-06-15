@@ -1,0 +1,18 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+module("rng") {
+  configs += [ "//kernel/kernel:enable_vm" ]
+  sources = [
+    "virtio-rng.c",
+  ]
+  deps = [
+    "//kernel/dev/hw_rng",
+    "//kernel/dev/virtio",
+    "//kernel/lib/cbuf",
+    "//kernel/lib/libc",
+  ]
+}

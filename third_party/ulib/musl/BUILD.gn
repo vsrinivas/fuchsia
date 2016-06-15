@@ -1,0 +1,496 @@
+config("musl_config") {
+  cflags_c = [
+    "-std=c11",
+    "-ffreestanding",
+    "-nostdinc",
+    "-Wa,--noexecstack",
+    "-fomit-frame-pointer",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Werror=implicit-function-declaration",
+    "-Werror=implicit-int",
+    "-Werror=pointer-sign",
+    "-Wno-incompatible-pointer-types",
+  ]
+  if (is_clang) {
+    # TODO(kulakowski): fix these
+    cflags_c += [
+      "-Wno-shift-op-parentheses",
+      "-Wno-logical-op-parentheses",
+      "-Wno-ignored-attributes",
+      "-Wno-tautological-compare",
+      "-Wno-bitwise-op-parentheses",
+      "-Wno-string-plus-int",
+      "-Wno-dangling-else",
+    ]
+  }
+
+  defines = [ "_XOPEN_SOURCE=700" ]
+
+  if (target_cpu == "arm") {
+    defines += [ "ARCH_ARM" ]
+  } else if (target_cpu == "arm64") {
+    defines += [ "ARCH_ARM64" ]
+  } else if (target_cpu == "x64") {
+    defines += [ "ARCH_X86_64" ]
+  }
+
+  include_dirs = []
+
+  # Architecture specific includes, these need to come before the general
+  # includes.
+  if (target_cpu == "arm") {
+    include_dirs += [ "arch/arm" ]
+  } else if (target_cpu == "arm64") {
+    include_dirs += [ "arch/aarch64" ]
+  } else if (target_cpu == "x64") {
+    include_dirs += [ "arch/x86_64" ]
+  }
+
+  # General includes, these need to come after the arch specific includes.
+  # src/internal must come before include.
+  include_dirs += [
+    "arch/generic",
+    "src/internal",
+    "include",
+    "third_party/include",
+    "//system/ulib/global/include",
+    "//system/ulib/magenta/include",
+    "//system/ulib/runtime/include",
+  ]
+}
+
+config("_musl_config") {
+  visibility = [ ":*" ]
+  defines = [ "WITH_LIBC_IO_HOOKS=1" ]
+  include_dirs = [ "include" ]
+}
+
+# The C library is built as a complete static library rather than thin archive
+# (or source set) so that it can be distributed as a part of toolchain.
+static_library("musl") {
+  output_name = "libc"
+  public_configs = [ ":_musl_config" ]
+  complete_static_lib = true
+  deps = [
+    "crt",
+    "magenta",
+    "src/complex",
+    "src/conf",
+    "src/crypt",
+    "src/ctype",
+    "src/dirent",
+    "src/env",
+    "src/errno",
+    "src/exit",
+    "src/fcntl",
+    "src/fenv",
+    "src/internal",
+    "src/locale",
+    "src/malloc",
+    "src/math",
+    "src/misc",
+    "src/mman",
+    "src/mq",
+    "src/multibyte",
+    "src/network",
+    "src/passwd",
+    "src/prng",
+    "src/process",
+    "src/regex",
+    "src/sched",
+    "src/setjmp",
+    "src/signal",
+    "src/stat",
+    "src/stdio",
+    "src/stdlib",
+    "src/string",
+    "src/temp",
+    "src/termios",
+    "src/thread",
+    "src/time",
+    "src/unistd",
+    "third_party/arch",
+    "third_party/complex",
+    "third_party/math",
+
+    # These submodules either do not build or even make sense for Magenta, but
+    # we still list them for completeness and future reference; however, they
+    # might be removed in the future.
+    #
+    # "ldso",
+    # "src/aio",
+    # "src/ipc",
+    # "src/ldso",
+    # "src/legacy",
+    # "src/linux",
+    # "src/select",
+
+    "//system/ulib/magenta",
+    "//system/ulib/runtime",
+  ]
+}
+
+# For simplicity, musl places all its symbols in libc. To support
+# linking against e.g. libm, either implicitly or with an explicit -lm
+# flag, we build empty libraries.
+static_library("libm") {
+  complete_static_lib = true
+}
+
+copy("copy_include") {
+  sources = [
+    "include/aio.h",
+    "include/alloca.h",
+    "include/ar.h",
+    "include/assert.h",
+    "include/byteswap.h",
+    "include/complex.h",
+    "include/cpio.h",
+    "include/crypt.h",
+    "include/ctype.h",
+    "include/dirent.h",
+    "include/dlfcn.h",
+    "include/elf.h",
+    "include/endian.h",
+    "include/err.h",
+    "include/errno.h",
+    "include/fcntl.h",
+    "include/features.h",
+
+    #"include/alltypes.h.in",
+    "include/fenv.h",
+    "include/float.h",
+    "include/fmtmsg.h",
+    "include/fnmatch.h",
+    "include/ftw.h",
+    "include/getopt.h",
+    "include/glob.h",
+    "include/grp.h",
+    "include/iconv.h",
+    "include/ifaddrs.h",
+    "include/inttypes.h",
+    "include/iso646.h",
+    "include/langinfo.h",
+    "include/lastlog.h",
+    "include/libgen.h",
+    "include/libintl.h",
+    "include/limits.h",
+    "include/link.h",
+    "include/locale.h",
+    "include/malloc.h",
+    "include/math.h",
+    "include/memory.h",
+    "include/mntent.h",
+    "include/monetary.h",
+    "include/mqueue.h",
+    "include/netdb.h",
+    "include/nl_types.h",
+    "include/paths.h",
+    "include/poll.h",
+    "include/pthread.h",
+    "include/pty.h",
+    "include/pwd.h",
+    "include/regex.h",
+    "include/resolv.h",
+    "include/sched.h",
+    "include/search.h",
+    "include/semaphore.h",
+    "include/setjmp.h",
+    "include/shadow.h",
+    "include/signal.h",
+    "include/spawn.h",
+    "include/stdalign.h",
+    "include/stdarg.h",
+    "include/stdbool.h",
+    "include/stddef.h",
+    "include/stdint.h",
+    "include/stdio.h",
+    "include/stdio_ext.h",
+    "include/stdlib.h",
+    "include/stdnoreturn.h",
+    "include/string.h",
+    "include/strings.h",
+    "include/stropts.h",
+    "include/syscall.h",
+    "include/sysexits.h",
+    "include/syslog.h",
+    "include/tar.h",
+    "include/termios.h",
+    "include/tgmath.h",
+    "include/threads.h",
+    "include/time.h",
+    "include/uchar.h",
+    "include/ucontext.h",
+    "include/ulimit.h",
+    "include/unistd.h",
+    "include/utime.h",
+    "include/utmp.h",
+    "include/utmpx.h",
+    "include/values.h",
+    "include/wait.h",
+    "include/wchar.h",
+    "include/wctype.h",
+    "include/wordexp.h",
+  ]
+  outputs = [
+    "${root_out_dir}/include/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_include_sys") {
+  sources = [
+    "include/sys/acct.h",
+    "include/sys/auxv.h",
+    "include/sys/cachectl.h",
+    "include/sys/dir.h",
+    "include/sys/epoll.h",
+    "include/sys/errno.h",
+    "include/sys/eventfd.h",
+    "include/sys/fanotify.h",
+    "include/sys/fcntl.h",
+    "include/sys/file.h",
+    "include/sys/fsuid.h",
+    "include/sys/inotify.h",
+    "include/sys/io.h",
+    "include/sys/ioctl.h",
+    "include/sys/ipc.h",
+    "include/sys/kd.h",
+    "include/sys/klog.h",
+    "include/sys/mman.h",
+    "include/sys/mount.h",
+    "include/sys/msg.h",
+    "include/sys/mtio.h",
+    "include/sys/param.h",
+    "include/sys/personality.h",
+    "include/sys/poll.h",
+    "include/sys/prctl.h",
+    "include/sys/procfs.h",
+    "include/sys/ptrace.h",
+    "include/sys/quota.h",
+    "include/sys/reboot.h",
+    "include/sys/reg.h",
+    "include/sys/resource.h",
+    "include/sys/select.h",
+    "include/sys/sem.h",
+    "include/sys/sendfile.h",
+    "include/sys/shm.h",
+    "include/sys/signal.h",
+    "include/sys/signalfd.h",
+    "include/sys/socket.h",
+    "include/sys/soundcard.h",
+    "include/sys/stat.h",
+    "include/sys/statfs.h",
+    "include/sys/statvfs.h",
+    "include/sys/stropts.h",
+    "include/sys/swap.h",
+    "include/sys/syscall.h",
+    "include/sys/sysinfo.h",
+    "include/sys/syslog.h",
+    "include/sys/sysmacros.h",
+    "include/sys/termios.h",
+    "include/sys/time.h",
+    "include/sys/timeb.h",
+    "include/sys/timerfd.h",
+    "include/sys/times.h",
+    "include/sys/timex.h",
+    "include/sys/ttydefaults.h",
+    "include/sys/types.h",
+    "include/sys/ucontext.h",
+    "include/sys/uio.h",
+    "include/sys/un.h",
+    "include/sys/user.h",
+    "include/sys/utsname.h",
+    "include/sys/vfs.h",
+    "include/sys/vt.h",
+    "include/sys/wait.h",
+  ]
+  outputs = [
+    "${root_out_dir}/include/sys/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_include_netinet") {
+  sources = [
+    "include/netinet/ether.h",
+    "include/netinet/icmp6.h",
+    "include/netinet/if_ether.h",
+    "include/netinet/igmp.h",
+    "include/netinet/in.h",
+    "include/netinet/in_systm.h",
+    "include/netinet/ip.h",
+    "include/netinet/ip6.h",
+    "include/netinet/ip_icmp.h",
+    "include/netinet/tcp.h",
+    "include/netinet/udp.h",
+  ]
+  outputs = [
+    "${root_out_dir}/include/netinet/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_include_scsi") {
+  sources = [
+    "include/scsi/scsi.h",
+    "include/scsi/scsi_ioctl.h",
+    "include/scsi/sg.h",
+  ]
+  outputs = [
+    "${root_out_dir}/include/scsi/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_include_arpa") {
+  sources = [
+    "include/arpa/ftp.h",
+    "include/arpa/inet.h",
+    "include/arpa/nameser.h",
+    "include/arpa/nameser_compat.h",
+    "include/arpa/telnet.h",
+    "include/arpa/tftp.h",
+  ]
+  outputs = [
+    "${root_out_dir}/include/arpa/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_include_netpacket") {
+  sources = [
+    "include/netpacket/packet.h",
+  ]
+  outputs = [
+    "${root_out_dir}/include/netpacket/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_include_net") {
+  sources = [
+    "include/net/ethernet.h",
+    "include/net/if.h",
+    "include/net/if_arp.h",
+    "include/net/route.h",
+  ]
+  outputs = [
+    "${root_out_dir}/include/net/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_include_bits") {
+  sources = [
+    "arch/generic/bits/errno.h",
+    "arch/generic/bits/poll.h",
+    "arch/generic/bits/resource.h",
+    "arch/generic/bits/sem.h",
+    "arch/generic/bits/statfs.h",
+    "arch/generic/bits/stdarg.h",
+    "arch/generic/bits/termios.h",
+    "include/bits/alltypes.h",
+  ]
+  if (current_cpu == "arm") {
+    sources += [
+      "arch/arm/bits/endian.h",
+      "arch/arm/bits/fcntl.h",
+      "arch/arm/bits/fenv.h",
+      "arch/arm/bits/float.h",
+      "arch/arm/bits/limits.h",
+      "arch/arm/bits/posix.h",
+      "arch/arm/bits/reg.h",
+      "arch/arm/bits/setjmp.h",
+      "arch/arm/bits/signal.h",
+      "arch/arm/bits/stat.h",
+      "arch/arm/bits/stdint.h",
+      "arch/arm/bits/syscall.h",
+      "arch/arm/bits/user.h",
+      "arch/generic/bits/io.h",
+      "arch/generic/bits/ioctl.h",
+      "arch/generic/bits/ipc.h",
+      "arch/generic/bits/mman.h",
+      "arch/generic/bits/msg.h",
+      "arch/generic/bits/shm.h",
+      "arch/generic/bits/socket.h",
+      "include/bits/alltypes-arm.h",
+    ]
+  } else if (current_cpu == "arm64") {
+    sources += [
+      "arch/aarch64/bits/endian.h",
+      "arch/aarch64/bits/fcntl.h",
+      "arch/aarch64/bits/fenv.h",
+      "arch/aarch64/bits/float.h",
+      "arch/aarch64/bits/ipc.h",
+      "arch/aarch64/bits/limits.h",
+      "arch/aarch64/bits/msg.h",
+      "arch/aarch64/bits/posix.h",
+      "arch/aarch64/bits/reg.h",
+      "arch/aarch64/bits/setjmp.h",
+      "arch/aarch64/bits/shm.h",
+      "arch/aarch64/bits/signal.h",
+      "arch/aarch64/bits/socket.h",
+      "arch/aarch64/bits/stat.h",
+      "arch/aarch64/bits/stdint.h",
+      "arch/aarch64/bits/syscall.h",
+      "arch/aarch64/bits/user.h",
+      "arch/generic/bits/io.h",
+      "arch/generic/bits/ioctl.h",
+      "arch/generic/bits/mman.h",
+      "include/bits/alltypes-aarch64.h",
+    ]
+  } else if (current_cpu == "x64") {
+    sources += [
+      "arch/x86_64/bits/endian.h",
+      "arch/x86_64/bits/fcntl.h",
+      "arch/x86_64/bits/fenv.h",
+      "arch/x86_64/bits/float.h",
+      "arch/x86_64/bits/io.h",
+      "arch/x86_64/bits/ioctl.h",
+      "arch/x86_64/bits/ipc.h",
+      "arch/x86_64/bits/limits.h",
+      "arch/x86_64/bits/mman.h",
+      "arch/x86_64/bits/msg.h",
+      "arch/x86_64/bits/posix.h",
+      "arch/x86_64/bits/reg.h",
+      "arch/x86_64/bits/setjmp.h",
+      "arch/x86_64/bits/shm.h",
+      "arch/x86_64/bits/signal.h",
+      "arch/x86_64/bits/socket.h",
+      "arch/x86_64/bits/stat.h",
+      "arch/x86_64/bits/stdint.h",
+      "arch/x86_64/bits/syscall.h",
+      "arch/x86_64/bits/user.h",
+      "include/bits/alltypes-x86_64.h",
+    ]
+  }
+  outputs = [
+    "${root_out_dir}/include/bits/{{source_name_part}}.h",
+  ]
+}
+
+copy("copy_libs") {
+  deps = [
+    ":libm",
+    ":musl",
+  ]
+  sources = [
+    "${target_out_dir}/libc.a",
+    "${target_out_dir}/libm.a",
+  ]
+  outputs = [
+    "${root_out_dir}/lib/{{source_name_part}}.a",
+  ]
+}
+
+group("install") {
+  deps = [
+    ":copy_include",
+    ":copy_include_arpa",
+    ":copy_include_bits",
+    ":copy_include_net",
+    ":copy_include_netinet",
+    ":copy_include_netpacket",
+    ":copy_include_scsi",
+    ":copy_include_sys",
+    ":copy_libs",
+    "crt:install",
+  ]
+}

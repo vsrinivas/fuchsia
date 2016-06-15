@@ -1,0 +1,13 @@
+source_set("arch") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = []
+  if (target_cpu == "x64") {
+    sources += [
+      "x86_64/longjmp.s",
+      "x86_64/setjmp.s",
+    ]
+  }
+}

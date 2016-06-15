@@ -1,0 +1,29 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_crypto_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("crypto") {
+  public_configs = [ ":_crypto_config" ]
+  public = [
+    "include/lib/crypto/hash.h",
+    "include/lib/crypto/prng.h",
+  ]
+  sources = [
+    "hash.cpp",
+    "hash_unittest.cpp",
+    "prng.cpp",
+    "prng_unittest.cpp",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+    "//kernel/lib/unittest",
+    "//third_party/lib/cryptolib",
+  ]
+}

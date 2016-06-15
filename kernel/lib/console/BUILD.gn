@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//gnbuild/config.gni")
+
+config("enable_console") {
+  if (enable_console) {
+    defines = [ "WITH_LIB_CONSOLE=1" ]
+  } else {
+    defines = [ "WITH_LIB_CONSOLE=0" ]
+  }
+}
+
+module("console") {
+  public_configs = [ ":enable_console" ]
+  sources = [
+    "console.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

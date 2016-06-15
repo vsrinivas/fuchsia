@@ -1,0 +1,37 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//gnbuild/config.gni")
+
+config("enable_klog") {
+  if (enable_klog) {
+    defines = [ "WITH_LIB_KLOG=1" ]
+  } else {
+    defines = [ "WITH_LIB_KLOG=0" ]
+  }
+}
+
+config("_klog_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+  configs = [ ":enable_klog" ]
+}
+
+module("klog") {
+  public_configs = [ ":_klog_config" ]
+  public = [
+    "include/lib/klog.h",
+  ]
+  sources = [
+    "klog.c",
+  ]
+  deps = [
+    "//kernel/lib/console",
+    "//kernel/lib/io",
+    "//kernel/lib/libc",
+    "//third_party/lib/cksum",
+  ]
+}

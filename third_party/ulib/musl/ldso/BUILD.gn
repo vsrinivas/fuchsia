@@ -1,0 +1,9 @@
+source_set("ldso") {
+  configs = []
+  configs = [ "//gnbuild:no_stack_protector" ]
+
+  sources = [
+    "dlstart.c",
+    "dynlink.c",
+  ]
+}

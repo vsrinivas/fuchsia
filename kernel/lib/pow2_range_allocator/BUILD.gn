@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("_pow2_range_allocator_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+module("pow2_range_allocator") {
+  public_configs = [ ":_pow2_range_allocator_config" ]
+  public = [
+    "include/lib/pow2_range_allocator.h",
+  ]
+  sources = [
+    "pow2_range_allocator.c",
+  ]
+  deps = [
+    "//kernel/lib/libc",
+  ]
+}

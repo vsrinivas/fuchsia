@@ -1,0 +1,20 @@
+source_set("usb_xhci") {
+  sources = [
+    "usb_poll.c",
+    "usb_xhci.c",
+    "xhci.c",
+    "xhci_commands.c",
+    "xhci_debug.c",
+    "xhci_devconf.c",
+    "xhci_events.c",
+    "xhci_private.h",
+    "xhci_rh.c",
+  ]
+  deps = [
+    "//system/ulib/ddk",
+    "//system/ulib/magenta",
+    "//system/ulib/mxu",
+    "//system/ulib/runtime",
+    "//third_party/ulib/musl",
+  ]
+}

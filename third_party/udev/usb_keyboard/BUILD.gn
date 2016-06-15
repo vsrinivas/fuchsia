@@ -1,0 +1,10 @@
+source_set("usb_keyboard") {
+  sources = [
+    "usb_keyboard.c",
+  ]
+  deps = [
+    "//system/ulib/ddk",
+    "//system/ulib/magenta",
+    "//third_party/ulib/musl",
+  ]
+}

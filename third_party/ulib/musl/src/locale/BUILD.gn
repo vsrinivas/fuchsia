@@ -1,0 +1,32 @@
+source_set("locale") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__lctrans.c",
+    "__mo_lookup.c",
+    "bind_textdomain_codeset.c",
+    "c_locale.c",
+    "catclose.c",
+    "catgets.c",
+    "catopen.c",
+    "dcngettext.c",
+    "duplocale.c",
+    "freelocale.c",
+    "iconv.c",
+    "langinfo.c",
+    "locale_map.c",
+    "localeconv.c",
+    "newlocale.c",
+    "pleval.c",
+    "setlocale.c",
+    "strcoll.c",
+    "strfmon.c",
+    "strxfrm.c",
+    "textdomain.c",
+    "uselocale.c",
+    "wcscoll.c",
+    "wcsxfrm.c",
+  ]
+}

@@ -1,0 +1,96 @@
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+if (target_os == "") {
+  target_os = "fuchsia"
+}
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+if (current_os == "") {
+  current_os = target_os
+}
+
+declare_args() {
+  # The desired platform for the build.
+  target_platform = "qemu"
+
+  # Debug build.
+  is_debug = true
+
+  # Set to true when compiling with the Clang compiler.
+  is_clang = false
+
+  # This should not be set as a build argument.
+  target_toolchain = ""
+
+  # This should not be set as a build argument.
+  host_toolchain = ""
+}
+
+# All binary targets will get this list of configs by default.
+_shared_binary_target_configs = [
+  "//gnbuild:compiler_defaults",
+  "//gnbuild:default_warnings",
+  "//gnbuild:strict_compiler_flags",
+]
+
+# Apply that default list to the binary target types.
+set_defaults("source_set") {
+  configs = _shared_binary_target_configs
+  configs += [ "//gnbuild:user_defaults" ]
+}
+set_defaults("static_library") {
+  configs = _shared_binary_target_configs
+  configs += [ "//gnbuild:user_defaults" ]
+}
+set_defaults("module") {
+  configs = _shared_binary_target_configs
+  configs += [ "//gnbuild:kernel_defaults" ]
+}
+set_defaults("executable") {
+  configs = _shared_binary_target_configs
+  configs += [
+    "//gnbuild:user_defaults",
+    "//gnbuild:executable_ldconfig",
+  ]
+}
+
+# Toolchain
+
+if (target_cpu == "arm" || target_cpu == "arm64" || target_cpu == "x64") {
+  if (is_clang) {
+    target_toolchain = "//gnbuild/toolchain:clang_target"
+  } else {
+    target_toolchain = "//gnbuild/toolchain:target"
+  }
+} else {
+  assert(false, "Target CPU not supported")
+}
+
+set_default_toolchain(target_toolchain)
+
+if (host_os == "linux") {
+  host_toolchain = "//gnbuild/toolchain:gcc_host"
+} else if (host_os == "mac") {
+  host_toolchain = "//gnbuild/toolchain:clang_host"
+} else {
+  assert(false, "Host OS not supported")
+}
+
+# Module
+
+# The template for kernel module.
+#
+# Accepts everything source_set accepts.
+template("module") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}

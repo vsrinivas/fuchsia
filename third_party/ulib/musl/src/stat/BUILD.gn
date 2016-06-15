@@ -1,0 +1,32 @@
+source_set("stat") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "__xstat.c",
+    "chmod.c",
+    "fchmod.c",
+    "fchmodat.c",
+    "fstatat.c",
+    "futimens.c",
+    "futimesat.c",
+    "lchmod.c",
+    "lstat.c",
+    "mkdir.c",
+    "mkdirat.c",
+    "mkfifo.c",
+    "mkfifoat.c",
+    "mknod.c",
+    "mknodat.c",
+    "statvfs.c",
+    "umask.c",
+    "utimensat.c",
+
+    # The following are not built until we have mxio and libc standing in
+    # proper relation to each other.
+    #
+    # "fstat.c",
+    # "stat.c",
+  ]
+}
