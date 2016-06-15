@@ -11,7 +11,9 @@
 #include <trace.h>
 #include <app/tests.h>
 #include <arch/ops.h>
+#include <kernel/event.h>
 #include <kernel/mp.h>
+#include <kernel/thread.h>
 
 #define LOCAL_TRACE 0
 
@@ -32,6 +34,43 @@ void counter_task(void *raw_context) {
     int *counter = raw_context;
     atomic_add(counter, 1);
 }
+
+int deadlock_test_thread(void *arg) {
+    event_t *gate = arg;
+    event_wait(gate);
+
+    int counter = 0;
+    arch_disable_ints();
+    mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, counter_task, &counter);
+    arch_enable_ints();
+    return 0;
+}
+
+void deadlock_test(void) {
+    /* Test for a deadlock caused by multiple CPUs broadcasting concurrently */
+
+    event_t gate = EVENT_INITIAL_VALUE(gate, false, 0);
+
+    thread_t *threads[5] = { 0 };
+    for (uint i = 0; i < countof(threads); ++i) {
+        threads[i] = thread_create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+        if (!threads[i]) {
+            TRACEF("  failed to create thread\n");
+            goto cleanup;
+        }
+        thread_resume(threads[i]);
+    }
+
+    event_signal(&gate, true);
+
+cleanup:
+    for (uint i = 0; i < countof(threads); ++i) {
+        if (threads[i]) {
+            thread_join(threads[i], NULL, INFINITE_TIME);
+        }
+    }
+    event_destroy(&gate);
+};
 
 int sync_ipi_tests(int argc, const cmd_args *argv)
 {
@@ -71,6 +110,12 @@ int sync_ipi_tests(int argc, const cmd_args *argv)
 
         LTRACEF("  Finished signaling all but local (%d)\n", counter);
         ASSERT((uint)counter == num_cpus - 1);
+    }
+
+    for (uint i = 0; i < runs; ++i) {
+        LTRACEF("Deadlock test\n");
+        deadlock_test();
+        LTRACEF("Deadlock test passed\n");
     }
 
     printf("Success\n");

@@ -150,6 +150,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
     /* we can take interrupts again once we've executed our task */
     arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
 
+    bool ints_disabled = arch_ints_disabled();
     /* wait for all other CPUs to be done with the context */
     while (1) {
         mp_cpu_mask_t outstanding = atomic_load_relaxed(
@@ -158,20 +159,32 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
         if ((outstanding & online) == 0) {
             break;
         }
+
+        /* If interrupts are still disabled, we need to attempt to process any
+         * tasks queued for us in order to prevent deadlock. */
+        if (ints_disabled) {
+            /* Optimistically check if our task list has work without the lock.
+             * mp_mbx_generic_irq will take the lock and check again */
+            if (!list_is_empty(&mp.ipi_task_list[local_cpu])) {
+                mp_mbx_generic_irq();
+                continue;
+            }
+        }
+
         arch_spinloop_pause();
     }
     smp_mb();
 
     /* make sure the sync_tasks aren't in lists anymore, since they're
      * stack allocated */
-    spin_lock(&mp.ipi_task_lock);
+    spin_lock_irqsave(&mp.ipi_task_lock, irqstate);
     for (uint i = 0; i < num_cpus; ++i) {
         /* If a task is still around, it's because the CPU went offline. */
         if (list_in_list(&sync_tasks[i].node)) {
             list_delete(&sync_tasks[i].node);
         }
     }
-    spin_unlock(&mp.ipi_task_lock);
+    spin_unlock_irqrestore(&mp.ipi_task_lock, irqstate);
 }
 
 void mp_set_curr_cpu_online(bool online)
