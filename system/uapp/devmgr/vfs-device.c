@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "device_internal.h"
+#include "device-internal.h"
 #include "vfs.h"
 
 // NOTE

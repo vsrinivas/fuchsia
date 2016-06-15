@@ -22,14 +22,14 @@ MODULE_TYPE := userlib
 GLOBAL_INCLUDES += $(LOCAL_DIR)/include
 
 ifeq ($(ARCH),arm)
-MODULE_SRCS += $(LOCAL_DIR)/syscalls_arm32.S
+MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm32.S
 else ifeq ($(ARCH),arm64)
-MODULE_SRCS += $(LOCAL_DIR)/syscalls_arm64.S
+MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm64.S
 else ifeq ($(ARCH),x86)
     ifeq ($(SUBARCH),x86-64)
-    MODULE_SRCS += $(LOCAL_DIR)/syscalls_x86_64.S
+    MODULE_SRCS += $(LOCAL_DIR)/syscalls-x86-64.S
     else
-    MODULE_SRCS += $(LOCAL_DIR)/syscalls_x86.S
+    MODULE_SRCS += $(LOCAL_DIR)/syscalls-x86.S
     endif
 endif
 

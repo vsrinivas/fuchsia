@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "elf_defines.h"
+#include "elf-defines.h"
 
 #include <magenta/types.h>
 #include <runtime/compiler.h>

@@ -28,7 +28,7 @@ source_set("mxu") {
   sources = [
     "fifo.c",
     "hexdump.c",
-    "unittest/all_tests.c",
+    "unittest/all-tests.c",
     "unittest/unittest.c",
   ]
   deps = [

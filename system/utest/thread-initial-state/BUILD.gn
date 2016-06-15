@@ -25,7 +25,7 @@ test("thread-initial-state") {
   } else if (target_cpu == "arm64") {
     sources += [ "arm64.S" ]
   } else if (target_cpu == "x64") {
-    sources += [ "x86_64.S" ]
+    sources += [ "x86-64.S" ]
   }
   deps = [
     "//system/ulib/magenta",

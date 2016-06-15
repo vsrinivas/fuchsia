@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "device_internal.h"
+#include "device-internal.h"
 #include <ddk/device.h>
 #include <ddk/driver.h>
 

@@ -19,7 +19,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/tls_test.c \
+    $(LOCAL_DIR)/tls-test.c \
 
 MODULE_NAME := tls-test
 

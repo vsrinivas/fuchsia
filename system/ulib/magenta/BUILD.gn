@@ -30,10 +30,10 @@ source_set("magenta") {
   ]
   sources = []
   if (target_cpu == "arm") {
-    sources += [ "syscalls_arm32.S" ]
+    sources += [ "syscalls-arm32.S" ]
   } else if (target_cpu == "arm64") {
-    sources += [ "syscalls_arm64.S" ]
+    sources += [ "syscalls-arm64.S" ]
   } else if (target_cpu == "x64") {
-    sources += [ "syscalls_x86_64.S" ]
+    sources += [ "syscalls-x86-64.S" ]
   }
 }

@@ -17,7 +17,7 @@ import("//system/utest/test.gni")
 test("thread-local-storage") {
   output_name = "thread-local-storage-test"
   sources = [
-    "tls_test.c",
+    "tls-test.c",
   ]
   deps = [
     "//system/ulib/magenta",

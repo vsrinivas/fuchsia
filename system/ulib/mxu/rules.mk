@@ -21,7 +21,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/hexdump.c \
     $(LOCAL_DIR)/fifo.c \
-    $(LOCAL_DIR)/unittest/all_tests.c \
+    $(LOCAL_DIR)/unittest/all-tests.c \
     $(LOCAL_DIR)/unittest/unittest.c
 
 MODULE_DEPS += \

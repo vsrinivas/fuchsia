@@ -20,7 +20,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/protocol/keyboard.c \
-    $(LOCAL_DIR)/io_alloc.c
+    $(LOCAL_DIR)/io-alloc.c
 
 MODULE_DEPS += \
     ulib/musl \

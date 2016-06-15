@@ -14,8 +14,8 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bluetooth_hci.h>
-#include <ddk/protocol/usb_device.h>
+#include <ddk/protocol/bluetooth-hci.h>
+#include <ddk/protocol/usb-device.h>
 #include <mxu/list.h>
 #include <runtime/mutex.h>
 #include <runtime/thread.h>

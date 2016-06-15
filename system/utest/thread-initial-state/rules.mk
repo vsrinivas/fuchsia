@@ -21,7 +21,7 @@ MODULE_TYPE := userapp
 MODULE_SRCS += $(LOCAL_DIR)/init-state.c
 
 ifeq ($(SUBARCH),x86-64)
-MODULE_SRCS += $(LOCAL_DIR)/x86_64.S
+MODULE_SRCS += $(LOCAL_DIR)/x86-64.S
 else ifeq ($(ARCH),arm)
 MODULE_SRCS += $(LOCAL_DIR)/arm.S
 else ifeq ($(ARCH),arm64)

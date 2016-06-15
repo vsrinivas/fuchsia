@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <ddk/io_alloc.h>
+#include <ddk/io-alloc.h>
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
 #include <stdio.h>

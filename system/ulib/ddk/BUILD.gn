@@ -24,7 +24,7 @@ source_set("ddk") {
     "include/hw/usb.h",
     "include/ddk/device.h",
     "include/ddk/driver.h",
-    "include/ddk/io_alloc.h",
+    "include/ddk/io-alloc.h",
     "include/ddk/protocol/bluetooth_hci.h",
     "include/ddk/protocol/char.h",
     "include/ddk/protocol/display.h",
