@@ -80,10 +80,12 @@
    ninja -C out/pc-x64
    ```
 
+   This also builds the host tools `bootserver` and `loglistener`.
+
 3. run Magenta using network boot:
 
    ```bash
-   ./tools/bootserver out/pc-x64/lk.bin
+   ./out/pc-x64/bootserver out/pc-x64/lk.bin
    ```
 
 ## Build Magenta with GN for QEMU arm32

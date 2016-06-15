@@ -35,3 +35,11 @@ executable("bootserver") {
     "netboot.h",
   ]
 }
+
+group("tools") {
+  deps = [
+    ":bootserver",
+    ":loglistener",
+    ":mkbootfs",
+  ]
+}

@@ -7,6 +7,13 @@
 import("//gnbuild/convert_to_raw.gni")
 
 # This target will be built if no target is specified when invoking Ninja.
+group("default") {
+  deps = [
+    ":lk_bin",
+    ":tools",
+  ]
+}
+
 executable("lk") {
   output_extension = "elf"
   configs -= [ "//gnbuild:user_defaults" ]
@@ -45,4 +52,24 @@ convert_to_raw("lk_bin") {
   deps = [
     ":lk",
   ]
+}
+
+# Copy tools/ binaries from the host_toolchain output directory
+# to the main output directory so they're easier to find and invoke.
+copy("tools") {
+  tools = [
+    "bootserver",
+    "loglistener",
+  ]
+
+  deps = []
+  sources = []
+  foreach(tool, tools) {
+    tool_label = "//tools:$tool($host_toolchain)"
+    tool_out = get_label_info(tool_label, "root_out_dir")
+    deps += [ tool_label ]
+    sources += [ "$tool_out/$tool" ]
+  }
+
+  outputs = [ "$root_out_dir/{{source_file_part}}" ]
 }
