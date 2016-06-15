@@ -50,6 +50,23 @@ static const char* opname(uint32_t op) {
     }
 }
 
+static bool is_message_valid(mx_rio_msg_t* msg) {
+    if ((msg->magic != MX_RIO_MAGIC) ||
+        (msg->datalen > MXIO_CHUNK_SIZE) ||
+        (msg->hcount > MXIO_MAX_HANDLES)) {
+        return false;
+    }
+    return true;
+}
+
+static bool is_message_reply_valid(mx_rio_msg_t* msg, uint32_t size) {
+    if ((size < MX_RIO_HDR_SZ) ||
+        (msg->datalen != (size - MX_RIO_HDR_SZ))) {
+        return false;
+    }
+    return is_message_valid(msg);
+}
+
 static void discard_handles(mx_handle_t* handles, unsigned count) {
     while (count-- > 0) {
         _magenta_handle_close(*handles++);
@@ -77,10 +94,7 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
         return r;
     }
 
-    if ((dsz < MX_RIO_HDR_SZ) ||
-        (msg.magic != MX_RIO_MAGIC) ||
-        (msg.datalen > MXIO_CHUNK_SIZE) ||
-        (msg.datalen != (dsz - MX_RIO_HDR_SZ))) {
+    if (!is_message_reply_valid(&msg, dsz)) {
         discard_handles(msg.handle, msg.hcount);
         return ERR_INVALID_ARGS;
     }
@@ -91,9 +105,7 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
             opname(msg.op), msg.arg, msg.datalen, msg.hcount);
 
     msg.arg = cb(&msg, cookie);
-    if ((msg.arg < 0) ||
-        (msg.datalen > MXIO_CHUNK_SIZE) ||
-        (msg.hcount > MXIO_MAX_HANDLES)) {
+    if ((msg.arg < 0) || !is_message_valid(&msg)) {
         discard_handles(msg.handle, msg.hcount);
         msg.datalen = 0;
         msg.hcount = 0;
@@ -142,8 +154,8 @@ void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
 // on success, msg->hcount indicates number of valid handles in msg->handle
 // on error there are never any handles
 static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
-    if ((msg->datalen > MXIO_CHUNK_SIZE) ||
-        (msg->hcount > MXIO_MAX_HANDLES)) {
+    msg->magic = MX_RIO_MAGIC;
+    if (!is_message_valid(msg)) {
         return ERR_INVALID_ARGS;
     }
 
@@ -152,7 +164,6 @@ static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
     mx_handle_t rh = rio->h;
 
     mx_status_t r;
-    msg->magic = MX_RIO_MAGIC;
     if ((r = _magenta_message_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
         goto fail_discard_handles;
     }
@@ -172,10 +183,8 @@ static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
         return r;
     }
     // check for protocol errors
-    if ((dsize < MX_RIO_HDR_SZ) ||
-        (msg->magic != MX_RIO_MAGIC) ||
-        (MX_RIO_OP(msg->op) != MX_RIO_STATUS) ||
-        (msg->datalen != (dsize - MX_RIO_HDR_SZ))) {
+    if (!is_message_reply_valid(msg, dsize) ||
+        (MX_RIO_OP(msg->op) != MX_RIO_STATUS)) {
         r = ERR_IO;
         goto fail_discard_handles;
     }
