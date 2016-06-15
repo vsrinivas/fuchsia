@@ -130,7 +130,10 @@ static inline void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void 
 {
     if (target != MP_CPU_ALL &&
         (!(target & 0x1) || target == MP_CPU_ALL_BUT_LOCAL)) return;
+    spin_lock_saved_state_t irqstate;
+    arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
     task(context);
+    arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
 }
 static inline void mp_set_curr_cpu_active(bool active) {}
 static inline void mp_set_curr_cpu_online(bool online) {}

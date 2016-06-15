@@ -62,7 +62,8 @@ void mp_reschedule(mp_cpu_mask_t target, uint flags)
 struct mp_sync_context {
     mp_sync_task_t task;
     void *task_context;
-    volatile int tasks_running;
+    /* Mask of which CPUs need to finish the task */
+    volatile mp_cpu_mask_t outstanding_cpus;
 };
 
 static void mp_sync_task(void *raw_context)
@@ -71,7 +72,7 @@ static void mp_sync_task(void *raw_context)
     context->task(context->task_context);
     /* use seq-cst atomic to ensure this update is not seen before the
      * side-effects of context->task */
-    atomic_add(&context->tasks_running, -1);
+    atomic_and((int *)&context->outstanding_cpus, ~(1U << arch_curr_cpu_num()));
     arch_spinloop_signal();
 }
 
@@ -86,27 +87,18 @@ static void mp_sync_task(void *raw_context)
 void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
 {
     uint num_cpus = arch_max_num_cpus();
-    uint num_targets = 0;
 
     if (target == MP_CPU_ALL) {
-        target = mp.online_cpus;
+        target = mp_get_online_mask();
     } else if (target == MP_CPU_ALL_BUT_LOCAL) {
         /* targeting all other CPUs but the current one is hazardous
          * if the local CPU may be changed underneath us */
         DEBUG_ASSERT(arch_ints_disabled());
-        target = mp.online_cpus & ~(1U << arch_curr_cpu_num());
+        target = mp_get_online_mask() & ~(1U << arch_curr_cpu_num());
     }
 
-    /* initialize num_targets (may include self) */
-    mp_cpu_mask_t remaining = target;
-    uint cpu_id = 0;
-    while (remaining && cpu_id < num_cpus) {
-        if (remaining & 1) {
-            num_targets++;
-        }
-        remaining >>= 1;
-        cpu_id++;
-    }
+    /* Mask any offline CPUs from target list */
+    target &= mp_get_online_mask();
 
     /* disable interrupts so our current CPU doesn't change */
     spin_lock_saved_state_t irqstate;
@@ -114,9 +106,9 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
     smp_rmb();
 
     uint local_cpu = arch_curr_cpu_num();
+
     /* remove self from target lists, since no need to IPI ourselves */
-    bool targetting_self =
-            (target != MP_CPU_ALL_BUT_LOCAL && (target & (1U << local_cpu)));
+    bool targetting_self = !!(target & (1U << local_cpu));
     target &= ~(1U << local_cpu);
 
     /* create tasks to enqueue (we need one per target due to each containing
@@ -124,7 +116,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
     struct mp_sync_context sync_context = {
         .task = task,
         .task_context = context,
-        .tasks_running = num_targets,
+        .outstanding_cpus = target,
     };
 
     struct mp_ipi_task sync_tasks[SMP_MAX_CPUS] = { 0 };
@@ -135,8 +127,8 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
 
     /* enqueue tasks */
     spin_lock(&mp.ipi_task_lock);
-    remaining = target;
-    cpu_id = 0;
+    mp_cpu_mask_t remaining = target;
+    uint cpu_id = 0;
     while (remaining && cpu_id < num_cpus) {
         if (remaining & 1) {
             list_add_tail(&mp.ipi_task_list[cpu_id], &sync_tasks[cpu_id].node);
@@ -159,16 +151,27 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
     arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
 
     /* wait for all other CPUs to be done with the context */
-    while (sync_context.tasks_running != 0) {
+    while (1) {
+        mp_cpu_mask_t outstanding = atomic_load_relaxed(
+                (int *)&sync_context.outstanding_cpus);
+        mp_cpu_mask_t online = mp_get_online_mask();
+        if ((outstanding & online) == 0) {
+            break;
+        }
         arch_spinloop_pause();
     }
     smp_mb();
 
     /* make sure the sync_tasks aren't in lists anymore, since they're
      * stack allocated */
+    spin_lock(&mp.ipi_task_lock);
     for (uint i = 0; i < num_cpus; ++i) {
-        ASSERT(!list_in_list(&sync_tasks[i].node));
+        /* If a task is still around, it's because the CPU went offline. */
+        if (list_in_list(&sync_tasks[i].node)) {
+            list_delete(&sync_tasks[i].node);
+        }
     }
+    spin_unlock(&mp.ipi_task_lock);
 }
 
 void mp_set_curr_cpu_online(bool online)
