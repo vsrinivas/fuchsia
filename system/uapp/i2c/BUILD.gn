@@ -12,20 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-group("udev") {
+executable("i2c") {
+  sources = [
+    "i2c.c",
+  ]
   deps = [
-    "bochs-vbe",
-    "console",
-    "i8042-keyboard",
-    "intel-i915",
-    "intel-rtc",
-    "intel-serialio",
-    "kpci",
-    "null",
-    "usb-bt-hci",
-    "usb-ethernet",
-    "//third_party/udev/usb_bus",
-    "//third_party/udev/usb_keyboard",
-    "//third_party/udev/usb_xhci",
+    "//system/ulib/ddk",
+    "//system/ulib/magenta",
+    "//system/ulib/mxio",
+    "//third_party/ulib/musl",
   ]
 }

@@ -12,40 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_ddk_config") {
+config("_intel-serialio_config") {
   visibility = [ ":*" ]
   include_dirs = [ "include" ]
 }
 
-source_set("ddk") {
-  public_configs = [ ":_ddk_config" ]
+source_set("intel-serialio") {
+  public_configs = [ ":_intel-serialio_config" ]
   public = [
-    "include/hw/pci.h",
-    "include/hw/usb.h",
-    "include/ddk/device.h",
-    "include/ddk/driver.h",
-    "include/ddk/io_alloc.h",
-    "include/ddk/protocol/bluetooth_hci.h",
-    "include/ddk/protocol/char.h",
-    "include/ddk/protocol/display.h",
-    "include/ddk/protocol/ethernet.h",
-    "include/ddk/protocol/fb.h",
-    "include/ddk/protocol/i2c.h",
-    "include/ddk/protocol/pci.h",
-    "include/ddk/protocol/usb_bus.h",
-    "include/ddk/protocol/usb_hci.h",
-    "include/ddk/protocol/usb_hub.h",
+    "include/intel-serialio/reg.h",
+    "include/intel-serialio/serialio.h",
   ]
   sources = [
-    "io_alloc.c",
-    "protocol/keyboard.c",
+    "dma/dma.c",
+    "i2c/controller.c",
+    "i2c/controller.h",
+    "i2c/slave.c",
+    "i2c/slave.h",
+    "sdio/sdio.c",
+    "serialio.c",
+    "spi/spi.c",
+    "uart/uart.c",
   ]
   deps = [
-    "//third_party/ulib/musl",
-  ]
-  public_deps = [
+    "//system/ulib/ddk",
     "//system/ulib/magenta",
+    "//system/ulib/mxio",
     "//system/ulib/mxu",
     "//system/ulib/runtime",
+    "//third_party/ulib/musl",
   ]
 }

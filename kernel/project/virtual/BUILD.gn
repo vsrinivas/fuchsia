@@ -84,6 +84,7 @@ mkbootfs("bootfs") {
     "//system/uapp/crasher",
     "//system/uapp/devmgr",
     "//system/uapp/dlog",
+    "//system/uapp/i2c",
     "//system/uapp/mxsh",
     "//system/uapp/netsvc",
     "//system/uapp/strerror",
