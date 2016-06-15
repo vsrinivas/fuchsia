@@ -19,8 +19,7 @@
 #include <runtime/mutex.h>
 #include <stdint.h>
 
-typedef struct __attribute__((packed)) intel_broadwell_serialio_i2c_regs
-{
+typedef struct __attribute__((packed)) intel_broadwell_serialio_i2c_regs {
     uint32_t ctl;
     uint32_t tar_add;
     uint32_t _reserved0[2];
@@ -139,11 +138,10 @@ enum {
     DATA_CMD_DAT = 0,
 };
 
-typedef struct intel_broadwell_serialio_i2c_device
-{
+typedef struct intel_broadwell_serialio_i2c_device {
     mx_device_t device;
 
-    intel_broadwell_serialio_i2c_regs *regs;
+    intel_broadwell_serialio_i2c_regs* regs;
     uint64_t regs_size;
     mx_handle_t regs_handle;
 

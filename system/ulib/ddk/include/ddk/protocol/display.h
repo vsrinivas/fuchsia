@@ -21,16 +21,16 @@
  * protocol/display.h - display protocol definitions
  */
 
-#define MX_DISPLAY_FORMAT_NONE         (-1)
-#define MX_DISPLAY_FORMAT_RGB_565      (0)
-#define MX_DISPLAY_FORMAT_RGB_332      (1)
-#define MX_DISPLAY_FORMAT_RGB_2220     (2)
-#define MX_DISPLAY_FORMAT_ARGB_8888    (3)
-#define MX_DISPLAY_FORMAT_RGB_x888     (4)
-#define MX_DISPLAY_FORMAT_MONO_1       (5)
-#define MX_DISPLAY_FORMAT_MONO_8       (6)
+#define MX_DISPLAY_FORMAT_NONE (-1)
+#define MX_DISPLAY_FORMAT_RGB_565 (0)
+#define MX_DISPLAY_FORMAT_RGB_332 (1)
+#define MX_DISPLAY_FORMAT_RGB_2220 (2)
+#define MX_DISPLAY_FORMAT_ARGB_8888 (3)
+#define MX_DISPLAY_FORMAT_RGB_x888 (4)
+#define MX_DISPLAY_FORMAT_MONO_1 (5)
+#define MX_DISPLAY_FORMAT_MONO_8 (6)
 
-#define MX_DISPLAY_FLAG_HW_FRAMEBUFFER (1<<0)
+#define MX_DISPLAY_FLAG_HW_FRAMEBUFFER (1 << 0)
 
 typedef struct mx_display_info {
     uint format;
@@ -41,10 +41,10 @@ typedef struct mx_display_info {
 } mx_display_info_t;
 
 typedef struct mx_display_protocol {
-    mx_status_t (*set_mode)(mx_device_t* dev, mx_display_info_t *info);
+    mx_status_t (*set_mode)(mx_device_t* dev, mx_display_info_t* info);
     // sets the display mode
 
-    mx_status_t (*get_mode)(mx_device_t* dev, mx_display_info_t *info);
+    mx_status_t (*get_mode)(mx_device_t* dev, mx_display_info_t* info);
     // gets the display mode
 
     mx_status_t (*get_framebuffer)(mx_device_t* dev, void** framebuffer);

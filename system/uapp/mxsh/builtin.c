@@ -267,7 +267,8 @@ static int mxc_runtests(int argc, char** argv) {
             total_count++;
 
             printf("\n------------------------------------------------\n"
-                   "RUNNING TEST: %s\n\n", de->name);
+                   "RUNNING TEST: %s\n\n",
+                   de->name);
             char name[4096];
             snprintf(name, sizeof(name), "/boot/bin/%s", de->name);
             char* argv[] = {name};
@@ -318,7 +319,7 @@ static int mxc_runtests(int argc, char** argv) {
         printf("\nThe following tests failed:\n");
         failure_t* failure = NULL;
         failure_t* temp = NULL;
-        list_for_every_entry_safe(&failures, failure, temp, failure_t, node) {
+        list_for_every_entry_safe (&failures, failure, temp, failure_t, node) {
             switch (failure->cause) {
             case FAILED_TO_LAUNCH:
                 printf("%s: failed to launch\n", failure->name);

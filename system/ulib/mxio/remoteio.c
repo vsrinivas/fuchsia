@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +39,6 @@ struct mx_rio {
 
     uint32_t flags;
 };
-
 
 static const char* _opnames[] = MX_RIO_OPNAMES;
 static const char* opname(uint32_t op) {
@@ -194,8 +192,8 @@ fail_discard_handles:
 }
 
 static ssize_t mx_rio_ioctl(
-        mxio_t* io, uint32_t op,
-        const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+    mxio_t* io, uint32_t op,
+    const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     mx_rio_t* rio = (mx_rio_t*)io;
     const uint8_t* data = in_buf;
     mx_status_t r = 0;
@@ -370,7 +368,7 @@ static mx_status_t mx_rio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void*
 
 mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount, mxio_t** out) {
     mx_status_t r;
-    mxio_t *io;
+    mxio_t* io;
 
     switch (type) {
     case MXIO_PROTOCOL_REMOTE:
@@ -435,7 +433,7 @@ static mx_status_t mx_rio_getobject(mx_rio_t* rio, uint32_t op, const char* name
 }
 
 static mx_status_t mx_rio_open(mxio_t* io, const char* path, int32_t flags, mxio_t** out) {
-    mx_rio_t* rio = (void*) io;
+    mx_rio_t* rio = (void*)io;
     mx_handle_t handles[MXIO_MAX_HANDLES];
     uint32_t type;
     mx_status_t r = mx_rio_getobject(rio, MX_RIO_OPEN, path, flags, handles, &type);
@@ -446,7 +444,7 @@ static mx_status_t mx_rio_open(mxio_t* io, const char* path, int32_t flags, mxio
 }
 
 static mx_status_t mx_rio_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
-    mx_rio_t* rio = (void*) io;
+    mx_rio_t* rio = (void*)io;
     mx_status_t r = mx_rio_getobject(rio, MX_RIO_CLONE, "", 0, handles, types);
     for (int i = 0; i < r; i++) {
         types[i] = MX_HND_TYPE_MXIO_REMOTE;
@@ -460,8 +458,8 @@ mx_status_t __mx_rio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types)
     return mx_rio_clone(&rio.io, handles, types);
 }
 
-static mx_status_t mx_rio_wait(mxio_t* io, uint32_t events, uint32_t *_pending, mx_time_t timeout) {
-    mx_rio_t* rio = (void*) io;
+static mx_status_t mx_rio_wait(mxio_t* io, uint32_t events, uint32_t* _pending, mx_time_t timeout) {
+    mx_rio_t* rio = (void*)io;
     if (rio->e == 0) {
         return ERR_NOT_SUPPORTED;
     }
@@ -516,7 +514,7 @@ static int rio_handler_thread(void* _args) {
 
 mx_status_t mxio_handler_create(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
     rio_args_t* args;
-    mxr_thread_t *t;
+    mxr_thread_t* t;
     if ((args = malloc(sizeof(*args))) == NULL) {
         goto fail;
     }

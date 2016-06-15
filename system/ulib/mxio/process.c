@@ -39,9 +39,10 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[], int hnds_count,
     off_t off = sizeof(pargs);
     int n;
 
-
-    if (args_count < 1) return ERR_INVALID_ARGS;
-    if (hnds_count < 0) return ERR_INVALID_ARGS;
+    if (args_count < 1)
+        return ERR_INVALID_ARGS;
+    if (hnds_count < 0)
+        return ERR_INVALID_ARGS;
     if (proc) {
         proc = _magenta_handle_duplicate(proc);
         if (proc < 0) {
@@ -88,7 +89,8 @@ mx_handle_t mxio_start_process_etc(int args_count, char* args[], int hnds_count,
     mx_handle_t h, p;
     mx_status_t r;
 
-    if (args_count < 1) return ERR_INVALID_ARGS;
+    if (args_count < 1)
+        return ERR_INVALID_ARGS;
 
     char* path = args[0];
     uint32_t path_len = MIN(strlen(path), MX_MAX_NAME_LEN);
@@ -158,8 +160,10 @@ mx_status_t mxio_load_elf_mem(mx_handle_t process, mx_vaddr_t* entry, void* data
 
 static ssize_t _elf_read_fd(elf_handle_t* elf, void* buf, uintptr_t off, size_t len) {
     ctxt* c = elf->arg;
-    if (lseek(c->fd, off, SEEK_SET) != (off_t)off) return ERR_IO;
-    if (read(c->fd, buf, len) != (ssize_t)len) return ERR_IO;
+    if (lseek(c->fd, off, SEEK_SET) != (off_t)off)
+        return ERR_IO;
+    if (read(c->fd, buf, len) != (ssize_t)len)
+        return ERR_IO;
     return len;
 }
 
@@ -169,11 +173,13 @@ static mx_status_t _elf_load_fd(elf_handle_t* elf, uintptr_t vaddr, uintptr_t of
 
     size_t save = len;
 
-    if (lseek(c->fd, off, SEEK_SET) != (off_t)off) return ERR_IO;
+    if (lseek(c->fd, off, SEEK_SET) != (off_t)off)
+        return ERR_IO;
 
     while (len > 0) {
         size_t xfer = (len > 4096) ? 4096 : len;
-        if (read(c->fd, tmp, xfer) != (ssize_t)xfer) return ERR_IO;
+        if (read(c->fd, tmp, xfer) != (ssize_t)xfer)
+            return ERR_IO;
 
         mx_ssize_t ret = _magenta_vm_object_write(elf->vmo, tmp, vaddr - elf->vmo_addr, xfer);
         if (ret < 0 || (size_t)ret != xfer) {

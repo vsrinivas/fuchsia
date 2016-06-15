@@ -14,14 +14,14 @@
 
 #include <runtime/process.h>
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
 #include <magenta/processargs.h>
+#include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 // TODO: allocate via vmo perhaps?
 static char __proc_data__[4096];
@@ -51,12 +51,12 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     char* data = __proc_data__;
     int avail = sizeof(__proc_data__);
     mx_proc_info_t* pi = &__proc_info__;
-    mx_handle_t h = (uintptr_t) arg;
+    mx_handle_t h = (uintptr_t)arg;
     mx_status_t r;
     uint32_t dsz = 0, hsz = 0;
-    char *msg = NULL;
-    mx_proc_args_t *pargs;
-    char **argv;
+    char* msg = NULL;
+    mx_proc_args_t* pargs;
+    char** argv;
     uint32_t n;
 
     memset(pi, 0, sizeof(*pi));
@@ -66,11 +66,12 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     if (r == ERR_NOT_ENOUGH_BUFFER) {
         int need = dsz + hsz * sizeof(mx_handle_t);
         need = (need + 7) & (~7);
-        if (need > avail) return pi;
+        if (need > avail)
+            return pi;
         msg = data;
         data += need;
         avail -= need;
-        pi->handle = (mx_handle_t *) msg;
+        pi->handle = (mx_handle_t*)msg;
         pi->handle_count = hsz;
         msg += sizeof(mx_handle_t) * hsz;
     } else {
@@ -85,21 +86,25 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     }
 
     // validate proc args
-    pi->proc_args = pargs = (mx_proc_args_t*) msg;
-    if (dsz < sizeof(*pargs)) return pi;
-    if (pargs->protocol != MX_PROCARGS_PROTOCOL) return pi;
+    pi->proc_args = pargs = (mx_proc_args_t*)msg;
+    if (dsz < sizeof(*pargs))
+        return pi;
+    if (pargs->protocol != MX_PROCARGS_PROTOCOL)
+        return pi;
 
     // setup handle info
-    pi->handle_info = (uint32_t*) (msg + pargs->handle_info_off);
+    pi->handle_info = (uint32_t*)(msg + pargs->handle_info_off);
 
     // extract arguments
-    if ((sizeof(char*) * pargs->args_num) > (unsigned)avail) return pi;
-    argv = (void*) data;
+    if ((sizeof(char*) * pargs->args_num) > (unsigned)avail)
+        return pi;
+    argv = (void*)data;
 
     msg = msg + pargs->args_off;
     for (n = 0; n < pargs->args_num; n++) {
         argv[n] = msg;
-        while (*msg) msg++;
+        while (*msg)
+            msg++;
         msg++;
     }
 

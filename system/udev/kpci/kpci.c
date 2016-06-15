@@ -79,8 +79,10 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
 
 finished:
     if (status != NO_ERROR) {
-        if (device) free(device);
-        if (handle >= 0) _magenta_handle_close(handle);
+        if (device)
+            free(device);
+        if (handle >= 0)
+            _magenta_handle_close(handle);
     }
     return status;
 }
@@ -129,7 +131,7 @@ mx_status_t devmgr_create_pcidev(mx_device_t** out, uint32_t index) {
 int devmgr_get_pcidev_index(mx_device_t* dev) {
     if (dev->parent == kpci_root_dev) {
         kpci_device_t* pcidev = get_kpci_device(dev);
-        return (int) pcidev->index;
+        return (int)pcidev->index;
     } else {
         return -1;
     }

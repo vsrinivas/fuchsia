@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 typedef struct {
     const char* name;
@@ -32,17 +32,17 @@ int blind_read(volatile unsigned int* addr) {
     return (int)(*addr);
 }
 
-int ro_write(volatile unsigned int *addr) {
+int ro_write(volatile unsigned int* addr) {
     // test that we cannot write to RO code memory
-    volatile unsigned int *p = (volatile unsigned int *)&ro_write;
+    volatile unsigned int* p = (volatile unsigned int*)&ro_write;
     *p = 99;
     return 0;
 }
 
-int nx_run(volatile unsigned int *addr) {
+int nx_run(volatile unsigned int* addr) {
     // test that we cannot execute NX memory
     static uint8_t codebuf[16];
-    void (*func)(void) = (void *)codebuf;
+    void (*func)(void) = (void*)codebuf;
     func();
     return 0;
 }
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
                 if (strcmp(cmd->name, argv[1]) == 0) {
                     printf("doing : %s\n", cmd->desc);
                     cmd->func(NULL);
-                    goto exit;  // should not reach here.
+                    goto exit; // should not reach here.
                 }
             }
         }

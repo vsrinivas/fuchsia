@@ -17,13 +17,13 @@
 #ifndef __ASSEMBLY__
 
 #if __GNUC__
-#define likely(x)       __builtin_expect(!!(x), 1)
-#define unlikely(x)     __builtin_expect(!!(x), 0)
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 #define __UNUSED __attribute__((__unused__))
 #define __PACKED __attribute__((packed))
 #define __ALIGNED(x) __attribute__((aligned(x)))
-#define __PRINTFLIKE(__fmt,__varargs) __attribute__((__format__ (__printf__, __fmt, __varargs)))
-#define __SCANFLIKE(__fmt,__varargs) __attribute__((__format__ (__scanf__, __fmt, __varargs)))
+#define __PRINTFLIKE(__fmt, __varargs) __attribute__((__format__(__printf__, __fmt, __varargs)))
+#define __SCANFLIKE(__fmt, __varargs) __attribute__((__format__(__scanf__, __fmt, __varargs)))
 #define __SECTION(x) __attribute((section(x)))
 #define __PURE __attribute((pure))
 #define __CONST __attribute((const))

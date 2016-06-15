@@ -22,15 +22,13 @@
 #include <magenta/syscalls.h>
 
 static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
-                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags)
-{
+                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
     return _magenta_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 static mx_status_t my_write_message(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
                                     const mx_handle_t* handles, uint32_t num_handles,
-                                    uint32_t flags)
-{
+                                    uint32_t flags) {
     return _magenta_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
@@ -38,8 +36,7 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
                            uint32_t num_handles, uint32_t* result_index,
                            mx_time_t deadline,
                            mx_signals_t* satisfied_signals,
-                           mx_signals_t* satisfiable_signals)
-{
+                           mx_signals_t* satisfiable_signals) {
     mx_status_t result;
 
     if (num_handles == 1u) {
@@ -70,7 +67,6 @@ static bool wait_readable(mx_handle_t handle) {
     return true;
 }
 
-
 static void* arg;
 
 void* __libc_intercept_arg(void* _arg) {
@@ -82,7 +78,8 @@ int main(int argc, char** argv) {
     mx_handle_t handle = (mx_handle_t)(intptr_t)arg;
     printf("child-process: got arg %u\n", handle);
 
-    if (!wait_readable(handle)) return -1;
+    if (!wait_readable(handle))
+        return -1;
 
     char buffer[64];
     uint32_t buffer_size = sizeof(buffer);
@@ -104,4 +101,3 @@ int main(int argc, char** argv) {
 
     return 1234;
 }
-

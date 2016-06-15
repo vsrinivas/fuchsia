@@ -22,8 +22,8 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -49,10 +49,10 @@ typedef struct i8042_keyboard_device {
 #define get_kbd_device(dev) containerof(dev, i8042_device_t, device)
 
 #define I8042_COMMAND_REG 0x64
-#define I8042_STATUS_REG  0x64
-#define I8042_DATA_REG    0x60
+#define I8042_STATUS_REG 0x64
+#define I8042_DATA_REG 0x60
 
-#define ISA_IRQ_KEYBOARD  0x1
+#define ISA_IRQ_KEYBOARD 0x1
 
 static inline int i8042_read_data(void) {
     return inp(I8042_DATA_REG);
@@ -73,42 +73,42 @@ static inline void i8042_write_command(int val) {
 /*
  * timeout in milliseconds
  */
-#define I8042_CTL_TIMEOUT   500
+#define I8042_CTL_TIMEOUT 500
 
 /*
  * status register bits
  */
-#define I8042_STR_PARITY    0x80
-#define I8042_STR_TIMEOUT   0x40
-#define I8042_STR_AUXDATA   0x20
-#define I8042_STR_KEYLOCK   0x10
-#define I8042_STR_CMDDAT    0x08
-#define I8042_STR_MUXERR    0x04
-#define I8042_STR_IBF       0x02
-#define I8042_STR_OBF       0x01
+#define I8042_STR_PARITY 0x80
+#define I8042_STR_TIMEOUT 0x40
+#define I8042_STR_AUXDATA 0x20
+#define I8042_STR_KEYLOCK 0x10
+#define I8042_STR_CMDDAT 0x08
+#define I8042_STR_MUXERR 0x04
+#define I8042_STR_IBF 0x02
+#define I8042_STR_OBF 0x01
 
 /*
  * control register bits
  */
-#define I8042_CTR_KBDINT    0x01
-#define I8042_CTR_AUXINT    0x02
-#define I8042_CTR_IGNKEYLK  0x08
-#define I8042_CTR_KBDDIS    0x10
-#define I8042_CTR_AUXDIS    0x20
-#define I8042_CTR_XLATE     0x40
+#define I8042_CTR_KBDINT 0x01
+#define I8042_CTR_AUXINT 0x02
+#define I8042_CTR_IGNKEYLK 0x08
+#define I8042_CTR_KBDDIS 0x10
+#define I8042_CTR_AUXDIS 0x20
+#define I8042_CTR_XLATE 0x40
 
 /*
  * commands
  */
-#define I8042_CMD_CTL_RCTR  0x0120
-#define I8042_CMD_CTL_WCTR  0x1060
-#define I8042_CMD_CTL_TEST  0x01aa
+#define I8042_CMD_CTL_RCTR 0x0120
+#define I8042_CMD_CTL_WCTR 0x1060
+#define I8042_CMD_CTL_TEST 0x01aa
 
-#define I8042_CMD_KBD_DIS   0x00ad
-#define I8042_CMD_KBD_EN    0x00ae
+#define I8042_CMD_KBD_DIS 0x00ad
+#define I8042_CMD_KBD_EN 0x00ae
 #define I8042_CMD_PULSE_RESET 0x00fe
-#define I8042_CMD_KBD_TEST  0x01ab
-#define I8042_CMD_KBD_MODE  0x01f0
+#define I8042_CMD_KBD_TEST 0x01ab
+#define I8042_CMD_KBD_MODE 0x01f0
 
 /*
  * used for flushing buffers. the i8042 internal buffer shoudn't exceed this.
@@ -121,9 +121,9 @@ const uint8_t pc_keymap_set1_lower[128] = {
     /* 0x10 */ 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', MX_KEY_RETURN, MX_KEY_LCTRL, 'a', 's',
     /* 0x20 */ 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', MX_KEY_LSHIFT, '\\', 'z', 'x', 'c', 'v',
     /* 0x30 */ 'b', 'n', 'm', ',', '.', '/', MX_KEY_RSHIFT, '*', MX_KEY_LALT, ' ', MX_KEY_CAPSLOCK, MX_KEY_F1, MX_KEY_F2,
-                MX_KEY_F3, MX_KEY_F4, MX_KEY_F5,
+    MX_KEY_F3, MX_KEY_F4, MX_KEY_F5,
     /* 0x40 */ MX_KEY_F6, MX_KEY_F7, MX_KEY_F8, MX_KEY_F9, MX_KEY_F10, MX_KEY_PAD_NUMLOCK, MX_KEY_SCRLOCK, MX_KEY_PAD_7, MX_KEY_PAD_8,
-                MX_KEY_PAD_9, MX_KEY_PAD_MINUS, MX_KEY_PAD_4, MX_KEY_PAD_5, MX_KEY_PAD_6, MX_KEY_PAD_PLUS, MX_KEY_PAD_1,
+    MX_KEY_PAD_9, MX_KEY_PAD_MINUS, MX_KEY_PAD_4, MX_KEY_PAD_5, MX_KEY_PAD_6, MX_KEY_PAD_PLUS, MX_KEY_PAD_1,
     /* 0x50 */ MX_KEY_PAD_2, MX_KEY_PAD_3, MX_KEY_PAD_0, MX_KEY_PAD_PERIOD, 0, 0, 0, MX_KEY_F11, MX_KEY_F12, 0, 0, 0, 0, 0, 0, 0,
 };
 
@@ -132,9 +132,9 @@ const uint8_t pc_keymap_set1_upper[128] = {
     /* 0x10 */ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', MX_KEY_RETURN, MX_KEY_LCTRL, 'A', 'S',
     /* 0x20 */ 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', MX_KEY_LSHIFT, '|', 'Z', 'X', 'C', 'V',
     /* 0x30 */ 'B', 'N', 'M', '<', '>', '?', MX_KEY_RSHIFT, '*', MX_KEY_LALT, ' ', MX_KEY_CAPSLOCK, MX_KEY_F1, MX_KEY_F2,
-                MX_KEY_F3, MX_KEY_F4, MX_KEY_F5,
+    MX_KEY_F3, MX_KEY_F4, MX_KEY_F5,
     /* 0x40 */ MX_KEY_F6, MX_KEY_F7, MX_KEY_F8, MX_KEY_F9, MX_KEY_F10, MX_KEY_PAD_NUMLOCK, MX_KEY_SCRLOCK, MX_KEY_PAD_7, MX_KEY_PAD_8,
-                MX_KEY_PAD_9, MX_KEY_PAD_MINUS, MX_KEY_PAD_4, MX_KEY_PAD_5, MX_KEY_PAD_6, MX_KEY_PAD_PLUS, MX_KEY_PAD_1,
+    MX_KEY_PAD_9, MX_KEY_PAD_MINUS, MX_KEY_PAD_4, MX_KEY_PAD_5, MX_KEY_PAD_6, MX_KEY_PAD_PLUS, MX_KEY_PAD_1,
     /* 0x50 */ MX_KEY_PAD_2, MX_KEY_PAD_3, MX_KEY_PAD_0, MX_KEY_PAD_PERIOD, 0, 0, 0, MX_KEY_F11, MX_KEY_F12, 0, 0, 0, 0, 0, 0, 0,
 };
 
@@ -144,8 +144,7 @@ const uint8_t pc_keymap_set1_e0[128] = {
     /* 0x20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     /* 0x30 */ 0, 0, 0, 0, 0, MX_KEY_PAD_DIVIDE, 0, MX_KEY_PRTSCRN, MX_KEY_RALT, 0, 0, 0, 0, 0, 0, 0,
     /* 0x40 */ 0, 0, 0, 0, 0, 0, 0, MX_KEY_HOME, MX_KEY_ARROW_UP, MX_KEY_PGUP, 0, MX_KEY_ARROW_LEFT, 0, MX_KEY_ARROW_RIGHT, 0, MX_KEY_END,
-    /* 0x50 */ MX_KEY_ARROW_DOWN, MX_KEY_PGDN, MX_KEY_INS, 0, 0, 0, 0, 0, 0, 0, 0, MX_KEY_LWIN, MX_KEY_RWIN, MX_KEY_MENU, 0, 0
-};
+    /* 0x50 */ MX_KEY_ARROW_DOWN, MX_KEY_PGDN, MX_KEY_INS, 0, 0, 0, 0, 0, 0, 0, 0, MX_KEY_LWIN, MX_KEY_RWIN, MX_KEY_MENU, 0, 0};
 
 static int i8042_wait_read(void) {
     int i = 0;
@@ -219,13 +218,14 @@ static int i8042_selftest(void) {
         if (i8042_command(&param, I8042_CMD_CTL_TEST)) {
             return -1;
         }
-        if (param == 0x55) return 0;
+        if (param == 0x55)
+            return 0;
         usleep(50 * 1000);
     } while (i++ < 5);
     return 0;
 }
 
-static int keyboard_command(uint8_t *param, int command) {
+static int keyboard_command(uint8_t* param, int command) {
     int retval = 0, i = 0;
 
     retval = i8042_wait_write();
@@ -289,7 +289,7 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
 
     //cprintf("i8042: scancode=0x%x, keyup=%u, multi=%u: keycode=0x%x\n", scode, !!key_up, multi, key_code);
 
-    mx_key_event_t ev = { .keycode = key_code, .pressed = !key_up };
+    mx_key_event_t ev = {.keycode = key_code, .pressed = !key_up};
     mxr_mutex_lock(&dev->fifo.lock);
     if (dev->fifo.head == dev->fifo.tail) {
         device_state_set(&dev->device, DEV_STATE_READABLE);
@@ -305,9 +305,11 @@ static int i8042_irq_thread(void* arg) {
     // TODO
     mx_status_t status;
     status = _magenta_mmap_device_io(I8042_COMMAND_REG, 1);
-    if (status) return 0;
+    if (status)
+        return 0;
     status = _magenta_mmap_device_io(I8042_DATA_REG, 1);
-    if (status) return 0;
+    if (status)
+        return 0;
 
     for (;;) {
         status = _magenta_interrupt_event_wait(device->irq);
@@ -323,8 +325,8 @@ static int i8042_irq_thread(void* arg) {
                 if (str & I8042_STR_OBF) {
                     uint8_t data = i8042_read_data();
                     i8042_process_scode(device, data,
-                            ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
-                            ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
+                                        ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
+                                            ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
                     retry = true;
                 }
                 // TODO check other status bits here
@@ -335,18 +337,19 @@ static int i8042_irq_thread(void* arg) {
     return 0;
 }
 
-
 // implement char protocol:
 
 static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count) {
     size_t size = sizeof(mx_key_event_t);
-    if (count < size || (count % size != 0)) return ERR_INVALID_ARGS;
+    if (count < size || (count % size != 0))
+        return ERR_INVALID_ARGS;
 
     i8042_device_t* device = get_kbd_device(dev);
     mx_key_event_t* data = (mx_key_event_t*)buf;
     mxr_mutex_lock(&device->fifo.lock);
     while (count > 0) {
-        if (mx_key_fifo_read(&device->fifo, data)) break;
+        if (mx_key_fifo_read(&device->fifo, data))
+            break;
         data++;
         count -= size;
     }
@@ -394,7 +397,8 @@ static mx_protocol_device_t i8042_device_proto = {
 static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     // create device
     i8042_device_t* device = calloc(1, sizeof(i8042_device_t));
-    if (!device) return ERR_NO_MEMORY;
+    if (!device)
+        return ERR_NO_MEMORY;
 
     device->fifo.lock = MXR_MUTEX_INIT;
 
@@ -414,15 +418,18 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
 
     // enable I/O port access
     status = _magenta_mmap_device_io(I8042_COMMAND_REG, 1);
-    if (status) goto fail;
+    if (status)
+        goto fail;
     status = _magenta_mmap_device_io(I8042_DATA_REG, 1);
-    if (status) goto fail;
+    if (status)
+        goto fail;
 
     // initialize keyboard hardware
     i8042_flush();
 
     uint8_t ctr;
-    if (i8042_command(&ctr, I8042_CMD_CTL_RCTR)) goto fail;
+    if (i8042_command(&ctr, I8042_CMD_CTL_RCTR))
+        goto fail;
 
     // turn on translation
     ctr |= I8042_CTR_XLATE;
@@ -431,7 +438,8 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     ctr &= ~I8042_CTR_KBDDIS;
     ctr |= I8042_CTR_KBDINT;
 
-    if (i8042_command(&ctr, I8042_CMD_CTL_WCTR)) goto fail;
+    if (i8042_command(&ctr, I8042_CMD_CTL_WCTR))
+        goto fail;
 
     // enable PS/2 port
     i8042_command(NULL, I8042_CMD_KBD_EN);
@@ -441,12 +449,14 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
 
     // get interrupt wait handle
     device->irq = _magenta_interrupt_event_create(ISA_IRQ_KEYBOARD, MX_FLAG_REMAP_IRQ);
-    if (device->irq < 0) goto fail;
+    if (device->irq < 0)
+        goto fail;
 
     // create irq thread
     const char* name = "i8042-irq";
     status = mxr_thread_create(i8042_irq_thread, device, name, &device->irq_thread);
-    if (status != NO_ERROR) goto fail;
+    if (status != NO_ERROR)
+        goto fail;
 
     xprintf("initialized i8042_keyboard driver\n");
 

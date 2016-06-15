@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/uio.h>
 #include <sys/stat.h>
+#include <sys/uio.h>
+#include <unistd.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -43,7 +42,7 @@ static mxio_t* mxio_fdtab[MAX_MXIO_FD] = {
     NULL,
 };
 
-void mxio_install_root(mxio_t *root) {
+void mxio_install_root(mxio_t* root) {
     if (mxio_root_handle == NULL) {
         mxio_root_handle = root;
     }
@@ -53,8 +52,10 @@ void mxio_install_root(mxio_t *root) {
 
 int mxio_bind_to_fd(mxio_t* io, int fd) {
     if (fd >= 0) {
-        if (fd >= MAX_MXIO_FD) return ERR_INVALID_ARGS;
-        if (mxio_fdtab[fd]) return ERR_ALREADY_EXISTS;
+        if (fd >= MAX_MXIO_FD)
+            return ERR_INVALID_ARGS;
+        if (mxio_fdtab[fd])
+            return ERR_ALREADY_EXISTS;
         mxio_fdtab[fd] = io;
         return fd;
     }
@@ -68,7 +69,8 @@ int mxio_bind_to_fd(mxio_t* io, int fd) {
 }
 
 static inline mxio_t* fd_to_io(int fd) {
-    if ((fd < 0) || (fd >= MAX_MXIO_FD)) return NULL;
+    if ((fd < 0) || (fd >= MAX_MXIO_FD))
+        return NULL;
     return mxio_fdtab[fd];
 }
 
@@ -155,7 +157,7 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
         case MX_HND_TYPE_MXIO_REMOTE:
             // remote objects may have a second handle
             // which is for signalling events
-            if (((n+1) < pi->handle_count) &&
+            if (((n + 1) < pi->handle_count) &&
                 (pi->handle_info[n] == pi->handle_info[n + 1])) {
                 mxio_fdtab[arg] = mxio_remote_create(h, pi->handle[n + 1]);
                 pi->handle_info[n + 1] = 0;
@@ -225,7 +227,8 @@ mx_status_t mxio_create_subprocess_handles(mx_handle_t* handles, uint32_t* types
     mx_status_t r;
     size_t n = 0;
 
-    if (count < MXIO_MAX_HANDLES) return ERR_NO_MEMORY;
+    if (count < MXIO_MAX_HANDLES)
+        return ERR_NO_MEMORY;
 
     if ((r = mxio_clone_root(handles + n, types + n)) < 0) {
         return r;
@@ -260,28 +263,34 @@ mx_handle_t mxio_start_process(int args_count, char* args[]) {
 
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL) return ERR_BAD_HANDLE;
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
     return io->ops->wait(io, events, pending, MX_TIME_INFINITE);
 }
 
 //TODO: errors -> errno
 ssize_t read(int fd, void* buf, size_t count) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL) return ERR_BAD_HANDLE;
-    if (buf == NULL) return ERR_INVALID_ARGS;
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
+    if (buf == NULL)
+        return ERR_INVALID_ARGS;
     return io->ops->read(io, buf, count);
 }
 
 ssize_t write(int fd, const void* buf, size_t count) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL) return ERR_BAD_HANDLE;
-    if (buf == NULL) return ERR_INVALID_ARGS;
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
+    if (buf == NULL)
+        return ERR_INVALID_ARGS;
     return io->ops->write(io, buf, count);
 }
 
 int __close(int fd) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL) return ERR_BAD_HANDLE;
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
     int r = io->ops->close(io);
     mxio_fdtab[fd] = NULL;
     return r;
@@ -289,13 +298,15 @@ int __close(int fd) {
 
 off_t lseek(int fd, off_t offset, int whence) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL) return ERR_BAD_HANDLE;
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
     return io->ops->seek(io, offset, whence);
 }
 
 int getdirents(int fd, void* ptr, size_t len) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL) return ERR_BAD_HANDLE;
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
     return io->ops->misc(io, MX_RIO_READDIR, len, ptr, 0);
 }
 
@@ -310,8 +321,10 @@ int __open(const char* path, int flags, ...) {
         return ERR_BAD_HANDLE;
     }
     r = mxio_root_handle->ops->open(mxio_root_handle, path, flags, &io);
-    if (r < 0) return r;
-    if (io == NULL) return ERR_IO;
+    if (r < 0)
+        return r;
+    if (io == NULL)
+        return ERR_IO;
     fd = mxio_bind_to_fd(io, -1);
     if (fd < 0) {
         io->ops->close(io);
@@ -323,8 +336,10 @@ int __open(const char* path, int flags, ...) {
 int mx_stat(mxio_t* io, struct stat* s) {
     vnattr_t attr;
     int r = io->ops->misc(io, MX_RIO_STAT, sizeof(attr), &attr, 0);
-    if (r < 0) return r;
-    if (r < (int)sizeof(attr)) return ERR_IO;
+    if (r < 0)
+        return r;
+    if (r < (int)sizeof(attr))
+        return ERR_IO;
     memset(s, 0, sizeof(struct stat));
     s->st_mode = attr.mode;
     s->st_size = attr.size;
@@ -334,7 +349,8 @@ int mx_stat(mxio_t* io, struct stat* s) {
 
 int fstat(int fd, struct stat* s) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL) return ERR_BAD_HANDLE;
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
     return mx_stat(io, s);
 }
 
@@ -358,7 +374,8 @@ int stat(const char* fn, struct stat* s) {
 int pipe(int pipefd[2]) {
     mxio_t *a, *b;
     int r = mxio_pipe_pair(&a, &b);
-    if (r < 0) return r;
+    if (r < 0)
+        return r;
     pipefd[0] = mxio_bind_to_fd(a, -1);
     if (pipefd[0] < 0) {
         mx_close(a);

@@ -16,13 +16,13 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb_device.h>
+#include <mxu/list.h>
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
-#include <mxu/list.h>
 
 #include <inttypes.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 

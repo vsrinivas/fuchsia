@@ -19,16 +19,17 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <mxio/util.h>
 #include <magenta/syscalls.h>
+#include <mxio/util.h>
 
-static mx_handle_t my_process_create(const char *name, uint32_t name_len) {
+static mx_handle_t my_process_create(const char* name, uint32_t name_len) {
     return _magenta_process_create(name, name_len);
 }
 
 static mx_status_t my_process_load(mx_handle_t process, const char* elf_file, uintptr_t* out_entry) {
     int fd = open(elf_file, O_RDONLY);
-    if (fd < 0) return ERR_IO;
+    if (fd < 0)
+        return ERR_IO;
 
     uintptr_t entry = 0;
     mx_status_t status = mxio_load_elf_fd(process, &entry, fd);
@@ -48,8 +49,7 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
                            uint32_t num_handles, uint32_t* result_index,
                            mx_time_t deadline,
                            mx_signals_t* satisfied_signals,
-                           mx_signals_t* satisfiable_signals)
-{
+                           mx_signals_t* satisfiable_signals) {
     mx_status_t result;
 
     if (num_handles == 1u) {
@@ -65,8 +65,7 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
     return result;
 }
 
-static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1)
-{
+static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1) {
     mx_handle_t result = _magenta_message_pipe_create(handle1);
     if (result < 0)
         return result;
@@ -75,25 +74,21 @@ static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* han
 }
 
 static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
-                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags)
-{
+                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
     return _magenta_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 static mx_status_t my_write_message(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
                                     const mx_handle_t* handles, uint32_t num_handles,
-                                    uint32_t flags)
-{
+                                    uint32_t flags) {
     return _magenta_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
-static mx_status_t my_close(mx_handle_t handle)
-{
+static mx_status_t my_close(mx_handle_t handle) {
     return _magenta_handle_close(handle);
 }
 
-static mx_status_t my_process_get_info(mx_handle_t handle, mx_process_info_t* info)
-{
+static mx_status_t my_process_get_info(mx_handle_t handle, mx_process_info_t* info) {
     return _magenta_process_get_info(handle, info, sizeof(*info));
 }
 
@@ -183,7 +178,8 @@ int main(void) {
     my_close(pipe1);
 
     mx_process_info_t info;
-    if (!wait_signalled(child_handle)) return -1;
+    if (!wait_signalled(child_handle))
+        return -1;
     status = my_process_get_info(child_handle, &info);
     printf("process-test: my_process_get_info returned %d\n", status);
     if (status != NO_ERROR)

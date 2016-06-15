@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <ctype.h>
-#include <limits.h>
 
 #include <magenta/syscalls.h>
 #include <mxu/hexdump.h>
@@ -66,12 +66,12 @@ bool vmo_read_write_test(void) {
     // map it
     uintptr_t ptr;
     status = _magenta_process_vm_map(0, vmo, 0, len, &ptr,
-            MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+                                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     EXPECT_EQ(NO_ERROR, status, "vm_map");
     EXPECT_NEQ(0u, ptr, "vm_map");
 
     // check that it matches what we last wrote into it
-    EXPECT_BYTES_EQ((void *)buf, (void *)ptr, sizeof(buf), "mapped buffer");
+    EXPECT_BYTES_EQ((void*)buf, (void*)ptr, sizeof(buf), "mapped buffer");
 
     status = _magenta_process_vm_unmap(0, ptr, 0);
     EXPECT_EQ(NO_ERROR, status, "vm_unmap");
@@ -100,7 +100,7 @@ bool vmo_resize_test(void) {
     EXPECT_EQ(NO_ERROR, status, "vm_object_get_size");
     EXPECT_EQ(len, size, "vm_object_get_size");
 
-    // set_size is not implemented right now, so test for the failure mode
+// set_size is not implemented right now, so test for the failure mode
 #if 0
     // try to resize it
     len += PAGE_SIZE;
@@ -128,15 +128,13 @@ bool vmo_resize_test(void) {
     END_TEST;
 }
 
-
-
 BEGIN_TEST_CASE(vmo_tests)
 RUN_TEST(vmo_create_test);
 RUN_TEST(vmo_read_write_test);
 RUN_TEST(vmo_resize_test);
 END_TEST_CASE(vmo_tests)
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 
     // TODO: remove this register once global constructors work
     unittest_register_test_case(&_vmo_tests_element);

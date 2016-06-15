@@ -85,9 +85,9 @@ static ssize_t vnd_write(vnode_t* vn, const void* data, size_t len, size_t off) 
 }
 
 static ssize_t vnd_ioctl(
-        vnode_t* vn, uint32_t op,
-        const void* in_data, size_t in_len,
-        void* out_data, size_t out_len) {
+    vnode_t* vn, uint32_t op,
+    const void* in_data, size_t in_len,
+    void* out_data, size_t out_len) {
 
     mx_protocol_char_t* ops = vn->pops;
     if (ops && ops->ioctl) {
@@ -108,8 +108,10 @@ static mx_status_t vnd_lookup(vnode_t* vn, vnode_t** out, const char* name, size
         list_for_every_entry (list, dev, mx_device_t, pnode) {
             xprintf("? dev=%p name='%s'\n", dev, dev->name);
             size_t n = strlen(dev->name);
-            if (n != len) continue;
-            if (memcmp(dev->name, name, len)) continue;
+            if (n != len)
+                continue;
+            if (memcmp(dev->name, name, len))
+                continue;
             xprintf("vnd_lookup: dev=%p\n", dev);
             return vnd_get_node(out, dev);
         }
@@ -119,8 +121,10 @@ static mx_status_t vnd_lookup(vnode_t* vn, vnode_t** out, const char* name, size
     list_for_every_entry (&parent->device_list, dev, mx_device_t, node) {
         xprintf("? dev=%p name='%s'\n", dev, dev->name);
         size_t n = strlen(dev->name);
-        if (n != len) continue;
-        if (memcmp(dev->name, name, len)) continue;
+        if (n != len)
+            continue;
+        if (memcmp(dev->name, name, len))
+            continue;
         xprintf("vnd_lookup: dev=%p\n", dev);
         return vnd_get_node(out, dev);
     }
@@ -160,7 +164,8 @@ static mx_status_t vnd_readdir(vnode_t* vn, void* cookie, void* data, size_t len
                 r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
                                     dev->name, strlen(dev->name),
                                     VTYPE_TO_DTYPE(vtype));
-                if (r < 0) break;
+                if (r < 0)
+                    break;
                 last = dev;
                 pos += r;
             }
@@ -179,7 +184,8 @@ static mx_status_t vnd_readdir(vnode_t* vn, void* cookie, void* data, size_t len
             r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
                                 dev->name, strlen(dev->name),
                                 VTYPE_TO_DTYPE(vtype));
-            if (r < 0) break;
+            if (r < 0)
+                break;
             last = dev;
             pos += r;
         }
@@ -219,7 +225,6 @@ static mx_handle_t vnd_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
     return 2;
 }
 
-
 static vnode_ops_t vn_device_ops = {
     .release = vnd_release,
     .open = vnd_open,
@@ -241,7 +246,8 @@ mx_status_t vnd_get_node(vnode_t** out, mx_device_t* dev) {
         return NO_ERROR;
     } else {
         vnode_t* vn;
-        if ((vn = malloc(sizeof(vnode_t))) == NULL) return ERR_NO_MEMORY;
+        if ((vn = malloc(sizeof(vnode_t))) == NULL)
+            return ERR_NO_MEMORY;
         vn->ops = &vn_device_ops,
         vn->vfs = NULL;
         // TODO: set this based on device properties

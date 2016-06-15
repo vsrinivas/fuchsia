@@ -17,11 +17,11 @@
 #include <ddk/protocol/char.h>
 #include <hw/inout.h>
 
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
 #include <assert.h>
-#include <stdlib.h>
+#include <magenta/syscalls.h>
+#include <magenta/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define RTC_IO_BASE 0x70
@@ -43,11 +43,10 @@ enum intel_rtc_registers {
     REG_YEAR,
 };
 
-
 struct rtc_time {
     uint8_t seconds, minutes, hours;
 };
-static void read_time(struct rtc_time *t) {
+static void read_time(struct rtc_time* t) {
     outp(RTC_IDX_REG, REG_SECONDS);
     t->seconds = inp(RTC_DATA_REG);
     outp(RTC_IDX_REG, REG_MINUTES);
@@ -56,10 +55,10 @@ static void read_time(struct rtc_time *t) {
     t->hours = inp(RTC_DATA_REG);
 }
 
-static bool rtc_time_eq(struct rtc_time *lhs, struct rtc_time *rhs) {
+static bool rtc_time_eq(struct rtc_time* lhs, struct rtc_time* rhs) {
     return lhs->seconds == rhs->seconds &&
-            lhs->minutes == rhs->minutes &&
-            lhs->hours == rhs->hours;
+           lhs->minutes == rhs->minutes &&
+           lhs->hours == rhs->hours;
 }
 
 // implement char protocol

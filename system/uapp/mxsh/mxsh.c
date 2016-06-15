@@ -91,11 +91,11 @@ typedef struct {
     int save_pos;
     hitem* item;
     char save[LINE_MAX];
-    char line[LINE_MAX+1];
+    char line[LINE_MAX + 1];
 } editstate;
 
 void history_add(editstate* es) {
-    hitem *item;
+    hitem* item;
     if (es->pos && ((item = malloc(sizeof(hitem))) != NULL)) {
         item->len = es->pos;
         memset(item->line, 0, sizeof(item->line));
@@ -315,7 +315,7 @@ void command(int argc, char** argv, bool runbg) {
 
 void console(void) {
     editstate es;
-    char *line;
+    char* line;
     bool runbg;
     char* argv[32];
     int argc;

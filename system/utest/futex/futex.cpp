@@ -36,14 +36,14 @@ static void assert_eq_check(int lhs_value, int rhs_value,
 
 // TODO(mseaborn): Use the standard sched_yield() here when it is available.
 static void yield() {
-    struct timespec wait_time = { 0, 1000 /* nanoseconds */ };
+    struct timespec wait_time = {0, 1000 /* nanoseconds */};
     ASSERT_EQ(nanosleep(&wait_time, NULL), 0);
 }
 
 static void test_futex_wait_value_mismatch() {
     int futex_value = 123;
     mx_status_t rc = _magenta_futex_wait(&futex_value, futex_value + 1,
-                                       MX_TIME_INFINITE);
+                                         MX_TIME_INFINITE);
     ASSERT_EQ(rc, ERR_BUSY);
 }
 
@@ -78,7 +78,7 @@ public:
         ASSERT_EQ(state_, STATE_ABOUT_TO_WAIT);
         // This should be long enough for wakeup_test_thread() to enter
         // futex_wait() and add the thread to the wait queue.
-        struct timespec wait_time = { 0, 100 * 1000000 /* nanoseconds */ };
+        struct timespec wait_time = {0, 100 * 1000000 /* nanoseconds */};
         ASSERT_EQ(nanosleep(&wait_time, NULL), 0);
         // This could also fail if futex_wait() gets a spurious wakeup.
         ASSERT_EQ(state_, STATE_ABOUT_TO_WAIT);
@@ -86,7 +86,8 @@ public:
 
     ~TestThread() {
         ASSERT_EQ(_magenta_handle_wait_one(thread_handle_, MX_SIGNAL_SIGNALED,
-            MX_TIME_INFINITE, NULL, NULL), NO_ERROR);
+                                           MX_TIME_INFINITE, NULL, NULL),
+                  NO_ERROR);
     }
 
     void assert_thread_woken() {
@@ -103,7 +104,7 @@ public:
     void wait_for_timeout() {
         ASSERT_EQ(state_, STATE_ABOUT_TO_WAIT);
         while (state_ == STATE_ABOUT_TO_WAIT) {
-            struct timespec wait_time = { 0, 50 * 1000000 /* nanoseconds */ };
+            struct timespec wait_time = {0, 50 * 1000000 /* nanoseconds */};
             ASSERT_EQ(nanosleep(&wait_time, NULL), 0);
         }
         ASSERT_EQ(state_, STATE_WAIT_RETURNED);
@@ -115,7 +116,7 @@ private:
         thread->state_ = STATE_ABOUT_TO_WAIT;
         mx_status_t rc =
             _magenta_futex_wait(const_cast<int*>(thread->futex_addr_),
-                            *thread->futex_addr_, thread->timeout_in_us_);
+                                *thread->futex_addr_, thread->timeout_in_us_);
         if (thread->timeout_in_us_ == MX_TIME_INFINITE) {
             ASSERT_EQ(rc, NO_ERROR);
         } else {
@@ -208,7 +209,7 @@ void test_futex_wakeup_address() {
 void test_futex_unqueued_on_timeout() {
     volatile int futex_value = 1;
     mx_status_t rc = _magenta_futex_wait(const_cast<int*>(&futex_value),
-                                       futex_value, 1);
+                                         futex_value, 1);
     ASSERT_EQ(rc, ERR_TIMED_OUT);
     TestThread thread(&futex_value);
     // If the earlier futex_wait() did not remove itself from the wait
@@ -258,14 +259,14 @@ void test_futex_requeue_value_mismatch() {
     int futex_value1 = 100;
     int futex_value2 = 200;
     mx_status_t rc = _magenta_futex_requeue(&futex_value1, 1, futex_value1 + 1,
-                                          &futex_value2, 1);
+                                            &futex_value2, 1);
     ASSERT_EQ(rc, ERR_BUSY);
 }
 
 void test_futex_requeue_same_addr() {
     int futex_value = 100;
     mx_status_t rc = _magenta_futex_requeue(&futex_value, 1, futex_value,
-                                          &futex_value, 1);
+                                            &futex_value, 1);
     ASSERT_EQ(rc, ERR_INVALID_ARGS);
 }
 
@@ -336,7 +337,8 @@ static void log(const char* str) {
 
 class Event {
 public:
-    Event() : signalled_(0) {}
+    Event()
+        : signalled_(0) {}
 
     void wait() {
         if (signalled_ == 0) {

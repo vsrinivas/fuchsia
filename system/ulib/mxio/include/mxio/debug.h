@@ -21,9 +21,9 @@
 void cprintf(const char* fmt, ...);
 
 // per-file chatty debug macro
-#define xprintf(fmt...)  \
-    do {                 \
-        if (MXDEBUG) {   \
+#define xprintf(fmt...)   \
+    do {                  \
+        if (MXDEBUG) {    \
             cprintf(fmt); \
-        }                \
+        }                 \
     } while (0)

@@ -14,10 +14,10 @@
 
 #pragma once
 
-#include <sys/types.h>
 #include <magenta/types.h>
 #include <mxu/list.h>
 #include <runtime/compiler.h>
+#include <sys/types.h>
 
 typedef struct mx_device mx_device_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
@@ -30,15 +30,15 @@ typedef struct mx_driver_ops {
     // Opportunity to do on-load work.
     // Called ony once, before any other ops are called.
 
-    mx_status_t (*probe)(mx_driver_t* driver, mx_device_t *device);
+    mx_status_t (*probe)(mx_driver_t* driver, mx_device_t* device);
     // Query whether this driver can bind to this device.
     // NO_ERROR indicates it can do so.
 
-    mx_status_t (*bind)(mx_driver_t* driver, mx_device_t *device);
+    mx_status_t (*bind)(mx_driver_t* driver, mx_device_t* device);
     // Requests that the driver bind to the provided device,
     // initialize it, and publish and children.
 
-    mx_status_t (*unbind)(mx_driver_t* driver, mx_device_t *device);
+    mx_status_t (*unbind)(mx_driver_t* driver, mx_device_t* device);
     // Notifies the driver that the device is being removed (has
     // been hot unplugged, etc)
 
@@ -68,9 +68,9 @@ struct mx_driver_binding {
 };
 
 // Device Manager API
-mx_status_t device_create(mx_device_t **device, mx_driver_t* driver,
-                          const char *name, mx_protocol_device_t* ops);
-mx_status_t device_init(mx_device_t *device, mx_driver_t *driver,
+mx_status_t device_create(mx_device_t** device, mx_driver_t* driver,
+                          const char* name, mx_protocol_device_t* ops);
+mx_status_t device_init(mx_device_t* device, mx_driver_t* driver,
                         const char* name, mx_protocol_device_t* ops);
 // Devices are created or (if embedded in a driver-specific structure)
 // initialized with the above functions.  The mx_device_t will be completely
@@ -102,4 +102,5 @@ void driver_remove(mx_driver_t* driver);
 #define MX_PROTOCOL_ETHERNET 'pETH'
 #define MX_PROTOCOL_BLUETOOTH_HCI 'pBTH'
 
-#define BUILTIN_DRIVER __ALIGNED(sizeof(void*)) __SECTION("builtin_drivers")
+#define BUILTIN_DRIVER __ALIGNED(sizeof(void*)) \
+__SECTION("builtin_drivers")

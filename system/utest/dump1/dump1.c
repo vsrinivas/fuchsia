@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include <mxio/io.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     unsigned char x;
     int fd = 0;
     if (argc == 2) {

@@ -18,21 +18,21 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
 #include <assert.h>
-#include <stdlib.h>
+#include <magenta/syscalls.h>
+#include <magenta/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define INTEL_I915_VID (0x8086)
 #define INTEL_I915_DID (0x1616)
 
 #define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
-#define INTEL_I915_FB_WINDOW_SIZE  (0x10000000u)
+#define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
 
 #define BACKLIGHT_CTRL_OFFSET (0xc8250)
-#define BACKLIGHT_CTRL_BIT    ((uint32_t)(1u << 31))
+#define BACKLIGHT_CTRL_BIT ((uint32_t)(1u << 31))
 
 #define TRACE 0
 
@@ -60,7 +60,7 @@ typedef struct intel_i915_device {
 #define get_i915_device(dev) containerof(dev, intel_i915_device_t, device)
 
 static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable) {
-    void*  backlight_ctrl = (uint8_t*)dev->regs + BACKLIGHT_CTRL_OFFSET;
+    void* backlight_ctrl = (uint8_t*)dev->regs + BACKLIGHT_CTRL_OFFSET;
     uint32_t tmp = pcie_read32(backlight_ctrl);
 
     if (enable)
@@ -90,7 +90,6 @@ static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuff
     (*framebuffer) = device->framebuffer;
     return NO_ERROR;
 }
-
 
 static mx_display_protocol_t intel_i915_display_proto = {
     .set_mode = intel_i915_set_mode,
@@ -138,7 +137,8 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 static mx_status_t intel_i915_probe(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+        return ERR_NOT_SUPPORTED;
 
     const pci_config_t* pci_config;
     mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
@@ -147,8 +147,8 @@ static mx_status_t intel_i915_probe(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_status_t status;
     status = (pci_config->vendor_id == INTEL_I915_VID) && (pci_config->device_id == INTEL_I915_DID)
-           ? NO_ERROR
-           : ERR_NOT_SUPPORTED;
+                 ? NO_ERROR
+                 : ERR_NOT_SUPPORTED;
 
     _magenta_handle_close(cfg_handle);
 
@@ -157,14 +157,17 @@ static mx_status_t intel_i915_probe(mx_driver_t* drv, mx_device_t* dev) {
 
 static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+        return ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);
-    if (status < 0) return status;
+    if (status < 0)
+        return status;
 
     // map resources and initialize the device
     intel_i915_device_t* device = calloc(1, sizeof(intel_i915_device_t));
-    if (!device) return ERR_NO_MEMORY;
+    if (!device)
+        return ERR_NO_MEMORY;
 
     // map register window
     device->regs_handle = pci->map_mmio(dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -185,7 +188,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     // create and add the display (char) device
     status = device_init(&device->device, drv, "intel_i915_disp", &intel_i915_device_proto);
-    if (status) goto fail;
+    if (status)
+        goto fail;
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;

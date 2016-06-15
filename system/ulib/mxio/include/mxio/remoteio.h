@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <sys/types.h>
 #include <magenta/types.h>
 #include <mxio/io.h>
+#include <sys/types.h>
 
 // clang-format off
 

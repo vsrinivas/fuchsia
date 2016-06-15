@@ -17,8 +17,8 @@
 
 #include <magenta/syscalls.h>
 
-#define CHECK(f, expected, message)                                                                \
-    if ((ret = (f)) != (expected))                                                                 \
+#define CHECK(f, expected, message) \
+    if ((ret = (f)) != (expected))  \
     printf("Test failed (%s): " #f " returned %d vs. %d\n", message, ret, expected)
 
 int main(void) {

@@ -29,9 +29,9 @@ struct list_node {
     list_node_t* next;
 };
 
-#define LIST_INITIAL_VALUE(list)                                                                   \
+#define LIST_INITIAL_VALUE(list) \
     { &(list), &(list) }
-#define LIST_INITIAL_CLEARED_VALUE                                                                 \
+#define LIST_INITIAL_CLEARED_VALUE \
     { NULL, NULL }
 
 static inline void list_initialize(list_node_t* list) {
@@ -83,15 +83,15 @@ static inline list_node_t* list_remove_head(list_node_t* list) {
     }
 }
 
-#define list_remove_head_type(list, type, element)                                                 \
-    ({                                                                                             \
-        list_node_t* __nod = list_remove_head(list);                                               \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_remove_head_type(list, type, element)   \
+    ({                                               \
+        list_node_t* __nod = list_remove_head(list); \
+        type* __t;                                   \
+        if (__nod)                                   \
+            __t = containerof(__nod, type, element); \
+        else                                         \
+            __t = (type*)0;                          \
+        __t;                                         \
     })
 
 static inline list_node_t* list_remove_tail(list_node_t* list) {
@@ -104,15 +104,15 @@ static inline list_node_t* list_remove_tail(list_node_t* list) {
     }
 }
 
-#define list_remove_tail_type(list, type, element)                                                 \
-    ({                                                                                             \
-        list_node_t* __nod = list_remove_tail(list);                                               \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_remove_tail_type(list, type, element)   \
+    ({                                               \
+        list_node_t* __nod = list_remove_tail(list); \
+        type* __t;                                   \
+        if (__nod)                                   \
+            __t = containerof(__nod, type, element); \
+        else                                         \
+            __t = (type*)0;                          \
+        __t;                                         \
     })
 
 static inline list_node_t* list_peek_head(list_node_t* list) {
@@ -123,15 +123,15 @@ static inline list_node_t* list_peek_head(list_node_t* list) {
     }
 }
 
-#define list_peek_head_type(list, type, element)                                                   \
-    ({                                                                                             \
-        list_node_t* __nod = list_peek_head(list);                                                 \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_peek_head_type(list, type, element)     \
+    ({                                               \
+        list_node_t* __nod = list_peek_head(list);   \
+        type* __t;                                   \
+        if (__nod)                                   \
+            __t = containerof(__nod, type, element); \
+        else                                         \
+            __t = (type*)0;                          \
+        __t;                                         \
     })
 
 static inline list_node_t* list_peek_tail(list_node_t* list) {
@@ -142,15 +142,15 @@ static inline list_node_t* list_peek_tail(list_node_t* list) {
     }
 }
 
-#define list_peek_tail_type(list, type, element)                                                   \
-    ({                                                                                             \
-        list_node_t* __nod = list_peek_tail(list);                                                 \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_peek_tail_type(list, type, element)     \
+    ({                                               \
+        list_node_t* __nod = list_peek_tail(list);   \
+        type* __t;                                   \
+        if (__nod)                                   \
+            __t = containerof(__nod, type, element); \
+        else                                         \
+            __t = (type*)0;                          \
+        __t;                                         \
     })
 
 static inline list_node_t* list_prev(list_node_t* list, list_node_t* item) {
@@ -160,15 +160,15 @@ static inline list_node_t* list_prev(list_node_t* list, list_node_t* item) {
         return NULL;
 }
 
-#define list_prev_type(list, item, type, element)                                                  \
-    ({                                                                                             \
-        list_node_t* __nod = list_prev(list, item);                                                \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_prev_type(list, item, type, element)    \
+    ({                                               \
+        list_node_t* __nod = list_prev(list, item);  \
+        type* __t;                                   \
+        if (__nod)                                   \
+            __t = containerof(__nod, type, element); \
+        else                                         \
+            __t = (type*)0;                          \
+        __t;                                         \
     })
 
 static inline list_node_t* list_prev_wrap(list_node_t* list, list_node_t* item) {
@@ -180,15 +180,15 @@ static inline list_node_t* list_prev_wrap(list_node_t* list, list_node_t* item) 
         return NULL;
 }
 
-#define list_prev_wrap_type(list, item, type, element)                                             \
-    ({                                                                                             \
-        list_node_t* __nod = list_prev_wrap(list, item);                                           \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_prev_wrap_type(list, item, type, element)   \
+    ({                                                   \
+        list_node_t* __nod = list_prev_wrap(list, item); \
+        type* __t;                                       \
+        if (__nod)                                       \
+            __t = containerof(__nod, type, element);     \
+        else                                             \
+            __t = (type*)0;                              \
+        __t;                                             \
     })
 
 static inline list_node_t* list_next(list_node_t* list, list_node_t* item) {
@@ -198,15 +198,15 @@ static inline list_node_t* list_next(list_node_t* list, list_node_t* item) {
         return NULL;
 }
 
-#define list_next_type(list, item, type, element)                                                  \
-    ({                                                                                             \
-        list_node_t* __nod = list_next(list, item);                                                \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_next_type(list, item, type, element)    \
+    ({                                               \
+        list_node_t* __nod = list_next(list, item);  \
+        type* __t;                                   \
+        if (__nod)                                   \
+            __t = containerof(__nod, type, element); \
+        else                                         \
+            __t = (type*)0;                          \
+        __t;                                         \
     })
 
 static inline list_node_t* list_next_wrap(list_node_t* list, list_node_t* item) {
@@ -218,15 +218,15 @@ static inline list_node_t* list_next_wrap(list_node_t* list, list_node_t* item) 
         return NULL;
 }
 
-#define list_next_wrap_type(list, item, type, element)                                             \
-    ({                                                                                             \
-        list_node_t* __nod = list_next_wrap(list, item);                                           \
-        type* __t;                                                                                 \
-        if (__nod)                                                                                 \
-            __t = containerof(__nod, type, element);                                               \
-        else                                                                                       \
-            __t = (type*)0;                                                                        \
-        __t;                                                                                       \
+#define list_next_wrap_type(list, item, type, element)   \
+    ({                                                   \
+        list_node_t* __nod = list_next_wrap(list, item); \
+        type* __t;                                       \
+        if (__nod)                                       \
+            __t = containerof(__nod, type, element);     \
+        else                                             \
+            __t = (type*)0;                              \
+        __t;                                             \
     })
 
 // iterates over the list, node should be list_node_t*
@@ -234,21 +234,21 @@ static inline list_node_t* list_next_wrap(list_node_t* list, list_node_t* item) 
 
 // iterates over the list in a safe way for deletion of current node
 // node and temp_node should be list_node_t*
-#define list_for_every_safe(list, node, temp_node)                                                 \
-    for (node = (list)->next, temp_node = (node)->next; node != (list);                            \
+#define list_for_every_safe(list, node, temp_node)                      \
+    for (node = (list)->next, temp_node = (node)->next; node != (list); \
          node = temp_node, temp_node = (node)->next)
 
 // iterates over the list, entry should be the container structure type *
-#define list_for_every_entry(list, entry, type, member)                                            \
-    for ((entry) = containerof((list)->next, type, member); &(entry)->member != (list);            \
+#define list_for_every_entry(list, entry, type, member)                                 \
+    for ((entry) = containerof((list)->next, type, member); &(entry)->member != (list); \
          (entry) = containerof((entry)->member.next, type, member))
 
 // iterates over the list in a safe way for deletion of current node
 // entry and temp_entry should be the container structure type *
-#define list_for_every_entry_safe(list, entry, temp_entry, type, member)                           \
-    for (entry = containerof((list)->next, type, member),                                          \
-        temp_entry = containerof((entry)->member.next, type, member);                              \
-         &(entry)->member != (list);                                                               \
+#define list_for_every_entry_safe(list, entry, temp_entry, type, member) \
+    for (entry = containerof((list)->next, type, member),                \
+        temp_entry = containerof((entry)->member.next, type, member);    \
+         &(entry)->member != (list);                                     \
          entry = temp_entry, temp_entry = containerof((temp_entry)->member.next, type, member))
 
 static inline bool list_is_empty(list_node_t* list) {

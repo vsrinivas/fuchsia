@@ -15,8 +15,8 @@
 #include <ddk/protocol/i2c.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <magenta/types.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 #include <mxio/util.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -24,10 +24,9 @@
 #include <string.h>
 #include <unistd.h>
 
-const char *prog_name;
+const char* prog_name;
 
-void print_usage(void)
-{
+void print_usage(void) {
     printf("Usage:\n");
     printf("\n");
     printf("%s DEVICE COMMAND [command arguments]\n", prog_name);
@@ -64,8 +63,7 @@ void print_usage(void)
     printf("%s [dev] transfer w 1 00 r 1\n", prog_name);
 }
 
-int cmd_add_slave(int fd, int argc, const char **argv)
-{
+int cmd_add_slave(int fd, int argc, const char** argv) {
     if (argc < 1) {
         print_usage();
         return 1;
@@ -93,8 +91,7 @@ int cmd_add_slave(int fd, int argc, const char **argv)
     return 0;
 }
 
-int cmd_remove_slave(int fd, int argc, const char **argv)
-{
+int cmd_remove_slave(int fd, int argc, const char** argv) {
     if (argc < 1) {
         print_usage();
         return 1;
@@ -122,8 +119,7 @@ int cmd_remove_slave(int fd, int argc, const char **argv)
     return 0;
 }
 
-int cmd_set_bus_frequency(int fd, int argc, const char **argv)
-{
+int cmd_set_bus_frequency(int fd, int argc, const char** argv) {
     if (argc < 1) {
         print_usage();
         return 1;
@@ -151,8 +147,7 @@ int cmd_set_bus_frequency(int fd, int argc, const char **argv)
     return 0;
 }
 
-int cmd_read(int fd, int argc, const char **argv)
-{
+int cmd_read(int fd, int argc, const char** argv) {
     if (argc < 1) {
         print_usage();
         return 1;
@@ -164,7 +159,7 @@ int cmd_read(int fd, int argc, const char **argv)
         return errno;
     }
 
-    uint8_t *buf = malloc(length);
+    uint8_t* buf = malloc(length);
     if (!buf) {
         printf("Failed to allocate buffer.\n");
         return 1;
@@ -186,14 +181,13 @@ cmd_read_finish:
     return ret;
 }
 
-int cmd_write(int fd, int argc, const char **argv)
-{
+int cmd_write(int fd, int argc, const char** argv) {
     if (argc < 1) {
         print_usage();
         return 1;
     }
 
-    uint8_t *buf = malloc(argc);
+    uint8_t* buf = malloc(argc);
     if (!buf) {
         printf("Failed to allocate buffer.\n");
         return 1;
@@ -219,8 +213,7 @@ cmd_write_finish:
     return ret;
 }
 
-int cmd_transfer(int fd, int argc, const char **argv)
-{
+int cmd_transfer(int fd, int argc, const char** argv) {
     const size_t base_size = offsetof(i2c_slave_ioctl_segment_t, buf);
     int ret = NO_ERROR;
 
@@ -228,7 +221,7 @@ int cmd_transfer(int fd, int argc, const char **argv)
     size_t in_len = 0;
     size_t out_len = 0;
     int count = argc;
-    const char **arg = argv;
+    const char** arg = argv;
     while (count) {
         if (count < 2) {
             print_usage();
@@ -267,22 +260,20 @@ int cmd_transfer(int fd, int argc, const char **argv)
         }
     }
 
-
     // Allocate the input and output buffers.
-    void *in_buf = malloc(in_len);
-    void *out_buf = malloc(out_len);
+    void* in_buf = malloc(in_len);
+    void* out_buf = malloc(out_len);
     if (!in_buf || !out_buf) {
         ret = 1;
         goto cmd_transfer_finish_1;
     }
 
-
     // Fill the "input" buffer which is sent to the ioctl.
     uintptr_t in_addr = (uintptr_t)in_buf;
     int i = 0;
     while (i < argc) {
-        i2c_slave_ioctl_segment_t *ioctl_segment =
-            (i2c_slave_ioctl_segment_t *)in_addr;
+        i2c_slave_ioctl_segment_t* ioctl_segment =
+            (i2c_slave_ioctl_segment_t*)in_addr;
         in_addr += base_size;
 
         if (!strcmp(argv[i++], "r")) {
@@ -301,7 +292,7 @@ int cmd_transfer(int fd, int argc, const char **argv)
             }
 
             for (int seg = 0; seg < ioctl_segment->len; seg++) {
-                *(uint8_t *)(in_addr++) = strtol(argv[i++], NULL, 16);
+                *(uint8_t*)(in_addr++) = strtol(argv[i++], NULL, 16);
                 if (errno) {
                     print_usage();
                     return errno;
@@ -316,7 +307,7 @@ int cmd_transfer(int fd, int argc, const char **argv)
         goto cmd_transfer_finish_1;
 
     for (size_t i = 0; i < out_len; i++)
-        printf(" %02x", ((uint8_t *)out_buf)[i]);
+        printf(" %02x", ((uint8_t*)out_buf)[i]);
     printf("\n");
 
     ret = 0;
@@ -328,8 +319,7 @@ cmd_transfer_finish_2:
     return ret;
 }
 
-int main(int argc, const char **argv)
-{
+int main(int argc, const char** argv) {
     if (argc < 1)
         return 1;
 
@@ -340,8 +330,8 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    const char *dev = argv[1];
-    const char *cmd = argv[2];
+    const char* dev = argv[1];
+    const char* cmd = argv[2];
 
     argc -= 3;
     argv += 3;

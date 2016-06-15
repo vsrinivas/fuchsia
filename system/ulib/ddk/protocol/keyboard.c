@@ -16,14 +16,17 @@
 #include <string.h>
 
 mx_status_t mx_key_fifo_peek(mx_key_fifo_t* fifo, mx_key_event_t** out) {
-    if (fifo->head == fifo->tail) return -1;
+    if (fifo->head == fifo->tail)
+        return -1;
     *out = &fifo->events[fifo->tail];
     return NO_ERROR;
 }
 
 mx_status_t mx_key_fifo_read(mx_key_fifo_t* fifo, mx_key_event_t* out) {
-    if (fifo->head == fifo->tail) return -1;
-    if (out) memcpy(out, &fifo->events[fifo->tail], sizeof(mx_key_event_t));
+    if (fifo->head == fifo->tail)
+        return -1;
+    if (out)
+        memcpy(out, &fifo->events[fifo->tail], sizeof(mx_key_event_t));
     fifo->tail = (fifo->tail + 1) & FIFOMASK;
     return NO_ERROR;
 }

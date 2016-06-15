@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <sys/types.h>
 #include <magenta/types.h>
 #include <runtime/mutex.h>
+#include <sys/types.h>
 
 #define FIFOSIZE 256
 #define FIFOMASK (FIFOSIZE - 1)

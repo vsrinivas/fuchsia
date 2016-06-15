@@ -16,8 +16,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <magenta/syscalls.h>
 #include "vcdebug.h"
+#include <magenta/syscalls.h>
 
 void cprintf(const char* fmt, ...) {
     char buf[128];

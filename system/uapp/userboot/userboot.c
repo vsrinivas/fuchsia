@@ -20,8 +20,8 @@
 #include <mxio/io.h>
 #include <mxio/util.h>
 
-#include <magenta/syscalls.h>
 #include <magenta/processargs.h>
+#include <magenta/syscalls.h>
 
 static size_t devmgr_off = 0;
 static size_t devmgr_len = 0;
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
     }
 
     mx_handle_t handles[1] = {bootfs_vmo};
-    uint32_t ids[1] = {MX_HND_INFO(MX_HND_TYPE_USER0,0)};
+    uint32_t ids[1] = {MX_HND_INFO(MX_HND_TYPE_USER0, 0)};
 
     if ((h = mxio_build_procargs(1, (char**)args, 1, handles, ids, 0)) < 0) {
         cprintf("userboot: failed to build devmgr args %d\n", h);
@@ -101,4 +101,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-

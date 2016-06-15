@@ -18,7 +18,7 @@
 
 #include <magenta/syscalls.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     bool tail = false;
     mx_handle_t h;
 
@@ -30,13 +30,13 @@ int main(int argc, char **argv) {
     }
 
     char buf[MX_LOG_RECORD_MAX];
-    mx_log_record_t* rec = (mx_log_record_t*) buf;
+    mx_log_record_t* rec = (mx_log_record_t*)buf;
     for (;;) {
         if (_magenta_log_read(h, MX_LOG_RECORD_MAX, rec, tail ? MX_LOG_FLAG_WAIT : 0) > 0) {
             char tmp[64];
             snprintf(tmp, 64, "[%05d.%03d] %c ",
-                     (int) (rec->timestamp / 1000000000ULL),
-                     (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
+                     (int)(rec->timestamp / 1000000000ULL),
+                     (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                      (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
             write(1, tmp, strlen(tmp));
             write(1, rec->data, rec->datalen);

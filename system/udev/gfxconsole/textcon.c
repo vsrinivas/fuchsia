@@ -230,10 +230,12 @@ static void putc_dec(textcon_t* tc, uint8_t c) {
         tc->num = tc->num * 10 + (c - '0');
         return;
     case 'h':
-        if (tc->num == 25) setparam(tc, TC_SHOW_CURSOR, NULL, 0);
+        if (tc->num == 25)
+            setparam(tc, TC_SHOW_CURSOR, NULL, 0);
         break;
     case 'l':
-        if (tc->num == 25) setparam(tc, TC_HIDE_CURSOR, NULL, 0);
+        if (tc->num == 25)
+            setparam(tc, TC_HIDE_CURSOR, NULL, 0);
         break;
     default:
         putc_plain(tc, c);
@@ -244,21 +246,23 @@ static void putc_dec(textcon_t* tc, uint8_t c) {
 
 static textcon_param_t osc_to_param(int osc) {
     switch (osc) {
-        case 2:
-            return TC_SET_TITLE;
-        default:
-            return -1;
+    case 2:
+        return TC_SET_TITLE;
+    default:
+        return -1;
     }
 }
 
 static void putc_osc2(textcon_t* tc, uint8_t c) {
     switch (c) {
     case 7: // end command
-        if (tc->argsn) setparam(tc, osc_to_param(ARG0(-1)), tc->args, tc->argsn);
+        if (tc->argsn)
+            setparam(tc, osc_to_param(ARG0(-1)), tc->args, tc->argsn);
         tc->putc = putc_plain;
         break;
     default:
-        if (tc->argsn < TC_MAX_ARG_LENGTH) tc->args[tc->argsn++] = c;
+        if (tc->argsn < TC_MAX_ARG_LENGTH)
+            tc->args[tc->argsn++] = c;
         break;
     }
 }

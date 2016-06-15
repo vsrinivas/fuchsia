@@ -30,14 +30,14 @@ int main(void) {
     for (int i = 0; i < 3; i++) {
         printf("loop %d\n", i);
         static const uint32_t buf[9] = {
-            24,          // struct header, num_bytes
-            1,           // struct header: version
-            0,           // struct header: flags
-            1,           // message header: name
-            0, 0,        // message header: request id (8 bytes)
-            4,           // array header: num bytes
-            4,           // array header: num elems
-            0x42424143,  // array contents: 'CABB'
+            24,         // struct header, num_bytes
+            1,          // struct header: version
+            0,          // struct header: flags
+            1,          // message header: name
+            0, 0,       // message header: request id (8 bytes)
+            4,          // array header: num bytes
+            4,          // array header: num elems
+            0x42424143, // array contents: 'CABB'
         };
         mx_handle_t status = _magenta_message_write(handles[1], (void*)buf, sizeof(buf), NULL, 0u, 0u);
         if (status != NO_ERROR) {

@@ -90,7 +90,6 @@ enum {
     _MX_KEY_LAST,
 } extended_keys;
 
-
 typedef struct mx_key_event {
     uint keycode;
     int pressed;

@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gfx/gfx.h>
 #include <font/font.h>
+#include <gfx/gfx.h>
 #include <stdint.h>
 
 #include "font.h"
 
 #if SMALL_FONT
-void font_draw_char(gfx_surface *surface, unsigned char c,
+void font_draw_char(gfx_surface* surface, unsigned char c,
                     int x, int y, uint32_t color, uint32_t bgcolor) {
-    uint i,j;
+    uint i, j;
     uint line;
 
     // draw this char into a buffer
@@ -34,9 +34,9 @@ void font_draw_char(gfx_surface *surface, unsigned char c,
     }
 }
 #else
-void font_draw_char(gfx_surface *surface, unsigned char c,
+void font_draw_char(gfx_surface* surface, unsigned char c,
                     int x, int y, uint32_t color, uint32_t bgcolor) {
-    uint i,j;
+    uint i, j;
     uint line;
 
     // draw this char into a buffer
@@ -49,4 +49,3 @@ void font_draw_char(gfx_surface *surface, unsigned char c,
     }
 }
 #endif
-

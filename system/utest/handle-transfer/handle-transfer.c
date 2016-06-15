@@ -24,8 +24,7 @@
 //   Reads H from B1 (should receive A1 again, possibly with a new value)
 //   Sends "3" into A0
 //   Reads from H until empty. Should read "1", "2", "3" in that order.
-int main(void)
-{
+int main(void) {
     mx_handle_t A[2];
     A[0] = _magenta_message_pipe_create(&A[1]);
     if (A[0] < 0) {
@@ -71,7 +70,7 @@ int main(void)
         printf("failed to write message \"3\" into A0: %u\n", status);
         return 1;
     }
-    for (int i=0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         char buf[1];
         num_bytes = 1u;
         num_handles = 0u;

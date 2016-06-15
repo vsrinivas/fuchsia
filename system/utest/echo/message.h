@@ -45,7 +45,7 @@ typedef struct mojo_message_header_with_request_id {
 } mojo_message_header_with_request_id_t;
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // MOJO_PUBLIC_C_BINDINGS_MESSAGE_H_
+#endif // MOJO_PUBLIC_C_BINDINGS_MESSAGE_H_

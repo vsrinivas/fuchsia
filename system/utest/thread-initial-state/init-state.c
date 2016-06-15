@@ -13,25 +13,23 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <stdio.h>
 #include <magenta/syscalls.h>
+#include <stdio.h>
 
-extern int thread_entry(void *arg);
+extern int thread_entry(void* arg);
 
-int print_fail(void)
-{
+int print_fail(void) {
     printf("Failed\n");
     _magenta_thread_exit();
     return 1; // Not reached
 }
 
-int main(void)
-{
-    void *arg = (void *)0x1234567890abcdef;
+int main(void) {
+    void* arg = (void*)0x1234567890abcdef;
     mx_handle_t handle = _magenta_thread_create(thread_entry, arg, "", 0);
     assert(handle >= 0);
     mx_status_t status = _magenta_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
-    	                                          MX_TIME_INFINITE, NULL, NULL);
+                                                  MX_TIME_INFINITE, NULL, NULL);
     assert(status >= 0);
     return 0;
 }

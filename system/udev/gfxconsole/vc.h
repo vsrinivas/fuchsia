@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <assert.h>
 #include <ddk/device.h>
 #include <ddk/protocol/keyboard.h>
-#include <runtime/mutex.h>
 #include <gfx/gfx.h>
 #include <mxio/vfs.h>
 #include <mxu/list.h>
-#include <assert.h>
+#include <runtime/mutex.h>
 #include <stdbool.h>
 
 #include "textcon.h"
 
 typedef uint16_t vc_char_t;
-#define CHARVAL(ch, fg, bg) (((ch) & 0xff) | (((fg) & 0xf) << 8) | (((bg) & 0xf) << 12))
-#define TOCHAR(ch) ((ch) & 0xff)
-#define TOFG(ch)   (((ch) >> 8) & 0xf)
-#define TOBG(ch)   (((ch) >> 12) & 0xf)
+#define CHARVAL(ch, fg, bg) (((ch)&0xff) | (((fg)&0xf) << 8) | (((bg)&0xf) << 12))
+#define TOCHAR(ch) ((ch)&0xff)
+#define TOFG(ch) (((ch) >> 8) & 0xf)
+#define TOBG(ch) (((ch) >> 12) & 0xf)
 
 #define MAX_COLOR 0xf
 
@@ -44,9 +44,9 @@ typedef struct vc_device {
     uint flags;
 
     // TODO make static
-    gfx_surface *gfx;
+    gfx_surface* gfx;
     // surface to draw on
-    gfx_surface *st_gfx;
+    gfx_surface* st_gfx;
     // status bar surface
     gfx_surface* hw_gfx;
     // backing store
@@ -91,11 +91,13 @@ typedef struct vc_device {
 
 #define get_vc_device(dev) containerof(dev, vc_device_t, device)
 
-#define VC_FLAG_HASINPUT    (1 << 0)
+#define VC_FLAG_HASINPUT (1 << 0)
 #define VC_FLAG_RESETSCROLL (1 << 1)
 
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev);
-static inline mx_status_t vc_device_free(vc_device_t* dev) { return ERR_NOT_SUPPORTED; };
+static inline mx_status_t vc_device_free(vc_device_t* dev) {
+    return ERR_NOT_SUPPORTED;
+};
 
 mx_status_t vc_set_active_console(uint console);
 void vc_get_status_line(char* str, int n);
@@ -134,18 +136,18 @@ mx_status_t vc_console_readkey(mx_device_t* dev, uint32_t flags);
 
 // char protocol:
 
-ssize_t vc_char_read(mx_device_t *dev, void *buf, size_t count);
-ssize_t vc_char_write(mx_device_t *dev, const void *buf, size_t count);
-ssize_t vc_char_ioctl(mx_device_t *dev, uint32_t op,
+ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count);
+ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count);
+ssize_t vc_char_ioctl(mx_device_t* dev, uint32_t op,
                       const void* cmd, size_t cmdlen,
                       void* reply, size_t max);
 
 #define MOD_LSHIFT (1 << 0)
 #define MOD_RSHIFT (1 << 1)
-#define MOD_LALT   (1 << 2)
-#define MOD_RALT   (1 << 3)
-#define MOD_LCTRL  (1 << 4)
-#define MOD_RCTRL  (1 << 5)
+#define MOD_LALT (1 << 2)
+#define MOD_RALT (1 << 3)
+#define MOD_LCTRL (1 << 4)
+#define MOD_RCTRL (1 << 5)
 
 #define MOD_SHIFT (MOD_LSHIFT | MOD_RSHIFT)
 #define MOD_ALT (MOD_LALT | MOD_RALT)

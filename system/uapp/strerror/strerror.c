@@ -14,12 +14,12 @@
 
 #include <errno.h>
 #include <mojo/mojo_string.h>
+#include <runtime/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <runtime/status.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     for (int idx = 1; idx < argc; idx++) {
         errno = 0;
         long error_long = strtol(argv[idx], NULL, 10);

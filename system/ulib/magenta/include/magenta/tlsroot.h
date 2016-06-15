@@ -43,10 +43,10 @@ typedef struct mx_tls_root mx_tls_root_t;
 struct mx_tls_root {
     mx_tls_root_t* self;
     mx_proc_info_t* proc;
-    uint32_t magic;     // MX_TLS_ROOT_MAGIC
-    uint16_t flags;     // Reserved for future use.
-    uint16_t maxslots;  // Number of slots in this object, minimum 8.
-    void* slots[1];     // TLS slots. Has length maxslots.
+    uint32_t magic;    // MX_TLS_ROOT_MAGIC
+    uint16_t flags;    // Reserved for future use.
+    uint16_t maxslots; // Number of slots in this object, minimum 8.
+    void* slots[1];    // TLS slots. Has length maxslots.
 };
 
 #define MX_TLS_ROOT_MAGIC 0x2facef0e

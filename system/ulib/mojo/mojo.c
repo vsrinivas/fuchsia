@@ -24,7 +24,8 @@
 #include <string.h>
 
 static mx_time_t mojo_to_mx_time(mojo_deadline_t t) {
-    if (t == MOJO_DEADLINE_INDEFINITE) return MX_TIME_INFINITE;
+    if (t == MOJO_DEADLINE_INDEFINITE)
+        return MX_TIME_INFINITE;
     // Convert microseconds to nanoseconds
     return (mx_time_t)(t * 1000);
 }
@@ -132,7 +133,8 @@ mojo_result_t mojo_close(mojo_handle_t handle) {
 
 mojo_result_t mojo_duplicate(mojo_handle_t handle, mojo_handle_t* out_handle) {
     mx_handle_t result = _magenta_handle_duplicate(handle);
-    if (result < 0) return lk_to_mojo_error(result);
+    if (result < 0)
+        return lk_to_mojo_error(result);
     *out_handle = result;
     return MOJO_RESULT_OK;
 }
@@ -159,7 +161,8 @@ mojo_result_t mojo_wait(const mojo_handle_t* handles, const mojo_handle_signals_
 
 mojo_result_t mojo_create_message_pipe(mojo_handle_t* handle0, mojo_handle_t* handle1) {
     mx_handle_t result = _magenta_message_pipe_create((mx_handle_t*)handle1);
-    if (result < 0) return lk_to_mojo_error(result);
+    if (result < 0)
+        return lk_to_mojo_error(result);
     *handle0 = result;
     return MOJO_RESULT_OK;
 }
@@ -213,9 +216,11 @@ mojo_result_t mojo_thread_create(mojo_thread_start_routine entry, void* arg,
     }
     ta->entry = entry;
     ta->arg = arg;
-    if (!name) name = "";
+    if (!name)
+        name = "";
     mx_handle_t result = _magenta_thread_create(thread_entry, ta, name, strlen(name) + 1);
-    if (result < 0) return lk_to_mojo_error(result);
+    if (result < 0)
+        return lk_to_mojo_error(result);
     *out_handle = result;
     return MOJO_RESULT_OK;
 }
@@ -234,7 +239,8 @@ mojo_result_t mojo_thread_join(mojo_handle_t handle, mojo_deadline_t timeout) {
 mojo_result_t mojo_interrupt_event_create(uint32_t vector, uint32_t flags,
                                           mojo_handle_t* out_handle) {
     mx_handle_t result = _magenta_interrupt_event_create(vector, flags);
-    if (result < 0) return lk_to_mojo_error(result);
+    if (result < 0)
+        return lk_to_mojo_error(result);
     *out_handle = result;
     return MOJO_RESULT_OK;
 }
@@ -251,7 +257,8 @@ mojo_result_t mojo_process_create(mojo_handle_t* out_handle) {
     // TODO(cpu): Get Mojo processes a name.
     char pname[] = "mojo<?>";
     mx_handle_t result = _magenta_process_create(pname, sizeof(pname));
-    if (result < 0) return lk_to_mojo_error(result);
+    if (result < 0)
+        return lk_to_mojo_error(result);
     *out_handle = result;
     return MOJO_RESULT_OK;
 }
@@ -288,7 +295,8 @@ mojo_result_t mojo_process_join(mojo_handle_t handle, int* out_retcode) {
 
 mojo_result_t mojo_event_create(uint32_t options, mojo_handle_t* out_handle) {
     mx_handle_t result = _magenta_event_create(options);
-    if (result < 0) return lk_to_mojo_error(result);
+    if (result < 0)
+        return lk_to_mojo_error(result);
     *out_handle = result;
     return MOJO_RESULT_OK;
 }

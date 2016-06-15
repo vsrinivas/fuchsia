@@ -47,7 +47,7 @@ static off_t mx_null_seek(mxio_t* io, off_t offset, int whence) {
     return NO_ERROR;
 }
 
-static mx_status_t mx_null_wait(mxio_t* io, uint32_t events, uint32_t *pending, mx_time_t timeout) {
+static mx_status_t mx_null_wait(mxio_t* io, uint32_t events, uint32_t* pending, mx_time_t timeout) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -64,7 +64,8 @@ static mxio_ops_t mx_null_ops = {
 
 mxio_t* mxio_null_create(void) {
     mxio_t* io = malloc(sizeof(*io));
-    if (io == NULL) return NULL;
+    if (io == NULL)
+        return NULL;
     io->ops = &mx_null_ops;
     io->magic = MXIO_MAGIC;
     io->priv = 0;

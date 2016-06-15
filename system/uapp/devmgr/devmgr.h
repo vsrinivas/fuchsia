@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <ddk/driver.h>
-#include <ddk/device.h>
 #include "device_internal.h"
+#include <ddk/device.h>
+#include <ddk/driver.h>
 
 #include <magenta/types.h>
 
@@ -68,7 +68,7 @@ struct devhost_msg {
     int32_t arg;
     uintptr_t device_id;
     uint32_t protocol_id;
-    char namedata[MX_DEVICE_NAME_MAX+1];
+    char namedata[MX_DEVICE_NAME_MAX + 1];
 };
 
 #define DH_OP_STATUS 0
@@ -109,8 +109,8 @@ static inline void __DM_UNLOCK(const char* fn, int ln) {
     mxr_mutex_unlock(&__devmgr_api_lock);
 }
 
-#define DM_LOCK() __DM_LOCK(__FILE__,__LINE__)
-#define DM_UNLOCK() __DM_UNLOCK(__FILE__,__LINE__)
+#define DM_LOCK() __DM_LOCK(__FILE__, __LINE__)
+#define DM_UNLOCK() __DM_UNLOCK(__FILE__, __LINE__)
 #else
 static inline void DM_LOCK(void) {
     mxr_mutex_lock(&__devmgr_api_lock);

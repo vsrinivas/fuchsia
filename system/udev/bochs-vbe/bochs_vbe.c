@@ -18,11 +18,11 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
 #include <assert.h>
-#include <stdlib.h>
+#include <magenta/syscalls.h>
+#include <magenta/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -55,49 +55,49 @@ typedef struct bochs_vbe_device {
 
 #define get_bochs_vbe_device(dev) containerof(dev, bochs_vbe_device_t, device)
 
-#define bochs_vbe_dispi_read(base, reg)       pcie_read16(base + (0x500 + (reg << 1)))
+#define bochs_vbe_dispi_read(base, reg) pcie_read16(base + (0x500 + (reg << 1)))
 #define bochs_vbe_dispi_write(base, reg, val) pcie_write16(base + (0x500 + (reg << 1)), val)
 
-#define BOCHS_VBE_DISPI_ID               0x0
-#define BOCHS_VBE_DISPI_XRES             0x1
-#define BOCHS_VBE_DISPI_YRES             0x2
-#define BOCHS_VBE_DISPI_BPP              0x3
-#define BOCHS_VBE_DISPI_ENABLE           0x4
-#define BOCHS_VBE_DISPI_BANK             0x5
-#define BOCHS_VBE_DISPI_VIRT_WIDTH       0x6
-#define BOCHS_VBE_DISPI_VIRT_HEIGHT      0x7
-#define BOCHS_VBE_DISPI_X_OFFSET         0x8
-#define BOCHS_VBE_DISPI_Y_OFFSET         0x9
+#define BOCHS_VBE_DISPI_ID 0x0
+#define BOCHS_VBE_DISPI_XRES 0x1
+#define BOCHS_VBE_DISPI_YRES 0x2
+#define BOCHS_VBE_DISPI_BPP 0x3
+#define BOCHS_VBE_DISPI_ENABLE 0x4
+#define BOCHS_VBE_DISPI_BANK 0x5
+#define BOCHS_VBE_DISPI_VIRT_WIDTH 0x6
+#define BOCHS_VBE_DISPI_VIRT_HEIGHT 0x7
+#define BOCHS_VBE_DISPI_X_OFFSET 0x8
+#define BOCHS_VBE_DISPI_Y_OFFSET 0x9
 #define BOCHS_VBE_DISPI_VIDEO_MEMORY_64K 0xa
 
 static int mx_display_format_to_bpp(uint format) {
     uint bpp;
     switch (format) {
-        case MX_DISPLAY_FORMAT_RGB_565:
-            bpp = 16;
-            break;
-        case MX_DISPLAY_FORMAT_RGB_332:
-            bpp = 8;
-            break;
-        case MX_DISPLAY_FORMAT_RGB_2220:
-            bpp = 6;
-            break;
-        case MX_DISPLAY_FORMAT_ARGB_8888:
-            bpp = 32;
-            break;
-        case MX_DISPLAY_FORMAT_RGB_x888:
-            bpp = 24;
-            break;
-        case MX_DISPLAY_FORMAT_MONO_1:
-            bpp = 1;
-            break;
-        case MX_DISPLAY_FORMAT_MONO_8:
-            bpp = 8;
-            break;
-        default:
-            // unsupported
-            bpp = -1;
-            break;
+    case MX_DISPLAY_FORMAT_RGB_565:
+        bpp = 16;
+        break;
+    case MX_DISPLAY_FORMAT_RGB_332:
+        bpp = 8;
+        break;
+    case MX_DISPLAY_FORMAT_RGB_2220:
+        bpp = 6;
+        break;
+    case MX_DISPLAY_FORMAT_ARGB_8888:
+        bpp = 32;
+        break;
+    case MX_DISPLAY_FORMAT_RGB_x888:
+        bpp = 24;
+        break;
+    case MX_DISPLAY_FORMAT_MONO_1:
+        bpp = 1;
+        break;
+    case MX_DISPLAY_FORMAT_MONO_8:
+        bpp = 8;
+        break;
+    default:
+        // unsupported
+        bpp = -1;
+        break;
     }
     return bpp;
 }
@@ -129,7 +129,7 @@ static void set_hw_mode(bochs_vbe_device_t* dev) {
     xprintf("    BPP: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_BPP));
     xprintf(" ENABLE: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ENABLE));
     xprintf("   BANK: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_BANK));
-    xprintf( "VWIDTH: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIRT_WIDTH));
+    xprintf("VWIDTH: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIRT_WIDTH));
     xprintf("VHEIGHT: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIRT_HEIGHT));
     xprintf("   XOFF: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_X_OFFSET));
     xprintf("   YOFF: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_Y_OFFSET));
@@ -166,7 +166,6 @@ static mx_display_protocol_t bochs_vbe_display_proto = {
     .get_mode = bochs_vbe_get_mode,
     .get_framebuffer = bochs_vbe_get_framebuffer,
 };
-
 
 // implement device protocol
 
@@ -205,7 +204,8 @@ static mx_protocol_device_t bochs_vbe_device_proto = {
 
 static mx_status_t bochs_vbe_probe(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+        return ERR_NOT_SUPPORTED;
 
     const pci_config_t* pci_config;
     mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
@@ -214,8 +214,8 @@ static mx_status_t bochs_vbe_probe(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_status_t status;
     status = (pci_config->vendor_id == QEMU_VGA_VID) && (pci_config->device_id == QEMU_VGA_DID)
-           ? NO_ERROR
-           : ERR_NOT_SUPPORTED;
+                 ? NO_ERROR
+                 : ERR_NOT_SUPPORTED;
 
     _magenta_handle_close(cfg_handle);
 
@@ -224,14 +224,17 @@ static mx_status_t bochs_vbe_probe(mx_driver_t* drv, mx_device_t* dev) {
 
 static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+        return ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);
-    if (status < 0) return status;
+    if (status < 0)
+        return status;
 
     // map resources and initialize the device
     bochs_vbe_device_t* device = calloc(1, sizeof(bochs_vbe_device_t));
-    if (!device) return ERR_NO_MEMORY;
+    if (!device)
+        return ERR_NO_MEMORY;
 
     // map register window
     device->regs_handle = pci->map_mmio(dev, 2, MX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -252,7 +255,8 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     // create and add the display (char) device
     status = device_init(&device->device, drv, "bochs_vbe", &bochs_vbe_device_proto);
-    if (status) goto fail;
+    if (status)
+        goto fail;
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &bochs_vbe_display_proto;

@@ -19,21 +19,22 @@
 
 #include <magenta/syscalls.h>
 
-#define CHECK_MX_STATUS(call) do { \
-    mx_status_t status = (call); \
-    if (status < 0) { \
-        printf("%s:%d: %s failed: %d\n", __FILE__, __LINE__, #call, status); \
-        return __LINE__; \
-    } \
-} while (0)
+#define CHECK_MX_STATUS(call)                                                    \
+    do {                                                                         \
+        mx_status_t status = (call);                                             \
+        if (status < 0) {                                                        \
+            printf("%s:%d: %s failed: %d\n", __FILE__, __LINE__, #call, status); \
+            return __LINE__;                                                     \
+        }                                                                        \
+    } while (0)
 
-#define FAIL_TEST do { \
-    printf("%s:%d: failed", __FILE__, __LINE__); \
-    return __LINE__; \
-} while (0)
+#define FAIL_TEST                                    \
+    do {                                             \
+        printf("%s:%d: failed", __FILE__, __LINE__); \
+        return __LINE__;                             \
+    } while (0)
 
-static bool wait(mx_handle_t event, mx_handle_t quit_event)
-{
+static bool wait(mx_handle_t event, mx_handle_t quit_event) {
     mx_status_t ms;
     mx_signals_t signals[2] = {MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED};
     mx_signals_t satisfied[2] = {};
@@ -47,8 +48,7 @@ static bool wait(mx_handle_t event, mx_handle_t quit_event)
     return (satisfied[1] == MX_SIGNAL_SIGNALED);
 }
 
-static bool wait_user(mx_handle_t event, mx_handle_t quit_event, mx_signals_t user_signal)
-{
+static bool wait_user(mx_handle_t event, mx_handle_t quit_event, mx_signals_t user_signal) {
     mx_status_t ms;
     mx_signals_t signals[2] = {user_signal, MX_SIGNAL_SIGNALED};
     mx_signals_t satisfied[2] = {};
@@ -62,9 +62,7 @@ static bool wait_user(mx_handle_t event, mx_handle_t quit_event, mx_signals_t us
     return (satisfied[1] == MX_SIGNAL_SIGNALED);
 }
 
-
-static int thread_fn_1(void* arg)
-{
+static int thread_fn_1(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     do {
@@ -76,8 +74,7 @@ static int thread_fn_1(void* arg)
     return 0;
 }
 
-static int thread_fn_2(void* arg)
-{
+static int thread_fn_2(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     while (!wait(events[1], events[0])) {
@@ -89,8 +86,7 @@ static int thread_fn_2(void* arg)
     return 0;
 }
 
-static int basic_test(void)
-{
+static int basic_test(void) {
     printf("basic event test\n");
 
     mx_handle_t events[3];
@@ -120,8 +116,7 @@ static int basic_test(void)
     return 0;
 }
 
-static int thread_fn_3(void* arg)
-{
+static int thread_fn_3(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     do {
@@ -133,8 +128,7 @@ static int thread_fn_3(void* arg)
     return 0;
 }
 
-static int thread_fn_4(void* arg)
-{
+static int thread_fn_4(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     while (!wait_user(events[1], events[0], MX_SIGNAL_USER1)) {
@@ -146,8 +140,7 @@ static int thread_fn_4(void* arg)
     return 0;
 }
 
-static int user_signals_test(void)
-{
+static int user_signals_test(void) {
     printf("user signals event test\n");
 
     mx_handle_t events[3];
@@ -181,14 +174,13 @@ static int thread_fn_closer(void* arg) {
     _magenta_nanosleep(1000000);
 
     mx_handle_t handle = *((mx_handle_t*)arg);
-    int rc = (int) _magenta_handle_close(handle);
+    int rc = (int)_magenta_handle_close(handle);
 
     _magenta_thread_exit();
     return rc;
 }
 
-static int wait_signals_test(void)
-{
+static int wait_signals_test(void) {
     printf("wait signals event test\n");
 
     mx_handle_t events[3];
@@ -200,8 +192,7 @@ static int wait_signals_test(void)
     mx_signals_t satisfied[3] = {0};
 
     const mx_signals_t signals[3] = {
-        MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED
-    };
+        MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED};
 
     status = _magenta_handle_wait_one(events[0], signals[0], 1u, &satisfied[0], NULL);
     if (status != ERR_TIMED_OUT)
@@ -248,7 +239,7 @@ static int wait_signals_test(void)
         FAIL_TEST;
 
     mx_handle_t thread;
-    CHECK_MX_STATUS(thread= _magenta_thread_create(thread_fn_closer, &events[1], "closer", 7));
+    CHECK_MX_STATUS(thread = _magenta_thread_create(thread_fn_closer, &events[1], "closer", 7));
 
     status = _magenta_handle_wait_one(events[1], signals[1], MX_TIME_INFINITE, NULL, NULL);
     if (status != ERR_CANCELLED)
@@ -265,10 +256,13 @@ static int wait_signals_test(void)
     return 0;
 }
 
-#define EXIT_TEST(n, r)  if ((r)) { printf("event test %d: error %d\n", (n), (r)); return r; }
+#define EXIT_TEST(n, r)                                \
+    if ((r)) {                                         \
+        printf("event test %d: error %d\n", (n), (r)); \
+        return r;                                      \
+    }
 
-int main(void)
-{
+int main(void) {
     int res;
     res = basic_test();
     EXIT_TEST(1, res);

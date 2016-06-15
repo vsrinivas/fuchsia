@@ -41,7 +41,7 @@ struct mxio_ops {
     mx_status_t (*close)(mxio_t* io);
     mx_status_t (*open)(mxio_t* io, const char* path, int32_t flags, mxio_t** out);
     mx_status_t (*clone)(mxio_t* io, mx_handle_t* out_handles, uint32_t* out_types);
-    mx_status_t (*wait)(mxio_t* io, uint32_t events, uint32_t *pending, mx_time_t timeout);
+    mx_status_t (*wait)(mxio_t* io, uint32_t events, uint32_t* pending, mx_time_t timeout);
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 };
 

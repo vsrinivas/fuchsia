@@ -14,31 +14,32 @@
 
 #include <mxu/hexdump.h>
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-void mxu_hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr) {
+void mxu_hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     uintptr_t address = (uintptr_t)ptr;
     size_t count;
 
-    for (count = 0 ; count < len; count += 16) {
+    for (count = 0; count < len; count += 16) {
         union {
             uint32_t buf[4];
-            uint8_t  cbuf[16];
+            uint8_t cbuf[16];
         } u;
         size_t s = ROUNDUP(MIN(len - count, 16), 4);
         size_t i;
 
         printf(((disp_addr + len) > 0xFFFFFFFF)
-               ? "0x%016llx: "
-               : "0x%08llx: ", disp_addr + count);
+                   ? "0x%016llx: "
+                   : "0x%08llx: ",
+               disp_addr + count);
 
         for (i = 0; i < s / 4; i++) {
-            u.buf[i] = ((const uint32_t *)address)[i];
+            u.buf[i] = ((const uint32_t*)address)[i];
             printf("%08x ", u.buf[i]);
         }
         for (; i < 4; i++) {
@@ -46,7 +47,7 @@ void mxu_hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr) {
         }
         printf("|");
 
-        for (i=0; i < 16; i++) {
+        for (i = 0; i < 16; i++) {
             char c = u.cbuf[i];
             if (i < s && isprint(c)) {
                 printf("%c", c);
@@ -59,19 +60,19 @@ void mxu_hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr) {
     }
 }
 
-void mxu_hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr)
-{
+void mxu_hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     uintptr_t address = (uintptr_t)ptr;
     size_t count;
     size_t i;
 
-    for (count = 0 ; count < len; count += 16) {
+    for (count = 0; count < len; count += 16) {
         printf(((disp_addr + len) > 0xFFFFFFFF)
-               ? "0x%016llx: "
-               : "0x%08llx: ", disp_addr + count);
+                   ? "0x%016llx: "
+                   : "0x%08llx: ",
+               disp_addr + count);
 
-        for (i=0; i < MIN(len - count, 16); i++) {
-            printf("%02hhx ", *(const uint8_t *)(address + i));
+        for (i = 0; i < MIN(len - count, 16); i++) {
+            printf("%02hhx ", *(const uint8_t*)(address + i));
         }
 
         for (; i < 16; i++) {
@@ -80,8 +81,8 @@ void mxu_hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr)
 
         printf("|");
 
-        for (i=0; i < MIN(len - count, 16); i++) {
-            char c = ((const char *)address)[i];
+        for (i = 0; i < MIN(len - count, 16); i++) {
+            char c = ((const char*)address)[i];
             printf("%c", isprint(c) ? c : '.');
         }
 
@@ -89,4 +90,3 @@ void mxu_hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr)
         address += 16;
     }
 }
-

@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     mx_status_t r;
 
     cprintf("helper: start\n");
-    h0 = (mx_handle_t)(uintptr_t) arg;
+    h0 = (mx_handle_t)(uintptr_t)arg;
     dsz = sizeof(data);
     hsz = 1;
     if ((r = _magenta_message_read(h0, data, &dsz, &h1, &hsz, 0)) < 0) {

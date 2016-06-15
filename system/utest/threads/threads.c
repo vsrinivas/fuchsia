@@ -18,10 +18,9 @@
 
 #include <magenta/syscalls.h>
 
-static int thread_1(void* arg)
-{
+static int thread_1(void* arg) {
     printf("thread 1 sleeping for .1 seconds\n");
-    struct timespec t = (struct timespec) {
+    struct timespec t = (struct timespec){
         .tv_sec = 0,
         .tv_nsec = 100 * 1000 * 1000,
     };
@@ -32,8 +31,7 @@ static int thread_1(void* arg)
     return 0;
 }
 
-int main(void)
-{
+int main(void) {
     mx_handle_t handle;
     printf("Welcome to thread test!\n");
 
@@ -49,7 +47,7 @@ int main(void)
 
     printf("Attempting to create thread with a super long name. This should fail\n");
     handle = _magenta_thread_create(thread_1, NULL,
-                                     "01234567890123456789012345678901234567890123456789012345678901234567890123456789", 81);
+                                    "01234567890123456789012345678901234567890123456789012345678901234567890123456789", 81);
     printf("_magenta_thread_create returned %u\n", handle);
 
     printf("Attempting to create thread with a null. This should succeed\n");

@@ -24,7 +24,7 @@ extern "C" {
 // This is a protocol for passing state to a new process
 // via a message in a message pipe.
 
-#define MX_PROCARGS_PROTOCOL 0x4150585d  // MXPA
+#define MX_PROCARGS_PROTOCOL 0x4150585d // MXPA
 #define MX_PROCARGS_VERSION 0x0001000
 
 typedef struct mx_proc_args mx_proc_args_t;
@@ -52,7 +52,7 @@ struct mx_proc_args {
 // Handle Info entries associate a type and optional
 // argument with each handle included in the process
 // arguments message.
-#define MX_HND_INFO(type, arg) (((type)&0xFFFF)|(((arg)&0xFFFF)<<16))
+#define MX_HND_INFO(type, arg) (((type)&0xFFFF) | (((arg)&0xFFFF) << 16))
 #define MX_HND_INFO_TYPE(n) ((n)&0xFFFF)
 #define MX_HND_INFO_ARG(n) (((n) >> 16) & 0xFFFF)
 
@@ -77,8 +77,8 @@ struct mx_proc_args {
 typedef struct mx_proc_info mx_proc_info_t;
 struct mx_proc_info {
     // Identifier and version of the mx_proc_info object.
-    uint32_t magic;    // MX_PROC_INFO_MAGIC
-    uint32_t version;  // MX_PROC_INFO_VERSION
+    uint32_t magic;   // MX_PROC_INFO_MAGIC
+    uint32_t version; // MX_PROC_INFO_VERSION
 
     // Next available TLS slot. Increment atomically.
     uint32_t next_tls_slot;

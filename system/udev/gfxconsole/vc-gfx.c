@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gfx/gfx.h>
 #include <font/font.h>
+#include <gfx/gfx.h>
 
 #define VCDEBUG 1
 
@@ -25,7 +25,8 @@ void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, uint x, uint y) {
 }
 
 void vc_gfx_invalidate_all(vc_device_t* dev) {
-    if (!dev->active) return;
+    if (!dev->active)
+        return;
     gfx_surface_blend(dev->hw_gfx, dev->st_gfx, 0, 0);
     gfx_surface_blend(dev->hw_gfx, dev->gfx, 0, dev->st_gfx->height);
     gfx_flush(dev->hw_gfx);
@@ -37,7 +38,8 @@ void vc_gfx_invalidate_status(vc_device_t* dev) {
 }
 
 void vc_gfx_invalidate(vc_device_t* dev, uint x, uint y, uint w, uint h) {
-    if (!dev->active) return;
+    if (!dev->active)
+        return;
     uint desty = dev->st_gfx->height + y * FONT_Y;
     gfx_blend(dev->hw_gfx, dev->gfx, x * FONT_X, y * FONT_Y, w * FONT_X, h * FONT_Y, x * FONT_X, desty);
     gfx_flush_rows(dev->hw_gfx, desty, desty + h * FONT_Y);

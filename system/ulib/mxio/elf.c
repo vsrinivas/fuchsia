@@ -22,11 +22,13 @@
 
 #include "elf.h"
 
-#include <magenta/types.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 //#define LTRACEF(fmt...) printf(fmt)
-#define LTRACEF(fmt...) do {} while (0)
+#define LTRACEF(fmt...) \
+    do {                \
+    } while (0)
 
 /* conditionally define a 32 or 64 bit version of the data structures
  * we care about, based on our bitness.
@@ -51,10 +53,14 @@ typedef struct Elf64_Phdr elf_phdr_t;
 
 mx_status_t elf_open_handle(elf_handle_t* handle, mx_handle_t proc_handle,
                             elf_read_hook_t rh, elf_load_hook_t lh, void* arg) {
-    if (!handle) return ERR_INVALID_ARGS;
-    if (!proc_handle) return ERR_INVALID_ARGS;
-    if (!rh) return ERR_INVALID_ARGS;
-    if (!lh) return ERR_INVALID_ARGS;
+    if (!handle)
+        return ERR_INVALID_ARGS;
+    if (!proc_handle)
+        return ERR_INVALID_ARGS;
+    if (!rh)
+        return ERR_INVALID_ARGS;
+    if (!lh)
+        return ERR_INVALID_ARGS;
 
     memset(handle, 0, sizeof(*handle));
 
@@ -133,7 +139,6 @@ static int verify_eheader(const void* header) {
     return NO_ERROR;
 }
 
-
 mx_status_t elf_load(elf_handle_t* handle) {
     if (!handle)
         return ERR_INVALID_ARGS;
@@ -181,8 +186,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
         // parse the program headers
         elf_phdr_t* pheader = &handle->pheaders[i];
 
-        LTRACEF("%u: type %u offset 0x" ELF_OFF_PRINT_X " vaddr " ELF_ADDR_PRINT_X " paddr "
-                ELF_ADDR_PRINT_X " memsiz " ELF_ADDR_PRINT_U " filesize " ELF_ADDR_PRINT_U
+        LTRACEF("%u: type %u offset 0x" ELF_OFF_PRINT_X " vaddr " ELF_ADDR_PRINT_X " paddr " ELF_ADDR_PRINT_X " memsiz " ELF_ADDR_PRINT_U " filesize " ELF_ADDR_PRINT_U
                 " flags 0x%x\n",
                 i, pheader->p_type, pheader->p_offset, pheader->p_vaddr,
                 pheader->p_paddr, pheader->p_memsz, pheader->p_filesz, pheader->p_flags);
@@ -218,7 +222,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
             mx_flags |= (pheader->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0;
             uintptr_t ptr = handle->vmo_addr;
             mx_status_t status = _magenta_process_vm_map(handle->proc, handle->vmo, 0,
-                    pheader->p_memsz + align, &ptr, mx_flags);
+                                                         pheader->p_memsz + align, &ptr, mx_flags);
             if (status < 0) {
                 LTRACEF("failed to map VMO to back elf segment at 0x%lx\n", handle->vmo_addr);
                 return ERR_NO_MEMORY;

@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <runtime/compiler.h>
 #include "mojo_types.h"
+#include <runtime/compiler.h>
 
 __BEGIN_CDECLS;
 

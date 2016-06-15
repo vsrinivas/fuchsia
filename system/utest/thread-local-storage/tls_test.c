@@ -13,23 +13,21 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <stdio.h>
-#include <pthread.h>
-#include <unistd.h>
 #include <magenta/syscalls.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
 
-static int key_create(pthread_key_t* tsd_key)
-{
-   int r = pthread_key_create(tsd_key, NULL);
-   assert(r == 0);
-   return r;
+static int key_create(pthread_key_t* tsd_key) {
+    int r = pthread_key_create(tsd_key, NULL);
+    assert(r == 0);
+    return r;
 }
 
-static int set_key_value(pthread_key_t key, void * value)
-{
-  int r = pthread_setspecific(key, value);
-  assert(r == 0);
-  return r;
+static int set_key_value(pthread_key_t key, void* value) {
+    int r = pthread_setspecific(key, value);
+    assert(r == 0);
+    return r;
 }
 
 static pthread_key_t tsd_key1, tsd_key2;
@@ -53,32 +51,31 @@ static void* do_work(void* arg) {
     return NULL;
 }
 
-
 int main(void) {
 #if defined ARCH_X86_64 || defined ARCH_ARM64
-  key_create(&tsd_key1);
-  key_create(&tsd_key2);
+    key_create(&tsd_key1);
+    key_create(&tsd_key2);
 
-  // Run this 20 times for sanity check
-  for(int i = 1; i <= 20; i++) {
-      int main_thread = 1, thread_1 = i*2, thread_2 = i*2+1;
+    // Run this 20 times for sanity check
+    for (int i = 1; i <= 20; i++) {
+        int main_thread = 1, thread_1 = i * 2, thread_2 = i * 2 + 1;
 
-      pthread_t thread2, thread3;
+        pthread_t thread2, thread3;
 
-      printf("creating thread: %d\n", thread_1);
-      pthread_create(&thread2, NULL, do_work, &thread_1);
+        printf("creating thread: %d\n", thread_1);
+        pthread_create(&thread2, NULL, do_work, &thread_1);
 
-      printf("creating thread: %d\n", thread_2);
-      pthread_create(&thread3, NULL, do_work, &thread_2);
+        printf("creating thread: %d\n", thread_2);
+        pthread_create(&thread3, NULL, do_work, &thread_2);
 
-      test_tls(main_thread);
+        test_tls(main_thread);
 
-      printf("joining thread: %d\n", thread_1);
-      pthread_join(thread2, NULL);
+        printf("joining thread: %d\n", thread_1);
+        pthread_join(thread2, NULL);
 
-      printf("joining thread: %d\n", thread_2);
-      pthread_join(thread3, NULL);
-  }
+        printf("joining thread: %d\n", thread_2);
+        pthread_join(thread3, NULL);
+    }
 #endif
     return 0;
 }

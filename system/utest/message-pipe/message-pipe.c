@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <mojo/mojo.h>
 #include <mojo/mojo_message_pipe.h>
 #include <mojo/mojo_threads.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <unistd.h>
 
 mojo_handle_t _pipe[4];
 
@@ -46,7 +46,7 @@ mojo_handle_t _pipe[4];
 
 static int reader_thread(void* arg) {
     unsigned int index = 2;
-    mojo_handle_t *pipe = &_pipe[index];
+    mojo_handle_t* pipe = &_pipe[index];
     mojo_result_t result;
     mojo_handle_signals_t satisfied[2], satisfiable[2];
     mojo_handle_signals_t signals = MOJO_HANDLE_SIGNAL_READABLE | MOJO_HANDLE_SIGNAL_PEER_CLOSED;
@@ -69,8 +69,10 @@ static int reader_thread(void* arg) {
             assert(result == MOJO_RESULT_OK);
             packets[1] += 1;
         } else {
-            if (satisfied[0] & MOJO_HANDLE_SIGNAL_PEER_CLOSED) closed[0] = true;
-            if (satisfied[1] & MOJO_HANDLE_SIGNAL_PEER_CLOSED) closed[1] = true;
+            if (satisfied[0] & MOJO_HANDLE_SIGNAL_PEER_CLOSED)
+                closed[0] = true;
+            if (satisfied[1] & MOJO_HANDLE_SIGNAL_PEER_CLOSED)
+                closed[1] = true;
         }
     } while (!closed[0] || !closed[1]);
     mojo_close(pipe[0]);

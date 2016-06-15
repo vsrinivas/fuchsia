@@ -40,9 +40,8 @@ static const uint64_t expected[THREAD_COUNT] = {
 
 /* optimize this function to cause it to try to use a lot of registers */
 __OPTIMIZE("O3")
-static int float_thread(void *arg)
-{
-    double *val = arg;
+static int float_thread(void* arg) {
+    double* val = arg;
     unsigned int i, j;
     double a[16];
 
@@ -52,13 +51,13 @@ static int float_thread(void *arg)
     /* do a bunch of work with floating point to test context switching */
     a[0] = *val;
     for (i = 1; i < countof(a); i++) {
-        a[i] = a[i-1] * 1.01;
+        a[i] = a[i - 1] * 1.01;
     }
 
     for (i = 0; i < ITER; i++) {
         a[0] += i;
         for (j = 1; j < countof(a); j++) {
-            a[j] += a[j-1] * 0.00001;
+            a[j] += a[j - 1] * 0.00001;
         }
     }
 
@@ -67,8 +66,7 @@ static int float_thread(void *arg)
     return 0;
 }
 
-int main(void)
-{
+int main(void) {
     printf("welcome to floating point test\n");
 
     /* test lazy fpu load on separate thread */
@@ -86,8 +84,8 @@ int main(void)
     for (unsigned int i = 0; i < countof(t); i++) {
         _magenta_handle_wait_one(t[i], MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
         _magenta_handle_close(t[i]);
-        void *v = &val[i];
-        uint64_t int64_val = *(uint64_t *)v;
+        void* v = &val[i];
+        uint64_t int64_val = *(uint64_t*)v;
 
         printf("float thread %u returns val %f 0x%llx, expected 0x%llx\n", i, val[i], int64_val, expected[i]);
 

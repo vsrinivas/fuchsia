@@ -30,7 +30,7 @@ struct vnboot {
     vnode_t vn;
     const char* name;
     void* data;
-    vnode_t *mounted;
+    vnode_t* mounted;
     size_t namelen;
     size_t datalen;
     struct list_node children;
@@ -55,9 +55,11 @@ static mx_status_t vnb_close(vnode_t* vn) {
 
 static ssize_t vnb_read(vnode_t* vn, void* data, size_t len, size_t off) {
     vnboot_t* vnb = vn->pdata;
-    if (off > vnb->datalen) return 0;
+    if (off > vnb->datalen)
+        return 0;
     size_t rlen = vnb->datalen - off;
-    if (len > rlen) len = rlen;
+    if (len > rlen)
+        len = rlen;
     memcpy(data, vnb->data + off, len);
     return len;
 }
@@ -72,8 +74,10 @@ static mx_status_t vnb_lookup(vnode_t* vn, vnode_t** out, const char* name, size
     xprintf("vnb_lookup: vn=%p name='%.*s'\n", vn, (int)len, name);
     list_for_every_entry (&parent->children, vnb, vnboot_t, node) {
         xprintf("? dev=%p name='%s'\n", vnb, vnb->name);
-        if (vnb->namelen != len) continue;
-        if (memcmp(vnb->name, name, len)) continue;
+        if (vnb->namelen != len)
+            continue;
+        if (memcmp(vnb->name, name, len))
+            continue;
         if (vnb->mounted) {
             vn_acquire(vnb->mounted);
             *out = vnb->mounted;
@@ -118,7 +122,8 @@ static mx_status_t vnb_readdir(vnode_t* vn, void* cookie, void* data, size_t len
             r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
                                 vnb->name, vnb->namelen,
                                 VTYPE_TO_DTYPE(vtype));
-            if (r < 0) break;
+            if (r < 0)
+                break;
             last = vnb;
             pos += r;
         }
@@ -161,10 +166,11 @@ static vnboot_t vnb_root = {
 };
 
 static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
-                              const char* name, size_t namelen,
-                              void* data, size_t datalen) {
+                               const char* name, size_t namelen,
+                               void* data, size_t datalen) {
     vnboot_t* vnb;
-    if ((vnb = calloc(1, sizeof(vnboot_t) + namelen + 1)) == NULL) return ERR_NO_MEMORY;
+    if ((vnb = calloc(1, sizeof(vnboot_t) + namelen + 1)) == NULL)
+        return ERR_NO_MEMORY;
     xprintf("vnb_create: vn=%p, parent=%p name='%.*s' datalen=%zd\n",
             vnb, parent, (int)namelen, name, datalen);
 
@@ -190,9 +196,12 @@ static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
 static mx_status_t _vnb_mkdir(vnboot_t* parent, vnboot_t** out, const char* name, size_t namelen) {
     vnboot_t* vnb;
     list_for_every_entry (&parent->children, vnb, vnboot_t, node) {
-        if (vnb->namelen != namelen) continue;
-        if (memcmp(vnb->name, name, namelen)) continue;
-        if (vnb->mounted) return ERR_NOT_SUPPORTED;
+        if (vnb->namelen != namelen)
+            continue;
+        if (memcmp(vnb->name, name, namelen))
+            continue;
+        if (vnb->mounted)
+            return ERR_NOT_SUPPORTED;
         *out = vnb;
         return NO_ERROR;
     }
@@ -202,16 +211,20 @@ static mx_status_t _vnb_mkdir(vnboot_t* parent, vnboot_t** out, const char* name
 mx_status_t vnb_add_file(const char* path, void* data, size_t len) {
     vnboot_t* vnb = &vnb_root;
     mx_status_t r;
-    if ((path[0] == '/') || (path[0] == 0)) return ERR_INVALID_ARGS;
+    if ((path[0] == '/') || (path[0] == 0))
+        return ERR_INVALID_ARGS;
     for (;;) {
         const char* nextpath = strchr(path, '/');
         if (nextpath == NULL) {
-            if (path[0] == 0) return ERR_INVALID_ARGS;
+            if (path[0] == 0)
+                return ERR_INVALID_ARGS;
             return _vnb_create(vnb, &vnb, path, strlen(path), data, len);
         } else {
-            if (nextpath == path) return ERR_INVALID_ARGS;
+            if (nextpath == path)
+                return ERR_INVALID_ARGS;
             r = _vnb_mkdir(vnb, &vnb, path, nextpath - path);
-            if (r < 0) return r;
+            if (r < 0)
+                return r;
             path = nextpath + 1;
         }
     }

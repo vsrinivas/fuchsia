@@ -20,11 +20,11 @@
 #include <magenta/types.h>
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include <runtime/thread.h>
 #include <runtime/mutex.h>
+#include <runtime/thread.h>
 
 #define FIFOSIZE 256
 #define FIFOMASK (FIFOSIZE - 1)
@@ -76,7 +76,8 @@ static ssize_t console_read(mx_device_t* dev, void* buf, size_t count) {
     uint8_t* data = buf;
     mxr_mutex_lock(&fifo.lock);
     while (count-- > 0) {
-        if (fifo_read(data)) break;
+        if (fifo_read(data))
+            break;
         data++;
     }
     if (fifo.head == fifo.tail) {

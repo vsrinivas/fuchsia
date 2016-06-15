@@ -41,7 +41,8 @@ static ssize_t mx_pipe_write(mxio_t* io, const void* _data, size_t len) {
     while (len > 0) {
         size_t xfer = (len > MXIO_CHUNK_SIZE) ? MXIO_CHUNK_SIZE : len;
         r = _magenta_message_write(p->h, data, xfer, NULL, 0, 0);
-        if (r < 0) break;
+        if (r < 0)
+            break;
         len -= xfer;
         count += xfer;
         data += xfer;
@@ -62,14 +63,16 @@ static ssize_t mx_pipe_read(mxio_t* io, void* _data, size_t len) {
             if (len >= MXIO_CHUNK_SIZE) {
                 // largest message will fit, read directly
                 r = mxu_blocking_read(p->h, data, MXIO_CHUNK_SIZE);
-                if (r <= 0) break;
+                if (r <= 0)
+                    break;
                 data += r;
                 len -= r;
                 count += r;
                 continue;
             } else {
                 r = mxu_blocking_read(p->h, p->data, MXIO_CHUNK_SIZE);
-                if (r <= 0) break;
+                if (r <= 0)
+                    break;
                 p->avail = r;
                 p->next = p->data;
             }
@@ -110,7 +113,7 @@ static off_t mx_pipe_seek(mxio_t* io, off_t offset, int whence) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t mx_pipe_wait(mxio_t* io, uint32_t events, uint32_t *pending, mx_time_t timeout) {
+static mx_status_t mx_pipe_wait(mxio_t* io, uint32_t events, uint32_t* pending, mx_time_t timeout) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -127,7 +130,8 @@ static mxio_ops_t mx_pipe_ops = {
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {
     mx_pipe_t* p = malloc(sizeof(*p));
-    if (p == NULL) return NULL;
+    if (p == NULL)
+        return NULL;
     p->io.ops = &mx_pipe_ops;
     p->io.magic = MXIO_MAGIC;
     p->io.priv = 0;
@@ -141,7 +145,8 @@ int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
     mx_handle_t ha, hb;
     mxio_t *a, *b;
     ha = _magenta_message_pipe_create(&hb);
-    if (ha < 0) return ha;
+    if (ha < 0)
+        return ha;
     if ((a = mxio_pipe_create(ha)) == NULL) {
         _magenta_handle_close(ha);
         _magenta_handle_close(hb);
@@ -168,5 +173,3 @@ mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types) {
     types[1] = MX_HND_TYPE_MXIO_PIPE;
     return 2;
 }
-
-

@@ -20,8 +20,7 @@
 #include <mxu/list.h>
 #include <stdint.h>
 
-typedef struct intel_broadwell_serialio_i2c_slave_device
-{
+typedef struct intel_broadwell_serialio_i2c_slave_device {
     mx_device_t device;
 
     uint8_t chip_address_width;
@@ -31,7 +30,7 @@ typedef struct intel_broadwell_serialio_i2c_slave_device
 } intel_broadwell_serialio_i2c_slave_device_t;
 
 mx_status_t intel_broadwell_serialio_i2c_slave_device_init(
-    mx_device_t *cont, intel_broadwell_serialio_i2c_slave_device_t *slave,
+    mx_device_t* cont, intel_broadwell_serialio_i2c_slave_device_t* slave,
     uint8_t width, uint16_t address);
 
 #define get_intel_broadwell_serialio_i2c_slave_device(dev) \

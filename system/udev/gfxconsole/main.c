@@ -16,15 +16,15 @@
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/keyboard.h>
 
-#include <mxu/list.h>
+#include <assert.h>
+#include <fcntl.h>
 #include <font/font.h>
+#include <mxu/list.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #include <mxio/io.h>
@@ -36,7 +36,7 @@
 #include "vc.h"
 #include "vcdebug.h"
 
-static gfx_surface hw_gfx; // framebuffer
+static gfx_surface hw_gfx;         // framebuffer
 static mxr_thread_t* input_thread; // input wait thread
 static mxr_thread_t* logreader_thread;
 
@@ -63,27 +63,27 @@ static const char* input_dev = NULL;
 static gfx_format display_format_to_gfx_format(uint display_format) {
     gfx_format format;
     switch (display_format) {
-        case MX_DISPLAY_FORMAT_RGB_565:
-            format = GFX_FORMAT_RGB_565;
-            break;
-        case MX_DISPLAY_FORMAT_RGB_332:
-            format = GFX_FORMAT_RGB_332;
-            break;
-        case MX_DISPLAY_FORMAT_RGB_2220:
-            format = GFX_FORMAT_RGB_2220;
-            break;
-        case MX_DISPLAY_FORMAT_ARGB_8888:
-            format = GFX_FORMAT_ARGB_8888;
-            break;
-        case MX_DISPLAY_FORMAT_RGB_x888:
-            format = GFX_FORMAT_RGB_x888;
-            break;
-        case MX_DISPLAY_FORMAT_MONO_8:
-            format = GFX_FORMAT_MONO;
-            break;
-        default:
-            xprintf("invalid graphics format)");
-            return ERR_INVALID_ARGS;
+    case MX_DISPLAY_FORMAT_RGB_565:
+        format = GFX_FORMAT_RGB_565;
+        break;
+    case MX_DISPLAY_FORMAT_RGB_332:
+        format = GFX_FORMAT_RGB_332;
+        break;
+    case MX_DISPLAY_FORMAT_RGB_2220:
+        format = GFX_FORMAT_RGB_2220;
+        break;
+    case MX_DISPLAY_FORMAT_ARGB_8888:
+        format = GFX_FORMAT_ARGB_8888;
+        break;
+    case MX_DISPLAY_FORMAT_RGB_x888:
+        format = GFX_FORMAT_RGB_x888;
+        break;
+    case MX_DISPLAY_FORMAT_MONO_8:
+        format = GFX_FORMAT_MONO;
+        break;
+    default:
+        xprintf("invalid graphics format)");
+        return ERR_INVALID_ARGS;
     }
     return format;
 }
@@ -118,76 +118,74 @@ static int vc_input_thread(void* arg) {
         int consumed = 0;
         if (ev.pressed) {
             switch (ev.keycode) {
-                // modifier keys are special
-                case MX_KEY_LSHIFT:
-                    modifiers |= MOD_LSHIFT;
-                    break;
-                case MX_KEY_RSHIFT:
-                    modifiers |= MOD_RSHIFT;
-                    break;
-                case MX_KEY_LALT:
-                    modifiers |= MOD_LALT;
-                    break;
-                case MX_KEY_RALT:
-                    modifiers |= MOD_RALT;
-                    break;
-                case MX_KEY_LCTRL:
-                    modifiers |= MOD_LCTRL;
-                    break;
-                case MX_KEY_RCTRL:
-                    modifiers |= MOD_RCTRL;
-                    break;
+            // modifier keys are special
+            case MX_KEY_LSHIFT:
+                modifiers |= MOD_LSHIFT;
+                break;
+            case MX_KEY_RSHIFT:
+                modifiers |= MOD_RSHIFT;
+                break;
+            case MX_KEY_LALT:
+                modifiers |= MOD_LALT;
+                break;
+            case MX_KEY_RALT:
+                modifiers |= MOD_RALT;
+                break;
+            case MX_KEY_LCTRL:
+                modifiers |= MOD_LCTRL;
+                break;
+            case MX_KEY_RCTRL:
+                modifiers |= MOD_RCTRL;
+                break;
 
-                case MX_KEY_F1:
-                    vc_set_active_console(active_vc_index == 0 ? vc_count - 1 : active_vc_index - 1);
+            case MX_KEY_F1:
+                vc_set_active_console(active_vc_index == 0 ? vc_count - 1 : active_vc_index - 1);
+                consumed = 1;
+                break;
+            case MX_KEY_F2:
+                vc_set_active_console(active_vc_index == vc_count - 1 ? 0 : active_vc_index + 1);
+                consumed = 1;
+                break;
+
+            case MX_KEY_ARROW_UP:
+                if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
+                    vc_device_scroll_viewport(active_vc, -1);
                     consumed = 1;
-                    break;
-                case MX_KEY_F2:
-                    vc_set_active_console(active_vc_index == vc_count - 1 ? 0 : active_vc_index + 1);
+                }
+                break;
+            case MX_KEY_ARROW_DOWN:
+                if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
+                    vc_device_scroll_viewport(active_vc, 1);
                     consumed = 1;
-                    break;
+                }
+                break;
 
-                case MX_KEY_ARROW_UP:
-                    if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
-                        vc_device_scroll_viewport(active_vc, -1);
-                        consumed = 1;
-                    }
-                    break;
-                case MX_KEY_ARROW_DOWN:
-                    if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
-                        vc_device_scroll_viewport(active_vc, 1);
-                        consumed = 1;
-                    }
-                    break;
-
-                // eat everything else
-                default:
-                    ; // nothing
+            // eat everything else
+            default:; // nothing
             }
         } else {
             switch (ev.keycode) {
-                // modifier keys are special
-                case MX_KEY_LSHIFT:
-                    modifiers &= ~MOD_LSHIFT;
-                    break;
-                case MX_KEY_RSHIFT:
-                    modifiers &= ~MOD_RSHIFT;
-                    break;
-                case MX_KEY_LALT:
-                    modifiers &= ~MOD_LALT;
-                    break;
-                case MX_KEY_RALT:
-                    modifiers &= ~MOD_RALT;
-                    break;
-                case MX_KEY_LCTRL:
-                    modifiers &= ~MOD_LCTRL;
-                    break;
-                case MX_KEY_RCTRL:
-                    modifiers &= ~MOD_RCTRL;
-                    break;
+            // modifier keys are special
+            case MX_KEY_LSHIFT:
+                modifiers &= ~MOD_LSHIFT;
+                break;
+            case MX_KEY_RSHIFT:
+                modifiers &= ~MOD_RSHIFT;
+                break;
+            case MX_KEY_LALT:
+                modifiers &= ~MOD_LALT;
+                break;
+            case MX_KEY_RALT:
+                modifiers &= ~MOD_RALT;
+                break;
+            case MX_KEY_LCTRL:
+                modifiers &= ~MOD_LCTRL;
+                break;
+            case MX_KEY_RCTRL:
+                modifiers &= ~MOD_RCTRL;
+                break;
 
-                default:
-                    ; // nothing
+            default:; // nothing
             }
         }
         if (!consumed) {
@@ -219,13 +217,13 @@ static int vc_logreader_thread(void* arg) {
     vc_char_write(&vc->device, ESCAPE_HIDE_CURSOR, strlen(ESCAPE_HIDE_CURSOR));
 
     char buf[MX_LOG_RECORD_MAX];
-    mx_log_record_t* rec = (mx_log_record_t*) buf;
+    mx_log_record_t* rec = (mx_log_record_t*)buf;
     for (;;) {
         if (_magenta_log_read(h, MX_LOG_RECORD_MAX, rec, MX_LOG_FLAG_WAIT) > 0) {
             char tmp[64];
             snprintf(tmp, 64, "[%05d.%03d] %c ",
-                     (int) (rec->timestamp / 1000000000ULL),
-                     (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
+                     (int)(rec->timestamp / 1000000000ULL),
+                     (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                      (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
             vc_char_write(&vc->device, tmp, strlen(tmp));
             vc_char_write(&vc->device, rec->data, rec->datalen);
@@ -238,17 +236,21 @@ static int vc_logreader_thread(void* arg) {
 }
 
 mx_status_t vc_set_active_console(uint console) {
-    if (console >= vc_count) return ERR_INVALID_ARGS;
+    if (console >= vc_count)
+        return ERR_INVALID_ARGS;
 
     uint i = 0;
     vc_device_t* device = NULL;
-    list_for_every_entry(&vc_list, device, vc_device_t, node) {
-        if (i == console) break;
+    list_for_every_entry (&vc_list, device, vc_device_t, node) {
+        if (i == console)
+            break;
         i++;
     }
-    if (device == active_vc) return NO_ERROR;
+    if (device == active_vc)
+        return NO_ERROR;
     mxr_mutex_lock(&active_lock);
-    if (active_vc) active_vc->active = false;
+    if (active_vc)
+        active_vc->active = false;
     device->active = true;
     active_vc = device;
     active_vc->flags &= ~VC_FLAG_HASINPUT;
@@ -263,15 +265,15 @@ void vc_get_status_line(char* str, int n) {
     char* ptr = str;
     uint i = 0;
     // TODO add process name, etc.
-    list_for_every_entry(&vc_list, device, vc_device_t, node) {
+    list_for_every_entry (&vc_list, device, vc_device_t, node) {
         int lines = vc_device_get_scrollback_lines(device);
         int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
-            device->active ? "\033[36m\033[1m" : "",
-            i,
-            device->title,
-            device->flags & VC_FLAG_HASINPUT ? '*' : ' ',
-            lines > 0 && -device->vpy < lines ? '<' : ' ',
-            device->vpy < 0 ? '>' : ' ');
+                             device->active ? "\033[36m\033[1m" : "",
+                             i,
+                             device->title,
+                             device->flags & VC_FLAG_HASINPUT ? '*' : ' ',
+                             lines > 0 && -device->vpy < lines ? '<' : ' ',
+                             device->vpy < 0 ? '>' : ' ');
         ptr += chars;
         i++;
     }
@@ -286,8 +288,7 @@ static mx_protocol_device_t vc_device_proto = {
 
 static mx_driver_t _driver_vc = {
     .name = "vc",
-    .ops = {
-    },
+    .ops = {},
 };
 
 static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {

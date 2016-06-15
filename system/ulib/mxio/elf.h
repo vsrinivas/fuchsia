@@ -79,7 +79,7 @@ struct elf_handle {
 };
 
 mx_status_t elf_open_handle(elf_handle_t* handle, mx_handle_t proc_handle,
-        elf_read_hook_t rh, elf_load_hook_t lh, void* arg);
+                            elf_read_hook_t rh, elf_load_hook_t lh, void* arg);
 mx_status_t elf_load(elf_handle_t* handle);
 void elf_close_handle(elf_handle_t* handle);
 

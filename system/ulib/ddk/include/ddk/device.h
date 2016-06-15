@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <magenta/types.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 #include <mxu/list.h>
 
 typedef struct mx_device mx_device_t;
@@ -34,9 +34,9 @@ typedef struct vnode vnode_t;
 struct mx_device {
     uintptr_t magic;
 
-    const char *name;
+    const char* name;
 
-    mx_protocol_device_t *ops;
+    mx_protocol_device_t* ops;
 
     uint32_t flags;
     uint32_t refcount;
@@ -48,15 +48,15 @@ struct mx_device {
     // most devices implement a single
     // protocol beyond the base device protocol
     uint32_t protocol_id;
-    void *protocol_ops;
+    void* protocol_ops;
 
-    mx_driver_t *driver;
+    mx_driver_t* driver;
     // driver that has published this device
 
-    mx_device_t *parent;
+    mx_device_t* parent;
     // parent in the device tree
 
-    mx_driver_t *owner;
+    mx_driver_t* owner;
     // driver that is bound to this device, NULL if unbound
 
     struct list_node node;
@@ -76,7 +76,7 @@ struct mx_device {
     vnode_t* vnode;
     // used by devmgr internals
 
-    char namedata[MX_DEVICE_NAME_MAX+1];
+    char namedata[MX_DEVICE_NAME_MAX + 1];
 };
 
 // mx_device_t objects must be created or initialized by the driver manager's
@@ -123,7 +123,6 @@ static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
     _magenta_object_signal(dev->event, setflag, clearflag);
 }
-
 
 // Devices which implement just the device protocol and one
 // additional protocol may use this common implementation:

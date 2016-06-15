@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <magenta/types.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {

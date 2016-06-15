@@ -19,4 +19,8 @@
 
 void cprintf(const char* fmt, ...);
 
-#define xprintf(fmt...) do { if (VCDEBUG) cprintf(fmt); } while (0)
+#define xprintf(fmt...)   \
+    do {                  \
+        if (VCDEBUG)      \
+            cprintf(fmt); \
+    } while (0)

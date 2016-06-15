@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <assert.h>
 #include <ddk/protocol/char.h>
 #include <ddk/protocol/console.h>
-#include <sys/param.h>
 #include <font/font.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 
 #define VCDEBUG 1
 
@@ -45,14 +45,14 @@ static uint32_t default_palette[] = {
 };
 
 #define DEFAULT_FRONT_COLOR 0x0 // black
-#define DEFAULT_BACK_COLOR  0xf // white
+#define DEFAULT_BACK_COLOR 0xf  // white
 
 #define SCROLLBACK_ROWS 1024 // TODO make configurable
 #define TOTAL_ROWS(dev) (dev->rows + dev->scrollback_rows)
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
 
-static mx_status_t vc_device_setup(vc_device_t *dev) {
+static mx_status_t vc_device_setup(vc_device_t* dev) {
     assert(dev->gfx);
     assert(dev->hw_gfx);
 
@@ -65,7 +65,8 @@ static mx_status_t vc_device_setup(vc_device_t *dev) {
 
     // allocate the text buffer
     dev->text_buf = calloc(1, dev->rows * dev->columns * sizeof(vc_char_t));
-    if (!dev->text_buf) return ERR_NO_MEMORY;
+    if (!dev->text_buf)
+        return ERR_NO_MEMORY;
 
     // allocate the scrollback buffer
     dev->scrollback_buf = calloc(1, dev->scrollback_rows * dev->columns * sizeof(vc_char_t));
@@ -88,7 +89,8 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
         int sc = 0;
         if (y < 0) {
             sc = dev->sc_t + y;
-            if (sc < 0) sc += dev->scrollback_rows;
+            if (sc < 0)
+                sc += dev->scrollback_rows;
         }
         for (int x = x0; x < x0 + w; x++) {
             if (y < 0) {
@@ -108,7 +110,8 @@ static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
         dev->flags &= ~VC_FLAG_RESETSCROLL;
         vc_device_scroll_viewport(dev, -dev->vpy);
     }
-    if (dev->vpy < 0) return;
+    if (dev->vpy < 0)
+        return;
     vc_device_invalidate(cookie, x0, y0, w, h);
     vc_gfx_invalidate(dev, x0, y0, w, h);
 }
@@ -131,10 +134,12 @@ static void vc_tc_pushline(void* cookie, int y) {
     vc_char_t* src = &dev->text_buf[y * dev->columns];
     memcpy(dst, src, dev->columns * sizeof(vc_char_t));
     dev->sc_t += 1;
-    if (dev->vpy < 0) dev->vpy -= 1;
+    if (dev->vpy < 0)
+        dev->vpy -= 1;
     if (dev->sc_t >= dev->scrollback_rows) {
         dev->sc_t -= dev->scrollback_rows;
-        if (dev->sc_t >= dev->sc_h) dev->sc_h = dev->sc_t + 1;
+        if (dev->sc_t >= dev->sc_h)
+            dev->sc_h = dev->sc_t + 1;
     }
 }
 
@@ -142,7 +147,8 @@ static void vc_tc_pushline(void* cookie, int y) {
 // textbuf must be updated before calling scroll
 static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
     vc_device_t* dev = cookie;
-    if (dev->vpy < 0) return;
+    if (dev->vpy < 0)
+        return;
     // invalidate the cursor before copying
     vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
     int delta = ABS(dir);
@@ -161,31 +167,30 @@ static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
 static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen) {
     vc_device_t* dev = cookie;
     switch (param) {
-        case TC_SET_TITLE:
-            strncpy(dev->title, (char*)arg, sizeof(dev->title));
-            vc_device_write_status(dev);
-            vc_gfx_invalidate_status(dev);
-            break;
-        case TC_SHOW_CURSOR:
-            if (dev->hide_cursor) {
-                dev->hide_cursor = false;
-                vc_tc_movecursor(dev, dev->x, dev->y);
-                gfx_fillrect(dev->gfx, dev->x * FONT_X, dev->y * FONT_Y, FONT_X, FONT_Y, palette_to_color(dev, dev->front_color));
-                vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
-            }
-            break;
-        case TC_HIDE_CURSOR:
-            if (!dev->hide_cursor) {
-                dev->hide_cursor = true;
-                vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
-                vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
-            }
-        default:
-            ; // nothing
+    case TC_SET_TITLE:
+        strncpy(dev->title, (char*)arg, sizeof(dev->title));
+        vc_device_write_status(dev);
+        vc_gfx_invalidate_status(dev);
+        break;
+    case TC_SHOW_CURSOR:
+        if (dev->hide_cursor) {
+            dev->hide_cursor = false;
+            vc_tc_movecursor(dev, dev->x, dev->y);
+            gfx_fillrect(dev->gfx, dev->x * FONT_X, dev->y * FONT_Y, FONT_X, FONT_Y, palette_to_color(dev, dev->front_color));
+            vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
+        }
+        break;
+    case TC_HIDE_CURSOR:
+        if (!dev->hide_cursor) {
+            dev->hide_cursor = true;
+            vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
+            vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
+        }
+    default:; // nothing
     }
 }
 
-static void vc_device_reset(vc_device_t *dev) {
+static void vc_device_reset(vc_device_t* dev) {
     // reset the cursor
     dev->x = 0;
     dev->y = 0;
@@ -215,7 +220,8 @@ static void vc_device_reset(vc_device_t *dev) {
 }
 
 void vc_device_write_status(vc_device_t* dev) {
-    static enum { NORMAL, ESCAPE } state = NORMAL;
+    static enum { NORMAL,
+                  ESCAPE } state = NORMAL;
     int fg = 7;
     int bg = 0;
     char c, str[512];
@@ -262,13 +268,14 @@ void vc_device_render(vc_device_t* dev) {
 }
 
 int vc_device_get_scrollback_lines(vc_device_t* dev) {
-     return dev->sc_t >= dev->sc_h ? dev->sc_t - dev->sc_h : dev->scrollback_rows - 1;
+    return dev->sc_t >= dev->sc_h ? dev->sc_t - dev->sc_h : dev->scrollback_rows - 1;
 }
 
 void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
     int vpy = MAX(MIN(dev->vpy + dir, 0), -vc_device_get_scrollback_lines(dev));
     int delta = ABS(dev->vpy - vpy);
-    if (delta == 0) return;
+    if (delta == 0)
+        return;
     dev->vpy = vpy;
     if (dir > 0) {
         gfx_copyrect(dev->gfx, 0, delta * FONT_Y, dev->gfx->width, (dev->rows - delta) * FONT_Y, 0, 0);
@@ -300,14 +307,14 @@ static mx_protocol_console_t vc_console_proto = {
 
 mx_status_t vc_device_get_protocol(mx_device_t* dev, uint32_t protocol_id, void** protocol) {
     switch (protocol_id) {
-        case MX_PROTOCOL_CHAR:
-            *protocol = &vc_char_proto;
-            break;
-        case MX_PROTOCOL_CONSOLE:
-            *protocol = &vc_console_proto;
-            break;
-        default:
-            return ERR_NOT_SUPPORTED;
+    case MX_PROTOCOL_CHAR:
+        *protocol = &vc_char_proto;
+        break;
+    case MX_PROTOCOL_CONSOLE:
+        *protocol = &vc_console_proto;
+        break;
+    default:
+        return ERR_NOT_SUPPORTED;
     }
     return NO_ERROR;
 }
@@ -331,17 +338,20 @@ mx_protocol_device_t vc_device_proto = {
     .release = vc_device_release,
 };
 
-mx_status_t vc_device_alloc(gfx_surface *hw_gfx, vc_device_t** out_dev) {
+mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     vc_device_t* device = calloc(1, sizeof(vc_device_t));
-    if (!device) return ERR_NO_MEMORY;
+    if (!device)
+        return ERR_NO_MEMORY;
 
     // init the status bar
     device->st_gfx = gfx_create_surface(NULL, hw_gfx->width, FONT_Y, hw_gfx->stride, hw_gfx->format, 0);
-    if (!device->st_gfx) goto fail;
+    if (!device->st_gfx)
+        goto fail;
 
     // init the main surface
     device->gfx = gfx_create_surface(NULL, hw_gfx->width, hw_gfx->height - FONT_Y, hw_gfx->stride, hw_gfx->format, 0);
-    if (!device->gfx) goto fail;
+    if (!device->gfx)
+        goto fail;
     device->hw_gfx = hw_gfx;
 
     vc_device_setup(device);
@@ -350,7 +360,8 @@ mx_status_t vc_device_alloc(gfx_surface *hw_gfx, vc_device_t** out_dev) {
     *out_dev = device;
     return NO_ERROR;
 fail:
-    if (device->st_gfx) gfx_surface_destroy(device->st_gfx);
+    if (device->st_gfx)
+        gfx_surface_destroy(device->st_gfx);
     free(device);
     return ERR_NO_MEMORY;
 }

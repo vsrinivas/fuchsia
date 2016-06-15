@@ -13,31 +13,28 @@
 // limitations under the License.
 
 #include <assert.h>
+#include <magenta/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <magenta/syscalls.h>
 
 #define WATCHDOG_DURATION_SECONDS 2
-#define WATCHDOG_DURATION_NANOSECONDS ((int64_t) WATCHDOG_DURATION_SECONDS * 1000 * 1000 * 1000)
+#define WATCHDOG_DURATION_NANOSECONDS ((int64_t)WATCHDOG_DURATION_SECONDS * 1000 * 1000 * 1000)
 
-enum handler_kind
-{
+enum handler_kind {
     HANDLER_THREAD,
     HANDLER_PROCESS,
     HANDLER_SYSTEM
 };
 
-struct handlers
-{
+struct handlers {
     mx_handle_t system;
     mx_handle_t process;
     mx_handle_t thread;
 };
 
-enum message
-{
+enum message {
     MSG_DONE,
     MSG_CRASH,
     MSG_PING,
@@ -55,16 +52,15 @@ static int for_real = 0;
 // Set to non-zero when done, disables watchdog.
 static int done_tests = 0;
 
-static void syscall_fail(const char *name, mx_status_t status)
-{
+static void syscall_fail(const char* name, mx_status_t status) {
     printf("syscall %s failed, rc %d\n", name, status);
     exit(1);
 }
 
-static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1)
-{
+static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1) {
     mx_handle_t status = _magenta_message_pipe_create(handle1);
-    if (status < 0) return status;
+    if (status < 0)
+        return status;
     *handle0 = status;
     return NO_ERROR;
 }
@@ -72,11 +68,12 @@ static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* han
 typedef int (*thread_start_func)(void*);
 
 static mx_status_t my_thread_create(thread_start_func entry, void* arg,
-                                    mx_handle_t* out_handle, const char* name)
-{
-    if (!name) name = "";
+                                    mx_handle_t* out_handle, const char* name) {
+    if (!name)
+        name = "";
     mx_handle_t status = _magenta_thread_create(entry, arg, name, strlen(name) + 1);
-    if (status < 0) return status;
+    if (status < 0)
+        return status;
     *out_handle = status;
     return NO_ERROR;
 }
@@ -85,8 +82,7 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
                            uint32_t num_handles, uint32_t* result_index,
                            mx_time_t deadline, //xyzdje, unused in _magenta_wait
                            mx_signals_t* satisfied_signals,
-                           mx_signals_t* satisfiable_signals)
-{
+                           mx_signals_t* satisfiable_signals) {
     mx_status_t result;
 
     if (num_handles == 1u) {
@@ -104,41 +100,36 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
 
 static mx_status_t my_write_message(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
                                     const mx_handle_t* handles, uint32_t num_handles,
-                                    uint32_t flags)
-{
+                                    uint32_t flags) {
     return _magenta_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
-                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags)
-{
+                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
     return _magenta_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 // Architecture specific ways to crash and then recover from the crash.
 
-static void crash_me(void)
-{
+static void crash_me(void) {
     printf("Attempting to crash thread.\n");
 #ifdef __x86_64__
-    __asm__ volatile ("int3");
+    __asm__ volatile("int3");
 #endif
     printf("Thread resuming after crash.\n");
 }
 
-static void uncrash_me(mx_handle_t thread)
-{
+static void uncrash_me(mx_handle_t thread) {
     printf("Attempting to recover from crash.\n");
 #ifdef __x86_64__
-    // TODO(dje): Advance pc by one.
+// TODO(dje): Advance pc by one.
 #endif
 }
 
 // Wait until |handle| is readable or peer is closed.
 // Result is true if readable, otherwise false.
 
-static bool wait_handle(mx_handle_t handle)
-{
+static bool wait_handle(mx_handle_t handle) {
     mx_signals_t satisfied_signals, satisfiable_signals;
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     mx_status_t result = my_wait(&handle, &signals, 1, NULL, WATCHDOG_DURATION_NANOSECONDS,
@@ -152,8 +143,7 @@ static bool wait_handle(mx_handle_t handle)
     return true;
 }
 
-static void send_msg(mx_handle_t handle, enum message msg)
-{
+static void send_msg(mx_handle_t handle, enum message msg) {
     uint64_t data = msg;
     printf("sending message %d on handle %u\n", msg, handle);
     mx_status_t status = my_write_message(handle, &data, sizeof(data), NULL, 0, 0);
@@ -161,41 +151,35 @@ static void send_msg(mx_handle_t handle, enum message msg)
         syscall_fail("my_write_message", status);
 }
 
-static enum message recv_msg(mx_handle_t handle)
-{
+static enum message recv_msg(mx_handle_t handle) {
     uint64_t data;
     uint32_t num_bytes = sizeof(data);
 
     printf("waiting for message on handle %u\n", handle);
 
-    if (!wait_handle(handle))
-    {
+    if (!wait_handle(handle)) {
         printf("peer closed while trying to read message\n");
-        exit (1);
+        exit(1);
     }
     mx_status_t status = my_read_message(handle, &data, &num_bytes, NULL, 0, 0);
     if (status != NO_ERROR)
         syscall_fail("my_read_message", status);
-    if (num_bytes != sizeof(data))
-    {
+    if (num_bytes != sizeof(data)) {
         printf("unexpected message size: %u\n", num_bytes);
         exit(1);
     }
-    printf("received message %d\n", (enum message) data);
-    return (enum message) data;
+    printf("received message %d\n", (enum message)data);
+    return (enum message)data;
 }
 
-static void resume_thread_from_exception(mx_handle_t thread, mx_handle_t msg_pipe)
-{
-    if (for_real)
-    {
+static void resume_thread_from_exception(mx_handle_t thread, mx_handle_t msg_pipe) {
+    if (for_real) {
         uncrash_me(thread);
         _magenta_mark_exception_handled(thread, MX_EXCEPTION_STATUS_RESUME);
     }
     send_msg(msg_pipe, MSG_PING);
     enum message msg = recv_msg(msg_pipe);
-    if (msg != MSG_PONG)
-    {
+    if (msg != MSG_PONG) {
         printf("unexpected reply from thread: %d\n", msg);
         exit(1);
     }
@@ -203,16 +187,14 @@ static void resume_thread_from_exception(mx_handle_t thread, mx_handle_t msg_pip
 }
 
 static void test_received_exception(struct handlers* handlers,
-                                    enum handler_kind kind)
-{
+                                    enum handler_kind kind) {
     mx_handle_t handle;
     const char* kind_name;
 
     if (!for_real)
         return;
 
-    switch (kind)
-    {
+    switch (kind) {
     case HANDLER_THREAD:
         handle = handlers->thread;
         kind_name = "thread";
@@ -229,10 +211,9 @@ static void test_received_exception(struct handlers* handlers,
         abort();
     }
 
-    if (!wait_handle(handle))
-    {
+    if (!wait_handle(handle)) {
         printf("exception handler sender closed\n");
-        exit (1);
+        exit(1);
     }
 
     mx_exception_report_t report;
@@ -240,8 +221,7 @@ static void test_received_exception(struct handlers* handlers,
     mx_status_t status = my_read_message(handle, &report, &num_bytes, NULL, 0, 0);
     if (status != NO_ERROR)
         syscall_fail("my_read_message of exception report", status);
-    if (num_bytes != sizeof(report))
-    {
+    if (num_bytes != sizeof(report)) {
         printf("unexpected message size: %u\n", num_bytes);
         exit(1);
     }
@@ -250,21 +230,17 @@ static void test_received_exception(struct handlers* handlers,
            kind_name, report.pid, report.tid);
 }
 
-static void mark_tests_done(mx_handle_t msg_pipe)
-{
+static void mark_tests_done(mx_handle_t msg_pipe) {
     send_msg(msg_pipe, MSG_DONE);
 }
 
-static int thread_func(void* arg)
-{
-    mx_handle_t msg_pipe = (mx_handle_t) (uintptr_t) arg;
+static int thread_func(void* arg) {
+    mx_handle_t msg_pipe = (mx_handle_t)(uintptr_t)arg;
 
     done_tests = 0;
-    while (!done_tests)
-    {
+    while (!done_tests) {
         enum message msg = recv_msg(msg_pipe);
-        switch (msg)
-        {
+        switch (msg) {
         case MSG_DONE:
             done_tests = 1;
             break;
@@ -284,22 +260,19 @@ static int thread_func(void* arg)
     return 0; // sigh
 }
 
-static int watchdog_thread_func(void* arg)
-{
-    for (int i = 0; i < WATCHDOG_DURATION_SECONDS; ++i)
-    {
+static int watchdog_thread_func(void* arg) {
+    for (int i = 0; i < WATCHDOG_DURATION_SECONDS; ++i) {
         _magenta_nanosleep(1000 * 1000 * 1000);
         if (done_tests)
             _magenta_thread_exit();
     }
     // This should kill the entire process, not just this thread.
-    exit (1);
+    exit(1);
 }
 
-int main(void)
-{
+int main(void) {
     mx_status_t status;
-    struct handlers send,recv;
+    struct handlers send, recv;
     mx_handle_t our_pipe, child_pipe;
 
 #ifdef __x86_64__
@@ -323,7 +296,7 @@ int main(void)
         syscall_fail("parent/child pipe", status);
 
     mx_handle_t thread_handle;
-    status = my_thread_create(thread_func, (void*) (uintptr_t) child_pipe, &thread_handle, "test-thread");
+    status = my_thread_create(thread_func, (void*)(uintptr_t)child_pipe, &thread_handle, "test-thread");
     if (status < 0)
         syscall_fail("my_thread_create", status);
 

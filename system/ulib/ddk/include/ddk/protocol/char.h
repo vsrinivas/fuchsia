@@ -17,9 +17,9 @@
 #include <ddk/driver.h>
 
 typedef struct mx_protocol_char {
-    ssize_t (*read)(mx_device_t *dev, void *buf, size_t count);
-    ssize_t (*write)(mx_device_t *dev, const void *buf, size_t count);
-    ssize_t (*ioctl)(mx_device_t *dev, uint32_t op,
-                         const void *in_buf, size_t in_len,
-                         void *out_buf, size_t out_len);
+    ssize_t (*read)(mx_device_t* dev, void* buf, size_t count);
+    ssize_t (*write)(mx_device_t* dev, const void* buf, size_t count);
+    ssize_t (*ioctl)(mx_device_t* dev, uint32_t op,
+                     const void* in_buf, size_t in_len,
+                     void* out_buf, size_t out_len);
 } mx_protocol_char_t;

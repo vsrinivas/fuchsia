@@ -23,7 +23,7 @@ typedef struct {
     int futex;
 } mxr_mutex_t;
 
-#define MXR_MUTEX_INIT ((mxr_mutex_t) { 0 })
+#define MXR_MUTEX_INIT ((mxr_mutex_t){0})
 
 mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex);
 mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout);

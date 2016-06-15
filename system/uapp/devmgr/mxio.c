@@ -90,7 +90,9 @@ fail:
 
 void devmgr_launch_devhost(mx_handle_t h, const char* arg0, const char* arg1) {
     const char* name = "/boot/bin/devmgr";
-    const char* args[3] = { name, arg0, arg1, };
+    const char* args[3] = {
+        name, arg0, arg1,
+    };
     mx_handle_t hnd[2];
     uint32_t ids[2];
     ids[0] = MX_HND_TYPE_MXIO_ROOT;

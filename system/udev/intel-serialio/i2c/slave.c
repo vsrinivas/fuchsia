@@ -17,9 +17,9 @@
 #include <ddk/protocol/char.h>
 #include <ddk/protocol/i2c.h>
 #include <intel_broadwell_serialio/reg.h>
+#include <magenta/types.h>
 #include <mxio/util.h>
 #include <mxu/list.h>
-#include <magenta/types.h>
 #include <runtime/mutex.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -30,19 +30,16 @@
 
 // Implement the device protocol for the slave devices.
 
-static mx_status_t intel_broadwell_serialio_i2c_slave_open(mx_device_t *dev,
-                                                           uint32_t flags)
-{
+static mx_status_t intel_broadwell_serialio_i2c_slave_open(mx_device_t* dev,
+                                                           uint32_t flags) {
     return NO_ERROR;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_slave_close(mx_device_t *dev)
-{
+static mx_status_t intel_broadwell_serialio_i2c_slave_close(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_slave_release(mx_device_t *dev)
-{
+static mx_status_t intel_broadwell_serialio_i2c_slave_release(mx_device_t* dev) {
     return NO_ERROR;
 }
 
@@ -56,9 +53,8 @@ static mx_protocol_device_t intel_broadwell_serialio_i2c_slave_device_proto = {
 // Implement the functionality of the i2c slave devices.
 
 static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
-    mx_device_t *dev, i2c_slave_segment_t *segments, int segment_count)
-{
-    intel_broadwell_serialio_i2c_slave_device_t *slave =
+    mx_device_t* dev, i2c_slave_segment_t* segments, int segment_count) {
+    intel_broadwell_serialio_i2c_slave_device_t* slave =
         get_intel_broadwell_serialio_i2c_slave_device(dev);
 
     if (!dev->parent) {
@@ -66,7 +62,7 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
         return ERR_BAD_STATE;
     }
 
-    intel_broadwell_serialio_i2c_device_t *controller =
+    intel_broadwell_serialio_i2c_device_t* controller =
         get_intel_broadwell_serialio_i2c_device(dev->parent);
 
     uint32_t ctl_addr_mode_bit;
@@ -106,7 +102,7 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
 
     while (segment_count--) {
         int len = segments->len;
-        uint8_t *buf = segments->buf;
+        uint8_t* buf = segments->buf;
 
         // If this segment is in the same direction as the last, inject a
         // restart at its start.
@@ -119,8 +115,9 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
             restart = 0;
             if (!segments->read) {
                 while (!(*REG32(&controller->regs->i2c_sta) &
-                         (0x1 << I2C_STA_TFNF)))
-                {;}
+                         (0x1 << I2C_STA_TFNF))) {
+                    ;
+                }
                 cmd |= (*buf << DATA_CMD_DAT);
                 cmd |= (DATA_CMD_CMD_WRITE << DATA_CMD_CMD);
             } else {
@@ -135,8 +132,9 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
             // If this is a read, extract the data.
             if (segments->read) {
                 while (!(*REG32(&controller->regs->i2c_sta) &
-                         (0x1 << I2C_STA_RFNE)))
-                {;}
+                         (0x1 << I2C_STA_RFNE))) {
+                    ;
+                }
                 *buf = *REG32(&controller->regs->data_cmd);
             }
 
@@ -157,8 +155,9 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
     } while ((i2c_sta & (0x1 << I2C_STA_CA)) ||
              !(i2c_sta & (0x1 << I2C_STA_TFCE)));
     while ((*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_CA)) ||
-           !(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_TFCE)))
-    {;}
+           !(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_TFCE))) {
+        ;
+    }
 
     while (*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE))
         *REG32(&controller->regs->data_cmd);
@@ -170,8 +169,7 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
 // Implement the char protocol for the slave devices.
 
 static ssize_t intel_broadwell_serialio_i2c_slave_read(
-    mx_device_t *dev, void *buf, size_t count)
-{
+    mx_device_t* dev, void* buf, size_t count) {
     i2c_slave_segment_t segment = {
         .read = 1,
         .buf = buf,
@@ -181,20 +179,18 @@ static ssize_t intel_broadwell_serialio_i2c_slave_read(
 }
 
 static ssize_t intel_broadwell_serialio_i2c_slave_write(
-    mx_device_t *dev, const void *buf, size_t count)
-{
+    mx_device_t* dev, const void* buf, size_t count) {
     i2c_slave_segment_t segment = {
         .read = 0,
-        .buf = (void *)buf,
+        .buf = (void*)buf,
         .len = count,
     };
     return intel_broadwell_serialio_i2c_slave_transfer(dev, &segment, 1);
 }
 
 static ssize_t intel_broadwell_serialio_i2c_slave_transfer_ioctl(
-    mx_device_t *dev, uint32_t op, const void *in_buf, size_t in_len,
-    void *out_buf, size_t out_len)
-{
+    mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
+    void* out_buf, size_t out_len) {
     mx_status_t status;
 
     size_t size = in_len;
@@ -204,8 +200,8 @@ static ssize_t intel_broadwell_serialio_i2c_slave_transfer_ioctl(
     uintptr_t segment_addr = (uintptr_t)in_buf;
     // Check that the inputs and output buffer are valid.
     while (size) {
-        const i2c_slave_ioctl_segment_t *ioctl_segment =
-            (const i2c_slave_ioctl_segment_t *)segment_addr;
+        const i2c_slave_ioctl_segment_t* ioctl_segment =
+            (const i2c_slave_ioctl_segment_t*)segment_addr;
         size_t base_size = offsetof(i2c_slave_ioctl_segment_t, buf);
         int len = ioctl_segment->len;
         if (size < base_size) {
@@ -235,19 +231,19 @@ static ssize_t intel_broadwell_serialio_i2c_slave_transfer_ioctl(
     }
 
     // Build a list of segments to transfer.
-    i2c_slave_segment_t *segments =
+    i2c_slave_segment_t* segments =
         calloc(segment_count, sizeof(*segments));
     if (!segments) {
         status = ERR_NO_MEMORY;
         goto slave_transfer_ioctl_finish_2;
     }
-    i2c_slave_segment_t *cur_segment = segments;
+    i2c_slave_segment_t* cur_segment = segments;
     segment_addr = (uintptr_t)in_buf;
     uintptr_t out_addr = (uintptr_t)out_buf;
     size = in_len;
     while (size) {
-        const i2c_slave_ioctl_segment_t *ioctl_segment =
-            (const i2c_slave_ioctl_segment_t *)segment_addr;
+        const i2c_slave_ioctl_segment_t* ioctl_segment =
+            (const i2c_slave_ioctl_segment_t*)segment_addr;
         const size_t base_size =
             offsetof(i2c_slave_ioctl_segment_t, buf);
         int len = ioctl_segment->len;
@@ -257,13 +253,13 @@ static ssize_t intel_broadwell_serialio_i2c_slave_transfer_ioctl(
             consumed = base_size;
             cur_segment->read = 1;
             cur_segment->len = len;
-            cur_segment->buf = (uint8_t *)out_addr;
+            cur_segment->buf = (uint8_t*)out_addr;
             out_addr += len;
         } else {
             consumed = base_size + len;
             cur_segment->read = 0;
             cur_segment->len = len;
-            cur_segment->buf = (uint8_t *)(segment_addr + base_size);
+            cur_segment->buf = (uint8_t*)(segment_addr + base_size);
         }
 
         cur_segment++;
@@ -283,16 +279,15 @@ slave_transfer_ioctl_finish_2:
 }
 
 static ssize_t intel_broadwell_serialio_i2c_slave_ioctl(
-    mx_device_t *dev, uint32_t op, const void *in_buf, size_t in_len,
-    void *out_buf, size_t out_len)
-{
+    mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
+    void* out_buf, size_t out_len) {
     switch (op) {
-        case I2C_SLAVE_TRANSFER:
-            return intel_broadwell_serialio_i2c_slave_transfer_ioctl(
-                dev, op, in_buf, in_len, out_buf, out_len);
-            break;
-        default:
-            return ERR_INVALID_ARGS;
+    case I2C_SLAVE_TRANSFER:
+        return intel_broadwell_serialio_i2c_slave_transfer_ioctl(
+            dev, op, in_buf, in_len, out_buf, out_len);
+        break;
+    default:
+        return ERR_INVALID_ARGS;
     }
 }
 
@@ -305,13 +300,12 @@ static mx_protocol_char_t intel_broadwell_serialio_i2c_slave_char_proto = {
 // Initialize a slave device structure.
 
 mx_status_t intel_broadwell_serialio_i2c_slave_device_init(
-    mx_device_t *cont, intel_broadwell_serialio_i2c_slave_device_t *slave,
-    uint8_t width, uint16_t address)
-{
+    mx_device_t* cont, intel_broadwell_serialio_i2c_slave_device_t* slave,
+    uint8_t width, uint16_t address) {
     mx_status_t status = NO_ERROR;
 
     char name[sizeof(address) * 2 + 2] = {
-        [sizeof(name) - 1] = '\0',
+            [sizeof(name) - 1] = '\0',
     };
     snprintf(name, sizeof(name) - 1, "%04x", address);
 

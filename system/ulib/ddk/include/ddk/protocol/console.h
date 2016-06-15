@@ -40,7 +40,6 @@ typedef struct mx_protocol_console {
     mx_status_t (*readkey)(mx_device_t* dev, uint32_t flags);
 } mx_protocol_console_t;
 
-
 #define CONSOLE_OP_GET_DIMENSIONS 1
 
 typedef struct {

@@ -33,7 +33,7 @@ typedef struct struct_header {
 } mojo_struct_header_t;
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // MOJO_PUBLIC_C_BINDINGS_STRUCT_H_
+#endif // MOJO_PUBLIC_C_BINDINGS_STRUCT_H_

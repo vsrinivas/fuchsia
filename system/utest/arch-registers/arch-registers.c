@@ -154,7 +154,7 @@ static uintptr_t make_valid_value(uintptr_t value) {
 #endif
 
 typedef struct context {
-    uintptr_t key;  // A different bit per thread so they test different values.
+    uintptr_t key; // A different bit per thread so they test different values.
     mx_handle_t* thread;
 } context;
 

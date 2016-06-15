@@ -19,10 +19,8 @@
 
 #include <intel_broadwell_serialio/serialio.h>
 
-mx_status_t intel_broadwell_serialio_bind_sdio(mx_driver_t *drv,
-                                               mx_device_t *dev)
-{
+mx_status_t intel_broadwell_serialio_bind_sdio(mx_driver_t* drv,
+                                               mx_device_t* dev) {
     // Not implemented yet.
     return ERR_NOT_IMPLEMENTED;
 }
-

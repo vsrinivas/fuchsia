@@ -24,8 +24,8 @@
 
 #include <mxu/list.h>
 
-#include <magenta/types.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
@@ -83,8 +83,8 @@ struct devhost {
 
 static mx_device_t* devhost_id_to_dev(devhost_t* dh, uintptr_t id) {
     proxy_t* proxy;
-    mx_device_t* dev = (mx_device_t*) id;
-    list_for_every_entry(&dh->devices, proxy, proxy_t, node) {
+    mx_device_t* dev = (mx_device_t*)id;
+    list_for_every_entry (&dh->devices, proxy, proxy_t, node) {
         if (&proxy->device == dev) {
             return dev;
         }
@@ -112,7 +112,7 @@ static mx_status_t devhost_remote_add(devhost_t* dh, devhost_msg_t* msg, mx_hand
         goto fail0;
     }
     if ((r = devmgr_device_init(&proxy->device, &proxy_driver,
-                                msg->namedata, &proxy_device_proto))< 0) {
+                                msg->namedata, &proxy_device_proto)) < 0) {
         goto fail1;
     }
     proxy->device.remote = h;
@@ -124,7 +124,7 @@ static mx_status_t devhost_remote_add(devhost_t* dh, devhost_msg_t* msg, mx_hand
     }
     list_add_tail(&dh->devices, &proxy->node);
 
-    msg->device_id = (uintptr_t) &proxy->device;
+    msg->device_id = (uintptr_t)&proxy->device;
     return NO_ERROR;
 fail1:
     free(proxy);
@@ -258,7 +258,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
     case MX_RIO_READ: {
         mx_status_t r;
         mx_protocol_char_t* proto;
-        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**) &proto)) < 0) {
+        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&proto)) < 0) {
             return r;
         }
         if ((r = proto->read(dev, msg->data, arg)) > 0) {
@@ -270,7 +270,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
     case MX_RIO_WRITE: {
         mx_status_t r;
         mx_protocol_char_t* proto;
-        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**) &proto)) < 0) {
+        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&proto)) < 0) {
             return r;
         }
         if ((r = proto->write(dev, msg->data, len)) > 0) {
@@ -284,7 +284,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
         if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
             return ERR_INVALID_ARGS;
         }
-        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**) &proto)) < 0) {
+        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&proto)) < 0) {
             return r;
         }
         if (!proto->ioctl) {
@@ -303,7 +303,6 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
         return ERR_NOT_SUPPORTED;
     }
 }
-
 
 mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
     mx_handle_t h0, h1;
@@ -334,10 +333,9 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     devhost_msg_t msg;
     memset(&msg, 0, sizeof(msg));
     msg.op = DH_OP_REMOVE;
-    msg.device_id = (uintptr_t) dev->remote_id;
+    msg.device_id = (uintptr_t)dev->remote_id;
     return devhost_rpc(devhost_handle, &msg, 0);
 }
-
 
 mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
 #if SINGLE_PROCESS
@@ -378,4 +376,3 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
     return 0;
 #endif
 }
-

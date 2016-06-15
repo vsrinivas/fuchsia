@@ -24,14 +24,13 @@
 
 #include <mxu/list.h>
 
-#include <magenta/types.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
 #include <runtime/mutex.h>
-
 
 #define TRACE 0
 
@@ -247,8 +246,10 @@ mx_status_t devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
                                const char* name, mx_protocol_device_t* ops) {
     xprintf("devmgr: init '%s' drv=%p, ops=%p\n", safename(name), driver, ops);
 
-    if (name == NULL) return ERR_INVALID_ARGS;
-    if (strlen(name) > MX_DEVICE_NAME_MAX) return ERR_INVALID_ARGS;
+    if (name == NULL)
+        return ERR_INVALID_ARGS;
+    if (strlen(name) > MX_DEVICE_NAME_MAX)
+        return ERR_INVALID_ARGS;
 
     memset(dev, 0, sizeof(mx_device_t));
     strncpy(dev->namedata, name, MX_DEVICE_NAME_MAX);
@@ -263,7 +264,8 @@ mx_status_t devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
 mx_status_t devmgr_device_create(mx_device_t** out, mx_driver_t* driver,
                                  const char* name, mx_protocol_device_t* ops) {
     mx_device_t* dev = malloc(sizeof(mx_device_t));
-    if (dev == NULL) return ERR_NO_MEMORY;
+    if (dev == NULL)
+        return ERR_NO_MEMORY;
     mx_status_t status = devmgr_device_init(dev, driver, name, ops);
     if (status) {
         free(dev);
@@ -282,7 +284,8 @@ void devmgr_device_set_bindable(mx_device_t* dev, bool bindable) {
 }
 
 mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
-    if (dev == NULL) return ERR_INVALID_ARGS;
+    if (dev == NULL)
+        return ERR_INVALID_ARGS;
     if (parent == NULL) {
         if (devmgr_is_remote) {
             //printf("device add: %p(%s): not allowed in devhost\n", dev, safename(dev->name));
@@ -437,7 +440,8 @@ mx_status_t devmgr_driver_add(mx_driver_t* drv) {
         DM_UNLOCK();
         r = drv->ops.init(drv);
         DM_LOCK();
-        if (r < 0) return r;
+        if (r < 0)
+            return r;
     }
 
     // add the driver to the driver list
@@ -502,8 +506,10 @@ static void devmgr_dump_device(uint level, mx_device_t* dev) {
         printf("  ");
     }
     printf("%c %s drv@%p", list_is_empty(&dev->device_list) ? '|' : '+', dev->name, dev->driver);
-    if (dev->driver) printf(" (%s)", dev->driver->name);
-    if (dev->owner) printf(" owner: %s", dev->owner->name);
+    if (dev->driver)
+        printf(" (%s)", dev->driver->name);
+    if (dev->owner)
+        printf(" owner: %s", dev->owner->name);
     printf("\n");
 }
 
@@ -538,7 +544,7 @@ void devmgr_dump(void) {
     printf("---- End Protocols ----\n");
     printf("\n");
     printf("---- Unmatched Devices -----\n");
-    list_for_every_entry(&unmatched_device_list, dev, mx_device_t, unode) {
+    list_for_every_entry (&unmatched_device_list, dev, mx_device_t, unode) {
         if (!dev->owner) {
             devmgr_dump_device(0, dev);
         }
@@ -562,11 +568,11 @@ mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "dump")) {
         devmgr_dump();
         return NO_ERROR;
-    } if (!strcmp(cmd, "crash")) {
-        *((int*) 0x1234) = 42;
+    }
+    if (!strcmp(cmd, "crash")) {
+        *((int*)0x1234) = 42;
         return NO_ERROR;
     } else {
         return ERR_NOT_SUPPORTED;
     }
 }
-

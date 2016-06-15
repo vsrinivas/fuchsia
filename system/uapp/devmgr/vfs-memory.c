@@ -59,14 +59,17 @@ static ssize_t mem_read(vnode_t* vn, void* _data, size_t len, size_t off) {
     mnode_t* mem = vn->pdata;
     uint8_t* data = _data;
     ssize_t count = 0;
-    if (off >= mem->datalen) return 0;
-    if (len > (mem->datalen - off)) len = mem->datalen - off;
+    if (off >= mem->datalen)
+        return 0;
+    if (len > (mem->datalen - off))
+        len = mem->datalen - off;
 
     size_t bno = off / BLOCKSIZE;
     off = off % BLOCKSIZE;
     while (len > 0) {
         size_t xfer = (BLOCKSIZE - off);
-        if (len < xfer) xfer = len;
+        if (len < xfer)
+            xfer = len;
         if (mem->block[bno] == NULL) {
             xprintf("mem_read: hole at %zu\n", bno);
             memset(data, 0, xfer);
@@ -90,7 +93,8 @@ static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off)
     off = off % BLOCKSIZE;
     while (len > 0) {
         size_t xfer = (BLOCKSIZE - off);
-        if (len < xfer) xfer = len;
+        if (len < xfer)
+            xfer = len;
         if (bno >= MAXBLOCKS) {
             return count ? count : ERR_NO_MEMORY;
         }
@@ -103,7 +107,8 @@ static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off)
         memcpy(mem->block[bno] + off, data, xfer);
 
         size_t pos = bno * BLOCKSIZE + off + xfer;
-        if (pos > mem->datalen) mem->datalen = pos;
+        if (pos > mem->datalen)
+            mem->datalen = pos;
 
         data += xfer;
         len -= xfer;
@@ -120,8 +125,10 @@ static mx_status_t mem_lookup(vnode_t* vn, vnode_t** out, const char* name, size
     xprintf("mem_lookup: vn=%p name='%.*s'\n", vn, (int)len, name);
     list_for_every_entry (&parent->children, mem, mnode_t, node) {
         xprintf("? dev=%p name='%s'\n", mem, mem->name);
-        if (mem->namelen != len) continue;
-        if (memcmp(mem->name, name, len)) continue;
+        if (mem->namelen != len)
+            continue;
+        if (memcmp(mem->name, name, len))
+            continue;
         vn_acquire(&mem->vn);
         *out = &mem->vn;
         return NO_ERROR;
@@ -161,7 +168,8 @@ static mx_status_t mem_readdir(vnode_t* vn, void* cookie, void* data, size_t len
             r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
                                 mem->name, mem->namelen,
                                 VTYPE_TO_DTYPE(vtype));
-            if (r < 0) break;
+            if (r < 0)
+                break;
             last = mem;
             pos += r;
         }
@@ -171,7 +179,7 @@ static mx_status_t mem_readdir(vnode_t* vn, void* cookie, void* data, size_t len
 }
 
 static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
-                              const char* name, size_t namelen);
+                               const char* name, size_t namelen);
 
 static mx_status_t mem_create(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode) {
     mnode_t* parent = vn->pdata;
@@ -213,9 +221,10 @@ static mnode_t mem_root = {
 };
 
 static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
-                              const char* name, size_t namelen) {
+                               const char* name, size_t namelen) {
     mnode_t* mem;
-    if ((mem = calloc(1, sizeof(mnode_t) + namelen + 1)) == NULL) return ERR_NO_MEMORY;
+    if ((mem = calloc(1, sizeof(mnode_t) + namelen + 1)) == NULL)
+        return ERR_NO_MEMORY;
     xprintf("mem_create: vn=%p, parent=%p name='%.*s'\n",
             mem, parent, (int)namelen, name);
 
@@ -239,8 +248,10 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
 static mx_status_t _mem_mkdir(mnode_t* parent, mnode_t** out, const char* name, size_t namelen) {
     mnode_t* mem;
     list_for_every_entry (&parent->children, mem, mnode_t, node) {
-        if (mem->namelen != namelen) continue;
-        if (memcmp(mem->name, name, namelen)) continue;
+        if (mem->namelen != namelen)
+            continue;
+        if (memcmp(mem->name, name, namelen))
+            continue;
         *out = mem;
         return NO_ERROR;
     }

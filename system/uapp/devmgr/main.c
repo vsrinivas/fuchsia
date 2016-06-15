@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <fcntl.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
@@ -21,9 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "devmgr.h"
 
@@ -42,7 +42,7 @@ int devicehost(int argc, char** argv) {
         uint32_t index = strtoul(argv[1] + 4, NULL, 10);
         uintptr_t id = strtoull(argv[2], NULL, 10);
 
-        printf("devhost: pci host %d: driver: %p\n", index, (void*) id);
+        printf("devhost: pci host %d: driver: %p\n", index, (void*)id);
         devmgr_init(true);
         mx_device_t* pcidev;
         if (devmgr_create_pcidev(&pcidev, index)) {
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
 
-    mxr_thread_t *t;
+    mxr_thread_t* t;
     if ((mxr_thread_create(console_starter, NULL, "console-starter", &t)) == 0) {
         mxr_thread_detach(t);
     }

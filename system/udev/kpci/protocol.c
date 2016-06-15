@@ -37,15 +37,15 @@ static mx_status_t pci_reset_device(mx_device_t* dev) {
     return _magenta_pci_reset_device(device->handle);
 }
 
-static mx_handle_t pci_map_mmio(mx_device_t*      dev,
-                                uint32_t          bar_num,
+static mx_handle_t pci_map_mmio(mx_device_t* dev,
+                                uint32_t bar_num,
                                 mx_cache_policy_t cache_policy,
-                                void**            vaddr,
-                                uint64_t*         size) {
+                                void** vaddr,
+                                uint64_t* size) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
-    assert(vaddr  != NULL);
-    assert(size   != NULL);
+    assert(vaddr != NULL);
+    assert(size != NULL);
 
     mx_handle_t mmio_handle;
     mmio_handle = _magenta_pci_map_mmio(device->handle, bar_num, cache_policy);

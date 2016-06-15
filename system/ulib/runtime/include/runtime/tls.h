@@ -31,18 +31,22 @@ typedef uint32_t mxr_tls_t;
 #if defined(__aarch64__)
 static inline mx_tls_root_t* mxr_tls_root_get(void) {
     mx_tls_root_t* tlsroot;
-    __asm__ volatile("mrs %0, tpidr_el0" : "=r" (tlsroot));
+    __asm__ volatile("mrs %0, tpidr_el0"
+                     : "=r"(tlsroot));
     return tlsroot;
 }
 static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {
-    __asm__ volatile("msr tpidr_el0, %0" : : "r" (tlsroot));
+    __asm__ volatile("msr tpidr_el0, %0"
+                     :
+                     : "r"(tlsroot));
     return NO_ERROR;
 }
 
 #elif defined(__arm__)
 static inline mx_tls_root_t* mxr_tls_root_get(void) {
     mx_tls_root_t* tlsroot;
-    __asm__ __volatile__("mrc p15, 0, %0, c13, c0, 3" : "=r"(tlsroot));
+    __asm__ __volatile__("mrc p15, 0, %0, c13, c0, 3"
+                         : "=r"(tlsroot));
     return tlsroot;
 }
 static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {
@@ -54,7 +58,8 @@ static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {
 #elif defined(__x86_64__)
 static inline mx_tls_root_t* mxr_tls_root_get(void) {
     mx_tls_root_t* tlsroot;
-    __asm__ __volatile__("mov %%fs:0,%0" : "=r"(tlsroot));
+    __asm__ __volatile__("mov %%fs:0,%0"
+                         : "=r"(tlsroot));
     return tlsroot;
 }
 static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {

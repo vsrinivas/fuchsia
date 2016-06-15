@@ -122,20 +122,20 @@ static int thread_trampoline(void* ctx) {
 
     mxr_mutex_lock(&thread->state_lock);
     switch (thread->state) {
-        case JOINED:
-            mxr_mutex_unlock(&thread->state_lock);
-            break;
-        case JOINABLE:
-            thread->state = DONE;
-            mxr_mutex_unlock(&thread->state_lock);
-            break;
-        case DETACHED:
-            mxr_mutex_unlock(&thread->state_lock);
-            thread_cleanup(thread, NULL);
-            break;
-        case DONE:
-            // Not reached.
-            abort();
+    case JOINED:
+        mxr_mutex_unlock(&thread->state_lock);
+        break;
+    case JOINABLE:
+        thread->state = DONE;
+        mxr_mutex_unlock(&thread->state_lock);
+        break;
+    case DETACHED:
+        mxr_mutex_unlock(&thread->state_lock);
+        thread_cleanup(thread, NULL);
+        break;
+    case DONE:
+        // Not reached.
+        abort();
     }
 
     _magenta_thread_exit();
@@ -169,22 +169,22 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
 mx_status_t mxr_thread_join(mxr_thread_t* thread, int* return_value_out) {
     mxr_mutex_lock(&thread->state_lock);
     switch (thread->state) {
-        case JOINED:
-        case DETACHED:
-            mxr_mutex_unlock(&thread->state_lock);
-            return ERR_INVALID_ARGS;
-        case JOINABLE: {
-            thread->state = JOINED;
-            mxr_mutex_unlock(&thread->state_lock);
-            mx_status_t status = _magenta_handle_wait_one(thread->handle, MX_SIGNAL_SIGNALED,
-                                                          MX_TIME_INFINITE, NULL, NULL);
-            if (status != NO_ERROR)
-                return status;
-            break;
-        }
-        case DONE:
-            mxr_mutex_unlock(&thread->state_lock);
-            break;
+    case JOINED:
+    case DETACHED:
+        mxr_mutex_unlock(&thread->state_lock);
+        return ERR_INVALID_ARGS;
+    case JOINABLE: {
+        thread->state = JOINED;
+        mxr_mutex_unlock(&thread->state_lock);
+        mx_status_t status = _magenta_handle_wait_one(thread->handle, MX_SIGNAL_SIGNALED,
+                                                      MX_TIME_INFINITE, NULL, NULL);
+        if (status != NO_ERROR)
+            return status;
+        break;
+    }
+    case DONE:
+        mxr_mutex_unlock(&thread->state_lock);
+        break;
     }
 
     return thread_cleanup(thread, return_value_out);
@@ -194,19 +194,19 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&thread->state_lock);
     switch (thread->state) {
-        case JOINABLE:
-            thread->state = DETACHED;
-            mxr_mutex_unlock(&thread->state_lock);
-            break;
-        case JOINED:
-        case DETACHED:
-            mxr_mutex_unlock(&thread->state_lock);
-            status = ERR_INVALID_ARGS;
-            break;
-        case DONE:
-            mxr_mutex_unlock(&thread->state_lock);
-            status = thread_cleanup(thread, NULL);
-            break;
+    case JOINABLE:
+        thread->state = DETACHED;
+        mxr_mutex_unlock(&thread->state_lock);
+        break;
+    case JOINED:
+    case DETACHED:
+        mxr_mutex_unlock(&thread->state_lock);
+        status = ERR_INVALID_ARGS;
+        break;
+    case DONE:
+        mxr_mutex_unlock(&thread->state_lock);
+        status = thread_cleanup(thread, NULL);
+        break;
     }
 
     return status;

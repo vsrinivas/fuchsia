@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include <magenta/syscalls.h>
 
 #include "util.h"
@@ -32,9 +31,12 @@ mx_handle_t mxu_read_handle(mx_handle_t h) {
         if (r == ERR_NO_MSG) {
             r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                          MX_TIME_INFINITE, &pending, NULL);
-            if (r < 0) return r;
-            if (pending & MX_SIGNAL_READABLE) continue;
-            if (pending & MX_SIGNAL_PEER_CLOSED) return ERR_CHANNEL_CLOSED;
+            if (r < 0)
+                return r;
+            if (pending & MX_SIGNAL_READABLE)
+                continue;
+            if (pending & MX_SIGNAL_PEER_CLOSED)
+                return ERR_CHANNEL_CLOSED;
             return ERR_GENERIC;
         }
         return r;
@@ -55,9 +57,12 @@ mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
         if (r == ERR_NO_MSG) {
             r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                          MX_TIME_INFINITE, &pending, NULL);
-            if (r < 0) return r;
-            if (pending & MX_SIGNAL_READABLE) continue;
-            if (pending & MX_SIGNAL_PEER_CLOSED) return ERR_CHANNEL_CLOSED;
+            if (r < 0)
+                return r;
+            if (pending & MX_SIGNAL_READABLE)
+                continue;
+            if (pending & MX_SIGNAL_PEER_CLOSED)
+                return ERR_CHANNEL_CLOSED;
             return ERR_GENERIC;
         }
         return r;
@@ -74,15 +79,19 @@ mx_status_t mxu_blocking_read_h(mx_handle_t h, void* data, size_t len, mx_handle
         hsz = 1;
         r = _magenta_message_read(h, data, &sz, out, &hsz, 0);
         if (r == 0) {
-            if (hsz != 1) *out = 0;
+            if (hsz != 1)
+                *out = 0;
             return sz;
         }
         if (r == ERR_NO_MSG) {
             r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                          MX_TIME_INFINITE, &pending, NULL);
-            if (r < 0) return r;
-            if (pending & MX_SIGNAL_READABLE) continue;
-            if (pending & MX_SIGNAL_PEER_CLOSED) return ERR_CHANNEL_CLOSED;
+            if (r < 0)
+                return r;
+            if (pending & MX_SIGNAL_READABLE)
+                continue;
+            if (pending & MX_SIGNAL_PEER_CLOSED)
+                return ERR_CHANNEL_CLOSED;
             return ERR_GENERIC;
         }
         return r;

@@ -18,7 +18,7 @@
 
 typedef struct bluetooth_hci_protocol {
     // returns message pipe for command & event packets
-    mx_handle_t (* get_control_pipe)(mx_device_t* device);
+    mx_handle_t (*get_control_pipe)(mx_device_t* device);
     // returns message pipe for ACL data
-    mx_handle_t (* get_acl_pipe)(mx_device_t* device);
+    mx_handle_t (*get_acl_pipe)(mx_device_t* device);
 } bluetooth_hci_protocol_t;

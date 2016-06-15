@@ -54,7 +54,8 @@ void bootfs_parse(void* _data, int len,
         data += sizeof(header);
 
         // check for end marker
-        if (header[NLEN] == 0) break;
+        if (header[NLEN] == 0)
+            break;
 
         // require reasonable filename size
         if ((header[NLEN] < 2) || (header[NLEN] > BOOTFS_MAX_NAME_LEN)) {

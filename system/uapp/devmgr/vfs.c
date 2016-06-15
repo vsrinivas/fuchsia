@@ -28,10 +28,10 @@
 
 #include <runtime/thread.h>
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
 
 #define MXDEBUG 0
 
@@ -101,7 +101,7 @@ mx_status_t vfs_create(vnode_t** out, const char* path, uint32_t flags, uint32_t
         return ERR_NOT_ALLOWED;
     }
     xprintf("vfs_create: path='%s' flags=%d mode=%d\n", path, flags, mode);
-    vnode_t *vn;
+    vnode_t* vn;
     mx_status_t r;
     if ((r = vfs_walk(vfs_root, &vn, path + 1, &path)) < 0) {
         xprintf("vfs_create: walk r=%d\n", r);
@@ -117,8 +117,10 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
     size_t sz = sizeof(vdirent_t) + len + 1;
 
     // round up to uint32 aligned
-    if (sz & 3) sz = (sz + 3) & (~3);
-    if (sz > delen) return ERR_TOO_BIG;
+    if (sz & 3)
+        sz = (sz + 3) & (~3);
+    if (sz > delen)
+        return ERR_TOO_BIG;
     de->size = sz;
     de->type = type;
     memcpy(de->name, name, len);
@@ -140,7 +142,7 @@ static mx_status_t vfs_get_handles(vnode_t* vn, mx_handle_t* hnds, uint32_t* ids
 mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
                              const char* path, uint32_t flags) {
     mx_status_t r;
-    vnode_t *vn;
+    vnode_t* vn;
 
     if (flags & O_CREAT) {
         return ERR_NOT_SUPPORTED;
@@ -176,11 +178,11 @@ static mx_status_t root_handler(mx_rio_msg_t* msg, void* cookie) {
             return ERR_INVALID_ARGS;
         }
         msg->data[len] = 0;
-        xprintf("root: open name='%s' flags=%d mode=%lld\n", (const char*) msg->data, arg, msg->off);
+        xprintf("root: open name='%s' flags=%d mode=%lld\n", (const char*)msg->data, arg, msg->off);
         if (arg & O_CREAT) {
-            r = vfs_create(&vn, (const char*) msg->data, arg, msg->off);
+            r = vfs_create(&vn, (const char*)msg->data, arg, msg->off);
         } else {
-            r = vfs_open(&vn, (const char*) msg->data, arg);
+            r = vfs_open(&vn, (const char*)msg->data, arg);
         }
         xprintf("root: open: r=%d\n", r);
         if (r < 0) {
@@ -195,7 +197,7 @@ static mx_status_t root_handler(mx_rio_msg_t* msg, void* cookie) {
         msg->hcount = r;
         xprintf("root: open: h=%x\n", msg->handle[0]);
         return NO_ERROR;
-        }
+    }
     case MX_RIO_CLONE:
         msg->off = MXIO_PROTOCOL_REMOTE;
         msg->hcount = 1;
@@ -278,7 +280,8 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         case SEEK_END: {
             vnattr_t attr;
             mx_status_t r;
-            if ((r = vn->ops->getattr(vn, &attr)) < 0) return r;
+            if ((r = vn->ops->getattr(vn, &attr)) < 0)
+                return r;
             ios->io_off = attr.size;
             break;
         }
@@ -290,7 +293,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
     case MX_RIO_STAT: {
         mx_status_t r;
         msg->datalen = sizeof(vnattr_t);
-        if ((r = vn->ops->getattr(vn, (vnattr_t*) msg->data)) < 0) {
+        if ((r = vn->ops->getattr(vn, (vnattr_t*)msg->data)) < 0) {
             return r;
         }
         return msg->datalen;
@@ -332,7 +335,8 @@ static mxio_dispatcher_t* vfs_dispatcher;
 mx_handle_t vfs_create_root_handle(void) {
     mx_handle_t h0, h1;
     mx_status_t r;
-    if ((h0 = _magenta_message_pipe_create(&h1)) < 0) return h0;
+    if ((h0 = _magenta_message_pipe_create(&h1)) < 0)
+        return h0;
     if ((r = mxio_dispatcher_add(vfs_dispatcher, h0, root_handler, NULL))) {
         _magenta_handle_close(h0);
         _magenta_handle_close(h1);
@@ -357,7 +361,8 @@ mx_handle_t vfs_create_handle(vnode_t* vn) {
     mx_status_t r;
     iostate_t* ios;
 
-    if ((ios = calloc(1, sizeof(iostate_t))) == NULL) return ERR_NO_MEMORY;
+    if ((ios = calloc(1, sizeof(iostate_t))) == NULL)
+        return ERR_NO_MEMORY;
     ios->vn = vn;
 
     if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
@@ -388,7 +393,7 @@ static int vfs_watchdog(void* arg) {
             printf("devmgr: watchdog: txn %d did not complete: vn=%p op=%d\n", txn, vn, vfs_txn_op);
             if (vn->flags & V_FLAG_DEVICE) {
                 printf("devmgr: watchdog: vn=%p is device '%s'\n", vn,
-                       ((mx_device_t*) vn->pdata)->name);
+                       ((mx_device_t*)vn->pdata)->name);
             }
         }
         txn = now;

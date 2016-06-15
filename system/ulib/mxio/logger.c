@@ -38,7 +38,7 @@ typedef struct ciobuf {
 } logbuf_t;
 
 static ssize_t log_write(mxio_t* io, const void* _data, size_t len) {
-    mxio_log_t* log_io = (mxio_log_t*) io;
+    mxio_log_t* log_io = (mxio_log_t*)io;
     logbuf_t* log = mxr_tls_get(logbuf_tls);
 
     if (log == NULL) {
@@ -76,14 +76,14 @@ static mx_status_t log_no_impl(void) {
 }
 
 static mxio_ops_t log_io_ops = {
-    .read = (void*) log_no_impl,
+    .read = (void*)log_no_impl,
     .write = log_write,
-    .seek = (void*) log_no_impl,
-    .misc = (void*) log_no_impl,
-    .close = (void*) log_no_impl,
-    .open = (void*) log_no_impl,
-    .clone = (void*) log_no_impl,
-    .ioctl = (void*) log_no_impl,
+    .seek = (void*)log_no_impl,
+    .misc = (void*)log_no_impl,
+    .close = (void*)log_no_impl,
+    .open = (void*)log_no_impl,
+    .clone = (void*)log_no_impl,
+    .ioctl = (void*)log_no_impl,
 };
 
 mxio_t* mxio_logger_create(mx_handle_t handle) {

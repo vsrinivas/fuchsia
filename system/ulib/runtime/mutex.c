@@ -39,19 +39,19 @@ mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex) {
 
 mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout) {
     for (;;) {
-        switch(__atomic_exchange_n(&mutex->futex, LOCKED, __ATOMIC_SEQ_CST)) {
-            case UNLOCKED:
-                return NO_ERROR;
-            case LOCKED: {
-                mx_status_t status = _magenta_futex_wait(&mutex->futex, LOCKED, timeout);
-                if (status == ERR_BUSY) {
-                    continue;
-                }
-                if (status != NO_ERROR) {
-                    return status;
-                }
+        switch (__atomic_exchange_n(&mutex->futex, LOCKED, __ATOMIC_SEQ_CST)) {
+        case UNLOCKED:
+            return NO_ERROR;
+        case LOCKED: {
+            mx_status_t status = _magenta_futex_wait(&mutex->futex, LOCKED, timeout);
+            if (status == ERR_BUSY) {
                 continue;
             }
+            if (status != NO_ERROR) {
+                return status;
+            }
+            continue;
+        }
         }
     }
 }

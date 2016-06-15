@@ -93,52 +93,50 @@ void unittest_set_output_function(test_output_func fun, void* arg);
  * Macros to format the error string
  */
 #define EXPECTED_STRING "%s:\n        expected "
-#define UNITTEST_TRACEF(str, x...)                                             \
-    do {                                                                       \
-        unittest_printf(" [FAILED] \n        %s:%d:\n        " str,            \
-                        __PRETTY_FUNCTION__, __LINE__, ##x);                   \
+#define UNITTEST_TRACEF(str, x...)                                  \
+    do {                                                            \
+        unittest_printf(" [FAILED] \n        %s:%d:\n        " str, \
+                        __PRETTY_FUNCTION__, __LINE__, ##x);        \
     } while (0)
 
 /*
  * BEGIN_TEST_CASE and END_TEST_CASE define a function that calls
  * RUN_TEST.
  */
-#define BEGIN_TEST_CASE(case_name)                                             \
-    bool case_name(void)                                                       \
-    {                                                                          \
-        bool all_success = true;                                               \
+#define BEGIN_TEST_CASE(case_name) \
+    bool case_name(void) {         \
+        bool all_success = true;   \
         unittest_printf("\nCASE %-50s [STARTED] \n", #case_name);
 
-#define DEFINE_REGISTER_TEST_CASE(case_name)                                   \
-    static void _register_##case_name(void)                                    \
-    {                                                                          \
-        unittest_register_test_case(&_##case_name##_element);                  \
-    }                                                                          \
-    void (*_register_##case_name##_ptr)(void) __SECTION(".ctors") =            \
+#define DEFINE_REGISTER_TEST_CASE(case_name)                        \
+    static void _register_##case_name(void) {                       \
+        unittest_register_test_case(&_##case_name##_element);       \
+    }                                                               \
+    void (*_register_##case_name##_ptr)(void) __SECTION(".ctors") = \
         _register_##case_name;
 
-#define END_TEST_CASE(case_name)                                               \
-    if (all_success) {                                                         \
-        unittest_printf("CASE %-50s [PASSED]\n", #case_name);                  \
-    } else {                                                                   \
-        unittest_printf("CASE %-50s [FAILED]\n", #case_name);                  \
-    }                                                                          \
-    return all_success;                                                        \
-    }                                                                          \
-    static struct test_case_element _##case_name##_element = {                 \
-        .next = NULL,                                                          \
-        .failed_next = NULL,                                                   \
-        .name = #case_name,                                                    \
-        .test_case = case_name,                                                \
-    };                                                                         \
+#define END_TEST_CASE(case_name)                               \
+    if (all_success) {                                         \
+        unittest_printf("CASE %-50s [PASSED]\n", #case_name);  \
+    } else {                                                   \
+        unittest_printf("CASE %-50s [FAILED]\n", #case_name);  \
+    }                                                          \
+    return all_success;                                        \
+    }                                                          \
+    static struct test_case_element _##case_name##_element = { \
+        .next = NULL,                                          \
+        .failed_next = NULL,                                   \
+        .name = #case_name,                                    \
+        .test_case = case_name,                                \
+    };                                                         \
     DEFINE_REGISTER_TEST_CASE(case_name);
 
-#define RUN_TEST(test)                                                         \
-    unittest_printf("    %-51s [RUNNING]", #test);                             \
-    if (!test()) {                                                             \
-        all_success = false;                                                   \
-    } else {                                                                   \
-        unittest_printf(" [PASSED] \n");                                       \
+#define RUN_TEST(test)                             \
+    unittest_printf("    %-51s [RUNNING]", #test); \
+    if (!test()) {                                 \
+        all_success = false;                       \
+    } else {                                       \
+        unittest_printf(" [PASSED] \n");           \
     }
 
 /*
@@ -157,129 +155,129 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 /*
  * Use the EXPECT_* macros to check test results.
  */
-#define EXPECT_EQ(expected, actual, msg)                                       \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
-        if (_e != _a) {                                                        \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld), "                                        \
-                            "actual %s (%ld)\n",                                \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
-        }                                                                      \
+#define EXPECT_EQ(expected, actual, msg)                                  \
+    do {                                                                  \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                    \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                        \
+        if (_e != _a) {                                                   \
+            UNITTEST_TRACEF(EXPECTED_STRING                               \
+                            "%s (%ld), "                                  \
+                            "actual %s (%ld)\n",                          \
+                            msg, #expected, (long)_e, #actual, (long)_a); \
+            all_ok = false;                                               \
+        }                                                                 \
     } while (0)
 
-#define EXPECT_NEQ(expected, actual, msg)                                      \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        if (_e == (actual)) {                                                  \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld), %s"                                      \
-                            " to differ, but they are the same %ld\n",          \
-                            msg, #expected, (long)_e, #actual);                 \
-            all_ok = false;                                                    \
-        }                                                                      \
+#define EXPECT_NEQ(expected, actual, msg)                              \
+    do {                                                               \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                 \
+        if (_e == (actual)) {                                          \
+            UNITTEST_TRACEF(EXPECTED_STRING                            \
+                            "%s (%ld), %s"                             \
+                            " to differ, but they are the same %ld\n", \
+                            msg, #expected, (long)_e, #actual);        \
+            all_ok = false;                                            \
+        }                                                              \
     } while (0)
 
-#define EXPECT_LE(expected, actual, msg)                                       \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
-        if (_e > _a) {                                                         \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " less-than-or-equal-to actual %s (%ld)\n",         \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
-        }                                                                      \
+#define EXPECT_LE(expected, actual, msg)                                  \
+    do {                                                                  \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                    \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                        \
+        if (_e > _a) {                                                    \
+            UNITTEST_TRACEF(EXPECTED_STRING                               \
+                            "%s (%ld) to be"                              \
+                            " less-than-or-equal-to actual %s (%ld)\n",   \
+                            msg, #expected, (long)_e, #actual, (long)_a); \
+            all_ok = false;                                               \
+        }                                                                 \
     } while (0)
 
-#define EXPECT_LT(expected, actual, msg)                                       \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
-        if (_e >= _a) {                                                        \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " less-than actual %s (%ld)\n",                     \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
-        }                                                                      \
+#define EXPECT_LT(expected, actual, msg)                                  \
+    do {                                                                  \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                    \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                        \
+        if (_e >= _a) {                                                   \
+            UNITTEST_TRACEF(EXPECTED_STRING                               \
+                            "%s (%ld) to be"                              \
+                            " less-than actual %s (%ld)\n",               \
+                            msg, #expected, (long)_e, #actual, (long)_a); \
+            all_ok = false;                                               \
+        }                                                                 \
     } while (0)
 
-#define EXPECT_GE(expected, actual, msg)                                       \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
-        if (_e < _a) {                                                         \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " greater-than-or-equal-to actual %s (%ld)\n",      \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
-        }                                                                      \
+#define EXPECT_GE(expected, actual, msg)                                   \
+    do {                                                                   \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                     \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                         \
+        if (_e < _a) {                                                     \
+            UNITTEST_TRACEF(EXPECTED_STRING                                \
+                            "%s (%ld) to be"                               \
+                            " greater-than-or-equal-to actual %s (%ld)\n", \
+                            msg, #expected, (long)_e, #actual, (long)_a);  \
+            all_ok = false;                                                \
+        }                                                                  \
     } while (0)
 
-#define EXPECT_GT(expected, actual, msg)                                       \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
-        if (_e <= _a) {                                                        \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " greater-than actual %s (%ld)\n",                  \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
-        }                                                                      \
+#define EXPECT_GT(expected, actual, msg)                                  \
+    do {                                                                  \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                    \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                        \
+        if (_e <= _a) {                                                   \
+            UNITTEST_TRACEF(EXPECTED_STRING                               \
+                            "%s (%ld) to be"                              \
+                            " greater-than actual %s (%ld)\n",            \
+                            msg, #expected, (long)_e, #actual, (long)_a); \
+            all_ok = false;                                               \
+        }                                                                 \
     } while (0)
 
-#define EXPECT_TRUE(actual, msg)                                               \
-    if (!(actual)) {                                                           \
-        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual);                    \
-        all_ok = false;                                                        \
+#define EXPECT_TRUE(actual, msg)                            \
+    if (!(actual)) {                                        \
+        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual); \
+        all_ok = false;                                     \
     }
 
-#define EXPECT_FALSE(actual, msg)                                              \
-    if (actual) {                                                              \
-        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual);                     \
-        all_ok = false;                                                        \
+#define EXPECT_FALSE(actual, msg)                          \
+    if (actual) {                                          \
+        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual); \
+        all_ok = false;                                    \
     }
 
-#define EXPECT_BYTES_EQ(expected, actual, length, msg)                         \
-    if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) {               \
-        all_ok = false;                                                        \
+#define EXPECT_BYTES_EQ(expected, actual, length, msg)                    \
+    if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
+        all_ok = false;                                                   \
     }
 
-#define EXPECT_BYTES_NE(bytes1, bytes2, length, msg)                           \
-    if (!memcmp(bytes1, bytes2, length)) {                                     \
-        UNITTEST_TRACEF(                                                       \
-            "%s and %s are the same; "                                         \
-            "expected different\n",                                            \
-            #bytes1, #bytes2);                                                 \
-        hexdump8(bytes1, length);                                              \
-        all_ok = false;                                                        \
+#define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) \
+    if (!memcmp(bytes1, bytes2, length)) {           \
+        UNITTEST_TRACEF(                             \
+            "%s and %s are the same; "               \
+            "expected different\n",                  \
+            #bytes1, #bytes2);                       \
+        hexdump8(bytes1, length);                    \
+        all_ok = false;                              \
     }
 
 /* For comparing uint64_t, like hw_id_t. */
-#define EXPECT_EQ_LL(expected, actual, msg)                                    \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
-        if (_e != _a) {                                                        \
-            UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a);  \
-            all_ok = false;                                                    \
-        }                                                                      \
+#define EXPECT_EQ_LL(expected, actual, msg)                                   \
+    do {                                                                      \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                        \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                            \
+        if (_e != _a) {                                                       \
+            UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a); \
+            all_ok = false;                                                   \
+        }                                                                     \
     } while (0)
 
 /*
  * The ASSERT_* macros are similar to the EXPECT_* macros except that
  * they return on failure.
  */
-#define ASSERT_NOT_NULL(p)                                                     \
-    if (!p) {                                                                  \
-        UNITTEST_TRACEF("ERROR: NULL pointer\n");                              \
-        return false;                                                          \
+#define ASSERT_NOT_NULL(p)                        \
+    if (!p) {                                     \
+        UNITTEST_TRACEF("ERROR: NULL pointer\n"); \
+        return false;                             \
     }
 
 /*
@@ -307,7 +305,6 @@ bool unittest_run_all_tests(void);
  * of the input buffers.
  */
 bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, size_t len,
-                     const char* msg);
+                              const char* msg);
 
 __END_CDECLS
-

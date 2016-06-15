@@ -14,14 +14,13 @@
 
 #include <mxu/unittest.h>
 
-static struct test_case_element *test_case_list = NULL;
-static struct test_case_element *failed_test_case_list = NULL;
+static struct test_case_element* test_case_list = NULL;
+static struct test_case_element* failed_test_case_list = NULL;
 
 /*
  * Registers a test case with the unit test framework.
  */
-void unittest_register_test_case(struct test_case_element *elem)
-{
+void unittest_register_test_case(struct test_case_element* elem) {
     elem->next = test_case_list;
     test_case_list = elem;
 }
@@ -29,14 +28,13 @@ void unittest_register_test_case(struct test_case_element *elem)
 /*
  * Runs all registered test cases.
  */
-bool unittest_run_all_tests(void)
-{
-    unsigned int n_tests   = 0;
+bool unittest_run_all_tests(void) {
+    unsigned int n_tests = 0;
     unsigned int n_success = 0;
-    unsigned int n_failed  = 0;
+    unsigned int n_failed = 0;
 
     bool all_success = true;
-    struct test_case_element *current = test_case_list;
+    struct test_case_element* current = test_case_list;
     while (current) {
         if (!current->test_case()) {
             current->failed_next = failed_test_case_list;
@@ -51,10 +49,10 @@ bool unittest_run_all_tests(void)
         n_success = n_tests;
         unittest_printf("SUCCESS!  All test cases passed!\n");
     } else {
-        struct test_case_element *failed = failed_test_case_list;
+        struct test_case_element* failed = failed_test_case_list;
         while (failed) {
-            struct test_case_element *failed_next =
-                        failed->failed_next;
+            struct test_case_element* failed_next =
+                failed->failed_next;
             failed->failed_next = NULL;
             failed = failed_next;
             n_failed++;
@@ -64,8 +62,8 @@ bool unittest_run_all_tests(void)
     }
 
     unittest_printf("\n====================================================\n");
-    unittest_printf  ("    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
-                      n_tests, n_success, n_failed);
+    unittest_printf("    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
+                    n_tests, n_success, n_failed);
     unittest_printf("\n====================================================\n");
 
     return all_success;
