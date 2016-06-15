@@ -73,7 +73,7 @@ void x86_uspace_entry(
  *                 be running.  The BP should be in the list.
  * @param num_cpus The number of entries in the apic_ids list.
  */
-void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus);
+void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus);
 
 #define IO_BITMAP_BITS      65536
 #define IO_BITMAP_BYTES     (IO_BITMAP_BITS/8)

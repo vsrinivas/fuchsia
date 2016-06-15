@@ -76,10 +76,13 @@ STATIC_ASSERT(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_O
 /* needs to be run very early in the boot process from start.S and as each cpu is brought up */
 void x86_init_percpu(uint8_t cpu_num);
 
+/* used to set the bootstrap processor's apic_id once the APIC is initialized */
 void x86_set_local_apic_id(uint32_t apic_id);
 
+int x86_apic_id_to_cpu_num(uint32_t apic_id);
+
 // Allocate all of the necessary structures for all of the APs to run.
-status_t x86_allocate_ap_structures(uint8_t cpu_count);
+status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count);
 
 static inline struct x86_percpu *x86_get_percpu(void)
 {

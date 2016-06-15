@@ -53,7 +53,7 @@ struct __PACKED x86_bootstrap16_data {
 struct __PACKED x86_ap_bootstrap_data {
     struct x86_bootstrap16_data hdr;
 
-    // Counter for APs to use to determine CPU IDs
+    // Counter for APs to use to determine which stack to take
     uint32_t cpu_id_counter;
     // Pointer to value to use to determine when APs are done with boot
     volatile int  *cpu_waiting_counter;

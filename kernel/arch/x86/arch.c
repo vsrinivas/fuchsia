@@ -94,13 +94,25 @@ void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void* thread
 
 #if WITH_SMP
 #include <arch/x86/apic.h>
-void x86_secondary_entry(uint8_t asm_cpu_num, volatile int *aps_still_booting)
+void x86_secondary_entry(volatile int *aps_still_booting)
 {
-    x86_init_percpu(asm_cpu_num);
     // Would prefer this to be in init_percpu, but there is a dependency on a
-    // page mapping existing, and the BP calls thta before the VM subsystem is
+    // page mapping existing, and the BP calls that before the VM subsystem is
     // initialized.
     apic_local_init();
+
+    uint32_t local_apic_id = apic_local_id();
+    int cpu_num = x86_apic_id_to_cpu_num(local_apic_id);
+    if (cpu_num < 0) {
+        // If we could not find our CPU number, do not proceed further
+        arch_disable_ints();
+        while (1) {
+            x86_hlt();
+        }
+    }
+
+    DEBUG_ASSERT(cpu_num > 0);
+    x86_init_percpu((uint)cpu_num);
 
     // Signal that this CPU is initialized
     atomic_add(aps_still_booting, -1);

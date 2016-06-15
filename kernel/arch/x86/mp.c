@@ -25,17 +25,42 @@
 #include <arch/x86/mp.h>
 #include <dev/interrupt.h>
 
-struct x86_percpu bp_percpu;
+struct x86_percpu bp_percpu = {
+    .cpu_num = 0,
+    .direct = &bp_percpu,
+    /* Start with an invalid id until we know the local APIC is setup */
+    .apic_id = INVALID_APIC_ID,
+};
 static struct x86_percpu *ap_percpus;
 uint8_t x86_num_cpus = 1;
 
-status_t x86_allocate_ap_structures(uint8_t cpu_count)
+status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
 {
+    DEBUG_ASSERT(cpu_count >= 1);
     ASSERT(ap_percpus == NULL);
     ap_percpus = calloc(sizeof(*ap_percpus), cpu_count - 1);
     if (ap_percpus == NULL) {
         return ERR_NO_MEMORY;
     }
+
+    uint32_t bootstrap_ap = apic_local_id();
+
+    uint apic_idx = 0;
+    for (uint i = 0; i < cpu_count; ++i) {
+        if (apic_ids[i] == bootstrap_ap) {
+            continue;
+        }
+        DEBUG_ASSERT(apic_idx != (uint)(cpu_count - 1));
+        if (apic_idx == (uint)cpu_count - 1) {
+            /* Never found bootstrap CPU in apic id list */
+            return ERR_BAD_STATE;
+        }
+        ap_percpus[apic_idx].cpu_num = apic_idx + 1;
+        ap_percpus[apic_idx].apic_id = apic_ids[i];
+        ap_percpus[apic_idx].direct = &ap_percpus[apic_idx];
+        apic_idx++;
+    }
+
     x86_num_cpus = cpu_count;
     return NO_ERROR;
 }
@@ -48,11 +73,8 @@ void x86_init_percpu(uint8_t cpu_num)
     } else {
         percpu = &ap_percpus[cpu_num - 1];
     }
-    /* set up the percpu structure */
-    percpu->direct = percpu;
-    percpu->cpu_num = cpu_num;
-    // Start with an invalid id until we know the local APIC is setup
-    percpu->apic_id = INVALID_APIC_ID;
+    DEBUG_ASSERT(percpu->cpu_num == cpu_num);
+    DEBUG_ASSERT(percpu->direct == percpu);
 
 #if ARCH_X86_64
     /* point gs at the per cpu structure */
@@ -113,7 +135,23 @@ void x86_init_percpu(uint8_t cpu_num)
 
 void x86_set_local_apic_id(uint32_t apic_id)
 {
-  x86_get_percpu()->apic_id = apic_id;
+    struct x86_percpu *percpu = x86_get_percpu();
+    DEBUG_ASSERT(percpu->cpu_num == 0);
+    percpu->apic_id = apic_id;
+}
+
+int x86_apic_id_to_cpu_num(uint32_t apic_id)
+{
+    if (bp_percpu.apic_id == apic_id) {
+        return (int)bp_percpu.cpu_num;
+    }
+
+    for (uint i = 0; i < (uint)x86_num_cpus - 1; ++i) {
+        if (ap_percpus[i].apic_id == apic_id) {
+            return (int)ap_percpus[i].cpu_num;
+        }
+    }
+    return -1;
 }
 
 #if WITH_SMP

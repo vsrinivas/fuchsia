@@ -24,8 +24,9 @@
 
 // Initialization MSR
 #define IA32_APIC_BASE_MSR 0x01B
-#define X2APIC_ENABLE (1 << 10)
-#define XAPIC_ENABLE (1 << 11)
+#define IA32_APIC_BASE_BSP (1 << 8)
+#define IA32_APIC_BASE_X2APIC_ENABLE (1 << 10)
+#define IA32_APIC_BASE_XAPIC_ENABLE (1 << 11)
 
 #define APIC_PHYS_BASE 0xFEE00000
 
@@ -114,15 +115,18 @@ void apic_vm_init(void)
 // apic_vm_init has been called.
 void apic_local_init(void)
 {
+    DEBUG_ASSERT(arch_ints_disabled());
+
     // Enter XAPIC mode and set the base address
     uint64_t v = read_msr(IA32_APIC_BASE_MSR);
-    v |= XAPIC_ENABLE;
+    v |= IA32_APIC_BASE_XAPIC_ENABLE;
     write_msr(IA32_APIC_BASE_MSR, v);
 
-    // Register the local APIC id for this processor
-    uint32_t apic_id = apic_local_id();
-    ASSERT(apic_id != INVALID_APIC_ID);
-    x86_set_local_apic_id(apic_id);
+    // If this is the bootstrap processor, we should record our APIC ID now
+    // that we know it.
+    if (v & IA32_APIC_BASE_BSP) {
+        x86_set_local_apic_id(apic_local_id());
+    }
 
     // Specify the spurious interrupt vector and enable the local APIC
     uint32_t svr = SVR_SPURIOUS_VECTOR(X86_INT_APIC_SPURIOUS) | SVR_APIC_ENABLE;

@@ -30,8 +30,22 @@ struct bp_bootstrap_data {
     uint32_t *apic_ids;
 };
 
-void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus)
+void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus);
+
+void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 {
+    status_t status = x86_allocate_ap_structures(apic_ids, num_cpus);
+    if (status != NO_ERROR) {
+        TRACEF("Failed to allocate structures for APs");
+        return;
+    }
+
+    lk_init_secondary_cpus(num_cpus - 1);
+
+    x86_bringup_smp(apic_ids, num_cpus);
+}
+
+void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus) {
     struct x86_ap_bootstrap_data *bootstrap_data = NULL;
 
     struct bp_bootstrap_data config = {
@@ -50,13 +64,7 @@ void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus)
         goto finish;
     }
 
-    status = x86_allocate_ap_structures(config.num_apics);
-    if (status != NO_ERROR) {
-        goto cleanup_aspace;
-    }
-
-    // Initialized to 1 since the BSP is CPU 0
-    bootstrap_data->cpu_id_counter = 1;
+    bootstrap_data->cpu_id_counter = 0;
     bootstrap_data->cpu_waiting_counter = &config.aps_still_booting;
     // Zero the kstack list so if we have to bail, we can safely free the
     // resources.
@@ -73,8 +81,6 @@ void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus)
     // Memory fence to ensure all writes to the bootstrap region are
     // visible on the APs when they come up
     smp_wmb();
-
-    lk_init_secondary_cpus(num_cpus - 1);
 
     uint32_t bsp_apic_id = apic_local_id();
     for (unsigned int i = 0; i < config.num_apics; ++i) {

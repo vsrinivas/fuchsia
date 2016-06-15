@@ -200,7 +200,7 @@ void platform_init_smp(void)
         ASSERT(found_bp);
     }
 
-    x86_bringup_smp(apic_ids, num_cpus);
+    x86_init_smp(apic_ids, num_cpus);
     free(apic_ids);
 }
 #endif
