@@ -98,7 +98,8 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
 
     if (!dev->parent) {
         printf("Orphaned I2C slave.\n");
-        return ERR_BAD_STATE;
+        status = ERR_BAD_STATE;
+        goto transfer_finish_2;
     }
 
     intel_broadwell_serialio_i2c_device_t* controller =
@@ -114,14 +115,15 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
         tar_add_addr_mode_bit = TAR_ADD_WIDTH_10BIT;
     } else {
         printf("Bad address width.\n");
-        return ERR_INVALID_ARGS;
+        status = ERR_INVALID_ARGS;
+        goto transfer_finish_2;
     }
 
     mxr_mutex_lock(&controller->mutex);
 
     if (!WAIT_FOR(bus_is_idle(controller))) {
         status = ERR_TIMED_OUT;
-        goto fail;
+        goto transfer_finish_1;
     }
 
     // Set the target adress value and width.
@@ -185,23 +187,26 @@ static mx_status_t intel_broadwell_serialio_i2c_slave_transfer(
     if (!DO_UNTIL(!stop_detected(controller),
                   *REG32(&controller->regs->clr_stop_det))) {
         status = ERR_TIMED_OUT;
-        goto fail;
+        goto transfer_finish_1;
     }
 
     if (!WAIT_FOR(bus_is_idle(controller))) {
         status = ERR_TIMED_OUT;
-        goto fail;
+        goto transfer_finish_1;
     }
 
     // Read the data_cmd register to pull data out of the RX FIFO.
     if (!DO_UNTIL(rx_fifo_empty(controller),
                   *REG32(&controller->regs->data_cmd))) {
         status = ERR_TIMED_OUT;
-        goto fail;
+        goto transfer_finish_1;
     }
 
-fail:
+transfer_finish_1:
+    if (status < 0)
+        intel_broadwell_serialio_i2c_reset_controller(controller);
     mxr_mutex_unlock(&controller->mutex);
+transfer_finish_2:
     return status;
 }
 

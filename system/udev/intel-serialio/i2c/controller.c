@@ -142,8 +142,8 @@ remove_slave_finish:
     return NO_ERROR;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency(
-    mx_device_t* dev, uint32_t frequency) {
+static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency_locked(
+    mx_device_t *dev, uint32_t frequency) {
     if (frequency > I2C_MAX_FAST_SPEED_HZ)
         return ERR_INVALID_ARGS;
 
@@ -166,8 +166,6 @@ static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency(
         return ERR_OUT_OF_RANGE;
     }
 
-    mxr_mutex_lock(&device->mutex);
-
     // Disable the controller before changing the frequency.
     uint32_t orig_en = *REG32(&device->regs->i2c_en);
     RMWREG32(&device->regs->i2c_en, I2C_EN_ENABLE, 1, 0);
@@ -179,9 +177,24 @@ static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency(
     // Reenable the controller, if it was originally enabled.
     *REG32(&device->regs->i2c_en) = orig_en;
 
-    mxr_mutex_unlock(&device->mutex);
+    device->frequency = frequency;
 
     return NO_ERROR;
+}
+
+static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency(
+    mx_device_t *dev, uint32_t frequency) {
+    mx_status_t status;
+
+    intel_broadwell_serialio_i2c_device_t *device =
+        get_intel_broadwell_serialio_i2c_device(dev);
+
+    mxr_mutex_lock(&device->mutex);
+    status = intel_broadwell_serialio_i2c_set_bus_frequency_locked(
+        dev, frequency);
+    mxr_mutex_unlock(&device->mutex);
+
+    return status;
 }
 
 // Implement the device protocol for the bus device.
@@ -266,17 +279,19 @@ static mx_protocol_char_t intel_broadwell_serialio_i2c_char_proto = {
     .ioctl = &intel_broadwell_serialio_i2c_ioctl,
 };
 
-static mx_status_t intel_broadwell_serialio_i2c_configure(
-    intel_broadwell_serialio_i2c_device_t* device) {
+// The controller lock should already be held when entering this function.
+mx_status_t intel_broadwell_serialio_i2c_reset_controller(
+    intel_broadwell_serialio_i2c_device_t *device) {
     mx_status_t status = NO_ERROR;
 
-    // Run the bus at 100KHz by default.
-    status = intel_broadwell_serialio_i2c_set_bus_frequency(
-        &device->device, 100000);
+    // Reset the device. These values are reversed in the docs.
+    RMWREG32(&device->regs->resets, 0, 2, 0x0);
+    RMWREG32(&device->regs->resets, 0, 2, 0x3);
+
+    status = intel_broadwell_serialio_i2c_set_bus_frequency_locked(
+        &device->device, device->frequency);
     if (status < 0)
         return status;
-
-    mxr_mutex_lock(&device->mutex);
 
     // Disable the controller.
     RMWREG32(&device->regs->i2c_en, I2C_EN_ENABLE, 1, 0);
@@ -293,7 +308,6 @@ static mx_status_t intel_broadwell_serialio_i2c_configure(
     *REG32(&device->regs->rx_tl) = 0;
     *REG32(&device->regs->tx_tl) = 0;
 
-    mxr_mutex_unlock(&device->mutex);
     return status;
 }
 
@@ -311,6 +325,9 @@ mx_status_t intel_broadwell_serialio_bind_i2c(mx_driver_t* drv,
     if (!device)
         return ERR_NO_MEMORY;
 
+    // Run the bus at 100KHz by default.
+    device->frequency = 100000;
+
     list_initialize(&device->slave_list);
     memset(&device->mutex, 0, sizeof(device->mutex));
 
@@ -327,8 +344,9 @@ mx_status_t intel_broadwell_serialio_bind_i2c(mx_driver_t* drv,
     if (status < 0)
         goto fail;
 
-    // Configure the I2C controller.
-    status = intel_broadwell_serialio_i2c_configure(device);
+    // Configure the I2C controller. We don't need to hold the lock because
+    // nobody else can see this controller yet.
+    status = intel_broadwell_serialio_i2c_reset_controller(device);
     if (status < 0)
         goto fail;
 

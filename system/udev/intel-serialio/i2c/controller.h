@@ -145,10 +145,15 @@ typedef struct intel_broadwell_serialio_i2c_device {
     uint64_t regs_size;
     mx_handle_t regs_handle;
 
+    uint32_t frequency;
+
     struct list_node slave_list;
 
     mxr_mutex_t mutex;
 } intel_broadwell_serialio_i2c_device_t;
+
+mx_status_t intel_broadwell_serialio_i2c_reset_controller(
+    intel_broadwell_serialio_i2c_device_t *controller);
 
 #define get_intel_broadwell_serialio_i2c_device(dev) \
     containerof(dev, intel_broadwell_serialio_i2c_device_t, device)
