@@ -49,9 +49,9 @@ MAGENTA_SYSCALL_DEF(0, 0, 4, mx_time_t, current_time, void)
 MAGENTA_SYSCALL_DEF(2, 2, 5, int, debug_send_command, const void* buffer, uint32_t length)
 
 /* Logging */
-MAGENTA_SYSCALL_DEF(1, 1, 30, mx_handle_t, log_create, uint32_t flags);
-MAGENTA_SYSCALL_DEF(4, 3, 31, mx_status_t, log_write, mx_handle_t handle, uint32_t len, const void* buffer, uint32_t flags);
-MAGENTA_SYSCALL_DEF(4, 3, 32, mx_status_t, log_read, mx_handle_t handle, uint32_t len, void* buffer, uint32_t flags);
+MAGENTA_SYSCALL_DEF(1, 1, 30, mx_handle_t, log_create, uint32_t flags)
+MAGENTA_SYSCALL_DEF(4, 3, 31, mx_status_t, log_write, mx_handle_t handle, uint32_t len, const void* buffer, uint32_t flags)
+MAGENTA_SYSCALL_DEF(4, 3, 32, mx_status_t, log_read, mx_handle_t handle, uint32_t len, void* buffer, uint32_t flags)
 
 /* Generic handle operations */
 MAGENTA_SYSCALL_DEF(1, 1, 40, mx_status_t, handle_close, mx_handle_t handle)
@@ -88,9 +88,9 @@ MAGENTA_SYSCALL_DEF(1, 1, 72, mx_status_t, interrupt_event_wait, mx_handle_t han
 MAGENTA_SYSCALL_DEF(0, 0, 80, mx_handle_t, process_create, const char* name, uint32_t name_len)
 MAGENTA_SYSCALL_DEF(3, 3, 82, mx_status_t, process_start, mx_handle_t handle, mx_handle_t handle_arg, mx_vaddr_t entry)
 MAGENTA_SYSCALL_DEF(6, 7, 83, mx_status_t, process_vm_map, mx_handle_t proc_handle, mx_handle_t vmo_handle,
-                    uint64_t offset, mx_size_t len, uintptr_t *ptr, uint32_t flags);
-MAGENTA_SYSCALL_DEF(3, 3, 84, mx_status_t, process_vm_unmap, mx_handle_t proc_handle, uintptr_t address, mx_size_t len);
-MAGENTA_SYSCALL_DEF(3, 3, 85, mx_status_t, process_get_info, mx_handle_t handle, mx_process_info_t *info, mx_size_t info_len);
+                    uint64_t offset, mx_size_t len, uintptr_t *ptr, uint32_t flags)
+MAGENTA_SYSCALL_DEF(3, 3, 84, mx_status_t, process_vm_unmap, mx_handle_t proc_handle, uintptr_t address, mx_size_t len)
+MAGENTA_SYSCALL_DEF(3, 3, 85, mx_status_t, process_get_info, mx_handle_t handle, mx_process_info_t *info, mx_size_t info_len)
 
 /* Synchronization */
 MAGENTA_SYSCALL_DEF(1, 1, 90, mx_handle_t, event_create, uint32_t options)
@@ -103,10 +103,10 @@ MAGENTA_SYSCALL_DEF(5, 5, 95, mx_status_t, futex_requeue, int* wake_ptr, uint32_
 
 /* Memory management */
 MAGENTA_SYSCALL_DEF(1, 2, 100, mx_handle_t, vm_object_create, uint64_t size)
-MAGENTA_SYSCALL_DEF(4, 5, 101, mx_ssize_t, vm_object_read, mx_handle_t handle, void *data, uint64_t offset, mx_size_t len);
-MAGENTA_SYSCALL_DEF(4, 5, 102, mx_ssize_t, vm_object_write, mx_handle_t handle, const void *data, uint64_t offset, mx_size_t len);
-MAGENTA_SYSCALL_DEF(2, 4, 103, mx_status_t, vm_object_get_size, mx_handle_t handle, uint64_t *size);
-MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vm_object_set_size, mx_handle_t handle, uint64_t size);
+MAGENTA_SYSCALL_DEF(4, 5, 101, mx_ssize_t, vm_object_read, mx_handle_t handle, void *data, uint64_t offset, mx_size_t len)
+MAGENTA_SYSCALL_DEF(4, 5, 102, mx_ssize_t, vm_object_write, mx_handle_t handle, const void *data, uint64_t offset, mx_size_t len)
+MAGENTA_SYSCALL_DEF(2, 4, 103, mx_status_t, vm_object_get_size, mx_handle_t handle, uint64_t *size)
+MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vm_object_set_size, mx_handle_t handle, uint64_t size)
 
 /* temporary syscalls to access port and memory mapped devices */
 MAGENTA_SYSCALL_DEF(2, 2, 105, mx_status_t, mmap_device_io, uint32_t io_addr, uint32_t len)
@@ -119,11 +119,11 @@ MAGENTA_SYSCALL_DEF(6, 6, 171, mx_status_t, set_framebuffer, void* vaddr, uint32
 
 /* temporary pci syscalls */
 /* TODO: remove when the pci driver moves to user space */
-MAGENTA_SYSCALL_DEF(2, 2, 180, mx_handle_t, pci_get_nth_device, uint32_t index, mx_pcie_get_nth_info_t* out_info);
+MAGENTA_SYSCALL_DEF(2, 2, 180, mx_handle_t, pci_get_nth_device, uint32_t index, mx_pcie_get_nth_info_t* out_info)
 MAGENTA_SYSCALL_DEF(1, 1, 181, mx_status_t, pci_claim_device, mx_handle_t handle)
 MAGENTA_SYSCALL_DEF(2, 2, 182, mx_status_t, pci_enable_bus_master, mx_handle_t handle, bool enable)
 MAGENTA_SYSCALL_DEF(1, 1, 183, mx_status_t, pci_reset_device, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(3, 3, 184, mx_handle_t, pci_map_mmio, mx_handle_t handle, uint32_t bar_num, mx_cache_policy_t cache_policy);
+MAGENTA_SYSCALL_DEF(3, 3, 184, mx_handle_t, pci_map_mmio, mx_handle_t handle, uint32_t bar_num, mx_cache_policy_t cache_policy)
 MAGENTA_SYSCALL_DEF(5, 5, 185, mx_status_t, pci_io_write, mx_handle_t handle, uint32_t bar_num, uint32_t offset, uint32_t len, const uint32_t value)
 MAGENTA_SYSCALL_DEF(5, 5, 186, mx_status_t, pci_io_read, mx_handle_t handle, uint32_t bar_num, uint32_t offset, uint32_t len, uint32_t* out_value)
 MAGENTA_SYSCALL_DEF(2, 2, 187, mx_handle_t, pci_map_interrupt, mx_handle_t handle, int32_t which_irq)
