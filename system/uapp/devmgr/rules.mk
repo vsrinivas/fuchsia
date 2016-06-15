@@ -33,12 +33,6 @@ MODULE_SRCS := \
     $(DRIVER_SRCS) \
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/servers/vc/vc-char.c \
-    $(LOCAL_DIR)/servers/vc/vc-console.c \
-    $(LOCAL_DIR)/servers/vc/vc-device.c \
-    $(LOCAL_DIR)/servers/vc/vc-gfx.c \
-    $(LOCAL_DIR)/servers/vc/textcon.c \
-    $(LOCAL_DIR)/servers/vc/main.c \
     $(LOCAL_DIR)/devmgr.c \
     $(LOCAL_DIR)/remote.c \
     $(LOCAL_DIR)/dmctl.c \

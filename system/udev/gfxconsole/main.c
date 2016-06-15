@@ -31,8 +31,6 @@
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
 
-#include "../../vfs.h"
-
 #define VCDEBUG 1
 
 #include "vc.h"

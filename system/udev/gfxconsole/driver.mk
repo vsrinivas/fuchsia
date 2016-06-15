@@ -12,26 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-executable("devmgr") {
-  sources = [
-    "api.c",
-    "device_internal.h",
-    "devmgr.c",
-    "devmgr.h",
-    "dmctl.c",
-    "main.c",
-    "mxio.c",
-    "remote.c",
-    "vfs-boot.c",
-    "vfs-device.c",
-    "vfs-memory.c",
-    "vfs.c",
-    "vfs.h",
-  ]
-  deps = [
-    "//system/udev",
-    "//system/ulib/ddk",
-    "//system/ulib/mxio",
-    "//third_party/ulib/musl",
-  ]
-}
+LOCAL_DIR := $(GET_LOCAL_DIR)
+
+DRIVER_SRCS += \
+    $(LOCAL_DIR)/vc-char.c \
+    $(LOCAL_DIR)/vc-console.c \
+    $(LOCAL_DIR)/vc-device.c \
+    $(LOCAL_DIR)/vc-gfx.c \
+    $(LOCAL_DIR)/textcon.c \
+    $(LOCAL_DIR)/main.c \
+
