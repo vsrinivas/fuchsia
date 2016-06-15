@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source_set("i8042_keyboard") {
+source_set("i8042-keyboard") {
   sources = [
-    "i8042_keyboard.c",
+    "i8042-keyboard.c",
   ]
   deps = [
     "//system/ulib/ddk",

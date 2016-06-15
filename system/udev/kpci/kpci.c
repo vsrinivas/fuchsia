@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "kpci_priv.h"
+#include "kpci-private.h"
 
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
 

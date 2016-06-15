@@ -14,7 +14,7 @@
 
 source_set("bochs_vbe") {
   sources = [
-    "bochs_vbe.c",
+    "bochs-vbe.c",
   ]
   deps = [
     "//system/ulib/ddk",

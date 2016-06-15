@@ -15,4 +15,4 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/intel_i915.c
+    $(LOCAL_DIR)/intel-i915.c

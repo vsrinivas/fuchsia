@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source_set("intel_i915") {
+source_set("intel-i915") {
   sources = [
-    "intel_i915.c",
+    "intel-i915.c",
   ]
   deps = [
     "//system/ulib/ddk",

@@ -16,7 +16,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/char.h>
 #include <ddk/protocol/i2c.h>
-#include <intel_broadwell_serialio/reg.h>
+#include <intel-serialio/reg.h>
 #include <magenta/types.h>
 #include <mxio/util.h>
 #include <mxu/list.h>

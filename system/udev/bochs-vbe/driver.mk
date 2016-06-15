@@ -15,4 +15,4 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/bochs_vbe.c
+    $(LOCAL_DIR)/bochs-vbe.c

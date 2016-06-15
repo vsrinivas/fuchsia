@@ -15,9 +15,9 @@
 source_set("usb_ethernet") {
   sources = [
     "asix.h",
-    "ethernet_char.c",
-    "ethernet_test.c",
-    "usb_ethernet.c",
+    "ethernet-char.c",
+    "ethernet-test.c",
+    "usb-ethernet.c",
   ]
   deps = [
     "//system/ulib/ddk",

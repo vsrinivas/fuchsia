@@ -15,4 +15,4 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/intel_rtc.c
+    $(LOCAL_DIR)/intel-rtc.c

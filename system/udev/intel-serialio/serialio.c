@@ -23,7 +23,7 @@
 
 #include <stdio.h>
 
-#include <intel_broadwell_serialio/serialio.h>
+#include <intel-serialio/serialio.h>
 
 static mx_status_t intel_broadwell_serialio_probe(mx_driver_t* drv,
                                                   mx_device_t* dev) {

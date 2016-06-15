@@ -17,7 +17,7 @@
 #include <assert.h>
 #include <magenta/syscalls.h>
 
-#include "kpci_priv.h"
+#include "kpci-private.h"
 
 static mx_status_t pci_claim_device(mx_device_t* dev) {
     kpci_device_t* device = get_kpci_device(dev);

@@ -17,7 +17,7 @@
 
 #include <magenta/types.h>
 
-#include <intel_broadwell_serialio/serialio.h>
+#include <intel-serialio/serialio.h>
 
 mx_status_t intel_broadwell_serialio_bind_dma(mx_driver_t* drv,
                                               mx_device_t* dev) {
