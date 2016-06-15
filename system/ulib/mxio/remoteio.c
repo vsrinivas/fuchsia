@@ -90,14 +90,13 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
     xprintf("handle_rio: op=%s arg=%d len=%u hsz=%d\n",
             opname(msg.op), msg.arg, msg.datalen, msg.hcount);
 
-    if ((msg.arg = cb(&msg, cookie)) < 0) {
-        msg.datalen = 0;
-    } else if (msg.datalen > MXIO_CHUNK_SIZE) {
-        msg.datalen = 0;
-        msg.arg = ERR_IO;
-    } else if (msg.hcount > MXIO_MAX_HANDLES) {
+    msg.arg = cb(&msg, cookie);
+    if ((msg.arg < 0) ||
+        (msg.datalen > MXIO_CHUNK_SIZE) ||
+        (msg.hcount > MXIO_MAX_HANDLES)) {
         discard_handles(msg.handle, msg.hcount);
         msg.datalen = 0;
+        msg.hcount = 0;
         msg.arg = ERR_IO;
     }
 
