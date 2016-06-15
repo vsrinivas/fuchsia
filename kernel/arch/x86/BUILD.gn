@@ -30,12 +30,13 @@ module("x86") {
   # variable.
   defines = kernel_defines
   sources = [
-    "64/ap_start.S",
     "64/asm.S",
+    "64/bootstrap16.c",
     "64/exceptions.S",
     "64/ops.S",
     "64/smp.c",
     "64/start.S",
+    "64/start16.S",
     "64/syscall.S",
     "64/user_copy.S",
     "64/uspace_entry.S",
