@@ -12,13 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_intel-serialio_config") {
-  visibility = [ ":*" ]
-  include_dirs = [ "include" ]
-}
-
 source_set("intel-serialio") {
-  public_configs = [ ":_intel-serialio_config" ]
+  include_dirs = [ "intel-serialio-include" ]
   public = [
     "include/intel-serialio/reg.h",
     "include/intel-serialio/serialio.h",
