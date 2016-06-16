@@ -14,11 +14,11 @@
 
 all: bootserver loglistener
 
-bootserver: bootserver.c
-	gcc -Wall -o bootserver bootserver.c
+bootserver: ../system/tools/bootserver.c
+	gcc -Wall -o bootserver ../system/tools/bootserver.c
 
-loglistener: loglistener.c
-	gcc -Wall -o loglistener loglistener.c
+loglistener: ../system/tools/loglistener.c
+	gcc -Wall -o loglistener ../system/tools/loglistener.c
 
 clean:
 	rm -f bootserver loglistener

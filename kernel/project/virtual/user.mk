@@ -37,7 +37,7 @@ EXTRA_BUILDDEPS += $(USER_BOOTFS)
 
 MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
 
-$(MKBOOTFS): tools/mkbootfs.c
+$(MKBOOTFS): system/tools/mkbootfs.c
 	@echo compiling $@
 	@$(MKDIR)
 	cc -Wall -o $@ $<
