@@ -37,6 +37,25 @@ config("musl_config") {
     defines += [ "ARCH_X86_64" ]
   }
 
+  cflags = []
+  asmflags = []
+  if (target_cpu == "arm") {
+    cflags += [ "-mcpu=cortex-a15" ]
+    if (is_clang) {
+      cflags += [ "--target=arm-elf" ]
+    }
+  } else if (target_cpu == "arm64") {
+    cflags += [ "-mcpu=cortex-a53" ]
+    if (is_clang) {
+      cflags += [ "--target=aarch64-elf" ]
+    }
+  } else if (target_cpu == "x64") {
+    if (is_clang) {
+      cflags += [ "--target=x86_64-elf" ]
+    }
+  }
+  asmflags += cflags
+
   include_dirs = []
 
   # Architecture specific includes, these need to come before the general

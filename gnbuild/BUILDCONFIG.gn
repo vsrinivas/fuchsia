@@ -27,6 +27,9 @@ declare_args() {
   # Set to true when compiling with the Clang compiler.
   is_clang = false
 
+  # Path to compiler runtime library
+  rtlib = ""
+
   # This should not be set as a build argument.
   target_toolchain = ""
 

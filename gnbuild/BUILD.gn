@@ -7,14 +7,21 @@
 import("//gnbuild/config.gni")
 
 config("compiler_defaults") {
-  cflags = [
+  asmflags = []
+  cflags = []
+  cflags_c = []
+  cflags_cc = []
+  ldflags = []
+  defines = []
+
+  cflags += [
     "-O2",
     "-finline",
     "-ffunction-sections",
     "-fdata-sections",
   ]
-  cflags_c = [ "-std=c11" ]
-  cflags_cc = [
+  cflags_c += [ "-std=c11" ]
+  cflags_cc += [
     "-std=c++11",
     "-fno-exceptions",
     "-fno-asynchronous-unwind-tables",
@@ -23,7 +30,7 @@ config("compiler_defaults") {
   ]
 
   if (target_cpu == "x64") {
-    defines = [
+    defines += [
       "ARCH_X86=1",
       "ARCH_X86_64=1",
       "ARCH_X86_32=0",
@@ -54,13 +61,10 @@ config("compiler_defaults") {
       "-fno-stack-protector",
     ]
     if (is_clang) {
-      cflags += [
-        "-target",
-        "x86_64-elf",
-      ]
+      cflags += [ "--target=x86_64-elf" ]
     }
   } else if (target_cpu == "arm") {
-    defines = [
+    defines += [
       "__thumb__",
       "ARCH_ARM=1",
       "ARM_CPU_CORTEX_A15=1",
@@ -87,27 +91,17 @@ config("compiler_defaults") {
       "TARGET=\"QEMU_VIRT\"",
     ]
     cflags += [
-      "-mthumb-interwork",
       "-mcpu=cortex-a15",
       "-mfpu=vfpv3",
-      "-mfloat-abi=softfp",
-      "-mthumb",
-    ]
-    asmflags = [
-      "-mthumb-interwork",
-      "-mcpu=cortex-a15",
-      "-mfpu=vfpv3",
-      "-mfloat-abi=softfp",
       "-mthumb",
     ]
     if (is_clang) {
-      cflags += [
-        "-target",
-        "arm-elf",
-      ]
+      cflags += [ "--target=arm-elf" ]
+    } else {
+      cflags += [ "-mthumb-interwork" ]
     }
   } else if (target_cpu == "arm64") {
-    defines = [
+    defines += [
       "ARM64_CPU_CORTEX_A53=1",
       "ARCH_ARM64=1",
       "ARM_ISA_ARMV8=1",
@@ -126,19 +120,24 @@ config("compiler_defaults") {
       "TARGET_QEMU_VIRT=1",
       "TARGET=\"QEMU_VIRT\"",
     ]
+    cflags += [ "-mcpu=cortex-a53" ]
     if (is_clang) {
-      cflags += [
-        "-target",
-        "aarch64-elf",
-      ]
+      cflags += [ "--target=aarch64-elf" ]
     }
   }
+
+  asmflags += cflags
+  asmflags += cflags_c
 }
 
 config("no_floats") {
+  asmflags = []
+  cflags = []
+
   defines = [ "WITH_NO_FP=1" ]
+
   if (target_cpu == "x64") {
-    cflags = [
+    cflags += [
       "-msoft-float",
       "-mno-mmx",
       "-mno-sse",
@@ -153,18 +152,30 @@ config("no_floats") {
         "-mno-fp-ret-in-387",
       ]
     }
+  } else if (target_cpu == "arm") {
+    cflags += [
+      "-msoft-float",
+      "-mfloat-abi=softfp",
+    ]
+  } else if (target_cpu == "arm64") {
+    cflags = [ "-mgeneral-regs-only" ]
   }
+
+  asmflags += cflags
 }
 
 config("kernel_defaults") {
+  asmflags = []
+  cflags = []
+
   configs = [ ":no_floats" ]
   include_dirs = [ "//kernel/include" ]
   defines = [
     "LK=1",
     "_KERNEL",
   ]
-  cflags = [ "-ffreestanding" ]
-  asmflags = [ "-DASSEMBLY" ]
+  cflags += [ "-ffreestanding" ]
+  asmflags += [ "-DASSEMBLY" ]
 
   if (is_debug) {
     defines += [ "LK_DEBUGLEVEL=${debug_level}" ]
@@ -243,6 +254,8 @@ config("kernel_defaults") {
     "-Wl,-T",
     rebase_path(linker_script, root_out_dir),
   ]
+
+  asmflags += cflags
 }
 
 # TODO(phosek): this should be removed once our toolchain includes libc
@@ -251,16 +264,23 @@ config("libc") {
 }
 
 config("user_defaults") {
+  asmflags = []
+  cflags = []
+
   defines = [
     "_XOPEN_SOURCE=700",
     "_BSD_SOURCE",
   ]
 
   if (is_debug) {
-    cflags = [ "-g" ]
+    cflags += [ "-g" ]
     if (target_cpu == "x64") {
       cflags += [ "-gdwarf-2" ]
     }
+  }
+
+  if (target_cpu == "arm") {
+    cflags += [ "-mfloat-abi=soft" ]
   }
 
   if (target_cpu == "x64") {
@@ -274,6 +294,8 @@ config("user_defaults") {
     "-Wl,-T",
     rebase_path(linker_script, root_out_dir),
   ]
+
+  asmflags += cflags
 }
 
 config("executable_ldconfig") {
@@ -284,6 +306,8 @@ config("executable_ldconfig") {
   ]
   if (!is_clang) {
     libs = [ exec_script("libgcc_path.sh", [ toolprefix ], "trim string") ]
+  } else if (rtlib != "") {
+    libs = [ rtlib ]
   }
 }
 
