@@ -25,8 +25,7 @@
 
 #include <intel-serialio/serialio.h>
 
-static mx_status_t intel_broadwell_serialio_probe(mx_driver_t* drv,
-                                                  mx_device_t* dev) {
+static mx_status_t intel_serialio_probe(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
@@ -56,8 +55,7 @@ static mx_status_t intel_broadwell_serialio_probe(mx_driver_t* drv,
     return res;
 }
 
-static mx_status_t intel_broadwell_serialio_bind(mx_driver_t* drv,
-                                                 mx_device_t* dev) {
+static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
@@ -71,28 +69,28 @@ static mx_status_t intel_broadwell_serialio_bind(mx_driver_t* drv,
     mx_status_t res;
     switch (pci_config->device_id) {
     case INTEL_BROADWELL_SERIALIO_DMA_DID:
-        res = intel_broadwell_serialio_bind_dma(drv, dev);
+        res = intel_serialio_bind_dma(drv, dev);
         break;
     case INTEL_BROADWELL_SERIALIO_I2C0_DID:
-        res = intel_broadwell_serialio_bind_i2c(drv, dev);
+        res = intel_serialio_bind_i2c(drv, dev);
         break;
     case INTEL_BROADWELL_SERIALIO_I2C1_DID:
-        res = intel_broadwell_serialio_bind_i2c(drv, dev);
+        res = intel_serialio_bind_i2c(drv, dev);
         break;
     case INTEL_BROADWELL_SERIALIO_SDIO_DID:
-        res = intel_broadwell_serialio_bind_sdio(drv, dev);
+        res = intel_serialio_bind_sdio(drv, dev);
         break;
     case INTEL_BROADWELL_SERIALIO_SPI0_DID:
-        res = intel_broadwell_serialio_bind_spi(drv, dev);
+        res = intel_serialio_bind_spi(drv, dev);
         break;
     case INTEL_BROADWELL_SERIALIO_SPI1_DID:
-        res = intel_broadwell_serialio_bind_spi(drv, dev);
+        res = intel_serialio_bind_spi(drv, dev);
         break;
     case INTEL_BROADWELL_SERIALIO_UART0_DID:
-        res = intel_broadwell_serialio_bind_uart(drv, dev);
+        res = intel_serialio_bind_uart(drv, dev);
         break;
     case INTEL_BROADWELL_SERIALIO_UART1_DID:
-        res = intel_broadwell_serialio_bind_uart(drv, dev);
+        res = intel_serialio_bind_uart(drv, dev);
         break;
     default:
         res = ERR_NOT_SUPPORTED;
@@ -107,11 +105,11 @@ static mx_driver_binding_t binding = {
     .protocol_id = MX_PROTOCOL_PCI,
 };
 
-mx_driver_t _intel_broadwell_serialio BUILTIN_DRIVER = {
-    .name = "intel_broadwell_serialio",
+mx_driver_t _intel_serialio BUILTIN_DRIVER = {
+    .name = "intel_serialio",
     .ops = {
-        .probe = intel_broadwell_serialio_probe,
-        .bind = intel_broadwell_serialio_bind,
+        .probe = intel_serialio_probe,
+        .bind = intel_serialio_bind,
     },
     .binding = &binding,
     .binding_count = 1,

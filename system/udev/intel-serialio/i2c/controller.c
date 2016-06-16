@@ -38,13 +38,13 @@ static uint32_t chip_addr_mask(int width) {
     return ((1 << width) - 1);
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_find_slave(
-    intel_broadwell_serialio_i2c_slave_device_t** slave,
-    intel_broadwell_serialio_i2c_device_t* device, uint16_t address) {
+static mx_status_t intel_serialio_i2c_find_slave(
+    intel_serialio_i2c_slave_device_t** slave,
+    intel_serialio_i2c_device_t* device, uint16_t address) {
     assert(slave);
 
     list_for_every_entry (&device->slave_list, *slave,
-                          intel_broadwell_serialio_i2c_slave_device_t,
+                          intel_serialio_i2c_slave_device_t,
                           slave_list_node) {
         if ((*slave)->chip_address == address)
             return NO_ERROR;
@@ -53,7 +53,7 @@ static mx_status_t intel_broadwell_serialio_i2c_find_slave(
     return ERR_NOT_FOUND;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_add_slave(
+static mx_status_t intel_serialio_i2c_add_slave(
     mx_device_t* dev, uint8_t width, uint16_t address) {
     mx_status_t status;
 
@@ -62,15 +62,14 @@ static mx_status_t intel_broadwell_serialio_i2c_add_slave(
         return ERR_INVALID_ARGS;
     }
 
-    intel_broadwell_serialio_i2c_device_t* device =
-        get_intel_broadwell_serialio_i2c_device(dev);
+    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
 
-    intel_broadwell_serialio_i2c_slave_device_t* slave;
+    intel_serialio_i2c_slave_device_t* slave;
 
     mxr_mutex_lock(&device->mutex);
 
     // Make sure a slave with the given address doesn't already exist.
-    status = intel_broadwell_serialio_i2c_find_slave(&slave, device, address);
+    status = intel_serialio_i2c_find_slave(&slave, device, address);
     if (status == NO_ERROR) {
         status = ERR_ALREADY_EXISTS;
         goto fail2;
@@ -84,8 +83,7 @@ static mx_status_t intel_broadwell_serialio_i2c_add_slave(
         goto fail1;
     }
 
-    status = intel_broadwell_serialio_i2c_slave_device_init(
-        dev, slave, width, address);
+    status = intel_serialio_i2c_slave_device_init(dev, slave, width, address);
     if (status < 0)
         goto fail1;
 
@@ -104,7 +102,7 @@ fail2:
     return status;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_remove_slave(
+static mx_status_t intel_serialio_i2c_remove_slave(
     mx_device_t* dev, uint8_t width, uint16_t address) {
     mx_status_t status;
 
@@ -113,15 +111,14 @@ static mx_status_t intel_broadwell_serialio_i2c_remove_slave(
         return ERR_INVALID_ARGS;
     }
 
-    intel_broadwell_serialio_i2c_device_t* device =
-        get_intel_broadwell_serialio_i2c_device(dev);
+    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
 
-    intel_broadwell_serialio_i2c_slave_device_t* slave;
+    intel_serialio_i2c_slave_device_t* slave;
 
     mxr_mutex_lock(&device->mutex);
 
     // Find the slave we're trying to remove.
-    status = intel_broadwell_serialio_i2c_find_slave(&slave, device, address);
+    status = intel_serialio_i2c_find_slave(&slave, device, address);
     if (status < 0)
         goto remove_slave_finish;
     if (slave->chip_address_width != width) {
@@ -142,13 +139,12 @@ remove_slave_finish:
     return NO_ERROR;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency_locked(
+static mx_status_t intel_serialio_i2c_set_bus_frequency_locked(
     mx_device_t *dev, uint32_t frequency) {
     if (frequency > I2C_MAX_FAST_SPEED_HZ)
         return ERR_INVALID_ARGS;
 
-    intel_broadwell_serialio_i2c_device_t* device =
-        get_intel_broadwell_serialio_i2c_device(dev);
+    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
 
     // Assume the base clock_frequency is 100 MHz, as alluded to in the docs.
     uint32_t clock_frequency = 100 * 1000 * 1000;
@@ -182,16 +178,14 @@ static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency_locked(
     return NO_ERROR;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency(
-    mx_device_t *dev, uint32_t frequency) {
+static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t *dev,
+                                                        uint32_t frequency) {
     mx_status_t status;
 
-    intel_broadwell_serialio_i2c_device_t *device =
-        get_intel_broadwell_serialio_i2c_device(dev);
+    intel_serialio_i2c_device_t *device = get_intel_serialio_i2c_device(dev);
 
     mxr_mutex_lock(&device->mutex);
-    status = intel_broadwell_serialio_i2c_set_bus_frequency_locked(
-        dev, frequency);
+    status = intel_serialio_i2c_set_bus_frequency_locked(dev, frequency);
     mxr_mutex_unlock(&device->mutex);
 
     return status;
@@ -199,39 +193,38 @@ static mx_status_t intel_broadwell_serialio_i2c_set_bus_frequency(
 
 // Implement the device protocol for the bus device.
 
-static mx_status_t intel_broadwell_serialio_i2c_open(mx_device_t* dev,
-                                                     uint32_t flags) {
+static mx_status_t intel_serialio_i2c_open(mx_device_t* dev, uint32_t flags) {
     return NO_ERROR;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_close(mx_device_t* dev) {
+static mx_status_t intel_serialio_i2c_close(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_status_t intel_broadwell_serialio_i2c_release(mx_device_t* dev) {
+static mx_status_t intel_serialio_i2c_release(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_protocol_device_t intel_broadwell_serialio_i2c_device_proto = {
+static mx_protocol_device_t intel_serialio_i2c_device_proto = {
     .get_protocol = &device_base_get_protocol,
-    .open = &intel_broadwell_serialio_i2c_open,
-    .close = &intel_broadwell_serialio_i2c_close,
-    .release = &intel_broadwell_serialio_i2c_release,
+    .open = &intel_serialio_i2c_open,
+    .close = &intel_serialio_i2c_close,
+    .release = &intel_serialio_i2c_release,
 };
 
 // Implement the char protocol for the bus device.
 
-static ssize_t intel_broadwell_serialio_i2c_read(
+static ssize_t intel_serialio_i2c_read(
     mx_device_t* dev, void* buf, size_t count) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t intel_broadwell_serialio_i2c_write(
+static ssize_t intel_serialio_i2c_write(
     mx_device_t* dev, const void* buf, size_t count) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t intel_broadwell_serialio_i2c_ioctl(
+static ssize_t intel_serialio_i2c_ioctl(
     mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
     void* out_buf, size_t out_len) {
     int ret;
@@ -241,8 +234,8 @@ static ssize_t intel_broadwell_serialio_i2c_ioctl(
         if (in_len < sizeof(*args))
             return ERR_INVALID_ARGS;
 
-        ret = intel_broadwell_serialio_i2c_add_slave(
-            dev, args->chip_address_width, args->chip_address);
+        ret = intel_serialio_i2c_add_slave(dev, args->chip_address_width,
+                                           args->chip_address);
         break;
     }
     case I2C_BUS_REMOVE_SLAVE: {
@@ -250,8 +243,8 @@ static ssize_t intel_broadwell_serialio_i2c_ioctl(
         if (in_len < sizeof(*args))
             return ERR_INVALID_ARGS;
 
-        ret = intel_broadwell_serialio_i2c_remove_slave(
-            dev, args->chip_address_width, args->chip_address);
+        ret = intel_serialio_i2c_remove_slave(dev, args->chip_address_width,
+                                              args->chip_address);
         break;
     }
     case I2C_BUS_SET_FREQUENCY: {
@@ -259,8 +252,7 @@ static ssize_t intel_broadwell_serialio_i2c_ioctl(
         if (in_len < sizeof(*args))
             return ERR_INVALID_ARGS;
 
-        ret = intel_broadwell_serialio_i2c_set_bus_frequency(
-            dev, args->frequency);
+        ret = intel_serialio_i2c_set_bus_frequency(dev, args->frequency);
         break;
     }
     default:
@@ -273,23 +265,23 @@ static ssize_t intel_broadwell_serialio_i2c_ioctl(
         return ret;
 }
 
-static mx_protocol_char_t intel_broadwell_serialio_i2c_char_proto = {
-    .read = &intel_broadwell_serialio_i2c_read,
-    .write = &intel_broadwell_serialio_i2c_write,
-    .ioctl = &intel_broadwell_serialio_i2c_ioctl,
+static mx_protocol_char_t intel_serialio_i2c_char_proto = {
+    .read = &intel_serialio_i2c_read,
+    .write = &intel_serialio_i2c_write,
+    .ioctl = &intel_serialio_i2c_ioctl,
 };
 
 // The controller lock should already be held when entering this function.
-mx_status_t intel_broadwell_serialio_i2c_reset_controller(
-    intel_broadwell_serialio_i2c_device_t *device) {
+mx_status_t intel_serialio_i2c_reset_controller(
+    intel_serialio_i2c_device_t *device) {
     mx_status_t status = NO_ERROR;
 
     // Reset the device. These values are reversed in the docs.
     RMWREG32(&device->regs->resets, 0, 2, 0x0);
     RMWREG32(&device->regs->resets, 0, 2, 0x3);
 
-    status = intel_broadwell_serialio_i2c_set_bus_frequency_locked(
-        &device->device, device->frequency);
+    status = intel_serialio_i2c_set_bus_frequency_locked(&device->device,
+                                                         device->frequency);
     if (status < 0)
         return status;
 
@@ -311,8 +303,7 @@ mx_status_t intel_broadwell_serialio_i2c_reset_controller(
     return status;
 }
 
-mx_status_t intel_broadwell_serialio_bind_i2c(mx_driver_t* drv,
-                                              mx_device_t* dev) {
+mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
@@ -321,7 +312,7 @@ mx_status_t intel_broadwell_serialio_bind_i2c(mx_driver_t* drv,
     if (status < 0)
         return status;
 
-    intel_broadwell_serialio_i2c_device_t* device = malloc(sizeof(*device));
+    intel_serialio_i2c_device_t* device = malloc(sizeof(*device));
     if (!device)
         return ERR_NO_MEMORY;
 
@@ -339,26 +330,26 @@ mx_status_t intel_broadwell_serialio_bind_i2c(mx_driver_t* drv,
         goto fail;
     }
 
-    status = device_init(&device->device, drv, "intel_broadwell_serialio_i2c",
-                         &intel_broadwell_serialio_i2c_device_proto);
+    status = device_init(&device->device, drv, "intel_serialio_i2c",
+                         &intel_serialio_i2c_device_proto);
     if (status < 0)
         goto fail;
 
     // Configure the I2C controller. We don't need to hold the lock because
     // nobody else can see this controller yet.
-    status = intel_broadwell_serialio_i2c_reset_controller(device);
+    status = intel_serialio_i2c_reset_controller(device);
     if (status < 0)
         goto fail;
 
     device->device.protocol_id = MX_PROTOCOL_CHAR;
-    device->device.protocol_ops = &intel_broadwell_serialio_i2c_char_proto;
+    device->device.protocol_ops = &intel_serialio_i2c_char_proto;
 
     status = device_add(&device->device, dev);
     if (status < 0)
         goto fail;
 
     xprintf(
-        "initialized intel broadwell serialio i2c driver, "
+        "initialized intel serialio i2c driver, "
         "reg=%#x regsize=%#x\n",
         device->regs, device->regs_size);
 

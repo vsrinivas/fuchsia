@@ -19,7 +19,7 @@
 #include <runtime/mutex.h>
 #include <stdint.h>
 
-typedef struct __attribute__((packed)) intel_broadwell_serialio_i2c_regs {
+typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
     uint32_t ctl;
     uint32_t tar_add;
     uint32_t _reserved0[2];
@@ -67,7 +67,7 @@ typedef struct __attribute__((packed)) intel_broadwell_serialio_i2c_regs {
     uint32_t _reserved6[1];
     uint32_t sw_ltr_value;
     uint32_t auto_ltr_value;
-} intel_broadwell_serialio_i2c_regs;
+} intel_serialio_i2c_regs;
 
 enum {
     I2C_MAX_FAST_SPEED_HZ = 400000,
@@ -138,10 +138,10 @@ enum {
     DATA_CMD_DAT = 0,
 };
 
-typedef struct intel_broadwell_serialio_i2c_device {
+typedef struct intel_serialio_i2c_device {
     mx_device_t device;
 
-    intel_broadwell_serialio_i2c_regs* regs;
+    intel_serialio_i2c_regs* regs;
     uint64_t regs_size;
     mx_handle_t regs_handle;
 
@@ -150,10 +150,10 @@ typedef struct intel_broadwell_serialio_i2c_device {
     struct list_node slave_list;
 
     mxr_mutex_t mutex;
-} intel_broadwell_serialio_i2c_device_t;
+} intel_serialio_i2c_device_t;
 
-mx_status_t intel_broadwell_serialio_i2c_reset_controller(
-    intel_broadwell_serialio_i2c_device_t *controller);
+mx_status_t intel_serialio_i2c_reset_controller(
+    intel_serialio_i2c_device_t *controller);
 
-#define get_intel_broadwell_serialio_i2c_device(dev) \
-    containerof(dev, intel_broadwell_serialio_i2c_device_t, device)
+#define get_intel_serialio_i2c_device(dev) \
+    containerof(dev, intel_serialio_i2c_device_t, device)

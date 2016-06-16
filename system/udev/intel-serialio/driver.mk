@@ -39,4 +39,4 @@ DRIVER_SRCS += \
     $(LOCAL_DIR)/spi/spi.c \
     $(LOCAL_DIR)/uart/uart.c
 
-MODULE_COMPILEFLAGS += -I $(LOCAL_DIR)/include/
+MODULE_COMPILEFLAGS += -I $(LOCAL_DIR)/intel-serialio-include/
