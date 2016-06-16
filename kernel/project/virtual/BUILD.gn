@@ -61,7 +61,7 @@ template("mkbootfs") {
   }
 
   compiled_action(target_name) {
-    tool = "//tools:mkbootfs"
+    tool = "//system/tools:mkbootfs"
 
     inputs = [
       manifest_file,

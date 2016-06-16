@@ -65,7 +65,7 @@ copy("tools") {
   deps = []
   sources = []
   foreach(tool, tools) {
-    tool_label = "//tools:$tool($host_toolchain)"
+    tool_label = "//system/tools:$tool($host_toolchain)"
     tool_out = get_label_info(tool_label, "root_out_dir")
     deps += [ tool_label ]
     sources += [ "$tool_out/$tool" ]
