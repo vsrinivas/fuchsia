@@ -1148,6 +1148,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/third_party/math/tan.c \
     $(LOCAL_DIR)/third_party/math/tanf.c \
     $(LOCAL_DIR)/third_party/math/tgammal.c \
+    $(LOCAL_DIR)/third_party/smoothsort/qsort.c \
 
 # Thef following are not built until we have mxio and libc standing in
 # proper relation to each other.

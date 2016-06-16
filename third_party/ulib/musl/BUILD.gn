@@ -122,6 +122,7 @@ static_library("musl") {
     "third_party/arch",
     "third_party/complex",
     "third_party/math",
+    "third_party/smoothsort",
     "//system/ulib/magenta",
     "//system/ulib/runtime",
   ]

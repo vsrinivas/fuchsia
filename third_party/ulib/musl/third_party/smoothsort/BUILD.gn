@@ -1,0 +1,9 @@
+source_set("smoothsort") {
+  configs = []
+
+  # Use relative path to make the build relocatable
+  configs += [ "../..:musl_config" ]
+  sources = [
+    "qsort.c",
+  ]
+}

@@ -89,6 +89,10 @@ Copyright © 2008 Stephen L. Moshier
 and labelled as such in comments in the individual source files. All
 have been licensed under extremely permissive terms.
 
+The smoothsort implementation (third_party/smoothsort/qsort.c) is
+Copyright © 2011 Valentin Ochs and is licensed under an MIT-style
+license.
+
 The x86_64 files in third_party/arch were written by Nicholas J. Kain
 and is licensed under the standard MIT terms.
 
