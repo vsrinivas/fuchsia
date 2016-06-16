@@ -1,6 +1,6 @@
-source_set("usb_keyboard") {
+source_set("usb-keyboard") {
   sources = [
-    "usb_keyboard.c",
+    "usb-keyboard.c",
   ]
   deps = [
     "//system/ulib/ddk",

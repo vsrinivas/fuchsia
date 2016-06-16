@@ -38,7 +38,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "xhci_private.h"
+#include "xhci-private.h"
 
 #define EPO_BUFFER_SIZE 2048
 

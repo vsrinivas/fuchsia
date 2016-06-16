@@ -1,11 +1,11 @@
-source_set("usb_bus") {
+source_set("usb-bus") {
   sources = [
-    "generic_hub.c",
-    "usb_bus.c",
-    "usb_device.c",
-    "usb_device.h",
-    "usb_hub.c",
-    "usb_private.h",
+    "generic-hub.c",
+    "usb-bus.c",
+    "usb-device.c",
+    "usb-device.h",
+    "usb-hub.c",
+    "usb-private.h",
   ]
   deps = [
     "//system/ulib/ddk",

@@ -30,7 +30,7 @@
 //#define XHCI_SPEW_DEBUG
 
 #include <unistd.h>
-#include "xhci_private.h"
+#include "xhci-private.h"
 
 void xhci_reset_event_ring(event_ring_t* const er) {
     int i;

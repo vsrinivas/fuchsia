@@ -33,8 +33,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "generic_hub.h"
-#include "usb_private.h"
+#include "generic-hub.h"
+#include "usb-private.h"
 
 void generic_hub_destroy(generic_hub_t* hub) {
     /* First, detach all devices behind this hub */

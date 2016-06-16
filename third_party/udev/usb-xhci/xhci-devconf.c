@@ -30,7 +30,7 @@
 //#define XHCI_DEBUG
 //#define XHCI_SPEW_DEBUG
 
-#include "xhci_private.h"
+#include "xhci-private.h"
 
 #include <stdlib.h>
 #include <string.h>

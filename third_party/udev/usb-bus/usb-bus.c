@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "generic_hub.h"
-#include "usb_device.h"
-#include "usb_private.h"
+#include "generic-hub.h"
+#include "usb-device.h"
+#include "usb-private.h"
 
 typedef struct usb_bus {
     mx_device_t device;

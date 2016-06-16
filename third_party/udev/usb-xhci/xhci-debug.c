@@ -28,7 +28,7 @@
  */
 
 #include <inttypes.h>
-#include "xhci_private.h"
+#include "xhci-private.h"
 
 #ifdef XHCI_DUMPS
 

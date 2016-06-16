@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xhci_private.h"
+#include "xhci-private.h"
 
 /**
  * Driver for USB XHCI controller.

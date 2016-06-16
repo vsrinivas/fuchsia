@@ -39,9 +39,9 @@
 #include <runtime/mutex.h>
 #include <mxu/list.h>
 
-#include "generic_hub.h"
-#include "usb_private.h"
-#include "usb_device.h"
+#include "generic-hub.h"
+#include "usb-private.h"
+#include "usb-device.h"
 
 #include <assert.h>
 

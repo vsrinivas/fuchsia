@@ -34,8 +34,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "usb_private.h"
-#include "usb_device.h"
+#include "usb-private.h"
+#include "usb-device.h"
 
 #define NEXT_DESCRIPTOR(header) ((descriptor_header_t*)((void*)header + header->bLength))
 

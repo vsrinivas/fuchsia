@@ -28,7 +28,7 @@
  */
 
 #include <stdlib.h>
-#include "xhci_private.h"
+#include "xhci-private.h"
 
 trb_t*
 xhci_next_command_trb(xhci_t* const xhci) {

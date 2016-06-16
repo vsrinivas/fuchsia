@@ -1,7 +1,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "usb_poll.h"
+#include "usb-poll.h"
 
 static list_node_t poll_list = LIST_INITIAL_VALUE(poll_list);
 static bool started = false;

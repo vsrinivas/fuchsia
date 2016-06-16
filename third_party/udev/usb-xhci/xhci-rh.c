@@ -33,7 +33,7 @@
 #include <ddk/protocol/usb-bus.h>
 #include <unistd.h>
 
-#include "xhci_private.h"
+#include "xhci-private.h"
 
 static int
 xhci_rh_port_status_changed_internal(xhci_t* xhci, const int port) {

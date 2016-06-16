@@ -42,7 +42,7 @@
 #include <pthread.h>
 #include <stdio.h>
 
-#include "usb_poll.h"
+#include "usb-poll.h"
 
 #ifdef XHCI_DEBUG
 #define xhci_debug(fmt, args...) printf("%s: " fmt, __func__, ##args)
