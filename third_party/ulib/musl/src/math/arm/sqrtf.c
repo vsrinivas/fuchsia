@@ -9,6 +9,6 @@ float sqrtf(float x) {
 
 #else
 
-#include "../sqrtf.c"
+#include "../../../third_party/math/sqrtf.c"
 
 #endif

@@ -9,6 +9,6 @@ double sqrt(double x) {
 
 #else
 
-#include "../sqrt.c"
+#include "../../../third_party/math/sqrt.c"
 
 #endif
