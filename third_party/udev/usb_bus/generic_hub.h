@@ -30,9 +30,9 @@
 #ifndef __USB_HUB_H
 #define __USB_HUB_H
 
-#include <ddk/protocol/usb_bus.h>
-#include <ddk/protocol/usb_hci.h>
-#include <ddk/protocol/usb_hub.h>
+#include <ddk/protocol/usb-bus.h>
+#include <ddk/protocol/usb-hci.h>
+#include <ddk/protocol/usb-hub.h>
 
 typedef struct generic_hub {
     int num_ports;

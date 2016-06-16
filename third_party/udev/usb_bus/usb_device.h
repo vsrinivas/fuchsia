@@ -30,7 +30,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/usb_device.h>
+#include <ddk/protocol/usb-device.h>
 
 mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed speed);
 

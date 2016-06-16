@@ -15,7 +15,7 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/protocol/usb_device.h>
+#include <ddk/protocol/usb-device.h>
 
 typedef struct usb_bus_protocol {
     mx_device_t* (*attach_device)(mx_device_t* busdev, mx_device_t* hubdev, int hubaddress, int port,

@@ -15,7 +15,7 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/protocol/usb_device.h>
+#include <ddk/protocol/usb-device.h>
 
 typedef struct usb_hub_protocol {
     /* returns 1 if the port's status changed since the last call */

@@ -1,7 +1,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb_bus.h>
-#include <ddk/protocol/usb_hci.h>
+#include <ddk/protocol/usb-bus.h>
+#include <ddk/protocol/usb-hci.h>
 #include <stdlib.h>
 #include <string.h>
 

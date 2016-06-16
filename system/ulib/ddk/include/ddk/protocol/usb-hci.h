@@ -15,7 +15,7 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/protocol/usb_device.h>
+#include <ddk/protocol/usb-device.h>
 
 typedef struct usb_hci_protocol {
     usb_request_t* (*alloc_request)(mx_device_t* dev, uint16_t size);

@@ -29,8 +29,8 @@
 
 #define USB_DEBUG
 
-#include <ddk/protocol/usb_hub.h>
-#include <ddk/protocol/usb_bus.h>
+#include <ddk/protocol/usb-hub.h>
+#include <ddk/protocol/usb-bus.h>
 #include <unistd.h>
 
 #include "xhci_private.h"

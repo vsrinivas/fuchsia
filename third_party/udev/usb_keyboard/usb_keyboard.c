@@ -40,7 +40,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/char.h>
-#include <ddk/protocol/usb_device.h>
+#include <ddk/protocol/usb-device.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
