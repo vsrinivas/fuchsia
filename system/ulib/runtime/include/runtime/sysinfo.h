@@ -22,10 +22,8 @@
 extern "C" {
 #endif
 
-
 int mxr_get_nprocs(void);
 int mxr_get_nprocs_conf(void);
-
 
 #ifdef __cplusplus
 }

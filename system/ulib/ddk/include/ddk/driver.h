@@ -102,5 +102,6 @@ void driver_remove(mx_driver_t* driver);
 #define MX_PROTOCOL_ETHERNET 'pETH'
 #define MX_PROTOCOL_BLUETOOTH_HCI 'pBTH'
 
-#define BUILTIN_DRIVER __ALIGNED(sizeof(void*)) \
-__SECTION("builtin_drivers")
+#define BUILTIN_DRIVER       \
+    __ALIGNED(sizeof(void*)) \
+    __SECTION("builtin_drivers")

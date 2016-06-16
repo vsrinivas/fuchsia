@@ -17,13 +17,13 @@
 
 #include <magenta/syscalls.h>
 
-#define CHECK(f, expected, message)                                                         \
-    do {                                                                                    \
-        if ((ret = (f)) != (expected)) {                                                    \
-            printf("Test failed (%s): " #f " returned %d vs. %d\n",                         \
-                   message, (int)ret, (int)expected);                                       \
-            return __LINE__;                                                                \
-        }                                                                                   \
+#define CHECK(f, expected, message)                                 \
+    do {                                                            \
+        if ((ret = (f)) != (expected)) {                            \
+            printf("Test failed (%s): " #f " returned %d vs. %d\n", \
+                   message, (int)ret, (int)expected);               \
+            return __LINE__;                                        \
+        }                                                           \
     } while (0)
 
 int main(void) {
@@ -33,19 +33,21 @@ int main(void) {
     mx_handle_t duped = _magenta_handle_duplicate(event);
 
     CHECK(_magenta_handle_get_info(
-        event, MX_INFO_HANDLE_VALID, NULL, 0u), NO_ERROR, "handle should be valid");
+              event, MX_INFO_HANDLE_VALID, NULL, 0u),
+          NO_ERROR, "handle should be valid");
     CHECK(_magenta_handle_close(event), NO_ERROR, "failed to close the handle");
     CHECK(_magenta_handle_get_info(
-        event, MX_INFO_HANDLE_VALID, NULL, 0u), ERR_BAD_HANDLE, "handle should be valid");
+              event, MX_INFO_HANDLE_VALID, NULL, 0u),
+          ERR_BAD_HANDLE, "handle should be valid");
 
-    handle_basic_info_t info = { 0 };
+    handle_basic_info_t info = {0};
     CHECK(_magenta_handle_get_info(
-        duped, MX_INFO_HANDLE_BASIC, &info, 4u),
-            ERR_NOT_ENOUGH_BUFFER, "bad struct size validation");
+              duped, MX_INFO_HANDLE_BASIC, &info, 4u),
+          ERR_NOT_ENOUGH_BUFFER, "bad struct size validation");
 
     CHECK(_magenta_handle_get_info(
-        duped, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
-            sizeof(info), "handle should be valid");
+              duped, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
+          sizeof(info), "handle should be valid");
 
     const mx_rights_t evr = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
                             MX_RIGHT_READ | MX_RIGHT_WRITE;

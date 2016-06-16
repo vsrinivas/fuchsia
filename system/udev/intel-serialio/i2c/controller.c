@@ -339,9 +339,10 @@ mx_status_t intel_broadwell_serialio_bind_i2c(mx_driver_t* drv,
     if (status < 0)
         goto fail;
 
-    xprintf("initialized intel broadwell serialio i2c driver, "
-            "reg=%#x regsize=%#x\n",
-            device->regs, device->regs_size);
+    xprintf(
+        "initialized intel broadwell serialio i2c driver, "
+        "reg=%#x regsize=%#x\n",
+        device->regs, device->regs_size);
 
     return NO_ERROR;
 

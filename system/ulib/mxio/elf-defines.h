@@ -18,8 +18,9 @@
 #include <inttypes.h>
 
 /* elf defines */
-#define ELF_MAGIC "\x7f" \
-                  "ELF"
+#define ELF_MAGIC \
+    "\x7f"        \
+    "ELF"
 
 /* e_ident */
 #define EI_MAG0 0

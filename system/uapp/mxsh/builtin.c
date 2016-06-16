@@ -266,9 +266,10 @@ static int mxc_runtests(int argc, char** argv) {
             }
             total_count++;
 
-            printf("\n------------------------------------------------\n"
-                   "RUNNING TEST: %s\n\n",
-                   de->name);
+            printf(
+                "\n------------------------------------------------\n"
+                "RUNNING TEST: %s\n\n",
+                de->name);
             char name[4096];
             snprintf(name, sizeof(name), "/boot/bin/%s", de->name);
             char* argv[] = {name};

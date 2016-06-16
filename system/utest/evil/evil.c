@@ -235,11 +235,12 @@ int handlespam(void) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        printf("usage: evil-tests spam1        spam writes into pipe\n"
-               "       evil-tests spam2        spam writes, don't close pipe after\n"
-               "       evil-tests spam3        spam handle creation\n"
-               "       evil-tests heap1 <n>    heap stress test, locking\n"
-               "       evil-tests heap2 <n>    heap stress test, no locking\n");
+        printf(
+            "usage: evil-tests spam1        spam writes into pipe\n"
+            "       evil-tests spam2        spam writes, don't close pipe after\n"
+            "       evil-tests spam3        spam handle creation\n"
+            "       evil-tests heap1 <n>    heap stress test, locking\n"
+            "       evil-tests heap2 <n>    heap stress test, no locking\n");
         return -1;
     } else if (!strcmp(argv[1], "spam1")) {
         return writespam(0);
