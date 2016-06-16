@@ -210,7 +210,7 @@ FUNCTION(_entry64)
      * But for some reason using _kstack + 4096 here causes
      * crashes on some UEFI platforms...
      */
-    mov PHYS(farjump64), %esp
+    mov $PHYS(farjump64), %rsp
 
     /* zero the bss */
     bss_setup
