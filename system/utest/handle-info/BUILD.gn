@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build/config.gni")
+import("//gnbuild/config.gni")
 import("//system/utest/test.gni")
 
 test("handle-info") {
@@ -22,7 +22,7 @@ test("handle-info") {
     "handle-info.c",
   ]
   deps = [
-    "//external/ulib/musl",
+    "//third_party/ulib/musl",
     "//system/ulib/magenta",
     "//system/ulib/mxio",
     "//system/ulib/runtime",

@@ -100,6 +100,7 @@ mkbootfs("bootfs") {
     "//system/utest/exceptions",
     "//system/utest/fpu",
     "//system/utest/futex",
+    "//system/utest/handle-info",
     "//system/utest/handle-transfer",
     "//system/utest/message-pipe",
     "//system/utest/mxr-mutex",

@@ -25,19 +25,19 @@ source_set("ddk") {
     "include/ddk/device.h",
     "include/ddk/driver.h",
     "include/ddk/io-alloc.h",
-    "include/ddk/protocol/bluetooth_hci.h",
+    "include/ddk/protocol/bluetooth-hci.h",
     "include/ddk/protocol/char.h",
     "include/ddk/protocol/display.h",
     "include/ddk/protocol/ethernet.h",
     "include/ddk/protocol/fb.h",
     "include/ddk/protocol/i2c.h",
     "include/ddk/protocol/pci.h",
-    "include/ddk/protocol/usb_bus.h",
-    "include/ddk/protocol/usb_hci.h",
-    "include/ddk/protocol/usb_hub.h",
+    "include/ddk/protocol/usb-bus.h",
+    "include/ddk/protocol/usb-hci.h",
+    "include/ddk/protocol/usb-hub.h",
   ]
   sources = [
-    "io_alloc.c",
+    "io-alloc.c",
     "protocol/keyboard.c",
   ]
   deps = [
