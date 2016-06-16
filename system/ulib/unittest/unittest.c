@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <unittest/hexdump.h>
 #include <unittest/unittest.h>
 
 #include <stdbool.h>
@@ -20,6 +19,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "hexdump.h"
 
 /**
  * \brief Default function to dump unit test results

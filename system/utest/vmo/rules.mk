@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := vmo-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/unittest ulib/mxu
+    ulib/musl ulib/mxio ulib/magenta ulib/unittest ulib/mxu ulib/ddk
 
 include make/module.mk

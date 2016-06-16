@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <unittest/hexdump.h>
+#include <ddk/hexdump.h>
 #include <unittest/unittest.h>
 
 bool vmo_create_test(void) {

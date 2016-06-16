@@ -1,0 +1,195 @@
+// Copyright 2016 The Fuchsia Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <magenta/types.h>
+#include <mxio/io.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <limits.h>
+
+#include <ddk/protocol/block.h>
+#include <ddk/hexdump.h>
+
+#define DEV_BLOCK "/dev/class/block"
+
+static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
+    const char* unit;
+    uint64_t div;
+    if (size < 1024) {
+        unit = "";
+        div = 1;
+    } else if (size >= 1024 && size < 1024 * 1024) {
+        unit = "K";
+        div = 1024;
+    } else if (size >= 1024 * 1024 && size < 1024 * 1024 * 1024) {
+        unit = "M";
+        div = 1024 * 1024;
+    } else if (size >= 1024 * 1024 * 1024 && size < 1024llu * 1024 * 1024 * 1024) {
+        unit = "G";
+        div = 1024 * 1024 * 1024;
+    } else {
+        unit = "T";
+        div = 1024llu * 1024 * 1024 * 1024;
+    }
+    snprintf(str, maxlen, "%llu%s", size / div, unit);
+    return str;
+}
+
+static const char* guid_to_type(char* guid) {
+    if (!strcmp("FE3A2A5D-4F32-41A7-25B7-09A38532CCAC", guid)) {
+        return "cros kernel";
+    } else if (!strcmp("3CB8E202-3B7E-47DD-3C8A-ECFC3CA1F27F", guid)) {
+        return "cros rootfs";
+    } else if (!strcmp("2E0A753D-9E48-43B0-3783-5E1BCB9251B1", guid)) {
+        return "cros reserved";
+    } else if (!strcmp("CAB6E88E-ABF3-4102-7AA0-D3C1E39BBBD4", guid)) {
+        return "cros firmware";
+    } else if (!strcmp("C12A7328-F81F-11D2-4BBA-3BC93EC9A000", guid)) {
+        return "efi system";
+    } else if (!strcmp("EBD0A0A2-B9E5-4433-C087-C79926B7B668", guid)) {
+        return "data";
+    } else {
+        return "unknown";
+    }
+}
+
+static int cmd_list_blk(void) {
+    struct dirent* de;
+    DIR* dir = opendir(DEV_BLOCK);
+    if (!dir) {
+        printf("Error opening %s\n", DEV_BLOCK);
+        return -1;
+    }
+    char devname[128];
+    char guid[40];
+    char name[40];
+    char sstr[8];
+    uint64_t size;
+    int fd;
+    int rc = 0;
+    printf("%-25s %-4s  %-14s %s\n", "DEVNAME", "SIZE", "TYPE", "NAME");
+    while ((de = readdir(dir)) != NULL) {
+        snprintf(devname, sizeof(devname), "%s/%s", DEV_BLOCK, de->d_name);
+        fd = open(devname, O_RDONLY);
+        if (fd < 0) {
+            rc = fd;
+            printf("Error opening %s\n", devname);
+            goto out;
+        }
+        rc = mxio_ioctl(fd, BLOCK_OP_GET_SIZE, NULL, 0, &size, sizeof(size));
+        if (rc < 0) {
+            printf("Error getting blocksize for %s\n", devname);
+            close(fd);
+            goto out;
+        }
+        rc = mxio_ioctl(fd, BLOCK_OP_GET_GUID, NULL, 0, guid, sizeof(guid));
+        if (rc < 0) {
+            printf("Error getting GUID for %s\n", devname);
+            close(fd);
+            goto out;
+        }
+        memset(name, 0, sizeof(name));
+        rc = mxio_ioctl(fd, BLOCK_OP_GET_NAME, NULL, 0, name, sizeof(name));
+        if (rc < 0) {
+            printf("Error getting partition name for %s\n", devname);
+            close(fd);
+            goto out;
+        }
+        rc = 0;
+        close(fd);
+        printf("%-25s %4s  %-14s %s\n", devname, size_to_cstring(sstr, sizeof(sstr), size), guid_to_type(guid), name);
+    }
+out:
+    closedir(dir);
+    return rc;
+}
+
+static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
+    int fd = open(dev, O_RDONLY);
+    if (fd < 0) {
+        printf("Error opening %s\n", dev);
+        return fd;
+    }
+
+    // check that count and offset are aligned to block size
+    uint64_t blksize;
+    int rc = mxio_ioctl(fd, BLOCK_OP_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
+    if (rc < 0) {
+        printf("Error getting block size for %s\n", dev);
+        close(fd);
+        goto out;
+    }
+    if (count % blksize) {
+        printf("Bytes read must be a multiple of blksize=%llu\n", blksize);
+        rc = -1;
+        goto out;
+    }
+    if (offset % blksize) {
+        printf("Offset must be a multiple of blksize=%llu\n", blksize);
+        rc = -1;
+        goto out;
+    }
+
+    // read the data
+    void* buf = malloc(count);
+    if (offset) {
+        rc = lseek(fd, offset, SEEK_SET);
+        if (rc < 0) {
+            printf("Error %d seeking to offset %lld\n", rc, offset);
+            goto out2;
+        }
+    }
+    ssize_t c = read(fd, buf, count);
+    if (c < 0) {
+        printf("Error %zd in read()\n", c);
+        rc = c;
+        goto out2;
+    }
+
+    hexdump8_ex(buf, c, offset);
+
+out2:
+    free(buf);
+out:
+    close(fd);
+    return 0;
+}
+
+int main(int argc, const char** argv) {
+    int rc = 0;
+    const char *cmd = argc > 1 ? argv[1] : NULL;
+    if (cmd) {
+        if (!strcmp(cmd, "help")) {
+            goto usage;
+        } else if (!strcmp(cmd, "read")) {
+            if (argc < 5) goto usage;
+            rc = cmd_read_blk(argv[2], strtoul(argv[3], NULL, 10), strtoull(argv[4], NULL, 10));
+        } else {
+            printf("Unrecognized command %s!\n", cmd);
+            goto usage;
+        }
+    } else {
+        rc = cmd_list_blk();
+    }
+    return rc;
+usage:
+    printf("Usage:\n");
+    printf("%s\n", argv[0]);
+    printf("%s read <blkdev> <offset> <count>\n", argv[0]);
+    return 0;
+}

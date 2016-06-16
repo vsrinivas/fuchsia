@@ -145,6 +145,8 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
         return "device";
     case MX_PROTOCOL_MISC:
         return "misc";
+    case MX_PROTOCOL_BLOCK:
+        return "block";
     case MX_PROTOCOL_CONSOLE:
         return "console";
     case MX_PROTOCOL_DISPLAY:

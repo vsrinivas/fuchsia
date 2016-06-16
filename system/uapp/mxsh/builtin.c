@@ -26,7 +26,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 #include <mxio/vfs.h>
-#include <unittest/hexdump.h>
+#include <ddk/hexdump.h>
 #include <system/listnode.h>
 
 static int mxc_dump(int argc, char** argv) {
