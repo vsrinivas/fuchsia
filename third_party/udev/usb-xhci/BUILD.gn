@@ -2,13 +2,13 @@ source_set("usb-xhci") {
   sources = [
     "usb-poll.c",
     "usb-xhci.c",
-    "xhci.c",
     "xhci-commands.c",
     "xhci-debug.c",
     "xhci-devconf.c",
     "xhci-events.c",
     "xhci-private.h",
     "xhci-rh.c",
+    "xhci.c",
   ]
   deps = [
     "//system/ulib/ddk",

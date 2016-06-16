@@ -76,7 +76,9 @@ static_library("musl") {
   complete_static_lib = true
   deps = [
     "crt",
+    "ldso",
     "magenta",
+    "src/aio",
     "src/complex",
     "src/conf",
     "src/crypt",
@@ -88,6 +90,9 @@ static_library("musl") {
     "src/fcntl",
     "src/fenv",
     "src/internal",
+    "src/ipc",
+    "src/ldso",
+    "src/legacy",
     "src/linux",
     "src/locale",
     "src/malloc",
@@ -102,6 +107,7 @@ static_library("musl") {
     "src/process",
     "src/regex",
     "src/sched",
+    "src/select",
     "src/setjmp",
     "src/signal",
     "src/stat",
@@ -116,18 +122,6 @@ static_library("musl") {
     "third_party/arch",
     "third_party/complex",
     "third_party/math",
-
-    # These submodules either do not build or even make sense for Magenta, but
-    # we still list them for completeness and future reference; however, they
-    # might be removed in the future.
-    #
-    # "ldso",
-    # "src/aio",
-    # "src/ipc",
-    # "src/ldso",
-    # "src/legacy",
-    # "src/select",
-
     "//system/ulib/magenta",
     "//system/ulib/runtime",
   ]
