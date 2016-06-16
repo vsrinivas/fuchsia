@@ -109,6 +109,7 @@ mkbootfs("bootfs") {
     "//system/utest/process",
     "//system/utest/pthread",
     "//system/utest/reply-handle",
+    "//system/utest/remoteio",
     "//system/utest/thread-initial-state",
     "//system/utest/thread-local-storage",
     "//system/utest/threads",
