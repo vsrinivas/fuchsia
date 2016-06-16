@@ -14,14 +14,10 @@ fi
 # There might be more than one clang-format tool, specially if chromium's
 # depot tools are in the path. Try to use the system one.
 
-CLANGFMT=/usr/bin/clang-format
+CLANGFMT=./clang-format
 
 if [ ! -f $CLANGFMT ]; then
-  # try local dir
-  CLANGFMT=./clang-format
-fi
-if [ ! -f $CLANGFMT ]; then
-  echo "$CLANGFMT not found. Go to http://llvm.org/releases/ to get it."
+  echo "$CLANGFMT not found. Run scripts/fetch-clang-fmt to get it."
   exit 0
 fi
 

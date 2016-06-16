@@ -2,6 +2,9 @@ Language: Cpp
 ColumnLimit: 0
 UseTab: Never
 IndentWidth: 4
+IndentCaseLabels: false
+AlignAfterOpenBracket: Align
+SpacesBeforeTrailingComments: 1
 BreakBeforeBraces: Attach
 AccessModifierOffset: -4
 DerivePointerAlignment: false
