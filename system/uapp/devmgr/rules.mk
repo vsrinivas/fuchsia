@@ -25,7 +25,7 @@ MODULE_TYPE := userapp
 LOCAL_SAVEDIR := $(LOCAL_DIR)
 DRIVER_SRCS :=
 DRIVERS := $(patsubst %/rules.mk,%,$(wildcard system/udev/*/driver.mk))
-DRIVERS += $(patsubst %/rules.mk,%,$(wildcard external/udev/*/driver.mk))
+DRIVERS += $(patsubst %/rules.mk,%,$(wildcard third_party/udev/*/driver.mk))
 -include $(DRIVERS)
 LOCAL_DIR := $(LOCAL_SAVEDIR)
 
