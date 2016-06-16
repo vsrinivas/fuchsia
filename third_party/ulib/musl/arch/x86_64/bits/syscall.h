@@ -19,7 +19,6 @@
 #define SYS_shmat 30
 #define SYS_shmctl 31
 #define SYS_dup 32
-#define SYS_nanosleep 35
 #define SYS_getitimer 36
 #define SYS_setitimer 38
 #define SYS_getpid 39

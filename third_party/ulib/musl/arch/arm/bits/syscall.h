@@ -71,7 +71,6 @@
 #define SYS_sched_get_priority_max 159
 #define SYS_sched_get_priority_min 160
 #define SYS_sched_rr_get_interval 161
-#define SYS_nanosleep 162
 #define SYS_setresuid 164
 #define SYS_getresuid 165
 #define SYS_setresgid 170

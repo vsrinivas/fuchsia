@@ -1,15 +1,24 @@
-#include "syscall.h"
-#include <errno.h>
 #include <threads.h>
 
+#include <assert.h>
+#include <magenta/syscalls.h>
+
+#include "time_conversion.h"
+
 int thrd_sleep(const struct timespec* req, struct timespec* rem) {
-    int ret = __syscall(SYS_nanosleep, req, rem);
-    switch (ret) {
-    case 0:
-        return 0;
-    case -EINTR:
-        return -1; /* value specified by C11 */
-    default:
-        return -2;
+    // For now, Magenta only provides an uninterruptible nanosleep. If
+    // we ever introduce an asynchronous mechanism that would require
+    // some EINTR-like logic, then we will also want a nanosleep call
+    // which reports back how much time is remaining. Until then,
+    // always report back 0 timeout remaining.
+
+    int ret = _magenta_nanosleep(__timespec_to_mx_time_t(*req));
+    assert(ret == 0);
+    if (rem) {
+        *rem = (struct timespec){
+            .tv_sec = 0,
+            .tv_nsec = 0,
+        };
     }
+    return 0;
 }

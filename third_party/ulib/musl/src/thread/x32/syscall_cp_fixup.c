@@ -42,9 +42,6 @@ __attribute__((__visibility__("hidden"))) long __syscall_cp_asm(volatile void* f
     case SYS_ppoll:
         __fixup(a3);
         break;
-    case SYS_nanosleep:
-        __fixup(a1);
-        break;
     }
     return __syscall_cp_internal(foo, n, a1, a2, a3, a4, a5, a6);
 }

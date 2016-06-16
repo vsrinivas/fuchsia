@@ -29,7 +29,6 @@
 #define __NR_dup (__X32_SYSCALL_BIT + 32)
 #define __NR_dup2 (__X32_SYSCALL_BIT + 33)
 #define __NR_pause (__X32_SYSCALL_BIT + 34)
-#define __NR_nanosleep (__X32_SYSCALL_BIT + 35)
 #define __NR_getitimer (__X32_SYSCALL_BIT + 36)
 #define __NR_alarm (__X32_SYSCALL_BIT + 37)
 #define __NR_setitimer (__X32_SYSCALL_BIT + 38)
@@ -301,7 +300,6 @@
 #define SYS_dup __NR_dup
 #define SYS_dup2 __NR_dup2
 #define SYS_pause __NR_pause
-#define SYS_nanosleep __NR_nanosleep
 #define SYS_getitimer __NR_getitimer
 #define SYS_alarm __NR_alarm
 #define SYS_setitimer __NR_setitimer
