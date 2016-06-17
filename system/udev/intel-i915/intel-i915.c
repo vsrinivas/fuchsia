@@ -183,7 +183,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
     if (cfg_handle >= 0) {
         if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
             // TODO: this should be based on the specific target
-            dev->flags |= FLAGS_BACKLIGHT;
+            device->flags |= FLAGS_BACKLIGHT;
         }
         _magenta_handle_close(cfg_handle);
     }
