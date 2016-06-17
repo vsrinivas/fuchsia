@@ -103,8 +103,12 @@ status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
 }
 
 status_t PciDeviceDispatcher::ResetDevice() {
-    // TODO(johngro) : Either remove this from the API, or implement it as function level reset.
-    return ERR_NOT_IMPLEMENTED;
+    AutoLock lock(&lock_);
+
+    if (!device_) return ERR_BAD_HANDLE;            // Are we closed already?
+    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+
+    return pcie_do_function_level_reset(device_->device());
 }
 
 status_t PciDeviceDispatcher::MapConfig(utils::RefPtr<Dispatcher>* out_mapping,

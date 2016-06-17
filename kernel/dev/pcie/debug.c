@@ -595,6 +595,47 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
     return NO_ERROR;
 }
 
+static int cmd_pcireset(int argc, const cmd_args *argv)
+{
+    bool confused = false;
+    uint bus_id, dev_id, func_id;
+
+    if (argc == 4) {
+        bus_id  = argv[1].i;
+        dev_id  = argv[2].i;
+        func_id = argv[3].i;
+
+        if ((bus_id  >= PCIE_MAX_BUSSES) ||
+            (dev_id  >= PCIE_MAX_DEVICES_PER_BUS) ||
+            (func_id >= PCIE_MAX_FUNCTIONS_PER_DEVICE))
+            confused = true;
+    } else {
+        confused = true;
+    }
+
+    if (confused) {
+        printf("usage: %s <bus_id> <dev_id> <func_id>\n", argv[0].str);
+        return NO_ERROR;
+    }
+
+    pcie_device_state_t* dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
+                                                     bus_id, dev_id, func_id);
+
+    if (!dev) {
+        printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
+    } else {
+        printf("Attempting reset of device %02x:%02x.%01x...\n", bus_id, dev_id, func_id);
+        status_t res = pcie_do_function_level_reset(dev);
+        pcie_release_device(dev);
+        if (res != NO_ERROR)
+            printf("Reset attempt failed (res = %d).\n", res);
+        else
+            printf("Success, device %02x:%02x.%01x has been reset.\n", bus_id, dev_id, func_id);
+    }
+
+    return NO_ERROR;
+}
+
 static int cmd_pcirescan(int argc, const cmd_args *argv)
 {
     pcie_scan_and_start_devices(pcie_get_bus_driver_state());
@@ -608,6 +649,9 @@ STATIC_COMMAND("lspci",
 STATIC_COMMAND("pciunplug",
                "Unplug the specified PCIe device (shutting down the driver if needed)",
                &cmd_pciunplug)
+STATIC_COMMAND("pcireset",
+               "Initiate a Function Level Reset of the specified device.",
+               &cmd_pcireset)
 STATIC_COMMAND("pcirescan",
                "Force a rescan of the PCIe configuration space, matching drivers to unclaimed "
                "devices as we go.  Then attempt to start all newly claimed devices.",

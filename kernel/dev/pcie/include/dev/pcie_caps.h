@@ -190,6 +190,24 @@ typedef enum {
 #define PCS_DEV_CAPS_CAP_SLOT_PWR_LIMIT_SCALE(val) (((val) >> 26) & 0x03)
 #define PCS_DEV_CAPS_FUNC_LEVEL_RESET(val)         (((val) >> 28) & 0x01)
 
+/**
+ * Structure and type definitions for capability PCIE_CAP_ID_ADVANCED_FEATURES
+ *
+ * @see The Advanced Capabilities for Conventional PCI ECN
+ */
+typedef struct pcie_cap_adv_caps {
+    pcie_cap_hdr_t    hdr;
+    uint8_t           length;
+    uint8_t           af_caps;
+    uint8_t           af_ctrl;
+    uint8_t           af_status;
+} pcie_cap_adv_caps_t;
+
+#define PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(val)   ((((val) >> 1) & 0x01) != 0)
+#define PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(val)      ((((val) >> 0) & 0x01) != 0)
+#define PCS_ADVCAPS_CTRL_INITIATE_FLR               (0x01)
+#define PCS_ADVCAPS_STATUS_TRANS_PENDING            (0x01)
+
 // TODO(johngro) : so many other bitfields to define... eventually, get around
 // to doing so.
 

@@ -243,6 +243,12 @@ typedef struct pcie_device_state {
         bool                 has_flr;  // true if device supports function level reset
     } pcie_caps;
 
+    /* PCI Advanced Capabilities (Standard Capability 0x13) if present */
+    struct {
+        pcie_cap_adv_caps_t* ecam;     // pointer to the adv caps structure in ECAM
+        bool                 has_flr;  // true if device supports function level reset
+    } pcie_adv_caps;
+
     /* IRQ configuration and handling state */
     struct {
         /* Shared state */
@@ -356,6 +362,11 @@ status_t pcie_claim_and_start_device(pcie_device_state_t* device,
  * pcie_claim_and_start_device()
  */
 void pcie_shutdown_device(pcie_device_state_t* device);
+
+/*
+ * Trigger a function level reset (if possible)
+ */
+status_t pcie_do_function_level_reset(pcie_device_state_t* dev);
 
 /*
  * Return information about the requested base address register, if it has been

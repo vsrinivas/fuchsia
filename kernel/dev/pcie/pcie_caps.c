@@ -211,6 +211,61 @@ static status_t pcie_parse_msi_caps(pcie_device_state_t* dev,
     return NO_ERROR;
 }
 
+/*
+ * Advanced Capabilities for Conventional PCI ECN
+ */
+static status_t pcie_parse_pci_advanced_features(struct pcie_device_state* dev,
+                                                 void*                     hdr,
+                                                 uint                      version,
+                                                 uint                      space_left) {
+    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(hdr);
+    DEBUG_ASSERT(!version);  // Standard capabilities do not have versions
+
+    /* Size sanity check */
+    pcie_cap_adv_caps_t* ecam = (pcie_cap_adv_caps_t*)hdr;
+    if (sizeof(*ecam) > space_left) {
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
+                "Advanced capability structure.  Structure is %zu bytes long, but "
+                "only %u bytes remain in ECAM standard config.\n",
+               dev->bus_id, dev->dev_id, dev->func_id,
+               dev->vendor_id, dev->device_id,
+               sizeof(*ecam), space_left);
+        return ERR_NOT_VALID;
+    }
+
+    uint8_t length = pcie_read8(&ecam->length);
+    if (sizeof(*ecam) > length) {
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has an invalid PCI Advanced "
+               "capability structure length.  Expected %zu, Actual %u\n",
+               dev->bus_id, dev->dev_id, dev->func_id,
+               dev->vendor_id, dev->device_id,
+               sizeof(*ecam), length);
+        return ERR_NOT_VALID;
+    }
+
+    /* Read the caps field and sanity check it */
+    uint8_t caps = pcie_read8(&ecam->af_caps);
+    if (PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps) !=
+        PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(caps)) {
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal PCI Advanced "
+               "capability structure.  Structure %s a Function Level Reset bit, "
+               "but %s a Transaction Pending Bit (caps = 0x%02x)\n",
+               dev->bus_id, dev->dev_id, dev->func_id,
+               dev->vendor_id, dev->device_id,
+               PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps) ? "has" : "does not have",
+               PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(caps)    ? "has" : "does not have",
+               caps);
+        return ERR_NOT_VALID;
+    }
+
+    /* Success, stash our results and we are done */
+    dev->pcie_adv_caps.ecam    = ecam;
+    dev->pcie_adv_caps.has_flr = PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps);
+
+    return NO_ERROR;
+}
+
 static status_t pcie_fetch_standard_cap_hdr(pcie_device_state_t*          dev,
                                             void*                         prev_hdr,
                                             pcie_caps_fetch_hdr_params_t *out_params) {
@@ -440,7 +495,7 @@ static const pcie_caps_parse_table_entry_t PCIE_STANDARD_CAPS_PARSE_TABLE[] = {
     PTE(PCIE_CAP_ID_PCI_EXPRESS,              pcie_parse_pci_express_caps),
     PTE(PCIE_CAP_ID_MSIX,                     NULL),
     PTE(PCIE_CAP_ID_SATA_DATA_NDX_CFG,        NULL),
-    PTE(PCIE_CAP_ID_ADVANCED_FEATURES,        NULL),
+    PTE(PCIE_CAP_ID_ADVANCED_FEATURES,        pcie_parse_pci_advanced_features),
     PTE(PCIE_CAP_ID_ENHANCED_ALLOCATION,      NULL),
 };
 
@@ -499,6 +554,7 @@ static const pcie_do_parse_caps_params_t PCIE_EXTENDED_PARSE_CAPS_PARAMS = {
 
 status_t pcie_parse_capabilities(struct pcie_device_state* dev) {
     status_t ret = pcie_do_parse_caps(dev, &PCIE_STANDARD_PARSE_CAPS_PARAMS);
+
     if (NO_ERROR != ret)
         return ret;
 

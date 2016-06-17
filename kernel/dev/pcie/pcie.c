@@ -17,6 +17,7 @@
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
+#include <platform.h>
 
 #include "pcie_priv.h"
 
@@ -900,6 +901,151 @@ void pcie_shutdown_device(pcie_device_state_t* dev) {
 
 finished:
     MUTEX_RELEASE(dev, start_claim_lock);
+}
+
+status_t pcie_do_function_level_reset(pcie_device_state_t* dev) {
+    status_t ret;
+    DEBUG_ASSERT(dev);
+
+    // TODO(johngro) : Function level reset is an operation which can take quite
+    // a long time (more than a second).  We should not hold the device lock for
+    // the entire duration of the operation.  This should be re-done so that the
+    // device can be placed into a "resetting" state (and other API calls can
+    // fail with ERR_BUSY, or some-such) and the lock can be released while the
+    // reset timeouts run.  This way, a spontaneous unplug event can occur and
+    // not block the whole world because the device unplugged was in the process
+    // of a FLR.
+    MUTEX_ACQUIRE(dev, dev_lock);
+
+    // Make certain to check to see if the device is still plugged in.
+    if (!dev->plugged_in) {
+        ret = ERR_NOT_MOUNTED;
+        goto finished;
+    }
+
+    // Disallow reset if we currently have an active IRQ mode.
+    //
+    // Note: the only possible reason for get_irq_mode to fail would be for the
+    // device to be unplugged.  Since we have already checked for that, we
+    // assert that the call should succeed.
+    pcie_irq_mode_info_t irq_mode_info;
+    ret = pcie_get_irq_mode_internal(dev, &irq_mode_info);
+    DEBUG_ASSERT(NO_ERROR == ret);
+    if (irq_mode_info.mode != PCIE_IRQ_MODE_DISABLED) {
+        ret = ERR_BUSY;
+        goto finished;
+    }
+    DEBUG_ASSERT(!irq_mode_info.registered_handlers);
+    DEBUG_ASSERT(!irq_mode_info.max_handlers);
+
+    // If cannot reset via the PCIe capability, or the PCI advanced capability,
+    // then this device simply does not support function level reset.
+    if (!dev->pcie_caps.has_flr && !dev->pcie_adv_caps.has_flr) {
+        ret = ERR_NOT_SUPPORTED;
+        goto finished;
+    }
+
+    if (dev->pcie_caps.has_flr) {
+        // TODO: perform function level reset using PCIe Capability Structure.
+        TRACEF("TODO(johngro): Implement PCIe Capability FLR\n");
+        ret = ERR_NOT_IMPLEMENTED;
+    }
+
+    if (dev->pcie_adv_caps.has_flr) {
+        // Following the procedure outlined in the Implementation notes
+        spin_lock_saved_state_t  irq_state;
+        pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+        pcie_config_t*           cfg = dev->cfg;
+        uint32_t                 bar_backup[PCIE_MAX_BAR_REGS];
+        uint16_t                 cmd_backup;
+        uint                     bar_count = pcie_downcast_to_bridge(dev)
+                                           ? PCIE_BAR_REGS_PER_BRIDGE
+                                           : PCIE_BAR_REGS_PER_DEVICE;
+
+        // 1) Make sure driver code is not creating new transactions (not much I
+        //    can do about this, just have to hope).
+        // 2) Clear out the command register so that no new transactions may be
+        //    initiated.  Also back up the BARs in the process.
+        spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+
+        cmd_backup = pcie_read16(&cfg->base.command);
+        pcie_write16(&cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+        for (uint i = 0; i < bar_count; ++i)
+            bar_backup[i] = pcie_read32(&cfg->base.base_addresses[i]);
+
+        spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+
+        // 3) Poll the transaction pending bit until it clears.  This may take
+        //    "several seconds"
+        lk_time_t start = current_time();
+        ret = ERR_TIMED_OUT;
+        do {
+            if (!(pcie_read8(&dev->pcie_adv_caps.ecam->af_status) &
+                  PCS_ADVCAPS_STATUS_TRANS_PENDING)) {
+                ret = NO_ERROR;
+                break;
+            }
+            thread_sleep(1);
+        } while ((current_time() - start) < 5000);
+
+        if (ret != NO_ERROR) {
+            TRACEF("Timeout waiting for pending transactions to clear the bus "
+                   "for %02x:%02x.%01x\n",
+                   dev->bus_id, dev->dev_id, dev->func_id);
+
+            // Restore the command register
+            spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+            pcie_write16(&cfg->base.command, cmd_backup);
+            spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+
+            goto finished;
+        } else {
+            // 4) Software initiates the FLR
+            pcie_write8(&dev->pcie_adv_caps.ecam->af_ctrl, PCS_ADVCAPS_CTRL_INITIATE_FLR);
+
+            // 5) Software waits 100mSec
+            thread_sleep(100);
+        }
+
+        // NOTE: Even though the spec says that the reset operation is supposed
+        // to always take less than 100mSec, no one really follows this rule.
+        // Generally speaking, when a device resets, config read cycles will
+        // return all 0xFFs until the device finally resets and comes back.
+        // Poll the Vendor ID field until the device finally completes it's
+        // reset.
+        start = current_time();
+        ret   = ERR_TIMED_OUT;
+        do {
+            if (pcie_read16(&dev->cfg->base.vendor_id) != PCIE_INVALID_VENDOR_ID) {
+                ret = NO_ERROR;
+                break;
+            }
+            thread_sleep(1);
+        } while ((current_time() - start) < 5000);
+
+        if (ret == NO_ERROR) {
+            // 6) Software reconfigures the function and enables it for normal operation
+            spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+
+            for (uint i = 0; i < bar_count; ++i)
+                pcie_write32(&cfg->base.base_addresses[i], bar_backup[i]);
+            pcie_write16(&cfg->base.command, cmd_backup);
+
+            spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+        } else {
+            // TODO(johngro) : What do we do if this fails?  If we trigger a
+            // device reset, and the device fails to re-appear after 5 seconds,
+            // it is probably gone for good.  We probably need to force unload
+            // any device drivers which had previously owned the device.
+            TRACEF("Timeout waiting for %02x:%02x.%01x to complete function "
+                   "level reset.  This is Very Bad.\n",
+                   dev->bus_id, dev->dev_id, dev->func_id);
+        }
+    }
+
+finished:
+    MUTEX_RELEASE(dev, dev_lock);
+    return ret;
 }
 
 EXPORT_TO_DEBUG_CONSOLE
