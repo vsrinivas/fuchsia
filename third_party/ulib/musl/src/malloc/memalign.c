@@ -22,14 +22,17 @@ void* __memalign(size_t align, size_t len) {
     }
 
     if (align <= 4 * sizeof(size_t)) {
-        if (!(mem = malloc(len))) return NULL;
+        if (!(mem = malloc(len)))
+            return NULL;
         return mem;
     }
 
-    if (!(mem = malloc(len + align - 1))) return NULL;
+    if (!(mem = malloc(len + align - 1)))
+        return NULL;
 
     new = (void*)((uintptr_t)mem + align - 1 & -align);
-    if (new == mem) return mem;
+    if (new == mem)
+        return mem;
 
     header = ((size_t*)mem)[-1];
 

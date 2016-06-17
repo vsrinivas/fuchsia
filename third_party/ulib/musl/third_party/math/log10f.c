@@ -37,9 +37,11 @@ float log10f(float x) {
 
     ix = u.i;
     k = 0;
-    if (ix < 0x00800000 || ix >> 31) {         /* x < 2**-126  */
-        if (ix << 1 == 0) return -1 / (x * x); /* log(+-0)=-inf */
-        if (ix >> 31) return (x - x) / 0.0f;   /* log(-#) = NaN */
+    if (ix < 0x00800000 || ix >> 31) { /* x < 2**-126  */
+        if (ix << 1 == 0)
+            return -1 / (x * x); /* log(+-0)=-inf */
+        if (ix >> 31)
+            return (x - x) / 0.0f; /* log(-#) = NaN */
         /* subnormal number, scale up x */
         k -= 25;
         x *= 0x1p25f;

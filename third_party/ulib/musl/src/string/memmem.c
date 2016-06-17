@@ -5,7 +5,8 @@
 static char* twobyte_memmem(const unsigned char* h, size_t k, const unsigned char* n) {
     uint16_t nw = n[0] << 8 | n[1], hw = h[0] << 8 | h[1];
     for (h++, k--; k; k--, hw = hw << 8 | *++h)
-        if (hw == nw) return (char*)h - 1;
+        if (hw == nw)
+            return (char*)h - 1;
     return 0;
 }
 
@@ -13,7 +14,8 @@ static char* threebyte_memmem(const unsigned char* h, size_t k, const unsigned c
     uint32_t nw = n[0] << 24 | n[1] << 16 | n[2] << 8;
     uint32_t hw = h[0] << 24 | h[1] << 16 | h[2] << 8;
     for (h += 2, k -= 2; k; k--, hw = (hw | *++h) << 8)
-        if (hw == nw) return (char*)h - 2;
+        if (hw == nw)
+            return (char*)h - 2;
     return 0;
 }
 
@@ -21,14 +23,15 @@ static char* fourbyte_memmem(const unsigned char* h, size_t k, const unsigned ch
     uint32_t nw = n[0] << 24 | n[1] << 16 | n[2] << 8 | n[3];
     uint32_t hw = h[0] << 24 | h[1] << 16 | h[2] << 8 | h[3];
     for (h += 3, k -= 3; k; k--, hw = hw << 8 | *++h)
-        if (hw == nw) return (char*)h - 3;
+        if (hw == nw)
+            return (char*)h - 3;
     return 0;
 }
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-#define BITOP(a, b, op)                                                                            \
+#define BITOP(a, b, op) \
     ((a)[(size_t)(b) / (8 * sizeof *(a))] op(size_t) 1 << ((size_t)(b) % (8 * sizeof *(a))))
 
 static char* twoway_memmem(const unsigned char* h, const unsigned char* z, const unsigned char* n,
@@ -39,7 +42,8 @@ static char* twoway_memmem(const unsigned char* h, const unsigned char* z, const
 
     /* Computing length of needle and fill shift table */
     for (i = 0; i < l; i++)
-        BITOP(byteset, n[i], |=), shift[n[i]] = i + 1;
+        BITOP(byteset, n[i], |=)
+    , shift[n[i]] = i + 1;
 
     /* Compute maximal suffix */
     ip = -1;
@@ -100,13 +104,15 @@ static char* twoway_memmem(const unsigned char* h, const unsigned char* z, const
     /* Search loop */
     for (;;) {
         /* If remainder of haystack is shorter than needle, done */
-        if (z - h < l) return 0;
+        if (z - h < l)
+            return 0;
 
         /* Check last byte first; advance by shift on mismatch */
         if (BITOP(byteset, h[l - 1], &)) {
             k = l - shift[h[l - 1]];
             if (k) {
-                if (mem0 && mem && k < p) k = l - p;
+                if (mem0 && mem && k < p)
+                    k = l - p;
                 h += k;
                 mem = 0;
                 continue;
@@ -128,7 +134,8 @@ static char* twoway_memmem(const unsigned char* h, const unsigned char* z, const
         /* Compare left half */
         for (k = ms + 1; k > mem && n[k - 1] == h[k - 1]; k--)
             ;
-        if (k <= mem) return (char*)h;
+        if (k <= mem)
+            return (char*)h;
         h += p;
         mem = mem0;
     }
@@ -138,19 +145,26 @@ void* memmem(const void* h0, size_t k, const void* n0, size_t l) {
     const unsigned char *h = h0, *n = n0;
 
     /* Return immediately on empty needle */
-    if (!l) return (void*)h;
+    if (!l)
+        return (void*)h;
 
     /* Return immediately when needle is longer than haystack */
-    if (k < l) return 0;
+    if (k < l)
+        return 0;
 
     /* Use faster algorithms for short needles */
     h = memchr(h0, *n, k);
-    if (!h || l == 1) return (void*)h;
+    if (!h || l == 1)
+        return (void*)h;
     k -= h - (const unsigned char*)h0;
-    if (k < l) return 0;
-    if (l == 2) return twobyte_memmem(h, k, n);
-    if (l == 3) return threebyte_memmem(h, k, n);
-    if (l == 4) return fourbyte_memmem(h, k, n);
+    if (k < l)
+        return 0;
+    if (l == 2)
+        return twobyte_memmem(h, k, n);
+    if (l == 3)
+        return threebyte_memmem(h, k, n);
+    if (l == 4)
+        return fourbyte_memmem(h, k, n);
 
     return twoway_memmem(h, h + k, n, l);
 }

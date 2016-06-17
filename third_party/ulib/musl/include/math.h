@@ -57,50 +57,50 @@ static __inline unsigned long long __DOUBLE_BITS(double __f) {
     return __u.__i;
 }
 
-#define fpclassify(x)                                                                              \
-    (sizeof(x) == sizeof(float) ? __fpclassifyf(x) : sizeof(x) == sizeof(double)                   \
-                                                         ? __fpclassify(x)                         \
+#define fpclassify(x)                                                            \
+    (sizeof(x) == sizeof(float) ? __fpclassifyf(x) : sizeof(x) == sizeof(double) \
+                                                         ? __fpclassify(x)       \
                                                          : __fpclassifyl(x))
 
-#define isinf(x)                                                                                   \
-    (sizeof(x) == sizeof(float)                                                                    \
-         ? (__FLOAT_BITS(x) & 0x7fffffff) == 0x7f800000                                            \
-         : sizeof(x) == sizeof(double) ? (__DOUBLE_BITS(x) & -1ULL >> 1) == 0x7ffULL << 52         \
+#define isinf(x)                                                                           \
+    (sizeof(x) == sizeof(float)                                                            \
+         ? (__FLOAT_BITS(x) & 0x7fffffff) == 0x7f800000                                    \
+         : sizeof(x) == sizeof(double) ? (__DOUBLE_BITS(x) & -1ULL >> 1) == 0x7ffULL << 52 \
                                        : __fpclassifyl(x) == FP_INFINITE)
 
-#define isnan(x)                                                                                   \
-    (sizeof(x) == sizeof(float)                                                                    \
-         ? (__FLOAT_BITS(x) & 0x7fffffff) > 0x7f800000                                             \
-         : sizeof(x) == sizeof(double) ? (__DOUBLE_BITS(x) & -1ULL >> 1) > 0x7ffULL << 52          \
+#define isnan(x)                                                                          \
+    (sizeof(x) == sizeof(float)                                                           \
+         ? (__FLOAT_BITS(x) & 0x7fffffff) > 0x7f800000                                    \
+         : sizeof(x) == sizeof(double) ? (__DOUBLE_BITS(x) & -1ULL >> 1) > 0x7ffULL << 52 \
                                        : __fpclassifyl(x) == FP_NAN)
 
-#define isnormal(x)                                                                                \
-    (sizeof(x) == sizeof(float)                                                                    \
-         ? ((__FLOAT_BITS(x) + 0x00800000) & 0x7fffffff) >= 0x01000000                             \
-         : sizeof(x) == sizeof(double)                                                             \
-               ? ((__DOUBLE_BITS(x) + (1ULL << 52)) & -1ULL >> 1) >= 1ULL << 53                    \
+#define isnormal(x)                                                             \
+    (sizeof(x) == sizeof(float)                                                 \
+         ? ((__FLOAT_BITS(x) + 0x00800000) & 0x7fffffff) >= 0x01000000          \
+         : sizeof(x) == sizeof(double)                                          \
+               ? ((__DOUBLE_BITS(x) + (1ULL << 52)) & -1ULL >> 1) >= 1ULL << 53 \
                : __fpclassifyl(x) == FP_NORMAL)
 
-#define isfinite(x)                                                                                \
-    (sizeof(x) == sizeof(float)                                                                    \
-         ? (__FLOAT_BITS(x) & 0x7fffffff) < 0x7f800000                                             \
-         : sizeof(x) == sizeof(double) ? (__DOUBLE_BITS(x) & -1ULL >> 1) < 0x7ffULL << 52          \
+#define isfinite(x)                                                                       \
+    (sizeof(x) == sizeof(float)                                                           \
+         ? (__FLOAT_BITS(x) & 0x7fffffff) < 0x7f800000                                    \
+         : sizeof(x) == sizeof(double) ? (__DOUBLE_BITS(x) & -1ULL >> 1) < 0x7ffULL << 52 \
                                        : __fpclassifyl(x) > FP_INFINITE)
 
 int __signbit(double);
 int __signbitf(float);
 int __signbitl(long double);
 
-#define signbit(x)                                                                                 \
-    (sizeof(x) == sizeof(float)                                                                    \
-         ? (int)(__FLOAT_BITS(x) >> 31)                                                            \
+#define signbit(x)                      \
+    (sizeof(x) == sizeof(float)         \
+         ? (int)(__FLOAT_BITS(x) >> 31) \
          : sizeof(x) == sizeof(double) ? (int)(__DOUBLE_BITS(x) >> 63) : __signbitl(x))
 
 #define isunordered(x, y) (isnan((x)) ? ((void)(y), 1) : isnan((y)))
 
-#define __ISREL_DEF(rel, op, type)                                                                 \
-    static __inline int __is##rel(type __x, type __y) {                                            \
-        return !isunordered(__x, __y) && __x op __y;                                               \
+#define __ISREL_DEF(rel, op, type)                      \
+    static __inline int __is##rel(type __x, type __y) { \
+        return !isunordered(__x, __y) && __x op __y;    \
     }
 
 __ISREL_DEF(lessf, <, float_t)
@@ -119,9 +119,9 @@ __ISREL_DEF(greaterequalf, >=, float_t)
 __ISREL_DEF(greaterequal, >=, double_t)
 __ISREL_DEF(greaterequall, >=, long double)
 
-#define __tg_pred_2(x, y, p)                                                                       \
-    (sizeof((x) + (y)) == sizeof(float) ? p##f(x, y) : sizeof((x) + (y)) == sizeof(double)         \
-                                                           ? p(x, y)                               \
+#define __tg_pred_2(x, y, p)                                                               \
+    (sizeof((x) + (y)) == sizeof(float) ? p##f(x, y) : sizeof((x) + (y)) == sizeof(double) \
+                                                           ? p(x, y)                       \
                                                            : p##l(x, y))
 
 #define isless(x, y) __tg_pred_2(x, y, __isless)

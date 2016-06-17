@@ -60,7 +60,8 @@ double tan(double x) {
     }
 
     /* tan(Inf or NaN) is NaN */
-    if (ix >= 0x7ff00000) return x - x;
+    if (ix >= 0x7ff00000)
+        return x - x;
 
     /* argument reduction */
     n = __rem_pio2(x, y);

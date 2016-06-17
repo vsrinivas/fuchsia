@@ -6,7 +6,8 @@
 mqd_t mq_open(const char* name, int flags, ...) {
     mode_t mode = 0;
     struct mq_attr* attr = 0;
-    if (*name == '/') name++;
+    if (*name == '/')
+        name++;
     if (flags & O_CREAT) {
         va_list ap;
         va_start(ap, flags);

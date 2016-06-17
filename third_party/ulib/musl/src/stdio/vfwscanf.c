@@ -21,7 +21,8 @@
 #define SIZE_ll 3
 
 static void store_int(void* dest, int size, unsigned long long i) {
-    if (!dest) return;
+    if (!dest)
+        return;
     switch (size) {
     case SIZE_hh:
         *(char*)dest = i;
@@ -57,17 +58,21 @@ static int in_set(const wchar_t* set, int c) {
     int j;
     const wchar_t* p = set;
     if (*p == '-') {
-        if (c == '-') return 1;
+        if (c == '-')
+            return 1;
         p++;
     } else if (*p == ']') {
-        if (c == ']') return 1;
+        if (c == ']')
+            return 1;
         p++;
     }
     for (; *p && *p != ']'; p++) {
         if (*p == '-' && p[1] && p[1] != ']')
             for (j = p++ [-1]; j < *p; j++)
-                if (c == j) return 1;
-        if (c == *p) return 1;
+                if (c == j)
+                    return 1;
+        if (c == *p)
+            return 1;
     }
     return 0;
 }
@@ -118,7 +123,8 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
             c = getwc(f);
             if (c != *p) {
                 ungetwc(c, f);
-                if (c < 0) goto input_fail;
+                if (c < 0)
+                    goto input_fail;
                 goto match_fail;
             }
             pos++;
@@ -214,7 +220,8 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
                     pos++;
             else
                 c = getwc(f);
-            if (c < 0) goto input_fail;
+            if (c < 0)
+                goto input_fail;
             ungetwc(c, f);
         }
 
@@ -228,12 +235,13 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
         case 'c':
         case '[':
             if (t == 'c') {
-                if (width < 1) width = 1;
+                if (width < 1)
+                    width = 1;
                 invert = 1;
                 set = L"";
             } else if (t == 's') {
                 invert = 1;
-                set = (const wchar_t[]){' ',    '\t',   '\n',   '\r',   11,     12,
+                set = (const wchar_t[]){' ', '\t', '\n', '\r', 11, 12,
                                         0x0085, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004,
                                         0x2005, 0x2006, 0x2008, 0x2009, 0x200a, 0x2028,
                                         0x2029, 0x205f, 0x3000, 0};
@@ -243,9 +251,11 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
                 else
                     invert = 0;
                 set = p;
-                if (*p == ']') p++;
+                if (*p == ']')
+                    p++;
                 while (*p != ']') {
-                    if (!*p) goto fmt_fail;
+                    if (!*p)
+                        goto fmt_fail;
                     p++;
                 }
             }
@@ -255,38 +265,46 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
 
             int gotmatch = 0;
 
-            if (width < 1) width = -1;
+            if (width < 1)
+                width = -1;
 
             i = 0;
             if (alloc) {
                 k = t == 'c' ? width + 1U : 31;
                 if (size == SIZE_l) {
                     wcs = malloc(k * sizeof(wchar_t));
-                    if (!wcs) goto alloc_fail;
+                    if (!wcs)
+                        goto alloc_fail;
                 } else {
                     s = malloc(k);
-                    if (!s) goto alloc_fail;
+                    if (!s)
+                        goto alloc_fail;
                 }
             }
             while (width) {
-                if ((c = getwc(f)) < 0) break;
-                if (in_set(set, c) == invert) break;
+                if ((c = getwc(f)) < 0)
+                    break;
+                if (in_set(set, c) == invert)
+                    break;
                 if (wcs) {
                     wcs[i++] = c;
                     if (alloc && i == k) {
                         k += k + 1;
                         wchar_t* tmp = realloc(wcs, k * sizeof(wchar_t));
-                        if (!tmp) goto alloc_fail;
+                        if (!tmp)
+                            goto alloc_fail;
                         wcs = tmp;
                     }
                 } else if (size != SIZE_l) {
                     int l = wctomb(s ? s + i : tmp, c);
-                    if (l < 0) goto input_fail;
+                    if (l < 0)
+                        goto input_fail;
                     i += l;
                     if (alloc && i > k - 4) {
                         k += k + 1;
                         char* tmp = realloc(s, k);
-                        if (!tmp) goto alloc_fail;
+                        if (!tmp)
+                            goto alloc_fail;
                         s = tmp;
                     }
                 }
@@ -296,7 +314,8 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
             }
             if (width) {
                 ungetwc(c, f);
-                if (t == 'c' || !gotmatch) goto match_fail;
+                if (t == 'c' || !gotmatch)
+                    goto match_fail;
             }
 
             if (alloc) {
@@ -306,8 +325,10 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
                     *(char**)dest = s;
             }
             if (t != 'c') {
-                if (wcs) wcs[i] = 0;
-                if (s) s[i] = 0;
+                if (wcs)
+                    wcs[i] = 0;
+                if (s)
+                    s[i] = 0;
             }
             break;
 
@@ -326,7 +347,8 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
         case 'G':
         case 'X':
         case 'p':
-            if (width < 1) width = 0;
+            if (width < 1)
+                width = 0;
             snprintf(tmp, sizeof tmp, "%.*s%.0d%s%c%%lln", 1 + !dest, "%*", width,
                      size_pfx[size + 2], t);
             cnt = 0;
@@ -340,13 +362,15 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
             goto fmt_fail;
         }
 
-        if (dest) matches++;
+        if (dest)
+            matches++;
     }
     if (0) {
     fmt_fail:
     alloc_fail:
     input_fail:
-        if (!matches) matches--;
+        if (!matches)
+            matches--;
     match_fail:
         if (alloc) {
             free(s);

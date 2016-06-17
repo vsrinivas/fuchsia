@@ -22,7 +22,8 @@ char* tmpnam(char* buf) {
 #else
         r = __syscall(SYS_fstatat, AT_FDCWD, s, &(struct stat){0}, AT_SYMLINK_NOFOLLOW);
 #endif
-        if (r == -ENOENT) return strcpy(buf ? buf : internal, s);
+        if (r == -ENOENT)
+            return strcpy(buf ? buf : internal, s);
     }
     return 0;
 }

@@ -12,7 +12,8 @@ int strverscmp(const char* l0, const char* r0) {
      * suffix and whether those digits are all zeros. */
     for (dp = i = 0; l[i] == r[i]; i++) {
         int c = l[i];
-        if (!c) return 0;
+        if (!c)
+            return 0;
         if (!isdigit(c))
             dp = i + 1, z = 1;
         else if (c != '0')
@@ -23,8 +24,10 @@ int strverscmp(const char* l0, const char* r0) {
         /* If we're not looking at a digit sequence that began
          * with a zero, longest digit string is greater. */
         for (j = i; isdigit(l[j]); j++)
-            if (!isdigit(r[j])) return 1;
-        if (isdigit(r[j])) return -1;
+            if (!isdigit(r[j]))
+                return 1;
+        if (isdigit(r[j]))
+            return -1;
     } else if (z && dp < i && (isdigit(l[i]) || isdigit(r[i]))) {
         /* Otherwise, if common prefix of digit sequence is
          * all zeros, digits order less than non-digits. */

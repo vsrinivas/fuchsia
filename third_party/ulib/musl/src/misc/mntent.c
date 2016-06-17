@@ -8,7 +8,8 @@ FILE* setmntent(const char* name, const char* mode) {
 }
 
 int endmntent(FILE* f) {
-    if (f) fclose(f);
+    if (f)
+        fclose(f);
     return 1;
 }
 
@@ -20,7 +21,8 @@ struct mntent* getmntent_r(FILE* f, struct mntent* mnt, char* linebuf, int bufle
 
     do {
         fgets(linebuf, buflen, f);
-        if (feof(f) || ferror(f)) return 0;
+        if (feof(f) || ferror(f))
+            return 0;
         if (!strchr(linebuf, '\n')) {
             fscanf(f, "%*[^\n]%*[\n]");
             errno = ERANGE;
@@ -50,7 +52,8 @@ struct mntent* getmntent(FILE* f) {
 }
 
 int addmntent(FILE* f, const struct mntent* mnt) {
-    if (fseek(f, 0, SEEK_END)) return 1;
+    if (fseek(f, 0, SEEK_END))
+        return 1;
     return fprintf(f, "%s\t%s\t%s\t%s\t%d\t%d\n", mnt->mnt_fsname, mnt->mnt_dir, mnt->mnt_type,
                    mnt->mnt_opts, mnt->mnt_freq, mnt->mnt_passno) < 0;
 }

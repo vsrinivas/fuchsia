@@ -146,7 +146,7 @@ void encrypt(char*, int);
 void swab(const void* __restrict, void* __restrict, ssize_t);
 #endif
 
-#if defined(_GNU_SOURCE) || defined(_BSD_SOURCE) ||                                                \
+#if defined(_GNU_SOURCE) || defined(_BSD_SOURCE) || \
     (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE + 0 < 700)
 int usleep(unsigned);
 unsigned ualarm(unsigned, unsigned);

@@ -41,10 +41,12 @@ double complex cexp(double complex z) {
     hy &= 0x7fffffff;
 
     /* cexp(x + I 0) = exp(x) + I 0 */
-    if ((hy | ly) == 0) return CMPLX(exp(x), y);
+    if ((hy | ly) == 0)
+        return CMPLX(exp(x), y);
     EXTRACT_WORDS(hx, lx, x);
     /* cexp(0 + I y) = cos(y) + I sin(y) */
-    if (((hx & 0x7fffffff) | lx) == 0) return CMPLX(cos(y), sin(y));
+    if (((hx & 0x7fffffff) | lx) == 0)
+        return CMPLX(cos(y), sin(y));
 
     if (hy >= 0x7ff00000) {
         if (lx != 0 || (hx & 0x7fffffff) != 0x7ff00000) {

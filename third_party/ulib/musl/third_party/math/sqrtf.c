@@ -31,8 +31,10 @@ float sqrtf(float x) {
 
     /* take care of zero */
     if (ix <= 0) {
-        if ((ix & ~sign) == 0) return x;      /* sqrt(+-0) = +-0 */
-        if (ix < 0) return (x - x) / (x - x); /* sqrt(-ve) = sNaN */
+        if ((ix & ~sign) == 0)
+            return x; /* sqrt(+-0) = +-0 */
+        if (ix < 0)
+            return (x - x) / (x - x); /* sqrt(-ve) = sNaN */
     }
     /* normalize x */
     m = ix >> 23;

@@ -7,8 +7,10 @@ long double fdiml(long double x, long double y) {
 }
 #else
 long double fdiml(long double x, long double y) {
-    if (isnan(x)) return x;
-    if (isnan(y)) return y;
+    if (isnan(x))
+        return x;
+    if (isnan(y))
+        return y;
     return x > y ? x - y : 0;
 }
 #endif

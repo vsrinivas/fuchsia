@@ -16,7 +16,8 @@ float atanhf(float x) {
     if (u.i < 0x3f800000 - (1 << 23)) {
         if (u.i < 0x3f800000 - (32 << 23)) {
             /* handle underflow */
-            if (u.i < (1 << 23)) FORCE_EVAL((float)(y * y));
+            if (u.i < (1 << 23))
+                FORCE_EVAL((float)(y * y));
         } else {
             /* |x| < 0.5, up to 1.7ulp error */
             y = 0.5f * log1pf(2 * y + 2 * y * y / (1 - y));

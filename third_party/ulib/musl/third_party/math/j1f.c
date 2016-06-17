@@ -25,7 +25,8 @@ static float common(uint32_t ix, float x, int y1, int sign) {
     double z, s, c, ss, cc;
 
     s = sinf(x);
-    if (y1) s = -s;
+    if (y1)
+        s = -s;
     c = cosf(x);
     cc = s - c;
     if (ix < 0x7f000000) {
@@ -36,11 +37,13 @@ static float common(uint32_t ix, float x, int y1, int sign) {
         else
             ss = z / cc;
         if (ix < 0x58800000) {
-            if (y1) ss = -ss;
+            if (y1)
+                ss = -ss;
             cc = ponef(x) * cc - qonef(x) * ss;
         }
     }
-    if (sign) cc = -cc;
+    if (sign)
+        cc = -cc;
     return invsqrtpi * cc / sqrtf(x);
 }
 
@@ -63,7 +66,8 @@ float j1f(float x) {
     GET_FLOAT_WORD(ix, x);
     sign = ix >> 31;
     ix &= 0x7fffffff;
-    if (ix >= 0x7f800000) return 1 / (x * x);
+    if (ix >= 0x7f800000)
+        return 1 / (x * x);
     if (ix >= 0x40000000) /* |x| >= 2 */
         return common(ix, fabsf(x), 0, sign);
     if (ix >= 0x32000000) { /* |x| >= 2**-27 */
@@ -97,9 +101,12 @@ float y1f(float x) {
     uint32_t ix;
 
     GET_FLOAT_WORD(ix, x);
-    if ((ix & 0x7fffffff) == 0) return -1 / 0.0f;
-    if (ix >> 31) return 0 / 0.0f;
-    if (ix >= 0x7f800000) return 1 / x;
+    if ((ix & 0x7fffffff) == 0)
+        return -1 / 0.0f;
+    if (ix >> 31)
+        return 0 / 0.0f;
+    if (ix >= 0x7f800000)
+        return 1 / x;
     if (ix >= 0x40000000) /* |x| >= 2.0 */
         return common(ix, x, 1, 0);
     if (ix < 0x32000000) /* x < 2**-27 */

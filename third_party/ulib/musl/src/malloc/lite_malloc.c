@@ -16,7 +16,8 @@ static void* __simple_malloc(size_t n) {
     size_t align = 1, pad;
     void* p;
 
-    if (!n) n++;
+    if (!n)
+        n++;
     while (align < n && align < ALIGN)
         align += align;
 
@@ -24,7 +25,8 @@ static void* __simple_malloc(size_t n) {
 
     pad = -(uintptr_t)cur & align - 1;
 
-    if (n <= SIZE_MAX / 2 + ALIGN) n += pad;
+    if (n <= SIZE_MAX / 2 + ALIGN)
+        n += pad;
 
     if (n > end - cur) {
         size_t m = n;

@@ -71,7 +71,8 @@ static volatile int aio_fd_cnt;
 volatile int __aio_fut;
 
 static struct aio_queue* __aio_get_queue(int fd, int need) {
-    if (fd < 0) return 0;
+    if (fd < 0)
+        return 0;
     int a = fd >> 24;
     unsigned char b = fd >> 16, c = fd >> 8, d = fd;
     struct aio_queue* q = 0;
@@ -79,14 +80,22 @@ static struct aio_queue* __aio_get_queue(int fd, int need) {
     if ((!map || !map[a] || !map[a][b] || !map[a][b][c] || !(q = map[a][b][c][d])) && need) {
         pthread_rwlock_unlock(&maplock);
         pthread_rwlock_wrlock(&maplock);
-        if (!map) map = calloc(sizeof *map, (-1U / 2 + 1) >> 24);
-        if (!map) goto out;
-        if (!map[a]) map[a] = calloc(sizeof **map, 256);
-        if (!map[a]) goto out;
-        if (!map[a][b]) map[a][b] = calloc(sizeof ***map, 256);
-        if (!map[a][b]) goto out;
-        if (!map[a][b][c]) map[a][b][c] = calloc(sizeof ****map, 256);
-        if (!map[a][b][c]) goto out;
+        if (!map)
+            map = calloc(sizeof *map, (-1U / 2 + 1) >> 24);
+        if (!map)
+            goto out;
+        if (!map[a])
+            map[a] = calloc(sizeof **map, 256);
+        if (!map[a])
+            goto out;
+        if (!map[a][b])
+            map[a][b] = calloc(sizeof ***map, 256);
+        if (!map[a][b])
+            goto out;
+        if (!map[a][b][c])
+            map[a][b][c] = calloc(sizeof ****map, 256);
+        if (!map[a][b][c])
+            goto out;
         if (!(q = map[a][b][c][d])) {
             map[a][b][c][d] = q = calloc(sizeof *****map, 1);
             if (q) {
@@ -97,7 +106,8 @@ static struct aio_queue* __aio_get_queue(int fd, int need) {
             }
         }
     }
-    if (q) pthread_mutex_lock(&q->lock);
+    if (q)
+        pthread_mutex_lock(&q->lock);
 out:
     pthread_rwlock_unlock(&maplock);
     return q;
@@ -147,13 +157,17 @@ static void cleanup(void* ctx) {
      * considerations. Type 4 is notified later via a cond var. */
 
     cb->__ret = at->ret;
-    if (a_swap(&at->running, 0) < 0) __wake(&at->running, -1);
-    if (a_swap(&cb->__err, at->err) != EINPROGRESS) __wake(&cb->__err, -1);
-    if (a_swap(&__aio_fut, 0)) __wake(&__aio_fut, -1);
+    if (a_swap(&at->running, 0) < 0)
+        __wake(&at->running, -1);
+    if (a_swap(&cb->__err, at->err) != EINPROGRESS)
+        __wake(&cb->__err, -1);
+    if (a_swap(&__aio_fut, 0))
+        __wake(&__aio_fut, -1);
 
     pthread_mutex_lock(&q->lock);
 
-    if (at->next) at->next->prev = at->prev;
+    if (at->next)
+        at->next->prev = at->prev;
     if (at->prev)
         at->prev->next = at->next;
     else
@@ -194,7 +208,8 @@ static void* io_thread_func(void* ctx) {
 
     args->err = q ? 0 : EAGAIN;
     sem_post(&args->sem);
-    if (!q) return 0;
+    if (!q)
+        return 0;
 
     at.op = op;
     at.running = 1;
@@ -204,7 +219,8 @@ static void* io_thread_func(void* ctx) {
     at.td = __pthread_self();
     at.cb = cb;
     at.prev = 0;
-    if ((at.next = q->head)) at.next->prev = &at;
+    if ((at.next = q->head))
+        at.next->prev = &at;
     q->head = &at;
     q->ref++;
 
@@ -222,7 +238,8 @@ static void* io_thread_func(void* ctx) {
         for (;;) {
             for (p = at.next; p && p->op != LIO_WRITE; p = p->next)
                 ;
-            if (!p) break;
+            if (!p)
+                break;
             pthread_cond_wait(&q->cond, &q->lock);
         }
     }
@@ -332,17 +349,20 @@ int aio_cancel(int fd, struct aiocb* cb) {
     pthread_sigmask(SIG_BLOCK, &allmask, &origmask);
 
     if (!(q = __aio_get_queue(fd, 0))) {
-        if (fcntl(fd, F_GETFD) < 0) ret = -1;
+        if (fcntl(fd, F_GETFD) < 0)
+            ret = -1;
         goto done;
     }
 
     for (p = q->head; p; p = p->next) {
-        if (cb && cb != p->cb) continue;
+        if (cb && cb != p->cb)
+            continue;
         /* Transition target from running to running-with-waiters */
         if (a_cas(&p->running, 1, -1)) {
             pthread_cancel(p->td);
             __wait(&p->running, 0, -1);
-            if (p->err == ECANCELED) ret = AIO_CANCELED;
+            if (p->err == ECANCELED)
+                ret = AIO_CANCELED;
         }
     }
 
@@ -354,7 +374,8 @@ done:
 
 int __aio_close(int fd) {
     a_barrier();
-    if (aio_fd_cnt) aio_cancel(fd, 0);
+    if (aio_fd_cnt)
+        aio_cancel(fd, 0);
     return fd;
 }
 

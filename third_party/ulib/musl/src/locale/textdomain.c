@@ -13,7 +13,8 @@ char* __gettextdomain(void) {
 }
 
 char* textdomain(const char* domainname) {
-    if (!domainname) return __gettextdomain();
+    if (!domainname)
+        return __gettextdomain();
 
     size_t domlen = strlen(domainname);
     if (domlen > NAME_MAX) {
@@ -23,7 +24,8 @@ char* textdomain(const char* domainname) {
 
     if (!current_domain) {
         current_domain = malloc(NAME_MAX + 1);
-        if (!current_domain) return 0;
+        if (!current_domain)
+            return 0;
     }
 
     memcpy(current_domain, domainname, domlen + 1);

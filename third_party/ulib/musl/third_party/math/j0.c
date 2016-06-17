@@ -75,7 +75,8 @@ static double common(uint32_t ix, double x, int y0) {
      */
     s = sin(x);
     c = cos(x);
-    if (y0) c = -c;
+    if (y0)
+        c = -c;
     cc = s + c;
     /* avoid overflow in 2*x, big ulp error when x>=0x1p1023 */
     if (ix < 0x7fe00000) {
@@ -86,7 +87,8 @@ static double common(uint32_t ix, double x, int y0) {
         else
             ss = z / cc;
         if (ix < 0x48000000) {
-            if (y0) ss = -ss;
+            if (y0)
+                ss = -ss;
             cc = pzero(x) * cc - qzero(x) * ss;
         }
     }
@@ -111,7 +113,8 @@ double j0(double x) {
     ix &= 0x7fffffff;
 
     /* j0(+-inf)=0, j0(nan)=nan */
-    if (ix >= 0x7ff00000) return 1 / (x * x);
+    if (ix >= 0x7ff00000)
+        return 1 / (x * x);
     x = fabs(x);
 
     if (ix >= 0x40000000) { /* |x| >= 2 */
@@ -155,9 +158,12 @@ double y0(double x) {
     EXTRACT_WORDS(ix, lx, x);
 
     /* y0(nan)=nan, y0(<0)=nan, y0(0)=-inf, y0(inf)=0 */
-    if ((ix << 1 | lx) == 0) return -1 / 0.0;
-    if (ix >> 31) return 0 / 0.0;
-    if (ix >= 0x7ff00000) return 1 / x;
+    if ((ix << 1 | lx) == 0)
+        return -1 / 0.0;
+    if (ix >> 31)
+        return 0 / 0.0;
+    if (ix >= 0x7ff00000)
+        return 1 / x;
 
     if (ix >= 0x40000000) { /* x >= 2 */
         /* large ulp errors near zeros: 3.958, 7.086,.. */

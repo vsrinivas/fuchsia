@@ -19,7 +19,8 @@ static ssize_t vstrfmon_l(char* s, size_t n, locale_t loc, const char* fmt, va_l
             continue;
         }
         fmt++;
-        if (*fmt == '%') goto literal;
+        if (*fmt == '%')
+            goto literal;
 
         fill = ' ';
         nogrp = 0;
@@ -62,7 +63,8 @@ static ssize_t vstrfmon_l(char* s, size_t n, locale_t loc, const char* fmt, va_l
         intl = *fmt++ == 'i';
 
         w = lp + 1 + rp;
-        if (!left && fw > w) w = fw;
+        if (!left && fw > w)
+            w = fw;
 
         x = va_arg(ap, double);
         l = snprintf(s, n, "%*.*f", w, rp, x);

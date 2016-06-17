@@ -6,7 +6,8 @@ static struct passwd pw;
 static size_t size;
 
 void setpwent() {
-    if (f) fclose(f);
+    if (f)
+        fclose(f);
     f = 0;
 }
 
@@ -14,8 +15,10 @@ weak_alias(setpwent, endpwent);
 
 struct passwd* getpwent() {
     struct passwd* res;
-    if (!f) f = fopen("/etc/passwd", "rbe");
-    if (!f) return 0;
+    if (!f)
+        f = fopen("/etc/passwd", "rbe");
+    if (!f)
+        return 0;
     __getpwent_a(f, &pw, &line, &size, &res);
     return res;
 }

@@ -20,7 +20,8 @@ long long llrintl(long double x) {
 
     e = fetestexcept(FE_INEXACT);
     x = rintl(x);
-    if (!e && (x > LLONG_MAX || x < LLONG_MIN)) feclearexcept(FE_INEXACT);
+    if (!e && (x > LLONG_MAX || x < LLONG_MIN))
+        feclearexcept(FE_INEXACT);
     /* conversion */
     return x;
 }

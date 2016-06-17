@@ -38,7 +38,8 @@ long double asinl(long double x) {
 
     if (e >= 0x3fff) { /* |x| >= 1 or nan */
         /* asin(+-1)=+-pi/2 with inexact */
-        if (x == 1 || x == -1) return x * pio2_hi + 0x1p-120f;
+        if (x == 1 || x == -1)
+            return x * pio2_hi + 0x1p-120f;
         return 0 / (x - x);
     }
     if (e < 0x3fff - 1) { /* |x| < 0.5 */

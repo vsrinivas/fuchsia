@@ -3,9 +3,10 @@
 #include <errno.h>
 #include <sys/resource.h>
 
-#define FIX(x)                                                                                     \
-    do {                                                                                           \
-        if ((x) >= SYSCALL_RLIM_INFINITY) (x) = RLIM_INFINITY;                                     \
+#define FIX(x)                            \
+    do {                                  \
+        if ((x) >= SYSCALL_RLIM_INFINITY) \
+            (x) = RLIM_INFINITY;          \
     } while (0)
 
 int getrlimit(int resource, struct rlimit* rlim) {
@@ -15,8 +16,10 @@ int getrlimit(int resource, struct rlimit* rlim) {
         FIX(rlim->rlim_cur);
         FIX(rlim->rlim_max);
     }
-    if (!ret || errno != ENOSYS) return ret;
-    if (syscall(SYS_getrlimit, resource, k_rlim) < 0) return -1;
+    if (!ret || errno != ENOSYS)
+        return ret;
+    if (syscall(SYS_getrlimit, resource, k_rlim) < 0)
+        return -1;
     rlim->rlim_cur = k_rlim[0] == -1UL ? RLIM_INFINITY : k_rlim[0];
     rlim->rlim_max = k_rlim[1] == -1UL ? RLIM_INFINITY : k_rlim[1];
     FIX(rlim->rlim_cur);

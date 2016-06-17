@@ -20,7 +20,8 @@
 #define SIZE_ll 3
 
 static void store_int(void* dest, int size, unsigned long long i) {
-    if (!dest) return;
+    if (!dest)
+        return;
     switch (size) {
     case SIZE_hh:
         *(char*)dest = i;
@@ -94,7 +95,8 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
             c = shgetc(f);
             if (c != *p) {
                 shunget(f);
-                if (c < 0) goto input_fail;
+                if (c < 0)
+                    goto input_fail;
                 goto match_fail;
             }
             pos++;
@@ -186,7 +188,8 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
 
         switch (t) {
         case 'c':
-            if (width < 1) width = 1;
+            if (width < 1)
+                width = 1;
         case '[':
             break;
         case 'n':
@@ -202,7 +205,8 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
         }
 
         shlim(f, width);
-        if (shgetc(f) < 0) goto input_fail;
+        if (shgetc(f) < 0)
+            goto input_fail;
         shunget(f);
 
         switch (t) {
@@ -232,7 +236,8 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
                 else if (*p == ']')
                     p++, scanset[1 + ']'] = 1 - invert;
                 for (; *p != ']'; p++) {
-                    if (!*p) goto fmt_fail;
+                    if (!*p)
+                        goto fmt_fail;
                     if (*p == '-' && p[1] && p[1] != ']')
                         for (c = p++ [-1]; c < *p; c++)
                             scanset[1 + c] = 1 - invert;
@@ -246,7 +251,8 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
             if (size == SIZE_l) {
                 if (alloc) {
                     wcs = malloc(k * sizeof(wchar_t));
-                    if (!wcs) goto alloc_fail;
+                    if (!wcs)
+                        goto alloc_fail;
                 } else {
                     wcs = dest;
                 }
@@ -258,24 +264,29 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
                     case -2:
                         continue;
                     }
-                    if (wcs) wcs[i++] = wc;
+                    if (wcs)
+                        wcs[i++] = wc;
                     if (alloc && i == k) {
                         k += k + 1;
                         wchar_t* tmp = realloc(wcs, k * sizeof(wchar_t));
-                        if (!tmp) goto alloc_fail;
+                        if (!tmp)
+                            goto alloc_fail;
                         wcs = tmp;
                     }
                 }
-                if (!mbsinit(&st)) goto input_fail;
+                if (!mbsinit(&st))
+                    goto input_fail;
             } else if (alloc) {
                 s = malloc(k);
-                if (!s) goto alloc_fail;
+                if (!s)
+                    goto alloc_fail;
                 while (scanset[(c = shgetc(f)) + 1]) {
                     s[i++] = c;
                     if (i == k) {
                         k += k + 1;
                         char* tmp = realloc(s, k);
-                        if (!tmp) goto alloc_fail;
+                        if (!tmp)
+                            goto alloc_fail;
                         s = tmp;
                     }
                 }
@@ -287,8 +298,10 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
                     ;
             }
             shunget(f);
-            if (!shcnt(f)) goto match_fail;
-            if (t == 'c' && shcnt(f) != width) goto match_fail;
+            if (!shcnt(f))
+                goto match_fail;
+            if (t == 'c' && shcnt(f) != width)
+                goto match_fail;
             if (alloc) {
                 if (size == SIZE_l)
                     *(wchar_t**)dest = wcs;
@@ -296,8 +309,10 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
                     *(char**)dest = s;
             }
             if (t != 'c') {
-                if (wcs) wcs[i] = 0;
-                if (s) s[i] = 0;
+                if (wcs)
+                    wcs[i] = 0;
+                if (s)
+                    s[i] = 0;
             }
             break;
         case 'p':
@@ -316,7 +331,8 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
             base = 0;
         int_common:
             x = __intscan(f, base, 0, ULLONG_MAX);
-            if (!shcnt(f)) goto match_fail;
+            if (!shcnt(f))
+                goto match_fail;
             if (t == 'p' && dest)
                 *(void**)dest = (void*)(uintptr_t)x;
             else
@@ -331,8 +347,10 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
         case 'g':
         case 'G':
             y = __floatscan(f, size, 0);
-            if (!shcnt(f)) goto match_fail;
-            if (dest) switch (size) {
+            if (!shcnt(f))
+                goto match_fail;
+            if (dest)
+                switch (size) {
                 case SIZE_def:
                     *(float*)dest = y;
                     break;
@@ -347,13 +365,15 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
         }
 
         pos += shcnt(f);
-        if (dest) matches++;
+        if (dest)
+            matches++;
     }
     if (0) {
     fmt_fail:
     alloc_fail:
     input_fail:
-        if (!matches) matches--;
+        if (!matches)
+            matches--;
     match_fail:
         if (alloc) {
             free(s);

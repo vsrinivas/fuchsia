@@ -13,11 +13,14 @@ int __execvpe(const char* file, char* const argv[], char* const envp[]) {
     int seen_eacces = 0;
 
     errno = ENOENT;
-    if (!*file) return -1;
+    if (!*file)
+        return -1;
 
-    if (strchr(file, '/')) return execve(file, argv, envp);
+    if (strchr(file, '/'))
+        return execve(file, argv, envp);
 
-    if (!path) path = "/usr/local/bin:/bin:/usr/bin";
+    if (!path)
+        path = "/usr/local/bin:/bin:/usr/bin";
     k = strnlen(file, NAME_MAX + 1);
     if (k > NAME_MAX) {
         errno = ENAMETOOLONG;
@@ -28,9 +31,11 @@ int __execvpe(const char* file, char* const argv[], char* const envp[]) {
     for (p = path;; p = z) {
         char b[l + k + 1];
         z = strchr(p, ':');
-        if (!z) z = p + strlen(p);
+        if (!z)
+            z = p + strlen(p);
         if (z - p >= l) {
-            if (!*z++) break;
+            if (!*z++)
+                break;
             continue;
         }
         memcpy(b, p, z - p);
@@ -41,9 +46,11 @@ int __execvpe(const char* file, char* const argv[], char* const envp[]) {
             seen_eacces = 1;
         else if (errno != ENOENT)
             return -1;
-        if (!*z++) break;
+        if (!*z++)
+            break;
     }
-    if (seen_eacces) errno = EACCES;
+    if (seen_eacces)
+        errno = EACCES;
     return -1;
 }
 

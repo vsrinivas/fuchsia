@@ -31,12 +31,15 @@ int sched_getcpu(void) {
     getcpu_f f = (getcpu_f)vdso_func;
     if (f) {
         r = f(&cpu, 0, 0);
-        if (!r) return cpu;
-        if (r != -ENOSYS) return __syscall_ret(r);
+        if (!r)
+            return cpu;
+        if (r != -ENOSYS)
+            return __syscall_ret(r);
     }
 #endif
 
     r = __syscall(SYS_getcpu, &cpu, 0, 0);
-    if (!r) return cpu;
+    if (!r)
+        return cpu;
     return __syscall_ret(r);
 }

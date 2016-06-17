@@ -45,7 +45,8 @@ static inline void lock(volatile int* l) {
 }
 
 static inline void unlock(volatile int* l) {
-    if (a_swap(l, 0) == 2) __wake(l, 1);
+    if (a_swap(l, 0) == 2)
+        __wake(l, 1);
 }
 
 static inline void unlock_requeue(volatile int* l, volatile int* r, int w) {
@@ -54,7 +55,7 @@ static inline void unlock_requeue(volatile int* l, volatile int* r, int w) {
         __wake(l, 1);
     else
         _magenta_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0, (void*)r,
-                           /* requeue count */ 1);
+                               /* requeue count */ 1);
 }
 
 enum {
@@ -69,9 +70,11 @@ int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restri
     int e, seq, clock = c->_c_clock, cs, oldstate, tmp;
     volatile int* fut;
 
-    if ((m->_m_type & 15) && (m->_m_lock & INT_MAX) != __pthread_self()->tid) return EPERM;
+    if ((m->_m_type & 15) && (m->_m_lock & INT_MAX) != __pthread_self()->tid)
+        return EPERM;
 
-    if (ts && ts->tv_nsec >= 1000000000UL) return EINVAL;
+    if (ts && ts->tv_nsec >= 1000000000UL)
+        return EINVAL;
 
     __pthread_testcancel();
 
@@ -92,12 +95,14 @@ int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restri
     __pthread_mutex_unlock(m);
 
     __pthread_setcancelstate(PTHREAD_CANCEL_MASKED, &cs);
-    if (cs == PTHREAD_CANCEL_DISABLE) __pthread_setcancelstate(cs, 0);
+    if (cs == PTHREAD_CANCEL_DISABLE)
+        __pthread_setcancelstate(cs, 0);
 
     do
         e = __timedwait_cp(fut, seq, clock, ts);
     while (*fut == seq && (!e || e == EINTR));
-    if (e == EINTR) e = 0;
+    if (e == EINTR)
+        e = 0;
 
     oldstate = a_cas(&node.state, WAITING, LEAVING);
 
@@ -121,7 +126,8 @@ int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restri
         unlock(&c->_c_lock);
 
         if (node.notify) {
-            if (a_fetch_add(node.notify, -1) == 1) __wake(node.notify, 1);
+            if (a_fetch_add(node.notify, -1) == 1)
+                __wake(node.notify, 1);
         }
     } else {
         /* Lock barrier first to control wake order. */
@@ -132,11 +138,14 @@ relock:
     /* Errors locking the mutex override any existing error or
      * cancellation, since the caller must see them to know the
      * state of the mutex. */
-    if ((tmp = pthread_mutex_lock(m))) e = tmp;
+    if ((tmp = pthread_mutex_lock(m)))
+        e = tmp;
 
-    if (oldstate == WAITING) goto done;
+    if (oldstate == WAITING)
+        goto done;
 
-    if (!node.next) a_inc(&m->_m_waiters);
+    if (!node.next)
+        a_inc(&m->_m_waiters);
 
     /* Unlock the barrier that's holding back the next waiter, and
      * either wake it or requeue it to the mutex. */
@@ -146,7 +155,8 @@ relock:
         a_dec(&m->_m_waiters);
 
     /* Since a signal was consumed, cancellation is not permitted. */
-    if (e == ECANCELED) e = 0;
+    if (e == ECANCELED)
+        e = 0;
 
 done:
     __pthread_setcancelstate(cs, 0);
@@ -171,12 +181,14 @@ int __private_cond_signal(pthread_cond_t* c, int n) {
             p->notify = &ref;
         } else {
             n--;
-            if (!first) first = p;
+            if (!first)
+                first = p;
         }
     }
     /* Split the list, leaving any remainder on the cv. */
     if (p) {
-        if (p->next) p->next->prev = 0;
+        if (p->next)
+            p->next->prev = 0;
         p->next = 0;
     } else {
         c->_c_head = 0;
@@ -191,7 +203,8 @@ int __private_cond_signal(pthread_cond_t* c, int n) {
         __wait(&ref, 0, cur);
 
     /* Allow first signaled waiter, if any, to proceed. */
-    if (first) unlock(&first->barrier);
+    if (first)
+        unlock(&first->barrier);
 
     return 0;
 }

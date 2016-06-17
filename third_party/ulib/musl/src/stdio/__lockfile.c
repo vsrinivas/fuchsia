@@ -3,7 +3,8 @@
 
 int __lockfile(FILE* f) {
     int owner, tid = __pthread_self()->tid;
-    if (f->lock == tid) return 0;
+    if (f->lock == tid)
+        return 0;
     while ((owner = a_cas(&f->lock, 0, tid)))
         __wait(&f->lock, &f->waiters, owner);
     return 1;
@@ -21,5 +22,6 @@ void __unlockfile(FILE* f) {
      * a spurious syscall will be made. If the implementation of
      * malloc changes, this assumption needs revisiting. */
 
-    if (f->waiters) __wake(&f->lock, 1);
+    if (f->waiters)
+        __wake(&f->lock, 1);
 }

@@ -20,11 +20,13 @@ float rintf(float x) {
     int s = u.i >> 31;
     float_t y;
 
-    if (e >= 0x7f + 23) return x;
+    if (e >= 0x7f + 23)
+        return x;
     if (s)
         y = x - toint + toint;
     else
         y = x + toint - toint;
-    if (y == 0) return s ? -0.0f : 0.0f;
+    if (y == 0)
+        return s ? -0.0f : 0.0f;
     return y;
 }

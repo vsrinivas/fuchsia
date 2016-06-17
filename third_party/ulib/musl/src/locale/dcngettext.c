@@ -37,8 +37,10 @@ char* bindtextdomain(const char* domainname, const char* dirname) {
     static mxr_mutex_t lock;
     struct binding *p, *q;
 
-    if (!domainname) return 0;
-    if (!dirname) return gettextdir(domainname, &(size_t){0});
+    if (!domainname)
+        return 0;
+    if (!dirname)
+        return gettextdir(domainname, &(size_t){0});
 
     size_t domlen = strlen(domainname);
     size_t dirlen = strlen(dirname);
@@ -73,7 +75,8 @@ char* bindtextdomain(const char* domainname, const char* dirname) {
     a_store(&p->active, 1);
 
     for (q = bindings; q; q = q->next) {
-        if (!strcmp(p->domainname, domainname) && q != p) a_store(&q->active, 0);
+        if (!strcmp(p->domainname, domainname) && q != p)
+            a_store(&q->active, 0);
     }
 
     mxr_mutex_unlock(&lock);
@@ -115,15 +118,19 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
     const char *dirname, *locname, *catname;
     size_t dirlen, loclen, catlen, domlen;
 
-    if ((unsigned)category >= LC_ALL) goto notrans;
+    if ((unsigned)category >= LC_ALL)
+        goto notrans;
 
-    if (!domainname) domainname = __gettextdomain();
+    if (!domainname)
+        domainname = __gettextdomain();
 
     domlen = strlen(domainname);
-    if (domlen > NAME_MAX) goto notrans;
+    if (domlen > NAME_MAX)
+        goto notrans;
 
     dirname = gettextdir(domainname, &dirlen);
-    if (!dirname) goto notrans;
+    if (!dirname)
+        goto notrans;
 
     lm = loc->cat[category];
     if (!lm) {
@@ -155,13 +162,15 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
     s[domlen + 3] = 0;
 
     for (p = cats; p; p = p->next)
-        if (!strcmp(p->name, name)) break;
+        if (!strcmp(p->name, name))
+            break;
 
     if (!p) {
         void* old_cats;
         size_t map_size;
         const void* map = __map_file(name, &map_size);
-        if (!map) goto notrans;
+        if (!map)
+            goto notrans;
         p = malloc(sizeof *p + namelen + 1);
         if (!p) {
             __munmap((void*)map, map_size);
@@ -177,11 +186,13 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
     }
 
     const char* trans = __mo_lookup(p->map, p->map_size, msgid1);
-    if (!trans) goto notrans;
+    if (!trans)
+        goto notrans;
 
     /* Non-plural-processing gettext forms pass a null pointer as
      * msgid2 to request that dcngettext suppress plural processing. */
-    if (!msgid2) return (char*)trans;
+    if (!msgid2)
+        return (char*)trans;
 
     if (!p->plural_rule) {
         const char* rule = "n!=1;";
@@ -206,7 +217,8 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
                 r++;
                 while (isspace(*r))
                     r++;
-                if (!strncmp(r, "plural=", 7)) rule = r + 7;
+                if (!strncmp(r, "plural=", 7))
+                    rule = r + 7;
             }
         }
         a_store(&p->nplurals, np);
@@ -214,11 +226,13 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
     }
     if (p->nplurals) {
         unsigned long plural = __pleval(p->plural_rule, n);
-        if (plural > p->nplurals) goto notrans;
+        if (plural > p->nplurals)
+            goto notrans;
         while (plural--) {
             size_t rem = p->map_size - (trans - (char*)p->map);
             size_t l = strnlen(trans, rem);
-            if (l + 1 >= rem) goto notrans;
+            if (l + 1 >= rem)
+                goto notrans;
             trans += l + 1;
         }
     }

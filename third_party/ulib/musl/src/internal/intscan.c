@@ -7,7 +7,7 @@
 static const unsigned char table[] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  -1, -1, -1, -1, -1, -1, -1, 10, 11, 12, 13, 14, 15,
+    -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1, -1, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, -1, -1, -1, -1,
     -1, -1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
     32, 33, 34, 35, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -50,7 +50,8 @@ unsigned long long __intscan(FILE* f, unsigned base, int pok, unsigned long long
             base = 8;
         }
     } else {
-        if (base == 0) base = 10;
+        if (base == 0)
+            base = 10;
         if (val[c] >= base) {
             shunget(f);
             shlim(f, 0);
@@ -64,7 +65,8 @@ unsigned long long __intscan(FILE* f, unsigned base, int pok, unsigned long long
         for (y = x; c - '0' < 10U && y <= ULLONG_MAX / 10 && 10 * y <= ULLONG_MAX - (c - '0');
              c = shgetc(f))
             y = y * 10 + (c - '0');
-        if (c - '0' >= 10U) goto done;
+        if (c - '0' >= 10U)
+            goto done;
     } else if (!(base & base - 1)) {
         int bs = "\0\1\2\4\7\3\6\5"[(0x17 * base) >> 5 & 7];
         for (x = 0; val[c] < base && x <= UINT_MAX / 32; c = shgetc(f))
@@ -83,7 +85,8 @@ unsigned long long __intscan(FILE* f, unsigned base, int pok, unsigned long long
             ;
         errno = ERANGE;
         y = lim;
-        if (lim & 1) neg = 0;
+        if (lim & 1)
+            neg = 0;
     }
 done:
     shunget(f);

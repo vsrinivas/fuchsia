@@ -15,18 +15,22 @@ int getservbyport_r(int port, const char* prots, struct servent* se, char* buf, 
 
     if (!prots) {
         int r = getservbyport_r(port, "tcp", se, buf, buflen, res);
-        if (r) r = getservbyport_r(port, "udp", se, buf, buflen, res);
+        if (r)
+            r = getservbyport_r(port, "udp", se, buf, buflen, res);
         return r;
     }
 
     /* Align buffer */
     i = (uintptr_t)buf & sizeof(char*) - 1;
-    if (!i) i = sizeof(char*);
-    if (buflen < 3 * sizeof(char*) - i) return ERANGE;
+    if (!i)
+        i = sizeof(char*);
+    if (buflen < 3 * sizeof(char*) - i)
+        return ERANGE;
     buf += sizeof(char*) - i;
     buflen -= sizeof(char*) - i;
 
-    if (strcmp(prots, "tcp") && strcmp(prots, "udp")) return EINVAL;
+    if (strcmp(prots, "tcp") && strcmp(prots, "udp"))
+        return EINVAL;
 
     se->s_port = port;
     se->s_proto = (char*)prots;

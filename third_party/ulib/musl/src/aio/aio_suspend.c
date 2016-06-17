@@ -23,7 +23,8 @@ int aio_suspend(const struct aiocb* const cbs[], int cnt, const struct timespec*
 
     for (i = 0; i < cnt; i++)
         if (cbs[i]) {
-            if (aio_error(cbs[i]) != EINPROGRESS) return 0;
+            if (aio_error(cbs[i]) != EINPROGRESS)
+                return 0;
             nzcnt++;
             cb = cbs[i];
         }
@@ -39,7 +40,8 @@ int aio_suspend(const struct aiocb* const cbs[], int cnt, const struct timespec*
 
     for (;;) {
         for (i = 0; i < cnt; i++)
-            if (cbs[i] && aio_error(cbs[i]) != EINPROGRESS) return 0;
+            if (cbs[i] && aio_error(cbs[i]) != EINPROGRESS)
+                return 0;
 
         switch (nzcnt) {
         case 0:
@@ -52,12 +54,15 @@ int aio_suspend(const struct aiocb* const cbs[], int cnt, const struct timespec*
             break;
         default:
             pfut = &__aio_fut;
-            if (!tid) tid = __pthread_self()->tid;
+            if (!tid)
+                tid = __pthread_self()->tid;
             expect = a_cas(pfut, 0, tid);
-            if (!expect) expect = tid;
+            if (!expect)
+                expect = tid;
             /* Need to recheck the predicate before waiting. */
             for (i = 0; i < cnt; i++)
-                if (cbs[i] && aio_error(cbs[i]) != EINPROGRESS) return 0;
+                if (cbs[i] && aio_error(cbs[i]) != EINPROGRESS)
+                    return 0;
             break;
         }
 

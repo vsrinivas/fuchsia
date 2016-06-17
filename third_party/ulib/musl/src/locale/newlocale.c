@@ -15,7 +15,8 @@ locale_t __newlocale(int mask, const char* name, locale_t loc) {
     /* For locales with allocated storage, modify in-place. */
     if (__loc_is_allocated(loc)) {
         for (i = 0; i < LC_ALL; i++)
-            if (mask & (1 << i)) loc->cat[i] = __get_locale(i, name);
+            if (mask & (1 << i))
+                loc->cat[i] = __get_locale(i, name);
         return loc;
     }
 
@@ -29,14 +30,18 @@ locale_t __newlocale(int mask, const char* name, locale_t loc) {
             lm = loc->cat[i];
         else
             lm = __get_locale(i, mask & (1 << i) ? name : "");
-        if (lm) j++;
+        if (lm)
+            j++;
         tmp.cat[i] = lm;
     }
 
-    if (!j) return C_LOCALE;
-    if (j == 1 && tmp.cat[LC_CTYPE] == &__c_dot_utf8) return UTF8_LOCALE;
+    if (!j)
+        return C_LOCALE;
+    if (j == 1 && tmp.cat[LC_CTYPE] == &__c_dot_utf8)
+        return UTF8_LOCALE;
 
-    if ((loc = malloc(sizeof *loc))) *loc = tmp;
+    if ((loc = malloc(sizeof *loc)))
+        *loc = tmp;
 
     return loc;
 }

@@ -10,8 +10,12 @@ extern "C" {
 #define __NEED_size_t
 #include <bits/alltypes.h>
 
-typedef enum { FIND, ENTER } ACTION;
-typedef enum { preorder, postorder, endorder, leaf } VISIT;
+typedef enum { FIND,
+               ENTER } ACTION;
+typedef enum { preorder,
+               postorder,
+               endorder,
+               leaf } VISIT;
 
 typedef struct entry {
     char* key;

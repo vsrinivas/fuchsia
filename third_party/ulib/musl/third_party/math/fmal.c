@@ -83,7 +83,8 @@ static inline long double add_adjusted(long double a, long double b) {
     sum = dd_add(a, b);
     if (sum.lo != 0) {
         u.f = sum.hi;
-        if (!LASTBIT(u)) sum.hi = nextafterl(sum.hi, INFINITY * sum.lo);
+        if (!LASTBIT(u))
+            sum.hi = nextafterl(sum.hi, INFINITY * sum.lo);
     }
     return (sum.hi);
 }
@@ -113,7 +114,8 @@ static inline long double add_and_denormalize(long double a, long double b, int 
     if (sum.lo != 0) {
         u.f = sum.hi;
         bits_lost = -u.i.se - scale + 1;
-        if ((bits_lost != 1) ^ LASTBIT(u)) sum.hi = nextafterl(sum.hi, INFINITY * sum.lo);
+        if ((bits_lost != 1) ^ LASTBIT(u))
+            sum.hi = nextafterl(sum.hi, INFINITY * sum.lo);
     }
     return scalbnl(sum.hi, scale);
 }
@@ -167,10 +169,14 @@ long double fmal(long double x, long double y, long double z) {
      * return values here are crucial in handling special cases involving
      * infinities, NaNs, overflows, and signed zeroes correctly.
      */
-    if (!isfinite(x) || !isfinite(y)) return (x * y + z);
-    if (!isfinite(z)) return (z);
-    if (x == 0.0 || y == 0.0) return (x * y + z);
-    if (z == 0.0) return (x * y);
+    if (!isfinite(x) || !isfinite(y))
+        return (x * y + z);
+    if (!isfinite(z))
+        return (z);
+    if (x == 0.0 || y == 0.0)
+        return (x * y + z);
+    if (z == 0.0)
+        return (x * y);
 
     xs = frexpl(x, &ex);
     ys = frexpl(y, &ey);
@@ -188,7 +194,8 @@ long double fmal(long double x, long double y, long double z) {
         feraiseexcept(FE_INEXACT);
 #endif
 #ifdef FE_UNDERFLOW
-        if (!isnormal(z)) feraiseexcept(FE_UNDERFLOW);
+        if (!isnormal(z))
+            feraiseexcept(FE_UNDERFLOW);
 #endif
         switch (oround) {
         default: /* FE_TONEAREST */

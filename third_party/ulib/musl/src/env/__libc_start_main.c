@@ -45,7 +45,7 @@ static void libc_start_init(void) {
 weak_alias(libc_start_init, __libc_start_init);
 
 // hook for extension libraries to init
-static void libc_extensions_init(mx_proc_info_t* pi) { }
+static void libc_extensions_init(mx_proc_info_t* pi) {}
 weak_alias(libc_extensions_init, __libc_extensions_init);
 
 // hook to let certain very low level processes muck
@@ -55,7 +55,7 @@ static void* libc_intercept_arg(void* arg) {
 }
 weak_alias(libc_intercept_arg, __libc_intercept_arg);
 
-int __libc_start_main(int (*main)(int,char**,void*), void* arg) {
+int __libc_start_main(int (*main)(int, char**, void*), void* arg) {
     arg = __libc_intercept_arg(arg);
 
     // extract process startup information from message pipe in arg

@@ -65,7 +65,7 @@ long double log2l(long double x) {
  */
 static const long double P[] = {
     4.9962495940332550844739E-1L, 1.0767376367209449010438E1L, 7.7671073698359539859595E1L,
-    2.5620629828144409632571E2L,  4.2401812743503691187826E2L, 3.4258224542413922935104E2L,
+    2.5620629828144409632571E2L, 4.2401812743503691187826E2L, 3.4258224542413922935104E2L,
     1.0747524399916215149070E2L,
 };
 static const long double Q[] = {
@@ -97,11 +97,14 @@ long double log2l(long double x) {
     long double y, z;
     int e;
 
-    if (isnan(x)) return x;
-    if (x == INFINITY) return x;
+    if (isnan(x))
+        return x;
+    if (x == INFINITY)
+        return x;
     if (x <= 0.0) {
-        if (x == 0.0) return -1 / (x * x); /* -inf with divbyzero */
-        return 0 / 0.0f;                   /* nan with invalid */
+        if (x == 0.0)
+            return -1 / (x * x); /* -inf with divbyzero */
+        return 0 / 0.0f;         /* nan with invalid */
     }
 
     /* separate mantissa from exponent */

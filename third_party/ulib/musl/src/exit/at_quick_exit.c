@@ -21,7 +21,8 @@ void __funcs_on_quick_exit(void) {
 }
 
 int at_quick_exit(void (*func)(void)) {
-    if (count == 32) return -1;
+    if (count == 32)
+        return -1;
     mxr_mutex_lock(&lock);
     funcs[count++] = func;
     mxr_mutex_unlock(&lock);

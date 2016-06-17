@@ -11,7 +11,8 @@ long double sinhl(long double x) {
     long double h, t, absx;
 
     h = 0.5;
-    if (u.i.se & 0x8000) h = -h;
+    if (u.i.se & 0x8000)
+        h = -h;
     /* |x| */
     u.i.se = ex;
     absx = u.f;
@@ -20,7 +21,8 @@ long double sinhl(long double x) {
     if (ex < 0x3fff + 13 || (ex == 0x3fff + 13 && u.i.m >> 32 < 0xb17217f7)) {
         t = expm1l(absx);
         if (ex < 0x3fff) {
-            if (ex < 0x3fff - 32) return x;
+            if (ex < 0x3fff - 32)
+                return x;
             return h * (2 * t - t * t / (1 + t));
         }
         return h * (t + t / (t + 1));

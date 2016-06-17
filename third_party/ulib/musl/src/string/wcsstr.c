@@ -10,7 +10,8 @@ static wchar_t* twoway_wcsstr(const wchar_t* h, const wchar_t* n) {
     /* Computing length of needle */
     for (l = 0; n[l] && h[l]; l++)
         ;
-    if (n[l]) return 0; /* hit the end of h */
+    if (n[l])
+        return 0; /* hit the end of h */
 
     /* Compute maximal suffix */
     ip = -1;
@@ -80,7 +81,8 @@ static wchar_t* twoway_wcsstr(const wchar_t* h, const wchar_t* n) {
             const wchar_t* z2 = wmemchr(z, 0, grow);
             if (z2) {
                 z = z2;
-                if (z - h < l) return 0;
+                if (z - h < l)
+                    return 0;
             } else
                 z += grow;
         }
@@ -96,7 +98,8 @@ static wchar_t* twoway_wcsstr(const wchar_t* h, const wchar_t* n) {
         /* Compare left half */
         for (k = ms + 1; k > mem && n[k - 1] == h[k - 1]; k--)
             ;
-        if (k <= mem) return (wchar_t*)h;
+        if (k <= mem)
+            return (wchar_t*)h;
         h += p;
         mem = mem0;
     }
@@ -104,13 +107,17 @@ static wchar_t* twoway_wcsstr(const wchar_t* h, const wchar_t* n) {
 
 wchar_t* wcsstr(const wchar_t* restrict h, const wchar_t* restrict n) {
     /* Return immediately on empty needle or haystack */
-    if (!n[0]) return (wchar_t*)h;
-    if (!h[0]) return 0;
+    if (!n[0])
+        return (wchar_t*)h;
+    if (!h[0])
+        return 0;
 
     /* Use faster algorithms for short needles */
     h = wcschr(h, *n);
-    if (!h || !n[1]) return (wchar_t*)h;
-    if (!h[1]) return 0;
+    if (!h || !n[1])
+        return (wchar_t*)h;
+    if (!h[1])
+        return 0;
 
     return twoway_wcsstr(h, n);
 }

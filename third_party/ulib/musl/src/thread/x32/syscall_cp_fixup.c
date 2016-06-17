@@ -14,13 +14,13 @@ struct __timespec_kernel {
     long long tv_nsec;
 };
 #define __tsc(X) ((struct __timespec*)(unsigned long)(X))
-#define __fixup(X)                                                                                 \
-    do {                                                                                           \
-        if (X) {                                                                                   \
-            ts->tv_sec = __tsc(X)->tv_sec;                                                         \
-            ts->tv_nsec = __tsc(X)->tv_nsec;                                                       \
-            (X) = (unsigned long)ts;                                                               \
-        }                                                                                          \
+#define __fixup(X)                           \
+    do {                                     \
+        if (X) {                             \
+            ts->tv_sec = __tsc(X)->tv_sec;   \
+            ts->tv_nsec = __tsc(X)->tv_nsec; \
+            (X) = (unsigned long)ts;         \
+        }                                    \
     } while (0)
 
 __attribute__((__visibility__("hidden"))) long __syscall_cp_asm(volatile void* foo, long long n,
@@ -35,7 +35,8 @@ __attribute__((__visibility__("hidden"))) long __syscall_cp_asm(volatile void* f
         __fixup(a5);
         break;
     case SYS_futex:
-        if ((a2 & (~128 /* FUTEX_PRIVATE_FLAG */)) == 0 /* FUTEX_WAIT */) __fixup(a4);
+        if ((a2 & (~128 /* FUTEX_PRIVATE_FLAG */)) == 0 /* FUTEX_WAIT */)
+            __fixup(a4);
         break;
     case SYS_clock_nanosleep:
     case SYS_rt_sigtimedwait:

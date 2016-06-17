@@ -23,7 +23,8 @@ FILE* popen(const char* cmd, const char* mode) {
         return 0;
     }
 
-    if (pipe2(p, O_CLOEXEC)) return NULL;
+    if (pipe2(p, O_CLOEXEC))
+        return NULL;
     f = fdopen(p[op], mode);
     if (!f) {
         __syscall(SYS_close, p[0]);
@@ -54,7 +55,8 @@ FILE* popen(const char* cmd, const char* mode) {
                                   __environ))) {
                 posix_spawn_file_actions_destroy(&fa);
                 f->pipe_pid = pid;
-                if (!strchr(mode, 'e')) fcntl(p[op], F_SETFD, 0);
+                if (!strchr(mode, 'e'))
+                    fcntl(p[op], F_SETFD, 0);
                 __syscall(SYS_close, p[1 - op]);
                 FUNLOCK(f);
                 return f;

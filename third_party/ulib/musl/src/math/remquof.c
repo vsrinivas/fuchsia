@@ -15,8 +15,10 @@ float remquof(float x, float y, int* quo) {
     uint32_t uxi = ux.i;
 
     *quo = 0;
-    if (uy.i << 1 == 0 || isnan(y) || ex == 0xff) return (x * y) / (x * y);
-    if (ux.i << 1 == 0) return x;
+    if (uy.i << 1 == 0 || isnan(y) || ex == 0xff)
+        return (x * y) / (x * y);
+    if (ux.i << 1 == 0)
+        return x;
 
     /* normalize x and y */
     if (!ex) {
@@ -38,7 +40,8 @@ float remquof(float x, float y, int* quo) {
 
     q = 0;
     if (ex < ey) {
-        if (ex + 1 == ey) goto end;
+        if (ex + 1 == ey)
+            goto end;
         return x;
     }
 
@@ -72,7 +75,8 @@ end:
     }
     ux.i = uxi;
     x = ux.f;
-    if (sy) y = -y;
+    if (sy)
+        y = -y;
     if (ex == ey || (ex + 1 == ey && (2 * x > y || (2 * x == y && q % 2)))) {
         x -= y;
         q++;

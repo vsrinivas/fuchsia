@@ -53,23 +53,23 @@ extern "C" {
 
 #define PTHREAD_PROCESS_PRIVATE 0
 
-#define PTHREAD_MUTEX_INITIALIZER                                                                  \
-    {                                                                                              \
-        {                                                                                          \
-            { 0 }                                                                                  \
-        }                                                                                          \
+#define PTHREAD_MUTEX_INITIALIZER \
+    {                             \
+        {                         \
+            { 0 }                 \
+        }                         \
     }
-#define PTHREAD_RWLOCK_INITIALIZER                                                                 \
-    {                                                                                              \
-        {                                                                                          \
-            { 0 }                                                                                  \
-        }                                                                                          \
+#define PTHREAD_RWLOCK_INITIALIZER \
+    {                              \
+        {                          \
+            { 0 }                  \
+        }                          \
     }
-#define PTHREAD_COND_INITIALIZER                                                                   \
-    {                                                                                              \
-        {                                                                                          \
-            { 0 }                                                                                  \
-        }                                                                                          \
+#define PTHREAD_COND_INITIALIZER \
+    {                            \
+        {                        \
+            { 0 }                \
+        }                        \
     }
 #define PTHREAD_ONCE_INIT 0
 
@@ -211,13 +211,13 @@ struct __ptcb {
 void _pthread_cleanup_push(struct __ptcb*, void (*)(void*), void*);
 void _pthread_cleanup_pop(struct __ptcb*, int);
 
-#define pthread_cleanup_push(f, x)                                                                 \
-    do {                                                                                           \
-        struct __ptcb __cb;                                                                        \
+#define pthread_cleanup_push(f, x) \
+    do {                           \
+        struct __ptcb __cb;        \
         _pthread_cleanup_push(&__cb, f, x);
-#define pthread_cleanup_pop(r)                                                                     \
-    _pthread_cleanup_pop(&__cb, (r));                                                              \
-    }                                                                                              \
+#define pthread_cleanup_pop(r)        \
+    _pthread_cleanup_pop(&__cb, (r)); \
+    }                                 \
     while (0)
 
 #ifdef _GNU_SOURCE

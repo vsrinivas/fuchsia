@@ -38,7 +38,8 @@ int __lookup_serv(struct service buf[static MAXSERVS], const char* name, int pro
     case 0:
         break;
     default:
-        if (name) return EAI_SERVICE;
+        if (name)
+            return EAI_SERVICE;
         buf[0].port = 0;
         buf[0].proto = proto;
         buf[0].socktype = socktype;
@@ -46,11 +47,13 @@ int __lookup_serv(struct service buf[static MAXSERVS], const char* name, int pro
     }
 
     if (name) {
-        if (!*name) return EAI_SERVICE;
+        if (!*name)
+            return EAI_SERVICE;
         port = strtoul(name, &z, 10);
     }
     if (!*z) {
-        if (port > 65535) return EAI_SERVICE;
+        if (port > 65535)
+            return EAI_SERVICE;
         if (proto != IPPROTO_UDP) {
             buf[cnt].port = port;
             buf[cnt].socktype = SOCK_STREAM;
@@ -64,13 +67,15 @@ int __lookup_serv(struct service buf[static MAXSERVS], const char* name, int pro
         return cnt;
     }
 
-    if (flags & AI_NUMERICSERV) return EAI_SERVICE;
+    if (flags & AI_NUMERICSERV)
+        return EAI_SERVICE;
 
     size_t l = strlen(name);
 
     unsigned char _buf[1032];
     FILE _f, *f = __fopen_rb_ca("/etc/services", &_f, _buf, sizeof _buf);
-    if (!f) switch (errno) {
+    if (!f)
+        switch (errno) {
         case ENOENT:
         case ENOTDIR:
         case EACCES:
@@ -80,30 +85,37 @@ int __lookup_serv(struct service buf[static MAXSERVS], const char* name, int pro
         }
 
     while (fgets(line, sizeof line, f) && cnt < MAXSERVS) {
-        if ((p = strchr(line, '#'))) *p++ = '\n', *p = 0;
+        if ((p = strchr(line, '#')))
+            *p++ = '\n', *p = 0;
 
         /* Find service name */
         for (p = line; (p = strstr(p, name)); p++) {
-            if (p > line && !isspace(p[-1])) continue;
-            if (p[l] && !isspace(p[l])) continue;
+            if (p > line && !isspace(p[-1]))
+                continue;
+            if (p[l] && !isspace(p[l]))
+                continue;
             break;
         }
-        if (!p) continue;
+        if (!p)
+            continue;
 
         /* Skip past canonical name at beginning of line */
         for (p = line; *p && !isspace(*p); p++)
             ;
 
         port = strtoul(p, &z, 10);
-        if (port > 65535 || z == p) continue;
+        if (port > 65535 || z == p)
+            continue;
         if (!strncmp(z, "/udp", 4)) {
-            if (proto == IPPROTO_TCP) continue;
+            if (proto == IPPROTO_TCP)
+                continue;
             buf[cnt].port = port;
             buf[cnt].socktype = SOCK_DGRAM;
             buf[cnt++].proto = IPPROTO_UDP;
         }
         if (!strncmp(z, "/tcp", 4)) {
-            if (proto == IPPROTO_UDP) continue;
+            if (proto == IPPROTO_UDP)
+                continue;
             buf[cnt].port = port;
             buf[cnt].socktype = SOCK_STREAM;
             buf[cnt++].proto = IPPROTO_TCP;

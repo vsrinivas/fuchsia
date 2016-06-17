@@ -14,7 +14,7 @@ extern "C" {
 #define __NEED_wint_t
 #define __NEED_mbstate_t
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 #define __NEED_locale_t
 #define __NEED_va_list
@@ -134,7 +134,7 @@ size_t wcsftime(wchar_t* __restrict, size_t, const wchar_t* __restrict,
 
 #undef iswdigit
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 FILE* open_wmemstream(wchar_t**, size_t*);
 size_t mbsnrtowcs(wchar_t* __restrict, const char** __restrict, size_t, size_t,

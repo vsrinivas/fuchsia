@@ -32,7 +32,8 @@ int getopt(int argc, char* const argv[], const char* optstring) {
         optind = 1;
     }
 
-    if (optind >= argc || !argv[optind]) return -1;
+    if (optind >= argc || !argv[optind])
+        return -1;
 
     if (argv[optind][0] != '-') {
         if (optstring[0] == '-') {
@@ -42,11 +43,14 @@ int getopt(int argc, char* const argv[], const char* optstring) {
         return -1;
     }
 
-    if (!argv[optind][1]) return -1;
+    if (!argv[optind][1])
+        return -1;
 
-    if (argv[optind][1] == '-' && !argv[optind][2]) return optind++, -1;
+    if (argv[optind][1] == '-' && !argv[optind][2])
+        return optind++, -1;
 
-    if (!optpos) optpos++;
+    if (!optpos)
+        optpos++;
     if ((k = mbtowc(&c, argv[optind] + optpos, MB_LEN_MAX)) < 0) {
         k = 1;
         c = 0xfffd; /* replacement char */
@@ -60,7 +64,8 @@ int getopt(int argc, char* const argv[], const char* optstring) {
         optpos = 0;
     }
 
-    if (optstring[0] == '-' || optstring[0] == '+') optstring++;
+    if (optstring[0] == '-' || optstring[0] == '+')
+        optstring++;
 
     i = 0;
     d = 0;
@@ -81,8 +86,10 @@ int getopt(int argc, char* const argv[], const char* optstring) {
         if (optstring[i + 1] == ':')
             optarg = 0;
         else if (optind >= argc) {
-            if (optstring[0] == ':') return ':';
-            if (opterr) __getopt_msg(argv[0], ": option requires an argument: ", optchar, k);
+            if (optstring[0] == ':')
+                return ':';
+            if (opterr)
+                __getopt_msg(argv[0], ": option requires an argument: ", optchar, k);
             return '?';
         }
         if (optstring[i + 1] != ':' || optpos) {

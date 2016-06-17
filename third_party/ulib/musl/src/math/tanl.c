@@ -11,7 +11,8 @@ long double tanl(long double x) {
     unsigned n;
 
     u.i.se &= 0x7fff;
-    if (u.i.se == 0x7fff) return x - x;
+    if (u.i.se == 0x7fff)
+        return x - x;
     if (u.f < M_PI_4) {
         if (u.i.se < 0x3fff - LDBL_MANT_DIG / 2) {
             /* raise inexact if x!=0 and underflow if subnormal */

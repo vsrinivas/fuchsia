@@ -42,8 +42,10 @@ double log2(double x) {
     hx = u.i >> 32;
     k = 0;
     if (hx < 0x00100000 || hx >> 31) {
-        if (u.i << 1 == 0) return -1 / (x * x); /* log(+-0)=-inf */
-        if (hx >> 31) return (x - x) / 0.0;     /* log(-#) = NaN */
+        if (u.i << 1 == 0)
+            return -1 / (x * x); /* log(+-0)=-inf */
+        if (hx >> 31)
+            return (x - x) / 0.0; /* log(-#) = NaN */
         /* subnormal number, scale x up */
         k -= 54;
         x *= 0x1p54;

@@ -41,10 +41,12 @@ float complex cexpf(float complex z) {
     hy &= 0x7fffffff;
 
     /* cexp(x + I 0) = exp(x) + I 0 */
-    if (hy == 0) return CMPLXF(expf(x), y);
+    if (hy == 0)
+        return CMPLXF(expf(x), y);
     GET_FLOAT_WORD(hx, x);
     /* cexp(0 + I y) = cos(y) + I sin(y) */
-    if ((hx & 0x7fffffff) == 0) return CMPLXF(cosf(y), sinf(y));
+    if ((hx & 0x7fffffff) == 0)
+        return CMPLXF(cosf(y), sinf(y));
 
     if (hy >= 0x7f800000) {
         if ((hx & 0x7fffffff) != 0x7f800000) {

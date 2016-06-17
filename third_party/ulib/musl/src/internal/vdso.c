@@ -24,8 +24,10 @@ typedef Elf64_Verdaux Verdaux;
 static int checkver(Verdef* def, int vsym, const char* vername, char* strings) {
     vsym &= 0x7fff;
     for (;;) {
-        if (!(def->vd_flags & VER_FLG_BASE) && (def->vd_ndx & 0x7fff) == vsym) break;
-        if (def->vd_next == 0) return 0;
+        if (!(def->vd_flags & VER_FLG_BASE) && (def->vd_ndx & 0x7fff) == vsym)
+            break;
+        if (def->vd_next == 0)
+            return 0;
         def = (Verdef*)((char*)def + def->vd_next);
     }
     Verdaux* aux = (Verdaux*)((char*)def + def->vd_aux);
@@ -38,7 +40,8 @@ static int checkver(Verdef* def, int vsym, const char* vername, char* strings) {
 void* __vdsosym(const char* vername, const char* name) {
     size_t i;
     for (i = 0; libc.auxv[i] != AT_SYSINFO_EHDR; i += 2)
-        if (!libc.auxv[i]) return 0;
+        if (!libc.auxv[i])
+            return 0;
     Ehdr* eh = (void*)libc.auxv[i + 1];
     Phdr* ph = (void*)((char*)eh + eh->e_phoff);
     size_t *dynv = 0, base = -1;
@@ -48,7 +51,8 @@ void* __vdsosym(const char* vername, const char* name) {
         else if (ph->p_type == PT_DYNAMIC)
             dynv = (void*)((char*)eh + ph->p_offset);
     }
-    if (!dynv || base == (size_t)-1) return 0;
+    if (!dynv || base == (size_t)-1)
+        return 0;
 
     char* strings = 0;
     Sym* syms = 0;
@@ -77,15 +81,22 @@ void* __vdsosym(const char* vername, const char* name) {
         }
     }
 
-    if (!strings || !syms || !hashtab) return 0;
-    if (!verdef) versym = 0;
+    if (!strings || !syms || !hashtab)
+        return 0;
+    if (!verdef)
+        versym = 0;
 
     for (i = 0; i < hashtab[1]; i++) {
-        if (!(1 << (syms[i].st_info & 0xf) & OK_TYPES)) continue;
-        if (!(1 << (syms[i].st_info >> 4) & OK_BINDS)) continue;
-        if (!syms[i].st_shndx) continue;
-        if (strcmp(name, strings + syms[i].st_name)) continue;
-        if (versym && !checkver(verdef, versym[i], vername, strings)) continue;
+        if (!(1 << (syms[i].st_info & 0xf) & OK_TYPES))
+            continue;
+        if (!(1 << (syms[i].st_info >> 4) & OK_BINDS))
+            continue;
+        if (!syms[i].st_shndx)
+            continue;
+        if (strcmp(name, strings + syms[i].st_name))
+            continue;
+        if (versym && !checkver(verdef, versym[i], vername, strings))
+            continue;
         return (void*)(base + syms[i].st_value);
     }
 

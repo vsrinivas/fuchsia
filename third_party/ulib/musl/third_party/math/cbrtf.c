@@ -35,8 +35,9 @@ float cbrtf(float x) {
         return x + x;
 
     /* rough cbrt to 5 bits */
-    if (hx < 0x00800000) {     /* zero or subnormal? */
-        if (hx == 0) return x; /* cbrt(+-0) is itself */
+    if (hx < 0x00800000) { /* zero or subnormal? */
+        if (hx == 0)
+            return x; /* cbrt(+-0) is itself */
         u.f = x * 0x1p24f;
         hx = u.i & 0x7fffffff;
         hx = hx / 3 + B2;

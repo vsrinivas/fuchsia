@@ -15,9 +15,11 @@ double fmod(double x, double y) {
     /* float load/store to inner loops ruining performance and code size */
     uint64_t uxi = ux.i;
 
-    if (uy.i << 1 == 0 || isnan(y) || ex == 0x7ff) return (x * y) / (x * y);
+    if (uy.i << 1 == 0 || isnan(y) || ex == 0x7ff)
+        return (x * y) / (x * y);
     if (uxi << 1 <= uy.i << 1) {
-        if (uxi << 1 == uy.i << 1) return 0 * x;
+        if (uxi << 1 == uy.i << 1)
+            return 0 * x;
         return x;
     }
 
@@ -43,14 +45,16 @@ double fmod(double x, double y) {
     for (; ex > ey; ex--) {
         i = uxi - uy.i;
         if (i >> 63 == 0) {
-            if (i == 0) return 0 * x;
+            if (i == 0)
+                return 0 * x;
             uxi = i;
         }
         uxi <<= 1;
     }
     i = uxi - uy.i;
     if (i >> 63 == 0) {
-        if (i == 0) return 0 * x;
+        if (i == 0)
+            return 0 * x;
         uxi = i;
     }
     for (; uxi >> 52 == 0; uxi <<= 1, ex--)

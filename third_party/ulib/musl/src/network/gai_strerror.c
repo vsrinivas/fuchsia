@@ -20,6 +20,7 @@ const char* gai_strerror(int ecode) {
     for (s = msgs, ecode++; ecode && *s; ecode++, s++)
         for (; *s; s++)
             ;
-    if (!*s) s++;
+    if (!*s)
+        s++;
     return LCTRANS_CUR(s);
 }

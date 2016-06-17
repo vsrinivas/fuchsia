@@ -46,7 +46,8 @@ static long long scanexp(FILE* f, int pok) {
     if (c == '+' || c == '-') {
         neg = (c == '-');
         c = shgetc(f);
-        if (c - '0' >= 10U && pok) shunget(f);
+        if (c - '0' >= 10U && pok)
+            shunget(f);
     }
     if (c - '0' >= 10U) {
         shunget(f);
@@ -94,12 +95,14 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
     x[0] = 0;
     for (; c - '0' < 10U || c == '.'; c = shgetc(f)) {
         if (c == '.') {
-            if (gotrad) break;
+            if (gotrad)
+                break;
             gotrad = 1;
             lrp = dc;
         } else if (k < KMAX - 3) {
             dc++;
-            if (c != '0') lnz = dc;
+            if (c != '0')
+                lnz = dc;
             if (j)
                 x[k] = x[k] * 10 + c - '0';
             else
@@ -111,10 +114,12 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
             gotdig = 1;
         } else {
             dc++;
-            if (c != '0') x[KMAX - 4] |= 1;
+            if (c != '0')
+                x[KMAX - 4] |= 1;
         }
     }
-    if (!gotrad) lrp = dc;
+    if (!gotrad)
+        lrp = dc;
 
     if (gotdig && (c | 32) == 'e') {
         e10 = scanexp(f, pok);
@@ -138,10 +143,12 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
     }
 
     /* Handle zero specially to avoid nasty special cases later */
-    if (!x[0]) return sign * 0.0;
+    if (!x[0])
+        return sign * 0.0;
 
     /* Optimize small integers (w/no exponent) and over/under-flow */
-    if (lrp == dc && dc < 10 && (bits > 30 || x[0] >> bits == 0)) return sign * (long double)x[0];
+    if (lrp == dc && dc < 10 && (bits > 30 || x[0] >> bits == 0))
+        return sign * (long double)x[0];
     if (lrp > -emin / 2) {
         errno = ERANGE;
         return sign * LDBL_MAX * LDBL_MAX;
@@ -166,10 +173,13 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
 
     /* Optimize small to mid-size integers (even in exp. notation) */
     if (lnz < 9 && lnz <= rp && rp < 18) {
-        if (rp == 9) return sign * (long double)x[0];
-        if (rp < 9) return sign * (long double)x[0] / p10s[8 - rp];
+        if (rp == 9)
+            return sign * (long double)x[0];
+        if (rp < 9)
+            return sign * (long double)x[0] / p10s[8 - rp];
         int bitlim = bits - 3 * (int)(rp - 9);
-        if (bitlim > 30 || x[0] >> bitlim == 0) return sign * (long double)x[0] * p10s[rp - 10];
+        if (bitlim > 30 || x[0] >> bitlim == 0)
+            return sign * (long double)x[0] * p10s[rp - 10];
     }
 
     /* Align radix point to B1B digit boundary */
@@ -186,7 +196,8 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
                 rp -= 9;
             }
         }
-        if (carry) x[z++] = carry;
+        if (carry)
+            x[z++] = carry;
         rp += 9 - rpm9;
     }
 
@@ -203,8 +214,10 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
                 carry = 0;
                 x[k] = tmp;
             }
-            if (k == (z - 1 & MASK) && k != a && !x[k]) z = k;
-            if (k == a) break;
+            if (k == (z - 1 & MASK) && k != a && !x[k])
+                z = k;
+            if (k == a)
+                break;
         }
         if (carry) {
             rp += 9;
@@ -227,11 +240,14 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
                 i = LD_B1B_DIG;
                 break;
             }
-            if (x[a + i & MASK] > th[i]) break;
+            if (x[a + i & MASK] > th[i])
+                break;
         }
-        if (i == LD_B1B_DIG && rp == 9 * LD_B1B_DIG) break;
+        if (i == LD_B1B_DIG && rp == 9 * LD_B1B_DIG)
+            break;
         /* FIXME: find a way to compute optimal sh */
-        if (rp > 9 + 9 * LD_B1B_DIG) sh = 9;
+        if (rp > 9 + 9 * LD_B1B_DIG)
+            sh = 9;
         e2 += sh;
         for (k = a; k != z; k = (k + 1 & MASK)) {
             uint32_t tmp = x[k] & (1 << sh) - 1;
@@ -254,7 +270,8 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
 
     /* Assemble desired bits into floating point variable */
     for (y = i = 0; i < LD_B1B_DIG; i++) {
-        if ((a + i & MASK) == z) x[(z = (z + 1 & MASK)) - 1] = 0;
+        if ((a + i & MASK) == z)
+            x[(z = (z + 1 & MASK)) - 1] = 0;
         y = 1000000000.0L * y + x[a + i & MASK];
     }
 
@@ -263,7 +280,8 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
     /* Limit precision for denormal results */
     if (bits > LDBL_MANT_DIG + e2 - emin) {
         bits = LDBL_MANT_DIG + e2 - emin;
-        if (bits < 0) bits = 0;
+        if (bits < 0)
+            bits = 0;
         denormal = 1;
     }
 
@@ -288,7 +306,8 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
             else
                 frac += 0.75 * sign;
         }
-        if (LDBL_MANT_DIG - bits >= 2 && !fmodl(frac, 1)) frac++;
+        if (LDBL_MANT_DIG - bits >= 2 && !fmodl(frac, 1))
+            frac++;
     }
 
     y += frac;
@@ -296,11 +315,13 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
 
     if ((e2 + LDBL_MANT_DIG & INT_MAX) > emax - 5) {
         if (fabs(y) >= CONCAT(0x1p, LDBL_MANT_DIG)) {
-            if (denormal && bits == LDBL_MANT_DIG + e2 - emin) denormal = 0;
+            if (denormal && bits == LDBL_MANT_DIG + e2 - emin)
+                denormal = 0;
             y *= 0.5;
             e2++;
         }
-        if (e2 + LDBL_MANT_DIG > emax || (denormal && frac)) errno = ERANGE;
+        if (e2 + LDBL_MANT_DIG > emax || (denormal && frac))
+            errno = ERANGE;
     }
 
     return scalbnl(y, e2);
@@ -334,7 +355,8 @@ static long double hexfloat(FILE* f, int bits, int emin, int sign, int pok) {
 
     for (; c - '0' < 10U || (c | 32) - 'a' < 6U || c == '.'; c = shgetc(f)) {
         if (c == '.') {
-            if (gotrad) break;
+            if (gotrad)
+                break;
             rp = dc;
             gotrad = 1;
         } else {
@@ -358,13 +380,15 @@ static long double hexfloat(FILE* f, int bits, int emin, int sign, int pok) {
         shunget(f);
         if (pok) {
             shunget(f);
-            if (gotrad) shunget(f);
+            if (gotrad)
+                shunget(f);
         } else {
             shlim(f, 0);
         }
         return sign * 0.0;
     }
-    if (!gotrad) rp = dc;
+    if (!gotrad)
+        rp = dc;
     while (dc < 8)
         x *= 16, dc++;
     if ((c | 32) == 'p') {
@@ -383,7 +407,8 @@ static long double hexfloat(FILE* f, int bits, int emin, int sign, int pok) {
     }
     e2 += 4 * rp - 32;
 
-    if (!x) return sign * 0.0;
+    if (!x)
+        return sign * 0.0;
     if (e2 > -emin) {
         errno = ERANGE;
         return sign * LDBL_MAX * LDBL_MAX;
@@ -406,17 +431,21 @@ static long double hexfloat(FILE* f, int bits, int emin, int sign, int pok) {
 
     if (bits > 32 + e2 - emin) {
         bits = 32 + e2 - emin;
-        if (bits < 0) bits = 0;
+        if (bits < 0)
+            bits = 0;
     }
 
-    if (bits < LDBL_MANT_DIG) bias = copysignl(scalbn(1, 32 + LDBL_MANT_DIG - bits - 1), sign);
+    if (bits < LDBL_MANT_DIG)
+        bias = copysignl(scalbn(1, 32 + LDBL_MANT_DIG - bits - 1), sign);
 
-    if (bits < 32 && y && !(x & 1)) x++, y = 0;
+    if (bits < 32 && y && !(x & 1))
+        x++, y = 0;
 
     y = bias + sign * (long double)x + sign * y;
     y -= bias;
 
-    if (!y) errno = ERANGE;
+    if (!y)
+        errno = ERANGE;
 
     return scalbnl(y, e2);
 }
@@ -454,7 +483,8 @@ long double __floatscan(FILE* f, int prec, int pok) {
     }
 
     for (i = 0; i < 8 && (c | 32) == "infinity"[i]; i++)
-        if (i < 7) c = shgetc(f);
+        if (i < 7)
+            c = shgetc(f);
     if (i == 3 || i == 8 || (i > 3 && pok)) {
         if (i != 8) {
             shunget(f);
@@ -466,7 +496,8 @@ long double __floatscan(FILE* f, int prec, int pok) {
     }
     if (!i)
         for (i = 0; i < 3 && (c | 32) == "nan"[i]; i++)
-            if (i < 2) c = shgetc(f);
+            if (i < 2)
+                c = shgetc(f);
     if (i == 3) {
         if (shgetc(f) != '(') {
             shunget(f);
@@ -474,8 +505,10 @@ long double __floatscan(FILE* f, int prec, int pok) {
         }
         for (i = 1;; i++) {
             c = shgetc(f);
-            if (c - '0' < 10U || c - 'A' < 26U || c - 'a' < 26U || c == '_') continue;
-            if (c == ')') return NAN;
+            if (c - '0' < 10U || c - 'A' < 26U || c - 'a' < 26U || c == '_')
+                continue;
+            if (c == ')')
+                return NAN;
             shunget(f);
             if (!pok) {
                 errno = EINVAL;
@@ -498,7 +531,8 @@ long double __floatscan(FILE* f, int prec, int pok) {
 
     if (c == '0') {
         c = shgetc(f);
-        if ((c | 32) == 'x') return hexfloat(f, bits, emin, sign, pok);
+        if ((c | 32) == 'x')
+            return hexfloat(f, bits, emin, sign, pok);
         shunget(f);
         c = '0';
     }

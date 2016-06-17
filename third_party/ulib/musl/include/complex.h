@@ -102,11 +102,11 @@ float crealf(float complex);
 long double creall(long double complex);
 
 #ifndef __cplusplus
-#define __CIMAG(x, t)                                                                              \
-    (+(union {                                                                                     \
-          _Complex t __z;                                                                          \
-          t __xy[2];                                                                               \
-      }){(_Complex t)(x)}                                                                          \
+#define __CIMAG(x, t)     \
+    (+(union {            \
+          _Complex t __z; \
+          t __xy[2];      \
+      }){(_Complex t)(x)} \
           .__xy[1])
 
 #define creal(x) ((double)(x))

@@ -13,5 +13,6 @@ void __vm_lock() {
 }
 
 void __vm_unlock() {
-    if (a_fetch_add(vmlock, -1) == 1 && vmlock[1]) __wake(vmlock, -1);
+    if (a_fetch_add(vmlock, -1) == 1 && vmlock[1])
+        __wake(vmlock, -1);
 }

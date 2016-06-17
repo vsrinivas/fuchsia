@@ -61,7 +61,8 @@ static int child(void* args_vp) {
                 sa.sa_handler = SIG_IGN;
             } else {
                 __libc_sigaction(i, 0, &sa);
-                if (sa.sa_handler == SIG_IGN) continue;
+                if (sa.sa_handler == SIG_IGN)
+                    continue;
                 sa.sa_handler = SIG_DFL;
             }
         } else {
@@ -71,7 +72,8 @@ static int child(void* args_vp) {
     }
 
     if (attr->__flags & POSIX_SPAWN_SETPGROUP)
-        if ((ret = __syscall(SYS_setpgid, 0, attr->__pgrp))) goto fail;
+        if ((ret = __syscall(SYS_setpgid, 0, attr->__pgrp)))
+            goto fail;
 
     /* Use syscalls directly because the library functions attempt
      * to do a multi-threaded synchronized id-change, which would
@@ -93,7 +95,8 @@ static int child(void* args_vp) {
              * an unoccupied fd. */
             if (op->fd == p) {
                 ret = __syscall(SYS_dup, p);
-                if (ret < 0) goto fail;
+                if (ret < 0)
+                    goto fail;
                 __syscall(SYS_close, p);
                 p = ret;
             }
@@ -102,13 +105,16 @@ static int child(void* args_vp) {
                 __syscall(SYS_close, op->fd);
                 break;
             case FDOP_DUP2:
-                if ((ret = __sys_dup2(op->srcfd, op->fd)) < 0) goto fail;
+                if ((ret = __sys_dup2(op->srcfd, op->fd)) < 0)
+                    goto fail;
                 break;
             case FDOP_OPEN:
                 fd = __sys_open(op->path, op->oflag, op->mode);
-                if ((ret = fd) < 0) goto fail;
+                if ((ret = fd) < 0)
+                    goto fail;
                 if (fd != op->fd) {
-                    if ((ret = __sys_dup2(fd, op->fd)) < 0) goto fail;
+                    if ((ret = __sys_dup2(fd, op->fd)) < 0)
+                        goto fail;
                     __syscall(SYS_close, fd);
                 }
                 break;
@@ -146,7 +152,8 @@ int __posix_spawnx(pid_t* restrict res, const char* restrict path,
     int ec = 0, cs;
     struct args args;
 
-    if (pipe2(args.p, O_CLOEXEC)) return errno;
+    if (pipe2(args.p, O_CLOEXEC))
+        return errno;
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
@@ -172,7 +179,8 @@ int __posix_spawnx(pid_t* restrict res, const char* restrict path,
 
     close(args.p[0]);
 
-    if (!ec && res) *res = pid;
+    if (!ec && res)
+        *res = pid;
 
     pthread_sigmask(SIG_SETMASK, &args.oldmask, 0);
     pthread_setcancelstate(cs, 0);

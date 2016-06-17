@@ -35,13 +35,16 @@ long double acosl(long double x) {
 
     /* |x| >= 1 or nan */
     if (e >= 0x3fff) {
-        if (x == 1) return 0;
-        if (x == -1) return 2 * pio2_hi + 0x1p-120f;
+        if (x == 1)
+            return 0;
+        if (x == -1)
+            return 2 * pio2_hi + 0x1p-120f;
         return 0 / (x - x);
     }
     /* |x| < 0.5 */
     if (e < 0x3fff - 1) {
-        if (e < 0x3fff - LDBL_MANT_DIG - 1) return pio2_hi + 0x1p-120f;
+        if (e < 0x3fff - LDBL_MANT_DIG - 1)
+            return pio2_hi + 0x1p-120f;
         return pio2_hi - (__invtrigl_R(x * x) * x - pio2_lo + x);
     }
     /* x < -0.5 */

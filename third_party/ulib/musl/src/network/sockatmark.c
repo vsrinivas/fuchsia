@@ -3,6 +3,7 @@
 
 int sockatmark(int s) {
     int ret;
-    if (ioctl(s, SIOCATMARK, &ret) < 0) return -1;
+    if (ioctl(s, SIOCATMARK, &ret) < 0)
+        return -1;
     return ret;
 }

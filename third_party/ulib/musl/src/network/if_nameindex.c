@@ -41,10 +41,12 @@ static int netlink_msg_to_nameindex(void* pctx, struct nlmsghdr* h) {
         rta = NLMSG_RTA(h, sizeof(*ifa));
     }
     for (; NLMSG_RTAOK(rta, h); rta = RTA_NEXT(rta)) {
-        if (rta->rta_type != type) continue;
+        if (rta->rta_type != type)
+            continue;
 
         namelen = RTA_DATALEN(rta) - 1;
-        if (namelen > IFNAMSIZ) return 0;
+        if (namelen > IFNAMSIZ)
+            return 0;
 
         /* suppress duplicates */
         bucket = index % IFADDRS_HASH_SIZE;
@@ -59,9 +61,11 @@ static int netlink_msg_to_nameindex(void* pctx, struct nlmsghdr* h) {
 
         if (ctx->num >= ctx->allocated) {
             size_t a = ctx->allocated ? ctx->allocated * 2 + 1 : 8;
-            if (a > SIZE_MAX / sizeof *map) return -1;
+            if (a > SIZE_MAX / sizeof *map)
+                return -1;
             map = realloc(ctx->list, a * sizeof *map);
-            if (!map) return -1;
+            if (!map)
+                return -1;
             ctx->list = map;
             ctx->allocated = a;
         }
@@ -88,10 +92,12 @@ struct if_nameindex* if_nameindex() {
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     memset(ctx, 0, sizeof(*ctx));
-    if (__rtnetlink_enumerate(AF_UNSPEC, AF_INET, netlink_msg_to_nameindex, ctx) < 0) goto err;
+    if (__rtnetlink_enumerate(AF_UNSPEC, AF_INET, netlink_msg_to_nameindex, ctx) < 0)
+        goto err;
 
     ifs = malloc(sizeof(struct if_nameindex[ctx->num + 1]) + ctx->str_bytes);
-    if (!ifs) goto err;
+    if (!ifs)
+        goto err;
 
     p = (char*)(ifs + ctx->num + 1);
     for (i = ctx->num, d = ifs, s = ctx->list; i; i--, s++, d++) {

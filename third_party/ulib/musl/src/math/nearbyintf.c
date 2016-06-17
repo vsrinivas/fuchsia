@@ -1,6 +1,6 @@
+#include "libm.h"
 #include <fenv.h>
 #include <math.h>
-#include "libm.h"
 
 float nearbyintf(float x) {
 #ifdef FE_INEXACT
@@ -11,7 +11,8 @@ float nearbyintf(float x) {
 #endif
     x = rintf(x);
 #ifdef FE_INEXACT
-    if (!e) feclearexcept(FE_INEXACT);
+    if (!e)
+        feclearexcept(FE_INEXACT);
 #endif
     return x;
 }

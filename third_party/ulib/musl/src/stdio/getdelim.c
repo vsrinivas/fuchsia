@@ -21,20 +21,24 @@ ssize_t getdelim(char** restrict s, size_t* restrict n, int delim, FILE* restric
         return -1;
     }
 
-    if (!*s) *n = 0;
+    if (!*s)
+        *n = 0;
 
     for (;;) {
         z = memchr(f->rpos, delim, f->rend - f->rpos);
         k = z ? z - f->rpos + 1 : f->rend - f->rpos;
         if (i + k + 1 >= *n) {
-            if (k >= SIZE_MAX / 2 - i) goto oom;
+            if (k >= SIZE_MAX / 2 - i)
+                goto oom;
             size_t m = i + k + 2;
-            if (!z && m < SIZE_MAX / 4) m += m / 2;
+            if (!z && m < SIZE_MAX / 4)
+                m += m / 2;
             tmp = realloc(*s, m);
             if (!tmp) {
                 m = i + k + 2;
                 tmp = realloc(*s, m);
-                if (!tmp) goto oom;
+                if (!tmp)
+                    goto oom;
             }
             *s = tmp;
             *n = m;
@@ -42,7 +46,8 @@ ssize_t getdelim(char** restrict s, size_t* restrict n, int delim, FILE* restric
         memcpy(*s + i, f->rpos, k);
         f->rpos += k;
         i += k;
-        if (z) break;
+        if (z)
+            break;
         if ((c = getc_unlocked(f)) == EOF) {
             if (!i || !feof(f)) {
                 FUNLOCK(f);
@@ -50,7 +55,8 @@ ssize_t getdelim(char** restrict s, size_t* restrict n, int delim, FILE* restric
             }
             break;
         }
-        if (((*s)[i++] = c) == delim) break;
+        if (((*s)[i++] = c) == delim)
+            break;
     }
     (*s)[i] = 0;
 

@@ -41,11 +41,14 @@ double hypot(double x, double y) {
     x = ux.f;
     y = uy.f;
     /* note: hypot(inf,nan) == inf */
-    if (ey == 0x7ff) return y;
-    if (ex == 0x7ff || uy.i == 0) return x;
+    if (ey == 0x7ff)
+        return y;
+    if (ex == 0x7ff || uy.i == 0)
+        return x;
     /* note: hypot(x,y) ~= x + y*y/x/2 with inexact for small y/x */
     /* 64 difference is enough for ld80 double_t */
-    if (ex - ey > 64) return x + y;
+    if (ex - ey > 64)
+        return x + y;
 
     /* precise sqrt argument in nearest rounding mode without overflow */
     /* xh*xh must not overflow and xl*xl must not underflow in sq */

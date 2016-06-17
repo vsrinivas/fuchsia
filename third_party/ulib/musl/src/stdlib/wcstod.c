@@ -12,7 +12,8 @@ static size_t do_read(FILE* f, unsigned char* buf, size_t len) {
     size_t i;
     const wchar_t* wcs = f->cookie;
 
-    if (!wcs[0]) wcs = L"@";
+    if (!wcs[0])
+        wcs = L"@";
     for (i = 0; i < f->buf_size && wcs[i]; i++)
         f->buf[i] = wcs[i] < 128 ? wcs[i] : '@';
     f->rpos = f->buf;

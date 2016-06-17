@@ -10,7 +10,8 @@ void __do_orphaned_stdio_locks(void) {
 
 void __unlist_locked_file(FILE* f) {
     if (f->lockcount) {
-        if (f->next_locked) f->next_locked->prev_locked = f->prev_locked;
+        if (f->next_locked)
+            f->next_locked->prev_locked = f->prev_locked;
         if (f->prev_locked)
             f->prev_locked->next_locked = f->next_locked;
         else
@@ -22,16 +23,20 @@ int ftrylockfile(FILE* f) {
     pthread_t self = __pthread_self();
     int tid = self->tid;
     if (f->lock == tid) {
-        if (f->lockcount == LONG_MAX) return -1;
+        if (f->lockcount == LONG_MAX)
+            return -1;
         f->lockcount++;
         return 0;
     }
-    if (f->lock < 0) f->lock = 0;
-    if (f->lock || a_cas(&f->lock, 0, tid)) return -1;
+    if (f->lock < 0)
+        f->lock = 0;
+    if (f->lock || a_cas(&f->lock, 0, tid))
+        return -1;
     f->lockcount = 1;
     f->prev_locked = 0;
     f->next_locked = self->stdio_locks;
-    if (f->next_locked) f->next_locked->prev_locked = f;
+    if (f->next_locked)
+        f->next_locked->prev_locked = f;
     self->stdio_locks = f;
     return 0;
 }

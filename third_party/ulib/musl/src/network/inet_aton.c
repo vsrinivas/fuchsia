@@ -13,11 +13,14 @@ int __inet_aton(const char* s0, struct in_addr* dest) {
 
     for (i = 0; i < 4; i++) {
         a[i] = strtoul(s, &z, 0);
-        if (z == s || (*z && *z != '.') || !isdigit(*s)) return 0;
-        if (!*z) break;
+        if (z == s || (*z && *z != '.') || !isdigit(*s))
+            return 0;
+        if (!*z)
+            break;
         s = z + 1;
     }
-    if (i == 4) return 0;
+    if (i == 4)
+        return 0;
     switch (i) {
     case 0:
         a[1] = a[0] & 0xffffff;
@@ -30,7 +33,8 @@ int __inet_aton(const char* s0, struct in_addr* dest) {
         a[2] >>= 8;
     }
     for (i = 0; i < 4; i++) {
-        if (a[i] > 255) return 0;
+        if (a[i] > 255)
+            return 0;
         d[i] = a[i];
     }
     return 1;

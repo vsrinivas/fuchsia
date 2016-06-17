@@ -5,9 +5,7 @@
 #include <stddef.h>
 
 const struct _ns_flagdata _ns_flagdata[16] = {
-    {0x8000, 15}, {0x7800, 11}, {0x0400, 10}, {0x0200, 9}, {0x0100, 8}, {0x0080, 7},
-    {0x0040, 6},  {0x0020, 5},  {0x0010, 4},  {0x000f, 0}, {0x0000, 0}, {0x0000, 0},
-    {0x0000, 0},  {0x0000, 0},  {0x0000, 0},  {0x0000, 0},
+    {0x8000, 15}, {0x7800, 11}, {0x0400, 10}, {0x0200, 9}, {0x0100, 8}, {0x0080, 7}, {0x0040, 6}, {0x0020, 5}, {0x0010, 4}, {0x000f, 0}, {0x0000, 0}, {0x0000, 0}, {0x0000, 0}, {0x0000, 0}, {0x0000, 0}, {0x0000, 0},
 };
 
 unsigned ns_get16(const unsigned char* cp) {
@@ -35,7 +33,8 @@ int ns_initparse(const unsigned char* msg, int msglen, ns_msg* handle) {
 
     handle->_msg = msg;
     handle->_eom = msg + msglen;
-    if (msglen < (2 + ns_s_max) * NS_INT16SZ) goto bad;
+    if (msglen < (2 + ns_s_max) * NS_INT16SZ)
+        goto bad;
     NS_GET16(handle->_id, msg);
     NS_GET16(handle->_flags, msg);
     for (i = 0; i < ns_s_max; i++)
@@ -44,13 +43,15 @@ int ns_initparse(const unsigned char* msg, int msglen, ns_msg* handle) {
         if (handle->_counts[i]) {
             handle->_sections[i] = msg;
             r = ns_skiprr(msg, handle->_eom, i, handle->_counts[i]);
-            if (r < 0) return -1;
+            if (r < 0)
+                return -1;
             msg += r;
         } else {
             handle->_sections[i] = NULL;
         }
     }
-    if (msg != handle->_eom) goto bad;
+    if (msg != handle->_eom)
+        goto bad;
     handle->_sect = ns_s_max;
     handle->_rrnum = -1;
     handle->_msg_ptr = NULL;
@@ -66,14 +67,18 @@ int ns_skiprr(const unsigned char* ptr, const unsigned char* eom, ns_sect sectio
 
     while (count--) {
         r = dn_skipname(p, eom);
-        if (r < 0) goto bad;
-        if (r + 2 * NS_INT16SZ > eom - p) goto bad;
+        if (r < 0)
+            goto bad;
+        if (r + 2 * NS_INT16SZ > eom - p)
+            goto bad;
         p += r + 2 * NS_INT16SZ;
         if (section != ns_s_qd) {
-            if (NS_INT32SZ + NS_INT16SZ > eom - p) goto bad;
+            if (NS_INT32SZ + NS_INT16SZ > eom - p)
+                goto bad;
             p += NS_INT32SZ;
             NS_GET16(r, p);
-            if (r > eom - p) goto bad;
+            if (r > eom - p)
+                goto bad;
             p += r;
         }
     }
@@ -86,35 +91,43 @@ bad:
 int ns_parserr(ns_msg* handle, ns_sect section, int rrnum, ns_rr* rr) {
     int r;
 
-    if (section < 0 || section >= ns_s_max) goto bad;
+    if (section < 0 || section >= ns_s_max)
+        goto bad;
     if (section != handle->_sect) {
         handle->_sect = section;
         handle->_rrnum = 0;
         handle->_msg_ptr = handle->_sections[section];
     }
-    if (rrnum == -1) rrnum = handle->_rrnum;
-    if (rrnum < 0 || rrnum >= handle->_counts[section]) goto bad;
+    if (rrnum == -1)
+        rrnum = handle->_rrnum;
+    if (rrnum < 0 || rrnum >= handle->_counts[section])
+        goto bad;
     if (rrnum < handle->_rrnum) {
         handle->_rrnum = 0;
         handle->_msg_ptr = handle->_sections[section];
     }
     if (rrnum > handle->_rrnum) {
         r = ns_skiprr(handle->_msg_ptr, handle->_eom, section, rrnum - handle->_rrnum);
-        if (r < 0) return -1;
+        if (r < 0)
+            return -1;
         handle->_msg_ptr += r;
         handle->_rrnum = rrnum;
     }
     r = ns_name_uncompress(handle->_msg, handle->_eom, handle->_msg_ptr, rr->name, NS_MAXDNAME);
-    if (r < 0) return -1;
+    if (r < 0)
+        return -1;
     handle->_msg_ptr += r;
-    if (2 * NS_INT16SZ > handle->_eom - handle->_msg_ptr) goto size;
+    if (2 * NS_INT16SZ > handle->_eom - handle->_msg_ptr)
+        goto size;
     NS_GET16(rr->type, handle->_msg_ptr);
     NS_GET16(rr->rr_class, handle->_msg_ptr);
     if (section != ns_s_qd) {
-        if (NS_INT32SZ + NS_INT16SZ > handle->_eom - handle->_msg_ptr) goto size;
+        if (NS_INT32SZ + NS_INT16SZ > handle->_eom - handle->_msg_ptr)
+            goto size;
         NS_GET32(rr->ttl, handle->_msg_ptr);
         NS_GET16(rr->rdlength, handle->_msg_ptr);
-        if (rr->rdlength > handle->_eom - handle->_msg_ptr) goto size;
+        if (rr->rdlength > handle->_eom - handle->_msg_ptr)
+            goto size;
         rr->rdata = handle->_msg_ptr;
         handle->_msg_ptr += rr->rdlength;
     } else {
@@ -145,6 +158,7 @@ int ns_name_uncompress(const unsigned char* msg, const unsigned char* eom, const
                        char* dst, size_t dstsiz) {
     int r;
     r = dn_expand(msg, eom, src, dst, dstsiz);
-    if (r < 0) errno = EMSGSIZE;
+    if (r < 0)
+        errno = EMSGSIZE;
     return r;
 }

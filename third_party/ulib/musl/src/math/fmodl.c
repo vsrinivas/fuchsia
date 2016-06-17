@@ -11,11 +11,13 @@ long double fmodl(long double x, long double y) {
     int ey = uy.i.se & 0x7fff;
     int sx = ux.i.se & 0x8000;
 
-    if (y == 0 || isnan(y) || ex == 0x7fff) return (x * y) / (x * y);
+    if (y == 0 || isnan(y) || ex == 0x7fff)
+        return (x * y) / (x * y);
     ux.i.se = ex;
     uy.i.se = ey;
     if (ux.f <= uy.f) {
-        if (ux.f == uy.f) return 0 * x;
+        if (ux.f == uy.f)
+            return 0 * x;
         return x;
     }
 
@@ -37,7 +39,8 @@ long double fmodl(long double x, long double y) {
     for (; ex > ey; ex--) {
         i = mx - my;
         if (mx >= my) {
-            if (i == 0) return 0 * x;
+            if (i == 0)
+                return 0 * x;
             mx = 2 * i;
         } else if (2 * mx < mx) {
             mx = 2 * mx - my;
@@ -47,7 +50,8 @@ long double fmodl(long double x, long double y) {
     }
     i = mx - my;
     if (mx >= my) {
-        if (i == 0) return 0 * x;
+        if (i == 0)
+            return 0 * x;
         mx = i;
     }
     for (; mx >> 63 == 0; mx *= 2, ex--)
@@ -62,9 +66,11 @@ long double fmodl(long double x, long double y) {
     for (; ex > ey; ex--) {
         hi = xhi - yhi;
         lo = xlo - ylo;
-        if (xlo < ylo) hi -= 1;
+        if (xlo < ylo)
+            hi -= 1;
         if (hi >> 63 == 0) {
-            if ((hi | lo) == 0) return 0 * x;
+            if ((hi | lo) == 0)
+                return 0 * x;
             xhi = 2 * hi + (lo >> 63);
             xlo = 2 * lo;
         } else {
@@ -74,9 +80,11 @@ long double fmodl(long double x, long double y) {
     }
     hi = xhi - yhi;
     lo = xlo - ylo;
-    if (xlo < ylo) hi -= 1;
+    if (xlo < ylo)
+        hi -= 1;
     if (hi >> 63 == 0) {
-        if ((hi | lo) == 0) return 0 * x;
+        if ((hi | lo) == 0)
+            return 0 * x;
         xhi = hi;
         xlo = lo;
     }

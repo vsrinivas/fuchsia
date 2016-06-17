@@ -2,9 +2,9 @@
 #include "libc.h"
 #include "pthread_impl.h"
 #include <limits.h>
+#include <runtime/tls.h>
 #include <stddef.h>
 #include <sys/mman.h>
-#include <runtime/tls.h>
 
 #define ROUND(x) (((x) + PAGE_SIZE - 1) & -PAGE_SIZE)
 
@@ -34,7 +34,7 @@ static void static_init_tls(void) {
     size_t len = ROUND(sizeof(struct pthread));
     pthread_t thread = __mmap_wrapper(len);
     mxr_tls_set(__pthread_key, thread);
-    if(__init_tp(thread))
+    if (__init_tp(thread))
         a_crash();
 }
 weak_alias(static_init_tls, __init_tls);

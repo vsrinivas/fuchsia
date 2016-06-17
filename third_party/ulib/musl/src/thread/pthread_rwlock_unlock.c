@@ -10,7 +10,8 @@ int pthread_rwlock_unlock(pthread_rwlock_t* rw) {
         new = (cnt == 0x7fffffff || cnt == 1) ? 0 : val - 1;
     } while (a_cas(&rw->_rw_lock, val, new) != val);
 
-    if (!new && (waiters || val < 0)) __wake(&rw->_rw_lock, cnt);
+    if (!new && (waiters || val < 0))
+        __wake(&rw->_rw_lock, cnt);
 
     return 0;
 }

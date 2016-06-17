@@ -15,14 +15,17 @@ int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct time
     mx_time_t deadline = MX_TIME_INFINITE;
 
     if (at) {
-        if (at->tv_nsec >= NS_PER_S) return EINVAL;
-        if (__clock_gettime(clk, &to)) return EINVAL;
+        if (at->tv_nsec >= NS_PER_S)
+            return EINVAL;
+        if (__clock_gettime(clk, &to))
+            return EINVAL;
         to.tv_sec = at->tv_sec - to.tv_sec;
         if ((to.tv_nsec = at->tv_nsec - to.tv_nsec) < 0) {
             to.tv_sec--;
             to.tv_nsec += NS_PER_S;
         }
-        if (to.tv_sec < 0) return ETIMEDOUT;
+        if (to.tv_sec < 0)
+            return ETIMEDOUT;
         deadline = to.tv_sec * NS_PER_S;
         deadline += to.tv_nsec;
     }

@@ -74,6 +74,7 @@ float expf(float x) {
     xx = x * x;
     c = x - xx * (P1 + xx * P2);
     y = 1 + (x * c / (2 - c) - lo + hi);
-    if (k == 0) return y;
+    if (k == 0)
+        return y;
     return scalbnf(y, k);
 }

@@ -14,9 +14,11 @@ int __pthread_key_create(pthread_key_t* k, void (*dtor)(void*)) {
 
     /* This can only happen in the main thread before
      * pthread_create has been called. */
-    if (!self->tsd) self->tsd = __pthread_tsd_main;
+    if (!self->tsd)
+        self->tsd = __pthread_tsd_main;
 
-    if (!dtor) dtor = nodtor;
+    if (!dtor)
+        dtor = nodtor;
     do {
         if (!a_cas_p(keys + j, 0, (void*)dtor)) {
             *k = j;

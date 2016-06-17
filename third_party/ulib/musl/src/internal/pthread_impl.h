@@ -115,9 +115,9 @@ struct __timer {
 #define SIGSYNCCALL 34
 
 #define SIGALL_SET ((sigset_t*)(const unsigned long long[2]){-1, -1})
-#define SIGPT_SET                                                                                  \
-    ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){[sizeof(long) == 4] =              \
-                                                                    3UL                            \
+#define SIGPT_SET                                                                     \
+    ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){[sizeof(long) == 4] = \
+                                                                    3UL               \
                                                                     << (32 * (sizeof(long) > 4))})
 #define SIGTIMER_SET ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){0x80000000})
 
@@ -141,7 +141,8 @@ int __timedwait(volatile int*, int, clockid_t, const struct timespec*);
 int __timedwait_cp(volatile int*, int, clockid_t, const struct timespec*);
 void __wait(volatile int*, volatile int*, int);
 static inline void __wake(volatile void* addr, int cnt) {
-    if (cnt < 0) cnt = INT_MAX;
+    if (cnt < 0)
+        cnt = INT_MAX;
     _magenta_futex_wake((void*)addr, cnt);
 }
 

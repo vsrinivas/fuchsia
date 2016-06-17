@@ -23,7 +23,8 @@ long double modfl(long double x, long double* iptr) {
     /* no fractional part */
     if (e >= LDBL_MANT_DIG - 1) {
         *iptr = x;
-        if (isnan(x)) return x;
+        if (isnan(x))
+            return x;
         return s ? -0.0 : 0.0;
     }
 
@@ -40,8 +41,10 @@ long double modfl(long double x, long double* iptr) {
         *iptr = x;
         return s ? -0.0 : 0.0;
     }
-    if (y > 0) y -= 1;
-    if (s) y = -y;
+    if (y > 0)
+        y -= 1;
+    if (s)
+        y = -y;
     *iptr = x + y;
     return -y;
 }

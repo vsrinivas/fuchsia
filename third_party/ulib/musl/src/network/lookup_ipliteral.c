@@ -32,7 +32,8 @@ int __lookup_ipliteral(struct address buf[static 1], const char* name, int famil
         name = tmp;
     }
 
-    if (inet_pton(AF_INET6, name, &a6) <= 0) return 0;
+    if (inet_pton(AF_INET6, name, &a6) <= 0)
+        return 0;
     if (family == AF_INET) /* wrong family */
         return EAI_NONAME;
 
@@ -44,11 +45,14 @@ int __lookup_ipliteral(struct address buf[static 1], const char* name, int famil
         else
             z = p - 1;
         if (*z) {
-            if (!IN6_IS_ADDR_LINKLOCAL(&a6) && !IN6_IS_ADDR_MC_LINKLOCAL(&a6)) return EAI_NONAME;
+            if (!IN6_IS_ADDR_LINKLOCAL(&a6) && !IN6_IS_ADDR_MC_LINKLOCAL(&a6))
+                return EAI_NONAME;
             scopeid = if_nametoindex(p);
-            if (!scopeid) return EAI_NONAME;
+            if (!scopeid)
+                return EAI_NONAME;
         }
-        if (scopeid > UINT_MAX) return EAI_NONAME;
+        if (scopeid > UINT_MAX)
+            return EAI_NONAME;
     }
     buf[0].scopeid = scopeid;
     return 1;

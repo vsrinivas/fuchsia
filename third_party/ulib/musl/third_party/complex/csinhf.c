@@ -46,7 +46,8 @@ float complex csinhf(float complex z) {
     iy = 0x7fffffff & hy;
 
     if (ix < 0x7f800000 && iy < 0x7f800000) {
-        if (iy == 0) return CMPLXF(sinhf(x), y);
+        if (iy == 0)
+            return CMPLXF(sinhf(x), y);
         if (ix < 0x41100000) /* small x: normal case */
             return CMPLXF(sinhf(x) * cosf(y), coshf(x) * sinf(y));
 
@@ -66,17 +67,21 @@ float complex csinhf(float complex z) {
         }
     }
 
-    if (ix == 0 && iy >= 0x7f800000) return CMPLXF(copysignf(0, x * (y - y)), y - y);
+    if (ix == 0 && iy >= 0x7f800000)
+        return CMPLXF(copysignf(0, x * (y - y)), y - y);
 
     if (iy == 0 && ix >= 0x7f800000) {
-        if ((hx & 0x7fffff) == 0) return CMPLXF(x, y);
+        if ((hx & 0x7fffff) == 0)
+            return CMPLXF(x, y);
         return CMPLXF(x, copysignf(0, y));
     }
 
-    if (ix < 0x7f800000 && iy >= 0x7f800000) return CMPLXF(y - y, x * (y - y));
+    if (ix < 0x7f800000 && iy >= 0x7f800000)
+        return CMPLXF(y - y, x * (y - y));
 
     if (ix >= 0x7f800000 && (hx & 0x7fffff) == 0) {
-        if (iy >= 0x7f800000) return CMPLXF(x * x, x * (y - y));
+        if (iy >= 0x7f800000)
+            return CMPLXF(x * x, x * (y - y));
         return CMPLXF(x * cosf(y), INFINITY * sinf(y));
     }
 

@@ -183,7 +183,8 @@ double __lgamma_r(double x, int* signgamp) {
     *signgamp = 1;
     sign = u.i >> 63;
     ix = u.i >> 32 & 0x7fffffff;
-    if (ix >= 0x7ff00000) return x * x;
+    if (ix >= 0x7ff00000)
+        return x * x;
     if (ix < (0x3ff - 70) << 20) { /* |x|<2**-70, return -log(|x|) */
         if (sign) {
             x = -x;
@@ -204,7 +205,8 @@ double __lgamma_r(double x, int* signgamp) {
     }
 
     /* purge off 1 and 2 */
-    if ((ix == 0x3ff00000 || ix == 0x40000000) && (uint32_t)u.i == 0) r = 0;
+    if ((ix == 0x3ff00000 || ix == 0x40000000) && (uint32_t)u.i == 0)
+        r = 0;
     /* for x < 2.0 */
     else if (ix < 0x40000000) {
         if (ix <= 0x3feccccc) { /* lgamma(x) = lgamma(x+1)-log(x) */
@@ -283,7 +285,8 @@ double __lgamma_r(double x, int* signgamp) {
         r = (x - 0.5) * (t - 1.0) + w;
     } else /* 2**58 <= x <= inf */
         r = x * (log(x) - 1.0);
-    if (sign) r = nadj - r;
+    if (sign)
+        r = nadj - r;
     return r;
 }
 

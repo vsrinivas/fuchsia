@@ -4,6 +4,7 @@
 void flockfile(FILE* f) {
     while (ftrylockfile(f)) {
         int owner = f->lock;
-        if (owner) __wait(&f->lock, &f->waiters, owner);
+        if (owner)
+            __wait(&f->lock, &f->waiters, owner);
     }
 }

@@ -80,10 +80,14 @@ long double expm1l(long double x) {
     long double px, qx, xx;
     int k;
 
-    if (isnan(x)) return x;
-    if (x > maxarg) return x * 0x1p16383L; /* overflow, unless x==inf */
-    if (x == 0.0) return x;
-    if (x < minarg) return -1.0;
+    if (isnan(x))
+        return x;
+    if (x > maxarg)
+        return x * 0x1p16383L; /* overflow, unless x==inf */
+    if (x == 0.0)
+        return x;
+    if (x < minarg)
+        return -1.0;
 
     xx = C1 + C2;
     /* Express x = ln 2 (k + remainder), remainder not exceeding 1/2. */

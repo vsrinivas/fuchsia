@@ -72,7 +72,8 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
         fd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         family = AF_INET;
     }
-    if (fd < 0 || bind(fd, (void*)&sa, sl) < 0) return -1;
+    if (fd < 0 || bind(fd, (void*)&sa, sl) < 0)
+        return -1;
 
     /* Past this point, there are no errors. Each individual query will
      * yield either no reply (indicated by zero length) or an answer
@@ -85,7 +86,8 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
     if (family == AF_INET6) {
         setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &(int){0}, sizeof 0);
         for (i = 0; i < nns; i++) {
-            if (ns[i].sin.sin_family != AF_INET) continue;
+            if (ns[i].sin.sin_family != AF_INET)
+                continue;
             memcpy(ns[i].sin6.sin6_addr.s6_addr + 12, &ns[i].sin.sin_addr, 4);
             memcpy(ns[i].sin6.sin6_addr.s6_addr, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12);
             ns[i].sin6.sin6_family = AF_INET6;
@@ -115,26 +117,31 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
         }
 
         /* Wait for a response, or until time to retry */
-        if (poll(&pfd, 1, t1 + retry_interval - t2) <= 0) continue;
+        if (poll(&pfd, 1, t1 + retry_interval - t2) <= 0)
+            continue;
 
         while ((rlen = recvfrom(fd, answers[next], asize, 0, (void*)&sa, (socklen_t[1]){sl})) >=
                0) {
 
             /* Ignore non-identifiable packets */
-            if (rlen < 4) continue;
+            if (rlen < 4)
+                continue;
 
             /* Ignore replies from addresses we didn't send to */
             for (j = 0; j < nns && memcmp(ns + j, &sa, sl); j++)
                 ;
-            if (j == nns) continue;
+            if (j == nns)
+                continue;
 
             /* Find which query this answer goes with, if any */
             for (i = next; i < nqueries &&
                            (answers[next][0] != queries[i][0] || answers[next][1] != queries[i][1]);
                  i++)
                 ;
-            if (i == nqueries) continue;
-            if (alens[i]) continue;
+            if (i == nqueries)
+                continue;
+            if (alens[i])
+                continue;
 
             /* Only accept positive or negative responses;
              * retry immediately on server failure, and ignore
@@ -159,7 +166,8 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
             else
                 memcpy(answers[i], answers[next], rlen);
 
-            if (next == nqueries) goto out;
+            if (next == nqueries)
+                goto out;
         }
     }
 out:
@@ -171,6 +179,7 @@ out:
 int __res_msend(int nqueries, const unsigned char* const* queries, const int* qlens,
                 unsigned char* const* answers, int* alens, int asize) {
     struct resolvconf conf;
-    if (__get_resolv_conf(&conf, 0, 0) < 0) return -1;
+    if (__get_resolv_conf(&conf, 0, 0) < 0)
+        return -1;
     return __res_msend_rc(nqueries, queries, qlens, answers, alens, asize, &conf);
 }

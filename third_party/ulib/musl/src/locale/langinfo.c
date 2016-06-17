@@ -66,23 +66,28 @@ char* __nl_langinfo_l(nl_item item, locale_t loc) {
     int idx = item & 65535;
     const char* str;
 
-    if (item == CODESET) return MB_CUR_MAX == 1 ? "ASCII" : "UTF-8";
+    if (item == CODESET)
+        return MB_CUR_MAX == 1 ? "ASCII" : "UTF-8";
 
     switch (cat) {
     case LC_NUMERIC:
-        if (idx > 1) return "";
+        if (idx > 1)
+            return "";
         str = c_numeric;
         break;
     case LC_TIME:
-        if (idx > 0x31) return "";
+        if (idx > 0x31)
+            return "";
         str = c_time;
         break;
     case LC_MONETARY:
-        if (idx > 0) return "";
+        if (idx > 0)
+            return "";
         str = "";
         break;
     case LC_MESSAGES:
-        if (idx > 3) return "";
+        if (idx > 3)
+            return "";
         str = c_messages;
         break;
     default:
@@ -92,7 +97,8 @@ char* __nl_langinfo_l(nl_item item, locale_t loc) {
     for (; idx; idx--, str++)
         for (; *str; str++)
             ;
-    if (cat != LC_NUMERIC && *str) str = LCTRANS(str, cat, loc);
+    if (cat != LC_NUMERIC && *str)
+        str = LCTRANS(str, cat, loc);
     return (char*)str;
 }
 

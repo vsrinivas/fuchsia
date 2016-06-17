@@ -8,6 +8,7 @@ int pselect(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restric
             const struct timespec* restrict ts, const sigset_t* restrict mask) {
     syscall_arg_t data[2] = {(uintptr_t)mask, _NSIG / 8};
     struct timespec ts_tmp;
-    if (ts) ts_tmp = *ts;
+    if (ts)
+        ts_tmp = *ts;
     return syscall(SYS_pselect6, n, rfds, wfds, efds, ts ? &ts_tmp : 0, data);
 }

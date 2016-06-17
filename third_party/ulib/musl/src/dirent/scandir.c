@@ -13,19 +13,24 @@ int scandir(const char* path, struct dirent*** res, int (*sel)(const struct dire
     size_t cnt = 0, len = 0;
     int old_errno = errno;
 
-    if (!d) return -1;
+    if (!d)
+        return -1;
 
     while ((errno = 0), (de = readdir(d))) {
-        if (sel && !sel(de)) continue;
+        if (sel && !sel(de))
+            continue;
         if (cnt >= len) {
             len = 2 * len + 1;
-            if (len > SIZE_MAX / sizeof *names) break;
+            if (len > SIZE_MAX / sizeof *names)
+                break;
             tmp = realloc(names, len * sizeof *names);
-            if (!tmp) break;
+            if (!tmp)
+                break;
             names = tmp;
         }
         names[cnt] = malloc(de->d_reclen);
-        if (!names[cnt]) break;
+        if (!names[cnt])
+            break;
         memcpy(names[cnt++], de, de->d_reclen);
     }
 
@@ -40,7 +45,8 @@ int scandir(const char* path, struct dirent*** res, int (*sel)(const struct dire
     }
     errno = old_errno;
 
-    if (cmp) qsort(names, cnt, sizeof *names, (int (*)(const void*, const void*))cmp);
+    if (cmp)
+        qsort(names, cnt, sizeof *names, (int (*)(const void*, const void*))cmp);
     *res = names;
     return cnt;
 }

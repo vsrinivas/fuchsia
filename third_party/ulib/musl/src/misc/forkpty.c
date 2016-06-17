@@ -11,7 +11,8 @@ int forkpty(int* pm, char* name, const struct termios* tio, const struct winsize
     pid_t pid = -1;
     sigset_t set, oldset;
 
-    if (openpty(&m, &s, name, tio, ws) < 0) return -1;
+    if (openpty(&m, &s, name, tio, ws) < 0)
+        return -1;
 
     sigfillset(&set);
     pthread_sigmask(SIG_BLOCK, &set, &oldset);

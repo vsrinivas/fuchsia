@@ -118,7 +118,8 @@ float __lgammaf_r(float x, int* signgamp) {
     *signgamp = 1;
     sign = u.i >> 31;
     ix = u.i & 0x7fffffff;
-    if (ix >= 0x7f800000) return x * x;
+    if (ix >= 0x7f800000)
+        return x * x;
     if (ix < 0x35000000) { /* |x| < 2**-21, return -log(|x|) */
         if (sign) {
             *signgamp = -1;
@@ -139,7 +140,8 @@ float __lgammaf_r(float x, int* signgamp) {
     }
 
     /* purge off 1 and 2 */
-    if (ix == 0x3f800000 || ix == 0x40000000) r = 0;
+    if (ix == 0x3f800000 || ix == 0x40000000)
+        r = 0;
     /* for x < 2.0 */
     else if (ix < 0x40000000) {
         if (ix <= 0x3f666666) { /* lgamma(x) = lgamma(x+1)-log(x) */
@@ -218,7 +220,8 @@ float __lgammaf_r(float x, int* signgamp) {
         r = (x - 0.5f) * (t - 1.0f) + w;
     } else /* 2**58 <= x <= inf */
         r = x * (logf(x) - 1.0f);
-    if (sign) r = nadj - r;
+    if (sign)
+        r = nadj - r;
     return r;
 }
 

@@ -33,7 +33,8 @@ static int find_exidx(struct dl_phdr_info* info, size_t size, void* ptr) {
 uintptr_t __gnu_Unwind_Find_exidx(uintptr_t pc, int* pcount) {
     struct find_exidx_data data;
     data.pc = pc;
-    if (dl_iterate_phdr(find_exidx, &data) <= 0) return 0;
+    if (dl_iterate_phdr(find_exidx, &data) <= 0)
+        return 0;
     *pcount = data.exidx_len / 8;
     return data.exidx_start;
 }

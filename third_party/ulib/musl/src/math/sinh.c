@@ -13,7 +13,8 @@ double sinh(double x) {
     double t, h, absx;
 
     h = 0.5;
-    if (u.i >> 63) h = -h;
+    if (u.i >> 63)
+        h = -h;
     /* |x| */
     u.i &= (uint64_t)-1 / 2;
     absx = u.f;

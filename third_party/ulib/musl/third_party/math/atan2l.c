@@ -29,8 +29,10 @@ long double atan2l(long double y, long double x) {
     long double z;
     int m, ex, ey;
 
-    if (isnan(x) || isnan(y)) return x + y;
-    if (x == 1) return atanl(y);
+    if (isnan(x) || isnan(y))
+        return x + y;
+    if (x == 1)
+        return atanl(y);
     ux.f = x;
     uy.f = y;
     ex = ux.i.se & 0x7fff;
@@ -47,7 +49,8 @@ long double atan2l(long double y, long double x) {
             return -2 * pio2_hi; /* atan(-0,-anything) =-pi */
         }
     }
-    if (x == 0) return m & 1 ? -pio2_hi : pio2_hi;
+    if (x == 0)
+        return m & 1 ? -pio2_hi : pio2_hi;
     if (ex == 0x7fff) {
         if (ey == 0x7fff) {
             switch (m) {
@@ -73,7 +76,8 @@ long double atan2l(long double y, long double x) {
             }
         }
     }
-    if (ex + 120 < ey || ey == 0x7fff) return m & 1 ? -pio2_hi : pio2_hi;
+    if (ex + 120 < ey || ey == 0x7fff)
+        return m & 1 ? -pio2_hi : pio2_hi;
     /* z = atan(|y/x|) without spurious underflow */
     if ((m & 2) && ey + 120 < ex) /* |y/x| < 0x1p-120, x<0 */
         z = 0.0;

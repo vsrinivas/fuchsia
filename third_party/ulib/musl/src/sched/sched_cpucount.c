@@ -6,6 +6,7 @@ int __sched_cpucount(size_t size, const cpu_set_t* set) {
     const unsigned char* p = (const void*)set;
     for (i = 0; i < size; i++)
         for (j = 0; j < 8; j++)
-            if (p[i] & (1 << j)) cnt++;
+            if (p[i] & (1 << j))
+                cnt++;
     return cnt;
 }

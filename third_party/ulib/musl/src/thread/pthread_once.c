@@ -3,7 +3,8 @@
 static void undo(void* control) {
     /* Wake all waiters, since the waiter status is lost when
      * resetting control to the initial state. */
-    if (a_swap(control, 0) == 3) __wake(control, -1);
+    if (a_swap(control, 0) == 3)
+        __wake(control, -1);
 }
 
 int __pthread_once_full(pthread_once_t* control, void (*init)(void)) {
@@ -20,7 +21,8 @@ int __pthread_once_full(pthread_once_t* control, void (*init)(void)) {
             init();
             pthread_cleanup_pop(0);
 
-            if (a_swap(control, 2) == 3) __wake(control, -1);
+            if (a_swap(control, 2) == 3)
+                __wake(control, -1);
             return 0;
         case 1:
             /* If this fails, so will __wait. */

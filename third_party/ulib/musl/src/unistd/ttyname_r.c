@@ -7,7 +7,8 @@ int ttyname_r(int fd, char* name, size_t size) {
     char procname[sizeof "/proc/self/fd/" + 3 * sizeof(int) + 2];
     ssize_t l;
 
-    if (!isatty(fd)) return ENOTTY;
+    if (!isatty(fd))
+        return ENOTTY;
 
     __procfdname(procname, fd);
     l = readlink(procname, name, size);

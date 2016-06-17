@@ -49,8 +49,10 @@ double complex csqrt(double complex z) {
     b = cimag(z);
 
     /* Handle special cases. */
-    if (z == 0) return CMPLX(0, b);
-    if (isinf(b)) return CMPLX(INFINITY, b);
+    if (z == 0)
+        return CMPLX(0, b);
+    if (isinf(b))
+        return CMPLX(INFINITY, b);
     if (isnan(a)) {
         t = (b - b) / (b - b); /* raise invalid if b is not a NaN */
         return CMPLX(a, t);    /* return NaN + NaN i */
@@ -91,6 +93,7 @@ double complex csqrt(double complex z) {
     }
 
     /* Rescale. */
-    if (scale) result *= 2;
+    if (scale)
+        result *= 2;
     return result;
 }

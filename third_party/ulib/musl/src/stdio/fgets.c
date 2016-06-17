@@ -14,7 +14,8 @@ char* fgets(char* restrict s, int n, FILE* restrict f) {
     if (n-- <= 1) {
         f->mode |= f->mode - 1;
         FUNLOCK(f);
-        if (n) return 0;
+        if (n)
+            return 0;
         *s = 0;
         return s;
     }
@@ -27,15 +28,19 @@ char* fgets(char* restrict s, int n, FILE* restrict f) {
         f->rpos += k;
         p += k;
         n -= k;
-        if (z || !n) break;
+        if (z || !n)
+            break;
         if ((c = getc_unlocked(f)) < 0) {
-            if (p == s || !feof(f)) s = 0;
+            if (p == s || !feof(f))
+                s = 0;
             break;
         }
         n--;
-        if ((*p++ = c) == '\n') break;
+        if ((*p++ = c) == '\n')
+            break;
     }
-    if (s) *p = 0;
+    if (s)
+        *p = 0;
 
     FUNLOCK(f);
 

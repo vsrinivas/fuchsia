@@ -37,7 +37,8 @@ int __cxa_atexit(void (*func)(void*), void* arg, void* dso) {
     mxr_mutex_lock(&lock);
 
     /* Defer initialization of head so it can be in BSS */
-    if (!head) head = &builtin;
+    if (!head)
+        head = &builtin;
 
     /* If the current function list is full, add a new one */
     if (slot == COUNT) {

@@ -41,8 +41,10 @@ float complex csqrtf(float complex z) {
     double t;
 
     /* Handle special cases. */
-    if (z == 0) return CMPLXF(0, b);
-    if (isinf(b)) return CMPLXF(INFINITY, b);
+    if (z == 0)
+        return CMPLXF(0, b);
+    if (isinf(b))
+        return CMPLXF(INFINITY, b);
     if (isnan(a)) {
         t = (b - b) / (b - b); /* raise invalid if b is not a NaN */
         return CMPLXF(a, t);   /* return NaN + NaN i */

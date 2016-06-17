@@ -12,11 +12,14 @@ double nexttoward(double x, long double y) {
     } ux = {x};
     int e;
 
-    if (isnan(x) || isnan(y)) return x + y;
-    if (x == y) return y;
+    if (isnan(x) || isnan(y))
+        return x + y;
+    if (x == y)
+        return y;
     if (x == 0) {
         ux.i = 1;
-        if (signbit(y)) ux.i |= 1ULL << 63;
+        if (signbit(y))
+            ux.i |= 1ULL << 63;
     } else if (x < y) {
         if (signbit(x))
             ux.i--;
@@ -30,9 +33,11 @@ double nexttoward(double x, long double y) {
     }
     e = ux.i >> 52 & 0x7ff;
     /* raise overflow if ux.f is infinite and x is finite */
-    if (e == 0x7ff) FORCE_EVAL(x + x);
+    if (e == 0x7ff)
+        FORCE_EVAL(x + x);
     /* raise underflow if ux.f is subnormal or zero */
-    if (e == 0) FORCE_EVAL(x * x + ux.f * ux.f);
+    if (e == 0)
+        FORCE_EVAL(x * x + ux.f * ux.f);
     return ux.f;
 }
 #endif

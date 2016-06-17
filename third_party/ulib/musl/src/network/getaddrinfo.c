@@ -20,7 +20,8 @@ int getaddrinfo(const char* restrict host, const char* restrict serv,
         } sa;
     } * out;
 
-    if (!host && !serv) return EAI_NONAME;
+    if (!host && !serv)
+        return EAI_NONAME;
 
     if (hint) {
         family = hint->ai_family;
@@ -30,7 +31,8 @@ int getaddrinfo(const char* restrict host, const char* restrict serv,
 
         const int mask = AI_PASSIVE | AI_CANONNAME | AI_NUMERICHOST | AI_V4MAPPED | AI_ALL |
                          AI_ADDRCONFIG | AI_NUMERICSERV;
-        if ((flags & mask) != flags) return EAI_BADFLAGS;
+        if ((flags & mask) != flags)
+            return EAI_BADFLAGS;
 
         switch (family) {
         case AF_INET:
@@ -43,15 +45,18 @@ int getaddrinfo(const char* restrict host, const char* restrict serv,
     }
 
     nservs = __lookup_serv(ports, serv, proto, socktype, flags);
-    if (nservs < 0) return nservs;
+    if (nservs < 0)
+        return nservs;
 
     naddrs = __lookup_name(addrs, canon, host, family, flags);
-    if (naddrs < 0) return naddrs;
+    if (naddrs < 0)
+        return naddrs;
 
     nais = nservs * naddrs;
     canon_len = strlen(canon);
     out = calloc(1, nais * sizeof(*out) + canon_len + 1);
-    if (!out) return EAI_MEMORY;
+    if (!out)
+        return EAI_MEMORY;
 
     if (canon_len) {
         outcanon = (void*)&out[nais];

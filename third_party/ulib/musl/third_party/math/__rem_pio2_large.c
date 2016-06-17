@@ -244,7 +244,8 @@ int __rem_pio2_large(double* x, double* y, int e0, int nx, int prec) {
     /* determine jx,jv,q0, note that 3>q0 */
     jx = nx - 1;
     jv = (e0 - 3) / 24;
-    if (jv < 0) jv = 0;
+    if (jv < 0)
+        jv = 0;
     q0 = e0 - 24 * (jv + 1);
 
     /* set up f[0] to f[jx+jk] where f[jx+jk] = ipio2[jv+jk] */
@@ -310,7 +311,8 @@ recompute:
         }
         if (ih == 2) {
             z = 1.0 - z;
-            if (carry != 0) z -= scalbn(1.0, q0);
+            if (carry != 0)
+                z -= scalbn(1.0, q0);
         }
     }
 

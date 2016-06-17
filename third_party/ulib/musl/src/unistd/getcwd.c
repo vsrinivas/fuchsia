@@ -13,6 +13,7 @@ char* getcwd(char* buf, size_t size) {
         errno = EINVAL;
         return 0;
     }
-    if (syscall(SYS_getcwd, buf, size) < 0) return 0;
+    if (syscall(SYS_getcwd, buf, size) < 0)
+        return 0;
     return buf == tmp ? strdup(buf) : buf;
 }

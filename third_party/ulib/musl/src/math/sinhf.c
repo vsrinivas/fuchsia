@@ -9,7 +9,8 @@ float sinhf(float x) {
     float t, h, absx;
 
     h = 0.5;
-    if (u.i >> 31) h = -h;
+    if (u.i >> 31)
+        h = -h;
     /* |x| */
     u.i &= 0x7fffffff;
     absx = u.f;
@@ -19,7 +20,8 @@ float sinhf(float x) {
     if (w < 0x42b17217) {
         t = expm1f(absx);
         if (w < 0x3f800000) {
-            if (w < 0x3f800000 - (12 << 23)) return x;
+            if (w < 0x3f800000 - (12 << 23))
+                return x;
             return h * (2 * t - t * t / (t + 1));
         }
         return h * (t + t / (t + 1));

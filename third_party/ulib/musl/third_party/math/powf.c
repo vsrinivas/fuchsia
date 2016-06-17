@@ -65,11 +65,14 @@ float powf(float x, float y) {
     iy = hy & 0x7fffffff;
 
     /* x**0 = 1, even if x is NaN */
-    if (iy == 0) return 1.0f;
+    if (iy == 0)
+        return 1.0f;
     /* 1**y = 1, even if y is NaN */
-    if (hx == 0x3f800000) return 1.0f;
+    if (hx == 0x3f800000)
+        return 1.0f;
     /* NaN if either arg is NaN */
-    if (ix > 0x7f800000 || iy > 0x7f800000) return x + y;
+    if (ix > 0x7f800000 || iy > 0x7f800000)
+        return x + y;
 
     /* determine if y is an odd int when x < 0
      * yisint = 0       ... y is not an integer
@@ -83,7 +86,8 @@ float powf(float x, float y) {
         else if (iy >= 0x3f800000) {
             k = (iy >> 23) - 0x7f; /* exponent */
             j = iy >> (23 - k);
-            if ((j << (23 - k)) == iy) yisint = 2 - (j & 1);
+            if ((j << (23 - k)) == iy)
+                yisint = 2 - (j & 1);
         }
     }
 
@@ -131,8 +135,10 @@ float powf(float x, float y) {
     /* |y| is huge */
     if (iy > 0x4d000000) { /* if |y| > 2**27 */
         /* over/underflow if x is not close to one */
-        if (ix < 0x3f7ffff8) return hy < 0 ? sn * huge * huge : sn * tiny * tiny;
-        if (ix > 0x3f800007) return hy > 0 ? sn * huge * huge : sn * tiny * tiny;
+        if (ix < 0x3f7ffff8)
+            return hy < 0 ? sn * huge * huge : sn * tiny * tiny;
+        if (ix > 0x3f800007)
+            return hy > 0 ? sn * huge * huge : sn * tiny * tiny;
         /* now |1-x| is tiny <= 2**-20, suffice to compute
            log(x) by x-x^2/2+x^3/3-x^4/4 */
         t = ax - 1; /* t has 20 trailing zeros */
@@ -213,15 +219,17 @@ float powf(float x, float y) {
     p_h = y1 * t1;
     z = p_l + p_h;
     GET_FLOAT_WORD(j, z);
-    if (j > 0x43000000)                                   /* if z > 128 */
-        return sn * huge * huge;                          /* overflow */
-    else if (j == 0x43000000) {                           /* if z == 128 */
-        if (p_l + ovt > z - p_h) return sn * huge * huge; /* overflow */
+    if (j > 0x43000000)          /* if z > 128 */
+        return sn * huge * huge; /* overflow */
+    else if (j == 0x43000000) {  /* if z == 128 */
+        if (p_l + ovt > z - p_h)
+            return sn * huge * huge; /* overflow */
     } else if ((j & 0x7fffffff) >
                0x43160000) /* z < -150 */ // FIXME: check should be  (uint32_t)j > 0xc3160000
         return sn * tiny * tiny;          /* underflow */
     else if (j == 0xc3160000) {           /* z == -150 */
-        if (p_l <= z - p_h) return sn * tiny * tiny; /* underflow */
+        if (p_l <= z - p_h)
+            return sn * tiny * tiny; /* underflow */
     }
     /*
      * compute 2**(p_h+p_l)
@@ -234,7 +242,8 @@ float powf(float x, float y) {
         k = ((n & 0x7fffffff) >> 23) - 0x7f; /* new k for n */
         SET_FLOAT_WORD(t, n & ~(0x007fffff >> k));
         n = ((n & 0x007fffff) | 0x00800000) >> (23 - k);
-        if (j < 0) n = -n;
+        if (j < 0)
+            n = -n;
         p_h -= t;
     }
     t = p_l + p_h;

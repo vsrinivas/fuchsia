@@ -18,7 +18,8 @@ long double atanhl(long double x) {
     if (e < 0x3ff - 1) {
         if (e < 0x3ff - LDBL_MANT_DIG / 2) {
             /* handle underflow */
-            if (e == 0) FORCE_EVAL((float)x);
+            if (e == 0)
+                FORCE_EVAL((float)x);
         } else {
             /* |x| < 0.5, up to 1.7ulp error */
             x = 0.5 * log1pl(2 * x + 2 * x * x / (1 - x));

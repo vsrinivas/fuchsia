@@ -40,13 +40,15 @@ long double cbrtl(long double x) {
      * If x = +-Inf, then cbrt(x) = +-Inf.
      * If x = NaN, then cbrt(x) = NaN.
      */
-    if (e == 0x7fff) return x + x;
+    if (e == 0x7fff)
+        return x + x;
     if (e == 0) {
         /* Adjust subnormal numbers. */
         u.f *= 0x1p120;
         e = u.i.se & 0x7fff;
         /* If x = +-0, then cbrt(x) = +-0. */
-        if (e == 0) return x;
+        if (e == 0)
+            return x;
         e -= 120;
     }
     e -= 0x3fff;

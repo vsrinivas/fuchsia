@@ -22,7 +22,8 @@ FILE* tmpfile(void) {
             __syscall(SYS_unlinkat, AT_FDCWD, s, 0);
 #endif
             f = __fdopen(fd, "w+");
-            if (!f) __syscall(SYS_close, fd);
+            if (!f)
+                __syscall(SYS_close, fd);
             return f;
         }
     }

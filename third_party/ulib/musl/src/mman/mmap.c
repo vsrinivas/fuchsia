@@ -2,10 +2,10 @@
 #include "syscall.h"
 #include <errno.h>
 #include <limits.h>
+#include <magenta/syscalls.h>
 #include <stdint.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <magenta/syscalls.h>
 
 static void dummy(void) {}
 weak_alias(dummy, __vm_wait);
@@ -14,7 +14,7 @@ weak_alias(dummy, __vm_wait);
 #define OFF_MASK ((-0x2000ULL << (8 * sizeof(long) - 1)) | (UNIT - 1))
 
 static void* io_mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
-    return (void*) MAP_FAILED;
+    return (void*)MAP_FAILED;
 }
 weak_alias(io_mmap, __libc_io_mmap);
 
@@ -58,7 +58,7 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
             return MAP_FAILED;
         }
 
-        return (void *)ptr;
+        return (void*)ptr;
     } else {
         // let someone else get a shot at this
         return __libc_io_mmap(start, len, prot, flags, fd, off);

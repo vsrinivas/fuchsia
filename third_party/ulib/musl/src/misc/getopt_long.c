@@ -28,13 +28,16 @@ static int __getopt_long(int argc, char* const* argv, const char* optstring,
         __optpos = 0;
         optind = 1;
     }
-    if (optind >= argc || !argv[optind]) return -1;
+    if (optind >= argc || !argv[optind])
+        return -1;
     skipped = optind;
     if (optstring[0] != '+' && optstring[0] != '-') {
         int i;
         for (i = optind;; i++) {
-            if (i >= argc || !argv[i]) return -1;
-            if (argv[i][0] == '-' && argv[i][1]) break;
+            if (i >= argc || !argv[i])
+                return -1;
+            if (argv[i][0] == '-' && argv[i][1])
+                break;
         }
         optind = i;
     }
@@ -60,10 +63,12 @@ static int __getopt_long_core(int argc, char* const* argv, const char* optstring
         for (cnt = i = 0; longopts[i].name; i++) {
             const char* name = longopts[i].name;
             opt = argv[optind] + 1;
-            if (*opt == '-') opt++;
+            if (*opt == '-')
+                opt++;
             for (; *name && *name == *opt; name++, opt++)
                 ;
-            if (*opt && *opt != '=') continue;
+            if (*opt && *opt != '=')
+                continue;
             match = i;
             if (!*name) {
                 cnt = 1;
@@ -77,7 +82,8 @@ static int __getopt_long_core(int argc, char* const* argv, const char* optstring
             optopt = longopts[i].val;
             if (*opt == '=') {
                 if (!longopts[i].has_arg) {
-                    if (colon || !opterr) return '?';
+                    if (colon || !opterr)
+                        return '?';
                     __getopt_msg(argv[0], ": option does not take an argument: ", longopts[i].name,
                                  strlen(longopts[i].name));
                     return '?';
@@ -85,15 +91,18 @@ static int __getopt_long_core(int argc, char* const* argv, const char* optstring
                 optarg = opt + 1;
             } else if (longopts[i].has_arg == required_argument) {
                 if (!(optarg = argv[optind])) {
-                    if (colon) return ':';
-                    if (!opterr) return '?';
+                    if (colon)
+                        return ':';
+                    if (!opterr)
+                        return '?';
                     __getopt_msg(argv[0], ": option requires an argument: ", longopts[i].name,
                                  strlen(longopts[i].name));
                     return '?';
                 }
                 optind++;
             }
-            if (idx) *idx = i;
+            if (idx)
+                *idx = i;
             if (longopts[i].flag) {
                 *longopts[i].flag = longopts[i].val;
                 return 0;

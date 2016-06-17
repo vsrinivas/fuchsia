@@ -27,7 +27,7 @@ static char* fourbyte_strstr(const unsigned char* h, const unsigned char* n) {
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-#define BITOP(a, b, op)                                                                            \
+#define BITOP(a, b, op) \
     ((a)[(size_t)(b) / (8 * sizeof *(a))] op(size_t) 1 << ((size_t)(b) % (8 * sizeof *(a))))
 
 static char* twoway_strstr(const unsigned char* h, const unsigned char* n) {
@@ -38,8 +38,10 @@ static char* twoway_strstr(const unsigned char* h, const unsigned char* n) {
 
     /* Computing length of needle and fill shift table */
     for (l = 0; n[l] && h[l]; l++)
-        BITOP(byteset, n[l], |=), shift[n[l]] = l + 1;
-    if (n[l]) return 0; /* hit the end of h */
+        BITOP(byteset, n[l], |=)
+    , shift[n[l]] = l + 1;
+    if (n[l])
+        return 0; /* hit the end of h */
 
     /* Compute maximal suffix */
     ip = -1;
@@ -109,7 +111,8 @@ static char* twoway_strstr(const unsigned char* h, const unsigned char* n) {
             const unsigned char* z2 = memchr(z, 0, grow);
             if (z2) {
                 z = z2;
-                if (z - h < l) return 0;
+                if (z - h < l)
+                    return 0;
             } else
                 z += grow;
         }
@@ -119,7 +122,8 @@ static char* twoway_strstr(const unsigned char* h, const unsigned char* n) {
             k = l - shift[h[l - 1]];
             // printf("adv by %zu (on %c) at [%s] (%zu;l=%zu)\n", k, h[l-1], h, shift[h[l-1]], l);
             if (k) {
-                if (mem0 && mem && k < p) k = l - p;
+                if (mem0 && mem && k < p)
+                    k = l - p;
                 h += k;
                 mem = 0;
                 continue;
@@ -141,7 +145,8 @@ static char* twoway_strstr(const unsigned char* h, const unsigned char* n) {
         /* Compare left half */
         for (k = ms + 1; k > mem && n[k - 1] == h[k - 1]; k--)
             ;
-        if (k <= mem) return (char*)h;
+        if (k <= mem)
+            return (char*)h;
         h += p;
         mem = mem0;
     }
@@ -149,17 +154,25 @@ static char* twoway_strstr(const unsigned char* h, const unsigned char* n) {
 
 char* strstr(const char* h, const char* n) {
     /* Return immediately on empty needle */
-    if (!n[0]) return (char*)h;
+    if (!n[0])
+        return (char*)h;
 
     /* Use faster algorithms for short needles */
     h = strchr(h, *n);
-    if (!h || !n[1]) return (char*)h;
-    if (!h[1]) return 0;
-    if (!n[2]) return twobyte_strstr((void*)h, (void*)n);
-    if (!h[2]) return 0;
-    if (!n[3]) return threebyte_strstr((void*)h, (void*)n);
-    if (!h[3]) return 0;
-    if (!n[4]) return fourbyte_strstr((void*)h, (void*)n);
+    if (!h || !n[1])
+        return (char*)h;
+    if (!h[1])
+        return 0;
+    if (!n[2])
+        return twobyte_strstr((void*)h, (void*)n);
+    if (!h[2])
+        return 0;
+    if (!n[3])
+        return threebyte_strstr((void*)h, (void*)n);
+    if (!h[3])
+        return 0;
+    if (!n[4])
+        return fourbyte_strstr((void*)h, (void*)n);
 
     return twoway_strstr((void*)h, (void*)n);
 }

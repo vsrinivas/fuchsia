@@ -149,7 +149,8 @@ static int dl_strcmp(const char* l, const char* r) {
 #if DL_FDPIC
 static void* laddr(const struct dso* p, size_t v) {
     size_t j = 0;
-    if (!p->loadmap) return p->base + v;
+    if (!p->loadmap)
+        return p->base + v;
     for (j = 0; v - p->loadmap->segs[j].p_vaddr >= p->loadmap->segs[j].p_memsz; j++)
         ;
     return (void*)(v - p->loadmap->segs[j].p_vaddr + p->loadmap->segs[j].addr);
@@ -173,7 +174,8 @@ static void decode_vec(size_t* v, size_t* a, size_t cnt) {
 
 static int search_vec(size_t* v, size_t* r, size_t key) {
     for (; v[0] != key; v += 2)
-        if (!v[0]) return 0;
+        if (!v[0])
+            return 0;
     *r = v[1];
     return 1;
 }
@@ -213,7 +215,8 @@ static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab, struct dso* dso, const ch
     uint32_t* buckets = hashtab + 4 + hashtab[2] * (sizeof(size_t) / 4);
     uint32_t i = buckets[h1 % nbuckets];
 
-    if (!i) return 0;
+    if (!i)
+        return 0;
 
     uint32_t* hashval = buckets + nbuckets + (i - hashtab[1]);
 
@@ -222,7 +225,8 @@ static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab, struct dso* dso, const ch
         if ((h1 == (h2 | 1)) && (!dso->versym || dso->versym[i] >= 0) &&
             !strcmp(s, dso->strings + dso->syms[i].st_name))
             return dso->syms + i;
-        if (h2 & 1) break;
+        if (h2 & 1)
+            break;
     }
 
     return 0;
@@ -232,15 +236,17 @@ static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab, struct dso* dso,
                                 uint32_t fofs, size_t fmask) {
     const size_t* bloomwords = (const void*)(hashtab + 4);
     size_t f = bloomwords[fofs & (hashtab[2] - 1)];
-    if (!(f & fmask)) return 0;
+    if (!(f & fmask))
+        return 0;
 
     f >>= (h1 >> hashtab[3]) % (8 * sizeof f);
-    if (!(f & 1)) return 0;
+    if (!(f & 1))
+        return 0;
 
     return gnu_lookup(h1, hashtab, dso, s);
 }
 
-#define OK_TYPES                                                                                   \
+#define OK_TYPES \
     (1 << STT_NOTYPE | 1 << STT_OBJECT | 1 << STT_FUNC | 1 << STT_COMMON | 1 << STT_TLS)
 #define OK_BINDS (1 << STB_GLOBAL | 1 << STB_WEAK | 1 << STB_GNU_UNIQUE)
 
@@ -254,7 +260,8 @@ static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
     struct symdef def = {0};
     for (; dso; dso = dso->next) {
         Sym* sym;
-        if (!dso->global) continue;
+        if (!dso->global)
+            continue;
         if ((ght = dso->ghashtab)) {
             if (!ghm) {
                 gh = gnu_hash(s);
@@ -264,21 +271,29 @@ static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
             }
             sym = gnu_lookup_filtered(gh, ght, dso, s, gho, ghm);
         } else {
-            if (!h) h = sysv_hash(s);
+            if (!h)
+                h = sysv_hash(s);
             sym = sysv_lookup(s, h, dso);
         }
-        if (!sym) continue;
+        if (!sym)
+            continue;
         if (!sym->st_shndx)
-            if (need_def || (sym->st_info & 0xf) == STT_TLS || ARCH_SYM_REJECT_UND(sym)) continue;
+            if (need_def || (sym->st_info & 0xf) == STT_TLS || ARCH_SYM_REJECT_UND(sym))
+                continue;
         if (!sym->st_value)
-            if ((sym->st_info & 0xf) != STT_TLS) continue;
-        if (!(1 << (sym->st_info & 0xf) & OK_TYPES)) continue;
-        if (!(1 << (sym->st_info >> 4) & OK_BINDS)) continue;
+            if ((sym->st_info & 0xf) != STT_TLS)
+                continue;
+        if (!(1 << (sym->st_info & 0xf) & OK_TYPES))
+            continue;
+        if (!(1 << (sym->st_info >> 4) & OK_BINDS))
+            continue;
 
-        if (def.sym && sym->st_info >> 4 == STB_WEAK) continue;
+        if (def.sym && sym->st_info >> 4 == STB_WEAK)
+            continue;
         def.sym = sym;
         def.dso = dso;
-        if (sym->st_info >> 4 == STB_GLOBAL) break;
+        if (sym->st_info >> 4 == STB_GLOBAL)
+            break;
     }
     return def;
 }
@@ -303,14 +318,17 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
 
     if (dso == &ldso) {
         /* Only ldso's REL table needs addend saving/reuse. */
-        if (rel == apply_addends_to) reuse_addends = 1;
+        if (rel == apply_addends_to)
+            reuse_addends = 1;
         skip_relative = 1;
     }
 
     for (; rel_size; rel += stride, rel_size -= stride * sizeof(size_t)) {
-        if (skip_relative && IS_RELATIVE(rel[1], dso->syms)) continue;
+        if (skip_relative && IS_RELATIVE(rel[1], dso->syms))
+            continue;
         type = R_TYPE(rel[1]);
-        if (type == REL_NONE) continue;
+        if (type == REL_NONE)
+            continue;
         sym_index = R_SYM(rel[1]);
         reloc_addr = laddr(dso, rel[0]);
         if (sym_index) {
@@ -321,7 +339,8 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
                                                       : find_sym(ctx, name, type == REL_PLT);
             if (!def.sym && (sym->st_shndx != SHN_UNDEF || sym->st_info >> 4 != STB_WEAK)) {
                 error("Error relocating %s: %s: symbol not found", dso->name, name);
-                if (runtime) longjmp(*rtld_fail, 1);
+                if (runtime)
+                    longjmp(*rtld_fail, 1);
                 continue;
             }
         } else {
@@ -338,7 +357,8 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
             /* Save original addend in stage 2 where the dso
              * chain consists of just ldso; otherwise read back
              * saved addend since the inline one was clobbered. */
-            if (head == &ldso) saved_addends[save_slot] = *reloc_addr;
+            if (head == &ldso)
+                saved_addends[save_slot] = *reloc_addr;
             addend = saved_addends[save_slot++];
         } else {
             addend = *reloc_addr;
@@ -401,7 +421,8 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
             break;
 #endif
         case REL_TLSDESC:
-            if (stride < 3) addend = reloc_addr[1];
+            if (stride < 3)
+                addend = reloc_addr[1];
             if (runtime && def.dso->tls_id >= static_tls_cnt) {
                 struct td_index* new = malloc(sizeof *new);
                 if (!new) {
@@ -426,7 +447,8 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
             break;
         default:
             error("Error relocating %s: unsupported relocation type %d", dso->name, type);
-            if (runtime) longjmp(*rtld_fail, 1);
+            if (runtime)
+                longjmp(*rtld_fail, 1);
             continue;
         }
     }
@@ -440,11 +462,14 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
 
 static void reclaim(struct dso* dso, size_t start, size_t end) {
     size_t *a, *z;
-    if (start >= dso->relro_start && start < dso->relro_end) start = dso->relro_end;
-    if (end >= dso->relro_start && end < dso->relro_end) end = dso->relro_start;
+    if (start >= dso->relro_start && start < dso->relro_end)
+        start = dso->relro_end;
+    if (end >= dso->relro_start && end < dso->relro_end)
+        end = dso->relro_start;
     start = start + 6 * sizeof(size_t) - 1 & -4 * sizeof(size_t);
     end = (end & -4 * sizeof(size_t)) - 2 * sizeof(size_t);
-    if (start > end || end - start < 4 * sizeof(size_t)) return;
+    if (start > end || end - start < 4 * sizeof(size_t))
+        return;
     a = laddr(dso, start);
     z = laddr(dso, end);
     a[-2] = 1;
@@ -457,10 +482,13 @@ static void reclaim_gaps(struct dso* dso) {
     Phdr* ph = dso->phdr;
     size_t phcnt = dso->phnum;
 
-    if (DL_FDPIC) return; // FIXME
+    if (DL_FDPIC)
+        return; // FIXME
     for (; phcnt--; ph = (void*)((char*)ph + dso->phentsize)) {
-        if (ph->p_type != PT_LOAD) continue;
-        if ((ph->p_flags & (PF_R | PF_W)) != (PF_R | PF_W)) continue;
+        if (ph->p_type != PT_LOAD)
+            continue;
+        if ((ph->p_flags & (PF_R | PF_W)) != (PF_R | PF_W))
+            continue;
         reclaim(dso, ph->p_vaddr & -PAGE_SIZE, ph->p_vaddr);
         reclaim(dso, ph->p_vaddr + ph->p_memsz,
                 ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE);
@@ -472,7 +500,8 @@ static void* mmap_fixed(void* p, size_t n, int prot, int flags, int fd, off_t of
     char* q;
     if (!no_map_fixed) {
         q = mmap(p, n, prot, flags | MAP_FIXED, fd, off);
-        if (!DL_NOMMU_SUPPORT || q != MAP_FAILED || errno != EINVAL) return q;
+        if (!DL_NOMMU_SUPPORT || q != MAP_FAILED || errno != EINVAL)
+            return q;
         no_map_fixed = 1;
     }
     /* Fallbacks for MAP_FIXED failure on NOMMU kernels. */
@@ -481,10 +510,12 @@ static void* mmap_fixed(void* p, size_t n, int prot, int flags, int fd, off_t of
         return p;
     }
     ssize_t r;
-    if (lseek(fd, off, SEEK_SET) < 0) return MAP_FAILED;
+    if (lseek(fd, off, SEEK_SET) < 0)
+        return MAP_FAILED;
     for (q = p; n; q += r, off += r, n -= r) {
         r = read(fd, q, n);
-        if (r < 0 && errno != EINTR) return MAP_FAILED;
+        if (r < 0 && errno != EINTR)
+            return MAP_FAILED;
         if (!r) {
             memset(q, 0, n);
             break;
@@ -497,7 +528,8 @@ static void unmap_library(struct dso* dso) {
     if (dso->loadmap) {
         size_t i;
         for (i = 0; i < dso->loadmap->nsegs; i++) {
-            if (!dso->loadmap->segs[i].p_memsz) continue;
+            if (!dso->loadmap->segs[i].p_memsz)
+                continue;
             munmap((void*)dso->loadmap->segs[i].addr, dso->loadmap->segs[i].p_memsz);
         }
         free(dso->loadmap);
@@ -524,20 +556,27 @@ static void* map_library(int fd, struct dso* dso) {
 
     ssize_t l = read(fd, buf, sizeof buf);
     eh = buf;
-    if (l < 0) return 0;
-    if (l < sizeof *eh || (eh->e_type != ET_DYN && eh->e_type != ET_EXEC)) goto noexec;
+    if (l < 0)
+        return 0;
+    if (l < sizeof *eh || (eh->e_type != ET_DYN && eh->e_type != ET_EXEC))
+        goto noexec;
     phsize = eh->e_phentsize * eh->e_phnum;
     if (phsize > sizeof buf - sizeof *eh) {
         allocated_buf = malloc(phsize);
-        if (!allocated_buf) return 0;
+        if (!allocated_buf)
+            return 0;
         l = pread(fd, allocated_buf, phsize, eh->e_phoff);
-        if (l < 0) goto error;
-        if (l != phsize) goto noexec;
+        if (l < 0)
+            goto error;
+        if (l != phsize)
+            goto noexec;
         ph = ph0 = allocated_buf;
     } else if (eh->e_phoff + phsize > l) {
         l = pread(fd, buf + 1, phsize, eh->e_phoff);
-        if (l < 0) goto error;
-        if (l != phsize) goto noexec;
+        if (l < 0)
+            goto error;
+        if (l != phsize)
+            goto noexec;
         ph = ph0 = (void*)(buf + 1);
     } else {
         ph = ph0 = (void*)((char*)buf + eh->e_phoff);
@@ -554,7 +593,8 @@ static void* map_library(int fd, struct dso* dso) {
             dso->relro_start = ph->p_vaddr & -PAGE_SIZE;
             dso->relro_end = (ph->p_vaddr + ph->p_memsz) & -PAGE_SIZE;
         }
-        if (ph->p_type != PT_LOAD) continue;
+        if (ph->p_type != PT_LOAD)
+            continue;
         nsegs++;
         if (ph->p_vaddr < addr_min) {
             addr_min = ph->p_vaddr;
@@ -567,13 +607,16 @@ static void* map_library(int fd, struct dso* dso) {
             addr_max = ph->p_vaddr + ph->p_memsz;
         }
     }
-    if (!dyn) goto noexec;
+    if (!dyn)
+        goto noexec;
     if (DL_FDPIC && !(eh->e_flags & FDPIC_CONSTDISP_FLAG)) {
         dso->loadmap = calloc(1, sizeof *dso->loadmap + nsegs * sizeof *dso->loadmap->segs);
-        if (!dso->loadmap) goto error;
+        if (!dso->loadmap)
+            goto error;
         dso->loadmap->nsegs = nsegs;
         for (ph = ph0, i = 0; i < nsegs; ph = (void*)((char*)ph + eh->e_phentsize)) {
-            if (ph->p_type != PT_LOAD) continue;
+            if (ph->p_type != PT_LOAD)
+                continue;
             prot =
                 (((ph->p_flags & PF_R) ? PROT_READ : 0) | ((ph->p_flags & PF_W) ? PROT_WRITE : 0) |
                  ((ph->p_flags & PF_X) ? PROT_EXEC : 0));
@@ -615,7 +658,8 @@ static void* map_library(int fd, struct dso* dso) {
     map = DL_NOMMU_SUPPORT ? mmap((void*)addr_min, map_len, PROT_READ | PROT_WRITE | PROT_EXEC,
                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
                            : mmap((void*)addr_min, map_len, prot, MAP_PRIVATE, fd, off_start);
-    if (map == MAP_FAILED) goto error;
+    if (map == MAP_FAILED)
+        goto error;
     dso->map = map;
     dso->map_len = map_len;
     /* If the loaded file is not relocatable and the requested address is
@@ -628,7 +672,8 @@ static void* map_library(int fd, struct dso* dso) {
     dso->phdr = 0;
     dso->phnum = 0;
     for (ph = ph0, i = eh->e_phnum; i; i--, ph = (void*)((char*)ph + eh->e_phentsize)) {
-        if (ph->p_type != PT_LOAD) continue;
+        if (ph->p_type != PT_LOAD)
+            continue;
         /* Check if the programs headers are in this load segment, and
          * if so, record the address for use by dl_iterate_phdr. */
         if (!dso->phdr && eh->e_phoff >= ph->p_offset &&
@@ -638,7 +683,8 @@ static void* map_library(int fd, struct dso* dso) {
             dso->phentsize = eh->e_phentsize;
         }
         /* Reuse the existing mapping for the lowest-address LOAD */
-        if ((ph->p_vaddr & -PAGE_SIZE) == addr_min && !DL_NOMMU_SUPPORT) continue;
+        if ((ph->p_vaddr & -PAGE_SIZE) == addr_min && !DL_NOMMU_SUPPORT)
+            continue;
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE;
         off_start = ph->p_offset & -PAGE_SIZE;
@@ -666,14 +712,17 @@ static void* map_library(int fd, struct dso* dso) {
 done_mapping:
     dso->base = base;
     dso->dynv = laddr(dso, dyn);
-    if (dso->tls.size) dso->tls.image = laddr(dso, tls_image);
-    if (!runtime) reclaim_gaps(dso);
+    if (dso->tls.size)
+        dso->tls.image = laddr(dso, tls_image);
+    if (!runtime)
+        reclaim_gaps(dso);
     free(allocated_buf);
     return map;
 noexec:
     errno = ENOEXEC;
 error:
-    if (map != MAP_FAILED) unmap_library(dso);
+    if (map != MAP_FAILED)
+        unmap_library(dso);
     free(allocated_buf);
     return 0;
 }
@@ -684,9 +733,11 @@ static int path_open(const char* name, const char* s, char* buf, size_t buf_size
     for (;;) {
         s += strspn(s, ":\n");
         l = strcspn(s, ":\n");
-        if (l - 1 >= INT_MAX) return -1;
+        if (l - 1 >= INT_MAX)
+            return -1;
         if (snprintf(buf, buf_size, "%.*s/%s", (int)l, s, name) < buf_size) {
-            if ((fd = open(buf, O_RDONLY | O_CLOEXEC)) >= 0) return fd;
+            if ((fd = open(buf, O_RDONLY | O_CLOEXEC)) >= 0)
+                return fd;
             switch (errno) {
             case ENOENT:
             case ENOTDIR:
@@ -707,7 +758,8 @@ static int fixup_rpath(struct dso* p, char* buf, size_t buf_size) {
     size_t n, l;
     const char *s, *t, *origin;
     char* d;
-    if (p->rpath || !p->rpath_orig) return 0;
+    if (p->rpath || !p->rpath_orig)
+        return 0;
     if (!strchr(p->rpath_orig, '$')) {
         p->rpath = p->rpath_orig;
         return 0;
@@ -715,11 +767,13 @@ static int fixup_rpath(struct dso* p, char* buf, size_t buf_size) {
     n = 0;
     s = p->rpath_orig;
     while ((t = strchr(s, '$'))) {
-        if (strncmp(t, "$ORIGIN", 7) && strncmp(t, "${ORIGIN}", 9)) return 0;
+        if (strncmp(t, "$ORIGIN", 7) && strncmp(t, "${ORIGIN}", 9))
+            return 0;
         s = t + 1;
         n++;
     }
-    if (n > SSIZE_MAX / PATH_MAX) return 0;
+    if (n > SSIZE_MAX / PATH_MAX)
+        return 0;
 
     if (p->kernel_mapped) {
         /* $ORIGIN searches cannot be performed for the main program
@@ -728,9 +782,11 @@ static int fixup_rpath(struct dso* p, char* buf, size_t buf_size) {
          * For libraries, however, $ORIGIN can be processed safely
          * since the library's pathname came from a trusted source
          * (either system paths or a call to dlopen). */
-        if (libc.secure) return 0;
+        if (libc.secure)
+            return 0;
         l = readlink("/proc/self/exe", buf, buf_size);
-        if (l == -1) switch (errno) {
+        if (l == -1)
+            switch (errno) {
             case ENOENT:
             case ENOTDIR:
             case EACCES:
@@ -738,7 +794,8 @@ static int fixup_rpath(struct dso* p, char* buf, size_t buf_size) {
             default:
                 return -1;
             }
-        if (l >= buf_size) return 0;
+        if (l >= buf_size)
+            return 0;
         buf[l] = 0;
         origin = buf;
     } else {
@@ -747,7 +804,8 @@ static int fixup_rpath(struct dso* p, char* buf, size_t buf_size) {
     t = strrchr(origin, '/');
     l = t ? t - origin : 0;
     p->rpath = malloc(strlen(p->rpath_orig) + n * l + 1);
-    if (!p->rpath) return -1;
+    if (!p->rpath)
+        return -1;
 
     d = p->rpath;
     s = p->rpath_orig;
@@ -769,22 +827,30 @@ static void decode_dyn(struct dso* p) {
     decode_vec(p->dynv, dyn, DYN_CNT);
     p->syms = laddr(p, dyn[DT_SYMTAB]);
     p->strings = laddr(p, dyn[DT_STRTAB]);
-    if (dyn[0] & (1 << DT_HASH)) p->hashtab = laddr(p, dyn[DT_HASH]);
-    if (dyn[0] & (1 << DT_RPATH)) p->rpath_orig = p->strings + dyn[DT_RPATH];
-    if (dyn[0] & (1 << DT_RUNPATH)) p->rpath_orig = p->strings + dyn[DT_RUNPATH];
-    if (dyn[0] & (1 << DT_PLTGOT)) p->got = laddr(p, dyn[DT_PLTGOT]);
-    if (search_vec(p->dynv, dyn, DT_GNU_HASH)) p->ghashtab = laddr(p, *dyn);
-    if (search_vec(p->dynv, dyn, DT_VERSYM)) p->versym = laddr(p, *dyn);
+    if (dyn[0] & (1 << DT_HASH))
+        p->hashtab = laddr(p, dyn[DT_HASH]);
+    if (dyn[0] & (1 << DT_RPATH))
+        p->rpath_orig = p->strings + dyn[DT_RPATH];
+    if (dyn[0] & (1 << DT_RUNPATH))
+        p->rpath_orig = p->strings + dyn[DT_RUNPATH];
+    if (dyn[0] & (1 << DT_PLTGOT))
+        p->got = laddr(p, dyn[DT_PLTGOT]);
+    if (search_vec(p->dynv, dyn, DT_GNU_HASH))
+        p->ghashtab = laddr(p, *dyn);
+    if (search_vec(p->dynv, dyn, DT_VERSYM))
+        p->versym = laddr(p, *dyn);
 }
 
 static size_t count_syms(struct dso* p) {
-    if (p->hashtab) return p->hashtab[1];
+    if (p->hashtab)
+        return p->hashtab[1];
 
     size_t nsym, i;
     uint32_t* buckets = p->ghashtab + 4 + (p->ghashtab[2] * sizeof(size_t) / 4);
     uint32_t* hashval;
     for (i = nsym = 0; i < p->ghashtab[0]; i++) {
-        if (buckets[i] > nsym) nsym = buckets[i];
+        if (buckets[i] > nsym)
+            nsym = buckets[i];
     }
     if (nsym) {
         hashval = buckets + p->ghashtab[0] + (nsym - p->ghashtab[1]);
@@ -818,7 +884,8 @@ static void makefuncdescs(struct dso* p) {
         p->funcdescs = malloc(size);
     }
     if (!p->funcdescs) {
-        if (!runtime) a_crash();
+        if (!runtime)
+            a_crash();
         error("Error allocating function descriptors for %s", p->name);
         longjmp(*rtld_fail, 1);
     }
@@ -872,7 +939,8 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
             }
         }
     }
-    if (!strcmp(name, ldso.name)) is_self = 1;
+    if (!strcmp(name, ldso.name))
+        is_self = 1;
     if (is_self) {
         if (!ldso.prev) {
             tail->next = &ldso;
@@ -892,12 +960,16 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
                 return p;
             }
         }
-        if (strlen(name) > NAME_MAX) return 0;
+        if (strlen(name) > NAME_MAX)
+            return 0;
         fd = -1;
-        if (env_path) fd = path_open(name, env_path, buf, sizeof buf);
+        if (env_path)
+            fd = path_open(name, env_path, buf, sizeof buf);
         for (p = needed_by; fd == -1 && p; p = p->needed_by) {
-            if (fixup_rpath(p, buf, sizeof buf) < 0) fd = -2; /* Inhibit further search. */
-            if (p->rpath) fd = path_open(name, p->rpath, buf, sizeof buf);
+            if (fixup_rpath(p, buf, sizeof buf) < 0)
+                fd = -2; /* Inhibit further search. */
+            if (p->rpath)
+                fd = path_open(name, p->rpath, buf, sizeof buf);
         }
         if (fd == -1) {
             if (!sys_path) {
@@ -906,9 +978,11 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
                 if (ldso.name[0] == '/') {
                     char *s, *t, *z;
                     for (s = t = z = ldso.name; *s; s++)
-                        if (*s == '/') z = t, t = s;
+                        if (*s == '/')
+                            z = t, t = s;
                     prefix_len = z - ldso.name;
-                    if (prefix_len < PATH_MAX) prefix = ldso.name;
+                    if (prefix_len < PATH_MAX)
+                        prefix = ldso.name;
                 }
                 if (!prefix) {
                     prefix = "";
@@ -928,12 +1002,14 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
                     sys_path = "";
                 }
             }
-            if (!sys_path) sys_path = "/lib:/usr/local/lib:/usr/lib";
+            if (!sys_path)
+                sys_path = "/lib:/usr/local/lib:/usr/lib";
             fd = path_open(name, sys_path, buf, sizeof buf);
         }
         pathname = buf;
     }
-    if (fd < 0) return 0;
+    if (fd < 0)
+        return 0;
     if (fstat(fd, &st) < 0) {
         close(fd);
         return 0;
@@ -943,7 +1019,8 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
             /* If this library was previously loaded with a
              * pathname but a search found the same inode,
              * setup its shortname so it can be found by name. */
-            if (!p->shortname && pathname != name) p->shortname = strrchr(p->name, '/') + 1;
+            if (!p->shortname && pathname != name)
+                p->shortname = strrchr(p->name, '/') + 1;
             close(fd);
             p->refcnt++;
             return p;
@@ -951,7 +1028,8 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
     }
     map = noload ? 0 : map_library(fd, &temp_dso);
     close(fd);
-    if (!map) return 0;
+    if (!map)
+        return 0;
 
     /* Allocate storage for the new DSO. When there is TLS, this
      * storage must include a reservation for all pre-existing
@@ -985,7 +1063,8 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
     p->name = p->buf;
     strcpy(p->name, pathname);
     /* Add a shortname only if name arg was not an explicit pathname. */
-    if (pathname != name) p->shortname = strrchr(p->name, '/') + 1;
+    if (pathname != name)
+        p->shortname = strrchr(p->name, '/') + 1;
     if (p->tls.image) {
         p->tls_id = ++tls_cnt;
         tls_align = MAXP2(tls_align, p->tls.align);
@@ -1011,9 +1090,11 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
     p->prev = tail;
     tail = p;
 
-    if (DL_FDPIC) makefuncdescs(p);
+    if (DL_FDPIC)
+        makefuncdescs(p);
 
-    if (ldd_mode) dprintf(1, "\t%s => %s (%p)\n", name, pathname, p->base);
+    if (ldd_mode)
+        dprintf(1, "\t%s => %s (%p)\n", name, pathname, p->base);
 
     return p;
 }
@@ -1023,17 +1104,20 @@ static void load_deps(struct dso* p) {
     struct dso ***deps = &p->deps, **tmp, *dep;
     for (; p; p = p->next) {
         for (i = 0; p->dynv[i]; i += 2) {
-            if (p->dynv[i] != DT_NEEDED) continue;
+            if (p->dynv[i] != DT_NEEDED)
+                continue;
             dep = load_library(p->strings + p->dynv[i + 1], p);
             if (!dep) {
                 error("Error loading shared library %s: %m (needed by %s)",
                       p->strings + p->dynv[i + 1], p->name);
-                if (runtime) longjmp(*rtld_fail, 1);
+                if (runtime)
+                    longjmp(*rtld_fail, 1);
                 continue;
             }
             if (runtime) {
                 tmp = realloc(*deps, sizeof(*tmp) * (ndeps + 2));
-                if (!tmp) longjmp(*rtld_fail, 1);
+                if (!tmp)
+                    longjmp(*rtld_fail, 1);
                 tmp[ndeps++] = dep;
                 tmp[ndeps] = 0;
                 *deps = tmp;
@@ -1088,9 +1172,11 @@ static void do_mips_relocs(struct dso* p, size_t* got) {
 static void reloc_all(struct dso* p) {
     size_t dyn[DYN_CNT];
     for (; p; p = p->next) {
-        if (p->relocated) continue;
+        if (p->relocated)
+            continue;
         decode_vec(p->dynv, dyn, DYN_CNT);
-        if (NEED_MIPS_GOT_RELOCS) do_mips_relocs(p, laddr(p, dyn[DT_PLTGOT]));
+        if (NEED_MIPS_GOT_RELOCS)
+            do_mips_relocs(p, laddr(p, dyn[DT_PLTGOT]));
         do_relocs(p, laddr(p, dyn[DT_JMPREL]), dyn[DT_PLTRELSZ], 2 + (dyn[DT_PLTREL] == DT_RELA));
         do_relocs(p, laddr(p, dyn[DT_REL]), dyn[DT_RELSZ], 2);
         do_relocs(p, laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
@@ -1099,7 +1185,8 @@ static void reloc_all(struct dso* p) {
             mprotect(laddr(p, p->relro_start), p->relro_end - p->relro_start, PROT_READ) &&
             errno != ENOSYS) {
             error("Error relocating %s: RELRO protection failed: %m", p->name);
-            if (runtime) longjmp(*rtld_fail, 1);
+            if (runtime)
+                longjmp(*rtld_fail, 1);
         }
 
         p->relocated = 1;
@@ -1116,9 +1203,12 @@ static void kernel_mapped_dso(struct dso* p) {
             p->relro_start = ph->p_vaddr & -PAGE_SIZE;
             p->relro_end = (ph->p_vaddr + ph->p_memsz) & -PAGE_SIZE;
         }
-        if (ph->p_type != PT_LOAD) continue;
-        if (ph->p_vaddr < min_addr) min_addr = ph->p_vaddr;
-        if (ph->p_vaddr + ph->p_memsz > max_addr) max_addr = ph->p_vaddr + ph->p_memsz;
+        if (ph->p_type != PT_LOAD)
+            continue;
+        if (ph->p_vaddr < min_addr)
+            min_addr = ph->p_vaddr;
+        if (ph->p_vaddr + ph->p_memsz > max_addr)
+            max_addr = ph->p_vaddr + ph->p_memsz;
     }
     min_addr &= -PAGE_SIZE;
     max_addr = (max_addr + PAGE_SIZE - 1) & -PAGE_SIZE;
@@ -1131,7 +1221,8 @@ void __libc_exit_fini(void) {
     struct dso* p;
     size_t dyn[DYN_CNT];
     for (p = fini_head; p; p = p->fini_next) {
-        if (!p->constructed) continue;
+        if (!p->constructed)
+            continue;
         decode_vec(p->dynv, dyn, DYN_CNT);
         if (dyn[0] & (1 << DT_FINI_ARRAY)) {
             size_t n = dyn[DT_FINI_ARRAYSZ] / sizeof(size_t);
@@ -1140,7 +1231,8 @@ void __libc_exit_fini(void) {
                 ((void (*)(void)) * --fn)();
         }
 #ifndef NO_LEGACY_INITFINI
-        if ((dyn[0] & (1 << DT_FINI)) && dyn[DT_FINI]) fpaddr(p, dyn[DT_FINI])();
+        if ((dyn[0] & (1 << DT_FINI)) && dyn[DT_FINI])
+            fpaddr(p, dyn[DT_FINI])();
 #endif
     }
 }
@@ -1152,7 +1244,8 @@ static void do_init_fini(struct dso* p) {
      * other threads until all ctors have finished. */
     pthread_mutex_lock(&init_fini_lock);
     for (; p; p = p->prev) {
-        if (p->constructed) continue;
+        if (p->constructed)
+            continue;
         p->constructed = 1;
         decode_vec(p->dynv, dyn, DYN_CNT);
         if (dyn[0] & ((1 << DT_FINI) | (1 << DT_FINI_ARRAY))) {
@@ -1160,7 +1253,8 @@ static void do_init_fini(struct dso* p) {
             fini_head = p;
         }
 #ifndef NO_LEGACY_INITFINI
-        if ((dyn[0] & (1 << DT_INIT)) && dyn[DT_INIT]) fpaddr(p, dyn[DT_INIT])();
+        if ((dyn[0] & (1 << DT_INIT)) && dyn[DT_INIT])
+            fpaddr(p, dyn[DT_INIT])();
 #endif
         if (dyn[0] & (1 << DT_INIT_ARRAY)) {
             size_t n = dyn[DT_INIT_ARRAYSZ] / sizeof(size_t);
@@ -1212,12 +1306,14 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     /* Get new TLS memory from all new DSOs up to the requested one */
     unsigned char* mem;
     for (p = head;; p = p->next) {
-        if (!p->tls_id || self->dtv[p->tls_id]) continue;
+        if (!p->tls_id || self->dtv[p->tls_id])
+            continue;
         mem = p->new_tls + (p->tls.size + p->tls.align) * a_fetch_add(&p->new_tls_idx, 1);
         mem += ((uintptr_t)p->tls.image - (uintptr_t)mem) & (p->tls.align - 1);
         self->dtv[p->tls_id] = mem;
         memcpy(mem, p->tls.image, p->tls.len);
-        if (p->tls_id == v[0]) break;
+        if (p->tls_id == v[0])
+            break;
     }
     __restore_sigs(&set);
     return mem + v[1] + DTP_OFFSET;
@@ -1272,7 +1368,8 @@ __attribute__((__visibility__("hidden"))) void __dls2(unsigned char* base, size_
     kernel_mapped_dso(&ldso);
     decode_dyn(&ldso);
 
-    if (DL_FDPIC) makefuncdescs(&ldso);
+    if (DL_FDPIC)
+        makefuncdescs(&ldso);
 
     /* Prepare storage for to save clobbered REL addends so they
      * can be reused in stage 3. There should be very few. If
@@ -1285,8 +1382,10 @@ __attribute__((__visibility__("hidden"))) void __dls2(unsigned char* base, size_
     size_t symbolic_rel_cnt = 0;
     apply_addends_to = rel;
     for (; rel_size; rel += 2, rel_size -= 2 * sizeof(size_t))
-        if (!IS_RELATIVE(rel[1], ldso.syms)) symbolic_rel_cnt++;
-    if (symbolic_rel_cnt >= ADDEND_LIMIT) a_crash();
+        if (!IS_RELATIVE(rel[1], ldso.syms))
+            symbolic_rel_cnt++;
+    if (symbolic_rel_cnt >= ADDEND_LIMIT)
+        a_crash();
     size_t addends[symbolic_rel_cnt + 1];
     saved_addends = addends;
 
@@ -1370,9 +1469,12 @@ _Noreturn void __dls3(size_t* sp) {
                 app.tls.align = phdr->p_align;
             }
         }
-        if (DL_FDPIC) app.loadmap = app_loadmap;
-        if (app.tls.size) app.tls.image = laddr(&app, tls_image);
-        if (interp_off) ldso.name = laddr(&app, interp_off);
+        if (DL_FDPIC)
+            app.loadmap = app_loadmap;
+        if (app.tls.size)
+            app.tls.image = laddr(&app, tls_image);
+        if (interp_off)
+            ldso.name = laddr(&app, interp_off);
         if ((aux[0] & (1UL << AT_EXECFN)) && strncmp((char*)aux[AT_EXECFN], "/proc/", 6))
             app.name = (char*)aux[AT_EXECFN];
         else
@@ -1382,7 +1484,8 @@ _Noreturn void __dls3(size_t* sp) {
         int fd;
         char* ldname = argv[0];
         size_t l = strlen(ldname);
-        if (l >= 3 && !strcmp(ldname + l - 3, "ldd")) ldd_mode = 1;
+        if (l >= 3 && !strcmp(ldname + l - 3, "ldd"))
+            ldd_mode = 1;
         argv++;
         while (argv[0] && argv[0][0] == '-' && argv[0][1] == '-') {
             char* opt = argv[0] + 2;
@@ -1437,7 +1540,8 @@ _Noreturn void __dls3(size_t* sp) {
          * linker had ldd not taken its place. */
         if (ldd_mode) {
             for (i = 0; i < app.phnum; i++) {
-                if (app.phdr[i].p_type == PT_INTERP) ldso.name = laddr(&app, app.phdr[i].p_vaddr);
+                if (app.phdr[i].p_type == PT_INTERP)
+                    ldso.name = laddr(&app, app.phdr[i].p_vaddr);
             }
             dprintf(1, "\t%s (%p)\n", ldso.name, ldso.base);
         }
@@ -1476,7 +1580,8 @@ _Noreturn void __dls3(size_t* sp) {
         vdso.phnum = ehdr->e_phnum;
         vdso.phentsize = ehdr->e_phentsize;
         for (i = ehdr->e_phnum; i; i--, phdr = (void*)((char*)phdr + ehdr->e_phentsize)) {
-            if (phdr->p_type == PT_DYNAMIC) vdso.dynv = (void*)(vdso_base + phdr->p_offset);
+            if (phdr->p_type == PT_DYNAMIC)
+                vdso.dynv = (void*)(vdso_base + phdr->p_offset);
             if (phdr->p_type == PT_LOAD)
                 vdso.base = (void*)(vdso_base - phdr->p_vaddr + phdr->p_offset);
         }
@@ -1498,12 +1603,14 @@ _Noreturn void __dls3(size_t* sp) {
 
     /* Load preload/needed libraries, add their symbols to the global
      * namespace, and perform all remaining relocations. */
-    if (env_preload) load_preload(env_preload);
+    if (env_preload)
+        load_preload(env_preload);
     load_deps(&app);
     make_global(&app);
 
     for (i = 0; app.dynv[i]; i += 2) {
-        if (!DT_DEBUG_INDIRECT && app.dynv[i] == DT_DEBUG) app.dynv[i + 1] = (size_t)&debug;
+        if (!DT_DEBUG_INDIRECT && app.dynv[i] == DT_DEBUG)
+            app.dynv[i + 1] = (size_t)&debug;
         if (DT_DEBUG_INDIRECT && app.dynv[i] == DT_DEBUG_INDIRECT) {
             size_t* ptr = (size_t*)app.dynv[i + 1];
             *ptr = (size_t)&debug;
@@ -1533,13 +1640,16 @@ _Noreturn void __dls3(size_t* sp) {
          * builtin_tls so that __copy_tls will use the same layout
          * as it did for before. Then check, just to be safe. */
         libc.tls_size = sizeof builtin_tls;
-        if (__copy_tls((void*)builtin_tls) != self) a_crash();
+        if (__copy_tls((void*)builtin_tls) != self)
+            a_crash();
         libc.tls_size = tmp_tls_size;
     }
     static_tls_cnt = tls_cnt;
 
-    if (ldso_fail) _exit(127);
-    if (ldd_mode) _exit(0);
+    if (ldso_fail)
+        _exit(127);
+    if (ldd_mode)
+        _exit(0);
 
     /* Switch to runtime mode: any further failures in the dynamic
      * linker are a reportable failure rather than a fatal startup
@@ -1568,7 +1678,8 @@ void* dlopen(const char* file, int mode) {
     int cs;
     jmp_buf jb;
 
-    if (!file) return head;
+    if (!file)
+        return head;
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     pthread_rwlock_wrlock(&lock);
@@ -1587,7 +1698,8 @@ void* dlopen(const char* file, int mode) {
         /* Clean up anything new that was (partially) loaded */
         if (p && p->deps)
             for (i = 0; p->deps[i]; i++)
-                if (p->deps[i]->global < 0) p->deps[i]->global = 0;
+                if (p->deps[i]->global < 0)
+                    p->deps[i]->global = 0;
         for (p = orig_tail->next; p; p = next) {
             next = p->next;
             while (p->td_index) {
@@ -1596,12 +1708,14 @@ void* dlopen(const char* file, int mode) {
                 p->td_index = tmp;
             }
             free(p->funcdescs);
-            if (p->rpath != p->rpath_orig) free(p->rpath);
+            if (p->rpath != p->rpath_orig)
+                free(p->rpath);
             free(p->deps);
             unmap_library(p);
             free(p);
         }
-        if (!orig_tls_tail) libc.tls_head = 0;
+        if (!orig_tls_tail)
+            libc.tls_head = 0;
         tls_tail = orig_tls_tail;
         tls_cnt = orig_tls_cnt;
         tls_offset = orig_tls_offset;
@@ -1624,13 +1738,17 @@ void* dlopen(const char* file, int mode) {
         load_deps(p);
         if (p->deps)
             for (i = 0; p->deps[i]; i++)
-                if (!p->deps[i]->global) p->deps[i]->global = -1;
-        if (!p->global) p->global = -1;
+                if (!p->deps[i]->global)
+                    p->deps[i]->global = -1;
+        if (!p->global)
+            p->global = -1;
         reloc_all(p);
         if (p->deps)
             for (i = 0; p->deps[i]; i++)
-                if (p->deps[i]->global < 0) p->deps[i]->global = 0;
-        if (p->global < 0) p->global = 0;
+                if (p->deps[i]->global < 0)
+                    p->deps[i]->global = 0;
+        if (p->global < 0)
+            p->global = 0;
     }
 
     if (mode & RTLD_GLOBAL) {
@@ -1645,9 +1763,11 @@ void* dlopen(const char* file, int mode) {
     orig_tail = tail;
 end:
     __release_ptc();
-    if (p) gencnt++;
+    if (p)
+        gencnt++;
     pthread_rwlock_unlock(&lock);
-    if (p) do_init_fini(orig_tail);
+    if (p)
+        do_init_fini(orig_tail);
     pthread_setcancelstate(cs, 0);
     return p;
 }
@@ -1655,7 +1775,8 @@ end:
 __attribute__((__visibility__("hidden"))) int __dl_invalid_handle(void* h) {
     struct dso* p;
     for (p = head; p; p = p->next)
-        if (h == p) return 0;
+        if (h == p)
+            return 0;
     error("Invalid library handle %p", (void*)h);
     return 1;
 }
@@ -1666,15 +1787,18 @@ static void* addr2dso(size_t a) {
     if (DL_FDPIC)
         for (p = head; p; p = p->next) {
             i = count_syms(p);
-            if (a - (size_t)p->funcdescs < i * sizeof(*p->funcdescs)) return p;
+            if (a - (size_t)p->funcdescs < i * sizeof(*p->funcdescs))
+                return p;
         }
     for (p = head; p; p = p->next) {
         if (DL_FDPIC && p->loadmap) {
             for (i = 0; i < p->loadmap->nsegs; i++) {
-                if (a - p->loadmap->segs[i].p_vaddr < p->loadmap->segs[i].p_memsz) return p;
+                if (a - p->loadmap->segs[i].p_vaddr < p->loadmap->segs[i].p_memsz)
+                    return p;
             }
         } else {
-            if (a - (size_t)p->map < p->map_len) return p;
+            if (a - (size_t)p->map < p->map_len)
+                return p;
         }
     }
     return 0;
@@ -1691,18 +1815,21 @@ static void* do_dlsym(struct dso* p, const char* s, void* ra) {
             p = head;
         } else if (p == RTLD_NEXT) {
             p = addr2dso((size_t)ra);
-            if (!p) p = head;
+            if (!p)
+                p = head;
             p = p->next;
         }
         struct symdef def = find_sym(p, s, 0);
-        if (!def.sym) goto failed;
+        if (!def.sym)
+            goto failed;
         if ((def.sym->st_info & 0xf) == STT_TLS)
             return __tls_get_addr((size_t[]){def.dso->tls_id, def.sym->st_value});
         if (DL_FDPIC && (def.sym->st_info & 0xf) == STT_FUNC)
             return def.dso->funcdescs + (def.sym - def.dso->syms);
         return laddr(def.dso, def.sym->st_value);
     }
-    if (__dl_invalid_handle(p)) return 0;
+    if (__dl_invalid_handle(p))
+        return 0;
     if ((ght = p->ghashtab)) {
         gh = gnu_hash(s);
         sym = gnu_lookup(gh, ght, p, s);
@@ -1719,10 +1846,12 @@ static void* do_dlsym(struct dso* p, const char* s, void* ra) {
     if (p->deps)
         for (i = 0; p->deps[i]; i++) {
             if ((ght = p->deps[i]->ghashtab)) {
-                if (!gh) gh = gnu_hash(s);
+                if (!gh)
+                    gh = gnu_hash(s);
                 sym = gnu_lookup(gh, ght, p->deps[i], s);
             } else {
-                if (!h) h = sysv_hash(s);
+                if (!h)
+                    h = sysv_hash(s);
                 sym = sysv_lookup(s, h, p->deps[i]);
             }
             if (sym && (sym->st_info & 0xf) == STT_TLS)
@@ -1748,7 +1877,8 @@ int dladdr(const void* addr, Dl_info* info) {
     p = addr2dso((size_t)addr);
     pthread_rwlock_unlock(&lock);
 
-    if (!p) return 0;
+    if (!p)
+        return 0;
 
     sym = p->syms;
     strings = p->strings;
@@ -1767,16 +1897,20 @@ int dladdr(const void* addr, Dl_info* info) {
             if (sym->st_value && (1 << (sym->st_info & 0xf) & OK_TYPES) &&
                 (1 << (sym->st_info >> 4) & OK_BINDS)) {
                 void* symaddr = laddr(p, sym->st_value);
-                if (symaddr > addr || symaddr < best) continue;
+                if (symaddr > addr || symaddr < best)
+                    continue;
                 best = symaddr;
                 bestsym = sym;
-                if (addr == symaddr) break;
+                if (addr == symaddr)
+                    break;
             }
         }
 
-    if (!best) return 0;
+    if (!best)
+        return 0;
 
-    if (DL_FDPIC && (bestsym->st_info & 0xf) == STT_FUNC) best = p->funcdescs + (bestsym - p->syms);
+    if (DL_FDPIC && (bestsym->st_info & 0xf) == STT_FUNC)
+        best = p->funcdescs + (bestsym - p->syms);
 
     info->dli_fname = p->name;
     info->dli_fbase = p->base;
@@ -1812,7 +1946,8 @@ int dl_iterate_phdr(int (*callback)(struct dl_phdr_info* info, size_t size, void
 
         ret = (callback)(&info, sizeof(info), data);
 
-        if (ret != 0) break;
+        if (ret != 0)
+            break;
 
         pthread_rwlock_rdlock(&lock);
         current = current->next;

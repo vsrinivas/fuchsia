@@ -29,7 +29,8 @@ static float common(uint32_t ix, float x, int y0) {
      */
     s = sinf(x);
     c = cosf(x);
-    if (y0) c = -c;
+    if (y0)
+        c = -c;
     cc = s + c;
     if (ix < 0x7f000000) {
         ss = s - c;
@@ -39,7 +40,8 @@ static float common(uint32_t ix, float x, int y0) {
         else
             ss = z / cc;
         if (ix < 0x58800000) {
-            if (y0) ss = -ss;
+            if (y0)
+                ss = -ss;
             cc = pzerof(x) * cc - qzerof(x) * ss;
         }
     }
@@ -62,7 +64,8 @@ float j0f(float x) {
 
     GET_FLOAT_WORD(ix, x);
     ix &= 0x7fffffff;
-    if (ix >= 0x7f800000) return 1 / (x * x);
+    if (ix >= 0x7f800000)
+        return 1 / (x * x);
     x = fabsf(x);
 
     if (ix >= 0x40000000) { /* |x| >= 2 */
@@ -98,9 +101,12 @@ float y0f(float x) {
     uint32_t ix;
 
     GET_FLOAT_WORD(ix, x);
-    if ((ix & 0x7fffffff) == 0) return -1 / 0.0f;
-    if (ix >> 31) return 0 / 0.0f;
-    if (ix >= 0x7f800000) return 1 / x;
+    if ((ix & 0x7fffffff) == 0)
+        return -1 / 0.0f;
+    if (ix >> 31)
+        return 0 / 0.0f;
+    if (ix >= 0x7f800000)
+        return 1 / x;
     if (ix >= 0x40000000) { /* |x| >= 2.0 */
         /* large ulp error near zeros */
         return common(ix, x, 1);

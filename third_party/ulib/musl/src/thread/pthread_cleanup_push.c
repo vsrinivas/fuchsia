@@ -12,5 +12,6 @@ void _pthread_cleanup_push(struct __ptcb* cb, void (*f)(void*), void* x) {
 
 void _pthread_cleanup_pop(struct __ptcb* cb, int run) {
     __do_cleanup_pop(cb);
-    if (run) cb->__f(cb->__x);
+    if (run)
+        cb->__f(cb->__x);
 }

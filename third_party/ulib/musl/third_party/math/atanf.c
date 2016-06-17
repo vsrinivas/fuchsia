@@ -42,7 +42,8 @@ float atanf(float x) {
     sign = ix >> 31;
     ix &= 0x7fffffff;
     if (ix >= 0x4c800000) { /* if |x| >= 2**26 */
-        if (isnan(x)) return x;
+        if (isnan(x))
+            return x;
         z = atanhi[3] + 0x1p-120f;
         return sign ? -z : z;
     }
@@ -79,7 +80,8 @@ float atanf(float x) {
     /* break sum from i=0 to 10 aT[i]z**(i+1) into odd and even poly */
     s1 = z * (aT[0] + w * (aT[2] + w * aT[4]));
     s2 = w * (aT[1] + w * aT[3]);
-    if (id < 0) return x - x * (s1 + s2);
+    if (id < 0)
+        return x - x * (s1 + s2);
     z = atanhi[id] - ((x * (s1 + s2) - atanlo[id]) - x);
     return sign ? -z : z;
 }

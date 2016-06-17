@@ -7,7 +7,8 @@ char* ecvt(double x, int n, int* dp, int* sign) {
     char tmp[32];
     int i, j;
 
-    if (n - 1U > 15) n = 15;
+    if (n - 1U > 15)
+        n = 15;
     sprintf(tmp, "%.*e", n - 1, x);
     i = *sign = (tmp[0] == '-');
     for (j = 0; tmp[i] != 'e'; j += (tmp[i++] != '.'))

@@ -19,12 +19,15 @@ FILE* fopen(const char* restrict filename, const char* restrict mode) {
     flags = __fmodeflags(mode);
 
     fd = open(filename, flags, 0666);
-    if (fd < 0) return 0;
+    if (fd < 0)
+        return 0;
     // TODO(kulakowski) Implement O_CLOEXEC semantics.
-    if (flags & O_CLOEXEC) __syscall(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
+    if (flags & O_CLOEXEC)
+        __syscall(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
 
     f = __fdopen(fd, mode);
-    if (f) return f;
+    if (f)
+        return f;
 
     close(fd);
     return 0;

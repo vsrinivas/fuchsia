@@ -76,14 +76,16 @@ static int fuzzycmp(const unsigned char* a, const unsigned char* b) {
     for (; *a && *b; a++, b++) {
         while (*a && (*a | 32U) - 'a' > 26 && *a - '0' > 10U)
             a++;
-        if ((*a | 32U) != *b) return 1;
+        if ((*a | 32U) != *b)
+            return 1;
     }
     return *a != *b;
 }
 
 static size_t find_charmap(const void* name) {
     const unsigned char* s;
-    if (!*(char*)name) name = charmaps; /* "utf8" */
+    if (!*(char*)name)
+        name = charmaps; /* "utf8" */
     for (s = charmaps; *s;) {
         if (!fuzzycmp(name, s)) {
             for (; *s; s += strlen((void*)s) + 1)
@@ -161,7 +163,8 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
     unsigned char totype = tomap[-1];
     locale_t *ploc = &CURRENT_LOCALE, loc = *ploc;
 
-    if (!in || !*in || !*inb) return 0;
+    if (!in || !*in || !*inb)
+        return 0;
 
     *ploc = UTF8_LOCALE;
 
@@ -169,7 +172,8 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
         c = *(unsigned char*)*in;
         l = 1;
 
-        if (c >= 128 || type - UTF_32BE < 7U) switch (type) {
+        if (c >= 128 || type - UTF_32BE < 7U)
+            switch (type) {
             case UTF_8:
                 l = mbrtowc_utf8(&wc, *in, *inb, &st);
                 if (!l)
@@ -184,31 +188,39 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
                 goto ilseq;
             case WCHAR_T:
                 l = sizeof(wchar_t);
-                if (*inb < l) goto starved;
+                if (*inb < l)
+                    goto starved;
                 c = *(wchar_t*)*in;
                 if (0) {
                 case UTF_32BE:
                 case UTF_32LE:
                     l = 4;
-                    if (*inb < 4) goto starved;
+                    if (*inb < 4)
+                        goto starved;
                     c = get_32((void*)*in, type);
                 }
-                if (c - 0xd800u < 0x800u || c >= 0x110000u) goto ilseq;
+                if (c - 0xd800u < 0x800u || c >= 0x110000u)
+                    goto ilseq;
                 break;
             case UCS2BE:
             case UCS2LE:
             case UTF_16BE:
             case UTF_16LE:
                 l = 2;
-                if (*inb < 2) goto starved;
+                if (*inb < 2)
+                    goto starved;
                 c = get_16((void*)*in, type);
-                if ((unsigned)(c - 0xdc00) < 0x400) goto ilseq;
+                if ((unsigned)(c - 0xdc00) < 0x400)
+                    goto ilseq;
                 if ((unsigned)(c - 0xd800) < 0x400) {
-                    if (type - UCS2BE < 2U) goto ilseq;
+                    if (type - UCS2BE < 2U)
+                        goto ilseq;
                     l = 4;
-                    if (*inb < 4) goto starved;
+                    if (*inb < 4)
+                        goto starved;
                     d = get_16((void*)(*in + 2), type);
-                    if ((unsigned)(d - 0xdc00) >= 0x400) goto ilseq;
+                    if ((unsigned)(d - 0xdc00) >= 0x400)
+                        goto ilseq;
                     c = ((c - 0xd7c0) << 10) + (d - 0xdc00);
                 }
                 break;
@@ -218,7 +230,8 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
                     break;
                 }
                 l = 2;
-                if (*inb < 2) goto starved;
+                if (*inb < 2)
+                    goto starved;
                 d = *((unsigned char*)*in + 1);
                 if (c - 129 <= 159 - 129)
                     c -= 129;
@@ -228,77 +241,98 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
                     goto ilseq;
                 c *= 2;
                 if (d - 64 <= 158 - 64) {
-                    if (d == 127) goto ilseq;
-                    if (d > 127) d--;
+                    if (d == 127)
+                        goto ilseq;
+                    if (d > 127)
+                        d--;
                     d -= 64;
                 } else if (d - 159 <= 252 - 159) {
                     c++;
                     d -= 159;
                 }
                 c = jis0208[c][d];
-                if (!c) goto ilseq;
+                if (!c)
+                    goto ilseq;
                 break;
             case EUC_JP:
                 l = 2;
-                if (*inb < 2) goto starved;
+                if (*inb < 2)
+                    goto starved;
                 d = *((unsigned char*)*in + 1);
                 if (c == 0x8e) {
                     c = d;
-                    if (c - 0xa1 > 0xdf - 0xa1) goto ilseq;
+                    if (c - 0xa1 > 0xdf - 0xa1)
+                        goto ilseq;
                     c += 0xff61 - 0xa1;
                     break;
                 }
                 c -= 0xa1;
                 d -= 0xa1;
-                if (c >= 84 || d >= 94) goto ilseq;
+                if (c >= 84 || d >= 94)
+                    goto ilseq;
                 c = jis0208[c][d];
-                if (!c) goto ilseq;
+                if (!c)
+                    goto ilseq;
                 break;
             case GB2312:
-                if (c < 0xa1) goto ilseq;
+                if (c < 0xa1)
+                    goto ilseq;
             case GBK:
             case GB18030:
                 c -= 0x81;
-                if (c >= 126) goto ilseq;
+                if (c >= 126)
+                    goto ilseq;
                 l = 2;
-                if (*inb < 2) goto starved;
+                if (*inb < 2)
+                    goto starved;
                 d = *((unsigned char*)*in + 1);
-                if (d < 0xa1 && type == GB2312) goto ilseq;
+                if (d < 0xa1 && type == GB2312)
+                    goto ilseq;
                 if (d - 0x40 >= 191 || d == 127) {
-                    if (d - '0' > 9 || type != GB18030) goto ilseq;
+                    if (d - '0' > 9 || type != GB18030)
+                        goto ilseq;
                     l = 4;
-                    if (*inb < 4) goto starved;
+                    if (*inb < 4)
+                        goto starved;
                     c = (10 * c + d - '0') * 1260;
                     d = *((unsigned char*)*in + 2);
-                    if (d - 0x81 > 126) goto ilseq;
+                    if (d - 0x81 > 126)
+                        goto ilseq;
                     c += 10 * (d - 0x81);
                     d = *((unsigned char*)*in + 3);
-                    if (d - '0' > 9) goto ilseq;
+                    if (d - '0' > 9)
+                        goto ilseq;
                     c += d - '0';
                     c += 128;
                     for (d = 0; d <= c;) {
                         k = 0;
                         for (int i = 0; i < 126; i++)
                             for (int j = 0; j < 190; j++)
-                                if (gb18030[i][j] - d <= c - d) k++;
+                                if (gb18030[i][j] - d <= c - d)
+                                    k++;
                         d = c + 1;
                         c += k;
                     }
                     break;
                 }
                 d -= 0x40;
-                if (d > 63) d--;
+                if (d > 63)
+                    d--;
                 c = gb18030[c][d];
                 break;
             case BIG5:
                 l = 2;
-                if (*inb < 2) goto starved;
+                if (*inb < 2)
+                    goto starved;
                 d = *((unsigned char*)*in + 1);
-                if (d - 0x40 >= 0xff - 0x40 || d - 0x7f < 0xa1 - 0x7f) goto ilseq;
+                if (d - 0x40 >= 0xff - 0x40 || d - 0x7f < 0xa1 - 0x7f)
+                    goto ilseq;
                 d -= 0x40;
-                if (d > 0x3e) d -= 0x22;
+                if (d > 0x3e)
+                    d -= 0x22;
                 if (c - 0xa1 >= 0xfa - 0xa1) {
-                    if (c - 0x87 >= 0xff - 0x87) goto ilseq;
+                    if (c - 0x87 >= 0xff - 0x87)
+                        goto ilseq;
                     if (c < 0xa1)
                         c -= 0x87;
                     else
@@ -314,7 +348,8 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
                             k = 2;
                         else
                             k = "\10\4\4\10\4\4\10\2\4"[totype - 0300];
-                        if (k > *outb) goto toobig;
+                        if (k > *outb)
+                            goto toobig;
                         x += iconv((iconv_t)(uintptr_t)to, &(char*){"\303\212\314\204"
                                                                     "\303\212\314\214"
                                                                     "\303\252\314\204"
@@ -323,23 +358,27 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
                                    &(size_t){4}, out, outb);
                         continue;
                     }
-                    if (!c) goto ilseq;
+                    if (!c)
+                        goto ilseq;
                     break;
                 }
                 c -= 0xa1;
                 c = big5[c][d] | (c == 0x27 && (d == 0x3a || d == 0x3c || d == 0x42)) << 17;
-                if (!c) goto ilseq;
+                if (!c)
+                    goto ilseq;
                 break;
             case EUC_KR:
                 l = 2;
-                if (*inb < 2) goto starved;
+                if (*inb < 2)
+                    goto starved;
                 d = *((unsigned char*)*in + 1);
                 c -= 0xa1;
                 d -= 0xa1;
                 if (c >= 93 || d >= 94) {
                     c += (0xa1 - 0x81);
                     d += 0xa1;
-                    if (c >= 93 || c >= 0xc6 - 0x81 && d > 0x52) goto ilseq;
+                    if (c >= 93 || c >= 0xc6 - 0x81 && d > 0x52)
+                        goto ilseq;
                     if (d - 'A' < 26)
                         d = d - 'A';
                     else if (d - 'a' < 26)
@@ -357,27 +396,33 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
                         k = 0;
                         for (int i = 0; i < 93; i++)
                             for (int j = 0; j < 94; j++)
-                                if (ksc[i][j] - d <= c - d) k++;
+                                if (ksc[i][j] - d <= c - d)
+                                    k++;
                         d = c + 1;
                         c += k;
                     }
                     break;
                 }
                 c = ksc[c][d];
-                if (!c) goto ilseq;
+                if (!c)
+                    goto ilseq;
                 break;
             default:
-                if (c < 128 + type) break;
+                if (c < 128 + type)
+                    break;
                 c -= 128 + type;
                 c = legacy_chars[map[c * 5 / 4] >> 2 * c % 8 |
                                  map[c * 5 / 4 + 1] << 8 - 2 * c % 8 & 1023];
-                if (!c) c = *(unsigned char*)*in;
-                if (c == 1) goto ilseq;
+                if (!c)
+                    c = *(unsigned char*)*in;
+                if (c == 1)
+                    goto ilseq;
             }
 
         switch (totype) {
         case WCHAR_T:
-            if (*outb < sizeof(wchar_t)) goto toobig;
+            if (*outb < sizeof(wchar_t))
+                goto toobig;
             *(wchar_t*)*out = c;
             *out += sizeof(wchar_t);
             *outb -= sizeof(wchar_t);
@@ -386,7 +431,8 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
             if (*outb < 4) {
                 char tmp[4];
                 k = wctomb_utf8(tmp, c);
-                if (*outb < k) goto toobig;
+                if (*outb < k)
+                    goto toobig;
                 memcpy(*out, tmp, k);
             } else
                 k = wctomb_utf8(*out, c);
@@ -394,10 +440,12 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
             *outb -= k;
             break;
         case US_ASCII:
-            if (c > 0x7f) subst:
+            if (c > 0x7f)
+            subst:
             x++, c = '*';
         default:
-            if (*outb < 1) goto toobig;
+            if (*outb < 1)
+                goto toobig;
             if (c < 128 + totype) {
             revout:
                 *(*out)++ = c;
@@ -418,14 +466,17 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
         case UTF_16BE:
         case UTF_16LE:
             if (c < 0x10000 || type - UCS2BE < 2U) {
-                if (c >= 0x10000) c = 0xFFFD;
-                if (*outb < 2) goto toobig;
+                if (c >= 0x10000)
+                    c = 0xFFFD;
+                if (*outb < 2)
+                    goto toobig;
                 put_16((void*)*out, c, totype);
                 *out += 2;
                 *outb -= 2;
                 break;
             }
-            if (*outb < 4) goto toobig;
+            if (*outb < 4)
+                goto toobig;
             c -= 0x10000;
             put_16((void*)*out, (c >> 10) | 0xd800, totype);
             put_16((void*)(*out + 2), (c & 0x3ff) | 0xdc00, totype);
@@ -434,7 +485,8 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
             break;
         case UTF_32BE:
         case UTF_32LE:
-            if (*outb < 4) goto toobig;
+            if (*outb < 4)
+                goto toobig;
             put_32((void*)*out, c, totype);
             *out += 4;
             *outb -= 4;

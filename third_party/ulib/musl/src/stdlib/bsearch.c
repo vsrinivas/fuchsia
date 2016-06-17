@@ -9,7 +9,8 @@ void* bsearch(const void* key, const void* base, size_t nel, size_t width,
         try
             = (char*)base + width * (nel / 2);
         sign = cmp(key, try);
-        if (!sign) return try
+        if (!sign)
+            return try
                 ;
         else if (nel == 1)
             break;

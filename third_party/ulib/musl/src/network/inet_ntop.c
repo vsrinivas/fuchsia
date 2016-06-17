@@ -11,7 +11,8 @@ const char* inet_ntop(int af, const void* restrict a0, char* restrict s, socklen
 
     switch (af) {
     case AF_INET:
-        if (snprintf(s, l, "%d.%d.%d.%d", a[0], a[1], a[2], a[3]) < l) return s;
+        if (snprintf(s, l, "%d.%d.%d.%d", a[0], a[1], a[2], a[3]) < l)
+            return s;
         break;
     case AF_INET6:
         if (memcmp(a, "\0\0\0\0\0\0\0\0\0\0\377\377", 12))
@@ -24,9 +25,11 @@ const char* inet_ntop(int af, const void* restrict a0, char* restrict s, socklen
                      256 * a[10] + a[11], a[12], a[13], a[14], a[15]);
         /* Replace longest /(^0|:)[:0]{2,}/ with "::" */
         for (i = best = 0, max = 2; buf[i]; i++) {
-            if (i && buf[i] != ':') continue;
+            if (i && buf[i] != ':')
+                continue;
             j = strspn(buf + i, ":0");
-            if (j > max) best = i, max = j;
+            if (j > max)
+                best = i, max = j;
         }
         if (max > 2) {
             buf[best] = buf[best + 1] = ':';

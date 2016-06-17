@@ -1,20 +1,28 @@
 #define a_ll a_ll
 static inline int a_ll(volatile int* p) {
     int v;
-    __asm__ __volatile__("ldaxr %w0,%1" : "=r"(v) : "Q"(*p));
+    __asm__ __volatile__("ldaxr %w0,%1"
+                         : "=r"(v)
+                         : "Q"(*p));
     return v;
 }
 
 #define a_sc a_sc
 static inline int a_sc(volatile int* p, int v) {
     int r;
-    __asm__ __volatile__("stlxr %w0,%w2,%1" : "=&r"(r), "=Q"(*p) : "r"(v) : "memory");
+    __asm__ __volatile__("stlxr %w0,%w2,%1"
+                         : "=&r"(r), "=Q"(*p)
+                         : "r"(v)
+                         : "memory");
     return !r;
 }
 
 #define a_barrier a_barrier
 static inline void a_barrier(void) {
-    __asm__ __volatile__("dmb ish" : : : "memory");
+    __asm__ __volatile__("dmb ish"
+                         :
+                         :
+                         : "memory");
 }
 
 #define a_cas a_cas
@@ -33,7 +41,9 @@ static inline int a_cas(volatile int* p, int t, int s) {
 #define a_ll_p a_ll_p
 static inline void* a_ll_p(volatile void* p) {
     void* v;
-    __asm__ __volatile__("ldaxr %0, %1" : "=r"(v) : "Q"(*(void* volatile*)p));
+    __asm__ __volatile__("ldaxr %0, %1"
+                         : "=r"(v)
+                         : "Q"(*(void* volatile*)p));
     return v;
 }
 

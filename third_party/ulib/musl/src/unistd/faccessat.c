@@ -11,8 +11,8 @@ struct ctx {
     int amode;
 };
 
-static const int errors[] = {0,      -EACCES, -ELOOP,   -ENAMETOOLONG, -ENOENT, -ENOTDIR, -EROFS,
-                             -EBADF, -EINVAL, -ETXTBSY, -EFAULT,       -EIO,    -ENOMEM,  -EBUSY};
+static const int errors[] = {0, -EACCES, -ELOOP, -ENAMETOOLONG, -ENOENT, -ENOTDIR, -EROFS,
+                             -EBADF, -EINVAL, -ETXTBSY, -EFAULT, -EIO, -ENOMEM, -EBUSY};
 
 static int checker(void* p) {
     struct ctx* c = p;
@@ -31,7 +31,8 @@ int faccessat(int fd, const char* filename, int amode, int flag) {
     if (!flag || (flag == AT_EACCESS && getuid() == geteuid() && getgid() == getegid()))
         return syscall(SYS_faccessat, fd, filename, amode, flag);
 
-    if (flag != AT_EACCESS) return __syscall_ret(-EINVAL);
+    if (flag != AT_EACCESS)
+        return __syscall_ret(-EINVAL);
 
     char stack[1024];
     sigset_t set;
@@ -47,7 +48,8 @@ int faccessat(int fd, const char* filename, int amode, int flag) {
         do {
             __syscall(SYS_wait4, pid, &status, __WCLONE, 0);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-        if (WIFEXITED(status)) ret = errors[WEXITSTATUS(status)];
+        if (WIFEXITED(status))
+            ret = errors[WEXITSTATUS(status)];
     }
 
     __restore_sigs(&set);

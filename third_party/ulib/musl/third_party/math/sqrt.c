@@ -94,8 +94,10 @@ double sqrt(double x) {
     }
     /* take care of zero */
     if (ix0 <= 0) {
-        if (((ix0 & ~sign) | ix1) == 0) return x; /* sqrt(+-0) = +-0 */
-        if (ix0 < 0) return (x - x) / (x - x);    /* sqrt(-ve) = sNaN */
+        if (((ix0 & ~sign) | ix1) == 0)
+            return x; /* sqrt(+-0) = +-0 */
+        if (ix0 < 0)
+            return (x - x) / (x - x); /* sqrt(-ve) = sNaN */
     }
     /* normalize x */
     m = ix0 >> 20;
@@ -143,9 +145,11 @@ double sqrt(double x) {
         t = s0;
         if (t < ix0 || (t == ix0 && t1 <= ix1)) {
             s1 = t1 + r;
-            if ((t1 & sign) == sign && (s1 & sign) == 0) s0++;
+            if ((t1 & sign) == sign && (s1 & sign) == 0)
+                s0++;
             ix0 -= t;
-            if (ix1 < t1) ix0--;
+            if (ix1 < t1)
+                ix0--;
             ix1 -= t1;
             q1 += r;
         }
@@ -163,7 +167,8 @@ double sqrt(double x) {
                 q1 = 0;
                 q++;
             } else if (z > 1.0) {
-                if (q1 == (uint32_t)0xfffffffe) q++;
+                if (q1 == (uint32_t)0xfffffffe)
+                    q++;
                 q1 += 2;
             } else
                 q1 += q1 & 1;
@@ -171,7 +176,8 @@ double sqrt(double x) {
     }
     ix0 = (q >> 1) + 0x3fe00000;
     ix1 = q1 >> 1;
-    if (q & 1) ix1 |= sign;
+    if (q & 1)
+        ix1 |= sign;
     ix0 += m << 20;
     INSERT_WORDS(z, ix0, ix1);
     return z;

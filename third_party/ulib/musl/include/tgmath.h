@@ -18,13 +18,13 @@ sizeof(double) == sizeof(long double)
 #define __IS_REAL(x) (__IS_FP(x) && 2 * sizeof(x) == sizeof((x) + I))
 
 #define __FLT(x) (__IS_REAL(x) && sizeof(x) == sizeof(float))
-#define __LDBL(x)                                                                                  \
+#define __LDBL(x) \
     (__IS_REAL(x) && sizeof(x) == sizeof(long double) && sizeof(long double) != sizeof(double))
 
 #define __FLTCX(x) (__IS_CX(x) && sizeof(x) == sizeof(float complex))
 #define __DBLCX(x) (__IS_CX(x) && sizeof(x) == sizeof(double complex))
-#define __LDBLCX(x)                                                                                \
-    (__IS_CX(x) && sizeof(x) == sizeof(long double complex) &&                                     \
+#define __LDBLCX(x)                                            \
+    (__IS_CX(x) && sizeof(x) == sizeof(long double complex) && \
      sizeof(long double) != sizeof(double))
 
 /* return type */
@@ -52,16 +52,16 @@ so they can be in null pointer constants
 /* cast to double when x is integral, otherwise use typeof(x) */
 #define __RETCAST(x) (__type2(__IS_FP(x), __typeof__(x), double))
 /* 2 args case, should work for complex types (cpow) */
-#define __RETCAST_2(x, y)                                                                          \
+#define __RETCAST_2(x, y) \
     (__type2(__IS_FP(x) && __IS_FP(y), __typeof__((x) + (y)), __typeof__((x) + (y) + 1.0)))
 /* 3 args case (fma only) */
-#define __RETCAST_3(x, y, z)                                                                       \
-    (__type2(__IS_FP(x) && __IS_FP(y) && __IS_FP(z), __typeof__((x) + (y) + (z)),                  \
+#define __RETCAST_3(x, y, z)                                                      \
+    (__type2(__IS_FP(x) && __IS_FP(y) && __IS_FP(z), __typeof__((x) + (y) + (z)), \
              __typeof__((x) + (y) + (z) + 1.0)))
 /* drop complex from the type of x */
 /* TODO: wrong when sizeof(long double)==sizeof(double) */
-#define __RETCAST_REAL(x)                                                                          \
-    (__type2(__IS_FP(x) && sizeof((x) + I) == sizeof(float complex), float,                        \
+#define __RETCAST_REAL(x)                                                   \
+    (__type2(__IS_FP(x) && sizeof((x) + I) == sizeof(float complex), float, \
              __type2(sizeof((x) + 1.0 + I) == sizeof(double complex), double, long double)))
 /* add complex to the type of x */
 #define __RETCAST_CX(x) (__typeof__(__RETCAST(x) 0 + I))
@@ -79,39 +79,39 @@ so they can be in null pointer constants
 
 #define __tg_real(fun, x) (__RETCAST(x) __tg_real_nocast(fun, x))
 
-#define __tg_real_2_1(fun, x, y)                                                                   \
+#define __tg_real_2_1(fun, x, y) \
     (__RETCAST(x)(__FLT(x) ? fun##f(x, y) : __LDBL(x) ? fun##l(x, y) : fun(x, y)))
 
-#define __tg_real_2(fun, x, y)                                                                     \
-    (__RETCAST_2(x, y)(__FLT(x) && __FLT(y) ? fun##f(x, y) : __LDBL((x) + (y)) ? fun##l(x, y)      \
+#define __tg_real_2(fun, x, y)                                                                \
+    (__RETCAST_2(x, y)(__FLT(x) && __FLT(y) ? fun##f(x, y) : __LDBL((x) + (y)) ? fun##l(x, y) \
                                                                                : fun(x, y)))
 
-#define __tg_complex(fun, x)                                                                       \
-    (__RETCAST_CX(x)(__FLTCX((x) + I) && __IS_FP(x) ? fun##f(x) : __LDBLCX((x) + I) ? fun##l(x)    \
+#define __tg_complex(fun, x)                                                                    \
+    (__RETCAST_CX(x)(__FLTCX((x) + I) && __IS_FP(x) ? fun##f(x) : __LDBLCX((x) + I) ? fun##l(x) \
                                                                                     : fun(x)))
 
-#define __tg_complex_retreal(fun, x)                                                               \
-    (__RETCAST_REAL(x)(__FLTCX((x) + I) && __IS_FP(x) ? fun##f(x) : __LDBLCX((x) + I) ? fun##l(x)  \
+#define __tg_complex_retreal(fun, x)                                                              \
+    (__RETCAST_REAL(x)(__FLTCX((x) + I) && __IS_FP(x) ? fun##f(x) : __LDBLCX((x) + I) ? fun##l(x) \
                                                                                       : fun(x)))
 
-#define __tg_real_complex(fun, x)                                                                  \
-    (__RETCAST(x)(__FLTCX(x)                                                                       \
-                      ? c##fun##f(x)                                                               \
-                      : __DBLCX(x) ? c##fun(x) : __LDBLCX(x)                                       \
-                                                     ? c##fun##l(x)                                \
-                                                     : __FLT(x) ? fun##f(x)                        \
+#define __tg_real_complex(fun, x)                                           \
+    (__RETCAST(x)(__FLTCX(x)                                                \
+                      ? c##fun##f(x)                                        \
+                      : __DBLCX(x) ? c##fun(x) : __LDBLCX(x)                \
+                                                     ? c##fun##l(x)         \
+                                                     : __FLT(x) ? fun##f(x) \
                                                                 : __LDBL(x) ? fun##l(x) : fun(x)))
 
 /* special cases */
 
-#define __tg_real_remquo(x, y, z)                                                                  \
-    (__RETCAST_2(x, y)(__FLT(x) && __FLT(y) ? remquof(x, y, z) : __LDBL((x) + (y))                 \
-                                                                     ? remquol(x, y, z)            \
+#define __tg_real_remquo(x, y, z)                                                       \
+    (__RETCAST_2(x, y)(__FLT(x) && __FLT(y) ? remquof(x, y, z) : __LDBL((x) + (y))      \
+                                                                     ? remquol(x, y, z) \
                                                                      : remquo(x, y, z)))
 
-#define __tg_real_fma(x, y, z)                                                                     \
-    (__RETCAST_3(x, y, z)(__FLT(x) && __FLT(y) && __FLT(z)                                         \
-                              ? fmaf(x, y, z)                                                      \
+#define __tg_real_fma(x, y, z)                             \
+    (__RETCAST_3(x, y, z)(__FLT(x) && __FLT(y) && __FLT(z) \
+                              ? fmaf(x, y, z)              \
                               : __LDBL((x) + (y) + (z)) ? fmal(x, y, z) : fma(x, y, z)))
 
 #define __tg_real_complex_pow(x, y)                                                                \
@@ -127,12 +127,12 @@ so they can be in null pointer constants
                                                                                      ? powl(x, y)  \
                                                                                      : pow(x, y)))
 
-#define __tg_real_complex_fabs(x)                                                                  \
-    (__RETCAST_REAL(x)(__FLTCX(x)                                                                  \
-                           ? cabsf(x)                                                              \
-                           : __DBLCX(x) ? cabs(x) : __LDBLCX(x) ? cabsl(x)                         \
-                                                                : __FLT(x) ? fabsf(x)              \
-                                                                           : __LDBL(x) ? fabsl(x)  \
+#define __tg_real_complex_fabs(x)                                                                 \
+    (__RETCAST_REAL(x)(__FLTCX(x)                                                                 \
+                           ? cabsf(x)                                                             \
+                           : __DBLCX(x) ? cabs(x) : __LDBLCX(x) ? cabsl(x)                        \
+                                                                : __FLT(x) ? fabsf(x)             \
+                                                                           : __LDBL(x) ? fabsl(x) \
                                                                                        : fabs(x)))
 
 /* suppress any macros in math.h or complex.h */

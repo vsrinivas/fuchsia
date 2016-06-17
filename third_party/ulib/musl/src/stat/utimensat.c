@@ -7,7 +7,8 @@
 int utimensat(int fd, const char* path, const struct timespec times[2], int flags) {
     int r = __syscall(SYS_utimensat, fd, path, times, flags);
 #ifdef SYS_futimesat
-    if (r != -ENOSYS || flags) return __syscall_ret(r);
+    if (r != -ENOSYS || flags)
+        return __syscall_ret(r);
     struct timeval *tv = 0, tmp[2];
     if (times) {
         int i;
@@ -18,7 +19,8 @@ int utimensat(int fd, const char* path, const struct timespec times[2], int flag
                     tv = 0;
                     break;
                 }
-                if (times[i].tv_nsec == UTIME_OMIT) return __syscall_ret(-ENOSYS);
+                if (times[i].tv_nsec == UTIME_OMIT)
+                    return __syscall_ret(-ENOSYS);
                 return __syscall_ret(-EINVAL);
             }
             tmp[i].tv_sec = times[i].tv_sec;
@@ -27,7 +29,8 @@ int utimensat(int fd, const char* path, const struct timespec times[2], int flag
     }
 
     r = __syscall(SYS_futimesat, fd, path, tv);
-    if (r != -ENOSYS || fd != AT_FDCWD) return __syscall_ret(r);
+    if (r != -ENOSYS || fd != AT_FDCWD)
+        return __syscall_ret(r);
     r = __syscall(SYS_utimes, path, tv);
 #endif
     return __syscall_ret(r);

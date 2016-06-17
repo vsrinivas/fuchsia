@@ -28,14 +28,16 @@ retry:
     buf[0] = NSCDVERSION;
 
     fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (fd < 0) return NULL;
+    if (fd < 0)
+        return NULL;
 
     if (!(f = fdopen(fd, "r"))) {
         close(fd);
         return 0;
     }
 
-    if (req_buf[2] > LOGIN_NAME_MAX) return f;
+    if (req_buf[2] > LOGIN_NAME_MAX)
+        return f;
 
     if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         /* If there isn't a running nscd we simulate a "not found"
@@ -49,7 +51,8 @@ retry:
         goto error;
     }
 
-    if (sendmsg(fd, &msg, MSG_NOSIGNAL) < 0) goto error;
+    if (sendmsg(fd, &msg, MSG_NOSIGNAL) < 0)
+        goto error;
 
     if (!fread(buf, len, 1, f)) {
         /* If the VERSION entry mismatches nscd will disconnect. The
@@ -57,7 +60,8 @@ retry:
          * byteswap and try once more. (if we already swapped, just
          * fail out)
          */
-        if (ferror(f)) goto error;
+        if (ferror(f))
+            goto error;
         if (!*swap) {
             fclose(f);
             for (i = 0; i < sizeof(req_buf) / sizeof(req_buf[0]); i++) {

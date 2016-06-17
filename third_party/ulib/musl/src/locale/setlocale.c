@@ -25,7 +25,8 @@ char* __strchrnul(const char*, int);
 char* setlocale(int cat, const char* name) {
     static mxr_mutex_t lock;
 
-    if ((unsigned)cat > LC_ALL) return 0;
+    if ((unsigned)cat > LC_ALL)
+        return 0;
 
     mxr_mutex_lock(&lock);
 
@@ -44,7 +45,8 @@ char* setlocale(int cat, const char* name) {
                 if (z - p <= LOCALE_NAME_MAX) {
                     memcpy(part, p, z - p);
                     part[z - p] = 0;
-                    if (*z) p = z + 1;
+                    if (*z)
+                        p = z + 1;
                 }
                 setlocale_one_unlocked(i, part);
             }

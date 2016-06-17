@@ -130,7 +130,8 @@ int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t*
         if (groupbuf[GRMEMCNT]) {
             mem[0][0] = *buf + groupbuf[GRNAMELEN] + groupbuf[GRPASSWDLEN];
             for (ptr = mem[0][0], i = 0; ptr != mem[0][0] + grlist_len; ptr++)
-                if (!*ptr) mem[0][++i] = ptr + 1;
+                if (!*ptr)
+                    mem[0][++i] = ptr + 1;
             mem[0][i] = 0;
 
             if (i != groupbuf[GRMEMCNT]) {
@@ -165,6 +166,7 @@ int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t*
 
 done:
     pthread_setcancelstate(cs, 0);
-    if (rv) errno = rv;
+    if (rv)
+        errno = rv;
     return rv;
 }

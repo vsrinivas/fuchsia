@@ -15,12 +15,15 @@ static int static_dl_iterate_phdr(int (*callback)(struct dl_phdr_info* info, siz
     size_t i, aux[AUX_CNT];
 
     for (i = 0; libc.auxv[i]; i += 2)
-        if (libc.auxv[i] < AUX_CNT) aux[libc.auxv[i]] = libc.auxv[i + 1];
+        if (libc.auxv[i] < AUX_CNT)
+            aux[libc.auxv[i]] = libc.auxv[i + 1];
 
     for (p = (void*)aux[AT_PHDR], n = aux[AT_PHNUM]; n; n--, p += aux[AT_PHENT]) {
         phdr = (void*)p;
-        if (phdr->p_type == PT_PHDR) base = aux[AT_PHDR] - phdr->p_vaddr;
-        if (phdr->p_type == PT_TLS) tls_phdr = phdr;
+        if (phdr->p_type == PT_PHDR)
+            base = aux[AT_PHDR] - phdr->p_vaddr;
+        if (phdr->p_type == PT_TLS)
+            tls_phdr = phdr;
     }
     info.dlpi_addr = base;
     info.dlpi_name = "/proc/self/exe";

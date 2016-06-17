@@ -22,7 +22,8 @@ void sincosl(long double x, long double* sin, long double* cos) {
     if (u.f < M_PI_4) {
         if (u.i.se < 0x3fff - LDBL_MANT_DIG) {
             /* raise underflow if subnormal */
-            if (u.i.se == 0) FORCE_EVAL(x * 0x1p-120f);
+            if (u.i.se == 0)
+                FORCE_EVAL(x * 0x1p-120f);
             *sin = x;
             /* raise inexact if x!=0 */
             *cos = 1.0 + x;

@@ -28,14 +28,16 @@ float jnf(int n, float x) {
         return x;
 
     /* J(-n,x) = J(n,-x), use |n|-1 to avoid overflow in -n */
-    if (n == 0) return j0f(x);
+    if (n == 0)
+        return j0f(x);
     if (n < 0) {
         nm1 = -(n + 1);
         x = -x;
         sign ^= 1;
     } else
         nm1 = n - 1;
-    if (nm1 == 0) return j1f(x);
+    if (nm1 == 0)
+        return j1f(x);
 
     sign &= n; /* even n: 0, odd n: signbit(x) */
     x = fabsf(x);
@@ -168,9 +170,11 @@ float ynf(int n, float x) {
         return x;
     if (sign && ix != 0) /* x < 0 */
         return 0 / 0.0f;
-    if (ix == 0x7f800000) return 0.0f;
+    if (ix == 0x7f800000)
+        return 0.0f;
 
-    if (n == 0) return y0f(x);
+    if (n == 0)
+        return y0f(x);
     if (n < 0) {
         nm1 = -(n + 1);
         sign = n & 1;
@@ -178,7 +182,8 @@ float ynf(int n, float x) {
         nm1 = n - 1;
         sign = 0;
     }
-    if (nm1 == 0) return sign ? -y1f(x) : y1f(x);
+    if (nm1 == 0)
+        return sign ? -y1f(x) : y1f(x);
 
     a = y0f(x);
     b = y1f(x);

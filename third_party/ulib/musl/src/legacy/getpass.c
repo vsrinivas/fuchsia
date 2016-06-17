@@ -11,7 +11,8 @@ char* getpass(const char* prompt) {
     ssize_t l;
     static char password[128];
 
-    if ((fd = open("/dev/tty", O_RDWR | O_NOCTTY | O_CLOEXEC)) < 0) return 0;
+    if ((fd = open("/dev/tty", O_RDWR | O_NOCTTY | O_CLOEXEC)) < 0)
+        return 0;
 
     tcgetattr(fd, &t);
     s = t;
@@ -26,7 +27,8 @@ char* getpass(const char* prompt) {
 
     l = read(fd, password, sizeof password);
     if (l >= 0) {
-        if (l > 0 && password[l - 1] == '\n') l--;
+        if (l > 0 && password[l - 1] == '\n')
+            l--;
         password[l] = 0;
     }
 

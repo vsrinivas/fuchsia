@@ -72,11 +72,11 @@ struct fdpic_dummy_loadmap {
 #endif
 
 #if !DL_FDPIC
-#define IS_RELATIVE(x, s)                                                                          \
+#define IS_RELATIVE(x, s) \
     ((R_TYPE(x) == REL_RELATIVE) || (R_TYPE(x) == REL_SYM_OR_REL && !R_SYM(x)))
 #else
-#define IS_RELATIVE(x, s)                                                                          \
-    (((R_TYPE(x) == REL_FUNCDESC_VAL) || (R_TYPE(x) == REL_SYMBOLIC)) &&                           \
+#define IS_RELATIVE(x, s)                                                \
+    (((R_TYPE(x) == REL_FUNCDESC_VAL) || (R_TYPE(x) == REL_SYMBOLIC)) && \
      (((s)[R_SYM(x)].st_info & 0xf) == STT_SECTION))
 #endif
 

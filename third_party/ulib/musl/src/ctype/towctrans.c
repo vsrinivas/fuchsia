@@ -1,7 +1,7 @@
 #include "libc.h"
 #include <wctype.h>
 
-#define CASEMAP(u1, u2, l)                                                                         \
+#define CASEMAP(u1, u2, l) \
     { (u1), (l) - (u1), (u2) - (u1) + 1 }
 #define CASELACE(u1, u2) CASEMAP((u1), (u2), (u1) + 1)
 
@@ -9,53 +9,80 @@ static const struct {
     unsigned short upper;
     signed char lower;
     unsigned char len;
-} casemaps[] = {CASEMAP('A', 'Z', 'a'),          CASEMAP(0xc0, 0xde, 0xe0),
+} casemaps[] = {CASEMAP('A', 'Z', 'a'), CASEMAP(0xc0, 0xde, 0xe0),
 
-                CASELACE(0x0100, 0x012e),        CASELACE(0x0132, 0x0136),
-                CASELACE(0x0139, 0x0147),        CASELACE(0x014a, 0x0176),
+                CASELACE(0x0100, 0x012e),
+                CASELACE(0x0132, 0x0136),
+                CASELACE(0x0139, 0x0147),
+                CASELACE(0x014a, 0x0176),
                 CASELACE(0x0179, 0x017d),
 
-                CASELACE(0x370, 0x372),          CASEMAP(0x391, 0x3a1, 0x3b1),
-                CASEMAP(0x3a3, 0x3ab, 0x3c3),    CASEMAP(0x400, 0x40f, 0x450),
+                CASELACE(0x370, 0x372),
+                CASEMAP(0x391, 0x3a1, 0x3b1),
+                CASEMAP(0x3a3, 0x3ab, 0x3c3),
+                CASEMAP(0x400, 0x40f, 0x450),
                 CASEMAP(0x410, 0x42f, 0x430),
 
-                CASELACE(0x460, 0x480),          CASELACE(0x48a, 0x4be),
-                CASELACE(0x4c1, 0x4cd),          CASELACE(0x4d0, 0x50e),
+                CASELACE(0x460, 0x480),
+                CASELACE(0x48a, 0x4be),
+                CASELACE(0x4c1, 0x4cd),
+                CASELACE(0x4d0, 0x50e),
 
-                CASELACE(0x514, 0x526),          CASEMAP(0x531, 0x556, 0x561),
+                CASELACE(0x514, 0x526),
+                CASEMAP(0x531, 0x556, 0x561),
 
-                CASELACE(0x01a0, 0x01a4),        CASELACE(0x01b3, 0x01b5),
-                CASELACE(0x01cd, 0x01db),        CASELACE(0x01de, 0x01ee),
-                CASELACE(0x01f8, 0x021e),        CASELACE(0x0222, 0x0232),
+                CASELACE(0x01a0, 0x01a4),
+                CASELACE(0x01b3, 0x01b5),
+                CASELACE(0x01cd, 0x01db),
+                CASELACE(0x01de, 0x01ee),
+                CASELACE(0x01f8, 0x021e),
+                CASELACE(0x0222, 0x0232),
                 CASELACE(0x03d8, 0x03ee),
 
-                CASELACE(0x1e00, 0x1e94),        CASELACE(0x1ea0, 0x1efe),
+                CASELACE(0x1e00, 0x1e94),
+                CASELACE(0x1ea0, 0x1efe),
 
-                CASEMAP(0x1f08, 0x1f0f, 0x1f00), CASEMAP(0x1f18, 0x1f1d, 0x1f10),
-                CASEMAP(0x1f28, 0x1f2f, 0x1f20), CASEMAP(0x1f38, 0x1f3f, 0x1f30),
+                CASEMAP(0x1f08, 0x1f0f, 0x1f00),
+                CASEMAP(0x1f18, 0x1f1d, 0x1f10),
+                CASEMAP(0x1f28, 0x1f2f, 0x1f20),
+                CASEMAP(0x1f38, 0x1f3f, 0x1f30),
                 CASEMAP(0x1f48, 0x1f4d, 0x1f40),
 
-                CASEMAP(0x1f68, 0x1f6f, 0x1f60), CASEMAP(0x1f88, 0x1f8f, 0x1f80),
-                CASEMAP(0x1f98, 0x1f9f, 0x1f90), CASEMAP(0x1fa8, 0x1faf, 0x1fa0),
-                CASEMAP(0x1fb8, 0x1fb9, 0x1fb0), CASEMAP(0x1fba, 0x1fbb, 0x1f70),
-                CASEMAP(0x1fc8, 0x1fcb, 0x1f72), CASEMAP(0x1fd8, 0x1fd9, 0x1fd0),
-                CASEMAP(0x1fda, 0x1fdb, 0x1f76), CASEMAP(0x1fe8, 0x1fe9, 0x1fe0),
-                CASEMAP(0x1fea, 0x1feb, 0x1f7a), CASEMAP(0x1ff8, 0x1ff9, 0x1f78),
+                CASEMAP(0x1f68, 0x1f6f, 0x1f60),
+                CASEMAP(0x1f88, 0x1f8f, 0x1f80),
+                CASEMAP(0x1f98, 0x1f9f, 0x1f90),
+                CASEMAP(0x1fa8, 0x1faf, 0x1fa0),
+                CASEMAP(0x1fb8, 0x1fb9, 0x1fb0),
+                CASEMAP(0x1fba, 0x1fbb, 0x1f70),
+                CASEMAP(0x1fc8, 0x1fcb, 0x1f72),
+                CASEMAP(0x1fd8, 0x1fd9, 0x1fd0),
+                CASEMAP(0x1fda, 0x1fdb, 0x1f76),
+                CASEMAP(0x1fe8, 0x1fe9, 0x1fe0),
+                CASEMAP(0x1fea, 0x1feb, 0x1f7a),
+                CASEMAP(0x1ff8, 0x1ff9, 0x1f78),
                 CASEMAP(0x1ffa, 0x1ffb, 0x1f7c),
 
-                CASELACE(0x246, 0x24e),          CASELACE(0x510, 0x512),
-                CASEMAP(0x2160, 0x216f, 0x2170), CASEMAP(0x2c00, 0x2c2e, 0x2c30),
-                CASELACE(0x2c67, 0x2c6b),        CASELACE(0x2c80, 0x2ce2),
+                CASELACE(0x246, 0x24e),
+                CASELACE(0x510, 0x512),
+                CASEMAP(0x2160, 0x216f, 0x2170),
+                CASEMAP(0x2c00, 0x2c2e, 0x2c30),
+                CASELACE(0x2c67, 0x2c6b),
+                CASELACE(0x2c80, 0x2ce2),
                 CASELACE(0x2ceb, 0x2ced),
 
-                CASELACE(0xa640, 0xa66c),        CASELACE(0xa680, 0xa696),
+                CASELACE(0xa640, 0xa66c),
+                CASELACE(0xa680, 0xa696),
 
-                CASELACE(0xa722, 0xa72e),        CASELACE(0xa732, 0xa76e),
-                CASELACE(0xa779, 0xa77b),        CASELACE(0xa77e, 0xa786),
+                CASELACE(0xa722, 0xa72e),
+                CASELACE(0xa732, 0xa76e),
+                CASELACE(0xa779, 0xa77b),
+                CASELACE(0xa77e, 0xa786),
 
-                CASELACE(0xa790, 0xa792),        CASELACE(0xa7a0, 0xa7a8),
+                CASELACE(0xa790, 0xa792),
+                CASELACE(0xa7a0, 0xa7a8),
 
-                CASEMAP(0xff21, 0xff3a, 0xff41), {0, 0, 0}};
+                CASEMAP(0xff21, 0xff3a, 0xff41),
+                {0, 0, 0}};
 
 static const unsigned short pairs[][2] = {{'I', 0x0131},
                                           {'S', 0x017f},
@@ -210,14 +237,17 @@ static wchar_t __towcase(wchar_t wc, int lower) {
     for (i = 0; casemaps[i].len; i++) {
         int base = casemaps[i].upper + (lmask & casemaps[i].lower);
         if ((unsigned)wc - base < casemaps[i].len) {
-            if (casemaps[i].lower == 1) return wc + lower - ((wc - casemaps[i].upper) & 1);
+            if (casemaps[i].lower == 1)
+                return wc + lower - ((wc - casemaps[i].upper) & 1);
             return wc + lmul * casemaps[i].lower;
         }
     }
     for (i = 0; pairs[i][1 - lower]; i++) {
-        if (pairs[i][1 - lower] == wc) return pairs[i][lower];
+        if (pairs[i][1 - lower] == wc)
+            return pairs[i][lower];
     }
-    if ((unsigned)wc - (0x10428 - 0x28 * lower) < 0x28) return wc - 0x28 + 0x50 * lower;
+    if ((unsigned)wc - (0x10428 - 0x28 * lower) < 0x28)
+        return wc - 0x28 + 0x50 * lower;
     return wc;
 }
 

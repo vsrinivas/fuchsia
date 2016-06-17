@@ -9,7 +9,8 @@ wint_t __fputwc_unlocked(wchar_t c, FILE* f) {
     int l;
     locale_t *ploc = &CURRENT_LOCALE, loc = *ploc;
 
-    if (f->mode <= 0) fwide(f, 1);
+    if (f->mode <= 0)
+        fwide(f, 1);
     *ploc = f->locale;
 
     if (isascii(c)) {
@@ -22,9 +23,11 @@ wint_t __fputwc_unlocked(wchar_t c, FILE* f) {
             f->wpos += l;
     } else {
         l = wctomb(mbc, c);
-        if (l < 0 || __fwritex((void*)mbc, l, f) < l) c = WEOF;
+        if (l < 0 || __fwritex((void*)mbc, l, f) < l)
+            c = WEOF;
     }
-    if (c == WEOF) f->flags |= F_ERR;
+    if (c == WEOF)
+        f->flags |= F_ERR;
     *ploc = loc;
     return c;
 }

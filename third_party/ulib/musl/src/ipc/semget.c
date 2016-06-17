@@ -9,6 +9,7 @@ int semget(key_t key, int n, int fl) {
      * of struct semid_ds, and thus might not check that the
      * n fits in the correct (per POSIX) userspace type, so
      * we have to check here. */
-    if (n > USHRT_MAX) return __syscall_ret(-EINVAL);
+    if (n > USHRT_MAX)
+        return __syscall_ret(-EINVAL);
     return syscall(SYS_semget, key, n, fl);
 }

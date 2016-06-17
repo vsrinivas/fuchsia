@@ -14,7 +14,8 @@ size_t strlcpy(char* d, const char* s, size_t n) {
     size_t* wd;
     const size_t* ws;
 
-    if (!n--) goto finish;
+    if (!n--)
+        goto finish;
     if (((uintptr_t)s & ALIGN) == ((uintptr_t)d & ALIGN)) {
         for (; ((uintptr_t)s & ALIGN) && n && (*d = *s); n--, s++, d++)
             ;

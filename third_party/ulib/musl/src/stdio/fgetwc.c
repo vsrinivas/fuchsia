@@ -28,11 +28,13 @@ static wint_t __fgetwc_unlocked_internal(FILE* f) {
     while (l == -2) {
         b = c = getc_unlocked(f);
         if (c < 0) {
-            if (!mbsinit(&st)) errno = EILSEQ;
+            if (!mbsinit(&st))
+                errno = EILSEQ;
             return WEOF;
         }
         l = mbrtowc(&wc, (void*)&b, 1, &st);
-        if (l == -1) return WEOF;
+        if (l == -1)
+            return WEOF;
     }
 
     return wc;
@@ -40,7 +42,8 @@ static wint_t __fgetwc_unlocked_internal(FILE* f) {
 
 wint_t __fgetwc_unlocked(FILE* f) {
     locale_t *ploc = &CURRENT_LOCALE, loc = *ploc;
-    if (f->mode <= 0) fwide(f, 1);
+    if (f->mode <= 0)
+        fwide(f, 1);
     *ploc = f->locale;
     wchar_t wc = __fgetwc_unlocked_internal(f);
     *ploc = loc;

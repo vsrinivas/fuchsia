@@ -14,7 +14,8 @@ char* __stpcpy(char* restrict d, const char* restrict s) {
 
     if ((uintptr_t)s % ALIGN == (uintptr_t)d % ALIGN) {
         for (; (uintptr_t)s % ALIGN; s++, d++)
-            if (!(*d = *s)) return d;
+            if (!(*d = *s))
+                return d;
         wd = (void*)d;
         ws = (const void*)s;
         for (; !HASZERO(*ws); *wd++ = *ws++)

@@ -17,7 +17,8 @@ void* memccpy(void* restrict dest, const void* restrict src, int c, size_t n) {
     if (((uintptr_t)s & ALIGN) == ((uintptr_t)d & ALIGN)) {
         for (; ((uintptr_t)s & ALIGN) && n && (*d = *s) != c; n--, s++, d++)
             ;
-        if ((uintptr_t)s & ALIGN) goto tail;
+        if ((uintptr_t)s & ALIGN)
+            goto tail;
         k = ONES * c;
         wd = (void*)d;
         ws = (const void*)s;
@@ -29,6 +30,7 @@ void* memccpy(void* restrict dest, const void* restrict src, int c, size_t n) {
     for (; n && (*d = *s) != c; n--, s++, d++)
         ;
 tail:
-    if (*s == c) return d + 1;
+    if (*s == c)
+        return d + 1;
     return 0;
 }

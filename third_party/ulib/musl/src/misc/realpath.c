@@ -22,17 +22,20 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
     }
 
     fd = sys_open(filename, O_PATH | O_NONBLOCK | O_CLOEXEC);
-    if (fd < 0) return 0;
+    if (fd < 0)
+        return 0;
     __procfdname(buf, fd);
 
     r = readlink(buf, tmp, sizeof tmp - 1);
-    if (r < 0) goto err;
+    if (r < 0)
+        goto err;
     tmp[r] = 0;
 
     fstat(fd, &st1);
     r = stat(tmp, &st2);
     if (r < 0 || st1.st_dev != st2.st_dev || st1.st_ino != st2.st_ino) {
-        if (!r) errno = ELOOP;
+        if (!r)
+            errno = ELOOP;
         goto err;
     }
 

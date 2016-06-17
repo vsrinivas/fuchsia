@@ -23,7 +23,8 @@ static void* start(void* p) {
     pthread_barrier_wait(&args->barrier);
     n = recv(s, buf, sizeof(buf), MSG_NOSIGNAL | MSG_WAITALL);
     close(s);
-    if (n == sizeof buf && buf[sizeof buf - 1] == 1) func(val);
+    if (n == sizeof buf && buf[sizeof buf - 1] == 1)
+        func(val);
     return 0;
 }
 
@@ -35,10 +36,12 @@ int mq_notify(mqd_t mqd, const struct sigevent* sev) {
     struct sigevent sev2;
     static const char zeros[32];
 
-    if (!sev || sev->sigev_notify != SIGEV_THREAD) return syscall(SYS_mq_notify, mqd, sev);
+    if (!sev || sev->sigev_notify != SIGEV_THREAD)
+        return syscall(SYS_mq_notify, mqd, sev);
 
     s = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, 0);
-    if (s < 0) return -1;
+    if (s < 0)
+        return -1;
     args.sock = s;
 
     if (sev->sigev_notify_attributes)

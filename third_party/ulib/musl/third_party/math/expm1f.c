@@ -40,7 +40,8 @@ float expm1f(float x) {
     if (hx >= 0x4195b844) {  /* if |x|>=27*ln2 */
         if (hx > 0x7f800000) /* NaN */
             return x;
-        if (sign) return -1;
+        if (sign)
+            return -1;
         if (x > o_threshold) {
             x *= 0x1p127f;
             return x;
@@ -68,7 +69,8 @@ float expm1f(float x) {
         x = hi - lo;
         c = (hi - x) - lo;
     } else if (hx < 0x33000000) { /* when |x|<2**-25, return x */
-        if (hx < 0x00800000) FORCE_EVAL(x * x);
+        if (hx < 0x00800000)
+            FORCE_EVAL(x * x);
         return x;
     } else
         k = 0;
@@ -84,9 +86,11 @@ float expm1f(float x) {
     e = x * (e - c) - c;
     e -= hxs;
     /* exp(x) ~ 2^k (x_reduced - e + 1) */
-    if (k == -1) return 0.5f * (x - e) - 0.5f;
+    if (k == -1)
+        return 0.5f * (x - e) - 0.5f;
     if (k == 1) {
-        if (x < -0.25f) return -2.0f * (e - (x + 0.5f));
+        if (x < -0.25f)
+            return -2.0f * (e - (x + 0.5f));
         return 1.0f + 2.0f * (x - e);
     }
     u.i = (0x7f + k) << 23; /* 2^k */

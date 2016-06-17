@@ -18,7 +18,8 @@ int __mkostemps(char* template, int len, int flags) {
     int fd, retries = 100;
     do {
         __randname(template + l - len - 6);
-        if ((fd = open(template, flags | O_RDWR | O_CREAT | O_EXCL, 0600)) >= 0) return fd;
+        if ((fd = open(template, flags | O_RDWR | O_CREAT | O_EXCL, 0600)) >= 0)
+            return fd;
     } while (--retries && errno == EEXIST);
 
     memcpy(template + l - len - 6, "XXXXXX", 6);

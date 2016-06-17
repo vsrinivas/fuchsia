@@ -22,7 +22,8 @@ float atan2f(float y, float x) {
     float z;
     uint32_t m, ix, iy;
 
-    if (isnan(x) || isnan(y)) return x + y;
+    if (isnan(x) || isnan(y))
+        return x + y;
     GET_FLOAT_WORD(ix, x);
     GET_FLOAT_WORD(iy, y);
     if (ix == 0x3f800000) /* x=1.0 */
@@ -44,7 +45,8 @@ float atan2f(float y, float x) {
         }
     }
     /* when x = 0 */
-    if (ix == 0) return m & 1 ? -pi / 2 : pi / 2;
+    if (ix == 0)
+        return m & 1 ? -pi / 2 : pi / 2;
     /* when x is INF */
     if (ix == 0x7f800000) {
         if (iy == 0x7f800000) {
@@ -72,7 +74,8 @@ float atan2f(float y, float x) {
         }
     }
     /* |y/x| > 0x1p26 */
-    if (ix + (26 << 23) < iy || iy == 0x7f800000) return m & 1 ? -pi / 2 : pi / 2;
+    if (ix + (26 << 23) < iy || iy == 0x7f800000)
+        return m & 1 ? -pi / 2 : pi / 2;
 
     /* z = atan(|y/x|) with correct underflow */
     if ((m & 2) && iy + (26 << 23) < ix) /*|y/x| < 0x1p-26, x < 0 */

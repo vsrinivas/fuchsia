@@ -12,10 +12,12 @@ wint_t ungetwc(wint_t c, FILE* f) {
 
     FLOCK(f);
 
-    if (f->mode <= 0) fwide(f, 1);
+    if (f->mode <= 0)
+        fwide(f, 1);
     *ploc = f->locale;
 
-    if (!f->rpos) __toread(f);
+    if (!f->rpos)
+        __toread(f);
     if (!f->rpos || c == WEOF || (l = wcrtomb((void*)mbc, c, 0)) < 0 ||
         f->rpos < f->buf - UNGET + l) {
         FUNLOCK(f);

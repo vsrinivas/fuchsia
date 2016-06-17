@@ -53,7 +53,8 @@ float tanf(float x) {
     }
 
     /* tan(Inf or NaN) is NaN */
-    if (ix >= 0x7f800000) return x - x;
+    if (ix >= 0x7f800000)
+        return x - x;
 
     /* argument reduction */
     n = __rem_pio2f(x, &y);

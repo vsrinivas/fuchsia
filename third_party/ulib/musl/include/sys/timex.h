@@ -75,8 +75,8 @@ struct timex {
 #define STA_MODE 0x4000
 #define STA_CLK 0x8000
 
-#define STA_RONLY                                                                                  \
-    (STA_PPSSIGNAL | STA_PPSJITTER | STA_PPSWANDER | STA_PPSERROR | STA_CLOCKERR | STA_NANO |      \
+#define STA_RONLY                                                                             \
+    (STA_PPSSIGNAL | STA_PPSJITTER | STA_PPSWANDER | STA_PPSERROR | STA_CLOCKERR | STA_NANO | \
      STA_MODE | STA_CLK)
 
 #define TIME_OK 0

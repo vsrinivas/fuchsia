@@ -105,7 +105,8 @@ double complex ctanh(double complex z) {
      * ctanh(x + i NAN) = NaN + i NaN
      * ctanh(x +- i Inf) = NaN + i NaN
      */
-    if (!isfinite(y)) return CMPLX(x ? y - y : x, y - y);
+    if (!isfinite(y))
+        return CMPLX(x ? y - y : x, y - y);
 
     /*
      * ctanh(+-huge + i +-y) ~= +-1 +- i 2sin(2y)/exp(2x), using the

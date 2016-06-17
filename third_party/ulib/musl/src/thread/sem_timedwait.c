@@ -8,7 +8,8 @@ static void cleanup(void* p) {
 int sem_timedwait(sem_t* restrict sem, const struct timespec* restrict at) {
     pthread_testcancel();
 
-    if (!sem_trywait(sem)) return 0;
+    if (!sem_trywait(sem))
+        return 0;
 
     int spins = 100;
     while (spins-- && sem->__val[0] <= 0 && !sem->__val[1])

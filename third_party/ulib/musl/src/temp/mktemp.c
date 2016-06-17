@@ -20,7 +20,8 @@ char* mktemp(char* template) {
     do {
         __randname(template + l - 6);
         if (stat(template, &st)) {
-            if (errno != ENOENT) *template = 0;
+            if (errno != ENOENT)
+                *template = 0;
             return template;
         }
     } while (--retries);

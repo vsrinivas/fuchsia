@@ -11,7 +11,8 @@ int sigfillset(sigset_t* set) {
     }
 #else
     set->__bits[0] = 0xfffffffc7ffffffful;
-    if (_NSIG > 65) set->__bits[1] = 0xfffffffffffffffful;
+    if (_NSIG > 65)
+        set->__bits[1] = 0xfffffffffffffffful;
 #endif
     return 0;
 }

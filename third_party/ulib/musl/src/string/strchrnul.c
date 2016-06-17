@@ -12,10 +12,12 @@ char* __strchrnul(const char* s, int c) {
     size_t *w, k;
 
     c = (unsigned char)c;
-    if (!c) return (char*)s + strlen(s);
+    if (!c)
+        return (char*)s + strlen(s);
 
     for (; (uintptr_t)s % ALIGN; s++)
-        if (!*s || *(unsigned char*)s == c) return (char*)s;
+        if (!*s || *(unsigned char*)s == c)
+            return (char*)s;
     k = ONES * c;
     for (w = (void*)s; !HASZERO(*w) && !HASZERO(*w ^ k); w++)
         ;

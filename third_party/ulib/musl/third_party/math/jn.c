@@ -54,14 +54,16 @@ double jn(int n, double x) {
      * Thus, J(-n,x) = J(n,-x)
      */
     /* nm1 = |n|-1 is used instead of |n| to handle n==INT_MIN */
-    if (n == 0) return j0(x);
+    if (n == 0)
+        return j0(x);
     if (n < 0) {
         nm1 = -(n + 1);
         x = -x;
         sign ^= 1;
     } else
         nm1 = n - 1;
-    if (nm1 == 0) return j1(x);
+    if (nm1 == 0)
+        return j1(x);
 
     sign &= n; /* even n: 0, odd n: signbit(x) */
     x = fabs(x);
@@ -229,9 +231,11 @@ double yn(int n, double x) {
         return x;
     if (sign && (ix | lx) != 0) /* x < 0 */
         return 0 / 0.0;
-    if (ix == 0x7ff00000) return 0.0;
+    if (ix == 0x7ff00000)
+        return 0.0;
 
-    if (n == 0) return y0(x);
+    if (n == 0)
+        return y0(x);
     if (n < 0) {
         nm1 = -(n + 1);
         sign = n & 1;
@@ -239,7 +243,8 @@ double yn(int n, double x) {
         nm1 = n - 1;
         sign = 0;
     }
-    if (nm1 == 0) return sign ? -y1(x) : y1(x);
+    if (nm1 == 0)
+        return sign ? -y1(x) : y1(x);
 
     if (ix >= 0x52d00000) { /* x > 2**302 */
                             /* (x >> n**2)

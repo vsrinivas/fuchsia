@@ -145,7 +145,8 @@ _Noreturn void pthread_exit(void* result) {
         self->robust_list.head = *rp;
         int cont = a_swap(&m->_m_lock, self->tid | 0x40000000);
         self->robust_list.pending = 0;
-        if (cont < 0 || waiters) __wake(&m->_m_lock, 1);
+        if (cont < 0 || waiters)
+            __wake(&m->_m_lock, 1);
     }
     __vm_unlock();
 
@@ -160,11 +161,13 @@ _Noreturn void pthread_exit(void* result) {
          * the case of threads that started out detached, the
          * initial clone flags are correct, but if the thread was
          * detached later (== 2), we need to clear it here. */
-        if (self->detached == 2) __syscall(SYS_set_tid_address, 0);
+        if (self->detached == 2)
+            __syscall(SYS_set_tid_address, 0);
 
         /* Robust list will no longer be valid, and was already
          * processed above, so unregister it with the kernel. */
-        if (self->robust_list.off) __syscall(SYS_set_robust_list, 0, 3 * sizeof(long));
+        if (self->robust_list.off)
+            __syscall(SYS_set_robust_list, 0, 3 * sizeof(long));
 
         /* Since __unmapself bypasses the normal munmap code path,
          * explicitly wait for vmlock holders first. */

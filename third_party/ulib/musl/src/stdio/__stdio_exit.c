@@ -6,10 +6,13 @@ weak_alias(dummy_file, __stdout_used);
 weak_alias(dummy_file, __stderr_used);
 
 static void close_file(FILE* f) {
-    if (!f) return;
+    if (!f)
+        return;
     FFINALLOCK(f);
-    if (f->wpos > f->wbase) f->write(f, 0, 0);
-    if (f->rpos < f->rend) f->seek(f, f->rpos - f->rend, SEEK_CUR);
+    if (f->wpos > f->wbase)
+        f->write(f, 0, 0);
+    if (f->rpos < f->rend)
+        f->seek(f, f->rpos - f->rend, SEEK_CUR);
 }
 
 void __stdio_exit(void) {

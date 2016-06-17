@@ -110,9 +110,11 @@ double pow(double x, double y) {
     iy = hy & 0x7fffffff;
 
     /* x**0 = 1, even if x is NaN */
-    if ((iy | ly) == 0) return 1.0;
+    if ((iy | ly) == 0)
+        return 1.0;
     /* 1**y = 1, even if y is NaN */
-    if (hx == 0x3ff00000 && lx == 0) return 1.0;
+    if (hx == 0x3ff00000 && lx == 0)
+        return 1.0;
     /* NaN if either arg is NaN */
     if (ix > 0x7ff00000 || (ix == 0x7ff00000 && lx != 0) || iy > 0x7ff00000 ||
         (iy == 0x7ff00000 && ly != 0))
@@ -131,10 +133,12 @@ double pow(double x, double y) {
             k = (iy >> 20) - 0x3ff; /* exponent */
             if (k > 20) {
                 j = ly >> (52 - k);
-                if ((j << (52 - k)) == ly) yisint = 2 - (j & 1);
+                if ((j << (52 - k)) == ly)
+                    yisint = 2 - (j & 1);
             } else if (ly == 0) {
                 j = iy >> (20 - k);
-                if ((j << (20 - k)) == iy) yisint = 2 - (j & 1);
+                if ((j << (20 - k)) == iy)
+                    yisint = 2 - (j & 1);
             }
         }
     }
@@ -150,7 +154,8 @@ double pow(double x, double y) {
                 return hy >= 0 ? 0.0 : -y;
         }
         if (iy == 0x3ff00000) { /* y is +-1 */
-            if (hy >= 0) return x;
+            if (hy >= 0)
+                return x;
             y = 1 / x;
 #if FLT_EVAL_METHOD != 0
             {
@@ -159,7 +164,8 @@ double pow(double x, double y) {
                     uint64_t i;
                 } u = {y};
                 uint64_t i = u.i & -1ULL / 2;
-                if (i >> 52 == 0 && (i & (i - 1))) FORCE_EVAL((float)y);
+                if (i >> 52 == 0 && (i & (i - 1)))
+                    FORCE_EVAL((float)y);
             }
 #endif
             return y;
@@ -200,12 +206,16 @@ double pow(double x, double y) {
     /* |y| is huge */
     if (iy > 0x41e00000) {     /* if |y| > 2**31 */
         if (iy > 0x43f00000) { /* if |y| > 2**64, must o/uflow */
-            if (ix <= 0x3fefffff) return hy < 0 ? huge * huge : tiny * tiny;
-            if (ix >= 0x3ff00000) return hy > 0 ? huge * huge : tiny * tiny;
+            if (ix <= 0x3fefffff)
+                return hy < 0 ? huge * huge : tiny * tiny;
+            if (ix >= 0x3ff00000)
+                return hy > 0 ? huge * huge : tiny * tiny;
         }
         /* over/underflow if x is not close to one */
-        if (ix < 0x3fefffff) return hy < 0 ? s * huge * huge : s * tiny * tiny;
-        if (ix > 0x3ff00000) return hy > 0 ? s * huge * huge : s * tiny * tiny;
+        if (ix < 0x3fefffff)
+            return hy < 0 ? s * huge * huge : s * tiny * tiny;
+        if (ix > 0x3ff00000)
+            return hy > 0 ? s * huge * huge : s * tiny * tiny;
         /* now |1-x| is tiny <= 2**-20, suffice to compute
            log(x) by x-x^2/2+x^3/3-x^4/4 */
         t = ax - 1.0; /* t has 20 trailing zeros */
@@ -281,15 +291,17 @@ double pow(double x, double y) {
     p_h = y1 * t1;
     z = p_l + p_h;
     EXTRACT_WORDS(j, i, z);
-    if (j >= 0x40900000) {                               /* z >= 1024 */
-        if (((j - 0x40900000) | i) != 0)                 /* if z > 1024 */
-            return s * huge * huge;                      /* overflow */
-        if (p_l + ovt > z - p_h) return s * huge * huge; /* overflow */
+    if (j >= 0x40900000) {               /* z >= 1024 */
+        if (((j - 0x40900000) | i) != 0) /* if z > 1024 */
+            return s * huge * huge;      /* overflow */
+        if (p_l + ovt > z - p_h)
+            return s * huge * huge; /* overflow */
     } else if ((j & 0x7fffffff) >=
-               0x4090cc00) { /* z <= -1075 */       // FIXME: instead of abs(j) use unsigned j
-        if (((j - 0xc090cc00) | i) != 0)            /* z < -1075 */
-            return s * tiny * tiny;                 /* underflow */
-        if (p_l <= z - p_h) return s * tiny * tiny; /* underflow */
+               0x4090cc00) { /* z <= -1075 */ // FIXME: instead of abs(j) use unsigned j
+        if (((j - 0xc090cc00) | i) != 0)      /* z < -1075 */
+            return s * tiny * tiny;           /* underflow */
+        if (p_l <= z - p_h)
+            return s * tiny * tiny; /* underflow */
     }
     /*
      * compute 2**(p_h+p_l)
@@ -303,7 +315,8 @@ double pow(double x, double y) {
         t = 0.0;
         SET_HIGH_WORD(t, n & ~(0x000fffff >> k));
         n = ((n & 0x000fffff) | 0x00100000) >> (20 - k);
-        if (j < 0) n = -n;
+        if (j < 0)
+            n = -n;
         p_h -= t;
     }
     t = p_l + p_h;

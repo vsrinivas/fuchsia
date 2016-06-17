@@ -28,15 +28,18 @@ int __getgrent_a(FILE* f, struct group* gr, char** line, size_t* size, char*** m
 
         s = line[0];
         gr->gr_name = s++;
-        if (!(s = strchr(s, ':'))) continue;
+        if (!(s = strchr(s, ':')))
+            continue;
 
         *s++ = 0;
         gr->gr_passwd = s;
-        if (!(s = strchr(s, ':'))) continue;
+        if (!(s = strchr(s, ':')))
+            continue;
 
         *s++ = 0;
         gr->gr_gid = atou(&s);
-        if (*s != ':') continue;
+        if (*s != ':')
+            continue;
 
         *s++ = 0;
         mems = s;
@@ -44,7 +47,8 @@ int __getgrent_a(FILE* f, struct group* gr, char** line, size_t* size, char*** m
     }
 
     for (*nmem = !!*s; *s; s++)
-        if (*s == ',') ++*nmem;
+        if (*s == ',')
+            ++*nmem;
     free(*mem);
     *mem = calloc(sizeof(char*), *nmem + 1);
     if (!*mem) {
@@ -57,7 +61,8 @@ int __getgrent_a(FILE* f, struct group* gr, char** line, size_t* size, char*** m
     if (*mems) {
         mem[0][0] = mems;
         for (s = mems, i = 0; *s; s++)
-            if (*s == ',') *s++ = 0, mem[0][++i] = s;
+            if (*s == ',')
+                *s++ = 0, mem[0][++i] = s;
         mem[0][++i] = 0;
     } else {
         mem[0][0] = 0;
@@ -66,6 +71,7 @@ int __getgrent_a(FILE* f, struct group* gr, char** line, size_t* size, char*** m
 end:
     pthread_setcancelstate(cs, 0);
     *res = gr;
-    if (rv) errno = rv;
+    if (rv)
+        errno = rv;
     return rv;
 }

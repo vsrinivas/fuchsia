@@ -6,7 +6,8 @@ size_t __freadahead(FILE* f) {
 
 const char* __freadptr(FILE* f, size_t* sizep) {
     size_t size = f->rend - f->rpos;
-    if (!size) return 0;
+    if (!size)
+        return 0;
     *sizep = size;
     return (const char*)f->rpos;
 }

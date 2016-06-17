@@ -14,12 +14,14 @@ long double rintl(long double x) {
     int s = u.i.se >> 15;
     long double y;
 
-    if (e >= 0x3fff + LDBL_MANT_DIG - 1) return x;
+    if (e >= 0x3fff + LDBL_MANT_DIG - 1)
+        return x;
     if (s)
         y = x - toint + toint;
     else
         y = x + toint - toint;
-    if (y == 0) return 0 * x;
+    if (y == 0)
+        return 0 * x;
     return y;
 }
 #endif

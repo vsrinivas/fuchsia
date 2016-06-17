@@ -41,14 +41,16 @@ static void fixup(struct statvfs* out, const struct statfs* in) {
 
 int statvfs(const char* restrict path, struct statvfs* restrict buf) {
     struct statfs kbuf;
-    if (__statfs(path, &kbuf) < 0) return -1;
+    if (__statfs(path, &kbuf) < 0)
+        return -1;
     fixup(buf, &kbuf);
     return 0;
 }
 
 int fstatvfs(int fd, struct statvfs* buf) {
     struct statfs kbuf;
-    if (__fstatfs(fd, &kbuf) < 0) return -1;
+    if (__fstatfs(fd, &kbuf) < 0)
+        return -1;
     fixup(buf, &kbuf);
     return 0;
 }

@@ -7,14 +7,14 @@ extern "C" {
 
 #include <features.h>
 
-#define __printflike(__fmt,__varargs) __attribute__((__format__ (__printf__, __fmt, __varargs)))
-#define __scanflike(__fmt,__varargs) __attribute__((__format__ (__scanf__, __fmt, __varargs)))
+#define __printflike(__fmt, __varargs) __attribute__((__format__(__printf__, __fmt, __varargs)))
+#define __scanflike(__fmt, __varargs) __attribute__((__format__(__scanf__, __fmt, __varargs)))
 
 #define __NEED_FILE
 #define __NEED___isoc_va_list
 #define __NEED_size_t
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 #define __NEED_ssize_t
 #define __NEED_off_t
@@ -126,7 +126,7 @@ void setbuf(FILE* __restrict, char* __restrict);
 char* tmpnam(char*);
 FILE* tmpfile(void);
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 FILE* fmemopen(void* __restrict, size_t, const char* __restrict);
 FILE* open_memstream(char**, size_t*);

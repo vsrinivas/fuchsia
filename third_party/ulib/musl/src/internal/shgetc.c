@@ -19,7 +19,9 @@ int __shgetc(FILE* f) {
         f->shend = f->rpos + (f->shlim - f->shcnt - 1);
     else
         f->shend = f->rend;
-    if (f->rend) f->shcnt += f->rend - f->rpos + 1;
-    if (f->rpos[-1] != c) f->rpos[-1] = c;
+    if (f->rend)
+        f->shcnt += f->rend - f->rpos + 1;
+    if (f->rpos[-1] != c)
+        f->rpos[-1] = c;
     return c;
 }

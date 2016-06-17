@@ -25,10 +25,10 @@
  * SUCH DAMAGE.
  */
 
+#include "libm.h"
 #include <fenv.h>
 #include <math.h>
 #include <stdint.h>
-#include "libm.h"
 
 /*
  * Fused multiply-add: Compute x * y + z with a single rounding error.

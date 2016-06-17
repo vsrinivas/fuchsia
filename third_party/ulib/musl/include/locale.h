@@ -52,7 +52,7 @@ struct lconv {
 char* setlocale(int, const char*);
 struct lconv* localeconv(void);
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 
 #define __NEED_locale_t

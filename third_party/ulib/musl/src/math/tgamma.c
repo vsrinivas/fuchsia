@@ -73,8 +73,8 @@ static const double Snum[N + 1] = {
     2.5066282746310002701649081771338373386264310793408,
 };
 static const double Sden[N + 1] = {
-    0,       39916800, 120543840, 150917976, 105258076, 45995730, 13339535,
-    2637558, 357423,   32670,     1925,      66,        1,
+    0, 39916800, 120543840, 150917976, 105258076, 45995730, 13339535,
+    2637558, 357423, 32670, 1925, 66, 1,
 };
 /* n! for small integer n */
 static const double fact[] = {
@@ -141,8 +141,10 @@ double tgamma(double x) {
     /* integer arguments */
     /* raise inexact when non-integer */
     if (x == floor(x)) {
-        if (sign) return 0 / 0.0;
-        if (x <= sizeof fact / sizeof *fact) return fact[(int)x - 1];
+        if (sign)
+            return 0 / 0.0;
+        if (x <= sizeof fact / sizeof *fact)
+            return fact[(int)x - 1];
     }
 
     /* x >= 172: tgamma(x)=inf with overflow */
@@ -150,7 +152,8 @@ double tgamma(double x) {
     if (ix >= 0x40670000) { /* |x| >= 184 */
         if (sign) {
             FORCE_EVAL((float)(0x1p-126 / x));
-            if (floor(x) * 0.5 == floor(x * 0.5)) return 0;
+            if (floor(x) * 0.5 == floor(x * 0.5))
+                return 0;
             return -0.0;
         }
         x *= 0x1p1023;

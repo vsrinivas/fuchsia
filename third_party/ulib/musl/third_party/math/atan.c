@@ -68,7 +68,8 @@ double atan(double x) {
     sign = ix >> 31;
     ix &= 0x7fffffff;
     if (ix >= 0x44100000) { /* if |x| >= 2^66 */
-        if (isnan(x)) return x;
+        if (isnan(x))
+            return x;
         z = atanhi[3] + 0x1p-120f;
         return sign ? -z : z;
     }
@@ -105,7 +106,8 @@ double atan(double x) {
     /* break sum from i=0 to 10 aT[i]z**(i+1) into odd and even poly */
     s1 = z * (aT[0] + w * (aT[2] + w * (aT[4] + w * (aT[6] + w * (aT[8] + w * aT[10])))));
     s2 = w * (aT[1] + w * (aT[3] + w * (aT[5] + w * (aT[7] + w * aT[9]))));
-    if (id < 0) return x - x * (s1 + s2);
+    if (id < 0)
+        return x - x * (s1 + s2);
     z = atanhi[id] - (x * (s1 + s2) - atanlo[id] - x);
     return sign ? -z : z;
 }

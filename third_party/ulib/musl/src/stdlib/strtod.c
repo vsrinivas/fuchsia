@@ -9,7 +9,8 @@ static long double strtox(const char* s, char** p, int prec) {
     shlim(&f, 0);
     long double y = __floatscan(&f, prec, 1);
     off_t cnt = shcnt(&f);
-    if (p) *p = cnt ? (char*)s + cnt : (char*)s;
+    if (p)
+        *p = cnt ? (char*)s + cnt : (char*)s;
     return y;
 }
 

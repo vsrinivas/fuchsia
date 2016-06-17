@@ -23,7 +23,8 @@ static off_t wms_seek(FILE* f, off_t off, int whence) {
         return -1;
     }
     base = (size_t[3]){0, c->pos, c->len}[whence];
-    if (off < -base || off > SSIZE_MAX / 4 - base) goto fail;
+    if (off < -base || off > SSIZE_MAX / 4 - base)
+        goto fail;
     memset(&c->mbs, 0, sizeof c->mbs);
     return c->pos = base + off;
 }
@@ -34,18 +35,22 @@ static size_t wms_write(FILE* f, const unsigned char* buf, size_t len) {
     wchar_t* newbuf;
     if (len + c->pos >= c->space) {
         len2 = 2 * c->space + 1 | c->pos + len + 1;
-        if (len2 > SSIZE_MAX / 4) return 0;
+        if (len2 > SSIZE_MAX / 4)
+            return 0;
         newbuf = realloc(c->buf, len2 * 4);
-        if (!newbuf) return 0;
+        if (!newbuf)
+            return 0;
         *c->bufp = c->buf = newbuf;
         memset(c->buf + c->space, 0, 4 * (len2 - c->space));
         c->space = len2;
     }
 
     len2 = mbsnrtowcs(c->buf + c->pos, (void*)&buf, len, c->space - c->pos, &c->mbs);
-    if (len2 == -1) return 0;
+    if (len2 == -1)
+        return 0;
     c->pos += len2;
-    if (c->pos >= c->len) c->len = c->pos;
+    if (c->pos >= c->len)
+        c->len = c->pos;
     *c->sizep = c->pos;
     return len;
 }
@@ -59,7 +64,8 @@ FILE* open_wmemstream(wchar_t** bufp, size_t* sizep) {
     struct cookie* c;
     wchar_t* buf;
 
-    if (!(f = malloc(sizeof *f + sizeof *c))) return 0;
+    if (!(f = malloc(sizeof *f + sizeof *c)))
+        return 0;
     if (!(buf = malloc(sizeof *buf))) {
         free(f);
         return 0;
@@ -82,7 +88,8 @@ FILE* open_wmemstream(wchar_t** bufp, size_t* sizep) {
     f->seek = wms_seek;
     f->close = wms_close;
 
-    if (!libc.threaded) f->lock = -1;
+    if (!libc.threaded)
+        f->lock = -1;
 
     return __ofl_add(f);
 }

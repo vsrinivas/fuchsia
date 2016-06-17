@@ -38,11 +38,13 @@ static const char* evalexpr(struct st* st, const char* s, int d);
 
 static const char* evalprim(struct st* st, const char* s, int d) {
     char* e;
-    if (--d < 0) return "";
+    if (--d < 0)
+        return "";
     s = skipspace(s);
     if (isdigit(*s)) {
         st->r = strtoul(s, &e, 10);
-        if (e == s || st->r == -1) return "";
+        if (e == s || st->r == -1)
+            return "";
         return skipspace(e);
     }
     if (*s == 'n') {
@@ -51,7 +53,8 @@ static const char* evalprim(struct st* st, const char* s, int d) {
     }
     if (*s == '(') {
         s = evalexpr(st, s + 1, d);
-        if (*s != ')') return "";
+        if (*s != ')')
+            return "";
         return skipspace(s + 1);
     }
     if (*s == '!') {
@@ -149,21 +152,26 @@ static const char* evalbinop(struct st* st, const char* s, int minprec, int d) {
         if op was missing then prec[op]==0
         */
         op = st->op;
-        if (prec[op] <= minprec) return s;
+        if (prec[op] <= minprec)
+            return s;
         left = st->r;
         s = evalbinop(st, s, prec[op], d);
-        if (binop(st, op, left)) return "";
+        if (binop(st, op, left))
+            return "";
     }
 }
 
 static const char* evalexpr(struct st* st, const char* s, int d) {
     unsigned long a, b;
-    if (--d < 0) return "";
+    if (--d < 0)
+        return "";
     s = evalbinop(st, s, 0, d);
-    if (*s != '?') return s;
+    if (*s != '?')
+        return s;
     a = st->r;
     s = evalexpr(st, s + 1, d);
-    if (*s != ':') return "";
+    if (*s != ':')
+        return "";
     b = st->r;
     s = evalexpr(st, s + 1, d);
     st->r = a ? b : st->r;

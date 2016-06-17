@@ -11,9 +11,11 @@ int __res_mkquery(int op, const char* dname, int class, int type, const unsigned
     size_t l = strnlen(dname, 255);
     int n;
 
-    if (l && dname[l - 1] == '.') l--;
+    if (l && dname[l - 1] == '.')
+        l--;
     n = 17 + l + !!l;
-    if (l > 253 || buflen < n || op > 15u || class > 255u || type > 255u) return -1;
+    if (l > 253 || buflen < n || op > 15u || class > 255u || type > 255u)
+        return -1;
 
     /* Construct query template - ID will be filled later */
     memset(q, 0, n);
@@ -23,7 +25,8 @@ int __res_mkquery(int op, const char* dname, int class, int type, const unsigned
     for (i = 13; q[i]; i = j + 1) {
         for (j = i; q[j] && q[j] != '.'; j++)
             ;
-        if (j - i - 1u > 62u) return -1;
+        if (j - i - 1u > 62u)
+            return -1;
         q[i - 1] = j - i;
     }
     q[i + 1] = type;

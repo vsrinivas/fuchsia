@@ -202,7 +202,8 @@ long sysconf(int name) {
         int __lsysinfo(struct sysinfo*);
         struct sysinfo si;
         __lsysinfo(&si);
-        if (!si.mem_unit) si.mem_unit = 1;
+        if (!si.mem_unit)
+            si.mem_unit = 1;
         if (name == _SC_PHYS_PAGES)
             mem = si.totalram;
         else

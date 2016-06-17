@@ -17,8 +17,10 @@ char* tempnam(const char* dir, const char* pfx) {
         ;
     int r;
 
-    if (!dir) dir = P_tmpdir;
-    if (!pfx) pfx = "temp";
+    if (!dir)
+        dir = P_tmpdir;
+    if (!pfx)
+        pfx = "temp";
 
     dl = strlen(dir);
     pl = strlen(pfx);
@@ -42,7 +44,8 @@ char* tempnam(const char* dir, const char* pfx) {
 #else
         r = __syscall(SYS_fstatat, AT_FDCWD, s, &(struct stat){0}, AT_SYMLINK_NOFOLLOW);
 #endif
-        if (r == -ENOENT) return strdup(s);
+        if (r == -ENOENT)
+            return strdup(s);
     }
     return 0;
 }

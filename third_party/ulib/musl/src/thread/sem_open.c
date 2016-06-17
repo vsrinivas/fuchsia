@@ -38,7 +38,8 @@ sem_t* sem_open(const char* name, int flags, ...) {
     struct stat st;
     char buf[NAME_MAX + 10];
 
-    if (!(name = __shm_mapname(name, buf))) return SEM_FAILED;
+    if (!(name = __shm_mapname(name, buf)))
+        return SEM_FAILED;
 
     mxr_mutex_lock(&lock);
     /* Allocate table if we don't have one yet */
@@ -53,7 +54,8 @@ sem_t* sem_open(const char* name, int flags, ...) {
     slot = -1;
     for (cnt = i = 0; i < SEM_NSEMS_MAX; i++) {
         cnt += semtab[i].refcnt;
-        if (!semtab[i].sem && slot < 0) slot = i;
+        if (!semtab[i].sem && slot < 0)
+            slot = i;
     }
     /* Avoid possibility of overflow later */
     if (cnt == INT_MAX || slot < 0) {
@@ -91,9 +93,11 @@ sem_t* sem_open(const char* name, int flags, ...) {
                 close(fd);
                 break;
             }
-            if (errno != ENOENT) goto fail;
+            if (errno != ENOENT)
+                goto fail;
         }
-        if (!(flags & O_CREAT)) goto fail;
+        if (!(flags & O_CREAT))
+            goto fail;
         if (first) {
             first = 0;
             va_start(ap, flags);
@@ -112,7 +116,8 @@ sem_t* sem_open(const char* name, int flags, ...) {
         snprintf(tmp, sizeof(tmp), "/dev/shm/tmp-%d", (int)ts.tv_nsec);
         fd = open(tmp, O_CREAT | O_EXCL | FLAGS, mode);
         if (fd < 0) {
-            if (errno == EEXIST) continue;
+            if (errno == EEXIST)
+                continue;
             goto fail;
         }
         if (write(fd, &newsem, sizeof newsem) != sizeof newsem || fstat(fd, &st) < 0 ||
@@ -125,12 +130,14 @@ sem_t* sem_open(const char* name, int flags, ...) {
         close(fd);
         e = link(tmp, name) ? errno : 0;
         unlink(tmp);
-        if (!e) break;
+        if (!e)
+            break;
         munmap(map, sizeof(sem_t));
         /* Failure is only fatal when doing an exclusive open;
          * otherwise, next iteration will try to open the
          * existing file. */
-        if (e != EEXIST || flags == (O_CREAT | O_EXCL)) goto fail;
+        if (e != EEXIST || flags == (O_CREAT | O_EXCL))
+            goto fail;
     }
 
     /* See if the newly mapped semaphore is already mapped. If

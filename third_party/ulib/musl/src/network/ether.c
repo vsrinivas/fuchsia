@@ -15,10 +15,12 @@ struct ether_addr* ether_aton_r(const char* x, struct ether_addr* p_a) {
         }
         n = strtoul(x, &y, 16);
         x = y;
-        if (n > 0xFF) return 0; /* bad byte */
+        if (n > 0xFF)
+            return 0; /* bad byte */
         a.ether_addr_octet[ii] = n;
     }
-    if (x[0] != 0) return 0; /* bad format */
+    if (x[0] != 0)
+        return 0; /* bad format */
     *p_a = a;
     return p_a;
 }

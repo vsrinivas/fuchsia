@@ -52,7 +52,8 @@ static int do_nftw(char* path, int (*fn)(const char*, const struct stat*, int, s
         type = FTW_F;
     }
 
-    if ((flags & FTW_MOUNT) && h && st.st_dev != h->dev) return 0;
+    if ((flags & FTW_MOUNT) && h && st.st_dev != h->dev)
+        return 0;
 
     new.chain = h;
     new.dev = st.st_dev;
@@ -63,10 +64,12 @@ static int do_nftw(char* path, int (*fn)(const char*, const struct stat*, int, s
     lev.level = new.level;
     lev.base = h ? h->base : (name = strrchr(path, '/')) ? name - path : 0;
 
-    if (!(flags & FTW_DEPTH) && (r = fn(path, &st, type, &lev))) return r;
+    if (!(flags & FTW_DEPTH) && (r = fn(path, &st, type, &lev)))
+        return r;
 
     for (; h; h = h->chain)
-        if (h->dev == st.st_dev && h->ino == st.st_ino) return 0;
+        if (h->dev == st.st_dev && h->ino == st.st_ino)
+            return 0;
 
     if ((type == FTW_D || type == FTW_DP) && fd_limit) {
         DIR* d = opendir(path);
@@ -95,7 +98,8 @@ static int do_nftw(char* path, int (*fn)(const char*, const struct stat*, int, s
     }
 
     path[l] = 0;
-    if ((flags & FTW_DEPTH) && (r = fn(path, &st, type, &lev))) return r;
+    if ((flags & FTW_DEPTH) && (r = fn(path, &st, type, &lev)))
+        return r;
 
     return 0;
 }
@@ -106,7 +110,8 @@ int nftw(const char* path, int (*fn)(const char*, const struct stat*, int, struc
     size_t l;
     char pathbuf[PATH_MAX + 1];
 
-    if (fd_limit <= 0) return 0;
+    if (fd_limit <= 0)
+        return 0;
 
     l = strlen(path);
     if (l > PATH_MAX) {

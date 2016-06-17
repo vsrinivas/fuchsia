@@ -126,33 +126,43 @@ static void do_tzset(void) {
     static const char search[] = "/usr/share/zoneinfo/\0/share/zoneinfo/\0/etc/zoneinfo/\0";
 
     s = getenv("TZ");
-    if (!s) s = "/etc/localtime";
-    if (!*s) s = __gmt;
+    if (!s)
+        s = "/etc/localtime";
+    if (!*s)
+        s = __gmt;
 
-    if (old_tz && !strcmp(s, old_tz)) return;
+    if (old_tz && !strcmp(s, old_tz))
+        return;
 
-    if (zi) __munmap((void*)zi, map_size);
+    if (zi)
+        __munmap((void*)zi, map_size);
 
     /* Cache the old value of TZ to check if it has changed. Avoid
      * free so as not to pull it into static programs. Growth
      * strategy makes it so free would have minimal benefit anyway. */
     i = strlen(s);
-    if (i > PATH_MAX + 1) s = __gmt, i = 3;
+    if (i > PATH_MAX + 1)
+        s = __gmt, i = 3;
     if (i >= old_tz_size) {
         old_tz_size *= 2;
-        if (i >= old_tz_size) old_tz_size = i + 1;
-        if (old_tz_size > PATH_MAX + 2) old_tz_size = PATH_MAX + 2;
+        if (i >= old_tz_size)
+            old_tz_size = i + 1;
+        if (old_tz_size > PATH_MAX + 2)
+            old_tz_size = PATH_MAX + 2;
         old_tz = malloc(old_tz_size);
     }
-    if (old_tz) memcpy(old_tz, s, i + 1);
+    if (old_tz)
+        memcpy(old_tz, s, i + 1);
 
     /* Non-suid can use an absolute tzfile pathname or a relative
      * pathame beginning with "."; in secure mode, only the
      * standard path will be searched. */
     if (*s == ':' || ((p = strchr(s, '/')) && !memchr(s, ',', p - s))) {
-        if (*s == ':') s++;
+        if (*s == ':')
+            s++;
         if (*s == '/' || *s == '.') {
-            if (!libc.secure || !strcmp(s, "/etc/localtime")) map = __map_file(s, &map_size);
+            if (!libc.secure || !strcmp(s, "/etc/localtime"))
+                map = __map_file(s, &map_size);
         } else {
             size_t l = strlen(s);
             if (l <= NAME_MAX && !strchr(s, '.')) {
@@ -165,7 +175,8 @@ static void do_tzset(void) {
                 }
             }
         }
-        if (!map) s = __gmt;
+        if (!map)
+            s = __gmt;
     }
     if (map && (map_size < 44 || memcmp(map, "TZif", 4))) {
         __munmap((void*)map, map_size);
@@ -208,8 +219,10 @@ static void do_tzset(void) {
                     __daylight = 1;
                 }
             }
-            if (!__tzname[0]) __tzname[0] = __tzname[1];
-            if (!__tzname[0]) __tzname[0] = (char*)__gmt;
+            if (!__tzname[0])
+                __tzname[0] = __tzname[1];
+            if (!__tzname[0])
+                __tzname[0] = (char*)__gmt;
             if (!__daylight) {
                 __tzname[1] = __tzname[0];
                 dst_off = __timezone;
@@ -218,7 +231,8 @@ static void do_tzset(void) {
         }
     }
 
-    if (!s) s = __gmt;
+    if (!s)
+        s = __gmt;
     getname(std_name, &s);
     __tzname[0] = std_name;
     __timezone = getoff(&s);
@@ -235,8 +249,10 @@ static void do_tzset(void) {
         dst_off = 0;
     }
 
-    if (*s == ',') s++, getrule(&s, r0);
-    if (*s == ',') s++, getrule(&s, r1);
+    if (*s == ',')
+        s++, getrule(&s, r0);
+    if (*s == ',')
+        s++, getrule(&s, r1);
 }
 
 /* Search zoneinfo rules to find the one that applies to the given time,
@@ -250,7 +266,8 @@ static size_t scan_trans(long long t, int local, size_t* alt) {
     size_t a = 0, n = (index - trans) >> scale, m;
 
     if (!n) {
-        if (alt) *alt = 0;
+        if (alt)
+            *alt = 0;
         return 0;
     }
 
@@ -262,7 +279,8 @@ static size_t scan_trans(long long t, int local, size_t* alt) {
             x = x << 32 | zi_read32(trans + (m << scale) + 4);
         else
             x = (int32_t)x;
-        if (local) off = (int32_t)zi_read32(types + 6 * index[m - 1]);
+        if (local)
+            off = (int32_t)zi_read32(types + 6 * index[m - 1]);
         if (t - off < (int64_t)x) {
             n /= 2;
         } else {
@@ -274,19 +292,23 @@ static size_t scan_trans(long long t, int local, size_t* alt) {
     /* First and last entry are special. First means to use lowest-index
      * non-DST type. Last means to apply POSIX-style rule if available. */
     n = (index - trans) >> scale;
-    if (a == n - 1) return -1;
+    if (a == n - 1)
+        return -1;
     if (a == 0) {
         x = zi_read32(trans + (a << scale));
         if (scale == 3)
             x = x << 32 | zi_read32(trans + (a << scale) + 4);
         else
             x = (int32_t)x;
-        if (local) off = (int32_t)zi_read32(types + 6 * index[a - 1]);
+        if (local)
+            off = (int32_t)zi_read32(types + 6 * index[a - 1]);
         if (t - off < (int64_t)x) {
             for (a = 0; a < (abbrevs - types) / 6; a++) {
-                if (types[6 * a + 4] != types[4]) break;
+                if (types[6 * a + 4] != types[4])
+                    break;
             }
-            if (a == (abbrevs - types) / 6) a = 0;
+            if (a == (abbrevs - types) / 6)
+                a = 0;
             if (types[6 * a + 4]) {
                 *alt = a;
                 return 0;
@@ -325,7 +347,8 @@ static long long rule_to_secs(const int* rule, int year) {
     int x, m, n, d;
     if (rule[0] != 'M') {
         x = rule[1];
-        if (rule[0] == 'J' && (x < 60 || !is_leap)) x--;
+        if (rule[0] == 'J' && (x < 60 || !is_leap))
+            x--;
         t += 86400 * x;
     } else {
         m = rule[1];
@@ -334,8 +357,10 @@ static long long rule_to_secs(const int* rule, int year) {
         t += __month_to_secs(m - 1, is_leap);
         int wday = (int)((t + 4 * 86400) % (7 * 86400)) / 86400;
         int days = d - wday;
-        if (days < 0) days += 7;
-        if (n == 5 && days + 28 >= days_in_month(m, is_leap)) n = 4;
+        if (days < 0)
+            days += 7;
+        if (n == 5 && days + 28 >= days_in_month(m, is_leap))
+            n = 4;
         t += 86400 * (days + 7 * (n - 1));
     }
     t += rule[4];
@@ -361,13 +386,15 @@ void __secs_to_zone(long long t, int local, int* isdst, long* offset, long* oppo
             *isdst = types[6 * i + 4];
             *offset = (int32_t)zi_read32(types + 6 * i);
             *zonename = (const char*)abbrevs + types[6 * i + 5];
-            if (oppoff) *oppoff = (int32_t)zi_read32(types + 6 * alt);
+            if (oppoff)
+                *oppoff = (int32_t)zi_read32(types + 6 * alt);
             mxr_mutex_unlock(&lock);
             return;
         }
     }
 
-    if (!__daylight) goto std;
+    if (!__daylight)
+        goto std;
 
     /* FIXME: may be broken if DST changes right at year boundary?
      * Also, this could be more efficient.*/
@@ -385,27 +412,31 @@ void __secs_to_zone(long long t, int local, int* isdst, long* offset, long* oppo
             t0 += __timezone;
             t1 += dst_off;
         }
-        if (t >= t0 && t < t1) goto dst;
+        if (t >= t0 && t < t1)
+            goto dst;
         goto std;
     } else {
         if (!local) {
             t1 += __timezone;
             t0 += dst_off;
         }
-        if (t >= t1 && t < t0) goto std;
+        if (t >= t1 && t < t0)
+            goto std;
         goto dst;
     }
 std:
     *isdst = 0;
     *offset = -__timezone;
-    if (oppoff) *oppoff = -dst_off;
+    if (oppoff)
+        *oppoff = -dst_off;
     *zonename = __tzname[0];
     mxr_mutex_unlock(&lock);
     return;
 dst:
     *isdst = 1;
     *offset = -dst_off;
-    if (oppoff) *oppoff = -__timezone;
+    if (oppoff)
+        *oppoff = -__timezone;
     *zonename = __tzname[1];
     mxr_mutex_unlock(&lock);
 }

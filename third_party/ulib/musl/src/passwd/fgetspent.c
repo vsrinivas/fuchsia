@@ -8,7 +8,8 @@ struct spwd* fgetspent(FILE* f) {
     struct spwd* res = 0;
     int cs;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    if (getline(&line, &size, f) >= 0 && __parsespent(line, &sp) >= 0) res = &sp;
+    if (getline(&line, &size, f) >= 0 && __parsespent(line, &sp) >= 0)
+        res = &sp;
     pthread_setcancelstate(cs, 0);
     return res;
 }

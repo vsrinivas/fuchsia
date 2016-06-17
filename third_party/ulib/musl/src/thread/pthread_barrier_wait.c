@@ -5,7 +5,8 @@ static int pshared_barrier_wait(pthread_barrier_t* b) {
     int ret = 0;
     int v, w;
 
-    if (limit == 1) return PTHREAD_BARRIER_SERIAL_THREAD;
+    if (limit == 1)
+        return PTHREAD_BARRIER_SERIAL_THREAD;
 
     while ((v = a_cas(&b->_b_lock, 0, limit)))
         __wait(&b->_b_lock, &b->_b_waiters, v);
@@ -14,10 +15,12 @@ static int pshared_barrier_wait(pthread_barrier_t* b) {
     if (++b->_b_count == limit) {
         a_store(&b->_b_count, 0);
         ret = PTHREAD_BARRIER_SERIAL_THREAD;
-        if (b->_b_waiters2) __wake(&b->_b_count, -1);
+        if (b->_b_waiters2)
+            __wake(&b->_b_count, -1);
     } else {
         a_store(&b->_b_lock, 0);
-        if (b->_b_waiters) __wake(&b->_b_lock, 1);
+        if (b->_b_waiters)
+            __wake(&b->_b_lock, 1);
         while ((v = b->_b_count) > 0)
             __wait(&b->_b_count, &b->_b_waiters2, v);
     }
@@ -27,7 +30,8 @@ static int pshared_barrier_wait(pthread_barrier_t* b) {
     /* Ensure all threads have a vm lock before proceeding */
     if (a_fetch_add(&b->_b_count, -1) == 1 - limit) {
         a_store(&b->_b_count, 0);
-        if (b->_b_waiters2) __wake(&b->_b_count, -1);
+        if (b->_b_waiters2)
+            __wake(&b->_b_count, -1);
     } else {
         while ((v = b->_b_count))
             __wait(&b->_b_count, &b->_b_waiters2, v);
@@ -40,7 +44,8 @@ static int pshared_barrier_wait(pthread_barrier_t* b) {
     } while (a_cas(&b->_b_lock, v, v == INT_MIN + 1 ? 0 : v - 1) != v);
 
     /* Wake a thread waiting to reuse or destroy the barrier */
-    if (v == INT_MIN + 1 || (v == 1 && w)) __wake(&b->_b_lock, 1);
+    if (v == INT_MIN + 1 || (v == 1 && w))
+        __wake(&b->_b_lock, 1);
 
     __vm_unlock();
 
@@ -59,10 +64,12 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
     struct instance* inst;
 
     /* Trivial case: count was set at 1 */
-    if (!limit) return PTHREAD_BARRIER_SERIAL_THREAD;
+    if (!limit)
+        return PTHREAD_BARRIER_SERIAL_THREAD;
 
     /* Process-shared barriers require a separate, inefficient wait */
-    if (limit < 0) return pshared_barrier_wait(b);
+    if (limit < 0)
+        return pshared_barrier_wait(b);
 
     /* Otherwise we need a lock on the barrier object */
     while (a_swap(&b->_b_lock, 1))
@@ -75,7 +82,8 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
         int spins = 200;
         b->_b_inst = inst = &new_inst;
         a_store(&b->_b_lock, 0);
-        if (b->_b_waiters) __wake(&b->_b_lock, 1);
+        if (b->_b_waiters)
+            __wake(&b->_b_lock, 1);
         while (spins-- && !inst->finished)
             a_spin();
         a_inc(&inst->finished);
@@ -88,12 +96,15 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
     if (++inst->count == limit) {
         b->_b_inst = 0;
         a_store(&b->_b_lock, 0);
-        if (b->_b_waiters) __wake(&b->_b_lock, 1);
+        if (b->_b_waiters)
+            __wake(&b->_b_lock, 1);
         a_store(&inst->last, 1);
-        if (inst->waiters) __wake(&inst->last, -1);
+        if (inst->waiters)
+            __wake(&inst->last, -1);
     } else {
         a_store(&b->_b_lock, 0);
-        if (b->_b_waiters) __wake(&b->_b_lock, 1);
+        if (b->_b_waiters)
+            __wake(&b->_b_lock, 1);
         __wait(&inst->last, &inst->waiters, 0);
     }
 

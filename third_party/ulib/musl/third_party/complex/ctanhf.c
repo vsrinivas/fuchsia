@@ -42,12 +42,14 @@ float complex ctanhf(float complex z) {
     ix = hx & 0x7fffffff;
 
     if (ix >= 0x7f800000) {
-        if (ix & 0x7fffff) return CMPLXF(x, (y == 0 ? y : x * y));
+        if (ix & 0x7fffff)
+            return CMPLXF(x, (y == 0 ? y : x * y));
         SET_FLOAT_WORD(x, hx - 0x40000000);
         return CMPLXF(x, copysignf(0, isinf(y) ? y : sinf(y) * cosf(y)));
     }
 
-    if (!isfinite(y)) return CMPLXF(ix ? y - y : x, y - y);
+    if (!isfinite(y))
+        return CMPLXF(ix ? y - y : x, y - y);
 
     if (ix >= 0x41300000) { /* x >= 11 */
         float exp_mx = expf(-fabsf(x));

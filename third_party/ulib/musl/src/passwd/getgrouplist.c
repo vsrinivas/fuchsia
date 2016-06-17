@@ -23,15 +23,19 @@ int getgrouplist(const char* user, gid_t gid, gid_t* groups, int* ngroups) {
     size_t nmem = 0;
     size_t size;
     nlim = *ngroups;
-    if (nlim >= 1) *groups++ = gid;
+    if (nlim >= 1)
+        *groups++ = gid;
 
     f = __nscd_query(GETINITGR, user, resp, sizeof resp, &swap);
-    if (!f) goto cleanup;
+    if (!f)
+        goto cleanup;
     if (resp[INITGRFOUND]) {
         nscdbuf = calloc(resp[INITGRNGRPS], sizeof(uint32_t));
-        if (!nscdbuf) goto cleanup;
+        if (!nscdbuf)
+            goto cleanup;
         if (!fread(nscdbuf, sizeof(*nscdbuf) * resp[INITGRNGRPS], 1, f)) {
-            if (!ferror(f)) errno = EIO;
+            if (!ferror(f))
+                errno = EIO;
             goto cleanup;
         }
         if (swap) {
@@ -42,18 +46,22 @@ int getgrouplist(const char* user, gid_t gid, gid_t* groups, int* ngroups) {
     fclose(f);
 
     f = fopen("/etc/group", "rbe");
-    if (!f && errno != ENOENT && errno != ENOTDIR) goto cleanup;
+    if (!f && errno != ENOENT && errno != ENOTDIR)
+        goto cleanup;
 
     if (f) {
         while (!(rv = __getgrent_a(f, &gr, &buf, &size, &mem, &nmem, &res)) && res) {
             if (nscdbuf)
                 for (i = 0; i < resp[INITGRNGRPS]; i++) {
-                    if (nscdbuf[i] == gr.gr_gid) nscdbuf[i] = gid;
+                    if (nscdbuf[i] == gr.gr_gid)
+                        nscdbuf[i] = gid;
                 }
             for (i = 0; gr.gr_mem[i] && strcmp(user, gr.gr_mem[i]); i++)
                 ;
-            if (!gr.gr_mem[i]) continue;
-            if (++n <= nlim) *groups++ = gr.gr_gid;
+            if (!gr.gr_mem[i])
+                continue;
+            if (++n <= nlim)
+                *groups++ = gr.gr_gid;
         }
         if (rv) {
             errno = rv;
@@ -63,7 +71,8 @@ int getgrouplist(const char* user, gid_t gid, gid_t* groups, int* ngroups) {
     if (nscdbuf) {
         for (i = 0; i < resp[INITGRNGRPS]; i++) {
             if (nscdbuf[i] != gid)
-                if (++n <= nlim) *groups++ = nscdbuf[i];
+                if (++n <= nlim)
+                    *groups++ = nscdbuf[i];
         }
     }
 
@@ -71,7 +80,8 @@ int getgrouplist(const char* user, gid_t gid, gid_t* groups, int* ngroups) {
     *ngroups = n;
 
 cleanup:
-    if (f) fclose(f);
+    if (f)
+        fclose(f);
     free(nscdbuf);
     free(buf);
     free(mem);

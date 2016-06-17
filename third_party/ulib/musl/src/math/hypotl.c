@@ -39,9 +39,12 @@ long double hypotl(long double x, long double y) {
         y = uy.f;
     }
 
-    if (ex == 0x7fff && isinf(y)) return y;
-    if (ex == 0x7fff || y == 0) return x;
-    if (ex - ey > LDBL_MANT_DIG) return x + y;
+    if (ex == 0x7fff && isinf(y))
+        return y;
+    if (ex == 0x7fff || y == 0)
+        return x;
+    if (ex - ey > LDBL_MANT_DIG)
+        return x + y;
 
     z = 1;
     if (ex > 0x3fff + 8000) {

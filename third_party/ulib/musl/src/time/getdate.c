@@ -40,7 +40,8 @@ struct tm* getdate(const char* s) {
 
     getdate_err = 7;
 out:
-    if (f) fclose(f);
+    if (f)
+        fclose(f);
     pthread_setcancelstate(cs, 0);
     return ret;
 }

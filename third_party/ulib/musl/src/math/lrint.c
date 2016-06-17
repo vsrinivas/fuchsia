@@ -32,7 +32,8 @@ long lrint(double x) {
 
     e = fetestexcept(FE_INEXACT);
     x = rint(x);
-    if (!e && (x > LONG_MAX || x < LONG_MIN)) feclearexcept(FE_INEXACT);
+    if (!e && (x > LONG_MAX || x < LONG_MIN))
+        feclearexcept(FE_INEXACT);
     /* conversion */
     return x;
 }

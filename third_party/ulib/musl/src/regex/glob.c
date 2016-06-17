@@ -19,7 +19,8 @@ static int is_literal(const char* p, int useesc) {
     for (; *p; p++) {
         switch (*p) {
         case '\\':
-            if (!useesc) break;
+            if (!useesc)
+                break;
         case '?':
         case '*':
             return 0;
@@ -27,7 +28,8 @@ static int is_literal(const char* p, int useesc) {
             bracket = 1;
             break;
         case ']':
-            if (bracket) return 0;
+            if (bracket)
+                return 0;
             break;
         }
     }
@@ -36,11 +38,13 @@ static int is_literal(const char* p, int useesc) {
 
 static int append(struct match** tail, const char* name, size_t len, int mark) {
     struct match* new = malloc(sizeof(struct match) + len + 1);
-    if (!new) return -1;
+    if (!new)
+        return -1;
     (*tail)->next = new;
     new->next = NULL;
     strcpy(new->name, name);
-    if (mark) strcat(new->name, "/");
+    if (mark)
+        strcat(new->name, "/");
     *tail = new;
     return 0;
 }
@@ -65,22 +69,26 @@ static int match_in_dir(const char* d, const char* p, int flags,
         p = pat;
     }
     literal = is_literal(p, !(flags & GLOB_NOESCAPE));
-    if (*d == '/' && !*(d + 1)) l = 0;
+    if (*d == '/' && !*(d + 1))
+        l = 0;
 
     /* rely on opendir failing for nondirectory objects */
     dir = opendir(*d ? d : ".");
     error = errno;
     if (!dir) {
         /* this is not an error -- we let opendir call stat for us */
-        if (error == ENOTDIR) return 0;
+        if (error == ENOTDIR)
+            return 0;
         if (error == EACCES && !*p) {
             struct stat st;
             if (!stat(d, &st) && S_ISDIR(st.st_mode)) {
-                if (append(tail, d, l, l)) return GLOB_NOSPACE;
+                if (append(tail, d, l, l))
+                    return GLOB_NOSPACE;
                 return 0;
             }
         }
-        if (errfunc(d, error) || (flags & GLOB_ERR)) return GLOB_ABORTED;
+        if (errfunc(d, error) || (flags & GLOB_ERR))
+            return GLOB_ABORTED;
         return 0;
     }
     if (!*p) {
@@ -90,9 +98,12 @@ static int match_in_dir(const char* d, const char* p, int flags,
     }
     while (!(error = readdir_r(dir, &de_buf, &de)) && de) {
         char namebuf[l + de->d_reclen + 2], *name = namebuf;
-        if (!literal && fnmatch(p, de->d_name, fnm_flags)) continue;
-        if (literal && strcmp(p, de->d_name)) continue;
-        if (p2 && de->d_type && !S_ISDIR(de->d_type << 12) && !S_ISLNK(de->d_type << 12)) continue;
+        if (!literal && fnmatch(p, de->d_name, fnm_flags))
+            continue;
+        if (literal && strcmp(p, de->d_name))
+            continue;
+        if (p2 && de->d_type && !S_ISDIR(de->d_type << 12) && !S_ISLNK(de->d_type << 12))
+            continue;
         if (*d) {
             memcpy(name, d, l);
             name[l] = '/';
@@ -123,7 +134,8 @@ static int match_in_dir(const char* d, const char* p, int flags,
         }
     }
     closedir(dir);
-    if (error && (errfunc(d, error) || (flags & GLOB_ERR))) return GLOB_ABORTED;
+    if (error && (errfunc(d, error) || (flags & GLOB_ERR)))
+        return GLOB_ABORTED;
     return 0;
 }
 
@@ -159,9 +171,11 @@ int glob(const char* restrict pat, int flags, int (*errfunc)(const char* path, i
         d = "";
     }
 
-    if (strlen(p) > PATH_MAX) return GLOB_NOSPACE;
+    if (strlen(p) > PATH_MAX)
+        return GLOB_NOSPACE;
 
-    if (!errfunc) errfunc = ignore_err;
+    if (!errfunc)
+        errfunc = ignore_err;
 
     if (!(flags & GLOB_APPEND)) {
         g->gl_offs = offs;
@@ -169,7 +183,8 @@ int glob(const char* restrict pat, int flags, int (*errfunc)(const char* path, i
         g->gl_pathv = NULL;
     }
 
-    if (*p) error = match_in_dir(d, p, flags, errfunc, &tail);
+    if (*p)
+        error = match_in_dir(d, p, flags, errfunc, &tail);
     if (error == GLOB_NOSPACE) {
         freelist(&head);
         return error;
@@ -180,7 +195,8 @@ int glob(const char* restrict pat, int flags, int (*errfunc)(const char* path, i
     if (!cnt) {
         if (flags & GLOB_NOCHECK) {
             tail = &head;
-            if (append(&tail, pat, strlen(pat), 0)) return GLOB_NOSPACE;
+            if (append(&tail, pat, strlen(pat), 0))
+                return GLOB_NOSPACE;
             cnt++;
         } else
             return GLOB_NOMATCH;
@@ -208,7 +224,8 @@ int glob(const char* restrict pat, int flags, int (*errfunc)(const char* path, i
     g->gl_pathv[offs + i] = NULL;
     g->gl_pathc += cnt;
 
-    if (!(flags & GLOB_NOSORT)) qsort(g->gl_pathv + offs, cnt, sizeof(char*), sort);
+    if (!(flags & GLOB_NOSORT))
+        qsort(g->gl_pathv + offs, cnt, sizeof(char*), sort);
 
     return error;
 }

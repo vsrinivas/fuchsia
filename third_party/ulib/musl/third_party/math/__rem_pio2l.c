@@ -24,7 +24,7 @@ static const long double toint = 1.5 / LDBL_EPSILON;
 
 #if LDBL_MANT_DIG == 64
 /* u ~< 0x1p25*pi/2 */
-#define SMALL(u)                                                                                   \
+#define SMALL(u) \
     (((u.i.se & 0x7fffU) << 16 | u.i.m >> 48) < ((0x3fff + 25) << 16 | 0x921f >> 1 | 0x8000))
 #define QUOBITS(x) ((uint32_t)(int32_t)x & 0x7fffffff)
 #define ROUND1 22
@@ -128,7 +128,8 @@ int __rem_pio2l(long double x, long double* y) {
         i--;
     n = __rem_pio2_large(tx, ty, ex - 0x3fff - 23, i + 1, NY);
     w = ty[1];
-    if (NY == 3) w += ty[2];
+    if (NY == 3)
+        w += ty[2];
     r = ty[0] + w;
     /* TODO: for ld128 this does not follow the recommendation of the
     comments of __rem_pio2_large which seem wrong if |ty[0]| > |ty[1]+ty[2]| */

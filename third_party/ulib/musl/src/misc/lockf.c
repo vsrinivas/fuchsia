@@ -10,8 +10,10 @@ int lockf(int fd, int op, off_t size) {
     switch (op) {
     case F_TEST:
         l.l_type = F_RDLCK;
-        if (fcntl(fd, F_GETLK, &l) < 0) return -1;
-        if (l.l_type == F_UNLCK || l.l_pid == getpid()) return 0;
+        if (fcntl(fd, F_GETLK, &l) < 0)
+            return -1;
+        if (l.l_type == F_UNLCK || l.l_pid == getpid())
+            return 0;
         errno = EACCES;
         return -1;
     case F_ULOCK:

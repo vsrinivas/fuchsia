@@ -73,7 +73,8 @@ static double common(uint32_t ix, double x, int y1, int sign) {
      * sin(x) +- cos(x) = -cos(2x)/(sin(x) -+ cos(x))
      */
     s = sin(x);
-    if (y1) s = -s;
+    if (y1)
+        s = -s;
     c = cos(x);
     cc = s - c;
     if (ix < 0x7fe00000) {
@@ -85,11 +86,13 @@ static double common(uint32_t ix, double x, int y1, int sign) {
         else
             ss = z / cc;
         if (ix < 0x48000000) {
-            if (y1) ss = -ss;
+            if (y1)
+                ss = -ss;
             cc = pone(x) * cc - qone(x) * ss;
         }
     }
-    if (sign) cc = -cc;
+    if (sign)
+        cc = -cc;
     return invsqrtpi * cc / sqrt(x);
 }
 
@@ -112,7 +115,8 @@ double j1(double x) {
     GET_HIGH_WORD(ix, x);
     sign = ix >> 31;
     ix &= 0x7fffffff;
-    if (ix >= 0x7ff00000) return 1 / (x * x);
+    if (ix >= 0x7ff00000)
+        return 1 / (x * x);
     if (ix >= 0x40000000) /* |x| >= 2 */
         return common(ix, fabs(x), 0, sign);
     if (ix >= 0x38000000) { /* |x| >= 2**-127 */
@@ -147,9 +151,12 @@ double y1(double x) {
 
     EXTRACT_WORDS(ix, lx, x);
     /* y1(nan)=nan, y1(<0)=nan, y1(0)=-inf, y1(inf)=0 */
-    if ((ix << 1 | lx) == 0) return -1 / 0.0;
-    if (ix >> 31) return 0 / 0.0;
-    if (ix >= 0x7ff00000) return 1 / x;
+    if ((ix << 1 | lx) == 0)
+        return -1 / 0.0;
+    if (ix >> 31)
+        return 0 / 0.0;
+    if (ix >= 0x7ff00000)
+        return 1 / x;
 
     if (ix >= 0x40000000) /* x >= 2 */
         return common(ix, x, 1, 0);

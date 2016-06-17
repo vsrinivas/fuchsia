@@ -10,12 +10,15 @@
 #include "crt_arch.h"
 
 #ifndef GETFUNCSYM
-#define GETFUNCSYM(fp, sym, got)                                                                   \
-    do {                                                                                           \
-        __attribute__((__visibility__("hidden"))) void sym(unsigned char*, size_t*);                                      \
-        static void (*static_func_ptr)(unsigned char*, size_t*) = sym;                                                    \
-        __asm__ __volatile__("" : "+m"(static_func_ptr) : : "memory");                             \
-        *(fp) = static_func_ptr;                                                                   \
+#define GETFUNCSYM(fp, sym, got)                                                     \
+    do {                                                                             \
+        __attribute__((__visibility__("hidden"))) void sym(unsigned char*, size_t*); \
+        static void (*static_func_ptr)(unsigned char*, size_t*) = sym;               \
+        __asm__ __volatile__(""                                                      \
+                             : "+m"(static_func_ptr)                                 \
+                             :                                                       \
+                             : "memory");                                            \
+        *(fp) = static_func_ptr;                                                     \
     } while (0)
 #endif
 
@@ -33,7 +36,8 @@ __attribute__((__visibility__("hidden"))) void _dlstart_c(size_t* sp, size_t* dy
     for (i = 0; i < AUX_CNT; i++)
         aux[i] = 0;
     for (i = 0; auxv[i]; i += 2)
-        if (auxv[i] < AUX_CNT) aux[auxv[i]] = auxv[i + 1];
+        if (auxv[i] < AUX_CNT)
+            aux[auxv[i]] = auxv[i + 1];
 
 #if DL_FDPIC
     struct fdpic_loadseg *segs, fakeseg;
@@ -50,7 +54,8 @@ __attribute__((__visibility__("hidden"))) void _dlstart_c(size_t* sp, size_t* dy
          * run as a command, finding the Ehdr is a heursitic: we
          * have to assume Phdrs start in the first 4k of the file. */
         base = aux[AT_BASE];
-        if (!base) base = aux[AT_PHDR] & -4096;
+        if (!base)
+            base = aux[AT_PHDR] & -4096;
         segs = &fakeseg;
         segs[0].addr = base;
         segs[0].p_vaddr = 0;
@@ -68,12 +73,15 @@ __attribute__((__visibility__("hidden"))) void _dlstart_c(size_t* sp, size_t* dy
     for (i = 0; i < DYN_CNT; i++)
         dyn[i] = 0;
     for (i = 0; dynv[i]; i += 2)
-        if (dynv[i] < DYN_CNT) dyn[dynv[i]] = dynv[i + 1];
+        if (dynv[i] < DYN_CNT)
+            dyn[dynv[i]] = dynv[i + 1];
 
 #if DL_FDPIC
     for (i = 0; i < DYN_CNT; i++) {
-        if (i == DT_RELASZ || i == DT_RELSZ) continue;
-        if (!dyn[i]) continue;
+        if (i == DT_RELASZ || i == DT_RELSZ)
+            continue;
+        if (!dyn[i])
+            continue;
         for (j = 0; dyn[i] - segs[j].p_vaddr >= segs[j].p_memsz; j++)
             ;
         dyn[i] += segs[j].addr - segs[j].p_vaddr;
@@ -85,7 +93,8 @@ __attribute__((__visibility__("hidden"))) void _dlstart_c(size_t* sp, size_t* dy
     rel = (void*)dyn[DT_RELA];
     rel_size = dyn[DT_RELASZ];
     for (; rel_size; rel += 3, rel_size -= 3 * sizeof(size_t)) {
-        if (!IS_RELATIVE(rel[1], syms)) continue;
+        if (!IS_RELATIVE(rel[1], syms))
+            continue;
         for (j = 0; rel[0] - segs[j].p_vaddr >= segs[j].p_memsz; j++)
             ;
         size_t* rel_addr = (void*)(rel[0] + segs[j].addr - segs[j].p_vaddr);
@@ -125,7 +134,8 @@ __attribute__((__visibility__("hidden"))) void _dlstart_c(size_t* sp, size_t* dy
         size_t local_cnt = 0;
         size_t* got = (void*)(base + dyn[DT_PLTGOT]);
         for (i = 0; dynv[i]; i += 2)
-            if (dynv[i] == DT_MIPS_LOCAL_GOTNO) local_cnt = dynv[i + 1];
+            if (dynv[i] == DT_MIPS_LOCAL_GOTNO)
+                local_cnt = dynv[i + 1];
         for (i = 0; i < local_cnt; i++)
             got[i] += base;
     }
@@ -133,7 +143,8 @@ __attribute__((__visibility__("hidden"))) void _dlstart_c(size_t* sp, size_t* dy
     rel = (void*)(base + dyn[DT_REL]);
     rel_size = dyn[DT_RELSZ];
     for (; rel_size; rel += 2, rel_size -= 2 * sizeof(size_t)) {
-        if (!IS_RELATIVE(rel[1], 0)) continue;
+        if (!IS_RELATIVE(rel[1], 0))
+            continue;
         size_t* rel_addr = (void*)(base + rel[0]);
         *rel_addr += base;
     }
@@ -141,7 +152,8 @@ __attribute__((__visibility__("hidden"))) void _dlstart_c(size_t* sp, size_t* dy
     rel = (void*)(base + dyn[DT_RELA]);
     rel_size = dyn[DT_RELASZ];
     for (; rel_size; rel += 3, rel_size -= 3 * sizeof(size_t)) {
-        if (!IS_RELATIVE(rel[1], 0)) continue;
+        if (!IS_RELATIVE(rel[1], 0))
+            continue;
         size_t* rel_addr = (void*)(base + rel[0]);
         *rel_addr = base + rel[2];
     }

@@ -21,7 +21,8 @@ static off_t ms_seek(FILE* f, off_t off, int whence) {
         return -1;
     }
     base = (size_t[3]){0, c->pos, c->len}[whence];
-    if (off < -base || off > SSIZE_MAX - base) goto fail;
+    if (off < -base || off > SSIZE_MAX - base)
+        goto fail;
     return c->pos = base + off;
 }
 
@@ -31,19 +32,22 @@ static size_t ms_write(FILE* f, const unsigned char* buf, size_t len) {
     char* newbuf;
     if (len2) {
         f->wpos = f->wbase;
-        if (ms_write(f, f->wbase, len2) < len2) return 0;
+        if (ms_write(f, f->wbase, len2) < len2)
+            return 0;
     }
     if (len + c->pos >= c->space) {
         len2 = 2 * c->space + 1 | c->pos + len + 1;
         newbuf = realloc(c->buf, len2);
-        if (!newbuf) return 0;
+        if (!newbuf)
+            return 0;
         *c->bufp = c->buf = newbuf;
         memset(c->buf + c->space, 0, len2 - c->space);
         c->space = len2;
     }
     memcpy(c->buf + c->pos, buf, len);
     c->pos += len;
-    if (c->pos >= c->len) c->len = c->pos;
+    if (c->pos >= c->len)
+        c->len = c->pos;
     *c->sizep = c->pos;
     return len;
 }
@@ -57,7 +61,8 @@ FILE* open_memstream(char** bufp, size_t* sizep) {
     struct cookie* c;
     char* buf;
 
-    if (!(f = malloc(sizeof *f + sizeof *c + BUFSIZ))) return 0;
+    if (!(f = malloc(sizeof *f + sizeof *c + BUFSIZ)))
+        return 0;
     if (!(buf = malloc(sizeof *buf))) {
         free(f);
         return 0;
@@ -80,7 +85,8 @@ FILE* open_memstream(char** bufp, size_t* sizep) {
     f->seek = ms_seek;
     f->close = ms_close;
 
-    if (!libc.threaded) f->lock = -1;
+    if (!libc.threaded)
+        f->lock = -1;
 
     return __ofl_add(f);
 }

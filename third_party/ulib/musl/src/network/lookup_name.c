@@ -16,7 +16,8 @@
 
 static int is_valid_hostname(const char* host) {
     const unsigned char* s;
-    if (strnlen(host, 255) - 1 >= 254 || mbstowcs(0, host, 0) == -1) return 0;
+    if (strnlen(host, 255) - 1 >= 254 || mbstowcs(0, host, 0) == -1)
+        return 0;
     for (s = (void*)host; *s >= 0x80 || *s == '.' || *s == '-' || isalnum(*s); s++)
         ;
     return !*s;
@@ -24,10 +25,13 @@ static int is_valid_hostname(const char* host) {
 
 static int name_from_null(struct address buf[static 2], const char* name, int family, int flags) {
     int cnt = 0;
-    if (name) return 0;
+    if (name)
+        return 0;
     if (flags & AI_PASSIVE) {
-        if (family != AF_INET6) buf[cnt++] = (struct address){.family = AF_INET};
-        if (family != AF_INET) buf[cnt++] = (struct address){.family = AF_INET6};
+        if (family != AF_INET6)
+            buf[cnt++] = (struct address){.family = AF_INET};
+        if (family != AF_INET)
+            buf[cnt++] = (struct address){.family = AF_INET6};
     } else {
         if (family != AF_INET6)
             buf[cnt++] = (struct address){.family = AF_INET, .addr = {127, 0, 0, 1}};
@@ -48,7 +52,8 @@ static int name_from_hosts(struct address buf[static MAXADDRS], char canon[stati
     int cnt = 0, badfam = 0;
     unsigned char _buf[1032];
     FILE _f, *f = __fopen_rb_ca("/etc/hosts", &_f, _buf, sizeof _buf);
-    if (!f) switch (errno) {
+    if (!f)
+        switch (errno) {
         case ENOENT:
         case ENOTDIR:
         case EACCES:
@@ -59,10 +64,12 @@ static int name_from_hosts(struct address buf[static MAXADDRS], char canon[stati
     while (fgets(line, sizeof line, f) && cnt < MAXADDRS) {
         char *p, *z;
 
-        if ((p = strchr(line, '#'))) *p++ = '\n', *p = 0;
+        if ((p = strchr(line, '#')))
+            *p++ = '\n', *p = 0;
         for (p = line + 1; (p = strstr(p, name)) && (!isspace(p[-1]) || !isspace(p[l])); p++)
             ;
-        if (!p) continue;
+        if (!p)
+            continue;
 
         /* Isolate IP address to parse */
         for (p = line; *p && !isspace(*p); p++)
@@ -85,7 +92,8 @@ static int name_from_hosts(struct address buf[static MAXADDRS], char canon[stati
         for (z = p; *z && !isspace(*z); z++)
             ;
         *z = 0;
-        if (is_valid_hostname(p)) memcpy(canon, p, z - p + 1);
+        if (is_valid_hostname(p))
+            memcpy(canon, p, z - p + 1);
     }
     __fclose_ca(f);
     return cnt ? cnt : badfam;
@@ -114,13 +122,15 @@ static int dns_parse_callback(void* c, int rr, const void* data, int len, const 
     struct dpc_ctx* ctx = c;
     switch (rr) {
     case RR_A:
-        if (len != 4) return -1;
+        if (len != 4)
+            return -1;
         ctx->addrs[ctx->cnt].family = AF_INET;
         ctx->addrs[ctx->cnt].scopeid = 0;
         memcpy(ctx->addrs[ctx->cnt++].addr, data, 4);
         break;
     case RR_AAAA:
-        if (len != 16) return -1;
+        if (len != 16)
+            return -1;
         ctx->addrs[ctx->cnt].family = AF_INET6;
         ctx->addrs[ctx->cnt].scopeid = 0;
         memcpy(ctx->addrs[ctx->cnt++].addr, data, 16);
@@ -152,15 +162,20 @@ static int name_from_dns(struct address buf[static MAXADDRS], char canon[static 
         nq++;
     }
 
-    if (__res_msend_rc(nq, qp, qlens, ap, alens, sizeof *abuf, conf) < 0) return EAI_SYSTEM;
+    if (__res_msend_rc(nq, qp, qlens, ap, alens, sizeof *abuf, conf) < 0)
+        return EAI_SYSTEM;
 
     for (i = 0; i < nq; i++)
         __dns_parse(abuf[i], alens[i], dns_parse_callback, &ctx);
 
-    if (ctx.cnt) return ctx.cnt;
-    if (alens[0] < 4 || (abuf[0][3] & 15) == 2) return EAI_AGAIN;
-    if ((abuf[0][3] & 15) == 0) return EAI_NONAME;
-    if ((abuf[0][3] & 15) == 3) return 0;
+    if (ctx.cnt)
+        return ctx.cnt;
+    if (alens[0] < 4 || (abuf[0][3] & 15) == 2)
+        return EAI_AGAIN;
+    if ((abuf[0][3] & 15) == 0)
+        return EAI_NONAME;
+    if ((abuf[0][3] & 15) == 3)
+        return 0;
     return EAI_FAIL;
 }
 
@@ -171,16 +186,20 @@ static int name_from_dns_search(struct address buf[static MAXADDRS], char canon[
     size_t l, dots;
     char *p, *z;
 
-    if (__get_resolv_conf(&conf, search, sizeof search) < 0) return -1;
+    if (__get_resolv_conf(&conf, search, sizeof search) < 0)
+        return -1;
 
     /* Count dots, suppress search when >=ndots or name ends in
      * a dot, which is an explicit request for global scope. */
     for (dots = l = 0; name[l]; l++)
-        if (name[l] == '.') dots++;
-    if (dots >= conf.ndots || name[l - 1] == '.') *search = 0;
+        if (name[l] == '.')
+            dots++;
+    if (dots >= conf.ndots || name[l - 1] == '.')
+        *search = 0;
 
     /* This can never happen; the caller already checked length. */
-    if (l >= 256) return EAI_NONAME;
+    if (l >= 256)
+        return EAI_NONAME;
 
     /* Name with search domain appended is setup in canon[]. This both
      * provides the desired default canonical name (if the requested
@@ -194,12 +213,14 @@ static int name_from_dns_search(struct address buf[static MAXADDRS], char canon[
             ;
         for (z = p; *z && !isspace(*z); z++)
             ;
-        if (z == p) break;
+        if (z == p)
+            break;
         if (z - p < 256 - l - 1) {
             memcpy(canon + l + 1, p, z - p);
             canon[z - p + 1 + l] = 0;
             int cnt = name_from_dns(buf, canon, canon, family, &conf);
-            if (cnt) return cnt;
+            if (cnt)
+                return cnt;
         }
     }
 
@@ -232,7 +253,8 @@ static const struct policy {
 static const struct policy* policyof(const struct in6_addr* a) {
     int i;
     for (i = 0;; i++) {
-        if (memcmp(a->s6_addr, defpolicy[i].addr, defpolicy[i].len)) continue;
+        if (memcmp(a->s6_addr, defpolicy[i].addr, defpolicy[i].len))
+            continue;
         if ((a->s6_addr[defpolicy[i].len] & defpolicy[i].mask) !=
             defpolicy[i].addr[defpolicy[i].len])
             continue;
@@ -245,10 +267,14 @@ static int labelof(const struct in6_addr* a) {
 }
 
 static int scopeof(const struct in6_addr* a) {
-    if (IN6_IS_ADDR_MULTICAST(a)) return a->s6_addr[1] & 15;
-    if (IN6_IS_ADDR_LINKLOCAL(a)) return 2;
-    if (IN6_IS_ADDR_LOOPBACK(a)) return 2;
-    if (IN6_IS_ADDR_SITELOCAL(a)) return 5;
+    if (IN6_IS_ADDR_MULTICAST(a))
+        return a->s6_addr[1] & 15;
+    if (IN6_IS_ADDR_LINKLOCAL(a))
+        return 2;
+    if (IN6_IS_ADDR_LOOPBACK(a))
+        return 2;
+    if (IN6_IS_ADDR_SITELOCAL(a))
+        return 5;
     return 14;
 }
 
@@ -284,7 +310,8 @@ int __lookup_name(struct address buf[static MAXADDRS], char canon[static 256], c
     if (name) {
         /* reject empty name and check len so it fits into temp bufs */
         size_t l = strnlen(name, 255);
-        if (l - 1 >= 254) return EAI_NONAME;
+        if (l - 1 >= 254)
+            return EAI_NONAME;
         memcpy(canon, name, l + 1);
     }
 
@@ -300,12 +327,15 @@ int __lookup_name(struct address buf[static MAXADDRS], char canon[static 256], c
 
     /* Try each backend until there's at least one result. */
     cnt = name_from_null(buf, name, family, flags);
-    if (!cnt) cnt = name_from_numeric(buf, name, family);
+    if (!cnt)
+        cnt = name_from_numeric(buf, name, family);
     if (!cnt && !(flags & AI_NUMERICHOST)) {
         cnt = name_from_hosts(buf, canon, name, family);
-        if (!cnt) cnt = name_from_dns_search(buf, canon, name, family);
+        if (!cnt)
+            cnt = name_from_dns_search(buf, canon, name, family);
     }
-    if (cnt <= 0) return cnt ? cnt : EAI_NONAME;
+    if (cnt <= 0)
+        return cnt ? cnt : EAI_NONAME;
 
     /* Filter/transform results for v4-mapped lookup, if requested. */
     if (flags & AI_V4MAPPED) {
@@ -315,14 +345,16 @@ int __lookup_name(struct address buf[static MAXADDRS], char canon[static 256], c
                 ;
             if (i < cnt) {
                 for (j = 0; i < cnt; i++) {
-                    if (buf[i].family == AF_INET6) buf[j++] = buf[i];
+                    if (buf[i].family == AF_INET6)
+                        buf[j++] = buf[i];
                 }
                 cnt = i = j;
             }
         }
         /* Translate any remaining v4 results to v6 */
         for (i = 0; i < cnt; i++) {
-            if (buf[i].family != AF_INET) continue;
+            if (buf[i].family != AF_INET)
+                continue;
             memcpy(buf[i].addr + 12, buf[i].addr, 4);
             memcpy(buf[i].addr, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12);
             buf[i].family = AF_INET6;
@@ -331,9 +363,11 @@ int __lookup_name(struct address buf[static MAXADDRS], char canon[static 256], c
 
     /* No further processing is needed if there are fewer than 2
      * results or if there are only IPv4 results. */
-    if (cnt < 2 || family == AF_INET) return cnt;
+    if (cnt < 2 || family == AF_INET)
+        return cnt;
     for (i = 0; buf[i].family == AF_INET; i++)
-        if (i == cnt) return cnt;
+        if (i == cnt)
+            return cnt;
 
     int cs;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
@@ -363,8 +397,10 @@ int __lookup_name(struct address buf[static MAXADDRS], char canon[static 256], c
             if (!connect(fd, (void*)&da, sizeof da)) {
                 key |= DAS_USABLE;
                 if (!getsockname(fd, (void*)&sa, &(socklen_t){sizeof sa})) {
-                    if (dscope == scopeof(&sa.sin6_addr)) key |= DAS_MATCHINGSCOPE;
-                    if (dlabel == labelof(&sa.sin6_addr)) key |= DAS_MATCHINGLABEL;
+                    if (dscope == scopeof(&sa.sin6_addr))
+                        key |= DAS_MATCHINGSCOPE;
+                    if (dlabel == labelof(&sa.sin6_addr))
+                        key |= DAS_MATCHINGLABEL;
                     prefixlen = prefixmatch(&sa.sin6_addr, &da.sin6_addr);
                 }
             }

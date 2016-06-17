@@ -7,11 +7,11 @@
 #include <string.h>
 #include <sys/socket.h>
 
-#define ALIGN                                                                                      \
-    (sizeof(struct {                                                                               \
-         char a;                                                                                   \
-         char* b;                                                                                  \
-     }) -                                                                                          \
+#define ALIGN        \
+    (sizeof(struct { \
+         char a;     \
+         char* b;    \
+     }) -            \
      sizeof(char*))
 
 int getservbyname_r(const char* name, const char* prots, struct servent* se, char* buf,
@@ -21,7 +21,8 @@ int getservbyname_r(const char* name, const char* prots, struct servent* se, cha
 
     /* Align buffer */
     align = -(uintptr_t)buf & ALIGN - 1;
-    if (buflen < 2 * sizeof(char*) + align) return ERANGE;
+    if (buflen < 2 * sizeof(char*) + align)
+        return ERANGE;
     buf += align;
 
     if (!prots)
@@ -34,7 +35,8 @@ int getservbyname_r(const char* name, const char* prots, struct servent* se, cha
         return EINVAL;
 
     cnt = __lookup_serv(servs, name, proto, 0, 0);
-    if (cnt < 0) switch (cnt) {
+    if (cnt < 0)
+        switch (cnt) {
         case EAI_MEMORY:
         case EAI_SYSTEM:
             return ENOMEM;

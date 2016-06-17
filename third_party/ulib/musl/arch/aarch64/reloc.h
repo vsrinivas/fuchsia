@@ -22,4 +22,7 @@
 #define REL_TPOFF R_AARCH64_TLS_TPREL64
 #define REL_TLSDESC R_AARCH64_TLSDESC
 
-#define CRTJMP(pc, sp) __asm__ __volatile__("mov sp,%1 ; br %0" : : "r"(pc), "r"(sp) : "memory")
+#define CRTJMP(pc, sp) __asm__ __volatile__("mov sp,%1 ; br %0" \
+                                            :                   \
+                                            : "r"(pc), "r"(sp)  \
+                                            : "memory")

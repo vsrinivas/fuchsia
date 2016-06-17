@@ -18,10 +18,13 @@ static int lio_wait(struct lio_state* st) {
 
     for (;;) {
         for (i = 0; i < cnt; i++) {
-            if (!cbs[i]) continue;
+            if (!cbs[i])
+                continue;
             err = aio_error(cbs[i]);
-            if (err == EINPROGRESS) break;
-            if (err) got_err = 1;
+            if (err == EINPROGRESS)
+                break;
+            if (err)
+                got_err = 1;
             cbs[i] = 0;
         }
         if (i == cnt) {
@@ -31,7 +34,8 @@ static int lio_wait(struct lio_state* st) {
             }
             return 0;
         }
-        if (aio_suspend((void*)cbs, cnt, 0)) return -1;
+        if (aio_suspend((void*)cbs, cnt, 0))
+            return -1;
     }
 }
 
@@ -81,7 +85,8 @@ int lio_listio(int mode, struct aiocb* restrict const* restrict cbs, int cnt,
     }
 
     for (i = 0; i < cnt; i++) {
-        if (!cbs[i]) continue;
+        if (!cbs[i])
+            continue;
         switch (cbs[i]->aio_lio_opcode) {
         case LIO_READ:
             ret = aio_read(cbs[i]);

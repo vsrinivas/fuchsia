@@ -5,8 +5,10 @@ long double logbl(long double x) {
 }
 #else
 long double logbl(long double x) {
-    if (!isfinite(x)) return x * x;
-    if (x == 0) return -1 / (x * x);
+    if (!isfinite(x))
+        return x * x;
+    if (x == 0)
+        return -1 / (x * x);
     return ilogbl(x);
 }
 #endif

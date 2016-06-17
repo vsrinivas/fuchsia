@@ -62,7 +62,8 @@ double sin(double x) {
     }
 
     /* sin(Inf or NaN) is NaN */
-    if (ix >= 0x7ff00000) return x - x;
+    if (ix >= 0x7ff00000)
+        return x - x;
 
     /* argument reduction needed */
     n = __rem_pio2(x, y);

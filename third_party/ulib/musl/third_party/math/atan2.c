@@ -46,7 +46,8 @@ double atan2(double y, double x) {
     double z;
     uint32_t m, lx, ly, ix, iy;
 
-    if (isnan(x) || isnan(y)) return x + y;
+    if (isnan(x) || isnan(y))
+        return x + y;
     EXTRACT_WORDS(ix, lx, x);
     EXTRACT_WORDS(iy, ly, y);
     if ((ix - 0x3ff00000 | lx) == 0) /* x = 1.0 */
@@ -68,7 +69,8 @@ double atan2(double y, double x) {
         }
     }
     /* when x = 0 */
-    if ((ix | lx) == 0) return m & 1 ? -pi / 2 : pi / 2;
+    if ((ix | lx) == 0)
+        return m & 1 ? -pi / 2 : pi / 2;
     /* when x is INF */
     if (ix == 0x7ff00000) {
         if (iy == 0x7ff00000) {
@@ -96,7 +98,8 @@ double atan2(double y, double x) {
         }
     }
     /* |y/x| > 0x1p64 */
-    if (ix + (64 << 20) < iy || iy == 0x7ff00000) return m & 1 ? -pi / 2 : pi / 2;
+    if (ix + (64 << 20) < iy || iy == 0x7ff00000)
+        return m & 1 ? -pi / 2 : pi / 2;
 
     /* z = atan(|y/x|) without spurious underflow */
     if ((m & 2) && iy + (64 << 20) < ix) /* |y/x| < 0x1p-64, x<0 */

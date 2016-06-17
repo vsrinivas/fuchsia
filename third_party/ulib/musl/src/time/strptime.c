@@ -24,7 +24,8 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
             continue;
         }
         f++;
-        if (*f == '+') f++;
+        if (*f == '+')
+            f++;
         if (isdigit(*f))
             w = strtoul(f, (void*)&f, 10);
         else
@@ -46,11 +47,13 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
             goto symbolic_range;
         case 'c':
             s = strptime(s, nl_langinfo(D_T_FMT), tm);
-            if (!s) return 0;
+            if (!s)
+                return 0;
             break;
         case 'C':
             dest = &century;
-            if (w < 0) w = 2;
+            if (w < 0)
+                w = 2;
             want_century |= 2;
             goto numeric_digits;
         case 'd':
@@ -61,7 +64,8 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
             goto numeric_range;
         case 'D':
             s = strptime(s, "%m/%d/%y", tm);
-            if (!s) return 0;
+            if (!s)
+                return 0;
             break;
         case 'H':
             dest = &tm->tm_hour;
@@ -111,11 +115,13 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
             return 0;
         case 'r':
             s = strptime(s, nl_langinfo(T_FMT_AMPM), tm);
-            if (!s) return 0;
+            if (!s)
+                return 0;
             break;
         case 'R':
             s = strptime(s, "%H:%M", tm);
-            if (!s) return 0;
+            if (!s)
+                return 0;
             break;
         case 'S':
             dest = &tm->tm_sec;
@@ -124,7 +130,8 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
             goto numeric_range;
         case 'T':
             s = strptime(s, "%H:%M:%S", tm);
-            if (!s) return 0;
+            if (!s)
+                return 0;
             break;
         case 'U':
         case 'W':
@@ -140,11 +147,13 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
             goto numeric_range;
         case 'x':
             s = strptime(s, nl_langinfo(D_FMT), tm);
-            if (!s) return 0;
+            if (!s)
+                return 0;
             break;
         case 'X':
             s = strptime(s, nl_langinfo(T_FMT), tm);
-            if (!s) return 0;
+            if (!s)
+                return 0;
             break;
         case 'y':
             dest = &tm->tm_year;
@@ -153,21 +162,25 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
             goto numeric_digits;
         case 'Y':
             dest = &tm->tm_year;
-            if (w < 0) w = 4;
+            if (w < 0)
+                w = 4;
             adj = 1900;
             want_century = 0;
             goto numeric_digits;
         case '%':
-            if (*s++ != '%') return 0;
+            if (*s++ != '%')
+                return 0;
             break;
         default:
             return 0;
         numeric_range:
-            if (!isdigit(*s)) return 0;
+            if (!isdigit(*s))
+                return 0;
             *dest = 0;
             for (i = 1; i <= min + range && isdigit(*s); i *= 10)
                 *dest = *dest * 10 + *s++ - '0';
-            if (*dest - min >= (unsigned)range) return 0;
+            if (*dest - min >= (unsigned)range)
+                return 0;
             *dest -= adj;
             switch ((char*)dest - (char*)tm) { case offsetof(struct tm, tm_yday):; }
             goto update;
@@ -177,22 +190,26 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
                 s++;
             else if (*s == '-')
                 neg = 1, s++;
-            if (!isdigit(*s)) return 0;
+            if (!isdigit(*s))
+                return 0;
             for (*dest = i = 0; i < w && isdigit(*s); i++)
                 *dest = *dest * 10 + *s++ - '0';
-            if (neg) *dest = -*dest;
+            if (neg)
+                *dest = -*dest;
             *dest -= adj;
             goto update;
         symbolic_range:
             for (i = 2 * range - 1; i >= 0; i--) {
                 ex = nl_langinfo(min + i);
                 len = strlen(ex);
-                if (strncasecmp(s, ex, len)) continue;
+                if (strncasecmp(s, ex, len))
+                    continue;
                 s += len;
                 *dest = i % range;
                 break;
             }
-            if (i < 0) return 0;
+            if (i < 0)
+                return 0;
             goto update;
         update:
             // FIXME

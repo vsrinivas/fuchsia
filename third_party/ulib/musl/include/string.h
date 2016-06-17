@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 #define __NEED_size_t
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 #define __NEED_locale_t
 #endif
@@ -56,7 +56,7 @@ char* strerror(int);
 #include <strings.h>
 #endif
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 char* strtok_r(char* __restrict, const char* __restrict, char** __restrict);
 int strerror_r(int, char*, size_t);

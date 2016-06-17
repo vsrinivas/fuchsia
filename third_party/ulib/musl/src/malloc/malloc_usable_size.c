@@ -1,5 +1,5 @@
-#include <malloc.h>
 #include "malloc_impl.h"
+#include <malloc.h>
 
 void* (*const __realloc_dep)(void*, size_t) = realloc;
 

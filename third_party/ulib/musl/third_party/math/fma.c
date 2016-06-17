@@ -34,9 +34,11 @@ return an adjusted hi so that rounding it to double (or less) precision is corre
 static long double adjust(long double hi, long double lo) {
     union ldshape uhi, ulo;
 
-    if (lo == 0) return hi;
+    if (lo == 0)
+        return hi;
     uhi.f = hi;
-    if (uhi.i.m & 0x3ff) return hi;
+    if (uhi.i.m & 0x3ff)
+        return hi;
     ulo.f = lo;
     if ((uhi.i.se & 0x8000) == (ulo.i.se & 0x8000))
         uhi.i.m++;
@@ -75,13 +77,17 @@ double fma(double x, double y, double z) {
     int round, ez, exy;
 
     /* handle +-inf,nan */
-    if (!isfinite(x) || !isfinite(y)) return x * y + z;
-    if (!isfinite(z)) return z;
+    if (!isfinite(x) || !isfinite(y))
+        return x * y + z;
+    if (!isfinite(z))
+        return z;
     /* handle +-0 */
-    if (x == 0.0 || y == 0.0) return x * y + z;
+    if (x == 0.0 || y == 0.0)
+        return x * y + z;
     round = fegetround();
     if (z == 0.0) {
-        if (round == FE_TONEAREST) return dmul(x, y);
+        if (round == FE_TONEAREST)
+            return dmul(x, y);
         return x * y;
     }
 
@@ -319,7 +325,7 @@ static inline struct dd dd_mul(double a, double b) {
  * since this implementation will likely be several times slower.
  */
 double fma(double x, double y, double z) {
-PRAGMA_STDC_FENV_ACCESS_ON
+    PRAGMA_STDC_FENV_ACCESS_ON
     double xs, ys, zs, adj;
     struct dd xy, r;
     int oround;
@@ -331,10 +337,14 @@ PRAGMA_STDC_FENV_ACCESS_ON
      * return values here are crucial in handling special cases involving
      * infinities, NaNs, overflows, and signed zeroes correctly.
      */
-    if (!isfinite(x) || !isfinite(y)) return (x * y + z);
-    if (!isfinite(z)) return (z);
-    if (x == 0.0 || y == 0.0) return (x * y + z);
-    if (z == 0.0) return (x * y);
+    if (!isfinite(x) || !isfinite(y))
+        return (x * y + z);
+    if (!isfinite(z))
+        return (z);
+    if (x == 0.0 || y == 0.0)
+        return (x * y + z);
+    if (z == 0.0)
+        return (x * y);
 
     xs = frexp(x, &ex);
     ys = frexp(y, &ey);
@@ -352,7 +362,8 @@ PRAGMA_STDC_FENV_ACCESS_ON
         feraiseexcept(FE_INEXACT);
 #endif
 #ifdef FE_UNDERFLOW
-        if (!isnormal(z)) feraiseexcept(FE_UNDERFLOW);
+        if (!isnormal(z))
+            feraiseexcept(FE_UNDERFLOW);
 #endif
         switch (oround) {
         default: /* FE_TONEAREST */

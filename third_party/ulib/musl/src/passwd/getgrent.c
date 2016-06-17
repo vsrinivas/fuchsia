@@ -5,7 +5,8 @@ static char *line, **mem;
 static struct group gr;
 
 void setgrent() {
-    if (f) fclose(f);
+    if (f)
+        fclose(f);
     f = 0;
 }
 
@@ -14,8 +15,10 @@ weak_alias(setgrent, endgrent);
 struct group* getgrent() {
     struct group* res;
     size_t size = 0, nmem = 0;
-    if (!f) f = fopen("/etc/group", "rbe");
-    if (!f) return 0;
+    if (!f)
+        f = fopen("/etc/group", "rbe");
+    if (!f)
+        return 0;
     __getgrent_a(f, &gr, &line, &size, &mem, &nmem, &res);
     return res;
 }

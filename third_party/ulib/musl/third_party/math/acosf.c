@@ -36,7 +36,8 @@ float acosf(float x) {
     /* |x| >= 1 or nan */
     if (ix >= 0x3f800000) {
         if (ix == 0x3f800000) {
-            if (hx >> 31) return 2 * pio2_hi + 0x1p-120f;
+            if (hx >> 31)
+                return 2 * pio2_hi + 0x1p-120f;
             return 0;
         }
         return 0 / (x - x);

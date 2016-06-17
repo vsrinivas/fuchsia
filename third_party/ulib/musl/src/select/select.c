@@ -13,7 +13,8 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     syscall_arg_t data[2] = {0, _NSIG / 8};
     struct timespec ts;
     if (tv) {
-        if (tv->tv_sec < 0 || tv->tv_usec < 0) return __syscall_ret(-EINVAL);
+        if (tv->tv_sec < 0 || tv->tv_usec < 0)
+            return __syscall_ret(-EINVAL);
         time_t extra_secs = tv->tv_usec / 1000000;
         ts.tv_nsec = tv->tv_usec % 1000000 * 1000;
         const time_t max_time = (1ULL << 8 * sizeof(time_t) - 1) - 1;

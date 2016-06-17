@@ -81,12 +81,12 @@ enum {
 static const unsigned char states[]['z' - 'A' + 1] = {
     {
         /* 0: bare types */
-        S('d') = INT,   S('i') = INT,   S('o') = UINT, S('u') = UINT,    S('x') = UINT,
-        S('X') = UINT,  S('e') = DBL,   S('f') = DBL,  S('g') = DBL,     S('a') = DBL,
-        S('E') = DBL,   S('F') = DBL,   S('G') = DBL,  S('A') = DBL,     S('c') = CHAR,
-        S('C') = INT,   S('s') = PTR,   S('S') = PTR,  S('p') = UIPTR,   S('n') = PTR,
-        S('m') = NOARG, S('l') = LPRE,  S('h') = HPRE, S('L') = BIGLPRE, S('z') = ZTPRE,
-        S('j') = JPRE,  S('t') = ZTPRE,
+        S('d') = INT, S('i') = INT, S('o') = UINT, S('u') = UINT, S('x') = UINT,
+        S('X') = UINT, S('e') = DBL, S('f') = DBL, S('g') = DBL, S('a') = DBL,
+        S('E') = DBL, S('F') = DBL, S('G') = DBL, S('A') = DBL, S('c') = CHAR,
+        S('C') = INT, S('s') = PTR, S('S') = PTR, S('p') = UIPTR, S('n') = PTR,
+        S('m') = NOARG, S('l') = LPRE, S('h') = HPRE, S('L') = BIGLPRE, S('z') = ZTPRE,
+        S('j') = JPRE, S('t') = ZTPRE,
     },
     {
         /* 1: l-prefixed */
@@ -134,7 +134,8 @@ union arg {
 
 static void pop_arg(union arg* arg, int type, va_list* ap) {
     /* Give the compiler a hint for optimizing the switch. */
-    if ((unsigned)type > MAXSTATE) return;
+    if ((unsigned)type > MAXSTATE)
+        return;
     switch (type) {
     case PTR:
         arg->p = va_arg(*ap, void*);
@@ -231,12 +232,14 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
         /* Update output count, end loop when fmt is exhausted */
         if (cnt >= 0) {
             if (l > INT_MAX - cnt) {
-                if (!ferror(f)) errno = EOVERFLOW;
+                if (!ferror(f))
+                    errno = EOVERFLOW;
                 cnt = -1;
             } else
                 cnt += l;
         }
-        if (!*s) break;
+        if (!*s)
+            break;
 
         /* Handle literal text and %% format specifiers */
         for (a = s; *s && *s != '%'; s++)
@@ -245,8 +248,10 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
         z = s + litpct;
         s += 2 * litpct;
         l = z - a;
-        if (f) out(f, a, l);
-        if (l) continue;
+        if (f)
+            out(f, a, l);
+        if (l)
+            continue;
 
         if (iswdigit(s[1]) && s[2] == '$') {
             l10n = 1;
@@ -273,7 +278,8 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
                 s++;
             } else
                 return -1;
-            if (w < 0) fl |= LEFT_ADJ, w = -w;
+            if (w < 0)
+                fl |= LEFT_ADJ, w = -w;
         } else if ((w = getint(&s)) < 0)
             return -1;
 
@@ -297,15 +303,18 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
         /* Format specifier state machine */
         st = 0;
         do {
-            if (OOB(*s)) return -1;
+            if (OOB(*s))
+                return -1;
             ps = st;
             st = states[st] S(*s++);
         } while (st - 1 < STOP);
-        if (!st) return -1;
+        if (!st)
+            return -1;
 
         /* Check validity of argument type (nl/normal) */
         if (st == NOARG) {
-            if (argpos >= 0) return -1;
+            if (argpos >= 0)
+                return -1;
         } else {
             if (argpos >= 0)
                 nl_type[argpos] = st, arg = nl_arg[argpos];
@@ -315,9 +324,11 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
                 return 0;
         }
 
-        if (!f) continue;
+        if (!f)
+            continue;
         t = s[-1];
-        if (ps && (t & 15) == 3) t &= ~32;
+        if (ps && (t & 15) == 3)
+            t &= ~32;
 
         switch (t) {
         case 'n':
@@ -356,32 +367,42 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
         case 'S':
             a = arg.p;
             z = wmemchr(a, 0, p);
-            if (z) p = z - a;
-            if (w < p) w = p;
-            if (!(fl & LEFT_ADJ)) fprintf(f, "%*s", w - p, "");
+            if (z)
+                p = z - a;
+            if (w < p)
+                w = p;
+            if (!(fl & LEFT_ADJ))
+                fprintf(f, "%*s", w - p, "");
             out(f, a, p);
-            if ((fl & LEFT_ADJ)) fprintf(f, "%*s", w - p, "");
+            if ((fl & LEFT_ADJ))
+                fprintf(f, "%*s", w - p, "");
             l = w;
             continue;
         case 'm':
             arg.p = strerror(errno);
         case 's':
-            if (!arg.p) arg.p = "(null)";
+            if (!arg.p)
+                arg.p = "(null)";
             bs = arg.p;
-            if (p < 0) p = INT_MAX;
+            if (p < 0)
+                p = INT_MAX;
             for (i = l = 0; l < p && (i = mbtowc(&wc, bs, MB_LEN_MAX)) > 0; bs += i, l++)
                 ;
-            if (i < 0) return -1;
+            if (i < 0)
+                return -1;
             p = l;
-            if (w < p) w = p;
-            if (!(fl & LEFT_ADJ)) fprintf(f, "%*s", w - p, "");
+            if (w < p)
+                w = p;
+            if (!(fl & LEFT_ADJ))
+                fprintf(f, "%*s", w - p, "");
             bs = arg.p;
             while (l--) {
                 i = mbtowc(&wc, bs, MB_LEN_MAX);
                 bs += i;
                 fputwc(wc, f);
             }
-            if ((fl & LEFT_ADJ)) fprintf(f, "%*s", w - p, "");
+            if ((fl & LEFT_ADJ))
+                fprintf(f, "%*s", w - p, "");
             l = w;
             continue;
         }
@@ -408,14 +429,17 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
         }
     }
 
-    if (f) return cnt;
-    if (!l10n) return 0;
+    if (f)
+        return cnt;
+    if (!l10n)
+        return 0;
 
     for (i = 1; i <= NL_ARGMAX && nl_type[i]; i++)
         pop_arg(nl_arg + i, nl_type[i], ap);
     for (; i <= NL_ARGMAX && !nl_type[i]; i++)
         ;
-    if (i <= NL_ARGMAX) return -1;
+    if (i <= NL_ARGMAX)
+        return -1;
     return 1;
 }
 
@@ -438,7 +462,8 @@ int vfwprintf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
     olderr = f->flags & F_ERR;
     f->flags &= ~F_ERR;
     ret = wprintf_core(f, fmt, &ap2, nl_arg, nl_type);
-    if (f->flags & F_ERR) ret = -1;
+    if (f->flags & F_ERR)
+        ret = -1;
     f->flags |= olderr;
     FUNLOCK(f);
     va_end(ap2);

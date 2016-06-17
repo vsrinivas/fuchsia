@@ -11,7 +11,8 @@ long double cosl(long double x) {
     long double y[2], hi, lo;
 
     u.i.se &= 0x7fff;
-    if (u.i.se == 0x7fff) return x - x;
+    if (u.i.se == 0x7fff)
+        return x - x;
     x = u.f;
     if (x < M_PI_4) {
         if (u.i.se < 0x3fff - LDBL_MANT_DIG) /* raise inexact if x!=0 */

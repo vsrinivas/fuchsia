@@ -36,10 +36,10 @@ static const long double atanlo[] = {
 };
 
 static const long double aT[] = {
-    3.33333333333333333017e-01L,  -1.99999999999999632011e-01L, 1.42857142857046531280e-01L,
-    -1.11111111100562372733e-01L, 9.09090902935647302252e-02L,  -7.69230552476207730353e-02L,
-    6.66661718042406260546e-02L,  -5.88158892835030888692e-02L, 5.25499891539726639379e-02L,
-    -4.70119845393155721494e-02L, 4.03539201366454414072e-02L,  -2.91303858419364158725e-02L,
+    3.33333333333333333017e-01L, -1.99999999999999632011e-01L, 1.42857142857046531280e-01L,
+    -1.11111111100562372733e-01L, 9.09090902935647302252e-02L, -7.69230552476207730353e-02L,
+    6.66661718042406260546e-02L, -5.88158892835030888692e-02L, 5.25499891539726639379e-02L,
+    -4.70119845393155721494e-02L, 4.03539201366454414072e-02L, -2.91303858419364158725e-02L,
     1.24822046299269234080e-02L,
 };
 
@@ -117,7 +117,8 @@ long double atanl(long double x) {
     unsigned expman;
 
     if (e >= 0x3fff + LDBL_MANT_DIG + 1) { /* if |x| is large, atan(x)~=pi/2 */
-        if (isnan(x)) return x;
+        if (isnan(x))
+            return x;
         return sign ? -atanhi[3] : atanhi[3];
     }
     /* Extract the exponent and the first few bits of the mantissa. */
@@ -125,7 +126,8 @@ long double atanl(long double x) {
     if (expman < ((0x3fff - 2) << 8) + 0xc0) {      /* |x| < 0.4375 */
         if (e < 0x3fff - (LDBL_MANT_DIG + 1) / 2) { /* if |x| is small, atanl(x)~=x */
             /* raise underflow if subnormal */
-            if (e == 0) FORCE_EVAL((float)x);
+            if (e == 0)
+                FORCE_EVAL((float)x);
             return x;
         }
         id = -1;
@@ -155,7 +157,8 @@ long double atanl(long double x) {
     /* break sum aT[i]z**(i+1) into odd and even poly */
     s1 = z * T_even(w);
     s2 = w * T_odd(w);
-    if (id < 0) return x - x * (s1 + s2);
+    if (id < 0)
+        return x - x * (s1 + s2);
     z = atanhi[id] - ((x * (s1 + s2) - atanlo[id]) - x);
     return sign ? -z : z;
 }

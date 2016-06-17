@@ -26,19 +26,24 @@ size_t __wcsftime_l(wchar_t* restrict s, size_t n, const wchar_t* restrict f,
             continue;
         }
         f++;
-        if ((plus = (*f == '+'))) f++;
+        if ((plus = (*f == '+')))
+            f++;
         width = wcstoul(f, &p, 10);
         if (*p == 'C' || *p == 'F' || *p == 'G' || *p == 'Y') {
-            if (!width && p != f) width = 1;
+            if (!width && p != f)
+                width = 1;
         } else {
             width = 0;
         }
         f = p;
-        if (*f == 'E' || *f == 'O') f++;
+        if (*f == 'E' || *f == 'O')
+            f++;
         t_mb = __strftime_fmt_1(&buf, &k, *f, tm, loc);
-        if (!t_mb) break;
+        if (!t_mb)
+            break;
         k = mbstowcs(wbuf, t_mb, sizeof wbuf / sizeof *wbuf);
-        if (k == (size_t)-1) return 0;
+        if (k == (size_t)-1)
+            return 0;
         t = wbuf;
         if (width) {
             for (; *t == '+' || *t == '-' || (*t == '0' && t[1]); t++, k--)
@@ -53,12 +58,14 @@ size_t __wcsftime_l(wchar_t* restrict s, size_t n, const wchar_t* restrict f,
             for (; width > k && l < n; width--)
                 s[l++] = '0';
         }
-        if (k >= n - l) k = n - l;
+        if (k >= n - l)
+            k = n - l;
         wmemcpy(s + l, t, k);
         l += k;
     }
     if (n) {
-        if (l == n) l = n - 1;
+        if (l == n)
+            l = n - 1;
         s[l] = 0;
     }
     return 0;

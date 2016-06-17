@@ -17,7 +17,8 @@ int __secs_to_tm(long long t, struct tm* tm) {
     static const char days_in_month[] = {31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 29};
 
     /* Reject time_t values whose year would overflow int */
-    if (t < INT_MIN * 31622400LL || t > INT_MAX * 31622400LL) return -1;
+    if (t < INT_MIN * 31622400LL || t > INT_MAX * 31622400LL)
+        return -1;
 
     secs = t - LEAPOCH;
     days = secs / 86400;
@@ -28,7 +29,8 @@ int __secs_to_tm(long long t, struct tm* tm) {
     }
 
     wday = (3 + days) % 7;
-    if (wday < 0) wday += 7;
+    if (wday < 0)
+        wday += 7;
 
     qc_cycles = days / DAYS_PER_400Y;
     remdays = days % DAYS_PER_400Y;
@@ -38,27 +40,32 @@ int __secs_to_tm(long long t, struct tm* tm) {
     }
 
     c_cycles = remdays / DAYS_PER_100Y;
-    if (c_cycles == 4) c_cycles--;
+    if (c_cycles == 4)
+        c_cycles--;
     remdays -= c_cycles * DAYS_PER_100Y;
 
     q_cycles = remdays / DAYS_PER_4Y;
-    if (q_cycles == 25) q_cycles--;
+    if (q_cycles == 25)
+        q_cycles--;
     remdays -= q_cycles * DAYS_PER_4Y;
 
     remyears = remdays / 365;
-    if (remyears == 4) remyears--;
+    if (remyears == 4)
+        remyears--;
     remdays -= remyears * 365;
 
     leap = !remyears && (q_cycles || !c_cycles);
     yday = remdays + 31 + 28 + leap;
-    if (yday >= 365 + leap) yday -= 365 + leap;
+    if (yday >= 365 + leap)
+        yday -= 365 + leap;
 
     years = remyears + 4 * q_cycles + 100 * c_cycles + 400LL * qc_cycles;
 
     for (months = 0; days_in_month[months] <= remdays; months++)
         remdays -= days_in_month[months];
 
-    if (years + 100 > INT_MAX || years + 100 < INT_MIN) return -1;
+    if (years + 100 > INT_MAX || years + 100 < INT_MIN)
+        return -1;
 
     tm->tm_year = years + 100;
     tm->tm_mon = months + 2;

@@ -53,7 +53,8 @@ double complex ccosh(double complex z) {
 
     /* Handle the nearly-non-exceptional cases where x and y are finite. */
     if (ix < 0x7ff00000 && iy < 0x7ff00000) {
-        if ((iy | ly) == 0) return CMPLX(cosh(x), x * y);
+        if ((iy | ly) == 0)
+            return CMPLX(cosh(x), x * y);
         if (ix < 0x40360000) /* small x: normal case */
             return CMPLX(cosh(x) * cos(y), sinh(x) * sin(y));
 
@@ -82,7 +83,8 @@ double complex ccosh(double complex z) {
      * The sign of 0 in the result is unspecified.  Choice = normally
      * the same as d(NaN).
      */
-    if ((ix | lx) == 0 && iy >= 0x7ff00000) return CMPLX(y - y, copysign(0, x * (y - y)));
+    if ((ix | lx) == 0 && iy >= 0x7ff00000)
+        return CMPLX(y - y, copysign(0, x * (y - y)));
 
     /*
      * cosh(+-Inf +- I 0) = +Inf + I (+-)(+-)0.
@@ -91,7 +93,8 @@ double complex ccosh(double complex z) {
      * The sign of 0 in the result is unspecified.
      */
     if ((iy | ly) == 0 && ix >= 0x7ff00000) {
-        if (((hx & 0xfffff) | lx) == 0) return CMPLX(x * x, copysign(0, x) * y);
+        if (((hx & 0xfffff) | lx) == 0)
+            return CMPLX(x * x, copysign(0, x) * y);
         return CMPLX(x * x, copysign(0, (x + x) * y));
     }
 
@@ -103,7 +106,8 @@ double complex ccosh(double complex z) {
      * Optionally raises the invalid floating-point exception for finite
      * nonzero x.  Choice = don't raise (except for signaling NaNs).
      */
-    if (ix < 0x7ff00000 && iy >= 0x7ff00000) return CMPLX(y - y, x * (y - y));
+    if (ix < 0x7ff00000 && iy >= 0x7ff00000)
+        return CMPLX(y - y, x * (y - y));
 
     /*
      * cosh(+-Inf + I NaN)  = +Inf + I d(NaN).
@@ -115,7 +119,8 @@ double complex ccosh(double complex z) {
      * cosh(+-Inf + I y)   = +Inf cos(y) +- I Inf sin(y)
      */
     if (ix >= 0x7ff00000 && ((hx & 0xfffff) | lx) == 0) {
-        if (iy >= 0x7ff00000) return CMPLX(x * x, x * (y - y));
+        if (iy >= 0x7ff00000)
+            return CMPLX(x * x, x * (y - y));
         return CMPLX((x * x) * cos(y), x * sin(y));
     }
 

@@ -42,8 +42,8 @@ void if_freenameindex(struct if_nameindex*);
 #define IFF_LOWER_UP 0x10000
 #define IFF_DORMANT 0x20000
 #define IFF_ECHO 0x40000
-#define IFF_VOLATILE                                                                               \
-    (IFF_LOOPBACK | IFF_POINTOPOINT | IFF_BROADCAST | IFF_ECHO | IFF_MASTER | IFF_SLAVE |          \
+#define IFF_VOLATILE                                                                      \
+    (IFF_LOOPBACK | IFF_POINTOPOINT | IFF_BROADCAST | IFF_ECHO | IFF_MASTER | IFF_SLAVE | \
      IFF_RUNNING | IFF_LOWER_UP | IFF_DORMANT)
 
 struct ifaddr {

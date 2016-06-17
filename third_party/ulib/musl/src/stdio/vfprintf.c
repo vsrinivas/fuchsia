@@ -88,12 +88,12 @@ enum {
 static const unsigned char states[]['z' - 'A' + 1] = {
     {
         /* 0: bare types */
-        S('d') = INT,   S('i') = INT,   S('o') = UINT, S('u') = UINT,    S('x') = UINT,
-        S('X') = UINT,  S('e') = DBL,   S('f') = DBL,  S('g') = DBL,     S('a') = DBL,
-        S('E') = DBL,   S('F') = DBL,   S('G') = DBL,  S('A') = DBL,     S('c') = CHAR,
-        S('C') = INT,   S('s') = PTR,   S('S') = PTR,  S('p') = UIPTR,   S('n') = PTR,
-        S('m') = NOARG, S('l') = LPRE,  S('h') = HPRE, S('L') = BIGLPRE, S('z') = ZTPRE,
-        S('j') = JPRE,  S('t') = ZTPRE,
+        S('d') = INT, S('i') = INT, S('o') = UINT, S('u') = UINT, S('x') = UINT,
+        S('X') = UINT, S('e') = DBL, S('f') = DBL, S('g') = DBL, S('a') = DBL,
+        S('E') = DBL, S('F') = DBL, S('G') = DBL, S('A') = DBL, S('c') = CHAR,
+        S('C') = INT, S('s') = PTR, S('S') = PTR, S('p') = UIPTR, S('n') = PTR,
+        S('m') = NOARG, S('l') = LPRE, S('h') = HPRE, S('L') = BIGLPRE, S('z') = ZTPRE,
+        S('j') = JPRE, S('t') = ZTPRE,
     },
     {
         /* 1: l-prefixed */
@@ -143,7 +143,8 @@ union arg {
 
 static void pop_arg(union arg* arg, int type, va_list* ap) {
     /* Give the compiler a hint for optimizing the switch. */
-    if ((unsigned)type > MAXSTATE) return;
+    if ((unsigned)type > MAXSTATE)
+        return;
     switch (type) {
     case PTR:
         arg->p = va_arg(*ap, void*);
@@ -206,12 +207,14 @@ static void pop_arg(union arg* arg, int type, va_list* ap) {
 }
 
 static void out(FILE* f, const char* s, size_t l) {
-    if (!(f->flags & F_ERR)) __fwritex((void*)s, l, f);
+    if (!(f->flags & F_ERR))
+        __fwritex((void*)s, l, f);
 }
 
 static void pad(FILE* f, char c, int w, int l, int fl) {
     char pad[256];
-    if (fl & (LEFT_ADJ | ZERO_PAD) || l >= w) return;
+    if (fl & (LEFT_ADJ | ZERO_PAD) || l >= w)
+        return;
     l = w - l;
     memset(pad, c, l > sizeof pad ? sizeof pad : l);
     for (; l >= sizeof pad; l -= sizeof pad)
@@ -271,7 +274,8 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
 
     if (!isfinite(y)) {
         char* s = (t & 32) ? "inf" : "INF";
-        if (y != y) s = (t & 32) ? "nan" : "NAN";
+        if (y != y)
+            s = (t & 32) ? "nan" : "NAN";
         pad(f, ' ', w, 3 + pl, fl & ~ZERO_PAD);
         out(f, prefix, pl);
         out(f, s, 3);
@@ -280,13 +284,15 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
     }
 
     y = frexpl(y, &e2) * 2;
-    if (y) e2--;
+    if (y)
+        e2--;
 
     if ((t | 32) == 'a') {
         long double round = 8.0;
         int re;
 
-        if (t & 32) prefix += 9;
+        if (t & 32)
+            prefix += 9;
         pl += 2;
 
         if (p < 0 || p >= LDBL_MANT_DIG / 4 - 1)
@@ -309,7 +315,8 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
         }
 
         estr = fmt_u(e2 < 0 ? -e2 : e2, ebuf);
-        if (estr == ebuf) *--estr = '0';
+        if (estr == ebuf)
+            *--estr = '0';
         *--estr = (e2 < 0 ? '-' : '+');
         *--estr = t + ('p' - 'a');
 
@@ -318,7 +325,8 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
             int x = y;
             *s++ = xdigits[x] | (t & 32);
             y = 16 * (y - x);
-            if (s - buf == 1 && (y || p > 0 || (fl & ALT_FORM))) *s++ = '.';
+            if (s - buf == 1 && (y || p > 0 || (fl & ALT_FORM)))
+                *s++ = '.';
         } while (y);
 
         if (p && s - buf - 2 < p)
@@ -335,9 +343,11 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
         pad(f, ' ', w, pl + l, fl ^ LEFT_ADJ);
         return MAX(w, pl + l);
     }
-    if (p < 0) p = 6;
+    if (p < 0)
+        p = 6;
 
-    if (y) y *= 0x1p28, e2 -= 28;
+    if (y)
+        y *= 0x1p28, e2 -= 28;
 
     if (e2 < 0)
         a = r = z = big;
@@ -357,7 +367,8 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
             *d = x % 1000000000;
             carry = x / 1000000000;
         }
-        if (carry) *--a = carry;
+        if (carry)
+            *--a = carry;
         while (z > a && !z[-1])
             z--;
         e2 -= sh;
@@ -370,11 +381,14 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
             *d = (*d >> sh) + carry;
             carry = (1000000000 >> sh) * rm;
         }
-        if (!*a) a++;
-        if (carry) *z++ = carry;
+        if (!*a)
+            a++;
+        if (carry)
+            *z++ = carry;
         /* Avoid (slow!) computation past requested precision */
         b = (t | 32) == 'f' ? r : a;
-        if (z - b > need) z = b + need;
+        if (z - b > need)
+            z = b + need;
         e2 += sh;
     }
 
@@ -399,34 +413,39 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
         if (x || d + 1 != z) {
             long double round = 2 / LDBL_EPSILON;
             long double small;
-            if (*d / i & 1) round += 2;
+            if (*d / i & 1)
+                round += 2;
             if (x < i / 2)
                 small = 0x0.8p0;
             else if (x == i / 2 && d + 1 == z)
                 small = 0x1.0p0;
             else
                 small = 0x1.8p0;
-            if (pl && *prefix == '-') round *= -1, small *= -1;
+            if (pl && *prefix == '-')
+                round *= -1, small *= -1;
             *d -= x;
             /* Decide whether to round by probing round+small */
             if (round + small != round) {
                 *d = *d + i;
                 while (*d > 999999999) {
                     *d-- = 0;
-                    if (d < a) *--a = 0;
+                    if (d < a)
+                        *--a = 0;
                     (*d)++;
                 }
                 for (i = 10, e = 9 * (r - a); *a >= i; i *= 10, e++)
                     ;
             }
         }
-        if (z > d + 1) z = d + 1;
+        if (z > d + 1)
+            z = d + 1;
     }
     for (; z > a && !z[-1]; z--)
         ;
 
     if ((t | 32) == 'g') {
-        if (!p) p++;
+        if (!p)
+            p++;
         if (p > e && e >= -4) {
             t--;
             p -= e + 1;
@@ -449,7 +468,8 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
     }
     l = 1 + p + (p || (fl & ALT_FORM));
     if ((t | 32) == 'f') {
-        if (e > 0) l += e;
+        if (e > 0)
+            l += e;
     } else {
         estr = fmt_u(e < 0 ? -e : e, ebuf);
         while (ebuf - estr < 2)
@@ -464,7 +484,8 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
     pad(f, '0', w, pl + l, fl ^ ZERO_PAD);
 
     if ((t | 32) == 'f') {
-        if (a > r) a = r;
+        if (a > r)
+            a = r;
         for (d = a; d <= r; d++) {
             char* s = fmt_u(*d, buf + 9);
             if (d != a)
@@ -474,7 +495,8 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
                 *--s = '0';
             out(f, s, buf + 9 - s);
         }
-        if (p || (fl & ALT_FORM)) out(f, ".", 1);
+        if (p || (fl & ALT_FORM))
+            out(f, ".", 1);
         for (; d < z && p > 0; d++, p -= 9) {
             char* s = fmt_u(*d, buf + 9);
             while (s > buf)
@@ -483,16 +505,19 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
         }
         pad(f, '0', p + 9, 9, 0);
     } else {
-        if (z <= a) z = a + 1;
+        if (z <= a)
+            z = a + 1;
         for (d = a; d < z && p >= 0; d++) {
             char* s = fmt_u(*d, buf + 9);
-            if (s == buf + 9) *--s = '0';
+            if (s == buf + 9)
+                *--s = '0';
             if (d != a)
                 while (s > buf)
                     *--s = '0';
             else {
                 out(f, s++, 1);
-                if (p > 0 || (fl & ALT_FORM)) out(f, ".", 1);
+                if (p > 0 || (fl & ALT_FORM))
+                    out(f, ".", 1);
             }
             out(f, s, MIN(buf + 9 - s, p));
             p -= buf + 9 - s;
@@ -539,7 +564,8 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
             } else
                 cnt += l;
         }
-        if (!*s) break;
+        if (!*s)
+            break;
 
         /* Handle literal text and %% format specifiers */
         for (a = s; *s && *s != '%'; s++)
@@ -547,8 +573,10 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
         for (z = s; s[0] == '%' && s[1] == '%'; z++, s += 2)
             ;
         l = z - a;
-        if (f) out(f, a, l);
-        if (l) continue;
+        if (f)
+            out(f, a, l);
+        if (l)
+            continue;
 
         if (isdigit(s[1]) && s[2] == '$') {
             l10n = 1;
@@ -575,7 +603,8 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
                 s++;
             } else
                 return -1;
-            if (w < 0) fl |= LEFT_ADJ, w = -w;
+            if (w < 0)
+                fl |= LEFT_ADJ, w = -w;
         } else if ((w = getint(&s)) < 0)
             return -1;
 
@@ -599,15 +628,18 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
         /* Format specifier state machine */
         st = 0;
         do {
-            if (OOB(*s)) return -1;
+            if (OOB(*s))
+                return -1;
             ps = st;
             st = states[st] S(*s++);
         } while (st - 1 < STOP);
-        if (!st) return -1;
+        if (!st)
+            return -1;
 
         /* Check validity of argument type (nl/normal) */
         if (st == NOARG) {
-            if (argpos >= 0) return -1;
+            if (argpos >= 0)
+                return -1;
         } else {
             if (argpos >= 0)
                 nl_type[argpos] = st, arg = nl_arg[argpos];
@@ -617,7 +649,8 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
                 return 0;
         }
 
-        if (!f) continue;
+        if (!f)
+            continue;
 
         z = buf + sizeof(buf);
         prefix = "-+   0X0x";
@@ -625,10 +658,12 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
         t = s[-1];
 
         /* Transform ls,lc -> S,C */
-        if (ps && (t & 15) == 3) t &= ~32;
+        if (ps && (t & 15) == 3)
+            t &= ~32;
 
         /* - and 0 flags are mutually exclusive */
-        if (fl & LEFT_ADJ) fl &= ~ZERO_PAD;
+        if (fl & LEFT_ADJ)
+            fl &= ~ZERO_PAD;
 
         switch (t) {
         case 'n':
@@ -663,11 +698,13 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
         case 'x':
         case 'X':
             a = fmt_x(arg.i, z, t & 32);
-            if (arg.i && (fl & ALT_FORM)) prefix += (t >> 4), pl = 2;
+            if (arg.i && (fl & ALT_FORM))
+                prefix += (t >> 4), pl = 2;
             if (0) {
             case 'o':
                 a = fmt_o(arg.i, z);
-                if ((fl & ALT_FORM) && p < z - a + 1) p = z - a + 1;
+                if ((fl & ALT_FORM) && p < z - a + 1)
+                    p = z - a + 1;
             }
             if (0) {
             case 'd':
@@ -684,7 +721,8 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
             case 'u':
                 a = fmt_u(arg.i, z);
             }
-            if (p >= 0) fl &= ~ZERO_PAD;
+            if (p >= 0)
+                fl &= ~ZERO_PAD;
             if (!arg.i && !p) {
                 a = z;
                 break;
@@ -740,8 +778,10 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
             continue;
         }
 
-        if (p < z - a) p = z - a;
-        if (w < pl + p) w = pl + p;
+        if (p < z - a)
+            p = z - a;
+        if (w < pl + p)
+            w = pl + p;
 
         pad(f, ' ', w, pl + p, fl);
         out(f, prefix, pl);
@@ -753,14 +793,17 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
         l = w;
     }
 
-    if (f) return cnt;
-    if (!l10n) return 0;
+    if (f)
+        return cnt;
+    if (!l10n)
+        return 0;
 
     for (i = 1; i <= NL_ARGMAX && nl_type[i]; i++)
         pop_arg(nl_arg + i, nl_type[i], ap);
     for (; i <= NL_ARGMAX && !nl_type[i]; i++)
         ;
-    if (i <= NL_ARGMAX) return -1;
+    if (i <= NL_ARGMAX)
+        return -1;
     return 1;
 }
 
@@ -781,7 +824,8 @@ int vfprintf(FILE* restrict f, const char* restrict fmt, va_list ap) {
 
     FLOCK(f);
     olderr = f->flags & F_ERR;
-    if (f->mode < 1) f->flags &= ~F_ERR;
+    if (f->mode < 1)
+        f->flags &= ~F_ERR;
     if (!f->buf_size) {
         saved_buf = f->buf;
         f->wpos = f->wbase = f->buf = internal_buf;
@@ -791,12 +835,14 @@ int vfprintf(FILE* restrict f, const char* restrict fmt, va_list ap) {
     ret = printf_core(f, fmt, &ap2, nl_arg, nl_type);
     if (saved_buf) {
         f->write(f, 0, 0);
-        if (!f->wpos) ret = -1;
+        if (!f->wpos)
+            ret = -1;
         f->buf = saved_buf;
         f->buf_size = 0;
         f->wpos = f->wbase = f->wend = 0;
     }
-    if (f->flags & F_ERR) ret = -1;
+    if (f->flags & F_ERR)
+        ret = -1;
     f->flags |= olderr;
     FUNLOCK(f);
     va_end(ap2);

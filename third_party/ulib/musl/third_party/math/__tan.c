@@ -98,7 +98,8 @@ double __tan(double x, double y, int odd) {
         v = s - 2.0 * (x + (r - w * w / (w + s)));
         return sign ? -v : v;
     }
-    if (!odd) return w;
+    if (!odd)
+        return w;
     /* -1.0/(x+r) has up to 2ulp error, so compute it accurately */
     w0 = w;
     SET_LOW_WORD(w0, 0);

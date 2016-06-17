@@ -11,7 +11,8 @@ int dup2(int old, int new) {
 #else
     if (old == new) {
         r = __syscall(SYS_fcntl, old, F_GETFD);
-        if (r >= 0) return old;
+        if (r >= 0)
+            return old;
     } else {
         while ((r = __syscall(SYS_dup3, old, new, 0)) == -EBUSY)
             ;

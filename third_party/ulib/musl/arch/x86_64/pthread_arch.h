@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <magenta/tlsroot.h>
+#include <stdio.h>
 
 #define TP_ADJ(p) (p)
 

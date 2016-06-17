@@ -72,7 +72,8 @@ static void copy_addr(struct sockaddr** r, int af, union sockany* sa, void* addr
     default:
         return;
     }
-    if (addrlen < len) return;
+    if (addrlen < len)
+        return;
     sa->sa.sa_family = af;
     memcpy(dst, addr, len);
     *r = &sa->sa;
@@ -82,16 +83,19 @@ static void gen_netmask(struct sockaddr** r, int af, union sockany* sa, int pref
     uint8_t addr[16] = {0};
     int i;
 
-    if (prefixlen > 8 * sizeof(addr)) prefixlen = 8 * sizeof(addr);
+    if (prefixlen > 8 * sizeof(addr))
+        prefixlen = 8 * sizeof(addr);
     i = prefixlen / 8;
     memset(addr, 0xff, i);
-    if (i < sizeof(addr)) addr[i++] = 0xff << (8 - (prefixlen % 8));
+    if (i < sizeof(addr))
+        addr[i++] = 0xff << (8 - (prefixlen % 8));
     copy_addr(r, af, sa, addr, sizeof(addr), 0);
 }
 
 static void copy_lladdr(struct sockaddr** r, union sockany* sa, void* addr, size_t addrlen,
                         int ifindex, unsigned short hatype) {
-    if (addrlen > sizeof(sa->ll.sll_addr)) return;
+    if (addrlen > sizeof(sa->ll.sll_addr))
+        return;
     sa->ll.sll_family = AF_PACKET;
     sa->ll.sll_ifindex = ifindex;
     sa->ll.sll_hatype = hatype;
@@ -110,18 +114,22 @@ static int netlink_msg_to_ifaddr(void* pctx, struct nlmsghdr* h) {
 
     if (h->nlmsg_type == RTM_NEWLINK) {
         for (rta = NLMSG_RTA(h, sizeof(*ifi)); NLMSG_RTAOK(rta, h); rta = RTA_NEXT(rta)) {
-            if (rta->rta_type != IFLA_STATS) continue;
+            if (rta->rta_type != IFLA_STATS)
+                continue;
             stats_len = RTA_DATALEN(rta);
             break;
         }
     } else {
         for (ifs0 = ctx->hash[ifa->ifa_index % IFADDRS_HASH_SIZE]; ifs0; ifs0 = ifs0->hash_next)
-            if (ifs0->index == ifa->ifa_index) break;
-        if (!ifs0) return 0;
+            if (ifs0->index == ifa->ifa_index)
+                break;
+        if (!ifs0)
+            return 0;
     }
 
     ifs = calloc(1, sizeof(struct ifaddrs_storage) + stats_len);
-    if (ifs == 0) return -1;
+    if (ifs == 0)
+        return -1;
 
     if (h->nlmsg_type == RTM_NEWLINK) {
         ifs->index = ifi->ifi_index;
@@ -197,8 +205,10 @@ static int netlink_msg_to_ifaddr(void* pctx, struct nlmsghdr* h) {
     }
 
     if (ifs->ifa.ifa_name) {
-        if (!ctx->first) ctx->first = ifs;
-        if (ctx->last) ctx->last->ifa.ifa_next = &ifs->ifa;
+        if (!ctx->first)
+            ctx->first = ifs;
+        if (ctx->last)
+            ctx->last->ifa.ifa_next = &ifs->ifa;
         ctx->last = ifs;
     } else {
         free(ifs);

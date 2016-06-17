@@ -6,7 +6,8 @@ long double complex cprojl(long double complex z) {
 }
 #else
 long double complex cprojl(long double complex z) {
-    if (isinf(creall(z)) || isinf(cimagl(z))) return CMPLXL(INFINITY, copysignl(0.0, creall(z)));
+    if (isinf(creall(z)) || isinf(cimagl(z)))
+        return CMPLXL(INFINITY, copysignl(0.0, creall(z)));
     return z;
 }
 #endif

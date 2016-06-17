@@ -18,7 +18,8 @@ int system(const char* cmd) {
 
     pthread_testcancel();
 
-    if (!cmd) return 1;
+    if (!cmd)
+        return 1;
 
     sigaction(SIGINT, &sa, &oldint);
     sigaction(SIGQUIT, &sa, &oldquit);
@@ -26,8 +27,10 @@ int system(const char* cmd) {
     sigprocmask(SIG_BLOCK, &sa.sa_mask, &old);
 
     sigemptyset(&reset);
-    if (oldint.sa_handler != SIG_IGN) sigaddset(&reset, SIGINT);
-    if (oldquit.sa_handler != SIG_IGN) sigaddset(&reset, SIGQUIT);
+    if (oldint.sa_handler != SIG_IGN)
+        sigaddset(&reset, SIGINT);
+    if (oldquit.sa_handler != SIG_IGN)
+        sigaddset(&reset, SIGQUIT);
     posix_spawnattr_init(&attr);
     posix_spawnattr_setsigmask(&attr, &old);
     posix_spawnattr_setsigdefault(&attr, &reset);
@@ -42,6 +45,7 @@ int system(const char* cmd) {
     sigaction(SIGQUIT, &oldquit, NULL);
     sigprocmask(SIG_SETMASK, &old, NULL);
 
-    if (ret) errno = ret;
+    if (ret)
+        errno = ret;
     return status;
 }

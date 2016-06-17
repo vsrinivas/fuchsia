@@ -9,9 +9,9 @@
 
 #define FFINALLOCK(f) ((f)->lock >= 0 ? __lockfile((f)) : 0)
 #define FLOCK(f) int __need_unlock = ((f)->lock >= 0 ? __lockfile((f)) : 0)
-#define FUNLOCK(f)                                                                                 \
-    if (__need_unlock)                                                                             \
-        __unlockfile((f));                                                                         \
+#define FUNLOCK(f)         \
+    if (__need_unlock)     \
+        __unlockfile((f)); \
     else
 
 #define F_PERM 1
@@ -67,7 +67,9 @@ int __towrite(FILE*);
 #if defined(__PIC__) && (100 * __GNUC__ + __GNUC_MINOR__ >= 303)
 __attribute__((visibility("protected")))
 #endif
-int __overflow(FILE *, int), __uflow(FILE *);
+int
+__overflow(FILE *, int),
+    __uflow(FILE *);
 
 int __fseeko(FILE*, off_t, int);
 int __fseeko_unlocked(FILE*, off_t, int);
@@ -88,8 +90,8 @@ void __ofl_unlock(void);
 
 #define getc_unlocked(f) (((f)->rpos < (f)->rend) ? *(f)->rpos++ : __uflow((f)))
 
-#define putc_unlocked(c, f)                                                                        \
-    (((unsigned char)(c) != (f)->lbf && (f)->wpos < (f)->wend) ? *(f)->wpos++ = (c)                \
+#define putc_unlocked(c, f)                                                         \
+    (((unsigned char)(c) != (f)->lbf && (f)->wpos < (f)->wend) ? *(f)->wpos++ = (c) \
                                                                : __overflow((f), (c)))
 
 /* Caller-allocated FILE * operations */

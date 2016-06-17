@@ -79,7 +79,8 @@ double asin(double x) {
     /* |x| < 0.5 */
     if (ix < 0x3fe00000) {
         /* if 0x1p-1022 <= |x| < 0x1p-26, avoid raising underflow */
-        if (ix < 0x3e500000 && ix >= 0x00100000) return x;
+        if (ix < 0x3e500000 && ix >= 0x00100000)
+            return x;
         return x + x * R(x * x);
     }
     /* 1 > |x| >= 0.5 */
@@ -96,6 +97,7 @@ double asin(double x) {
         c = (z - f * f) / (s + f);
         x = 0.5 * pio2_hi - (2 * s * r - (pio2_lo - 2 * c) - (0.5 * pio2_hi - 2 * f));
     }
-    if (hx >> 31) return -x;
+    if (hx >> 31)
+        return -x;
     return x;
 }

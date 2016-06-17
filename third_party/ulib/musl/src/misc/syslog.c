@@ -23,7 +23,8 @@ static int log_fd = -1;
 int setlogmask(int maskpri) {
     mxr_mutex_lock(&lock);
     int ret = log_mask;
-    if (maskpri) log_mask = maskpri;
+    if (maskpri)
+        log_mask = maskpri;
     mxr_mutex_unlock(&lock);
     return ret;
 }
@@ -45,7 +46,8 @@ void closelog(void) {
 
 static void __openlog(void) {
     log_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-    if (log_fd >= 0) connect(log_fd, (void*)&log_addr, sizeof log_addr);
+    if (log_fd >= 0)
+        connect(log_fd, (void*)&log_addr, sizeof log_addr);
 }
 
 void openlog(const char* ident, int opt, int facility) {
@@ -63,7 +65,8 @@ void openlog(const char* ident, int opt, int facility) {
     log_opt = opt;
     log_facility = facility;
 
-    if ((opt & LOG_NDELAY) && log_fd < 0) __openlog();
+    if ((opt & LOG_NDELAY) && log_fd < 0)
+        __openlog();
 
     mxr_mutex_unlock(&lock);
     pthread_setcancelstate(cs, 0);
@@ -84,9 +87,11 @@ static void _vsyslog(int priority, const char* message, va_list ap) {
     int hlen;
     int fd;
 
-    if (log_fd < 0) __openlog();
+    if (log_fd < 0)
+        __openlog();
 
-    if (!(priority & LOG_FACMASK)) priority |= log_facility;
+    if (!(priority & LOG_FACMASK))
+        priority |= log_facility;
 
     now = time(NULL);
     gmtime_r(&now, &tm);
@@ -102,7 +107,8 @@ static void _vsyslog(int priority, const char* message, va_list ap) {
             l = sizeof buf - 1;
         else
             l += l2;
-        if (buf[l - 1] != '\n') buf[l++] = '\n';
+        if (buf[l - 1] != '\n')
+            buf[l++] = '\n';
         if (send(log_fd, buf, l, 0) < 0 &&
             (!is_lost_conn(errno) || connect(log_fd, (void*)&log_addr, sizeof log_addr) < 0 ||
              send(log_fd, buf, l, 0) < 0) &&
@@ -113,13 +119,15 @@ static void _vsyslog(int priority, const char* message, va_list ap) {
                 close(fd);
             }
         }
-        if (log_opt & LOG_PERROR) dprintf(2, "%.*s", l - hlen, buf + hlen);
+        if (log_opt & LOG_PERROR)
+            dprintf(2, "%.*s", l - hlen, buf + hlen);
     }
 }
 
 void __vsyslog(int priority, const char* message, va_list ap) {
     int cs;
-    if (!(log_mask & LOG_MASK(priority & 7)) || (priority & ~0x3ff)) return;
+    if (!(log_mask & LOG_MASK(priority & 7)) || (priority & ~0x3ff))
+        return;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     mxr_mutex_lock(&lock);
     _vsyslog(priority, message, ap);

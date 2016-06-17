@@ -128,8 +128,10 @@ double expm1(double x) {
 
     /* filter out huge and non-finite argument */
     if (hx >= 0x4043687A) { /* if |x|>=56*ln2 */
-        if (isnan(x)) return x;
-        if (sign) return -1;
+        if (isnan(x))
+            return x;
+        if (sign)
+            return -1;
         if (x > o_threshold) {
             x *= 0x1p1023;
             return x;
@@ -157,7 +159,8 @@ double expm1(double x) {
         x = hi - lo;
         c = (hi - x) - lo;
     } else if (hx < 0x3c900000) { /* |x| < 2**-54, return x */
-        if (hx < 0x00100000) FORCE_EVAL((float)x);
+        if (hx < 0x00100000)
+            FORCE_EVAL((float)x);
         return x;
     } else
         k = 0;
@@ -173,9 +176,11 @@ double expm1(double x) {
     e = x * (e - c) - c;
     e -= hxs;
     /* exp(x) ~ 2^k (x_reduced - e + 1) */
-    if (k == -1) return 0.5 * (x - e) - 0.5;
+    if (k == -1)
+        return 0.5 * (x - e) - 0.5;
     if (k == 1) {
-        if (x < -0.25) return -2.0 * (e - (x + 0.5));
+        if (x < -0.25)
+            return -2.0 * (e - (x + 0.5));
         return 1.0 + 2.0 * (x - e);
     }
     u.i = (uint64_t)(0x3ff + k) << 52; /* 2^k */

@@ -55,7 +55,7 @@ extern const struct _ns_flagdata _ns_flagdata[];
 #define ns_msg_end(handle) ((handle)._eom + 0)
 #define ns_msg_size(handle) ((handle)._eom - (handle)._msg)
 #define ns_msg_count(handle, section) ((handle)._counts[section] + 0)
-#define ns_msg_getflag(handle, flag)                                                               \
+#define ns_msg_getflag(handle, flag) \
     (((handle)._flags & _ns_flagdata[flag].mask) >> _ns_flagdata[flag].shift)
 
 typedef struct __ns_rr {
@@ -254,8 +254,8 @@ typedef enum __ns_cert_types {
 #define NS_KEY_RESERVED10 0x0020
 #define NS_KEY_RESERVED11 0x0010
 #define NS_KEY_SIGNATORYMASK 0x000F
-#define NS_KEY_RESERVED_BITMASK                                                                    \
-    (NS_KEY_RESERVED2 | NS_KEY_RESERVED4 | NS_KEY_RESERVED5 | NS_KEY_RESERVED8 |                   \
+#define NS_KEY_RESERVED_BITMASK                                                  \
+    (NS_KEY_RESERVED2 | NS_KEY_RESERVED4 | NS_KEY_RESERVED5 | NS_KEY_RESERVED8 | \
      NS_KEY_RESERVED9 | NS_KEY_RESERVED10 | NS_KEY_RESERVED11)
 #define NS_KEY_RESERVED_BITMASK2 0xFFFF
 #define NS_ALG_MD5RSA 1

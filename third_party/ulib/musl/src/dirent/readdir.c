@@ -12,7 +12,8 @@ struct dirent* readdir(DIR* dir) {
     if (dir->buf_pos >= dir->buf_end) {
         int len = __syscall(SYS_getdents, dir->fd, dir->buf, sizeof dir->buf);
         if (len <= 0) {
-            if (len < 0 && len != -ENOENT) errno = -len;
+            if (len < 0 && len != -ENOENT)
+                errno = -len;
             return 0;
         }
         dir->buf_end = len;

@@ -13,7 +13,8 @@ long double ceill(long double x) {
     int e = u.i.se & 0x7fff;
     long double y;
 
-    if (e >= 0x3fff + LDBL_MANT_DIG - 1 || x == 0) return x;
+    if (e >= 0x3fff + LDBL_MANT_DIG - 1 || x == 0)
+        return x;
     /* y = int(x) - x, where int(x) is an integer neighbor of x */
     if (u.i.se >> 15)
         y = x - toint + toint - x;
@@ -24,7 +25,8 @@ long double ceill(long double x) {
         FORCE_EVAL(y);
         return u.i.se >> 15 ? -0.0 : 1;
     }
-    if (y < 0) return x + y + 1;
+    if (y < 0)
+        return x + y + 1;
     return x + y;
 }
 #endif

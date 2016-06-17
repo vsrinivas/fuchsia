@@ -88,7 +88,8 @@ int timer_create(clockid_t clk, struct sigevent* restrict evp, timer_t* restrict
             ksev.sigev_tid = 0;
             ksevp = &ksev;
         }
-        if (syscall(SYS_timer_create, clk, ksevp, &timerid) < 0) return -1;
+        if (syscall(SYS_timer_create, clk, ksevp, &timerid) < 0)
+            return -1;
         *res = (void*)(intptr_t)timerid;
         break;
     case SIGEV_THREAD:
@@ -113,10 +114,12 @@ int timer_create(clockid_t clk, struct sigevent* restrict evp, timer_t* restrict
         ksev.sigev_signo = SIGTIMER;
         ksev.sigev_notify = 4; /* SIGEV_THREAD_ID */
         ksev.sigev_tid = td->tid;
-        if (syscall(SYS_timer_create, clk, &ksev, &timerid) < 0) timerid = -1;
+        if (syscall(SYS_timer_create, clk, &ksev, &timerid) < 0)
+            timerid = -1;
         td->timer_id = timerid;
         pthread_barrier_wait(&args.b);
-        if (timerid < 0) return -1;
+        if (timerid < 0)
+            return -1;
         *res = (void*)(INTPTR_MIN | (uintptr_t)td >> 1);
         break;
     default:

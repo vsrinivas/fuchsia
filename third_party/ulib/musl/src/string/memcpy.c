@@ -50,7 +50,8 @@ void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
         return dest;
     }
 
-    if (n >= 32) switch ((uintptr_t)d % 4) {
+    if (n >= 32)
+        switch ((uintptr_t)d % 4) {
         case 1:
             w = *(u32*)s;
             *d++ = *s++;

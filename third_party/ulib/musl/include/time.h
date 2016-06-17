@@ -18,7 +18,7 @@ extern "C" {
 #define __NEED_clock_t
 #define __NEED_struct_timespec
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 #define __NEED_clockid_t
 #define __NEED_timer_t
@@ -62,7 +62,7 @@ int timespec_get(struct timespec*, int);
 
 #define TIME_UTC 1
 
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) ||                \
+#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 
 size_t strftime_l(char* __restrict, size_t, const char* __restrict, const struct tm* __restrict,

@@ -12,7 +12,8 @@ int setenv(const char* var, const char* value, int overwrite) {
         errno = EINVAL;
         return -1;
     }
-    if (!overwrite && getenv(var)) return 0;
+    if (!overwrite && getenv(var))
+        return 0;
 
     l1 = strlen(var);
     l2 = strlen(value);
@@ -22,7 +23,8 @@ int setenv(const char* var, const char* value, int overwrite) {
         s[l1] = '=';
         memcpy(s + l1 + 1, value, l2);
         s[l1 + l2 + 1] = 0;
-        if (!__putenv(s, 1)) return 0;
+        if (!__putenv(s, 1))
+            return 0;
     }
     free(s);
     return -1;

@@ -16,7 +16,8 @@ char* mkdtemp(char* template) {
 
     do {
         __randname(template + l - 6);
-        if (!mkdir(template, 0700)) return template;
+        if (!mkdir(template, 0700))
+            return template;
     } while (--retries && errno == EEXIST);
 
     memcpy(template + l - 6, "XXXXXX", 6);

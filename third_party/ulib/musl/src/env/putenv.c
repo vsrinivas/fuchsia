@@ -11,14 +11,17 @@ int __putenv(char* s, int a) {
     char** newmap = 0;
     static char** oldenv;
 
-    if (!z) return unsetenv(s);
-    if (z == s) return -1;
+    if (!z)
+        return unsetenv(s);
+    if (z == s)
+        return -1;
     for (; __environ[i] && memcmp(s, __environ[i], z - s + 1); i++)
         ;
     if (a) {
         if (!__env_map) {
             __env_map = calloc(2, sizeof(char*));
-            if (__env_map) __env_map[0] = s;
+            if (__env_map)
+                __env_map[0] = s;
         } else {
             for (; __env_map[j] && __env_map[j] != __environ[i]; j++)
                 ;
@@ -38,7 +41,8 @@ int __putenv(char* s, int a) {
     if (!__environ[i]) {
         newenv = malloc(sizeof(char*) * (i + 2));
         if (!newenv) {
-            if (a && __env_map) __env_map[j] = 0;
+            if (a && __env_map)
+                __env_map[j] = 0;
             return -1;
         }
         memcpy(newenv, __environ, sizeof(char*) * i);

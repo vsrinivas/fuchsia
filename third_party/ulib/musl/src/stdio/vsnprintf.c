@@ -6,7 +6,8 @@
 
 static size_t sn_write(FILE* f, const unsigned char* s, size_t l) {
     size_t k = f->wend - f->wpos;
-    if (k > l) k = l;
+    if (k > l)
+        k = l;
     memcpy(f->wpos, s, k);
     f->wpos += k;
     /* pretend to succeed, but discard extra data */
@@ -28,13 +29,15 @@ int vsnprintf(char* restrict s, size_t n, const char* restrict fmt, va_list ap) 
     }
 
     /* Ensure pointers don't wrap if "infinite" n is passed in */
-    if (n > (char*)0 + SIZE_MAX - s - 1) n = (char*)0 + SIZE_MAX - s - 1;
+    if (n > (char*)0 + SIZE_MAX - s - 1)
+        n = (char*)0 + SIZE_MAX - s - 1;
     f.buf_size = n;
     f.buf = f.wpos = (void*)s;
     f.wbase = f.wend = (void*)(s + n);
     r = vfprintf(&f, fmt, ap);
 
     /* Null-terminate, overwriting last char if dest buffer is full */
-    if (n) f.wpos[-(f.wpos == f.wend)] = 0;
+    if (n)
+        f.wpos[-(f.wpos == f.wend)] = 0;
     return r;
 }

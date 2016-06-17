@@ -18,8 +18,10 @@ float hypotf(float x, float y) {
 
     x = ux.f;
     y = uy.f;
-    if (uy.i == 0xff << 23) return y;
-    if (ux.i >= 0xff << 23 || uy.i == 0 || ux.i - uy.i >= 25 << 23) return x + y;
+    if (uy.i == 0xff << 23)
+        return y;
+    if (ux.i >= 0xff << 23 || uy.i == 0 || ux.i - uy.i >= 25 << 23)
+        return x + y;
 
     z = 1;
     if (ux.i >= (0x7f + 60) << 23) {

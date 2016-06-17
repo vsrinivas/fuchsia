@@ -24,10 +24,10 @@
 
 #define SYNCH 242
 
-#define telcmds                                                                                    \
-    ((char[][6]){                                                                                  \
-        "EOF", "SUSP", "ABORT", "EOR", "SE",   "NOP",  "DMARK", "BRK",  "IP",  "AO", "AYT",        \
-        "EC",  "EL",   "GA",    "SB",  "WILL", "WONT", "DO",    "DONT", "IAC", 0})
+#define telcmds                                                                        \
+    ((char[][6]){                                                                      \
+        "EOF", "SUSP", "ABORT", "EOR", "SE", "NOP", "DMARK", "BRK", "IP", "AO", "AYT", \
+        "EC", "EL", "GA", "SB", "WILL", "WONT", "DO", "DONT", "IAC", 0})
 
 #define TELCMD_FIRST xEOF
 #define TELCMD_LAST IAC
@@ -257,7 +257,7 @@ extern char* authtype_names[];
 
 #ifdef ENCRYPT_NAMES
 char* encrypt_names[] = {
-    "IS",          "SUPPORT",   "REPLY",     "START", "END", "REQUEST-START",
+    "IS", "SUPPORT", "REPLY", "START", "END", "REQUEST-START",
     "REQUEST-END", "ENC-KEYID", "DEC-KEYID", 0,
 };
 char* enctype_names[] = {

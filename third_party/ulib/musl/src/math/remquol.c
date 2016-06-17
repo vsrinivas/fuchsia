@@ -14,8 +14,10 @@ long double remquol(long double x, long double y, int* quo) {
     uint32_t q;
 
     *quo = 0;
-    if (y == 0 || isnan(y) || ex == 0x7fff) return (x * y) / (x * y);
-    if (x == 0) return x;
+    if (y == 0 || isnan(y) || ex == 0x7fff)
+        return (x * y) / (x * y);
+    if (x == 0)
+        return x;
 
     /* normalize x and y */
     if (!ex) {
@@ -71,7 +73,8 @@ long double remquol(long double x, long double y, int* quo) {
         for (; ex > ey; ex--) {
             hi = xhi - yhi;
             lo = xlo - ylo;
-            if (xlo < ylo) hi -= 1;
+            if (xlo < ylo)
+                hi -= 1;
             if (hi >> 63 == 0) {
                 xhi = 2 * hi + (lo >> 63);
                 xlo = 2 * lo;
@@ -84,7 +87,8 @@ long double remquol(long double x, long double y, int* quo) {
         }
         hi = xhi - yhi;
         lo = xlo - ylo;
-        if (xlo < ylo) hi -= 1;
+        if (xlo < ylo)
+            hi -= 1;
         if (hi >> 63 == 0) {
             xhi = hi;
             xlo = lo;
@@ -107,7 +111,8 @@ long double remquol(long double x, long double y, int* quo) {
     } else
         ux.i.se = ex;
     x = ux.f;
-    if (sy) y = -y;
+    if (sy)
+        y = -y;
     if (ex == ey || (ex + 1 == ey && (2 * x > y || (2 * x == y && q % 2)))) {
         x -= y;
         q++;

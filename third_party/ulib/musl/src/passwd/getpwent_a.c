@@ -26,27 +26,33 @@ int __getpwent_a(FILE* f, struct passwd* pw, char** line, size_t* size, struct p
 
         s = line[0];
         pw->pw_name = s++;
-        if (!(s = strchr(s, ':'))) continue;
+        if (!(s = strchr(s, ':')))
+            continue;
 
         *s++ = 0;
         pw->pw_passwd = s;
-        if (!(s = strchr(s, ':'))) continue;
+        if (!(s = strchr(s, ':')))
+            continue;
 
         *s++ = 0;
         pw->pw_uid = atou(&s);
-        if (*s != ':') continue;
+        if (*s != ':')
+            continue;
 
         *s++ = 0;
         pw->pw_gid = atou(&s);
-        if (*s != ':') continue;
+        if (*s != ':')
+            continue;
 
         *s++ = 0;
         pw->pw_gecos = s;
-        if (!(s = strchr(s, ':'))) continue;
+        if (!(s = strchr(s, ':')))
+            continue;
 
         *s++ = 0;
         pw->pw_dir = s;
-        if (!(s = strchr(s, ':'))) continue;
+        if (!(s = strchr(s, ':')))
+            continue;
 
         *s++ = 0;
         pw->pw_shell = s;
@@ -54,6 +60,7 @@ int __getpwent_a(FILE* f, struct passwd* pw, char** line, size_t* size, struct p
     }
     pthread_setcancelstate(cs, 0);
     *res = pw;
-    if (rv) errno = rv;
+    if (rv)
+        errno = rv;
     return rv;
 }

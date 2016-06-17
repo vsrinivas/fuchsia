@@ -30,8 +30,10 @@ int gethostbyaddr_r(const void* a, socklen_t l, int af, struct hostent* h, char*
 
     /* Align buffer and check for space for pointers and ip address */
     i = (uintptr_t)buf & sizeof(char*) - 1;
-    if (!i) i = sizeof(char*);
-    if (buflen <= 5 * sizeof(char*) - i + l) return ERANGE;
+    if (!i)
+        i = sizeof(char*);
+    if (buflen <= 5 * sizeof(char*) - i + l)
+        return ERANGE;
     buf += sizeof(char*) - i;
     buflen -= 5 * sizeof(char*) - i + l;
 

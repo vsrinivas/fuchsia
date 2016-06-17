@@ -46,7 +46,8 @@ static void cancel_handler(int sig, siginfo_t* si, void* ctx) {
     uintptr_t pc = uc->uc_mcontext.MC_PC;
 
     a_barrier();
-    if (!self->cancel || self->canceldisable == PTHREAD_CANCEL_DISABLE) return;
+    if (!self->cancel || self->canceldisable == PTHREAD_CANCEL_DISABLE)
+        return;
 
     _sigaddset(&uc->uc_sigmask, SIGCANCEL);
 
@@ -60,7 +61,8 @@ static void cancel_handler(int sig, siginfo_t* si, void* ctx) {
 
 void __testcancel(void) {
     pthread_t self = __pthread_self();
-    if (self->cancel && !self->canceldisable) __cancel();
+    if (self->cancel && !self->canceldisable)
+        __cancel();
 }
 
 static void init_cancellation(void) {
@@ -76,6 +78,7 @@ int pthread_cancel(pthread_t t) {
         init = 1;
     }
     a_store(&t->cancel, 1);
-    if (t == pthread_self() && !t->cancelasync) return 0;
+    if (t == pthread_self() && !t->cancelasync)
+        return 0;
     return pthread_kill(t, SIGCANCEL);
 }

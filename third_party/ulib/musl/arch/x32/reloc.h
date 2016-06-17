@@ -22,15 +22,15 @@
 #define REL_DTPOFF R_X86_64_DTPOFF64
 #define REL_TPOFF R_X86_64_TPOFF64
 
-#define CRTJMP(pc, sp)                                                                             \
-    __asm__ __volatile__("mov %1,%%esp ; jmp *%0"                                                  \
-                         :                                                                         \
-                         : "r"((uint64_t)(uintptr_t)pc), "r"(sp)                                   \
+#define CRTJMP(pc, sp)                                           \
+    __asm__ __volatile__("mov %1,%%esp ; jmp *%0"                \
+                         :                                       \
+                         : "r"((uint64_t)(uintptr_t)pc), "r"(sp) \
                          : "memory")
 
-#define GETFUNCSYM(fp, sym, got)                                                                   \
-    __asm__(".hidden " #sym "\n"                                                                   \
-            "	lea " #sym "(%%rip),%0\n"                                                          \
-            : "=r"(*fp)                                                                            \
-            :                                                                                      \
+#define GETFUNCSYM(fp, sym, got)          \
+    __asm__(".hidden " #sym "\n"          \
+            "	lea " #sym "(%%rip),%0\n" \
+            : "=r"(*fp)                   \
+            :                             \
             : "memory")

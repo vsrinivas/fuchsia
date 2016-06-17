@@ -13,8 +13,10 @@ long double roundl(long double x) {
     int e = u.i.se & 0x7fff;
     long double y;
 
-    if (e >= 0x3fff + LDBL_MANT_DIG - 1) return x;
-    if (u.i.se >> 15) x = -x;
+    if (e >= 0x3fff + LDBL_MANT_DIG - 1)
+        return x;
+    if (u.i.se >> 15)
+        x = -x;
     if (e < 0x3fff - 1) {
         FORCE_EVAL(x + toint);
         return 0 * u.f;
@@ -26,7 +28,8 @@ long double roundl(long double x) {
         y = y + x + 1;
     else
         y = y + x;
-    if (u.i.se >> 15) y = -y;
+    if (u.i.se >> 15)
+        y = -y;
     return y;
 }
 #endif

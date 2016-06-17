@@ -15,7 +15,8 @@ char* __stpncpy(char* restrict d, const char* restrict s, size_t n) {
     if (((uintptr_t)s & ALIGN) == ((uintptr_t)d & ALIGN)) {
         for (; ((uintptr_t)s & ALIGN) && n && (*d = *s); n--, s++, d++)
             ;
-        if (!n || !*s) goto tail;
+        if (!n || !*s)
+            goto tail;
         wd = (void*)d;
         ws = (const void*)s;
         for (; n >= sizeof(size_t) && !HASZERO(*ws); n -= sizeof(size_t), ws++, wd++)

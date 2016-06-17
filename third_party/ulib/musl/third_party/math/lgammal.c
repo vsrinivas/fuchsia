@@ -227,7 +227,8 @@ long double __lgammal_r(long double x, int* sg) {
     *sg = 1;
 
     /* purge off +-inf, NaN, +-0, tiny and negative arguments */
-    if (ix >= 0x7fff0000) return x * x;
+    if (ix >= 0x7fff0000)
+        return x * x;
     if (ix < 0x3fc08000) { /* |x|<2**-63, return -log(|x|) */
         if (sign) {
             *sg = -1;
@@ -238,7 +239,8 @@ long double __lgammal_r(long double x, int* sg) {
     if (sign) {
         x = -x;
         t = sin_pi(x);
-        if (t == 0.0) return 1.0 / (x - x); /* -integer */
+        if (t == 0.0)
+            return 1.0 / (x - x); /* -integer */
         if (t > 0.0)
             *sg = -1;
         else
@@ -328,7 +330,8 @@ long double __lgammal_r(long double x, int* sg) {
         r = (x - 0.5) * (t - 1.0) + w;
     } else /* 2**66 <= x <= inf */
         r = x * (logl(x) - 1.0);
-    if (sign) r = nadj - r;
+    if (sign)
+        r = nadj - r;
     return r;
 }
 #elif LDBL_MANT_DIG == 113 && LDBL_MAX_EXP == 16384
