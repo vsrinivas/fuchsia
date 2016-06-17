@@ -12,6 +12,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/debug.c \
 	$(LOCAL_DIR)/pcie.c \
 	$(LOCAL_DIR)/pcie_caps.c \
-	$(LOCAL_DIR)/pcie_irqs.c
+	$(LOCAL_DIR)/pcie_irqs.c \
+	$(LOCAL_DIR)/pcie_topology.c
 
 include make/module.mk

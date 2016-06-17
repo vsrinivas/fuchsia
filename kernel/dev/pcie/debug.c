@@ -27,13 +27,14 @@ typedef struct {
 
 typedef struct lspci_params {
     bool verbose;
-    bool tree;
+    uint base_level;
     uint indent_level;
     uint bus_id;
     uint dev_id;
     uint func_id;
     uint cfg_dump_amt;
     bool force_dump_cfg;
+    uint found;
 } lspci_params_t;
 
 #define WILDCARD_ID (0xFFFFFFFF)
@@ -337,7 +338,6 @@ static void dump_pcie_standard(const pcie_device_state_t* dev, lspci_params_t* p
     LSPCI_PRINTF("IRQ pin           : 0x%02x\n", pcie_read8(&cfg->interrupt_pin));
     LSPCI_PRINTF("Min Grant         : 0x%02x\n", pcie_read8(&cfg->min_grant));
     LSPCI_PRINTF("Max Latency       : 0x%02x\n", pcie_read8(&cfg->max_latency));
-
 }
 
 static void dump_pcie_bridge(const pcie_device_state_t* dev, lspci_params_t* params)
@@ -365,31 +365,50 @@ static void dump_pcie_bridge(const pcie_device_state_t* dev, lspci_params_t* par
     LSPCI_PRINTF("Interrupt Line    : 0x%02x\n", pcie_read8(&bcfg->interrupt_line));
     LSPCI_PRINTF("Interrupt Pin     : 0x%02x\n", pcie_read8(&bcfg->interrupt_pin));
     LSPCI_PRINTF("Bridge Control    : 0x%04x\n", pcie_read16(&bcfg->bridge_control));
-
 }
 
-static void dump_pcie_raw_config(uint amt, void* kvaddr, uint64_t phys) {
+static void dump_pcie_raw_config(uint amt, void* kvaddr, uint64_t phys)
+{
     printf("%u bytes of raw config (kvaddr %p; phys 0x%llx)\n", amt, kvaddr, phys);
     hexdump8(kvaddr, amt);
 }
 
-static size_t dump_pcie_node(const pcie_device_state_t* dev, lspci_params_t* params)
+static bool dump_pcie_device(pcie_device_state_t* dev, void* ctx, uint level)
 {
-    DEBUG_ASSERT(dev && params);
+    DEBUG_ASSERT(dev && ctx);
+    lspci_params_t* params = (lspci_params_t*)ctx;
+
+    /* Grab the device's lock so it cannot be unplugged out from under us while
+     * we print details. */
+    mutex_acquire(&dev->dev_lock);
+
+    /* If the device has already been unplugged, just skip it */
+    if (!dev->plugged_in)
+        goto finished;
 
     bool match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == dev->bus_id)) &&
                   ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == dev->dev_id)) &&
                   ((params->func_id == WILDCARD_ID) || (params->func_id == dev->func_id)));
+    if (!match)
+        goto finished;
 
+    if (!params->found && (params->bus_id != WILDCARD_ID)) {
+        params->base_level = level;
+    } else {
+        DEBUG_ASSERT(!params->base_level);
+    }
 
-    /* Dump the header if this device matches our filter, or if it is a bridge
-     * and we are in tree dump mode */
-    if (match || (params->tree && pcie_downcast_to_bridge(dev)))
-        dump_pcie_hdr(dev, params);
+    params->found++;
+
+    DEBUG_ASSERT(level >= params->base_level);
+    params->indent_level = params->verbose ? 0 : level - params->base_level;
+
+    /* Dump the header */
+    dump_pcie_hdr(dev, params);
 
     /* Only dump details if we are in verbose mode and this device matches our
      * filter */
-    if (match && params->verbose) {
+    if (params->verbose) {
         params->indent_level += 2;
 
         dump_pcie_common(dev, params);
@@ -418,55 +437,17 @@ static size_t dump_pcie_node(const pcie_device_state_t* dev, lspci_params_t* par
         params->indent_level -= 2;
     }
 
-    if (match && params->cfg_dump_amt)
+    if (params->cfg_dump_amt)
         dump_pcie_raw_config(params->cfg_dump_amt, dev->cfg, (uint64_t)dev->cfg_phys);
 
-    return match ? 1 : 0;
-}
-
-static size_t do_lspci(const pcie_device_state_t* dev, lspci_params_t* params, bool show_node)
-{
-    size_t found = 0;
-    DEBUG_ASSERT(dev && params);
-
-    if (show_node)
-        found += dump_pcie_node(dev, params);
-
-    const pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
-    if (bridge) {
-        if (params->tree) {
-            params->indent_level++;
-
-            for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-                const pcie_device_state_t* downstream = bridge->downstream[i];
-
-                if (downstream)
-                    found += do_lspci(downstream, params, true);
-            }
-
-            params->indent_level--;
-        } else {
-            for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-                const pcie_device_state_t* downstream = bridge->downstream[i];
-                if (downstream)
-                    found += dump_pcie_node(downstream, params);
-            }
-
-            for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-                const pcie_device_state_t* downstream = bridge->downstream[i];
-                if (downstream)
-                    found += do_lspci(downstream, params, false);
-            }
-        }
-    }
-
-    return found;
+finished:
+    mutex_release(&dev->dev_lock);
+    return true;
 }
 
 static int cmd_lspci(int argc, const cmd_args *argv)
 {
     lspci_params_t params;
-    size_t found;
     uint filter_ndx = 0;
 
     memset(&params, 0, sizeof(params));
@@ -484,10 +465,6 @@ static int cmd_lspci(int argc, const cmd_args *argv)
 
             while (!confused && *c) {
                 switch (*c) {
-                    case 't':
-                        params.tree = true;
-                        break;
-
                     case 'f':
                         if (params.cfg_dump_amt < PCIE_BASE_CONFIG_SIZE)
                             params.cfg_dump_amt = PCIE_BASE_CONFIG_SIZE;
@@ -545,7 +522,6 @@ static int cmd_lspci(int argc, const cmd_args *argv)
 
         if (confused) {
             printf("usage: %s [-t] [-l] [<bus_id>] [<dev_id>] [<func_id>]\n", argv[0].str);
-            printf("       -t : Dump using tree formating\n");
             printf("       -l : Be verbose when dumping info about discovered devices.\n");
             printf("       -c : Dump raw standard config (implies -l)\n");
             printf("       -e : Dump raw extended config (implies -l -c)\n");
@@ -555,24 +531,17 @@ static int cmd_lspci(int argc, const cmd_args *argv)
         }
     }
 
-    const pcie_bus_driver_state_t* drv = pcie_get_bus_driver_state();
-    DEBUG_ASSERT(drv);
+    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    pcie_foreach_device(bus_drv, dump_pcie_device, &params);
 
-    if (!drv->host_bridge) {
-        printf("No host bridge discovered...\n");
-        return NO_ERROR;
-    }
-
-    found = do_lspci(&drv->host_bridge->dev, &params, true);
-
-    if (!found && params.force_dump_cfg &&
+    if (!params.found && params.force_dump_cfg &&
         (params.bus_id  != WILDCARD_ID) &&
         (params.dev_id  != WILDCARD_ID) &&
         (params.func_id != WILDCARD_ID)) {
         pcie_config_t* cfg;
         uint64_t cfg_phys;
 
-        cfg = pcie_get_config(drv, &cfg_phys, params.bus_id, params.dev_id, params.func_id);
+        cfg = pcie_get_config(bus_drv, &cfg_phys, params.bus_id, params.dev_id, params.func_id);
         if (!cfg) {
             printf("Config space for %02x:%02x.%01x not mapped by bus driver!\n",
                    params.bus_id, params.dev_id, params.func_id);
@@ -580,13 +549,13 @@ static int cmd_lspci(int argc, const cmd_args *argv)
             dump_pcie_raw_config(params.cfg_dump_amt, cfg, cfg_phys);
         }
     } else {
-        printf("PCIe scan discovered %zu device%s\n", found, (found == 1) ? "" : "s");
+        printf("PCIe scan discovered %u device%s\n", params.found, (params.found == 1) ? "" : "s");
     }
 
     return NO_ERROR;
 }
 
-static int cmd_pcishutdown(int argc, const cmd_args *argv)
+static int cmd_pciunplug(int argc, const cmd_args *argv)
 {
     bool confused = false;
     uint bus_id, dev_id, func_id;
@@ -609,37 +578,17 @@ static int cmd_pcishutdown(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    pcie_bus_driver_state_t* drv = pcie_get_bus_driver_state();
-    pcie_device_state_t*     dev = NULL;
-
-    DEBUG_ASSERT(drv);
-
-    /*
-     * TODO(johngro) : Remove this soon.
-     *
-     * Now that we are adding user mode drivers, triggering this from the debug
-     * console is fundamentally unsafe.  Shutting down a device out from
-     * underneath a user-mode driver is guaranteed to cause Very Bad things to
-     * happen.  Also, if a user mode device driver shuts down and unclaims its
-     * device after we have picked it out of this list, but before we attempt to
-     * shut the device down ourselves, we are guaranteed to explode.
-     */
-    mutex_acquire(&drv->claimed_devices_lock);
-    list_for_every_entry(&drv->claimed_devices, dev, pcie_device_state_t, claimed_device_node) {
-        if ((dev->bus_id  == bus_id) &&
-            (dev->dev_id  == dev_id) &&
-            (dev->func_id == func_id))
-            break;
-    }
-    mutex_release(&drv->claimed_devices_lock);
+    pcie_device_state_t* dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
+                                                     bus_id, dev_id, func_id);
 
     if (!dev) {
-        printf("Failed to find claimed PCI device %02x:%02x.%x.  "
-               "Are you sure it has a loaded driver?\n", bus_id, dev_id, func_id);
+        printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
     } else {
-        printf("Shutting down PCI device %02x:%02x.%x (%s)...\n",
+        printf("Shutting down and unplugging PCI device %02x:%02x.%x (%s)...\n",
                 bus_id, dev_id, func_id, pcie_driver_name(dev->driver));
         pcie_shutdown_device(dev);
+        pcie_unplug_device(dev);
+        pcie_release_device(dev);
         printf("done\n");
     }
 
@@ -656,9 +605,9 @@ STATIC_COMMAND_START
 STATIC_COMMAND("lspci",
                "Enumerate the devices detected in PCIe ECAM space",
                &cmd_lspci)
-STATIC_COMMAND("pcishutdown",
-               "Shutdown the specified PCIe device instance",
-               &cmd_pcishutdown)
+STATIC_COMMAND("pciunplug",
+               "Unplug the specified PCIe device (shutting down the driver if needed)",
+               &cmd_pciunplug)
 STATIC_COMMAND("pcirescan",
                "Force a rescan of the PCIe configuration space, matching drivers to unclaimed "
                "devices as we go.  Then attempt to start all newly claimed devices.",

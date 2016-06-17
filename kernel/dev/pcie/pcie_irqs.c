@@ -193,7 +193,7 @@ static inline status_t pcie_mask_unmask_legacy_irq(pcie_device_state_t* dev,
  * Platform dependent remapping is an exercise for the reader.  FWIW: PC
  * architectures use the _PRT tables in ACPI to perform the remapping.
  */
-static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin) {
+static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin, pcie_bridge_state_t* upstream) {
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(dev->cfg);
     DEBUG_ASSERT(pin);
@@ -201,12 +201,16 @@ static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin) {
 
     pin -= 1; // Change to 0s indexing
 
+    /* Hold the bus topology lock while we do this, so we don't need to worry
+     * about stuff disappearing as we walk the tree up */
+    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+    MUTEX_ACQUIRE(bus_drv, bus_topology_lock);
+
     /* Walk up the PCI/PCIe tree, applying the swizzling rules as we go.  Stop
      * when we reach the device which is hanging off of the root bus/root
      * complex.  At this point, platform specific swizzling takes over.
      */
-    pcie_bridge_state_t* upstream = dev->upstream;
-    DEBUG_ASSERT(upstream);  // We should not be mapping IRQs for the root complex
+    DEBUG_ASSERT(upstream);  // We should not be mapping IRQs for the "host bridge" special case
     while (upstream->dev.upstream) {
         /* We need to swizzle every time we pass through...
          * 1) A PCI-to-PCI bridge (real or virtual)
@@ -249,13 +253,14 @@ static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin) {
         }
 
         /* Climb one branch higher up the tree */
-        dev   = &upstream->dev;
+        dev      = &upstream->dev;
         upstream = dev->upstream;
     }
 
+    MUTEX_RELEASE(bus_drv, bus_topology_lock);
+
     uint irq;
     __UNUSED status_t status;
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
     DEBUG_ASSERT(bus_drv && bus_drv->legacy_irq_swizzle);
     status = bus_drv->legacy_irq_swizzle(dev, pin, &irq);
     DEBUG_ASSERT(status == NO_ERROR);
@@ -271,7 +276,7 @@ static pcie_legacy_irq_handler_state_t* pcie_find_legacy_irq_handler(
     /* Search to see if we have already created a shared handler for this system
      * level IRQ id already */
     pcie_legacy_irq_handler_state_t* ret = NULL;
-    mutex_acquire(&bus_drv->legacy_irq_list_lock);
+    MUTEX_ACQUIRE(bus_drv, legacy_irq_list_lock);
 
     list_for_every_entry(&bus_drv->legacy_irq_list,
                          ret,
@@ -296,7 +301,7 @@ static pcie_legacy_irq_handler_state_t* pcie_find_legacy_irq_handler(
     unmask_interrupt(ret->irq_id);
 
 finished:
-    mutex_release(&bus_drv->legacy_irq_list_lock);
+    MUTEX_RELEASE(bus_drv, legacy_irq_list_lock);
     return ret;
 }
 
@@ -670,14 +675,11 @@ bailout:
  * Internal implementation of the Kernel facing API.
  *
  ******************************************************************************/
-static status_t pcie_mask_unmask_irq_internal(pcie_device_state_t* dev,
-                                              uint                 irq_id,
-                                              bool                 mask);
-
-static status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t* dev,
-                                                          pcie_irq_mode_t mode,
-                                                          pcie_irq_mode_caps_t* out_caps) {
+status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t* dev,
+                                                   pcie_irq_mode_t mode,
+                                                   pcie_irq_mode_caps_t* out_caps) {
     DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
     DEBUG_ASSERT(dev->bus_drv);
     DEBUG_ASSERT(out_caps);
 
@@ -728,11 +730,12 @@ static status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_stat
     return NO_ERROR;
 }
 
-static status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
-                                           pcie_irq_mode_t         mode,
-                                           uint                    requested_irqs,
-                                           pcie_irq_sharing_mode_t share_mode) {
+status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
+                                    pcie_irq_mode_t         mode,
+                                    uint                    requested_irqs,
+                                    pcie_irq_sharing_mode_t share_mode) {
     DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     /* Are we disabling IRQs? */
     if (mode == PCIE_IRQ_MODE_DISABLED) {
@@ -799,11 +802,12 @@ static status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
     }
 }
 
-static status_t pcie_register_irq_handler_internal(pcie_device_state_t*  dev,
-                                                   uint                  irq_id,
-                                                   pcie_irq_handler_fn_t handler,
-                                                   void*                 ctx) {
+status_t pcie_register_irq_handler_internal(pcie_device_state_t*  dev,
+                                            uint                  irq_id,
+                                            pcie_irq_handler_fn_t handler,
+                                            void*                 ctx) {
     DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     /* Cannot register a handler if we are currently disabled */
     if (dev->irq.mode == PCIE_IRQ_MODE_DISABLED)
@@ -828,10 +832,11 @@ static status_t pcie_register_irq_handler_internal(pcie_device_state_t*  dev,
     return NO_ERROR;
 }
 
-static status_t pcie_mask_unmask_irq_internal(pcie_device_state_t* dev,
-                                              uint                 irq_id,
-                                              bool                 mask) {
+status_t pcie_mask_unmask_irq_internal(pcie_device_state_t* dev,
+                                       uint                 irq_id,
+                                       bool                 mask) {
     DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     /* Cannot manipulate mask status while in the DISABLED state */
     if (dev->irq.mode == PCIE_IRQ_MODE_DISABLED)
@@ -875,9 +880,17 @@ status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
     DEBUG_ASSERT(dev);
     status_t ret;
 
-    // TODO(johngro) : obtain API lock here!
-    ret = pcie_query_irq_mode_capabilities_internal(dev, mode, out_caps);
-    // TODO(johngro) : release API lock here!
+    // TODO(johngro) : Is casting away this const evil?  Yes.  Until we switch
+    // to C++, however, I cannot flag the lock member as mutable.  Since
+    // pcie_device_state_t's are never going to live in an un-modifiable page,
+    // I'd rather leave the API as const, and cast away the const in order to
+    // obtain the lock.  When things move to C++, we can solve the problem with
+    // mutable.
+    MUTEX_ACQUIRE(((pcie_device_state_t*)dev), dev_lock);
+    ret = dev->plugged_in
+        ? pcie_query_irq_mode_capabilities_internal(dev, mode, out_caps)
+        : ERR_NOT_MOUNTED;
+    MUTEX_RELEASE(((pcie_device_state_t*)dev), dev_lock);
 
     return ret;
 }
@@ -889,9 +902,11 @@ status_t pcie_set_irq_mode(pcie_device_state_t*    dev,
     DEBUG_ASSERT(dev);
     status_t ret;
 
-    // TODO(johngro) : obtain API lock here!
-    ret = pcie_set_irq_mode_internal(dev, mode, requested_irqs, share_mode);
-    // TODO(johngro) : release API lock here!
+    MUTEX_ACQUIRE(dev, dev_lock);
+    ret = dev->plugged_in
+        ? pcie_set_irq_mode_internal(dev, mode, requested_irqs, share_mode)
+        : ERR_NOT_MOUNTED;
+    MUTEX_RELEASE(dev, dev_lock);
 
     return ret;
 }
@@ -903,9 +918,11 @@ status_t pcie_register_irq_handler(pcie_device_state_t*  dev,
     DEBUG_ASSERT(dev);
     status_t ret;
 
-    // TODO(johngro) : obtain API lock here!
-    ret = pcie_register_irq_handler_internal(dev, irq_id, handler, ctx);
-    // TODO(johngro) : release API lock here!
+    MUTEX_ACQUIRE(dev, dev_lock);
+    ret = dev->plugged_in
+        ? pcie_register_irq_handler_internal(dev, irq_id, handler, ctx)
+        : ERR_NOT_MOUNTED;
+    MUTEX_RELEASE(dev, dev_lock);
 
     return ret;
 }
@@ -916,9 +933,11 @@ status_t pcie_mask_unmask_irq(pcie_device_state_t* dev,
     DEBUG_ASSERT(dev);
     status_t ret;
 
-    // TODO(johngro) : obtain API lock here!
-    ret = pcie_mask_unmask_irq_internal(dev, irq_id, mask);
-    // TODO(johngro) : release API lock here!
+    MUTEX_ACQUIRE(dev, dev_lock);
+    ret = dev->plugged_in
+        ? pcie_mask_unmask_irq_internal(dev, irq_id, mask)
+        : ERR_NOT_MOUNTED;
+    MUTEX_RELEASE(dev, dev_lock);
 
     return ret;
 }
@@ -928,17 +947,18 @@ status_t pcie_mask_unmask_irq(pcie_device_state_t* dev,
  * Internal API; prototypes in pcie_priv.h
  *
  ******************************************************************************/
-status_t pcie_init_device_irq_state(pcie_device_state_t* dev) {
+status_t pcie_init_device_irq_state(pcie_device_state_t* dev, pcie_bridge_state_t* upstream) {
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(dev->cfg);
     DEBUG_ASSERT(!dev->irq.legacy.pin);
     DEBUG_ASSERT(!dev->irq.legacy.shared_handler);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     dev->irq.legacy.pin = pcie_read8(&dev->cfg->base.interrupt_pin);
     if (dev->irq.legacy.pin) {
         uint irq_id;
 
-        irq_id = pcie_map_pin_to_irq(dev, dev->irq.legacy.pin);
+        irq_id = pcie_map_pin_to_irq(dev, dev->irq.legacy.pin, upstream);
         dev->irq.legacy.shared_handler = pcie_find_legacy_irq_handler(dev->bus_drv, irq_id);
 
         if (!dev->irq.legacy.shared_handler) {
@@ -994,7 +1014,7 @@ void pcie_shutdown_irqs(pcie_bus_driver_state_t* bus_drv) {
 
     /* Shut off all of our IRQs and free all of our bookkeeping */
     pcie_legacy_irq_handler_state_t* handler;
-    mutex_acquire(&bus_drv->legacy_irq_list_lock);
+    MUTEX_ACQUIRE(bus_drv, legacy_irq_list_lock);
     while ((handler = list_remove_head_type(&bus_drv->legacy_irq_list,
                                             pcie_legacy_irq_handler_state_t,
                                             legacy_irq_list_node)) != NULL) {
@@ -1003,5 +1023,5 @@ void pcie_shutdown_irqs(pcie_bus_driver_state_t* bus_drv) {
         register_int_handler(handler->irq_id, NULL, NULL);
         free(handler);
     }
-    mutex_release(&bus_drv->legacy_irq_list_lock);
+    MUTEX_RELEASE(bus_drv, legacy_irq_list_lock);
 }

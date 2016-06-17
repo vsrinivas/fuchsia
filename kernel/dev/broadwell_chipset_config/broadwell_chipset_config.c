@@ -190,10 +190,15 @@ static void bcc_pci_shutdown_locked(pcie_device_state_t* pci_device) {
             state->rcba_virt = NULL;
         }
 
+        state->rcba_phys = 0;
         state->aspace = NULL;
     } else {
         DEBUG_ASSERT(!state->rcba_virt);
+        DEBUG_ASSERT(!state->rcba_phys);
     }
+
+    DEBUG_ASSERT(state->pci_device == pci_device);
+    state->pci_device = NULL;
 }
 
 static void bcc_pci_shutdown(pcie_device_state_t* pci_device) {
@@ -252,12 +257,12 @@ finished:
     return ret;
 }
 
-static void bcc_pci_release(pcie_device_state_t* pci_device) {
+static void bcc_pci_release(void* ctx) {
     mutex_acquire(&g_lock);
 
-    chipset_config_state_t* state = (chipset_config_state_t*)pci_device->driver_ctx;
+    chipset_config_state_t* state = (chipset_config_state_t*)ctx;
     DEBUG_ASSERT(state == &g_chipset_config_state);
-    DEBUG_ASSERT(state->pci_device);
+    DEBUG_ASSERT(!state->pci_device);
     DEBUG_ASSERT(!state->aspace);
     DEBUG_ASSERT(!state->rcba_phys);
     DEBUG_ASSERT(!state->rcba_virt);

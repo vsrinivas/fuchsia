@@ -687,13 +687,13 @@ static void intel_hda_pci_shutdown(struct pcie_device_state* pci_device) {
 
     /* Place the device into reset */
     intel_hda_reset(dev, true);
-}
-
-static void intel_hda_pci_release(struct pcie_device_state* pci_device) {
-    DEBUG_ASSERT(pci_device && pci_device->driver_ctx);
-    intel_hda_device_t* dev = (intel_hda_device_t*)(pci_device->driver_ctx);
 
     dev->pci_device = NULL;
+}
+
+static void intel_hda_pci_release(void* ctx) {
+    DEBUG_ASSERT(ctx);
+    intel_hda_device_t* dev = (intel_hda_device_t*)(ctx);
 
     DEBUG_ASSERT(!list_in_list(&dev->device_list_node));
     intel_hda_release(dev);

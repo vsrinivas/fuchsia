@@ -272,9 +272,9 @@ static void intel_i915_pci_shutdown(struct pcie_device_state* pci_device) {
     pcie_enable_mmio(pci_device, false);
 }
 
-static void intel_i915_pci_release(pcie_device_state_t* pci_device) {
-    DEBUG_ASSERT(pci_device && pci_device->driver_ctx);
-    DEBUG_ASSERT(g_i915_device == pci_device->driver_ctx);
+static void intel_i915_pci_release(void* ctx) {
+    DEBUG_ASSERT(ctx);
+    DEBUG_ASSERT(g_i915_device == ctx);
     DEBUG_ASSERT(g_i915_device->regs == NULL);
     DEBUG_ASSERT(g_i915_device->framebuffer == NULL);
 

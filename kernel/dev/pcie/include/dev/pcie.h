@@ -16,6 +16,7 @@
 #include <dev/pcie_irqs.h>
 #include <endian.h>
 #include <err.h>
+#include <kernel/mutex.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
@@ -154,7 +155,7 @@ typedef struct pcie_init_info {
  *   registered driver (if any) wishes to claim and manage a device.  Drivers
  *   who wish to claim a device must return a non-NULL void* context pointer
  *   which will be made available as the driver_ctx member of the
- *   pcie_device_state_t structure and provided to all subsequent callbacks via
+ *   pcie_device_state_t structure and provided to subsequent callbacks via
  *   the pci_device member.
  *
  * + startup_hook
@@ -180,15 +181,17 @@ typedef struct pcie_init_info {
  *   which may have been allocated during its life cycle.  At a minimum, drivers
  *   who dynamically allocate context during pcie_probe_fn should register a
  *   release_hook in order to clean up their dynamically allocated resources.  A
- *   driver's release hook will always be called for a device which was claimed
- *   during probe, even if the startup_hook was never called (possibly due to
- *   bus level resource exhaustion).
+ *   driver's release hook will always be called if the driver attempted to
+ *   claim a device during probe.  Note that it is possible that the device was
+ *   never started, or possibly never even claimed (due to hotplug or
+ *   multithreaded races).  Drivers should use the only as a chance to free any
+ *   internal state associated with an attempt to claim a device.
  */
 typedef struct pcie_driver_fn_table {
     void*               (*pcie_probe_fn)   (struct pcie_device_state* pci_device);
     status_t            (*pcie_startup_fn) (struct pcie_device_state* pci_device);
     void                (*pcie_shutdown_fn)(struct pcie_device_state* pci_device);
-    void                (*pcie_release_fn) (struct pcie_device_state* pci_device);
+    void                (*pcie_release_fn) (void* ctx);
 } pcie_driver_fn_table_t;
 
 typedef struct pcie_driver_registration {
@@ -218,10 +221,15 @@ typedef struct pcie_device_state {
     uint                          dev_id;    // The device ID of this bridge/device
     uint                          func_id;   // The function ID of this bridge/device
 
-    /* State tracking for this device's driver (if this device has been claimed by a driver */
+    /* State related to lifetime management */
+    int                           ref_count;
+    mutex_t                       dev_lock;
+    mutex_t                       start_claim_lock;
+    bool                          plugged_in;
+
+    /* State tracking for this device's driver (if this device has been claimed by a driver) */
     const pcie_driver_registration_t* driver;
     void*                             driver_ctx;
-    struct list_node                  claimed_device_node;
     bool                              started;
 
     /* Info about the BARs computed and cached during the initial setup/probe,
@@ -318,11 +326,22 @@ status_t pcie_init(const pcie_init_info_t* init_info);
  */
 void pcie_shutdown(void);
 
-/*
- * For iterating through all PCI devices. Returns the nth device, or NULL
- * if index is >= the number of PCI devices.
+/**
+ * Fetches a ref'ed pointer to the Nth PCIe device currently in the system.
+ * Used for iterating through all PCIe devices.
+ *
+ * @param index The 0-based index of the device to fetch.
+ *
+ * @return A ref'ed pointer the requested device, or NULL if no such device
+ * exists.  @note If a pointer to a device is returned, it must eventually be
+ * released using a call to pcie_release_device.
  */
-pcie_device_state_t* pci_get_nth_device(uint32_t index);
+pcie_device_state_t* pcie_get_nth_device(uint32_t index);
+
+/**
+ * Release a device previously obtained using pcie_get_nth_device.
+ */
+void pcie_release_device(pcie_device_state_t* dev);
 
 /*
  * Attaches a driver to a PCI device. Returns ERR_BUSY if the device has already been
@@ -369,8 +388,9 @@ static inline const pcie_bar_info_t* pcie_get_bar_info(const pcie_device_state_t
  * modified.
  * @param clr_bits The mask of bits to be cleared.
  * @param clr_bits The mask of bits to be set.
+ * @return A status_t indicating success or failure of the operation.
  */
-void pcie_modify_cmd(const pcie_device_state_t* device, uint16_t clr_bits, uint16_t set_bits);
+status_t pcie_modify_cmd(pcie_device_state_t* device, uint16_t clr_bits, uint16_t set_bits);
 
 /*
  * Enable or disable bus mastering in a device's configuration.
@@ -378,11 +398,12 @@ void pcie_modify_cmd(const pcie_device_state_t* device, uint16_t clr_bits, uint1
  * @param device A pointer to the target device.
  * @param enable If true, allow the device to access main system memory as a bus
  * master.
+ * @return A status_t indicating success or failure of the operation.
  */
-static inline void pcie_enable_bus_master(const pcie_device_state_t* device, bool enabled) {
-    pcie_modify_cmd(device,
-            enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
-            enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
+static inline status_t pcie_enable_bus_master(pcie_device_state_t* device, bool enabled) {
+    return pcie_modify_cmd(device,
+                           enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
+                           enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
 }
 
 /*
@@ -390,11 +411,12 @@ static inline void pcie_enable_bus_master(const pcie_device_state_t* device, boo
  *
  * @param device A pointer to the target device.
  * @param enable If true, allow the device to access its PIO mapped registers.
+ * @return A status_t indicating success or failure of the operation.
  */
-static inline void pcie_enable_pio(const pcie_device_state_t* device, bool enabled) {
-    pcie_modify_cmd(device,
-            enabled ? 0 : PCI_COMMAND_IO_EN,
-            enabled ? PCI_COMMAND_IO_EN : 0);
+static inline status_t pcie_enable_pio(pcie_device_state_t* device, bool enabled) {
+    return pcie_modify_cmd(device,
+                           enabled ? 0 : PCI_COMMAND_IO_EN,
+                           enabled ? PCI_COMMAND_IO_EN : 0);
 }
 
 /*
@@ -402,11 +424,12 @@ static inline void pcie_enable_pio(const pcie_device_state_t* device, bool enabl
  *
  * @param device A pointer to the target device.
  * @param enable If true, allow the device to access its MMIO mapped registers.
+ * @return A status_t indicating success or failure of the operation.
  */
-static inline void pcie_enable_mmio(const pcie_device_state_t* device, bool enabled) {
-    pcie_modify_cmd(device,
-            enabled ? 0 : PCI_COMMAND_MEM_EN,
-            enabled ? PCI_COMMAND_MEM_EN : 0);
+static inline status_t pcie_enable_mmio(pcie_device_state_t* device, bool enabled) {
+    return pcie_modify_cmd(device,
+                           enabled ? 0 : PCI_COMMAND_MEM_EN,
+                           enabled ? PCI_COMMAND_MEM_EN : 0);
 }
 
 /*

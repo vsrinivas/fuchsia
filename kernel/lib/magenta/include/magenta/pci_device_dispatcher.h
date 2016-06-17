@@ -21,7 +21,7 @@ class PciDeviceDispatcher final : public Dispatcher {
 public:
     class PciDeviceWrapper final : public utils::RefCounted<PciDeviceWrapper> {
       public:
-        static status_t Create(pcie_device_state_t* device,
+        static status_t Create(uint32_t index,
                                utils::RefPtr<PciDeviceWrapper>* out_device);
 
         status_t Claim();   // Called only from PciDeviceDispatcher while holding dispatcher lock_

@@ -33,14 +33,10 @@ status_t PciDeviceDispatcher::Create(uint32_t                   index,
                                      mx_pcie_get_nth_info_t*    out_info,
                                      utils::RefPtr<Dispatcher>* out_dispatcher,
                                      mx_rights_t*               out_rights) {
-    pcie_device_state_t* device = pci_get_nth_device(index);
-    if (!device)
-        return ERR_OUT_OF_RANGE;
-
     status_t status;
     utils::RefPtr<PciDeviceWrapper> device_wrapper;
 
-    status = PciDeviceWrapper::Create(device, &device_wrapper);
+    status = PciDeviceWrapper::Create(index, &device_wrapper);
     if (status != NO_ERROR)
         return status;
 
@@ -225,8 +221,10 @@ PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(pcie_device_state_t* dev
 
 PciDeviceDispatcher::PciDeviceWrapper::~PciDeviceWrapper() {
     DEBUG_ASSERT(device_);
-    if (claimed_)
-        pcie_shutdown_device(device_);
+    pcie_shutdown_device(device_);
+
+    // Release the reference we are holding because of our call to pcie_get_nth_device
+    pcie_release_device(device_);
 }
 
 status_t PciDeviceDispatcher::PciDeviceWrapper::Claim() {
@@ -243,14 +241,22 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Claim() {
 }
 
 status_t PciDeviceDispatcher::PciDeviceWrapper::Create(
-        pcie_device_state_t* device,
+        uint32_t index,
         utils::RefPtr<PciDeviceWrapper>* out_device) {
-    if (!device || !out_device)
+    if (!out_device)
         return ERR_INVALID_ARGS;
 
-    *out_device = utils::AdoptRef<PciDeviceWrapper>(new PciDeviceWrapper(device));
+    pcie_device_state_t* device = pcie_get_nth_device(index);
+    if (!device)
+        return ERR_OUT_OF_RANGE;
 
-    return *out_device ? NO_ERROR : ERR_NO_MEMORY;
+    *out_device = utils::AdoptRef<PciDeviceWrapper>(new PciDeviceWrapper(device));
+    if (!*out_device) {
+        pcie_release_device(device);
+        return ERR_NO_MEMORY;
+    }
+
+    return NO_ERROR;
 }
 
 status_t PciDeviceDispatcher::PciDeviceWrapper::AddBarCachePolicyRef(uint bar_num,

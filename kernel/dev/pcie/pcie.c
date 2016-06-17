@@ -179,6 +179,7 @@ static bool pcie_probe_bar_info(pcie_config_t*   cfg,
 
 static void pcie_enumerate_bars(pcie_device_state_t* dev) {
     DEBUG_ASSERT(dev && dev->cfg);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     pcie_config_t* cfg  = dev->cfg;
     uint8_t header_type = pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
@@ -233,26 +234,31 @@ static status_t pcie_scan_init_device(pcie_device_state_t*     dev,
                                       uint                     dev_id,
                                       uint                     func_id) {
     DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(dev->ref_count == 1);
+    DEBUG_ASSERT(!dev->plugged_in);
     DEBUG_ASSERT(bus_drv);
+
+    mutex_init(&dev->dev_lock);
+    mutex_init(&dev->start_claim_lock);
+    MUTEX_ACQUIRE(dev, dev_lock);
 
     status_t       status;
     uint64_t       cfg_phys;
     pcie_config_t* cfg = pcie_get_config(bus_drv, &cfg_phys, bus_id, dev_id, func_id);
-
     DEBUG_ASSERT(cfg);
 
-    dev->cfg       = cfg;
-    dev->cfg_phys  = cfg_phys;
-    dev->upstream  = upstream_bridge;
-    dev->bus_drv   = bus_drv;
-    dev->vendor_id = pcie_read16(&cfg->base.vendor_id);
-    dev->device_id = pcie_read16(&cfg->base.device_id);
-    dev->class_id  = pcie_read8(&cfg->base.base_class);
-    dev->subclass  = pcie_read8(&cfg->base.sub_class);
-    dev->prog_if   = pcie_read8(&cfg->base.program_interface);
-    dev->bus_id    = bus_id;
-    dev->dev_id    = dev_id;
-    dev->func_id   = func_id;
+    dev->cfg        = cfg;
+    dev->cfg_phys   = cfg_phys;
+    dev->bus_drv    = bus_drv;
+    dev->vendor_id  = pcie_read16(&cfg->base.vendor_id);
+    dev->device_id  = pcie_read16(&cfg->base.device_id);
+    dev->class_id   = pcie_read8(&cfg->base.base_class);
+    dev->subclass   = pcie_read8(&cfg->base.sub_class);
+    dev->prog_if    = pcie_read8(&cfg->base.program_interface);
+    dev->bus_id     = bus_id;
+    dev->dev_id     = dev_id;
+    dev->func_id    = func_id;
+    dev->plugged_in = true;
 
     /* PCI Express Capabilities */
     dev->pcie_caps.devtype = PCIE_DEVTYPE_UNKNOWN;
@@ -265,11 +271,24 @@ static status_t pcie_scan_init_device(pcie_device_state_t*     dev,
      * if they exist */
     status = pcie_parse_capabilities(dev);
     if (status != NO_ERROR)
-        return status;
+        goto finished;
 
     /* Now that we know what our capabilities are, initialize our internal IRQ
      * bookkeeping */
-    return pcie_init_device_irq_state(dev);
+    status = pcie_init_device_irq_state(dev, upstream_bridge);
+
+finished:
+    MUTEX_RELEASE(dev, dev_lock);
+
+    /* If things have gone well, and we have an upstream bridge, go ahead and
+     * link ourselves up to the upstream bridge. */
+    if ((status == NO_ERROR) && upstream_bridge) {
+        pcie_link_device_to_upstream(dev, upstream_bridge);
+    } else {
+        DEBUG_ASSERT(dev->upstream == NULL);
+    }
+
+    return status;
 }
 
 static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
@@ -330,12 +349,19 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
             return;
         }
 
+        // TODO(johngro) : The local "dev" pointer owns this reference.  Clean
+        // this up using smart pointers when we switch to C++
         dev = &bridge->dev;
+        dev->ref_count = 1;
         dev->is_bridge = true;
         bridge->managed_bus_id = secondary_id;
     } else {
         /* Allocate and initialize our device structure */
+
+        // TODO(johngro) : The local "dev" pointer owns this reference.  Clean
+        // this up using smart pointers when we switch to C++
         dev = calloc(1, sizeof(*dev));
+        dev->ref_count = 1;
         if (!dev) {
             TRACEF("Failed to allocate device node for %02x:%02x.%01x during bus scan.\n",
                     bus_id, dev_id, func_id);
@@ -343,7 +369,7 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
         }
     }
 
-    /* Link up the graph, and initialize common fields
+    /* Initialize common fields, linking up the graph in the process.
      *
      * TODO(johngro): Don't assert that this succeeds.  Instead handle sanity
      * check failures at runtime.  This goes for all of the other things which
@@ -354,13 +380,11 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
      * to a driver.
      */
     __UNUSED status_t res;
-    upstream_bridge->downstream[ndx] = dev;
     res = pcie_scan_init_device(dev,
                                 upstream_bridge,
                                 upstream_bridge->dev.bus_drv,
                                 bus_id, dev_id, func_id);
     DEBUG_ASSERT(NO_ERROR == res);
-
 
     /* If this was a bridge device, recurse and continue probing. */
     pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
@@ -410,8 +434,16 @@ static void pcie_scan_bus(pcie_bridge_state_t* bridge) {
     }
 }
 
-static void pcie_free_bridge_device_tree(pcie_device_state_t* dev) {
+void pcie_unplug_device(pcie_device_state_t* dev) {
     DEBUG_ASSERT(dev);
+
+    /* Begin by completely nerfing this device, and preventing an new API
+     * operations on it.  We need to be inside the dev lock to do this.  Note:
+     * it is assumed that we will not disappear during any of this function,
+     * because our caller is holding a reference to us.  This will be much
+     * easier to prove when we switch to C++ and start using utils:RefCounted
+     * pointers instead of raw C pointers. */
+    MUTEX_ACQUIRE(dev, dev_lock);
 
     /* ASSERT that any driver which may have been associated with this
      * device has been properly shutdown already. */
@@ -419,20 +451,40 @@ static void pcie_free_bridge_device_tree(pcie_device_state_t* dev) {
     DEBUG_ASSERT(!dev->driver_ctx);
     DEBUG_ASSERT(!dev->started);
 
-    /* If this is a bridge, recursively free its children.  Otherwise, just free the device */
+    if (dev->plugged_in) {
+        /* Remove all access this device has to the PCI bus */
+        pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+
+        /* TODO(johngro) : Make sure that our interrupt mode has been set to
+         * completely disabled.  Do not return allocated BARs to the central
+         * pool yet.  These regions of the physical bus need to remain
+         * "allocated" until all drivers/users in the system release their last
+         * reference to the device.  This way, if the device gets plugged in
+         * again immediately, the new version of the device will not end up
+         * getting mapped underneath any stale driver instances. */
+
+        dev->plugged_in = false;
+    } else {
+        /* TODO(johngro) : Assert that the device has been completely disabled. */
+    }
+
+    MUTEX_RELEASE(dev, dev_lock);
+
+    /* If this is a bridge, recursively unplug its children */
     pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
     if (bridge) {
         for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-            pcie_device_state_t* downstream_node = bridge->downstream[i];
+            pcie_device_state_t* downstream_device = pcie_get_refed_downstream(bridge, i);
 
-            if (downstream_node)
-                pcie_free_bridge_device_tree(downstream_node);
-
-            free(bridge);
+            if (downstream_device) {
+                pcie_unplug_device(downstream_device);
+                pcie_release_device(downstream_device);
+            }
         }
-    } else {
-        free(dev);
     }
+
+    /* Unlink ourselves from our upstream parent (if we still have one). */
+    pcie_unlink_device_from_upstream(dev);
 }
 
 static bool pcie_allocate_bar(pcie_bar_info_t* info) {
@@ -520,7 +572,7 @@ static bool pcie_allocate_bar(pcie_bar_info_t* info) {
     return true;
 }
 
-static void pcie_allocate_bars(pcie_device_state_t* dev) {
+static status_t pcie_allocate_bars(pcie_device_state_t* dev) {
     /* TODO(johngro) : This method should be much smarter.  Right now, it just
      * allocates the BARs in the order it happens to enumerate them in, paying
      * no attention to the bridge topology, nor making any effort to be
@@ -532,14 +584,24 @@ static void pcie_allocate_bars(pcie_device_state_t* dev) {
      * heuristic to achieve efficient alignment and packing (probably allocating
      * the largest regions first is a good start)
      */
-
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(dev->cfg);
+    MUTEX_ACQUIRE(dev, dev_lock);
+
+    status_t ret;
+
+    /* Has the device been unplugged already? */
+    if (!dev->plugged_in) {
+        ret = ERR_NOT_MOUNTED;
+        goto finished;
+    }
 
     /* If this has been claimed by a driver, do not make any changes
      * to the BAR allocation. */
-    if (dev->driver)
-        return;
+    if (dev->driver) {
+        ret = NO_ERROR;
+        goto finished;
+    }
 
     /* Make sure the device has no access to either MMIO or PIO space, cannot
      * access main system memory, and has its IRQ(s) disabled */
@@ -560,117 +622,152 @@ static void pcie_allocate_bars(pcie_device_state_t* dev) {
             }
         }
     }
-}
 
-/*
- * Attaches a driver to a PCI device if not already claimed.
- */
-static status_t pcie_do_claim_device(pcie_device_state_t* dev,
-                                     const pcie_driver_registration_t* driver,
-                                     void* driver_ctx) {
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(driver && driver->fn_table);
+    ret = NO_ERROR;
 
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
-    status_t                 ret;
-
-    mutex_acquire(&bus_drv->claimed_devices_lock);
-
-    if (list_in_list(&dev->claimed_device_node)) {
-        DEBUG_ASSERT(dev->driver);
-        ret = ERR_BUSY;
-    } else {
-        DEBUG_ASSERT(!dev->driver);
-        DEBUG_ASSERT(!dev->driver_ctx);
-        DEBUG_ASSERT(!dev->started);
-
-        dev->driver = driver;
-        dev->driver_ctx = driver_ctx;
-        list_add_tail(&bus_drv->claimed_devices, &dev->claimed_device_node);
-        ret = NO_ERROR;
-    }
-
-    mutex_release(&bus_drv->claimed_devices_lock);
-
-    if (ret == NO_ERROR) {
-        LTRACEF("Device %04hx:%04hx at %02x:%02x.%01x (cfg vaddr = %p) claimed by driver \"%s\"\n",
-                dev->vendor_id,
-                dev->device_id,
-                dev->bus_id,
-                dev->dev_id,
-                dev->func_id,
-                dev->cfg,
-                pcie_driver_name(driver));
-    }
-
+finished:
+    MUTEX_RELEASE(dev, dev_lock);
     return ret;
 }
 
-static void pcie_claim_devices(pcie_device_state_t* dev) {
+static bool pcie_allocate_device_bars_helper(struct pcie_device_state* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(dev->cfg);
-
-    /* Don't allow anyone to claim this device if it has already been
-     * claimed. */
-    if (!dev->driver) {
-        /* Go over our list of builtin drivers and see if any are interested in this
-         * device. */
-        void* driver_ctx = NULL;
-
-        const pcie_driver_registration_t* driver;
-        for (driver = __start_pcie_builtin_drivers;
-             driver < __stop_pcie_builtin_drivers;
-             ++driver) {
-            const pcie_driver_fn_table_t* fn_table = driver->fn_table;
-            DEBUG_ASSERT(fn_table->pcie_probe_fn);
-            driver_ctx = fn_table->pcie_probe_fn(dev);
-            if (driver_ctx)
-                break;
-        }
-
-        /* If we found a driver who wants this device, Finish filling out the
-         * structure and add the device to the claimed devices list */
-        if (driver_ctx) {
-            __UNUSED status_t result;
-            DEBUG_ASSERT(driver < __stop_pcie_builtin_drivers);
-
-            result = pcie_do_claim_device(dev, driver, driver_ctx);
-            DEBUG_ASSERT(result == NO_ERROR);
-        }
-    }
-
-    /* If this is a bridge, recurse over its children. */
-    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
-    if (bridge) {
-        for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-            if (bridge->downstream[i]) {
-                pcie_claim_devices(bridge->downstream[i]);
-            }
-        }
-    }
+    pcie_allocate_bars(dev);
+    return true;
 }
 
-/*
-  * The claimed_devices_lock must be held while calling this function.
- */
-static status_t pcie_start_claimed_device(pcie_device_state_t* dev) {
+static void pcie_allocate_device_bars(pcie_bus_driver_state_t* bus_drv) {
+    pcie_foreach_device(bus_drv, pcie_allocate_device_bars_helper, NULL);
+}
+
+static status_t pcie_claim_device(pcie_device_state_t* dev,
+                                  const pcie_driver_registration_t* driver,
+                                  void* driver_ctx) {
+    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(driver && driver->fn_table);
+    DEBUG_ASSERT(is_mutex_held(&dev->start_claim_lock));
+    DEBUG_ASSERT(!dev->driver);
+
+    status_t ret;
+    MUTEX_ACQUIRE(dev, dev_lock);
+
+    /* Has the device been unplugged? */
+    if (!dev->plugged_in) {
+        // TODO(johngro) : It would be nice to have a better error code for this.
+        ret = ERR_NOT_MOUNTED;
+        goto finished;
+    }
+
+    /* Looks good!  Claim the device in the name of the driver. */
+    dev->driver     = driver;
+    dev->driver_ctx = driver_ctx;
+    ret             = NO_ERROR;
+
+finished:
+    MUTEX_RELEASE(dev, dev_lock);
+    return ret;
+}
+
+static bool pcie_claim_devices_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+    DEBUG_ASSERT(dev);
+
+    /* Our device is currently ref'ed, so we know it will not disappear out from
+     * under us.  While holding the device's start/claim lock, iterate over our
+     * list of built-in kernel drivers and see if any of them want to claim this
+     * device.  Do not hold the device's API lock while calling the driver's
+     * probe method.  The driver is going to interact with the device using the
+     * public facing API, which will need to obtain the API lock for pretty much
+     * every operation.
+     */
+    MUTEX_ACQUIRE(dev, start_claim_lock);
+
+    /* If we have already been claimed, just move on to the next device */
+    if (dev->driver)
+        goto finished;
+
+    /* Go over our list of builtin drivers and see if any are interested in this
+     * device. */
+    void* driver_ctx = NULL;
+    const pcie_driver_registration_t* driver;
+
+    for (driver = __start_pcie_builtin_drivers; driver < __stop_pcie_builtin_drivers; ++driver) {
+        const pcie_driver_fn_table_t* fn_table = driver->fn_table;
+        DEBUG_ASSERT(fn_table->pcie_probe_fn);
+        driver_ctx = fn_table->pcie_probe_fn(dev);
+
+        if (driver_ctx)
+            break;
+    }
+
+    /* If no one wanted the device, just move on to the next one. */
+    if (!driver_ctx)
+        goto finished;
+
+    /* Looks like we found a driver who is interested in the device.  Attempt to
+     * claim it in the name of the driver.  This might fail because the device
+     * may have become unplugged.  If so, give the device context back to the
+     * driver using its release method (if it has one).
+     */
+    status_t res = pcie_claim_device(dev, driver, driver_ctx);
+    if (res != NO_ERROR) {
+        if (driver->fn_table->pcie_release_fn)
+            driver->fn_table->pcie_release_fn(driver_ctx);
+    }
+
+    /* Move on to the next device */
+finished:
+    MUTEX_RELEASE(dev, start_claim_lock);
+    return true;
+}
+
+static void pcie_claim_devices(pcie_bus_driver_state_t* bus_drv) {
+    pcie_foreach_device(bus_drv, pcie_claim_devices_helper, NULL);
+}
+
+static status_t pcie_start_device(pcie_device_state_t* dev) {
+    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(is_mutex_held(&dev->start_claim_lock));
+
+    /* Note: We do not obtain the dev_lock during this method.  We are going to
+     * be calling back through the start hook of the driver, and we cannot be
+     * holding the device lock when we do this (since the driver needs to
+     * interact with the PCIe API in order to start).  If the device is
+     * spontaneously unplugged during this startup process, the driver should
+     * fail at some point while interacting with the API and fail the startup
+     * process.
+     *
+     * TODO(johngro): At some point, when we have the infrastructure in place,
+     * the unplug operation needs to notify the device driver that it has become
+     * spontaneously unplugged.  For sanity's sake, this operation will need to
+     * be synchronized with the start/claim process.
+     */
+
+    /* Was the device was already un-claimed */
+    if (!dev->driver)
+        return ERR_BAD_STATE;
+
+    /* Was the device was already started?  If so, great.  Just declare success */
+    if (dev->started)
+        return NO_ERROR;
+
+    /* Attempt to start the device */
+    status_t ret = NO_ERROR;
     const pcie_driver_fn_table_t* fn_table = dev->driver->fn_table;
-    status_t err = NO_ERROR;
-    if (fn_table->pcie_startup_fn && ((err = fn_table->pcie_startup_fn(dev)) != NO_ERROR)) {
+    if (fn_table->pcie_startup_fn && ((ret = fn_table->pcie_startup_fn(dev)) != NO_ERROR)) {
         /* Device failed to start.*/
         TRACEF("Failed to start %04hx:%04hx at %02x:%02x.%01x claimed by driver "
-               "\"%s\" (err %d)\n",
+               "\"%s\" (result %d)\n",
                pcie_read16(&dev->cfg->base.vendor_id),
                pcie_read16(&dev->cfg->base.device_id),
                dev->bus_id,
                dev->dev_id,
                dev->func_id,
                pcie_driver_name(dev->driver),
-               err);
+               ret);
 
         /* Call the driver release method (if any) */
         if (fn_table->pcie_release_fn)
-            fn_table->pcie_release_fn(dev);
+            fn_table->pcie_release_fn(dev->driver_ctx);
 
         /* Clear out any internal driver related bookkeeping */
         dev->driver     = NULL;
@@ -679,61 +776,57 @@ static status_t pcie_start_claimed_device(pcie_device_state_t* dev) {
     } else {
         dev->started = true;
     }
-    return err;
+
+    return ret;
 }
 
-void pcie_start_claimed_devices(pcie_bus_driver_state_t* bus_drv) {
-    DEBUG_ASSERT(bus_drv);
-
-    pcie_device_state_t* dev;
-    pcie_device_state_t* tmp;
-
-    /* Try to start device on the claimed list which is not already started. */
-    mutex_acquire(&bus_drv->claimed_devices_lock);
-    list_for_every_entry_safe(&bus_drv->claimed_devices,
-                              dev, tmp, pcie_device_state_t, claimed_device_node) {
-        /* Skip this device if it has already started */
-        if (dev->started)
-            continue;
-
-        if (pcie_start_claimed_device(dev) != NO_ERROR) {
-            /* Remove the device from the claimed list */
-            list_delete(&dev->claimed_device_node);
-        }
-    }
-    mutex_release(&bus_drv->claimed_devices_lock);
-}
-
-static pcie_device_state_t* do_get_nth_device(pcie_device_state_t* dev, uint32_t* index) {
+static bool pcie_start_devices_helper(struct pcie_device_state* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev);
 
-    const pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
-    if (bridge) {
-        for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-            pcie_device_state_t* downstream = bridge->downstream[i];
-            if (downstream) {
-                pcie_device_state_t* dev = do_get_nth_device(downstream, index);
-                if (dev)
-                    return dev;
-            }
-        }
-    } else {
-        if ((*index)-- == 0)
-            return dev;
+    /* Don't let the started/claimed status of the device change for the
+     * duration of this operaion */
+    MUTEX_ACQUIRE(dev, start_claim_lock);
+    pcie_start_device(dev);
+    MUTEX_RELEASE(dev, start_claim_lock);
+
+    return true;
+}
+
+void pcie_start_devices(pcie_bus_driver_state_t* bus_drv) {
+    pcie_foreach_device(bus_drv, pcie_start_devices_helper, NULL);
+}
+
+typedef struct pcie_get_nth_device_state {
+    uint32_t index;
+    pcie_device_state_t* ret;
+} pcie_get_nth_device_state_t;
+
+static bool pcie_get_nth_device_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+    DEBUG_ASSERT(dev && ctx);
+
+    pcie_get_nth_device_state_t* state = (pcie_get_nth_device_state_t*)ctx;
+    if (!state->index) {
+        state->ret = dev;
+        pcie_add_ref_device(state->ret);
+        return false;
     }
-    return NULL;
+
+    state->index--;
+    return true;
 }
 
 /*
  * For iterating through all PCI devices. Returns the nth device, or NULL
  * if index is >= the number of PCI devices.
  */
-pcie_device_state_t* pci_get_nth_device(uint32_t index) {
+pcie_device_state_t* pcie_get_nth_device(uint32_t index) {
     pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
-    if (!bus_drv || !bus_drv->host_bridge) return NULL;
+    if (!bus_drv) return NULL;
 
-    uint32_t mutable_index = index;
-    return do_get_nth_device(&bus_drv->host_bridge->dev, &mutable_index);
+    pcie_get_nth_device_state_t state = { .index = index, .ret = NULL };
+    pcie_foreach_device(bus_drv, pcie_get_nth_device_helper, &state);
+
+    return state.ret;
 }
 
 /*
@@ -745,17 +838,19 @@ status_t pcie_claim_and_start_device(pcie_device_state_t* dev,
                                      void* driver_ctx) {
     status_t result;
 
-    result = pcie_do_claim_device(dev, driver, driver_ctx);
+    /* Don't allow the claimed/started state to chage during this operation */
+    MUTEX_ACQUIRE(dev, start_claim_lock);
+
+    result = pcie_claim_device(dev, driver, driver_ctx);
     if (result != NO_ERROR)
-        return result;
+        goto finished;
 
-    /* "start" the device.  This operation should never fail as this function
-     * should only ever be called when registering user mode device drivers.
-     * User mode device drivers should never have a kernel_mode startup hook (so
-     * they should never fail to start */
-    result = pcie_start_claimed_device(dev);
-    DEBUG_ASSERT(result == NO_ERROR);
+    /* No special actions need to be taken if we fail to start the device.  It
+     * will automatically have been unclaimed for us. */
+    result = pcie_start_device(dev);
 
+finished:
+    MUTEX_RELEASE(dev, start_claim_lock);
     return result;
 }
 
@@ -764,22 +859,29 @@ status_t pcie_claim_and_start_device(pcie_device_state_t* dev,
  * pcie_claim_and_start_device()
  */
 void pcie_shutdown_device(pcie_device_state_t* dev) {
-    DEBUG_ASSERT(dev && dev->driver && dev->driver->fn_table);
-    pcie_bus_driver_state_t*      bus_drv = dev->bus_drv;
-    const pcie_driver_fn_table_t* fn      = dev->driver->fn_table;
+    DEBUG_ASSERT(dev);
+    MUTEX_ACQUIRE(dev, start_claim_lock);
+
+    /* If the device is not claimed, then there is nothing to do */
+    if (!dev->driver) {
+        DEBUG_ASSERT(!dev->driver_ctx);
+        DEBUG_ASSERT(!dev->started);
+        LTRACEF("PCI device (%02x:%02x.%x) already shutdown.\n",
+                dev->bus_id, dev->dev_id, dev->func_id);
+        goto finished;
+    }
+
+    const pcie_driver_fn_table_t* fn = dev->driver->fn_table;
 
     LTRACEF("Shutting down PCI device %02x:%02x.%x (%s)...\n",
-            dev->bus_id,
-            dev->dev_id,
-            dev->func_id,
+            dev->bus_id, dev->dev_id, dev->func_id,
             pcie_driver_name(dev->driver));
 
     /* If startup was ever successfully called for this device, and the device
      * has registered a shutdown hook, give it a chance to shutdown cleanly */
-    if (dev->started && fn->pcie_shutdown_fn) {
+    if (dev->started && fn->pcie_shutdown_fn)
         fn->pcie_shutdown_fn(dev);
-        dev->started = false;
-    }
+    dev->started = false;
 
     /* Make sure that all IRQs are shutdown and all handlers released for this device */
     pcie_set_irq_mode_disabled(dev);
@@ -790,22 +892,21 @@ void pcie_shutdown_device(pcie_device_state_t* dev) {
     /* If the device has a release hook, call it in order to allow it to free
      * any dynamically allocated resources. */
     if (fn->pcie_release_fn)
-        fn->pcie_release_fn(dev);
+        fn->pcie_release_fn(dev->driver_ctx);
 
     /* Unclaim the device. */
-    mutex_acquire(&bus_drv->claimed_devices_lock);
-
-    DEBUG_ASSERT(list_in_list(&dev->claimed_device_node));
-    list_delete(&dev->claimed_device_node);
     dev->driver     = NULL;
     dev->driver_ctx = NULL;
 
-    mutex_release(&bus_drv->claimed_devices_lock);
+finished:
+    MUTEX_RELEASE(dev, start_claim_lock);
 }
 
 EXPORT_TO_DEBUG_CONSOLE
 void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
     DEBUG_ASSERT(bus_drv);
+
+    MUTEX_ACQUIRE(bus_drv, bus_rescan_lock);
 
     /* If we have not already discovered the host bridge, start by looking for it */
     if (!bus_drv->host_bridge) {
@@ -840,6 +941,7 @@ void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
             TRACEF("Failed to allocate bridge node for 00:00.0 during bus scan.\n");
             return;
         }
+        bus_drv->host_bridge->dev.ref_count = 1;    // bus_drv->host_bridge owns this ref
 
         /* Initialize common fields
          *
@@ -868,10 +970,12 @@ void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
 
     /* Go over our tree and look for drivers who might want to take ownership of
      * device. */
-    pcie_claim_devices(&bus_drv->host_bridge->dev);
+    pcie_claim_devices(bus_drv);
 
     /* Give the devices claimed by drivers a chance to start */
-    pcie_start_claimed_devices(bus_drv);
+    pcie_start_devices(bus_drv);
+
+    MUTEX_RELEASE(bus_drv, bus_rescan_lock);
 }
 
 status_t pcie_init(const pcie_init_info_t* init_info) {
@@ -893,8 +997,8 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
     if (status != NO_ERROR)
         return status;
 
-    mutex_init     (&bus_drv->claimed_devices_lock);
-    list_initialize(&bus_drv->claimed_devices);
+    mutex_init(&bus_drv->bus_topology_lock);
+    mutex_init(&bus_drv->bus_rescan_lock);
 
     bus_drv->mmio_lo.io   = init_info->mmio_window_lo;
     bus_drv->mmio_hi.io   = init_info->mmio_window_hi;
@@ -1005,32 +1109,24 @@ bailout:
     return status;
 }
 
+static bool pcie_shutdown_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+    DEBUG_ASSERT(dev);
+    pcie_shutdown_device(dev);
+    return true;
+}
+
 void pcie_shutdown(void) {
     pcie_bus_driver_state_t* bus_drv = &g_drv_state;
 
-    /* Force shutdown any devices which happen to still be running.
-     *
-     * TODO(johngro) : Rework this so that shutdown of devices can happen in an
-     * orderly asynchronous fashion before we finally free all of the bus driver
-     * resources.  This is technically not safe as a device might attempt to
-     * shut itself down while we are tryign to shut down the bus.  By the time
-     * we get to this point, we should be able to assert that all driver have
-     * been shutdown and unclaimed their devices, and that no new device claims
-     * can happen.
-     */
-    pcie_device_state_t* dev;
-    while ((dev = list_peek_head_type(&bus_drv->claimed_devices,
-                                      pcie_device_state_t,
-                                      claimed_device_node)) != NULL) {
-        pcie_shutdown_device(dev);
-    }
+    /* Force shutdown any devices which happen to still be running. */
+    pcie_foreach_device(bus_drv, pcie_shutdown_helper, NULL);
 
     /* Shut off all of our IRQs and free all of our bookkeeping */
     pcie_shutdown_irqs(bus_drv);
 
     /* Free the device tree */
     if (bus_drv->host_bridge) {
-        pcie_free_bridge_device_tree(&bus_drv->host_bridge->dev);
+        pcie_unplug_device(&bus_drv->host_bridge->dev);
         bus_drv->host_bridge = NULL;
     }
 
@@ -1051,8 +1147,9 @@ void pcie_shutdown(void) {
     memset(bus_drv, 0, sizeof(*bus_drv));
 }
 
-void pcie_modify_cmd(const pcie_device_state_t* dev, uint16_t clr_bits, uint16_t set_bits) {
+void pcie_modify_cmd_internal(pcie_device_state_t* dev, uint16_t clr_bits, uint16_t set_bits) {
     DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
     spin_lock_saved_state_t  irq_state;
     pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
     pcie_config_t*           cfg = dev->cfg;
@@ -1070,6 +1167,22 @@ void pcie_modify_cmd(const pcie_device_state_t* dev, uint16_t clr_bits, uint16_t
     spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
 }
 
+status_t pcie_modify_cmd(pcie_device_state_t* dev, uint16_t clr_bits, uint16_t set_bits) {
+    status_t ret;
+    MUTEX_ACQUIRE(dev, dev_lock);
+
+    if (dev->plugged_in) {
+        pcie_modify_cmd_internal(dev, clr_bits, set_bits);
+        ret = NO_ERROR;
+    } else {
+        ret = ERR_NOT_MOUNTED;
+    }
+
+    MUTEX_RELEASE(dev, dev_lock);
+    return ret;
+}
+
 void pcie_rescan_bus(void) {
-    pcie_scan_and_start_devices(&g_drv_state);
+    pcie_bus_driver_state_t* bus_drv = &g_drv_state;
+    pcie_scan_and_start_devices(bus_drv);
 }

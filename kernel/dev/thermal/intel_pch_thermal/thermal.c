@@ -154,7 +154,7 @@ static void pch_thermal_shutdown(struct pcie_device_state* pci_device)
     pch_thermal_cleanup(&g_pch_thermal_context);
 }
 
-static void pch_thermal_release(struct pcie_device_state* pci_device)
+static void pch_thermal_release(void* ctx)
 {
     DEBUG_ASSERT(!g_pch_thermal_context.regs);
     DEBUG_ASSERT(!g_pch_thermal_context.pci_device);
