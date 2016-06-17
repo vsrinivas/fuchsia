@@ -1,9 +1,9 @@
 #if defined(__x86_64__)
-#include "../../arch/generic/bits/statfs.h"
+#include "generic/statfs.h"
 #elif defined(__aarch64__)
-#include "../../arch/generic/bits/statfs.h"
+#include "generic/statfs.h"
 #elif defined(__arm__)
-#include "../../arch/generic/bits/statfs.h"
+#include "generic/statfs.h"
 #else
 #error Unsupported architecture!
 #endif

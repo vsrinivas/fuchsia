@@ -1,9 +1,9 @@
 #if defined(__x86_64__)
-#include "../../arch/x86_64/bits/shm.h"
+#include "x86_64/shm.h"
 #elif defined(__aarch64__)
-#include "../../arch/aarch64/bits/shm.h"
+#include "aarch64/shm.h"
 #elif defined(__arm__)
-#include "../../arch/generic/bits/shm.h"
+#include "generic/shm.h"
 #else
 #error Unsupported architecture!
 #endif

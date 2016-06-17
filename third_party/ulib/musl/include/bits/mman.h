@@ -1,9 +1,9 @@
 #if defined(__x86_64__)
-#include "../../arch/x86_64/bits/mman.h"
+#include "x86_64/mman.h"
 #elif defined(__aarch64__)
-#include "../../arch/generic/bits/mman.h"
+#include "generic/mman.h"
 #elif defined(__arm__)
-#include "../../arch/generic/bits/mman.h"
+#include "generic/mman.h"
 #else
 #error Unsupported architecture!
 #endif

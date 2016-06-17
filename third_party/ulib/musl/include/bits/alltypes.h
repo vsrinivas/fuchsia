@@ -1,9 +1,9 @@
 #if defined(__x86_64__)
-#include "alltypes-x86_64.h"
+#include "x86_64/alltypes.h"
 #elif defined(__aarch64__)
-#include "alltypes-aarch64.h"
+#include "aarch64/alltypes.h"
 #elif defined(__arm__)
-#include "alltypes-arm.h"
+#include "arm/alltypes.h"
 #else
 #error Unsupported architecture!
 #endif

@@ -1,9 +1,9 @@
 #if defined(__x86_64__)
-#include "../../arch/x86_64/bits/fenv.h"
+#include "x86_64/fenv.h"
 #elif defined(__aarch64__)
-#include "../../arch/aarch64/bits/fenv.h"
+#include "aarch64/fenv.h"
 #elif defined(__arm__)
-#include "../../arch/arm/bits/fenv.h"
+#include "arm/fenv.h"
 #else
 #error Unsupported architecture!
 #endif

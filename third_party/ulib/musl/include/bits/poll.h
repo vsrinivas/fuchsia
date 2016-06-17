@@ -1,9 +1,9 @@
 #if defined(__x86_64__)
-#include "../../arch/generic/bits/poll.h"
+#include "generic/poll.h"
 #elif defined(__aarch64__)
-#include "../../arch/generic/bits/poll.h"
+#include "generic/poll.h"
 #elif defined(__arm__)
-#include "../../arch/generic/bits/poll.h"
+#include "generic/poll.h"
 #else
 #error Unsupported architecture!
 #endif
