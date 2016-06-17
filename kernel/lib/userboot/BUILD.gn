@@ -45,6 +45,7 @@ module("userboot") {
       "USER_BOOTFS_FILENAME=\"${bootfs_file}\"",
     ]
     sources += [ "bootfs.S" ]
+    inputs = [ user_bootfs ]
     deps += [ "//kernel/project/virtual:bootfs" ]
   }
 }
