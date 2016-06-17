@@ -37,8 +37,11 @@
 #include "vc.h"
 #include "vcdebug.h"
 
-static gfx_surface hw_gfx;         // framebuffer
-static mxr_thread_t* input_thread; // input wait thread
+// framebuffer
+static gfx_surface hw_gfx;
+
+static mxr_thread_t* input_thread0;
+static mxr_thread_t* input_thread1;
 static mxr_thread_t* logreader_thread;
 
 static struct list_node vc_list = LIST_INITIAL_VALUE(vc_list);
@@ -50,15 +53,6 @@ static mxr_mutex_t active_lock = MXR_MUTEX_INIT;
 
 // TODO create dynamically
 #define VC_COUNT 4
-
-// TODO need a better way to find the display/input devices
-#if PROJECT_MAGENTA_QEMU_X86_64
-static const char* input_dev = "/dev/protocol/char/i8042_keyboard";
-#elif PROJECT_MAGENTA_PC_UEFI
-static const char* input_dev = "/dev/protocol/char/i8042_keyboard";
-#else
-static const char* input_dev = NULL;
-#endif
 
 // TODO move this to ulib/gfx
 static gfx_format display_format_to_gfx_format(uint display_format) {
@@ -99,11 +93,18 @@ static bool vc_ischar(mx_key_event_t* ev) {
 }
 
 static int vc_input_thread(void* arg) {
-    int fd = open(input_dev, O_RDONLY);
-    if (fd < 0) {
-        printf("vc: cannot open '%s'\n", input_dev);
-        return 0;
+    const char* input_dev = arg;
+    int fd;
+restart:
+    for (;;) {
+        fd = open(input_dev, O_RDONLY);
+        if (fd < 0) {
+            _magenta_nanosleep(250000000ULL);
+            continue;
+        }
+        break;
     }
+    printf("vc_input_thread: device opened\n");
     mx_key_event_t ev;
     int modifiers = 0;
 
@@ -111,7 +112,8 @@ static int vc_input_thread(void* arg) {
         mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL);
         int r = read(fd, &ev, sizeof(mx_key_event_t));
         if (r < 0) {
-            return r;
+            close(fd);
+            goto restart;
         }
         if ((size_t)(r) != sizeof(mx_key_event_t)) {
             continue;
@@ -365,9 +367,15 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u, count=%u\n", dev->name, info.width, info.height, info.stride, format, i);
 
-    // start a thread to wait for input
-    if ((status = mxr_thread_create(vc_input_thread, NULL, "vc-input", &input_thread)) < 0) {
-        printf("vc-input thread did not start %d\n", status);
+    // start input threads
+    // TODO: generalize this to handle any keyboard devices
+    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/protocol/char/i8042-keyboard",
+                                    "vc-input-ps2", &input_thread0)) < 0) {
+        printf("vc-input-ps2 thread did not start %d\n", status);
+    }
+    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/protocol/char/usb-keyboard",
+                                    "vc-input-usb", &input_thread1)) < 0) {
+        printf("vc-input-usb thread did not start %d\n", status);
     }
 
     mxr_thread_create(vc_logreader_thread, NULL, "vc-debuglog", &logreader_thread);

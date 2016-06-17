@@ -402,7 +402,7 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
 
     device->fifo.lock = MXR_MUTEX_INIT;
 
-    mx_status_t status = device_init(&device->device, driver, "i8042_keyboard", &i8042_device_proto);
+    mx_status_t status = device_init(&device->device, driver, "i8042-keyboard", &i8042_device_proto);
     if (status) {
         free(device);
         return status;
@@ -467,7 +467,7 @@ fail:
 }
 
 mx_driver_t _driver_i8042_keyboard BUILTIN_DRIVER = {
-    .name = "i8042_keyboard",
+    .name = "i8042-keyboard",
     .ops = {
         .init = i8042_keyboard_init,
     },
