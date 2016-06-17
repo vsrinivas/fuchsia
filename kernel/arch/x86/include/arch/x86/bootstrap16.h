@@ -17,7 +17,7 @@
 #define BCD_LM_CS_OFFSET 24
 #define BCD_CPU_COUNTER_OFFSET 28
 #define BCD_CPU_WAITING_OFFSET 32
-#define BCD_KSTACK_BASE_OFFSET 40
+#define BCD_PER_CPU_BASE_OFFSET 40
 
 #ifndef ASSEMBLY
 #include <compiler.h>
@@ -50,6 +50,7 @@ struct __PACKED x86_bootstrap16_data {
     uint32_t long_mode_cs;
 };
 
+
 struct __PACKED x86_ap_bootstrap_data {
     struct x86_bootstrap16_data hdr;
 
@@ -57,8 +58,14 @@ struct __PACKED x86_ap_bootstrap_data {
     uint32_t cpu_id_counter;
     // Pointer to value to use to determine when APs are done with boot
     volatile int  *cpu_waiting_counter;
-    // Virtual address of initial kstacks, one kstack per secondary cpu
-    uint64_t kstack_base[SMP_MAX_CPUS - 1];
+
+    // Per-cpu data
+    struct __PACKED {
+        // Virtual address of base of initial kstack
+        uint64_t kstack_base;
+        // Virtual address of initial thread_t
+        uint64_t thread;
+    } per_cpu[SMP_MAX_CPUS - 1];
 };
 
 // Upon success, returns a pointer to the bootstrap aspace and to the
@@ -80,7 +87,7 @@ STATIC_ASSERT(__offsetof(struct x86_bootstrap16_data, long_mode_cs) == BCD_LM_CS
 STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, hdr) == 0);
 STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, cpu_id_counter) == BCD_CPU_COUNTER_OFFSET);
 STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, cpu_waiting_counter) == BCD_CPU_WAITING_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, kstack_base) == BCD_KSTACK_BASE_OFFSET);
+STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, per_cpu) == BCD_PER_CPU_BASE_OFFSET);
 
 __END_CDECLS
 

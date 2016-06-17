@@ -68,14 +68,16 @@ void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus) {
     bootstrap_data->cpu_waiting_counter = &config.aps_still_booting;
     // Zero the kstack list so if we have to bail, we can safely free the
     // resources.
-    memset(bootstrap_data->kstack_base, 0, sizeof(uint64_t) * (SMP_MAX_CPUS - 1));
-    // Allocate kstacks for all processors
+    memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
+    // Allocate kstacks and threads for all processors
     for (unsigned int i = 0; i < config.num_apics - 1; ++i) {
-        void *kstack_addr = memalign(16, PAGE_SIZE);
-        if (!kstack_addr) {
-            goto cleanup_kstacks;
+        void *thread_addr = memalign(16, PAGE_SIZE + ROUNDUP(sizeof(thread_t), 16));
+        if (!thread_addr) {
+            goto cleanup_allocationss;
         }
-        bootstrap_data->kstack_base[i] = (uint64_t)kstack_addr;
+        bootstrap_data->per_cpu[i].kstack_base =
+                (uint64_t)thread_addr + ROUNDUP(sizeof(thread_t), 16);
+        bootstrap_data->per_cpu[i].thread = (uint64_t)thread_addr;
     }
 
     // Memory fence to ensure all writes to the bootstrap region are
@@ -131,10 +133,10 @@ void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus) {
     // Now that everything is booted, cleanup all temporary structures (e.g.
     // everything except the kstacks).
     goto cleanup_aspace;
-cleanup_kstacks:
+cleanup_allocationss:
     for (unsigned int i = 0; i < config.num_apics - 1; ++i) {
-        if (bootstrap_data->kstack_base[i]) {
-            free((void *)bootstrap_data->kstack_base[i]);
+        if (bootstrap_data->per_cpu[i].thread) {
+            free((void *)bootstrap_data->per_cpu[i].thread);
         }
     }
 cleanup_aspace:

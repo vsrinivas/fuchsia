@@ -94,7 +94,7 @@ void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void* thread
 
 #if WITH_SMP
 #include <arch/x86/apic.h>
-void x86_secondary_entry(volatile int *aps_still_booting)
+void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
 {
     // Would prefer this to be in init_percpu, but there is a dependency on a
     // page mapping existing, and the BP calls that before the VM subsystem is
@@ -120,8 +120,13 @@ void x86_secondary_entry(volatile int *aps_still_booting)
     /* run early secondary cpu init routines up to the threading level */
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
 
+    thread_secondary_cpu_init_early(thread);
+    /* The thread stack and struct are from a single allocation, free it when we
+     * exit into the scheduler */
+    thread->flags |= THREAD_FLAG_FREE_STRUCT;
     lk_secondary_cpu_entry();
 
+fail:
     // lk_secondary_cpu_entry only returns on an error, halt the core in this
     // case.
     arch_disable_ints();

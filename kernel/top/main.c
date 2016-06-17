@@ -150,7 +150,6 @@ void lk_secondary_cpu_entry(void)
         return;
     }
 
-    thread_secondary_cpu_init_early();
     thread_resume(secondary_bootstrap_threads[cpu - 1]);
 
     dprintf(SPEW, "entering scheduler on cpu %d\n", cpu);
@@ -180,6 +179,16 @@ void lk_init_secondary_cpus(uint secondary_cpu_count)
         t->pinned_cpu = i + 1;
         thread_detach(t);
         secondary_bootstrap_threads[i] = t;
+    }
+    for (uint i = 0; i < secondary_cpu_count; i++) {
+        dprintf(SPEW, "creating idle thread for cpu %d\n", i + 1);
+        thread_t *t = thread_create_idle_thread(i + 1);
+        if (!t) {
+            dprintf(CRITICAL, "could not allocate idle thread %d\n", i + 1);
+            secondary_bootstrap_thread_count = i;
+            break;
+        }
+        thread_detach(t);
     }
     secondary_bootstrap_thread_count = secondary_cpu_count;
 }

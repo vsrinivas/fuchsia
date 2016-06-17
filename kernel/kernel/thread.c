@@ -67,7 +67,7 @@ static thread_t _idle_thread;
 
 /* local routines */
 static void thread_resched(void);
-static void idle_thread_routine(void) __NO_RETURN;
+static int idle_thread_routine(void *) __NO_RETURN;
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
 /* preemption timer */
@@ -432,7 +432,7 @@ void thread_exit(int retcode)
     panic("somehow fell through thread_exit()\n");
 }
 
-__NO_RETURN static void idle_thread_routine(void)
+__NO_RETURN static int idle_thread_routine(void *arg)
 {
     for (;;)
         arch_idle();
@@ -782,6 +782,34 @@ void thread_sleep(lk_time_t delay)
 }
 
 /**
+ * @brief Construct a thread t around the current running state
+ *
+ * This should be called once per CPU initialization.  It will create
+ * a thread that is pinned to the current CPU and running at the
+ * highest priority.
+ */
+void thread_construct_first(thread_t *t, const char *name)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    /* Due to somethings below being macros, this might be unused on
+     * non-SMP builds */
+    __UNUSED uint cpu = arch_curr_cpu_num();
+
+    init_thread_struct(t, name);
+    t->priority = HIGHEST_PRIORITY;
+    t->state = THREAD_RUNNING;
+    t->flags = THREAD_FLAG_DETACHED;
+    thread_set_curr_cpu(t, cpu);
+    thread_set_pinned_cpu(t, cpu);
+    wait_queue_init(&t->retcode_wait_queue);
+
+    THREAD_LOCK(state);
+    list_add_head(&thread_list, &t->thread_list_node);
+    set_current_thread(t);
+    THREAD_UNLOCK(state);
+}
+
+/**
  * @brief  Initialize threading system
  *
  * This function is called once, from kmain()
@@ -801,17 +829,7 @@ void thread_init_early(void)
 
     /* create a thread to cover the current running state */
     thread_t *t = idle_thread(0);
-    init_thread_struct(t, "bootstrap");
-
-    /* half construct this thread, since we're already running */
-    t->priority = HIGHEST_PRIORITY;
-    t->state = THREAD_RUNNING;
-    t->flags = THREAD_FLAG_DETACHED;
-    thread_set_curr_cpu(t, 0);
-    thread_set_pinned_cpu(t, 0);
-    wait_queue_init(&t->retcode_wait_queue);
-    list_add_head(&thread_list, &t->thread_list_node);
-    set_current_thread(t);
+    thread_construct_first(t, "bootstrap");
 }
 
 /**
@@ -894,54 +912,58 @@ void thread_become_idle(void)
     arch_enable_ints();
     thread_yield();
 
-    idle_thread_routine();
+    idle_thread_routine(NULL);
 }
 
-/* create an idle thread for the cpu we're on, and start scheduling */
-
-void thread_secondary_cpu_init_early(void)
+/**
+ * @brief Create a thread around the current execution context
+ */
+void thread_secondary_cpu_init_early(thread_t *t)
 {
     DEBUG_ASSERT(arch_ints_disabled());
-
-    /* construct an idle thread to cover our cpu */
-    uint cpu = arch_curr_cpu_num();
-    thread_t *t = idle_thread(cpu);
-
     char name[16];
-    snprintf(name, sizeof(name), "idle %u", cpu);
-    init_thread_struct(t, name);
-    thread_set_pinned_cpu(t, cpu);
-
-    /* half construct this thread, since we're already running */
-    t->priority = HIGHEST_PRIORITY;
-    t->state = THREAD_RUNNING;
-    t->flags = THREAD_FLAG_DETACHED | THREAD_FLAG_IDLE;
-    thread_set_curr_cpu(t, cpu);
-    thread_set_pinned_cpu(t, cpu);
-    wait_queue_init(&t->retcode_wait_queue);
-
-    THREAD_LOCK(state);
-
-    list_add_head(&thread_list, &t->thread_list_node);
-    set_current_thread(t);
-
-    THREAD_UNLOCK(state);
+    snprintf(name, sizeof(name), "cpu_init %d", arch_curr_cpu_num());
+    thread_construct_first(t, name);
 }
 
 void thread_secondary_cpu_entry(void)
 {
     uint cpu = arch_curr_cpu_num();
-    thread_t *t = get_current_thread();
-    t->priority = IDLE_PRIORITY;
 
     mp_set_curr_cpu_active(true);
     mp_set_cpu_idle(cpu);
 
-    /* enable interrupts and start the scheduler on this cpu */
-    arch_enable_ints();
-    thread_yield();
+    /* Make sure the idle thread is runnable */
+    thread_resume(idle_thread(cpu));
 
-    idle_thread_routine();
+    /* Exit from our bootstrap thread, and enter the scheduler on this cpu */
+    thread_exit(0);
+}
+
+/**
+ * @brief Create an idle thread for a secondary CPU
+ */
+thread_t *thread_create_idle_thread(uint cpu_num)
+{
+    DEBUG_ASSERT(cpu_num != 0);
+
+    /* Shouldn't be initialized yet */
+    DEBUG_ASSERT(idle_thread(cpu_num)->magic != THREAD_MAGIC);
+
+    char name[16];
+    snprintf(name, sizeof(name), "idle %u", cpu_num);
+
+    thread_t *t = thread_create_etc(
+            idle_thread(cpu_num), name,
+            idle_thread_routine, NULL,
+            IDLE_PRIORITY,
+            NULL, DEFAULT_STACK_SIZE);
+    if (t == NULL) {
+        return t;
+    }
+    t->flags |= THREAD_FLAG_IDLE;
+    thread_set_pinned_cpu(t, cpu_num);
+    return t;
 }
 
 static const char *thread_state_to_str(enum thread_state state)

@@ -81,10 +81,18 @@ FUNCTION(_x86_secondary_cpu_long_mode_entry)
     LOCK xadd %edi, BCD_CPU_COUNTER_OFFSET(%esi)
     # %rdi is now the index this CPU should use to grab resources
 
+    # Shift index by 2, since the per_cpu member contains two 64-bit values which
+    # will be at offsets 8*(2n) and 8*(2n+1) relative to PER_CPU_BASE_OFFSET
+    shl $1, %rdi
     # Retrieve this CPUs initial kernel stack
     # Note: the stack is unusable until we switch cr3 below
-    mov BCD_KSTACK_BASE_OFFSET(%rsi, %rdi, 8), %rsp
+    mov BCD_PER_CPU_BASE_OFFSET(%rsi, %rdi, 8), %rsp
     add $PAGE_SIZE, %rsp
+
+    # Retrieve this CPUs initial thread
+    # Note: the stack is unusable until we switch cr3 below
+    add $1, %rdi
+    mov BCD_PER_CPU_BASE_OFFSET(%rsi, %rdi, 8), %rdx
 
     # Retrieve the new PML4 address before our data page becomes unreachable
     mov BCD_PHYS_KERNEL_PML4_OFFSET(%esi), %ecx
@@ -114,8 +122,9 @@ FUNCTION(_x86_secondary_cpu_long_mode_entry)
     # Load the IDT
     lidt _idtr
 
+    mov %rdx, %rsi
     # Do an indirect call to keep this position independent
-    # x86_secondary_entry(CPU ready counter)
+    # x86_secondary_entry(CPU ready counter, thread)
     movq $x86_secondary_entry, %rbx
     call *%rbx
 

@@ -36,11 +36,18 @@ uint8_t x86_num_cpus = 1;
 
 status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
 {
-    DEBUG_ASSERT(cpu_count >= 1);
     ASSERT(ap_percpus == NULL);
-    ap_percpus = calloc(sizeof(*ap_percpus), cpu_count - 1);
-    if (ap_percpus == NULL) {
-        return ERR_NO_MEMORY;
+
+    DEBUG_ASSERT(cpu_count >= 1);
+    if (cpu_count == 0) {
+        return ERR_INVALID_ARGS;
+    }
+
+    if (cpu_count > 1) {
+        ap_percpus = calloc(sizeof(*ap_percpus), cpu_count - 1);
+        if (ap_percpus == NULL) {
+            return ERR_NO_MEMORY;
+        }
     }
 
     uint32_t bootstrap_ap = apic_local_id();

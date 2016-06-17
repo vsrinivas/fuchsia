@@ -25,6 +25,7 @@
 static spin_lock_t arm_boot_cpu_lock = 1;
 static volatile int secondaries_to_init = 0;
 uint arm_num_cpus = 1;
+static thread_t _init_thread[SMP_MAX_CPUS - 1];
 #endif
 
 static void arm64_cpu_early_init(void)
@@ -135,6 +136,7 @@ void arm64_secondary_entry(ulong asm_cpu_num)
     atomic_add((int *)&arm_num_cpus, 1);
     __asm__ volatile("sev");
 
+    thread_secondary_cpu_init_early(&_init_thread[cpu - 1]);
     lk_secondary_cpu_entry();
 }
 #endif
