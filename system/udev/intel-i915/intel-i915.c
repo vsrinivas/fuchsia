@@ -26,7 +26,8 @@
 #include <string.h>
 
 #define INTEL_I915_VID (0x8086)
-#define INTEL_I915_DID (0x1616)
+#define INTEL_I915_BROADWELL_DID (0x1616)
+#define INTEL_I915_SKYLAKE_DID (0x1916)
 
 #define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
 #define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
@@ -55,20 +56,25 @@ typedef struct intel_i915_device {
     mx_handle_t framebuffer_handle;
 
     mx_display_info_t info;
+    uint32_t flags;
 } intel_i915_device_t;
+
+#define FLAGS_BACKLIGHT 1
 
 #define get_i915_device(dev) containerof(dev, intel_i915_device_t, device)
 
 static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable) {
-    void* backlight_ctrl = (uint8_t*)dev->regs + BACKLIGHT_CTRL_OFFSET;
-    uint32_t tmp = pcie_read32(backlight_ctrl);
+    if (dev->flags & FLAGS_BACKLIGHT) {
+        void* backlight_ctrl = (uint8_t*)dev->regs + BACKLIGHT_CTRL_OFFSET;
+        uint32_t tmp = pcie_read32(backlight_ctrl);
 
-    if (enable)
-        tmp |= BACKLIGHT_CTRL_BIT;
-    else
-        tmp &= ~BACKLIGHT_CTRL_BIT;
+        if (enable)
+            tmp |= BACKLIGHT_CTRL_BIT;
+        else
+            tmp &= ~BACKLIGHT_CTRL_BIT;
 
-    pcie_write32(backlight_ctrl, tmp);
+        pcie_write32(backlight_ctrl, tmp);
+    }
 }
 
 // implement display protocol
@@ -145,11 +151,14 @@ static mx_status_t intel_i915_probe(mx_driver_t* drv, mx_device_t* dev) {
     if (cfg_handle < 0)
         return cfg_handle;
 
-    mx_status_t status;
-    status = (pci_config->vendor_id == INTEL_I915_VID) && (pci_config->device_id == INTEL_I915_DID)
-                 ? NO_ERROR
-                 : ERR_NOT_SUPPORTED;
-
+    mx_status_t status = ERR_NOT_SUPPORTED;
+    if (pci_config->vendor_id == INTEL_I915_VID) {
+        if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
+            status = NO_ERROR;
+        } else if (pci_config->device_id == INTEL_I915_SKYLAKE_DID) {
+            status = NO_ERROR;
+        }
+    }
     _magenta_handle_close(cfg_handle);
 
     return status;
@@ -168,6 +177,16 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
     intel_i915_device_t* device = calloc(1, sizeof(intel_i915_device_t));
     if (!device)
         return ERR_NO_MEMORY;
+
+    const pci_config_t* pci_config;
+    mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
+    if (cfg_handle >= 0) {
+        if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
+            // TODO: this should be based on the specific target
+            dev->flags |= FLAGS_BACKLIGHT;
+        }
+        _magenta_handle_close(cfg_handle);
+    }
 
     // map register window
     device->regs_handle = pci->map_mmio(dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
