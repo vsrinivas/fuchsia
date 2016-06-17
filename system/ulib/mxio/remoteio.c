@@ -214,9 +214,9 @@ static ssize_t mx_rio_ioctl(
 
     memset(&msg, 0, MX_RIO_HDR_SZ);
     msg.op = MX_RIO_IOCTL;
-    msg.off = op;
     msg.datalen = in_len;
     msg.arg = out_len;
+    msg.arg2.op = op;
     memcpy(msg.data, data, in_len);
 
     if ((r = mx_rio_txn(rio, &msg)) < 0) {
@@ -313,7 +313,7 @@ static off_t mx_rio_seek(mxio_t* io, off_t offset, int whence) {
 
     memset(&msg, 0, MX_RIO_HDR_SZ);
     msg.op = MX_RIO_SEEK;
-    msg.off = offset;
+    msg.arg2.off = offset;
     msg.arg = whence;
 
     if ((r = mx_rio_txn(rio, &msg)) < 0) {
@@ -321,7 +321,7 @@ static off_t mx_rio_seek(mxio_t* io, off_t offset, int whence) {
     }
 
     discard_handles(msg.handle, msg.hcount);
-    return msg.off;
+    return msg.arg2.off;
 }
 
 static mx_status_t mx_rio_close(mxio_t* io) {
@@ -437,7 +437,7 @@ static mx_status_t mx_rio_getobject(mx_rio_t* rio, uint32_t op, const char* name
         return r;
     }
     memcpy(handles, msg.handle, msg.hcount * sizeof(mx_handle_t));
-    *type = msg.off;
+    *type = msg.arg2.protocol;
     return (mx_status_t)msg.hcount;
 }
 

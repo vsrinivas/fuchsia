@@ -252,7 +252,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
             msg->hcount = 1;
         }
         mxio_dispatcher_add(devmgr_dispatcher, h1, rio_handler, dev);
-        msg->off = MXIO_PROTOCOL_REMOTE;
+        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         return NO_ERROR;
     }
     case MX_RIO_READ: {
@@ -264,7 +264,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
         if ((r = proto->read(dev, msg->data, arg)) > 0) {
             msg->datalen = r;
         }
-        msg->off = 0;
+        msg->arg2.off = 0;
         return r;
     }
     case MX_RIO_WRITE: {
@@ -274,7 +274,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
             return r;
         }
         if ((r = proto->write(dev, msg->data, len)) > 0) {
-            msg->off = 0;
+            msg->arg2.off = 0;
         }
         return r;
     }
@@ -293,10 +293,10 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
 
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
-        if ((r = proto->ioctl(dev, msg->off, in_buf, len, msg->data, arg)) > 0) {
+        if ((r = proto->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg)) > 0) {
             msg->datalen = r;
         }
-        msg->off = 0;
+        msg->arg2.off = 0;
         return r;
     }
     default:

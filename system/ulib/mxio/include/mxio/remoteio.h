@@ -67,10 +67,15 @@ mx_status_t mxio_handler_create(mx_handle_t h, mxio_rio_cb_t cb, void* cookie);
 
 struct mx_rio_msg {
     uint32_t magic;                    // MX_RIO_MAGIC
-    uint32_t op;                       // opcode | flags
+    uint32_t op;                       // opcode
     uint32_t datalen;                  // size of data[]
     int32_t arg;                       // tx: argument, rx: return value
-    int64_t off;                       // tx/rx: offset where needed
+    union {
+        int64_t off;                   // tx/rx: offset where needed
+        uint32_t mode;                 // tx: Open
+        uint32_t protocol;             // rx: Open
+        uint32_t op;                   // tx: Ioctl
+    } arg2;
     int32_t reserved;
     uint32_t hcount;                   // number of valid handles
     mx_handle_t handle[4];             // up to 3 handles + reply pipe handle
@@ -81,7 +86,7 @@ struct mx_rio_msg {
 // - msg.arg is the return code on replies
 
 // request------------------------------------   response------------------------------
-// op        arg        off     data             off         data            handle[]
+// op        arg        arg2    data             arg2        data            handle[]
 // --------- ---------- ------- --------------   ----------- --------------------------
 // CLOSE     0          0       -                0           -               -
 // CLONE     0          0       -                objtype     -               handle(s)

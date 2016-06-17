@@ -178,9 +178,9 @@ static mx_status_t root_handler(mx_rio_msg_t* msg, void* cookie) {
             return ERR_INVALID_ARGS;
         }
         msg->data[len] = 0;
-        xprintf("root: open name='%s' flags=%d mode=%lld\n", (const char*)msg->data, arg, msg->off);
+        xprintf("root: open name='%s' flags=%d mode=%lld\n", (const char*)msg->data, arg, msg->arg2.mode);
         if (arg & O_CREAT) {
-            r = vfs_create(&vn, (const char*)msg->data, arg, msg->off);
+            r = vfs_create(&vn, (const char*)msg->data, arg, msg->arg2.mode);
         } else {
             r = vfs_open(&vn, (const char*)msg->data, arg);
         }
@@ -193,13 +193,13 @@ static mx_status_t root_handler(mx_rio_msg_t* msg, void* cookie) {
             return r;
         }
         // TODO: ensure this is always true:
-        msg->off = MXIO_PROTOCOL_REMOTE;
+        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->hcount = r;
         xprintf("root: open: h=%x\n", msg->handle[0]);
         return NO_ERROR;
     }
     case MX_RIO_CLONE:
-        msg->off = MXIO_PROTOCOL_REMOTE;
+        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->hcount = 1;
         if ((msg->handle[0] = vfs_create_root_handle()) < 0) {
             return msg->handle[0];
@@ -249,7 +249,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
             return r;
         }
         // TODO: ensure this is always true:
-        msg->off = MXIO_PROTOCOL_REMOTE;
+        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->hcount = r;
         return NO_ERROR;
     }
@@ -257,7 +257,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         ssize_t r = vn->ops->read(vn, msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
-            msg->off = ios->io_off;
+            msg->arg2.off = ios->io_off;
             msg->datalen = r;
         }
         return r;
@@ -266,14 +266,14 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         ssize_t r = vn->ops->write(vn, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
-            msg->off = ios->io_off;
+            msg->arg2.off = ios->io_off;
         }
         return r;
     }
     case MX_RIO_SEEK:
         switch (arg) {
         case SEEK_SET:
-            ios->io_off = msg->off;
+            ios->io_off = msg->arg2.off;
             break;
         case SEEK_CUR:
             break;
@@ -288,7 +288,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         default:
             return ERR_INVALID_ARGS;
         }
-        msg->off = ios->io_off;
+        msg->arg2.off = ios->io_off;
         return NO_ERROR;
     case MX_RIO_STAT: {
         mx_status_t r;
@@ -318,9 +318,9 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
 
-        ssize_t r = vn->ops->ioctl(vn, msg->off, in_buf, len, msg->data, arg);
+        ssize_t r = vn->ops->ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
-            msg->off = 0;
+            msg->arg2.off = 0;
             msg->datalen = r;
         }
         return r;

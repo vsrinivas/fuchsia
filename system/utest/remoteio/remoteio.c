@@ -69,8 +69,8 @@ mx_status_t callback_file_access(mx_rio_msg_t* msg, void* cookie) {
     case MX_RIO_SEEK:
         assert(counter++ == 8);
         EXPECT_EQ(seek_whence_gold, msg->arg, "Unexpected arg");
-        EXPECT_EQ(seek_offset_gold, msg->off, "Unexpected off");
-        msg->off = seek_response_gold;
+        EXPECT_EQ(seek_offset_gold, msg->arg2.off, "Unexpected off");
+        msg->arg2.off = seek_response_gold;
         return NO_ERROR;
     case MX_RIO_READ:
         assert(counter++ == 10);
@@ -111,7 +111,7 @@ mx_status_t callback_directory_access(mx_rio_msg_t* msg, void* cookie) {
                                                 callback_file_access,
                                                 (void*)file_cookie_gold),
                   "Could not create file handler server");
-        msg->off = MXIO_PROTOCOL_REMOTE;
+        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->handle[0] = file_handle_client;
         msg->hcount = 1;
         return NO_ERROR;
