@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #define HEAP_DEBUG 1
 
 struct chunk {
