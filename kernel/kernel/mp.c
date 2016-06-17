@@ -26,7 +26,7 @@
 #if WITH_SMP
 /* a global state structure, aligned on cpu cache line to minimize aliasing */
 struct mp_state mp __CPU_ALIGN = {
-    .unplug_lock = MUTEX_INITIAL_VALUE(mp.unplug_lock),
+    .hotplug_lock = MUTEX_INITIAL_VALUE(mp.hotplug_lock),
     .ipi_task_lock = SPIN_LOCK_INITIAL_VALUE,
 };
 
@@ -221,6 +221,29 @@ static void mp_unplug_trampoline(void) {
     arch_flush_state_and_halt(unplug_done);
 }
 
+/* Hotplug the given cpu.  Blocks until the CPU is up, or a failure is
+ * detected.
+ *
+ * This should be called in a thread context
+ */
+status_t mp_hotplug_cpu(uint cpu_id) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+
+    status_t status = ERR_GENERIC;
+
+    mutex_acquire(&mp.hotplug_lock);
+
+    if (mp_is_cpu_online(cpu_id)) {
+        status = ERR_ALREADY_STARTED;
+        goto cleanup_mutex;
+    }
+
+    status = platform_mp_cpu_hotplug(cpu_id);
+cleanup_mutex:
+    mutex_release(&mp.hotplug_lock);
+    return status;
+}
+
 /* Unplug the given cpu.  Blocks until the CPU is removed.
  *
  * This should be called in a thread context
@@ -231,7 +254,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
     thread_t *t = NULL;
     status_t status = ERR_GENERIC;
 
-    mutex_acquire(&mp.unplug_lock);
+    mutex_acquire(&mp.hotplug_lock);
 
     if (!mp_is_cpu_online(cpu_id)) {
         /* Cannot unplug offline CPU */
@@ -301,7 +324,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
 cleanup_thread:
     thread_forget(t);
 cleanup_mutex:
-    mutex_release(&mp.unplug_lock);
+    mutex_release(&mp.hotplug_lock);
     return status;
 }
 
@@ -354,8 +377,10 @@ enum handler_return mp_mbx_reschedule_irq(void)
     return (mp.active_cpus & (1U << cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
+__WEAK status_t arch_mp_cpu_hotplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
 __WEAK status_t arch_mp_prep_cpu_unplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
 __WEAK status_t arch_mp_cpu_unplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
+__WEAK status_t platform_mp_cpu_hotplug(uint cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
 __WEAK status_t platform_mp_prep_cpu_unplug(uint cpu_id) { return arch_mp_prep_cpu_unplug(cpu_id); }
 __WEAK status_t platform_mp_cpu_unplug(uint cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
 

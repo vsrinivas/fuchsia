@@ -145,6 +145,7 @@ usage:
         printf("usage:\n");
         printf("%s features\n", argv[0].str);
         printf("%s unplug <cpu_id>\n", argv[0].str);
+        printf("%s hotplug <cpu_id>\n", argv[0].str);
         return ERR_GENERIC;
     }
 
@@ -160,6 +161,16 @@ usage:
         status = mp_unplug_cpu(argv[2].u);
 #endif
         printf("CPU %lu unplugged: %d\n", argv[2].u, status);
+    } else if (!strcmp(argv[1].str, "hotplug")) {
+        if (argc < 3) {
+            printf("specify a cpu_id\n");
+            goto usage;
+        }
+        status_t status = ERR_NOT_SUPPORTED;
+#if WITH_SMP
+        status = mp_hotplug_cpu(argv[2].u);
+#endif
+        printf("CPU %lu hotplugged: %d\n", argv[2].u, status);
     } else {
         printf("unknown command\n");
         goto usage;

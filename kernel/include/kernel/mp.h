@@ -42,6 +42,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context);
 void mp_set_curr_cpu_online(bool online);
 void mp_set_curr_cpu_active(bool active);
 
+status_t mp_hotplug_cpu(uint cpu_id);
 status_t mp_unplug_cpu(uint cpu_id);
 
 /* called from arch code during reschedule irq */
@@ -73,8 +74,8 @@ struct mp_state {
      * accessed with the ipi_task_lock held */
     struct list_node ipi_task_list[SMP_MAX_CPUS];
 
-    /* lock for serializing CPU unplug operations */
-    mutex_t unplug_lock;
+    /* lock for serializing CPU hotplug/unplug operations */
+    mutex_t hotplug_lock;
 };
 
 extern struct mp_state mp;

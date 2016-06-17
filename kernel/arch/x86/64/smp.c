@@ -18,19 +18,9 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
 #include <lk/main.h>
+#include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-
-struct bp_bootstrap_data {
-    // Counter of number of APs that have booted
-    volatile int aps_still_booting;
-    vmm_aspace_t *bootstrap_aspace;
-
-    uint32_t num_apics;
-    uint32_t *apic_ids;
-};
-
-void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus);
 
 void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 {
@@ -41,39 +31,48 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
     }
 
     lk_init_secondary_cpus(num_cpus - 1);
-
-    x86_bringup_smp(apic_ids, num_cpus);
 }
 
-void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus) {
+status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
+{
+    status_t status = ERR_GENERIC;
+    // Sanity check the given ids
+    for (uint i = 0; i < count; ++i) {
+        int cpu = x86_apic_id_to_cpu_num(apic_ids[i]);
+        DEBUG_ASSERT(cpu > 0);
+        if (cpu <= 0) {
+            return ERR_INVALID_ARGS;
+        }
+        if (mp_is_cpu_online(cpu)) {
+            return ERR_ALREADY_STARTED;
+        }
+    }
+
     struct x86_ap_bootstrap_data *bootstrap_data = NULL;
 
-    struct bp_bootstrap_data config = {
-        .aps_still_booting = num_cpus - 1,
-        .bootstrap_aspace = NULL,
-        .apic_ids = apic_ids,
-        .num_apics = num_cpus,
-    };
+    volatile int aps_still_booting = count;
+    vmm_aspace_t *bootstrap_aspace = NULL;
 
-    status_t status = x86_bootstrap16_prep(
+    status = x86_bootstrap16_prep(
             PHYS_BOOTSTRAP_PAGE,
             (uintptr_t)_x86_secondary_cpu_long_mode_entry,
-            &config.bootstrap_aspace,
+            &bootstrap_aspace,
             (void **)&bootstrap_data);
     if (status != NO_ERROR) {
         goto finish;
     }
 
     bootstrap_data->cpu_id_counter = 0;
-    bootstrap_data->cpu_waiting_counter = &config.aps_still_booting;
+    bootstrap_data->cpu_waiting_counter = &aps_still_booting;
     // Zero the kstack list so if we have to bail, we can safely free the
     // resources.
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
     // Allocate kstacks and threads for all processors
-    for (unsigned int i = 0; i < config.num_apics - 1; ++i) {
+    for (unsigned int i = 0; i < count; ++i) {
         void *thread_addr = memalign(16, PAGE_SIZE + ROUNDUP(sizeof(thread_t), 16));
         if (!thread_addr) {
-            goto cleanup_allocationss;
+            status = ERR_NO_MEMORY;
+            goto cleanup_allocations;
         }
         bootstrap_data->per_cpu[i].kstack_base =
                 (uint64_t)thread_addr + ROUNDUP(sizeof(thread_t), 16);
@@ -84,13 +83,8 @@ void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus) {
     // visible on the APs when they come up
     smp_wmb();
 
-    uint32_t bsp_apic_id = apic_local_id();
-    for (unsigned int i = 0; i < config.num_apics; ++i) {
-        uint32_t apic_id = config.apic_ids[i];
-        // Don't attempt to initialize the bootstrap processor
-        if (apic_id == bsp_apic_id) {
-            continue;
-        }
+    for (unsigned int i = 0; i < count; ++i) {
+        uint32_t apic_id = apic_ids[i];
         apic_send_ipi(0, apic_id, DELIVERY_MODE_INIT);
     }
 
@@ -100,20 +94,17 @@ void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus) {
     // Actually send the startups
     ASSERT(PHYS_BOOTSTRAP_PAGE < 1 * MB);
     uint8_t vec = PHYS_BOOTSTRAP_PAGE >> PAGE_SIZE_SHIFT;
-    // Try up to two times per core
+    // Try up to two times per CPU
     for (int tries = 0; tries < 2; ++tries) {
-        for (unsigned int i = 0; i < config.num_apics; ++i) {
-            uint32_t apic_id = config.apic_ids[i];
-            // Don't attempt to initialize the bootstrap processor
-            if (apic_id == bsp_apic_id) {
-                continue;
-            }
+        for (unsigned int i = 0; i < count; ++i) {
+            uint32_t apic_id = apic_ids[i];
+
             // This will cause the APs to begin executing at PHYS_BOOTSTRAP_PAGE in
             // physical memory.
             apic_send_ipi(vec, apic_id, DELIVERY_MODE_STARTUP);
         }
 
-        if (config.aps_still_booting == 0) {
+        if (aps_still_booting == 0) {
             break;
         }
         // Wait 2ms for cores to boot.  The docs recommend 200us, but we do a
@@ -121,30 +112,36 @@ void x86_bringup_smp(uint32_t *apic_ids, uint32_t num_cpus) {
         thread_sleep(2);
     }
 
-    if (config.aps_still_booting != 0) {
-        printf("Failed to boot %d cores\n", config.aps_still_booting);
+    if (aps_still_booting != 0) {
+        printf("Failed to boot %d cores\n", aps_still_booting);
         // If we failed to boot some cores, leak the shared resources.
         // There is the risk the cores will try to access them after
         // we free them.
-        // TODO: Can we do better here
+        // TODO: Fix this up by synchronizing with the other CPUs on a variable. If
+        // they see the timed out value, then they should go into a halt loop.
+        // After updating the flag, we should send an INIT IPI to all CPUs that
+        // failed to get passed the synchronization point before we timed out.
+        // This guarantees that they stop executing our code, so we can free the
+        // resources.
+        status = ERR_TIMED_OUT;
         goto finish;
     }
 
     // Now that everything is booted, cleanup all temporary structures (e.g.
     // everything except the kstacks).
     goto cleanup_aspace;
-cleanup_allocationss:
-    for (unsigned int i = 0; i < config.num_apics - 1; ++i) {
+cleanup_allocations:
+    for (unsigned int i = 0; i < count; ++i) {
         if (bootstrap_data->per_cpu[i].thread) {
             free((void *)bootstrap_data->per_cpu[i].thread);
         }
     }
 cleanup_aspace:
-    status = vmm_free_aspace(config.bootstrap_aspace);
-    DEBUG_ASSERT(status == NO_ERROR);
+    vmm_free_aspace(bootstrap_aspace);
     vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
     vmm_free_region(kernel_aspace, (vaddr_t)bootstrap_data);
 finish:
     // Get all CPUs to agree on the PATs
     x86_pat_sync();
+    return status;
 }

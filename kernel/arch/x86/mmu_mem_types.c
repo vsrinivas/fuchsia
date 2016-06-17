@@ -77,34 +77,35 @@ void x86_mmu_mem_type_init(void)
 
 /* @brief Give all CPUs our Page Attribute Tables
  *
+ * This operation is not safe to perform while a CPU may be
+ * hotplugged.
+ *
  * This algorithm is based on section 11.11.8 of Intel 3A
  * This must only be called after the APs are brought up.
  */
 void x86_pat_sync(void)
 {
-    int num_cpus = arch_max_num_cpus();
-    uint target = mp_get_online_mask();
-    /* This operation is not hotplug aware */
-    ASSERT(target == (1U << num_cpus) - 1);
+    mp_cpu_mask_t online = mp_get_online_mask();
 
     struct pat_sync_task_context context = {
-        .barrier1 = num_cpus,
-        .barrier2 = num_cpus,
+        .barrier1 = online,
+        .barrier2 = online,
     };
     /* Step 1: Broadcast to all processors to execute the sequence */
-    mp_sync_exec(MP_CPU_ALL, x86_pat_sync_task, &context);
+    mp_sync_exec(online, x86_pat_sync_task, &context);
 }
 
 static void x86_pat_sync_task(void *raw_context)
 {
     /* Step 2: Disable interrupts */
-    spin_lock_saved_state_t state;
-    arch_interrupt_save(&state, 0);
+    DEBUG_ASSERT(arch_ints_disabled());
 
     struct pat_sync_task_context *context = raw_context;
 
+    uint cpu = arch_curr_cpu_num();
+
     /* Step 3: Wait for all processors to reach this point. */
-    atomic_add(&context->barrier1, -1);
+    atomic_and(&context->barrier1, ~(1 << cpu));
     while (context->barrier1 != 0) {
         arch_spinloop_pause();
     }
@@ -165,13 +166,10 @@ static void x86_pat_sync_task(void *raw_context)
     }
 
     /* Step 14: Wait for all processors to reach this point. */
-    atomic_add(&context->barrier2, -1);
+    atomic_and(&context->barrier2, ~(1 << cpu));
     while (context->barrier2 != 0) {
         arch_spinloop_pause();
     }
-
-    /* Step 15: Re-enable interrupts */
-    arch_interrupt_restore(state, 0);
 }
 
 /* Helper for decoding and printing MTRRs */

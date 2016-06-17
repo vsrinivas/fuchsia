@@ -250,6 +250,26 @@ status_t arch_mp_cpu_unplug(uint cpu_id)
     return NO_ERROR;
 }
 
+status_t arch_mp_cpu_hotplug(uint cpu_id)
+{
+    if (cpu_id >= x86_num_cpus) {
+        return ERR_INVALID_ARGS;
+    }
+    if (mp_is_cpu_online(cpu_id)) {
+        return ERR_ALREADY_STARTED;
+    }
+    DEBUG_ASSERT(cpu_id != 0);
+    if (cpu_id == 0) {
+        /* We shouldn't be able to shutoff the bootstrap CPU, so
+         * no reason to be able to bring it back via this route. */
+        return ERR_INVALID_ARGS;
+    }
+
+    struct x86_percpu *percpu = &ap_percpus[cpu_id - 1];
+    DEBUG_ASSERT(percpu->apic_id != INVALID_APIC_ID);
+    return x86_bringup_aps(&percpu->apic_id, 1);
+}
+
 /* Used to suspend work on a CPU until it is further shutdown */
 void arch_flush_state_and_halt(event_t *flush_done)
 {
@@ -268,4 +288,5 @@ void arch_flush_state_and_halt(event_t *flush_done)
         __asm__ volatile("cli; hlt" : : : "memory");
     }
 }
+
 #endif

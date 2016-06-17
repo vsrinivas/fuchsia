@@ -13,6 +13,9 @@
 /* send inter processor interrupt, if supported */
 status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi);
 
+/* Bring a CPU up and enter it into the scheduler */
+status_t platform_mp_cpu_hotplug(uint cpu_id);
+
 /* Prepare for CPU unplug.  The platform may want to shift
  * around external interrupts at this time. */
 status_t platform_mp_prep_cpu_unplug(uint cpu_id);
@@ -20,6 +23,10 @@ status_t platform_mp_prep_cpu_unplug(uint cpu_id);
 /* shutdown the specified CPU.  called after it is no longer
  * being scheduled on.  */
 status_t platform_mp_cpu_unplug(uint cpu_id);
+
+/* Should be invoked by platform_mp_cpu_hotplug to ask the arch
+ * to bring a CPU up and enter it into the scheduler */
+status_t arch_mp_cpu_hotplug(uint cpu_id);
 
 /* Should be invoked by platform_mp_prep_cpu_unplug to ask the
  * arch to do whatever it needs to do to stop the CPU */

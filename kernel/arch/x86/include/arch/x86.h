@@ -65,15 +65,32 @@ void x86_uspace_entry(
         uint64_t rflags,
         vaddr_t entry_point) __NO_RETURN;
 
-/* @brief Bring all of the APs up and hand them over to the kernel
+/* @brief Register all of the CPUs in the system
  *
- * Must be called on the BP
+ * Must be called only once.
  *
- * @param apic_ids A list of all APIC IDs that correspond to cores that should
- *                 be running.  The BP should be in the list.
+ * @param apic_ids A list of all APIC IDs in the system.  The BP should be in
+ *        the list.
  * @param num_cpus The number of entries in the apic_ids list.
  */
 void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus);
+
+/* @brief Bring all of the specified APs up and hand them over to the kernel
+ *
+ * This function must not be called before x86_init_smp.
+ *
+ * May be called by any running CPU.  Due to requiring use of the very limited
+ * low 1MB of memory, this function is not re-entrant.  Itshould not be executed
+ * more than once concurrently.
+ *
+ * @param apic_ids A list of all APIC IDs to launch.
+ * @param count The number of entries in the apic_ids list.
+ *
+ * @return ERR_INVALID_ARGS if an unknown APIC ID was provided.
+ * @return ERR_ALREADY_STARTED if one of the targets is currently online
+ * @return ERR_TIMED_OUT if one of the targets failed to launch
+ */
+status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count);
 
 #define IO_BITMAP_BITS      65536
 #define IO_BITMAP_BYTES     (IO_BITMAP_BITS/8)
