@@ -51,14 +51,8 @@ MessagePipeDispatcher::~MessagePipeDispatcher() {
     pipe_->OnDispatcherDestruction(side_);
 }
 
-void MessagePipeDispatcher::Close(Handle* handle) {
-    LTRACE_ENTRY;
-    pipe_->GetWaiter(side_)->CloseHandle(handle);
-}
-
-Waiter* MessagePipeDispatcher::BeginWait(event_t* event, Handle* handle, mx_signals_t signals) {
-    LTRACE_ENTRY;
-    return pipe_->GetWaiter(side_)->BeginWait(event, handle, signals);
+Waiter* MessagePipeDispatcher::get_waiter() {
+    return pipe_->GetWaiter(side_);
 }
 
 status_t MessagePipeDispatcher::BeginRead(uint32_t* message_size, uint32_t* handle_count) {

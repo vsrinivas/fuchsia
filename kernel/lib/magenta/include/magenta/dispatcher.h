@@ -18,7 +18,6 @@
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 
-class HandleList;
 class Waiter;
 
 // The Kernel Objects. Keep this list sorted.
@@ -38,15 +37,13 @@ class Dispatcher : public utils::RefCounted<Dispatcher> {
 public:
     virtual ~Dispatcher() {}
 
-    virtual void Close(Handle* handle) = 0;
-
     virtual mx_obj_type_t GetType() const = 0;
 
     virtual status_t UserSignal(uint32_t set_mask, uint32_t clear_mask) {
         return ERR_NOT_SUPPORTED;
     }
 
-    virtual Waiter* BeginWait(event_t* event, Handle* handle, mx_signals_t signals) {
+    virtual Waiter* get_waiter() {
         return nullptr;
     }
 

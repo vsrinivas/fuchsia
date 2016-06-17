@@ -29,9 +29,6 @@ LogDispatcher::~LogDispatcher() {
     dlog_reader_destroy(&reader_);
 }
 
-void LogDispatcher::Close(Handle* handle) {
-}
-
 status_t LogDispatcher::Write(const void* ptr, size_t len, uint32_t flags) {
     return dlog_write(flags_, ptr, len);
 }

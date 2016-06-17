@@ -32,8 +32,3 @@ Handle::~Handle() {
 utils::RefPtr<Dispatcher> Handle::dispatcher() {
     return dispatcher_;
 }
-
-// Closes a handle. Always succeeds.
-void Handle::Close() {
-    dispatcher_->Close(this);
-}

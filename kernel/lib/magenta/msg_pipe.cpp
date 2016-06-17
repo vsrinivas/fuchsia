@@ -34,7 +34,6 @@ void MessagePacket::ReturnHandles() {
 
 MessagePacket::~MessagePacket() {
     for (size_t ix = 0; ix != handles.size(); ++ix) {
-        handles[ix]->Close();
         DeleteHandle(handles[ix]);
     }
 }

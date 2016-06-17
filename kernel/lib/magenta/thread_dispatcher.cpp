@@ -36,11 +36,9 @@ ThreadDispatcher::~ThreadDispatcher() {
     thread_->Detach();
 }
 
-Waiter* ThreadDispatcher::BeginWait(event_t* event, Handle* handle, mx_signals_t signals) {
-    return thread_->GetWaiter()->BeginWait(event, handle, signals);
+Waiter* ThreadDispatcher::get_waiter() {
+    return thread_->GetWaiter();
 }
-
-void ThreadDispatcher::Close(Handle* handle) {}
 
 status_t ThreadDispatcher::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
     return thread_->SetExceptionHandler(handler, behaviour);

@@ -72,7 +72,7 @@ status_t PciInterruptDispatcher::Create(
     return NO_ERROR;
 }
 
-void PciInterruptDispatcher::Close(Handle* handle) {
+void PciInterruptDispatcher::Close() {
     {
         AutoLock lock(&lock_);
 

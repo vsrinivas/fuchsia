@@ -61,7 +61,6 @@ UserProcess::~UserProcess() {
         AutoLock lock(&handle_table_lock_);
         while (handles_.first()) {
             auto handle = handles_.pop_front();
-            handle->Close();
             DeleteHandle(handle);
         };
     }

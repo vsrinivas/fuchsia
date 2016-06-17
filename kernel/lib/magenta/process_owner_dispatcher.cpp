@@ -29,14 +29,12 @@ status_t ProcessOwnerDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher,
 ProcessOwnerDispatcher::ProcessOwnerDispatcher(utils::unique_ptr<UserProcess> process)
     : process_(utils::move(process)) {}
 
-ProcessOwnerDispatcher::~ProcessOwnerDispatcher() {}
-
-void ProcessOwnerDispatcher::Close(Handle* handle) {
+ProcessOwnerDispatcher::~ProcessOwnerDispatcher() {
     process_->Close();
 }
 
-Waiter* ProcessOwnerDispatcher::BeginWait(event_t* event, Handle* handle, mx_signals_t signals) {
-    return process_->GetWaiter()->BeginWait(event, handle, signals);
+Waiter* ProcessOwnerDispatcher::get_waiter() {
+    return process_->GetWaiter();
 }
 
 status_t ProcessOwnerDispatcher::Start(mx_handle_t handle, mx_vaddr_t entry) {

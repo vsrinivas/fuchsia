@@ -33,9 +33,6 @@ VmObjectDispatcher::VmObjectDispatcher(utils::RefPtr<VmObject> vmo)
 
 VmObjectDispatcher::~VmObjectDispatcher() {}
 
-void VmObjectDispatcher::Close(Handle* handle) {
-}
-
 mx_ssize_t VmObjectDispatcher::Read(void* user_data, mx_size_t length, uint64_t offset) {
 
     size_t bytes_read;

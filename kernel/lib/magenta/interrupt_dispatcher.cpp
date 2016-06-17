@@ -60,7 +60,3 @@ status_t InterruptDispatcher::InterruptComplete() {
     }
     return NO_ERROR;
 }
-
-void InterruptDispatcher::Close(Handle* handle) {
-    // TODO(yky): figure this out with thread lifecycle. need to wake up the waiting thread
-}

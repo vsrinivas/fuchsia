@@ -37,7 +37,7 @@ IoMappingDispatcher::~IoMappingDispatcher() {
     Cleanup();
 }
 
-void IoMappingDispatcher::Close(Handle* handle) {
+void IoMappingDispatcher::Close() {
     Cleanup();
 }
 

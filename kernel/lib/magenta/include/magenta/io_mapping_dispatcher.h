@@ -19,9 +19,11 @@ public:
                            mx_rights_t* out_rights);
 
     ~IoMappingDispatcher();
-    void Close(Handle* handle);
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_IOMAP; }
     IoMappingDispatcher* get_io_mapping_dispatcher() final { return this; }
+
+    // TODO(cpu): this should be removed when device waiting is refactored.
+    virtual void Close();
 
     bool    closed() const;
     paddr_t paddr()  const { return paddr_; }

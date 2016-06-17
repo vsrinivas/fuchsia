@@ -26,11 +26,10 @@ public:
     explicit ProcessOwnerDispatcher(utils::unique_ptr<UserProcess> process);
 
     virtual ~ProcessOwnerDispatcher() final;
-    void Close(Handle* handle) final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
     ProcessOwnerDispatcher* get_process_owner_dispatcher() final { return this; }
 
-    Waiter* BeginWait(event_t* event, Handle* handle, mx_signals_t signals);
+    Waiter* get_waiter() final;
     status_t Start(mx_handle_t handle, mx_vaddr_t pc_vaddr);
     mx_handle_t AddHandle(HandleUniquePtr handle);
     utils::RefPtr<VmAspace> GetVmAspace() { return process_->aspace(); }

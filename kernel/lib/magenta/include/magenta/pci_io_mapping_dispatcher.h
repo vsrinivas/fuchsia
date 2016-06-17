@@ -31,7 +31,9 @@ public:
             mx_rights_t* out_rights);
 
     ~PciIoMappingDispatcher() final;
-    void Close(Handle* handle) final;
+
+    // TODO(cpu): this should be removed when device waiting is refactored.
+    void Close() override;
 
 private:
     PciIoMappingDispatcher(const utils::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device)

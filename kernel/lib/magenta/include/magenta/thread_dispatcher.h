@@ -19,11 +19,10 @@ public:
                            mx_rights_t* rights);
 
     virtual ~ThreadDispatcher() final;
-    void Close(Handle* handle) final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_THREAD; }
     ThreadDispatcher* get_thread_dispatcher() final { return this; }
 
-    Waiter* BeginWait(event_t* event, Handle* handle, mx_signals_t signals);
+    Waiter* get_waiter() final;
     status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
     status_t MarkExceptionHandled(mx_exception_status_t status);
 

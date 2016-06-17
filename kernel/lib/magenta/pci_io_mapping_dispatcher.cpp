@@ -111,9 +111,9 @@ PciIoMappingDispatcher::~PciIoMappingDispatcher() {
     DEBUG_ASSERT(device_ == nullptr);
 }
 
-void PciIoMappingDispatcher::Close(Handle* handle) {
+void PciIoMappingDispatcher::Close() {
     // Close the underlying mapping; this will unmap the range from the user's process.
-    IoMappingDispatcher::Close(handle);
+    IoMappingDispatcher::Close();
 
     // Now that we are unmapped, if this was a BAR mapping, be sure to release
     // the reference to the cache policy we were holding.

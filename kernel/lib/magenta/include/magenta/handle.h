@@ -32,9 +32,6 @@ public:
         return rights_;
     }
 
-    // Closes a handle. Always succeeds.
-    void Close();
-
     Handle* list_prev() {
         return prev_;
     }

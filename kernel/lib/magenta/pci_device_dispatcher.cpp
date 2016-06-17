@@ -75,11 +75,6 @@ PciDeviceDispatcher::PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
 }
 
 PciDeviceDispatcher::~PciDeviceDispatcher() {
-    // By the time that we destruct, we should have been formally closed.
-    DEBUG_ASSERT(!device_);
-}
-
-void PciDeviceDispatcher::Close(Handle* handle) {
     // Release our reference to the underlying PCI device state to indicate that
     // we are now closed.
     AutoLock lock(&lock_);

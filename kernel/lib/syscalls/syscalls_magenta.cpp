@@ -80,9 +80,11 @@ struct WaitHelper {
     ~WaitHelper() { DEBUG_ASSERT(dispatcher.get() == nullptr); }
 
     status_t Begin(Handle* handle, event_t* event, mx_signals_t signals) {
-        dispatcher = handle->dispatcher();
-        waiter = dispatcher->BeginWait(event, handle, signals);
-        return waiter ? NO_ERROR : ERR_NOT_SUPPORTED;
+        waiter = handle->dispatcher()->get_waiter();
+        if (!waiter)
+            return ERR_NOT_SUPPORTED;
+        waiter->BeginWait(event, handle, signals);
+        return NO_ERROR;
     }
 
     mx_signals_t End(event_t* event) {
@@ -238,10 +240,9 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
     auto up = UserProcess::GetCurrent();
     HandleUniquePtr handle(up->RemoveHandle(handle_value));
-    if (handle)
-        handle->Close();
-
-    return (handle) ? NO_ERROR : ERR_INVALID_ARGS;
+    if (!handle)
+        return ERR_INVALID_ARGS;
+    return NO_ERROR ;
 }
 
 mx_handle_t sys_handle_duplicate(mx_handle_t handle_value) {

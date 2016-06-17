@@ -31,14 +31,6 @@ EventDispatcher::EventDispatcher(uint32_t options) {}
 
 EventDispatcher::~EventDispatcher() {}
 
-void EventDispatcher::Close(Handle* handle) {
-    waiter_.CloseHandle(handle);
-}
-
-Waiter* EventDispatcher::BeginWait(event_t* event, Handle* handle, mx_signals_t signals) {
-    return waiter_.BeginWait(event, handle, signals);
-}
-
 status_t EventDispatcher::SignalEvent() {
     waiter_.Signal(MX_SIGNAL_SIGNALED);
     return NO_ERROR;

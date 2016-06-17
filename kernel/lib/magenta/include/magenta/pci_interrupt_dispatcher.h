@@ -23,9 +23,11 @@ public:
                            utils::RefPtr<Dispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
-    void Close(Handle* handle) final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PCI_INT; }
     PciInterruptDispatcher* get_pci_interrupt_dispatcher() final { return this; }
+
+    // TODO(cpu): this should be removed when device waiting is refactored.
+    void Close();
 
     status_t InterruptWait();
 

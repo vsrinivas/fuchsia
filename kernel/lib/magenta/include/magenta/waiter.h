@@ -51,7 +51,7 @@ public:
     mx_signals_t FinishWait(event_t* event);
 
     // The syscall layer calls this when a handle is closed.
-    bool CloseHandle(Handle* handle);
+    bool CancelWait(Handle* handle);
 
     // The object internally calls this method when its state changes.
     // If there is a matching wait, the associated event will be signaled.

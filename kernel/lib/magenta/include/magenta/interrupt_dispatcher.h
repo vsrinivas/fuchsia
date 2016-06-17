@@ -16,7 +16,6 @@ public:
                            mx_rights_t* rights);
 
     virtual ~InterruptDispatcher() final;
-    void Close(Handle* handle) final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_INTERRUPT; }
     InterruptDispatcher* get_interrupt_dispatcher() final { return this; }
 

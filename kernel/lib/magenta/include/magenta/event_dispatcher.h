@@ -19,12 +19,11 @@ public:
                            mx_rights_t* rights);
 
     ~EventDispatcher() final;
-    void Close(Handle* handle) final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_EVENT; }
     EventDispatcher* get_event_dispatcher() final { return this; }
 
 
-    Waiter* BeginWait(event_t* event, Handle* handle, mx_signals_t signals);
+    virtual Waiter* get_waiter() final { return &waiter_; }
 
     status_t SignalEvent();
 

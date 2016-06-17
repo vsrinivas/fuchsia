@@ -95,7 +95,7 @@ bool Waiter::Reset() {
     return true;
 }
 
-bool Waiter::CloseHandle(Handle* handle) {
+bool Waiter::CancelWait(Handle* handle) {
     int wake_count = 0;
     {
         AutoLock lock(&lock_);
