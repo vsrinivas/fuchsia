@@ -449,8 +449,9 @@ status_t platform_enumerate_cpus(
     }
     uint32_t count = 0;
     uintptr_t addr;
-    for (addr = records_start; addr < records_end;) {
-        ACPI_SUBTABLE_HEADER *record_hdr = (ACPI_SUBTABLE_HEADER *)addr;
+    ACPI_SUBTABLE_HEADER *record_hdr;
+    for (addr = records_start; addr < records_end; addr += record_hdr->Length) {
+        record_hdr = (ACPI_SUBTABLE_HEADER *)addr;
         switch (record_hdr->Type) {
             case ACPI_MADT_TYPE_LOCAL_APIC: {
                 ACPI_MADT_LOCAL_APIC *lapic = (ACPI_MADT_LOCAL_APIC *)record_hdr;
@@ -465,8 +466,6 @@ status_t platform_enumerate_cpus(
                 break;
             }
         }
-
-        addr += record_hdr->Length;
     }
     if (addr != records_end) {
       TRACEF("malformed MADT\n");
