@@ -23,7 +23,7 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     mutex_destroy(&wait_lock_);
 }
 
-pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(struct pcie_common_state* dev,
+pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(struct pcie_device_state* dev,
                                                            uint irq_id,
                                                            void* ctx) {
     DEBUG_ASSERT(ctx);
@@ -55,7 +55,7 @@ status_t PciInterruptDispatcher::Create(
 
     // Attempt to register our dispatcher with the bus driver.
     DEBUG_ASSERT(device->device());
-    status_t result = pcie_register_irq_handler(&device->device()->common,
+    status_t result = pcie_register_irq_handler(device->device(),
                                                 irq_id,
                                                 IrqThunk,
                                                 interrupt_dispatcher);
@@ -83,7 +83,7 @@ void PciInterruptDispatcher::Close() {
 
         // Start by unregistering our IRQ handler with the bus driver.
         __UNUSED status_t ret;
-        ret = pcie_register_irq_handler(&device_->device()->common, irq_id_, NULL, NULL);
+        ret = pcie_register_irq_handler(device_->device(), irq_id_, NULL, NULL);
         DEBUG_ASSERT(ret == NO_ERROR);  // This should never fail.
 
         // Release our reference to our device in order to indicate that we are
@@ -117,7 +117,7 @@ status_t PciInterruptDispatcher::InterruptWait() {
         // will signal our event and then disable itself.
         if (maskable_) {
             DEBUG_ASSERT(device_->device() && device_->claimed());
-            result = pcie_unmask_irq(&device_->device()->common, irq_id_);
+            result = pcie_unmask_irq(device_->device(), irq_id_);
             if (result != NO_ERROR) {
                 // Something went horribly wrong.  Be sure to release the wait
                 // lock before we unwind our of the main lock and report our

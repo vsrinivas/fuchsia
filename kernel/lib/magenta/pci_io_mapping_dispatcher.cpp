@@ -28,8 +28,9 @@ status_t PciIoMappingDispatcher::Create(
 
     // Create a debug name for the mapping.
     char name[32];
-    const pcie_common_state_t& c = device->device()->common;
-    snprintf(name, sizeof(name), "usr_pci_%s_%02x_%02x_%x", dbg_tag, c.bus_id, c.dev_id, c.func_id);
+    const pcie_device_state_t& dev = *device->device();
+    snprintf(name, sizeof(name), "usr_pci_%s_%02x_%02x_%x",
+             dbg_tag, dev.bus_id, dev.dev_id, dev.func_id);
 
     // Initialize the mapping
     utils::RefPtr<Dispatcher> disp = utils::AdoptRef<Dispatcher>(pim_disp);
@@ -55,7 +56,7 @@ status_t PciIoMappingDispatcher::CreateBarMapping(
         return ERR_INVALID_ARGS;
 
     // Fetch our BAR info.
-    const pcie_bar_info_t* info = pcie_get_bar_info(&device->device()->common, bar_num);
+    const pcie_bar_info_t* info = pcie_get_bar_info(device->device(), bar_num);
     if (!info) return ERR_INVALID_ARGS;
     DEBUG_ASSERT(bar_num < PCIE_MAX_BAR_REGS);
 

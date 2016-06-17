@@ -38,17 +38,17 @@ static const pcie_ecam_range_t PCIE_ECAM_WINDOWS[] = {
 
 static const paddr_t GICV2M_REG_FRAMES[] = { GICV2M_FRAME_PHYS };
 
-static status_t qemu_pcie_irq_swizzle(const pcie_common_state_t* common,
+static status_t qemu_pcie_irq_swizzle(const pcie_device_state_t* dev,
                                       uint pin,
                                       uint *irq)
 {
-    DEBUG_ASSERT(common && irq);
+    DEBUG_ASSERT(dev && irq);
     DEBUG_ASSERT(pin < PCIE_MAX_LEGACY_IRQ_PINS);
 
-    if (common->bus_id != 0)
+    if (dev->bus_id != 0)
         return ERR_NOT_FOUND;
 
-    *irq = PCIE_INT_BASE + ((pin + common->dev_id) % PCIE_MAX_LEGACY_IRQ_PINS);
+    *irq = PCIE_INT_BASE + ((pin + dev->dev_id) % PCIE_MAX_LEGACY_IRQ_PINS);
     return NO_ERROR;
 }
 

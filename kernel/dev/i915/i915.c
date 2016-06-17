@@ -214,7 +214,7 @@ static status_t intel_i915_pci_startup(struct pcie_device_state* pci_device) {
      * framebuffer window */
     const pcie_bar_info_t* info;
 
-    info = pcie_get_device_bar_info(pci_device, 0);
+    info = pcie_get_bar_info(pci_device, 0);
     if (!info || !info->is_allocated || !info->is_mmio) {
         status = ERR_BAD_STATE;
         goto bailout;
@@ -224,7 +224,7 @@ static status_t intel_i915_pci_startup(struct pcie_device_state* pci_device) {
     if (status != NO_ERROR)
         goto bailout;
 
-    info = pcie_get_device_bar_info(pci_device, 2);
+    info = pcie_get_bar_info(pci_device, 2);
     if (!info || !info->is_allocated || !info->is_mmio) {
         status = ERR_BAD_STATE;
         goto bailout;
@@ -285,8 +285,8 @@ static void* intel_i915_pci_probe(pcie_device_state_t* pci_device) {
     DEBUG_ASSERT(pci_device);
 
     /* Is this the droid we are looking for? */
-    if ((pci_device->common.vendor_id != INTEL_I915_VID) ||
-        (pci_device->common.device_id != INTEL_I915_DID)) {
+    if ((pci_device->vendor_id != INTEL_I915_VID) ||
+        (pci_device->device_id != INTEL_I915_DID)) {
         return NULL;
     }
 

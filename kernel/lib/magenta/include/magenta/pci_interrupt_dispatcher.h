@@ -32,7 +32,7 @@ public:
     status_t InterruptWait();
 
 private:
-    static pcie_irq_handler_retval_t IrqThunk(struct pcie_common_state* dev,
+    static pcie_irq_handler_retval_t IrqThunk(struct pcie_device_state* dev,
                                               uint irq_id,
                                               void* ctx);
     PciInterruptDispatcher(uint32_t irq);

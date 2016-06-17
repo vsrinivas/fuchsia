@@ -22,7 +22,7 @@ struct pch_thermal_context g_pch_thermal_context;
 static void pch_thermal_cleanup(struct pch_thermal_context* ctx)
 {
     if (ctx->pci_device)
-        pcie_set_irq_mode_disabled(&ctx->pci_device->common);
+        pcie_set_irq_mode_disabled(ctx->pci_device);
 
     if (ctx->regs) {
         /* Disable thermal sensor */
@@ -36,7 +36,7 @@ static void pch_thermal_cleanup(struct pch_thermal_context* ctx)
     ctx->regs   = NULL;
 }
 
-pcie_irq_handler_retval_t pch_thermal_irq_handler(struct pcie_common_state* dev,
+pcie_irq_handler_retval_t pch_thermal_irq_handler(struct pcie_device_state* dev,
                                                   uint irq_id,
                                                   void* ctx)
 {
@@ -54,9 +54,9 @@ static void* pch_thermal_probe(struct pcie_device_state* pci_device)
     g_pch_thermal_context.pci_device = pci_device;
 
     bool claim = false;
-    if (pci_device->common.vendor_id == INTEL_VID) {
+    if (pci_device->vendor_id == INTEL_VID) {
         for (uint i = 0; i < countof(intel_dids); ++i) {
-            if (pci_device->common.device_id == intel_dids[i]) {
+            if (pci_device->device_id == intel_dids[i]) {
                 claim = true;
                 break;
             }
@@ -78,13 +78,11 @@ static status_t pch_thermal_startup(struct pcie_device_state* pci_device)
 
     g_pch_thermal_context.aspace = vmm_get_kernel_aspace();
 
-    const pcie_bar_info_t* bar_info = pcie_get_device_bar_info(
-            pci_device,
-            0);
+    const pcie_bar_info_t* bar_info = pcie_get_bar_info(pci_device, 0);
     DEBUG_ASSERT(bar_info->bus_addr);
 
     /* Select legacy IRQ Mode */
-    status = pcie_set_irq_mode(&pci_device->common,
+    status = pcie_set_irq_mode(pci_device,
                                PCIE_IRQ_MODE_LEGACY,
                                1,
                                PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED);
@@ -94,7 +92,7 @@ static status_t pch_thermal_startup(struct pcie_device_state* pci_device)
     }
 
     /* Register our IRQ handler */
-    status = pcie_register_irq_handler(&pci_device->common, 0, pch_thermal_irq_handler, NULL);
+    status = pcie_register_irq_handler(pci_device, 0, pch_thermal_irq_handler, NULL);
     if (status != NO_ERROR) {
         TRACEF("Failed to register Legacy IRQ handler (err = %d)\n", status);
         goto finished;
@@ -137,7 +135,7 @@ static status_t pch_thermal_startup(struct pcie_device_state* pci_device)
     g_pch_thermal_context.regs->tsc |= 1;
 
     /* Enable our interrupt */
-    status = pcie_unmask_irq(&pci_device->common, 0);
+    status = pcie_unmask_irq(pci_device, 0);
     if (status != NO_ERROR) {
         TRACEF("Failed to unmask IRQ (err = %d)\n", status);
         goto finished;

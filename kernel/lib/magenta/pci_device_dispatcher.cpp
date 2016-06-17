@@ -59,8 +59,8 @@ PciDeviceDispatcher::PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
     : device_(device) {
     mutex_init(&lock_);
 
-    const pcie_common_state_t& common = device_->device()->common;
-    const pcie_config_t* cfg = common.cfg;
+    const pcie_device_state_t& dev = *device_->device();
+    const pcie_config_t* cfg = dev.cfg;
     DEBUG_ASSERT(cfg);
 
     out_info->vendor_id         = pcie_read16(&cfg->base.vendor_id);
@@ -69,9 +69,9 @@ PciDeviceDispatcher::PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
     out_info->sub_class         = pcie_read8 (&cfg->base.sub_class);
     out_info->program_interface = pcie_read8 (&cfg->base.program_interface);
     out_info->revision_id       = pcie_read8 (&cfg->base.revision_id_0);
-    out_info->bus_id            = static_cast<uint8_t>(common.bus_id);
-    out_info->dev_id            = static_cast<uint8_t>(common.dev_id);
-    out_info->func_id           = static_cast<uint8_t>(common.func_id);
+    out_info->bus_id            = static_cast<uint8_t>(dev.bus_id);
+    out_info->dev_id            = static_cast<uint8_t>(dev.dev_id);
+    out_info->func_id           = static_cast<uint8_t>(dev.func_id);
 }
 
 PciDeviceDispatcher::~PciDeviceDispatcher() {
@@ -107,12 +107,12 @@ status_t PciDeviceDispatcher::ClaimDevice() {
 
     // Does this device support MSI?  If so, choose this as the mode and attempt
     // to grab as many vectors as we can get away with.
-    result = pcie_query_irq_mode_capabilities(&device_->device()->common,
+    result = pcie_query_irq_mode_capabilities(device_->device(),
                                               PCIE_IRQ_MODE_MSI,
                                               &mode_caps);
     if (result == NO_ERROR) {
         while (mode_caps.max_irqs) {
-            result = pcie_set_irq_mode(&device_->device()->common,
+            result = pcie_set_irq_mode(device_->device(),
                                        PCIE_IRQ_MODE_MSI,
                                        mode_caps.max_irqs,
                                        PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
@@ -129,7 +129,7 @@ status_t PciDeviceDispatcher::ClaimDevice() {
 
     // If MSI didn't end up working out for us, try for Legacy mode.
     if (!irqs_supported_) {
-        result = pcie_set_irq_mode(&device_->device()->common,
+        result = pcie_set_irq_mode(device_->device(),
                                    PCIE_IRQ_MODE_LEGACY,
                                    1,
                                    PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED);
@@ -163,7 +163,7 @@ status_t PciDeviceDispatcher::MapConfig(utils::RefPtr<Dispatcher>* out_mapping,
     AutoLock lock(&lock_);
     return PciIoMappingDispatcher::Create(device_,
                                          "cfg",
-                                          device_->device()->common.cfg_phys,
+                                          device_->device()->cfg_phys,
                                           PCIE_EXTENDED_CONFIG_SIZE,
                                           0 /* vmm flags */,
                                           ARCH_MMU_FLAG_UNCACHED_DEVICE |

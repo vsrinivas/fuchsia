@@ -177,7 +177,7 @@ static bool pcie_probe_bar_info(pcie_config_t*   cfg,
     return (info_out->size > 0);
 }
 
-static void pcie_enumerate_bars(pcie_common_state_t* dev) {
+static void pcie_enumerate_bars(pcie_device_state_t* dev) {
     DEBUG_ASSERT(dev && dev->cfg);
 
     pcie_config_t* cfg  = dev->cfg;
@@ -226,13 +226,13 @@ static void pcie_enumerate_bars(pcie_common_state_t* dev) {
     }
 }
 
-static status_t pcie_scan_init_common(pcie_common_state_t*     common,
+static status_t pcie_scan_init_device(pcie_device_state_t*     dev,
                                       pcie_bridge_state_t*     upstream_bridge,
                                       pcie_bus_driver_state_t* bus_drv,
                                       uint                     bus_id,
                                       uint                     dev_id,
                                       uint                     func_id) {
-    DEBUG_ASSERT(common);
+    DEBUG_ASSERT(dev);
     DEBUG_ASSERT(bus_drv);
 
     status_t       status;
@@ -241,47 +241,47 @@ static status_t pcie_scan_init_common(pcie_common_state_t*     common,
 
     DEBUG_ASSERT(cfg);
 
-    common->cfg       = cfg;
-    common->cfg_phys  = cfg_phys;
-    common->upstream  = upstream_bridge;
-    common->bus_drv   = bus_drv;
-    common->vendor_id = pcie_read16(&cfg->base.vendor_id);
-    common->device_id = pcie_read16(&cfg->base.device_id);
-    common->class_id  = pcie_read8(&cfg->base.base_class);
-    common->subclass  = pcie_read8(&cfg->base.sub_class);
-    common->prog_if   = pcie_read8(&cfg->base.program_interface);
-    common->bus_id    = bus_id;
-    common->dev_id    = dev_id;
-    common->func_id   = func_id;
+    dev->cfg       = cfg;
+    dev->cfg_phys  = cfg_phys;
+    dev->upstream  = upstream_bridge;
+    dev->bus_drv   = bus_drv;
+    dev->vendor_id = pcie_read16(&cfg->base.vendor_id);
+    dev->device_id = pcie_read16(&cfg->base.device_id);
+    dev->class_id  = pcie_read8(&cfg->base.base_class);
+    dev->subclass  = pcie_read8(&cfg->base.sub_class);
+    dev->prog_if   = pcie_read8(&cfg->base.program_interface);
+    dev->bus_id    = bus_id;
+    dev->dev_id    = dev_id;
+    dev->func_id   = func_id;
 
     /* PCI Express Capabilities */
-    common->pcie_caps.devtype = PCIE_DEVTYPE_UNKNOWN;
+    dev->pcie_caps.devtype = PCIE_DEVTYPE_UNKNOWN;
 
     /* Build this device's list of BARs with non-zero size, but do not actually
      * allocate them yet. */
-    pcie_enumerate_bars(common);
+    pcie_enumerate_bars(dev);
 
     /* Parse and sanity check the capabilities and extended capabilities lists
      * if they exist */
-    status = pcie_parse_capabilities(common);
+    status = pcie_parse_capabilities(dev);
     if (status != NO_ERROR)
         return status;
 
     /* Now that we know what our capabilities are, initialize our internal IRQ
      * bookkeeping */
-    return pcie_init_device_irq_state(common);
+    return pcie_init_device_irq_state(dev);
 }
 
 static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
-                               pcie_config_t* cfg,
-                               uint64_t cfg_phys,
-                               uint dev_id,
-                               uint func_id) {
+                               pcie_config_t*       cfg,
+                               uint64_t             cfg_phys,
+                               uint                 dev_id,
+                               uint                 func_id) {
     DEBUG_ASSERT(upstream_bridge && cfg);
     DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
     DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
 
-    pcie_common_state_t* common = NULL;
+    pcie_device_state_t* dev = NULL;
     uint bus_id = upstream_bridge->managed_bus_id;
     uint ndx    = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
 
@@ -330,20 +330,17 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
             return;
         }
 
-        common = &bridge->common;
-        bridge->common.type    = PCIE_BRIDGE;
+        dev = &bridge->dev;
+        dev->is_bridge = true;
         bridge->managed_bus_id = secondary_id;
     } else {
         /* Allocate and initialize our device structure */
-        pcie_device_state_t* device = calloc(1, sizeof(*device));
-        if (!device) {
+        dev = calloc(1, sizeof(*dev));
+        if (!dev) {
             TRACEF("Failed to allocate device node for %02x:%02x.%01x during bus scan.\n",
                     bus_id, dev_id, func_id);
             return;
         }
-
-        common = &device->common;
-        device->common.type = PCIE_DEVICE;
     }
 
     /* Link up the graph, and initialize common fields
@@ -357,16 +354,16 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
      * to a driver.
      */
     __UNUSED status_t res;
-    upstream_bridge->downstream[ndx] = common;
-    res = pcie_scan_init_common(common,
+    upstream_bridge->downstream[ndx] = dev;
+    res = pcie_scan_init_device(dev,
                                 upstream_bridge,
-                                upstream_bridge->common.bus_drv,
+                                upstream_bridge->dev.bus_drv,
                                 bus_id, dev_id, func_id);
     DEBUG_ASSERT(NO_ERROR == res);
 
 
     /* If this was a bridge device, recurse and continue probing. */
-    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(common);
+    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
     if (bridge)
         pcie_scan_bus(bridge);
 }
@@ -383,7 +380,7 @@ static void pcie_scan_bus(pcie_bridge_state_t* bridge) {
             /* If we can find the config, and it has a valid vendor ID, go ahead
              * and scan it looking for a valid function. */
             uint64_t cfg_phys;
-            pcie_config_t* cfg = pcie_get_config(bridge->common.bus_drv, &cfg_phys,
+            pcie_config_t* cfg = pcie_get_config(bridge->dev.bus_drv, &cfg_phys,
                                                  bridge->managed_bus_id, dev_id, func_id);
             bool good_device = cfg && (pcie_read16(&cfg->base.vendor_id) != PCIE_INVALID_VENDOR_ID);
             if (good_device) {
@@ -393,7 +390,7 @@ static void pcie_scan_bus(pcie_bridge_state_t* bridge) {
                 uint ndx    = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
                 DEBUG_ASSERT(ndx < countof(bridge->downstream));
 
-                pcie_common_state_t* downstream = bridge->downstream[ndx];
+                pcie_device_state_t* downstream = bridge->downstream[ndx];
                 if (!downstream) {
                     pcie_scan_function(bridge, cfg, cfg_phys, dev_id, func_id);
                 } else {
@@ -413,30 +410,28 @@ static void pcie_scan_bus(pcie_bridge_state_t* bridge) {
     }
 }
 
-static void pcie_free_bridge_device_tree(pcie_common_state_t* common) {
-    DEBUG_ASSERT(common);
+static void pcie_free_bridge_device_tree(pcie_device_state_t* dev) {
+    DEBUG_ASSERT(dev);
 
-    pcie_device_state_t* device = pcie_downcast_to_device(common);
-    if (device) {
-        /* ASSERT that any driver which may have been associated with this
-         * device has been properly shutdown already. */
-        DEBUG_ASSERT(!device->driver);
-        DEBUG_ASSERT(!device->driver_ctx);
-        DEBUG_ASSERT(!device->started);
-        free(device);
-    } else {
-        /* If this is not a device, it had better be a bridge */
-        pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(common);
-        DEBUG_ASSERT(bridge);
+    /* ASSERT that any driver which may have been associated with this
+     * device has been properly shutdown already. */
+    DEBUG_ASSERT(!dev->driver);
+    DEBUG_ASSERT(!dev->driver_ctx);
+    DEBUG_ASSERT(!dev->started);
 
+    /* If this is a bridge, recursively free its children.  Otherwise, just free the device */
+    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
+    if (bridge) {
         for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-            pcie_common_state_t* downstream_node = bridge->downstream[i];
+            pcie_device_state_t* downstream_node = bridge->downstream[i];
 
             if (downstream_node)
                 pcie_free_bridge_device_tree(downstream_node);
 
             free(bridge);
         }
+    } else {
+        free(dev);
     }
 }
 
@@ -451,7 +446,7 @@ static bool pcie_allocate_bar(pcie_bar_info_t* info) {
     if (info->is_allocated)
         return true;
 
-    pcie_common_state_t*     dev = info->dev;
+    pcie_device_state_t*     dev = info->dev;
     pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
     pcie_config_t*           cfg = dev->cfg;
 
@@ -525,7 +520,7 @@ static bool pcie_allocate_bar(pcie_bar_info_t* info) {
     return true;
 }
 
-static void pcie_allocate_bars(pcie_common_state_t* common) {
+static void pcie_allocate_bars(pcie_device_state_t* dev) {
     /* TODO(johngro) : This method should be much smarter.  Right now, it just
      * allocates the BARs in the order it happens to enumerate them in, paying
      * no attention to the bridge topology, nor making any effort to be
@@ -538,27 +533,26 @@ static void pcie_allocate_bars(pcie_common_state_t* common) {
      * the largest regions first is a good start)
      */
 
-    DEBUG_ASSERT(common);
-    DEBUG_ASSERT(common->cfg);
+    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(dev->cfg);
 
-    /* If this is a device, and it has been claimed by a driver, do not make any
-     * changes to the BAR allocation. */
-    pcie_device_state_t* device = pcie_downcast_to_device(common);
-    if (device && device->driver)
+    /* If this has been claimed by a driver, do not make any changes
+     * to the BAR allocation. */
+    if (dev->driver)
         return;
 
     /* Make sure the device has no access to either MMIO or PIO space, cannot
      * access main system memory, and has its IRQ(s) disabled */
-    pcie_write16(&common->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+    pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
 
     /* Allocate BARs for the device */
-    for (size_t i = 0; i < countof(common->bars); ++i) {
-        if (common->bars[i].size)
-            pcie_allocate_bar(&common->bars[i]);
+    for (size_t i = 0; i < countof(dev->bars); ++i) {
+        if (dev->bars[i].size)
+            pcie_allocate_bar(&dev->bars[i]);
     }
 
     /* If this is a bridge, recurse and keep allocating */
-    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(common);
+    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
     if (bridge) {
         for (size_t i = 0; i < countof(bridge->downstream); ++i) {
             if (bridge->downstream[i]) {
@@ -571,29 +565,28 @@ static void pcie_allocate_bars(pcie_common_state_t* common) {
 /*
  * Attaches a driver to a PCI device if not already claimed.
  */
-static status_t pcie_do_claim_device(pcie_device_state_t* device,
+static status_t pcie_do_claim_device(pcie_device_state_t* dev,
                                      const pcie_driver_registration_t* driver,
                                      void* driver_ctx) {
-    DEBUG_ASSERT(device);
+    DEBUG_ASSERT(dev);
     DEBUG_ASSERT(driver && driver->fn_table);
 
-    pcie_common_state_t*     common = &device->common;
-    pcie_bus_driver_state_t* bus_drv    = common->bus_drv;
+    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
     status_t                 ret;
 
     mutex_acquire(&bus_drv->claimed_devices_lock);
 
-    if (list_in_list(&device->claimed_device_node)) {
-        DEBUG_ASSERT(device->driver);
+    if (list_in_list(&dev->claimed_device_node)) {
+        DEBUG_ASSERT(dev->driver);
         ret = ERR_BUSY;
     } else {
-        DEBUG_ASSERT(!device->driver);
-        DEBUG_ASSERT(!device->driver_ctx);
-        DEBUG_ASSERT(!device->started);
+        DEBUG_ASSERT(!dev->driver);
+        DEBUG_ASSERT(!dev->driver_ctx);
+        DEBUG_ASSERT(!dev->started);
 
-        device->driver = driver;
-        device->driver_ctx = driver_ctx;
-        list_add_tail(&bus_drv->claimed_devices, &device->claimed_device_node);
+        dev->driver = driver;
+        dev->driver_ctx = driver_ctx;
+        list_add_tail(&bus_drv->claimed_devices, &dev->claimed_device_node);
         ret = NO_ERROR;
     }
 
@@ -601,98 +594,90 @@ static status_t pcie_do_claim_device(pcie_device_state_t* device,
 
     if (ret == NO_ERROR) {
         LTRACEF("Device %04hx:%04hx at %02x:%02x.%01x (cfg vaddr = %p) claimed by driver \"%s\"\n",
-                device->common.vendor_id,
-                device->common.device_id,
-                device->common.bus_id,
-                device->common.dev_id,
-                device->common.func_id,
-                device->common.cfg,
+                dev->vendor_id,
+                dev->device_id,
+                dev->bus_id,
+                dev->dev_id,
+                dev->func_id,
+                dev->cfg,
                 pcie_driver_name(driver));
     }
 
     return ret;
 }
 
-static void pcie_claim_devices(pcie_common_state_t* common) {
-    DEBUG_ASSERT(common);
-    DEBUG_ASSERT(common->cfg);
+static void pcie_claim_devices(pcie_device_state_t* dev) {
+    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(dev->cfg);
 
-    /* Currently, we do not allow for custom bridge drivers.  If this is a
-     * bridge, just recurse over its children. */
-    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(common);
+    /* Don't allow anyone to claim this device if it has already been
+     * claimed. */
+    if (!dev->driver) {
+        /* Go over our list of builtin drivers and see if any are interested in this
+         * device. */
+        void* driver_ctx = NULL;
+
+        const pcie_driver_registration_t* driver;
+        for (driver = __start_pcie_builtin_drivers;
+             driver < __stop_pcie_builtin_drivers;
+             ++driver) {
+            const pcie_driver_fn_table_t* fn_table = driver->fn_table;
+            DEBUG_ASSERT(fn_table->pcie_probe_fn);
+            driver_ctx = fn_table->pcie_probe_fn(dev);
+            if (driver_ctx)
+                break;
+        }
+
+        /* If we found a driver who wants this device, Finish filling out the
+         * structure and add the device to the claimed devices list */
+        if (driver_ctx) {
+            __UNUSED status_t result;
+            DEBUG_ASSERT(driver < __stop_pcie_builtin_drivers);
+
+            result = pcie_do_claim_device(dev, driver, driver_ctx);
+            DEBUG_ASSERT(result == NO_ERROR);
+        }
+    }
+
+    /* If this is a bridge, recurse over its children. */
+    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
     if (bridge) {
         for (size_t i = 0; i < countof(bridge->downstream); ++i) {
             if (bridge->downstream[i]) {
                 pcie_claim_devices(bridge->downstream[i]);
             }
         }
-
-        return;
-    }
-
-    /* This had better be a device, or something is very very wrong */
-    pcie_device_state_t* device = pcie_downcast_to_device(common);
-    DEBUG_ASSERT(device);
-    if (!device)
-        return;
-
-    /* Bail out if this device has already been claimed */
-    if (device->driver) {
-        return;
-    }
-
-    /* Go over our list of builtin drivers and see if any are interested in this
-     * device. */
-    void* driver_ctx = NULL;
-
-    const pcie_driver_registration_t* driver;
-    for (driver = __start_pcie_builtin_drivers; driver < __stop_pcie_builtin_drivers; ++driver) {
-        const pcie_driver_fn_table_t* fn_table = driver->fn_table;
-        DEBUG_ASSERT(fn_table->pcie_probe_fn);
-        driver_ctx = fn_table->pcie_probe_fn(device);
-        if (driver_ctx)
-            break;
-    }
-
-    /* If we found a driver who wants this device, Finish filling out the
-     * structure and add the device to the claimed devices list */
-    if (driver_ctx) {
-        __UNUSED status_t result;
-        DEBUG_ASSERT(driver < __stop_pcie_builtin_drivers);
-
-        result = pcie_do_claim_device(device, driver, driver_ctx);
-        DEBUG_ASSERT(result == NO_ERROR);
     }
 }
 
 /*
   * The claimed_devices_lock must be held while calling this function.
  */
-static status_t pcie_start_claimed_device(pcie_device_state_t* device) {
-    const pcie_driver_fn_table_t* fn_table = device->driver->fn_table;
+static status_t pcie_start_claimed_device(pcie_device_state_t* dev) {
+    const pcie_driver_fn_table_t* fn_table = dev->driver->fn_table;
     status_t err = NO_ERROR;
-    if (fn_table->pcie_startup_fn && ((err = fn_table->pcie_startup_fn(device)) != NO_ERROR)) {
+    if (fn_table->pcie_startup_fn && ((err = fn_table->pcie_startup_fn(dev)) != NO_ERROR)) {
         /* Device failed to start.*/
         TRACEF("Failed to start %04hx:%04hx at %02x:%02x.%01x claimed by driver "
                "\"%s\" (err %d)\n",
-               pcie_read16(&device->common.cfg->base.vendor_id),
-               pcie_read16(&device->common.cfg->base.device_id),
-               device->common.bus_id,
-               device->common.dev_id,
-               device->common.func_id,
-               pcie_driver_name(device->driver),
+               pcie_read16(&dev->cfg->base.vendor_id),
+               pcie_read16(&dev->cfg->base.device_id),
+               dev->bus_id,
+               dev->dev_id,
+               dev->func_id,
+               pcie_driver_name(dev->driver),
                err);
 
         /* Call the driver release method (if any) */
         if (fn_table->pcie_release_fn)
-            fn_table->pcie_release_fn(device);
+            fn_table->pcie_release_fn(dev);
 
         /* Clear out any internal driver related bookkeeping */
-        device->driver     = NULL;
-        device->driver_ctx = NULL;
-        DEBUG_ASSERT(!device->started);
+        dev->driver     = NULL;
+        dev->driver_ctx = NULL;
+        DEBUG_ASSERT(!dev->started);
     } else {
-        device->started = true;
+        dev->started = true;
     }
     return err;
 }
@@ -700,38 +685,41 @@ static status_t pcie_start_claimed_device(pcie_device_state_t* device) {
 void pcie_start_claimed_devices(pcie_bus_driver_state_t* bus_drv) {
     DEBUG_ASSERT(bus_drv);
 
-    pcie_device_state_t* device;
+    pcie_device_state_t* dev;
     pcie_device_state_t* tmp;
 
     /* Try to start device on the claimed list which is not already started. */
     mutex_acquire(&bus_drv->claimed_devices_lock);
     list_for_every_entry_safe(&bus_drv->claimed_devices,
-                              device, tmp, pcie_device_state_t, claimed_device_node) {
+                              dev, tmp, pcie_device_state_t, claimed_device_node) {
         /* Skip this device if it has already started */
-        if (device->started)
+        if (dev->started)
             continue;
 
-        if (pcie_start_claimed_device(device) != NO_ERROR) {
+        if (pcie_start_claimed_device(dev) != NO_ERROR) {
             /* Remove the device from the claimed list */
-            list_delete(&device->claimed_device_node);
+            list_delete(&dev->claimed_device_node);
         }
     }
     mutex_release(&bus_drv->claimed_devices_lock);
 }
 
-static pcie_device_state_t* do_get_nth_device(pcie_common_state_t* node, uint32_t* index) {
-    const pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(node);
+static pcie_device_state_t* do_get_nth_device(pcie_device_state_t* dev, uint32_t* index) {
+    DEBUG_ASSERT(dev);
+
+    const pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
     if (bridge) {
         for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-            pcie_common_state_t* downstream = bridge->downstream[i];
+            pcie_device_state_t* downstream = bridge->downstream[i];
             if (downstream) {
-                pcie_device_state_t* device = do_get_nth_device(downstream, index);
-                if (device) return device;
+                pcie_device_state_t* dev = do_get_nth_device(downstream, index);
+                if (dev)
+                    return dev;
             }
         }
     } else {
-        pcie_device_state_t* device = pcie_downcast_to_device(node);
-        if (device && (*index)-- == 0) return device;
+        if ((*index)-- == 0)
+            return dev;
     }
     return NULL;
 }
@@ -745,19 +733,19 @@ pcie_device_state_t* pci_get_nth_device(uint32_t index) {
     if (!bus_drv || !bus_drv->host_bridge) return NULL;
 
     uint32_t mutable_index = index;
-    return do_get_nth_device(&bus_drv->host_bridge->common, &mutable_index);
+    return do_get_nth_device(&bus_drv->host_bridge->dev, &mutable_index);
 }
 
 /*
  * Attaches a driver to a PCI device. Returns ERR_BUSY if the device has already been
  * claimed by another driver.
  */
-status_t pcie_claim_and_start_device(pcie_device_state_t* device,
+status_t pcie_claim_and_start_device(pcie_device_state_t* dev,
                                      const pcie_driver_registration_t* driver,
                                      void* driver_ctx) {
     status_t result;
 
-    result = pcie_do_claim_device(device, driver, driver_ctx);
+    result = pcie_do_claim_device(dev, driver, driver_ctx);
     if (result != NO_ERROR)
         return result;
 
@@ -765,7 +753,7 @@ status_t pcie_claim_and_start_device(pcie_device_state_t* device,
      * should only ever be called when registering user mode device drivers.
      * User mode device drivers should never have a kernel_mode startup hook (so
      * they should never fail to start */
-    result = pcie_start_claimed_device(device);
+    result = pcie_start_claimed_device(dev);
     DEBUG_ASSERT(result == NO_ERROR);
 
     return result;
@@ -775,42 +763,42 @@ status_t pcie_claim_and_start_device(pcie_device_state_t* device,
  * Shutdown and unclaim a device had been successfully claimed with
  * pcie_claim_and_start_device()
  */
-void pcie_shutdown_device(pcie_device_state_t* device) {
-    DEBUG_ASSERT(device && device->driver && device->driver->fn_table);
-    pcie_bus_driver_state_t*      bus_drv = device->common.bus_drv;
-    const pcie_driver_fn_table_t* fn  = device->driver->fn_table;
+void pcie_shutdown_device(pcie_device_state_t* dev) {
+    DEBUG_ASSERT(dev && dev->driver && dev->driver->fn_table);
+    pcie_bus_driver_state_t*      bus_drv = dev->bus_drv;
+    const pcie_driver_fn_table_t* fn      = dev->driver->fn_table;
 
     LTRACEF("Shutting down PCI device %02x:%02x.%x (%s)...\n",
-            device->common.bus_id,
-            device->common.dev_id,
-            device->common.func_id,
-            pcie_driver_name(device->driver));
+            dev->bus_id,
+            dev->dev_id,
+            dev->func_id,
+            pcie_driver_name(dev->driver));
 
     /* If startup was ever successfully called for this device, and the device
      * has registered a shutdown hook, give it a chance to shutdown cleanly */
-    if (device->started && fn->pcie_shutdown_fn) {
-        fn->pcie_shutdown_fn(device);
-        device->started = false;
+    if (dev->started && fn->pcie_shutdown_fn) {
+        fn->pcie_shutdown_fn(dev);
+        dev->started = false;
     }
 
     /* Make sure that all IRQs are shutdown and all handlers released for this device */
-    pcie_set_irq_mode_disabled(&device->common);
+    pcie_set_irq_mode_disabled(dev);
 
     /* Disable access to MMIO windows, PIO windows, and system memory */
-    pcie_write16(&device->common.cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+    pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
 
     /* If the device has a release hook, call it in order to allow it to free
      * any dynamically allocated resources. */
     if (fn->pcie_release_fn)
-        fn->pcie_release_fn(device);
+        fn->pcie_release_fn(dev);
 
     /* Unclaim the device. */
     mutex_acquire(&bus_drv->claimed_devices_lock);
 
-    DEBUG_ASSERT(list_in_list(&device->claimed_device_node));
-    list_delete(&device->claimed_device_node);
-    device->driver     = NULL;
-    device->driver_ctx = NULL;
+    DEBUG_ASSERT(list_in_list(&dev->claimed_device_node));
+    list_delete(&dev->claimed_device_node);
+    dev->driver     = NULL;
+    dev->driver_ctx = NULL;
 
     mutex_release(&bus_drv->claimed_devices_lock);
 }
@@ -864,9 +852,9 @@ void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
          * to a driver.
          */
         __UNUSED status_t res;
-        res = pcie_scan_init_common(&bus_drv->host_bridge->common, NULL, bus_drv, 0, 0, 0);
+        res = pcie_scan_init_device(&bus_drv->host_bridge->dev, NULL, bus_drv, 0, 0, 0);
         DEBUG_ASSERT(NO_ERROR == res);
-        root->common.type = PCIE_BRIDGE;
+        root->dev.is_bridge = true;
     }
 
     /* Now that we have found the host bridge, scan the bus it controls, looking
@@ -876,11 +864,11 @@ void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
     /* Now that we have scanned the config space, allocate I/O widows for each
      * of the BARs discovered by carving up the regions of the system and I/O
      * buses which were provided to us by the platform. */
-    pcie_allocate_bars(&bus_drv->host_bridge->common);
+    pcie_allocate_bars(&bus_drv->host_bridge->dev);
 
     /* Go over our tree and look for drivers who might want to take ownership of
      * device. */
-    pcie_claim_devices(&bus_drv->host_bridge->common);
+    pcie_claim_devices(&bus_drv->host_bridge->dev);
 
     /* Give the devices claimed by drivers a chance to start */
     pcie_start_claimed_devices(bus_drv);
@@ -1030,11 +1018,11 @@ void pcie_shutdown(void) {
      * been shutdown and unclaimed their devices, and that no new device claims
      * can happen.
      */
-    pcie_device_state_t* device;
-    while ((device = list_peek_head_type(&bus_drv->claimed_devices,
-                                         pcie_device_state_t,
-                                         claimed_device_node)) != NULL) {
-        pcie_shutdown_device(device);
+    pcie_device_state_t* dev;
+    while ((dev = list_peek_head_type(&bus_drv->claimed_devices,
+                                      pcie_device_state_t,
+                                      claimed_device_node)) != NULL) {
+        pcie_shutdown_device(dev);
     }
 
     /* Shut off all of our IRQs and free all of our bookkeeping */
@@ -1042,7 +1030,7 @@ void pcie_shutdown(void) {
 
     /* Free the device tree */
     if (bus_drv->host_bridge) {
-        pcie_free_bridge_device_tree(&bus_drv->host_bridge->common);
+        pcie_free_bridge_device_tree(&bus_drv->host_bridge->dev);
         bus_drv->host_bridge = NULL;
     }
 
@@ -1063,11 +1051,11 @@ void pcie_shutdown(void) {
     memset(bus_drv, 0, sizeof(*bus_drv));
 }
 
-void pcie_modify_cmd(const pcie_device_state_t* device, uint16_t clr_bits, uint16_t set_bits) {
-    DEBUG_ASSERT(device);
+void pcie_modify_cmd(const pcie_device_state_t* dev, uint16_t clr_bits, uint16_t set_bits) {
+    DEBUG_ASSERT(dev);
     spin_lock_saved_state_t  irq_state;
-    pcie_bus_driver_state_t* bus_drv = device->common.bus_drv;
-    pcie_config_t*           cfg = device->common.cfg;
+    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+    pcie_config_t*           cfg = dev->cfg;
 
     /* In order to keep internal bookkeeping coherent, and interactions between
      * MSI/MSI-X and Legacy IRQ mode safe, API users may not directly manipulate

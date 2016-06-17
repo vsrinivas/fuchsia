@@ -27,7 +27,6 @@ typedef struct pcie_config {
 } __PACKED pcie_config_t;
 
 /* Fwd decls */
-struct pcie_common_state;
 struct pcie_bridge_state;
 struct pcie_bus_driver_state;
 struct pcie_device_state;
@@ -38,7 +37,7 @@ struct pcie_legacy_irq_handler_state;
  * struct used to fetch information about a configured base address register
  */
 typedef struct pcie_bar_info {
-    struct pcie_common_state* dev;
+    struct pcie_device_state* dev;
 
     uint64_t size;
     uint64_t bus_addr;
@@ -197,24 +196,19 @@ typedef struct pcie_driver_registration {
     const pcie_driver_fn_table_t* fn_table;
 } pcie_driver_registration_t;
 
-/* An enumeration used to flag whether a node in the system-wide bridge/device
- * tree is a bridge or a device */
-typedef enum {
-    PCIE_INVALID_NODE_TYPE = 0,
-    PCIE_BRIDGE,
-    PCIE_DEVICE,
-} pcie_node_type_t;
-
 /*
- * Struct used to hold the information common to all bridges and devices in the
- * tree describing the PCIe complex for a system.
+ * Struct used to manage the relationship between a PCIe device/function and its
+ * associated driver.  During a bus scan/probe operation, all drivers will have
+ * their registered probe methods called until a driver claims a device.  A
+ * driver may claim a device by returning a pointer to a driver-managed
+ * pcie_device_state struct, with the driver owned fields filled out.
  */
-typedef struct pcie_common_state {
+typedef struct pcie_device_state {
     pcie_config_t*                cfg;       // Pointer to the memory mapped ECAM (kernel vaddr)
     paddr_t                       cfg_phys;  // The physical address of the device's ECAM
     struct pcie_bridge_state*     upstream;  // The upstream bridge, or NULL if we are root
     struct pcie_bus_driver_state* bus_drv;   // Pointer to our bus driver state.
-    pcie_node_type_t              type;      // Type of the node (bridge or device)
+    bool                          is_bridge; // True if this device is also a bridge
     uint16_t                      vendor_id; // The device's vendor ID, as read from config
     uint16_t                      device_id; // The device's device ID, as read from config
     uint8_t                       class_id;  // The device's class ID, as read from config.
@@ -223,6 +217,12 @@ typedef struct pcie_common_state {
     uint                          bus_id;    // The bus ID this bridge/device exists on
     uint                          dev_id;    // The device ID of this bridge/device
     uint                          func_id;   // The function ID of this bridge/device
+
+    /* State tracking for this device's driver (if this device has been claimed by a driver */
+    const pcie_driver_registration_t* driver;
+    void*                             driver_ctx;
+    struct list_node                  claimed_device_node;
+    bool                              started;
 
     /* Info about the BARs computed and cached during the initial setup/probe,
      * indexed by starting BAR register index */
@@ -264,10 +264,10 @@ typedef struct pcie_common_state {
         struct { } msi_x;
     } irq;
 
-} pcie_common_state_t;
+} pcie_device_state_t;
 
 typedef struct pcie_bridge_state {
-    pcie_common_state_t common;          // State shared by every node in the bridge/device tree
+    pcie_device_state_t dev;             // Common device state for this bridge.
     uint                managed_bus_id;  // The ID of the downstream bus which this bridge manages.
 
     /* An array of pointers for all the possible functions which exist on the
@@ -279,23 +279,8 @@ typedef struct pcie_bridge_state {
      * sorted by bus/dev/func identifiers.  Switch this when we fully transition
      * to C++ and Magenta.
      */
-    pcie_common_state_t* downstream[PCIE_MAX_FUNCTIONS_PER_BUS];
+    pcie_device_state_t* downstream[PCIE_MAX_FUNCTIONS_PER_BUS];
 } pcie_bridge_state_t;
-
-/*
- * Struct used to manage the relationship between a PCIe device/function and its
- * associated driver.  During a bus scan/probe operation, all drivers will have
- * their registered probe methods called until a driver claims a device.  A
- * driver may claim a device by returning a pointer to a driver-managed
- * pcie_device_state struct, with the driver owned fields filled out.
- */
-typedef struct pcie_device_state {
-    pcie_common_state_t               common;
-    const pcie_driver_registration_t* driver;
-    void*                             driver_ctx;
-    struct list_node                  claimed_device_node;
-    bool                              started;
-} pcie_device_state_t;
 
 /*
  * Endian independent PCIe register access helpers.
@@ -309,17 +294,12 @@ static inline void pcie_write16(volatile uint16_t* reg, uint16_t val) { *reg = L
 static inline void pcie_write32(volatile uint32_t* reg, uint32_t val) { *reg = LE32(val); }
 
 /*
- * Helper methods used for safely downcasting from pcie_common_state_t's to
+ * Helper methods used for safely downcasting from pcie_device_state_t's to
  * their derrived types.
  */
-static inline pcie_bridge_state_t* pcie_downcast_to_bridge(const pcie_common_state_t* common) {
-    DEBUG_ASSERT(common);
-    return common->type != PCIE_BRIDGE ? NULL : containerof(common, pcie_bridge_state_t, common);
-}
-
-static inline pcie_device_state_t* pcie_downcast_to_device(const pcie_common_state_t* common) {
-    DEBUG_ASSERT(common);
-    return common->type != PCIE_DEVICE ? NULL : containerof(common, pcie_device_state_t, common);
+static inline pcie_bridge_state_t* pcie_downcast_to_bridge(const pcie_device_state_t* device) {
+    DEBUG_ASSERT(device);
+    return device->is_bridge ? containerof(device, pcie_bridge_state_t, dev) : NULL;
 }
 
 /*
@@ -362,34 +342,20 @@ void pcie_shutdown_device(pcie_device_state_t* device);
  * Return information about the requested base address register, if it has been
  * allocated.  Otherwise, return NULL.
  *
- * @param common A pointer to the pcie device/bridge node to fetch BAR info for.
+ * @param dev A pointer to the pcie device/bridge node to fetch BAR info for.
  * @param bar_ndx The index of the BAR register to fetch info for.
  *
  * @return A pointer to the BAR info, including where in the bus address space
  * the BAR window has been mapped, or NULL if the BAR window does not exist or
  * has not been allocated.
  */
-static inline const pcie_bar_info_t* pcie_get_bar_info(
-        const pcie_common_state_t* common,
-        uint bar_ndx)
-{
-    DEBUG_ASSERT(common);
-    DEBUG_ASSERT(bar_ndx < countof(common->bars));
+static inline const pcie_bar_info_t* pcie_get_bar_info(const pcie_device_state_t* dev,
+                                                       uint bar_ndx) {
+    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(bar_ndx < countof(dev->bars));
 
-    const pcie_bar_info_t* ret = &common->bars[bar_ndx];
+    const pcie_bar_info_t* ret = &dev->bars[bar_ndx];
     return ret->is_allocated ? ret : NULL;
-}
-
-/*
- * A helper version of pcie_get_bar_info which takes a pcie_device_state_t
- * pointer and passes the pointer to the common state along.
- */
-static inline const pcie_bar_info_t* pcie_get_device_bar_info(
-        const pcie_device_state_t* device,
-        uint bar_ndx)
-{
-    DEBUG_ASSERT(device);
-    return pcie_get_bar_info(&device->common, bar_ndx);
 }
 
 /*

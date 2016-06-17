@@ -439,9 +439,9 @@ static void ihda_dump_codecs(intel_hda_device_t* dev) {
             codec_count++;
 
     printf("Intel HDA Audio Controller @%02x:%02x.%01x has %u active codec%s\n",
-            dev->pci_device->common.bus_id,
-            dev->pci_device->common.dev_id,
-            dev->pci_device->common.func_id,
+            dev->pci_device->bus_id,
+            dev->pci_device->dev_id,
+            dev->pci_device->func_id,
             codec_count,
             codec_count == 1 ? "" : "s");
 

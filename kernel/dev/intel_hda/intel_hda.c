@@ -361,7 +361,7 @@ static void intel_hda_deactivate_device(intel_hda_device_t* dev) {
     /* Shut off our IRQ at the PCIe level and synchronize with the PCIe bus
      * driver's IRQ dispatcher.  After this point, we are certain that we can no
      * longer be added to the pending work list by the IRQ handler.  */
-    pcie_set_irq_mode_disabled(&dev->pci_device->common);
+    pcie_set_irq_mode_disabled(dev->pci_device);
 
     /* Purge ourselves from the pending work list if we are currently on it.
      * Keep track of whether or not we were on the pending work list.  If we
@@ -393,7 +393,7 @@ static void intel_hda_deactivate_device(intel_hda_device_t* dev) {
      */
 }
 
-pcie_irq_handler_retval_t intel_hda_pci_irq_handler(struct pcie_common_state* pci_device,
+pcie_irq_handler_retval_t intel_hda_pci_irq_handler(struct pcie_device_state* pci_device,
                                                     uint  irq_id,
                                                     void* ctx) {
     DEBUG_ASSERT(pci_device && ctx);
@@ -437,13 +437,13 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
     DEBUG_ASSERT(dev->pci_device == pci_device);
     LTRACEF("Starting %s @ %02x:%02x.%01x\n",
             pcie_driver_name(pci_device->driver),
-            pci_device->common.bus_id,
-            pci_device->common.dev_id,
-            pci_device->common.func_id);
+            pci_device->bus_id,
+            pci_device->dev_id,
+            pci_device->func_id);
 
     /* Fetch the information about where our registers have been mapped for us,
      * then sanity check. */
-    const pcie_bar_info_t* info = pcie_get_device_bar_info(pci_device, 0);
+    const pcie_bar_info_t* info = pcie_get_bar_info(pci_device, 0);
     if (!info || !info->is_allocated || !info->is_mmio) {
         TRACEF("Failed to fetch base address register info!\n");
         ret = ERR_BAD_STATE;
@@ -601,7 +601,7 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
 
     /* Select our IRQ mode and register our handler. Try to use MSI, but if we
      * can't, fall back on legacy. */
-    ret = pcie_set_irq_mode(&pci_device->common,
+    ret = pcie_set_irq_mode(pci_device,
                             PCIE_IRQ_MODE_MSI,
                             1,
                             PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
@@ -610,7 +610,7 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
         TRACEF("Failed to configure PCIe device for MSI IRQ mode (err = %d), "
                "falling back on Legacy mode\n", ret);
 
-        ret = pcie_set_irq_mode(&pci_device->common,
+        ret = pcie_set_irq_mode(pci_device,
                                 PCIE_IRQ_MODE_LEGACY,
                                 1,
                                 PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED);
@@ -623,13 +623,13 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
 
     /* Register our handler; if the mode we are operating in does not support
      * masking, we might start to receive interrupts as soon as we register. */
-    ret = pcie_register_irq_handler(&pci_device->common, 0, intel_hda_pci_irq_handler, dev);
+    ret = pcie_register_irq_handler(pci_device, 0, intel_hda_pci_irq_handler, dev);
     if (ret != NO_ERROR) {
         TRACEF("Failed to register IRQ handler (err = %d)\n", ret);
         goto finished;
     }
 
-    ret = pcie_unmask_irq(&pci_device->common, 0);
+    ret = pcie_unmask_irq(pci_device, 0);
     if (ret != NO_ERROR) {
         TRACEF("Failed to unmask IRQ (err = %d)\n", ret);
         goto finished;
@@ -664,9 +664,9 @@ static void intel_hda_pci_shutdown(struct pcie_device_state* pci_device) {
 
     LTRACEF("Shutting down %s @ %02x:%02x.%01x\n",
             pcie_driver_name(pci_device->driver),
-            pci_device->common.bus_id,
-            pci_device->common.dev_id,
-            pci_device->common.func_id);
+            pci_device->bus_id,
+            pci_device->dev_id,
+            pci_device->func_id);
 
     /* Deactivate the device.  This will ensure that...
      *
@@ -895,8 +895,8 @@ static void* intel_hda_pci_probe(struct pcie_device_state* pci_device) {
     DEBUG_ASSERT(pci_device);
     intel_hda_module_state_t* mod = &g_module_state;
 
-    if ((pci_device->common.vendor_id != INTEL_HDA_VID) ||
-        (pci_device->common.device_id != INTEL_HDA_DID)) {
+    if ((pci_device->vendor_id != INTEL_HDA_VID) ||
+        (pci_device->device_id != INTEL_HDA_DID)) {
         return NULL;
     }
 

@@ -157,15 +157,15 @@ static void* bcc_pci_probe(pcie_device_state_t* pci_device) {
 
     mutex_acquire(&g_lock);
 
-    if ((pci_device->common.vendor_id != LPC_BRIDGE_VID) ||
-        (pci_device->common.bus_id    != LPC_BRIDGE_BUS) ||
-        (pci_device->common.dev_id    != LPC_BRIDGE_DEV) ||
-        (pci_device->common.func_id   != LPC_BRIDGE_FUNC))
+    if ((pci_device->vendor_id != LPC_BRIDGE_VID) ||
+        (pci_device->bus_id    != LPC_BRIDGE_BUS) ||
+        (pci_device->dev_id    != LPC_BRIDGE_DEV) ||
+        (pci_device->func_id   != LPC_BRIDGE_FUNC))
         goto finished;
 
     size_t i;
     for (i = 0; i < countof(LPC_BRIDGE_DIDS); ++i)
-        if (pci_device->common.device_id == LPC_BRIDGE_DIDS[i])
+        if (pci_device->device_id == LPC_BRIDGE_DIDS[i])
             break;
 
     if (i >= countof(LPC_BRIDGE_DIDS))
@@ -210,9 +210,9 @@ static status_t bcc_pci_startup(pcie_device_state_t* pci_device) {
     mutex_acquire(&g_lock);
 
     /* Find the "root complex base address" and make sure the registers are enabled */
-    state->rcba_phys = pcie_read32((volatile uint32_t*)((intptr_t)pci_device->common.cfg + 0xf0));
+    state->rcba_phys = pcie_read32((volatile uint32_t*)((intptr_t)pci_device->cfg + 0xf0));
     state->rcba_phys |= 0x1;
-    pcie_write32((volatile uint32_t*)((intptr_t)pci_device->common.cfg + 0xf0), state->rcba_phys);
+    pcie_write32((volatile uint32_t*)((intptr_t)pci_device->cfg + 0xf0), state->rcba_phys);
     state->rcba_phys &= ~((1u << 14) - 1);
 
     /* Map in the chipset configuration registers */

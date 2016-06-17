@@ -224,16 +224,16 @@ static const char* pci_class_code_to_string(uint8_t class_code)
     }
 }
 
-static const char* pci_device_type(const pcie_common_state_t* node)
+static const char* pci_device_type(const pcie_device_state_t* dev)
 {
     // TODO(johngro): It might be a good idea, some day, to make this something
     // better than an O(n) search.
-    DEBUG_ASSERT(node);
+    DEBUG_ASSERT(dev);
 
     // If this is a PCIe style bridge with a specific device type spelled out in
     // its PCI Express Capabilities structure, use that to provide the type
     // string.
-    switch (node->pcie_caps.devtype) {
+    switch (dev->pcie_caps.devtype) {
         case PCIE_DEVTYPE_RC_ROOT_PORT:           return "PCIe Root Port";
         case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:   return "PCIe Upstream Switch Port";
         case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT: return "PCIe Downstream Switch Port";
@@ -245,14 +245,14 @@ static const char* pci_device_type(const pcie_common_state_t* node)
     for (size_t i = 0; i < countof(PCI_DEV_TYPE_LUT); ++i) {
         const pci_dev_type_lut_entry_t* entry = PCI_DEV_TYPE_LUT + i;
 
-        if ((node->class_id == entry->class)         &&
-            (node->subclass == entry->subclass)      &&
-            (node->prog_if  >= entry->prof_if_start) &&
-            (node->prog_if  <= entry->prof_if_end))
+        if ((dev->class_id == entry->class)         &&
+            (dev->subclass == entry->subclass)      &&
+            (dev->prog_if  >= entry->prof_if_start) &&
+            (dev->prog_if  <= entry->prof_if_end))
             return entry->desc;
     }
 
-    return pci_class_code_to_string(node->class_id);
+    return pci_class_code_to_string(dev->class_id);
 }
 
 static void do_lspci_indent(uint level) {
@@ -265,36 +265,34 @@ static void do_lspci_indent(uint level) {
         printf(_fmt, ##__VA_ARGS__);           \
     } while (0)
 
-static void dump_pcie_hdr(const pcie_common_state_t* node, lspci_params_t* params)
+static void dump_pcie_hdr(const pcie_device_state_t* dev, lspci_params_t* params)
 {
-    DEBUG_ASSERT(node && params);
+    DEBUG_ASSERT(dev && params);
     LSPCI_PRINTF("[%02x:%02x.%01x] - VID 0x%04x DID 0x%04x :: %s",
-                 node->bus_id, node->dev_id, node->func_id,
-                 node->vendor_id, node->device_id,
-                 pci_device_type(node));
+                 dev->bus_id, dev->dev_id, dev->func_id,
+                 dev->vendor_id, dev->device_id,
+                 pci_device_type(dev));
 
-    const pcie_device_state_t* device = pcie_downcast_to_device(node);
-    if (device && device->driver) {
-        printf(" [driver = \"%s\"]", pcie_driver_name(device->driver));
-    }
+    if (dev->driver)
+        printf(" [driver = \"%s\"]", pcie_driver_name(dev->driver));
 
     printf("\n");
 }
 
-static void dump_pcie_bars(const pcie_common_state_t* node,
+static void dump_pcie_bars(const pcie_device_state_t* dev,
                            lspci_params_t* params,
                            uint bar_count)
 {
-    pci_config_t* cfg = &node->cfg->base;
+    pci_config_t* cfg = &dev->cfg->base;
 
     DEBUG_ASSERT(bar_count <= countof(cfg->base_addresses));
-    DEBUG_ASSERT(bar_count <= countof(node->bars));
+    DEBUG_ASSERT(bar_count <= countof(dev->bars));
     for (uint i = 0; i < bar_count; ++i) {
         DEBUG_ASSERT(i < bar_count);
 
         LSPCI_PRINTF("Base Addr[%u]      : 0x%08x", i, pcie_read32(&cfg->base_addresses[i]));
 
-        const pcie_bar_info_t* info = pcie_get_bar_info(node, i);
+        const pcie_bar_info_t* info = pcie_get_bar_info(dev, i);
         if (!info) {
             printf("\n");
             continue;
@@ -309,9 +307,9 @@ static void dump_pcie_bars(const pcie_common_state_t* node,
     }
 }
 
-static void dump_pcie_common(const pcie_common_state_t* node, lspci_params_t* params)
+static void dump_pcie_common(const pcie_device_state_t* dev, lspci_params_t* params)
 {
-    pci_config_t* cfg = &node->cfg->base;
+    pci_config_t* cfg = &dev->cfg->base;
     uint8_t base_class = pcie_read8(&cfg->base_class);
 
     LSPCI_PRINTF("Command           : 0x%04x\n",    pcie_read16(&cfg->command));
@@ -327,9 +325,9 @@ static void dump_pcie_common(const pcie_common_state_t* node, lspci_params_t* pa
     LSPCI_PRINTF("BIST              : 0x%02x\n",    pcie_read8(&cfg->bist));
 }
 
-static void dump_pcie_standard(const pcie_common_state_t* node, lspci_params_t* params)
+static void dump_pcie_standard(const pcie_device_state_t* dev, lspci_params_t* params)
 {
-    pci_config_t* cfg = &node->cfg->base;
+    pci_config_t* cfg = &dev->cfg->base;
     LSPCI_PRINTF("Cardbus CIS       : 0x%08x\n", pcie_read32(&cfg->cardbus_cis_ptr));
     LSPCI_PRINTF("Subsystem VID     : 0x%04x\n", pcie_read16(&cfg->subsystem_vendor_id));
     LSPCI_PRINTF("Subsystem ID      : 0x%04x\n", pcie_read16(&cfg->subsystem_id));
@@ -342,9 +340,9 @@ static void dump_pcie_standard(const pcie_common_state_t* node, lspci_params_t* 
 
 }
 
-static void dump_pcie_bridge(const pcie_common_state_t* node, lspci_params_t* params)
+static void dump_pcie_bridge(const pcie_device_state_t* dev, lspci_params_t* params)
 {
-    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&node->cfg->base);
+    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&dev->cfg->base);
 
     LSPCI_PRINTF("P. Bus ID         : 0x%02x\n", pcie_read8(&bcfg->primary_bus_id));
     LSPCI_PRINTF("S. Bus Range      : [0x%02x, 0x%02x]\n",
@@ -375,37 +373,37 @@ static void dump_pcie_raw_config(uint amt, void* kvaddr, uint64_t phys) {
     hexdump8(kvaddr, amt);
 }
 
-static size_t dump_pcie_node(const pcie_common_state_t* node, lspci_params_t* params)
+static size_t dump_pcie_node(const pcie_device_state_t* dev, lspci_params_t* params)
 {
-    DEBUG_ASSERT(node && params);
+    DEBUG_ASSERT(dev && params);
 
-    bool match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == node->bus_id)) &&
-                  ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == node->dev_id)) &&
-                  ((params->func_id == WILDCARD_ID) || (params->func_id == node->func_id)));
+    bool match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == dev->bus_id)) &&
+                  ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == dev->dev_id)) &&
+                  ((params->func_id == WILDCARD_ID) || (params->func_id == dev->func_id)));
 
 
     /* Dump the header if this device matches our filter, or if it is a bridge
      * and we are in tree dump mode */
-    if (match || (params->tree && pcie_downcast_to_bridge(node)))
-        dump_pcie_hdr(node, params);
+    if (match || (params->tree && pcie_downcast_to_bridge(dev)))
+        dump_pcie_hdr(dev, params);
 
     /* Only dump details if we are in verbose mode and this device matches our
      * filter */
     if (match && params->verbose) {
         params->indent_level += 2;
 
-        dump_pcie_common(node, params);
+        dump_pcie_common(dev, params);
 
-        uint8_t header_type = pcie_read8(&node->cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
+        uint8_t header_type = pcie_read8(&dev->cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
         switch (header_type) {
         case PCI_HEADER_TYPE_STANDARD:
-            dump_pcie_bars(node, params, 6);
-            dump_pcie_standard(node, params);
+            dump_pcie_bars(dev, params, 6);
+            dump_pcie_standard(dev, params);
             break;
 
         case PCI_HEADER_TYPE_PCI_BRIDGE:
-            dump_pcie_bars(node, params, 2);
-            dump_pcie_bridge(node, params);
+            dump_pcie_bars(dev, params, 2);
+            dump_pcie_bridge(dev, params);
             break;
 
         case PCI_HEADER_TYPE_CARD_BUS:
@@ -421,26 +419,26 @@ static size_t dump_pcie_node(const pcie_common_state_t* node, lspci_params_t* pa
     }
 
     if (match && params->cfg_dump_amt)
-        dump_pcie_raw_config(params->cfg_dump_amt, node->cfg, (uint64_t)node->cfg_phys);
+        dump_pcie_raw_config(params->cfg_dump_amt, dev->cfg, (uint64_t)dev->cfg_phys);
 
     return match ? 1 : 0;
 }
 
-static size_t do_lspci(const pcie_common_state_t* node, lspci_params_t* params, bool show_node)
+static size_t do_lspci(const pcie_device_state_t* dev, lspci_params_t* params, bool show_node)
 {
     size_t found = 0;
-    DEBUG_ASSERT(node && params);
+    DEBUG_ASSERT(dev && params);
 
     if (show_node)
-        found += dump_pcie_node(node, params);
+        found += dump_pcie_node(dev, params);
 
-    const pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(node);
+    const pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
     if (bridge) {
         if (params->tree) {
             params->indent_level++;
 
             for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-                const pcie_common_state_t* downstream = bridge->downstream[i];
+                const pcie_device_state_t* downstream = bridge->downstream[i];
 
                 if (downstream)
                     found += do_lspci(downstream, params, true);
@@ -449,13 +447,13 @@ static size_t do_lspci(const pcie_common_state_t* node, lspci_params_t* params, 
             params->indent_level--;
         } else {
             for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-                const pcie_common_state_t* downstream = bridge->downstream[i];
+                const pcie_device_state_t* downstream = bridge->downstream[i];
                 if (downstream)
                     found += dump_pcie_node(downstream, params);
             }
 
             for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-                const pcie_common_state_t* downstream = bridge->downstream[i];
+                const pcie_device_state_t* downstream = bridge->downstream[i];
                 if (downstream)
                     found += do_lspci(downstream, params, false);
             }
@@ -565,7 +563,7 @@ static int cmd_lspci(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    found = do_lspci(&drv->host_bridge->common, &params, true);
+    found = do_lspci(&drv->host_bridge->dev, &params, true);
 
     if (!found && params.force_dump_cfg &&
         (params.bus_id  != WILDCARD_ID) &&
@@ -612,8 +610,7 @@ static int cmd_pcishutdown(int argc, const cmd_args *argv)
     }
 
     pcie_bus_driver_state_t* drv = pcie_get_bus_driver_state();
-    pcie_device_state_t* device = NULL;
-    pcie_device_state_t* tmp;
+    pcie_device_state_t*     dev = NULL;
 
     DEBUG_ASSERT(drv);
 
@@ -628,23 +625,21 @@ static int cmd_pcishutdown(int argc, const cmd_args *argv)
      * shut the device down ourselves, we are guaranteed to explode.
      */
     mutex_acquire(&drv->claimed_devices_lock);
-    list_for_every_entry(&drv->claimed_devices, tmp, pcie_device_state_t, claimed_device_node) {
-        if ((tmp->common.bus_id  == bus_id) &&
-            (tmp->common.dev_id  == dev_id) &&
-            (tmp->common.func_id == func_id)) {
-            device = tmp;
+    list_for_every_entry(&drv->claimed_devices, dev, pcie_device_state_t, claimed_device_node) {
+        if ((dev->bus_id  == bus_id) &&
+            (dev->dev_id  == dev_id) &&
+            (dev->func_id == func_id))
             break;
-        }
     }
     mutex_release(&drv->claimed_devices_lock);
 
-    if (!device) {
+    if (!dev) {
         printf("Failed to find claimed PCI device %02x:%02x.%x.  "
                "Are you sure it has a loaded driver?\n", bus_id, dev_id, func_id);
     } else {
         printf("Shutting down PCI device %02x:%02x.%x (%s)...\n",
-                bus_id, dev_id, func_id, pcie_driver_name(device->driver));
-        pcie_shutdown_device(device);
+                bus_id, dev_id, func_id, pcie_driver_name(dev->driver));
+        pcie_shutdown_device(dev);
         printf("done\n");
     }
 

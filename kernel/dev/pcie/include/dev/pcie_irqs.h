@@ -17,7 +17,7 @@
 __BEGIN_CDECLS
 
 /* Fwd decls */
-struct pcie_common_state;
+struct pcie_device_state;
 
 /**
  * Enumeration which defines the IRQ modes a PCIe device may be operating in.
@@ -150,21 +150,21 @@ typedef struct pcie_msi_block {
  * @param irq_id The 0-indexed ID of the IRQ which occurred.
  * @param ctx The context pointer registered when registering the handler.
  */
-typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(struct pcie_common_state* dev,
+typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(struct pcie_device_state* dev,
                                                            uint irq_id,
                                                            void* ctx);
 
 /**
  * Callback definition used for platform-specific legacy IRQ remapping.
  *
- * @param common A pointer to the pcie device/bridge to swizzle for.
+ * @param dev A pointer to the pcie device/bridge to swizzle for.
  * @param pin The pin we want to swizzle
  * @param irq An output pointer for what IRQ this pin goes to
  *
  * @return NO_ERROR if we successfully swizzled
  * @return ERR_NOT_FOUND if we did not know how to swizzle this pin
  */
-typedef status_t (*platform_legacy_irq_swizzle_t)(const struct pcie_common_state* common,
+typedef status_t (*platform_legacy_irq_swizzle_t)(const struct pcie_device_state* dev,
                                                   uint pin,
                                                   uint *irq);
 
@@ -232,7 +232,7 @@ typedef struct pcie_irq_handler_state {
     spin_lock_t               lock;
     pcie_irq_handler_fn_t     handler;
     void*                     ctx;
-    struct pcie_common_state* dev;
+    struct pcie_device_state* dev;
     uint                      pci_irq_id;
     bool                      masked;
 } pcie_irq_handler_state_t;
@@ -248,7 +248,7 @@ typedef struct pcie_irq_handler_state {
  *
  * @return A status_t indicating the success or failure of the operation.
  */
-status_t pcie_query_irq_mode_capabilities(const struct pcie_common_state* dev,
+status_t pcie_query_irq_mode_capabilities(const struct pcie_device_state* dev,
                                           pcie_irq_mode_t mode,
                                           pcie_irq_mode_caps_t* out_caps);
 /**
@@ -288,7 +288,7 @@ status_t pcie_query_irq_mode_capabilities(const struct pcie_common_state* dev,
  *    The system is unable to allocate sufficient system IRQs to satisfy the
  *    number of IRQs and exclusivity mode requested the device driver.
  */
-status_t pcie_set_irq_mode(struct pcie_common_state* dev,
+status_t pcie_set_irq_mode(struct pcie_device_state* dev,
                            pcie_irq_mode_t           mode,
                            uint                      requested_irqs,
                            pcie_irq_sharing_mode_t   share_mode);
@@ -298,7 +298,7 @@ status_t pcie_set_irq_mode(struct pcie_common_state* dev,
  *
  * Convenience function.  @see pcie_set_irq_mode for details.
  */
-static inline void pcie_set_irq_mode_disabled(struct pcie_common_state* dev) {
+static inline void pcie_set_irq_mode_disabled(struct pcie_device_state* dev) {
     /* It should be impossible to fail a transition to the DISABLED state,
      * regardless of the state of the system.  ASSERT this in debug builds */
     __UNUSED status_t result;
@@ -326,7 +326,7 @@ static inline void pcie_set_irq_mode_disabled(struct pcie_common_state* dev) {
  * ++ ERR_INVALID_ARGS
  *    The irq_id parameter is out of range for the currently configured mode.
  */
-status_t pcie_register_irq_handler(struct pcie_common_state* dev,
+status_t pcie_register_irq_handler(struct pcie_device_state* dev,
                                    uint                      irq_id,
                                    pcie_irq_handler_fn_t     handler,
                                    void*                     ctx);
@@ -350,7 +350,7 @@ status_t pcie_register_irq_handler(struct pcie_common_state* dev,
  *    The device is operating in MSI mode, but neither the PCI device nor the
  *    platform interrupt controller support masking the MSI vector.
  */
-status_t pcie_mask_unmask_irq(struct pcie_common_state* dev,
+status_t pcie_mask_unmask_irq(struct pcie_device_state* dev,
                               uint                      irq_id,
                               bool                      mask);
 
@@ -359,7 +359,7 @@ status_t pcie_mask_unmask_irq(struct pcie_common_state* dev,
  *
  * Convenience function.  @see pcie_mask_unmask_irq for details.
  */
-static inline status_t pcie_mask_irq(struct pcie_common_state* dev, uint irq_id) {
+static inline status_t pcie_mask_irq(struct pcie_device_state* dev, uint irq_id) {
     return pcie_mask_unmask_irq(dev, irq_id, true);
 }
 
@@ -368,7 +368,7 @@ static inline status_t pcie_mask_irq(struct pcie_common_state* dev, uint irq_id)
  *
  * Convenience function.  @see pcie_mask_unmask_irq for details.
  */
-static inline status_t pcie_unmask_irq(struct pcie_common_state* dev, uint irq_id) {
+static inline status_t pcie_unmask_irq(struct pcie_device_state* dev, uint irq_id) {
     return pcie_mask_unmask_irq(dev, irq_id, false);
 }
 

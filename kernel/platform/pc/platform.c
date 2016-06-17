@@ -205,16 +205,14 @@ void platform_init_smp(void)
 }
 #endif
 
-static status_t acpi_pcie_irq_swizzle(const pcie_common_state_t* common,
-                                      uint pin,
-                                      uint *irq)
+static status_t acpi_pcie_irq_swizzle(const pcie_device_state_t* dev, uint pin, uint *irq)
 {
-    DEBUG_ASSERT(common);
+    DEBUG_ASSERT(dev);
     DEBUG_ASSERT(pin < 4);
-    if (common->bus_id != 0) {
+    if (dev->bus_id != 0) {
         return ERR_NOT_FOUND;
     }
-    uint32_t val = pcie_root_irq_map.dev_pin_to_global_irq[common->dev_id][common->func_id][pin];
+    uint32_t val = pcie_root_irq_map.dev_pin_to_global_irq[dev->dev_id][dev->func_id][pin];
     if (val == ACPI_NO_IRQ_MAPPING) {
         return ERR_NOT_FOUND;
     }
