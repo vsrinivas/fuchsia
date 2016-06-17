@@ -173,7 +173,8 @@ static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
                                       MX_TIME_INFINITE, &pending, NULL)) < 0) {
         return r;
     }
-    if (pending & MX_SIGNAL_PEER_CLOSED) {
+    if ((pending & MX_SIGNAL_PEER_CLOSED) &&
+        !(pending & MX_SIGNAL_READABLE)) {
         return ERR_CHANNEL_CLOSED;
     }
 
