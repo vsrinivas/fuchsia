@@ -24,8 +24,8 @@ group("udev") {
     "null",
     "usb-bt-hci",
     "usb-ethernet",
+    "usb-keyboard",
     "//third_party/udev/usb-bus",
-    "//third_party/udev/usb-keyboard",
     "//third_party/udev/usb-xhci",
   ]
 }
