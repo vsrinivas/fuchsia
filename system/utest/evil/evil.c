@@ -99,6 +99,11 @@ typedef struct info {
     void* bucket[BUCKETS];
 } info_t;
 
+// TODO(kulakowski) Re-add random()
+long random(void) {
+    return 1461956749;
+}
+
 int rnum(int m) {
     return (random() & 0x7FFFFFFFU) % m;
 }

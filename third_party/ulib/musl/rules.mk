@@ -828,7 +828,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/stdlib/ldiv.c \
     $(LOCAL_DIR)/src/stdlib/llabs.c \
     $(LOCAL_DIR)/src/stdlib/lldiv.c \
-    $(LOCAL_DIR)/src/stdlib/random.c \
     $(LOCAL_DIR)/src/stdlib/strtod.c \
     $(LOCAL_DIR)/src/stdlib/strtol.c \
     $(LOCAL_DIR)/src/stdlib/wcstod.c \
