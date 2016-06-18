@@ -250,7 +250,7 @@ mx_handle_t mxio_start_process(int args_count, char* args[]) {
     // worset case slots for all fds plus root handle
     // plus a process handle possibly added by start process
     mx_handle_t hnd[(2 + MAX_MXIO_FD) * MXIO_MAX_HANDLES];
-    uint32_t ids[(2 + MAX_MXIO_FD) + MXIO_MAX_HANDLES];
+    uint32_t ids[(2 + MAX_MXIO_FD) * MXIO_MAX_HANDLES];
     mx_status_t r;
 
     r = mxio_create_subprocess_handles(hnd, ids, (1 + MAX_MXIO_FD) * MXIO_MAX_HANDLES);
