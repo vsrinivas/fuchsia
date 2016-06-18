@@ -28,6 +28,5 @@ source_set("gfxconsole") {
     "//system/ulib/ddk",
     "//system/ulib/font",
     "//system/ulib/mxio",
-    "//third_party/ulib/musl",
   ]
 }

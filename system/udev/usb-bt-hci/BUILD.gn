@@ -20,6 +20,5 @@ source_set("usb-bt-hci") {
     "//system/ulib/ddk",
     "//system/ulib/mxu",
     "//system/ulib/runtime",
-    "//third_party/ulib/musl",
   ]
 }

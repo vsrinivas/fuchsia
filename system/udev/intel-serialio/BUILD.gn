@@ -35,6 +35,5 @@ source_set("intel-serialio") {
     "//system/ulib/mxio",
     "//system/ulib/mxu",
     "//system/ulib/runtime",
-    "//third_party/ulib/musl",
   ]
 }

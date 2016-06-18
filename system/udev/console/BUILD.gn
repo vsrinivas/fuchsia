@@ -21,6 +21,5 @@ source_set("console") {
     "//system/ulib/magenta",
     "//system/ulib/mxio",
     "//system/ulib/runtime",
-    "//third_party/ulib/musl",
   ]
 }

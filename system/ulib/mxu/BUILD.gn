@@ -34,7 +34,6 @@ source_set("mxu") {
   deps = [
     "//system/ulib/magenta",
     "//system/ulib/runtime",
-    "//third_party/ulib/musl",
   ]
   public_deps = [
     "//system/ulib/global",

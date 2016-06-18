@@ -28,7 +28,6 @@ source_set("font") {
   ]
   deps = [
     "//system/ulib/magenta",
-    "//third_party/ulib/musl",
   ]
   public_deps = [
     "//system/ulib/gfx",

@@ -30,6 +30,5 @@ source_set("inet6") {
   deps = [
     "//system/ulib/magenta",
     "//system/ulib/mxio",
-    "//third_party/ulib/musl",
   ]
 }

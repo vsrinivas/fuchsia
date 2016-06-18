@@ -19,7 +19,6 @@ config("_magenta_config") {
 
 source_set("magenta") {
   public_configs = [ ":_magenta_config" ]
-  include_dirs = [ "//third_party/ulib/musl/include" ]
   public = [
     "include/magenta/prctl.h",
     "include/magenta/processargs.h",

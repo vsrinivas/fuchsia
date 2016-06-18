@@ -19,6 +19,5 @@ source_set("intel-i915") {
   deps = [
     "//system/ulib/ddk",
     "//system/ulib/magenta",
-    "//third_party/ulib/musl",
   ]
 }

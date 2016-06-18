@@ -245,6 +245,11 @@ config("kernel_defaults") {
   ]
 }
 
+# TODO(phosek): this should be removed once our toolchain includes libc
+config("libc") {
+  include_dirs = [ "//third_party/ulib/musl/include" ]
+}
+
 config("user_defaults") {
   defines = [
     "_XOPEN_SOURCE=700",

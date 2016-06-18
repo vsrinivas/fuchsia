@@ -21,6 +21,5 @@ source_set("kpci") {
   deps = [
     "//system/ulib/ddk",
     "//system/ulib/magenta",
-    "//third_party/ulib/musl",
   ]
 }

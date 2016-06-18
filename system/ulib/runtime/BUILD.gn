@@ -19,7 +19,6 @@ config("_runtime_config") {
 
 source_set("runtime") {
   public_configs = [ ":_runtime_config" ]
-  include_dirs = [ "//third_party/ulib/musl/include" ]
   public = [
     "include/runtime/atomic.h",
     "include/runtime/mutex.h",

@@ -23,6 +23,5 @@ source_set("usb-ethernet") {
     "//system/ulib/ddk",
     "//system/ulib/mxu",
     "//system/ulib/runtime",
-    "//third_party/ulib/musl",
   ]
 }

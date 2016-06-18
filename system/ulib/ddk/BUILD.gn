@@ -40,9 +40,6 @@ source_set("ddk") {
     "io-alloc.c",
     "protocol/keyboard.c",
   ]
-  deps = [
-    "//third_party/ulib/musl",
-  ]
   public_deps = [
     "//system/ulib/magenta",
     "//system/ulib/mxu",

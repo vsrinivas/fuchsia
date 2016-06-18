@@ -29,6 +29,5 @@ source_set("gfx") {
     "//system/ulib/ddk",
     "//system/ulib/magenta",
     "//system/ulib/mxu",
-    "//third_party/ulib/musl",
   ]
 }

@@ -44,11 +44,17 @@ _shared_binary_target_configs = [
 # Apply that default list to the binary target types.
 set_defaults("source_set") {
   configs = _shared_binary_target_configs
-  configs += [ "//gnbuild:user_defaults" ]
+  configs += [
+    "//gnbuild:user_defaults",
+    "//gnbuild:libc",
+  ]
 }
 set_defaults("static_library") {
   configs = _shared_binary_target_configs
-  configs += [ "//gnbuild:user_defaults" ]
+  configs += [
+    "//gnbuild:user_defaults",
+    "//gnbuild:libc",
+  ]
 }
 set_defaults("module") {
   configs = _shared_binary_target_configs
@@ -58,6 +64,7 @@ set_defaults("executable") {
   configs = _shared_binary_target_configs
   configs += [
     "//gnbuild:user_defaults",
+    "//gnbuild:libc",
     "//gnbuild:executable_ldconfig",
   ]
 }

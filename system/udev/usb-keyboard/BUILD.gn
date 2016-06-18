@@ -18,8 +18,7 @@ source_set("usb-keyboard") {
   ]
   deps = [
     "//system/ulib/ddk",
-    "//system/ulib/mxu",
     "//system/ulib/magenta",
-    "//third_party/ulib/musl",
+    "//system/ulib/mxu",
   ]
 }
