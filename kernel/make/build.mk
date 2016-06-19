@@ -96,17 +96,37 @@ $(BUILDDIR)/%.elf.strip: $(BUILDDIR)/%.elf
 	@echo generating $@
 	$(NOECHO)$(STRIP) -d $< -o $@
 
+# generate a new manifest and compare to see if it differs from the previous one
+.PHONY: usermanifestfile
+$(USER_MANIFEST): usermanifestfile
+	@echo generating $@
+	@$(MKDIR)
+	$(NOECHO)echo $(USER_MANIFEST_LINES) | tr ' ' '\n' | sort > $@.tmp
+	$(NOECHO)$(call TESTANDREPLACEFILE,$@.tmp,$@)
+
+GENERATED += $(USER_MANIFEST)
+
+# build the mkbootfs tool
+MKBOOTFS := $(BUILDDIR)/system/tools/mkbootfs
+
+$(MKBOOTFS): system/tools/mkbootfs.c
+	@echo compiling $@
+	@$(MKDIR)
+	$(NOECHO)cc -Wall -o $@ $<
+
+GENERATED += $(MKBOOTFS)
+
 # Manifest Lines are bootfspath=buildpath
 # Extract the part after the = for each line
 # to generate dependencies
 USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(SPACE),$(strip $(x)))))
 
-$(USER_MANIFEST): $(CONFIGHEADER) $(USER_MANIFEST_DEPS)
+$(USER_BOOTFS): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
 	@echo generating $@
 	@$(MKDIR)
-	$(NOECHO)echo $(USER_MANIFEST_LINES) | tr ' ' '\n' | sort > $@
+	$(NOECHO)$(MKBOOTFS) -o $(USER_BOOTFS) $(USER_MANIFEST)
 
-GENERATED += $(USER_MANIFEST)
+GENERATED += $(USER_BOOTFS)
 
 # build userspace filesystem image
 $(USER_FS): $(USER_BOOTFS)

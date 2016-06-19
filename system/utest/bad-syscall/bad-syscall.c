@@ -25,8 +25,8 @@ int main(void) {
     mx_status_t ret;
     void* unmapped_addr = (void*)4096;
     CHECK(_magenta_debug_write(unmapped_addr, 1), -1, "reading unmapped addr");
-    CHECK(_magenta_debug_write((void*)KERNEL_BASE - 1, 5), -1, "read crossing kernel boundary");
-    CHECK(_magenta_debug_write((void*)KERNEL_BASE, 1), -1, "read into kernel space");
+    CHECK(_magenta_debug_write((void*)KERNEL_ASPACE_BASE - 1, 5), -1, "read crossing kernel boundary");
+    CHECK(_magenta_debug_write((void*)KERNEL_ASPACE_BASE, 1), -1, "read into kernel space");
     CHECK(_magenta_debug_write((void*)&unmapped_addr, sizeof(void*)), (int)sizeof(void*),
           "good read");
     printf("Done\n");

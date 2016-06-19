@@ -64,6 +64,10 @@ MODULES += $(MODULE_DEPS)
 HEADER_MODULE_DEPS := $(MODULE_DEPS)
 HEADER_MODULE_DEPS += $(MODULE_HEADER_DEPS)
 
+# compute our shortname, which has all of the build system prefix paths removed
+MODULE_SHORTNAME = $(MODULE)
+$(foreach pfx,$(LKPREFIXES),$(eval MODULE_SHORTNAME := $(patsubst $(pfx)%,%,$(MODULE_SHORTNAME))))
+
 #$(info module $(MODULE))
 #$(info MODULE_SRCDIR $(MODULE_SRCDIR))
 #$(info MODULE_BUILDDIR $(MODULE_BUILDDIR))
@@ -84,6 +88,8 @@ MODULE_DEFINES += MODULE_TYPE=\"$(subst $(SPACE),_,$(MODULE_TYPE))\"
 
 # Introduce local, libc, and dependency include paths and defines
 ifneq (,$(filter userapp userlib,$(MODULE_TYPE)))
+# user app
+MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
 MODULE_COMPILEFLAGS += -Isystem/ulib/global/include
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/include
@@ -94,7 +100,9 @@ MODULE_COMPILEFLAGS += -D_BSD_SOURCE
 endif
 MODULE_COMPILEFLAGS += $(foreach DEP,$(HEADER_MODULE_DEPS),-I$(DEP)/include)
 else
-MODULE_COMPILEFLAGS += -D_KERNEL
+# kernel module
+KERNEL_DEFINES += $(addsuffix =1,$(addprefix WITH_,$(MODULE_SHORTNAME)))
+MODULE_SRCDEPS += $(KERNEL_CONFIG_HEADER)
 endif
 
 # generate a per-module config.h file
@@ -158,6 +166,7 @@ endif
 
 # empty out any vars set here
 MODULE :=
+MODULE_SHORTNAME :=
 MODULE_SRCDIR :=
 MODULE_BUILDDIR :=
 MODULE_DEPS :=

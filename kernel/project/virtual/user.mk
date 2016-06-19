@@ -7,7 +7,7 @@
 
 # modules needed to implement user space
 
-GLOBAL_DEFINES += WITH_DEBUG_LINEBUFFER=1
+KERNEL_DEFINES += WITH_DEBUG_LINEBUFFER=1
 
 MODULES += \
     ulib/musl \
@@ -35,16 +35,3 @@ endif
 
 EXTRA_BUILDDEPS += $(USER_BOOTFS)
 
-MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
-
-$(MKBOOTFS): system/tools/mkbootfs.c
-	@echo compiling $@
-	@$(MKDIR)
-	cc -Wall -o $@ $<
-
-$(USER_BOOTFS): $(MKBOOTFS) $(USER_MANIFEST)
-	@echo generating $@
-	@$(MKDIR)
-	$(NOECHO)$(MKBOOTFS) -o $(USER_BOOTFS) $(USER_MANIFEST)
-
-GENERATED += $(USER_BOOTFS) $(MKBOOTFS) $(USERBOOT_BIN)

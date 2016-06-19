@@ -42,12 +42,12 @@ MODULE_DEPS += \
     dev/virtio/gpu \
     dev/virtio/rng \
 
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
     MEMBASE=$(MEMBASE) \
     MEMSIZE=$(MEMSIZE) \
     PLATFORM_SUPPORTS_PANIC_SHELL=1
 
-GLOBAL_DEFINES += MMU_WITH_TRAMPOLINE=1 \
+KERNEL_DEFINES += MMU_WITH_TRAMPOLINE=1 \
 
 LINKER_SCRIPT += \
     $(BUILDDIR)/system-onesegment.ld

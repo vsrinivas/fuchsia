@@ -36,7 +36,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/user_copy_c.c \
 	$(LOCAL_DIR)/uspace_entry.S
 
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARCH_DEFAULT_STACK_SIZE=4096
 
 # if its requested we build with SMP, arm generically supports 4 cpus
@@ -45,7 +45,7 @@ SMP_MAX_CPUS ?= 4
 SMP_CPU_CLUSTER_SHIFT ?= 8
 SMP_CPU_ID_BITS ?= 24 # Ignore aff3 bits for now since they are not next to aff2
 
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
     WITH_SMP=1 \
     SMP_MAX_CPUS=$(SMP_MAX_CPUS) \
     SMP_CPU_CLUSTER_SHIFT=$(SMP_CPU_CLUSTER_SHIFT) \
@@ -54,7 +54,7 @@ GLOBAL_DEFINES += \
 MODULE_SRCS += \
     $(LOCAL_DIR)/mp.c
 else
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
     SMP_MAX_CPUS=1
 endif
 
@@ -83,7 +83,7 @@ GLOBAL_DEFINES += \
 KERNEL_BASE ?= $(KERNEL_ASPACE_BASE)
 KERNEL_LOAD_OFFSET ?= 0
 
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
     KERNEL_BASE=$(KERNEL_BASE) \
     KERNEL_LOAD_OFFSET=$(KERNEL_LOAD_OFFSET)
 
@@ -94,7 +94,7 @@ KERNEL_LOAD_OFFSET ?= 0
 
 endif
 
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	MEMBASE=$(MEMBASE) \
 	MEMSIZE=$(MEMSIZE)
 
