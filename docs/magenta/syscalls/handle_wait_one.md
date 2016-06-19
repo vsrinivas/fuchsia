@@ -56,3 +56,6 @@ not be waited upon.
 
 Currently the *satisfiable_signals* return value is filled with the same
 content as the *satisifed_signals* value.
+
+Currently the smallest *timeout* is 1 millisecond. Intervals smaller
+than that are equivalent to 1ms.

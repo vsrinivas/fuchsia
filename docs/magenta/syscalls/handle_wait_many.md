@@ -68,3 +68,6 @@ have **MX_RIGHT_READ** and may not be waited upon.
 
 Currently the *satisfiable_signals* array is filled with the same content
 as the *satisifed_signals* array.
+
+Currently the smallest *timeout* is 1 millisecond. Intervals smaller
+than that are equivalent to 1ms.

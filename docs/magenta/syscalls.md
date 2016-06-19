@@ -1,5 +1,8 @@
 # Magenta System Calls
 
+## Thread
++ [nanosleep](syscalls/nanosleep.md)
+
 ## Handles
 
 + [handle_close](syscalls/handle_close.md)

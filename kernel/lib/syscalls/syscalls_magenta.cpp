@@ -50,13 +50,15 @@ void sys_exit(int retcode) {
     UserProcess::GetCurrent()->Exit(retcode);
 }
 
-int sys_nanosleep(mx_time_t nanoseconds) {
+mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
     LTRACEF("nseconds %llu\n", nanoseconds);
 
     lk_time_t t = mx_time_to_lk(nanoseconds);
+    if ((nanoseconds > 0ull) && (t == 0u))
+        t = 1u;
 
     thread_sleep(t);
-    return 0;
+    return NO_ERROR;
 }
 
 uint sys_num_cpus(void) {
@@ -125,7 +127,11 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     uint32_t satisfied = 0u;
     uint32_t satisfiable = 0u;
 
-    result = event_wait_timeout(&event, mx_time_to_lk(timeout));
+    lk_time_t t = mx_time_to_lk(timeout);
+    if ((timeout > 0ull) && (t == 0u))
+        t = 1u;
+
+    result = event_wait_timeout(&event, t);
 
     // Regardless of wait outcome, we must call FinishWait().
     satisfiable = wait_helper.End(&event);
@@ -210,7 +216,11 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         }
     }
 
-    result = event_wait_timeout(&event, mx_time_to_lk(timeout));
+    lk_time_t t = mx_time_to_lk(timeout);
+    if ((timeout > 0ull) && (t == 0u))
+        t = 1u;
+
+    result = event_wait_timeout(&event, t);
 
     // Regardless of wait outcome, we must call FinishWait().
     for (size_t ix = 0; ix != count; ++ix) {
