@@ -66,13 +66,15 @@ int console_starter(void* arg) {
         int fd;
         char name[64];
         snprintf(name, sizeof(name), "/dev/protocol/char/vc%u", i);
+        char pname[32];
+        snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
         //printf("? %s\n", name);
         if ((fd = open(name, O_RDWR)) < 0) {
             _magenta_nanosleep(100000000ULL);
             continue;
         }
         close(fd);
-        devmgr_launch("/boot/bin/mxsh", name);
+        devmgr_launch(pname, "/boot/bin/mxsh", name);
         i++;
     }
     return 0;
@@ -118,10 +120,10 @@ int main(int argc, char** argv) {
 #if !WITH_APP_SHELL
     // if no kernel shell on serial uart, start a mxsh there
     printf("devmgr: shell startup\n");
-    devmgr_launch("/boot/bin/mxsh", "/dev/console");
+    devmgr_launch("mxsh:console", "/boot/bin/mxsh", "/dev/console");
 #endif
 
-    devmgr_launch("/boot/bin/netsvc", "/dev/console");
+    devmgr_launch("netsvc", "/boot/bin/netsvc", "/dev/console");
 
     devmgr_handle_messages();
     printf("devmgr: message handler returned?!\n");

@@ -56,8 +56,8 @@ void devmgr_handle_messages(void);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void* bootfs, size_t len);
-void devmgr_launch(const char* app, const char* device);
-void devmgr_launch_devhost(mx_handle_t h, const char* arg0, const char* arg1);
+void devmgr_launch(const char* name, const char* app, const char* device);
+void devmgr_launch_devhost(const char* name, mx_handle_t h, const char* arg0, const char* arg1);
 
 int devmgr_get_pcidev_index(mx_device_t* dev);
 mx_status_t devmgr_create_pcidev(mx_device_t** out, uint32_t index);

@@ -118,5 +118,12 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount, m
 // returns fd on success
 int mxio_bind_to_fd(mxio_t* io, int fd);
 
+
+#define MAX_MXIO_FD 256
+
+// mxio-specific operations through fds (to the backing mxio_t's):
+
 // wait until one or more events are pending
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending);
+
+ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);

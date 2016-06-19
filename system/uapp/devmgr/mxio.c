@@ -56,7 +56,7 @@ static void callback(const char* path, size_t off, size_t len) {
     vnb_add_file(tmp, bootfs + off, len);
 }
 
-void devmgr_launch(const char* app, const char* device) {
+void devmgr_launch(const char* name, const char* app, const char* device) {
     mx_handle_t hnd[5 * VFS_MAX_HANDLES];
     uint32_t ids[5 * VFS_MAX_HANDLES];
     unsigned n = 1;
@@ -79,7 +79,7 @@ void devmgr_launch(const char* app, const char* device) {
     }
     n += r;
     printf("devmgr: launch shell on %s\n", device);
-    mxio_start_process_etc(1, (char**)&app, n, hnd, ids);
+    mxio_start_process_etc(name, 1, (char**)&app, n, hnd, ids);
     return;
 fail:
     while (n > 0) {
@@ -88,10 +88,11 @@ fail:
     }
 }
 
-void devmgr_launch_devhost(mx_handle_t h, const char* arg0, const char* arg1) {
-    const char* name = "/boot/bin/devmgr";
+void devmgr_launch_devhost(const char* name, mx_handle_t h,
+                           const char* arg0, const char* arg1) {
+    const char* binname = "/boot/bin/devmgr";
     const char* args[3] = {
-        name, arg0, arg1,
+        binname, arg0, arg1,
     };
     mx_handle_t hnd[2];
     uint32_t ids[2];
@@ -100,7 +101,7 @@ void devmgr_launch_devhost(mx_handle_t h, const char* arg0, const char* arg1) {
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
     printf("devmgr: launch host: %s %s\n", arg0, arg1);
-    mxio_start_process_etc(3, (char**)args, 2, hnd, ids);
+    mxio_start_process_etc(name, 3, (char**)args, 2, hnd, ids);
 }
 
 void devmgr_io_init(void) {

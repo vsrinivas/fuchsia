@@ -22,12 +22,12 @@
 // code like userboot and devmgr
 
 // starts new process, handling fd/handle transfer
-mx_handle_t mxio_start_process(int argc, char** argv);
+mx_handle_t mxio_start_process(const char* name, int argc, char** argv);
 
 // Starts new process, manual configuration of initial handle set.
 // Handles and ids must be one larger than hnds_count as the
 // process handle is added at the very end.
-mx_handle_t mxio_start_process_etc(int args_count, char* args[],
+mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[],
                                    int hnds_count, mx_handle_t* handles, uint32_t* ids);
 
 // Utilities to help assemble handles for a new process
@@ -36,9 +36,6 @@ mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types);
 
-// Interface for calling into our temporary ioctl
-ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
-
 // Create a handle containing process arguments.
 // If proc is nonzero, it will be added to the
 // end of the handle/id tables, so they must
@@ -46,12 +43,9 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
 mx_handle_t mxio_build_procargs(int args_count, char* args[], int hnds_count,
                                 mx_handle_t* handles, uint32_t* ids, mx_handle_t proc);
 
+// Load a static elf binary into a process from memory buffer or fd
 mx_status_t mxio_load_elf_mem(mx_handle_t process, mx_vaddr_t* entry, void* data, size_t len);
-
 mx_status_t mxio_load_elf_fd(mx_handle_t process, mx_vaddr_t* entry, int fd);
-
-// call from libc glue
-void mxio_init(void* arg, int* argc, char*** argv);
 
 void bootfs_parse(void* _data, int len,
                   void (*cb)(const char* fn, size_t off, size_t len));

@@ -83,8 +83,8 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[], int hnds_count,
     return h0;
 }
 
-mx_handle_t mxio_start_process_etc(int args_count, char* args[], int hnds_count,
-                                   mx_handle_t* handles, uint32_t* ids) {
+mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[],
+                                   int hnds_count, mx_handle_t* handles, uint32_t* ids) {
     uintptr_t entry = 0;
     mx_handle_t h, p;
     mx_status_t r;
@@ -92,17 +92,19 @@ mx_handle_t mxio_start_process_etc(int args_count, char* args[], int hnds_count,
     if (args_count < 1)
         return ERR_INVALID_ARGS;
 
-    char* path = args[0];
-    uint32_t path_len = MIN(strlen(path), MX_MAX_NAME_LEN);
+    if (name == NULL) {
+        name = args[0];
+    }
+    uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
 
-    if ((p = _magenta_process_create(path, path_len)) < 0) {
+    if ((p = _magenta_process_create(name, name_len)) < 0) {
         return p;
     }
     if ((h = mxio_build_procargs(args_count, args, hnds_count, handles, ids, 0)) < 0) {
         _magenta_handle_close(p);
         return h;
     }
-    int fd = open(path, O_RDONLY);
+    int fd = open(args[0], O_RDONLY);
     if (fd < 0) {
         r = ERR_IO;
         goto fail;
@@ -119,6 +121,44 @@ mx_handle_t mxio_start_process_etc(int args_count, char* args[], int hnds_count,
         return r;
     }
     return p;
+}
+
+mx_status_t mxio_create_subprocess_handles(mx_handle_t* handles, uint32_t* types, size_t count) {
+    mx_status_t r;
+    size_t n = 0;
+
+    if (count < MXIO_MAX_HANDLES)
+        return ERR_NO_MEMORY;
+
+    if ((r = mxio_clone_root(handles + n, types + n)) < 0) {
+        return r;
+    }
+    n += r;
+    count -= r;
+
+    for (int fd = 0; (fd < MAX_MXIO_FD) && (count >= MXIO_MAX_HANDLES); fd++) {
+        if ((r = mxio_clone_fd(fd, fd, handles + n, types + n)) <= 0) {
+            continue;
+        }
+        n += r;
+        count -= r;
+    }
+    return n;
+}
+
+mx_handle_t mxio_start_process(const char* name, int args_count, char* args[]) {
+    // worset case slots for all fds plus root handle
+    // plus a process handle possibly added by start process
+    mx_handle_t hnd[(2 + MAX_MXIO_FD) * MXIO_MAX_HANDLES];
+    uint32_t ids[(2 + MAX_MXIO_FD) * MXIO_MAX_HANDLES];
+    mx_status_t r;
+
+    r = mxio_create_subprocess_handles(hnd, ids, (1 + MAX_MXIO_FD) * MXIO_MAX_HANDLES);
+    if (r < 0) {
+        return r;
+    } else {
+        return mxio_start_process_etc(name, args_count, args, r, hnd, ids);
+    }
 }
 
 typedef struct {

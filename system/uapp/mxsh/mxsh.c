@@ -296,7 +296,7 @@ void command(int argc, char** argv, bool runbg) {
     snprintf(tmp, sizeof(tmp), "%s%s",
              (argv[0][0] == '/') ? "" : "/boot/bin/", argv[0]);
     argv[0] = tmp;
-    mx_handle_t p = mxio_start_process(argc, argv);
+    mx_handle_t p = mxio_start_process(argv[0], argc, argv);
     if (p < 0) {
         printf("process failed to start (%d)\n", p);
         return;

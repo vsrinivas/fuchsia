@@ -367,11 +367,13 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
     list_add_tail(&devhost_list, &dh->node);
     mxio_dispatcher_add(devmgr_dispatcher, h0, NULL, dh);
 
+    char name[32];
     char arg0[32];
     char arg1[32];
+    snprintf(name, 32, "devhost:pci:%d", index);
     snprintf(arg0, 32, "pci=%d", index);
     snprintf(arg1, 32, "%p", drv);
-    devmgr_launch_devhost(h1, arg0, arg1);
+    devmgr_launch_devhost(name, h1, arg0, arg1);
     //TODO: make drv ineligible for further probing?
     return 0;
 #endif

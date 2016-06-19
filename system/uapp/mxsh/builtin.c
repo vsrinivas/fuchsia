@@ -273,7 +273,7 @@ static int mxc_runtests(int argc, char** argv) {
             char name[4096];
             snprintf(name, sizeof(name), "/boot/bin/%s", de->name);
             char* argv[] = {name};
-            mx_handle_t handle = mxio_start_process(1, argv);
+            mx_handle_t handle = mxio_start_process(name, 1, argv);
             if (handle < 0) {
                 printf("FAILURE: Failed to launch %s: %d\n", de->name, handle);
                 mxc_fail_test(&failures, de->name, FAILED_TO_LAUNCH, 0);

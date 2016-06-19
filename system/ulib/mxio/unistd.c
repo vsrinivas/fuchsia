@@ -32,8 +32,6 @@
 // non-thread-safe emulation of unistd io functions
 // using the mxio transports
 
-#define MAX_MXIO_FD 256
-
 static mxio_t* mxio_root_handle = NULL;
 
 static mx_handle_t mxio_process_handle = 0;
@@ -221,44 +219,6 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
         return ERR_NOT_SUPPORTED;
     }
     return io->ops->ioctl(io, op, in_buf, in_len, out_buf, out_len);
-}
-
-mx_status_t mxio_create_subprocess_handles(mx_handle_t* handles, uint32_t* types, size_t count) {
-    mx_status_t r;
-    size_t n = 0;
-
-    if (count < MXIO_MAX_HANDLES)
-        return ERR_NO_MEMORY;
-
-    if ((r = mxio_clone_root(handles + n, types + n)) < 0) {
-        return r;
-    }
-    n += r;
-    count -= r;
-
-    for (int fd = 0; (fd < MAX_MXIO_FD) && (count >= MXIO_MAX_HANDLES); fd++) {
-        if ((r = mxio_clone_fd(fd, fd, handles + n, types + n)) <= 0) {
-            continue;
-        }
-        n += r;
-        count -= r;
-    }
-    return n;
-}
-
-mx_handle_t mxio_start_process(int args_count, char* args[]) {
-    // worset case slots for all fds plus root handle
-    // plus a process handle possibly added by start process
-    mx_handle_t hnd[(2 + MAX_MXIO_FD) * MXIO_MAX_HANDLES];
-    uint32_t ids[(2 + MAX_MXIO_FD) * MXIO_MAX_HANDLES];
-    mx_status_t r;
-
-    r = mxio_create_subprocess_handles(hnd, ids, (1 + MAX_MXIO_FD) * MXIO_MAX_HANDLES);
-    if (r < 0) {
-        return r;
-    } else {
-        return mxio_start_process_etc(args_count, args, r, hnd, ids);
-    }
 }
 
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending) {
