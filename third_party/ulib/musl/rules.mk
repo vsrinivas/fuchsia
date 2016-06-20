@@ -592,6 +592,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/prng/mrand48.c \
     $(LOCAL_DIR)/src/prng/rand.c \
     $(LOCAL_DIR)/src/prng/rand_r.c \
+    $(LOCAL_DIR)/src/prng/random.c \
     $(LOCAL_DIR)/src/prng/seed48.c \
     $(LOCAL_DIR)/src/prng/srand48.c \
     $(LOCAL_DIR)/src/process/execl.c \

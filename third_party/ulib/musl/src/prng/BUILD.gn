@@ -12,6 +12,7 @@ source_set("prng") {
     "mrand48.c",
     "rand.c",
     "rand_r.c",
+    "random.c",
     "seed48.c",
     "srand48.c",
   ]
