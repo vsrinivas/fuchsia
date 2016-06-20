@@ -32,8 +32,7 @@ extern int __bss_start;
 extern int _end;
 
 #if WITH_SMP
-static thread_t *secondary_bootstrap_threads[SMP_MAX_CPUS - 1];
-static uint secondary_bootstrap_thread_count;
+static uint secondary_idle_thread_count;
 #endif
 
 static int bootstrap2(void *arg);
@@ -144,24 +143,18 @@ void lk_secondary_cpu_entry(void)
 {
     uint cpu = arch_curr_cpu_num();
 
-    if (cpu > secondary_bootstrap_thread_count) {
-        dprintf(CRITICAL, "Invalid secondary cpu num %d, SMP_MAX_CPUS %d, secondary_bootstrap_thread_count %d\n",
-                cpu, SMP_MAX_CPUS, secondary_bootstrap_thread_count);
+    if (cpu > secondary_idle_thread_count) {
+        dprintf(CRITICAL, "Invalid secondary cpu num %d, SMP_MAX_CPUS %d, secondary_idle_thread_count %d\n",
+                cpu, SMP_MAX_CPUS, secondary_idle_thread_count);
         return;
     }
 
-    thread_resume(secondary_bootstrap_threads[cpu - 1]);
-
-    dprintf(SPEW, "entering scheduler on cpu %d\n", cpu);
-    thread_secondary_cpu_entry();
-}
-
-static int secondary_cpu_bootstrap2(void *arg)
-{
+    dprintf(SPEW, "running final init tasks on cpu %d\n", cpu);
     /* secondary cpu initialize from threading level up. 0 to threading was handled in arch */
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_LAST);
 
-    return 0;
+    dprintf(SPEW, "entering scheduler on cpu %d\n", cpu);
+    thread_secondary_cpu_entry();
 }
 
 void lk_init_secondary_cpus(uint secondary_cpu_count)
@@ -172,24 +165,15 @@ void lk_init_secondary_cpus(uint secondary_cpu_count)
         secondary_cpu_count = SMP_MAX_CPUS - 1;
     }
     for (uint i = 0; i < secondary_cpu_count; i++) {
-        dprintf(SPEW, "creating bootstrap completion thread for cpu %d\n", i + 1);
-        thread_t *t = thread_create("secondarybootstrap2",
-                                    &secondary_cpu_bootstrap2, NULL,
-                                    DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
-        t->pinned_cpu = i + 1;
-        thread_detach(t);
-        secondary_bootstrap_threads[i] = t;
-    }
-    for (uint i = 0; i < secondary_cpu_count; i++) {
         dprintf(SPEW, "creating idle thread for cpu %d\n", i + 1);
         thread_t *t = thread_create_idle_thread(i + 1);
         if (!t) {
             dprintf(CRITICAL, "could not allocate idle thread %d\n", i + 1);
-            secondary_bootstrap_thread_count = i;
+            secondary_idle_thread_count = i;
             break;
         }
-        thread_detach(t);
+        thread_detach_and_resume(t);
     }
-    secondary_bootstrap_thread_count = secondary_cpu_count;
+    secondary_idle_thread_count = secondary_cpu_count;
 }
 #endif

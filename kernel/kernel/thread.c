@@ -936,9 +936,6 @@ void thread_secondary_cpu_entry(void)
     mp_set_curr_cpu_active(true);
     mp_set_cpu_idle(cpu);
 
-    /* Make sure the idle thread is runnable */
-    thread_resume(idle_thread(cpu));
-
     /* Exit from our bootstrap thread, and enter the scheduler on this cpu */
     thread_exit(0);
 }
