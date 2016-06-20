@@ -6,18 +6,5 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# build all magenta projects in the project directory
-PROJECTS=`echo kernel/project/magenta*.mk | xargs -n1 basename | sed 's/\.mk//'`
-FAILED=""
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-for p in $PROJECTS; do
-    nice $DIR/make-parallel $p || FAILED="$FAILED $p"
-done
-
-if [ "$FAILED" != "" ]; then
-    echo
-    echo some projects have failed to build:
-    echo $FAILED
-fi
+$DIR/buildall -m $*

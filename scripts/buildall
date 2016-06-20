@@ -10,6 +10,7 @@
 function HELP {
     echo "help:"
     echo "-f                  : Exit on first failure"
+    echo "-m                  : Build magenta targets only"
     echo "-r                  : Also build release mode builds"
     echo "-h for help"
     exit 1
@@ -18,11 +19,12 @@ function HELP {
 FAIL_FAST=0
 DO_RELEASE=0
 
-while getopts fhr FLAG; do
+while getopts fhmr FLAG; do
     case $FLAG in
         f) FAIL_FAST=1;;
         h) HELP;;
         r) DO_RELEASE=1;;
+        m) MAGENTA_ONLY=1;;
         \?)
             echo unrecognized option
             HELP
@@ -30,8 +32,12 @@ while getopts fhr FLAG; do
 done
 shift $((OPTIND-1))
 
-# build everything in the projects directory
-PROJECTS=`echo kernel/project/*.mk | xargs -n1 basename | sed 's/\.mk//'`
+if [ "$MAGENTA_ONLY" -eq 1 ]; then
+    # build everything in the projects directory
+    PROJECTS=`echo kernel/project/magenta*.mk | xargs -n1 basename | sed 's/\.mk//'`
+else
+    PROJECTS=`echo kernel/project/*.mk | xargs -n1 basename | sed 's/\.mk//'`
+fi
 FAILED=""
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
