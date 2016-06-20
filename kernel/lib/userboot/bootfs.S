@@ -6,16 +6,18 @@
 
 #include <asm.h>
 
-.section .bootfs
-.align 4
+// put this in a special section, mark it read only
+.section bootfs,"a"
+.balign 4096
 
-// include the bootfs archive containing user 
+// include the bootfs archive containing a user file system
 DATA(user_bootfs)
 .incbin USER_BOOTFS_FILENAME
+END(user_bootfs)
 
-user_bootfs_end:
-.size user_bootfs, user_bootfs_end - user_bootfs
+.Luser_bootfs_end:
 
+// save the length of the bootfs
 DATA(user_bootfs_len)
-    .int user_bootfs_end - user_bootfs
-.size user_bootfs_len, . - user_bootfs_len
+    .int .Luser_bootfs_end - user_bootfs
+END(user_bootfs_len)

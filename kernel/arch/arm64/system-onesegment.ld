@@ -82,7 +82,6 @@ SECTIONS
         /* in one segment binaries, the rom data address is on top of the ram data address */
         __data_start = .;
         *(.data .data.* .gnu.linkonce.d.*)
-        *(.bootfs)
     }
 
     .ctors : ALIGN(8) {

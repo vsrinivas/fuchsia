@@ -240,12 +240,14 @@ FUNCTION(_start)
     str     tmp2, [page_table0, tmp, lsl #3]     /* tt_trampoline[paddr index] = pt entry */
 
 #if WITH_SMP
-    adr     tmp, page_tables_not_ready
+    adrp    tmp, page_tables_not_ready
+    add     tmp, tmp, #:lo12:page_tables_not_ready
     str     wzr, [tmp]
     b       .Lpage_tables_ready
 
 .Lmmu_enable_secondary:
-    adr     tmp, page_tables_not_ready
+    adrp    tmp, page_tables_not_ready
+    add     tmp, tmp, #:lo12:page_tables_not_ready
 .Lpage_tables_not_ready:
     ldr     wtmp2, [tmp]
     cbnz    wtmp2, .Lpage_tables_not_ready

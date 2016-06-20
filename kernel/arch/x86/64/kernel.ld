@@ -52,7 +52,6 @@ SECTIONS
     .data : ALIGN(4096) {
         __data_start = .;
         *(.data .data.* .gnu.linkonce.d.*)
-        *(.bootfs)
     }
 
     .ctors : ALIGN(4) {

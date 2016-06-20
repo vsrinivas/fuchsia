@@ -89,8 +89,8 @@ static int attempt_userboot(const void* userboot, size_t ublen,
 }
 
 #if EMBED_USER_BOOTFS
-extern "C" uint8_t user_bootfs[];
-extern "C" uint32_t user_bootfs_len;
+extern "C" const uint8_t user_bootfs[];
+extern "C" const uint32_t user_bootfs_len;
 
 #define FSMAGIC "[BOOTFS]\0\0\0\0\0\0\0\0"
 
