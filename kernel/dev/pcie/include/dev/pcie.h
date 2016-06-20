@@ -247,7 +247,6 @@ typedef struct pcie_device_state {
     struct {
         /* Shared state */
         pcie_irq_mode_t           mode;
-        pcie_irq_sharing_mode_t   share_mode;
         pcie_irq_handler_state_t  singleton_handler;
         pcie_irq_handler_state_t* handlers;
         uint                      handler_count;

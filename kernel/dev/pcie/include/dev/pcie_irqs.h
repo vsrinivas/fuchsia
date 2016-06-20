@@ -66,34 +66,6 @@ typedef struct pcie_irq_mode_caps {
 } pcie_irq_mode_caps_t;
 
 /**
- * An enumeration which controls the requested behavior regarding sharing system
- * interrupts when selecting an IRQ mode.  The system is permitted to configure
- * vectors in a more exclusive mode than the mode requested, but not a less
- * exclusive mode.  For example, if a driver requests SYSTEM_SHARED exclusivity,
- * the system is permitted to deliver either DEVICE_SHARED or EXCLUSIVE service
- * (resources permitting) but must fail the call if EXCLUSIVE is requests but
- * only one of the lesser grades of service is available.
- *
- * ++ PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED
- *    Device driver will permit its IRQ vector(s) to be shared with other
- *    devices in the system.
- *
- * ++ PCIE_IRQ_SHARE_MODE_DEVICE_SHARED
- *    Device driver will permit its IRQ vector(s) to be shared with other
- *    vectors in the device, not with other devices in the system.
- *
- * ++ PCIE_IRQ_SHARE_MODE_EXCLUSIVE
- *    Device driver will not permit any of its IRQ vector(s) to be shared.  Each
- *    vector must be mapped to an individually triggered and managed system IRQ.
- */
-typedef enum pcie_irq_share_mode {
-    PCIE_IRQ_SHARE_MODE_INVALID = 0,
-    PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED,
-    PCIE_IRQ_SHARE_MODE_DEVICE_SHARED,
-    PCIE_IRQ_SHARE_MODE_EXCLUSIVE,
-} pcie_irq_sharing_mode_t;
-
-/**
  * An enumeration of the permitted return values from a PCIe IRQ handler.
  *
  * ++ PCIE_IRQRET_NO_ACTION
@@ -143,7 +115,6 @@ typedef struct pcie_msi_block {
 typedef struct pcie_irq_mode_info {
    pcie_irq_mode_t          mode;                 /// The currently configured mode.
    uint                     max_handlers;         /// The max number of handlers for the mode.
-   pcie_irq_sharing_mode_t  share_mode;           /// The currently configured share mode.
    uint                     registered_handlers;  /// The current number of registered handlers.
 } pcie_irq_mode_info_t;
 
@@ -298,8 +269,6 @@ status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
  * @param mode The requested mode.
  * @param requested_irqs The number of individual IRQ vectors the device would
  * like to use.
- * @param share_mode The level of sharing the driver is willing to tolerate for
- * its IRQ vectors.  @see pcie_irq_sharing_mode_t for details.
  *
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
@@ -311,8 +280,6 @@ status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
  *    due to the mode it is currently in.
  * ++ ERR_NOT_SUPPORTED
  *    ++ The chosen mode is not supported by the device
- *    ++ The chosen share_mode is not compatible with the chosen irq mode.  For
- *       example, legacy IRQ mode demands that IRQs be shared at the system level.
  *    ++ The device supports the chosen mode, but does not support the number of
  *       IRQs requested.
  * ++ ERR_NO_RESOURCES
@@ -321,8 +288,7 @@ status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
  */
 status_t pcie_set_irq_mode(struct pcie_device_state* dev,
                            pcie_irq_mode_t           mode,
-                           uint                      requested_irqs,
-                           pcie_irq_sharing_mode_t   share_mode);
+                           uint                      requested_irqs);
 
 /**
  * Set the current IRQ mode to PCIE_IRQ_MODE_DISABLED
@@ -334,7 +300,7 @@ static inline void pcie_set_irq_mode_disabled(struct pcie_device_state* dev) {
      * regardless of the state of the system.  ASSERT this in debug builds */
     __UNUSED status_t result;
 
-    result = pcie_set_irq_mode(dev, PCIE_IRQ_MODE_DISABLED, 0, PCIE_IRQ_SHARE_MODE_INVALID);
+    result = pcie_set_irq_mode(dev, PCIE_IRQ_MODE_DISABLED, 0);
 
     DEBUG_ASSERT(result == NO_ERROR);
 }

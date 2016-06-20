@@ -37,7 +37,6 @@ static void pcie_reset_common_irq_bookkeeping(pcie_device_state_t* dev) {
 
     memset(&dev->irq.singleton_handler, 0, sizeof(dev->irq.singleton_handler));
     dev->irq.mode          = PCIE_IRQ_MODE_DISABLED;
-    dev->irq.share_mode    = PCIE_IRQ_SHARE_MODE_INVALID;
     dev->irq.handlers      = NULL;
     dev->irq.handler_count = 0;
 }
@@ -356,14 +355,11 @@ static void pcie_leave_legacy_irq_mode(pcie_device_state_t* dev) {
 }
 
 static status_t pcie_enter_legacy_irq_mode(pcie_device_state_t*    dev,
-                                           uint                    requested_irqs,
-                                           pcie_irq_sharing_mode_t share_mode) {
+                                           uint                    requested_irqs) {
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(requested_irqs);
 
-    if (!dev->irq.legacy.pin ||
-       (requested_irqs > 1)  ||
-       (share_mode != PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED))
+    if (!dev->irq.legacy.pin || (requested_irqs > 1))
         return ERR_NOT_SUPPORTED;
 
     /* We can never fail to allocated a single handlers (since we are going to
@@ -372,8 +368,7 @@ static status_t pcie_enter_legacy_irq_mode(pcie_device_state_t*    dev,
     DEBUG_ASSERT(res == NO_ERROR);
     DEBUG_ASSERT(dev->irq.handlers == &dev->irq.singleton_handler);
 
-    dev->irq.mode       = PCIE_IRQ_MODE_LEGACY;
-    dev->irq.share_mode = PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED;
+    dev->irq.mode = PCIE_IRQ_MODE_LEGACY;
 
     pcie_register_legacy_irq_handler(dev);
     return NO_ERROR;
@@ -592,8 +587,7 @@ static void pcie_leave_msi_irq_mode(pcie_device_state_t* dev) {
 }
 
 static status_t pcie_enter_msi_irq_mode(pcie_device_state_t*    dev,
-                                        uint                    requested_irqs,
-                                        pcie_irq_sharing_mode_t share_mode) {
+                                        uint                    requested_irqs) {
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(dev->bus_drv);
     DEBUG_ASSERT(requested_irqs);
@@ -628,13 +622,8 @@ static status_t pcie_enter_msi_irq_mode(pcie_device_state_t*    dev,
     if (res != NO_ERROR)
         goto bailout;
 
-    /* Record our new IRQ and share mode
-     *
-     * Note, no matter what the user asked for regarding the sharing mode, we
-     * only support exclusive mode for MSI right now.
-     */
+    /* Record our new IRQ mode */
     dev->irq.mode       = PCIE_IRQ_MODE_MSI;
-    dev->irq.share_mode = PCIE_IRQ_SHARE_MODE_EXCLUSIVE;
 
     /* Program the target write transaction into the MSI registers.  As a side
      * effect, this will ensure that...
@@ -738,7 +727,6 @@ status_t pcie_get_irq_mode_internal(const struct pcie_device_state* dev,
 
     out_info->mode                = dev->irq.mode;
     out_info->max_handlers        = dev->irq.handler_count;
-    out_info->share_mode          = dev->irq.share_mode;
     out_info->registered_handlers = dev->irq.registered_handler_count;
 
     return NO_ERROR;
@@ -746,8 +734,7 @@ status_t pcie_get_irq_mode_internal(const struct pcie_device_state* dev,
 
 status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
                                     pcie_irq_mode_t         mode,
-                                    uint                    requested_irqs,
-                                    pcie_irq_sharing_mode_t share_mode) {
+                                    uint                    requested_irqs) {
     DEBUG_ASSERT(dev && dev->plugged_in);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
@@ -755,7 +742,6 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
     if (mode == PCIE_IRQ_MODE_DISABLED) {
         /* If so, and we are already disabled, cool!  Run some sanity checks and we are done */
         if (dev->irq.mode == PCIE_IRQ_MODE_DISABLED) {
-            DEBUG_ASSERT(dev->irq.share_mode == PCIE_IRQ_SHARE_MODE_INVALID);
             DEBUG_ASSERT(!dev->irq.handlers);
             DEBUG_ASSERT(!dev->irq.handler_count);
             return NO_ERROR;
@@ -767,7 +753,6 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
         switch (dev->irq.mode) {
         case PCIE_IRQ_MODE_LEGACY:
             DEBUG_ASSERT(list_in_list(&dev->irq.legacy.shared_handler_node));
-            DEBUG_ASSERT(dev->irq.share_mode == PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
 
             pcie_leave_legacy_irq_mode(dev);
 
@@ -775,7 +760,6 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
             return NO_ERROR;
 
         case PCIE_IRQ_MODE_MSI:
-            DEBUG_ASSERT(dev->irq.share_mode == PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
             DEBUG_ASSERT(dev->irq.msi.cfg);
             DEBUG_ASSERT(dev->irq.msi.irq_block.allocated);
 
@@ -800,23 +784,14 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
     if (requested_irqs < 1)
         return ERR_INVALID_ARGS;
 
-    switch (share_mode) {
-    case PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED:
-    case PCIE_IRQ_SHARE_MODE_DEVICE_SHARED:
-    case PCIE_IRQ_SHARE_MODE_EXCLUSIVE:
-        break;
-    default:
-        return ERR_INVALID_ARGS;
-    }
-
     /* If we are picking an active IRQ mode, we need to currently be in the
      * disabled state */
     if (dev->irq.mode != PCIE_IRQ_MODE_DISABLED)
         return ERR_BAD_STATE;
 
     switch (mode) {
-    case PCIE_IRQ_MODE_LEGACY: return pcie_enter_legacy_irq_mode(dev, requested_irqs, share_mode);
-    case PCIE_IRQ_MODE_MSI:    return pcie_enter_msi_irq_mode   (dev, requested_irqs, share_mode);
+    case PCIE_IRQ_MODE_LEGACY: return pcie_enter_legacy_irq_mode(dev, requested_irqs);
+    case PCIE_IRQ_MODE_MSI:    return pcie_enter_msi_irq_mode   (dev, requested_irqs);
     case PCIE_IRQ_MODE_MSI_X:  return ERR_NOT_IMPLEMENTED;
     default:                   return ERR_INVALID_ARGS;
     }
@@ -948,14 +923,13 @@ status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
 
 status_t pcie_set_irq_mode(pcie_device_state_t*    dev,
                            pcie_irq_mode_t         mode,
-                           uint                    requested_irqs,
-                           pcie_irq_sharing_mode_t share_mode) {
+                           uint                    requested_irqs) {
     DEBUG_ASSERT(dev);
     status_t ret;
 
     MUTEX_ACQUIRE(dev, dev_lock);
     ret = dev->plugged_in
-        ? pcie_set_irq_mode_internal(dev, mode, requested_irqs, share_mode)
+        ? pcie_set_irq_mode_internal(dev, mode, requested_irqs)
         : ERR_NOT_MOUNTED;
     MUTEX_RELEASE(dev, dev_lock);
 

@@ -108,11 +108,7 @@ status_t PciDeviceDispatcher::ClaimDevice() {
                                               &mode_caps);
     if (result == NO_ERROR) {
         while (mode_caps.max_irqs) {
-            result = pcie_set_irq_mode(device_->device(),
-                                       PCIE_IRQ_MODE_MSI,
-                                       mode_caps.max_irqs,
-                                       PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
-
+            result = pcie_set_irq_mode(device_->device(), PCIE_IRQ_MODE_MSI, mode_caps.max_irqs);
             if (result == NO_ERROR) {
                 irqs_supported_ = mode_caps.max_irqs;
                 irqs_maskable_  = mode_caps.per_vector_masking_supported;
@@ -125,10 +121,7 @@ status_t PciDeviceDispatcher::ClaimDevice() {
 
     // If MSI didn't end up working out for us, try for Legacy mode.
     if (!irqs_supported_) {
-        result = pcie_set_irq_mode(device_->device(),
-                                   PCIE_IRQ_MODE_LEGACY,
-                                   1,
-                                   PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED);
+        result = pcie_set_irq_mode(device_->device(), PCIE_IRQ_MODE_LEGACY, 1);
         if (result == NO_ERROR) {
             irqs_supported_ = 1;
             irqs_maskable_  = true;

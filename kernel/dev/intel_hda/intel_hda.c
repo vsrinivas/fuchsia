@@ -601,20 +601,12 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
 
     /* Select our IRQ mode and register our handler. Try to use MSI, but if we
      * can't, fall back on legacy. */
-    ret = pcie_set_irq_mode(pci_device,
-                            PCIE_IRQ_MODE_MSI,
-                            1,
-                            PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
-
+    ret = pcie_set_irq_mode(pci_device, PCIE_IRQ_MODE_MSI, 1);
     if (ret != NO_ERROR) {
         TRACEF("Failed to configure PCIe device for MSI IRQ mode (err = %d), "
                "falling back on Legacy mode\n", ret);
 
-        ret = pcie_set_irq_mode(pci_device,
-                                PCIE_IRQ_MODE_LEGACY,
-                                1,
-                                PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED);
-
+        ret = pcie_set_irq_mode(pci_device, PCIE_IRQ_MODE_LEGACY, 1);
         if (ret != NO_ERROR) {
             TRACEF("Failed to configure PCIe device for Legacy IRQ mode (err = %d)\n", ret);
             goto finished;

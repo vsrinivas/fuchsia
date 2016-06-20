@@ -296,8 +296,7 @@ status_t pcie_get_irq_mode_internal(
 status_t pcie_set_irq_mode_internal(
         pcie_device_state_t*    dev,
         pcie_irq_mode_t         mode,
-        uint                    requested_irqs,
-        pcie_irq_sharing_mode_t share_mode);
+        uint                    requested_irqs);
 
 status_t pcie_register_irq_handler_internal(
         pcie_device_state_t*  dev,

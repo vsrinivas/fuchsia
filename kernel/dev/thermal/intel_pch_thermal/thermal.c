@@ -82,10 +82,7 @@ static status_t pch_thermal_startup(struct pcie_device_state* pci_device)
     DEBUG_ASSERT(bar_info->bus_addr);
 
     /* Select legacy IRQ Mode */
-    status = pcie_set_irq_mode(pci_device,
-                               PCIE_IRQ_MODE_LEGACY,
-                               1,
-                               PCIE_IRQ_SHARE_MODE_SYSTEM_SHARED);
+    status = pcie_set_irq_mode(pci_device, PCIE_IRQ_MODE_LEGACY, 1);
     if (status != NO_ERROR) {
         TRACEF("Failed to configure PCIe device for Legacy IRQ mode (err = %d)\n", status);
         goto finished;
