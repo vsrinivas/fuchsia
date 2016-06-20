@@ -152,6 +152,14 @@ typedef struct mx_pcie_get_nth_info {
     uint8_t  func_id;
 } mx_pcie_get_nth_info_t;
 
+// Enum used to select PCIe IRQ modes
+typedef enum {
+    MX_PCIE_IRQ_MODE_DISABLED = 0,
+    MX_PCIE_IRQ_MODE_LEGACY   = 1,
+    MX_PCIE_IRQ_MODE_MSI      = 2,
+    MX_PCIE_IRQ_MODE_MSI_X    = 3,
+} mx_pci_irq_mode_t;
+
 // Flags which can be used to to control cache policy for APIs which map memory.
 typedef enum {
     MX_CACHE_POLICY_CACHED          = 0,

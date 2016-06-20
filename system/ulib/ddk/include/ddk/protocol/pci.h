@@ -35,6 +35,12 @@ typedef struct pci_protocol {
     mx_handle_t (*map_interrupt)(mx_device_t* dev, int which_irq);
     mx_status_t (*pci_wait_interrupt)(mx_handle_t handle);
     mx_handle_t (*get_config)(mx_device_t* dev, const pci_config_t** config);
+    mx_status_t (*query_irq_mode_caps)(mx_device_t* dev,
+                                       mx_pci_irq_mode_t mode,
+                                       uint32_t* out_max_irqs);
+    mx_status_t (*set_irq_mode)(mx_device_t* dev,
+                                mx_pci_irq_mode_t mode,
+                                uint32_t requested_irq_count);
 } pci_protocol_t;
 
 extern pci_protocol_t _pci_protocol;

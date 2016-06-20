@@ -84,49 +84,9 @@ status_t PciDeviceDispatcher::ClaimDevice() {
     if (!device_) return ERR_BAD_HANDLE;      // Are we closed already?
     if (device_->claimed()) return ERR_BUSY;  // Are we claimed already?
 
-    // TODO(johngro) : Lifetime management issues regarding interactions between
-    // PCIe bus driver level objects and this dispatcher need to be addressed.
-    // Specifially, if a device were to spontaniously shutdown (hot-unplug
-    // event) and call back through the driver shutdown hook, Bad Things could
-    // happen if there was a user mode thread currently attempting to interact
-    // with the device.  See Bug #MG-65
     result = device_->Claim();
     if (result != NO_ERROR)
         return result;
-
-    // TODO(johngro) : Move the process of negotiating the IRQ mode, allocation
-    // and sharing disposition up to the user-mode driver.
-    //
-    // Query the device to figure out which IRQ modes it supports, then pick a
-    // mode and claim our vectors.
-    pcie_irq_mode_caps_t mode_caps;
-
-    // Does this device support MSI?  If so, choose this as the mode and attempt
-    // to grab as many vectors as we can get away with.
-    result = pcie_query_irq_mode_capabilities(device_->device(),
-                                              PCIE_IRQ_MODE_MSI,
-                                              &mode_caps);
-    if (result == NO_ERROR) {
-        while (mode_caps.max_irqs) {
-            result = pcie_set_irq_mode(device_->device(), PCIE_IRQ_MODE_MSI, mode_caps.max_irqs);
-            if (result == NO_ERROR) {
-                irqs_supported_ = mode_caps.max_irqs;
-                irqs_maskable_  = mode_caps.per_vector_masking_supported;
-                break;
-            }
-
-            mode_caps.max_irqs >>= 1;
-        }
-    }
-
-    // If MSI didn't end up working out for us, try for Legacy mode.
-    if (!irqs_supported_) {
-        result = pcie_set_irq_mode(device_->device(), PCIE_IRQ_MODE_LEGACY, 1);
-        if (result == NO_ERROR) {
-            irqs_supported_ = 1;
-            irqs_maskable_  = true;
-        }
-    }
 
     return NO_ERROR;
 }
@@ -203,6 +163,56 @@ status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
                                           irqs_maskable_,
                                           rights,
                                           interrupt_dispatcher);
+}
+
+static_assert(static_cast<uint>(MX_PCIE_IRQ_MODE_DISABLED) ==
+              static_cast<uint>(PCIE_IRQ_MODE_DISABLED),
+              "Mode mismatch, MX_PCIE_IRQ_MODE_DISABLED != PCIE_IRQ_MODE_DISABLED");
+static_assert(static_cast<uint>(MX_PCIE_IRQ_MODE_LEGACY) ==
+              static_cast<uint>(PCIE_IRQ_MODE_LEGACY),
+              "Mode mismatch, MX_PCIE_IRQ_MODE_LEGACY != PCIE_IRQ_MODE_LEGACY");
+static_assert(static_cast<uint>(MX_PCIE_IRQ_MODE_MSI) ==
+              static_cast<uint>(PCIE_IRQ_MODE_MSI),
+              "Mode mismatch, MX_PCIE_IRQ_MODE_MSI != PCIE_IRQ_MODE_MSI");
+static_assert(static_cast<uint>(MX_PCIE_IRQ_MODE_MSI_X) ==
+              static_cast<uint>(PCIE_IRQ_MODE_MSI_X),
+              "Mode mismatch, MX_PCIE_IRQ_MODE_MSI_X != PCIE_IRQ_MODE_MSI_X");
+status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+    pcie_irq_mode_caps_t caps;
+    status_t ret;
+
+    AutoLock lock(&lock_);
+    if (!device_) return ERR_BAD_HANDLE; // Are we closed already?
+
+    ret = pcie_query_irq_mode_capabilities(device_->device(),
+                                           static_cast<pcie_irq_mode_t>(mode),
+                                           &caps);
+
+    *out_max_irqs = (ret == NO_ERROR) ? caps.max_irqs : 0;
+    return ret;
+}
+
+status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+    AutoLock lock(&lock_);
+    if (!device_) return ERR_BAD_HANDLE;            // Are we closed already?
+    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+
+    status_t ret;
+    ret = pcie_set_irq_mode(device_->device(),
+                            static_cast<pcie_irq_mode_t>(mode),
+                            requested_irq_count);
+    if (ret == NO_ERROR) {
+        pcie_irq_mode_caps_t caps;
+        __UNUSED status_t tmp;
+        tmp = pcie_query_irq_mode_capabilities(device_->device(),
+                                               static_cast<pcie_irq_mode_t>(mode),
+                                               &caps);
+        DEBUG_ASSERT(tmp == NO_ERROR);
+        irqs_supported_ = caps.max_irqs;
+        irqs_maskable_  = caps.per_vector_masking_supported;
+    }
+
+    return ret;
 }
 
 PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(pcie_device_state_t* device)

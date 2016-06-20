@@ -121,9 +121,14 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
         goto error_return;
     }
 
+    status = pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1);
+    if (status < 0) {
+        printf("usb_xhci_bind set_irq_mode failed %d\n", status);
+        goto error_return;
+    }
+
     // register for interrupts
     status = pci->map_interrupt(dev, 0);
-    printf("map_interrupt returned %d\n", status);
     if (status < 0) {
         printf("usb_xhci_bind map_interrupt failed %d\n", status);
         goto error_return;

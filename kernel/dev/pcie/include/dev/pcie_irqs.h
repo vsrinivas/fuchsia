@@ -47,9 +47,9 @@ struct pcie_device_state;
  */
 typedef enum pcie_irq_mode {
     PCIE_IRQ_MODE_DISABLED = 0,
-    PCIE_IRQ_MODE_LEGACY,
-    PCIE_IRQ_MODE_MSI,
-    PCIE_IRQ_MODE_MSI_X,
+    PCIE_IRQ_MODE_LEGACY   = 1,
+    PCIE_IRQ_MODE_MSI      = 2,
+    PCIE_IRQ_MODE_MSI_X    = 3,
 } pcie_irq_mode_t;
 
 /**

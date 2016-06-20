@@ -452,6 +452,71 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
 }
 
 /**
+ * Gets info about the capabilities of a PCI device's IRQ modes.
+ * @param handle Handle associated with a PCI device.
+ * @param mode The IRQ mode whose capabilities are to be queried.
+ * @param out_len Out param which will hold the maximum number of IRQs supported by the mode.
+ */
+mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
+                                        mx_pci_irq_mode_t mode,
+                                        uint32_t* out_max_irqs) {
+    LTRACEF("handle %u\n", handle);
+
+    auto up = UserProcess::GetCurrent();
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto pci_device = dispatcher->get_pci_device_dispatcher();
+    if (!pci_device)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    uint32_t max_irqs;
+    status_t result = pci_device->QueryIrqModeCaps(mode, &max_irqs);
+    if (result != NO_ERROR)
+        return result;
+
+    if (copy_to_user(reinterpret_cast<uint8_t*>(out_max_irqs),
+                     &max_irqs, sizeof(*out_max_irqs)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return result;
+}
+
+/**
+ * Selects an IRQ mode for a PCI device.
+ * @param handle Handle associated with a PCI device.
+ * @param mode The IRQ mode to select.
+ * @param requested_irq_count The number of IRQs to select request for the given mode.
+ */
+mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
+                                 mx_pci_irq_mode_t mode,
+                                 uint32_t requested_irq_count) {
+    LTRACEF("handle %u\n", handle);
+
+    auto up = UserProcess::GetCurrent();
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto pci_device = dispatcher->get_pci_device_dispatcher();
+    if (!pci_device)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    return pci_device->SetIrqMode(mode, requested_irq_count);
+}
+
+/**
  * Gets info about an I/O mapping object.
  * @param handle Handle associated with an I/O mapping object.
  * @param out_vaddr Mapped virtual address for the I/O range.

@@ -72,6 +72,8 @@ public:
     status_t MapInterrupt(int32_t which_irq,
                           utils::RefPtr<Dispatcher>* interrupt_dispatcher,
                           mx_rights_t* rights);
+    status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
+    status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count);
 
     bool irqs_maskable() const { return irqs_maskable_; }
 
