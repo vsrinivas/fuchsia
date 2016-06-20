@@ -17,7 +17,8 @@ package ext2fs
 
 //go:generate ./build_libs.sh
 
-// #cgo CFLAGS: -I${SRCDIR}/third_party/e2fsprogs/lib/et -I${SRCDIR}/third_party/e2fsprogs/lib/ext2fs
+// #cgo CFLAGS: -I${SRCDIR}/third_party/e2fsprogs/lib/et -I${SRCDIR}/third_party/e2fsprogs/lib
+// #cgo CFLAGS: -I${SRCDIR}/third_party/e2fsprogs/lib/ext2fs
 // #cgo LDFLAGS: -L${SRCDIR}/third_party/e2fsprogs/lib -lext2fs -lcom_err
 // #include <ext2fs.h>
 // #include <ext2_io.h>
