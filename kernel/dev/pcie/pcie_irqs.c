@@ -678,7 +678,7 @@ bailout:
 status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t* dev,
                                                    pcie_irq_mode_t mode,
                                                    pcie_irq_mode_caps_t* out_caps) {
-    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(dev && dev->plugged_in);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
     DEBUG_ASSERT(dev->bus_drv);
     DEBUG_ASSERT(out_caps);
@@ -730,11 +730,25 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t* de
     return NO_ERROR;
 }
 
+status_t pcie_get_irq_mode_internal(const struct pcie_device_state* dev,
+                                    pcie_irq_mode_info_t* out_info) {
+    DEBUG_ASSERT(dev && dev->plugged_in);
+    DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
+    DEBUG_ASSERT(out_info);
+
+    out_info->mode                = dev->irq.mode;
+    out_info->max_handlers        = dev->irq.handler_count;
+    out_info->share_mode          = dev->irq.share_mode;
+    out_info->registered_handlers = dev->irq.registered_handler_count;
+
+    return NO_ERROR;
+}
+
 status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
                                     pcie_irq_mode_t         mode,
                                     uint                    requested_irqs,
                                     pcie_irq_sharing_mode_t share_mode) {
-    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(dev && dev->plugged_in);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     /* Are we disabling IRQs? */
@@ -754,14 +768,20 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
         case PCIE_IRQ_MODE_LEGACY:
             DEBUG_ASSERT(list_in_list(&dev->irq.legacy.shared_handler_node));
             DEBUG_ASSERT(dev->irq.share_mode == PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
+
             pcie_leave_legacy_irq_mode(dev);
+
+            DEBUG_ASSERT(!dev->irq.registered_handler_count);
             return NO_ERROR;
 
         case PCIE_IRQ_MODE_MSI:
             DEBUG_ASSERT(dev->irq.share_mode == PCIE_IRQ_SHARE_MODE_EXCLUSIVE);
             DEBUG_ASSERT(dev->irq.msi.cfg);
             DEBUG_ASSERT(dev->irq.msi.irq_block.allocated);
+
             pcie_leave_msi_irq_mode(dev);
+
+            DEBUG_ASSERT(!dev->irq.registered_handler_count);
             return NO_ERROR;
 
         /* Right now, there should be no way to get into MSI-X mode */
@@ -806,7 +826,7 @@ status_t pcie_register_irq_handler_internal(pcie_device_state_t*  dev,
                                             uint                  irq_id,
                                             pcie_irq_handler_fn_t handler,
                                             void*                 ctx) {
-    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(dev && dev->plugged_in);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     /* Cannot register a handler if we are currently disabled */
@@ -824,6 +844,17 @@ status_t pcie_register_irq_handler_internal(pcie_device_state_t*  dev,
     spin_lock_saved_state_t irq_state;
     pcie_irq_handler_state_t* hstate = &dev->irq.handlers[irq_id];
 
+    /* Update our registered handler bookkeeping.  Perform some sanity checks as we do so */
+    if (hstate->handler) {
+        DEBUG_ASSERT(dev->irq.registered_handler_count);
+        if (!handler)
+            dev->irq.registered_handler_count--;
+    } else {
+        if (handler)
+            dev->irq.registered_handler_count++;
+    }
+    DEBUG_ASSERT(dev->irq.registered_handler_count <= dev->irq.handler_count);
+
     spin_lock_irqsave(&hstate->lock, irq_state);
     hstate->handler = handler;
     hstate->ctx     = handler ? ctx : NULL;
@@ -835,7 +866,7 @@ status_t pcie_register_irq_handler_internal(pcie_device_state_t*  dev,
 status_t pcie_mask_unmask_irq_internal(pcie_device_state_t* dev,
                                        uint                 irq_id,
                                        bool                 mask) {
-    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(dev && dev->plugged_in);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
     /* Cannot manipulate mask status while in the DISABLED state */
@@ -878,6 +909,9 @@ status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
                                           pcie_irq_mode_t mode,
                                           pcie_irq_mode_caps_t* out_caps) {
     DEBUG_ASSERT(dev);
+    if (!out_caps)
+        return ERR_INVALID_ARGS;
+
     status_t ret;
 
     // TODO(johngro) : Is casting away this const evil?  Yes.  Until we switch
@@ -889,6 +923,23 @@ status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
     MUTEX_ACQUIRE(((pcie_device_state_t*)dev), dev_lock);
     ret = dev->plugged_in
         ? pcie_query_irq_mode_capabilities_internal(dev, mode, out_caps)
+        : ERR_NOT_MOUNTED;
+    MUTEX_RELEASE(((pcie_device_state_t*)dev), dev_lock);
+
+    return ret;
+}
+
+status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
+                           pcie_irq_mode_info_t* out_info) {
+    DEBUG_ASSERT(dev);
+    if (!out_info)
+        return ERR_INVALID_ARGS;
+
+    status_t ret;
+
+    MUTEX_ACQUIRE(((pcie_device_state_t*)dev), dev_lock);
+    ret = dev->plugged_in
+        ? pcie_get_irq_mode_internal(dev, out_info)
         : ERR_NOT_MOUNTED;
     MUTEX_RELEASE(((pcie_device_state_t*)dev), dev_lock);
 

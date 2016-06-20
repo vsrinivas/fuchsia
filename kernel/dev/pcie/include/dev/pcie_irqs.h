@@ -137,6 +137,17 @@ typedef struct pcie_msi_block {
 } pcie_msi_block_t;
 
 /**
+ * A structure used to hold the details about the currently configured IRQ mode
+ * of a device.  Used in conjunction with pcie_get_irq_mode.
+ */
+typedef struct pcie_irq_mode_info {
+   pcie_irq_mode_t          mode;                 /// The currently configured mode.
+   uint                     max_handlers;         /// The max number of handlers for the mode.
+   pcie_irq_sharing_mode_t  share_mode;           /// The currently configured share mode.
+   uint                     registered_handlers;  /// The current number of registered handlers.
+} pcie_irq_mode_info_t;
+
+/**
  * Definition of the callback registered with pcie_register_irq_handler.  This
  * callback will be called by a bus central IRQ dispatcher any time a chosen
  * device IRQ occurs.
@@ -251,6 +262,24 @@ typedef struct pcie_irq_handler_state {
 status_t pcie_query_irq_mode_capabilities(const struct pcie_device_state* dev,
                                           pcie_irq_mode_t mode,
                                           pcie_irq_mode_caps_t* out_caps);
+
+/**
+ * Fetch details about the currently configured IRQ mode.
+ *
+ * @param dev A pointer to the pci device to configure.
+ * @param out_info A pointer to the structure which (upon success) will hold
+ * info about the currently configured IRQ mode.  @see pcie_irq_mode_info_t for
+ * more details.
+ *
+ * @return A status_t indicating the success or failure of the operation.
+ * Status codes may include (but are not limited to)...
+ *
+ * ++ ERR_NOT_MOUNTED
+ *    The device has become unplugged and is waiting to be released.
+ */
+status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
+                           pcie_irq_mode_info_t* out_info);
+
 /**
  * Configure the base IRQ mode, requesting a specific number of vectors and
  * sharing mode in the process.
@@ -275,6 +304,8 @@ status_t pcie_query_irq_mode_capabilities(const struct pcie_device_state* dev,
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
  *
+ * ++ ERR_NOT_MOUNTED
+ *    The device has become unplugged and is waiting to be released.
  * ++ ERR_BAD_STATE
  *    The device cannot transition into the selected mode at this point in time
  *    due to the mode it is currently in.
@@ -321,6 +352,8 @@ static inline void pcie_set_irq_mode_disabled(struct pcie_device_state* dev) {
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
  *
+ * ++ ERR_NOT_MOUNTED
+ *    The device has become unplugged and is waiting to be released.
  * ++ ERR_BAD_STATE
  *    The device is in DISABLED IRQ mode.
  * ++ ERR_INVALID_ARGS
@@ -341,6 +374,8 @@ status_t pcie_register_irq_handler(struct pcie_device_state* dev,
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
  *
+ * ++ ERR_NOT_MOUNTED
+ *    The device has become unplugged and is waiting to be released.
  * ++ ERR_BAD_STATE
  *    Attempting to mask or unmask an IRQ while in the DISABLED mode or with no
  *    handler registered.

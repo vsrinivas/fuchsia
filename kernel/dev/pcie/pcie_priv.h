@@ -289,6 +289,10 @@ status_t pcie_query_irq_mode_capabilities_internal(
         pcie_irq_mode_t mode,
         pcie_irq_mode_caps_t* out_caps);
 
+status_t pcie_get_irq_mode_internal(
+        const struct pcie_device_state* dev,
+        pcie_irq_mode_info_t* out_info);
+
 status_t pcie_set_irq_mode_internal(
         pcie_device_state_t*    dev,
         pcie_irq_mode_t         mode,

@@ -251,6 +251,7 @@ typedef struct pcie_device_state {
         pcie_irq_handler_state_t  singleton_handler;
         pcie_irq_handler_state_t* handlers;
         uint                      handler_count;
+        uint                      registered_handler_count;
 
         /* Legacy IRQ state */
         struct {
