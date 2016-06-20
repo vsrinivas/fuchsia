@@ -302,7 +302,7 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
 
     pcie_device_state_t* dev = NULL;
     uint bus_id = upstream_bridge->managed_bus_id;
-    uint ndx    = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
+    __UNUSED uint ndx = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
 
     DEBUG_ASSERT(ndx < countof(upstream_bridge->downstream));
     DEBUG_ASSERT(!upstream_bridge->downstream[ndx]);
