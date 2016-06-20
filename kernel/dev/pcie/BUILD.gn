@@ -34,6 +34,7 @@ module("pcie") {
     "pcie.c",
     "pcie_caps.c",
     "pcie_irqs.c",
+    "pcie_topology.c",
     "pcie_priv.h",
   ]
   deps = [
