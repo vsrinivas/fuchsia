@@ -53,15 +53,19 @@ cd $GOPATH/src/fuchsia.googlesource.com/thinfs
 ## Testing ##
 
 ### Make a test filesystem ###
+```shell
 cd $MOJO_DIR/
 dd if=/dev/zero of=test.fs bs=4096 count=16384
 mkfs.ext2 $MOJO_DIR/test.fs
+```
 
 ### Run the file system client application ###
+```shell
 cd $MOJO_DIR/src
 mojo/devtools/common/mojo_run --enable-multiprocess --release \
         --args-for="mojo:blockd -logtostderr -path $MOJO_DIR/test.fs -readonly=true" \
         --args-for="mojo:fs -logtostderr" --args-for="mojo:fsclient -logtostderr" mojo:fsclient
+```
 
 If you see output that looks like
 ```
