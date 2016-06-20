@@ -41,16 +41,22 @@ fi
 FAILED=""
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+STATUS=0
 
 for p in $PROJECTS; do
-  if ! nice $DIR/make-parallel $p; then
+  nice $DIR/make-parallel $p
+  STATUS=$?
+  if [ "$STATUS" -ne 0 ]; then
     FAILED="$FAILED $p"
     if [ "$FAIL_FAST" -eq 1 ]; then
       break
     fi
   fi
+
   if [ "$DO_RELEASE" -eq 1 ]; then
-    if ! nice $DIR/make-release $p; then
+    nice $DIR/make-release $p
+    STATUS=$?
+    if [ "$STATUS" -ne 0 ]; then
       FAILED="$FAILED $p-release"
       if [ "$FAIL_FAST" -eq 1 ]; then
         break
@@ -64,3 +70,5 @@ if [ "$FAILED" != "" ]; then
   echo some projects have failed to build:
   echo $FAILED
 fi
+
+exit $STATUS
