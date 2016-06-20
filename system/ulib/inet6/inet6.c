@@ -148,7 +148,10 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
     if (len) {
         sum += (*data & 0xFF);
     }
-    return sum + (sum >> 16);
+    while (sum > 0xFFFF) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    return sum;
 }
 
 typedef struct {
