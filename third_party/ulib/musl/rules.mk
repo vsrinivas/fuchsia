@@ -477,12 +477,26 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/mq/mq_timedreceive.c \
     $(LOCAL_DIR)/src/mq/mq_timedsend.c \
     $(LOCAL_DIR)/src/mq/mq_unlink.c \
+    $(LOCAL_DIR)/src/multibyte/btowc.c \
     $(LOCAL_DIR)/src/multibyte/c16rtomb.c \
     $(LOCAL_DIR)/src/multibyte/c32rtomb.c \
+    $(LOCAL_DIR)/src/multibyte/internal.c \
+    $(LOCAL_DIR)/src/multibyte/mblen.c \
+    $(LOCAL_DIR)/src/multibyte/mbrlen.c \
     $(LOCAL_DIR)/src/multibyte/mbrtoc16.c \
     $(LOCAL_DIR)/src/multibyte/mbrtoc32.c \
+    $(LOCAL_DIR)/src/multibyte/mbrtowc.c \
+    $(LOCAL_DIR)/src/multibyte/mbsinit.c \
+    $(LOCAL_DIR)/src/multibyte/mbsnrtowcs.c \
+    $(LOCAL_DIR)/src/multibyte/mbsrtowcs.c \
     $(LOCAL_DIR)/src/multibyte/mbstowcs.c \
+    $(LOCAL_DIR)/src/multibyte/mbtowc.c \
+    $(LOCAL_DIR)/src/multibyte/wcrtomb.c \
+    $(LOCAL_DIR)/src/multibyte/wcsnrtombs.c \
+    $(LOCAL_DIR)/src/multibyte/wcsrtombs.c \
     $(LOCAL_DIR)/src/multibyte/wcstombs.c \
+    $(LOCAL_DIR)/src/multibyte/wctob.c \
+    $(LOCAL_DIR)/src/multibyte/wctomb.c \
     $(LOCAL_DIR)/src/network/accept.c \
     $(LOCAL_DIR)/src/network/accept4.c \
     $(LOCAL_DIR)/src/network/bind.c \

@@ -551,9 +551,8 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
     const char* prefix;
     int t, pl;
     wchar_t wc[2];
-    // TODO(kulakowski) Wide char string formatting
-    // wchar_t* ws;
-    // char mb[4];
+    wchar_t* ws;
+    char mb[4];
 
     for (;;) {
         /* Update output count, end loop when fmt is exhausted */
@@ -751,21 +750,20 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
             wc[1] = 0;
             arg.p = wc;
             p = -1;
-        // TODO(kulakowski) Wide char string formatting
-        // case 'S':
-        //     ws = arg.p;
-        //     for (i = l = 0; i < 0U + p && *ws && (l = wctomb(mb, *ws++)) >= 0 && l <= 0U + p - i;
-        //          i += l)
-        //         ;
-        //     if (l < 0) return -1;
-        //     p = i;
-        //     pad(f, ' ', w, p, fl);
-        //     ws = arg.p;
-        //     for (i = 0; i < 0U + p && *ws && i + (l = wctomb(mb, *ws++)) <= p; i += l)
-        //         out(f, mb, l);
-        //     pad(f, ' ', w, p, fl ^ LEFT_ADJ);
-        //     l = w > p ? w : p;
-        //     continue;
+        case 'S':
+            ws = arg.p;
+            for (i = l = 0; i < 0U + p && *ws && (l = wctomb(mb, *ws++)) >= 0 && l <= 0U + p - i;
+                 i += l)
+                ;
+            if (l < 0) return -1;
+            p = i;
+            pad(f, ' ', w, p, fl);
+            ws = arg.p;
+            for (i = 0; i < 0U + p && *ws && i + (l = wctomb(mb, *ws++)) <= p; i += l)
+                out(f, mb, l);
+            pad(f, ' ', w, p, fl ^ LEFT_ADJ);
+            l = w > p ? w : p;
+            continue;
         case 'e':
         case 'f':
         case 'g':
