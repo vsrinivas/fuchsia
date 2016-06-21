@@ -80,7 +80,7 @@ template("mkbootfs") {
 }
 
 mkbootfs("bootfs") {
-  data_deps = [
+  deps = [
     "//system/uapp/crasher",
     "//system/uapp/devmgr",
     "//system/uapp/dlog",
