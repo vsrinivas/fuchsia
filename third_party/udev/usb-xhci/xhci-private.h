@@ -42,8 +42,6 @@
 #include <pthread.h>
 #include <stdio.h>
 
-#include "usb-poll.h"
-
 #ifdef XHCI_DEBUG
 #define xhci_debug(fmt, args...) printf("%s: " fmt, __func__, ##args)
 #else
@@ -530,8 +528,6 @@ typedef struct xhci {
 
     usbdev_t* devices[128]; // dev 0 is root hub, 127 is last addressable
 
-    poll_node_t poll_node;
-
     list_node_t completed_reqs;
 
     mx_device_t* bus_device;
@@ -548,6 +544,7 @@ typedef struct usb_xhci {
     io_alloc_t* io_alloc;
     void* mmio;
     uint64_t mmio_len;
+    bool legacy_irq_mode;
 
     pci_protocol_t* pci;
     mx_handle_t irq_handle;
@@ -612,6 +609,8 @@ int xhci_get_descriptor(usbdev_t* dev, int rtype, int desc_type, int desc_idx,
 
 usb_hci_protocol_t _xhci_protocol;
 usb_hub_protocol_t xhci_rh_hub_protocol;
+
+void xhci_poll(xhci_t* xhci);
 
 #if ARCH_X86_32 || ARCH_X86_64
 #define wmb() __asm__ volatile("sfence")

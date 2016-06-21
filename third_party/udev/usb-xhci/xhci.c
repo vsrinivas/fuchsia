@@ -167,8 +167,7 @@ usb_hci_protocol_t _xhci_protocol = {
     .set_bus_device = xhci_set_bus_device,
 };
 
-static void xhci_poll(void* context) {
-    xhci_t* xhci = (xhci_t*)context;
+void xhci_poll(xhci_t* xhci) {
     list_node_t completed_reqs;
 
     xhci_rh_check_status_changed(xhci);
@@ -296,7 +295,6 @@ mx_status_t xhci_startup(usb_xhci_t* uxhci) {
 
     xhci_rh_init(uxhci);
     list_initialize(&xhci->completed_reqs);
-    poll_add(&xhci->poll_node, xhci_poll, xhci);
 
     return NO_ERROR;
 
@@ -389,7 +387,7 @@ xhci_reinit(xhci_t* xhci) {
     xhci->hcrreg->intrrs[0].erstba_hi = 0;
 
     /* enable interrupts */
-    //    xhci->hcrreg->intrrs[0].iman |= IMAN_IE;
+    xhci->hcrreg->intrrs[0].iman |= IMAN_IE;
 
     xhci_start(xhci);
 

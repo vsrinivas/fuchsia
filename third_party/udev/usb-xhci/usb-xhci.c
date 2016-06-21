@@ -21,8 +21,36 @@ static void* xhci_irq_thread(void* arg) {
     usb_xhci_t* xhci = (usb_xhci_t*)arg;
     printf("xhci_irq_thread start\n");
 
-    while (xhci->pci->pci_wait_interrupt(xhci->irq_handle) == NO_ERROR) {
-        printf("got interrupt\n");
+    while (1) {
+        mx_status_t wait_res;
+
+        wait_res = xhci->pci->pci_wait_interrupt(xhci->irq_handle);
+        if (wait_res != NO_ERROR) {
+            if (wait_res != ERR_CANCELLED)
+                printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            break;
+        }
+
+        xhci_poll(&xhci->xhci);
+
+        // acknowledge everything
+        uint32_t tmp = xhci->xhci.opreg->usbsts;
+        tmp &= USBSTS_HCH
+             | USBSTS_HSE
+             | USBSTS_EINT
+             | USBSTS_PCD
+             | USBSTS_SSS
+             | USBSTS_RSS
+             | USBSTS_SRE
+             | USBSTS_CNR
+             | USBSTS_HCE
+             | USBSTS_PRSRV_MASK;
+        xhci->xhci.opreg->usbsts = tmp;
+
+        // If we are in legacy IRQ mode, clear the IP (Interrupt Pending) bit
+        // from the IMAN register of our one-and-only interrupter.
+        if (xhci->legacy_irq_mode)
+            xhci->xhci.hcrreg->intrrs[0].iman |= IMAN_IP;
     }
     printf("xhci_irq_thread done\n");
     return NULL;
@@ -50,16 +78,24 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     mx_handle_t cfg_handle = MX_HANDLE_INVALID;
     io_alloc_t* io_alloc = NULL;
     usb_xhci_t* xhci = NULL;
+    mx_status_t status;
 
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) {
-        return ERR_NOT_SUPPORTED;
+        status = ERR_NOT_SUPPORTED;
+        goto error_return;
     }
 
-    mx_status_t status = pci->claim_device(dev);
+    xhci = calloc(1, sizeof(usb_xhci_t));
+    if (!xhci) {
+        status = ERR_NO_MEMORY;
+        goto error_return;
+    }
+
+    status = pci->claim_device(dev);
     if (status < 0) {
         printf("usb_xhci_bind claim_device failed %d\n", status);
-        return status;
+        goto error_return;
     }
 
     const pci_config_t* pci_config;
@@ -103,10 +139,19 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
         goto error_return;
     }
 
+    // select our IRQ mode
     status = pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
-        printf("usb_xhci_bind set_irq_mode failed %d\n", status);
-        goto error_return;
+        mx_status_t status_legacy = pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_LEGACY, 1);
+
+        if (status_legacy < 0) {
+            printf("usb_xhci_bind Failed to set IRQ mode to either MSI "
+                   "(err = %d) or Legacy (err = %d)\n",
+                   status, status_legacy);
+            goto error_return;
+        }
+
+        xhci->legacy_irq_mode = true;
     }
 
     // register for interrupts
@@ -116,12 +161,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
         goto error_return;
     }
     irq_handle = status;
-
-    xhci = malloc(sizeof(usb_xhci_t));
-    if (!xhci) {
-        status = ERR_NO_MEMORY;
-        goto error_return;
-    }
 
     xhci->io_alloc = io_alloc;
     xhci->mmio = mmio;
@@ -145,7 +184,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     device_add(hcidev, dev);
 
     pthread_create(&xhci->irq_thread, NULL, xhci_irq_thread, xhci);
-    usb_poll_start();
 
     return NO_ERROR;
 
