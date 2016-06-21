@@ -158,7 +158,5 @@ RUN_TEST(handle_transfer_cancel_wait_test)
 END_TEST_CASE(handle_transfer_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_handle_transfer_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

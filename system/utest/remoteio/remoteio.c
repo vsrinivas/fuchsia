@@ -187,9 +187,6 @@ RUN_TEST(remoteio_test);
 END_TEST_CASE(remoteio_tests)
 
 int main(int argc, char** argv) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_remoteio_tests_element);
-
     bool success = unittest_run_all_tests();
     return success ? 0 : -1;
 }

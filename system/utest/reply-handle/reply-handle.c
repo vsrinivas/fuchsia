@@ -94,7 +94,5 @@ RUN_TEST(reply_handle_test)
 END_TEST_CASE(reply_handle_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_reply_handle_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

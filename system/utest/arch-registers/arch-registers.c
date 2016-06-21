@@ -249,7 +249,5 @@ RUN_TEST(arch_register_test)
 END_TEST_CASE(arch_register_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_arch_register_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

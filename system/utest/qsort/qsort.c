@@ -69,7 +69,5 @@ RUN_TEST(qsort_test)
 END_TEST_CASE(qsort_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_qsort_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

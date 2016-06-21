@@ -135,10 +135,6 @@ RUN_TEST(vmo_resize_test);
 END_TEST_CASE(vmo_tests)
 
 int main(int argc, char** argv) {
-
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_vmo_tests_element);
-
     bool success = unittest_run_all_tests();
     return success ? 0 : -1;
 }

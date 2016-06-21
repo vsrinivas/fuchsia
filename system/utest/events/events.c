@@ -268,7 +268,5 @@ RUN_TEST(reset_test)
 END_TEST_CASE(event_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_event_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

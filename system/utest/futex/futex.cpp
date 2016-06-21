@@ -438,9 +438,6 @@ RUN_TEST(test_event_signalling);
 END_TEST_CASE(futex_tests)
 
 int main(int argc, char** argv) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_futex_tests_element);
-
     bool success = unittest_run_all_tests();
     return success ? 0 : -1;
 }

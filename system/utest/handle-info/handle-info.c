@@ -102,7 +102,5 @@ RUN_TEST(handle_info_test)
 END_TEST_CASE(handle_info_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_handle_info_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

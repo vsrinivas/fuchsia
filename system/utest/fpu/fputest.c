@@ -103,9 +103,6 @@ RUN_TEST(fpu_test);
 END_TEST_CASE(fpu_tests)
 
 int main(int argc, char** argv) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_fpu_tests_element);
-
     bool success = unittest_run_all_tests();
     return success ? 0 : -1;
 }

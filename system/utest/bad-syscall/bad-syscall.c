@@ -34,7 +34,5 @@ RUN_TEST(bad_syscall_test)
 END_TEST_CASE(bad_syscall_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_bad_syscall_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

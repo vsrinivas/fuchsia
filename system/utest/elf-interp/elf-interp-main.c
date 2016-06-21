@@ -49,9 +49,6 @@ RUN_TEST(test_interp_loaded)
 END_TEST_CASE(elf_interp_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_elf_interp_tests_element);
-
     bool success = unittest_run_all_tests();
     return success ? 0 : -1;
 }

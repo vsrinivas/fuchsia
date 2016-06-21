@@ -158,7 +158,5 @@ RUN_TEST(echo_test)
 END_TEST_CASE(echo_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_echo_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

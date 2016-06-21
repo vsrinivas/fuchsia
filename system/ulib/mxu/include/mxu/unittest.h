@@ -36,10 +36,6 @@
  * command or by a call to run_all_tests(), which runs all registered
  * unit tests.
  *
- * NOTE: at the moment auto-registration of tests does not work, so in order
- * to register a test case, use unittest_register_test_case() before running them:
- * unittest_register_test_case(&_foo_tests_element);
- *
  * A test looks like this, using the BEGIN_TEST and END_TEST macros at
  * the beginning and end of the test and the EXPECT_* macros to
  * validate test results, as shown:

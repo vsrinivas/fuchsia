@@ -90,9 +90,6 @@ RUN_TEST(address_space_limits_test);
 END_TEST_CASE(memory_mapping_tests)
 
 int main(int argc, char** argv) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_memory_mapping_tests_element);
-
     bool success = unittest_run_all_tests();
     return success ? 0 : -1;
 }

@@ -13,15 +13,33 @@
 // limitations under the License.
 
 #include <mxu/unittest.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-bool empty_libs(void) {
+static bool global_ctor_ran;
+
+static struct Global {
+    Global() { global_ctor_ran = true; }
+} global;
+
+bool check_ctor() {
     BEGIN_TEST;
+    EXPECT_TRUE(global_ctor_ran, "global constuctor didn't run!");
     END_TEST;
 }
 
-BEGIN_TEST_CASE(empty_libs_tests)
-RUN_TEST(empty_libs)
-END_TEST_CASE(empty_libs_tests)
+static int my_static = 23;
+
+bool check_initializer() {
+    BEGIN_TEST;
+    EXPECT_EQ(my_static, 23, "static initializer didn't run!");
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(ctors)
+RUN_TEST(check_ctor)
+RUN_TEST(check_initializer)
+END_TEST_CASE(ctors)
 
 int main(void) {
     return unittest_run_all_tests() ? 0 : -1;

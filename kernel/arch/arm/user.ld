@@ -82,15 +82,15 @@ SECTIONS
         *(.data .data.* .gnu.linkonce.d.*)
     }
 
-    .ctors : ALIGN(4) {
-        __ctor_list = .;
-        KEEP(*(.ctors .init_array))
-        __ctor_end = .;
+    .init_array : ALIGN(4) {
+        __init_array_start = .;
+        KEEP(*(.init_array .ctors))
+        __init_array_end = .;
     }
-    .dtors : ALIGN(4) {
-        __dtor_list = .;
-        KEEP(*(.dtors .fini_array))
-        __dtor_end = .;
+    .fini_array : ALIGN(4) {
+        __fini_array_start = .;
+        KEEP(*(.fini_array .dtors))
+        __fini_array_end = .;
     }
     .got : { *(.got.plt) *(.got) }
     .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }

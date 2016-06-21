@@ -183,7 +183,5 @@ RUN_TEST(test_try_mutexes)
 END_TEST_CASE(mxr_mutex_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_mxr_mutex_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

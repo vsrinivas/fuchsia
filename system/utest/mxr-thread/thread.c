@@ -85,7 +85,5 @@ RUN_TEST(mxr_thread_test)
 END_TEST_CASE(mxr_thread_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_mxr_thread_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }

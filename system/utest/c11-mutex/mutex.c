@@ -190,7 +190,5 @@ RUN_TEST(test_mtx_size)
 END_TEST_CASE(mtx_tests)
 
 int main(void) {
-    // TODO: remove this register once global constructors work
-    unittest_register_test_case(&_mtx_tests_element);
     return unittest_run_all_tests() ? 0 : -1;
 }
