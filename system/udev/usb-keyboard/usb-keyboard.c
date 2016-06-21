@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/char.h>
 #include <ddk/protocol/usb-device.h>
 #include <ddk/protocol/keyboard.h>
@@ -197,32 +198,6 @@ static void kbd_int_cb(usb_request_t* req) {
     kbd->usb->queue_request(kbd->usbdev, req);
 }
 
-static mx_status_t kbd_probe(mx_driver_t* drv, mx_device_t* dev) {
-    usb_device_protocol_t* usb;
-    if (device_get_protocol(dev, MX_PROTOCOL_USB_DEVICE, (void**)&usb)) {
-        return ERR_NOT_SUPPORTED;
-    }
-    usb_device_config_t* cfg;
-    if (usb->get_config(dev, &cfg) < 0) {
-        return ERR_NOT_SUPPORTED;
-    }
-    usb_device_descriptor_t* dcfg = cfg->descriptor;
-    usb_configuration_t* config = &cfg->configurations[0];
-    usb_interface_t* intf = &config->interfaces[0];
-    usb_interface_descriptor_t* icfg = intf->descriptor;
-    if ((dcfg->bDeviceClass != USB_CLASS_HID) &&
-        ((dcfg->bDeviceClass != 0) || (icfg->bInterfaceClass != USB_CLASS_HID))) {
-        return ERR_NOT_SUPPORTED;
-    }
-    if (icfg->bInterfaceSubClass != HID_SUBCLASS_BOOT) {
-        return ERR_NOT_SUPPORTED;
-    }
-    if (icfg->bInterfaceProtocol != HID_BOOT_PROTOCOL_KEYBOARD) {
-        return ERR_NOT_SUPPORTED;
-    }
-    return NO_ERROR;
-}
-
 static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len) {
     kbd_device_t* kbd = get_kbd_device(dev);
     mx_key_event_t* evt = buf;
@@ -342,17 +317,22 @@ static mx_status_t kbd_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_USB_DEVICE,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
+    BI_GOTO_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID, 1),
+    BI_ABORT_IF(NE, BIND_USB_CLASS, 0),
+    BI_ABORT_IF(NE, BIND_USB_IFC_CLASS, USB_CLASS_HID),
+    BI_LABEL(1),
+    BI_ABORT_IF(NE, BIND_USB_IFC_SUBCLASS, HID_SUBCLASS_BOOT),
+    BI_MATCH_IF(EQ, BIND_USB_IFC_PROTOCOL, HID_BOOT_PROTOCOL_KEYBOARD),
 };
 
 mx_driver_t _driver_usb_keyboard BUILTIN_DRIVER = {
     .name = "usb-keyboard",
     .ops = {
-        .probe = kbd_probe,
         .bind = kbd_bind,
         .unbind = kbd_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

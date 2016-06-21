@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -202,26 +203,6 @@ static mx_protocol_device_t bochs_vbe_device_proto = {
 
 // implement driver object:
 
-static mx_status_t bochs_vbe_probe(mx_driver_t* drv, mx_device_t* dev) {
-    pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
-
-    const pci_config_t* pci_config;
-    mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
-    if (cfg_handle < 0)
-        return cfg_handle;
-
-    mx_status_t status;
-    status = (pci_config->vendor_id == QEMU_VGA_VID) && (pci_config->device_id == QEMU_VGA_DID)
-                 ? NO_ERROR
-                 : ERR_NOT_SUPPORTED;
-
-    _magenta_handle_close(cfg_handle);
-
-    return status;
-}
-
 static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
@@ -278,16 +259,17 @@ fail:
     return status;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_PCI,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, QEMU_VGA_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QEMU_VGA_DID),
 };
 
 mx_driver_t _driver_bochs_vbe BUILTIN_DRIVER = {
     .name = "bochs_vbe",
     .ops = {
-        .probe = bochs_vbe_probe,
         .bind = bochs_vbe_bind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

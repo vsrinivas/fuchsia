@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -141,29 +142,6 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 // implement driver object:
 
-static mx_status_t intel_i915_probe(mx_driver_t* drv, mx_device_t* dev) {
-    pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
-
-    const pci_config_t* pci_config;
-    mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
-    if (cfg_handle < 0)
-        return cfg_handle;
-
-    mx_status_t status = ERR_NOT_SUPPORTED;
-    if (pci_config->vendor_id == INTEL_I915_VID) {
-        if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
-            status = NO_ERROR;
-        } else if (pci_config->device_id == INTEL_I915_SKYLAKE_DID) {
-            status = NO_ERROR;
-        }
-    }
-    _magenta_handle_close(cfg_handle);
-
-    return status;
-}
-
 static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
@@ -243,16 +221,18 @@ fail:
     return status;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_PCI,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_I915_BROADWELL_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_I915_SKYLAKE_DID),
 };
 
 mx_driver_t _driver_intel_i915 BUILTIN_DRIVER = {
     .name = "intel_i915_disp",
     .ops = {
-        .probe = intel_i915_probe,
         .bind = intel_i915_bind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

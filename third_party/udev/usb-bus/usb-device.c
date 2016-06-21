@@ -35,6 +35,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <runtime/compiler.h>
+
 #include "usb-private.h"
 #include "usb-device.h"
 
@@ -54,7 +56,7 @@ typedef struct usb_device {
     // FIXME add code to free these
     usb_device_config_t config;
 
-    mx_device_prop_t props[6];
+    mx_device_prop_t props[9];
 } usb_device_t;
 #define get_usb_device(dev) containerof(dev, usb_device_t, device)
 
@@ -353,16 +355,8 @@ usb_device_protocol_t _device_protocol = {
     .get_address = usb_get_address,
 };
 
-static mx_status_t usb_device_probe(mx_driver_t* drv, mx_device_t* dev) {
-    //printf("usb_device_probe\n");
-    return ERR_NOT_SUPPORTED;
-}
-
 mx_driver_t _driver_usb_device BUILTIN_DRIVER = {
     .name = "usb_device",
-    .ops = {
-        .probe = usb_device_probe,
-    },
 };
 
 static mx_status_t usb_device_open(mx_device_t* dev, uint32_t flags) {
@@ -455,14 +449,21 @@ mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed speed
     dev->device.protocol_id = MX_PROTOCOL_USB_DEVICE;
     dev->device.protocol_ops = &_device_protocol;
 
+    usb_interface_descriptor_t* ifcdesc = dev->config.configurations[0].interfaces[0].descriptor;
     dev->props[0] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB_DEVICE };
     dev->props[1] = (mx_device_prop_t){ BIND_USB_VID, 0, descriptor->idVendor };
     dev->props[2] = (mx_device_prop_t){ BIND_USB_PID, 0, descriptor->idProduct };
     dev->props[3] = (mx_device_prop_t){ BIND_USB_CLASS, 0, descriptor->bDeviceClass };
     dev->props[4] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, descriptor->bDeviceSubClass };
     dev->props[5] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, descriptor->bDeviceProtocol };
+    // TODO: either we should publish device-per-interface
+    // or we need to come up with a better way to represent
+    // the various interface properties
+    dev->props[6] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, ifcdesc->bInterfaceClass };
+    dev->props[7] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, ifcdesc->bInterfaceSubClass };
+    dev->props[8] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, ifcdesc->bInterfaceProtocol };
     dev->device.props = dev->props;
-    dev->device.prop_count = 6;
+    dev->device.prop_count = countof(dev->props);
 
     return &dev->device;
 }

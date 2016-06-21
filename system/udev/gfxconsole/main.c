@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <ddk/device.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/keyboard.h>
 
@@ -294,6 +295,15 @@ static mx_driver_t _driver_vc = {
 static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
     mx_status_t status;
 
+    if (vc_count > 0) {
+        // disallow multiple instances
+        return ERR_NOT_SUPPORTED;
+    }
+    // TODO: bind by protocol
+    if (strcmp(dev->name, "bochs_vbe") && strcmp(dev->name, "intel_i915_disp")) {
+        return ERR_NOT_SUPPORTED;
+    }
+
     mx_display_protocol_t* disp;
     if ((status = device_get_protocol(dev, MX_PROTOCOL_DISPLAY, (void**)&disp)) < 0) {
         return status;
@@ -365,28 +375,15 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_status_t vc_root_probe(mx_driver_t* drv, mx_device_t* dev) {
-    if (vc_count > 0) {
-        // disallow multiple instances
-        return ERR_NOT_SUPPORTED;
-    }
-    // TODO: bind by protocol
-    if (strcmp(dev->name, "bochs_vbe") && strcmp(dev->name, "intel_i915_disp")) {
-        return ERR_NOT_SUPPORTED;
-    }
-    return NO_ERROR;
-}
-
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_DISPLAY,
+static mx_bind_inst_t binding[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_DISPLAY),
 };
 
 mx_driver_t _driver_vc_root BUILTIN_DRIVER = {
     .name = "vc-root",
     .ops = {
-        .probe = vc_root_probe,
         .bind = vc_root_bind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

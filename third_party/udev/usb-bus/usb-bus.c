@@ -1,5 +1,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 #include <stdlib.h>
@@ -79,18 +80,6 @@ static mx_protocol_device_t usb_bus_device_proto = {
     .release = usb_bus_release,
 };
 
-static mx_status_t usb_bus_probe(mx_driver_t* driver, mx_device_t* device) {
-    usb_hci_protocol_t* hci_protocol;
-    usb_hub_protocol_t* hub_protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_HCI, (void**)&hci_protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-    if (device_get_protocol(device, MX_PROTOCOL_USB_HUB, (void**)&hub_protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-    return NO_ERROR;
-}
-
 static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_hci_protocol_t* hci_protocol;
     if (device_get_protocol(device, MX_PROTOCOL_USB_HCI, (void**)&hci_protocol)) {
@@ -135,17 +124,16 @@ static mx_status_t usb_bus_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_USB_HCI,
+static mx_bind_inst_t binding[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_USB_HCI),
 };
 
 mx_driver_t _driver_usb_bus BUILTIN_DRIVER = {
     .name = "usb_bus",
     .ops = {
-        .probe = usb_bus_probe,
         .bind = usb_bus_bind,
         .unbind = usb_bus_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

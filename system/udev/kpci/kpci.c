@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <runtime/compiler.h>
+
 #include "kpci-private.h"
 
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
@@ -85,7 +87,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     device->props[5] = (mx_device_prop_t){ BIND_PCI_INTERFACE, 0, info.program_interface };
     device->props[6] = (mx_device_prop_t){ BIND_PCI_REVISION, 0, info.revision_id };
     device->device.props = device->props;
-    device->device.prop_count = 7;
+    device->device.prop_count = countof(device->props);
 
 finished:
     if (status != NO_ERROR) {

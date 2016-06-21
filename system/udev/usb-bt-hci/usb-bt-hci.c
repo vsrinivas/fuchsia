@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/bluetooth-hci.h>
 #include <ddk/protocol/usb-device.h>
 #include <mxu/list.h>
@@ -282,30 +283,6 @@ static mx_protocol_device_t hci_device_proto = {
     .release = hci_release,
 };
 
-static mx_status_t hci_probe(mx_driver_t* driver, mx_device_t* device) {
-    usb_device_protocol_t* protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-    usb_device_config_t* device_config;
-    mx_status_t status = protocol->get_config(device, &device_config);
-    if (status < 0)
-        return status;
-
-    usb_device_descriptor_t* desc = device_config->descriptor;
-
-#if defined(USB_VID) && defined(USB_PID)
-    if (desc->idVendor == USB_VID && desc->idProduct == USB_PID) {
-        return NO_ERROR;
-    }
-#else
-    if (desc->bDeviceClass == 224 && desc->bDeviceSubClass == 1 && desc->bDeviceProtocol == 1) {
-        return NO_ERROR;
-    }
-#endif
-    return ERR_NOT_SUPPORTED;
-}
-
 static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_device_protocol_t* protocol;
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
@@ -427,17 +404,24 @@ static mx_status_t hci_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_USB_DEVICE,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
+#if defined(USB_VID) && defined(USB_PID)
+    BI_ABORT_IF(NE, BIND_USB_VID, USB_VID),
+    BI_MATCH_IF(EQ, BIND_USB_PID, USB_PID),
+#else
+    BI_ABORT_IF(NE, BIND_USB_CLASS, 224),
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, 1),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 1),
+#endif
 };
 
 mx_driver_t _driver_usb_bt_hci BUILTIN_DRIVER = {
     .name = "usb_bt_hci",
     .ops = {
-        .probe = hci_probe,
         .bind = hci_bind,
         .unbind = hci_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/char.h>
 #include <ddk/protocol/ethernet.h>
 
@@ -77,15 +78,6 @@ static mx_protocol_char_t ethernet_char_proto = {
     .write = ethernet_char_write,
 };
 
-static mx_status_t ethernet_char_probe(mx_driver_t* driver, mx_device_t* device) {
-    ethernet_protocol_t* eth_protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_ETHERNET, (void**)&eth_protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    return NO_ERROR;
-}
-
 static mx_status_t ethernet_char_bind(mx_driver_t* driver, mx_device_t* device) {
     ethernet_protocol_t* eth_protocol;
     if (device_get_protocol(device, MX_PROTOCOL_ETHERNET, (void**)&eth_protocol)) {
@@ -126,17 +118,16 @@ static mx_status_t ethernet_char_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_ETHERNET,
+static mx_bind_inst_t binding[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ETHERNET),
 };
 
 mx_driver_t _driver_ethernet_char BUILTIN_DRIVER = {
     .name = "ethernet_char",
     .ops = {
-        .probe = ethernet_char_probe,
         .bind = ethernet_char_bind,
         .unbind = ethernet_char_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

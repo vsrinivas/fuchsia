@@ -14,6 +14,7 @@
 
 #include <ddk/protocol/char.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/binding.h>
 #include <hw/pci.h>
 
 #include <mxu/list.h>
@@ -24,36 +25,6 @@
 #include <stdio.h>
 
 #include <intel-serialio/serialio.h>
-
-static mx_status_t intel_serialio_probe(mx_driver_t* drv, mx_device_t* dev) {
-    pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
-
-    const pci_config_t* pci_config;
-    mx_handle_t config_handle = pci->get_config(dev, &pci_config);
-
-    if (config_handle < 0)
-        return config_handle;
-
-    mx_status_t res;
-    if ((pci_config->vendor_id == INTEL_VID) &&
-        ((pci_config->device_id == INTEL_BROADWELL_SERIALIO_DMA_DID) ||
-         (pci_config->device_id == INTEL_BROADWELL_SERIALIO_I2C0_DID) ||
-         (pci_config->device_id == INTEL_BROADWELL_SERIALIO_I2C1_DID) ||
-         (pci_config->device_id == INTEL_BROADWELL_SERIALIO_SDIO_DID) ||
-         (pci_config->device_id == INTEL_BROADWELL_SERIALIO_SPI0_DID) ||
-         (pci_config->device_id == INTEL_BROADWELL_SERIALIO_SPI1_DID) ||
-         (pci_config->device_id == INTEL_BROADWELL_SERIALIO_UART0_DID) ||
-         (pci_config->device_id == INTEL_BROADWELL_SERIALIO_UART1_DID))) {
-        res = NO_ERROR;
-    } else {
-        res = ERR_NOT_SUPPORTED;
-    }
-
-    _magenta_handle_close(config_handle);
-    return res;
-}
 
 static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
@@ -101,16 +72,24 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
     return res;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_PCI,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_DMA_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_I2C0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_I2C1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_SDIO_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_SPI0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_SPI1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_UART0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_UART1_DID),
 };
 
 mx_driver_t _intel_serialio BUILTIN_DRIVER = {
     .name = "intel_serialio",
     .ops = {
-        .probe = intel_serialio_probe,
         .bind = intel_serialio_bind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

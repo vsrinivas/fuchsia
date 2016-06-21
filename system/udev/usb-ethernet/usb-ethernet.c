@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-device.h>
 #include <mxu/list.h>
@@ -475,25 +476,6 @@ static int usb_ethernet_start_thread(void* arg) {
     return NO_ERROR;
 }
 
-static mx_status_t usb_ethernet_probe(mx_driver_t* driver, mx_device_t* device) {
-    usb_device_protocol_t* protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-    usb_device_config_t* device_config;
-    mx_status_t status = protocol->get_config(device, &device_config);
-    if (status < 0)
-        return status;
-
-    uint16_t vid = le16toh(device_config->descriptor->idVendor);
-    uint16_t pid = le16toh(device_config->descriptor->idProduct);
-    if (vid != ASIX_VID || pid != ASIX_PID) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    return NO_ERROR;
-}
-
 static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_device_protocol_t* protocol;
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
@@ -589,17 +571,18 @@ static mx_status_t usb_ethernet_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_USB_DEVICE,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
+    BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
+    BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
 };
 
 mx_driver_t _driver_usb_ethernet BUILTIN_DRIVER = {
     .name = "usb_ethernet",
     .ops = {
-        .probe = usb_ethernet_probe,
         .bind = usb_ethernet_bind,
         .unbind = usb_ethernet_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

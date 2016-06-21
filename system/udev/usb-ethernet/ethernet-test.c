@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
 
 #include <runtime/thread.h>
@@ -70,15 +71,6 @@ static int ethernet_write_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t ethernet_test_probe(mx_driver_t* driver, mx_device_t* device) {
-    ethernet_protocol_t* protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_ETHERNET, (void**)&protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    return NO_ERROR;
-}
-
 static mx_status_t ethernet_test_bind(mx_driver_t* driver, mx_device_t* device) {
     ethernet_protocol_t* protocol;
     if (device_get_protocol(device, MX_PROTOCOL_ETHERNET, (void**)&protocol)) {
@@ -104,18 +96,17 @@ static mx_status_t ethernet_test_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_ETHERNET,
+static mx_bind_inst_t binding[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ETHERNET),
 };
 
 // uncomment BUILTIN_DRIVER below to enable this test driver
 mx_driver_t _driver_ethernet_test /* BUILTIN_DRIVER */ = {
     .name = "ethernet_test",
     .ops = {
-        .probe = ethernet_test_probe,
         .bind = ethernet_test_bind,
         .unbind = ethernet_test_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

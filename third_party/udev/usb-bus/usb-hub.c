@@ -30,6 +30,7 @@
 //#define USB_DEBUG
 
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <hw/usb.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -302,22 +303,6 @@ static mx_protocol_device_t usb_hub_device_proto = {
     .release = usb_hub_release,
 };
 
-static mx_status_t usb_hub_probe(mx_driver_t* driver, mx_device_t* device) {
-    usb_device_protocol_t* protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    usb_device_config_t* device_config;
-    mx_status_t status = protocol->get_config(device, &device_config);
-    if (status < 0)
-        return status;
-
-    if (device_config->descriptor->bDeviceClass != USB_CLASS_HUB)
-        return ERR_NOT_SUPPORTED;
-    return NO_ERROR;
-}
-
 static mx_device_t* usb_get_bus(mx_device_t* device) {
     while (device) {
         usb_bus_protocol_t* bus_protocol;
@@ -414,17 +399,17 @@ static mx_status_t usb_hub_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_USB_DEVICE,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
+    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB),
 };
 
 mx_driver_t _driver_usb_hub BUILTIN_DRIVER = {
     .name = "usb_hub",
     .ops = {
-        .probe = usb_hub_probe,
         .bind = usb_hub_bind,
         .unbind = usb_hub_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };

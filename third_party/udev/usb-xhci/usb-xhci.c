@@ -1,5 +1,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb-hci.h>
 
@@ -60,34 +61,6 @@ static mx_protocol_device_t xhci_device_proto = {
     .close = xhci_close,
     .release = xhci_release,
 };
-
-static mx_status_t usb_xhci_probe(mx_driver_t* drv, mx_device_t* dev) {
-    pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    const pci_config_t* pci_config;
-    mx_status_t status;
-    mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
-    if (cfg_handle < 0) {
-        printf("usb_xhci_probe failed to map config (err = %d)\n", cfg_handle);
-        status = cfg_handle;
-    } else {
-        if (pci_config->base_class == 0x0c &&
-            pci_config->sub_class == 0x03 &&
-            pci_config->program_interface == 0x30) {
-            printf("probe found XHCI\n");
-            status = NO_ERROR;
-        } else {
-            status = ERR_NOT_SUPPORTED;
-        }
-
-        _magenta_handle_close(cfg_handle);
-    }
-
-    return status;
-}
 
 static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
@@ -210,17 +183,19 @@ static mx_status_t usb_xhci_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_driver_binding_t binding = {
-    .protocol_id = MX_PROTOCOL_PCI,
+static mx_bind_inst_t binding[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),
+    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x03),
+    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x30),
 };
 
 mx_driver_t _driver_usb_xhci BUILTIN_DRIVER = {
     .name = "usb_xhci",
     .ops = {
-        .probe = usb_xhci_probe,
         .bind = usb_xhci_bind,
         .unbind = usb_xhci_unbind,
     },
-    .binding = &binding,
-    .binding_count = 1,
+    .binding = binding,
+    .binding_size = sizeof(binding),
 };
