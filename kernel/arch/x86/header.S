@@ -15,7 +15,7 @@
 /* The flags for the Multiboot header. */
 #define MULTIBOOT_HEADER_FLAGS 0x00010002
 
-.section ".text.header"
+.section ".text.header", "ax"
 .code16
 
 .align 4
