@@ -76,11 +76,15 @@ template("mkbootfs") {
     deps = [
       ":${target_name}_generate_manifest",
     ]
+    # Ensure that the bootfs gets rebuilt if dependencies change
+    if (defined(invoker.data_deps)) {
+      deps += invoker.data_deps
+    }
   }
 }
 
 mkbootfs("bootfs") {
-  deps = [
+  data_deps = [
     "//system/uapp/crasher",
     "//system/uapp/devmgr",
     "//system/uapp/dlog",
