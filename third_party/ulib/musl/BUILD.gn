@@ -154,8 +154,6 @@ copy("copy_include") {
     "include/errno.h",
     "include/fcntl.h",
     "include/features.h",
-
-    #"include/alltypes.h.in",
     "include/fenv.h",
     "include/float.h",
     "include/fmtmsg.h",

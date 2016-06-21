@@ -36,8 +36,7 @@ source_set("stdio") {
     "fgetwc.c",
     "fgetws.c",
     "fileno.c",
-
-    #"flockfile.c",
+    "flockfile.c",
     "fmemopen.c",
     "fopen.c",
     "fprintf.c",

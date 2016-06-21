@@ -11,8 +11,5 @@ source_set("internal") {
     "shgetc.c",
     "syscall_ret.c",
     "vdso.c",
-
-    # We do not currently generate the version number.
-    # "version.c",
   ]
 }

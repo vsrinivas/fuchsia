@@ -33,11 +33,9 @@ source_set("thread") {
     "pthread_attr_setscope.c",
     "pthread_attr_setstack.c",
     "pthread_attr_setstacksize.c",
-
-    #"pthread_barrier_destroy.c",
+    "pthread_barrier_destroy.c",
     "pthread_barrier_init.c",
-
-    #"pthread_barrier_wait.c",
+    "pthread_barrier_wait.c",
     "pthread_barrierattr_destroy.c",
     "pthread_barrierattr_init.c",
     "pthread_cancel.c",

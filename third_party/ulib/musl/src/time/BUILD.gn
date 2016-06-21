@@ -35,9 +35,8 @@ source_set("time") {
     "strptime.c",
     "time.c",
     "timegm.c",
-
-    #"timer_create.c",
-    #"timer_delete.c",
+    "timer_create.c",
+    "timer_delete.c",
     "timer_getoverrun.c",
     "timer_gettime.c",
     "timer_settime.c",
