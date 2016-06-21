@@ -45,6 +45,8 @@ MessagePipe::MessagePipe()
 
 MessagePipe::~MessagePipe() {
     // No need to lock. We are single threaded and will not have new requests.
+    mutex_destroy(&lock_);
+
     clean_list(&messages_[0]);
     clean_list(&messages_[1]);
 }
