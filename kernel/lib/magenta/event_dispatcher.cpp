@@ -32,6 +32,7 @@ EventDispatcher::EventDispatcher(uint32_t options) {}
 EventDispatcher::~EventDispatcher() {}
 
 status_t EventDispatcher::SignalEvent() {
+    // Do not take more locks here! SignalEvent can be called from IRQ context.
     waiter_.Signal(MX_SIGNAL_SIGNALED);
     return NO_ERROR;
 }

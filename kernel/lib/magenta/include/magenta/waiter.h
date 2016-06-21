@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include <kernel/event.h>
-#include <kernel/mutex.h>
+#include <kernel/spinlock.h>
 
 #include <magenta/types.h>
 #include <utils/intrusive_single_list.h>
@@ -81,7 +81,7 @@ private:
 
     int SignalComplete_NoLock();
 
-    utils::SinglyLinkedList<WaitNode> nodes_;
-    mutex_t lock_;
+    spin_lock_t lock_;
     mx_signals_t signals_;
+    utils::SinglyLinkedList<WaitNode> nodes_;
 };

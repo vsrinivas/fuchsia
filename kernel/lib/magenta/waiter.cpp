@@ -6,15 +6,14 @@
 
 #include <magenta/waiter.h>
 
-#include <kernel/auto_lock.h>
+#include <kernel/auto_spinlock.h>
 #include <kernel/mutex.h>
 
 #include <utils/intrusive_single_list.h>
 #include <utils/list_utils.h>
 
 Waiter::Waiter()
-    : signals_(0u) {
-    mutex_init(&lock_);
+    : lock_(SPIN_LOCK_INITIAL_VALUE), signals_(0u) {
 }
 
 Waiter* Waiter::BeginWait(event_t* event, Handle* handle, mx_signals_t signals) {
@@ -22,20 +21,25 @@ Waiter* Waiter::BeginWait(event_t* event, Handle* handle, mx_signals_t signals) 
     if (!node)
         return nullptr;
 
+    int wake_count = 0;
     {
-        AutoLock lock(&lock_);
+        AutoSpinLock<> lock(&lock_);
         nodes_.push_front(node);
 
         if (signals & signals_)
-            event_signal(event, true);
+            wake_count = event_signal_etc(event, false, NO_ERROR);
     }
+
+    if (wake_count)
+        thread_yield();
+
     return this;
 }
 
 mx_signals_t Waiter::FinishWait(event_t* event) {
     WaitNode* node = nullptr;
     {
-        AutoLock lock(&lock_);
+        AutoSpinLock<> lock(&lock_);
         node = utils::pop_if(&nodes_, [event](WaitNode* node) {
             return (node->event == event);
         });
@@ -48,7 +52,7 @@ mx_signals_t Waiter::FinishWait(event_t* event) {
 bool Waiter::Signal(mx_signals_t signals) {
     int wake_count = 0;
     {
-        AutoLock lock(&lock_);
+        AutoSpinLock<> lock(&lock_);
 
         auto prev = signals_;
         signals_ |= signals;
@@ -72,7 +76,7 @@ void Waiter::ClearSignal(mx_signals_t signals) {
 void Waiter::Modify(mx_signals_t set_mask, mx_signals_t clear_mask) {
     int wake_count = 0;
     {
-        AutoLock lock(&lock_);
+        AutoSpinLock<> lock(&lock_);
 
         auto prev = signals_;
         signals_ = (signals_ & (~clear_mask)) | set_mask;
@@ -88,7 +92,7 @@ void Waiter::Modify(mx_signals_t set_mask, mx_signals_t clear_mask) {
 }
 
 bool Waiter::Reset() {
-    AutoLock lock(&lock_);
+    AutoSpinLock<> lock(&lock_);
     utils::for_each(&nodes_, [](WaitNode* node) {
         event_unsignal(node->event);
     });
@@ -98,7 +102,7 @@ bool Waiter::Reset() {
 bool Waiter::CancelWait(Handle* handle) {
     int wake_count = 0;
     {
-        AutoLock lock(&lock_);
+        AutoSpinLock<> lock(&lock_);
 
         utils::for_each(&nodes_, [handle, &wake_count](WaitNode* node) {
             if (node->handle == handle)
