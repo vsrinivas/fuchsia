@@ -29,7 +29,7 @@ import (
 	"unsafe"
 
 	"fuchsia.googlesource.com/thinfs/lib/block"
-	"fuchsia.googlesource.com/thinfs/lib/handle"
+	"fuchsia.googlesource.com/thinfs/lib/cpointer"
 	"fuchsia.googlesource.com/thinfs/lib/thinio"
 	"github.com/golang/glog"
 )
@@ -68,7 +68,7 @@ func validate(channel C.io_channel) (*channelData, C.errcode_t) {
 		return nil, C.EXT2_ET_MAGIC_IO_CHANNEL
 	}
 
-	val, err := handle.Value(uintptr(channel.private_data))
+	val, err := cpointer.Value(uintptr(channel.private_data))
 	if err != nil {
 		return nil, C.EXT2_ET_BAD_MAGIC
 	}
@@ -108,7 +108,7 @@ func fuchsiaOpen(name *C.char, flags C.int, channel *C.io_channel) C.errcode_t {
 	}
 	priv.stats.num_fields = 2 // Not sure why this is necessary but the unix_io_manager does it.
 
-	io.private_data = unsafe.Pointer(handle.New(priv))
+	io.private_data = unsafe.Pointer(cpointer.New(priv))
 	io.block_size = defaultBlockSize
 	io.read_error = nil
 	io.write_error = nil
@@ -116,7 +116,7 @@ func fuchsiaOpen(name *C.char, flags C.int, channel *C.io_channel) C.errcode_t {
 
 	// handleError is used to make sure everything is cleaned up properly if an error occurs.
 	handleError := func(err error) C.errcode_t {
-		handle.MustDelete(uintptr(io.private_data))
+		cpointer.MustDelete(uintptr(io.private_data))
 		C.ext2fs_free_mem(unsafe.Pointer(&io.name))
 		C.ext2fs_free_mem(unsafe.Pointer(&io))
 
@@ -128,7 +128,7 @@ func fuchsiaOpen(name *C.char, flags C.int, channel *C.io_channel) C.errcode_t {
 		handleError(err)
 		return C.EXT2_ET_BAD_DEVICE_NAME
 	}
-	dev, err := handle.Value(uintptr(h))
+	dev, err := cpointer.Value(uintptr(h))
 	if err != nil {
 		handleError(err)
 		return C.EXT2_ET_BAD_DEVICE_NAME
@@ -155,7 +155,7 @@ func fuchsiaClose(channel C.io_channel) C.errcode_t {
 	}
 
 	cleanup := func() {
-		handle.MustDelete(uintptr(channel.private_data))
+		cpointer.MustDelete(uintptr(channel.private_data))
 		channel.private_data = nil
 
 		C.ext2fs_free_mem(unsafe.Pointer(&channel.name))

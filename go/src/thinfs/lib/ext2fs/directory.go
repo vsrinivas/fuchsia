@@ -36,7 +36,7 @@ package ext2fs
 // //
 // //   Go code -> static inline function -> library function -> extern function -> Go code
 // //
-// // There's some extra wrinkles because we also need to pass around a handle as private
+// // There's some extra wrinkles because we also need to pass around a C pointer as private
 // // data so that the callback function can actually do something meaningful, but we can just
 // // stop here for now.
 // extern int dirIterCB(struct ext2_dir_entry *dirent, int offset, int blocksize, char *buf, void *priv);
@@ -51,7 +51,7 @@ import (
 	"time"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/lib/handle"
+	"fuchsia.googlesource.com/thinfs/lib/cpointer"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
@@ -137,7 +137,7 @@ func (d *Dir) Read() ([]Dirent, error) {
 // top of this file.  We use the export keyword to make it callable from C code.
 //export dirIterCB
 func dirIterCB(dirent *C.struct_ext2_dir_entry, _ C.int, _ C.int, _ *C.char, priv unsafe.Pointer) C.int {
-	fn := handle.MustValue(uintptr(priv)).(func(*C.struct_ext2_dir_entry) C.int)
+	fn := cpointer.MustValue(uintptr(priv)).(func(*C.struct_ext2_dir_entry) C.int)
 
 	return fn(dirent)
 }
@@ -148,8 +148,8 @@ func dirIterCB(dirent *C.struct_ext2_dir_entry, _ C.int, _ C.int, _ *C.char, pri
 // C.DIRENT_ABORT to stop iteration.  |do| must also return C.DIRENT_CHANGED if it changes
 // any of the directory entries.  Returns an error if the inode is not a directory.
 func forEachDirent(fs C.ext2_filsys, ino C.ext2_ino_t, flags C.int, do func(*C.struct_ext2_dir_entry) C.int) error {
-	priv := handle.New(do)
-	defer handle.MustDelete(priv)
+	priv := cpointer.New(do)
+	defer cpointer.MustDelete(priv)
 
 	// This will make its way back to dirIterCB above.
 	if err := check(C.dir_iterate(fs, ino, C.int(flags), unsafe.Pointer(priv))); err != nil {

@@ -12,28 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package handle
+package cpointer
 
 import (
 	"sync"
 	"testing"
 )
 
-func TestHandle(t *testing.T) {
-	h := New(t)
-	t1, err := Value(h)
+func TestCPointer(t *testing.T) {
+	p := New(t)
+	t1, err := Value(p)
 	if err != nil {
 		t.Errorf("Value failed: %v", err)
 	} else if t1 != t {
 		t.Errorf("Value returned %v, expected %v", t1, t)
 	}
-	if err := Delete(h); err != nil {
+	if err := Delete(p); err != nil {
 		t.Errorf("Delete failed: %v", err)
 	}
-	if _, err := Value(h); err == nil {
+	if _, err := Value(p); err == nil {
 		t.Errorf("Value succeeded unexpectedly")
 	}
-	if err := Delete(h); err == nil {
+	if err := Delete(p); err == nil {
 		t.Error("Delete succeeded unexpectedly after Delete")
 	}
 }
@@ -57,11 +57,11 @@ func TestConcurrent(t *testing.T) {
 		close(c)
 	}()
 	m := make(map[uintptr]bool)
-	for h := range c {
-		if m[h] {
-			t.Errorf("duplicate handle %d", h)
+	for p := range c {
+		if m[p] {
+			t.Errorf("duplicate C pointer %d", p)
 		}
-		m[h] = true
-		Delete(h)
+		m[p] = true
+		Delete(p)
 	}
 }

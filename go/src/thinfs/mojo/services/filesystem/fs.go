@@ -24,8 +24,8 @@ import (
 	"interfaces/filesystem/common"
 	"interfaces/filesystem/directory"
 
+	"fuchsia.googlesource.com/thinfs/lib/cpointer"
 	"fuchsia.googlesource.com/thinfs/lib/ext2fs"
-	"fuchsia.googlesource.com/thinfs/lib/handle"
 	blk "fuchsia.googlesource.com/thinfs/mojo/clients/block"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -72,10 +72,10 @@ func (Factory) OpenFileSystem(ptr block.Device_Pointer, req directory.Directory_
 		return mojoerr.Error_PermissionDenied, nil
 	}
 
-	// Use the uintptr returned by the handle package to refer to the device.  The I/O
+	// Use the uintptr returned by the cpointer package to refer to the device.  The I/O
 	// manager in the ext2fs package will convert it back into a uintptr and use it to
 	// get the device.
-	path := fmt.Sprintf("%#x", handle.New(dev))
+	path := fmt.Sprintf("%#x", cpointer.New(dev))
 	ext2, err := ext2fs.New(path, ext2flags)
 	if err != nil {
 		return mojoerr.Error_FailedPrecondition, nil
