@@ -86,6 +86,13 @@ typedef struct thread {
     vmm_aspace_t *aspace;
 #endif
 
+    /* accounting information */
+    lk_bigtime_t last_started_running_us;
+    /* Total time in THREAD_RUNNING state.  If the thread is currently in
+     * THREAD_RUNNING state, this excludes the time it has accrued since it
+     * left the scheduler. */
+    lk_bigtime_t runtime_us;
+
     /* if blocked, a pointer to the wait queue */
     struct wait_queue *blocking_wait_queue;
     status_t wait_queue_block_ret;

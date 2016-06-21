@@ -503,6 +503,10 @@ void thread_resched(void)
     if (newthread == oldthread)
         return;
 
+    lk_bigtime_t now = current_time_hires();
+    oldthread->runtime_us += now - oldthread->last_started_running_us;
+    newthread->last_started_running_us = now;
+
     /* set up quantum for the new thread if it was consumed */
     if (newthread->remaining_quantum <= 0) {
         newthread->remaining_quantum = 5; // XXX make this smarter
@@ -530,7 +534,6 @@ void thread_resched(void)
     THREAD_STATS_INC(context_switches);
 
     if (thread_is_idle(oldthread)) {
-        lk_bigtime_t now = current_time_hires();
         thread_stats[cpu].idle_time += now - thread_stats[cpu].last_idle_timestamp;
     }
     if (thread_is_idle(newthread)) {
@@ -991,6 +994,11 @@ static const char *thread_state_to_str(enum thread_state state)
  */
 void dump_thread(thread_t *t)
 {
+    lk_bigtime_t runtime = t->runtime_us;
+    if (t->state == THREAD_RUNNING) {
+        runtime += current_time_hires() - t->last_started_running_us;
+    }
+
     dprintf(INFO, "dump_thread: t %p (%s)\n", t, t->name);
 #if WITH_SMP
     dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining quantum %d\n",
@@ -999,6 +1007,7 @@ void dump_thread(thread_t *t)
     dprintf(INFO, "\tstate %s, priority %d, remaining quantum %d\n",
             thread_state_to_str(t->state), t->priority, t->remaining_quantum);
 #endif
+    dprintf(INFO, "\truntime_us %lld, runtime_s %lld\n", runtime, runtime / 1000000);
     dprintf(INFO, "\tstack %p, stack_size %zd\n", t->stack, t->stack_size);
     dprintf(INFO, "\tentry %p, arg %p, flags 0x%x\n", t->entry, t->arg, t->flags);
     dprintf(INFO, "\twait queue %p, wait queue ret %d\n", t->blocking_wait_queue, t->wait_queue_block_ret);
