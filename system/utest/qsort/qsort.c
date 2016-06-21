@@ -24,10 +24,6 @@ static void verify_sorted(char* array, size_t length, size_t element_size, compa
     assert(length > 0);
 
     for (size_t idx = 1; idx < length; idx++) {
-        printf("%4zu %llu\n", idx, (unsigned long long)((uint32_t*)array)[idx]);
-    }
-
-    for (size_t idx = 1; idx < length; idx++) {
         char* left = array + (idx - 1) * element_size;
         char* right = array + idx * element_size;
         int c = cmp(left, right);
