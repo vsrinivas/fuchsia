@@ -28,7 +28,7 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
                    unsigned char* const* answers, int* alens, int asize,
                    const struct resolvconf* conf) {
     int fd;
-    int timeout, attempts, retry_interval, servfail_retry;
+    int timeout, attempts, retry_interval, servfail_retry = 0;
     union {
         struct sockaddr_in sin;
         struct sockaddr_in6 sin6;

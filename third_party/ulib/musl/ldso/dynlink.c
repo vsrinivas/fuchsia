@@ -545,10 +545,10 @@ static void* map_library(int fd, struct dso* dso) {
     size_t addr_min = SIZE_MAX, addr_max = 0, map_len;
     size_t this_min, this_max;
     size_t nsegs = 0;
-    off_t off_start;
+    off_t off_start = 0;
     Ehdr* eh;
     Phdr *ph, *ph0;
-    unsigned prot;
+    unsigned prot = 0u;
     unsigned char *map = MAP_FAILED, *base;
     size_t dyn = 0;
     size_t tls_image = 0;

@@ -33,13 +33,9 @@ MODULE_DEPS := \
 # TODO(kulakowski) Clean up the junkier -Wno flags below.
 MODULE_CFLAGS := \
     -D_XOPEN_SOURCE=700 \
-    -Wno-maybe-uninitialized \
     -Wno-sign-compare \
-    -Wno-strict-prototypes \
-    -Wno-unused-value \
     -Wno-parentheses \
     -Wno-discarded-qualifiers \
-    -Wno-empty-body \
     -Wno-error \
     -Wno-unused-but-set-variable \
     -Wno-missing-braces \

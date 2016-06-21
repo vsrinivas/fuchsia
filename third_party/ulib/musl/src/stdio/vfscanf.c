@@ -60,8 +60,8 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
     int base;
     const unsigned char* p;
     int c, t;
-    char* s;
-    wchar_t* wcs;
+    char* s = NULL;
+    wchar_t* wcs = NULL;
     mbstate_t st;
     void* dest = NULL;
     int invert;
@@ -119,8 +119,6 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
         }
 
         if (*p == 'm') {
-            wcs = 0;
-            s = 0;
             alloc = !!dest;
             p++;
         } else {
@@ -244,8 +242,6 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
                     scanset[1 + *p] = 1 - invert;
                 }
             }
-            wcs = 0;
-            s = 0;
             i = 0;
             k = t == 'c' ? width + 1U : 31;
             if (size == SIZE_l) {

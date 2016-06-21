@@ -204,7 +204,6 @@ static void* io_thread_func(void* ctx) {
     off_t off = cb->aio_offset;
 
     struct aio_queue* q = __aio_get_queue(fd, 1);
-    ssize_t ret;
 
     args->err = q ? 0 : EAGAIN;
     sem_post(&args->sem);
@@ -248,20 +247,19 @@ static void* io_thread_func(void* ctx) {
 
     switch (op) {
     case LIO_WRITE:
-        ret = q->append ? write(fd, buf, len) : pwrite(fd, buf, len, off);
+        at.ret = q->append ? write(fd, buf, len) : pwrite(fd, buf, len, off);
         break;
     case LIO_READ:
-        ret = !q->seekable ? read(fd, buf, len) : pread(fd, buf, len, off);
+        at.ret = !q->seekable ? read(fd, buf, len) : pread(fd, buf, len, off);
         break;
     case O_SYNC:
-        ret = fsync(fd);
+        at.ret = fsync(fd);
         break;
     case O_DSYNC:
-        ret = fdatasync(fd);
+        at.ret = fdatasync(fd);
         break;
     }
-    at.ret = ret;
-    at.err = ret < 0 ? errno : 0;
+    at.err = at.ret < 0 ? errno : 0;
 
     pthread_cleanup_pop(1);
 
