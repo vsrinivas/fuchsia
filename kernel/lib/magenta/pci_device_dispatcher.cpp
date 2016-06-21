@@ -73,15 +73,18 @@ PciDeviceDispatcher::PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
 PciDeviceDispatcher::~PciDeviceDispatcher() {
     // Release our reference to the underlying PCI device state to indicate that
     // we are now closed.
-    AutoLock lock(&lock_);
+    //
+    // Note: we should not need the lock at this point in time.  We are
+    // destructing, if there are any other threads interacting with methods in
+    // this object, then we have a serious lifecycle management problem.
     device_ = nullptr;
 }
 
 status_t PciDeviceDispatcher::ClaimDevice() {
     status_t result;
     AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
 
-    if (!device_) return ERR_BAD_HANDLE;      // Are we closed already?
     if (device_->claimed()) return ERR_BUSY;  // Are we claimed already?
 
     result = device_->Claim();
@@ -93,8 +96,8 @@ status_t PciDeviceDispatcher::ClaimDevice() {
 
 status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
     AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
 
-    if (!device_) return ERR_BAD_HANDLE;            // Are we closed already?
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
 
     pcie_enable_bus_master(device_->device(), enable);
@@ -104,8 +107,8 @@ status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
 
 status_t PciDeviceDispatcher::ResetDevice() {
     AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
 
-    if (!device_) return ERR_BAD_HANDLE;            // Are we closed already?
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
 
     return pcie_do_function_level_reset(device_->device());
@@ -132,7 +135,8 @@ status_t PciDeviceDispatcher::MapMmio(uint32_t bar_num,
                                       utils::RefPtr<Dispatcher>* out_mapping,
                                       mx_rights_t* out_rights) {
     AutoLock lock(&lock_);
-    if (!device_) return ERR_BAD_HANDLE;           // Are we closed already?
+    DEBUG_ASSERT(device_ && device_->device());
+
     if (!device_->claimed()) return ERR_BAD_STATE; // Are we not claimed yet?
 
     status_t status;
@@ -154,8 +158,8 @@ status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
                                            utils::RefPtr<Dispatcher>* interrupt_dispatcher,
                                            mx_rights_t* rights) {
     AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
 
-    if (!device_) return ERR_BAD_HANDLE;            // Are we closed already?
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
     if ((which_irq < 0) ||
         (static_cast<uint32_t>(which_irq) >= irqs_supported_)) return ERR_INVALID_ARGS;
@@ -182,15 +186,13 @@ static_assert(static_cast<uint>(MX_PCIE_IRQ_MODE_MSI_X) ==
               static_cast<uint>(PCIE_IRQ_MODE_MSI_X),
               "Mode mismatch, MX_PCIE_IRQ_MODE_MSI_X != PCIE_IRQ_MODE_MSI_X");
 status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-    pcie_irq_mode_caps_t caps;
-    status_t ret;
-
     AutoLock lock(&lock_);
-    if (!device_) return ERR_BAD_HANDLE; // Are we closed already?
+    DEBUG_ASSERT(device_ && device_->device());
 
-    ret = pcie_query_irq_mode_capabilities(device_->device(),
-                                           static_cast<pcie_irq_mode_t>(mode),
-                                           &caps);
+    pcie_irq_mode_caps_t caps;
+    status_t ret = pcie_query_irq_mode_capabilities(device_->device(),
+                                                    static_cast<pcie_irq_mode_t>(mode),
+                                                    &caps);
 
     *out_max_irqs = (ret == NO_ERROR) ? caps.max_irqs : 0;
     return ret;
@@ -198,7 +200,8 @@ status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t*
 
 status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
     AutoLock lock(&lock_);
-    if (!device_) return ERR_BAD_HANDLE;            // Are we closed already?
+    DEBUG_ASSERT(device_ && device_->device());
+
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
 
     status_t ret;
