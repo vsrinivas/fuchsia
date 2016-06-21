@@ -23,16 +23,13 @@ typedef struct mx_device mx_device_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
 
 typedef struct mx_driver mx_driver_t;
+typedef struct mx_bind_inst mx_bind_inst_t;
 typedef struct mx_driver_binding mx_driver_binding_t;
 
 typedef struct mx_driver_ops {
     mx_status_t (*init)(mx_driver_t* driver);
     // Opportunity to do on-load work.
     // Called ony once, before any other ops are called.
-
-    mx_status_t (*probe)(mx_driver_t* driver, mx_device_t* device);
-    // Query whether this driver can bind to this device.
-    // NO_ERROR indicates it can do so.
 
     mx_status_t (*bind)(mx_driver_t* driver, mx_device_t* device);
     // Requests that the driver bind to the provided device,
@@ -57,9 +54,9 @@ struct mx_driver {
 
     struct list_node node;
 
-    mx_driver_binding_t* binding;
-    uint32_t binding_count;
-    // list of protocols and options
+    mx_bind_inst_t* binding;
+    uint32_t binding_size;
+    // binding instructions
 };
 
 struct mx_driver_binding {

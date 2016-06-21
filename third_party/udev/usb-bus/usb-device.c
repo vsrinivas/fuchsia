@@ -29,6 +29,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/usb-hci.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,6 +53,8 @@ typedef struct usb_device {
 
     // FIXME add code to free these
     usb_device_config_t config;
+
+    mx_device_prop_t props[6];
 } usb_device_t;
 #define get_usb_device(dev) containerof(dev, usb_device_t, device)
 
@@ -451,6 +454,16 @@ mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed speed
     }
     dev->device.protocol_id = MX_PROTOCOL_USB_DEVICE;
     dev->device.protocol_ops = &_device_protocol;
+
+    dev->props[0] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB_DEVICE };
+    dev->props[1] = (mx_device_prop_t){ BIND_USB_VID, 0, descriptor->idVendor };
+    dev->props[2] = (mx_device_prop_t){ BIND_USB_PID, 0, descriptor->idProduct };
+    dev->props[3] = (mx_device_prop_t){ BIND_USB_CLASS, 0, descriptor->bDeviceClass };
+    dev->props[4] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, descriptor->bDeviceSubClass };
+    dev->props[5] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, descriptor->bDeviceProtocol };
+    dev->device.props = dev->props;
+    dev->device.prop_count = 6;
+
     return &dev->device;
 }
 

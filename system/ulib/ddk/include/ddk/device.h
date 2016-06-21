@@ -20,6 +20,7 @@
 
 typedef struct mx_device mx_device_t;
 typedef struct mx_driver mx_driver_t;
+typedef struct mx_device_prop mx_device_prop_t;
 
 typedef struct mx_protocol_device mx_protocol_device_t;
 
@@ -75,6 +76,10 @@ struct mx_device {
 
     vnode_t* vnode;
     // used by devmgr internals
+
+    mx_device_prop_t* props;
+    uint32_t prop_count;
+    // properties for driver binding
 
     char namedata[MX_DEVICE_NAME_MAX + 1];
 };

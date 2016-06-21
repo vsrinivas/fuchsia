@@ -48,6 +48,8 @@ mx_status_t devmgr_device_close(mx_device_t* dev);
 
 mx_status_t devmgr_control(const char* cmd);
 
+bool devmgr_is_bindable(mx_driver_t* drv, mx_device_t* dev);
+
 // Internals
 void devmgr_init(bool hostproc);
 void devmgr_init_builtin_drivers(void);

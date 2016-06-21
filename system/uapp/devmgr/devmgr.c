@@ -200,26 +200,9 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     xprintf("devmgr: probe dev=%p(%s) drv=%p(%s)\n",
             dev, safename(dev->name), drv, safename(drv->name));
 
-    for (uint32_t n = 0; n < drv->binding_count; n++) {
-        if (drv->binding[n].protocol_id == dev->protocol_id) {
-            goto protocol_match;
-        }
-    }
-    return ERR_NOT_SUPPORTED;
-
-protocol_match:
-    if (drv->ops.probe == NULL) {
+    // evaluate the driver's binding program against the device's properties
+    if (!devmgr_is_bindable(drv, dev)) {
         return ERR_NOT_SUPPORTED;
-    }
-    if (drv == dev->driver) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    DM_UNLOCK();
-    status = drv->ops.probe(drv, dev);
-    DM_LOCK();
-    if (status) {
-        return status;
     }
 
     // Determine if we should remote-host this driver
@@ -488,7 +471,7 @@ void devmgr_init_builtin_drivers(void) {
     mx_driver_t* drv;
     for (drv = __start_builtin_drivers; drv < __stop_builtin_drivers; drv++) {
         if (devmgr_is_remote) {
-            if (drv->binding_count == 0) {
+            if (drv->binding_size == 0) {
                 // root-level devices not loaded on devhost instances
                 continue;
             }
