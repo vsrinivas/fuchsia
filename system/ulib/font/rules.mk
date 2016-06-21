@@ -27,10 +27,4 @@ MODULE_DEPS += \
 MODULE_SRCS += \
 	$(LOCAL_DIR)/font.c
 
-ifeq ($(FREETYPE_CONSOLE),1)
-	MODULE_DEPS += ulib/freetype
-	MODULE_SRCS += $(LOCAL_DIR)/freetype.c
-	MODULE_CFLAGS += -DFREETYPE_CONSOLE=1
-endif
-
 include make/module.mk

@@ -19,7 +19,7 @@
 #include "font.h"
 
 #if SMALL_FONT
-void font_draw_char_internal(gfx_surface* surface, unsigned char c,
+void font_draw_char(gfx_surface* surface, unsigned char c,
                     int x, int y, uint32_t color, uint32_t bgcolor) {
     uint i, j;
     uint line;
@@ -34,7 +34,7 @@ void font_draw_char_internal(gfx_surface* surface, unsigned char c,
     }
 }
 #else
-void font_draw_char_internal(gfx_surface* surface, unsigned char c,
+void font_draw_char(gfx_surface* surface, unsigned char c,
                     int x, int y, uint32_t color, uint32_t bgcolor) {
     uint i, j;
     uint line;
@@ -49,18 +49,3 @@ void font_draw_char_internal(gfx_surface* surface, unsigned char c,
     }
 }
 #endif
-
-#if FREETYPE_CONSOLE
-extern bool freetype_draw_char(gfx_surface *surface, unsigned char c, int x, int y, uint32_t color, uint32_t bgcolor);
-#endif
-
-void font_draw_char(gfx_surface* surface, unsigned char c, int x, int y, uint32_t color, uint32_t bgcolor)
-{
-#if FREETYPE_CONSOLE
-    if (!freetype_draw_char(surface, c, x, y, color, bgcolor)) {
-        font_draw_char_internal(surface, c, x, y, color, bgcolor);
-    }
-#else
-    font_draw_char_internal(surface, c, x, y, color, bgcolor);
-#endif
-}
