@@ -39,7 +39,11 @@ PHYS_HEADER_LOAD_OFFSET ?= 0x00002000
 KERNEL_ASPACE_BASE ?= 0xffffff8000000000UL # -512GB
 KERNEL_ASPACE_SIZE ?= 0x0000008000000000UL
 USER_ASPACE_BASE   ?= 0x0000000001000000UL # 16MB
-USER_ASPACE_SIZE   ?= 0x00007fffff000000UL # full user address space size - 16MB
+# We set the top of user address space to be (1 << 47) - 4k.  See
+# docs/magenta/sysret_problem.md for why we subtract 4k here.
+# Subtracting USER_ASPACE_BASE from that value gives the value for
+# USER_ASPACE_SIZE below.
+USER_ASPACE_SIZE   ?= 0x00007ffffefff000UL
 SUBARCH_DIR := $(LOCAL_DIR)/64
 endif
 

@@ -92,6 +92,8 @@ FUNCTION(x86_syscall)
     /* put the user gs back */
     swapgs
 
+    /* This will fault if the return address is non-canonical.  See
+     * docs/magenta/sysret_problem.md for how we avoid that. */
     sysretq
 
 END(x86_syscall)
