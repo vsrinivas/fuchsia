@@ -118,7 +118,7 @@ status_t event_wait_timeout(event_t *e, lk_time_t timeout)
  * @param reschedule  If true, waiting thread(s) are executed immediately,
  *                    and the current thread resumes only after the
  *                    waiting threads have been satisfied. If false,
- *                    waiting threads are placed at the end of the run
+ *                    waiting threads are placed at the head of the run
  *                    queue.
  * @param wait_result What status event_wait_timeout will return to the
  *                    thread or threads that are woken up.
@@ -168,7 +168,7 @@ int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
  * @param reschedule  If true, waiting thread(s) are executed immediately,
  *                    and the current thread resumes only after the
  *                    waiting threads have been satisfied. If false,
- *                    waiting threads are placed at the end of the run
+ *                    waiting threads are placed at the head of the run
  *                    queue.
  *
  * @return  Returns NO_ERROR on success.
