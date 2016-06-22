@@ -15,6 +15,7 @@
 executable("devmgr") {
   sources = [
     "api.c",
+    "binding.c",
     "device_internal.h",
     "devmgr.c",
     "devmgr.h",
