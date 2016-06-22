@@ -15,24 +15,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-typedef int (*comparator)(const void*, const void*);
-
-#include <stdio.h>
-
-static void verify_sorted(char* array, size_t length, size_t element_size, comparator cmp) {
-    assert(length > 0);
-
-    for (size_t idx = 1; idx < length; idx++) {
-        char* left = array + (idx - 1) * element_size;
-        char* right = array + idx * element_size;
-        int c = cmp(left, right);
-        if (c > 0) {
-            printf("%zu %zu\n", idx - 1, idx);
-            abort();
-        }
-    }
-}
+#include <mxu/unittest.h>
 
 static int uint32_t_cmp(const void* void_left, const void* void_right) {
     uint32_t left = *(const uint32_t*)void_left;
@@ -64,7 +47,29 @@ static uint32_t test_data[] = {
     0x56c2ae32, 0xdd9e52d3, 0x86f7cf57, 0x58c320ca, 0xdfc296d4, 0x6681d69e, 0x43a27d19, 0xd37988f5,
 };
 
+static bool qsort_test(void) {
+    BEGIN_TEST;
+
+    size_t length = sizeof(test_data) / sizeof(*test_data);
+
+    qsort(test_data, length, sizeof(*test_data), uint32_t_cmp);
+
+    for (size_t idx = 1; idx < length; idx++) {
+        uint32_t* left = test_data + idx - 1;
+        uint32_t* right = test_data + idx;
+        int c = uint32_t_cmp(left, right);
+        EXPECT_LT(c, 0, "array not sorted!");
+    }
+
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(qsort_tests)
+RUN_TEST(qsort_test)
+END_TEST_CASE(qsort_tests)
+
 int main(void) {
-    qsort(test_data, sizeof(test_data) / sizeof(*test_data), sizeof(*test_data), uint32_t_cmp);
-    verify_sorted((char*)test_data, sizeof(test_data) / sizeof(*test_data), sizeof(*test_data), uint32_t_cmp);
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_qsort_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
