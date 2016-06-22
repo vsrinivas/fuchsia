@@ -63,12 +63,9 @@ enum {
     SPIN_LOCK_FLAG_FIQ              = 0x80000000, /* Do not use unless IRQs are already disabled */
     SPIN_LOCK_FLAG_IRQ_FIQ          = SPIN_LOCK_FLAG_IRQ | SPIN_LOCK_FLAG_FIQ,
 
-    /* Generic flags */
-    SPIN_LOCK_FLAG_INTERRUPTS       = SPIN_LOCK_FLAG_IRQ,
+    /* default arm flag is to just disable plain irqs */
+    ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS = SPIN_LOCK_FLAG_IRQ
 };
-
-/* default arm flag is to just disable plain irqs */
-#define ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS  SPIN_LOCK_FLAG_INTERRUPTS
 
 enum {
     /* private */

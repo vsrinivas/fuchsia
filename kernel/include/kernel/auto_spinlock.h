@@ -8,7 +8,7 @@
 
 #include <kernel/spinlock.h>
 
-template <unsigned int flags = ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS>
+template <unsigned int flags = SPIN_LOCK_FLAG_INTERRUPTS>
 class AutoSpinLock {
 public:
     inline explicit AutoSpinLock(spin_lock_t* lock) : lock_(lock) {
