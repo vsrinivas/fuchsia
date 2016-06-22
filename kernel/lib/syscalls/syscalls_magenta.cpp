@@ -82,7 +82,8 @@ struct WaitHelper {
     ~WaitHelper() { DEBUG_ASSERT(dispatcher.get() == nullptr); }
 
     status_t Begin(Handle* handle, event_t* event, mx_signals_t signals) {
-        waiter = handle->dispatcher()->get_waiter();
+        dispatcher = handle->dispatcher();
+        waiter = dispatcher->get_waiter();
         if (!waiter)
             return ERR_NOT_SUPPORTED;
         waiter->BeginWait(event, handle, signals);
@@ -90,6 +91,7 @@ struct WaitHelper {
     }
 
     mx_signals_t End(event_t* event) {
+        DEBUG_ASSERT(dispatcher);
         auto s = waiter->FinishWait(event);
         dispatcher.reset();
         return s;
