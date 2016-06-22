@@ -74,8 +74,7 @@ source_set("thread") {
     "pthread_mutexattr_setprotocol.c",
     "pthread_mutexattr_setrobust.c",
     "pthread_mutexattr_settype.c",
-
-    #"pthread_once.c",
+    "pthread_once.c",
     "pthread_rwlock_destroy.c",
     "pthread_rwlock_init.c",
     "pthread_rwlock_rdlock.c",
