@@ -53,6 +53,11 @@ void sys_exit(int retcode) {
 mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
     LTRACEF("nseconds %llu\n", nanoseconds);
 
+    if (nanoseconds == 0ull) {
+        thread_yield();
+        return NO_ERROR;
+    }
+
     lk_time_t t = mx_time_to_lk(nanoseconds);
     if ((nanoseconds > 0ull) && (t == 0u))
         t = 1u;
