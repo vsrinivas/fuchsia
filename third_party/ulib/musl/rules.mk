@@ -1169,9 +1169,6 @@ MODULE_SRCS += \
 #    $(LOCAL_DIR)/src/unistd/read.c \
 #    $(LOCAL_DIR)/src/unistd/write.c \
 
-# so mxio knows to use the new hooks
-GLOBAL_CFLAGS += -DWITH_LIBC_IO_HOOKS
-
 ifeq ($(ARCH),arm64)
 MODULE_SRCS += \
     $(LOCAL_DIR)/src/fenv/aarch64/fenv.s \

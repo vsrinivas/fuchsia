@@ -84,13 +84,8 @@ static void mxio_exit(void) {
 }
 
 // hook into musl FILE* io
-#if WITH_LIBC_IO_HOOKS
 #define __open __libc_io_open
 #define __close __libc_io_close
-#else
-#define __open open
-#define __close close
-#endif
 
 ssize_t __libc_io_write(int fd, const void* data, size_t len) {
     return write(fd, data, len);

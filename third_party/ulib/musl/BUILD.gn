@@ -64,7 +64,6 @@ config("musl_config") {
 
 config("_musl_config") {
   visibility = [ ":*" ]
-  defines = [ "WITH_LIBC_IO_HOOKS=1" ]
   include_dirs = [ "include" ]
 }
 

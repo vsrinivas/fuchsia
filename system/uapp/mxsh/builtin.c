@@ -141,7 +141,6 @@ static int mxc_ls(int argc, char** argv) {
     return r;
 }
 
-#if WITH_LIBC_IO_HOOKS
 static int mxc_list(int argc, char** argv) {
     char line[1024];
     FILE* fp;
@@ -164,7 +163,6 @@ static int mxc_list(int argc, char** argv) {
     fclose(fp);
     return 0;
 }
-#endif
 
 static int mxc_cp(int argc, char** argv) {
     char data[4096];
