@@ -14,6 +14,7 @@
 
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
+#include <mxu/unittest.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +24,7 @@ static mxr_mutex_t mutex = MXR_MUTEX_INIT;
 
 static void xlog(const char* str) {
     uint64_t now = _magenta_current_time();
-    printf("[%08llu.%08llu]: %s", now / 1000000000, now % 1000000000, str);
+    unittest_printf("[%08llu.%08llu]: %s", now / 1000000000, now % 1000000000, str);
 }
 
 static int mutex_thread_1(void* arg) {
@@ -68,17 +69,18 @@ static int mutex_thread_3(void* arg) {
     return 0;
 }
 
-static void test_initializer(void) {
+static bool test_initializer(void) {
+    BEGIN_TEST;
     // Let's not accidentally break .bss'd mutexes
     static mxr_mutex_t static_mutex;
     mxr_mutex_t mutex = MXR_MUTEX_INIT;
-    if (memcmp(&static_mutex, &mutex, sizeof(mxr_mutex_t))) {
-        printf("mxr_mutex's initializer is not all zeroes\n");
-        exit(-1);
-    }
+    int status = memcmp(&static_mutex, &mutex, sizeof(mxr_mutex_t));
+    EXPECT_EQ(status, 0, "mxr_mutex's initializer is not all zeroes");
+    END_TEST;
 }
 
-static void test_mutexes(void) {
+static bool test_mutexes(void) {
+    BEGIN_TEST;
     mx_handle_t handle1, handle2, handle3;
 
     handle1 = _magenta_thread_create(mutex_thread_1, NULL, "thread 1", 9);
@@ -92,11 +94,17 @@ static void test_mutexes(void) {
     _magenta_handle_close(handle1);
     _magenta_handle_close(handle2);
     _magenta_handle_close(handle3);
+    END_TEST;
 }
 
-int main(int argc, char** argv) {
-    test_initializer();
-    test_mutexes();
 
-    return 0;
+BEGIN_TEST_CASE(mxr_mutex_tests)
+RUN_TEST(test_initializer)
+RUN_TEST(test_mutexes)
+END_TEST_CASE(mxr_mutex_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_mxr_mutex_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }

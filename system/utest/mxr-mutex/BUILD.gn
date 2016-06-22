@@ -22,6 +22,7 @@ test("mxr-mutex") {
   deps = [
     "//system/ulib/magenta",
     "//system/ulib/mxio",
+    "//system/ulib/mxu",
     "//system/ulib/runtime",
     "//third_party/ulib/musl",
   ]

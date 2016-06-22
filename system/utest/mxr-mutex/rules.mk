@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := mxr-mutex-test
 
 # Depend on musl for now for crt and printf
-MODULE_DEPS := ulib/musl ulib/runtime ulib/mxio ulib/magenta
+MODULE_DEPS := ulib/musl ulib/runtime ulib/mxio ulib/magenta ulib/mxu
 
 include make/module.mk
