@@ -16,18 +16,22 @@
 #include <stdlib.h>
 
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 
 #define CHECK(f, expected, message)                                 \
     do {                                                            \
-        if ((ret = (f)) != (expected)) {                            \
-            printf("Test failed (%s): " #f " returned %d vs. %d\n", \
+        mx_status_t ret = (f);                                                  \
+        char msg[32];                                               \
+        snprintf(msg, sizeof(msg), "Test failed (%s): " #f " returned %d vs. %d\n",     \
                    message, (int)ret, (int)expected);               \
+        EXPECT_EQ(ret, (int)(expected), msg);                            \
+        if ((ret = (f)) != (expected)) {                            \
             return __LINE__;                                        \
         }                                                           \
     } while (0)
 
-int main(void) {
-    mx_status_t ret;
+bool handle_info_test(void) {
+    BEGIN_TEST;
 
     mx_handle_t event = _magenta_event_create(0u);
     mx_handle_t duped = _magenta_handle_duplicate(event);
@@ -57,6 +61,16 @@ int main(void) {
     if (info.rights != evr)
         CHECK(0, 1, "wrong set of rights");
 
-    printf("Done\n");
-    return 0;
+    unittest_printf("Done\n");
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(handle_info_tests)
+RUN_TEST(handle_info_test)
+END_TEST_CASE(handle_info_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_handle_info_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
