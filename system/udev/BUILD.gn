@@ -16,6 +16,7 @@ group("udev") {
   deps = [
     "bochs-vbe",
     "console",
+    "gfxconsole",
     "i8042-keyboard",
     "intel-i915",
     "intel-rtc",
