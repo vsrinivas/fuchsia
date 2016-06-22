@@ -18,6 +18,7 @@ function HELP {
 
 FAIL_FAST=0
 DO_RELEASE=0
+MAGENTA_ONLY=0
 
 while getopts fhmr FLAG; do
     case $FLAG in
