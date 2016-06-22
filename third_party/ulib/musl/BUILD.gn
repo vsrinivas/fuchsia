@@ -279,7 +279,6 @@ copy("copy_include_sys") {
     "include/sys/stropts.h",
     "include/sys/swap.h",
     "include/sys/syscall.h",
-    "include/sys/sysinfo.h",
     "include/sys/syslog.h",
     "include/sys/sysmacros.h",
     "include/sys/termios.h",

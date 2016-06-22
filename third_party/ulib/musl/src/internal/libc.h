@@ -38,7 +38,6 @@ extern struct __libc __libc ATTR_LIBC_VISIBILITY;
 #define libc __libc
 
 extern size_t __hwcap ATTR_LIBC_VISIBILITY;
-extern size_t __sysinfo ATTR_LIBC_VISIBILITY;
 extern char *__progname, *__progname_full;
 
 int __lockfile(FILE*) ATTR_LIBC_VISIBILITY;

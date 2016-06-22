@@ -6,7 +6,6 @@ source_set("conf") {
   sources = [
     "confstr.c",
     "fpathconf.c",
-    "legacy.c",
     "pathconf.c",
     "sysconf.c",
   ]

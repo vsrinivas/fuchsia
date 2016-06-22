@@ -123,7 +123,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/third_party/complex/ctanhf.c \
     $(LOCAL_DIR)/src/conf/confstr.c \
     $(LOCAL_DIR)/src/conf/fpathconf.c \
-    $(LOCAL_DIR)/src/conf/legacy.c \
     $(LOCAL_DIR)/src/conf/pathconf.c \
     $(LOCAL_DIR)/src/conf/sysconf.c \
     $(LOCAL_DIR)/src/crypt/crypt.c \

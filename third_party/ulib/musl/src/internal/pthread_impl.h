@@ -25,7 +25,6 @@ struct __mx_thread_info {
 struct pthread {
     struct pthread* self;
     void **dtv, *unused1, *unused2;
-    uintptr_t sysinfo;
     uintptr_t canary, canary2;
     pid_t tid, pid;
     int tsd_used;

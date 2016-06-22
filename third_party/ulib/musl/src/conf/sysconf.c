@@ -4,7 +4,6 @@
 #include <limits.h>
 #include <signal.h>
 #include <sys/resource.h>
-#include <sys/sysinfo.h>
 #include <unistd.h>
 
 #define JT(x) (-256 | (x))
@@ -188,7 +187,7 @@ long sysconf(int name) {
     case JT_SEM_VALUE_MAX & 255:
         return SEM_VALUE_MAX;
     case JT_NPROCESSORS_CONF & 255:
-    case JT_NPROCESSORS_ONLN & 255:;
+    case JT_NPROCESSORS_ONLN & 255: {
         unsigned char set[128] = {1};
         int i, cnt;
         __syscall(SYS_sched_getaffinity, 0, sizeof set, set);
@@ -196,21 +195,22 @@ long sysconf(int name) {
             for (; set[i]; set[i] &= set[i] - 1, cnt++)
                 ;
         return cnt;
+    }
     case JT_PHYS_PAGES & 255:
-    case JT_AVPHYS_PAGES & 255:;
-        unsigned long long mem;
-        int __lsysinfo(struct sysinfo*);
-        struct sysinfo si;
-        __lsysinfo(&si);
-        if (!si.mem_unit)
-            si.mem_unit = 1;
-        if (name == _SC_PHYS_PAGES)
-            mem = si.totalram;
-        else
-            mem = si.freeram + si.bufferram;
-        mem *= si.mem_unit;
-        mem /= PAGE_SIZE;
-        return (mem > LONG_MAX) ? LONG_MAX : mem;
+    case JT_AVPHYS_PAGES & 255:
+        // TODO(kulakowski) Ask magenta for physical memory allocation
+
+        // Note that on Linux the calculation looks like this
+        // depending on whether _SC_PHYS_PAGES was asked for or not:
+        // if (name == _SC_PHYS_PAGES)
+        //     mem = si.totalram;
+        // else
+        //     mem = si.freeram + si.bufferram;
+        // mem *= si.mem_unit;
+        // mem /= PAGE_SIZE;
+        // return (mem > LONG_MAX) ? LONG_MAX : mem;
+        errno = EINVAL;
+        return -1;
     case JT_ZERO & 255:
         return 0;
     }
