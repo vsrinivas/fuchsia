@@ -501,6 +501,9 @@ typedef struct xhci {
             uint32_t res;
             uint32_t erstba_lo;
             uint32_t erstba_hi;
+#define ERDP_DESI_MASK (0x7 << 0)
+#define ERDP_EHB       (0x1 << 3)
+#define ERDP_ADDR_MASK (0xFFFFFFFFFFFFFFF0ull)
             uint32_t erdp_lo;
             uint32_t erdp_hi;
         } __attribute__((packed)) intrrs[]; // up to 1024, but maximum host specific, given in capreg->MaxIntrs

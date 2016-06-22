@@ -29,6 +29,7 @@
 
 //#define XHCI_SPEW_DEBUG
 
+#include <assert.h>
 #include <unistd.h>
 #include "xhci-private.h"
 
@@ -52,8 +53,24 @@ void xhci_update_event_dq(xhci_t* const xhci) {
         xhci_spew("Updating dq ptr: @%p(0x%08" PRIx32 ") -> %p\n",
                   xhci_phys_to_virt(xhci, xhci->hcrreg->intrrs[0].erdp_lo),
                   xhci->hcrreg->intrrs[0].erdp_lo, xhci->er.cur);
-        xhci->hcrreg->intrrs[0].erdp_lo = xhci_virt_to_phys(xhci, (mx_vaddr_t)xhci->er.cur);
-        xhci->hcrreg->intrrs[0].erdp_hi = 0;
+
+        uint64_t next_erdp = xhci_virt_to_phys(xhci, (mx_vaddr_t)xhci->er.cur);
+        assert(!(next_erdp & ~ERDP_ADDR_MASK));
+
+        // Clear the EHB (Event Handler Busy) bit by writing a 1 to it.
+        next_erdp |= ERDP_EHB;
+
+        // TODO(johngro) : Or in the DESI (Dequeue ERST Segment Index) based on
+        // the segment which contains the new Dequeue pointer value we are
+        // updating the ERDP with.  Right now, this system only supports a
+        // single segment, so the DESI value will always be 0.
+        //
+        // See section 5.5.2.3.3 of the XHCI spec, rev 1.1
+        //
+        // next_erdp |= (xhci->er.cur_segment & ERDP_DESI_MASK);
+        
+        xhci->hcrreg->intrrs[0].erdp_lo = (uint32_t)(next_erdp & 0xFFFFFFFF);
+        xhci->hcrreg->intrrs[0].erdp_hi = (uint32_t)(next_erdp >> 32);
         xhci->er.adv = 0;
     }
 }
