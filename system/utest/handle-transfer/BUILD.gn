@@ -23,6 +23,7 @@ test("handle-transfer") {
     "//system/ulib/magenta",
     "//system/ulib/mojo",
     "//system/ulib/mxio",
+    "//system/ulib/mxu",
     "//system/ulib/runtime",
     "//third_party/ulib/musl",
   ]
