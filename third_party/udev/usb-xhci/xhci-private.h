@@ -372,9 +372,9 @@ typedef struct xhci {
         union {
             uint32_t hcsparams1;
             struct {
-                unsigned long MaxSlots : 7;
+                unsigned long MaxSlots : 8;
                 unsigned long MaxIntrs : 11;
-                unsigned long : 6;
+                unsigned long : 5;
                 unsigned long MaxPorts : 8;
             } __attribute__((packed));
         } __attribute__((packed));
@@ -426,12 +426,16 @@ typedef struct xhci {
 #define USBCMD_HCRST 1 << 1
 #define USBCMD_INTE 1 << 2
         uint32_t usbsts;
-#define USBSTS_HCH 1 << 0
-#define USBSTS_HSE 1 << 2
-#define USBSTS_EINT 1 << 3
-#define USBSTS_PCD 1 << 4
-#define USBSTS_CNR 1 << 11
-#define USBSTS_PRSRV_MASK ((1 << 1) | 0xffffe000)
+#define USBSTS_HCH  (1 << 0)
+#define USBSTS_HSE  (1 << 2)
+#define USBSTS_EINT (1 << 3)
+#define USBSTS_PCD  (1 << 4)
+#define USBSTS_SSS  (1 << 8)
+#define USBSTS_RSS  (1 << 9)
+#define USBSTS_SRE  (1 << 10)
+#define USBSTS_CNR  (1 << 11)
+#define USBSTS_HCE  (1 << 12)
+#define USBSTS_PRSRV_MASK (0xffffe000)
         uint32_t pagesize;
         uint8_t res1[0x13 - 0x0c + 1];
         uint32_t dnctrl;
