@@ -50,6 +50,94 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/magenta/linuxisms.c \
     $(LOCAL_DIR)/magenta/new.cpp \
     $(LOCAL_DIR)/magenta/pure_virtual.c \
+    $(LOCAL_DIR)/pthread/pthread_atfork.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_get.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_init.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setdetachstate.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setguardsize.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setinheritsched.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setschedparam.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setschedpolicy.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setscope.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setstack.c \
+    $(LOCAL_DIR)/pthread/pthread_attr_setstacksize.c \
+    $(LOCAL_DIR)/pthread/pthread_barrier_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_barrier_init.c \
+    $(LOCAL_DIR)/pthread/pthread_barrier_wait.c \
+    $(LOCAL_DIR)/pthread/pthread_barrierattr_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_barrierattr_init.c \
+    $(LOCAL_DIR)/pthread/pthread_cancel.c \
+    $(LOCAL_DIR)/pthread/pthread_cleanup_push.c \
+    $(LOCAL_DIR)/pthread/pthread_cond_broadcast.c \
+    $(LOCAL_DIR)/pthread/pthread_cond_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_cond_init.c \
+    $(LOCAL_DIR)/pthread/pthread_cond_signal.c \
+    $(LOCAL_DIR)/pthread/pthread_cond_timedwait.c \
+    $(LOCAL_DIR)/pthread/pthread_cond_wait.c \
+    $(LOCAL_DIR)/pthread/pthread_condattr_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_condattr_init.c \
+    $(LOCAL_DIR)/pthread/pthread_condattr_setclock.c \
+    $(LOCAL_DIR)/pthread/pthread_create.c \
+    $(LOCAL_DIR)/pthread/pthread_detach.c \
+    $(LOCAL_DIR)/pthread/pthread_equal.c \
+    $(LOCAL_DIR)/pthread/pthread_getattr_np.c \
+    $(LOCAL_DIR)/pthread/pthread_getconcurrency.c \
+    $(LOCAL_DIR)/pthread/pthread_getcpuclockid.c \
+    $(LOCAL_DIR)/pthread/pthread_getschedparam.c \
+    $(LOCAL_DIR)/pthread/pthread_getspecific.c \
+    $(LOCAL_DIR)/pthread/pthread_join.c \
+    $(LOCAL_DIR)/pthread/pthread_key_create.c \
+    $(LOCAL_DIR)/pthread/pthread_kill.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_consistent.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_getprioceiling.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_init.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_lock.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_setprioceiling.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_timedlock.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_trylock.c \
+    $(LOCAL_DIR)/pthread/pthread_mutex_unlock.c \
+    $(LOCAL_DIR)/pthread/pthread_mutexattr_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_mutexattr_init.c \
+    $(LOCAL_DIR)/pthread/pthread_mutexattr_setprotocol.c \
+    $(LOCAL_DIR)/pthread/pthread_mutexattr_setrobust.c \
+    $(LOCAL_DIR)/pthread/pthread_mutexattr_settype.c \
+    $(LOCAL_DIR)/pthread/pthread_once.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_init.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_rdlock.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_timedrdlock.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_timedwrlock.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_tryrdlock.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_trywrlock.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_unlock.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlock_wrlock.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlockattr_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_rwlockattr_init.c \
+    $(LOCAL_DIR)/pthread/pthread_self.c \
+    $(LOCAL_DIR)/pthread/pthread_setcancelstate.c \
+    $(LOCAL_DIR)/pthread/pthread_setcanceltype.c \
+    $(LOCAL_DIR)/pthread/pthread_setconcurrency.c \
+    $(LOCAL_DIR)/pthread/pthread_setschedparam.c \
+    $(LOCAL_DIR)/pthread/pthread_setschedprio.c \
+    $(LOCAL_DIR)/pthread/pthread_setspecific.c \
+    $(LOCAL_DIR)/pthread/pthread_sigmask.c \
+    $(LOCAL_DIR)/pthread/pthread_spin_destroy.c \
+    $(LOCAL_DIR)/pthread/pthread_spin_init.c \
+    $(LOCAL_DIR)/pthread/pthread_spin_lock.c \
+    $(LOCAL_DIR)/pthread/pthread_spin_trylock.c \
+    $(LOCAL_DIR)/pthread/pthread_spin_unlock.c \
+    $(LOCAL_DIR)/pthread/pthread_testcancel.c \
+    $(LOCAL_DIR)/pthread/sem_destroy.c \
+    $(LOCAL_DIR)/pthread/sem_getvalue.c \
+    $(LOCAL_DIR)/pthread/sem_init.c \
+    $(LOCAL_DIR)/pthread/sem_open.c \
+    $(LOCAL_DIR)/pthread/sem_post.c \
+    $(LOCAL_DIR)/pthread/sem_timedwait.c \
+    $(LOCAL_DIR)/pthread/sem_trywait.c \
+    $(LOCAL_DIR)/pthread/sem_unlink.c \
+    $(LOCAL_DIR)/pthread/sem_wait.c \
     $(LOCAL_DIR)/src/aio/aio.c \
     $(LOCAL_DIR)/src/aio/aio_suspend.c \
     $(LOCAL_DIR)/src/aio/lio_listio.c \
@@ -106,21 +194,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/complex/ctanf.c \
     $(LOCAL_DIR)/src/complex/ctanhl.c \
     $(LOCAL_DIR)/src/complex/ctanl.c \
-    $(LOCAL_DIR)/third_party/complex/__cexp.c \
-    $(LOCAL_DIR)/third_party/complex/__cexpf.c \
-    $(LOCAL_DIR)/third_party/complex/catan.c \
-    $(LOCAL_DIR)/third_party/complex/catanf.c \
-    $(LOCAL_DIR)/third_party/complex/catanl.c \
-    $(LOCAL_DIR)/third_party/complex/ccosh.c \
-    $(LOCAL_DIR)/third_party/complex/ccoshf.c \
-    $(LOCAL_DIR)/third_party/complex/cexp.c \
-    $(LOCAL_DIR)/third_party/complex/cexpf.c \
-    $(LOCAL_DIR)/third_party/complex/csinh.c \
-    $(LOCAL_DIR)/third_party/complex/csinhf.c \
-    $(LOCAL_DIR)/third_party/complex/csqrt.c \
-    $(LOCAL_DIR)/third_party/complex/csqrtf.c \
-    $(LOCAL_DIR)/third_party/complex/ctanh.c \
-    $(LOCAL_DIR)/third_party/complex/ctanhf.c \
     $(LOCAL_DIR)/src/conf/confstr.c \
     $(LOCAL_DIR)/src/conf/fpathconf.c \
     $(LOCAL_DIR)/src/conf/pathconf.c \
@@ -876,94 +949,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/thread/mtx_timedlock.c \
     $(LOCAL_DIR)/src/thread/mtx_trylock.c \
     $(LOCAL_DIR)/src/thread/mtx_unlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_atfork.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_get.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setdetachstate.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setguardsize.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setinheritsched.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setschedparam.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setschedpolicy.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setscope.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setstack.c \
-    $(LOCAL_DIR)/src/thread/pthread_attr_setstacksize.c \
-    $(LOCAL_DIR)/src/thread/pthread_barrier_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_barrier_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_barrier_wait.c \
-    $(LOCAL_DIR)/src/thread/pthread_barrierattr_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_barrierattr_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_cancel.c \
-    $(LOCAL_DIR)/src/thread/pthread_cleanup_push.c \
-    $(LOCAL_DIR)/src/thread/pthread_cond_broadcast.c \
-    $(LOCAL_DIR)/src/thread/pthread_cond_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_cond_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_cond_signal.c \
-    $(LOCAL_DIR)/src/thread/pthread_cond_timedwait.c \
-    $(LOCAL_DIR)/src/thread/pthread_cond_wait.c \
-    $(LOCAL_DIR)/src/thread/pthread_condattr_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_condattr_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_condattr_setclock.c \
-    $(LOCAL_DIR)/src/thread/pthread_create.c \
-    $(LOCAL_DIR)/src/thread/pthread_detach.c \
-    $(LOCAL_DIR)/src/thread/pthread_equal.c \
-    $(LOCAL_DIR)/src/thread/pthread_getattr_np.c \
-    $(LOCAL_DIR)/src/thread/pthread_getconcurrency.c \
-    $(LOCAL_DIR)/src/thread/pthread_getcpuclockid.c \
-    $(LOCAL_DIR)/src/thread/pthread_getschedparam.c \
-    $(LOCAL_DIR)/src/thread/pthread_getspecific.c \
-    $(LOCAL_DIR)/src/thread/pthread_join.c \
-    $(LOCAL_DIR)/src/thread/pthread_key_create.c \
-    $(LOCAL_DIR)/src/thread/pthread_kill.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_consistent.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_getprioceiling.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_lock.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_setprioceiling.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_timedlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_trylock.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutex_unlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutexattr_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutexattr_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutexattr_setprotocol.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutexattr_setrobust.c \
-    $(LOCAL_DIR)/src/thread/pthread_mutexattr_settype.c \
-    $(LOCAL_DIR)/src/thread/pthread_once.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_rdlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_timedrdlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_timedwrlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_tryrdlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_trywrlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_unlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlock_wrlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlockattr_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_rwlockattr_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_self.c \
-    $(LOCAL_DIR)/src/thread/pthread_setcancelstate.c \
-    $(LOCAL_DIR)/src/thread/pthread_setcanceltype.c \
-    $(LOCAL_DIR)/src/thread/pthread_setconcurrency.c \
-    $(LOCAL_DIR)/src/thread/pthread_setschedparam.c \
-    $(LOCAL_DIR)/src/thread/pthread_setschedprio.c \
-    $(LOCAL_DIR)/src/thread/pthread_setspecific.c \
-    $(LOCAL_DIR)/src/thread/pthread_sigmask.c \
-    $(LOCAL_DIR)/src/thread/pthread_spin_destroy.c \
-    $(LOCAL_DIR)/src/thread/pthread_spin_init.c \
-    $(LOCAL_DIR)/src/thread/pthread_spin_lock.c \
-    $(LOCAL_DIR)/src/thread/pthread_spin_trylock.c \
-    $(LOCAL_DIR)/src/thread/pthread_spin_unlock.c \
-    $(LOCAL_DIR)/src/thread/pthread_testcancel.c \
-    $(LOCAL_DIR)/src/thread/sem_destroy.c \
-    $(LOCAL_DIR)/src/thread/sem_getvalue.c \
-    $(LOCAL_DIR)/src/thread/sem_init.c \
-    $(LOCAL_DIR)/src/thread/sem_open.c \
-    $(LOCAL_DIR)/src/thread/sem_post.c \
-    $(LOCAL_DIR)/src/thread/sem_timedwait.c \
-    $(LOCAL_DIR)/src/thread/sem_trywait.c \
-    $(LOCAL_DIR)/src/thread/sem_unlink.c \
-    $(LOCAL_DIR)/src/thread/sem_wait.c \
     $(LOCAL_DIR)/src/thread/thrd_create.c \
     $(LOCAL_DIR)/src/thread/thrd_exit.c \
     $(LOCAL_DIR)/src/thread/thrd_join.c \
@@ -1089,6 +1074,21 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/unlinkat.c \
     $(LOCAL_DIR)/src/unistd/usleep.c \
     $(LOCAL_DIR)/src/unistd/writev.c \
+    $(LOCAL_DIR)/third_party/complex/__cexp.c \
+    $(LOCAL_DIR)/third_party/complex/__cexpf.c \
+    $(LOCAL_DIR)/third_party/complex/catan.c \
+    $(LOCAL_DIR)/third_party/complex/catanf.c \
+    $(LOCAL_DIR)/third_party/complex/catanl.c \
+    $(LOCAL_DIR)/third_party/complex/ccosh.c \
+    $(LOCAL_DIR)/third_party/complex/ccoshf.c \
+    $(LOCAL_DIR)/third_party/complex/cexp.c \
+    $(LOCAL_DIR)/third_party/complex/cexpf.c \
+    $(LOCAL_DIR)/third_party/complex/csinh.c \
+    $(LOCAL_DIR)/third_party/complex/csinhf.c \
+    $(LOCAL_DIR)/third_party/complex/csqrt.c \
+    $(LOCAL_DIR)/third_party/complex/csqrtf.c \
+    $(LOCAL_DIR)/third_party/complex/ctanh.c \
+    $(LOCAL_DIR)/third_party/complex/ctanhf.c \
     $(LOCAL_DIR)/third_party/math/__cos.c \
     $(LOCAL_DIR)/third_party/math/__cosdf.c \
     $(LOCAL_DIR)/third_party/math/__cosl.c \
