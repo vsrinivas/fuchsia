@@ -21,9 +21,9 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/fputest.c
 
-MODULE_NAME := fputest-broken
+MODULE_NAME := fpu-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta
+    ulib/musl ulib/mxio ulib/magenta ulib/mxu
 
 include make/module.mk

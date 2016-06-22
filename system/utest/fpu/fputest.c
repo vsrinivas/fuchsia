@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 
 #define THREAD_COUNT 8
 #define ITER 1000000
@@ -45,7 +46,7 @@ static int float_thread(void* arg) {
     unsigned int i, j;
     double a[16];
 
-    printf("float_thread arg %f, running %u iterations\n", *val, ITER);
+    unittest_printf("float_thread arg %f, running %u iterations\n", *val, ITER);
     usleep(500000);
 
     /* do a bunch of work with floating point to test context switching */
@@ -66,15 +67,17 @@ static int float_thread(void* arg) {
     return 0;
 }
 
-int main(void) {
-    printf("welcome to floating point test\n");
+bool fpu_test(void) {
+    BEGIN_TEST;
+
+    unittest_printf("welcome to floating point test\n");
 
     /* test lazy fpu load on separate thread */
     mx_handle_t t[THREAD_COUNT];
     double val[countof(t)];
     char name[MX_MAX_NAME_LEN];
 
-    printf("creating %zu floating point threads\n", countof(t));
+    unittest_printf("creating %zu floating point threads\n", countof(t));
     for (unsigned int i = 0; i < countof(t); i++) {
         val[i] = i;
         snprintf(name, sizeof(name), "fpu thread %u", i);
@@ -87,14 +90,22 @@ int main(void) {
         void* v = &val[i];
         uint64_t int64_val = *(uint64_t*)v;
 
-        printf("float thread %u returns val %f 0x%llx, expected 0x%llx\n", i, val[i], int64_val, expected[i]);
-
-        if (int64_val != expected[i]) {
-            printf("ERROR: value does not match expected\n");
-        }
+        unittest_printf("float thread %u returns val %f 0x%llx, expected 0x%llx\n", i, val[i], int64_val, expected[i]);
+        EXPECT_EQ(int64_val, expected[i], "Value does not match as expected");
     }
 
-    printf("floating point test done\n");
+    unittest_printf("floating point test done\n");
+    END_TEST;
+}
 
-    return 0;
+BEGIN_TEST_CASE(fpu_tests)
+RUN_TEST(fpu_test);
+END_TEST_CASE(fpu_tests)
+
+int main(int argc, char** argv) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_fpu_tests_element);
+
+    bool success = unittest_run_all_tests();
+    return success ? 0 : -1;
 }
