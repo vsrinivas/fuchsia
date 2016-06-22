@@ -130,7 +130,6 @@ void netifc_poll(void) {
     int r;
 
     while ((r = read(netfd, buffer, sizeof(buffer))) > 0) {
-        printf("(%d)\n", r);
         eth_recv(buffer, r);
     }
 }
