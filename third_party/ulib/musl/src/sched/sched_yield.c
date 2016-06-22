@@ -1,6 +1,8 @@
-#include "syscall.h"
 #include <sched.h>
 
+#include <magenta/syscalls.h>
+
 int sched_yield() {
-    return syscall(SYS_sched_yield);
+    _magenta_nanosleep(0ull);
+    return 0;
 }

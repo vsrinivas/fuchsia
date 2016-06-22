@@ -67,7 +67,6 @@
 #define SYS_sched_getparam 155
 #define SYS_sched_setscheduler 156
 #define SYS_sched_getscheduler 157
-#define SYS_sched_yield 158
 #define SYS_sched_get_priority_max 159
 #define SYS_sched_get_priority_min 160
 #define SYS_sched_rr_get_interval 161

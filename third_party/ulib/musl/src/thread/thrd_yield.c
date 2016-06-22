@@ -1,6 +1,7 @@
-#include "syscall.h"
 #include <threads.h>
 
+#include <magenta/syscalls.h>
+
 void thrd_yield() {
-    __syscall(SYS_sched_yield);
+    _magenta_nanosleep(0ull);
 }

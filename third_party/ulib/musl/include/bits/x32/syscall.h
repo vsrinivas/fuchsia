@@ -18,7 +18,6 @@
 #define __NR_access (__X32_SYSCALL_BIT + 21)
 #define __NR_pipe (__X32_SYSCALL_BIT + 22)
 #define __NR_select (__X32_SYSCALL_BIT + 23)
-#define __NR_sched_yield (__X32_SYSCALL_BIT + 24)
 #define __NR_mremap (__X32_SYSCALL_BIT + 25)
 #define __NR_msync (__X32_SYSCALL_BIT + 26)
 #define __NR_mincore (__X32_SYSCALL_BIT + 27)
@@ -289,7 +288,6 @@
 #define SYS_access __NR_access
 #define SYS_pipe __NR_pipe
 #define SYS_select __NR_select
-#define SYS_sched_yield __NR_sched_yield
 #define SYS_mremap __NR_mremap
 #define SYS_msync __NR_msync
 #define SYS_mincore __NR_mincore

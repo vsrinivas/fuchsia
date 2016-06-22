@@ -11,7 +11,6 @@
 #define SYS_pwrite64 18
 #define SYS_readv 19
 #define SYS_writev 20
-#define SYS_sched_yield 24
 #define SYS_msync 26
 #define SYS_mincore 27
 #define SYS_madvise 28
