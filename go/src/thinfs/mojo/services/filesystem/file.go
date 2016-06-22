@@ -22,21 +22,21 @@ import (
 	"mojo/public/go/bindings"
 	"mojo/public/go/system"
 
-	"fuchsia.googlesource.com/thinfs/lib/ext2fs"
+	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
 
 type file struct {
 	fs    *filesystem
-	file  *ext2fs.File
+	file  fs.File
 	flags common.OpenFlags
 }
 
-func serveFile(fs *filesystem, e2file *ext2fs.File, req mojofile.File_Request, flags common.OpenFlags) {
+func serveFile(fs *filesystem, vfile fs.File, req mojofile.File_Request, flags common.OpenFlags) {
 	f := &file{
 		fs:    fs,
-		file:  e2file,
+		file:  vfile,
 		flags: flags,
 	}
 	stub := mojofile.NewFileStub(req, f, bindings.GetAsyncWaiter())

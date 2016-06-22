@@ -25,7 +25,7 @@ import (
 	"mojo/public/go/bindings"
 	"mojo/public/go/system"
 
-	"fuchsia.googlesource.com/thinfs/lib/ext2fs"
+	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
@@ -33,33 +33,33 @@ import (
 // dir holds a pointer to an inode and any connection-specific state.
 type dir struct {
 	fs    *filesystem
-	dir   *ext2fs.Dir
+	dir   fs.Directory
 	flags common.OpenFlags
 }
 
 func convertError(err error) (mojoerr.Error, error) {
 	switch errors.Cause(err) {
-	case ext2fs.ErrAlreadyExists:
+	case fs.ErrAlreadyExists:
 		return mojoerr.Error_AlreadyExists, nil
-	case ext2fs.ErrNotFound:
+	case fs.ErrNotFound:
 		return mojoerr.Error_NotFound, nil
-	case ext2fs.ErrNotADir:
+	case fs.ErrNotADir:
 		return mojoerr.Error_FailedPrecondition, nil
-	case ext2fs.ErrNotAFile:
+	case fs.ErrNotAFile:
 		return mojoerr.Error_FailedPrecondition, nil
-	case ext2fs.ErrNotEmpty:
+	case fs.ErrNotEmpty:
 		return mojoerr.Error_FailedPrecondition, nil
-	case ext2fs.ErrIsActive:
+	case fs.ErrIsActive:
 		return mojoerr.Error_FailedPrecondition, nil
 	default:
 		return mojoerr.Error_Internal, err
 	}
 }
 
-func serveDirectory(fs *filesystem, e2dir *ext2fs.Dir, req directory.Directory_Request, flags common.OpenFlags) {
+func serveDirectory(fs *filesystem, vdir fs.Directory, req directory.Directory_Request, flags common.OpenFlags) {
 	d := &dir{
 		fs:    fs,
-		dir:   e2dir,
+		dir:   vdir,
 		flags: flags,
 	}
 	stub := directory.NewDirectoryStub(req, d, bindings.GetAsyncWaiter())
@@ -87,11 +87,11 @@ func serveDirectory(fs *filesystem, e2dir *ext2fs.Dir, req directory.Directory_R
 	}()
 }
 
-func convertFileType(ft ext2fs.FileType) directory.FileType {
+func convertFileType(ft fs.FileType) directory.FileType {
 	switch ft {
-	case ext2fs.Directory:
+	case fs.FileTypeDirectory:
 		return directory.FileType_Directory
-	case ext2fs.RegularFile:
+	case fs.FileTypeRegularFile:
 		return directory.FileType_RegularFile
 	default:
 		return directory.FileType_Unknown
@@ -114,8 +114,8 @@ func (d *dir) Read() (*[]directory.DirectoryEntry, mojoerr.Error, error) {
 	out := make([]directory.DirectoryEntry, len(entries))
 	for i, entry := range entries {
 		out[i] = directory.DirectoryEntry{
-			Type: convertFileType(entry.Type),
-			Name: entry.Name,
+			Type: convertFileType(entry.GetType()),
+			Name: entry.GetName(),
 		}
 	}
 	return &out, mojoerr.Error_Ok, nil
@@ -137,8 +137,8 @@ func (d *dir) ReadTo(src system.ProducerHandle) (mojoerr.Error, error) {
 	go func() {
 		for _, e := range entries {
 			dirent := &directory.DirectoryEntry{
-				Type: convertFileType(e.Type),
-				Name: e.Name,
+				Type: convertFileType(e.GetType()),
+				Name: e.GetName(),
 			}
 			encoder := bindings.NewEncoder()
 			if err := dirent.Encode(encoder); err != nil {
@@ -220,12 +220,12 @@ func (d *dir) OpenFile(filepath string, req mojofile.File_Request, flags common.
 		return flagerr, nil
 	}
 
-	var oflags ext2fs.OpenFlags
+	var oflags fs.OpenFlags
 	if flags&common.OpenFlags_Create != 0 {
-		oflags |= ext2fs.Create
+		oflags |= fs.OpenFlagCreate
 	}
 	if flags&common.OpenFlags_Exclusive != 0 {
-		oflags |= ext2fs.Exclusive
+		oflags |= fs.OpenFlagExclusive
 	}
 
 	newfile, err := d.dir.OpenFile(cleanpath, oflags)
@@ -258,12 +258,12 @@ func (d *dir) OpenDirectory(dirpath string, req directory.Directory_Request, fla
 		return flagerr, nil
 	}
 
-	var oflags ext2fs.OpenFlags
+	var oflags fs.OpenFlags
 	if flags&common.OpenFlags_Create != 0 {
-		oflags |= ext2fs.Create
+		oflags |= fs.OpenFlagCreate
 	}
 	if flags&common.OpenFlags_Exclusive != 0 {
-		oflags |= ext2fs.Exclusive
+		oflags |= fs.OpenFlagExclusive
 	}
 
 	newdir, err := d.dir.OpenDirectory(cleanPath, oflags)

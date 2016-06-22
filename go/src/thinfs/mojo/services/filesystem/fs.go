@@ -25,7 +25,8 @@ import (
 	"interfaces/filesystem/directory"
 
 	"fuchsia.googlesource.com/thinfs/lib/cpointer"
-	"fuchsia.googlesource.com/thinfs/lib/ext2fs"
+	"fuchsia.googlesource.com/thinfs/lib/fs"
+	"fuchsia.googlesource.com/thinfs/lib/fs/ext2fs"
 	blk "fuchsia.googlesource.com/thinfs/mojo/clients/block"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -34,13 +35,13 @@ import (
 type filesystem struct {
 	sync.Mutex
 	refcnt int
-	ext2   *ext2fs.FS
+	fs     fs.FileSystem
 }
 
 func (fs *filesystem) decRef() {
 	fs.Lock()
 	if fs.refcnt--; fs.refcnt <= 0 {
-		if err := fs.ext2.Close(); err != nil {
+		if err := fs.fs.Close(); err != nil {
 			glog.Error(err)
 		}
 		runtime.SetFinalizer(fs, nil)
@@ -59,15 +60,15 @@ func (Factory) OpenFileSystem(ptr block.Device_Pointer, req directory.Directory_
 	}
 
 	var (
-		flags     common.OpenFlags
-		ext2flags ext2fs.Options
+		openFlags common.OpenFlags
+		fsFlags   fs.FileSystemOptions
 	)
 	if caps := dev.GetCapabilities(); caps == block.Capabilities_ReadWrite {
-		flags = common.OpenFlags_ReadWrite
-		ext2flags = ext2fs.ReadWrite
+		openFlags = common.OpenFlags_ReadWrite
+		fsFlags = fs.ReadWrite
 	} else if caps == block.Capabilities_ReadOnly {
-		flags = common.OpenFlags_ReadOnly
-		ext2flags = ext2fs.ReadOnly
+		openFlags = common.OpenFlags_ReadOnly
+		fsFlags = fs.ReadOnly
 	} else {
 		return mojoerr.Error_PermissionDenied, nil
 	}
@@ -76,22 +77,23 @@ func (Factory) OpenFileSystem(ptr block.Device_Pointer, req directory.Directory_
 	// manager in the ext2fs package will convert it back into a uintptr and use it to
 	// get the device.
 	path := fmt.Sprintf("%#x", cpointer.New(dev))
-	ext2, err := ext2fs.New(path, ext2flags)
+	// TODO(smklein): Use different constructors for different filesystems.
+	vfs, err := ext2fs.New(path, fsFlags)
 	if err != nil {
 		return mojoerr.Error_FailedPrecondition, nil
 	}
 
 	fs := &filesystem{
-		ext2:   ext2,
+		fs:     vfs,
 		refcnt: 1, // refcnt starts at 1 because of the root directory.
 	}
 	runtime.SetFinalizer(fs, func(*filesystem) {
 		glog.Error("Filesystem became unreachable before it was closed.")
-		if err := fs.ext2.Close(); err != nil {
+		if err := fs.fs.Close(); err != nil {
 			glog.Error(err)
 		}
 	})
 
-	serveDirectory(fs, ext2.RootDirectory(), req, flags)
+	serveDirectory(fs, vfs.RootDirectory(), req, openFlags)
 	return mojoerr.Error_Ok, nil
 }
