@@ -142,8 +142,11 @@ void unittest_set_output_function(test_output_func fun, void* arg);
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
  * and that call the EXPECT_ macros.
  */
-#define BEGIN_TEST bool all_ok = true
-#define END_TEST return all_ok
+#define BEGIN_TEST bool all_ok = true, expect_failed = false
+// To remove unused variable error using expect_failed
+#define END_TEST         \
+    (void)expect_failed; \
+    return all_ok
 
 #ifdef __cplusplus
 #define AUTO_TYPE_VAR(type) auto&
@@ -151,18 +154,20 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 #define AUTO_TYPE_VAR(type) __typeof__(type)
 #endif
 
-#define EXPECT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str)                 \
-    do {                                                                \
-        const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                      \
-        const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                      \
-        if (!(_lhs_val op _rhs_val)) {                                  \
-            UNITTEST_TRACEF(                                            \
-                "%s:\n"                                                 \
-                "        Comparison failed: %s %s %s is false\n"        \
-                "        Specifically, %ld %s %ld is false\n",          \
-                msg, lhs_str, #op, rhs_str, _lhs_val, #op, _rhs_val);   \
-            all_ok = false;                                             \
-        }                                                               \
+#define EXPECT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str)               \
+    do {                                                              \
+        expect_failed = false;                                        \
+        const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                    \
+        const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                    \
+        if (!(_lhs_val op _rhs_val)) {                                \
+            UNITTEST_TRACEF(                                          \
+                "%s:\n"                                               \
+                "        Comparison failed: %s %s %s is false\n"      \
+                "        Specifically, %ld %s %ld is false\n",        \
+                msg, lhs_str, #op, rhs_str, _lhs_val, #op, _rhs_val); \
+            all_ok = false;                                           \
+            expect_failed = true;                                     \
+        }                                                             \
     } while (0)
 
 /*
@@ -176,23 +181,30 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 #define EXPECT_GT(lhs, rhs, msg) EXPECT_CMP(>, msg, lhs, rhs, #lhs, #rhs)
 
 #define EXPECT_TRUE(actual, msg)                            \
+    expect_failed = false;                                  \
     if (!(actual)) {                                        \
         UNITTEST_TRACEF("%s: %s is false\n", msg, #actual); \
         all_ok = false;                                     \
+        expect_failed = true;                               \
     }
 
 #define EXPECT_FALSE(actual, msg)                          \
+    expect_failed = false;                                 \
     if (actual) {                                          \
         UNITTEST_TRACEF("%s: %s is true\n", msg, #actual); \
         all_ok = false;                                    \
+        expect_failed = true;                              \
     }
 
 #define EXPECT_BYTES_EQ(expected, actual, length, msg)                    \
+    expect_failed = false;                                                \
     if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
         all_ok = false;                                                   \
+        expect_failed = true;                                             \
     }
 
 #define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) \
+    expect_failed = false;                           \
     if (!memcmp(bytes1, bytes2, length)) {           \
         UNITTEST_TRACEF(                             \
             "%s and %s are the same; "               \
@@ -200,18 +212,26 @@ void unittest_set_output_function(test_output_func fun, void* arg);
             #bytes1, #bytes2);                       \
         hexdump8(bytes1, length);                    \
         all_ok = false;                              \
+        expect_failed = true;                        \
     }
 
 /* For comparing uint64_t, like hw_id_t. */
 #define EXPECT_EQ_LL(expected, actual, msg)                                   \
     do {                                                                      \
+        expect_failed = false;                                                \
         const AUTO_TYPE_VAR(expected) _e = (expected);                        \
         const AUTO_TYPE_VAR(actual) _a = (actual);                            \
         if (_e != _a) {                                                       \
             UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a); \
             all_ok = false;                                                   \
+            expect_failed = true;                                             \
         }                                                                     \
     } while (0)
+
+#define RET_ON_ASSERT_FAIL \
+    if (expect_failed) {   \
+        return false;      \
+    }
 
 /*
  * The ASSERT_* macros are similar to the EXPECT_* macros except that
@@ -222,6 +242,38 @@ void unittest_set_output_function(test_output_func fun, void* arg);
         UNITTEST_TRACEF("ERROR: NULL pointer\n"); \
         return false;                             \
     }
+
+#define ASSERT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str) \
+    EXPECT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str);    \
+    RET_ON_ASSERT_FAIL
+
+#define ASSERT_EQ(lhs, rhs, msg) ASSERT_CMP(==, msg, lhs, rhs, #lhs, #rhs)
+#define ASSERT_NEQ(lhs, rhs, msg) ASSERT_CMP(!=, msg, lhs, rhs, #lhs, #rhs)
+#define ASSERT_LE(lhs, rhs, msg) ASSERT_CMP(<=, msg, lhs, rhs, #lhs, #rhs)
+#define ASSERT_GE(lhs, rhs, msg) ASSERT_CMP(>=, msg, lhs, rhs, #lhs, #rhs)
+#define ASSERT_LT(lhs, rhs, msg) ASSERT_CMP(<, msg, lhs, rhs, #lhs, #rhs)
+#define ASSERT_GT(lhs, rhs, msg) ASSERT_CMP(>, msg, lhs, rhs, #lhs, #rhs)
+
+#define ASSERT_TRUE(actual, msg) \
+    EXPECT_TRUE(actual, msg);    \
+    RET_ON_ASSERT_FAIL
+
+#define ASSERT_FALSE(actual, msg) \
+    EXPECT_FALSE(actual, msg);    \
+    RET_ON_ASSERT_FAIL
+
+#define ASSERT_BYTES_EQ(expected, actual, length, msg) \
+    EXPECT_BYTES_EQ(expected, actual, length, msg);    \
+    RET_ON_ASSERT_FAIL
+
+#define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) \
+    EXPECT_BYTES_NE(bytes1, bytes2, length, msg);    \
+    RET_ON_ASSERT_FAIL
+
+/* For comparing uint64_t, like hw_id_t. */
+#define ASSERT_EQ_LL(expected, actual, msg) \
+    EXPECT_EQ_LL(expected, actual, msg);    \
+    RET_ON_ASSERT_FAIL
 
 /*
  * The list of test cases is made up of these elements.
