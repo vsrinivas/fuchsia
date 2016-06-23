@@ -133,6 +133,20 @@ static void acpi_debug_mcfg(void)
     }
 }
 
+static void acpi_debug_ecdt(void) {
+    ACPI_TABLE_HEADER *raw_table = NULL;
+    ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_ECDT, 1, &raw_table);
+    if (status != AE_OK) {
+        printf("could not find ECDT\n");
+        return;
+    }
+    ACPI_TABLE_ECDT *ecdt = (ACPI_TABLE_ECDT *)raw_table;
+    printf("  Control: %d %#016llx\n", ecdt->Control.SpaceId, ecdt->Control.Address);
+    printf("  Data: %d %#016llx\n", ecdt->Data.SpaceId, ecdt->Data.Address);
+    printf("  GPE: %#x\n", ecdt->Gpe);
+    printf("  Path: %s\n", (char*)ecdt->Id);
+}
+
 static inline void do_indent(uint level) {
     while (level) {
         printf("  ");
@@ -432,7 +446,7 @@ static void acpi_debug_pcie_irq_routing(void)
     }
 }
 
-static ACPI_STATUS acpi_debug_print_device(
+static ACPI_STATUS acpi_debug_print_device_name(
         ACPI_HANDLE object,
         UINT32 nesting_level,
         void *context,
@@ -460,7 +474,7 @@ static void acpi_debug_walk_ns(void)
             ACPI_TYPE_DEVICE,
             ACPI_ROOT_OBJECT,
             INT_MAX,
-            acpi_debug_print_device,
+            acpi_debug_print_device_name,
             NULL,
             NULL,
             NULL);
@@ -484,7 +498,7 @@ static int spy_thread(void* arg) {
     }
 
     printf("acpi spy thread terminated\n");
-    return 0; 
+    return 0;
 }
 
 static void acpi_debug_hook_all_events(void)
@@ -506,6 +520,7 @@ usage:
         printf("usage:\n");
         printf("%s madt\n", argv[0].str);
         printf("%s mcfg\n", argv[0].str);
+        printf("%s ecdt\n", argv[0].str);
         printf("%s pcie-crs\n", argv[0].str);
         printf("%s pcie-irq\n", argv[0].str);
         printf("%s walk-ns\n", argv[0].str);
@@ -517,6 +532,8 @@ usage:
         acpi_debug_madt();
     } else if (!strcmp(argv[1].str, "mcfg")) {
         acpi_debug_mcfg();
+    } else if (!strcmp(argv[1].str, "ecdt")) {
+        acpi_debug_ecdt();
     } else if (!strcmp(argv[1].str, "pcie-crs")) {
         acpi_debug_pcie_crs();
     } else if (!strcmp(argv[1].str, "pcie-irq")) {

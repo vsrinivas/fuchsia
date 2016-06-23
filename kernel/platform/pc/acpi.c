@@ -16,6 +16,8 @@
 #include <kernel/port.h>
 #include <platform/pc/acpi.h>
 
+#include "acpi_ec.h"
+
 #define LOCAL_TRACE 0
 
 #define ACPI_MAX_INIT_TABLES 16
@@ -136,6 +138,8 @@ void platform_init_acpi(void)
     if (status != AE_OK) {
         printf("Failed to install POWER_BUTTON handler\n");
     }
+
+    acpi_ec_init();
 
     LTRACEF("ACPI initialized\n");
 }
