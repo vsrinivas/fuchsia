@@ -56,7 +56,7 @@ func TestUnixToDOSShort(t *testing.T) {
 		if len(goldName) != dosNameLen {
 			panic("Malformed test case; invalid gold DOS name length")
 		}
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			panic("The callback should not be necessary for this test case")
 		}
 		name, longnameNeeded, err := convertUnixToDOS(callback, nameUnix)
@@ -103,7 +103,7 @@ func TestUnixToDOSLong(t *testing.T) {
 		if len(goldName) != dosNameLen {
 			panic("Malformed test case; invalid gold DOS name length")
 		}
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			return directoryContents[i], nil
 		}
 		name, longnameNeeded, err := convertUnixToDOS(callback, nameUnix)
@@ -204,7 +204,7 @@ func TestUnixToDOSLong(t *testing.T) {
 
 func TestUnixToDOSFailure(t *testing.T) {
 	checkConvertUnixToDOSFail := func(nameUnix string, goldErr error) {
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			panic("The callback should not be necessary for this test case")
 		}
 		_, _, err := convertUnixToDOS(callback, nameUnix)
@@ -228,7 +228,7 @@ func TestUnixToDOSFailure(t *testing.T) {
 
 func TestUnixDOSCombo(t *testing.T) {
 	checkConvertUnixToDOSAndBack := func(nameUnix string, lowercase bool) {
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			panic("The callback should not be necessary for this test case")
 		}
 		nameDOS, longnameNeeded, err := convertUnixToDOS(callback, nameUnix)
@@ -262,7 +262,7 @@ func TestConvertUnixToWin(t *testing.T) {
 		directoryContents := [][]byte{
 			LastFreeDirent(),
 		}
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			return directoryContents[i], nil
 		}
 		nameDOS, longnameNeeded, err := convertUnixToDOS(callback, nameUnix)
@@ -424,7 +424,7 @@ func TestConvertUnixToWinFailure(t *testing.T) {
 		directoryContents := [][]byte{
 			LastFreeDirent(),
 		}
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			return directoryContents[i], nil
 		}
 		nameDOS, longnameNeeded, err := convertUnixToDOS(callback, nameUnix)
@@ -448,7 +448,7 @@ func TestConvertUnixToWinFailure(t *testing.T) {
 
 func TestGetShortEntryFromWin(t *testing.T) {
 	checkGetShortEntryFromWin := func(buf, goldShortBuf []byte, goldNumDirentrySlots uint8) {
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			return buf[i*DirentrySize : (i+1)*DirentrySize], nil
 		}
 		shortEntry, numDirentrySlots, err := getShortEntryFromWin(callback, 0)
@@ -484,7 +484,7 @@ func TestGetShortEntryFromWin(t *testing.T) {
 func TestGetShortEntryFromWinFailure(t *testing.T) {
 	// Test completely broken callback
 	callbackErr := errors.New("This callback is broken")
-	callbackBad := func(i uint) ([]byte, error) {
+	callbackBad := func(i int) ([]byte, error) {
 		return nil, callbackErr
 	}
 	_, _, err := getShortEntryFromWin(callbackBad, 0)
@@ -500,7 +500,7 @@ func TestGetShortEntryFromWinFailure(t *testing.T) {
 	short.setName([]byte("FOOBAR  BAZ"))
 	buf := append(long[0].bytes(), long[1].bytes()...)
 	buf = append(buf, short.bytes()...)
-	callbackGood := func(i uint) ([]byte, error) {
+	callbackGood := func(i int) ([]byte, error) {
 		return buf[i*DirentrySize : (i+1)*DirentrySize], nil
 	}
 	_, _, err = getShortEntryFromWin(callbackGood, 0)
@@ -516,7 +516,7 @@ func TestGetShortEntryFromWinFailure(t *testing.T) {
 	short.setName([]byte("FOOBAR  BAZ"))
 	buf = append(long[0].bytes(), long[1].bytes()...)
 	buf = append(buf, short.bytes()...)
-	callbackGood = func(i uint) ([]byte, error) {
+	callbackGood = func(i int) ([]byte, error) {
 		return buf[i*DirentrySize : (i+1)*DirentrySize], nil
 	}
 	_, _, err = getShortEntryFromWin(callbackGood, 0)
@@ -533,7 +533,7 @@ func TestGetShortEntryFromWinFailure(t *testing.T) {
 	short.setName([]byte("FOOBAR  BAZ"))
 	buf = append(long[0].bytes(), long[1].bytes()...)
 	buf = append(buf, short.bytes()...)
-	callbackGood = func(i uint) ([]byte, error) {
+	callbackGood = func(i int) ([]byte, error) {
 		if i == 0 {
 			return buf[i*DirentrySize : (i+1)*DirentrySize], nil
 		}
@@ -547,8 +547,8 @@ func TestGetShortEntryFromWinFailure(t *testing.T) {
 
 func TestConvertWinToUnix(t *testing.T) {
 	checkConvertWinToUnix := func(direntries []longDirentry, goldNameUnix string) {
-		callback := func(i uint) ([]byte, error) {
-			if i < uint(len(direntries)) {
+		callback := func(i int) ([]byte, error) {
+			if i < len(direntries) {
 				return direntries[i].bytes(), nil
 			}
 			return LastFreeDirent(), nil
@@ -638,7 +638,7 @@ func TestConvertWinToUnixFailure(t *testing.T) {
 	}
 
 	checkConvertWinToUnixFailure := func(direntries []longDirentry, chksum uint8, goldErr error) {
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			return direntries[i].bytes(), nil
 		}
 		_, err := convertWinToUnix(callback, 0, chksum, uint8(len(direntries)))
@@ -740,7 +740,7 @@ func TestUnixWinCombo(t *testing.T) {
 		directoryContents := [][]byte{
 			LastFreeDirent(),
 		}
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			return directoryContents[i], nil
 		}
 
@@ -754,7 +754,7 @@ func TestUnixWinCombo(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		callback = func(i uint) ([]byte, error) {
+		callback = func(i int) ([]byte, error) {
 			return direntries[i].bytes(), nil
 		}
 		newNameUnix, err := convertWinToUnix(callback, 0, checksum(nameDOS), uint8(len(direntries)))

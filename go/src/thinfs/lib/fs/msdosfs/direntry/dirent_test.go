@@ -68,7 +68,7 @@ func TestUpdateWriteTime(t *testing.T) {
 		d.WriteTime = newTime
 
 		// Serialize and deserialize to simulate writing to disk
-		callback := func(i uint) ([]byte, error) {
+		callback := func(i int) ([]byte, error) {
 			panic("Callback should not be necessary")
 		}
 		buf, err := d.Serialize(callback)
@@ -77,7 +77,7 @@ func TestUpdateWriteTime(t *testing.T) {
 		}
 
 		// Load dirent
-		callback = func(i uint) ([]byte, error) {
+		callback = func(i int) ([]byte, error) {
 			return buf, nil
 		}
 		d, _, err = LoadDirent(callback, 0)
@@ -111,8 +111,8 @@ func TestUpdateWriteTime(t *testing.T) {
 
 func appendEmptyFile(directory []byte, name string) []byte {
 	d := New(name, 0, fs.FileTypeRegularFile)
-	callback := func(i uint) ([]byte, error) {
-		if i >= uint(len(directory)/DirentrySize) {
+	callback := func(i int) ([]byte, error) {
+		if i >= len(directory)/DirentrySize {
 			// Pretend we reached the end of the directory
 			return LastFreeDirent(), nil
 		}
@@ -133,7 +133,7 @@ func appendFree(directory []byte, lastFree bool) []byte {
 }
 
 func checkedSerialize(t *testing.T, directory []byte, d *Dirent, goldSize int) []byte {
-	callback := func(i uint) ([]byte, error) {
+	callback := func(i int) ([]byte, error) {
 		return directory[i*DirentrySize : (i+1)*DirentrySize], nil
 	}
 	buf, err := d.Serialize(callback)
@@ -145,8 +145,8 @@ func checkedSerialize(t *testing.T, directory []byte, d *Dirent, goldSize int) [
 	return buf
 }
 
-func checkedLookup(t *testing.T, directory []byte, name string, goldIndex uint) *Dirent {
-	callback := func(i uint) ([]byte, error) {
+func checkedLookup(t *testing.T, directory []byte, name string, goldIndex int) *Dirent {
+	callback := func(i int) ([]byte, error) {
 		return directory[i*DirentrySize : (i+1)*DirentrySize], nil
 	}
 	d, foundIndex, err := LookupDirent(callback, name)
@@ -298,7 +298,7 @@ func TestSerializeError(t *testing.T) {
 	// Serialize with a completely broken callback
 	d := New("This long filename will require a generation number (and callback)", 0, fs.FileTypeRegularFile)
 	goldErr := errors.New("This is the first callback error")
-	callback := func(i uint) ([]byte, error) {
+	callback := func(i int) ([]byte, error) {
 		return nil, goldErr
 	}
 	_, err := d.Serialize(callback)
@@ -309,7 +309,7 @@ func TestSerializeError(t *testing.T) {
 
 func TestLookupCallbackError(t *testing.T) {
 	goldErr := errors.New("This is a callback error")
-	callback := func(i uint) ([]byte, error) {
+	callback := func(i int) ([]byte, error) {
 		return nil, goldErr
 	}
 
@@ -323,7 +323,7 @@ func TestLoadLongDirentError(t *testing.T) {
 	var directory []byte
 	directory = appendEmptyFile(directory, "The quick brown.fox") // Index 0, 1, 2
 	directory = appendFree(directory /* lastFree = */, true)
-	callback := func(i uint) ([]byte, error) {
+	callback := func(i int) ([]byte, error) {
 		return directory[i*DirentrySize : (i+1)*DirentrySize], nil
 	}
 	// Try reading a long direntry from an invalid starting location.

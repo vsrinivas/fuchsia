@@ -388,7 +388,7 @@ func convertUnixToWin(nameUnix string, nameDOS []byte) ([]longDirentry, error) {
 // getShortEntryFromWin takes a long filename (via a callback) and accesses the short filename at the
 // end of the LFN components. Also return the number of slots necessary to represent the dirent on
 // disk.
-func getShortEntryFromWin(callback GetDirentryCallback, startIndex uint) (shortEntry []byte, numDirentrySlots uint8, err error) {
+func getShortEntryFromWin(callback GetDirentryCallback, startIndex int) (shortEntry []byte, numDirentrySlots uint8, err error) {
 	buf, err := callback(startIndex)
 	if err != nil {
 		return nil, 0, err
@@ -403,7 +403,7 @@ func getShortEntryFromWin(callback GetDirentryCallback, startIndex uint) (shortE
 		return nil, 0, errLongDirentry
 	}
 
-	short, err := callback(startIndex + uint(order))
+	short, err := callback(startIndex + int(order))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -412,7 +412,7 @@ func getShortEntryFromWin(callback GetDirentryCallback, startIndex uint) (shortE
 }
 
 // convertWinToUnix reads long direntries, verifies them, and compiles them into a unix name.
-func convertWinToUnix(callback GetDirentryCallback, startIndex uint, chksum, highestOrder uint8) (nameUnix string, err error) {
+func convertWinToUnix(callback GetDirentryCallback, startIndex int, chksum, highestOrder uint8) (nameUnix string, err error) {
 	order := uint8(0)
 	nameBuffer := make([]uint16, 0, longnameMaxLen)
 
@@ -420,7 +420,7 @@ func convertWinToUnix(callback GetDirentryCallback, startIndex uint, chksum, hig
 	// The "highestOrder-1"-th entry should have an order of "1".
 	for direntryIndex := highestOrder - 1; direntryIndex >= 0; direntryIndex-- {
 		// Get the next long direntry component
-		buf, err := callback(startIndex + uint(direntryIndex))
+		buf, err := callback(startIndex + int(direntryIndex))
 		if err != nil {
 			return "", err
 		}

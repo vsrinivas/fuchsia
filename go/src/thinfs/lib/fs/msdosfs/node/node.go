@@ -25,58 +25,69 @@ const (
 // node represents a regular FAT node (either a file or a directory).
 // A node is shared between all files / directories which have it open.
 type node struct {
-	info        *metadata.Info
-	isDirectory bool
+	metadata  *metadata.Info
+	directory bool
 
 	sync.RWMutex
-	parent      Node          // Parent directory containing the direntry for this node.
-	direntIndex uint          // Direntry index in parent directory
-	children    map[uint]Node // Map of "direntIndex" --> "Node", if a child is open.
-	clusters    []uint32      // The starting cluster of the node. Does NOT include EOF / free.
-	size        int64         // The size of the node.
-	references  int           // The number of open files/directories referencing this node.
-	deleted     bool          // "true" if this node has been deleted.
-	mtime       time.Time     // Last modified time of node
+	// File-Only fields
+	parent      DirectoryNode // Parent directory containing the direntry for this node
+	direntIndex int           // Direntry index in parent directory
+	// Directory-Only fields
+	children     map[int]FileNode // Map of "direntIndex" --> "FileNode", if a child is open
+	startCluster uint32           // The first cluster of the node. Constant
+	// Shared
+	clusters   []uint32  // The clusters of the node. Does NOT include EOF / free.
+	size       int64     // The size of the node.
+	references int       // The number of open files/directories referencing this node.
+	deleted    bool      // "true" if this node has been deleted.
+	mtime      time.Time // Last modified time of node
 }
 
-// New makes a new node.
-//
-// If 'parent' is not nil, then parent.Child(direntIndex) is set to the new node, and node.Parent()
-// is set to the parent.
-func New(info *metadata.Info, isDirectory bool, parent Node, direntIndex uint, startCluster uint32, mtime time.Time, refs bool) (Node, error) {
-	// Node is not open anywhere else -- let's open it now.
-	numRefs := 0
-	if refs {
-		numRefs = 1
-	}
+// NewFile creates a new node representing a file.
+func NewFile(m *metadata.Info, parent DirectoryNode, direntIndex int, startCluster uint32, mtime time.Time) (FileNode, error) {
 	n := &node{
-		info:        info,
-		isDirectory: isDirectory,
+		metadata:    m,
+		directory:   false,
 		parent:      parent,
 		direntIndex: direntIndex,
 		mtime:       mtime,
-		references:  numRefs,
+		references:  0,
 	}
 
-	if isDirectory {
-		// Lazily make a map of children -- this info is not relevant for files.
-		n.children = make(map[uint]Node)
-	}
-
-	if parent != nil {
-		parent.setChild(direntIndex, n)
-	}
+	parent.setChildFile(direntIndex, n)
 
 	var err error
-	n.clusters, err = info.ClusterMgr.ClusterCollect(startCluster)
-	if err != nil {
+	if n.clusters, err = m.ClusterMgr.ClusterCollect(startCluster); err != nil {
 		return nil, err
 	}
 	return n, nil
 }
 
-func (n *node) Info() *metadata.Info {
-	return n.info
+// NewDirectory makes a new node representing a directory.
+func NewDirectory(m *metadata.Info, startCluster uint32, mtime time.Time) (DirectoryNode, error) {
+	n := &node{
+		metadata:     m,
+		directory:    true,
+		children:     make(map[int]FileNode),
+		startCluster: startCluster,
+		mtime:        mtime,
+		references:   0,
+	}
+
+	var err error
+	// Since FAT directories do not store their size in a direntry, the size must be recalculated
+	// from the number of used clusters.
+	if n.clusters, err = m.ClusterMgr.ClusterCollect(startCluster); err != nil {
+		return nil, err
+	} else if err = n.SetSize(int64(m.Br.ClusterSize()) * int64(len(n.clusters))); err != nil {
+		panic(err)
+	}
+
+	return n, nil
+}
+
+func (n *node) Metadata() *metadata.Info {
+	return n.metadata
 }
 
 // SetSize attempts to modify the acceptable in-memory "size" of a node.
@@ -84,13 +95,13 @@ func (n *node) Info() *metadata.Info {
 //
 // If 'SetSize' renders some clusters inaccessible, it frees them.
 func (n *node) SetSize(size int64) error {
-	clusterSize := int64(n.info.Br.ClusterSize())
+	clusterSize := int64(n.metadata.Br.ClusterSize())
 	maxSize := clusterSize * int64(len(n.clusters))
 	if n.deleted {
 		panic("Should not modify size of deleted node")
 	} else if maxSize < size {
 		return ErrNoSpace
-	} else if !n.IsRoot() && n.isDirectory && size <= 0 {
+	} else if !n.IsRoot() && n.IsDirectory() && size <= 0 {
 		panic("Should not attempt to set size of non-root directory to less than or equal to zero")
 	}
 	n.size = size
@@ -107,7 +118,7 @@ func (n *node) SetSize(size int64) error {
 		// Make a best-effort attempt to delete the clusters.
 		// If an I/O error occurs, clusters may be lost until FAT fsck executes, but the filesystem
 		// will not actually be corrupted.
-		n.info.ClusterMgr.ClusterDelete(clusterToDelete)
+		n.metadata.ClusterMgr.ClusterDelete(clusterToDelete)
 	}
 	return nil
 }
@@ -146,20 +157,24 @@ func (n *node) RefDown(numRefs int) error {
 	if n.references < 0 {
 		panic("Invalid internal refcounting")
 	} else if n.references == 0 && n.deleted && len(n.clusters) > 0 {
-		return n.Info().ClusterMgr.ClusterDelete(n.clusters[0])
+		return n.Metadata().ClusterMgr.ClusterDelete(n.clusters[0])
 	}
 	return nil
 }
 
-// ReadAt reads len(buf) bytes from offset "off" in the node into buf.
+func (n *node) ReadAt(buf []byte, off int64) (int, error) {
+	return n.readAt(buf, off)
+}
+
+// readAt reads len(buf) bytes from offset "off" in the node into buf.
 // It returns the number of bytes read, and an error if the number of bytes read is less than
 // len(buf).
-func (n *node) ReadAt(buf []byte, off int64) (int, error) {
+func (n *node) readAt(buf []byte, off int64) (int, error) {
 	// Short-circuit the cases where offset is reading out of bounds
 	if off < 0 || n.size <= off {
 		return 0, ErrBadArgument
 	}
-	clusterSize := int64(n.info.Br.ClusterSize())
+	clusterSize := int64(n.metadata.Br.ClusterSize())
 	bytesRead := 0
 	stopReading := false
 
@@ -170,7 +185,7 @@ func (n *node) ReadAt(buf []byte, off int64) (int, error) {
 			// Reading at this offset attempts to access a cluster which has not been allocated.
 			break
 		}
-		deviceOffset := int64(n.info.Br.ClusterLocationData(n.clusters[clusterIndex])) + clusterStart
+		deviceOffset := int64(n.metadata.Br.ClusterLocationData(n.clusters[clusterIndex])) + clusterStart
 
 		// What's the maximum number of bytes we could read from this single cluster?
 		clusterBytesToRead := int(clusterSize - clusterStart)
@@ -185,7 +200,7 @@ func (n *node) ReadAt(buf []byte, off int64) (int, error) {
 			stopReading = true
 		}
 
-		dBytesRead, err := n.info.Dev.ReadAt(buf[bytesRead:bytesRead+clusterBytesToRead], deviceOffset)
+		dBytesRead, err := n.metadata.Dev.ReadAt(buf[bytesRead:bytesRead+clusterBytesToRead], deviceOffset)
 		bytesRead += dBytesRead
 		off += int64(dBytesRead)
 		if err != nil {
@@ -198,10 +213,12 @@ func (n *node) ReadAt(buf []byte, off int64) (int, error) {
 	return bytesRead, nil
 }
 
-// WriteAt writes the bytes of buf at offset "off". It returns the number of bytes written, and an
-// error if the number of bytes written is less than len(buf).
 func (n *node) WriteAt(buf []byte, off int64) (int, error) {
-	if n.info.Readonly {
+	return n.writeAt(buf, off)
+}
+
+func (n *node) writeAt(buf []byte, off int64) (int, error) {
+	if n.metadata.Readonly {
 		return 0, fs.ErrPermission
 	} else if off < 0 {
 		return 0, ErrBadArgument
@@ -225,14 +242,14 @@ func (n *node) WriteAt(buf []byte, off int64) (int, error) {
 	}
 
 	// Expand the number of clusters to fill the last byte of the buffer.
-	clusterSize := int64(n.info.Br.ClusterSize())
+	clusterSize := int64(n.metadata.Br.ClusterSize())
 	for maxPotentialSize > int64(clusterSize)*int64(len(n.clusters)) {
 		// Only expand the tail if there is one. Empty files, for example, have no clusters.
 		tail := uint32(0)
 		if len(n.clusters) > 0 {
 			tail = n.clusters[len(n.clusters)-1]
 		}
-		newCluster, err := n.info.ClusterMgr.ClusterExtend(tail)
+		newCluster, err := n.metadata.ClusterMgr.ClusterExtend(tail)
 		if err != nil {
 			// Error intentionally ignored; we are just cleaning up after the ClusterExtend error.
 			// The writeBuffer cannot be fully written -- instead, only write the chunk which will
@@ -248,7 +265,7 @@ func (n *node) WriteAt(buf []byte, off int64) (int, error) {
 	for bytesWritten < len(writeBuf) {
 		clusterIndex := off / clusterSize // Which cluster are we writing to?
 		clusterStart := off % clusterSize // How far into the cluster are we starting from?
-		deviceOffset := n.info.Br.ClusterLocationData(n.clusters[clusterIndex]) + clusterStart
+		deviceOffset := n.metadata.Br.ClusterLocationData(n.clusters[clusterIndex]) + clusterStart
 
 		// What's the maximum number of bytes we could write to this single cluster?
 		clusterBytesToWrite := int(clusterSize - clusterStart)
@@ -256,7 +273,7 @@ func (n *node) WriteAt(buf []byte, off int64) (int, error) {
 			// If the size of the output buffer can't cover this whole cluster, write less.
 			clusterBytesToWrite = len(writeBuf) - bytesWritten
 		}
-		dBytesWritten, err := n.info.Dev.WriteAt(writeBuf[bytesWritten:bytesWritten+clusterBytesToWrite], deviceOffset)
+		dBytesWritten, err := n.metadata.Dev.WriteAt(writeBuf[bytesWritten:bytesWritten+clusterBytesToWrite], deviceOffset)
 		bytesWritten += dBytesWritten
 		off += int64(dBytesWritten)
 
@@ -285,14 +302,21 @@ func (n *node) WriteAt(buf []byte, off int64) (int, error) {
 }
 
 func (n *node) IsDirectory() bool {
-	return n.isDirectory
+	return n.directory
 }
 
 func (n *node) StartCluster() uint32 {
 	if len(n.clusters) == 0 {
-		return n.info.ClusterMgr.ClusterEOF()
+		return n.metadata.ClusterMgr.ClusterEOF()
 	}
 	return n.clusters[0]
+}
+
+func (n *node) ID() uint32 {
+	if !n.IsDirectory() {
+		panic("Non-directory nodes do not have IDs")
+	}
+	return n.startCluster
 }
 
 func (n *node) NumClusters() int {
@@ -301,15 +325,12 @@ func (n *node) NumClusters() int {
 
 func (n *node) IsRoot() bool {
 	// The root can only be a 'normal' node on FAT32
-	if n.info.Br.Type() != bootrecord.FAT32 {
+	if n.metadata.Br.Type() != bootrecord.FAT32 {
 		return false
-	}
-
-	if len(n.clusters) > 0 {
-		startCluster := n.info.Br.RootCluster()
-		if n.clusters[0] == startCluster {
-			return true
-		}
+	} else if !n.IsDirectory() {
+		return false
+	} else if n.ID() == n.metadata.Br.RootCluster() {
+		return true
 	}
 	return false
 }
@@ -322,34 +343,56 @@ func (n *node) MTime() time.Time {
 	return n.mtime
 }
 
-func (n *node) Parent() (Node, uint) {
+func (n *node) SetMTime(mtime time.Time) {
+	n.mtime = mtime
+}
+
+func (n *node) LockParent() (DirectoryNode, int) {
+	n.Lock()
+	parent := n.parent
+	index := n.direntIndex
+	n.Unlock()
+
+	if parent != nil {
+		parent.Lock() // Check that 'parent' is still actually our parent
+		if n2, ok := parent.ChildFile(index); ok && n == n2 {
+			// Intentionally keep the lock on 'parent'
+			return parent, index
+		}
+		parent.Unlock() // We were unlinked
+		return nil, 0
+	}
+	return nil, 0 // No known parent
+}
+
+func (n *node) Parent() (DirectoryNode, int) {
 	return n.parent, n.direntIndex
 }
 
-func (n *node) setChild(direntIndex uint, child Node) {
-	if !n.isDirectory {
+func (n *node) setChildFile(direntIndex int, child FileNode) {
+	if !n.IsDirectory() {
 		panic("Files cannot have children")
 	} else if _, ok := n.children[direntIndex]; ok {
-		panic("setChild failed; a child already exists at this index")
+		panic("setChildFile failed; a child already exists at this index")
 	}
 	n.children[direntIndex] = child
 }
 
-func (n *node) MoveNode(newParent Node, newDirentIndex uint) {
+func (n *node) MoveFile(newParent DirectoryNode, newDirentIndex int) {
 	if n.parent == nil || newParent == nil {
 		panic("Cannot move a node with invalid parents (as either src or dst)")
 	}
 	// Remove node from old parent
-	n.parent.RemoveChild(n.direntIndex)
+	n.parent.RemoveFile(n.direntIndex)
 	// Update node with information regarding new parent
 	n.parent = newParent
 	n.direntIndex = newDirentIndex
 	// Update new parent with information about node
-	newParent.setChild(newDirentIndex, n)
+	newParent.setChildFile(newDirentIndex, n)
 }
 
-func (n *node) Children() []Node {
-	children := make([]Node, len(n.children))
+func (n *node) ChildFiles() []FileNode {
+	children := make([]FileNode, len(n.children))
 	i := 0
 	for k := range n.children {
 		children[i] = n.children[k]
@@ -358,12 +401,12 @@ func (n *node) Children() []Node {
 	return children
 }
 
-func (n *node) Child(direntIndex uint) (Node, bool) {
+func (n *node) ChildFile(direntIndex int) (FileNode, bool) {
 	c, ok := n.children[direntIndex]
 	return c, ok
 }
 
-func (n *node) RemoveChild(direntIndex uint) {
+func (n *node) RemoveFile(direntIndex int) {
 	if _, ok := n.children[direntIndex]; !ok {
 		panic("Child does not exist in node")
 	}

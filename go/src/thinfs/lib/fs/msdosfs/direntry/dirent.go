@@ -21,7 +21,7 @@ import (
 //
 // For long direntries, it may need to be called multiple times to read the long direntry
 // components.
-type GetDirentryCallback func(uint) ([]byte, error)
+type GetDirentryCallback func(int) ([]byte, error)
 
 // Dirent describes an in-memory representation of a direntry.
 // This must be an in-memory representation, rather than one which accesses persistant storage, as
@@ -72,9 +72,9 @@ func New(name string, cluster uint32, attr fs.FileType) *Dirent {
 // at which it was found.
 //
 // If a Dirent with a matching name is not found, return "nil".
-func LookupDirent(callback GetDirentryCallback, name string) (*Dirent, uint, error) {
+func LookupDirent(callback GetDirentryCallback, name string) (*Dirent, int, error) {
 	glog.V(1).Info("Looking up a dirent with name: ", name)
-	for direntryIndex := uint(0); ; {
+	for direntryIndex := 0; ; {
 		d, numSlots, err := LoadDirent(callback, direntryIndex)
 		if err != nil {
 			glog.V(2).Infof("At index %d, encountered an error", direntryIndex)
@@ -93,14 +93,14 @@ func LookupDirent(callback GetDirentryCallback, name string) (*Dirent, uint, err
 			return d, direntryIndex, nil
 		}
 		glog.V(2).Infof("Name not found. Jumping %d slots", numSlots)
-		direntryIndex += uint(numSlots)
+		direntryIndex += numSlots
 	}
 }
 
 // doesShortNameExist is a helper function wrapped around the callback. Helps determine if a short
 // entry name exists in the directory.
 func doesShortNameExist(callback GetDirentryCallback, shortName []byte) (bool, error) {
-	for i := uint(0); ; i++ {
+	for i := 0; ; i++ {
 		buf, err := callback(i)
 		if err != nil {
 			return false, err
@@ -130,7 +130,7 @@ func doesShortNameExist(callback GetDirentryCallback, shortName []byte) (bool, e
 // (optional) other long entries and (required) a short entry.
 //
 // Otherwise, the requested direntry is invalid.
-func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint, error) {
+func LoadDirent(callback GetDirentryCallback, direntryIndex int) (*Dirent, int, error) {
 	glog.V(1).Info("Loading a dirent")
 	buf, err := callback(direntryIndex)
 	if err != nil {
@@ -184,7 +184,7 @@ func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint
 		longname:   true,
 		free:       short.isFree(),
 		lastFree:   short.isLastFree(),
-	}, uint(numDirentrySlots), nil
+	}, int(numDirentrySlots), nil
 }
 
 // GetName implements fs.Dirent

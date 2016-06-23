@@ -23,6 +23,32 @@ var (
 	ErrBadArgument = errors.New("FAT Node: Bad argument passed to node")
 )
 
+// FileNode implements the interface of a file (leaf node) in the FAT filesystem
+type FileNode interface {
+	Node
+	WriteAt(p []byte, off int64) (int, error) // Implements io.WriterAt
+	ReadAt(p []byte, off int64) (int, error)  // Implements io.ReaderAt
+
+	MoveFile(newParent DirectoryNode, newDirentIndex int) // Relocate a file node to a new directory
+	LockParent() (parent DirectoryNode, direntIndex int)  // Return the parent directory (locked, if it exists) for this file
+	Parent() (parent DirectoryNode, direntIndex int)      // Return the parent directory for this file (NOT thread-safe)
+}
+
+// DirectoryNode implements the interface of a directory in the FAT filesystem
+type DirectoryNode interface {
+	Node
+
+	RemoveFile(direntIndex int)                 // Remove a child file open in this directory
+	ChildFiles() []FileNode                     // Return the child files open in this directory
+	ChildFile(direntIndex int) (FileNode, bool) // Return a child file open at a particular direntIndex
+
+	// Methods which do not require lock
+	IsRoot() bool // True iff the node corresponds to the root of a filesystem
+	ID() uint32   // Unique ID which identifies directory
+
+	setChildFile(direntIndex int, child FileNode) // Internal method to place a child at an empty direntInex
+}
+
 // Node implements the interface of a single node (file, directory, or root) in the FAT filesystem.
 type Node interface {
 	sync.Locker // Writer-lock access
@@ -30,28 +56,24 @@ type Node interface {
 	RUnlock()   // Unlock reader lock
 
 	// Write-access methods, which may modify the contents of the Node
-	MoveNode(newParent Node, newDirentIndex uint)
-	RemoveChild(direntIndex uint)
-	SetSize(size int64) error                 // Change node size. Shrinking can remove clusters
-	WriteAt(p []byte, off int64) (int, error) // Implements io.WriterAt
-	RefUp()                                   // Increment refs
-	RefDown(numRefs int) error                // Decrement refs, possibly delete clusters if they're unused
-	MarkDeleted()                             // Mark that the node's clusters should be deleted when refs is zero
-	setChild(direntIndex uint, child Node)    // Internal method to place a child at an empty direntInex
+	SetSize(size int64) error  // Change node size. Shrinking can remove clusters
+	SetMTime(mtime time.Time)  // Updates the last modified time
+	RefUp()                    // Increment refs
+	RefDown(numRefs int) error // Decrement refs, possibly delete clusters if they're unused
+	MarkDeleted()              // Mark that the node's clusters should be deleted when refs is zero
 
 	// Read-access methods, which do not modify the contents of the Node
-	Parent() (parent Node, direntIndex uint)
-	Children() []Node
-	Child(direntIndex uint) (Node, bool)
-	Size() int64                             // Return the number of bytes accessible within the node
-	StartCluster() uint32                    // Returns the first cluster of the node (or EOF)
-	NumClusters() int                        // Returns the number of clusters used by the node (internally)
-	ReadAt(p []byte, off int64) (int, error) // Implements io.ReaderAt
-	RefCount() int                           // Number of external references ('refs') to the node
-	IsRoot() bool                            // True iff the node corresponds to the root of a filesystem
-	MTime() time.Time                        // Get last modified time of node, if known
+	Size() int64          // Return the number of bytes accessible within the node
+	StartCluster() uint32 // Returns the first cluster of the node (or EOF)
+	NumClusters() int     // Returns the number of clusters used by the node (internally)
+	RefCount() int        // Number of external references ('refs') to the node
+	MTime() time.Time     // Get last modified time of node, if known
 
 	// Accessible without a lock
-	IsDirectory() bool    // True iff the node corresponds to a directory
-	Info() *metadata.Info // Return constant info about the node's filesystem
+	IsDirectory() bool        // True iff the node corresponds to a directory
+	Metadata() *metadata.Info // Return info about the node's filesystem
+
+	// Internal methods
+	writeAt(p []byte, off int64) (int, error) // Implements io.WriterAt
+	readAt(p []byte, off int64) (int, error)  // Implements io.ReaderAt
 }

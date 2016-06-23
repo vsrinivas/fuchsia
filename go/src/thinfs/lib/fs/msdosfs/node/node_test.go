@@ -71,22 +71,18 @@ func cleanup(fileBackedFAT *testutil.FileFAT, info *metadata.Info) {
 	info.Dev.Close()
 }
 
-func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) Node {
+func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) DirectoryNode {
 	if fat32 {
-		isDirectory := true
-		direntIndex := uint(0)
 		startCluster := info.Br.RootCluster()
-		root, err := New(info, isDirectory, nil, direntIndex, startCluster, time.Time{}, true)
+		root, err := NewDirectory(info, startCluster, time.Time{})
 		if err != nil {
 			t.Fatal(err)
-		} else if root.Info() != info {
-			t.Fatal("Invalid info")
+		} else if root.Metadata() != info {
+			t.Fatal("Invalid metadata")
 		} else if !root.IsDirectory() {
 			t.Fatal("Node incorrectly thinks it is not a directory")
 		} else if !root.IsRoot() {
 			t.Fatal("Node incorrectly thinks it is not root")
-		} else if parent, _ := root.Parent(); parent != nil {
-			t.Fatal("Root cannot have a parent")
 		}
 		return root
 	}
@@ -95,41 +91,65 @@ func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) Node {
 	offsetStart, numRootEntriesMax := info.Br.RootReservedInfo()
 	direntrySize := int64(direntry.DirentrySize)
 	root := NewRoot(info, offsetStart, numRootEntriesMax*direntrySize)
-	if root.Info() != info {
+	if root.Metadata() != info {
 		t.Fatal("Invalid info")
 	} else if !root.IsDirectory() {
 		t.Fatal("Node incorrectly thinks it is not a directory")
 	} else if !root.IsRoot() {
 		t.Fatal("Node incorrectly thinks it is not root")
-	} else if parent, _ := root.Parent(); parent != nil {
-		t.Fatal("Root cannot have a parent")
 	}
 
 	return root
 }
 
-func checkedMakeNode(t *testing.T, info *metadata.Info, parent Node, direntIndex uint, isDirectory bool) Node {
-	node, err := New(info, isDirectory, parent, direntIndex, 0, time.Time{}, true)
+func checkedMakeFileNode(t *testing.T, info *metadata.Info, parent DirectoryNode, direntIndex int) FileNode {
+	node, err := NewFile(info, parent, direntIndex, 0, time.Time{})
 	if err != nil {
 		t.Fatal(err)
-	} else if node.Info() != info {
+	} else if node.IsDirectory() {
+		t.Fatal("Expected file, not directory")
+	} else if node.Metadata() != info {
 		t.Fatal("Invalid info")
-	} else if node.IsRoot() {
-		t.Fatal("Node incorrectly thinks it is root")
-	} else if node.IsDirectory() != isDirectory {
-		t.Fatal("n.IsDirectory() returned wrong result")
 	} else if node.Size() != 0 {
 		t.Fatal("node.Size() should be zero")
 	} else if node.StartCluster() != info.ClusterMgr.ClusterEOF() {
 		t.Fatal("Node should be initialized with an EOF cluster")
 	} else if node.NumClusters() != 0 {
 		t.Fatal("Node should be initialized with no clusters")
-	} else if node.RefCount() != 1 {
-		t.Fatal("Node should be initialized with a single reference")
-	} else if p, i := node.Parent(); p != parent || i != direntIndex {
-		t.Fatal("node.Parent() returned the wrong node / index combo")
-	} else if c, exists := parent.Child(direntIndex); c != node || !exists {
+	} else if c, exists := parent.ChildFile(direntIndex); c != node || !exists {
 		t.Fatal("Child should exist in the parent, but it does not")
+	}
+
+	if p, i := node.LockParent(); p != parent || i != direntIndex {
+		t.Fatal("node.LockParent() returned the wrong node / index combo")
+	} else {
+		p.Unlock()
+	}
+
+	return node
+}
+
+func checkedMakeDirectoryNode(t *testing.T, info *metadata.Info, parent DirectoryNode, direntIndex int) DirectoryNode {
+	newCluster, err := info.ClusterMgr.ClusterExtend(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	node, err := NewDirectory(info, newCluster, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	} else if !node.IsDirectory() {
+		t.Fatal("Expected directory, not file")
+	} else if node.Metadata() != info {
+		t.Fatal("Invalid info")
+	} else if node.IsRoot() {
+		t.Fatal("Node incorrectly thinks it is root")
+	} else if node.Size() != int64(info.Br.ClusterSize()) {
+		t.Fatal("node.Size() should be a single cluster")
+	} else if node.StartCluster() != newCluster {
+		t.Fatal("Node should be initialized with a known cluster")
+	} else if node.NumClusters() != 1 {
+		t.Fatal("Node should be initialized with one cluster")
 	}
 	return node
 }
@@ -144,7 +164,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 		verifyBuffer := func(buf []byte) {
 			// An 'exact' read should work
 			readbuf := make([]byte, len(buf))
-			if l, err := n.ReadAt(readbuf, 0); err != nil {
+			if l, err := n.readAt(readbuf, 0); err != nil {
 				t.Fatal(err)
 			} else if l != len(readbuf) {
 				t.Fatalf("Unexpected read length: %d (expected %d)", l, len(readbuf))
@@ -154,7 +174,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 
 			// A read of 'one less byte' should work
 			readbuf = make([]byte, len(buf)-1)
-			if l, err := n.ReadAt(readbuf, 0); err != nil {
+			if l, err := n.readAt(readbuf, 0); err != nil {
 				t.Fatal(err)
 			} else if l != len(readbuf) {
 				t.Fatalf("Unexpected read length: %d (expected %d)", l, len(readbuf))
@@ -164,7 +184,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 
 			// A read of 'one more byte' should work, but also return an EOF error.
 			readbuf = make([]byte, len(buf)+1)
-			if l, err := n.ReadAt(readbuf, 0); err != ErrEOF {
+			if l, err := n.readAt(readbuf, 0); err != ErrEOF {
 				t.Fatal("Expected an EOF error")
 			} else if l != len(readbuf)-1 {
 				t.Fatalf("Unexpected read length: %d (expected %d)", l, len(readbuf)-1)
@@ -173,7 +193,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 			}
 		}
 
-		if l, err := n.WriteAt(buf1, 0); err != nil {
+		if l, err := n.writeAt(buf1, 0); err != nil {
 			t.Fatal(err)
 		} else if l != len(buf1) {
 			t.Fatalf("Unexpected write length: %d (expected %d)", l, len(buf1))
@@ -182,7 +202,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 		}
 		verifyBuffer(buf1)
 
-		if l, err := n.WriteAt(buf2, int64(len(buf1))); err != nil {
+		if l, err := n.writeAt(buf2, int64(len(buf1))); err != nil {
 			t.Fatal(err)
 		} else if l != len(buf2) {
 			t.Fatalf("Unexpected write length: %d (expected %d)", l, len(buf2))
@@ -192,21 +212,21 @@ func TestSingleNodeReadWrite(t *testing.T) {
 		verifyBuffer(bufCombined)
 
 		// This is somewhat cheating, but force the filesystem to become readonly
-		n.Info().Readonly = true
+		n.Metadata().Readonly = true
 		// We can still read
 		verifyBuffer(bufCombined)
 		// We cannot write
-		if _, err := n.WriteAt(buf1, 0); err != fs.ErrPermission {
+		if _, err := n.writeAt(buf1, 0); err != fs.ErrPermission {
 			t.Fatal("Expected ReadOnly error")
 		}
-		n.Info().Readonly = false
+		n.Metadata().Readonly = false
 
 		// TEST: Edge cases of reading / writing
 
 		// A large read should fail with ErrBadArguments; it's out of bounds
 		readbuf := make([]byte, 10)
 		largeOffset := int64(len(bufCombined) + 10)
-		if l, err := n.ReadAt(readbuf, largeOffset); err != ErrBadArgument {
+		if l, err := n.readAt(readbuf, largeOffset); err != ErrBadArgument {
 			t.Fatal("Expected a bad argument error")
 		} else if l != 0 {
 			t.Fatalf("Unexpected read length: %d (expected %d)", l, 0)
@@ -214,7 +234,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 
 		// A large read should fail with ErrEOF; it's only partially out of bounds
 		largeOffset = int64(len(bufCombined) - len(readbuf)/2)
-		if l, err := n.ReadAt(readbuf, largeOffset); err != ErrEOF {
+		if l, err := n.readAt(readbuf, largeOffset); err != ErrEOF {
 			t.Fatal("Expected an EOF error")
 		} else if l != len(readbuf)/2 {
 			t.Fatalf("Unexpected read length: %d (expected %d)", l, len(readbuf)/2)
@@ -223,23 +243,23 @@ func TestSingleNodeReadWrite(t *testing.T) {
 		// A large write can succeed; it will just force the file to allocate clusters
 		buf := []byte{'a'}
 		readbuf = make([]byte, 1)
-		if l, err := n.WriteAt(buf, largeOffset); err != nil {
+		if l, err := n.writeAt(buf, largeOffset); err != nil {
 			t.Fatal(err)
 		} else if l != 1 {
 			t.Fatalf("Unexpected write length: %d (expected %d)", l, 1)
-		} else if _, err := n.ReadAt(readbuf, largeOffset); err != nil {
+		} else if _, err := n.readAt(readbuf, largeOffset); err != nil {
 			t.Fatal(err)
 		} else if !bytes.Equal(buf, readbuf) {
 			t.Fatal("Read buffer did not equal write buffer")
 		}
 
 		// Test negative writes / reads
-		if l, err := n.WriteAt(buf, -1); err != ErrBadArgument {
+		if l, err := n.writeAt(buf, -1); err != ErrBadArgument {
 			t.Fatal("Expected ErrBadArgument")
 		} else if l != 0 {
 			t.Fatalf("Unexpected write length: %d (expected %d)", l, 0)
 		}
-		if l, err := n.ReadAt(buf, -1); err != ErrBadArgument {
+		if l, err := n.readAt(buf, -1); err != ErrBadArgument {
 			t.Fatal("Expected ErrBadArgument")
 		} else if l != 0 {
 			t.Fatalf("Unexpected read length: %d (expected %d)", l, 0)
@@ -247,12 +267,12 @@ func TestSingleNodeReadWrite(t *testing.T) {
 
 		// Test empty writes / reads
 		var emptybuf []byte
-		if n, err := n.WriteAt(emptybuf, 0); err != nil {
+		if n, err := n.writeAt(emptybuf, 0); err != nil {
 			t.Fatal(err)
 		} else if n != 0 {
 			t.Fatalf("Empty write actually wrote %d bytes", n)
 		}
-		if n, err := n.ReadAt(emptybuf, 0); err != nil {
+		if n, err := n.readAt(emptybuf, 0); err != nil {
 			t.Fatal(err)
 		} else if n != 0 {
 			t.Fatalf("Empty read actually read %d bytes", n)
@@ -262,12 +282,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	glog.Info("Testing FAT32 Root")
-	doTest(root)
-	dir := checkedMakeNode(t, info, root, 0 /* isDirectory= */, true)
-	glog.Info("Testing FAT32 Directory")
-	doTest(dir)
-	file := checkedMakeNode(t, info, root, 1 /* isDirectory= */, false)
+	file := checkedMakeFileNode(t, info, root, 1)
 	glog.Info("Testing FAT32 File")
 	doTest(file)
 
@@ -275,16 +290,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 	fileBackedFAT, info = setupFAT16(t, "10M", false)
 
 	root = checkedMakeRoot(t, info /* fat32= */, false)
-	// Root16 starts at 'max size', we need to manually change it to match the format of this test
-	if err := root.SetSize(0); err != nil {
-		t.Fatal(err)
-	}
-	glog.Info("Testing FAT16 Root")
-	doTest(root)
-	dir = checkedMakeNode(t, info, root, 0 /* isDirectory= */, true)
-	glog.Info("Testing FAT16 Directory")
-	doTest(dir)
-	file = checkedMakeNode(t, info, root, 1 /* isDirectory= */, false)
+	file = checkedMakeFileNode(t, info, root, 1)
 	glog.Info("Testing FAT16 File")
 	doTest(file)
 
@@ -310,7 +316,11 @@ func TestSetSize(t *testing.T) {
 			n = checkedMakeRoot(t, info, fat32)
 		} else {
 			r := checkedMakeRoot(t, info, fat32)
-			n = checkedMakeNode(t, info, r, 0, isDir)
+			if isDir {
+				n = checkedMakeDirectoryNode(t, info, r, 0)
+			} else {
+				n = checkedMakeFileNode(t, info, r, 0)
+			}
 		}
 
 		// We want to test everything EXCEPT FAT-16's root, which does not use clusters
@@ -321,7 +331,7 @@ func TestSetSize(t *testing.T) {
 
 		numClustersStart := 3
 		buf := testutil.MakeRandomBuffer(int(info.Br.ClusterSize()) * numClustersStart)
-		if _, err := n.WriteAt(buf, 0); err != nil {
+		if _, err := n.writeAt(buf, 0); err != nil {
 			t.Fatal(err)
 		} else if nodeUsesClusters && n.NumClusters() != numClustersStart {
 			t.Fatal("Unexpected number of starting clusters")
@@ -370,7 +380,7 @@ func TestSingleNodeRefs(t *testing.T) {
 	doTest := func(n Node) {
 		// First, write to the node so it has at least one cluster
 		buf := testutil.MakeRandomBuffer(100)
-		if _, err := n.WriteAt(buf, 0); err != nil {
+		if _, err := n.writeAt(buf, 0); err != nil {
 			t.Fatal(nil)
 		}
 
@@ -404,7 +414,8 @@ func TestSingleNodeRefs(t *testing.T) {
 		}
 
 		// Mark deleted, decrement to zero again
-		if !n.IsRoot() { // We can't delete the root directory -- don't even try.
+		dir, isDir := n.(DirectoryNode)
+		if !isDir || !dir.IsRoot() { // We can't delete the root directory -- don't even try.
 			n.MarkDeleted()
 			if err := n.RefDown(1); err != nil {
 				t.Fatal(err)
@@ -417,10 +428,10 @@ func TestSingleNodeRefs(t *testing.T) {
 	root := checkedMakeRoot(t, info /* fat32= */, true)
 	glog.Info("Testing FAT32 Root")
 	doTest(root)
-	dir := checkedMakeNode(t, info, root, 0 /* isDirectory= */, true)
+	dir := checkedMakeDirectoryNode(t, info, root, 0)
 	glog.Info("Testing FAT32 Directory")
 	doTest(dir)
-	file := checkedMakeNode(t, info, root, 1 /* isDirectory= */, false)
+	file := checkedMakeFileNode(t, info, root, 1)
 	glog.Info("Testing FAT32 File")
 	doTest(file)
 
@@ -430,10 +441,10 @@ func TestSingleNodeRefs(t *testing.T) {
 	root = checkedMakeRoot(t, info /* fat32= */, false)
 	glog.Info("Testing FAT16 Root")
 	doTest(root)
-	dir = checkedMakeNode(t, info, root, 0 /* isDirectory= */, true)
+	dir = checkedMakeDirectoryNode(t, info, root, 0)
 	glog.Info("Testing FAT16 Directory")
 	doTest(dir)
-	file = checkedMakeNode(t, info, root, 1 /* isDirectory= */, false)
+	file = checkedMakeFileNode(t, info, root, 1)
 	glog.Info("Testing FAT16 File")
 	doTest(file)
 
@@ -451,13 +462,13 @@ func TestNodeHierarchy(t *testing.T) {
 		// /bar/bazfile.txt
 
 		root := checkedMakeRoot(t, info, fat32)
-		foo := checkedMakeNode(t, info, root, 0, true)
-		foofile := checkedMakeNode(t, info, foo, 0, false)
-		bar := checkedMakeNode(t, info, root, 1, true)
-		baz := checkedMakeNode(t, info, bar, 0, true)
-		bazfile := checkedMakeNode(t, info, bar, 1, false)
+		foo := checkedMakeDirectoryNode(t, info, root, 0)
+		foofile := checkedMakeFileNode(t, info, foo, 0)
+		bar := checkedMakeDirectoryNode(t, info, root, 1)
+		baz := checkedMakeDirectoryNode(t, info, bar, 0)
+		bazfile := checkedMakeFileNode(t, info, bar, 1)
 
-		contains := func(children []Node, target Node) bool {
+		contains := func(children []FileNode, target Node) bool {
 			for _, child := range children {
 				if child == target {
 					return true
@@ -467,56 +478,103 @@ func TestNodeHierarchy(t *testing.T) {
 		}
 
 		// Verify the children
-		if children := root.Children(); len(children) != 2 {
+		if children := root.ChildFiles(); len(children) != 0 {
 			t.Fatal("Unexpected number of children")
-		} else if !contains(children, foo) {
-			t.Fatal("foo is not a child of root")
-		} else if !contains(children, bar) {
-			t.Fatal("bar is not a child of root")
 		}
-		if children := foo.Children(); len(children) != 1 {
+		if children := foo.ChildFiles(); len(children) != 1 {
 			t.Fatal("Unexpected number of children")
 		} else if !contains(children, foofile) {
 			t.Fatal("foofile is not a child of foo")
 		}
-		if children := bar.Children(); len(children) != 2 {
+		if children := bar.ChildFiles(); len(children) != 1 {
 			t.Fatal("Unexpected number of children")
-		} else if !contains(children, baz) {
-			t.Fatal("baz is not a child of bar")
 		} else if !contains(children, bazfile) {
 			t.Fatal("bazfile is not a child of bar")
 		}
-		if children := baz.Children(); len(children) != 0 {
+		if children := baz.ChildFiles(); len(children) != 0 {
 			t.Fatal("Unexpected number of children")
 		}
 
-		// Move the 'bar' directory inside the 'foo' directory
-		bar.MoveNode(foo, 1)
+		// Move the 'foofile' directory inside the root directory
+		foofile.MoveFile(root, 1)
 
 		// Verify the structure of the filesystem
-		if children := root.Children(); len(children) != 1 {
-			t.Fatal("Unexpected number of children")
-		} else if !contains(children, foo) {
-			t.Fatal("foo is not a child of root")
-		}
-		if children := foo.Children(); len(children) != 2 {
+		if children := root.ChildFiles(); len(children) != 1 {
 			t.Fatal("Unexpected number of children")
 		} else if !contains(children, foofile) {
-			t.Fatal("foofile is not a child of foo")
-		} else if !contains(children, bar) {
-			t.Fatal("bar is not a child of foo")
+			t.Fatal("foofile is not a child of root")
+		}
+		if children := foo.ChildFiles(); len(children) != 0 {
+			t.Fatal("Unexpected number of children")
 		}
 
-		if children := bar.Children(); len(children) != 2 {
+		if children := bar.ChildFiles(); len(children) != 1 {
 			t.Fatal("Unexpected number of children")
-		} else if !contains(children, baz) {
-			t.Fatal("baz is not a child of bar")
 		} else if !contains(children, bazfile) {
 			t.Fatal("bazfile is not a child of bar")
 		}
-		if children := baz.Children(); len(children) != 0 {
+		if children := baz.ChildFiles(); len(children) != 0 {
 			t.Fatal("Unexpected number of children")
 		}
+	}
+
+	fileBackedFAT, info := setupFAT32(t, "1G", false)
+	doTest(info /* fat32= */, true)
+	cleanup(fileBackedFAT, info)
+
+	fileBackedFAT, info = setupFAT16(t, "10M", false)
+	doTest(info /* fat32= */, false)
+	cleanup(fileBackedFAT, info)
+}
+
+// Test that "LockParent" will not return an invalid parent, even when the parent is being
+// concurrently altered.
+func TestLockParent(t *testing.T) {
+	checkParentUntilRemoved := func(done chan bool, f FileNode, d DirectoryNode, dirIndex int) {
+		// Loop forever, checking parent...
+		for {
+			parent, index := f.LockParent()
+			if parent == nil {
+				// ... until it is removed.
+				done <- true
+				return
+			} else if parent != d {
+				t.Fatal("Unexpected parent from LockParent")
+			} else if index != dirIndex {
+				t.Fatal("Unexpected dirIndex from LockParent")
+			} else if c, ok := parent.ChildFile(index); !ok || (c != f) {
+				t.Fatal("Unexpected child of parent")
+			}
+			parent.Unlock()
+		}
+	}
+
+	doTest := func(info *metadata.Info, fat32 bool) {
+		root := checkedMakeRoot(t, info, fat32)
+		dirIndex := 3
+		foo := checkedMakeDirectoryNode(t, info, root, 0)
+		foofile := checkedMakeFileNode(t, info, foo, dirIndex)
+		done := make(chan bool)
+
+		// Test that "LockParent" can deal with another thread removing the parent --> child
+		// relationship
+		go checkParentUntilRemoved(done, foofile, foo, dirIndex)
+		foo.Lock()
+		foo.RemoveFile(dirIndex)
+		foo.Unlock()
+		<-done
+
+		// Test that "LockParent" can deal with another thread removing the parent <--> child
+		// relationship
+		foofile = checkedMakeFileNode(t, info, foo, dirIndex)
+		go checkParentUntilRemoved(done, foofile, foo, dirIndex)
+		foo.Lock()
+		foofile.Lock()
+		foo.RemoveFile(dirIndex)
+		foofile.MarkDeleted()
+		foofile.Unlock()
+		foo.Unlock()
+		<-done
 	}
 
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
@@ -570,39 +628,11 @@ func TestRoot16PanicDeleted(t *testing.T) {
 	t.Fatal("Expected panic")
 }
 
-func TestRoot32PanicMove(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "10G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, true)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("Recover returned without a panic")
-		}
-	}()
-	root.MoveNode(foo, 0)
-	t.Fatal("Expected panic")
-}
-
-func TestRoot16PanicMove(t *testing.T) {
-	fileBackedFAT, info := setupFAT16(t, "10M", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, false)
-	foo := checkedMakeNode(t, info, root, 0, true)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("Recover returned without a panic")
-		}
-	}()
-	root.MoveNode(foo, 0)
-	t.Fatal("Expected panic")
-}
-
 func TestNodePanicDeletedTwice(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 	defer cleanup(fileBackedFAT, info)
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, true)
+	foo := checkedMakeDirectoryNode(t, info, root, 0)
 	foo.MarkDeleted()
 	defer func() {
 		if r := recover(); r == nil {
@@ -617,7 +647,8 @@ func TestNodePanicRefUpAfterDelete(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 	defer cleanup(fileBackedFAT, info)
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, true)
+	foo := checkedMakeDirectoryNode(t, info, root, 0)
+	foo.RefUp()
 	foo.MarkDeleted()
 	if err := foo.RefDown(1); err != nil { // This actually deletes foo
 		t.Fatal(err)
@@ -637,7 +668,7 @@ func TestNodePanicSetSizeAfterDelete(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 	defer cleanup(fileBackedFAT, info)
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, false)
+	foo := checkedMakeFileNode(t, info, root, 0)
 	foo.MarkDeleted()
 	defer func() {
 		if r := recover(); r == nil {
@@ -654,7 +685,7 @@ func TestNodePanicSetSizeNonRootDirectory(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 	defer cleanup(fileBackedFAT, info)
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	dir := checkedMakeNode(t, info, root, 0, true)
+	dir := checkedMakeDirectoryNode(t, info, root, 0)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Recover returned without a panic")
@@ -668,8 +699,7 @@ func TestNodePanicRefDown(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 	defer cleanup(fileBackedFAT, info)
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, true)
-	foo.RefDown(1)
+	foo := checkedMakeDirectoryNode(t, info, root, 0)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Recover returned without a panic")
@@ -683,30 +713,15 @@ func TestNodePanicMoveAfterDelete(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 	defer cleanup(fileBackedFAT, info)
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, true)
-	bar := checkedMakeNode(t, info, root, 1, true)
-	root.RemoveChild(0)
+	foofile := checkedMakeFileNode(t, info, root, 0)
+	bar := checkedMakeDirectoryNode(t, info, root, 1)
+	root.RemoveFile(0)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Recover returned without a panic")
 		}
 	}()
-	foo.MoveNode(bar, 0)
-	t.Fatal("Expected panic")
-}
-
-func TestNodePanicMoveToFile(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, true)
-	barFile := checkedMakeNode(t, info, root, 1, false)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("Recover returned without a panic")
-		}
-	}()
-	foo.MoveNode(barFile, 0)
+	foofile.MoveFile(bar, 0)
 	t.Fatal("Expected panic")
 }
 
@@ -716,8 +731,10 @@ func TestLargestNode(t *testing.T) {
 		root := checkedMakeRoot(t, info, fat32)
 		if doRoot {
 			largeNode = root
+		} else if doDirectory {
+			largeNode = checkedMakeDirectoryNode(t, info, root, 0)
 		} else {
-			largeNode = checkedMakeNode(t, info, root, 0, doDirectory)
+			largeNode = checkedMakeFileNode(t, info, root, 0)
 		}
 		fileSize := largeNode.Size()
 		bufSize := maxSize / 20 // Write in large chunks
@@ -728,7 +745,7 @@ func TestLargestNode(t *testing.T) {
 			if bufSize+fileSize > maxSize {
 				buf = buf[:maxSize-fileSize]
 			}
-			n, err := largeNode.WriteAt(buf, fileSize)
+			n, err := largeNode.writeAt(buf, fileSize)
 			if err != nil {
 				t.Fatal(err)
 			} else if n != len(buf) {
@@ -739,7 +756,7 @@ func TestLargestNode(t *testing.T) {
 
 		// Once the node is "full", overflow it with a single byte
 		buf = testutil.MakeRandomBuffer(1)
-		if n, err := largeNode.WriteAt(buf, fileSize); err != ErrNoSpace {
+		if n, err := largeNode.writeAt(buf, fileSize); err != ErrNoSpace {
 			t.Fatal("Expected ErrNoSpace error, but saw: ", err, " with filesize: ", largeNode.Size())
 		} else if n != 0 {
 			t.Fatalf("Wrote 0x%x bytes (expected 0x%x)", n, 0)
@@ -750,7 +767,7 @@ func TestLargestNode(t *testing.T) {
 		// Try writing partially under and partially over the max size
 		buf = testutil.MakeRandomBuffer(100)
 		halfBufSize := int64(len(buf) / 2)
-		if n, err := largeNode.WriteAt(buf, fileSize-halfBufSize); err != ErrNoSpace {
+		if n, err := largeNode.writeAt(buf, fileSize-halfBufSize); err != ErrNoSpace {
 			t.Fatal("Expected ErrNoSpace error, but saw: ", err)
 		} else if n != int(halfBufSize) {
 			t.Fatalf("Wrote 0x%x bytes (expected 0x%x)", n, halfBufSize)
@@ -797,12 +814,17 @@ func TestNoSpace(t *testing.T) {
 		if doRoot {
 			largeNode = root
 		} else {
-			largeNode = checkedMakeNode(t, info, root, 0, doDirectory)
+			if doDirectory {
+				largeNode = checkedMakeDirectoryNode(t, info, root, 0)
+			} else {
+				largeNode = checkedMakeFileNode(t, info, root, 0)
+			}
+			largeNode.RefUp()
 		}
 		buf := testutil.MakeRandomBuffer(int(100000))
 
 		for {
-			n, err := largeNode.WriteAt(buf, largeNode.Size())
+			n, err := largeNode.writeAt(buf, largeNode.Size())
 			if err == ErrNoSpace && n < len(buf) {
 				// Only valid exit condition: Using all the space in the filesystem and not
 				// completing write

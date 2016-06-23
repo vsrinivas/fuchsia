@@ -13,23 +13,23 @@ import (
 )
 
 type root struct {
-	info        *metadata.Info
+	metadata    *metadata.Info
 	offsetStart int64 // Device offset at which the root starts.
 	maxSize     int64 // The maximum size of the root node.
 
 	mu         sync.RWMutex
-	children   map[uint]Node // Map of "direntIndex" --> "Node", if a child is open.
-	size       int64         // The size of the node.
-	references int           // The number of open files referencing this node.
+	children   map[int]FileNode // Map of "direntIndex" --> "FileNode", if a child is open.
+	size       int64            // The size of the node.
+	references int              // The number of open files referencing this node.
 }
 
 // NewRoot makes a new root, specific for FAT-12 / FAT-16
-func NewRoot(info *metadata.Info, offsetStart, maxSize int64) Node {
+func NewRoot(m *metadata.Info, offsetStart, maxSize int64) DirectoryNode {
 	r := &root{
-		info:        info,
+		metadata:    m,
 		offsetStart: offsetStart,
 		maxSize:     maxSize,
-		children:    make(map[uint]Node),
+		children:    make(map[int]FileNode),
 		size:        maxSize,
 		references:  1,
 	}
@@ -37,8 +37,8 @@ func NewRoot(info *metadata.Info, offsetStart, maxSize int64) Node {
 	return r
 }
 
-func (r *root) Info() *metadata.Info {
-	return r.info
+func (r *root) Metadata() *metadata.Info {
+	return r.metadata
 }
 
 func (r *root) SetSize(size int64) error {
@@ -71,7 +71,7 @@ func (r *root) RefDown(numRefs int) error {
 	return nil
 }
 
-func (r *root) ReadAt(buf []byte, off int64) (int, error) {
+func (r *root) readAt(buf []byte, off int64) (int, error) {
 	bytesToRead := len(buf)
 
 	if off < 0 || r.size <= off {
@@ -81,7 +81,7 @@ func (r *root) ReadAt(buf []byte, off int64) (int, error) {
 		bytesToRead = int(r.size - off)
 	}
 
-	bytesRead, err := r.info.Dev.ReadAt(buf[:bytesToRead], r.offsetStart+off)
+	bytesRead, err := r.metadata.Dev.ReadAt(buf[:bytesToRead], r.offsetStart+off)
 	if err != nil {
 		return 0, err
 	}
@@ -92,8 +92,8 @@ func (r *root) ReadAt(buf []byte, off int64) (int, error) {
 	return bytesRead, nil
 }
 
-func (r *root) WriteAt(buf []byte, off int64) (int, error) {
-	if r.info.Readonly {
+func (r *root) writeAt(buf []byte, off int64) (int, error) {
+	if r.metadata.Readonly {
 		return 0, fs.ErrPermission
 	}
 
@@ -107,7 +107,7 @@ func (r *root) WriteAt(buf []byte, off int64) (int, error) {
 		// Would the end of this write extend beyond the max size? If so, write less.
 		bytesToWrite = int(r.maxSize - off)
 	}
-	bytesWritten, err := r.info.Dev.WriteAt(buf[:bytesToWrite], r.offsetStart+off)
+	bytesWritten, err := r.metadata.Dev.WriteAt(buf[:bytesToWrite], r.offsetStart+off)
 
 	// Adjust the size of the root if we have extended it.
 	if off+int64(bytesWritten) > r.size {
@@ -132,7 +132,11 @@ func (r *root) IsDirectory() bool {
 // This root does not use clusters. However, for the sake of simplicity, we'll simply lie using a
 // reserved cluster.
 func (r *root) StartCluster() uint32 {
-	return r.info.ClusterMgr.ClusterEOF()
+	return r.metadata.ClusterMgr.ClusterEOF()
+}
+
+func (r *root) ID() uint32 {
+	return r.metadata.ClusterMgr.ClusterEOF()
 }
 
 func (r *root) NumClusters() int {
@@ -147,12 +151,10 @@ func (r *root) MTime() time.Time {
 	return time.Time{}
 }
 
+func (r *root) SetMTime(mtime time.Time) {}
+
 func (r *root) Size() int64 {
 	return r.size
-}
-
-func (r *root) Parent() (parent Node, direntIndex uint) {
-	return nil, 0
 }
 
 func (r *root) Lock() {
@@ -168,8 +170,8 @@ func (r *root) RUnlock() {
 	r.mu.RUnlock()
 }
 
-func (r *root) Children() []Node {
-	children := make([]Node, len(r.children))
+func (r *root) ChildFiles() []FileNode {
+	children := make([]FileNode, len(r.children))
 	i := 0
 	for k := range r.children {
 		children[i] = r.children[k]
@@ -178,23 +180,19 @@ func (r *root) Children() []Node {
 	return children
 }
 
-func (r *root) Child(direntIndex uint) (Node, bool) {
+func (r *root) ChildFile(direntIndex int) (FileNode, bool) {
 	c, ok := r.children[direntIndex]
 	return c, ok
 }
 
-func (r *root) setChild(direntIndex uint, child Node) {
+func (r *root) setChildFile(direntIndex int, child FileNode) {
 	if _, ok := r.children[direntIndex]; ok {
-		panic("setChild failed; a child already exists at this index")
+		panic("setChildFile failed; a child already exists at this index")
 	}
 	r.children[direntIndex] = child
 }
 
-func (r *root) MoveNode(newParent Node, newDirentIndex uint) {
-	panic("Cannot move root16")
-}
-
-func (r *root) RemoveChild(direntIndex uint) {
+func (r *root) RemoveFile(direntIndex int) {
 	if _, ok := r.children[direntIndex]; !ok {
 		panic("Child does not exist in root16")
 	}
