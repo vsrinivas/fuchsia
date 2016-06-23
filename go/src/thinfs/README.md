@@ -70,6 +70,5 @@ If you see output that looks like
 ```
 # I0603 16:43:45.294634    4996 main.go:78] Entry name=., type=Directory
 # I0603 16:43:45.294969    4996 main.go:78] Entry name=.., type=Directory
-# I0603 16:43:45.294996    4996 main.go:78] Entry name=lost+found, type=Directory
 ```
 then you know it worked.

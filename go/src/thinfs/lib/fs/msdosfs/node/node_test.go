@@ -337,18 +337,15 @@ func TestSetSize(t *testing.T) {
 		}
 		// Adjust the size of the node (trim down to one cluster)
 		newLen := int64(metadata.Br.ClusterSize())
-		if err := n.SetSize(newLen); err != nil {
-			t.Fatal(err)
-		}
+		n.SetSize(newLen)
 
 		if nodeUsesClusters && n.NumClusters() != 1 {
 			t.Fatal("Modifying the size should have reduced the number of clusters, but it didn't")
 		}
 
 		if canHaveZeroSize {
-			if err := n.SetSize(0); err != nil {
-				t.Fatal(err)
-			} else if nodeUsesClusters {
+			n.SetSize(0)
+			if nodeUsesClusters {
 				if fat32 && isRoot {
 					if n.NumClusters() != 1 {
 						t.Fatal("Truncating to zero should have left the file with a single cluster")
@@ -585,20 +582,30 @@ func TestLockParent(t *testing.T) {
 	cleanup(fileBackedFAT, metadata)
 }
 
-func TestSetSizeInvalid(t *testing.T) {
+func TestSetSizeFAT32Invalid(t *testing.T) {
 	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
 	root := checkedMakeRoot(t, metadata /* fat32= */, true)
-	if err := root.SetSize(int64(metadata.Br.ClusterSize() + 1)); err != ErrNoSpace {
-		t.Fatal("Expected error: Not enough clusters for size")
-	}
-	cleanup(fileBackedFAT, metadata)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Recover returned without a panic")
+		}
+	}()
+	root.SetSize(int64(metadata.Br.ClusterSize() + 1))
+	t.Fatal("Expected panic related to setting a node size too large")
+}
 
-	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
-	root = checkedMakeRoot(t, metadata /* fat32= */, false)
-	if err := root.SetSize(100000); err != ErrNoSpace {
-		t.Fatal("Expected error: Not enough clusters for size")
-	}
-	cleanup(fileBackedFAT, metadata)
+func TestSetSizeFAT16Invalid(t *testing.T) {
+	fileBackedFAT, metadata := setupFAT16(t, "10M", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, false)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Recover returned without a panic")
+		}
+	}()
+	root.SetSize(100000)
+	t.Fatal("Expected panic related to setting a root size too large")
 }
 
 func TestRoot32PanicDeleted(t *testing.T) {
@@ -766,10 +773,15 @@ func TestLargestNode(t *testing.T) {
 		// Try writing partially under and partially over the max size
 		buf = testutil.MakeRandomBuffer(100)
 		halfBufSize := int64(len(buf) / 2)
+		expectedWriteSize := halfBufSize
+		if doRoot || doDirectory {
+			// Root / Directory contain metadata; they cannot complete partial writes
+			expectedWriteSize = 0
+		}
 		if n, err := largeNode.writeAt(buf, fileSize-halfBufSize); err != ErrNoSpace {
 			t.Fatal("Expected ErrNoSpace error, but saw: ", err)
-		} else if n != int(halfBufSize) {
-			t.Fatalf("Wrote 0x%x bytes (expected 0x%x)", n, halfBufSize)
+		} else if n != int(expectedWriteSize) {
+			t.Fatalf("Wrote 0x%x bytes (expected 0x%x)", n, expectedWriteSize)
 		} else if largeNode.Size() != maxSize {
 			t.Fatalf("Node size changed after failed write to 0x%x", largeNode.Size())
 		}
@@ -824,7 +836,7 @@ func TestNoSpace(t *testing.T) {
 
 		for {
 			n, err := largeNode.writeAt(buf, largeNode.Size())
-			if err == ErrNoSpace && n < len(buf) {
+			if err == fs.ErrResourceExhausted && n < len(buf) {
 				// Only valid exit condition: Using all the space in the filesystem and not
 				// completing write
 				break

@@ -5,6 +5,8 @@
 package node
 
 import (
+	"time"
+
 	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/direntry"
 )
@@ -57,20 +59,11 @@ func Allocate(n DirectoryNode, entry *direntry.Dirent) (direntryIndex int, err e
 			if numFree != 0 {
 				panic("Corrupt directory: 'LastFree' direntry was preceded by free entries")
 			}
-			// No more allocated sectors after this one.
-			// Expand directory to hold the number of free entries we need...
-			freeDirent := direntry.FreeDirent()
-			for 0 < numNewEntries {
-				if err := write(n, freeDirent, direntryIndex); err != nil {
-					return 0, err
-				}
-				direntryIndex++
-				numNewEntries--
-			}
-			// ... including the new "LastFree" marker.
-			if err := write(n, direntry.LastFreeDirent(), direntryIndex); err != nil {
+			// Write the new "LastFree" marker
+			if err := write(n, direntry.LastFreeDirent(), startDirentryIndex+numNewEntries); err != nil {
 				return 0, err
 			}
+			// Write our entry before the "LastFree" marker
 			return startDirentryIndex, write(n, diskDirents, startDirentryIndex)
 		} else if entry.IsFree() {
 			// Found a single free spot.
@@ -109,45 +102,41 @@ func MakeEmpty(n DirectoryNode) error {
 	lastFreeIndex := firstDirentIndex(n)
 	if err := write(n, direntry.LastFreeDirent(), lastFreeIndex); err != nil {
 		return err
-	} else if err := n.SetSize(int64(lastFreeIndex+1) * direntry.DirentrySize); err != nil {
-		return err
 	}
+	n.SetSize(int64(lastFreeIndex+1) * direntry.DirentrySize)
 	return nil
 }
 
 // Update updates the direntry for the child node by updating its parent direntry.
 // Cannot be used to alter a direntry name.
-func Update(parent DirectoryNode, child Node, direntryIndex int) error {
+// Returns the old cluster which was replaced
+func Update(parent DirectoryNode, cluster uint32, mTime time.Time, size uint32, direntryIndex int) (uint32, error) {
 	entry, numSlots, err := Read(parent, direntryIndex)
 	if err != nil {
-		return err
+		return 0, err
 	} else if entry.IsFree() {
 		panic("Attempting to update a free entry")
 	}
 
+	oldCluster := entry.Cluster
+	entry.Cluster = cluster
+	entry.WriteTime = mTime
 	if entry.GetType() == fs.FileTypeDirectory {
 		// On disk, FAT directories always store their size as "0"
 		entry.Size = 0
-		if entry.Cluster != child.StartCluster() {
-			panic("FAT Directory Start Clusters should never change")
-		}
-		// FAT directory "Last Modified" time is actually treated like "creation time", and
-		// therefore is not updated here.
 	} else {
-		entry.Size = uint32(child.Size())
-		entry.Cluster = child.StartCluster()
-		entry.WriteTime = child.MTime()
+		entry.Size = size
 	}
 
 	// If the name of the dirent has not changed, then the size of the dirent has not changed.
 	buf, err := entry.Serialize(nil)
 	if err != nil {
-		return err
+		return 0, err
 	} else if len(buf)/direntry.DirentrySize != numSlots {
 		panic("Unexpected dirent size")
 	}
 
-	return write(parent, buf, direntryIndex)
+	return oldCluster, write(parent, buf, direntryIndex)
 }
 
 // Free frees the direntry at a provided index inside a directory node.
@@ -179,21 +168,17 @@ func Free(n DirectoryNode, index int) (*direntry.Dirent, error) {
 			}
 			lastFreeIndex--
 		}
+		// Wipe out the direntry (implicitly) by writing the last free dirent
 		if err := write(n, direntry.LastFreeDirent(), lastFreeIndex); err != nil {
 			return nil, err
-		} else if err := n.SetSize(int64(lastFreeIndex+1) * direntry.DirentrySize); err != nil {
-			return nil, err
 		}
+		n.SetSize(int64(lastFreeIndex+1) * direntry.DirentrySize)
 	} else {
-		if err := write(n, direntry.FreeDirent(), index); err != nil {
-			return nil, err
-		}
-	}
-
-	// Wipe out the rest of direntry. If multiple direntries were used, then wipe them out.
-	for i := index + 1; i < index+numSlots; i++ {
-		if err = write(n, direntry.FreeDirent(), i); err != nil {
-			panic(err)
+		// Wipe out the direntry. If multiple direntries were used, then wipe them out.
+		for i := index; i < index+numSlots; i++ {
+			if err = write(n, direntry.FreeDirent(), i); err != nil {
+				return nil, err
+			}
 		}
 	}
 

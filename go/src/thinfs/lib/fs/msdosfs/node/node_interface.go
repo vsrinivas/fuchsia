@@ -8,6 +8,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"fuchsia.googlesource.com/thinfs/lib/fs"
 )
 
 var (
@@ -15,10 +17,10 @@ var (
 	ErrEOF = errors.New("FAT Node: EOF hit before operation completed")
 
 	// ErrNoSpace indicates the requested operation requires more space than is available
-	ErrNoSpace = errors.New("FAT Node: Not enough space for requested operation")
+	ErrNoSpace = fs.ErrResourceExhausted
 
 	// ErrBadArgument indicates the argument passed to a node was invalid
-	ErrBadArgument = errors.New("FAT Node: Bad argument passed to node")
+	ErrBadArgument = fs.ErrInvalidArgs
 )
 
 // FileNode implements the interface of a file (leaf node) in the FAT filesystem
@@ -54,7 +56,7 @@ type Node interface {
 	RUnlock()   // Unlock reader lock
 
 	// Write-access methods, which may modify the contents of the Node
-	SetSize(size int64) error  // Change node size. Shrinking can remove clusters
+	SetSize(size int64)        // Change node size. Shrinking can remove clusters
 	SetMTime(mtime time.Time)  // Updates the last modified time
 	RefUp()                    // Increment refs
 	RefDown(numRefs int) error // Decrement refs, possibly delete clusters if they're unused

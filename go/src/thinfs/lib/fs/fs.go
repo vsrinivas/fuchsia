@@ -42,7 +42,7 @@ var (
 	// ErrNotEmpty indicates that the caller attempted to remove a non-empty directory
 	ErrNotEmpty = errors.New("directory is not empty")
 
-	// ErrNotOpen indicates that the caller is attempting to close a file or directory
+	// ErrNotOpen indicates that the caller is attempting to access a file or directory
 	// that is not currently open.
 	ErrNotOpen = errors.New("file or directory not open")
 
@@ -57,6 +57,10 @@ var (
 	// ErrIsActive indicates that the caller attempted to unlink a directory with active
 	// references
 	ErrIsActive = errors.New("directory has active references")
+
+	// ErrUnmounted indicates that the entire filesystem has been unmounted, and all future
+	// operations will fail
+	ErrUnmounted = errors.New("operation failed because filesystem is unmounted")
 )
 
 // FileType describes the type of a given file.
@@ -203,10 +207,10 @@ type Directory interface {
 	Close() error
 
 	// Stat returns the size, last access time, and last modified time (if known) of the directory.
-	Stat() (int64, *time.Time, *time.Time, error)
+	Stat() (int64, time.Time, time.Time, error)
 
-	// Touch updates the directory's access and modification times (if they are non-nil).
-	Touch(lastAccess, lastModified *time.Time) error
+	// Touch updates the directory's access and modification times.
+	Touch(lastAccess, lastModified time.Time) error
 
 	// Dup returns a directory which shares all the information as 'this' directory, including the
 	// permissions and file seek position.
@@ -252,10 +256,10 @@ type File interface {
 	Close() error
 
 	// Stat returns the size, last access time, and last modified time of the file.
-	Stat() (int64, *time.Time, *time.Time, error)
+	Stat() (int64, time.Time, time.Time, error)
 
-	// Touch updates the file's access and modification times (if they are non-nil).
-	Touch(lastAccess, lastModified *time.Time) error
+	// Touch updates the file's access and modification times.
+	Touch(lastAccess, lastModified time.Time) error
 
 	// Dup returns a file which shares all the information as 'this' file, including the
 	// permissions and file seek position.
@@ -267,12 +271,14 @@ type File interface {
 	// 2) The file position is set to either zero or EOF depending on "flags".
 	Reopen(flags OpenFlags) (File, error)
 
-	// Read reads a maximum of len(p) bytes into "p" into the file at a location decided by "off"
+	// Read reads a maximum of len(p) bytes into "p" from the file at a location decided by "off"
 	// and "whence".
+	// The seek position is only updated if fs.WhenceFromCurrent is passed as whence.
 	Read(p []byte, off int64, whence int) (int, error)
 
-	// Write writes a maximum of len(p) bytes from "p" into the file at a location decided by "off"
-	// and "whence".
+	// Write writes a maximum of len(p) bytes from "p" into the file at a location decided by
+	// "off" and "whence".
+	// The seek position is only updated if fs.WhenceFromCurrent is passed as whence.
 	Write(p []byte, off int64, whence int) (int, error)
 
 	// Truncate reduces the file to the size specified by "size" in bytes.

@@ -66,7 +66,7 @@ func checkMakeEmpty(t *testing.T, d DirectoryNode) {
 }
 
 func checkUpdate(t *testing.T, d DirectoryNode, child Node, index int) {
-	if err := Update(d, child, index); err != nil {
+	if _, err := Update(d, child.StartCluster(), child.MTime(), uint32(child.Size()), index); err != nil {
 		t.Fatal(err)
 	}
 }

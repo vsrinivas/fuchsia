@@ -40,12 +40,11 @@ func (r *root) Metadata() *Metadata {
 	return r.metadata
 }
 
-func (r *root) SetSize(size int64) error {
+func (r *root) SetSize(size int64) {
 	if r.maxSize < size {
-		return ErrNoSpace
+		panic("Setting root size to something larger than max size")
 	}
 	r.size = size
-	return nil
 }
 
 func (r *root) MarkDeleted() {
@@ -94,34 +93,21 @@ func (r *root) readAt(buf []byte, off int64) (int, error) {
 func (r *root) writeAt(buf []byte, off int64) (int, error) {
 	if r.metadata.Readonly {
 		return 0, fs.ErrPermission
+	} else if off < 0 {
+		return 0, ErrBadArgument
+	} else if off >= r.maxSize || off+int64(len(buf)) > r.maxSize {
+		// Would the start/end of this write extend beyond the max size? If so, don't write.
+		return 0, ErrNoSpace
 	}
 
-	bytesToWrite := len(buf)
-	if off < 0 {
-		return 0, ErrBadArgument
-	} else if off >= r.maxSize {
-		// Would the start of this write extend beyond the max size? If so, don't write.
-		bytesToWrite = 0
-	} else if off+int64(bytesToWrite) > r.maxSize {
-		// Would the end of this write extend beyond the max size? If so, write less.
-		bytesToWrite = int(r.maxSize - off)
-	}
-	bytesWritten, err := r.metadata.Dev.WriteAt(buf[:bytesToWrite], r.offsetStart+off)
+	bytesWritten, err := r.metadata.Dev.WriteAt(buf, r.offsetStart+off)
 
 	// Adjust the size of the root if we have extended it.
 	if off+int64(bytesWritten) > r.size {
 		r.size = off + int64(bytesWritten)
 	}
 
-	if err != nil {
-		return bytesWritten, err
-	}
-
-	// We wrote as many bytes as possible, but there was not enough space for that many bytes.
-	if bytesWritten < len(buf) {
-		return bytesWritten, ErrNoSpace
-	}
-	return bytesWritten, nil
+	return bytesWritten, err
 }
 
 func (r *root) IsDirectory() bool {

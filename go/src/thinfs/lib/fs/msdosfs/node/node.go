@@ -78,10 +78,8 @@ func NewDirectory(m *Metadata, startCluster uint32, mtime time.Time) (DirectoryN
 	// from the number of used clusters.
 	if n.clusters, err = m.ClusterMgr.ClusterCollect(startCluster); err != nil {
 		return nil, err
-	} else if err = n.SetSize(int64(m.Br.ClusterSize()) * int64(len(n.clusters))); err != nil {
-		panic(err)
 	}
-
+	n.SetSize(int64(m.Br.ClusterSize()) * int64(len(n.clusters)))
 	return n, nil
 }
 
@@ -93,13 +91,13 @@ func (n *node) Metadata() *Metadata {
 // Node sizes can be overestimated up to the nearest cluster.
 //
 // If 'SetSize' renders some clusters inaccessible, it frees them.
-func (n *node) SetSize(size int64) error {
+func (n *node) SetSize(size int64) {
 	clusterSize := int64(n.metadata.Br.ClusterSize())
 	maxSize := clusterSize * int64(len(n.clusters))
 	if n.deleted {
 		panic("Should not modify size of deleted node")
 	} else if maxSize < size {
-		return ErrNoSpace
+		panic("Setting size larger than accessible by known clusters")
 	} else if !n.IsRoot() && n.IsDirectory() && size <= 0 {
 		panic("Should not attempt to set size of non-root directory to less than or equal to zero")
 	}
@@ -117,9 +115,12 @@ func (n *node) SetSize(size int64) error {
 		// Make a best-effort attempt to delete the clusters.
 		// If an I/O error occurs, clusters may be lost until FAT fsck executes, but the filesystem
 		// will not actually be corrupted.
-		n.metadata.ClusterMgr.ClusterDelete(clusterToDelete)
+		if len(n.clusters) > 0 {
+			n.metadata.ClusterMgr.ClusterTruncate(n.clusters[len(n.clusters)-1])
+		} else {
+			n.metadata.ClusterMgr.ClusterDelete(clusterToDelete)
+		}
 	}
-	return nil
 }
 
 // MarkDeleted sets the node to be deleted, so it can be removed from disk once fully closed.
@@ -223,8 +224,6 @@ func (n *node) writeAt(buf []byte, off int64) (int, error) {
 		return 0, ErrBadArgument
 	}
 
-	// TODO(smklein): Consider bypassing the cache for extremely large writes.
-
 	// If (and only if) the write increases the size of the file, this variable holds the new size.
 	maxPotentialSize := off + int64(len(buf))
 	maxNodeSize := maxSizeFile
@@ -236,13 +235,17 @@ func (n *node) writeAt(buf []byte, off int64) (int, error) {
 	// Ensure the write does not expand beyond the maximum allowable file / directory size. This
 	// should later result in an error, since the input buffer will not be written fully.
 	if maxPotentialSize > maxNodeSize {
+		if n.directory {
+			// Directories are metadata -- partial writes should be avoided
+			return 0, ErrNoSpace
+		}
 		writeBuf = writeBuf[:len(writeBuf)-int(maxPotentialSize-maxNodeSize)]
 		maxPotentialSize = maxNodeSize
 	}
 
 	// Expand the number of clusters to fill the last byte of the buffer.
 	clusterSize := int64(n.metadata.Br.ClusterSize())
-	for maxPotentialSize > int64(clusterSize)*int64(len(n.clusters)) {
+	for maxPotentialSize > clusterSize*int64(len(n.clusters)) {
 		// Only expand the tail if there is one. Empty files, for example, have no clusters.
 		tail := uint32(0)
 		if len(n.clusters) > 0 {
@@ -250,6 +253,9 @@ func (n *node) writeAt(buf []byte, off int64) (int, error) {
 		}
 		newCluster, err := n.metadata.ClusterMgr.ClusterExtend(tail)
 		if err != nil {
+			if n.directory {
+				return 0, err
+			}
 			// Error intentionally ignored; we are just cleaning up after the ClusterExtend error.
 			// The writeBuffer cannot be fully written -- instead, only write the chunk which will
 			// fit given our constrained cluster size.
