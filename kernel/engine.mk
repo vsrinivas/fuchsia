@@ -100,7 +100,11 @@ ARCH_CPPFLAGS :=
 ARCH_ASMFLAGS :=
 
 # top level rule
-all:: $(OUTLKBIN) $(OUTLKELF).lst $(OUTLKELF).debug.lst $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size $(OUTLKELF).dump $(OUTLKELF)-gdb.py
+all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
+
+ifeq ($(ENABLE_BUILD_LISTFILES),true)
+all:: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size $(OUTLKELF).dump
+endif
 
 # master module object list
 ALLOBJS_MODULE :=
@@ -206,6 +210,7 @@ include top/rules.mk
 # modules in the ALLMODULES list
 include make/recurse.mk
 
+ifeq ($(ENABLE_BUILD_SYSROOT),true)
 ifneq ($(SYSROOT_MEGA_LIBC),)
 MEGA_LIBC := $(BUILDDIR)/sysroot/lib/libc.a
 # this is a really awful hack, but makes everything
@@ -219,13 +224,17 @@ $(MEGA_LIBC): $(SYSROOT_MEGA_LIBC_OBJS)
 SYSROOT_DEPS += $(MEGA_LIBC)
 GENERATED += $(MEGA_LIBC)
 endif
+endif
 
 # any extra top level build dependencies that someone declared
 all:: $(EXTRA_BUILDDEPS) $(SYSROOT_DEPS)
 
 # make the build depend on all of the user apps
-all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).lst $(app).dump $(app).strip)
+all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 
+ifeq ($(ENABLE_BUILD_LISTFILES),true)
+all:: $(foreach app,$(ALLUSER_APPS),$(app).lst $(app).dump)
+endif
 
 # generate linkage dependencies for userspace apps after
 # all modules have been evaluated, so we can recursively

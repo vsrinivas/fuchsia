@@ -12,6 +12,16 @@ BUILDROOT ?= .
 DEFAULT_PROJECT ?= magenta-qemu-x86-64
 TOOLCHAIN_PREFIX ?=
 
+ENABLE_BUILD_SYSROOT ?= false
+# if true, $BUILDDIR/sysroot/{lib,include,...} will be populated with
+# public libraries, headers, and other "build artifacts" necessary
+# for a toolchain to compile binaries for Magenta.
+
+ENABLE_BUILD_LISTFILES ?= false
+# If true, various verbose listings (*.lst, *.sym, *,dump, etc) will
+# be generated for the kernel and userspace binaries.  These can be
+# useful for debugging, but are large and can slow the build some.
+
 # check if LKROOT is already a part of LKINC list and add it only if it is not
 ifneq ($(findstring $(LKROOT),$(LKINC)), $(LKROOT))
 LKINC := $(LKROOT) $(LKINC)

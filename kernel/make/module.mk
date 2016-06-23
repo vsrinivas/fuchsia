@@ -162,8 +162,10 @@ ALLUSER_MODULES += $(MODULE)
 USER_MANIFEST_LINES += bin/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 else ifeq ($(MODULE_TYPE),userlib)
 MODULE_$(MODULE)_DEPS := $(MODULE_DEPS)
-ifneq ($(MODULE_EXPORT),)
+
+ifeq ($(ENABLE_BUILD_SYSROOT),true)
 # exported modules have libraries and headers installed in sysroot/...
+ifneq ($(MODULE_EXPORT),)
 
 # where to install our static library:
 MODULE_USERLIB_STATIC := $(BUILDDIR)/sysroot/lib/lib$(MODULE_EXPORT).a
@@ -187,7 +189,6 @@ $(call copy-dst-src,$(CRT_DST),$(CRT_SRC))\
 $(eval SYSROOT_DEPS += $(CRT_DST))\
 $(eval GENERATED += $(CRT_DST)))
 endif
-
 
 ifeq ($(filter $(MODULE_EXPORT),$(SYSROOT_MEGA_LIBC)),)
 # build a static library if not part of mega-libc
@@ -216,7 +217,8 @@ $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.inc,$(MODULE_SRCDIR)/include/%.i
 SYSROOT_DEPS += $(MODULE_PUBLIC_HEADERS)
 GENERATED += $(MODULE_PUBLIC_HEADERS)
 endif
-endif
+endif # if ENABLE_BUILD_SYSROOT true
+endif # if MODULE_TYPE userlib
 
 # empty out any vars set here
 MODULE :=
