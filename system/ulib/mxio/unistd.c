@@ -131,6 +131,18 @@ int __libc_io_writev(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
+int __libc_io_rmdir(const char* path) {
+    return -1;
+}
+
+int __libc_io_unlink(const char* path) {
+    return -1;
+}
+
+int __libc_io_unlinkat(int fd, const char* path, int flag) {
+    return -1;
+}
+
 mx_handle_t mxio_get_process_handle(void) {
     return mxio_process_handle;
 }
