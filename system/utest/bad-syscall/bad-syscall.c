@@ -16,19 +16,25 @@
 #include <stdlib.h>
 
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 
-#define CHECK(f, expected, message) \
-    if ((ret = (f)) != (expected))  \
-    printf("Test failed (%s): " #f " returned %d vs. %d\n", message, ret, expected)
+int bad_syscall_test(void) {
+    BEGIN_TEST;
+    void* unmapped_addr = (void*)4096;
+    EXPECT_LT(_magenta_debug_write(unmapped_addr, 1), 0, "Error: reading unmapped addr");
+    EXPECT_LT(_magenta_debug_write((void*)KERNEL_ASPACE_BASE - 1, 5), 0, "Error: read crossing kernel boundary");
+    EXPECT_LT(_magenta_debug_write((void*)KERNEL_ASPACE_BASE, 1), 0, "Error: read into kernel space");
+    EXPECT_EQ(_magenta_debug_write((void*)&unmapped_addr, sizeof(void*)), (int)sizeof(void*),
+              "Good syscall failed");
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(bad_syscall_tests)
+RUN_TEST(bad_syscall_test)
+END_TEST_CASE(bad_syscall_tests)
 
 int main(void) {
-    mx_status_t ret;
-    void* unmapped_addr = (void*)4096;
-    CHECK(_magenta_debug_write(unmapped_addr, 1), -1, "reading unmapped addr");
-    CHECK(_magenta_debug_write((void*)KERNEL_ASPACE_BASE - 1, 5), -1, "read crossing kernel boundary");
-    CHECK(_magenta_debug_write((void*)KERNEL_ASPACE_BASE, 1), -1, "read into kernel space");
-    CHECK(_magenta_debug_write((void*)&unmapped_addr, sizeof(void*)), (int)sizeof(void*),
-          "good read");
-    printf("Done\n");
-    return 0;
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_bad_syscall_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
