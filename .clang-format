@@ -1,0 +1,13 @@
+# Requires clang-format-3.9; try mojo/src/buildtools/linux64/clang-format
+Language: Cpp
+ColumnLimit: 100
+UseTab: Never
+IndentWidth: 4
+BreakBeforeBraces: WebKit
+AccessModifierOffset: -4
+DerivePointerAlignment: false
+PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: All
+KeepEmptyLinesAtTheStartOfBlocks: true
+AlignEscapedNewlinesLeft: false
+ForEachMacros: ['list_for_every_entry']
