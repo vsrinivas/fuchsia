@@ -142,7 +142,6 @@
 #define SYS_mknodat 324
 #define SYS_fchownat 325
 #define SYS_fstatat64 327
-#define SYS_unlinkat 328
 #define SYS_renameat 329
 #define SYS_linkat 330
 #define SYS_symlinkat 331

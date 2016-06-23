@@ -69,10 +69,8 @@
 #define __NR_fchdir (__X32_SYSCALL_BIT + 81)
 #define __NR_rename (__X32_SYSCALL_BIT + 82)
 #define __NR_mkdir (__X32_SYSCALL_BIT + 83)
-#define __NR_rmdir (__X32_SYSCALL_BIT + 84)
 #define __NR_creat (__X32_SYSCALL_BIT + 85)
 #define __NR_link (__X32_SYSCALL_BIT + 86)
-#define __NR_unlink (__X32_SYSCALL_BIT + 87)
 #define __NR_symlink (__X32_SYSCALL_BIT + 88)
 #define __NR_readlink (__X32_SYSCALL_BIT + 89)
 #define __NR_chmod (__X32_SYSCALL_BIT + 90)
@@ -191,7 +189,6 @@
 #define __NR_fchownat (__X32_SYSCALL_BIT + 260)
 #define __NR_futimesat (__X32_SYSCALL_BIT + 261)
 #define __NR_newfstatat (__X32_SYSCALL_BIT + 262)
-#define __NR_unlinkat (__X32_SYSCALL_BIT + 263)
 #define __NR_renameat (__X32_SYSCALL_BIT + 264)
 #define __NR_linkat (__X32_SYSCALL_BIT + 265)
 #define __NR_symlinkat (__X32_SYSCALL_BIT + 266)
@@ -339,10 +336,8 @@
 #define SYS_fchdir __NR_fchdir
 #define SYS_rename __NR_rename
 #define SYS_mkdir __NR_mkdir
-#define SYS_rmdir __NR_rmdir
 #define SYS_creat __NR_creat
 #define SYS_link __NR_link
-#define SYS_unlink __NR_unlink
 #define SYS_symlink __NR_symlink
 #define SYS_readlink __NR_readlink
 #define SYS_chmod __NR_chmod
@@ -461,7 +456,6 @@
 #define SYS_fchownat __NR_fchownat
 #define SYS_futimesat __NR_futimesat
 #define SYS_newfstatat __NR_newfstatat
-#define SYS_unlinkat __NR_unlinkat
 #define SYS_renameat __NR_renameat
 #define SYS_linkat __NR_linkat
 #define SYS_symlinkat __NR_symlinkat

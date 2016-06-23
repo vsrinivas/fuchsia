@@ -1,11 +1,19 @@
-#include "syscall.h"
-#include <fcntl.h>
 #include <unistd.h>
 
-int rmdir(const char* path) {
-#ifdef SYS_rmdir
-    return syscall(SYS_rmdir, path);
+#include <errno.h>
+
+#include "libc.h"
+
+#if SHARED
+static int io_rmdir(const char* path) {
+    errno = EIO;
+    return -1;
+}
+weak_alias(io_rmdir, __libc_io_rmdir);
 #else
-    return syscall(SYS_unlinkat, AT_FDCWD, path, AT_REMOVEDIR);
+int __libc_io_rmdir(const char* path);
 #endif
+
+int rmdir(const char* path) {
+    return __libc_io_rmdir(path);
 }
