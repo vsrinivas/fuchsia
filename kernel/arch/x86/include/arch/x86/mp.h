@@ -26,10 +26,11 @@
 
 #ifndef ASSEMBLY
 
-#include <compiler.h>
-#include <stdint.h>
+#include <arch/spinlock.h>
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
+#include <compiler.h>
+#include <stdint.h>
 
 __BEGIN_CDECLS
 
@@ -100,12 +101,32 @@ static inline struct x86_percpu *x86_get_percpu(void)
 
 static inline struct thread *get_current_thread(void)
 {
-    return x86_get_percpu()->current_thread;
+#if ARCH_X86_64
+    /* Read directly from gs, rather than via x86_get_percpu()->current_thread,
+     * so that this is atomic.  Otherwise, we could context switch between the
+     * read of percpu from gs and the read of the current_thread pointer, and
+     * discover the current thread on a different CPU */
+    return (struct thread *)x86_read_gs_offset(PERCPU_CURRENT_THREAD_OFFSET);
+#else
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, 0);
+    struct thread *t = x86_get_percpu()->current_thread;
+    arch_interrupt_restore(state, 0);
+    return t;
+#endif
 }
 
 static inline void set_current_thread(struct thread *t)
 {
+#if ARCH_X86_64
+    /* See above for why this is a direct gs write */
+    x86_write_gs_offset(PERCPU_CURRENT_THREAD_OFFSET, (uintptr_t)t);
+#else
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, 0);
     x86_get_percpu()->current_thread = t;
+    arch_interrupt_restore(state, 0);
+#endif
 }
 
 static inline uint arch_curr_cpu_num(void)
@@ -122,7 +143,14 @@ static uint arch_max_num_cpus(void)
 /* set on every context switch and before entering user space */
 static inline void x86_set_percpu_kernel_sp(uintptr_t sp)
 {
+#if ARCH_X86_64
+    x86_write_gs_offset(PERCPU_KERNEL_SP_OFFSET, sp);
+#else
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, 0);
     x86_get_percpu()->kernel_sp = sp;
+    arch_interrupt_restore(state, 0);
+#endif
 }
 
 enum handler_return x86_ipi_generic_handler(void);

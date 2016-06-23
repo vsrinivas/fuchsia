@@ -397,26 +397,26 @@ static inline bool x86_is_PAE_enabled(void)
     return true;
 }
 
-static inline ulong x86_read_gs_offset(uintptr_t offset)
+static inline uintptr_t x86_read_gs_offset(uintptr_t offset)
 {
     ulong ret;
 
     __asm__(
         "mov   %%gs:%1, %0"
         : "=r" (ret)
-        : "m" (*(ulong *)(offset))
+        : "m" (*(uintptr_t *)(offset))
         :
     );
 
     return ret;
 }
 
-static inline void x86_write_gs_offset(uintptr_t offset, ulong val)
+static inline void x86_write_gs_offset(uintptr_t offset, uintptr_t val)
 {
     __asm__(
         "mov   %0, %%gs:%1"
         :
-        : "r" (val), "m" (*(ulong *)(offset))
+        : "r" (val), "m" (*(uintptr_t *)(offset))
         : "memory"
     );
 }

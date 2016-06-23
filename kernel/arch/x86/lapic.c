@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <arch/ops.h>
 #include <arch/spinlock.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>

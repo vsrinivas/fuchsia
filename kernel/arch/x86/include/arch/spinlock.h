@@ -7,10 +7,9 @@
 
 #pragma once
 
-#include <arch/ops.h>
 #include <arch/x86.h>
-#include <stdbool.h>
 #include <compiler.h>
+#include <stdbool.h>
 
 __BEGIN_CDECLS
 
@@ -70,7 +69,8 @@ static inline void
 arch_interrupt_save(spin_lock_saved_state_t *statep, spin_lock_save_flags_t flags)
 {
     *statep = x86_save_flags();
-    arch_disable_ints();
+    __asm__ volatile("cli");
+    CF;
 }
 
 static inline void
