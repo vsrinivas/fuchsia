@@ -8,8 +8,6 @@ import (
 	"errors"
 	"sync"
 	"time"
-
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/metadata"
 )
 
 var (
@@ -70,8 +68,8 @@ type Node interface {
 	MTime() time.Time     // Get last modified time of node, if known
 
 	// Accessible without a lock
-	IsDirectory() bool        // True iff the node corresponds to a directory
-	Metadata() *metadata.Info // Return info about the node's filesystem
+	IsDirectory() bool   // True iff the node corresponds to a directory
+	Metadata() *Metadata // Return info about the node's filesystem
 
 	// Internal methods
 	writeAt(p []byte, off int64) (int, error) // Implements io.WriterAt

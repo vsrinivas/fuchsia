@@ -11,7 +11,6 @@ import (
 	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bootrecord"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/direntry"
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/metadata"
 )
 
 const (
@@ -25,7 +24,7 @@ const (
 // node represents a regular FAT node (either a file or a directory).
 // A node is shared between all files / directories which have it open.
 type node struct {
-	metadata  *metadata.Info
+	metadata  *Metadata
 	directory bool
 
 	sync.RWMutex
@@ -44,7 +43,7 @@ type node struct {
 }
 
 // NewFile creates a new node representing a file.
-func NewFile(m *metadata.Info, parent DirectoryNode, direntIndex int, startCluster uint32, mtime time.Time) (FileNode, error) {
+func NewFile(m *Metadata, parent DirectoryNode, direntIndex int, startCluster uint32, mtime time.Time) (FileNode, error) {
 	n := &node{
 		metadata:    m,
 		directory:   false,
@@ -64,7 +63,7 @@ func NewFile(m *metadata.Info, parent DirectoryNode, direntIndex int, startClust
 }
 
 // NewDirectory makes a new node representing a directory.
-func NewDirectory(m *metadata.Info, startCluster uint32, mtime time.Time) (DirectoryNode, error) {
+func NewDirectory(m *Metadata, startCluster uint32, mtime time.Time) (DirectoryNode, error) {
 	n := &node{
 		metadata:     m,
 		directory:    true,
@@ -86,7 +85,7 @@ func NewDirectory(m *metadata.Info, startCluster uint32, mtime time.Time) (Direc
 	return n, nil
 }
 
-func (n *node) Metadata() *metadata.Info {
+func (n *node) Metadata() *Metadata {
 	return n.metadata
 }
 

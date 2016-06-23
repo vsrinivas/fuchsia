@@ -15,69 +15,68 @@ import (
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bootrecord"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/cluster"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/direntry"
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/metadata"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/testutil"
 	"fuchsia.googlesource.com/thinfs/lib/thinio"
 )
 
-func setupFAT32(t *testing.T, size string, readonly bool) (*testutil.FileFAT, *metadata.Info) {
+func setupFAT32(t *testing.T, size string, readonly bool) (*testutil.FileFAT, *Metadata) {
 	fileBackedFAT := testutil.MkfsFAT(t, size, 2, 0, 4, 512)
 	dev := fileBackedFAT.GetRawDevice()
-	info := &metadata.Info{
+	metadata := &Metadata{
 		Dev:      thinio.NewConductor(dev, 8*1024),
 		Readonly: readonly,
 	}
 	var err error
-	info.Br, err = bootrecord.New(info.Dev)
+	metadata.Br, err = bootrecord.New(metadata.Dev)
 	if err != nil {
 		t.Fatal(err)
-	} else if info.Br.Type() != bootrecord.FAT32 {
+	} else if metadata.Br.Type() != bootrecord.FAT32 {
 		t.Fatal("FAT created, but it was not FAT32")
 	}
 
-	info.ClusterMgr, err = cluster.Mount(info.Dev, info.Br, info.Readonly)
+	metadata.ClusterMgr, err = cluster.Mount(metadata.Dev, metadata.Br, metadata.Readonly)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return fileBackedFAT, info
+	return fileBackedFAT, metadata
 }
 
-func setupFAT16(t *testing.T, size string, readonly bool) (*testutil.FileFAT, *metadata.Info) {
+func setupFAT16(t *testing.T, size string, readonly bool) (*testutil.FileFAT, *Metadata) {
 	fileBackedFAT := testutil.MkfsFAT(t, size, 2, 0, 4, 512)
 	dev := fileBackedFAT.GetRawDevice()
-	info := &metadata.Info{
+	metadata := &Metadata{
 		Dev:      thinio.NewConductor(dev, 8*1024),
 		Readonly: readonly,
 	}
 	var err error
-	info.Br, err = bootrecord.New(info.Dev)
+	metadata.Br, err = bootrecord.New(metadata.Dev)
 	if err != nil {
 		t.Fatal(err)
-	} else if info.Br.Type() != bootrecord.FAT16 {
+	} else if metadata.Br.Type() != bootrecord.FAT16 {
 		t.Fatal("FAT created, but it was not FAT16")
 	}
 
-	info.ClusterMgr, err = cluster.Mount(info.Dev, info.Br, info.Readonly)
+	metadata.ClusterMgr, err = cluster.Mount(metadata.Dev, metadata.Br, metadata.Readonly)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return fileBackedFAT, info
+	return fileBackedFAT, metadata
 }
 
-func cleanup(fileBackedFAT *testutil.FileFAT, info *metadata.Info) {
+func cleanup(fileBackedFAT *testutil.FileFAT, metadata *Metadata) {
 	fileBackedFAT.RmfsFAT()
-	info.Dev.Close()
+	metadata.Dev.Close()
 }
 
-func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) DirectoryNode {
+func checkedMakeRoot(t *testing.T, metadata *Metadata, fat32 bool) DirectoryNode {
 	if fat32 {
-		startCluster := info.Br.RootCluster()
-		root, err := NewDirectory(info, startCluster, time.Time{})
+		startCluster := metadata.Br.RootCluster()
+		root, err := NewDirectory(metadata, startCluster, time.Time{})
 		if err != nil {
 			t.Fatal(err)
-		} else if root.Metadata() != info {
+		} else if root.Metadata() != metadata {
 			t.Fatal("Invalid metadata")
 		} else if !root.IsDirectory() {
 			t.Fatal("Node incorrectly thinks it is not a directory")
@@ -88,11 +87,11 @@ func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) DirectoryNod
 	}
 
 	// FAT 12 / 16 case:
-	offsetStart, numRootEntriesMax := info.Br.RootReservedInfo()
+	offsetStart, numRootEntriesMax := metadata.Br.RootReservedInfo()
 	direntrySize := int64(direntry.DirentrySize)
-	root := NewRoot(info, offsetStart, numRootEntriesMax*direntrySize)
-	if root.Metadata() != info {
-		t.Fatal("Invalid info")
+	root := NewRoot(metadata, offsetStart, numRootEntriesMax*direntrySize)
+	if root.Metadata() != metadata {
+		t.Fatal("Invalid metadata")
 	} else if !root.IsDirectory() {
 		t.Fatal("Node incorrectly thinks it is not a directory")
 	} else if !root.IsRoot() {
@@ -102,17 +101,17 @@ func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) DirectoryNod
 	return root
 }
 
-func checkedMakeFileNode(t *testing.T, info *metadata.Info, parent DirectoryNode, direntIndex int) FileNode {
-	node, err := NewFile(info, parent, direntIndex, 0, time.Time{})
+func checkedMakeFileNode(t *testing.T, metadata *Metadata, parent DirectoryNode, direntIndex int) FileNode {
+	node, err := NewFile(metadata, parent, direntIndex, 0, time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	} else if node.IsDirectory() {
 		t.Fatal("Expected file, not directory")
-	} else if node.Metadata() != info {
-		t.Fatal("Invalid info")
+	} else if node.Metadata() != metadata {
+		t.Fatal("Invalid metadata")
 	} else if node.Size() != 0 {
 		t.Fatal("node.Size() should be zero")
-	} else if node.StartCluster() != info.ClusterMgr.ClusterEOF() {
+	} else if node.StartCluster() != metadata.ClusterMgr.ClusterEOF() {
 		t.Fatal("Node should be initialized with an EOF cluster")
 	} else if node.NumClusters() != 0 {
 		t.Fatal("Node should be initialized with no clusters")
@@ -129,22 +128,22 @@ func checkedMakeFileNode(t *testing.T, info *metadata.Info, parent DirectoryNode
 	return node
 }
 
-func checkedMakeDirectoryNode(t *testing.T, info *metadata.Info, parent DirectoryNode, direntIndex int) DirectoryNode {
-	newCluster, err := info.ClusterMgr.ClusterExtend(0)
+func checkedMakeDirectoryNode(t *testing.T, metadata *Metadata, parent DirectoryNode, direntIndex int) DirectoryNode {
+	newCluster, err := metadata.ClusterMgr.ClusterExtend(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	node, err := NewDirectory(info, newCluster, time.Time{})
+	node, err := NewDirectory(metadata, newCluster, time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	} else if !node.IsDirectory() {
 		t.Fatal("Expected directory, not file")
-	} else if node.Metadata() != info {
-		t.Fatal("Invalid info")
+	} else if node.Metadata() != metadata {
+		t.Fatal("Invalid metadata")
 	} else if node.IsRoot() {
 		t.Fatal("Node incorrectly thinks it is root")
-	} else if node.Size() != int64(info.Br.ClusterSize()) {
+	} else if node.Size() != int64(metadata.Br.ClusterSize()) {
 		t.Fatal("node.Size() should be a single cluster")
 	} else if node.StartCluster() != newCluster {
 		t.Fatal("Node should be initialized with a known cluster")
@@ -279,22 +278,22 @@ func TestSingleNodeReadWrite(t *testing.T) {
 		}
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
 
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	file := checkedMakeFileNode(t, info, root, 1)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	file := checkedMakeFileNode(t, metadata, root, 1)
 	glog.Info("Testing FAT32 File")
 	doTest(file)
 
-	cleanup(fileBackedFAT, info)
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
+	cleanup(fileBackedFAT, metadata)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
 
-	root = checkedMakeRoot(t, info /* fat32= */, false)
-	file = checkedMakeFileNode(t, info, root, 1)
+	root = checkedMakeRoot(t, metadata /* fat32= */, false)
+	file = checkedMakeFileNode(t, metadata, root, 1)
 	glog.Info("Testing FAT16 File")
 	doTest(file)
 
-	cleanup(fileBackedFAT, info)
+	cleanup(fileBackedFAT, metadata)
 }
 
 func TestSetSize(t *testing.T) {
@@ -302,24 +301,24 @@ func TestSetSize(t *testing.T) {
 		// Set up filesystem (we do abnormal truncation in this test, so we recerate the filesystem
 		// for each test case).
 		var fileBackedFAT *testutil.FileFAT
-		var info *metadata.Info
+		var metadata *Metadata
 		if fat32 {
-			fileBackedFAT, info = setupFAT32(t, "1G", false)
+			fileBackedFAT, metadata = setupFAT32(t, "1G", false)
 		} else {
-			fileBackedFAT, info = setupFAT16(t, "10M", false)
+			fileBackedFAT, metadata = setupFAT16(t, "10M", false)
 		}
-		defer cleanup(fileBackedFAT, info)
+		defer cleanup(fileBackedFAT, metadata)
 
 		// Create the target node
 		var n Node
 		if isRoot {
-			n = checkedMakeRoot(t, info, fat32)
+			n = checkedMakeRoot(t, metadata, fat32)
 		} else {
-			r := checkedMakeRoot(t, info, fat32)
+			r := checkedMakeRoot(t, metadata, fat32)
 			if isDir {
-				n = checkedMakeDirectoryNode(t, info, r, 0)
+				n = checkedMakeDirectoryNode(t, metadata, r, 0)
 			} else {
-				n = checkedMakeFileNode(t, info, r, 0)
+				n = checkedMakeFileNode(t, metadata, r, 0)
 			}
 		}
 
@@ -330,14 +329,14 @@ func TestSetSize(t *testing.T) {
 		canHaveZeroSize := !isDir || isRoot
 
 		numClustersStart := 3
-		buf := testutil.MakeRandomBuffer(int(info.Br.ClusterSize()) * numClustersStart)
+		buf := testutil.MakeRandomBuffer(int(metadata.Br.ClusterSize()) * numClustersStart)
 		if _, err := n.writeAt(buf, 0); err != nil {
 			t.Fatal(err)
 		} else if nodeUsesClusters && n.NumClusters() != numClustersStart {
 			t.Fatal("Unexpected number of starting clusters")
 		}
 		// Adjust the size of the node (trim down to one cluster)
-		newLen := int64(info.Br.ClusterSize())
+		newLen := int64(metadata.Br.ClusterSize())
 		if err := n.SetSize(newLen); err != nil {
 			t.Fatal(err)
 		}
@@ -423,36 +422,36 @@ func TestSingleNodeRefs(t *testing.T) {
 		}
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
 
-	root := checkedMakeRoot(t, info /* fat32= */, true)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
 	glog.Info("Testing FAT32 Root")
 	doTest(root)
-	dir := checkedMakeDirectoryNode(t, info, root, 0)
+	dir := checkedMakeDirectoryNode(t, metadata, root, 0)
 	glog.Info("Testing FAT32 Directory")
 	doTest(dir)
-	file := checkedMakeFileNode(t, info, root, 1)
+	file := checkedMakeFileNode(t, metadata, root, 1)
 	glog.Info("Testing FAT32 File")
 	doTest(file)
 
-	cleanup(fileBackedFAT, info)
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
+	cleanup(fileBackedFAT, metadata)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
 
-	root = checkedMakeRoot(t, info /* fat32= */, false)
+	root = checkedMakeRoot(t, metadata /* fat32= */, false)
 	glog.Info("Testing FAT16 Root")
 	doTest(root)
-	dir = checkedMakeDirectoryNode(t, info, root, 0)
+	dir = checkedMakeDirectoryNode(t, metadata, root, 0)
 	glog.Info("Testing FAT16 Directory")
 	doTest(dir)
-	file = checkedMakeFileNode(t, info, root, 1)
+	file = checkedMakeFileNode(t, metadata, root, 1)
 	glog.Info("Testing FAT16 File")
 	doTest(file)
 
-	cleanup(fileBackedFAT, info)
+	cleanup(fileBackedFAT, metadata)
 }
 
 func TestNodeHierarchy(t *testing.T) {
-	doTest := func(info *metadata.Info, fat32 bool) {
+	doTest := func(metadata *Metadata, fat32 bool) {
 		// Set up the following hierarchy:
 		// /
 		// /foo/
@@ -461,12 +460,12 @@ func TestNodeHierarchy(t *testing.T) {
 		// /bar/baz/
 		// /bar/bazfile.txt
 
-		root := checkedMakeRoot(t, info, fat32)
-		foo := checkedMakeDirectoryNode(t, info, root, 0)
-		foofile := checkedMakeFileNode(t, info, foo, 0)
-		bar := checkedMakeDirectoryNode(t, info, root, 1)
-		baz := checkedMakeDirectoryNode(t, info, bar, 0)
-		bazfile := checkedMakeFileNode(t, info, bar, 1)
+		root := checkedMakeRoot(t, metadata, fat32)
+		foo := checkedMakeDirectoryNode(t, metadata, root, 0)
+		foofile := checkedMakeFileNode(t, metadata, foo, 0)
+		bar := checkedMakeDirectoryNode(t, metadata, root, 1)
+		baz := checkedMakeDirectoryNode(t, metadata, bar, 0)
+		bazfile := checkedMakeFileNode(t, metadata, bar, 1)
 
 		contains := func(children []FileNode, target Node) bool {
 			for _, child := range children {
@@ -518,13 +517,13 @@ func TestNodeHierarchy(t *testing.T) {
 		}
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	doTest(info /* fat32= */, true)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	doTest(metadata /* fat32= */, true)
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
-	doTest(info /* fat32= */, false)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
+	doTest(metadata /* fat32= */, false)
+	cleanup(fileBackedFAT, metadata)
 }
 
 // Test that "LockParent" will not return an invalid parent, even when the parent is being
@@ -549,11 +548,11 @@ func TestLockParent(t *testing.T) {
 		}
 	}
 
-	doTest := func(info *metadata.Info, fat32 bool) {
-		root := checkedMakeRoot(t, info, fat32)
+	doTest := func(metadata *Metadata, fat32 bool) {
+		root := checkedMakeRoot(t, metadata, fat32)
 		dirIndex := 3
-		foo := checkedMakeDirectoryNode(t, info, root, 0)
-		foofile := checkedMakeFileNode(t, info, foo, dirIndex)
+		foo := checkedMakeDirectoryNode(t, metadata, root, 0)
+		foofile := checkedMakeFileNode(t, metadata, foo, dirIndex)
 		done := make(chan bool)
 
 		// Test that "LockParent" can deal with another thread removing the parent --> child
@@ -566,7 +565,7 @@ func TestLockParent(t *testing.T) {
 
 		// Test that "LockParent" can deal with another thread removing the parent <--> child
 		// relationship
-		foofile = checkedMakeFileNode(t, info, foo, dirIndex)
+		foofile = checkedMakeFileNode(t, metadata, foo, dirIndex)
 		go checkParentUntilRemoved(done, foofile, foo, dirIndex)
 		foo.Lock()
 		foofile.Lock()
@@ -577,35 +576,35 @@ func TestLockParent(t *testing.T) {
 		<-done
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	doTest(info /* fat32= */, true)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	doTest(metadata /* fat32= */, true)
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
-	doTest(info /* fat32= */, false)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
+	doTest(metadata /* fat32= */, false)
+	cleanup(fileBackedFAT, metadata)
 }
 
 func TestSetSizeInvalid(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	if err := root.SetSize(int64(info.Br.ClusterSize() + 1)); err != ErrNoSpace {
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	if err := root.SetSize(int64(metadata.Br.ClusterSize() + 1)); err != ErrNoSpace {
 		t.Fatal("Expected error: Not enough clusters for size")
 	}
-	cleanup(fileBackedFAT, info)
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
-	root = checkedMakeRoot(t, info /* fat32= */, false)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
+	root = checkedMakeRoot(t, metadata /* fat32= */, false)
 	if err := root.SetSize(100000); err != ErrNoSpace {
 		t.Fatal("Expected error: Not enough clusters for size")
 	}
-	cleanup(fileBackedFAT, info)
+	cleanup(fileBackedFAT, metadata)
 }
 
 func TestRoot32PanicDeleted(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Recover returned without a panic")
@@ -616,9 +615,9 @@ func TestRoot32PanicDeleted(t *testing.T) {
 }
 
 func TestRoot16PanicDeleted(t *testing.T) {
-	fileBackedFAT, info := setupFAT16(t, "10M", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, false)
+	fileBackedFAT, metadata := setupFAT16(t, "10M", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, false)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Recover returned without a panic")
@@ -629,10 +628,10 @@ func TestRoot16PanicDeleted(t *testing.T) {
 }
 
 func TestNodePanicDeletedTwice(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeDirectoryNode(t, info, root, 0)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	foo := checkedMakeDirectoryNode(t, metadata, root, 0)
 	foo.MarkDeleted()
 	defer func() {
 		if r := recover(); r == nil {
@@ -644,10 +643,10 @@ func TestNodePanicDeletedTwice(t *testing.T) {
 }
 
 func TestNodePanicRefUpAfterDelete(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeDirectoryNode(t, info, root, 0)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	foo := checkedMakeDirectoryNode(t, metadata, root, 0)
 	foo.RefUp()
 	foo.MarkDeleted()
 	if err := foo.RefDown(1); err != nil { // This actually deletes foo
@@ -665,10 +664,10 @@ func TestNodePanicRefUpAfterDelete(t *testing.T) {
 // There is no reason why users of the node package should need to modify the size of deleted nodes.
 // As a precaution, panic if incorrect behavior is exhibited.
 func TestNodePanicSetSizeAfterDelete(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeFileNode(t, info, root, 0)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	foo := checkedMakeFileNode(t, metadata, root, 0)
 	foo.MarkDeleted()
 	defer func() {
 		if r := recover(); r == nil {
@@ -682,10 +681,10 @@ func TestNodePanicSetSizeAfterDelete(t *testing.T) {
 // Non-root directories require space for "." and ".." entries.
 // If their size could be set to zero, it would become invalid.
 func TestNodePanicSetSizeNonRootDirectory(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	dir := checkedMakeDirectoryNode(t, info, root, 0)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	dir := checkedMakeDirectoryNode(t, metadata, root, 0)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Recover returned without a panic")
@@ -696,10 +695,10 @@ func TestNodePanicSetSizeNonRootDirectory(t *testing.T) {
 }
 
 func TestNodePanicRefDown(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeDirectoryNode(t, info, root, 0)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	foo := checkedMakeDirectoryNode(t, metadata, root, 0)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Recover returned without a panic")
@@ -710,11 +709,11 @@ func TestNodePanicRefDown(t *testing.T) {
 }
 
 func TestNodePanicMoveAfterDelete(t *testing.T) {
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, info)
-	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foofile := checkedMakeFileNode(t, info, root, 0)
-	bar := checkedMakeDirectoryNode(t, info, root, 1)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, metadata)
+	root := checkedMakeRoot(t, metadata /* fat32= */, true)
+	foofile := checkedMakeFileNode(t, metadata, root, 0)
+	bar := checkedMakeDirectoryNode(t, metadata, root, 1)
 	root.RemoveFile(0)
 	defer func() {
 		if r := recover(); r == nil {
@@ -726,15 +725,15 @@ func TestNodePanicMoveAfterDelete(t *testing.T) {
 }
 
 func TestLargestNode(t *testing.T) {
-	doTest := func(info *metadata.Info, maxSize int64, fat32, doRoot, doDirectory bool) {
+	doTest := func(metadata *Metadata, maxSize int64, fat32, doRoot, doDirectory bool) {
 		var largeNode Node
-		root := checkedMakeRoot(t, info, fat32)
+		root := checkedMakeRoot(t, metadata, fat32)
 		if doRoot {
 			largeNode = root
 		} else if doDirectory {
-			largeNode = checkedMakeDirectoryNode(t, info, root, 0)
+			largeNode = checkedMakeDirectoryNode(t, metadata, root, 0)
 		} else {
-			largeNode = checkedMakeFileNode(t, info, root, 0)
+			largeNode = checkedMakeFileNode(t, metadata, root, 0)
 		}
 		fileSize := largeNode.Size()
 		bufSize := maxSize / 20 // Write in large chunks
@@ -777,47 +776,47 @@ func TestLargestNode(t *testing.T) {
 
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "5G", false)
+	fileBackedFAT, metadata := setupFAT32(t, "5G", false)
 	fat32 := true
 	doRoot := false
 	doDirectory := false
 	glog.Info("Testing FAT32 File")
-	doTest(info, maxSizeFile, fat32, doRoot, doDirectory) // FAT32 file
+	doTest(metadata, maxSizeFile, fat32, doRoot, doDirectory) // FAT32 file
 	doRoot = true
 	doDirectory = true
 	glog.Info("Testing FAT32 Root")
-	doTest(info, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 root
+	doTest(metadata, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 root
 	doRoot = false
 	doDirectory = true
 	glog.Info("Testing FAT32 Directory")
-	doTest(info, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 non-root directory
-	cleanup(fileBackedFAT, info)
+	doTest(metadata, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 non-root directory
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "50M", false)
+	fileBackedFAT, metadata = setupFAT16(t, "50M", false)
 	fat32 = false
 	doRoot = true
 	doDirectory = true
-	_, numRootEntriesMax := info.Br.RootReservedInfo()
+	_, numRootEntriesMax := metadata.Br.RootReservedInfo()
 	glog.Info("Testing FAT16 Root")
-	doTest(info, numRootEntriesMax*direntry.DirentrySize, fat32, doRoot, doDirectory) // FAT16 root
+	doTest(metadata, numRootEntriesMax*direntry.DirentrySize, fat32, doRoot, doDirectory) // FAT16 root
 	doRoot = false
 	doDirectory = true
 	glog.Info("Testing FAT16 Directory")
-	doTest(info, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT16 non-root directory
-	cleanup(fileBackedFAT, info)
+	doTest(metadata, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT16 non-root directory
+	cleanup(fileBackedFAT, metadata)
 }
 
 func TestNoSpace(t *testing.T) {
-	doTest := func(info *metadata.Info, fat32, doRoot, doDirectory bool) {
+	doTest := func(metadata *Metadata, fat32, doRoot, doDirectory bool) {
 		var largeNode Node
-		root := checkedMakeRoot(t, info, fat32)
+		root := checkedMakeRoot(t, metadata, fat32)
 		if doRoot {
 			largeNode = root
 		} else {
 			if doDirectory {
-				largeNode = checkedMakeDirectoryNode(t, info, root, 0)
+				largeNode = checkedMakeDirectoryNode(t, metadata, root, 0)
 			} else {
-				largeNode = checkedMakeFileNode(t, info, root, 0)
+				largeNode = checkedMakeFileNode(t, metadata, root, 0)
 			}
 			largeNode.RefUp()
 		}
@@ -842,36 +841,36 @@ func TestNoSpace(t *testing.T) {
 		}
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "600M", false)
+	fileBackedFAT, metadata := setupFAT32(t, "600M", false)
 	fat32 := true
 	doRoot := false
 	doDirectory := false
 	glog.Info("Testing FAT32 File")
-	doTest(info, fat32, doRoot, doDirectory) // FAT32 file
+	doTest(metadata, fat32, doRoot, doDirectory) // FAT32 file
 	doRoot = false
 	doDirectory = true
 	glog.Info("Testing FAT32 Directory")
-	doTest(info, fat32, doRoot, doDirectory) // FAT32 non-root directory
+	doTest(metadata, fat32, doRoot, doDirectory) // FAT32 non-root directory
 	doRoot = true
 	doDirectory = true
 	glog.Info("Testing FAT32 Root")
-	doTest(info, fat32, doRoot, doDirectory) // FAT32 root
-	cleanup(fileBackedFAT, info)
+	doTest(metadata, fat32, doRoot, doDirectory) // FAT32 root
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "50M", false)
+	fileBackedFAT, metadata = setupFAT16(t, "50M", false)
 	fat32 = false
 	doRoot = false
 	doDirectory = false
 	glog.Info("Testing FAT16 File")
-	doTest(info, fat32, doRoot, doDirectory) // FAT16 file
+	doTest(metadata, fat32, doRoot, doDirectory) // FAT16 file
 	doRoot = false
 	doDirectory = true
 	glog.Info("Testing FAT16 Directory")
-	doTest(info, fat32, doRoot, doDirectory) // FAT16 non-root directory
+	doTest(metadata, fat32, doRoot, doDirectory) // FAT16 non-root directory
 	doRoot = true
 	doDirectory = true
 	glog.Info("Testing FAT16 Root")
-	doTest(info, fat32, doRoot, doDirectory) // FAT16 root
+	doTest(metadata, fat32, doRoot, doDirectory) // FAT16 root
 
-	cleanup(fileBackedFAT, info)
+	cleanup(fileBackedFAT, metadata)
 }

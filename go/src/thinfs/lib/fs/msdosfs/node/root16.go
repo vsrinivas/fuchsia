@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/thinfs/lib/fs"
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/metadata"
 )
 
 type root struct {
-	metadata    *metadata.Info
+	metadata    *Metadata
 	offsetStart int64 // Device offset at which the root starts.
 	maxSize     int64 // The maximum size of the root node.
 
@@ -24,7 +23,7 @@ type root struct {
 }
 
 // NewRoot makes a new root, specific for FAT-12 / FAT-16
-func NewRoot(m *metadata.Info, offsetStart, maxSize int64) DirectoryNode {
+func NewRoot(m *Metadata, offsetStart, maxSize int64) DirectoryNode {
 	r := &root{
 		metadata:    m,
 		offsetStart: offsetStart,
@@ -37,7 +36,7 @@ func NewRoot(m *metadata.Info, offsetStart, maxSize int64) DirectoryNode {
 	return r
 }
 
-func (r *root) Metadata() *metadata.Info {
+func (r *root) Metadata() *Metadata {
 	return r.metadata
 }
 

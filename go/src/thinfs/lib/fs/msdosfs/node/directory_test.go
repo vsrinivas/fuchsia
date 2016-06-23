@@ -10,7 +10,6 @@ import (
 
 	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/direntry"
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/metadata"
 )
 
 func checkRead(t *testing.T, d DirectoryNode, index int, goldName string, goldCluster uint32, goldNumSlots int) {
@@ -120,27 +119,27 @@ func TestDirentEmptyDirectory(t *testing.T) {
 		checkIsEmpty(t, d, true)
 	}
 
-	doTest := func(info *metadata.Info, fat32 bool) {
-		root := checkedMakeRoot(t, info, fat32)
+	doTest := func(metadata *Metadata, fat32 bool) {
+		root := checkedMakeRoot(t, metadata, fat32)
 		testDirectory(root)
-		foo := checkedMakeDirectoryNode(t, info, root, 0)
+		foo := checkedMakeDirectoryNode(t, metadata, root, 0)
 		testDirectory(foo)
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	doTest(info /* fat32= */, true)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	doTest(metadata /* fat32= */, true)
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
-	doTest(info /* fat32= */, false)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
+	doTest(metadata /* fat32= */, false)
+	cleanup(fileBackedFAT, metadata)
 }
 
 func TestDirentAllocateFree(t *testing.T) {
-	doTest := func(info *metadata.Info, fat32 bool) {
-		root := checkedMakeRoot(t, info, fat32)
+	doTest := func(metadata *Metadata, fat32 bool) {
+		root := checkedMakeRoot(t, metadata, fat32)
 
-		d := checkedMakeDirectoryNode(t, info, root, 0)
+		d := checkedMakeDirectoryNode(t, metadata, root, 0)
 		checkIsEmpty(t, d, true)
 
 		// Create the "typical" contents for a directory: ".", "..", and the last free directory.
@@ -185,20 +184,20 @@ func TestDirentAllocateFree(t *testing.T) {
 		checkRead(t, d, 6, "Another long name", anotherCluster, 3)
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	doTest(info /* fat32= */, true)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	doTest(metadata /* fat32= */, true)
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
-	doTest(info /* fat32= */, false)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
+	doTest(metadata /* fat32= */, false)
+	cleanup(fileBackedFAT, metadata)
 }
 
 func TestDirentUpdate(t *testing.T) {
-	doTest := func(info *metadata.Info, fat32 bool) {
-		root := checkedMakeRoot(t, info, fat32)
+	doTest := func(metadata *Metadata, fat32 bool) {
+		root := checkedMakeRoot(t, metadata, fat32)
 
-		d := checkedMakeDirectoryNode(t, info, root, 0)
+		d := checkedMakeDirectoryNode(t, metadata, root, 0)
 		checkIsEmpty(t, d, true)
 
 		// Create the "typical" contents for a directory: ".", "..", and the last free directory.
@@ -283,11 +282,11 @@ func TestDirentUpdate(t *testing.T) {
 		checkIsEmpty(t, d, true)
 	}
 
-	fileBackedFAT, info := setupFAT32(t, "1G", false)
-	doTest(info /* fat32= */, true)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
+	doTest(metadata /* fat32= */, true)
+	cleanup(fileBackedFAT, metadata)
 
-	fileBackedFAT, info = setupFAT16(t, "10M", false)
-	doTest(info /* fat32= */, false)
-	cleanup(fileBackedFAT, info)
+	fileBackedFAT, metadata = setupFAT16(t, "10M", false)
+	doTest(metadata /* fat32= */, false)
+	cleanup(fileBackedFAT, metadata)
 }
