@@ -56,7 +56,7 @@ $(OUTLKELF).size: $(OUTLKELF)
 
 $(OUTLKELF)-gdb.py: scripts/$(LKELF)-gdb.py
 	@echo generating $@
-	$(NOECHO)ln -sf ../$< $@
+	$(NOECHO)cp -f $< $@
 
 # print some information about the build
 $(BUILDDIR)/srcfiles.txt:
