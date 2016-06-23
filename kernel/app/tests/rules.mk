@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/cache_tests.c \
     $(LOCAL_DIR)/clock_tests.c \
     $(LOCAL_DIR)/fibo.c \
+    $(LOCAL_DIR)/fifo_buffer_tests.cpp \
     $(LOCAL_DIR)/float.c \
     $(LOCAL_DIR)/float_instructions.S \
     $(LOCAL_DIR)/float_test_vec.c \

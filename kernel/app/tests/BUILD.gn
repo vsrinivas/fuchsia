@@ -21,6 +21,7 @@ module("tests") {
     "cache_tests.c",
     "clock_tests.c",
     "fibo.c",
+    "fifo_buffer_tests.cpp",
     "float.c",
     "float_instructions.S",
     "float_test_vec.c",

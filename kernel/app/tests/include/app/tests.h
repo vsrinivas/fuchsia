@@ -30,6 +30,7 @@ int vm_tests(int argc, const cmd_args *argv);
 int auto_call_tests(int argc, const cmd_args *argv);
 int sync_ipi_tests(int argc, const cmd_args *argv);
 int arena_tests(int argc, const cmd_args *argv);
+int fifo_tests(int argc, const cmd_args *argv);
 void unittests(void);
 
 __END_CDECLS
