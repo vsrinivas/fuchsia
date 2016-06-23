@@ -21,6 +21,7 @@
 
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
+#include <mxu/unittest.h>
 
 static mx_handle_t my_process_create(const char* name, uint32_t name_len) {
     return _magenta_process_create(name, name_len);
@@ -97,97 +98,91 @@ static bool wait_readable(mx_handle_t handle) {
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     mx_status_t status = my_wait(&handle, &signals, 1, NULL, MX_TIME_INFINITE,
                                  &satisfied_signals, &satisfiable_signals);
-    if (status != NO_ERROR) {
-        printf("process-test: my_wait returned %d\n", status);
-        return false;
-    } else if ((satisfied_signals & MX_SIGNAL_READABLE) == 0) {
-        printf("process-test: my_wait peer closed\n");
-        return false;
-    }
+    ASSERT_EQ(status, NO_ERROR, "process-test: Error in wait");
+    ASSERT_NEQ(satisfied_signals & MX_SIGNAL_READABLE, 0u,
+               "process-test: my_wait peer closed");
+
     return true;
 }
 
-static bool wait_signalled(mx_handle_t handle) {
+static mx_status_t wait_signalled(mx_handle_t handle) {
     mx_signals_t satisfied_signals, satisfiable_signals;
     mx_signals_t signals = MX_SIGNAL_SIGNALED;
     mx_status_t status = my_wait(&handle, &signals, 1, NULL, MX_TIME_INFINITE,
                                  &satisfied_signals, &satisfiable_signals);
-    if (status != NO_ERROR) {
-        printf("process-test: my_wait returned %d\n", status);
-        return false;
-    }
-    return true;
+    return status;
 }
 
-int main(void) {
+bool process_test(void) {
+    BEGIN_TEST;
     mx_handle_t child_handle, pipe1, pipe2;
 
     mx_status_t status = my_create_message_pipe(&pipe1, &pipe2);
-    if (status == NO_ERROR) {
-        printf("process-test: created message pipe: %u %u\n", pipe1, pipe2);
-    } else {
-        printf("process-test: my_create_message_pipe failed %d\n", status);
-        return status;
-    }
+    ASSERT_EQ(status, NO_ERROR, "process-test: my_create_message_pipe failed");
+    unittest_printf("process-test: created message pipe: %u %u\n", pipe1, pipe2);
 
     static const char child_name[] = "child-process";
-    printf("process-test: starting process \"%s\"\n", child_name);
+    unittest_printf("process-test: starting process \"%s\"\n", child_name);
     child_handle = my_process_create(child_name, sizeof(child_name));
-    printf("process-test: my_process_create returned %d\n", child_handle);
-    if (child_handle < 0)
-        return -1;
+    unittest_printf("process-test: my_process_create returned %d\n", child_handle);
+    ASSERT_GE(child_handle, 0, "child handle invalid");
 
     uintptr_t entry;
     status = my_process_load(child_handle, "/boot/bin/child-process", &entry);
-    printf("process-test: my_process_load returned %d\n", status);
+    unittest_printf("process-test: my_process_load returned %d\n", status);
     if (status != NO_ERROR) {
         my_close(pipe1);
         my_close(child_handle);
-        return -1;
+        ASSERT_TRUE(false, "error loading child process");
     }
 
     status = my_process_start(child_handle, pipe2, entry);
-    printf("process-test: my_process_start returned %d\n", status);
+    unittest_printf("process-test: my_process_start returned %d\n", status);
     if (status != NO_ERROR) {
         my_close(pipe1);
         my_close(child_handle);
-        return -1;
+        ASSERT_TRUE(false, "error starting child process");
     }
 
     char buffer[64];
     uint32_t buffer_size = sizeof(buffer);
     snprintf(buffer, buffer_size, "Hi there!");
     status = my_write_message(pipe1, buffer, buffer_size, NULL, 0, 0);
-    printf("process-test: my_write_message returned %d\n", status);
+    unittest_printf("process-test: my_write_message returned %d\n", status);
 
-    if (!wait_readable(pipe1))
-        return -1;
+    ASSERT_TRUE(wait_readable(pipe1), "Error while waiting to read");
 
     buffer_size = sizeof(buffer);
     memset(buffer, 0, sizeof(buffer));
     status = my_read_message(pipe1, buffer, &buffer_size, NULL, NULL, 0);
-    printf("process-test: my_read_message returned %d\n", status);
-    printf("process-test: received \"%s\"\n", buffer);
-    if (strcmp(buffer, "Hi there to you too!") != 0) {
-        printf("process-test: unexpected message from child\n");
-        return -1;
-    }
+    unittest_printf("process-test: my_read_message returned %d\n", status);
+    unittest_printf("process-test: received \"%s\"\n", buffer);
+    ASSERT_BYTES_EQ((uint8_t*)buffer, (uint8_t*)"Hi there to you too!", buffer_size,
+                    "process-test: unexpected message from child");
 
-    printf("process-test: done\n");
+    unittest_printf("process-test: done\n");
 
     my_close(pipe1);
 
     mx_process_info_t info;
-    if (!wait_signalled(child_handle))
-        return -1;
+    ASSERT_EQ(wait_signalled(child_handle), NO_ERROR, "error while waiting for child to exit");
+
     status = my_process_get_info(child_handle, &info);
-    printf("process-test: my_process_get_info returned %d\n", status);
-    if (status != NO_ERROR)
-        return 1;
-    printf("child process returned %d\n", info.return_code);
-    if (info.return_code != 1234)
-        return -1;
+    ASSERT_EQ(status, NO_ERROR, "Error while getting process info");
+
+    ASSERT_EQ(info.return_code, 1234, "Invalid child process return code");
 
     my_close(child_handle);
-    return 0;
+
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(process_tests)
+RUN_TEST(process_test)
+END_TEST_CASE(process_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_process_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }

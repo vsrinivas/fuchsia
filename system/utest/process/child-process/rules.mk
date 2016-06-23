@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_CFLAGS := -Wno-main
 
 MODULE_DEPS := \
-    ulib/musl ulib/magenta ulib/runtime ulib/mxio ulib/magenta
+    ulib/musl ulib/magenta ulib/runtime ulib/mxio ulib/magenta ulib/mxu
 
 include make/module.mk

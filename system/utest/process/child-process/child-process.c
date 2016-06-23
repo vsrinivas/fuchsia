@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 
 static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
                                    mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
@@ -58,10 +59,10 @@ static bool wait_readable(mx_handle_t handle) {
     mx_status_t result = my_wait(&handle, &signals, 1, NULL, MX_TIME_INFINITE,
                                  &satisfied_signals, &satisfiable_signals);
     if (result != NO_ERROR) {
-        printf("child-test: my_wait returned %d\n", result);
+        unittest_printf("child-test: my_wait returned %d\n", result);
         return false;
     } else if ((satisfied_signals & MX_SIGNAL_READABLE) == 0) {
-        printf("child-test: my_wait peer closed\n");
+        unittest_printf("child-test: my_wait peer closed\n");
         return false;
     }
     return true;
@@ -76,7 +77,7 @@ void* __libc_intercept_arg(void* _arg) {
 
 int main(int argc, char** argv) {
     mx_handle_t handle = (mx_handle_t)(intptr_t)arg;
-    printf("child-process: got arg %u\n", handle);
+    unittest_printf("child-process: got arg %u\n", handle);
 
     if (!wait_readable(handle))
         return -1;
@@ -85,19 +86,19 @@ int main(int argc, char** argv) {
     uint32_t buffer_size = sizeof(buffer);
     memset(buffer, 0, sizeof(buffer));
     mx_status_t status = my_read_message(handle, buffer, &buffer_size, NULL, NULL, 0);
-    printf("child-process: my_read_message returned %d\n", status);
-    printf("child-process: received \"%s\"\n", buffer);
+    unittest_printf("child-process: my_read_message returned %d\n", status);
+    unittest_printf("child-process: received \"%s\"\n", buffer);
 
-    printf("child-process: sleeping a bit before responding\n");
+    unittest_printf("child-process: sleeping a bit before responding\n");
     _magenta_nanosleep(200 * 1000 * 1000);
 
     buffer_size = sizeof(buffer);
     snprintf(buffer, buffer_size, "Hi there to you too!");
 
     status = my_write_message(handle, buffer, strlen(buffer) + 1, NULL, 0, 0);
-    printf("child-process: my_write_message returned %d\n", status);
+    unittest_printf("child-process: my_write_message returned %d\n", status);
 
-    printf("child-process: done\n");
+    unittest_printf("child-process: done\n");
 
     return 1234;
 }
