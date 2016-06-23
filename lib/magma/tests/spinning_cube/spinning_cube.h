@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #ifndef EXAMPLES_SPINNING_CUBE_SPINNING_CUBE_H_
 #define EXAMPLES_SPINNING_CUBE_SPINNING_CUBE_H_
 

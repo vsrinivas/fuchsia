@@ -12,27 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _MAGMA_UMD_H_
-#define _MAGMA_UMD_H_
-
-#include <stdint.h>
-
-#include "magma.h"
-#include "p_umd/include/magma_arch.h"
-
-struct MagmaUmd {
-    MagmaUmd(MagmaArch* arch);
-
-    uint64_t GetDeviceId() { return magma_arch_get_device_id(arch_); }
-
-    drm_intel_bo* AllocTiledBufferObject(const char* name, uint32_t x, uint32_t y,
-                                         uint32_t bytes_per_pixel, uint32_t tiling_mode,
-                                         uint32_t* stride);
-
-    static MagmaUmd* New(uint32_t gpu_index);
-
-private:
-    MagmaArch* arch_;
-};
-
-#endif // _MAGMA_UMD_H_
+#include <gpureadback.h>
+int main(void) { return test_gpu_readback(); }

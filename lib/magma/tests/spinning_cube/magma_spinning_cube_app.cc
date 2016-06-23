@@ -30,7 +30,7 @@ bool MagmaSpinningCubeApp::Initialize(int fd_in) {
   if( is_initialized_ )
     return false;
 
-  fd = fd_in;
+  fd_ = fd_in;
   curr_buf_ = 0;
 
   if (!InitKMS())
@@ -87,7 +87,7 @@ void MagmaSpinningCubeApp::Cleanup(){
   CleanupFramebuffer();
   CleanupEGL();
   CleanupKMS();
-  close(fd);
+  close(fd_);
 
   fprintf(stderr, "\nCLeaned Up Successfully, Exiting Cleanly\n\n");
 }
@@ -213,7 +213,7 @@ bool MagmaSpinningCubeApp::InitFramebuffer() {
       reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
           eglGetProcAddress("glEGLImageTargetTexture2DOES"));
 
-  for (int i = 0; i < bufcount; i++) {
+  for (int i = 0; i < bufcount_; i++) {
     fb_[i].bo =
         gbm_bo_create(gbm_, mode_.hdisplay, mode_.vdisplay, GBM_BO_FORMAT_ARGB8888,
                       GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
@@ -269,7 +269,7 @@ bool MagmaSpinningCubeApp::InitFramebuffer() {
 
 void MagmaSpinningCubeApp::CleanupFramebuffer() {
 
-  for (int i = 0; i < bufcount; i++) {
+  for (int i = 0; i < bufcount_; i++) {
     if (fb_[i].fb_id) {
       drmModeRmFB(fd, fb_[i].fb_id);
     }
@@ -349,7 +349,7 @@ bool MagmaSpinningCubeApp::Draw(uint32_t time_delta_ms) {
     return false;
   }
   waiting_on_page_flip_ = true;
-  curr_buf_ = (curr_buf_ + 1) % bufcount;
+  curr_buf_ = (curr_buf_ + 1) % bufcount_;
 
   return true;
 }

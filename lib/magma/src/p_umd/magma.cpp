@@ -289,3 +289,4 @@ int magma_reg_read(drm_intel_bufmgr* bufmgr, uint32_t offset, uint64_t* result)
     UNIMPLEMENTED("magma_reg_read");
     return 0;
 }
+

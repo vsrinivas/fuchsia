@@ -49,6 +49,7 @@
  */
 
 #include "p_umd/arch/intel-gen/include/intel_gen.h"
+#include <stdio.h>
 
 // Alignment must be a power of 2
 #define ALIGN(value, alignment) (((value) + ((alignment)-1)) & ~((alignment)-1))
@@ -129,4 +130,16 @@ bool magma_arch_compute_tiled_buffer_params(IntelGen* gen, uint32_t x, uint32_t 
                                             uint64_t* size, uint32_t* stride)
 {
     return gen->ComputeTiledBufferParams(x, y, bytes_per_pixel, tiling_mode, size, stride);
+}
+
+
+IntelGen* magma_arch_open(uint32_t gpu_index)
+{
+    printf("magma_arch_open UNIMPLEMENTED\n");
+    return nullptr;
+}
+
+void magma_arch_close(IntelGen* gen)
+{
+    printf("magma_arch_close UNIMPLEMENTED\n");
 }
