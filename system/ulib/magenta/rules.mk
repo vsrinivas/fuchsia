@@ -33,4 +33,6 @@ else ifeq ($(ARCH),x86)
     endif
 endif
 
+MODULE_EXPORT := magenta
+
 include make/module.mk

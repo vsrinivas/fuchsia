@@ -162,6 +162,60 @@ ALLUSER_MODULES += $(MODULE)
 USER_MANIFEST_LINES += bin/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 else ifeq ($(MODULE_TYPE),userlib)
 MODULE_$(MODULE)_DEPS := $(MODULE_DEPS)
+ifneq ($(MODULE_EXPORT),)
+# exported modules have libraries and headers installed in sysroot/...
+
+# where to install our static library:
+MODULE_USERLIB_STATIC := $(BUILDDIR)/sysroot/lib/lib$(MODULE_EXPORT).a
+
+# for now, unify all headers in one pile
+# TODO: ddk, etc should be packaged separately
+MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
+
+MODULE_USERLIB_OBJS := $(MODULE_OBJS)
+
+ifeq ($(MODULE_EXPORT),c)
+# locate the crt files in libc, remove them from the objects list,
+# and install them (under the expected name) as standalone .o files
+CRT_NAMES := crt1.c.o crti.s.o crtn.s.o
+
+$(foreach crt,$(CRT_NAMES),\
+$(eval CRT_SRC := $(filter %/$(crt),$(MODULE_OBJS)))\
+$(eval CRT_DST := $(BUILDDIR)/sysroot/lib/$(subst .s.o,.o,$(subst .c.o,.o,$(crt))))\
+$(eval MODULE_USERLIB_OBJS := $(filter-out %/$(crt),$(MODULE_USERLIB_OBJS)))\
+$(call copy-dst-src,$(CRT_DST),$(CRT_SRC))\
+$(eval SYSROOT_DEPS += $(CRT_DST))\
+$(eval GENERATED += $(CRT_DST)))
+endif
+
+
+ifeq ($(filter $(MODULE_EXPORT),$(SYSROOT_MEGA_LIBC)),)
+# build a static library if not part of mega-libc
+$(MODULE_USERLIB_STATIC): $(MODULE_USERLIB_OBJS)
+	@$(MKDIR)
+	@echo linking $@
+	$(NOECHO)$(AR) cr $@ $^
+
+SYSROOT_DEPS += $(MODULE_USERLIB_STATIC)
+GENERATED += $(MODULE_USERLIB_STATIC)
+else
+SYSROOT_MEGA_LIBC_OBJS += $(MODULE_USERLIB_OBJS)
+endif
+
+# locate headers from module source public include dir
+MODULE_PUBLIC_HEADERS := $(shell find $(MODULE_SRCDIR)/include -name \*\.h -or -name \*\.inc)
+MODULE_PUBLIC_HEADERS := $(patsubst $(MODULE_SRCDIR)/include/%,%,$(MODULE_PUBLIC_HEADERS))
+
+# translate them to the final destination
+MODULE_PUBLIC_HEADERS := $(patsubst %,$(MODULE_INSTALL_HEADERS)/%,$(MODULE_PUBLIC_HEADERS))
+
+# generate rules to copy them
+$(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.h,$(MODULE_SRCDIR)/include/%.h)
+$(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.inc,$(MODULE_SRCDIR)/include/%.inc)
+
+SYSROOT_DEPS += $(MODULE_PUBLIC_HEADERS)
+GENERATED += $(MODULE_PUBLIC_HEADERS)
+endif
 endif
 
 # empty out any vars set here
@@ -186,3 +240,4 @@ MODULE_OBJECT :=
 MODULE_ARM_OVERRIDE_SRCS :=
 MODULE_TYPE :=
 MODULE_NAME :=
+MODULE_EXPORT :=

@@ -33,4 +33,6 @@ MODULE_DEPS += \
 MODULE_HEADER_DEPS += \
     ulib/musl
 
+MODULE_EXPORT := runtime
+
 include make/module.mk

@@ -37,4 +37,6 @@ MODULE_DEPS += \
     ulib/mxu \
     ulib/musl
 
+MODULE_EXPORT := mxio
+
 include make/module.mk

@@ -61,3 +61,12 @@ modname-check = $(if $(word 2,$(2)),$(error MODULE $(1): resolves to: $(2)),$(if
 # sure that there is only one match (via modname-check)
 modname-make-canonical = $(strip $(if $(wildcard $(1)),$(1),$(call modname-check,$(1),$(foreach pfx,$(LKINC),$(wildcard $(pfx)/$(1))))))
 
+
+define generate-copy-dst-src
+$1: $2
+	@$$(MKDIR)
+	@echo installing $$@
+	$$(NOECHO) cp -f $$< $$@
+endef
+
+copy-dst-src = $(eval $(call generate-copy-dst-src,$(strip $1),$(strip $2)))

@@ -1315,4 +1315,6 @@ include $(LOCAL_DIR)/src/string/rules.mk
 # Include crt sources
 include $(LOCAL_DIR)/crt/rules.mk
 
+MODULE_EXPORT := c
+
 include make/module.mk

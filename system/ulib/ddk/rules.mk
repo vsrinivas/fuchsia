@@ -28,4 +28,6 @@ MODULE_DEPS += \
     ulib/mxu \
     ulib/runtime
 
+MODULE_EXPORT := ddk
+
 include make/module.mk
