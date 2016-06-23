@@ -139,7 +139,7 @@ func doesShortNameExist(callback GetDirentryCallback, shortName []byte) (bool, e
 // (optional) other long entries and (required) a short entry.
 //
 // Otherwise, the requested direntry is invalid.
-func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint8, error) {
+func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint, error) {
 	glog.V(1).Info("Loading a dirent")
 	buf, err := callback(direntryIndex)
 	if err != nil {
@@ -189,7 +189,7 @@ func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint
 		attributes: short.attributes,
 		free:       short.isFree(),
 		lastFree:   short.isLastFree(),
-	}, numDirentrySlots, nil
+	}, uint(numDirentrySlots), nil
 }
 
 // GetName implements fs.Dirent

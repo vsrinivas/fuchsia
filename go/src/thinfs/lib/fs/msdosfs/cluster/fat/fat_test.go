@@ -54,10 +54,8 @@ func TestFATReadWrite(t *testing.T) {
 	}
 
 	// Check the root cluster
-	rootCluster, err := br.RootCluster()
-	if err != nil {
-		t.Fatal(err)
-	} else if rootCluster != 2 {
+	rootCluster := br.RootCluster()
+	if rootCluster != 2 {
 		t.Fatalf("Expected root cluster to be 2, but it was %d", rootCluster)
 	}
 

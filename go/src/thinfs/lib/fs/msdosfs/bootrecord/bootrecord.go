@@ -139,22 +139,22 @@ func (b *Bootrecord) NumUsableClusters() uint32 {
 
 // RootCluster returns the cluster number of the root directory. Returns an error if the root
 // directory is not found in a cluster (as is the case for FAT12 and FAT16).
-func (b *Bootrecord) RootCluster() (uint32, error) {
+func (b *Bootrecord) RootCluster() uint32 {
 	switch b.t {
 	case FAT32:
-		return b.rootCluster, nil
+		return b.rootCluster
 	case FAT16, FAT12:
-		return 0, errors.New("Root Cluster does not exist")
+		panic("Root cluster does not exist outside FAT32")
 	default:
 		panic("Unsupported FAT version")
 	}
 }
 
 // RootReservedInfo provides information for the root directory on FAT12 and FAT16 filesystems.
-func (b *Bootrecord) RootReservedInfo() (offsetStart int64, numRootEntriesMax int64, err error) {
+func (b *Bootrecord) RootReservedInfo() (offsetStart int64, numRootEntriesMax int64) {
 	switch b.t {
 	case FAT32:
-		return 0, 0, errors.New("Root is not in the reserved region for FAT32")
+		panic("Root is not in the reserved region for FAT32")
 	case FAT16, FAT12:
 		offsetStart = int64(b.sectorSize * (b.reservedSectors + (b.numFATs * b.sectorsPerFAT)))
 		numRootEntriesMax = int64(b.numRootEntriesMax)
