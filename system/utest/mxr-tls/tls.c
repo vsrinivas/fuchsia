@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <sched.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -22,10 +23,6 @@
 static void fail(const char* function, int line) {
     printf("mxr tls test failure in " __FILE__ ": %s: line %d\n", function, line);
     _magenta_exit(-1);
-}
-
-static void yield(void) {
-    _magenta_nanosleep(0u);
 }
 
 static uint64_t test_values[] = {
@@ -57,7 +54,7 @@ static int test_entry_point(void* arg) {
                 values[idx] ^= (idx << 16);
                 mxr_tls_set(keys[idx], (void*)values[idx]);
             }
-            yield();
+            sched_yield();
             for (size_t idx = 0; idx < num_keys; ++idx) {
                 uintptr_t new_value = (uintptr_t)mxr_tls_get(keys[idx]);
                 if (new_value != values[idx])

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,10 +25,6 @@ static void fail(const char* function, int line, const char* message) {
     printf("arch_registers test failure in " __FILE__ ": %s: line %d:%s\n", function, line,
            message);
     _magenta_exit(-1);
-}
-
-static void yield(void) {
-    _magenta_nanosleep(0u);
 }
 
 typedef uintptr_t (*register_getter)(mx_handle_t);
@@ -176,9 +173,9 @@ static int test_entry_point(void* arg) {
                 register_ops* o = ops + op_idx;
                 value ^= ((uintptr_t)op_idx << 24);
                 uintptr_t real_value = make_valid_value(value);
-                yield();
+                sched_yield();
                 o->set(*c->thread, real_value);
-                yield();
+                sched_yield();
                 uintptr_t new_value = o->get(*c->thread);
                 if (new_value != real_value)
                     fail(__FUNCTION__, __LINE__, o->name);

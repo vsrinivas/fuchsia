@@ -14,6 +14,7 @@
 
 #include <limits.h>
 #include <magenta/syscalls.h>
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,12 +34,6 @@ static void assert_eq_check(int lhs_value, int rhs_value,
 }
 
 #define ASSERT_EQ(x, y) assert_eq_check((x), (y), #x, #y, __FILE__, __LINE__)
-
-// TODO(mseaborn): Use the standard sched_yield() here when it is available.
-static void yield() {
-    struct timespec wait_time = {0, 1000 /* nanoseconds */};
-    ASSERT_EQ(nanosleep(&wait_time, NULL), 0);
-}
 
 static void test_futex_wait_value_mismatch() {
     int futex_value = 123;
@@ -72,7 +67,7 @@ public:
                                                 "wakeup_test_thread", 19);
         ASSERT_EQ(thread_handle_ > 0, true);
         while (state_ == STATE_STARTED) {
-            yield();
+            sched_yield();
         }
         // Note that this could fail if futex_wait() gets a spurious wakeup.
         ASSERT_EQ(state_, STATE_ABOUT_TO_WAIT);
@@ -92,7 +87,7 @@ public:
 
     void assert_thread_woken() {
         while (state_ == STATE_ABOUT_TO_WAIT) {
-            yield();
+            sched_yield();
         }
         ASSERT_EQ(state_, STATE_WAIT_RETURNED);
     }
