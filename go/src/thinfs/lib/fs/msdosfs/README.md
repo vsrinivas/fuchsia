@@ -44,3 +44,21 @@ In the end, a view of a "Dirent" is provided, with mechanisms to:
 Using these methods does NOT require the caller to have any knowledge of short
 vs long filenames. All "input strings" to this package are expected to be UTF-8
 encoded. All "output strings" will be UTF-8 encoded as well.
+
+## [Nodes: In-memory Refcounting & Reading / Writing](node)
+
+Writing to a file or directory in any filesystem is complex enough, let alone in
+the FAT filesystem. The Node package abstracts away many of the internal
+details, and provides a mechanism to prevent code duplication between files and
+directories.
+
+The Node interface provides a few important features, including:
+ - A simple, per-node reader-writer locking mechanism
+ - An implementation of ReaderAt / WriterAt that avoids interacting with the
+   underlying cluster layer
+ - A mechanism to refcount and automate deletion of nodes. RefUp and RefDown
+   should be used to alter the number of EXTERNAL references to nodes (i.e., a
+   single new "file handle" indicates RefUp should be called)
+ - A mechanism to maintain the hierarchy of nodes via parents and children, as
+   well as built-in checks to panic on bad filesystem requests that "should
+   never happen"

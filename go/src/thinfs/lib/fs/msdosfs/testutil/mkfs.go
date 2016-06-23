@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package testutil provides utilities for quickly making FAT filesystems using Linux tools.
+// Package testutil provides utilities which help test the FAT filesystem.
 package testutil
 
 import (
