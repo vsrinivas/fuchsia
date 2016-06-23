@@ -45,8 +45,12 @@ static void libc_start_init(void) {
 weak_alias(libc_start_init, __libc_start_init);
 
 // hook for extension libraries to init
+#if SHARED
 static void libc_extensions_init(mx_proc_info_t* pi) {}
 weak_alias(libc_extensions_init, __libc_extensions_init);
+#else
+void __libc_extensions_init(mx_proc_info_t* pi);
+#endif
 
 // hook to let certain very low level processes muck
 // with arg before things start

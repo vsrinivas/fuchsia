@@ -3,10 +3,14 @@
 #include <fcntl.h>
 #include <stdarg.h>
 
+#if SHARED
 static int io_open(const char* filename, int flags, int mode) {
     return -1;
 }
 weak_alias(io_open, __libc_io_open);
+#else
+int __libc_io_open(const char* filename, int flags, int mode);
+#endif
 
 int open(const char* filename, int flags, ...) {
     mode_t mode = 0;

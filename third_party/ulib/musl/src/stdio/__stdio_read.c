@@ -1,10 +1,14 @@
 #include "stdio_impl.h"
 #include <sys/uio.h>
 
+#if SHARED
 static ssize_t io_readv(int fd, const struct iovec* iov, int num) {
     return 0;
 }
 weak_alias(io_readv, __libc_io_readv);
+#else
+ssize_t __libc_io_readv(int fd, const struct iovec* iov, int num);
+#endif
 
 size_t __stdio_read(FILE* f, unsigned char* buf, size_t len) {
     struct iovec iov[2] = {{.iov_base = buf, .iov_len = len - !!f->buf_size},
