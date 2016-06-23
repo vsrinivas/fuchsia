@@ -69,6 +69,9 @@ void platform_halt(platform_halt_action suggested_action,
 /* called during chain loading to make sure drivers and platform is put into a stopped state */
 void platform_quiesce(void);
 
+/* returns ramdisk image and size if a ramdisk exists, NULL if not */
+void *platform_get_ramdisk(size_t *size);
+
 __END_CDECLS;
 
 #endif
