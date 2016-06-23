@@ -1,8 +1,11 @@
 #include "ksigaction.h"
+
+#include "atomic.h"
 #include "libc.h"
 #include "pthread_impl.h"
 #include "syscall.h"
 #include <errno.h>
+#include <stdint.h>
 #include <signal.h>
 #include <string.h>
 

@@ -9,7 +9,6 @@
 #include <pthread.h>
 #include <signal.h>
 
-#include <magenta/syscalls.h>
 #include <runtime/mutex.h>
 #include <runtime/tls.h>
 
@@ -138,12 +137,6 @@ void __vm_unlock(void);
 
 int __timedwait(volatile int*, int, clockid_t, const struct timespec*);
 int __timedwait_cp(volatile int*, int, clockid_t, const struct timespec*);
-void __wait(volatile int*, volatile int*, int);
-static inline void __wake(volatile void* addr, int cnt) {
-    if (cnt < 0)
-        cnt = INT_MAX;
-    _magenta_futex_wake((void*)addr, cnt);
-}
 
 void __acquire_ptc(void);
 void __release_ptc(void);

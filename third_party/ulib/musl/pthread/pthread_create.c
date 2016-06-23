@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "futex_impl.h"
 #include "pthread_impl.h"
 
 #include <magenta/syscalls.h>

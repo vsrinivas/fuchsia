@@ -1,4 +1,3 @@
-#include "pthread_impl.h"
 #include "stdio_impl.h"
 
 void __unlist_locked_file(FILE*);

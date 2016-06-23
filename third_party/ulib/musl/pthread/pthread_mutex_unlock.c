@@ -1,5 +1,7 @@
 #include "pthread_impl.h"
 
+#include "futex_impl.h"
+
 int __pthread_mutex_unlock(pthread_mutex_t* m) {
     pthread_t self;
     int waiters = m->_m_waiters;

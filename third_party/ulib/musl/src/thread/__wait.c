@@ -1,4 +1,5 @@
-#include "pthread_impl.h"
+#include "atomic.h"
+#include "futex_impl.h"
 
 void __wait(volatile int* addr, volatile int* waiters, int val) {
     int spins = 100;

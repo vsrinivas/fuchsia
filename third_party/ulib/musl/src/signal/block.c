@@ -1,5 +1,5 @@
-#include "pthread_impl.h"
 #include "syscall.h"
+#include <limits.h>
 #include <signal.h>
 
 static const unsigned long all_mask[] = {

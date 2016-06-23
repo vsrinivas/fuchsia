@@ -2,7 +2,6 @@
 #include "atomic.h"
 #include "libc.h"
 #include "malloc_impl.h"
-#include "pthread_impl.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>

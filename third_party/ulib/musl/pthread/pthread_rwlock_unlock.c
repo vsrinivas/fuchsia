@@ -1,3 +1,4 @@
+#include "futex_impl.h"
 #include "pthread_impl.h"
 
 int pthread_rwlock_unlock(pthread_rwlock_t* rw) {

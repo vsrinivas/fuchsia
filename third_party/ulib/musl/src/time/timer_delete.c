@@ -1,3 +1,4 @@
+#include "futex_impl.h"
 #include "pthread_impl.h"
 #include <limits.h>
 #include <time.h>

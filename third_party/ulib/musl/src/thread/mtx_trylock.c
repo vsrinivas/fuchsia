@@ -1,6 +1,8 @@
 #include "pthread_impl.h"
 #include <threads.h>
 
+#include "atomic.h"
+
 int __pthread_mutex_trylock(mtx_t*);
 
 int mtx_trylock(mtx_t* m) {

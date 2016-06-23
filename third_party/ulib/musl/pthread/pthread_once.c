@@ -1,3 +1,4 @@
+#include "futex_impl.h"
 #include "pthread_impl.h"
 
 static void undo(void* control) {

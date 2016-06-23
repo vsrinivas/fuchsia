@@ -1,9 +1,10 @@
 #include "libc.h"
-#include "pthread_impl.h"
 #include <aio.h>
 #include <errno.h>
+#include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+#include "syscall.h"
 
 struct lio_state {
     struct sigevent* sev;

@@ -1,4 +1,3 @@
-#include "pthread_impl.h"
 #include "syscall.h"
 #include <setjmp.h>
 #include <signal.h>

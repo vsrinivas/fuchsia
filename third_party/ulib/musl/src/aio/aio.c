@@ -1,4 +1,5 @@
 #include "atomic.h"
+#include "futex_impl.h"
 #include "libc.h"
 #include "pthread_impl.h"
 #include "syscall.h"
