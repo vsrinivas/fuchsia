@@ -62,8 +62,6 @@ public:
 
     void Modify(mx_signals_t set_mask, mx_signals_t clear_mask);
 
-    bool Reset();
-
 private:
     struct WaitNode {
         WaitNode* next;

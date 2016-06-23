@@ -38,10 +38,9 @@ status_t EventDispatcher::SignalEvent() {
 }
 
 status_t EventDispatcher::ResetEvent() {
-    waiter_.Reset();
+    waiter_.ClearSignal(MX_SIGNAL_SIGNALED);
     return NO_ERROR;
 }
-
 
 status_t EventDispatcher::UserSignal(uint32_t set_mask, uint32_t clear_mask) {
     waiter_.Modify(set_mask, clear_mask);

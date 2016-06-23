@@ -70,6 +70,7 @@ bool Waiter::Signal(mx_signals_t signals) {
 }
 
 void Waiter::ClearSignal(mx_signals_t signals) {
+    AutoSpinLock<> lock(&lock_);
     signals_ &= ~signals;
 }
 
@@ -89,14 +90,6 @@ void Waiter::Modify(mx_signals_t set_mask, mx_signals_t clear_mask) {
 
     if (wake_count)
         thread_yield();
-}
-
-bool Waiter::Reset() {
-    AutoSpinLock<> lock(&lock_);
-    utils::for_each(&nodes_, [](WaitNode* node) {
-        event_unsignal(node->event);
-    });
-    return true;
 }
 
 bool Waiter::CancelWait(Handle* handle) {

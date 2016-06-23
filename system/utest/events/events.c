@@ -256,6 +256,24 @@ static int wait_signals_test(void) {
     return 0;
 }
 
+static int reset_test(void) {
+    printf("reset event test\n");
+
+    mx_handle_t event;
+    CHECK_MX_STATUS(event = _magenta_event_create(0U));
+    CHECK_MX_STATUS(_magenta_event_signal(event));
+    CHECK_MX_STATUS(_magenta_event_reset(event));
+
+    mx_status_t status;
+    status = _magenta_handle_wait_one(event, MX_SIGNAL_SIGNALED, 1u, NULL, NULL);
+    if (status != ERR_TIMED_OUT)
+        FAIL_TEST;
+
+    CHECK_MX_STATUS(_magenta_handle_close(event));
+
+    return 0;
+}
+
 #define EXIT_TEST(n, r)                                \
     if ((r)) {                                         \
         printf("event test %d: error %d\n", (n), (r)); \
@@ -270,6 +288,8 @@ int main(void) {
     EXIT_TEST(2, res);
     res = wait_signals_test();
     EXIT_TEST(3, res);
+    res = reset_test();
+    EXIT_TEST(4, res);
 
     printf("event test done\n");
     return 0;
