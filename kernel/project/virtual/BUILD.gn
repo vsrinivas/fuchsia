@@ -106,6 +106,7 @@ mkbootfs("bootfs") {
     "//system/utest/futex",
     "//system/utest/handle-info",
     "//system/utest/handle-transfer",
+    "//system/utest/handle-wait",
     "//system/utest/memory-mapping",
     "//system/utest/message-pipe",
     "//system/utest/mxr-mutex",
