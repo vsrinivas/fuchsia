@@ -15,7 +15,7 @@ source_set("ldso") {
   if (target_cpu == "arm") {
     sources += [
       "arm/dlsym.s",
-      "arm/tlsdesc.s",
+      "tlsdesc.c",
     ]
   } else if (target_cpu == "arm64") {
     sources += [

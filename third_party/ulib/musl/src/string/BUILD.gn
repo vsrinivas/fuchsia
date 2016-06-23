@@ -77,7 +77,7 @@ source_set("string") {
   ]
   if (target_cpu == "arm") {
     sources += [
-      "arm/memcpy.c",
+      "memcpy.c",
       "memmove.c",
       "memset.c",
     ]
