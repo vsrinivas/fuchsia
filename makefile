@@ -8,7 +8,7 @@
 LKMAKEROOT := .
 LKROOT := kernel
 LKINC := system third_party
-BUILDROOT := .
+BUILDROOT ?= .
 DEFAULT_PROJECT ?= magenta-qemu-x86-64
 TOOLCHAIN_PREFIX ?=
 
