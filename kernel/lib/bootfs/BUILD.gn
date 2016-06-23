@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_bootfs_config") {
-  visibility = [ ":*" ]
+config("bootfs_config") {
+  visibility = [ ":bootfs" ]
   include_dirs = [ "include" ]
 }
 
 module("bootfs") {
-  public_configs = [ ":_bootfs_config" ]
+  public_configs = [ ":bootfs_config" ]
   public = [
     "include/lib/bootfs.h",
   ]

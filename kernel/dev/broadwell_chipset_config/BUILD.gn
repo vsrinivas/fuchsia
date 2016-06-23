@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_broadwell_chipset_config_config") {
-  visibility = [ ":*" ]
+config("broadwell_chipset_config_config") {
+  visibility = [ ":broadwell_chipset_config_config" ]
   include_dirs = [ "include" ]
 }
 
 module("broadwell_chipset_config") {
-  public_configs = [ ":_broadwell_chipset_config_config" ]
+  public_configs = [ ":broadwell_chipset_config_config" ]
   sources = [
     "broadwell_chipset_config.c",
   ]

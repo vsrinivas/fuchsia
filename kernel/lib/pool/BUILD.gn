@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_pool_config") {
-  visibility = [ ":*" ]
+config("pool_config") {
+  visibility = [ ":pool" ]
   include_dirs = [ "include" ]
 }
 
 module("pool") {
-  public_configs = [ ":_pool_config" ]
+  public_configs = [ ":pool_config" ]
   public = [
     "include/lib/pool.h",
   ]

@@ -14,14 +14,14 @@ config("enable_klog") {
   }
 }
 
-config("_klog_config") {
-  visibility = [ ":*" ]
+config("klog_config") {
+  visibility = [ ":klog" ]
   include_dirs = [ "include" ]
   configs = [ ":enable_klog" ]
 }
 
 module("klog") {
-  public_configs = [ ":_klog_config" ]
+  public_configs = [ ":klog_config" ]
   public = [
     "include/lib/klog.h",
   ]

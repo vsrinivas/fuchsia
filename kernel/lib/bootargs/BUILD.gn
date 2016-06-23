@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_bootargs_config") {
-  visibility = [ ":*" ]
+config("bootargs_config") {
+  visibility = [ ":bootargs" ]
   include_dirs = [ "include" ]
 }
 
 module("bootargs") {
-  public_configs = [ ":_bootargs_config" ]
+  public_configs = [ ":bootargs_config" ]
   configs += [ "//kernel/kernel:enable_vm" ]
   public = [
     "include/lib/bootargs.h",

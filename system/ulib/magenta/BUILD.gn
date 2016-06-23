@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_magenta_config") {
-  visibility = [ ":*" ]
+config("magenta_config") {
+  visibility = [ ":magenta" ]
   include_dirs = [ "include" ]
 }
 
 source_set("magenta") {
-  public_configs = [ ":_magenta_config" ]
+  public_configs = [ ":magenta_config" ]
   public = [
     "include/magenta/prctl.h",
     "include/magenta/processargs.h",

@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_tftp_config") {
-  visibility = [ ":*" ]
+config("tftp_config") {
+  visibility = [ ":tftp" ]
   include_dirs = [ "include" ]
 }
 
 module("tftp") {
-  public_configs = [ ":_tftp_config" ]
+  public_configs = [ ":tftp_config" ]
   public = [
     "include/lib/tftp.h",
   ]

@@ -1,10 +1,10 @@
-config("_fdt_config") {
-  visibility = [ ":*" ]
+config("fdt_config") {
+  visibility = [ ":fdt" ]
   include_dirs = [ "include" ]
 }
 
 module("fdt") {
-  public_configs = [ ":_fdt_config" ]
+  public_configs = [ ":fdt_config" ]
   public = [
     "include/fdt.h",
     "include/fdt_env.h",

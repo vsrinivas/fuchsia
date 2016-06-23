@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_bootimage_config") {
-  visibility = [ ":*" ]
+config("bootimage_config") {
+  visibility = [ ":bootimage" ]
   include_dirs = [ "include" ]
 }
 
 module("bootimage") {
-  public_configs = [ ":_bootimage_config" ]
+  public_configs = [ ":bootimage_config" ]
   public = [
     "include/lib/bootimage.h",
     "include/lib/bootimage_struct.h",

@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_utils_config") {
-  visibility = [ ":*" ]
+config("utils_config") {
+  visibility = [ ":utils" ]
   include_dirs = [ "include" ]
 }
 
 module("utils") {
-  public_configs = [ ":_utils_config" ]
+  public_configs = [ ":utils_config" ]
   public = [
     "include/utils/arena.h",
     "include/utils/array.h",

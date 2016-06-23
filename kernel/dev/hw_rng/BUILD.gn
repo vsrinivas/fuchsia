@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_hw_rng_config") {
-  visibility = [ ":*" ]
+config("hw_rng_config") {
+  visibility = [ ":hw_rng" ]
   include_dirs = [ "include" ]
 }
 
 module("hw_rng") {
-  public_configs = [ ":_hw_rng_config" ]
+  public_configs = [ ":hw_rng_config" ]
   public = [
     "include/dev/hw_rng.h",
   ]

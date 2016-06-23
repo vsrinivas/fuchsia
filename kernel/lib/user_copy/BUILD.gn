@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_user_copy_config") {
-  visibility = [ ":*" ]
+config("user_copy_config") {
+  visibility = [ ":user_copy" ]
   include_dirs = [ "include" ]
 }
 
 module("user_copy") {
-  public_configs = [ ":_user_copy_config" ]
+  public_configs = [ ":user_copy_config" ]
   include_dirs = [
     "//kernel/lib/heap/include",
     "//kernel/lib/io/include",

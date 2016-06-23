@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_mxu_config") {
-  visibility = [ ":*" ]
+config("mxu_config") {
+  visibility = [ ":mxu" ]
   include_dirs = [ "include" ]
 }
 
 source_set("mxu") {
-  public_configs = [ ":_mxu_config" ]
+  public_configs = [ ":mxu_config" ]
   public = [
     "include/mxu/hexdump.h",
     "include/mxu/fifo.h",

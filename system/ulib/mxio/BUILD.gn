@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_mxio_config") {
-  visibility = [ ":*" ]
+config("mxio_config") {
+  visibility = [ ":mxio" ]
   include_dirs = [ "include" ]
 }
 
 source_set("mxio") {
-  public_configs = [ ":_mxio_config" ]
+  public_configs = [ ":mxio_config" ]
   public = [
     "include/mxio/debug.h",
     "include/mxio/dispatcher.h",

@@ -6,14 +6,14 @@
 
 import("//gnbuild/config.gni")
 
-config("_io_config") {
-  visibility = [ ":*" ]
+config("io_config") {
+  visibility = [ ":io" ]
   include_dirs = [ "include" ]
   defines = [ "WITH_LIB_IO=1" ]
 }
 
 module("io") {
-  public_configs = [ ":_io_config" ]
+  public_configs = [ ":io_config" ]
   public = [
     "include/lib/io.h",
   ]

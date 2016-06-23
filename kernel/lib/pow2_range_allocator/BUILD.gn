@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_pow2_range_allocator_config") {
-  visibility = [ ":*" ]
+config("pow2_range_allocator_config") {
+  visibility = [ ":pow2_range_allocator" ]
   include_dirs = [ "include" ]
 }
 
 module("pow2_range_allocator") {
-  public_configs = [ ":_pow2_range_allocator_config" ]
+  public_configs = [ ":pow2_range_allocator_config" ]
   public = [
     "include/lib/pow2_range_allocator.h",
   ]

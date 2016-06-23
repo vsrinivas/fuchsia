@@ -4,14 +4,14 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_miniheap_config") {
-  visibility = [ ":*" ]
+config("miniheap_config") {
+  visibility = [ ":miniheap" ]
   include_dirs = [ "include" ]
   defines = [ "WITH_LIB_HEAP_MINIHEAP=1" ]
 }
 
 module("miniheap") {
-  public_configs = [ ":_miniheap_config" ]
+  public_configs = [ ":miniheap_config" ]
   public = [
     "include/lib/miniheap.h",
   ]

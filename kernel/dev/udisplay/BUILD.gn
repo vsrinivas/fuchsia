@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_udisplay_config") {
-  visibility = [ ":*" ]
+config("udisplay_config") {
+  visibility = [ ":udisplay" ]
   include_dirs = [ "include" ]
 }
 
 module("udisplay") {
-  public_configs = [ ":_udisplay_config" ]
+  public_configs = [ ":udisplay_config" ]
   public = [
     "include/dev/udisplay.h",
   ]

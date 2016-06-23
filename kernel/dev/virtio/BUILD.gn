@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_virtio_config") {
-  visibility = [ ":*" ]
+config("virtio_config") {
+  visibility = [ ":virtio" ]
   include_dirs = [ "include" ]
 }
 
 module("virtio") {
-  public_configs = [ ":_virtio_config" ]
+  public_configs = [ ":virtio_config" ]
   configs += [ "//kernel/kernel:enable_vm" ]
   sources = [
     "virtio.c",

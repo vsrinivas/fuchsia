@@ -6,13 +6,13 @@
 
 import("//gnbuild/config.gni")
 
-config("_libc_config") {
-  visibility = [ ":*" ]
+config("libc_config") {
+  visibility = [ ":libc" ]
   include_dirs = [ "include" ]
 }
 
 module("libc") {
-  public_configs = [ ":_libc_config" ]
+  public_configs = [ ":libc_config" ]
   public = [
     "include/printf.h",
     "include/alloca.h",

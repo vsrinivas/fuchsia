@@ -8,14 +8,14 @@ assert(target_cpu == "x64")
 
 import("//gnbuild/config.gni")
 
-config("_pc_config") {
-  visibility = [ ":*" ]
+config("pc_config") {
+  visibility = [ ":pc" ]
   include_dirs = [ "include" ]
 }
 
 module("pc") {
   configs += [ "//kernel/kernel:enable_vm" ]
-  public_configs = [ ":_pc_config" ]
+  public_configs = [ ":pc_config" ]
   defines = kernel_defines
   cflags = [ "-Wno-pointer-to-int-cast" ]
   public = [

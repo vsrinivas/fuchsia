@@ -14,14 +14,14 @@ config("enable_pcie") {
   }
 }
 
-config("_pcie_config") {
-  visibility = [ ":*" ]
+config("pcie_config") {
+  visibility = [ ":pcie" ]
   include_dirs = [ "include" ]
   configs = [ ":enable_pcie" ]
 }
 
 module("pcie") {
-  public_configs = [ ":_pcie_config" ]
+  public_configs = [ ":pcie_config" ]
   configs += [ "//kernel/kernel:enable_vm" ]
   public = [
     "include/dev/pcie/pcie.h",

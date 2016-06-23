@@ -4,14 +4,14 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_syscalls_config") {
-  visibility = [ ":*" ]
+config("syscalls_config") {
+  visibility = [ ":syscalls" ]
   include_dirs = [ "include" ]
 }
 
 # TODO(phosek): this should be disabled if enable_userboot is false
 module("syscalls") {
-  public_configs = [ ":_syscalls_config" ]
+  public_configs = [ ":syscalls_config" ]
   configs += [ "//kernel/lib/userboot:enable_userboot" ]
   include_dirs = [ "//system/ulib/magenta/include" ]
   sources = [

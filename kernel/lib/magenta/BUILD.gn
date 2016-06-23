@@ -14,8 +14,8 @@ config("enable_magenta") {
   }
 }
 
-config("_magenta_config") {
-  visibility = [ ":*" ]
+config("magenta_config") {
+  visibility = [ ":magenta" ]
   include_dirs = [
     "include",
     "//system/ulib/magenta/include",
@@ -23,7 +23,7 @@ config("_magenta_config") {
 }
 
 module("magenta") {
-  public_configs = [ ":_magenta_config" ]
+  public_configs = [ ":magenta_config" ]
   configs += [ "//kernel/lib/userboot:enable_userboot" ]
   public = [
     "include/magenta/dispatcher.h",

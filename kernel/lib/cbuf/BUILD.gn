@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_cbuf_config") {
-  visibility = [ ":*" ]
+config("cbuf_config") {
+  visibility = [ ":cbuf" ]
   include_dirs = [ "include" ]
 }
 
 module("cbuf") {
-  public_configs = [ ":_cbuf_config" ]
+  public_configs = [ ":cbuf_config" ]
   public = [
     "include/lib/cbuf.h",
   ]

@@ -1,10 +1,10 @@
-config("_safeint_config") {
-  visibility = [ ":*" ]
+config("safeint_config") {
+  visibility = [ ":safeint" ]
   include_dirs = [ "include" ]
 }
 
 module("safeint") {
-  public_configs = [ ":_safeint_config" ]
+  public_configs = [ ":safeint_config" ]
   public = [
     "include/safeint/safe_conversions.h",
     "include/safeint/safe_conversions_impl.h",

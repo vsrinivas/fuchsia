@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_elf_config") {
-  visibility = [ ":*" ]
+config("elf_config") {
+  visibility = [ ":elf" ]
   include_dirs = [ "include" ]
 }
 
 module("elf") {
-  public_configs = [ ":_elf_config" ]
+  public_configs = [ ":elf_config" ]
   public = [
     "include/lib/elf_defines.h",
     "include/lib/elf.h",

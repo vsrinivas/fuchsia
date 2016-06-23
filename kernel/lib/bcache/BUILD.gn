@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_bcache_config") {
-  visibility = [ ":*" ]
+config("bcache_config") {
+  visibility = [ ":bcache" ]
   include_dirs = [ "include" ]
 }
 
 module("bcache") {
-  public_configs = [ ":_bcache_config" ]
+  public_configs = [ ":bcache_config" ]
   public = [
     "include/lib/bcache.h",
   ]

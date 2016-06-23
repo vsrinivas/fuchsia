@@ -14,13 +14,13 @@ config("enable_shell") {
   }
 }
 
-config("_shell_config") {
-  visibility = [ ":*" ]
+config("shell_config") {
+  visibility = [ ":shell" ]
   configs = [ ":enable_shell" ]
 }
 
 module("shell") {
-  public_configs = [ ":_shell_config" ]
+  public_configs = [ ":shell_config" ]
   sources = [
     "shell.c",
   ]

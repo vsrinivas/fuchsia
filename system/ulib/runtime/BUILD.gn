@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_runtime_config") {
-  visibility = [ ":*" ]
+config("runtime_config") {
+  visibility = [ ":runtime" ]
   include_dirs = [ "include" ]
 }
 
 source_set("runtime") {
-  public_configs = [ ":_runtime_config" ]
+  public_configs = [ ":runtime_config" ]
   public = [
     "include/runtime/atomic.h",
     "include/runtime/mutex.h",

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_global_config") {
-  visibility = [ ":*" ]
+config("global_config") {
+  visibility = [ ":global" ]
   include_dirs = [ "include" ]
 }
 
 source_set("global") {
-  public_configs = [ ":_global_config" ]
+  public_configs = [ ":global_config" ]
   public = [
     "include/runtime/compiler.h",
   ]

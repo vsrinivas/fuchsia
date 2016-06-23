@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_buildsig_config") {
-  visibility = [ ":*" ]
+config("buildsig_config") {
+  visibility = [ ":buildsig" ]
   include_dirs = [ "include" ]
 }
 
 module("buildsig") {
-  public_configs = [ ":_buildsig_config" ]
+  public_configs = [ ":buildsig_config" ]
   public = [
     "include/lib/buildsig.h",
   ]

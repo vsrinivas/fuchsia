@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_gfx_config") {
-  visibility = [ ":*" ]
+config("gfx_config") {
+  visibility = [ ":gfx" ]
   include_dirs = [ "include" ]
 }
 
 source_set("gfx") {
-  public_configs = [ ":_gfx_config" ]
+  public_configs = [ ":gfx_config" ]
   public = [
     "include/gfx/gfx.h",
   ]

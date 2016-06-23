@@ -6,8 +6,8 @@
 
 import("//gnbuild/config.gni")
 
-config("_heap_config") {
-  visibility = [ ":*" ]
+config("heap_config") {
+  visibility = [ ":heap" ]
   include_dirs = [ "include" ]
 }
 
@@ -16,7 +16,7 @@ module("heap") {
     "//kernel/kernel:enable_vm",
     "//kernel/lib/console:enable_console",
   ]
-  public_configs = [ ":_heap_config" ]
+  public_configs = [ ":heap_config" ]
   public = [
     "include/lib/heap.h",
   ]

@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_arm_generic_config") {
-  visibility = [ ":*" ]
+config("arm_generic_config") {
+  visibility = [ ":arm_generic" ]
   include_dirs = [ "include" ]
 }
 
 module("arm_generic") {
-  public_configs = [ ":_arm_generic_config" ]
+  public_configs = [ ":arm_generic_config" ]
   defines = [ "PLATFORM_HAS_DYNAMIC_TIMER=1" ]
   sources = [
     "arm_generic_timer.c",

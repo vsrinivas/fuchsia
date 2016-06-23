@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_inet6_config") {
-  visibility = [ ":*" ]
+config("inet6_config") {
+  visibility = [ ":inet6" ]
   include_dirs = [ "include" ]
 }
 
 source_set("inet6") {
-  public_configs = [ ":_inet6_config" ]
+  public_configs = [ ":inet6_config" ]
   public = [
     "include/inet6/inet6.h",
     "include/inet6/netifc.h",

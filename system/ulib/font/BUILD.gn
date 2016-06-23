@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_font_config") {
-  visibility = [ ":*" ]
+config("font_config") {
+  visibility = [ ":font" ]
   include_dirs = [ "include" ]
 }
 
 source_set("font") {
-  public_configs = [ ":_font_config" ]
+  public_configs = [ ":font_config" ]
   public = [
     "include/font/font.h",
   ]

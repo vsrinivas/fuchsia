@@ -14,14 +14,14 @@ config("enable_debuglog") {
   }
 }
 
-config("_debuglog_config") {
-  visibility = [ ":*" ]
+config("debuglog_config") {
+  visibility = [ ":debuglog" ]
   include_dirs = [ "include" ]
   configs = [ ":enable_debuglog" ]
 }
 
 module("debuglog") {
-  public_configs = [ ":_debuglog_config" ]
+  public_configs = [ ":debuglog_config" ]
   include_dirs = [
     "//kernel/lib/heap/include",
     "//kernel/lib/io/include",

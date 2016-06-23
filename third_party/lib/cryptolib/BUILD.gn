@@ -1,10 +1,10 @@
-config("_cryptolib_config") {
-  visibility = [ ":*" ]
+config("cryptolib_config") {
+  visibility = [ ":cryptolib" ]
   include_dirs = [ "include" ]
 }
 
 module("cryptolib") {
-  public_configs = [ ":_cryptolib_config" ]
+  public_configs = [ ":cryptolib_config" ]
   sources = [
     "cryptolib.c",
   ]

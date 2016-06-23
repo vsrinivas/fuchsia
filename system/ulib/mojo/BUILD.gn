@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_mojo_config") {
-  visibility = [ ":*" ]
+config("mojo_config") {
+  visibility = [ ":mojo" ]
   include_dirs = [ "include" ]
 }
 
 source_set("mojo") {
-  public_configs = [ ":_mojo_config" ]
+  public_configs = [ ":mojo_config" ]
   public = [
     "include/mojo/mojo_string.h",
     "include/mojo/mojo_futex.h",

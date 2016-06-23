@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_bio_config") {
-  visibility = [ ":*" ]
+config("bio_config") {
+  visibility = [ ":bio" ]
   include_dirs = [ "include" ]
 }
 
 module("bio") {
-  public_configs = [ ":_bio_config" ]
+  public_configs = [ ":bio_config" ]
   configs += [ "//kernel/lib/partition:enable_partition" ]
   public = [
     "include/lib/bio.h",

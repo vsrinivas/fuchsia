@@ -62,8 +62,8 @@ config("musl_config") {
   ]
 }
 
-config("_musl_config") {
-  visibility = [ ":*" ]
+config("libc_config") {
+  visibility = [ ":musl" ]
   include_dirs = [ "include" ]
 }
 
@@ -71,7 +71,7 @@ config("_musl_config") {
 # (or source set) so that it can be distributed as a part of toolchain.
 static_library("musl") {
   output_name = "libc"
-  public_configs = [ ":_musl_config" ]
+  public_configs = [ ":libc_config" ]
   complete_static_lib = true
   deps = [
     "crt",

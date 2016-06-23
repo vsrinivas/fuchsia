@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("_ddk_config") {
-  visibility = [ ":*" ]
+config("ddk_config") {
+  visibility = [ ":ddk" ]
   include_dirs = [ "include" ]
 }
 
 source_set("ddk") {
-  public_configs = [ ":_ddk_config" ]
+  public_configs = [ ":ddk_config" ]
   public = [
     "include/hw/pci.h",
     "include/hw/usb.h",

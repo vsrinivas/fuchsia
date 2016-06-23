@@ -1,13 +1,13 @@
 import("//gnbuild/config.gni")
 
-config("_cksum_config") {
-  visibility = [ ":*" ]
+config("cksum_config") {
+  visibility = [ ":cksum" ]
   include_dirs = [ "include" ]
   defines = [ "WITH_LIB_CKSUM=1" ]
 }
 
 module("cksum") {
-  public_configs = [ ":_cksum_config" ]
+  public_configs = [ ":cksum_config" ]
   configs -= [ "//gnbuild:strict_compiler_flags" ]
   sources = [
     "adler32.c",

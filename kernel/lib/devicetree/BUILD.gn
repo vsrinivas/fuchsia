@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_devicetree_config") {
-  visibility = [ ":*" ]
+config("devicetree_config") {
+  visibility = [ ":devicetree" ]
   include_dirs = [ "include" ]
 }
 
 module("devicetree") {
-  public_configs = [ ":_devicetree_config" ]
+  public_configs = [ ":devicetree_config" ]
   sources = [
     "devicetree.c",
   ]

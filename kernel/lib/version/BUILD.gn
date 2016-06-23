@@ -12,13 +12,13 @@ action("generate_buildid") {
   args = [ rebase_path("${target_gen_dir}/buildid.h") ]
 }
 
-config("_version_config") {
-  visibility = [ ":*" ]
+config("version_config") {
+  visibility = [ ":version" ]
   include_dirs = [ "include" ]
 }
 
 module("version") {
-  public_configs = [ ":_version_config" ]
+  public_configs = [ ":version_config" ]
   include_dirs = [ target_gen_dir ]
   public = [
     "include/lib/version.h",

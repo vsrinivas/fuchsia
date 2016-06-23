@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_fixed_point_config") {
-  visibility = [ ":*" ]
+config("fixed_point_config") {
+  visibility = [ ":fixed_point" ]
   include_dirs = [ "include" ]
 }
 
 module("fixed_point") {
-  public_configs = [ ":_fixed_point_config" ]
+  public_configs = [ ":fixed_point_config" ]
   public = [
     "include/lib/fixed_point.h",
     "include/lib/fixed_point_debug.h",

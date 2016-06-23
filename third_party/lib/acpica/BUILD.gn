@@ -1,10 +1,10 @@
-config("_acpica_config") {
-  visibility = [ ":*" ]
+config("acpica_config") {
+  visibility = [ ":acpica" ]
   include_dirs = [ "source/include" ]
 }
 
 module("acpica") {
-  public_configs = [ ":_acpica_config" ]
+  public_configs = [ ":acpica_config" ]
   include_dirs = [ "source/include" ]
   cflags_c = [
     # The implementation dereferences type-punned pointers.

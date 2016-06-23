@@ -4,13 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("_unittest_config") {
-  visibility = [ ":*" ]
+config("unittest_config") {
+  visibility = [ ":unittest" ]
   include_dirs = [ "include" ]
 }
 
 module("unittest") {
-  public_configs = [ ":_unittest_config" ]
+  public_configs = [ ":unittest_config" ]
   public = [
     "include/unittest.h",
   ]

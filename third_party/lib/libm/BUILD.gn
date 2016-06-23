@@ -1,10 +1,10 @@
-config("_libm_config") {
-  visibility = [ ":*" ]
+config("libm_config") {
+  visibility = [ ":libm" ]
   include_dirs = [ "include" ]
 }
 
 module("libm") {
-  public_configs = [ ":_libm_config" ]
+  public_configs = [ ":libm_config" ]
   cflags = [
     "-Wno-unused-variable",
     "-Wno-sign-compare",
