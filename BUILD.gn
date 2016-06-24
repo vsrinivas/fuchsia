@@ -9,12 +9,12 @@ import("//gnbuild/convert_to_raw.gni")
 # This target will be built if no target is specified when invoking Ninja.
 group("default") {
   deps = [
-    ":lk_bin",
+    ":magenta_bin",
     ":tools",
   ]
 }
 
-executable("lk") {
+executable("magenta") {
   output_extension = "elf"
   configs -= [ "//gnbuild:user_defaults" ]
   configs += [ "//gnbuild:kernel_defaults" ]
@@ -46,11 +46,11 @@ executable("lk") {
   }
 }
 
-convert_to_raw("lk_bin") {
-  input = "${root_build_dir}/lk.elf"
-  output = "${root_build_dir}/lk.bin"
+convert_to_raw("magenta_bin") {
+  input = "${root_build_dir}/magenta.elf"
+  output = "${root_build_dir}/magenta.bin"
   deps = [
-    ":lk",
+    ":magenta",
   ]
 }
 
