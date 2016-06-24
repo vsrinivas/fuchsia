@@ -315,9 +315,8 @@ config("default_warnings") {
   # TODO(phosek): split these into multiple configs
   cflags = [
     "-Wall",
+    "-Wextra",
 
-    #-Wextra
-    #-Werror
     "-Wno-multichar",
     "-Wno-unused-parameter",
     "-Wno-unused-function",
@@ -330,6 +329,14 @@ config("default_warnings") {
     cflags += [
       "-Wno-incompatible-pointer-types-discards-qualifiers",
       "-Wno-format",
+    ]
+  } else {
+    cflags += [
+      # TODO(mcgrathr): This matches what engine.mk does for now, but I
+      # don't know why it needs this.  Eventually we should adjust the
+      # warning flags and/or clean up the code so that -Werror is OK with
+      # clang too.
+      "-Werror",
     ]
   }
 }

@@ -5,6 +5,7 @@ config("fdt_config") {
 
 module("fdt") {
   public_configs = [ ":fdt_config" ]
+  cflags = [ "-Wno-sign-compare" ]
   public = [
     "include/fdt.h",
     "include/fdt_env.h",
