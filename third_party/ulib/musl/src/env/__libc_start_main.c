@@ -59,7 +59,7 @@ static void* libc_intercept_arg(void* arg) {
 }
 weak_alias(libc_intercept_arg, __libc_intercept_arg);
 
-int __libc_start_main(int (*main)(int, char**, void*), void* arg) {
+int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
     arg = __libc_intercept_arg(arg);
 
     // extract process startup information from message pipe in arg

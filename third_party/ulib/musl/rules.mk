@@ -35,12 +35,27 @@ MODULE_CFLAGS := \
     -D_XOPEN_SOURCE=700 \
     -Wno-sign-compare \
     -Wno-parentheses \
-    -Wno-discarded-qualifiers \
     -Wno-error \
-    -Wno-unused-but-set-variable \
     -Wno-missing-braces \
     -Wno-type-limits \
     -Werror=strict-prototypes \
+
+ifeq ($(CLANG),1)
+MODULE_CFLAGS += \
+    -Wno-missing-field-initializers \
+    -Wno-incompatible-pointer-types-discards-qualifiers \
+    -Wno-incompatible-pointer-types \
+    -Wno-ignored-attributes \
+    -Wno-tautological-compare \
+    -Wno-string-plus-int \
+    -Wno-absolute-value \
+    -Wno-unused-const-variable \
+    -Wno-implicit-exception-spec-mismatch
+else
+MODULE_CFLAGS += \
+    -Wno-discarded-qualifiers \
+    -Wno-unused-but-set-variable
+endif
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/magenta/debug.c \
