@@ -116,7 +116,7 @@ MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vm_object_set_size, mx_handle_t hand
 /* temporary syscalls to access port and memory mapped devices */
 MAGENTA_SYSCALL_DEF(2, 2, 105, mx_status_t, mmap_device_io, uint32_t io_addr, uint32_t len)
 MAGENTA_SYSCALL_DEF(3, 3, 106, mx_status_t, mmap_device_memory, uintptr_t paddr, uint32_t len, void **out_vaddr)
-MAGENTA_SYSCALL_DEF(3, 3, 107, mx_status_t, alloc_device_memory, uint32_t len, void **out_vaddr, void **out_paddr)
+MAGENTA_SYSCALL_DEF(3, 3, 107, mx_status_t, alloc_device_memory, uint32_t len, void **out_paddr, void **out_vaddr)
 
 /* TODO(security) */
 MAGENTA_SYSCALL_DEF(4, 4, 170, mx_status_t, bootloader_fb_get_info, uint32_t* format, uint32_t* width, uint32_t* height, uint32_t* stride)
