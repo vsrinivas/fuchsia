@@ -13,6 +13,7 @@
 #include <lk/init.h>
 #include <magenta/user_process.h>
 #include <magenta/vm_object_dispatcher.h>
+#include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +34,13 @@ static int attempt_userboot(const void* userboot, size_t ublen,
     dprintf(INFO, "userboot: bootfs   @%p (%zd)\n", bootfs, bfslen);
     dprintf(INFO, "userboot: userboot @%p (%zd)\n", userboot, ublen);
 
+    size_t rsize;
+    void *rbase = platform_get_ramdisk(&rsize);
+
+    if (rbase) {
+        dprintf(INFO, "userboot: ramdisk  @%p (%zd)\n", rbase, rsize);
+    }
+
     utils::unique_ptr<UserProcess> proc(new UserProcess("userboot"));
     if (!proc) {
         return ERR_NO_MEMORY;
@@ -50,7 +58,7 @@ static int attempt_userboot(const void* userboot, size_t ublen,
     }
 
     // map bootfs into the userboot process
-    auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, bfslen);
+    auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, bfslen + rsize);
     if (!vmo) {
         return ERR_NO_MEMORY;
     }
@@ -58,6 +66,12 @@ static int attempt_userboot(const void* userboot, size_t ublen,
     size_t written;
     if (vmo->Write(bootfs, 0, bfslen, &written) < 0) {
         return ERR_NO_MEMORY;
+    }
+
+    if (rbase) {
+        if (vmo->Write(rbase, bfslen, rsize, &written) < 0) {
+            return ERR_NO_MEMORY;
+        }
     }
 
     // create a Vm Object dispatcher

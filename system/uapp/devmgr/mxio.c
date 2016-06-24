@@ -14,6 +14,7 @@
 
 #include "devmgr.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,12 +49,14 @@ struct bootfile {
 
 static uint8_t* bootfs = NULL;
 static int bootfiles_count = 0;
+static size_t bootfs_end = 0;
 
 static void callback(const char* path, size_t off, size_t len) {
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
     char tmp[1024];
     snprintf(tmp, sizeof(tmp), "boot/%s", path);
     vnb_add_file(tmp, bootfs + off, len);
+    bootfs_end = off + ((len + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1)));
 }
 
 void devmgr_launch(const char* name, const char* app, const char* device) {
@@ -126,6 +129,13 @@ void devmgr_vfs_init(void* _bootfs, size_t len) {
     if (_bootfs != NULL) {
         bootfs = _bootfs;
         bootfs_parse(bootfs, len, callback);
+
+        // there can be a second bootfs (if passed as initrd)
+        if (bootfs_end < len) {
+            bootfs = (void*) ((char*) bootfs + bootfs_end);
+            bootfs_parse(bootfs, len - bootfs_end, callback);
+        }
+
         if (bootfiles_count) {
             printf("devmgr: bootfs contains %d file%s\n",
                    bootfiles_count, (bootfiles_count == 1) ? "" : "s");

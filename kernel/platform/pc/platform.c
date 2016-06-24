@@ -86,6 +86,9 @@ uint32_t bootloader_fb_format;
 uint32_t bootloader_i915_reg_base;
 uint32_t bootloader_fb_window_size;
 
+static uint32_t bootloader_ramdisk_base;
+static uint32_t bootloader_ramdisk_size;
+
 /* This is a temporary extension to the "zero page" protcol, making use
  * of obsolete fields to pass some additional data from bootloader to
  * kernel in a way that would to badly interact with a Linux kernel booting
@@ -94,6 +97,9 @@ uint32_t bootloader_fb_window_size;
 void platform_save_bootloader_data(void)
 {
     uint32_t *zp = (void*) ((uintptr_t)_zero_page_boot_params + KERNEL_BASE);
+
+    bootloader_ramdisk_base = zp[0x218 / 4];
+    bootloader_ramdisk_size = zp[0x21C / 4];
 
     if (zp[0x220 / 4] == 0xDBC64323) {
         bootloader_acpi_rsdp = zp[0x80 / 4];
@@ -104,6 +110,34 @@ void platform_save_bootloader_data(void)
         bootloader_fb_format = zp[0xA0 / 4];
         bootloader_i915_reg_base = zp[0xA4 / 4];
         bootloader_fb_window_size = zp[0xA8 / 4];
+    }
+}
+
+static void* ramdisk_base;
+static size_t ramdisk_size;
+
+static void platform_preserve_ramdisk(void) {
+    if (bootloader_ramdisk_size == 0) {
+        return;
+    }
+    if (bootloader_ramdisk_base == 0) {
+        return;
+    }
+    size_t pages = (bootloader_ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t actual = pmm_alloc_range(bootloader_ramdisk_base, pages, NULL);
+    if (actual == pages) {
+        ramdisk_base = paddr_to_kvaddr(bootloader_ramdisk_base);
+        ramdisk_size = pages * PAGE_SIZE;
+    }
+}
+
+void* platform_get_ramdisk(size_t *size) {
+    if (ramdisk_base) {
+        *size = ramdisk_size;
+        return ramdisk_base;
+    } else {
+        *size = 0;
+        return NULL;
     }
 }
 
@@ -155,6 +189,8 @@ void platform_early_init(void)
 
     /* initialize physical memory arenas */
     platform_mem_init();
+
+    platform_preserve_ramdisk();
 }
 
 #if WITH_SMP
