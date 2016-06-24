@@ -172,8 +172,10 @@ int import_manifest(const char *fn, unsigned *hdrsz, fs *fs) {
 }
 
 int import_directory(const char *dpath, const char *spath, unsigned *hdrsz, fs *fs) {
-    char dst[PATH_MAX];
-    char src[PATH_MAX];
+#define MAX_BOOTFS_PATH_LEN 4096
+    char dst[MAX_BOOTFS_PATH_LEN];
+    char src[MAX_BOOTFS_PATH_LEN];
+#undef MAX_BOOTFS_PATH_LEN
     struct stat s;
     unsigned sz = 0;
     struct dirent *de;
