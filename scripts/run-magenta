@@ -19,6 +19,7 @@ function HELP {
     echo "-r                  : run release build"
     echo "-u                  : use uniprocessor"
     echo "-v                  : use vnc based display"
+    echo "-x <bootfs>         : add eXtra bootfs"
     echo "-h for help"
     echo "all arguments after -- are passed to qemu directly"
     exit 1
@@ -37,8 +38,9 @@ NET=0
 UP=0
 RELEASE=0
 VNC=0
+INITRD=
 
-while getopts a:bdgkm:no:ruvh FLAG; do
+while getopts a:bdgkm:no:ruvx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
@@ -51,6 +53,7 @@ while getopts a:bdgkm:no:ruvh FLAG; do
         r) RELEASE=1;;
         u) UP=1;;
         v) VNC=1;;
+        x) INITRD=$OPTARG;;
         h) HELP;;
         \?)
             echo unrecognized option
@@ -150,6 +153,11 @@ case $ARCH in
         HELP
         ;;
 esac
+
+# ramdisk image
+if [ "$INITRD" != "" ]; then
+    ARGS+=" -initrd $INITRD"
+fi
 
 # run qemu
 echo $QEMU $ARGS $@
