@@ -32,7 +32,7 @@ size_t pcie_mem_lo_size;
 
 /* Store the PIO region for PCIe; make thes variables so we can easily
  * change them later */
-#define BASE_PMIO_ADDR 0x1000
+#define BASE_PMIO_ADDR 0x8000
 uint16_t pcie_pio_base = BASE_PMIO_ADDR;
 uint16_t pcie_pio_size = 0x10000 - BASE_PMIO_ADDR;
 
