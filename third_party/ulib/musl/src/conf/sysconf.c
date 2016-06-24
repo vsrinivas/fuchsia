@@ -2,6 +2,7 @@
 #include "syscall.h"
 #include <errno.h>
 #include <limits.h>
+#include <runtime/sysinfo.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -187,15 +188,8 @@ long sysconf(int name) {
     case JT_SEM_VALUE_MAX & 255:
         return SEM_VALUE_MAX;
     case JT_NPROCESSORS_CONF & 255:
-    case JT_NPROCESSORS_ONLN & 255: {
-        unsigned char set[128] = {1};
-        int i, cnt;
-        __syscall(SYS_sched_getaffinity, 0, sizeof set, set);
-        for (i = cnt = 0; i < sizeof set; i++)
-            for (; set[i]; set[i] &= set[i] - 1, cnt++)
-                ;
-        return cnt;
-    }
+    case JT_NPROCESSORS_ONLN & 255:
+        return mxr_get_nprocs_conf();
     case JT_PHYS_PAGES & 255:
     case JT_AVPHYS_PAGES & 255:
         // TODO(kulakowski) Ask magenta for physical memory allocation
