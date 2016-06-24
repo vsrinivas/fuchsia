@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <ctype.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -20,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 int verbose = 0;
 
@@ -35,6 +37,8 @@ char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
 //   namedata   (namelength bytes, includes \0)
 //
 // - fileoffsets must be page aligned (multiple of 4096)
+
+#define FSENTRYSZ 12
 
 typedef struct fsentry fsentry;
 struct fsentry {
@@ -69,7 +73,7 @@ char *trim(char *str) {
     return str;
 }
 
-fsentry *import_entry(const char *fn, int lineno, const char *dst, const char *src) {
+fsentry *import_manifest_entry(const char *fn, int lineno, const char *dst, const char *src) {
     fsentry *e;
     struct stat s;
 
@@ -87,11 +91,55 @@ fsentry *import_entry(const char *fn, int lineno, const char *dst, const char *s
     }
 
     if ((e = calloc(1, sizeof(*e))) == NULL) return NULL;
-    if ((e->name = strdup(dst)) == NULL) return NULL;
-    if ((e->srcpath = strdup(src)) == NULL) return NULL;
+    if ((e->name = strdup(dst)) == NULL) goto fail;
+    if ((e->srcpath = strdup(src)) == NULL) goto fail;
     e->namelen = strlen(e->name) + 1;
     e->length = s.st_size;
     return e;
+fail:
+    free(e->name);
+    free(e);
+    return NULL;
+}
+
+fsentry *import_directory_entry(const char *dst, const char *src, struct stat *s) {
+    fsentry *e;
+
+    if (s->st_size > INT32_MAX) {
+        fprintf(stderr, "error: file too large '%s'\n", src);
+        return NULL;
+    }
+
+    if ((e = calloc(1, sizeof(*e))) == NULL) return NULL;
+    if ((e->name = strdup(dst)) == NULL) goto fail;
+    if ((e->srcpath = strdup(src)) == NULL) goto fail;
+    e->namelen = strlen(e->name) + 1;
+    e->length = s->st_size;
+    return e;
+fail:
+    free(e->name);
+    free(e);
+    return NULL;
+}
+
+unsigned add_entry(fs *fs, fsentry *e) {
+    if (!strcmp(e->name, "bin/userboot")) {
+        // userboot must be the first entry
+        e->next = fs->first;
+        fs->first = e;
+        if (!fs->last) {
+            fs->last = e;
+        }
+    } else {
+        e->next = NULL;
+        if (fs->last) {
+            fs->last->next = e;
+        } else {
+            fs->first = e;
+        }
+        fs->last = e;
+    }
+    return e->namelen + FSENTRYSZ;
 }
 
 int import_manifest(const char *fn, unsigned *hdrsz, fs *fs) {
@@ -113,29 +161,73 @@ int import_manifest(const char *fn, unsigned *hdrsz, fs *fs) {
         *eq++ = 0;
         char* dstfn = trim(line);
         char* srcfn = trim(eq);
-        if ((e = import_entry(fn, lineno, dstfn, srcfn)) == NULL) {
+        if ((e = import_manifest_entry(fn, lineno, dstfn, srcfn)) == NULL) {
             return -1;
         }
-        if (!strcmp(dstfn, "bin/userboot")) {
-            // userboot must be the first entry
-            e->next = fs->first;
-            fs->first = e;
-            if (!fs->last)
-                fs->last = e;
-        } else {
-            e->next = NULL;
-            if (fs->last) {
-                fs->last->next = e;
-            } else {
-                fs->first = e;
-            }
-            fs->last = e;
-        }
-        sz += e->namelen + 12;
+        sz += add_entry(fs, e);
     }
     fclose(fp);
     *hdrsz += sz;
     return 0;
+}
+
+int import_directory(const char *dpath, const char *spath, unsigned *hdrsz, fs *fs) {
+    char dst[PATH_MAX];
+    char src[PATH_MAX];
+    struct stat s;
+    unsigned sz = 0;
+    struct dirent *de;
+    DIR *dir;
+
+    if ((dir = opendir(spath)) == NULL) {
+        fprintf(stderr, "error: cannot open directory '%s'\n", spath);
+        return -1;
+    }
+    while ((de = readdir(dir)) != NULL) {
+        char *name = de->d_name;
+        if (name[0] == '.') {
+            if (name[1] == 0) {
+                continue;
+            }
+            if ((name[1] == '.') && (name[2] == 0)) {
+                continue;
+            }
+        }
+        if (snprintf(src, sizeof(src), "%s/%s", spath, name) > sizeof(src)) {
+            fprintf(stderr, "error: name '%s/%s' is too long\n", spath, name);
+            goto fail;
+        }
+        if (stat(src, &s) < 0) {
+            fprintf(stderr, "error: cannot stat '%s'\n", src);
+            goto fail;
+        }
+        if (S_ISREG(s.st_mode)) {
+            fsentry *e;
+            if (snprintf(dst, sizeof(dst), "%s%s", dpath, name) > sizeof(dst)) {
+                fprintf(stderr, "error: name '%s%s' is too long\n", dpath, name);
+                goto fail;
+            }
+            if ((e = import_directory_entry(dst, src, &s)) < 0) {
+                goto fail;
+            }
+            sz += add_entry(fs, e);
+        } else if (S_ISDIR(s.st_mode)) {
+            if (snprintf(dst, sizeof(dst), "%s%s/", dpath, name) > sizeof(dst)) {
+                fprintf(stderr, "error: name '%s%s/' is too long\n", dpath, name);
+                goto fail;
+            }
+            import_directory(dst, src, hdrsz, fs);
+        } else {
+            fprintf(stderr, "error: unsupported filetype '%s'\n", src);
+            goto fail;
+        }
+    }
+    *hdrsz += sz;
+    closedir(dir);
+    return 0;
+fail:
+    closedir(dir);
+    return -1;
 }
 
 int copydata(int fd, const char *fn, size_t len) {
@@ -263,8 +355,20 @@ int main(int argc, char **argv) {
         return -1;
     }
     for (i = 0; i < argc; i++) {
-        if (import_manifest(argv[i], &hsz, &fs) < -1)
+        char *path = argv[i];
+        if (path[0] == '@') {
+            path++;
+            int len = strlen(path);
+            if (path[len - 1] == '/') {
+                // remove trailing slash
+                path[len - 1] = 0;
+            }
+            if (import_directory("", path, &hsz, &fs) < 0) {
+                return -1;
+            }
+        } else if (import_manifest(path, &hsz, &fs) < 0) {
             return -1;
+        }
     }
 
     // account for the magic
