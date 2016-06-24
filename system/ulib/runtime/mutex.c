@@ -31,8 +31,8 @@ enum {
 };
 
 mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex) {
-    int futex_value = atomic_cmpxchg(&mutex->futex, UNLOCKED, LOCKED);
-    if (futex_value != UNLOCKED)
+    int futex_value = UNLOCKED;
+    if (!atomic_cmpxchg(&mutex->futex, &futex_value, LOCKED))
         return ERR_BUSY;
     return NO_ERROR;
 }

@@ -69,6 +69,52 @@ static int mutex_thread_3(void* arg) {
     return 0;
 }
 
+static mx_status_t got_lock_1;
+static mx_status_t got_lock_2;
+static mx_status_t got_lock_3;
+
+static int mutex_try_thread_1(void* arg) {
+    xlog("thread 1 started\n");
+
+    for (int times = 0; times < 300; times++) {
+        got_lock_1 = mxr_mutex_trylock(&mutex);
+        _magenta_nanosleep(1000);
+        mxr_mutex_unlock(&mutex);
+    }
+
+    xlog("thread 1 done\n");
+    _magenta_thread_exit();
+    return 0;
+}
+
+static int mutex_try_thread_2(void* arg) {
+    xlog("thread 2 started\n");
+
+    for (int times = 0; times < 150; times++) {
+        got_lock_2 = mxr_mutex_trylock(&mutex);
+        _magenta_nanosleep(2000);
+        mxr_mutex_unlock(&mutex);
+    }
+
+    xlog("thread 2 done\n");
+    _magenta_thread_exit();
+    return 0;
+}
+
+static int mutex_try_thread_3(void* arg) {
+    xlog("thread 3 started\n");
+
+    for (int times = 0; times < 100; times++) {
+        got_lock_3 = mxr_mutex_trylock(&mutex);
+        _magenta_nanosleep(3000);
+        mxr_mutex_unlock(&mutex);
+    }
+
+    xlog("thread 3 done\n");
+    _magenta_thread_exit();
+    return 0;
+}
+
 static bool test_initializer(void) {
     BEGIN_TEST;
     // Let's not accidentally break .bss'd mutexes
@@ -97,10 +143,34 @@ static bool test_mutexes(void) {
     END_TEST;
 }
 
+static bool test_try_mutexes(void) {
+    BEGIN_TEST;
+    mx_handle_t handle1, handle2, handle3;
+
+    handle1 = _magenta_thread_create(mutex_try_thread_1, NULL, "thread 1", 9);
+    handle2 = _magenta_thread_create(mutex_try_thread_2, NULL, "thread 2", 9);
+    handle3 = _magenta_thread_create(mutex_try_thread_3, NULL, "thread 3", 9);
+
+    _magenta_handle_wait_one(handle1, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    _magenta_handle_wait_one(handle2, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    _magenta_handle_wait_one(handle3, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+
+    _magenta_handle_close(handle1);
+    _magenta_handle_close(handle2);
+    _magenta_handle_close(handle3);
+
+    EXPECT_EQ(got_lock_1, NO_ERROR, "failed to get lock 1");
+    EXPECT_EQ(got_lock_2, NO_ERROR, "failed to get lock 2");
+    EXPECT_EQ(got_lock_3, NO_ERROR, "failed to get lock 3");
+
+    END_TEST;
+}
+
 
 BEGIN_TEST_CASE(mxr_mutex_tests)
 RUN_TEST(test_initializer)
 RUN_TEST(test_mutexes)
+RUN_TEST(test_try_mutexes)
 END_TEST_CASE(mxr_mutex_tests)
 
 int main(void) {
