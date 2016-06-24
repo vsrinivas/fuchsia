@@ -43,8 +43,6 @@ MODULE_CFLAGS := \
     -Werror=strict-prototypes \
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/ldso/dlstart.c \
-    $(LOCAL_DIR)/ldso/dynlink.c \
     $(LOCAL_DIR)/magenta/debug.c \
     $(LOCAL_DIR)/magenta/io.c \
     $(LOCAL_DIR)/magenta/linuxisms.c \
