@@ -54,7 +54,7 @@ $(OUTLKELF).size: $(OUTLKELF)
 	@echo generating size map: $@
 	$(NOECHO)$(NM) -S --size-sort $< > $@
 
-$(OUTLKELF)-gdb.py: scripts/$(LKELF)-gdb.py
+$(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 	@echo generating $@
 	$(NOECHO)cp -f $< $@
 

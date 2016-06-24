@@ -9,13 +9,15 @@ LOCAL_MAKEFILE:=$(MAKEFILE_LIST)
 
 BUILDROOT ?= .
 
+LKNAME := magenta
+
 ifeq ($(MAKECMDGOALS),spotless)
 spotless:
 	rm -rf -- "$(BUILDROOT)"/build-*
 else
 
 ifndef LKROOT
-$(error please define LKROOT to the root of the lk build system)
+$(error please define LKROOT to the root of the $(LKNAME) build system)
 endif
 
 -include local.mk
@@ -56,9 +58,8 @@ DEBUG ?= 2
 
 BUILDDIR_SUFFIX ?=
 BUILDDIR := $(BUILDROOT)/build-$(PROJECT)$(BUILDDIR_SUFFIX)
-OUTLKBIN := $(BUILDDIR)/lk.bin
-LKELF := lk.elf
-OUTLKELF := $(BUILDDIR)/$(LKELF)
+OUTLKBIN := $(BUILDDIR)/$(LKNAME).bin
+OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
 GLOBAL_CONFIG_HEADER := $(BUILDDIR)/global_config.h
 KERNEL_CONFIG_HEADER := $(BUILDDIR)/kernel_config.h
 USER_CONFIG_HEADER := $(BUILDDIR)/user_config.h

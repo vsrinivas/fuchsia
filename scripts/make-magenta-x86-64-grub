@@ -17,12 +17,12 @@ PROJECT_DIR="$DIR/../build-$PROJECT"
 
 TEMP="$(mktemp -d)"
 mkdir -p "$TEMP/boot/grub"
-cp "$PROJECT_DIR/lk.bin" "$TEMP/boot/lk.bin"
+cp "$PROJECT_DIR/magenta.bin" "$TEMP/boot/magenta.bin"
 cat > "$TEMP/boot/grub/grub.cfg" << EOF
 set timeout=0
 menuentry "Magenta" {
-  multiboot /boot/lk.bin
+  multiboot /boot/magenta.bin
 }
 EOF
-grub-mkrescue -o "$PROJECT_DIR/lk.iso" "$TEMP"
+grub-mkrescue -o "$PROJECT_DIR/magenta.iso" "$TEMP"
 rm -rf "$TEMP"

@@ -21,7 +21,7 @@ _KERNEL_EXCEPTION_UNWINDER_PARAMETER = "kernel-exception-unwinder"
 
 _THREAD_MAGIC = 0x74687264
 
-print "Loading lk.elf-gdb.py ..."
+print "Loading magenta.elf-gdb.py ..."
 
 
 def _is_x86_64():

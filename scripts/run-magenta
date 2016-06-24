@@ -124,21 +124,21 @@ fi
 case $ARCH in
     arm32)
         QEMU=qemu-system-arm
-        ARGS+=" -machine virt -cpu cortex-a15 -kernel $BUILDDIR/lk.elf"
+        ARGS+=" -machine virt -cpu cortex-a15 -kernel $BUILDDIR/magenta.elf"
         if [ "$UP" -eq 0 ]; then
           ARGS+=" -smp cores=2,sockets=1"
         fi
         ;;
     arm64)
         QEMU=qemu-system-aarch64
-        ARGS+=" -machine virt -cpu cortex-a53 -kernel $BUILDDIR/lk.elf"
+        ARGS+=" -machine virt -cpu cortex-a53 -kernel $BUILDDIR/magenta.elf"
         if [ "$UP" -eq 0 ]; then
           ARGS+=" -smp cores=2,sockets=1"
         fi
         ;;
     x86-64)
         QEMU=qemu-system-x86_64
-        ARGS+=" -machine q35 -kernel $BUILDDIR/lk.bin"
+        ARGS+=" -machine q35 -kernel $BUILDDIR/magenta.bin"
         if [ "$UP" -eq 0 ]; then
           ARGS+=" -smp cores=2,threads=2,sockets=1"
         fi
