@@ -32,5 +32,6 @@ __WEAK void platform_quiesce(void)
 
 __WEAK void *platform_get_ramdisk(size_t *size)
 {
+    *size = 0;
     return NULL;
 }
