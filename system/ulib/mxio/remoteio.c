@@ -106,10 +106,16 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
 
     msg.arg = cb(&msg, cookie);
     if ((msg.arg < 0) || !is_message_valid(&msg)) {
+        // in the event of an error response or bad message
+        // release all the handles and data payload
         discard_handles(msg.handle, msg.hcount);
         msg.datalen = 0;
         msg.hcount = 0;
-        msg.arg = ERR_IO;
+        // specific errors are prioritized over the bad
+        // message case which we represent as ERR_FAULT
+        // to differentiate from ERR_IO on the near side
+        // TODO: consider a better error code
+        msg.arg = (msg.arg < 0) ? msg.arg : ERR_FAULT;
     }
 
     msg.op = MX_RIO_STATUS;
