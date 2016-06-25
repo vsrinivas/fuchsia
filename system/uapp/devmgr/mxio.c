@@ -57,6 +57,7 @@ static void callback(const char* path, size_t off, size_t len) {
     snprintf(tmp, sizeof(tmp), "boot/%s", path);
     vnb_add_file(tmp, bootfs + off, len);
     bootfs_end = off + ((len + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1)));
+    bootfiles_count++;
 }
 
 void devmgr_launch(const char* name, const char* app, const char* device) {
