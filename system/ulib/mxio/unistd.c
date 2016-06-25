@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -81,66 +82,6 @@ static void mxio_exit(void) {
             mxio_fdtab[fd] = NULL;
         }
     }
-}
-
-// hook into musl FILE* io
-#define __open __libc_io_open
-#define __close __libc_io_close
-
-ssize_t __libc_io_write(int fd, const void* data, size_t len) {
-    return write(fd, data, len);
-}
-
-int __libc_io_readv(int fd, const struct iovec* iov, int num) {
-    ssize_t count = 0;
-    ssize_t r;
-    while (num > 0) {
-        if (iov->iov_len != 0) {
-            r = read(fd, iov->iov_base, iov->iov_len);
-            if (r < 0) {
-                return count ? count : r;
-            }
-            if ((size_t)r < iov->iov_len) {
-                return count + r;
-            }
-            count += r;
-        }
-        iov++;
-        num--;
-    }
-    return count;
-}
-
-int __libc_io_writev(int fd, const struct iovec* iov, int num) {
-    ssize_t count = 0;
-    ssize_t r;
-    while (num > 0) {
-        if (iov->iov_len != 0) {
-            r = write(fd, iov->iov_base, iov->iov_len);
-            if (r < 0) {
-                return count ? count : r;
-            }
-            if ((size_t)r < iov->iov_len) {
-                return count + r;
-            }
-            count += r;
-        }
-        iov++;
-        num--;
-    }
-    return count;
-}
-
-int __libc_io_rmdir(const char* path) {
-    return -1;
-}
-
-int __libc_io_unlink(const char* path) {
-    return -1;
-}
-
-int __libc_io_unlinkat(int fd, const char* path, int flag) {
-    return -1;
 }
 
 mx_handle_t mxio_get_process_handle(void) {
@@ -235,78 +176,15 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending) {
     return io->ops->wait(io, events, pending, MX_TIME_INFINITE);
 }
 
-//TODO: errors -> errno
-ssize_t read(int fd, void* buf, size_t count) {
-    mxio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ERR_BAD_HANDLE;
-    if (buf == NULL)
-        return ERR_INVALID_ARGS;
-    return io->ops->read(io, buf, count);
-}
-
-ssize_t write(int fd, const void* buf, size_t count) {
-    mxio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ERR_BAD_HANDLE;
-    if (buf == NULL)
-        return ERR_INVALID_ARGS;
-    return io->ops->write(io, buf, count);
-}
-
-int __close(int fd) {
-    mxio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ERR_BAD_HANDLE;
-    int r = io->ops->close(io);
-    mxio_fdtab[fd] = NULL;
-    return r;
-}
-
-off_t lseek(int fd, off_t offset, int whence) {
-    mxio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ERR_BAD_HANDLE;
-    return io->ops->seek(io, offset, whence);
-}
-
-int getdirents(int fd, void* ptr, size_t len) {
-    mxio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ERR_BAD_HANDLE;
-    return io->ops->misc(io, MX_RIO_READDIR, len, ptr, 0);
-}
-
-int __open(const char* path, int flags, ...) {
-    mxio_t* io = NULL;
-    mx_status_t r;
-    int fd;
-    if (path == NULL) {
-        return ERR_INVALID_ARGS;
-    }
-    if (mxio_root_handle == NULL) {
-        return ERR_BAD_HANDLE;
-    }
-    r = mxio_root_handle->ops->open(mxio_root_handle, path, flags, &io);
-    if (r < 0)
-        return r;
-    if (io == NULL)
-        return ERR_IO;
-    fd = mxio_bind_to_fd(io, -1);
-    if (fd < 0) {
-        io->ops->close(io);
-        return ERR_NO_RESOURCES;
-    }
-    return fd;
-}
-
 int mx_stat(mxio_t* io, struct stat* s) {
     vnattr_t attr;
     int r = io->ops->misc(io, MX_RIO_STAT, sizeof(attr), &attr, 0);
-    if (r < 0)
-        return r;
-    if (r < (int)sizeof(attr))
+    if (r < 0) {
+        return ERR_BAD_HANDLE;
+    }
+    if (r < (int)sizeof(attr)) {
         return ERR_IO;
+    }
     memset(s, 0, sizeof(struct stat));
     s->st_mode = attr.mode;
     s->st_size = attr.size;
@@ -314,46 +192,235 @@ int mx_stat(mxio_t* io, struct stat* s) {
     return 0;
 }
 
+// TODO: determine complete correct mapping
+static int status_to_errno(mx_status_t status) {
+    switch (status) {
+    case ERR_NOT_FOUND: return ENOENT;
+    case ERR_NO_MEMORY: return ENOMEM;
+    case ERR_NOT_VALID: return EINVAL;
+    case ERR_INVALID_ARGS: return EINVAL;
+    case ERR_NOT_ENOUGH_BUFFER: ;
+    case ERR_TIMED_OUT: return ETIMEDOUT;
+    case ERR_ALREADY_EXISTS: return EEXIST;
+    case ERR_CHANNEL_CLOSED: return ENOTCONN;
+    case ERR_NOT_ALLOWED: return EPERM;
+    case ERR_BAD_PATH: return ENAMETOOLONG;
+    case ERR_IO: return EIO;
+    case ERR_NOT_DIR: return ENOTDIR;
+    case ERR_NOT_SUPPORTED: return ENOTSUP;
+    case ERR_TOO_BIG: return E2BIG;
+    case ERR_CANCELLED: return ECANCELED;
+    case ERR_NOT_IMPLEMENTED: return ENOTSUP;
+    case ERR_BUSY: return EBUSY;
+    case ERR_OUT_OF_RANGE: return EINVAL;
+    case ERR_FAULT: return EFAULT;
+    case ERR_NO_RESOURCES: return ENOMEM;
+    case ERR_BAD_HANDLE: return EBADFD;
+    case ERR_ACCESS_DENIED: return EACCES;
+
+    // no translation
+    default: return 999;
+    }
+}
+
+// set errno to the closest match for error and return -1
+static int ERROR(mx_status_t error) {
+    errno = status_to_errno(error);
+    return -1;
+}
+
+// if status is negative, set errno as appropriate and return -1
+// otherwise return status
+static int STATUS(mx_status_t status) {
+    if (status < 0) {
+        errno = status_to_errno(status);
+        return -1;
+    } else {
+        return status;
+    }
+}
+
+// set errno to e, return -1
+static inline int ERRNO(int e) {
+    errno = e;
+    return -1;
+}
+
+// The functions from here on provide implementations of fd and path
+// centric posix-y io operations (eg, their method signatures match
+// the standard headers even if the names are sometimes prefixed by
+// __libc_io_ for plumbing purposes.
+
+int __libc_io_readv(int fd, const struct iovec* iov, int num) {
+    ssize_t count = 0;
+    ssize_t r;
+    while (num > 0) {
+        if (iov->iov_len != 0) {
+            r = read(fd, iov->iov_base, iov->iov_len);
+            if (r < 0) {
+                return count ? count : r;
+            }
+            if ((size_t)r < iov->iov_len) {
+                return count + r;
+            }
+            count += r;
+        }
+        iov++;
+        num--;
+    }
+    return count;
+}
+
+int __libc_io_writev(int fd, const struct iovec* iov, int num) {
+    ssize_t count = 0;
+    ssize_t r;
+    while (num > 0) {
+        if (iov->iov_len != 0) {
+            r = write(fd, iov->iov_base, iov->iov_len);
+            if (r < 0) {
+                return count ? count : r;
+            }
+            if ((size_t)r < iov->iov_len) {
+                return count + r;
+            }
+            count += r;
+        }
+        iov++;
+        num--;
+    }
+    return count;
+}
+
+int __libc_io_rmdir(const char* path) {
+    return ERROR(ERR_NOT_SUPPORTED);
+}
+
+int __libc_io_unlink(const char* path) {
+    return ERROR(ERR_NOT_SUPPORTED);
+}
+
+int __libc_io_unlinkat(int fd, const char* path, int flag) {
+    return ERROR(ERR_NOT_SUPPORTED);
+}
+
+ssize_t read(int fd, void* buf, size_t count) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADFD);
+    }
+    if (buf == NULL) {
+        return ERROR(EINVAL);
+    }
+    return STATUS(io->ops->read(io, buf, count));
+}
+
+ssize_t __libc_io_write(int fd, const void* buf, size_t count) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADFD);
+    }
+    if (buf == NULL) {
+        return ERRNO(EINVAL);
+    }
+    return STATUS(io->ops->write(io, buf, count));
+}
+
+ssize_t write(int fd, const void* data, size_t len) {
+    return __libc_io_write(fd, data, len);
+}
+
+int __libc_io_close(int fd) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADFD);
+    }
+    int r = io->ops->close(io);
+    mxio_fdtab[fd] = NULL;
+    return STATUS(r);
+}
+
+off_t lseek(int fd, off_t offset, int whence) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADFD);
+    }
+    return STATUS(io->ops->seek(io, offset, whence));
+}
+
+int getdirents(int fd, void* ptr, size_t len) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADFD);
+    }
+    return STATUS(io->ops->misc(io, MX_RIO_READDIR, len, ptr, 0));
+}
+
+int __libc_io_open(const char* path, int flags, ...) {
+    mxio_t* io = NULL;
+    mx_status_t r;
+    int fd;
+    if (path == NULL) {
+        return ERRNO(EBADFD);
+    }
+    if (mxio_root_handle == NULL) {
+        return ERRNO(EBADFD);
+    }
+    r = mxio_root_handle->ops->open(mxio_root_handle, path, flags, &io);
+    if (r < 0) {
+        return ERROR(r);
+    }
+    if (io == NULL) {
+        return ERRNO(EIO);
+    }
+    fd = mxio_bind_to_fd(io, -1);
+    if (fd < 0) {
+        io->ops->close(io);
+        return ERRNO(EMFILE);
+    }
+    return fd;
+}
+
 int fstat(int fd, struct stat* s) {
     mxio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ERR_BAD_HANDLE;
-    return mx_stat(io, s);
+    if (io == NULL) {
+        return ERRNO(EBADFD);
+    }
+    return STATUS(mx_stat(io, s));
 }
 
 int stat(const char* fn, struct stat* s) {
     mxio_t* io;
     mx_status_t r;
     if (fn == NULL) {
-        return ERR_INVALID_ARGS;
+        return ERRNO(EINVAL);
     }
     if (mxio_root_handle == NULL) {
-        return ERR_BAD_HANDLE;
+        return ERRNO(EBADFD);
     }
-    if ((r = mx_open(mxio_root_handle, fn, 0, &io)) < 0) {
-        return r;
+    if ((r = mx_open(mxio_root_handle, fn, 0, &io)) == 0) {
+        r = mx_stat(io, s);
+        mx_close(io);
     }
-    r = mx_stat(io, s);
-    mx_close(io);
-    return r;
+    return STATUS(r);
 }
 
 int pipe(int pipefd[2]) {
     mxio_t *a, *b;
     int r = mxio_pipe_pair(&a, &b);
-    if (r < 0)
-        return r;
+    if (r < 0) {
+        return ERROR(r);
+    }
     pipefd[0] = mxio_bind_to_fd(a, -1);
     if (pipefd[0] < 0) {
         mx_close(a);
         mx_close(b);
-        return pipefd[0];
+        return ERROR(pipefd[0]);
     }
     pipefd[1] = mxio_bind_to_fd(b, -1);
     if (pipefd[1] < 0) {
         close(pipefd[0]);
         mx_close(b);
-        return pipefd[1];
+        return ERROR(pipefd[1]);
     }
     return 0;
 }
