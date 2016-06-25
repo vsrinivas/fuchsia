@@ -100,5 +100,12 @@ int main(int argc, char** argv) {
     }
     _magenta_process_start(proc, h, entry);
 
+    // wait for devmgr to stop
+    r = _magenta_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+
+    printf("userboot: devmgr exited\n");
+
+    _magenta_handle_close(proc);
+
     return 0;
 }
