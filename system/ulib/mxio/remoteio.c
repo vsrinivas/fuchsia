@@ -23,6 +23,7 @@
 #include <mxio/remoteio.h>
 
 #include <runtime/thread.h>
+#include <runtime/mutex.h>
 
 #define MXDEBUG 0
 
@@ -38,6 +39,10 @@ struct mx_rio {
     mx_handle_t e;
 
     uint32_t flags;
+
+    // TODO: replace with reply-pipes to allow
+    // true multithreaded io
+    mxr_mutex_t lock;
 };
 
 static const char* _opnames[] = MX_RIO_OPNAMES;
@@ -159,7 +164,7 @@ void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
 
 // on success, msg->hcount indicates number of valid handles in msg->handle
 // on error there are never any handles
-static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
+static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
     msg->magic = MX_RIO_MAGIC;
     if (!is_message_valid(msg)) {
         return ERR_INVALID_ARGS;
@@ -203,6 +208,14 @@ static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
 fail_discard_handles:
     discard_handles(msg->handle, msg->hcount);
     msg->hcount = 0;
+    return r;
+}
+
+static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
+    mx_status_t r;
+    mxr_mutex_lock(&rio->lock);
+    r = mx_rio_txn_locked(rio, msg);
+    mxr_mutex_unlock(&rio->lock);
     return r;
 }
 
@@ -512,6 +525,7 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
     rio->h = h;
     rio->e = e;
     rio->flags = 0;
+    rio->lock = MXR_MUTEX_INIT;
     return &rio->io;
 }
 
