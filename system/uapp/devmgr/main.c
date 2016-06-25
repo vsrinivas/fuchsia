@@ -127,18 +127,18 @@ int main(int argc, char** argv) {
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
 
-    mxr_thread_t* t;
-    if ((mxr_thread_create(console_starter, NULL, "console-starter", &t)) == 0) {
-        mxr_thread_detach(t);
-    }
-
-#if !WITH_APP_SHELL
+#if !_MX_KERNEL_HAS_SHELL
     // if no kernel shell on serial uart, start a mxsh there
     printf("devmgr: shell startup\n");
     devmgr_launch("mxsh:console", "/boot/bin/mxsh", "/dev/console");
 #endif
 
     devmgr_launch("netsvc", "/boot/bin/netsvc", "/dev/console");
+
+    mxr_thread_t* t;
+    if ((mxr_thread_create(console_starter, NULL, "console-starter", &t)) == 0) {
+        mxr_thread_detach(t);
+    }
 
     devmgr_handle_messages();
     printf("devmgr: message handler returned?!\n");
