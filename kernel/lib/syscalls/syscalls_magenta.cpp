@@ -70,10 +70,6 @@ uint sys_num_cpus(void) {
     return arch_max_num_cpus();
 }
 
-uint sys_num_idle_cpus(void) {
-    return __builtin_popcount(mp.idle_cpus);
-}
-
 uint64_t sys_current_time() {
     return current_time_hires() * 1000;  // microseconds to nanoseconds
 }

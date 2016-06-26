@@ -50,7 +50,6 @@ MAGENTA_SYSCALL_DEF(2, 2, 5, int, debug_send_command, const void* buffer, uint32
 
 // Temporary system calls before pending calls to get system info are created.
 MAGENTA_SYSCALL_DEF(0, 0, 6, unsigned int, num_cpus, void)
-MAGENTA_SYSCALL_DEF(0, 0, 7, unsigned int, num_idle_cpus, void)
 
 /* Logging */
 MAGENTA_SYSCALL_DEF(1, 1, 30, mx_handle_t, log_create, uint32_t flags)

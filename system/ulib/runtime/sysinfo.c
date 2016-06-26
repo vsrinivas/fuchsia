@@ -20,5 +20,5 @@ int mxr_get_nprocs_conf(void) {
 }
 
 int mxr_get_nprocs(void) {
-    return _magenta_num_idle_cpus();
+    return _magenta_num_cpus();
 }
