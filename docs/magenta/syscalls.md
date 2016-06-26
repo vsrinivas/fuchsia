@@ -1,7 +1,7 @@
 # Magenta System Calls
 
 ## Thread
-+ [nanosleep](syscalls/nanosleep.md)
++ [nanosleep](syscalls/nano_sleep.md)
 
 ## Handles
 

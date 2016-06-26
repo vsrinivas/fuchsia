@@ -13,18 +13,18 @@ with OS resources via object handles which map kernel objects to processes.
 + Message pipe
 + Interrupt request
 + Futex
++ VMObject
 
 ## Kernel objects planned
 
 + Data pipe
-+ Memory mapping (VM object)
 + Job
++ IOPort
 
 ## Kernel Object and LK
-Most kernel objects wrap one or more LK-level constructs. For example the
-Thread object wraps one thread_t, or the Event object wraps one event_t.
-The Message Pipe however wraps two port_t objects and there is not a fixed
-mapping from LK to the Process object.
+Some kernel objects wrap one or more LK-level constructs. For example the
+Thread object wraps one `thread_t`. However the Message Pipe does not wrap
+any LK-level objects.
 
 ## Kernel object lifetime
 Kernel objects are ref-counted. Most kernel objects are born during a syscall
@@ -49,6 +49,7 @@ the name you'll see is `utils::RefPtr<Dispatcher>`.
 
 ## Kernel Object security
 In principle, kernel objects do not have an intrinsic notion of security and
-do not do authorization; security rights are held by each handle. A Single
-process can have two different handles to the same object with different
-rights.
+do not do authorization checks; security rights are held by each handle. A
+single process can have two different handles to the same object with
+different rights.
+

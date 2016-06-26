@@ -18,5 +18,3 @@ is closed. [⚠ not implemented].
 Next, the main binary is loaded into the process via `sys_process_load()` and
 its execution begins with `sys_process_start()`.
 
-A thread in another process can wait for a process to exit with
-`sys_process_join()`.
