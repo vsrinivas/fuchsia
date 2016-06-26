@@ -136,8 +136,8 @@ mx_status_t vc_console_readkey(mx_device_t* dev, uint32_t flags);
 
 // char protocol:
 
-ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count);
-ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count);
+ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off);
+ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t off);
 ssize_t vc_char_ioctl(mx_device_t* dev, uint32_t op,
                       const void* cmd, size_t cmdlen,
                       void* reply, size_t max);

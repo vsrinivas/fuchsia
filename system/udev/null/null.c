@@ -25,11 +25,11 @@
 
 // implement character protocol:
 
-static ssize_t null_read(mx_device_t* dev, void* buf, size_t count) {
+static ssize_t null_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
     return NO_ERROR;
 }
 
-static ssize_t null_write(mx_device_t* dev, const void* buf, size_t count) {
+static ssize_t null_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     return count;
 }
 

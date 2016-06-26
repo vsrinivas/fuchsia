@@ -215,12 +215,12 @@ static mx_protocol_device_t intel_serialio_i2c_device_proto = {
 // Implement the char protocol for the bus device.
 
 static ssize_t intel_serialio_i2c_read(
-    mx_device_t* dev, void* buf, size_t count) {
+    mx_device_t* dev, void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
 static ssize_t intel_serialio_i2c_write(
-    mx_device_t* dev, const void* buf, size_t count) {
+    mx_device_t* dev, const void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 

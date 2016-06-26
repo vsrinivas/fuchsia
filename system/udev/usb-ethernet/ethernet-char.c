@@ -54,7 +54,7 @@ static mx_protocol_device_t ethernet_char_device_proto = {
     .release = ethernet_char_release,
 };
 
-static ssize_t ethernet_char_read(mx_device_t* device, void* buf, size_t count) {
+static ssize_t ethernet_char_read(mx_device_t* device, void* buf, size_t count, size_t off) {
     ethernet_char_t* eth = get_eth_device(device);
 
     // special case reading MAC address
@@ -68,7 +68,7 @@ static ssize_t ethernet_char_read(mx_device_t* device, void* buf, size_t count) 
     return eth->eth_protocol->recv(eth->eth_device, buf, count);
 }
 
-static ssize_t ethernet_char_write(mx_device_t* device, const void* buf, size_t count) {
+static ssize_t ethernet_char_write(mx_device_t* device, const void* buf, size_t count, size_t off) {
     ethernet_char_t* eth = get_eth_device(device);
     return eth->eth_protocol->send(eth->eth_device, buf, count);
 }

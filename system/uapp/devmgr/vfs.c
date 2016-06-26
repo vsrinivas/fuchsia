@@ -270,26 +270,65 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         }
         return r;
     }
-    case MX_RIO_SEEK:
+    case MX_RIO_SEEK: {
+        vnattr_t attr;
+        mx_status_t r;
+        if ((r = vn->ops->getattr(vn, &attr)) < 0) {
+            return r;
+        }
+        size_t n;
         switch (arg) {
         case SEEK_SET:
-            ios->io_off = msg->arg2.off;
+            if (msg->arg2.off < 0) {
+                return ERR_INVALID_ARGS;
+            }
+            n = msg->arg2.off;
             break;
         case SEEK_CUR:
+            n = ios->io_off + msg->arg2.off;
+            if (msg->arg2.off < 0) {
+                // if negative seek
+                if (n > ios->io_off) {
+                    // wrapped around. attempt to seek before start
+                    return ERR_INVALID_ARGS;
+                }
+            } else {
+                // positive seek
+                if (n < ios->io_off) {
+                    // wrapped around. overflow
+                    return ERR_INVALID_ARGS;
+                }
+            }
             break;
-        case SEEK_END: {
-            vnattr_t attr;
-            mx_status_t r;
-            if ((r = vn->ops->getattr(vn, &attr)) < 0)
-                return r;
-            ios->io_off = attr.size;
+        case SEEK_END:
+            n = attr.size + msg->arg2.off;
+            if (msg->arg2.off < 0) {
+                // if negative seek
+                if (n > attr.size) {
+                    // wrapped around. attempt to seek before start
+                    return ERR_INVALID_ARGS;
+                }
+            } else {
+                // positive seek
+                if (n < attr.size) {
+                    // wrapped around
+                    return ERR_INVALID_ARGS;
+                }
+            }
             break;
-        }
         default:
             return ERR_INVALID_ARGS;
         }
+        if (vn->flags & V_FLAG_DEVICE) {
+            if (n > attr.size) {
+                // devices may not seek past the end
+                return ERR_INVALID_ARGS;
+            }
+        }
+        ios->io_off = n;
         msg->arg2.off = ios->io_off;
         return NO_ERROR;
+    }
     case MX_RIO_STAT: {
         mx_status_t r;
         msg->datalen = sizeof(vnattr_t);

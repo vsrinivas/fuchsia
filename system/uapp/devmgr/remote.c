@@ -222,8 +222,38 @@ static mx_status_t devhost_rpc(mx_handle_t h, devhost_msg_t* msg, mx_handle_t ha
     return msg->arg;
 }
 
+static ssize_t read_unsupported(mx_device_t* d, void* p, size_t c, size_t o) {
+    return ERR_NOT_SUPPORTED;
+}
+static ssize_t write_unsupported(mx_device_t* d, const void* p, size_t c, size_t o) {
+    return ERR_NOT_SUPPORTED;
+}
+static mx_protocol_char_t cproto_unsupported = {
+    .read = read_unsupported,
+    .write = write_unsupported,
+};
+
+typedef struct iostate {
+    mx_device_t* dev;
+    mx_protocol_char_t* cproto;
+    size_t io_off;
+} iostate_t;
+
+static iostate_t* create_iostate(mx_device_t* dev) {
+    iostate_t* ios;
+    if ((ios = calloc(1, sizeof(iostate_t))) == NULL) {
+        return NULL;
+    }
+    ios->dev = dev;
+    if (device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&ios->cproto)) {
+        ios->cproto = &cproto_unsupported;
+    }
+    return ios;
+}
+
 static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
-    mx_device_t* dev = cookie;
+    iostate_t* ios = cookie;
+    mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -234,10 +264,18 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
 
     switch (MX_RIO_OP(msg->op)) {
     case MX_RIO_CLOSE:
+        free(ios);
         return NO_ERROR;
     case MX_RIO_CLONE: {
+        iostate_t* newios;
+        if ((newios = create_iostate(dev)) == NULL) {
+            return ERR_NO_MEMORY;
+        }
+        newios->io_off = ios->io_off;
+
         mx_handle_t h0, h1;
         if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
+            free(newios);
             return h0;
         }
         msg->handle[0] = h0;
@@ -245,58 +283,106 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
             if ((msg->handle[1] = _magenta_handle_duplicate(dev->event)) < 0) {
                 _magenta_handle_close(h0);
                 _magenta_handle_close(h1);
+                free(newios);
                 return msg->handle[1];
             }
             msg->hcount = 2;
         } else {
             msg->hcount = 1;
         }
-        mxio_dispatcher_add(devmgr_dispatcher, h1, rio_handler, dev);
+        mxio_dispatcher_add(devmgr_dispatcher, h1, rio_handler, newios);
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         return NO_ERROR;
     }
     case MX_RIO_READ: {
-        mx_status_t r;
-        mx_protocol_char_t* proto;
-        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&proto)) < 0) {
-            return r;
-        }
-        if ((r = proto->read(dev, msg->data, arg)) > 0) {
+        mx_status_t r = ios->cproto->read(dev, msg->data, arg, ios->io_off);
+        if (r >= 0) {
+            ios->io_off += r;
+            msg->arg2.off = ios->io_off;
             msg->datalen = r;
         }
-        msg->arg2.off = 0;
         return r;
     }
     case MX_RIO_WRITE: {
-        mx_status_t r;
-        mx_protocol_char_t* proto;
-        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&proto)) < 0) {
-            return r;
-        }
-        if ((r = proto->write(dev, msg->data, len)) > 0) {
-            msg->arg2.off = 0;
+        mx_status_t r = ios->cproto->write(dev, msg->data, len, ios->io_off);
+        if (r >= 0) {
+            ios->io_off += r;
+            msg->arg2.off = ios->io_off;
         }
         return r;
     }
+    case MX_RIO_SEEK: {
+        size_t end, n;
+        if (ios->cproto->getsize) {
+            end = ios->cproto->getsize(dev);
+        } else {
+            end = 0;
+        }
+        switch (arg) {
+        case SEEK_SET:
+            if ((msg->arg2.off < 0) || ((size_t)msg->arg2.off > end)) {
+                return ERR_INVALID_ARGS;
+            }
+            n = msg->arg2.off;
+            break;
+        case SEEK_CUR:
+            // TODO: track seekability with flag, don't update off
+            // at all on read/write if not seekable
+            n = ios->io_off + msg->arg2.off;
+            if (msg->arg2.off < 0) {
+                // if negative seek
+                if (n > ios->io_off) {
+                    // wrapped around
+                    return ERR_INVALID_ARGS;
+                }
+            } else {
+                // positive seek
+                if (n < ios->io_off) {
+                    // wrapped around
+                    return ERR_INVALID_ARGS;
+                }
+            }
+            break;
+        case SEEK_END:
+            n = end + msg->arg2.off;
+            if (msg->arg2.off <= 0) {
+                // if negative or exact-end seek
+                if (n > end) {
+                    // wrapped around
+                    return ERR_INVALID_ARGS;
+                }
+            } else {
+                if (n < end) {
+                    // wrapped around
+                    return ERR_INVALID_ARGS;
+                }
+            }
+            break;
+        default:
+            return ERR_INVALID_ARGS;
+        }
+        if (n > end) {
+            // devices may not seek past the end
+            return ERR_INVALID_ARGS;
+        }
+        ios->io_off = n;
+        msg->arg2.off = ios->io_off;
+        return NO_ERROR;
+    }
     case MX_RIO_IOCTL: {
-        mx_status_t r;
-        mx_protocol_char_t* proto;
         if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
             return ERR_INVALID_ARGS;
         }
-        if ((r = device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&proto)) < 0) {
-            return r;
-        }
-        if (!proto->ioctl) {
+        if (!ios->cproto->ioctl) {
             return ERR_NOT_SUPPORTED;
         }
-
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
-        if ((r = proto->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg)) > 0) {
+        mx_status_t r = ios->cproto->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
+        if (r >= 0) {
             msg->datalen = r;
+            msg->arg2.off = ios->io_off;
         }
-        msg->arg2.off = 0;
         return r;
     }
     default:
@@ -305,8 +391,13 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
 }
 
 mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
+    iostate_t* ios;
+    if ((ios = create_iostate(dev)) == NULL) {
+        return ERR_NO_MEMORY;
+    }
     mx_handle_t h0, h1;
     if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
+        free(ios);
         return h0;
     }
     //printf("devhost_add(%p, %p)\n", dev, parent);
@@ -318,13 +409,13 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
     memcpy(msg.namedata, dev->namedata, sizeof(dev->namedata));
     mx_status_t r = devhost_rpc(devhost_handle, &msg, h1);
     //printf("devhost_add() %d\n", r);
-
     if (r == NO_ERROR) {
         //printf("devhost: dev=%p remoted\n", dev);
-        mxio_dispatcher_add(devmgr_dispatcher, h0, rio_handler, dev);
         dev->remote_id = msg.device_id;
+        mxio_dispatcher_add(devmgr_dispatcher, h0, rio_handler, ios);
     } else {
         _magenta_handle_close(h0);
+        free(ios);
     }
     return r;
 }

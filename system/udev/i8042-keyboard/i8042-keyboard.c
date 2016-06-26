@@ -339,7 +339,7 @@ static int i8042_irq_thread(void* arg) {
 
 // implement char protocol:
 
-static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count) {
+static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
     size_t size = sizeof(mx_key_event_t);
     if (count < size || (count % size != 0))
         return ERR_INVALID_ARGS;
@@ -360,7 +360,7 @@ static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count) {
     return (data - (mx_key_event_t*)buf) * size;
 }
 
-static ssize_t i8042_write(mx_device_t* dev, const void* buf, size_t count) {
+static ssize_t i8042_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 

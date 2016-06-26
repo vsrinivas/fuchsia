@@ -198,7 +198,7 @@ static void kbd_int_cb(usb_request_t* req) {
     kbd->usb->queue_request(kbd->usbdev, req);
 }
 
-static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len) {
+static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len, size_t off) {
     kbd_device_t* kbd = get_kbd_device(dev);
     mx_key_event_t* evt = buf;
     size_t count = 0;
@@ -219,7 +219,7 @@ static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len) {
     return count;
 }
 
-static ssize_t kbd_write(mx_device_t* dev, const void* buf, size_t count) {
+static ssize_t kbd_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 

@@ -69,7 +69,7 @@ static mx_status_t vnd_close(vnode_t* vn) {
 static ssize_t vnd_read(vnode_t* vn, void* data, size_t len, size_t off) {
     mx_protocol_char_t* ops = vn->pops;
     if (ops) {
-        return ops->read(vn->pdata, data, len);
+        return ops->read(vn->pdata, data, len, off);
     } else {
         return ERR_NOT_SUPPORTED;
     }
@@ -78,7 +78,7 @@ static ssize_t vnd_read(vnode_t* vn, void* data, size_t len, size_t off) {
 static ssize_t vnd_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     mx_protocol_char_t* ops = vn->pops;
     if (ops) {
-        return ops->write(vn->pdata, data, len);
+        return ops->write(vn->pdata, data, len, off);
     } else {
         return ERR_NOT_SUPPORTED;
     }
@@ -138,6 +138,10 @@ static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
+    }
+    mx_protocol_char_t* ops = vn->pops;
+    if (ops && ops->getsize) {
+        attr->size = ops->getsize(dev);
     }
     return NO_ERROR;
 }

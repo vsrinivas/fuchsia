@@ -213,7 +213,7 @@ transfer_finish_2:
 // Implement the char protocol for the slave devices.
 
 static ssize_t intel_serialio_i2c_slave_read(
-    mx_device_t* dev, void* buf, size_t count) {
+    mx_device_t* dev, void* buf, size_t count, size_t off) {
     i2c_slave_segment_t segment = {
         .read = 1,
         .buf = buf,
@@ -223,7 +223,7 @@ static ssize_t intel_serialio_i2c_slave_read(
 }
 
 static ssize_t intel_serialio_i2c_slave_write(
-    mx_device_t* dev, const void* buf, size_t count) {
+    mx_device_t* dev, const void* buf, size_t count, size_t off) {
     i2c_slave_segment_t segment = {
         .read = 0,
         .buf = (void*)buf,

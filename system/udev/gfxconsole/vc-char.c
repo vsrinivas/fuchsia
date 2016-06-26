@@ -26,7 +26,7 @@
 
 // implement char protocol:
 
-ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count) {
+ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
     vc_device_t* device = get_vc_device(dev);
     mx_key_event_t ev;
     ssize_t r = 0;
@@ -166,7 +166,7 @@ ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count) {
     return r;
 }
 
-ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count) {
+ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     vc_device_t* device = get_vc_device(dev);
     mxr_mutex_lock(&device->lock);
     const uint8_t* str = (const uint8_t*)buf;

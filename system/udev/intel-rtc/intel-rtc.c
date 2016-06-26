@@ -62,7 +62,7 @@ static bool rtc_time_eq(struct rtc_time* lhs, struct rtc_time* rhs) {
 }
 
 // implement char protocol
-static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count) {
+static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
     struct rtc_time cur, last;
 
     read_time(&cur);
@@ -81,7 +81,7 @@ static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count) {
     return n;
 }
 
-static ssize_t intel_rtc_write(mx_device_t* dev, const void* buf, size_t count) {
+static ssize_t intel_rtc_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 

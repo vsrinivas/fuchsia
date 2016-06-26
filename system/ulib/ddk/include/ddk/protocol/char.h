@@ -17,9 +17,20 @@
 #include <ddk/driver.h>
 
 typedef struct mx_protocol_char {
-    ssize_t (*read)(mx_device_t* dev, void* buf, size_t count);
-    ssize_t (*write)(mx_device_t* dev, const void* buf, size_t count);
+    ssize_t (*read)(mx_device_t* dev, void* buf, size_t count, size_t off);
+    // attempt to read count bytes at offset off
+    // off may be ignored for devices without the concept of a position
+
+    ssize_t (*write)(mx_device_t* dev, const void* buf, size_t count, size_t off);
+    // attempt to write count bytes at offset off
+    // off may be ignored for devices without the concept of a position
+
+    size_t (*getsize)(mx_device_t* dev);
+    // optional: return the size (in bytes) of the readable/writable space
+    // of the device.  Will default to 0 (non-seekable) if this is unimplemented
+
     ssize_t (*ioctl)(mx_device_t* dev, uint32_t op,
                      const void* in_buf, size_t in_len,
                      void* out_buf, size_t out_len);
+    // optional: do an device-specific io operation
 } mx_protocol_char_t;
