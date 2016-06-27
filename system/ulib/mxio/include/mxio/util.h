@@ -16,7 +16,7 @@
 
 #include <magenta/types.h>
 #include <mxio/io.h>
-#include <sys/types.h>
+#include <stdint.h>
 
 // These routines are "internal" to mxio but used by some companion
 // code like userboot and devmgr
@@ -40,8 +40,10 @@ mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types);
 // If proc is nonzero, it will be added to the
 // end of the handle/id tables, so they must
 // be one larger than specified in hnds_count.
-mx_handle_t mxio_build_procargs(int args_count, char* args[], int hnds_count,
-                                mx_handle_t* handles, uint32_t* ids, mx_handle_t proc);
+mx_handle_t mxio_build_procargs(int args_count, char* args[],
+                                int auxv_count, uintptr_t auxv[],
+                                int hnds_count, mx_handle_t* handles,
+                                uint32_t* ids, mx_handle_t proc);
 
 // Load a static elf binary into a process from memory buffer or fd
 mx_status_t mxio_load_elf_mem(mx_handle_t process, mx_vaddr_t* entry, void* data, size_t len);

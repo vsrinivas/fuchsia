@@ -41,6 +41,12 @@ struct mx_proc_args {
     // passed along with the message.
     uint32_t handle_info_off;
 
+    // Offset from start of message to "auxiliary info" array, which
+    // contains an even number of uintptr_t elements.  Even-numbered
+    // elements are AT_* tags, odd-numbered elements are values.
+    uint32_t aux_info_off;
+    uint32_t aux_info_num;
+
     // Offset from start of message to arguments and
     // count of arguments.  Arguments are provided as
     // a set of null-terminated utf-8 strings, one

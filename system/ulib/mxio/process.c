@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define _GNU_SOURCE
+#include <assert.h>
 #include <fcntl.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -30,16 +31,28 @@
 
 #include "elf.h"
 
-mx_handle_t mxio_build_procargs(int args_count, char* args[], int hnds_count,
-                                mx_handle_t* handles, uint32_t* ids, mx_handle_t proc) {
-    uint8_t data[8192];
-    mx_proc_args_t pargs;
+#define PROCARGS_BUFFER_SIZE 8192
+
+mx_handle_t mxio_build_procargs(int args_count, char* args[],
+                                int auxv_count, uintptr_t auxv[],
+                                int hnds_count, mx_handle_t* handles,
+                                uint32_t* ids, mx_handle_t proc) {
+    union {
+        uint8_t buffer[PROCARGS_BUFFER_SIZE];
+        struct {
+            mx_proc_args_t pargs;
+            uint8_t data[PROCARGS_BUFFER_SIZE - sizeof(mx_proc_args_t)];
+        } msg;
+    } msgbuf;
+    static_assert(sizeof(msgbuf) == sizeof(msgbuf.buffer),
+                  "unexpected union layout");
     mx_handle_t h0, h1;
     mx_status_t r;
-    off_t off = sizeof(pargs);
     int n;
 
     if (args_count < 1)
+        return ERR_INVALID_ARGS;
+    if (auxv_count < 0 || auxv_count % 2 != 0)
         return ERR_INVALID_ARGS;
     if (hnds_count < 0)
         return ERR_INVALID_ARGS;
@@ -55,24 +68,40 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[], int hnds_count,
         handles[hnds_count] = proc;
         ids[hnds_count++] = MX_HND_TYPE_PROC_SELF;
     }
-    //TODO: bounds checking
-    pargs.protocol = MX_PROCARGS_PROTOCOL;
-    pargs.version = MX_PROCARGS_VERSION;
-    pargs.handle_info_off = off;
-    memcpy(data + off, ids, hnds_count * sizeof(uint32_t));
-    off += hnds_count * sizeof(uint32_t);
-    pargs.args_off = off;
-    pargs.args_num = args_count;
+
+    msgbuf.msg.pargs.protocol = MX_PROCARGS_PROTOCOL;
+    msgbuf.msg.pargs.version = MX_PROCARGS_VERSION;
+    uint8_t* p = msgbuf.msg.data;
+#define CHECK_MSGBUF_SIZE(bytes) \
+    do { \
+        if ((ptrdiff_t) (bytes) > &msgbuf.buffer[sizeof(msgbuf)] - p) \
+            return ERR_TOO_BIG; \
+    } while (0)
+
+    CHECK_MSGBUF_SIZE(hnds_count * sizeof(ids[0]));
+    msgbuf.msg.pargs.handle_info_off = p - msgbuf.buffer;
+    p = mempcpy(p, ids, hnds_count * sizeof(ids[0]));
+
+    CHECK_MSGBUF_SIZE(auxv_count * sizeof(auxv[0]));
+    msgbuf.msg.pargs.aux_info_off = p - msgbuf.buffer;
+    msgbuf.msg.pargs.aux_info_num = auxv_count;
+    p = mempcpy(p, auxv, auxv_count * sizeof(auxv[0]));
+
+    msgbuf.msg.pargs.args_off = p - msgbuf.buffer;
+    msgbuf.msg.pargs.args_num = args_count;
     for (n = 0; n < args_count; n++) {
-        strcpy((void*)data + off, args[n]);
-        off += strlen(args[n]) + 1;
+        size_t len = strlen(args[n]) + 1;
+        CHECK_MSGBUF_SIZE(len);
+        p = mempcpy(p, args[n], len);
     }
-    memcpy(data, &pargs, sizeof(pargs));
+
+#undef CHECK_MSGBUF_SIZE
 
     if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
         return h0;
     }
-    if ((r = _magenta_message_write(h1, data, off, handles, hnds_count, 0)) < 0) {
+    if ((r = _magenta_message_write(h1, msgbuf.buffer, p - msgbuf.buffer,
+                                    handles, hnds_count, 0)) < 0) {
         cprintf("start_process: failed to write args %d\n", r);
         _magenta_handle_close(h0);
         _magenta_handle_close(h1);
@@ -100,7 +129,8 @@ mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[
     if ((p = _magenta_process_create(name, name_len)) < 0) {
         return p;
     }
-    if ((h = mxio_build_procargs(args_count, args, hnds_count, handles, ids, 0)) < 0) {
+    if ((h = mxio_build_procargs(args_count, args, 0, NULL,
+                                 hnds_count, handles, ids, 0)) < 0) {
         _magenta_handle_close(p);
         return h;
     }
