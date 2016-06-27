@@ -1,4 +1,3 @@
-#include "libc.h"
 #include <dirent.h>
 #include <errno.h>
 #include <stddef.h>
@@ -50,5 +49,3 @@ int scandir(const char* path, struct dirent*** res, int (*sel)(const struct dire
     *res = names;
     return cnt;
 }
-
-LFS64(scandir);

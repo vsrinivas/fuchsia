@@ -1,4 +1,3 @@
-#include "libc.h"
 #include <dirent.h>
 #include <errno.h>
 #include <ftw.h>
@@ -125,5 +124,3 @@ int nftw(const char* path, int (*fn)(const char*, const struct stat*, int, struc
     pthread_setcancelstate(cs, 0);
     return r;
 }
-
-LFS64(nftw);

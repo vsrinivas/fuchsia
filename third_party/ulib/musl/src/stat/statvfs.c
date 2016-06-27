@@ -54,8 +54,3 @@ int fstatvfs(int fd, struct statvfs* buf) {
     fixup(buf, &kbuf);
     return 0;
 }
-
-LFS64(statvfs);
-LFS64(statfs);
-LFS64(fstatvfs);
-LFS64(fstatfs);

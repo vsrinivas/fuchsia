@@ -1,10 +1,11 @@
-#include "libc.h"
+#include "syscall.h"
 #include <aio.h>
 #include <errno.h>
+#include <limits.h>
 #include <pthread.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "syscall.h"
 
 struct lio_state {
     struct sigevent* sev;
@@ -139,5 +140,3 @@ int lio_listio(int mode, struct aiocb* restrict const* restrict cbs, int cnt,
 
     return 0;
 }
-
-LFS64(lio_listio);

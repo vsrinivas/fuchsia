@@ -774,7 +774,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/signal/sigtimedwait.c \
     $(LOCAL_DIR)/src/signal/sigwait.c \
     $(LOCAL_DIR)/src/signal/sigwaitinfo.c \
-    $(LOCAL_DIR)/src/stat/__xstat.c \
     $(LOCAL_DIR)/src/stat/chmod.c \
     $(LOCAL_DIR)/src/stat/fchmod.c \
     $(LOCAL_DIR)/src/stat/fchmodat.c \

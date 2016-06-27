@@ -1,4 +1,3 @@
-#include "libc.h"
 #include <ftw.h>
 
 int ftw(const char* path, int (*fn)(const char*, const struct stat*, int), int fd_limit) {
@@ -7,5 +6,3 @@ int ftw(const char* path, int (*fn)(const char*, const struct stat*, int), int f
      * actually undefined, but works on all real-world machines. */
     return nftw(path, (int (*)(const char*, const struct stat*, int, struct FTW*))fn, fd_limit, FTW_PHYS);
 }
-
-LFS64(ftw);

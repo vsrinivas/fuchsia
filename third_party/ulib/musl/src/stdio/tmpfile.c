@@ -1,6 +1,8 @@
-#include "stdio_impl.h"
 #include <fcntl.h>
 #include <stdio.h>
+
+#include "stdio_impl.h"
+#include "syscall.h"
 
 #define MAXTRIES 100
 
@@ -25,5 +27,3 @@ FILE* tmpfile(void) {
     }
     return 0;
 }
-
-LFS64(tmpfile);

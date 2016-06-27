@@ -1,4 +1,3 @@
-#include "libc.h"
 #include "syscall.h"
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -10,5 +9,3 @@ int lstat(const char* restrict path, struct stat* restrict buf) {
     return syscall(SYS_fstatat, AT_FDCWD, path, buf, AT_SYMLINK_NOFOLLOW);
 #endif
 }
-
-LFS64(lstat);

@@ -1,4 +1,3 @@
-#include "libc.h"
 #include "syscall.h"
 #include <fcntl.h>
 #include <stdarg.h>
@@ -28,5 +27,3 @@ int open(const char* filename, int flags, ...) {
 
     return __syscall_ret(fd);
 }
-
-LFS64(open);

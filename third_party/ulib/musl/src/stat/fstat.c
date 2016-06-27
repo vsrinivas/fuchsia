@@ -1,4 +1,3 @@
-#include "libc.h"
 #include "syscall.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -19,5 +18,3 @@ int fstat(int fd, struct stat* st) {
     return syscall(SYS_fstatat, AT_FDCWD, buf, st, 0);
 #endif
 }
-
-LFS64(fstat);

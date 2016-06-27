@@ -1,4 +1,3 @@
-#include "libc.h"
 #include "syscall.h"
 #include <errno.h>
 #include <sys/resource.h>
@@ -26,5 +25,3 @@ int getrlimit(int resource, struct rlimit* rlim) {
     FIX(rlim->rlim_max);
     return 0;
 }
-
-LFS64(getrlimit);

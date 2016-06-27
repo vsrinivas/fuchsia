@@ -1,5 +1,4 @@
 #include "atomic.h"
-#include "libc.h"
 #include "pthread_impl.h"
 #include <aio.h>
 #include <errno.h>
@@ -78,5 +77,3 @@ int aio_suspend(const struct aiocb* const cbs[], int cnt, const struct timespec*
         }
     }
 }
-
-LFS64(aio_suspend);

@@ -1,5 +1,4 @@
 #include "__dirent.h"
-#include "libc.h"
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
@@ -26,5 +25,3 @@ int readdir_r(DIR* restrict dir, struct dirent* restrict buf, struct dirent** re
     *result = buf;
     return 0;
 }
-
-LFS64_2(readdir_r, readdir64_r);
