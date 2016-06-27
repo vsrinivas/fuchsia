@@ -5,6 +5,8 @@
 #include <trace.h>
 #include <arch/ops.h>
 #include <dev/interrupt.h>
+#include <kernel/cond.h>
+#include <kernel/mutex.h>
 #include <kernel/semaphore.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
@@ -290,6 +292,31 @@ ACPI_THREAD_ID AcpiOsGetThreadId() {
     return (uintptr_t)get_current_thread();
 }
 
+/* Data and structures used for implementing AcpiOsExecute and
+ * AcpiOsWaitEventsComplete */
+static mutex_t os_execute_lock = MUTEX_INITIAL_VALUE(os_execute_lock);
+static cond_t os_execute_cond = COND_INITIAL_VALUE(os_execute_cond);
+static int os_execute_tasks = 0;
+
+struct acpi_os_task_ctx {
+    ACPI_OSD_EXEC_CALLBACK func;
+    void *ctx;
+};
+
+static int acpi_os_task(void *raw_ctx) {
+    struct acpi_os_task_ctx *ctx = raw_ctx;
+
+    ctx->func(ctx->ctx);
+
+    mutex_acquire(&os_execute_lock);
+    os_execute_tasks--;
+    cond_broadcast(&os_execute_cond);
+    mutex_release(&os_execute_lock);
+
+    free(ctx);
+    return 0;
+}
+
 /**
  * @brief Schedule a procedure for deferred execution.
  *
@@ -305,8 +332,64 @@ ACPI_STATUS AcpiOsExecute(
         ACPI_EXECUTE_TYPE Type,
         ACPI_OSD_EXEC_CALLBACK Function,
         void *Context) {
-    PANIC_UNIMPLEMENTED;
+
+    if (Function == NULL) {
+        return AE_BAD_PARAMETER;
+    }
+
+    switch (Type) {
+        case OSL_GLOBAL_LOCK_HANDLER:
+        case OSL_NOTIFY_HANDLER:
+        case OSL_GPE_HANDLER:
+        case OSL_DEBUGGER_MAIN_THREAD:
+        case OSL_DEBUGGER_EXEC_THREAD:
+        case OSL_EC_POLL_HANDLER:
+        case OSL_EC_BURST_HANDLER: break;
+        default: return AE_BAD_PARAMETER;
+    }
+
+    struct acpi_os_task_ctx *ctx = malloc(sizeof(*ctx));
+    if (!ctx) {
+        return AE_NO_MEMORY;
+    }
+    ctx->func = Function;
+    ctx->ctx = Context;
+
+    mutex_acquire(&os_execute_lock);
+    os_execute_tasks++;
+    mutex_release(&os_execute_lock);
+
+    thread_t *t = thread_create(
+            "acpi_os_exec",
+            acpi_os_task, ctx,
+            DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    if (!t) {
+        free(ctx);
+        mutex_acquire(&os_execute_lock);
+        os_execute_tasks--;
+        mutex_release(&os_execute_lock);
+        return AE_NO_MEMORY;
+    }
+    status_t status = thread_detach_and_resume(t);
+    if (status != NO_ERROR) {
+        thread_resume(t);
+    }
+
     return AE_OK;
+}
+
+/**
+ * @brief Wait for completion of asynchronous events.
+ *
+ * This function blocks until all asynchronous events initiated by
+ * AcpiOsExecute have completed.
+ */
+void AcpiOsWaitEventsComplete(void) {
+    mutex_acquire(&os_execute_lock);
+    while (os_execute_tasks > 0) {
+        cond_wait_timeout(&os_execute_cond, &os_execute_lock, INFINITE_TIME);
+    }
+    mutex_release(&os_execute_lock);
 }
 
 /**
@@ -331,16 +414,6 @@ void AcpiOsSleep(UINT64 Milliseconds) {
  */
 void AcpiOsStall(UINT32 Microseconds) {
     spin(Microseconds);
-}
-
-/**
- * @brief Wait for completion of asynchronous events.
- *
- * This function blocks until all asynchronous events initiated by
- * AcpiOsExecute have completed.
- */
-void AcpiOsWaitEventsComplete() {
-    PANIC_UNIMPLEMENTED;
 }
 
 /**
@@ -543,6 +616,9 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
         0);
 
     struct acpi_irq_wrapper_arg *arg = malloc(sizeof(*arg));
+    if (!arg) {
+        return AE_NO_MEMORY;
+    }
     arg->handler = Handler;
     arg->context = Context;
     register_int_handler(InterruptLevel, acpi_irq_wrapper, arg);
