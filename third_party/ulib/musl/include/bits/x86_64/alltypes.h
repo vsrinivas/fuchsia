@@ -86,11 +86,7 @@ typedef struct {
 
 #if defined(__NEED_mtx_t) && !defined(__DEFINED_mtx_t)
 typedef struct {
-    union {
-        int __i[10];
-        volatile int __vi[10];
-        volatile void* volatile __p[5];
-    } __u;
+    int __i[1];
 } mtx_t;
 #define __DEFINED_mtx_t
 #endif

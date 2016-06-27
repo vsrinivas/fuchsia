@@ -1,21 +1,14 @@
-#include "pthread_impl.h"
+#include <runtime/mutex.h>
 #include <threads.h>
 
-#include "atomic.h"
-
-int __pthread_mutex_trylock(mtx_t*);
-
 int mtx_trylock(mtx_t* m) {
-    if (m->_m_type == PTHREAD_MUTEX_NORMAL)
-        return (a_cas(&m->_m_lock, 0, EBUSY) & EBUSY) ? thrd_busy : thrd_success;
-
-    int ret = __pthread_mutex_trylock(m);
-    switch (ret) {
+    mx_status_t status = mxr_mutex_trylock((mxr_mutex_t*)&m->__i);
+    switch (status) {
     default:
         return thrd_error;
     case 0:
         return thrd_success;
-    case EBUSY:
+    case ERR_BUSY:
         return thrd_busy;
     }
 }
