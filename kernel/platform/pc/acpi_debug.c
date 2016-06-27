@@ -4,10 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <acpi.h>
-#include <accommon.h>
-//#include "acdisasm.h"
-#include <acnamesp.h>
+#include <acpica/acpi.h>
+#include <acpica/accommon.h>
+#include <acpica/acnamesp.h>
 #include <assert.h>
 #include <err.h>
 

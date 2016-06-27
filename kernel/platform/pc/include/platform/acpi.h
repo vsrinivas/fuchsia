@@ -9,7 +9,7 @@
 
 #include <compiler.h>
 
-#include <acpi.h>
+#include <acpica/acpi.h>
 
 #include <arch/x86/apic.h>
 #include <dev/pcie.h>

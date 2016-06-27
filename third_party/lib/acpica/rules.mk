@@ -9,7 +9,7 @@ GLOBAL_INCLUDES += $(LOCAL_DIR)/source/include
 ifneq ($(CLANG),1)
 MODULE_CFLAGS += -Wno-discarded-qualifiers
 endif
-MODULE_CFLAGS += -Wno-strict-aliasing
+MODULE_CFLAGS += -Wno-strict-aliasing -I$(LOCAL_DIR)/source/include/acpica
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/hardware/hwacpi.c \
