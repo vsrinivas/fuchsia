@@ -11,4 +11,3 @@ This page is a non-comprehensive index of the magenta documentation.
     + [Thread Objects](thread_object.md)
 + [Futexes](futex.md)
 + [System Calls](syscalls.md)
-+ [Build System](gn.md)

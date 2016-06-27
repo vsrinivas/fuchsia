@@ -9,7 +9,6 @@ cscope.*
 doit
 t
 blk.bin
-/gn
 *.dSYM
 scripts/toolpaths.local
 clang-format
@@ -19,6 +18,3 @@ clang-format
 *_BASE_*
 *.sublime-*
 /out*
-/tools/gn/bin/linux
-/tools/gn/bin/mac
-/tools/gn/bin/win
