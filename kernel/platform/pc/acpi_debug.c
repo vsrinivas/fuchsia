@@ -14,7 +14,7 @@
 #include <lib/console.h>
 #include <lk/init.h>
 #include <kernel/port.h>
-#include <platform/acpi.h>
+#include <platform/pc/acpi.h>
 
 extern status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end);
 

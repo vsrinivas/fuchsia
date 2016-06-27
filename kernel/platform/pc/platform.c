@@ -14,8 +14,8 @@
 #include <arch/x86/mmu.h>
 #include <platform.h>
 #include "platform_p.h"
-#include <platform/acpi.h>
 #include <platform/pc.h>
+#include <platform/pc/acpi.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
 #include <dev/interrupt_event.h>

@@ -14,7 +14,7 @@
 
 #include <arch/x86/apic.h>
 #include <kernel/port.h>
-#include <platform/acpi.h>
+#include <platform/pc/acpi.h>
 
 #define LOCAL_TRACE 0
 

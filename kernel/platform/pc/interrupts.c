@@ -20,7 +20,7 @@
 #include <kernel/spinlock.h>
 #include "platform_p.h"
 #include <platform/pc.h>
-#include <platform/acpi.h>
+#include <platform/pc/acpi.h>
 #include <platform/pic.h>
 #include <lib/pow2_range_allocator.h>
 #include <pow2.h>

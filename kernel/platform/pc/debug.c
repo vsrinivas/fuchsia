@@ -15,8 +15,8 @@
 #include <lib/cbuf.h>
 #include <dev/interrupt.h>
 #include <platform.h>
-#include <platform/acpi.h>
 #include <platform/pc.h>
+#include <platform/pc/acpi.h>
 #include <platform/pc/memmap.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
