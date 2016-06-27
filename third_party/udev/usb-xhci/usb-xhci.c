@@ -180,9 +180,10 @@ error_return:
 }
 
 static mx_status_t usb_xhci_unbind(mx_driver_t* drv, mx_device_t* dev) {
+    //TODO: should avoid using dev->childern
     mx_device_t* child = NULL;
     mx_device_t* temp = NULL;
-    list_for_every_entry_safe (&dev->device_list, child, temp, mx_device_t, node) {
+    list_for_every_entry_safe (&dev->children, child, temp, mx_device_t, node) {
         device_remove(child);
     }
     return NO_ERROR;

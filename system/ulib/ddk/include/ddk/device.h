@@ -63,12 +63,8 @@ struct mx_device {
     struct list_node node;
     // for the parent's device_list
 
-    struct list_node device_list;
+    struct list_node children;
     // list of this device's children in the device tree
-
-    struct list_node pnode;
-    // for list of all devices that implement a protocol
-    // TODO: will have to change for multi-protocol support
 
     struct list_node unode;
     // for list of all unmatched devices, if not bound

@@ -42,6 +42,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-device.c \
     $(LOCAL_DIR)/vfs-boot.c \
     $(LOCAL_DIR)/vfs-memory.c \
+    $(LOCAL_DIR)/dnode.c \
     $(LOCAL_DIR)/mxio.c \
     $(LOCAL_DIR)/main.c
 

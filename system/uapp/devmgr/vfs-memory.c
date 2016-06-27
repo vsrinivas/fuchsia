@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "vfs.h"
+#include "dnode.h"
+
 #define MXDEBUG 0
 
 #define MAXBLOCKS 64
@@ -31,11 +34,7 @@
 typedef struct mnode mnode_t;
 struct mnode {
     vnode_t vn;
-    const char* name;
-    size_t namelen;
     size_t datalen;
-    struct list_node children;
-    struct list_node node;
     uint8_t* block[MAXBLOCKS];
 };
 
@@ -119,27 +118,30 @@ static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off)
     return count;
 }
 
-static mx_status_t mem_lookup(vnode_t* vn, vnode_t** out, const char* name, size_t len) {
-    mnode_t* parent = vn->pdata;
-    mnode_t* mem;
-    xprintf("mem_lookup: vn=%p name='%.*s'\n", vn, (int)len, name);
-    list_for_every_entry (&parent->children, mem, mnode_t, node) {
-        xprintf("? dev=%p name='%s'\n", mem, mem->name);
-        if (mem->namelen != len)
-            continue;
-        if (memcmp(mem->name, name, len))
-            continue;
-        vn_acquire(&mem->vn);
-        *out = &mem->vn;
-        return NO_ERROR;
+ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off) {
+    return ERR_NOT_SUPPORTED;
+}
+
+ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_t len) {
+    if (parent->dnode == NULL) {
+        return ERR_NOT_FOUND;
     }
-    return ERR_NOT_FOUND;
+    dnode_t* dn;
+    mx_status_t r = dn_lookup(parent->dnode, &dn, name, len);
+    if (r >= 0) {
+        *out = dn->vnode;
+    }
+    return r;
 }
 
 static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
     mnode_t* mem = vn->pdata;
     memset(attr, 0, sizeof(vnattr_t));
-    if (list_is_empty(&mem->children)) {
+    if (vn->dnode == NULL) {
         attr->size = mem->datalen;
         attr->mode = V_TYPE_FILE | V_IRUSR;
     } else {
@@ -148,34 +150,12 @@ static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
     return NO_ERROR;
 }
 
-static mx_status_t mem_readdir(vnode_t* vn, void* cookie, void* data, size_t len) {
-    mnode_t* parent = vn->pdata;
-    vdircookie_t* c = cookie;
-    mnode_t* last = c->p;
-    size_t pos = 0;
-    char* ptr = data;
-    bool search = (last != NULL);
-    mx_status_t r;
-    mnode_t* mem;
-
-    list_for_every_entry (&parent->children, mem, mnode_t, node) {
-        if (search) {
-            if (mem == last) {
-                search = false;
-            }
-        } else {
-            uint32_t vtype = list_is_empty(&mem->children) ? V_TYPE_DIR : V_TYPE_FILE;
-            r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
-                                mem->name, mem->namelen,
-                                VTYPE_TO_DTYPE(vtype));
-            if (r < 0)
-                break;
-            last = mem;
-            pos += r;
-        }
+mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len) {
+    if (parent->dnode == NULL) {
+        // TODO: not directory error?
+        return ERR_NOT_FOUND;
     }
-    c->p = last;
-    return pos;
+    return dn_readdir(parent->dnode, cookie, data, len);
 }
 
 static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
@@ -195,69 +175,115 @@ static mx_status_t mem_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
     return ERR_NOT_SUPPORTED;
 }
 
-static vnode_ops_t vn_mem_ops = {
+/*static*/ vnode_ops_t vn_mem_ops = {
     .release = mem_release,
     .open = mem_open,
     .close = mem_close,
     .read = mem_read,
     .write = mem_write,
-    .lookup = mem_lookup,
+    .lookup = memfs_lookup,
     .getattr = mem_getattr,
-    .readdir = mem_readdir,
+    .readdir = memfs_readdir,
     .create = mem_create,
     .gethandles = mem_gethandles,
 };
 
+static vnode_ops_t vn_mem_ops_dir = {
+    .release = mem_release,
+    .open = mem_open,
+    .close = mem_close,
+    .read = memfs_read_none,
+    .write = memfs_write_none,
+    .lookup = memfs_lookup,
+    .getattr = mem_getattr,
+    .readdir = memfs_readdir,
+    .create = mem_create,
+    .gethandles = mem_gethandles,
+};
+
+static dnode_t mem_root_dn = {
+    .name = "tmp",
+    .flags = 3,
+    .refcount = 1,
+    .children = LIST_INITIAL_VALUE(mem_root_dn.children),
+};
+
 static mnode_t mem_root = {
     .vn = {
-        .ops = &vn_mem_ops,
+        .ops = &vn_mem_ops_dir,
         .refcount = 1,
         .pdata = &mem_root,
+        .dnode = &mem_root_dn,
+        .dn_list = LIST_INITIAL_VALUE(mem_root.vn.dn_list),
     },
-    .name = "memory",
-    .namelen = 6,
-    .node = LIST_INITIAL_VALUE(mem_root.node),
-    .children = LIST_INITIAL_VALUE(mem_root.children),
 };
 
 static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
                                const char* name, size_t namelen) {
+    if ((parent == NULL) || (parent->vn.dnode == NULL)) {
+        return ERR_INVALID_ARGS;
+    }
+
     mnode_t* mem;
-    if ((mem = calloc(1, sizeof(mnode_t) + namelen + 1)) == NULL)
+    if ((mem = calloc(1, sizeof(mnode_t))) == NULL) {
         return ERR_NO_MEMORY;
+    }
     xprintf("mem_create: vn=%p, parent=%p name='%.*s'\n",
             mem, parent, (int)namelen, name);
-
-    char* tmp = ((char*)mem) + sizeof(mnode_t);
-    memcpy(tmp, name, namelen);
-    tmp[namelen] = 0;
 
     mem->vn.ops = &vn_mem_ops;
     mem->vn.refcount = 1;
     mem->vn.pdata = mem;
-    mem->name = tmp;
-    mem->namelen = namelen;
-    list_initialize(&mem->node);
-    list_initialize(&mem->children);
+    list_initialize(&mem->vn.dn_list);
 
-    list_add_tail(&parent->children, &mem->node);
+    mx_status_t r;
+    dnode_t* dn;
+    if ((r = dn_lookup(parent->vn.dnode, &dn, name, namelen)) == NO_ERROR) {
+        free(mem);
+        return ERR_ALREADY_EXISTS;
+    }
+
+    if ((r = dn_create(&dn, name, namelen, &mem->vn)) < 0) {
+        free(mem);
+        return r;
+    }
+    dn_add_child(parent->vn.dnode, dn);
+
     *out = mem;
     return NO_ERROR;
 }
 
-static mx_status_t _mem_mkdir(mnode_t* parent, mnode_t** out, const char* name, size_t namelen) {
-    mnode_t* mem;
-    list_for_every_entry (&parent->children, mem, mnode_t, node) {
-        if (mem->namelen != namelen)
-            continue;
-        if (memcmp(mem->name, name, namelen))
-            continue;
-        *out = mem;
-        return NO_ERROR;
-    }
-    return _mem_create(parent, out, name, namelen);
+vnode_t* memfs_get_root(void) {
+    mem_root_dn.vnode = &mem_root.vn;
+    return &mem_root.vn;
 }
 
-vnode_t* mem_get_root(void) {
-    return &mem_root.vn;
+
+static dnode_t vfs_root_dn = {
+    .name = "<root>",
+    .flags = 6,
+    .refcount = 1,
+    .children = LIST_INITIAL_VALUE(vfs_root_dn.children),
+    .parent = &vfs_root_dn,
+};
+
+static mnode_t vfs_root = {
+    .vn = {
+        .ops = &vn_mem_ops_dir,
+        .refcount = 1,
+        .pdata = &vfs_root,
+        .dnode = &vfs_root_dn,
+        .dn_list = LIST_INITIAL_VALUE(vfs_root.vn.dn_list),
+    },
+};
+
+vnode_t* vfs_get_root(void) {
+    if (vfs_root_dn.vnode == NULL) {
+        vfs_root_dn.vnode = &vfs_root.vn;
+        //TODO implement fs mount mechanism
+        dn_add_child(&vfs_root_dn, devfs_get_root()->dnode);
+        dn_add_child(&vfs_root_dn, bootfs_get_root()->dnode);
+        dn_add_child(&vfs_root_dn, memfs_get_root()->dnode);
+    }
+    return &vfs_root.vn;
 }

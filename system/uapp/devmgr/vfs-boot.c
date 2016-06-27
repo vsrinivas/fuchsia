@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "vfs.h"
+#include "dnode.h"
+
 #include <mxu/list.h>
 
 #include <ddk/device.h>
@@ -28,13 +31,8 @@
 typedef struct vnboot vnboot_t;
 struct vnboot {
     vnode_t vn;
-    const char* name;
     void* data;
-    vnode_t* mounted;
-    size_t namelen;
     size_t datalen;
-    struct list_node children;
-    struct list_node node;
 };
 
 mx_status_t vnb_get_node(vnode_t** out, mx_device_t* dev);
@@ -68,68 +66,16 @@ static ssize_t vnb_write(vnode_t* vn, const void* data, size_t len, size_t off) 
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t vnb_lookup(vnode_t* vn, vnode_t** out, const char* name, size_t len) {
-    vnboot_t* parent = vn->pdata;
-    vnboot_t* vnb;
-    xprintf("vnb_lookup: vn=%p name='%.*s'\n", vn, (int)len, name);
-    list_for_every_entry (&parent->children, vnb, vnboot_t, node) {
-        xprintf("? dev=%p name='%s'\n", vnb, vnb->name);
-        if (vnb->namelen != len)
-            continue;
-        if (memcmp(vnb->name, name, len))
-            continue;
-        if (vnb->mounted) {
-            vn_acquire(vnb->mounted);
-            *out = vnb->mounted;
-        } else {
-            vn_acquire(&vnb->vn);
-            *out = &vnb->vn;
-        }
-        return NO_ERROR;
-    }
-    return ERR_NOT_FOUND;
-}
-
 static mx_status_t vnb_getattr(vnode_t* vn, vnattr_t* attr) {
     vnboot_t* vnb = vn->pdata;
     memset(attr, 0, sizeof(vnattr_t));
-    if (list_is_empty(&vnb->children)) {
+    if (vn->dnode == NULL) {
         attr->size = vnb->datalen;
         attr->mode = V_TYPE_FILE | V_IRUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
     }
     return NO_ERROR;
-}
-
-static mx_status_t vnb_readdir(vnode_t* vn, void* cookie, void* data, size_t len) {
-    vnboot_t* parent = vn->pdata;
-    vdircookie_t* c = cookie;
-    vnboot_t* last = c->p;
-    size_t pos = 0;
-    char* ptr = data;
-    bool search = (last != NULL);
-    mx_status_t r;
-    vnboot_t* vnb;
-
-    list_for_every_entry (&parent->children, vnb, vnboot_t, node) {
-        if (search) {
-            if (vnb == last) {
-                search = false;
-            }
-        } else {
-            uint32_t vtype = list_is_empty(&vnb->children) ? V_TYPE_DIR : V_TYPE_FILE;
-            r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
-                                vnb->name, vnb->namelen,
-                                VTYPE_TO_DTYPE(vtype));
-            if (r < 0)
-                break;
-            last = vnb;
-            pos += r;
-        }
-    }
-    c->p = last;
-    return pos;
 }
 
 static mx_status_t vnb_create(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode) {
@@ -146,11 +92,18 @@ static vnode_ops_t vn_boot_ops = {
     .close = vnb_close,
     .read = vnb_read,
     .write = vnb_write,
-    .lookup = vnb_lookup,
+    .lookup = memfs_lookup,
     .getattr = vnb_getattr,
-    .readdir = vnb_readdir,
+    .readdir = memfs_readdir,
     .create = vnb_create,
     .gethandles = vnb_gethandles,
+};
+
+static dnode_t vnb_root_dn = {
+    .name = "boot",
+    .flags = 4,
+    .refcount = 1,
+    .children = LIST_INITIAL_VALUE(vnb_root_dn.children),
 };
 
 static vnboot_t vnb_root = {
@@ -158,57 +111,78 @@ static vnboot_t vnb_root = {
         .ops = &vn_boot_ops,
         .refcount = 1,
         .pdata = &vnb_root,
+        .dnode = &vnb_root_dn,
+        .dn_list = LIST_INITIAL_VALUE(vnb_root.vn.dn_list),
     },
-    .name = "bootfs",
-    .namelen = 6,
-    .node = LIST_INITIAL_VALUE(vnb_root.node),
-    .children = LIST_INITIAL_VALUE(vnb_root.children),
 };
 
 static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
                                const char* name, size_t namelen,
                                void* data, size_t datalen) {
+    if (parent->vn.dnode == NULL) {
+        return ERR_NOT_DIR;
+    }
+
     vnboot_t* vnb;
-    if ((vnb = calloc(1, sizeof(vnboot_t) + namelen + 1)) == NULL)
+    if ((vnb = calloc(1, sizeof(vnboot_t))) == NULL) {
         return ERR_NO_MEMORY;
+    }
     xprintf("vnb_create: vn=%p, parent=%p name='%.*s' datalen=%zd\n",
             vnb, parent, (int)namelen, name, datalen);
-
-    char* tmp = ((char*)vnb) + sizeof(vnboot_t);
-    memcpy(tmp, name, namelen);
-    tmp[namelen] = 0;
 
     vnb->vn.ops = &vn_boot_ops;
     vnb->vn.refcount = 1;
     vnb->vn.pdata = vnb;
-    vnb->name = tmp;
-    vnb->namelen = namelen;
+    list_initialize(&vnb->vn.dn_list);
+
     vnb->data = data;
     vnb->datalen = datalen;
-    list_initialize(&vnb->node);
-    list_initialize(&vnb->children);
 
-    list_add_tail(&parent->children, &vnb->node);
+    dnode_t* dn;
+    mx_status_t r;
+    if ((r = dn_create(&dn, name, namelen, &vnb->vn)) < 0) {
+        free(vnb);
+        return r;
+    }
+
+    if (data == NULL) {
+        // no data means this is a directory,
+        // so take ownership of the dnode
+        vnb->vn.dnode = dn;
+    }
+
+    // TODO: dups?
+    dn_add_child(parent->vn.dnode, dn);
     *out = vnb;
+
     return NO_ERROR;
 }
 
 static mx_status_t _vnb_mkdir(vnboot_t* parent, vnboot_t** out, const char* name, size_t namelen) {
-    vnboot_t* vnb;
-    list_for_every_entry (&parent->children, vnb, vnboot_t, node) {
-        if (vnb->namelen != namelen)
-            continue;
-        if (memcmp(vnb->name, name, namelen))
-            continue;
-        if (vnb->mounted)
-            return ERR_NOT_SUPPORTED;
-        *out = vnb;
-        return NO_ERROR;
+    //printf("vnb_mkdir: parent=%p name='%.*s'\n", parent, (int)namelen, name);
+    if (parent->vn.dnode == NULL) {
+        printf("bootfs: %p not a directory\n", parent);
+        return ERR_NOT_DIR;
     }
+
+    // existing directory of the same name?
+    dnode_t* dn;
+    if (dn_lookup(parent->vn.dnode, &dn, name, namelen) == NO_ERROR) {
+        //printf("vnb_mkdir: found dn %p\n", dn);
+        if (dn->vnode->dnode != NULL) {
+            // is a directory, success!
+            *out = dn->vnode->pdata;
+            return NO_ERROR;
+        } else {
+            return ERR_NOT_DIR;
+        }
+    }
+
+    // create a new directory
     return _vnb_create(parent, out, name, namelen, NULL, 0);
 }
 
-mx_status_t vnb_add_file(const char* path, void* data, size_t len) {
+mx_status_t bootfs_add_file(const char* path, void* data, size_t len) {
     vnboot_t* vnb = &vnb_root;
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
@@ -230,22 +204,7 @@ mx_status_t vnb_add_file(const char* path, void* data, size_t len) {
     }
 }
 
-vnode_t* vnb_get_root(void) {
+vnode_t* bootfs_get_root(void) {
+    vnb_root_dn.vnode = &vnb_root.vn;
     return &vnb_root.vn;
-}
-
-mx_status_t vnb_mount_at(vnode_t* vn, const char* dirname) {
-    if (dirname == NULL) {
-        return ERR_INVALID_ARGS;
-    }
-    if (strchr(dirname, '/')) {
-        return ERR_INVALID_ARGS;
-    }
-    vnboot_t* parent;
-    mx_status_t r;
-    if ((r = _vnb_mkdir(&vnb_root, &parent, dirname, strlen(dirname))) < 0) {
-        return r;
-    }
-    parent->mounted = vn;
-    return NO_ERROR;
 }

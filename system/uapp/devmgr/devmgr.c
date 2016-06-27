@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "devmgr.h"
+#include "vfs.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -49,6 +50,10 @@ bool __dm_locked = false;
 mx_handle_t devhost_handle;
 
 mxr_mutex_t __devmgr_api_lock = MXR_MUTEX_INIT;
+
+// vnodes for root driver and protocols
+static vnode_t* vnroot;
+static vnode_t* vnproto;
 
 // The Root Driver
 static mx_driver_t root_driver = {
@@ -92,7 +97,6 @@ static mx_protocol_device_t root_device_proto = {
 };
 
 static mx_device_t* root_dev = NULL;
-static mx_device_t* proto_dev = NULL;
 
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
 
@@ -101,6 +105,8 @@ static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
 // handler for messages from device host processes
 mxio_dispatcher_t* devmgr_dispatcher;
+
+#define device_is_bound(dev) (!!dev->owner)
 
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
@@ -130,53 +136,24 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     case MX_PROTOCOL_BLUETOOTH_HCI:
         return "bluetooth-hci";
     default:
-        snprintf(buf, PNMAX, "<%08x>", id);
+        snprintf(buf, PNMAX, "proto-%08x", id);
         return buf;
     }
 }
 
-struct devmgr_protocol_list_node {
-    uint32_t proto_id;
-    const char* name;
-    struct list_node device_list;
-    struct list_node node;
-};
+static mx_status_t devmgr_register_with_protocol(mx_device_t* dev, uint32_t proto_id) {
+    char buf[PNMAX];
+    const char* pname = proto_name(proto_id, buf);
 
-static struct list_node device_list_by_protocol = LIST_INITIAL_VALUE(device_list_by_protocol);
-
-extern mx_driver_t* _builtin_drivers;
-
-#define device_is_bound(dev) (!!dev->owner)
-
-static struct list_node* devmgr_get_device_list_by_protocol(uint32_t proto_id) {
-    struct devmgr_protocol_list_node* node = NULL;
-    struct devmgr_protocol_list_node* protocol = NULL;
-    // find the protocol in the list
-    list_for_every_entry (&device_list_by_protocol, node, struct devmgr_protocol_list_node, node) {
-        if (node->proto_id == proto_id) {
-            protocol = node;
-            break;
-        }
+    // find or create a vnode for protocol/<pname>
+    vnode_t* vnp;
+    mx_status_t r;
+    if ((r = devfs_add_node(&vnp, vnproto, pname, NULL)) < 0) {
+        return r;
     }
-    // if no list is found, create one for the new protocol
-    if (!protocol) {
-        char tmp[PNMAX];
-        protocol = (struct devmgr_protocol_list_node*)malloc(sizeof(struct devmgr_protocol_list_node));
-        assert(protocol); // TODO out of memory
-        protocol->proto_id = proto_id;
-        protocol->name = proto_name(proto_id, tmp);
-        list_initialize(&protocol->device_list);
-        list_add_tail(&device_list_by_protocol, &protocol->node);
 
-        // create a device to represent this protocol family
-        mx_device_t* pdev;
-        if (devmgr_device_create(&pdev, &root_driver, protocol->name, &root_device_proto) == NO_ERROR) {
-            pdev->flags |= DEV_FLAG_PROTOCOL | DEV_FLAG_UNBINDABLE;
-            pdev->protocol_ops = &protocol->device_list;
-            devmgr_device_add(pdev, proto_dev);
-        }
-    }
-    return &protocol->device_list;
+    // TODO: use 0, 1, ... naming here
+    return devfs_add_link(vnp, dev->name, dev);
 }
 
 static const char* safename(const char* name) {
@@ -188,6 +165,10 @@ static void dev_ref_release(mx_device_t* dev) {
     if (dev->refcount == 0) {
         printf("device: %p(%s): ref=0. releasing.\n", dev, safename(dev->name));
         _magenta_handle_close(dev->event);
+        if (dev->vnode) {
+            devfs_remove(dev->vnode);
+            dev->vnode = NULL;
+        }
         DM_UNLOCK();
         dev->ops->release(dev);
         DM_LOCK();
@@ -219,9 +200,9 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     }
     if (status < 0) {
         return status;
-        dev->owner = &remote_driver;
-        dev->refcount++;
     }
+    dev->owner = &remote_driver;
+    dev->refcount++;
     return NO_ERROR;
 }
 
@@ -240,7 +221,7 @@ mx_status_t devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
     dev->name = dev->namedata;
     dev->ops = ops;
     dev->driver = driver;
-    list_initialize(&dev->device_list);
+    list_initialize(&dev->children);
     return NO_ERROR;
 }
 
@@ -267,8 +248,9 @@ void devmgr_device_set_bindable(mx_device_t* dev, bool bindable) {
 }
 
 mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
-    if (dev == NULL)
+    if (dev == NULL) {
         return ERR_INVALID_ARGS;
+    }
     if (parent == NULL) {
         if (devmgr_is_remote) {
             //printf("device add: %p(%s): not allowed in devhost\n", dev, safename(dev->name));
@@ -294,7 +276,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
         return ERR_INVALID_ARGS;
     }
 
-    // Don't create event handle if we alredy have one
+    // Don't create an event handle if we alredy have one
     if (dev->event == MX_HANDLE_INVALID && (dev->event = _magenta_event_create(0)) < 0) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, safename(dev->name), dev->event);
@@ -303,24 +285,21 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
 
     dev->flags |= DEV_FLAG_BUSY;
 
-    // add to the protocol list
-    if (proto_dev && dev->protocol_id) {
-        struct list_node* protocol = devmgr_get_device_list_by_protocol(dev->protocol_id);
-        list_add_tail(protocol, &dev->pnode);
-    }
-
     // add to the device tree
     dev->parent = parent;
     dev->parent->refcount++;
 
     // this is balanced by end of devmgr_device_remove
     dev->refcount++;
-    list_add_tail(&parent->device_list, &dev->node);
+    list_add_tail(&parent->children, &dev->node);
 
     if (devmgr_is_remote) {
         mx_status_t r = devhost_add(dev, parent);
         if (r < 0) {
             printf("devhost: remote add failed %d\n", r);
+            dev->refcount--;
+            dev->parent->refcount--;
+            list_delete(&dev->node);
             dev->flags &= (~DEV_FLAG_BUSY);
             return r;
         }
@@ -330,6 +309,16 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
         xprintf("dev %p is REMOTE\n", dev);
         // for now devhost'd devices are openable but not bindable
         dev->flags |= DEV_FLAG_UNBINDABLE;
+    }
+
+    // add device to devfs
+    if (!devmgr_is_remote && (parent->vnode != NULL)) {
+        vnode_t* vn;
+        if (devfs_add_node(&vn, parent->vnode, dev->name, dev) == NO_ERROR) {
+            if (vnproto && dev->protocol_id) {
+                devmgr_register_with_protocol(dev, dev->protocol_id);
+            }
+        }
     }
 
     if ((dev->flags & DEV_FLAG_UNBINDABLE) == 0) {
@@ -363,16 +352,13 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
         return ERR_BAD_STATE;
     }
     printf("device: %p: is being removed\n", dev);
-    if (!list_is_empty(&dev->device_list)) {
+    if (!list_is_empty(&dev->children)) {
         printf("device: %p: still has children! now orphaned.\n", dev);
     }
     dev->flags |= DEV_FLAG_DEAD;
     if (dev->parent) {
         list_delete(&dev->node);
         dev_ref_release(dev->parent);
-    }
-    if (list_in_list(&dev->pnode)) {
-        list_delete(&dev->pnode);
     }
     if (list_in_list(&dev->unode)) {
         list_delete(&dev->unode);
@@ -458,10 +444,10 @@ void devmgr_init(bool devhost) {
     device_create(&root_dev, &root_driver, "root", &root_device_proto);
 
     if (!devhost) {
-        // init a place to hang protocols
-        device_create(&proto_dev, &root_driver, "protocol", &root_device_proto);
-        proto_dev->flags |= DEV_FLAG_UNBINDABLE;
-        device_add(proto_dev, root_dev);
+        // init devfs
+        vnroot = devfs_get_root();
+        root_dev->vnode = vnroot;
+        devfs_add_node(&vnproto, vnroot, "protocol", NULL);
     }
 
     mxio_dispatcher_create(&devmgr_dispatcher, devhost ? mxio_rio_handler : devmgr_handler);
@@ -488,7 +474,7 @@ static void devmgr_dump_device(uint level, mx_device_t* dev) {
     for (uint i = 0; i < level; i++) {
         printf("  ");
     }
-    printf("%c %s drv@%p", list_is_empty(&dev->device_list) ? '|' : '+', dev->name, dev->driver);
+    printf("%c %s drv@%p", list_is_empty(&dev->children) ? '|' : '+', dev->name, dev->driver);
     if (dev->driver)
         printf(" (%s)", dev->driver->name);
     if (dev->owner)
@@ -499,12 +485,15 @@ static void devmgr_dump_device(uint level, mx_device_t* dev) {
 static void devmgr_dump_recursive(uint level, mx_device_t* _dev) {
     devmgr_dump_device(level, _dev);
     mx_device_t* dev = NULL;
-    list_for_every_entry (&_dev->device_list, dev, mx_device_t, node) {
+    list_for_every_entry (&_dev->children, dev, mx_device_t, node) {
         devmgr_dump_recursive(level + 1, dev);
     }
 }
 
 static void devmgr_dump_protocols(void) {
+// TODO: walk devfs for this
+#if 0
+    //XXX walk proto nodes
     struct devmgr_protocol_list_node* protocol = NULL;
     list_for_every_entry (&device_list_by_protocol, protocol, struct devmgr_protocol_list_node, node) {
         printf("%s:\n", protocol->name);
@@ -513,6 +502,7 @@ static void devmgr_dump_protocols(void) {
             printf("  %s drv@%p\n", dev->name, dev->driver);
         }
     }
+#endif
 }
 
 void devmgr_dump(void) {

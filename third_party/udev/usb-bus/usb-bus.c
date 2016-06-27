@@ -116,9 +116,10 @@ static mx_status_t usb_bus_unbind(mx_driver_t* drv, mx_device_t* dev) {
     usb_bus_t* bus = get_usb_bus(dev);
     bus->hci_protocol->set_bus_device(bus->hcidev, NULL);
 
+    //TODO: should avoid using dev->childern
     mx_device_t* child = NULL;
     mx_device_t* temp = NULL;
-    list_for_every_entry_safe (&dev->device_list, child, temp, mx_device_t, node) {
+    list_for_every_entry_safe (&dev->children, child, temp, mx_device_t, node) {
         device_remove(child);
     }
     return NO_ERROR;

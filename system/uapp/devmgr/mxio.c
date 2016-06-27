@@ -31,14 +31,6 @@
 
 #include "vfs.h"
 
-mx_status_t vnd_get_node(vnode_t** out, mx_device_t* dev);
-
-vnode_t* vnb_get_root(void);
-mx_status_t vnb_add_file(const char* path, void* data, size_t len);
-mx_status_t vnb_mount_at(vnode_t* vn, const char* dirname);
-
-vnode_t* mem_get_root(void);
-
 typedef struct bootfile bootfile_t;
 struct bootfile {
     bootfile_t* next;
@@ -53,9 +45,7 @@ static size_t bootfs_end = 0;
 
 static void callback(const char* path, size_t off, size_t len) {
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-    char tmp[1024];
-    snprintf(tmp, sizeof(tmp), "boot/%s", path);
-    vnb_add_file(tmp, bootfs + off, len);
+    bootfs_add_file(path, bootfs + off, len);
     bootfs_end = off + ((len + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1)));
     bootfiles_count++;
 }
@@ -105,7 +95,10 @@ void devmgr_launch_devhost(const char* name, mx_handle_t h,
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
     printf("devmgr: launch host: %s %s\n", arg0, arg1);
-    mxio_start_process_etc(name, 3, (char**)args, 2, hnd, ids);
+    mx_status_t r = mxio_start_process_etc(name, 3, (char**)args, 2, hnd, ids);
+    if (r < 0) {
+        printf("devmgr: launch failed: %d\n", r);
+    }
 }
 
 void devmgr_io_init(void) {
@@ -143,17 +136,7 @@ void devmgr_vfs_init(void* _bootfs, size_t len) {
         }
     }
 
-    // init vfs, bootfs is root
-    vfs_init(vnb_get_root());
-
-    // install devfs at /dev
-    vnode_t* vn;
-    if (vnd_get_node(&vn, devmgr_device_root()) == NO_ERROR) {
-        vnb_mount_at(vn, "dev");
-    }
-
-    // install memfs at /tmp
-    vnb_mount_at(mem_get_root(), "tmp");
+    vfs_init(vfs_get_root());
 
     // give our own process access to files in the vfs
     mx_handle_t h = vfs_create_root_handle();

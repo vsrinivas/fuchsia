@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "vfs.h"
+#include "dnode.h"
+#include "devmgr.h"
+
 #include <mxu/list.h>
 
 #include <ddk/device.h>
@@ -27,22 +31,20 @@
 #include <string.h>
 
 #include "device-internal.h"
-#include "vfs.h"
 
-// NOTE
-// - devmgr creates protocol family devices under /dev/protocol/...
-// - these devices store a pointer to a list in their protocol_ops field
-//   (which is otherwise unused)
-// - they also have DEV_TYPE_PROTOCOL set in their flags field
-// - vnd_lookup() and vnd_readdir() know about this so they can look at
-//   this list when walking through protocol devices
-// - TODO: replace with symlinks once we have 'em
 
 #define MXDEBUG 0
 
-mx_status_t vnd_get_node(vnode_t** out, mx_device_t* dev);
-
 static void vnd_release(vnode_t* vn) {
+}
+
+//XXX refcounts
+static mx_status_t vnd_open_none(vnode_t** _vn, uint32_t flags) {
+    return NO_ERROR;
+}
+
+static mx_status_t vnd_close_none(vnode_t* vn) {
+    return NO_ERROR;
 }
 
 static mx_status_t vnd_open(vnode_t** _vn, uint32_t flags) {
@@ -66,22 +68,14 @@ static mx_status_t vnd_close(vnode_t* vn) {
     return NO_ERROR;
 }
 
-static ssize_t vnd_read(vnode_t* vn, void* data, size_t len, size_t off) {
+static ssize_t vnd_read_char(vnode_t* vn, void* data, size_t len, size_t off) {
     mx_protocol_char_t* ops = vn->pops;
-    if (ops) {
-        return ops->read(vn->pdata, data, len, off);
-    } else {
-        return ERR_NOT_SUPPORTED;
-    }
+    return ops->read(vn->pdata, data, len, off);
 }
 
-static ssize_t vnd_write(vnode_t* vn, const void* data, size_t len, size_t off) {
+static ssize_t vnd_write_char(vnode_t* vn, const void* data, size_t len, size_t off) {
     mx_protocol_char_t* ops = vn->pops;
-    if (ops) {
-        return ops->write(vn->pdata, data, len, off);
-    } else {
-        return ERR_NOT_SUPPORTED;
-    }
+    return ops->write(vn->pdata, data, len, off);
 }
 
 static ssize_t vnd_ioctl(
@@ -97,44 +91,10 @@ static ssize_t vnd_ioctl(
     }
 }
 
-static mx_status_t vnd_lookup(vnode_t* vn, vnode_t** out, const char* name, size_t len) {
-    mx_device_t* parent = vn->pdata;
-    mx_device_t* dev;
-
-    xprintf("vnd_lookup: vn=%p dev=%p name='%.*s'\n", vn, parent, (int)len, name);
-
-    if (parent->flags & DEV_FLAG_PROTOCOL) {
-        struct list_node* list = parent->protocol_ops;
-        list_for_every_entry (list, dev, mx_device_t, pnode) {
-            xprintf("? dev=%p name='%s'\n", dev, dev->name);
-            size_t n = strlen(dev->name);
-            if (n != len)
-                continue;
-            if (memcmp(dev->name, name, len))
-                continue;
-            xprintf("vnd_lookup: dev=%p\n", dev);
-            return vnd_get_node(out, dev);
-        }
-        return ERR_NOT_FOUND;
-    }
-
-    list_for_every_entry (&parent->device_list, dev, mx_device_t, node) {
-        xprintf("? dev=%p name='%s'\n", dev, dev->name);
-        size_t n = strlen(dev->name);
-        if (n != len)
-            continue;
-        if (memcmp(dev->name, name, len))
-            continue;
-        xprintf("vnd_lookup: dev=%p\n", dev);
-        return vnd_get_node(out, dev);
-    }
-    return ERR_NOT_FOUND;
-}
-
 static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
     mx_device_t* dev = vn->pdata;
     memset(attr, 0, sizeof(vnattr_t));
-    if (list_is_empty(&dev->device_list)) {
+    if ((vn->dnode == NULL) || list_is_empty(&vn->dnode->children)) {
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
@@ -144,58 +104,6 @@ static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
         attr->size = ops->getsize(dev);
     }
     return NO_ERROR;
-}
-
-static mx_status_t vnd_readdir(vnode_t* vn, void* cookie, void* data, size_t len) {
-    mx_device_t* parent = vn->pdata;
-    vdircookie_t* c = cookie;
-    mx_device_t* last = c->p;
-    size_t pos = 0;
-    char* ptr = data;
-    bool search = (last != NULL);
-    mx_status_t r;
-    mx_device_t* dev;
-
-    if (parent->flags & DEV_FLAG_PROTOCOL) {
-        struct list_node* list = parent->protocol_ops;
-        list_for_every_entry (list, dev, mx_device_t, pnode) {
-            if (search) {
-                if (dev == last) {
-                    search = false;
-                }
-            } else {
-                uint32_t vtype = list_is_empty(&dev->device_list) ? V_TYPE_DIR : V_TYPE_FILE;
-                r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
-                                    dev->name, strlen(dev->name),
-                                    VTYPE_TO_DTYPE(vtype));
-                if (r < 0)
-                    break;
-                last = dev;
-                pos += r;
-            }
-        }
-        c->p = last;
-        return pos;
-    }
-
-    list_for_every_entry (&parent->device_list, dev, mx_device_t, node) {
-        if (search) {
-            if (dev == last) {
-                search = false;
-            }
-        } else {
-            uint32_t vtype = list_is_empty(&dev->device_list) ? V_TYPE_DIR : V_TYPE_FILE;
-            r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
-                                dev->name, strlen(dev->name),
-                                VTYPE_TO_DTYPE(vtype));
-            if (r < 0)
-                break;
-            last = dev;
-            pos += r;
-        }
-    }
-    c->p = last;
-    return pos;
 }
 
 static mx_status_t vnd_create(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode) {
@@ -229,39 +137,174 @@ static mx_handle_t vnd_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
     return 2;
 }
 
+static mx_handle_t vnd_gethandles_none(vnode_t* vn, mx_handle_t* handles, uint32_t* ids) {
+    return ERR_NOT_SUPPORTED;
+}
+
+// default device ops
 static vnode_ops_t vn_device_ops = {
     .release = vnd_release,
     .open = vnd_open,
     .close = vnd_close,
-    .read = vnd_read,
-    .write = vnd_write,
-    .lookup = vnd_lookup,
+    .read = memfs_read_none,
+    .write = memfs_write_none,
+    .lookup = memfs_lookup,
     .getattr = vnd_getattr,
-    .readdir = vnd_readdir,
+    .readdir = memfs_readdir,
     .create = vnd_create,
     .gethandles = vnd_gethandles,
     .ioctl = vnd_ioctl,
 };
 
-mx_status_t vnd_get_node(vnode_t** out, mx_device_t* dev) {
-    if (dev->vnode) {
-        vn_acquire(dev->vnode);
-        *out = dev->vnode;
-        return NO_ERROR;
-    } else {
-        vnode_t* vn;
-        if ((vn = malloc(sizeof(vnode_t))) == NULL)
-            return ERR_NO_MEMORY;
-        vn->ops = &vn_device_ops,
-        vn->vfs = NULL;
-        // TODO: set this based on device properties
-        vn->flags = V_FLAG_DEVICE;
-        vn->refcount = 1;
-        vn->pdata = dev;
-        vn->pops = NULL;
-        device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&vn->pops);
-        dev->vnode = vn;
-        *out = vn;
-        return NO_ERROR;
+// ops for character protocol devices
+static vnode_ops_t vn_device_ops_char = {
+    .release = vnd_release,
+    .open = vnd_open,
+    .close = vnd_close,
+    .read = vnd_read_char,
+    .write = vnd_write_char,
+    .lookup = memfs_lookup,
+    .getattr = vnd_getattr,
+    .readdir = memfs_readdir,
+    .create = vnd_create,
+    .gethandles = vnd_gethandles,
+    .ioctl = vnd_ioctl,
+};
+
+// ops for directory nodes
+static vnode_ops_t vn_device_ops_none = {
+    .release = vnd_release,
+    .open = vnd_open_none,
+    .close = vnd_close_none,
+    .read = memfs_read_none,
+    .write = memfs_write_none,
+    .lookup = memfs_lookup,
+    .getattr = vnd_getattr,
+    .readdir = memfs_readdir,
+    .create = vnd_create,
+    .gethandles = vnd_gethandles_none,
+    .ioctl = vnd_ioctl,
+};
+
+static dnode_t vnd_root_dn = {
+    .name = "dev",
+    .flags = 3,
+    .refcount = 1,
+    .children = LIST_INITIAL_VALUE(vnd_root_dn.children),
+};
+
+static vnode_t vnd_root = {
+    .ops = &vn_device_ops_none,
+    .refcount = 1,
+    .pdata = &vnd_root,
+    .dnode = &vnd_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(vnd_root.dn_list),
+};
+
+vnode_t* devfs_get_root(void) {
+    vnd_root_dn.vnode = &vnd_root;
+    return &vnd_root;
+}
+
+mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev) {
+    if ((parent == NULL) || (name == NULL)) {
+        return ERR_INVALID_ARGS;
     }
+    xprintf("devfs_add_node() p=%p name='%s' dev=%p\n", parent, name, dev);
+    size_t len = strlen(name);
+
+    // check for duplicate
+    dnode_t* dn;
+    if (dn_lookup(parent->dnode, &dn, name, len) == NO_ERROR) {
+        *out = dn->vnode;
+        if ((dev == NULL) && (dn->vnode->pdata == NULL)) {
+            // creating a duplicate directory node simply
+            // returns the one that's already there
+            return NO_ERROR;
+        }
+        return ERR_ALREADY_EXISTS;
+    }
+
+    // create vnode
+    vnode_t* vn;
+    if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    vn->refcount = 1;
+
+    if (dev) {
+        // attach device
+        vn->pdata = dev;
+        vn->flags = V_FLAG_DEVICE;
+        device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&vn->pops);
+        if (vn->pops != NULL) {
+            vn->ops = &vn_device_ops_char;
+        } else {
+            vn->ops = &vn_device_ops;
+        }
+    } else {
+        // directory-only devfs node
+        vn->ops = &vn_device_ops_none;
+    }
+    list_initialize(&vn->dn_list);
+
+    // create dnode
+    mx_status_t r;
+    if ((r = dn_create(&dn, name, len, vn)) < 0) {
+        free(vn);
+        return r;
+    }
+
+    // add to parent dnode list
+    dn_add_child(parent->dnode, dn);
+    vn->dnode = dn;
+
+    xprintf("devfs_add_node() vn=%p\n", vn);
+    if (dev) {
+        dev->vnode = vn;
+    }
+    *out = vn;
+    return NO_ERROR;
+}
+
+mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) {
+    if ((parent == NULL) || (dev == NULL) || (dev->vnode == NULL)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    xprintf("devfs_add_link() p=%p name='%s' dev=%p\n", parent, name, dev);
+    mx_status_t r;
+    dnode_t* dn;
+    size_t len = strlen(name);
+    if (dn_lookup(parent->dnode, &dn, name, len) == NO_ERROR) {
+        return ERR_ALREADY_EXISTS;
+    }
+    if ((r = dn_create(&dn, name, len, dev->vnode)) < 0) {
+        return r;
+    }
+    dn_add_child(parent->dnode, dn);
+    return NO_ERROR;
+}
+
+mx_status_t devfs_remove(vnode_t* vn) {
+    printf("devfs_remove(%p)\n", vn);
+    if (vn->pdata) {
+        mx_device_t* dev = vn->pdata;
+        dev->vnode = NULL;
+        vn->pdata = NULL;
+    }
+    dnode_t* dn;
+    while ((dn = list_peek_head_type(&vn->dn_list, dnode_t, vn_entry)) != NULL) {
+        if (vn->dnode == dn) {
+            vn->dnode = NULL;
+        }
+        dn_delete(dn);
+    }
+    if (vn->dnode) {
+        printf("devfs_remove(%p) dnode not in dn_list?\n", vn);
+        dn_delete(vn->dnode);
+        vn->dnode = NULL;
+    }
+    vn_release(vn);
+    return NO_ERROR;
 }

@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include "vfs.h"
+#include "dnode.h"
+#include "devmgr.h"
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
@@ -216,6 +218,7 @@ static mx_status_t root_handler(mx_rio_msg_t* msg, void* cookie) {
 typedef struct iostate iostate_t;
 struct iostate {
     vnode_t* vn;
+    dnode_t* dn;
     size_t io_off;
     vdircookie_t cookie;
 };
@@ -447,4 +450,12 @@ void vfs_init(vnode_t* root) {
     }
     mxr_thread_t* t;
     mxr_thread_create(vfs_watchdog, NULL, "vfs-watchdog", &t);
+}
+
+void vn_release(vnode_t* vn) {
+    vn->refcount--;
+    if (vn->refcount == 0) {
+        printf("gc vn %p\n", vn);
+        vn->ops->release(vn);
+    }
 }

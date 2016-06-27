@@ -15,6 +15,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <mxu/list.h>
 
 // ssize_t?
 #include <stdio.h>
@@ -24,6 +25,8 @@ typedef struct vfs_ops vfs_ops_t;
 
 typedef struct vnode vnode_t;
 typedef struct vnode_ops vnode_ops_t;
+
+typedef struct dnode dnode_t;
 
 typedef struct vnattr vnattr_t;
 typedef struct vdirent vdirent_t;
@@ -90,9 +93,14 @@ struct vnode {
     vfs_t* vfs;
     uint32_t flags;
     uint32_t refcount;
+    dnode_t* dnode;
 
     void* pdata;
     void* pops;
+
+    // all dnodes that point at this vnode
+    list_node_t dn_list;
+    uint32_t dn_count;
 };
 
 struct vfs_ops {
@@ -145,12 +153,7 @@ static inline void vn_acquire(vnode_t* vn) {
     vn->refcount++;
 }
 
-static inline void vn_release(vnode_t* vn) {
-    vn->refcount--;
-    if (vn->refcount == 0) {
-        vn->ops->release(vn);
-    }
-}
+void vn_release(vnode_t* vn);
 
 // helper for filling out dents
 // returns offset to next vdirent_t on success
