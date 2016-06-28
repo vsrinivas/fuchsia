@@ -1,3 +1,9 @@
+// Copyright 2016 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
 /* TODO(teisenbe): Once there is a notion of driver loading based off of ACPI,
  * this should probably be moved to that framework.
  */
