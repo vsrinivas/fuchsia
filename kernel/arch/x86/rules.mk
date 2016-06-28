@@ -162,7 +162,11 @@ KERNEL_COMPILEFLAGS += -mno-80387 -mno-fp-ret-in-387
 endif
 
 ifeq ($(CLANG),1)
-GLOBAL_COMPILEFLAGS += -target x86_64-elf -integrated-as
+ifeq ($(FUCHSIA),1)
+GLOBAL_COMPILEFLAGS += --target=x86_64-fuchsia
+else
+GLOBAL_COMPILEFLAGS += --target=x86_64-fuchsia -integrated-as
+endif
 endif
 
 ifeq ($(SUBARCH),x86-32)

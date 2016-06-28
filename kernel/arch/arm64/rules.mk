@@ -118,7 +118,11 @@ GLOBAL_LDFLAGS += -z max-page-size=4096
 KERNEL_COMPILEFLAGS += -mgeneral-regs-only -DWITH_NO_FP=1
 
 ifeq ($(CLANG),1)
-GLOBAL_COMPILEFLAGS += -target aarch64-elf -integrated-as
+ifeq ($(FUCHSIA),1)
+GLOBAL_COMPILEFLAGS += --target=aarch64-fuchsia
+else
+GLOBAL_COMPILEFLAGS += --target=aarch64-elf -integrated-as
+endif
 endif
 
 ifeq ($(CLANG),1)
