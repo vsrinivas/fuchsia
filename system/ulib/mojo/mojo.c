@@ -52,8 +52,6 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_INVALID_ARGUMENT;
     case ERR_NOT_ENOUGH_BUFFER:
         return MOJO_RESULT_RESOURCE_EXHAUSTED;
-    case ERR_NOT_SUSPENDED:
-        return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_OBJECT_DESTROYED: // returned from wait_queue_destroy
         return MOJO_RESULT_ABORTED;
     case ERR_NOT_BLOCKED:
@@ -90,22 +88,14 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_UNIMPLEMENTED;
     case ERR_CHECKSUM_FAIL:
         return MOJO_RESULT_DATA_LOSS;
-    case ERR_CRC_FAIL:
-        return MOJO_RESULT_DATA_LOSS;
-    case ERR_CMD_UNKNOWN:
-        return MOJO_RESULT_INTERNAL;
     case ERR_BAD_STATE:
         return MOJO_RESULT_FAILED_PRECONDITION;
-    case ERR_BAD_LEN:
-        return MOJO_RESULT_INTERNAL;
     case ERR_BUSY:
         return MOJO_RESULT_BUSY;
     case ERR_THREAD_DETACHED:
         return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_I2C_NACK:
         return MOJO_RESULT_DATA_LOSS;
-    case ERR_ALREADY_EXPIRED:
-        return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_OUT_OF_RANGE:
         return MOJO_RESULT_OUT_OF_RANGE;
     case ERR_NOT_CONFIGURED:

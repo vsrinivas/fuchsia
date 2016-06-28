@@ -31,7 +31,7 @@ static status_t validate_bootimage(bootimage_t *bi)
     /* is it large enough to hold the first entry */
     if (bi->len < 4096) {
         LTRACEF("bootentry too short\n");
-        return ERR_BAD_LEN;
+        return ERR_INVALID_ARGS;
     }
 
     bootentry *be = (bootentry *)bi->ptr;
