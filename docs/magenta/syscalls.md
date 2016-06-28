@@ -15,3 +15,9 @@
 + [message_pipe_create](syscalls/message_pipe_create.md)
 + [message_read](syscalls/message_read.md)
 + [message_write](syscalls/message_write.md)
+
+## Futexes
+
++ [futex_wait](syscalls/futex_wait.md)
++ [futex_wake](syscalls/futex_wake.md)
++ [futex_requeue](syscalls/futex_requeue.md)

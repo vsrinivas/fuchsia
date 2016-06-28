@@ -85,7 +85,7 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
                     futex_table_.add(futex_key, next);
                 }
             }
-            return result;
+            return ERR_TIMED_OUT;
         }
         prev = test;
         test = next;

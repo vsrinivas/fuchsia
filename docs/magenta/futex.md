@@ -29,9 +29,12 @@ resources in the uncontested case.
 The magenta futex implementation currently supports three operations:
 
 ```C
-    uint32_t sys_futex_wait(int* value_ptr, int current_value, uint32_t timeout)
-    uint32_t sys_futex_wake(int* value_ptr, uint32_t wake_count)
-    uint32_t sys_futex_requeue(int* value_ptr, uint32_t wake_count, int current_value, int* requeue_ptr, uint32_t requeue_count);
+    mx_status_t _magenta_futex_wait(int* value_ptr, int current_value,
+                                    mx_time_t timeout);
+    mx_status_t _magenta_futex_wake(int* value_ptr, uint32_t wake_count);
+    mx_status_t _magenta_futex_requeue(int* value_ptr, uint32_t wake_count,
+                                       int current_value, int* requeue_ptr,
+                                       uint32_t requeue_count);
 ```
 
 All of these share a `value_ptr` parameter, which is the virtual
@@ -42,25 +45,9 @@ waiting on. The kernel does not currently modify the value of
 so). It is up to userspace code to correctly atomically modify this
 value across threads in order to build mutexes and so on.
 
-### `sys_futex_wait`
-
-Waiting on a futex (or acquiring it) causes a thread to sleep until
-the futex is made available by a call to `sys_futex_wake`. Optionally,
-the thread can also be woken up after the timeout argument expires.
-
-### `sys_futex_wake`
-
-Waking a futex causes `wake_count` threads waiting on that futex to be
-woken up.
-
-### `sys_futex_requeue`
-
-Requeuing is a generalization of waking. After waking `wake_count`
-threads, `requeue_count` threads are moved from the original futex's
-wait queue to the wait queue corresponding to `requeue_ptr`, another
-futex.
-
-This requeueing behavior is used to avoid thundering herds on wake.
+See the [futex_wait](syscalls/futex_wait.md),
+[futex_wake](syscalls/futex_wake.md), and
+[futex_requeue](syscalls/futex_requeue.md) man pages for more details.
 
 ## Differences from Linux futexes
 
