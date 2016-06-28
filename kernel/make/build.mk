@@ -15,9 +15,15 @@ ifneq (,$(EXTRA_BUILDRULES))
 -include $(EXTRA_BUILDRULES)
 endif
 
+# enable/disable the size output based on the ENABLE_BUILD_LISTFILES switch
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
+SIZECMD:=$(SIZE)
+else
+SIZECMD:=true
+endif
+
 $(OUTLKBIN): $(OUTLKELF)
 	@echo generating image: $@
-	$(NOECHO)$(SIZE) $<
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
 
 $(OUTLKELF).hex: $(OUTLKELF)
@@ -26,9 +32,10 @@ $(OUTLKELF).hex: $(OUTLKELF)
 
 $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
 	@echo linking $@
-	$(NOECHO)$(SIZE) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -dT $(LINKER_SCRIPT) \
 		$(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LIBGCC) -o $@
+	$(NOECHO)$(SIZECMD) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
+	$(NOECHO)$(SIZECMD) $@
 
 $(OUTLKELF).sym: $(OUTLKELF)
 	@echo generating symbols: $@

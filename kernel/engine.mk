@@ -103,7 +103,7 @@ ARCH_ASMFLAGS :=
 # top level rule
 all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
 
-ifeq ($(ENABLE_BUILD_LISTFILES),true)
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
 all:: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size $(OUTLKELF).dump
 endif
 
@@ -211,7 +211,7 @@ include top/rules.mk
 # modules in the ALLMODULES list
 include make/recurse.mk
 
-ifeq ($(ENABLE_BUILD_SYSROOT),true)
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
 ifneq ($(SYSROOT_MEGA_LIBC),)
 MEGA_LIBC := $(BUILDDIR)/sysroot/lib/libc.a
 # this is a really awful hack, but makes everything
@@ -233,7 +233,7 @@ all:: $(EXTRA_BUILDDEPS) $(SYSROOT_DEPS)
 # make the build depend on all of the user apps
 all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 
-ifeq ($(ENABLE_BUILD_LISTFILES),true)
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
 all:: $(foreach app,$(ALLUSER_APPS),$(app).lst $(app).dump)
 endif
 
