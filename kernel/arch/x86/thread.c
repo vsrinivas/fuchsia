@@ -7,6 +7,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
 #include <sys/types.h>
 #include <string.h>
 #include <stdlib.h>
@@ -144,6 +145,26 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
      */
     oldthread->arch.fs_base = read_msr(X86_MSR_IA32_FS_BASE);
     oldthread->arch.gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
+
+    /* The segment selector registers can't be preserved across context
+     * switches in all cases, because some values get clobbered when
+     * returning from interrupts.  If an interrupt occurs when a userland
+     * process has set %fs = 1 (for example), the IRET instruction used for
+     * returning from the interrupt will reset %fs to 0.
+     *
+     * To prevent the segment selector register values from leaking between
+     * processes, we reset these registers across context switches. */
+    set_ds(0);
+    set_es(0);
+    set_fs(0);
+    if (get_gs() != 0) {
+        /* Assigning to %gs clobbers gs_base, so we must restore gs_base
+         * afterwards. */
+        DEBUG_ASSERT(arch_ints_disabled());
+        uintptr_t gs_base = (uintptr_t)x86_get_percpu();
+        set_gs(0);
+        write_msr(X86_MSR_IA32_GS_BASE, gs_base);
+    }
 
     write_msr(X86_MSR_IA32_FS_BASE, newthread->arch.fs_base);
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, newthread->arch.gs_base);

@@ -340,6 +340,23 @@ static inline void x86_set_cr4(ulong in_val)
         :"r" (in_val));
 }
 
+#define DEFINE_REGISTER_ACCESSOR(REG)                           \
+    static inline void set_##REG(uint16_t value) {              \
+        __asm__ volatile("mov %0, %%" #REG : : "r"(value));     \
+    }                                                           \
+    static inline uint16_t get_##REG(void) {                    \
+        uint16_t value;                                         \
+        __asm__ volatile("mov %%" #REG ", %0" : "=r"(value));   \
+        return value;                                           \
+    }
+
+DEFINE_REGISTER_ACCESSOR(ds)
+DEFINE_REGISTER_ACCESSOR(es)
+DEFINE_REGISTER_ACCESSOR(fs)
+DEFINE_REGISTER_ACCESSOR(gs)
+
+#undef DEFINE_REGISTER_ACCESSOR
+
 static inline uint64_t read_msr (uint32_t msr_id)
 {
 #if ARCH_X86_64
