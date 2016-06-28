@@ -7,7 +7,12 @@
 
 LOCAL_MAKEFILE:=$(MAKEFILE_LIST)
 
+# various command line and environment arguments
 BUILDROOT ?= .
+BUILDDIR_SUFFIX ?=
+DEBUG ?= 2
+ENABLE_BUILD_LISTFILES ?= false
+ENABLE_BUILD_SYSROOT ?= false
 
 LKNAME := magenta
 
@@ -54,9 +59,6 @@ $(error No project specified. Use 'make list' for a list of projects or 'make he
 endif
 endif
 
-DEBUG ?= 2
-
-BUILDDIR_SUFFIX ?=
 BUILDDIR := $(BUILDROOT)/build-$(PROJECT)$(BUILDDIR_SUFFIX)
 OUTLKBIN := $(BUILDDIR)/$(LKNAME).bin
 OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
