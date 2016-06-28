@@ -47,7 +47,7 @@ extern "C" {
 #define DRM_MAX_MINOR 16
 #endif
 
-#if defined(__linux__) || defined(__fucshia__)
+#if defined(__linux__) || defined(__Fucshia__)
 
 #define DRM_IOCTL_NR(n) _IOC_NR(n)
 #define DRM_IOC_VOID _IOC_NONE
