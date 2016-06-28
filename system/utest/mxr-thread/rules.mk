@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := mxr-thread-test
 
 MODULE_DEPS := \
-    ulib/runtime ulib/musl ulib/mxio ulib/magenta
+    ulib/runtime ulib/musl ulib/mxio ulib/magenta ulib/mxu
 
 include make/module.mk

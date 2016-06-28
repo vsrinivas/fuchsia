@@ -18,8 +18,9 @@
 #include <stdlib.h>
 
 #include <magenta/syscalls.h>
-#include <runtime/thread.h>
+#include <mxu/unittest.h>
 
+#include <runtime/thread.h>
 #include <runtime/tls.h>
 
 volatile int threads_done[7];
@@ -29,61 +30,62 @@ static int thread_entry(void* arg) {
     errno = thread_number;
     printf("thread %d sleeping for .1 seconds\n", thread_number);
     _magenta_nanosleep(100 * 1000 * 1000);
-    if (errno != thread_number) {
-        printf("errno changed by someone!\n");
-        exit(-1);
-    }
+    EXPECT_EQ(errno, thread_number, "errno changed by someone!");
     threads_done[thread_number] = 1;
     return thread_number;
 }
 
-int main(void) {
+bool mxr_thread_test(void) {
+    BEGIN_TEST;
+
     mxr_thread_t* thread;
     mx_status_t status;
     int return_value;
 
-    printf("Welcome to thread test!\n");
+    unittest_printf("Welcome to thread test!\n");
 
     for (int i = 0; i != 4; ++i) {
         status = mxr_thread_create(thread_entry, (void*)(intptr_t)i, "mxr thread test", &thread);
-        if (status != NO_ERROR)
-            exit(status);
+        ASSERT_EQ(status, NO_ERROR, "Error while creating thread");
+
         status = mxr_thread_join(thread, &return_value);
-        if (status != NO_ERROR)
-            exit(status);
-        if (return_value != i)
-            exit(-1);
+        ASSERT_EQ(status, NO_ERROR, "Error while thread join");
+        ASSERT_EQ(return_value, i, "Incorrect return from thread");
     }
 
-    printf("Attempting to create thread with a super long name. This should fail\n");
+    unittest_printf("Attempting to create thread with a super long name. This should fail\n");
     status = mxr_thread_create(thread_entry, NULL,
                                "01234567890123456789012345678901234567890123456789012345678901234567890123456789", &thread);
-    if (status == NO_ERROR)
-        exit(-2);
-    printf("Attempting to create thread with a null name. This should succeed\n");
+    ASSERT_NEQ(status, NO_ERROR, "thread creation should have thrown error");
+
+    unittest_printf("Attempting to create thread with a null name. This should succeed\n");
     status = mxr_thread_create(thread_entry, (void*)(intptr_t)4, NULL, &thread);
-    if (status != NO_ERROR)
-        exit(status);
+    ASSERT_EQ(status, NO_ERROR, "Error returned from thread creation");
+
     status = mxr_thread_join(thread, &return_value);
-    if (status != NO_ERROR)
-        exit(status);
-    if (return_value != 4)
-        exit(-3);
+    ASSERT_EQ(status, NO_ERROR, "Error while thread join");
+    ASSERT_EQ(return_value, 4, "Incorrect return from thread");
 
     status = mxr_thread_create(thread_entry, (void*)(intptr_t)5, NULL, &thread);
-    if (status != NO_ERROR)
-        exit(status);
+    ASSERT_EQ(status, NO_ERROR, "Error returned from thread creation");
     status = mxr_thread_detach(thread);
-    if (status != NO_ERROR)
-        exit(status);
+    ASSERT_EQ(status, NO_ERROR, "Error while thread detach");
+
     while (!threads_done[5])
         _magenta_nanosleep(100 * 1000 * 1000);
 
     thread_entry((void*)(intptr_t)6);
-    if (!threads_done[6])
-        exit(-4);
+    ASSERT_TRUE(threads_done[6], "All threads should have completed")
 
-    printf("thread test done\n");
+    END_TEST;
+}
 
-    return 0;
+BEGIN_TEST_CASE(mxr_thread_tests)
+RUN_TEST(mxr_thread_test)
+END_TEST_CASE(mxr_thread_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_mxr_thread_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
