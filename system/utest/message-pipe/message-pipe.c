@@ -16,6 +16,7 @@
 #include <mojo/mojo.h>
 #include <mojo/mojo_message_pipe.h>
 #include <mojo/mojo_threads.h>
+#include <mxu/unittest.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -54,19 +55,16 @@ static int reader_thread(void* arg) {
     bool closed[2] = {false, false};
     do {
         result = mojo_wait(pipe, &signals, 2, NULL, MOJO_DEADLINE_INDEFINITE, satisfied, satisfiable);
-        if (result != MOJO_RESULT_OK) {
-            printf("error %u from mojo_wait\n", result);
-            return 0;
-        }
+        ASSERT_EQ(result, MOJO_RESULT_OK, "error from mojo_wait");
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
         if (satisfied[0] & MOJO_HANDLE_SIGNAL_READABLE) {
             result = mojo_read_message(pipe[0], &data, &num_bytes, NULL, 0, 0);
-            assert(result == MOJO_RESULT_OK);
+            ASSERT_EQ(result, MOJO_RESULT_OK, "error while reading message");
             packets[0] += 1;
         } else if (satisfied[1] & MOJO_HANDLE_SIGNAL_READABLE) {
             result = mojo_read_message(pipe[1], &data, &num_bytes, NULL, 0, 0);
-            assert(result == MOJO_RESULT_OK);
+            ASSERT_EQ(result, MOJO_RESULT_OK, "error while reading message");
             packets[1] += 1;
         } else {
             if (satisfied[0] & MOJO_HANDLE_SIGNAL_PEER_CLOSED)
@@ -82,60 +80,37 @@ static int reader_thread(void* arg) {
     return 0;
 }
 
-int main(void) {
+bool message_pipe_test(void) {
+    BEGIN_TEST;
     mojo_result_t result = mojo_create_message_pipe(&_pipe[0], &_pipe[2]);
-    if (result != MOJO_RESULT_OK) {
-        printf("error in create message pipe %u\n", result);
-        return result;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in create message pipe");
 
     result = mojo_create_message_pipe(&_pipe[1], &_pipe[3]);
-    if (result != MOJO_RESULT_OK) {
-        printf("error in create message pipe %u\n", result);
-        return result;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in create message pipe");
 
     mojo_handle_t thread;
     result = mojo_thread_create(reader_thread, NULL, &thread, "reader");
-    if (result != MOJO_RESULT_OK) {
-        printf("error %u in mojo_thread_create\n", result);
-        return -1;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in mojo_thread_create");
 
     uint32_t data = 0xdeadbeef;
     result = mojo_write_message(_pipe[0], &data, sizeof(uint32_t), NULL, 0, 0);
-    if (result != MOJO_RESULT_OK) {
-        printf("error %u in mojo_write_message\n", result);
-        return -1;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in mojo_write_message");
 
     result = mojo_write_message(_pipe[1], &data, sizeof(uint32_t), NULL, 0, 0);
-    if (result != MOJO_RESULT_OK) {
-        printf("error %u in mojo_write_message\n", result);
-        return -1;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in mojo_write_message");
 
     usleep(1);
 
     result = mojo_write_message(_pipe[0], &data, sizeof(uint32_t), NULL, 0, 0);
-    if (result != MOJO_RESULT_OK) {
-        printf("error %u in mojo_write_message\n", result);
-        return -1;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in mojo_write_message");
 
     result = mojo_write_message(_pipe[0], &data, sizeof(uint32_t), NULL, 0, 0);
-    if (result != MOJO_RESULT_OK) {
-        printf("error %u in mojo_write_message\n", result);
-        return -1;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in mojo_write_message");
 
     usleep(1);
 
     result = mojo_write_message(_pipe[1], &data, sizeof(uint32_t), NULL, 0, 0);
-    if (result != MOJO_RESULT_OK) {
-        printf("error %u in mojo_write_message\n", result);
-        return -1;
-    }
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error in mojo_write_message");
 
     mojo_close(_pipe[1]);
 
@@ -144,7 +119,15 @@ int main(void) {
 
     mojo_thread_join(thread, MOJO_DEADLINE_INDEFINITE);
 
-    printf("Success\n");
+    END_TEST;
+}
 
-    return 0;
+BEGIN_TEST_CASE(message_pipe_tests)
+RUN_TEST(message_pipe_test)
+END_TEST_CASE(message_pipe_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_message_pipe_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
