@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
@@ -30,7 +31,7 @@ int thread_with_lock = 0;
 static void log(const char* str) {
     struct timespec time;
     clock_gettime(CLOCK_REALTIME, &time);
-    printf("[%08lu.%08lu]: %s", time.tv_sec, time.tv_nsec / 1000, str);
+    unittest_printf("[%08lu.%08lu]: %s", time.tv_sec, time.tv_nsec / 1000, str);
 }
 
 static void* mutex_thread_1(void* arg) {
@@ -41,7 +42,7 @@ static void* mutex_thread_1(void* arg) {
     _magenta_nanosleep(300 * 1000 * 1000);
 
     // Make sure no other thread woke up
-    assert(thread_with_lock == 1);
+    EXPECT_EQ(thread_with_lock, 1, "Only thread 1 should have woken up");
     log("thread 1 releasing mutex\n");
     pthread_mutex_unlock(&mutex);
     log("thread 1 done\n");
@@ -58,7 +59,7 @@ static void* mutex_thread_2(void* arg) {
     _magenta_nanosleep(300 * 1000 * 1000);
 
     // Make sure no other thread woke up
-    assert(thread_with_lock == 2);
+    EXPECT_EQ(thread_with_lock, 2, "Only thread 2 should have woken up");
 
     log("thread 2 releasing mutex\n");
     pthread_mutex_unlock(&mutex);
@@ -76,7 +77,7 @@ static void* mutex_thread_3(void* arg) {
     _magenta_nanosleep(300 * 1000 * 1000);
 
     // Make sure no other thread woke up
-    assert(thread_with_lock == 3);
+    EXPECT_EQ(thread_with_lock, 3, "Only thread 3 should have woken up");
 
     log("thread 3 releasing mutex\n");
     pthread_mutex_unlock(&mutex);
@@ -120,7 +121,9 @@ static void* cond_thread3(void* arg) {
     return NULL;
 }
 
-extern "C" int main(void) {
+bool pthread_test(void) {
+
+    BEGIN_TEST;
     pthread_t thread1, thread2, thread3;
 
     log("testing uncontested case\n");
@@ -142,17 +145,17 @@ extern "C" int main(void) {
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
     _magenta_nanosleep(300 * 1000 * 1000);
-    assert(process_waked == 1);
+    EXPECT_EQ(process_waked, 1, "Only 1 process should have woken up");
 
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
     _magenta_nanosleep(100 * 1000 * 1000);
-    assert(process_waked == 2);
+    EXPECT_EQ(process_waked, 2, "Only 2 processes should have woken up");
 
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
     _magenta_nanosleep(100 * 1000 * 1000);
-    assert(process_waked == 3);
+    EXPECT_EQ(process_waked, 3, "Only 3 processes should have woken up");
 
     log("joining cond threads\n");
     pthread_join(thread1, NULL);
@@ -172,7 +175,7 @@ extern "C" int main(void) {
     log("pthread_cond_timedwait returned\n");
     printf("pthread_cond_timedwait result: %d\n", result);
 
-    assert(result == ERR_TIMED_OUT);
+    EXPECT_EQ(result, ERR_TIMED_OUT, "Lock should have timeout");
 
     log("creating mutex threads\n");
     pthread_create(&thread1, NULL, mutex_thread_1, NULL);
@@ -187,5 +190,16 @@ extern "C" int main(void) {
     pthread_join(thread3, NULL);
     log("thread 3 joined\n");
 
-    return 0;
+    END_TEST;
+}
+
+
+BEGIN_TEST_CASE(pthread_tests)
+RUN_TEST(pthread_test)
+END_TEST_CASE(pthread_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_pthread_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
