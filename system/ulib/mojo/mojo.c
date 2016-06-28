@@ -60,8 +60,6 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_ALREADY_EXISTS;
     case ERR_CHANNEL_CLOSED:
         return MOJO_RESULT_FAILED_PRECONDITION;
-    case ERR_OFFLINE:
-        return MOJO_RESULT_UNAVAILABLE;
     case ERR_NOT_ALLOWED:
         return MOJO_RESULT_PERMISSION_DENIED;
     case ERR_BAD_PATH:

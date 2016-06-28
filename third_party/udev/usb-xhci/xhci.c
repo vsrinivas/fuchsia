@@ -743,7 +743,7 @@ xhci_queue_request(mx_device_t* hcidev, int slot_id, usb_request_t* request) {
     if (ep_state > 1) {
         if (xhci_reset_endpoint(xhci, slot_id, ep)) {
             mxr_mutex_unlock(&xhci->mutex);
-            return ERR_OFFLINE;
+            return ERR_BAD_STATE;
         }
     }
 

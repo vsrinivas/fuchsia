@@ -253,9 +253,6 @@ typedef struct mx_log_record {
 // TODO: Replace with either ACCESS_DENIED or NOT_SUPPORTED as appropriate
 #define ERR_NOT_ALLOWED         (-96)
 
-// TODO: Remove ERR_OFFLINE
-#define ERR_OFFLINE             (-97)
-
 // TODO: These all seem like state errors, should they just be ERR_BAD_STATE?
 #define ERR_NO_MSG              (-98)
 #define ERR_ALREADY_STARTED     (-99)

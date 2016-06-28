@@ -334,9 +334,9 @@ mx_status_t usb_ethernet_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
     return NO_ERROR;
 }
 
-mx_status_t usb_ethernet_is_online(mx_device_t* device) {
+bool usb_ethernet_is_online(mx_device_t* device) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
-    return eth->online ? NO_ERROR : ERR_OFFLINE;
+    return eth->online;
 }
 
 size_t usb_ethernet_get_mtu(mx_device_t* device) {
