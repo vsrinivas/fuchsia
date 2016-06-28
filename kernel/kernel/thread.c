@@ -1248,7 +1248,7 @@ void wait_queue_destroy(wait_queue_t *wait, bool reschedule)
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    wait_queue_wake_all(wait, reschedule, ERR_OBJECT_DESTROYED);
+    wait_queue_wake_all(wait, reschedule, ERR_CANCELLED);
     wait->magic = 0;
 }
 

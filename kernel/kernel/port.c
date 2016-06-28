@@ -619,7 +619,7 @@ status_t port_close(port_t port)
             // remove self from port group list.
             list_delete(&rp->g_node);
         }
-        // wake up waiters, the return code is ERR_OBJECT_DESTROYED.
+        // wake up waiters, the return code is ERR_CANCELLED.
         wait_queue_destroy(&rp->wait, true);
         rp->magic = 0;
 

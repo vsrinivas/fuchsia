@@ -279,7 +279,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
 
     if (parent->flags & DEV_FLAG_DEAD) {
         printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-        return ERR_OBJECT_DESTROYED;
+        return ERR_BAD_STATE;
     }
     xprintf("%s: device add: %p(%s) parent=%p(%s)\n", devmgr_is_remote ? "devhost" : "devmgr",
             dev, safename(dev->name), parent, safename(parent->name));
@@ -396,7 +396,7 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
 mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, safename(dev->name));
-        return ERR_OBJECT_DESTROYED;
+        return ERR_BAD_STATE;
     }
     dev->refcount++;
     mx_status_t r;

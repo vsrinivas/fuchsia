@@ -52,8 +52,6 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_INVALID_ARGUMENT;
     case ERR_NOT_ENOUGH_BUFFER:
         return MOJO_RESULT_RESOURCE_EXHAUSTED;
-    case ERR_OBJECT_DESTROYED: // returned from wait_queue_destroy
-        return MOJO_RESULT_ABORTED;
     case ERR_NOT_BLOCKED:
         return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_TIMED_OUT:
