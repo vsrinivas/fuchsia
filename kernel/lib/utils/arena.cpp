@@ -108,7 +108,7 @@ void Arena::Free(void* addr) {
     if (!addr) return;
     DEBUG_ASSERT((addr >= d_start_) && (addr < d_end_));
 
-    auto node = new (reinterpret_cast<void*>(c_top_)) Node{nullptr, addr};
+    auto node = new (reinterpret_cast<void*>(c_top_)) Node{addr};
     c_top_ += sizeof(Node);
     free_.push_front(node);
 }

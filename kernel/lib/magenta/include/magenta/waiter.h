@@ -88,19 +88,17 @@ public:
     }
 
 private:
-    struct WaitNode {
-        WaitNode* next;
+    struct WaitNode : public utils::SinglyLinkedListable<WaitNode*> {
+        WaitNode(WaitEvent* _event, Handle* _handle, mx_signals_t _signals, uint64_t _context)
+            : event(_event),
+              handle(_handle),
+              signals(_signals),
+              context(_context) { }
+
         WaitEvent* event;
         Handle* handle;
         mx_signals_t signals;
         uint64_t context;
-
-        void list_set_next(WaitNode* node) {
-            next = node;
-        }
-        WaitNode* list_next() {
-            return next;
-        }
     };
 
     bool SignalStateChange_NoLock();
@@ -110,7 +108,7 @@ private:
     spin_lock_t lock_;
 
     // Active waiters are elements in |nodes_|.
-    utils::SinglyLinkedList<WaitNode> nodes_;
+    utils::SinglyLinkedList<WaitNode*> nodes_;
 
     // mojo-style signaling.
     mx_signals_state_t signals_state_;

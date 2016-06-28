@@ -8,22 +8,17 @@
 #include <unittest.h>
 #include <utils/hash_table.h>
 
-class FooHash {
+class FooHash : public utils::SinglyLinkedListable<FooHash*> {
 public:
-    FooHash(int value) : key_(-1), value_(value), next_(nullptr) {}
+    FooHash(int value) : key_(-1), value_(value) { }
     int get_value() const { return value_; }
 
     int get_key() const { return key_; }
     void set_key(int key) { key_ = key; }
 
-    void list_set_next(FooHash* foo) { next_ = foo; }
-    const FooHash* list_next() const { return next_; }
-    FooHash* list_next() { return next_; }
-
 private:
     int key_;
     int value_;
-    FooHash* next_;
 };
 
 struct FooHashFn {
@@ -39,7 +34,7 @@ struct FooHashFn {
     }
 };
 
-static int GetHashTableKey(FooHash* fh) { return fh->get_key(); }
+static int GetHashTableKey(const FooHash* fh) { return fh->get_key(); }
 
 static void SetHashTableKey(FooHash* fh, int key) { fh->set_key(key); }
 

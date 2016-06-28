@@ -15,7 +15,7 @@
 
 // Node for linked list of threads blocked on a futex
 // Intended to be embedded within a UserThread Instance
-class FutexNode {
+class FutexNode : public utils::SinglyLinkedListable<FutexNode*> {
 public:
     FutexNode();
     ~FutexNode();
@@ -41,21 +41,15 @@ public:
     FutexNode* next() const {
         return next_;
     }
+
     void set_next(FutexNode* node) {
         next_ = node;
-    }
-
-    // for SinglyLinkedList entry in the FutexContext hash table
-    FutexNode* list_next() {
-        return hash_next_;
-    }
-    void list_set_next(FutexNode* node) {
-        hash_next_ = node;
     }
 
     uintptr_t hash_key() const {
         return hash_key_;
     }
+
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;
     }
@@ -79,9 +73,6 @@ private:
     // condition variable used for blocking our containing thread on
     cond_t condvar_;
 
-    // for SinglyLinkedList entry in futex hash table
-    FutexNode* hash_next_;
-
     // for list of threads blocked on a futex
     FutexNode* next_;
 
@@ -90,5 +81,5 @@ private:
     FutexNode* tail_;
 };
 
-uintptr_t GetHashTableKey(FutexNode* node);
+uintptr_t GetHashTableKey(const FutexNode* node);
 void SetHashTableKey(FutexNode* node, uintptr_t key);

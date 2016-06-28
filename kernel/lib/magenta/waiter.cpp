@@ -24,7 +24,7 @@ Waiter::Waiter(mx_signals_state_t signals_state)
 }
 
 mx_status_t Waiter::BeginWait(WaitEvent* event, Handle* handle, mx_signals_t signals, uint64_t context) {
-    auto node = new WaitNode{nullptr, event, handle, signals, context};
+    auto node = new WaitNode(event, handle, signals, context);
     if (!node)
         return ERR_NO_MEMORY;
 
@@ -64,10 +64,9 @@ mx_signals_state_t Waiter::FinishWait(WaitEvent* event) {
 
     {
         AutoSpinLock<> lock(&lock_);
-        node = utils::pop_if(&nodes_, [event](WaitNode* node) {
-            return (node->event == event);
-        });
-
+        node = nodes_.erase_if([event](const WaitNode& node) -> bool {
+                return (node.event == event);
+            });
         rv = signals_state_;
     }
 
@@ -150,10 +149,10 @@ bool Waiter::CancelWait(Handle* handle) {
     {
         AutoSpinLock<> lock(&lock_);
 
-        utils::for_each(&nodes_, [handle, &awoke_threads](WaitNode* node) {
-            if (node->handle == handle)
-                awoke_threads |= node->event->Signal(WaitEvent::Result::CANCELLED, node->context);
-        });
+        for (auto& node : nodes_) {
+            if (node.handle == handle)
+                awoke_threads |= node.event->Signal(WaitEvent::Result::CANCELLED, node.context);
+        }
     }
 
     if (awoke_threads)
@@ -165,12 +164,12 @@ bool Waiter::CancelWait(Handle* handle) {
 bool Waiter::SignalStateChange_NoLock() {
     bool awoke_threads = false;
 
-    utils::for_each(&nodes_, [this, &awoke_threads](WaitNode* node) {
-        if (node->signals & signals_state_.satisfied)
-            awoke_threads |= node->event->Signal(WaitEvent::Result::SATISFIED, node->context);
-        else if (!(node->signals & signals_state_.satisfiable))
-            awoke_threads |= node->event->Signal(WaitEvent::Result::UNSATISFIABLE, node->context);
-    });
+    for (auto& node : nodes_) {
+        if (node.signals & signals_state_.satisfied)
+            awoke_threads |= node.event->Signal(WaitEvent::Result::SATISFIED, node.context);
+        else if (!(node.signals & signals_state_.satisfiable))
+            awoke_threads |= node.event->Signal(WaitEvent::Result::UNSATISFIABLE, node.context);
+    }
     return awoke_threads;
 }
 

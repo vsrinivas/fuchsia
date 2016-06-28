@@ -12,7 +12,7 @@
 
 #define LOCAL_TRACE 0
 
-FutexNode::FutexNode() : hash_next_(nullptr), next_(nullptr), tail_(nullptr) {
+FutexNode::FutexNode() : next_(nullptr), tail_(nullptr) {
     LTRACE_ENTRY;
 
     cond_init(&condvar_);
@@ -69,9 +69,10 @@ void FutexNode::WakeThreads(FutexNode* head) {
     }
 }
 
-uintptr_t GetHashTableKey(FutexNode* node) {
+uintptr_t GetHashTableKey(const FutexNode* node) {
     return node->hash_key();
 }
+
 void SetHashTableKey(FutexNode* node, uintptr_t key) {
     node->set_hash_key(key);
 }

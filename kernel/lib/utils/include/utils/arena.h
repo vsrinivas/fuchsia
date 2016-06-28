@@ -48,24 +48,14 @@ private:
     Arena(const Arena&) = delete;
     Arena& operator=(const Arena&) = delete;
 
-    struct Node {
-        Node* next;
+    struct Node : public SinglyLinkedListable<Node*> {
+        explicit Node(void* s) : slot(s) { }
         void* slot;
-
-        Node* list_next() {
-            return next;
-        }
-        const Node* list_next() const {
-            return next;
-        }
-        void list_set_next(Node* node) {
-            next = node;
-        }
     };
 
     void CommitMemoryAheadIfNeeded();
 
-    SinglyLinkedList<Node> free_;
+    SinglyLinkedList<Node*> free_;
 
     size_t ob_size_;
 

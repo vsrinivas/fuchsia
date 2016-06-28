@@ -12,14 +12,21 @@
 
 namespace utils {
 
+// TODO(johngro) : Move this implementation back to a list_utils/lambda
+// function based implementation once the API differences between Single
+// and Doubly linked lists have been resolved.
+#define USE_LIST_UTILS 0
+
 // The number of buckets should be a nice prime such as 37, 211, 389 unless
 // The hash function is really good. Lots of cheap hash functions have hidden
 // periods for which the mod with prime above 'mostly' fixes.
 
 template <typename Key, typename T, typename HashFn, size_t num_buckets = 37,
-          typename ListTraits = SinglyLinkedListTraits<T>>
+          typename ListTraits = DefaultSinglyLinkedListTraits<T*>>
 class HashTable {
 public:
+    using BucketType = SinglyLinkedList<T*, ListTraits>;
+
     constexpr HashTable() {}
     ~HashTable() {
         DEBUG_ASSERT(count_ == 0);
@@ -32,22 +39,27 @@ public:
     }
 
     T* get(Key key) {
-        T* found =
-            find_if(&GetBucket(key), [key](T* entry) { return key == GetHashTableKey(entry); });
-        return found;
+        BucketType& bucket = GetBucket(key);
+        for (auto& obj : bucket) {
+            if (key == GetHashTableKey(&obj))
+                return &obj;
+        }
+
+        return nullptr;
     }
 
     T* remove(Key key) {
-        T* found =
-            pop_if(&GetBucket(key), [key](T* entry) { return key == GetHashTableKey(entry); });
+        BucketType& bucket = GetBucket(key);
+        T* found = bucket.erase_if([key](const T& entry) {
+            return key == GetHashTableKey(&entry);
+        });
         if (found) --count_;
         return found;
     }
 
     void clear() {
-        for (auto& e : buckets_) {
+        for (auto& e : buckets_)
             e.clear();
-        }
         count_ = 0;
     }
 
@@ -60,13 +72,15 @@ public:
 
     template <typename UnaryFn>
     void for_each(UnaryFn fn) {
-        for (auto& e : buckets_) {
-            utils::for_each(&e, fn);
+        for (auto& bucket : buckets_) {
+            for (auto& obj : bucket) {
+                fn(&obj);
+            }
         }
     }
 
 private:
-    SinglyLinkedList<T>& GetBucket(Key key) {
+    BucketType& GetBucket(Key key) {
         return buckets_[hashfn_(key) % num_buckets];
     }
 
@@ -74,7 +88,9 @@ private:
     HashTable& operator=(const HashTable&) = delete;
 
     size_t count_ = 0UL;
-    SinglyLinkedList<T, ListTraits> buckets_[num_buckets];
+    BucketType buckets_[num_buckets];
     HashFn hashfn_;
 };
-}
+
+#undef USE_LIST_UTILS
+}  // namespace utils
