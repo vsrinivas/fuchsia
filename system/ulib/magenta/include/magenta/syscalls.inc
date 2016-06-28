@@ -171,7 +171,12 @@ MAGENTA_SYSCALL_DEF(3, 3, 211, mx_status_t, set_exception_handler,
 MAGENTA_SYSCALL_DEF(2, 2, 212, mx_status_t, mark_exception_handled,
                     mx_handle_t object, mx_exception_status_t status)
 
-// syscall arg passing tests
+// IO Ports */
+MAGENTA_SYSCALL_DEF(1, 1, 220, mx_handle_t, io_port_create, uint32_t options)
+MAGENTA_SYSCALL_DEF(4, 4, 221, mx_status_t, io_port_queue, mx_handle_t handle, intptr_t key, const void* packet, mx_size_t size)
+MAGENTA_SYSCALL_DEF(4, 4, 222, mx_status_t, io_port_wait, mx_handle_t handle, intptr_t* key, void* packet, mx_size_t size)
+
+/* syscall arg passing tests */
 MAGENTA_SYSCALL_DEF(0, 0, 20000, int, syscall_test_0, void)
 MAGENTA_SYSCALL_DEF(1, 1, 20001, int, syscall_test_1, int a)
 MAGENTA_SYSCALL_DEF(2, 2, 20002, int, syscall_test_2, int a, int b)

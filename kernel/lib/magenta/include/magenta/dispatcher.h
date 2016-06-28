@@ -31,6 +31,7 @@ class ProcessOwnerDispatcher;
 class ThreadDispatcher;
 class VmObjectDispatcher;
 class IoMappingDispatcher;
+class IOPortDispatcher;
 
 
 class Dispatcher : public utils::RefCounted<Dispatcher> {
@@ -84,6 +85,10 @@ public:
     }
 
     virtual LogDispatcher* get_log_dispatcher() {
+        return nullptr;
+    }
+
+    virtual IOPortDispatcher* get_io_port_dispatcher() {
         return nullptr;
     }
 };

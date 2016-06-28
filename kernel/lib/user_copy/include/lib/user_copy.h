@@ -49,6 +49,7 @@ MAKE_COPY_TO_USER(copy_to_user_32, int32_t);
 MAKE_COPY_TO_USER(copy_to_user_u32, uint32_t);
 MAKE_COPY_TO_USER(copy_to_user_u64, uint64_t);
 MAKE_COPY_TO_USER(copy_to_user_uptr, uintptr_t);
+MAKE_COPY_TO_USER(copy_to_user_iptr, intptr_t);
 
 #undef MAKE_COPY_TO_USER
 
@@ -63,6 +64,7 @@ MAKE_COPY_FROM_USER(copy_from_user_u32, uint32_t);
 MAKE_COPY_FROM_USER(copy_from_user_32, int32_t);
 MAKE_COPY_FROM_USER(copy_from_user_u64, uint64_t);
 MAKE_COPY_FROM_USER(copy_from_user_uptr, uintptr_t);
+MAKE_COPY_FROM_USER(copy_from_user_iptr, intptr_t);
 
 #undef MAKE_COPY_FROM_USER
 

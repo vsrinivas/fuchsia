@@ -16,6 +16,7 @@
 #include <list.h>
 
 #include <magenta/event_dispatcher.h>
+#include <magenta/io_port_dispatcher.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
@@ -1094,4 +1095,95 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, void* ptr, uint32_t flags
         return ERR_ACCESS_DENIED;
 
     return log->ReadFromUser(ptr, len, flags);
+}
+
+mx_handle_t sys_io_port_create(uint32_t options) {
+    LTRACEF("options %u\n", options);
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    mx_rights_t rights;
+    mx_status_t result = IOPortDispatcher::Create(options, &dispatcher, &rights);
+    if (result != NO_ERROR)
+        return result;
+
+    HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), rights));
+    if (!handle)
+        return ERR_NO_MEMORY;
+
+    auto up = UserProcess::GetCurrent();
+
+    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    up->AddHandle(utils::move(handle));
+
+    return hv;
+}
+
+mx_status_t sys_io_port_queue(mx_handle_t handle, intptr_t key, const void* packet, mx_size_t size) {
+    LTRACEF("handle %d\n", handle);
+
+    IOP_Packet iop;
+
+    if (key < 0)
+        return ERR_INVALID_ARGS;
+
+    if (size < sizeof(iop.u))
+        return ERR_INVALID_ARGS;
+
+    auto up = UserProcess::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto ioport = dispatcher->get_io_port_dispatcher();
+    if (!ioport)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    if (magenta_copy_from_user(packet, &iop.u, sizeof(iop.u)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    iop.key = key;
+    return ioport->Queue(&iop);
+}
+
+mx_status_t sys_io_port_wait(mx_handle_t handle, intptr_t* key, void* packet, mx_size_t size) {
+    LTRACEF("handle %d\n", handle);
+
+    IOP_Packet iop;
+
+    if (size < sizeof(iop.u))
+        return ERR_INVALID_ARGS;
+
+    if (!key)
+        return ERR_INVALID_ARGS;
+
+    auto up = UserProcess::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto ioport = dispatcher->get_io_port_dispatcher();
+    if (!ioport)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    mx_status_t status = ioport->Wait(&iop);
+    if (status < 0)
+        return status;
+
+    if (copy_to_user_iptr(key, iop.key) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    if (copy_to_user(packet, &iop.u, sizeof(iop.u)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
 }

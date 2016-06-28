@@ -124,6 +124,7 @@ typedef enum {
     MX_OBJ_TYPE_IOMAP           = 8,
     MX_OBJ_TYPE_PCI_DEVICE      = 9,
     MX_OBJ_TYPE_PCI_INT         = 10,
+    MX_OBJ_TYPE_IOPORT          = 11
 } mx_obj_type_t;
 
 typedef enum {
@@ -186,6 +187,21 @@ typedef struct mx_log_record {
 #define MX_LOG_FLAG_MASK      0x0F00
 
 #define MX_LOG_FLAG_WAIT      0x80000000
+
+// IO port definitions.
+typedef struct mx_port_io_event {
+    mx_time_t timestamp;
+    mx_size_t bytes;
+    mx_signals_t signals;
+    uint32_t reserved;
+} mx_port_io_event_t;
+
+typedef struct mx_port_uq_event {
+    uint64_t param[3];
+} mx_port_uq_event_t;
+
+#define MX_IOPORT_OPT_128_SLOTS   0
+#define MX_IOPORT_OPT_1K_SLOTS    1
 
 // Maximum string length for kernel names (process name, thread name, etc)
 #define MX_MAX_NAME_LEN           (32)
