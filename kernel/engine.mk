@@ -7,15 +7,21 @@
 
 LOCAL_MAKEFILE:=$(MAKEFILE_LIST)
 
+# try to include a file in the local dir to let the user semi-permanently set options
+-include local.mk
+include make/macros.mk
+
 # various command line and environment arguments
+# default them to something so when they're referenced in the make instance they're not undefined
 BUILDROOT ?= .
 BUILDDIR_SUFFIX ?=
 DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
+CLANG ?= 0
+LKNAME ?= magenta
 
-LKNAME := magenta
-
+# special rule for handling make spotless
 ifeq ($(MAKECMDGOALS),spotless)
 spotless:
 	rm -rf -- "$(BUILDROOT)"/build-*
@@ -24,9 +30,6 @@ else
 ifndef LKROOT
 $(error please define LKROOT to the root of the $(LKNAME) build system)
 endif
-
--include local.mk
-include make/macros.mk
 
 # If one of our goals (from the commandline) happens to have a
 # matching project/goal.mk, then we should re-invoke make with
@@ -94,7 +97,7 @@ KERNEL_ASMFLAGS :=
 USER_COMPILEFLAGS := -include $(USER_CONFIG_HEADER)
 USER_CFLAGS :=
 USER_CPPFLAGS :=
-KERUSER_ASMFLAGS :=
+USER_ASMFLAGS :=
 
 # Architecture specific compile flags
 ARCH_COMPILEFLAGS :=
@@ -288,14 +291,6 @@ endif
 # prefix all of the paths in GLOBAL_INCLUDES with -I
 GLOBAL_INCLUDES := $(addprefix -I,$(GLOBAL_INCLUDES))
 
-# test for some old variables
-ifneq ($(INCLUDES),)
-$(error INCLUDES variable set, please move to GLOBAL_INCLUDES: $(INCLUDES))
-endif
-ifneq ($(DEFINES),)
-$(error DEFINES variable set, please move to GLOBAL_DEFINES: $(DEFINES))
-endif
-
 # default to no ccache
 CCACHE ?=
 ifeq ($(CLANG),1)
@@ -341,23 +336,6 @@ USER_DEFINES += USER_COMPILEFLAGS=\"$(subst $(SPACE),_,$(USER_COMPILEFLAGS))\"
 USER_DEFINES += USER_CFLAGS=\"$(subst $(SPACE),_,$(USER_CFLAGS))\"
 USER_DEFINES += USER_CPPFLAGS=\"$(subst $(SPACE),_,$(USER_CPPFLAGS))\"
 USER_DEFINES += USER_ASMFLAGS=\"$(subst $(SPACE),_,$(USER_ASMFLAGS))\"
-
-ifneq ($(OBJS),)
-$(warning OBJS=$(OBJS))
-$(error OBJS is not empty, please convert to new module format)
-endif
-ifneq ($(OPTFLAGS),)
-$(warning OPTFLAGS=$(OPTFLAGS))
-$(error OPTFLAGS is not empty, please use GLOBAL_OPTFLAGS or MODULE_OPTFLAGS)
-endif
-ifneq ($(CFLAGS),)
-$(warning CFLAGS=$(CFLAGS))
-$(error CFLAGS is not empty, please use GLOBAL_CFLAGS or MODULE_CFLAGS)
-endif
-ifneq ($(CPPFLAGS),)
-$(warning CPPFLAGS=$(CPPFLAGS))
-$(error CPPFLAGS is not empty, please use GLOBAL_CPPFLAGS or MODULE_CPPFLAGS)
-endif
 
 #$(info LIBGCC = $(LIBGCC))
 #$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS))

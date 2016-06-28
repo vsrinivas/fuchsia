@@ -293,7 +293,7 @@ endif
 # try to find toolchain
 include $(LOCAL_DIR)/toolchain.mk
 TOOLCHAIN_PREFIX := $(ARCH_$(ARCH)_TOOLCHAIN_PREFIX)
-$(info TOOLCHAIN_PREFIX = $(TOOLCHAIN_PREFIX))
+#$(info TOOLCHAIN_PREFIX = $(TOOLCHAIN_PREFIX))
 
 ARCH_COMPILEFLAGS += $(ARCH_$(ARCH)_COMPILEFLAGS)
 
@@ -312,9 +312,8 @@ USER_LINKER_SCRIPT := $(LOCAL_DIR)/user.ld
 
 # find the direct path to libgcc.a for our particular multilib variant
 LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(THUMBCFLAGS) -print-libgcc-file-name)
-$(info LIBGCC = $(LIBGCC))
-
-$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(THUMBCFLAGS))
+#$(info LIBGCC = $(LIBGCC))
+#$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(THUMBCFLAGS))
 
 # make sure some bits were set up
 MEMVARS_SET := 0
