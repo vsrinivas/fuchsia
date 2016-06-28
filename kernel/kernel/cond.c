@@ -60,3 +60,14 @@ void cond_signal(cond_t *cond)
 
     THREAD_UNLOCK(state);
 }
+
+void cond_broadcast(cond_t *cond)
+{
+    DEBUG_ASSERT(cond->magic == COND_MAGIC);
+
+    THREAD_LOCK(state);
+
+    wait_queue_wake_all(&cond->wait, true, NO_ERROR);
+
+    THREAD_UNLOCK(state);
+}
