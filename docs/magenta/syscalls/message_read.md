@@ -49,9 +49,9 @@ pointers.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 
-**ERR_NO_MSG**  The message pipe contained no messages to read.
+**ERR_BAD_STATE**  The message pipe contained no messages to read.
 
-**ERR_BAD_STATE**  The other side of the message pipe is closed.
+**ERR_CHANNEL_CLOSED**  The other side of the message pipe is closed.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

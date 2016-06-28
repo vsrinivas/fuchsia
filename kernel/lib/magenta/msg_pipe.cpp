@@ -79,7 +79,7 @@ status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
 
     if (*msg)
         return NO_ERROR;
-    return other_alive ? ERR_NO_MSG : ERR_BAD_STATE;
+    return other_alive ? ERR_BAD_STATE : ERR_CHANNEL_CLOSED;
 }
 
 status_t MessagePipe::Write(size_t side, utils::unique_ptr<MessagePacket> msg) {

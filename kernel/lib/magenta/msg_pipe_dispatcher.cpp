@@ -80,7 +80,7 @@ status_t MessagePipeDispatcher::AcceptRead(utils::Array<uint8_t>* data,
         AutoLock lock(&lock_);
         msg = utils::move(pending_);
         // if there is no message it means another user thread beat us here.
-        if (!msg) return ERR_NO_MSG;
+        if (!msg) return ERR_BAD_STATE;
 
         *data = utils::move(msg->data);
         *handles = utils::move(msg->handles);

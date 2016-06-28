@@ -40,8 +40,6 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_NOT_FOUND;
     case ERR_NOT_READY:
         return MOJO_RESULT_FAILED_PRECONDITION;
-    case ERR_NO_MSG:
-        return MOJO_RESULT_INTERNAL;
     case ERR_NO_MEMORY:
         return MOJO_RESULT_RESOURCE_EXHAUSTED;
     case ERR_ALREADY_STARTED:

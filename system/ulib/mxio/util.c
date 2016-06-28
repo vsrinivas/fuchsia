@@ -28,7 +28,7 @@ mx_handle_t mxu_read_handle(mx_handle_t h) {
         if (r == 0) {
             return out;
         }
-        if (r == ERR_NO_MSG) {
+        if (r == ERR_BAD_STATE) {
             r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                          MX_TIME_INFINITE, &pending, NULL);
             if (r < 0)
@@ -54,7 +54,7 @@ mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
         if (r == 0) {
             return sz;
         }
-        if (r == ERR_NO_MSG) {
+        if (r == ERR_BAD_STATE) {
             r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                          MX_TIME_INFINITE, &pending, NULL);
             if (r < 0)
@@ -83,7 +83,7 @@ mx_status_t mxu_blocking_read_h(mx_handle_t h, void* data, size_t len, mx_handle
                 *out = 0;
             return sz;
         }
-        if (r == ERR_NO_MSG) {
+        if (r == ERR_BAD_STATE) {
             r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                          MX_TIME_INFINITE, &pending, NULL);
             if (r < 0)

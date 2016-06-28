@@ -527,7 +527,7 @@ status_t sm_intc_fiq_enter(void)
 
     if (irq >= 1020) {
         LTRACEF("spurious fiq: cpu %d, old %d, new %d\n", cpu, current_fiq[cpu], irq);
-        return ERR_NO_MSG;
+        return ERR_BAD_STATE;
     }
 
     fiq_enabled = update_fiq_targets(cpu, false, irq, false);

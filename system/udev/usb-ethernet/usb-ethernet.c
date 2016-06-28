@@ -281,7 +281,7 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
 
     list_node_t* node = list_peek_head(&eth->completed_reads);
     if (!node) {
-        status = ERR_NO_MSG;
+        status = ERR_BAD_STATE;
         goto out;
     }
     usb_request_t* request = containerof(node, usb_request_t, node);

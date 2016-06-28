@@ -75,7 +75,6 @@
 #define ERR_NOT_ALLOWED         (-96)
 
 // TODO: These all seem like state errors, should they just be ERR_BAD_STATE?
-#define ERR_NO_MSG              (-98)
 #define ERR_ALREADY_STARTED     (-99)
 #define ERR_NOT_BLOCKED         (-100)
 #define ERR_THREAD_DETACHED     (-101)

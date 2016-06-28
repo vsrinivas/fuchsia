@@ -111,7 +111,7 @@ static status_t buf_write(port_buf_t *buf, const port_packet_t *packets, size_t 
 static status_t buf_read(port_buf_t *buf, port_result_t *pr)
 {
     if (buf_is_empty(buf))
-        return ERR_NO_MSG;
+        return ERR_BAD_STATE;
     pr->packet = buf->packet[buf->head];
     buf->head = modpow2(++buf->head, buf->log2);
     ++buf->avail;
@@ -437,7 +437,7 @@ static inline status_t read_no_lock(read_port_t *rp, lk_time_t timeout, port_res
     status_t status = buf_read(rp->buf, result);
     result->ctx = rp->ctx;
 
-    if (status != ERR_NO_MSG)
+    if (status != ERR_BAD_STATE)
         return status;
 
     // early return allows compiler to elide the rest for the group read case.

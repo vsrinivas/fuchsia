@@ -40,7 +40,7 @@ status_t LogDispatcher::Read(void* ptr, size_t len, uint32_t flags) {
 status_t LogDispatcher::ReadFromUser(void* ptr, size_t len, uint32_t flags) {
     for (;;) {
         mx_status_t r = dlog_read_user(&reader_, 0, ptr, len);
-        if ((r == ERR_NO_MSG) && (flags & MX_LOG_FLAG_WAIT)) {
+        if ((r == ERR_BAD_STATE) && (flags & MX_LOG_FLAG_WAIT)) {
             dlog_wait(&reader_);
             continue;
         }

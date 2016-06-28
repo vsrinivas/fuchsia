@@ -103,7 +103,7 @@ status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
 // TODO: filter with flags
 status_t dlog_read_etc(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, bool user) {
     dlog_t* log = rdr->log;
-    status_t r = ERR_NO_MSG;
+    status_t r = ERR_BAD_STATE;
 
     mutex_acquire(&log->lock);
     if (rdr->tail != log->head) {
