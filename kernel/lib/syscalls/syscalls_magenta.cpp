@@ -413,6 +413,9 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     }
 
     for (size_t idx = 0u; idx < next_message_num_handles; ++idx) {
+        if (handle_list[idx]->dispatcher()->get_waiter()) {
+            handle_list[idx]->dispatcher()->get_waiter()->CancelWait(handle_list[idx]);
+        }
         HandleUniquePtr handle(handle_list[idx]);
         up->AddHandle(utils::move(handle));
     }
