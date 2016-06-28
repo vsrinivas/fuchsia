@@ -20,7 +20,7 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += $(LOCAL_DIR)/exceptions.c
 
-MODULE_NAME := exceptions-test
+MODULE_NAME := exceptions-test-broken
 
 MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta
 
