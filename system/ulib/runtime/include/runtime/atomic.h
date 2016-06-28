@@ -94,5 +94,6 @@ __MAKE_ATOMICS(int16_t, _int16)
 __MAKE_ATOMICS(int32_t, _int32)
 __MAKE_ATOMICS(int64_t, _int64)
 __MAKE_ATOMICS(int, )
+__MAKE_ATOMICS(bool, _bool)
 
 __END_CDECLS

@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := fpu-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/mxu
+    ulib/musl ulib/mxio ulib/magenta ulib/runtime ulib/mxu
 
 include make/module.mk

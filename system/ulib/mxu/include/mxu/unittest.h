@@ -66,6 +66,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <runtime/atomic.h>
 #include <runtime/compiler.h>
 
 #define PRINT_BUFFER_SIZE (512)
@@ -132,6 +133,8 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 
 #define RUN_TEST(test)                             \
     unittest_printf("    %-51s [RUNNING]", #test); \
+    struct test_info test_info_##test;             \
+    current_test_info = &test_info_##test;         \
     if (!test()) {                                 \
         all_success = false;                       \
     } else {                                       \
@@ -142,11 +145,8 @@ void unittest_set_output_function(test_output_func fun, void* arg);
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
  * and that call the EXPECT_ macros.
  */
-#define BEGIN_TEST bool all_ok = true, expect_failed = false
-// To remove unused variable error using expect_failed
-#define END_TEST         \
-    (void)expect_failed; \
-    return all_ok
+#define BEGIN_TEST atomic_store_bool(&current_test_info->all_ok, true)
+#define END_TEST return atomic_load_bool(&current_test_info->all_ok)
 
 #ifdef __cplusplus
 #define AUTO_TYPE_VAR(type) auto&
@@ -154,9 +154,11 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 #define AUTO_TYPE_VAR(type) __typeof__(type)
 #endif
 
-#define EXPECT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str)               \
+#define RET_FALSE return false
+#define DONOT_RET
+
+#define UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, ret)              \
     do {                                                              \
-        expect_failed = false;                                        \
         const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                    \
         const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                    \
         if (!(_lhs_val op _rhs_val)) {                                \
@@ -165,10 +167,55 @@ void unittest_set_output_function(test_output_func fun, void* arg);
                 "        Comparison failed: %s %s %s is false\n"      \
                 "        Specifically, %ld %s %ld is false\n",        \
                 msg, lhs_str, #op, rhs_str, _lhs_val, #op, _rhs_val); \
-            all_ok = false;                                           \
-            expect_failed = true;                                     \
+            atomic_store_bool(&current_test_info->all_ok, false);     \
+            ret;                                                      \
         }                                                             \
     } while (0)
+
+#define UT_TRUE(actual, msg, ret)                             \
+    if (!(actual)) {                                          \
+        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual);   \
+        atomic_store_bool(&current_test_info->all_ok, false); \
+        ret;                                                  \
+    }
+
+#define UT_FALSE(actual, msg, ret)                            \
+    if (actual) {                                             \
+        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual);    \
+        atomic_store_bool(&current_test_info->all_ok, false); \
+        ret;                                                  \
+    }
+
+#define UT_BYTES_EQ(expected, actual, length, msg, ret)                   \
+    if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
+        atomic_store_bool(&current_test_info->all_ok, false);             \
+        ret;                                                              \
+    }
+
+#define UT_BYTES_NE(bytes1, bytes2, length, msg, ret)         \
+    if (!memcmp(bytes1, bytes2, length)) {                    \
+        UNITTEST_TRACEF(                                      \
+            "%s and %s are the same; "                        \
+            "expected different\n",                           \
+            #bytes1, #bytes2);                                \
+        hexdump8(bytes1, length);                             \
+        atomic_store_bool(&current_test_info->all_ok, false); \
+        ret;                                                  \
+    }
+
+/* For comparing uint64_t, like hw_id_t. */
+#define UT_EQ_LL(expected, actual, msg, ret)                                  \
+    do {                                                                      \
+        const AUTO_TYPE_VAR(expected) _e = (expected);                        \
+        const AUTO_TYPE_VAR(actual) _a = (actual);                            \
+        if (_e != _a) {                                                       \
+            UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a); \
+            atomic_store_bool(&current_test_info->all_ok, false);             \
+            ret;                                                              \
+        }                                                                     \
+    } while (0)
+
+#define EXPECT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str) UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, DONOT_RET)
 
 /*
  * Use the EXPECT_* macros to check test results.
@@ -180,58 +227,13 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 #define EXPECT_LT(lhs, rhs, msg) EXPECT_CMP(<, msg, lhs, rhs, #lhs, #rhs)
 #define EXPECT_GT(lhs, rhs, msg) EXPECT_CMP(>, msg, lhs, rhs, #lhs, #rhs)
 
-#define EXPECT_TRUE(actual, msg)                            \
-    expect_failed = false;                                  \
-    if (!(actual)) {                                        \
-        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual); \
-        all_ok = false;                                     \
-        expect_failed = true;                               \
-    }
-
-#define EXPECT_FALSE(actual, msg)                          \
-    expect_failed = false;                                 \
-    if (actual) {                                          \
-        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual); \
-        all_ok = false;                                    \
-        expect_failed = true;                              \
-    }
-
-#define EXPECT_BYTES_EQ(expected, actual, length, msg)                    \
-    expect_failed = false;                                                \
-    if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
-        all_ok = false;                                                   \
-        expect_failed = true;                                             \
-    }
-
-#define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) \
-    expect_failed = false;                           \
-    if (!memcmp(bytes1, bytes2, length)) {           \
-        UNITTEST_TRACEF(                             \
-            "%s and %s are the same; "               \
-            "expected different\n",                  \
-            #bytes1, #bytes2);                       \
-        hexdump8(bytes1, length);                    \
-        all_ok = false;                              \
-        expect_failed = true;                        \
-    }
+#define EXPECT_TRUE(actual, msg) UT_TRUE(actual, msg, DONOT_RET)
+#define EXPECT_FALSE(actual, msg) UT_FALSE(actual, msg, DONOT_RET)
+#define EXPECT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, DONOT_RET)
+#define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, DONOT_RET)
 
 /* For comparing uint64_t, like hw_id_t. */
-#define EXPECT_EQ_LL(expected, actual, msg)                                   \
-    do {                                                                      \
-        expect_failed = false;                                                \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                        \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                            \
-        if (_e != _a) {                                                       \
-            UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a); \
-            all_ok = false;                                                   \
-            expect_failed = true;                                             \
-        }                                                                     \
-    } while (0)
-
-#define RET_ON_ASSERT_FAIL \
-    if (expect_failed) {   \
-        return false;      \
-    }
+#define EXPECT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, DONOT_RET)
 
 /*
  * The ASSERT_* macros are similar to the EXPECT_* macros except that
@@ -243,9 +245,7 @@ void unittest_set_output_function(test_output_func fun, void* arg);
         return false;                             \
     }
 
-#define ASSERT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str) \
-    EXPECT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str);    \
-    RET_ON_ASSERT_FAIL
+#define ASSERT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str) UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, RET_FALSE)
 
 #define ASSERT_EQ(lhs, rhs, msg) ASSERT_CMP(==, msg, lhs, rhs, #lhs, #rhs)
 #define ASSERT_NEQ(lhs, rhs, msg) ASSERT_CMP(!=, msg, lhs, rhs, #lhs, #rhs)
@@ -254,26 +254,13 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 #define ASSERT_LT(lhs, rhs, msg) ASSERT_CMP(<, msg, lhs, rhs, #lhs, #rhs)
 #define ASSERT_GT(lhs, rhs, msg) ASSERT_CMP(>, msg, lhs, rhs, #lhs, #rhs)
 
-#define ASSERT_TRUE(actual, msg) \
-    EXPECT_TRUE(actual, msg);    \
-    RET_ON_ASSERT_FAIL
-
-#define ASSERT_FALSE(actual, msg) \
-    EXPECT_FALSE(actual, msg);    \
-    RET_ON_ASSERT_FAIL
-
-#define ASSERT_BYTES_EQ(expected, actual, length, msg) \
-    EXPECT_BYTES_EQ(expected, actual, length, msg);    \
-    RET_ON_ASSERT_FAIL
-
-#define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) \
-    EXPECT_BYTES_NE(bytes1, bytes2, length, msg);    \
-    RET_ON_ASSERT_FAIL
+#define ASSERT_TRUE(actual, msg) UT_TRUE(actual, msg, RET_FALSE)
+#define ASSERT_FALSE(actual, msg) UT_FALSE(actual, msg, RET_FALSE)
+#define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
+#define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
 
 /* For comparing uint64_t, like hw_id_t. */
-#define ASSERT_EQ_LL(expected, actual, msg) \
-    EXPECT_EQ_LL(expected, actual, msg);    \
-    RET_ON_ASSERT_FAIL
+#define ASSERT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, RET_FALSE)
 
 /*
  * The list of test cases is made up of these elements.
@@ -284,6 +271,18 @@ struct test_case_element {
     const char* name;
     bool (*test_case)(void);
 };
+
+/*
+ * Struct to store current test case info
+ */
+struct test_info {
+    bool all_ok;
+};
+
+/*
+ * Object which stores current test info
+ */
+__UNUSED static struct test_info* current_test_info;
 
 /*
  * Registers a test case with the unit test framework.

@@ -41,7 +41,9 @@
  * variable throughout the code.
  */
 
-BEGIN_TEST;
+
+// TODO: change all asserts to either ASSERT_* or EXPECT_*
+
 uintptr_t counter = 0;
 
 const uintptr_t dir_cookie_gold = 0x1234;
@@ -83,7 +85,7 @@ mx_status_t callback_file_access(mx_rio_msg_t* msg, void* cookie) {
         assert(counter++ == 12);
         return NO_ERROR;
     default:
-        assert(false);
+        EXPECT_TRUE(false, "Operation not supported");
         return ERR_NOT_SUPPORTED;
     }
 }
@@ -119,12 +121,13 @@ mx_status_t callback_directory_access(mx_rio_msg_t* msg, void* cookie) {
         assert(counter++ == 4);
         return NO_ERROR;
     default:
-        assert(false);
+        EXPECT_TRUE(false, "Operation not supported");
         return ERR_NOT_SUPPORTED;
     }
 }
 
-int main(void) {
+bool remoteio_test(void) {
+    BEGIN_TEST;
     // First, initialize the message pipes we'll be passing around later.
     mx_handle_t dir_handle_client;
     mx_handle_t dir_handle_server;
@@ -177,9 +180,17 @@ int main(void) {
     EXPECT_EQ(NO_ERROR, mx_close(file_client), "Unexpected close status");
     assert(counter++ == 13);
 
-    if (!all_ok)
-        return -1;
+    END_TEST;
+}
 
-    printf("Remoteio Basic Test: Success\n");
-    return 0;
+BEGIN_TEST_CASE(remoteio_tests)
+RUN_TEST(remoteio_test);
+END_TEST_CASE(remoteio_tests)
+
+int main(int argc, char** argv) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_remoteio_tests_element);
+
+    bool success = unittest_run_all_tests();
+    return success ? 0 : -1;
 }
