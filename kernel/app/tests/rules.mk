@@ -42,8 +42,6 @@ MODULE_DEPS += \
     lib/utils \
     lib/crypto \
 
-MODULE_ARM_OVERRIDE_SRCS := \
-
 MODULE_COMPILEFLAGS += -Wno-format -fno-builtin
 
 include make/module.mk

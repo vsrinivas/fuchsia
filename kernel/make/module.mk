@@ -24,8 +24,6 @@
 # MODULE_TYPE : "userapp" for userspace executables, "userlib" for userspace library,
 #               "" for standard LK module
 
-# MODULE_ARM_OVERRIDE_SRCS : list of source files, local path that should be force compiled with ARM (if applicable)
-
 # the minimum module rules.mk file is as follows:
 #
 # LOCAL_DIR := $(GET_LOCAL_DIR)
@@ -228,7 +226,6 @@ MODULE_SRCDEPS :=
 MODULE_EXTRA_OBJS :=
 MODULE_CONFIG :=
 MODULE_OBJECT :=
-MODULE_ARM_OVERRIDE_SRCS :=
 MODULE_TYPE :=
 MODULE_NAME :=
 MODULE_EXPORT :=

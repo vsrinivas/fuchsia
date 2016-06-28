@@ -191,11 +191,8 @@ ifneq ($(HANDLED_CORE),true)
 $(error $(LOCAL_DIR)/rules.mk doesnt have logic for arm core $(ARM_CPU))
 endif
 
-THUMBCFLAGS :=
-THUMBINTERWORK :=
 ifeq ($(ENABLE_THUMB),true)
-THUMBCFLAGS := -mthumb -D__thumb__
-THUMBINTERWORK := -mthumb-interwork
+ARCH_COMPILEFLAGS += -mthumb -D__thumb__ -mthumb-interwork
 endif
 
 GLOBAL_INCLUDES += \
@@ -204,6 +201,7 @@ GLOBAL_INCLUDES += \
 ifeq ($(SUBARCH),arm)
 MODULE_SRCS += \
 	$(LOCAL_DIR)/arm/start.S \
+	$(LOCAL_DIR)/arm/arch.c \
 	$(LOCAL_DIR)/arm/asm.S \
 	$(LOCAL_DIR)/arm/cache-ops.S \
 	$(LOCAL_DIR)/arm/cache.c \
@@ -215,9 +213,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/arm/mmu.c \
 	$(LOCAL_DIR)/arm/thread.c \
 	$(LOCAL_DIR)/arm/uspace_entry.S
-
-MODULE_ARM_OVERRIDE_SRCS := \
-	$(LOCAL_DIR)/arm/arch.c
 
 KERNEL_DEFINES += \
 	ARCH_DEFAULT_STACK_SIZE=4096
@@ -299,8 +294,6 @@ ARCH_COMPILEFLAGS += $(ARCH_$(ARCH)_COMPILEFLAGS)
 
 OBJDUMP_LIST_FLAGS := -Mreg-names-raw
 
-GLOBAL_COMPILEFLAGS += $(THUMBINTERWORK)
-
 # hard disable the fpu in kernel code
 KERNEL_COMPILEFLAGS += -msoft-float -mfloat-abi=soft -DWITH_NO_FP=1
 
@@ -311,9 +304,9 @@ GLOBAL_LDFLAGS += -z max-page-size=4096
 USER_LINKER_SCRIPT := $(LOCAL_DIR)/user.ld
 
 # find the direct path to libgcc.a for our particular multilib variant
-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(THUMBCFLAGS) -print-libgcc-file-name)
+LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) -print-libgcc-file-name)
 #$(info LIBGCC = $(LIBGCC))
-#$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(THUMBCFLAGS))
+$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS))
 
 # make sure some bits were set up
 MEMVARS_SET := 0
