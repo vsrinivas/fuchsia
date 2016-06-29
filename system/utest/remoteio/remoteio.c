@@ -42,7 +42,6 @@
  */
 
 
-// TODO: change all asserts to either ASSERT_* or EXPECT_*
 
 uintptr_t counter = 0;
 
@@ -63,26 +62,26 @@ mx_status_t callback_file_access(mx_rio_msg_t* msg, void* cookie) {
     case MX_RIO_OPEN:
         return ERR_NOT_SUPPORTED;
     case MX_RIO_WRITE:
-        assert(counter++ == 6);
+        EXPECT_EQ(counter++, 6u, "");
         EXPECT_EQ(strlen(write_data_gold) + 1, msg->datalen, "Unexpected datalen");
-        assert(strcmp((const char*)msg->data, write_data_gold) == 0);
+        EXPECT_EQ(strcmp((const char*)msg->data, write_data_gold), 0, "");
         // TODO(smklein): Set / test offset.
         return msg->datalen;
     case MX_RIO_SEEK:
-        assert(counter++ == 8);
+        EXPECT_EQ(counter++, 8u, "");
         EXPECT_EQ(seek_whence_gold, msg->arg, "Unexpected arg");
         EXPECT_EQ(seek_offset_gold, msg->arg2.off, "Unexpected off");
         msg->arg2.off = seek_response_gold;
         return NO_ERROR;
     case MX_RIO_READ:
-        assert(counter++ == 10);
+        EXPECT_EQ(counter++, 10u, "");
         // Copy the string and the null character.
         strncpy((char*)msg->data, read_data_gold, strlen(read_data_gold) + 1);
         msg->datalen = strlen(read_data_gold) + 1;
         // TODO(smklein): Set / test offset.
         return msg->datalen;
     case MX_RIO_CLOSE:
-        assert(counter++ == 12);
+        EXPECT_EQ(counter++, 12u, "");
         return NO_ERROR;
     default:
         EXPECT_TRUE(false, "Operation not supported");
@@ -98,10 +97,10 @@ mx_status_t callback_directory_access(mx_rio_msg_t* msg, void* cookie) {
     switch (msg->op) {
     case MX_RIO_OPEN:
         // Verify input.
-        assert(counter++ == 2);
+        EXPECT_EQ(counter++, 2u, "");
         EXPECT_EQ(strlen(open_path_gold), msg->datalen, "Unexpected datalen");
         EXPECT_EQ(open_flags_gold, msg->arg, "Unexpected arg");
-        assert(strncmp((const char*)msg->data, open_path_gold, msg->datalen) == 0);
+        EXPECT_EQ(strncmp((const char*)msg->data, open_path_gold, msg->datalen), 0, "");
         // TODO(smklein): Test 'mode_gold'
 
         // Create another handler server, responsible for dealing with the file.
@@ -118,7 +117,7 @@ mx_status_t callback_directory_access(mx_rio_msg_t* msg, void* cookie) {
         msg->hcount = 1;
         return NO_ERROR;
     case MX_RIO_CLOSE:
-        assert(counter++ == 4);
+        EXPECT_EQ(counter++, 4u, "");
         return NO_ERROR;
     default:
         EXPECT_TRUE(false, "Operation not supported");
@@ -139,10 +138,10 @@ bool remoteio_test(void) {
                                             callback_directory_access,
                                             (void*)dir_cookie_gold),
               "Could not create dir handler server");
-    assert(counter++ == 0);
+    ASSERT_EQ(counter++, 0u, "");
     mxio_t* dir_client = mxio_remote_create(dir_handle_client, 0);
     EXPECT_NEQ(dir_client, NULL, "Could not create dir client from handle");
-    assert(counter++ == 1);
+    ASSERT_EQ(counter++, 1u, "");
 
     // Open a file, causing a new file server to open.
     mxio_t* file_client;
@@ -150,23 +149,23 @@ bool remoteio_test(void) {
                                 &file_client),
               "Error opening file client");
     EXPECT_NEQ(file_client, NULL, "Could not open file client");
-    assert(counter++ == 3);
+    ASSERT_EQ(counter++, 3u,  "");
 
     // Close the directory server -- we no longer need it.
     EXPECT_EQ(NO_ERROR, mx_close(dir_client), "Unexpected close status");
-    assert(counter++ == 5);
+    ASSERT_EQ(counter++, 5u, "");
 
     // Write to the 'file'. The write should 'transfer' all of write_data_gold.
     // +1 to write the null character too.
     EXPECT_EQ((ssize_t)strlen(write_data_gold) + 1,
               mx_write(file_client, write_data_gold, strlen(write_data_gold) + 1),
               "Unexpected number of bytes written");
-    assert(counter++ == 7);
+    ASSERT_EQ(counter++, 7u, "");
 
     EXPECT_EQ(seek_response_gold,
               mx_seek(file_client, seek_offset_gold, seek_whence_gold),
               "Unexpected seek response");
-    assert(counter++ == 9);
+    ASSERT_EQ(counter++, 9u, "");
 
     // Read from the 'file'. The read should complete in its entirety.
     // Note that we are ignoring the results of 'seek' intentionally.
@@ -174,11 +173,11 @@ bool remoteio_test(void) {
     EXPECT_EQ((ssize_t)strlen(read_data_gold) + 1,
               mx_read(file_client, read_buffer, sizeof(read_buffer)),
               "Unexpected number of bytes read");
-    assert(counter++ == 11);
-    assert(strcmp(read_buffer, read_data_gold) == 0);
+    ASSERT_EQ(counter++, 11u, "");
+    ASSERT_EQ(strcmp(read_buffer, read_data_gold), 0, "read_buffer and read_data_gold should be same");
 
     EXPECT_EQ(NO_ERROR, mx_close(file_client), "Unexpected close status");
-    assert(counter++ == 13);
+    ASSERT_EQ(counter++, 13u, "");
 
     END_TEST;
 }
