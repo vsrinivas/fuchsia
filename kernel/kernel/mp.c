@@ -235,7 +235,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
 
     if (!mp_is_cpu_online(cpu_id)) {
         /* Cannot unplug offline CPU */
-        status = ERR_OFFLINE;
+        status = ERR_BAD_STATE;
         goto cleanup_mutex;
     }
 
