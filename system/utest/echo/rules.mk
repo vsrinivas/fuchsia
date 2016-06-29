@@ -20,13 +20,12 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/echo.c \
-    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/message.c \
     $(LOCAL_DIR)/struct.c
 
 MODULE_NAME := echo-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta
+    ulib/musl ulib/mxio ulib/magenta ulib/mxu
 
 include make/module.mk
