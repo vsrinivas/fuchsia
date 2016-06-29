@@ -17,13 +17,9 @@
 #include <string.h>
 
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
-
-static void fail(const char* function, int line) {
-    printf("mxr tls test failure in " __FILE__ ": %s: line %d\n", function, line);
-    _magenta_exit(-1);
-}
 
 static uint64_t test_values[] = {
     0x0000000000000000ull, 0xffffffffffffffffull, 0x5555555555555555ull,
@@ -40,8 +36,7 @@ static int test_entry_point(void* arg) {
 
     // Test that slots are zeroed out on creation.
     for (size_t idx = 0; idx < num_keys; idx++) {
-        if (mxr_tls_get(keys[idx]))
-            fail(__FUNCTION__, __LINE__);
+        ASSERT_EQ(mxr_tls_get(keys[idx]), NULL, "Inital slots not zeroed");
     }
 
     // Test setting valid values.
@@ -57,8 +52,7 @@ static int test_entry_point(void* arg) {
             sched_yield();
             for (size_t idx = 0; idx < num_keys; ++idx) {
                 uintptr_t new_value = (uintptr_t)mxr_tls_get(keys[idx]);
-                if (new_value != values[idx])
-                    fail(__FUNCTION__, __LINE__);
+                ASSERT_EQ(new_value, values[idx], "tls_get returned wrong value");
             }
         }
     }
@@ -66,21 +60,19 @@ static int test_entry_point(void* arg) {
     return 0;
 }
 
-int main(void) {
-    printf("Starting mxr tls test.\n");
+bool mxr_tls_test(void) {
+    BEGIN_TEST;
 
     for (;;) {
         mxr_tls_t key = mxr_tls_allocate();
         if (key == MXR_TLS_SLOT_INVALID)
             break;
         // We shouldn't allocate too many slots.
-        if (num_keys >= MXR_TLS_SLOT_MAX)
-            fail(__FUNCTION__, __LINE__);
+        ASSERT_LT(num_keys, MXR_TLS_SLOT_MAX, "Too many slots allocated");
         keys[num_keys++] = key;
     }
 
-    if (num_keys == 0)
-        fail(__FUNCTION__, __LINE__);
+    ASSERT_GT(num_keys, 0u, "num_keys should be more than 0");
 
 #define num_threads 64
 
@@ -88,18 +80,25 @@ int main(void) {
 
     for (uintptr_t idx = 0; idx < num_threads; ++idx) {
         mx_status_t status = mxr_thread_create(test_entry_point, (void*)idx, "mxr tls test", threads + idx);
-        if (status != NO_ERROR)
-            fail(__FUNCTION__, __LINE__);
+        ASSERT_EQ(status, NO_ERROR, "Error while thread creation");
     }
 
     for (uintptr_t idx = 0; idx < num_threads; ++idx) {
         mx_status_t status = mxr_thread_join(threads[idx], NULL);
         if (status != NO_ERROR)
-            fail(__FUNCTION__, __LINE__);
+        ASSERT_EQ(status, NO_ERROR, "Error while thread join");
     }
 
     test_entry_point((void*)(uintptr_t)num_threads);
+    END_TEST;
+}
 
-    printf("Finishing mxr tls test.\n");
-    return 0;
+BEGIN_TEST_CASE(mxr_tls_tests)
+RUN_TEST(mxr_tls_test)
+END_TEST_CASE(mxr_tls_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_mxr_tls_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
