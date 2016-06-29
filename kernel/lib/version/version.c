@@ -12,7 +12,7 @@
 #include <lk/init.h>
 
 /* generated for us */
-#include <buildid.h>
+#include <config-buildid.h>
 
 /* ARCH, PLATFORM, TARGET, PROJECT should be defined by the build system */
 

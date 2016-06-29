@@ -13,6 +13,7 @@ MKDIR = if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
 
 # prepends the BUILD_DIR var to each item in the list
 TOBUILDDIR = $(addprefix $(BUILDDIR)/,$(1))
+TOMODULEDIR = $(addprefix $(MODULE_BUILDDIR)/,$(1))
 
 # converts specified variable to boolean value
 TOBOOL = $(if $(filter-out 0 false,$1),true,false)

@@ -34,7 +34,6 @@
 # include make/module.mk
 
 MODULE_SRCDIR := $(MODULE)
-MODULE_BUILDDIR := $(call TOBUILDDIR,$(MODULE_SRCDIR))
 
 ifeq ($(MODULE_TYPE),)
 # add a local include dir to the global include path for kernel code
@@ -55,6 +54,8 @@ HEADER_MODULE_DEPS += $(MODULE_HEADER_DEPS)
 # compute our shortname, which has all of the build system prefix paths removed
 MODULE_SHORTNAME = $(MODULE)
 $(foreach pfx,$(LKPREFIXES),$(eval MODULE_SHORTNAME := $(patsubst $(pfx)%,%,$(MODULE_SHORTNAME))))
+
+MODULE_BUILDDIR := $(call TOBUILDDIR,$(MODULE_SHORTNAME))
 
 #$(info module $(MODULE))
 #$(info MODULE_SRCDIR $(MODULE_SRCDIR))
@@ -93,7 +94,13 @@ MODULE_SRCDEPS += $(KERNEL_CONFIG_HEADER)
 endif
 
 # generate a per-module config.h file
-MODULE_CONFIG := $(MODULE_BUILDDIR)/module_config.h
+MODULE_CONFIG := $(MODULE_BUILDDIR)/config-module.h
+
+# base name for the generated binaries, libraries, etc
+MODULE_OUTNAME := $(MODULE_BUILDDIR)/$(notdir $(MODULE))
+
+# record so we can find for link resolution later
+MODULE_$(MODULE)_OUTNAME := $(MODULE_OUTNAME)
 
 $(MODULE_CONFIG): MODULE_DEFINES:=$(MODULE_DEFINES)
 $(MODULE_CONFIG): configheader
@@ -118,7 +125,7 @@ endif
 #$(info MODULE_OBJS = $(MODULE_OBJS))
 
 # build a ld -r style combined object
-MODULE_OBJECT := $(call TOBUILDDIR,$(MODULE_SRCDIR).mod.o)
+MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
 $(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)
 	@echo linking $@

@@ -27,7 +27,7 @@ endif
 # of the first make pass. This lets modules that haven't been
 # included yet set BUILDID.
 BUILDID_DEFINE="BUILDID=\"$(BUILDID)\""
-BUILDID_H := $(BUILDDIR)/buildid.h
+BUILDID_H := $(BUILDDIR)/config-buildid.h
 $(BUILDID_H): .PHONY
 	@$(call MAKECONFIGHEADER,$@,BUILDID_DEFINE)
 

@@ -66,22 +66,22 @@ $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 	$(NOECHO)cp -f $< $@
 
 # print some information about the build
-$(BUILDDIR)/srcfiles.txt:
-	@echo generating $@
-	$(NOECHO)echo $(sort $(ALLSRCS)) | tr ' ' '\n' > $@
-
-.PHONY: $(BUILDDIR)/srcfiles.txt
-GENERATED += $(BUILDDIR)/srcfiles.txt
-
-$(BUILDDIR)/include_paths.txt:
-	@echo generating $@
-	$(NOECHO)echo $(subst -I,,$(sort $(GLOBAL_INCLUDES))) | tr ' ' '\n' > $@
-
-.PHONY: $(BUILDDIR)/include_paths.txt
-GENERATED += $(BUILDDIR)/include_paths.txt
-
-.PHONY: $(BUILDDIR)/user_include_paths.txt
-GENERATED += $(BUILDDIR)/user_include_paths.txt
+#$(BUILDDIR)/srcfiles.txt:
+#	@echo generating $@
+#	$(NOECHO)echo $(sort $(ALLSRCS)) | tr ' ' '\n' > $@
+#
+#.PHONY: $(BUILDDIR)/srcfiles.txt
+#GENERATED += $(BUILDDIR)/srcfiles.txt
+#
+#$(BUILDDIR)/include-paths.txt:
+#	@echo generating $@
+#	$(NOECHO)echo $(subst -I,,$(sort $(GLOBAL_INCLUDES))) | tr ' ' '\n' > $@
+#
+#.PHONY: $(BUILDDIR)/include-paths.txt
+#GENERATED += $(BUILDDIR)/include-paths.txt
+#
+#.PHONY: $(BUILDDIR)/user-include-paths.txt
+#GENERATED += $(BUILDDIR)/user-include-paths.txt
 
 # userspace app build rule
 # NOTE: another rule in engine.mk adds additional deps to individual .elf files
@@ -113,22 +113,24 @@ $(USER_MANIFEST): usermanifestfile
 
 GENERATED += $(USER_MANIFEST)
 
-# build the mkbootfs tool
-MKBOOTFS := $(BUILDDIR)/system/tools/mkbootfs
+# build useful tools
+MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
+BOOTSERVER := $(BUILDDIR)/tools/bootserver
+LOGLISTENER := $(BUILDDIR)/tools/loglistener
 
-$(MKBOOTFS): system/tools/mkbootfs.c
+$(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
 	@$(MKDIR)
 	$(NOECHO)cc -Wall -o $@ $<
 
-GENERATED += $(MKBOOTFS)
+GENERATED += $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER)
 
 # Manifest Lines are bootfspath=buildpath
 # Extract the part after the = for each line
 # to generate dependencies
 USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(SPACE),$(strip $(x)))))
 
-$(USER_BOOTFS): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
+$(USER_BOOTFS): $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
 	@echo generating $@
 	@$(MKDIR)
 	$(NOECHO)$(MKBOOTFS) -o $(USER_BOOTFS) $(USER_MANIFEST)
