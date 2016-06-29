@@ -224,6 +224,7 @@ MEGA_LIBC := $(BUILDDIR)/sysroot/lib/libc.a
 $(MEGA_LIBC): $(SYSROOT_MEGA_LIBC_OBJS)
 	@$(MKDIR)
 	@echo linking $@
+	@rm -f $@
 	$(NOECHO)$(AR) cr $@ $^
 
 SYSROOT_DEPS += $(MEGA_LIBC)

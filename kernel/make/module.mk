@@ -99,8 +99,12 @@ MODULE_CONFIG := $(MODULE_BUILDDIR)/config-module.h
 # base name for the generated binaries, libraries, etc
 MODULE_OUTNAME := $(MODULE_BUILDDIR)/$(notdir $(MODULE))
 
+# base name for libraries
+MODULE_LIBNAME := $(MODULE_BUILDDIR)/lib$(notdir $(MODULE))
+
 # record so we can find for link resolution later
 MODULE_$(MODULE)_OUTNAME := $(MODULE_OUTNAME)
+MODULE_$(MODULE)_LIBNAME := $(MODULE_LIBNAME)
 
 $(MODULE_CONFIG): MODULE_DEFINES:=$(MODULE_DEFINES)
 $(MODULE_CONFIG): configheader
@@ -148,54 +152,70 @@ endif
 ifeq ($(MODULE_TYPE),)
 # make the rest of the build depend on our output
 ALLMODULE_OBJS := $(ALLMODULE_OBJS) $(MODULE_OBJECT)
+
 else ifeq ($(MODULE_TYPE),userapp)
 MODULE_$(MODULE)_DEPS := $(MODULE_DEPS)
 MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
 USER_MANIFEST_LINES += bin/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
+
 else ifeq ($(MODULE_TYPE),userlib)
 MODULE_$(MODULE)_DEPS := $(MODULE_DEPS)
 
-ifeq ($(ENABLE_BUILD_SYSROOT),true)
-# exported modules have libraries and headers installed in sysroot/...
-ifneq ($(MODULE_EXPORT),)
-
-# where to install our static library:
-MODULE_USERLIB_STATIC := $(BUILDDIR)/sysroot/lib/lib$(MODULE_EXPORT).a
-
-# for now, unify all headers in one pile
-# TODO: ddk, etc should be packaged separately
-MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
-
-MODULE_USERLIB_OBJS := $(MODULE_OBJS)
+# default library objects
+MODULE_LIBRARY_OBJS := $(MODULE_OBJS)
 
 ifeq ($(MODULE_EXPORT),c)
-# locate the crt files in libc, remove them from the objects list,
-# and install them (under the expected name) as standalone .o files
-CRT_NAMES := crt1.c.o crti.s.o crtn.s.o
+# locate the crt files in libc and remove them from the objects list
+MODULE_CRT_NAMES := crt1.c.o crti.s.o crtn.s.o
+$(foreach crt,$(MODULE_CRT_NAMES),\
+	$(eval MODULE_LIBRARY_OBJS := $(filter-out %/$(crt),$(MODULE_LIBRARY_OBJS))))
+else
+MODULE_CRT_NAMES :=
+endif
 
-$(foreach crt,$(CRT_NAMES),\
+# build static library
+MODULE_STATIC_LIB := $(MODULE_LIBNAME).a
+$(MODULE_STATIC_LIB): $(MODULE_LIBRARY_OBJS)
+	@$(MKDIR)
+	@echo linking $@
+	@rm -f $@
+	$(NOECHO)$(AR) cr $@ $^
+
+# always build all libraries
+EXTRA_BUILDDEPS += $(MODULE_STATIC_LIB)
+GENERATED += $(MODULE_STATIC_LIB)
+
+# if the SYSROOT build feature is enabled, we will package
+# up exported libraries, their headers, etc
+ifeq ($(ENABLE_BUILD_SYSROOT),true)
+ifneq ($(MODULE_EXPORT),)
+
+# install crt files if they exist for this module
+ifneq ($(MODULE_CRT_NAME),)
+$(foreach crt,$(MODULE_CRT_NAMES),\
 $(eval CRT_SRC := $(filter %/$(crt),$(MODULE_OBJS)))\
 $(eval CRT_DST := $(BUILDDIR)/sysroot/lib/$(subst .s.o,.o,$(subst .c.o,.o,$(crt))))\
-$(eval MODULE_USERLIB_OBJS := $(filter-out %/$(crt),$(MODULE_USERLIB_OBJS)))\
 $(call copy-dst-src,$(CRT_DST),$(CRT_SRC))\
 $(eval SYSROOT_DEPS += $(CRT_DST))\
 $(eval GENERATED += $(CRT_DST)))
 endif
 
 ifeq ($(filter $(MODULE_EXPORT),$(SYSROOT_MEGA_LIBC)),)
-# build a static library if not part of mega-libc
-$(MODULE_USERLIB_STATIC): $(MODULE_USERLIB_OBJS)
-	@$(MKDIR)
-	@echo linking $@
-	$(NOECHO)$(AR) cr $@ $^
-
-SYSROOT_DEPS += $(MODULE_USERLIB_STATIC)
-GENERATED += $(MODULE_USERLIB_STATIC)
+# if this library has not been pulled into the MEGA LIBC, install it
+TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_EXPORT).a
+$(call copy-dst-src,$(TMP),$(MODULE_STATIC_LIB))
+SYSROOT_DEPS += $(TMP)
+GENERATED += $(TMP)
 else
-SYSROOT_MEGA_LIBC_OBJS += $(MODULE_USERLIB_OBJS)
+# if it is part of MEGA LIBC, record the objects to include
+SYSROOT_MEGA_LIBC_OBJS += $(MODULE_LIBRARY_OBJS)
 endif
+
+# for now, unify all headers in one pile
+# TODO: ddk, etc should be packaged separately
+MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
 
 # locate headers from module source public include dir
 MODULE_PUBLIC_HEADERS := $(shell find $(MODULE_SRCDIR)/include -name \*\.h -or -name \*\.inc)
