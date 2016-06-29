@@ -60,7 +60,7 @@ public:
     constexpr unique_ptr() : ptr_(nullptr) {}
     constexpr unique_ptr(decltype(nullptr)) : unique_ptr() {}
 
-    explicit unique_ptr(T* t) : ptr_(t) {}
+    explicit unique_ptr(T* t) : ptr_(t) { }
 
     ~unique_ptr() {
         if (ptr_) Deleter()(ptr_);
@@ -76,6 +76,18 @@ public:
         reset();
         return *this;
     }
+
+    // Comparison against nullptr operators (of the form, myptr == nullptr).
+    bool operator==(decltype(nullptr)) const { return (ptr_ == nullptr); }
+    bool operator!=(decltype(nullptr)) const { return (ptr_ != nullptr); }
+
+    // Comparison against other unique_ptr<>'s.
+    bool operator==(const unique_ptr& o) const { return ptr_ == o.ptr_; }
+    bool operator!=(const unique_ptr& o) const { return ptr_ != o.ptr_; }
+    bool operator< (const unique_ptr& o) const { return ptr_ <  o.ptr_; }
+    bool operator<=(const unique_ptr& o) const { return ptr_ <= o.ptr_; }
+    bool operator> (const unique_ptr& o) const { return ptr_ >  o.ptr_; }
+    bool operator>=(const unique_ptr& o) const { return ptr_ >= o.ptr_; }
 
     unique_ptr(const unique_ptr& o) = delete;
     unique_ptr& operator=(const unique_ptr& o) = delete;
@@ -133,6 +145,18 @@ public:
         return *this;
     }
 
+    // Comparison against nullptr operators (of the form, myptr == nullptr).
+    bool operator==(decltype(nullptr)) const { return (ptr_ == nullptr); }
+    bool operator!=(decltype(nullptr)) const { return (ptr_ != nullptr); }
+
+    // Comparison against other unique_ptr<>'s.
+    bool operator==(const unique_ptr& o) const { return ptr_ == o.ptr_; }
+    bool operator!=(const unique_ptr& o) const { return ptr_ != o.ptr_; }
+    bool operator< (const unique_ptr& o) const { return ptr_ <  o.ptr_; }
+    bool operator<=(const unique_ptr& o) const { return ptr_ <= o.ptr_; }
+    bool operator> (const unique_ptr& o) const { return ptr_ >  o.ptr_; }
+    bool operator>=(const unique_ptr& o) const { return ptr_ >= o.ptr_; }
+
     unique_ptr(const unique_ptr& o) = delete;
     unique_ptr& operator=(const unique_ptr& o) = delete;
 
@@ -166,6 +190,15 @@ private:
     T* ptr_;
 };
 
-// TODO: operator==, operator!=, operator<, etc
+// Comparison against nullptr operators (of the form, nullptr == myptr) for T and T[]
+template <typename T, typename Deleter>
+static inline bool operator==(decltype(nullptr), const unique_ptr<T, Deleter>& ptr) {
+    return (ptr.get() == nullptr);
+}
+
+template <typename T, typename Deleter>
+static inline bool operator!=(decltype(nullptr), const unique_ptr<T, Deleter>& ptr) {
+    return (ptr.get() != nullptr);
+}
 
 }  // namespace utils

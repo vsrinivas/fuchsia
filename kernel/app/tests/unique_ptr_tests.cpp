@@ -146,6 +146,108 @@ extern "C" int unique_ptr_tests(int argc, const cmd_args* argv)
 
     destroy_count = 0;
 
+    // Test comparison operators.
+    {
+        utils::unique_ptr<int> null_unique;
+        utils::unique_ptr<int> lesser_unique(new int(1));
+        utils::unique_ptr<int> greater_unique(new int(2));
+
+        EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
+        if (lesser_unique.get() > greater_unique.get())
+            lesser_unique.swap(greater_unique);
+
+        // Comparison against nullptr
+        EXPECT_TRUE(   null_unique == nullptr, "");
+        EXPECT_TRUE( lesser_unique != nullptr, "");
+        EXPECT_TRUE(greater_unique != nullptr, "");
+
+        EXPECT_TRUE(nullptr ==    null_unique, "");
+        EXPECT_TRUE(nullptr !=  lesser_unique, "");
+        EXPECT_TRUE(nullptr != greater_unique, "");
+
+        // Comparison against other unique_ptr<>s
+        EXPECT_TRUE( lesser_unique  ==  lesser_unique, "");
+        EXPECT_FALSE( lesser_unique == greater_unique, "");
+        EXPECT_FALSE(greater_unique ==  lesser_unique, "");
+        EXPECT_TRUE(greater_unique  == greater_unique, "");
+
+        EXPECT_FALSE( lesser_unique !=  lesser_unique, "");
+        EXPECT_TRUE ( lesser_unique != greater_unique, "");
+        EXPECT_TRUE (greater_unique !=  lesser_unique, "");
+        EXPECT_FALSE(greater_unique != greater_unique, "");
+
+        EXPECT_FALSE( lesser_unique <   lesser_unique, "");
+        EXPECT_TRUE ( lesser_unique <  greater_unique, "");
+        EXPECT_FALSE(greater_unique <   lesser_unique, "");
+        EXPECT_FALSE(greater_unique <  greater_unique, "");
+
+        EXPECT_FALSE( lesser_unique >   lesser_unique, "");
+        EXPECT_FALSE( lesser_unique >  greater_unique, "");
+        EXPECT_TRUE (greater_unique >   lesser_unique, "");
+        EXPECT_FALSE(greater_unique >  greater_unique, "");
+
+        EXPECT_TRUE ( lesser_unique <=  lesser_unique, "");
+        EXPECT_TRUE ( lesser_unique <= greater_unique, "");
+        EXPECT_FALSE(greater_unique <=  lesser_unique, "");
+        EXPECT_TRUE (greater_unique <= greater_unique, "");
+
+        EXPECT_TRUE ( lesser_unique >=  lesser_unique, "");
+        EXPECT_FALSE( lesser_unique >= greater_unique, "");
+        EXPECT_TRUE (greater_unique >=  lesser_unique, "");
+        EXPECT_TRUE (greater_unique >= greater_unique, "");
+    }
+
+    // Test T[] comparison operators.
+    {
+        utils::unique_ptr<int[]> null_unique;
+        utils::unique_ptr<int[]> lesser_unique(new int[1]);
+        utils::unique_ptr<int[]> greater_unique(new int[2]);
+
+        EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
+        if (lesser_unique.get() > greater_unique.get())
+            lesser_unique.swap(greater_unique);
+
+        // Comparison against nullptr
+        EXPECT_TRUE(   null_unique == nullptr, "");
+        EXPECT_TRUE( lesser_unique != nullptr, "");
+        EXPECT_TRUE(greater_unique != nullptr, "");
+
+        EXPECT_TRUE(nullptr ==    null_unique, "");
+        EXPECT_TRUE(nullptr !=  lesser_unique, "");
+        EXPECT_TRUE(nullptr != greater_unique, "");
+
+        // Comparison against other unique_ptr<>s
+        EXPECT_TRUE( lesser_unique  ==  lesser_unique, "");
+        EXPECT_FALSE( lesser_unique == greater_unique, "");
+        EXPECT_FALSE(greater_unique ==  lesser_unique, "");
+        EXPECT_TRUE(greater_unique  == greater_unique, "");
+
+        EXPECT_FALSE( lesser_unique !=  lesser_unique, "");
+        EXPECT_TRUE ( lesser_unique != greater_unique, "");
+        EXPECT_TRUE (greater_unique !=  lesser_unique, "");
+        EXPECT_FALSE(greater_unique != greater_unique, "");
+
+        EXPECT_FALSE( lesser_unique <   lesser_unique, "");
+        EXPECT_TRUE ( lesser_unique <  greater_unique, "");
+        EXPECT_FALSE(greater_unique <   lesser_unique, "");
+        EXPECT_FALSE(greater_unique <  greater_unique, "");
+
+        EXPECT_FALSE( lesser_unique >   lesser_unique, "");
+        EXPECT_FALSE( lesser_unique >  greater_unique, "");
+        EXPECT_TRUE (greater_unique >   lesser_unique, "");
+        EXPECT_FALSE(greater_unique >  greater_unique, "");
+
+        EXPECT_TRUE ( lesser_unique <=  lesser_unique, "");
+        EXPECT_TRUE ( lesser_unique <= greater_unique, "");
+        EXPECT_FALSE(greater_unique <=  lesser_unique, "");
+        EXPECT_TRUE (greater_unique <= greater_unique, "");
+
+        EXPECT_TRUE ( lesser_unique >=  lesser_unique, "");
+        EXPECT_FALSE( lesser_unique >= greater_unique, "");
+        EXPECT_TRUE (greater_unique >=  lesser_unique, "");
+        EXPECT_TRUE (greater_unique >= greater_unique, "");
+    }
+
     printf("all tests passed\n");
     END_TEST;
 }
