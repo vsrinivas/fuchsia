@@ -109,8 +109,8 @@ ARCH_COMPILEFLAGS += $(ARCH_$(ARCH)_COMPILEFLAGS)
 USER_LINKER_SCRIPT := $(LOCAL_DIR)/user.ld
 
 ifeq ($(CLANG),1)
-GLOBAL_LDFLAGS = -m aarch64elf
-GLOBAL_MODULE_LDFLAGS= -m aarch64elf
+GLOBAL_LDFLAGS += -m aarch64elf
+GLOBAL_MODULE_LDFLAGS += -m aarch64elf
 endif
 GLOBAL_LDFLAGS += -z max-page-size=4096
 

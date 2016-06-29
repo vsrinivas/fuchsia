@@ -83,9 +83,8 @@ GLOBAL_CFLAGS := --std=c11 -Werror-implicit-function-declaration -Wstrict-protot
 GLOBAL_CPPFLAGS := --std=c++11 -fno-exceptions -fno-asynchronous-unwind-tables -fno-rtti -fno-threadsafe-statics -Wconversion
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS := -DASSEMBLY
-GLOBAL_LDFLAGS := -nostdlib
-
-GLOBAL_LDFLAGS += $(addprefix -L,$(LKINC))
+GLOBAL_LDFLAGS := -nostdlib $(addprefix -L,$(LKINC))
+GLOBAL_MODULE_LDFLAGS :=
 
 # Kernel compile flags
 KERNEL_COMPILEFLAGS := -ffreestanding -include $(KERNEL_CONFIG_HEADER)
