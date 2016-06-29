@@ -62,8 +62,6 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_PERMISSION_DENIED;
     case ERR_BAD_PATH:
         return MOJO_RESULT_INVALID_ARGUMENT;
-    case ERR_ALREADY_MOUNTED:
-        return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_IO:
         return MOJO_RESULT_INTERNAL;
     case ERR_NOT_DIR:

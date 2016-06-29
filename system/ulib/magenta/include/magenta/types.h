@@ -275,8 +275,7 @@ typedef struct mx_port_uq_event {
 #define ERR_NOT_BLOCKED         (-100)
 #define ERR_THREAD_DETACHED     (-101)
 
-// TODO: These two are variants of ERR_BAD_STATE
-#define ERR_ALREADY_MOUNTED     (-103)
+// TODO: This is a variant of ERR_BAD_STATE
 #define ERR_NOT_MOUNTED         (-104)
 
 // TODO: One user of this code, remove it.
