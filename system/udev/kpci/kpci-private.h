@@ -22,6 +22,7 @@ typedef struct kpci_device {
     mx_device_t device;
     mx_handle_t handle;
     uint32_t index;
+    mx_pcie_get_nth_info_t info;
     mx_device_prop_t props[7];
 } kpci_device_t;
 

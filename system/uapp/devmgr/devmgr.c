@@ -51,9 +51,11 @@ mx_handle_t devhost_handle;
 
 mxr_mutex_t __devmgr_api_lock = MXR_MUTEX_INIT;
 
+#if !LIBDRIVER
 // vnodes for root driver and protocols
 static vnode_t* vnroot;
 static vnode_t* vnproto;
+#endif
 
 // The Root Driver
 static mx_driver_t root_driver = {
@@ -142,6 +144,9 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
 }
 
 static mx_status_t devmgr_register_with_protocol(mx_device_t* dev, uint32_t proto_id) {
+#if LIBDRIVER
+    return 0;
+#else
     char buf[PNMAX];
     const char* pname = proto_name(proto_id, buf);
 
@@ -154,6 +159,7 @@ static mx_status_t devmgr_register_with_protocol(mx_device_t* dev, uint32_t prot
 
     // TODO: use 0, 1, ... naming here
     return devfs_add_link(vnp, dev->name, dev);
+#endif
 }
 
 static const char* safename(const char* name) {
@@ -173,6 +179,17 @@ static void dev_ref_release(mx_device_t* dev) {
         dev->ops->release(dev);
         DM_LOCK();
     }
+}
+
+static mx_status_t devmgr_driver_probe(mx_device_t* dev) {
+    mx_status_t status;
+
+    if ((status = devmgr_host_process(dev, NULL)) < 0) {
+        return status;
+    }
+    dev->owner = &remote_driver;
+    dev->refcount++;
+    return NO_ERROR;
 }
 
 static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
@@ -311,6 +328,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
         dev->flags |= DEV_FLAG_UNBINDABLE;
     }
 
+#if !LIBDRIVER
     // add device to devfs
     if (!devmgr_is_remote && (parent->vnode != NULL)) {
         vnode_t* vn;
@@ -320,14 +338,18 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
             }
         }
     }
+#endif
 
     if ((dev->flags & DEV_FLAG_UNBINDABLE) == 0) {
         if (!device_is_bound(dev)) {
-            // probe the device with all drivers and initialize if the probe is successful
-            mx_driver_t* drv = NULL;
-            list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-                if (devmgr_device_probe(dev, drv) == NO_ERROR) {
-                    break;
+            // first, look for a specific driver binary for this device
+            if (devmgr_driver_probe(dev) < 0) {
+                // if not found, probe all built-in drivers
+                mx_driver_t* drv = NULL;
+                list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
+                    if (devmgr_device_probe(dev, drv) == NO_ERROR) {
+                        break;
+                    }
                 }
             }
         }
@@ -443,12 +465,14 @@ void devmgr_init(bool devhost) {
     // init device tree
     device_create(&root_dev, &root_driver, "root", &root_device_proto);
 
+#if !LIBDRIVER
     if (!devhost) {
         // init devfs
         vnroot = devfs_get_root();
         root_dev->vnode = vnroot;
         devfs_add_node(&vnproto, vnroot, "protocol", NULL);
     }
+#endif
 
     mxio_dispatcher_create(&devmgr_dispatcher, devhost ? mxio_rio_handler : devmgr_handler);
 }

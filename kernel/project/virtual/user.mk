@@ -26,6 +26,7 @@ MODULES += \
     ulib/mojo \
     ulib/mxio \
     ulib/inet6 \
+    ulib/driver \
     utest \
 
 # if we're not embedding the bootfs, build a standalone image

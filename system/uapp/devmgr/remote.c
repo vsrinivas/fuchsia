@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -429,14 +430,15 @@ mx_status_t devhost_remove(mx_device_t* dev) {
 }
 
 mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
-#if SINGLE_PROCESS
+#if LIBDRIVER
     return ERR_NOT_SUPPORTED;
 #else
     if (devmgr_is_remote) {
         return ERR_NOT_SUPPORTED;
     }
     // pci drivers get their own host process
-    int index = devmgr_get_pcidev_index(dev);
+    uint16_t vid, did;
+    int index = devmgr_get_pcidev_index(dev, &vid, &did);
     if (index < 0) {
         return ERR_NOT_SUPPORTED;
     }
@@ -458,10 +460,21 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
     list_add_tail(&devhost_list, &dh->node);
     mxio_dispatcher_add(devmgr_dispatcher, h0, NULL, dh);
 
-    char name[32];
+    char name[64];
     char arg0[32];
     char arg1[32];
-    snprintf(name, 32, "devhost:pci:%d", index);
+
+    if (drv == NULL) {
+        // check for a specific driver binary for this device
+        snprintf(name, 64, "/boot/bin/driver-pci-%04x-%04x", vid, did);
+        struct stat s;
+        if (stat(name, &s)) {
+            return ERR_NOT_FOUND;
+        }
+    } else {
+        // otherwise launch a devhost
+        snprintf(name, 64, "devhost:pci:%d", index);
+    }
     snprintf(arg0, 32, "pci=%d", index);
     snprintf(arg1, 32, "%p", drv);
     devmgr_launch_devhost(name, h1, arg0, arg1);

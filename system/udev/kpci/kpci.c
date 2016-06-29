@@ -89,6 +89,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     device->device.props = device->props;
     device->device.prop_count = countof(device->props);
 
+    memcpy(&device->info, &info, sizeof(info));
 finished:
     if (status != NO_ERROR) {
         if (device)
@@ -140,9 +141,11 @@ mx_status_t devmgr_create_pcidev(mx_device_t** out, uint32_t index) {
     return kpci_init_child(&_driver_kpci, out, index);
 }
 
-int devmgr_get_pcidev_index(mx_device_t* dev) {
+int devmgr_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did) {
     if (dev->parent == kpci_root_dev) {
         kpci_device_t* pcidev = get_kpci_device(dev);
+        *vid = pcidev->info.vendor_id;
+        *did = pcidev->info.device_id;
         return (int)pcidev->index;
     } else {
         return -1;

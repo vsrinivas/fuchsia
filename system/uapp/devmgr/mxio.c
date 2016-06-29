@@ -85,35 +85,27 @@ fail:
 void devmgr_launch_devhost(const char* name, mx_handle_t h,
                            const char* arg0, const char* arg1) {
     const char* binname = "/boot/bin/devmgr";
+
+    // if absolute path provided, this is a dedicated driver
+    if (name[0] == '/') {
+        binname = name;
+    }
+
     const char* args[3] = {
         binname, arg0, arg1,
     };
+
     mx_handle_t hnd[2];
     uint32_t ids[2];
     ids[0] = MX_HND_TYPE_MXIO_ROOT;
     hnd[0] = vfs_create_root_handle();
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
-    printf("devmgr: launch host: %s %s\n", arg0, arg1);
+    printf("devmgr: launch: %s %s %s\n", name, arg0, arg1);
     mx_status_t r = mxio_start_process_etc(name, 3, (char**)args, 2, hnd, ids);
     if (r < 0) {
         printf("devmgr: launch failed: %d\n", r);
     }
-}
-
-void devmgr_io_init(void) {
-    // setup stdout
-    uint32_t flags = devmgr_is_remote ? MX_LOG_FLAG_DEVICE : MX_LOG_FLAG_DEVMGR;
-    mx_handle_t h;
-    if ((h = _magenta_log_create(flags)) < 0) {
-        return;
-    }
-    mxio_t* logger;
-    if ((logger = mxio_logger_create(h)) == NULL) {
-        return;
-    }
-    close(1);
-    mxio_bind_to_fd(logger, 1);
 }
 
 void devmgr_vfs_init(void* _bootfs, size_t len) {

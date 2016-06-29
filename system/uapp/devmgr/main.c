@@ -29,6 +29,21 @@
 
 #define VC_COUNT 4
 
+void devmgr_io_init(void) {
+    // setup stdout
+    uint32_t flags = devmgr_is_remote ? MX_LOG_FLAG_DEVICE : MX_LOG_FLAG_DEVMGR;
+    mx_handle_t h;
+    if ((h = _magenta_log_create(flags)) < 0) {
+        return;
+    }
+    mxio_t* logger;
+    if ((logger = mxio_logger_create(h)) == NULL) {
+        return;
+    }
+    close(1);
+    mxio_bind_to_fd(logger, 1);
+}
+
 int devicehost(int argc, char** argv) {
     devhost_handle = mxr_process_get_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
     if (devhost_handle <= 0) {
@@ -40,9 +55,8 @@ int devicehost(int argc, char** argv) {
     }
     if (!strncmp(argv[1], "pci=", 4)) {
         uint32_t index = strtoul(argv[1] + 4, NULL, 10);
-        uintptr_t id = strtoull(argv[2], NULL, 10);
 
-        printf("devhost: pci host %d: driver: %p\n", index, (void*)id);
+        printf("devhost: pci host %d\n", index);
         devmgr_init(true);
         mx_device_t* pcidev;
         if (devmgr_create_pcidev(&pcidev, index)) {
@@ -50,9 +64,7 @@ int devicehost(int argc, char** argv) {
             return -1;
         }
         device_add(pcidev, devmgr_device_root());
-        printf("devhost: load drivers\n");
         devmgr_init_builtin_drivers();
-        printf("devhost: message loop\n");
         devmgr_handle_messages();
     }
     printf("devhost: exiting\n");
@@ -81,16 +93,19 @@ int console_starter(void* arg) {
 }
 
 int main(int argc, char** argv) {
-    mx_handle_t bootfs_vmo;
-    mx_status_t status;
-    uint64_t bootfs_size;
-    uintptr_t bootfs_val;
-
     devmgr_io_init();
 
     if (argc > 1) {
         return devicehost(argc, argv);
     }
+
+#if LIBDRIVER
+    printf("device driver - not a standalone executable\n");
+#else
+    mx_handle_t bootfs_vmo;
+    mx_status_t status;
+    uint64_t bootfs_size;
+    uintptr_t bootfs_val;
 
     bootfs_vmo = mxr_process_get_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     status = _magenta_vm_object_get_size(bootfs_vmo, &bootfs_size);
@@ -127,5 +142,6 @@ int main(int argc, char** argv) {
 
     devmgr_handle_messages();
     printf("devmgr: message handler returned?!\n");
+#endif
     return 0;
 }
