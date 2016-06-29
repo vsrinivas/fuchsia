@@ -27,6 +27,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <assert.h>
+#include <lk/init.h>
 #include <kernel/vm.h>
 
 #define LOCAL_TRACE 0

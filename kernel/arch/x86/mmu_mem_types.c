@@ -22,8 +22,8 @@ extern uint8_t g_paddr_width;
 #define IA32_MTRRCAP 0xfe
 #define IA32_MTRR_DEF_TYPE 0x2ff
 #define IA32_MTRR_FIX64K_00000 0x250
-#define IA32_MTRR_FIX16K_80000 0x258
-#define IA32_MTRR_FIX16K_A0000 0x259
+#define IA32_MTRR_NUM_FIX16K 2
+#define IA32_MTRR_FIX16K_80000(x) (0x258 + (x))
 #define IA32_MTRR_NUM_FIX4K 8
 #define IA32_MTRR_FIX4K_C0000(x) (0x268 + (x))
 #define IA32_MTRR_PHYSBASE(x) (0x200 + 2 * (x))
@@ -44,6 +44,11 @@ extern uint8_t g_paddr_width;
 #define MTRR_DEF_TYPE_FIXED_ENABLE(x) ((x) & (1 << 10))
 #define MTRR_DEF_TYPE_TYPE(x) ((uint8_t)(x))
 
+/* IA32_MTRR_DEF_TYPE masks */
+#define MTRR_DEF_TYPE_ENABLE_FLAG (1 << 11)
+#define MTRR_DEF_TYPE_FIXED_ENABLE_FLAG (1 << 10)
+#define MTRR_DEF_TYPE_TYPE_MASK 0xff
+
 /* IA32_MTRR_PHYSBASE read functions */
 #define MTRR_PHYSBASE_BASE(x) ((x) & ~((1 << 12) - 1) & ((1 << g_paddr_width) - 1))
 #define MTRR_PHYSBASE_TYPE(x) ((uint8_t)(x))
@@ -59,6 +64,20 @@ static bool supports_fixed_range = false;
 /* Whether write-combining memory type is supported */
 static bool supports_wc = false;
 
+struct variable_mtrr {
+    uint64_t physbase;
+    uint64_t physmask;
+};
+
+struct mtrrs {
+    uint64_t mtrr_def;
+    uint64_t mtrr_fix64k;
+    uint64_t mtrr_fix16k[IA32_MTRR_NUM_FIX16K];
+    uint64_t mtrr_fix4k[IA32_MTRR_NUM_FIX4K];
+    struct variable_mtrr mtrr_var[];
+};
+static struct mtrrs *target_mtrrs;
+
 /* Function called by all CPUs to setup their PAT */
 static void x86_pat_sync_task(void *context);
 struct pat_sync_task_context {
@@ -67,15 +86,42 @@ struct pat_sync_task_context {
     volatile int barrier2;
 };
 
+extern void* boot_alloc_mem(size_t len);
 void x86_mmu_mem_type_init(void)
 {
     uint64_t caps = read_msr(IA32_MTRRCAP);
     num_variable = MTRRCAP_VCNT(caps);
     supports_fixed_range = MTRRCAP_FIX(caps);
     supports_wc = MTRRCAP_WC(caps);
+
+    target_mtrrs = boot_alloc_mem(
+            sizeof(struct mtrrs) + sizeof(struct variable_mtrr) * num_variable);
+    ASSERT(target_mtrrs);
+
+    target_mtrrs->mtrr_def = read_msr(IA32_MTRR_DEF_TYPE);
+    target_mtrrs->mtrr_fix64k = read_msr(IA32_MTRR_FIX64K_00000);
+    for (uint i = 0; i < IA32_MTRR_NUM_FIX16K; ++i) {
+        target_mtrrs->mtrr_fix16k[i] = read_msr(IA32_MTRR_FIX16K_80000(i));
+    }
+    for (uint i = 0; i < IA32_MTRR_NUM_FIX4K; ++i) {
+        target_mtrrs->mtrr_fix4k[i] = read_msr(IA32_MTRR_FIX4K_C0000(i));
+    }
+    for (uint i = 0; i < num_variable; ++i) {
+        target_mtrrs->mtrr_var[i].physbase = read_msr(IA32_MTRR_PHYSBASE(i));
+        target_mtrrs->mtrr_var[i].physmask = read_msr(IA32_MTRR_PHYSMASK(i));
+    }
+
+    /* Set default MTRR to UC, by Intel's recommendation (section 11.11.2.1).
+     * Some platforms come up with less restrictive caching. */
+    target_mtrrs->mtrr_def &= ~MTRR_DEF_TYPE_TYPE_MASK;
+    target_mtrrs->mtrr_def |= X86_PAT_UC;
+
+    /* Have our changes to the MTRRs take effect */
+    x86_pat_sync();
 }
 
-/* @brief Give all CPUs our Page Attribute Tables
+/* @brief Give all CPUs our Page Attribute Tables and Memory Type Range
+ * Registers
  *
  * This operation is not safe to perform while a CPU may be
  * hotplugged.
@@ -131,6 +177,25 @@ static void x86_pat_sync_task(void *raw_context)
         x86_set_cr3(x86_get_cr3());
     }
 
+    /* Step 8: Disable MTRRs */
+    write_msr(IA32_MTRR_DEF_TYPE, 0);
+
+    /* Step 9: Sync up the MTRR entries */
+    write_msr(IA32_MTRR_FIX64K_00000, target_mtrrs->mtrr_fix64k);
+    for (uint i = 0; i < IA32_MTRR_NUM_FIX16K; ++i) {
+        write_msr(IA32_MTRR_FIX16K_80000(i), target_mtrrs->mtrr_fix16k[i]);
+    }
+    for (uint i = 0; i < IA32_MTRR_NUM_FIX4K; ++i) {
+        write_msr(IA32_MTRR_FIX4K_C0000(i), target_mtrrs->mtrr_fix4k[i]);
+    }
+    for (uint i = 0; i < num_variable; ++i) {
+        write_msr(IA32_MTRR_PHYSBASE(i), target_mtrrs->mtrr_var[i].physbase);
+        write_msr(IA32_MTRR_PHYSMASK(i), target_mtrrs->mtrr_var[i].physmask);
+    }
+
+    /* For now, we leave the MTRRs as the firmware gave them to us, except for
+     * setting the default memory type to uncached */
+
     /* Starting from here, we diverge from the algorithm in 11.11.8.  That
      * algorithm is for MTRR changes, and 11.12.4 suggests using a variant of
      * it.
@@ -148,6 +213,9 @@ static void x86_pat_sync_task(void *raw_context)
     pat_val |= (uint64_t)X86_PAT_INDEX6 << 48;
     pat_val |= (uint64_t)X86_PAT_INDEX7 << 56;
     write_msr(IA32_PAT, pat_val);
+
+    /* Step 10: Re-enable MTRRs (and set the default type) */
+    write_msr(IA32_MTRR_DEF_TYPE, target_mtrrs->mtrr_def);
 
     /* Step 11: Flush all cache and the TLB again */
     __asm volatile ("wbinvd" ::: "memory");
@@ -222,8 +290,9 @@ usage:
         printf("  default: %#02x\n", MTRR_DEF_TYPE_TYPE(default_type));
         if (supports_fixed_range && print_fixed) {
             print_fixed_range_mtrr(IA32_MTRR_FIX64K_00000, 0x00000, (1 << 16));
-            print_fixed_range_mtrr(IA32_MTRR_FIX16K_80000, 0x80000, (1 << 14));
-            print_fixed_range_mtrr(IA32_MTRR_FIX16K_A0000, 0xA0000, (1 << 14));
+            for (int i = 0; i < IA32_MTRR_NUM_FIX16K; ++i) {
+                print_fixed_range_mtrr(IA32_MTRR_FIX16K_80000(i), 0x80000 + i * (1<<17), (1 << 14));
+            }
             for (int i = 0; i < IA32_MTRR_NUM_FIX4K; ++i) {
                 print_fixed_range_mtrr(IA32_MTRR_FIX4K_C0000(i), 0xC0000 + i * (1<<15), (1 << 12));
             }
