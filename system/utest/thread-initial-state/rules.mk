@@ -30,6 +30,6 @@ endif
 
 MODULE_NAME := thread-initial-state-test
 
-MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta
+MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta ulib/mxu
 
 include make/module.mk
