@@ -14,19 +14,18 @@
 
 #include <assert.h>
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
 
 static int key_create(pthread_key_t* tsd_key) {
     int r = pthread_key_create(tsd_key, NULL);
-    assert(r == 0);
     return r;
 }
 
 static int set_key_value(pthread_key_t key, void* value) {
     int r = pthread_setspecific(key, value);
-    assert(r == 0);
     return r;
 }
 
@@ -35,26 +34,29 @@ static pthread_key_t tsd_key1, tsd_key2;
 static void test_tls(int thread_no) {
     int value1 = thread_no;
     int value2 = thread_no + 10;
-    set_key_value(tsd_key1, &value1);
-    set_key_value(tsd_key2, &value2);
+    EXPECT_EQ(set_key_value(tsd_key1, &value1), 0,
+              "Error while setting tls value");
+    EXPECT_EQ(set_key_value(tsd_key2, &value2), 0,
+              "Error while setting tls value");
     _magenta_nanosleep(100 * 1000 * 1000);
     int* v = pthread_getspecific(tsd_key1);
-    assert(*v == value1);
+    EXPECT_EQ(*v, value1, "wrong TLS value for key1");
     v = pthread_getspecific(tsd_key2);
-    assert(*v == value2);
-    printf("tls_test completed for thread: %d\n", thread_no);
+    EXPECT_EQ(*v, value2, "wrong TLS value for key2");
+    unittest_printf("tls_test completed for thread: %d\n", thread_no);
 }
 
 static void* do_work(void* arg) {
-    printf("do_work for thread: %d\n", *(int*)arg);
+    unittest_printf("do_work for thread: %d\n", *(int*)arg);
     test_tls(*(int*)arg);
     return NULL;
 }
 
-int main(void) {
+bool tls_test(void) {
+    BEGIN_TEST;
 #if defined ARCH_X86_64 || defined ARCH_ARM64
-    key_create(&tsd_key1);
-    key_create(&tsd_key2);
+    ASSERT_EQ(key_create(&tsd_key1), 0, "Error while key creation");
+    ASSERT_EQ(key_create(&tsd_key2), 0, "Error while key creation");
 
     // Run this 20 times for sanity check
     for (int i = 1; i <= 20; i++) {
@@ -62,20 +64,30 @@ int main(void) {
 
         pthread_t thread2, thread3;
 
-        printf("creating thread: %d\n", thread_1);
+        unittest_printf("creating thread: %d\n", thread_1);
         pthread_create(&thread2, NULL, do_work, &thread_1);
 
-        printf("creating thread: %d\n", thread_2);
+        unittest_printf("creating thread: %d\n", thread_2);
         pthread_create(&thread3, NULL, do_work, &thread_2);
 
         test_tls(main_thread);
 
-        printf("joining thread: %d\n", thread_1);
+        unittest_printf("joining thread: %d\n", thread_1);
         pthread_join(thread2, NULL);
 
-        printf("joining thread: %d\n", thread_2);
+        unittest_printf("joining thread: %d\n", thread_2);
         pthread_join(thread3, NULL);
     }
 #endif
-    return 0;
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(tls_tests)
+RUN_TEST(tls_test)
+END_TEST_CASE(tls_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_tls_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
