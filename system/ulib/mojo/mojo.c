@@ -116,7 +116,7 @@ mojo_result_t mojo_close(mojo_handle_t handle) {
 }
 
 mojo_result_t mojo_duplicate(mojo_handle_t handle, mojo_handle_t* out_handle) {
-    mx_handle_t result = _magenta_handle_duplicate(handle);
+    mx_handle_t result = _magenta_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS);
     if (result < 0)
         return lk_to_mojo_error(result);
     *out_handle = result;

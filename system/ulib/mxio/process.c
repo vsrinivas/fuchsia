@@ -57,7 +57,7 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
     if (hnds_count < 0)
         return ERR_INVALID_ARGS;
     if (proc) {
-        proc = _magenta_handle_duplicate(proc);
+        proc = _magenta_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
         if (proc < 0) {
             cprintf("start_process: proc duplicate failed %d\n", proc);
             return proc;

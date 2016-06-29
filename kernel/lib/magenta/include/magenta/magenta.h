@@ -23,7 +23,7 @@ class UserProcess;
 Handle* MakeHandle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
 
 // Duplicate a handle created by MakeHandle().
-Handle* DupHandle(Handle* source);
+Handle* DupHandle(Handle* source, mx_rights_t rights);
 
 // Deletes a |handle| made by MakeHandle() or DupHandle().
 void DeleteHandle(Handle* handle);

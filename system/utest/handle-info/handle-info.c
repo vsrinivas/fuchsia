@@ -34,7 +34,7 @@ bool handle_info_test(void) {
     BEGIN_TEST;
 
     mx_handle_t event = _magenta_event_create(0u);
-    mx_handle_t duped = _magenta_handle_duplicate(event);
+    mx_handle_t duped = _magenta_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS);
 
     CHECK(_magenta_handle_get_info(
               event, MX_INFO_HANDLE_VALID, NULL, 0u),
@@ -61,7 +61,37 @@ bool handle_info_test(void) {
     if (info.rights != evr)
         CHECK(0, 1, "wrong set of rights");
 
-    unittest_printf("Done\n");
+    _magenta_handle_close(event);
+    _magenta_handle_close(duped);
+
+    END_TEST;
+}
+
+bool handle_rights_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t event = _magenta_event_create(0u);
+    mx_handle_t duped_ro = _magenta_handle_duplicate(event, MX_RIGHT_READ);
+
+    handle_basic_info_t info = {0};
+    CHECK(_magenta_handle_get_info(
+              duped_ro, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
+          sizeof(info), "handle should be valid");
+
+    if (info.rights != MX_RIGHT_READ)
+        CHECK(0, 1, "wrong set of rights");
+
+    mx_handle_t h;
+
+    h = _magenta_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS);
+    CHECK(h, ERR_ACCESS_DENIED, "should fail rights check");
+
+    h = _magenta_handle_duplicate(event, MX_RIGHT_EXECUTE | MX_RIGHT_READ);
+    CHECK(h, ERR_INVALID_ARGS, "cannot upgrade rights");
+
+    _magenta_handle_close(event);
+    _magenta_handle_close(duped_ro);
+
     END_TEST;
 }
 

@@ -63,9 +63,9 @@ Handle* MakeHandle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     return handle_arena.New(utils::move(dispatcher), rights);
 }
 
-Handle* DupHandle(Handle* source) {
+Handle* DupHandle(Handle* source, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
-    return handle_arena.New(*source);
+    return handle_arena.New(source, rights);
 }
 
 void DeleteHandle(Handle* handle) {

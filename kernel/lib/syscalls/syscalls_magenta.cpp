@@ -259,7 +259,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     return NO_ERROR ;
 }
 
-mx_handle_t sys_handle_duplicate(mx_handle_t handle_value) {
+mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
     LTRACEF("handle %u\n", handle_value);
 
     auto up = UserProcess::GetCurrent();
@@ -269,11 +269,17 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value) {
         AutoLock lock(up->handle_table_lock());
         Handle* source = up->GetHandle_NoLock(handle_value);
         if (!source)
-            return ERR_INVALID_ARGS;
+            return ERR_BAD_HANDLE;
 
         if (!magenta_rights_check(source->rights(), MX_RIGHT_DUPLICATE))
             return ERR_ACCESS_DENIED;
-        dest.reset(DupHandle(source));
+        if (rights == MX_RIGHT_SAME_RIGHTS) {
+            dest.reset(DupHandle(source, source->rights()));
+        } else {
+            if ((source->rights() & rights) != rights)
+                return ERR_INVALID_ARGS;
+            dest.reset(DupHandle(source, rights));
+        }
     }
 
     if (!dest)

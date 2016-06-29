@@ -280,7 +280,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
         }
         msg->handle[0] = h0;
         if (dev->event > 0) {
-            if ((msg->handle[1] = _magenta_handle_duplicate(dev->event)) < 0) {
+            if ((msg->handle[1] = _magenta_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS)) < 0) {
                 _magenta_handle_close(h0);
                 _magenta_handle_close(h1);
                 free(newios);

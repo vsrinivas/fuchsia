@@ -129,7 +129,7 @@ static mx_handle_t vnd_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
         return 1;
     }
 
-    if ((handles[1] = _magenta_handle_duplicate(dev->event)) < 0) {
+    if ((handles[1] = _magenta_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS)) < 0) {
         _magenta_handle_close(handles[0]);
         return handles[1];
     }

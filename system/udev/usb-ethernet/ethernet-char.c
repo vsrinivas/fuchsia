@@ -103,7 +103,7 @@ static mx_status_t ethernet_char_bind(mx_driver_t* driver, mx_device_t* device) 
     eth->char_device.protocol_ops = &ethernet_char_proto;
 
     // duplicate ethernet device status to retweet readable/writable events
-    mx_handle_t event_handle = _magenta_handle_duplicate(device->event);
+    mx_handle_t event_handle = _magenta_handle_duplicate(device->event, MX_RIGHT_SAME_RIGHTS);
     if (event_handle < 0) {
         free(eth);
         return event_handle;

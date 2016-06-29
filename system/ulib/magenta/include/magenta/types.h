@@ -53,6 +53,7 @@ typedef uint32_t mx_rights_t;
 #define MX_RIGHT_READ             ((mx_rights_t)1u << 2)
 #define MX_RIGHT_WRITE            ((mx_rights_t)1u << 3)
 #define MX_RIGHT_EXECUTE          ((mx_rights_t)1u << 4)
+#define MX_RIGHT_SAME_RIGHTS      ((mx_rights_t)1u << 31)
 
 // flags to vm map routines
 #define MX_VM_FLAG_FIXED          (1u << 0)

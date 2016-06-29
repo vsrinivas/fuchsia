@@ -166,7 +166,7 @@ static void message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes)
 
 static mx_handle_t handle_duplicate(mx_handle_t handle)
 {
-    mx_handle_t h = _magenta_handle_duplicate(handle);
+    mx_handle_t h = _magenta_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS);
     if (h < 0)
         syscall_fail("handle_duplicate", h);
     return h;

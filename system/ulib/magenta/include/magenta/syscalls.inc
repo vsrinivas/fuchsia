@@ -63,7 +63,7 @@ MAGENTA_SYSCALL_DEF(4, 3, 32, mx_status_t, log_read,
 
 // Generic handle operations
 MAGENTA_SYSCALL_DEF(1, 1, 40, mx_status_t, handle_close, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(1, 1, 41, mx_handle_t, handle_duplicate, mx_handle_t handle)
+MAGENTA_SYSCALL_DEF(2, 2, 41, mx_handle_t, handle_duplicate, mx_handle_t handle, mx_rights_t rights)
 MAGENTA_SYSCALL_DEF(5, 6, 42, mx_status_t, handle_wait_one, mx_handle_t handle, mx_signals_t signals,
                     mx_time_t timeout, mx_signals_t* satisfied_signals, mx_signals_t* satisfiable_signals)
 MAGENTA_SYSCALL_DEF(6, 8, 43, mx_status_t, handle_wait_many, uint32_t count, const mx_handle_t* handles,
