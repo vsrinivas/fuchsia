@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := qsort-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/runtime ulib/mxu
+    ulib/musl ulib/mxio ulib/magenta ulib/mxu
 
 include make/module.mk

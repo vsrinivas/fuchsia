@@ -66,7 +66,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <runtime/atomic.h>
 #include <runtime/compiler.h>
 
 #define PRINT_BUFFER_SIZE (512)
@@ -145,8 +144,8 @@ void unittest_set_output_function(test_output_func fun, void* arg);
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
  * and that call the EXPECT_ macros.
  */
-#define BEGIN_TEST atomic_store_bool(&current_test_info->all_ok, true)
-#define END_TEST return atomic_load_bool(&current_test_info->all_ok)
+#define BEGIN_TEST current_test_info->all_ok = true
+#define END_TEST return current_test_info->all_ok
 
 #ifdef __cplusplus
 #define AUTO_TYPE_VAR(type) auto&
@@ -167,40 +166,40 @@ void unittest_set_output_function(test_output_func fun, void* arg);
                 "        Comparison failed: %s %s %s is false\n"      \
                 "        Specifically, %ld %s %ld is false\n",        \
                 msg, lhs_str, #op, rhs_str, _lhs_val, #op, _rhs_val); \
-            atomic_store_bool(&current_test_info->all_ok, false);     \
+            current_test_info->all_ok = false;                        \
             ret;                                                      \
         }                                                             \
     } while (0)
 
-#define UT_TRUE(actual, msg, ret)                             \
-    if (!(actual)) {                                          \
-        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual);   \
-        atomic_store_bool(&current_test_info->all_ok, false); \
-        ret;                                                  \
+#define UT_TRUE(actual, msg, ret)                           \
+    if (!(actual)) {                                        \
+        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual); \
+        current_test_info->all_ok = false;                  \
+        ret;                                                \
     }
 
-#define UT_FALSE(actual, msg, ret)                            \
-    if (actual) {                                             \
-        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual);    \
-        atomic_store_bool(&current_test_info->all_ok, false); \
-        ret;                                                  \
+#define UT_FALSE(actual, msg, ret)                         \
+    if (actual) {                                          \
+        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual); \
+        current_test_info->all_ok = false;                 \
+        ret;                                               \
     }
 
 #define UT_BYTES_EQ(expected, actual, length, msg, ret)                   \
     if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
-        atomic_store_bool(&current_test_info->all_ok, false);             \
+        current_test_info->all_ok = false;                                \
         ret;                                                              \
     }
 
-#define UT_BYTES_NE(bytes1, bytes2, length, msg, ret)         \
-    if (!memcmp(bytes1, bytes2, length)) {                    \
-        UNITTEST_TRACEF(                                      \
-            "%s and %s are the same; "                        \
-            "expected different\n",                           \
-            #bytes1, #bytes2);                                \
-        hexdump8(bytes1, length);                             \
-        atomic_store_bool(&current_test_info->all_ok, false); \
-        ret;                                                  \
+#define UT_BYTES_NE(bytes1, bytes2, length, msg, ret) \
+    if (!memcmp(bytes1, bytes2, length)) {            \
+        UNITTEST_TRACEF(                              \
+            "%s and %s are the same; "                \
+            "expected different\n",                   \
+            #bytes1, #bytes2);                        \
+        hexdump8(bytes1, length);                     \
+        current_test_info->all_ok = false;            \
+        ret;                                          \
     }
 
 /* For comparing uint64_t, like hw_id_t. */
@@ -210,7 +209,7 @@ void unittest_set_output_function(test_output_func fun, void* arg);
         const AUTO_TYPE_VAR(actual) _a = (actual);                            \
         if (_e != _a) {                                                       \
             UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a); \
-            atomic_store_bool(&current_test_info->all_ok, false);             \
+            current_test_info->all_ok = false;                                \
             ret;                                                              \
         }                                                                     \
     } while (0)

@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := bad-syscall-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/magenta ulib/mxio ulib/runtime ulib/mxu
+    ulib/musl ulib/magenta ulib/mxio ulib/mxu
 
 include make/module.mk
