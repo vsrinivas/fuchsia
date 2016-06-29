@@ -69,6 +69,58 @@ static uint32_t power_button_event_handler(void* ctx)
     return ACPI_INTERRUPT_HANDLED;
 }
 
+static void notify_event_handler(ACPI_HANDLE Device, UINT32 Value, void* Context)
+{
+    ACPI_DEVICE_INFO *info = NULL;
+    ACPI_STATUS status = AcpiGetObjectInfo(Device, &info);
+    if (status != AE_OK) {
+        if (info) {
+            ACPI_FREE(info);
+        }
+        return;
+    }
+
+    /* Handle powerbutton events via the notify interface */
+    bool power_btn = false;
+    if (info->Valid & ACPI_VALID_HID) {
+        if (Value == 128 &&
+            !strncmp(info->HardwareId.String, "PNP0C0C", info->HardwareId.Length)) {
+
+            power_btn = true;
+        } else if (Value == 199 &&
+                   (!strncmp(info->HardwareId.String, "MSHW0028", info->HardwareId.Length) ||
+                    !strncmp(info->HardwareId.String, "MSHW0040", info->HardwareId.Length))) {
+            power_btn = true;
+        }
+    }
+
+    if (power_btn) {
+        port_packet_t packet = { {"1"} };
+        port_write((port_t)Context, &packet, 1);
+    }
+
+    ACPI_FREE(info);
+}
+
+static int power_button_thread(void* arg) {
+    port_t port;
+    if (port_open(POWER_BUTTON_PORT, NULL, &port) < 0) {
+        printf("acpi power button port open failed\n");
+        return -1;
+    }
+
+    port_result_t pr;
+    for(;;) {
+        if (port_read(port, INFINITE_TIME, &pr) < 0) {
+            break;
+        }
+        acpi_poweroff();
+    }
+
+    printf("acpi power button thread terminated\n");
+    return 0;
+}
+
 /**
  * @brief Initialize the entire ACPI subsystem
  *
@@ -140,6 +192,12 @@ void platform_init_acpi(void)
     }
 
     acpi_ec_init();
+
+    /* HACKs to make the power button power off the machine */
+    AcpiInstallNotifyHandler(ACPI_ROOT_OBJECT, ACPI_SYSTEM_NOTIFY | ACPI_DEVICE_NOTIFY, notify_event_handler, power_button_port);
+    thread_t* th = thread_create("acpi-powerbtn", power_button_thread, NULL,
+                                 DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_resume(th);
 
     LTRACEF("ACPI initialized\n");
 }
