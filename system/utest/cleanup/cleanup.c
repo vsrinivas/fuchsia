@@ -18,6 +18,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <mxu/unittest.h>
 
 static const char* msg = "This is a test message, please discard.";
 
@@ -25,14 +26,13 @@ volatile int test_state = 0;
 
 int watchdog(void* arg) {
     _magenta_nanosleep(100 * 1000 * 1000);
-    if (test_state < 100) {
-        printf("cleanup-test: FAILED. Stuck waiting in test%d\n", test_state);
-    }
+    EXPECT_GE(test_state, 100, "cleanup-test: FAILED. Stuck waiting in test");
     _magenta_thread_exit();
     return 0;
 }
 
-int main(int argc, char** argv) {
+bool cleanup_test(void) {
+    BEGIN_TEST;
     mx_handle_t p0tx, p0rx, p1tx, p1rx;
     mx_signals_t pending;
     mx_status_t r;
@@ -42,23 +42,17 @@ int main(int argc, char** argv) {
     // TEST1
     // Create a pipe, close one end, try to wait on the other.
     test_state = 1;
-    if ((p1tx = _magenta_message_pipe_create(&p1rx)) < 0) {
-        printf("cleanup-test: pipe create 1 failed: %d\n", p1tx);
-        return -1;
-    }
+    p1tx = _magenta_message_pipe_create(&p1rx);
+    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 1 failed");
+
     _magenta_handle_close(p1rx);
-    printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
+    unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
     r = _magenta_handle_wait_one(p1tx, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending, NULL);
-    if (r) {
-        printf("cleanup-test: FAILED, error %d\n", r);
-        return -1;
-    }
-    if (pending != MX_SIGNAL_PEER_CLOSED) {
-        printf("cleanup-test: FAILED, pending=%x, not PEER_CLOSED\n", pending);
-        return -1;
-    }
-    printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
+    ASSERT_EQ(r, 0, "cleanup-test: FAILED");
+
+    ASSERT_EQ(pending, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
+    unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
     _magenta_handle_close(p1tx);
     _magenta_handle_close(p1rx);
 
@@ -69,30 +63,19 @@ int main(int argc, char** argv) {
     // fails (because the other end is closed) The event should still
     // be usable from this process.
     test_state = 2;
-    if ((p1tx = _magenta_message_pipe_create(&p1rx)) < 0) {
-        printf("cleanup-test: pipe create 1 failed: %d\n", p1tx);
-        return -1;
-    }
+    p1tx = _magenta_message_pipe_create(&p1rx);
+    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 1 failed");
     _magenta_handle_close(p1rx);
 
     mx_handle_t event = _magenta_event_create(0u);
-    if (event < 0) {
-        printf("cleanup-test: event create failed: %d\n", p1tx);
-        return -1;
-    }
 
+    ASSERT_GE(event, 0, "cleanup-test: event create failed");
     r = _magenta_message_write(p1tx, &msg, sizeof(msg), &event, 1, 0);
-    if (r != ERR_BAD_STATE) {
-        printf("cleanup-test: unexpected message_write return code: %d\n", r);
-        return -1;
-    }
+    ASSERT_EQ(r, ERR_BAD_STATE, "cleanup-test: unexpected message_write return code");
 
-    if ((r = _magenta_event_signal(event)) < 0) {
-        printf("cleanup-test: unable to signal event!\n");
-        return -1;
-    }
-
-    printf("cleanup-test: SUCCESS, event is alive\n\n");
+    r = _magenta_event_signal(event);
+    ASSERT_GE(r, 0, "cleanup-test: unable to signal event!");
+    unittest_printf("cleanup-test: SUCCESS, event is alive\n\n");
 
     _magenta_handle_close(event);
     _magenta_handle_close(p1tx);
@@ -107,38 +90,37 @@ int main(int argc, char** argv) {
     // be closed and waiting on the opposing handle should
     // signal PEER_CLOSED.
     test_state = 3;
-    if ((p0tx = _magenta_message_pipe_create(&p0rx)) < 0) {
-        printf("cleanup-test: pipe create 0 failed: %d\n", p0tx);
-        return -1;
-    }
+    p0tx = _magenta_message_pipe_create(&p0rx);
+    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 0 failed");
 
-    if ((p1tx = _magenta_message_pipe_create(&p1rx)) < 0) {
-        printf("cleanup-test: pipe create 1 failed: %d\n", p1tx);
-        return -1;
-    }
+    p1tx = _magenta_message_pipe_create(&p1rx);
+    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 1 failed");
 
-    if ((r = _magenta_message_write(p0tx, &msg, sizeof(msg), &p1rx, 1, 0)) < 0) {
-        printf("cleanup-test: pipe write failed: %d\n", r);
-        return -1;
-    }
+    r = _magenta_message_write(p0tx, &msg, sizeof(msg), &p1rx, 1, 0);
+    ASSERT_GE(r, 0, "cleanup-test: pipe write failed");
 
     _magenta_handle_close(p0tx);
     _magenta_handle_close(p0rx);
 
-    printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
+    unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
     r = _magenta_handle_wait_one(p1tx, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending, NULL);
-    if (r) {
-        printf("cleanup-test: FAILED, error %d\n", r);
-        return -1;
-    }
-    if (pending != MX_SIGNAL_PEER_CLOSED) {
-        printf("cleanup-test: FAILED, pending=%x, not PEER_CLOSED\n", pending);
-        return -1;
-    }
+    ASSERT_EQ(r, 0, "cleanup-test: FAILED");
+
+    ASSERT_EQ(pending, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
 
     test_state = 100;
-    printf("cleanup-test: PASSED\n");
+    unittest_printf("cleanup-test: PASSED\n");
     _magenta_handle_close(p1tx);
-    return 0;
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(cleanup_tests)
+RUN_TEST(cleanup_test)
+END_TEST_CASE(cleanup_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_cleanup_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
