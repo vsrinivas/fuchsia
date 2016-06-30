@@ -20,12 +20,22 @@
 
 #include <magenta/prctl.h>
 #include <magenta/syscalls.h>
+#include <mxu/unittest.h>
 
-static void fail(const char* function, int line, const char* message) {
-    printf("arch_registers test failure in " __FILE__ ": %s: line %d:%s\n", function, line,
-           message);
-    _magenta_exit(-1);
-}
+#define THREAD_ASSERT_FALSE(exp, msg) \
+    bool val = (exp);                 \
+    EXPECT_FALSE(val, msg);           \
+    if (val) {                        \
+        _magenta_thread_exit();       \
+    }
+
+#define THREAD_ASSERT_EQ(exp1, exp2, msg)    \
+    const AUTO_TYPE_VAR(exp2) val2 = (exp2); \
+    const AUTO_TYPE_VAR(exp1) val1 = (exp1); \
+    EXPECT_EQ(val1, val2, msg);              \
+    if (val1 != val2) {                      \
+        _magenta_thread_exit();              \
+    }
 
 typedef uintptr_t (*register_getter)(mx_handle_t);
 typedef void (*register_setter)(mx_handle_t, uintptr_t);
@@ -47,8 +57,7 @@ static uintptr_t tpidrro_el0_get(mx_handle_t handle) {
 }
 static void tpidrro_el0_set(mx_handle_t handle, uintptr_t value) {
     mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_TPIDRRO_EL0, &value);
-    if (status != NO_ERROR)
-        fail(__FUNCTION__, __LINE__, " failed to set!");
+    THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
 static register_ops ops[] = {
     {
@@ -67,8 +76,7 @@ static uintptr_t cp15_readonly_get(mx_handle_t handle) {
 }
 static void cp15_readonly_set(mx_handle_t handle, uintptr_t value) {
     mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_CP15_READONLY, &value);
-    if (status != NO_ERROR)
-        fail(__FUNCTION__, __LINE__, " failed to set!");
+    THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
 static uintptr_t cp15_readwrite_get(mx_handle_t handle) {
     uintptr_t value;
@@ -96,27 +104,27 @@ static uintptr_t make_valid_value(uintptr_t value) {
 static uintptr_t fs_get(mx_handle_t handle) {
     uintptr_t value;
     mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_GET_FS, &value);
-    if (status != NO_ERROR)
-        fail(__FUNCTION__, __LINE__, " failed to get!");
+    THREAD_ASSERT_EQ(status, NO_ERROR, "failed to get!");
     return value;
 }
+
 static void fs_set(mx_handle_t handle, uintptr_t value) {
     mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_FS, &value);
-    if (status != NO_ERROR)
-        fail(__FUNCTION__, __LINE__, " failed to set!");
+    THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
+
 static uintptr_t gs_get(mx_handle_t handle) {
     uintptr_t value;
     mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_GET_GS, &value);
-    if (status != NO_ERROR)
-        fail(__FUNCTION__, __LINE__, " failed to get!");
+    THREAD_ASSERT_EQ(status, NO_ERROR, "failed to get!");
     return value;
 }
+
 static void gs_set(mx_handle_t handle, uintptr_t value) {
     mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_GS, &value);
-    if (status != NO_ERROR)
-        fail(__FUNCTION__, __LINE__, " failed to set!");
+    THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
+
 static register_ops ops[] = {
     {
         &fs_get, &fs_set, "fs",
@@ -136,9 +144,7 @@ static uint8_t vaddr_bits(void) {
 
 static uintptr_t make_valid_value(uintptr_t value) {
     uint8_t vaddr_len = vaddr_bits();
-    if (vaddr_len < 32) {
-        fail(__FUNCTION__, __LINE__, " invalid vaddr len");
-    }
+    THREAD_ASSERT_FALSE(vaddr_len < 32, "invalid vaddr len");
     value &= (1 << vaddr_len) - 1;
     bool sign = !!(value & (1 << (vaddr_len - 1)));
     if (sign) {
@@ -177,8 +183,7 @@ static int test_entry_point(void* arg) {
                 o->set(*c->thread, real_value);
                 sched_yield();
                 uintptr_t new_value = o->get(*c->thread);
-                if (new_value != real_value)
-                    fail(__FUNCTION__, __LINE__, o->name);
+                ASSERT_EQ(new_value, real_value, o->name);
             }
         }
     }
@@ -186,12 +191,10 @@ static int test_entry_point(void* arg) {
     // Test bad op.
     uintptr_t value = (uintptr_t)0xabcdabcdabcdabcdull;
     mx_status_t status = _magenta_thread_arch_prctl(*c->thread, 42, &value);
-    if (status != ERR_INVALID_ARGS)
-        fail(__FUNCTION__, __LINE__, "failed to reject bad op");
+    ASSERT_EQ(status, ERR_INVALID_ARGS, "failed to reject bad op");
     for (size_t op_idx = 0; op_idx < sizeof(ops) / sizeof(*ops); ++op_idx) {
         uintptr_t current_value = ops[op_idx].get(*c->thread);
-        if (current_value == value)
-            fail(__FUNCTION__, __LINE__, "modified value in invalid call");
+        ASSERT_NEQ(current_value, value, "modified value in invalid call");
     }
 
     // TODO(kulakowski) Re-enable this part of the test once we figure
@@ -214,9 +217,8 @@ static int test_entry_point(void* arg) {
     return 0;
 }
 
-int main(void) {
-    printf("Starting arch register test.\n");
-
+bool arch_register_test(void) {
+    BEGIN_TEST;
 #define num_threads 64
 
     mx_handle_t threads[num_threads] = {0};
@@ -227,20 +229,27 @@ int main(void) {
 
         contexts[idx] = (context){(1ull << idx), threads + idx};
         threads[idx] = _magenta_thread_create(test_entry_point, contexts + idx, thread_name, strlen(thread_name));
-        if (threads[idx] < 0)
-            fail(__FUNCTION__, __LINE__, "failed to create thread");
+        ASSERT_GE(threads[idx], 0, "failed to create thread");
     }
 
     for (uintptr_t idx = 0; idx < num_threads; ++idx) {
         mx_status_t result = _magenta_handle_wait_one(threads[idx], MX_SIGNAL_SIGNALED,
                                                       MX_TIME_INFINITE, NULL, NULL);
-        if (result != NO_ERROR)
-            fail(__FUNCTION__, __LINE__, "failed to join thread");
+        ASSERT_EQ(result, NO_ERROR, "failed to join thread");
         result = _magenta_handle_close(threads[idx]);
-        if (result != NO_ERROR)
-            fail(__FUNCTION__, __LINE__, "failed to close thread handle");
+        ASSERT_EQ(result, NO_ERROR, "failed to join thread");
     }
 
-    printf("Finishing arch register test.\n");
+    END_TEST;
     return 0;
+}
+
+BEGIN_TEST_CASE(arch_register_tests)
+RUN_TEST(arch_register_test)
+END_TEST_CASE(arch_register_tests)
+
+int main(void) {
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_arch_register_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
