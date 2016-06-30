@@ -148,7 +148,7 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
                 break;
         }
     } else {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally PCI Express "
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal PCI Express "
                "capability structure version (%u).\n",
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,
