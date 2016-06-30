@@ -35,27 +35,22 @@
 constexpr size_t kMaxHandleCount = 8 * 1024;
 
 // The handle arena and its mutex.
-mutex_t handle_mutex;
+mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);
 utils::TypedArena<Handle> handle_arena;
 
 // The process list, id and its mutex.
-mutex_t process_mutex;
-uint32_t next_process_id = 4u;
+mutex_t process_mutex = MUTEX_INITIAL_VALUE(process_mutex);
+uint32_t next_process_id = 0u;
 utils::DoublyLinkedList<UserProcess> process_list;
 
 // The system exception handler
 static utils::RefPtr<Dispatcher> system_exception_handler;
 static mx_exception_behaviour_t system_exception_behaviour;
-static mutex_t system_exception_mutex;
+static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mutex);
 
 void magenta_init(uint level) {
-    mutex_init(&handle_mutex);
     handle_arena.Init("handles", kMaxHandleCount);
-
-    mutex_init(&process_mutex);
-
     system_exception_behaviour = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
-    mutex_init(&system_exception_mutex);
 }
 
 Handle* MakeHandle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
@@ -115,7 +110,7 @@ uint32_t AddProcess(UserProcess* process) {
     // Don't call any method of |process|, it is not yet fully constructed.
     AutoLock lock(&process_mutex);
     ++next_process_id;
-    process_list.push_front(process);
+    process_list.push_back(process);
     LTRACEF("Adding process %p : id = %u\n", process, next_process_id);
     return next_process_id;
 }
@@ -128,10 +123,11 @@ void RemoveProcess(UserProcess* process) {
 
 void DebugDumpProcessList() {
     AutoLock lock(&process_mutex);
-    printf("ps: [id] [#threads] [#handles] [addr] [name]\n");
+    printf("ps: [id] [state] [#threads] [#handles] [addr] [name]\n");
     utils::for_each(&process_list, [](UserProcess* process) {
-        printf("%3u %3u %3u %p %s\n",
+        printf("%3u %c %3u %3u %p %s\n",
             process->id(),
+            process->StateChar(),
             process->ThreadCount(),
             process->HandleCount(),
             process,

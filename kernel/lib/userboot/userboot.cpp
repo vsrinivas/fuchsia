@@ -15,8 +15,12 @@
 #include <magenta/vm_object_dispatcher.h>
 #include <platform.h>
 #include <stdio.h>
+#include <trace.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <magenta/user_process.h>
+#include <magenta/vm_object_dispatcher.h>
 
 #define USERBOOT_PAYLOAD 0x2000000
 
@@ -28,6 +32,8 @@ static int join_thread(void* arg) {
     //delete proc;
     return 0;
 }
+
+static utils::RefPtr<UserProcess> userboot_process;
 
 static int attempt_userboot(const void* userboot, size_t ublen,
                             const void* bootfs, size_t bfslen) {
@@ -41,7 +47,7 @@ static int attempt_userboot(const void* userboot, size_t ublen,
         dprintf(INFO, "userboot: ramdisk  @%p (%zd)\n", rbase, rsize);
     }
 
-    utils::unique_ptr<UserProcess> proc(new UserProcess("userboot"));
+    auto proc = utils::AdoptRef(new UserProcess("userboot"));
     if (!proc) {
         return ERR_NO_MEMORY;
     }
@@ -98,7 +104,10 @@ static int attempt_userboot(const void* userboot, size_t ublen,
     // create a thread to Join and delete the UserProcess so we don't leak
     thread_detach_and_resume(thread_create("join_thread", &join_thread, proc.get(),
                                            DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
-    proc.release();
+
+    // hold onto a global ref to this
+    userboot_process = utils::move(proc);
+
     return NO_ERROR;
 }
 

@@ -14,8 +14,7 @@ class UserThread;
 
 class ThreadDispatcher : public Dispatcher {
 public:
-    // Does not take ownership of |thread|
-    static status_t Create(UserThread* thread, utils::RefPtr<Dispatcher>* dispatcher,
+    static status_t Create(utils::RefPtr<UserThread> thread, utils::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
     virtual ~ThreadDispatcher() final;
@@ -27,9 +26,9 @@ public:
     status_t MarkExceptionHandled(mx_exception_status_t status);
 
 private:
-    explicit ThreadDispatcher(UserThread* thread);
+    explicit ThreadDispatcher(utils::RefPtr<UserThread> thread);
 
-    UserThread* thread() { return thread_; }
+    UserThread* thread() { return thread_.get(); }
 
-    UserThread* thread_;
+    utils::RefPtr<UserThread> thread_;
 };

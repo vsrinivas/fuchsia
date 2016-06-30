@@ -7,13 +7,16 @@
 #include <magenta/process_owner_dispatcher.h>
 
 #include <err.h>
+#include <trace.h>
+
+#define LOCAL_TRACE 0
 
 constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_TRANSFER;
 
 status_t ProcessOwnerDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher,
                                         mx_rights_t* rights,
                                         utils::StringPiece name) {
-    utils::unique_ptr<UserProcess> new_process(new UserProcess(name));
+    auto new_process = utils::AdoptRef(new UserProcess(name));
     if (!new_process)
         return ERR_NO_MEMORY;
 
@@ -26,15 +29,19 @@ status_t ProcessOwnerDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher,
     return (*dispatcher) ? NO_ERROR : ERR_NO_MEMORY;
 }
 
-ProcessOwnerDispatcher::ProcessOwnerDispatcher(utils::unique_ptr<UserProcess> process)
-    : process_(utils::move(process)) {}
+ProcessOwnerDispatcher::ProcessOwnerDispatcher(utils::RefPtr<UserProcess> process)
+    : process_(utils::move(process)) {
+    LTRACE_ENTRY_OBJ;
+}
 
 ProcessOwnerDispatcher::~ProcessOwnerDispatcher() {
-    process_->Close();
+    LTRACE_ENTRY_OBJ;
+
+    process_->DispatcherClosed();
 }
 
 Waiter* ProcessOwnerDispatcher::get_waiter() {
-    return process_->GetWaiter();
+    return process_->waiter();
 }
 
 status_t ProcessOwnerDispatcher::Start(mx_handle_t handle, mx_vaddr_t entry) {
@@ -47,7 +54,7 @@ mx_handle_t ProcessOwnerDispatcher::AddHandle(HandleUniquePtr handle) {
     return hv;
 }
 
-status_t ProcessOwnerDispatcher::GetInfo(mx_process_info_t *info) {
+status_t ProcessOwnerDispatcher::GetInfo(mx_process_info_t* info) {
     return process_->GetInfo(info);
 }
 

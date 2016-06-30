@@ -23,7 +23,7 @@ public:
     static status_t Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights, utils::StringPiece name);
 
     // $$$ move to private?
-    explicit ProcessOwnerDispatcher(utils::unique_ptr<UserProcess> process);
+    explicit ProcessOwnerDispatcher(utils::RefPtr<UserProcess> process);
 
     virtual ~ProcessOwnerDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
@@ -33,9 +33,9 @@ public:
     status_t Start(mx_handle_t handle, mx_vaddr_t pc_vaddr);
     mx_handle_t AddHandle(HandleUniquePtr handle);
     utils::RefPtr<VmAspace> GetVmAspace() { return process_->aspace(); }
-    status_t GetInfo(mx_process_info_t *info);
+    status_t GetInfo(mx_process_info_t* info);
     status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
 
 private:
-    utils::unique_ptr<UserProcess> process_;
+    utils::RefPtr<UserProcess> process_;
 };

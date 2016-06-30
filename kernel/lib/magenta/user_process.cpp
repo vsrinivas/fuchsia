@@ -4,6 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/user_process.h>
+
+#include <list.h>
 #include <rand.h>
 #include <string.h>
 #include <trace.h>
@@ -14,34 +17,17 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 
-#include <list.h>
-
 #include <magenta/dispatcher.h>
 #include <magenta/futex_context.h>
 #include <magenta/magenta.h>
 #include <magenta/user_copy.h>
-#include <magenta/user_process.h>
 
 #define LOCAL_TRACE 0
 
-UserProcess::UserProcess(utils::StringPiece name)
-    : next_thread_id_(1),
-      aspace_(nullptr),
-      state_(PROC_STATE_INITIAL),
-      retcode_(NO_ERROR),
-      exception_behaviour_(MX_EXCEPTION_BEHAVIOUR_DEFAULT),
-      prev_(nullptr),
-      next_(nullptr),
-      name_() {
+UserProcess::UserProcess(utils::StringPiece name) {
     LTRACE_ENTRY_OBJ;
 
     id_ = AddProcess(this);
-
-    list_initialize(&thread_list_);
-    mutex_init(&thread_list_lock_);
-    mutex_init(&handle_table_lock_);
-    mutex_init(&state_lock_);
-    mutex_init(&exception_lock_);
 
     // Generate handle XOR mask with top bit and bottom two bits cleared
     handle_rand_ = (rand() << 2) & INT_MAX;
@@ -53,21 +39,13 @@ UserProcess::UserProcess(utils::StringPiece name)
 UserProcess::~UserProcess() {
     LTRACE_ENTRY_OBJ;
 
+    DEBUG_ASSERT(state_ == State::INITIAL || state_ == State::DEAD);
+
+    // assert that we have no handles, should have been cleaned up in the -> DEAD transition
+    DEBUG_ASSERT(handles_.is_empty());
+
+    // remove ourself from the global process list
     RemoveProcess(this);
-
-    // clean up the handle table
-    LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
-    {
-        AutoLock lock(&handle_table_lock_);
-        while (handles_.first()) {
-            auto handle = handles_.pop_front();
-            DeleteHandle(handle);
-        };
-    }
-    LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
-
-    // tear down the address space
-    aspace_->Destroy();
 
     mutex_destroy(&state_lock_);
     mutex_destroy(&handle_table_lock_);
@@ -79,6 +57,10 @@ UserProcess::~UserProcess() {
 status_t UserProcess::Initialize() {
     LTRACE_ENTRY_OBJ;
 
+    AutoLock lock(state_lock_);
+
+    DEBUG_ASSERT(state_ == State::INITIAL);
+
     // create an address space for this process.
     aspace_ = VmAspace::Create(0, nullptr);
     if (!aspace_) {
@@ -89,36 +71,188 @@ status_t UserProcess::Initialize() {
     return NO_ERROR;
 }
 
-void UserProcess::Close() {
+status_t UserProcess::Start(void* arg, mx_vaddr_t entry) {
     LTRACE_ENTRY_OBJ;
 
-    // TODO - we should kill all of our threads here, but no mechanism exists yet for that.
-    // So for now we block until all the threads have exited.
-    // After which, it will be safe to delete this object.
-    mutex_acquire(&thread_list_lock_);
+    // grab and hold the state lock across this entire routine, since we're
+    // effectively transitioning from INITIAL to RUNNING
+    AutoLock lock(state_lock_);
 
-    // Join all our running threads
-    list_node* node;
-    while ((node = list_remove_head(&thread_list_)) != nullptr) {
-        // need to release thread_list_lock_ before calling thread_join
-        mutex_release(&thread_list_lock_);
+    DEBUG_ASSERT(state_ == State::INITIAL);
 
-        UserThread* thread = containerof(node, UserThread, node_);
-
-        LTRACEF_LEVEL(2, "processs %p waiting on thread %p\n", this, thread);
-        thread_join(&thread->thread_, nullptr, INFINITE_TIME);
-        LTRACEF_LEVEL(2, "processs %p done waiting on thread %p\n", this, thread);
-
-        mutex_acquire(&thread_list_lock_);
-
-        // need to reacquire before looking at joined_ and detached_
-        thread->joined_ = true;
-        if (thread->detached_) delete thread;
+    // make sure we're in the right state
+    if (state_ != State::INITIAL) {
+        TRACEF("UserProcess has not been loaded\n");
+        return ERR_BAD_STATE;
     }
 
-    mutex_release(&thread_list_lock_);
+    if (entry) {
+        entry_ = (thread_start_routine)entry;
+    }
+
+    // TODO: move the creation of the initial thread to user space
+    status_t result;
+    // create the first thread
+    auto t = utils::AdoptRef(new UserThread(utils::RefPtr<UserProcess>(this), entry_, arg));
+    if (!t) {
+        result = ERR_NO_MEMORY;
+    } else {
+        result = t->Initialize(utils::StringPiece("main thread"));
+    }
+
+    if (result == NO_ERROR) {
+        // we're ready to run now
+        SetState(State::RUNNING);
+    } else {
+        // to be safe, assume process is dead after failed start
+        SetState(State::DEAD);
+        return result;
+    }
+
+    // save a ref to this thread so it doesn't go out of scope
+    main_thread_ = t;
+
+    LTRACEF("starting main thread\n");
+    t->Start();
+
+    return NO_ERROR;
 }
 
+void UserProcess::Exit(int retcode) {
+    LTRACE_ENTRY_OBJ;
+
+    {
+        AutoLock lock(state_lock_);
+
+        DEBUG_ASSERT(state_ == State::RUNNING);
+
+        retcode_ = retcode;
+
+        // enter the dying state, which should kill all threads
+        SetState(State::DYING);
+    }
+
+    UserThread::GetCurrent()->Exit();
+}
+
+void UserProcess::Kill() {
+    LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(state_lock_);
+
+    // we're already dead
+    if (state_ == State::DEAD)
+        return;
+
+    // if we have no threads, enter the dead state directly
+    if (thread_list_.is_empty()) {
+        SetState(State::DEAD);
+    } else {
+        // enter the dying state, which should trigger a thread kill.
+        // the last thread exiting will transition us to DEAD
+        SetState(State::DYING);
+    }
+}
+
+// the dispatcher has closed its handle on us, so kill ourselves
+void UserProcess::DispatcherClosed() {
+    LTRACE_ENTRY_OBJ;
+
+    Kill();
+}
+
+void UserProcess::KillAllThreads() {
+    LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(&thread_list_lock_);
+
+    for_each(&thread_list_, [](UserThread* thread) {
+        LTRACEF("killing thread %p\n", thread);
+        thread->Kill();
+    });
+}
+
+status_t UserProcess::AddThread(UserThread* t) {
+    LTRACE_ENTRY_OBJ;
+
+    // cannot add thread to dying/dead state
+    if (state_ == State::DYING || state_ == State::DEAD) {
+        return ERR_BAD_STATE;
+    }
+
+    // add the thread to our list
+    AutoLock lock(&thread_list_lock_);
+    thread_list_.push_back(t);
+
+    DEBUG_ASSERT(t->process() == this);
+
+    return NO_ERROR;
+}
+
+void UserProcess::RemoveThread(UserThread* t) {
+    LTRACE_ENTRY_OBJ;
+
+    // we're going to check for state and possibly transition below
+    AutoLock state_lock(&state_lock_);
+
+    // remove the thread from our list
+    AutoLock lock(&thread_list_lock_);
+    thread_list_.remove(t);
+
+    // drop the ref from the main_thread_ pointer if its being removed
+    if (t == main_thread_.get()) {
+        main_thread_.reset();
+    }
+
+    // if this was the last thread, transition directly to DEAD state
+    if (thread_list_.is_empty()) {
+        LTRACEF("last thread left the process %p, entering DEAD state\n", this);
+        SetState(State::DEAD);
+    }
+}
+
+void UserProcess::SetState(State s) {
+    LTRACEF("process %p: state %u (%s)\n", this, static_cast<unsigned int>(s), StateToString(s));
+
+    DEBUG_ASSERT(is_mutex_held(&state_lock_));
+
+    // look for some invalid state transitions
+    if (state_ == State::DEAD && s != State::DEAD) {
+        panic("UserProcess::SetState invalid state transition from DEAD to !DEAD\n");
+        return;
+    }
+
+    // transitions to your own state are okay
+    if (s == state_)
+        return;
+
+    state_ = s;
+
+    if (s == State::DYING) {
+        // send kill to all of our threads
+        KillAllThreads();
+    } else if (s == State::DEAD) {
+        // clean up the handle table
+        LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
+        {
+            AutoLock lock(&handle_table_lock_);
+            while (handles_.first()) {
+                auto handle = handles_.pop_front();
+                DeleteHandle(handle);
+            };
+        }
+        LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
+
+        // tear down the address space
+        aspace_->Destroy();
+
+        // signal waiter
+        LTRACEF_LEVEL(2, "signalling waiters\n");
+        waiter_.Signal(MX_SIGNAL_SIGNALED);
+    }
+}
+
+// process handle manipulation routines
 mx_handle_t UserProcess::MapHandleToValue(Handle* handle) {
     auto handle_index = MapHandleToU32(handle) + 1;
     return handle_index ^ handle_rand_;
@@ -175,104 +309,7 @@ bool UserProcess::GetDispatcher(mx_handle_t handle_value, utils::RefPtr<Dispatch
     return true;
 }
 
-status_t UserProcess::Start(void* arg, mx_vaddr_t entry) {
-    LTRACE_ENTRY_OBJ;
-
-    {
-        AutoLock lock(state_lock_);
-
-        // make sure we're in the right state
-        if ((state_ != PROC_STATE_INITIAL) && (state_ != PROC_STATE_LOADED)) {
-            TRACEF("UserProcess has not been loaded\n");
-            return ERR_BAD_STATE;
-        }
-        state_ = PROC_STATE_STARTING;
-    }
-
-    if (entry) {
-        entry_ = (thread_start_routine)entry;
-    }
-
-    status_t result;
-    // create the first thread
-    UserThread* t = new UserThread(this, entry_, arg);
-    if (!t) {
-        result = ERR_NO_MEMORY;
-    } else {
-        result = t->Initialize(utils::StringPiece("main thread"));
-    }
-
-    {
-        AutoLock lock(state_lock_);
-        if (result == NO_ERROR) {
-            // we're ready to run now
-            state_ = PROC_STATE_RUNNING;
-        } else {
-            // to be safe, assume process is dead after failed start
-            Dead_NoLock();
-            delete t;
-            return result;
-        }
-    }
-
-    LTRACEF("starting main thread\n");
-    t->Start();
-
-    // main thread has no handle, so it can be freed on join
-    ThreadDetached(t);
-
-    return NO_ERROR;
-}
-
-void UserProcess::Exit(int retcode) {
-    LTRACE_ENTRY_OBJ;
-
-    {
-        AutoLock lock(state_lock_);
-
-        retcode_ = retcode;
-        Dead_NoLock();
-    }
-
-    // TODO - kill our other threads here?
-
-    UserThread::GetCurrent()->Exit();
-}
-
-void UserProcess::Kill() {
-    LTRACE_ENTRY_OBJ;
-
-    AutoLock lock(state_lock_);
-
-    Dead_NoLock();
-
-    // TODO - kill our other threads here
-}
-
-
-void UserProcess::AddThread(UserThread* t) {
-    LTRACE_ENTRY_OBJ;
-
-    AutoLock lock(&thread_list_lock_);
-    list_add_head(&thread_list_, &t->node_);
-}
-
-void UserProcess::ThreadDetached(UserThread* t) {
-    LTRACE_ENTRY_OBJ;
-
-    AutoLock lock(&thread_list_lock_);
-    t->detached_ = true;
-
-    if (t->joined_)
-        delete t;
-}
-
-void UserProcess::Dead_NoLock() {
-    state_ = PROC_STATE_DEAD;
-    waiter_.Signal(MX_SIGNAL_SIGNALED);
-}
-
-status_t UserProcess::GetInfo(mx_process_info_t *info) {
+status_t UserProcess::GetInfo(mx_process_info_t* info) {
     info->len = sizeof(mx_process_info_t);
 
     info->return_code = retcode_;
@@ -305,5 +342,35 @@ uint32_t UserProcess::HandleCount() {
 
 uint32_t UserProcess::ThreadCount() {
     AutoLock lock(&thread_list_lock_);
-    return static_cast<uint32_t>(list_length(&thread_list_));
+    return static_cast<uint32_t>(thread_list_.size_slow());
+}
+
+char UserProcess::StateChar() const {
+    State s = state();
+
+    switch (s) {
+    case State::INITIAL:
+        return 'I';
+    case State::RUNNING:
+        return 'R';
+    case State::DYING:
+        return 'Y';
+    case State::DEAD:
+        return 'D';
+    }
+    return '?';
+}
+
+const char* StateToString(UserProcess::State state) {
+    switch (state) {
+    case UserProcess::State::INITIAL:
+        return "initial";
+    case UserProcess::State::RUNNING:
+        return "running";
+    case UserProcess::State::DYING:
+        return "dying";
+    case UserProcess::State::DEAD:
+        return "dead";
+    }
+    return "unknown";
 }

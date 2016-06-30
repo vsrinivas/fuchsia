@@ -549,7 +549,7 @@ mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, 
 
     auto up = UserProcess::GetCurrent();
 
-    utils::unique_ptr<UserThread> user_thread(new UserThread(up, entry, arg));
+    auto user_thread = utils::AdoptRef(new UserThread(utils::RefPtr<UserProcess>(up), entry, arg));
     if (!user_thread)
         return ERR_NO_MEMORY;
 
@@ -561,7 +561,7 @@ mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, 
 
     utils::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    result = ThreadDispatcher::Create(user_thread.release(), &dispatcher, &rights);
+    result = ThreadDispatcher::Create(utils::move(user_thread), &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 
@@ -574,7 +574,7 @@ mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, 
 
 void sys_thread_exit() {
     LTRACE_ENTRY;
-    return UserThread::GetCurrent()->Exit();
+    UserThread::GetCurrent()->Exit();
 }
 
 mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr_t* value_ptr) {

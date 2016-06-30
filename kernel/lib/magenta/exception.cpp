@@ -115,7 +115,7 @@ status_t magenta_exception_handler(uint exception_type,
         // we're not in magenta thread context, bail
         return ERR_NOT_VALID;
     }
-    UserProcess* process = thread->process();
+    auto process = thread->process();
 
     status_t status;
 

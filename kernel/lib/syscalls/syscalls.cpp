@@ -159,7 +159,7 @@ extern "C" uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, 
     /* re-enable interrupts to maintain kernel preemptiveness */
     arch_enable_ints();
 
-    LTRACEF_LEVEL(2, "syscall num 0x%llx\n", syscall_num);
+    LTRACEF_LEVEL(2, "t %p syscall num %llu ip 0x%llx\n", get_current_thread(), syscall_num, ip);
 
     /* build a function pointer to call the routine.
      * the args are jammed into the function independent of if the function
@@ -182,6 +182,8 @@ extern "C" uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, 
 
     /* check to see if there are any pending signals */
     thread_process_pending_signals();
+
+    LTRACEF_LEVEL(2, "t %p ret 0x%llx\n", get_current_thread(), ret);
 
     return ret;
 }

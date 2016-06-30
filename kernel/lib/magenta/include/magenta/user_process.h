@@ -19,36 +19,34 @@
 #include <magenta/waiter.h>
 
 #include <utils/intrusive_double_list.h>
+#include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 #include <utils/string_piece.h>
 
 class Dispatcher;
 
-class UserProcess {
+class UserProcess : public utils::RefCounted<UserProcess> {
 public:
     // state of the process
-    enum State {
-        PROC_STATE_INITIAL,
-        PROC_STATE_LOADING,
-        PROC_STATE_LOADED,
-        PROC_STATE_STARTING,
-        PROC_STATE_RUNNING,
-        PROC_STATE_DEAD,
+    enum class State {
+        INITIAL, // initial state, no thread present in process
+        RUNNING, // first thread has started and is running
+        DYING,   // process has delivered kill signal to all threads
+        DEAD,    // all threads have entered DEAD state and potentially dropped refs on process
     };
 
     UserProcess(utils::StringPiece name);
     ~UserProcess();
 
-    mx_pid_t id() const {
-        return id_;
+    static UserProcess* GetCurrent() {
+        UserThread* current = UserThread::GetCurrent();
+        DEBUG_ASSERT(current);
+        return current->process();
     }
 
     // Performs initialization on a newly constructed UserProcess
     // If this fails, then the object is invalid and should be deleted
     status_t Initialize();
-
-    // Called when the process owner handle is closed
-    void Close();
 
     // Map a |handle| to an integer which can be given to usermode as a
     // handle value. Uses MapHandleToU32() plus additional mixing.
@@ -75,34 +73,29 @@ public:
     bool GetDispatcher(mx_handle_t handle_value, utils::RefPtr<Dispatcher>* dispatcher,
                        uint32_t* rights);
 
+    // accessors
+    mx_pid_t id() const { return id_; }
     mutex_t& handle_table_lock() { return handle_table_lock_; }
-
-    static UserProcess* GetCurrent() {
-        UserThread *current = UserThread::GetCurrent();
-        DEBUG_ASSERT(current);
-        return current->process();
-    }
     FutexContext* futex_context() { return &futex_context_; }
+    Waiter* waiter() { return &waiter_; }
+    State state() const { return state_; }
+    utils::RefPtr<VmAspace> aspace() { return aspace_; }
+    const utils::StringPiece name() const { return name_; }
 
-    Waiter* GetWaiter() { return &waiter_; }
+    char StateChar() const;
+    mx_tid_t GetNextThreadId();
 
     // Starts the process running
-    // The process must first be in state PROC_STATE_LOADED
     status_t Start(void* arg, mx_vaddr_t vaddr);
 
     void Exit(int retcode);
     void Kill();
+    void DispatcherClosed();
 
-    status_t GetInfo(mx_process_info_t *info);
+    status_t GetInfo(mx_process_info_t* info);
 
-    mx_tid_t GetNextThreadId();
-
-    utils::RefPtr<VmAspace> aspace() { return aspace_; }
-
-    const utils::StringPiece name() const { return name_; }
-
+    // exception handling routines
     status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
-
     utils::RefPtr<Dispatcher> exception_handler();
 
     // The following two methods can slow and innacurrate and should only be
@@ -124,52 +117,62 @@ private:
 
     // Thread lifecycle support
     friend class UserThread;
-    void AddThread(UserThread* t);
-    void ThreadDetached(UserThread* t);
+    status_t AddThread(UserThread* t);
+    void RemoveThread(UserThread* t);
 
-    // Transition to dead state and signal waiter.
-    void Dead_NoLock();
+    void SetState(State);
 
-    mx_pid_t id_;
+    // Kill all threads
+    void KillAllThreads();
 
-    mx_handle_t handle_rand_;
+    mx_pid_t id_ = 0;
+
+    mx_handle_t handle_rand_ = 0;
 
     // The next thread id to assign.
     // This is an int as we use atomic_add. TODO(dje): wip
-    int next_thread_id_;
+    int next_thread_id_ = 1;
 
     // protects thread_list_, as well as the UserThread joined_ and detached_ flags
-    mutex_t thread_list_lock_;
-    // list of running threads
-    struct list_node thread_list_;
+    mutex_t thread_list_lock_ = MUTEX_INITIAL_VALUE(thread_list_lock_);
+
+    // list of threads in this process
+    utils::DoublyLinkedList<UserThread> thread_list_;
+
+    // a ref to the main thread
+    utils::RefPtr<UserThread> main_thread_;
 
     // our address space
     utils::RefPtr<VmAspace> aspace_;
 
-    mutex_t handle_table_lock_;  // protects |handles_|.
+    // our list of handles
+    mutex_t handle_table_lock_ = MUTEX_INITIAL_VALUE(handle_table_lock_); // protects |handles_|.
     utils::DoublyLinkedList<Handle> handles_;
 
     Waiter waiter_;
 
     FutexContext futex_context_;
 
-    State state_;
-    mutex_t state_lock_;
+    // our state
+    State state_ = State::INITIAL;
+    mutex_t state_lock_ = MUTEX_INITIAL_VALUE(state_lock_);
 
     // process return code
-    int retcode_;
+    int retcode_ = 0;
 
     // main entry point to the process
-    thread_start_routine entry_;
+    thread_start_routine entry_ = nullptr;
 
     utils::RefPtr<Dispatcher> exception_handler_;
-    mx_exception_behaviour_t exception_behaviour_;
-    mutex_t exception_lock_;
+    mx_exception_behaviour_t exception_behaviour_ = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
+    mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
 
     // Holds the linked list of processes that magenta.cpp mantains.
-    UserProcess* prev_;
-    UserProcess* next_;
+    UserProcess* prev_ = nullptr;
+    UserProcess* next_ = nullptr;
 
     // The user-friendly process name. For debug purposes only.
-    char name_[THREAD_NAME_LENGTH / 2];
+    char name_[THREAD_NAME_LENGTH / 2] = {};
 };
+
+const char* StateToString(UserProcess::State state);

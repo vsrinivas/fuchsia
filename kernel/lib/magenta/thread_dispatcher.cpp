@@ -15,29 +15,32 @@ constexpr mx_rights_t kDefaultThreadRights =
     MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
 
 // static
-status_t ThreadDispatcher::Create(UserThread* thread, utils::RefPtr<Dispatcher>* dispatcher,
+status_t ThreadDispatcher::Create(utils::RefPtr<UserThread> thread, utils::RefPtr<Dispatcher>* dispatcher,
                                   mx_rights_t* rights) {
     Dispatcher* disp = new ThreadDispatcher(thread);
-    if (!disp) return ERR_NO_MEMORY;
+    if (!disp)
+        return ERR_NO_MEMORY;
 
     *rights = kDefaultThreadRights;
     *dispatcher = utils::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 
-ThreadDispatcher::ThreadDispatcher(UserThread* thread) : thread_(thread) {
-    LTRACE_ENTRY;
+ThreadDispatcher::ThreadDispatcher(utils::RefPtr<UserThread> thread)
+    : thread_(utils::move(thread)) {
+    LTRACE_ENTRY_OBJ;
+
+    LTRACEF("thread %p\n", get_current_thread());
 }
 
 ThreadDispatcher::~ThreadDispatcher() {
-    LTRACE_ENTRY;
+    LTRACE_ENTRY_OBJ;
 
-    // thread is effectively detached when there are no more handles referring to it
-    thread_->Detach();
+    thread_->DispatcherClosed();
 }
 
 Waiter* ThreadDispatcher::get_waiter() {
-    return thread_->GetWaiter();
+    return thread_->waiter();
 }
 
 status_t ThreadDispatcher::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {

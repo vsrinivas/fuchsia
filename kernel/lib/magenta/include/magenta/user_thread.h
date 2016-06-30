@@ -6,90 +6,106 @@
 
 #pragma once
 
+#include <kernel/cond.h>
+#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 #include <list.h>
+
 #include <magenta/dispatcher.h>
-#include <magenta/waiter.h>
 #include <magenta/futex_node.h>
+#include <magenta/waiter.h>
+
+#include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 #include <utils/string_piece.h>
 
 class ThreadHandle;
 class UserProcess;
 
-class UserThread {
+class UserThread : public utils::RefCounted<UserThread> {
 public:
-    UserThread(UserProcess* process, thread_start_routine entry, void* arg);
+    // state of the thread
+    enum class State {
+        INITIAL,     // newly created thread
+        INITIALIZED, // LK thread state is initialized
+        RUNNING,     // thread is running
+        DYING,       // thread has been signalled for kill, but has not exited yet
+        DEAD,        // thread has exited and is not running
+    };
+
+    UserThread(utils::RefPtr<UserProcess> process, thread_start_routine entry, void* arg);
     ~UserThread();
-
-    // Performs initialization on a newly constructed UserThread
-    // If this fails, then the object is invalid and should be deleted
-    status_t Initialize(utils::StringPiece name);
-    void Start();
-    void Exit();
-    void Detach();
-
-    UserProcess* process() const {
-        return process_;
-    }
-
-    mx_tid_t id() const {
-        return id_;
-    }
 
     static UserThread* GetCurrent() {
         return reinterpret_cast<UserThread*>(tls_get(TLS_ENTRY_LKUSER));
     }
 
+    // Performs initialization on a newly constructed UserThread
+    // If this fails, then the object is invalid and should be deleted
+    status_t Initialize(utils::StringPiece name);
+    void Start();
+    void Exit() __NO_RETURN;
+    void Kill();
+    void DispatcherClosed();
+
+    // accessors
+    UserProcess* process() { return process_.get(); }
+    mx_tid_t id() const { return id_; }
+    FutexNode* futex_node() { return &futex_node_; }
+    Waiter* waiter() { return &waiter_; }
+    const utils::StringPiece name() const { return thread_.name; }
+    State state() const { return state_; }
+
     status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
     utils::RefPtr<Dispatcher> exception_handler();
-
-    FutexNode* futex_node() {
-        return &futex_node_;
-    }
-
-    const utils::StringPiece name() const { return thread_.name; }
-
-    Waiter* GetWaiter() { return &waiter_; }
 
     // TODO(dje): Support unwinding from this exception and introducing a
     // different exception.
     status_t WaitForExceptionHandler(utils::RefPtr<Dispatcher> dispatcher, const mx_exception_report_t* report);
     void WakeFromExceptionHandler(mx_exception_status_t status);
 
+    // Necessary members for using DoublyLinkedList<UserThread>.
+    UserThread* list_prev() { return prev_; }
+    UserThread* list_next() { return next_; }
+    const UserThread* list_prev() const { return prev_; }
+    const UserThread* list_next() const { return next_; }
+    void list_set_prev(UserThread* node) { prev_ = node; }
+    void list_set_next(UserThread* node) { next_ = node; }
+
 private:
     UserThread(const UserThread&) = delete;
     UserThread& operator=(const UserThread&) = delete;
 
+    // kernel level entry point
     static int StartRoutine(void* arg);
 
-    // my process
-    UserProcess* process_;
+    // callback from kernel when thread is exiting, just before it stops for good.
+    void Exiting();
+    static void ThreadExitCallback(void* arg);
 
-    // So UserProcess can access node_, thread_, joined_ and detached_
-    friend class UserProcess;
+    // change states of the object, do what is appropriate for the state transition
+    void SetState(State);
 
-    // for my process's thread list
-    struct list_node node_;
+    // a ref pointer back to the parent process
+    utils::RefPtr<UserProcess> process_;
 
     // A unique thread id within the process.
-    mx_tid_t id_;
+    mx_tid_t id_ = -1;
 
     // thread start routine and argument pointer
-    thread_start_routine entry_;
-    void* arg_;
+    thread_start_routine entry_ = nullptr;
+    void* arg_ = nullptr;
 
-    // True if the thread has been joined
-    // Only set by UserProcess, protected by UserProcess::thread_list_lock_
-    bool joined_;
-    // We are detached if there are no handles remaining that refer to us.
-    // In that case, it is safe to delete this UserThread instance when the thread is joined.
-    // Only set by UserProcess, protected by UserProcess::thread_list_lock_
-    bool detached_;
+    // user space stack
+    void* user_stack_ = nullptr;
 
-    thread_t thread_;
-    void* user_stack_;
+    // default user space stack size
+    static const int kDefaultStackSize = 16 * PAGE_SIZE;
+
+    // our State
+    State state_ = State::INITIAL;
+    mutex_t state_lock_ = MUTEX_INITIAL_VALUE(state_lock_);
 
     // Node for linked list of threads blocked on a futex
     FutexNode futex_node_;
@@ -98,14 +114,22 @@ private:
 
     // A thread-level exception handler for this thread.
     utils::RefPtr<Dispatcher> exception_handler_;
-    mx_exception_behaviour_t exception_behaviour_;
-    mutex_t exception_lock_;
+    mx_exception_behaviour_t exception_behaviour_ = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
+    mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
 
     // Support for waiting for an exception handler.
     // Reply from handler.
-    mx_exception_status_t exception_status_;
-    cond_t exception_wait_cond_;
-    mutex_t exception_wait_lock_;
+    mx_exception_status_t exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
+    cond_t exception_wait_cond_ = COND_INITIAL_VALUE(exception_wait_cond_);
+    mutex_t exception_wait_lock_ = MUTEX_INITIAL_VALUE(exception_wait_lock_);
 
-    static const int kDefaultStackSize = 16 * PAGE_SIZE;
+    // our linked list members for the UserProcess list
+    UserThread* prev_ = nullptr;
+    UserThread* next_ = nullptr;
+
+    // LK thread structure
+    // put last to ease debugging since this is a pretty large structure
+    thread_t thread_ = {};
 };
+
+const char* StateToString(UserThread::State state);

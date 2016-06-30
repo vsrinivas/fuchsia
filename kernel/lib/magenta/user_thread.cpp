@@ -4,8 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/user_thread.h>
+
 #include <assert.h>
 #include <err.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
 
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
@@ -15,29 +20,26 @@
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
 #include <magenta/user_process.h>
-#include <magenta/user_thread.h>
-
-#include <string.h>
-#include <trace.h>
 
 #define LOCAL_TRACE 0
 
-UserThread::UserThread(UserProcess* process, thread_start_routine entry, void* arg)
-    : process_(process), entry_(entry), arg_(arg), joined_(false), detached_(false), user_stack_(nullptr),
-      exception_behaviour_(MX_EXCEPTION_BEHAVIOUR_DEFAULT),
-      exception_status_(MX_EXCEPTION_STATUS_NOT_HANDLED) {
+UserThread::UserThread(utils::RefPtr<UserProcess> process, thread_start_routine entry, void* arg)
+    : process_(utils::move(process)), entry_(entry), arg_(arg) {
     LTRACE_ENTRY_OBJ;
 
-    id_ = process->GetNextThreadId();
-
-    list_clear_node(&node_);
-    mutex_init(&exception_lock_);
-    cond_init(&exception_wait_cond_);
-    mutex_init(&exception_wait_lock_);
+    id_ = process_->GetNextThreadId();
 }
 
 UserThread::~UserThread() {
     LTRACE_ENTRY_OBJ;
+
+    DEBUG_ASSERT_MSG(state_ == State::DEAD, "state is %s\n", StateToString(state_));
+    DEBUG_ASSERT(&thread_ != get_current_thread());
+
+    LTRACEF("joining LK thread to clean up state\n");
+    auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
+    LTRACEF("done joining LK thread\n");
+    DEBUG_ASSERT_MSG(ret == NO_ERROR, "thread_join returned something other than NO_ERROR\n");
 
     process_->aspace()->FreeRegion(reinterpret_cast<vaddr_t>(user_stack_));
     cond_destroy(&exception_wait_cond_);
@@ -46,6 +48,10 @@ UserThread::~UserThread() {
 
 status_t UserThread::Initialize(utils::StringPiece name) {
     LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(state_lock_);
+
+    DEBUG_ASSERT(state_ == State::INITIAL);
 
     // Make sure we can hold process name and thread name combined.
     static_assert((MX_MAX_NAME_LEN * 2) == THREAD_NAME_LENGTH, "name length issue");
@@ -68,11 +74,20 @@ status_t UserThread::Initialize(utils::StringPiece name) {
     }
     DEBUG_ASSERT(lkthread == &thread_);
 
+    // bump the ref on this object that the LK thread state will now own until the lk thread has exited
+    AddRef();
+
+    // register an exit handler with the LK kernel
+    thread_set_exit_callback(&thread_, &ThreadExitCallback, reinterpret_cast<void*>(this));
+
     // set the per-thread pointer
     thread_.tls[TLS_ENTRY_LKUSER] = reinterpret_cast<uintptr_t>(this);
 
     // associate the proc's address space with this thread
     process_->aspace()->AttachToThread(lkthread);
+
+    // we've entered the initialized state
+    SetState(State::INITIALIZED);
 
     return NO_ERROR;
 }
@@ -80,24 +95,110 @@ status_t UserThread::Initialize(utils::StringPiece name) {
 void UserThread::Start() {
     LTRACE_ENTRY_OBJ;
 
-    process_->AddThread(this);
+    AutoLock lock(state_lock_);
+
+    DEBUG_ASSERT(state_ == State::INITIALIZED);
+
+    auto ret = process_->AddThread(this);
+
+    // XXX deal with this case differently
+    DEBUG_ASSERT(ret == NO_ERROR);
+
+    SetState(State::RUNNING);
+
     thread_resume(&thread_);
 }
 
+// called in the context of our thread
 void UserThread::Exit() {
     LTRACE_ENTRY_OBJ;
 
-    waiter_.Signal(MX_SIGNAL_SIGNALED);
+    // only valid to call this on the current thread
+    DEBUG_ASSERT(get_current_thread() == &thread_);
 
+    {
+        AutoLock lock(state_lock_);
+
+        DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
+
+        SetState(State::DYING);
+    }
+
+    // exit here
+    // this will recurse back to us in ::Exiting()
     thread_exit(0);
+
+    __UNREACHABLE;
 }
 
-void UserThread::Detach() {
+void UserThread::Kill() {
     LTRACE_ENTRY_OBJ;
 
-    process_->ThreadDetached(this);
+    // see if we're already going down.
+    // check these ahead of time in case we're recursing from inside an already exiting situation
+    if (state_ == State::DYING || state_ == State::DEAD)
+        return;
+
+    AutoLock lock(state_lock_);
+
+    // double check that the above check wasn't a race
+    if (state_ == State::DYING || state_ == State::DEAD)
+        return;
+
+    // deliver a kernel kill signal to the thread
+    thread_kill(&thread_, false);
+
+    // enter the dying state
+    SetState(State::DYING);
 }
 
+void UserThread::DispatcherClosed() {
+    LTRACE_ENTRY_OBJ;
+
+    Kill();
+}
+
+void UserThread::Exiting() {
+    LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(state_lock_);
+
+    DEBUG_ASSERT(state_ == State::DYING);
+
+    // signal any waiters
+    waiter_.Signal(MX_SIGNAL_SIGNALED);
+
+    // remove ourselves from our parent process's view
+    process_->RemoveThread(this);
+
+    // put ourselves into to dead state
+    SetState(State::DEAD);
+
+    // drop LK's reference
+    if (Release()) {
+        // We're the last reference, so will need to destruct ourself while running...
+        // TODO: add worker thread here to clean up object
+        TRACEF("TODO: leaking UserThread, add worker thread based cleanup\n");
+
+        // XXX hack in dropping resources to simulate a cleanup
+        // XXX This doesn't really work on smp, since there's a race where the UserProcess gets destroyed
+        // before we've fully exited and are holding onto the address space object
+        //LTRACEF("about to drop ref on process, ref is (before drop) %u\n", process_->ref_count_debug());
+        //process_.reset();
+    }
+
+    // after this point the thread will stop permanently
+    LTRACE_EXIT_OBJ;
+}
+
+// low level LK callback in thread's context just before exiting
+void UserThread::ThreadExitCallback(void* arg) {
+    UserThread* t = reinterpret_cast<UserThread*>(arg);
+
+    t->Exiting();
+}
+
+// low level LK entry point for the thread
 int UserThread::StartRoutine(void* arg) {
     LTRACE_ENTRY;
 
@@ -115,6 +216,16 @@ int UserThread::StartRoutine(void* arg) {
 
     __UNREACHABLE;
 }
+
+void UserThread::SetState(State state) {
+    LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
+
+    DEBUG_ASSERT(is_mutex_held(&state_lock_));
+
+    state_ = state;
+}
+
+// Exception handling below
 
 status_t UserThread::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
     AutoLock lock(&exception_lock_);
@@ -173,4 +284,20 @@ void UserThread::WakeFromExceptionHandler(mx_exception_status_t status) {
     AutoLock lock(&exception_wait_lock_);
     exception_status_ = status;
     cond_signal(&exception_wait_cond_);
+}
+
+const char* StateToString(UserThread::State state) {
+    switch (state) {
+    case UserThread::State::INITIAL:
+        return "initial";
+    case UserThread::State::INITIALIZED:
+        return "initialized";
+    case UserThread::State::RUNNING:
+        return "running";
+    case UserThread::State::DYING:
+        return "dying";
+    case UserThread::State::DEAD:
+        return "dead";
+    }
+    return "unknown";
 }
