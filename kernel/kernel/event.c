@@ -77,18 +77,28 @@ void event_destroy(event_t *e)
  *
  * @param e        Event object
  * @param timeout  Timeout value, in ms
+ * @param interruptable  Allowed to interrupt if thread is signalled
  *
  * @return  0 on success, ERR_TIMED_OUT on timeout,
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
-status_t event_wait_timeout(event_t *e, lk_time_t timeout)
+status_t event_wait_timeout(event_t *e, lk_time_t timeout, bool interruptable)
 {
+    thread_t *current_thread = get_current_thread();
     status_t ret = NO_ERROR;
 
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
     THREAD_LOCK(state);
+
+    /* if we've been killed and going in interruptable, abort here */
+    if (interruptable && unlikely((current_thread->signals & THREAD_SIGNAL_KILL))) {
+        ret = ERR_INTERRUPTED;
+        goto out;
+    }
+
+    current_thread->interruptable = interruptable;
 
     if (e->signalled) {
         /* signalled, we're going to fall through */
@@ -101,6 +111,9 @@ status_t event_wait_timeout(event_t *e, lk_time_t timeout)
         ret = wait_queue_block(&e->wait, timeout);
     }
 
+    current_thread->interruptable = false;
+
+out:
     THREAD_UNLOCK(state);
 
     return ret;
@@ -171,12 +184,11 @@ int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
  *                    waiting threads are placed at the head of the run
  *                    queue.
  *
- * @return  Returns NO_ERROR on success.
+ * @return  Returns the number of threads that have been unblocked.
  */
-status_t event_signal(event_t *e, bool reschedule)
+int event_signal(event_t *e, bool reschedule)
 {
-    event_signal_etc(e, reschedule, NO_ERROR);
-    return NO_ERROR;
+    return event_signal_etc(e, reschedule, NO_ERROR);
 }
 
 /**

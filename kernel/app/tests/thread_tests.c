@@ -601,8 +601,127 @@ static void spinlock_test(void)
 #undef COUNT
 }
 
+static void sleeper_thread_exit(void *arg)
+{
+    TRACEF("arg %p\n", arg);
+}
+
+static int sleeper_kill_thread(void *arg)
+{
+    thread_sleep(100);
+
+    lk_time_t t = current_time();
+    status_t err = thread_sleep_etc(5000, true);
+    t = current_time() - t;
+    TRACEF("thread_sleep_etc returns %d after %u msecs\n", err, t);
+
+    return 0;
+}
+
+static void waiter_thread_exit(void *arg)
+{
+    TRACEF("arg %p\n", arg);
+}
+
+static int waiter_kill_thread_infinite_wait(void *arg)
+{
+    event_t *e = (event_t *)arg;
+
+    thread_sleep(100);
+
+    lk_time_t t = current_time();
+    status_t err = event_wait_timeout(e, INFINITE_TIME, true);
+    t = current_time() - t;
+    TRACEF("event_wait_timeout returns %d after %u msecs\n", err, t);
+
+    return 0;
+}
+
+static int waiter_kill_thread(void *arg)
+{
+    event_t *e = (event_t *)arg;
+
+    thread_sleep(100);
+
+    lk_time_t t = current_time();
+    status_t err = event_wait_timeout(e, 5000, true);
+    t = current_time() - t;
+    TRACEF("event_wait_timeout with timeout returns %d after %u msecs\n", err, t);
+
+    return 0;
+}
+
+static void kill_tests(void)
+{
+    thread_t *t;
+
+    printf("starting sleeper thread, then killing it while it sleeps.\n");
+    t = thread_create("sleeper", sleeper_kill_thread, 0, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_exit_callback(t, &sleeper_thread_exit, (void *)t);
+    thread_resume(t);
+    thread_sleep(200);
+    thread_kill(t, true);
+    thread_join(t, NULL, INFINITE_TIME);
+
+    printf("starting sleeper thread, then killing it before it wakes up.\n");
+    t = thread_create("sleeper", sleeper_kill_thread, 0, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_exit_callback(t, &sleeper_thread_exit, (void *)t);
+    thread_resume(t);
+    thread_kill(t, true);
+    thread_join(t, NULL, INFINITE_TIME);
+
+    printf("starting sleeper thread, then killing it before it is unsuspended.\n");
+    t = thread_create("sleeper", sleeper_kill_thread, 0, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_exit_callback(t, &sleeper_thread_exit, (void *)t);
+    thread_kill(t, false); // kill it before it is resumed
+    thread_resume(t);
+    thread_join(t, NULL, INFINITE_TIME);
+
+    event_t e;
+
+    printf("starting waiter thread that waits forever, then killing it while it blocks.\n");
+    event_init(&e, false, 0);
+    t = thread_create("waiter", waiter_kill_thread_infinite_wait, &e, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_exit_callback(t, &waiter_thread_exit, (void *)t);
+    thread_resume(t);
+    thread_sleep(200);
+    thread_kill(t, true);
+    thread_join(t, NULL, INFINITE_TIME);
+    event_destroy(&e);
+
+    printf("starting waiter thread that waits forever, then killing it before it wakes up.\n");
+    event_init(&e, false, 0);
+    t = thread_create("waiter", waiter_kill_thread_infinite_wait, &e, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_exit_callback(t, &waiter_thread_exit, (void *)t);
+    thread_resume(t);
+    thread_kill(t, true);
+    thread_join(t, NULL, INFINITE_TIME);
+    event_destroy(&e);
+
+    printf("starting waiter thread that waits some time, then killing it while it blocks.\n");
+    event_init(&e, false, 0);
+    t = thread_create("waiter", waiter_kill_thread, &e, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_exit_callback(t, &waiter_thread_exit, (void *)t);
+    thread_resume(t);
+    thread_sleep(200);
+    thread_kill(t, true);
+    thread_join(t, NULL, INFINITE_TIME);
+    event_destroy(&e);
+
+    printf("starting waiter thread that waits some time, then killing it before it wakes up.\n");
+    event_init(&e, false, 0);
+    t = thread_create("waiter", waiter_kill_thread, &e, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_exit_callback(t, &waiter_thread_exit, (void *)t);
+    thread_resume(t);
+    thread_kill(t, true);
+    thread_join(t, NULL, INFINITE_TIME);
+    event_destroy(&e);
+}
+
 int thread_tests(void)
 {
+    kill_tests();
+
     mutex_test();
     semaphore_test();
     event_test();
@@ -643,7 +762,7 @@ int spinner(int argc, const cmd_args *argv)
     if (argc >= 3 && !strcmp(argv[2].str, "rt")) {
         thread_set_real_time(t);
     }
-    thread_resume(t);
+    thread_detach_and_resume(t);
 
     return 0;
 }

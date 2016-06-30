@@ -18,6 +18,7 @@
 
 #include <debug.h>
 #include <stdio.h>
+#include <string.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <kernel/debug.h>
@@ -32,6 +33,7 @@ static int cmd_threads(int argc, const cmd_args *argv);
 static int cmd_threadstats(int argc, const cmd_args *argv);
 static int cmd_threadload(int argc, const cmd_args *argv);
 static int cmd_kevlog(int argc, const cmd_args *argv);
+static int cmd_kill(int argc, const cmd_args *argv);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
@@ -44,6 +46,7 @@ STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
 #if WITH_KERNEL_EVLOG
 STATIC_COMMAND_MASKED("kevlog", "dump kernel event log", &cmd_kevlog, CMD_AVAIL_ALWAYS)
 #endif
+STATIC_COMMAND("kill", "kill a thread", &cmd_kill)
 STATIC_COMMAND_END(kernel);
 
 #if LK_DEBUGLEVEL > 1
@@ -150,6 +153,21 @@ static int cmd_threadload(int argc, const cmd_args *argv)
 }
 
 #endif // THREAD_STATS
+
+static int cmd_kill(int argc, const cmd_args *argv)
+{
+    if (argc < 2) {
+        printf("not enough arguments\n");
+        return -1;
+    }
+
+    bool wait = true;
+    if (argc >= 3 && !strcmp(argv[2].str, "nowait"))
+        wait = false;
+    thread_kill(argv[1].p, wait);
+
+    return 0;
+}
 
 #endif // WITH_LIB_CONSOLE
 

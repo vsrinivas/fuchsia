@@ -44,6 +44,7 @@ enum thread_state {
 
 typedef int (*thread_start_routine)(void *arg);
 typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
+typedef void (*thread_exit_callback_t)(void *arg);
 
 /* thread local storage */
 enum thread_tls_list {
@@ -63,6 +64,8 @@ enum thread_tls_list {
 #define THREAD_FLAG_IDLE                      (1<<4)
 #define THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK  (1<<5)
 
+#define THREAD_SIGNAL_KILL                    (1<<0)
+
 #define THREAD_MAGIC (0x74687264) // 'thrd'
 
 #define THREAD_NAME_LENGTH 64
@@ -79,10 +82,13 @@ typedef struct thread {
     enum thread_state state;
     int remaining_quantum;
     unsigned int flags;
+    unsigned int signals;
 #if WITH_SMP
     int curr_cpu;
     int pinned_cpu; /* only run on pinned_cpu if >= 0 */
 #endif
+
+    /* pointer to the kernel address space this thread is associated with */
 #if WITH_KERNEL_VM
     vmm_aspace_t *aspace;
 #endif
@@ -96,7 +102,12 @@ typedef struct thread {
 
     /* if blocked, a pointer to the wait queue */
     struct wait_queue *blocking_wait_queue;
-    status_t wait_queue_block_ret;
+
+    /* return code if woken up abnornmally from suspend, sleep, or block */
+    status_t blocked_status;
+
+    /* are we allowed to be interrupted on the current thing we're blocked/sleeping on */
+    bool interruptable;
 
     /* architecture stuff */
     struct arch_thread arch;
@@ -119,6 +130,10 @@ typedef struct thread {
 
     /* thread local storage */
     uintptr_t tls[MAX_TLS_ENTRY];
+
+    /* callbacks particular events */
+    thread_exit_callback_t exit_callback;
+    void *exit_callback_arg;
 
     char name[THREAD_NAME_LENGTH];
 #if WITH_DEBUG_LINEBUFFER
@@ -166,16 +181,31 @@ void thread_construct_first(thread_t *t, const char *name);
 thread_t *thread_create_idle_thread(uint cpu_num);
 void thread_set_name(const char *name);
 void thread_set_priority(int priority);
+void thread_set_exit_callback(thread_t *t, thread_exit_callback_t cb, void *cb_arg);
 thread_t *thread_create(const char *name, thread_start_routine entry, void *arg, int priority, size_t stack_size);
 thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
 status_t thread_resume(thread_t *);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t *);
-void thread_sleep(lk_time_t delay);
+
 status_t thread_detach(thread_t *t);
 status_t thread_join(thread_t *t, int *retcode, lk_time_t timeout);
 status_t thread_detach_and_resume(thread_t *t);
 status_t thread_set_real_time(thread_t *t);
+
+/* wait for at least delay amount of time. interruptable may return early with ERR_INTERRUPTED
+ * if thread is signalled for kill.
+ */
+status_t thread_sleep_etc(lk_time_t delay, bool interruptable);
+
+/* non interruptable version of thread_sleep_etc */
+static inline status_t thread_sleep(lk_time_t delay) { return thread_sleep_etc(delay, false); }
+
+/* deliver a kill signal to a thread */
+void thread_kill(thread_t *t, bool block);
+
+/* process pending signals, may never return because of kill signal */
+void thread_process_pending_signals(void);
 
 void dump_thread(thread_t *t);
 void arch_dump_thread(thread_t *t);

@@ -63,8 +63,10 @@ mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
     if ((nanoseconds > 0ull) && (t == 0u))
         t = 1u;
 
-    thread_sleep(t);
-    return NO_ERROR;
+    /* sleep with interruptable flag set */
+    status_t err = thread_sleep_etc(t, true);
+
+    return err;
 }
 
 uint sys_num_cpus(void) {
@@ -134,7 +136,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     if ((timeout > 0ull) && (t == 0u))
         t = 1u;
 
-    result = event_wait_timeout(&event, t);
+    result = event_wait_timeout(&event, t, true);
 
     // Regardless of wait outcome, we must call FinishWait().
     satisfiable = wait_helper.End(&event);
@@ -223,7 +225,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     if ((timeout > 0ull) && (t == 0u))
         t = 1u;
 
-    result = event_wait_timeout(&event, t);
+    result = event_wait_timeout(&event, t, true);
 
     // Regardless of wait outcome, we must call FinishWait().
     for (size_t ix = 0; ix != count; ++ix) {

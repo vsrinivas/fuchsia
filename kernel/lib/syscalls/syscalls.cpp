@@ -75,6 +75,9 @@ extern "C" void arm_syscall_handler(struct arm_fault_frame* frame) {
     LTRACEF_LEVEL(2, "ret 0x%llx\n", ret);
 
 out:
+    /* check to see if there are any pending signals */
+    thread_process_pending_signals();
+
     /* unpack the 64bit return back into r0 and r1 */
     frame->r[0] = ret & 0xffffffff;
     frame->r[1] = static_cast<uint32_t>((ret >> 32) & 0xffffffff);
@@ -127,6 +130,9 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     /* put the return code back */
     frame->r[0] = ret;
 
+    /* check to see if there are any pending signals */
+    thread_process_pending_signals();
+
     /* re-disable interrupts on the way out */
     arch_disable_ints();
 }
@@ -174,7 +180,8 @@ extern "C" uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, 
     /* call the routine */
     uint64_t ret = sfunc(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 
-    LTRACEF_LEVEL(2, "ret 0x%llx\n", ret);
+    /* check to see if there are any pending signals */
+    thread_process_pending_signals();
 
     return ret;
 }

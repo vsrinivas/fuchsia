@@ -813,7 +813,7 @@ static int ide_wait_for_completion(struct device *dev)
     struct ide_driver_state *state = dev->state;
     status_t err;
 
-    err = event_wait_timeout(&state->completion, 20000);
+    err = event_wait_timeout(&state->completion, 20000, false);
     if (err)
         return IDE_TIMEOUT;
 

@@ -68,6 +68,7 @@ static thread_t _idle_thread;
 /* local routines */
 static void thread_resched(void);
 static int idle_thread_routine(void *) __NO_RETURN;
+static void thread_exit_locked(thread_t *current_thread, int retcode) __NO_RETURN;
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
 /* preemption timer */
@@ -105,6 +106,7 @@ static void init_thread_struct(thread_t *t, const char *name)
     t->magic = THREAD_MAGIC;
     thread_set_pinned_cpu(t, -1);
     strlcpy(t->name, name, sizeof(t->name));
+    wait_queue_init(&t->retcode_wait_queue);
 }
 
 static void initial_thread_func(void) __NO_RETURN;
@@ -174,16 +176,14 @@ thread_t *thread_create_etc(
     t->arg = arg;
     t->priority = priority;
     t->state = THREAD_SUSPENDED;
+    t->signals = 0;
     t->blocking_wait_queue = NULL;
-    t->wait_queue_block_ret = NO_ERROR;
+    t->blocked_status = NO_ERROR;
+    t->interruptable = false;
     thread_set_curr_cpu(t, -1);
 
     t->retcode = 0;
     wait_queue_init(&t->retcode_wait_queue);
-
-#if WITH_KERNEL_VM
-    t->aspace = NULL;
-#endif
 
     /* create the stack */
     if (!stack) {
@@ -392,25 +392,8 @@ status_t thread_detach(thread_t *t)
     }
 }
 
-/**
- * @brief  Terminate the current thread
- *
- * Current thread exits with the specified return code.
- *
- * This function does not return.
- */
-void thread_exit(int retcode)
+__NO_RETURN static void thread_exit_locked(thread_t *current_thread, int retcode)
 {
-    thread_t *current_thread = get_current_thread();
-
-    DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
-    DEBUG_ASSERT(!thread_is_idle(current_thread));
-
-//  dprintf("thread_exit: current %p\n", current_thread);
-
-    THREAD_LOCK(state);
-
     /* enter the dead state */
     current_thread->state = THREAD_DEATH;
     current_thread->retcode = retcode;
@@ -470,6 +453,119 @@ void thread_forget(thread_t *t)
 
     if (t->flags & THREAD_FLAG_FREE_STRUCT)
         free(t);
+}
+
+/**
+ * @brief  Terminate the current thread
+ *
+ * Current thread exits with the specified return code.
+ *
+ * This function does not return.
+ */
+void thread_exit(int retcode)
+{
+    thread_t *current_thread = get_current_thread();
+
+    DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
+    DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+    DEBUG_ASSERT(!thread_is_idle(current_thread));
+
+    /* if the thread has a callback set, call it here */
+    if (current_thread->exit_callback) {
+        current_thread->exit_callback(current_thread->exit_callback_arg);
+    }
+
+    THREAD_LOCK(state);
+
+    thread_exit_locked(current_thread, retcode);
+}
+
+/* kill a thread, optionally waiting for it to die */
+void thread_kill(thread_t *t, bool block)
+{
+    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+
+    THREAD_LOCK(state);
+
+    /* deliver a signal to the thread */
+    /* NOTE: it's not important to do this atomically, since we're inside
+     * the thread lock, but go ahead and flush it out to memory to avoid the amount
+     * of races if another thread is looking at this.
+     */
+    t->signals |= THREAD_SIGNAL_KILL;
+    smp_mb();
+
+    /* we are killing ourself */
+    if (t == get_current_thread())
+        goto done;
+
+    /* general logic is to wake up the thread so it notices it had a signal delivered to it */
+
+    switch (t->state) {
+        case THREAD_SUSPENDED:
+            /* thread is suspended.
+             * not really safe to wake it up, since it's only in the state (currently)
+             * because its under construction by the creator thread.
+             */
+            break;
+        case THREAD_READY:
+            /* thread is ready to run and not blocked or suspended.
+             * will wake up and deal with the signal soon.
+             */
+            /* TODO: short circuit if it was blocked from user space */
+            break;
+        case THREAD_RUNNING:
+            /* thread is running (on another cpu) */
+#if WITH_SMP
+            mp_reschedule(1u << t->curr_cpu, 0);
+#endif
+            break;
+        case THREAD_BLOCKED:
+            /* thread is blocked on something and marked interruptable */
+            if (t->interruptable)
+                thread_unblock_from_wait_queue(t, ERR_INTERRUPTED);
+            break;
+        case THREAD_SLEEPING:
+            /* thread is sleeping */
+            if (t->interruptable) {
+                t->state = THREAD_READY;
+                t->blocked_status = ERR_INTERRUPTED;
+                insert_in_run_queue_head(t);
+            }
+            break;
+        case THREAD_DEATH:
+            /* thread is already dead */
+            goto done;
+    }
+
+    /* wait for the thread to exit */
+    if (block && !(t->flags & THREAD_FLAG_DETACHED)) {
+        wait_queue_block(&t->retcode_wait_queue, INFINITE_TIME);
+    }
+
+done:
+    THREAD_UNLOCK(state);
+}
+
+/* check for any pending signals and handle them */
+void thread_process_pending_signals(void)
+{
+    thread_t *current_thread = get_current_thread();
+    if (likely(current_thread->signals == 0))
+        return;
+
+    /* grab the thread lock so we can safely look at the signal mask */
+    THREAD_LOCK(state);
+
+    if (current_thread->signals & THREAD_SIGNAL_KILL) {
+        /* mask the signal to avoid any recursion into the exit handler */
+        current_thread->signals &= ~THREAD_SIGNAL_KILL;
+        THREAD_UNLOCK(state);
+        thread_exit(0);
+        /* unreachable */
+    }
+
+    THREAD_UNLOCK(state);
 }
 
 __NO_RETURN static int idle_thread_routine(void *arg)
@@ -783,14 +879,19 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
     thread_t *t = (thread_t *)arg;
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(t->state == THREAD_SLEEPING);
 
-    THREAD_LOCK(state);
+    spin_lock(&thread_lock);
+
+    if (t->state != THREAD_SLEEPING) {
+        spin_unlock(&thread_lock);
+        return INT_NO_RESCHEDULE;
+    }
 
     t->state = THREAD_READY;
+    t->blocked_status = NO_ERROR;
     insert_in_run_queue_head(t);
 
-    THREAD_UNLOCK(state);
+    spin_unlock(&thread_lock);
 
     return INT_RESCHEDULE;
 }
@@ -804,24 +905,48 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
  * Note that this function could sleep for longer than the specified delay if
  * other threads are running.  When the timer expires, this thread will
  * be placed at the head of the run queue.
+ *
+ * interruptable argument allows this routine to return early if the thread was signalled
+ * for something.
  */
-void thread_sleep(lk_time_t delay)
+status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
 {
-    timer_t timer;
-
     thread_t *current_thread = get_current_thread();
+    status_t blocked_status;
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
     DEBUG_ASSERT(!thread_is_idle(current_thread));
 
+    timer_t timer;
     timer_initialize(&timer);
 
     THREAD_LOCK(state);
+
+    /* if we've been killed and going in interruptable, abort here */
+    if (interruptable && unlikely((current_thread->signals & THREAD_SIGNAL_KILL))) {
+        blocked_status = ERR_INTERRUPTED;
+        goto out;
+    }
+
     timer_set_oneshot(&timer, delay, thread_sleep_handler, (void *)current_thread);
     current_thread->state = THREAD_SLEEPING;
+    current_thread->blocked_status = NO_ERROR;
+
+    current_thread->interruptable = interruptable;
     thread_resched();
+    current_thread->interruptable = false;
+
+    blocked_status = current_thread->blocked_status;
+    if (blocked_status == ERR_INTERRUPTED) {
+        /* TODO: fix race in timer_cancel which may cause it to fire after this */
+        timer_cancel(&timer);
+    }
+
+out:
     THREAD_UNLOCK(state);
+
+    return blocked_status;
 }
 
 /**
@@ -842,9 +967,9 @@ void thread_construct_first(thread_t *t, const char *name)
     t->priority = HIGHEST_PRIORITY;
     t->state = THREAD_RUNNING;
     t->flags = THREAD_FLAG_DETACHED;
+    t->signals = 0;
     thread_set_curr_cpu(t, cpu);
     thread_set_pinned_cpu(t, cpu);
-    wait_queue_init(&t->retcode_wait_queue);
 
     THREAD_LOCK(state);
     list_add_head(&thread_list, &t->thread_list_node);
@@ -896,6 +1021,15 @@ void thread_set_name(const char *name)
 {
     thread_t *current_thread = get_current_thread();
     strlcpy(current_thread->name, name, sizeof(current_thread->name));
+}
+
+/**
+ * @brief Set the callback pointer to a function called on thread exit.
+ */
+void thread_set_exit_callback(thread_t *t, thread_exit_callback_t cb, void *cb_arg)
+{
+    t->exit_callback = cb;
+    t->exit_callback_arg = cb_arg;
 }
 
 /**
@@ -1047,8 +1181,15 @@ void dump_thread(thread_t *t)
 #endif
     dprintf(INFO, "\truntime_us %lld, runtime_s %lld\n", runtime, runtime / 1000000);
     dprintf(INFO, "\tstack %p, stack_size %zd\n", t->stack, t->stack_size);
-    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x\n", t->entry, t->arg, t->flags);
-    dprintf(INFO, "\twait queue %p, wait queue ret %d\n", t->blocking_wait_queue, t->wait_queue_block_ret);
+    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,
+            (t->flags & THREAD_FLAG_DETACHED) ? "Dt" :"",
+            (t->flags & THREAD_FLAG_FREE_STACK) ? "Fs" :"",
+            (t->flags & THREAD_FLAG_FREE_STRUCT) ? "Ft" :"",
+            (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" :"",
+            (t->flags & THREAD_FLAG_IDLE) ? "Id" :"",
+            (t->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) ? "Sc" :"");
+    dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %u\n",
+            t->blocking_wait_queue, t->blocked_status, t->interruptable);
 #if WITH_KERNEL_VM
     dprintf(INFO, "\taspace %p\n", t->aspace);
 #endif
@@ -1148,7 +1289,7 @@ status_t wait_queue_block(wait_queue_t *wait, lk_time_t timeout)
     wait->count++;
     current_thread->state = THREAD_BLOCKED;
     current_thread->blocking_wait_queue = wait;
-    current_thread->wait_queue_block_ret = NO_ERROR;
+    current_thread->blocked_status = NO_ERROR;
 
     /* if the timeout is nonzero or noninfinite, set a callback to yank us out of the queue */
     if (timeout != INFINITE_TIME) {
@@ -1163,7 +1304,7 @@ status_t wait_queue_block(wait_queue_t *wait, lk_time_t timeout)
         timer_cancel(&timer);
     }
 
-    return current_thread->wait_queue_block_ret;
+    return current_thread->blocked_status;
 }
 
 /**
@@ -1196,7 +1337,7 @@ int wait_queue_wake_one(wait_queue_t *wait, bool reschedule, status_t wait_queue
         wait->count--;
         DEBUG_ASSERT(t->state == THREAD_BLOCKED);
         t->state = THREAD_READY;
-        t->wait_queue_block_ret = wait_queue_error;
+        t->blocked_status = wait_queue_error;
         t->blocking_wait_queue = NULL;
 
         /* if we're instructed to reschedule, stick the current thread on the head
@@ -1259,7 +1400,7 @@ int wait_queue_wake_all(wait_queue_t *wait, bool reschedule, status_t wait_queue
         wait->count--;
         DEBUG_ASSERT(t->state == THREAD_BLOCKED);
         t->state = THREAD_READY;
-        t->wait_queue_block_ret = wait_queue_error;
+        t->blocked_status = wait_queue_error;
         t->blocking_wait_queue = NULL;
 
         insert_in_run_queue_head(t);
@@ -1322,7 +1463,7 @@ status_t thread_unblock_from_wait_queue(thread_t *t, status_t wait_queue_error)
     t->blocking_wait_queue->count--;
     t->blocking_wait_queue = NULL;
     t->state = THREAD_READY;
-    t->wait_queue_block_ret = wait_queue_error;
+    t->blocked_status = wait_queue_error;
     insert_in_run_queue_head(t);
     mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
 

@@ -78,7 +78,7 @@ mx_status_t IOPortDispatcher::Wait(IOP_Packet* packet) {
                 return NO_ERROR;
             }
         }
-        status_t st = event_wait_timeout(&event_, INFINITE_TIME);
+        status_t st = event_wait_timeout(&event_, INFINITE_TIME, true);
         if (st != NO_ERROR)
             return st;
     }

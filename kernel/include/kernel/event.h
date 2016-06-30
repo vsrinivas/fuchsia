@@ -53,20 +53,20 @@ typedef struct event {
 void event_init(event_t *, bool initial, uint flags);
 void event_destroy(event_t *);
 
-status_t event_wait_timeout(event_t *, lk_time_t);
+/* Wait for up to timeout amount of time.
+ * Interruptable arg allows it to return early with ERR_INTERRUPTED if thread
+ * is signaled for kill.
+ */
+status_t event_wait_timeout(event_t *, lk_time_t, bool interruptable);
+
+/* no timeout, non interruptable version of the above. */
+static inline status_t event_wait(event_t *e) { return event_wait_timeout(e, INFINITE_TIME, false); }
+
 int event_signal_etc(event_t *, bool reschedule, status_t result);
-status_t event_signal(event_t *, bool reschedule);
+int event_signal(event_t *, bool reschedule);
 status_t event_unsignal(event_t *);
 
-static inline bool event_initialized(event_t *e)
-{
-    return e->magic == EVENT_MAGIC;
-}
-
-static inline status_t event_wait(event_t *e)
-{
-    return event_wait_timeout(e, INFINITE_TIME);
-}
+static inline bool event_initialized(event_t *e) { return e->magic == EVENT_MAGIC; }
 
 __END_CDECLS;
 

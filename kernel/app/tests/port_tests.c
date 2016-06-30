@@ -798,7 +798,7 @@ int group_waiting(void)
     // threads waiting on that port group.
     port_group_add(pg, r_test_port1);
 
-    if (event_wait_timeout(&group_waiting_sync_evt, 500) != NO_ERROR)
+    if (event_wait_timeout(&group_waiting_sync_evt, 500, false) != NO_ERROR)
         return __LINE__;
 
     st = port_close(w_test_port1);

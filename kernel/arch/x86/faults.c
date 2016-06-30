@@ -251,6 +251,9 @@ void x86_exception_handler(x86_iframe_t *frame)
 {
     THREAD_STATS_INC(interrupts);
 
+    // did we come from user or kernel space?
+    bool from_user = SELECTOR_PL(frame->cs) != 0;
+
     // deliver the interrupt
     enum handler_return ret = INT_NO_RESCHEDULE;
 
@@ -260,8 +263,6 @@ void x86_exception_handler(x86_iframe_t *frame)
             break;
 
         case X86_INT_DEVICE_NA: {
-            // did we come from user or kernel space?
-            bool from_user = SELECTOR_PL(frame->cs) != 0;
             if (unlikely(!from_user)) {
                 exception_die(frame, "invalid fpu use in kernel\n");
             }
@@ -323,6 +324,14 @@ void x86_exception_handler(x86_iframe_t *frame)
         }
         default:
             x86_unhandled_exception(frame);
+    }
+
+    /* if we came from user space, check to see if we have any signals to handle */
+    if (unlikely(from_user)) {
+        /* in the case of receiving a kill signal, this function may not return,
+         * but the scheduler would have been invoked so it's fine.
+         */
+        thread_process_pending_signals();
     }
 
     if (ret != INT_NO_RESCHEDULE)

@@ -234,6 +234,7 @@ typedef struct mx_user_packet {
 #define ERR_BUSY                (-23)
 #define ERR_CANCELLED           (-24)
 #define ERR_CHANNEL_CLOSED      (-25)
+#define ERR_INTERRUPTED         (-26)
 
 // Permission check errors
 #define ERR_ACCESS_DENIED       (-30)

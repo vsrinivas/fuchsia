@@ -211,6 +211,16 @@ void arm64_irq(struct arm64_iframe_long *iframe, uint exception_flags)
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
     enum handler_return ret = platform_irq(iframe);
+
+    /* if we came from user space, check to see if we have any signals to handle */
+    if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
+        /* in the case of receiving a kill signal, this function may not return,
+         * but the scheduler would have been invoked so it's fine.
+         */
+        thread_process_pending_signals();
+    }
+
+    /* preempt the thread if the interrupt has signalled it */
     if (ret != INT_NO_RESCHEDULE)
         thread_preempt();
 }
