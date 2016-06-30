@@ -161,7 +161,7 @@ void platform_early_display_init(void) {
     }
 
     // allocate an offscreen buffer of worst-case size, page aligned
-    bits = boot_alloc_mem(8192 + bootloader_fb_height * bootloader_fb_width * 4);
+    bits = boot_alloc_mem(8192 + bootloader_fb_height * bootloader_fb_stride * 4);
     bits = (void*) ((((uintptr_t) bits) + 4095) & (~4095));
 
     memset(&info, 0, sizeof(info));
