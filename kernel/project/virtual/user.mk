@@ -11,6 +11,9 @@ KERNEL_DEFINES += WITH_DEBUG_LINEBUFFER=1
 
 MODULES += \
     ulib/musl \
+    ulib/m \
+    ulib/dl \
+    ulib/pthread \
     lib/syscalls \
     lib/userboot \
     lib/debuglog \
