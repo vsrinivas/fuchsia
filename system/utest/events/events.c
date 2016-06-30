@@ -18,21 +18,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-
-#define CHECK_MX_STATUS(call)                                                    \
-    do {                                                                         \
-        mx_status_t status = (call);                                             \
-        if (status < 0) {                                                        \
-            printf("%s:%d: %s failed: %d\n", __FILE__, __LINE__, #call, status); \
-            return __LINE__;                                                     \
-        }                                                                        \
-    } while (0)
-
-#define FAIL_TEST                                    \
-    do {                                             \
-        printf("%s:%d: failed", __FILE__, __LINE__); \
-        return __LINE__;                             \
-    } while (0)
+#include <mxu/unittest.h>
 
 static bool wait(mx_handle_t event, mx_handle_t quit_event) {
     mx_status_t ms;
@@ -86,34 +72,40 @@ static int thread_fn_2(void* arg) {
     return 0;
 }
 
-static int basic_test(void) {
-    printf("basic event test\n");
+static bool basic_test(void) {
+    BEGIN_TEST;
 
     mx_handle_t events[3];
-    CHECK_MX_STATUS(events[0] = _magenta_event_create(0U));
-    CHECK_MX_STATUS(events[1] = _magenta_event_create(1U));
-    CHECK_MX_STATUS(events[2] = _magenta_event_create(2U));
+    events[0] = _magenta_event_create(0U);
+    ASSERT_GE(events[0], 0, "Error during event create");
+    events[1] = _magenta_event_create(1U);
+    ASSERT_GE(events[1], 0, "Error during event create");
+    events[2] = _magenta_event_create(2U);
+    ASSERT_GE(events[2], 0, "Error during event create");
 
     mx_handle_t threads[4];
-    CHECK_MX_STATUS(threads[3] = _magenta_thread_create(thread_fn_1, events, "master", 7));
+    threads[3] = _magenta_thread_create(thread_fn_1, events, "master", 7);
+    ASSERT_GE(threads[3], 0, "Error during thread creation");
 
     for (int ix = 0; ix != 3; ++ix) {
-        CHECK_MX_STATUS(threads[ix] = _magenta_thread_create(thread_fn_2, events, "workers", 8));
+        threads[ix] = _magenta_thread_create(thread_fn_2, events, "workers", 8);
+        ASSERT_GE(threads[ix], 0, "Error during thread creation");
     }
 
     _magenta_nanosleep(400 * 1000 * 1000);
     _magenta_event_signal(events[0]);
 
     for (int ix = 0; ix != 4; ++ix) {
-        CHECK_MX_STATUS(_magenta_handle_wait_one(threads[ix], MX_SIGNAL_SIGNALED,
-                                                 MX_TIME_INFINITE, NULL, NULL));
-        CHECK_MX_STATUS(_magenta_handle_close(threads[ix]));
+        ASSERT_GE(_magenta_handle_wait_one(threads[ix], MX_SIGNAL_SIGNALED,
+                                           MX_TIME_INFINITE, NULL, NULL),
+                  0, "Error during wait");
+        ASSERT_GE(_magenta_handle_close(threads[ix]), 0, "Error during thread close");
     }
 
-    CHECK_MX_STATUS(_magenta_handle_close(events[0]));
-    CHECK_MX_STATUS(_magenta_handle_close(events[1]));
-    CHECK_MX_STATUS(_magenta_handle_close(events[2]));
-    return 0;
+    ASSERT_GE(_magenta_handle_close(events[0]), 0, "Error during event-0 close");
+    ASSERT_GE(_magenta_handle_close(events[1]), 0, "Error during event-1 close");
+    ASSERT_GE(_magenta_handle_close(events[2]), 0, "Error during event-2 close");
+    END_TEST;
 }
 
 static int thread_fn_3(void* arg) {
@@ -140,34 +132,40 @@ static int thread_fn_4(void* arg) {
     return 0;
 }
 
-static int user_signals_test(void) {
-    printf("user signals event test\n");
+static bool user_signals_test(void) {
+    BEGIN_TEST;
 
     mx_handle_t events[3];
-    CHECK_MX_STATUS(events[0] = _magenta_event_create(0U));
-    CHECK_MX_STATUS(events[1] = _magenta_event_create(1U));
-    CHECK_MX_STATUS(events[2] = _magenta_event_create(2U));
+    events[0] = _magenta_event_create(0U);
+    ASSERT_GE(events[0], 0, "Error during event create");
+    events[1] = _magenta_event_create(1U);
+    ASSERT_GE(events[1], 0, "Error during event create");
+    events[2] = _magenta_event_create(2U);
+    ASSERT_GE(events[2], 0, "Error during event create");
 
     mx_handle_t threads[4];
-    CHECK_MX_STATUS(threads[3] = _magenta_thread_create(thread_fn_3, events, "master", 7));
+    threads[3] = _magenta_thread_create(thread_fn_3, events, "master", 7);
+    ASSERT_GE(threads[3], 0, "Error during thread creation");
 
     for (int ix = 0; ix != 3; ++ix) {
-        CHECK_MX_STATUS(threads[ix] = _magenta_thread_create(thread_fn_4, events, "workers", 8));
+        threads[ix] = _magenta_thread_create(thread_fn_4, events, "workers", 8);
+        ASSERT_GE(threads[ix], 0, "Error during thread creation");
     }
 
     _magenta_nanosleep(400 * 1000 * 1000);
     _magenta_event_signal(events[0]);
 
     for (int ix = 0; ix != 4; ++ix) {
-        CHECK_MX_STATUS(_magenta_handle_wait_one(threads[ix], MX_SIGNAL_SIGNALED,
-                                                 MX_TIME_INFINITE, NULL, NULL));
-        CHECK_MX_STATUS(_magenta_handle_close(threads[ix]));
+        ASSERT_GE(_magenta_handle_wait_one(threads[ix], MX_SIGNAL_SIGNALED,
+                                           MX_TIME_INFINITE, NULL, NULL),
+                  0, "Error during wait");
+        ASSERT_GE(_magenta_handle_close(threads[ix]), 0, "Error during thread close");
     }
 
-    CHECK_MX_STATUS(_magenta_handle_close(events[0]));
-    CHECK_MX_STATUS(_magenta_handle_close(events[1]));
-    CHECK_MX_STATUS(_magenta_handle_close(events[2]));
-    return 0;
+    ASSERT_GE(_magenta_handle_close(events[0]), 0, "Error during event-0 close");
+    ASSERT_GE(_magenta_handle_close(events[1]), 0, "Error during event-1 close");
+    ASSERT_GE(_magenta_handle_close(events[2]), 0, "Error during event-2 close");
+    END_TEST;
 }
 
 static int thread_fn_closer(void* arg) {
@@ -180,13 +178,16 @@ static int thread_fn_closer(void* arg) {
     return rc;
 }
 
-static int wait_signals_test(void) {
-    printf("wait signals event test\n");
+static bool wait_signals_test(void) {
+    BEGIN_TEST;
 
     mx_handle_t events[3];
-    CHECK_MX_STATUS(events[0] = _magenta_event_create(0U));
-    CHECK_MX_STATUS(events[1] = _magenta_event_create(1U));
-    CHECK_MX_STATUS(events[2] = _magenta_event_create(2U));
+    events[0] = _magenta_event_create(0U);
+    ASSERT_GE(events[0], 0, "Error during event create");
+    events[1] = _magenta_event_create(1U);
+    ASSERT_GE(events[1], 0, "Error during event create");
+    events[2] = _magenta_event_create(2U);
+    ASSERT_GE(events[2], 0, "Error during event create");
 
     mx_status_t status;
     mx_signals_t satisfied[3] = {0};
@@ -195,102 +196,79 @@ static int wait_signals_test(void) {
         MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED};
 
     status = _magenta_handle_wait_one(events[0], signals[0], 1u, &satisfied[0], NULL);
-    if (status != ERR_TIMED_OUT)
-        FAIL_TEST;
-    if (satisfied[0])
-        FAIL_TEST;
+    ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
+    ASSERT_EQ(satisfied[0], 0u, "");
 
     status = _magenta_handle_wait_many(3u, events, signals, 1u, satisfied, NULL);
-    if (status != ERR_TIMED_OUT)
-        FAIL_TEST;
-    if (satisfied[0] || satisfied[1] || satisfied[2])
-        FAIL_TEST;
+    ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
+    ASSERT_FALSE(satisfied[0] || satisfied[1] || satisfied[2], "")
 
     status = _magenta_handle_wait_one(events[0], signals[0], 0u, &satisfied[0], NULL);
-    if (status != ERR_TIMED_OUT)
-        FAIL_TEST;
-    if (satisfied[0])
-        FAIL_TEST;
+    ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
+    ASSERT_EQ(satisfied[0], 0u, "");
 
     status = _magenta_handle_wait_many(3u, events, signals, 0u, satisfied, NULL);
-    if (status != ERR_TIMED_OUT)
-        return 1;
-    if (satisfied[1] || satisfied[1])
-        FAIL_TEST;
+    ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
+    ASSERT_FALSE(satisfied[0] || satisfied[1] || satisfied[2], "")
 
-    CHECK_MX_STATUS(_magenta_event_signal(events[0]));
+    ASSERT_GE(_magenta_event_signal(events[0]), 0, "Error suring event signal");
 
     status = _magenta_handle_wait_one(events[0], signals[0], 1u, &satisfied[0], NULL);
-    if (status)
-        FAIL_TEST;
-    if (satisfied[0] != MX_SIGNAL_SIGNALED)
-        FAIL_TEST;
+    ASSERT_EQ(status, 0, "wait failed");
+    ASSERT_EQ(satisfied[0], MX_SIGNAL_SIGNALED, "Error during wait call");
 
     status = _magenta_handle_wait_many(3u, events, signals, 1u, satisfied, NULL);
-    if (status)
-        FAIL_TEST;
-    if (satisfied[0] != MX_SIGNAL_SIGNALED)
-        FAIL_TEST;
+    ASSERT_EQ(status, 0, "wait failed");
+    ASSERT_EQ(satisfied[0], MX_SIGNAL_SIGNALED, "Error during wait call");
 
     status = _magenta_handle_wait_one(events[0], signals[0], 0u, &satisfied[0], NULL);
-    if (status)
-        FAIL_TEST;
-    if (satisfied[0] != MX_SIGNAL_SIGNALED)
-        FAIL_TEST;
+    ASSERT_EQ(status, 0, "wait failed");
+    ASSERT_EQ(satisfied[0], MX_SIGNAL_SIGNALED, "Error during wait call");
 
     mx_handle_t thread;
-    CHECK_MX_STATUS(thread = _magenta_thread_create(thread_fn_closer, &events[1], "closer", 7));
+    thread = _magenta_thread_create(thread_fn_closer, &events[1], "closer", 7);
+    ASSERT_GE(thread, 0, "Error during thread creation");
 
     status = _magenta_handle_wait_one(events[1], signals[1], MX_TIME_INFINITE, NULL, NULL);
-    if (status != ERR_CANCELLED)
-        FAIL_TEST;
+    ASSERT_EQ(status, ERR_CANCELLED, "Error during wait");
 
-    CHECK_MX_STATUS(_magenta_handle_wait_one(
-        thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL));
+    ASSERT_GE(_magenta_handle_wait_one(
+                  thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL),
+              0, "Error during wait");
 
-    CHECK_MX_STATUS(_magenta_handle_close(thread));
+    ASSERT_GE(_magenta_handle_close(thread), 0, "Error during thread close");
 
-    CHECK_MX_STATUS(_magenta_handle_close(events[0]));
-    CHECK_MX_STATUS(_magenta_handle_close(events[2]));
+    ASSERT_GE(_magenta_handle_close(events[0]), 0, "Error during event-0 close");
+    ASSERT_GE(_magenta_handle_close(events[2]), 0, "Error during event-2 close");
 
-    return 0;
+    END_TEST;
 }
 
-static int reset_test(void) {
-    printf("reset event test\n");
-
-    mx_handle_t event;
-    CHECK_MX_STATUS(event = _magenta_event_create(0U));
-    CHECK_MX_STATUS(_magenta_event_signal(event));
-    CHECK_MX_STATUS(_magenta_event_reset(event));
+static bool reset_test(void) {
+    BEGIN_TEST;
+    mx_handle_t event = _magenta_event_create(0U);
+    ASSERT_GE(event, 0, "Error during event creation");
+    ASSERT_GE(_magenta_event_signal(event), 0, "Error during event signal");
+    ASSERT_GE(_magenta_event_reset(event), 0, "Error during event reset");
 
     mx_status_t status;
     status = _magenta_handle_wait_one(event, MX_SIGNAL_SIGNALED, 1u, NULL, NULL);
-    if (status != ERR_TIMED_OUT)
-        FAIL_TEST;
+    ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
 
-    CHECK_MX_STATUS(_magenta_handle_close(event));
+    ASSERT_GE(_magenta_handle_close(event), 0, "error during handle close");
 
-    return 0;
+    END_TEST;
 }
 
-#define EXIT_TEST(n, r)                                \
-    if ((r)) {                                         \
-        printf("event test %d: error %d\n", (n), (r)); \
-        return r;                                      \
-    }
+BEGIN_TEST_CASE(event_tests)
+RUN_TEST(basic_test)
+RUN_TEST(user_signals_test)
+RUN_TEST(wait_signals_test)
+RUN_TEST(reset_test)
+END_TEST_CASE(event_tests)
 
 int main(void) {
-    int res;
-    res = basic_test();
-    EXIT_TEST(1, res);
-    res = user_signals_test();
-    EXIT_TEST(2, res);
-    res = wait_signals_test();
-    EXIT_TEST(3, res);
-    res = reset_test();
-    EXIT_TEST(4, res);
-
-    printf("event test done\n");
-    return 0;
+    // TODO: remove this register once global constructors work
+    unittest_register_test_case(&_event_tests_element);
+    return unittest_run_all_tests() ? 0 : -1;
 }
