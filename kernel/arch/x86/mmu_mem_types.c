@@ -110,14 +110,6 @@ void x86_mmu_mem_type_init(void)
         target_mtrrs->mtrr_var[i].physbase = read_msr(IA32_MTRR_PHYSBASE(i));
         target_mtrrs->mtrr_var[i].physmask = read_msr(IA32_MTRR_PHYSMASK(i));
     }
-
-    /* Set default MTRR to UC, by Intel's recommendation (section 11.11.2.1).
-     * Some platforms come up with less restrictive caching. */
-    target_mtrrs->mtrr_def &= ~MTRR_DEF_TYPE_TYPE_MASK;
-    target_mtrrs->mtrr_def |= X86_PAT_UC;
-
-    /* Have our changes to the MTRRs take effect */
-    x86_pat_sync();
 }
 
 /* @brief Give all CPUs our Page Attribute Tables and Memory Type Range
