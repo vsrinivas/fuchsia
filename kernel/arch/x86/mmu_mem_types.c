@@ -50,11 +50,11 @@ extern uint8_t g_paddr_width;
 #define MTRR_DEF_TYPE_TYPE_MASK 0xff
 
 /* IA32_MTRR_PHYSBASE read functions */
-#define MTRR_PHYSBASE_BASE(x) ((x) & ~((1 << 12) - 1) & ((1 << g_paddr_width) - 1))
+#define MTRR_PHYSBASE_BASE(x) ((x) & ~((1ULL << 12) - 1) & ((1ULL << g_paddr_width) - 1))
 #define MTRR_PHYSBASE_TYPE(x) ((uint8_t)(x))
 
 /* IA32_MTRR_PHYSMASK read functions */
-#define MTRR_PHYSMASK_MASK(x) ((x) & ~((1 << 12) - 1) & ((1 << g_paddr_width) - 1))
+#define MTRR_PHYSMASK_MASK(x) ((x) & ~((1ULL << 12) - 1) & ((1ULL << g_paddr_width) - 1))
 #define MTRR_PHYSMASK_VALID(x) !!((x) & (1 << 11))
 
 /* Number of variable length MTRRs */
