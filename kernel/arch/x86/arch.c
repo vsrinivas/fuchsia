@@ -21,6 +21,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
+#include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/mp.h>
 #include <arch/mmu.h>
 #include <kernel/vm.h>
@@ -113,6 +114,10 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
 
     DEBUG_ASSERT(cpu_num > 0);
     x86_init_percpu((uint)cpu_num);
+
+    // Load the appropriate PAT/MTRRs.  This must happen after init_percpu, so
+    // that this CPU is considered online.
+    x86_pat_sync(1U << cpu_num);
 
     // Signal that this CPU is initialized
     atomic_add(aps_still_booting, -1);

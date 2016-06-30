@@ -15,7 +15,7 @@
 #include <arch/x86/bootstrap16.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
-#include <arch/x86/mmu.h>
+#include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/mp.h>
 #include <lk/main.h>
 #include <kernel/mp.h>
@@ -141,7 +141,5 @@ cleanup_aspace:
     vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
     vmm_free_region(kernel_aspace, (vaddr_t)bootstrap_data);
 finish:
-    // Get all CPUs to agree on the PATs
-    x86_pat_sync();
     return status;
 }

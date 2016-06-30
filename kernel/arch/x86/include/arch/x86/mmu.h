@@ -195,9 +195,6 @@ void x86_mmu_percpu_init(void);
 void x86_mmu_early_init(void);
 void x86_mmu_init(void);
 
-void x86_mmu_mem_type_init(void);
-void x86_pat_sync(void);
-
 __END_CDECLS
 
 #endif // !ASSEMBLY

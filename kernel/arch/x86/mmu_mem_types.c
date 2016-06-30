@@ -11,9 +11,9 @@
 #include <string.h>
 #include <arch/x86.h>
 #include <arch/x86/mmu.h>
+#include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/registers.h>
 #include <lib/console.h>
-#include <kernel/mp.h>
 
 /* address widths from mmu.c */
 extern uint8_t g_paddr_width;
@@ -113,28 +113,29 @@ void x86_mmu_mem_type_init(void)
 
     /* Update the PAT on the bootstrap processor (and sync any changes to the
      * MTRR that may have been made above). */
-    x86_pat_sync();
+    x86_pat_sync(1<<0);
 }
 
-/* @brief Give all CPUs our Page Attribute Tables and Memory Type Range
- * Registers
+/* @brief Give the specificed CPUs our Page Attribute Tables and
+ * Memory Type Range Registers.
  *
  * This operation is not safe to perform while a CPU may be
- * hotplugged.
+ * hotplugged.  This should be called with mp_get_online_mask() as
+ * the targets if we ever want to update the PAT or MTRRs after
+ * boot.
  *
  * This algorithm is based on section 11.11.8 of Intel 3A
- * This must only be called after the APs are brought up.
  */
-void x86_pat_sync(void)
+void x86_pat_sync(mp_cpu_mask_t targets)
 {
-    mp_cpu_mask_t online = mp_get_online_mask();
+    targets &= mp_get_online_mask();
 
     struct pat_sync_task_context context = {
-        .barrier1 = online,
-        .barrier2 = online,
+        .barrier1 = targets,
+        .barrier2 = targets,
     };
     /* Step 1: Broadcast to all processors to execute the sequence */
-    mp_sync_exec(online, x86_pat_sync_task, &context);
+    mp_sync_exec(targets, x86_pat_sync_task, &context);
 }
 
 static void x86_pat_sync_task(void *raw_context)

@@ -15,6 +15,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
+#include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <kernel/vm.h>
 
