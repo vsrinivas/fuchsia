@@ -112,10 +112,10 @@ pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t* bus_drv,
     return NULL;
 }
 
-static bool pcie_probe_bar_info(pcie_config_t*   cfg,
-                                uint             bar_id,
-                                uint             bar_count,
-                                pcie_bar_info_t* info_out) {
+static status_t pcie_probe_bar_info(pcie_config_t*   cfg,
+                                    uint             bar_id,
+                                    uint             bar_count,
+                                    pcie_bar_info_t* info_out) {
     DEBUG_ASSERT(cfg);
     DEBUG_ASSERT(bar_id < bar_count);
     DEBUG_ASSERT(info_out);
@@ -136,14 +136,14 @@ static bool pcie_probe_bar_info(pcie_config_t*   cfg,
             TRACEF("Illegal 64-bit MMIO BAR position (%u/%u) while fetching BAR info "
                    "for device config @%p\n",
                    bar_id, bar_count, cfg);
-            return false;
+            return ERR_BAD_STATE;
         }
     } else {
         if (info_out->is_mmio && ((bar_val & PCI_BAR_MMIO_TYPE_MASK) != PCI_BAR_MMIO_TYPE_32BIT)) {
             TRACEF("Unrecognized MMIO BAR type (BAR[%u] == 0x%08x) while fetching BAR info "
                    "for device config @%p\n",
                    bar_id, bar_val, cfg);
-            return false;
+            return ERR_BAD_STATE;
         }
     }
 
@@ -175,10 +175,10 @@ static bool pcie_probe_bar_info(pcie_config_t*   cfg,
     }
 
     /* Success */
-    return (info_out->size > 0);
+    return NO_ERROR;
 }
 
-static void pcie_enumerate_bars(pcie_device_state_t* dev) {
+static status_t pcie_enumerate_bars(pcie_device_state_t* dev) {
     DEBUG_ASSERT(dev && dev->cfg);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
 
@@ -199,12 +199,12 @@ static void pcie_enumerate_bars(pcie_device_state_t* dev) {
         break;
 
     case PCI_HEADER_TYPE_CARD_BUS:
-        return; // Nothing to do if this header type has no BARs
+        goto finished;  // Nothing to do if this header type has no BARs
 
     default:
-        TRACEF("Unrecognized header type (0x%02x) in %s for device %02x:%02x:%01x.\n",
-               header_type, __FUNCTION__, dev->bus_id, dev->dev_id, dev->func_id);
-        return;
+        TRACEF("Unrecognized header type (0x%02x) for device %02x:%02x:%01x.\n",
+               header_type, dev->bus_id, dev->dev_id, dev->func_id);
+        return ERR_NOT_SUPPORTED;
     }
 
     DEBUG_ASSERT(bar_count <= countof(dev->bars));
@@ -213,19 +213,29 @@ static void pcie_enumerate_bars(pcie_device_state_t* dev) {
         DEBUG_ASSERT(dev->bars[i].size == 0);
         DEBUG_ASSERT(!dev->bars[i].is_allocated);
 
-        if (pcie_probe_bar_info(cfg, i, bar_count, &dev->bars[i])) {
-            DEBUG_ASSERT(dev->bars[i].size != 0);
+        status_t probe_res = pcie_probe_bar_info(cfg, i, bar_count, &dev->bars[i]);
+        if (probe_res != NO_ERROR)
+            return probe_res;
 
+        if (dev->bars[i].size > 0) {
             dev->bars[i].dev = dev;
 
             /* If this was a 64 bit bar, it took two registers to store.  Make
              * sure to skip the next register */
             if (dev->bars[i].is_64bit) {
                 i++;
-                DEBUG_ASSERT(i < bar_count);
+
+                if (i >= bar_count) {
+                    TRACEF("Device %02x:%02x:%01x claims to have 64-bit BAR in position %u/%u!\n",
+                           dev->bus_id, dev->dev_id, dev->func_id, i, bar_count);
+                    return ERR_BAD_STATE;
+                }
             }
         }
     }
+
+finished:
+    return NO_ERROR;
 }
 
 static status_t pcie_scan_init_device(pcie_device_state_t*     dev,
@@ -259,14 +269,15 @@ static status_t pcie_scan_init_device(pcie_device_state_t*     dev,
     dev->bus_id     = bus_id;
     dev->dev_id     = dev_id;
     dev->func_id    = func_id;
-    dev->plugged_in = true;
 
     /* PCI Express Capabilities */
     dev->pcie_caps.devtype = PCIE_DEVTYPE_UNKNOWN;
 
     /* Build this device's list of BARs with non-zero size, but do not actually
      * allocate them yet. */
-    pcie_enumerate_bars(dev);
+    status = pcie_enumerate_bars(dev);
+    if (status != NO_ERROR)
+        goto finished;
 
     /* Parse and sanity check the capabilities and extended capabilities lists
      * if they exist */
@@ -282,11 +293,17 @@ finished:
     MUTEX_RELEASE(dev, dev_lock);
 
     /* If things have gone well, and we have an upstream bridge, go ahead and
-     * link ourselves up to the upstream bridge. */
-    if ((status == NO_ERROR) && upstream_bridge) {
-        pcie_link_device_to_upstream(dev, upstream_bridge);
+     * flag the device as plugged in, then link ourselves up to the upstream bridge. */
+    if (status == NO_ERROR) {
+        dev->plugged_in = true;
+        if (upstream_bridge)
+            pcie_link_device_to_upstream(dev, upstream_bridge);
+
+        DEBUG_ASSERT((dev->upstream == NULL) == (upstream_bridge == NULL));
     } else {
-        DEBUG_ASSERT(dev->upstream == NULL);
+        TRACEF("Failed to initialize device %02x:%02x:%01x; This is Very Bad.  "
+               "Device (and any of its children) will be inaccessible!\n",
+               bus_id, dev_id, func_id);
     }
 
     return status;
@@ -306,7 +323,7 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
     __UNUSED uint ndx = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
 
     DEBUG_ASSERT(ndx < countof(upstream_bridge->downstream));
-    DEBUG_ASSERT(!upstream_bridge->downstream[ndx]);
+    DEBUG_ASSERT(upstream_bridge->downstream[ndx] == NULL);
 
     /* Is there an actual device here? */
     uint16_t vendor_id = pcie_read16(&cfg->base.vendor_id);
@@ -362,35 +379,33 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
         // TODO(johngro) : The local "dev" pointer owns this reference.  Clean
         // this up using smart pointers when we switch to C++
         dev = calloc(1, sizeof(*dev));
-        dev->ref_count = 1;
         if (!dev) {
             TRACEF("Failed to allocate device node for %02x:%02x.%01x during bus scan.\n",
                     bus_id, dev_id, func_id);
             return;
         }
+        dev->ref_count = 1;
     }
 
-    /* Initialize common fields, linking up the graph in the process.
-     *
-     * TODO(johngro): Don't assert that this succeeds.  Instead handle sanity
-     * check failures at runtime.  This goes for all of the other things which
-     * might fail their sanity checks (BAR configurations, header types, etc...)
-     *
-     * We should probably keep the device definition around, do our best to
-     * quiesce it, and flag it as bad to prevent it from ever being handed out
-     * to a driver.
-     */
-    __UNUSED status_t res;
-    res = pcie_scan_init_device(dev,
-                                upstream_bridge,
-                                upstream_bridge->dev.bus_drv,
-                                bus_id, dev_id, func_id);
-    DEBUG_ASSERT(NO_ERROR == res);
-
-    /* If this was a bridge device, recurse and continue probing. */
-    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
-    if (bridge)
-        pcie_scan_bus(bridge);
+    /* Initialize common fields, linking up the graph in the process. */
+    status_t res = pcie_scan_init_device(dev,
+                                         upstream_bridge,
+                                         upstream_bridge->dev.bus_drv,
+                                         bus_id, dev_id, func_id);
+    if (NO_ERROR == res) {
+        /* If this was a bridge device, recurse and continue probing. */
+        pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
+        if (bridge)
+            pcie_scan_bus(bridge);
+    } else {
+        /* Something went terribly wrong during init.  ASSERT that we are not
+         * tracking this device upstream, and release it.  No need to log,
+         * pcie_scan_init_device has done so already for us.
+         */
+        DEBUG_ASSERT(upstream_bridge->downstream[ndx] == NULL);
+        pcie_release_device(dev);
+        dev = NULL;
+    }
 }
 
 static void pcie_scan_bus(pcie_bridge_state_t* bridge) {
@@ -1089,19 +1104,15 @@ void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
         }
         bus_drv->host_bridge->dev.ref_count = 1;    // bus_drv->host_bridge owns this ref
 
-        /* Initialize common fields
-         *
-         * TODO(johngro): Don't assert that this succeeds.  Instead handle sanity
-         * check failures at runtime.  This goes for all of the other things which
-         * might fail their sanity checks (BAR configurations, header types, etc...)
-         *
-         * We should probably keep the device definition around, do our best to
-         * quiesce it, and flag it as bad to prevent it from ever being handed out
-         * to a driver.
-         */
-        __UNUSED status_t res;
-        res = pcie_scan_init_device(&bus_drv->host_bridge->dev, NULL, bus_drv, 0, 0, 0);
-        DEBUG_ASSERT(NO_ERROR == res);
+        /* Initialize common fields */
+        status_t res = pcie_scan_init_device(&bus_drv->host_bridge->dev, NULL, bus_drv, 0, 0, 0);
+        if (NO_ERROR != res) {
+            /* No need to log, init device has done so already for us. */
+            pcie_release_device(&bus_drv->host_bridge->dev);
+            bus_drv->host_bridge = NULL;
+            goto finished;
+        }
+
         root->dev.is_bridge = true;
     }
 
@@ -1121,6 +1132,7 @@ void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
     /* Give the devices claimed by drivers a chance to start */
     pcie_start_devices(bus_drv);
 
+finished:
     MUTEX_RELEASE(bus_drv, bus_rescan_lock);
 }
 
@@ -1153,35 +1165,82 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
     bus_drv->mmio_hi.used = 0;
     bus_drv->pio.used     = 0;
 
-    /* In debug builds, sanity check the init info */
-    /* TODO(johngro) : turn these into runtime checks and return proper error codes */
-#if LK_DEBUGLEVEL > 1
+    /* Sanity check the init info provided by the platform.  If anything goes
+     * wrong in this section, the error will be INVALID_ARGS, so just set the
+     * status to that for now to save typing. */
+    status = ERR_INVALID_ARGS;
+
     /* Start by checking the ECAM window requirements */
-    DEBUG_ASSERT(init_info->ecam_windows);
-    DEBUG_ASSERT(init_info->ecam_window_count > 0);
-    DEBUG_ASSERT(init_info->ecam_windows[0].bus_start == 0);
+    if (!init_info->ecam_windows) {
+        TRACEF("Invalid ecam_windows pointer (%p)!\n", init_info->ecam_windows);
+        goto bailout;
+    }
+
+    if (!init_info->ecam_window_count) {
+        TRACEF("Invalid ecam_window_count (%zu)!\n", init_info->ecam_window_count);
+        goto bailout;
+    }
+
+    if (!init_info->ecam_windows[0].bus_start == 0) {
+        TRACEF("First ECAM window provided by platform does not include bus 0 (bus_start = %u)\n",
+                init_info->ecam_windows[0].bus_start);
+        goto bailout;
+    }
+
     for (size_t i = 0; i < init_info->ecam_window_count; ++i) {
         const pcie_ecam_range_t* window = init_info->ecam_windows + i;
-        DEBUG_ASSERT(window->bus_start <= window->bus_end);
-        DEBUG_ASSERT(window->io_range.size >= ((window->bus_end - window->bus_start + 1u) *
-                                               PCIE_ECAM_BYTE_PER_BUS));
+        if (window->bus_start > window->bus_end) {
+            TRACEF("First ECAM window[%zu]'s bus_start exceeds bus_end (%u > %u)\n",
+                    i, window->bus_start, window->bus_end);
+            goto bailout;
+        }
+
+        if (window->io_range.size < ((window->bus_end - window->bus_start + 1u) *
+                                     PCIE_ECAM_BYTE_PER_BUS)) {
+            TRACEF("ECAM window[%zu]'s size is too small to manage %u buses (%zu < %zu)\n",
+                    i,
+                    (window->bus_end - window->bus_start + 1u),
+                    (size_t)(window->io_range.size),
+                    (size_t)((window->bus_end - window->bus_start + 1u) * PCIE_ECAM_BYTE_PER_BUS));
+            goto bailout;
+        }
 
         if (i) {
             const pcie_ecam_range_t* prev = init_info->ecam_windows + i - 1;
-            DEBUG_ASSERT(window->bus_start > prev->bus_end);
+
+            if (window->bus_start <= prev->bus_end) {
+                TRACEF("ECAM windows not in strictly monotonically increasing "
+                       "bus region order.  (window[%zu].start <= window[%zu].end; %u <= %u)\n",
+                        i, i - 1,
+                        window->bus_start, prev->bus_end);
+                goto bailout;
+            }
         }
     }
 
     /* The MMIO low memory region must be below the physical 4GB mark */
-    DEBUG_ASSERT((bus_drv->mmio_lo.io.bus_addr + 0ull) < 0x100000000ull);
-    DEBUG_ASSERT((bus_drv->mmio_lo.io.size     + 0ull) < 0x100000000ull);
-    DEBUG_ASSERT(bus_drv->mmio_lo.io.bus_addr <= (0x100000000ull - bus_drv->mmio_lo.io.size));
+    if (((bus_drv->mmio_lo.io.bus_addr + 0ull) >= 0x100000000ull) ||
+        ((bus_drv->mmio_lo.io.size     + 0ull) >= 0x100000000ull) ||
+         (bus_drv->mmio_lo.io.bus_addr         > (0x100000000ull - bus_drv->mmio_lo.io.size))) {
+        TRACEF("Low mem MMIO region [%zx, %zx) does not exist entirely below 4GB mark.\n",
+                (size_t)bus_drv->mmio_lo.io.bus_addr,
+                (size_t)bus_drv->mmio_lo.io.bus_addr + bus_drv->mmio_lo.io.size);
+        goto bailout;
+    }
 
     /* The PIO region must fit somewhere in the architecture's I/O bus region */
-    DEBUG_ASSERT((bus_drv->pio.io.bus_addr + 0ull) < PCIE_PIO_ADDR_SPACE_SIZE);
-    DEBUG_ASSERT((bus_drv->pio.io.size     + 0ull) < PCIE_PIO_ADDR_SPACE_SIZE);
-    DEBUG_ASSERT(bus_drv->pio.io.bus_addr <= PCIE_PIO_ADDR_SPACE_SIZE - bus_drv->pio.io.size);
-#endif
+    if (((bus_drv->pio.io.bus_addr + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
+        ((bus_drv->pio.io.size     + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
+         (bus_drv->pio.io.bus_addr         > (PCIE_PIO_ADDR_SPACE_SIZE - bus_drv->pio.io.size))) {
+        TRACEF("PIO region [%zx, %zx) too large for architecture's PIO address space size (%zx)\n",
+                (size_t)bus_drv->pio.io.bus_addr,
+                (size_t)bus_drv->pio.io.bus_addr + bus_drv->pio.io.size,
+                (size_t)PCIE_PIO_ADDR_SPACE_SIZE);
+        goto bailout;
+    }
+
+    /* Init parameters look good, go back to assuming NO_ERROR for now. */
+    status = NO_ERROR;
 
     /* Stash the ECAM window info and map the ECAM windows into the bus driver's
      * address space so we can access config space. */

@@ -987,10 +987,10 @@ status_t pcie_init_device_irq_state(pcie_device_state_t* dev, pcie_bridge_state_
         dev->irq.legacy.shared_handler = pcie_find_legacy_irq_handler(dev->bus_drv, irq_id);
 
         if (!dev->irq.legacy.shared_handler) {
-            LTRACEF("Failed to find or create shared legacy IRQ handler for "
-                    "dev %02x:%02x.%01x (pin %u, irq id %u)\n",
-                    dev->bus_id, dev->dev_id, dev->func_id,
-                    dev->irq.legacy.pin, irq_id);
+            TRACEF("Failed to find or create shared legacy IRQ handler for "
+                   "dev %02x:%02x.%01x (pin %u, irq id %u)\n",
+                   dev->bus_id, dev->dev_id, dev->func_id,
+                   dev->irq.legacy.pin, irq_id);
             return ERR_NO_RESOURCES;
         }
     }
