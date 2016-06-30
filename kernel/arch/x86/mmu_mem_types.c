@@ -110,6 +110,10 @@ void x86_mmu_mem_type_init(void)
         target_mtrrs->mtrr_var[i].physbase = read_msr(IA32_MTRR_PHYSBASE(i));
         target_mtrrs->mtrr_var[i].physmask = read_msr(IA32_MTRR_PHYSMASK(i));
     }
+
+    /* Update the PAT on the bootstrap processor (and sync any changes to the
+     * MTRR that may have been made above). */
+    x86_pat_sync();
 }
 
 /* @brief Give all CPUs our Page Attribute Tables and Memory Type Range

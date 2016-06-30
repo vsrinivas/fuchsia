@@ -175,6 +175,43 @@ void platform_early_display_init(void) {
     gfxconsole_bind_display(&info, bits);
 }
 
+/* Ensure the framebuffer is write-combining as soon as we have the VMM.
+ * Some system firmware has the MTRRs for the framebuffer set to Uncached.
+ * Since dealing with MTRRs is rather complicated, we wait for the VMM to
+ * come up so we can use PAT to manage the memory types. */
+static void platform_ensure_display_memtype(uint level)
+{
+    if (bootloader_fb_base == 0) {
+        return;
+    }
+    struct display_info info;
+    memset(&info, 0, sizeof(info));
+    info.format = bootloader_fb_format;
+    info.width = bootloader_fb_width;
+    info.height = bootloader_fb_height;
+    info.stride = bootloader_fb_stride;
+    info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
+
+    void *addr = NULL;
+    status_t status = vmm_alloc_physical(
+            vmm_get_kernel_aspace(),
+            "boot_fb",
+            ROUNDUP(info.stride * info.height * 4, PAGE_SIZE),
+            &addr,
+            PAGE_SIZE_SHIFT,
+            bootloader_fb_base,
+            0 /* vmm flags */,
+            ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+    if (status != NO_ERROR) {
+        TRACEF("Failed to map boot_fb: %d\n", status);
+        return;
+    }
+
+    info.framebuffer = addr;
+    gfxconsole_bind_display(&info, NULL);
+}
+LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1);
+
 void platform_early_init(void)
 {
     /* get the debug output working */
