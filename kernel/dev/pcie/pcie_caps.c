@@ -37,31 +37,48 @@ typedef struct pcie_do_parse_caps_params {
 } pcie_do_parse_caps_params_t;
 
 /*
- * PCI Express Base Specification 3.1a Section 7.8
+ * PCI Express Base Specification 1.1  Section 7.8 (version 1)
+ * PCI Express Base Specification 3.1a Section 7.8 (version 2)
  */
 static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
                                             void*                     hdr,
-                                            uint                      version,
+                                            uint                      capability_version,
                                             uint                      space_left) {
+    static_assert(countof(dev->pcie_caps.chunks) == PCS_CAPS_CHUNK_COUNT);
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(hdr);
-    DEBUG_ASSERT(!version);  // Standard capabilities do not have versions
+    DEBUG_ASSERT(!capability_version);  // Standard caps do not have version encoded in the std hdr
 
-    /* Size sanity check */
-    pcie_capabilities_t* ecam = (pcie_capabilities_t*)hdr;
-    if (sizeof(*ecam) > space_left) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
-                "Express capability structure.  Structure is %zu bytes long, but "
-                "only %u bytes remain in ECAM standard config.\n",
+    /* Duplicate check */
+    if (dev->pcie_caps.ecam) {
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has more than one PCI "
+                "Express capability structure!\n",
                dev->bus_id, dev->dev_id, dev->func_id,
-               dev->vendor_id, dev->device_id,
-               sizeof(*ecam), space_left);
-        return ERR_NOT_VALID;
+               dev->vendor_id, dev->device_id);
+        goto fail;
     }
 
-    /* Read the caps field, then parse and sanity check the device/port type */
-    uint16_t caps = pcie_read16(&ecam->caps);
-    pcie_device_type_t devtype = PCS_CAPS_DEVTYPE(caps);
+    /* Min size sanity check */
+    uint min_size = PCS_CAPS_MIN_SIZE;
+    if (min_size > space_left) {
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
+               "Express capability structure.  Structure must be at least %u "
+               "bytes long, but only %u bytes remain in ECAM standard config.\n",
+               dev->bus_id, dev->dev_id, dev->func_id,
+               dev->vendor_id, dev->device_id,
+               min_size, space_left);
+        goto fail;
+    }
+
+    /* Extract the the version and device type and use it to determine the real
+     * minimum size of the structure.  Sanity check the device/port type in the
+     * process */
+    pcie_capabilities_t* ecam = (pcie_capabilities_t*)hdr;
+    uint16_t             caps = pcie_read16(&ecam->hdr.caps);
+    uint                 version = PCS_CAPS_VERSION(caps);
+    pcie_device_type_t   devtype = PCS_CAPS_DEVTYPE(caps);
+
+    /* Sanity check the device/port type */
     switch (devtype) {
         // Type 0 config header types
         case PCIE_DEVTYPE_PCIE_ENDPOINT:
@@ -105,6 +122,82 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
             return ERR_NOT_VALID;
     }
 
+    /* Version sanity check and size extraction */
+    if (version == 2) {
+        /* V2 structure always have the full structure */
+        min_size = PCS_CAPS_V2_SIZE;
+    } else if (version == 1) {
+        /* Presence or absence of fields in V1 registers depend on the device
+         * type.  See PCI Express Base Specification 1.1  Section 7.8 */
+        switch (devtype) {
+            case PCIE_DEVTYPE_RC_ROOT_PORT:
+            case PCIE_DEVTYPE_RC_EVENT_COLLECTOR:
+                min_size = PCS_CAPS_V1_ROOT_PORT_SIZE;
+                break;
+
+            case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT:
+                min_size = PCS_CAPS_V1_DOWNSTREAM_PORT_SIZE;
+                break;
+
+            case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:
+                min_size = PCS_CAPS_V1_UPSTREAM_PORT_SIZE;
+                break;
+
+            default:
+                min_size = PCS_CAPS_V1_ENDPOINT_SIZE;
+                break;
+        }
+    } else {
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally PCI Express "
+               "capability structure version (%u).\n",
+               dev->bus_id, dev->dev_id, dev->func_id,
+               dev->vendor_id, dev->device_id,
+               version);
+        goto fail;
+    }
+
+    /* Finish the size sanity check */
+    if (min_size > space_left) {
+        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
+               "Express capability structure (ver %u, devtype %u).  Structure "
+               "must be at least %u bytes long, but only %u bytes remain in ECAM "
+               "standard config.\n",
+               dev->bus_id, dev->dev_id, dev->func_id,
+               dev->vendor_id, dev->device_id,
+               version, devtype, min_size, space_left);
+        goto fail;
+    }
+
+    /* Based on the device type and version, extract the various chunk pointers */
+    switch (devtype) {
+        case PCIE_DEVTYPE_RC_ROOT_PORT:
+            dev->pcie_caps.root = &ecam->root;
+            // Deliberate fall-thru
+
+        case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT:
+            dev->pcie_caps.chunks[PCS_CAPS_SLOT_CHUNK_NDX] = &ecam->slot;
+            if (version > 1)
+                dev->pcie_caps.chunks[PCS_CAPS_SLOT2_CHUNK_NDX] = &ecam->slot2;
+            // Deliberate fall-thru
+
+        case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:
+            dev->pcie_caps.chunks[PCS_CAPS_LINK_CHUNK_NDX] = &ecam->link;
+            if (version > 1)
+                dev->pcie_caps.chunks[PCS_CAPS_LINK2_CHUNK_NDX] = &ecam->link2;
+            // Deliberate fall-thru
+
+        default:
+            dev->pcie_caps.chunks[PCS_CAPS_DEV_CHUNK_NDX] = &ecam->device;
+            if (version > 1)
+                dev->pcie_caps.chunks[PCS_CAPS_DEV2_CHUNK_NDX] = &ecam->device2;
+            break;
+    }
+
+    /* Root event collectors do not have slot or link chunks, but they do have
+     * device chunks as well as the root chunk.  */
+    if (devtype == PCIE_DEVTYPE_RC_EVENT_COLLECTOR)
+        dev->pcie_caps.root = &ecam->root;
+
     /* TODO(johngro): remember to read the MSI/MSI-X interrupt message number
      * field when setting up for MSI/MSI-X.  We almost certainly need to hook
      * this IRQ in order to be aware of any changes to the extended
@@ -114,14 +207,19 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
 
     /* Check device capabilities to see if we support function level reset or
      * not */
-    uint32_t devcaps = pcie_read32(&ecam->device.caps);
+    uint32_t devcaps = pcie_read32(&dev->pcie_caps.chunks[PCS_CAPS_DEV_CHUNK_NDX]->caps);
     bool has_flr = PCS_DEV_CAPS_FUNC_LEVEL_RESET(devcaps) != 0;
 
-    /* Success, stash our results and we are done */
-    dev->pcie_caps.ecam    = ecam;
+    /* Success, stash the rest of our results and we are done */
+    dev->pcie_caps.ecam    = &ecam->hdr;
+    dev->pcie_caps.version = version;
     dev->pcie_caps.devtype = devtype;
     dev->pcie_caps.has_flr = has_flr;
     return NO_ERROR;
+
+fail:
+    memset(&dev->pcie_caps, 0, sizeof(dev->pcie_caps));
+    return ERR_NOT_VALID;
 }
 
 /*

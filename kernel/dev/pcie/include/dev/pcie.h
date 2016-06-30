@@ -238,9 +238,17 @@ typedef struct pcie_device_state {
 
     /* PCI Express Capabilities (Standard Capability 0x10) if present */
     struct {
-        pcie_capabilities_t* ecam;     // pointer to the caps structure in ECAM
-        pcie_device_type_t   devtype;  // device type parts from pcie_caps
-        bool                 has_flr;  // true if device supports function level reset
+        uint               version;  // version of the caps structure.
+        pcie_device_type_t devtype;  // device type parts from pcie_caps
+        bool               has_flr;  // true if device supports function level reset
+        pcie_caps_hdr_t*   ecam;     // pointer to the caps structure header in ECAM
+
+        /* Pointers to various chunk structures which may or may not be present
+         * in the caps structure.  All of these chunks will be present in a v2
+         * structure, but only some of the chunks may be present (depending on
+         * device type) in a v1 structure. */
+        pcie_caps_chunk_t*      chunks[PCS_CAPS_CHUNK_COUNT];
+        pcie_caps_root_chunk_t* root;
     } pcie_caps;
 
     /* PCI Advanced Capabilities (Standard Capability 0x13) if present */

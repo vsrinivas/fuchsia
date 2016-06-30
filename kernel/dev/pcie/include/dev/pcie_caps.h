@@ -130,30 +130,51 @@ typedef struct pcie_msix_vector_entry {
  *
  * @see The PCI Express Base Spec v3.1a, Section 7.8
  */
+typedef struct pcie_caps_hdr {
+    pcie_cap_hdr_t hdr;
+    uint16_t       caps;
+} __PACKED pcie_caps_hdr_t;
+
 typedef struct pcie_caps_chunk {
     uint32_t caps;
     uint16_t ctrl;
     uint16_t status;
 } __PACKED pcie_caps_chunk_t;
 
+typedef struct pcie_caps_root_chunk {
+    uint16_t ctrl;
+    uint16_t caps;
+    uint32_t status;
+} __PACKED pcie_caps_root_chunk_t;
+
 typedef struct pcie_capabilities {
-    pcie_cap_hdr_t    hdr;
-    uint16_t          caps;
+    pcie_caps_hdr_t        hdr;
 
-    pcie_caps_chunk_t device;
-    pcie_caps_chunk_t link;
-    pcie_caps_chunk_t slot;
+    pcie_caps_chunk_t      device;
+    pcie_caps_chunk_t      link;
+    pcie_caps_chunk_t      slot;
 
-    struct {
-        uint16_t ctrl;
-        uint16_t caps;
-        uint32_t status;
-    } __PACKED root;
+    pcie_caps_root_chunk_t root;
 
-    pcie_caps_chunk_t device2;
-    pcie_caps_chunk_t link2;
-    pcie_caps_chunk_t slot2;
+    pcie_caps_chunk_t      device2;
+    pcie_caps_chunk_t      link2;
+    pcie_caps_chunk_t      slot2;
 } __PACKED pcie_capabilities_t;
+
+#define PCS_CAPS_V1_ENDPOINT_SIZE        ((uint)offsetof(pcie_capabilities_t, link))
+#define PCS_CAPS_V1_UPSTREAM_PORT_SIZE   ((uint)offsetof(pcie_capabilities_t, slot))
+#define PCS_CAPS_V1_DOWNSTREAM_PORT_SIZE ((uint)offsetof(pcie_capabilities_t, root))
+#define PCS_CAPS_V1_ROOT_PORT_SIZE       ((uint)offsetof(pcie_capabilities_t, device2))
+#define PCS_CAPS_V2_SIZE                 ((uint)sizeof(pcie_capabilities_t))
+#define PCS_CAPS_MIN_SIZE                ((uint)offsetof(pcie_capabilities_t, device))
+
+#define PCS_CAPS_DEV_CHUNK_NDX    (0u)
+#define PCS_CAPS_LINK_CHUNK_NDX   (1u)
+#define PCS_CAPS_SLOT_CHUNK_NDX   (2u)
+#define PCS_CAPS_DEV2_CHUNK_NDX   (3u)
+#define PCS_CAPS_LINK2_CHUNK_NDX  (4u)
+#define PCS_CAPS_SLOT2_CHUNK_NDX  (5u)
+#define PCS_CAPS_CHUNK_COUNT      (6u)
 
 typedef enum {
     // Type 0 config header types
