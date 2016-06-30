@@ -122,8 +122,42 @@ bool message_pipe_test(void) {
     END_TEST;
 }
 
+bool message_pipe_read_error_test(void) {
+    BEGIN_TEST;
+    mojo_handle_t pipe[2];
+    mojo_result_t result = mojo_create_message_pipe(&pipe[0], &pipe[1]);
+    ASSERT_EQ(result, MOJO_RESULT_OK, "error creating message pipe");
+
+    // Read from an empty message pipe.
+    result = mojo_read_message(pipe[0], NULL, NULL, NULL, NULL, 0u);
+    ASSERT_EQ(result, MOJO_RESULT_FAILED_PRECONDITION, "read on empty non-closed pipe produced incorrect error");
+
+    char data = 'x';
+    result = mojo_write_message(pipe[1], &data, 1u, NULL, 0u, 0u);
+    ASSERT_EQ(result, MOJO_RESULT_OK, "write failed");
+
+    mojo_close(pipe[1]);
+
+    // Read a message with the peer closed, should yield the message.
+    char read_data = '\0';
+    uint32_t read_data_size = 1u;
+    result = mojo_read_message(pipe[0], &read_data, &read_data_size, NULL, NULL, 0u);
+    ASSERT_EQ(result, MOJO_RESULT_OK, "read failed with peer closed but message in the pipe");
+    ASSERT_EQ(read_data_size, 1u, "read returned incorrect number of bytes");
+    ASSERT_EQ(read_data, 'x', "read returned incorrect data");
+
+    // Read from an empty pipe with a closed peer, should yield a channel closed error.
+    result = mojo_read_message(pipe[0], NULL, 0u, NULL, 0u, 0u);
+    // TODO: This error code should be distinguishable from reading from an empty pipe with an open
+    // peer.
+    ASSERT_EQ(result, MOJO_RESULT_FAILED_PRECONDITION, "read on empty closed pipe produced incorrect error");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(message_pipe_tests)
 RUN_TEST(message_pipe_test)
+RUN_TEST(message_pipe_read_error_test)
 END_TEST_CASE(message_pipe_tests)
 
 int main(void) {
