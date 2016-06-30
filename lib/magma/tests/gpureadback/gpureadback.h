@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-int test_gpu_readback(void);
+int test_gpu_readback(int fd);

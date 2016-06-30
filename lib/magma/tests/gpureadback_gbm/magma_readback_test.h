@@ -17,11 +17,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <gbm.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#include <gbm.h>
 
 class MagmaReadbackTest {
 public:
@@ -29,7 +29,7 @@ public:
     ~MagmaReadbackTest();
     bool Initialize(int fd);
     void Cleanup();
-    bool Draw(void *results_buffer);
+    bool Draw(void* results_buffer);
     bool CanDraw() { return !encountered_async_error_; }
 
 private:
@@ -38,7 +38,7 @@ private:
     bool InitFramebuffer();
     void CleanupFramebuffer();
 
-    int fd = 0;
+    int fd_ = 0;
 
     struct gbm_device* gbm_ = nullptr;
     EGLDisplay display_ = EGL_NO_DISPLAY;

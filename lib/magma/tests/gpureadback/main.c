@@ -13,4 +13,11 @@
 // limitations under the License.
 
 #include <gpureadback.h>
-int main(void) { return test_gpu_readback(); }
+#include <fcntl.h>
+#include <stdio.h>
+
+int main(void) {
+    int fd = open("/dev/dri/card0", O_RDWR);
+    printf("got fd %d\n", fd);
+    return test_gpu_readback(fd);
+}

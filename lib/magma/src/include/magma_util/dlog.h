@@ -12,27 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _MAGMA_UMD_H_
-#define _MAGMA_UMD_H_
+#include <stdio.h>
 
-#include <stdint.h>
+// TODO: disable logging by default
+#define DLOG_ENABLE
 
-#include "magma.h"
-#include "p_umd/include/magma_arch.h"
+#ifdef DLOG_ENABLE
 
-struct MagmaUmd {
-    MagmaUmd(MagmaArch* arch);
+#define DLOG(...) do {                                                                             \
+    printf("%s:%d ", __FILE__, __LINE__);                                                          \
+    printf(__VA_ARGS__);                                                                           \
+    printf("\n");                                                                                  \
+} while(0)
 
-    uint64_t GetDeviceId() { return magma_arch_get_device_id(arch_); }
-
-    drm_intel_bo* AllocTiledBufferObject(const char* name, uint32_t x, uint32_t y,
-                                         uint32_t bytes_per_pixel, uint32_t tiling_mode,
-                                         uint32_t* stride);
-
-    static MagmaUmd* New(uint32_t gpu_index);
-
-private:
-    MagmaArch* arch_;
-};
-
-#endif // _MAGMA_UMD_H_
+#else
+#define DLOG
+#endif

@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 source_set("main") {
   sources = [
-    "driver_main.c",
+    "driver_main.cpp",
   ]
   deps = [
+    "//magma:libmsd",
     "//magma/tests/gpureadback"
   ]
   libs = [
@@ -25,5 +27,4 @@ source_set("main") {
   defines = [
     "_GNU_SOURCE"
   ]
-
 }

@@ -21,6 +21,7 @@
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#include <gbm.h>
 
 class MagmaReadbackTest {
 public:
@@ -39,6 +40,7 @@ private:
 
     int fd_ = 0;
 
+    struct gbm_device* gbm_ = nullptr;
     EGLDisplay display_ = EGL_NO_DISPLAY;
     EGLContext context_ = EGL_NO_CONTEXT;
 
@@ -46,7 +48,6 @@ private:
     int curr_buf_;
 
     struct framebuffer {
-        EGLImage image = EGL_NO_IMAGE;
         GLuint fb = 0, color_rb = 0, depth_rb = 0;
         uint32_t fb_id = 0;
     };

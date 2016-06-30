@@ -14,33 +14,84 @@
 
 import("//magma/gnbuild/magma.gni")
 
-executable("magma_service_driver"){
+group("magma_service_driver") {
   deps = [
-    "src/main"
+    "$msd_intel_gen_build_root",
   ]
 }
 
-config("magma_public_config") {
+config("libmad_api") {
+  include_dirs = [ "include" ]
+}
+
+config("libmsd_api") {
   include_dirs = [
     "include",
-    "src",
+    "include/sys-driver",
   ]
-
 }
 
-source_set("magma") {
+config("util_api") {
+  include_dirs = [
+    "src/include",
+  ]
+}
 
-  public_configs = [ ":magma_public_config" ]
+source_set("util") {
+  public_configs = [ ":util_api" ]
+}
 
+config("libdrm_api") {
+  include_dirs = [ "third_party/libdrm" ]
+}
+
+source_set("libdrm") {
+  sources = [
+    "third_party/libdrm/libdrm_intel_gen.cpp",
+    "third_party/libdrm/libdrm_intel_gen.h",
+  ]
+
+  public_configs = [ ":libdrm_api" ]
+
+  configs += [ ":libmsd_api" ]
+
+  deps = [
+    ":util",
+  ]
+}
+
+source_set("libmad") {
+  public_configs = [ ":libmad_api" ]
 
   sources = [
-    "src/p_umd/magma.cpp",
-    "src/p_umd/magma_umd.cpp",
-    "src/p_umd/magma_umd.h",
-    "src/p_umd/include/magma_arch.h",
-    "src/p_umd/arch/intel-gen/include/intel_gen.h",
-    "src/p_umd/arch/intel-gen/intel_gen.cpp",
+    "include/common/magma_defs.h",
     "include/magma.h",
-    "include/magma_defs.h",
+    "src/app-driver/magma.cpp",
+    "src/app-driver/magma_device.cpp",
+    "src/app-driver/magma_device.h",
+  ]
+
+  deps = [
+    ":libdrm",
+    ":libmsd",
+  ]
+}
+
+# internal only
+source_set("libmsd") {
+  public_configs = [ ":libmsd_api" ]
+
+  public_deps = [
+    ":util",
+  ]
+
+  include_dirs = [ "third_party" ]
+
+  sources = [
+    "include/magma_driver.h",
+    "include/magma_sys_defs.h",
+    "include/magma_sys_driver.h",
+    "include/magma_system.h",
+    "src/sys-driver/magma_system.cpp",
   ]
 }

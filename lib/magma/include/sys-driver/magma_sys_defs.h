@@ -12,15 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdio.h>
+#ifndef _MAGMA_SYS_DEFS_H_
+#define _MAGMA_SYS_DEFS_H_
 
-// TODO(MA-5): disable logging by default
-#define DLOG_ENABLE
+#include <common/magma_defs.h>
+#include <stdint.h>
 
-#ifdef DLOG_ENABLE
-#define DLOG(...)                                                                                  \
-    fprintf(stderr, "%s:%d ", __FILE__, __LINE__);                                                 \
-    fprintf(stderr, __VA_ARGS__);
-#else
-#define DLOG
+#if defined(__cplusplus)
+extern "C" {
 #endif
+
+typedef uint32_t ClientId;
+
+struct MagmaExecBuffer {
+    uint32_t placeholder;
+};
+
+#if defined(__cplusplus)
+}
+#endif
+
+#endif /* _MAGMA_SYS_DEFS_H_ */

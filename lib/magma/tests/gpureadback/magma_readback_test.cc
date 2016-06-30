@@ -22,18 +22,19 @@
 
 MagmaReadbackTest::MagmaReadbackTest() {}
 
-bool MagmaReadbackTest::Initialize(int fd_in)
+bool MagmaReadbackTest::Initialize(int fd)
 {
     if (is_initialized_)
         return false;
 
-    fd_ = fd_in;
+    fd_ = fd;
     curr_buf_ = 0;
 
     if (!InitEGL()) {
         printf("failed to initialize egl\n");
         return false;
     }
+
     if (!InitFramebuffer()) {
         printf("failed to initialize framebuffer\n");
         return false;
@@ -50,7 +51,6 @@ void MagmaReadbackTest::Cleanup()
 
     CleanupFramebuffer();
     CleanupEGL();
-    close(fd_);
 
     printf("\nCleaned Up Successfully, Exiting Cleanly\n\n");
 }
@@ -59,9 +59,16 @@ MagmaReadbackTest::~MagmaReadbackTest() { Cleanup(); }
 
 bool MagmaReadbackTest::InitEGL()
 {
-    display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    gbm_ = gbm_create_device(fd_);
+    if (!gbm_) {
+        printf("could not create gbm_device\n");
+        return false;
+    }
+    printf("GBM device created\n");
+
+    display_ = eglGetDisplay(gbm_);
     if (display_ == EGL_NO_DISPLAY) {
-        printf("could not create EGL display from default device\n");
+        printf("could not create EGL display\n");
         return false;
     }
     EGLint major, minor;
@@ -69,6 +76,7 @@ bool MagmaReadbackTest::InitEGL()
         printf("eglInitialize failed\n");
         return false;
     }
+
     const char* extensions = eglQueryString(display_, EGL_EXTENSIONS);
     if (!extensions) {
         printf("failed to get extension string\n");
@@ -103,6 +111,13 @@ bool MagmaReadbackTest::InitEGL()
         return false;
     }
 
+    extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+
+    if (!(strstr(extensions, "GL_OES_rgb8_rgba8"))) {
+        printf("extension GL_OES_rgb8_rgba8 not found:\n%s\n", extensions);
+        return false;
+    }
+
     return true;
 }
 
@@ -113,8 +128,8 @@ bool MagmaReadbackTest::InitFramebuffer()
         glBindFramebuffer(GL_FRAMEBUFFER, fb_[i].fb);
 
         glGenRenderbuffers(1, &fb_[i].color_rb);
-        glBindRenderbuffer(GL_TEXTURE_2D, fb_[i].color_rb);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB565, FB_W, FB_H);
+        glBindRenderbuffer(GL_RENDERBUFFER, fb_[i].color_rb);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8_OES, FB_W, FB_H);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER,
                                   fb_[i].color_rb);
 
@@ -148,10 +163,6 @@ void MagmaReadbackTest::CleanupFramebuffer()
         if (fb_[i].fb) {
             glDeleteFramebuffers(1, &fb_[i].fb);
         }
-
-        if (fb_[i].image) {
-            eglDestroyImage(display_, fb_[i].image);
-        }
     }
 }
 
@@ -164,6 +175,9 @@ void MagmaReadbackTest::CleanupEGL()
     if (display_ != EGL_NO_DISPLAY) {
         eglTerminate(display_);
     }
+
+    if (gbm_)
+        gbm_device_destroy(gbm_);
 }
 
 bool MagmaReadbackTest::Draw(void* results_buffer)
@@ -173,8 +187,11 @@ bool MagmaReadbackTest::Draw(void* results_buffer)
 
     glBindFramebuffer(GL_FRAMEBUFFER, fb_[curr_buf_].fb);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    printf("->glFinish\n");
     glFinish();
 
+    printf("->glReadPixels\n");
     glReadPixels(0, 0, FB_W, FB_H, GL_RGBA, GL_UNSIGNED_BYTE, results_buffer);
 
     curr_buf_ = (curr_buf_ + 1) % bufcount_;
@@ -184,43 +201,46 @@ bool MagmaReadbackTest::Draw(void* results_buffer)
 
 extern "C" {
 
-int test_gpu_readback(void)
+int test_gpu_readback(int fd)
 {
-
     MagmaReadbackTest app;
-    if (!app.Initialize(0xDEADBEEF)) {
+    if (!app.Initialize(fd)) {
         printf("could not initialize app\n");
         return -1;
     }
 
     // clear magenta, obviously
-    glClearColor(1, 0, 1, 1);
+    glClearColor(1, 0, 0.5, 0.75);
 
-    void* data = malloc(FB_W * FB_W * sizeof(uint32_t));
+    int size = FB_W * FB_H * sizeof(uint32_t);
+    auto data = reinterpret_cast<uint32_t*>(malloc(size));
     if (!data) {
         printf("failed to allocate CPU framebuffer\n");
         return -1;
     }
+
+    memset(data, 0, size);
 
     if (!app.Draw(data)) {
         printf("draw failed\n");
         return -1;
     }
 
-    uint32_t expected_value = 0xFF00FFFF; // expect magenta, obviously
-    bool has_mismatch = false;
+    printf("Draw complete, comparing\n");
+
+    uint32_t expected_value = 0xBF8000FF;
+    int mismatches = 0;
     for (int i = 0; i < FB_W * FB_H; i++) {
-        uint32_t curr_val = ((uint32_t*)data)[i];
-        if (curr_val != expected_value) {
-            printf("Value Mismatch at index %d!\n\tExpected 0x%04x, got 0x%04x\n", i, curr_val,
-                   expected_value);
-            has_mismatch = true;
+        if (data[i] != expected_value) {
+            if (mismatches++ < 10)
+                printf("Value Mismatch at index %d - expected 0x%04x, got 0x%04x\n", i,
+                       expected_value, data[i]);
         }
     }
-    if (has_mismatch) {
-        printf("Test Failed!\n");
+    if (mismatches) {
+        printf("****** Test Failed! %d mismatches\n", mismatches);
     } else {
-        printf("All values matched, test passed.\n");
+        printf("****** Test Passed! All values matched.\n");
     }
     free(data);
 

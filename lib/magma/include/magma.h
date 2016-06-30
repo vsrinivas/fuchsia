@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "magma_defs.h"
+#include <common/magma_defs.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -33,9 +33,9 @@ drm_intel_bo* magma_bo_alloc_for_render(drm_intel_bufmgr* bufmgr, const char* na
 //                     void *addr, uint32_t tiling_mode,
 //                     uint32_t stride, unsigned long size,
 //                     unsigned long flags);
-drm_intel_bo* magma_bo_alloc_tiled(drm_intel_bufmgr* bufmgr, const char* name, int x, int y,
-                                   int cpp, uint32_t* tiling_mode, unsigned long* pitch,
-                                   unsigned long flags);
+drm_intel_bo* magma_bo_alloc_tiled(drm_intel_bufmgr* bufmgr, const char* name, unsigned long size,
+                                   unsigned long flags, uint32_t tiling_mode, unsigned long stride);
+
 void magma_bo_reference(drm_intel_bo* bo);
 void magma_bo_unreference(drm_intel_bo* bo);
 int magma_bo_map(drm_intel_bo* bo, int write_enable);
@@ -50,7 +50,7 @@ void magma_bufmgr_destroy(drm_intel_bufmgr* bufmgr);
 
 // int magma_bo_exec(drm_intel_bo *bo, int used,
 //               struct drm_clip_rect *cliprects, int num_cliprects, int DR4);
-int magma_bo_mrb_exec(drm_intel_bo* bo, int used, struct drm_clip_rect* cliprects,
+int magma_bo_mrb_exec(drm_intel_bo* bo, int used, void* cliprects,
                       int num_cliprects, int DR4, unsigned int flags);
 int magma_bufmgr_check_aperture_space(drm_intel_bo** bo_array, int count);
 
