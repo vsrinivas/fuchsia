@@ -28,7 +28,7 @@
 typedef struct io_block_header io_block_header_t;
 
 struct io_alloc {
-    void* phys;
+    mx_paddr_t phys;
     void* virt;
     size_t size;
     intptr_t virt_offset;
@@ -51,7 +51,7 @@ io_alloc_t* io_alloc_init(size_t size) {
 
     ioa->mutex = MXR_MUTEX_INIT;
 
-    void* phys;
+    mx_paddr_t phys;
     void* virt;
     mx_status_t status = _magenta_alloc_device_memory(size, &phys, &virt);
     if (status) {
@@ -63,7 +63,7 @@ io_alloc_t* io_alloc_init(size_t size) {
     ioa->phys = phys;
     ioa->virt = virt;
     ioa->size = size;
-    ioa->virt_offset = (uintptr_t)virt - (uintptr_t)phys;
+    ioa->virt_offset = (uintptr_t)virt - phys;
 
     io_block_header_t* free_list = virt;
     free_list->size = size;

@@ -114,7 +114,7 @@ mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len, void** out_vad
     return NO_ERROR;
 }
 
-mx_status_t sys_alloc_device_memory(uint32_t len, void** out_paddr, void** out_vaddr) {
+mx_status_t sys_alloc_device_memory(uint32_t len, mx_paddr_t* out_paddr, void** out_vaddr) {
     LTRACEF("len 0x%x\n", len);
 
     if (!out_paddr)
