@@ -193,7 +193,7 @@ ifeq ($(ENABLE_BUILD_SYSROOT),true)
 ifneq ($(MODULE_EXPORT),)
 
 # install crt files if they exist for this module
-ifneq ($(MODULE_CRT_NAME),)
+ifneq ($(MODULE_CRT_NAMES),)
 $(foreach crt,$(MODULE_CRT_NAMES),\
 $(eval CRT_SRC := $(filter %/$(crt),$(MODULE_OBJS)))\
 $(eval CRT_DST := $(BUILDDIR)/sysroot/lib/$(subst .s.o,.o,$(subst .c.o,.o,$(crt))))\
