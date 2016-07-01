@@ -36,6 +36,25 @@ typedef struct pcie_do_parse_caps_params {
     const uint                           max_possible_caps;
 } pcie_do_parse_caps_params_t;
 
+static bool quirk_should_force_pcie(struct pcie_device_state* dev) {
+    DEBUG_ASSERT(dev);
+
+    static const struct {
+        uint16_t vendor_id;
+        uint16_t device_id;
+    } QUIRK_LIST[] = {
+        { .vendor_id = 0x8086, .device_id = 0x1616 },  // Wildcat Point GPU
+    };
+
+    for (size_t i = 0; i < countof(QUIRK_LIST); ++i) {
+        if ((QUIRK_LIST[i].vendor_id == dev->vendor_id) &&
+            (QUIRK_LIST[i].device_id == dev->device_id))
+            return true;
+    }
+
+    return false;
+}
+
 /*
  * PCI Express Base Specification 1.1  Section 7.8 (version 1)
  * PCI Express Base Specification 3.1a Section 7.8 (version 2)
@@ -397,7 +416,8 @@ static status_t pcie_fetch_standard_cap_hdr(pcie_device_state_t*          dev,
         return NO_ERROR;
 
     /* Sanity check the capability pointer. */
-    if (!((cptr >= PCIE_CAP_PTR_MIN_VALID) && (cptr <= PCIE_CAP_PTR_MAX_VALID))) {
+    if (!((cptr >= PCIE_CAP_PTR_MIN_VALID) && (cptr <= PCIE_CAP_PTR_MAX_VALID)) ||
+        !IS_ALIGNED(cptr, PCIE_CAP_PTR_ALIGNMENT)) {
         TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal capability "
                "pointer (0x%02x) in standard capability list.\n",
                dev->bus_id, dev->dev_id, dev->func_id,
@@ -442,7 +462,8 @@ static status_t pcie_fetch_extended_cap_hdr(pcie_device_state_t*          dev,
         return NO_ERROR;
 
     /* Sanity check the capability pointer. */
-    if (!((cptr >= PCIE_EXT_CAP_PTR_MIN_VALID) && (cptr <= PCIE_EXT_CAP_PTR_MAX_VALID))) {
+    if (!((cptr >= PCIE_EXT_CAP_PTR_MIN_VALID) && (cptr <= PCIE_EXT_CAP_PTR_MAX_VALID)) ||
+        !IS_ALIGNED(cptr, PCIE_EXT_CAP_PTR_ALIGNMENT)) {
         TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal capability "
                "pointer (0x%02x) in extended capability list.\n",
                dev->bus_id, dev->dev_id, dev->func_id,
@@ -458,32 +479,6 @@ static status_t pcie_fetch_extended_cap_hdr(pcie_device_state_t*          dev,
 
     pcie_ext_cap_hdr_t* hdr_ptr = (pcie_ext_cap_hdr_t*)((uintptr_t)(dev->cfg) + cptr);
     pcie_ext_cap_hdr_t  hdr_val = pcie_read32(hdr_ptr);
-
-    /*
-     * TODO(johngro) : Figure this out.
-     *
-     * In theory all PCIe device are supposed to have an extended caps list.  If
-     * the list is empty, it is supposed to start with a NULL capability ID
-     * followed by a 0x000 next pointer.
-     *
-     * Some devices (such as the PCI-to-ISA bridge in Broadwell, and all of the
-     * emulated devices in QEMU) seem to fill their extended capabilities config
-     * region with 0xFF instead of zero.  This might be because they are
-     * supposed to be considered to be "legacy endpoints", however it is unclear
-     * what the proper way to test for this is.
-     *
-     * Section 7.8 of the PCIe 3.1a spec defines the "PCI Express Capability
-     * Structure" and says "The PCI Express Capability structure is required for
-     * PCI Express device Functions".  Unfortunately there are devices (the Intel
-     * HDA audio controller in Broadwell, for example) which lack this standard
-     * header, but possess extended capabilities.
-     *
-     * For now, we just special case this.  If we see a header in the extended
-     * config whose values are all 0xFs, just assume that this device has no
-     * extended capabilities and stop looking.
-     */
-    if (hdr_val == 0xFFFFFFFF)
-        return NO_ERROR;
 
     /* A raw extended header value of 0 indicates the end of the list */
     if (!hdr_val)
@@ -577,6 +572,7 @@ static status_t pcie_do_parse_caps(pcie_device_state_t* dev,
 
 #define PTE(_cap_id, _parse_fn) { .cap_id = _cap_id, .parse = _parse_fn }
 static const pcie_caps_parse_table_entry_t PCIE_STANDARD_CAPS_PARSE_TABLE[] = {
+    PTE(PCIE_CAP_ID_NULL,                     NULL),
     PTE(PCIE_CAP_ID_PCI_PWR_MGMT,             NULL),
     PTE(PCIE_CAP_ID_AGP,                      NULL),
     PTE(PCIE_CAP_ID_VPD,                      NULL),
@@ -598,6 +594,7 @@ static const pcie_caps_parse_table_entry_t PCIE_STANDARD_CAPS_PARSE_TABLE[] = {
 };
 
 static const pcie_caps_parse_table_entry_t PCIE_EXTENDED_CAPS_PARSE_TABLE[] = {
+    PTE(PCIE_EXT_CAP_ID_NULL,                                  NULL),
     PTE(PCIE_EXT_CAP_ID_ADVANCED_ERROR_REPORTING,              NULL),
     PTE(PCIE_EXT_CAP_ID_VIRTUAL_CHANNEL_NO_MFVC,               NULL),
     PTE(PCIE_EXT_CAP_ID_DEVICE_SERIAL_NUMBER,                  NULL),
@@ -656,5 +653,20 @@ status_t pcie_parse_capabilities(struct pcie_device_state* dev) {
     if (NO_ERROR != ret)
         return ret;
 
-    return pcie_do_parse_caps(dev, &PCIE_EXTENDED_PARSE_CAPS_PARAMS);
+    /* If this device is PCIe device, the parse the extended configuration
+     * section of the PCI config looking for extended capabilities.  Based on
+     * the spec, we should only need to look for a PCI Express Capability
+     * Structure in the standard config section to make the determination that
+     * this device is a legit PCIe device.
+     *
+     * This said, I have encountered at least one device (the graphics
+     * controller in the Wildcat Point PCH) which clearly is PCIe and clearly
+     * has extended capabilities, but which is not spec compliant and does not
+     * contain a proper PCI Express Capability Structure.  Because of this, we
+     * maintain a quirks list of non compliant devices which are actually PCIe,
+     * but do not appear to be so at first glance. */
+    if (dev->pcie_caps.ecam || quirk_should_force_pcie(dev))
+        ret = pcie_do_parse_caps(dev, &PCIE_EXTENDED_PARSE_CAPS_PARAMS);
+
+    return ret;
 };
