@@ -23,4 +23,9 @@ _start:
     add r12, #1
     str r12, [lr]
     ldr lr, =ADDRESS__start
+
+    // add 1 to the start address to make it work with thumb code
+    // NOTE: assumes _start is in thumb mode, and will break if this changes
+    add lr, #1
+
     bx lr
