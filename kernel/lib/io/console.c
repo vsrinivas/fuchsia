@@ -22,6 +22,13 @@
 #include <lib/debuglog.h>
 #endif
 
+/* enable this to cause the kernel-originated messages to splat messages out of the platform
+ * putc mechanism immediately instead of going through the debug log
+ */
+#ifndef ENABLE_KERNEL_LL_DEBUG
+#define ENABLE_KERNEL_LL_DEBUG 0
+#endif
+
 /* routines for dealing with main console io */
 
 #if WITH_LIB_SM
@@ -98,7 +105,7 @@ static void __out_count(const char *str, size_t len)
         spin_unlock_restore(&print_spin_lock, state, PRINT_LOCK_FLAGS);
     }
 
-#if WITH_LIB_DEBUGLOG
+#if WITH_LIB_DEBUGLOG && !ENABLE_KERNEL_LL_DEBUG
     if (dlog_write(DLOG_FLAG_KERNEL, str, len)) {
         __raw_out_count(str, len);
     }
