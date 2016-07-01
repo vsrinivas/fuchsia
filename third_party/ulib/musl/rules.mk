@@ -966,7 +966,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/thread/thrd_join.c \
     $(LOCAL_DIR)/src/thread/thrd_sleep.c \
     $(LOCAL_DIR)/src/thread/thrd_yield.c \
-    $(LOCAL_DIR)/src/thread/tls.c \
     $(LOCAL_DIR)/src/thread/tss_create.c \
     $(LOCAL_DIR)/src/thread/tss_delete.c \
     $(LOCAL_DIR)/src/thread/tss_set.c \
