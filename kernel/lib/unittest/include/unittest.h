@@ -12,28 +12,32 @@
  *
  * Sample usage:
  *
- * A test case runs a collection of tests like this, with
- * BEGIN_TEST_CASE and END_TEST_CASE and the beginning and end of the
- * function and RUN_TEST to call each individual test, as follows:
+ * A test case runs a collection of unittests, with
+ * STATIC_UNITTEST_START_TESTCASE and STATIC_UNITTEST_END_TESTCASE
+ * BEGIN_TEST_CASE and END_TEST_CASE at the beginning and end of the list of
+ * unitests, and STATIC_UNITTEST for each individual test, as follows:
  *
- *  BEGIN_TEST_CASE(foo_tests);
+ *  STATIC_UNITTEST_START_TESTCASE(foo_tests)
  *
- *  RUN_TEST(test_foo);
- *  RUN_TEST(test_bar);
- *  RUN_TEST(test_baz);
+ *  STATIC_UNITTEST(test_foo);
+ *  STATIC_UNITTEST(test_bar);
+ *  STATIC_UNITTEST(test_baz);
  *
  *  END_TEST_CASE(foo_tests);
+ *  STATIC_UNITTEST_END_TESTCASE(foo_tests,
+ *                               "footest",
+ *                               "Test to be sure that your foos have proper bars",
+ *                               init_foo_test_env,
+ *                               cleanup_foo_test_env);
  *
- * This creates a static function foo_tests() and registers it with the
- * unit test framework.  foo_tests() can be executed either by a shell
- * command or by a call to run_all_tests(), which runs all registered
- * unit tests.
+ * This creates an entry in the global unittest table and registers it with the
+ * unit test framework.
  *
  * A test looks like this, using the BEGIN_TEST and END_TEST macros at
  * the beginning and end of the test and the EXPECT_* macros to
  * validate test results, as shown:
  *
- * static bool test_foo(void)
+ * static bool test_foo(void* context)
  * {
  *      BEGIN_TEST;
  *
@@ -46,6 +50,29 @@
  *      EXPECT_NEQ(ERR_TIMED_OUT, foo_event(), "event timed out");
  *
  *      END_TEST;
+ * }
+ *
+ * A test case may have an init and cleanup function registered with it in order
+ * to set up a shared test environment.  A pointer to the shared environment
+ * will be passed as the "context" parameter to each unittest.
+ *
+ * The init function might look something like...
+ *
+ * static status_t init_foo_test_env(void** context)
+ * {
+ *      *context = new FooTestEnvironment(...);
+ *
+ *      if (!(*context))
+ *          return ERR_NO_MEMORY;
+ *
+ *      return NO_ERROR;
+ * }
+ *
+ * While the cleanup function might look like...
+ *
+ * static void cleanup_foo_test_env(void* context)
+ * {
+ *      delete static_cast<FooTestEnvironment*>(context);
  * }
  *
  * To your rules.mk file, add lib/unittest to MODULE_DEPS:
@@ -90,51 +117,9 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 #define EXPECTED_STRING "%s:\n        expected "
 #define UNITTEST_TRACEF(str, x...)                                             \
     do {                                                                       \
-        unittest_printf(" [FAILED] \n        %s:%d:\n        " str,            \
+        unittest_printf("\n        [FAILED]\n        %s:%d:\n        " str,    \
                         __PRETTY_FUNCTION__, __LINE__, ##x);                   \
     } while (0)
-
-/*
- * BEGIN_TEST_CASE and END_TEST_CASE define a function that calls
- * RUN_TEST.
- */
-#define BEGIN_TEST_CASE(case_name)                                             \
-    bool case_name(void)                                                       \
-    {                                                                          \
-        bool all_success = true;                                               \
-        unittest_printf("\nCASE %-49s [STARTED] \n", #case_name);
-
-#define DEFINE_REGISTER_TEST_CASE(case_name)                                   \
-    static void _register_##case_name(void)                                    \
-    {                                                                          \
-        unittest_register_test_case(&_##case_name##_element);                  \
-    }                                                                          \
-    void (*_register_##case_name##_ptr)(void) __SECTION(".ctors") =            \
-        _register_##case_name;
-
-#define END_TEST_CASE(case_name)                                               \
-    if (all_success) {                                                         \
-        unittest_printf("CASE %-59s [PASSED]\n", #case_name);                  \
-    } else {                                                                   \
-        unittest_printf("CASE %-59s [FAILED]\n", #case_name);                  \
-    }                                                                          \
-    return all_success;                                                        \
-    }                                                                          \
-    static struct test_case_element _##case_name##_element = {                 \
-        .next = NULL,                                                          \
-        .failed_next = NULL,                                                   \
-        .name = #case_name,                                                    \
-        .test_case = case_name,                                                \
-    };                                                                         \
-    DEFINE_REGISTER_TEST_CASE(case_name);
-
-#define RUN_TEST(test)                                                         \
-    unittest_printf("    %-50s [RUNNING]", #test);                             \
-    if (!test()) {                                                             \
-        all_success = false;                                                   \
-    } else {                                                                   \
-        unittest_printf(" [PASSED] \n");                                       \
-    }
 
 /*
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
@@ -303,6 +288,51 @@ bool run_all_tests(void);
  */
 bool expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, size_t len,
                      const char* msg);
+
+
+typedef bool     (*unitest_fn_t)(void* context);
+typedef status_t (*unitest_testcase_init_fn_t)(void** context);
+typedef void     (*unitest_testcase_cleanup_fn_t)(void* context);
+
+typedef struct unitest_registration {
+    const char*  name;
+    unitest_fn_t fn;
+} unittest_registration_t;
+
+typedef struct unitest_testcase_registration {
+    const char*                     name;
+    const char*                     desc;
+    unitest_testcase_init_fn_t      init;
+    unitest_testcase_cleanup_fn_t   cleanup;
+    const unittest_registration_t*  tests;
+    size_t                          test_cnt;
+} unittest_testcase_registration_t;
+
+#ifdef WITH_LIB_UNITTEST
+#define STATIC_UNITTEST_START_TESTCASE(_global_id)  \
+    static const unittest_registration_t __unittest_table_##_global_id[] = {
+
+#define STATIC_UNITTEST(_name, _fn) \
+    { .name = _name, .fn = _fn },
+
+#define STATIC_UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup)    \
+    };  /* __unittest_table_##_global_id */                                        \
+    extern const unittest_testcase_registration_t __unittest_case_##_global_id;    \
+    const unittest_testcase_registration_t __unittest_case_##_global_id            \
+    __ALIGNED(sizeof(void *)) __SECTION("unittest_testcases") =                    \
+    {                                                                              \
+        .name = _name,                                                             \
+        .desc = _desc,                                                             \
+        .init = _init,                                                             \
+        .cleanup = _cleanup,                                                       \
+        .tests =  __unittest_table_##_global_id,                                   \
+        .test_cnt =  countof(__unittest_table_##_global_id),                       \
+    }
+#else   // WITH_LIB_UNITTEST
+#define STATIC_UNITTEST_START_TESTCASE(_global_id)
+#define STATIC_UNITTEST(_name, _fn)
+#define STATIC_UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup)
+#endif  // WITH_LIB_UNITTEST
 
 __END_CDECLS
 

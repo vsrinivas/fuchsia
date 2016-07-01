@@ -10,7 +10,7 @@
 namespace crypto {
 
 namespace {
-bool instantiate(void) {
+bool instantiate(void*) {
   BEGIN_TEST;
 
   { Hash256 hash(); }
@@ -20,7 +20,7 @@ bool instantiate(void) {
 
 // Test an implementation detail of the Hash256 class: that it is a valid
 // SHA256.
-bool compute_hashes(void) {
+bool compute_hashes(void*) {
   BEGIN_TEST;
 
   // Test vectors from
@@ -91,11 +91,10 @@ bool compute_hashes(void) {
 
 }  // namespace
 
-BEGIN_TEST_CASE(hash256_tests);
-
-RUN_TEST(instantiate);
-RUN_TEST(compute_hashes);
-
-END_TEST_CASE(hash256_tests);
+STATIC_UNITTEST_START_TESTCASE(hash256_tests)
+STATIC_UNITTEST("Instantiate", instantiate)
+STATIC_UNITTEST("Compute",     compute_hashes)
+STATIC_UNITTEST_END_TESTCASE(hash256_tests, "sha256", "Test SHA256 implementation Tests",
+                             NULL, NULL);
 
 }  // namespace crypto

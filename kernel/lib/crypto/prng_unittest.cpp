@@ -12,7 +12,7 @@
 namespace crypto {
 
 namespace {
-bool instantiate(void) {
+bool instantiate(void*) {
   BEGIN_TEST;
 
   { PRNG prng("", 0); }
@@ -20,7 +20,7 @@ bool instantiate(void) {
   END_TEST;
 }
 
-bool prng_output(void) {
+bool prng_output(void*) {
   BEGIN_TEST;
 
   static const char kSeed1[] = "abc";
@@ -67,11 +67,11 @@ bool prng_output(void) {
 
 }  // namespace
 
-BEGIN_TEST_CASE(prng_tests);
-
-RUN_TEST(instantiate);
-RUN_TEST(prng_output);
-
-END_TEST_CASE(prng_tests);
+STATIC_UNITTEST_START_TESTCASE(prng_tests)
+STATIC_UNITTEST("Instantiate", instantiate)
+STATIC_UNITTEST("Test Output", prng_output)
+STATIC_UNITTEST_END_TESTCASE(prng_tests, "prng",
+                             "Test pseudo-random number generator implementation.",
+                             NULL, NULL);
 
 }  // namespace crypto

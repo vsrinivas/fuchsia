@@ -16,7 +16,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/cache_tests.c \
     $(LOCAL_DIR)/clock_tests.c \
     $(LOCAL_DIR)/fibo.c \
-    $(LOCAL_DIR)/fifo_buffer_tests.cpp \
     $(LOCAL_DIR)/float.c \
     $(LOCAL_DIR)/float_instructions.S \
     $(LOCAL_DIR)/float_test_vec.c \
@@ -33,8 +32,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/tests.c \
     $(LOCAL_DIR)/thread_tests.c \
     $(LOCAL_DIR)/unique_ptr_tests.cpp \
-    $(LOCAL_DIR)/unittests.c \
     $(LOCAL_DIR)/vm_tests.cpp \
+
+#    $(LOCAL_DIR)/fifo_buffer_tests.cpp \
 
 MODULE_DEPS += \
     lib/safeint \

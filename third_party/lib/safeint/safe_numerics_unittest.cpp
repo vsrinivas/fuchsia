@@ -62,8 +62,6 @@ using safeint::internal::SignedIntegerForSize;
 // Signed integer arithmetic.
 template <typename Dst>
 static bool TestSpecializedArithmetic(
-    const char* dst,
-    int line,
     typename utils::enable_if<numeric_limits<Dst>::is_integer &&
                                 numeric_limits<Dst>::is_signed,
                             int>::type = 0) {
@@ -120,8 +118,6 @@ static bool TestSpecializedArithmetic(
 // Unsigned integer arithmetic.
 template <typename Dst>
 static bool TestSpecializedArithmetic(
-    const char* dst,
-    int line,
     typename utils::enable_if<numeric_limits<Dst>::is_integer &&
                                 !numeric_limits<Dst>::is_signed,
                             int>::type = 0) {
@@ -161,7 +157,7 @@ static bool TestSpecializedArithmetic(
 
 // Generic arithmetic tests.
 template <typename Dst>
-static bool TestArithmetic(const char* dst, int line) {
+static bool TestArithmetic(void* ctx) {
   typedef numeric_limits<Dst> DstLimits;
 
   BEGIN_TEST;
@@ -244,26 +240,29 @@ static bool TestArithmetic(const char* dst, int line) {
   TEST_EXPECTED_VALUE(DstLimits::max() / 2,
                       CheckedNumeric<Dst>(DstLimits::max()) / 2);
 
-  TestSpecializedArithmetic<Dst>(dst, line);
+  TestSpecializedArithmetic<Dst>();
   END_TEST;
 }
 
-// Helper macro to wrap displaying the conversion types and line numbers.
-#define TEST_ARITHMETIC(Dst) TestArithmetic<Dst>(#Dst, __LINE__)
+#define TEST_ARITHMETIC(Dst) STATIC_UNITTEST(#Dst, TestArithmetic<Dst>)
 
-BEGIN_TEST_CASE(SafeNumerics_SignedIntegerMath)
-  TEST_ARITHMETIC(int8_t);
-  TEST_ARITHMETIC(int);
-  TEST_ARITHMETIC(intptr_t);
-  TEST_ARITHMETIC(intmax_t);
-END_TEST_CASE(SafeNumerics_SignedIntegerMath)
+STATIC_UNITTEST_START_TESTCASE(SafeNumerics_SignedIntegerMath)
+TEST_ARITHMETIC(int8_t)
+TEST_ARITHMETIC(int)
+TEST_ARITHMETIC(intptr_t)
+TEST_ARITHMETIC(intmax_t)
+STATIC_UNITTEST_END_TESTCASE(SafeNumerics_SignedIntegerMath,
+                             "intmath", "SafeNumerics signed integer arithmetic tests",
+                             NULL, NULL);
 
-BEGIN_TEST_CASE(SafeNumerics_UnsignedIntegerMath)
-  TEST_ARITHMETIC(uint8_t);
-  TEST_ARITHMETIC(unsigned int);
-  TEST_ARITHMETIC(uintptr_t);
-  TEST_ARITHMETIC(uintmax_t);
-END_TEST_CASE(SafeNumerics_UnsignedIntegerMath)
+STATIC_UNITTEST_START_TESTCASE(SafeNumerics_UnsignedIntegerMath)
+TEST_ARITHMETIC(uint8_t)
+TEST_ARITHMETIC(uint)
+TEST_ARITHMETIC(uintptr_t)
+TEST_ARITHMETIC(uintmax_t)
+STATIC_UNITTEST_END_TESTCASE(SafeNumerics_UnsignedIntegerMath,
+                             "uintmath", "SafeNumerics unsigned integer arithmetic tests",
+                             NULL, NULL);
 
 // Enumerates the five different conversions types we need to test.
 enum NumericConversionType {
@@ -286,7 +285,7 @@ struct TestNumericConversion {};
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
-  static bool Test(const char *dst, const char *src, int line) {
+  static bool Test(void*) {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -333,7 +332,7 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
-  static bool Test(const char *dst, const char *src, int line) {
+  static bool Test(void*) {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -379,7 +378,7 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
-  static bool Test(const char *dst, const char *src, int line) {
+  static bool Test(void*) {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -403,7 +402,7 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
-  static bool Test(const char *dst, const char *src, int line) {
+  static bool Test(void*) {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -445,7 +444,7 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, UNSIGN_TO_SIGN_NARROW_OR_EQUAL> {
-  static bool Test(const char *dst, const char *src, int line) {
+  static bool Test(void*) {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -466,72 +465,62 @@ struct TestNumericConversion<Dst, Src, UNSIGN_TO_SIGN_NARROW_OR_EQUAL> {
   }
 };
 
-// Helper macro to wrap displaying the conversion types and line numbers
 #define TEST_NUMERIC_CONVERSION(d, s, t) \
-  TestNumericConversion<d, s, t>::Test(#d, #s, __LINE__)
+    STATIC_UNITTEST(#d " <--> " #s, (TestNumericConversion<d, s, t>::Test))
 
-BEGIN_TEST_CASE(SafeNumerics_IntMinOperations)
-  TEST_NUMERIC_CONVERSION(int8_t, int8_t, SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(uint8_t, uint8_t, SIGN_PRESERVING_VALUE_PRESERVING);
+STATIC_UNITTEST_START_TESTCASE(SafeNumerics_IntMinOperations)
+TEST_NUMERIC_CONVERSION(int8_t,  int8_t,       SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(uint8_t, uint8_t,      SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(int8_t,  int,          SIGN_PRESERVING_NARROW)
+TEST_NUMERIC_CONVERSION(uint8_t, unsigned int, SIGN_PRESERVING_NARROW)
+TEST_NUMERIC_CONVERSION(uint8_t, int8_t,       SIGN_TO_UNSIGN_WIDEN_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(uint8_t, int,          SIGN_TO_UNSIGN_NARROW)
+TEST_NUMERIC_CONVERSION(uint8_t, intmax_t,     SIGN_TO_UNSIGN_NARROW)
+TEST_NUMERIC_CONVERSION(int8_t,  unsigned int, UNSIGN_TO_SIGN_NARROW_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(int8_t,  uintmax_t,    UNSIGN_TO_SIGN_NARROW_OR_EQUAL)
+STATIC_UNITTEST_END_TESTCASE(SafeNumerics_IntMinOperations,
+                             "intmin_ops", "SafeNumerics IntMin operations",
+                             NULL, NULL);
 
-  TEST_NUMERIC_CONVERSION(int8_t, int, SIGN_PRESERVING_NARROW);
-  TEST_NUMERIC_CONVERSION(uint8_t, unsigned int, SIGN_PRESERVING_NARROW);
+STATIC_UNITTEST_START_TESTCASE(SafeNumerics_IntOperations)
+TEST_NUMERIC_CONVERSION(int,          int,          SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(unsigned int, unsigned int, SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(int,          int8_t,       SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(unsigned int, uint8_t,      SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(int,          uint8_t,      SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(int,          intmax_t,     SIGN_PRESERVING_NARROW)
+TEST_NUMERIC_CONVERSION(unsigned int, uintmax_t,    SIGN_PRESERVING_NARROW)
+TEST_NUMERIC_CONVERSION(unsigned int, int,          SIGN_TO_UNSIGN_WIDEN_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(unsigned int, int8_t,       SIGN_TO_UNSIGN_WIDEN_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(unsigned int, intmax_t,     SIGN_TO_UNSIGN_NARROW)
+TEST_NUMERIC_CONVERSION(int,          unsigned int, UNSIGN_TO_SIGN_NARROW_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(int,          uintmax_t,    UNSIGN_TO_SIGN_NARROW_OR_EQUAL)
+STATIC_UNITTEST_END_TESTCASE(SafeNumerics_IntOperations,
+                             "int_ops", "SafeNumerics Int operations",
+                             NULL, NULL);
 
-  TEST_NUMERIC_CONVERSION(uint8_t, int8_t, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
+STATIC_UNITTEST_START_TESTCASE(SafeNumerics_IntMaxOperations)
+TEST_NUMERIC_CONVERSION(intmax_t,  intmax_t,     SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(uintmax_t, uintmax_t,    SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(intmax_t,  int,          SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(uintmax_t, unsigned int, SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(intmax_t,  unsigned int, SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(intmax_t,  uint8_t,      SIGN_PRESERVING_VALUE_PRESERVING)
+TEST_NUMERIC_CONVERSION(uintmax_t, int,          SIGN_TO_UNSIGN_WIDEN_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(uintmax_t, int8_t,       SIGN_TO_UNSIGN_WIDEN_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(intmax_t,  uintmax_t,    UNSIGN_TO_SIGN_NARROW_OR_EQUAL)
+STATIC_UNITTEST_END_TESTCASE(SafeNumerics_IntMaxOperations,
+                             "intmax_ops", "SafeNumerics IntMax operations",
+                             NULL, NULL);
 
-  TEST_NUMERIC_CONVERSION(uint8_t, int, SIGN_TO_UNSIGN_NARROW);
-  TEST_NUMERIC_CONVERSION(uint8_t, intmax_t, SIGN_TO_UNSIGN_NARROW);
+STATIC_UNITTEST_START_TESTCASE(SafeNumerics_SizeTOperations)
+TEST_NUMERIC_CONVERSION(size_t, int,    SIGN_TO_UNSIGN_WIDEN_OR_EQUAL)
+TEST_NUMERIC_CONVERSION(int,    size_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL)
+STATIC_UNITTEST_END_TESTCASE(SafeNumerics_SizeTOperations,
+                             "sizet_ops", "SafeNumerics SizeT operations",
+                             NULL, NULL);
 
-  TEST_NUMERIC_CONVERSION(int8_t, unsigned int, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
-  TEST_NUMERIC_CONVERSION(int8_t, uintmax_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
-END_TEST_CASE(SafeNumerics_IntMinOperations)
-
-BEGIN_TEST_CASE(SafeNumerics_IntOperations)
-  TEST_NUMERIC_CONVERSION(int, int, SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(unsigned int, unsigned int,
-                          SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(int, int8_t, SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(unsigned int, uint8_t,
-                          SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(int, uint8_t, SIGN_PRESERVING_VALUE_PRESERVING);
-
-  TEST_NUMERIC_CONVERSION(int, intmax_t, SIGN_PRESERVING_NARROW);
-  TEST_NUMERIC_CONVERSION(unsigned int, uintmax_t, SIGN_PRESERVING_NARROW);
-
-  TEST_NUMERIC_CONVERSION(unsigned int, int, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
-  TEST_NUMERIC_CONVERSION(unsigned int, int8_t, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
-
-  TEST_NUMERIC_CONVERSION(unsigned int, intmax_t, SIGN_TO_UNSIGN_NARROW);
-
-  TEST_NUMERIC_CONVERSION(int, unsigned int, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
-  TEST_NUMERIC_CONVERSION(int, uintmax_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
-END_TEST_CASE(SafeNumerics_IntOperations)
-
-BEGIN_TEST_CASE(SafeNumerics_IntMaxOperations)
-  TEST_NUMERIC_CONVERSION(intmax_t, intmax_t, SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(uintmax_t, uintmax_t,
-                          SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(intmax_t, int, SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(uintmax_t, unsigned int,
-                          SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(intmax_t, unsigned int,
-                          SIGN_PRESERVING_VALUE_PRESERVING);
-  TEST_NUMERIC_CONVERSION(intmax_t, uint8_t, SIGN_PRESERVING_VALUE_PRESERVING);
-
-
-  TEST_NUMERIC_CONVERSION(uintmax_t, int, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
-  TEST_NUMERIC_CONVERSION(uintmax_t, int8_t, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
-
-
-  TEST_NUMERIC_CONVERSION(intmax_t, uintmax_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
-END_TEST_CASE(SafeNumerics_IntMaxOperations)
-
-BEGIN_TEST_CASE(SafeNumerics_SizeTOperations)
-  TEST_NUMERIC_CONVERSION(size_t, int, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
-  TEST_NUMERIC_CONVERSION(int, size_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
-END_TEST_CASE(SafeNumerics_SizeTOperations)
-
-BEGIN_TEST_CASE(SafeNumerics_CastTests)
+bool SafeNumerics_CastTests(void*) {
 // MSVC catches and warns that we're forcing saturation in these tests.
 // Since that's intentional, we need to shut this warning off.
 #if defined(COMPILER_MSVC)
@@ -579,10 +568,10 @@ BEGIN_TEST_CASE(SafeNumerics_CastTests)
             static_cast<int>(small_positive));
   EXPECT_EQ2(saturated_cast<unsigned>(small_negative),
             static_cast<unsigned>(0));
-  all_success &= all_ok;
-END_TEST_CASE(SafeNumerics_CastTests)
+  END_TEST;
+}
 
-BEGIN_TEST_CASE(SafeNumerics_IsValueInRangeForNumericType)
+bool SafeNumerics_IsValueInRangeForNumericType(void*) {
   BEGIN_TEST;
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint32_t>(0));
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint32_t>(1));
@@ -656,10 +645,10 @@ BEGIN_TEST_CASE(SafeNumerics_IsValueInRangeForNumericType)
       static_cast<int64_t>(utils::numeric_limits<int32_t>::min())));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int64_t>(
       utils::numeric_limits<int64_t>::min()));
-  all_success &= all_ok;
-END_TEST_CASE(SafeNumerics_IsValueInRangeForNumericType)
+  END_TEST;
+}
 
-BEGIN_TEST_CASE(SafeNumerics_CompoundNumericOperations)
+bool SafeNumerics_CompoundNumericOperations(void*) {
   BEGIN_TEST;
   CheckedNumeric<int> a = 1;
   CheckedNumeric<int> b = 2;
@@ -682,5 +671,13 @@ BEGIN_TEST_CASE(SafeNumerics_CompoundNumericOperations)
   EXPECT_FALSE1(too_large.IsValid());
   too_large /= d;
   EXPECT_FALSE1(too_large.IsValid());
-  all_success &= all_ok;
-END_TEST_CASE(SafeNumerics_CompoundNumericOperations)
+  END_TEST;
+}
+
+STATIC_UNITTEST_START_TESTCASE(SafeNumerics)
+STATIC_UNITTEST("Cast", SafeNumerics_CastTests)
+STATIC_UNITTEST("In-range for type", SafeNumerics_IsValueInRangeForNumericType)
+STATIC_UNITTEST("Compound numeric ops", SafeNumerics_CompoundNumericOperations)
+STATIC_UNITTEST_END_TESTCASE(SafeNumerics,
+                             "safenum", "Misc. SafeNumerics tests.",
+                             NULL, NULL);
