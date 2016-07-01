@@ -261,9 +261,6 @@ typedef struct mx_port_uq_event {
 // TODO: Replace with ERR_INVALID_ARGS or ERR_NOT_ENOUGH_BUFFER
 #define ERR_TOO_BIG             (-93)
 
-// TODO: This appears to be obsolete, see if we need it.
-#define ERR_NOT_CONFIGURED      (-94)
-
 // TODO: This appears to be used as a bool, does it need a distinct code?
 #define ERR_FAULT               (-95)
 

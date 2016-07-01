@@ -65,9 +65,6 @@
 // TODO: Replace with ERR_INVALID_ARGS or ERR_NOT_ENOUGH_BUFFER
 #define ERR_TOO_BIG             (-93)
 
-// TODO: This appears to be obsolete, see if we need it.
-#define ERR_NOT_CONFIGURED      (-94)
-
 // TODO: This appears to be used as a bool, does it need a distinct code?
 #define ERR_FAULT               (-95)
 
@@ -81,6 +78,13 @@
 
 // TODO: This is a variant of ERR_BAD_STATE
 #define ERR_NOT_MOUNTED         (-104)
+
+// Kernel-private errors
+#define ERR_KERNEL_PRIVATE_BASE (-500)
+
+// TODO: This is used primarily by class drivers which are obsolete.
+// Re-examine when those are removed.
+#define ERR_NOT_CONFIGURED      (-501)
 
 #define ERR_USER_BASE           (-16384)
 

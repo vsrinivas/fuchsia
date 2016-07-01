@@ -90,8 +90,6 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_DATA_LOSS;
     case ERR_OUT_OF_RANGE:
         return MOJO_RESULT_OUT_OF_RANGE;
-    case ERR_NOT_CONFIGURED:
-        return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_NOT_MOUNTED:
         return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_FAULT:
