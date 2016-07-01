@@ -35,7 +35,7 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 
 status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 {
-    status_t status = ERR_GENERIC;
+    status_t status = ERR_INTERNAL;
     // Sanity check the given ids
     for (uint i = 0; i < count; ++i) {
         int cpu = x86_apic_id_to_cpu_num(apic_ids[i]);

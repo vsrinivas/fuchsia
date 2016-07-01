@@ -34,8 +34,8 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
     switch (err) {
     case NO_ERROR:
         return MOJO_RESULT_OK;
-    case ERR_GENERIC:
-        return MOJO_RESULT_UNKNOWN;
+    case ERR_INTERNAL:
+        return MOJO_RESULT_INTERNAL;
     case ERR_NOT_FOUND:
         return MOJO_RESULT_NOT_FOUND;
     case ERR_NOT_READY:
@@ -45,7 +45,7 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
     case ERR_ALREADY_STARTED:
         return MOJO_RESULT_FAILED_PRECONDITION;
     case ERR_NOT_VALID:
-        return MOJO_RESULT_INTERNAL;
+        return MOJO_RESULT_INVALID_ARGUMENT;
     case ERR_INVALID_ARGS:
         return MOJO_RESULT_INVALID_ARGUMENT;
     case ERR_NOT_ENOUGH_BUFFER:

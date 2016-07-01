@@ -68,7 +68,7 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
     aspace_ = UserProcess::GetCurrent()->aspace();
     DEBUG_ASSERT(aspace_); // This should never fail.
     if (!aspace_)
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
 
     paddr_ = paddr;
     size_  = size;

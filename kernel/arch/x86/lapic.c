@@ -333,7 +333,7 @@ usage:
         printf("%s dump local\n", argv[0].str);
         printf("%s broadcast <vec>\n", argv[0].str);
         printf("%s self <vec>\n", argv[0].str);
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "broadcast")) {

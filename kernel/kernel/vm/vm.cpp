@@ -233,7 +233,7 @@ static int cmd_vm(int argc, const cmd_args* argv) {
         printf("%s virt2phys <address>\n", argv[0].str);
         printf("%s map <phys> <virt> <count> <flags>\n", argv[0].str);
         printf("%s unmap <virt> <count>\n", argv[0].str);
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "phys2virt")) {

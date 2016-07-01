@@ -456,7 +456,7 @@ status_t port_read(port_t port, lk_time_t timeout, port_result_t *result)
     if (!port || !result)
         return ERR_INVALID_ARGS;
 
-    status_t rc = ERR_GENERIC;
+    status_t rc = ERR_INTERNAL;
     read_port_t *rp = (read_port_t *)port;
 
     THREAD_LOCK(state);
@@ -494,7 +494,7 @@ status_t port_peek(port_t port, port_result_t *result)
     if (!port || !result)
         return ERR_INVALID_ARGS;
 
-    status_t rc = ERR_GENERIC;
+    status_t rc = ERR_INTERNAL;
     read_port_t *rp = (read_port_t *)port;
 
     THREAD_LOCK(state);
@@ -518,7 +518,7 @@ status_t port_wait(port_t port, lk_time_t timeout) {
     if (!port)
         return ERR_INVALID_ARGS;
 
-    status_t rc = ERR_GENERIC;
+    status_t rc = ERR_INTERNAL;
     read_port_t *rp = (read_port_t *)port;
 
     THREAD_LOCK(state);

@@ -73,7 +73,7 @@ static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, size_t 
 
     int n = snprintf(buf, count, "%02x:%02x:%02x", cur.hours, cur.minutes, cur.seconds);
     if (n < 0) {
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
     if ((unsigned int)n > count) {
         return ERR_NOT_ENOUGH_BUFFER;

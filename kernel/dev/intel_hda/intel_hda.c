@@ -432,7 +432,7 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
     DEBUG_ASSERT(pci_device && pci_device->driver_ctx);
     intel_hda_device_t* dev = (intel_hda_device_t*)(pci_device->driver_ctx);
     hda_registers_t*    r   = NULL;
-    status_t            ret = ERR_GENERIC;
+    status_t            ret = ERR_INTERNAL;
 
     DEBUG_ASSERT(dev->pci_device == pci_device);
     LTRACEF("Starting %s @ %02x:%02x.%01x\n",

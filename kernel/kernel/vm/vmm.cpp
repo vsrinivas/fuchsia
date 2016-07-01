@@ -201,7 +201,7 @@ static int cmd_vmm(int argc, const cmd_args* argv) {
         printf("%s create_test_aspace\n", argv[0].str);
         printf("%s free_aspace <address>\n", argv[0].str);
         printf("%s set_test_aspace <address>\n", argv[0].str);
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
 
     static vmm_aspace_t* test_aspace;

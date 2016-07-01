@@ -442,7 +442,7 @@ err:
     arm64_mmu_unmap_pt(vaddr_in, vaddr_rel_in, size_in - size,
                        index_shift, page_size_shift, page_table, asid);
     DSB;
-    return ERR_GENERIC;
+    return ERR_INTERNAL;
 }
 
 static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
@@ -514,7 +514,7 @@ err:
     // here there's a programming bug since the higher level region abstraction
     // should guard against us trying to change permissions on an umapped page
     DSB;
-    return ERR_GENERIC;
+    return ERR_INTERNAL;
 }
 
 int arm64_mmu_map(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,

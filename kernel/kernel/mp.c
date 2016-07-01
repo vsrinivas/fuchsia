@@ -229,7 +229,7 @@ static void mp_unplug_trampoline(void) {
 status_t mp_hotplug_cpu(uint cpu_id) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
-    status_t status = ERR_GENERIC;
+    status_t status = ERR_INTERNAL;
 
     mutex_acquire(&mp.hotplug_lock);
 
@@ -252,7 +252,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
     thread_t *t = NULL;
-    status_t status = ERR_GENERIC;
+    status_t status = ERR_INTERNAL;
 
     mutex_acquire(&mp.hotplug_lock);
 

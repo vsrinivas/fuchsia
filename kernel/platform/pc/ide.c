@@ -319,7 +319,7 @@ static ssize_t ide_write(struct device *dev, off_t offset, const void *buf, size
     err = ide_poll_status(dev, 0, IDE_CTRL_BSY | IDE_DRV_DRQ);
     if (err) {
         LTRACEF("Error while waiting for controller: %s\n", ide_error_str[err]);
-        ret = ERR_GENERIC;
+        ret = ERR_INTERNAL;
         goto done;
     }
 
@@ -334,7 +334,7 @@ static ssize_t ide_write(struct device *dev, off_t offset, const void *buf, size
         err = ide_poll_status(dev, 0, IDE_CTRL_BSY);
         if (err) {
             LTRACEF("Error while waiting for controller: %s\n", ide_error_str[err]);
-            ret = ERR_GENERIC;
+            ret = ERR_INTERNAL;
             goto done;
         }
 
@@ -348,7 +348,7 @@ static ssize_t ide_write(struct device *dev, off_t offset, const void *buf, size
         err = ide_poll_status(dev, IDE_DRV_RDY, 0);
         if (err) {
             LTRACEF("Error while waiting for controller: %s\n", ide_error_str[err]);
-            ret = ERR_GENERIC;
+            ret = ERR_INTERNAL;
             goto done;
         }
 
@@ -359,7 +359,7 @@ static ssize_t ide_write(struct device *dev, off_t offset, const void *buf, size
             err = ide_poll_status(dev, IDE_DRV_DRQ, 0);
             if (err) {
                 LTRACEF("Error while waiting for drive: %s\n", ide_error_str[err]);
-                ret = ERR_GENERIC;
+                ret = ERR_INTERNAL;
                 goto done;
             }
 
@@ -404,7 +404,7 @@ static ssize_t ide_read(struct device *dev, off_t offset, void *buf, size_t coun
     err = ide_poll_status(dev, 0, IDE_CTRL_BSY | IDE_DRV_DRQ);
     if (err) {
         LTRACEF("Error while waiting for controller: %s\n", ide_error_str[err]);
-        ret = ERR_GENERIC;
+        ret = ERR_INTERNAL;
         goto done;
     }
 
@@ -419,7 +419,7 @@ static ssize_t ide_read(struct device *dev, off_t offset, void *buf, size_t coun
         err = ide_poll_status(dev, 0, IDE_CTRL_BSY);
         if (err) {
             LTRACEF("Error while waiting for controller: %s\n", ide_error_str[err]);
-            ret = ERR_GENERIC;
+            ret = ERR_INTERNAL;
             goto done;
         }
 
@@ -433,7 +433,7 @@ static ssize_t ide_read(struct device *dev, off_t offset, void *buf, size_t coun
         err = ide_poll_status(dev, IDE_DRV_RDY, 0);
         if (err) {
             LTRACEF("Error while waiting for controller: %s\n", ide_error_str[err]);
-            ret = ERR_GENERIC;
+            ret = ERR_INTERNAL;
             goto done;
         }
 
@@ -444,7 +444,7 @@ static ssize_t ide_read(struct device *dev, off_t offset, void *buf, size_t coun
             err = ide_poll_status(dev, IDE_DRV_DRQ, 0);
             if (err) {
                 LTRACEF("Error while waiting for drive: %s\n", ide_error_str[err]);
-                ret = ERR_GENERIC;
+                ret = ERR_INTERNAL;
                 goto done;
             }
 

@@ -776,7 +776,7 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
         default:
             /* mode is not one of the valid enum values, this should be impossible */
             DEBUG_ASSERT(false);
-            return ERR_GENERIC;
+            return ERR_INTERNAL;
         }
     }
 
@@ -869,7 +869,7 @@ status_t pcie_mask_unmask_irq_internal(pcie_device_state_t* dev,
     case PCIE_IRQ_MODE_MSI_X:  return ERR_NOT_IMPLEMENTED;
     default:
         DEBUG_ASSERT(false); /* This should be un-possible! */
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
 
     return NO_ERROR;

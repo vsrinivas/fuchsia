@@ -525,7 +525,7 @@ usage:
         printf("%s pcie-irq\n", argv[0].str);
         printf("%s walk-ns\n", argv[0].str);
         printf("%s spy\n", argv[0].str);
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "madt")) {

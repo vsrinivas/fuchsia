@@ -1263,7 +1263,7 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
     if (bus_drv->aspace == NULL) {
         TRACEF("Failed to initialize PCIe bus driver; could not obtain handle "
                "to kernel address space\n");
-        status = ERR_GENERIC;
+        status = ERR_INTERNAL;
         goto bailout;
     }
 

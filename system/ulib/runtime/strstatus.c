@@ -19,7 +19,7 @@ static struct {
     const char* string;
 } table[] = {
     {NO_ERROR, "NO_ERROR"},
-    {ERR_GENERIC, "ERR_GENERIC"},
+    {ERR_INTERNAL, "ERR_INTERNAL"},
     {ERR_NOT_FOUND, "ERR_NOT_FOUND"},
     {ERR_NOT_READY, "ERR_NOT_READY"},
     {ERR_NO_MEMORY, "ERR_NO_MEMORY"},

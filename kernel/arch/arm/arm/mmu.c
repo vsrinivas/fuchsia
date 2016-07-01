@@ -769,7 +769,7 @@ int arch_mmu_protect(arch_aspace_t *aspace, vaddr_t vaddr, uint count, uint flag
     return 0;
 err:
     arm_after_invalidate_tlb_barrier();
-    return ERR_GENERIC;
+    return ERR_INTERNAL;
 }
 
 int arch_mmu_unmap(arch_aspace_t *aspace, vaddr_t vaddr, uint count)

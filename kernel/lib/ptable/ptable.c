@@ -54,9 +54,9 @@ static inline size_t ptable_length(size_t entry_cnt)
 static status_t validate_entry(const struct ptable_entry *entry)
 {
     if (entry->offset > entry->offset + entry->length)
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     if (entry->offset + entry->length > (uint64_t)ptable.bdev->total_size)
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
 
     uint i;
     for (i = 0; i < sizeof(entry->name); i++)
@@ -64,7 +64,7 @@ static status_t validate_entry(const struct ptable_entry *entry)
             break;
 
     if (!i || (i >= sizeof(entry->name)))
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
 
     return NO_ERROR;
 }
@@ -73,7 +73,7 @@ static status_t ptable_write(void)
 {
     uint8_t *buf = NULL;
     bdev_t *bdev = NULL;
-    ssize_t err = ERR_GENERIC;
+    ssize_t err = ERR_INTERNAL;
 
     if (!ptable_found_valid())
         return ERR_NOT_MOUNTED;

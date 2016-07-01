@@ -93,7 +93,7 @@ static inline status_t iobp_map_status(uint32_t status) {
         case IOBPS_STATUS_SUCCESS:  return NO_ERROR;
         case IOBPS_STATUS_NOIMPL:   return ERR_NOT_IMPLEMENTED;
         case IOBPS_STATUS_PWR_DOWN: return ERR_BAD_STATE;
-        default:                    return ERR_GENERIC;
+        default:                    return ERR_INTERNAL;
     }
 }
 

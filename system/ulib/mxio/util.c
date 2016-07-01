@@ -37,7 +37,7 @@ mx_handle_t mxu_read_handle(mx_handle_t h) {
                 continue;
             if (pending & MX_SIGNAL_PEER_CLOSED)
                 return ERR_CHANNEL_CLOSED;
-            return ERR_GENERIC;
+            return ERR_INTERNAL;
         }
         return r;
     }
@@ -63,7 +63,7 @@ mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
                 continue;
             if (pending & MX_SIGNAL_PEER_CLOSED)
                 return ERR_CHANNEL_CLOSED;
-            return ERR_GENERIC;
+            return ERR_INTERNAL;
         }
         return r;
     }
@@ -92,7 +92,7 @@ mx_status_t mxu_blocking_read_h(mx_handle_t h, void* data, size_t len, mx_handle
                 continue;
             if (pending & MX_SIGNAL_PEER_CLOSED)
                 return ERR_CHANNEL_CLOSED;
-            return ERR_GENERIC;
+            return ERR_INTERNAL;
         }
         return r;
     }

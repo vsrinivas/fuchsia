@@ -86,7 +86,7 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
     if (!requested_irqs || (requested_irqs > PCIE_MAX_MSI_IRQS))
         return ERR_INVALID_ARGS;
 
-    status_t ret = ERR_GENERIC;
+    status_t ret = ERR_INTERNAL;
     bool is_32bit = false;
     uint alloc_size = 1u << log2_uint_roundup(requested_irqs);
     uint alloc_start;

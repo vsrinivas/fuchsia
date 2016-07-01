@@ -211,7 +211,8 @@ typedef struct mx_port_uq_event {
 #define NO_ERROR                (0)
 
 // Internal failures
-// TODO: Rename ERR_GENERIC -> ERR_INTERNAL
+#define ERR_INTERNAL            (-1)
+// TODO: Remove ERR_GENERIC once all uses are gone.
 #define ERR_GENERIC             (-1)
 #define ERR_NOT_SUPPORTED       (-2)
 #define ERR_NOT_FOUND           (-3)

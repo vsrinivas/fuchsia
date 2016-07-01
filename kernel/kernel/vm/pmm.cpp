@@ -475,7 +475,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
         printf("%s alloc_contig <count> <alignment>\n", argv[0].str);
         printf("%s dump_alloced\n", argv[0].str);
         printf("%s free_alloced\n", argv[0].str);
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
 
     static struct list_node allocated = LIST_INITIAL_VALUE(allocated);

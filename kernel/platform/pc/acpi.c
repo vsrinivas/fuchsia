@@ -445,7 +445,7 @@ status_t platform_find_pcie_legacy_irq_mapping(struct acpi_pcie_irq_mapping *roo
             root_bus_map,
             NULL);
     if (status != AE_OK) {
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     }
     return NO_ERROR;
 }

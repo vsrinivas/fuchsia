@@ -164,7 +164,7 @@ status_t UserThread::WaitForExceptionHandler(utils::RefPtr<Dispatcher> dispatche
     status = cond_wait_timeout(&exception_wait_cond_, &exception_wait_lock_, INFINITE_TIME);
     DEBUG_ASSERT(status == NO_ERROR);
     if (exception_status_ != MX_EXCEPTION_STATUS_RESUME)
-        return ERR_GENERIC;
+        return ERR_INTERNAL;
     return NO_ERROR;
 }
 
