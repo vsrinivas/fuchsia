@@ -35,7 +35,9 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 
 status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 {
+    volatile int aps_still_booting = 0;
     status_t status = ERR_INTERNAL;
+
     // Sanity check the given ids
     for (uint i = 0; i < count; ++i) {
         int cpu = x86_apic_id_to_cpu_num(apic_ids[i]);
@@ -46,11 +48,10 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         if (mp_is_cpu_online(cpu)) {
             return ERR_ALREADY_STARTED;
         }
+        aps_still_booting |= 1U << cpu;
     }
 
     struct x86_ap_bootstrap_data *bootstrap_data = NULL;
-
-    volatile int aps_still_booting = count;
     vmm_aspace_t *bootstrap_aspace = NULL;
 
     status = x86_bootstrap16_prep(
@@ -63,7 +64,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     }
 
     bootstrap_data->cpu_id_counter = 0;
-    bootstrap_data->cpu_waiting_counter = &aps_still_booting;
+    bootstrap_data->cpu_waiting_mask = &aps_still_booting;
     // Zero the kstack list so if we have to bail, we can safely free the
     // resources.
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
@@ -121,18 +122,36 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         thread_sleep(5);
     }
 
-    if (aps_still_booting != 0) {
-        printf("Failed to boot %d cores\n", aps_still_booting);
-        // If we failed to boot some cores, leak the shared resources.
-        // There is the risk the cores will try to access them after
-        // we free them.
-        // TODO: Fix this up by synchronizing with the other CPUs on a variable. If
-        // they see the timed out value, then they should go into a halt loop.
-        // After updating the flag, we should send an INIT IPI to all CPUs that
-        // failed to get passed the synchronization point before we timed out.
-        // This guarantees that they stop executing our code, so we can free the
-        // resources.
+    uint failed_aps = (uint)atomic_swap(&aps_still_booting, 0);
+    if (failed_aps != 0) {
+        printf("Failed to boot CPUs: mask %x\n", failed_aps);
+        for (uint i = 0; i < count; ++i) {
+            int cpu = x86_apic_id_to_cpu_num(apic_ids[i]);
+            uint mask = 1U << cpu;
+            if ((failed_aps & mask) == 0) {
+                continue;
+            }
+
+            // Shut the failed AP down
+            apic_send_ipi(0, apic_ids[i], DELIVERY_MODE_INIT);
+
+            // It shouldn't have been possible for it to have been in the
+            // scheduler...
+            ASSERT(!mp_is_cpu_active(cpu));
+
+            // Make sure the CPU is not marked online
+            atomic_and((volatile int *)&mp.online_cpus, ~mask);
+
+            // Free the failed AP's thread, it was cancelled before it could use
+            // it.
+            free((void *)bootstrap_data->per_cpu[i].thread);
+
+            failed_aps &= ~mask;
+        }
+        DEBUG_ASSERT(failed_aps == 0);
+
         status = ERR_TIMED_OUT;
+
         goto finish;
     }
 

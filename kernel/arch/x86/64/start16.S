@@ -20,6 +20,15 @@ FUNCTION(x86_bootstrap16_start)
 
 .code16
 FUNCTION(x86_bootstrap16_entry)
+    # Enter no-fill cache mode (allegedly this is the initial state
+    # according to Intel 3A, but on at least one Broadwell the APs can
+    # come up with caching enabled)
+    mov %cr0, %ebx
+    or $X86_CR0_CD, %ebx
+    and $~X86_CR0_NW, %ebx
+    mov %ebx, %cr0
+0:
+
     # We cheat a little and don't switch off of our real mode segments in
     # protected mode.  In real mode and protected mode, all of our code
     # and data accesess are relative to %cs and %ss, using the real mode
@@ -96,7 +105,7 @@ FUNCTION(_x86_secondary_cpu_long_mode_entry)
 
     # Retrieve the new PML4 address before our data page becomes unreachable
     mov BCD_PHYS_KERNEL_PML4_OFFSET(%esi), %ecx
-    # Similarly for the CPU waiting counter
+    # Similarly for the CPU waiting mask
     mov BCD_CPU_WAITING_OFFSET(%esi), %rdi
 
     # Switch out of the copied code page and into the kernel's

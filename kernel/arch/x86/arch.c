@@ -46,6 +46,7 @@ __SECTION(".data") void *_zero_page_boot_params;
 
 void arch_early_init(void)
 {
+    x86_mmu_percpu_init();
     x86_mmu_early_init();
 }
 
@@ -115,12 +116,25 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     DEBUG_ASSERT(cpu_num > 0);
     x86_init_percpu((uint)cpu_num);
 
+    // Signal that this CPU is initialized.  It is important that after this
+    // operation, we do not touch any resources associated with bootstrap
+    // besides our thread_t and stack, since this is the checkpoint the
+    // bootstrap process uses to identify completion.
+    int old_val = atomic_and(aps_still_booting, ~(1U << cpu_num));
+    if (old_val == 0) {
+        // If the value is already zero, then booting this CPU timed out.
+        goto fail;
+    }
+
+    // Defer configuring memory settings until after the atomic_and above.
+    // This ensures that we were in no-fill cache mode for the duration of early
+    // AP init.
+    DEBUG_ASSERT(x86_get_cr0() & X86_CR0_CD);
+    x86_mmu_percpu_init();
+
     // Load the appropriate PAT/MTRRs.  This must happen after init_percpu, so
     // that this CPU is considered online.
     x86_pat_sync(1U << cpu_num);
-
-    // Signal that this CPU is initialized
-    atomic_add(aps_still_booting, -1);
 
     /* run early secondary cpu init routines up to the threading level */
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
@@ -131,9 +145,9 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     thread->flags |= THREAD_FLAG_FREE_STRUCT;
     lk_secondary_cpu_entry();
 
-fail:
     // lk_secondary_cpu_entry only returns on an error, halt the core in this
     // case.
+fail:
     arch_disable_ints();
     while (1) {
       x86_hlt();

@@ -101,8 +101,6 @@ void x86_init_percpu(uint8_t cpu_num)
 
     x86_initialize_percpu_tss();
 
-    x86_mmu_percpu_init();
-
 #if ARCH_X86_64
     /* load the syscall entry point */
     extern void x86_syscall(void);

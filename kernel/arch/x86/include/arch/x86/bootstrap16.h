@@ -57,7 +57,7 @@ struct __PACKED x86_ap_bootstrap_data {
     // Counter for APs to use to determine which stack to take
     uint32_t cpu_id_counter;
     // Pointer to value to use to determine when APs are done with boot
-    volatile int  *cpu_waiting_counter;
+    volatile int *cpu_waiting_mask;
 
     // Per-cpu data
     struct __PACKED {
@@ -86,7 +86,7 @@ STATIC_ASSERT(__offsetof(struct x86_bootstrap16_data, long_mode_cs) == BCD_LM_CS
 
 STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, hdr) == 0);
 STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, cpu_id_counter) == BCD_CPU_COUNTER_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, cpu_waiting_counter) == BCD_CPU_WAITING_OFFSET);
+STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, cpu_waiting_mask) == BCD_CPU_WAITING_OFFSET);
 STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, per_cpu) == BCD_PER_CPU_BASE_OFFSET);
 
 __END_CDECLS
