@@ -82,9 +82,6 @@
 // TODO: This is a variant of ERR_BAD_STATE
 #define ERR_NOT_MOUNTED         (-104)
 
-// TODO: One user of this code, remove it.
-#define ERR_PARTIAL_WRITE       (-105)
-
 #define ERR_USER_BASE           (-16384)
 
 #endif

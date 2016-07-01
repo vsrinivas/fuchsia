@@ -150,7 +150,7 @@ static int single_thread_basic(void)
         return __LINE__;
     }
 
-    // LK 'classic' ports return ERR_PARTIAL_WRITE.
+    // LK 'classic' ports return ERR_BAD_STATE.
     if (st != ERR_CHANNEL_CLOSED) {
         printf("expected buffer error, status =%d\n", st);
         return __LINE__;

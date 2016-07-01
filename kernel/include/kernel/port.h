@@ -92,7 +92,7 @@ status_t port_group_add(port_t group, port_t port);
 status_t port_group_remove(port_t group, port_t port);
 
 /* Write to a port |count| packets, non-blocking, all or none atomic success
- * for unicast ports. It can return ERR_PARTIAL_WRITE for multicast.
+ * for unicast ports. It can return ERR_BAD_STATE for multicast.
  *
  * Returns ERR_CHANNEL_CLOSED if there was a read port that got closed.
  *

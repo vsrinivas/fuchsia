@@ -401,7 +401,7 @@ status_t port_write(port_t port, const port_packet_t *pk, size_t count)
         list_for_every_entry(&wp->rp_list, rp, read_port_t, w_node) {
             if (buf_write(rp->buf, pk, count) < 0) {
                 // buffer full.
-                status = ERR_PARTIAL_WRITE;
+                status = ERR_BAD_STATE;
                 continue;
             }
 

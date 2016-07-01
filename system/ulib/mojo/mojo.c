@@ -102,8 +102,6 @@ static mojo_result_t lk_to_mojo_error(mx_status_t err) {
         return MOJO_RESULT_INTERNAL;
     case ERR_ACCESS_DENIED:
         return MOJO_RESULT_PERMISSION_DENIED;
-    case ERR_PARTIAL_WRITE:
-        return MOJO_RESULT_RESOURCE_EXHAUSTED;
     default:
         return MOJO_RESULT_UNKNOWN;
     }
