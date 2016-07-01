@@ -22,6 +22,6 @@ MODULE_SRCS += $(LOCAL_DIR)/exceptions.c
 
 MODULE_NAME := exceptions-test-broken
 
-MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta
+MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta ulib/unittest
 
 include make/module.mk
