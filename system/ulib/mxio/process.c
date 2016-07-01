@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -112,9 +113,10 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
     return h0;
 }
 
+#define MAX_AUXV_COUNT (8*2)
+
 mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[],
                                    int hnds_count, mx_handle_t* handles, uint32_t* ids) {
-    uintptr_t entry = 0;
     mx_handle_t h, p;
     mx_status_t r;
 
@@ -129,27 +131,28 @@ mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[
     if ((p = _magenta_process_create(name, name_len)) < 0) {
         return p;
     }
-    if ((h = mxio_build_procargs(args_count, args, 0, NULL,
+
+    uintptr_t entry = 0;
+    int auxv_count = MAX_AUXV_COUNT;
+    uintptr_t auxv[MAX_AUXV_COUNT];
+    r = mxio_load_elf_filename(p, args[0], &auxv_count, auxv, &entry);
+    if (r < 0) {
+        _magenta_handle_close(p);
+        return r;
+    }
+
+    if ((h = mxio_build_procargs(args_count, args, auxv_count, auxv,
                                  hnds_count, handles, ids, 0)) < 0) {
         _magenta_handle_close(p);
         return h;
     }
-    int fd = open(args[0], O_RDONLY);
-    if (fd < 0) {
-        r = ERR_IO;
-        goto fail;
-    }
-    r = mxio_load_elf_fd(p, &entry, fd);
-    close(fd);
-    if (r < 0) {
-        goto fail;
-    }
+
     if ((r = _magenta_process_start(p, h, entry)) < 0) {
-    fail:
         _magenta_handle_close(h);
         _magenta_handle_close(p);
         return r;
     }
+
     return p;
 }
 
@@ -271,5 +274,98 @@ mx_status_t mxio_load_elf_fd(mx_handle_t process, mx_vaddr_t* entry, int fd) {
     status = elf_load(&elf);
     *entry = elf.entry;
     elf_close_handle(&elf);
+    return status;
+}
+
+static mx_status_t load_elf_filename(ctxt* c, elf_handle_t* elf,
+                                     mx_handle_t process,
+                                     const char* filename) {
+    mx_status_t status = elf_open_handle(elf, process,
+                                         _elf_read_fd, _elf_load_fd, c);
+    if (status == NO_ERROR) {
+        c->fd = open(filename, O_RDONLY);
+        if (c->fd < 0)
+            return ERR_IO;
+        status = elf_load(elf);
+    }
+    return status;
+}
+
+mx_status_t mxio_load_elf_filename(mx_handle_t process, const char* filename,
+                                   int* auxv_count, uintptr_t auxv[],
+                                   mx_vaddr_t* entry) {
+
+    ctxt c;
+    elf_handle_t elf;
+
+    mx_status_t status = load_elf_filename(&c, &elf, process, filename);
+    if (status != NO_ERROR)
+        goto fail;
+
+    int auxv_idx = 0;
+    if (elf.phdr_vaddr != 0) {
+        if (auxv_idx + 1 < *auxv_count) {
+            auxv[auxv_idx++] = AT_PHDR;
+            auxv[auxv_idx++] = elf.phdr_vaddr + elf.load_bias;
+        }
+        if (auxv_idx + 1 < *auxv_count) {
+            auxv[auxv_idx++] = AT_PHENT;
+            auxv[auxv_idx++] = sizeof(elf.pheaders[0]);
+        }
+        if (auxv_idx + 1 < *auxv_count) {
+            auxv[auxv_idx++] = AT_PHNUM;
+            auxv[auxv_idx++] = elf.eheader.e_phnum;
+        }
+    }
+
+    *entry = elf.entry + elf.load_bias;
+
+    if (status == NO_ERROR && elf.interp_len != 0) {
+        // There is a PT_INTERP segment, so load the interpreter.
+
+        // First, we read the segment's contents: the interpreter file name.
+        char* interp = malloc(elf.interp_len);
+        if (interp == NULL) {
+            status = ERR_NO_MEMORY;
+            goto fail;
+        }
+        ssize_t read_len = _elf_read_fd(&elf, interp,
+                                        elf.interp_offset, elf.interp_len);
+        if (read_len != (ssize_t)elf.interp_len) {
+            free(interp);
+            status = read_len < 0 ? read_len : ERR_IO;
+            goto fail;
+        }
+
+        // This is supposed to be a file name, so it better be a proper string.
+        if (interp[elf.interp_len - 1] != '\0') {
+            free(interp);
+            status = ERR_BAD_PATH;
+            goto fail;
+        }
+
+        ctxt interp_ctxt;
+        elf_handle_t interp_elf;
+        status = load_elf_filename(&interp_ctxt, &interp_elf, process, interp);
+        free(interp);
+
+        if (status == NO_ERROR) {
+            if (auxv_idx + 1 < *auxv_count) {
+                auxv[auxv_idx++] = AT_BASE;
+                auxv[auxv_idx++] = interp_elf.load_bias;
+            }
+            if (auxv_idx + 1 < *auxv_count) {
+                auxv[auxv_idx++] = AT_ENTRY;
+                auxv[auxv_idx++] = elf.entry + elf.load_bias;
+            }
+            *entry = interp_elf.entry + interp_elf.load_bias;
+        }
+
+        elf_close_handle(&interp_elf);
+    }
+
+fail:
+    elf_close_handle(&elf);
+    close(c.fd);
     return status;
 }

@@ -49,6 +49,10 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
 mx_status_t mxio_load_elf_mem(mx_handle_t process, mx_vaddr_t* entry, void* data, size_t len);
 mx_status_t mxio_load_elf_fd(mx_handle_t process, mx_vaddr_t* entry, int fd);
 
+mx_status_t mxio_load_elf_filename(mx_handle_t process, const char* filename,
+                                   int* auxv_count, uintptr_t auxv[],
+                                   mx_vaddr_t* entry);
+
 void bootfs_parse(void* _data, int len,
                   void (*cb)(const char* fn, size_t off, size_t len));
 

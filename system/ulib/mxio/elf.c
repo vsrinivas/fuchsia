@@ -139,6 +139,86 @@ static int verify_eheader(const void* header) {
     return NO_ERROR;
 }
 
+// An ET_DYN file can be loaded anywhere, so choose where.  This computes
+// handle->load_bias, which is the difference between p_vaddr values in
+// this file and actual runtime addresses.  (Usually the lowest p_vaddr in
+// an ET_DYN file will be 0 and so the load bias is also the load base
+// address, but ELF does not require that the lowest p_vaddr be 0.)
+static mx_status_t choose_load_bias(elf_handle_t* handle) {
+    // This file can be loaded anywhere, so the first thing is to
+    // figure out the total span it will need and reserve a span
+    // of address space that big.  The kernel decides where to put it.
+
+    uintptr_t low = 0, high = 0;
+    for (uint_fast16_t i = 0; i < handle->eheader.e_phnum; ++i) {
+        if (handle->pheaders[i].p_type == PT_LOAD) {
+            uint_fast16_t j = handle->eheader.e_phnum;
+            do {
+                --j;
+            } while (j > i && handle->pheaders[j].p_type != PT_LOAD);
+            low = handle->pheaders[i].p_vaddr & -PAGE_SIZE;
+            high = ((handle->pheaders[j].p_vaddr +
+                     handle->pheaders[j].p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE);
+            break;
+        }
+    }
+    LTRACEF("computed load span [%#" PRIxPTR ",%#" PRIxPTR ")\n",
+            low, high);
+
+    // Sanity check.  ELF requires that PT_LOAD phdrs be sorted in
+    // ascending p_vaddr order.
+    if (low > high) {
+        LTRACEF("bogus PT_LOAD order: %#zx..%#zx\n", low, high);
+        return ERR_NOT_FOUND;
+    }
+
+    const size_t span = high - low;
+    if (span == 0)
+        return NO_ERROR;
+
+    // vm_map requires some vm_object handle, so create a dummy one.
+    mx_handle_t vmo = _magenta_vm_object_create(0);
+    if (vmo < 0) {
+        LTRACEF("reservation vm_object_create(0) failed: %d\n", vmo);
+        return ERR_NO_MEMORY;
+    }
+
+    // Do a mapping to let the kernel choose an address range.
+    // TODO(MG-161): This really ought to be a no-access mapping (PROT_NONE
+    // in POSIX terms).  But the kernel currently doesn't allow that, so do
+    // a read-only mapping.
+    uintptr_t base;
+    mx_status_t status = _magenta_process_vm_map(handle->proc,
+                                                 vmo, 0,
+                                                 span, &base,
+                                                 MX_VM_FLAG_PERM_READ);
+    _magenta_handle_close(vmo);
+    if (status < 0) {
+        LTRACEF("failed to reserve %zu bytes of address space: %d\n",
+                span, status);
+        return ERR_NO_MEMORY;
+    }
+    LTRACEF("reserved address space at %#" PRIxPTR "+%zu\n", base, span);
+
+    // TODO(MG-133): Really we should just leave the no-access mapping in
+    // place and let each PT_LOAD mapping overwrite it.  But the kernel
+    // currently doesn't allow splitting an existing mapping to overwrite
+    // part of it.  So we remove the address-reserving mapping before
+    // starting on the actual PT_LOAD mappings.  Since there is no chance
+    // of racing with another thread doing mappings in this process,
+    // there's no danger of "losing the reservation".
+    status = _magenta_process_vm_unmap(handle->proc, base, 0);
+    if (status < 0) {
+        LTRACEF("vm_unmap failed on reservation %#" PRIxPTR "+%zu: %d\n",
+                base, span, status);
+        return ERR_NO_MEMORY;
+    }
+
+    handle->load_bias = base - low;
+
+    return NO_ERROR;
+}
+
 mx_status_t elf_load(elf_handle_t* handle) {
     if (!handle)
         return ERR_INVALID_ARGS;
@@ -181,6 +261,19 @@ mx_status_t elf_load(elf_handle_t* handle) {
         return ERR_NO_MEMORY;
     }
 
+    switch (handle->eheader.e_type) {
+    case ET_EXEC:
+        break;
+    case ET_DYN:;
+        mx_status_t status = choose_load_bias(handle);
+        if (status != NO_ERROR)
+            return status;
+        break;
+    default:
+        LTRACEF("bogus e_type %u\n", handle->eheader.e_type);
+        return ERR_NOT_FOUND;
+    }
+
     LTRACEF("program headers:\n");
     for (uint i = 0; i < handle->eheader.e_phnum; i++) {
         // parse the program headers
@@ -191,8 +284,8 @@ mx_status_t elf_load(elf_handle_t* handle) {
                 i, pheader->p_type, pheader->p_offset, pheader->p_vaddr,
                 pheader->p_paddr, pheader->p_memsz, pheader->p_filesz, pheader->p_flags);
 
-        // we only care about PT_LOAD segments at the moment
-        if (pheader->p_type == PT_LOAD) {
+        switch (pheader->p_type) {
+        case PT_LOAD:
             // allocate a block of memory to back the segment
             if (handle->vmo != 0) {
                 _magenta_handle_close(handle->vmo);
@@ -203,7 +296,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
             // Fix that up so we don't make the vmo mapping
             // unhappy later, and things get loaded correctly.
             uint64_t align = 0;
-            handle->vmo_addr = (uintptr_t)pheader->p_vaddr;
+            handle->vmo_addr = (uintptr_t)pheader->p_vaddr + handle->load_bias;
             if (handle->vmo_addr & (PAGE_SIZE - 1)) {
                 handle->vmo_addr &= (~(PAGE_SIZE - 1));
                 align = PAGE_SIZE - (handle->vmo_addr & (PAGE_SIZE - 1));
@@ -224,17 +317,37 @@ mx_status_t elf_load(elf_handle_t* handle) {
             mx_status_t status = _magenta_process_vm_map(handle->proc, handle->vmo, 0,
                                                          pheader->p_memsz + align, &ptr, mx_flags);
             if (status < 0) {
-                LTRACEF("failed to map VMO to back elf segment at 0x%lx\n", handle->vmo_addr);
+                LTRACEF("failed to map VMO to back elf segment at %#"
+                        PRIxPTR ": %d\n", handle->vmo_addr, status);
                 return ERR_NO_MEMORY;
             }
 
             // read the file portion of the segment into memory at vaddr
-            readerr = handle->load_hook(handle, pheader->p_vaddr,
+            readerr = handle->load_hook(handle,
+                                        pheader->p_vaddr + handle->load_bias,
                                         pheader->p_offset, pheader->p_filesz);
             if (readerr < (ssize_t)pheader->p_filesz) {
                 LTRACEF("error %ld reading program header %u\n", readerr, i);
                 return (readerr < 0) ? readerr : ERR_IO;
             }
+            break;
+
+        case PT_INTERP:
+            if (handle->interp_offset == 0) {
+                handle->interp_offset = pheader->p_offset;
+                handle->interp_len = pheader->p_filesz;
+            }
+            break;
+
+        case PT_PHDR:
+            if (handle->phdr_vaddr == 0) {
+                handle->phdr_vaddr = pheader->p_vaddr;
+            }
+            break;
+
+        default:
+            // Other segment types are not interesting.
+            break;
         }
     }
 

@@ -579,3 +579,9 @@ struct Elf64_Rela {
 #define ELF64_R_TYPE_DATA(info) (((Elf64_Xword)(info) << 32) >> 40)
 #define ELF64_R_TYPE_ID(info) (((Elf64_Xword)(info) << 56) >> 56)
 #define ELF64_R_TYPE_INFO(data, type) (((Elf64_Xword)(data) << 8) + (Elf64_Xword)(type))
+
+#define AT_PHDR 3
+#define AT_PHENT 4
+#define AT_PHNUM 5
+#define AT_BASE 7
+#define AT_ENTRY 9

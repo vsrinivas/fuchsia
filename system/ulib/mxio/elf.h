@@ -74,8 +74,15 @@ struct elf_handle {
     mx_handle_t vmo;
     uintptr_t vmo_addr;
 
-    uintptr_t load_address;
+    uintptr_t load_bias;
     uintptr_t entry;
+
+    // PT_INTERP segment bounds in the file image
+    uintptr_t interp_offset;
+    uintptr_t interp_len;
+
+    // p_vaddr of PT_PHDR segment (if any)
+    uintptr_t phdr_vaddr;
 };
 
 mx_status_t elf_open_handle(elf_handle_t* handle, mx_handle_t proc_handle,
