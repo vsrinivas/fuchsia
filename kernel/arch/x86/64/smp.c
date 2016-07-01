@@ -94,7 +94,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     // Actually send the startups
     ASSERT(PHYS_BOOTSTRAP_PAGE < 1 * MB);
     uint8_t vec = PHYS_BOOTSTRAP_PAGE >> PAGE_SIZE_SHIFT;
-    // Try up to two times per CPU
+    // Try up to two times per CPU, as Intel 3A recommends.
     for (int tries = 0; tries < 2; ++tries) {
         for (unsigned int i = 0; i < count; ++i) {
             uint32_t apic_id = apic_ids[i];
@@ -107,9 +107,18 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         if (aps_still_booting == 0) {
             break;
         }
-        // Wait 2ms for cores to boot.  The docs recommend 200us, but we do a
-        // bit more work before we mark an AP as booted.
-        thread_sleep(2);
+        // Wait 1ms for cores to boot.  The docs recommend 200us between STARTUP
+        // IPIs.
+        thread_sleep(1);
+    }
+
+    // The docs recommend waiting 200us for cores to boot.  We do a bit more
+    // work before the cores report in, so wait longer (up to 1 second).
+    for (int tries_left = 200;
+         aps_still_booting != 0 && tries_left > 0;
+         --tries_left) {
+
+        thread_sleep(5);
     }
 
     if (aps_still_booting != 0) {
