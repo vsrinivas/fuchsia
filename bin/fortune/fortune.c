@@ -7,7 +7,7 @@
 #include <time.h>
 
 static const size_t kFortunesSize = 4;
-static const char* kFortunes[kFortunesSize] = {
+static const char* kFortunes[4] = {
   "If we have data, let’s look at data. If all we have are opinions, let’s go\n"
   "with mine. -- Jim Barksdale",
   "Things that are impossible just take longer.",
