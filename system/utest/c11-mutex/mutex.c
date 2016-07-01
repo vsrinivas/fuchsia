@@ -70,17 +70,20 @@ static int mutex_thread_3(void* arg) {
     return 0;
 }
 
-static mx_status_t got_lock_1;
-static mx_status_t got_lock_2;
-static mx_status_t got_lock_3;
+static bool got_lock_1 = false;
+static bool got_lock_2 = false;
+static bool got_lock_3 = false;
 
 static int mutex_try_thread_1(void* arg) {
     xlog("thread 1 started\n");
 
-    for (int times = 0; times < 300; times++) {
-        got_lock_1 = mtx_trylock(&mutex);
+    for (int times = 0; times < 300 || !got_lock_1; times++) {
+        int status = mtx_trylock(&mutex);
         _magenta_nanosleep(1000);
-        mtx_unlock(&mutex);
+        if (status == thrd_success) {
+            got_lock_1 = true;
+            mtx_unlock(&mutex);
+        }
     }
 
     xlog("thread 1 done\n");
@@ -91,10 +94,13 @@ static int mutex_try_thread_1(void* arg) {
 static int mutex_try_thread_2(void* arg) {
     xlog("thread 2 started\n");
 
-    for (int times = 0; times < 150; times++) {
-        got_lock_2 = mtx_trylock(&mutex);
+    for (int times = 0; times < 150 || !got_lock_2; times++) {
+        int status = mtx_trylock(&mutex);
         _magenta_nanosleep(2000);
-        mtx_unlock(&mutex);
+        if (status == thrd_success) {
+            got_lock_2 = true;
+            mtx_unlock(&mutex);
+        }
     }
 
     xlog("thread 2 done\n");
@@ -105,10 +111,13 @@ static int mutex_try_thread_2(void* arg) {
 static int mutex_try_thread_3(void* arg) {
     xlog("thread 3 started\n");
 
-    for (int times = 0; times < 100; times++) {
-        got_lock_3 = mtx_trylock(&mutex);
+    for (int times = 0; times < 100 || !got_lock_3; times++) {
+        int status = mtx_trylock(&mutex);
         _magenta_nanosleep(3000);
-        mtx_unlock(&mutex);
+        if (status == thrd_success) {
+            got_lock_3 = true;
+            mtx_unlock(&mutex);
+        }
     }
 
     xlog("thread 3 done\n");
@@ -159,9 +168,9 @@ static bool test_try_mutexes(void) {
     _magenta_handle_close(handle2);
     _magenta_handle_close(handle3);
 
-    EXPECT_EQ(got_lock_1, NO_ERROR, "failed to get lock 1");
-    EXPECT_EQ(got_lock_2, NO_ERROR, "failed to get lock 2");
-    EXPECT_EQ(got_lock_3, NO_ERROR, "failed to get lock 3");
+    EXPECT_TRUE(got_lock_1, "failed to get lock 1");
+    EXPECT_TRUE(got_lock_2, "failed to get lock 2");
+    EXPECT_TRUE(got_lock_3, "failed to get lock 3");
 
     END_TEST;
 }
