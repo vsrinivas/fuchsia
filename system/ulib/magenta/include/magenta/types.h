@@ -88,8 +88,6 @@ typedef intptr_t mx_ssize_t;
 
 // Internal failures
 #define ERR_INTERNAL            (-1)
-// TODO: Remove ERR_GENERIC once all uses are gone.
-#define ERR_GENERIC             (-1)
 #define ERR_NOT_SUPPORTED       (-2)
 #define ERR_NOT_FOUND           (-3)
 #define ERR_NO_MEMORY           (-4)
