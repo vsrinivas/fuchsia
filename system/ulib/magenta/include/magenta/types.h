@@ -190,16 +190,16 @@ typedef struct mx_log_record {
 #define MX_LOG_FLAG_WAIT      0x80000000
 
 // IO port definitions.
-typedef struct mx_port_io_event {
+typedef struct mx_io_packet {
     mx_time_t timestamp;
     mx_size_t bytes;
     mx_signals_t signals;
     uint32_t reserved;
-} mx_port_io_event_t;
+} mx_io_packet_t;
 
-typedef struct mx_port_uq_event {
+typedef struct mx_user_packet {
     uint64_t param[3];
-} mx_port_uq_event_t;
+} mx_user_packet_t;
 
 #define MX_IOPORT_OPT_128_SLOTS   0
 #define MX_IOPORT_OPT_1K_SLOTS    1

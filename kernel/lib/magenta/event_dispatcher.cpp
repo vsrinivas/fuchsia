@@ -32,7 +32,7 @@ EventDispatcher::EventDispatcher(uint32_t options) {}
 EventDispatcher::~EventDispatcher() {}
 
 status_t EventDispatcher::SignalEvent() {
-    // Do not take more locks here! SignalEvent can be called from IRQ context.
+    // TODO(cpu): to signal from IRQ we need a diferent entrypoint that calls Modify(..., false).
     waiter_.Signal(MX_SIGNAL_SIGNALED);
     return NO_ERROR;
 }
@@ -43,6 +43,6 @@ status_t EventDispatcher::ResetEvent() {
 }
 
 status_t EventDispatcher::UserSignal(uint32_t set_mask, uint32_t clear_mask) {
-    waiter_.Modify(set_mask, clear_mask);
+    waiter_.Modify(set_mask, clear_mask, true);
     return NO_ERROR;
 }

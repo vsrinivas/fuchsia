@@ -83,13 +83,12 @@ struct WaitHelper {
         : waiter(nullptr) {}
     ~WaitHelper() { DEBUG_ASSERT(dispatcher.get() == nullptr); }
 
-    status_t Begin(Handle* handle, event_t* event, mx_signals_t signals) {
+    mx_status_t Begin(Handle* handle, event_t* event, mx_signals_t signals) {
         dispatcher = handle->dispatcher();
         waiter = dispatcher->get_waiter();
         if (!waiter)
             return ERR_NOT_SUPPORTED;
-        waiter->BeginWait(event, handle, signals);
-        return NO_ERROR;
+        return  waiter->BeginWait(event, handle, signals);
     }
 
     mx_signals_t End(event_t* event) {
@@ -1195,4 +1194,39 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, intptr_t* key, void* packet, mx
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
+}
+
+mx_status_t sys_io_port_bind(mx_handle_t handle, intptr_t key, mx_handle_t source, mx_signals_t signals) {
+    LTRACEF("handle %d source %d\n", handle, source);
+
+    auto up = UserProcess::GetCurrent();
+    uint32_t rights = 0;
+
+    if (key >= 0)
+        return ERR_INVALID_ARGS;
+
+    utils::RefPtr<Dispatcher> iop_d;
+    if (!up->GetDispatcher(handle, &iop_d, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto ioport = iop_d->get_io_port_dispatcher();
+    if (!ioport)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    utils::RefPtr<Dispatcher> src_d;
+    if (!up->GetDispatcher(source, &src_d, &rights))
+        return ERR_INVALID_ARGS;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    auto waiter = src_d->get_waiter();
+    if (!waiter)
+        return ERR_INVALID_ARGS;
+
+    return waiter->BindIOPort(utils::RefPtr<IOPortDispatcher>(ioport), key, signals) ?
+        NO_ERROR : ERR_NOT_READY;
 }

@@ -21,8 +21,8 @@
 struct IOP_Packet {
     intptr_t key;
     union {
-        mx_port_io_event_t io_ev;
-        mx_port_uq_event_t uq_ev;
+        mx_io_packet_t io_pk;
+        mx_user_packet_t us_pk;
     } u;
 };
 
@@ -37,9 +37,6 @@ public:
     IOPortDispatcher* get_io_port_dispatcher() final { return this; }
 
     mx_status_t Queue(const IOP_Packet* packet);
-    mx_status_t Bind(utils::RefPtr<Dispatcher> dispatcher,
-                     intptr_t key,
-                     mx_signals_t signals);
     mx_status_t Wait(IOP_Packet* packet);
 
 private:

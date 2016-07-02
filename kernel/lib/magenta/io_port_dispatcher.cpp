@@ -9,7 +9,7 @@
 #include <err.h>
 #include <kernel/auto_lock.h>
 
-static_assert(sizeof(mx_port_io_event_t) == sizeof(mx_port_uq_event), "packet size mismatch");
+static_assert(sizeof(mx_user_packet_t) == sizeof(mx_io_packet_t), "packet size mismatch");
 
 
 constexpr mx_rights_t kDefaultIOPortRights =
@@ -66,24 +66,17 @@ mx_status_t IOPortDispatcher::Queue(const IOP_Packet* packet) {
     return NO_ERROR;
 }
 
-mx_status_t IOPortDispatcher::Bind(utils::RefPtr<Dispatcher> dispatcher,
-                                   intptr_t key,
-                                   mx_signals_t signals) {
-    AutoLock al(&lock_);
-    // TODO(cpu): wire binding to other dispatchers.
-    return NO_ERROR;
-}
-
 mx_status_t IOPortDispatcher::Wait(IOP_Packet* packet) {
     IOP_Packet* head;
     while (true) {
         {
             AutoLock al(&lock_);
             head = packets_.pop_head();
-        }
-        if (head) {
-            *packet = *head;
-            return NO_ERROR;
+
+            if (head) {
+                *packet = *head;
+                return NO_ERROR;
+            }
         }
         status_t st = event_wait_timeout(&event_, INFINITE_TIME);
         if (st != NO_ERROR)
