@@ -27,7 +27,6 @@ MODULE_NAME := mxsh
 MODULE_DEPS := \
     ulib/mxio ulib/mxu ulib/musl ulib/magenta
 
-USER_MANIFEST_LINES += docs/kernel-objects.md=docs/magenta/kernel_objects.md
 USER_MANIFEST_LINES += docs/LICENSE=kernel/LICENSE
 
 include make/module.mk

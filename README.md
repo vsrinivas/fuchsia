@@ -4,5 +4,5 @@ Welcome to the Magenta repository.
 
 The documentation is divided into
 
++ [Magenta](docs/index.md) specific.
 + [LK](docs/lk/index.md) specific.
-+ [Magenta](docs/magenta/index.md) specific.
