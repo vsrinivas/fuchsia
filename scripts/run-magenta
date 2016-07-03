@@ -15,6 +15,7 @@ function HELP {
     echo "-k                  : use KVM"
     echo "-m <memory in MB>   : default 512MB"
     echo "-n                  : run with emulated nic"
+    echo "-N                  : run with emulated nic via tun/tap"
     echo "-o <dir>            : build directory"
     echo "-r                  : run release build"
     echo "-u                  : use uniprocessor"
@@ -40,7 +41,7 @@ RELEASE=0
 VNC=0
 INITRD=
 
-while getopts a:bdgkm:no:ruvx:h FLAG; do
+while getopts a:bdgkm:nNo:ruvx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
@@ -49,6 +50,7 @@ while getopts a:bdgkm:no:ruvx:h FLAG; do
         k) DO_KVM=1;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
+        N) NET=2;;
         o) BUILDDIR=$OPTARG;;
         r) RELEASE=1;;
         u) UP=1;;
@@ -121,6 +123,16 @@ if [ "$NET" -eq 1 ]; then
         ARGS+=" -netdev user,id=vmnic,hostname=qemu -device virtio-net-device,netdev=vmnic"
     fi
 fi
+
+if [ "$NET" -eq 2 ]; then
+    ARGS+=" -netdev type=tap,ifname=qemu,script=no,id=net0"
+    if [ "$ARCH" == "x86-64" ]; then
+        ARGS+=" -device e1000,netdev=net0"
+    else
+        ARGS+=" -device virtio-net-device,netdev=net0"
+    fi
+fi
+
 case $ARCH in
     arm32)
         QEMU=qemu-system-arm
