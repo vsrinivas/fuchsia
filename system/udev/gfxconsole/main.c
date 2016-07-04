@@ -109,7 +109,7 @@ restart:
     int modifiers = 0;
 
     for (;;) {
-        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL);
+        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(fd, &ev, sizeof(mx_key_event_t));
         if (r < 0) {
             close(fd);

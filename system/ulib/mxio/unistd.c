@@ -169,11 +169,11 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
     return io->ops->ioctl(io, op, in_buf, in_len, out_buf, out_len);
 }
 
-mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending) {
+mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t timeout) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL)
         return ERR_BAD_HANDLE;
-    return io->ops->wait(io, events, pending, MX_TIME_INFINITE);
+    return io->ops->wait(io, events, pending, timeout);
 }
 
 int mx_stat(mxio_t* io, struct stat* s) {

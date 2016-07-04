@@ -47,7 +47,7 @@ void cputs(const char* s, size_t len) {
 int cgetc(void) {
     uint8_t ch;
     for (;;) {
-        mxio_wait_fd(0, MXIO_EVT_READABLE, NULL);
+        mxio_wait_fd(0, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(0, &ch, 1);
         if (r < 0) {
             return r;

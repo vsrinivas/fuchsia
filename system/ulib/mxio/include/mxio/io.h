@@ -124,6 +124,6 @@ int mxio_bind_to_fd(mxio_t* io, int fd);
 // mxio-specific operations through fds (to the backing mxio_t's):
 
 // wait until one or more events are pending
-mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending);
+mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t timeout);
 
 ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);

@@ -494,7 +494,7 @@ static mx_status_t mx_rio_wait(mxio_t* io, uint32_t events, uint32_t* _pending, 
     mx_status_t r;
     mx_signals_t pending;
     if ((r = _magenta_handle_wait_one(rio->e, events & MXIO_EVT_ALL,
-                                      MX_TIME_INFINITE, &pending, NULL)) < 0) {
+                                      timeout, &pending, NULL)) < 0) {
         return r;
     }
     if (_pending) {
