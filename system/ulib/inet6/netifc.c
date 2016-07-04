@@ -22,6 +22,8 @@
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
+#include <mxio/io.h>
+
 static int netfd = -1;
 static uint8_t netmac[6];
 
@@ -76,7 +78,7 @@ int eth_add_mcast_filter(const mac_addr* addr) {
     return 0;
 }
 
-static uint64_t net_timer = 0;
+static volatile uint64_t net_timer = 0;
 
 #define TIMER_MS(n) (((uint64_t)(n)) * 1000000ULL)
 
@@ -129,7 +131,18 @@ void netifc_poll(void) {
     uint8_t buffer[2048];
     int r;
 
-    while ((r = read(netfd, buffer, sizeof(buffer))) > 0) {
-        eth_recv(buffer, r);
+    for (;;) {
+        while ((r = read(netfd, buffer, sizeof(buffer))) > 0) {
+            eth_recv(buffer, r);
+        }
+        if (net_timer) {
+            mx_time_t now = _magenta_current_time();
+            if (now > net_timer) {
+                break;
+            }
+            mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, net_timer - now + TIMER_MS(1));
+        } else {
+            mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+        }
     }
 }

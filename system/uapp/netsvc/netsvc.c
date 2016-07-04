@@ -67,22 +67,36 @@ void udp6_recv(void* data, size_t len,
         return;
     if (pkt->seqno != seqno)
         return;
-    seqno++;
-    pending = 0;
-    printf("ack!\n");
+    if (pending) {
+        seqno++;
+        pending = 0;
+        // ensure we stop polling
+        netifc_set_timer(0);
+    }
 }
 
+#define TIME_MS(n) (((uint64_t)(n)) * 1000000ULL)
+
 int main(int argc, char** argv) {
+    mx_time_t delay = TIME_MS(200);
     logpacket_t pkt;
     int len = 0;
     if ((loghandle = _magenta_log_create(0)) < 0) {
         return -1;
     }
-    _magenta_nanosleep(1000000000ULL);
+
     printf("netsvc: main()\n");
-    while (netifc_open() < 0) {
-        _magenta_nanosleep(100000000ULL);
+    //TODO: non-polling startup once possible
+    for (;;) {
+        _magenta_nanosleep(delay);
+        if (netifc_open() == 0) {
+            break;
+        }
+        while (delay < TIME_MS(1000)) {
+            delay += TIME_MS(100);
+        }
     }
+
     printf("netsvc: start\n");
     for (;;) {
         if (pending == 0) {
@@ -105,9 +119,12 @@ int main(int argc, char** argv) {
         }
         if (netifc_timer_expired()) {
         transmit:
-            udp6_send(&pkt, 8 + len, &ip6_ll_all_nodes, 33337, 33338);
-            netifc_set_timer(100);
+            if (pending) {
+                udp6_send(&pkt, 8 + len, &ip6_ll_all_nodes, 33337, 33338);
+            }
         }
+        //TODO: wakeup early for log traffic too
+        netifc_set_timer(100);
         netifc_poll();
     }
     return 0;
