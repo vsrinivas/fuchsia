@@ -60,6 +60,8 @@ bool handle_info_test(void) {
         CHECK(0, 1, "handle should be an event");
     if (info.rights != evr)
         CHECK(0, 1, "wrong set of rights");
+    if (info.props != MX_OBJ_PROP_WAITABLE)
+        CHECK(0, 1, "wrong set of properties");
 
     _magenta_handle_close(event);
     _magenta_handle_close(duped);

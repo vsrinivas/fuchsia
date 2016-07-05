@@ -312,7 +312,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
         handle_basic_info_t info = {
             rights,
             dispatcher->GetType(),
-            MX_OBJ_PROP_NONE,     // TODO(cpu): Return MX_OBJ_PROP_WAITABLE when appropiate.
+            dispatcher->get_waiter() ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
         };
 
         if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
