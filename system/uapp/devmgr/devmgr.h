@@ -73,12 +73,6 @@ struct devhost_msg {
     char namedata[MX_DEVICE_NAME_MAX + 1];
 };
 
-static inline void panic(void) {
-    for (;;) {
-        *((int*) 0) = 0;
-    }
-}
-
 #define DH_OP_STATUS 0
 #define DH_OP_ADD 1
 #define DH_OP_REMOVE 2

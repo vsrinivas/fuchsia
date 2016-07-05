@@ -85,6 +85,15 @@ void device_set_bindable(mx_device_t* dev, bool bindable);
 void driver_add(mx_driver_t* driver);
 void driver_remove(mx_driver_t* driver);
 
+// panic is for handling non-recoverable, non-reportable fatal
+// errors in a way that will get logged.  Right now this just
+// does a bogus write to unmapped memory.
+static inline void panic(void) {
+    for (;;) {
+        *((int*) 0xdead) = 1;
+    }
+}
+
 // Protocol Identifiers
 #define MX_PROTOCOL_DEVICE 'pDEV'
 #define MX_PROTOCOL_CHAR 'pCHR'
