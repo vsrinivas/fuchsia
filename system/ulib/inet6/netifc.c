@@ -97,8 +97,12 @@ int netifc_timer_expired(void) {
 }
 
 int netifc_open(void) {
-    if ((netfd = open("/dev/class/misc/ethernet", O_RDWR)) < 0) {
-        return -1;
+    //TODO: should open any /dev/class/ethernet/... interface
+    //TODO: update once better plumbing exists
+    if ((netfd = open("/dev/class/ethernet/intel-ethernet", O_RDWR)) < 0) {
+        if ((netfd = open("/dev/class/ethernet/usb-ethernet", O_RDWR)) < 0) {
+            return -1;
+        }
     }
     if (read(netfd, netmac, 6) != 6) {
         close(netfd);

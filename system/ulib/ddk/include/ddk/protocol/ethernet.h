@@ -26,3 +26,5 @@ typedef struct ethernet_protocol {
     bool (*is_online)(mx_device_t* device);
     size_t (*get_mtu)(mx_device_t* device);
 } ethernet_protocol_t;
+
+#define ETH_MAC_SIZE 6

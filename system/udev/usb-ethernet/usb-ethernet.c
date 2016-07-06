@@ -357,8 +357,28 @@ static mx_status_t usb_ethernet_release(mx_device_t* device) {
     return NO_ERROR;
 }
 
+// simplified read/write interface
+
+static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, size_t off, void* cookie) {
+    // special case reading MAC address
+    if (len == ETH_MAC_SIZE) {
+        usb_ethernet_get_mac_addr(dev, data);
+        return len;
+    }
+    if (len < usb_ethernet_get_mtu(dev)) {
+        return ERR_NOT_ENOUGH_BUFFER;
+    }
+    return usb_ethernet_recv(dev, data, len);
+}
+
+static ssize_t eth_write(mx_device_t* dev, const void* data, size_t len, size_t off, void* cookie) {
+    return usb_ethernet_send(dev, data, len);
+}
+
 static mx_protocol_device_t usb_ethernet_device_proto = {
     .release = usb_ethernet_release,
+    .read = eth_read,
+    .write = eth_write,
 };
 
 static int usb_ethernet_start_thread(void* arg) {
@@ -447,7 +467,7 @@ static int usb_ethernet_start_thread(void* arg) {
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
-    status = device_init(&eth->device, eth->driver, "usb_ethernet", &usb_ethernet_device_proto);
+    status = device_init(&eth->device, eth->driver, "usb-ethernet", &usb_ethernet_device_proto);
     if (status != NO_ERROR) {
         free(eth);
         return status;

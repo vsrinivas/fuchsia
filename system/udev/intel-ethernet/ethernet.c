@@ -113,6 +113,24 @@ static ethernet_protocol_t ethernet_ops = {
     .get_mtu = eth_get_mtu,
 };
 
+// simplified read/write interface
+
+static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, size_t off, void* cookie) {
+    // special case reading MAC address
+    if (len == ETH_MAC_SIZE) {
+        eth_get_mac_addr(dev, data);
+        return len;
+    }
+    if (len < eth_get_mtu(dev)) {
+        return ERR_NOT_ENOUGH_BUFFER;
+    }
+    return eth_recv(dev, data, len);
+}
+
+static ssize_t eth_write(mx_device_t* dev, const void* data, size_t len, size_t off, void* cookie) {
+    return eth_send(dev, data, len);
+}
+
 static mx_status_t eth_release(mx_device_t* dev) {
     ethernet_device_t* edev = get_eth_device(dev);
     eth_reset_hw(&edev->eth);
@@ -125,6 +143,8 @@ static mx_status_t eth_release(mx_device_t* dev) {
 
 static mx_protocol_device_t device_ops = {
     .release = eth_release,
+    .read = eth_read,
+    .write = eth_write,
 };
 
 static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {

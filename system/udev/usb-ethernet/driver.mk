@@ -15,6 +15,4 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/usb-ethernet.c \
-    $(LOCAL_DIR)/ethernet-char.c \
-    $(LOCAL_DIR)/ethernet-test.c \
+    $(LOCAL_DIR)/usb-ethernet.c
