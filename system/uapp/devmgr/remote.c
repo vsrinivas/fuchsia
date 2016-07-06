@@ -21,7 +21,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/char.h>
 
 #include <mxu/list.h>
 
@@ -49,22 +48,11 @@ struct proxy {
     list_node_t node;
 };
 
-static mx_status_t proxy_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t proxy_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t proxy_release(mx_device_t* dev) {
     return ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t proxy_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = proxy_open,
-    .close = proxy_close,
     .release = proxy_release,
 };
 
@@ -223,20 +211,9 @@ static mx_status_t devhost_rpc(mx_handle_t h, devhost_msg_t* msg, mx_handle_t ha
     return msg->arg;
 }
 
-static ssize_t read_unsupported(mx_device_t* d, void* p, size_t c, size_t o) {
-    return ERR_NOT_SUPPORTED;
-}
-static ssize_t write_unsupported(mx_device_t* d, const void* p, size_t c, size_t o) {
-    return ERR_NOT_SUPPORTED;
-}
-static mx_protocol_char_t cproto_unsupported = {
-    .read = read_unsupported,
-    .write = write_unsupported,
-};
-
 typedef struct iostate {
     mx_device_t* dev;
-    mx_protocol_char_t* cproto;
+    void* cookie;
     size_t io_off;
 } iostate_t;
 
@@ -246,9 +223,6 @@ static iostate_t* create_iostate(mx_device_t* dev) {
         return NULL;
     }
     ios->dev = dev;
-    if (device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&ios->cproto)) {
-        ios->cproto = &cproto_unsupported;
-    }
     return ios;
 }
 
@@ -296,7 +270,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
         return NO_ERROR;
     }
     case MX_RIO_READ: {
-        mx_status_t r = ios->cproto->read(dev, msg->data, arg, ios->io_off);
+        mx_status_t r = dev->ops->read(dev, msg->data, arg, ios->io_off, ios->cookie);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
@@ -305,7 +279,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
         return r;
     }
     case MX_RIO_WRITE: {
-        mx_status_t r = ios->cproto->write(dev, msg->data, len, ios->io_off);
+        mx_status_t r = dev->ops->write(dev, msg->data, len, ios->io_off, ios->cookie);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
@@ -314,11 +288,7 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
     }
     case MX_RIO_SEEK: {
         size_t end, n;
-        if (ios->cproto->getsize) {
-            end = ios->cproto->getsize(dev);
-        } else {
-            end = 0;
-        }
+        end = dev->ops->get_size(dev, ios->cookie);
         switch (arg) {
         case SEEK_SET:
             if ((msg->arg2.off < 0) || ((size_t)msg->arg2.off > end)) {
@@ -374,12 +344,9 @@ static mx_status_t rio_handler(mx_rio_msg_t* msg, void* cookie) {
         if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
             return ERR_INVALID_ARGS;
         }
-        if (!ios->cproto->ioctl) {
-            return ERR_NOT_SUPPORTED;
-        }
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
-        mx_status_t r = ios->cproto->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
+        mx_status_t r = dev->ops->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg, ios->cookie);
         if (r >= 0) {
             msg->datalen = r;
             msg->arg2.off = ios->io_off;

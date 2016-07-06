@@ -15,7 +15,6 @@
 #include <assert.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/char.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -191,42 +190,9 @@ static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t *dev,
     return status;
 }
 
-// Implement the device protocol for the bus device.
-
-static mx_status_t intel_serialio_i2c_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t intel_serialio_i2c_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-static mx_status_t intel_serialio_i2c_release(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-static mx_protocol_device_t intel_serialio_i2c_device_proto = {
-    .get_protocol = &device_base_get_protocol,
-    .open = &intel_serialio_i2c_open,
-    .close = &intel_serialio_i2c_close,
-    .release = &intel_serialio_i2c_release,
-};
-
-// Implement the char protocol for the bus device.
-
-static ssize_t intel_serialio_i2c_read(
-    mx_device_t* dev, void* buf, size_t count, size_t off) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static ssize_t intel_serialio_i2c_write(
-    mx_device_t* dev, const void* buf, size_t count, size_t off) {
-    return ERR_NOT_SUPPORTED;
-}
-
 static ssize_t intel_serialio_i2c_ioctl(
     mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len) {
+    void* out_buf, size_t out_len, void* cookie) {
     int ret;
     switch (op) {
     case I2C_BUS_ADD_SLAVE: {
@@ -265,9 +231,7 @@ static ssize_t intel_serialio_i2c_ioctl(
         return ret;
 }
 
-static mx_protocol_char_t intel_serialio_i2c_char_proto = {
-    .read = &intel_serialio_i2c_read,
-    .write = &intel_serialio_i2c_write,
+static mx_protocol_device_t intel_serialio_i2c_device_proto = {
     .ioctl = &intel_serialio_i2c_ioctl,
 };
 
@@ -340,9 +304,6 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     status = intel_serialio_i2c_reset_controller(device);
     if (status < 0)
         goto fail;
-
-    device->device.protocol_id = MX_PROTOCOL_CHAR;
-    device->device.protocol_ops = &intel_serialio_i2c_char_proto;
 
     status = device_add(&device->device, dev);
     if (status < 0)

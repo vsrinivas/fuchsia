@@ -15,7 +15,6 @@
 #include <mxu/list.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/char.h>
 
 #include <mxio/debug.h>
 #include <mxio/vfs.h>

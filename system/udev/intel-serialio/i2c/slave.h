@@ -15,7 +15,6 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/char.h>
 #include <magenta/types.h>
 #include <mxu/list.h>
 #include <stdint.h>

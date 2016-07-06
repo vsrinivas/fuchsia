@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ddk/protocol/char.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/binding.h>
 #include <hw/pci.h>

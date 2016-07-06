@@ -77,7 +77,7 @@ int console_starter(void* arg) {
     for (uint i = 1; i < VC_COUNT;) {
         int fd;
         char name[64];
-        snprintf(name, sizeof(name), "/dev/protocol/char/vc%u", i);
+        snprintf(name, sizeof(name), "/dev/class/console/vc%u", i);
         char pname[32];
         snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
         //printf("? %s\n", name);

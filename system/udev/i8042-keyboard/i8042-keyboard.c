@@ -337,9 +337,7 @@ static int i8042_irq_thread(void* arg) {
     return 0;
 }
 
-// implement char protocol:
-
-static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie) {
     size_t size = sizeof(mx_key_event_t);
     if (count < size || (count % size != 0))
         return ERR_INVALID_ARGS;
@@ -360,25 +358,6 @@ static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, size_t off)
     return (data - (mx_key_event_t*)buf) * size;
 }
 
-static ssize_t i8042_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_protocol_char_t i8042_char_proto = {
-    .read = i8042_read,
-    .write = i8042_write,
-};
-
-// implement device protocol:
-
-static mx_status_t i8042_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t i8042_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t i8042_release(mx_device_t* dev) {
     i8042_device_t* device = get_kbd_device(dev);
     free(device);
@@ -386,13 +365,9 @@ static mx_status_t i8042_release(mx_device_t* dev) {
 }
 
 static mx_protocol_device_t i8042_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = i8042_open,
-    .close = i8042_close,
     .release = i8042_release,
+    .read = i8042_read,
 };
-
-// implement driver object:
 
 static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     // create device
@@ -409,8 +384,6 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     }
 
     // add to root device
-    device->device.protocol_id = MX_PROTOCOL_CHAR;
-    device->device.protocol_ops = &i8042_char_proto;
     if (device_add(&device->device, NULL)) {
         free(device);
         return NO_ERROR;

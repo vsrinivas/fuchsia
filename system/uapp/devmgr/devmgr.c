@@ -54,7 +54,7 @@ mxr_mutex_t __devmgr_api_lock = MXR_MUTEX_INIT;
 #if !LIBDRIVER
 // vnodes for root driver and protocols
 static vnode_t* vnroot;
-static vnode_t* vnproto;
+static vnode_t* vnclass;
 #endif
 
 // The Root Driver
@@ -67,35 +67,59 @@ static mx_driver_t remote_driver = {
 };
 
 // The Root Device
-mx_status_t device_base_get_protocol(mx_device_t* dev, uint32_t proto_id, void** proto) {
+static mx_status_t default_get_protocol(mx_device_t* dev, uint32_t proto_id, void** proto) {
     if (proto_id == MX_PROTOCOL_DEVICE) {
         *proto = dev->ops;
         return NO_ERROR;
     }
-    if ((proto_id == dev->protocol_id) && (dev->protocol_id != 0)) {
+    if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
         *proto = dev->protocol_ops;
         return NO_ERROR;
     }
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t root_open(mx_device_t* dev, uint32_t flags) {
+static mx_status_t default_open(mx_device_t* dev, uint32_t flags, void** cookie) {
     return NO_ERROR;
 }
 
-mx_status_t root_close(mx_device_t* dev) {
+static mx_status_t default_close(mx_device_t* dev, void* cookie) {
     return NO_ERROR;
 }
 
-mx_status_t root_release(mx_device_t* dev) {
+static mx_status_t default_release(mx_device_t* dev) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static ssize_t default_read(mx_device_t* dev, void* buf, size_t count,
+                            size_t off, void* cookie) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static ssize_t default_write(mx_device_t* dev, const void* buf, size_t count,
+                             size_t off, void* cookie) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static size_t default_get_size(mx_device_t* dev, void* cookie) {
+    return 0;
+}
+
+static ssize_t default_ioctl(mx_device_t* dev, uint32_t op,
+                             const void* in_buf, size_t in_len,
+                             void* out_buf, size_t out_len, void* cookie) {
     return ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t root_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = root_open,
-    .close = root_close,
-    .release = root_release,
+    .get_protocol = default_get_protocol,
+    .open = default_open,
+    .close = default_close,
+    .release = default_release,
+    .read = default_read,
+    .write = default_write,
+    .get_size = default_get_size,
+    .ioctl = default_ioctl,
 };
 
 static mx_device_t* root_dev = NULL;
@@ -115,8 +139,8 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     switch (id) {
     case MX_PROTOCOL_DEVICE:
         return "device";
-    case MX_PROTOCOL_CHAR:
-        return "char";
+    case MX_PROTOCOL_MISC:
+        return "misc";
     case MX_PROTOCOL_CONSOLE:
         return "console";
     case MX_PROTOCOL_DISPLAY:
@@ -150,10 +174,10 @@ static mx_status_t devmgr_register_with_protocol(mx_device_t* dev, uint32_t prot
     char buf[PNMAX];
     const char* pname = proto_name(proto_id, buf);
 
-    // find or create a vnode for protocol/<pname>
+    // find or create a vnode for class/<pname>
     vnode_t* vnp;
     mx_status_t r;
-    if ((r = devfs_add_node(&vnp, vnproto, pname, NULL)) < 0) {
+    if ((r = devfs_add_node(&vnp, vnclass, pname, NULL)) < 0) {
         return r;
     }
 
@@ -264,6 +288,11 @@ void devmgr_device_set_bindable(mx_device_t* dev, bool bindable) {
     }
 }
 
+#define DEFAULT_IF_NULL(ops,method) \
+    if (ops->method == NULL) { \
+        ops->method = default_##method; \
+    }
+
 mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     if (dev == NULL) {
         return ERR_INVALID_ARGS;
@@ -287,11 +316,17 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
         printf("device add: %p(%s): NULL ops\n", dev, safename(dev->name));
         return ERR_INVALID_ARGS;
     }
-    if ((dev->ops->get_protocol == NULL) || (dev->ops->open == NULL) ||
-        (dev->ops->close == NULL) || (dev->ops->release == NULL)) {
-        printf("device add: %p(%s): incomplete ops\n", dev, safename(dev->name));
-        return ERR_INVALID_ARGS;
-    }
+
+    // install default methods if needed
+    mx_protocol_device_t* ops = dev->ops;
+    DEFAULT_IF_NULL(ops, get_protocol)
+    DEFAULT_IF_NULL(ops, open);
+    DEFAULT_IF_NULL(ops, close);
+    DEFAULT_IF_NULL(ops, release);
+    DEFAULT_IF_NULL(ops, read);
+    DEFAULT_IF_NULL(ops, write);
+    DEFAULT_IF_NULL(ops, get_size);
+    DEFAULT_IF_NULL(ops, ioctl);
 
     // Don't create an event handle if we alredy have one
     if (dev->event == MX_HANDLE_INVALID && (dev->event = _magenta_event_create(0)) < 0) {
@@ -329,13 +364,17 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     }
 
 #if !LIBDRIVER
+    // devices which do not declare a primary protocol
+    // are implied to be misc devices
+    if (dev->protocol_id == 0) {
+        dev->protocol_id = MX_PROTOCOL_MISC;
+    }
+
     // add device to devfs
     if (!devmgr_is_remote && (parent->vnode != NULL)) {
         vnode_t* vn;
         if (devfs_add_node(&vn, parent->vnode, dev->name, dev) == NO_ERROR) {
-            if (vnproto && dev->protocol_id) {
-                devmgr_register_with_protocol(dev, dev->protocol_id);
-            }
+            devmgr_register_with_protocol(dev, dev->protocol_id);
         }
     }
 #endif
@@ -408,8 +447,9 @@ mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags) {
     }
     dev->refcount++;
     mx_status_t r;
+    void* cookie = NULL;
     DM_UNLOCK();
-    r = dev->ops->open(dev, flags);
+    r = dev->ops->open(dev, flags, &cookie);
     DM_LOCK();
     return r;
 }
@@ -417,7 +457,7 @@ mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags) {
 mx_status_t devmgr_device_close(mx_device_t* dev) {
     mx_status_t r;
     DM_UNLOCK();
-    r = dev->ops->close(dev);
+    r = dev->ops->close(dev, NULL);
     DM_LOCK();
     dev_ref_release(dev);
     return r;
@@ -470,7 +510,7 @@ void devmgr_init(bool devhost) {
         // init devfs
         vnroot = devfs_get_root();
         root_dev->vnode = vnroot;
-        devfs_add_node(&vnproto, vnroot, "protocol", NULL);
+        devfs_add_node(&vnclass, vnroot, "class", NULL);
     }
 #endif
 

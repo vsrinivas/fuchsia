@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/console.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/keyboard.h>
 
@@ -217,7 +218,7 @@ static int vc_logreader_thread(void* arg) {
 
     vc_device_t* vc = debug_vc;
     // hide cursor in logreader
-    vc_char_write(&vc->device, ESCAPE_HIDE_CURSOR, strlen(ESCAPE_HIDE_CURSOR), 0);
+    vc_char_write(&vc->device, ESCAPE_HIDE_CURSOR, strlen(ESCAPE_HIDE_CURSOR), 0, NULL);
 
     char buf[MX_LOG_RECORD_MAX];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
@@ -228,10 +229,10 @@ static int vc_logreader_thread(void* arg) {
                      (int)(rec->timestamp / 1000000000ULL),
                      (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                      (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
-            vc_char_write(&vc->device, tmp, strlen(tmp), 0);
-            vc_char_write(&vc->device, rec->data, rec->datalen, 0);
+            vc_char_write(&vc->device, tmp, strlen(tmp), 0, NULL);
+            vc_char_write(&vc->device, rec->data, rec->datalen, 0, NULL);
             if (rec->data[rec->datalen - 1] != '\n') {
-                vc_char_write(&vc->device, "\n", 1, 0);
+                vc_char_write(&vc->device, "\n", 1, 0, NULL);
             }
         }
     }
@@ -282,17 +283,13 @@ void vc_get_status_line(char* str, int n) {
     }
 }
 
-static mx_protocol_device_t vc_device_proto = {
-    .get_protocol = vc_device_get_protocol,
-    .open = vc_device_open,
-    .close = vc_device_close,
-    .release = vc_device_release,
-};
-
 static mx_driver_t _driver_vc = {
     .name = "vc",
     .ops = {},
 };
+
+extern mx_protocol_device_t vc_device_proto;
+extern mx_protocol_console_t vc_console_proto;
 
 static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
     mx_status_t status;
@@ -350,7 +347,8 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
         } else {
             strncpy(device->title, name, sizeof(device->title));
         }
-        device->device.protocol_id = MX_PROTOCOL_CHAR;
+        device->device.protocol_id = MX_PROTOCOL_CONSOLE;
+        device->device.protocol_ops = &vc_console_proto;
 
         // add devices to root node
         list_add_tail(&vc_list, &device->node);
@@ -369,11 +367,11 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     // start input threads
     // TODO: generalize this to handle any keyboard devices
-    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/protocol/char/i8042-keyboard",
+    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/class/misc/i8042-keyboard",
                                     "vc-input-ps2", &input_thread0)) < 0) {
         printf("vc-input-ps2 thread did not start %d\n", status);
     }
-    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/protocol/char/usb-keyboard",
+    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/class/misc/usb-keyboard",
                                     "vc-input-usb", &input_thread1)) < 0) {
         printf("vc-input-usb thread did not start %d\n", status);
     }

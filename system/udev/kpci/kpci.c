@@ -32,14 +32,6 @@ static mx_device_t* kpci_root_dev;
 
 extern pci_protocol_t _pci_protocol;
 
-static mx_status_t kpci_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t kpci_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t kpci_release(mx_device_t* dev) {
     kpci_device_t* device = get_kpci_device(dev);
     _magenta_handle_close(device->handle);
@@ -48,9 +40,6 @@ static mx_status_t kpci_release(mx_device_t* dev) {
 }
 
 static mx_protocol_device_t kpci_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = kpci_open,
-    .close = kpci_close,
     .release = kpci_release,
 };
 

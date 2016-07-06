@@ -351,25 +351,13 @@ static ethernet_protocol_t usb_ethernet_proto = {
     .get_mtu = usb_ethernet_get_mtu,
 };
 
-static mx_status_t usb_ethernet_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t usb_ethernet_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t usb_ethernet_release(mx_device_t* device) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
     free(eth);
-
     return NO_ERROR;
 }
 
 static mx_protocol_device_t usb_ethernet_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = usb_ethernet_open,
-    .close = usb_ethernet_close,
     .release = usb_ethernet_release,
 };
 

@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <ddk/protocol/char.h>
+#include <stdint.h>
 #include <runtime/mutex.h>
 
 // Keyboard devices implement the char protocol and send key_event_t's for each keystroke.
@@ -91,8 +91,8 @@ enum {
 } extended_keys;
 
 typedef struct mx_key_event {
-    uint keycode;
-    int pressed;
+    uint32_t keycode;
+    int32_t pressed;
 } mx_key_event_t;
 
 // simple keyboard input queue

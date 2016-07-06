@@ -14,7 +14,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/char.h>
 #include <ddk/protocol/i2c.h>
 #include <intel-serialio/reg.h>
 #include <magenta/types.h>
@@ -49,28 +48,6 @@ static const uint64_t timeout_ns = 2 * 1000 * 1000 * 1000;
     })
 
 #define WAIT_FOR(condition) DO_UNTIL(condition, )
-
-// Implement the device protocol for the slave devices.
-
-static mx_status_t intel_serialio_i2c_slave_open(mx_device_t* dev,
-                                                           uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t intel_serialio_i2c_slave_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-static mx_status_t intel_serialio_i2c_slave_release(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-static mx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
-    .get_protocol = &device_base_get_protocol,
-    .open = &intel_serialio_i2c_slave_open,
-    .close = &intel_serialio_i2c_slave_close,
-    .release = &intel_serialio_i2c_slave_release,
-};
 
 // Implement the functionality of the i2c slave devices.
 
@@ -213,7 +190,7 @@ transfer_finish_2:
 // Implement the char protocol for the slave devices.
 
 static ssize_t intel_serialio_i2c_slave_read(
-    mx_device_t* dev, void* buf, size_t count, size_t off) {
+    mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie) {
     i2c_slave_segment_t segment = {
         .read = 1,
         .buf = buf,
@@ -223,7 +200,7 @@ static ssize_t intel_serialio_i2c_slave_read(
 }
 
 static ssize_t intel_serialio_i2c_slave_write(
-    mx_device_t* dev, const void* buf, size_t count, size_t off) {
+    mx_device_t* dev, const void* buf, size_t count, size_t of, void* cookie) {
     i2c_slave_segment_t segment = {
         .read = 0,
         .buf = (void*)buf,
@@ -323,7 +300,7 @@ slave_transfer_ioctl_finish_2:
 
 static ssize_t intel_serialio_i2c_slave_ioctl(
     mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len) {
+    void* out_buf, size_t out_len, void* cookie) {
     switch (op) {
     case I2C_SLAVE_TRANSFER:
         return intel_serialio_i2c_slave_transfer_ioctl(
@@ -334,7 +311,9 @@ static ssize_t intel_serialio_i2c_slave_ioctl(
     }
 }
 
-static mx_protocol_char_t intel_serialio_i2c_slave_char_proto = {
+// Implement the device protocol for the slave devices.
+
+static mx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
     .read = &intel_serialio_i2c_slave_read,
     .write = &intel_serialio_i2c_slave_write,
     .ioctl = &intel_serialio_i2c_slave_ioctl,
@@ -356,9 +335,6 @@ mx_status_t intel_serialio_i2c_slave_device_init(
                          &intel_serialio_i2c_slave_device_proto);
     if (status < 0)
         return status;
-
-    slave->device.protocol_id = MX_PROTOCOL_CHAR;
-    slave->device.protocol_ops = &intel_serialio_i2c_slave_char_proto;
 
     slave->chip_address_width = width;
     slave->chip_address = address;

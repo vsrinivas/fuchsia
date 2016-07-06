@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ddk/protocol/char.h>
 #include <ddk/protocol/console.h>
 #include <font/font.h>
 #include <magenta/syscalls.h>
@@ -26,7 +25,7 @@
 
 // implement char protocol:
 
-ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie) {
     vc_device_t* device = get_vc_device(dev);
     mx_key_event_t ev;
     ssize_t r = 0;
@@ -166,7 +165,7 @@ ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
     return r;
 }
 
-ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t off, void* cookie) {
     vc_device_t* device = get_vc_device(dev);
     mxr_mutex_lock(&device->lock);
     const uint8_t* str = (const uint8_t*)buf;
@@ -184,7 +183,7 @@ ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t of
 
 ssize_t vc_char_ioctl(mx_device_t* dev, uint32_t op,
                       const void* cmd, size_t cmdlen,
-                      void* reply, size_t max) {
+                      void* reply, size_t max, void* cookie) {
     vc_device_t* device = get_vc_device(dev);
     switch (op) {
     case CONSOLE_OP_GET_DIMENSIONS: {

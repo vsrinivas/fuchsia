@@ -18,6 +18,9 @@
 #include <magenta/types.h>
 #include <mxu/list.h>
 
+// for ssize_t:
+#include <unistd.h>
+
 typedef struct mx_device mx_device_t;
 typedef struct mx_driver mx_driver_t;
 typedef struct mx_device_prop mx_device_prop_t;
@@ -91,14 +94,34 @@ typedef struct mx_protocol_device {
     // Asks if the device supports a specific protocol.
     // If it does, protocol ops returned via **protocol.
 
-    mx_status_t (*open)(mx_device_t* dev, uint32_t flags);
+    mx_status_t (*open)(mx_device_t* dev, uint32_t flags, void** cookie_out);
+    // The optional cookie will be passed to close/read/write/get_size/ioctl
+    // This allows for per-instance context to be tracked
 
-    mx_status_t (*close)(mx_device_t* dev);
+    mx_status_t (*close)(mx_device_t* dev, void* cookie);
 
     mx_status_t (*release)(mx_device_t* dev);
     // Release any resources held by the mx_device_t and free() it.
     // release is called after a device is remove()'d and its
     // refcount hits zero (all closes and unbinds complete)
+
+    ssize_t (*read)(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie);
+    // attempt to read count bytes at offset off
+    // off may be ignored for devices without the concept of a position
+
+    ssize_t (*write)(mx_device_t* dev, const void* buf, size_t count, size_t off, void* cookie);
+    // attempt to write count bytes at offset off
+    // off may be ignored for devices without the concept of a position
+
+    size_t (*get_size)(mx_device_t* dev, void* cookie);
+    // optional: return the size (in bytes) of the readable/writable space
+    // of the device.  Will default to 0 (non-seekable) if this is unimplemented
+
+    ssize_t (*ioctl)(mx_device_t* dev, uint32_t op,
+                     const void* in_buf, size_t in_len,
+                     void* out_buf, size_t out_len,
+                     void* cookie);
+    // optional: do an device-specific io operation
 } mx_protocol_device_t;
 
 // Device Convenience Wrappers
@@ -124,7 +147,3 @@ static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
     _magenta_object_signal(dev->event, setflag, clearflag);
 }
-
-// Devices which implement just the device protocol and one
-// additional protocol may use this common implementation:
-mx_status_t device_base_get_protocol(mx_device_t* dev, uint32_t proto_id, void** proto);

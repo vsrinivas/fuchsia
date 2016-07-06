@@ -28,21 +28,6 @@ static void* xhci_irq_thread(void* arg) {
     return NULL;
 }
 
-static mx_status_t xhci_open(mx_device_t* dev, uint32_t flags) {
-    printf("xhci_open\n");
-    return NO_ERROR;
-}
-
-static mx_status_t xhci_close(mx_device_t* dev) {
-    printf("xhci_close\n");
-    return NO_ERROR;
-}
-
-static mx_status_t xhci_release(mx_device_t* dev) {
-    printf("xhci_release\n");
-    return NO_ERROR;
-}
-
 mx_status_t xhci_get_protocol(mx_device_t* dev, uint32_t proto_id, void** proto) {
     if (proto_id == MX_PROTOCOL_USB_HCI) {
         *proto = &_xhci_protocol;
@@ -57,9 +42,6 @@ mx_status_t xhci_get_protocol(mx_device_t* dev, uint32_t proto_id, void** proto)
 
 static mx_protocol_device_t xhci_device_proto = {
     .get_protocol = xhci_get_protocol,
-    .open = xhci_open,
-    .close = xhci_close,
-    .release = xhci_release,
 };
 
 static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {

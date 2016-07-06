@@ -15,7 +15,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/char.h>
 #include <ddk/protocol/ethernet.h>
 
 #include <runtime/thread.h>
@@ -33,28 +32,13 @@ typedef struct {
 } ethernet_char_t;
 #define get_eth_device(dev) containerof(dev, ethernet_char_t, char_device)
 
-static mx_status_t ethernet_char_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t ethernet_char_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t ethernet_char_release(mx_device_t* device) {
     ethernet_char_t* eth = get_eth_device(device);
     free(eth);
     return NO_ERROR;
 }
 
-static mx_protocol_device_t ethernet_char_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = ethernet_char_open,
-    .close = ethernet_char_close,
-    .release = ethernet_char_release,
-};
-
-static ssize_t ethernet_char_read(mx_device_t* device, void* buf, size_t count, size_t off) {
+static ssize_t ethernet_char_read(mx_device_t* device, void* buf, size_t count, size_t off, void* cookie) {
     ethernet_char_t* eth = get_eth_device(device);
 
     // special case reading MAC address
@@ -68,12 +52,13 @@ static ssize_t ethernet_char_read(mx_device_t* device, void* buf, size_t count, 
     return eth->eth_protocol->recv(eth->eth_device, buf, count);
 }
 
-static ssize_t ethernet_char_write(mx_device_t* device, const void* buf, size_t count, size_t off) {
+static ssize_t ethernet_char_write(mx_device_t* device, const void* buf, size_t count, size_t off, void* cookie) {
     ethernet_char_t* eth = get_eth_device(device);
     return eth->eth_protocol->send(eth->eth_device, buf, count);
 }
 
-static mx_protocol_char_t ethernet_char_proto = {
+static mx_protocol_device_t ethernet_char_device_proto = {
+    .release = ethernet_char_release,
     .read = ethernet_char_read,
     .write = ethernet_char_write,
 };
@@ -93,14 +78,12 @@ static mx_status_t ethernet_char_bind(mx_driver_t* driver, mx_device_t* device) 
     eth->mtu = eth_protocol->get_mtu(device);
     eth_protocol->get_mac_addr(device, eth->mac_addr);
 
-    mx_status_t status = device_init(&eth->char_device, driver, "ethernet_char",
+    mx_status_t status = device_init(&eth->char_device, driver, "ethernet",
                                      &ethernet_char_device_proto);
     if (status != NO_ERROR) {
         free(eth);
         return status;
     }
-    eth->char_device.protocol_id = MX_PROTOCOL_CHAR;
-    eth->char_device.protocol_ops = &ethernet_char_proto;
 
     // duplicate ethernet device status to retweet readable/writable events
     mx_handle_t event_handle = _magenta_handle_duplicate(device->event, MX_RIGHT_SAME_RIGHTS);
@@ -123,7 +106,7 @@ static mx_bind_inst_t binding[] = {
 };
 
 mx_driver_t _driver_ethernet_char BUILTIN_DRIVER = {
-    .name = "ethernet_char",
+    .name = "ethernet-char-wrapper",
     .ops = {
         .bind = ethernet_char_bind,
         .unbind = ethernet_char_unbind,

@@ -97,7 +97,7 @@ int netifc_timer_expired(void) {
 }
 
 int netifc_open(void) {
-    if ((netfd = open("/dev/protocol/char/ethernet_char", O_RDWR)) < 0) {
+    if ((netfd = open("/dev/class/misc/ethernet", O_RDWR)) < 0) {
         return -1;
     }
     if (read(netfd, netmac, 6) != 6) {

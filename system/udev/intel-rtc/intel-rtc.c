@@ -14,7 +14,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/char.h>
 #include <hw/inout.h>
 
 #include <assert.h>
@@ -62,7 +61,7 @@ static bool rtc_time_eq(struct rtc_time* lhs, struct rtc_time* rhs) {
 }
 
 // implement char protocol
-static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie) {
     struct rtc_time cur, last;
 
     read_time(&cur);
@@ -81,34 +80,8 @@ static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, size_t 
     return n;
 }
 
-static ssize_t intel_rtc_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_protocol_char_t intel_rtc_char_proto = {
-    .read = intel_rtc_read,
-    .write = intel_rtc_write,
-};
-
-// implement device protocol
-
-static mx_status_t intel_rtc_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t intel_rtc_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-static mx_status_t intel_rtc_release(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_protocol_device_t intel_rtc_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = intel_rtc_open,
-    .close = intel_rtc_close,
-    .release = intel_rtc_release,
+    .read = intel_rtc_read,
 };
 
 // implement driver object:
@@ -129,8 +102,6 @@ static mx_status_t intel_rtc_init(mx_driver_t* drv) {
         return status;
     }
 
-    dev->protocol_id = MX_PROTOCOL_CHAR;
-    dev->protocol_ops = &intel_rtc_char_proto;
     status = device_add(dev, NULL);
     if (status != NO_ERROR) {
         free(dev);
@@ -139,7 +110,6 @@ static mx_status_t intel_rtc_init(mx_driver_t* drv) {
     return NO_ERROR;
 #else
     intel_rtc_device_proto = intel_rtc_device_proto;
-    intel_rtc_char_proto = intel_rtc_char_proto;
     return ERR_NOT_SUPPORTED;
 #endif
 }

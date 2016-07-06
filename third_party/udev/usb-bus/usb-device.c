@@ -359,16 +359,6 @@ mx_driver_t _driver_usb_device BUILTIN_DRIVER = {
     .name = "usb_device",
 };
 
-static mx_status_t usb_device_open(mx_device_t* dev, uint32_t flags) {
-    printf("usb_device_open\n");
-    return NO_ERROR;
-}
-
-static mx_status_t usb_device_close(mx_device_t* dev) {
-    printf("usb_device_close\n");
-    return NO_ERROR;
-}
-
 static void usb_interface_free(usb_interface_t* intf) {
     for (int i = 0; i < intf->num_alt_interfaces; i++) {
         usb_interface_t* alt = &intf->alt_interfaces[i];
@@ -412,9 +402,6 @@ static mx_status_t usb_device_release(mx_device_t* device) {
 }
 
 mx_protocol_device_t usb_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = usb_device_open,
-    .close = usb_device_close,
     .release = usb_device_release,
 };
 

@@ -113,14 +113,6 @@ static ethernet_protocol_t ethernet_ops = {
     .get_mtu = eth_get_mtu,
 };
 
-static mx_status_t eth_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t eth_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t eth_release(mx_device_t* dev) {
     ethernet_device_t* edev = get_eth_device(dev);
     eth_reset_hw(&edev->eth);
@@ -132,9 +124,6 @@ static mx_status_t eth_release(mx_device_t* dev) {
 }
 
 static mx_protocol_device_t device_ops = {
-    .get_protocol = device_base_get_protocol,
-    .open = eth_open,
-    .close = eth_close,
     .release = eth_release,
 };
 

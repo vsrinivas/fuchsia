@@ -96,7 +96,7 @@ static inline void panic(void) {
 
 // Protocol Identifiers
 #define MX_PROTOCOL_DEVICE 'pDEV'
-#define MX_PROTOCOL_CHAR 'pCHR'
+#define MX_PROTOCOL_MISC 'pMSC'
 #define MX_PROTOCOL_CONSOLE 'pCON'
 #define MX_PROTOCOL_DISPLAY 'pDIS'
 #define MX_PROTOCOL_FB 'pFBU'

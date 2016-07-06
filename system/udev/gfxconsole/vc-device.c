@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <ddk/protocol/char.h>
 #include <ddk/protocol/console.h>
 #include <font/font.h>
 #include <stdlib.h>
@@ -289,13 +288,7 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
     vc_gfx_invalidate_all(dev);
 }
 
-static mx_protocol_char_t vc_char_proto = {
-    .read = vc_char_read,
-    .write = vc_char_write,
-    .ioctl = vc_char_ioctl,
-};
-
-static mx_protocol_console_t vc_console_proto = {
+mx_protocol_console_t vc_console_proto = {
     .getsurface = vc_console_getsurface,
     .invalidate = vc_console_invalidate,
     .movecursor = vc_console_movecursor,
@@ -303,39 +296,10 @@ static mx_protocol_console_t vc_console_proto = {
     .readkey = vc_console_readkey,
 };
 
-// implement device protocol
-
-mx_status_t vc_device_get_protocol(mx_device_t* dev, uint32_t protocol_id, void** protocol) {
-    switch (protocol_id) {
-    case MX_PROTOCOL_CHAR:
-        *protocol = &vc_char_proto;
-        break;
-    case MX_PROTOCOL_CONSOLE:
-        *protocol = &vc_console_proto;
-        break;
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-    return NO_ERROR;
-}
-
-mx_status_t vc_device_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-mx_status_t vc_device_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-mx_status_t vc_device_release(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 mx_protocol_device_t vc_device_proto = {
-    .get_protocol = vc_device_get_protocol,
-    .open = vc_device_open,
-    .close = vc_device_close,
-    .release = vc_device_release,
+    .read = vc_char_read,
+    .write = vc_char_write,
+    .ioctl = vc_char_ioctl,
 };
 
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {

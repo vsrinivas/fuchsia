@@ -170,14 +170,6 @@ static mx_display_protocol_t bochs_vbe_display_proto = {
 
 // implement device protocol
 
-static mx_status_t bochs_vbe_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t bochs_vbe_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t bochs_vbe_release(mx_device_t* dev) {
     bochs_vbe_device_t* vdev = get_bochs_vbe_device(dev);
 
@@ -195,9 +187,6 @@ static mx_status_t bochs_vbe_release(mx_device_t* dev) {
 }
 
 static mx_protocol_device_t bochs_vbe_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = bochs_vbe_open,
-    .close = bochs_vbe_close,
     .release = bochs_vbe_release,
 };
 

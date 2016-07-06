@@ -14,7 +14,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/char.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -72,7 +71,7 @@ static int debug_reader(void* arg) {
     return 0;
 }
 
-static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie) {
     uint8_t* data = buf;
     mxr_mutex_lock(&fifo.lock);
     while (count-- > 0) {
@@ -87,40 +86,19 @@ static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, size_t of
     return data - (uint8_t*)buf;
 }
 
-static ssize_t console_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+static ssize_t console_write(mx_device_t* dev, const void* buf, size_t count, size_t off, void* cookie) {
     return _magenta_debug_write(buf, count);
 }
 
-static mx_protocol_char_t console_char_proto = {
+static mx_protocol_device_t console_device_proto = {
     .read = console_read,
     .write = console_write,
-};
-
-static mx_status_t console_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t console_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-static mx_status_t console_release(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-static mx_protocol_device_t console_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = console_open,
-    .close = console_close,
-    .release = console_release,
 };
 
 mx_status_t console_init(mx_driver_t* driver) {
     mx_device_t* dev;
     printf("console_init()\n");
     if (device_create(&dev, driver, "console", &console_device_proto) == NO_ERROR) {
-        dev->protocol_id = MX_PROTOCOL_CHAR;
-        dev->protocol_ops = &console_char_proto;
         if (device_add(dev, NULL) < 0) {
             free(dev);
         } else {

@@ -19,7 +19,6 @@
 #include <mxu/list.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/char.h>
 
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
@@ -69,13 +68,13 @@ static mx_status_t vnd_close(vnode_t* vn) {
 }
 
 static ssize_t vnd_read_char(vnode_t* vn, void* data, size_t len, size_t off) {
-    mx_protocol_char_t* ops = vn->pops;
-    return ops->read(vn->pdata, data, len, off);
+    mx_protocol_device_t* ops = vn->pops;
+    return ops->read(vn->pdata, data, len, off, NULL);
 }
 
 static ssize_t vnd_write_char(vnode_t* vn, const void* data, size_t len, size_t off) {
-    mx_protocol_char_t* ops = vn->pops;
-    return ops->write(vn->pdata, data, len, off);
+    mx_protocol_device_t* ops = vn->pops;
+    return ops->write(vn->pdata, data, len, off, NULL);
 }
 
 static ssize_t vnd_ioctl(
@@ -83,12 +82,8 @@ static ssize_t vnd_ioctl(
     const void* in_data, size_t in_len,
     void* out_data, size_t out_len) {
 
-    mx_protocol_char_t* ops = vn->pops;
-    if (ops && ops->ioctl) {
-        return ops->ioctl(vn->pdata, op, in_data, in_len, out_data, out_len);
-    } else {
-        return ERR_NOT_SUPPORTED;
-    }
+    mx_protocol_device_t* ops = vn->pops;
+    return ops->ioctl(vn->pdata, op, in_data, in_len, out_data, out_len, NULL);
 }
 
 static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
@@ -99,9 +94,9 @@ static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
     }
-    mx_protocol_char_t* ops = vn->pops;
-    if (ops && ops->getsize) {
-        attr->size = ops->getsize(dev);
+    mx_protocol_device_t* ops = vn->pops;
+    if (ops) {
+        attr->size = ops->get_size(dev, NULL);
     }
     return NO_ERROR;
 }
@@ -143,21 +138,6 @@ static mx_handle_t vnd_gethandles_none(vnode_t* vn, mx_handle_t* handles, uint32
 
 // default device ops
 static vnode_ops_t vn_device_ops = {
-    .release = vnd_release,
-    .open = vnd_open,
-    .close = vnd_close,
-    .read = memfs_read_none,
-    .write = memfs_write_none,
-    .lookup = memfs_lookup,
-    .getattr = vnd_getattr,
-    .readdir = memfs_readdir,
-    .create = vnd_create,
-    .gethandles = vnd_gethandles,
-    .ioctl = vnd_ioctl,
-};
-
-// ops for character protocol devices
-static vnode_ops_t vn_device_ops_char = {
     .release = vnd_release,
     .open = vnd_open,
     .close = vnd_close,
@@ -235,13 +215,9 @@ mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_
     if (dev) {
         // attach device
         vn->pdata = dev;
+        vn->pops = dev->ops;
         vn->flags = V_FLAG_DEVICE;
-        device_get_protocol(dev, MX_PROTOCOL_CHAR, (void**)&vn->pops);
-        if (vn->pops != NULL) {
-            vn->ops = &vn_device_ops_char;
-        } else {
-            vn->ops = &vn_device_ops;
-        }
+        vn->ops = &vn_device_ops;
     } else {
         // directory-only devfs node
         vn->ops = &vn_device_ops_none;

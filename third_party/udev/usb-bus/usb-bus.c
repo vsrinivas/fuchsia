@@ -61,23 +61,7 @@ usb_bus_protocol_t _bus_protocol = {
     .root_hub_port_changed = usb_root_hub_port_changed,
 };
 
-mx_status_t usb_bus_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-mx_status_t usb_bus_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
-mx_status_t usb_bus_release(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_protocol_device_t usb_bus_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = usb_bus_open,
-    .close = usb_bus_close,
-    .release = usb_bus_release,
 };
 
 static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {

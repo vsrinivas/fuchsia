@@ -261,14 +261,6 @@ static bluetooth_hci_protocol_t hci_proto = {
     .get_acl_pipe = hci_get_acl_pipe,
 };
 
-static mx_status_t hci_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t hci_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t hci_release(mx_device_t* device) {
     hci_t* hci = get_hci(device);
     free(hci);
@@ -277,9 +269,6 @@ static mx_status_t hci_release(mx_device_t* device) {
 }
 
 static mx_protocol_device_t hci_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = hci_open,
-    .close = hci_close,
     .release = hci_release,
 };
 

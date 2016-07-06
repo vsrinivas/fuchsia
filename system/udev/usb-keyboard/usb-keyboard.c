@@ -15,7 +15,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/char.h>
 #include <ddk/protocol/usb-device.h>
 #include <ddk/protocol/keyboard.h>
 
@@ -198,7 +197,7 @@ static void kbd_int_cb(usb_request_t* req) {
     kbd->usb->queue_request(kbd->usbdev, req);
 }
 
-static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len, size_t off) {
+static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len, size_t off, void* cookie) {
     kbd_device_t* kbd = get_kbd_device(dev);
     mx_key_event_t* evt = buf;
     size_t count = 0;
@@ -219,33 +218,14 @@ static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len, size_t off) {
     return count;
 }
 
-static ssize_t kbd_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_protocol_char_t kbd_char_ops = {
-    .read = kbd_read,
-    .write = kbd_write,
-};
-
-static mx_status_t kbd_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t kbd_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t kbd_release(mx_device_t* dev) {
     free(dev);
     return NO_ERROR;
 }
 
 static mx_protocol_device_t kbd_dev_ops = {
-    .get_protocol = device_base_get_protocol,
-    .open = kbd_open,
-    .close = kbd_close,
     .release = kbd_release,
+    .read = kbd_read,
 };
 
 static mx_status_t kbd_bind(mx_driver_t* drv, mx_device_t* dev) {
@@ -259,8 +239,6 @@ static mx_status_t kbd_bind(mx_driver_t* drv, mx_device_t* dev) {
         free(kbd);
         return status;
     }
-    kbd->dev.protocol_id = MX_PROTOCOL_CHAR;
-    kbd->dev.protocol_ops = &kbd_char_ops;
 
     kbd->usbdev = dev;
     if (device_get_protocol(dev, MX_PROTOCOL_USB_DEVICE, (void**)&kbd->usb) < 0) {

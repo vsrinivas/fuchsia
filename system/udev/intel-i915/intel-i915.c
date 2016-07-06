@@ -106,13 +106,13 @@ static mx_display_protocol_t intel_i915_display_proto = {
 
 // implement device protocol
 
-static mx_status_t intel_i915_open(mx_device_t* dev, uint32_t flags) {
+static mx_status_t intel_i915_open(mx_device_t* dev, uint32_t flags, void** cookie) {
     intel_i915_device_t* device = get_i915_device(dev);
     intel_i915_enable_backlight(device, true);
     return NO_ERROR;
 }
 
-static mx_status_t intel_i915_close(mx_device_t* dev) {
+static mx_status_t intel_i915_close(mx_device_t* dev, void* cookie) {
     return NO_ERROR;
 }
 
@@ -134,7 +134,6 @@ static mx_status_t intel_i915_release(mx_device_t* dev) {
 }
 
 static mx_protocol_device_t intel_i915_device_proto = {
-    .get_protocol = device_base_get_protocol,
     .open = intel_i915_open,
     .close = intel_i915_close,
     .release = intel_i915_release,

@@ -280,14 +280,6 @@ static void usb_hub_interrupt_complete(usb_request_t* request) {
     mxr_mutex_unlock(&hub->mutex);
 }
 
-static mx_status_t usb_hub_open(mx_device_t* dev, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t usb_hub_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t usb_hub_release(mx_device_t* device) {
     usb_hub_t* hub = get_hub(device);
     generic_hub_destroy(&hub->generic_hub);
@@ -297,9 +289,6 @@ static mx_status_t usb_hub_release(mx_device_t* device) {
 }
 
 static mx_protocol_device_t usb_hub_device_proto = {
-    .get_protocol = device_base_get_protocol,
-    .open = usb_hub_open,
-    .close = usb_hub_close,
     .release = usb_hub_release,
 };
 
