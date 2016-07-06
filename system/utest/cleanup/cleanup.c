@@ -25,7 +25,7 @@ static const char* msg = "This is a test message, please discard.";
 volatile int test_state = 0;
 
 int watchdog(void* arg) {
-    _magenta_nanosleep(100 * 1000 * 1000);
+    _magenta_nanosleep(1000 * 1000 * 1000);
     EXPECT_GE(test_state, 100, "cleanup-test: FAILED. Stuck waiting in test");
     _magenta_thread_exit();
     return 0;

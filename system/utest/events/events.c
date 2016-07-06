@@ -169,7 +169,7 @@ static bool user_signals_test(void) {
 }
 
 static int thread_fn_closer(void* arg) {
-    _magenta_nanosleep(1000000);
+    _magenta_nanosleep(200 * 1000 * 1000);
 
     mx_handle_t handle = *((mx_handle_t*)arg);
     int rc = (int)_magenta_handle_close(handle);
