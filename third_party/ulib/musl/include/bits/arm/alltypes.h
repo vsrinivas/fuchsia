@@ -1,4 +1,4 @@
-#define _Addr int
+#define _Addr long
 #define _Int64 long long
 #define _Reg int
 
@@ -122,7 +122,7 @@ typedef struct {
 #endif
 
 #if defined(__NEED_size_t) && !defined(__DEFINED_size_t)
-typedef unsigned _Addr size_t;
+typedef unsigned int size_t;
 #define __DEFINED_size_t
 #endif
 
@@ -137,7 +137,7 @@ typedef _Addr ptrdiff_t;
 #endif
 
 #if defined(__NEED_ssize_t) && !defined(__DEFINED_ssize_t)
-typedef _Addr ssize_t;
+typedef int ssize_t;
 #define __DEFINED_ssize_t
 #endif
 
