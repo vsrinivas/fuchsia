@@ -309,7 +309,7 @@ ssize_t read(int fd, void* buf, size_t count) {
         return ERRNO(EBADFD);
     }
     if (buf == NULL) {
-        return ERROR(EINVAL);
+        return ERRNO(EINVAL);
     }
     return STATUS(io->ops->read(io, buf, count));
 }
