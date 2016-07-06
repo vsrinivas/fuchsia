@@ -61,6 +61,7 @@ public:
     // |buffer_count| is the maximum number of T's the container can hold
     // and must be a power of two.
     bool Init(uint32_t buffer_count) {
+        clear();
         free_memory();
 
         log2_ = log2_uint(buffer_count);
