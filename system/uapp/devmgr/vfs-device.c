@@ -76,8 +76,11 @@ static mx_status_t vnd_create(vnode_t* vn, vnode_t** out, const char* name, size
 static mx_handle_t vnd_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* ids) {
     mx_device_t* dev = vn->pdata;
 
-    // directory node: fallback to default path
-    if (dev == NULL) {
+    // if we are a pure directory node (no dev attached)
+    // or we are a dev + directory node with children
+    // fall back to the default gethandles() to get the vnode
+    // handle not the device handles
+    if ((dev == NULL) || (vn->dnode && (!list_is_empty(&vn->dnode->children)))) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -108,7 +111,6 @@ static dnode_t vnd_root_dn = {
 static vnode_t vnd_root = {
     .ops = &vn_device_ops,
     .refcount = 1,
-    .pdata = &vnd_root,
     .dnode = &vnd_root_dn,
     .dn_list = LIST_INITIAL_VALUE(vnd_root.dn_list),
 };

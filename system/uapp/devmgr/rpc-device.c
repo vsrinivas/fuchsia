@@ -209,6 +209,14 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
         msg->arg2.off = ios->io_off;
         return NO_ERROR;
     }
+    case MX_RIO_STAT: {
+        msg->datalen = sizeof(vnattr_t);
+        vnattr_t* attr = (void*) msg->data;
+        memset(attr, 0, sizeof(vnattr_t));
+        attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
+        attr->size = dev->ops->get_size(dev, ios->cookie);
+        return msg->datalen;
+    }
     case MX_RIO_IOCTL: {
         if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
             return ERR_INVALID_ARGS;
