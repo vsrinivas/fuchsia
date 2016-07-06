@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := handle-wait-test
 
 MODULE_DEPS := \
-    ulib/magenta ulib/musl ulib/mxio
+    ulib/magenta ulib/musl ulib/mxio ulib/unittest
 
 include make/module.mk
