@@ -16,7 +16,7 @@
 
 #include <ddk/device.h>
 #include <magenta/types.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 #include <stdint.h>
 
 typedef struct intel_serialio_i2c_slave_device {

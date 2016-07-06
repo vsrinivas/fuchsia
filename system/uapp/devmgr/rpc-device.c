@@ -22,8 +22,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <mxu/list.h>
-
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <magenta/processargs.h>
@@ -32,6 +30,8 @@
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
+
+#include <system/listnode.h>
 
 #define MXDEBUG 0
 

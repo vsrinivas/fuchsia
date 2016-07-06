@@ -30,7 +30,7 @@
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include "mxsh.h"
 

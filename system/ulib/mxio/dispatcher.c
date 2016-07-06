@@ -19,7 +19,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include <runtime/thread.h>
 

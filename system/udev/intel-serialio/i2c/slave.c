@@ -18,7 +18,7 @@
 #include <intel-serialio/reg.h>
 #include <magenta/types.h>
 #include <mxio/util.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 #include <runtime/mutex.h>
 #include <stddef.h>
 #include <stdio.h>

@@ -17,7 +17,7 @@
 #include <ddk/protocol/keyboard.h>
 #include <gfx/gfx.h>
 #include <mxio/vfs.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 #include <runtime/mutex.h>
 #include <stdbool.h>
 

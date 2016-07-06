@@ -35,7 +35,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 #include "usb-private.h"
 #include "usb-device.h"

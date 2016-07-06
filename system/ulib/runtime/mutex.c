@@ -15,10 +15,8 @@
 #include <runtime/mutex.h>
 
 #include <magenta/syscalls.h>
-#include <runtime/atomic.h>
+#include <system/atomic.h>
 #include <stdlib.h>
-
-#include <stdio.h>
 
 // TODO(kulakowski) Reintroduce (correctly) optimization counting waiters.
 

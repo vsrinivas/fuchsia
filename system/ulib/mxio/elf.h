@@ -18,7 +18,7 @@
 #include "elf-defines.h"
 
 #include <magenta/types.h>
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 #include <stdbool.h>
 #include <sys/types.h>
 

@@ -22,7 +22,7 @@
 
 #include <magenta/syscalls.h>
 
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 typedef int (*thread_start_func_t)(void*);
 

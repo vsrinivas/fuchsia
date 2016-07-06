@@ -20,9 +20,6 @@ MODULE_NAME := netsvc
 
 MODULE_TYPE := userapp
 
-MODULE_HEADER_DEPS := \
-    ulib/mxu
-
 MODULE_SRCS += \
     $(LOCAL_DIR)/netsvc.c \
 

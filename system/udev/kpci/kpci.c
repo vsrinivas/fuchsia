@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 #include "kpci-private.h"
 

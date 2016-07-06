@@ -26,7 +26,7 @@
 #include <mxio/util.h>
 #include <mxio/vfs.h>
 #include <mxu/hexdump.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 static int mxc_dump(int argc, char** argv) {
     int fd;

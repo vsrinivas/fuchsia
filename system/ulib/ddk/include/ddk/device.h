@@ -16,7 +16,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 // for ssize_t:
 #include <unistd.h>

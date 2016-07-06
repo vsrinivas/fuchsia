@@ -25,7 +25,6 @@ MODULE_SRCS += \
 MODULE_DEPS += \
     ulib/musl \
     ulib/magenta \
-    ulib/mxu \
     ulib/runtime
 
 MODULE_EXPORT := ddk

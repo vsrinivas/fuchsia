@@ -66,7 +66,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 #define PRINT_BUFFER_SIZE (512)
 

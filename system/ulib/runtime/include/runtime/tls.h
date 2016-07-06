@@ -17,7 +17,7 @@
 #include <magenta/prctl.h>
 #include <magenta/syscalls.h>
 #include <magenta/tlsroot.h>
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 __BEGIN_CDECLS
 

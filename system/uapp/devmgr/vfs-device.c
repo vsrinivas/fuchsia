@@ -16,7 +16,7 @@
 #include "dnode.h"
 #include "devmgr.h"
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include <ddk/device.h>
 

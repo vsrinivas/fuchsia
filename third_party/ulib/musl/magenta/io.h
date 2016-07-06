@@ -1,6 +1,6 @@
 #pragma once
 
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 #include <stdint.h>
 #include <sys/types.h>
 

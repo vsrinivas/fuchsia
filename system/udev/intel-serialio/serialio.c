@@ -16,7 +16,7 @@
 #include <ddk/binding.h>
 #include <hw/pci.h>
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>

@@ -23,7 +23,6 @@ MODULE_TYPE := userlib
 MODULE_DEPS := \
     ulib/ddk \
     ulib/magenta \
-    ulib/mxu \
 
 MODULE_HEADER_DEPS := \
     ulib/musl

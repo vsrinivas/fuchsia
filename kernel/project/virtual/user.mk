@@ -30,6 +30,7 @@ MODULES += \
     ulib/mxio \
     ulib/inet6 \
     ulib/driver \
+    ulib/system \
     utest \
 
 # if we're not embedding the bootfs, build a standalone image

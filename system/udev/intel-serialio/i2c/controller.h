@@ -15,7 +15,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 #include <runtime/mutex.h>
 #include <stdint.h>
 

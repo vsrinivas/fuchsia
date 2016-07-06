@@ -16,7 +16,7 @@
 #define _MOJO_STRING_H
 
 #include "mojo_types.h"
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 __BEGIN_CDECLS;
 

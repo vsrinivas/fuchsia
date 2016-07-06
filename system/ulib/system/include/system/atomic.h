@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 #include <stdint.h>
 
 __BEGIN_CDECLS

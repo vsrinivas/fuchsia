@@ -14,8 +14,8 @@
 
 #include <runtime/tls.h>
 
-#include <runtime/atomic.h>
 #include <runtime/process.h>
+#include <system/atomic.h>
 
 mxr_tls_t mxr_tls_allocate(void) {
     mxr_tls_t* next_slot = &mxr_process_get_info()->next_tls_slot;

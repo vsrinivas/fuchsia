@@ -19,7 +19,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <hw/pci.h>
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include <runtime/thread.h>
 #include <runtime/mutex.h>

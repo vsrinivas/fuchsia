@@ -15,7 +15,7 @@
 #include "vfs.h"
 #include "dnode.h"
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include <ddk/device.h>
 

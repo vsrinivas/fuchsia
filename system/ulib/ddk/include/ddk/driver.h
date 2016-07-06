@@ -15,8 +15,8 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxu/list.h>
-#include <runtime/compiler.h>
+#include <system/listnode.h>
+#include <system/compiler.h>
 #include <sys/types.h>
 
 typedef struct mx_device mx_device_t;

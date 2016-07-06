@@ -1,6 +1,6 @@
 #include <features.h>
 
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 int main(int, char**, char**);
 __NO_RETURN int __libc_start_main(int (*)(int, char**, char**), void* arg);

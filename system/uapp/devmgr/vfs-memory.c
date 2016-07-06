@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include <ddk/device.h>
 

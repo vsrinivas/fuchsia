@@ -26,7 +26,7 @@
 
 #include <assert.h>
 #include <err.h>
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>

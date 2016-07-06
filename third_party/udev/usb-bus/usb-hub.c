@@ -38,7 +38,7 @@
 #include <unistd.h>
 
 #include <runtime/mutex.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include "generic-hub.h"
 #include "usb-private.h"

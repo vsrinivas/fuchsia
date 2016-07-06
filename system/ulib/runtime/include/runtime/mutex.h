@@ -15,7 +15,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <runtime/compiler.h>
+#include <system/compiler.h>
 
 __BEGIN_CDECLS
 

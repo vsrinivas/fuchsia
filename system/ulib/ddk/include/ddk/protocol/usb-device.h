@@ -16,7 +16,7 @@
 
 #include <ddk/driver.h>
 #include <hw/usb.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 typedef int direction_t;
 typedef int endpoint_type;

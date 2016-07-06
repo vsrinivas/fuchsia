@@ -17,7 +17,7 @@
 #include "dnode.h"
 #include "devmgr.h"
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 #include <stdio.h>
 #include <stdlib.h>

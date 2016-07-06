@@ -34,7 +34,6 @@ MODULE_SRCS += \
 MODULE_DEPS += \
     ulib/magenta \
     ulib/runtime \
-    ulib/mxu \
     ulib/musl
 
 MODULE_EXPORT := mxio

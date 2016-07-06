@@ -31,7 +31,7 @@ MODULE_SRCS := \
 	system/udev/kpci/protocol.c \
 	$(LOCAL_DIR)/main.c \
 
-MODULE_HEADER_DEPS := ulib/ddk ulib/mxu
+MODULE_HEADER_DEPS := ulib/ddk
 
 MODULE_DEPS := ulib/musl ulib/mxio ulib/runtime ulib/magenta
 

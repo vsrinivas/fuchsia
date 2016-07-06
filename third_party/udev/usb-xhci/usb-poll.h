@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mxu/list.h>
+#include <system/listnode.h>
 #include <stdint.h>
 
 typedef void poll_cb(void* context);

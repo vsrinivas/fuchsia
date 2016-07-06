@@ -55,7 +55,6 @@ MODULE_DEPS := \
     ulib/gfx \
     ulib/font \
     ulib/runtime \
-    ulib/mxu \
     ulib/magenta
 
 include make/module.mk

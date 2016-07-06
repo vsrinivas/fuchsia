@@ -15,7 +15,7 @@
 #pragma once
 
 #include <mxio/vfs.h>
-#include <mxu/list.h>
+#include <system/listnode.h>
 
 typedef struct dnode dnode_t;
 
