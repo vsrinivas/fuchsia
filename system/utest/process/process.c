@@ -21,7 +21,7 @@
 
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 static mx_handle_t my_process_create(const char* name, uint32_t name_len) {
     return _magenta_process_create(name, name_len);

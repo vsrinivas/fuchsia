@@ -15,7 +15,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 #include <pthread.h>
 #include <stdio.h>
 

@@ -19,7 +19,7 @@
 #include <string.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 #include "message.h"
 #include "struct.h"

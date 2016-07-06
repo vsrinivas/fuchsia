@@ -14,7 +14,7 @@
 
 #include <assert.h>
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 #include <stdio.h>
 
 extern int thread_entry(void* arg);

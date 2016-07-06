@@ -16,7 +16,7 @@
 #include <time.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 // This example tests transfering message pipe handles through message pipes. To do so, it:
 //   Creates two message pipes, A and B, with handles A0-A1 and B0-B1, respectively

@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := cleanup-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/mxu
+    ulib/musl ulib/mxio ulib/magenta ulib/unittest
 
 include make/module.mk

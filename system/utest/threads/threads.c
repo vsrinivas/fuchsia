@@ -17,7 +17,7 @@
 #include <time.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 static int thread_1(void* arg) {
     unittest_printf("thread 1 sleeping for .1 seconds\n");

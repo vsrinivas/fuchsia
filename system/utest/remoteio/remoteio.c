@@ -20,7 +20,7 @@
 
 #include <magenta/syscalls.h>
 #include <mxio/remoteio.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 /**
  * Remoteio aims to test the basic client/server interaction that remoteio

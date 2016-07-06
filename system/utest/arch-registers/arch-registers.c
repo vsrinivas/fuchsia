@@ -20,7 +20,7 @@
 
 #include <magenta/prctl.h>
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 #define THREAD_ASSERT_FALSE(exp, msg) \
     bool val = (exp);                 \

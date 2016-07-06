@@ -21,7 +21,7 @@
 
 #include <magenta/syscalls.h>
 #include <mxu/hexdump.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 bool vmo_create_test(void) {
     BEGIN_TEST;

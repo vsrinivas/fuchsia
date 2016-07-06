@@ -15,7 +15,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 static int uint32_t_cmp(const void* void_left, const void* void_right) {
     uint32_t left = *(const uint32_t*)void_left;

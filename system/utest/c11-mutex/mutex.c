@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 #include <runtime/mutex.h>
 #include <stddef.h>
 #include <stdio.h>

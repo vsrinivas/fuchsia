@@ -24,7 +24,7 @@ MODULE_SRCS += \
 MODULE_NAME := elf-interp-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/magenta ulib/mxio ulib/mxu
+    ulib/musl ulib/magenta ulib/mxio ulib/unittest
 
 include make/module.mk
 

@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 #define THREAD_COUNT 8
 #define ITER 1000000

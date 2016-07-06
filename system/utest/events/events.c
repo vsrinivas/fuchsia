@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 static bool wait(mx_handle_t event, mx_handle_t quit_event) {
     mx_status_t ms;

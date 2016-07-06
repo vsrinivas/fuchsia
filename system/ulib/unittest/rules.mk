@@ -16,14 +16,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/memory-mapping.cpp
+    $(LOCAL_DIR)/all-tests.c \
+    $(LOCAL_DIR)/unittest.c \
 
-MODULE_NAME := memory-mapping-test
-
-MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/unittest
+MODULE_DEPS += \
+    ulib/musl \
+    ulib/magenta \
+    ulib/mxu
 
 include make/module.mk

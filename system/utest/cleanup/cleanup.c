@@ -18,7 +18,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 static const char* msg = "This is a test message, please discard.";
 

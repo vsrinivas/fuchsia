@@ -14,7 +14,7 @@
 
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

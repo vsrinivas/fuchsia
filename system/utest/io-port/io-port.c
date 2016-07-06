@@ -15,7 +15,7 @@
 #include <stdio.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 #define NUM_IO_THREADS 5
 #define NUM_SLOTS 10

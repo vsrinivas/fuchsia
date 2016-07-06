@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 // Having a section named ".interp" causes the linker to emit a PT_INTERP
 // phdr even for a static link.  Note that we must do something to ensure

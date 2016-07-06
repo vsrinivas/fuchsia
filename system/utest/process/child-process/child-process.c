@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
                                    mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {

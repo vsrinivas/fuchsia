@@ -16,7 +16,7 @@
 #include <mojo/mojo.h>
 #include <mojo/mojo_message_pipe.h>
 #include <mojo/mojo_threads.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>

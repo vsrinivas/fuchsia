@@ -17,7 +17,7 @@
 #include <stdlib.h>
 
 #include <magenta/syscalls.h>
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 #include <mxio/io.h>
 #include <mxio/util.h>

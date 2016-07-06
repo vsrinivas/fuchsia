@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <mxu/unittest.h>
+#include <unittest/unittest.h>
 
 static struct test_case_element* test_case_list = NULL;
 static struct test_case_element* failed_test_case_list = NULL;

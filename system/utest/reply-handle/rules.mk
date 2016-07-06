@@ -24,7 +24,7 @@ MODULE_SRCS += \
 MODULE_NAME := reply-handle-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/mxu
+    ulib/musl ulib/mxio ulib/magenta ulib/unittest
 
 MODULES += \
     $(LOCAL_DIR)/helper
