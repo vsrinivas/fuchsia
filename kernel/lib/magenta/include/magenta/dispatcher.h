@@ -21,17 +21,19 @@
 class Waiter;
 
 // The Kernel Objects. Keep this list sorted.
+class DataPipeConsumerDispatcher;
+class DataPipeProducerDispatcher;
 class EventDispatcher;
 class InterruptDispatcher;
+class IoMappingDispatcher;
+class IOPortDispatcher;
 class LogDispatcher;
 class MessagePipeDispatcher;
-class PciInterruptDispatcher;
 class PciDeviceDispatcher;
+class PciInterruptDispatcher;
 class ProcessDispatcher;
 class ThreadDispatcher;
 class VmObjectDispatcher;
-class IoMappingDispatcher;
-class IOPortDispatcher;
 
 
 class Dispatcher : public utils::RefCounted<Dispatcher> {
@@ -89,6 +91,14 @@ public:
     }
 
     virtual IOPortDispatcher* get_io_port_dispatcher() {
+        return nullptr;
+    }
+
+    virtual DataPipeProducerDispatcher* get_data_pipe_producer_dispatcher() {
+        return nullptr;
+    }
+
+    virtual DataPipeConsumerDispatcher* get_data_pipe_consumer_dispatcher() {
         return nullptr;
     }
 };

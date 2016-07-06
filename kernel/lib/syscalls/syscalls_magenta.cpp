@@ -15,6 +15,9 @@
 #include <lib/user_copy.h>
 #include <list.h>
 
+#include <magenta/data_pipe.h>
+#include <magenta/data_pipe_producer_dispatcher.h>
+#include <magenta/data_pipe_consumer_dispatcher.h>
 #include <magenta/event_dispatcher.h>
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/log_dispatcher.h>
@@ -44,6 +47,7 @@ constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 1024u;
 
 constexpr uint32_t kMaxWaitHandleCount = 256u;
+constexpr mx_size_t kDefaultDataPipeCapacity = 32 * 1024u;
 
 void sys_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
@@ -1229,4 +1233,163 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
 
     return waiter->BindIOPort(utils::RefPtr<IOPortDispatcher>(ioport), key, signals) ?
         NO_ERROR : ERR_NOT_READY;
+}
+
+mx_handle_t sys_data_pipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,
+                                 mx_handle_t* _handle) {
+    LTRACEF("options %u\n", options);
+
+    if (!_handle)
+        return ERR_INVALID_ARGS;
+
+    // TODO(cpu): support different element sizes.
+    if (element_size != 1u)
+        return ERR_INVALID_ARGS;
+
+
+    utils::RefPtr<Dispatcher> producer_dispatcher;
+    mx_rights_t producer_rights;
+
+    utils::RefPtr<Dispatcher> consumer_dispatcher;
+    mx_rights_t consumer_rights;
+
+    mx_status_t result = DataPipe::Create(capacity ? capacity : kDefaultDataPipeCapacity,
+                                          &producer_dispatcher,
+                                          &consumer_dispatcher,
+                                          &producer_rights,
+                                          &consumer_rights);
+    if (result != NO_ERROR)
+        return result;
+
+    HandleUniquePtr producer_handle(MakeHandle(utils::move(producer_dispatcher), producer_rights));
+    if (!producer_handle)
+        return ERR_NO_MEMORY;
+
+    HandleUniquePtr consumer_handle(MakeHandle(utils::move(consumer_dispatcher), consumer_rights));
+    if (!consumer_handle)
+        return ERR_NO_MEMORY;
+
+    auto up = UserProcess::GetCurrent();
+    mx_handle_t hv_producer = up->MapHandleToValue(producer_handle.get());
+    mx_handle_t hv_consumer = up->MapHandleToValue(consumer_handle.get());
+
+    if (copy_to_user_32(_handle, hv_consumer) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    up->AddHandle(utils::move(producer_handle));
+    up->AddHandle(utils::move(consumer_handle));
+
+    return hv_producer;
+}
+
+mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size_t requested,
+                                     uintptr_t* buffer) {
+    LTRACEF("handle %d\n", handle);
+
+    if (!buffer)
+        return ERR_INVALID_ARGS;
+
+    auto up = UserProcess::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto producer = dispatcher->get_data_pipe_producer_dispatcher();
+    if (!producer)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    mx_status_t status;
+    uintptr_t user_addr = 0u;
+
+    status = producer->BeginWrite(up->aspace(), reinterpret_cast<void**>(&user_addr), &requested);
+    if (status != NO_ERROR)
+        return status;
+
+    if (copy_to_user_uptr(buffer, user_addr) != NO_ERROR) {
+        producer->EndWrite(0u);
+        return ERR_INVALID_ARGS;
+    }
+
+    return requested;
+}
+
+mx_status_t sys_data_pipe_end_write(mx_handle_t handle, mx_size_t written) {
+    LTRACEF("handle %d\n", handle);
+
+    auto up = UserProcess::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto producer = dispatcher->get_data_pipe_producer_dispatcher();
+    if (!producer)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    return producer->EndWrite(written);
+}
+
+mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
+                                    uintptr_t* buffer) {
+    LTRACEF("handle %d\n", handle);
+
+    if (!buffer)
+        return ERR_INVALID_ARGS;
+
+    auto up = UserProcess::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
+    if (!consumer)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    mx_status_t status;
+    uintptr_t user_addr = 0u;
+
+    status = consumer->BeginRead(up->aspace(), reinterpret_cast<void**>(&user_addr), &requested);
+    if (status != NO_ERROR)
+        return status;
+
+    if (copy_to_user_uptr(buffer, user_addr) != NO_ERROR) {
+        consumer->EndRead(0u);
+        return ERR_INVALID_ARGS;
+    }
+
+    return requested;
+}
+
+mx_status_t sys_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
+    LTRACEF("handle %d\n", handle);
+
+    auto up = UserProcess::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
+    if (!consumer)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    return consumer->EndRead(read);
 }
