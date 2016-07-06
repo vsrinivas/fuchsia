@@ -12,6 +12,8 @@
 #include <string.h>
 #include <trace.h>
 
+#include <lib/dpc.h>
+
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
@@ -158,6 +160,16 @@ void UserThread::DispatcherClosed() {
     Kill();
 }
 
+static void ThreadCleanupDpc(dpc_t *d) {
+    LTRACEF("dpc %p\n", d);
+
+    UserThread *t = reinterpret_cast<UserThread *>(d->arg);
+    DEBUG_ASSERT(t);
+
+    delete t;
+    delete d;
+}
+
 void UserThread::Exiting() {
     LTRACE_ENTRY_OBJ;
 
@@ -176,15 +188,14 @@ void UserThread::Exiting() {
 
     // drop LK's reference
     if (Release()) {
-        // We're the last reference, so will need to destruct ourself while running...
-        // TODO: add worker thread here to clean up object
-        TRACEF("TODO: leaking UserThread, add worker thread based cleanup\n");
+        // We're the last reference, so will need to destruct ourself while running, which is not possible
+        // Use a dpc to pull this off
+        dpc_t *d = new dpc_t;
+        DEBUG_ASSERT(d);
 
-        // XXX hack in dropping resources to simulate a cleanup
-        // XXX This doesn't really work on smp, since there's a race where the UserProcess gets destroyed
-        // before we've fully exited and are holding onto the address space object
-        //LTRACEF("about to drop ref on process, ref is (before drop) %u\n", process_->ref_count_debug());
-        //process_.reset();
+        d->func = ThreadCleanupDpc;
+        d->arg = this;
+        dpc_queue(d, false);
     }
 
     // after this point the thread will stop permanently

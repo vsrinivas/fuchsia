@@ -34,6 +34,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/waiter.cpp \
 
 MODULE_DEPS := \
+    lib/dpc \
     lib/utils \
     dev/udisplay \
 
