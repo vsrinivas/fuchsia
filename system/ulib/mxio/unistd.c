@@ -199,7 +199,7 @@ static int status_to_errno(mx_status_t status) {
     case ERR_NO_MEMORY: return ENOMEM;
     case ERR_NOT_VALID: return EINVAL;
     case ERR_INVALID_ARGS: return EINVAL;
-    case ERR_NOT_ENOUGH_BUFFER: ;
+    case ERR_NOT_ENOUGH_BUFFER: return EINVAL;
     case ERR_TIMED_OUT: return ETIMEDOUT;
     case ERR_ALREADY_EXISTS: return EEXIST;
     case ERR_CHANNEL_CLOSED: return ENOTCONN;
