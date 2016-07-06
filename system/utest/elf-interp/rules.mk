@@ -44,7 +44,7 @@ $(BUILDDIR)/$(LOCAL_DIR)/$(ARCH).S.o: $(LOCAL_DIR)/$(ARCH).S
 
 $(BUILDDIR)/$(LOCAL_DIR)/elf-interp-helper.so: \
     $(BUILDDIR)/$(LOCAL_DIR)/$(ARCH).S.o
-	$(NOECHO)$(LD) -shared $^ -o $@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -shared $^ -o $@
 
 USER_MANIFEST_LINES += \
     bin/elf-interp-helper.so=$(BUILDDIR)/$(LOCAL_DIR)/elf-interp-helper.so
