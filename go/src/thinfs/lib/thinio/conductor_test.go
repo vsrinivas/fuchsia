@@ -45,6 +45,18 @@ func setUp(t *testing.T) (*Conductor, []byte, *rand.Rand) {
 	return c, dev, r
 }
 
+func TestSize(t *testing.T) {
+	c, _, _ := setUp(t)
+	size := c.DeviceSize()
+	if size != deviceSize {
+		t.Fatalf("Device size was seen as %d (expected %d)\n", size, deviceSize)
+	}
+
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestReadAt(t *testing.T) {
 	c, dev, r := setUp(t)
 

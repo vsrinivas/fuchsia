@@ -200,6 +200,11 @@ func NewConductor(dev block.Device, cacheSize int) *Conductor {
 	return conductor
 }
 
+// DeviceSize returns the size of the underlying device in bytes.
+func (c *Conductor) DeviceSize() int64 {
+	return c.dev.dev.Size()
+}
+
 // ReadAt implements io.ReaderAt for Conductor.
 func (c *Conductor) ReadAt(p []byte, off int64) (int, error) {
 	if len(c.errs) > 0 {
