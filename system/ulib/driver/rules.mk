@@ -25,7 +25,7 @@ MODULE_DEFINES += LIBDRIVER=1
 MODULE_SRCS := \
 	$(LOCAL_DIR)/devmgr.c \
 	$(LOCAL_DIR)/binding.c \
-	$(LOCAL_DIR)/remote.c \
+	$(LOCAL_DIR)/devhost.c \
 	$(LOCAL_DIR)/api.c \
 	system/udev/kpci/kpci.c \
 	system/udev/kpci/protocol.c \

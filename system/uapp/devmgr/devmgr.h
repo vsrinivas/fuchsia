@@ -22,6 +22,9 @@
 
 #include <runtime/mutex.h>
 
+#include <mxio/dispatcher.h>
+#include <mxio/remoteio.h>
+
 void cprintf(const char* fmt, ...);
 
 // Nothing outside of devmgr/main.c and devmgr/devmgr.c
@@ -61,6 +64,8 @@ void devmgr_vfs_init(void* bootfs, size_t len);
 void devmgr_launch(const char* name, const char* app, const char* device);
 void devmgr_launch_devhost(const char* name, mx_handle_t h, const char* arg0, const char* arg1);
 
+mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids);
+
 int devmgr_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did);
 mx_status_t devmgr_create_pcidev(mx_device_t** out, uint32_t index);
 
@@ -87,6 +92,18 @@ mx_status_t devhost_remove(mx_device_t* dev);
 extern bool devmgr_is_remote;
 extern mx_handle_t devhost_handle;
 extern mxr_mutex_t __devmgr_api_lock;
+
+extern mxio_dispatcher_t* devmgr_rio_dispatcher;
+extern mxio_dispatcher_t* devmgr_devhost_dispatcher;
+
+typedef struct diostate {
+    mx_device_t* dev;
+    void* cookie;
+    size_t io_off;
+} diostate_t;
+
+diostate_t* create_iostate(mx_device_t* dev);
+mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie);
 
 extern bool __dm_locked;
 

@@ -32,6 +32,7 @@
 #include <mxio/remoteio.h>
 
 #include <runtime/mutex.h>
+#include <runtime/thread.h>
 
 #define TRACE 0
 
@@ -130,7 +131,10 @@ static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_dev
 static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
 // handler for messages from device host processes
-mxio_dispatcher_t* devmgr_dispatcher;
+mxio_dispatcher_t* devmgr_devhost_dispatcher;
+
+// handler for messages to device
+mxio_dispatcher_t* devmgr_rio_dispatcher;
 
 #define device_is_bound(dev) (!!dev->owner)
 
@@ -511,10 +515,12 @@ void devmgr_init(bool devhost) {
         vnroot = devfs_get_root();
         root_dev->vnode = vnroot;
         devfs_add_node(&vnclass, vnroot, "class", NULL);
+
+        mxio_dispatcher_create(&devmgr_devhost_dispatcher, devmgr_handler);
     }
 #endif
 
-    mxio_dispatcher_create(&devmgr_dispatcher, devhost ? mxio_rio_handler : devmgr_handler);
+    mxio_dispatcher_create(&devmgr_rio_dispatcher, mxio_rio_handler);
 }
 
 void devmgr_init_builtin_drivers(void) {
@@ -530,8 +536,17 @@ void devmgr_init_builtin_drivers(void) {
     }
 }
 
+static int devhost_dispatcher_thread(void* arg) {
+    mxio_dispatcher_run(devmgr_devhost_dispatcher);
+    return 0;
+}
+
 void devmgr_handle_messages(void) {
-    mxio_dispatcher_run(devmgr_dispatcher);
+    if (devmgr_devhost_dispatcher) {
+        mxr_thread_t* t;
+        mxr_thread_create(devhost_dispatcher_thread, NULL, "devhost-dispatcher", &t);
+    }
+    mxio_dispatcher_run(devmgr_rio_dispatcher);
 }
 
 static void devmgr_dump_device(uint level, mx_device_t* dev) {

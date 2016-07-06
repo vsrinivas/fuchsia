@@ -72,7 +72,7 @@ void devmgr_launch(const char* name, const char* app, const char* device) {
         goto fail;
     }
     n += r;
-    printf("devmgr: launch shell on %s\n", device);
+    printf("devmgr: launch %s on %s\n", app, device);
     mxio_start_process_etc(name, 1, (char**)&app, n, hnd, ids);
     return;
 fail:

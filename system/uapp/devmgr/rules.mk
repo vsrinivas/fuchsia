@@ -35,7 +35,9 @@ MODULE_SRCS := \
 MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr.c \
     $(LOCAL_DIR)/binding.c \
-    $(LOCAL_DIR)/remote.c \
+    $(LOCAL_DIR)/rpc-device.c \
+    $(LOCAL_DIR)/rpc-devhost.c \
+    $(LOCAL_DIR)/devhost.c \
     $(LOCAL_DIR)/dmctl.c \
     $(LOCAL_DIR)/api.c \
     $(LOCAL_DIR)/vfs.c \
