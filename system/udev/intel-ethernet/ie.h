@@ -28,9 +28,10 @@ struct ethdev {
 
     // base physical addresses for
     // tx/rx rings and rx buffers
-    uintptr_t txd_phys;
-    uintptr_t rxd_phys;
-    uintptr_t rxb_phys;
+    // store as 64bit integer to match hw register size
+    uint64_t txd_phys;
+    uint64_t rxd_phys;
+    uint64_t rxb_phys;
     void* rxb;
 
     uint8_t mac[6];
