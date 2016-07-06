@@ -19,6 +19,10 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         errno = EINVAL;
         return MAP_FAILED;
     }
+    if (len == 0) {
+        errno = EINVAL;
+        return MAP_FAILED;
+    }
     if (len >= PTRDIFF_MAX) {
         errno = ENOMEM;
         return MAP_FAILED;
@@ -26,11 +30,21 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
     if (flags & MAP_FIXED) {
         __vm_wait();
     }
+    if (prot == 0) {
+        // PROT_NONE is not supported (yet?)
+        errno = EINVAL;
+        return MAP_FAILED;
+    }
+    if (!(flags & (MAP_PRIVATE|MAP_SHARED)) ||
+         (flags & MAP_PRIVATE && flags & MAP_SHARED)) {
+        errno = EINVAL;
+        return MAP_FAILED;
+    }
 
     //printf("__mmap start %p, len %zu prot %u flags %u fd %d off %llx\n", start, len, prot, flags, fd, off);
 
     // look for a specific case that we can handle, from pthread_create
-    if ((flags & MAP_PRIVATE) && (flags & MAP_ANON) && (fd < 0)) {
+    if ((flags & MAP_ANON) && (fd < 0)) {
         // round up to page size
         len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
@@ -50,6 +64,7 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         uintptr_t ptr = (uintptr_t)start;
         mx_status_t status = mx_process_vm_map(current_proc_handle, vmo, 0, len, &ptr, mx_flags);
         mx_handle_close(vmo);
+        // TODO: map this as shared if we ever implement forking
         if (status < 0) {
             return MAP_FAILED;
         }

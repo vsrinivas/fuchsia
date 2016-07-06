@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <errno.h>
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
+#include <sys/mman.h>
 
 namespace {
 
@@ -83,10 +85,92 @@ bool address_space_limits_test() {
     END_TEST;
 }
 
+bool mmap_len_test() {
+    BEGIN_TEST;
+
+    uint32_t* addr = (uint32_t*)mmap(NULL, 0, PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 0);
+    auto test_errno = errno;
+    EXPECT_EQ(MAP_FAILED, addr, "mmap should fail when len == 0");
+    EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL when len == 0");
+
+    addr = (uint32_t*)mmap(NULL, PTRDIFF_MAX, PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 0);
+    test_errno = errno;
+    EXPECT_EQ(MAP_FAILED, addr, "mmap should fail when len >= PTRDIFF_MAX");
+    EXPECT_EQ(ENOMEM, test_errno, "mmap errno should be ENOMEM when len >= PTRDIFF_MAX");
+
+    END_TEST;
+}
+
+bool mmap_offset_test() {
+    BEGIN_TEST;
+
+    uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 4);
+    auto test_errno = errno;
+    EXPECT_EQ(MAP_FAILED, addr, "mmap should fail for unaligned offset");
+    EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL for unaligned offset");
+
+    END_TEST;
+}
+
+bool mmap_prot_test() {
+    BEGIN_TEST;
+
+    volatile uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_NONE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    auto test_errno = errno;
+    // PROT_NONE is not supported yet.
+    EXPECT_EQ(MAP_FAILED, addr, "mmap should have failed for PROT_NONE");
+    EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL for PROT_NONE");
+
+    addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 0);
+    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed for read-only alloc");
+
+    // This is somewhat pointless, to have a private read-only mapping, but we
+    // should be able to read it.
+    EXPECT_EQ(*addr, *addr, "could not read from mmaped address");
+
+    addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed for read-write alloc");
+
+    // Now we test writing to the mapped memory, and verify that we can read it
+    // back.
+    *addr = 5678u;
+    EXPECT_EQ(5678u, *addr, "writing to address returned by mmap failed");
+
+    // TODO: test PROT_EXEC
+
+    END_TEST;
+}
+
+bool mmap_flags_test() {
+    BEGIN_TEST;
+
+    uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_ANON, -1, 0);
+    auto test_errno = errno;
+    EXPECT_EQ(MAP_FAILED, addr, "mmap should fail without MAP_PRIVATE or MAP_SHARED");
+    EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL with bad flags");
+
+    addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE|MAP_SHARED|MAP_ANON, -1, 0);
+    test_errno = errno;
+    EXPECT_EQ(MAP_FAILED, addr, "mmap should fail with both MAP_PRIVATE and MAP_SHARED");
+    EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL with bad flags");
+
+    addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 0);
+    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed with MAP_PRIVATE flags");
+
+    addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_SHARED|MAP_ANON, -1, 0);
+    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed with MAP_SHARED flags");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(memory_mapping_tests)
 RUN_TEST(address_space_limits_test);
+RUN_TEST(mmap_len_test);
+RUN_TEST(mmap_offset_test);
+RUN_TEST(mmap_prot_test);
+RUN_TEST(mmap_flags_test);
 END_TEST_CASE(memory_mapping_tests)
 
 int main(int argc, char** argv) {
