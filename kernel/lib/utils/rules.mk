@@ -13,6 +13,7 @@ GLOBAL_INCLUDES += $(LOCAL_DIR)/include
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/arena.cpp \
+    $(LOCAL_DIR)/arena_tests.cpp \
     $(LOCAL_DIR)/hash_tests.cpp \
 
 include make/module.mk

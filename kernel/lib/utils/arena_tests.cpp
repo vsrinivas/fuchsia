@@ -20,10 +20,9 @@ struct ArenaFoo {
 };
 
 
-extern "C" int arena_tests(int argc, const cmd_args* argv)
+static bool arena_test(void* context)
 {
-    bool all_ok = true;
-
+    BEGIN_TEST;
     utils::TypedArena<ArenaFoo> arena;
     arena.Init("arena_tests", 1000);
 
@@ -62,7 +61,9 @@ extern "C" int arena_tests(int argc, const cmd_args* argv)
           EXPECT_TRUE(leak != nullptr, "");
         }
     }
-
-    printf("arena tests : %s\n", all_ok ? "ok" : "failed");
-    return 0;
+    END_TEST;
 }
+
+STATIC_UNITTEST_START_TESTCASE(arena_tests)
+STATIC_UNITTEST("Arena allocator test", arena_test)
+STATIC_UNITTEST_END_TESTCASE(arena_tests, "arenatests", "Arena allocator test", NULL, NULL);
