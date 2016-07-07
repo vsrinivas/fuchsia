@@ -39,13 +39,13 @@ struct FooHashFn {
     }
 };
 
-int GetHashTableKey(FooHash* fh) { return fh->get_key(); }
+static int GetHashTableKey(FooHash* fh) { return fh->get_key(); }
 
-void SetHashTableKey(FooHash* fh, int key) { fh->set_key(key); }
+static void SetHashTableKey(FooHash* fh, int key) { fh->set_key(key); }
 
-extern "C" int hash_tests(int argc, const cmd_args* argv)
+static bool hash_test(void* context)
 {
-    bool all_ok = true;
+    BEGIN_TEST;
 
     utils::HashTable<int, FooHash, FooHashFn> foo_table;
 
@@ -75,6 +75,9 @@ extern "C" int hash_tests(int argc, const cmd_args* argv)
     foo_table.clear();
     EXPECT_EQ(0U, foo_table.size(), "");
 
-    printf("hash tests : %s\n", all_ok ? "ok" : "failed");
-    return 0;
+    END_TEST;
 }
+
+STATIC_UNITTEST_START_TESTCASE(hash_tests)
+STATIC_UNITTEST("Hash test", hash_test)
+STATIC_UNITTEST_END_TESTCASE(hash_tests, "hashtests", "Hash table tests", NULL, NULL);
