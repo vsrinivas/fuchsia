@@ -37,6 +37,9 @@ struct vnboot {
 mx_status_t vnb_get_node(vnode_t** out, mx_device_t* dev);
 
 static void vnb_release(vnode_t* vn) {
+    printf("bootfs: vn %p destroyed\n", vn);
+
+    free(vn);
 }
 
 static mx_status_t vnb_open(vnode_t** _vn, uint32_t flags) {
@@ -96,6 +99,8 @@ static vnode_ops_t vn_boot_ops = {
     .readdir = memfs_readdir,
     .create = vnb_create,
     .gethandles = vnb_gethandles,
+    .ioctl = memfs_ioctl,
+    .unlink = memfs_unlink,
 };
 
 static dnode_t vnb_root_dn = {
@@ -130,7 +135,6 @@ static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
             vnb, parent, (int)namelen, name, datalen);
 
     vnb->vn.ops = &vn_boot_ops;
-    vnb->vn.refcount = 1;
     vnb->vn.pdata = vnb;
     list_initialize(&vnb->vn.dn_list);
 
@@ -139,6 +143,7 @@ static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
 
     dnode_t* dn;
     mx_status_t r;
+    // dnode takes a reference to the vnode
     if ((r = dn_create(&dn, name, namelen, &vnb->vn)) < 0) {
         free(vnb);
         return r;

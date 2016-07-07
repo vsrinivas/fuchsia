@@ -77,6 +77,7 @@ mx_status_t vfs_open(vnode_t** out, const char* path, uint32_t flags) {
         return ERR_INVALID_ARGS;
     }
     if (path[1] == 0) {
+        // fake open of root
         vn_acquire(vfs_root);
         *out = vfs_root;
         return NO_ERROR;
@@ -155,6 +156,9 @@ mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
     if ((r = vfs_get_handles(vn, hnds, ids)) < 0) {
         return r;
     }
+    // drop the ref we got from open
+    // the backend behind get_handles holds the on-going ref
+    vn_release(vn);
     for (int i = 0; i < r; i++) {
         ids[i] |= (arg & 0xFFFF) << 16;
     }
@@ -194,6 +198,11 @@ static mx_status_t root_handler(mx_rio_msg_t* msg, void* cookie) {
         if ((r = vfs_get_handles(vn, msg->handle, ids)) < 0) {
             return r;
         }
+
+        // drop the ref from open or create
+        // the backend behind get_handles holds the on-going ref
+        vn_release(vn);
+
         // TODO: ensure this is always true:
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->hcount = r;
@@ -242,6 +251,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
 
     switch (MX_RIO_OP(msg->op)) {
     case MX_RIO_CLOSE:
+        // this will drop the ref on the vn
         vn->ops->close(vn);
         free(ios);
         return NO_ERROR;
@@ -351,9 +361,6 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         return r;
     }
     case MX_RIO_IOCTL: {
-        if (!vn->ops->ioctl) {
-            return ERR_NOT_SUPPORTED;
-        }
         if (len > MXIO_IOCTL_MAX_INPUT) {
             return ERR_INVALID_ARGS;
         }
@@ -367,6 +374,8 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         }
         return r;
     }
+    case MX_RIO_UNLINK:
+        return vn->ops->unlink(vn, (const char*) msg->data, len);
     default:
         return ERR_NOT_SUPPORTED;
     }
@@ -422,6 +431,8 @@ mx_handle_t vfs_create_handle(vnode_t* vn) {
         free(ios);
         return r;
     }
+    // take a ref for the dispatcher
+    vn_acquire(vn);
     return h1;
 }
 
@@ -453,9 +464,12 @@ void vfs_init(vnode_t* root) {
 }
 
 void vn_release(vnode_t* vn) {
+    if (vn->refcount == 0) {
+        printf("vn %p: ref underflow\n", vn);
+        panic();
+    }
     vn->refcount--;
     if (vn->refcount == 0) {
-        printf("gc vn %p\n", vn);
         vn->ops->release(vn);
     }
 }

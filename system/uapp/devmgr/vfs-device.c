@@ -35,6 +35,8 @@
 #define MXDEBUG 0
 
 static void vnd_release(vnode_t* vn) {
+    printf("devfs: vn %p destroyed\n", vn);
+    free(vn);
 }
 
 static mx_status_t vnd_open(vnode_t** _vn, uint32_t flags) {
@@ -44,14 +46,8 @@ static mx_status_t vnd_open(vnode_t** _vn, uint32_t flags) {
 }
 
 static mx_status_t vnd_close(vnode_t* vn) {
+    vn_release(vn);
     return NO_ERROR;
-}
-
-static ssize_t vnd_ioctl(
-    vnode_t* vn, uint32_t op,
-    const void* in_data, size_t in_len,
-    void* out_data, size_t out_len) {
-    return ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
@@ -87,6 +83,10 @@ static mx_handle_t vnd_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
     return devmgr_get_handles(dev, handles, ids);
 }
 
+static mx_status_t vnd_unlink(vnode_t* vn, const char* name, size_t len) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static vnode_ops_t vn_device_ops = {
     .release = vnd_release,
     .open = vnd_open,
@@ -98,7 +98,8 @@ static vnode_ops_t vn_device_ops = {
     .readdir = memfs_readdir,
     .create = vnd_create,
     .gethandles = vnd_gethandles,
-    .ioctl = vnd_ioctl,
+    .ioctl = memfs_ioctl,
+    .unlink = vnd_unlink,
 };
 
 static dnode_t vnd_root_dn = {
@@ -144,7 +145,6 @@ mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_
     if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
-    vn->refcount = 1;
     vn->ops = &vn_device_ops;
 
     if (dev) {
@@ -155,7 +155,7 @@ mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_
     }
     list_initialize(&vn->dn_list);
 
-    // create dnode
+    // create dnode, which takes a reference to the new vnode
     mx_status_t r;
     if ((r = dn_create(&dn, name, len, vn)) < 0) {
         free(vn);
@@ -200,6 +200,16 @@ mx_status_t devfs_remove(vnode_t* vn) {
         dev->vnode = NULL;
         vn->pdata = NULL;
     }
+
+    // if this vnode is a directory, delete its dnode
+    if (vn->dnode) {
+        printf("devfs_remove(%p) dnode not in dn_list?\n", vn);
+        dn_delete(vn->dnode);
+        vn->dnode = NULL;
+    }
+
+    // delete all dnodes that point to this vnode
+    // (effectively unlink() it from every directory it is in)
     dnode_t* dn;
     while ((dn = list_peek_head_type(&vn->dn_list, dnode_t, vn_entry)) != NULL) {
         if (vn->dnode == dn) {
@@ -207,11 +217,8 @@ mx_status_t devfs_remove(vnode_t* vn) {
         }
         dn_delete(dn);
     }
-    if (vn->dnode) {
-        printf("devfs_remove(%p) dnode not in dn_list?\n", vn);
-        dn_delete(vn->dnode);
-        vn->dnode = NULL;
-    }
-    vn_release(vn);
+
+    // with all dnodes destroyed, nothing should hold a reference
+    // to the vnode and it should be release()'d
     return NO_ERROR;
 }

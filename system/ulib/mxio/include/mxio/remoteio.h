@@ -35,7 +35,8 @@
 #define MX_RIO_STAT         0x00000008
 #define MX_RIO_READDIR      0x00000009
 #define MX_RIO_IOCTL        0x0000000a
-#define MX_RIO_NUM_OPS      11
+#define MX_RIO_UNLINK       0x0000000b
+#define MX_RIO_NUM_OPS      12
 
 #define MX_RIO_OP(n)        ((n) & 0xFFFF)
 #define MX_RIO_REPLY_PIPE   0x01000000
@@ -43,7 +44,7 @@
 #define MX_RIO_OPNAMES { \
     "status", "close", "clone", "open", \
     "misc", "read", "write", "seek", \
-    "stat", "readdir", "ioctl" }
+    "stat", "readdir", "ioctl", "unlink" }
 
 typedef struct mx_rio_msg mx_rio_msg_t;
 
@@ -97,7 +98,7 @@ struct mx_rio_msg {
 // STAT      maxreply   0       -                0           <vnattr_t>      -
 // READDIR   maxreply   0       -                0           <vndirent_t[]>  -
 // IOCTL     out_len    opcode  <in_bytes>       0           <out_bytes>     -
-//
+// UNLINK    0          0       <name>           0           -               -
 //
 // proposed:
 //
@@ -105,7 +106,6 @@ struct mx_rio_msg {
 // MKDIR     0          0       <name>           0           -               -
 // READ_AT   maxread    offset  -                newoffset   <bytes>         -
 // WRITE_AT  0          offset  <bytes>          newoffset   -               -
-// UNLINK    0          0       <name>           0           -               -
 // RENAME*   name1len   0       <name1><name2>   0           -               -
 // SYMLINK   namelen    0       <name><path>     0           -               -
 // READLINK  maxreply   0       -                0           <path>          -

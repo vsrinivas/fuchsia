@@ -40,6 +40,15 @@ struct mnode {
 mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
 
 static void mem_release(vnode_t* vn) {
+    printf("memfs: vn %p destroyed\n", vn);
+
+    mnode_t* mem = vn->pdata;
+    for (int i = 0; i < MAXBLOCKS; i++) {
+        if (mem->block[i]) {
+            free(mem->block[i]);
+        }
+    }
+    free(mem);
 }
 
 static mx_status_t mem_open(vnode_t** _vn, uint32_t flags) {
@@ -165,6 +174,7 @@ static mx_status_t mem_create(vnode_t* vn, vnode_t** out, const char* name, size
     mnode_t* mem;
     mx_status_t r = _mem_create(parent, &mem, name, len);
     if (r >= 0) {
+        vn_acquire(&mem->vn);
         *out = &mem->vn;
     }
     return r;
@@ -174,7 +184,31 @@ static mx_status_t mem_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
     return ERR_NOT_SUPPORTED;
 }
 
-/*static*/ vnode_ops_t vn_mem_ops = {
+ssize_t memfs_ioctl(vnode_t* vn, uint32_t op,
+                    const void* in_data, size_t in_len,
+                    void* out_data, size_t out_len) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
+    xprintf("memfs_unlink(%p,'%.*s')\n", vn, (int)len, name);
+    if (vn->dnode == NULL) {
+        return ERR_NOT_DIR;
+    }
+    dnode_t* dn;
+    mx_status_t r;
+    if ((r = dn_lookup(vn->dnode, &dn, name, len)) < 0) {
+        return r;
+    }
+    if (list_is_empty(&dn->children)) {
+        dn_delete(dn);
+        return NO_ERROR;
+    } else {
+        return ERR_NOT_FILE;
+    }
+}
+
+static vnode_ops_t vn_mem_ops = {
     .release = mem_release,
     .open = mem_open,
     .close = mem_close,
@@ -185,6 +219,7 @@ static mx_status_t mem_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
     .readdir = memfs_readdir,
     .create = mem_create,
     .gethandles = mem_gethandles,
+    .unlink = memfs_unlink,
 };
 
 static vnode_ops_t vn_mem_ops_dir = {
@@ -198,6 +233,7 @@ static vnode_ops_t vn_mem_ops_dir = {
     .readdir = memfs_readdir,
     .create = mem_create,
     .gethandles = mem_gethandles,
+    .unlink = memfs_unlink,
 };
 
 static dnode_t mem_root_dn = {
@@ -231,7 +267,6 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
             mem, parent, (int)namelen, name);
 
     mem->vn.ops = &vn_mem_ops;
-    mem->vn.refcount = 1;
     mem->vn.pdata = mem;
     list_initialize(&mem->vn.dn_list);
 
@@ -242,6 +277,7 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
         return ERR_ALREADY_EXISTS;
     }
 
+    // dnode takes a reference to the vnode
     if ((r = dn_create(&dn, name, namelen, &mem->vn)) < 0) {
         free(mem);
         return r;

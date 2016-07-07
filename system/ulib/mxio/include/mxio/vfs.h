@@ -79,6 +79,9 @@ struct vnode_ops {
     ssize_t (*ioctl)(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
+
+    mx_status_t (*unlink)(vnode_t* vn, const char* name, size_t len);
+    // Removes name from directory vn
 };
 
 struct vnattr {

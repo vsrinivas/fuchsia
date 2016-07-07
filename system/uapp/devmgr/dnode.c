@@ -79,6 +79,7 @@ void dn_delete(dnode_t* dn) {
     if (dn->vnode) {
         list_delete(&dn->vn_entry);
         dn->vnode->dn_count--;
+        vn_release(dn->vnode);
         dn->vnode = NULL;
     }
 

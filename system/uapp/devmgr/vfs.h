@@ -47,3 +47,6 @@ mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_
 mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len);
 ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off);
 ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
+mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len);
+ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len,
+                    void* out_data, size_t out_len);
