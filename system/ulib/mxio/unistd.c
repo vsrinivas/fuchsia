@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -34,6 +35,8 @@
 // using the mxio transports
 
 static mxio_t* mxio_root_handle = NULL;
+
+static mxio_t* mxio_cwd_handle = NULL;
 
 static mx_handle_t mxio_process_handle = 0;
 
@@ -88,6 +91,70 @@ mx_handle_t mxio_get_process_handle(void) {
     return mxio_process_handle;
 }
 
+static mx_status_t __mxio_open(mxio_t** io, const char* path, int flags) {
+    mxio_t* iodir;
+    if (path == NULL) {
+        return ERR_INVALID_ARGS;
+    }
+    if (path[0] == '/') {
+        iodir = mxio_root_handle;
+        path++;
+        if (path[0] == 0) {
+            path = ".";
+        }
+    } else {
+        iodir = mxio_cwd_handle;
+    }
+    if (path[0] == 0) {
+        return ERR_INVALID_ARGS;
+    }
+    if (iodir == NULL) {
+        return ERR_INTERNAL;
+    }
+    return iodir->ops->open(iodir, path, flags, io);
+}
+
+// opens the directory containing path
+// returns the non-directory portion of the path as name on success
+static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, const char** _name) {
+    char dirpath[1024];
+
+    if (path == NULL) {
+        return ERR_INVALID_ARGS;
+    }
+
+    mxio_t* iodir;
+    if (path[0] == '/') {
+        path++;
+        iodir = mxio_root_handle;
+    } else {
+        iodir = mxio_cwd_handle;
+    }
+
+    const char* name = strrchr(path, '/');
+    if (name == NULL) {
+        name = path;
+        dirpath[0] = '.';
+        dirpath[1] = 0;
+    } else {
+        if ((name - path) > (ptrdiff_t)(sizeof(dirpath) - 1)) {
+            return ERR_INVALID_ARGS;
+        }
+        memcpy(dirpath, path, name - path);
+        dirpath[name - path] = 0;
+        name++;
+    }
+    if (name[0] == 0) {
+        return ERR_INVALID_ARGS;
+    }
+    if (iodir == NULL) {
+        return ERR_INTERNAL;
+    }
+
+    *_name = name;
+    return iodir->ops->open(iodir, dirpath, O_DIRECTORY, io);
+}
+
 // hook into libc process startup
 void __libc_extensions_init(mx_proc_info_t* pi) {
     int n;
@@ -130,6 +197,10 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
         if (mxio_fdtab[n] == NULL) {
             mxio_fdtab[n] = mxio_null_create();
         }
+    }
+
+    if (mxio_root_handle) {
+        __mxio_open(&mxio_cwd_handle, "/", O_DIRECTORY);
     }
 
     atexit(mxio_exit);
@@ -356,71 +427,26 @@ int getdirents(int fd, void* ptr, size_t len) {
 }
 
 int _unlink(const char* path) {
-    mxio_t* io = NULL;
+    const char* name;
+    mxio_t* io;
     mx_status_t r;
-    if (path == NULL) {
-        return ERRNO(EINVAL);
-    }
-    if (mxio_root_handle == NULL) {
-        return ERRNO(EBADFD);
-    }
-    if (path[0] == '/') {
-        path++;
-    } else {
-        return ERROR(ERR_NOT_FOUND);
-    }
-
-    // split path from name
-    const char* name = strrchr(path, '/');
-    char tmp[1024];
-    if (name == NULL) {
-        return ERRNO(EINVAL);
-    }
-    if ((name - path) > (ptrdiff_t)(sizeof(tmp) - 1)) {
-        return ERRNO(EINVAL);
-    }
-    memcpy(tmp, path, name - path);
-    tmp[name - path] = 0;
-
-    // require a non-zero-length name
-    name++;
-    if (name[0] == 0) {
-        return ERRNO(EINVAL);
-    }
-
-    if ((r = mxio_root_handle->ops->open(mxio_root_handle, tmp, 0, &io)) < 0) {
+    if ((r = __mxio_opendir_containing(&io, path, &name)) < 0) {
         return ERROR(r);
     }
-
-    r = STATUS(io->ops->misc(io, MX_RIO_UNLINK, 0, (void*) name, strlen(name)));
+    r = io->ops->misc(io, MX_RIO_UNLINK, 0, (void*) name, strlen(name));
     io->ops->close(io);
-    return r;
+    return STATUS(r);
 }
 
 int __libc_io_open(const char* path, int flags, ...) {
     mxio_t* io = NULL;
     mx_status_t r;
     int fd;
-    if (path == NULL) {
-        return ERRNO(EINVAL);
-    }
-    if (path[0] == '/') {
-        path++;
-    } else {
-        return ERROR(ERR_NOT_FOUND);
-    }
-    if (mxio_root_handle == NULL) {
-        return ERRNO(EBADFD);
-    }
-    r = mxio_root_handle->ops->open(mxio_root_handle, path, flags, &io);
-    if (r < 0) {
+
+    if ((r = __mxio_open(&io, path, flags)) < 0) {
         return ERROR(r);
     }
-    if (io == NULL) {
-        return ERRNO(EIO);
-    }
-    fd = mxio_bind_to_fd(io, -1);
-    if (fd < 0) {
+    if ((fd = mxio_bind_to_fd(io, -1)) < 0) {
         io->ops->close(io);
         return ERRNO(EMFILE);
     }
@@ -438,21 +464,12 @@ int fstat(int fd, struct stat* s) {
 int stat(const char* fn, struct stat* s) {
     mxio_t* io;
     mx_status_t r;
-    if (fn == NULL) {
-        return ERRNO(EINVAL);
+
+    if ((r = __mxio_open(&io, fn, 0)) < 0) {
+        return ERROR(r);
     }
-    if (fn[0] == '/') {
-        fn++;
-    } else {
-        return ERROR(ERR_NOT_FOUND);
-    }
-    if (mxio_root_handle == NULL) {
-        return ERRNO(EBADFD);
-    }
-    if ((r = mx_open(mxio_root_handle, fn, 0, &io)) == 0) {
-        r = mx_stat(io, s);
-        mx_close(io);
-    }
+    r = mx_stat(io, s);
+    mx_close(io);
     return STATUS(r);
 }
 
