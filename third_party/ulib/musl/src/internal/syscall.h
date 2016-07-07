@@ -31,11 +31,6 @@ long __syscall_ret(unsigned long r);
 
 /* fixup legacy 32-bit-vs-lfs64 junk */
 
-#ifdef SYS_getdents64
-#undef SYS_getdents
-#define SYS_getdents SYS_getdents64
-#endif
-
 #if defined(SYS_newfstatat)
 #undef SYS_fstatat
 #define SYS_fstatat SYS_newfstatat

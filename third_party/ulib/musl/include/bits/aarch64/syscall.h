@@ -26,7 +26,6 @@
 #define SYS_close 57
 #define SYS_pipe2 59
 #define SYS_quotactl 60
-#define SYS_getdents64 61
 #define SYS_write 64
 #define SYS_readv 65
 #define SYS_writev 66

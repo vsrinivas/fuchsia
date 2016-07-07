@@ -52,7 +52,6 @@
 #define SYS_quotactl 131
 #define SYS_getpgid 132
 #define SYS_fchdir 133
-#define SYS_getdents 141
 #define SYS_flock 143
 #define SYS_msync 144
 #define SYS_readv 145

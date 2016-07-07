@@ -251,18 +251,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/ctype/wcswidth.c \
     $(LOCAL_DIR)/src/ctype/wctrans.c \
     $(LOCAL_DIR)/src/ctype/wcwidth.c \
-    $(LOCAL_DIR)/src/dirent/__getdents.c \
     $(LOCAL_DIR)/src/dirent/alphasort.c \
-    $(LOCAL_DIR)/src/dirent/closedir.c \
-    $(LOCAL_DIR)/src/dirent/dirfd.c \
-    $(LOCAL_DIR)/src/dirent/fdopendir.c \
-    $(LOCAL_DIR)/src/dirent/opendir.c \
-    $(LOCAL_DIR)/src/dirent/readdir.c \
-    $(LOCAL_DIR)/src/dirent/readdir_r.c \
-    $(LOCAL_DIR)/src/dirent/rewinddir.c \
     $(LOCAL_DIR)/src/dirent/scandir.c \
-    $(LOCAL_DIR)/src/dirent/seekdir.c \
-    $(LOCAL_DIR)/src/dirent/telldir.c \
     $(LOCAL_DIR)/src/dirent/versionsort.c \
     $(LOCAL_DIR)/src/env/__environ.c \
     $(LOCAL_DIR)/src/env/__init_tls.c \

@@ -56,7 +56,6 @@
 #define SYS_fdatasync 75
 #define SYS_truncate 76
 #define SYS_ftruncate 77
-#define SYS_getdents 78
 #define SYS_getcwd 79
 #define SYS_chdir 80
 #define SYS_fchdir 81
