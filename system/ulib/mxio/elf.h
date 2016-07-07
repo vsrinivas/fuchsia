@@ -81,7 +81,7 @@ struct elf_handle {
     uintptr_t interp_offset;
     uintptr_t interp_len;
 
-    // p_vaddr of PT_PHDR segment (if any)
+    // vaddr of program headers
     uintptr_t phdr_vaddr;
 };
 

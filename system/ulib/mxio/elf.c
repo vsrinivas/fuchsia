@@ -274,6 +274,10 @@ mx_status_t elf_load(elf_handle_t* handle) {
         return ERR_NOT_FOUND;
     }
 
+    elf_phdr_t* phdrs_segment = NULL;
+    const size_t phdrs_total_size =
+        handle->eheader.e_phnum * sizeof(elf_phdr_t);
+
     LTRACEF("program headers:\n");
     for (uint i = 0; i < handle->eheader.e_phnum; i++) {
         // parse the program headers
@@ -286,6 +290,11 @@ mx_status_t elf_load(elf_handle_t* handle) {
 
         switch (pheader->p_type) {
         case PT_LOAD:
+            if (pheader->p_offset <= handle->eheader.e_phoff &&
+                pheader->p_filesz >= phdrs_total_size &&
+                pheader->p_filesz - phdrs_total_size >= handle->eheader.e_phoff)
+                phdrs_segment = pheader;
+
             // allocate a block of memory to back the segment
             if (handle->vmo != 0) {
                 _magenta_handle_close(handle->vmo);
@@ -349,6 +358,15 @@ mx_status_t elf_load(elf_handle_t* handle) {
             // Other segment types are not interesting.
             break;
         }
+    }
+
+    // If there was no PT_PHDR header, then figure out where it should have
+    // been based on the PT_LOAD segment that contains the e_phoff region
+    // of the file.
+    if (handle->phdr_vaddr == 0 && phdrs_segment != NULL) {
+        handle->phdr_vaddr = (handle->eheader.e_phoff -
+                              phdrs_segment->p_offset +
+                              phdrs_segment->p_vaddr);
     }
 
     // save the entry point
