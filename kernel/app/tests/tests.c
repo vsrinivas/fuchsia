@@ -30,7 +30,6 @@ STATIC_COMMAND("ref_ptr_tests", "test ref_ptr", (console_cmd)&ref_ptr_tests)
 STATIC_COMMAND("ref_counted_tests", "test ref_counted", (console_cmd)&ref_counted_tests)
 STATIC_COMMAND("forward_tests", "test forward", (console_cmd)&forward_tests)
 STATIC_COMMAND("list_tests", "test lists", (console_cmd)&list_tests)
-STATIC_COMMAND("auto_call_tests", "test auto call", (console_cmd)&auto_call_tests)
 STATIC_COMMAND("sync_ipi_tests", "test synchronous IPIs", (console_cmd)&sync_ipi_tests)
 STATIC_COMMAND_END(tests);
 

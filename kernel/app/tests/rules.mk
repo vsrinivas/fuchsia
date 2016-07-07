@@ -10,7 +10,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/auto_call_tests.cpp \
     $(LOCAL_DIR)/benchmarks.c \
     $(LOCAL_DIR)/cache_tests.c \
     $(LOCAL_DIR)/clock_tests.c \

@@ -16,7 +16,7 @@ __NO_INLINE static void test_func()
     test_func_count++;
 }
 
-int auto_call_tests(int argc, const cmd_args *argv)
+static bool auto_call_test(void* context)
 {
 //    extern int foo();
 //    int a;
@@ -79,7 +79,8 @@ int auto_call_tests(int argc, const cmd_args *argv)
     EXPECT_EQ(test_func_count, 1, "autocall has run");
 
     END_TEST;
-
-    return 0;
 }
 
+STATIC_UNITTEST_START_TESTCASE(auto_call_tests)
+STATIC_UNITTEST("Auto call test", auto_call_test)
+STATIC_UNITTEST_END_TESTCASE(auto_call_tests, "autocalltests", "Auto call test", NULL, NULL);
