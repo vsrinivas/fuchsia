@@ -32,7 +32,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/tests.c \
     $(LOCAL_DIR)/thread_tests.c \
     $(LOCAL_DIR)/unique_ptr_tests.cpp \
-    $(LOCAL_DIR)/vm_tests.cpp \
 
 #    $(LOCAL_DIR)/fifo_buffer_tests.cpp \
 

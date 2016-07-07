@@ -14,12 +14,10 @@
 #include <unittest.h>
 #include <utils/array.h>
 
-__NO_INLINE static bool pmm_tests() {
+static bool pmm_tests(void* context) {
     BEGIN_TEST;
-    printf("starting pmm tests\n");
-
     // allocate a single page, translate it to a vm_page_t and free it
-    printf("allocating single page, then freeing it\n");
+    unittest_printf("allocating single page, then freeing it\n");
     {
         paddr_t pa;
 
@@ -35,7 +33,7 @@ __NO_INLINE static bool pmm_tests() {
     }
 
     // allocate a bunch of pages then free them
-    printf("allocating a lot of pages, then freeing them\n");
+    unittest_printf("allocating a lot of pages, then freeing them\n");
     {
         list_node list = LIST_INITIAL_VALUE(list);
 
@@ -50,7 +48,7 @@ __NO_INLINE static bool pmm_tests() {
     }
 
     // allocate too many pages and make sure it fails nicely
-    printf("allocating too many pages, then freeing them\n");
+    unittest_printf("allocating too many pages, then freeing them\n");
     {
         list_node list = LIST_INITIAL_VALUE(list);
 
@@ -65,7 +63,7 @@ __NO_INLINE static bool pmm_tests() {
         EXPECT_EQ(count, ret, "pmm_free_page on a list of pages");
     }
 
-    printf("done with pmm tests\n");
+    unittest_printf("done with pmm tests\n");
     END_TEST;
 }
 
@@ -102,7 +100,7 @@ static bool test_region(uintptr_t seed, void* _ptr, size_t len) {
 #endif
     for (size_t i = 0; i < len / 4; i++) {
         if (ptr[i] != val) {
-            printf("value at %p (%zu) is incorrect: 0x%x vs 0x%x\n", &ptr[i], i, ptr[i], val);
+            unittest_printf("value at %p (%zu) is incorrect: 0x%x vs 0x%x\n", &ptr[i], i, ptr[i], val);
             return false;
         }
 
@@ -121,11 +119,9 @@ static void fill_and_test(bool& all_ok, void* ptr, size_t len) {
     EXPECT_TRUE(result, "testing region for corruption");
 }
 
-__NO_INLINE static bool vmm_tests() {
+static bool vmm_tests(void* context) {
     BEGIN_TEST;
-    printf("starting vmm tests\n");
-
-    printf("allocating a region in kernel space, read/write it, then destroy it\n");
+    unittest_printf("allocating a region in kernel space, read/write it, then destroy it\n");
     {
         static const size_t alloc_size = 256 * 1024;
 
@@ -143,7 +139,7 @@ __NO_INLINE static bool vmm_tests() {
         EXPECT_EQ(0, err, "vmm_free_region region of memory");
     }
 
-    printf("allocating a contiguous region in kernel space, read/write it, then destroy it\n");
+    unittest_printf("allocating a contiguous region in kernel space, read/write it, then destroy it\n");
     {
         static const size_t alloc_size = 256 * 1024;
 
@@ -158,7 +154,7 @@ __NO_INLINE static bool vmm_tests() {
         fill_and_test(all_ok, ptr, alloc_size);
 
         // test that it is indeed contiguous
-        printf("testing that region is contiguous\n");
+        unittest_printf("testing that region is contiguous\n");
         paddr_t last_pa = 0;
         for (size_t i = 0; i < alloc_size / PAGE_SIZE; i++) {
             paddr_t pa = vaddr_to_paddr((uint8_t*)ptr + i * PAGE_SIZE);
@@ -174,7 +170,7 @@ __NO_INLINE static bool vmm_tests() {
         EXPECT_EQ(0, err, "vmm_free_region region of memory");
     }
 
-    printf("allocating a new address space and creating a few regions in it, then destroy it\n");
+    unittest_printf("allocating a new address space and creating a few regions in it, then destroy it\n");
     {
         void* ptr;
         vmm_aspace_t* aspace;
@@ -218,7 +214,7 @@ __NO_INLINE static bool vmm_tests() {
         EXPECT_EQ(0, err, "vmm_free_aspace");
     }
 
-    printf("test for some invalid arguments\n");
+    unittest_printf("test for some invalid arguments\n");
     {
         void* ptr;
         status_t err;
@@ -242,12 +238,12 @@ __NO_INLINE static bool vmm_tests() {
         EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc_contiguous");
     }
 
-    printf("allocating a vm address space object directly, allowing it to go out of scope\n");
+    unittest_printf("allocating a vm address space object directly, allowing it to go out of scope\n");
     {
         auto aspace = VmAspace::Create(0, "test aspace");
     }
 
-    printf("allocating a vm address space object directly, mapping somethign on it, allowing it to go out of scope\n");
+    unittest_printf("allocating a vm address space object directly, mapping somethign on it, allowing it to go out of scope\n");
     {
         auto aspace = VmAspace::Create(0, "test aspace2");
 
@@ -262,24 +258,22 @@ __NO_INLINE static bool vmm_tests() {
         aspace.reset();
     }
 
-    printf("verify there are no test aspaces left around\n");
+    unittest_printf("verify there are no test aspaces left around\n");
     DumpAllAspaces();
 
-    printf("done with vmm tests\n");
+    unittest_printf("done with vmm tests\n");
     END_TEST;
 }
 
-__NO_INLINE static bool vmm_object_tests() {
+static bool vmm_object_tests(void* context) {
     BEGIN_TEST;
-    printf("starting vmm object based tests\n");
-
-    printf("creating vm object\n");
+    unittest_printf("creating vm object\n");
     {
         auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE);
         EXPECT_TRUE(vmo, "vmobject creation\n");
     }
 
-    printf("creating vm object, committing memory\n");
+    unittest_printf("creating vm object, committing memory\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
         auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
@@ -289,7 +283,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ((ssize_t)alloc_size, ret, "committing vm object\n");
     }
 
-    printf("creating vm object, committing odd sized memory\n");
+    unittest_printf("creating vm object, committing odd sized memory\n");
     {
         static const size_t alloc_size = 15;
         auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
@@ -299,7 +293,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ((ssize_t)alloc_size, ret, "committing vm object\n");
     }
 
-    printf("creating vm object, committing contiguous memory\n");
+    unittest_printf("creating vm object, committing contiguous memory\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
         auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
@@ -309,7 +303,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ((ssize_t)alloc_size, ret, "committing vm object contiguously\n");
     }
 
-    printf("creating vm object, mapping it, precommitted\n");
+    unittest_printf("creating vm object, mapping it, precommitted\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
         auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
@@ -328,7 +322,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
     }
 
-    printf("creating vm object, mapping it, demand paged\n");
+    unittest_printf("creating vm object, mapping it, demand paged\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
         auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
@@ -346,7 +340,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
     }
 
-    printf("creating vm object, mapping it, dropping ref before unmapping\n");
+    unittest_printf("creating vm object, mapping it, dropping ref before unmapping\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
         auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
@@ -367,7 +361,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
     }
 
-    printf(
+    unittest_printf(
         "creating vm object, mapping it, filling it with data, unmapping, mapping again somewhere "
         "else\n");
     {
@@ -400,7 +394,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
     }
 
-    printf(
+    unittest_printf(
         "creating vm object, mapping it, filling it with data, mapping it a second time and third "
         "time somwehere else\n");
     {
@@ -449,7 +443,7 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ(NO_ERROR, ret, "unmapping object");
     }
 
-    printf("creating vm object, writing to it\n");
+    unittest_printf("creating vm object, writing to it\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
 
@@ -521,7 +515,7 @@ __NO_INLINE static bool vmm_object_tests() {
         ka->FreeRegion((vaddr_t)ptr);
 
         // test that we can read from it
-        printf("reading back from vm object\n");
+        unittest_printf("reading back from vm object\n");
         utils::Array<uint8_t> b(new uint8_t[alloc_size], alloc_size);
 
         size_t bytes_read = -1;
@@ -542,14 +536,12 @@ __NO_INLINE static bool vmm_object_tests() {
         EXPECT_EQ(0, cmpres, "reading from object");
     }
 
-    printf("done with vmm object based tests\n");
+    unittest_printf("done with vmm object based tests\n");
     END_TEST;
 }
 
-int vm_tests(int argc, const cmd_args* argv) {
-    pmm_tests();
-    vmm_tests();
-    vmm_object_tests();
-
-    return 0;
-}
+STATIC_UNITTEST_START_TESTCASE(vm_tests)
+STATIC_UNITTEST("pmm tests", pmm_tests)
+STATIC_UNITTEST("vmm tests", vmm_tests)
+STATIC_UNITTEST("vm object based test", vmm_object_tests)
+STATIC_UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", NULL, NULL);

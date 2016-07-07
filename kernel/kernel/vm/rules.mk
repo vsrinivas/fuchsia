@@ -21,5 +21,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vm_object.cpp \
     $(LOCAL_DIR)/vm_region.cpp \
     $(LOCAL_DIR)/vmm.cpp \
+    $(LOCAL_DIR)/vm_unittest.cpp \
 
 include make/module.mk
