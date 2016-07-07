@@ -1,6 +1,8 @@
-#include "syscall.h"
 #include <unistd.h>
 
+#include <errno.h>
+
 int dup(int fd) {
-    return syscall(SYS_dup, fd);
+    errno = ENOSYS;
+    return -1;
 }

@@ -23,16 +23,7 @@ struct args {
 void __get_handler_set(sigset_t*);
 
 static int __sys_dup2(int old, int new) {
-#ifdef SYS_dup2
-    return __syscall(SYS_dup2, old, new);
-#else
-    if (old == new) {
-        int r = __syscall(SYS_fcntl, old, F_GETFD);
-        return r < 0 ? r : old;
-    } else {
-        return __syscall(SYS_dup3, old, new, 0);
-    }
-#endif
+    return dup2(old, new);
 }
 
 static int child(void* args_vp) {
@@ -94,7 +85,7 @@ static int child(void* args_vp) {
              * parent. To avoid that, we dup the pipe onto
              * an unoccupied fd. */
             if (op->fd == p) {
-                ret = __syscall(SYS_dup, p);
+                ret = dup(p);
                 if (ret < 0)
                     goto fail;
                 __syscall(SYS_close, p);

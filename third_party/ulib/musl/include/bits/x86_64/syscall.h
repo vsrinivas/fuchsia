@@ -17,7 +17,6 @@
 #define SYS_shmget 29
 #define SYS_shmat 30
 #define SYS_shmctl 31
-#define SYS_dup 32
 #define SYS_getitimer 36
 #define SYS_setitimer 38
 #define SYS_getpid 39
@@ -153,7 +152,6 @@
 #define SYS_utimensat 280
 #define SYS_fallocate 285
 #define SYS_accept4 288
-#define SYS_dup3 292
 #define SYS_pipe2 293
 #define SYS_preadv 295
 #define SYS_pwritev 296

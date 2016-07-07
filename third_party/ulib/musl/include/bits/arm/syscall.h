@@ -9,7 +9,6 @@
 #define SYS_ptrace 26
 #define SYS_sync 36
 #define SYS_kill 37
-#define SYS_dup 41
 #define SYS_times 43
 #define SYS_brk 45
 #define SYS_setgid 46
@@ -153,7 +152,6 @@
 #define SYS_getcpu 345
 #define SYS_utimensat 348
 #define SYS_fallocate 352
-#define SYS_dup3 358
 #define SYS_pipe2 359
 #define SYS_preadv 361
 #define SYS_pwritev 362
