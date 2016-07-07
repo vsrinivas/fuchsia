@@ -355,12 +355,49 @@ int getdirents(int fd, void* ptr, size_t len) {
     return STATUS(io->ops->misc(io, MX_RIO_READDIR, len, ptr, 0));
 }
 
+int _unlink(const char* path) {
+    mxio_t* io = NULL;
+    mx_status_t r;
+    if (path == NULL) {
+        return ERRNO(EINVAL);
+    }
+    if (mxio_root_handle == NULL) {
+        return ERRNO(EBADFD);
+    }
+
+    // split path from name
+    const char* name = strrchr(path, '/');
+    char tmp[1024];
+    if (name == NULL) {
+        return ERRNO(EINVAL);
+    }
+    if ((name - path) > (ptrdiff_t)(sizeof(tmp) - 1)) {
+        return ERRNO(EINVAL);
+    }
+    memcpy(tmp, path, name - path);
+    tmp[name - path] = 0;
+
+    // require a non-zero-length name
+    name++;
+    if (name[0] == 0) {
+        return ERRNO(EINVAL);
+    }
+
+    if ((r = mxio_root_handle->ops->open(mxio_root_handle, tmp, 0, &io)) < 0) {
+        return ERROR(r);
+    }
+
+    r = STATUS(io->ops->misc(io, MX_RIO_UNLINK, 0, (void*) name, strlen(name)));
+    io->ops->close(io);
+    return r;
+}
+
 int __libc_io_open(const char* path, int flags, ...) {
     mxio_t* io = NULL;
     mx_status_t r;
     int fd;
     if (path == NULL) {
-        return ERRNO(EBADFD);
+        return ERRNO(EINVAL);
     }
     if (mxio_root_handle == NULL) {
         return ERRNO(EBADFD);

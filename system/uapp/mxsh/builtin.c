@@ -204,6 +204,23 @@ done:
     return r;
 }
 
+int _unlink(const char* path);
+
+static int mxc_rm(int argc, char** argv) {
+    if (argc < 2) {
+        printf("usage: rm <filename>\n");
+        return -1;
+    }
+    while (argc > 1) {
+        argc--;
+        argv++;
+        if (_unlink(argv[0])) {
+            printf("error: failed to delete '%s'\n", argv[0]);
+        }
+    }
+    return 0;
+}
+
 typedef struct failure {
     list_node_t node;
     int cause;
@@ -369,6 +386,7 @@ builtin_t builtins[] = {
     {"dm", mxc_dm, "send command to device manager"},
     {"list", mxc_list, "display a text file with line numbers"},
     {"ls", mxc_ls, "list directory contents"},
+    {"rm", mxc_rm, "delete a file"},
     {"runtests", mxc_runtests, "run all test programs"},
     {NULL, NULL, NULL},
 };
