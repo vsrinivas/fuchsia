@@ -6,18 +6,16 @@
 
 #include <glm/glm.hpp>
 
-#include "escher/base/macros.h"
-#include "escher/base/time.h"
+#include "ftl/macros.h"
+#include "escher/effects/lighting/lighting_effect.h"
 #include "escher/geometry/quad.h"
 #include "escher/geometry/size_i.h"
 #include "escher/gl/frame_buffer.h"
+#include "escher/gl/texture_cache.h"
 #include "escher/rendering/model_renderer.h"
 #include "escher/scene/stage.h"
 #include "escher/scene/model.h"
 #include "escher/shaders/blit_shader.h"
-#include "escher/shaders/lighting/illumination_shader.h"
-#include "escher/shaders/lighting/illumination_reconstruction_filter.h"
-#include "escher/shaders/lighting/occlusion_detector.h"
 
 namespace escher {
 
@@ -36,29 +34,19 @@ class Renderer {
   void Render(const Stage& stage, const Model& model);
 
  private:
-  void ResizeBuffers(const SizeI& size);
   void Blit(GLuint texture_id);
-  void DrawModel(const Model& model, const glm::mat4& matrix);
-
-  void ComputeIllumination(const Stage& stage);
-  void DrawFullFrameQuad(GLint position);
 
   GLuint front_frame_buffer_id_ = 0;
+  TextureCache texture_cache_;
+  LightingEffect lighting_;
+  BlitShader blit_shader_;
   SizeI size_;
-  FrameBuffer scene_buffer_;
-  FrameBuffer lighting_buffer_;
-  UniqueTexture scratch_texture_;
+  FrameBuffer scene_;
   Quad full_frame_;
 
-  BlitShader blit_shader_;
-  IlluminationShader illumination_shader_;
-  IlluminationReconstructionFilter reconstruction_filter_;
-  OcclusionDetector occlusion_detector_;
   ModelRenderer model_renderer_;
 
-  UniqueTexture noise_texture_;
-
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(Renderer);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };
 
 }  // namespace escher

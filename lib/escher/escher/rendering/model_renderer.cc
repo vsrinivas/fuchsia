@@ -14,11 +14,7 @@ ModelRenderer::ModelRenderer() {}
 
 ModelRenderer::~ModelRenderer() {}
 
-void ModelRenderer::DrawModel(const Stage& stage,
-                              const Model& model,
-                              const glm::mat4& matrix,
-                              const UniqueFrameBuffer& frame_buffer) {
-  glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer.id());
+void ModelRenderer::DrawModel(const Stage& stage, const Model& model) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
@@ -29,6 +25,7 @@ void ModelRenderer::DrawModel(const Stage& stage,
   // also need to use multiple rendering passes for certain blending effects.
   glDepthFunc(GL_LEQUAL);
 
+  glm::mat4 matrix = stage.viewing_volume().GetProjectionMatrix();
   DrawContext context(*this, stage, matrix);
 
   for (const auto& object : model.objects())
@@ -103,7 +100,7 @@ void ModelRenderer::DrawContext::BindMaterial(const Material& material,
 
 void ModelRenderer::DrawContext::UseMaterialShader(
     const MaterialShader* shader) {
-  ESCHER_DCHECK(shader);
+  FTL_DCHECK(shader);
 
   if (shader == shader_)
     return;

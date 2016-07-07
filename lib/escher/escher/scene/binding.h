@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/base/macros.h"
+#include "ftl/logging.h"
 
 namespace escher {
 
@@ -26,7 +26,7 @@ class Binding {
   BindingType type() const { return type_; }
 
   const T& constant_value() const {
-    ESCHER_DCHECK(type_ == BindingType::kConstant);
+    FTL_DCHECK(type_ == BindingType::kConstant);
     return constant_value_;
   }
 

@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 #include "escher/scene/material.h"
 #include "escher/shaders/material/material_shader.h"
 #include "escher/shaders/material/modifier.h"
@@ -31,7 +31,7 @@ class MaterialShaderFactory {
                      MaterialShaderDescriptor::Hash>
       shaders_;
 
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(MaterialShaderFactory);
+  FTL_DISALLOW_COPY_AND_ASSIGN(MaterialShaderFactory);
 };
 
 }  // namespace escher

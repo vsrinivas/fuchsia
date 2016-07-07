@@ -11,7 +11,7 @@
 #include "examples/waterfall/scenes/material_stage.h"
 #include "examples/waterfall/scenes/shadow_test_scene.h"
 
-static const bool kDrawShadowTestScene = false;
+constexpr bool kDrawShadowTestScene = false;
 
 @interface WaterfallViewController () {
   escher::Stage stage_;
@@ -49,10 +49,8 @@ static const bool kDrawShadowTestScene = false;
     NSLog(@"Failed to initialize renderer");
   }
 
-  CGFloat contentScaleFactor = self.view.contentScaleFactor;
   CGSize size = self.view.bounds.size;
-  focus_ = glm::vec2(size.width * contentScaleFactor / 2.0f,
-                     size.height * contentScaleFactor / 2.0f);
+  focus_ = glm::vec2(size.width / 2.0f, size.height / 2.0f);
   [self update];
 }
 
@@ -69,8 +67,9 @@ static const bool kDrawShadowTestScene = false;
 - (void)update {
   CGFloat contentScaleFactor = self.view.contentScaleFactor;
   CGSize size = self.view.bounds.size;
-  stage_.SetSize(escher::SizeI(size.width * contentScaleFactor,
-                               size.height * contentScaleFactor));
+  stage_.Resize(escher::SizeI(size.width * contentScaleFactor,
+                              size.height * contentScaleFactor),
+                contentScaleFactor);
 }
 
 - (void)glkView:(GLKView*)view drawInRect:(CGRect)rect {
@@ -82,15 +81,15 @@ static const bool kDrawShadowTestScene = false;
   }
 
   if (kDrawShadowTestScene)
-    renderer_->Render(stage_, shadow_test_scene_.GetModel(stage_.size()));
-  renderer_->Render(stage_, app_test_scene_.GetModel(stage_.size(), focus_));
+    renderer_->Render(stage_, shadow_test_scene_.GetModel(stage_.viewing_volume()));
+  else
+    renderer_->Render(stage_, app_test_scene_.GetModel(stage_.viewing_volume(), focus_));
 }
 
 - (void)touchesMoved:(NSSet*)touches withEvent:(UIEvent*)event {
-    CGFloat scale = self.view.contentScaleFactor;
     for (UITouch* touch in touches) {
         CGPoint windowCoordinates = [touch locationInView:nil];
-        focus_ = glm::vec2(scale * windowCoordinates.x, scale * windowCoordinates.y);
+        focus_ = glm::vec2(windowCoordinates.x, windowCoordinates.y);
     }
     [self.view setNeedsDisplay];
 }

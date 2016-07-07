@@ -4,23 +4,23 @@
 
 #pragma once
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 #include "escher/gl/unique_program.h"
 
 namespace escher {
 
-class IlluminationShader {
+class IlluminationReconstructionFilter {
  public:
-  IlluminationShader();
-  ~IlluminationShader();
+  IlluminationReconstructionFilter();
+  ~IlluminationReconstructionFilter();
 
   bool Compile();
 
   const UniqueProgram& program() const { return program_; }
 
   // Uniforms
-  GLint scene() const { return scene_; }
-  GLint lighting() const { return lighting_; }
+  GLint illumination() const { return illumination_; }
+  GLint stride() const { return stride_; }
 
   // Attributes
   GLint position() const { return position_; }
@@ -28,11 +28,11 @@ class IlluminationShader {
  private:
   UniqueProgram program_;
 
-  GLint scene_ = 0;
-  GLint lighting_ = 0;
+  GLint illumination_ = 0;
+  GLint stride_ = 0;
   GLint position_ = 0;
 
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(IlluminationShader);
+  FTL_DISALLOW_COPY_AND_ASSIGN(IlluminationReconstructionFilter);
 };
 
 }  // namespace escher

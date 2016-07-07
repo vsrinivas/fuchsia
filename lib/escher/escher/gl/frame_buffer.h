@@ -4,43 +4,48 @@
 
 #pragma once
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 #include "escher/geometry/size_i.h"
 #include "escher/gl/unique_frame_buffer.h"
-#include "escher/gl/unique_texture.h"
+#include "escher/gl/texture.h"
+#include "escher/gl/texture_cache.h"
 
 namespace escher {
 
 class FrameBuffer {
  public:
-  // The mask argument understands GL_COLOR_BUFFER_BIT and GL_DEPTH_BUFFER_BIT.
-  // TODO(abarth): Support stencil buffers.
-  explicit FrameBuffer(GLbitfield mask);
+  FrameBuffer();
+  explicit FrameBuffer(UniqueFrameBuffer frame_buffer);
   ~FrameBuffer();
 
-  SizeI size() const { return size_; }
-  bool SetSize(const SizeI& size);
+  FrameBuffer(FrameBuffer&& other);
+  FrameBuffer& operator=(FrameBuffer&& other);
 
-  const UniqueFrameBuffer& frame_buffer() const { return frame_buffer_; };
-  const UniqueTexture& depth() const { return depth_; };
-  const UniqueTexture& color() const { return color_; };
+  static FrameBuffer Make();
 
-  // Returns the old color texture (if any).
-  // Requires that the frame buffer was constructed with GL_COLOR_BUFFER_BIT.
-  UniqueTexture SetColorTexture(UniqueTexture color);
+  explicit operator bool() const { return static_cast<bool>(frame_buffer_); }
+
+  void Bind();
+
+  const UniqueFrameBuffer& frame_buffer() const { return frame_buffer_; }
+  const Texture& depth() const { return depth_; };
+  const Texture& color() const { return color_; };
+
+  void SetDepth(Texture depth);
+  void SetColor(Texture color);
+
+  Texture TakeColor();
+  Texture SwapColor(Texture color);
 
  private:
   bool CheckStatusIfDebug();
-
-  bool has_depth_;
-  bool has_color_;
+  bool IsBound();
 
   UniqueFrameBuffer frame_buffer_;
-  UniqueTexture depth_;
-  UniqueTexture color_;
-  SizeI size_;
+  Texture depth_;
+  Texture color_;
 
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(FrameBuffer);
+  FTL_DISALLOW_COPY_AND_ASSIGN(FrameBuffer);
 };
 
 }  // namespace escher

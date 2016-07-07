@@ -15,6 +15,7 @@ class Quad {
   Quad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3);
 
   static Quad CreateFromRect(glm::vec2 position, glm::vec2 size, float z);
+  static Quad CreateFillClipSpace(float z);
 
   const float* data() const {
     return reinterpret_cast<const float*>(this);

@@ -12,8 +12,11 @@ Stage::Stage() {
 Stage::~Stage() {
 }
 
-void Stage::SetSize(SizeI size) {
-  viewing_volume_ = ViewingVolume(std::move(size), viewing_volume_.near(), viewing_volume_.far());
+void Stage::Resize(SizeI size, float device_pixel_ratio) {
+  physical_size_ = std::move(size);
+  viewing_volume_ = viewing_volume_.CopyWith(
+      physical_size_.width() / device_pixel_ratio,
+      physical_size_.height() / device_pixel_ratio);
 }
 
 }  // namespace escher

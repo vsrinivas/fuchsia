@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 #include "escher/scene/object.h"
 
 namespace escher {
@@ -31,7 +31,7 @@ class Model {
  private:
   std::vector<Object> objects_;
 
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(Model);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Model);
 };
 
 }  // namespace escher

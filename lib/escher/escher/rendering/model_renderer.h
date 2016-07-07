@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 #include "escher/gl/unique_frame_buffer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
@@ -14,18 +14,12 @@
 
 namespace escher {
 
-// Draws the contents of a model.
 class ModelRenderer {
  public:
   ModelRenderer();
   ~ModelRenderer();
 
-  // Draws the content of the model to the specified frame buffer which
-  // must have color and depth buffers attached.
-  void DrawModel(const Stage& stage,
-                 const Model& model,
-                 const glm::mat4& matrix,
-                 const UniqueFrameBuffer& frame_buffer);
+  void DrawModel(const Stage& stage, const Model& model);
 
  private:
   class DrawContext {
@@ -52,7 +46,7 @@ class ModelRenderer {
 
   MaterialShaderFactory material_shader_factory_;
 
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(ModelRenderer);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ModelRenderer);
 };
 
 }  // namespace escher

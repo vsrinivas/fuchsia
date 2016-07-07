@@ -7,7 +7,7 @@
 #include <sstream>
 #include <string>
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 
 namespace escher {
 
@@ -24,7 +24,7 @@ class GLSLGenerator {
  private:
   std::ostringstream code_;
 
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(GLSLGenerator);
+  FTL_DISALLOW_COPY_AND_ASSIGN(GLSLGenerator);
 };
 
 }  // namespace escher

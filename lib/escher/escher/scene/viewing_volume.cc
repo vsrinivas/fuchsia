@@ -12,16 +12,19 @@ namespace escher {
 ViewingVolume::ViewingVolume() {
 }
 
-ViewingVolume::ViewingVolume(SizeI size, float near, float far)
-  : size_(std::move(size)), near_(near), far_(far) {
+ViewingVolume::ViewingVolume(float width, float height, float near, float far)
+  : width_(width), height_(height), near_(near), far_(far) {
 }
 
 ViewingVolume::~ViewingVolume() {
 }
 
+ViewingVolume ViewingVolume::CopyWith(float width, float height) {
+  return ViewingVolume(width, height, near_, far_);
+}
+
 glm::mat4 ViewingVolume::GetProjectionMatrix() const {
-  return glm::ortho<float>(0.0f, size_.width(), size_.height(), 0.0f, -near_,
-                           -far_);
+  return glm::ortho<float>(0.0f, width_, height_, 0.0f, -near_, -far_);
 }
 
 }  // namespace escher

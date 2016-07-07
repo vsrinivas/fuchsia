@@ -6,6 +6,7 @@
 
 #include <math.h>
 
+#include "ftl/logging.h"
 #include "escher/shaders/glsl_generator.h"
 
 namespace escher {
@@ -157,6 +158,7 @@ MaterialShader::~MaterialShader() {}
 void MaterialShader::Use(const glm::mat4& matrix) const {
   glUseProgram(program_.id());
   glEnableVertexAttribArray(position_);
+  // TODO(jjosh): simply check if uv_ != -1 ?
   if (descriptor_.mask == Modifier::Mask::kCircular)
     glEnableVertexAttribArray(uv_);
   glUniformMatrix4fv(matrix_, 1, GL_FALSE, &matrix[0][0]);
@@ -211,25 +213,28 @@ bool MaterialShader::Compile() {
     return false;
 
   matrix_ = glGetUniformLocation(program_.id(), "u_matrix");
-  ESCHER_DCHECK(matrix_ != -1);
+  FTL_DCHECK(matrix_ != -1);
 
   if (descriptor_.color_binding_type == BindingType::kConstant) {
     color_ = glGetUniformLocation(program_.id(), "u_color");
-    ESCHER_DCHECK(color_ != -1);
+    FTL_DCHECK(color_ != -1);
   }
 
   if (descriptor_.displacement != Displacement::Type::kNone) {
     displacement_params0_ =
         glGetUniformLocation(program_.id(), "u_displacement_params0");
-    ESCHER_DCHECK(displacement_params0_ != -1);
+    FTL_DCHECK(displacement_params0_ != -1);
     displacement_params1_ =
         glGetUniformLocation(program_.id(), "u_displacement_params1");
-    ESCHER_DCHECK(displacement_params1_ != -1);
+    FTL_DCHECK(displacement_params1_ != -1);
   }
+
+  position_ = glGetAttribLocation(program_.id(), "a_position");
+  FTL_DCHECK(position_ != -1);
 
   if (NeedsUV()) {
     uv_ = glGetAttribLocation(program_.id(), "a_uv");
-    ESCHER_DCHECK(uv_ != -1);
+    FTL_DCHECK(uv_ != -1);
   }
   return true;
 }

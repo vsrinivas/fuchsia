@@ -19,4 +19,8 @@ bool SizeI::Equals(const SizeI& size) const {
   return width_ == size.width_ && height_ == size.height_;
 }
 
+size_t SizeI::GetHashCode() const {
+  return width_ * 37 + height_;
+}
+
 }  // namespace escher

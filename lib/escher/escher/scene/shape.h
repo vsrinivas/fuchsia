@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-#include "escher/base/macros.h"
+#include "ftl/logging.h"
 
 namespace escher {
 
@@ -37,7 +37,7 @@ class Shape {
 
   // Radius in pixels.
   float radius() const {
-    ESCHER_DCHECK(type_ == Type::kCircle);
+    FTL_DCHECK(type_ == Type::kCircle);
     return size_.x * 0.5f;
   }
 

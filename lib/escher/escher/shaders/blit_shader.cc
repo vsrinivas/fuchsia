@@ -4,6 +4,8 @@
 
 #include "escher/shaders/blit_shader.h"
 
+#include "ftl/logging.h"
+
 namespace escher {
 namespace {
 
@@ -38,7 +40,7 @@ bool BlitShader::Compile() {
   if (!program_)
     return false;
   source_ = glGetUniformLocation(program_.id(), "u_source");
-  ESCHER_DCHECK(source_ != -1);
+  FTL_DCHECK(source_ != -1);
   return true;
 }
 

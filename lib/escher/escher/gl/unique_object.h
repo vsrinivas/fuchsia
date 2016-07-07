@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 #include "escher/gl/bindings.h"
 
 namespace escher {
@@ -40,7 +40,7 @@ class UniqueObject {
  private:
   GLuint id_ = 0;
 
-  ESCHER_DISALLOW_COPY_AND_ASSIGN(UniqueObject);
+  FTL_DISALLOW_COPY_AND_ASSIGN(UniqueObject);
 };
 
 }  // namespace escher

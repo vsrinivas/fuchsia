@@ -4,20 +4,16 @@
 
 #pragma once
 
-#include <assert.h>
-
-#define ESCHER_DISALLOW_COPY(TypeName)                                         \
+#define FTL_DISALLOW_COPY(TypeName)                                            \
   TypeName(const TypeName&) = delete
 
-#define ESCHER_DISALLOW_ASSIGN(TypeName)                                       \
+#define FTL_DISALLOW_ASSIGN(TypeName)                                          \
   void operator=(const TypeName&) = delete
 
-#define ESCHER_DISALLOW_COPY_AND_ASSIGN(TypeName)                              \
+#define FTL_DISALLOW_COPY_AND_ASSIGN(TypeName)                                 \
   TypeName(const TypeName&) = delete;                                          \
   void operator=(const TypeName&) = delete
 
-#define ESCHER_DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName)                        \
+#define FTL_DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName)                           \
   TypeName() = delete;                                                         \
-  DISALLOW_COPY_AND_ASSIGN(TypeName)
-
-#define ESCHER_DCHECK(expr) assert(expr)
+  FTL_DISALLOW_COPY_AND_ASSIGN(TypeName)

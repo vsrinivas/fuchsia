@@ -6,11 +6,11 @@
 
 #include <chrono>
 
-namespace escher {
+namespace ftl {
 
 typedef std::chrono::steady_clock::time_point TimePoint;
 typedef std::chrono::steady_clock::duration Duration;
 
 TimePoint Now();
 
-}  // namespace escher
+}  // namespace ftl

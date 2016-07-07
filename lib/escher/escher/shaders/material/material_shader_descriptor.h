@@ -22,7 +22,7 @@ struct MaterialShaderDescriptor {
   ~MaterialShaderDescriptor();
 
   bool operator==(const MaterialShaderDescriptor& other) const;
-  size_t hash() const;
+  size_t GetHashCode() const;
 
   BindingType color_binding_type;
   Displacement::Type displacement;
@@ -34,7 +34,7 @@ struct MaterialShaderDescriptor::Hash {
   typedef size_t result_type;
 
   inline size_t operator()(const MaterialShaderDescriptor& descriptor) const {
-    return descriptor.hash();
+    return descriptor.GetHashCode();
   }
 };
 

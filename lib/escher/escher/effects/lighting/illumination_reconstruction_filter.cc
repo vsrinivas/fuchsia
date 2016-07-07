@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/shaders/lighting/illumination_reconstruction_filter.h"
+#include "escher/effects/lighting/illumination_reconstruction_filter.h"
+
+#include "ftl/logging.h"
 
 namespace escher {
 namespace {
@@ -19,27 +21,30 @@ constexpr char g_vertex_shader[] = R"GLSL(
 
 constexpr char g_fragment_shader[] = R"GLSL(
   precision mediump float;
-  uniform sampler2D u_illumination_map;
-  uniform vec2 u_tap_stride;
+  uniform sampler2D u_illumination;
+  uniform vec2 u_stride;
   varying vec2 fragment_uv;
 
   const float scene_depth = 26.0;
 
+  // Related to OcclusionDetector::kNoiseSize.
+  // We need the reconstruction filter to remove exactly the frequency of the
+  // noise, which is why these values need to be coordinated.
   #define RADIUS 4
 
   void main() {
-    vec4 center_tap = texture2D(u_illumination_map, fragment_uv);
+    vec4 center_tap = texture2D(u_illumination, fragment_uv);
     float center_key = center_tap.z * scene_depth;
 
     float sum = center_tap.x;
     float total_weight = 1.0;
 
     for (int r = 1; r <= RADIUS; ++r) {
-      vec4 left_tap = texture2D(u_illumination_map, fragment_uv + float(-r) * u_tap_stride);
+      vec4 left_tap = texture2D(u_illumination, fragment_uv + float(-r) * u_stride);
       float left_tap_key = left_tap.z * scene_depth;
       float left_key_weight = max(0.0, 1.0 - abs(left_tap_key - center_key));
 
-      vec4 right_tap = texture2D(u_illumination_map, fragment_uv + float(r) * u_tap_stride);
+      vec4 right_tap = texture2D(u_illumination, fragment_uv + float(r) * u_stride);
       float right_tap_key = right_tap.z * scene_depth;
       float right_key_weight = max(0.0, 1.0 - abs(right_tap_key - center_key));
 
@@ -65,10 +70,10 @@ bool IlluminationReconstructionFilter::Compile() {
   program_ = MakeUniqueProgram(g_vertex_shader, g_fragment_shader);
   if (!program_)
     return false;
-  illumination_map_ = glGetUniformLocation(program_.id(), "u_illumination_map");
-  ESCHER_DCHECK(illumination_map_ != -1);
-  tap_stride_ = glGetUniformLocation(program_.id(), "u_tap_stride");
-  ESCHER_DCHECK(tap_stride_ != -1);
+  illumination_ = glGetUniformLocation(program_.id(), "u_illumination");
+  FTL_DCHECK(illumination_ != -1);
+  stride_ = glGetUniformLocation(program_.id(), "u_stride");
+  FTL_DCHECK(stride_ != -1);
   return true;
 }
 

@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-#include "escher/base/macros.h"
+#include "ftl/macros.h"
 
 namespace escher {
 
@@ -27,10 +27,15 @@ class SizeI {
 
   glm::vec2 AsVec2() const;
   bool Equals(const SizeI& size) const;
+  size_t GetHashCode() const;
 
  private:
   int width_ = 0;
   int height_ = 0;
 };
+
+inline bool operator==(const SizeI& lhs, const SizeI& rhs) {
+  return lhs.width() == rhs.width() && lhs.height() == rhs.height();
+}
 
 }  // namespace escher

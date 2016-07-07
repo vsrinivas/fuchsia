@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/shaders/lighting/illumination_shader.h"
+#include "escher/effects/lighting/illumination_shader.h"
+
+#include "ftl/logging.h"
 
 namespace escher {
 namespace {
@@ -19,14 +21,14 @@ constexpr char g_vertex_shader[] = R"GLSL(
 
 constexpr char g_fragment_shader[] = R"GLSL(
   precision mediump float;
-  uniform sampler2D u_scene;
-  uniform sampler2D u_lighting;
+  uniform sampler2D u_color;
+  uniform sampler2D u_illumination;
   varying vec2 fragment_uv;
 
   void main() {
-    vec3 scene = texture2D(u_scene, fragment_uv.xy).rgb;
-    float illumination = texture2D(u_lighting, fragment_uv.xy).r;
-    gl_FragColor = vec4(illumination * scene, 1.0);
+    vec3 color = texture2D(u_color, fragment_uv.xy).rgb;
+    float illumination = texture2D(u_illumination, fragment_uv.xy).r;
+    gl_FragColor = vec4(illumination * color, 1.0);
   }
 )GLSL";
 
@@ -40,10 +42,10 @@ bool IlluminationShader::Compile() {
   program_ = MakeUniqueProgram(g_vertex_shader, g_fragment_shader);
   if (!program_)
     return false;
-  scene_ = glGetUniformLocation(program_.id(), "u_scene");
-  ESCHER_DCHECK(scene_ != -1);
-  lighting_ = glGetUniformLocation(program_.id(), "u_lighting");
-  ESCHER_DCHECK(lighting_ != -1);
+  color_ = glGetUniformLocation(program_.id(), "u_color");
+  FTL_DCHECK(color_ != -1);
+  illumination_ = glGetUniformLocation(program_.id(), "u_illumination");
+  FTL_DCHECK(illumination_ != -1);
   return true;
 }
 

@@ -6,49 +6,63 @@
 
 #include <iostream>
 
+#include "ftl/logging.h"
+
 namespace escher {
 
-FrameBuffer::FrameBuffer(GLbitfield mask)
-    : has_depth_(mask & GL_DEPTH_BUFFER_BIT),
-      has_color_(mask & GL_COLOR_BUFFER_BIT) {}
+FrameBuffer::FrameBuffer() {}
+
+FrameBuffer::FrameBuffer(UniqueFrameBuffer frame_buffer)
+  : frame_buffer_(std::move(frame_buffer)) {}
 
 FrameBuffer::~FrameBuffer() {}
 
-bool FrameBuffer::SetSize(const SizeI& size) {
-  if (size_.Equals(size))
-    return !!frame_buffer_;
-  size_ = size;
+FrameBuffer::FrameBuffer(FrameBuffer&& other)
+  : frame_buffer_(std::move(other.frame_buffer_)),
+    depth_(std::move(other.depth_)),
+    color_(std::move(other.color_)) {}
 
-  if (!frame_buffer_)
-    frame_buffer_ = MakeUniqueFrameBuffer();
-  ESCHER_DCHECK(frame_buffer_);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer_.id());
-
-  if (has_depth_) {
-    depth_ = MakeDepthTexture(size);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                           depth_.id(), 0);
-  }
-
-  if (has_color_) {
-    color_ = MakeColorTexture(size_);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           color_.id(), 0);
-  }
-
-  return CheckStatusIfDebug();
+FrameBuffer& FrameBuffer::operator=(FrameBuffer&& other) {
+  std::swap(frame_buffer_, other.frame_buffer_);
+  std::swap(depth_, other.depth_);
+  std::swap(color_, other.color_);
+  return *this;
 }
 
-UniqueTexture FrameBuffer::SetColorTexture(UniqueTexture color) {
-  ESCHER_DCHECK(has_color_);
-  ESCHER_DCHECK(frame_buffer_);
+FrameBuffer FrameBuffer::Make() {
+  return FrameBuffer(MakeUniqueFrameBuffer());
+}
+
+void FrameBuffer::Bind() {
   glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer_.id());
+}
+
+void FrameBuffer::SetDepth(Texture depth) {
+  FTL_DCHECK(IsBound());
+  depth_ = std::move(depth);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                         depth_.id(), 0);
+  FTL_DCHECK(CheckStatusIfDebug());
+}
+
+void FrameBuffer::SetColor(Texture color) {
+  FTL_DCHECK(IsBound());
+  color_ = std::move(color);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         color.id(), 0);
-  ESCHER_DCHECK(CheckStatusIfDebug());
-  std::swap(color_, color);
-  return std::move(color);
+                         color_.id(), 0);
+  FTL_DCHECK(CheckStatusIfDebug());
+}
+
+Texture FrameBuffer::TakeColor() {
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         0, 0);
+  return std::move(color_);
+}
+
+Texture FrameBuffer::SwapColor(Texture color) {
+  Texture result = std::move(color_);
+  SetColor(std::move(color));
+  return result;
 }
 
 bool FrameBuffer::CheckStatusIfDebug() {
@@ -63,6 +77,12 @@ bool FrameBuffer::CheckStatusIfDebug() {
 #else
   return true;
 #endif
+}
+
+bool FrameBuffer::IsBound() {
+  GLint id = -1;
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &id);
+  return id == frame_buffer_.id();
 }
 
 }  // namespace escher

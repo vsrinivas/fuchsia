@@ -4,7 +4,7 @@
 
 #include "examples/waterfall/scenes/shadow_test_scene.h"
 
-#include "escher/base/arraysize.h"
+#include "ftl/arraysize.h"
 #include "escher/renderer.h"
 
 namespace {
@@ -24,10 +24,10 @@ ShadowTestScene::ShadowTestScene() {
 
 ShadowTestScene::~ShadowTestScene() {}
 
-escher::Model ShadowTestScene::GetModel(const escher::SizeI& size) {
+escher::Model ShadowTestScene::GetModel(const escher::ViewingVolume& volume) {
   std::vector<escher::Object> objects;
 
-  float center = size.width() / 2.0f;
+  float center = volume.width() / 2.0f;
 
   float left[] = {
       kPadding, center + kPadding,
@@ -38,7 +38,8 @@ escher::Model ShadowTestScene::GetModel(const escher::SizeI& size) {
 
   objects.emplace_back(
       escher::Shape::CreateRect(glm::vec2(0.0f, 0.0f),
-                                glm::vec2(size.width(), size.height()), 0.0f),
+                                glm::vec2(volume.width(), volume.height()),
+                                0.0f),
       &card_material_);
 
   for (int i = 0; i < arraysize(kElevations); ++i) {

@@ -22,7 +22,7 @@ bool MaterialShaderDescriptor::operator==(
          displacement == other.displacement && mask == other.mask;
 }
 
-size_t MaterialShaderDescriptor::hash() const {
+size_t MaterialShaderDescriptor::GetHashCode() const {
   return static_cast<int>(color_binding_type) * 37 +
          static_cast<int>(displacement) * 37 * 37 + static_cast<int>(mask);
 }

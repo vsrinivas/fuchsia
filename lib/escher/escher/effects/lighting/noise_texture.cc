@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/textures/noise_texture.h"
+#include "escher/effects/lighting/noise_texture.h"
 
 #include <memory>
 #include <random>
@@ -23,6 +23,8 @@ UniqueTexture MakeNoiseTexture(const SizeI& size) {
   glBindTexture(GL_TEXTURE_2D, result.id());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.width(), size.height(), 0,
                GL_RGBA, GL_UNSIGNED_BYTE, data.get());
   return result;

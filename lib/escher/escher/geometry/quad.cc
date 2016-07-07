@@ -4,7 +4,7 @@
 
 #include "escher/geometry/quad.h"
 
-#include "escher/base/arraysize.h"
+#include "ftl/arraysize.h"
 
 namespace escher {
 namespace {
@@ -29,6 +29,10 @@ Quad Quad::CreateFromRect(glm::vec2 position, glm::vec2 size, float z) {
               glm::vec3(position.x + size.x, position.y + size.y, z),
               glm::vec3(position.x + size.x, position.y, z),
               glm::vec3(position.x, position.y, z));
+}
+
+Quad Quad::CreateFillClipSpace(float z) {
+  return CreateFromRect(glm::vec2(-1.0f, 1.0f), glm::vec2(2.0f, -2.0f), z);
 }
 
 const unsigned short* Quad::GetIndices() {
