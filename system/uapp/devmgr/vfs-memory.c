@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fcntl.h>
+
 #include "vfs.h"
 #include "dnode.h"
 
@@ -51,13 +53,16 @@ static void mem_release(vnode_t* vn) {
     free(mem);
 }
 
-static mx_status_t mem_open(vnode_t** _vn, uint32_t flags) {
+mx_status_t memfs_open(vnode_t** _vn, uint32_t flags) {
     vnode_t* vn = *_vn;
+    if ((flags & O_DIRECTORY) && (vn->dnode == NULL)) {
+        return ERR_NOT_DIR;
+    }
     vn_acquire(vn);
     return NO_ERROR;
 }
 
-static mx_status_t mem_close(vnode_t* vn) {
+mx_status_t memfs_close(vnode_t* vn) {
     vn_release(vn);
     return NO_ERROR;
 }
@@ -210,8 +215,8 @@ mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
 
 static vnode_ops_t vn_mem_ops = {
     .release = mem_release,
-    .open = mem_open,
-    .close = mem_close,
+    .open = memfs_open,
+    .close = memfs_close,
     .read = mem_read,
     .write = mem_write,
     .lookup = memfs_lookup,
@@ -224,8 +229,8 @@ static vnode_ops_t vn_mem_ops = {
 
 static vnode_ops_t vn_mem_ops_dir = {
     .release = mem_release,
-    .open = mem_open,
-    .close = mem_close,
+    .open = memfs_open,
+    .close = memfs_close,
     .read = memfs_read_none,
     .write = memfs_write_none,
     .lookup = memfs_lookup,

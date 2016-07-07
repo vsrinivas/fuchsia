@@ -114,9 +114,7 @@ struct vfs {
     vnode_t* root;
 };
 
-// such a node requires a dedicated service thread
-#define V_FLAG_BLOCKING 1
-#define V_FLAG_DEVICE 2
+#define V_FLAG_DEVICE 1
 
 // bits compatible with POSIX stat
 #define V_TYPE_MASK 0170000

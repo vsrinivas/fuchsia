@@ -42,17 +42,6 @@ static void vnb_release(vnode_t* vn) {
     free(vn);
 }
 
-static mx_status_t vnb_open(vnode_t** _vn, uint32_t flags) {
-    vnode_t* vn = *_vn;
-    vn_acquire(vn);
-    return NO_ERROR;
-}
-
-static mx_status_t vnb_close(vnode_t* vn) {
-    vn_release(vn);
-    return NO_ERROR;
-}
-
 static ssize_t vnb_read(vnode_t* vn, void* data, size_t len, size_t off) {
     vnboot_t* vnb = vn->pdata;
     if (off > vnb->datalen)
@@ -90,8 +79,8 @@ static mx_status_t vnb_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* i
 
 static vnode_ops_t vn_boot_ops = {
     .release = vnb_release,
-    .open = vnb_open,
-    .close = vnb_close,
+    .open = memfs_open,
+    .close = memfs_close,
     .read = vnb_read,
     .write = vnb_write,
     .lookup = memfs_lookup,

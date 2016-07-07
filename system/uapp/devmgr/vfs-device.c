@@ -39,17 +39,6 @@ static void vnd_release(vnode_t* vn) {
     free(vn);
 }
 
-static mx_status_t vnd_open(vnode_t** _vn, uint32_t flags) {
-    vnode_t* vn = *_vn;
-    vn_acquire(vn);
-    return NO_ERROR;
-}
-
-static mx_status_t vnd_close(vnode_t* vn) {
-    vn_release(vn);
-    return NO_ERROR;
-}
-
 static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
     mx_device_t* dev = vn->pdata;
     memset(attr, 0, sizeof(vnattr_t));
@@ -89,8 +78,8 @@ static mx_status_t vnd_unlink(vnode_t* vn, const char* name, size_t len) {
 
 static vnode_ops_t vn_device_ops = {
     .release = vnd_release,
-    .open = vnd_open,
-    .close = vnd_close,
+    .open = memfs_open,
+    .close = memfs_close,
     .read = memfs_read_none,
     .write = memfs_write_none,
     .lookup = memfs_lookup,

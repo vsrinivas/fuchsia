@@ -364,6 +364,11 @@ int _unlink(const char* path) {
     if (mxio_root_handle == NULL) {
         return ERRNO(EBADFD);
     }
+    if (path[0] == '/') {
+        path++;
+    } else {
+        return ERROR(ERR_NOT_FOUND);
+    }
 
     // split path from name
     const char* name = strrchr(path, '/');
@@ -399,6 +404,11 @@ int __libc_io_open(const char* path, int flags, ...) {
     if (path == NULL) {
         return ERRNO(EINVAL);
     }
+    if (path[0] == '/') {
+        path++;
+    } else {
+        return ERROR(ERR_NOT_FOUND);
+    }
     if (mxio_root_handle == NULL) {
         return ERRNO(EBADFD);
     }
@@ -430,6 +440,11 @@ int stat(const char* fn, struct stat* s) {
     mx_status_t r;
     if (fn == NULL) {
         return ERRNO(EINVAL);
+    }
+    if (fn[0] == '/') {
+        fn++;
+    } else {
+        return ERROR(ERR_NOT_FOUND);
     }
     if (mxio_root_handle == NULL) {
         return ERRNO(EBADFD);

@@ -72,19 +72,14 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out, const char* path, const char** 
     return ERR_NOT_FOUND;
 }
 
-mx_status_t vfs_open(vnode_t** out, const char* path, uint32_t flags) {
-    if ((out == NULL) || (path == NULL) || (path[0] != '/')) {
+static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags) {
+    if ((out == NULL) || (path == NULL) || (path[0] == '/') || (path[0] == 0)) {
         return ERR_INVALID_ARGS;
     }
-    if (path[1] == 0) {
-        // fake open of root
-        vn_acquire(vfs_root);
-        *out = vfs_root;
-        return NO_ERROR;
-    }
+    xprintf("vfs_open: path='%s' flags=%d\n", path, flags);
     vnode_t* vn;
     mx_status_t r;
-    if ((r = vfs_walk(vfs_root, &vn, path + 1, NULL)) < 0) {
+    if ((r = vfs_walk(vndir, &vn, path, NULL)) < 0) {
         return r;
     }
     if ((r = vn->ops->open(&vn, flags)) < 0) {
@@ -95,18 +90,15 @@ mx_status_t vfs_open(vnode_t** out, const char* path, uint32_t flags) {
     return NO_ERROR;
 }
 
-mx_status_t vfs_create(vnode_t** out, const char* path, uint32_t flags, uint32_t mode) {
-    if ((out == NULL) || (path == NULL) || (path[0] != '/')) {
+static mx_status_t vfs_create(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags, uint32_t mode) {
+    if ((out == NULL) || (path == NULL) || (path[0] == '/') | (path[0] == 0)) {
         xprintf("vfs_create: bogus args\n");
         return ERR_INVALID_ARGS;
-    }
-    if (path[1] == 0) {
-        return ERR_NOT_ALLOWED;
     }
     xprintf("vfs_create: path='%s' flags=%d mode=%d\n", path, flags, mode);
     vnode_t* vn;
     mx_status_t r;
-    if ((r = vfs_walk(vfs_root, &vn, path + 1, &path)) < 0) {
+    if ((r = vfs_walk(vfs_root, &vn, path, &path)) < 0) {
         xprintf("vfs_create: walk r=%d\n", r);
         return r;
     }
@@ -147,10 +139,15 @@ mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
     mx_status_t r;
     vnode_t* vn;
 
+    if ((path == NULL) || (path[0] != '/')) {
+        return ERR_INVALID_ARGS;
+    }
+    path++;
+
     if (flags & O_CREAT) {
         return ERR_NOT_SUPPORTED;
     }
-    if ((r = vfs_open(&vn, path, flags)) < 0) {
+    if ((r = vfs_open(vfs_root, &vn, path, flags)) < 0) {
         return r;
     }
     if ((r = vfs_get_handles(vn, hnds, ids)) < 0) {
@@ -163,65 +160,6 @@ mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
         ids[i] |= (arg & 0xFFFF) << 16;
     }
     return r;
-}
-
-// remoteio transport wrapper
-static mx_status_t root_handler(mx_rio_msg_t* msg, void* cookie) {
-    uint32_t len = msg->datalen;
-    int32_t arg = msg->arg;
-    mx_status_t r;
-    vnode_t* vn;
-
-    msg->datalen = 0;
-
-    for (unsigned i = 0; i < msg->hcount; i++) {
-        _magenta_handle_close(msg->handle[i]);
-    }
-
-    switch (MX_RIO_OP(msg->op)) {
-    case MX_RIO_OPEN: {
-        if ((len < 1) || (len > 1024)) {
-            return ERR_INVALID_ARGS;
-        }
-        msg->data[len] = 0;
-        xprintf("root: open name='%s' flags=%d mode=%lld\n", (const char*)msg->data, arg, msg->arg2.mode);
-        if (arg & O_CREAT) {
-            r = vfs_create(&vn, (const char*)msg->data, arg, msg->arg2.mode);
-        } else {
-            r = vfs_open(&vn, (const char*)msg->data, arg);
-        }
-        xprintf("root: open: r=%d\n", r);
-        if (r < 0) {
-            return r;
-        }
-        uint32_t ids[VFS_MAX_HANDLES];
-        if ((r = vfs_get_handles(vn, msg->handle, ids)) < 0) {
-            return r;
-        }
-
-        // drop the ref from open or create
-        // the backend behind get_handles holds the on-going ref
-        vn_release(vn);
-
-        // TODO: ensure this is always true:
-        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
-        msg->hcount = r;
-        xprintf("root: open: h=%x\n", msg->handle[0]);
-        return NO_ERROR;
-    }
-    case MX_RIO_CLONE:
-        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
-        msg->hcount = 1;
-        if ((msg->handle[0] = vfs_create_root_handle()) < 0) {
-            return msg->handle[0];
-        } else {
-            return NO_ERROR;
-        }
-    case MX_RIO_CLOSE:
-        return NO_ERROR;
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
 }
 
 typedef struct iostate iostate_t;
@@ -250,6 +188,39 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
     }
 
     switch (MX_RIO_OP(msg->op)) {
+    case MX_RIO_OPEN: {
+        if ((len < 1) || (len > 1024)) {
+            return ERR_INVALID_ARGS;
+        }
+        msg->data[len] = 0;
+        xprintf("vfs: open name='%s' flags=%d mode=%lld\n", (const char*)msg->data, arg, msg->arg2.mode);
+
+        mx_status_t r;
+        if (arg & O_CREAT) {
+            r = vfs_create(vn, &vn, (const char*)msg->data, arg, msg->arg2.mode);
+        } else {
+            r = vfs_open(vn, &vn, (const char*)msg->data, arg);
+        }
+        xprintf("vfs: open: r=%d\n", r);
+        if (r < 0) {
+            return r;
+        }
+        uint32_t ids[VFS_MAX_HANDLES];
+        if ((r = vfs_get_handles(vn, msg->handle, ids)) < 0) {
+            vn->ops->close(vn);
+            return r;
+        }
+
+        // drop the ref from open or create
+        // the backend behind get_handles holds the on-going ref
+        vn_release(vn);
+
+        // TODO: ensure this is always true:
+        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
+        msg->hcount = r;
+        xprintf("vfs: open: h=%x\n", msg->handle[0]);
+        return NO_ERROR;
+    }
     case MX_RIO_CLOSE:
         // this will drop the ref on the vn
         vn->ops->close(vn);
@@ -383,19 +354,6 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
 
 static mxio_dispatcher_t* vfs_dispatcher;
 
-mx_handle_t vfs_create_root_handle(void) {
-    mx_handle_t h0, h1;
-    mx_status_t r;
-    if ((h0 = _magenta_message_pipe_create(&h1)) < 0)
-        return h0;
-    if ((r = mxio_dispatcher_add(vfs_dispatcher, h0, root_handler, NULL))) {
-        _magenta_handle_close(h0);
-        _magenta_handle_close(h1);
-        return r;
-    }
-    return h1;
-}
-
 static volatile int vfs_txn = -1;
 static int vfs_txn_no = 0;
 
@@ -420,12 +378,7 @@ mx_handle_t vfs_create_handle(vnode_t* vn) {
         free(ios);
         return h0;
     }
-    if (vn->flags & V_FLAG_BLOCKING) {
-        r = mxio_handler_create(h0, vfs_handler, ios);
-    } else {
-        r = mxio_dispatcher_add(vfs_dispatcher, h0, vfs_handler, ios);
-    }
-    if (r < 0) {
+    if ((r = mxio_dispatcher_add(vfs_dispatcher, h0, vfs_handler, ios)) < 0) {
         _magenta_handle_close(h0);
         _magenta_handle_close(h1);
         free(ios);
@@ -434,6 +387,15 @@ mx_handle_t vfs_create_handle(vnode_t* vn) {
     // take a ref for the dispatcher
     vn_acquire(vn);
     return h1;
+}
+
+mx_handle_t vfs_create_root_handle(void) {
+    vnode_t* vn = vfs_root;
+    mx_status_t r;
+    if ((r = vfs_root->ops->open(&vn, O_DIRECTORY)) < 0) {
+        return r;
+    }
+    return vfs_create_handle(vfs_root);
 }
 
 static int vfs_watchdog(void* arg) {
