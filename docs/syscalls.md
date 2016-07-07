@@ -21,3 +21,11 @@
 + [futex_wait](syscalls/futex_wait.md)
 + [futex_wake](syscalls/futex_wake.md)
 + [futex_requeue](syscalls/futex_requeue.md)
+
+## IO Ports
+
++ [io_port_create](syscalls/io_port_create.md)
++ [io_port_queue](syscalls/io_port_queue.md)
++ [io_port_wait](syscalls/io_port_wait.md)
++ [io_port_bind](syscalls/io_port_bind.md)
+
