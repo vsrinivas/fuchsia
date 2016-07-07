@@ -16,6 +16,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/arena_tests.cpp \
     $(LOCAL_DIR)/auto_call_tests.cpp \
     $(LOCAL_DIR)/hash_tests.cpp \
+    $(LOCAL_DIR)/list_tests.cpp \
 
 include make/module.mk
 
