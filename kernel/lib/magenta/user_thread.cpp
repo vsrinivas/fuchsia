@@ -41,7 +41,7 @@ UserThread::~UserThread() {
     // join the LK thread before doing anything else to clean up LK state and ensure
     // the thread we're destroying has stopped.
     LTRACEF("joining LK thread to clean up state\n");
-    auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
+    __UNUSED auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
     LTRACEF("done joining LK thread\n");
     DEBUG_ASSERT_MSG(ret == NO_ERROR, "thread_join returned something other than NO_ERROR\n");
 
@@ -103,7 +103,7 @@ void UserThread::Start() {
 
     DEBUG_ASSERT(state_ == State::INITIALIZED);
 
-    auto ret = process_->AddThread(this);
+    __UNUSED auto ret = process_->AddThread(this);
 
     // XXX deal with this case differently
     DEBUG_ASSERT(ret == NO_ERROR);

@@ -43,7 +43,7 @@ static int dpc_thread(void *arg)
 {
     for (;;) {
         // wait for a dpc to fire
-        status_t err = event_wait(&dpc_event);
+        __UNUSED status_t err = event_wait(&dpc_event);
         DEBUG_ASSERT(err == NO_ERROR);
 
         spin_lock_saved_state_t state;
