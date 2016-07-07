@@ -44,7 +44,7 @@ bool handle_info_test(void) {
               event, MX_INFO_HANDLE_VALID, NULL, 0u),
           ERR_BAD_HANDLE, "handle should be valid");
 
-    handle_basic_info_t info = {0};
+    mx_handle_basic_info_t info = {0};
     CHECK(_magenta_handle_get_info(
               duped, MX_INFO_HANDLE_BASIC, &info, 4u),
           ERR_NOT_ENOUGH_BUFFER, "bad struct size validation");
@@ -75,7 +75,7 @@ bool handle_rights_test(void) {
     mx_handle_t event = _magenta_event_create(0u);
     mx_handle_t duped_ro = _magenta_handle_duplicate(event, MX_RIGHT_READ);
 
-    handle_basic_info_t info = {0};
+    mx_handle_basic_info_t info = {0};
     CHECK(_magenta_handle_get_info(
               duped_ro, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
           sizeof(info), "handle should be valid");

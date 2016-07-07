@@ -300,28 +300,53 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    if (topic == MX_INFO_HANDLE_VALID)
-        return NO_ERROR;
+    switch (topic) {
+        case MX_INFO_HANDLE_VALID:
+            return NO_ERROR;
+        case MX_INFO_HANDLE_BASIC: {
+            if (!_info)
+                return ERR_INVALID_ARGS;
 
-    if (topic == MX_INFO_HANDLE_BASIC) {
-        if (!_info)
+            if (info_size < sizeof(mx_handle_basic_info_t))
+                return ERR_NOT_ENOUGH_BUFFER;
+
+            mx_handle_basic_info_t info = {
+                rights,
+                dispatcher->GetType(),
+                dispatcher->get_waiter() ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
+            };
+
+            if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+
+            return sizeof(mx_handle_basic_info_t);
+        }
+        case MX_INFO_PROCESS: {
+            if (!_info)
+                return ERR_INVALID_ARGS;
+
+            if (info_size < sizeof(mx_process_info_t))
+                return ERR_NOT_ENOUGH_BUFFER;
+
+            auto process = dispatcher->get_process_dispatcher();
+            if (!process)
+                return ERR_BAD_HANDLE;
+
+            if (!magenta_rights_check(rights, MX_RIGHT_READ))
+                return ERR_ACCESS_DENIED;
+
+            mx_process_info_t info;
+            auto err = process->GetInfo(&info);
+            if (err != NO_ERROR)
+                return err;
+
+            if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+
+            return sizeof(mx_process_info_t);
+        }
+        default:
             return ERR_INVALID_ARGS;
-
-        if (info_size < sizeof(handle_basic_info_t))
-            return ERR_NOT_ENOUGH_BUFFER;
-
-        handle_basic_info_t info = {
-            rights,
-            dispatcher->GetType(),
-            dispatcher->get_waiter() ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
-        };
-
-        if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-
-        return sizeof(handle_basic_info_t);
-    } else {
-        return ERR_INVALID_ARGS;
     }
 }
 
@@ -689,33 +714,6 @@ mx_status_t sys_process_start(mx_handle_t handle_value, mx_handle_t arg_handle_v
     mx_handle_t arg_nhv = process->AddHandle(utils::move(arg_handle));
 
     return process->Start(arg_nhv, entry);
-}
-
-mx_status_t sys_process_get_info(mx_handle_t handle, mx_process_info_t* user_info, mx_size_t info_len) {
-    LTRACEF("handle %d, info %p, info_len %lu\n", handle, user_info, info_len);
-
-    mx_process_info_t info;
-
-    auto up = UserProcess::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
-
-    auto process = dispatcher->get_process_dispatcher();
-    if (!process)
-        return ERR_BAD_HANDLE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
-
-    status_t result = process->GetInfo(&info);
-    if (result != NO_ERROR)
-        return result;
-
-    size_t copy_len = MIN(info_len, sizeof(info));
-    return (copy_to_user(user_info, &info, copy_len) != NO_ERROR) ? ERR_INVALID_ARGS : 0;
 }
 
 mx_handle_t sys_event_create(uint32_t options) {

@@ -310,8 +310,6 @@ bool UserProcess::GetDispatcher(mx_handle_t handle_value, utils::RefPtr<Dispatch
 }
 
 status_t UserProcess::GetInfo(mx_process_info_t* info) {
-    info->len = sizeof(mx_process_info_t);
-
     info->return_code = retcode_;
 
     return NO_ERROR;

@@ -261,9 +261,11 @@ mojo_result_t mojo_process_join(mojo_handle_t handle, int* out_retcode) {
     // read the return code
     if (out_retcode) {
         mx_process_info_t proc_info;
-        r = _magenta_process_get_info(handle, &proc_info, sizeof(proc_info));
-        if (r != NO_ERROR)
+        mx_ssize_t info_status = _magenta_handle_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
+        if (info_status < NO_ERROR)
             return lk_to_mojo_error(r);
+        else if (info_status != sizeof(proc_info))
+            return MOJO_RESULT_INVALID_ARGUMENT;
 
         *out_retcode = proc_info.return_code;
     }

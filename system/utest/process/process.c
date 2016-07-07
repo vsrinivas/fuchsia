@@ -90,7 +90,13 @@ static mx_status_t my_close(mx_handle_t handle) {
 }
 
 static mx_status_t my_process_get_info(mx_handle_t handle, mx_process_info_t* info) {
-    return _magenta_process_get_info(handle, info, sizeof(*info));
+    mx_ssize_t ret = _magenta_handle_get_info(handle, MX_INFO_PROCESS, info, sizeof(*info));
+    if (ret < 0)
+        return ret;
+    else if (ret != sizeof(*info))
+        return ERR_INVALID_ARGS;
+    else
+        return NO_ERROR;
 }
 
 static bool wait_readable(mx_handle_t handle) {

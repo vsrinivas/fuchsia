@@ -102,16 +102,12 @@ typedef uint32_t mx_exception_status_t;
 #define MX_EXCEPTION_STATUS_NOT_HANDLED 0
 #define MX_EXCEPTION_STATUS_RESUME 1
 
-// information from process_get_info
-typedef struct mx_process_info {
-    mx_size_t len;
-
-    int return_code;
-} mx_process_info_t;
-
 // Valid topics for _magenta_handle_get_info.
-#define MX_INFO_HANDLE_VALID 0
-#define MX_INFO_HANDLE_BASIC 1
+typedef enum {
+    MX_INFO_HANDLE_VALID,
+    MX_INFO_HANDLE_BASIC,
+    MX_INFO_PROCESS,
+} mx_handle_info_topic_t;
 
 typedef enum {
     MX_OBJ_TYPE_NONE            = 0,
@@ -133,11 +129,17 @@ typedef enum {
     MX_OBJ_PROP_WAITABLE        = 1,
 } mx_obj_props_t;
 
-typedef struct handle_basic_info {
+// Returned for topic MX_INFO_HANDLE_BASIC
+typedef struct mx_handle_basic_info {
     mx_rights_t rights;
     uint32_t type;                // mx_obj_type_t;
     uint32_t props;               // mx_obj_props_t;
-} handle_basic_info_t;
+} mx_handle_basic_info_t;
+
+// Returned for topic MX_INFO_PROCESS
+typedef struct mx_process_info {
+    int return_code;
+} mx_process_info_t;
 
 // Info returned to dev manager for PCIe devices when probing.
 typedef struct mx_pcie_get_nth_info {

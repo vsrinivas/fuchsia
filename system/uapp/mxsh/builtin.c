@@ -307,11 +307,11 @@ static int mxc_runtests(int argc, char** argv) {
 
             // read the return code
             mx_process_info_t proc_info;
-            status = _magenta_process_get_info(handle, &proc_info, sizeof(proc_info));
+            mx_ssize_t info_status = _magenta_handle_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
             _magenta_handle_close(handle);
 
-            if (status != NO_ERROR) {
-                printf("FAILURE: Failed to get process return code %s: %d\n", de->name, status);
+            if (info_status != sizeof(proc_info)) {
+                printf("FAILURE: Failed to get process return code %s: %ld\n", de->name, info_status);
                 mxc_fail_test(&failures, de->name, FAILED_TO_RETURN_CODE, 0);
                 failed_count++;
                 continue;

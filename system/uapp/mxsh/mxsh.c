@@ -267,9 +267,9 @@ void joinproc(mx_handle_t p) {
 
     // read the return code
     mx_process_info_t proc_info;
-    r = _magenta_process_get_info(p, &proc_info, sizeof(proc_info));
-    if (r != NO_ERROR) {
-        printf("[process(%x): process_get_info failed? %d]\n", p, r);
+    mx_ssize_t ret = _magenta_handle_get_info(p, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
+    if (ret != sizeof(proc_info)) {
+        printf("[process(%x): handle_get_info failed? %ld]\n", p, ret);
     } else {
         printf("[process(%x): status: %d]\n", p, proc_info.return_code);
     }
