@@ -27,7 +27,7 @@ class LogDispatcher;
 class MessagePipeDispatcher;
 class PciInterruptDispatcher;
 class PciDeviceDispatcher;
-class ProcessOwnerDispatcher;
+class ProcessDispatcher;
 class ThreadDispatcher;
 class VmObjectDispatcher;
 class IoMappingDispatcher;
@@ -60,7 +60,7 @@ public:
         return nullptr;
     }
 
-    virtual ProcessOwnerDispatcher* get_process_owner_dispatcher() {
+    virtual ProcessDispatcher* get_process_dispatcher() {
         return nullptr;
     }
 

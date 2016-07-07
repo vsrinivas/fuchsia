@@ -18,16 +18,16 @@
 
 class UserProcess;
 
-class ProcessOwnerDispatcher : public Dispatcher {
+class ProcessDispatcher : public Dispatcher {
 public:
     static status_t Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights, utils::StringPiece name);
 
     // $$$ move to private?
-    explicit ProcessOwnerDispatcher(utils::RefPtr<UserProcess> process);
+    explicit ProcessDispatcher(utils::RefPtr<UserProcess> process);
 
-    virtual ~ProcessOwnerDispatcher() final;
+    virtual ~ProcessDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
-    ProcessOwnerDispatcher* get_process_owner_dispatcher() final { return this; }
+    ProcessDispatcher* get_process_dispatcher() final { return this; }
 
     Waiter* get_waiter() final;
     status_t Start(mx_handle_t handle, mx_vaddr_t pc_vaddr);

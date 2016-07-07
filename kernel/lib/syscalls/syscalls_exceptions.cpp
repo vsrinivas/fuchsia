@@ -14,7 +14,7 @@
 
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
-#include <magenta/process_owner_dispatcher.h>
+#include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_process.h>
@@ -86,7 +86,7 @@ mx_status_t sys_set_exception_handler(mx_handle_t object_handle,
         if (!magenta_rights_check(rights, MX_RIGHT_READ))
             return ERR_ACCESS_DENIED;
 
-        auto process = dispatcher->get_process_owner_dispatcher();
+        auto process = dispatcher->get_process_dispatcher();
         if (process)
             return process->SetExceptionHandler(utils::move(pipe_dispatcher), behaviour);
 

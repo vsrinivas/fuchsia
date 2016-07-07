@@ -20,7 +20,7 @@
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
-#include <magenta/process_owner_dispatcher.h>
+#include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_process.h>
@@ -654,7 +654,7 @@ mx_handle_t sys_process_create(const char* name, uint32_t name_len) {
 
     utils::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status_t res = ProcessOwnerDispatcher::Create(&dispatcher, &rights, sp);
+    status_t res = ProcessDispatcher::Create(&dispatcher, &rights, sp);
     if (res != NO_ERROR)
         return res;
 
@@ -678,7 +678,7 @@ mx_status_t sys_process_start(mx_handle_t handle_value, mx_handle_t arg_handle_v
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
         return ERR_INVALID_ARGS;
 
-    auto process = dispatcher->get_process_owner_dispatcher();
+    auto process = dispatcher->get_process_dispatcher();
     if (!process)
         return ERR_BAD_HANDLE;
 
@@ -703,7 +703,7 @@ mx_status_t sys_process_get_info(mx_handle_t handle, mx_process_info_t* user_inf
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_INVALID_ARGS;
 
-    auto process = dispatcher->get_process_owner_dispatcher();
+    auto process = dispatcher->get_process_dispatcher();
     if (!process)
         return ERR_BAD_HANDLE;
 
@@ -963,7 +963,7 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
         if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
             return ERR_INVALID_ARGS;
 
-        auto process = proc_dispatcher->get_process_owner_dispatcher();
+        auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
             return ERR_BAD_HANDLE;
 
@@ -1010,7 +1010,7 @@ mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_
         if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
             return ERR_INVALID_ARGS;
 
-        auto process = proc_dispatcher->get_process_owner_dispatcher();
+        auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
             return ERR_BAD_HANDLE;
 
