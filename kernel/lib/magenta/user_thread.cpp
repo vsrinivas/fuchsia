@@ -38,6 +38,8 @@ UserThread::~UserThread() {
     DEBUG_ASSERT_MSG(state_ == State::DEAD, "state is %s\n", StateToString(state_));
     DEBUG_ASSERT(&thread_ != get_current_thread());
 
+    // join the LK thread before doing anything else to clean up LK state and ensure
+    // the thread we're destroying has stopped.
     LTRACEF("joining LK thread to clean up state\n");
     auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
     LTRACEF("done joining LK thread\n");
@@ -138,6 +140,8 @@ void UserThread::Kill() {
 
     // see if we're already going down.
     // check these ahead of time in case we're recursing from inside an already exiting situation
+    // the recursion path is UserThread::Exiting -> UserProcess::RemoveThread -> clean up handle table ->
+    // UserThread::DispatcherClosed -> UserThread::Kill
     if (state_ == State::DYING || state_ == State::DEAD)
         return;
 
@@ -167,7 +171,6 @@ static void ThreadCleanupDpc(dpc_t *d) {
     DEBUG_ASSERT(t);
 
     delete t;
-    delete d;
 }
 
 void UserThread::Exiting() {
@@ -188,14 +191,21 @@ void UserThread::Exiting() {
 
     // drop LK's reference
     if (Release()) {
+
         // We're the last reference, so will need to destruct ourself while running, which is not possible
         // Use a dpc to pull this off
-        dpc_t *d = new dpc_t;
-        DEBUG_ASSERT(d);
+        cleanup_dpc_.func = ThreadCleanupDpc;
+        cleanup_dpc_.arg = this;
 
-        d->func = ThreadCleanupDpc;
-        d->arg = this;
-        dpc_queue(d, false);
+        // disable interrupts before queuing the dpc to prevent starving the DPC thread if it starts running
+        // before we're completed.
+        // disabling interrupts effectively raises us to maximum priority on this cpu.
+        // note this is only safe because we're about to exit the thread permanently so the context
+        // switch will effectively reenable interrupts in the new thread.
+        arch_disable_ints();
+
+        // queue without reschdule since us exiting is a reschedule event already
+        dpc_queue(&cleanup_dpc_, false);
     }
 
     // after this point the thread will stop permanently

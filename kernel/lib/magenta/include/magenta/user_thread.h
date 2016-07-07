@@ -10,7 +10,7 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
-#include <list.h>
+#include <lib/dpc.h>
 
 #include <magenta/dispatcher.h>
 #include <magenta/futex_node.h>
@@ -126,6 +126,9 @@ private:
     // our linked list members for the UserProcess list
     UserThread* prev_ = nullptr;
     UserThread* next_ = nullptr;
+
+    // cleanup dpc structure
+    dpc_t cleanup_dpc_ = {};
 
     // LK thread structure
     // put last to ease debugging since this is a pretty large structure
