@@ -125,3 +125,125 @@ func TestFuzz(t *testing.T) {
 		t.Error("Final byte slices differ")
 	}
 }
+
+// Don't even bother validating the device itself -- just ensure that the cache does not crash when
+// accessed concurrently.
+func TestConcurrencySimple(t *testing.T) {
+	c, _, _ := setUp(t)
+
+	writer := func(chanEnd chan bool) {
+		seed := time.Now().UTC().UnixNano()
+		r := rand.New(rand.NewSource(seed))
+
+		for i := 0; i < numIterations; i++ {
+			// Write random bytes to an offset.
+			off := r.Int63n(deviceSize)
+			p := make([]byte, r.Int63n(min(maxWriteSize, deviceSize-off)))
+			r.Read(p)
+			if _, err := c.WriteAt(p, off); err != nil {
+				t.Errorf("Error writing %v bytes to offset %#x: %v\n", len(p), off, err)
+			}
+		}
+		chanEnd <- true
+	}
+
+	reader := func(chanEnd chan bool) {
+		seed := time.Now().UTC().UnixNano()
+		r := rand.New(rand.NewSource(seed))
+
+		for i := 0; i < numIterations; i++ {
+			// Read random bytes from an offset (don't bother verifying the read).
+			off := r.Int63n(deviceSize)
+			p := make([]byte, r.Int63n(min(maxWriteSize, deviceSize-off)))
+
+			if _, err := c.ReadAt(p, off); err != nil {
+				t.Errorf("Error reading %v bytes from offset %#x: %v\n", len(p), off, err)
+			}
+		}
+		chanEnd <- true
+	}
+
+	chanEnd := make(chan bool)
+	numWriters := 3
+	numReaders := 3
+
+	for i := 0; i < numWriters; i++ {
+		go writer(chanEnd)
+	}
+	for i := 0; i < numReaders; i++ {
+		go reader(chanEnd)
+	}
+
+	// Wait for everyone to finish
+	for i := 0; i < numWriters+numReaders; i++ {
+		<-chanEnd
+	}
+
+	if err := c.Flush(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Serialize all writes, but use multiple concurrent readers.
+func TestConcurrencyOneWriterMultipleReaders(t *testing.T) {
+	c, dev, _ := setUp(t)
+	checker := make([]byte, deviceSize)
+	copy(checker, dev)
+	writer := func(chanEnd chan bool) {
+		seed := time.Now().UTC().UnixNano()
+		r := rand.New(rand.NewSource(seed))
+
+		for i := 0; i < numIterations; i++ {
+			// Write random bytes to an offset.
+			off := r.Int63n(deviceSize)
+			p := make([]byte, r.Int63n(min(maxWriteSize, deviceSize-off)))
+			r.Read(p)
+			copy(checker[off:], p)
+			if _, err := c.WriteAt(p, off); err != nil {
+				t.Errorf("Error writing %v bytes to offset %#x: %v\n", len(p), off, err)
+			}
+		}
+		chanEnd <- true
+	}
+
+	reader := func(chanEnd chan bool) {
+		seed := time.Now().UTC().UnixNano()
+		r := rand.New(rand.NewSource(seed))
+
+		for i := 0; i < numIterations; i++ {
+			// Read random bytes from an offset (don't bother verifying the read).
+			off := r.Int63n(deviceSize)
+			p := make([]byte, r.Int63n(min(maxWriteSize, deviceSize-off)))
+
+			if _, err := c.ReadAt(p, off); err != nil {
+				t.Errorf("Error reading %v bytes from offset %#x: %v\n", len(p), off, err)
+			}
+		}
+		chanEnd <- true
+	}
+
+	chanEnd := make(chan bool)
+	numWriters := 1
+	numReaders := 3
+
+	for i := 0; i < numWriters; i++ {
+		go writer(chanEnd)
+	}
+	for i := 0; i < numReaders; i++ {
+		go reader(chanEnd)
+	}
+
+	// Wait for everyone to finish
+	for i := 0; i < numWriters+numReaders; i++ {
+		<-chanEnd
+	}
+
+	if err := c.Flush(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Validate the serialized writes were not altered by the reads in any way.
+	if !bytes.Equal(dev, checker) {
+		t.Error("Final byte slices differ")
+	}
+}

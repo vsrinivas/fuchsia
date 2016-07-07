@@ -18,6 +18,7 @@ package thinio
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"fuchsia.googlesource.com/thinfs/lib/block"
@@ -173,6 +174,8 @@ func (d *device) Close() {
 // Conductor orchestrates all I/O operations on a block.Device, maintaining an internal cache
 // of disk blocks for better performance
 type Conductor struct {
+	// TODO(smklein): This lock is too coarse-grained and prevents parallel access to the device.
+	mu    sync.Mutex
 	dev   *device
 	cache *cache.C
 	errs  []error // TODO(chirantan): recover from error?
@@ -207,6 +210,8 @@ func (c *Conductor) DeviceSize() int64 {
 
 // ReadAt implements io.ReaderAt for Conductor.
 func (c *Conductor) ReadAt(p []byte, off int64) (int, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if len(c.errs) > 0 {
 		return 0, c.errs[0]
 	}
@@ -250,6 +255,8 @@ func (c *Conductor) ReadAt(p []byte, off int64) (int, error) {
 
 // WriteAt implements io.WriterAt for Conductor.
 func (c *Conductor) WriteAt(p []byte, off int64) (int, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if len(c.errs) > 0 {
 		return 0, c.errs[0]
 	}
@@ -310,6 +317,8 @@ func (c *Conductor) WriteAt(p []byte, off int64) (int, error) {
 
 // Discard discards the data in the address range [off, off+size).  Returns an error, if any.
 func (c *Conductor) Discard(off, size int64) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if len(c.errs) > 0 {
 		return c.errs[0]
 	}
@@ -326,6 +335,8 @@ func (c *Conductor) Discard(off, size int64) error {
 // block.Device.  Flush does not return until all previous writes are committed to stable
 // storage. Returns an error, if any.
 func (c *Conductor) Flush() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if len(c.errs) > 0 {
 		return c.errs[0]
 	}
@@ -352,6 +363,8 @@ func (c *Conductor) Flush() error {
 // Callers must call Flush before calling Close to ensure that all pending changes have been
 // flushed to stable storage.
 func (c *Conductor) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if len(c.errs) > 0 {
 		return c.errs[0]
 	}
@@ -371,5 +384,7 @@ func (c *Conductor) Close() error {
 // operation, if any.  Callers must not modify the returned slice, which is invalidated
 // if any other method is invoked on c.
 func (c *Conductor) Errors() []error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	return c.errs
 }
