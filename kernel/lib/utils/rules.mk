@@ -15,6 +15,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/arena.cpp \
     $(LOCAL_DIR)/arena_tests.cpp \
     $(LOCAL_DIR)/auto_call_tests.cpp \
+    $(LOCAL_DIR)/fifo_buffer_tests.cpp \
     $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/hash_tests.cpp \
     $(LOCAL_DIR)/list_tests.cpp \

@@ -7,18 +7,17 @@
 #include <unittest.h>
 #include <utils/fifo_buffer.h>
 
-
 namespace {
 
 struct Packet {
-  int val;
-  char name[16];
+    int val;
+    char name[16];
 
-  Packet() : val(-1), name{"abc"} {}
+    Packet()
+        : val(-1), name{"abc"} {}
 };
 
-bool fifo_basic(void)
-{
+static bool fifo_basic(void* context) {
     BEGIN_TEST;
 
     utils::FifoBuffer<Packet> fifo;
@@ -59,7 +58,7 @@ bool fifo_basic(void)
     EXPECT_EQ(16, fifo.peek_head()->val, "peek failed");
 
     loops = 0;
-    while(!fifo.is_empty()) {
+    while (!fifo.is_empty()) {
         ++loops;
         p = fifo.pop_head();
     }
@@ -70,10 +69,8 @@ bool fifo_basic(void)
 
     END_TEST;
 }
+} // namespace
 
-}  // namespace
-
-
-BEGIN_TEST_CASE(fifo_buffer_tests);
-RUN_TEST(fifo_basic);
-END_TEST_CASE(fifo_buffer_tests);
+STATIC_UNITTEST_START_TESTCASE(fifo_buffer_tests)
+STATIC_UNITTEST("FIFO basic", fifo_basic)
+STATIC_UNITTEST_END_TESTCASE(fifo_buffer_tests, "fifotests", "FIFO Buffer Tests", NULL, NULL);
