@@ -11,30 +11,30 @@
 
 enum Category { CAT_LVALUE, CAT_RVALUE };
 
-int category(const int& arg) { return CAT_LVALUE; }
+static int category(const int& arg) { return CAT_LVALUE; }
 
-int category(int&& arg) { return CAT_RVALUE; }
+static int category(int&& arg) { return CAT_RVALUE; }
 
 template <typename T>
-int passing(T&& t)
+static int passing(T&& t)
 {
     return category(t);
 }
 
 template <typename T>
-int moving(T&& t)
+static int moving(T&& t)
 {
     return category(utils::move(t));
 }
 
 template <typename T>
-int forwarding(T&& t)
+static int forwarding(T&& t)
 {
     return category(utils::forward<T>(t));
 }
 
 template <typename T>
-int forward_copy(T&& t)
+static int forward_copy(T&& t)
 {
     return category(utils::forward<T&>(t));
 }
@@ -46,15 +46,14 @@ struct A {
 };
 
 template <typename T, typename U>
-T make_object(U&& u)
+static T make_object(U&& u)
 {
     return T(utils::forward<U>(u));
 }
 
-extern "C" int forward_tests(int argc, const cmd_args* argv)
+static bool forward_test(void* context)
 {
-    bool all_ok = true;
-
+    BEGIN_TEST;
     int val = 42;
     int& ref = val;
     const int& cref = val;
@@ -89,6 +88,9 @@ extern "C" int forward_tests(int argc, const cmd_args* argv)
     EXPECT_EQ(CAT_RVALUE, a1.category, "");
     EXPECT_EQ(CAT_LVALUE, a2.category, "");
 
-    if (all_ok) printf("all tests passed\n");
-    return 0;
+    END_TEST;
 }
+
+STATIC_UNITTEST_START_TESTCASE(forward_tests)
+STATIC_UNITTEST("Forward test", forward_test)
+STATIC_UNITTEST_END_TESTCASE(forward_tests, "forwardtests", "Forward Tests", NULL, NULL);

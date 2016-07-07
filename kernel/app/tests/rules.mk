@@ -17,7 +17,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/float.c \
     $(LOCAL_DIR)/float_instructions.S \
     $(LOCAL_DIR)/float_test_vec.c \
-    $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/mem_tests.c \
     $(LOCAL_DIR)/port_tests.c \
     $(LOCAL_DIR)/printf_tests.c \
