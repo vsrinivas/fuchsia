@@ -601,10 +601,19 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
         UINT32 InterruptLevel,
         ACPI_OSD_HANDLER Handler,
         void *Context) {
-    // Note that InterruptLevel here is Global IRQ, not system exceptions
-    // TODO: Clean this up to be less x86 centric.  Ideally we want an interface
-    // that will let us install a handler for a Global IRQ and abstract away the
-    // details of what interrupt vector was picked
+    // Note that InterruptLevel here is ISA IRQs (or global of the legacy PIC
+    // does't exist), not system exceptions.
+
+    // TODO: Clean this up to be less x86 centric.
+
+    if (InterruptLevel == 0) {
+        /* Some buggy firmware fails to populate the SCI_INT field of the FADT
+         * properly.  0 is a known bad value, since the legacy PIT uses it and
+         * cannot be remapped.  Just lie and say we installed a handler; this
+         * system will just never receive an SCI.  If we return an error here,
+         * ACPI init will fail completely, and the system will be unusable. */
+        return AE_OK;
+    }
 
     ASSERT(InterruptLevel == 0x9); // SCI
     apic_io_configure_isa_irq(
