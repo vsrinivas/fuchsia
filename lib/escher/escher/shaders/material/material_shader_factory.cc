@@ -13,8 +13,10 @@ MaterialShaderFactory::~MaterialShaderFactory() {}
 const MaterialShader* MaterialShaderFactory::GetShader(
     const Material& material,
     const Modifier& modifier) {
-  MaterialShaderDescriptor descriptor(
-      material.color().type(), material.displacement().type(), modifier.mask());
+  MaterialShaderDescriptor descriptor(material.color().type(),
+                                      material.displacement().type(),
+                                      modifier.mask(),
+                                      material.has_texture());
 
   auto it = shaders_.find(descriptor);
   if (it == shaders_.end()) {

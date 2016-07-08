@@ -56,6 +56,8 @@ class MaterialShader {
   // Attributes.
   GLint position_ = -1;
   GLint uv_ = -1;
+  GLint texture_ = -1;
+  GLint texture_matrix_ = -1;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MaterialShader);
 };

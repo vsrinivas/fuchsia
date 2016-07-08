@@ -4,8 +4,9 @@
 
 #include "examples/waterfall/scenes/app_test_scene.h"
 
-#include "ftl/arraysize.h"
+#include "escher/gl/bindings.h"
 #include "escher/renderer.h"
+#include "ftl/arraysize.h"
 
 namespace {
 
@@ -24,9 +25,32 @@ AppTestScene::AppTestScene() {
       escher::MakeConstantBinding(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)));
   green_material_.set_color(
       escher::MakeConstantBinding(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)));
+  // Rotate by 10 degrees and scale by 2.
+  constexpr double angle = 3.14159265359 / 18;
+  const float c = 2 * cos(angle);
+  const float s = 2 * sin(angle);
+  checkerboard_material_.set_texture_matrix(
+      escher::MakeConstantBinding(
+          glm::mat2(glm::vec2(c, -s), glm::vec2(s, c))));
 }
 
 AppTestScene::~AppTestScene() {}
+
+void AppTestScene::InitGL() {
+  // Generate RGB texture containing 2x2 checkerboard.
+  constexpr GLubyte checkerboard[] =
+      {255, 255, 255, 255, 0, 0, 0, 255,
+       0, 0, 0, 255, 255, 255, 255, 255};
+  GLuint texture = 0;
+  glGenTextures(1, &texture);
+  FTL_DCHECK(texture != 0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+      &(checkerboard[0]));
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  checkerboard_material_.set_texture(texture);
+}
 
 escher::Model AppTestScene::GetModel(const escher::ViewingVolume& volume,
                                      const glm::vec2& focus) {
@@ -62,6 +86,12 @@ escher::Model AppTestScene::GetModel(const escher::ViewingVolume& volume,
       escher::Shape::CreateRect(glm::vec2(200.0f, 180.0f),
                                 glm::vec2(60.0f, 40.0f), 16.0f),
       &green_material_);
+
+  // third eye
+  objects.emplace_back(
+      escher::Shape::CreateRect(glm::vec2(300.0f, 180.0f),
+                                glm::vec2(60.0f, 40.0f), 16.0f),
+      &checkerboard_material_);
 
   // null
   objects.emplace_back(escher::Shape::CreateRect(glm::vec2(20.0f, 290.0f),

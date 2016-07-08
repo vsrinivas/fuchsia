@@ -56,12 +56,19 @@ void ModelRenderer::DrawContext::DrawObject(const Object& object) {
 
 void ModelRenderer::DrawContext::DrawRect(const Object& object) {
   Modifier modifier;
-  BindMaterial(*object.material(), modifier);
+  const Material& material = *object.material();
+  BindMaterial(material, modifier);
 
   Quad quad = Quad::CreateFromRect(object.shape().position(),
                                    object.shape().size(), object.shape().z());
   glVertexAttribPointer(shader_->position(), 3, GL_FLOAT, GL_FALSE, 0,
                         quad.data());
+
+  if (material.has_texture()) {
+    constexpr GLfloat uv[] = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
+    glVertexAttribPointer(shader_->uv(), 2, GL_FLOAT, GL_FALSE, 0, uv);
+  }
+
   glDrawElements(GL_TRIANGLES, Quad::GetIndexCount(), GL_UNSIGNED_SHORT,
                  Quad::GetIndices());
 }

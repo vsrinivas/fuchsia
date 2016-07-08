@@ -23,7 +23,7 @@ constexpr char g_decls[] = R"GLSL(
   #define HAS_MASK (MASK != MASK_NONE)
   #define HAS_DISPLACEMENT (DISPLACEMENT != DISPLACEMENT_NONE)
 
-  #define NEEDS_UV (HAS_MASK || HAS_DISPLACEMENT)
+  #define NEEDS_UV (HAS_MASK || HAS_DISPLACEMENT || HAS_TEXTURE)
   #define NEEDS_DEPTH HAS_DISPLACEMENT
 )GLSL";
 
@@ -57,7 +57,14 @@ constexpr char g_fragment_shader[] = R"GLSL(
   varying vec2 v_uv;
 #endif
 
-#if COLOR_BINDING == BINDING_NONE
+#if HAS_TEXTURE
+  uniform sampler2D u_texture;
+  // TODO(jjosh): more efficiently done in vertex shader?
+  uniform vec4 u_texture_matrix;
+  vec4 color() {
+    return texture2D(u_texture, mat2(u_texture_matrix) * v_uv);
+  }
+#elif COLOR_BINDING == BINDING_NONE
   vec4 color() {
     return vec4(0.0, 0.0, 0.0, 1.0); // should alpha be 0?
   }
@@ -136,8 +143,8 @@ void DefineMaskSymbol(GLSLGenerator& generator, Modifier::Mask mask) {
   }
 }
 
-void DefineDislacementSymbol(GLSLGenerator& generator,
-                             Displacement::Type displacement) {
+void DefineDisplacementSymbol(GLSLGenerator& generator,
+                              Displacement::Type displacement) {
   switch (displacement) {
     case Displacement::Type::kNone:
       generator.DefineSymbol("DISPLACEMENT", "DISPLACEMENT_NONE");
@@ -146,6 +153,10 @@ void DefineDislacementSymbol(GLSLGenerator& generator,
       generator.DefineSymbol("DISPLACEMENT", "DISPLACEMENT_WAVE");
       break;
   }
+}
+
+void DefineTextureSymbol(GLSLGenerator& generator, bool has_texture) {
+  generator.DefineSymbol("HAS_TEXTURE", has_texture ? "1" : "0");
 }
 
 }  // namespace
@@ -172,6 +183,14 @@ void MaterialShader::Bind(const Stage& stage,
     glUniform4fv(color_, 1, &color[0]);
   }
 
+  FTL_DCHECK(material.has_texture() == descriptor_.has_texture);
+  if (material.has_texture()) {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, material.texture());
+    const glm::mat2& texture_matrix = material.texture_matrix().constant_value();
+    glUniform4fv(texture_matrix_, 1, &texture_matrix[0][0]);
+  }
+
   if (material.displacement().type() == Displacement::Type::kWave) {
     auto& displacement = material.displacement();
     glm::vec2 wavevector = displacement.end() - displacement.start();
@@ -191,7 +210,8 @@ void MaterialShader::Bind(const Stage& stage,
 
 bool MaterialShader::NeedsUV() const {
   return descriptor_.displacement != Displacement::Type::kNone ||
-         descriptor_.mask != Modifier::Mask::kNone;
+         descriptor_.mask != Modifier::Mask::kNone ||
+         descriptor_.has_texture;
 }
 
 bool MaterialShader::Compile() {
@@ -229,6 +249,13 @@ bool MaterialShader::Compile() {
     FTL_DCHECK(displacement_params1_ != -1);
   }
 
+  if (descriptor_.has_texture) {
+    texture_ = glGetUniformLocation(program_.id(), "u_texture");
+    texture_matrix_ = glGetUniformLocation(program_.id(), "u_texture_matrix");
+    FTL_DCHECK(texture_ != -1);
+    FTL_DCHECK(texture_matrix_ != -1);
+  }
+
   position_ = glGetAttribLocation(program_.id(), "a_position");
   FTL_DCHECK(position_ != -1);
 
@@ -243,8 +270,10 @@ std::string MaterialShader::GeneratePrologue() {
   GLSLGenerator generator;
   DefineBindingSymbol(generator, "COLOR_BINDING",
                       descriptor_.color_binding_type);
-  DefineDislacementSymbol(generator, descriptor_.displacement);
+  DefineDisplacementSymbol(generator, descriptor_.displacement);
   DefineMaskSymbol(generator, descriptor_.mask);
+  DefineTextureSymbol(generator, descriptor_.has_texture);
+
   return generator.GenerateCode();
 }
 

@@ -42,6 +42,7 @@ constexpr bool kDrawShadowTestScene = false;
 
   [EAGLContext setCurrentContext:self.context];
 
+  app_test_scene_.InitGL();
   InitStageForMaterial(&stage_);
   renderer_.reset(new escher::Renderer());
 

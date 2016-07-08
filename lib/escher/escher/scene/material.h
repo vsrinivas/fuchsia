@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
+#include <glm/mat2x2.hpp>
+#include <glm/vec4.hpp>
 
+#include "escher/gl/bindings.h"
 #include "escher/scene/binding.h"
 #include "escher/scene/displacement.h"
 
@@ -31,10 +33,23 @@ class Material {
   }
   const Displacement& displacement() const { return displacement_; }
 
+  void set_texture(GLuint texture) {
+    texture_ = texture;
+  }
+  GLuint texture() const { return texture_; }
+  bool has_texture() const { return texture_ != 0; }
+
+  void set_texture_matrix(const Binding<glm::mat2>& texture_matrix) {
+    texture_matrix_ = texture_matrix;
+  }
+  const Binding<glm::mat2>& texture_matrix() const { return texture_matrix_; }
+
   // TODO(jeffbrown): Normals.
 
  private:
   Binding<glm::vec4> color_;
+  GLuint texture_ = 0;
+  Binding<glm::mat2> texture_matrix_;
   Displacement displacement_;
 };
 

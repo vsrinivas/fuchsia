@@ -18,7 +18,8 @@ struct MaterialShaderDescriptor {
 
   MaterialShaderDescriptor(BindingType color_binding_type,
                            Displacement::Type displacement,
-                           Modifier::Mask mask);
+                           Modifier::Mask mask,
+                           bool has_texture);
   ~MaterialShaderDescriptor();
 
   bool operator==(const MaterialShaderDescriptor& other) const;
@@ -27,6 +28,7 @@ struct MaterialShaderDescriptor {
   BindingType color_binding_type;
   Displacement::Type displacement;
   Modifier::Mask mask;
+  bool has_texture;
 };
 
 struct MaterialShaderDescriptor::Hash {

@@ -13,6 +13,9 @@ class AppTestScene {
   AppTestScene();
   ~AppTestScene();
 
+  // Initialize once OpenGL context is available.
+  void InitGL();
+
   escher::Model GetModel(const escher::ViewingVolume& volume,
                          const glm::vec2& focus);
 
@@ -22,6 +25,7 @@ class AppTestScene {
   escher::Material card_material_;
   escher::Material fab_material_;
   escher::Material green_material_;
+  escher::Material checkerboard_material_;
   escher::Material null_material_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AppTestScene);

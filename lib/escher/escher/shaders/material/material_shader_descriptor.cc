@@ -9,21 +9,25 @@ namespace escher {
 MaterialShaderDescriptor::MaterialShaderDescriptor(
     BindingType color_binding_type,
     Displacement::Type displacement,
-    Modifier::Mask mask)
+    Modifier::Mask mask,
+    bool has_texture)
     : color_binding_type(color_binding_type),
       displacement(displacement),
-      mask(mask) {}
+      mask(mask),
+      has_texture(has_texture) {}
 
 MaterialShaderDescriptor::~MaterialShaderDescriptor() {}
 
 bool MaterialShaderDescriptor::operator==(
     const MaterialShaderDescriptor& other) const {
-  return color_binding_type == other.color_binding_type &&
+  return has_texture == other.has_texture &&
+         color_binding_type == other.color_binding_type &&
          displacement == other.displacement && mask == other.mask;
 }
 
 size_t MaterialShaderDescriptor::GetHashCode() const {
-  return static_cast<int>(color_binding_type) * 37 +
+  return (has_texture ? 1 : 0) +
+         static_cast<int>(color_binding_type) * 37 +
          static_cast<int>(displacement) * 37 * 37 + static_cast<int>(mask);
 }
 
