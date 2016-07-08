@@ -272,7 +272,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/exit/quick_exit.c \
     $(LOCAL_DIR)/src/fcntl/creat.c \
     $(LOCAL_DIR)/src/fcntl/fcntl.c \
-    $(LOCAL_DIR)/src/fcntl/open.c \
     $(LOCAL_DIR)/src/fcntl/openat.c \
     $(LOCAL_DIR)/src/fcntl/posix_fadvise.c \
     $(LOCAL_DIR)/src/fcntl/posix_fallocate.c \
@@ -1001,9 +1000,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/access.c \
     $(LOCAL_DIR)/src/unistd/acct.c \
     $(LOCAL_DIR)/src/unistd/alarm.c \
-    $(LOCAL_DIR)/src/unistd/chdir.c \
     $(LOCAL_DIR)/src/unistd/chown.c \
-    $(LOCAL_DIR)/src/unistd/close.c \
     $(LOCAL_DIR)/src/unistd/ctermid.c \
     $(LOCAL_DIR)/src/unistd/dup.c \
     $(LOCAL_DIR)/src/unistd/dup2.c \
@@ -1043,9 +1040,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/pwritev.c \
     $(LOCAL_DIR)/src/unistd/readlink.c \
     $(LOCAL_DIR)/src/unistd/readlinkat.c \
-    $(LOCAL_DIR)/src/unistd/readv.c \
     $(LOCAL_DIR)/src/unistd/renameat.c \
-    $(LOCAL_DIR)/src/unistd/rmdir.c \
     $(LOCAL_DIR)/src/unistd/setegid.c \
     $(LOCAL_DIR)/src/unistd/seteuid.c \
     $(LOCAL_DIR)/src/unistd/setgid.c \
@@ -1068,10 +1063,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/ttyname.c \
     $(LOCAL_DIR)/src/unistd/ttyname_r.c \
     $(LOCAL_DIR)/src/unistd/ualarm.c \
-    $(LOCAL_DIR)/src/unistd/unlink.c \
-    $(LOCAL_DIR)/src/unistd/unlinkat.c \
     $(LOCAL_DIR)/src/unistd/usleep.c \
-    $(LOCAL_DIR)/src/unistd/writev.c \
     $(LOCAL_DIR)/third_party/complex/__cexp.c \
     $(LOCAL_DIR)/third_party/complex/__cexpf.c \
     $(LOCAL_DIR)/third_party/complex/catan.c \

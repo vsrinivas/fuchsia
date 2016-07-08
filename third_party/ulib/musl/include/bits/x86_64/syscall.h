@@ -9,8 +9,6 @@
 #define SYS_ioctl 16
 #define SYS_pread64 17
 #define SYS_pwrite64 18
-#define SYS_readv 19
-#define SYS_writev 20
 #define SYS_msync 26
 #define SYS_mincore 27
 #define SYS_madvise 28

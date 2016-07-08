@@ -371,11 +371,9 @@ static inline int ERRNO(int e) {
 }
 
 // The functions from here on provide implementations of fd and path
-// centric posix-y io operations (eg, their method signatures match
-// the standard headers even if the names are sometimes prefixed by
-// __libc_io_ for plumbing purposes.
+// centric posix-y io operations.
 
-int __libc_io_readv(int fd, const struct iovec* iov, int num) {
+ssize_t readv(int fd, const struct iovec* iov, int num) {
     ssize_t count = 0;
     ssize_t r;
     while (num > 0) {
@@ -395,7 +393,7 @@ int __libc_io_readv(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
-int __libc_io_writev(int fd, const struct iovec* iov, int num) {
+ssize_t writev(int fd, const struct iovec* iov, int num) {
     ssize_t count = 0;
     ssize_t r;
     while (num > 0) {
@@ -415,15 +413,11 @@ int __libc_io_writev(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
-int __libc_io_rmdir(const char* path) {
+int rmdir(const char* path) {
     return ERROR(ERR_NOT_SUPPORTED);
 }
 
-int __libc_io_unlink(const char* path) {
-    return ERROR(ERR_NOT_SUPPORTED);
-}
-
-int __libc_io_unlinkat(int fd, const char* path, int flag) {
+int unlinkat(int fd, const char* path, int flag) {
     return ERROR(ERR_NOT_SUPPORTED);
 }
 
@@ -441,7 +435,7 @@ ssize_t read(int fd, void* buf, size_t count) {
     return r;
 }
 
-ssize_t __libc_io_write(int fd, const void* buf, size_t count) {
+ssize_t write(int fd, const void* buf, size_t count) {
     if (buf == NULL) {
         return ERRNO(EINVAL);
     }
@@ -455,11 +449,7 @@ ssize_t __libc_io_write(int fd, const void* buf, size_t count) {
     return r;
 }
 
-ssize_t write(int fd, const void* data, size_t len) {
-    return __libc_io_write(fd, data, len);
-}
-
-int __libc_io_close(int fd) {
+int close(int fd) {
     mxr_mutex_lock(&mxio_lock);
     if ((fd < 0) || (fd >= MAX_MXIO_FD) || (mxio_fdtab[fd] == NULL)) {
         mxr_mutex_unlock(&mxio_lock);
@@ -496,7 +486,7 @@ static int getdirents(int fd, void* ptr, size_t len) {
     return r;
 }
 
-int _unlink(const char* path) {
+int unlink(const char* path) {
     const char* name;
     mxio_t* io;
     mx_status_t r;
@@ -509,7 +499,7 @@ int _unlink(const char* path) {
     return STATUS(r);
 }
 
-int __libc_io_open(const char* path, int flags, ...) {
+int open(const char* path, int flags, ...) {
     mxio_t* io = NULL;
     mx_status_t r;
     int fd;
@@ -572,8 +562,7 @@ int pipe(int pipefd[2]) {
     return 0;
 }
 
-
-int _chdir(const char* path) {
+int chdir(const char* path) {
     mxio_t* io;
     mx_status_t r;
     if ((r = __mxio_open(&io, path, O_DIRECTORY)) < 0) {
@@ -606,7 +595,7 @@ DIR* opendir(const char* name) {
     }
     dir->lock = MXR_MUTEX_INIT;
     dir->size = 0;
-    if ((dir->fd = __libc_io_open(name, O_DIRECTORY)) < 0) {
+    if ((dir->fd = open(name, O_DIRECTORY)) < 0) {
         free(dir);
         return NULL;
     }

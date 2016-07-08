@@ -53,8 +53,6 @@
 #define SYS_fchdir 133
 #define SYS_flock 143
 #define SYS_msync 144
-#define SYS_readv 145
-#define SYS_writev 146
 #define SYS_getsid 147
 #define SYS_fdatasync 148
 #define SYS_mlock 150

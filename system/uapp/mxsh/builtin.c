@@ -74,13 +74,11 @@ static int mxc_echo(int argc, char** argv) {
     return 0;
 }
 
-int _chdir(const char* path);
-
 static int mxc_cd(int argc, char** argv) {
     if (argc < 2) {
         return 0;
     }
-    if (_chdir(argv[1])) {
+    if (chdir(argv[1])) {
         printf("error: cannot change directory to '%s'\n", argv[1]);
         return -1;
     }
@@ -205,8 +203,6 @@ done:
     return r;
 }
 
-int _unlink(const char* path);
-
 static int mxc_rm(int argc, char** argv) {
     if (argc < 2) {
         printf("usage: rm <filename>\n");
@@ -215,7 +211,7 @@ static int mxc_rm(int argc, char** argv) {
     while (argc > 1) {
         argc--;
         argv++;
-        if (_unlink(argv[0])) {
+        if (unlink(argv[0])) {
             printf("error: failed to delete '%s'\n", argv[0]);
         }
     }

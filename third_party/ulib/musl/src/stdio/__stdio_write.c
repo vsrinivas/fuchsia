@@ -2,16 +2,6 @@
 #include "stdio_impl.h"
 #include <sys/uio.h>
 
-#if SHARED
-static ssize_t io_write(int fd, const void* buf, size_t count) {
-    return count;
-}
-
-weak_alias(io_write, __libc_io_write);
-#else
-ssize_t __libc_io_write(int fd, const void* buf, size_t count);
-#endif
-
 size_t __stdio_write(FILE* f, const unsigned char* buf, size_t len) {
     struct iovec iovs[2] = {{.iov_base = f->wbase, .iov_len = f->wpos - f->wbase},
                             {.iov_base = (void*)buf, .iov_len = len}};
@@ -20,7 +10,7 @@ size_t __stdio_write(FILE* f, const unsigned char* buf, size_t len) {
     int iovcnt = 2;
     ssize_t cnt = 0;
     for (;;) {
-        cnt = __libc_io_write(f->fd, iov[0].iov_base, iov[0].iov_len);
+        cnt = writev(f->fd, iov, iovcnt);
         if (cnt == rem) {
             f->wend = f->buf + f->buf_size;
             f->wpos = f->wbase = f->buf;

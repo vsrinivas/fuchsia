@@ -14,11 +14,6 @@ weak_alias(dummy, __vm_wait);
 #define UNIT SYSCALL_MMAP2_UNIT
 #define OFF_MASK ((-0x2000ULL << (8 * sizeof(long) - 1)) | (UNIT - 1))
 
-static void* io_mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
-    return (void*)MAP_FAILED;
-}
-weak_alias(io_mmap, __libc_io_mmap);
-
 void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
     if (off & OFF_MASK) {
         errno = EINVAL;
@@ -61,8 +56,8 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
 
         return (void*)ptr;
     } else {
-        // let someone else get a shot at this
-        return __libc_io_mmap(start, len, prot, flags, fd, off);
+        // TODO(kulakowski) mxio file mapping
+        return MAP_FAILED;
     }
 }
 
