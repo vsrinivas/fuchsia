@@ -19,6 +19,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/hash_tests.cpp \
     $(LOCAL_DIR)/list_tests.cpp \
+    $(LOCAL_DIR)/ref_counted_tests.cpp \
 
 include make/module.mk
 

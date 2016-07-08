@@ -12,15 +12,15 @@
 
 class DestructionTracker : public utils::RefCounted<DestructionTracker> {
 public:
-    explicit DestructionTracker(bool* destroyed) : destroyed_(destroyed) {}
+    explicit DestructionTracker(bool* destroyed)
+        : destroyed_(destroyed) {}
     ~DestructionTracker() { *destroyed_ = true; }
 
 private:
     bool* destroyed_;
 };
 
-static int inc_and_dec(void* arg)
-{
+static int inc_and_dec(void* arg) {
     DestructionTracker* tracker = reinterpret_cast<DestructionTracker*>(arg);
     for (size_t i = 0u; i < 500; ++i) {
         utils::RefPtr<DestructionTracker> ptr(tracker);
@@ -28,8 +28,7 @@ static int inc_and_dec(void* arg)
     return 0;
 }
 
-extern "C" int ref_counted_tests(int argc, const cmd_args* argv)
-{
+static bool ref_counted_test(void* context) {
     BEGIN_TEST;
 
     bool destroyed = false;
@@ -49,16 +48,20 @@ extern "C" int ref_counted_tests(int argc, const cmd_args* argv)
                                    DEFAULT_STACK_SIZE);
         threads[4] = thread_create("inc_and_dec thread 4", &inc_and_dec, arg, DEFAULT_PRIORITY,
                                    DEFAULT_STACK_SIZE);
-        for (size_t i = 0u; i < 5u; ++i) thread_resume(threads[i]);
+        for (size_t i = 0u; i < 5u; ++i)
+            thread_resume(threads[i]);
 
         inc_and_dec(arg);
 
-        for (size_t i = 0u; i < 5u; ++i) thread_join(threads[i], NULL, INFINITE_TIME);
+        for (size_t i = 0u; i < 5u; ++i)
+            thread_join(threads[i], NULL, INFINITE_TIME);
 
         EXPECT_FALSE(destroyed, "should not be destroyed after inc/dec pairs");
     }
     EXPECT_TRUE(destroyed, "should be when RefPtr falls out of scope");
-
-    printf("all tests done\n");
     END_TEST;
 }
+
+STATIC_UNITTEST_START_TESTCASE(ref_counted_tests)
+STATIC_UNITTEST("Ref Counted", ref_counted_test)
+STATIC_UNITTEST_END_TESTCASE(ref_counted_tests, "refctests", "Ref Counted Tests", NULL, NULL);
