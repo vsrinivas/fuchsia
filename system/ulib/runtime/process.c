@@ -92,8 +92,22 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     if (pargs->protocol != MX_PROCARGS_PROTOCOL)
         return pi;
 
-    // setup handle info
+    if (pargs->handle_info_off > dsz ||
+        (dsz - pargs->handle_info_off) / sizeof(uint32_t) < hsz)
+        return pi;
     pi->handle_info = (uint32_t*)(msg + pargs->handle_info_off);
+
+    if (pargs->aux_info_off > dsz ||
+        (dsz - pargs->aux_info_off) / sizeof(uintptr_t) < pargs->aux_info_num)
+        return pi;
+    if (pargs->aux_info_num > 0) {
+        pi->auxv = (uintptr_t*)(msg + pargs->aux_info_off);
+        // The auxv must have an even number of elements, and the last
+        // pair must start with a zero (AT_NULL) terminator.
+        if (pargs->aux_info_num % 2 != 0 ||
+            pi->auxv[pargs->aux_info_num - 2] != 0)
+            return pi;
+    }
 
     // extract arguments
     if ((sizeof(char*) * pargs->args_num) > (unsigned)avail)

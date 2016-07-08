@@ -97,6 +97,8 @@ struct mx_proc_info {
 
     char** argv;
     int argc;
+
+    uintptr_t* auxv;
 };
 
 #ifdef __cplusplus
