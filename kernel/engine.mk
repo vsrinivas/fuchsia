@@ -93,7 +93,7 @@ KERNEL_CPPFLAGS :=
 KERNEL_ASMFLAGS :=
 
 # User space compile flags
-USER_COMPILEFLAGS := -include $(USER_CONFIG_HEADER)
+USER_COMPILEFLAGS := -include $(USER_CONFIG_HEADER) -fPIC
 USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=
@@ -165,6 +165,9 @@ ALLUSER_APPS :=
 
 # userspace app modules
 ALLUSER_MODULES :=
+
+# userspace lib modules
+ALLUSER_LIBS :=
 
 # sysroot (exported libraries and headers)
 SYSROOT_DEPS :=
@@ -241,32 +244,6 @@ all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
 all:: $(foreach app,$(ALLUSER_APPS),$(app).lst $(app).dump)
 endif
-
-# generate linkage dependencies for userspace apps after
-# all modules have been evaluated, so we can recursively
-# expand the module dependencies and handle cases like
-# APP A depends on LIB B which depends on LIB C
-#
-# Duplicates are removed from the list with $(sort), which
-# works due to how we're linking binaries now.  If we shift
-# to true .a files we'll need to get fancier here.
-EXPAND_DEPS = $(1) $(foreach DEP,$(MODULE_$(1)_DEPS),$(call EXPAND_DEPS,$(DEP)))
-
-GET_USERAPP_DEPS = $(sort $(foreach DEP,$(MODULE_$(1)_DEPS),$(call EXPAND_DEPS,$(DEP))))
-
-GET_USERAPP_LIBS = $(foreach DEP,$(call GET_USERAPP_DEPS,$(1)),$(MODULE_$(DEP)_OUTNAME).mod.o)
-
-# NOTE: Uses :: rules to set deps on the app binary
-# A rule in build.mk sets the final link line
-LINK_USERAPP = $(eval $(1):: $(2))$(eval $(1): _LIBS := $(2))
-
-$(foreach app,$(ALLUSER_MODULES),\
-	$(eval $(call LINK_USERAPP,\
-	$(MODULE_$(app)_OUTNAME).elf,\
-	$(call GET_USERAPP_LIBS,$(app)))))
-
-#$(foreach app,$(ALLUSER_MODULES),\
-#	$(info LINK-APP $(app) $(MODULE_$(app)_OUTNAME).elf $(call GET_USERAPP_LIBS,$(app))))
 
 # add some automatic configuration defines
 GLOBAL_DEFINES += \

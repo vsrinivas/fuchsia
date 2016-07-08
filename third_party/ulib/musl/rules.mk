@@ -1,26 +1,19 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)
-
-MODULE_TYPE := userlib
-
-MODULE_COMPILEFLAGS := \
+LOCAL_COMPILEFLAGS := \
     -I$(LOCAL_DIR)/src/internal \
     -I$(LOCAL_DIR)/include \
     -I$(LOCAL_DIR)/third_party/include \
 
 ifeq ($(ARCH),arm64)
-MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/aarch64
+LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/aarch64
 else ifeq ($(ARCH),arm)
-MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/arm
+LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/arm
 else ifeq ($(SUBARCH),x86-64)
-MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/x86_64
+LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/x86_64
 else
-error Unsupported architecture for musl build!
+$(error Unsupported architecture $(ARCH) for musl build!)
 endif
-
-MODULE_DEPS := \
-    ulib/magenta ulib/runtime
 
 # The following are, more or less, from the upstream musl build.  The
 # _XOPEN_SOURCE value in particular is taken from there, and is
@@ -31,7 +24,7 @@ MODULE_DEPS := \
 # fairly carefully.
 
 # TODO(kulakowski) Clean up the junkier -Wno flags below.
-MODULE_CFLAGS := \
+LOCAL_CFLAGS := \
     -D_XOPEN_SOURCE=700 \
     -Wno-sign-compare \
     -Wno-parentheses \
@@ -41,7 +34,7 @@ MODULE_CFLAGS := \
     -Werror=strict-prototypes \
 
 ifeq ($(CLANG),1)
-MODULE_CFLAGS += \
+LOCAL_CFLAGS += \
     -Wno-missing-field-initializers \
     -Wno-incompatible-pointer-types-discards-qualifiers \
     -Wno-incompatible-pointer-types \
@@ -52,12 +45,12 @@ MODULE_CFLAGS += \
     -Wno-unused-const-variable \
     -Wno-implicit-exception-spec-mismatch
 else
-MODULE_CFLAGS += \
+LOCAL_CFLAGS += \
     -Wno-discarded-qualifiers \
     -Wno-unused-but-set-variable
 endif
 
-MODULE_SRCS += \
+LOCAL_SRCS := \
     $(LOCAL_DIR)/magenta/debug.c \
     $(LOCAL_DIR)/magenta/io.c \
     $(LOCAL_DIR)/magenta/linuxisms.c \
@@ -1130,7 +1123,7 @@ MODULE_SRCS += \
 #    $(LOCAL_DIR)/src/crypt/encrypt.c \
 
 ifeq ($(ARCH),arm64)
-MODULE_SRCS += \
+LOCAL_SRCS += \
     $(LOCAL_DIR)/src/fenv/aarch64/fenv.s \
     $(LOCAL_DIR)/src/internal/syscall.c \
     $(LOCAL_DIR)/src/ldso/aarch64/dlsym.s \
@@ -1174,7 +1167,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/third_party/math/logl.c \
 
 else ifeq ($(ARCH),arm)
-MODULE_SRCS += \
+LOCAL_SRCS += \
     $(LOCAL_DIR)/src/exit/arm/__aeabi_atexit.c \
     $(LOCAL_DIR)/src/fenv/arm/fenv-hf.S \
     $(LOCAL_DIR)/src/fenv/fenv.c \
@@ -1222,7 +1215,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/third_party/math/sqrtf.c \
 
 else ifeq ($(SUBARCH),x86-64)
-MODULE_SRCS += \
+LOCAL_SRCS += \
     $(LOCAL_DIR)/src/fenv/x86_64/fenv.s \
     $(LOCAL_DIR)/src/ldso/x86_64/dlsym.s \
     $(LOCAL_DIR)/src/ldso/x86_64/tlsdesc.s \
@@ -1273,9 +1266,47 @@ endif
 # Include src/string sources
 include $(LOCAL_DIR)/src/string/rules.mk
 
-# Include crt sources
-include $(LOCAL_DIR)/crt/rules.mk
 
+# static library
+
+MODULE := $(LOCAL_DIR)
+MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
+MODULE_DEPS := ulib/magenta ulib/runtime
+MODULE_CFLAGS := $(LOCAL_CFLAGS)
+MODULE_SRCS := $(LOCAL_SRCS)
 MODULE_EXPORT := c
+
+include make/module.mk
+
+
+# shared library
+ifeq (1,2)
+MODULE := $(LOCAL_DIR)-shared
+MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
+MODULE_DEPS := ulib/magenta ulib/runtime
+MODULE_CFLAGS := $(LOCAL_CFLAGS)
+MODULE_SRCS := $(LOCAL_SRCS)
+MODULE_SONAME := c
+
+include make/module.mk
+endif
+
+# build a fake library to build crt1.o separately
+
+MODULE := $(LOCAL_DIR)-crt
+MODULE_EXPORT := crt
+MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
+MODULE_CFLAGS := $(LOCAL_CFLAGS)
+
+MODULE_SRCS := $(LOCAL_DIR)/crt/crt1.c
+
+# where our object files will end up
+LOCAL_OUT := $(BUILDDIR)/ulib/musl-crt/$(LOCAL_DIR)
+
+# The build needs these globally
+LIBC_CRT1_OBJ := $(LOCAL_OUT)/crt/crt1.c.o
 
 include make/module.mk

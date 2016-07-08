@@ -145,7 +145,7 @@ cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`";
 GLOBAL_CFLAGS += $(call cc-option,$(CC),-fno-stack-protector,)
 
 GLOBAL_COMPILEFLAGS += -gdwarf-2
-GLOBAL_COMPILEFLAGS += -fno-pic
+KERNEL_COMPILEFLAGS += -fno-pic
 ifeq ($(CLANG),1)
 GLOBAL_LDFLAGS += -m elf_x86_64
 GLOBAL_MODULE_LDFLAGS += -m elf_x86_64

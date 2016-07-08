@@ -83,13 +83,7 @@ $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 #.PHONY: $(BUILDDIR)/user-include-paths.txt
 #GENERATED += $(BUILDDIR)/user-include-paths.txt
 
-# userspace app build rule
-# NOTE: another rule in engine.mk adds additional deps to individual .elf files
-# so they will be reflected in the $^ expansion of the link line
-$(BUILDDIR)/%.elf:: $(BUILDDIR)/%.mod.o $(USER_LINKER_SCRIPT)
-	@echo linking $@
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(USER_LINKER_SCRIPT) $(ARCH_LDFLAGS) \
-		$(filter-out $(USER_LINKER_SCRIPT),$^) $(LIBGCC) -o $@
+# userspace app debug info rules
 
 $(BUILDDIR)/%.elf.dump: $(BUILDDIR)/%.elf
 	@echo generating $@
@@ -145,3 +139,55 @@ $(USER_FS): $(USER_BOOTFS)
 
 # add the fs image to the clean list
 GENERATED += $(USER_FS)
+
+
+# generate linkage dependencies for userspace apps after
+# all modules have been evaluated, so we can recursively
+# expand the module dependencies and handle cases like
+# APP A depends on LIB B which depends on LIB C
+#
+# Duplicates are removed from the list with $(sort), which
+# works due to how we're linking binaries now.  If we shift
+# to true .a files we'll need to get fancier here.
+EXPAND_ADEPS = $(1) $(foreach DEP,$(MODULE_$(1)_ALIBS),$(call EXPAND_ADEPS,$(DEP)))
+GET_USERAPP_ADEPS = $(sort $(foreach DEP,$(MODULE_$(1)_ALIBS),$(call EXPAND_ADEPS,$(DEP))))
+GET_USERAPP_ALIBS = $(foreach DEP,$(call GET_USERAPP_ADEPS,$(1)),$(MODULE_$(DEP)_OUTNAME).mod.o)
+
+# shared library deps are non-recursive
+GET_USERAPP_SOLIBS = $(foreach DEP,$(MODULE_$(1)_SOLIBS),$(MODULE_$(DEP)_LIBNAME).so)
+
+# Template for the link rule for a user app
+define link_userapp
+$(1): $(USER_LINKER_SCRIPT) $(LIBC_CRT1_OBJ) $(2) $(3) $(4)
+	@$(MKDIR)
+	@echo linking $$@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(USER_LINKER_SCRIPT) $(ARCH_LDFLAGS) \
+	$(LIBC_CRT1_OBJ) $(2) $(3) $(4) $(LIBGCC) -o $$@
+endef
+LINK_USERAPP = $(eval $(call link_userapp,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4))))
+
+# Template for the link rule for a user solib
+define link_userlib
+$(1): $(2) $(3) $(4)
+	@$(MKDIR)
+	@echo linking $$@ '(dynamic)'
+	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) -shared -soname $(5) $(2) $(3) $(4) -o $$@
+endef
+LINK_USERLIB = $(eval $(call link_userlib,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4)),$(5)))
+
+# For each user app module, generate a link rule
+$(foreach app,$(ALLUSER_MODULES),\
+	$(eval $(call LINK_USERAPP,\
+	$(MODULE_$(app)_OUTNAME).elf,\
+	$(MODULE_$(app)_OBJS),\
+	$(call GET_USERAPP_ALIBS,$(app)),\
+	$(call GET_USERAPP_SOLIBS,$(app)))))
+
+# For each user lib module, generate a link rule
+$(foreach lib,$(ALLUSER_LIBS),\
+	$(eval $(call LINK_USERLIB,\
+	$(MODULE_$(lib)_LIBNAME).so,\
+	$(MODULE_$(lib)_OBJS),\
+	$(call GET_USERAPP_ALIBS,$(lib)),\
+	$(call GET_USERAPP_SOLIBS,$(lib)),\
+	lib$(MODULE_$(lib)_SONAME).so)))

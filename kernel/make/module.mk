@@ -23,6 +23,9 @@
 # MODULE_EXTRA_OBJS : extra .o files that should be linked with the module
 # MODULE_TYPE : "userapp" for userspace executables, "userlib" for userspace library,
 #               "" for standard LK module
+# MODULE_LIBS : shared libraries for a userapp or userlib to depend on
+# MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
+# MODULE_SONAME : linkage name for the shared library
 
 # the minimum module rules.mk file is as follows:
 #
@@ -42,13 +45,15 @@ endif
 
 # expand deps to canonical paths
 MODULE_DEPS := $(foreach d,$(MODULE_DEPS),$(call modname-make-canonical,$(d)))
+MODULE_LIBS := $(foreach d,$(MODULE_LIBS),$(call modname-make-canonical,$(d)))
+MODULE_STATIC_LIBS := $(foreach d,$(MODULE_STATIC_LIBS),$(call modname-make-canonical,$(d)))
 MODULE_HEADER_DEPS := $(foreach d,$(MODULE_HEADER_DEPS),$(call modname-make-canonical,$(strip $(d))))
 
 # add the listed module deps to the global list
-MODULES += $(MODULE_DEPS)
+MODULES += $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)
 
-# add the headers to include to a list
-HEADER_MODULE_DEPS := $(MODULE_DEPS)
+# include headers for any type of dependency (generic, static, dynamic, header-only)
+HEADER_MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)
 HEADER_MODULE_DEPS += $(MODULE_HEADER_DEPS)
 
 # compute our shortname, which has all of the build system prefix paths removed
@@ -70,6 +75,8 @@ MODULE_DEFINES += MODULE_ASMFLAGS=\"$(subst $(SPACE),_,$(MODULE_ASMFLAGS))\"
 MODULE_DEFINES += MODULE_OPTFLAGS=\"$(subst $(SPACE),_,$(MODULE_OPTFLAGS))\"
 MODULE_DEFINES += MODULE_SRCDEPS=\"$(subst $(SPACE),_,$(MODULE_SRCDEPS))\"
 MODULE_DEFINES += MODULE_DEPS=\"$(subst $(SPACE),_,$(MODULE_DEPS))\"
+MODULE_DEFINES += MODULE_LIBS=\"$(subst $(SPACE),_,$(MODULE_LIBS))\"
+MODULE_DEFINES += MODULE_STATIC_LIBS=\"$(subst $(SPACE),_,$(MODULE_STATIC_LIBS))\"
 MODULE_DEFINES += MODULE_SRCS=\"$(subst $(SPACE),_,$(MODULE_SRCS))\"
 MODULE_DEFINES += MODULE_HEADER_DEPS=\"$(subst $(SPACE),_,$(MODULE_HEADER_DEPS))\"
 MODULE_DEFINES += MODULE_TYPE=\"$(subst $(SPACE),_,$(MODULE_TYPE))\"
@@ -83,7 +90,7 @@ MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
 MODULE_COMPILEFLAGS += -Isystem/ulib/global/include
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/include
 MODULE_COMPILEFLAGS += -D_XOPEN_SOURCE=700
-ifneq ($(MODULE),third_party/ulib/musl)
+ifeq ($(filter third_party/ulib/musl%,$(MODULE)),)
 # musl has to carefully manipulate this define internally, so don't set it for it.
 MODULE_COMPILEFLAGS += -D_BSD_SOURCE
 endif
@@ -150,58 +157,77 @@ ifeq ($(MODULE_NAME),)
 MODULE_NAME := $(basename $(notdir $(MODULE)))
 endif
 
+
+#TODO: remove once we've converted all user modules to _LIBS/_STATIC_LIBS usage
+ifneq ($(MODULE_TYPE),)
+ifneq ($(MODULE_DEPS),)
+#$(warning $(MODULE) user modules should use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
+MODULE_STATIC_LIBS += $(MODULE_DEPS)
+endif
+endif
+
 ifeq ($(MODULE_TYPE),)
+ifneq ($(MODULE_LIBS),)
+$(error $(MODULE) kernel modules may not use MODULE_LIBS)
+endif
+ifneq ($(MODULE_STATIC_LIBS),)
+$(error $(MODULE) kernel modules may not use MODULE_STATIC_LIBS)
+endif
+
 # make the rest of the build depend on our output
 ALLMODULE_OBJS := $(ALLMODULE_OBJS) $(MODULE_OBJECT)
 
 else ifeq ($(MODULE_TYPE),userapp)
-MODULE_$(MODULE)_DEPS := $(MODULE_DEPS)
+MODULE_$(MODULE)_SOLIBS := $(MODULE_LIBS)
+MODULE_$(MODULE)_ALIBS := $(MODULE_STATIC_LIBS)
+MODULE_$(MODULE)_OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
 USER_MANIFEST_LINES += bin/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 
 else ifeq ($(MODULE_TYPE),userlib)
-MODULE_$(MODULE)_DEPS := $(MODULE_DEPS)
+MODULE_$(MODULE)_SOLIBS := $(MODULE_LIBS)
+MODULE_$(MODULE)_ALIBS := $(MODULE_STATIC_LIBS)
+MODULE_$(MODULE)_OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
+
+# modules that declare a soname desire to be shared libs
+ifneq ($(MODULE_SONAME),)
+MODULE_$(MODULE)_SONAME := $(MODULE_SONAME)
+ALLUSER_LIBS += $(MODULE)
+EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so
+GENERATED += $(MODULE_LIBNAME).so
+USER_MANIFEST_LINES += lib/lib$(MODULE_SONAME).so=$(MODULE_LIBNAME).so
+endif
 
 # default library objects
 MODULE_LIBRARY_OBJS := $(MODULE_OBJS)
 
-ifeq ($(MODULE_EXPORT),c)
-# locate the crt files in libc and remove them from the objects list
-MODULE_CRT_NAMES := crt1.c.o crti.s.o crtn.s.o
-$(foreach crt,$(MODULE_CRT_NAMES),\
-	$(eval MODULE_LIBRARY_OBJS := $(filter-out %/$(crt),$(MODULE_LIBRARY_OBJS))))
-else
-MODULE_CRT_NAMES :=
-endif
-
 # build static library
-MODULE_STATIC_LIB := $(MODULE_LIBNAME).a
-$(MODULE_STATIC_LIB): $(MODULE_LIBRARY_OBJS)
+$(MODULE_LIBNAME).a: $(MODULE_LIBRARY_OBJS)
 	@$(MKDIR)
 	@echo linking $@
 	@rm -f $@
 	$(NOECHO)$(AR) cr $@ $^
 
 # always build all libraries
-EXTRA_BUILDDEPS += $(MODULE_STATIC_LIB)
-GENERATED += $(MODULE_STATIC_LIB)
+EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a
+GENERATED += $(MODULE_LIBNAME).a
 
 # if the SYSROOT build feature is enabled, we will package
 # up exported libraries, their headers, etc
 ifeq ($(ENABLE_BUILD_SYSROOT),true)
-ifneq ($(MODULE_EXPORT),)
 
-# install crt files if they exist for this module
-ifneq ($(MODULE_CRT_NAMES),)
-$(foreach crt,$(MODULE_CRT_NAMES),\
-$(eval CRT_SRC := $(filter %/$(crt),$(MODULE_OBJS)))\
-$(eval CRT_DST := $(BUILDDIR)/sysroot/lib/$(subst .s.o,.o,$(subst .c.o,.o,$(crt))))\
-$(call copy-dst-src,$(CRT_DST),$(CRT_SRC))\
-$(eval SYSROOT_DEPS += $(CRT_DST))\
-$(eval GENERATED += $(CRT_DST)))
+ifeq ($(MODULE_EXPORT),crt)
+# special magic library that's just crt1.o
+MODULE_EXPORT :=
+SYSROOT_CRT1 := $(BUILDDIR)/sysroot/lib/crt1.o
+$(call copy-dst-src,$(SYSROOT_CRT1),$(LIBC_CRT1_OBJ))
+SYSROOT_DEPS += $(SYSROOT_CRT1)
+GENERATED += $(SYSROOT_CRT1)
 endif
+
+ifneq ($(MODULE_EXPORT),)
 
 ifeq ($(filter $(MODULE_EXPORT),$(SYSROOT_MEGA_LIBC)),)
 # if this library has not been pulled into the MEGA LIBC, install it
@@ -257,3 +283,6 @@ MODULE_OBJECT :=
 MODULE_TYPE :=
 MODULE_NAME :=
 MODULE_EXPORT :=
+MODULE_LIBS :=
+MODULE_STATIC_LIBS :=
+MODULE_SONAME :=

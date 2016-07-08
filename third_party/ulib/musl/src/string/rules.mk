@@ -1,4 +1,4 @@
-MODULE_SRCS += \
+LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/bcmp.c \
     $(GET_LOCAL_DIR)/bcopy.c \
     $(GET_LOCAL_DIR)/bzero.c \
@@ -71,19 +71,19 @@ MODULE_SRCS += \
     $(GET_LOCAL_DIR)/wmemset.c \
 
 ifeq ($(ARCH),arm64)
-MODULE_SRCS += \
+LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/memcpy.c \
     $(GET_LOCAL_DIR)/memmove.c \
     $(GET_LOCAL_DIR)/memset.c \
 
 else ifeq ($(ARCH),arm)
-MODULE_SRCS += \
+LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/memcpy.c \
     $(GET_LOCAL_DIR)/memmove.c \
     $(GET_LOCAL_DIR)/memset.c \
 
 else ifeq ($(SUBARCH),x86-64)
-MODULE_SRCS += \
+LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/x86_64/memcpy.s \
     $(GET_LOCAL_DIR)/x86_64/memmove.s \
     $(GET_LOCAL_DIR)/x86_64/memset.s \

@@ -26,7 +26,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/tls.c \
     $(LOCAL_DIR)/sysinfo.c \
 
-MODULE_DEPS += \
+MODULE_LIBS += \
     ulib/magenta
 
 # for stdint.h
@@ -34,5 +34,6 @@ MODULE_HEADER_DEPS += \
     ulib/musl
 
 MODULE_EXPORT := runtime
+MODULE_SONAME := runtime
 
 include make/module.mk
