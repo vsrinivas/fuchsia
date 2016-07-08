@@ -190,6 +190,7 @@ typedef struct mx_log_record {
 #define MX_LOG_FLAG_MASK      0x0F00
 
 #define MX_LOG_FLAG_WAIT      0x80000000
+#define MX_LOG_FLAG_READABLE  0x40000000
 
 // IO port definitions.
 typedef struct mx_io_packet {

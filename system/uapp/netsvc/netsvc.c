@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     mx_time_t delay = TIME_MS(200);
     logpacket_t pkt;
     int len = 0;
-    if ((loghandle = _magenta_log_create(0)) < 0) {
+    if ((loghandle = _magenta_log_create(MX_LOG_FLAG_READABLE)) < 0) {
         return -1;
     }
 

@@ -212,7 +212,7 @@ restart:
 static int vc_logreader_thread(void* arg) {
     mx_handle_t h;
 
-    if ((h = _magenta_log_create(MX_LOG_FLAG_CONSOLE)) < 0) {
+    if ((h = _magenta_log_create(MX_LOG_FLAG_CONSOLE | MX_LOG_FLAG_READABLE)) < 0) {
         return h;
     }
 

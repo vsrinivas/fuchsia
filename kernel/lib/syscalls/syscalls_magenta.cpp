@@ -1045,6 +1045,12 @@ int sys_log_create(uint32_t flags) {
     if (result != NO_ERROR)
         return result;
 
+    // by default log objects are write-only
+    // as readable logs are more expensive
+    if (flags & MX_LOG_FLAG_READABLE) {
+        rights |= MX_RIGHT_READ;
+    }
+
     // create a handle and attach the dispatcher to it
     HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), rights));
     if (!handle)
