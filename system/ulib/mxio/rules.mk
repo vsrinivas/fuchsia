@@ -29,7 +29,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/process.c \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/unistd.c \
-    $(LOCAL_DIR)/util.c \
 
 MODULE_DEPS += \
     ulib/magenta \

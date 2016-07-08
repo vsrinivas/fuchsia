@@ -20,7 +20,6 @@
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
 
-#include "util.h"
 #include "private.h"
 
 typedef struct mx_pipe {
@@ -31,6 +30,32 @@ typedef struct mx_pipe {
     uint8_t* next;
     uint8_t data[MXIO_CHUNK_SIZE];
 } mx_pipe_t;
+
+static mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
+    mx_signals_t pending;
+    mx_status_t r;
+    uint32_t sz;
+
+    for (;;) {
+        sz = len;
+        r = _magenta_message_read(h, data, &sz, NULL, NULL, 0);
+        if (r == 0) {
+            return sz;
+        }
+        if (r == ERR_BAD_STATE) {
+            r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                         MX_TIME_INFINITE, &pending, NULL);
+            if (r < 0)
+                return r;
+            if (pending & MX_SIGNAL_READABLE)
+                continue;
+            if (pending & MX_SIGNAL_PEER_CLOSED)
+                return ERR_CHANNEL_CLOSED;
+            return ERR_INTERNAL;
+        }
+        return r;
+    }
+}
 
 static ssize_t mx_pipe_write(mxio_t* io, const void* _data, size_t len) {
     mx_pipe_t* p = (mx_pipe_t*)io;
