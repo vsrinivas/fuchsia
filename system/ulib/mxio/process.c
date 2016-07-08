@@ -53,7 +53,10 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
 
     if (args_count < 1)
         return ERR_INVALID_ARGS;
-    if (auxv_count < 0 || auxv_count % 2 != 0)
+    // The auxv must have an even number of elements, and the last
+    // pair must start with a zero (AT_NULL) terminator.
+    if (auxv_count < 0 || auxv_count % 2 != 0 ||
+        (auxv_count > 0 && auxv[auxv_count - 2] != AT_NULL))
         return ERR_INVALID_ARGS;
     if (hnds_count < 0)
         return ERR_INVALID_ARGS;
@@ -362,6 +365,16 @@ mx_status_t mxio_load_elf_filename(mx_handle_t process, const char* filename,
         }
 
         elf_close_handle(&interp_elf);
+    }
+
+    if (auxv_idx != 0) {
+        if (auxv_idx + 1 < *auxv_count) {
+            auxv[auxv_idx++] = AT_NULL;
+            auxv[auxv_idx++] = 0;
+            *auxv_count = auxv_idx;
+        } else {
+            status = ERR_NOT_ENOUGH_BUFFER;
+        }
     }
 
 fail:
