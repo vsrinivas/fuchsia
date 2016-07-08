@@ -96,13 +96,6 @@ extern mxr_mutex_t __devmgr_api_lock;
 extern mxio_dispatcher_t* devmgr_rio_dispatcher;
 extern mxio_dispatcher_t* devmgr_devhost_dispatcher;
 
-typedef struct diostate {
-    mx_device_t* dev;
-    void* cookie;
-    size_t io_off;
-} diostate_t;
-
-diostate_t* create_iostate(mx_device_t* dev);
 mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie);
 
 extern bool __dm_locked;

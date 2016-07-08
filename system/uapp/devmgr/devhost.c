@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "devmgr.h"
+#include "vfs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,7 +59,7 @@ static mx_status_t devhost_rpc(mx_handle_t h, devhost_msg_t* msg, mx_handle_t ha
 }
 
 mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
-    diostate_t* ios;
+    iostate_t* ios;
     if ((ios = create_iostate(dev)) == NULL) {
         return ERR_NO_MEMORY;
     }
@@ -78,6 +79,11 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
     //printf("devhost_add() %d\n", r);
     if (r == NO_ERROR) {
         //printf("devhost: dev=%p remoted\n", dev);
+
+        char tmp[MX_DEVICE_NAME_MAX + 9];
+        snprintf(tmp, sizeof(tmp), "device:%s", dev->name);
+        track_iostate(ios, tmp);
+
         dev->remote_id = msg.device_id;
         mxio_dispatcher_add(devmgr_rio_dispatcher, h0, devmgr_rio_handler, ios);
     } else {

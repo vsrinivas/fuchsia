@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "devmgr.h"
+#include "vfs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,9 +38,9 @@
 
 static const char* name = "devmgr";
 
-diostate_t* create_iostate(mx_device_t* dev) {
-    diostate_t* ios;
-    if ((ios = calloc(1, sizeof(diostate_t))) == NULL) {
+iostate_t* create_iostate(mx_device_t* dev) {
+    iostate_t* ios;
+    if ((ios = calloc(1, sizeof(iostate_t))) == NULL) {
         return NULL;
     }
     ios->dev = dev;
@@ -49,7 +50,7 @@ diostate_t* create_iostate(mx_device_t* dev) {
 mx_status_t __mx_rio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
 mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
-    diostate_t* newios;
+    iostate_t* newios;
     if (devmgr_is_remote) {
         name = "devhost";
     }
@@ -92,6 +93,10 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t*
         r = 1;
     }
 
+    char tmp[MX_DEVICE_NAME_MAX + 9];
+    snprintf(tmp, sizeof(tmp), "device:%s", dev->name);
+    track_iostate(newios, tmp);
+
     newios->cookie = cookie;
     mxio_dispatcher_add(devmgr_rio_dispatcher, h1, devmgr_rio_handler, newios);
     return r;
@@ -106,7 +111,7 @@ fail1:
 }
 
 mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
-    diostate_t* ios = cookie;
+    iostate_t* ios = cookie;
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
@@ -118,6 +123,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
 
     switch (MX_RIO_OP(msg->op)) {
     case MX_RIO_CLOSE:
+        untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
     case MX_RIO_CLONE: {

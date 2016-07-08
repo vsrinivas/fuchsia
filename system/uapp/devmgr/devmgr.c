@@ -617,8 +617,19 @@ mx_device_t* devmgr_device_root(void) {
 }
 
 mx_status_t devmgr_control(const char* cmd) {
+    if (!strcmp(cmd, "help")) {
+        printf("dump   - dump device tree\n"
+               "lsof   - list open remoteio files and devices\n"
+               "crash  - crash the device manager\n"
+               );
+        return NO_ERROR;
+    }
     if (!strcmp(cmd, "dump")) {
         devmgr_dump();
+        return NO_ERROR;
+    }
+    if (!strcmp(cmd, "lsof")) {
+        vfs_dump_handles();
         return NO_ERROR;
     }
     if (!strcmp(cmd, "crash")) {

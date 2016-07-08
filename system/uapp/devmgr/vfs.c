@@ -29,6 +29,7 @@
 #include <magenta/syscalls.h>
 
 #include <runtime/thread.h>
+#include <runtime/mutex.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -36,6 +37,32 @@
 #include <string.h>
 
 #define MXDEBUG 0
+
+#define DEBUG_TRACK_NAMES 1
+
+static list_node_t iostate_list = LIST_INITIAL_VALUE(iostate_list);
+static mxr_mutex_t iostate_lock = MXR_MUTEX_INIT;
+
+void track_iostate(iostate_t* ios, const char* fn) {
+#if DEBUG_TRACK_NAMES
+    if (fn) {
+        ios->fn = strdup(fn);
+    }
+#endif
+    mxr_mutex_lock(&iostate_lock);
+    list_add_tail(&iostate_list, &ios->node);
+    mxr_mutex_unlock(&iostate_lock);
+}
+
+void untrack_iostate(iostate_t* ios) {
+    mxr_mutex_lock(&iostate_lock);
+    list_delete(&ios->node);
+    mxr_mutex_unlock(&iostate_lock);
+#if DEBUG_TRACK_NAMES
+    free((void*) ios->fn);
+    ios->fn = NULL;
+#endif
+}
 
 static vnode_t* vfs_root;
 
@@ -123,11 +150,11 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
     return sz;
 }
 
-static mx_status_t vfs_get_handles(vnode_t* vn, mx_handle_t* hnds, uint32_t* ids) {
+static mx_status_t vfs_get_handles(vnode_t* vn, mx_handle_t* hnds, uint32_t* ids, const char* trackfn) {
     mx_status_t r;
     if ((r = vn->ops->gethandles(vn, hnds, ids)) == ERR_NOT_SUPPORTED) {
         // local vnode, we will create the handles
-        hnds[0] = vfs_create_handle(vn);
+        hnds[0] = vfs_create_handle(vn, trackfn);
         ids[0] = MX_HND_TYPE_MXIO_REMOTE;
         r = 1;
     }
@@ -142,15 +169,14 @@ mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
     if ((path == NULL) || (path[0] != '/')) {
         return ERR_INVALID_ARGS;
     }
-    path++;
 
     if (flags & O_CREAT) {
         return ERR_NOT_SUPPORTED;
     }
-    if ((r = vfs_open(vfs_root, &vn, path, flags)) < 0) {
+    if ((r = vfs_open(vfs_root, &vn, path + 1, flags)) < 0) {
         return r;
     }
-    if ((r = vfs_get_handles(vn, hnds, ids)) < 0) {
+    if ((r = vfs_get_handles(vn, hnds, ids, path)) < 0) {
         return r;
     }
     // drop the ref we got from open
@@ -161,14 +187,6 @@ mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
     }
     return r;
 }
-
-typedef struct iostate iostate_t;
-struct iostate {
-    vnode_t* vn;
-    dnode_t* dn;
-    size_t io_off;
-    vdircookie_t cookie;
-};
 
 static vnode_t* volatile vfs_txn_vn;
 static volatile int vfs_txn_op;
@@ -206,7 +224,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
             return r;
         }
         uint32_t ids[VFS_MAX_HANDLES];
-        if ((r = vfs_get_handles(vn, msg->handle, ids)) < 0) {
+        if ((r = vfs_get_handles(vn, msg->handle, ids, (const char*)msg->data)) < 0) {
             vn->ops->close(vn);
             return r;
         }
@@ -224,11 +242,12 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
     case MX_RIO_CLOSE:
         // this will drop the ref on the vn
         vn->ops->close(vn);
+        untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
     case MX_RIO_CLONE: {
         uint32_t ids[VFS_MAX_HANDLES];
-        mx_status_t r = vfs_get_handles(vn, msg->handle, ids);
+        mx_status_t r = vfs_get_handles(vn, msg->handle, ids, "<clone>");
         if (r < 0) {
             return r;
         }
@@ -325,7 +344,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         if (arg > MXIO_CHUNK_SIZE) {
             return ERR_INVALID_ARGS;
         }
-        mx_status_t r = vn->ops->readdir(vn, &ios->cookie, msg->data, arg);
+        mx_status_t r = vn->ops->readdir(vn, &ios->dircookie, msg->data, arg);
         if (r >= 0) {
             msg->datalen = r;
         }
@@ -365,7 +384,7 @@ static mx_status_t vfs_handler(mx_rio_msg_t* msg, void* cookie) {
     return r;
 }
 
-mx_handle_t vfs_create_handle(vnode_t* vn) {
+mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn) {
     mx_handle_t h0, h1;
     mx_status_t r;
     iostate_t* ios;
@@ -384,6 +403,7 @@ mx_handle_t vfs_create_handle(vnode_t* vn) {
         free(ios);
         return r;
     }
+    track_iostate(ios, trackfn);
     // take a ref for the dispatcher
     vn_acquire(vn);
     return h1;
@@ -395,7 +415,7 @@ mx_handle_t vfs_create_root_handle(void) {
     if ((r = vfs_root->ops->open(&vn, O_DIRECTORY)) < 0) {
         return r;
     }
-    return vfs_create_handle(vfs_root);
+    return vfs_create_handle(vfs_root, "/");
 }
 
 static int vfs_watchdog(void* arg) {
@@ -434,4 +454,13 @@ void vn_release(vnode_t* vn) {
     if (vn->refcount == 0) {
         vn->ops->release(vn);
     }
+}
+
+void vfs_dump_handles(void) {
+    iostate_t* ios;
+    mxr_mutex_lock(&iostate_lock);
+    list_for_every_entry(&iostate_list, ios, iostate_t, node) {
+        printf("obj %p '%s'\n", ios->vn, ios->fn ? ios->fn : "???");
+    }
+    mxr_mutex_unlock(&iostate_lock);
 }

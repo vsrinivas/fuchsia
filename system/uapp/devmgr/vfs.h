@@ -17,12 +17,13 @@
 #include <ddk/device.h>
 #include <magenta/types.h>
 #include <mxio/vfs.h>
+#include <system/listnode.h>
 
 void vfs_init(vnode_t* root);
 
 // generate mxremoteio handles
 mx_handle_t vfs_create_root_handle(void);
-mx_handle_t vfs_create_handle(vnode_t* vn);
+mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn);
 
 mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
                              const char* path, uint32_t flags);
@@ -42,6 +43,8 @@ vnode_t* memfs_get_root(void);
 
 vnode_t* vfs_get_root(void);
 
+void vfs_dump_handles(void);
+
 // shared among all memory filesystems
 mx_status_t memfs_open(vnode_t** _vn, uint32_t flags);
 mx_status_t memfs_close(vnode_t* vn);
@@ -52,3 +55,23 @@ ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
 mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len);
 ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len,
                     void* out_data, size_t out_len);
+
+typedef struct iostate {
+    union {
+        mx_device_t* dev;
+        vnode_t* vn;
+    };
+    union {
+        vdircookie_t dircookie;
+        void* cookie;
+    };
+    size_t io_off;
+
+    list_node_t node;
+    const char* fn;
+} iostate_t;
+
+void track_iostate(iostate_t* ios, const char* fn);
+void untrack_iostate(iostate_t* ios);
+
+iostate_t* create_iostate(mx_device_t* dev);
