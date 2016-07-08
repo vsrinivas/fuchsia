@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -22,6 +23,8 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+
+#include <runtime/mutex.h>
 
 #include <mxio/debug.h>
 #include <mxio/io.h>
@@ -492,4 +495,81 @@ int pipe(int pipefd[2]) {
         return ERROR(pipefd[1]);
     }
     return 0;
+}
+
+
+int _chdir(const char* path) {
+    mxio_t* io;
+    mx_status_t r;
+    if ((r = __mxio_open(&io, path, O_DIRECTORY)) < 0) {
+        return STATUS(r);
+    }
+    mxio_t* old = mxio_cwd_handle;
+    mxio_cwd_handle = io;
+    if (old != NULL) {
+        old->ops->close(old);
+    }
+    return 0;
+}
+
+#define DIR_BUFSIZE 2048
+
+struct __dirstream {
+    mxr_mutex_t lock;
+    int fd;
+    size_t size;
+    uint8_t* ptr;
+    uint8_t data[DIR_BUFSIZE];
+    struct dirent de;
+};
+
+DIR* _opendir(const char* name) {
+    DIR* dir;
+    if ((dir = calloc(1, sizeof(DIR))) == NULL) {
+        return NULL;
+    }
+    dir->lock = MXR_MUTEX_INIT;
+    dir->size = 0;
+    if ((dir->fd = __libc_io_open(name, O_DIRECTORY)) < 0) {
+        free(dir);
+        return NULL;
+    }
+    return dir;
+}
+
+int _closedir(DIR* dir) {
+    close(dir->fd);
+    free(dir);
+    return 0;
+}
+
+struct dirent *_readdir(DIR* dir) {
+    mxr_mutex_lock(&dir->lock);
+    struct dirent* de = &dir->de;
+    for (;;) {
+        if (dir->size >= sizeof(vdirent_t)) {
+            vdirent_t* vde = (void*) dir->ptr;
+            if (dir->size >= vde->size) {
+                de->d_ino = 0;
+                de->d_off = 0;
+                de->d_reclen = 0;
+                de->d_type = vde->type;
+                strcpy(de->d_name, vde->name);
+                dir->ptr += vde->size;
+                dir->size -= vde->size;
+                break;
+            }
+            dir->size = 0;
+        }
+        int r = getdirents(dir->fd, dir->data, DIR_BUFSIZE);
+        if (r > 0) {
+            dir->ptr = dir->data;
+            dir->size = r;
+            continue;
+        }
+        de = NULL;
+        break;
+    }
+    mxr_mutex_unlock(&dir->lock);
+    return de;
 }

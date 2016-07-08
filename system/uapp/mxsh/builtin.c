@@ -73,6 +73,19 @@ static int mxc_echo(int argc, char** argv) {
     return 0;
 }
 
+int _chdir(const char* path);
+
+static int mxc_cd(int argc, char** argv) {
+    if (argc < 2) {
+        return 0;
+    }
+    if (_chdir(argv[1])) {
+        printf("error: cannot change directory to '%s'\n", argv[1]);
+        return -1;
+    }
+    return 0;
+}
+
 static const char* modestr(uint32_t mode) {
     switch (mode & S_IFMT) {
     case S_IFREG:
@@ -88,22 +101,27 @@ static const char* modestr(uint32_t mode) {
     }
 }
 
+#include <dirent.h>
+DIR* _opendir(const char* name);
+struct dirent* _readdir(DIR* dir);
+int _closedir(DIR* dir);
+
 int getdirents(int fd, void* ptr, size_t len);
 
 static int mxc_ls(int argc, char** argv) {
     const char* dirn;
     struct stat s;
-    char buf[4096];
     char tmp[2048];
-    int fd, r, off;
     size_t dirln;
+    struct dirent* de;
+    DIR* dir;
 
     if ((argc > 1) && !strcmp(argv[1], "-l")) {
         argc--;
         argv++;
     }
     if (argc < 2) {
-        dirn = "/";
+        dirn = ".";
     } else {
         dirn = argv[1];
     }
@@ -113,32 +131,20 @@ static int mxc_ls(int argc, char** argv) {
         printf("usage: ls [ <directory> ]\n");
         return -1;
     }
-    fd = open(dirn, O_RDONLY);
-    if (fd < 0) {
+    if ((dir = _opendir(dirn)) == NULL) {
         printf("error: cannot open '%s'\n", dirn);
         return -1;
     }
-    for (;;) {
-        r = getdirents(fd, buf, sizeof(buf));
-        if (r <= 0) {
-            if (r)
-                printf("error: reading dirents\n");
-            break;
+    while((de = _readdir(dir)) != NULL) {
+        memset(&s, 0, sizeof(struct stat));
+        if ((strlen(de->d_name) + dirln + 2) <= sizeof(tmp)) {
+            snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
+            stat(tmp, &s);
         }
-        off = 0;
-        while (off < r) {
-            vdirent_t* de = (vdirent_t*)(buf + off);
-            memset(&s, 0, sizeof(struct stat));
-            if ((strlen(de->name) + dirln + 2) <= sizeof(tmp)) {
-                snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->name);
-                stat(tmp, &s);
-            }
-            printf("%s %8llu %s\n", modestr(s.st_mode), s.st_size, de->name);
-            off += de->size;
-        }
+        printf("%s %8llu %s\n", modestr(s.st_mode), s.st_size, de->d_name);
     }
-    close(fd);
-    return r;
+    _closedir(dir);
+    return 0;
 }
 
 static int mxc_list(int argc, char** argv) {
@@ -245,89 +251,77 @@ enum {
     FAILED_NONZERO_RETURN_CODE,
 };
 static int mxc_runtests(int argc, char** argv) {
-    char buf[4096];
     list_node_t failures = LIST_INITIAL_VALUE(failures);
-    int r, off;
 
     int total_count = 0;
     int failed_count = 0;
 
     const char* dirn = "/boot/bin";
-    int fd = open(dirn, O_RDONLY);
-    if (fd < 0) {
+    DIR* dir = _opendir(dirn);
+    if (dir == NULL) {
         printf("error: cannot open '%s'\n", dirn);
         return -1;
     }
     size_t test_suffix_len = sizeof(TESTNAME_SUFFIX) - 1;
-    for (;;) {
-        r = getdirents(fd, buf, sizeof(buf));
-        if (r <= 0) {
-            if (r)
-                printf("error: reading dirents\n");
-            break;
+
+    struct dirent* de;
+    while ((de = _readdir(dir)) != NULL) {
+        size_t len = strlen(de->d_name);
+        if (len < test_suffix_len) {
+            continue;
         }
-        off = 0;
-        while (off < r) {
-            vdirent_t* de = (vdirent_t*)(buf + off);
-            off += de->size;
+        char* suffix = de->d_name + len - test_suffix_len;
+        if (strncmp(suffix, TESTNAME_SUFFIX, test_suffix_len)) {
+            continue;
+        }
+        total_count++;
 
-            size_t len = strlen(de->name);
-            if (len < test_suffix_len) {
-                continue;
-            }
-            char* suffix = de->name + len - test_suffix_len;
-            if (strncmp(suffix, TESTNAME_SUFFIX, test_suffix_len)) {
-                continue;
-            }
-            total_count++;
+        printf(
+            "\n------------------------------------------------\n"
+            "RUNNING TEST: %s\n\n",
+            de->d_name);
+        char name[4096];
+        snprintf(name, sizeof(name), "/boot/bin/%s", de->d_name);
+        char* argv[] = {name};
+        mx_handle_t handle = mxio_start_process(name, 1, argv);
+        if (handle < 0) {
+            printf("FAILURE: Failed to launch %s: %d\n", de->d_name, handle);
+            mxc_fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);
+            failed_count++;
+            continue;
+        }
 
-            printf(
-                "\n------------------------------------------------\n"
-                "RUNNING TEST: %s\n\n",
-                de->name);
-            char name[4096];
-            snprintf(name, sizeof(name), "/boot/bin/%s", de->name);
-            char* argv[] = {name};
-            mx_handle_t handle = mxio_start_process(name, 1, argv);
-            if (handle < 0) {
-                printf("FAILURE: Failed to launch %s: %d\n", de->name, handle);
-                mxc_fail_test(&failures, de->name, FAILED_TO_LAUNCH, 0);
-                failed_count++;
-                continue;
-            }
+        mx_status_t status = _magenta_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
+                                                      MX_TIME_INFINITE, 0, 0);
+        if (status != NO_ERROR) {
+            printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
+            mxc_fail_test(&failures, de->d_name, FAILED_TO_WAIT, 0);
+            failed_count++;
+            continue;
+        }
 
-            mx_status_t status = _magenta_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
-                                                          MX_TIME_INFINITE, 0, 0);
-            if (status != NO_ERROR) {
-                printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->name, status);
-                mxc_fail_test(&failures, de->name, FAILED_TO_WAIT, 0);
-                failed_count++;
-                continue;
-            }
+        // read the return code
+        mx_process_info_t proc_info;
+        mx_ssize_t info_status = _magenta_handle_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
+        _magenta_handle_close(handle);
 
-            // read the return code
-            mx_process_info_t proc_info;
-            mx_ssize_t info_status = _magenta_handle_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
-            _magenta_handle_close(handle);
+        if (info_status != sizeof(proc_info)) {
+            printf("FAILURE: Failed to get process return code %s: %ld\n", de->d_name, info_status);
+            mxc_fail_test(&failures, de->d_name, FAILED_TO_RETURN_CODE, 0);
+            failed_count++;
+            continue;
+        }
 
-            if (info_status != sizeof(proc_info)) {
-                printf("FAILURE: Failed to get process return code %s: %ld\n", de->name, info_status);
-                mxc_fail_test(&failures, de->name, FAILED_TO_RETURN_CODE, 0);
-                failed_count++;
-                continue;
-            }
-
-            if (proc_info.return_code == 0) {
-                printf("PASSED: %s passed\n", de->name);
-            } else {
-                printf("FAILED: %s exited with nonzero status: %d\n", de->name, proc_info.return_code);
-                mxc_fail_test(&failures, de->name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
-                failed_count++;
-            }
+        if (proc_info.return_code == 0) {
+            printf("PASSED: %s passed\n", de->d_name);
+        } else {
+            printf("FAILED: %s exited with nonzero status: %d\n", de->d_name, proc_info.return_code);
+            mxc_fail_test(&failures, de->d_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
+            failed_count++;
         }
     }
 
-    close(fd);
+    _closedir(dir);
 
     printf("\nSUMMARY: Ran %d tests: %d failed\n", total_count, failed_count);
 
@@ -379,6 +373,7 @@ static int mxc_dm(int argc, char** argv) {
 static int mxc_help(int argc, char** argv);
 
 builtin_t builtins[] = {
+    {"cd", mxc_cd, "change directory"},
     {"cp", mxc_cp, "copy a file"},
     {"dump", mxc_dump, "display a file in hexadecimal"},
     {"echo", mxc_echo, "print its arguments"},
