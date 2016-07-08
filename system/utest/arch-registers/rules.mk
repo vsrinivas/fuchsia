@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := arch-registers-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/magenta ulib/mxio ulib/unittest
+    ulib/musl ulib/magenta ulib/mxio ulib/runtime ulib/unittest
 
 include make/module.mk

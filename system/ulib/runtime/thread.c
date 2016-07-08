@@ -89,6 +89,7 @@ static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
 
 static mx_status_t thread_cleanup(mxr_thread_t* thread, int* return_value_out) {
     mx_status_t status = _magenta_handle_close(thread->handle);
+    thread->handle = 0;
     if (status != NO_ERROR)
         return status;
     int return_value = thread->return_value;
@@ -210,6 +211,23 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
     }
 
     return status;
+}
+
+mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
+    mx_handle_t ret = 0;
+
+    if (!thread) {
+        // TODO: get current handle from TLS once we pass it into the thread
+    } else {
+        mxr_mutex_lock(&thread->state_lock);
+
+        if (thread->state != DONE)
+            ret = thread->handle;
+
+        mxr_mutex_unlock(&thread->state_lock);
+    }
+
+    return ret;
 }
 
 void __mxr_thread_main(void) {

@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
+#include <runtime/thread.h>
 #include <unittest/unittest.h>
 
 static bool wait(mx_handle_t event, mx_handle_t quit_event) {
@@ -56,7 +57,6 @@ static int thread_fn_1(void* arg) {
         _magenta_event_signal(events[1]);
     } while (!wait(events[2], events[0]));
 
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -68,7 +68,6 @@ static int thread_fn_2(void* arg) {
         _magenta_event_signal(events[2]);
     }
 
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -83,23 +82,20 @@ static bool basic_test(void) {
     events[2] = _magenta_event_create(2U);
     ASSERT_GE(events[2], 0, "Error during event create");
 
-    mx_handle_t threads[4];
-    threads[3] = _magenta_thread_create(thread_fn_1, events, "master", 7);
-    ASSERT_GE(threads[3], 0, "Error during thread creation");
+    mxr_thread_t *threads[4];
+    mx_status_t status = mxr_thread_create(thread_fn_1, events, "master", &threads[3]);
+    ASSERT_EQ(status, 0, "Error during thread creation");
 
     for (int ix = 0; ix != 3; ++ix) {
-        threads[ix] = _magenta_thread_create(thread_fn_2, events, "workers", 8);
-        ASSERT_GE(threads[ix], 0, "Error during thread creation");
+        status = mxr_thread_create(thread_fn_2, events, "workers", &threads[ix]);
+        ASSERT_EQ(status, 0, "Error during thread creation");
     }
 
     _magenta_nanosleep(400 * 1000 * 1000);
     _magenta_event_signal(events[0]);
 
     for (int ix = 0; ix != 4; ++ix) {
-        ASSERT_GE(_magenta_handle_wait_one(threads[ix], MX_SIGNAL_SIGNALED,
-                                           MX_TIME_INFINITE, NULL, NULL),
-                  0, "Error during wait");
-        ASSERT_GE(_magenta_handle_close(threads[ix]), 0, "Error during thread close");
+        ASSERT_EQ(mxr_thread_join(threads[ix], NULL), 0, "Error during wait");
     }
 
     ASSERT_GE(_magenta_handle_close(events[0]), 0, "Error during event-0 close");
@@ -116,7 +112,6 @@ static int thread_fn_3(void* arg) {
         _magenta_object_signal(events[1], MX_SIGNAL_USER1, MX_SIGNAL_USER_ALL);
     } while (!wait_user(events[2], events[0], MX_SIGNAL_USER2));
 
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -128,7 +123,6 @@ static int thread_fn_4(void* arg) {
         _magenta_object_signal(events[2], MX_SIGNAL_USER2, MX_SIGNAL_USER_ALL);
     }
 
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -143,23 +137,20 @@ static bool user_signals_test(void) {
     events[2] = _magenta_event_create(2U);
     ASSERT_GE(events[2], 0, "Error during event create");
 
-    mx_handle_t threads[4];
-    threads[3] = _magenta_thread_create(thread_fn_3, events, "master", 7);
-    ASSERT_GE(threads[3], 0, "Error during thread creation");
+    mxr_thread_t *threads[4];
+    mx_status_t status = mxr_thread_create(thread_fn_3, events, "master", &threads[3]);
+    ASSERT_EQ(status, 0, "Error during thread creation");
 
     for (int ix = 0; ix != 3; ++ix) {
-        threads[ix] = _magenta_thread_create(thread_fn_4, events, "workers", 8);
-        ASSERT_GE(threads[ix], 0, "Error during thread creation");
+        status = mxr_thread_create(thread_fn_4, events, "workers", &threads[ix]);
+        ASSERT_EQ(status, 0, "Error during thread creation");
     }
 
     _magenta_nanosleep(400 * 1000 * 1000);
     _magenta_event_signal(events[0]);
 
     for (int ix = 0; ix != 4; ++ix) {
-        ASSERT_GE(_magenta_handle_wait_one(threads[ix], MX_SIGNAL_SIGNALED,
-                                           MX_TIME_INFINITE, NULL, NULL),
-                  0, "Error during wait");
-        ASSERT_GE(_magenta_handle_close(threads[ix]), 0, "Error during thread close");
+        ASSERT_EQ(mxr_thread_join(threads[ix], NULL), 0, "Error during wait");
     }
 
     ASSERT_GE(_magenta_handle_close(events[0]), 0, "Error during event-0 close");
@@ -174,7 +165,6 @@ static int thread_fn_closer(void* arg) {
     mx_handle_t handle = *((mx_handle_t*)arg);
     int rc = (int)_magenta_handle_close(handle);
 
-    _magenta_thread_exit();
     return rc;
 }
 
@@ -225,18 +215,14 @@ static bool wait_signals_test(void) {
     ASSERT_EQ(status, 0, "wait failed");
     ASSERT_EQ(satisfied[0], MX_SIGNAL_SIGNALED, "Error during wait call");
 
-    mx_handle_t thread;
-    thread = _magenta_thread_create(thread_fn_closer, &events[1], "closer", 7);
-    ASSERT_GE(thread, 0, "Error during thread creation");
+    mxr_thread_t *thread;
+    status = mxr_thread_create(thread_fn_closer, &events[1], "closer", &thread);
+    ASSERT_EQ(status, 0, "Error during thread creation");
 
     status = _magenta_handle_wait_one(events[1], signals[1], MX_TIME_INFINITE, NULL, NULL);
     ASSERT_EQ(status, ERR_CANCELLED, "Error during wait");
 
-    ASSERT_GE(_magenta_handle_wait_one(
-                  thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL),
-              0, "Error during wait");
-
-    ASSERT_GE(_magenta_handle_close(thread), 0, "Error during thread close");
+    ASSERT_EQ(mxr_thread_join(thread, NULL), 0, "Error during thread close");
 
     ASSERT_GE(_magenta_handle_close(events[0]), 0, "Error during event-0 close");
     ASSERT_GE(_magenta_handle_close(events[2]), 0, "Error during event-2 close");

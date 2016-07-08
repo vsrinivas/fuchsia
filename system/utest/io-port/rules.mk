@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := io-port-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/unittest ulib/runtime
+    ulib/musl ulib/mxio ulib/magenta ulib/runtime ulib/unittest
 
 include make/module.mk

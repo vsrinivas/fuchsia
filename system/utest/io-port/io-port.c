@@ -15,6 +15,7 @@
 #include <stdio.h>
 
 #include <magenta/syscalls.h>
+#include <runtime/thread.h>
 #include <unittest/unittest.h>
 
 #define NUM_IO_THREADS 5
@@ -54,7 +55,6 @@ static int thread_consumer(void* arg)
         _magenta_nanosleep(1u);
     };
 
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -111,10 +111,10 @@ static bool thread_pool_test(void)
     tinfo.io_port = _magenta_io_port_create(0u);
     EXPECT_GT(tinfo.io_port, 0, "could not create ioport");
 
-    mx_handle_t threads[NUM_IO_THREADS];
+    mxr_thread_t *threads[NUM_IO_THREADS];
     for (size_t ix = 0; ix != NUM_IO_THREADS; ++ix) {
-        threads[ix] = _magenta_thread_create(thread_consumer, &tinfo, "tpool", 5);
-        EXPECT_GT(threads[ix], 0, "could not create thread");
+        status = mxr_thread_create(thread_consumer, &tinfo, "tpool", &threads[ix]);
+        EXPECT_EQ(status, 0, "could not create thread");
     }
 
     mx_user_packet_t us_pkt = {0};
@@ -125,8 +125,7 @@ static bool thread_pool_test(void)
     }
 
     for (size_t ix = 0; ix != NUM_IO_THREADS; ++ix) {
-        status = _magenta_handle_wait_one(
-            threads[ix], MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+        status = mxr_thread_join(threads[ix], NULL);
         EXPECT_EQ(status, NO_ERROR, "failed to wait");
     }
 
@@ -142,11 +141,6 @@ static bool thread_pool_test(void)
         sum += slot;
     }
     EXPECT_EQ(sum, 145, "bad sum");
-
-    for (size_t ix = 0; ix != NUM_IO_THREADS; ++ix) {
-        status = _magenta_handle_close(threads[ix]);
-        EXPECT_EQ(status, NO_ERROR, "failed to close thread handle");
-    }
 
     END_TEST;
 }
@@ -235,7 +229,6 @@ static int io_reply_thread(void* arg)
 
     };
 
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -262,8 +255,9 @@ static bool bind_events_test(void)
         EXPECT_EQ(status, NO_ERROR, "failed to bind event to ioport");
     }
 
-    mx_handle_t thread = _magenta_thread_create(io_reply_thread, &info, "reply", 5);
-    EXPECT_GT(thread, 0, "could not create thread");
+    mxr_thread_t *thread;
+    status = mxr_thread_create(io_reply_thread, &info, "reply", &thread);
+    EXPECT_EQ(status, 0, "could not create thread");
 
     // Poke at the events in some order, mesages with the events should arrive in order.
     int order[] = {2, 1, 0, 4, 3, 1, 2};
@@ -290,7 +284,7 @@ static bool bind_events_test(void)
         EXPECT_EQ(-report.key, (intptr_t)events[order[ix]], "invalid key");
     }
 
-    status = _magenta_handle_wait_one(thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    status = mxr_thread_join(thread, NULL);
     EXPECT_EQ(status, NO_ERROR, "could not wait for thread");
 
     // Test cleanup.
@@ -299,8 +293,6 @@ static bool bind_events_test(void)
         EXPECT_EQ(status, NO_ERROR, "failed closing events");
     }
 
-    status = _magenta_handle_close(thread);
-    EXPECT_EQ(status, NO_ERROR, "failed to close thread");
     status = _magenta_handle_close(info.io_port);
     EXPECT_EQ(status, NO_ERROR, "failed to close ioport");
     status = _magenta_handle_close(info.reply_pipe);

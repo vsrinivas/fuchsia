@@ -19,6 +19,7 @@
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
+#include <runtime/thread.h>
 
 #define THREAD_COUNT 8
 #define ITER 1000000
@@ -63,7 +64,6 @@ static int float_thread(void* arg) {
     }
 
     *val = a[countof(a) - 1];
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -73,7 +73,7 @@ bool fpu_test(void) {
     unittest_printf("welcome to floating point test\n");
 
     /* test lazy fpu load on separate thread */
-    mx_handle_t t[THREAD_COUNT];
+    mxr_thread_t *t[THREAD_COUNT];
     double val[countof(t)];
     char name[MX_MAX_NAME_LEN];
 
@@ -81,12 +81,11 @@ bool fpu_test(void) {
     for (unsigned int i = 0; i < countof(t); i++) {
         val[i] = i;
         snprintf(name, sizeof(name), "fpu thread %u", i);
-        t[i] = _magenta_thread_create(float_thread, &val[i], name, strlen(name));
+        mxr_thread_create(float_thread, &val[i], name, &t[i]);
     }
 
     for (unsigned int i = 0; i < countof(t); i++) {
-        _magenta_handle_wait_one(t[i], MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
-        _magenta_handle_close(t[i]);
+        mxr_thread_join(t[i], NULL);
         void* v = &val[i];
         uint64_t int64_val = *(uint64_t*)v;
 

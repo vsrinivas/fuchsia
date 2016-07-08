@@ -16,6 +16,7 @@
 #include <time.h>
 
 #include <magenta/syscalls.h>
+#include <runtime/thread.h>
 #include <unittest/unittest.h>
 
 // This example tests transfering message pipe handles through message pipes. To do so, it:
@@ -112,7 +113,6 @@ static int thread(void* arg) {
     }
 
 thread_exit:
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -134,17 +134,17 @@ bool handle_transfer_cancel_wait_test(void) {
     snprintf(msg, sizeof(msg), "failed to create message pipe B[0,1]: %d\n", (mx_status_t)B[0]);
     EXPECT_GE(B[0], 0, msg);
 
-    mx_handle_t thr = _magenta_thread_create(thread, A, "write thread", 13);
-    EXPECT_GE(thr, 0, "failed to create write thread");
+    mxr_thread_t *thr;
+    mx_status_t status = mxr_thread_create(thread, A, "write thread", &thr);
+    EXPECT_EQ(status, 0, "failed to create write thread");
 
     mx_signals_t satisfied_signals, satisfiable_signals;
     mx_signals_t signals = MX_SIGNAL_PEER_CLOSED;
-    mx_status_t status = _magenta_handle_wait_one(A[0], signals, 1000 * 1000 * 1000,
+    status = _magenta_handle_wait_one(A[0], signals, 1000 * 1000 * 1000,
             &satisfied_signals, &satisfiable_signals);
     EXPECT_NEQ(ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
 
-    status = _magenta_handle_wait_one(thr, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
-    _magenta_handle_close(thr);
+    mxr_thread_join(thr, NULL);
     _magenta_handle_close(B[1]);
     _magenta_handle_close(B[0]);
     _magenta_handle_close(A[1]);

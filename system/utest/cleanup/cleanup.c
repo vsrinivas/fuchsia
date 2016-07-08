@@ -19,15 +19,15 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <unittest/unittest.h>
+#include <runtime/thread.h>
 
 static const char* msg = "This is a test message, please discard.";
 
 volatile int test_state = 0;
 
 int watchdog(void* arg) {
-    _magenta_nanosleep(1000 * 1000 * 1000);
+    usleep(1000 * 1000);
     EXPECT_GE(test_state, 100, "cleanup-test: FAILED. Stuck waiting in test");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -37,7 +37,9 @@ bool cleanup_test(void) {
     mx_signals_t pending;
     mx_status_t r;
 
-    _magenta_thread_create(watchdog, NULL, "watchdog", 8);
+    mxr_thread_t *thread;
+    mxr_thread_create(watchdog, NULL, "watchdog", &thread);
+    mxr_thread_detach(thread);
 
     // TEST1
     // Create a pipe, close one end, try to wait on the other.

@@ -27,4 +27,7 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
 mx_status_t mxr_thread_join(mxr_thread_t* thread, int* return_value_out);
 mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 
+// get magenta handle to thread or current thread if passed NULL
+mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
+
 __END_CDECLS

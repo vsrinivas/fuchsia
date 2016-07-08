@@ -14,6 +14,7 @@
 
 #include <limits.h>
 #include <magenta/syscalls.h>
+#include <runtime/thread.h>
 #include <unittest/unittest.h>
 #include <sched.h>
 #include <stdio.h>
@@ -57,9 +58,8 @@ public:
         : futex_addr_(futex_addr),
           timeout_in_us_(timeout_in_us),
           state_(STATE_STARTED) {
-        thread_handle_ = _magenta_thread_create(wakeup_test_thread, this,
-                                                "wakeup_test_thread", 19);
-        EXPECT_GT(thread_handle_, 0, "Error during thread creation");
+        auto ret = mxr_thread_create(wakeup_test_thread, this, "wakeup_test_thread", &thread_);
+        EXPECT_EQ(ret, NO_ERROR, "Error during thread creation");
         while (state_ == STATE_STARTED) {
             sched_yield();
         }
@@ -74,9 +74,7 @@ public:
     }
 
     ~TestThread() {
-        EXPECT_EQ(_magenta_handle_wait_one(thread_handle_, MX_SIGNAL_SIGNALED,
-                                           MX_TIME_INFINITE, NULL, NULL),
-                  NO_ERROR, "Error during wait");
+        EXPECT_EQ(mxr_thread_join(thread_, NULL), NO_ERROR, "Error during wait");
     }
 
     void assert_thread_woken() {
@@ -113,11 +111,10 @@ private:
             EXPECT_EQ(rc, ERR_TIMED_OUT, "wait should have timedout");
         }
         thread->state_ = STATE_WAIT_RETURNED;
-        _magenta_thread_exit();
         return 0;
     }
 
-    mx_handle_t thread_handle_;
+    mxr_thread_t *thread_;
     volatile int* futex_addr_;
     mx_time_t timeout_in_us_;
     volatile enum {
@@ -373,7 +370,6 @@ static int signal_thread1(void* arg) {
     log("thread 1 waiting on event\n");
     event.wait();
     log("thread 1 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -381,7 +377,6 @@ static int signal_thread2(void* arg) {
     log("thread 2 waiting on event\n");
     event.wait();
     log("thread 2 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -389,34 +384,29 @@ static int signal_thread3(void* arg) {
     log("thread 3 waiting on event\n");
     event.wait();
     log("thread 3 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
 static bool test_event_signalling() {
     BEGIN_TEST;
-    mx_handle_t handle1, handle2, handle3;
+    mxr_thread_t *handle1, *handle2, *handle3;
 
     log("starting signal threads\n");
-    handle1 = _magenta_thread_create(signal_thread1, NULL, "thread 1", 9);
-    handle2 = _magenta_thread_create(signal_thread2, NULL, "thread 2", 9);
-    handle3 = _magenta_thread_create(signal_thread3, NULL, "thread 3", 9);
+    mxr_thread_create(signal_thread1, NULL, "thread 1", &handle1);
+    mxr_thread_create(signal_thread2, NULL, "thread 2", &handle2);
+    mxr_thread_create(signal_thread3, NULL, "thread 3", &handle3);
 
     _magenta_nanosleep(300 * 1000 * 1000);
     log("signalling event\n");
     event.signal();
 
     log("joining signal threads\n");
-    _magenta_handle_wait_one(handle1, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    mxr_thread_join(handle1, NULL);
     log("signal_thread 1 joined\n");
-    _magenta_handle_wait_one(handle2, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    mxr_thread_join(handle2, NULL);
     log("signal_thread 2 joined\n");
-    _magenta_handle_wait_one(handle3, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    mxr_thread_join(handle3, NULL);
     log("signal_thread 3 joined\n");
-
-    _magenta_handle_close(handle1);
-    _magenta_handle_close(handle2);
-    _magenta_handle_close(handle3);
     END_TEST;
 }
 

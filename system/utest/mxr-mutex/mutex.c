@@ -14,6 +14,7 @@
 
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
+#include <runtime/thread.h>
 #include <unittest/unittest.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -37,7 +38,6 @@ static int mutex_thread_1(void* arg) {
     }
 
     xlog("thread 1 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -51,7 +51,6 @@ static int mutex_thread_2(void* arg) {
     }
 
     xlog("thread 2 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -65,7 +64,6 @@ static int mutex_thread_3(void* arg) {
     }
 
     xlog("thread 3 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -86,7 +84,6 @@ static int mutex_try_thread_1(void* arg) {
     }
 
     xlog("thread 1 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -103,7 +100,6 @@ static int mutex_try_thread_2(void* arg) {
     }
 
     xlog("thread 2 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -120,7 +116,6 @@ static int mutex_try_thread_3(void* arg) {
     }
 
     xlog("thread 3 done\n");
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -136,37 +131,30 @@ static bool test_initializer(void) {
 
 static bool test_mutexes(void) {
     BEGIN_TEST;
-    mx_handle_t handle1, handle2, handle3;
+    mxr_thread_t *handle1, *handle2, *handle3;
 
-    handle1 = _magenta_thread_create(mutex_thread_1, NULL, "thread 1", 9);
-    handle2 = _magenta_thread_create(mutex_thread_2, NULL, "thread 2", 9);
-    handle3 = _magenta_thread_create(mutex_thread_3, NULL, "thread 3", 9);
+    mxr_thread_create(mutex_thread_1, NULL, "thread 1", &handle1);
+    mxr_thread_create(mutex_thread_2, NULL, "thread 2", &handle2);
+    mxr_thread_create(mutex_thread_3, NULL, "thread 3", &handle3);
 
-    _magenta_handle_wait_one(handle1, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
-    _magenta_handle_wait_one(handle2, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
-    _magenta_handle_wait_one(handle3, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    mxr_thread_join(handle1, NULL);
+    mxr_thread_join(handle2, NULL);
+    mxr_thread_join(handle3, NULL);
 
-    _magenta_handle_close(handle1);
-    _magenta_handle_close(handle2);
-    _magenta_handle_close(handle3);
     END_TEST;
 }
 
 static bool test_try_mutexes(void) {
     BEGIN_TEST;
-    mx_handle_t handle1, handle2, handle3;
+    mxr_thread_t *handle1, *handle2, *handle3;
 
-    handle1 = _magenta_thread_create(mutex_try_thread_1, NULL, "thread 1", 9);
-    handle2 = _magenta_thread_create(mutex_try_thread_2, NULL, "thread 2", 9);
-    handle3 = _magenta_thread_create(mutex_try_thread_3, NULL, "thread 3", 9);
+    mxr_thread_create(mutex_try_thread_1, NULL, "thread 1", &handle1);
+    mxr_thread_create(mutex_try_thread_2, NULL, "thread 2", &handle2);
+    mxr_thread_create(mutex_try_thread_3, NULL, "thread 3", &handle3);
 
-    _magenta_handle_wait_one(handle1, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
-    _magenta_handle_wait_one(handle2, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
-    _magenta_handle_wait_one(handle3, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
-
-    _magenta_handle_close(handle1);
-    _magenta_handle_close(handle2);
-    _magenta_handle_close(handle3);
+    mxr_thread_join(handle1, NULL);
+    mxr_thread_join(handle2, NULL);
+    mxr_thread_join(handle3, NULL);
 
     EXPECT_TRUE(got_lock_1, "failed to get lock 1");
     EXPECT_TRUE(got_lock_2, "failed to get lock 2");

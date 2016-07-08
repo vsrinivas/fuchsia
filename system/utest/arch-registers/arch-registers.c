@@ -20,6 +20,7 @@
 
 #include <magenta/prctl.h>
 #include <magenta/syscalls.h>
+#include <runtime/thread.h>
 #include <unittest/unittest.h>
 
 #define THREAD_ASSERT_FALSE(exp, msg) \
@@ -158,7 +159,7 @@ static uintptr_t make_valid_value(uintptr_t value) {
 
 typedef struct context {
     uintptr_t key; // A different bit per thread so they test different values.
-    mx_handle_t* thread;
+    mxr_thread_t** thread;
 } context;
 
 static uint64_t values[] = {
@@ -170,6 +171,10 @@ static uint64_t values[] = {
 static int test_entry_point(void* arg) {
     context* c = (context*)arg;
 
+    // sleep a short period of time to make sure we get a good thread pointer
+    usleep(100000);
+    mx_handle_t thread = mxr_thread_get_handle(*c->thread);
+
     // Test setting valid values.
     for (size_t idx = 0; idx < sizeof(values) / sizeof(*values); ++idx) {
         uintptr_t value = values[idx] ^ c->key;
@@ -180,9 +185,9 @@ static int test_entry_point(void* arg) {
                 value ^= ((uintptr_t)op_idx << 24);
                 uintptr_t real_value = make_valid_value(value);
                 sched_yield();
-                o->set(*c->thread, real_value);
+                o->set(thread, real_value);
                 sched_yield();
-                uintptr_t new_value = o->get(*c->thread);
+                uintptr_t new_value = o->get(thread);
                 ASSERT_EQ(new_value, real_value, o->name);
             }
         }
@@ -190,10 +195,10 @@ static int test_entry_point(void* arg) {
 
     // Test bad op.
     uintptr_t value = (uintptr_t)0xabcdabcdabcdabcdull;
-    mx_status_t status = _magenta_thread_arch_prctl(*c->thread, 42, &value);
+    mx_status_t status = _magenta_thread_arch_prctl(thread, 42, &value);
     ASSERT_EQ(status, ERR_INVALID_ARGS, "failed to reject bad op");
     for (size_t op_idx = 0; op_idx < sizeof(ops) / sizeof(*ops); ++op_idx) {
-        uintptr_t current_value = ops[op_idx].get(*c->thread);
+        uintptr_t current_value = ops[op_idx].get(thread);
         ASSERT_NEQ(current_value, value, "modified value in invalid call");
     }
 
@@ -213,7 +218,6 @@ static int test_entry_point(void* arg) {
     //         fail(__FUNCTION__, __LINE__, "modified arch register in invalid call");
     // }
 
-    _magenta_thread_exit();
     return 0;
 }
 
@@ -221,22 +225,19 @@ bool arch_register_test(void) {
     BEGIN_TEST;
 #define num_threads 64
 
-    mx_handle_t threads[num_threads] = {0};
+    mxr_thread_t *threads[num_threads] = {0};
     context contexts[num_threads] = {0};
 
     for (uintptr_t idx = 0; idx < num_threads; ++idx) {
         const char* thread_name = "arch register";
 
-        contexts[idx] = (context){(1ull << idx), threads + idx};
-        threads[idx] = _magenta_thread_create(test_entry_point, contexts + idx, thread_name, strlen(thread_name));
-        ASSERT_GE(threads[idx], 0, "failed to create thread");
+        contexts[idx] = (context){(1ull << idx), &threads[idx]};
+        mx_status_t result = mxr_thread_create(test_entry_point, contexts + idx, thread_name, &threads[idx]);
+        ASSERT_EQ(result, 0, "failed to create thread");
     }
 
     for (uintptr_t idx = 0; idx < num_threads; ++idx) {
-        mx_status_t result = _magenta_handle_wait_one(threads[idx], MX_SIGNAL_SIGNALED,
-                                                      MX_TIME_INFINITE, NULL, NULL);
-        ASSERT_EQ(result, NO_ERROR, "failed to join thread");
-        result = _magenta_handle_close(threads[idx]);
+        mx_status_t result = mxr_thread_join(threads[idx], NULL);
         ASSERT_EQ(result, NO_ERROR, "failed to join thread");
     }
 
