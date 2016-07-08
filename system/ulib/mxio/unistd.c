@@ -638,3 +638,25 @@ struct dirent *readdir(DIR* dir) {
     mxr_mutex_unlock(&dir->lock);
     return de;
 }
+
+int isatty(int fd) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        errno = EBADF;
+        return 0;
+    }
+
+    int ret;
+    // For now, stdout etc. needs to be a tty for line buffering to
+    // work. So let's pretend those are ttys but nothing else is.
+    if (fd == 0 || fd == 1 || fd == 2) {
+        ret = 1;
+    } else {
+        ret = 0;
+        errno = ENOTTY;
+    }
+
+    mxio_release(io);
+
+    return ret;
+}

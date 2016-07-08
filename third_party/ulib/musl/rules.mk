@@ -1023,7 +1023,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/getppid.c \
     $(LOCAL_DIR)/src/unistd/getsid.c \
     $(LOCAL_DIR)/src/unistd/getuid.c \
-    $(LOCAL_DIR)/src/unistd/isatty.c \
     $(LOCAL_DIR)/src/unistd/lchown.c \
     $(LOCAL_DIR)/src/unistd/link.c \
     $(LOCAL_DIR)/src/unistd/linkat.c \

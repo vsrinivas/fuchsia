@@ -35,7 +35,13 @@ static off_t stub_lseek(int fd, off_t offset, int whence) {
     errno = ENOSYS;
     return -1;
 }
-      weak_alias(stub_lseek, lseek);
+weak_alias(stub_lseek, lseek);
+
+static int stub_isatty(int fd) {
+    errno = ENOSYS;
+    return 0;
+}
+weak_alias(stub_isatty, isatty);
 
 static ssize_t stub_readv(int fd, const struct iovec* iov, int num) {
     errno = ENOSYS;
