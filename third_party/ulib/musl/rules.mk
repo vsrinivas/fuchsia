@@ -151,9 +151,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/pthread/sem_trywait.c \
     $(LOCAL_DIR)/pthread/sem_unlink.c \
     $(LOCAL_DIR)/pthread/sem_wait.c \
-    $(LOCAL_DIR)/src/aio/aio.c \
-    $(LOCAL_DIR)/src/aio/aio_suspend.c \
-    $(LOCAL_DIR)/src/aio/lio_listio.c \
     $(LOCAL_DIR)/src/complex/cabs.c \
     $(LOCAL_DIR)/src/complex/cabsf.c \
     $(LOCAL_DIR)/src/complex/cabsl.c \
