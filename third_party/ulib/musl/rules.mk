@@ -208,9 +208,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/conf/fpathconf.c \
     $(LOCAL_DIR)/src/conf/pathconf.c \
     $(LOCAL_DIR)/src/conf/sysconf.c \
-    $(LOCAL_DIR)/src/crypt/crypt.c \
-    $(LOCAL_DIR)/src/crypt/crypt_r.c \
-    $(LOCAL_DIR)/src/crypt/encrypt.c \
     $(LOCAL_DIR)/src/ctype/__ctype_b_loc.c \
     $(LOCAL_DIR)/src/ctype/__ctype_get_mb_cur_max.c \
     $(LOCAL_DIR)/src/ctype/__ctype_tolower_loc.c \
@@ -1148,6 +1145,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/third_party/math/tanf.c \
     $(LOCAL_DIR)/third_party/math/tgammal.c \
     $(LOCAL_DIR)/third_party/smoothsort/qsort.c \
+
+# These refer to __crypt_*, __des_setkey, and __do_des, which we do not have.
+#    $(LOCAL_DIR)/src/crypt/crypt.c \
+#    $(LOCAL_DIR)/src/crypt/crypt_r.c \
+#    $(LOCAL_DIR)/src/crypt/encrypt.c \
 
 # Thef following are not built until we have mxio and libc standing in
 # proper relation to each other.
