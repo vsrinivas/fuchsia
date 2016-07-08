@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# disabled for now
+# uses a no longer public interface
+
+ifeq (1,2)
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
@@ -27,3 +31,4 @@ MODULE_DEPS := \
     ulib/musl ulib/mxio ulib/magenta ulib/unittest
 
 include make/module.mk
+endif

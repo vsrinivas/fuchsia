@@ -21,9 +21,12 @@
 #include <mxio/debug.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
+#include <mxio/util.h>
 
 #include <runtime/thread.h>
 #include <runtime/mutex.h>
+
+#include "private.h"
 
 #define MXDEBUG 0
 
@@ -219,9 +222,8 @@ static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
     return r;
 }
 
-static ssize_t mx_rio_ioctl(
-    mxio_t* io, uint32_t op,
-    const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+static ssize_t mx_rio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
+                            size_t in_len, void* out_buf, size_t out_len) {
     mx_rio_t* rio = (mx_rio_t*)io;
     const uint8_t* data = in_buf;
     mx_status_t r = 0;
@@ -355,14 +357,14 @@ static mx_status_t mx_rio_close(mxio_t* io) {
         discard_handles(msg.handle, msg.hcount);
     }
 
-    // probably should defer the free
-    _magenta_handle_close(rio->h);
-    if (rio->e > 0) {
-        _magenta_handle_close(rio->e);
-        rio->e = 0;
-    }
+    mx_handle_t h = rio->h;
     rio->h = 0;
-    free(rio);
+    _magenta_handle_close(h);
+    if (rio->e > 0) {
+        h = rio->e;
+        rio->e = 0;
+        _magenta_handle_close(h);
+    }
 
     return r;
 }
@@ -521,7 +523,7 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
         return NULL;
     rio->io.ops = &mx_remote_ops;
     rio->io.magic = MXIO_MAGIC;
-    rio->io.priv = 0;
+    rio->io.refcount = 1;
     rio->h = h;
     rio->e = e;
     rio->flags = 0;

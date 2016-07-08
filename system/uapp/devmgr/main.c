@@ -94,7 +94,6 @@ int console_starter(void* arg) {
 
 int main(int argc, char** argv) {
     devmgr_io_init();
-
     if (argc > 1) {
         return devicehost(argc, argv);
     }

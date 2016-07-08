@@ -16,6 +16,7 @@
 
 #include <system/compiler.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 __BEGIN_CDECLS
 

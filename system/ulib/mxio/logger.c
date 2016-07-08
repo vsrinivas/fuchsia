@@ -21,6 +21,8 @@
 #include <runtime/mutex.h>
 #include <runtime/tls.h>
 
+#include "private.h"
+
 static int logbuf_tls = -1;
 static mxr_mutex_t logbuf_lock;
 
@@ -71,19 +73,24 @@ static ssize_t log_write(mxio_t* io, const void* _data, size_t len) {
     return r;
 }
 
-static mx_status_t log_no_impl(void) {
-    return ERR_NOT_SUPPORTED;
+static mx_status_t log_close(mxio_t* io) {
+    mxio_log_t* log_io = (mxio_log_t*)io;
+    mx_handle_t h = log_io->handle;
+    log_io->handle = 0;
+    _magenta_handle_close(h);
+    return NO_ERROR;
 }
 
 static mxio_ops_t log_io_ops = {
-    .read = (void*)log_no_impl,
+    .read = mxio_default_read,
     .write = log_write,
-    .seek = (void*)log_no_impl,
-    .misc = (void*)log_no_impl,
-    .close = (void*)log_no_impl,
-    .open = (void*)log_no_impl,
-    .clone = (void*)log_no_impl,
-    .ioctl = (void*)log_no_impl,
+    .seek = mxio_default_seek,
+    .misc = mxio_default_misc,
+    .close = log_close,
+    .open = mxio_default_open,
+    .clone = mxio_default_clone,
+    .wait = mxio_default_wait,
+    .ioctl = mxio_default_ioctl,
 };
 
 mxio_t* mxio_logger_create(mx_handle_t handle) {
@@ -100,6 +107,8 @@ mxio_t* mxio_logger_create(mx_handle_t handle) {
         return NULL;
     }
     log->io.ops = &log_io_ops;
+    log->io.magic = MXIO_MAGIC;
+    log->io.refcount = 1;
     log->handle = handle;
     return &log->io;
 }

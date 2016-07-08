@@ -21,6 +21,8 @@
 // These routines are "internal" to mxio but used by some companion
 // code like userboot and devmgr
 
+typedef struct mxio mxio_t;
+
 // starts new process, handling fd/handle transfer
 mx_handle_t mxio_start_process(const char* name, int argc, char** argv);
 
@@ -56,8 +58,23 @@ mx_status_t mxio_load_elf_filename(mx_handle_t process, const char* filename,
 void bootfs_parse(void* _data, int len,
                   void (*cb)(const char* fn, size_t off, size_t len));
 
-// return our own process handle if we know it
-mx_handle_t mxio_get_process_handle(void);
 
 // used for bootstrap
 void mxio_install_root(mxio_t* root);
+
+// attempt to install a mxio in the unistd fd table
+// if fd >= 0, request a specific fd instead of first available
+// returns fd on success
+// the mxio must have been upref'd on behalf of the fdtab first
+int mxio_bind_to_fd(mxio_t* io, int fd);
+
+// creates a do-nothing mxio_t
+mxio_t* mxio_null_create(void);
+
+// wraps a message port with an mxio_t using remote io
+mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
+
+// creates a mxio that wraps a log object
+// this will allocate a per-thread buffer (on demand) to assemble
+// entire log-lines and flush them on newline or buffer full.
+mxio_t* mxio_logger_create(mx_handle_t);

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -101,12 +102,6 @@ static const char* modestr(uint32_t mode) {
     }
 }
 
-#include <dirent.h>
-DIR* _opendir(const char* name);
-struct dirent* _readdir(DIR* dir);
-int _closedir(DIR* dir);
-
-int getdirents(int fd, void* ptr, size_t len);
 
 static int mxc_ls(int argc, char** argv) {
     const char* dirn;
@@ -131,11 +126,11 @@ static int mxc_ls(int argc, char** argv) {
         printf("usage: ls [ <directory> ]\n");
         return -1;
     }
-    if ((dir = _opendir(dirn)) == NULL) {
+    if ((dir = opendir(dirn)) == NULL) {
         printf("error: cannot open '%s'\n", dirn);
         return -1;
     }
-    while((de = _readdir(dir)) != NULL) {
+    while((de = readdir(dir)) != NULL) {
         memset(&s, 0, sizeof(struct stat));
         if ((strlen(de->d_name) + dirln + 2) <= sizeof(tmp)) {
             snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
@@ -143,7 +138,7 @@ static int mxc_ls(int argc, char** argv) {
         }
         printf("%s %8llu %s\n", modestr(s.st_mode), s.st_size, de->d_name);
     }
-    _closedir(dir);
+    closedir(dir);
     return 0;
 }
 
@@ -257,7 +252,7 @@ static int mxc_runtests(int argc, char** argv) {
     int failed_count = 0;
 
     const char* dirn = "/boot/bin";
-    DIR* dir = _opendir(dirn);
+    DIR* dir = opendir(dirn);
     if (dir == NULL) {
         printf("error: cannot open '%s'\n", dirn);
         return -1;
@@ -265,7 +260,7 @@ static int mxc_runtests(int argc, char** argv) {
     size_t test_suffix_len = sizeof(TESTNAME_SUFFIX) - 1;
 
     struct dirent* de;
-    while ((de = _readdir(dir)) != NULL) {
+    while ((de = readdir(dir)) != NULL) {
         size_t len = strlen(de->d_name);
         if (len < test_suffix_len) {
             continue;
@@ -321,7 +316,7 @@ static int mxc_runtests(int argc, char** argv) {
         }
     }
 
-    _closedir(dir);
+    closedir(dir);
 
     printf("\nSUMMARY: Ran %d tests: %d failed\n", total_count, failed_count);
 

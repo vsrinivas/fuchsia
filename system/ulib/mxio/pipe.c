@@ -21,16 +21,16 @@
 #include <mxio/io.h>
 
 #include "util.h"
+#include "private.h"
 
-typedef struct mx_pipe mx_pipe_t;
-struct mx_pipe {
+typedef struct mx_pipe {
     mxio_t io;
     mx_handle_t h;
     uint32_t avail;
     uint32_t flags;
     uint8_t* next;
     uint8_t data[MXIO_CHUNK_SIZE];
-};
+} mx_pipe_t;
 
 static ssize_t mx_pipe_write(mxio_t* io, const void* _data, size_t len) {
     mx_pipe_t* p = (mx_pipe_t*)io;
@@ -92,40 +92,28 @@ static ssize_t mx_pipe_read(mxio_t* io, void* _data, size_t len) {
 
 static mx_status_t mx_pipe_close(mxio_t* io) {
     mx_pipe_t* p = (mx_pipe_t*)io;
-    _magenta_handle_close(p->h);
-    free(p);
+    mx_handle_t h = p->h;
+    p->h = 0;
+    _magenta_handle_close(h);
     return 0;
 }
 
-static mx_status_t mx_pipe_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* ptr, size_t len) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t mx_pipe_open(mxio_t* io, const char* path, int32_t flags, mxio_t** out) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_handle_t mx_pipe_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static off_t mx_pipe_seek(mxio_t* io, off_t offset, int whence) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t mx_pipe_wait(mxio_t* io, uint32_t events, uint32_t* pending, mx_time_t timeout) {
-    return ERR_NOT_SUPPORTED;
+static void mx_pipe_release(mxio_t* io) {
+    mx_pipe_t* p = (mx_pipe_t*)io;
+    _magenta_handle_close(p->h);
+    free(io);
 }
 
 static mxio_ops_t mx_pipe_ops = {
     .read = mx_pipe_read,
     .write = mx_pipe_write,
-    .misc = mx_pipe_misc,
+    .seek = mxio_default_seek,
+    .misc = mxio_default_misc,
     .close = mx_pipe_close,
-    .open = mx_pipe_open,
-    .clone = mx_pipe_clone,
-    .seek = mx_pipe_seek,
-    .wait = mx_pipe_wait,
+    .open = mxio_default_open,
+    .clone = mxio_default_clone,
+    .wait = mxio_default_wait,
+    .ioctl = mxio_default_ioctl,
 };
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {
@@ -134,7 +122,7 @@ mxio_t* mxio_pipe_create(mx_handle_t h) {
         return NULL;
     p->io.ops = &mx_pipe_ops;
     p->io.magic = MXIO_MAGIC;
-    p->io.priv = 0;
+    p->io.refcount = 1;
     p->h = h;
     p->avail = 0;
     p->flags = 0;
