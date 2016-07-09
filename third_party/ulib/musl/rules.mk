@@ -1029,7 +1029,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/linkat.c \
     $(LOCAL_DIR)/src/unistd/nice.c \
     $(LOCAL_DIR)/src/unistd/pause.c \
-    $(LOCAL_DIR)/src/unistd/pipe2.c \
     $(LOCAL_DIR)/src/unistd/posix_close.c \
     $(LOCAL_DIR)/src/unistd/pread.c \
     $(LOCAL_DIR)/src/unistd/preadv.c \
@@ -1150,15 +1149,6 @@ MODULE_SRCS += \
 #    $(LOCAL_DIR)/src/crypt/crypt.c \
 #    $(LOCAL_DIR)/src/crypt/crypt_r.c \
 #    $(LOCAL_DIR)/src/crypt/encrypt.c \
-
-# Thef following are not built until we have mxio and libc standing in
-# proper relation to each other.
-#    $(LOCAL_DIR)/src/stat/fstat.c \
-#    $(LOCAL_DIR)/src/stat/stat.c \
-#    $(LOCAL_DIR)/src/unistd/lseek.c \
-#    $(LOCAL_DIR)/src/unistd/pipe.c \
-#    $(LOCAL_DIR)/src/unistd/read.c \
-#    $(LOCAL_DIR)/src/unistd/write.c \
 
 ifeq ($(ARCH),arm64)
 MODULE_SRCS += \

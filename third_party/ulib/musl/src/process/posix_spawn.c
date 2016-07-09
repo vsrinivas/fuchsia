@@ -129,7 +129,7 @@ fail:
     /* Since sizeof errno < PIPE_BUF, the write is atomic. */
     ret = -ret;
     if (ret)
-        while (__syscall(SYS_write, p, &ret, sizeof ret) < 0)
+        while (write(p, &ret, sizeof(ret)) < 0)
             ;
     _exit(127);
 }

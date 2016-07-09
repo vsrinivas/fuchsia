@@ -1,5 +1,4 @@
 #define SYS_exit 1
-#define SYS_write 4
 #define SYS_close 6
 #define SYS_execve 11
 #define SYS_chdir 12
@@ -150,7 +149,6 @@
 #define SYS_getcpu 345
 #define SYS_utimensat 348
 #define SYS_fallocate 352
-#define SYS_pipe2 359
 #define SYS_preadv 361
 #define SYS_pwritev 362
 #define SYS_recvmmsg 365

@@ -1,4 +1,3 @@
-#define SYS_write 1
 #define SYS_close 3
 #define SYS_fstat 5
 #define SYS_mmap 9
@@ -150,7 +149,6 @@
 #define SYS_utimensat 280
 #define SYS_fallocate 285
 #define SYS_accept4 288
-#define SYS_pipe2 293
 #define SYS_preadv 295
 #define SYS_pwritev 296
 #define SYS_recvmmsg 299
