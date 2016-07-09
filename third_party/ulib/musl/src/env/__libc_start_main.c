@@ -72,10 +72,10 @@ int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
     // TODO(kulakowski) Set up ssp once kernel randomness exists
     // __init_ssp((void*)aux[AT_RANDOM]);
     __init_security();
-    __libc_start_init();
 
     // allow companion libraries a chance to poke at this
     __libc_extensions_init(pi);
+    __libc_start_init();
 
     // Pass control to the application
     exit(main(pi->argc, pi->argv, NULL));
