@@ -77,7 +77,7 @@ static mxio_ops_t mx_null_ops = {
 };
 
 mxio_t* mxio_null_create(void) {
-    mxio_t* io = malloc(sizeof(*io));
+    mxio_t* io = calloc(1, sizeof(*io));
     if (io == NULL) {
         return NULL;
     }

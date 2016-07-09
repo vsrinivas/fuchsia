@@ -49,6 +49,8 @@ typedef struct mxio {
     mxio_ops_t* ops;
     uint32_t magic;
     int32_t refcount;
+    int32_t dupcount;
+    int32_t flags;
 } mxio_t;
 
 // Lifecycle notes:
@@ -69,27 +71,29 @@ typedef struct mxio {
 // certainly fail doe to underlying handles being closed
 // at which point a downref will happen and destruction
 // will follow.
+//
+// dupcount tracks how many fdtab entries an mxio object
+// is in.  close() reduces the dupcount, and only actually
+// closes the underlying object when it reaches zero.
 
 #define MXIO_MAGIC 0x4f49584d // MXIO
 
-static inline ssize_t mx_read(mxio_t* io, void* data, size_t len) {
+static inline ssize_t mxio_read(mxio_t* io, void* data, size_t len) {
     return io->ops->read(io, data, len);
 }
-static inline ssize_t mx_write(mxio_t* io, const void* data, size_t len) {
+static inline ssize_t mxio_write(mxio_t* io, const void* data, size_t len) {
     return io->ops->write(io, data, len);
 }
-static inline off_t mx_seek(mxio_t* io, off_t offset, int whence) {
+static inline off_t mxio_seek(mxio_t* io, off_t offset, int whence) {
     return io->ops->seek(io, offset, whence);
 }
-static inline mx_status_t mx_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* data, size_t len) {
+static inline mx_status_t mxio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* data, size_t len) {
     return io->ops->misc(io, op, maxreply, data, len);
 }
-static inline mx_status_t mx_close(mxio_t* io) {
-    return io->ops->close(io);
-}
-static inline mx_status_t mx_open(mxio_t* io, const char* path, int32_t flags, mxio_t** out) {
+static inline mx_status_t mxio_open(mxio_t* io, const char* path, int32_t flags, mxio_t** out) {
     return io->ops->open(io, path, flags, out);
 }
+mx_status_t mxio_close(mxio_t* io);
 
 // wraps a message port with an mxio_t using simple io
 mxio_t* mxio_pipe_create(mx_handle_t h);

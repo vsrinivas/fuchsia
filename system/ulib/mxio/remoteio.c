@@ -518,7 +518,7 @@ static mxio_ops_t mx_remote_ops = {
 };
 
 mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
-    mx_rio_t* rio = malloc(sizeof(*rio));
+    mx_rio_t* rio = calloc(1, sizeof(*rio));
     if (rio == NULL)
         return NULL;
     rio->io.ops = &mx_remote_ops;
@@ -526,7 +526,6 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
     rio->io.refcount = 1;
     rio->h = h;
     rio->e = e;
-    rio->flags = 0;
     rio->lock = MXR_MUTEX_INIT;
     return &rio->io;
 }

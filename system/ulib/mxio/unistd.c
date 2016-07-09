@@ -60,19 +60,20 @@ void mxio_install_root(mxio_t* root) {
     mxr_mutex_unlock(&mxio_lock);
 }
 
-//TODO: fd's pointing to same mxio, refcount, etc
-
+// Attaches an mxio to an fdtab slot.
+// The mxio must have been upref'd on behalf of the
+// fdtab prior to binding.
 int mxio_bind_to_fd(mxio_t* io, int fd) {
-    int r;
+    mxio_t* io_to_close = NULL;
 
     mxr_mutex_lock(&mxio_lock);
     if (fd >= 0) {
         if (fd >= MAX_MXIO_FD) {
-            r = ERR_INVALID_ARGS;
+            errno = EINVAL;
+            fd = -1;
+            goto fail;
         } else if (mxio_fdtab[fd]) {
-            r = ERR_ALREADY_EXISTS;
-        } else {
-            goto ok;
+            io_to_close = mxio_fdtab[fd];
         }
     } else {
         //TODO: bitmap, ffs, etc
@@ -81,15 +82,28 @@ int mxio_bind_to_fd(mxio_t* io, int fd) {
                 goto ok;
             }
         }
-        r = ERR_NO_RESOURCES;
+        errno = EMFILE;
+        fd = -1;
+        goto fail;
     }
-    mxr_mutex_unlock(&mxio_lock);
-    return r;
 
 ok:
-    mxio_acquire(io);
+    if (io_to_close) {
+        io_to_close->dupcount--;
+        if (io_to_close->dupcount > 0) {
+            // still alive in another fdtab slot
+            mxio_release(io_to_close);
+            io_to_close = NULL;
+        }
+    }
+    io->dupcount++;
     mxio_fdtab[fd] = io;
+fail:
     mxr_mutex_unlock(&mxio_lock);
+    if (io_to_close) {
+        io_to_close->ops->close(io_to_close);
+        mxio_release(io_to_close);
+    }
     return fd;
 }
 
@@ -113,11 +127,21 @@ static void mxio_exit(void) {
         mxio_t* io = mxio_fdtab[fd];
         if (io) {
             mxio_fdtab[fd] = NULL;
-            io->ops->close(io);
+            io->dupcount--;
+            if (io->dupcount == 0) {
+                io->ops->close(io);
+            }
             mxio_release(io);
         }
     }
     mxr_mutex_unlock(&mxio_lock);
+}
+
+mx_status_t mxio_close(mxio_t* io) {
+    if (io->dupcount > 0) {
+        printf("mxio_close(%p): dupcount nonzero!\n", io);
+    }
+    return io->ops->close(io);
 }
 
 static mx_status_t __mxio_open(mxio_t** io, const char* path, int flags) {
@@ -220,9 +244,11 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
             } else {
                 mxio_fdtab[arg] = mxio_remote_create(h, 0);
             }
+            mxio_fdtab[arg]->dupcount++;
             break;
         case MX_HND_TYPE_MXIO_PIPE:
             mxio_fdtab[arg] = mxio_pipe_create(h);
+            mxio_fdtab[arg]->dupcount++;
             break;
         default:
             // unknown handle, leave it alone
@@ -236,6 +262,7 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
     for (n = 0; n < 3; n++) {
         if (mxio_fdtab[n] == NULL) {
             mxio_fdtab[n] = mxio_null_create();
+            mxio_fdtab[n]->dupcount++;
         }
     }
 
@@ -300,7 +327,7 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t t
     return r;
 }
 
-int mx_stat(mxio_t* io, struct stat* s) {
+int mxio_stat(mxio_t* io, struct stat* s) {
     vnattr_t attr;
     int r = io->ops->misc(io, MX_RIO_STAT, sizeof(attr), &attr, 0);
     if (r < 0) {
@@ -456,14 +483,35 @@ int close(int fd) {
         return ERRNO(EBADFD);
     }
     mxio_t* io = mxio_fdtab[fd];
+    io->dupcount--;
     mxio_fdtab[fd] = NULL;
-    mxr_mutex_unlock(&mxio_lock);
+    if (io->dupcount > 0) {
+        // still alive in other fdtab slots
+        mxr_mutex_unlock(&mxio_lock);
+        mxio_release(io);
+        return NO_ERROR;
+    } else {
+        mxr_mutex_unlock(&mxio_lock);
+        int r = io->ops->close(io);
+        mxio_release(io);
+        return STATUS(r);
+    }
+}
 
-    int r = io->ops->close(io);
-    // drop the ref that the fdtab held
-    // deletion will be deferred if another thread is holding a ref
-    mxio_release(io);
-    return STATUS(r);
+int _dup2(int oldfd, int newfd) {
+    mxio_t* io = fd_to_io(oldfd);
+    if (io == NULL) {
+        return ERRNO(EBADFD);
+    }
+    int fd = mxio_bind_to_fd(io, newfd);
+    if (fd < 0) {
+        mxio_release(io);
+    }
+    return fd;
+}
+
+int _dup(int oldfd) {
+    return dup2(oldfd, -1);
 }
 
 off_t lseek(int fd, off_t offset, int whence) {
@@ -520,7 +568,7 @@ int fstat(int fd, struct stat* s) {
     if (io == NULL) {
         return ERRNO(EBADFD);
     }
-    int r = STATUS(mx_stat(io, s));
+    int r = STATUS(mxio_stat(io, s));
     mxio_release(io);
     return r;
 }
@@ -532,8 +580,8 @@ int stat(const char* fn, struct stat* s) {
     if ((r = __mxio_open(&io, fn, 0)) < 0) {
         return ERROR(r);
     }
-    r = mx_stat(io, s);
-    mx_close(io);
+    r = mxio_stat(io, s);
+    mxio_close(io);
     mxio_release(io);
     return STATUS(r);
 }
@@ -546,16 +594,16 @@ int pipe(int pipefd[2]) {
     }
     pipefd[0] = mxio_bind_to_fd(a, -1);
     if (pipefd[0] < 0) {
-        mx_close(a);
+        mxio_close(a);
         mxio_release(a);
-        mx_close(b);
+        mxio_close(b);
         mxio_release(b);
         return ERROR(pipefd[0]);
     }
     pipefd[1] = mxio_bind_to_fd(b, -1);
     if (pipefd[1] < 0) {
         close(pipefd[0]);
-        mx_close(b);
+        mxio_close(b);
         mxio_release(b);
         return ERROR(pipefd[1]);
     }

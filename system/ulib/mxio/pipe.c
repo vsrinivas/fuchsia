@@ -142,15 +142,13 @@ static mxio_ops_t mx_pipe_ops = {
 };
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {
-    mx_pipe_t* p = malloc(sizeof(*p));
+    mx_pipe_t* p = calloc(1, sizeof(*p));
     if (p == NULL)
         return NULL;
     p->io.ops = &mx_pipe_ops;
     p->io.magic = MXIO_MAGIC;
     p->io.refcount = 1;
     p->h = h;
-    p->avail = 0;
-    p->flags = 0;
     return &p->io;
 }
 
