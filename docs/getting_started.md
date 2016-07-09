@@ -49,7 +49,7 @@ cd $SRC
 git clone https://fuchsia.googlesource.com/third_party/qemu
 cd qemu
 git checkout fuchsia
-./configure --target-list=arm-softmmu,aarch64-softmmu,i386-softmmu,x86-64-softmmu
+./configure --target-list=arm-softmmu,aarch64-softmmu,x86_64-softmmu
 make -j32
 sudo make install
 ```
