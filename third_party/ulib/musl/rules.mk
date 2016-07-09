@@ -705,6 +705,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/process/waitpid.c \
     $(LOCAL_DIR)/src/regex/fnmatch.c \
     $(LOCAL_DIR)/src/regex/glob.c \
+    $(LOCAL_DIR)/src/regex/regcomp.c \
+    $(LOCAL_DIR)/src/regex/regerror.c \
+    $(LOCAL_DIR)/src/regex/regexec.c \
+    $(LOCAL_DIR)/src/regex/regfree.c \
     $(LOCAL_DIR)/src/sched/affinity.c \
     $(LOCAL_DIR)/src/sched/sched_cpucount.c \
     $(LOCAL_DIR)/src/sched/sched_get_priority_max.c \
