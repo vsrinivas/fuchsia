@@ -32,20 +32,20 @@
 #endif
 
 // useful addresses
-const ip6_addr ip6_ll_all_nodes = {
-    .x = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+const ip6_addr_t ip6_ll_all_nodes = {
+    .u8 = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
-const ip6_addr ip6_ll_all_routers = {
-    .x = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+const ip6_addr_t ip6_ll_all_routers = {
+    .u8 = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 };
 
 // Convert MAC Address to IPv6 Link Local Address
 // aa:bb:cc:dd:ee:ff => FF80::aabb:ccFF:FEdd:eeff
 // bit 2 (U/L) of the mac is inverted
-void ll6addr_from_mac(ip6_addr* _ip, const mac_addr* _mac) {
-    uint8_t* ip = _ip->x;
+void ll6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
+    uint8_t* ip = _ip->u8;
     const uint8_t* mac = _mac->x;
-    memset(ip, 0, IP6_ADDR_LEN);
+    memset(ip, 0, sizeof(ip6_addr_t));
     ip[0] = 0xFE;
     ip[1] = 0x80;
     memset(ip + 2, 0, 6);
@@ -61,8 +61,8 @@ void ll6addr_from_mac(ip6_addr* _ip, const mac_addr* _mac) {
 
 // Convert MAC Address to IPv6 Solicit Neighbor Multicast Address
 // aa:bb:cc:dd:ee:ff -> FF02::1:FFdd:eeff
-void snmaddr_from_mac(ip6_addr* _ip, const mac_addr* _mac) {
-    uint8_t* ip = _ip->x;
+void snmaddr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
+    uint8_t* ip = _ip->u8;
     const uint8_t* mac = _mac->x;
     ip[0] = 0xFF;
     ip[1] = 0x02;
@@ -75,8 +75,8 @@ void snmaddr_from_mac(ip6_addr* _ip, const mac_addr* _mac) {
 }
 
 // Convert IPv6 Multicast Address to Ethernet Multicast Address
-void multicast_from_ip6(mac_addr* _mac, const ip6_addr* _ip6) {
-    const uint8_t* ip = _ip6->x;
+void multicast_from_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip6) {
+    const uint8_t* ip = _ip6->u8;
     uint8_t* mac = _mac->x;
     mac[0] = 0x33;
     mac[1] = 0x33;
@@ -87,18 +87,18 @@ void multicast_from_ip6(mac_addr* _mac, const ip6_addr* _ip6) {
 }
 
 // ip6 stack configuration
-mac_addr ll_mac_addr;
-ip6_addr ll_ip6_addr;
-mac_addr snm_mac_addr;
-ip6_addr snm_ip6_addr;
+mac_addr_t ll_mac_addr;
+ip6_addr_t ll_ip6_addr;
+mac_addr_t snm_mac_addr;
+ip6_addr_t snm_ip6_addr;
 
 // cache for the last source addresses we've seen
-static mac_addr rx_mac_addr;
-static ip6_addr rx_ip6_addr;
+static mac_addr_t rx_mac_addr;
+static ip6_addr_t rx_ip6_addr;
 
 void ip6_init(void* macaddr) {
     char tmp[IP6TOAMAX];
-    mac_addr all;
+    mac_addr_t all;
 
     // save our ethernet MAC and synthesize link layer addresses
     memcpy(&ll_mac_addr, macaddr, 6);
@@ -118,8 +118,8 @@ void ip6_init(void* macaddr) {
     printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
 }
 
-static int resolve_ip6(mac_addr* _mac, const ip6_addr* _ip) {
-    const uint8_t* ip = _ip->x;
+static int resolve_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip) {
+    const uint8_t* ip = _ip->u8;
 
     // Multicast addresses are a simple transform
     if (ip[0] == 0xFF) {
@@ -129,7 +129,7 @@ static int resolve_ip6(mac_addr* _mac, const ip6_addr* _ip) {
 
     // Trying to send to the IP that we last received a packet from?
     // Assume their mac address has not changed
-    if (memcmp(_ip, &rx_ip6_addr, sizeof(rx_ip6_addr)) == 0) {
+    if (ip6_addr_eq(_ip, &rx_ip6_addr)) {
         memcpy(_mac, &rx_mac_addr, sizeof(rx_mac_addr));
         return 0;
     }
@@ -156,24 +156,24 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
 
 typedef struct {
     uint8_t eth[16];
-    ip6_hdr ip6;
+    ip6_hdr_t ip6;
     uint8_t data[0];
-} ip6_pkt;
+} ip6_pkt_t;
 
 typedef struct {
     uint8_t eth[16];
-    ip6_hdr ip6;
-    udp_hdr udp;
+    ip6_hdr_t ip6;
+    udp_hdr_t udp;
     uint8_t data[0];
-} udp_pkt;
+} udp_pkt_t;
 
-static unsigned ip6_checksum(ip6_hdr* ip, unsigned type, size_t length) {
+static unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
     uint16_t sum;
 
     // length and protocol field for pseudo-header
     sum = checksum(&ip->length, 2, htons(type));
     // src/dst for pseudo-header + payload
-    sum = checksum(ip->src, 32 + length, sum);
+    sum = checksum(&ip->src, 32 + length, sum);
 
     // 0 is illegal, so 0xffff remains 0xffff
     if (sum != 0xffff) {
@@ -183,8 +183,8 @@ static unsigned ip6_checksum(ip6_hdr* ip, unsigned type, size_t length) {
     }
 }
 
-static int ip6_setup(ip6_pkt* p, const ip6_addr* daddr, size_t length, uint8_t type) {
-    mac_addr dmac;
+static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* daddr, size_t length, uint8_t type) {
+    mac_addr_t dmac;
 
     if (resolve_ip6(&dmac, daddr))
         return -1;
@@ -200,17 +200,17 @@ static int ip6_setup(ip6_pkt* p, const ip6_addr* daddr, size_t length, uint8_t t
     p->ip6.length = htons(length);
     p->ip6.next_header = type;
     p->ip6.hop_limit = 255;
-    memcpy(p->ip6.src, &ll_ip6_addr, sizeof(ip6_addr));
-    memcpy(p->ip6.dst, daddr, sizeof(ip6_addr));
+    p->ip6.src = ll_ip6_addr;
+    p->ip6.dst = *daddr;
 
     return 0;
 }
 
 #define UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
 
-int udp6_send(const void* data, size_t dlen, const ip6_addr* daddr, uint16_t dport, uint16_t sport) {
+int udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, uint16_t dport, uint16_t sport) {
     size_t length = dlen + UDP_HDR_LEN;
-    udp_pkt* p = eth_get_buffer(ETH_MTU + 2);
+    udp_pkt_t* p = eth_get_buffer(ETH_MTU + 2);
 
     if (p == 0)
         return -1;
@@ -236,9 +236,9 @@ fail:
 
 #define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
 
-static int icmp6_send(const void* data, size_t length, const ip6_addr* daddr) {
-    ip6_pkt* p;
-    icmp6_hdr* icmp;
+static int icmp6_send(const void* data, size_t length, const ip6_addr_t* daddr) {
+    ip6_pkt_t* p;
+    icmp6_hdr_t* icmp;
 
     p = eth_get_buffer(ETH_MTU + 2);
     if (p == 0)
@@ -258,8 +258,8 @@ fail:
     return -1;
 }
 
-void _udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
-    udp_hdr* udp = _data;
+void _udp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
+    udp_hdr_t* udp = _data;
     uint16_t sum, n;
 
     if (len < UDP_HDR_LEN)
@@ -270,7 +270,7 @@ void _udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
         udp->checksum = 0;
 
     sum = checksum(&ip->length, 2, htons(HDR_UDP));
-    sum = checksum(ip->src, 32 + len, sum);
+    sum = checksum(&ip->src, 32 + len, sum);
     if (sum != 0xFFFF)
         BAD("Checksum Incorrect");
 
@@ -282,12 +282,12 @@ void _udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
     len = n - UDP_HDR_LEN;
 
     udp6_recv((uint8_t*)_data + UDP_HDR_LEN, len,
-              (void*)ip->dst, ntohs(udp->dst_port),
-              (void*)ip->src, ntohs(udp->src_port));
+              (void*)&ip->dst, ntohs(udp->dst_port),
+              (void*)&ip->src, ntohs(udp->src_port));
 }
 
-void icmp6_recv(ip6_hdr* ip, void* _data, size_t len) {
-    icmp6_hdr* icmp = _data;
+void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
+    icmp6_hdr_t* icmp = _data;
     uint16_t sum;
 
     if (icmp->checksum == 0)
@@ -296,41 +296,41 @@ void icmp6_recv(ip6_hdr* ip, void* _data, size_t len) {
         icmp->checksum = 0;
 
     sum = checksum(&ip->length, 2, htons(HDR_ICMP6));
-    sum = checksum(ip->src, 32 + len, sum);
+    sum = checksum(&ip->src, 32 + len, sum);
     if (sum != 0xFFFF)
         BAD("Checksum Incorrect");
 
     if (icmp->type == ICMP6_NDP_N_SOLICIT) {
-        ndp_n_hdr* ndp = _data;
+        ndp_n_hdr_t* ndp = _data;
         struct {
-            ndp_n_hdr hdr;
+            ndp_n_hdr_t hdr;
             uint8_t opt[8];
         } msg;
 
-        if (len < sizeof(ndp_n_hdr))
+        if (len < sizeof(ndp_n_hdr_t))
             BAD("Bogus NDP Message");
         if (ndp->code != 0)
             BAD("Bogus NDP Code");
-        if (memcmp(ndp->target, &ll_ip6_addr, IP6_ADDR_LEN))
+        if (!ip6_addr_eq((ip6_addr_t*) ndp->target, &ll_ip6_addr))
             BAD("NDP Not For Me");
 
         msg.hdr.type = ICMP6_NDP_N_ADVERTISE;
         msg.hdr.code = 0;
         msg.hdr.checksum = 0;
         msg.hdr.flags = 0x60; // (S)olicited and (O)verride flags
-        memcpy(msg.hdr.target, &ll_ip6_addr, IP6_ADDR_LEN);
+        memcpy(msg.hdr.target, &ll_ip6_addr, sizeof(ip6_addr_t));
         msg.opt[0] = NDP_N_TGT_LL_ADDR;
         msg.opt[1] = 1;
         memcpy(msg.opt + 2, &ll_mac_addr, ETH_ADDR_LEN);
 
-        icmp6_send(&msg, sizeof(msg), (void*)ip->src);
+        icmp6_send(&msg, sizeof(msg), (void*)&ip->src);
         return;
     }
 
     if (icmp->type == ICMP6_ECHO_REQUEST) {
         icmp->checksum = 0;
         icmp->type = ICMP6_ECHO_REPLY;
-        icmp6_send(_data, len, (void*)ip->src);
+        icmp6_send(_data, len, (void*)&ip->src);
         return;
     }
 
@@ -339,7 +339,7 @@ void icmp6_recv(ip6_hdr* ip, void* _data, size_t len) {
 
 void eth_recv(void* _data, size_t len) {
     uint8_t* data = _data;
-    ip6_hdr* ip;
+    ip6_hdr_t* ip;
     uint32_t n;
 
     if (len < (ETH_HDR_LEN + IP6_HDR_LEN))
@@ -366,26 +366,25 @@ void eth_recv(void* _data, size_t len) {
     len = n;
 
     // require that we are the destination
-    if (memcmp(&ll_ip6_addr, ip->dst, IP6_ADDR_LEN) &&
-        memcmp(&snm_ip6_addr, ip->dst, IP6_ADDR_LEN)) {
+    if (!ip6_addr_eq(&ll_ip6_addr, &ip->dst) &&
+        !ip6_addr_eq(&snm_ip6_addr, &ip->dst)) {
         return;
     }
 
     // stash the sender's info to simplify replies
     memcpy(&rx_mac_addr, (uint8_t*)_data + 6, ETH_ADDR_LEN);
-    memcpy(&rx_ip6_addr, ip->src, IP6_ADDR_LEN);
+    rx_ip6_addr = ip->src;
 
-    if (ip->next_header == HDR_ICMP6) {
+    switch (ip->next_header) {
+    case HDR_ICMP6:
         icmp6_recv(ip, data, len);
-        return;
-    }
-
-    if (ip->next_header == HDR_UDP) {
+        break;
+    case HDR_UDP:
         _udp6_recv(ip, data, len);
-        return;
+        break;
+    default:
+        BAD("Unhandled IP6");
     }
-
-    BAD("Unhandled IP6");
 }
 
 char* ip6toa(char* _out, void* ip6addr) {

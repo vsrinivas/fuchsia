@@ -36,35 +36,45 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
-typedef struct mac_addr_t mac_addr;
-typedef struct ip6_addr_t ip6_addr;
-typedef struct ip6_hdr_t ip6_hdr;
-typedef struct udp_hdr_t udp_hdr;
-typedef struct icmp6_hdr_t icmp6_hdr;
-typedef struct ndp_n_hdr_t ndp_n_hdr;
+typedef struct mac_addr mac_addr_t;
+typedef union ip6_addr ip6_addr_t;
+typedef struct ip6_hdr ip6_hdr_t;
+typedef struct udp_hdr udp_hdr_t;
+typedef struct icmp6_hdr icmp6_hdr_t;
+typedef struct ndp_n_hdr ndp_n_hdr_t;
 
 #define ETH_ADDR_LEN 6
 #define ETH_HDR_LEN 14
 #define ETH_MTU 1514
 
 #define IP6_ADDR_LEN 16
+#define IP6_U32_LEN 4
+#define IP6_U64_LEN 2
+
 #define IP6_HDR_LEN 40
 
 #define IP6_MIN_MTU 1280
 
 #define UDP_HDR_LEN 8
 
-struct mac_addr_t {
+struct mac_addr {
     uint8_t x[ETH_ADDR_LEN];
 } __attribute__((packed));
 
-struct ip6_addr_t {
-    uint8_t x[IP6_ADDR_LEN];
+union ip6_addr {
+    uint8_t u8[IP6_ADDR_LEN];
+    uint32_t u32[IP6_U32_LEN];
+    uint64_t u64[IP6_U64_LEN];
 } __attribute__((packed));
 
-extern const ip6_addr ip6_ll_all_nodes;
-extern const ip6_addr ip6_ll_all_routers;
+extern const ip6_addr_t ip6_ll_all_nodes;
+extern const ip6_addr_t ip6_ll_all_routers;
+
+static inline bool ip6_addr_eq(const ip6_addr_t* a, const ip6_addr_t* b) {
+    return ((a->u64[0] == b->u64[0]) && (a->u64[1] == b->u64[1]));
+}
 
 #define ETH_IP4 0x0800
 #define ETH_ARP 0x0806
@@ -79,16 +89,16 @@ extern const ip6_addr ip6_ll_all_routers;
 #define HDR_NONE 59
 #define HDR_DST_OPT 60
 
-struct ip6_hdr_t {
+struct ip6_hdr {
     uint32_t ver_tc_flow;
     uint16_t length;
     uint8_t next_header;
     uint8_t hop_limit;
-    uint8_t src[IP6_ADDR_LEN];
-    uint8_t dst[IP6_ADDR_LEN];
+    ip6_addr_t src;
+    ip6_addr_t dst;
 } __attribute__((packed));
 
-struct udp_hdr_t {
+struct udp_hdr {
     uint16_t src_port;
     uint16_t dst_port;
     uint16_t length;
@@ -106,13 +116,13 @@ struct udp_hdr_t {
 #define ICMP6_NDP_N_SOLICIT 135
 #define ICMP6_NDP_N_ADVERTISE 136
 
-struct icmp6_hdr_t {
+struct icmp6_hdr {
     uint8_t type;
     uint8_t code;
     uint16_t checksum;
 } __attribute__((packed));
 
-struct ndp_n_hdr_t {
+struct ndp_n_hdr {
     uint8_t type;
     uint8_t code;
     uint16_t checksum;
@@ -157,17 +167,17 @@ void eth_recv(void* data, size_t len);
 void* eth_get_buffer(size_t len);
 void eth_put_buffer(void* ptr);
 int eth_send(void* data, size_t len);
-int eth_add_mcast_filter(const mac_addr* addr);
+int eth_add_mcast_filter(const mac_addr_t* addr);
 
 // call to transmit a UDP packet
 int udp6_send(const void* data, size_t len,
-              const ip6_addr* daddr, uint16_t dport,
+              const ip6_addr_t* daddr, uint16_t dport,
               uint16_t sport);
 
 // implement to recive UDP packets
 void udp6_recv(void* data, size_t len,
-               const ip6_addr* daddr, uint16_t dport,
-               const ip6_addr* saddr, uint16_t sport);
+               const ip6_addr_t* daddr, uint16_t dport,
+               const ip6_addr_t* saddr, uint16_t sport);
 
 // NOTES
 //

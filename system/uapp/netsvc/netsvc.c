@@ -56,8 +56,8 @@ static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
 void udp6_recv(void* data, size_t len,
-               const ip6_addr* daddr, uint16_t dport,
-               const ip6_addr* saddr, uint16_t sport) {
+               const ip6_addr_t* daddr, uint16_t dport,
+               const ip6_addr_t* saddr, uint16_t sport) {
     if (dport != 33338)
         return;
     if (len != 8)

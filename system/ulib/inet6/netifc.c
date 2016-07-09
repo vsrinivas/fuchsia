@@ -74,7 +74,7 @@ int eth_send(void* data, size_t len) {
     return r;
 }
 
-int eth_add_mcast_filter(const mac_addr* addr) {
+int eth_add_mcast_filter(const mac_addr_t* addr) {
     return 0;
 }
 
