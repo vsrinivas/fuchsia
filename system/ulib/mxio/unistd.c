@@ -15,6 +15,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -39,17 +40,31 @@
 // non-thread-safe emulation of unistd io functions
 // using the mxio transports
 
-static mxr_mutex_t mxio_lock = MXR_MUTEX_INIT;
+typedef struct {
+    mxr_mutex_t lock;
+    mxr_mutex_t cwd_lock;
+    bool init;
+    uint32_t reserved;
+    mxio_t* root;
+    mxio_t* cwd;
+    mxio_t* fdtab[MAX_MXIO_FD];
+    char cwd_path[PATH_MAX];
+} mxio_state_t;
 
-static mxio_t* mxio_root_handle = NULL;
-
-static mxio_t* mxio_cwd_handle = NULL;
-
-static mxio_t* mxio_fdtab[MAX_MXIO_FD] = {
-    NULL,
+static mxio_state_t __mxio_global_state = {
+    .lock = MXR_MUTEX_INIT,
+    .cwd_lock = MXR_MUTEX_INIT,
+    .init = true,
+    .cwd_path = "/",
 };
 
-static bool mxio_root_init = true;
+#define mxio_lock (__mxio_global_state.lock)
+#define mxio_root_handle (__mxio_global_state.root)
+#define mxio_cwd_handle (__mxio_global_state.cwd)
+#define mxio_cwd_lock (__mxio_global_state.cwd_lock)
+#define mxio_cwd_path (__mxio_global_state.cwd_path)
+#define mxio_fdtab (__mxio_global_state.fdtab)
+#define mxio_root_init (__mxio_global_state.init)
 
 void mxio_install_root(mxio_t* root) {
     mxr_mutex_lock(&mxio_lock);
@@ -610,18 +625,104 @@ int pipe(int pipefd[2]) {
     return 0;
 }
 
+static void update_cwd_path(const char* path) {
+    if (path[0] == '/') {
+        // it's "absolute", but we'll still parse it as relative (from /)
+        // so that we normalize the path (resolving, ., .., //, etc)
+        mxio_cwd_path[0] = '/';
+        mxio_cwd_path[1] = 0;
+        path++;
+    }
+
+    size_t seglen;
+    const char* next;
+    for (; path[0]; path = next) {
+        next = strchr(path, '/');
+        if (next == NULL) {
+            seglen = strlen(path);
+            next = path + seglen;
+        } else {
+            seglen = next - path;
+            next++;
+        }
+        if (seglen == 0) {
+            // empty segment, skip
+            continue;
+        }
+        if ((seglen == 1) && (path[0] == '.')) {
+            // no-change segment, skip
+            continue;
+        }
+        if ((seglen == 2) && (path[0] == '.') && (path[1] == '.')) {
+            // parent directory, remove the trailing path segment from cwd_path
+            char *x = strrchr(mxio_cwd_path, '/');
+            if (x == NULL) {
+                // shouldn't ever happen
+                goto wat;
+            }
+            // remove the current trailing path segment from cwd
+            if (x == mxio_cwd_path) {
+                // but never remove the first /
+                mxio_cwd_path[1] = 0;
+            } else {
+                x[0] = 0;
+            }
+            continue;
+        }
+        // regular path segment, append to cwd_path
+        size_t len = strlen(mxio_cwd_path);
+        if ((len + seglen + 2) >= PATH_MAX) {
+            // doesn't fit, shouldn't happen, but...
+            goto wat;
+        }
+        if(len != 1) {
+            // if len is 1, path is "/", so don't append a '/'
+            mxio_cwd_path[len++] = '/';
+        }
+        memcpy(mxio_cwd_path + len, path, seglen);
+        mxio_cwd_path[len + seglen] = 0;
+    }
+    return;
+
+wat:
+    strcpy(mxio_cwd_path, "(unknown)");
+    return;
+}
+
+char *_getcwd(char* buf, size_t size) {
+    if ((buf == NULL) || (size == 0)) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    char* out = NULL;
+    mxr_mutex_lock(&mxio_cwd_lock);
+    size_t len = strlen(mxio_cwd_path) + 1;
+    if (len < size) {
+        memcpy(buf, mxio_cwd_path, len);
+        out = buf;
+    } else {
+        errno = ERANGE;
+    }
+    mxr_mutex_unlock(&mxio_cwd_lock);
+    return out;
+}
+
 int chdir(const char* path) {
     mxio_t* io;
     mx_status_t r;
     if ((r = __mxio_open(&io, path, O_DIRECTORY)) < 0) {
         return STATUS(r);
     }
+    mxr_mutex_lock(&mxio_cwd_lock);
+    update_cwd_path(path);
     mxr_mutex_lock(&mxio_lock);
     mxio_t* old = mxio_cwd_handle;
     mxio_cwd_handle = io;
     old->ops->close(old);
     mxio_release(old);
     mxr_mutex_unlock(&mxio_lock);
+    mxr_mutex_unlock(&mxio_cwd_lock);
     return 0;
 }
 
