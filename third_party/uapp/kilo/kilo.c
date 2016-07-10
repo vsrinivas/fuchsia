@@ -34,7 +34,9 @@
 
 #define KILO_VERSION "0.0.1"
 
+#ifndef _BSD_SOURCE
 #define _BSD_SOURCE
+#endif
 #define _GNU_SOURCE
 
 #include <termios.h>
@@ -50,6 +52,38 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <fcntl.h>
+
+#ifdef __MAGENTA__
+#include <mxio/io.h>
+#include <ddk/protocol/console.h>
+
+static time_t time(void* arg) {
+    return 0;
+}
+
+static int getConsoleSize(int *rows, int *cols) {
+    ioctl_console_dimensions_t dims;
+    ssize_t r = mxio_ioctl(0, CONSOLE_OP_GET_DIMENSIONS, NULL, 0, &dims, sizeof(dims));
+    if (r != sizeof(dims)) {
+        return -1;
+    }
+    *rows = dims.height;
+    *cols = dims.width;
+    return 0;
+}
+
+#define MX_TIME_MS(n) (((mx_time_t)n) * 1000000ULL)
+
+static int __read(int fd, void* buf, size_t len) {
+    if (fd != 0) {
+        return read(fd, buf, len);
+    }
+    mxio_wait_fd(0, MXIO_EVT_READABLE, NULL, MX_TIME_MS(100));
+    return read(0, buf, len);
+}
+
+#define read __read
+#endif
 
 /* Syntax highlight types */
 #define HL_NORMAL 0
@@ -202,6 +236,9 @@ void editorAtExit(void) {
 
 /* Raw mode: 1960 magic shit. */
 int enableRawMode(int fd) {
+#ifdef __MAGENTA__
+    return 0;
+#else
     struct termios raw;
 
     if (E.rawmode) return 0; /* Already enabled. */
@@ -232,6 +269,7 @@ int enableRawMode(int fd) {
 fatal:
     errno = ENOTTY;
     return -1;
+#endif
 }
 
 /* Read a key from the terminal put in raw mode, trying to handle
@@ -315,9 +353,14 @@ int getCursorPosition(int ifd, int ofd, int *rows, int *cols) {
  * call fails the function will try to query the terminal itself.
  * Returns 0 on success, -1 on error. */
 int getWindowSize(int ifd, int ofd, int *rows, int *cols) {
+#ifdef __MAGENTA__
+    if (getConsoleSize(rows, cols) == 0) {
+        return 0;
+    } else {
+#else
     struct winsize ws;
-
     if (ioctl(1, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+#endif
         /* ioctl() failed. Try to query the terminal itself. */
         int orig_row, orig_col, retval;
 
@@ -337,10 +380,12 @@ int getWindowSize(int ifd, int ofd, int *rows, int *cols) {
             /* Can't recover... */
         }
         return 0;
+#ifndef __MAGENTA__
     } else {
         *cols = ws.ws_col;
         *rows = ws.ws_row;
         return 0;
+#endif
     }
 
 failed:
@@ -736,7 +781,7 @@ fixcursor:
 }
 
 /* Delete the char at the current prompt position. */
-void editorDelChar() {
+void editorDelChar(void) {
     int filerow = E.rowoff+E.cy;
     int filecol = E.coloff+E.cx;
     erow *row = (filerow >= E.numrows) ? NULL : &E.row[filerow];
