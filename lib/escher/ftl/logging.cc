@@ -19,6 +19,7 @@ LogMessage::LogMessage(LogSeverity severity,
 
 LogMessage::~LogMessage() {
   stream_ << std::endl;
+  stream_ << file_ << ":" << line_ << std::endl;
   std::cerr << stream_.str();
   std::cerr.flush();
 
