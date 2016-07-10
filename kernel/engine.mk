@@ -133,7 +133,7 @@ GLOBAL_DEFINES := LK=1
 KERNEL_DEFINES := _KERNEL=1
 
 # anything added to USER_DEFINES will be put into $(BUILDDIR)/config-user.h
-USER_DEFINES :=
+USER_DEFINES := __MAGENTA__=1
 
 # Anything added to GLOBAL_SRCDEPS will become a dependency of every source file in the system.
 # Useful for header files that may be included by one or more source files.
