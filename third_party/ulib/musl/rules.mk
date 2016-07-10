@@ -1003,8 +1003,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/alarm.c \
     $(LOCAL_DIR)/src/unistd/chown.c \
     $(LOCAL_DIR)/src/unistd/ctermid.c \
-    $(LOCAL_DIR)/src/unistd/dup.c \
-    $(LOCAL_DIR)/src/unistd/dup2.c \
     $(LOCAL_DIR)/src/unistd/dup3.c \
     $(LOCAL_DIR)/src/unistd/faccessat.c \
     $(LOCAL_DIR)/src/unistd/fchdir.c \
@@ -1013,7 +1011,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/fdatasync.c \
     $(LOCAL_DIR)/src/unistd/fsync.c \
     $(LOCAL_DIR)/src/unistd/ftruncate.c \
-    $(LOCAL_DIR)/src/unistd/getcwd.c \
     $(LOCAL_DIR)/src/unistd/getegid.c \
     $(LOCAL_DIR)/src/unistd/geteuid.c \
     $(LOCAL_DIR)/src/unistd/getgid.c \

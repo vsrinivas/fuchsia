@@ -513,7 +513,7 @@ int close(int fd) {
     }
 }
 
-int _dup2(int oldfd, int newfd) {
+int dup2(int oldfd, int newfd) {
     mxio_t* io = fd_to_io(oldfd);
     if (io == NULL) {
         return ERRNO(EBADFD);
@@ -525,7 +525,7 @@ int _dup2(int oldfd, int newfd) {
     return fd;
 }
 
-int _dup(int oldfd) {
+int dup(int oldfd) {
     return dup2(oldfd, -1);
 }
 
@@ -689,8 +689,12 @@ wat:
     return;
 }
 
-char *_getcwd(char* buf, size_t size) {
-    if ((buf == NULL) || (size == 0)) {
+char *getcwd(char* buf, size_t size) {
+    char tmp[PATH_MAX];
+    if (buf == NULL) {
+        buf = tmp;
+        size = PATH_MAX;
+    } else if (size == 0) {
         errno = EINVAL;
         return NULL;
     }
@@ -705,6 +709,10 @@ char *_getcwd(char* buf, size_t size) {
         errno = ERANGE;
     }
     mxr_mutex_unlock(&mxio_cwd_lock);
+
+    if (out == tmp) {
+        out = strdup(tmp);
+    }
     return out;
 }
 
