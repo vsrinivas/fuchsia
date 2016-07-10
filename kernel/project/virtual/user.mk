@@ -10,28 +10,21 @@
 KERNEL_DEFINES += WITH_DEBUG_LINEBUFFER=1
 
 MODULES += \
-    ulib/musl \
-    ulib/m \
-    ulib/dl \
-    ulib/pthread \
     lib/syscalls \
     lib/userboot \
     lib/debuglog \
-    uapp/crasher \
-    uapp/devmgr \
-    uapp/i2c \
-    uapp/mxsh \
-    uapp/strerror \
-    uapp/userboot \
-    uapp/dlog \
-    uapp/netsvc \
-    ulib/magenta \
-    ulib/mojo \
-    ulib/mxio \
-    ulib/inet6 \
-    ulib/driver \
-    ulib/system \
-    utest \
+
+# include all ulib, uapp, and utest from system/...
+MODULES += $(patsubst %/rules.mk,%,$(wildcard system/ulib/*/rules.mk))
+MODULES += $(patsubst %/rules.mk,%,$(wildcard system/uapp/*/rules.mk))
+MODULES += $(patsubst %/rules.mk,%,$(wildcard system/utest/*/rules.mk))
+MODULES := $(patsubst system/%,%,$(MODULES))
+
+# include all all ulib, uapp, and utest from third_party/...
+MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/ulib/*/rules.mk))
+MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/uapp/*/rules.mk))
+MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/utest/*/rules.mk))
+MODULES := $(patsubst third_party/%,%,$(MODULES))
 
 # if we're not embedding the bootfs, build a standalone image
 ifneq ($(EMBED_USER_BOOTFS),true)
