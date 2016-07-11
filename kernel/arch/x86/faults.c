@@ -94,12 +94,15 @@ void x86_syscall_handler(x86_iframe_t *frame)
 void x86_gpf_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
-    arch_enable_ints();
-    status_t erc = magenta_exception_handler(EXC_GENERAL, &context, frame->ip);
-    arch_disable_ints();
-    if (erc == NO_ERROR)
-        return;
+    bool from_user = SELECTOR_PL(frame->cs) != 0;
+    if (from_user) {
+        struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
+        arch_enable_ints();
+        status_t erc = magenta_exception_handler(EXC_GENERAL, &context, frame->ip);
+        arch_disable_ints();
+        if (erc == NO_ERROR)
+            return;
+    }
 #endif
     exception_die(frame, "unhandled gpf, halting\n");
 }
@@ -107,12 +110,15 @@ void x86_gpf_handler(x86_iframe_t *frame)
 void x86_invop_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
-    arch_enable_ints();
-    status_t erc = magenta_exception_handler(EXC_UNDEFINED_INSTRUCTION, &context, frame->ip);
-    arch_disable_ints();
-    if (erc == NO_ERROR)
-        return;
+    bool from_user = SELECTOR_PL(frame->cs) != 0;
+    if (from_user) {
+        struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
+        arch_enable_ints();
+        status_t erc = magenta_exception_handler(EXC_UNDEFINED_INSTRUCTION, &context, frame->ip);
+        arch_disable_ints();
+        if (erc == NO_ERROR)
+            return;
+    }
 #endif
     exception_die(frame, "invalid opcode, halting\n");
 }
@@ -120,12 +126,15 @@ void x86_invop_handler(x86_iframe_t *frame)
 void x86_unhandled_exception(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
-    arch_enable_ints();
-    status_t erc = magenta_exception_handler(EXC_GENERAL, &context, frame->ip);
-    arch_disable_ints();
-    if (erc == NO_ERROR)
-        return;
+    bool from_user = SELECTOR_PL(frame->cs) != 0;
+    if (from_user) {
+        struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
+        arch_enable_ints();
+        status_t erc = magenta_exception_handler(EXC_GENERAL, &context, frame->ip);
+        arch_disable_ints();
+        if (erc == NO_ERROR)
+            return;
+    }
 #endif
     printf("vector %u\n", (uint)frame->vector);
     exception_die(frame, "unhandled exception, halting\n");
@@ -215,7 +224,7 @@ void x86_pfe_handler(x86_iframe_t *frame)
     flags |= (error_code & PFEX_U) ? VMM_PF_FLAG_USER : 0;
     flags |= (error_code & PFEX_I) ? VMM_PF_FLAG_INSTRUCTION : 0;
 
-    int pf_err = vmm_page_fault_handler(va, flags);
+    status_t pf_err = vmm_page_fault_handler(va, flags);
     if (unlikely(pf_err < 0)) {
         /* if the high level page fault handler can't deal with it,
          * resort to trying to recover first, before bailing */
@@ -231,15 +240,17 @@ void x86_pfe_handler(x86_iframe_t *frame)
 
         /* let high level code deal with this */
 #if WITH_LIB_MAGENTA
-        struct arch_exception_context context = { .frame = frame, .is_page_fault = true, .cr2 = va };
-        status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->ip);
-        arch_disable_ints();
-        if (erc == NO_ERROR)
-            return;
+        bool from_user = SELECTOR_PL(frame->cs) != 0;
+        if (from_user) {
+            struct arch_exception_context context = { .frame = frame, .is_page_fault = true, .cr2 = va };
+            status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->ip);
+            arch_disable_ints();
+            if (erc == NO_ERROR)
+                return;
+        }
 #else
         arch_disable_ints();
 #endif
-
 
         /* fatal (for now) */
         x86_fatal_pfe_handler(frame, va);

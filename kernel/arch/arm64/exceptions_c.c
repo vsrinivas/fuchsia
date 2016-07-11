@@ -104,12 +104,13 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
         case 0b100001: { /* instruction abort from same level */
             /* read the FAR register */
             uint64_t far = ARM64_READ_SYSREG(far_el1);
+            bool is_user = !BIT(ec, 0);
 
             uint pf_flags = VMM_PF_FLAG_INSTRUCTION;
-            pf_flags |= BIT(ec, 0) ? 0 : VMM_PF_FLAG_USER;
+            pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
 
-            LTRACEF("instruction abort: PC at 0x%llx, FAR 0x%llx, esr 0x%x, iss 0x%x\n",
-                    iframe->elr, far, esr, iss);
+            LTRACEF("instruction abort: PC at 0x%llx, is_user %u, FAR 0x%llx, esr 0x%x, iss 0x%x\n",
+                    iframe->elr, is_user, far, esr, iss);
 
             arch_enable_ints();
             status_t err = vmm_page_fault_handler(far, pf_flags);
@@ -118,13 +119,15 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
                 return;
 
 #if WITH_LIB_MAGENTA
-            /* let magenta get a shot at it */
-            arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
-            arch_enable_ints();
-            status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, iframe->elr);
-            arch_disable_ints();
-            if (erc == NO_ERROR)
-                return;
+            /* if this is from user space, let magenta get a shot at it */
+            if (is_user) {
+                arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
+                arch_enable_ints();
+                status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, iframe->elr);
+                arch_disable_ints();
+                if (erc == NO_ERROR)
+                    return;
+            }
 #endif
 
             printf("instruction abort: PC at 0x%llx\n", iframe->elr);
@@ -134,13 +137,14 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
         case 0b100101: { /* data abort from same level */
             /* read the FAR register */
             uint64_t far = ARM64_READ_SYSREG(far_el1);
+            bool is_user = !BIT(ec, 0);
 
             uint pf_flags = 0;
             pf_flags |= BIT(iss, 6) ? VMM_PF_FLAG_WRITE : 0;
-            pf_flags |= BIT(ec, 0) ? 0 : VMM_PF_FLAG_USER;
+            pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
 
-            LTRACEF("data fault: PC at 0x%llx, FAR 0x%llx, esr 0x%x, iss 0x%x\n",
-                    iframe->elr, far, esr, iss);
+            LTRACEF("data fault: PC at 0x%llx, is_user %u, FAR 0x%llx, esr 0x%x, iss 0x%x\n",
+                    iframe->elr, is_user, far, esr, iss);
 
             arch_enable_ints();
             status_t err = vmm_page_fault_handler(far, pf_flags);
@@ -166,13 +170,15 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             }
 
 #if WITH_LIB_MAGENTA
-            /* let magenta get a shot at it */
-            arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
-            arch_enable_ints();
-            status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, iframe->elr);
-            arch_disable_ints();
-            if (erc == NO_ERROR)
-                return;
+            /* if this is from user space, let magenta get a shot at it */
+            if (is_user) {
+                arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
+                arch_enable_ints();
+                status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, iframe->elr);
+                arch_disable_ints();
+                if (erc == NO_ERROR)
+                    return;
+            }
 #endif
 
             /* decode the iss */
@@ -187,6 +193,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
         }
         default: {
 #if WITH_LIB_MAGENTA
+            /* TODO: properly decode more of these, since they may be originating in kernel space */
             /* let magenta get a shot at it */
             arch_exception_context_t context = { .frame = iframe, .esr = esr };
             arch_enable_ints();

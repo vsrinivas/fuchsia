@@ -161,13 +161,16 @@ void arm_undefined_handler(struct arm_iframe *frame)
 #endif
 
 #if WITH_LIB_MAGENTA
-    // let magenta get a shot at it
-    struct arch_exception_context context = { .iframe = true, .frame = frame };
-    arch_enable_ints();
-    status_t erc = magenta_exception_handler(EXC_UNDEFINED_INSTRUCTION, &context, frame->pc);
-    arch_disable_ints();
-    if (erc == NO_ERROR)
-        return;
+    bool user = (frame->spsr & CPSR_MODE_MASK) == CPSR_MODE_USR;
+    if (user) {
+        // let magenta get a shot at it
+        struct arch_exception_context context = { .iframe = true, .frame = frame };
+        arch_enable_ints();
+        status_t erc = magenta_exception_handler(EXC_UNDEFINED_INSTRUCTION, &context, frame->pc);
+        arch_disable_ints();
+        if (erc == NO_ERROR)
+            return;
+    }
 #endif
 
     exception_die_iframe(frame, "undefined abort, halting\n");
@@ -235,13 +238,16 @@ void arm_data_abort_handler(struct arm_fault_frame *frame)
     }
 
 #if WITH_LIB_MAGENTA
-    // let magenta get a shot at it
-    struct arch_exception_context context = { .iframe = false, .frame = frame };
-    arch_enable_ints();
-    status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->pc);
-    arch_disable_ints();
-    if (erc == NO_ERROR)
-        return;
+    bool user = (frame->spsr & CPSR_MODE_MASK) == CPSR_MODE_USR;
+    if (user) {
+        // let magenta get a shot at it
+        struct arch_exception_context context = { .iframe = false, .frame = frame };
+        arch_enable_ints();
+        status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->pc);
+        arch_disable_ints();
+        if (erc == NO_ERROR)
+            return;
+    }
 #endif
 
     // at this point we're dumping state and panicing
@@ -308,13 +314,16 @@ void arm_prefetch_abort_handler(struct arm_fault_frame *frame)
         return;
 
 #if WITH_LIB_MAGENTA
-    // let magenta get a shot at it
-    struct arch_exception_context context = { .iframe = false, .frame = frame };
-    arch_enable_ints();
-    status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->pc);
-    arch_disable_ints();
-    if (erc == NO_ERROR)
-        return;
+    bool user = (frame->spsr & CPSR_MODE_MASK) == CPSR_MODE_USR;
+    if (user) {
+        // let magenta get a shot at it
+        struct arch_exception_context context = { .iframe = false, .frame = frame };
+        arch_enable_ints();
+        status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->pc);
+        arch_disable_ints();
+        if (erc == NO_ERROR)
+            return;
+    }
 #endif
 
     uint32_t fault_status = (BIT(fsr, 10) ? (1<<4) : 0) |  BITS(fsr, 3, 0);
