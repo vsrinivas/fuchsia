@@ -239,6 +239,10 @@ static usb_hub_protocol_t usb_hub_protocol = {
 };
 
 static void usb_hub_interrupt_complete(usb_request_t* request) {
+    if (request->status < 0) {
+        printf("usb_hub_interrupt_complete got %d\n", request->status);
+        return;
+    }
     usb_hub_t* hub = (usb_hub_t*)request->client_data;
 
     uint8_t* bitmap = request->buffer;

@@ -485,6 +485,14 @@ void xhci_destroy_dev(mx_device_t* hcidev, const int slot_id) {
         return;
     }
 
+    // complete all pending requests
+    usb_request_t* request;
+    list_for_every_entry(&xhci->devices[slot_id]->req_queue, request, usb_request_t, node) {
+        request->status = ERR_CHANNEL_CLOSED;
+        request->complete_cb(request);
+    }
+    list_initialize(&xhci->devices[slot_id]->req_queue);
+
     inputctx_t* const ic = xhci_make_inputctx(xhci, CTXSIZE(xhci));
     if (!ic) {
         xhci_debug("Out of memory, leaking resources!\n");
