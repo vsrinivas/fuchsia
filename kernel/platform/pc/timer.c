@@ -55,6 +55,10 @@ static uint8_t apic_divisor = 0;
 // TSC timer calibration values
 static uint64_t tsc_ticks_per_ms;
 
+uint64_t get_tsc_ticks_per_ms(void) {
+    return tsc_ticks_per_ms;
+}
+
 #define INTERNAL_FREQ 1193182ULL
 #define INTERNAL_FREQ_3X 3579546ULL
 

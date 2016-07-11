@@ -609,6 +609,10 @@ void sys_thread_exit() {
     UserThread::GetCurrent()->Exit();
 }
 
+extern "C" {
+uint64_t get_tsc_ticks_per_ms(void);
+};
+
 mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr_t* value_ptr) {
     LTRACEF("handle %u operation %u value_ptr %p", handle_value, op, value_ptr);
 
@@ -616,61 +620,54 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
 
     uintptr_t value;
 
+    switch (op) {
 #ifdef ARCH_X86_64
-    switch (op) {
-        case ARCH_SET_FS:
-            if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            if (!x86_is_vaddr_canonical(value))
-                return ERR_INVALID_ARGS;
-            write_msr(X86_MSR_IA32_FS_BASE, value);
-            break;
-        case ARCH_GET_FS:
-            value = read_msr(X86_MSR_IA32_FS_BASE);
-            if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            break;
-        case ARCH_SET_GS:
-            if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            if (!x86_is_vaddr_canonical(value))
-                return ERR_INVALID_ARGS;
-            write_msr(X86_MSR_IA32_KERNEL_GS_BASE, value);
-            break;
-        case ARCH_GET_GS:
-            value = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
-            if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            break;
-        default:
+    case ARCH_SET_FS:
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
-    }
+        if (!x86_is_vaddr_canonical(value))
+            return ERR_INVALID_ARGS;
+        write_msr(X86_MSR_IA32_FS_BASE, value);
+        break;
+    case ARCH_GET_FS:
+        value = read_msr(X86_MSR_IA32_FS_BASE);
+        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        break;
+    case ARCH_SET_GS:
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        if (!x86_is_vaddr_canonical(value))
+            return ERR_INVALID_ARGS;
+        write_msr(X86_MSR_IA32_KERNEL_GS_BASE, value);
+        break;
+    case ARCH_GET_GS:
+        value = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
+        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        break;
+    case ARCH_GET_TSC_TICKS_PER_MS:
+        value = get_tsc_ticks_per_ms();
+        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        break;
 #elif ARCH_ARM64
-    switch (op) {
-        case ARCH_SET_TPIDRRO_EL0:
-            if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            ARM64_WRITE_SYSREG(tpidrro_el0, value);
-            break;
-        default:
+    case ARCH_SET_TPIDRRO_EL0:
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
-    }
+        ARM64_WRITE_SYSREG(tpidrro_el0, value);
+        break;
 #elif ARCH_ARM
-    switch (op) {
-        case ARCH_SET_CP15_READONLY:
-            if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            __asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (value));
-            ISB;
-            break;
-        default:
+    case ARCH_SET_CP15_READONLY:
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
-    }
-#else
-    // Unsupported architecture.
-    (void)value;
-    return ERR_INVALID_ARGS;
+        __asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (value));
+        ISB;
+        break;
 #endif
+    default:
+        return ERR_INVALID_ARGS;
+    }
 
     return NO_ERROR;
 }
