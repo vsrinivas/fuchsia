@@ -1,0 +1,31 @@
+#!/bin/bash
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
+
+case "$(uname -s)" in
+  Darwin)
+    readonly HOST_PLATFORM="mac"
+    ;;
+  Linux)
+    readonly HOST_PLATFORM="linux64"
+    ;;
+  *)
+    echo "Unknown operating system. Cannot run gn."
+    exit 1
+    ;;
+esac
+
+readonly GN_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/gn"
+
+if [[ ! -x "${GN_PATH}" ]]; then
+  echo "Cannot find ${GN_PATH}"
+  echo "Did you run update.sh?"
+  exit 1
+fi
+
+exec "${GN_PATH}" "$@"
