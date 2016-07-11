@@ -32,7 +32,7 @@ for building Magenta for ARM32, ARM64, and x86-64 architectures:
 cd $SRC
 git clone https://github.com/travisg/toolchains.git
 cd toolchains
-./doit -a 'arm aarch64 x86-64' -f -j32
+./doit -a 'arm aarch64 x86_64' -f -j32
 ```
 
 ## Build Qemu
