@@ -74,6 +74,9 @@ struct mx_proc_args {
 // Handle types the mojo library uses
 #define MX_HND_TYPE_MOJO_SHELL 0x100
 
+// Message pipe for dynamic loader service
+#define MX_HND_TYPE_LOADER_SVC 0x200
+
 // Handle types for one-off use and prototyping
 #define MX_HND_TYPE_USER0 0xFFF0
 #define MX_HND_TYPE_USER1 0xFFF1
@@ -82,7 +85,7 @@ struct mx_proc_args {
 #define MX_PROC_INFO_MAGIC 0xd0dabb1e
 #define MX_PROC_INFO_VERSION 0
 
-// Utility to parse the above
+// In-process parsed process args structure
 typedef struct mx_proc_info mx_proc_info_t;
 struct mx_proc_info {
     // Identifier and version of the mx_proc_info object.
@@ -103,6 +106,30 @@ struct mx_proc_info {
 
     uintptr_t* auxv;
 };
+
+// Dynamic Loader Service Messages
+// Used by dynamic loader to obtain objects to link.
+typedef struct mx_loader_svc_msg mx_loader_svc_msg_t;
+struct mx_loader_svc_msg {
+    uint32_t opcode;
+    int32_t arg;
+    uint32_t reserved0;
+    uint32_t reserved1;
+    uint8_t data[0];
+};
+
+#define LOADER_SVC_OP_STATUS 0
+// reply message, arg=status
+
+#define LOADER_SVC_OP_DONE 1
+// Clean shutdown of service
+
+#define LOADER_SVC_OP_LOAD_OBJECT 2
+// arg=0, data[] object name (asciiz)
+// reply includes vmo handle on success
+
+#define LOADER_SVC_OP_DEBUG_PRINT 3
+// arg=0, data[] debug text (asciiz)
 
 #ifdef __cplusplus
 }
