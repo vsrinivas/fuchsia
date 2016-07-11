@@ -20,8 +20,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mem_tests.c \
     $(LOCAL_DIR)/port_tests.c \
     $(LOCAL_DIR)/printf_tests.c \
-    $(LOCAL_DIR)/ref_call_counter.cpp \
-    $(LOCAL_DIR)/ref_ptr_tests.cpp \
     $(LOCAL_DIR)/sync_ipi_tests.c \
     $(LOCAL_DIR)/tests.c \
     $(LOCAL_DIR)/thread_tests.c \

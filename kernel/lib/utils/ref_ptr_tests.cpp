@@ -11,7 +11,7 @@
 
 #include "ref_call_counter.h"
 
-extern "C" int ref_ptr_tests(int argc, const cmd_args* argv)
+static bool ref_ptr_test(void* context)
 {
     BEGIN_TEST;
     using RefCallPtr = utils::RefPtr<RefCallCounter>;
@@ -78,6 +78,9 @@ extern "C" int ref_ptr_tests(int argc, const cmd_args* argv)
     EXPECT_FALSE(static_cast<bool>(ptr), "");
     EXPECT_FALSE(ptr.get(), "");
 
-    printf("all tests done\n");
     END_TEST;
 }
+
+STATIC_UNITTEST_START_TESTCASE(ref_ptr_tests)
+STATIC_UNITTEST("Ref Pointer", ref_ptr_test)
+STATIC_UNITTEST_END_TESTCASE(ref_ptr_tests, "refptrtests", "Ref Pointer Tests", NULL, NULL);

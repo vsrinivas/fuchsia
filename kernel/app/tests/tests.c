@@ -26,7 +26,6 @@ STATIC_COMMAND("clock_tests", "test clocks", (console_cmd)&clock_tests)
 STATIC_COMMAND("bench", "miscellaneous benchmarks", (console_cmd)&benchmarks)
 STATIC_COMMAND("fibo", "threaded fibonacci", (console_cmd)&fibo)
 STATIC_COMMAND("spinner", "create a spinning thread", (console_cmd)&spinner)
-STATIC_COMMAND("ref_ptr_tests", "test ref_ptr", (console_cmd)&ref_ptr_tests)
 STATIC_COMMAND("sync_ipi_tests", "test synchronous IPIs", (console_cmd)&sync_ipi_tests)
 STATIC_COMMAND_END(tests);
 
