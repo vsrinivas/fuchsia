@@ -56,7 +56,8 @@ int generic_hub_wait_for_port(mx_device_t* device, const int port,
 
 int generic_hub_scanport(generic_hub_t* const hub, int port);
 
-int generic_hub_init(generic_hub_t* hub, mx_device_t* hubdev, mx_device_t* busdev, int hub_address);
+int generic_hub_init(generic_hub_t* hub, mx_device_t* hubdev, usb_hub_protocol_t* hub_protocol,
+                     mx_device_t* busdev, int hub_address);
 
 int generic_hub_attach_dev(generic_hub_t* const hub, const int port);
 int generic_hub_detach_dev(generic_hub_t* const hub, const int port);

@@ -368,7 +368,8 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     if (hub->speed == SUPER_SPEED)
         usb_hub_set_hub_depth(hub->device);
 
-    generic_hub_init(&hub->generic_hub, &hub->hub_device, usb_get_bus(device), address);
+    generic_hub_init(&hub->generic_hub, &hub->hub_device, &usb_hub_protocol, usb_get_bus(device),
+                     address);
     device_set_bindable(&hub->hub_device, false);
     device_add(&hub->hub_device, device);
 

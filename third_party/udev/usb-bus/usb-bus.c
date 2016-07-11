@@ -66,7 +66,11 @@ static mx_protocol_device_t usb_bus_device_proto = {
 
 static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_hci_protocol_t* hci_protocol;
+    usb_hub_protocol_t* hub_protocol;
     if (device_get_protocol(device, MX_PROTOCOL_USB_HCI, (void**)&hci_protocol)) {
+        return ERR_NOT_SUPPORTED;
+    }
+    if (device_get_protocol(device, MX_PROTOCOL_USB_HUB, (void**)&hub_protocol)) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -91,7 +95,7 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {
     device_add(&bus->device, device);
 
     hci_protocol->set_bus_device(device, &bus->device);
-    generic_hub_init(&bus->generic_hub, device, &bus->device, 0);
+    generic_hub_init(&bus->generic_hub, device, hub_protocol, &bus->device, 0);
 
     return NO_ERROR;
 }

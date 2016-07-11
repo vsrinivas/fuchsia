@@ -136,9 +136,11 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_device_t* hcidev = &xhci->hcidev;
     status = device_init(hcidev, drv, "xhci_usb", &xhci_device_proto);
-    hcidev->protocol_id = MX_PROTOCOL_USB_HCI;
     if (status < 0)
         goto error_return;
+
+    hcidev->protocol_id = MX_PROTOCOL_USB_HCI;
+    hcidev->protocol_ops = &_xhci_protocol;
 
     device_add(hcidev, dev);
 

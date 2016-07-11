@@ -174,10 +174,9 @@ int generic_hub_scanport(generic_hub_t* const hub, const int port) {
     return 0;
 }
 
-int generic_hub_init(generic_hub_t* hub, mx_device_t* hubdev, mx_device_t* busdev, int hub_address) {
-    usb_hub_protocol_t* hub_protocol;
+int generic_hub_init(generic_hub_t* hub, mx_device_t* hubdev, usb_hub_protocol_t* hub_protocol,
+                     mx_device_t* busdev, int hub_address) {
     usb_bus_protocol_t* bus_protocol;
-    device_get_protocol(hubdev, MX_PROTOCOL_USB_HUB, (void**)&hub_protocol);
     device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, (void**)&bus_protocol);
 
     hub->hub_address = hub_address;
