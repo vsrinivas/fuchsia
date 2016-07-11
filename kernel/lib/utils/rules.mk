@@ -22,6 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/ref_call_counter.cpp \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/ref_ptr_tests.cpp \
+    $(LOCAL_DIR)/unique_ptr_tests.cpp \
 
 include make/module.mk
 
