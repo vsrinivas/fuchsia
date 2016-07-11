@@ -85,10 +85,13 @@ list_node_t history = LIST_INITIAL_VALUE(history);
 static const char nl[2] = {'\r', '\n'};
 static const char bs[3] = {8, ' ', 8};
 static const char erase_line[5] = {ESC, '[', '2', 'K', '\r'};
+static const char cursor_left[3] = {ESC, '[', 'D'};
+static const char cursor_right[3] = {ESC, '[', 'C'};
 
 typedef struct {
     int pos;
-    int save_pos;
+    int len;
+    int save_len;
     hitem* item;
     char save[LINE_MAX];
     char line[LINE_MAX + 1];
@@ -96,10 +99,10 @@ typedef struct {
 
 void history_add(editstate* es) {
     hitem* item;
-    if (es->pos && ((item = malloc(sizeof(hitem))) != NULL)) {
-        item->len = es->pos;
+    if (es->len && ((item = malloc(sizeof(hitem))) != NULL)) {
+        item->len = es->len;
         memset(item->line, 0, sizeof(item->line));
-        memcpy(item->line, es->line, es->pos);
+        memcpy(item->line, es->line, es->len);
         list_add_tail(&history, &item->node);
     }
 }
@@ -111,7 +114,7 @@ int history_up(editstate* es) {
         if (next != NULL) {
             es->item = next;
             memcpy(es->line, es->item->line, es->item->len);
-            es->pos = es->item->len;
+            es->pos = es->len = es->item->len;
             cputs(erase_line, sizeof(erase_line));
             return 1;
         } else {
@@ -123,10 +126,10 @@ int history_up(editstate* es) {
         if (next != NULL) {
             es->item = next;
             memset(es->save, 0, sizeof(es->save));
-            memcpy(es->save, es->line, es->pos);
-            es->save_pos = es->pos;
-            es->pos = es->item->len;
-            memcpy(es->line, es->item->line, es->pos);
+            memcpy(es->save, es->line, es->len);
+            es->save_len = es->len;
+            es->pos = es->len = es->item->len;
+            memcpy(es->line, es->item->line, es->len);
             cputs(erase_line, sizeof(erase_line));
             return 1;
         } else {
@@ -143,11 +146,11 @@ int history_down(editstate* es) {
     hitem* next = list_next_type(&history, &es->item->node, hitem, node);
     if (next != NULL) {
         es->item = next;
-        es->pos = es->item->len;
-        memcpy(es->line, es->item->line, es->pos);
+        es->pos = es->len = es->item->len;
+        memcpy(es->line, es->item->line, es->len);
     } else {
-        memcpy(es->line, es->save, es->save_pos);
-        es->pos = es->save_pos;
+        memcpy(es->line, es->save, es->save_len);
+        es->pos = es->len = es->save_len;
         es->item = NULL;
     }
     cputs(erase_line, sizeof(erase_line));
@@ -156,14 +159,20 @@ int history_down(editstate* es) {
 
 int readline(editstate* es) {
     int a, b, c;
+    es->len = 0;
     es->pos = 0;
-    es->save_pos = 0;
+    es->save_len = 0;
     es->item = NULL;
 again:
     cputc('>');
     cputc(' ');
-    if (es->pos) {
-        cputs(es->line, es->pos);
+    if (es->len) {
+        cputs(es->line, es->len);
+    }
+    if (es->len != es->pos) {
+        char tmp[16];
+        sprintf(tmp, "%c[%dG", ESC, es->pos + 3);
+        cputs(tmp, strlen(tmp));
     }
     for (;;) {
         if ((c = cgetc()) < 0) {
@@ -171,7 +180,17 @@ again:
             return c;
         }
         if ((c >= ' ') && (c < 127)) {
-            if (es->pos < LINE_MAX) {
+            if (es->len < LINE_MAX) {
+                if (es->pos != es->len) {
+                    memmove(es->line + es->pos + 1, es->line + es->pos, es->len - es->pos);
+                    // expensive full redraw of line
+                    es->len++;
+                    es->line[es->pos++] = c;
+                    es->item = NULL;
+                    cputs(erase_line, sizeof(erase_line));
+                    goto again;
+                }
+                es->len++;
                 es->line[es->pos++] = c;
                 cputc(c);
             }
@@ -180,6 +199,7 @@ again:
         }
         switch (c) {
         case CTRL_C:
+            es->len = 0;
             es->pos = 0;
             es->item = NULL;
             cputs(nl, sizeof(nl));
@@ -192,7 +212,12 @@ again:
         backspace:
             if (es->pos > 0) {
                 es->pos--;
-                cputs(bs, sizeof(bs));
+                es->len--;
+                memmove(es->line + es->pos, es->line + es->pos + 1, es->len - es->pos);
+                // expensive full redraw of line
+                es->item = NULL;
+                cputs(erase_line, sizeof(erase_line));
+                goto again;
             } else {
                 beep();
             }
@@ -200,7 +225,7 @@ again:
             continue;
         case NL:
         case CR:
-            es->line[es->pos] = 0;
+            es->line[es->len] = 0;
             cputs(nl, sizeof(nl));
             history_add(es);
             return 0;
@@ -226,9 +251,21 @@ again:
                 }
                 break;
             case EXT_RIGHT:
+                if (es->pos < es->len) {
+                    es->pos++;
+                    cputs(cursor_right, sizeof(cursor_right));
+                } else {
+                    beep();
+                }
                 break;
             case EXT_LEFT:
-                goto backspace;
+                if (es->pos > 0) {
+                    es->pos--;
+                    cputs(cursor_left, sizeof(cursor_left));
+                } else {
+                    beep();
+                }
+                break;
             }
         }
         beep();
