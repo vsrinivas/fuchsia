@@ -33,38 +33,19 @@
 #include <mxio/util.h>
 #include <mxio/vfs.h>
 
-#include "private.h"
+#include "unistd.h"
 
 #define MXDEBUG 0
 
 // non-thread-safe emulation of unistd io functions
 // using the mxio transports
 
-typedef struct {
-    mxr_mutex_t lock;
-    mxr_mutex_t cwd_lock;
-    bool init;
-    uint32_t reserved;
-    mxio_t* root;
-    mxio_t* cwd;
-    mxio_t* fdtab[MAX_MXIO_FD];
-    char cwd_path[PATH_MAX];
-} mxio_state_t;
-
-static mxio_state_t __mxio_global_state = {
+mxio_state_t __mxio_global_state = {
     .lock = MXR_MUTEX_INIT,
     .cwd_lock = MXR_MUTEX_INIT,
     .init = true,
     .cwd_path = "/",
 };
-
-#define mxio_lock (__mxio_global_state.lock)
-#define mxio_root_handle (__mxio_global_state.root)
-#define mxio_cwd_handle (__mxio_global_state.cwd)
-#define mxio_cwd_lock (__mxio_global_state.cwd_lock)
-#define mxio_cwd_path (__mxio_global_state.cwd_path)
-#define mxio_fdtab (__mxio_global_state.fdtab)
-#define mxio_root_init (__mxio_global_state.init)
 
 void mxio_install_root(mxio_t* root) {
     mxr_mutex_lock(&mxio_lock);
@@ -122,7 +103,7 @@ fail:
     return fd;
 }
 
-static inline mxio_t* fd_to_io(int fd) {
+mxio_t* __mxio_fd_to_io(int fd) {
     mxio_t* io = NULL;
     mxr_mutex_lock(&mxio_lock);
     if ((fd < 0) || (fd >= MAX_MXIO_FD)) {
@@ -455,10 +436,6 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
-int rmdir(const char* path) {
-    return ERROR(ERR_NOT_SUPPORTED);
-}
-
 int unlinkat(int fd, const char* path, int flag) {
     return ERROR(ERR_NOT_SUPPORTED);
 }
@@ -576,6 +553,10 @@ int open(const char* path, int flags, ...) {
         return ERRNO(EMFILE);
     }
     return fd;
+}
+
+int creat(const char* path, mode_t mode) {
+    return open(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
 }
 
 int fstat(int fd, struct stat* s) {
@@ -816,4 +797,13 @@ int isatty(int fd) {
     mxio_release(io);
 
     return ret;
+}
+
+mode_t umask(mode_t mask) {
+    mode_t oldmask;
+    mxr_mutex_lock(&mxio_lock);
+    oldmask = __mxio_global_state.umask;
+    __mxio_global_state.umask = mask & 0777;
+    mxr_mutex_unlock(&mxio_lock);
+    return oldmask;
 }

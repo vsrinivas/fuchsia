@@ -267,8 +267,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/exit/atexit.c \
     $(LOCAL_DIR)/src/exit/exit.c \
     $(LOCAL_DIR)/src/exit/quick_exit.c \
-    $(LOCAL_DIR)/src/fcntl/creat.c \
-    $(LOCAL_DIR)/src/fcntl/fcntl.c \
     $(LOCAL_DIR)/src/fcntl/openat.c \
     $(LOCAL_DIR)/src/fcntl/posix_fadvise.c \
     $(LOCAL_DIR)/src/fcntl/posix_fallocate.c \
@@ -761,22 +759,16 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/signal/sigtimedwait.c \
     $(LOCAL_DIR)/src/signal/sigwait.c \
     $(LOCAL_DIR)/src/signal/sigwaitinfo.c \
-    $(LOCAL_DIR)/src/stat/chmod.c \
-    $(LOCAL_DIR)/src/stat/fchmod.c \
     $(LOCAL_DIR)/src/stat/fchmodat.c \
     $(LOCAL_DIR)/src/stat/fstatat.c \
     $(LOCAL_DIR)/src/stat/futimens.c \
     $(LOCAL_DIR)/src/stat/futimesat.c \
     $(LOCAL_DIR)/src/stat/lchmod.c \
     $(LOCAL_DIR)/src/stat/lstat.c \
-    $(LOCAL_DIR)/src/stat/mkdir.c \
     $(LOCAL_DIR)/src/stat/mkdirat.c \
-    $(LOCAL_DIR)/src/stat/mkfifo.c \
     $(LOCAL_DIR)/src/stat/mkfifoat.c \
-    $(LOCAL_DIR)/src/stat/mknod.c \
     $(LOCAL_DIR)/src/stat/mknodat.c \
     $(LOCAL_DIR)/src/stat/statvfs.c \
-    $(LOCAL_DIR)/src/stat/umask.c \
     $(LOCAL_DIR)/src/stat/utimensat.c \
     $(LOCAL_DIR)/src/stdio/__fclose_ca.c \
     $(LOCAL_DIR)/src/stdio/__fdopen.c \
@@ -856,9 +848,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/stdio/putw.c \
     $(LOCAL_DIR)/src/stdio/putwc.c \
     $(LOCAL_DIR)/src/stdio/putwchar.c \
-    $(LOCAL_DIR)/src/stdio/remove.c \
-    $(LOCAL_DIR)/src/stdio/rename.c \
-    $(LOCAL_DIR)/src/stdio/rewind.c \
     $(LOCAL_DIR)/src/stdio/scanf.c \
     $(LOCAL_DIR)/src/stdio/setbuf.c \
     $(LOCAL_DIR)/src/stdio/setbuffer.c \
@@ -998,19 +987,13 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/time/utime.c \
     $(LOCAL_DIR)/src/time/wcsftime.c \
     $(LOCAL_DIR)/src/unistd/_exit.c \
-    $(LOCAL_DIR)/src/unistd/access.c \
     $(LOCAL_DIR)/src/unistd/acct.c \
     $(LOCAL_DIR)/src/unistd/alarm.c \
-    $(LOCAL_DIR)/src/unistd/chown.c \
     $(LOCAL_DIR)/src/unistd/ctermid.c \
     $(LOCAL_DIR)/src/unistd/dup3.c \
     $(LOCAL_DIR)/src/unistd/faccessat.c \
     $(LOCAL_DIR)/src/unistd/fchdir.c \
-    $(LOCAL_DIR)/src/unistd/fchown.c \
     $(LOCAL_DIR)/src/unistd/fchownat.c \
-    $(LOCAL_DIR)/src/unistd/fdatasync.c \
-    $(LOCAL_DIR)/src/unistd/fsync.c \
-    $(LOCAL_DIR)/src/unistd/ftruncate.c \
     $(LOCAL_DIR)/src/unistd/getegid.c \
     $(LOCAL_DIR)/src/unistd/geteuid.c \
     $(LOCAL_DIR)/src/unistd/getgid.c \
@@ -1024,8 +1007,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/getppid.c \
     $(LOCAL_DIR)/src/unistd/getsid.c \
     $(LOCAL_DIR)/src/unistd/getuid.c \
-    $(LOCAL_DIR)/src/unistd/lchown.c \
-    $(LOCAL_DIR)/src/unistd/link.c \
     $(LOCAL_DIR)/src/unistd/linkat.c \
     $(LOCAL_DIR)/src/unistd/nice.c \
     $(LOCAL_DIR)/src/unistd/pause.c \
@@ -1034,7 +1015,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/preadv.c \
     $(LOCAL_DIR)/src/unistd/pwrite.c \
     $(LOCAL_DIR)/src/unistd/pwritev.c \
-    $(LOCAL_DIR)/src/unistd/readlink.c \
     $(LOCAL_DIR)/src/unistd/readlinkat.c \
     $(LOCAL_DIR)/src/unistd/renameat.c \
     $(LOCAL_DIR)/src/unistd/setegid.c \
@@ -1050,12 +1030,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/unistd/setuid.c \
     $(LOCAL_DIR)/src/unistd/setxid.c \
     $(LOCAL_DIR)/src/unistd/sleep.c \
-    $(LOCAL_DIR)/src/unistd/symlink.c \
     $(LOCAL_DIR)/src/unistd/symlinkat.c \
-    $(LOCAL_DIR)/src/unistd/sync.c \
     $(LOCAL_DIR)/src/unistd/tcgetpgrp.c \
     $(LOCAL_DIR)/src/unistd/tcsetpgrp.c \
-    $(LOCAL_DIR)/src/unistd/truncate.c \
     $(LOCAL_DIR)/src/unistd/ttyname.c \
     $(LOCAL_DIR)/src/unistd/ttyname_r.c \
     $(LOCAL_DIR)/src/unistd/ualarm.c \
