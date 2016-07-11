@@ -9,10 +9,37 @@
 #include <unittest.h>
 #include <utils/ref_ptr.h>
 
-#include "ref_call_counter.h"
+namespace {
 
-static bool ref_ptr_test(void* context)
-{
+class RefCallCounter {
+public:
+    RefCallCounter();
+
+    void AddRef();
+    bool Release();
+
+    void Adopt() {}
+
+    int add_ref_calls() const { return add_ref_calls_; }
+    int release_calls() const { return release_calls_; }
+
+private:
+    int add_ref_calls_;
+    int release_calls_;
+};
+
+RefCallCounter::RefCallCounter()
+    : add_ref_calls_(0u), release_calls_(0u) {}
+
+void RefCallCounter::AddRef() {
+    add_ref_calls_++;
+}
+bool RefCallCounter::Release() {
+    release_calls_++;
+    return false;
+}
+
+static bool ref_ptr_test(void* context) {
     BEGIN_TEST;
     using RefCallPtr = utils::RefPtr<RefCallCounter>;
 
@@ -80,6 +107,7 @@ static bool ref_ptr_test(void* context)
 
     END_TEST;
 }
+} //namespace
 
 STATIC_UNITTEST_START_TESTCASE(ref_ptr_tests)
 STATIC_UNITTEST("Ref Pointer", ref_ptr_test)
