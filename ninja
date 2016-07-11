@@ -6,7 +6,7 @@
 set -e
 
 readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
-readonly TOOL_NAME="gn"
+readonly TOOL_NAME="ninja"
 
 case "$(uname -s)" in
   Darwin)

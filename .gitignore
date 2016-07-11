@@ -1,4 +1,10 @@
 /linux64/gn
 /linux64/gn.stamp
+/linux64/ninja
+/linux64/ninja.stamp
 /mac/gn
 /mac/gn.stamp
+/mac/ninja
+/mac/ninja.stamp
+/sdk
+/sdk.stamp
