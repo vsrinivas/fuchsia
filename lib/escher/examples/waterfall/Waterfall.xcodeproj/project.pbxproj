@@ -635,6 +635,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.domokit.experiments.Waterfall;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "6e3b7591-e3e6-4331-a584-7a8376ffefa6";
 			};
 			name = Debug;
 		};
@@ -650,6 +651,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.domokit.experiments.Waterfall;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "6e3b7591-e3e6-4331-a584-7a8376ffefa6";
 			};
 			name = Release;
 		};
