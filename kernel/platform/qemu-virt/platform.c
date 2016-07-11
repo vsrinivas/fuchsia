@@ -16,6 +16,7 @@
 #include <dev/uart.h>
 #include <dev/virtio.h>
 #include <lk/init.h>
+#include <lib/console.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <platform.h>
@@ -189,4 +190,30 @@ void platform_init(void)
     status_t status = pcie_init(&PCIE_INIT_INFO);
     if (status != NO_ERROR)
         TRACEF("Failed to initialize PCIe bus driver! (status = %d)\n", status);
+}
+
+void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
+{
+
+    if (suggested_action == HALT_ACTION_REBOOT) {
+        ulong psci_call_num = 0x84000000 + 9; /* SYSTEM_RESET */
+        psci_call(psci_call_num, 0, 0, 0);
+    } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
+        ulong psci_call_num = 0x84000000 + 8; /* SYSTEM_SHUTDOWN */
+        psci_call(psci_call_num, 0, 0, 0);
+    } else {
+#if ENABLE_PANIC_SHELL
+        dprintf(ALWAYS, "HALT: starting debug shell... (reason = %d)\n", reason);
+        arch_disable_ints();
+        panic_shell_start();
+#else
+        dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
+        arch_disable_ints();
+        for (;;);
+#endif
+    }
+
+    // catch all fallthrough cases
+    arch_disable_ints();
+    for (;;);
 }
