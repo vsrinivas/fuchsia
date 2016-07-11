@@ -32,6 +32,8 @@
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
 
+#include <runtime/mutex.h>
+
 #include <system/listnode.h>
 
 #define MXDEBUG 0
@@ -49,7 +51,7 @@ iostate_t* create_iostate(mx_device_t* dev) {
 
 mx_status_t __mx_rio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
-mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
+static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
     iostate_t* newios;
     if (devmgr_is_remote) {
         name = "devhost";
@@ -107,6 +109,21 @@ fail1:
     _magenta_handle_close(h0);
     _magenta_handle_close(h1);
     free(newios);
+    return r;
+}
+
+static mxr_mutex_t rio_lock = MXR_MUTEX_INIT;
+
+// This is called from both the vfs handler thread and console start thread
+// and if not protected by rio_lock, they can step on each other when cloning
+// remoted devices.
+//
+// TODO: eventually this should be integrated with core devmgr locking, but
+//       that will require a bit more work.  This resolves the immediate issue.
+mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
+    mxr_mutex_lock(&rio_lock);
+    mx_status_t r = __devmgr_get_handles(dev, handles, ids);
+    mxr_mutex_unlock(&rio_lock);
     return r;
 }
 
