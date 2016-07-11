@@ -586,7 +586,11 @@ int stat(const char* fn, struct stat* s) {
     return STATUS(r);
 }
 
-int pipe(int pipefd[2]) {
+int pipe2(int pipefd[2], int flags) {
+    const int allowed_flags = O_NONBLOCK | O_CLOEXEC;
+    if (flags & ~allowed_flags) {
+        return ERRNO(EINVAL);
+    }
     mxio_t *a, *b;
     int r = mxio_pipe_pair(&a, &b);
     if (r < 0) {
@@ -608,6 +612,10 @@ int pipe(int pipefd[2]) {
         return ERROR(pipefd[1]);
     }
     return 0;
+}
+
+int pipe(int pipefd[2]) {
+    return pipe2(pipefd, 0);
 }
 
 static void update_cwd_path(const char* path) {

@@ -664,6 +664,22 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/process/execvp.c \
     $(LOCAL_DIR)/src/process/fexecve.c \
     $(LOCAL_DIR)/src/process/fork.c \
+    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_addclose.c \
+    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_adddup2.c \
+    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_addopen.c \
+    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_destroy.c \
+    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_init.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_destroy.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_getflags.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_getpgroup.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_getsigdefault.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_getsigmask.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_init.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_sched.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_setflags.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_setpgroup.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_setsigdefault.c \
+    $(LOCAL_DIR)/src/process/posix_spawnattr_setsigmask.c \
     $(LOCAL_DIR)/src/process/wait.c \
     $(LOCAL_DIR)/src/process/waitid.c \
     $(LOCAL_DIR)/src/process/waitpid.c \
@@ -1096,32 +1112,14 @@ LOCAL_SRCS := \
 # These refer to dup2 or fcntl.
 #    $(LOCAL_DIR)/src/legacy/daemon.c \
 #    $(LOCAL_DIR)/src/legacy/isastream.c \
+#    $(LOCAL_DIR)/src/misc/forkpty.c \
 #    $(LOCAL_DIR)/src/misc/lockf.c \
 #    $(LOCAL_DIR)/src/misc/login_tty.c \
-
-# These refer to pipe2.
-#    $(LOCAL_DIR)/src/misc/forkpty.c \
 #    $(LOCAL_DIR)/src/misc/wordexp.c \
-#    $(LOCAL_DIR)/src/stdio/popen.c \
 #    $(LOCAL_DIR)/src/process/posix_spawn.c \
-#    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_addclose.c \
-#    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_adddup2.c \
-#    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_addopen.c \
-#    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_destroy.c \
-#    $(LOCAL_DIR)/src/process/posix_spawn_file_actions_init.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_destroy.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_getflags.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_getpgroup.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_getsigdefault.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_getsigmask.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_init.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_sched.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_setflags.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_setpgroup.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_setsigdefault.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnattr_setsigmask.c \
 #    $(LOCAL_DIR)/src/process/posix_spawnp.c \
 #    $(LOCAL_DIR)/src/process/system.c \
+#    $(LOCAL_DIR)/src/stdio/popen.c \
 
 # These refer to __crypt_*, __des_setkey, and __do_des, which we do not have.
 #    $(LOCAL_DIR)/src/crypt/crypt.c \

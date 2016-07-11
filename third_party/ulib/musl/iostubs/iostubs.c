@@ -115,6 +115,12 @@ static int stub_pipe(int pipefd[2]) {
 }
 weak_alias(stub_pipe, pipe);
 
+static int stub_pipe2(int pipe2fd[2], int flags) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_pipe2, pipe2);
+
 static int stub_chdir(const char* path) {
     errno = ENOSYS;
     return -1;
