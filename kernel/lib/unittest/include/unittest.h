@@ -13,22 +13,21 @@
  * Sample usage:
  *
  * A test case runs a collection of unittests, with
- * STATIC_UNITTEST_START_TESTCASE and STATIC_UNITTEST_END_TESTCASE
+ * UNITTEST_START_TESTCASE and UNITTEST_END_TESTCASE
  * BEGIN_TEST_CASE and END_TEST_CASE at the beginning and end of the list of
- * unitests, and STATIC_UNITTEST for each individual test, as follows:
+ * unitests, and UNITTEST for each individual test, as follows:
  *
- *  STATIC_UNITTEST_START_TESTCASE(foo_tests)
+ *  UNITTEST_START_TESTCASE(foo_tests)
  *
- *  STATIC_UNITTEST(test_foo);
- *  STATIC_UNITTEST(test_bar);
- *  STATIC_UNITTEST(test_baz);
+ *  UNITTEST(test_foo);
+ *  UNITTEST(test_bar);
+ *  UNITTEST(test_baz);
  *
- *  END_TEST_CASE(foo_tests);
- *  STATIC_UNITTEST_END_TESTCASE(foo_tests,
- *                               "footest",
- *                               "Test to be sure that your foos have proper bars",
- *                               init_foo_test_env,
- *                               cleanup_foo_test_env);
+ *  UNITTEST_END_TESTCASE(foo_tests,
+ *                        "footest",
+ *                        "Test to be sure that your foos have proper bars",
+ *                        init_foo_test_env,
+ *                        cleanup_foo_test_env);
  *
  * This creates an entry in the global unittest table and registers it with the
  * unit test framework.
@@ -309,13 +308,13 @@ typedef struct unitest_testcase_registration {
 } unittest_testcase_registration_t;
 
 #ifdef WITH_LIB_UNITTEST
-#define STATIC_UNITTEST_START_TESTCASE(_global_id)  \
+#define UNITTEST_START_TESTCASE(_global_id)  \
     static const unittest_registration_t __unittest_table_##_global_id[] = {
 
-#define STATIC_UNITTEST(_name, _fn) \
+#define UNITTEST(_name, _fn) \
     { .name = _name, .fn = _fn },
 
-#define STATIC_UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup)    \
+#define UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup)           \
     };  /* __unittest_table_##_global_id */                                        \
     extern const unittest_testcase_registration_t __unittest_case_##_global_id;    \
     const unittest_testcase_registration_t __unittest_case_##_global_id            \
@@ -329,9 +328,9 @@ typedef struct unitest_testcase_registration {
         .test_cnt =  countof(__unittest_table_##_global_id),                       \
     }
 #else   // WITH_LIB_UNITTEST
-#define STATIC_UNITTEST_START_TESTCASE(_global_id)
-#define STATIC_UNITTEST(_name, _fn)
-#define STATIC_UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup)
+#define UNITTEST_START_TESTCASE(_global_id)
+#define UNITTEST(_name, _fn)
+#define UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup)
 #endif  // WITH_LIB_UNITTEST
 
 __END_CDECLS

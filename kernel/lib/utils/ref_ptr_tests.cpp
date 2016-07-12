@@ -109,6 +109,6 @@ static bool ref_ptr_test(void* context) {
 }
 } //namespace
 
-STATIC_UNITTEST_START_TESTCASE(ref_ptr_tests)
-STATIC_UNITTEST("Ref Pointer", ref_ptr_test)
-STATIC_UNITTEST_END_TESTCASE(ref_ptr_tests, "refptrtests", "Ref Pointer Tests", NULL, NULL);
+UNITTEST_START_TESTCASE(ref_ptr_tests)
+UNITTEST("Ref Pointer", ref_ptr_test)
+UNITTEST_END_TESTCASE(ref_ptr_tests, "refptrtests", "Ref Pointer Tests", NULL, NULL);

@@ -67,11 +67,11 @@ bool prng_output(void*) {
 
 } // namespace
 
-STATIC_UNITTEST_START_TESTCASE(prng_tests)
-STATIC_UNITTEST("Instantiate", instantiate)
-STATIC_UNITTEST("Test Output", prng_output)
-STATIC_UNITTEST_END_TESTCASE(prng_tests, "prng",
-                             "Test pseudo-random number generator implementation.",
-                             NULL, NULL);
+UNITTEST_START_TESTCASE(prng_tests)
+UNITTEST("Instantiate", instantiate)
+UNITTEST("Test Output", prng_output)
+UNITTEST_END_TESTCASE(prng_tests, "prng",
+                      "Test pseudo-random number generator implementation.",
+                      NULL, NULL);
 
 } // namespace crypto

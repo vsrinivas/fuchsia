@@ -62,6 +62,6 @@ static bool ref_counted_test(void* context) {
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(ref_counted_tests)
-STATIC_UNITTEST("Ref Counted", ref_counted_test)
-STATIC_UNITTEST_END_TESTCASE(ref_counted_tests, "refctests", "Ref Counted Tests", NULL, NULL);
+UNITTEST_START_TESTCASE(ref_counted_tests)
+UNITTEST("Ref Counted", ref_counted_test)
+UNITTEST_END_TESTCASE(ref_counted_tests, "refctests", "Ref Counted Tests", NULL, NULL);

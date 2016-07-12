@@ -91,10 +91,10 @@ bool compute_hashes(void*) {
 
 } // namespace
 
-STATIC_UNITTEST_START_TESTCASE(hash256_tests)
-STATIC_UNITTEST("Instantiate", instantiate)
-STATIC_UNITTEST("Compute", compute_hashes)
-STATIC_UNITTEST_END_TESTCASE(hash256_tests, "sha256", "Test SHA256 implementation Tests",
-                             NULL, NULL);
+UNITTEST_START_TESTCASE(hash256_tests)
+UNITTEST("Instantiate", instantiate)
+UNITTEST("Compute", compute_hashes)
+UNITTEST_END_TESTCASE(hash256_tests, "sha256", "Test SHA256 implementation Tests",
+                      NULL, NULL);
 
 } // namespace crypto

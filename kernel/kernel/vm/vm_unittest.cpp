@@ -540,8 +540,8 @@ static bool vmm_object_tests(void* context) {
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(vm_tests)
-STATIC_UNITTEST("pmm tests", pmm_tests)
-STATIC_UNITTEST("vmm tests", vmm_tests)
-STATIC_UNITTEST("vm object based test", vmm_object_tests)
-STATIC_UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", NULL, NULL);
+UNITTEST_START_TESTCASE(vm_tests)
+UNITTEST("pmm tests", pmm_tests)
+UNITTEST("vmm tests", vmm_tests)
+UNITTEST("vm object based test", vmm_object_tests)
+UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", NULL, NULL);

@@ -291,18 +291,18 @@ static bool uptr_test_array_comparison(void* context) {
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(unique_ptr)
-STATIC_UNITTEST("Scoped Destruction",               uptr_test_scoped_destruction)
-STATIC_UNITTEST("Move",                             uptr_test_move)
-STATIC_UNITTEST("nullptr Scoped Destruction",       uptr_test_null_scoped_destruction)
-STATIC_UNITTEST("Different Scope Swapping",         uptr_test_diff_scope_swap)
-STATIC_UNITTEST("operator bool",                    uptr_test_bool_op)
-STATIC_UNITTEST("comparison operators",             uptr_test_comparison)
-STATIC_UNITTEST("Array Scoped Destruction",         uptr_test_array_scoped_destruction)
-STATIC_UNITTEST("Array Move",                       uptr_test_array_move)
-STATIC_UNITTEST("Array nullptr Scoped Destruction", uptr_test_array_null_scoped_destruction)
-STATIC_UNITTEST("Array Different Scope Swapping",   uptr_test_array_diff_scope_swap)
-STATIC_UNITTEST("Array operator bool",              uptr_test_array_bool_op)
-STATIC_UNITTEST("Array comparison operators",       uptr_test_array_comparison)
-STATIC_UNITTEST_END_TESTCASE(unique_ptr, "uptr", "Tests of the utils::unique_ptr<T> class",
-                             NULL, NULL);
+UNITTEST_START_TESTCASE(unique_ptr)
+UNITTEST("Scoped Destruction",               uptr_test_scoped_destruction)
+UNITTEST("Move",                             uptr_test_move)
+UNITTEST("nullptr Scoped Destruction",       uptr_test_null_scoped_destruction)
+UNITTEST("Different Scope Swapping",         uptr_test_diff_scope_swap)
+UNITTEST("operator bool",                    uptr_test_bool_op)
+UNITTEST("comparison operators",             uptr_test_comparison)
+UNITTEST("Array Scoped Destruction",         uptr_test_array_scoped_destruction)
+UNITTEST("Array Move",                       uptr_test_array_move)
+UNITTEST("Array nullptr Scoped Destruction", uptr_test_array_null_scoped_destruction)
+UNITTEST("Array Different Scope Swapping",   uptr_test_array_diff_scope_swap)
+UNITTEST("Array operator bool",              uptr_test_array_bool_op)
+UNITTEST("Array comparison operators",       uptr_test_array_comparison)
+UNITTEST_END_TESTCASE(unique_ptr, "uptr", "Tests of the utils::unique_ptr<T> class",
+                      NULL, NULL);

@@ -274,9 +274,9 @@ static bool list_move_test(void* context)
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(list_tests)
-STATIC_UNITTEST("Singly one linked list", singly_linked_one_list_test)
-STATIC_UNITTEST("Single two linked lists", singly_linked_two_lists_test)
-STATIC_UNITTEST("Doubly linked list", doubly_linked_one_list_test)
-STATIC_UNITTEST("Move list", list_move_test)
-STATIC_UNITTEST_END_TESTCASE(list_tests, "listtests", "List Tests", NULL, NULL);
+UNITTEST_START_TESTCASE(list_tests)
+UNITTEST("Singly one linked list", singly_linked_one_list_test)
+UNITTEST("Single two linked lists", singly_linked_two_lists_test)
+UNITTEST("Doubly linked list", doubly_linked_one_list_test)
+UNITTEST("Move list", list_move_test)
+UNITTEST_END_TESTCASE(list_tests, "listtests", "List Tests", NULL, NULL);

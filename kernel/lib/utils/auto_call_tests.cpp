@@ -81,6 +81,6 @@ static bool auto_call_test(void* context)
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(auto_call_tests)
-STATIC_UNITTEST("Auto call test", auto_call_test)
-STATIC_UNITTEST_END_TESTCASE(auto_call_tests, "autocalltests", "Auto call test", NULL, NULL);
+UNITTEST_START_TESTCASE(auto_call_tests)
+UNITTEST("Auto call test", auto_call_test)
+UNITTEST_END_TESTCASE(auto_call_tests, "autocalltests", "Auto call test", NULL, NULL);

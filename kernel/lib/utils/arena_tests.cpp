@@ -64,6 +64,6 @@ static bool arena_test(void* context)
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(arena_tests)
-STATIC_UNITTEST("Arena allocator test", arena_test)
-STATIC_UNITTEST_END_TESTCASE(arena_tests, "arenatests", "Arena allocator test", NULL, NULL);
+UNITTEST_START_TESTCASE(arena_tests)
+UNITTEST("Arena allocator test", arena_test)
+UNITTEST_END_TESTCASE(arena_tests, "arenatests", "Arena allocator test", NULL, NULL);

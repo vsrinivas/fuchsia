@@ -71,6 +71,6 @@ static bool fifo_basic(void* context) {
 }
 } // namespace
 
-STATIC_UNITTEST_START_TESTCASE(fifo_buffer_tests)
-STATIC_UNITTEST("FIFO basic", fifo_basic)
-STATIC_UNITTEST_END_TESTCASE(fifo_buffer_tests, "fifotests", "FIFO Buffer Tests", NULL, NULL);
+UNITTEST_START_TESTCASE(fifo_buffer_tests)
+UNITTEST("FIFO basic", fifo_basic)
+UNITTEST_END_TESTCASE(fifo_buffer_tests, "fifotests", "FIFO Buffer Tests", NULL, NULL);

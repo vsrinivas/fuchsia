@@ -91,6 +91,6 @@ static bool forward_test(void* context)
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(forward_tests)
-STATIC_UNITTEST("Forward test", forward_test)
-STATIC_UNITTEST_END_TESTCASE(forward_tests, "forwardtests", "Forward Tests", NULL, NULL);
+UNITTEST_START_TESTCASE(forward_tests)
+UNITTEST("Forward test", forward_test)
+UNITTEST_END_TESTCASE(forward_tests, "forwardtests", "Forward Tests", NULL, NULL);

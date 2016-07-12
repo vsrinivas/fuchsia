@@ -78,6 +78,6 @@ static bool hash_test(void* context)
     END_TEST;
 }
 
-STATIC_UNITTEST_START_TESTCASE(hash_tests)
-STATIC_UNITTEST("Hash test", hash_test)
-STATIC_UNITTEST_END_TESTCASE(hash_tests, "hashtests", "Hash table tests", NULL, NULL);
+UNITTEST_START_TESTCASE(hash_tests)
+UNITTEST("Hash test", hash_test)
+UNITTEST_END_TESTCASE(hash_tests, "hashtests", "Hash table tests", NULL, NULL);
