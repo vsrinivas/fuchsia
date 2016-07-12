@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 
 namespace utils {
 
@@ -22,7 +23,9 @@ Arena::Arena()
       c_top_(nullptr),
       d_start_(nullptr),
       d_top_(nullptr),
-      d_end_(nullptr) {}
+      d_end_(nullptr),
+      p_top_(nullptr) {
+}
 
 Arena::~Arena() {
     free_.clear();
@@ -32,36 +35,52 @@ Arena::~Arena() {
 }
 
 status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
-    if (!ob_size) return ERR_INVALID_ARGS;
-    if (!count) return ERR_INVALID_ARGS;
+    if ((ob_size == 0) || (ob_size > PAGE_SIZE))
+        return ERR_INVALID_ARGS;
+    if (!count)
+        return ERR_INVALID_ARGS;
 
     ob_size_ = ob_size;
 
     char vname[24 + 8] = {};
-    if (strlen(name) >= (sizeof(vname) - 8)) return ERR_INVALID_ARGS;
+    if (strlen(name) >= (sizeof(vname) - 8))
+        return ERR_INVALID_ARGS;
 
-    auto kspace = vmm_get_kernel_aspace();
     void* start = nullptr;
     status_t st;
 
+    auto kspace = vmm_get_kernel_aspace();
+
+    // Allocate the control zone, ddemand paged.
     sprintf(vname, "%s_ctrl", name);
-    st = vmm_alloc(kspace, vname, count * sizeof(Node), &start, PAGE_SIZE_SHIFT, 0,
-                   ARCH_MMU_FLAG_PERM_NO_EXECUTE);
-    if (st < 0) return st;
+    st = vmm_alloc(kspace, vname, count * sizeof(Node), &start, PAGE_SIZE_SHIFT,
+                   0, ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+    if (st < 0)
+        return st;
 
     c_start_ = reinterpret_cast<char*>(start);
     c_top_ = c_start_;
 
+    // Allocate the data zone, demand-paged (although we do manual range commits).
+    auto data_mem_sz = count * ob_size;
+
     sprintf(vname, "%s_data", name);
-    st = vmm_alloc(kspace, vname, count * ob_size, &start, PAGE_SIZE_SHIFT, 0,
-                   ARCH_MMU_FLAG_PERM_NO_EXECUTE);
-    if (st < 0) {
+    vmo_ = VmObject::Create(PMM_ALLOC_FLAG_ANY, data_mem_sz);
+    if (!vmo_) {
         vmm_free_region(kspace, reinterpret_cast<vaddr_t>(c_start_));
-        return st;
+        return ERR_NO_MEMORY;
     }
+
+    st = vmm_aspace_to_obj(kspace)->MapObject(
+            vmo_, vname, 0u, data_mem_sz, &start, PAGE_SIZE_SHIFT,
+            0, ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+
+    if (st < 0)
+        return st;
 
     d_start_ = reinterpret_cast<char*>(start);
     d_top_ = d_start_;
+    p_top_ = d_top_;
 
     d_end_ = d_start_ + count * ob_size;
 
@@ -70,12 +89,13 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
 void* Arena::Alloc() {
     // Prefers to give a previously used memory in the hopes that it is
-    // still in the cache.
+    // still in hot the cache.
     if (!free_.is_empty()) {
         auto node = free_.pop_front();
         c_top_ -= sizeof(Node);
         return node->slot;
     } else if (d_top_ < d_end_) {
+        CommitMemoryAheadIfNeeded();
         auto slot = d_top_;
         d_top_ += ob_size_;
         return slot;
@@ -100,4 +120,22 @@ size_t Arena::Trim() {
     // 3-  free pages, adjust d_end_, etc;
     return 0u;
 }
+
+void Arena::CommitMemoryAheadIfNeeded() {
+   if ((p_top_ - d_top_) >= PAGE_SIZE)
+        return;
+
+    // The top of the used range is close to the edge of commited memory,
+    // rather than suffer a page fault, we commit ahead 4 pages or less
+    // if we are near the end.
+
+    auto len = vmo_->CommitRange(p_top_ - d_start_, 4 * PAGE_SIZE);
+    if (len < 0) {
+        // it seems we ran out of physical memory.
+        panic("failed to commit arena pages\n");
+    }
+
+    p_top_ += len;
+}
+
 }

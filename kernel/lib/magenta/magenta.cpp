@@ -30,9 +30,10 @@
 
 #define LOCAL_TRACE 0
 
-// This handle limit is super low, but we can increase it when the arena
-// can reserve VA ranges. Currently it commits physical pages.
-constexpr size_t kMaxHandleCount = 8 * 1024;
+// This handle limit relects the fact that VMOs have an internal array
+// with entry per memory page. When we switch to a tree of ranges we can
+// up this limit.
+constexpr size_t kMaxHandleCount = 32 * 1024;
 
 // The handle arena and its mutex.
 mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);

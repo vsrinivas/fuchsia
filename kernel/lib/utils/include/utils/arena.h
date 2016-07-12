@@ -9,7 +9,10 @@
 #include <new.h>
 #include <stddef.h>
 
+#include <kernel/vm/vm_object.h>
+
 #include <utils/intrusive_single_list.h>
+#include <utils/ref_ptr.h>
 #include <utils/type_support.h>
 
 namespace utils {
@@ -60,6 +63,8 @@ private:
         }
     };
 
+    void CommitMemoryAheadIfNeeded();
+
     SinglyLinkedList<Node> free_;
 
     size_t ob_size_;
@@ -71,6 +76,10 @@ private:
     char* d_start_;
     char* d_top_;
     char* d_end_;
+
+    // Memory management.
+    utils::RefPtr<VmObject> vmo_;
+    char* p_top_;
 };
 
 template <typename T>
