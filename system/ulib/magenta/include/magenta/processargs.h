@@ -71,6 +71,9 @@ struct mx_proc_args {
 #define MX_HND_TYPE_MXIO_PIPE 0x12
 #define MX_HND_TYPE_MXIO_EVENT 0x13
 
+// Handle types the mojo library uses
+#define MX_HND_TYPE_MOJO_SHELL 0x100
+
 // Handle types for one-off use and prototyping
 #define MX_HND_TYPE_USER0 0xFFF0
 #define MX_HND_TYPE_USER1 0xFFF1
