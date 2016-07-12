@@ -39,6 +39,7 @@ config("default_warnings") {
   cflags = [
     "-Wall",
     "-Wextra",
+    "-Wno-unused-parameter",
   ]
 }
 
