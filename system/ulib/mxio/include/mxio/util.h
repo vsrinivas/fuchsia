@@ -82,4 +82,8 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
 // entire log-lines and flush them on newline or buffer full.
 mxio_t* mxio_logger_create(mx_handle_t);
 
+// Start a thread to resolve loader service requests
+// and return a message pipe handle to talk to said service
+mx_handle_t mxio_loader_service(void);
+
 __END_CDECLS
