@@ -87,7 +87,7 @@ GLOBAL_LDFLAGS := -nostdlib $(addprefix -L,$(LKINC))
 GLOBAL_MODULE_LDFLAGS :=
 
 # Kernel compile flags
-KERNEL_COMPILEFLAGS := -ffreestanding -include $(KERNEL_CONFIG_HEADER)
+KERNEL_COMPILEFLAGS := -fno-pic -ffreestanding -include $(KERNEL_CONFIG_HEADER)
 KERNEL_CFLAGS :=
 KERNEL_CPPFLAGS :=
 KERNEL_ASMFLAGS :=
