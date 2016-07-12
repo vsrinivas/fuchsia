@@ -7,13 +7,12 @@ with OS resources via object handles which map kernel objects to processes.
 
 ## Kernel objects in progress
 
-+ [Process](process_object.md)
-+ [Thread](thread_object.md)
-+ Event
-+ Message pipe
-+ Interrupt request
-+ Futex
-+ VMObject
++ [Process](objects/process.md)
++ [Thread](objects/thread.md)
++ [Event](objects/event.md)
++ [Message pipe](objects/message_pipe.md)
++ [Interrupt request](objects/interrupt_request.md)
++ [VMObject](objects/vm_object.md)
 
 ## Kernel objects planned
 
