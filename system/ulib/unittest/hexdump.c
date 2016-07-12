@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <mxu/hexdump.h>
+#include <unittest/hexdump.h>
 
 #include <ctype.h>
 #include <stdint.h>
@@ -21,7 +21,7 @@
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-void mxu_hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
+void hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     uintptr_t address = (uintptr_t)ptr;
     size_t count;
 
@@ -60,7 +60,7 @@ void mxu_hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     }
 }
 
-void mxu_hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr) {
+void hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     uintptr_t address = (uintptr_t)ptr;
     size_t count;
     size_t i;

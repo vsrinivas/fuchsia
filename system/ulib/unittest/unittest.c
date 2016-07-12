@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <unittest/hexdump.h>
 #include <unittest/unittest.h>
 
 #include <stdbool.h>
@@ -19,8 +20,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <mxu/hexdump.h>
 
 /**
  * \brief Default function to dump unit test results
@@ -62,9 +61,9 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
                               const char* msg) {
     if (memcmp(expected, actual, len)) {
         printf("%s. expected\n", msg);
-        mxu_hexdump8(expected, len);
+        hexdump8(expected, len);
         printf("actual\n");
-        mxu_hexdump8(actual, len);
+        hexdump8(actual, len);
         return false;
     }
     return true;

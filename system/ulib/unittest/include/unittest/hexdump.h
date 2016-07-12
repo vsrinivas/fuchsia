@@ -18,13 +18,13 @@
 #include <sys/types.h>
 
 /* do a hex dump against stdout 32bits and 8bits at a time */
-void mxu_hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr);
-void mxu_hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr);
+void hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr);
+void hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr);
 
-static inline void mxu_hexdump(const void* ptr, size_t len) {
-    mxu_hexdump_ex(ptr, len, (uint64_t)((uintptr_t)ptr));
+static inline void hexdump(const void* ptr, size_t len) {
+    hexdump_ex(ptr, len, (uint64_t)((uintptr_t)ptr));
 }
 
-static inline void mxu_hexdump8(const void* ptr, size_t len) {
-    mxu_hexdump8_ex(ptr, len, (uint64_t)((uintptr_t)ptr));
+static inline void hexdump8(const void* ptr, size_t len) {
+    hexdump8_ex(ptr, len, (uint64_t)((uintptr_t)ptr));
 }

@@ -26,7 +26,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 #include <mxio/vfs.h>
-#include <mxu/hexdump.h>
+#include <unittest/hexdump.h>
 #include <system/listnode.h>
 
 static int mxc_dump(int argc, char** argv) {
@@ -53,7 +53,7 @@ static int mxc_dump(int argc, char** argv) {
                 printf("error: io\n");
             break;
         }
-        mxu_hexdump8_ex(buf, len, off);
+        hexdump8_ex(buf, len, off);
         off += len;
     }
     close(fd);
