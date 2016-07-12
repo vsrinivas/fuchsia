@@ -47,8 +47,6 @@ int __setxid(int, int, int, int);
 
 extern char** __environ;
 
-ssize_t __magenta_io_write(int fd, const void* buf, size_t count);
-
 #undef weak_alias
 #define weak_alias(old, new) extern __typeof(old) new __attribute__((weak, alias(#old)))
 

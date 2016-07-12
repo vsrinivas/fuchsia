@@ -49,7 +49,7 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
                                            satisfied_signals, satisfiable_signals);
     }
 
-    // from _magenta_wait*: TODO(cpu): implement |result_index|, see MG-33 bug.
+    // from mx_wait*: TODO(cpu): implement |result_index|, see MG-33 bug.
     return result;
 }
 

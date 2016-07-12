@@ -24,9 +24,9 @@ Upon return, if successful *packet* will contain the earliest (in FIFO order)
 available packet data, and the corresponding *key* that was queued
 with **io_port_queue**().
 
-Unlike **_magenta_wait_one**() and **_magenta_wait_many**() only one waiting
-thread is released (per available packet) which makes IO ports amenable to
-to be serviced by thread pools.
+Unlike **mx_wait_one**() and **mx_wait_many**() only one waiting thread is
+released (per available packet) which makes IO ports amenable to be serviced
+by thread pools.
 
 If *key* is zero or a positive value, the *packet* is of type **mx_user_packet_t**
 If *key* is a negative value, the *packet* is of type **mx_io_packet_t**.

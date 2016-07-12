@@ -76,7 +76,7 @@ static mx_status_t my_thread_create(thread_start_func entry, void* arg,
 
 static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signals,
                            uint32_t num_handles, uint32_t* result_index,
-                           mx_time_t deadline, //xyzdje, unused in _magenta_wait
+                           mx_time_t deadline, //xyzdje, unused in mx_wait
                            mx_signals_t* satisfied_signals,
                            mx_signals_t* satisfiable_signals) {
     mx_status_t result;
@@ -90,7 +90,7 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
                                            satisfied_signals, satisfiable_signals);
     }
 
-    // xyzdje, from _magenta_wait: TODO(cpu): implement |result_index|, see MG-33 bug.
+    // xyzdje, from mx_wait: TODO(cpu): implement |result_index|, see MG-33 bug.
     return result;
 }
 
