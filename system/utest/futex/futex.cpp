@@ -73,6 +73,9 @@ public:
         EXPECT_EQ(state_, STATE_ABOUT_TO_WAIT, "wrong state");
     }
 
+    TestThread(const TestThread &) = delete;
+    TestThread& operator=(const TestThread &) = delete;
+
     ~TestThread() {
         EXPECT_EQ(mxr_thread_join(thread_, NULL), NO_ERROR, "Error during wait");
     }

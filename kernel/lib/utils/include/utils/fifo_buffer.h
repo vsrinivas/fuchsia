@@ -53,6 +53,9 @@ public:
         : log2_(0u), avail_(0u), head_(0u), tail_(0u), buffer_(nullptr) {
     }
 
+    FifoBuffer(const FifoBuffer &) = delete;
+    FifoBuffer& operator=(const FifoBuffer &) = delete;
+
     ~FifoBuffer() {
         clear();
         free_memory();

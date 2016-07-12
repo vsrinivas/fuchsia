@@ -41,6 +41,8 @@ public:
         };
 
         explicit PciDeviceWrapper(pcie_device_state_t* device);
+        PciDeviceWrapper(const PciDeviceWrapper &) = delete;
+        PciDeviceWrapper& operator=(const PciDeviceWrapper &) = delete;
         ~PciDeviceWrapper();
 
         mutex_t              cp_ref_lock_;
@@ -80,6 +82,9 @@ public:
 private:
     PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
                         mx_pcie_get_nth_info_t* out_info);
+
+    PciDeviceDispatcher(const PciDeviceDispatcher &) = delete;
+    PciDeviceDispatcher& operator=(const PciDeviceDispatcher &) = delete;
 
     // Lock protecting upward facing APIs.  Generally speaking, this lock is
     // held for the duration of most of our dispatcher API implementations.  It

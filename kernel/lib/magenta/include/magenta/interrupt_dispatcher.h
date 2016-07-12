@@ -15,6 +15,9 @@ public:
     static status_t Create(uint32_t vector, uint32_t flags, utils::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
+    InterruptDispatcher(const InterruptDispatcher &) = delete;
+    InterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
+
     virtual ~InterruptDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_INTERRUPT; }
     InterruptDispatcher* get_interrupt_dispatcher() final { return this; }

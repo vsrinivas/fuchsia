@@ -44,9 +44,10 @@ public:
     File(const char* name = nullptr) {
         strlcpy(name_, name ? name : "unnamed", sizeof(name_));
     }
-    virtual ~File() {}
+    File(const File &) = delete;
+    File& operator=(const File &) = delete;
 
-    File(const File&) = delete;
+    virtual ~File() {}
 
     status_t Load();
 
@@ -101,6 +102,8 @@ class ToMemFile : public File {
 public:
     ToMemFile(const char* name, utils::RefPtr<VmAspace> aspace)
         : File(name), aspace_(utils::move(aspace)) {}
+    ToMemFile(const ToMemFile &) = delete;
+    ToMemFile& operator=(const ToMemFile &) = delete;
     virtual ~ToMemFile() override {}
 
     // Called by the loader to allocate memory for a segment.
@@ -131,6 +134,8 @@ protected:
 class MemFile : public ToMemFile {
 public:
     MemFile(const char* name, utils::RefPtr<VmAspace> aspace, const void* src_ptr, size_t src_len);
+    MemFile(const MemFile &) = delete;
+    MemFile& operator=(const MemFile &) = delete;
     virtual ~MemFile() override;
 
     // memory from the source into the segment at a particular offset
@@ -150,6 +155,8 @@ class BioToMemFile : public ToMemFile {
 public:
     BioToMemFile(const char* name, utils::RefPtr<VmAspace> aspace, struct bdev* bdev,
                  uint64_t bdev_offset, uint64_t bdev_len);
+    BioToMemFile(const BioToMemFile &) = delete;
+    BioToMemFile& operator=(const BioToMemFile &) = delete;
     virtual ~BioToMemFile() override;
 
     // memory from the source into the segment at a particular offset

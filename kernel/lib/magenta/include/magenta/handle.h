@@ -18,7 +18,10 @@ class Handle final {
 public:
     Handle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
     Handle(const Handle* rhs, mx_rights_t rights);
+
     Handle(const Handle&) = delete;
+    Handle& operator=(const Handle &) = delete;
+
     ~Handle();
 
     utils::RefPtr<Dispatcher> dispatcher();

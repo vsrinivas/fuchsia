@@ -44,6 +44,10 @@ public:
     }
 
     constexpr DoublyLinkedList() : head_(nullptr) {}
+
+    DoublyLinkedList (const DoublyLinkedList &) = delete;
+    DoublyLinkedList& operator=(const DoublyLinkedList &) = delete;
+
     ~DoublyLinkedList() {
         DEBUG_ASSERT(is_empty());
     }

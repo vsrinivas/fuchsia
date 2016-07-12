@@ -20,6 +20,9 @@ public:
     FutexNode();
     ~FutexNode();
 
+    FutexNode(const FutexNode &) = delete;
+    FutexNode& operator=(const FutexNode &) = delete;
+
     // adds a list of nodes to our tail
     void AppendList(FutexNode* head);
 

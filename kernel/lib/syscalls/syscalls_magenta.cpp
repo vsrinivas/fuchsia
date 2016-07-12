@@ -84,6 +84,8 @@ struct WaitHelper {
     WaitHelper()
         : waiter(nullptr) {}
     ~WaitHelper() { DEBUG_ASSERT(dispatcher.get() == nullptr); }
+    WaitHelper(const WaitHelper &) = delete;
+    WaitHelper& operator=(const WaitHelper &) = delete;
 
     mx_status_t Begin(Handle* handle, event_t* event, mx_signals_t signals) {
         dispatcher = handle->dispatcher();
