@@ -78,7 +78,7 @@ VmObject::~VmObject() {
 
 utils::RefPtr<VmObject> VmObject::Create(uint32_t pmm_alloc_flags, uint64_t size) {
     // there's a max size to keep indexes within range
-    if (size >= MAX_SIZE)
+    if (size > MAX_SIZE)
         return nullptr;
 
     auto vmo = utils::AdoptRef(new VmObject(pmm_alloc_flags));
@@ -113,7 +113,7 @@ status_t VmObject::Resize(uint64_t s) {
     LTRACEF("vmo %p, size %llu\n", this, s);
 
     // there's a max size to keep indexes within range
-    if (s >= MAX_SIZE)
+    if (ROUNDUP_PAGE_SIZE(s) > MAX_SIZE)
         return ERR_TOO_BIG;
 
     AutoLock a(lock_);

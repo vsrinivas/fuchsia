@@ -77,7 +77,11 @@ private:
                                T copyfunc);
 
     // constants
+#if IS_64BIT
+    static const uint64_t MAX_SIZE = ROUNDDOWN(SIZE_MAX, PAGE_SIZE);
+#else
     static const uint64_t MAX_SIZE = SIZE_MAX * PAGE_SIZE;
+#endif
 
     // magic value
     static const uint32_t MAGIC = 0x564d4f5f; // VMO_
