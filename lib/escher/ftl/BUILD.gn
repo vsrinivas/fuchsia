@@ -6,14 +6,26 @@ config("ftl_config") {
   include_dirs = [ ".." ]
 }
 
-source_set("ftl") {
+static_library("ftl") {
   public_configs = [ ":ftl_config" ]
+
+  sources = [
+    "arraysize.h",
+    "debug/debugger.cc",
+    "debug/debugger.h",
+    "logging.cc",
+    "logging.h",
+    "macros.h",
+    "time/time.cc",
+    "time/time.h",
+  ]
 }
 
 executable("ftl_unittests") {
   sources = [
     "arraysize_unittest.cc",
     "test/run_all_unittests.cc",
+    "time/time_unittest.cc",
   ]
 
   deps = [
