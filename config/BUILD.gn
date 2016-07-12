@@ -21,6 +21,9 @@ config("compiler") {
     configs += [ "//build/config/fuchsia:compiler" ]
   }
 
+  cflags_c += [ "-std=c11" ]
+  cflags_cc += [ "-std=c++11" ]
+
   asmflags += cflags
   asmflags += cflags_c
 }
