@@ -232,7 +232,7 @@ ifneq ($(MODULE_EXPORT),)
 ifeq ($(filter $(MODULE_EXPORT),$(SYSROOT_MEGA_LIBC)),)
 # if this library has not been pulled into the MEGA LIBC, install it
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_EXPORT).a
-$(call copy-dst-src,$(TMP),$(MODULE_STATIC_LIB))
+$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).a)
 SYSROOT_DEPS += $(TMP)
 GENERATED += $(TMP)
 else
