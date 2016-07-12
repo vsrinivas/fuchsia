@@ -1,0 +1,49 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/config.gni")
+
+config("compiler") {
+  asmflags = []
+  cflags = []
+  cflags_c = []
+  cflags_cc = []
+  ldflags = []
+  defines = []
+  configs = []
+
+  if (is_debug) {
+    cflags += [ "-g" ]
+  }
+
+  if (target_os == "fuchsia") {
+    configs += [ "//build/config/fuchsia:compiler" ]
+  }
+
+  asmflags += cflags
+  asmflags += cflags_c
+}
+
+config("default_warnings") {
+  cflags = [
+    "-Wall",
+    "-Wextra",
+  ]
+}
+
+config("shared_library_config") {
+  configs = []
+
+  if (target_os == "fuchsia") {
+    configs += [ "//build/config/fuchsia:shared_library_config" ]
+  }
+}
+
+config("executable_config") {
+  configs = []
+
+  if (target_os == "fuchsia") {
+    configs += [ "//build/config/fuchsia:executable_config" ]
+  }
+}

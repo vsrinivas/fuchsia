@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/gcc_toolchain.gni")
+
+gcc_toolchain("gcc_${host_cpu}") {
+  cc = "gcc"
+  cxx = "g++"
+  ar = "ar"
+  ld = cxx
+  strip = "strip"
+
+  toolchain_cpu = host_cpu
+  toolchain_os = host_os
+  is_clang = false
+}
+
+clang_toolchain("clang_${host_cpu}") {
+  cc = "clang"
+  cxx = "clang++"
+  ld = cxx
+  ar = "ar"
+  strip = "strip"
+
+  toolchain_cpu = host_cpu
+  toolchain_os = host_os
+}

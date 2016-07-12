@@ -1,0 +1,53 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/sysroot.gni")
+
+assert(target_os == "fuchsia")
+
+config("compiler") {
+  asmflags = []
+  cflags = []
+  ldflags = []
+  configs = []
+
+  configs += [ ":compiler_cpu" ]
+
+  if (is_clang) {
+    cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+    ldflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+  }
+
+  asmflags += cflags
+}
+
+config("compiler_cpu") {
+  cflags = []
+  ldflags = []
+
+  if (is_clang) {
+    if (current_cpu == "arm64") {
+      cflags += [ "--target=aarch64-fuchsia" ]
+      ldflags += [ "--target=aarch64-fuchsia" ]
+    } else if (current_cpu == "x64") {
+      cflags += [ "--target=x86_64-fuchsia" ]
+      ldflags += [ "--target=x86_64-fuchsia" ]
+    } else {
+      assert(false, "Unsupported architecture")
+    }
+  }
+}
+
+config("shared_library_config") {
+}
+
+config("executable_config") {
+  # TODO(phosek): Until Magenta supports dynamically linked applications,
+  # static linking is the default configuration for Fuchsia.
+  configs = [ ":static_config" ]
+}
+
+config("static_config") {
+  ldflags = [ "-static" ]
+}

@@ -1,0 +1,67 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (target_os == "") {
+  target_os = "fuchsia"
+}
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+if (current_os == "") {
+  current_os = target_os
+}
+
+declare_args() {
+  # This should not be set as a build argument.
+  is_clang = true
+
+  # This should not be set as a build argument.
+  target_toolchain = ""
+
+  # This should not be set as a build argument.
+  host_toolchain = ""
+}
+
+# All binary targets will get this list of configs by default.
+_shared_binary_target_configs = [
+  "//build/config:compiler",
+  "//build/config:default_warnings",
+]
+_shared_library_target_configs =
+    _shared_binary_target_configs + [ "//build/config:shared_library_config" ]
+_executable_target_configs =
+    _shared_binary_target_configs + [ "//build/config:executable_config" ]
+
+# Apply that default list to the binary target types.
+set_defaults("source_set") {
+  configs = _shared_binary_target_configs
+}
+set_defaults("static_library") {
+  configs = _shared_binary_target_configs
+}
+set_defaults("shared_library") {
+  configs = _shared_library_target_configs
+}
+set_defaults("executable") {
+  configs = _executable_target_configs
+}
+
+if (target_os == "fuchsia" && is_clang) {
+  target_toolchain = "//build/toolchain/fuchsia:clang_${target_cpu}"
+} else {
+  assert(false, "Target OS not supported")
+}
+
+if (host_os == "linux") {
+  host_toolchain = "//build/toolchain:gcc_${host_cpu}"
+} else if (host_os == "mac") {
+  host_toolchain = "//build/toolchain:clang_${host_cpu}"
+} else {
+  assert(false, "Host OS not supported")
+}
+
+set_default_toolchain(target_toolchain)

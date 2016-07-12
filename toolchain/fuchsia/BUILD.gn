@@ -1,0 +1,36 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/gcc_toolchain.gni")
+import("//build/config/fuchsia/config.gni")
+
+clang_toolchain("clang_${target_cpu}") {
+  if (host_cpu == "arm64") {
+    clang_cpu = "aarch64"
+  } else if (host_cpu == "x64") {
+    clang_cpu = "x86_64"
+  } else {
+    assert(false, "Host CPU not supported")
+  }
+
+  if (host_os == "mac") {
+    clang_os = "darwin"
+  } else if (host_os == "linux") {
+    clang_os = "linux"
+  } else {
+    assert(false, "Host OS not supported")
+  }
+
+  clang_name = "clang+llvm-$clang_cpu-$clang_os"
+  clang_path = "$fuchsia_sdk/toolchains/$clang_name"
+  prefix = rebase_path("$clang_path/bin/", root_build_dir)
+
+  cc = "${prefix}clang"
+  cxx = "${prefix}clang++"
+  ld = cxx
+  ar = "${prefix}llvm-ar"
+
+  toolchain_cpu = target_cpu
+  toolchain_os = target_os
+}
