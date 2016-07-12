@@ -13,59 +13,59 @@ namespace crypto {
 
 namespace {
 bool instantiate(void*) {
-  BEGIN_TEST;
+    BEGIN_TEST;
 
-  { PRNG prng("", 0); }
+    { PRNG prng("", 0); }
 
-  END_TEST;
+    END_TEST;
 }
 
 bool prng_output(void*) {
-  BEGIN_TEST;
+    BEGIN_TEST;
 
-  static const char kSeed1[] = "abc";
-  static const int kSeed1Size = 3;
-  static const int kDrawSize = 13;
+    static const char kSeed1[] = "abc";
+    static const int kSeed1Size = 3;
+    static const int kDrawSize = 13;
 
-  PRNG prng1(kSeed1, kSeed1Size);
-  uint8_t out1[kDrawSize];
-  prng1.Draw(out1, sizeof(out1));
+    PRNG prng1(kSeed1, kSeed1Size);
+    uint8_t out1[kDrawSize];
+    prng1.Draw(out1, sizeof(out1));
 
-  PRNG prng2(kSeed1, kSeed1Size);
-  uint8_t out2[kDrawSize];
-  prng2.Draw(out2, sizeof(out2));
+    PRNG prng2(kSeed1, kSeed1Size);
+    uint8_t out2[kDrawSize];
+    prng2.Draw(out2, sizeof(out2));
 
-  EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
+    EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
 
-  // Draw from prng1 again. Check that the output is different this time.
-  // There is no theoritical guarantee that the output is different, but
-  // kDrawSize is large enough that the probability of this happening is
-  // negligible. Also this test is fully deterministic for one given PRNG
-  // implementation.
-  prng1.Draw(out1, sizeof(out1));
+    // Draw from prng1 again. Check that the output is different this time.
+    // There is no theoritical guarantee that the output is different, but
+    // kDrawSize is large enough that the probability of this happening is
+    // negligible. Also this test is fully deterministic for one given PRNG
+    // implementation.
+    prng1.Draw(out1, sizeof(out1));
 
-  EXPECT_NEQ(0, memcmp(out1, out2, sizeof(out1)), "prng output is constant");
+    EXPECT_NEQ(0, memcmp(out1, out2, sizeof(out1)), "prng output is constant");
 
-  // We can expect the same output from prng2.
-  prng2.Draw(out2, sizeof(out2));
+    // We can expect the same output from prng2.
+    prng2.Draw(out2, sizeof(out2));
 
-  EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
+    EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
 
-  // Now verify that different seeds produce different outputs.
-  PRNG prng3("blah", 4);
-  uint8_t out3[kDrawSize];
-  prng3.Draw(out3, sizeof(out3));
+    // Now verify that different seeds produce different outputs.
+    PRNG prng3("blah", 4);
+    uint8_t out3[kDrawSize];
+    prng3.Draw(out3, sizeof(out3));
 
-  PRNG prng4("bleh", 4);
-  uint8_t out4[kDrawSize];
-  prng3.Draw(out4, sizeof(out4));
+    PRNG prng4("bleh", 4);
+    uint8_t out4[kDrawSize];
+    prng3.Draw(out4, sizeof(out4));
 
-  EXPECT_NEQ(0, memcmp(out3, out4, sizeof(out3)), "prng output is constant");
+    EXPECT_NEQ(0, memcmp(out3, out4, sizeof(out3)), "prng output is constant");
 
-  END_TEST;
+    END_TEST;
 }
 
-}  // namespace
+} // namespace
 
 STATIC_UNITTEST_START_TESTCASE(prng_tests)
 STATIC_UNITTEST("Instantiate", instantiate)
@@ -74,4 +74,4 @@ STATIC_UNITTEST_END_TESTCASE(prng_tests, "prng",
                              "Test pseudo-random number generator implementation.",
                              NULL, NULL);
 
-}  // namespace crypto
+} // namespace crypto

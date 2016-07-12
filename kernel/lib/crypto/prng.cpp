@@ -10,14 +10,18 @@
 
 namespace crypto {
 
-PRNG::PRNG(const void* data, int size) { clPRNG_init(&ctx_, data, size); }
-
-void PRNG::AddEntropy(const void* data, int size) {
-  clPRNG_entropy(&ctx_, data, size);
+PRNG::PRNG(const void* data, int size) {
+    clPRNG_init(&ctx_, data, size);
 }
 
-void PRNG::Draw(void* out, int size) { clPRNG_draw(&ctx_, out, size); }
+void PRNG::AddEntropy(const void* data, int size) {
+    clPRNG_entropy(&ctx_, data, size);
+}
+
+void PRNG::Draw(void* out, int size) {
+    clPRNG_draw(&ctx_, out, size);
+}
 
 PRNG::~PRNG() {}
 
-}  // namespace crypto
+} // namespace crypto

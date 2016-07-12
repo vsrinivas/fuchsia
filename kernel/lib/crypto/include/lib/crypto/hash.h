@@ -28,25 +28,25 @@ namespace crypto {
 // hash2.Final();
 // hash2.digest() returns the hash of "abc".
 class Hash256 {
- public:
-  static const size_t kHashSize = 256 / 8;
-  Hash256();
-  Hash256(const void* data, int len);
-  ~Hash256();
+public:
+    static const size_t kHashSize = 256 / 8;
+    Hash256();
+    Hash256(const void* data, int len);
+    ~Hash256();
 
-  void Update(const void* data, int len);
-  void Final();
-  const uint8_t* digest() const { return digest_; }
+    void Update(const void* data, int len);
+    void Final();
+    const uint8_t* digest() const { return digest_; }
 
- private:
-  Hash256(const Hash256&) = delete;
-  Hash256& operator=(const Hash256&) = delete;
+private:
+    Hash256(const Hash256&) = delete;
+    Hash256& operator=(const Hash256&) = delete;
 
-  clSHA256_CTX ctx_;
-  const uint8_t* digest_;
-#if defined(LK_DEBUG_BUILD)
-  bool finalized_;
+    clSHA256_CTX ctx_;
+    const uint8_t* digest_;
+#if LK_DEBUGLEVEL > 0
+    bool finalized_;
 #endif
 };
 
-}  // namespace crypto
+} // namespace crypto

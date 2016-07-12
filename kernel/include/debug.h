@@ -16,12 +16,6 @@
 #define LK_DEBUGLEVEL 0
 #endif
 
-#if LK_DEBUGLEVEL > 0
-#define LK_DEBUG_BUILD 1
-#else
-#undef LK_DEBUG_BUILD
-#endif
-
 /* debug levels */
 #define CRITICAL 0
 #define ALWAYS 0
