@@ -15,6 +15,9 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <system/compiler.h>
+
+__BEGIN_CDECLS
 
 typedef struct mxio_dispatcher mxio_dispatcher_t;
 
@@ -41,3 +44,5 @@ void mxio_dispatcher_run(mxio_dispatcher_t* md);
 
 // add a pipe and handler to a dispatcher
 mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, void* cookie);
+
+__END_CDECLS

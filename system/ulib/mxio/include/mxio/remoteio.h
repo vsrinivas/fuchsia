@@ -15,8 +15,11 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <system/compiler.h>
 #include <mxio/io.h>
 #include <sys/types.h>
+
+__BEGIN_CDECLS
 
 // clang-format off
 
@@ -118,3 +121,4 @@ struct mx_rio_msg {
 // * handle[0] used to pass reference to second directory handle
 // ** handle[0] used to pass reference to target object
 
+__END_CDECLS

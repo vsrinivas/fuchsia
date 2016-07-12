@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include <magenta/types.h>
+#include <system/compiler.h>
 
 #define MAX_MXIO_FD 256
 
@@ -43,7 +44,7 @@
 #define MXIO_EVT_ERROR MX_SIGNAL_USER2
 #define MXIO_EVT_ALL (MXIO_EVT_READABLE | MXIO_EVT_WRITABLE | MXIO_EVT_ERROR)
 
-
+__BEGIN_CDECLS
 
 // wait until one or more events are pending
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t timeout);
@@ -51,3 +52,4 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t t
 // invoke a raw mxio ioctl
 ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 
+__END_CDECLS

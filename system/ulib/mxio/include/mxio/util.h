@@ -15,8 +15,11 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <system/compiler.h>
 #include <mxio/io.h>
 #include <stdint.h>
+
+__BEGIN_CDECLS
 
 // These routines are "internal" to mxio but used by some companion
 // code like userboot and devmgr
@@ -78,3 +81,5 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
 // this will allocate a per-thread buffer (on demand) to assemble
 // entire log-lines and flush them on newline or buffer full.
 mxio_t* mxio_logger_create(mx_handle_t);
+
+__END_CDECLS

@@ -16,9 +16,12 @@
 
 #include <magenta/types.h>
 #include <system/listnode.h>
+#include <system/compiler.h>
 
 // ssize_t?
 #include <stdio.h>
+
+__BEGIN_CDECLS
 
 typedef struct vfs vfs_t;
 typedef struct vfs_ops vfs_ops_t;
@@ -160,3 +163,5 @@ void vn_release(vnode_t* vn);
 // returns offset to next vdirent_t on success
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type);
+
+__END_CDECLS

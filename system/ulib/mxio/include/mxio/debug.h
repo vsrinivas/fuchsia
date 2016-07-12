@@ -17,6 +17,8 @@
 #include <system/compiler.h>
 #include <stdio.h>
 
+__BEGIN_CDECLS
+
 // raw console printf, to go away before long
 void cprintf(const char* fmt, ...);
 
@@ -27,3 +29,5 @@ void cprintf(const char* fmt, ...);
             cprintf(fmt); \
         }                 \
     } while (0)
+
+__END_CDECLS
