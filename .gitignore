@@ -6,5 +6,7 @@
 /mac/gn.stamp
 /mac/ninja
 /mac/ninja.stamp
+/mkbootfs
+/mkbootfs.stamp
 /sdk
 /sdk.stamp
