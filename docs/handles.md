@@ -16,7 +16,7 @@ When it is bound to kernel we say its 'in-transit'.
 
 In user-mode a handle is simply a specific number returned by
 some syscall. Only handles that are not in-transit are visible
-to user-mode. 
+to user-mode.
 
 The integer that represents a handle is only meaninful for that
 process. The same number in another process might not map to any
@@ -30,7 +30,7 @@ logical fields:
 + The rights to the kernel object
 + The process it is bound to (or if its bound to kernel)
 
-The 'rights' specify what operations on the kernel object are
+The '(rights)[rights.md]' specify what operations on the kernel object are
 allowed. It is possible for a single process to have two different
 handles to the same kernel object with different rights.
 
@@ -55,7 +55,7 @@ There is only one syscall that can destroy a handle:
 + `mx_handle_close`
 
 There is only one syscall that takes a handle bound to calling
-process and bounds it into kernel (puts the handle in-transit):
+process and binds it into kernel (puts the handle in-transit):
 + `mx_message_write`
 
 There is only one syscall that takes an in-transit handle and
@@ -97,3 +97,6 @@ is destroyed, the handle is closed.
 + Debugging sessions (and debuggers) might have special syscalls to
 get access to handles.
 
+## See Also
+[Kernel Objects](kernel_objects.md),
+[Rights](rights.md)

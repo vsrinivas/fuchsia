@@ -52,3 +52,5 @@ do not do authorization checks; security rights are held by each handle. A
 single process can have two different handles to the same object with
 different rights.
 
+## See Also
+[Handles](handles.md)
