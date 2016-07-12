@@ -63,10 +63,11 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
     if ((ios = create_iostate(dev)) == NULL) {
         return ERR_NO_MEMORY;
     }
-    mx_handle_t h0, h1;
-    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
+    mx_handle_t h[2];
+    mx_status_t r;
+    if ((r = mx_message_pipe_create(h, 0)) < 0) {
         free(ios);
-        return h0;
+        return r;
     }
     //printf("devhost_add(%p, %p)\n", dev, parent);
     devhost_msg_t msg;
@@ -75,7 +76,7 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
     msg.device_id = parent->remote_id;
     msg.protocol_id = dev->protocol_id;
     memcpy(msg.namedata, dev->namedata, sizeof(dev->namedata));
-    mx_status_t r = devhost_rpc(devhost_handle, &msg, h1);
+    r = devhost_rpc(devhost_handle, &msg, h[1]);
     //printf("devhost_add() %d\n", r);
     if (r == NO_ERROR) {
         //printf("devhost: dev=%p remoted\n", dev);
@@ -85,10 +86,10 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
         track_iostate(ios, tmp);
 
         dev->remote_id = msg.device_id;
-        mxio_dispatcher_add(devmgr_rio_dispatcher, h0, devmgr_rio_handler, ios);
+        mxio_dispatcher_add(devmgr_rio_dispatcher, h[0], devmgr_rio_handler, ios);
     } else {
         printf("devhost: dev=%p name='%s' failed remoting %d\n", dev, dev->name, r);
-        mx_handle_close(h0);
+        mx_handle_close(h[0]);
         free(ios);
     }
     return r;

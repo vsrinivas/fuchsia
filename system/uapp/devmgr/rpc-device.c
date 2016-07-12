@@ -52,6 +52,7 @@ iostate_t* create_iostate(mx_device_t* dev) {
 mx_status_t __mx_rio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
 static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
+    mx_status_t r;
     iostate_t* newios;
     if (devmgr_is_remote) {
         name = "devhost";
@@ -60,7 +61,7 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
     // remote device: clone from remote devhost
     // TODO: timeout or handoff
     if (dev->flags & DEV_FLAG_REMOTE) {
-        mx_status_t r = __mx_rio_clone(dev->remote, handles, ids);
+        r = __mx_rio_clone(dev->remote, handles, ids);
         return r;
     }
 
@@ -68,15 +69,14 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
         return ERR_NO_MEMORY;
     }
 
-    mx_handle_t h0, h1;
-    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
+    mx_handle_t h[2];
+    if ((r = mx_message_pipe_create(h, 0)) < 0) {
         free(newios);
-        return h0;
+        return r;
     }
-    handles[0] = h0;
+    handles[0] = h[0];
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
-    mx_status_t r;
     void* cookie = NULL;
     if ((r = dev->ops->open(dev, 0, &cookie)) < 0) {
         printf("%s_get_handles(%p) open %d\n", name, dev, r);
@@ -100,14 +100,14 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
     track_iostate(newios, tmp);
 
     newios->cookie = cookie;
-    mxio_dispatcher_add(devmgr_rio_dispatcher, h1, devmgr_rio_handler, newios);
+    mxio_dispatcher_add(devmgr_rio_dispatcher, h[1], devmgr_rio_handler, newios);
     return r;
 
 fail2:
     dev->ops->close(dev, cookie);
 fail1:
-    mx_handle_close(h0);
-    mx_handle_close(h1);
+    mx_handle_close(h[0]);
+    mx_handle_close(h[1]);
     free(newios);
     return r;
 }

@@ -153,19 +153,19 @@ mxio_t* mxio_pipe_create(mx_handle_t h) {
 }
 
 int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
-    mx_handle_t ha, hb;
+    mx_handle_t h[2];
     mxio_t *a, *b;
-    ha = mx_message_pipe_create(&hb);
-    if (ha < 0)
-        return ha;
-    if ((a = mxio_pipe_create(ha)) == NULL) {
-        mx_handle_close(ha);
-        mx_handle_close(hb);
+    mx_status_t r = mx_message_pipe_create(h, 0);
+    if (r < 0)
+        return r;
+    if ((a = mxio_pipe_create(h[0])) == NULL) {
+        mx_handle_close(h[0]);
+        mx_handle_close(h[1]);
         return ERR_NO_MEMORY;
     }
-    if ((b = mxio_pipe_create(hb)) == NULL) {
+    if ((b = mxio_pipe_create(h[1])) == NULL) {
         mx_pipe_close(a);
-        mx_handle_close(hb);
+        mx_handle_close(h[1]);
         return ERR_NO_MEMORY;
     }
     *_a = a;
@@ -174,12 +174,10 @@ int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
 }
 
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types) {
-    mx_handle_t ha, hb;
-    if ((ha = mx_message_pipe_create(&hb)) < 0) {
-        return ha;
+    mx_status_t r;
+    if ((r = mx_message_pipe_create(handles, 0)) < 0) {
+        return r;
     }
-    handles[0] = ha;
-    handles[1] = hb;
     types[0] = MX_HND_TYPE_MXIO_PIPE;
     types[1] = MX_HND_TYPE_MXIO_PIPE;
     return 2;

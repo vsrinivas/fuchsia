@@ -210,17 +210,18 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
         return ERR_NO_MEMORY;
     }
 
-    mx_handle_t h0, h1;
-    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
+    mx_handle_t h[2];
+    mx_status_t r;
+    if ((r = mx_message_pipe_create(h, 0)) < 0) {
         free(dh);
-        return h0;
+        return r;
     }
 
     dh->root = dev;
-    dh->handle = h0;
+    dh->handle = h[0];
     list_initialize(&dh->devices);
     list_add_tail(&devhost_list, &dh->node);
-    mxio_dispatcher_add(devmgr_devhost_dispatcher, h0, NULL, dh);
+    mxio_dispatcher_add(devmgr_devhost_dispatcher, h[0], NULL, dh);
 
     char name[64];
     char arg0[32];
@@ -240,7 +241,7 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
     printf("devmgr: remote(%p) for '%s'\n", dh, name);
     snprintf(arg0, 32, "pci=%d", index);
     snprintf(arg1, 32, "%p", drv);
-    devmgr_launch_devhost(name, h1, arg0, arg1);
+    devmgr_launch_devhost(name, h[1], arg0, arg1);
 
     //TODO: make drv ineligible for further probing?
     return 0;

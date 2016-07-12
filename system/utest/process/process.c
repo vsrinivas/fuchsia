@@ -67,10 +67,13 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
 }
 
 static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1) {
-    mx_handle_t result = mx_message_pipe_create(handle1);
+    mx_handle_t h[2];
+
+    mx_status_t result = mx_message_pipe_create(h, 0);
     if (result < 0)
         return result;
-    *handle0 = result;
+    *handle0 = h[0];
+    *handle1 = h[1];
     return NO_ERROR;
 }
 

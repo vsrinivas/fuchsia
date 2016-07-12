@@ -318,13 +318,13 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         return ERR_NO_MEMORY;
     }
 
-    hci->control_pipe[0] = mx_message_pipe_create(&hci->control_pipe[1]);
-    if (hci->control_pipe[0] < 0) {
+    status = mx_message_pipe_create(hci->control_pipe, 0);
+    if (status < 0) {
         free(hci);
         return ERR_NO_MEMORY;
     }
-    hci->acl_pipe[0] = mx_message_pipe_create(&hci->acl_pipe[1]);
-    if (hci->acl_pipe[0] < 0) {
+    status = mx_message_pipe_create(hci->acl_pipe, 0);
+    if (status < 0) {
         mx_handle_close(hci->control_pipe[0]);
         mx_handle_close(hci->control_pipe[1]);
         free(hci);

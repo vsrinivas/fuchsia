@@ -84,8 +84,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 52, mx_status_t, thread_arch_prctl, mx_handle_t handle
                     uintptr_t* value_ptr)
 
 // Messages
-// TODO(jamesr): creation options
-MAGENTA_SYSCALL_DEF(1, 1, 60, mx_handle_t, message_pipe_create, mx_handle_t* out_handle)
+MAGENTA_SYSCALL_DEF(2, 2, 60, mx_status_t, message_pipe_create, mx_handle_t out_handles[2], uint32_t flags)
 MAGENTA_SYSCALL_DEF(6, 6, 61, mx_status_t, message_read, mx_handle_t handle, void* bytes,
                     uint32_t* num_bytes, mx_handle_t* handles, uint32_t* num_handles, uint32_t flags)
 MAGENTA_SYSCALL_DEF(6, 6, 62, mx_status_t, message_write, mx_handle_t handle, const void* bytes,

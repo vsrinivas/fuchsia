@@ -180,19 +180,19 @@ int heapblaster(int count, int locking) {
 static uint8_t data[65534];
 
 int writespam(int opt) {
-    mx_handle_t p0tx, p0rx;
+    mx_handle_t p[2];
     mx_status_t r;
     uint64_t count = 0;
 
-    if ((p0tx = mx_message_pipe_create(&p0rx)) < 0) {
-        printf("cleanup-test: pipe create 0 failed: %d\n", p0tx);
+    if ((r = mx_message_pipe_create(p, 0)) < 0) {
+        printf("cleanup-test: pipe create 0 failed: %d\n", r);
         return -1;
     }
 
     printf("evil-tests: about to spam data into a pipe\n");
     for (;;) {
         count++;
-        if ((r = mx_message_write(p0tx, data, sizeof(data), NULL, 0, 0)) < 0) {
+        if ((r = mx_message_write(p[0], data, sizeof(data), NULL, 0, 0)) < 0) {
             printf("evil-tests: SUCCESS, writespammer error %d after only %llu writes\n", r, count);
             return 0;
         }
@@ -202,8 +202,8 @@ int writespam(int opt) {
     }
     if (opt == 0) {
         printf("evil-tests: closing the pipe (full of messages)\n");
-        mx_handle_close(p0tx);
-        mx_handle_close(p0rx);
+        mx_handle_close(p[0]);
+        mx_handle_close(p[1]);
     } else {
         printf("evil-tests: leaving the pipe open (full of messages)\n");
     }
@@ -211,13 +211,14 @@ int writespam(int opt) {
 }
 
 int handlespam(void) {
-    mx_handle_t p0tx, p0rx;
+    mx_handle_t p[2];
     uint64_t count = 0;
 
     printf("evil-tests: about to create all the handles\n");
     for (;;) {
-        if ((p0tx = mx_message_pipe_create(&p0rx)) < 0) {
-            printf("evil-tests: SUCCESS, pipe create failed %d after %llu created\n", p0tx, count);
+        mx_status_t status;
+        if ((status = mx_message_pipe_create(p, 0)) < 0) {
+            printf("evil-tests: SUCCESS, pipe create failed %d after %llu created\n", status, count);
             return 0;
         }
         count++;

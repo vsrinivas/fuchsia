@@ -385,7 +385,7 @@ static mx_status_t vfs_handler(mx_rio_msg_t* msg, void* cookie) {
 }
 
 mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn) {
-    mx_handle_t h0, h1;
+    mx_handle_t h[2];
     mx_status_t r;
     iostate_t* ios;
 
@@ -393,20 +393,20 @@ mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn) {
         return ERR_NO_MEMORY;
     ios->vn = vn;
 
-    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
+    if ((r = mx_message_pipe_create(h, 0)) < 0) {
         free(ios);
-        return h0;
+        return r;
     }
-    if ((r = mxio_dispatcher_add(vfs_dispatcher, h0, vfs_handler, ios)) < 0) {
-        mx_handle_close(h0);
-        mx_handle_close(h1);
+    if ((r = mxio_dispatcher_add(vfs_dispatcher, h[0], vfs_handler, ios)) < 0) {
+        mx_handle_close(h[0]);
+        mx_handle_close(h[1]);
         free(ios);
         return r;
     }
     track_iostate(ios, trackfn);
     // take a ref for the dispatcher
     vn_acquire(vn);
-    return h1;
+    return h[1];
 }
 
 mx_handle_t vfs_create_root_handle(void) {

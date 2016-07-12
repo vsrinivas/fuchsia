@@ -9,7 +9,7 @@ message_pipe_create - create a message pipe
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t mx_message_pipe_create(mx_handle_t* other_handle);
+mx_status_t mx_message_pipe_create(mx_handle_t handles[2], uint32_t flags);
 
 ```
 
@@ -28,17 +28,16 @@ to another process via message pipe write), MX_RIGHT_WRITE (allowing
 messages to be written to them), and MX_RIGHT_READ (allowing messages
 to be read from them).
 
+The flags argument is currently unused and should be set to zero.
+
 ## RETURN VALUE
 
-**message_pipe_create**() returns a valid message pipe handle (positive)
-on success, in which case the handle to the other side of the message
-pipe is returned via the *other_handle* pointer.  In the event of failure,
-a negative error value is returned.  Zero (the "invalid handle") is never
-returned.
+**message_pipe_create**() returns **NO_ERROR** on success. In the event
+of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *other_handle* is an inavlid pointer or NULL.
+**ERR_INVALID_ARGS**  *handles* is an invalid pointer or NULL.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

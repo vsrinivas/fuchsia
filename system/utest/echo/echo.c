@@ -127,8 +127,8 @@ bool serve_echo_request(mx_handle_t handle) {
 bool echo_test(void) {
     BEGIN_TEST;
     mx_handle_t handles[2] = {0};
-    handles[0] = mx_message_pipe_create(&handles[1]);
-    ASSERT_GE(handles[0], 0, "could not create message pipe");
+    mx_status_t status = mx_message_pipe_create(handles, 0);
+    ASSERT_EQ(status, 0, "could not create message pipe");
     unittest_printf("created message pipe with handle values %u and %u\n", handles[0], handles[1]);
     for (int i = 0; i < 3; i++) {
         unittest_printf("loop %d\n", i);

@@ -30,17 +30,17 @@
 bool handle_transfer_test(void) {
     BEGIN_TEST;
     mx_handle_t A[2];
-    A[0] = mx_message_pipe_create(&A[1]);
+    mx_status_t status = mx_message_pipe_create(A, 0);
     char msg[512];
-    snprintf(msg, sizeof(msg), "failed to create message pipe A: %u\n", (mx_status_t)A[0]);
-    EXPECT_GE(A[0], 0, msg);
+    snprintf(msg, sizeof(msg), "failed to create message pipe A: %d\n", status);
+    EXPECT_EQ(status, 0, msg);
 
     mx_handle_t B[2];
-    B[0] = mx_message_pipe_create(&B[1]);
-    snprintf(msg, sizeof(msg), "failed to create message pipe B: %u\n", (mx_status_t)B[0]);
-    EXPECT_GE(B[0], 0, msg);
+    status = mx_message_pipe_create(B, 0);
+    snprintf(msg, sizeof(msg), "failed to create message pipe B: %d\n", status);
+    EXPECT_EQ(status, 0, msg);
 
-    mx_status_t status = mx_message_write(A[0], "1", 1u, NULL, 0u, 0u);
+    status = mx_message_write(A[0], "1", 1u, NULL, 0u, 0u);
     snprintf(msg, sizeof(msg), "failed to write message \"1\" into A0: %u\n", status);
     EXPECT_EQ(status, NO_ERROR, msg);
 
@@ -126,16 +126,16 @@ bool handle_transfer_cancel_wait_test(void) {
     BEGIN_TEST;
     mx_handle_t A[4];
     mx_handle_t* B = &A[2];
-    A[0] = mx_message_pipe_create(&A[1]);
+    mx_status_t status = mx_message_pipe_create(A, 0);
     char msg[512];
-    snprintf(msg, sizeof(msg), "failed to create message pipe A[0,1]: %d\n", (mx_status_t)A[0]);
-    EXPECT_GE(A[0], 0, msg);
-    B[0] = mx_message_pipe_create(&B[1]);
-    snprintf(msg, sizeof(msg), "failed to create message pipe B[0,1]: %d\n", (mx_status_t)B[0]);
-    EXPECT_GE(B[0], 0, msg);
+    snprintf(msg, sizeof(msg), "failed to create message pipe A[0,1]: %d\n", status);
+    EXPECT_EQ(status, 0, msg);
+    status = mx_message_pipe_create(B, 0);
+    snprintf(msg, sizeof(msg), "failed to create message pipe B[0,1]: %d\n", status);
+    EXPECT_EQ(status, 0, msg);
 
     mxr_thread_t *thr;
-    mx_status_t status = mxr_thread_create(thread, A, "write thread", &thr);
+    status = mxr_thread_create(thread, A, "write thread", &thr);
     EXPECT_EQ(status, 0, "failed to create write thread");
 
     mx_signals_t satisfied_signals, satisfiable_signals;

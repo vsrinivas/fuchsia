@@ -54,10 +54,14 @@ static int for_real = 0;
 static int done_tests = 0;
 
 static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1) {
-    mx_handle_t status = mx_message_pipe_create(handle1);
+    mx_handle_t h[2];
+
+    mx_status_t status = mx_message_pipe_create(h, 0);
     if (status < 0)
         return status;
-    *handle0 = status;
+
+    *handle0 = h[0];
+    *handle1 = h[1];
     return NO_ERROR;
 }
 

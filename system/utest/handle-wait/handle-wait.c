@@ -142,10 +142,12 @@ static enum wait_result wait_signalled(mx_handle_t handle)
 
 static void message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1)
 {
-    mx_handle_t h0 = mx_message_pipe_create(handle1);
-    if (h0 < 0)
-        syscall_fail("parent/child pipe", h0);
-    *handle0 = h0;
+    mx_handle_t h[2];
+    mx_status_t status = mx_message_pipe_create(h, 0);
+    if (status < 0)
+        syscall_fail("parent/child pipe", status);
+    *handle0 = h[0];
+    *handle1 = h[1];
 }
 
 static void message_write(mx_handle_t handle, const void* bytes, uint32_t num_bytes)

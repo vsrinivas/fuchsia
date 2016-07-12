@@ -84,19 +84,24 @@ static int reader_thread(void* arg) {
 bool message_pipe_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t result = mx_message_pipe_create(&_pipe[2]);
-    ASSERT_GE(result, 0, "error in message pipe create");
-    _pipe[0] = result;
+    mx_status_t status;
 
-    result = mx_message_pipe_create(&_pipe[3]);
-    ASSERT_GE(result, 0, "error in message pipe create");
-    _pipe[1] = result;
+    mx_handle_t h[2];
+    status = mx_message_pipe_create(h, 0);
+    ASSERT_EQ(status, 0, "error in message pipe create");
+
+    _pipe[0] = h[0];
+    _pipe[2] = h[1];
+
+    status = mx_message_pipe_create(h, 0);
+    ASSERT_EQ(status, 0, "error in message pipe create");
+
+    _pipe[1] = h[0];
+    _pipe[3] = h[1];
 
     const char* reader = "reader";
     mx_handle_t thread = mx_thread_create(reader_thread, NULL, reader, strlen(reader) + 1);
     ASSERT_GE(thread, 0, "error in thread create");
-
-    mx_status_t status;
 
     uint32_t data = 0xdeadbeef;
     status = mx_message_write(_pipe[0], &data, sizeof(uint32_t), NULL, 0u, 0u);
@@ -130,13 +135,10 @@ bool message_pipe_test(void) {
 bool message_pipe_read_error_test(void) {
     BEGIN_TEST;
     mx_handle_t pipe[2];
-    mx_handle_t result = mx_message_pipe_create(&pipe[1]);
-    ASSERT_GE(result, 0, "error in message pipe create");
-    pipe[0] = result;
-
+    mx_status_t status = mx_message_pipe_create(pipe, 0);
+    ASSERT_EQ(status, 0, "error in message pipe create");
 
     // Read from an empty message pipe.
-    mx_status_t status;
     status = mx_message_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
     ASSERT_EQ(status, ERR_BAD_STATE, "read on empty non-closed pipe produced incorrect error");
 

@@ -242,10 +242,12 @@ static bool bind_events_test(void)
     info.io_port = mx_io_port_create(0u);
     EXPECT_GT(info.io_port, 0, "could not create ioport");
 
-    mx_handle_t pipe;
-    info.reply_pipe = mx_message_pipe_create(&pipe);
-    EXPECT_GT(pipe, 0, "could not create pipe 0");
-    EXPECT_GT(info.reply_pipe, 0, "could not create pipe 1");
+    mx_handle_t h[2];
+    status = mx_message_pipe_create(h, 0);
+    EXPECT_EQ(status, 0, "could not create pipes");
+
+    mx_handle_t pipe = h[0];
+    info.reply_pipe = h[1];
 
     mx_handle_t events[5];
     for (int ix = 0; ix != countof(events); ++ix) {

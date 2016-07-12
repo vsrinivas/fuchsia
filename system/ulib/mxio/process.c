@@ -47,7 +47,7 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
     } msgbuf;
     static_assert(sizeof(msgbuf) == sizeof(msgbuf.buffer),
                   "unexpected union layout");
-    mx_handle_t h0, h1;
+    mx_handle_t h[2];
     mx_status_t r;
     int n;
 
@@ -101,19 +101,19 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
 
 #undef CHECK_MSGBUF_SIZE
 
-    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
-        return h0;
+    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+        return r;
     }
-    if ((r = mx_message_write(h1, msgbuf.buffer, p - msgbuf.buffer,
+    if ((r = mx_message_write(h[1], msgbuf.buffer, p - msgbuf.buffer,
                                     handles, hnds_count, 0)) < 0) {
         cprintf("start_process: failed to write args %d\n", r);
-        mx_handle_close(h0);
-        mx_handle_close(h1);
+        mx_handle_close(h[0]);
+        mx_handle_close(h[1]);
         return r;
     }
     // we're done with our end now
-    mx_handle_close(h1);
-    return h0;
+    mx_handle_close(h[1]);
+    return h[0];
 }
 
 #define MAX_AUXV_COUNT (8*2)

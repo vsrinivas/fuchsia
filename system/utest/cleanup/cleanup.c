@@ -33,7 +33,7 @@ int watchdog(void* arg) {
 
 bool cleanup_test(void) {
     BEGIN_TEST;
-    mx_handle_t p0tx, p0rx, p1tx, p1rx;
+    mx_handle_t p0[2], p1[2];
     mx_signals_t pending;
     mx_status_t r;
 
@@ -44,19 +44,19 @@ bool cleanup_test(void) {
     // TEST1
     // Create a pipe, close one end, try to wait on the other.
     test_state = 1;
-    p1tx = mx_message_pipe_create(&p1rx);
-    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 1 failed");
+    r = mx_message_pipe_create(p1, 0);
+    ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
 
-    mx_handle_close(p1rx);
+    mx_handle_close(p1[1]);
     unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
-    r = mx_handle_wait_one(p1tx, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    r = mx_handle_wait_one(p1[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending, NULL);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
     ASSERT_EQ(pending, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
     unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
-    mx_handle_close(p1tx);
-    mx_handle_close(p1rx);
+    mx_handle_close(p1[0]);
+    mx_handle_close(p1[1]);
 
     // TEST2
     // Create a pipe, close one end. Then create an event and write a
@@ -65,14 +65,14 @@ bool cleanup_test(void) {
     // fails (because the other end is closed) The event should still
     // be usable from this process.
     test_state = 2;
-    p1tx = mx_message_pipe_create(&p1rx);
-    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 1 failed");
-    mx_handle_close(p1rx);
+    r = mx_message_pipe_create(p1, 0);
+    ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
+    mx_handle_close(p1[1]);
 
     mx_handle_t event = mx_event_create(0u);
 
     ASSERT_GE(event, 0, "cleanup-test: event create failed");
-    r = mx_message_write(p1tx, &msg, sizeof(msg), &event, 1, 0);
+    r = mx_message_write(p1[0], &msg, sizeof(msg), &event, 1, 0);
     ASSERT_EQ(r, ERR_BAD_STATE, "cleanup-test: unexpected message_write return code");
 
     r = mx_event_signal(event);
@@ -80,7 +80,7 @@ bool cleanup_test(void) {
     unittest_printf("cleanup-test: SUCCESS, event is alive\n\n");
 
     mx_handle_close(event);
-    mx_handle_close(p1tx);
+    mx_handle_close(p1[0]);
 
     // TEST3
     // Simulates the case where we prepare a message pipe with a
@@ -92,20 +92,20 @@ bool cleanup_test(void) {
     // be closed and waiting on the opposing handle should
     // signal PEER_CLOSED.
     test_state = 3;
-    p0tx = mx_message_pipe_create(&p0rx);
-    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 0 failed");
+    r = mx_message_pipe_create(p0, 0);
+    ASSERT_EQ(r, 0, "cleanup-test: pipe create 0 failed");
 
-    p1tx = mx_message_pipe_create(&p1rx);
-    ASSERT_GE(p1tx, 0, "cleanup-test: pipe create 1 failed");
+    r = mx_message_pipe_create(p1, 0);
+    ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
 
-    r = mx_message_write(p0tx, &msg, sizeof(msg), &p1rx, 1, 0);
+    r = mx_message_write(p0[0], &msg, sizeof(msg), &p1[1], 1, 0);
     ASSERT_GE(r, 0, "cleanup-test: pipe write failed");
 
-    mx_handle_close(p0tx);
-    mx_handle_close(p0rx);
+    mx_handle_close(p0[0]);
+    mx_handle_close(p0[1]);
 
     unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
-    r = mx_handle_wait_one(p1tx, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    r = mx_handle_wait_one(p1[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending, NULL);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
@@ -113,7 +113,7 @@ bool cleanup_test(void) {
 
     test_state = 100;
     unittest_printf("cleanup-test: PASSED\n");
-    mx_handle_close(p1tx);
+    mx_handle_close(p1[0]);
     END_TEST;
 }
 

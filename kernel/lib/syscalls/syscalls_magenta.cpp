@@ -532,8 +532,8 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
     return result;
 }
 
-mx_handle_t sys_message_pipe_create(mx_handle_t* out_handle) {
-    LTRACE_ENTRY;
+mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
+    LTRACEF("entry out_handle[] %p\n", out_handle);
 
     if (!out_handle)
         return ERR_INVALID_ARGS;
@@ -555,12 +555,14 @@ mx_handle_t sys_message_pipe_create(mx_handle_t* out_handle) {
     auto up = UserProcess::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (copy_to_user_32(out_handle, hv[1]) != NO_ERROR)
+    if (copy_to_user(out_handle, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(utils::move(h0));
     up->AddHandle(utils::move(h1));
-    return hv[0];
+
+    LTRACE_EXIT;
+    return NO_ERROR;
 }
 
 mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, uint32_t name_len) {

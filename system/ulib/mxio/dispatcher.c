@@ -138,11 +138,14 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     }
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
-    if ((md->tx = mx_message_pipe_create(&md->rx)) < 0) {
-        mx_status_t r = md->tx;
+    mx_handle_t h[2];
+    mx_status_t r = mx_message_pipe_create(h, 0);
+    if (r < 0) {
         free(md);
         return r;
     }
+    md->tx = h[0];
+    md->rx = h[1];
     md->cb = cb;
     *out = md;
     return NO_ERROR;
