@@ -16,7 +16,6 @@
 
 #include <limits.h>
 #include <magenta/syscalls.h>
-#include <stdlib.h>
 #include <system/atomic.h>
 
 enum {
@@ -47,7 +46,7 @@ mx_status_t mxr_completion_wait(mxr_completion_t* completion, mx_time_t timeout)
             return ERR_TIMED_OUT;
         case ERR_INVALID_ARGS:
         default:
-            abort();
+            __builtin_trap();
         }
     }
 }

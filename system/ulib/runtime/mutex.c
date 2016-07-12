@@ -16,7 +16,6 @@
 
 #include <magenta/syscalls.h>
 #include <system/atomic.h>
-#include <stdlib.h>
 
 // TODO(kulakowski) Reintroduce (correctly) optimization counting waiters.
 
@@ -57,12 +56,12 @@ mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout) {
 void mxr_mutex_lock(mxr_mutex_t* mutex) {
     mx_status_t status = mxr_mutex_timedlock(mutex, MX_TIME_INFINITE);
     if (status != NO_ERROR)
-        abort();
+        __builtin_trap();
 }
 
 void mxr_mutex_unlock(mxr_mutex_t* mutex) {
     __atomic_store_n(&mutex->futex, UNLOCKED, __ATOMIC_SEQ_CST);
     mx_status_t status = mx_futex_wake(&mutex->futex, 0x7FFFFFFF);
     if (status != NO_ERROR)
-        abort();
+        __builtin_trap();
 }

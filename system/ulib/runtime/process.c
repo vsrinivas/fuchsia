@@ -14,10 +14,7 @@
 
 #include <runtime/process.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <stddef.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -59,7 +56,11 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     char** argv;
     uint32_t n;
 
-    memset(pi, 0, sizeof(*pi));
+    // Avoid calling memset so as not to depend on libc.
+    {
+        const mx_proc_info_t zero = {};
+        *pi = zero;
+    }
 
     // discover size of message and handles, allocate space
     r = mx_message_read(h, NULL, &dsz, NULL, &hsz, 0);

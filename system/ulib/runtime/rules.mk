@@ -27,6 +27,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/tls.c \
     $(LOCAL_DIR)/sysinfo.c \
 
+# This library should not depend on libc.
+MODULE_COMPILEFLAGS := -ffreestanding
+
 MODULE_LIBS += \
     ulib/magenta
 

@@ -18,6 +18,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+# This library should not depend on libc.
+MODULE_COMPILEFLAGS := -ffreestanding
+
 # kernel code needs magenta headers
 GLOBAL_INCLUDES += $(LOCAL_DIR)/include
 

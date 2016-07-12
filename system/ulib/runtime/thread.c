@@ -21,8 +21,6 @@
 #include <runtime/process.h>
 #include <runtime/tls.h>
 #include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
 
 // An mxr_thread_t starts its life JOINABLE.
 // - If someone calls mxr_thread_join on it, it transitions to JOINED.
@@ -108,7 +106,9 @@ static void init_tls(mxr_thread_t* thread) {
     thread->tls_root.magic = MX_TLS_ROOT_MAGIC;
     thread->tls_root.flags = 0;
     thread->tls_root.maxslots = MXR_TLS_SLOT_MAX;
-    memset(&thread->tls_root.slots, 0, MXR_TLS_SLOT_MAX * sizeof(void*));
+    // Avoid calling memset so as not to depend on libc.
+    for (size_t i = 0; i < MXR_TLS_SLOT_MAX; ++i)
+        thread->tls_root.slots[i] = NULL;
     mxr_tls_root_set(&thread->tls_root);
     mxr_tls_set(MXR_TLS_SLOT_SELF, &thread->tls_root);
     mxr_tls_set(MXR_TLS_SLOT_ERRNO, &thread->errno_value);
@@ -136,11 +136,19 @@ static int thread_trampoline(void* ctx) {
         break;
     case DONE:
         // Not reached.
-        abort();
+        __builtin_trap();
     }
 
     mx_thread_exit();
     return 0;
+}
+
+// Local implementation so libruntime does not depend on libc.
+static size_t local_strlen(const char* s) {
+    size_t len = 0;
+    while (*s++ != '\0')
+        ++len;
+    return len;
 }
 
 mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* name, mxr_thread_t** thread_out) {
@@ -156,7 +164,7 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
 
     if (name == NULL)
         name = "";
-    size_t name_length = strlen(name) + 1;
+    size_t name_length = local_strlen(name) + 1;
     mx_handle_t handle = mx_thread_create(thread_trampoline, thread, name, name_length);
     if (handle < 0) {
         deallocate_thread_page(thread);
@@ -236,7 +244,7 @@ void __mxr_thread_main(void) {
 
     if (self_slot != MXR_TLS_SLOT_SELF ||
         errno_slot != MXR_TLS_SLOT_ERRNO)
-        abort();
+        __builtin_trap();
 
     mxr_thread_t* thread = NULL;
     allocate_thread_page(&thread);
