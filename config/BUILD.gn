@@ -25,6 +25,13 @@ config("compiler") {
   asmflags += cflags_c
 }
 
+config("default_include_dirs") {
+  include_dirs = [
+    "//",
+    root_gen_dir,
+  ]
+}
+
 config("default_warnings") {
   cflags = [
     "-Wall",

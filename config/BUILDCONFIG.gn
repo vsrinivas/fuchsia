@@ -29,6 +29,7 @@ declare_args() {
 # All binary targets will get this list of configs by default.
 _shared_binary_target_configs = [
   "//build/config:compiler",
+  "//build/config:default_include_dirs",
   "//build/config:default_warnings",
 ]
 _shared_library_target_configs =
