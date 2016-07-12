@@ -16,25 +16,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userlib
+MODULE_TYPE := userapp
 
-MODULE_SRCS := \
-    $(LOCAL_DIR)/completion.c \
-    $(LOCAL_DIR)/mutex.c \
-    $(LOCAL_DIR)/process.c \
-    $(LOCAL_DIR)/strstatus.c \
-    $(LOCAL_DIR)/thread.c \
-    $(LOCAL_DIR)/tls.c \
-    $(LOCAL_DIR)/sysinfo.c \
+MODULE_SRCS += \
+    $(LOCAL_DIR)/completion.c
 
-MODULE_LIBS += \
-    ulib/magenta
+MODULE_NAME := mxr-completion-test
 
-# for stdint.h
-MODULE_HEADER_DEPS += \
-    ulib/musl
-
-MODULE_EXPORT := runtime
-MODULE_SONAME := runtime
+MODULE_DEPS := ulib/musl ulib/runtime ulib/mxio ulib/magenta ulib/unittest
 
 include make/module.mk
