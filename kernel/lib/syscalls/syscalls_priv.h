@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <magenta/syscalls-types.h>
 
 // Please don't put CDECLS here. We want the stricter declaration matching
 // rules of C++.

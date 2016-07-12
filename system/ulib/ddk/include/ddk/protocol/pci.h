@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <magenta/syscalls-types.h>
 #include <ddk/driver.h>
 #include <hw/pci.h>
 

@@ -17,6 +17,8 @@
 #include <magenta/types.h>
 #include <stdbool.h>
 
+#include <magenta/syscalls-types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
