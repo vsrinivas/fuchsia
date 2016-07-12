@@ -55,12 +55,12 @@ int main(int argc, char** argv) {
     uint64_t bootfs_size;
     uintptr_t bootfs_val;
 
-    mx_status_t status = _magenta_vm_object_get_size(bootfs_vmo, &bootfs_size);
+    mx_status_t status = mx_vm_object_get_size(bootfs_vmo, &bootfs_size);
     if (status < 0) {
         cprintf("userboot: failed to get bootfs size (%d)\n", status);
         return -1;
     }
-    status = _magenta_process_vm_map(
+    status = mx_process_vm_map(
         0, bootfs_vmo, 0, bootfs_size, &bootfs_val, MX_VM_FLAG_PERM_READ);
     if (status < 0) {
         cprintf("userboot: failed to map bootfs (%d)\n", status);
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 
     const char pname[] = "devmgr";
 
-    if ((proc = _magenta_process_create(pname, sizeof(pname))) < 0)
+    if ((proc = mx_process_create(pname, sizeof(pname))) < 0)
         return proc;
     if ((r = mxio_load_elf_mem(proc, &entry, devmgr, devmgr_len))) {
         cprintf("userboot: elf load of devmgr failed %d\n", r);
@@ -98,14 +98,14 @@ int main(int argc, char** argv) {
         cprintf("userboot: failed to build devmgr args %d\n", h);
         return h;
     }
-    _magenta_process_start(proc, h, entry);
+    mx_process_start(proc, h, entry);
 
     // wait for devmgr to stop
-    r = _magenta_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    r = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
 
     printf("userboot: devmgr exited\n");
 
-    _magenta_handle_close(proc);
+    mx_handle_close(proc);
 
     return 0;
 }

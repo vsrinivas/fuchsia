@@ -39,7 +39,7 @@ static void* mutex_thread_1(void* arg) {
     pthread_mutex_lock(&mutex);
     log("thread 1 got mutex\n");
     thread_with_lock = 1;
-    _magenta_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(300 * 1000 * 1000);
 
     // Make sure no other thread woke up
     EXPECT_EQ(thread_with_lock, 1, "Only thread 1 should have woken up");
@@ -50,13 +50,13 @@ static void* mutex_thread_1(void* arg) {
 }
 
 static void* mutex_thread_2(void* arg) {
-    _magenta_nanosleep(100 * 1000 * 1000);
+    mx_nanosleep(100 * 1000 * 1000);
     log("thread 2 grabbing mutex\n");
     pthread_mutex_lock(&mutex);
     log("thread 2 got mutex\n");
     thread_with_lock = 2;
 
-    _magenta_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(300 * 1000 * 1000);
 
     // Make sure no other thread woke up
     EXPECT_EQ(thread_with_lock, 2, "Only thread 2 should have woken up");
@@ -68,13 +68,13 @@ static void* mutex_thread_2(void* arg) {
 }
 
 static void* mutex_thread_3(void* arg) {
-    _magenta_nanosleep(100 * 1000 * 1000);
+    mx_nanosleep(100 * 1000 * 1000);
     log("thread 3 grabbing mutex\n");
     pthread_mutex_lock(&mutex);
     log("thread 3 got mutex\n");
     thread_with_lock = 3;
 
-    _magenta_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(300 * 1000 * 1000);
 
     // Make sure no other thread woke up
     EXPECT_EQ(thread_with_lock, 3, "Only thread 3 should have woken up");
@@ -136,25 +136,25 @@ bool pthread_test(void) {
     pthread_create(&thread2, NULL, cond_thread2, NULL);
     pthread_create(&thread3, NULL, cond_thread3, NULL);
 
-    _magenta_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(300 * 1000 * 1000);
 
     log("calling pthread_cond_broadcast\n");
     pthread_cond_broadcast(&cond);
 
-    _magenta_nanosleep(100 * 1000 * 1000);
+    mx_nanosleep(100 * 1000 * 1000);
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
-    _magenta_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(300 * 1000 * 1000);
     EXPECT_EQ(process_waked, 1, "Only 1 process should have woken up");
 
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
-    _magenta_nanosleep(100 * 1000 * 1000);
+    mx_nanosleep(100 * 1000 * 1000);
     EXPECT_EQ(process_waked, 2, "Only 2 processes should have woken up");
 
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
-    _magenta_nanosleep(100 * 1000 * 1000);
+    mx_nanosleep(100 * 1000 * 1000);
     EXPECT_EQ(process_waked, 3, "Only 3 processes should have woken up");
 
     log("joining cond threads\n");

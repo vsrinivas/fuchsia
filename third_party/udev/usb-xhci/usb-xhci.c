@@ -155,11 +155,11 @@ error_return:
     if (io_alloc)
         io_alloc_free(io_alloc);
     if (irq_handle != MX_HANDLE_INVALID)
-        _magenta_handle_close(irq_handle);
+        mx_handle_close(irq_handle);
     if (mmio_handle != MX_HANDLE_INVALID)
-        _magenta_handle_close(mmio_handle);
+        mx_handle_close(mmio_handle);
     if (cfg_handle != MX_HANDLE_INVALID)
-        _magenta_handle_close(cfg_handle);
+        mx_handle_close(cfg_handle);
     return status;
 }
 

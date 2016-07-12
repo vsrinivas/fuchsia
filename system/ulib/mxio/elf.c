@@ -83,7 +83,7 @@ void elf_close_handle(elf_handle_t* handle) {
     free(handle->pheaders);
 
     if (handle->vmo > 0)
-        _magenta_handle_close(handle->vmo);
+        mx_handle_close(handle->vmo);
 }
 
 static int verify_eheader(const void* header) {
@@ -177,7 +177,7 @@ static mx_status_t choose_load_bias(elf_handle_t* handle) {
         return NO_ERROR;
 
     // vm_map requires some vm_object handle, so create a dummy one.
-    mx_handle_t vmo = _magenta_vm_object_create(0);
+    mx_handle_t vmo = mx_vm_object_create(0);
     if (vmo < 0) {
         LTRACEF("reservation vm_object_create(0) failed: %d\n", vmo);
         return ERR_NO_MEMORY;
@@ -188,11 +188,11 @@ static mx_status_t choose_load_bias(elf_handle_t* handle) {
     // in POSIX terms).  But the kernel currently doesn't allow that, so do
     // a read-only mapping.
     uintptr_t base;
-    mx_status_t status = _magenta_process_vm_map(handle->proc,
+    mx_status_t status = mx_process_vm_map(handle->proc,
                                                  vmo, 0,
                                                  span, &base,
                                                  MX_VM_FLAG_PERM_READ);
-    _magenta_handle_close(vmo);
+    mx_handle_close(vmo);
     if (status < 0) {
         LTRACEF("failed to reserve %zu bytes of address space: %d\n",
                 span, status);
@@ -207,7 +207,7 @@ static mx_status_t choose_load_bias(elf_handle_t* handle) {
     // starting on the actual PT_LOAD mappings.  Since there is no chance
     // of racing with another thread doing mappings in this process,
     // there's no danger of "losing the reservation".
-    status = _magenta_process_vm_unmap(handle->proc, base, 0);
+    status = mx_process_vm_unmap(handle->proc, base, 0);
     if (status < 0) {
         LTRACEF("vm_unmap failed on reservation %#" PRIxPTR "+%zu: %d\n",
                 base, span, status);
@@ -297,7 +297,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
 
             // allocate a block of memory to back the segment
             if (handle->vmo != 0) {
-                _magenta_handle_close(handle->vmo);
+                mx_handle_close(handle->vmo);
             }
 
             // Some binaries declare program headers that
@@ -311,7 +311,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
                 align = PAGE_SIZE - (handle->vmo_addr & (PAGE_SIZE - 1));
             }
 
-            handle->vmo = _magenta_vm_object_create(pheader->p_memsz + align);
+            handle->vmo = mx_vm_object_create(pheader->p_memsz + align);
             if (handle->vmo < 0) {
                 LTRACEF("failed to allocate VMO to back elf segment at 0x%lx\n", handle->vmo_addr);
                 return ERR_NO_MEMORY;
@@ -323,7 +323,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
             mx_flags |= (pheader->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0;
             mx_flags |= (pheader->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0;
             uintptr_t ptr = handle->vmo_addr;
-            mx_status_t status = _magenta_process_vm_map(handle->proc, handle->vmo, 0,
+            mx_status_t status = mx_process_vm_map(handle->proc, handle->vmo, 0,
                                                          pheader->p_memsz + align, &ptr, mx_flags);
             if (status < 0) {
                 LTRACEF("failed to map VMO to back elf segment at %#"

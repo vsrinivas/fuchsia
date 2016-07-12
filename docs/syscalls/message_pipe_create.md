@@ -1,4 +1,4 @@
-# _magenta_message_pipe_create
+# mx_message_pipe_create
 
 ## NAME
 
@@ -9,7 +9,7 @@ message_pipe_create - create a message pipe
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t _magenta_message_pipe_create(mx_handle_t* other_handle);
+mx_handle_t mx_message_pipe_create(mx_handle_t* other_handle);
 
 ```
 

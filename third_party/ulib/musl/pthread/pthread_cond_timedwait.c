@@ -55,7 +55,7 @@ static inline void unlock_requeue(volatile int* l, volatile int* r, int w) {
     if (w)
         __wake(l, 1);
     else
-        _magenta_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0, (void*)r,
+        mx_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0, (void*)r,
                                /* requeue count */ 1);
 }
 

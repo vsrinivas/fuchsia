@@ -21,16 +21,16 @@ extern int thread_entry(void* arg);
 
 int print_fail(void) {
     EXPECT_TRUE(false, "Failed");
-    _magenta_thread_exit();
+    mx_thread_exit();
     return 1; // Not reached
 }
 
 bool tis_test(void) {
     BEGIN_TEST;
     void* arg = (void*)0x1234567890abcdef;
-    mx_handle_t handle = _magenta_thread_create(thread_entry, arg, "", 0);
+    mx_handle_t handle = mx_thread_create(thread_entry, arg, "", 0);
     ASSERT_GE(handle, 0, "Error while thread creation");
-    mx_status_t status = _magenta_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
+    mx_status_t status = mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
                                                   MX_TIME_INFINITE, NULL, NULL);
     ASSERT_GE(status, 0, "Error while thread wait");
     END_TEST;

@@ -77,7 +77,7 @@ static bool is_message_reply_valid(mx_rio_msg_t* msg, uint32_t size) {
 
 static void discard_handles(mx_handle_t* handles, unsigned count) {
     while (count-- > 0) {
-        _magenta_handle_close(*handles++);
+        mx_handle_close(*handles++);
     }
 }
 
@@ -98,7 +98,7 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
 
     msg.hcount = MXIO_MAX_HANDLES + 1;
     uint32_t dsz = sizeof(msg);
-    if ((r = _magenta_message_read(h, &msg, &dsz, msg.handle, &msg.hcount, 0)) < 0) {
+    if ((r = mx_message_read(h, &msg, &dsz, msg.handle, &msg.hcount, 0)) < 0) {
         return r;
     }
 
@@ -127,7 +127,7 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
     }
 
     msg.op = MX_RIO_STATUS;
-    r = _magenta_message_write(h, &msg, MX_RIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0);
+    r = mx_message_write(h, &msg, MX_RIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0);
     if (is_close) {
         // signals to not perform a close callback
         return 1;
@@ -142,7 +142,7 @@ void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
 
     xprintf("riosvr(%x) starting...\n", h);
     for (;;) {
-        r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+        r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                      MX_TIME_INFINITE, &pending, NULL);
         if (r < 0)
             break;
@@ -162,7 +162,7 @@ void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
     if (r != 0) {
         xprintf("riosvr(%x) done, status=%d\n", h, r);
     }
-    _magenta_handle_close(h);
+    mx_handle_close(h);
 }
 
 // on success, msg->hcount indicates number of valid handles in msg->handle
@@ -178,12 +178,12 @@ static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
     mx_handle_t rh = rio->h;
 
     mx_status_t r;
-    if ((r = _magenta_message_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
+    if ((r = mx_message_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
         goto fail_discard_handles;
     }
 
     mx_signals_t pending;
-    if ((r = _magenta_handle_wait_one(rh, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    if ((r = mx_handle_wait_one(rh, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                       MX_TIME_INFINITE, &pending, NULL)) < 0) {
         return r;
     }
@@ -194,7 +194,7 @@ static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
 
     dsize = MX_RIO_HDR_SZ + MXIO_CHUNK_SIZE;
     msg->hcount = MXIO_MAX_HANDLES + 1;
-    if ((r = _magenta_message_read(rh, msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
+    if ((r = mx_message_read(rh, msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
         return r;
     }
     // check for protocol errors
@@ -359,11 +359,11 @@ static mx_status_t mx_rio_close(mxio_t* io) {
 
     mx_handle_t h = rio->h;
     rio->h = 0;
-    _magenta_handle_close(h);
+    mx_handle_close(h);
     if (rio->e > 0) {
         h = rio->e;
         rio->e = 0;
-        _magenta_handle_close(h);
+        mx_handle_close(h);
     }
 
     return r;
@@ -495,7 +495,7 @@ static mx_status_t mx_rio_wait(mxio_t* io, uint32_t events, uint32_t* _pending, 
     }
     mx_status_t r;
     mx_signals_t pending;
-    if ((r = _magenta_handle_wait_one(rio->e, events & MXIO_EVT_ALL,
+    if ((r = mx_handle_wait_one(rio->e, events & MXIO_EVT_ALL,
                                       timeout, &pending, NULL)) < 0) {
         return r;
     }
@@ -558,7 +558,7 @@ mx_status_t mxio_handler_create(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
     return 0;
 fail:
     xprintf("riosvr: could not install handler %x %p\n", h, cb);
-    _magenta_handle_close(h);
+    mx_handle_close(h);
     free(args);
     return ERR_NO_RESOURCES;
 }

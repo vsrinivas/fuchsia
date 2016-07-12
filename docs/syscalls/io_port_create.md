@@ -1,4 +1,4 @@
-# _magenta_io_port_create
+# mx_io_port_create
 
 ## NAME
 
@@ -9,7 +9,7 @@ io_port_create - create an IO port
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t _magenta_io_port_create(uint32_t options);
+mx_handle_t mx_io_port_create(uint32_t options);
 
 ```
 

@@ -23,8 +23,8 @@ extern "C" {
 
 // define all of the syscalls from the syscall list header.
 // user space syscall vaneer routines are all prefixed with _magenta_
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) extern ret _magenta_##name(args);
-#define MAGENTA_SYSCALL_DEF_WITH_ATTRS(nargs64, nargs32, n, ret, name, attrs, args...) extern ret _magenta_##name(args) __attribute__(attrs);
+#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) extern ret mx_##name(args);
+#define MAGENTA_SYSCALL_DEF_WITH_ATTRS(nargs64, nargs32, n, ret, name, attrs, args...) extern ret mx_##name(args) __attribute__(attrs);
 
 #include <magenta/syscalls.inc>
 

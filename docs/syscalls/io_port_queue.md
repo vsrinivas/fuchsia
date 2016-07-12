@@ -1,4 +1,4 @@
-# _magenta_io_port_queue
+# mx_io_port_queue
 
 ## NAME
 
@@ -9,8 +9,8 @@ io_port_queue - queue a packet to an IO port
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_io_port_queue(mx_handle_t handle, intptr_t key,
-                                   const void* packet, mx_size_t size);
+mx_status_t mx_io_port_queue(mx_handle_t handle, intptr_t key,
+                             const void* packet, mx_size_t size);
 
 ```
 

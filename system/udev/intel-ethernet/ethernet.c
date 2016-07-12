@@ -54,7 +54,7 @@ static int irq_thread(void* arg) {
     ethernet_device_t* edev = arg;
     for (;;) {
         mx_status_t r;
-        if ((r = _magenta_pci_interrupt_wait(edev->irqh)) < 0) {
+        if ((r = mx_pci_interrupt_wait(edev->irqh)) < 0) {
             printf("eth: irq wait failed? %d\n", r);
             break;
         }
@@ -135,8 +135,8 @@ static mx_status_t eth_release(mx_device_t* dev) {
     ethernet_device_t* edev = get_eth_device(dev);
     eth_reset_hw(&edev->eth);
     edev->pci->enable_bus_master(edev->pcidev, true);
-    _magenta_handle_close(edev->irqh);
-    _magenta_handle_close(edev->ioh);
+    mx_handle_close(edev->irqh);
+    mx_handle_close(edev->ioh);
     free(dev);
     return ERR_NOT_SUPPORTED;
 }
@@ -202,7 +202,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_paddr_t iophys;
     void* iomem;
-    if ((r = _magenta_alloc_device_memory(ETH_ALLOC, &iophys, &iomem)) < 0) {
+    if ((r = mx_alloc_device_memory(ETH_ALLOC, &iophys, &iomem)) < 0) {
         printf("eth: cannot alloc buffers %d\n", r);
         goto fail;
     }
@@ -227,8 +227,8 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
 fail:
     if (edev->ioh) {
         edev->pci->enable_bus_master(edev->pcidev, true);
-        _magenta_handle_close(edev->irqh);
-        _magenta_handle_close(edev->ioh);
+        mx_handle_close(edev->irqh);
+        mx_handle_close(edev->ioh);
     }
     free(edev);
     return ERR_NOT_SUPPORTED;

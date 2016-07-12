@@ -318,7 +318,7 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
 
 fail:
     if (device->regs_handle >= 0)
-        _magenta_handle_close(device->regs_handle);
+        mx_handle_close(device->regs_handle);
     free(device);
 
     return status;

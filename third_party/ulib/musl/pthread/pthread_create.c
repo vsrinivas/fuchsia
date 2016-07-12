@@ -32,7 +32,7 @@ static int thread_entry(void* arg) {
         mxr_tls_set(MXR_TLS_SLOT_ERRNO, &ei->errno_value);
     }
     ei->func(ei->arg);
-    _magenta_thread_exit();
+    mx_thread_exit();
     return 0;
 }
 
@@ -73,7 +73,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
         thread->tsd = map + len - __pthread_tsd_size;
     }
 
-    handle = _magenta_thread_create(thread_entry, &thread->mx_thread_info,
+    handle = mx_thread_create(thread_entry, &thread->mx_thread_info,
                                     "musl", 5);
     if (handle < 0) {
         __munmap(map, len);

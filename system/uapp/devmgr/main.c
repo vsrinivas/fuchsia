@@ -33,7 +33,7 @@ void devmgr_io_init(void) {
     // setup stdout
     uint32_t flags = devmgr_is_remote ? MX_LOG_FLAG_DEVICE : MX_LOG_FLAG_DEVMGR;
     mx_handle_t h;
-    if ((h = _magenta_log_create(flags)) < 0) {
+    if ((h = mx_log_create(flags)) < 0) {
         return;
     }
     mxio_t* logger;
@@ -82,7 +82,7 @@ int console_starter(void* arg) {
         snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
         //printf("? %s\n", name);
         if ((fd = open(name, O_RDWR)) < 0) {
-            _magenta_nanosleep(100000000ULL);
+            mx_nanosleep(100000000ULL);
             continue;
         }
         close(fd);
@@ -107,12 +107,12 @@ int main(int argc, char** argv) {
     uintptr_t bootfs_val;
 
     bootfs_vmo = mxr_process_get_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
-    status = _magenta_vm_object_get_size(bootfs_vmo, &bootfs_size);
+    status = mx_vm_object_get_size(bootfs_vmo, &bootfs_size);
     if (status < 0) {
         cprintf("devmgr: failed to get bootfs size (%d)\n", status);
         return -1;
     }
-    status = _magenta_process_vm_map(0, bootfs_vmo, 0, bootfs_size,
+    status = mx_process_vm_map(0, bootfs_vmo, 0, bootfs_size,
                                      &bootfs_val, MX_VM_FLAG_PERM_READ);
     if (status < 0) {
         cprintf("devmgr: failed to map bootfs (%d)\n", status);

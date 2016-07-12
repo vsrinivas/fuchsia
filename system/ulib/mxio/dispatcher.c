@@ -47,8 +47,8 @@ struct mxio_dispatcher {
 };
 
 static void mxio_dispatcher_destroy(mxio_dispatcher_t* md) {
-    _magenta_handle_close(md->tx);
-    _magenta_handle_close(md->rx);
+    mx_handle_close(md->tx);
+    mx_handle_close(md->rx);
     free(md);
 }
 
@@ -58,7 +58,7 @@ static void remove_handler(mxio_dispatcher_t* md, handler_t* handler, mx_status_
         md->cb(0, handler->cb, handler->cookie);
     }
     xprintf("handler(%x) done, status=%d\n", handler->h, r);
-    _magenta_handle_close(handler->h);
+    mx_handle_close(handler->h);
     free(handler);
 }
 
@@ -80,7 +80,7 @@ setup:
 
     xprintf("dispatcher: listening to %d pipe%s\n", count, (count == 1) ? "" : "s");
     for (;;) {
-        r = _magenta_handle_wait_many(count + 1, md->handles, md->wsigs, MX_TIME_INFINITE,
+        r = mx_handle_wait_many(count + 1, md->handles, md->wsigs, MX_TIME_INFINITE,
                                       md->ssigs, NULL);
         if (r < 0) {
             xprintf("dispatcher: wait many failed %d\n", r);
@@ -103,20 +103,20 @@ setup:
         if (md->ssigs[count] & MX_SIGNAL_READABLE) {
             uint32_t sz = sizeof(handler_t);
             handler_t a;
-            if ((r = _magenta_message_read(md->rx, &a, &sz, NULL, NULL, 0)) < 0) {
+            if ((r = mx_message_read(md->rx, &a, &sz, NULL, NULL, 0)) < 0) {
                 xprintf("dispatcher: read failure on new handle pipe %d\n", r);
                 break;
             }
             if (count == MAX_HANDLERS) {
                 // TODO: support growing the table, or use waitsets
                 md->cb(0, a.cb, a.cookie);
-                _magenta_handle_close(a.h);
+                mx_handle_close(a.h);
                 xprintf("dispatcher(%x) discarding handler, out of memory\n", a.h);
                 break;
             }
             if ((handler = malloc(sizeof(handler_t))) == NULL) {
                 md->cb(0, a.cb, a.cookie);
-                _magenta_handle_close(a.h);
+                mx_handle_close(a.h);
                 xprintf("dispatcher(%x) discarding handler, out of memory\n", a.h);
                 break;
             }
@@ -138,7 +138,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     }
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
-    if ((md->tx = _magenta_message_pipe_create(&md->rx)) < 0) {
+    if ((md->tx = mx_message_pipe_create(&md->rx)) < 0) {
         mx_status_t r = md->tx;
         free(md);
         return r;
@@ -171,7 +171,7 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, 
     handler.h = h;
     handler.cb = cb;
     handler.cookie = cookie;
-    if ((r = _magenta_message_write(md->tx, &handler, sizeof(handler), NULL, 0, 0)) < 0) {
+    if ((r = mx_message_write(md->tx, &handler, sizeof(handler), NULL, 0, 0)) < 0) {
         return r;
     }
     return 0;

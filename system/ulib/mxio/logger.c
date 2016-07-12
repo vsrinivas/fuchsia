@@ -56,7 +56,7 @@ static ssize_t log_write(mxio_t* io, const void* _data, size_t len) {
     while (len-- > 0) {
         char c = *data++;
         if (c == '\n') {
-            _magenta_log_write(log_io->handle, log->next, log->data, 0);
+            mx_log_write(log_io->handle, log->next, log->data, 0);
             log->next = 0;
             continue;
         }
@@ -65,7 +65,7 @@ static ssize_t log_write(mxio_t* io, const void* _data, size_t len) {
         }
         log->data[log->next++] = c;
         if (log->next == LOGBUF_MAX) {
-            _magenta_log_write(log_io->handle, log->next, log->data, 0);
+            mx_log_write(log_io->handle, log->next, log->data, 0);
             log->next = 0;
             continue;
         }
@@ -77,7 +77,7 @@ static mx_status_t log_close(mxio_t* io) {
     mxio_log_t* log_io = (mxio_log_t*)io;
     mx_handle_t h = log_io->handle;
     log_io->handle = 0;
-    _magenta_handle_close(h);
+    mx_handle_close(h);
     return NO_ERROR;
 }
 

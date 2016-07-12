@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
     h0 = (mx_handle_t)(uintptr_t)arg;
     dsz = sizeof(data);
     hsz = 1;
-    if ((r = _magenta_message_read(h0, data, &dsz, &h1, &hsz, 0)) < 0) {
+    if ((r = mx_message_read(h0, data, &dsz, &h1, &hsz, 0)) < 0) {
         cprintf("helper: failed to read message %d\n", r);
         return -1;
     }
@@ -45,9 +45,9 @@ int main(int argc, char** argv) {
         cprintf("no handle received\n");
         return -1;
     }
-    if ((r = _magenta_message_write(h1, "okay", 5, &h1, 1, 0)) < 0) {
+    if ((r = mx_message_write(h1, "okay", 5, &h1, 1, 0)) < 0) {
         cprintf("helper: failed to write message %d\n", r);
-        _magenta_message_write(h1, "fail", 5, NULL, 0, 0);
+        mx_message_write(h1, "fail", 5, NULL, 0, 0);
         return -1;
     }
     printf("helper: done\n");

@@ -69,7 +69,7 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
     }
 
     mx_handle_t h0, h1;
-    if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
+    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
         free(newios);
         return h0;
     }
@@ -85,7 +85,7 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
 
     if (dev->event > 0) {
         //TODO: read only?
-        if ((handles[1] = _magenta_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS)) < 0) {
+        if ((handles[1] = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS)) < 0) {
             r = handles[1];
             goto fail2;
         }
@@ -106,8 +106,8 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
 fail2:
     dev->ops->close(dev, cookie);
 fail1:
-    _magenta_handle_close(h0);
-    _magenta_handle_close(h1);
+    mx_handle_close(h0);
+    mx_handle_close(h1);
     free(newios);
     return r;
 }
@@ -135,7 +135,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
     msg->datalen = 0;
 
     for (unsigned i = 0; i < msg->hcount; i++) {
-        _magenta_handle_close(msg->handle[i]);
+        mx_handle_close(msg->handle[i]);
     }
 
     switch (MX_RIO_OP(msg->op)) {

@@ -121,7 +121,7 @@ static mx_status_t devhost_remote_add(devhost_t* dh, devhost_msg_t* msg, mx_hand
 fail1:
     free(proxy);
 fail0:
-    _magenta_handle_close(h);
+    mx_handle_close(h);
     return r;
 }
 
@@ -152,7 +152,7 @@ mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
 
     uint32_t dsz = sizeof(msg);
     uint32_t hcount = 1;
-    if ((r = _magenta_message_read(h, &msg, &dsz, &hnd, &hcount, 0)) < 0) {
+    if ((r = mx_message_read(h, &msg, &dsz, &hnd, &hcount, 0)) < 0) {
         return r;
     }
     if (dsz != sizeof(msg)) {
@@ -179,14 +179,14 @@ mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
         goto fail;
     }
     msg.op = DH_OP_STATUS;
-    if ((r = _magenta_message_write(h, &msg, sizeof(msg), NULL, 0, 0)) < 0) {
+    if ((r = mx_message_write(h, &msg, sizeof(msg), NULL, 0, 0)) < 0) {
         return r;
     }
     return NO_ERROR;
 fail:
     printf("devmgr_handler: error %d\n", r);
     if (hcount) {
-        _magenta_handle_close(hnd);
+        mx_handle_close(hnd);
     }
     return ERR_IO;
 }
@@ -211,7 +211,7 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
     }
 
     mx_handle_t h0, h1;
-    if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
+    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
         free(dh);
         return h0;
     }

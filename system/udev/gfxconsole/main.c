@@ -100,7 +100,7 @@ restart:
     for (;;) {
         fd = open(input_dev, O_RDONLY);
         if (fd < 0) {
-            _magenta_nanosleep(250000000ULL);
+            mx_nanosleep(250000000ULL);
             continue;
         }
         break;
@@ -212,7 +212,7 @@ restart:
 static int vc_logreader_thread(void* arg) {
     mx_handle_t h;
 
-    if ((h = _magenta_log_create(MX_LOG_FLAG_CONSOLE | MX_LOG_FLAG_READABLE)) < 0) {
+    if ((h = mx_log_create(MX_LOG_FLAG_CONSOLE | MX_LOG_FLAG_READABLE)) < 0) {
         return h;
     }
 
@@ -223,7 +223,7 @@ static int vc_logreader_thread(void* arg) {
     char buf[MX_LOG_RECORD_MAX];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
     for (;;) {
-        if (_magenta_log_read(h, MX_LOG_RECORD_MAX, rec, MX_LOG_FLAG_WAIT) > 0) {
+        if (mx_log_read(h, MX_LOG_RECORD_MAX, rec, MX_LOG_FLAG_WAIT) > 0) {
             char tmp[64];
             snprintf(tmp, 64, "[%05d.%03d] %c ",
                      (int)(rec->timestamp / 1000000000ULL),

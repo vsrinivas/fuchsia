@@ -121,12 +121,12 @@ static mx_status_t intel_i915_release(mx_device_t* dev) {
     intel_i915_enable_backlight(device, false);
 
     if (device->regs) {
-        _magenta_handle_close(device->regs_handle);
+        mx_handle_close(device->regs_handle);
         device->regs_handle = -1;
     }
 
     if (device->framebuffer) {
-        _magenta_handle_close(device->framebuffer_handle);
+        mx_handle_close(device->framebuffer_handle);
         device->framebuffer_handle = -1;
     }
 
@@ -162,7 +162,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
             // TODO: this should be based on the specific target
             device->flags |= FLAGS_BACKLIGHT;
         }
-        _magenta_handle_close(cfg_handle);
+        mx_handle_close(cfg_handle);
     }
 
     // map register window
@@ -189,7 +189,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;
-    status = _magenta_bootloader_fb_get_info(&format, &width, &height, &stride);
+    status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
     if (status == NO_ERROR) {
         di->format = format;
         di->width = width;
@@ -205,7 +205,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     // TODO remove when the gfxconsole moves to user space
     intel_i915_enable_backlight(device, true);
-    _magenta_set_framebuffer(device->framebuffer, device->framebuffer_size, format, width, height, stride);
+    mx_set_framebuffer(device->framebuffer, device->framebuffer_size, format, width, height, stride);
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &intel_i915_display_proto;

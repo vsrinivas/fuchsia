@@ -1,4 +1,4 @@
-# _magenta_futex_requeue
+# mx_futex_requeue
 
 ## NAME
 
@@ -10,9 +10,9 @@ move more waiters to another wait queue.
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_futex_requeue(int* value_ptr, uint32_t wake_count,
-                                   int current_value, int* requeue_ptr,
-                                   uint32_t requeue_count);
+mx_status_t mx_futex_requeue(int* value_ptr, uint32_t wake_count,
+                             int current_value, int* requeue_ptr,
+                             uint32_t requeue_count);
 ```
 
 ## DESCRIPTION

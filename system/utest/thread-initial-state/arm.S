@@ -49,6 +49,6 @@ FUNCTION(thread_entry)
     bne .Lfail
 
     // TODO: Test floating point/simd if we support
-    b _magenta_thread_exit
+    b mx_thread_exit
 .Lfail:
     b print_fail

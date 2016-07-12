@@ -202,7 +202,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
     vfs_txn_op = MX_RIO_OP(msg->op);
 
     for (unsigned i = 0; i < msg->hcount; i++) {
-        _magenta_handle_close(msg->handle[i]);
+        mx_handle_close(msg->handle[i]);
     }
 
     switch (MX_RIO_OP(msg->op)) {
@@ -393,13 +393,13 @@ mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn) {
         return ERR_NO_MEMORY;
     ios->vn = vn;
 
-    if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
+    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
         free(ios);
         return h0;
     }
     if ((r = mxio_dispatcher_add(vfs_dispatcher, h0, vfs_handler, ios)) < 0) {
-        _magenta_handle_close(h0);
-        _magenta_handle_close(h1);
+        mx_handle_close(h0);
+        mx_handle_close(h1);
         free(ios);
         return r;
     }
@@ -421,7 +421,7 @@ mx_handle_t vfs_create_root_handle(void) {
 static int vfs_watchdog(void* arg) {
     int txn = vfs_txn;
     for (;;) {
-        _magenta_nanosleep(500000000ULL);
+        mx_nanosleep(500000000ULL);
         int now = vfs_txn;
         if ((now == txn) && (now != -1)) {
             vnode_t* vn = vfs_txn_vn;

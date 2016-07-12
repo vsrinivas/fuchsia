@@ -41,7 +41,7 @@ mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout) {
         case UNLOCKED:
             return NO_ERROR;
         case LOCKED: {
-            mx_status_t status = _magenta_futex_wait(&mutex->futex, LOCKED, timeout);
+            mx_status_t status = mx_futex_wait(&mutex->futex, LOCKED, timeout);
             if (status == ERR_BUSY) {
                 continue;
             }
@@ -62,7 +62,7 @@ void mxr_mutex_lock(mxr_mutex_t* mutex) {
 
 void mxr_mutex_unlock(mxr_mutex_t* mutex) {
     __atomic_store_n(&mutex->futex, UNLOCKED, __ATOMIC_SEQ_CST);
-    mx_status_t status = _magenta_futex_wake(&mutex->futex, 0x7FFFFFFF);
+    mx_status_t status = mx_futex_wake(&mutex->futex, 0x7FFFFFFF);
     if (status != NO_ERROR)
         abort();
 }

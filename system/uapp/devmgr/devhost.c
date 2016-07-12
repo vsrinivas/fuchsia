@@ -37,11 +37,11 @@
 
 static mx_status_t devhost_rpc(mx_handle_t h, devhost_msg_t* msg, mx_handle_t harg) {
     mx_status_t r;
-    if ((r = _magenta_message_write(h, msg, sizeof(*msg), &harg, harg ? 1 : 0, 0)) < 0) {
+    if ((r = mx_message_write(h, msg, sizeof(*msg), &harg, harg ? 1 : 0, 0)) < 0) {
         return r;
     }
     mx_signals_t pending;
-    if ((r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    if ((r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                       MX_TIME_INFINITE, &pending, NULL)) < 0) {
         return r;
     }
@@ -49,7 +49,7 @@ static mx_status_t devhost_rpc(mx_handle_t h, devhost_msg_t* msg, mx_handle_t ha
         return ERR_CHANNEL_CLOSED;
     }
     uint32_t dsz = sizeof(*msg);
-    if ((r = _magenta_message_read(h, msg, &dsz, NULL, NULL, 0)) < 0) {
+    if ((r = mx_message_read(h, msg, &dsz, NULL, NULL, 0)) < 0) {
         return r;
     }
     if ((dsz != sizeof(*msg)) || (msg->op != DH_OP_STATUS)) {
@@ -64,7 +64,7 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
         return ERR_NO_MEMORY;
     }
     mx_handle_t h0, h1;
-    if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
+    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
         free(ios);
         return h0;
     }
@@ -88,7 +88,7 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
         mxio_dispatcher_add(devmgr_rio_dispatcher, h0, devmgr_rio_handler, ios);
     } else {
         printf("devhost: dev=%p name='%s' failed remoting %d\n", dev, dev->name, r);
-        _magenta_handle_close(h0);
+        mx_handle_close(h0);
         free(ios);
     }
     return r;

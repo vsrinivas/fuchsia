@@ -52,7 +52,7 @@ static inline mx_tls_root_t* mxr_tls_root_get(void) {
 static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {
     // TODO(kulakowski) Thread self handle.
     mx_handle_t self = 0;
-    return _magenta_thread_arch_prctl(self, ARCH_SET_CP15_READONLY, (uintptr_t*)&tlsroot);
+    return mx_thread_arch_prctl(self, ARCH_SET_CP15_READONLY, (uintptr_t*)&tlsroot);
 }
 
 #elif defined(__x86_64__)
@@ -65,7 +65,7 @@ static inline mx_tls_root_t* mxr_tls_root_get(void) {
 static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {
     // TODO(kulakowski) Thread self handle.
     mx_handle_t self = 0;
-    return _magenta_thread_arch_prctl(self, ARCH_SET_FS, (uintptr_t*)&tlsroot);
+    return mx_thread_arch_prctl(self, ARCH_SET_FS, (uintptr_t*)&tlsroot);
 }
 
 #else

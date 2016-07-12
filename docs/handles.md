@@ -37,9 +37,9 @@ handles to the same kernel object with different rights.
 ## Using Handles
 There are many syscalls that create a new kernel object
 and which return a handle to it. To name a few:
-+ `_magenta_event_create`
-+ `_magenta_process_create`
-+ `_magenta_thread_create`
++ `mx_event_create`
++ `mx_process_create`
++ `mx_thread_create`
 
 These calls create both the kernel object and the first
 handle pointing to it. The handle is bound to the process that
@@ -49,29 +49,29 @@ that type of kernel object.
 There is only one syscall that can make a copy of a handle,
 which points to the same kernel object and is bound to the same
 process that issued the syscall:
-+ `_magenta_handle_duplicate`
++ `mx_handle_duplicate`
 
 There is only one syscall that can destroy a handle:
-+ `_magenta_handle_close`
++ `mx_handle_close`
 
 There is only one syscall that takes a handle bound to calling
 process and bounds it into kernel (puts the handle in-transit):
-+ `_magenta_message_write`
++ `mx_message_write`
 
 There is only one syscall that takes an in-transit handle and
 binds it to the calling process:
-+ `_magenta_message_read`
++ `mx_message_read`
 
 The pair of 'message' syscalls above are used to effectively transfer
 a handle from one process to another. The gist is that it is possible
 to connect two processes with a 'message pipe'. To transfer a handle
-the source process calls `_magenta_message_write` and then the
-destination process calls `_magenta_message_read` on the same pipe.
+the source process calls `mx_message_write` and then the
+destination process calls `mx_message_read` on the same pipe.
 
 Finally, there is a single syscall that gives a new process its
 boostrapping handle, that is, the handle that it can use to
 request other handles:
-+ `_magenta_process_start`
++ `mx_process_start`
 
 It is natural that the bootstrapping handle points to one end of a
 message pipe.

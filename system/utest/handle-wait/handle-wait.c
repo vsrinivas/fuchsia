@@ -92,7 +92,7 @@ static mx_handle_t thread_create(thread_start_func_t entry, void* arg,
 {
     if (!name)
         name = "";
-    mx_handle_t handle = _magenta_thread_create(entry, arg, name, strlen(name) + 1);
+    mx_handle_t handle = mx_thread_create(entry, arg, name, strlen(name) + 1);
     if (handle < 0)
         syscall_fail("thread_create", handle);
     log_msg("created thread, handle %d", handle);
@@ -106,7 +106,7 @@ static enum wait_result wait_readable(mx_handle_t handle)
     mx_signals_t satisfied_signals, satisfiable_signals;
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     int64_t timeout = MX_TIME_INFINITE;
-    mx_status_t status = _magenta_handle_wait_one(handle, signals, timeout,
+    mx_status_t status = mx_handle_wait_one(handle, signals, timeout,
                                                   &satisfied_signals, &satisfiable_signals);
     if (status == ERR_CANCELLED)
         return WAIT_CANCELLED;
@@ -127,7 +127,7 @@ static enum wait_result wait_signalled(mx_handle_t handle)
     mx_signals_t satisfied_signals, satisfiable_signals;
     mx_signals_t signals = MX_SIGNAL_SIGNALED;
     int64_t timeout = MX_TIME_INFINITE;
-    mx_status_t status = _magenta_handle_wait_one(handle, signals, timeout,
+    mx_status_t status = mx_handle_wait_one(handle, signals, timeout,
                                                   &satisfied_signals, &satisfiable_signals);
     if (status == ERR_CANCELLED)
         return WAIT_CANCELLED;
@@ -142,7 +142,7 @@ static enum wait_result wait_signalled(mx_handle_t handle)
 
 static void message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1)
 {
-    mx_handle_t h0 = _magenta_message_pipe_create(handle1);
+    mx_handle_t h0 = mx_message_pipe_create(handle1);
     if (h0 < 0)
         syscall_fail("parent/child pipe", h0);
     *handle0 = h0;
@@ -151,7 +151,7 @@ static void message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1)
 static void message_write(mx_handle_t handle, const void* bytes, uint32_t num_bytes)
 {
     mx_status_t status =
-        _magenta_message_write(handle, bytes, num_bytes, NULL, 0, 0);
+        mx_message_write(handle, bytes, num_bytes, NULL, 0, 0);
     if (status < 0)
         syscall_fail("message_write", status);
 }
@@ -159,14 +159,14 @@ static void message_write(mx_handle_t handle, const void* bytes, uint32_t num_by
 static void message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes)
 {
     mx_status_t status =
-        _magenta_message_read(handle, bytes, num_bytes, NULL, 0, 0);
+        mx_message_read(handle, bytes, num_bytes, NULL, 0, 0);
     if (status < 0)
         syscall_fail("message_read", status);
 }
 
 static mx_handle_t handle_duplicate(mx_handle_t handle)
 {
-    mx_handle_t h = _magenta_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS);
+    mx_handle_t h = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS);
     if (h < 0)
         syscall_fail("handle_duplicate", h);
     return h;
@@ -204,7 +204,7 @@ static enum message recv_msg(mx_handle_t handle)
     if (num_bytes != sizeof(data))
     {
         log_msg("unexpected message size: %u", num_bytes);
-        _magenta_thread_exit();
+        mx_thread_exit();
     }
 
     log_msg("received message %d", (enum message) data);
@@ -250,7 +250,7 @@ static int worker_thread_func(void* arg) {
     msg_loop(data->pipe);
     log_msg("thread %d exiting", data->thread_num);
     send_msg(data->pipe, MSG_EXITED);
-    _magenta_thread_exit();
+    mx_thread_exit();
 }
 
 int main(void) {
@@ -282,7 +282,7 @@ int main(void) {
     // N.B. We're assuming thread 1 is waiting on thread 2 at this point.
 
     mx_handle_t thread2_handle_dup = handle_duplicate(thread2_handle);
-    _magenta_handle_close(thread2_handle);
+    mx_handle_close(thread2_handle);
 
     msg = recv_msg(thread1_pipe[0]);
     if (msg != MSG_WAIT_THREAD2_CANCELLED) {

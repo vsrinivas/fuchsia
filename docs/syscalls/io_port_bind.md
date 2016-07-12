@@ -1,4 +1,4 @@
-# _magenta_io_port_bind
+# mx_io_port_bind
 
 ## NAME
 
@@ -9,8 +9,8 @@ io_port_bind - bind an IO port to another kernel object.
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_io_port_bind(mx_handle_t handle, intptr_t key,
-                                  mx_handle_t source, mx_signals_t signals);
+mx_status_t mx_io_port_bind(mx_handle_t handle, intptr_t key,
+                            mx_handle_t source, mx_signals_t signals);
 ```
 
 ## DESCRIPTION

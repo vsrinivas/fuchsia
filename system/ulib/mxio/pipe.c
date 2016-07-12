@@ -38,12 +38,12 @@ static mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
 
     for (;;) {
         sz = len;
-        r = _magenta_message_read(h, data, &sz, NULL, NULL, 0);
+        r = mx_message_read(h, data, &sz, NULL, NULL, 0);
         if (r == 0) {
             return sz;
         }
         if (r == ERR_BAD_STATE) {
-            r = _magenta_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+            r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                          MX_TIME_INFINITE, &pending, NULL);
             if (r < 0)
                 return r;
@@ -65,7 +65,7 @@ static ssize_t mx_pipe_write(mxio_t* io, const void* _data, size_t len) {
 
     while (len > 0) {
         size_t xfer = (len > MXIO_CHUNK_SIZE) ? MXIO_CHUNK_SIZE : len;
-        r = _magenta_message_write(p->h, data, xfer, NULL, 0, 0);
+        r = mx_message_write(p->h, data, xfer, NULL, 0, 0);
         if (r < 0)
             break;
         len -= xfer;
@@ -119,13 +119,13 @@ static mx_status_t mx_pipe_close(mxio_t* io) {
     mx_pipe_t* p = (mx_pipe_t*)io;
     mx_handle_t h = p->h;
     p->h = 0;
-    _magenta_handle_close(h);
+    mx_handle_close(h);
     return 0;
 }
 
 static void mx_pipe_release(mxio_t* io) {
     mx_pipe_t* p = (mx_pipe_t*)io;
-    _magenta_handle_close(p->h);
+    mx_handle_close(p->h);
     free(io);
 }
 
@@ -155,17 +155,17 @@ mxio_t* mxio_pipe_create(mx_handle_t h) {
 int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
     mx_handle_t ha, hb;
     mxio_t *a, *b;
-    ha = _magenta_message_pipe_create(&hb);
+    ha = mx_message_pipe_create(&hb);
     if (ha < 0)
         return ha;
     if ((a = mxio_pipe_create(ha)) == NULL) {
-        _magenta_handle_close(ha);
-        _magenta_handle_close(hb);
+        mx_handle_close(ha);
+        mx_handle_close(hb);
         return ERR_NO_MEMORY;
     }
     if ((b = mxio_pipe_create(hb)) == NULL) {
         mx_pipe_close(a);
-        _magenta_handle_close(hb);
+        mx_handle_close(hb);
         return ERR_NO_MEMORY;
     }
     *_a = a;
@@ -175,7 +175,7 @@ int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
 
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types) {
     mx_handle_t ha, hb;
-    if ((ha = _magenta_message_pipe_create(&hb)) < 0) {
+    if ((ha = mx_message_pipe_create(&hb)) < 0) {
         return ha;
     }
     handles[0] = ha;

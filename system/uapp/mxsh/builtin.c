@@ -282,7 +282,7 @@ static int mxc_runtests(int argc, char** argv) {
             continue;
         }
 
-        mx_status_t status = _magenta_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
+        mx_status_t status = mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
                                                       MX_TIME_INFINITE, 0, 0);
         if (status != NO_ERROR) {
             printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
@@ -293,8 +293,8 @@ static int mxc_runtests(int argc, char** argv) {
 
         // read the return code
         mx_process_info_t proc_info;
-        mx_ssize_t info_status = _magenta_handle_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
-        _magenta_handle_close(handle);
+        mx_ssize_t info_status = mx_handle_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
+        mx_handle_close(handle);
 
         if (info_status != sizeof(proc_info)) {
             printf("FAILURE: Failed to get process return code %s: %ld\n", de->d_name, info_status);

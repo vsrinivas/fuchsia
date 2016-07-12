@@ -102,7 +102,7 @@ static void hci_event_complete(usb_request_t* request) {
         if (hci->event_buffer_offset == 0 && length >= 2) {
             size_t packet_size = buffer[1] + 2;
             if (packet_size == length) {
-                mx_status_t status = _magenta_message_write(hci->control_pipe[0], buffer, length,
+                mx_status_t status = mx_message_write(hci->control_pipe[0], buffer, length,
                                                             NULL, 0, 0);
                 if (status < 0) {
                     printf("hci_interrupt failed to write\n");
@@ -131,7 +131,7 @@ static void hci_event_complete(usb_request_t* request) {
         // check to see if we have a full packet
         packet_size = hci->event_buffer[1] + 2;
         if (packet_size <= hci->event_buffer_offset) {
-            mx_status_t status = _magenta_message_write(hci->control_pipe[0], hci->event_buffer,
+            mx_status_t status = mx_message_write(hci->control_pipe[0], hci->event_buffer,
                                                         packet_size, NULL, 0, 0);
             if (status < 0) {
                 printf("hci_interrupt failed to write\n");
@@ -154,7 +154,7 @@ static void hci_acl_read_complete(usb_request_t* request) {
     hci_t* hci = (hci_t*)request->client_data;
 
     if (request->status == NO_ERROR) {
-        mx_status_t status = _magenta_message_write(hci->acl_pipe[0], request->buffer,
+        mx_status_t status = mx_message_write(hci->acl_pipe[0], request->buffer,
                                                     request->transfer_length, NULL, 0, 0);
         if (status < 0) {
             printf("hci_acl_read_complete failed to write\n");
@@ -190,17 +190,17 @@ static int hci_read_thread(void* arg) {
         mx_signals_t satisfied_signals[2];
         mx_signals_t satisfiable_signals[2];
 
-        mx_status_t status = _magenta_handle_wait_many(countof(handles), handles, signals,
+        mx_status_t status = mx_handle_wait_many(countof(handles), handles, signals,
                                                        MX_TIME_INFINITE, satisfied_signals,
                                                        satisfiable_signals);
         if (status < 0) {
-            printf("_magenta_handle_wait_many fail\n");
+            printf("mx_handle_wait_many fail\n");
             break;
         }
         if (satisfied_signals[0] & MX_SIGNAL_READABLE) {
             uint8_t buf[256];
             uint32_t length = sizeof(buf);
-            status = _magenta_message_read(handles[0], buf, &length, NULL, 0, 0);
+            status = mx_message_read(handles[0], buf, &length, NULL, 0, 0);
             if (status >= 0) {
                 status = hci->device_protocol->control(hci->usb_device,
                                                        USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
@@ -216,7 +216,7 @@ static int hci_read_thread(void* arg) {
         if (satisfied_signals[1] & MX_SIGNAL_READABLE) {
             uint8_t buf[ACL_BUF_SIZE];
             uint32_t length = sizeof(buf);
-            status = _magenta_message_read(handles[1], buf, &length, NULL, 0, 0);
+            status = mx_message_read(handles[1], buf, &length, NULL, 0, 0);
             if (status >= 0) {
                 mxr_mutex_lock(&hci->mutex);
 
@@ -318,15 +318,15 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         return ERR_NO_MEMORY;
     }
 
-    hci->control_pipe[0] = _magenta_message_pipe_create(&hci->control_pipe[1]);
+    hci->control_pipe[0] = mx_message_pipe_create(&hci->control_pipe[1]);
     if (hci->control_pipe[0] < 0) {
         free(hci);
         return ERR_NO_MEMORY;
     }
-    hci->acl_pipe[0] = _magenta_message_pipe_create(&hci->acl_pipe[1]);
+    hci->acl_pipe[0] = mx_message_pipe_create(&hci->acl_pipe[1]);
     if (hci->acl_pipe[0] < 0) {
-        _magenta_handle_close(hci->control_pipe[0]);
-        _magenta_handle_close(hci->control_pipe[1]);
+        mx_handle_close(hci->control_pipe[0]);
+        mx_handle_close(hci->control_pipe[1]);
         free(hci);
         return ERR_NO_MEMORY;
     }

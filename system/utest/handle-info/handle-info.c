@@ -33,23 +33,23 @@
 bool handle_info_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t event = _magenta_event_create(0u);
-    mx_handle_t duped = _magenta_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS);
+    mx_handle_t event = mx_event_create(0u);
+    mx_handle_t duped = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS);
 
-    CHECK(_magenta_handle_get_info(
+    CHECK(mx_handle_get_info(
               event, MX_INFO_HANDLE_VALID, NULL, 0u),
           NO_ERROR, "handle should be valid");
-    CHECK(_magenta_handle_close(event), NO_ERROR, "failed to close the handle");
-    CHECK(_magenta_handle_get_info(
+    CHECK(mx_handle_close(event), NO_ERROR, "failed to close the handle");
+    CHECK(mx_handle_get_info(
               event, MX_INFO_HANDLE_VALID, NULL, 0u),
           ERR_BAD_HANDLE, "handle should be valid");
 
     mx_handle_basic_info_t info = {0};
-    CHECK(_magenta_handle_get_info(
+    CHECK(mx_handle_get_info(
               duped, MX_INFO_HANDLE_BASIC, &info, 4u),
           ERR_NOT_ENOUGH_BUFFER, "bad struct size validation");
 
-    CHECK(_magenta_handle_get_info(
+    CHECK(mx_handle_get_info(
               duped, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
           sizeof(info), "handle should be valid");
 
@@ -63,8 +63,8 @@ bool handle_info_test(void) {
     if (info.props != MX_OBJ_PROP_WAITABLE)
         CHECK(0, 1, "wrong set of properties");
 
-    _magenta_handle_close(event);
-    _magenta_handle_close(duped);
+    mx_handle_close(event);
+    mx_handle_close(duped);
 
     END_TEST;
 }
@@ -72,11 +72,11 @@ bool handle_info_test(void) {
 bool handle_rights_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t event = _magenta_event_create(0u);
-    mx_handle_t duped_ro = _magenta_handle_duplicate(event, MX_RIGHT_READ);
+    mx_handle_t event = mx_event_create(0u);
+    mx_handle_t duped_ro = mx_handle_duplicate(event, MX_RIGHT_READ);
 
     mx_handle_basic_info_t info = {0};
-    CHECK(_magenta_handle_get_info(
+    CHECK(mx_handle_get_info(
               duped_ro, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
           sizeof(info), "handle should be valid");
 
@@ -85,14 +85,14 @@ bool handle_rights_test(void) {
 
     mx_handle_t h;
 
-    h = _magenta_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS);
+    h = mx_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS);
     CHECK(h, ERR_ACCESS_DENIED, "should fail rights check");
 
-    h = _magenta_handle_duplicate(event, MX_RIGHT_EXECUTE | MX_RIGHT_READ);
+    h = mx_handle_duplicate(event, MX_RIGHT_EXECUTE | MX_RIGHT_READ);
     CHECK(h, ERR_INVALID_ARGS, "cannot upgrade rights");
 
-    _magenta_handle_close(event);
-    _magenta_handle_close(duped_ro);
+    mx_handle_close(event);
+    mx_handle_close(duped_ro);
 
     END_TEST;
 }

@@ -1,4 +1,4 @@
-# _magenta_handle_wait_many
+# mx_handle_wait_many
 
 ## NAME
 
@@ -9,11 +9,11 @@ handle_wait_many - wait for signals on multiple handles
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_handle_wait_many(uint32_t count, const mx_handle_t* handles,
-                                      const mx_signals_t* signals,
-                                      mx_time_t timeout,
-                                      mx_signals_t* satisfied_signals,
-                                      mx_signals_t* satisfiable_signals);
+mx_status_t mx_handle_wait_many(uint32_t count, const mx_handle_t* handles,
+                                const mx_signals_t* signals,
+                                mx_time_t timeout,
+                                mx_signals_t* satisfied_signals,
+                                mx_signals_t* satisfiable_signals);
 ```
 
 ## DESCRIPTION

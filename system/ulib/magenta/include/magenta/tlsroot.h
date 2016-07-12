@@ -29,7 +29,7 @@ extern "C" {
 // with a compare-and-swap and take the old value as an index into the
 // slots array.
 //
-// Any user code that calls the _magenta_thread_create system call is
+// Any user code that calls the mx_thread_create system call is
 // responsible for allocating an mx_tls_root_t object with at least 8
 // slots, setting its fields correctly, and placing a pointer to it in
 // the TLS register appropriately for the current architecture.

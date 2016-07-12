@@ -22,19 +22,19 @@
 static mx_status_t pci_claim_device(mx_device_t* dev) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
-    return _magenta_pci_claim_device(device->handle);
+    return mx_pci_claim_device(device->handle);
 }
 
 static mx_status_t pci_enable_bus_master(mx_device_t* dev, bool enable) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
-    return _magenta_pci_enable_bus_master(device->handle, enable);
+    return mx_pci_enable_bus_master(device->handle, enable);
 }
 
 static mx_status_t pci_reset_device(mx_device_t* dev) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
-    return _magenta_pci_reset_device(device->handle);
+    return mx_pci_reset_device(device->handle);
 }
 
 static mx_handle_t pci_map_mmio(mx_device_t* dev,
@@ -48,14 +48,14 @@ static mx_handle_t pci_map_mmio(mx_device_t* dev,
     assert(size != NULL);
 
     mx_handle_t mmio_handle;
-    mmio_handle = _magenta_pci_map_mmio(device->handle, bar_num, cache_policy);
+    mmio_handle = mx_pci_map_mmio(device->handle, bar_num, cache_policy);
     if (mmio_handle < 0)
         return mmio_handle;
 
-    mx_status_t status = _magenta_io_mapping_get_info(mmio_handle, vaddr, size);
+    mx_status_t status = mx_io_mapping_get_info(mmio_handle, vaddr, size);
     if (status != NO_ERROR) {
         assert(status < 0);
-        _magenta_handle_close(mmio_handle);
+        mx_handle_close(mmio_handle);
         return status;
     }
 
@@ -65,11 +65,11 @@ static mx_handle_t pci_map_mmio(mx_device_t* dev,
 static mx_handle_t pci_map_interrupt(mx_device_t* dev, int which_irq) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
-    return _magenta_pci_map_interrupt(device->handle, which_irq);
+    return mx_pci_map_interrupt(device->handle, which_irq);
 }
 
 static mx_status_t pci_wait_interrupt(mx_handle_t handle) {
-    return _magenta_pci_interrupt_wait(handle);
+    return mx_pci_interrupt_wait(handle);
 }
 
 static mx_handle_t pci_get_config(mx_device_t* dev, const pci_config_t** config) {
@@ -78,17 +78,17 @@ static mx_handle_t pci_get_config(mx_device_t* dev, const pci_config_t** config)
     assert(config != NULL);
 
     mx_handle_t cfg_handle;
-    cfg_handle = _magenta_pci_map_config(device->handle);
+    cfg_handle = mx_pci_map_config(device->handle);
     if (cfg_handle < 0)
         return cfg_handle;
 
     void* vaddr = NULL;
     uint64_t size;
 
-    mx_status_t status = _magenta_io_mapping_get_info(cfg_handle, &vaddr, &size);
+    mx_status_t status = mx_io_mapping_get_info(cfg_handle, &vaddr, &size);
     if (status != NO_ERROR) {
         assert(status < 0);
-        _magenta_handle_close(cfg_handle);
+        mx_handle_close(cfg_handle);
         *config = NULL;
         return status;
     }
@@ -102,7 +102,7 @@ mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,
                                     uint32_t* out_max_irqs) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
-    return _magenta_pci_query_irq_mode_caps(device->handle, mode, out_max_irqs);
+    return mx_pci_query_irq_mode_caps(device->handle, mode, out_max_irqs);
 }
 
 mx_status_t pci_set_irq_mode(mx_device_t* dev,
@@ -110,7 +110,7 @@ mx_status_t pci_set_irq_mode(mx_device_t* dev,
                              uint32_t requested_irq_count) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
-    return _magenta_pci_set_irq_mode(device->handle, mode, requested_irq_count);
+    return mx_pci_set_irq_mode(device->handle, mode, requested_irq_count);
 }
 
 pci_protocol_t _pci_protocol = {

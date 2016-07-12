@@ -32,21 +32,21 @@ int reply_handle_test(void) {
     int fd;
     char msg[128];
 
-    p1a = _magenta_message_pipe_create(&p1b);
+    p1a = mx_message_pipe_create(&p1b);
     snprintf(msg, sizeof(msg), "failed to create pipe1 %d\n", p1a);
     ASSERT_GE(p1a, 0, msg);
 
-    p2a = _magenta_message_pipe_create(&p2b);
+    p2a = mx_message_pipe_create(&p2b);
     snprintf(msg, sizeof(msg), "failed to create pipe2 %d\n", p2a);
     ASSERT_GE(p2a, 0, msg);
 
     // send a message and p2b through p1a
-    r = _magenta_message_write(p1a, "hello", 6, &p2b, 1, 0);
+    r = mx_message_write(p1a, "hello", 6, &p2b, 1, 0);
     snprintf(msg, sizeof(msg), "failed to write message+handle to p1a %d\n", r);
     EXPECT_GE(r, 0, msg);
 
     // create helper process and pass p1b across to it
-    p = _magenta_process_create("helper", 7);
+    p = mx_process_create("helper", 7);
     snprintf(msg, sizeof(msg), "couldn't create process %d\n", p);
     ASSERT_GE(p, 0, msg);
 
@@ -58,12 +58,12 @@ int reply_handle_test(void) {
     snprintf(msg, sizeof(msg), "couldn't load reply-handle-helper %d\n", r);
     ASSERT_GE(r, 0, msg);
 
-    r = _magenta_process_start(p, p1b, entry);
+    r = mx_process_start(p, p1b, entry);
     snprintf(msg, sizeof(msg), "process did not start %d\n", r);
     ASSERT_GE(r, 0, msg);
 
     mx_signals_t pending;
-    r = _magenta_handle_wait_one(p2a, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    r = mx_handle_wait_one(p2a, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending, NULL);
     snprintf(msg, sizeof(msg), "error waiting on p2a %d\n", r);
     ASSERT_GE(r, 0, msg);
@@ -75,7 +75,7 @@ int reply_handle_test(void) {
     mx_handle_t h;
     uint32_t dsz = sizeof(data) - 1;
     uint32_t hsz = 1;
-    r = _magenta_message_read(p2a, data, &dsz, &h, &hsz, 0);
+    r = mx_message_read(p2a, data, &dsz, &h, &hsz, 0);
     snprintf(msg, sizeof(msg), "failed to read reply %d\n", r);
     ASSERT_GE(r, 0, msg);
 

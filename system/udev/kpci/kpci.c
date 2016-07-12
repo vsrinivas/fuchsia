@@ -34,7 +34,7 @@ extern pci_protocol_t _pci_protocol;
 
 static mx_status_t kpci_release(mx_device_t* dev) {
     kpci_device_t* device = get_kpci_device(dev);
-    _magenta_handle_close(device->handle);
+    mx_handle_close(device->handle);
     free(device);
     return NO_ERROR;
 }
@@ -46,7 +46,7 @@ static mx_protocol_device_t kpci_device_proto = {
 static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t index) {
     mx_pcie_get_nth_info_t info;
 
-    mx_handle_t handle = _magenta_pci_get_nth_device(index, &info);
+    mx_handle_t handle = mx_pci_get_nth_device(index, &info);
     if (handle < 0) {
         return handle;
     }
@@ -84,7 +84,7 @@ finished:
         if (device)
             free(device);
         if (handle >= 0)
-            _magenta_handle_close(handle);
+            mx_handle_close(handle);
     }
     return status;
 }

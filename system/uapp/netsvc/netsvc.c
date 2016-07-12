@@ -28,7 +28,7 @@ static mx_handle_t loghandle;
 int get_log_line(char* out) {
     char buf[MX_LOG_RECORD_MAX + 1];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
-    if (_magenta_log_read(loghandle, MX_LOG_RECORD_MAX, rec, 0) > 0) {
+    if (mx_log_read(loghandle, MX_LOG_RECORD_MAX, rec, 0) > 0) {
         if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
             rec->datalen--;
         }
@@ -81,14 +81,14 @@ int main(int argc, char** argv) {
     mx_time_t delay = TIME_MS(200);
     logpacket_t pkt;
     int len = 0;
-    if ((loghandle = _magenta_log_create(MX_LOG_FLAG_READABLE)) < 0) {
+    if ((loghandle = mx_log_create(MX_LOG_FLAG_READABLE)) < 0) {
         return -1;
     }
 
     printf("netsvc: main()\n");
     //TODO: non-polling startup once possible
     for (;;) {
-        _magenta_nanosleep(delay);
+        mx_nanosleep(delay);
         if (netifc_open() == 0) {
             break;
         }

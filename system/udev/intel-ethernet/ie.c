@@ -27,7 +27,7 @@
 #include <magenta/syscalls.h>
 #include <ddk/driver.h>
 typedef int status_t;
-#define __nanosleep(x) _magenta_nanosleep(x);
+#define __nanosleep(x) mx_nanosleep(x);
 #define REG32(addr) ((volatile uint32_t *)(uintptr_t)(addr))
 #define writel(v, a) (*REG32(eth->iobase + (a)) = (v))
 #define readl(a) (*REG32(eth->iobase + (a)))

@@ -29,10 +29,10 @@ resources in the uncontested case.
 The magenta futex implementation currently supports three operations:
 
 ```C
-    mx_status_t _magenta_futex_wait(int* value_ptr, int current_value,
+    mx_status_t mx_futex_wait(int* value_ptr, int current_value,
                                     mx_time_t timeout);
-    mx_status_t _magenta_futex_wake(int* value_ptr, uint32_t wake_count);
-    mx_status_t _magenta_futex_requeue(int* value_ptr, uint32_t wake_count,
+    mx_status_t mx_futex_wake(int* value_ptr, uint32_t wake_count);
+    mx_status_t mx_futex_requeue(int* value_ptr, uint32_t wake_count,
                                        int current_value, int* requeue_ptr,
                                        uint32_t requeue_count);
 ```

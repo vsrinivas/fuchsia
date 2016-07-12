@@ -295,7 +295,7 @@ void joinproc(mx_handle_t p) {
     mx_status_t r;
     mx_signals_t satisfied, satisfiable;
 
-    r = _magenta_handle_wait_one(p, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE,
+    r = mx_handle_wait_one(p, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE,
                                  &satisfied, &satisfiable);
     if (r != NO_ERROR) {
         printf("[process(%x): wait failed? %d]\n", p, r);
@@ -304,14 +304,14 @@ void joinproc(mx_handle_t p) {
 
     // read the return code
     mx_process_info_t proc_info;
-    mx_ssize_t ret = _magenta_handle_get_info(p, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
+    mx_ssize_t ret = mx_handle_get_info(p, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
     if (ret != sizeof(proc_info)) {
         printf("[process(%x): handle_get_info failed? %ld]\n", p, ret);
     } else {
         printf("[process(%x): status: %d]\n", p, proc_info.return_code);
     }
 
-    _magenta_handle_close(p);
+    mx_handle_close(p);
 }
 
 void* joiner(void* arg) {
@@ -343,7 +343,7 @@ void command(int argc, char** argv, bool runbg) {
         //       on process exit
         pthread_t t;
         if (pthread_create(&t, NULL, joiner, (void*)((uintptr_t)p))) {
-            _magenta_handle_close(p);
+            mx_handle_close(p);
         }
     } else {
         joinproc(p);
@@ -361,7 +361,7 @@ void console(void) {
     while (readline(&es) == 0) {
         line = es.line;
         if (line[0] == '`') {
-            _magenta_debug_send_command(line + 1, strlen(line) - 1);
+            mx_debug_send_command(line + 1, strlen(line) - 1);
             continue;
         }
         len = strlen(line);

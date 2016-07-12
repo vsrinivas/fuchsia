@@ -34,7 +34,7 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         // round up to page size
         len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-        mx_handle_t vmo = _magenta_vm_object_create(len);
+        mx_handle_t vmo = mx_vm_object_create(len);
         if (vmo < 0)
             return MAP_FAILED;
 
@@ -48,8 +48,8 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         mx_handle_t current_proc_handle = 0; /* TODO: get from TLS */
 
         uintptr_t ptr = (uintptr_t)start;
-        mx_status_t status = _magenta_process_vm_map(current_proc_handle, vmo, 0, len, &ptr, mx_flags);
-        _magenta_handle_close(vmo);
+        mx_status_t status = mx_process_vm_map(current_proc_handle, vmo, 0, len, &ptr, mx_flags);
+        mx_handle_close(vmo);
         if (status < 0) {
             return MAP_FAILED;
         }

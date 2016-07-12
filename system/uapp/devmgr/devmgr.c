@@ -198,7 +198,7 @@ static void dev_ref_release(mx_device_t* dev) {
     dev->refcount--;
     if (dev->refcount == 0) {
         printf("device: %p(%s): ref=0. releasing.\n", dev, safename(dev->name));
-        _magenta_handle_close(dev->event);
+        mx_handle_close(dev->event);
         if (dev->vnode) {
             devfs_remove(dev->vnode);
             dev->vnode = NULL;
@@ -333,7 +333,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     DEFAULT_IF_NULL(ops, ioctl);
 
     // Don't create an event handle if we alredy have one
-    if (dev->event == MX_HANDLE_INVALID && (dev->event = _magenta_event_create(0)) < 0) {
+    if (dev->event == MX_HANDLE_INVALID && (dev->event = mx_event_create(0)) < 0) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, safename(dev->name), dev->event);
         return dev->event;

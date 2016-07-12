@@ -61,7 +61,7 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
     if (hnds_count < 0)
         return ERR_INVALID_ARGS;
     if (proc) {
-        proc = _magenta_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
+        proc = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
         if (proc < 0) {
             cprintf("start_process: proc duplicate failed %d\n", proc);
             return proc;
@@ -101,18 +101,18 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
 
 #undef CHECK_MSGBUF_SIZE
 
-    if ((h0 = _magenta_message_pipe_create(&h1)) < 0) {
+    if ((h0 = mx_message_pipe_create(&h1)) < 0) {
         return h0;
     }
-    if ((r = _magenta_message_write(h1, msgbuf.buffer, p - msgbuf.buffer,
+    if ((r = mx_message_write(h1, msgbuf.buffer, p - msgbuf.buffer,
                                     handles, hnds_count, 0)) < 0) {
         cprintf("start_process: failed to write args %d\n", r);
-        _magenta_handle_close(h0);
-        _magenta_handle_close(h1);
+        mx_handle_close(h0);
+        mx_handle_close(h1);
         return r;
     }
     // we're done with our end now
-    _magenta_handle_close(h1);
+    mx_handle_close(h1);
     return h0;
 }
 
@@ -131,7 +131,7 @@ mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[
     }
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
 
-    if ((p = _magenta_process_create(name, name_len)) < 0) {
+    if ((p = mx_process_create(name, name_len)) < 0) {
         return p;
     }
 
@@ -140,19 +140,19 @@ mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[
     uintptr_t auxv[MAX_AUXV_COUNT];
     r = mxio_load_elf_filename(p, args[0], &auxv_count, auxv, &entry);
     if (r < 0) {
-        _magenta_handle_close(p);
+        mx_handle_close(p);
         return r;
     }
 
     if ((h = mxio_build_procargs(args_count, args, auxv_count, auxv,
                                  hnds_count, handles, ids, 0)) < 0) {
-        _magenta_handle_close(p);
+        mx_handle_close(p);
         return h;
     }
 
-    if ((r = _magenta_process_start(p, h, entry)) < 0) {
-        _magenta_handle_close(h);
-        _magenta_handle_close(p);
+    if ((r = mx_process_start(p, h, entry)) < 0) {
+        mx_handle_close(h);
+        mx_handle_close(p);
         return r;
     }
 
@@ -212,7 +212,7 @@ static ssize_t _elf_read(elf_handle_t* elf, void* buf, uintptr_t off, size_t len
 static mx_status_t _elf_load(elf_handle_t* elf, uintptr_t vaddr, uintptr_t off, size_t len) {
     ctxt* c = elf->arg;
 
-    mx_ssize_t ret = _magenta_vm_object_write(elf->vmo, c->data + off, vaddr - elf->vmo_addr, len);
+    mx_ssize_t ret = mx_vm_object_write(elf->vmo, c->data + off, vaddr - elf->vmo_addr, len);
     if (ret < 0 || (size_t)ret != len) {
         cprintf("failed to write\n");
         return ret;
@@ -257,7 +257,7 @@ static mx_status_t _elf_load_fd(elf_handle_t* elf, uintptr_t vaddr, uintptr_t of
         if (read(c->fd, tmp, xfer) != (ssize_t)xfer)
             return ERR_IO;
 
-        mx_ssize_t ret = _magenta_vm_object_write(elf->vmo, tmp, vaddr - elf->vmo_addr, xfer);
+        mx_ssize_t ret = mx_vm_object_write(elf->vmo, tmp, vaddr - elf->vmo_addr, xfer);
         if (ret < 0 || (size_t)ret != xfer) {
             return ret;
         }

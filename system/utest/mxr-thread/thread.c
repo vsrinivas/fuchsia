@@ -29,7 +29,7 @@ static int thread_entry(void* arg) {
     int thread_number = (int)(intptr_t)arg;
     errno = thread_number;
     printf("thread %d sleeping for .1 seconds\n", thread_number);
-    _magenta_nanosleep(100 * 1000 * 1000);
+    mx_nanosleep(100 * 1000 * 1000);
     EXPECT_EQ(errno, thread_number, "errno changed by someone!");
     threads_done[thread_number] = 1;
     return thread_number;
@@ -72,7 +72,7 @@ bool mxr_thread_test(void) {
     ASSERT_EQ(status, NO_ERROR, "Error while thread detach");
 
     while (!threads_done[5])
-        _magenta_nanosleep(100 * 1000 * 1000);
+        mx_nanosleep(100 * 1000 * 1000);
 
     thread_entry((void*)(intptr_t)6);
     ASSERT_TRUE(threads_done[6], "All threads should have completed")

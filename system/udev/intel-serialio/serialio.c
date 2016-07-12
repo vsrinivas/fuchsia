@@ -67,7 +67,7 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
         break;
     }
 
-    _magenta_handle_close(config_handle);
+    mx_handle_close(config_handle);
     return res;
 }
 

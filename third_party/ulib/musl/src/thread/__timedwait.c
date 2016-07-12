@@ -32,7 +32,7 @@ int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct time
         deadline += to.tv_nsec;
     }
 
-    r = _magenta_futex_wait((void*)addr, val, deadline);
+    r = mx_futex_wait((void*)addr, val, deadline);
     // TODO(kulakowski): These return values probably don't make sense
     // for a magenta call.
     // if (r != EINTR && r != ETIMEDOUT && r != ECANCELED) r = 0;

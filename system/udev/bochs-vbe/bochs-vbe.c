@@ -120,7 +120,7 @@ static void set_hw_mode(bochs_vbe_device_t* dev) {
     bochs_vbe_dispi_write(dev->regs, BOCHS_VBE_DISPI_Y_OFFSET, 0);
     bochs_vbe_dispi_write(dev->regs, BOCHS_VBE_DISPI_ENABLE, 0x41);
 
-    _magenta_set_framebuffer(dev->framebuffer, dev->framebuffer_size, dev->info.format, dev->info.width, dev->info.height, dev->info.stride);
+    mx_set_framebuffer(dev->framebuffer, dev->framebuffer_size, dev->info.format, dev->info.width, dev->info.height, dev->info.stride);
 
 #if TRACE
     xprintf("bochs_vbe_set_hw_mode:\n");
@@ -174,12 +174,12 @@ static mx_status_t bochs_vbe_release(mx_device_t* dev) {
     bochs_vbe_device_t* vdev = get_bochs_vbe_device(dev);
 
     if (vdev->regs) {
-        _magenta_handle_close(vdev->regs_handle);
+        mx_handle_close(vdev->regs_handle);
         vdev->regs_handle = -1;
     }
 
     if (vdev->framebuffer) {
-        _magenta_handle_close(vdev->framebuffer_handle);
+        mx_handle_close(vdev->framebuffer_handle);
         vdev->framebuffer_handle = -1;
     }
 

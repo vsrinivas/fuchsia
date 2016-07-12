@@ -27,7 +27,7 @@
     bool val = (exp);                 \
     EXPECT_FALSE(val, msg);           \
     if (val) {                        \
-        _magenta_thread_exit();       \
+        mx_thread_exit();       \
     }
 
 #define THREAD_ASSERT_EQ(exp1, exp2, msg)    \
@@ -35,7 +35,7 @@
     const AUTO_TYPE_VAR(exp1) val1 = (exp1); \
     EXPECT_EQ(val1, val2, msg);              \
     if (val1 != val2) {                      \
-        _magenta_thread_exit();              \
+        mx_thread_exit();              \
     }
 
 typedef uintptr_t (*register_getter)(mx_handle_t);
@@ -57,7 +57,7 @@ static uintptr_t tpidrro_el0_get(mx_handle_t handle) {
     return value;
 }
 static void tpidrro_el0_set(mx_handle_t handle, uintptr_t value) {
-    mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_TPIDRRO_EL0, &value);
+    mx_status_t status = mx_thread_arch_prctl(handle, ARCH_SET_TPIDRRO_EL0, &value);
     THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
 static register_ops ops[] = {
@@ -76,7 +76,7 @@ static uintptr_t cp15_readonly_get(mx_handle_t handle) {
     return value;
 }
 static void cp15_readonly_set(mx_handle_t handle, uintptr_t value) {
-    mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_CP15_READONLY, &value);
+    mx_status_t status = mx_thread_arch_prctl(handle, ARCH_SET_CP15_READONLY, &value);
     THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
 static uintptr_t cp15_readwrite_get(mx_handle_t handle) {
@@ -104,25 +104,25 @@ static uintptr_t make_valid_value(uintptr_t value) {
 #elif defined(__x86_64__)
 static uintptr_t fs_get(mx_handle_t handle) {
     uintptr_t value;
-    mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_GET_FS, &value);
+    mx_status_t status = mx_thread_arch_prctl(handle, ARCH_GET_FS, &value);
     THREAD_ASSERT_EQ(status, NO_ERROR, "failed to get!");
     return value;
 }
 
 static void fs_set(mx_handle_t handle, uintptr_t value) {
-    mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_FS, &value);
+    mx_status_t status = mx_thread_arch_prctl(handle, ARCH_SET_FS, &value);
     THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
 
 static uintptr_t gs_get(mx_handle_t handle) {
     uintptr_t value;
-    mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_GET_GS, &value);
+    mx_status_t status = mx_thread_arch_prctl(handle, ARCH_GET_GS, &value);
     THREAD_ASSERT_EQ(status, NO_ERROR, "failed to get!");
     return value;
 }
 
 static void gs_set(mx_handle_t handle, uintptr_t value) {
-    mx_status_t status = _magenta_thread_arch_prctl(handle, ARCH_SET_GS, &value);
+    mx_status_t status = mx_thread_arch_prctl(handle, ARCH_SET_GS, &value);
     THREAD_ASSERT_EQ(status, NO_ERROR, "failed to set!");
 }
 
@@ -195,7 +195,7 @@ static int test_entry_point(void* arg) {
 
     // Test bad op.
     uintptr_t value = (uintptr_t)0xabcdabcdabcdabcdull;
-    mx_status_t status = _magenta_thread_arch_prctl(thread, 42, &value);
+    mx_status_t status = mx_thread_arch_prctl(thread, 42, &value);
     ASSERT_EQ(status, ERR_INVALID_ARGS, "failed to reject bad op");
     for (size_t op_idx = 0; op_idx < sizeof(ops) / sizeof(*ops); ++op_idx) {
         uintptr_t current_value = ops[op_idx].get(thread);
@@ -208,7 +208,7 @@ static int test_entry_point(void* arg) {
     // Test bad handle. Assumes 0 is a valid prctl op.
     // uintptr_t original_value = (uintptrt_t)0x5678567856785678ull;
     // value = original_value;
-    // status = _magenta_thread_arch_prctl(MX_HANDLE_INVALID, 0, &value);
+    // status = mx_thread_arch_prctl(MX_HANDLE_INVALID, 0, &value);
     // if (status != ERR_INVALID_ARGS)
     //     fail(__FUNCTION__, __LINE__, "failed to reject bad handle");
     // if (value != original_value) fail(__FUNCTION__, __LINE__, "modified value in invalid call");

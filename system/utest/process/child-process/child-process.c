@@ -24,13 +24,13 @@
 
 static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
                                    mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
-    return _magenta_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
+    return mx_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 static mx_status_t my_write_message(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
                                     const mx_handle_t* handles, uint32_t num_handles,
                                     uint32_t flags) {
-    return _magenta_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
+    return mx_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signals,
@@ -42,10 +42,10 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
 
     if (num_handles == 1u) {
         result =
-            _magenta_handle_wait_one(*handles, *signals, MX_TIME_INFINITE,
+            mx_handle_wait_one(*handles, *signals, MX_TIME_INFINITE,
                                      satisfied_signals, satisfiable_signals);
     } else {
-        result = _magenta_handle_wait_many(num_handles, handles, signals, MX_TIME_INFINITE,
+        result = mx_handle_wait_many(num_handles, handles, signals, MX_TIME_INFINITE,
                                            satisfied_signals, satisfiable_signals);
     }
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
     unittest_printf("child-process: received \"%s\"\n", buffer);
 
     unittest_printf("child-process: sleeping a bit before responding\n");
-    _magenta_nanosleep(200 * 1000 * 1000);
+    mx_nanosleep(200 * 1000 * 1000);
 
     buffer_size = sizeof(buffer);
     snprintf(buffer, buffer_size, "Hi there to you too!");

@@ -4,6 +4,6 @@
 
 _Noreturn void _Exit(int ec) {
     for (;;) {
-        _magenta_exit(ec);
+        mx_exit(ec);
     }
 }

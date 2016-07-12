@@ -1,4 +1,4 @@
-# _magenta_nanosleep
+# mx_nanosleep
 
 ## NAME
 
@@ -9,7 +9,7 @@ nanosleep - high resolution sleep
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_nanosleep(mx_time_t nanoseconds);
+mx_status_t mx_nanosleep(mx_time_t nanoseconds);
 ```
 
 ## DESCRIPTION

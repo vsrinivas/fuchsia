@@ -25,14 +25,14 @@ int main(int argc, char** argv) {
     if ((argc == 2) && (!strcmp(argv[1], "-f"))) {
         tail = true;
     }
-    if ((h = _magenta_log_create(0)) < 0) {
+    if ((h = mx_log_create(0)) < 0) {
         printf("dlog: cannot open log\n");
     }
 
     char buf[MX_LOG_RECORD_MAX];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
     for (;;) {
-        if (_magenta_log_read(h, MX_LOG_RECORD_MAX, rec, tail ? MX_LOG_FLAG_WAIT : 0) > 0) {
+        if (mx_log_read(h, MX_LOG_RECORD_MAX, rec, tail ? MX_LOG_FLAG_WAIT : 0) > 0) {
             char tmp[64];
             snprintf(tmp, 64, "[%05d.%03d] %c ",
                      (int)(rec->timestamp / 1000000000ULL),

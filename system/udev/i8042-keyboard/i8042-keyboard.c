@@ -304,15 +304,15 @@ static int i8042_irq_thread(void* arg) {
     // enable I/O port access
     // TODO
     mx_status_t status;
-    status = _magenta_mmap_device_io(I8042_COMMAND_REG, 1);
+    status = mx_mmap_device_io(I8042_COMMAND_REG, 1);
     if (status)
         return 0;
-    status = _magenta_mmap_device_io(I8042_DATA_REG, 1);
+    status = mx_mmap_device_io(I8042_DATA_REG, 1);
     if (status)
         return 0;
 
     for (;;) {
-        status = _magenta_interrupt_event_wait(device->irq);
+        status = mx_interrupt_event_wait(device->irq);
         if (status == NO_ERROR) {
             // keep handling status on the keyboard controller until no bits are set we care about
             bool retry;
@@ -331,7 +331,7 @@ static int i8042_irq_thread(void* arg) {
                 }
                 // TODO check other status bits here
             } while (retry);
-            _magenta_interrupt_event_complete(device->irq);
+            mx_interrupt_event_complete(device->irq);
         }
     }
     return 0;
@@ -390,10 +390,10 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     }
 
     // enable I/O port access
-    status = _magenta_mmap_device_io(I8042_COMMAND_REG, 1);
+    status = mx_mmap_device_io(I8042_COMMAND_REG, 1);
     if (status)
         goto fail;
-    status = _magenta_mmap_device_io(I8042_DATA_REG, 1);
+    status = mx_mmap_device_io(I8042_DATA_REG, 1);
     if (status)
         goto fail;
 
@@ -421,7 +421,7 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     keyboard_command(&ctr, 0x1f4);
 
     // get interrupt wait handle
-    device->irq = _magenta_interrupt_event_create(ISA_IRQ_KEYBOARD, MX_FLAG_REMAP_IRQ);
+    device->irq = mx_interrupt_event_create(ISA_IRQ_KEYBOARD, MX_FLAG_REMAP_IRQ);
     if (device->irq < 0)
         goto fail;
 

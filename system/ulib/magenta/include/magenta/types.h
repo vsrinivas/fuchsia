@@ -97,12 +97,12 @@ typedef struct mx_exception_report {
     mx_exception_context_t context;
 } mx_exception_report_t;
 
-// The argument to _magenta_mark_exception_handled.
+// The argument to mx_mark_exception_handled.
 typedef uint32_t mx_exception_status_t;
 #define MX_EXCEPTION_STATUS_NOT_HANDLED 0
 #define MX_EXCEPTION_STATUS_RESUME 1
 
-// Valid topics for _magenta_handle_get_info.
+// Valid topics for mx_handle_get_info.
 typedef enum {
     MX_INFO_HANDLE_VALID,
     MX_INFO_HANDLE_BASIC,

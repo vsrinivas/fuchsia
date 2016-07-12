@@ -27,8 +27,8 @@ static int thread_1(void* arg) {
     };
     nanosleep(&t, NULL);
 
-    unittest_printf("thread 1 calling _magenta_thread_exit()\n");
-    _magenta_thread_exit();
+    unittest_printf("thread 1 calling mx_thread_exit()\n");
+    mx_thread_exit();
     return 0;
 }
 
@@ -38,27 +38,27 @@ bool threads_test(void) {
     unittest_printf("Welcome to thread test!\n");
 
     for (int i = 0; i != 4; ++i) {
-        handle = _magenta_thread_create(thread_1, NULL, "thread 1", 9);
+        handle = mx_thread_create(thread_1, NULL, "thread 1", 9);
         ASSERT_GT(handle, 0, "Error while creating thread");
         unittest_printf("thread:%d created handle %d\n", i, handle);
 
-        _magenta_handle_wait_one(handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+        mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
         unittest_printf("thread:%d joined\n", i);
 
-        _magenta_handle_close(handle);
+        mx_handle_close(handle);
     }
 
     unittest_printf("Attempting to create thread with a super long name. This should fail\n");
-    handle = _magenta_thread_create(thread_1, NULL,
+    handle = mx_thread_create(thread_1, NULL,
                                     "01234567890123456789012345678901234567890123456789012345678901234567890123456789", 81);
     ASSERT_LT(handle, 0, "Thread creation should have failed");
-    unittest_printf("_magenta_thread_create returned %u\n", handle);
+    unittest_printf("mx_thread_create returned %u\n", handle);
 
     unittest_printf("Attempting to create thread with a null. This should fail\n");
-    handle = _magenta_thread_create(thread_1, NULL, NULL, 0);
+    handle = mx_thread_create(thread_1, NULL, NULL, 0);
     ASSERT_LT(handle, 0, "Error while creating thread");
-    unittest_printf("_magenta_thread_create returned %u\n", handle);
-    _magenta_handle_close(handle);
+    unittest_printf("mx_thread_create returned %u\n", handle);
+    mx_handle_close(handle);
 
     END_TEST;
 }

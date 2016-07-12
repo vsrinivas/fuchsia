@@ -106,7 +106,7 @@ mx_status_t callback_directory_access(mx_rio_msg_t* msg, void* cookie) {
         // Create another handler server, responsible for dealing with the file.
         mx_handle_t file_handle_client;
         mx_handle_t file_handle_server;
-        file_handle_client = _magenta_message_pipe_create(&file_handle_server);
+        file_handle_client = mx_message_pipe_create(&file_handle_server);
         EXPECT_GT(file_handle_client, 0, "Invalid file handle client");
         EXPECT_EQ(NO_ERROR, mxio_handler_create(file_handle_server,
                                                 callback_file_access,
@@ -130,7 +130,7 @@ bool remoteio_test(void) {
     // First, initialize the message pipes we'll be passing around later.
     mx_handle_t dir_handle_client;
     mx_handle_t dir_handle_server;
-    dir_handle_client = _magenta_message_pipe_create(&dir_handle_server);
+    dir_handle_client = mx_message_pipe_create(&dir_handle_server);
     EXPECT_GT(dir_handle_client, 0, "Invalid dir handle client");
 
     // Next, initialize the directory server.

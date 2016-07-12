@@ -1,4 +1,4 @@
-# _magenta_handle_duplicate
+# mx_handle_duplicate
 
 ## NAME
 
@@ -9,7 +9,7 @@ handle_duplicate - duplicate a handle
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t _magenta_handle_duplicate(mx_handle_t handle, mx_rights_t rights);
+mx_handle_t mx_handle_duplicate(mx_handle_t handle, mx_rights_t rights);
 ```
 
 ## DESCRIPTION

@@ -59,7 +59,7 @@ static int debug_reader(void* arg) {
     uint8_t ch;
     printf("debug_reader()\n");
     for (;;) {
-        if (_magenta_debug_read((void*)&ch, 1) == 1) {
+        if (mx_debug_read((void*)&ch, 1) == 1) {
             mxr_mutex_lock(&fifo.lock);
             if (fifo.head == fifo.tail) {
                 device_state_set(dev, DEV_STATE_READABLE);
@@ -87,7 +87,7 @@ static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, size_t of
 }
 
 static ssize_t console_write(mx_device_t* dev, const void* buf, size_t count, size_t off, void* cookie) {
-    return _magenta_debug_write(buf, count);
+    return mx_debug_write(buf, count);
 }
 
 static mx_protocol_device_t console_device_proto = {

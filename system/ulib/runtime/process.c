@@ -62,7 +62,7 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     memset(pi, 0, sizeof(*pi));
 
     // discover size of message and handles, allocate space
-    r = _magenta_message_read(h, NULL, &dsz, NULL, &hsz, 0);
+    r = mx_message_read(h, NULL, &dsz, NULL, &hsz, 0);
     if (r == ERR_NOT_ENOUGH_BUFFER) {
         int need = dsz + hsz * sizeof(mx_handle_t);
         need = (need + 7) & (~7);
@@ -79,8 +79,8 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     }
 
     // obtain message and handles
-    r = _magenta_message_read(h, msg, &dsz, pi->handle, &hsz, 0);
-    _magenta_handle_close(h);
+    r = mx_message_read(h, msg, &dsz, pi->handle, &hsz, 0);
+    mx_handle_close(h);
     if (r < 0) {
         return pi;
     }

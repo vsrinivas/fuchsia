@@ -61,7 +61,7 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
     len += PAGE_SIZE - 1;
     len &= ~(PAGE_SIZE - 1);
 
-    mx_handle_t vmo = _magenta_vm_object_create(len);
+    mx_handle_t vmo = mx_vm_object_create(len);
     if (vmo < 0)
         return (mx_status_t)vmo;
 
@@ -69,13 +69,13 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
     mx_handle_t self_handle = 0;
     uintptr_t mapping = 0;
     uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-    mx_status_t status = _magenta_process_vm_map(self_handle, vmo, 0, len, &mapping, flags);
+    mx_status_t status = mx_process_vm_map(self_handle, vmo, 0, len, &mapping, flags);
     if (status != NO_ERROR) {
-        _magenta_handle_close(vmo);
+        mx_handle_close(vmo);
         return status;
     }
 
-    _magenta_handle_close(vmo);
+    mx_handle_close(vmo);
     *thread_out = (mxr_thread_t*)mapping;
     return NO_ERROR;
 }
@@ -84,11 +84,11 @@ static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
     // TODO(kulakowski) Track process handle.
     mx_handle_t self_handle = 0;
     uintptr_t mapping = (uintptr_t)thread;
-    return _magenta_process_vm_unmap(self_handle, mapping, 0u);
+    return mx_process_vm_unmap(self_handle, mapping, 0u);
 }
 
 static mx_status_t thread_cleanup(mxr_thread_t* thread, int* return_value_out) {
-    mx_status_t status = _magenta_handle_close(thread->handle);
+    mx_status_t status = mx_handle_close(thread->handle);
     thread->handle = 0;
     if (status != NO_ERROR)
         return status;
@@ -139,7 +139,7 @@ static int thread_trampoline(void* ctx) {
         abort();
     }
 
-    _magenta_thread_exit();
+    mx_thread_exit();
     return 0;
 }
 
@@ -157,7 +157,7 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
     if (name == NULL)
         name = "";
     size_t name_length = strlen(name) + 1;
-    mx_handle_t handle = _magenta_thread_create(thread_trampoline, thread, name, name_length);
+    mx_handle_t handle = mx_thread_create(thread_trampoline, thread, name, name_length);
     if (handle < 0) {
         deallocate_thread_page(thread);
         return (mx_status_t)handle;
@@ -177,7 +177,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread, int* return_value_out) {
     case JOINABLE: {
         thread->state = JOINED;
         mxr_mutex_unlock(&thread->state_lock);
-        mx_status_t status = _magenta_handle_wait_one(thread->handle, MX_SIGNAL_SIGNALED,
+        mx_status_t status = mx_handle_wait_one(thread->handle, MX_SIGNAL_SIGNALED,
                                                       MX_TIME_INFINITE, NULL, NULL);
         if (status != NO_ERROR)
             return status;

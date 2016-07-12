@@ -1,4 +1,4 @@
-# _magenta_message_write
+# mx_message_write
 
 ## NAME
 
@@ -9,10 +9,10 @@ message_write - write a message to a message pipe
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_message_write(mx_handle_t handle,
-                                   void* bytes, uint32_t num_bytes,
-                                   mx_handle_t* handles, uint32_t num_handles,
-                                   uint32_t flags);
+mx_status_t mx_message_write(mx_handle_t handle,
+                             void* bytes, uint32_t num_bytes,
+                             mx_handle_t* handles, uint32_t num_handles,
+                             uint32_t flags);
 ```
 
 ## DESCRIPTION

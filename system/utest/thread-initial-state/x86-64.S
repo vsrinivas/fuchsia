@@ -88,6 +88,6 @@ FUNCTION(thread_entry)
     check_mm %mm7
 
     # TODO: Test ymm registers once they exist
-    jmp _magenta_thread_exit
+    jmp mx_thread_exit
 .Lfail:
     jmp print_fail

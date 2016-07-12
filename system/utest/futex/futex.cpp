@@ -27,7 +27,7 @@
 static bool test_futex_wait_value_mismatch() {
     BEGIN_TEST;
     int futex_value = 123;
-    mx_status_t rc = _magenta_futex_wait(&futex_value, futex_value + 1,
+    mx_status_t rc = mx_futex_wait(&futex_value, futex_value + 1,
                                          MX_TIME_INFINITE);
     ASSERT_EQ(rc, ERR_BUSY, "Futex wait should have reurned busy");
     END_TEST;
@@ -36,7 +36,7 @@ static bool test_futex_wait_value_mismatch() {
 static bool test_futex_wait_timeout() {
     BEGIN_TEST;
     int futex_value = 123;
-    mx_status_t rc = _magenta_futex_wait(&futex_value, futex_value, 0);
+    mx_status_t rc = mx_futex_wait(&futex_value, futex_value, 0);
     ASSERT_EQ(rc, ERR_TIMED_OUT, "Futex wait should have reurned timeout");
     END_TEST;
 }
@@ -44,7 +44,7 @@ static bool test_futex_wait_timeout() {
 static bool test_futex_wait_bad_address() {
     BEGIN_TEST;
     // Check that the wait address is checked for validity.
-    mx_status_t rc = _magenta_futex_wait(nullptr, 123, MX_TIME_INFINITE);
+    mx_status_t rc = mx_futex_wait(nullptr, 123, MX_TIME_INFINITE);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, "Futex wait should have reurned invalid_arg");
     END_TEST;
 }
@@ -103,7 +103,7 @@ private:
         TestThread* thread = reinterpret_cast<TestThread*>(thread_arg);
         thread->state_ = STATE_ABOUT_TO_WAIT;
         mx_status_t rc =
-            _magenta_futex_wait(const_cast<int*>(thread->futex_addr_),
+            mx_futex_wait(const_cast<int*>(thread->futex_addr_),
                                 *thread->futex_addr_, thread->timeout_in_us_);
         if (thread->timeout_in_us_ == MX_TIME_INFINITE) {
             EXPECT_EQ(rc, NO_ERROR, "Error while wait");
@@ -132,7 +132,7 @@ void check_futex_wake(volatile int* futex_addr, int nwake) {
     // success result.
     (*futex_addr)++;
 
-    mx_status_t rc = _magenta_futex_wake(const_cast<int*>(futex_addr), nwake);
+    mx_status_t rc = mx_futex_wake(const_cast<int*>(futex_addr), nwake);
     EXPECT_EQ(rc, NO_ERROR, "error during futex wait");
 }
 
@@ -202,7 +202,7 @@ bool test_futex_wakeup_address() {
 bool test_futex_unqueued_on_timeout() {
     BEGIN_TEST;
     volatile int futex_value = 1;
-    mx_status_t rc = _magenta_futex_wait(const_cast<int*>(&futex_value),
+    mx_status_t rc = mx_futex_wait(const_cast<int*>(&futex_value),
                                          futex_value, 1);
     ASSERT_EQ(rc, ERR_TIMED_OUT, "wait should have timedout");
     TestThread thread(&futex_value);
@@ -258,7 +258,7 @@ bool test_futex_requeue_value_mismatch() {
     BEGIN_TEST;
     int futex_value1 = 100;
     int futex_value2 = 200;
-    mx_status_t rc = _magenta_futex_requeue(&futex_value1, 1, futex_value1 + 1,
+    mx_status_t rc = mx_futex_requeue(&futex_value1, 1, futex_value1 + 1,
                                             &futex_value2, 1);
     ASSERT_EQ(rc, ERR_BUSY, "requeue should have returned busy");
     END_TEST;
@@ -267,7 +267,7 @@ bool test_futex_requeue_value_mismatch() {
 bool test_futex_requeue_same_addr() {
     BEGIN_TEST;
     int futex_value = 100;
-    mx_status_t rc = _magenta_futex_requeue(&futex_value, 1, futex_value,
+    mx_status_t rc = mx_futex_requeue(&futex_value, 1, futex_value,
                                             &futex_value, 1);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, "requeue should have returned invalid args");
     END_TEST;
@@ -285,7 +285,7 @@ bool test_futex_requeue() {
     TestThread thread5(&futex_value1);
     TestThread thread6(&futex_value1);
 
-    mx_status_t rc = _magenta_futex_requeue(
+    mx_status_t rc = mx_futex_requeue(
         const_cast<int*>(&futex_value1), 3, futex_value1,
         const_cast<int*>(&futex_value2), 2);
     ASSERT_EQ(rc, NO_ERROR, "Error in requeue");
@@ -319,7 +319,7 @@ bool test_futex_requeue_unqueued_on_timeout() {
     volatile int futex_value1 = 100;
     volatile int futex_value2 = 200;
     TestThread thread1(&futex_value1, timeout_in_us);
-    mx_status_t rc = _magenta_futex_requeue(
+    mx_status_t rc = mx_futex_requeue(
         const_cast<int*>(&futex_value1), 0, futex_value1,
         const_cast<int*>(&futex_value2), INT_MAX);
     ASSERT_EQ(rc, NO_ERROR, "Error in requeue");
@@ -338,7 +338,7 @@ bool test_futex_requeue_unqueued_on_timeout() {
 }
 
 static void log(const char* str) {
-    uint64_t now = _magenta_current_time();
+    uint64_t now = mx_current_time();
     unittest_printf("[%08llu.%08llu]: %s", now / 1000000000, now % 1000000000, str);
 }
 
@@ -349,14 +349,14 @@ public:
 
     void wait() {
         if (signalled_ == 0) {
-            _magenta_futex_wait(&signalled_, signalled_, MX_TIME_INFINITE);
+            mx_futex_wait(&signalled_, signalled_, MX_TIME_INFINITE);
         }
     }
 
     void signal() {
         if (signalled_ == 0) {
             signalled_ = 1;
-            _magenta_futex_wake(&signalled_, UINT32_MAX);
+            mx_futex_wake(&signalled_, UINT32_MAX);
         }
     }
 
@@ -396,7 +396,7 @@ static bool test_event_signalling() {
     mxr_thread_create(signal_thread2, NULL, "thread 2", &handle2);
     mxr_thread_create(signal_thread3, NULL, "thread 3", &handle3);
 
-    _magenta_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(300 * 1000 * 1000);
     log("signalling event\n");
     event.signal();
 

@@ -1,4 +1,4 @@
-# _magenta_handle_close
+# mx_handle_close
 
 ## NAME
 
@@ -9,7 +9,7 @@ handle_close - close a handle
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_handle_close(mx_handle_t handle);
+mx_status_t mx_handle_close(mx_handle_t handle);
 ```
 
 ## DESCRIPTION

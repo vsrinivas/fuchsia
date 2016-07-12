@@ -53,9 +53,9 @@ io_alloc_t* io_alloc_init(size_t size) {
 
     mx_paddr_t phys;
     void* virt;
-    mx_status_t status = _magenta_alloc_device_memory(size, &phys, &virt);
+    mx_status_t status = mx_alloc_device_memory(size, &phys, &virt);
     if (status) {
-        printf("_magenta_alloc_device_memory failed %d\n", status);
+        printf("mx_alloc_device_memory failed %d\n", status);
         free(ioa);
         return NULL;
     }
@@ -74,7 +74,7 @@ io_alloc_t* io_alloc_init(size_t size) {
 }
 
 void io_alloc_free(io_alloc_t* ioa) {
-    // FIXME (voydanoff) no way to release memory allocated via _magenta_alloc_device_memory
+    // FIXME (voydanoff) no way to release memory allocated via mx_alloc_device_memory
     free(ioa);
 }
 

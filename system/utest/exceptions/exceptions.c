@@ -54,7 +54,7 @@ static int for_real = 0;
 static int done_tests = 0;
 
 static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1) {
-    mx_handle_t status = _magenta_message_pipe_create(handle1);
+    mx_handle_t status = mx_message_pipe_create(handle1);
     if (status < 0)
         return status;
     *handle0 = status;
@@ -67,7 +67,7 @@ static mx_status_t my_thread_create(thread_start_func entry, void* arg,
                                     mx_handle_t* out_handle, const char* name) {
     if (!name)
         name = "";
-    mx_handle_t status = _magenta_thread_create(entry, arg, name, strlen(name) + 1);
+    mx_handle_t status = mx_thread_create(entry, arg, name, strlen(name) + 1);
     if (status < 0)
         return status;
     *out_handle = status;
@@ -83,10 +83,10 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
 
     if (num_handles == 1u) {
         result =
-            _magenta_handle_wait_one(*handles, *signals, MX_TIME_INFINITE,
+            mx_handle_wait_one(*handles, *signals, MX_TIME_INFINITE,
                                      satisfied_signals, satisfiable_signals);
     } else {
-        result = _magenta_handle_wait_many(num_handles, handles, signals, MX_TIME_INFINITE,
+        result = mx_handle_wait_many(num_handles, handles, signals, MX_TIME_INFINITE,
                                            satisfied_signals, satisfiable_signals);
     }
 
@@ -97,12 +97,12 @@ static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signa
 static mx_status_t my_write_message(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
                                     const mx_handle_t* handles, uint32_t num_handles,
                                     uint32_t flags) {
-    return _magenta_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
+    return mx_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
                                    mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
-    return _magenta_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
+    return mx_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
 }
 
 // Architecture specific ways to crash and then recover from the crash.
@@ -163,7 +163,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
 static bool resume_thread_from_exception(mx_handle_t thread, mx_handle_t msg_pipe) {
     if (for_real) {
         uncrash_me(thread);
-        _magenta_mark_exception_handled(thread, MX_EXCEPTION_STATUS_RESUME);
+        mx_mark_exception_handled(thread, MX_EXCEPTION_STATUS_RESUME);
     }
     ASSERT_EQ(send_msg(msg_pipe, MSG_PING), NO_ERROR, "send message failed");
     enum message msg;
@@ -238,15 +238,15 @@ static int thread_func(void* arg) {
             break;
         }
     }
-    _magenta_thread_exit();
+    mx_thread_exit();
     return 0; // sigh
 }
 
 static int watchdog_thread_func(void* arg) {
     for (int i = 0; i < WATCHDOG_DURATION_SECONDS; ++i) {
-        _magenta_nanosleep(1000 * 1000 * 1000);
+        mx_nanosleep(1000 * 1000 * 1000);
         if (done_tests)
-            _magenta_thread_exit();
+            mx_thread_exit();
     }
     // This should kill the entire process, not just this thread.
     exit(1);
@@ -285,7 +285,7 @@ bool exceptions_test(void) {
     // That's it for test setup, now onto the tests.
 
     unittest_printf("\nsystem exception handler basic test\n");
-    status = _magenta_set_system_exception_handler(send.system, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
+    status = mx_set_system_exception_handler(send.system, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
     ASSERT_GE(status, 0, "set_system_exception_handler");
 
     ASSERT_EQ(send_msg(our_pipe, MSG_CRASH), NO_ERROR, "send message failed");
@@ -293,14 +293,14 @@ bool exceptions_test(void) {
     ASSERT_TRUE(resume_thread_from_exception(thread_handle, our_pipe), "");
 
     unittest_printf("\nprocess exception handler basic test\n");
-    status = _magenta_set_exception_handler(0, send.process, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
+    status = mx_set_exception_handler(0, send.process, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
     ASSERT_GE(status, 0, "set_process_exception_handler");
     ASSERT_EQ(send_msg(our_pipe, MSG_CRASH), NO_ERROR, "send message failed");
     ASSERT_TRUE(test_received_exception(&recv, HANDLER_PROCESS), "");
     ASSERT_TRUE(resume_thread_from_exception(thread_handle, our_pipe), "");
 
     unittest_printf("\nthread exception handler basic test\n");
-    status = _magenta_set_exception_handler(thread_handle, send.thread, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
+    status = mx_set_exception_handler(thread_handle, send.thread, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
     ASSERT_GE(status, 0, "set_thread_exception_handler");
 
     ASSERT_EQ(send_msg(our_pipe, MSG_CRASH), NO_ERROR, "send message failed");

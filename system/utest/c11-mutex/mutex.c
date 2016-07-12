@@ -25,7 +25,7 @@
 static mtx_t mutex;
 
 static void xlog(const char* str) {
-    uint64_t now = _magenta_current_time();
+    uint64_t now = mx_current_time();
     unittest_printf("[%08llu.%08llu]: %s", now / 1000000000, now % 1000000000, str);
 }
 
@@ -34,7 +34,7 @@ static int mutex_thread_1(void* arg) {
 
     for (int times = 0; times < 300; times++) {
         mtx_lock(&mutex);
-        _magenta_nanosleep(1000);
+        mx_nanosleep(1000);
         mtx_unlock(&mutex);
     }
 
@@ -47,7 +47,7 @@ static int mutex_thread_2(void* arg) {
 
     for (int times = 0; times < 150; times++) {
         mtx_lock(&mutex);
-        _magenta_nanosleep(2000);
+        mx_nanosleep(2000);
         mtx_unlock(&mutex);
     }
 
@@ -60,7 +60,7 @@ static int mutex_thread_3(void* arg) {
 
     for (int times = 0; times < 100; times++) {
         mtx_lock(&mutex);
-        _magenta_nanosleep(3000);
+        mx_nanosleep(3000);
         mtx_unlock(&mutex);
     }
 
@@ -77,7 +77,7 @@ static int mutex_try_thread_1(void* arg) {
 
     for (int times = 0; times < 300 || !got_lock_1; times++) {
         int status = mtx_trylock(&mutex);
-        _magenta_nanosleep(1000);
+        mx_nanosleep(1000);
         if (status == thrd_success) {
             got_lock_1 = true;
             mtx_unlock(&mutex);
@@ -93,7 +93,7 @@ static int mutex_try_thread_2(void* arg) {
 
     for (int times = 0; times < 150 || !got_lock_2; times++) {
         int status = mtx_trylock(&mutex);
-        _magenta_nanosleep(2000);
+        mx_nanosleep(2000);
         if (status == thrd_success) {
             got_lock_2 = true;
             mtx_unlock(&mutex);
@@ -109,7 +109,7 @@ static int mutex_try_thread_3(void* arg) {
 
     for (int times = 0; times < 100 || !got_lock_3; times++) {
         int status = mtx_trylock(&mutex);
-        _magenta_nanosleep(3000);
+        mx_nanosleep(3000);
         if (status == thrd_success) {
             got_lock_3 = true;
             mtx_unlock(&mutex);

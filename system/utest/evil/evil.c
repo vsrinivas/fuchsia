@@ -40,12 +40,12 @@ static void _unlock(volatile int* lock) {
 
 static void _ftxlock(volatile int* lock) {
     while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE) != 0) {
-        _magenta_futex_wait((int*)lock, 1, MX_TIME_INFINITE);
+        mx_futex_wait((int*)lock, 1, MX_TIME_INFINITE);
     }
 }
 static void _ftxunlock(volatile int* lock) {
     __atomic_store_n(lock, 0, __ATOMIC_RELEASE);
-    _magenta_futex_wake((int*)lock, 1);
+    mx_futex_wake((int*)lock, 1);
 }
 
 #if USE_PTHREAD_MUTEXES
@@ -184,7 +184,7 @@ int writespam(int opt) {
     mx_status_t r;
     uint64_t count = 0;
 
-    if ((p0tx = _magenta_message_pipe_create(&p0rx)) < 0) {
+    if ((p0tx = mx_message_pipe_create(&p0rx)) < 0) {
         printf("cleanup-test: pipe create 0 failed: %d\n", p0tx);
         return -1;
     }
@@ -192,7 +192,7 @@ int writespam(int opt) {
     printf("evil-tests: about to spam data into a pipe\n");
     for (;;) {
         count++;
-        if ((r = _magenta_message_write(p0tx, data, sizeof(data), NULL, 0, 0)) < 0) {
+        if ((r = mx_message_write(p0tx, data, sizeof(data), NULL, 0, 0)) < 0) {
             printf("evil-tests: SUCCESS, writespammer error %d after only %llu writes\n", r, count);
             return 0;
         }
@@ -202,8 +202,8 @@ int writespam(int opt) {
     }
     if (opt == 0) {
         printf("evil-tests: closing the pipe (full of messages)\n");
-        _magenta_handle_close(p0tx);
-        _magenta_handle_close(p0rx);
+        mx_handle_close(p0tx);
+        mx_handle_close(p0rx);
     } else {
         printf("evil-tests: leaving the pipe open (full of messages)\n");
     }
@@ -216,7 +216,7 @@ int handlespam(void) {
 
     printf("evil-tests: about to create all the handles\n");
     for (;;) {
-        if ((p0tx = _magenta_message_pipe_create(&p0rx)) < 0) {
+        if ((p0tx = mx_message_pipe_create(&p0rx)) < 0) {
             printf("evil-tests: SUCCESS, pipe create failed %d after %llu created\n", p0tx, count);
             return 0;
         }

@@ -78,7 +78,7 @@ void devmgr_launch(const char* name, const char* app, const char* device) {
 fail:
     while (n > 0) {
         n--;
-        _magenta_handle_close(hnd[n]);
+        mx_handle_close(hnd[n]);
     }
 }
 

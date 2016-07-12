@@ -1,4 +1,4 @@
-# _magenta_handle_wait_one
+# mx_handle_wait_one
 
 ## NAME
 
@@ -9,10 +9,10 @@ handle_wait_one - wait for signals on a handle
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t _magenta_handle_wait_one(mx_handle_t handle, mx_signals_t signals,
-                                     mx_signals_t* satisfied_signals,
-                                     mx_time timeout,
-                                     mx_signals_t* satisfiable_signals);
+mx_status_t mx_handle_wait_one(mx_handle_t handle, mx_signals_t signals,
+                               mx_signals_t* satisfied_signals,
+                               mx_time timeout,
+                               mx_signals_t* satisfiable_signals);
 ```
 
 ## DESCRIPTION

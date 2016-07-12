@@ -26,5 +26,5 @@ void cprintf(const char* fmt, ...) {
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     buf[sizeof(buf) - 1] = 0;
-    _magenta_debug_write(buf, strlen(buf));
+    mx_debug_write(buf, strlen(buf));
 }

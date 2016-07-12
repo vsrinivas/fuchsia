@@ -23,7 +23,7 @@ static void* do_test(void* arg) {
     int thread_no = *(int*)arg;
     unittest_printf("do_test for thread: %d\n", thread_no);
     errno = -thread_no;
-    _magenta_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(300 * 1000 * 1000);
     unittest_printf("comparing result for: %d\n", thread_no);
     EXPECT_EQ(errno, -thread_no, "Incorrect errno for this thread");
     return NULL;
