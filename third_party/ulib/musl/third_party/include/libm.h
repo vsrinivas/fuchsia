@@ -10,8 +10,7 @@
  * ====================================================
  */
 
-#ifndef _LIBM_H
-#define _LIBM_H
+#pragma once
 
 #include <complex.h>
 #include <endian.h>
@@ -218,5 +217,3 @@ long double __tanl(long double, long double, int);
 /* polynomial evaluation */
 long double __polevll(long double, const long double*, int);
 long double __p1evll(long double, const long double*, int);
-
-#endif

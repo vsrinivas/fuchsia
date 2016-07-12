@@ -1,5 +1,4 @@
-#ifndef _INTERNAL_RELOC_H
-#define _INTERNAL_RELOC_H
+#pragma once
 
 #include <elf.h>
 #include <features.h>
@@ -95,5 +94,3 @@ typedef void (*stage2_func)(unsigned char*, size_t*);
 // stage3_funcs should be __attribute__((noreturn)), but this cannot
 // be expressed in the typedef.
 typedef void (*stage3_func)(size_t*);
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef _PTHREAD_IMPL_H
-#define _PTHREAD_IMPL_H
+#pragma once
 
 #include "atomic.h"
 #include "libc.h"
@@ -150,5 +149,3 @@ void __restore_sigs(void*);
 #define DEFAULT_GUARD_SIZE PAGE_SIZE
 
 #define __ATTRP_C11_THREAD ((void*)(uintptr_t)-1)
-
-#endif

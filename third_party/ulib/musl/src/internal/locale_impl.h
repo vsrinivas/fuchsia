@@ -1,5 +1,4 @@
-#ifndef _LOCALE_IMPL_H
-#define _LOCALE_IMPL_H
+#pragma once
 
 #include "libc.h"
 #include "pthread_impl.h"
@@ -36,5 +35,3 @@ const char* __lctrans_cur(const char*);
 
 #undef MB_CUR_MAX
 #define MB_CUR_MAX (CURRENT_UTF8 ? 4 : 1)
-
-#endif

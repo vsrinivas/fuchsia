@@ -1,5 +1,4 @@
-#ifndef _ATOMIC_H
-#define _ATOMIC_H
+#pragma once
 
 #include <stdint.h>
 
@@ -284,6 +283,4 @@ static inline int a_ctz_l(unsigned long x) {
         return a_ctz_64(x);
     return debruijn32[(x & -x) * 0x076be629 >> 27];
 }
-#endif
-
 #endif

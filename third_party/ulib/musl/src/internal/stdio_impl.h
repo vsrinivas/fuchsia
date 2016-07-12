@@ -1,5 +1,4 @@
-#ifndef _STDIO_IMPL_H
-#define _STDIO_IMPL_H
+#pragma once
 
 #include "libc.h"
 #include "syscall.h"
@@ -96,5 +95,3 @@ void __ofl_unlock(void);
 /* Caller-allocated FILE * operations */
 FILE* __fopen_rb_ca(const char*, FILE*, unsigned char*, size_t);
 int __fclose_ca(FILE*);
-
-#endif

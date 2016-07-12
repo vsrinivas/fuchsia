@@ -1,5 +1,4 @@
-#ifndef _INTERNAL_SYSCALL_H
-#define _INTERNAL_SYSCALL_H
+#pragma once
 
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -64,5 +63,3 @@ long __syscall_ret(unsigned long r);
 
 #define __sys_open(...) __SYSCALL_DISP(__sys_open, , __VA_ARGS__)
 #define sys_open(...) __syscall_ret(__sys_open(__VA_ARGS__))
-
-#endif

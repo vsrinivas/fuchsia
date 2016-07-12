@@ -1,5 +1,4 @@
-#ifndef LOOKUP_H
-#define LOOKUP_H
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -37,5 +36,3 @@ int __lookup_name(struct address buf[static MAXADDRS], char canon[static 256], c
 int __lookup_ipliteral(struct address buf[static 1], const char* name, int family);
 
 int __get_resolv_conf(struct resolvconf*, char*, size_t);
-
-#endif
