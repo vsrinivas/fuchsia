@@ -89,19 +89,13 @@ MODULE_DEFINES += MODULE_SRCS=\"$(subst $(SPACE),_,$(MODULE_SRCS))\"
 MODULE_DEFINES += MODULE_HEADER_DEPS=\"$(subst $(SPACE),_,$(MODULE_HEADER_DEPS))\"
 MODULE_DEFINES += MODULE_TYPE=\"$(subst $(SPACE),_,$(MODULE_TYPE))\"
 
-# Introduce local, libc, system, and dependency include paths and defines
+# Introduce local, libc, system, and dependency include paths
 ifneq (,$(filter userapp userlib,$(MODULE_TYPE)))
 # user app
 MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
 MODULE_COMPILEFLAGS += -Isystem/ulib/system/include
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
-MODULE_COMPILEFLAGS += -Isystem/ulib/global/include
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/include
-MODULE_COMPILEFLAGS += -D_XOPEN_SOURCE=700
-ifeq ($(filter third_party/ulib/musl%,$(MODULE)),)
-# musl has to carefully manipulate this define internally, so don't set it for it.
-MODULE_COMPILEFLAGS += -D_BSD_SOURCE
-endif
 MODULE_COMPILEFLAGS += $(foreach DEP,$(HEADER_MODULE_DEPS),-I$(DEP)/include)
 else
 # kernel module

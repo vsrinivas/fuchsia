@@ -4,7 +4,7 @@
 #define _GNU_SOURCE 1
 #endif
 
-#if defined(_DEFAULT_SOURCE) && !defined(_BSD_SOURCE)
+#if !defined(_BSD_SOURCE)
 #define _BSD_SOURCE 1
 #endif
 
