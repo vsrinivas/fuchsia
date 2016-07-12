@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <errno.h>
-#include <mojo/mojo_string.h>
 #include <runtime/status.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,11 +26,9 @@ int main(int argc, char** argv) {
             exit(ERR_INVALID_ARGS);
         int error = (int)error_long;
         const char* mx_error = mx_strstatus((mx_status_t)error);
-        const char* mojo_error = mojo_strerror((mojo_result_t)error);
         char* posix_error = strerror(error);
         printf("Int value: %d\n", error);
         printf("\tMagenta error: %s\n", mx_error);
-        printf("\tMojo error: %s\n", mojo_error);
         printf("\tPosix error: %s\n", posix_error);
     }
 }

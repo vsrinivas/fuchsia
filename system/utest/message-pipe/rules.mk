@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := message-pipe-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mojo ulib/mxio ulib/unittest
+    ulib/magenta ulib/musl ulib/mxio ulib/unittest
 
 include make/module.mk

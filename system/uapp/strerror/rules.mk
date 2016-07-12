@@ -22,6 +22,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/strerror.c
 
 MODULE_DEPS := \
-    ulib/musl ulib/mojo ulib/mxio ulib/runtime ulib/magenta
+    ulib/musl ulib/mxio ulib/runtime ulib/magenta
 
 include make/module.mk
