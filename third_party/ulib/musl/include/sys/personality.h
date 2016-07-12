@@ -1,5 +1,4 @@
-#ifndef _PERSONALITY_H
-#define _PERSONALITY_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,5 +41,4 @@ int personality(unsigned long);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

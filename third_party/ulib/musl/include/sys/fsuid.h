@@ -1,5 +1,4 @@
-#ifndef _SYS_FSUID_H
-#define _SYS_FSUID_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +14,4 @@ int setfsgid(gid_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

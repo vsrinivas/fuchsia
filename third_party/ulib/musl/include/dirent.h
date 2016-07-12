@@ -1,5 +1,4 @@
-#ifndef _DIRENT_H
-#define _DIRENT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +73,4 @@ int versionsort(const struct dirent**, const struct dirent**);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

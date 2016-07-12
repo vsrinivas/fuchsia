@@ -1,5 +1,4 @@
-#ifndef _FCNTL_H
-#define _FCNTL_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -182,6 +181,4 @@ ssize_t tee(int, int, size_t, unsigned);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

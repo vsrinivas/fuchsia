@@ -1,5 +1,4 @@
-#ifndef _NETINET_TCP_H
-#define _NETINET_TCP_H
+#pragma once
 
 #include <features.h>
 
@@ -196,7 +195,5 @@ struct tcp_md5sig {
     uint32_t __tcpm_pad2;
     uint8_t tcpm_key[TCP_MD5SIG_MAXKEYLEN];
 };
-
-#endif
 
 #endif

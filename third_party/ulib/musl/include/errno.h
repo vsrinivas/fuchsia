@@ -1,5 +1,4 @@
-#ifndef _ERRNO_H
-#define _ERRNO_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,6 +17,4 @@ extern char *program_invocation_short_name, *program_invocation_name;
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

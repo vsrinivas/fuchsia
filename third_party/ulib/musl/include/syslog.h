@@ -1,5 +1,4 @@
-#ifndef _SYSLOG_H
-#define _SYSLOG_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +115,4 @@ typedef struct {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

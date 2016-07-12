@@ -1,5 +1,4 @@
-#ifndef _SETJMP_H
-#define _SETJMP_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +33,4 @@ _Noreturn void longjmp(jmp_buf, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,5 +1,4 @@
-#ifndef _ARPA_NAMESER_H
-#define _ARPA_NAMESER_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -446,6 +445,4 @@ typedef struct {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,5 +1,4 @@
-#ifndef _DLFCN_H
-#define _DLFCN_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +36,4 @@ int dlinfo(void*, int, void*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,5 +1,4 @@
-#ifndef _NETPACKET_PACKET_H
-#define _NETPACKET_PACKET_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +55,4 @@ struct packet_mreq {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

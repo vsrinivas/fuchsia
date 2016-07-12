@@ -1,5 +1,4 @@
-#ifndef _ENDIAN_H
-#define _ENDIAN_H
+#pragma once
 
 #include <features.h>
 
@@ -72,8 +71,6 @@ static __inline uint64_t __bswap64(uint64_t __x) {
 #define htole64(x) __bswap64(x)
 #define le64toh(x) __bswap64(x)
 #define letoh64(x) __bswap64(x)
-#endif
-
 #endif
 
 #endif

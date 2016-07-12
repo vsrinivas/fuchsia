@@ -1,5 +1,4 @@
-#ifndef _THREADS_H
-#define _THREADS_H
+#pragma once
 
 #include <features.h>
 #include <time.h>
@@ -82,6 +81,4 @@ void* tss_get(tss_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

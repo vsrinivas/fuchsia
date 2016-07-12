@@ -1,5 +1,4 @@
-#ifndef _NETINET_IN_H
-#define _NETINET_IN_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -392,6 +391,4 @@ struct ip6_mtuinfo {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

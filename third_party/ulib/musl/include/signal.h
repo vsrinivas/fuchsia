@@ -1,5 +1,4 @@
-#ifndef _SIGNAL_H
-#define _SIGNAL_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -262,6 +261,4 @@ int raise(int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

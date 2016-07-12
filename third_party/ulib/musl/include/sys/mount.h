@@ -1,5 +1,4 @@
-#ifndef _SYS_MOUNT_H
-#define _SYS_MOUNT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,6 +67,4 @@ int umount2(const char*, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

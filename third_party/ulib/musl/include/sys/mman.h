@@ -1,5 +1,5 @@
-#ifndef _SYS_MMAN_H
-#define _SYS_MMAN_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -114,5 +114,4 @@ int shm_unlink(const char*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

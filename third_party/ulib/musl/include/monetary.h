@@ -1,5 +1,4 @@
-#ifndef _MONETARY_H
-#define _MONETARY_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,6 +17,4 @@ ssize_t strfmon_l(char* __restrict, size_t, locale_t, const char* __restrict, ..
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

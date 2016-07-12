@@ -1,5 +1,4 @@
-#ifndef _FENV_H
-#define _FENV_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,5 +22,4 @@ int feupdateenv(const fenv_t*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

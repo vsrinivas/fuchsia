@@ -1,5 +1,4 @@
-#ifndef _NETINET_UDP_H
-#define _NETINET_UDP_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +32,4 @@ struct udphdr {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

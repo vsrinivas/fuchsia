@@ -1,5 +1,4 @@
-#ifndef _WORDEXP_H
-#define _WORDEXP_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,6 +35,4 @@ void wordfree(wordexp_t*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

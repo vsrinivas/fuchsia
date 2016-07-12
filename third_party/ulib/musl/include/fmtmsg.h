@@ -1,5 +1,4 @@
-#ifndef _FMTMSG_H
-#define _FMTMSG_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +41,4 @@ int fmtmsg(long, const char*, int, const char*, const char*, const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

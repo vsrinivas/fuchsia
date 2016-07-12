@@ -1,5 +1,5 @@
-#ifndef _SYS_SELECT_H
-#define _SYS_SELECT_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,5 +46,4 @@ int pselect(int, fd_set* __restrict, fd_set* __restrict, fd_set* __restrict,
 
 #ifdef __cplusplus
 }
-#endif
 #endif

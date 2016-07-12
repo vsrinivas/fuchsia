@@ -1,5 +1,4 @@
-#ifndef _FEATURES_H
-#define _FEATURES_H
+#pragma once
 
 #if defined(_ALL_SOURCE) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE 1
@@ -30,6 +29,4 @@
 #define _Noreturn __attribute__((__noreturn__))
 #else
 #define _Noreturn
-#endif
-
 #endif

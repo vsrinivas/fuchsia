@@ -1,5 +1,4 @@
-#ifndef _MALLOC_H
-#define _MALLOC_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +19,4 @@ size_t malloc_usable_size(void*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

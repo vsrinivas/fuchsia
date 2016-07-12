@@ -1,5 +1,4 @@
-#ifndef _CPIO_H
-#define _CPIO_H
+#pragma once
 
 #define MAGIC "070707"
 
@@ -25,5 +24,3 @@
 #define C_ISLNK 0120000
 #define C_ISCTG 0110000
 #define C_ISREG 0100000
-
-#endif

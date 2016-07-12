@@ -1,5 +1,4 @@
-#ifndef _LINK_H
-#define _LINK_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +50,4 @@ int dl_iterate_phdr(int (*)(struct dl_phdr_info*, size_t, void*), void*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

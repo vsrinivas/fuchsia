@@ -1,5 +1,4 @@
-#ifndef _VALUES_H
-#define _VALUES_H
+#pragma once
 
 #include <limits.h>
 
@@ -35,5 +34,3 @@
 #define FMAXEXP FLT_MAX_EXP
 
 #define BITSPERBYTE CHAR_BIT
-
-#endif

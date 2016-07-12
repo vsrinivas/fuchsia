@@ -1,5 +1,4 @@
-#ifndef _ULIMIT_H
-#define _ULIMIT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,6 +11,4 @@ long ulimit(int, ...);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

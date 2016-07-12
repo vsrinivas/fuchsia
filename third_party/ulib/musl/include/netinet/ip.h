@@ -1,5 +1,4 @@
-#ifndef _NETINET_IP_H
-#define _NETINET_IP_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -193,6 +192,4 @@ struct ip_timestamp {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

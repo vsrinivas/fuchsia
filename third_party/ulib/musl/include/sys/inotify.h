@@ -1,5 +1,4 @@
-#ifndef _SYS_INOTIFY_H
-#define _SYS_INOTIFY_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +51,4 @@ int inotify_rm_watch(int, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

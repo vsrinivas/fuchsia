@@ -1,5 +1,4 @@
-#ifndef _SYS_CACHECTL_H
-#define _SYS_CACHECTL_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,6 +16,4 @@ int _flush_cache(void*, int, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

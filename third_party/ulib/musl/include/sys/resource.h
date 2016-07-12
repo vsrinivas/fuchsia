@@ -1,5 +1,4 @@
-#ifndef _SYS_RESOURCE_H
-#define _SYS_RESOURCE_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +104,4 @@ int prlimit(pid_t, int, const struct rlimit*, struct rlimit*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

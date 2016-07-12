@@ -1,5 +1,4 @@
-#ifndef _TIME_H
-#define _TIME_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,6 +126,4 @@ time_t timegm(struct tm*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

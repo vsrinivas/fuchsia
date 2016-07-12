@@ -1,5 +1,4 @@
-#ifndef _GLOB_H
-#define _GLOB_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +43,4 @@ void globfree(glob_t*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

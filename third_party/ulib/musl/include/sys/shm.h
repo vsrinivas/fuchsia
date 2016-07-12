@@ -1,5 +1,4 @@
-#ifndef _SYS_SHM_H
-#define _SYS_SHM_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +48,4 @@ int shmget(key_t, size_t, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

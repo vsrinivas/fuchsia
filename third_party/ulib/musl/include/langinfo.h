@@ -1,5 +1,4 @@
-#ifndef _LANGINFO_H
-#define _LANGINFO_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,6 +86,4 @@ char* nl_langinfo_l(nl_item, locale_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

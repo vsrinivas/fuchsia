@@ -1,5 +1,5 @@
-#ifndef _SYS_WAIT_H
-#define _SYS_WAIT_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -52,5 +52,4 @@ pid_t wait4(pid_t, int*, int, struct rusage*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

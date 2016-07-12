@@ -1,5 +1,4 @@
-#ifndef _LIBGEN_H
-#define _LIBGEN_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,6 +9,4 @@ char* basename(char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

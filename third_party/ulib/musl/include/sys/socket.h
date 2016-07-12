@@ -1,5 +1,5 @@
-#ifndef _SYS_SOCKET_H
-#define _SYS_SOCKET_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -321,5 +321,4 @@ int sockatmark(int);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

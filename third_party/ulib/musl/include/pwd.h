@@ -1,5 +1,4 @@
-#ifndef _PWD_H
-#define _PWD_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +42,4 @@ int putpwent(const struct passwd*, FILE*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

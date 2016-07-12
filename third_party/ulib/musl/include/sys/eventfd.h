@@ -1,5 +1,4 @@
-#ifndef _SYS_EVENTFD_H
-#define _SYS_EVENTFD_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,5 +20,3 @@ int eventfd_write(int, eventfd_t);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* sys/eventfd.h */

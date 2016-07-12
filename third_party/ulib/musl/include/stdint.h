@@ -1,5 +1,4 @@
-#ifndef _STDINT_H
-#define _STDINT_H
+#pragma once
 
 #define __NEED_int8_t
 #define __NEED_int16_t
@@ -112,6 +111,4 @@ typedef uint64_t uint_least64_t;
 #define UINT64_C(c) c##ULL
 #define INTMAX_C(c) c##LL
 #define UINTMAX_C(c) c##ULL
-#endif
-
 #endif

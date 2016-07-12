@@ -1,5 +1,4 @@
-#ifndef _SYS_UIO_H
-#define _SYS_UIO_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,6 +44,4 @@ ssize_t process_vm_readv(pid_t, const struct iovec*, unsigned long, const struct
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

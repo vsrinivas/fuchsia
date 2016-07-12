@@ -1,5 +1,4 @@
-#ifndef _REGEX_H
-#define _REGEX_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,6 +56,4 @@ size_t regerror(int, const regex_t* __restrict, char* __restrict, size_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

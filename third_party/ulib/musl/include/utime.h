@@ -1,5 +1,4 @@
-#ifndef _UTIME_H
-#define _UTIME_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,6 +17,4 @@ int utime(const char*, const struct utimbuf*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

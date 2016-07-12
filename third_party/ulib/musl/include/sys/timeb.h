@@ -1,5 +1,5 @@
-#ifndef _SYS_TIMEB_H
-#define _SYS_TIMEB_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,5 +18,4 @@ int ftime(struct timeb*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

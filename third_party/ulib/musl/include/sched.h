@@ -1,5 +1,5 @@
-#ifndef _SCHED_H
-#define _SCHED_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -129,5 +129,4 @@ __CPU_op_func_S(AND, &) __CPU_op_func_S(OR, |) __CPU_op_func_S(XOR, ^)
 
 #ifdef __cplusplus
 }
-#endif
 #endif

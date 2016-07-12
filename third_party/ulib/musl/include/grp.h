@@ -1,5 +1,4 @@
-#ifndef _GRP_H
-#define _GRP_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,6 +45,4 @@ int initgroups(const char*, gid_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

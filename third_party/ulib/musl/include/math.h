@@ -1,5 +1,4 @@
-#ifndef _MATH_H
-#define _MATH_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -434,6 +433,4 @@ long double pow10l(long double);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

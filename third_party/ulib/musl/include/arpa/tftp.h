@@ -1,5 +1,5 @@
-#ifndef _ARPA_TFTP_H
-#define _ARPA_TFTP_H
+#pragma once
+
 #define SEGSIZE 512
 #define RRQ 01
 #define WRQ 02
@@ -27,4 +27,3 @@ struct tftphdr {
 #define EBADID 5
 #define EEXISTS 6
 #define ENOUSER 7
-#endif

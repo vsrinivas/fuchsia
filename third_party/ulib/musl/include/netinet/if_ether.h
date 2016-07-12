@@ -1,5 +1,4 @@
-#ifndef _NETINET_IF_ETHER_H
-#define _NETINET_IF_ETHER_H
+#pragma once
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -124,5 +123,3 @@ struct ether_arp {
         (enaddr)[4] = ((uint8_t*)ipaddr)[2];        \
         (enaddr)[5] = ((uint8_t*)ipaddr)[3];        \
     } while (0)
-
-#endif

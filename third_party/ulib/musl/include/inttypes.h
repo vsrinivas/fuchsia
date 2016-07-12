@@ -1,5 +1,4 @@
-#ifndef _INTTYPES_H
-#define _INTTYPES_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -218,6 +217,4 @@ uintmax_t wcstoumax(const wchar_t* __restrict, wchar_t** __restrict, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

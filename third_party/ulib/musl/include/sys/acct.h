@@ -1,5 +1,4 @@
-#ifndef _SYS_ACCT_H
-#define _SYS_ACCT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,6 +66,4 @@ int acct(const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

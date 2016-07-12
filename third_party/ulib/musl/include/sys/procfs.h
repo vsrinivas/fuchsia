@@ -1,5 +1,5 @@
-#ifndef _SYS_PROCFS_H
-#define _SYS_PROCFS_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -60,5 +60,4 @@ typedef struct elf_prpsinfo prpsinfo_t;
 
 #ifdef __cplusplus
 }
-#endif
 #endif

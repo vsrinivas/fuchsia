@@ -1,5 +1,5 @@
-#ifndef _SYS_TIME_H
-#define _SYS_TIME_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -60,5 +60,4 @@ int adjtime(const struct timeval*, struct timeval*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

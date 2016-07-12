@@ -1,5 +1,5 @@
-#ifndef _SYS_SEM_H
-#define _SYS_SEM_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,5 +63,4 @@ int semtimedop(int, struct sembuf*, size_t, const struct timespec*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

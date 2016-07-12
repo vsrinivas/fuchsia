@@ -1,5 +1,4 @@
-#ifndef _FNMATCH_H
-#define _FNMATCH_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,6 +18,4 @@ int fnmatch(const char*, const char*, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

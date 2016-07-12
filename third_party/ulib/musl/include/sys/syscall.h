@@ -1,6 +1,3 @@
-#ifndef _SYS_SYSCALL_H
-#define _SYS_SYSCALL_H
+#pragma once
 
 #include <bits/syscall.h>
-
-#endif

@@ -1,5 +1,5 @@
-#ifndef _SYS_STAT_H
-#define _SYS_STAT_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -109,5 +109,4 @@ int lchmod(const char*, mode_t);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

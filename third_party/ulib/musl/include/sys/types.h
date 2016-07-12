@@ -1,5 +1,5 @@
-#ifndef _SYS_TYPES_H
-#define _SYS_TYPES_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -82,5 +82,4 @@ typedef unsigned long long u_quad_t;
 
 #ifdef __cplusplus
 }
-#endif
 #endif

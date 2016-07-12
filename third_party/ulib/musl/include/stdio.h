@@ -1,5 +1,4 @@
-#ifndef _STDIO_H
-#define _STDIO_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -197,6 +196,4 @@ int fputs_unlocked(const char*, FILE*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

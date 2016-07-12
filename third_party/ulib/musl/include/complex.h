@@ -1,5 +1,4 @@
-#ifndef _COMPLEX_H
-#define _COMPLEX_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,5 +132,4 @@ long double creall(long double complex);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

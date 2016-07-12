@@ -1,5 +1,4 @@
-#ifndef _WCHAR_H
-#define _WCHAR_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -181,6 +180,4 @@ wctype_t wctype(const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

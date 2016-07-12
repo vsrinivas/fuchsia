@@ -1,5 +1,4 @@
-#ifndef _ICONV_H
-#define _ICONV_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,6 +18,4 @@ int iconv_close(iconv_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

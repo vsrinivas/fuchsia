@@ -1,5 +1,4 @@
-#ifndef _IFADDRS_H
-#define _IFADDRS_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +28,4 @@ int getifaddrs(struct ifaddrs** ifap);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

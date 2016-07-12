@@ -1,5 +1,4 @@
-#ifndef _SCSI_SCSI_H
-#define _SCSI_SCSI_H
+#pragma once
 
 #define TEST_UNIT_READY 0x00
 #define REZERO_UNIT 0x01
@@ -145,5 +144,3 @@ struct ccs_modesel_head {
     unsigned char block_length_med;
     unsigned char block_length_lo;
 };
-
-#endif

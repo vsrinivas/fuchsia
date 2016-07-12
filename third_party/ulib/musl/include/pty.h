@@ -1,5 +1,4 @@
-#ifndef _PTY_H
-#define _PTY_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,6 +12,4 @@ int forkpty(int*, char*, const struct termios*, const struct winsize*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

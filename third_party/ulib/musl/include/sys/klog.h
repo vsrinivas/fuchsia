@@ -1,5 +1,4 @@
-#ifndef _SYS_KLOG_H
-#define _SYS_KLOG_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -9,6 +8,4 @@ int klogctl(int, char*, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,5 +1,4 @@
-#ifndef _STRING_H
-#define _STRING_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -98,6 +97,4 @@ char* basename(void);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

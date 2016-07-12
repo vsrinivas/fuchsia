@@ -1,5 +1,4 @@
-#ifndef _ALLOCA_H
-#define _ALLOCA_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,6 +15,4 @@ void* alloca(size_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

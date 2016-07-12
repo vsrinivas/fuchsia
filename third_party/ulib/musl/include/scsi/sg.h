@@ -1,5 +1,4 @@
-#ifndef _SCSI_SG_H
-#define _SCSI_SG_H
+#pragma once
 
 #define SG_DXFER_NONE -1
 #define SG_DXFER_TO_DEV -2
@@ -125,5 +124,3 @@ struct sg_header {
     unsigned other_flags : 10;
     unsigned char sense_buffer[SG_MAX_SENSE];
 };
-
-#endif

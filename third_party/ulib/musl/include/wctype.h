@@ -1,5 +1,4 @@
-#ifndef _WCTYPE_H
-#define _WCTYPE_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +73,4 @@ wctype_t wctype_l(const char*, locale_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,5 +1,5 @@
-#ifndef _SYS_USER_H
-#define _SYS_USER_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,5 +12,4 @@ extern "C" {
 
 #ifdef __cplusplus
 }
-#endif
 #endif

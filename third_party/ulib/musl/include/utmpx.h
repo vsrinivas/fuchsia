@@ -1,5 +1,4 @@
-#ifndef _UTMPX_H
-#define _UTMPX_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,6 +56,4 @@ int utmpxname(const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

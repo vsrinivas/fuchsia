@@ -1,5 +1,4 @@
-#ifndef _SYS_UTSNAME_H
-#define _SYS_UTSNAME_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +23,4 @@ int uname(struct utsname*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

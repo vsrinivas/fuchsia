@@ -1,5 +1,4 @@
-#ifndef _UCHAR_H
-#define _UCHAR_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +21,4 @@ size_t mbrtoc32(char32_t* __restrict, const char* __restrict, size_t, mbstate_t*
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

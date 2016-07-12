@@ -1,5 +1,4 @@
-#ifndef _NET_ETHERNET_H
-#define _NET_ETHERNET_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +47,4 @@ struct ether_header {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

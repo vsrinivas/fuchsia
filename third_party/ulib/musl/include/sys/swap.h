@@ -1,5 +1,4 @@
-#ifndef _SYS_SWAP_H
-#define _SYS_SWAP_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +14,4 @@ int swapoff(const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

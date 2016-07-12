@@ -1,5 +1,4 @@
-#ifndef _NETINET_IP_ICMP_H
-#define _NETINET_IP_ICMP_H
+#pragma once
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -184,6 +183,4 @@ struct icmp {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

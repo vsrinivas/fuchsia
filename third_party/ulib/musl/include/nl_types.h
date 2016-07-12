@@ -1,5 +1,4 @@
-#ifndef _NL_TYPES_H
-#define _NL_TYPES_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,6 +16,4 @@ int catclose(nl_catd);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

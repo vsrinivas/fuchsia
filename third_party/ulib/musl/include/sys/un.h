@@ -1,5 +1,4 @@
-#ifndef _SYS_UN_H
-#define _SYS_UN_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +25,4 @@ size_t strlen(const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

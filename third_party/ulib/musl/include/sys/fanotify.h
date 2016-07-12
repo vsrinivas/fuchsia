@@ -1,5 +1,4 @@
-#ifndef _FANOTIFY_H
-#define _FANOTIFY_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,5 +76,4 @@ int fanotify_mark(int, unsigned, unsigned long long, int, const char*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

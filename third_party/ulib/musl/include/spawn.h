@@ -1,5 +1,4 @@
-#ifndef _SPAWN_H
-#define _SPAWN_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +73,4 @@ int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t*, int, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

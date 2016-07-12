@@ -1,5 +1,4 @@
-#ifndef _ISO646_H
-#define _ISO646_H
+#pragma once
 
 #ifndef __cplusplus
 
@@ -14,7 +13,5 @@
 #define or_eq |=
 #define xor ^
 #define xor_eq ^=
-
-#endif
 
 #endif

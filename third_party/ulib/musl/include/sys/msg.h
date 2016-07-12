@@ -1,5 +1,4 @@
-#ifndef _SYS_MSG_H
-#define _SYS_MSG_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +46,4 @@ struct msgbuf {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

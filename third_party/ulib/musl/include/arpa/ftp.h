@@ -1,5 +1,5 @@
-#ifndef _ARPA_FTP_H
-#define _ARPA_FTP_H
+#pragma once
+
 #define PRELIM 1
 #define COMPLETE 2
 #define CONTINUE 3
@@ -31,5 +31,4 @@ char* modenames[] = {"0", "Stream", "Block", "Compressed"};
 char* strunames[] = {"0", "File", "Record", "Page"};
 char* typenames[] = {"0", "ASCII", "EBCDIC", "Image", "Local"};
 char* formnames[] = {"0", "Nonprint", "Telnet", "Carriage-control"};
-#endif
 #endif

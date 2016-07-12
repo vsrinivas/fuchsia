@@ -1,5 +1,4 @@
-#ifndef _NET_ROUTE_H
-#define _NET_ROUTE_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,6 +113,4 @@ struct in6_rtmsg {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

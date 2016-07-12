@@ -1,5 +1,5 @@
-#ifndef _PTHREAD_H
-#define _PTHREAD_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -229,5 +229,4 @@ int pthread_getattr_np(pthread_t, pthread_attr_t*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

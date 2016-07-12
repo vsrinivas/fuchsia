@@ -1,5 +1,4 @@
-#ifndef _LIMITS_H
-#define _LIMITS_H
+#pragma once
 
 #include <features.h>
 
@@ -150,5 +149,3 @@
 #define _XOPEN_IOV_MAX 16
 #define _XOPEN_NAME_MAX 255
 #define _XOPEN_PATH_MAX 1024
-
-#endif

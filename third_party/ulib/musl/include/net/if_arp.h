@@ -1,6 +1,7 @@
 /* Nonstandard header */
-#ifndef _NET_IF_ARP_H
-#define _NET_IF_ARP_H
+
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -132,5 +133,4 @@ struct arpd_request {
 
 #ifdef __cplusplus
 }
-#endif
 #endif

@@ -1,5 +1,4 @@
-#ifndef _STRINGS_H
-#define _STRINGS_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +32,4 @@ int strncasecmp_l(const char*, const char*, size_t, locale_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

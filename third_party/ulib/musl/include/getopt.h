@@ -1,5 +1,4 @@
-#ifndef _GETOPT_H
-#define _GETOPT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +24,4 @@ int getopt_long_only(int, char* const*, const char*, const struct option*, int*)
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

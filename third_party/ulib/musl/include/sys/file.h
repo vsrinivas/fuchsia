@@ -1,5 +1,5 @@
-#ifndef _SYS_FILE_H
-#define _SYS_FILE_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,5 +17,4 @@ int flock(int, int);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

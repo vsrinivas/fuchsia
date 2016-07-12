@@ -1,5 +1,4 @@
-#ifndef _ELF_H
-#define _ELF_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -2577,6 +2576,4 @@ typedef Elf32_Addr Elf32_Conflict;
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

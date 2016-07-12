@@ -1,5 +1,4 @@
-#ifndef _SYS_TIMES_H
-#define _SYS_TIMES_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,6 +18,4 @@ clock_t times(struct tms*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

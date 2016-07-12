@@ -1,5 +1,4 @@
-#ifndef _SYS_TIMEX_H
-#define _SYS_TIMEX_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,6 +93,4 @@ int clock_adjtime(clockid_t, struct timex*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,5 +1,4 @@
-#ifndef _AR_H
-#define _AR_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +19,4 @@ struct ar_hdr {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

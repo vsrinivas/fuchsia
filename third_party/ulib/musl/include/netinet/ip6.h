@@ -1,5 +1,4 @@
-#ifndef _NETINET_IP6_H
-#define _NETINET_IP6_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -137,6 +136,4 @@ struct ip6_opt_router {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,9 +1,6 @@
-#ifndef _SYS_REG_H
-#define _SYS_REG_H
+#pragma once
 
 #include <limits.h>
 #include <unistd.h>
 
 #include <bits/reg.h>
-
-#endif

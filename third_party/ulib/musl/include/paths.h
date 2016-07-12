@@ -1,5 +1,4 @@
-#ifndef _PATHS_H
-#define _PATHS_H
+#pragma once
 
 #define _PATH_DEFPATH "/usr/local/bin:/bin:/usr/bin"
 #define _PATH_STDPATH "/bin:/usr/bin:/sbin:/usr/sbin"
@@ -27,5 +26,3 @@
 #define _PATH_VARDB "/var/lib/misc/"
 #define _PATH_VARRUN "/var/run/"
 #define _PATH_VARTMP "/var/tmp/"
-
-#endif

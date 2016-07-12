@@ -1,5 +1,4 @@
-#ifndef _SYS_MTIO_H
-#define _SYS_MTIO_H
+#pragma once
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -180,6 +179,4 @@ struct mtconfiginfo {
 #define MT_ST_HPLOADER_OFFSET 10000
 #ifndef DEFTAPE
 #define DEFTAPE "/dev/tape"
-#endif
-
 #endif

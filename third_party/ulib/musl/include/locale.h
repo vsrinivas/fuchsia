@@ -1,5 +1,4 @@
-#ifndef _LOCALE_H
-#define _LOCALE_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,6 +77,4 @@ locale_t uselocale(locale_t);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

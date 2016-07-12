@@ -1,5 +1,5 @@
-#ifndef _SYS_PTRACE_H
-#define _SYS_PTRACE_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -96,5 +96,4 @@ long ptrace(int, ...);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

@@ -1,5 +1,4 @@
-#ifndef _MNTENT_H
-#define _MNTENT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,6 +37,4 @@ char* hasmntopt(const struct mntent*, const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

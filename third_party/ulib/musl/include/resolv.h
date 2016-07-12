@@ -1,5 +1,4 @@
-#ifndef _RESOLV_H
-#define _RESOLV_H
+#pragma once
 
 #include <arpa/nameser.h>
 #include <netinet/in.h>
@@ -138,6 +137,4 @@ int dn_skipname(const unsigned char*, const unsigned char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

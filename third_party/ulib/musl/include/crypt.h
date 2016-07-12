@@ -1,5 +1,4 @@
-#ifndef _CRYPT_H
-#define _CRYPT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +14,4 @@ char* crypt_r(const char*, const char*, struct crypt_data*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

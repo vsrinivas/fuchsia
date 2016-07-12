@@ -1,5 +1,5 @@
-#ifndef _UCONTEXT_H
-#define _UCONTEXT_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,5 +21,4 @@ int swapcontext(struct __ucontext*, const struct __ucontext*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

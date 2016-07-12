@@ -1,5 +1,4 @@
-#ifndef _NET_IF_H
-#define _NET_IF_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,6 +126,4 @@ struct ifconf {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

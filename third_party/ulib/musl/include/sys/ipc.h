@@ -1,5 +1,5 @@
-#ifndef _SYS_IPC_H
-#define _SYS_IPC_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,5 +38,4 @@ key_t ftok(const char*, int);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

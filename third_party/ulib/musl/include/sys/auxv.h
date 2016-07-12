@@ -1,5 +1,4 @@
-#ifndef _SYS_AUXV_H
-#define _SYS_AUXV_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,6 +10,4 @@ unsigned long getauxval(unsigned long);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

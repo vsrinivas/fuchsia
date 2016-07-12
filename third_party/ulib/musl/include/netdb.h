@@ -1,5 +1,4 @@
-#ifndef _NETDB_H
-#define _NETDB_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,6 +149,4 @@ int getservbyname_r(const char*, const char*, struct servent*, char*, size_t, st
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

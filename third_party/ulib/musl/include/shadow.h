@@ -1,5 +1,4 @@
-#ifndef _SHADOW_H
-#define _SHADOW_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +38,4 @@ int ulckpwdf(void);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

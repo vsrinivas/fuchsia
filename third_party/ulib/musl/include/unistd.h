@@ -1,5 +1,4 @@
-#ifndef _UNISTD_H
-#define _UNISTD_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -458,6 +457,4 @@ int eaccess(const char*, int);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

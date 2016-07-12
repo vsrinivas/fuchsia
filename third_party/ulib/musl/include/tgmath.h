@@ -1,5 +1,4 @@
-#ifndef _TGMATH_H
-#define _TGMATH_H
+#pragma once
 
 /*
 the return types are only correct with gcc (__GNUC__)
@@ -260,5 +259,3 @@ so they can be in null pointer constants
 #define tanh(x) __tg_real_complex(tanh, (x))
 #define tgamma(x) __tg_real(tgamma, (x))
 #define trunc(x) __tg_real(trunc, (x))
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef _STDIO_EXT_H
-#define _STDIO_EXT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +28,4 @@ void __fseterr(FILE*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

@@ -1,5 +1,5 @@
-#ifndef _SYS_REBOOT_H
-#define _SYS_REBOOT_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,5 +16,4 @@ int reboot(int);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

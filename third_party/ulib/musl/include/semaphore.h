@@ -1,5 +1,5 @@
-#ifndef _SEMAPHORE_H
-#define _SEMAPHORE_H
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,5 +30,4 @@ int sem_wait(sem_t*);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

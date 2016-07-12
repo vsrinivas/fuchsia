@@ -1,5 +1,4 @@
-#ifndef _STDLIB_H
-#define _STDLIB_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -165,6 +164,4 @@ long double strtold_l(const char* __restrict, char** __restrict, struct __locale
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

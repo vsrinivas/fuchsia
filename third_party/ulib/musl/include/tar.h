@@ -1,5 +1,4 @@
-#ifndef _TAR_H
-#define _TAR_H
+#pragma once
 
 #define TSUID 04000
 #define TSGID 02000
@@ -29,5 +28,3 @@
 
 #define TVERSION "00"
 #define TVERSLEN 2
-
-#endif

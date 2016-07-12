@@ -1,5 +1,4 @@
-#ifndef _STROPTS_H
-#define _STROPTS_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,6 +133,4 @@ int ioctl(int, int, ...);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

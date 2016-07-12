@@ -1,5 +1,4 @@
-#ifndef _FTW_H
-#define _FTW_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,6 +35,4 @@ int nftw(const char*, int (*)(const char*, const struct stat*, int, struct FTW*)
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

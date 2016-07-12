@@ -1,5 +1,4 @@
-#ifndef _SYS_STATFS_H
-#define _SYS_STATFS_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +24,4 @@ int fstatfs(int, struct statfs*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

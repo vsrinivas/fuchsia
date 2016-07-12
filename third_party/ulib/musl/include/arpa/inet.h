@@ -1,5 +1,4 @@
-#ifndef _ARPA_INET_H
-#define _ARPA_INET_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +30,4 @@ in_addr_t inet_netof(struct in_addr);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

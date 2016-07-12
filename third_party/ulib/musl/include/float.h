@@ -1,5 +1,4 @@
-#ifndef _FLOAT_H
-#define _FLOAT_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +46,4 @@ int __flt_rounds(void);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

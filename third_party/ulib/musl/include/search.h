@@ -1,5 +1,4 @@
-#ifndef _SEARCH_H
-#define _SEARCH_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +59,4 @@ void tdestroy(void*, void (*)(void*));
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

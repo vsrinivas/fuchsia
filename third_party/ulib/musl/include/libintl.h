@@ -1,5 +1,4 @@
-#ifndef _LIBINTL_H
-#define _LIBINTL_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +27,4 @@ char* bind_textdomain_codeset(const char*, const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

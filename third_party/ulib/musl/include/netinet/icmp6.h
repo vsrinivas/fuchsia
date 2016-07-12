@@ -1,5 +1,4 @@
-#ifndef _NETINET_ICMP6_H
-#define _NETINET_ICMP6_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -298,6 +297,4 @@ struct nd_opt_home_agent_info {
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif
