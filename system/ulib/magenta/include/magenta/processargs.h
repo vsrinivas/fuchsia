@@ -71,8 +71,8 @@ struct mx_proc_args {
 #define MX_HND_TYPE_MXIO_PIPE 0x12
 #define MX_HND_TYPE_MXIO_EVENT 0x13
 
-// Handle types the mojo library uses
-#define MX_HND_TYPE_MOJO_SHELL 0x100
+// Handle types used by the mojo application model
+#define MX_HND_TYPE_APPLICATION_REQUEST 0x100
 
 // Message pipe for dynamic loader service
 #define MX_HND_TYPE_LOADER_SVC 0x200
