@@ -27,8 +27,8 @@ class BlitShader {
  private:
   UniqueProgram program_;
 
-  GLint source_ = 0;
-  GLint position_ = 0;
+  GLint position_ = -1;
+  GLint source_ = -1;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BlitShader);
 };

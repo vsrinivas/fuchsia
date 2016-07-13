@@ -39,6 +39,8 @@ bool BlitShader::Compile() {
   program_ = MakeUniqueProgram(g_vertex_shader, g_fragment_shader);
   if (!program_)
     return false;
+  position_ = glGetAttribLocation(program_.id(), "a_position");
+  FTL_DCHECK(position_ != -1);
   source_ = glGetUniformLocation(program_.id(), "u_source");
   FTL_DCHECK(source_ != -1);
   return true;
