@@ -64,7 +64,7 @@ mx_signals_t Waiter::FinishWait(event_t* event) {
     return signals_;
 }
 
-bool Waiter::BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uintptr_t key, mx_signals_t signals) {
+bool Waiter::BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals) {
     {
         AutoSpinLock<> lock(&lock_);
         if (!signals) {

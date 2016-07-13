@@ -62,7 +62,7 @@ public:
     mx_signals_t FinishWait(event_t* event);
 
     // Register IO Port for state changes.
-    bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uintptr_t key, mx_signals_t signals);
+    bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
 
     // Cancel a pending wait started with BeginWait.
     bool CancelWait(Handle* handle);
@@ -101,5 +101,5 @@ private:
     utils::SinglyLinkedList<WaitNode> nodes_;
     utils::RefPtr<IOPortDispatcher> io_port_;
     mx_signals_t io_port_signals_;
-    uintptr_t io_port_key_;
+    uint64_t io_port_key_;
 };
