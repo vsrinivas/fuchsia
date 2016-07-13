@@ -50,6 +50,11 @@ class Handle;
 
 class Waiter {
 public:
+    struct State {
+        mx_signals_t signals;
+        mx_signals_t satisfiable;
+    };
+
     Waiter();
 
     Waiter(const Waiter& o) = delete;
@@ -59,7 +64,7 @@ public:
     mx_status_t BeginWait(event_t* event, Handle* handle, mx_signals_t signals);
 
     // End an event-based wait.
-    mx_signals_t FinishWait(event_t* event);
+    State FinishWait(event_t* event);
 
     // Register IO Port for state changes.
     bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
@@ -67,15 +72,12 @@ public:
     // Cancel a pending wait started with BeginWait.
     bool CancelWait(Handle* handle);
 
-    // The object internally calls this method when its state changes.
-    // If there is a matching wait, the associated event will be signaled.
-    bool Signal(mx_signals_t signals) { return Modify(signals, 0u, true); }
-
-    // Call to clear the signal, but not unsignal any events.
-    void ClearSignal(mx_signals_t signals);
-
     // Notify others (possibly waking them) that signals have changed.
-    bool Modify(mx_signals_t set_mask, mx_signals_t clear_mask, bool yield);
+    // Only clearing signals (set_mask to zero) never wakes.
+    bool Satisfied(mx_signals_t set_mask, mx_signals_t clear_mask, bool yield);
+
+    // Setting the satifiable signals never wakes.
+    void Satisfiable(mx_signals_t set_mask, mx_signals_t clear_mask);
 
 private:
     struct WaitNode {
@@ -97,8 +99,15 @@ private:
     bool SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
 
     spin_lock_t lock_;
-    mx_signals_t signals_;
+
+    // Active waiters are elements in |nodes_|.
     utils::SinglyLinkedList<WaitNode> nodes_;
+
+    // mojo-style signaling.
+    mx_signals_t satisfied_signals_;
+    mx_signals_t satisfiable_signals_;
+
+    // io port style signaling.
     utils::RefPtr<IOPortDispatcher> io_port_;
     mx_signals_t io_port_signals_;
     uint64_t io_port_key_;

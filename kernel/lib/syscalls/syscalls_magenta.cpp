@@ -95,7 +95,7 @@ struct WaitHelper {
         return  waiter->BeginWait(event, handle, signals);
     }
 
-    mx_signals_t End(event_t* event) {
+    Waiter::State End(event_t* event) {
         DEBUG_ASSERT(dispatcher);
         auto s = waiter->FinishWait(event);
         dispatcher.reset();
@@ -106,8 +106,8 @@ struct WaitHelper {
 mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
-                                mx_signals_t* satisfied_signals,
-                                mx_signals_t* satisfiable_signals) {
+                                mx_signals_t* _satisfied_signals,
+                                mx_signals_t* _satisfiable_signals) {
     LTRACEF("handle %u\n", handle_value);
 
     event_t event;
@@ -131,9 +131,6 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
             return result;
     }
 
-    uint32_t satisfied = 0u;
-    uint32_t satisfiable = 0u;
-
     lk_time_t t = mx_time_to_lk(timeout);
     if ((timeout > 0ull) && (t == 0u))
         t = 1u;
@@ -141,22 +138,19 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     result = event_wait_timeout(&event, t, true);
 
     // Regardless of wait outcome, we must call FinishWait().
-    satisfiable = wait_helper.End(&event);
-
-    // TODO(cpu): This is incorrect. See MG-32 bug.
-    satisfied = satisfiable;
+    Waiter::State state = wait_helper.End(&event);
 
     if ((result != NO_ERROR) && (result != ERR_TIMED_OUT)) {
         return result;
     }
 
-    if (satisfied_signals) {
-        if (copy_to_user_u32(satisfied_signals, satisfied) != NO_ERROR)
+    if (_satisfied_signals) {
+        if (copy_to_user_u32(_satisfied_signals, state.signals) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
-    if (satisfiable_signals) {
-        if (copy_to_user_u32(satisfiable_signals, satisfiable) != NO_ERROR)
+    if (_satisfiable_signals) {
+        if (copy_to_user_u32(_satisfiable_signals, state.satisfiable) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -203,6 +197,13 @@ mx_status_t sys_handle_wait_many(uint32_t count,
             return ERR_NO_MEMORY;
     }
 
+    utils::unique_ptr<uint32_t[]> satisfiable;
+    if (_satisfiable_signals) {
+        satisfiable.reset(new uint32_t[count]);
+        if (!satisfiable)
+            return ERR_NO_MEMORY;
+    }
+
     event_t event;
     event_init(&event, false, 0);
 
@@ -233,7 +234,9 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     for (size_t ix = 0; ix != count; ++ix) {
         auto s = waiters[ix].End(&event);
         if (satisfied)
-            satisfied[ix] = s;
+            satisfied[ix] = s.signals;
+        if (satisfiable)
+            satisfiable[ix] = s.satisfiable;
     }
 
     if ((result != NO_ERROR) && (result != ERR_TIMED_OUT)) {
@@ -244,9 +247,9 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         if (copy_to_user(_satisfied_signals, satisfied.get(), bytes_size) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
-    // TODO(cpu): This is incorrect. See MG-32 bug.
+
     if (_satisfiable_signals) {
-        if (copy_to_user(_satisfiable_signals, satisfied.get(), bytes_size) != NO_ERROR)
+        if (copy_to_user(_satisfiable_signals, satisfiable.get(), bytes_size) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 

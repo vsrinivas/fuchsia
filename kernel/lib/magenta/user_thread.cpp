@@ -30,6 +30,7 @@ UserThread::UserThread(utils::RefPtr<UserProcess> process, thread_start_routine 
     LTRACE_ENTRY_OBJ;
 
     id_ = process_->GetNextThreadId();
+    waiter_.Satisfiable(MX_SIGNAL_SIGNALED, 0u);
 }
 
 UserThread::~UserThread() {
@@ -181,7 +182,7 @@ void UserThread::Exiting() {
     DEBUG_ASSERT(state_ == State::DYING);
 
     // signal any waiters
-    waiter_.Signal(MX_SIGNAL_SIGNALED);
+    waiter_.Satisfied(MX_SIGNAL_SIGNALED, 0u, true);
 
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);

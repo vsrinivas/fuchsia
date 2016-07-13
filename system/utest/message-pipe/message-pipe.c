@@ -44,7 +44,7 @@ mx_handle_t _pipe[4];
  */
 
 static int reader_thread(void* arg) {
-    unsigned int index = 2;
+    const unsigned int index = 2;
     mx_handle_t* pipe = &_pipe[index];
     mx_status_t status;
     mx_signals_t satisfied[2], satisfiable[2];
@@ -72,14 +72,17 @@ static int reader_thread(void* arg) {
                 closed[1] = true;
         }
     } while (!closed[0] || !closed[1]);
-    mx_handle_close(pipe[0]);
-    mx_handle_close(pipe[1]);
     assert(packets[0] == 3);
     assert(packets[1] == 2);
     mx_thread_exit();
     return 0;
 }
 
+mx_signals_t get_satisfiable_signals(mx_handle_t handle) {
+    mx_signals_t satisfiable = 0u;
+    mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, NULL, &satisfiable);
+    return (status == ERR_TIMED_OUT) ? satisfiable : (mx_signals_t) status;
+}
 
 bool message_pipe_test(void) {
     BEGIN_TEST;
@@ -89,6 +92,9 @@ bool message_pipe_test(void) {
     mx_handle_t h[2];
     status = mx_message_pipe_create(h, 0);
     ASSERT_EQ(status, 0, "error in message pipe create");
+
+    ASSERT_EQ(get_satisfiable_signals(h[0]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(get_satisfiable_signals(h[1]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
 
     _pipe[0] = h[0];
     _pipe[2] = h[1];
@@ -124,10 +130,21 @@ bool message_pipe_test(void) {
 
     mx_handle_close(_pipe[1]);
 
+    ASSERT_EQ(get_satisfiable_signals(_pipe[3]), MX_SIGNAL_READABLE, "");
+
     usleep(1);
     mx_handle_close(_pipe[0]);
 
     mx_handle_wait_one(thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+
+    // Since the the other side of pipe[3] is closed, reading the last message makes
+    // the statisfiable signals to become zero.
+    uint32_t num_bytes = sizeof(data);
+    mx_message_read(_pipe[3], &data, &num_bytes, NULL, 0u, 0u);
+    ASSERT_EQ(get_satisfiable_signals(_pipe[3]), 0u, "");
+
+    mx_handle_close(_pipe[2]);
+    mx_handle_close(_pipe[3]);
 
     END_TEST;
 }

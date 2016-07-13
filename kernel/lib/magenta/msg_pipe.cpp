@@ -15,6 +15,7 @@
 #include <utils/list_utils.h>
 
 namespace {
+
 size_t other_side(size_t side) {
     return side ? 0u : 1u;
 }
@@ -41,6 +42,8 @@ MessagePacket::~MessagePacket() {
 MessagePipe::MessagePipe()
     : dispatcher_alive_{true, true} {
     mutex_init(&lock_);
+    waiter_[0].Satisfiable(MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, 0);
+    waiter_[1].Satisfiable(MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, 0);
 }
 
 MessagePipe::~MessagePipe() {
@@ -59,8 +62,10 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
     dispatcher_alive_[side] = false;
     other_alive = dispatcher_alive_[other];
 
-    if (other_alive)
-        waiter_[other].Signal(MX_SIGNAL_PEER_CLOSED);
+    if (other_alive) {
+        waiter_[other].Satisfied(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE, true);
+        waiter_[other].Satisfiable(0, MX_SIGNAL_WRITABLE);
+    }
 }
 
 status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
@@ -73,7 +78,9 @@ status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
         other_alive = dispatcher_alive_[other];
 
         if (messages_[side].is_empty()) {
-            waiter_[side].ClearSignal(MX_SIGNAL_READABLE);
+            waiter_[side].Satisfied(0, MX_SIGNAL_READABLE, true);
+            if (!other_alive)
+                waiter_[side].Satisfiable(0, MX_SIGNAL_READABLE);
         }
     }
 
@@ -96,7 +103,7 @@ status_t MessagePipe::Write(size_t side, utils::unique_ptr<MessagePacket> msg) {
 
     messages_[other].push_back(msg.release());
 
-    waiter_[other].Signal(MX_SIGNAL_READABLE);
+    waiter_[other].Satisfied(MX_SIGNAL_READABLE, 0, true);
     return NO_ERROR;
 }
 

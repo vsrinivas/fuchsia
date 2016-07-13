@@ -27,22 +27,24 @@ status_t EventDispatcher::Create(uint32_t options, utils::RefPtr<Dispatcher>* di
     return NO_ERROR;
 }
 
-EventDispatcher::EventDispatcher(uint32_t options) {}
+EventDispatcher::EventDispatcher(uint32_t options) {
+    waiter_.Satisfiable(MX_SIGNAL_SIGNALED, 0u);
+}
 
 EventDispatcher::~EventDispatcher() {}
 
 status_t EventDispatcher::SignalEvent() {
-    // TODO(cpu): to signal from IRQ we need a diferent entrypoint that calls Modify(..., false).
-    waiter_.Signal(MX_SIGNAL_SIGNALED);
+    // TODO(cpu): to signal from IRQ we need a diferent entrypoint that calls Satisfied(..., false).
+    waiter_.Satisfied(MX_SIGNAL_SIGNALED, 0, true);
     return NO_ERROR;
 }
 
 status_t EventDispatcher::ResetEvent() {
-    waiter_.ClearSignal(MX_SIGNAL_SIGNALED);
+    waiter_.Satisfied(0, MX_SIGNAL_SIGNALED, true);
     return NO_ERROR;
 }
 
 status_t EventDispatcher::UserSignal(uint32_t set_mask, uint32_t clear_mask) {
-    waiter_.Modify(set_mask, clear_mask, true);
+    waiter_.Satisfied(set_mask, clear_mask, true);
     return NO_ERROR;
 }

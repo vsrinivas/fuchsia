@@ -34,6 +34,8 @@ UserProcess::UserProcess(utils::StringPiece name) {
 
     if (name.length() > 0 && (name.length() < sizeof(name_)))
         strlcpy(name_, name.data(), sizeof(name_));
+
+    waiter_.Satisfiable(MX_SIGNAL_SIGNALED, 0u);
 }
 
 UserProcess::~UserProcess() {
@@ -248,7 +250,7 @@ void UserProcess::SetState(State s) {
 
         // signal waiter
         LTRACEF_LEVEL(2, "signalling waiters\n");
-        waiter_.Signal(MX_SIGNAL_SIGNALED);
+        waiter_.Satisfied(MX_SIGNAL_SIGNALED, 0, true);
     }
 }
 
