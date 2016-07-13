@@ -531,18 +531,20 @@ static bool pcie_allocate_bar(pcie_bar_info_t* info) {
      * range.  In the case of a 64 bit MMIO BAR, if we run out of space in
      * the high-memory MMIO range, try the low memory range as well.
      */
-    uint64_t align_mask, avail, tmp64, align_overhead;
+    uint64_t align_size, avail, alloc_start, align_overhead, real_alloc_start;
     while (true) {
         /* MMIO windows and I/O windows on systems where I/O space is actually
          * memory mapped must be aligned to a page boundary, at least. */
         bool is_io_space = PCIE_HAS_IO_ADDR_SPACE && !info->is_mmio;
         DEBUG_ASSERT(io_range->used <= io_range->io.size);
-        align_mask     = ((info->size >= PAGE_SIZE) || is_io_space)
-                       ? (info->size - 1)
-                       : (PAGE_SIZE  - 1);
+        align_size     = ((info->size >= PAGE_SIZE) || is_io_space)
+                       ? info->size
+                       : PAGE_SIZE;
         avail          = (io_range->io.size - io_range->used);
-        tmp64          = io_range->io.bus_addr + io_range->used;
-        align_overhead = (info->size - (tmp64 & align_mask)) & align_mask;
+
+        alloc_start    = io_range->io.bus_addr + io_range->used;
+        real_alloc_start = ROUNDUP(alloc_start, align_size);
+        align_overhead = real_alloc_start - alloc_start;
 
         if ((avail < align_overhead) ||
            ((avail - align_overhead) < info->size)) {
@@ -573,17 +575,15 @@ static bool pcie_allocate_bar(pcie_bar_info_t* info) {
      * BAR(s) */
     volatile uint32_t* bar_reg = &cfg->base.base_addresses[info->first_bar_reg];
 
-    io_range->used += (size_t)(align_overhead + info->size);
-    tmp64 += align_overhead;
-    tmp64 &= ((uint64_t)0xFFFFFFFF << 32) |
-             ((uint64_t)addr_mask);
+    io_range->used += (size_t)(align_overhead + align_size);
+    DEBUG_ASSERT(!(real_alloc_start & ~addr_mask));
 
-    pcie_write32(bar_reg, (uint32_t)(tmp64 & 0xFFFFFFFF) | (pcie_read32(bar_reg) & ~addr_mask));
+    pcie_write32(bar_reg, (uint32_t)(real_alloc_start & 0xFFFFFFFF) | (pcie_read32(bar_reg) & ~addr_mask));
     if (info->is_64bit)
-        pcie_write32(bar_reg + 1, (uint32_t)(tmp64 >> 32));
+        pcie_write32(bar_reg + 1, (uint32_t)(real_alloc_start >> 32));
 
     /* Success!  Fill out the info structure and we are done. */
-    info->bus_addr     = tmp64;
+    info->bus_addr     = real_alloc_start;
     info->is_allocated = true;
     return true;
 }
