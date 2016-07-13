@@ -100,8 +100,10 @@ if [ "$GRAPHICS" -eq 0 ]; then
     ARGS+=" -nographic"
 else
     ARGS+=" -serial stdio"
-    if [ "$ARCH" != "x86-64" ]; then
-        # PC already has a vga framebuffer
+    if [ "$ARCH" = "x86-64" ]; then
+        # Enable Bochs VBE device, which Magenta has a device for
+        ARGS+=" -vga std"
+    else
         ARGS+=" -device virtio-gpu-device"
     fi
 fi
