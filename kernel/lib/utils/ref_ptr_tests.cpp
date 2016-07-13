@@ -107,8 +107,44 @@ static bool ref_ptr_test(void* context) {
 
     END_TEST;
 }
+
+static bool ref_ptr_compare_test(void* context) {
+    BEGIN_TEST;
+    using RefCallPtr = utils::RefPtr<RefCallCounter>;
+
+    RefCallCounter obj1, obj2;
+    RefCallPtr ptr1 = utils::AdoptRef<RefCallCounter>(&obj1);
+    RefCallPtr ptr2 = utils::AdoptRef<RefCallCounter>(&obj2);
+    RefCallPtr also_ptr1 = ptr1;
+    RefCallPtr null_ref_ptr;
+
+    EXPECT_TRUE (ptr1 == ptr1, "");
+    EXPECT_FALSE(ptr1 != ptr1, "");
+
+    EXPECT_FALSE(ptr1 == ptr2, "");
+    EXPECT_TRUE (ptr1 != ptr2, "");
+
+    EXPECT_TRUE (ptr1 == also_ptr1, "");
+    EXPECT_FALSE(ptr1 != also_ptr1, "");
+
+    EXPECT_TRUE (ptr1 != null_ref_ptr, "");
+    EXPECT_TRUE (ptr1 != nullptr, "");
+    EXPECT_TRUE (nullptr != ptr1, "");
+    EXPECT_FALSE(ptr1 == null_ref_ptr, "");
+    EXPECT_FALSE(ptr1 == nullptr, "");
+    EXPECT_FALSE(nullptr == ptr1, "");
+
+    EXPECT_TRUE (null_ref_ptr == nullptr, "");
+    EXPECT_FALSE(null_ref_ptr != nullptr, "");
+    EXPECT_TRUE (nullptr == null_ref_ptr, "");
+    EXPECT_FALSE(nullptr != null_ref_ptr, "");
+
+    END_TEST;
+}
+
 } //namespace
 
 UNITTEST_START_TESTCASE(ref_ptr_tests)
 UNITTEST("Ref Pointer", ref_ptr_test)
+UNITTEST("Ref Pointer Comparison", ref_ptr_compare_test)
 UNITTEST_END_TESTCASE(ref_ptr_tests, "refptrtests", "Ref Pointer Tests", NULL, NULL);

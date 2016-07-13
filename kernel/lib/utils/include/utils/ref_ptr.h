@@ -97,6 +97,10 @@ public:
         return !!ptr_;
     }
 
+    // Comparison against nullptr operators (of the form, myptr == nullptr).
+    bool operator==(decltype(nullptr)) const { return (ptr_ == nullptr); }
+    bool operator!=(decltype(nullptr)) const { return (ptr_ != nullptr); }
+
     bool operator ==(const RefPtr<T>& other) const { return ptr_ == other.ptr_; }
     bool operator !=(const RefPtr<T>& other) const { return ptr_ != other.ptr_; }
 
@@ -114,6 +118,17 @@ private:
     }
     T* ptr_;
 };
+
+// Comparison against nullptr operator (of the form, nullptr == myptr)
+template <typename T>
+static inline bool operator==(decltype(nullptr), const RefPtr<T>& ptr) {
+    return (ptr.get() == nullptr);
+}
+
+template <typename T>
+static inline bool operator!=(decltype(nullptr), const RefPtr<T>& ptr) {
+    return (ptr.get() != nullptr);
+}
 
 // Constructs a RefPtr from a fresh object that has not been referenced before.
 // Use like:
