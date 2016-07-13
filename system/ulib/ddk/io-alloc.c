@@ -16,6 +16,7 @@
 #include <ddk/io-alloc.h>
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -91,6 +92,12 @@ void* io_calloc(io_alloc_t* ioa, size_t count, size_t size) {
     return result;
 }
 
+static bool block_splits_page(uintptr_t ptr, size_t size) {
+    uintptr_t start_page = ptr & ~(PAGE_SIZE - 1);
+    uintptr_t end_page = (ptr + size - 1) & ~(PAGE_SIZE - 1);
+    return start_page != end_page;
+}
+
 void* io_memalign(io_alloc_t* ioa, size_t align, size_t size) {
     void* result = NULL;
 
@@ -113,6 +120,13 @@ void* io_memalign(io_alloc_t* ioa, size_t align, size_t size) {
         // compute aligned address past block header
         uintptr_t ptr = (uintptr_t)block + sizeof(io_block_header_t);
         ptr = (ptr + align - 1) & -align;
+
+        if (size <= PAGE_SIZE && block_splits_page(ptr, size)) {
+            // align to next page if this block would span page boundaries
+            // FIXME - this is a place where best fit might work better than first fit
+            ptr = (ptr + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+        }
+
         uintptr_t block_end = (uintptr_t)block + block_size;
         size_t aligned_block_size = block_end - ptr;
 
