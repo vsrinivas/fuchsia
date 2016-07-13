@@ -71,11 +71,11 @@ if [[ ! -f "${SDK_STAMP_PATH}" ]] || [[ "${SDK_HASH}" != "$(cat "${SDK_STAMP_PAT
   echo "${SDK_HASH}" > "${SDK_STAMP_PATH}"
 fi
 
-readonly MKBOOTFS_PATH="${SCRIPT_ROOT}/mkbootfs"
+readonly MKBOOTFS_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/mkbootfs"
 readonly MKBOOTFS_STAMP_PATH="${MKBOOTFS_PATH}.stamp"
 readonly MKBOOTFS_SOURCE="${SCRIPT_ROOT}/../magenta/system/tools/mkbootfs.c"
 readonly MKBOOTFS_HASH="$(cd ${SCRIPT_ROOT}/../magenta && git rev-parse HEAD)"
-if [[ ! -f "${MKBOOTFS_STAMP_PATH}" || "${MKBOOTFS_HASH}" != "$(cat ${MKBOOTFS_STAMP_PATH})" ]]; then
+if [[ ! -f "${MKBOOTFS_PATH}" || ! -f "${MKBOOTFS_STAMP_PATH}" || "${MKBOOTFS_HASH}" != "$(cat ${MKBOOTFS_STAMP_PATH})" ]]; then
     echo "Building mkbootfs..."
     rm -f "${MKBOOTFS_PATH}"
     gcc "${MKBOOTFS_SOURCE}" -o "${MKBOOTFS_PATH}"
