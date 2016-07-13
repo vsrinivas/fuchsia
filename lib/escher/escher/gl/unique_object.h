@@ -17,7 +17,7 @@ template <ObjectDeleter Delete>
 class UniqueObject {
  public:
   UniqueObject() = default;
-  ~UniqueObject() = default;
+  ~UniqueObject() { Reset(); }
 
   UniqueObject(UniqueObject<Delete>&& other) : id_(other.id_) { other.id_ = 0; }
 
