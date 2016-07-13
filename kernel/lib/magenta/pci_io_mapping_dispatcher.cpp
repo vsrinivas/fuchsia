@@ -82,12 +82,16 @@ status_t PciIoMappingDispatcher::CreateBarMapping(
     char tag[32];
     snprintf(tag, sizeof(tag), "bar%u", bar_num);
 
+    // make sure the BAR mapping is at least a page. The pcie driver should already have
+    // allocated BAR addresses on a page boundary.
+    uint64_t aligned_size = ROUNDUP(info->size, PAGE_SIZE);
+
     // Go ahead and create the I/O Mapping object.  If this fails, remember to
     // release our cache policy reference.
     status = Create(device,
                     tag,
                     static_cast<paddr_t>(info->bus_addr),
-                    static_cast<size_t>(info->size),
+                    static_cast<size_t>(aligned_size),
                     0 /* vmm flags */,
                     cache_policy |
                     ARCH_MMU_FLAG_PERM_NO_EXECUTE |
