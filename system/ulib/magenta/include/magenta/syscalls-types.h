@@ -148,9 +148,9 @@ typedef struct mx_log_record {
 #define MX_LOG_FLAG_WAIT      0x80000000
 #define MX_LOG_FLAG_READABLE  0x40000000
 
-
 // Defines and structures for mx_io_port_*()
 typedef struct mx_io_packet {
+    uint64_t key;
     mx_time_t timestamp;
     mx_size_t bytes;
     mx_signals_t signals;
@@ -158,9 +158,12 @@ typedef struct mx_io_packet {
 } mx_io_packet_t;
 
 typedef struct mx_user_packet {
+    uint64_t key;
     uint64_t param[3];
 } mx_user_packet_t;
 
+#define MX_IOPORT_FLAG_USER 1
+#define MX_IOPORT_FLAG_IO 2
 #define MX_IOPORT_OPT_128_SLOTS   0
 #define MX_IOPORT_OPT_1K_SLOTS    1
 

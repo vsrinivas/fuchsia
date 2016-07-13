@@ -9,8 +9,7 @@ io_port_wait - wait for a packet in an IO port
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_io_port_wait(mx_handle_t handle, intptr_t* key,
-                            void* packet, mx_size_t size);
+mx_status_t mx_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size);
 ```
 
 ## DESCRIPTION
@@ -28,8 +27,9 @@ Unlike **mx_wait_one**() and **mx_wait_many**() only one waiting thread is
 released (per available packet) which makes IO ports amenable to be serviced
 by thread pools.
 
-If *key* is zero or a positive value, the *packet* is of type **mx_user_packet_t**
-If *key* is a negative value, the *packet* is of type **mx_io_packet_t**.
+The *key* field in the packet is the *key* that was in the packet as send
+via **mx_io_port_queue**(), or the *key* that was provided to **mx_io_port_bind**()
+when the binding was made.
 
 ## RETURN VALUE
 
@@ -45,9 +45,11 @@ not be waited upon.
 
 ## NOTES
 
-Only kernel itself can queue packets with negative *key* values.
-Positive *key* values are associated with user-mode queued packets via
-**io_port_queue**().
+Being able to determine which type of packet has been received (**mx_io_packet_t**
+vs **mx_user_packet_t**) depends on using suitably unique keys when binding or
+queueing packets.
+
+## SEE ALSO
 
 [io_port_create](io_port_create.md).
 [io_port_queue](io_port_queue.md).

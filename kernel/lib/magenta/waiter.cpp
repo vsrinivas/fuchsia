@@ -64,7 +64,7 @@ mx_signals_t Waiter::FinishWait(event_t* event) {
     return signals_;
 }
 
-bool Waiter::BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, intptr_t key, mx_signals_t signals) {
+bool Waiter::BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uintptr_t key, mx_signals_t signals) {
     {
         AutoSpinLock<> lock(&lock_);
         if (!signals) {
@@ -156,8 +156,8 @@ int Waiter::SignalComplete_NoLock() {
 
 bool Waiter::SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals) {
     IOP_Packet packet ={
-        io_port_key_,
         {
+            io_port_key_,
             current_time_hires(),
             0u,                     //  TODO(cpu): support bytes (for pipes)
             signals,

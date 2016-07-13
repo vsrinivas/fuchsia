@@ -1134,13 +1134,10 @@ mx_handle_t sys_io_port_create(uint32_t options) {
     return hv;
 }
 
-mx_status_t sys_io_port_queue(mx_handle_t handle, intptr_t key, const void* packet, mx_size_t size) {
+mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     IOP_Packet iop;
-
-    if (key < 0)
-        return ERR_INVALID_ARGS;
 
     if (size < sizeof(iop.u))
         return ERR_INVALID_ARGS;
@@ -1162,11 +1159,10 @@ mx_status_t sys_io_port_queue(mx_handle_t handle, intptr_t key, const void* pack
     if (magenta_copy_from_user(packet, &iop.u, sizeof(iop.u)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    iop.key = key;
     return ioport->Queue(&iop);
 }
 
-mx_status_t sys_io_port_wait(mx_handle_t handle, intptr_t* key, void* packet, mx_size_t size) {
+mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     IOP_Packet iop;
@@ -1174,7 +1170,7 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, intptr_t* key, void* packet, mx
     if (size < sizeof(iop.u))
         return ERR_INVALID_ARGS;
 
-    if (!key)
+    if (!packet)
         return ERR_INVALID_ARGS;
 
     auto up = UserProcess::GetCurrent();
@@ -1195,23 +1191,17 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, intptr_t* key, void* packet, mx
     if (status < 0)
         return status;
 
-    if (copy_to_user_iptr(key, iop.key) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-
     if (copy_to_user(packet, &iop.u, sizeof(iop.u)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
 }
 
-mx_status_t sys_io_port_bind(mx_handle_t handle, intptr_t key, mx_handle_t source, mx_signals_t signals) {
+mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, mx_signals_t signals) {
     LTRACEF("handle %d source %d\n", handle, source);
 
     auto up = UserProcess::GetCurrent();
     uint32_t rights = 0;
-
-    if (key >= 0)
-        return ERR_INVALID_ARGS;
 
     utils::RefPtr<Dispatcher> iop_d;
     if (!up->GetDispatcher(handle, &iop_d, &rights))
