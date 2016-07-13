@@ -19,6 +19,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
+#include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
@@ -99,6 +100,9 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
     msg.hcount = MXIO_MAX_HANDLES + 1;
     uint32_t dsz = sizeof(msg);
     if ((r = mx_message_read(h, &msg, &dsz, msg.handle, &msg.hcount, 0)) < 0) {
+        if (r == ERR_BAD_STATE) {
+            return ERR_DISPATCHER_NO_WORK;
+        }
         return r;
     }
 

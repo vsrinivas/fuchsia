@@ -45,4 +45,7 @@ void mxio_dispatcher_run(mxio_dispatcher_t* md);
 // add a pipe and handler to a dispatcher
 mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, void* cookie);
 
+// dispatcher callback return code that there were no messages to read
+#define ERR_DISPATCHER_NO_WORK -9999
+
 __END_CDECLS

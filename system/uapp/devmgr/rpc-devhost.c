@@ -153,6 +153,9 @@ mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
     uint32_t dsz = sizeof(msg);
     uint32_t hcount = 1;
     if ((r = mx_message_read(h, &msg, &dsz, &hnd, &hcount, 0)) < 0) {
+        if (r == ERR_BAD_STATE) {
+            return ERR_DISPATCHER_NO_WORK;
+        }
         return r;
     }
     if (dsz != sizeof(msg)) {
