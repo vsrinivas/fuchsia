@@ -43,6 +43,14 @@ ifeq ($(MODULE_TYPE),)
 GLOBAL_INCLUDES += $(MODULE_SRCDIR)/include
 endif
 
+# configure the module install path for 'usertest' and 'userapp' modules
+ifeq ($(MODULE_TYPE),usertest)
+MODULE_TYPE := userapp
+MODULE_INSTALL_PATH := test
+else ifeq ($(MODULE_TYPE),userapp)
+MODULE_INSTALL_PATH := bin
+endif
+
 # expand deps to canonical paths
 MODULE_DEPS := $(foreach d,$(MODULE_DEPS),$(call modname-make-canonical,$(d)))
 MODULE_LIBS := $(foreach d,$(MODULE_LIBS),$(call modname-make-canonical,$(d)))
@@ -184,7 +192,7 @@ MODULE_$(MODULE)_OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
-USER_MANIFEST_LINES += bin/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
+USER_MANIFEST_LINES += $(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 
 else ifeq ($(MODULE_TYPE),userlib)
 MODULE_$(MODULE)_SOLIBS := $(MODULE_LIBS)

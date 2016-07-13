@@ -234,7 +234,6 @@ static void mxc_fail_test(list_node_t* failures, const char* name, int cause, in
     list_add_tail(failures, &failure->node);
 }
 
-#define TESTNAME_SUFFIX "-test"
 enum {
     FAILED_TO_LAUNCH,
     FAILED_TO_WAIT,
@@ -247,24 +246,15 @@ static int mxc_runtests(int argc, char** argv) {
     int total_count = 0;
     int failed_count = 0;
 
-    const char* dirn = "/boot/bin";
+    const char* dirn = "/boot/test";
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
         printf("error: cannot open '%s'\n", dirn);
         return -1;
     }
-    size_t test_suffix_len = sizeof(TESTNAME_SUFFIX) - 1;
 
     struct dirent* de;
     while ((de = readdir(dir)) != NULL) {
-        size_t len = strlen(de->d_name);
-        if (len < test_suffix_len) {
-            continue;
-        }
-        char* suffix = de->d_name + len - test_suffix_len;
-        if (strncmp(suffix, TESTNAME_SUFFIX, test_suffix_len)) {
-            continue;
-        }
         total_count++;
 
         printf(
@@ -272,7 +262,7 @@ static int mxc_runtests(int argc, char** argv) {
             "RUNNING TEST: %s\n\n",
             de->d_name);
         char name[4096];
-        snprintf(name, sizeof(name), "/boot/bin/%s", de->d_name);
+        snprintf(name, sizeof(name), "/boot/test/%s", de->d_name);
         char* argv[] = {name};
         mx_handle_t handle = mxio_start_process(name, 1, argv);
         if (handle < 0) {
