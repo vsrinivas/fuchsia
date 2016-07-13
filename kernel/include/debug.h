@@ -24,14 +24,22 @@
 
 __BEGIN_CDECLS
 
+typedef int(hexdump_print_fn_t)(const char* fmt, ...);
+
 #if !DISABLE_DEBUG_OUTPUT
 
 /* Obtain the panic file descriptor. */
 FILE *get_panic_fd(void);
 
 /* dump memory */
-void hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr_start);
-void hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr_start);
+void hexdump_very_ex(const void *ptr,
+                     size_t len,
+                     uint64_t disp_addr_start,
+                     hexdump_print_fn_t* pfn);
+void hexdump8_very_ex(const void *ptr,
+                      size_t len,
+                      uint64_t disp_addr_start,
+                      hexdump_print_fn_t* pfn);
 
 #else
 
@@ -39,10 +47,26 @@ void hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr_start);
 static inline FILE *get_panic_fd(void) { return NULL; }
 
 /* dump memory */
-static inline void hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr_start) { }
-static inline void hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr_start) { }
+static inline void hexdump_very_ex(const void *ptr,
+                                   size_t len,
+                                   uint64_t disp_addr_start,
+                                   hexdump_print_fn_t* pfn) { }
+static inline void hexdump8_very_ex(const void *ptr,
+                                    size_t len,
+                                    uint64_t disp_addr_start,
+                                    hexdump_print_fn_t* pfn) { }
 
 #endif /* DISABLE_DEBUG_OUTPUT */
+
+static inline void hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr_start)
+{
+    hexdump_very_ex(ptr, len, disp_addr_start, _printf);
+}
+
+static inline void hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr_start)
+{
+    hexdump8_very_ex(ptr, len, disp_addr_start, _printf);
+}
 
 static inline void hexdump(const void *ptr, size_t len)
 {

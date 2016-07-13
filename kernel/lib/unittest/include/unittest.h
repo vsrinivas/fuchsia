@@ -89,26 +89,19 @@
 #include <compiler.h>
 #include <trace.h>
 
-#define PRINT_BUFFER_SIZE (512)
-
 __BEGIN_CDECLS
-
-/*
- * Type for unit test result Output
- */
-typedef void (*test_output_func)(const char* line, int len, void* arg);
 
 /*
  * Printf dedicated to the unittest library
  * the default output is the printf
  */
-void unittest_printf(const char* format, ...);
+int unittest_printf(const char* format, ...);
 
 /*
- * Function to set the callback for printing
- * the unit test output
+ * Function to set the FILE target for printing
+ * the unit test output.
  */
-void unittest_set_output_function(test_output_func fun, void* arg);
+void unittest_set_output_file_target(FILE* target);
 
 /*
  * Macros to format the error string

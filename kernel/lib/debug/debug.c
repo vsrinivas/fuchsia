@@ -87,7 +87,7 @@ FILE *get_panic_fd(void)
     return &panic_fd;
 }
 
-void hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr)
+void hexdump_very_ex(const void *ptr, size_t len, uint64_t disp_addr, hexdump_print_fn_t* pfn)
 {
     addr_t address = (addr_t)ptr;
     size_t count;
@@ -100,59 +100,59 @@ void hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr)
         size_t s = ROUNDUP(MIN(len - count, 16), 4);
         size_t i;
 
-        printf(((disp_addr + len) > 0xFFFFFFFF)
+        pfn(((disp_addr + len) > 0xFFFFFFFF)
                ? "0x%016llx: "
                : "0x%08llx: ", disp_addr + count);
 
         for (i = 0; i < s / 4; i++) {
             u.buf[i] = ((const uint32_t *)address)[i];
-            printf("%08x ", u.buf[i]);
+            pfn("%08x ", u.buf[i]);
         }
         for (; i < 4; i++) {
-            printf("         ");
+            pfn("         ");
         }
-        printf("|");
+        pfn("|");
 
         for (i=0; i < 16; i++) {
             char c = u.cbuf[i];
             if (i < s && isprint(c)) {
-                printf("%c", c);
+                pfn("%c", c);
             } else {
-                printf(".");
+                pfn(".");
             }
         }
-        printf("|\n");
+        pfn("|\n");
         address += 16;
     }
 }
 
-void hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr)
+void hexdump8_very_ex(const void *ptr, size_t len, uint64_t disp_addr, hexdump_print_fn_t* pfn)
 {
     addr_t address = (addr_t)ptr;
     size_t count;
     size_t i;
 
     for (count = 0 ; count < len; count += 16) {
-        printf(((disp_addr + len) > 0xFFFFFFFF)
+        pfn(((disp_addr + len) > 0xFFFFFFFF)
                ? "0x%016llx: "
                : "0x%08llx: ", disp_addr + count);
 
         for (i=0; i < MIN(len - count, 16); i++) {
-            printf("%02hhx ", *(const uint8_t *)(address + i));
+            pfn("%02hhx ", *(const uint8_t *)(address + i));
         }
 
         for (; i < 16; i++) {
-            printf("   ");
+            pfn("   ");
         }
 
-        printf("|");
+        pfn("|");
 
         for (i=0; i < MIN(len - count, 16); i++) {
             char c = ((const char *)address)[i];
-            printf("%c", isprint(c) ? c : '.');
+            pfn("%c", isprint(c) ? c : '.');
         }
 
-        printf("\n");
+        pfn("\n");
         address += 16;
     }
 }

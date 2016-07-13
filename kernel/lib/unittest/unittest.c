@@ -20,61 +20,43 @@
 #include <string.h>
 #include <unittest.h>
 
-/**
- * \brief Default function to dump unit test results
- *
- * \param[in] line is the buffer to dump
- * \param[in] len is the length of the buffer to dump
- * \param[in] arg can be any kind of arguments needed to dump the values
- */
-static void default_printf (const char *line, int len, void *arg)
-{
-    printf ("%s", line);
-}
-
-// Default output function is the printf
-static test_output_func out_func = default_printf;
-// Buffer the argument to be sent to the output function
-static void *out_func_arg = NULL;
+// Default output FILE is stdout
+static FILE* output_target = stdout;
 
 /**
  * \brief Function called to dump results
  *
  * This function will call the out_func callback
  */
-void unittest_printf (const char *format, ...)
+int unittest_printf (const char *format, ...)
 {
-    static char print_buffer[PRINT_BUFFER_SIZE];
+    int ret = 0;
 
-    va_list argp;
-    va_start (argp, format);
-
-    if (out_func != NULL) {
-        // Format the string
-        vsnprintf(print_buffer, PRINT_BUFFER_SIZE, format, argp);
-        out_func (print_buffer, PRINT_BUFFER_SIZE, out_func_arg);
+    if (output_target) {
+        va_list argp;
+        va_start (argp, format);
+        ret = vfprintf(output_target, format, argp);
+        va_end (argp);
     }
 
-    va_end (argp);
+    return ret;
 }
 
 bool expect_bytes_eq(const uint8_t *expected, const uint8_t *actual, size_t len,
                      const char *msg)
 {
     if (memcmp(expected, actual, len)) {
-        printf("%s. expected\n", msg);
-        hexdump8(expected, len);
-        printf("actual\n");
-        hexdump8(actual, len);
+        unittest_printf("%s. expected\n", msg);
+        hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
+        unittest_printf("actual\n");
+        hexdump8_very_ex(actual, len, (uint64_t)((addr_t)actual), unittest_printf);
         return false;
     }
     return true;
 }
 
-void unittest_set_output_function (test_output_func fun, void *arg)
-{
-    out_func = fun;
-    out_func_arg = arg;
+void unittest_set_output_file_target(FILE* target) {
+    output_target = target;
 }
 
 #if defined(WITH_LIB_CONSOLE)
@@ -149,10 +131,10 @@ bool run_unittest(const unittest_testcase_registration_t* testcase) {
     }
     snprintf(fmt_string, sizeof(fmt_string), "  %%-%zus : ", max_namelen);
 
-    printf("%s : Running %zu test%s...\n",
-           testcase->name,
-           testcase->test_cnt,
-           testcase->test_cnt == 1 ? "" : "s");
+    unittest_printf("%s : Running %zu test%s...\n",
+                    testcase->name,
+                    testcase->test_cnt,
+                    testcase->test_cnt == 1 ? "" : "s");
 
     void* context = NULL;
     status_t init_res = testcase->init ? testcase->init(&context) : NO_ERROR;
@@ -178,21 +160,21 @@ bool run_unittest(const unittest_testcase_registration_t* testcase) {
             printf(fmt_string, test->name ? test->name : "");
         }
 
-        printf("%s (%lld.%03lld mSec)\n",
-               good ? "PASSED" : "FAILED",
-               test_runtime / 1000,
-               test_runtime % 1000);
+        unittest_printf("%s (%lld.%03lld mSec)\n",
+                        good ? "PASSED" : "FAILED",
+                        test_runtime / 1000,
+                        test_runtime % 1000);
 
     }
 
     lk_bigtime_t testcase_runtime = current_time_hires() - testcase_start;
 
-    printf("%s : %sll tests passed (%zu/%zu) in %lld.%03lld mSec\n",
-           testcase->name,
-           passed != testcase->test_cnt ? "Not a" : "A",
-           passed, testcase->test_cnt,
-           testcase_runtime / 1000,
-           testcase_runtime % 1000);
+    unittest_printf("%s : %sll tests passed (%zu/%zu) in %lld.%03lld mSec\n",
+                    testcase->name,
+                    passed != testcase->test_cnt ? "Not a" : "A",
+                    passed, testcase->test_cnt,
+                    testcase_runtime / 1000,
+                    testcase_runtime % 1000);
 
     return passed == testcase->test_cnt;
 }
@@ -233,10 +215,10 @@ static int run_unittests(int argc, const cmd_args* argv)
     }
 
     if (!run_all && !chosen) {
-        printf("Test case \"%s\" not found!\n", casename);
+        unittest_printf("Test case \"%s\" not found!\n", casename);
         list_cases();
     } else {
-        printf("Passed %zu/%zu test case%s\n", passed, chosen, chosen == 1 ? "" : "s");
+        unittest_printf("Passed %zu/%zu test case%s\n", passed, chosen, chosen == 1 ? "" : "s");
     }
 
     return 0;
