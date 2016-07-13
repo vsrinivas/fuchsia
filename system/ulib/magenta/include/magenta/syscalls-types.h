@@ -162,8 +162,6 @@ typedef struct mx_user_packet {
     uint64_t param[3];
 } mx_user_packet_t;
 
-#define MX_IOPORT_FLAG_USER 1
-#define MX_IOPORT_FLAG_IO 2
 #define MX_IOPORT_OPT_128_SLOTS   0
 #define MX_IOPORT_OPT_1K_SLOTS    1
 
