@@ -11,6 +11,7 @@ static_library("ftl") {
 
   sources = [
     "arraysize.h",
+    "memory/make_unique.h",
     "debug/debugger.cc",
     "debug/debugger.h",
     "logging.cc",

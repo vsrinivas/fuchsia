@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("mtl_config") {
+  include_dirs = [ ".." ]
+}
+
+static_library("mtl") {
+  public_configs = [ ":mtl_config" ]
+
+  sources = [
+    "unique_handle.cc",
+    "unique_handle.h",
+  ]
+}
+
+executable("mtl_unittests") {
+  sources = [
+    "unique_handle_unittest.cc",
+    "test/run_all_unittests.cc",
+  ]
+
+  deps = [
+    ":mtl",
+    "//third_party/gtest",
+  ]
+}

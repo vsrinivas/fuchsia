@@ -5,5 +5,6 @@
 group("escher") {
   deps = [
     "//escher/ftl:ftl_unittests",
+    "//escher/mtl:mtl_unittests",
   ]
 }
