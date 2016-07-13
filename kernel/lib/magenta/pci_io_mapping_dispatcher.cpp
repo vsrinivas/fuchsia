@@ -35,11 +35,13 @@ status_t PciIoMappingDispatcher::Create(
     // Initialize the mapping
     utils::RefPtr<Dispatcher> disp = utils::AdoptRef<Dispatcher>(pim_disp);
     status_t status = pim_disp->Init(name, paddr, size, vmm_flags, arch_mmu_flags);
-    if (status != NO_ERROR)
+    if (status != NO_ERROR) {
+        pim_disp->Close();
         return status;
+    }
 
     // Success!  Stash the results.
-    *out_dispatcher = disp;
+    *out_dispatcher = utils::move(disp);
     *out_rights     = IoMappingDispatcher::kDefaultRights;
     return NO_ERROR;
 }
