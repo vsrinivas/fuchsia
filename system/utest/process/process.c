@@ -21,6 +21,7 @@
 
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
+#include <unittest/test-utils.h>
 #include <unittest/unittest.h>
 
 static mx_handle_t my_process_create(const char* name, uint32_t name_len) {
@@ -46,88 +47,11 @@ static mx_status_t my_process_start(mx_handle_t process, mx_handle_t handle, uin
     return mx_process_start(process, handle, entry);
 }
 
-static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signals,
-                           uint32_t num_handles, uint32_t* result_index,
-                           mx_time_t deadline,
-                           mx_signals_t* satisfied_signals,
-                           mx_signals_t* satisfiable_signals) {
-    mx_status_t result;
-
-    if (num_handles == 1u) {
-        result =
-            mx_handle_wait_one(*handles, *signals, MX_TIME_INFINITE,
-                                     satisfied_signals, satisfiable_signals);
-    } else {
-        result = mx_handle_wait_many(num_handles, handles, signals, MX_TIME_INFINITE,
-                                           satisfied_signals, satisfiable_signals);
-    }
-
-    // from mx_wait_*: TODO(cpu): implement |result_index|, see MG-33 bug.
-    return result;
-}
-
-static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1) {
-    mx_handle_t h[2];
-
-    mx_status_t result = mx_message_pipe_create(h, 0);
-    if (result < 0)
-        return result;
-    *handle0 = h[0];
-    *handle1 = h[1];
-    return NO_ERROR;
-}
-
-static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
-                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
-    return mx_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
-}
-
-static mx_status_t my_write_message(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
-                                    const mx_handle_t* handles, uint32_t num_handles,
-                                    uint32_t flags) {
-    return mx_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
-}
-
-static mx_status_t my_close(mx_handle_t handle) {
-    return mx_handle_close(handle);
-}
-
-static mx_status_t my_process_get_info(mx_handle_t handle, mx_process_info_t* info) {
-    mx_ssize_t ret = mx_handle_get_info(handle, MX_INFO_PROCESS, info, sizeof(*info));
-    if (ret < 0)
-        return ret;
-    else if (ret != sizeof(*info))
-        return ERR_INVALID_ARGS;
-    else
-        return NO_ERROR;
-}
-
-static bool wait_readable(mx_handle_t handle) {
-    mx_signals_t satisfied_signals, satisfiable_signals;
-    mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-    mx_status_t status = my_wait(&handle, &signals, 1, NULL, MX_TIME_INFINITE,
-                                 &satisfied_signals, &satisfiable_signals);
-    ASSERT_EQ(status, NO_ERROR, "process-test: Error in wait");
-    ASSERT_NEQ(satisfied_signals & MX_SIGNAL_READABLE, 0u,
-               "process-test: my_wait peer closed");
-
-    return true;
-}
-
-static mx_status_t wait_signalled(mx_handle_t handle) {
-    mx_signals_t satisfied_signals, satisfiable_signals;
-    mx_signals_t signals = MX_SIGNAL_SIGNALED;
-    mx_status_t status = my_wait(&handle, &signals, 1, NULL, MX_TIME_INFINITE,
-                                 &satisfied_signals, &satisfiable_signals);
-    return status;
-}
-
 bool process_test(void) {
     BEGIN_TEST;
     mx_handle_t child_handle, pipe1, pipe2;
 
-    mx_status_t status = my_create_message_pipe(&pipe1, &pipe2);
-    ASSERT_EQ(status, NO_ERROR, "process-test: my_create_message_pipe failed");
+    tu_message_pipe_create(&pipe1, &pipe2);
     unittest_printf("process-test: created message pipe: %u %u\n", pipe1, pipe2);
 
     static const char child_name[] = "child-process";
@@ -137,33 +61,33 @@ bool process_test(void) {
     ASSERT_GE(child_handle, 0, "child handle invalid");
 
     uintptr_t entry;
-    status = my_process_load(child_handle, "/boot/bin/child-process", &entry);
+    mx_status_t status = my_process_load(child_handle, "/boot/bin/child-process", &entry);
     unittest_printf("process-test: my_process_load returned %d\n", status);
     if (status != NO_ERROR) {
-        my_close(pipe1);
-        my_close(child_handle);
+        tu_handle_close(pipe1);
+        tu_handle_close(child_handle);
         ASSERT_TRUE(false, "error loading child process");
     }
 
     status = my_process_start(child_handle, pipe2, entry);
     unittest_printf("process-test: my_process_start returned %d\n", status);
     if (status != NO_ERROR) {
-        my_close(pipe1);
-        my_close(child_handle);
+        tu_handle_close(pipe1);
+        tu_handle_close(child_handle);
         ASSERT_TRUE(false, "error starting child process");
     }
 
     char buffer[64];
     uint32_t buffer_size = sizeof(buffer);
     snprintf(buffer, buffer_size, "Hi there!");
-    status = my_write_message(pipe1, buffer, buffer_size, NULL, 0, 0);
+    status = mx_message_write(pipe1, buffer, buffer_size, NULL, 0, 0);
     unittest_printf("process-test: my_write_message returned %d\n", status);
 
-    ASSERT_TRUE(wait_readable(pipe1), "Error while waiting to read");
+    ASSERT_TRUE(tu_wait_readable(pipe1), "pipe1 closed");
 
     buffer_size = sizeof(buffer);
     memset(buffer, 0, sizeof(buffer));
-    status = my_read_message(pipe1, buffer, &buffer_size, NULL, NULL, 0);
+    status = mx_message_read(pipe1, buffer, &buffer_size, NULL, NULL, 0);
     unittest_printf("process-test: my_read_message returned %d\n", status);
     unittest_printf("process-test: received \"%s\"\n", buffer);
     ASSERT_BYTES_EQ((uint8_t*)buffer, (uint8_t*)"Hi there to you too!", buffer_size,
@@ -171,17 +95,14 @@ bool process_test(void) {
 
     unittest_printf("process-test: done\n");
 
-    my_close(pipe1);
+    tu_handle_close(pipe1);
 
-    mx_process_info_t info;
-    ASSERT_EQ(wait_signalled(child_handle), NO_ERROR, "error while waiting for child to exit");
+    tu_wait_signalled(child_handle);
 
-    status = my_process_get_info(child_handle, &info);
-    ASSERT_EQ(status, NO_ERROR, "Error while getting process info");
+    int return_code = tu_process_get_return_code(child_handle);
+    ASSERT_EQ(return_code, 1234, "Invalid child process return code");
 
-    ASSERT_EQ(info.return_code, 1234, "Invalid child process return code");
-
-    my_close(child_handle);
+    tu_handle_close(child_handle);
 
     END_TEST;
 }

@@ -20,11 +20,13 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/all-tests.c \
+    $(LOCAL_DIR)/test-utils.c \
     $(LOCAL_DIR)/unittest.c \
     $(LOCAL_DIR)/hexdump.c
 
 MODULE_DEPS += \
     ulib/musl \
-    ulib/magenta
+    ulib/magenta \
+    ulib/runtime
 
 include make/module.mk

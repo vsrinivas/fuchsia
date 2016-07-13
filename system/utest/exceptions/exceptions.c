@@ -13,15 +13,13 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <magenta/syscalls.h>
-#include <unittest/unittest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#define WATCHDOG_DURATION_SECONDS 2
-#define WATCHDOG_DURATION_NANOSECONDS ((int64_t)WATCHDOG_DURATION_SECONDS * 1000 * 1000 * 1000)
+#include <magenta/syscalls.h>
+#include <unittest/test-utils.h>
+#include <unittest/unittest.h>
 
 enum handler_kind {
     HANDLER_THREAD,
@@ -53,62 +51,6 @@ static int for_real = 0;
 // Set to non-zero when done, disables watchdog.
 static int done_tests = 0;
 
-static mx_status_t my_create_message_pipe(mx_handle_t* handle0, mx_handle_t* handle1) {
-    mx_handle_t h[2];
-
-    mx_status_t status = mx_message_pipe_create(h, 0);
-    if (status < 0)
-        return status;
-
-    *handle0 = h[0];
-    *handle1 = h[1];
-    return NO_ERROR;
-}
-
-typedef int (*thread_start_func)(void*);
-
-static mx_status_t my_thread_create(thread_start_func entry, void* arg,
-                                    mx_handle_t* out_handle, const char* name) {
-    if (!name)
-        name = "";
-    mx_handle_t status = mx_thread_create(entry, arg, name, strlen(name) + 1);
-    if (status < 0)
-        return status;
-    *out_handle = status;
-    return NO_ERROR;
-}
-
-static mx_status_t my_wait(const mx_handle_t* handles, const mx_signals_t* signals,
-                           uint32_t num_handles, uint32_t* result_index,
-                           mx_time_t deadline, //xyzdje, unused in mx_wait
-                           mx_signals_t* satisfied_signals,
-                           mx_signals_t* satisfiable_signals) {
-    mx_status_t result;
-
-    if (num_handles == 1u) {
-        result =
-            mx_handle_wait_one(*handles, *signals, MX_TIME_INFINITE,
-                                     satisfied_signals, satisfiable_signals);
-    } else {
-        result = mx_handle_wait_many(num_handles, handles, signals, MX_TIME_INFINITE,
-                                           satisfied_signals, satisfiable_signals);
-    }
-
-    // xyzdje, from mx_wait: TODO(cpu): implement |result_index|, see MG-33 bug.
-    return result;
-}
-
-static mx_status_t my_write_message(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
-                                    const mx_handle_t* handles, uint32_t num_handles,
-                                    uint32_t flags) {
-    return mx_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
-}
-
-static mx_status_t my_read_message(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
-                                   mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
-    return mx_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
-}
-
 // Architecture specific ways to crash and then recover from the crash.
 
 static void crash_me(void) {
@@ -126,25 +68,10 @@ static void uncrash_me(mx_handle_t thread) {
 #endif
 }
 
-// Wait until |handle| is readable or peer is closed.
-// Result is true if readable, otherwise false.
-
-static bool wait_handle(mx_handle_t handle) {
-    mx_signals_t satisfied_signals, satisfiable_signals;
-    mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-    mx_status_t result = my_wait(&handle, &signals, 1, NULL, WATCHDOG_DURATION_NANOSECONDS,
-                                 &satisfied_signals, &satisfiable_signals);
-    ASSERT_EQ(result, NO_ERROR, "my_wait failed");
-    ASSERT_NEQ(satisfied_signals & MX_SIGNAL_READABLE, 0u, "my_wait: peer closed");
-
-    return true;
-}
-
-static mx_status_t send_msg(mx_handle_t handle, enum message msg) {
+static void send_msg(mx_handle_t handle, enum message msg) {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
-    mx_status_t status = my_write_message(handle, &data, sizeof(data), NULL, 0, 0);
-    return status;
+    tu_message_write(handle, &data, sizeof(data), NULL, 0, 0);
 }
 
 static bool recv_msg(mx_handle_t handle, enum message* msg) {
@@ -153,10 +80,9 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
 
     unittest_printf("waiting for message on handle %u\n", handle);
 
-    ASSERT_TRUE(wait_handle(handle), "peer closed while trying to read message");
+    ASSERT_TRUE(tu_wait_readable(handle), "peer closed while trying to read message");
 
-    mx_status_t status = my_read_message(handle, &data, &num_bytes, NULL, 0, 0);
-    ASSERT_EQ(status, NO_ERROR, "my_read_message failed");
+    tu_message_read(handle, &data, &num_bytes, NULL, 0, 0);
     ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
 
     *msg = data;
@@ -169,7 +95,7 @@ static bool resume_thread_from_exception(mx_handle_t thread, mx_handle_t msg_pip
         uncrash_me(thread);
         mx_mark_exception_handled(thread, MX_EXCEPTION_STATUS_RESUME);
     }
-    ASSERT_EQ(send_msg(msg_pipe, MSG_PING), NO_ERROR, "send message failed");
+    send_msg(msg_pipe, MSG_PING);
     enum message msg;
     ASSERT_TRUE(recv_msg(msg_pipe, &msg), "Error while recieving msg");
     ASSERT_EQ(msg, (enum message)MSG_PONG, "unexpected reply from thread");
@@ -202,12 +128,11 @@ static bool test_received_exception(struct handlers* handlers,
         ASSERT_TRUE(false, "Invalid kind");
     }
 
-    ASSERT_TRUE(wait_handle(handle), "exception handler sender closed");
+    ASSERT_TRUE(tu_wait_readable(handle), "exception handler sender closed");
 
     mx_exception_report_t report;
     uint32_t num_bytes = sizeof(report);
-    mx_status_t status = my_read_message(handle, &report, &num_bytes, NULL, 0, 0);
-    ASSERT_EQ(status, NO_ERROR, "my_read_message of exception report");
+    tu_message_read(handle, &report, &num_bytes, NULL, 0, 0);
     ASSERT_EQ(num_bytes, sizeof(report), "unexpected message size");
 
     unittest_printf("exception received from %s handler: pid %u, tid %u\n",
@@ -216,7 +141,7 @@ static bool test_received_exception(struct handlers* handlers,
 }
 
 static void mark_tests_done(mx_handle_t msg_pipe) {
-    EXPECT_EQ(send_msg(msg_pipe, MSG_DONE), NO_ERROR, "send message failed");
+    send_msg(msg_pipe, MSG_DONE);
 }
 
 static int thread_func(void* arg) {
@@ -235,7 +160,7 @@ static int thread_func(void* arg) {
                 crash_me();
             break;
         case MSG_PING:
-            ASSERT_EQ(send_msg(msg_pipe, MSG_PONG), NO_ERROR, "send message failed");
+            send_msg(msg_pipe, MSG_PONG);
             break;
         default:
             unittest_printf("\nunknown message received: %d\n", msg);
@@ -247,7 +172,7 @@ static int thread_func(void* arg) {
 }
 
 static int watchdog_thread_func(void* arg) {
-    for (int i = 0; i < WATCHDOG_DURATION_SECONDS; ++i) {
+    for (int i = 0; i < TU_WATCHDOG_DURATION_SECONDS; ++i) {
         mx_nanosleep(1000 * 1000 * 1000);
         if (done_tests)
             mx_thread_exit();
@@ -266,25 +191,18 @@ bool exceptions_test(void) {
     for_real = ENABLE_FOR_REAL;
 #endif
 
-    status = my_create_message_pipe(&send.system, &recv.system);
-    ASSERT_GE(status, 0, "system exception pipe");
+    tu_message_pipe_create(&send.system, &recv.system);
+    tu_message_pipe_create(&send.process, &recv.process);
+    tu_message_pipe_create(&send.thread, &recv.thread);
+    tu_message_pipe_create(&our_pipe, &child_pipe);
 
-    status = my_create_message_pipe(&send.process, &recv.process);
-    ASSERT_GE(status, 0, "process exception pipe");
+    mx_handle_t thread_handle =
+        tu_thread_create(thread_func, (void*)(uintptr_t)child_pipe, "test-thread");
 
-    status = my_create_message_pipe(&send.thread, &recv.thread);
-    ASSERT_GE(status, 0, "thread exception pipe");
-
-    status = my_create_message_pipe(&our_pipe, &child_pipe);
-    ASSERT_GE(status, 0, "parent/child pipe");
-
-    mx_handle_t thread_handle;
-    status = my_thread_create(thread_func, (void*)(uintptr_t)child_pipe, &thread_handle, "test-thread");
-    ASSERT_GE(status, 0, "my_thread_create");
-
-    mx_handle_t watchdog_thread_handle;
-    status = my_thread_create(watchdog_thread_func, NULL, &watchdog_thread_handle, "watchdog-thread");
-    ASSERT_GE(status, 0, "my_thread_create, watchdog");
+    mx_handle_t watchdog_thread_handle =
+        tu_thread_create(watchdog_thread_func, NULL, "watchdog-thread");
+    // We could wait for this thread to exit when we're done, but there's no point.
+    (void) watchdog_thread_handle;
 
     // That's it for test setup, now onto the tests.
 
@@ -292,14 +210,14 @@ bool exceptions_test(void) {
     status = mx_set_system_exception_handler(send.system, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
     ASSERT_GE(status, 0, "set_system_exception_handler");
 
-    ASSERT_EQ(send_msg(our_pipe, MSG_CRASH), NO_ERROR, "send message failed");
+    send_msg(our_pipe, MSG_CRASH);
     ASSERT_TRUE(test_received_exception(&recv, HANDLER_SYSTEM), "");
     ASSERT_TRUE(resume_thread_from_exception(thread_handle, our_pipe), "");
 
     unittest_printf("\nprocess exception handler basic test\n");
     status = mx_set_exception_handler(0, send.process, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
     ASSERT_GE(status, 0, "set_process_exception_handler");
-    ASSERT_EQ(send_msg(our_pipe, MSG_CRASH), NO_ERROR, "send message failed");
+    send_msg(our_pipe, MSG_CRASH);
     ASSERT_TRUE(test_received_exception(&recv, HANDLER_PROCESS), "");
     ASSERT_TRUE(resume_thread_from_exception(thread_handle, our_pipe), "");
 
@@ -307,7 +225,7 @@ bool exceptions_test(void) {
     status = mx_set_exception_handler(thread_handle, send.thread, MX_EXCEPTION_BEHAVIOUR_DEFAULT);
     ASSERT_GE(status, 0, "set_thread_exception_handler");
 
-    ASSERT_EQ(send_msg(our_pipe, MSG_CRASH), NO_ERROR, "send message failed");
+    send_msg(our_pipe, MSG_CRASH);
     ASSERT_TRUE(test_received_exception(&recv, HANDLER_THREAD), "");
     ASSERT_TRUE(resume_thread_from_exception(thread_handle, our_pipe), "");
 
