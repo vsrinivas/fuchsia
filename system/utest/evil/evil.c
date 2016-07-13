@@ -28,6 +28,17 @@
 #define USE_SPINLOCKS 0
 #define USE_FUTEXES 1
 
+// malloc may behave differently for larger allocations (e.g., using mmap).
+// Using up to 512k allocations will likely trigger this behavior.
+#define LARGE_MALLOC 0
+#define LARGE_MALLOC_SIZE (512 * 1024)
+#define SMALL_MALLOC_SIZE 1024
+#if LARGE_MALLOC
+#define MALLOC_SIZE LARGE_MALLOC_SIZE
+#else
+#define MALLOC_SIZE SMALL_MALLOC_SIZE
+#endif
+
 static volatile int xlock = 0;
 
 static void _lock(volatile int* lock) {
@@ -120,7 +131,7 @@ void* blaster(void* arg) {
         int n = rnum(BUCKETS);
         if (info->bucket[n] == NULL) {
         allocnew:
-            info->size[n] = 7 + rnum(1024);
+            info->size[n] = 7 + rnum(MALLOC_SIZE);
             LOCK();
             info->bucket[n] = malloc(info->size[n]);
             UNLOCK();

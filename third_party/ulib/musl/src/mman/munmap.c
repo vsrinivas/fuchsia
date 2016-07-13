@@ -1,5 +1,6 @@
 #include "libc.h"
-#include "syscall.h"
+#include <errno.h>
+#include <magenta/syscalls.h>
 #include <sys/mman.h>
 
 static void dummy(void) {}
@@ -7,7 +8,17 @@ weak_alias(dummy, __vm_wait);
 
 int __munmap(void* start, size_t len) {
     __vm_wait();
-    // TODO(kulakowski) Implement more mmap
+
+    mx_handle_t current_proc_handle = 0; /* TODO: get from TLS */
+    uintptr_t ptr = (uintptr_t)start;
+    /* NOTE: this currently unmaps the entire region that start was mapped into.
+     * magenta does not yet support partial unmapping.
+     */
+    mx_status_t status = mx_process_vm_unmap(current_proc_handle, ptr, 0);
+    if (status < 0) {
+        errno = EINVAL;
+        return -1;
+    }
     return 0;
 }
 
