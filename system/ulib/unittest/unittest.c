@@ -30,6 +30,7 @@
  */
 static void default_printf(const char* line, int len, void* arg) {
     printf("%s", line);
+    fflush(stdout);
 }
 
 // Default output function is the printf
