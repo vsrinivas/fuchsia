@@ -1,0 +1,13 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+action("mkbootfs") {
+  script = "//buildtools/mkbootfs"
+  manifest_file = "$target_gen_dir/user.bootfs.manifest"
+  output_file = "$root_build_dir/user.bootfs"
+  outputs = [ output_file ]
+  depfile = "$target_gen_dir/user.bootfs.d"
+ 
+  args = [ "-o", rebase_path(output_file), rebase_path(manifest_file) ]
+}

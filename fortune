@@ -1,0 +1,9 @@
+{
+    "label": "//fortune",
+    "binaries": [
+        {
+            "binary": "fortune",
+            "bootfs_path": "bin/fortune"
+        }
+    ]
+}

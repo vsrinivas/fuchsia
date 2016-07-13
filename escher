@@ -1,0 +1,13 @@
+{
+    "label": "//escher",
+    "binaries": [
+        {
+            "binary": "ftl_unittests",
+            "bootfs_path": "test/ftl_unittests"
+        },
+        {
+            "binary": "mtl_unittests",
+            "bootfs_path": "test/mtl_unittests"
+        }
+    ]
+}
