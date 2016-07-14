@@ -201,6 +201,7 @@ static status_t arm_shared_page_fault_handler(struct arm_fault_frame *frame, uin
             pf_flags |= write ? VMM_PF_FLAG_WRITE : 0;
             pf_flags |= user ? VMM_PF_FLAG_USER : 0;
             pf_flags |= instruction_fault ? VMM_PF_FLAG_INSTRUCTION : 0;
+            pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
 
             arch_enable_ints();
             status_t err = vmm_page_fault_handler(far, pf_flags);

@@ -204,6 +204,15 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
         return ERR_ACCESS_DENIED;
     }
 
+    if (!(pf_flags & VMM_PF_FLAG_NOT_PRESENT)) {
+        // kernel attempting to access userspace, and permissions were fine, so
+        // architecture prevented the cross-privilege access
+        if (!(pf_flags & VMM_PF_FLAG_USER) && aspace_->is_user()) {
+            TRACEF("ERROR: kernel faulted on user address\n");
+            return ERR_ACCESS_DENIED;
+        }
+    }
+
     if (!object_) {
         // we have no backing object, error
         TRACEF("ERROR: faulted on region with no backing object\n");

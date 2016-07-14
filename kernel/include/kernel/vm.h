@@ -255,6 +255,7 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace);
 #define VMM_PF_FLAG_WRITE (1u << 0)
 #define VMM_PF_FLAG_USER (1u << 1)
 #define VMM_PF_FLAG_INSTRUCTION (1u << 2)
+#define VMM_PF_FLAG_NOT_PRESENT (1u << 3)
 status_t vmm_page_fault_handler(vaddr_t addr, uint flags);
 
 __END_CDECLS

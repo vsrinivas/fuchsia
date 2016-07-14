@@ -223,6 +223,7 @@ void x86_pfe_handler(x86_iframe_t *frame)
     flags |= (error_code & PFEX_W) ? VMM_PF_FLAG_WRITE : 0;
     flags |= (error_code & PFEX_U) ? VMM_PF_FLAG_USER : 0;
     flags |= (error_code & PFEX_I) ? VMM_PF_FLAG_INSTRUCTION : 0;
+    flags |= (error_code & PFEX_P) ? 0 : VMM_PF_FLAG_NOT_PRESENT;
 
     status_t pf_err = vmm_page_fault_handler(va, flags);
     if (unlikely(pf_err < 0)) {

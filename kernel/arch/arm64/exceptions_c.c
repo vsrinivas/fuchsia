@@ -108,6 +108,10 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 
             uint pf_flags = VMM_PF_FLAG_INSTRUCTION;
             pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
+            /* Check if this was not permission fault */
+            if ((iss & 0b111100) != 0b001100) {
+                pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+            }
 
             LTRACEF("instruction abort: PC at 0x%llx, is_user %u, FAR 0x%llx, esr 0x%x, iss 0x%x\n",
                     iframe->elr, is_user, far, esr, iss);
@@ -142,6 +146,10 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             uint pf_flags = 0;
             pf_flags |= BIT(iss, 6) ? VMM_PF_FLAG_WRITE : 0;
             pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
+            /* Check if this was not permission fault */
+            if ((iss & 0b111100) != 0b001100) {
+                pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+            }
 
             LTRACEF("data fault: PC at 0x%llx, is_user %u, FAR 0x%llx, esr 0x%x, iss 0x%x\n",
                     iframe->elr, is_user, far, esr, iss);
