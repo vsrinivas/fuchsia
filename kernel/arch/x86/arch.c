@@ -87,8 +87,6 @@ void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void* thread
     /* set the KERNEL_GS_BASE msr here, because we're going to swapgs below */
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, 0);
 
-    /* TODO: clear all of the other registers to avoid leading kernel state */
-
     x86_uspace_entry(thread_arg, user_stack_top, flags, entry_point);
     __UNREACHABLE;
 #endif
