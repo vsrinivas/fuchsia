@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 group("escher") {
+  testonly = true
+
   deps = [
-    "//escher/ftl:ftl_unittests",
-    "//escher/mtl:mtl_unittests",
+    "//lib/escher/ftl:ftl_unittests",
+    "//lib/escher/mtl:mtl_unittests",
   ]
 }
