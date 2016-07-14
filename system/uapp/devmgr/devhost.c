@@ -102,3 +102,13 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     msg.device_id = (uintptr_t)dev->remote_id;
     return devhost_rpc(devhost_handle, &msg, 0);
 }
+
+#if LIBDRIVER
+mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
+    return ERR_NOT_SUPPORTED;
+}
+void track_iostate(iostate_t* ios, const char* fn) {
+}
+void untrack_iostate(iostate_t* ios) {
+}
+#endif

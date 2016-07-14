@@ -192,9 +192,6 @@ fail:
 }
 
 mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
-#if LIBDRIVER
-    return ERR_NOT_SUPPORTED;
-#else
     if (devmgr_is_remote) {
         return ERR_NOT_SUPPORTED;
     }
@@ -248,5 +245,4 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
 
     //TODO: make drv ineligible for further probing?
     return 0;
-#endif
 }

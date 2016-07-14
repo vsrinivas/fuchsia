@@ -12,30 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-LOCAL_DIR := system/uapp/devmgr
+LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := system/ulib/driver
+MODULE := $(LOCAL_DIR)
 
-MODULE_NAME := driver
-
-MODULE_TYPE := userlib
-
-MODULE_DEFINES += LIBDRIVER=1
+MODULE_TYPE := userapp
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/devmgr.c \
-	$(LOCAL_DIR)/devhost.c \
-	$(LOCAL_DIR)/binding.c \
-	$(LOCAL_DIR)/rpc-device.c \
-	$(LOCAL_DIR)/api.c \
-	system/udev/kpci/kpci.c \
-	system/udev/kpci/protocol.c \
-	$(LOCAL_DIR)/main.c \
+    system/udev/intel-ethernet/ethernet.c \
+    system/udev/intel-ethernet/ie.c
 
-MODULE_HEADER_DEPS := ulib/ddk
+MODULE_NAME := test-driver
 
-MODULE_DEPS := ulib/musl ulib/mxio ulib/runtime ulib/magenta
-
-MODULE_EXPORT := driver
+MODULE_DEPS := \
+    ulib/musl ulib/magenta ulib/runtime ulib/ddk ulib/driver
 
 include make/module.mk
