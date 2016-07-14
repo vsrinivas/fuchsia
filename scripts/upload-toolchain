@@ -13,19 +13,29 @@
 # as an environment variable, since that is how Jenkins passes arguments from
 # matrix build configurations.
 
+# This script also assumes a directory structure based on the Magenta Jiri
+# manifests.  Jenkins uses these manifests to sync the code.
+
 set -e
 set -x
 
 # We assume the following directory structure:
 # ./magenta/scripts
-# ./toolchains
+# ./third_party/gcc_none_toolchains
 readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "${SCRIPT_DIR}/../../toolchains"
+cd "${SCRIPT_DIR}/../../third_party/gcc_none_toolchains"
 
 # We require the ARCH variable to be set when calling this script.  Passing arguments
 # via environment variables is how Jenkins does things :/
 if [[ -z "${ARCH}" ]]; then
   echo "ARCH environment variable must be set!"
+  exit 99
+fi
+
+# Sanity check the value of ARCH.  `doit` accepts multiple values for arch at a time,
+# so it's easy to accidentally do the same for this script.
+if [[ "${ARCH}" != "${ARCH// /}" ]]; then
+  echo "ARCH appears to contain spaces; provide only one ARCH at a time"
   exit 99
 fi
 
@@ -52,11 +62,13 @@ readonly TARBALL="/tmp/${GIT_SHA}"
 cp "${SCRIPT_DIR}/upload-toolchain.README.md" "${TOOLCHAIN_DIR}/README.md"
 echo "${GIT_SHA}" >> "${TOOLCHAIN_DIR}/README.md"
 
-# Tar up the toolchain.
-tar jcvf "${TARBALL}" "${TOOLCHAIN_DIR}"
+# Tar up the toolchain.  Note that we apply a label to the tarball that corresponds
+# to the top level directory packed into the tarball.  This helps us inform the user
+# where the toolchain was installed after download.
+tar jcvf "${TARBALL}" --label "${TOOLCHAIN_DIR}" "${TOOLCHAIN_DIR}"
 
 # Upload the prebuilts to Google Storage.  We don't do any authentication here because
 # we assume that the environment has been set up with auth already.  For notes on
 # how to do that, see: https://cloud.google.com/storage/docs/authentication
-readonly GS_BUCKET="gs://fuchsia-build/magenta/toolchain/${ARCH}"
+readonly GS_BUCKET="gs://fuchsia-build/magenta/toolchain/${ARCH}-${ABI}/${OS}-${HOSTARCH}"
 gsutil cp "${TARBALL}" "${GS_BUCKET}/${GIT_SHA}"

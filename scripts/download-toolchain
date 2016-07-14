@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This script downloads the Magenta toolchain as prebuilts from Google Storage.
+
+# This script is expected to be executed by Jiri as a runhook, or by individual
+# developers who want to grab the latest prebuilts.  It assumes directory structure
+# based on Magenta's Jiri manifests.
+
+set -e
+
+readonly GS_BUCKET="https://fuchsia-build.storage.googleapis.com/magenta/toolchain"
+readonly OS="$(uname)"
+readonly HOSTARCH="$(uname -m)"
+
+# We assume the following directory structure:
+# ./magenta/scripts
+# ./third_party/gcc_none_toolchains
+readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly TOOLCHAIN_REPO="$( cd "${SCRIPT_DIR}/../../third_party/gcc_none_toolchains" && pwd)"
+readonly MAGENTA_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# The toolchain we download corresponds to the git sha of the toolchain repository.
+cd "${TOOLCHAIN_REPO}"
+readonly CURRENT_VERSION="$(git log -1 --format=%H)"
+
+# Download the tools if they don't already exist, or if their versions are out of date.
+function downloadToolchain() {
+  local target="${1}"
+  local tool_name="${target}-${OS}-${HOSTARCH}"
+  local stamp_path="${TOOLCHAIN_REPO}/${tool_name}.stamp"
+  local tool_path="${TOOLCHAIN_REPO}/${tool_name}.tar.bz2"
+  local tool_url="${GS_BUCKET}/${target}/${OS}-${HOSTARCH}/${CURRENT_VERSION}"
+  if [[ ! -f "${stamp_path}" || "${CURRENT_VERSION}" != "$(cat ${stamp_path})" ]]; then
+    rm -f -- "${tool_path}"
+    echo "Downloading ${tool_url}"
+    curl -continue-at=- --location --output "${tool_path}" "${tool_url}"
+    echo "Unpacking ${tool_path}"
+    tar jxf "${tool_path}"
+    echo "${CURRENT_VERSION}" > "${stamp_path}"
+  fi
+}
+
+# We want the toolchains for all target types.
+readonly TARGETS=("arm-eabi" "x86_64-elf" "aarch64-elf")
+for target in "${TARGETS[@]}"; do
+  downloadToolchain "${target}"
+done
+echo "All toolchains installed under ${TOOLCHAIN_REPO}"
