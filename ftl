@@ -1,0 +1,9 @@
+{
+    "label": "//lib/ftl",
+    "binaries": [
+        {
+            "binary": "ftl_unittests",
+            "bootfs_path": "test/ftl_unittests"
+        }
+    ]
+}

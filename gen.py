@@ -10,7 +10,12 @@ import subprocess
 import sys
 
 # TODO: This should be configurable
-package_configs = [ "escher", "fortune", "mojo" ]
+package_configs = [
+    "fortune",
+    "ftl",
+    "mojo",
+    "mtl",
+]
 
 def parse_config(config, labels, binaries):
     with open(config) as f:
