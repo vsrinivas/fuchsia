@@ -80,7 +80,8 @@ group("default") {
         [gn_path, "gen", outdir_path,
          "--root=%s" % base_path,
          "--dotfile=%s" % dotfile_path,
-         "--script-executable=/usr/bin/env"])
+         "--script-executable=/usr/bin/env",
+         "--check"])
     return 0
 
 if __name__ == "__main__":
