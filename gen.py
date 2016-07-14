@@ -11,6 +11,7 @@ import sys
 
 # TODO: This should be configurable
 package_configs = [
+    "dart",
     "fortune",
     "ftl",
     "mojo",
