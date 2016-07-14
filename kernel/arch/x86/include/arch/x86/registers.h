@@ -56,3 +56,61 @@
 #define X86_FLAGS_VIF                   (1<<19)
 #define X86_FLAGS_VIP                   (1<<20)
 #define X86_FLAGS_ID                    (1<<21)
+
+#ifndef ASSEMBLY
+
+#include <compiler.h>
+#include <sys/types.h>
+
+__BEGIN_CDECLS
+
+/* Bit masks for xsave feature states; state components are
+ * enumerated in Intel Vol 1 section 13.1 */
+#define X86_XSAVE_STATE_X87                  (1<<0)
+#define X86_XSAVE_STATE_SSE                  (1<<1)
+#define X86_XSAVE_STATE_AVX                  (1<<2)
+#define X86_XSAVE_STATE_MPX_BNDREG           (1<<3)
+#define X86_XSAVE_STATE_MPX_BNDCSR           (1<<4)
+#define X86_XSAVE_STATE_AVX512_OPMASK        (1<<5)
+#define X86_XSAVE_STATE_AVX512_LOWERZMM_HIGH (1<<6)
+#define X86_XSAVE_STATE_AVX512_HIGHERZMM     (1<<7)
+#define X86_XSAVE_STATE_PT                   (1<<8)
+#define X86_XSAVE_STATE_PKRU                 (1<<9)
+
+#define X86_MAX_EXTENDED_REGISTER_SIZE 1024
+
+enum x86_extended_register_feature {
+    X86_EXTENDED_REGISTER_X87,
+    X86_EXTENDED_REGISTER_SSE,
+    X86_EXTENDED_REGISTER_AVX,
+    X86_EXTENDED_REGISTER_MPX,
+    X86_EXTENDED_REGISTER_AVX512,
+    X86_EXTENDED_REGISTER_PT,
+    X86_EXTENDED_REGISTER_PKRU,
+};
+
+/* Identify which extended registers are supported.  Also initialize
+ * the FPU if present */
+void x86_extended_register_init(void);
+
+/* Enable the requested feature on this CPU, return true on success.
+ * It is currently assumed that if a feature is enabled on one CPU, the caller
+ * will ensure it is enabled on all CPUs */
+bool x86_extended_register_enable_feature(enum x86_extended_register_feature);
+
+size_t x86_extended_register_size(void);
+/* Initialize a state vector */
+void x86_extended_register_init_state(void *register_state);
+/* Save current state to state vector */
+void x86_extended_register_save_state(void *register_state);
+/* Restore a state created by x86_extended_register_init_state or
+ * x86_extended_register_save_state */
+void x86_extended_register_restore_state(void *register_state);
+
+typedef struct thread thread_t;
+void x86_extended_register_context_switch(
+        thread_t *old_thread, thread_t *new_thread);
+
+__END_CDECLS
+
+#endif

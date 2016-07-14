@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <trace.h>
 
-#include <arch/fpu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <arch/x86.h>
@@ -94,7 +93,10 @@ void x86_init_percpu(uint8_t cpu_num)
 #endif
 
     x86_feature_init();
-    fpu_init();
+    x86_extended_register_init();
+    x86_extended_register_enable_feature(X86_EXTENDED_REGISTER_SSE);
+    x86_extended_register_enable_feature(X86_EXTENDED_REGISTER_AVX);
+    x86_extended_register_enable_feature(X86_EXTENDED_REGISTER_AVX512);
 
     idt_setup(&percpu->idt);
     idt_load(&percpu->idt);

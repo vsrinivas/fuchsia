@@ -28,6 +28,7 @@ struct cpuid_leaf {
 enum x86_cpuid_leaf_num {
     X86_CPUID_BASE = 0,
     X86_CPUID_TOPOLOGY = 0xb,
+    X86_CPUID_XSAVE = 0xd,
 
     X86_CPUID_EXT_BASE = 0x80000000,
     X86_CPUID_ADDR_WIDTH = 0x80000008,

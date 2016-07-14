@@ -9,6 +9,7 @@
 #pragma once
 
 #include <compiler.h>
+#include <arch/x86/registers.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
@@ -21,8 +22,8 @@ struct arch_thread {
 #endif
 
     /* buffer to save fpu state */
-    vaddr_t *fpu_states;
-    uint8_t fpu_buffer[512 + 16];
+    vaddr_t *extended_register_state;
+    uint8_t extended_register_buffer[X86_MAX_EXTENDED_REGISTER_SIZE + 64];
 
     /* if non-NULL, address to return to on page fault */
     void *page_fault_resume;
