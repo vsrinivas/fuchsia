@@ -36,7 +36,7 @@ mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex) {
 
 mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout) {
     for (;;) {
-        switch (__atomic_exchange_n(&mutex->futex, LOCKED, __ATOMIC_SEQ_CST)) {
+        switch (atomic_swap(&mutex->futex, LOCKED)) {
         case UNLOCKED:
             return NO_ERROR;
         case LOCKED: {
@@ -60,7 +60,7 @@ void mxr_mutex_lock(mxr_mutex_t* mutex) {
 }
 
 void mxr_mutex_unlock(mxr_mutex_t* mutex) {
-    __atomic_store_n(&mutex->futex, UNLOCKED, __ATOMIC_SEQ_CST);
+    atomic_store(&mutex->futex, UNLOCKED);
     mx_status_t status = mx_futex_wake(&mutex->futex, 0x7FFFFFFF);
     if (status != NO_ERROR)
         __builtin_trap();
