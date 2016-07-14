@@ -93,6 +93,6 @@ BEGIN_TEST_CASE(reply_handle_tests)
 RUN_TEST(reply_handle_test)
 END_TEST_CASE(reply_handle_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

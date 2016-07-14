@@ -38,12 +38,15 @@ static test_output_func out_func = default_printf;
 // Buffer the argument to be sent to the output function
 static void* out_func_arg = NULL;
 
+// Controls the behavior of unittest_printf.
+int utest_verbosity_level = 1;
+
 /**
  * \brief Function called to dump results
  *
  * This function will call the out_func callback
  */
-void unittest_printf(const char* format, ...) {
+void unittest_printf_critical(const char* format, ...) {
     static char print_buffer[PRINT_BUFFER_SIZE];
 
     va_list argp;
@@ -73,4 +76,10 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
 void unittest_set_output_function(test_output_func fun, void* arg) {
     out_func = fun;
     out_func_arg = arg;
+}
+
+int unittest_set_verbosity_level(int new_level) {
+    int out = utest_verbosity_level;
+    utest_verbosity_level = new_level;
+    return out;
 }

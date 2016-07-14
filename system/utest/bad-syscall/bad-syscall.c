@@ -34,6 +34,6 @@ BEGIN_TEST_CASE(bad_syscall_tests)
 RUN_TEST(bad_syscall_test)
 END_TEST_CASE(bad_syscall_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

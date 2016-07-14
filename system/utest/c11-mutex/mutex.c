@@ -177,6 +177,6 @@ RUN_TEST(test_try_mutexes)
 RUN_TEST(test_mtx_size)
 END_TEST_CASE(mtx_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

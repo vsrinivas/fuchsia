@@ -48,7 +48,7 @@ BEGIN_TEST_CASE(elf_interp_tests)
 RUN_TEST(test_interp_loaded)
 END_TEST_CASE(elf_interp_tests)
 
-int main(void) {
-    bool success = unittest_run_all_tests();
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
     return success ? 0 : -1;
 }

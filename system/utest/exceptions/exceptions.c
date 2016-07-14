@@ -239,6 +239,6 @@ RUN_TEST(exceptions_test);
 END_TEST_CASE(exceptions_tests)
 
 int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests();
+    bool success = unittest_run_all_tests(argc, argv);
     return success ? 0 : -1;
 }

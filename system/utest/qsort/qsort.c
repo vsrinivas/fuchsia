@@ -68,6 +68,6 @@ BEGIN_TEST_CASE(qsort_tests)
 RUN_TEST(qsort_test)
 END_TEST_CASE(qsort_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

@@ -121,6 +121,6 @@ BEGIN_TEST_CASE(cleanup_tests)
 RUN_TEST(cleanup_test)
 END_TEST_CASE(cleanup_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

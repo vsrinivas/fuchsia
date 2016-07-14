@@ -157,6 +157,6 @@ BEGIN_TEST_CASE(echo_tests)
 RUN_TEST(echo_test)
 END_TEST_CASE(echo_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

@@ -174,6 +174,6 @@ RUN_TEST(mmap_flags_test);
 END_TEST_CASE(memory_mapping_tests)
 
 int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests();
+    bool success = unittest_run_all_tests(argc, argv);
     return success ? 0 : -1;
 }

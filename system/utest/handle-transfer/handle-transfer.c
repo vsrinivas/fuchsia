@@ -157,6 +157,6 @@ RUN_TEST(handle_transfer_test)
 RUN_TEST(handle_transfer_cancel_wait_test)
 END_TEST_CASE(handle_transfer_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

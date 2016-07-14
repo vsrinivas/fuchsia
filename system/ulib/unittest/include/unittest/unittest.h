@@ -68,6 +68,8 @@
 
 __BEGIN_CDECLS
 
+extern int utest_verbosity_level;
+
 /*
  * Type for unit test result Output
  */
@@ -77,7 +79,18 @@ typedef void (*test_output_func)(const char* line, int len, void* arg);
  * Printf dedicated to the unittest library
  * the default output is the printf
  */
-void unittest_printf(const char* format, ...);
+void unittest_printf_critical(const char* format, ...);
+
+/*
+ * Printf dedicated to the unittest library which output
+ * depends on the verbosity level.
+ */
+
+#define unittest_printf(format, ...)                           \
+    do {                                                       \
+        if (utest_verbosity_level > 0)                         \
+            unittest_printf_critical(format, ##__VA_ARGS__);   \
+    } while (0)
 
 /*
  * Function to set the callback for printing
@@ -86,54 +99,60 @@ void unittest_printf(const char* format, ...);
 void unittest_set_output_function(test_output_func fun, void* arg);
 
 /*
+ * Function to set the verbosity level. This affects
+ * the output of unittest_printf().
+ */
+int unittest_set_verbosity_level(int new_level);
+
+/*
  * Macros to format the error string
  */
-#define UNITTEST_TRACEF(str, x...)                                  \
-    do {                                                            \
-        unittest_printf(" [FAILED] \n        %s:%d:\n        " str, \
-                        __PRETTY_FUNCTION__, __LINE__, ##x);        \
+#define UNITTEST_TRACEF(str, x...)                                            \
+    do {                                                                      \
+        unittest_printf_critical(" [FAILED] \n        %s:%d:\n        " str,  \
+                                 __PRETTY_FUNCTION__, __LINE__, ##x);         \
     } while (0)
 
 /*
  * BEGIN_TEST_CASE and END_TEST_CASE define a function that calls
  * RUN_TEST.
  */
-#define BEGIN_TEST_CASE(case_name) \
-    bool case_name(void) {         \
-        bool all_success = true;   \
-        unittest_printf("\nCASE %-50s [STARTED] \n", #case_name);
+#define BEGIN_TEST_CASE(case_name)                                          \
+    bool case_name(void) {                                                  \
+        bool all_success = true;                                            \
+        unittest_printf_critical("\nCASE %-50s [STARTED] \n", #case_name);
 
-#define DEFINE_REGISTER_TEST_CASE(case_name)                        \
-    static void _register_##case_name(void) {                       \
-        unittest_register_test_case(&_##case_name##_element);       \
-    }                                                               \
-    void (*_register_##case_name##_ptr)(void) __SECTION(".ctors") = \
+#define DEFINE_REGISTER_TEST_CASE(case_name)                            \
+    static void _register_##case_name(void) {                           \
+        unittest_register_test_case(&_##case_name##_element);           \
+    }                                                                   \
+    void (*_register_##case_name##_ptr)(void) __SECTION(".ctors") =     \
         _register_##case_name;
 
-#define END_TEST_CASE(case_name)                               \
-    if (all_success) {                                         \
-        unittest_printf("CASE %-50s [PASSED]\n", #case_name);  \
-    } else {                                                   \
-        unittest_printf("CASE %-50s [FAILED]\n", #case_name);  \
-    }                                                          \
-    return all_success;                                        \
-    }                                                          \
-    static struct test_case_element _##case_name##_element = { \
-        .next = NULL,                                          \
-        .failed_next = NULL,                                   \
-        .name = #case_name,                                    \
-        .test_case = case_name,                                \
-    };                                                         \
+#define END_TEST_CASE(case_name)                                        \
+    if (all_success) {                                                  \
+        unittest_printf_critical("CASE %-50s [PASSED]\n", #case_name);  \
+    } else {                                                            \
+        unittest_printf_critical("CASE %-50s [FAILED]\n", #case_name);  \
+    }                                                                   \
+    return all_success;                                                 \
+    }                                                                   \
+    static struct test_case_element _##case_name##_element = {          \
+        .next = NULL,                                                   \
+        .failed_next = NULL,                                            \
+        .name = #case_name,                                             \
+        .test_case = case_name,                                         \
+    };                                                                  \
     DEFINE_REGISTER_TEST_CASE(case_name);
 
-#define RUN_TEST(test)                             \
-    unittest_printf("    %-51s [RUNNING]", #test); \
-    struct test_info test_info_##test;             \
-    current_test_info = &test_info_##test;         \
-    if (!test()) {                                 \
-        all_success = false;                       \
-    } else {                                       \
-        unittest_printf(" [PASSED] \n");           \
+#define RUN_TEST(test)                                          \
+    unittest_printf_critical("    %-51s [RUNNING]", #test);     \
+    struct test_info test_info_##test;                          \
+    current_test_info = &test_info_##test;                      \
+    if (!test()) {                                              \
+        all_success = false;                                    \
+    } else {                                                    \
+        unittest_printf_critical(" [PASSED] \n");               \
     }
 
 /*
@@ -287,7 +306,7 @@ void unittest_register_test_case(struct test_case_element* elem);
 /*
  * Runs all registered test cases.
  */
-bool unittest_run_all_tests(void);
+bool unittest_run_all_tests(int argc, char** argv);
 
 /*
  * Returns false if expected does not equal actual and prints msg and a hexdump8

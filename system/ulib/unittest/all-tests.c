@@ -28,10 +28,17 @@ void unittest_register_test_case(struct test_case_element* elem) {
 /*
  * Runs all registered test cases.
  */
-bool unittest_run_all_tests(void) {
+bool unittest_run_all_tests(int argc, char** argv) {
     unsigned int n_tests = 0;
     unsigned int n_success = 0;
     unsigned int n_failed = 0;
+
+    int prev_verbosity_level = -1;
+    if (argc == 2) {
+        if ((strlen(argv[1]) == 3) && (argv[1][0] == 'v') && (argv[1][1] = '=')) {
+            prev_verbosity_level = unittest_set_verbosity_level(argv[1][2] - '0');
+        }
+    }
 
     bool all_success = true;
     struct test_case_element* current = test_case_list;
@@ -45,9 +52,12 @@ bool unittest_run_all_tests(void) {
         n_tests++;
     }
 
+    if (prev_verbosity_level >= 0)
+        unittest_set_verbosity_level(prev_verbosity_level);
+
     if (all_success) {
         n_success = n_tests;
-        unittest_printf("SUCCESS!  All test cases passed!\n");
+        unittest_printf_critical("SUCCESS!  All test cases passed!\n");
     } else {
         struct test_case_element* failed = failed_test_case_list;
         while (failed) {
@@ -61,10 +71,10 @@ bool unittest_run_all_tests(void) {
         failed_test_case_list = NULL;
     }
 
-    unittest_printf("\n====================================================\n");
-    unittest_printf("    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
-                    n_tests, n_success, n_failed);
-    unittest_printf("\n====================================================\n");
+    unittest_printf_critical("\n====================================================\n");
+    unittest_printf_critical("    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
+                             n_tests, n_success, n_failed);
+    unittest_printf_critical("\n====================================================\n");
 
     return all_success;
 }

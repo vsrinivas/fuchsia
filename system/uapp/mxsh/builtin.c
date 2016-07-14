@@ -253,18 +253,35 @@ static int mxc_runtests(int argc, char** argv) {
         return -1;
     }
 
+    int verbosity = 0;
+
+    if (argc > 1) {
+        if (strcmp(argv[1], "-v") == 0) {
+            printf("verbose output. enjoy.\n");
+            verbosity = 1;
+        } else {
+            printf("unknown option. usage: %s [-v]\n", argv[0]);
+            return -1;
+        }
+    }
+
     struct dirent* de;
     while ((de = readdir(dir)) != NULL) {
         total_count++;
 
-        printf(
-            "\n------------------------------------------------\n"
-            "RUNNING TEST: %s\n\n",
-            de->d_name);
+        if (verbosity) {
+            printf(
+                "\n------------------------------------------------\n"
+                "RUNNING TEST: %s\n\n",
+                de->d_name);
+        }
+
+        char opts[] = {'v','=', verbosity + '0', 0};
+
         char name[4096];
         snprintf(name, sizeof(name), "/boot/test/%s", de->d_name);
-        char* argv[] = {name};
-        mx_handle_t handle = mxio_start_process(name, 1, argv);
+        char* argv[] = {name, opts};
+        mx_handle_t handle = mxio_start_process(name, 2, argv);
         if (handle < 0) {
             printf("FAILURE: Failed to launch %s: %d\n", de->d_name, handle);
             mxc_fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);

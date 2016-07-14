@@ -296,6 +296,6 @@ RUN_TEST(bind_basic_test)
 RUN_TEST(bind_events_test)
 END_TEST_CASE(io_port_tests)
 
-int main(void) {
-    return unittest_run_all_tests() ? 0 : -1;
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }
