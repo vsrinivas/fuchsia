@@ -65,4 +65,18 @@ if (host_os == "linux") {
   assert(false, "Host OS not supported")
 }
 
+is_android = false
+is_fuchsia = false
+is_ios = false
+is_linux = false
+is_mac = false
+
+if (current_os == "fuchsia") {
+  is_fuchsia = true
+} else if (current_os == "linux") {
+  is_linux = true
+} else if (current_os == "mac") {
+  is_mac = true
+}
+
 set_default_toolchain(target_toolchain)
