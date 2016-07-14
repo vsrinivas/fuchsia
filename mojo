@@ -12,6 +12,10 @@
         {
             "binary": "hello_mojo_server",
             "bootfs_path": "apps/hello_mojo_server"
+        },
+        {
+            "binary": "tiny",
+            "bootfs_path": "apps/tiny"
         }
     ]
 }
