@@ -165,6 +165,18 @@ restart:
                     consumed = 1;
                 }
                 break;
+            case MX_KEY_PGUP:
+                if (modifiers & MOD_LSHIFT || modifiers & MOD_RSHIFT) {
+                    vc_device_scroll_viewport(active_vc, -(active_vc->rows / 2));
+                    consumed = 1;
+                }
+                break;
+            case MX_KEY_PGDN:
+                if (modifiers & MOD_LSHIFT || modifiers & MOD_RSHIFT) {
+                    vc_device_scroll_viewport(active_vc, active_vc->rows / 2);
+                    consumed = 1;
+                }
+                break;
 
             // eat everything else
             default:; // nothing
