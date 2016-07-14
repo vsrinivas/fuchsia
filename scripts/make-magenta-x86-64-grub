@@ -15,6 +15,11 @@ PROJECT_DIR="$DIR/../build-$PROJECT"
 
 (cd "$DIR/.."; $DIR/make-parallel $PROJECT) || exit
 
+if ! which xorriso grub-mkrescue &> /dev/null; then
+  echo "ERROR: You must install xorriso and grub-mkrescue"
+  exit
+fi
+
 TEMP="$(mktemp -d)"
 mkdir -p "$TEMP/boot/grub"
 cp "$PROJECT_DIR/magenta.bin" "$TEMP/boot/magenta.bin"
