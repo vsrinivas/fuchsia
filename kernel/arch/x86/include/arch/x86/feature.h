@@ -6,11 +6,17 @@
 
 #pragma once
 
+#include <assert.h>
 #include <compiler.h>
 #include <stdint.h>
 #include <arch/x86.h>
 
 __BEGIN_CDECLS
+
+/* We expect to always have at least leaves with eax <= 7*/
+#define MIN_MAX_CPUID           (0x7)
+#define MAX_SUPPORTED_CPUID     (0x17)
+#define MAX_SUPPORTED_CPUID_EXT (0x80000008)
 
 struct cpuid_leaf {
     uint32_t a;
@@ -37,12 +43,49 @@ struct x86_cpuid_bit {
         (struct x86_cpuid_bit){(enum x86_cpuid_leaf_num)(leaf), (word), (bit)}
 
 void x86_feature_init(void);
-const struct cpuid_leaf *x86_get_cpuid_leaf(enum x86_cpuid_leaf_num);
+static inline const struct cpuid_leaf *x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf)
+{
+    extern struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
+    extern struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
+    extern uint32_t max_cpuid;
+    extern uint32_t max_ext_cpuid;
+
+    if (leaf < X86_CPUID_EXT_BASE) {
+        if (leaf > MIN_MAX_CPUID && leaf > max_cpuid)
+            return NULL;
+
+        return &_cpuid[leaf];
+    } else {
+        if (leaf > max_ext_cpuid)
+            return NULL;
+
+        return &_cpuid_ext[(uint32_t)leaf - (uint32_t)X86_CPUID_EXT_BASE];
+    }
+}
 /* Retrieve the specified subleaf.  This function is not cached.
  * Returns false if leaf num is invalid */
 bool x86_get_cpuid_subleaf(
         enum x86_cpuid_leaf_num, uint32_t, struct cpuid_leaf *);
-bool x86_feature_test(struct x86_cpuid_bit);
+
+static inline bool x86_feature_test(struct x86_cpuid_bit bit)
+{
+    DEBUG_ASSERT (bit.word <= 3 && bit.bit <= 31);
+
+    if (bit.word > 3 || bit.bit > 31)
+        return false;
+
+    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(bit.leaf_num);
+    if (!leaf)
+        return false;
+
+    switch (bit.word) {
+        case 0: return !!((1u << bit.bit) & leaf->a);
+        case 1: return !!((1u << bit.bit) & leaf->b);
+        case 2: return !!((1u << bit.bit) & leaf->c);
+        case 3: return !!((1u << bit.bit) & leaf->d);
+        default: return false;
+    }
+}
 
 void x86_feature_debug(void);
 

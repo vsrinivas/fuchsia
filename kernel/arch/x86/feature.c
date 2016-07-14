@@ -14,13 +14,10 @@
 
 #define LOCAL_TRACE 0
 
-#define MAX_SUPPORTED_CPUID     (0x17)
-#define MAX_SUPPORTED_CPUID_EXT (0x80000008)
-
-static struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
-static struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
-static uint32_t max_cpuid = 0;
-static uint32_t max_ext_cpuid = 0;
+struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
+struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
+uint32_t max_cpuid = 0;
+uint32_t max_ext_cpuid = 0;
 
 static int initialized = 0;
 
@@ -35,6 +32,8 @@ void x86_feature_init(void)
     max_cpuid = _cpuid[0].a;
     if (max_cpuid > MAX_SUPPORTED_CPUID)
         max_cpuid = MAX_SUPPORTED_CPUID;
+
+    ASSERT(max_cpuid >= MIN_MAX_CPUID);
     LTRACEF("max cpuid 0x%x\n", max_cpuid);
 
     /* read in the base cpuids */
@@ -61,22 +60,6 @@ void x86_feature_init(void)
 #endif
 }
 
-const struct cpuid_leaf *x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf)
-{
-    if (leaf < X86_CPUID_EXT_BASE) {
-        if (leaf > max_cpuid)
-            return NULL;
-
-        return &_cpuid[leaf];
-    } else {
-        if (leaf > max_ext_cpuid)
-            return NULL;
-
-        leaf -= X86_CPUID_EXT_BASE;
-        return &_cpuid_ext[leaf];
-    }
-}
-
 bool x86_get_cpuid_subleaf(
         enum x86_cpuid_leaf_num num, uint32_t subleaf, struct cpuid_leaf *leaf)
 {
@@ -89,26 +72,6 @@ bool x86_get_cpuid_subleaf(
 
     cpuid_c((uint32_t)num, subleaf, &leaf->a, &leaf->b, &leaf->c, &leaf->d);
     return true;
-}
-
-bool x86_feature_test(struct x86_cpuid_bit bit)
-{
-    DEBUG_ASSERT (bit.word <= 3 && bit.bit <= 31);
-
-    if (bit.word > 3 || bit.bit > 31)
-        return false;
-
-    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(bit.leaf_num);
-    if (!leaf)
-        return false;
-
-    switch (bit.word) {
-        case 0: return !!((1u << bit.bit) & leaf->a);
-        case 1: return !!((1u << bit.bit) & leaf->b);
-        case 2: return !!((1u << bit.bit) & leaf->c);
-        case 3: return !!((1u << bit.bit) & leaf->d);
-        default: return false;
-    }
 }
 
 bool x86_topology_enumerate(uint8_t level, struct x86_topology_level *info)
