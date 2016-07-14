@@ -31,6 +31,7 @@ bool LightingEffect::Init(TextureCache* texture_cache) {
 }
 
 void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
+  glPushGroupMarkerEXT(24, "LightingEffect::Prepare");
   auto& size = stage.physical_size();
   frame_buffer_.Bind();
 
@@ -83,9 +84,12 @@ void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
 
     texture_cache_->PutTexture(std::move(illumination));
   }
+  glPopGroupMarkerEXT();
 }
 
 void LightingEffect::Draw(const Texture& color) {
+  glPushGroupMarkerEXT(21, "LightingEffect::Draw");
+
   glUseProgram(shader_.program().id());
   glUniform1i(shader_.color(), 0);
   glUniform1i(shader_.illumination(), 1);
@@ -98,6 +102,8 @@ void LightingEffect::Draw(const Texture& color) {
 
   glEnableVertexAttribArray(shader_.position());
   DrawQuad(shader_.position(), full_frame_);
+
+  glPopGroupMarkerEXT();
 }
 
 }  // namespace escher
