@@ -58,7 +58,7 @@ fi
 readonly SDK_PATH="${SCRIPT_ROOT}/sdk"
 readonly SDK_STAMP_PATH="${SDK_PATH}.stamp"
 readonly SDK_HASH="$(cat "${SDK_PATH}.sha1")"
-readonly SDK_TAR_PATH="${SDK_PATH}/sdk.tar.lz"
+readonly SDK_TAR_PATH="${SDK_PATH}/sdk.tar.bz2"
 readonly SDK_URL="${FUCHSIA_URL_BASE}/sdk/${SDK_HASH}"
 
 if [[ ! -f "${SDK_STAMP_PATH}" ]] || [[ "${SDK_HASH}" != "$(cat "${SDK_STAMP_PATH}")" ]]; then
@@ -66,7 +66,7 @@ if [[ ! -f "${SDK_STAMP_PATH}" ]] || [[ "${SDK_HASH}" != "$(cat "${SDK_STAMP_PAT
   rm -rf -- "${SDK_PATH}"
   mkdir -- "${SDK_PATH}"
   curl --progress-bar -continue-at=- --location --output "${SDK_TAR_PATH}" "${SDK_URL}"
-  (cd -- "${SDK_PATH}" && tar xf sdk.tar.lz)
+  (cd -- "${SDK_PATH}" && tar xf sdk.tar.bz2)
   rm -f -- "${SDK_TAR_PATH}"
   echo "${SDK_HASH}" > "${SDK_STAMP_PATH}"
 fi
