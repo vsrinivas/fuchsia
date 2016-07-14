@@ -40,12 +40,12 @@ static mx_status_t devhost_rpc(mx_handle_t h, devhost_msg_t* msg, mx_handle_t ha
     if ((r = mx_message_write(h, msg, sizeof(*msg), &harg, harg ? 1 : 0, 0)) < 0) {
         return r;
     }
-    mx_signals_t pending;
+    mx_signals_state_t pending;
     if ((r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                      MX_TIME_INFINITE, &pending, NULL)) < 0) {
+                                      MX_TIME_INFINITE, &pending)) < 0) {
         return r;
     }
-    if (pending & MX_SIGNAL_PEER_CLOSED) {
+    if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
         return ERR_CHANNEL_CLOSED;
     }
     uint32_t dsz = sizeof(*msg);

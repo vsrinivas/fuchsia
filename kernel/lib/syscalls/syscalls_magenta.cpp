@@ -30,6 +30,7 @@
 #include <magenta/user_thread.h>
 #include <magenta/vm_object_dispatcher.h>
 #include <magenta/waiter.h>
+#include <magenta/wait_event.h>
 
 #include <platform.h>
 #include <stdint.h>
@@ -91,15 +92,15 @@ struct WaitHelper {
     WaitHelper(const WaitHelper &) = delete;
     WaitHelper& operator=(const WaitHelper &) = delete;
 
-    mx_status_t Begin(Handle* handle, event_t* event, mx_signals_t signals) {
+    mx_status_t Begin(Handle* handle, WaitEvent* event, mx_signals_t signals, uint64_t context) {
         dispatcher = handle->dispatcher();
         waiter = dispatcher->get_waiter();
         if (!waiter)
             return ERR_NOT_SUPPORTED;
-        return  waiter->BeginWait(event, handle, signals);
+        return  waiter->BeginWait(event, handle, signals, context);
     }
 
-    Waiter::State End(event_t* event) {
+    Waiter::State End(WaitEvent* event) {
         DEBUG_ASSERT(dispatcher);
         auto s = waiter->FinishWait(event);
         dispatcher.reset();
@@ -110,12 +111,10 @@ struct WaitHelper {
 mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
-                                mx_signals_t* _satisfied_signals,
-                                mx_signals_t* _satisfiable_signals) {
+                                mx_signals_state_t* _signals_state) {
     LTRACEF("handle %u\n", handle_value);
 
-    event_t event;
-    event_init(&event, false, 0);
+    WaitEvent event;
 
     status_t result;
     WaitHelper wait_helper;
@@ -130,7 +129,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
         if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
             return ERR_ACCESS_DENIED;
 
-        result = wait_helper.Begin(handle, &event, signals);
+        result = wait_helper.Begin(handle, &event, signals, 0u);
         if (result != NO_ERROR)
             return result;
     }
@@ -139,22 +138,17 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     if ((timeout > 0ull) && (t == 0u))
         t = 1u;
 
-    result = event_wait_timeout(&event, t, true);
+    result = WaitEvent::ResultToStatus(event.Wait(t, nullptr));
 
     // Regardless of wait outcome, we must call FinishWait().
     Waiter::State state = wait_helper.End(&event);
 
-    if ((result != NO_ERROR) && (result != ERR_TIMED_OUT)) {
+    if (result != NO_ERROR && result != ERR_CANCELLED && result != ERR_TIMED_OUT)
         return result;
-    }
 
-    if (_satisfied_signals) {
-        if (copy_to_user_u32(_satisfied_signals, state.signals) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-    }
-
-    if (_satisfiable_signals) {
-        if (copy_to_user_u32(_satisfiable_signals, state.satisfiable) != NO_ERROR)
+    if (_signals_state) {
+        mx_signals_state_t signals_state = { state.signals, state.satisfiable };
+        if (copy_to_user(_signals_state, &signals_state, sizeof(signals_state)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -165,8 +159,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
                                  const mx_handle_t* _handle_values,
                                  const mx_signals_t* _signals,
                                  mx_time_t timeout,
-                                 mx_signals_t* _satisfied_signals,
-                                 mx_signals_t* _satisfiable_signals) {
+                                 uint32_t* _result_index,
+                                 mx_signals_state_t* _signals_states) {
     LTRACEF("count %u\n", count);
 
     if (!_handle_values || !_signals)
@@ -194,22 +188,14 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     if (!waiters)
         return ERR_NO_MEMORY;
 
-    utils::unique_ptr<uint32_t[]> satisfied;
-    if (_satisfied_signals) {
-        satisfied.reset(new uint32_t[count]);
-        if (!satisfied)
+    utils::unique_ptr<mx_signals_state_t[]> signals_states;
+    if (_signals_states) {
+        signals_states.reset(new mx_signals_state_t[count]);
+        if (!signals_states)
             return ERR_NO_MEMORY;
     }
 
-    utils::unique_ptr<uint32_t[]> satisfiable;
-    if (_satisfiable_signals) {
-        satisfiable.reset(new uint32_t[count]);
-        if (!satisfiable)
-            return ERR_NO_MEMORY;
-    }
-
-    event_t event;
-    event_init(&event, false, 0);
+    WaitEvent event;
 
     {
         auto up = UserProcess::GetCurrent();
@@ -222,7 +208,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
             if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
                 return ERR_ACCESS_DENIED;
 
-            result = waiters[ix].Begin(handle, &event, signals[ix]);
+            result = waiters[ix].Begin(handle, &event, signals[ix], static_cast<uint64_t>(ix));
             if (result != NO_ERROR)
                 return result;
         }
@@ -232,28 +218,30 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     if ((timeout > 0ull) && (t == 0u))
         t = 1u;
 
-    result = event_wait_timeout(&event, t, true);
+    uint64_t context = -1;
+    WaitEvent::Result wait_event_result = event.Wait(t, &context);
+    result = WaitEvent::ResultToStatus(wait_event_result);
 
     // Regardless of wait outcome, we must call FinishWait().
     for (size_t ix = 0; ix != count; ++ix) {
         auto s = waiters[ix].End(&event);
-        if (satisfied)
-            satisfied[ix] = s.signals;
-        if (satisfiable)
-            satisfiable[ix] = s.satisfiable;
+        if (signals_states) {
+            signals_states[ix].satisfied = s.signals;
+            signals_states[ix].satisfiable = s.satisfiable;
+        }
     }
 
-    if ((result != NO_ERROR) && (result != ERR_TIMED_OUT)) {
-        return result;
-    }
-
-    if (_satisfied_signals) {
-        if (copy_to_user(_satisfied_signals, satisfied.get(), bytes_size) != NO_ERROR)
+    if (_result_index && WaitEvent::HaveContextForResult(wait_event_result)) {
+        if (copy_to_user_u32(_result_index, static_cast<uint32_t>(context)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
-    if (_satisfiable_signals) {
-        if (copy_to_user(_satisfiable_signals, satisfiable.get(), bytes_size) != NO_ERROR)
+    if (result != NO_ERROR && result != ERR_CANCELLED && result != ERR_TIMED_OUT)
+        return result;
+
+    if (_signals_states) {
+        if (copy_to_user(_signals_states, signals_states.get(),
+                         sizeof(mx_signals_state_t) * count) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 

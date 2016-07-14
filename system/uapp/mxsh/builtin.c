@@ -297,7 +297,7 @@ static int mxc_runtests(int argc, char** argv) {
         }
 
         mx_status_t status = mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
-                                                      MX_TIME_INFINITE, 0, 0);
+                                                      MX_TIME_INFINITE, NULL);
         if (status != NO_ERROR) {
             printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
             mxc_fail_test(&failures, de->d_name, FAILED_TO_WAIT, 0);

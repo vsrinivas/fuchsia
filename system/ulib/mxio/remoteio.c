@@ -141,21 +141,21 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
 }
 
 void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
-    mx_signals_t pending;
+    mx_signals_state_t pending;
     mx_status_t r;
 
     xprintf("riosvr(%x) starting...\n", h);
     for (;;) {
         r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                     MX_TIME_INFINITE, &pending, NULL);
+                                     MX_TIME_INFINITE, &pending);
         if (r < 0)
             break;
-        if (pending & MX_SIGNAL_READABLE) {
+        if (pending.satisfied & MX_SIGNAL_READABLE) {
             if ((r = mxio_rio_handler(h, cb, cookie)) != 0) {
                 break;
             }
         }
-        if (pending & MX_SIGNAL_PEER_CLOSED) {
+        if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
             r = ERR_CHANNEL_CLOSED;
             break;
         }
@@ -186,13 +186,13 @@ static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
         goto fail_discard_handles;
     }
 
-    mx_signals_t pending;
+    mx_signals_state_t pending;
     if ((r = mx_handle_wait_one(rh, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                      MX_TIME_INFINITE, &pending, NULL)) < 0) {
+                                      MX_TIME_INFINITE, &pending)) < 0) {
         return r;
     }
-    if ((pending & MX_SIGNAL_PEER_CLOSED) &&
-        !(pending & MX_SIGNAL_READABLE)) {
+    if ((pending.satisfied & MX_SIGNAL_PEER_CLOSED) &&
+        !(pending.satisfied & MX_SIGNAL_READABLE)) {
         return ERR_CHANNEL_CLOSED;
     }
 
@@ -498,13 +498,12 @@ static mx_status_t mx_rio_wait(mxio_t* io, uint32_t events, uint32_t* _pending, 
         return ERR_NOT_SUPPORTED;
     }
     mx_status_t r;
-    mx_signals_t pending;
-    if ((r = mx_handle_wait_one(rio->e, events & MXIO_EVT_ALL,
-                                      timeout, &pending, NULL)) < 0) {
+    mx_signals_state_t pending;
+    if ((r = mx_handle_wait_one(rio->e, events & MXIO_EVT_ALL, timeout, &pending)) < 0) {
         return r;
     }
     if (_pending) {
-        *_pending = pending;
+        *_pending = pending.satisfied;
     }
     return NO_ERROR;
 }

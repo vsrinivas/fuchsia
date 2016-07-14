@@ -83,7 +83,7 @@ static int loader_service_thread(void* arg) {
     mx_status_t r;
 
     for (;;) {
-        if ((r = mx_handle_wait_one(h, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL, NULL)) < 0) {
+        if ((r = mx_handle_wait_one(h, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL)) < 0) {
             fprintf(stderr, "dlsvc: wait error %d\n", r);
             break;
         }

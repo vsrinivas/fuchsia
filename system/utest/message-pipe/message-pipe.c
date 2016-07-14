@@ -47,28 +47,27 @@ static int reader_thread(void* arg) {
     const unsigned int index = 2;
     mx_handle_t* pipe = &_pipe[index];
     mx_status_t status;
-    mx_signals_t satisfied[2], satisfiable[2];
+    mx_signals_state_t states[2];
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     unsigned int packets[2] = {0, 0};
     bool closed[2] = {false, false};
     do {
-        status = mx_handle_wait_many(2, pipe, &signals, MX_TIME_INFINITE,
-                                           satisfied, satisfiable);
+        status = mx_handle_wait_many(2, pipe, &signals, MX_TIME_INFINITE, NULL, states);
         ASSERT_EQ(status, NO_ERROR, "error from mx_handle_wait_many");
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
-        if (satisfied[0] & MX_SIGNAL_READABLE) {
+        if (states[0].satisfied & MX_SIGNAL_READABLE) {
             status = mx_message_read(pipe[0], &data, &num_bytes, NULL, 0u, 0u);
             ASSERT_EQ(status, NO_ERROR, "error while reading message");
             packets[0] += 1;
-        } else if (satisfied[1] & MX_SIGNAL_READABLE) {
+        } else if (states[1].satisfied & MX_SIGNAL_READABLE) {
             status = mx_message_read(pipe[1], &data, &num_bytes, NULL, 0u, 0u);
             ASSERT_EQ(status, NO_ERROR, "error while reading message");
             packets[1] += 1;
         } else {
-            if (satisfied[0] & MX_SIGNAL_PEER_CLOSED)
+            if (states[0].satisfied & MX_SIGNAL_PEER_CLOSED)
                 closed[0] = true;
-            if (satisfied[1] & MX_SIGNAL_PEER_CLOSED)
+            if (states[1].satisfied & MX_SIGNAL_PEER_CLOSED)
                 closed[1] = true;
         }
     } while (!closed[0] || !closed[1]);
@@ -79,9 +78,9 @@ static int reader_thread(void* arg) {
 }
 
 mx_signals_t get_satisfiable_signals(mx_handle_t handle) {
-    mx_signals_t satisfiable = 0u;
-    mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, NULL, &satisfiable);
-    return (status == ERR_TIMED_OUT) ? satisfiable : (mx_signals_t) status;
+    mx_signals_state_t signals_state = {0};
+    mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
+    return (status == ERR_TIMED_OUT) ? signals_state.satisfiable : (mx_signals_t) status;
 }
 
 bool message_pipe_test(void) {
@@ -135,7 +134,7 @@ bool message_pipe_test(void) {
     usleep(1);
     mx_handle_close(_pipe[0]);
 
-    mx_handle_wait_one(thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    mx_handle_wait_one(thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
 
     // Since the the other side of pipe[3] is closed, reading the last message makes
     // the statisfiable signals to become zero.

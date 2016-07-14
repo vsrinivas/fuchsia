@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
     mx_process_start(proc, h, entry);
 
     // wait for devmgr to stop
-    r = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+    r = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
 
     printf("userboot: devmgr exited\n");
 

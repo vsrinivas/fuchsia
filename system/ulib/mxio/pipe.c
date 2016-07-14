@@ -32,7 +32,7 @@ typedef struct mx_pipe {
 } mx_pipe_t;
 
 static mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
-    mx_signals_t pending;
+    mx_signals_state_t pending;
     mx_status_t r;
     uint32_t sz;
 
@@ -44,12 +44,12 @@ static mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
         }
         if (r == ERR_BAD_STATE) {
             r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                         MX_TIME_INFINITE, &pending, NULL);
+                                         MX_TIME_INFINITE, &pending);
             if (r < 0)
                 return r;
-            if (pending & MX_SIGNAL_READABLE)
+            if (pending.satisfied & MX_SIGNAL_READABLE)
                 continue;
-            if (pending & MX_SIGNAL_PEER_CLOSED)
+            if (pending.satisfied & MX_SIGNAL_PEER_CLOSED)
                 return ERR_CHANNEL_CLOSED;
             return ERR_INTERNAL;
         }

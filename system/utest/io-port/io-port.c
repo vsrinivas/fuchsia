@@ -263,7 +263,7 @@ static bool bind_events_test(void)
 
     // The messages should match the event poke order.
     for (int ix = 0; ix != countof(order); ++ix) {
-        status = mx_handle_wait_one(pipe, MX_SIGNAL_READABLE, 1000000000ULL, NULL, NULL);
+        status = mx_handle_wait_one(pipe, MX_SIGNAL_READABLE, 1000000000ULL, NULL);
         EXPECT_EQ(status, NO_ERROR, "failed to wait for pipe");
         status = mx_message_read(pipe, &report, &bytes, NULL, NULL, 0u);
         EXPECT_EQ(status, NO_ERROR, "expected valid message");

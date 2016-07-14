@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 
-#include <kernel/event.h>
 #include <kernel/spinlock.h>
 
 #include <magenta/types.h>
@@ -17,6 +16,7 @@
 #include <utils/intrusive_single_list.h>
 
 class Handle;
+class WaitEvent;
 
 // Magenta Waiter
 //
@@ -34,9 +34,9 @@ class Handle;
 //  Style 1: Using BeginWait / FinishWait. Assume an existing |event|
 //
 //      auto waiter = handle->dispatcher()->get_waiter();
-//      waiter->BeginWait(&event, handle, signals);
+//      waiter->BeginWait(&event, handle, signals, 0);
 //
-//      event_wait(&event);
+//      event.Wait(timeout);
 //      waiter->FinishWait(&event);
 //
 //  Style 2: Using IOPorts. Assume an existing |io_port|.
@@ -61,10 +61,10 @@ public:
     Waiter& operator=(const Waiter& o) = delete;
 
     // Start an event-based wait.
-    mx_status_t BeginWait(event_t* event, Handle* handle, mx_signals_t signals);
+    mx_status_t BeginWait(WaitEvent* event, Handle* handle, mx_signals_t signals, uint64_t context);
 
     // End an event-based wait.
-    State FinishWait(event_t* event);
+    State FinishWait(WaitEvent* event);
 
     // Register IO Port for state changes.
     bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
@@ -82,9 +82,10 @@ public:
 private:
     struct WaitNode {
         WaitNode* next;
-        event_t* event;
+        WaitEvent* event;
         Handle* handle;
         mx_signals_t signals;
+        uint64_t context;
 
         void list_set_next(WaitNode* node) {
             next = node;
@@ -94,7 +95,7 @@ private:
         }
     };
 
-    int SignalComplete_NoLock();
+    bool SignalComplete_NoLock();
 
     bool SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
 

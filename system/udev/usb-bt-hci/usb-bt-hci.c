@@ -187,17 +187,15 @@ static int hci_read_thread(void* arg) {
     signals[1] = MX_SIGNAL_READABLE;
 
     while (1) {
-        mx_signals_t satisfied_signals[2];
-        mx_signals_t satisfiable_signals[2];
+        mx_signals_state_t signals_state[2];
 
         mx_status_t status = mx_handle_wait_many(countof(handles), handles, signals,
-                                                       MX_TIME_INFINITE, satisfied_signals,
-                                                       satisfiable_signals);
+                                                       MX_TIME_INFINITE, NULL, signals_state);
         if (status < 0) {
             printf("mx_handle_wait_many fail\n");
             break;
         }
-        if (satisfied_signals[0] & MX_SIGNAL_READABLE) {
+        if (signals_state[0].satisfied & MX_SIGNAL_READABLE) {
             uint8_t buf[256];
             uint32_t length = sizeof(buf);
             status = mx_message_read(handles[0], buf, &length, NULL, 0, 0);
@@ -213,7 +211,7 @@ static int hci_read_thread(void* arg) {
                 break;
             }
         }
-        if (satisfied_signals[1] & MX_SIGNAL_READABLE) {
+        if (signals_state[1].satisfied & MX_SIGNAL_READABLE) {
             uint8_t buf[ACL_BUF_SIZE];
             uint32_t length = sizeof(buf);
             status = mx_message_read(handles[1], buf, &length, NULL, 0, 0);

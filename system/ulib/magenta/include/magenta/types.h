@@ -46,6 +46,11 @@ typedef uint32_t mx_signals_t;
 #define MX_SIGNAL_USER3           ((mx_signals_t)1u << 7)
 #define MX_SIGNAL_USER_ALL        ((mx_signals_t)15u << 4)
 
+typedef struct {
+    mx_signals_t satisfied;
+    mx_signals_t satisfiable;
+} mx_signals_state_t;
+
 typedef uint32_t mx_rights_t;
 #define MX_RIGHT_NONE             ((mx_rights_t)0u)
 #define MX_RIGHT_DUPLICATE        ((mx_rights_t)1u << 0)

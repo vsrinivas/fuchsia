@@ -62,13 +62,13 @@ int reply_handle_test(void) {
     snprintf(msg, sizeof(msg), "process did not start %d\n", r);
     ASSERT_GE(r, 0, msg);
 
-    mx_signals_t pending;
+    mx_signals_state_t pending;
     r = mx_handle_wait_one(p2[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                 MX_TIME_INFINITE, &pending, NULL);
+                                 MX_TIME_INFINITE, &pending);
     snprintf(msg, sizeof(msg), "error waiting on p2[0] %d\n", r);
     ASSERT_GE(r, 0, msg);
 
-    ASSERT_TRUE(pending & MX_SIGNAL_READABLE, "pipe 2a not readable");
+    ASSERT_TRUE(pending.satisfied & MX_SIGNAL_READABLE, "pipe 2a not readable");
 
     unittest_printf("write handle %x to helper...\n", p2[1]);
     char data[128];

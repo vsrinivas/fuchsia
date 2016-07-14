@@ -43,7 +43,7 @@ struct mxio_dispatcher {
 
     mx_handle_t handles[MAX_HANDLERS + 1];
     mx_signals_t wsigs[MAX_HANDLERS + 1];
-    mx_signals_t ssigs[MAX_HANDLERS + 1];
+    mx_signals_states_t states[MAX_HANDLERS + 1];
 };
 
 static void mxio_dispatcher_destroy(mxio_dispatcher_t* md) {
@@ -81,26 +81,26 @@ setup:
     xprintf("dispatcher: listening to %d pipe%s\n", count, (count == 1) ? "" : "s");
     for (;;) {
         r = mx_handle_wait_many(count + 1, md->handles, md->wsigs, MX_TIME_INFINITE,
-                                      md->ssigs, NULL);
+                                      NULL, md->states);
         if (r < 0) {
             xprintf("dispatcher: wait many failed %d\n", r);
             break;
         }
         i = 0;
         list_for_every_entry (&md->list, handler, handler_t, node) {
-            if (md->ssigs[i] & MX_SIGNAL_READABLE) {
+            if (md->states[i].satisfied & MX_SIGNAL_READABLE) {
                 if ((r = md->cb(handler->h, handler->cb, handler->cookie)) != 0) {
                     remove_handler(md, handler, r);
                     goto setup;
                 }
             }
-            if (md->ssigs[i] & MX_SIGNAL_PEER_CLOSED) {
+            if (md->states[i].satisfied & MX_SIGNAL_PEER_CLOSED) {
                 remove_handler(md, handler, ERR_CHANNEL_CLOSED);
                 goto setup;
             }
             i++;
         }
-        if (md->ssigs[count] & MX_SIGNAL_READABLE) {
+        if (md->states[count].satisfied & MX_SIGNAL_READABLE) {
             uint32_t sz = sizeof(handler_t);
             handler_t a;
             if ((r = mx_message_read(md->rx, &a, &sz, NULL, NULL, 0)) < 0) {

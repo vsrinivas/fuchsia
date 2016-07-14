@@ -12,8 +12,8 @@ handle_wait_many - wait for signals on multiple handles
 mx_status_t mx_handle_wait_many(uint32_t count, const mx_handle_t* handles,
                                 const mx_signals_t* signals,
                                 mx_time_t timeout,
-                                mx_signals_t* satisfied_signals,
-                                mx_signals_t* satisfiable_signals);
+                                uint32_t* result_index,
+                                mx_signals_state_t* signals_states);
 ```
 
 ## DESCRIPTION
@@ -32,17 +32,17 @@ takes two special values: **0** and **MX_TIME_INFINITE**. The former causes
 the wait to complete immediately and the latter signals that wait will
 never times out.
 
-Upon return, if non-NULL, the *satisfied_signals* array is filled with
-a bitmap for each of the *count* specified handles, indicating which
-signals are pending on that particular handle.
+Upon return, if non-null, the *signals_states* array is filled with a pair of
+bitmaps for each of the *count* specified handles, indicating which signals are
+pending and which are satisfiable on that particular handle.
 
-It is possible to have the call return with a *satisfiable_signals* array
-with values different than the values that caused the wait to complete
-if other threads are further modifing the objects behind the *handles*.
+It is possible to have the call return with a *signals_states* array with values
+different than the values that caused the wait to complete if other threads are
+further modifing the objects behind the *handles*.
 
-If non-NULL, the *satisfiable_signals* is filled with a bitmap for each of
-the specified handles indicating which signals are possible to be pending
-on that handle, given its type and current state.
+If non-null and the return value is **NO_ERROR** or **ERR_CANCELLED**,
+*result_index* set to first handle that satisfied the wait (or was closed,
+respectively).
 
 ## RETURN VALUE
 
@@ -50,24 +50,23 @@ on that handle, given its type and current state.
 satisfied by the *signals* input or **ERR_TIMED_OUT** if the wait completed
 because *timeout* nanoseconds have elapsed.
 
-In the event of **ERR_TIMED_OUT**, *satisfied_signals* may indicate
-signals that were satisfied after the timeout but before the syscall
-returned.
+In the event of **ERR_TIMED_OUT**, *signals_states* may include state changes
+that occurred after the timeout but before the syscall returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *handle* isn't a valid handle or *satisfied_signals*
-or *satisfiable_signals* were invalid pointers.
+**ERR_INVALID_ARGS**  *handle* isn't a valid handle or *result_index* or
+or *signals_states* were invalid pointers.
 
 **ERR_ACCESS_DENIED**  One or more of the provided *handles* does not
 have **MX_RIGHT_READ** and may not be waited upon.
 
 **ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
 
-## BUGS
+**ERR_CANCELLED** One or more of the provided *handles* was invalidated (e.g.,
+closed) during the wait.
 
-Currently the *satisfiable_signals* array is filled with the same content
-as the *satisifed_signals* array.
+## BUGS
 
 Currently the smallest *timeout* is 1 millisecond. Intervals smaller
 than that are equivalent to 1ms.

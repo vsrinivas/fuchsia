@@ -42,7 +42,7 @@ bool threads_test(void) {
         ASSERT_GT(handle, 0, "Error while creating thread");
         unittest_printf("thread:%d created handle %d\n", i, handle);
 
-        mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL, NULL);
+        mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
         unittest_printf("thread:%d joined\n", i);
 
         mx_handle_close(handle);

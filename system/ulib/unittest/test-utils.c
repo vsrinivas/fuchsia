@@ -71,18 +71,16 @@ mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
 static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signals,
                            uint32_t num_handles, uint32_t* result_index,
                            mx_time_t deadline,
-                           mx_signals_t* satisfied_signals,
-                           mx_signals_t* satisfiable_signals)
+                           mx_signals_state_t* signals_states)
 {
     mx_status_t result;
 
     if (num_handles == 1u) {
         result =
-            mx_handle_wait_one(*handles, *signals, deadline,
-                               satisfied_signals, satisfiable_signals);
+            mx_handle_wait_one(*handles, *signals, deadline, signals_states);
     } else {
-        result = mx_handle_wait_many(num_handles, handles, signals, deadline,
-                                     satisfied_signals, satisfiable_signals);
+        result = mx_handle_wait_many(num_handles, handles, signals, deadline, NULL,
+                                     signals_states);
     }
 
     // xyzdje, from mx_wait: TODO(cpu): implement |result_index|, see MG-33 bug.
@@ -120,14 +118,13 @@ void tu_message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
 
 bool tu_wait_readable(mx_handle_t handle)
 {
-    mx_signals_t satisfied_signals, satisfiable_signals;
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    mx_signals_state_t signals_state;
     int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
-    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout,
-                                 &satisfied_signals, &satisfiable_signals);
+    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &signals_state);
     if (result != NO_ERROR)
         tu_syscall_fail(__func__, result);
-    if ((satisfied_signals & MX_SIGNAL_READABLE) == 0) {
+    if ((signals_state.satisfied & MX_SIGNAL_READABLE) == 0) {
         unittest_printf("%s: peer closed\n", __func__);
         return false;
     }
@@ -136,14 +133,13 @@ bool tu_wait_readable(mx_handle_t handle)
 
 void tu_wait_signalled(mx_handle_t handle)
 {
-    mx_signals_t satisfied_signals, satisfiable_signals;
     mx_signals_t signals = MX_SIGNAL_SIGNALED;
+    mx_signals_state_t signals_state;
     int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
-    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout,
-                                 &satisfied_signals, &satisfiable_signals);
+    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &signals_state);
     if (result != NO_ERROR)
         tu_syscall_fail(__func__, result);
-    if ((satisfied_signals & MX_SIGNAL_SIGNALED) == 0) {
+    if ((signals_state.satisfied & MX_SIGNAL_SIGNALED) == 0) {
         unittest_printf("%s: unexpected return from tu_wait\n", __func__);
         exit(TU_FAIL_ERRCODE);
     }
