@@ -24,6 +24,7 @@ extern "C" {
 
 #pragma GCC visibility push(hidden)
 
+// Accessors for system configuration info.
 int mxr_get_nprocs(void);
 int mxr_get_nprocs_conf(void);
 

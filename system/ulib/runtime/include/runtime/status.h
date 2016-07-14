@@ -22,6 +22,7 @@ extern "C" {
 
 #pragma GCC visibility push(hidden)
 
+// Return a human-readable description of status.
 const char* mx_strstatus(mx_status_t status);
 
 #pragma GCC visibility pop

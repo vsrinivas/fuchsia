@@ -28,6 +28,22 @@ typedef uint32_t mxr_tls_t;
 #define MXR_TLS_SLOT_ERRNO ((mxr_tls_t)1)
 #define MXR_TLS_SLOT_INVALID ((mxr_tls_t)-1)
 
+#pragma GCC visibility push(hidden)
+
+// Allocate a thread local storage slot. mxr_tls_t slots do not have
+// associated destructors and cannot be reclaimed.
+mxr_tls_t mxr_tls_allocate(void);
+
+// Get and set the value in a thread local storage slot.
+static inline void* mxr_tls_get(mxr_tls_t slot);
+static inline void mxr_tls_set(mxr_tls_t slot, void* value);
+
+// Get or set the tls root structure for the current thread. These
+// only need to be called by the implementations of e.g. mxr_threads
+// or pthreads, not directly by users of thread local storage.
+static inline mx_tls_root_t* mxr_tls_root_get(void);
+static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot);
+
 #if defined(__aarch64__)
 static inline mx_tls_root_t* mxr_tls_root_get(void) {
     mx_tls_root_t* tlsroot;
@@ -72,8 +88,6 @@ static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {
 #error Unsupported architecture
 
 #endif
-
-#pragma GCC visibility push(hidden)
 
 mxr_tls_t mxr_tls_allocate(void);
 

@@ -27,9 +27,19 @@ typedef struct {
 
 #pragma GCC visibility push(hidden)
 
+// Attempts to take the lock without blocking. Returns NO_ERROR if the
+// lock is obtained, and ERR_BUSY if not.
 mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex);
+
+// Attempts to take the lock before the timeout expires. Returns
+// NO_ERROR if the lock is acquired, and ERR_TIMED_OUT if the timeout
+// expires.
 mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout);
+
+// Blocks until the lock is obtained.
 void mxr_mutex_lock(mxr_mutex_t* mutex);
+
+// Unlocks the lock.
 void mxr_mutex_unlock(mxr_mutex_t* mutex);
 
 #pragma GCC visibility pop

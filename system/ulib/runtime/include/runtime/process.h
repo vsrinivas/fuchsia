@@ -25,10 +25,10 @@ __BEGIN_CDECLS
 // proc info structure.  Return a pointer to the same.
 mx_proc_info_t* mxr_process_parse_args(void* arg);
 
-// Obtain the global proc info structure
+// Obtain the global proc info structure.
 mx_proc_info_t* mxr_process_get_info(void);
 
-// Obtain a handle from proc args, if such a handle exists
+// Obtain a handle from proc args, if such a handle exists.
 mx_handle_t mxr_process_get_handle(uint32_t id);
 
 #pragma GCC visibility pop
