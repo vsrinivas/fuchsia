@@ -1,4 +1,3 @@
-# Fuchsia Template Library
+# Magenta Template Library
 
-A library containing basic C++ building blocks, such as logging and reference
-counting.
+A library containing C++ utilities for working with the Magenta system API.
