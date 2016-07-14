@@ -12,35 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//magma/gnbuild/magma.gni")
-
-executable("magma_service_driver"){
-  deps = [
-    "src/main"
-  ]
-}
-
-config("magma_public_config") {
-  include_dirs = [
-    "include",
-    "src",
-  ]
-
-}
-
-source_set("magma") {
-
-  public_configs = [ ":magma_public_config" ]
-
-
-  sources = [
-    "src/p_umd/magma.cpp",
-    "src/p_umd/magma_umd.cpp",
-    "src/p_umd/magma_umd.h",
-    "src/p_umd/include/magma_arch.h",
-    "src/p_umd/arch/intel-gen/include/intel_gen.h",
-    "src/p_umd/arch/intel-gen/intel_gen.cpp",
-    "include/magma.h",
-    "include/magma_defs.h",
-  ]
+declare_args() {
+  magma_build_root = "//magma"
+  mesa_build_root = "//third_party/mesa"
+  expat_build_root = "//third_party/expat"
 }

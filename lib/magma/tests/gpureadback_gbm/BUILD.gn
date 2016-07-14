@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//gnbuild/magma.gni")
+import("//magma/gnbuild/magma.gni")
 
 config("gpureadback_public_config"){
   include_dirs = ["."]
@@ -31,10 +31,6 @@ source_set("gpureadback") {
     "magma_readback_test.cc",
     "magma_readback_test.h",
     "gpureadback.h",
-  ]
-
-  deps = [
-    "//third_party/ulib/musl",
   ]
 
   public_deps = [

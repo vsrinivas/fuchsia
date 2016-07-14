@@ -25,9 +25,9 @@ config("drm_headers_public_config"){
     ".",
     "./drm",
   ]
-
+  
   defines = [
-    "__Fucshia__"
+    "_GNU_SOURCE"
   ]
 }
 

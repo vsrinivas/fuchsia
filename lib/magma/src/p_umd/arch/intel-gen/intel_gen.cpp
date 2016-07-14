@@ -54,7 +54,7 @@
 // Alignment must be a power of 2
 #define ALIGN(value, alignment) (((value) + ((alignment)-1)) & ~((alignment)-1))
 
-IntelGen::~IntelGen() {}
+MagmaArch::~MagmaArch() {}
 
 /*
  * Round a given stride (bytes) up to the minimum required for X tiling on a

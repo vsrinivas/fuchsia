@@ -11,36 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import("//magma/gnbuild/magma.gni")
-
-executable("magma_service_driver"){
-  deps = [
-    "src/main"
-  ]
-}
-
-config("magma_public_config") {
-  include_dirs = [
-    "include",
-    "src",
-  ]
-
-}
-
-source_set("magma") {
-
-  public_configs = [ ":magma_public_config" ]
-
-
+source_set("main") {
   sources = [
-    "src/p_umd/magma.cpp",
-    "src/p_umd/magma_umd.cpp",
-    "src/p_umd/magma_umd.h",
-    "src/p_umd/include/magma_arch.h",
-    "src/p_umd/arch/intel-gen/include/intel_gen.h",
-    "src/p_umd/arch/intel-gen/intel_gen.cpp",
-    "include/magma.h",
-    "include/magma_defs.h",
+    "driver_main.c",
   ]
+  deps = [
+    "//magma/tests/gpureadback"
+  ]
+  libs = [
+    "-ldriver"
+  ]
+
+  defines = [
+    "_GNU_SOURCE"
+  ]
+
 }
