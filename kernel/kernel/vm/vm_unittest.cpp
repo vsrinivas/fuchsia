@@ -110,13 +110,17 @@ static bool test_region(uintptr_t seed, void* _ptr, size_t len) {
     return true;
 }
 
-static void fill_and_test(bool& all_ok, void* ptr, size_t len) {
+static bool fill_and_test(void* ptr, size_t len) {
+    BEGIN_TEST;
+
     // fill it with a pattern
     fill_region((uintptr_t)ptr, ptr, len);
 
     // test that the pattern is read back properly
     auto result = test_region((uintptr_t)ptr, ptr, len);
     EXPECT_TRUE(result, "testing region for corruption");
+
+    END_TEST;
 }
 
 static bool vmm_tests(void* context) {
@@ -132,7 +136,8 @@ static bool vmm_tests(void* context) {
         EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         // free the region
         err = vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
@@ -151,7 +156,8 @@ static bool vmm_tests(void* context) {
         EXPECT_NEQ(nullptr, ptr, "vmm_allocate_contiguous region of memory");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         // test that it is indeed contiguous
         unittest_printf("testing that region is contiguous\n");
@@ -189,7 +195,8 @@ static bool vmm_tests(void* context) {
         EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         // allocate region 1
         err = vmm_alloc(aspace, "test1", 16384, &ptr, 0, 0, 0);
@@ -197,7 +204,8 @@ static bool vmm_tests(void* context) {
         EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         // allocate region 2
         err = vmm_alloc(aspace, "test2", 16384, &ptr, 0, 0, 0);
@@ -205,7 +213,8 @@ static bool vmm_tests(void* context) {
         EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         vmm_set_active_aspace(old_aspace);
 
@@ -316,7 +325,8 @@ static bool vmm_object_tests(void* context) {
         EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         auto err = ka->FreeRegion((vaddr_t)ptr);
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
@@ -334,7 +344,8 @@ static bool vmm_object_tests(void* context) {
         EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         auto err = ka->FreeRegion((vaddr_t)ptr);
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
@@ -355,7 +366,8 @@ static bool vmm_object_tests(void* context) {
         EXPECT_FALSE(vmo, "dropped ref to object");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         auto err = ka->FreeRegion((vaddr_t)ptr);
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
@@ -376,7 +388,8 @@ static bool vmm_object_tests(void* context) {
         EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         auto err = ka->FreeRegion((vaddr_t)ptr);
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
@@ -408,7 +421,8 @@ static bool vmm_object_tests(void* context) {
         EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
         // fill with known pattern and test
-        fill_and_test(all_ok, ptr, alloc_size);
+        if (!fill_and_test(ptr, alloc_size))
+            all_ok = false;
 
         // map it again
         void* ptr2;

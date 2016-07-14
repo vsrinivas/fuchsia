@@ -42,14 +42,33 @@ int unittest_printf (const char *format, ...)
     return ret;
 }
 
-bool expect_bytes_eq(const uint8_t *expected, const uint8_t *actual, size_t len,
-                     const char *msg)
+bool unittest_expect_bytes(const uint8_t* expected,
+                           const char* expected_name,
+                           const uint8_t* actual,
+                           const char* actual_name,
+                           size_t len,
+                           const char *msg,
+                           const char* func,
+                           int line,
+                           bool expect_eq)
 {
-    if (memcmp(expected, actual, len)) {
-        unittest_printf("%s. expected\n", msg);
-        hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
-        unittest_printf("actual\n");
-        hexdump8_very_ex(actual, len, (uint64_t)((addr_t)actual), unittest_printf);
+    if (!memcmp(expected, actual, len) != expect_eq) {
+
+        unittest_printf(UNITTEST_TRACEF_FORMAT "%s:\n%s %s %s, but should not!\n",
+                        func, line, msg,
+                        expected_name,
+                        expect_eq ? "does not match" : "matches",
+                        actual_name);
+
+        if (expect_eq) {
+            hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
+        } else {
+            unittest_printf("expected (%s)\n", expected_name);
+            hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
+            unittest_printf("actual (%s)\n", actual_name);
+            hexdump8_very_ex(actual, len, (uint64_t)((addr_t)actual), unittest_printf);
+        }
+
         return false;
     }
     return true;

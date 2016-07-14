@@ -107,9 +107,10 @@ void unittest_set_output_file_target(FILE* target);
  * Macros to format the error string
  */
 #define EXPECTED_STRING "%s:\n        expected "
+#define UNITTEST_TRACEF_FORMAT "\n        [FAILED]\n        %s:%d:\n        "
 #define UNITTEST_TRACEF(str, x...)                                             \
     do {                                                                       \
-        unittest_printf("\n        [FAILED]\n        %s:%d:\n        " str,    \
+        unittest_printf(UNITTEST_TRACEF_FORMAT str,                            \
                         __PRETTY_FUNCTION__, __LINE__, ##x);                   \
     } while (0)
 
@@ -117,6 +118,7 @@ void unittest_set_output_file_target(FILE* target);
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
  * and that call the EXPECT_ macros.
  */
+
 #define BEGIN_TEST bool all_ok = true
 #define END_TEST return all_ok
 
@@ -127,132 +129,163 @@ void unittest_set_output_file_target(FILE* target);
 #endif
 
 /*
- * Use the EXPECT_* macros to check test results.
+ * UTCHECK_* macros are used to check test results.  Generally, one should
+ * prefer to use either the EXPECT_* (non-terminating) or REQUIRE_*
+ * (terminating) forms of the macros.  See below.
  */
-#define EXPECT_EQ(expected, actual, msg)                                       \
+#define UTCHECK_EQ(expected, actual, msg, term)                                \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e != _a) {                                                        \
             UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld), "                                        \
-                            "actual %s (%ld)\n",                                \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
+                            "%s (%ld), "                                       \
+                            "actual %s (%ld)\n",                               \
+                            msg, #expected, (long)_e, #actual, (long)_a);      \
+            if (term) return false; else all_ok = false;                       \
         }                                                                      \
     } while (0)
 
-#define EXPECT_NEQ(expected, actual, msg)                                      \
+#define UTCHECK_NEQ(expected, actual, msg, term)                               \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         if (_e == (actual)) {                                                  \
             UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld), %s"                                      \
-                            " to differ, but they are the same %ld\n",          \
-                            msg, #expected, (long)_e, #actual);                 \
-            all_ok = false;                                                    \
+                            "%s (%ld), %s"                                     \
+                            " to differ, but they are the same %ld\n",         \
+                            msg, #expected, (long)_e, #actual);                \
+            if (term) return false; else all_ok = false;                       \
         }                                                                      \
     } while (0)
 
-#define EXPECT_LE(expected, actual, msg)                                       \
+#define UTCHECK_LE(expected, actual, msg, term)                                \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e > _a) {                                                         \
             UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " less-than-or-equal-to actual %s (%ld)\n",         \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
+                            "%s (%ld) to be"                                   \
+                            " less-than-or-equal-to actual %s (%ld)\n",        \
+                            msg, #expected, (long)_e, #actual, (long)_a);      \
+            if (term) return false; else all_ok = false;                       \
         }                                                                      \
     } while (0)
 
-#define EXPECT_LT(expected, actual, msg)                                       \
+#define UTCHECK_LT(expected, actual, msg, term)                                \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e >= _a) {                                                        \
             UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " less-than actual %s (%ld)\n",                     \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
+                            "%s (%ld) to be"                                   \
+                            " less-than actual %s (%ld)\n",                    \
+                            msg, #expected, (long)_e, #actual, (long)_a);      \
+            if (term) return false; else all_ok = false;                       \
         }                                                                      \
     } while (0)
 
-#define EXPECT_GE(expected, actual, msg)                                       \
+#define UTCHECK_GE(expected, actual, msg, term)                                \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e < _a) {                                                         \
             UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " greater-than-or-equal-to actual %s (%ld)\n",      \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
+                            "%s (%ld) to be"                                   \
+                            " greater-than-or-equal-to actual %s (%ld)\n",     \
+                            msg, #expected, (long)_e, #actual, (long)_a);      \
+            if (term) return false; else all_ok = false;                       \
         }                                                                      \
     } while (0)
 
-#define EXPECT_GT(expected, actual, msg)                                       \
+#define UTCHECK_GT(expected, actual, msg, term)                                \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e <= _a) {                                                        \
             UNITTEST_TRACEF(EXPECTED_STRING                                    \
-                            "%s (%ld) to be"                                    \
-                            " greater-than actual %s (%ld)\n",                  \
-                            msg, #expected, (long)_e, #actual, (long)_a);        \
-            all_ok = false;                                                    \
+                            "%s (%ld) to be"                                   \
+                            " greater-than actual %s (%ld)\n",                 \
+                            msg, #expected, (long)_e, #actual, (long)_a);      \
+            if (term) return false; else all_ok = false;                       \
         }                                                                      \
     } while (0)
 
-#define EXPECT_TRUE(actual, msg)                                               \
+#define UTCHECK_TRUE(actual, msg, term)                                        \
     if (!(actual)) {                                                           \
         UNITTEST_TRACEF("%s: %s is false\n", msg, #actual);                    \
-        all_ok = false;                                                        \
+        if (term) return false; else all_ok = false;                           \
     }
 
-#define EXPECT_FALSE(actual, msg)                                              \
+#define UTCHECK_FALSE(actual, msg, term)                                       \
     if (actual) {                                                              \
         UNITTEST_TRACEF("%s: %s is true\n", msg, #actual);                     \
-        all_ok = false;                                                        \
+        if (term) return false; else all_ok = false;                           \
     }
 
-#define EXPECT_BYTES_EQ(expected, actual, length, msg)                         \
-    if (!expect_bytes_eq((expected), (actual), (length), msg)) {               \
-        all_ok = false;                                                        \
+#define UTCHECK_NULL(actual, msg, term)                                        \
+    if (actual != NULL) {                                                      \
+        UNITTEST_TRACEF("%s: %s is non-null!\n", msg, #actual);                \
+        if (term) return false; else all_ok = false;                           \
     }
 
-#define EXPECT_BYTES_NE(bytes1, bytes2, length, msg)                           \
-    if (!memcmp(bytes1, bytes2, length)) {                                     \
-        UNITTEST_TRACEF(                                                       \
-            "%s and %s are the same; "                                         \
-            "expected different\n",                                            \
-            #bytes1, #bytes2);                                                 \
-        hexdump8(bytes1, length);                                              \
-        all_ok = false;                                                        \
+#define UTCHECK_NONNULL(actual, msg, term)                                     \
+    if (actual == NULL) {                                                      \
+        UNITTEST_TRACEF("%s: %s is null!\n", msg, #actual);                    \
+        if (term) return false; else all_ok = false;                           \
     }
 
-/* For comparing uint64_t, like hw_id_t. */
-#define EXPECT_EQ_LL(expected, actual, msg)                                    \
-    do {                                                                       \
-        const AUTO_TYPE_VAR(expected) _e = (expected);                         \
-        const AUTO_TYPE_VAR(actual) _a = (actual);                             \
-        if (_e != _a) {                                                        \
-            UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a);  \
-            all_ok = false;                                                    \
-        }                                                                      \
-    } while (0)
+#define UTCHECK_BYTES_EQ(expected, actual, length, msg, term)                  \
+    if (!unittest_expect_bytes((expected), #expected,                          \
+                               (actual), #actual,                              \
+                               (len), msg, __PRETTY_FUNCTION__, __LINE__,      \
+                               true)) {                                        \
+        if (term) return false; else all_ok = false;                           \
+    }
 
-/*
- * The ASSERT_* macros are similar to the EXPECT_* macros except that
- * they return on failure.
+#define UTCHECK_BYTES_NE(expected, actual, length, msg, term)                  \
+    if (!unittest_expect_bytes((expected), #expected,                          \
+                               (actual), #actual,                              \
+                               (len), msg, __PRETTY_FUNCTION__, __LINE__,      \
+                               false)) {                                       \
+        if (term) return false; else all_ok = false;                           \
+    }
+
+/* EXPECT_* macros check the supplied condition and will print a message and flag the test
+ * as having failed if the condition fails.  The test will continue to run, even
+ * if the condition fails.
  */
-#define ASSERT_NOT_NULL(p)                                                     \
-    if (!p) {                                                                  \
-        UNITTEST_TRACEF("ERROR: NULL pointer\n");                              \
-        return false;                                                          \
-    }
+#define EXPECT_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, false)
+#define EXPECT_NEQ(expected, actual, msg)              UTCHECK_NEQ(expected, actual, msg, false)
+#define EXPECT_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, false)
+#define EXPECT_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, false)
+#define EXPECT_GE(expected, actual, msg)               UTCHECK_GE(expected, actual, msg, false)
+#define EXPECT_GT(expected, actual, msg)               UTCHECK_GT(expected, actual, msg, false)
+#define EXPECT_TRUE(actual, msg)                       UTCHECK_TRUE(actual, msg, false)
+#define EXPECT_FALSE(actual, msg)                      UTCHECK_FALSE(actual, msg, false)
+#define EXPECT_BYTES_EQ(expected, actual, length, msg) UTCHECK_BYTES_EQ(expected, actual, length, msg, false)
+#define EXPECT_BYTES_NE(bytes1, bytes2, length, msg)   UTCHECK_BYTES_NE(bytes1, bytes2, length, msg, false)
+#define EXPECT_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, false)
+#define EXPECT_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, false)
+#define EXPECT_NULL(actual, msg)                       UTCHECK_NULL(actual, msg, false)
+#define EXPECT_NONNULL(actual, msg)                    UTCHECK_NONNULL(actual, msg, false)
+
+/* REQUIRE_* macros check the condition and will print a message and immediately
+ * abort a test with a filure status if the condition fails.
+ */
+#define REQUIRE_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, true)
+#define REQUIRE_NEQ(expected, actual, msg)              UTCHECK_NEQ(expected, actual, msg, true)
+#define REQUIRE_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, true)
+#define REQUIRE_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, true)
+#define REQUIRE_GE(expected, actual, msg)               UTCHECK_GE(expected, actual, msg, true)
+#define REQUIRE_GT(expected, actual, msg)               UTCHECK_GT(expected, actual, msg, true)
+#define REQUIRE_TRUE(actual, msg)                       UTCHECK_TRUE(actual, msg, true)
+#define REQUIRE_FALSE(actual, msg)                      UTCHECK_FALSE(actual, msg, true)
+#define REQUIRE_BYTES_EQ(expected, actual, length, msg) UTCHECK_BYTES_EQ(expected, actual, length, msg, true)
+#define REQUIRE_BYTES_NE(bytes1, bytes2, length, msg)   UTCHECK_BYTES_NE(bytes1, bytes2, length, msg, true)
+#define REQUIRE_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, true)
+#define REQUIRE_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, true)
+#define REQUIRE_NULL(actual, msg)                       UTCHECK_NULL(actual, msg, true)
+#define REQUIRE_NONNULL(actual, msg)                    UTCHECK_NONNULL(actual, msg, true)
 
 /*
  * The list of test cases is made up of these elements.
@@ -275,12 +308,18 @@ void unittest_register_test_case(struct test_case_element* elem);
 bool run_all_tests(void);
 
 /*
- * Returns false if expected does not equal actual and prints msg and a hexdump8
- * of the input buffers.
+ * Returns false if expected does or does not equal actual (based on expect_eq).
+ * Will print msg and a hexdump8 of the input buffers if the check fails.
  */
-bool expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, size_t len,
-                     const char* msg);
-
+bool unittest_expect_bytes(const uint8_t* expected,
+                           const char* expected_name,
+                           const uint8_t* actual,
+                           const char* actual_name,
+                           size_t len,
+                           const char *msg,
+                           const char* func,
+                           int line,
+                           bool expect_eq);
 
 typedef bool     (*unitest_fn_t)(void* context);
 typedef status_t (*unitest_testcase_init_fn_t)(void** context);
