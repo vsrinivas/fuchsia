@@ -15,7 +15,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <sys/types.h>
+#include <stdint.h>
 
 #include <runtime/mutex.h>
 #include <system/atomic.h>

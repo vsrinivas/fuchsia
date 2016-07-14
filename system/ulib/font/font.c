@@ -21,8 +21,8 @@
 #if SMALL_FONT
 void font_draw_char(gfx_surface* surface, unsigned char c,
                     int x, int y, uint32_t color, uint32_t bgcolor) {
-    uint i, j;
-    uint line;
+    unsigned i, j;
+    unsigned line;
 
     // draw this char into a buffer
     for (i = 0; i < FONT_Y; i++) {

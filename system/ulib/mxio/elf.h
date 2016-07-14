@@ -20,7 +20,7 @@
 #include <magenta/types.h>
 #include <system/compiler.h>
 #include <stdbool.h>
-#include <sys/types.h>
+#include <stdint.h>
 
 /* based on our bitness, support 32 or 64 bit elf */
 #if IS_64BIT

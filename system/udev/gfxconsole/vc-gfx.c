@@ -20,7 +20,7 @@
 #include "vc.h"
 #include "vcdebug.h"
 
-void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, uint x, uint y) {
+void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y) {
     font_draw_char(dev->gfx, TOCHAR(ch), x * FONT_X, y * FONT_Y, palette_to_color(dev, TOFG(ch)), palette_to_color(dev, TOBG(ch)));
 }
 
@@ -37,10 +37,10 @@ void vc_gfx_invalidate_status(vc_device_t* dev) {
     gfx_flush_rows(dev->hw_gfx, 0, dev->st_gfx->height);
 }
 
-void vc_gfx_invalidate(vc_device_t* dev, uint x, uint y, uint w, uint h) {
+void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     if (!dev->active)
         return;
-    uint desty = dev->st_gfx->height + y * FONT_Y;
+    unsigned desty = dev->st_gfx->height + y * FONT_Y;
     gfx_blend(dev->hw_gfx, dev->gfx, x * FONT_X, y * FONT_Y, w * FONT_X, h * FONT_Y, x * FONT_X, desty);
     gfx_flush_rows(dev->hw_gfx, desty, desty + h * FONT_Y);
 }

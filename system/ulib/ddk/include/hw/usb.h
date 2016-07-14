@@ -16,7 +16,7 @@
 
 // clang-format off
 
-#include <sys/types.h>
+#include <stdint.h>
 #include <system/compiler.h>
 
 __BEGIN_CDECLS;

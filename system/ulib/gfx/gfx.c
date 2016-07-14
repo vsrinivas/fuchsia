@@ -27,9 +27,9 @@
 #include <assert.h>
 #include <err.h>
 #include <system/compiler.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
 #define TRACE 0
 
@@ -89,7 +89,7 @@ static uint32_t ARGB8888_to_RGB2220(uint32_t in) {
 /**
  * @brief  Copy a rectangle of pixels from one part of the display to another.
  */
-void gfx_copyrect(gfx_surface* surface, uint x, uint y, uint width, uint height, uint x2, uint y2) {
+void gfx_copyrect(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2) {
     // trim
     if (x >= surface->width)
         return;
@@ -120,7 +120,7 @@ void gfx_copyrect(gfx_surface* surface, uint x, uint y, uint width, uint height,
 /**
  * @brief  Fill a rectangle on the screen with a constant color.
  */
-void gfx_fillrect(gfx_surface* surface, uint x, uint y, uint width, uint height, uint color) {
+void gfx_fillrect(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color) {
     xprintf("surface %p, x %u y %u w %u h %u c %u\n", surface, x, y, width, height, color);
     // trim
     if (unlikely(x >= surface->width))
@@ -144,7 +144,7 @@ void gfx_fillrect(gfx_surface* surface, uint x, uint y, uint width, uint height,
 /**
  * @brief  Write a single pixel to the screen.
  */
-void gfx_putpixel(gfx_surface* surface, uint x, uint y, uint color) {
+void gfx_putpixel(gfx_surface* surface, unsigned x, unsigned y, unsigned color) {
     if (unlikely(x >= surface->width))
         return;
     if (y >= surface->height)
@@ -153,34 +153,34 @@ void gfx_putpixel(gfx_surface* surface, uint x, uint y, uint color) {
     surface->putpixel(surface, x, y, color);
 }
 
-static void putpixel16(gfx_surface* surface, uint x, uint y, uint color) {
+static void putpixel16(gfx_surface* surface, unsigned x, unsigned y, unsigned color) {
     uint16_t* dest = &((uint16_t*)surface->ptr)[x + y * surface->stride];
 
     // colors come in in ARGB 8888 form, flatten them
     *dest = (uint16_t)(surface->translate_color(color));
 }
 
-static void putpixel32(gfx_surface* surface, uint x, uint y, uint color) {
+static void putpixel32(gfx_surface* surface, unsigned x, unsigned y, unsigned color) {
     uint32_t* dest = &((uint32_t*)surface->ptr)[x + y * surface->stride];
 
     *dest = color;
 }
 
-static void putpixel8(gfx_surface* surface, uint x, uint y, uint color) {
+static void putpixel8(gfx_surface* surface, unsigned x, unsigned y, unsigned color) {
     uint8_t* dest = &((uint8_t*)surface->ptr)[x + y * surface->stride];
 
     // colors come in in ARGB 8888 form, flatten them
     *dest = (uint8_t)(surface->translate_color(color));
 }
 
-static void copyrect8(gfx_surface* surface, uint x, uint y, uint width, uint height, uint x2, uint y2) {
+static void copyrect8(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2) {
     // copy
     const uint8_t* src = &((const uint8_t*)surface->ptr)[x + y * surface->stride];
     uint8_t* dest = &((uint8_t*)surface->ptr)[x2 + y2 * surface->stride];
-    uint stride_diff = surface->stride - width;
+    unsigned stride_diff = surface->stride - width;
 
     if (dest < src) {
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -195,7 +195,7 @@ static void copyrect8(gfx_surface* surface, uint x, uint y, uint width, uint hei
         src += height * surface->stride + width;
         dest += height * surface->stride + width;
 
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -208,13 +208,13 @@ static void copyrect8(gfx_surface* surface, uint x, uint y, uint width, uint hei
     }
 }
 
-static void fillrect8(gfx_surface* surface, uint x, uint y, uint width, uint height, uint color) {
+static void fillrect8(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color) {
     uint8_t* dest = &((uint8_t*)surface->ptr)[x + y * surface->stride];
-    uint stride_diff = surface->stride - width;
+    unsigned stride_diff = surface->stride - width;
 
     uint8_t color8 = (uint8_t)(surface->translate_color(color));
 
-    uint i, j;
+    unsigned i, j;
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             *dest = color8;
@@ -224,14 +224,14 @@ static void fillrect8(gfx_surface* surface, uint x, uint y, uint width, uint hei
     }
 }
 
-static void copyrect16(gfx_surface* surface, uint x, uint y, uint width, uint height, uint x2, uint y2) {
+static void copyrect16(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2) {
     // copy
     const uint16_t* src = &((const uint16_t*)surface->ptr)[x + y * surface->stride];
     uint16_t* dest = &((uint16_t*)surface->ptr)[x2 + y2 * surface->stride];
-    uint stride_diff = surface->stride - width;
+    unsigned stride_diff = surface->stride - width;
 
     if (dest < src) {
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -246,7 +246,7 @@ static void copyrect16(gfx_surface* surface, uint x, uint y, uint width, uint he
         src += height * surface->stride + width;
         dest += height * surface->stride + width;
 
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -259,13 +259,13 @@ static void copyrect16(gfx_surface* surface, uint x, uint y, uint width, uint he
     }
 }
 
-static void fillrect16(gfx_surface* surface, uint x, uint y, uint width, uint height, uint color) {
+static void fillrect16(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color) {
     uint16_t* dest = &((uint16_t*)surface->ptr)[x + y * surface->stride];
-    uint stride_diff = surface->stride - width;
+    unsigned stride_diff = surface->stride - width;
 
     uint16_t color16 = (uint16_t)(surface->translate_color(color));
 
-    uint i, j;
+    unsigned i, j;
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             *dest = color16;
@@ -275,14 +275,14 @@ static void fillrect16(gfx_surface* surface, uint x, uint y, uint width, uint he
     }
 }
 
-static void copyrect32(gfx_surface* surface, uint x, uint y, uint width, uint height, uint x2, uint y2) {
+static void copyrect32(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2) {
     // copy
     const uint32_t* src = &((const uint32_t*)surface->ptr)[x + y * surface->stride];
     uint32_t* dest = &((uint32_t*)surface->ptr)[x2 + y2 * surface->stride];
-    uint stride_diff = surface->stride - width;
+    unsigned stride_diff = surface->stride - width;
 
     if (dest < src) {
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -297,7 +297,7 @@ static void copyrect32(gfx_surface* surface, uint x, uint y, uint width, uint he
         src += height * surface->stride + width;
         dest += height * surface->stride + width;
 
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -310,11 +310,11 @@ static void copyrect32(gfx_surface* surface, uint x, uint y, uint width, uint he
     }
 }
 
-static void fillrect32(gfx_surface* surface, uint x, uint y, uint width, uint height, uint color) {
+static void fillrect32(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color) {
     uint32_t* dest = &((uint32_t*)surface->ptr)[x + y * surface->stride];
-    uint stride_diff = surface->stride - width;
+    unsigned stride_diff = surface->stride - width;
 
-    uint i, j;
+    unsigned i, j;
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             *dest = color;
@@ -324,7 +324,7 @@ static void fillrect32(gfx_surface* surface, uint x, uint y, uint width, uint he
     }
 }
 
-void gfx_line(gfx_surface* surface, uint x1, uint y1, uint x2, uint y2, uint color) {
+void gfx_line(gfx_surface* surface, unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned color) {
     if (unlikely(x1 >= surface->width))
         return;
     if (unlikely(x2 >= surface->width))
@@ -341,18 +341,18 @@ void gfx_line(gfx_surface* surface, uint x1, uint y1, uint x2, uint y2, uint col
     int sdx = (0 < dx) - (dx < 0);
     int sdy = (0 < dy) - (dy < 0);
 
-    uint dxabs = (dx > 0) ? dx : -dx;
-    uint dyabs = (dy > 0) ? dy : -dy;
+    unsigned dxabs = (dx > 0) ? dx : -dx;
+    unsigned dyabs = (dy > 0) ? dy : -dy;
 
-    uint x = dyabs >> 1;
-    uint y = dxabs >> 1;
+    unsigned x = dyabs >> 1;
+    unsigned y = dxabs >> 1;
 
-    uint px = x1;
-    uint py = y1;
+    unsigned px = x1;
+    unsigned py = y1;
 
     if (dxabs >= dyabs) {
         // mostly horizontal line.
-        for (uint i = 0; i < dxabs; i++) {
+        for (unsigned i = 0; i < dxabs; i++) {
             y += dyabs;
             if (y >= dxabs) {
                 y -= dxabs;
@@ -363,7 +363,7 @@ void gfx_line(gfx_surface* surface, uint x1, uint y1, uint x2, uint y2, uint col
         }
     } else {
         // mostly vertical line.
-        for (uint i = 0; i < dyabs; i++) {
+        for (unsigned i = 0; i < dyabs; i++) {
             x += dxabs;
             if (x >= dyabs) {
                 x -= dyabs;
@@ -416,14 +416,14 @@ uint32_t alpha32_add_ignore_destalpha(uint32_t dest, uint32_t src) {
  *
  * Currently does not support alpha channel.
  */
-void gfx_surface_blend(struct gfx_surface* target, struct gfx_surface* source, uint destx, uint desty) {
+void gfx_surface_blend(struct gfx_surface* target, struct gfx_surface* source, unsigned destx, unsigned desty) {
     gfx_blend(target, source, 0, 0, source->width, source->height, destx, desty);
 }
 
 /**
  * @brief  Copy pixels from source to dest.
  */
-void gfx_blend(gfx_surface* target, gfx_surface* source, uint srcx, uint srcy, uint width, uint height, uint destx, uint desty) {
+void gfx_blend(gfx_surface* target, gfx_surface* source, unsigned srcx, unsigned srcy, unsigned width, unsigned height, unsigned destx, unsigned desty) {
     assert(target->format == source->format);
 
     xprintf("target %p, source %p, srcx %u, srcy %u, width %u, height %u, destx %u, desty %u\n", target, source, srcx, srcy, width, height, destx, desty);
@@ -453,12 +453,12 @@ void gfx_blend(gfx_surface* target, gfx_surface* source, uint srcx, uint srcy, u
         // 16 bit to 16 bit
         const uint16_t* src = &((const uint16_t*)source->ptr)[srcx + srcy * source->stride];
         uint16_t* dest = &((uint16_t*)target->ptr)[destx + desty * target->stride];
-        uint dest_stride_diff = target->stride - width;
-        uint source_stride_diff = source->stride - width;
+        unsigned dest_stride_diff = target->stride - width;
+        unsigned source_stride_diff = source->stride - width;
 
         xprintf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff, source_stride_diff);
 
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -472,12 +472,12 @@ void gfx_blend(gfx_surface* target, gfx_surface* source, uint srcx, uint srcy, u
         // both are 32 bit modes, both alpha
         const uint32_t* src = &((const uint32_t*)source->ptr)[srcx + srcy * source->stride];
         uint32_t* dest = &((uint32_t*)target->ptr)[destx + desty * target->stride];
-        uint dest_stride_diff = target->stride - width;
-        uint source_stride_diff = source->stride - width;
+        unsigned dest_stride_diff = target->stride - width;
+        unsigned source_stride_diff = source->stride - width;
 
         xprintf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff, source_stride_diff);
 
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 // XXX ignores destination alpha
@@ -492,12 +492,12 @@ void gfx_blend(gfx_surface* target, gfx_surface* source, uint srcx, uint srcy, u
         // both are 32 bit modes, no alpha
         const uint32_t* src = &((const uint32_t*)source->ptr)[srcx + srcy * source->stride];
         uint32_t* dest = &((uint32_t*)target->ptr)[destx + desty * target->stride];
-        uint dest_stride_diff = target->stride - width;
-        uint source_stride_diff = source->stride - width;
+        unsigned dest_stride_diff = target->stride - width;
+        unsigned source_stride_diff = source->stride - width;
 
         xprintf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff, source_stride_diff);
 
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -511,12 +511,12 @@ void gfx_blend(gfx_surface* target, gfx_surface* source, uint srcx, uint srcy, u
         // both are 8 bit modes, no alpha
         const uint8_t* src = &((const uint8_t*)source->ptr)[srcx + srcy * source->stride];
         uint8_t* dest = &((uint8_t*)target->ptr)[destx + desty * target->stride];
-        uint dest_stride_diff = target->stride - width;
-        uint source_stride_diff = source->stride - width;
+        unsigned dest_stride_diff = target->stride - width;
+        unsigned source_stride_diff = source->stride - width;
 
         xprintf("w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff, source_stride_diff);
 
-        uint i, j;
+        unsigned i, j;
         for (i = 0; i < height; i++) {
             for (j = 0; j < width; j++) {
                 *dest = *src;
@@ -548,9 +548,9 @@ void gfx_flush(gfx_surface* surface) {
 /**
  * @brief  Ensure that a sub-region of the display is up to date.
  */
-void gfx_flush_rows(struct gfx_surface* surface, uint start, uint end) {
+void gfx_flush_rows(struct gfx_surface* surface, unsigned start, unsigned end) {
     if (start > end) {
-        uint temp = start;
+        unsigned temp = start;
         start = end;
         end = temp;
     }
@@ -574,7 +574,7 @@ void gfx_flush_rows(struct gfx_surface* surface, uint start, uint end) {
 /**
  * @brief  Create a new graphics surface object
  */
-gfx_surface* gfx_create_surface(void* ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags) {
+gfx_surface* gfx_create_surface(void* ptr, unsigned width, unsigned height, unsigned stride, gfx_format format, uint32_t flags) {
     gfx_surface* surface = calloc(1, sizeof(*surface));
     if (surface == NULL)
         return NULL;
@@ -585,7 +585,7 @@ gfx_surface* gfx_create_surface(void* ptr, uint width, uint height, uint stride,
     return surface;
 }
 
-int gfx_init_surface(gfx_surface* surface, void* ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags) {
+int gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height, unsigned stride, gfx_format format, uint32_t flags) {
     assert(width > 0);
     assert(height > 0);
     assert(stride >= width);

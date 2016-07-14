@@ -111,7 +111,7 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     // find our bar
     int bar = -1;
-    for (uint i = 0; i < countof(pci_config->base_addresses); i++) {
+    for (size_t i = 0; i < countof(pci_config->base_addresses); i++) {
         if (pci_config->base_addresses[i]) {
             bar = i;
             break;

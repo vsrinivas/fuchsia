@@ -71,8 +71,8 @@ typedef struct bochs_vbe_device {
 #define BOCHS_VBE_DISPI_Y_OFFSET 0x9
 #define BOCHS_VBE_DISPI_VIDEO_MEMORY_64K 0xa
 
-static int mx_display_format_to_bpp(uint format) {
-    uint bpp;
+static int mx_display_format_to_bpp(unsigned format) {
+    unsigned bpp;
     switch (format) {
     case MX_DISPLAY_FORMAT_RGB_565:
         bpp = 16;

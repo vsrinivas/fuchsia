@@ -17,7 +17,7 @@
 #include <magenta/types.h>
 #include <system/compiler.h>
 #include <mxio/io.h>
-#include <sys/types.h>
+#include <stdint.h>
 
 __BEGIN_CDECLS
 

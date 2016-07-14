@@ -33,11 +33,11 @@
 #define MX_DISPLAY_FLAG_HW_FRAMEBUFFER (1 << 0)
 
 typedef struct mx_display_info {
-    uint format;
+    unsigned format;
     int width;
     int height;
     int stride;
-    uint flags;
+    unsigned flags;
 } mx_display_info_t;
 
 typedef struct mx_display_protocol {

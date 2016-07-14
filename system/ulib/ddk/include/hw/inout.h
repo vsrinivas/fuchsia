@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #if ARCH_X86
 static inline uint8_t inp(uint16_t _port) {

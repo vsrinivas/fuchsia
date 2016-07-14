@@ -74,7 +74,7 @@ int devicehost(int argc, char** argv) {
 int console_starter(void* arg) {
     printf("devmgr: vc startup\n");
     // don't start a shell on vc0, since it is the debug console
-    for (uint i = 1; i < VC_COUNT;) {
+    for (unsigned i = 1; i < VC_COUNT;) {
         int fd;
         char name[64];
         snprintf(name, sizeof(name), "/dev/class/console/vc%u", i);

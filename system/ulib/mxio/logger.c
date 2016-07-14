@@ -35,7 +35,7 @@ struct mxio_log {
 #define LOGBUF_MAX (MX_LOG_RECORD_MAX - sizeof(mx_log_record_t))
 
 typedef struct ciobuf {
-    uint next;
+    unsigned next;
     char data[LOGBUF_MAX];
 } logbuf_t;
 

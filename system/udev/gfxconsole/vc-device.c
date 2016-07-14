@@ -229,7 +229,7 @@ void vc_device_write_status(vc_device_t* dev) {
     vc_get_status_line(str, sizeof(str));
     // TODO clean this up with textcon stuff
     gfx_fillrect(dev->st_gfx, 0, 0, dev->st_gfx->width, dev->st_gfx->height, palette_to_color(dev, bg));
-    for (uint i = 0; i < MIN(dev->columns, strlen(str)); i++) {
+    for (unsigned i = 0; i < MIN(dev->columns, strlen(str)); i++) {
         c = str[i];
         if (state == NORMAL) {
             if (c == 0x1b) {

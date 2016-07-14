@@ -14,8 +14,8 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 #define TC_MAX_ARG 16
 #define TC_MAX_ARG_LENGTH 8 // matches vc title length

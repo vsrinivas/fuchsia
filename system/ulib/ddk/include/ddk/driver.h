@@ -17,7 +17,7 @@
 #include <magenta/types.h>
 #include <system/listnode.h>
 #include <system/compiler.h>
-#include <sys/types.h>
+#include <stdint.h>
 
 typedef struct mx_device mx_device_t;
 typedef struct mx_protocol_device mx_protocol_device_t;

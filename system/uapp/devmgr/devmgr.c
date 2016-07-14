@@ -549,8 +549,8 @@ void devmgr_handle_messages(void) {
     mxio_dispatcher_run(devmgr_rio_dispatcher);
 }
 
-static void devmgr_dump_device(uint level, mx_device_t* dev) {
-    for (uint i = 0; i < level; i++) {
+static void devmgr_dump_device(unsigned level, mx_device_t* dev) {
+    for (unsigned i = 0; i < level; i++) {
         printf("  ");
     }
     printf("%c %s drv@%p", list_is_empty(&dev->children) ? '|' : '+', dev->name, dev->driver);
@@ -561,7 +561,7 @@ static void devmgr_dump_device(uint level, mx_device_t* dev) {
     printf("\n");
 }
 
-static void devmgr_dump_recursive(uint level, mx_device_t* _dev) {
+static void devmgr_dump_recursive(unsigned level, mx_device_t* _dev) {
     devmgr_dump_device(level, _dev);
     mx_device_t* dev = NULL;
     list_for_every_entry (&_dev->children, dev, mx_device_t, node) {

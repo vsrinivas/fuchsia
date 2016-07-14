@@ -41,7 +41,7 @@ typedef struct vc_device {
     char title[8];
     // vc title, shown in status bar
     bool active;
-    uint flags;
+    unsigned flags;
 
     // TODO make static
     gfx_surface* gfx;
@@ -56,23 +56,23 @@ typedef struct vc_device {
     vc_char_t* scrollback_buf;
     // scrollback buffer
 
-    uint rows, columns;
+    unsigned rows, columns;
     // screen size
-    uint scrollback_rows;
+    unsigned scrollback_rows;
     // number of rows in scrollback
 
-    uint x, y;
+    unsigned x, y;
     // cursor
     bool hide_cursor;
     // cursor visibility
     int vpy;
     // viewport position, must be <= 0
-    uint sc_h, sc_t;
+    unsigned sc_h, sc_t;
     // offsets into the scrollback buffer in rows
 
     uint32_t palette[16];
-    uint front_color;
-    uint back_color;
+    unsigned front_color;
+    unsigned back_color;
     // color
 
     textcon_t textcon;
@@ -99,7 +99,7 @@ static inline mx_status_t vc_device_free(vc_device_t* dev) {
     return ERR_NOT_SUPPORTED;
 };
 
-mx_status_t vc_set_active_console(uint console);
+mx_status_t vc_set_active_console(unsigned console);
 void vc_get_status_line(char* str, int n);
 
 void vc_device_write_status(vc_device_t* dev);
@@ -111,8 +111,8 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir);
 
 void vc_gfx_invalidate_all(vc_device_t* dev);
 void vc_gfx_invalidate_status(vc_device_t* dev);
-void vc_gfx_invalidate(vc_device_t* dev, uint x, uint y, uint w, uint h);
-void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, uint x, uint y);
+void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h);
+void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y);
 
 static inline uint32_t palette_to_color(vc_device_t* dev, uint8_t color) {
     assert(color <= MAX_COLOR);

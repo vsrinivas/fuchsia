@@ -14,8 +14,8 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 /* do a hex dump against stdout 32bits and 8bits at a time */
 void hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr);

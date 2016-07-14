@@ -279,7 +279,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
         handle->eheader.e_phnum * sizeof(elf_phdr_t);
 
     LTRACEF("program headers:\n");
-    for (uint i = 0; i < handle->eheader.e_phnum; i++) {
+    for (size_t i = 0; i < handle->eheader.e_phnum; i++) {
         // parse the program headers
         elf_phdr_t* pheader = &handle->pheaders[i];
 

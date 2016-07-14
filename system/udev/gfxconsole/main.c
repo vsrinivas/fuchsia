@@ -48,15 +48,15 @@ static mxr_thread_t* logreader_thread;
 static struct list_node vc_list = LIST_INITIAL_VALUE(vc_list);
 static vc_device_t* debug_vc;
 static vc_device_t* active_vc;
-static uint active_vc_index;
-static uint vc_count;
+static unsigned active_vc_index;
+static unsigned vc_count;
 static mxr_mutex_t active_lock = MXR_MUTEX_INIT;
 
 // TODO create dynamically
 #define VC_COUNT 4
 
 // TODO move this to ulib/gfx
-static gfx_format display_format_to_gfx_format(uint display_format) {
+static gfx_format display_format_to_gfx_format(unsigned display_format) {
     gfx_format format;
     switch (display_format) {
     case MX_DISPLAY_FORMAT_RGB_565:
@@ -239,11 +239,11 @@ static int vc_logreader_thread(void* arg) {
     return 0;
 }
 
-mx_status_t vc_set_active_console(uint console) {
+mx_status_t vc_set_active_console(unsigned console) {
     if (console >= vc_count)
         return ERR_INVALID_ARGS;
 
-    uint i = 0;
+    unsigned i = 0;
     vc_device_t* device = NULL;
     list_for_every_entry (&vc_list, device, vc_device_t, node) {
         if (i == console)
@@ -267,7 +267,7 @@ mx_status_t vc_set_active_console(uint console) {
 void vc_get_status_line(char* str, int n) {
     vc_device_t* device = NULL;
     char* ptr = str;
-    uint i = 0;
+    unsigned i = 0;
     // TODO add process name, etc.
     list_for_every_entry (&vc_list, device, vc_device_t, node) {
         int lines = vc_device_get_scrollback_lines(device);
@@ -328,7 +328,7 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
         return status;
     }
 
-    uint i;
+    unsigned i;
     for (i = 0; i < VC_COUNT; i++) {
         // allocate vc# devices
         vc_device_t* device;

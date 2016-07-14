@@ -17,7 +17,8 @@
 #include <inttypes.h>
 #include <magenta/types.h>
 #include <stdbool.h>
-#include <sys/types.h>
+#include <stddef.h>
+#include <stdint.h>
 
 // gfx library
 
@@ -53,54 +54,54 @@ typedef struct gfx_surface {
     void* ptr;
     uint32_t flags;
     gfx_format format;
-    uint width;
-    uint height;
-    uint stride;
-    uint pixelsize;
+    unsigned width;
+    unsigned height;
+    unsigned stride;
+    unsigned pixelsize;
     size_t len;
-    uint alpha;
+    unsigned alpha;
 
     // function pointers
     uint32_t (*translate_color)(uint32_t input);
-    void (*copyrect)(struct gfx_surface*, uint x, uint y, uint width, uint height, uint x2, uint y2);
-    void (*fillrect)(struct gfx_surface*, uint x, uint y, uint width, uint height, uint color);
-    void (*putpixel)(struct gfx_surface*, uint x, uint y, uint color);
-    void (*flush)(uint starty, uint endy);
+    void (*copyrect)(struct gfx_surface*, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2);
+    void (*fillrect)(struct gfx_surface*, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color);
+    void (*putpixel)(struct gfx_surface*, unsigned x, unsigned y, unsigned color);
+    void (*flush)(unsigned starty, unsigned endy);
 } gfx_surface;
 
 // copy a rect from x,y with width x height to x2, y2
-void gfx_copyrect(gfx_surface* surface, uint x, uint y, uint width, uint height, uint x2, uint y2);
+void gfx_copyrect(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2);
 
 // fill a rect within the surface with a color
-void gfx_fillrect(gfx_surface* surface, uint x, uint y, uint width, uint height, uint color);
+void gfx_fillrect(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color);
 
 // draw a pixel at x, y in the surface
-void gfx_putpixel(gfx_surface* surface, uint x, uint y, uint color);
+void gfx_putpixel(gfx_surface* surface, unsigned x, unsigned y, unsigned color);
 
 // draw a single pixel line between x1,y1 and x2,y1
-void gfx_line(gfx_surface* surface, uint x1, uint y1, uint x2, uint y2, uint color);
+void gfx_line(gfx_surface* surface, unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned color);
 
 // blend source surface to target surface
-void gfx_surface_blend(struct gfx_surface* target, struct gfx_surface* source, uint destx, uint desty);
+void gfx_surface_blend(struct gfx_surface* target, struct gfx_surface* source, unsigned destx, unsigned desty);
 
 // blend an area from the source surface to the target surface
-void gfx_blend(struct gfx_surface* target, struct gfx_surface* source, uint srcx, uint srcy, uint width, uint height, uint destx, uint desty);
+void gfx_blend(struct gfx_surface* target, struct gfx_surface* source, unsigned srcx, unsigned srcy, unsigned width, unsigned height, unsigned destx, unsigned desty);
 
 // ensure the surface is written back to memory and optionally backing store
 void gfx_flush(struct gfx_surface* surface);
 
 // flush a subset of the surface
-void gfx_flush_rows(struct gfx_surface* surface, uint start, uint end);
+void gfx_flush_rows(struct gfx_surface* surface, unsigned start, unsigned end);
 
 // clear the entire surface with a color
-static inline void gfx_clear(gfx_surface* surface, uint color) {
+static inline void gfx_clear(gfx_surface* surface, unsigned color) {
     surface->fillrect(surface, 0, 0, surface->width, surface->height, color);
     gfx_flush(surface);
 }
 
 // surface setup
-gfx_surface* gfx_create_surface(void* ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags);
-mx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags);
+gfx_surface* gfx_create_surface(void* ptr, unsigned width, unsigned height, unsigned stride, gfx_format format, uint32_t flags);
+mx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height, unsigned stride, gfx_format format, uint32_t flags);
 
 // free the surface
 // optionally frees the buffer if the free bit is set
