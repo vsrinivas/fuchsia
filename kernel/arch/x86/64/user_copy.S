@@ -23,19 +23,15 @@
     push %r15
     push %rbx
 
-    # shift all of the arguments into the intersection of callee save and
-    # not mutated by cpuid
+    # shift all of the arguments into callee save registers
     mov %rdi, %r12
     mov %rsi, %r13
     mov %rdx, %r14
-    mov %rcx, %r15
+    mov %r8, %r15
+    mov %rcx, %rbx
 
     # Check if SMAP is enabled
-    mov $7, %eax
-    mov $0, %ecx
-    cpuid
-    and $1<<20, %rbx
-
+    cmp $0, %rbx
     # Disable SMAP protection if SMAP is enabled
     jz 0f
     stac
@@ -55,7 +51,7 @@
     pop %r12
 .endm
 
-# status_t _x86_copy_from_user(void *dst, const void *src, size_t len, void **fault_return)
+# status_t _x86_copy_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
 FUNCTION(_x86_copy_from_user)
     begin_usercopy
 
@@ -95,7 +91,7 @@ FUNCTION(_x86_copy_from_user)
     end_usercopy
     ret
 
-# status_t _x86_copy_to_user(void *dst, const void *src, size_t len, void **fault_return)
+# status_t _x86_copy_to_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
 FUNCTION(_x86_copy_to_user)
     begin_usercopy
 

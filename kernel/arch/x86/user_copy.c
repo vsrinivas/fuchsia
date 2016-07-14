@@ -10,6 +10,7 @@
 
 #include <arch/user_copy.h>
 #include <arch/x86.h>
+#include <arch/x86/feature.h>
 #include <arch/x86/user_copy.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
@@ -25,9 +26,10 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len)
 {
     DEBUG_ASSERT(!ac_flag());
 
+    bool smap_avail = x86_feature_test(X86_FEATURE_SMAP);
     thread_t *thr = get_current_thread();
-    status_t status =
-            _x86_copy_from_user(dst, src, len, &thr->arch.page_fault_resume);
+    status_t status = _x86_copy_from_user(dst, src, len, smap_avail,
+                                          &thr->arch.page_fault_resume);
 
     DEBUG_ASSERT(!ac_flag());
     return status;
@@ -37,9 +39,10 @@ status_t arch_copy_to_user(void *dst, const void *src, size_t len)
 {
     DEBUG_ASSERT(!ac_flag());
 
+    bool smap_avail = x86_feature_test(X86_FEATURE_SMAP);
     thread_t *thr = get_current_thread();
-    status_t status;
-    status = _x86_copy_to_user(dst, src, len, &thr->arch.page_fault_resume);
+    status_t status = _x86_copy_to_user(dst, src, len, smap_avail,
+                                        &thr->arch.page_fault_resume);
 
     DEBUG_ASSERT(!ac_flag());
     return status;
