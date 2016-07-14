@@ -10,6 +10,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <kernel/mp.h>
+#include <kernel/vm/vm_region.h>
 #include <kernel/vm/vm_object.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
@@ -1049,6 +1050,67 @@ mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_
     // It's not really feasible to do it because of the handle 0 hack at the moment, and there's
     // not a good way to get to the current dispatcher without going through a handle
     return aspace->FreeRegion(address);
+}
+
+mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, mx_size_t len,
+                                   uint32_t prot) {
+    LTRACEF("proc handle %d, address 0x%lx, len 0x%lx, prot 0x%x\n", proc_handle, address, len, prot);
+
+    // get a reffed pointer to the address space in the target process
+    auto up = UserProcess::GetCurrent();
+    utils::RefPtr<VmAspace> aspace;
+    if (proc_handle == 0) {
+        // handle 0 is magic for 'current process'
+        // TODO: remove this hack and switch to requiring user to pass the current process handle
+        aspace = up->aspace();
+    } else {
+        // get the process dispatcher and convert to aspace
+        utils::RefPtr<Dispatcher> proc_dispatcher;
+        uint32_t proc_rights;
+        if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
+            return ERR_INVALID_ARGS;
+
+        auto process = proc_dispatcher->get_process_dispatcher();
+        if (!process)
+            return ERR_BAD_HANDLE;
+
+        if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
+            return ERR_ACCESS_DENIED;
+
+        // get the aspace out of the process dispatcher
+        aspace = process->GetVmAspace();
+        if (!aspace)
+            return ERR_INVALID_ARGS;
+    }
+
+    // TODO: support range protect
+    // at the moment only support protecting what is at a given address, signalled with len = 0
+    if (len != 0)
+        return ERR_INVALID_ARGS;
+
+    auto r = aspace->FindRegion(address);
+    if (!r)
+        return ERR_INVALID_ARGS;
+
+    uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER;
+    switch (prot & (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE)) {
+    case MX_VM_FLAG_PERM_READ:
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_RO;
+        break;
+    case MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE:
+        // default flags
+        break;
+    case 0: // no way to express no permissions
+    case MX_VM_FLAG_PERM_WRITE:
+        // no way to express write only
+        return ERR_INVALID_ARGS;
+    }
+
+    if ((prot & MX_VM_FLAG_PERM_EXECUTE) == 0) {
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_NO_EXECUTE;
+    }
+
+    return r->Protect(arch_mmu_flags);
 }
 
 int sys_log_create(uint32_t flags) {

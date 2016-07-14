@@ -107,6 +107,8 @@ MAGENTA_SYSCALL_DEF(6, 7, 83, mx_status_t, process_vm_map, mx_handle_t proc_hand
                     uint64_t offset, mx_size_t len, uintptr_t *ptr, uint32_t flags)
 MAGENTA_SYSCALL_DEF(3, 3, 84, mx_status_t, process_vm_unmap, mx_handle_t proc_handle, uintptr_t address,
                     mx_size_t len)
+MAGENTA_SYSCALL_DEF(4, 4, 85, mx_status_t, process_vm_protect, mx_handle_t proc_handle, uintptr_t address,
+                    mx_size_t len, uint32_t prot);
 
 // Synchronization
 MAGENTA_SYSCALL_DEF(1, 1, 90, mx_handle_t, event_create, uint32_t options)

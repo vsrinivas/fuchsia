@@ -1,12 +1,40 @@
 #include "libc.h"
-#include "syscall.h"
+#include <errno.h>
+#include <magenta/syscalls.h>
+#include <magenta/types.h>
 #include <sys/mman.h>
 
+static void dummy(void) {}
+weak_alias(dummy, __vm_wait);
+
 int __mprotect(void* addr, size_t len, int prot) {
-    size_t start, end;
-    start = (size_t)addr & -PAGE_SIZE;
-    end = (size_t)((char*)addr + len + PAGE_SIZE - 1) & -PAGE_SIZE;
-    return syscall(SYS_mprotect, start, end - start, prot);
+    __vm_wait();
+
+    mx_handle_t current_proc_handle = 0; /* TODO: get from TLS */
+    uintptr_t ptr = (uintptr_t)addr;
+    /* NOTE: this currently changes protect on the entire region that addr was
+     * mapped into. magenta does not yet support changing protection on partial
+     * ranges.
+     */
+    uint32_t mx_prot = PROT_NONE;
+    mx_prot |= (prot & PROT_READ) ? MX_VM_FLAG_PERM_READ : 0;
+    mx_prot |= (prot & PROT_WRITE) ? MX_VM_FLAG_PERM_WRITE : 0;
+    mx_prot |= (prot & PROT_EXEC) ? MX_VM_FLAG_PERM_EXECUTE : 0;
+    mx_status_t status = mx_process_vm_protect(current_proc_handle, ptr, 0, mx_prot);
+    if (!status) return 0;
+
+    switch (status) {
+        case ERR_ACCESS_DENIED:
+                errno = EACCES;
+                break;
+        case ERR_INVALID_ARGS:
+                errno = ENOTSUP;
+                break;
+        default:
+                errno = EINVAL;
+                break;
+    }
+    return -1;
 }
 
 weak_alias(__mprotect, mprotect);

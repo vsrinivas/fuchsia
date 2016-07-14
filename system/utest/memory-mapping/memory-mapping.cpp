@@ -163,6 +163,36 @@ bool mmap_flags_test() {
     END_TEST;
 }
 
+bool mprotect_test() {
+    BEGIN_TEST;
+
+    uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    ASSERT_NEQ(MAP_FAILED, addr, "mmap failed to map");
+
+    // Should be able to write.
+    *addr = 10;
+    EXPECT_EQ(10u, *addr, "read after write failed");
+
+    int status = mprotect(addr, sizeof(uint32_t), PROT_READ);
+    EXPECT_EQ(0, status, "mprotect failed to downgrade to read-only");
+
+    // TODO: catch page fault exceptions and confirm that the following line
+    // fails
+    //*addr = 12;
+
+    status = mprotect(addr, sizeof(uint32_t), PROT_WRITE);
+    auto test_errno = errno;
+    EXPECT_EQ(-1, status, "mprotect should fail for write-only");
+    EXPECT_EQ(ENOTSUP, test_errno, "mprotect should return ENOTSUP for write-only");
+
+    status = mprotect(addr, sizeof(uint32_t), PROT_NONE);
+    test_errno = errno;
+    EXPECT_EQ(-1, status, "mprotect should fail for PROT_NONE");
+    EXPECT_EQ(ENOTSUP, test_errno, "mprotect should return ENOTSUP for PROT_NONE");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(memory_mapping_tests)
@@ -171,6 +201,7 @@ RUN_TEST(mmap_len_test);
 RUN_TEST(mmap_offset_test);
 RUN_TEST(mmap_prot_test);
 RUN_TEST(mmap_flags_test);
+RUN_TEST(mprotect_test);
 END_TEST_CASE(memory_mapping_tests)
 
 int main(int argc, char** argv) {
