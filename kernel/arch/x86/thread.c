@@ -14,10 +14,10 @@
 #include <debug.h>
 #include <kernel/thread.h>
 #include <kernel/spinlock.h>
-#include <arch/fpu.h>
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mp.h>
+#include <arch/x86/registers.h>
 
 void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
 {
@@ -54,8 +54,13 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     frame->rflags = 0x3002; /* IF = 0, NT = 0, IOPL = 3 */
 #endif
 
-    // initialize the saved fpu state
-    fpu_init_thread_states(t);
+    // initialize the saved extended register state
+    vaddr_t buf = ROUNDUP(((vaddr_t)t->arch.extended_register_buffer), 64);
+    __UNUSED size_t overhead = buf - (vaddr_t)t->arch.extended_register_buffer;
+    DEBUG_ASSERT(sizeof(t->arch.extended_register_buffer) - overhead >=
+            x86_extended_register_size());
+    t->arch.extended_register_state = (vaddr_t *)buf;
+    x86_extended_register_init_state(t->arch.extended_register_state);
 
     // set the stack pointer
     t->arch.sp = (vaddr_t)frame;
@@ -81,7 +86,7 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 {
     //dprintf(DEBUG, "arch_context_switch: old %p (%s), new %p (%s)\n", oldthread, oldthread->name, newthread, newthread->name);
 
-    fpu_context_switch(oldthread, newthread);
+    x86_extended_register_context_switch(oldthread, newthread);
 
     __asm__ __volatile__ (
         "pushl $1f			\n\t"
@@ -126,7 +131,7 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 
 void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 {
-    fpu_context_switch(oldthread, newthread);
+    x86_extended_register_context_switch(oldthread, newthread);
 
     /* TODO: precompute the stack top and put in the thread structure directly */
     vaddr_t kstack_top = (vaddr_t)newthread->stack + newthread->stack_size;
