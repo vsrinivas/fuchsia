@@ -253,7 +253,7 @@
 				978B78B71D2AFFE400806B19 /* time */,
 			);
 			name = ftl;
-			path = ../../ftl;
+			path = ../../../ftl;
 			sourceTree = "<group>";
 		};
 		978B78B71D2AFFE400806B19 /* time */ = {
@@ -627,15 +627,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				HEADER_SEARCH_PATHS = (
-					../..,
-					../../../third_party/glm,
-				);
+				HEADER_SEARCH_PATHS = ../../../../third_party/glm;
 				INFOPLIST_FILE = "$(SRCROOT)/app/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.domokit.experiments.Waterfall;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "6e3b7591-e3e6-4331-a584-7a8376ffefa6";
+				USER_HEADER_SEARCH_PATHS = "../.. ../../.. ../../../..";
 			};
 			name = Debug;
 		};
@@ -643,15 +641,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				HEADER_SEARCH_PATHS = (
-					../..,
-					../../../third_party/glm,
-				);
+				HEADER_SEARCH_PATHS = ../../../../third_party/glm;
 				INFOPLIST_FILE = "$(SRCROOT)/app/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.domokit.experiments.Waterfall;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "6e3b7591-e3e6-4331-a584-7a8376ffefa6";
+				USER_HEADER_SEARCH_PATHS = "../.. ../../.. ../../../..";
 			};
 			name = Release;
 		};
