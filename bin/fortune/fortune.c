@@ -12,7 +12,7 @@ static const char* kFortunes[4] = {
   "with mine. -- Jim Barksdale",
   "Things that are impossible just take longer.",
   "Better lucky than good.",
-  "Fortune favours the bold.",
+  "Fortune favors the bold.",
 };
 
 int main(int argc, char** argv) {

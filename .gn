@@ -1,5 +1,0 @@
-# The location of the build configuration file.
-buildconfig = "//build/config/BUILDCONFIG.gn"
-
-# The source root location.
-root = "//fortune"
