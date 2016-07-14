@@ -38,6 +38,10 @@
 #error MAGENTA_SYSCALL_DEF not defined
 #endif
 
+#ifndef MAGENTA_DDKCALL_DEF
+#error MAGENTA_DDKCALL_DEF not defined
+#endif
+
 #ifndef MAGENTA_SYSCALL_DEF_WITH_ATTRS
 #define MAGENTA_SYSCALL_DEF_WITH_ATTRS(num_64bit_slots, num_32bit_slots, syscall_num, return_type, \
         name, attrs, arguments...) \
@@ -45,11 +49,11 @@
 #endif
 
 MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 0, void, exit, (noreturn), int retcode)
-MAGENTA_SYSCALL_DEF(2, 2, 1, int, debug_read, void* buffer, uint32_t length)
+MAGENTA_DDKCALL_DEF(2, 2, 1, int, debug_read, void* buffer, uint32_t length)
 MAGENTA_SYSCALL_DEF(2, 2, 2, int, debug_write, const void* buffer, uint32_t length)
 MAGENTA_SYSCALL_DEF(1, 2, 3, mx_status_t, nanosleep, mx_time_t nanoseconds)
 MAGENTA_SYSCALL_DEF(0, 0, 4, mx_time_t, current_time, void)
-MAGENTA_SYSCALL_DEF(2, 2, 5, int, debug_send_command, const void* buffer, uint32_t length)
+MAGENTA_DDKCALL_DEF(2, 2, 5, int, debug_send_command, const void* buffer, uint32_t length)
 
 // Temporary system calls before pending calls to get system info are created.
 MAGENTA_SYSCALL_DEF(0, 0, 6, unsigned int, num_cpus, void)
@@ -91,9 +95,9 @@ MAGENTA_SYSCALL_DEF(6, 6, 62, mx_status_t, message_write, mx_handle_t handle, co
                     uint32_t num_bytes, const mx_handle_t* handles, uint32_t num_handles, uint32_t flags)
 
 // Drivers
-MAGENTA_SYSCALL_DEF(2, 2, 70, mx_handle_t, interrupt_event_create, uint32_t vector, uint32_t flags)
-MAGENTA_SYSCALL_DEF(1, 1, 71, mx_status_t, interrupt_event_complete, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(1, 1, 72, mx_status_t, interrupt_event_wait, mx_handle_t handle)
+MAGENTA_DDKCALL_DEF(2, 2, 70, mx_handle_t, interrupt_event_create, uint32_t vector, uint32_t flags)
+MAGENTA_DDKCALL_DEF(1, 1, 71, mx_status_t, interrupt_event_complete, mx_handle_t handle)
+MAGENTA_DDKCALL_DEF(1, 1, 72, mx_status_t, interrupt_event_wait, mx_handle_t handle)
 
 // Processes
 MAGENTA_SYSCALL_DEF(0, 0, 80, mx_handle_t, process_create, const char* name, uint32_t name_len)
@@ -123,41 +127,41 @@ MAGENTA_SYSCALL_DEF(2, 4, 103, mx_status_t, vm_object_get_size, mx_handle_t hand
 MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vm_object_set_size, mx_handle_t handle, uint64_t size)
 
 // temporary syscalls to access port and memory mapped devices
-MAGENTA_SYSCALL_DEF(2, 2, 105, mx_status_t, mmap_device_io, uint32_t io_addr, uint32_t len)
-MAGENTA_SYSCALL_DEF(3, 3, 106, mx_status_t, mmap_device_memory, mx_paddr_t paddr, uint32_t len,
+MAGENTA_DDKCALL_DEF(2, 2, 105, mx_status_t, mmap_device_io, uint32_t io_addr, uint32_t len)
+MAGENTA_DDKCALL_DEF(3, 3, 106, mx_status_t, mmap_device_memory, mx_paddr_t paddr, uint32_t len,
                     void **out_vaddr)
-MAGENTA_SYSCALL_DEF(3, 3, 107, mx_status_t, alloc_device_memory, uint32_t len, mx_paddr_t *out_paddr,
+MAGENTA_DDKCALL_DEF(3, 3, 107, mx_status_t, alloc_device_memory, uint32_t len, mx_paddr_t *out_paddr,
                     void **out_vaddr)
 
 // TODO(security)
-MAGENTA_SYSCALL_DEF(4, 4, 170, mx_status_t, bootloader_fb_get_info, uint32_t* format, uint32_t* width,
+MAGENTA_DDKCALL_DEF(4, 4, 170, mx_status_t, bootloader_fb_get_info, uint32_t* format, uint32_t* width,
                     uint32_t* height, uint32_t* stride)
-MAGENTA_SYSCALL_DEF(6, 6, 171, mx_status_t, set_framebuffer, void* vaddr, uint32_t len, uint32_t format,
+MAGENTA_DDKCALL_DEF(6, 6, 171, mx_status_t, set_framebuffer, void* vaddr, uint32_t len, uint32_t format,
                     uint32_t width, uint32_t height, uint32_t stride)
 
 // temporary pci syscalls
 // TODO: remove when the pci driver moves to user space
-MAGENTA_SYSCALL_DEF(2, 2, 180, mx_handle_t, pci_get_nth_device, uint32_t index,
+MAGENTA_DDKCALL_DEF(2, 2, 180, mx_handle_t, pci_get_nth_device, uint32_t index,
                     mx_pcie_get_nth_info_t* out_info)
-MAGENTA_SYSCALL_DEF(1, 1, 181, mx_status_t, pci_claim_device, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(2, 2, 182, mx_status_t, pci_enable_bus_master, mx_handle_t handle, bool enable)
-MAGENTA_SYSCALL_DEF(1, 1, 183, mx_status_t, pci_reset_device, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(3, 3, 184, mx_handle_t, pci_map_mmio, mx_handle_t handle, uint32_t bar_num,
+MAGENTA_DDKCALL_DEF(1, 1, 181, mx_status_t, pci_claim_device, mx_handle_t handle)
+MAGENTA_DDKCALL_DEF(2, 2, 182, mx_status_t, pci_enable_bus_master, mx_handle_t handle, bool enable)
+MAGENTA_DDKCALL_DEF(1, 1, 183, mx_status_t, pci_reset_device, mx_handle_t handle)
+MAGENTA_DDKCALL_DEF(3, 3, 184, mx_handle_t, pci_map_mmio, mx_handle_t handle, uint32_t bar_num,
                     mx_cache_policy_t cache_policy)
-MAGENTA_SYSCALL_DEF(5, 5, 185, mx_status_t, pci_io_write, mx_handle_t handle, uint32_t bar_num,
+MAGENTA_DDKCALL_DEF(5, 5, 185, mx_status_t, pci_io_write, mx_handle_t handle, uint32_t bar_num,
                     uint32_t offset, uint32_t len, const uint32_t value)
-MAGENTA_SYSCALL_DEF(5, 5, 186, mx_status_t, pci_io_read, mx_handle_t handle, uint32_t bar_num,
+MAGENTA_DDKCALL_DEF(5, 5, 186, mx_status_t, pci_io_read, mx_handle_t handle, uint32_t bar_num,
                     uint32_t offset, uint32_t len, uint32_t* out_value)
-MAGENTA_SYSCALL_DEF(2, 2, 187, mx_handle_t, pci_map_interrupt, mx_handle_t handle, int32_t which_irq)
-MAGENTA_SYSCALL_DEF(1, 1, 188, mx_status_t, pci_interrupt_wait, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(1, 1, 189, mx_handle_t, pci_map_config, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(4, 4, 190, mx_status_t, pci_query_irq_mode_caps, mx_handle_t handle,
+MAGENTA_DDKCALL_DEF(2, 2, 187, mx_handle_t, pci_map_interrupt, mx_handle_t handle, int32_t which_irq)
+MAGENTA_DDKCALL_DEF(1, 1, 188, mx_status_t, pci_interrupt_wait, mx_handle_t handle)
+MAGENTA_DDKCALL_DEF(1, 1, 189, mx_handle_t, pci_map_config, mx_handle_t handle)
+MAGENTA_DDKCALL_DEF(4, 4, 190, mx_status_t, pci_query_irq_mode_caps, mx_handle_t handle,
                     mx_pci_irq_mode_t mode, uint32_t* out_max_irqs)
-MAGENTA_SYSCALL_DEF(4, 4, 191, mx_status_t, pci_set_irq_mode, mx_handle_t handle, mx_pci_irq_mode_t mode,
+MAGENTA_DDKCALL_DEF(4, 4, 191, mx_status_t, pci_set_irq_mode, mx_handle_t handle, mx_pci_irq_mode_t mode,
                     uint32_t requested_irq_count)
 
 // I/O mapping objects
-MAGENTA_SYSCALL_DEF(3, 3, 200, mx_status_t, io_mapping_get_info, mx_handle_t handle, void** out_vaddr,
+MAGENTA_DDKCALL_DEF(3, 3, 200, mx_status_t, io_mapping_get_info, mx_handle_t handle, void** out_vaddr,
                     uint64_t* out_size)
 
 // exception handlers
@@ -189,4 +193,5 @@ MAGENTA_SYSCALL_DEF(7, 7, 20007, int, syscall_test_7, int a, int b, int c, int d
 MAGENTA_SYSCALL_DEF(8, 8, 20008, int, syscall_test_8, int a, int b, int c, int d, int e, int f, int g, int h)
 
 #undef MAGENTA_SYSCALL_DEF
+#undef MAGENTA_DDKCALL_DEF
 #undef MAGENTA_SYSCALL_DEF_WITH_ATTRS

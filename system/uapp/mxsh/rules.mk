@@ -25,7 +25,7 @@ MODULE_SRCS += \
 MODULE_NAME := mxsh
 
 MODULE_DEPS := \
-    ulib/mxio ulib/unittest ulib/musl ulib/magenta
+    ulib/mxio ulib/unittest ulib/musl ulib/ddk ulib/magenta
 
 USER_MANIFEST_LINES += docs/LICENSE=kernel/LICENSE
 

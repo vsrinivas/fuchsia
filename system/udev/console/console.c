@@ -16,6 +16,7 @@
 #include <ddk/driver.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 
 #include <stdio.h>

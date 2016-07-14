@@ -11,6 +11,6 @@
 
 // Please don't put CDECLS here. We want the stricter declaration matching
 // rules of C++.
-
+#define MAGENTA_DDKCALL_DEF(a...) MAGENTA_SYSCALL_DEF(a)
 #define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) ret sys_##name(args);
 #include <magenta/syscalls.inc>

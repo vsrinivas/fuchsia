@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 
 static int val = 5;
 

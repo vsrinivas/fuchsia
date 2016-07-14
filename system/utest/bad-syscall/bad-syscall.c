@@ -16,6 +16,7 @@
 #include <stdlib.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 #include <unittest/unittest.h>
 
 int bad_syscall_test(void) {

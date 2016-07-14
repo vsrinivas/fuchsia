@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <ddk/io-alloc.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 #include <runtime/mutex.h>
 #include <limits.h>
 #include <stdio.h>

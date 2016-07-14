@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := bad-kernel-access-test-crashes
 
 MODULE_DEPS := \
-    ulib/musl ulib/magenta ulib/mxio ulib/unittest
+    ulib/musl ulib/magenta ulib/mxio ulib/ddk ulib/unittest
 
 include make/module.mk

@@ -18,6 +18,7 @@
 
 #include <hw/pci.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

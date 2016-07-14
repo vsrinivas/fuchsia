@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 #include <mxio/debug.h>
 #include <mxio/util.h>
 #include <runtime/process.h>

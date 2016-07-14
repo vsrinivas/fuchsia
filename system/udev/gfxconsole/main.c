@@ -33,6 +33,8 @@
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
 
+#include <magenta/syscalls-ddk.h>
+
 #define VCDEBUG 1
 
 #include "vc.h"

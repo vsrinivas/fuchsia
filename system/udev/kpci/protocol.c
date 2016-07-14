@@ -16,6 +16,7 @@
 
 #include <assert.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 
 #include "kpci-private.h"
 
