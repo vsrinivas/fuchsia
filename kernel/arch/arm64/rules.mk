@@ -16,12 +16,6 @@ else
 $(error $(LOCAL_DIR)/rules.mk doesnt have logic for arm core $(ARM_CPU))
 endif
 
-GLOBAL_DEFINES += \
-	ARM64_CPU_$(ARM_CPU)=1 \
-	ARM_ISA_ARMV8=1 \
-	ARM_ISA_ARMV8A=1 \
-	IS_64BIT=1
-
 MODULE_SRCS += \
 	$(LOCAL_DIR)/arch.c \
 	$(LOCAL_DIR)/asm.S \
@@ -37,6 +31,10 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/uspace_entry.S
 
 KERNEL_DEFINES += \
+	ARM64_CPU_$(ARM_CPU)=1 \
+	ARM_ISA_ARMV8=1 \
+	ARM_ISA_ARMV8A=1 \
+	IS_64BIT=1 \
 	ARCH_DEFAULT_STACK_SIZE=4096
 
 # if its requested we build with SMP, arm generically supports 4 cpus

@@ -63,11 +63,11 @@ int stack_overflow(volatile unsigned int* i_array) {
 }
 
 int undefined(volatile unsigned int* unused) {
-#if ARCH_X86_64
+#if defined(__x86_64__)
     __asm__ volatile("ud2");
-#elif ARCH_ARM64
+#elif defined(__aarch64__)
     __asm__ volatile("brk #0"); // not undefined, but close enough
-#elif ARCH_ARM
+#elif defined(__arm__)
     __asm__ volatile("udf");
 #else
 #error "need to define undefined for this architecture"

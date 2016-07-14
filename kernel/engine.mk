@@ -127,10 +127,10 @@ LINKER_SCRIPT :=
 GENERATED :=
 
 # anything added to GLOBAL_DEFINES will be put into $(BUILDDIR)/config-global.h
-GLOBAL_DEFINES := LK=1
+GLOBAL_DEFINES :=
 
 # anything added to KERNEL_DEFINES will be put into $(BUILDDIR)/config-kernel.h
-KERNEL_DEFINES := _KERNEL=1
+KERNEL_DEFINES := LK=1 _KERNEL=1
 
 # anything added to USER_DEFINES will be put into $(BUILDDIR)/config-user.h
 USER_DEFINES := __MAGENTA__=1
@@ -246,7 +246,7 @@ all:: $(foreach app,$(ALLUSER_APPS),$(app).lst $(app).dump)
 endif
 
 # add some automatic configuration defines
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	PROJECT_$(PROJECT)=1 \
 	PROJECT=\"$(PROJECT)\" \
 	TARGET_$(TARGET)=1 \

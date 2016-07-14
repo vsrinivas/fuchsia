@@ -18,25 +18,27 @@
 extern "C" {
 #endif
 
-#if ARCH_X86_64
+#if defined(__x86_64__)
 
 enum { ARCH_SET_FS = 0,
        ARCH_GET_FS = 1,
        ARCH_SET_GS = 2,
        ARCH_GET_GS = 3 };
 
-#elif ARCH_ARM64
+#elif defined(__aarch64__)
 
 enum {
     ARCH_SET_TPIDRRO_EL0 = 0,
 };
 
-#elif ARCH_ARM
+#elif defined(__arm__)
 
 enum {
     ARCH_SET_CP15_READONLY = 0,
 };
 
+#else
+#error "need to define PRCTL enum for your architecture"
 #endif
 
 #ifdef __cplusplus

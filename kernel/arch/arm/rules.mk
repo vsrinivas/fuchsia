@@ -15,13 +15,13 @@ ENABLE_THUMB?=true
 # default to the regular arm subarch
 SUBARCH := arm
 
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_$(ARM_CPU)=1
 
 # do set some options based on the cpu core
 HANDLED_CORE := false
 ifeq ($(ARM_CPU),cortex-m0)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_CORTEX_M0=1 \
 	ARM_ISA_ARMV6M=1 \
 	ARM_WITH_THUMB=1
@@ -30,7 +30,7 @@ ENABLE_THUMB := true
 SUBARCH := arm-m
 endif
 ifeq ($(ARM_CPU),cortex-m0plus)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_CORTEX_M0_PLUS=1 \
 	ARM_ISA_ARMV6M=1 \
 	ARM_WITH_THUMB=1
@@ -39,7 +39,7 @@ ENABLE_THUMB := true
 SUBARCH := arm-m
 endif
 ifeq ($(ARM_CPU),cortex-m3)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_CORTEX_M3=1 \
 	ARM_ISA_ARMv7=1 \
 	ARM_ISA_ARMv7M=1 \
@@ -50,7 +50,7 @@ ENABLE_THUMB := true
 SUBARCH := arm-m
 endif
 ifeq ($(ARM_CPU),cortex-m4)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_CORTEX_M4=1 \
 	ARM_ISA_ARMv7=1 \
 	ARM_ISA_ARMv7M=1 \
@@ -61,7 +61,7 @@ ENABLE_THUMB := true
 SUBARCH := arm-m
 endif
 ifeq ($(ARM_CPU),cortex-m4f)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_CORTEX_M4=1 \
 	ARM_CPU_CORTEX_M4F=1 \
 	ARM_ISA_ARMv7=1 \
@@ -75,7 +75,7 @@ ENABLE_THUMB := true
 SUBARCH := arm-m
 endif
 ifeq ($(ARM_CPU),cortex-m7)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_CORTEX_M7=1 \
 	ARM_ISA_ARMv7=1 \
 	ARM_ISA_ARMv7M=1 \
@@ -87,7 +87,7 @@ ENABLE_THUMB := true
 SUBARCH := arm-m
 endif
 ifeq ($(ARM_CPU),cortex-a7)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
 	ARM_WITH_MMU=1 \
 	ARM_ISA_ARMv7=1 \
@@ -100,7 +100,7 @@ GLOBAL_DEFINES += \
 HANDLED_CORE := true
 endif
 ifeq ($(ARM_CPU),cortex-a15)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
 	ARM_WITH_MMU=1 \
 	ARM_ISA_ARMv7=1 \
@@ -110,14 +110,14 @@ GLOBAL_DEFINES += \
 	ARM_WITH_CACHE=1 \
 	ARM_WITH_L2=1
 ifneq ($(ARM_WITHOUT_VFP_NEON),true)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_VFP=1 \
 	ARM_WITH_NEON=1
 endif
 HANDLED_CORE := true
 endif
 ifeq ($(ARM_CPU),cortex-a8)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
 	ARM_WITH_MMU=1 \
 	ARM_ISA_ARMv7=1 \
@@ -131,7 +131,7 @@ GLOBAL_DEFINES += \
 HANDLED_CORE := true
 endif
 ifeq ($(ARM_CPU),cortex-a9)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
 	ARM_WITH_MMU=1 \
 	ARM_ISA_ARMv7=1 \
@@ -142,7 +142,7 @@ GLOBAL_DEFINES += \
 HANDLED_CORE := true
 endif
 ifeq ($(ARM_CPU),cortex-a9-neon)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_CPU_CORTEX_A9=1 \
 	ARM_WITH_CP15=1 \
 	ARM_WITH_MMU=1 \
@@ -156,7 +156,7 @@ GLOBAL_DEFINES += \
 HANDLED_CORE := true
 endif
 ifeq ($(ARM_CPU),arm1136j-s)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
 	ARM_WITH_MMU=1 \
 	ARM_ISA_ARMv6=1 \
@@ -166,7 +166,7 @@ GLOBAL_DEFINES += \
 HANDLED_CORE := true
 endif
 ifeq ($(ARM_CPU),arm1176jzf-s)
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
 	ARM_WITH_MMU=1 \
 	ARM_ISA_ARMv6=1 \
@@ -178,7 +178,7 @@ HANDLED_CORE := true
 endif
 ifeq ($(ARM_CPU),armemu)
 # flavor of emulated cpu by the armemu project
-GLOBAL_DEFINES += \
+KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
 	ARM_ISA_ARMv7=1 \
 	ARM_ISA_ARMv7A=1 \

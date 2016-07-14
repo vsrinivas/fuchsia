@@ -117,20 +117,17 @@ static int verify_eheader(const void* header) {
     if (eheader->e_phentsize < sizeof(elf_phdr_t))
         return ERR_NOT_FOUND;
 
-#if ARCH_ARM
+#if defined(__arm__)
     if (eheader->e_machine != EM_ARM)
         return ERR_NOT_FOUND;
-#elif ARCH_ARM64
+#elif defined(__aarch64__)
     if (eheader->e_machine != EM_AARCH64)
         return ERR_NOT_FOUND;
-#elif ARCH_X86_64
+#elif defined(__x86_64__)
     if (eheader->e_machine != EM_X86_64)
         return ERR_NOT_FOUND;
-#elif ARCH_X86_32
+#elif defined(__i386__)
     if (eheader->e_machine != EM_386)
-        return ERR_NOT_FOUND;
-#elif ARCH_MICROBLAZE
-    if (eheader->e_machine != EM_MICROBLAZE)
         return ERR_NOT_FOUND;
 #else
 #error find proper EM_ define for your machine
