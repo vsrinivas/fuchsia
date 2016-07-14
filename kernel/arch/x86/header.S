@@ -20,7 +20,7 @@
 
 .align 4
 
-FUNCTION(_setup_start)
+LOCAL_DATA(_setup_start)
 
     /* screen_info             0x000-0x040 struct screen_info */
     .org 0x040
@@ -59,7 +59,7 @@ FUNCTION(_setup_start)
     /* scratch                 0x1E4-0x1E8 */
     .org 0x1E8
     /* e820_entries            0x1E8-0x1E9 */
-e820_entries:
+LOCAL_DATA(e820_entries)
     .byte 0
     /* eddbuf_entries          0x1E9-0x1EA */
     .org 0x1EA
@@ -74,85 +74,86 @@ e820_entries:
     /* padding */
     .org 0x1F1
     /* hdr                     0x1F1-0x268 */
-        /* setup_sects */
-        .byte (((_setup_end - _setup_start) >> 9) - 1)
-        /* root_flags */
-        .short 0
-        /* syssize */
-        .int _zero_page_sys_size
-        /* ram_size */
-        .short 0
-        /* vid_mode */
-        .short 0
-        /* root_dev */
-        .short 0
-        /* boot_flag */
-        .short 0xAA55
-        /* jump */
-        .byte 0xEB, end_of_setup_header - 0f
+LOCAL_DATA(hdr)
+    /* setup_sects */
+    .byte (((_setup_end - _setup_start) >> 9) - 1)
+    /* root_flags */
+    .short 0
+    /* syssize */
+    .int _zero_page_sys_size
+    /* ram_size */
+    .short 0
+    /* vid_mode */
+    .short 0
+    /* root_dev */
+    .short 0
+    /* boot_flag */
+    .short 0xAA55
+    /* jump */
+    .byte 0xEB, end_of_setup_header - 0f
 0:
-        /* header */
-        .ascii "HdrS"
-        /* version */
-        .short 0x020C
-        /* realmode_swtch */
-        .int 0
-        /* start_sys (obsolete) */
-        .short 0x1000
-        /* kernel_version */
-        .short 0
-        /* type_of_loader */
-        .byte 0
-        /* loadflags */
-        .byte 0x01
-        /* setup_move_size */
-        .short 0
-        /* code32_start */
-        .int PHYS(_protected_start)
-        /* ramdisk_image */
-        .int 0
-        /* ramdisk_size */
-        .int 0
-        /* bootsect_kludge (obsolete) */
-        .int 0
-        /* heap_end_ptr */
-        .short 0
-        /* ext_loader_ver */
-        .byte 0
-        /* ext_loader_type */
-        .byte 0
-        /* cmd_line_ptr */
-        .int 0
-        /* initrd_addr_max */
-        .int 0x7fffffff
-        /* kernel_alignment */
-        .int 0x200000
-        /* relocatable_kernel */
-        .byte 0
-        /* min_alignment */
-        .byte 8
-        /* xloadflags */
-        .short 0
-        /* cmdline_size */
-        .int 2048
-        /* hardware_subarch */
-        .int 0
-        /* hardware_subarch_data */
-        .quad 0
-        /* payload_offset */
-        .int 0
-        /* payload_length */
-        .int 0
-        /* setup_data */
-        .quad 0
-        /* pref_address */
-        .long PHYS(_protected_start)
-        .long 0
-        /* init_size */
-        .long 0
-        /* handover_offset */
-        .long 0
-end_of_setup_header:
+    /* header */
+    .ascii "HdrS"
+    /* version */
+    .short 0x020C
+    /* realmode_swtch */
+    .int 0
+    /* start_sys (obsolete) */
+    .short 0x1000
+    /* kernel_version */
+    .short 0
+    /* type_of_loader */
+    .byte 0
+    /* loadflags */
+    .byte 0x01
+    /* setup_move_size */
+    .short 0
+    /* code32_start */
+    .int PHYS(_protected_start)
+    /* ramdisk_image */
+    .int 0
+    /* ramdisk_size */
+    .int 0
+    /* bootsect_kludge (obsolete) */
+    .int 0
+    /* heap_end_ptr */
+    .short 0
+    /* ext_loader_ver */
+    .byte 0
+    /* ext_loader_type */
+    .byte 0
+    /* cmd_line_ptr */
+    .int 0
+    /* initrd_addr_max */
+    .int 0x7fffffff
+    /* kernel_alignment */
+    .int 0x200000
+    /* relocatable_kernel */
+    .byte 0
+    /* min_alignment */
+    .byte 8
+    /* xloadflags */
+    .short 0
+    /* cmdline_size */
+    .int 2048
+    /* hardware_subarch */
+    .int 0
+    /* hardware_subarch_data */
+    .quad 0
+    /* payload_offset */
+    .int 0
+    /* payload_length */
+    .int 0
+    /* setup_data */
+    .quad 0
+    /* pref_address */
+    .long PHYS(_protected_start)
+    .long 0
+    /* init_size */
+    .long 0
+    /* handover_offset */
+    .long 0
+LOCAL_FUNCTION(end_of_setup_header)
     jmp end_of_zero_page
 0:
     /* padding */
@@ -160,7 +161,7 @@ end_of_setup_header:
     /* edd_mbr_sig_buffer      0x290-0x2D0 */
     .org 0x2D0
     /* e820_map                0x2D0-0xCD0 */
-e820_map:
+LOCAL_DATA(e820_map)
     .org 0xCD0
     /* padding */
     .org 0xD00
@@ -169,7 +170,7 @@ e820_map:
     /* padding */
     .org 0x1000
 
-end_of_zero_page:
+LOCAL_FUNCTION(end_of_zero_page)
     /* gather e820 information if it wasn't provided */
     cmpw $0, (e820_entries - _setup_start)
     jne e820_loop_end
@@ -237,7 +238,6 @@ e820_loop_end:
     movw %ax, %ds
     movw %ax, %es
     movw %ax, %fs
-    movw %ax, %ss
     movw %ax, %gs
     movw %ax, %ss
 
