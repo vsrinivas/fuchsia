@@ -8,7 +8,7 @@
 #pragma once
 
 /* some assembly #defines, need to match the structure below */
-#if IS_64BIT
+#if _LP64
 #define __MMU_INITIAL_MAPPING_PHYS_OFFSET 0
 #define __MMU_INITIAL_MAPPING_VIRT_OFFSET 8
 #define __MMU_INITIAL_MAPPING_SIZE_OFFSET 16

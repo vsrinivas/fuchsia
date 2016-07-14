@@ -77,7 +77,7 @@ private:
                                T copyfunc);
 
     // constants
-#if IS_64BIT
+#if _LP64
     static const uint64_t MAX_SIZE = ROUNDDOWN(SIZE_MAX, PAGE_SIZE);
 #else
     static const uint64_t MAX_SIZE = SIZE_MAX * PAGE_SIZE;

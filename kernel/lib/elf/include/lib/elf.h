@@ -18,7 +18,7 @@
 #include <utils/ref_ptr.h>
 
 // based on our bitness, support 32 or 64 bit elf
-#if IS_64BIT
+#if _LP64
 #define WITH_ELF64 1
 #else
 #define WITH_ELF32 1
