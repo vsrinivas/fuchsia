@@ -43,6 +43,10 @@ pointer or *size* is an invalid packet size.
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
 not be waited upon.
 
+**ERR_NOT_ENOUGH_BUFFER** if a packet was lost because the IO port buffer was
+full. This is usually a temporary condition.
+
+
 ## NOTES
 
 Being able to determine which type of packet has been received (**mx_io_packet_t**

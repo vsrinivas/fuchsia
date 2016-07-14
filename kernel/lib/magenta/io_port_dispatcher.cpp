@@ -51,19 +51,22 @@ mx_status_t IOPortDispatcher::Init(uint32_t depth) {
 
 mx_status_t IOPortDispatcher::Queue(const IOP_Packet* packet) {
     int wake_count = 0;
+    mx_status_t status = NO_ERROR;
     {
         AutoLock al(&lock_);
         auto tail = packets_.push_tail();
-        if (!tail)
-            return ERR_NOT_ENOUGH_BUFFER;
-        *tail = *packet;
-        wake_count = event_signal_etc(&event_, false, NO_ERROR);
+        if (!tail) {
+            status = ERR_NOT_ENOUGH_BUFFER;
+        } else {
+            *tail = *packet;
+        }
+        wake_count = event_signal_etc(&event_, false, status);
     }
 
     if (wake_count)
         thread_yield();
 
-    return NO_ERROR;
+    return status;
 }
 
 mx_status_t IOPortDispatcher::Wait(IOP_Packet* packet) {
