@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FTL_MACROS_H_
+#define LIB_FTL_MACROS_H_
 
 #define FTL_DISALLOW_COPY(TypeName)                                            \
   TypeName(const TypeName&) = delete
@@ -17,3 +18,5 @@
 #define FTL_DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName)                           \
   TypeName() = delete;                                                         \
   FTL_DISALLOW_COPY_AND_ASSIGN(TypeName)
+
+#endif  // LIB_FTL_MACROS_H_
