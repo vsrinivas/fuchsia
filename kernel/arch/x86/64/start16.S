@@ -50,9 +50,9 @@ FUNCTION(x86_bootstrap16_entry)
     # clear instruction prefetch queue
     jmp 0f
 0:
-    # enable PAE
+    # enable PAE / PGE
     mov %cr4, %ecx
-    or $X86_CR4_PAE, %ecx
+    or $(X86_CR4_PAE|X86_CR4_PGE), %ecx
     mov %ecx, %cr4
 
     # load CR3 with the bootstrap PML4

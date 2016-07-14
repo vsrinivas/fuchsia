@@ -128,12 +128,14 @@ paging_setup:
      * for initial bootstrap, this page table will be 1 to 1
      */
 
-    /* PAE bit must be enabled  for 64 bit paging*/
+    /* Set the PAE bit to enable 64bit paging
+     * Set PGE to enable global kernel pages
+     */
     mov %cr4, %eax
-    btsl $(5), %eax
+    or $(X86_CR4_PAE|X86_CR4_PGE), %eax
     mov %eax, %cr4
 
-    /* Long Mode Enabled at this point*/
+    /* Long Mode Enabled at this point */
     movl $X86_MSR_EFER, %ecx
     rdmsr
     orl $X86_EFER_LME,%eax
