@@ -28,6 +28,9 @@ class Model {
   // Objects in back to front draw order.
   const std::vector<Object>& objects() const { return objects_; }
 
+  // TODO(jjosh): Used to parameterize DepthBasedBlur.  Need an API for this.
+  float blur_plane_height() const { return 16.0f; }
+
  private:
   std::vector<Object> objects_;
 

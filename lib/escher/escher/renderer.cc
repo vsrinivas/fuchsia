@@ -4,17 +4,20 @@
 
 #include "escher/renderer.h"
 
-#include <iostream>
 #include <math.h>
 #include <utility>
 
+#include "escher/geometry/quad.h"
 #include "escher/gl/bindings.h"
 #include "escher/rendering/canvas.h"
+
+#include "ftl/logging.h"
 
 namespace escher {
 namespace {
 
 constexpr bool kDebugIllumination = false;
+constexpr bool kDepthBasedBlur = true;
 
 }  // namespace
 
@@ -23,38 +26,61 @@ Renderer::Renderer() {}
 Renderer::~Renderer() {}
 
 bool Renderer::Init() {
-  if (!blit_shader_.Compile() || !lighting_.Init(&texture_cache_))
-    return false;
+  if (!blit_shader_.Compile()) return false;
+  if (!lighting_.Init(&texture_cache_)) return false;
+  if (!blur_.Init(&texture_cache_)) return false;
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glCullFace(GL_BACK);
   glEnable(GL_CULL_FACE);
 
-  scene_ = FrameBuffer::Make();
+  unlit_scene_ = FrameBuffer::Make();
+  lit_scene_ = FrameBuffer::Make();
+
   return true;
 }
 
 void Renderer::Render(const Stage& stage, const Model& model) {
+  FTL_DCHECK(glGetError() == GL_NO_ERROR);
+
   auto& size = stage.physical_size();
-
   glViewport(0, 0, size.width(), size.height());
-  scene_.Bind();
-
-  if (!scene_.color().size().Equals(size)) {
-    scene_.SetDepth(texture_cache_.GetDepthTexture(size));
-    scene_.SetColor(texture_cache_.GetColorTexture(size));
+  unlit_scene_.Bind();
+  if (!unlit_scene_.color().size().Equals(size)) {
+    unlit_scene_.SetDepth(texture_cache_.GetDepthTexture(size));
+    unlit_scene_.SetColor(texture_cache_.GetColorTexture(size));
   }
 
   model_renderer_.DrawModel(stage, model);
 
-  lighting_.Prepare(stage, scene_.depth());
+  lighting_.Prepare(stage, unlit_scene_.depth());
 
-  glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
-  glClear(GL_COLOR_BUFFER_BIT);
-  if (kDebugIllumination)
+  if (kDebugIllumination) {
+    glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
+    glClear(GL_COLOR_BUFFER_BIT);
     Blit(lighting_.illumination().id());
-  else
-    lighting_.Draw(scene_.color());
+  } else if (kDepthBasedBlur) {
+    lit_scene_.Bind();
+
+    if (!lit_scene_.color().size().Equals(size)) {
+      lit_scene_.SetColor(texture_cache_.GetColorTexture(size));
+    }
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    lighting_.Draw(unlit_scene_.color());
+
+    blur_.Draw(stage,
+               lit_scene_.color(),
+               unlit_scene_.depth(),
+               model.blur_plane_height(),
+               front_frame_buffer_id_);
+  } else {
+    glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
+    glClear(GL_COLOR_BUFFER_BIT);
+    lighting_.Draw(unlit_scene_.color());
+  }
+
+  FTL_DCHECK(glGetError() == GL_NO_ERROR);
 }
 
 void Renderer::Blit(GLuint texture_id) {

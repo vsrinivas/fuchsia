@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		696750C41D347C73005B4E7F /* depth_based_blur_effect.cc in Sources */ = {isa = PBXBuildFile; fileRef = 696750C21D347C73005B4E7F /* depth_based_blur_effect.cc */; };
 		971538A51D2DC32800EE4821 /* logging.cc in Sources */ = {isa = PBXBuildFile; fileRef = 971538A41D2DC32800EE4821 /* logging.cc */; };
 		971538A91D2DC77A00EE4821 /* debugger.cc in Sources */ = {isa = PBXBuildFile; fileRef = 971538A71D2DC77A00EE4821 /* debugger.cc */; };
 		97254BE61D1B92B3002980D5 /* unique_shader.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BE41D1B92B3002980D5 /* unique_shader.cc */; };
@@ -55,6 +56,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		696750C21D347C73005B4E7F /* depth_based_blur_effect.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = depth_based_blur_effect.cc; sourceTree = "<group>"; };
+		696750C31D347C73005B4E7F /* depth_based_blur_effect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = depth_based_blur_effect.h; sourceTree = "<group>"; };
 		971538A41D2DC32800EE4821 /* logging.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cc; sourceTree = "<group>"; };
 		971538A71D2DC77A00EE4821 /* debugger.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = debugger.cc; sourceTree = "<group>"; };
 		971538A81D2DC77A00EE4821 /* debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = debugger.h; sourceTree = "<group>"; };
@@ -161,6 +164,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		696750C11D347C45005B4E7F /* blur */ = {
+			isa = PBXGroup;
+			children = (
+				696750C21D347C73005B4E7F /* depth_based_blur_effect.cc */,
+				696750C31D347C73005B4E7F /* depth_based_blur_effect.h */,
+			);
+			path = blur;
+			sourceTree = "<group>";
+		};
 		971538A61D2DC77A00EE4821 /* debug */ = {
 			isa = PBXGroup;
 			children = (
@@ -200,6 +212,7 @@
 		9736D07D1D29D098001369BA /* effects */ = {
 			isa = PBXGroup;
 			children = (
+				696750C11D347C45005B4E7F /* blur */,
 				9736D07E1D29D098001369BA /* lighting */,
 			);
 			name = effects;
@@ -511,6 +524,7 @@
 				97E733A51D1A5C7F00F62181 /* unique_program.cc in Sources */,
 				97254BE61D1B92B3002980D5 /* unique_shader.cc in Sources */,
 				978372D21D1D9AFE00B0AB77 /* displacement.cc in Sources */,
+				696750C41D347C73005B4E7F /* depth_based_blur_effect.cc in Sources */,
 				971538A51D2DC32800EE4821 /* logging.cc in Sources */,
 				97254BF91D1B92ED002980D5 /* modifier.cc in Sources */,
 				97E733A31D1A5C7F00F62181 /* frame_buffer.cc in Sources */,

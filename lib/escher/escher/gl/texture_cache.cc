@@ -36,8 +36,8 @@ Texture TextureCache::GetTexture(const TextureDescriptor& descriptor) {
 }
 
 void TextureCache::PutTexture(Texture texture) {
-  FTL_DCHECK(texture);
-  cache_.emplace(texture.descriptor(), texture.TakeUniqueTexture());
+  if (texture)
+    cache_.emplace(texture.descriptor(), texture.TakeUniqueTexture());
 }
 
 void TextureCache::Clear() {

@@ -31,6 +31,7 @@ constexpr bool kDrawShadowTestScene = false;
   [super viewDidLoad];
 
   self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+  self.preferredFramesPerSecond = 60;
 
   if (!self.context) {
     NSLog(@"Failed to create ES context");

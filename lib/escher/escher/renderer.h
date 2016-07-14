@@ -7,8 +7,8 @@
 #include <glm/glm.hpp>
 
 #include "ftl/macros.h"
+#include "escher/effects/blur/depth_based_blur_effect.h"
 #include "escher/effects/lighting/lighting_effect.h"
-#include "escher/geometry/quad.h"
 #include "escher/geometry/size_i.h"
 #include "escher/gl/frame_buffer.h"
 #include "escher/gl/texture_cache.h"
@@ -41,8 +41,9 @@ class Renderer {
   LightingEffect lighting_;
   BlitShader blit_shader_;
   SizeI size_;
-  FrameBuffer scene_;
-  Quad full_frame_;
+  FrameBuffer unlit_scene_;
+  FrameBuffer lit_scene_;
+  DepthBasedBlurEffect blur_;
 
   ModelRenderer model_renderer_;
 

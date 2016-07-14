@@ -124,6 +124,8 @@ bool OcclusionDetector::Compile() {
   program_ = MakeUniqueProgram(g_vertex_shader, g_fragment_shader);
   if (!program_)
     return false;
+  position_ = glGetAttribLocation(program_.id(), "a_position");
+  FTL_DCHECK(position_ != -1);
   depth_map_ = glGetUniformLocation(program_.id(), "u_depth_map");
   FTL_DCHECK(depth_map_ != -1);
   noise_ = glGetUniformLocation(program_.id(), "u_noise");

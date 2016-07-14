@@ -27,8 +27,8 @@ AppTestScene::AppTestScene() {
       escher::MakeConstantBinding(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)));
   // Rotate by 10 degrees and scale by 2.
   constexpr double angle = 3.14159265359 / 18;
-  const float c = 2 * cos(angle);
-  const float s = 2 * sin(angle);
+  const float c = 5 * cos(angle);
+  const float s = 5 * sin(angle);
   checkerboard_material_.set_texture_matrix(
       escher::MakeConstantBinding(
           glm::mat2(glm::vec2(c, -s), glm::vec2(s, c))));
@@ -90,7 +90,19 @@ escher::Model AppTestScene::GetModel(const escher::ViewingVolume& volume,
   // third eye
   objects.emplace_back(
       escher::Shape::CreateRect(glm::vec2(300.0f, 180.0f),
-                                glm::vec2(60.0f, 40.0f), 16.0f),
+                                glm::vec2(60.0f, 40.0f), 5.0f),
+      &checkerboard_material_);
+
+  // fourth eye
+  objects.emplace_back(
+      escher::Shape::CreateRect(glm::vec2(400.0f, 180.0f),
+                                glm::vec2(60.0f, 40.0f), 12.0f),
+      &checkerboard_material_);
+
+  // fifth eye
+  objects.emplace_back(
+      escher::Shape::CreateRect(glm::vec2(500.0f, 180.0f),
+                                glm::vec2(60.0f, 40.0f), 19.0f),
       &checkerboard_material_);
 
   // null
@@ -98,9 +110,12 @@ escher::Model AppTestScene::GetModel(const escher::ViewingVolume& volume,
                                                  glm::vec2(40.0f, 40.0f), 2.0f),
                        &null_material_);
 
-  // fab
+  // fabs
   objects.emplace_back(
-      escher::Shape::CreateCircle(focus, kFabSize / 2.0f, 6.0f),
+      escher::Shape::CreateCircle(focus - glm::vec2(kFabSize, 0.f), kFabSize / 2.0f, 4.0f),
+      &fab_material_);
+  objects.emplace_back(
+      escher::Shape::CreateCircle(focus + glm::vec2(kFabSize, 0.f), kFabSize / 2.0f, 12.0f),
       &fab_material_);
 
   return escher::Model(std::move(objects));
