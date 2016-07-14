@@ -384,7 +384,7 @@ static inline void pcie_set_msi_enb(pcie_device_state_t* dev, bool enb) {
     DEBUG_ASSERT(dev->irq.msi.cfg);
 
     volatile uint16_t* ctrl_reg = &dev->irq.msi.cfg->ctrl;
-    pcie_write16(ctrl_reg, PCIE_CAP_MSI_CTRL_SET_ENB(pcie_read16(ctrl_reg), enb));
+    pcie_write16(ctrl_reg, PCIE_CAP_MSI_CTRL_SET_ENB(enb, pcie_read16(ctrl_reg)));
 }
 
 static inline bool pcie_mask_unmask_msi_irq_locked(pcie_device_state_t* dev,
