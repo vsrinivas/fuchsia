@@ -322,9 +322,15 @@ static inline bool page_aligned(vaddr_t vaddr) {
     return (vaddr & (page_size<Level>() - 1)) == 0;
 }
 
-static void tlb_global_invalidate(void) {
-    /* TODO: make sufficient for global pages */
-    x86_set_cr3(x86_get_cr3());
+static void tlb_global_invalidate() {
+    /* See Intel 3A section 4.10.4.1 */
+    ulong cr4 = x86_get_cr4();
+    if (likely(cr4 & X86_CR4_PGE)) {
+        x86_set_cr4(cr4 & ~X86_CR4_PGE);
+        x86_set_cr4(cr4);
+    } else {
+        x86_set_cr3(x86_get_cr3());
+    }
 }
 
 /* Task used for invalidating a TLB entry on each CPU */
@@ -343,8 +349,6 @@ static void tlb_invalidate_page_task(void* raw_context) {
         /* This invalidation doesn't apply to this CPU, ignore it */
         return;
     }
-
-    /* TODO: Handle invalidating global mappings (gotta toggle the cr4 bit) */
 
     switch (context->level) {
 #if X86_PAGING_LEVELS > 3
