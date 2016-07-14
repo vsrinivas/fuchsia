@@ -71,6 +71,7 @@ int devicehost(int argc, char** argv) {
     return 0;
 }
 
+#if !LIBDRIVER
 int console_starter(void* arg) {
     printf("devmgr: vc startup\n");
     // don't start a shell on vc0, since it is the debug console
@@ -91,6 +92,7 @@ int console_starter(void* arg) {
     }
     return 0;
 }
+#endif
 
 int main(int argc, char** argv) {
     devmgr_io_init();

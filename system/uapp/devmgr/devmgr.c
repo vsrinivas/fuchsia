@@ -199,10 +199,12 @@ static void dev_ref_release(mx_device_t* dev) {
     if (dev->refcount == 0) {
         printf("device: %p(%s): ref=0. releasing.\n", dev, safename(dev->name));
         mx_handle_close(dev->event);
+#if !LIBDRIVER
         if (dev->vnode) {
             devfs_remove(dev->vnode);
             dev->vnode = NULL;
         }
+#endif
         DM_UNLOCK();
         dev->ops->release(dev);
         DM_LOCK();
@@ -549,6 +551,11 @@ void devmgr_handle_messages(void) {
     mxio_dispatcher_run(devmgr_rio_dispatcher);
 }
 
+mx_device_t* devmgr_device_root(void) {
+    return root_dev;
+}
+
+#if !LIBDRIVER
 static void devmgr_dump_device(unsigned level, mx_device_t* dev) {
     for (unsigned i = 0; i < level; i++) {
         printf("  ");
@@ -612,10 +619,6 @@ void devmgr_dump(void) {
     DM_UNLOCK();
 }
 
-mx_device_t* devmgr_device_root(void) {
-    return root_dev;
-}
-
 mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "help")) {
         printf("dump   - dump device tree\n"
@@ -639,3 +642,4 @@ mx_status_t devmgr_control(const char* cmd) {
         return ERR_NOT_SUPPORTED;
     }
 }
+#endif
