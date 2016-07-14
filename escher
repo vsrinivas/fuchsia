@@ -1,5 +1,5 @@
 {
-    "label": "//escher",
+    "label": "//lib/escher",
     "binaries": [
         {
             "binary": "ftl_unittests",

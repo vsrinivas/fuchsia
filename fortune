@@ -1,5 +1,5 @@
 {
-    "label": "//fortune",
+    "label": "//bin/fortune",
     "binaries": [
         {
             "binary": "fortune",
