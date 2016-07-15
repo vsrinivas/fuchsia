@@ -70,6 +70,7 @@ struct mx_proc_args {
 #define MX_HND_TYPE_MXIO_REMOTE 0x11
 #define MX_HND_TYPE_MXIO_PIPE 0x12
 #define MX_HND_TYPE_MXIO_EVENT 0x13
+#define MX_HND_TYPE_MXIO_LOGGER 0x14
 
 // Handle types used by the mojo application model
 #define MX_HND_TYPE_APPLICATION_REQUEST 0x100

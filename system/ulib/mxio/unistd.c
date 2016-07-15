@@ -246,6 +246,10 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
             mxio_fdtab[arg] = mxio_pipe_create(h);
             mxio_fdtab[arg]->dupcount++;
             break;
+        case MX_HND_TYPE_MXIO_LOGGER:
+            mxio_fdtab[arg] = mxio_logger_create(h);
+            mxio_fdtab[arg]->dupcount++;
+            break;
         default:
             // unknown handle, leave it alone
             continue;
