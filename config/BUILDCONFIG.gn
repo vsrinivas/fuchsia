@@ -51,6 +51,35 @@ set_defaults("executable") {
   configs = _executable_target_configs
 }
 
+# Some targets we share with Chromium declare themselves to be components,
+# which means they can build either as shared libraries or as static libraries.
+# We build them as static libraries.
+template("component") {
+  if (!defined(invoker.sources)) {
+    # When there are no sources defined, use a source set to avoid creating
+    # an empty static library (which generally don't work).
+    _component_mode = "source_set"
+  } else {
+    _component_mode = "static_library"
+  }
+
+  target(_component_mode, target_name) {
+    # Explicitly forward visibility, implicitly forward everything else.
+    # Forwarding "*" doesn't recurse into nested scopes (to avoid copying all
+    # globals into each template invocation), so won't pick up file-scoped
+    # variables. Normally this isn't too bad, but visibility is commonly
+    # defined at the file scope. Explicitly forwarding visibility and then
+    # excluding it from the "*" set works around this problem.
+    # See http://crbug.com/594610
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+  }
+}
+
+set_defaults("component") {
+  configs = _shared_binary_target_configs
+}
+
 if (target_os == "fuchsia" && is_clang) {
   target_toolchain = "//build/toolchain/fuchsia:clang_${target_cpu}"
 } else {
