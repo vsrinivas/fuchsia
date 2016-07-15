@@ -29,3 +29,5 @@
 + [io_port_wait](syscalls/io_port_wait.md)
 + [io_port_bind](syscalls/io_port_bind.md)
 
+## Threads
++ [thread_arch_prctl](syscalls/thread_arch_prctl.md)
