@@ -223,9 +223,9 @@ mx_status_t elf_load(elf_handle_t* handle) {
         return ERR_NOT_READY;
 
     // validate that this is an ELF file
-    ssize_t readerr = handle->read_hook(handle, &handle->eheader,
-                                        0, sizeof(handle->eheader));
-    if (readerr < (ssize_t)sizeof(handle->eheader)) {
+    mx_ssize_t readerr = handle->read_hook(handle, &handle->eheader,
+                                           0, sizeof(handle->eheader));
+    if (readerr < (mx_ssize_t)sizeof(handle->eheader)) {
         LTRACEF("couldn't read elf header\n");
         return ERR_NOT_FOUND;
     }
@@ -253,7 +253,7 @@ mx_status_t elf_load(elf_handle_t* handle) {
 
     readerr = handle->read_hook(handle, handle->pheaders, handle->eheader.e_phoff,
                                 handle->eheader.e_phnum * handle->eheader.e_phentsize);
-    if (readerr < (ssize_t)(handle->eheader.e_phnum * handle->eheader.e_phentsize)) {
+    if (readerr < (mx_ssize_t)(handle->eheader.e_phnum * handle->eheader.e_phentsize)) {
         LTRACEF("failed to read program headers\n");
         return ERR_NO_MEMORY;
     }
@@ -297,20 +297,37 @@ mx_status_t elf_load(elf_handle_t* handle) {
                 mx_handle_close(handle->vmo);
             }
 
-            // Some binaries declare program headers that
-            // do not start aligned to a page boundary.
-            // Fix that up so we don't make the vmo mapping
-            // unhappy later, and things get loaded correctly.
-            uint64_t align = 0;
-            handle->vmo_addr = (uintptr_t)pheader->p_vaddr + handle->load_bias;
-            if (handle->vmo_addr & (PAGE_SIZE - 1)) {
-                handle->vmo_addr &= (~(PAGE_SIZE - 1));
-                align = PAGE_SIZE - (handle->vmo_addr & (PAGE_SIZE - 1));
-            }
+            // The p_vaddr can start in the middle of a page, but the
+            // semantics are that all the whole pages containing the
+            // p_vaddr+p_filesz range are mapped in.
+            uintptr_t start = (uintptr_t)pheader->p_vaddr + handle->load_bias;
+            uintptr_t end = start + pheader->p_memsz;
+            start &= -PAGE_SIZE;
+            end = (end + PAGE_SIZE - 1) & -PAGE_SIZE;
+            size_t mapsize = end - start;
 
-            handle->vmo = mx_vm_object_create(pheader->p_memsz + align);
+            uintptr_t file_start = (uintptr_t)pheader->p_offset;
+            uintptr_t file_end = file_start + pheader->p_filesz;
+            file_start &= -PAGE_SIZE;
+            // For a read-only segment, the last whole page from the file
+            // is visible in memory, even if p_filesz stops mid-page.
+            // However, for a writable segment with trailing bss, the
+            // trailing partial page after p_filesz gets cleared to zero.
+            // With proper memory-mapped files, this is usually done with a
+            // memset call that COW-faults the page.  Since we're just
+            // creating a VMO and populating it, and it starts out all
+            // zero, just truncate the amount we populate from the file
+            // (i.e. leave it at just p_filesz unrounded).
+            if (pheader->p_memsz == pheader->p_filesz)
+                file_end = (file_end + PAGE_SIZE - 1) & -PAGE_SIZE;
+
+            size_t filesize = file_end - file_start;
+
+            handle->vmo_addr = start;
+            handle->vmo = mx_vm_object_create(mapsize);
             if (handle->vmo < 0) {
-                LTRACEF("failed to allocate VMO to back elf segment at 0x%lx\n", handle->vmo_addr);
+                LTRACEF("failed to allocate VMO to back elf segment at %#"
+                        PRIxPTR "\n", start);
                 return ERR_NO_MEMORY;
             }
 
@@ -319,9 +336,8 @@ mx_status_t elf_load(elf_handle_t* handle) {
             mx_flags |= (pheader->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0;
             mx_flags |= (pheader->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0;
             mx_flags |= (pheader->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0;
-            uintptr_t ptr = handle->vmo_addr;
             mx_status_t status = mx_process_vm_map(handle->proc, handle->vmo, 0,
-                                                         pheader->p_memsz + align, &ptr, mx_flags);
+                                                   mapsize, &start, mx_flags);
             if (status < 0) {
                 LTRACEF("failed to map VMO to back elf segment at %#"
                         PRIxPTR ": %d\n", handle->vmo_addr, status);
@@ -329,10 +345,8 @@ mx_status_t elf_load(elf_handle_t* handle) {
             }
 
             // read the file portion of the segment into memory at vaddr
-            readerr = handle->load_hook(handle,
-                                        pheader->p_vaddr + handle->load_bias,
-                                        pheader->p_offset, pheader->p_filesz);
-            if (readerr < (ssize_t)pheader->p_filesz) {
+            readerr = handle->load_hook(handle, start, file_start, filesize);
+            if (readerr < (mx_ssize_t)filesize) {
                 LTRACEF("error %ld reading program header %u\n", readerr, i);
                 return (readerr < 0) ? readerr : ERR_IO;
             }

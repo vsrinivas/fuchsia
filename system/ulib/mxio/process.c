@@ -203,17 +203,30 @@ typedef struct {
     int fd;
 } ctxt;
 
-static ssize_t _elf_read(elf_handle_t* elf, void* buf, uintptr_t off, size_t len) {
+static mx_ssize_t _elf_read(elf_handle_t* elf,
+                            void* buf, uintptr_t off, size_t len) {
     ctxt* c = elf->arg;
     memcpy(buf, c->data + off, len);
     return len;
 }
 
-static mx_status_t _elf_load(elf_handle_t* elf, uintptr_t vaddr, uintptr_t off, size_t len) {
+static mx_ssize_t _elf_load(elf_handle_t* elf,
+                            uintptr_t vaddr, uintptr_t off, size_t len) {
     ctxt* c = elf->arg;
 
-    mx_ssize_t ret = mx_vm_object_write(elf->vmo, c->data + off, vaddr - elf->vmo_addr, len);
-    if (ret < 0 || (size_t)ret != len) {
+    if (off >= c->len)
+        return ERR_IO;
+
+    // Reading off the end of the virtual file is fine.  Memory-mapping off
+    // the end of the file would just get zeros for the last partial page,
+    // and that's what we're doing here.
+    size_t left = c->len - off;
+    if (len < left)
+        left = len;
+
+    mx_ssize_t ret = mx_vm_object_write(elf->vmo, c->data + off,
+                                        vaddr - elf->vmo_addr, left);
+    if (ret < 0 || (size_t)ret != left) {
         cprintf("failed to write\n");
         return ret;
     }
@@ -234,7 +247,8 @@ mx_status_t mxio_load_elf_mem(mx_handle_t process, mx_vaddr_t* entry, void* data
     return status;
 }
 
-static ssize_t _elf_read_fd(elf_handle_t* elf, void* buf, uintptr_t off, size_t len) {
+static mx_ssize_t _elf_read_fd(elf_handle_t* elf,
+                               void* buf, uintptr_t off, size_t len) {
     ctxt* c = elf->arg;
     if (lseek(c->fd, off, SEEK_SET) != (off_t)off)
         return ERR_IO;
@@ -243,7 +257,8 @@ static ssize_t _elf_read_fd(elf_handle_t* elf, void* buf, uintptr_t off, size_t 
     return len;
 }
 
-static mx_status_t _elf_load_fd(elf_handle_t* elf, uintptr_t vaddr, uintptr_t off, size_t len) {
+static mx_ssize_t _elf_load_fd(elf_handle_t* elf,
+                               uintptr_t vaddr, uintptr_t off, size_t len) {
     uint8_t tmp[4096];
     ctxt* c = elf->arg;
 
@@ -254,17 +269,24 @@ static mx_status_t _elf_load_fd(elf_handle_t* elf, uintptr_t vaddr, uintptr_t of
 
     while (len > 0) {
         size_t xfer = (len > 4096) ? 4096 : len;
-        if (read(c->fd, tmp, xfer) != (ssize_t)xfer)
+        ssize_t nread = read(c->fd, tmp, xfer);
+        if (nread < 0)
             return ERR_IO;
+        if (nread == 0)
+            // Reading off the end of the file is fine.  Memory-mapping off
+            // the end of the file would just get zeros for the last
+            // partial page, and that's what we're doing here.
+            break;
 
-        mx_ssize_t ret = mx_vm_object_write(elf->vmo, tmp, vaddr - elf->vmo_addr, xfer);
-        if (ret < 0 || (size_t)ret != xfer) {
+        mx_ssize_t ret = mx_vm_object_write(elf->vmo, tmp,
+                                            vaddr - elf->vmo_addr, nread);
+        if (ret < 0 || ret != nread)
             return ret;
-        }
 
-        len -= xfer;
-        vaddr += xfer;
+        len -= nread;
+        vaddr += nread;
     }
+
     return save;
 }
 
@@ -332,9 +354,9 @@ mx_status_t mxio_load_elf_filename(mx_handle_t process, const char* filename,
             status = ERR_NO_MEMORY;
             goto fail;
         }
-        ssize_t read_len = _elf_read_fd(&elf, interp,
-                                        elf.interp_offset, elf.interp_len);
-        if (read_len != (ssize_t)elf.interp_len) {
+        mx_ssize_t read_len = _elf_read_fd(&elf, interp,
+                                           elf.interp_offset, elf.interp_len);
+        if (read_len != (mx_ssize_t)elf.interp_len) {
             free(interp);
             status = read_len < 0 ? read_len : ERR_IO;
             goto fail;

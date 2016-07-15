@@ -42,10 +42,10 @@ __BEGIN_CDECLS
 typedef struct elf_handle elf_handle_t;
 
 // read data from elf image into buffer
-typedef ssize_t (*elf_read_hook_t)(elf_handle_t*, void* buf, uintptr_t offset, size_t len);
+typedef mx_ssize_t (*elf_read_hook_t)(elf_handle_t*, void* buf, uintptr_t offset, size_t len);
 
 // read data (or zeros if offset==0) from elf image into new process
-typedef mx_status_t (*elf_load_hook_t)(elf_handle_t*, uintptr_t vaddr, uintptr_t offset, size_t len);
+typedef mx_ssize_t (*elf_load_hook_t)(elf_handle_t*, uintptr_t vaddr, uintptr_t offset, size_t len);
 
 struct elf_handle {
     bool open;
