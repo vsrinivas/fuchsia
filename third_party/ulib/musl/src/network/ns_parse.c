@@ -91,7 +91,7 @@ bad:
 int ns_parserr(ns_msg* handle, ns_sect section, int rrnum, ns_rr* rr) {
     int r;
 
-    if (section < 0 || section >= ns_s_max)
+    if ((int)section < 0 || section >= ns_s_max)
         goto bad;
     if (section != handle->_sect) {
         handle->_sect = section;

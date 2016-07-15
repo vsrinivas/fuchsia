@@ -106,7 +106,7 @@ static void copy_lladdr(struct sockaddr** r, union sockany* sa, void* addr, size
 
 static int netlink_msg_to_ifaddr(void* pctx, struct nlmsghdr* h) {
     struct ifaddrs_ctx* ctx = pctx;
-    struct ifaddrs_storage *ifs, *ifs0;
+    struct ifaddrs_storage *ifs, *ifs0 = NULL;
     struct ifinfomsg* ifi = NLMSG_DATA(h);
     struct ifaddrmsg* ifa = NLMSG_DATA(h);
     struct rtattr* rta;

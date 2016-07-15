@@ -37,12 +37,8 @@ ifeq ($(CLANG),1)
 LOCAL_CFLAGS += \
     -Wno-missing-field-initializers \
     -Wno-incompatible-pointer-types-discards-qualifiers \
-    -Wno-incompatible-pointer-types \
-    -Wno-ignored-attributes \
-    -Wno-tautological-compare \
-    -Wno-absolute-value \
-    -Wno-unused-const-variable \
-    -Wno-implicit-exception-spec-mismatch
+
+LOCAL_COMPILEFLAGS += -Wno-implicit-exception-spec-mismatch
 else
 LOCAL_CFLAGS += \
     -Wno-discarded-qualifiers \

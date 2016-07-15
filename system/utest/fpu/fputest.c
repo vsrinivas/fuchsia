@@ -24,8 +24,6 @@
 #define THREAD_COUNT 8
 #define ITER 1000000
 
-#define __OPTIMIZE(x) __attribute__((optimize(x)))
-
 #define countof(a) (sizeof(a) / sizeof((a)[0]))
 
 /* expected double bit pattern for each thread */
