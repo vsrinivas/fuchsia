@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-#if ARCH_X86
+#if defined(__x86_64__) || defined(__i386__)
 static inline uint8_t inp(uint16_t _port) {
     uint8_t rv;
     __asm__ __volatile__("inb %1, %0"

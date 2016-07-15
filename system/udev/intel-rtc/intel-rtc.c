@@ -88,7 +88,7 @@ static mx_protocol_device_t intel_rtc_device_proto = {
 // implement driver object:
 //
 static mx_status_t intel_rtc_init(mx_driver_t* drv) {
-#if ARCH_X86
+#if defined(__x86_64__) || defined(__i386__)
     // TODO(teisenbe): This should be probed via the ACPI pseudo bus whenever it
     // exists.
 

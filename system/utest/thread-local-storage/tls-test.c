@@ -54,7 +54,7 @@ static void* do_work(void* arg) {
 
 bool tls_test(void) {
     BEGIN_TEST;
-#if defined ARCH_X86_64 || defined ARCH_ARM64
+#if defined(__x86_64__) || defined(__aarch64__)
     ASSERT_EQ(key_create(&tsd_key1), 0, "Error while key creation");
     ASSERT_EQ(key_create(&tsd_key2), 0, "Error while key creation");
 
