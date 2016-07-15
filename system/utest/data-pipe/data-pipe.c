@@ -127,7 +127,7 @@ static bool begin_write_read(void) {
 
     uintptr_t buffer = 0;
     mx_ssize_t avail = mx_data_pipe_begin_write(producer, 0u, 4 * 3000u, &buffer);
-    ASSERT_EQ(avail, 4 * 3000u, "begin_write failed");
+    ASSERT_EQ(avail, 4 * 3000, "begin_write failed");
 
     uint32_t seed[5] = {7u, 0u, 0u, 0u, 0u};
     for (int ix = 0; ix != 4; ++ix) {
@@ -150,7 +150,7 @@ static bool begin_write_read(void) {
     for (int ix= 0; ix != 4; ++ix) {
         buffer = 0;
         avail = mx_data_pipe_begin_read(consumer, 0u, 3000u, &buffer);
-        ASSERT_EQ(avail, 3000u, "begin_write failed");
+        ASSERT_EQ(avail, 3000, "begin_write failed");
 
         bool equal = test_region((void*)buffer, 3000u, seed[ix]);
         ASSERT_EQ(equal, true, "invalid data");
