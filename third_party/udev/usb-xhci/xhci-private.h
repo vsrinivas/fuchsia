@@ -60,11 +60,11 @@
 #define MASK(startbit, lenbit) (((1 << (lenbit)) - 1) << (startbit))
 
 /* Make these high enough to not collide with negative XHCI CCs */
-#define TIMEOUT -65
-#define CONTROLLER_ERROR -66
-#define COMMUNICATION_ERROR -67
-#define OUT_OF_MEMORY -68
-#define DRIVER_ERROR -69
+#define TIMEOUT (-65)
+#define CONTROLLER_ERROR (-66)
+#define COMMUNICATION_ERROR (-67)
+#define OUT_OF_MEMORY (-68)
+#define DRIVER_ERROR (-69)
 
 #define CC_SUCCESS 1
 #define CC_TRB_ERROR 5
@@ -420,9 +420,9 @@ typedef struct xhci {
 	   making bitfields unusable for MMIO register blocks. Yay C :-( */
     volatile struct opreg {
         uint32_t usbcmd;
-#define USBCMD_RS 1 << 0
-#define USBCMD_HCRST 1 << 1
-#define USBCMD_INTE 1 << 2
+#define USBCMD_RS (1 << 0)
+#define USBCMD_HCRST (1 << 1)
+#define USBCMD_INTE (1 << 2)
         uint32_t usbsts;
 #define USBSTS_HCH  (1 << 0)
 #define USBSTS_HSE  (1 << 2)
@@ -439,10 +439,10 @@ typedef struct xhci {
         uint32_t dnctrl;
         uint32_t crcr_lo;
         uint32_t crcr_hi;
-#define CRCR_RCS 1 << 0
-#define CRCR_CS 1 << 1
-#define CRCR_CA 1 << 2
-#define CRCR_CRR 1 << 3
+#define CRCR_RCS (1 << 0)
+#define CRCR_CS (1 << 1)
+#define CRCR_CA (1 << 2)
+#define CRCR_CRR (1 << 3)
         uint8_t res2[0x2f - 0x20 + 1];
         uint32_t dcbaap_lo;
         uint32_t dcbaap_hi;
