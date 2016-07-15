@@ -7,6 +7,9 @@
 
 LOCAL_MAKEFILE:=$(MAKEFILE_LIST)
 
+# include settings for prebuilts that are auto-updated by checkout scripts
+-include prebuilt/config.mk
+
 # try to include a file in the local dir to let the user semi-permanently set options
 -include local.mk
 include make/macros.mk
