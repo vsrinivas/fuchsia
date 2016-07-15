@@ -90,13 +90,13 @@ mx_status_t DataPipe::ProducerWriteBegin(utils::RefPtr<VmAspace> aspace,
 
     if (producer_.cursor > consumer_.cursor) {
         if (future_cursor > vmo_->size())
-            *requested = vmo_->size() - producer_.cursor;
+            *requested = static_cast<mx_size_t>(vmo_->size() - producer_.cursor);
     } else if (producer_.cursor < consumer_.cursor) {
         if (future_cursor > consumer_.cursor)
-            *requested = consumer_.cursor - producer_.cursor;
+            *requested = static_cast<mx_size_t>(consumer_.cursor - producer_.cursor);
     }
 
-    uint64_t start = ROUNDDOWN(producer_.cursor, PAGE_SIZE);
+    size_t start = ROUNDDOWN(producer_.cursor, PAGE_SIZE);
     size_t offset = producer_.cursor - start;
     size_t length = ROUNDUP(*requested + offset, PAGE_SIZE);
 
@@ -153,13 +153,13 @@ mx_status_t DataPipe::ConsumerReadBegin(utils::RefPtr<VmAspace> aspace,
 
     if (consumer_.cursor < producer_.cursor) {
         if (future_cursor > producer_.cursor)
-            *requested = producer_.cursor - consumer_.cursor;
+            *requested = static_cast<mx_size_t>(producer_.cursor - consumer_.cursor);
     } else if (consumer_.cursor > producer_.cursor) {
         if (future_cursor > vmo_->size())
-            *requested = vmo_->size() - consumer_.cursor;
+            *requested = static_cast<mx_size_t>(vmo_->size() - consumer_.cursor);
     }
 
-    uint64_t start = ROUNDDOWN(consumer_.cursor, PAGE_SIZE);
+    size_t start = ROUNDDOWN(consumer_.cursor, PAGE_SIZE);
     size_t offset = consumer_.cursor - start;
     size_t length = ROUNDUP(*requested + offset, PAGE_SIZE);
 

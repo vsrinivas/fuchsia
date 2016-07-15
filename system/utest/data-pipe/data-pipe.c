@@ -52,7 +52,7 @@ static bool test_region(void* _ptr, size_t len, uint32_t seed) {
     return true;
 }
 
-#define KB_(x) (x*1024u)
+#define KB_(x) (x*1024)
 
 static bool create_destroy_test(void) {
     BEGIN_TEST;

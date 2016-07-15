@@ -47,7 +47,7 @@ public:
 private:
     struct EndPoint {
         bool alive = true;
-        uint64_t cursor = 0u;
+        mx_size_t cursor = 0u;
         vaddr_t vad_start = 0u;
         mx_size_t max_size = 0u;
         utils::RefPtr<VmAspace> aspace;
@@ -63,5 +63,5 @@ private:
     EndPoint producer_;
     EndPoint consumer_;
     utils::RefPtr<VmObject> vmo_;
-    mx_size_t available_;
+    uint64_t available_;
 };
