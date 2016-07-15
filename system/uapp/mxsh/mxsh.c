@@ -351,47 +351,66 @@ void command(int argc, char** argv, bool runbg) {
     }
 }
 
-void console(void) {
-    editstate es;
-    char* line;
+void execline(char* line) {
     bool runbg;
     char* argv[32];
     int argc;
     int len;
 
+    if (line[0] == '`') {
+        mx_debug_send_command(line + 1, strlen(line) - 1);
+        return;
+    }
+    len = strlen(line);
+
+    // trim whitespace
+    while ((len > 0) && (line[len - 1] <= ' ')) {
+        len--;
+        line[len] = 0;
+    }
+
+    // handle backgrounding
+    if ((len > 0) && (line[len - 1] == '&')) {
+        line[len - 1] = 0;
+        runbg = true;
+    } else {
+        runbg = false;
+    }
+
+    // tokenize and execute
+    argc = split(line, argv, 32);
+    if (argc) {
+        command(argc, argv, runbg);
+    }
+}
+
+void execscript(const char* fn) {
+    char line[1024];
+    FILE* fp;
+    if ((fp = fopen(fn, "r")) == NULL) {
+        printf("cannot open '%s'\n", fn);
+        return;
+    }
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        execline(line);
+    }
+}
+
+void console(void) {
+    editstate es;
+
     while (readline(&es) == 0) {
-        line = es.line;
-        if (line[0] == '`') {
-            mx_debug_send_command(line + 1, strlen(line) - 1);
-            continue;
-        }
-        len = strlen(line);
-
-        // trim whitespace
-        while ((len > 0) && (line[len - 1] <= ' ')) {
-            len--;
-            line[len] = 0;
-        }
-
-        // handle backgrounding
-        if ((len > 0) && (line[len - 1] == '&')) {
-            line[len - 1] = 0;
-            runbg = true;
-        } else {
-            runbg = false;
-        }
-
-        // tokenize and execute
-        argc = split(line, argv, 32);
-        if (argc) {
-            command(argc, argv, runbg);
-        }
+        execline(es.line);
     }
 }
 
 int main(int argc, char** argv) {
-    const char* banner = "\033]2;mxsh\007\nMXCONSOLE...\n";
-    cputs(banner, strlen(banner));
-    console();
+    if (argc > 1) {
+        execscript(argv[1]);
+    } else {
+        const char* banner = "\033]2;mxsh\007\nMXCONSOLE...\n";
+        cputs(banner, strlen(banner));
+        console();
+    }
     return 0;
 }

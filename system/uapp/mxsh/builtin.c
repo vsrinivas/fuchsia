@@ -74,6 +74,13 @@ static int mxc_echo(int argc, char** argv) {
     return 0;
 }
 
+static int mxc_msleep(int argc, char** argv) {
+    if (argc == 2) {
+        mx_nanosleep(atoi(argv[1]) * 1000000ULL);
+    }
+    return 0;
+}
+
 static int mxc_cd(int argc, char** argv) {
     if (argc < 2) {
         return 0;
@@ -381,6 +388,7 @@ builtin_t builtins[] = {
     {"ls", mxc_ls, "list directory contents"},
     {"rm", mxc_rm, "delete a file"},
     {"runtests", mxc_runtests, "run all test programs"},
+    {"msleep", mxc_msleep, "pause for milliseconds"},
     {NULL, NULL, NULL},
 };
 

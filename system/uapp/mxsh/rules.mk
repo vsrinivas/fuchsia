@@ -29,4 +29,8 @@ MODULE_DEPS := \
 
 USER_MANIFEST_LINES += docs/LICENSE=kernel/LICENSE
 
+ifneq ($(wildcard autorun),)
+USER_MANIFEST_LINES += autorun=autorun
+endif
+
 include make/module.mk
