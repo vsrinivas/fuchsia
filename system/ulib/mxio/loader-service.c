@@ -135,7 +135,7 @@ mx_handle_t mxio_loader_service(void) {
     mx_handle_t h[2];
     mx_status_t r;
 
-    if ((r == mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_message_pipe_create(h, 0)) < 0) {
         return r;
     }
 
