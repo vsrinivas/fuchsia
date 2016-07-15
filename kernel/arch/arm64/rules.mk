@@ -110,6 +110,7 @@ GLOBAL_LDFLAGS += -m aarch64elf
 GLOBAL_MODULE_LDFLAGS += -m aarch64elf
 endif
 GLOBAL_LDFLAGS += -z max-page-size=4096
+USERLIB_SOLDFLAGS += -z max-page-size=4096
 
 # kernel hard disables floating point
 KERNEL_COMPILEFLAGS += -mgeneral-regs-only -DWITH_NO_FP=1

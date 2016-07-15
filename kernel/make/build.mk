@@ -161,19 +161,21 @@ define link_userapp
 $(1): $(USER_LINKER_SCRIPT) $(LIBC_CRT1_OBJ) $(2) $(3) $(4)
 	@$(MKDIR)
 	@echo linking $$@
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(USER_LINKER_SCRIPT) $(ARCH_LDFLAGS) \
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(USER_LINKER_SCRIPT) \
+	$(ARCH_LDFLAGS) $(5) \
 	$(LIBC_CRT1_OBJ) $(2) $(3) $(4) $(LIBGCC) -o $$@
 endef
-LINK_USERAPP = $(eval $(call link_userapp,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4))))
+LINK_USERAPP = $(eval $(call link_userapp,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4)),$(strip $(5))))
 
 # Template for the link rule for a user solib
 define link_userlib
 $(1): $(2) $(3) $(4)
 	@$(MKDIR)
 	@echo linking $$@ '(dynamic)'
-	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) -shared -soname $(5) $(2) $(3) $(4) -o $$@
+	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) $(USERLIB_SOLDFLAGS) \
+	$(6) -shared -soname $(5) $(2) $(3) $(4) $(LIBGCC) -o $$@
 endef
-LINK_USERLIB = $(eval $(call link_userlib,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4)),$(5)))
+LINK_USERLIB = $(eval $(call link_userlib,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4)),$(5),$(strip $(6))))
 
 # For each user app module, generate a link rule
 $(foreach app,$(ALLUSER_MODULES),\
@@ -181,7 +183,8 @@ $(foreach app,$(ALLUSER_MODULES),\
 	$(MODULE_$(app)_OUTNAME).elf,\
 	$(MODULE_$(app)_OBJS),\
 	$(call GET_USERAPP_ALIBS,$(app)),\
-	$(call GET_USERAPP_SOLIBS,$(app)))))
+	$(call GET_USERAPP_SOLIBS,$(app)),\
+	$(MODULE_$(app)_LDFLAGS))))
 
 # For each user lib module, generate a link rule
 $(foreach lib,$(ALLUSER_LIBS),\
@@ -190,4 +193,5 @@ $(foreach lib,$(ALLUSER_LIBS),\
 	$(MODULE_$(lib)_OBJS),\
 	$(call GET_USERAPP_ALIBS,$(lib)),\
 	$(call GET_USERAPP_SOLIBS,$(lib)),\
-	lib$(MODULE_$(lib)_SONAME).so)))
+	lib$(MODULE_$(lib)_SONAME).so,\
+	$(MODULE_$(lib)_LDFLAGS))))
