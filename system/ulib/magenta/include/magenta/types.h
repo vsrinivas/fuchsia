@@ -66,6 +66,9 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_PERM_WRITE     (1u << 2)
 #define MX_VM_FLAG_PERM_EXECUTE   (1u << 3)
 
+// flags to message pipe routines
+#define MX_FLAG_REPLY_PIPE        (1u << 0)
+
 // virtual address
 typedef uintptr_t mx_vaddr_t;
 

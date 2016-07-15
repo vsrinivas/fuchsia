@@ -28,7 +28,10 @@ to another process via message pipe write), MX_RIGHT_WRITE (allowing
 messages to be written to them), and MX_RIGHT_READ (allowing messages
 to be read from them).
 
-The flags argument is currently unused and should be set to zero.
+The *flags* can be either 0 or MX_FLAG_REPLY_PIPE. A reply pipe
+behaves like a regular message pipe except for **mx_message_write**()
+which must include itself as the last handle being transfered.
+
 
 ## RETURN VALUE
 

@@ -17,10 +17,19 @@ mx_status_t mx_message_write(mx_handle_t handle,
 
 ## DESCRIPTION
 
-**message_write**() attempts to write a message of *num_bytes* 
+**message_write**() attempts to write a message of *num_bytes*
 bytes and *num_handles* handles to the message pipe specified by
 *handle*.  The pointers *handles* and *bytes* may be null if their
 respective sizes are zero.
+
+If the *handle* message pipe is a reply pipe, *handle* must be
+included as the last handle in the *handles* array.
+
+If the *handle* message pipe is not a reply pipe, it is invalid
+to include *handle* in the *handles* array.
+
+To create a reply pipe, use MX_FLAG_REPLY_PIPE in the
+**message_pipe_create**() call.
 
 ## RETURN VALUE
 
@@ -33,9 +42,14 @@ respective sizes are zero.
 or any of the handles passed via the *handles* array are invalid
 handles.
 
+**ERR_NOT_SUPPORTED** The *handle* was found in the *handles* array
+and the pipe is not a reply pipe.
+
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_BAD_STATE**  The other side of the message pipe is closed.
+**ERR_BAD_STATE**  The other side of the message pipe is closed or
+the pipe is a reply pipe and the reply pipe handle was not included
+as the last element of the *handles* array.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

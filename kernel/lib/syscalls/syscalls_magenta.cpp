@@ -495,6 +495,8 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
     if (!msg_pipe)
         return ERR_BAD_HANDLE;
 
+    bool is_reply_pipe = msg_pipe->is_reply_pipe();
+
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
@@ -504,11 +506,29 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
         // we remove them from this process.
         AutoLock lock(up->handle_table_lock());
 
+        size_t reply_pipe_found = -1;
+
         for (size_t ix = 0; ix != num_handles; ++ix) {
             auto handle = up->GetHandle_NoLock(handles[ix]);
             if (!handle)
                 return ERR_INVALID_ARGS;
+
+            if (handle->dispatcher() == dispatcher) {
+                // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
+                if (!is_reply_pipe) {
+                    return ERR_NOT_SUPPORTED;
+                } else {
+                    reply_pipe_found = ix;
+                }
+            }
+
             handle_list[ix] = handle;
+        }
+
+        if (is_reply_pipe) {
+            // For reply pipes, itself must be in the handle array and be the last handle.
+            if ((num_handles == 0) || (reply_pipe_found != (num_handles - 1)))
+                return ERR_BAD_STATE;
         }
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
@@ -535,9 +555,12 @@ mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
     if (!out_handle)
         return ERR_INVALID_ARGS;
 
+    if ((flags != 0u) && (flags != MX_FLAG_REPLY_PIPE))
+        return ERR_INVALID_ARGS;
+
     utils::RefPtr<Dispatcher> mpd0, mpd1;
     mx_rights_t rights;
-    status_t result = MessagePipeDispatcher::Create(&mpd0, &mpd1, &rights);
+    status_t result = MessagePipeDispatcher::Create(flags, &mpd0, &mpd1, &rights);
     if (result != NO_ERROR)
         return result;
 

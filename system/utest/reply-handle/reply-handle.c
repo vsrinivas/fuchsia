@@ -22,7 +22,42 @@
 #include <mxio/io.h>
 #include <mxio/util.h>
 
-int reply_handle_test(void) {
+int reply_handle_basic(void) {
+    BEGIN_TEST;
+
+    mx_handle_t p1[2], p2[2];
+    mx_status_t r;
+
+    r = mx_message_pipe_create(p1, 0);
+    ASSERT_EQ(r, NO_ERROR, "failed to create pipe p1");
+
+    r = mx_message_write(p1[0], "hello", 6, &p1[0], 1, 0);
+    ASSERT_EQ(r, ERR_NOT_SUPPORTED, "expected failure");
+
+    r = mx_message_write(p1[1], "hello", 6, &p1[1], 1, 0);
+    ASSERT_EQ(r, ERR_NOT_SUPPORTED, "expected failure");
+
+    r = mx_message_pipe_create(p2, MX_FLAG_REPLY_PIPE);
+    ASSERT_EQ(r, NO_ERROR, "failed to create pipe p2");
+
+    r = mx_message_write(p2[1], "hello", 6, NULL, 0, 0);
+    ASSERT_EQ(r, ERR_BAD_STATE, "expected failure");
+
+    r = mx_message_write(p2[1], "hello", 6, &p1[1], 1, 0);
+    ASSERT_EQ(r, ERR_BAD_STATE, "expected failure");
+
+    mx_handle_t har1[2] = {p2[1], p1[1]};
+    r = mx_message_write(p2[1], "hello", 6, har1, 2, 0);
+    ASSERT_EQ(r, ERR_BAD_STATE, "expected failure");
+
+    mx_handle_t har2[2] = {p1[1], p2[1]};
+    r = mx_message_write(p2[1], "hello", 6, har2, 2, 0);
+    ASSERT_EQ(r, NO_ERROR, "expected success");
+
+    END_TEST;
+}
+
+int reply_handle_rw(void) {
     BEGIN_TEST;
 
     mx_handle_t p1[2], p2[2];
@@ -36,7 +71,7 @@ int reply_handle_test(void) {
     snprintf(msg, sizeof(msg), "failed to create pipe1 %d\n", r);
     ASSERT_EQ(r, 0, msg);
 
-    r = mx_message_pipe_create(p2, 0);
+    r = mx_message_pipe_create(p2, MX_FLAG_REPLY_PIPE);
     snprintf(msg, sizeof(msg), "failed to create pipe2 %d\n", r);
     ASSERT_EQ(r, 0, msg);
 
@@ -90,7 +125,8 @@ int reply_handle_test(void) {
 }
 
 BEGIN_TEST_CASE(reply_handle_tests)
-RUN_TEST(reply_handle_test)
+RUN_TEST(reply_handle_basic)
+RUN_TEST(reply_handle_rw)
 END_TEST_CASE(reply_handle_tests)
 
 int main(int argc, char** argv) {

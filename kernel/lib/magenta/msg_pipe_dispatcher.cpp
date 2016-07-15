@@ -22,7 +22,8 @@
 constexpr mx_rights_t kDefaultPipeRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 // static
-status_t MessagePipeDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher0,
+status_t MessagePipeDispatcher::Create(uint32_t flags,
+                                       utils::RefPtr<Dispatcher>* dispatcher0,
                                        utils::RefPtr<Dispatcher>* dispatcher1,
                                        mx_rights_t* rights) {
     LTRACE_ENTRY;
@@ -30,10 +31,10 @@ status_t MessagePipeDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher0,
     utils::RefPtr<MessagePipe> pipe = utils::AdoptRef(new MessagePipe());
     if (!pipe) return ERR_NO_MEMORY;
 
-    Dispatcher* msgp0 = new MessagePipeDispatcher(0u, pipe);
+    Dispatcher* msgp0 = new MessagePipeDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, pipe);
     if (!msgp0) return ERR_NO_MEMORY;
 
-    Dispatcher* msgp1 = new MessagePipeDispatcher(1u, pipe);
+    Dispatcher* msgp1 = new MessagePipeDispatcher(flags, 1u, pipe);
     if (!msgp1) return ERR_NO_MEMORY;
 
     *rights = kDefaultPipeRights;
@@ -42,13 +43,15 @@ status_t MessagePipeDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher0,
     return NO_ERROR;
 }
 
-MessagePipeDispatcher::MessagePipeDispatcher(size_t side, utils::RefPtr<MessagePipe> pipe)
-    : side_(side), pipe_(utils::move(pipe)) {
+MessagePipeDispatcher::MessagePipeDispatcher(uint32_t flags,
+                                             size_t side, utils::RefPtr<MessagePipe> pipe)
+    : side_(side), flags_(flags), pipe_(utils::move(pipe)) {
     mutex_init(&lock_);
 }
 
 MessagePipeDispatcher::~MessagePipeDispatcher() {
     pipe_->OnDispatcherDestruction(side_);
+    mutex_destroy(&lock_);
 }
 
 Waiter* MessagePipeDispatcher::get_waiter() {
