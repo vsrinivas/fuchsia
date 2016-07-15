@@ -63,6 +63,9 @@ function downloadToolchain() {
   local tarball_root="$(tar --test-label -jf "${tool_path}")"
   case "${target}" in
     "arm-eabi")
+      TOOLCHAIN_MAKEVARS+=("ARCH_arm_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${tarball_root}/bin/${target}-")
+      ;;
+    "aarch64-elf")
       TOOLCHAIN_MAKEVARS+=("ARCH_arm64_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${tarball_root}/bin/${target}-")
       ;;
     "x86_64-elf")
