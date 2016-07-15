@@ -88,7 +88,7 @@ int console_starter(void* arg) {
             continue;
         }
         close(fd);
-        devmgr_launch(pname, "/boot/bin/mxsh", name);
+        devmgr_launch(pname, "/boot/bin/mxsh", NULL, name);
         i++;
     }
     return 0;
@@ -132,15 +132,17 @@ int main(int argc, char** argv) {
 #if !_MX_KERNEL_HAS_SHELL
     // if no kernel shell on serial uart, start a mxsh there
     printf("devmgr: shell startup\n");
-    devmgr_launch("mxsh:console", "/boot/bin/mxsh", "/dev/console");
+    devmgr_launch("mxsh:console", "/boot/bin/mxsh", NULL, "/dev/console");
 #endif
 
-    devmgr_launch("netsvc", "/boot/bin/netsvc", "/dev/console");
+    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, "/dev/console");
 
     mxr_thread_t* t;
     if ((mxr_thread_create(console_starter, NULL, "console-starter", &t)) == 0) {
         mxr_thread_detach(t);
     }
+
+    devmgr_launch("mxsh:autorun", "/boot/bin/mxsh", "/boot/autorun", NULL);
 
     devmgr_handle_messages();
     printf("devmgr: message handler returned?!\n");

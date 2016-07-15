@@ -50,30 +50,46 @@ static void callback(const char* path, size_t off, size_t len) {
     bootfiles_count++;
 }
 
-void devmgr_launch(const char* name, const char* app, const char* device) {
+void devmgr_launch(const char* name, const char* app, const char* arg, const char* device) {
     mx_handle_t hnd[5 * VFS_MAX_HANDLES];
     uint32_t ids[5 * VFS_MAX_HANDLES];
     unsigned n = 1;
     mx_status_t r;
+    const char* args[2] = { app, arg };
 
     ids[0] = MX_HND_TYPE_MXIO_ROOT;
     hnd[0] = vfs_create_root_handle();
 
-    // TODO: correct open flags once we have them
-    if ((r = vfs_open_handles(hnd + n, ids + n, 0, device, 0)) < 0) {
-        goto fail;
+    if (device == NULL) {
+        // start with log handles, no stdin
+        device = "debuglog";
+        ids[n] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
+        if ((hnd[n] = mx_log_create(0)) < 0) {
+            goto fail;
+        }
+        n++;
+        ids[n] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);
+        if ((hnd[n] = mx_log_create(0)) < 0) {
+            goto fail;
+        }
+        n++;
+    } else {
+        // TODO: correct open flags once we have them
+        if ((r = vfs_open_handles(hnd + n, ids + n, 0, device, 0)) < 0) {
+            goto fail;
+        }
+        n += r;
+        if ((r = vfs_open_handles(hnd + n, ids + n, 1, device, 0)) < 0) {
+            goto fail;
+        }
+        n += r;
+        if ((r = vfs_open_handles(hnd + n, ids + n, 2, device, 0)) < 0) {
+            goto fail;
+        }
+        n += r;
     }
-    n += r;
-    if ((r = vfs_open_handles(hnd + n, ids + n, 1, device, 0)) < 0) {
-        goto fail;
-    }
-    n += r;
-    if ((r = vfs_open_handles(hnd + n, ids + n, 2, device, 0)) < 0) {
-        goto fail;
-    }
-    n += r;
     printf("devmgr: launch %s on %s\n", app, device);
-    mxio_start_process_etc(name, 1, (char**)&app, n, hnd, ids);
+    mxio_start_process_etc(name, arg ? 2 : 1, (char**)args, n, hnd, ids);
     return;
 fail:
     while (n > 0) {
