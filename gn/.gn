@@ -6,4 +6,4 @@
 buildconfig = "//build/config/BUILDCONFIG.gn"
 
 # The source root location.
-root = "//packages"
+root = "//packages/gn"
