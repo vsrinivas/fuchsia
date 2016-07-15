@@ -70,6 +70,7 @@ is_fuchsia = false
 is_ios = false
 is_linux = false
 is_mac = false
+is_win = false
 
 if (current_os == "fuchsia") {
   is_fuchsia = true
