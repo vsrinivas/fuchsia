@@ -40,7 +40,6 @@ LOCAL_CFLAGS += \
     -Wno-incompatible-pointer-types \
     -Wno-ignored-attributes \
     -Wno-tautological-compare \
-    -Wno-string-plus-int \
     -Wno-absolute-value \
     -Wno-unused-const-variable \
     -Wno-implicit-exception-spec-mismatch
