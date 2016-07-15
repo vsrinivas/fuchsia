@@ -819,6 +819,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/stdio/putw.c \
     $(LOCAL_DIR)/src/stdio/putwc.c \
     $(LOCAL_DIR)/src/stdio/putwchar.c \
+    $(LOCAL_DIR)/src/stdio/rewind.c \
     $(LOCAL_DIR)/src/stdio/scanf.c \
     $(LOCAL_DIR)/src/stdio/setbuf.c \
     $(LOCAL_DIR)/src/stdio/setbuffer.c \
