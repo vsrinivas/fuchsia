@@ -17,6 +17,14 @@ constexpr LogSeverity LOG_INFO = 0;
 constexpr LogSeverity LOG_WARNING = 1;
 constexpr LogSeverity LOG_ERROR = 2;
 constexpr LogSeverity LOG_FATAL = 3;
+constexpr LogSeverity LOG_NUM_SEVERITIES = 4;
+
+// LOG_DFATAL is LOG_FATAL in debug mode, ERROR in normal mode
+#ifdef NDEBUG
+const LogSeverity LOG_DFATAL = LOG_ERROR;
+#else
+const LogSeverity LOG_DFATAL = LOG_FATAL;
+#endif
 
 class LogMessageVoidify {
  public:
@@ -44,11 +52,11 @@ class LogMessage {
 
 }  // namespace ftl
 
+#define FTL_LOG(severity) \
+  ::ftl::LogMessage(::ftl::LOG_##severity, __FILE__, __LINE__, nullptr).stream()
+
 #define FTL_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::ftl::LogMessageVoidify() & (stream)
-
-#define FTL_LOG_STREAM(severity, ...) \
-  ::ftl::LogMessage(::ftl::LOG_ #severity, __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define FTL_EAT_STREAM_PARAMETERS \
   true ? (void)0 : ::ftl::LogMessageVoidify() & FTL_LOG_STREAM(FATAL)
