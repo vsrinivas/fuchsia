@@ -12,7 +12,7 @@ namespace {
 
 TEST(Time, Now) {
   auto start = Now();
-  for (int i=0; i < 3; ++i) {
+  for (int i = 0; i < 3; ++i) {
     auto now = Now();
     EXPECT_GE(now, start);
     std::this_thread::yield();

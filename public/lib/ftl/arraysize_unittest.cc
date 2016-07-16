@@ -9,7 +9,7 @@ namespace ftl {
 namespace {
 
 TEST(ArraySize, Control) {
-  int numbers[] = { 1, 2, 3 };
+  int numbers[] = {1, 2, 3};
   EXPECT_EQ(3u, arraysize(numbers));
 }
 

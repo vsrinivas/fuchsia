@@ -13,7 +13,7 @@ LogMessage::LogMessage(LogSeverity severity,
                        const char* file,
                        int line,
                        const char* condition)
-  : severity_(severity), file_(file), line_(line) {
+    : severity_(severity), file_(file), line_(line) {
   stream_ << "Check failed: " << condition << ". ";
 }
 

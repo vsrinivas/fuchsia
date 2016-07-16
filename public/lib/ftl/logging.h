@@ -45,17 +45,19 @@ class LogMessage {
 }  // namespace ftl
 
 #define FTL_LAZY_STREAM(stream, condition) \
-  !(condition) ? (void) 0 : ::ftl::LogMessageVoidify() & (stream)
+  !(condition) ? (void)0 : ::ftl::LogMessageVoidify() & (stream)
 
 #define FTL_LOG_STREAM(severity, ...) \
-  ::ftl::LogMessage(::ftl::LOG_#severity, __FILE__, __LINE__, ##__VA_ARGS__)
+  ::ftl::LogMessage(::ftl::LOG_ #severity, __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define FTL_EAT_STREAM_PARAMETERS \
-  true ? (void) 0 : ::ftl::LogMessageVoidify() & FTL_LOG_STREAM(FATAL)
+  true ? (void)0 : ::ftl::LogMessageVoidify() & FTL_LOG_STREAM(FATAL)
 
-#define FTL_CHECK(condition) \
-  FTL_LAZY_STREAM(::ftl::LogMessage( \
-    ::ftl::LOG_FATAL, __FILE__, __LINE__, #condition).stream(), !(condition))
+#define FTL_CHECK(condition)                                              \
+  FTL_LAZY_STREAM(                                                        \
+      ::ftl::LogMessage(::ftl::LOG_FATAL, __FILE__, __LINE__, #condition) \
+          .stream(),                                                      \
+      !(condition))
 
 #ifndef NDEBUG
 #define FTL_DCHECK(condition) FTL_CHECK(condition)
