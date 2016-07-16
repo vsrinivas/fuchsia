@@ -5,12 +5,23 @@
 static_library("ftl") {
   sources = [
     "arraysize.h",
-    "memory/make_unique.h",
     "debug/debugger.cc",
     "debug/debugger.h",
     "logging.cc",
     "logging.h",
     "macros.h",
+    "memory/make_unique.h",
+    "memory/ref_counted_internal.h",
+    "memory/ref_counted.h",
+    "memory/ref_ptr_internal.h",
+    "memory/ref_ptr.h",
+    "memory/weak_ptr_internal.cc",
+    "memory/weak_ptr_internal.h",
+    "memory/weak_ptr.h",
+    "strings/string_number_conversions.cc",
+    "strings/string_number_conversions.h",
+    "strings/string_printf.cc",
+    "strings/string_printf.h",
     "time/time.cc",
     "time/time.h",
   ]
@@ -19,6 +30,10 @@ static_library("ftl") {
 executable("ftl_unittests") {
   sources = [
     "arraysize_unittest.cc",
+    "memory/ref_counted_unittest.cc",
+    "memory/weak_ptr_unittest.cc",
+    "strings/string_number_conversions_unittest.cc",
+    "strings/string_printf_unittest.cc",
     "test/run_all_unittests.cc",
     "time/time_unittest.cc",
   ]
