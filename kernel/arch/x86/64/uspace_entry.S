@@ -33,9 +33,10 @@ FUNCTION(x86_uspace_entry)
     xor %r14, %r14
     xor %r15, %r15
 
-    # TODO(teisenbe): Clear xmm/ymm stuff.  Currently this is all
-    # handled by lazy FPU loading, but once we support YMM this will
-    # likely change
+    # We do not need to clear extended register state, since the kernel only
+    # uses the general purpose registers, and the extended state is initialized
+    # to a cleared state.
+
     swapgs
 
     mov %ax, %ds

@@ -24,6 +24,11 @@
     jnz .Lfail
 .endm
 
+.macro check_ymm reg
+    vptest \reg, \reg
+    jnz .Lfail
+.endm
+
 .macro check_mm reg
     movq \reg, %rax
     cmpq $0, %rax
@@ -69,15 +74,6 @@ FUNCTION(thread_entry)
     check_segment %fs
     check_segment %gs
 
-    check_xmm %xmm0
-    check_xmm %xmm1
-    check_xmm %xmm2
-    check_xmm %xmm3
-    check_xmm %xmm4
-    check_xmm %xmm5
-    check_xmm %xmm6
-    check_xmm %xmm7
-
     check_mm %mm0
     check_mm %mm1
     check_mm %mm2
@@ -87,7 +83,58 @@ FUNCTION(thread_entry)
     check_mm %mm6
     check_mm %mm7
 
-    # TODO: Test ymm registers once they exist
+    check_xmm %xmm0
+    check_xmm %xmm1
+    check_xmm %xmm2
+    check_xmm %xmm3
+    check_xmm %xmm4
+    check_xmm %xmm5
+    check_xmm %xmm6
+    check_xmm %xmm7
+    check_xmm %xmm8
+    check_xmm %xmm9
+    check_xmm %xmm10
+    check_xmm %xmm11
+    check_xmm %xmm12
+    check_xmm %xmm13
+    check_xmm %xmm14
+    check_xmm %xmm15
+
+    # Use Intel Vol 1 section 14.3 procedure for checking if AVX enabled
+
+    mov $1, %eax
+    cpuid
+    # Check for OSXSAVE support (can we use xgetbv)
+    test $(1<<27), %ecx
+    jz .Lno_avx
+    # Check for AVX support
+    test $(1<<28), %ecx
+    jz .Lno_avx
+    # Check for operating system support for AVX
+    mov $0, %ecx
+    xgetbv
+    and $0b110, %eax
+    cmp $0b110, %eax
+    jz .Lno_avx
+
+    check_ymm %ymm0
+    check_ymm %ymm1
+    check_ymm %ymm2
+    check_ymm %ymm3
+    check_ymm %ymm4
+    check_ymm %ymm5
+    check_ymm %ymm6
+    check_ymm %ymm7
+    check_ymm %ymm8
+    check_ymm %ymm9
+    check_ymm %ymm10
+    check_ymm %ymm11
+    check_ymm %ymm12
+    check_ymm %ymm13
+    check_ymm %ymm14
+    check_ymm %ymm15
+.Lno_avx:
+
     jmp mx_thread_exit
 .Lfail:
     jmp print_fail
