@@ -33,7 +33,6 @@ void x86_feature_init(void)
     if (max_cpuid > MAX_SUPPORTED_CPUID)
         max_cpuid = MAX_SUPPORTED_CPUID;
 
-    ASSERT(max_cpuid >= MIN_MAX_CPUID);
     LTRACEF("max cpuid 0x%x\n", max_cpuid);
 
     /* read in the base cpuids */

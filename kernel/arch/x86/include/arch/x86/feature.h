@@ -13,8 +13,6 @@
 
 __BEGIN_CDECLS
 
-/* We expect to always have at least leaves with eax <= 7*/
-#define MIN_MAX_CPUID           (0x7)
 #define MAX_SUPPORTED_CPUID     (0x17)
 #define MAX_SUPPORTED_CPUID_EXT (0x80000008)
 
@@ -52,7 +50,7 @@ static inline const struct cpuid_leaf *x86_get_cpuid_leaf(enum x86_cpuid_leaf_nu
     extern uint32_t max_ext_cpuid;
 
     if (leaf < X86_CPUID_EXT_BASE) {
-        if (leaf > MIN_MAX_CPUID && leaf > max_cpuid)
+        if (leaf > max_cpuid)
             return NULL;
 
         return &_cpuid[leaf];
