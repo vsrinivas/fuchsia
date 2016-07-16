@@ -38,6 +38,11 @@ function downloadToolchain() {
 
   # These are files and paths we expect to already exist.
   local common_path="toolchain/${target}/${OS}-${HOSTARCH}"
+  if [ ! -d "${common_path}" ]; then
+    echo "Path ${common_path} does not exist."
+    echo "Your operating system is probably not supported, aborting."
+    exit 1
+  fi
   local required_version="$(cat "${PREBUILTS_DIR}/versions/${common_path}/version.sha" )"
   local prebuilt_url="${GS_BUCKET}/${common_path}/${required_version}"
 
@@ -54,7 +59,7 @@ function downloadToolchain() {
     echo "Downloading ${prebuilt_url}"
     curl -continue-at=- --location --output "${tool_path}" "${prebuilt_url}"
     echo "Unpacking ${tool_path}"
-    tar jxf "${tool_path}"
+    bzip2 -dc "${tool_path}" | tar -x
     echo "${required_version}" > "${stamp_path}"
   fi
 
@@ -83,7 +88,7 @@ done
 # Update prebuilt/config.mk to point at the toolchains we just installed.
 readonly ENV_MK="${PREBUILTS_DIR}/config.mk"
 if [[ -f "${ENV_MK}" ]]; then
-  sed -i '/ARCH_.*_TOOLCHAIN_PREFIX/d' "${ENV_MK}"
+  sed -i.bak '/ARCH_.*_TOOLCHAIN_PREFIX/d' "${ENV_MK}"
 fi
 for line in "${TOOLCHAIN_MAKEVARS[@]}"; do
   echo $line >> "${ENV_MK}"
