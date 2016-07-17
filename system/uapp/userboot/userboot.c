@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -27,9 +28,11 @@ static size_t devmgr_off = 0;
 static size_t devmgr_len = 0;
 static size_t end_off = 0;
 
+static const char* devmgr_fn = "bin/devmgr";
+
 static void callback(const char* fn, size_t off, size_t len) {
     //cprintf("bootfs: %s @%zd (%zd bytes)\n", fn, off, len);
-    if (!strcmp(fn, "bin/devmgr")) {
+    if (!strcmp(fn, devmgr_fn)) {
         devmgr_off = off;
         devmgr_len = len;
     }
@@ -50,6 +53,25 @@ void* __libc_intercept_arg(void* _arg) {
     return NULL;
 }
 
+static const char* __kernel_cmdline;
+
+const char* cmdline_get(const char* key) {
+    unsigned sz = strlen(key);
+    const char* ptr = __kernel_cmdline;
+    for (;;) {
+        if (strncmp(ptr, key, sz)) {
+            ptr = strchr(ptr, 0) + 1;
+            if (*ptr == 0) {
+                return NULL;
+            }
+        }
+        ptr += sz;
+        if (*ptr == '=') {
+             ptr++;
+        }
+        return ptr;
+    }
+}
 int main(int argc, char** argv) {
     mx_handle_t bootfs_vmo = (mx_handle_t)(uintptr_t)arg;
     uint64_t bootfs_size;
@@ -66,12 +88,20 @@ int main(int argc, char** argv) {
         cprintf("userboot: failed to map bootfs (%d)\n", status);
         return -1;
     }
-    void* bootfs = (void*)bootfs_val;
+    __kernel_cmdline = (void*) bootfs_val;
+    void* bootfs = (void*) (bootfs_val + PAGE_SIZE);
 
     cprintf("userboot: starting...\n");
-    bootfs_parse(bootfs, 32768, callback);
+
+    const char* s = cmdline_get("userboot");
+    if (s) {
+        cprintf("userboot: userboot='%s'\n", s);
+        devmgr_fn = s;
+    }
+
+    bootfs_parse(bootfs, bootfs_size - PAGE_SIZE, callback);
     if (devmgr_off == 0) {
-        cprintf("userboot: error: bin/devmgr not found\n");
+        cprintf("userboot: error: %s not found\n", devmgr_fn);
         return -1;
     }
 

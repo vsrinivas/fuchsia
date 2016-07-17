@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
@@ -32,6 +33,8 @@ static int join_thread(void* arg) {
     //delete proc;
     return 0;
 }
+
+extern char __kernel_cmdline[CMDLINE_MAX];
 
 static utils::RefPtr<UserProcess> userboot_process;
 
@@ -64,18 +67,21 @@ static int attempt_userboot(const void* userboot, size_t ublen,
     }
 
     // map bootfs into the userboot process
-    auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, bfslen + rsize);
+    auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, bfslen + rsize + CMDLINE_MAX);
     if (!vmo) {
         return ERR_NO_MEMORY;
     }
 
     size_t written;
-    if (vmo->Write(bootfs, 0, bfslen, &written) < 0) {
+    if (vmo->Write(__kernel_cmdline, 0, CMDLINE_MAX, &written) < 0) {
+        return ERR_NO_MEMORY;
+    }
+    if (vmo->Write(bootfs, CMDLINE_MAX, bfslen, &written) < 0) {
         return ERR_NO_MEMORY;
     }
 
     if (rbase) {
-        if (vmo->Write(rbase, bfslen, rsize, &written) < 0) {
+        if (vmo->Write(rbase, CMDLINE_MAX + bfslen, rsize, &written) < 0) {
             return ERR_NO_MEMORY;
         }
     }

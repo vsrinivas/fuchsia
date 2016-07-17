@@ -10,6 +10,7 @@ function HELP {
     echo "help:"
     echo "-a <arch>           : arm32, arm64, or x86-64"
     echo "-b                  : build first"
+    echo "-c                  : add item to kernel commandline"
     echo "-d                  : run with emulated disk"
     echo "-g                  : use graphical console"
     echo "-k                  : use KVM"
@@ -40,11 +41,13 @@ UP=0
 RELEASE=0
 VNC=0
 INITRD=
+CMDLINE=""
 
-while getopts a:bdgkm:nNo:ruvx:h FLAG; do
+while getopts a:bc:dgkm:nNo:ruvx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
+        c) CMDLINE+="$OPTARG ";;
         d) DISK=1;;
         g) GRAPHICS=1;;
         k) DO_KVM=1;;
@@ -174,6 +177,6 @@ if [ "$INITRD" != "" ]; then
 fi
 
 # run qemu
-echo $QEMU $ARGS $@
-$QEMU $ARGS $@
+echo $QEMU $ARGS -append "$CMDLINE" $@
+$QEMU $ARGS -append "$CMDLINE" $@
 

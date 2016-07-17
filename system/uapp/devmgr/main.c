@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <fcntl.h>
+#include <limits.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
@@ -122,9 +123,11 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    //const char* cmdline = (void*) bootfs_val;
+
     printf("devmgr: main()\n");
     devmgr_init(false);
-    devmgr_vfs_init((void*)bootfs_val, bootfs_size);
+    devmgr_vfs_init((void*)(bootfs_val + PAGE_SIZE), bootfs_size - PAGE_SIZE);
 
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
