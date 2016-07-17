@@ -32,6 +32,9 @@ The *flags* can be either 0 or MX_FLAG_REPLY_PIPE. A reply pipe
 behaves like a regular message pipe except for **mx_message_write**()
 which must include itself as the last handle being transfered.
 
+When *flags* is MX_FLAG_REPLY_PIPE, only *handles[1]* is a reply
+pipe. *handles[0]* is a regular pipe.
+
 
 ## RETURN VALUE
 
