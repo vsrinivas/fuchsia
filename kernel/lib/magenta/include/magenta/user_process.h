@@ -98,9 +98,9 @@ public:
     status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
     utils::RefPtr<Dispatcher> exception_handler();
 
-    // The following two methods can slow and innacurrate and should only be
+    // The following two methods can be slow and innacurrate and should only be
     // called from diagnostics code.
-    uint32_t HandleCount();
+    uint32_t HandleStats(uint32_t*handle_type, size_t size);
     uint32_t ThreadCount();
 
     // Necessary members for using DoublyLinkedList<UserProcess>.

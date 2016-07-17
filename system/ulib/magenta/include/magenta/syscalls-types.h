@@ -69,14 +69,15 @@ typedef enum {
     MX_OBJ_TYPE_VMEM                = 3,
     MX_OBJ_TYPE_MESSAGE_PIPE        = 4,
     MX_OBJ_TYPE_EVENT               = 5,
-    MX_OBJ_TYPE_LOG                 = 6,
-    MX_OBJ_TYPE_INTERRUPT           = 7,
-    MX_OBJ_TYPE_IOMAP               = 8,
-    MX_OBJ_TYPE_PCI_DEVICE          = 9,
-    MX_OBJ_TYPE_PCI_INT             = 10,
-    MX_OBJ_TYPE_IOPORT              = 11,
-    MX_OBJ_TYPE_DATA_PIPE_PRODUCER  = 12,
-    MX_OBJ_TYPE_DATA_PIPE_CONSUMER  = 13,
+    MX_OBJ_TYPE_IOPORT              = 6,
+    MX_OBJ_TYPE_DATA_PIPE_PRODUCER  = 7,
+    MX_OBJ_TYPE_DATA_PIPE_CONSUMER  = 8,
+    MX_OBJ_TYPE_INTERRUPT           = 9,
+    MX_OBJ_TYPE_IOMAP               = 10,
+    MX_OBJ_TYPE_PCI_DEVICE          = 11,
+    MX_OBJ_TYPE_PCI_INT             = 12,
+    MX_OBJ_TYPE_LOG                 = 13,
+    MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
 
 typedef enum {

@@ -335,9 +335,18 @@ utils::RefPtr<Dispatcher> UserProcess::exception_handler() {
     return exception_handler_;
 }
 
-uint32_t UserProcess::HandleCount() {
+uint32_t UserProcess::HandleStats(uint32_t* handle_type, size_t size) {
     AutoLock lock(&handle_table_lock_);
-    return static_cast<uint32_t>(handles_.size_slow());
+    uint32_t total = 0;
+    utils::for_each(&handles_, [&total, handle_type, size](Handle* handle) {
+        if (handle_type) {
+            uint32_t type = static_cast<uint32_t>(handle->dispatcher()->GetType());
+            if (size > type)
+                ++handle_type[type];
+        }
+        ++total;
+    });
+    return total;
 }
 
 uint32_t UserProcess::ThreadCount() {

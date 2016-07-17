@@ -122,18 +122,54 @@ void RemoveProcess(UserProcess* process) {
     LTRACEF("Removing process %p : id = %u\n", process, process->id());
 }
 
+char* DebugDumpHandleTypeCount_NoLock(UserProcess* process) {
+    static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
+
+    uint32_t types[MX_OBJ_TYPE_LAST] = {0};
+    uint32_t handle_count = process->HandleStats(types, sizeof(types));
+
+    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u %3u",
+             handle_count,
+             types[1],              // process.
+             types[2],              // thread.
+             types[3],              // vmem
+             types[4],              // msg pipe.
+             types[5],              // event
+             types[6],              // ioport.
+             types[7] + types[8],   // data pipe (both),
+             types[9],              // interrupt.
+             types[10]              // io map
+             );
+    return buf;
+}
+
 void DebugDumpProcessList() {
     AutoLock lock(&process_mutex);
-    printf("ps: [id] [state] [#threads] [#handles] [addr] [name]\n");
+    printf(" id-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n");
     utils::for_each(&process_list, [](UserProcess* process) {
-        printf("%3u %c %3u %3u %p %s\n",
+        printf("%3u-%c %3u %s [%s]\n",
             process->id(),
             process->StateChar(),
             process->ThreadCount(),
-            process->HandleCount(),
-            process,
+            DebugDumpHandleTypeCount_NoLock(process),
             process->name().data());
     });
+}
+
+void DumpProcessListKeyMap() {
+    printf("id  : process id number\n");
+    printf("-s  : state: R = running D = dead\n");
+    printf("#t  : number of threads\n");
+    printf("#h  : total number of handles\n");
+    printf("#pr : number of process handles\n");
+    printf("#th : number of thread handles\n");
+    printf("#vm : number of vm map handles\n");
+    printf("#mp : number of message pipe handles\n");
+    printf("#ev : number of event handles\n");
+    printf("#ip : number of io port handles\n");
+    printf("#dp : number of data pipe handles (both)\n");
+    printf("#it : number of interrupt handles\n");
+    printf("#io : number of io map handles\n");
 }
 
 void SetSystemExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
@@ -163,11 +199,17 @@ static int cmd_magenta(int argc, const cmd_args* argv) {
         printf("not enough arguments:\n");
     usage:
         printf("%s ps  : list processes\n", argv[0].str);
+        printf("%s ps  help: display keymap\n", argv[0].str);
         return -1;
     }
 
-    if (!strcmp(argv[1].str, "ps")) {
-        DebugDumpProcessList();
+    if (strcmp(argv[1].str, "ps") == 0) {
+
+       if ((argc == 3) && (strcmp(argv[2].str, "help") == 0)) {
+            DumpProcessListKeyMap();
+        } else {
+            DebugDumpProcessList();
+        }
     } else {
         printf("unrecognized subcommand\n");
         goto usage;
