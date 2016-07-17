@@ -28,6 +28,7 @@
 #include <string.h>
 #include <assert.h>
 #include <lk/init.h>
+#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 
 #define LOCAL_TRACE 0
@@ -102,6 +103,10 @@ void platform_save_bootloader_data(void)
 
     bootloader_ramdisk_base = zp[0x218 / 4];
     bootloader_ramdisk_size = zp[0x21C / 4];
+
+    if (zp[0x228/4] != 0) {
+        cmdline_init((void*) X86_PHYS_TO_VIRT(zp[0x228/4]));
+    }
 
     if (zp[0x220 / 4] == 0xDBC64323) {
         bootloader_acpi_rsdp = zp[0x80 / 4];
