@@ -27,6 +27,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/semaphore.c \
 	$(LOCAL_DIR)/mp.c \
 	$(LOCAL_DIR)/port.c \
+	$(LOCAL_DIR)/cmdline.c \
 
 
 ifeq ($(WITH_KERNEL_VM),1)

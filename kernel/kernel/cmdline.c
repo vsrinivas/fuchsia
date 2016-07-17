@@ -1,0 +1,72 @@
+// Copyright 2016 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#include <string.h>
+#include <kernel/cmdline.h>
+
+char __kernel_cmdline[CMDLINE_MAX];
+
+// import into kernel commandline, converting invalid
+// characters to '.', combining multiple spaces, and
+// converting into a \0 separated, \0\0 terminated
+// style environment string
+void cmdline_init(const char* data) {
+    unsigned i = 0;
+    unsigned max = CMDLINE_MAX - 2;
+
+    while (i < max) {
+        unsigned c = *data++;
+        if (c == 0) {
+            break;
+        }
+        if ((c < ' ') || (c > 127)) {
+            c = '.';
+        }
+        if (c == ' ') {
+            // spaces become \0's, but do not double up
+            if ((i == 0) || (__kernel_cmdline[i] == 0)) {
+                continue;
+            } else {
+                c = 0;
+            }
+        }
+        __kernel_cmdline[i++] = c;
+    }
+    // ensure a double-\0 terminator
+    __kernel_cmdline[i++] = 0;
+    __kernel_cmdline[i] = 0;
+}
+
+const char* cmdline_get(const char* key) {
+    unsigned sz = strlen(key);
+    const char* ptr = __kernel_cmdline;
+    for (;;) {
+        if (strncmp(ptr, key, sz)) {
+            ptr = strchr(ptr, 0) + 1;
+            if (*ptr == 0) {
+                return NULL;
+            }
+        }
+        ptr += sz;
+        if (*ptr == '=') {
+             ptr++;
+        }
+        return ptr;
+    }
+}
+
+bool cmdline_get_bool(const char* key, bool _default) {
+    const char* value = cmdline_get(key);
+    if (value == NULL) {
+        return _default;
+    }
+    if ((strcmp(value, "0") == 0) ||
+        (strcmp(value, "false") == 0) ||
+        (strcmp(value, "off") == 0)) {
+        return false;
+    }
+    return true;
+}
