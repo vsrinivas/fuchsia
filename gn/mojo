@@ -6,6 +6,10 @@
             "bootfs_path": "bin/application_manager"
         },
         {
+            "binary": "mojo_public_unittests",
+            "bootfs_path": "bin/mojo_public_unittests"
+        },
+        {
             "binary": "echo_client",
             "bootfs_path": "apps/echo_client"
         },
