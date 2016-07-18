@@ -237,6 +237,10 @@ static ssize_t mx_rio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
         return ERR_INVALID_ARGS;
     }
 
+    if ((op == IOCTL_DEVICE_GET_HANDLE) && (out_len < sizeof(mx_handle_t))) {
+        return ERR_INVALID_ARGS;
+    }
+
     memset(&msg, 0, MX_RIO_HDR_SZ);
     msg.op = MX_RIO_IOCTL;
     msg.datalen = in_len;
@@ -254,7 +258,17 @@ static ssize_t mx_rio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     }
 
     memcpy(out_buf, msg.data, copy_len);
-    discard_handles(msg.handle, msg.hcount);
+    if (op == IOCTL_DEVICE_GET_HANDLE) {
+        if (msg.hcount > 0) {
+            memcpy(out_buf, msg.handle, sizeof(mx_handle_t));
+            discard_handles(msg.handle + 1, msg.hcount - 1);
+        } else {
+            mx_handle_t zero = 0;
+            memcpy(out_buf, &zero, sizeof(mx_handle_t));
+        }
+    } else {
+        discard_handles(msg.handle, msg.hcount);
+    }
     return r;
 }
 

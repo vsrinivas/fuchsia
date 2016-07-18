@@ -248,6 +248,10 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
         memcpy(in_buf, msg->data, len);
         mx_status_t r = dev->ops->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg, ios->cookie);
         if (r >= 0) {
+            if (msg->arg2.op == IOCTL_DEVICE_GET_HANDLE) {
+                msg->hcount = 1;
+                memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
+            }
             msg->datalen = r;
             msg->arg2.off = ios->io_off;
         }
