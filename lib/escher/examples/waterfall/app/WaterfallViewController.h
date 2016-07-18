@@ -8,5 +8,6 @@
 @interface WaterfallViewController : GLKViewController
 
 @property (nonatomic) IBOutlet UIButton *runTestsButton;
+@property (weak, nonatomic) IBOutlet UISlider *blurPlaneHeightSlider;
 
 @end

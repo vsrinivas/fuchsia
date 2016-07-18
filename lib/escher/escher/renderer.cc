@@ -59,7 +59,7 @@ void Renderer::Render(const Stage& stage, const Model& model) {
     glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
     glClear(GL_COLOR_BUFFER_BIT);
     Blit(lighting_.illumination().id());
-  } else if (kDepthBasedBlur) {
+  } else if (kDepthBasedBlur && model.blur_plane_height() > 0.0) {
     lit_scene_.Bind();
 
     if (!lit_scene_.color().size().Equals(size)) {

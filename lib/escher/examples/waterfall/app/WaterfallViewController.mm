@@ -83,10 +83,14 @@ constexpr bool kDrawShadowTestScene = false;
     renderer_->set_front_frame_buffer_id(fbo);
   }
 
-  if (kDrawShadowTestScene)
-    renderer_->Render(stage_, shadow_test_scene_.GetModel(stage_.viewing_volume()));
-  else
-    renderer_->Render(stage_, app_test_scene_.GetModel(stage_.viewing_volume(), focus_));
+  escher::Model model;
+  if (kDrawShadowTestScene) {
+    model = shadow_test_scene_.GetModel(stage_.viewing_volume());
+  } else {
+    model = app_test_scene_.GetModel(stage_.viewing_volume(), focus_);
+  }
+  model.set_blur_plane_height(self.blurPlaneHeightSlider.value);
+  renderer_->Render(stage_, model);
 }
 
 - (void)touchesMoved:(NSSet*)touches withEvent:(UIEvent*)event {

@@ -27,14 +27,21 @@
                                     <action selector="handleButtonClick:" destination="C4K-LB-LdZ" eventType="touchUpInside" id="56x-NT-Byl"/>
                                 </connections>
                             </button>
+                            <slider opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="0.5" minValue="-0.10000000000000001" maxValue="24.100000000000001" translatesAutoresizingMaskIntoConstraints="NO" id="QAh-9c-q7f">
+                                <rect key="frame" x="119" y="562" width="463" height="31"/>
+                            </slider>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <constraints>
                             <constraint firstItem="o5L-mm-fEC" firstAttribute="leading" secondItem="yZL-Qw-8bF" secondAttribute="leadingMargin" id="IWE-z9-QrW"/>
+                            <constraint firstItem="QAh-9c-q7f" firstAttribute="trailing" secondItem="yZL-Qw-8bF" secondAttribute="trailingMargin" id="fKU-kj-bLz"/>
+                            <constraint firstItem="UjX-fH-INl" firstAttribute="top" secondItem="QAh-9c-q7f" secondAttribute="bottom" constant="8" id="jCa-M9-mLG"/>
                             <constraint firstItem="UjX-fH-INl" firstAttribute="top" secondItem="o5L-mm-fEC" secondAttribute="bottom" constant="8" id="le7-fr-sRU"/>
+                            <constraint firstItem="QAh-9c-q7f" firstAttribute="leading" secondItem="o5L-mm-fEC" secondAttribute="trailing" constant="8" id="tx1-Cp-QMw"/>
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="blurPlaneHeightSlider" destination="QAh-9c-q7f" id="hBv-KJ-0zp"/>
                         <outlet property="runTestsButton" destination="o5L-mm-fEC" id="qZB-Rb-Ob6"/>
                     </connections>
                 </viewController>
