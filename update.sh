@@ -26,7 +26,7 @@ function download_tool() {
   local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
   local stamp_path="${tool_path}.stamp"
   local requested_hash="$(cat "${tool_path}.sha1")"
-  local tool_url="${FUCHSIA_URL_BASE}/${name}/${HOST_PLATFORM=}/${requested_hash}"
+  local tool_url="${FUCHSIA_URL_BASE}/${name}/${HOST_PLATFORM}/${requested_hash}"
 
   if [[ ! -f "${stamp_path}" ]] || [[ "${requested_hash}" != "$(cat "${stamp_path}")" ]]; then
     echo "Downloading ${name}..."
@@ -54,6 +54,26 @@ if [[ ! -f "${GN_STAMP_PATH}" ]] || [[ "${GN_HASH}" != "$(cat "${GN_STAMP_PATH}"
   chmod a+x "${GN_PATH}"
   echo "${GN_HASH}" > "${GN_STAMP_PATH}"
 fi
+
+function download_tarball() {
+  local name="${1}"
+  local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
+  local stamp_path="${tool_path}.stamp"
+  local requested_hash="$(cat "${tool_path}.sha1")"
+  local tar_path="${tool_path}.tar.bz2"
+  local tool_url="${FUCHSIA_URL_BASE}/${name}/${HOST_PLATFORM}/${requested_hash}"
+
+  if [[ ! -f "${stamp_path}" || "${requested_hash}" != "$(cat "${stamp_path}")" ]]; then
+    echo "Downloading ${name}..."
+    rm -rf -- "${SCRIPT_ROOT}/${name}"
+    curl --progress-bar -continue-at=- --location --output "${tar_path}" "${tool_url}"
+    (cd -- "${SCRIPT_ROOT}" && tar xf ${tar_path})
+    rm -f -- "${tar_path}"
+    echo "${requested_hash}" > "${stamp_path}"
+  fi
+}
+
+download_tarball cmake
 
 readonly SDK_STAMP_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/sdk.stamp"
 readonly SDK_HASH="$(cat "${SCRIPT_ROOT}/${HOST_PLATFORM}/sdk.sha1")"
