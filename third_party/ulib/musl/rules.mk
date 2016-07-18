@@ -39,6 +39,13 @@ LOCAL_CFLAGS += \
     -Wno-incompatible-pointer-types-discards-qualifiers \
 
 LOCAL_COMPILEFLAGS += -Wno-implicit-exception-spec-mismatch
+
+# TODO(kulakowski) This is needed because clang, as an assembler,
+# yells loudly about ununused options such as -finline which are
+# currently unconditionally added to COMPILEFLAGS. Ideally these
+# arguments would only be added to C or C++ targets.
+LOCAL_COMPILEFLAGS += -Qunused-arguments
+
 else
 LOCAL_CFLAGS += \
     -Wno-discarded-qualifiers \
