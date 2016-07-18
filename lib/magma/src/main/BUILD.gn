@@ -21,7 +21,8 @@ source_set("main") {
     "//magma/tests/gpureadback"
   ]
   libs = [
-    "-ldriver"
+    "-ldriver",
+    "-lddk",
   ]
 
   defines = [
