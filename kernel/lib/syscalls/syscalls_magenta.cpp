@@ -144,9 +144,6 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     // Regardless of wait outcome, we must call FinishWait().
     auto signals_state = wait_helper.End(&event);
 
-    if (result != NO_ERROR && result != ERR_CANCELLED && result != ERR_TIMED_OUT)
-        return result;
-
     if (_signals_state) {
         if (copy_to_user(_signals_state, &signals_state, sizeof(signals_state)) != NO_ERROR)
             return ERR_INVALID_ARGS;
@@ -234,9 +231,6 @@ mx_status_t sys_handle_wait_many(uint32_t count,
             return ERR_INVALID_ARGS;
     }
 
-    if (result != NO_ERROR && result != ERR_CANCELLED && result != ERR_TIMED_OUT)
-        return result;
-
     if (_signals_states) {
         if (copy_to_user(_signals_states, signals_states.get(),
                          sizeof(mx_signals_state_t) * count) != NO_ERROR)
@@ -252,7 +246,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     HandleUniquePtr handle(up->RemoveHandle(handle_value));
     if (!handle)
         return ERR_INVALID_ARGS;
-    return NO_ERROR ;
+    return NO_ERROR;
 }
 
 mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {

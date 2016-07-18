@@ -75,12 +75,17 @@ public:
     // Cancel a pending wait started with BeginWait.
     bool CancelWait(Handle* handle);
 
-    // Notify others (possibly waking them) that signals have changed.
-    // Only clearing signals (set_mask to zero) never wakes.
-    bool Satisfied(mx_signals_t set_mask, mx_signals_t clear_mask, bool yield);
+    // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
+    // setting satisfiable signals should not wake anyone.) Returns true if some thread was awoken.
+    bool UpdateState(mx_signals_t satisfied_set_mask,
+                     mx_signals_t satisfied_clear_mask,
+                     mx_signals_t satisfiable_set_mask,
+                     mx_signals_t satisfiable_clear_mask,
+                     bool yield);
 
-    // Setting the satifiable signals never wakes.
-    void Satisfiable(mx_signals_t set_mask, mx_signals_t clear_mask);
+    bool UpdateSatisfied(mx_signals_t set_mask, mx_signals_t clear_mask, bool yield) {
+        return UpdateState(set_mask, clear_mask, 0u, 0u, yield);
+    }
 
 private:
     struct WaitNode {
@@ -98,7 +103,7 @@ private:
         }
     };
 
-    bool SignalComplete_NoLock();
+    bool SignalStateChange_NoLock();
 
     bool SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
 

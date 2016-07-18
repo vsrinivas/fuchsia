@@ -26,7 +26,7 @@ public:
         // Valid for Signal():
         CANCELLED = ERR_CANCELLED,
         SATISFIED = NO_ERROR,
-        // TODO(vtl): Add UNSATISFIABLE.
+        UNSATISFIABLE = ERR_BAD_STATE,
     };
 
     // Converts a Result to an appropriate |status_t|.

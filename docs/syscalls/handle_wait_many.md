@@ -47,10 +47,11 @@ respectively).
 ## RETURN VALUE
 
 **handle_wait_many**() returns **NO_ERROR** on success when the wait was
-satisfied by the *signals* input or **ERR_TIMED_OUT** if the wait completed
-because *timeout* nanoseconds have elapsed.
+satisfied by the *signals* input, **ERR_BAD_STATE** when one of the *signals*
+inputs became unsatisfiable, or **ERR_TIMED_OUT** if the wait completed because
+*timeout* nanoseconds have elapsed.
 
-In the event of **ERR_TIMED_OUT**, *signals_states* may include state changes
+In the event of **ERR_TIMED_OUT**, *signals_states* may reflect state changes
 that occurred after the timeout but before the syscall returned.
 
 ## ERRORS
@@ -61,10 +62,10 @@ or *signals_states* were invalid pointers.
 **ERR_ACCESS_DENIED**  One or more of the provided *handles* does not
 have **MX_RIGHT_READ** and may not be waited upon.
 
-**ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
-
-**ERR_CANCELLED** One or more of the provided *handles* was invalidated (e.g.,
+**ERR_CANCELLED**  One or more of the provided *handles* was invalidated (e.g.,
 closed) during the wait.
+
+**ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
 
 ## BUGS
 

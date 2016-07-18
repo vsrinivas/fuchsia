@@ -39,9 +39,12 @@ mx_status_t Waiter::BeginWait(WaitEvent* event, Handle* handle, mx_signals_t sig
             io_port_bound = true;
         } else {
             nodes_.push_front(node);
-            // The condition might be already satisfiable, if so signal the event now.
+            // The condition may already be satisfiable; if so signal the event now.
             if (signals & signals_state_.satisfied)
                 awoke_threads |= event->Signal(WaitEvent::Result::SATISFIED, context);
+            // Or the condition may already be unsatisfiable; if so signal the event now.
+            else if (!(signals & signals_state_.satisfiable))
+                awoke_threads |= event->Signal(WaitEvent::Result::UNSATISFIABLE, context);
         }
     }
 
@@ -98,7 +101,11 @@ bool Waiter::BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, m
     return true;
 }
 
-bool Waiter::Satisfied(mx_signals_t set_mask, mx_signals_t clear_mask, bool yield) {
+bool Waiter::UpdateState(mx_signals_t satisfied_set_mask,
+                         mx_signals_t satisfied_clear_mask,
+                         mx_signals_t satisfiable_set_mask,
+                         mx_signals_t satisfiable_clear_mask,
+                         bool yield) {
     bool awoke_threads = false;
     mx_signals_t signal_match = 0u;
     utils::RefPtr<IOPortDispatcher> io_port;
@@ -106,34 +113,36 @@ bool Waiter::Satisfied(mx_signals_t set_mask, mx_signals_t clear_mask, bool yiel
     {
         AutoSpinLock<> lock(&lock_);
 
-        auto prev = signals_state_.satisfied;
-        signals_state_.satisfied = (signals_state_.satisfied & (~clear_mask)) | set_mask;
-
-        if (prev == signals_state_.satisfied)
-            return false;
+        auto previous_signals_state = signals_state_;
+        signals_state_.satisfied &= ~satisfied_clear_mask;
+        signals_state_.satisfied |= satisfied_set_mask;
+        signals_state_.satisfiable &= ~satisfiable_clear_mask;
+        signals_state_.satisfiable |= satisfiable_set_mask;
 
         if (io_port_) {
+            if (previous_signals_state.satisfied == signals_state_.satisfied)
+                return false;
+
             signal_match = signals_state_.satisfied & io_port_signals_;
             // If there is signal match, we need to ref-up the io port because we are going
             // to call it from outside the lock.
             if (signal_match)
                 io_port = io_port_;
         } else {
-            awoke_threads |= SignalComplete_NoLock();
+            if (previous_signals_state.satisfied == signals_state_.satisfied &&
+                previous_signals_state.satisfiable == signals_state_.satisfiable)
+                return false;
+
+            awoke_threads |= SignalStateChange_NoLock();
         }
     }
 
     if (io_port)
         return SendIOPortPacket_NoLock(io_port.get(), signal_match);
 
-    if (yield & awoke_threads)
+    if (yield && awoke_threads)
         thread_yield();
     return true;
-}
-
-void Waiter::Satisfiable(mx_signals_t set_mask, mx_signals_t clear_mask) {
-    AutoSpinLock<> lock(&lock_);
-    signals_state_.satisfiable = (signals_state_.satisfiable & (~clear_mask)) | set_mask;
 }
 
 bool Waiter::CancelWait(Handle* handle) {
@@ -153,12 +162,14 @@ bool Waiter::CancelWait(Handle* handle) {
     return true;
 }
 
-bool Waiter::SignalComplete_NoLock() {
+bool Waiter::SignalStateChange_NoLock() {
     bool awoke_threads = false;
 
     utils::for_each(&nodes_, [this, &awoke_threads](WaitNode* node) {
         if (node->signals & signals_state_.satisfied)
             awoke_threads |= node->event->Signal(WaitEvent::Result::SATISFIED, node->context);
+        else if (!(node->signals & signals_state_.satisfiable))
+            awoke_threads |= node->event->Signal(WaitEvent::Result::UNSATISFIABLE, node->context);
     });
     return awoke_threads;
 }

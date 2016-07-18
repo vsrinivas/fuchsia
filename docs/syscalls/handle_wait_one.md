@@ -37,11 +37,12 @@ never times out.
 
 ## RETURN VALUE
 
-**handle_wait_one**() returns **NO_ERROR** on success or **ERR_TIMED_OUT**
-if the wait completed because *timeout* nanoseconds have elapsed.
+**handle_wait_one**() returns **NO_ERROR** on success, **ERR_BAD_STATE** if the
+*signals* became unsatisfiable, or **ERR_TIMED_OUT** if the wait completed
+because *timeout* nanoseconds have elapsed.
 
-In the event of **ERR_TIMED_OUT**, *signals_state* may reflect state changes
-after the timeout but before the syscall returned.
+In the event of **ERR_TIMED_OUT**, *signals_states* may reflect state changes
+that occurred after the timeout but before the syscall returned.
 
 ## ERRORS
 
@@ -51,10 +52,10 @@ invalid pointer.
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
 not be waited upon.
 
-## BUGS
+**ERR_CANCELLED**  One or more of the provided *handles* was invalidated (e.g.,
+closed) during the wait.
 
-Currently the *satisfiable_signals* return value is filled with the same
-content as the *satisifed_signals* value.
+## BUGS
 
 Currently the smallest *timeout* is 1 millisecond. Intervals smaller
 than that are equivalent to 1ms.

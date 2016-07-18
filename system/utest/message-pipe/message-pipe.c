@@ -80,13 +80,15 @@ static int reader_thread(void* arg) {
 mx_signals_t get_satisfied_signals(mx_handle_t handle) {
     mx_signals_state_t signals_state = {0};
     mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-    return (status == ERR_TIMED_OUT) ? signals_state.satisfied : (mx_signals_t)-1;
+    assert(status == ERR_BAD_STATE);  // "Unsatisfiable".
+    return signals_state.satisfied;
 }
 
 mx_signals_t get_satisfiable_signals(mx_handle_t handle) {
     mx_signals_state_t signals_state = {0};
     mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-    return (status == ERR_TIMED_OUT) ? signals_state.satisfiable : (mx_signals_t)-1;
+    assert(status == ERR_BAD_STATE);  // "Unsatisfiable".
+    return signals_state.satisfiable;
 }
 
 bool message_pipe_test(void) {
@@ -151,8 +153,8 @@ bool message_pipe_test(void) {
 
     // Since the the other side of _pipe[3] is closed, and the read thread read everything from it,
     // the only satisfied/satisfiable signals should be "peer closed".
-    EXPECT_EQ(get_satisfied_signals(_pipe[3]), MX_SIGNAL_PEER_CLOSED, "");
-    EXPECT_EQ(get_satisfiable_signals(_pipe[3]), MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfied_signals(_pipe[3]), MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfiable_signals(_pipe[3]), MX_SIGNAL_PEER_CLOSED, "");
 
     mx_handle_close(_pipe[2]);
     mx_handle_close(_pipe[3]);
@@ -187,6 +189,10 @@ bool message_pipe_read_error_test(void) {
     // Read from an empty pipe with a closed peer, should yield a channel closed error.
     status = mx_message_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
     ASSERT_EQ(status, ERR_CHANNEL_CLOSED, "read on empty closed pipe produced incorrect error");
+
+    // Waiting for readability should yield a bad state error.
+    status = mx_handle_wait_one(pipe[0], MX_SIGNAL_READABLE, 0u, NULL);
+    ASSERT_EQ(status, ERR_BAD_STATE, "waiting for readability should not succeed");
 
     END_TEST;
 }
