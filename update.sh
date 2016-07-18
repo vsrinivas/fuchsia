@@ -55,9 +55,9 @@ if [[ ! -f "${GN_STAMP_PATH}" ]] || [[ "${GN_HASH}" != "$(cat "${GN_STAMP_PATH}"
   echo "${GN_HASH}" > "${GN_STAMP_PATH}"
 fi
 
+readonly SDK_STAMP_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/sdk.stamp"
+readonly SDK_HASH="$(cat "${SCRIPT_ROOT}/${HOST_PLATFORM}/sdk.sha1")"
 readonly SDK_PATH="${SCRIPT_ROOT}/sdk"
-readonly SDK_STAMP_PATH="${SDK_PATH}.stamp"
-readonly SDK_HASH="$(cat "${SDK_PATH}.sha1")"
 readonly SDK_TAR_PATH="${SDK_PATH}/sdk.tar.bz2"
 readonly SDK_URL="${FUCHSIA_URL_BASE}/sdk/${SDK_HASH}"
 

@@ -4,11 +4,12 @@
 /linux64/mkbootfs.stamp
 /linux64/ninja
 /linux64/ninja.stamp
+/linux64/sdk.stamp
 /mac/gn
 /mac/gn.stamp
 /mac/mkbootfs
 /mac/mkbootfs.stamp
 /mac/ninja
 /mac/ninja.stamp
+/mac/sdk.stamp
 /sdk
-/sdk.stamp
