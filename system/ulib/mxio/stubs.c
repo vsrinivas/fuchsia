@@ -105,10 +105,6 @@ int fchmod(int fd, mode_t mode) {
     return checkfd(fd, (mode & (~0777)) ? ENOSYS : 0);
 }
 
-int fcntl(int fd, int cmd, ...) {
-    return checkfd(fd, ENOSYS);
-}
-
 int access(const char* path, int mode) {
     return checkfile(path, 0);
 }

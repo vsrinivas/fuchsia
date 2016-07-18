@@ -109,6 +109,12 @@ static int stub_stat(const char* fn, struct stat* s) {
 }
 weak_alias(stub_stat, stat);
 
+static int stub_fcntl(int fcntl) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fcntl, fcntl);
+
 static int stub_dup(int oldfd) {
     errno = ENOSYS;
     return -1;

@@ -66,10 +66,11 @@ void bootfs_parse(void* _data, int len,
 void mxio_install_root(mxio_t* root);
 
 // attempt to install a mxio in the unistd fd table
-// if fd >= 0, request a specific fd instead of first available
+// if fd >= 0, request a specific fd, and starting_fd is ignored
+// if fd < 0, request the first available fd >= starting_fd
 // returns fd on success
 // the mxio must have been upref'd on behalf of the fdtab first
-int mxio_bind_to_fd(mxio_t* io, int fd);
+int mxio_bind_to_fd(mxio_t* io, int fd, int starting_fd);
 
 // creates a do-nothing mxio_t
 mxio_t* mxio_null_create(void);

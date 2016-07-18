@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -59,7 +61,7 @@ void mxio_install_root(mxio_t* root) {
 // Attaches an mxio to an fdtab slot.
 // The mxio must have been upref'd on behalf of the
 // fdtab prior to binding.
-int mxio_bind_to_fd(mxio_t* io, int fd) {
+int mxio_bind_to_fd(mxio_t* io, int fd, int starting_fd) {
     mxio_t* io_to_close = NULL;
 
     mxr_mutex_lock(&mxio_lock);
@@ -73,7 +75,7 @@ int mxio_bind_to_fd(mxio_t* io, int fd) {
         }
     } else {
         //TODO: bitmap, ffs, etc
-        for (fd = 0; fd < MAX_MXIO_FD; fd++) {
+        for (fd = starting_fd; fd < MAX_MXIO_FD; fd++) {
             if (mxio_fdtab[fd] == NULL) {
                 goto ok;
             }
@@ -494,20 +496,83 @@ int close(int fd) {
     }
 }
 
-int dup2(int oldfd, int newfd) {
+static int mxio_dup(int oldfd, int newfd, int starting_fd) {
     mxio_t* io = fd_to_io(oldfd);
     if (io == NULL) {
         return ERRNO(EBADFD);
     }
-    int fd = mxio_bind_to_fd(io, newfd);
+    int fd = mxio_bind_to_fd(io, newfd, starting_fd);
     if (fd < 0) {
         mxio_release(io);
     }
     return fd;
 }
 
+int dup2(int oldfd, int newfd) {
+    return mxio_dup(oldfd, newfd, 0);
+}
+
 int dup(int oldfd) {
-    return dup2(oldfd, -1);
+    return mxio_dup(oldfd, -1, 0);
+}
+
+int fcntl(int fd, int cmd, ...) {
+    // Note that it is not safe to pull out the int out of the
+    // variadic arguments at the top level, as callers are not
+    // required to pass anything for many of the commands.
+#define GET_INT_ARG(ARG)                        \
+    va_list args;                               \
+    va_start(args, cmd);                        \
+    int ARG = va_arg(args, int);                \
+    va_end(args)
+
+    switch (cmd) {
+    case F_DUPFD:
+    case F_DUPFD_CLOEXEC: {
+        // TODO(kulakowski) Implement CLOEXEC.
+        GET_INT_ARG(starting_fd);
+        return mxio_dup(fd, -1, starting_fd);
+    }
+    case F_GETFD: {
+        mxio_t* io = fd_to_io(fd);
+        if (io == NULL) {
+            return ERRNO(EBADF);
+        }
+        int flags = (int)(io->flags & MXIO_FD_FLAGS);
+        // POSIX mandates that the return value be nonnegative if successful.
+        assert(flags >= 0);
+        mxio_release(io);
+        return flags;
+    }
+    case F_SETFD: {
+        mxio_t* io = fd_to_io(fd);
+        if (io == NULL) {
+            return ERRNO(EBADF);
+        }
+        GET_INT_ARG(flags);
+        // TODO(kulakowski) Implement CLOEXEC.
+        io->flags = (int)(flags & MXIO_FD_FLAGS);
+        mxio_release(io);
+        return 0;
+    }
+    case F_GETFL:
+    case F_SETFL:
+        // TODO(kulakowski) File status flags and access modes.
+        return ERRNO(ENOSYS);
+    case F_GETOWN:
+    case F_SETOWN:
+        // TODO(kulakowski) Socket support.
+        return ERRNO(ENOSYS);
+    case F_GETLK:
+    case F_SETLK:
+    case F_SETLKW:
+        // TODO(kulakowski) Advisory file locking support.
+        return ERRNO(ENOSYS);
+    default:
+        return ERRNO(EINVAL);
+    }
+
+#undef GET_INT_ARG
 }
 
 off_t lseek(int fd, off_t offset, int whence) {
@@ -551,7 +616,7 @@ int open(const char* path, int flags, ...) {
     if ((r = __mxio_open(&io, path, flags)) < 0) {
         return ERROR(r);
     }
-    if ((fd = mxio_bind_to_fd(io, -1)) < 0) {
+    if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
         io->ops->close(io);
         mxio_release(io);
         return ERRNO(EMFILE);
@@ -596,7 +661,7 @@ int pipe2(int pipefd[2], int flags) {
     if (r < 0) {
         return ERROR(r);
     }
-    pipefd[0] = mxio_bind_to_fd(a, -1);
+    pipefd[0] = mxio_bind_to_fd(a, -1, 0);
     if (pipefd[0] < 0) {
         mxio_close(a);
         mxio_release(a);
@@ -604,7 +669,7 @@ int pipe2(int pipefd[2], int flags) {
         mxio_release(b);
         return ERROR(pipefd[0]);
     }
-    pipefd[1] = mxio_bind_to_fd(b, -1);
+    pipefd[1] = mxio_bind_to_fd(b, -1, 0);
     if (pipefd[1] < 0) {
         close(pipefd[0]);
         mxio_close(b);

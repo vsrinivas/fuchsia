@@ -45,6 +45,10 @@ typedef struct mxio_ops {
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 } mxio_ops_t;
 
+// For now, mxio_t.flags is only used to track the as-yet-unimplement
+// FD_CLOEXEC state.
+#define MXIO_FD_FLAGS ((int32_t)FD_CLOEXEC)
+
 typedef struct mxio {
     mxio_ops_t* ops;
     uint32_t magic;

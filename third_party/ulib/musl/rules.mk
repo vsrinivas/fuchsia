@@ -311,6 +311,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/getpagesize.c \
     $(LOCAL_DIR)/src/legacy/getpass.c \
     $(LOCAL_DIR)/src/legacy/getusershell.c \
+    $(LOCAL_DIR)/src/legacy/isastream.c \
     $(LOCAL_DIR)/src/legacy/lutimes.c \
     $(LOCAL_DIR)/src/legacy/ulimit.c \
     $(LOCAL_DIR)/src/legacy/utmpx.c \
@@ -501,6 +502,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/initgroups.c \
     $(LOCAL_DIR)/src/misc/ioctl.c \
     $(LOCAL_DIR)/src/misc/issetugid.c \
+    $(LOCAL_DIR)/src/misc/lockf.c \
     $(LOCAL_DIR)/src/misc/login_tty.c \
     $(LOCAL_DIR)/src/misc/mntent.c \
     $(LOCAL_DIR)/src/misc/openpty.c \
@@ -513,6 +515,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/syscall.c \
     $(LOCAL_DIR)/src/misc/syslog.c \
     $(LOCAL_DIR)/src/misc/uname.c \
+    $(LOCAL_DIR)/src/misc/wordexp.c \
     $(LOCAL_DIR)/src/mman/madvise.c \
     $(LOCAL_DIR)/src/mman/mincore.c \
     $(LOCAL_DIR)/src/mman/mlock.c \
@@ -831,6 +834,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/stdio/open_wmemstream.c \
     $(LOCAL_DIR)/src/stdio/pclose.c \
     $(LOCAL_DIR)/src/stdio/perror.c \
+    $(LOCAL_DIR)/src/stdio/popen.c \
     $(LOCAL_DIR)/src/stdio/printf.c \
     $(LOCAL_DIR)/src/stdio/putc.c \
     $(LOCAL_DIR)/src/stdio/putc_unlocked.c \
@@ -1119,12 +1123,6 @@ LOCAL_SRCS := \
 #    $(LOCAL_DIR)/pthread/sem_open.c \
 #    $(LOCAL_DIR)/src/legacy/ftw.c \
 #    $(LOCAL_DIR)/src/misc/nftw.c \
-
-# These refer to dup2 or fcntl.
-#    $(LOCAL_DIR)/src/legacy/isastream.c \
-#    $(LOCAL_DIR)/src/misc/lockf.c \
-#    $(LOCAL_DIR)/src/misc/wordexp.c \
-#    $(LOCAL_DIR)/src/stdio/popen.c \
 
 # These refer to __crypt_*, __des_setkey, and __do_des, which we do not have.
 #    $(LOCAL_DIR)/src/crypt/crypt.c \

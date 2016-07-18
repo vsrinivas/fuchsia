@@ -43,7 +43,7 @@ void devmgr_io_init(void) {
         return;
     }
     close(1);
-    mxio_bind_to_fd(logger, 1);
+    mxio_bind_to_fd(logger, 1, 0);
 }
 
 int devicehost(int argc, char** argv) {
