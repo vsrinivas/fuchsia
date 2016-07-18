@@ -17,6 +17,7 @@
 #include <dev/virtio.h>
 #include <lk/init.h>
 #include <lib/console.h>
+#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <platform.h>
@@ -99,6 +100,36 @@ static pmm_arena_t arena = {
 
 extern void psci_call(ulong arg0, ulong arg1, ulong arg2, ulong arg3);
 
+static uint32_t bootloader_ramdisk_base;
+static uint32_t bootloader_ramdisk_size;
+static void* ramdisk_base;
+static size_t ramdisk_size;
+
+static void platform_preserve_ramdisk(void) {
+    if (bootloader_ramdisk_size == 0) {
+        return;
+    }
+    if (bootloader_ramdisk_base == 0) {
+        return;
+    }
+    size_t pages = (bootloader_ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t actual = pmm_alloc_range(bootloader_ramdisk_base, pages, NULL);
+    if (actual == pages) {
+        ramdisk_base = paddr_to_kvaddr(bootloader_ramdisk_base);
+        ramdisk_size = pages * PAGE_SIZE;
+    }
+}
+
+void* platform_get_ramdisk(size_t *size) {
+    if (ramdisk_base) {
+        *size = ramdisk_size;
+        return ramdisk_base;
+    } else {
+        *size = 0;
+        return NULL;
+    }
+}
+
 void platform_early_init(void)
 {
     /* initialize the interrupt controller */
@@ -112,7 +143,7 @@ void platform_early_init(void)
     const void *fdt = (void *)KERNEL_BASE;
     int err = fdt_check_header(fdt);
     if (err >= 0) {
-        /* walk the nodes, looking for 'memory' */
+        /* walk the nodes, looking for 'memory' and 'chosen' */
         int depth = 0;
         int offset = 0;
         for (;;) {
@@ -125,7 +156,7 @@ void platform_early_init(void)
             if (!name)
                 continue;
 
-            /* look for the 'memory' property */
+            /* look for the properties we care about */
             if (strcmp(name, "memory") == 0) {
                 int lenp;
                 const void *prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
@@ -145,6 +176,30 @@ void platform_early_init(void)
                     /* set the size in the pmm arena */
                     arena.size = len;
                 }
+            } else if (strcmp(name, "chosen") == 0) {
+                int lenp;
+                const void *prop_ptr = fdt_getprop(fdt, offset, "bootargs", &lenp);
+                if (prop_ptr) {
+                    cmdline_init(prop_ptr);
+                }
+
+                prop_ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &lenp);
+                if (prop_ptr && lenp == 4) {
+                    bootloader_ramdisk_base = fdt32_to_cpu(*(const uint32_t*)prop_ptr);
+                }
+
+                uint32_t initrd_end = 0;
+                prop_ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &lenp);
+                if (prop_ptr && lenp == 4) {
+                    initrd_end = fdt32_to_cpu(*(const uint32_t*)prop_ptr);
+                }
+
+                if (bootloader_ramdisk_base && initrd_end <= bootloader_ramdisk_base) {
+                    printf("invalid initrd args: 0x%08x < 0x%08x\n", initrd_end, bootloader_ramdisk_base);
+                    bootloader_ramdisk_base = 0;
+                } else {
+                    bootloader_ramdisk_size = initrd_end - bootloader_ramdisk_base;
+                }
             }
         }
     }
@@ -154,6 +209,8 @@ void platform_early_init(void)
 
     /* reserve the first 64k of ram, which should be holding the fdt */
     pmm_alloc_range(MEMBASE, 0x10000 / PAGE_SIZE, NULL);
+
+    platform_preserve_ramdisk();
 
     /* boot the secondary cpus using the Power State Coordintion Interface */
     ulong psci_call_num = 0x84000000 + 3; /* SMC32 CPU_ON */
