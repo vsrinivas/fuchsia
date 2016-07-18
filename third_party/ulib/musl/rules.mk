@@ -49,6 +49,12 @@ LOCAL_CFLAGS += \
     -Wno-unused-but-set-variable
 endif
 
+# The upstream musl build uses this too.  It's necessary to avoid the
+# compiler assuming things about library functions that might not be true.
+# For example, without this, GCC assumes that calling free(PTR) doesn't
+# need any stores to *PTR to have actually happened.
+LOCAL_CFLAGS += -ffreestanding
+
 LOCAL_SRCS := \
     $(LOCAL_DIR)/magenta/debug.c \
     $(LOCAL_DIR)/magenta/io.c \
@@ -137,7 +143,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/pthread/sem_destroy.c \
     $(LOCAL_DIR)/pthread/sem_getvalue.c \
     $(LOCAL_DIR)/pthread/sem_init.c \
-    $(LOCAL_DIR)/pthread/sem_open.c \
     $(LOCAL_DIR)/pthread/sem_post.c \
     $(LOCAL_DIR)/pthread/sem_timedwait.c \
     $(LOCAL_DIR)/pthread/sem_trywait.c \
@@ -296,17 +301,14 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/ldso/dlinfo.c \
     $(LOCAL_DIR)/src/ldso/dlopen.c \
     $(LOCAL_DIR)/src/legacy/cuserid.c \
-    $(LOCAL_DIR)/src/legacy/daemon.c \
     $(LOCAL_DIR)/src/legacy/err.c \
     $(LOCAL_DIR)/src/legacy/euidaccess.c \
-    $(LOCAL_DIR)/src/legacy/ftw.c \
     $(LOCAL_DIR)/src/legacy/futimes.c \
     $(LOCAL_DIR)/src/legacy/getdtablesize.c \
     $(LOCAL_DIR)/src/legacy/getloadavg.c \
     $(LOCAL_DIR)/src/legacy/getpagesize.c \
     $(LOCAL_DIR)/src/legacy/getpass.c \
     $(LOCAL_DIR)/src/legacy/getusershell.c \
-    $(LOCAL_DIR)/src/legacy/isastream.c \
     $(LOCAL_DIR)/src/legacy/lutimes.c \
     $(LOCAL_DIR)/src/legacy/ulimit.c \
     $(LOCAL_DIR)/src/legacy/utmpx.c \
@@ -496,10 +498,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/initgroups.c \
     $(LOCAL_DIR)/src/misc/ioctl.c \
     $(LOCAL_DIR)/src/misc/issetugid.c \
-    $(LOCAL_DIR)/src/misc/lockf.c \
-    $(LOCAL_DIR)/src/misc/login_tty.c \
     $(LOCAL_DIR)/src/misc/mntent.c \
-    $(LOCAL_DIR)/src/misc/nftw.c \
     $(LOCAL_DIR)/src/misc/openpty.c \
     $(LOCAL_DIR)/src/misc/ptsname.c \
     $(LOCAL_DIR)/src/misc/pty.c \
@@ -1093,6 +1092,17 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/third_party/math/tgammal.c \
     $(LOCAL_DIR)/third_party/smoothsort/qsort.c \
 
+# These refer to access.
+#    $(LOCAL_DIR)/pthread/sem_open.c \
+#    $(LOCAL_DIR)/src/legacy/ftw.c \
+#    $(LOCAL_DIR)/src/misc/nftw.c \
+
+# These refer to dup2 or fcntl.
+#    $(LOCAL_DIR)/src/legacy/daemon.c \
+#    $(LOCAL_DIR)/src/legacy/isastream.c \
+#    $(LOCAL_DIR)/src/misc/lockf.c \
+#    $(LOCAL_DIR)/src/misc/login_tty.c \
+
 # These refer to pipe2.
 #    $(LOCAL_DIR)/src/misc/forkpty.c \
 #    $(LOCAL_DIR)/src/misc/wordexp.c \
@@ -1280,8 +1290,7 @@ MODULE_EXPORT := c
 include make/module.mk
 
 
-# shared library
-ifeq (1,2)
+# shared library (which is also the dynamic linker)
 MODULE := $(LOCAL_DIR)-shared
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
@@ -1290,8 +1299,15 @@ MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCS := $(LOCAL_SRCS)
 MODULE_SONAME := c
 
+MODULE_SRCS += \
+    $(LOCAL_DIR)/iostubs/iostubs.c \
+    $(LOCAL_DIR)/ldso/dlstart.c \
+    $(LOCAL_DIR)/ldso/dynlink.c
+
+MODULE_LDFLAGS := -e _dlstart
+
 include make/module.mk
-endif
+
 
 # build a fake library to build crt1.o separately
 

@@ -11,10 +11,11 @@
 #define REL_TPOFF R_X86_64_TPOFF64
 #define REL_TLSDESC R_X86_64_TLSDESC
 
-#define CRTJMP(pc, sp)                            \
-    __asm__ __volatile__("mov %1,%%rsp ; jmp *%0" \
-                         :                        \
-                         : "r"(pc), "r"(sp)       \
+// Jump to PC with ARG1 in the first argument register.
+#define CRTJMP(pc, arg1)                                       \
+    __asm__ __volatile__("jmp %*%0"                            \
+                         :                                     \
+                         : "r"(pc), "D"((unsigned long)(arg1)) \
                          : "memory")
 
 #define GETFUNCSYM(fp, sym, got)          \

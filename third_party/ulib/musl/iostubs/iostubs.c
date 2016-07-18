@@ -55,6 +55,12 @@ static ssize_t stub_writev(int fd, const struct iovec* iov, int num) {
 }
 weak_alias(stub_writev, writev);
 
+static int stub_link(const char* oldpath, const char* newpath) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_link, link);
+
 static int stub_unlinkat(int fd, const char* path, int flag) {
     errno = ENOSYS;
     return -1;
@@ -67,11 +73,29 @@ static int stub_unlink(const char* path) {
 }
 weak_alias(stub_unlink, unlink);
 
+static ssize_t stub_readlink(const char* path, char* buf, size_t bufsiz) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_readlink, readlink);
+
+static int stub_mkdir(const char* path, mode_t mode) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_mkdir, mkdir);
+
 static int stub_rmdir(const char* path) {
     errno = ENOSYS;
     return -1;
 }
 weak_alias(stub_rmdir, rmdir);
+
+static char *stub_getcwd(char* buf, size_t size) {
+    errno = ENOSYS;
+    return NULL;
+}
+weak_alias(stub_getcwd, getcwd);
 
 static int stub_fstat(int fd, struct stat* s) {
     errno = ENOSYS;

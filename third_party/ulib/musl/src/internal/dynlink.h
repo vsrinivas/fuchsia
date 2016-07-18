@@ -42,42 +42,10 @@ enum {
     REL_FUNCDESC_VAL,
 };
 
-struct fdpic_loadseg {
-    uintptr_t addr, p_vaddr, p_memsz;
-};
-
-struct fdpic_loadmap {
-    unsigned short version, nsegs;
-    struct fdpic_loadseg segs[];
-};
-
-struct fdpic_dummy_loadmap {
-    unsigned short version, nsegs;
-    struct fdpic_loadseg segs[1];
-};
-
 #include "reloc.h"
 
-#ifndef FDPIC_CONSTDISP_FLAG
-#define FDPIC_CONSTDISP_FLAG 0
-#endif
-
-#ifndef DL_FDPIC
-#define DL_FDPIC 0
-#endif
-
-#ifndef DL_NOMMU_SUPPORT
-#define DL_NOMMU_SUPPORT 0
-#endif
-
-#if !DL_FDPIC
 #define IS_RELATIVE(x, s) \
     ((R_TYPE(x) == REL_RELATIVE) || (R_TYPE(x) == REL_SYM_OR_REL && !R_SYM(x)))
-#else
-#define IS_RELATIVE(x, s)                                                \
-    (((R_TYPE(x) == REL_FUNCDESC_VAL) || (R_TYPE(x) == REL_SYMBOLIC)) && \
-     (((s)[R_SYM(x)].st_info & 0xf) == STT_SECTION))
-#endif
 
 #ifndef NEED_MIPS_GOT_RELOCS
 #define NEED_MIPS_GOT_RELOCS 0
@@ -90,7 +58,7 @@ struct fdpic_dummy_loadmap {
 #define AUX_CNT 32
 #define DYN_CNT 32
 
-typedef void (*stage2_func)(unsigned char*, size_t*);
+typedef void (*stage2_func)(unsigned char*, void*);
 // stage3_funcs should be __attribute__((noreturn)), but this cannot
 // be expressed in the typedef.
-typedef void (*stage3_func)(size_t*);
+typedef void (*stage3_func)(void*);

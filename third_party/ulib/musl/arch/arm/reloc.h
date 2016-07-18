@@ -28,7 +28,9 @@
 #define REL_TPOFF R_ARM_TLS_TPOFF32
 //#define REL_TLSDESC     R_ARM_TLS_DESC
 
-#define CRTJMP(pc, sp) __asm__ __volatile__("mov sp,%1 ; bx %0" \
-                                            :                   \
-                                            : "r"(pc), "r"(sp)  \
-                                            : "memory")
+// Jump to PC with ARG1 in the first argument register.
+#define CRTJMP(pc, arg1) \
+    __asm__ __volatile__("mov r0,%1 ; bx %0"                    \
+                         :                                      \
+                         : "r"(pc), "r"((unsigned long)(arg1))  \
+                         : "memory")
