@@ -73,7 +73,11 @@ if [ "$ARCH" == "" ]; then
     HELP
 fi
 
-PROJECT=magenta-qemu-$ARCH
+if [ "$ARCH" = "x86-64" ]; then
+    PROJECT=magenta-pc-x86-64
+else
+    PROJECT=magenta-qemu-$ARCH
+fi
 
 # build the project if asked for
 if [ "$BUILD" -eq 1 ]; then

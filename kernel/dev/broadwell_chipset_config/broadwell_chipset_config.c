@@ -279,7 +279,7 @@ static const pcie_driver_fn_table_t BCC_FN_TABLE = {
     .pcie_release_fn  = bcc_pci_release,
 };
 
-STATIC_PCIE_DRIVER(intel_hda, "Broadwell Chipset Config", BCC_FN_TABLE)
+STATIC_PCIE_DRIVER(broadwell_chipset, "Broadwell Chipset Config", BCC_FN_TABLE)
 
 /****************************************************************************************
  *

@@ -5,7 +5,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# mostly null target configuration for pc-x86
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
@@ -13,7 +12,14 @@ MODULE := $(LOCAL_DIR)
 PLATFORM := pc
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/config.c
+	$(LOCAL_DIR)/config.c \
+	$(LOCAL_DIR)/debug.c \
+	$(LOCAL_DIR)/pixel2_quirks.c
+
+MODULE_DEPS += \
+    dev/broadwell_chipset_config \
+    dev/i915 \
+    dev/thermal/intel_pch_thermal
 
 include make/module.mk
 

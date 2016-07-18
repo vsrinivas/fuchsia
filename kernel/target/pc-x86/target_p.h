@@ -4,10 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "target_p.h"
+#pragma once
 
-void target_init(void)
-{
-    pc_uefi_debug_init();
-}
-
+void pc_debug_init(void);

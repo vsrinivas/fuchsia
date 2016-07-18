@@ -47,7 +47,7 @@ bool has_cros_embedded_controller(void)
     return has_cros_ec;
 }
 
-void pc_uefi_debug_init(void)
+void pc_debug_init(void)
 {
     /* The Pixel2 does not have the serial RX IRQ wired up for the debug UART.
      * Try to detect if we're a Pixel2 by checking for a CrOS embedded

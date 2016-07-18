@@ -10,7 +10,7 @@ set -e -u
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-PROJECT="magenta-pc-uefi"
+PROJECT="magenta-pc-x86-64"
 PROJECT_DIR="$DIR/../build-$PROJECT"
 
 (cd "$DIR/.."; $DIR/make-parallel $PROJECT) || exit
