@@ -74,7 +74,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     }
 
     handle = mx_thread_create(thread_entry, &thread->mx_thread_info,
-                                    "musl", 5);
+                              "musl", 5);
     if (handle < 0) {
         __munmap(map, len);
         return handle;

@@ -5,8 +5,8 @@
 #include "pthread_impl.h"
 #include "syscall.h"
 #include <errno.h>
-#include <stdint.h>
 #include <signal.h>
+#include <stdint.h>
 #include <string.h>
 
 static int unmask_done;

@@ -755,7 +755,8 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
             for (i = l = 0; i < 0U + p && *ws && (l = wctomb(mb, *ws++)) >= 0 && l <= 0U + p - i;
                  i += l)
                 ;
-            if (l < 0) return -1;
+            if (l < 0)
+                return -1;
             p = i;
             pad(f, ' ', w, p, fl);
             ws = arg.p;

@@ -5,7 +5,6 @@
 #include <pthread.h>
 #include <time.h>
 
-
 int __pthread_setcancelstate(int, int*);
 int __clock_gettime(clockid_t, struct timespec*);
 

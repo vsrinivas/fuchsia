@@ -35,8 +35,8 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         errno = EINVAL;
         return MAP_FAILED;
     }
-    if (!(flags & (MAP_PRIVATE|MAP_SHARED)) ||
-         (flags & MAP_PRIVATE && flags & MAP_SHARED)) {
+    if (!(flags & (MAP_PRIVATE | MAP_SHARED)) ||
+        (flags & MAP_PRIVATE && flags & MAP_SHARED)) {
         errno = EINVAL;
         return MAP_FAILED;
     }

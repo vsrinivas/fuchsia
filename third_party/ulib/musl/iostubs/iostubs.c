@@ -65,7 +65,7 @@ static int stub_unlink(const char* path) {
     errno = ENOSYS;
     return -1;
 }
-       weak_alias(stub_unlink, unlink);
+weak_alias(stub_unlink, unlink);
 
 static int stub_rmdir(const char* path) {
     errno = ENOSYS;

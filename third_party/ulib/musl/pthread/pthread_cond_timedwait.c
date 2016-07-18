@@ -56,7 +56,7 @@ static inline void unlock_requeue(volatile int* l, volatile int* r, int w) {
         __wake(l, 1);
     else
         mx_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0, (void*)r,
-                               /* requeue count */ 1);
+                         /* requeue count */ 1);
 }
 
 enum {

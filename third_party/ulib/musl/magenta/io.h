@@ -1,8 +1,8 @@
 #pragma once
 
-#include <system/compiler.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <system/compiler.h>
 
 /* LK specific calls to register to get input/output of the main console */
 
