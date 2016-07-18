@@ -101,9 +101,8 @@ USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=
 
-# Flags for building shared libraries (ld -shared).
-USERLIB_SOLDFLAGS := -nostdlib $(addprefix -L,$(LKINC)) \
-		     -z combreloc -z relro -z now -z text -z defs
+# Additional flags for building shared libraries (ld -shared).
+USERLIB_SOLDFLAGS := -z combreloc -z relro -z now -z text -z defs
 
 # Architecture specific compile flags
 ARCH_COMPILEFLAGS :=

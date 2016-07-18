@@ -172,7 +172,8 @@ define link_userlib
 $(1): $(2) $(3) $(4)
 	@$(MKDIR)
 	@echo linking $$@ '(dynamic)'
-	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) $(USERLIB_SOLDFLAGS) \
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) \
+	$(GLOBAL_MODULE_LDFLAGS) $(USERLIB_SOLDFLAGS) \
 	$(6) -shared -soname $(5) $(2) $(3) $(4) $(LIBGCC) -o $$@
 endef
 LINK_USERLIB = $(eval $(call link_userlib,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4)),$(5),$(strip $(6))))

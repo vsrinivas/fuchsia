@@ -145,7 +145,6 @@ GLOBAL_LDFLAGS += -m elf_x86_64
 GLOBAL_MODULE_LDFLAGS += -m elf_x86_64
 endif
 GLOBAL_LDFLAGS += -z max-page-size=4096
-USERLIB_SOLDFLAGS += -z max-page-size=4096
 ifneq ($(CLANG),1)
 KERNEL_COMPILEFLAGS += -falign-jumps=1 -falign-loops=1 -falign-functions=4
 endif
