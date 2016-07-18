@@ -3,6 +3,7 @@
     <dependencies>
         <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="10085"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
     </dependencies>
     <scenes>
         <!--Waterfall View Controller-->
@@ -16,12 +17,30 @@
                     <view key="view" contentMode="scaleToFill" id="yZL-Qw-8bF" customClass="GLKView">
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="o5L-mm-fEC">
+                                <rect key="frame" x="20" y="562" width="93" height="30"/>
+                                <state key="normal" title="Run Tests">
+                                    <color key="titleColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <connections>
+                                    <action selector="handleButtonClick:" destination="C4K-LB-LdZ" eventType="touchUpInside" id="56x-NT-Byl"/>
+                                </connections>
+                            </button>
+                        </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstItem="o5L-mm-fEC" firstAttribute="leading" secondItem="yZL-Qw-8bF" secondAttribute="leadingMargin" id="IWE-z9-QrW"/>
+                            <constraint firstItem="UjX-fH-INl" firstAttribute="top" secondItem="o5L-mm-fEC" secondAttribute="bottom" constant="8" id="le7-fr-sRU"/>
+                        </constraints>
                     </view>
+                    <connections>
+                        <outlet property="runTestsButton" destination="o5L-mm-fEC" id="qZB-Rb-Ob6"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="aUH-HH-DBx" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="327" y="664"/>
+            <point key="canvasLocation" x="320" y="639"/>
         </scene>
     </scenes>
 </document>

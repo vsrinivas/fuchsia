@@ -7,4 +7,6 @@
 
 @interface WaterfallViewController : GLKViewController
 
+@property (nonatomic) IBOutlet UIButton *runTestsButton;
+
 @end

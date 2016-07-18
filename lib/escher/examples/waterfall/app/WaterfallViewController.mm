@@ -4,6 +4,7 @@
 
 #import "WaterfallViewController.h"
 
+#include <gtest/gtest.h>
 #include <memory>
 
 #include "escher/renderer.h"
@@ -94,6 +95,29 @@ constexpr bool kDrawShadowTestScene = false;
         focus_ = glm::vec2(windowCoordinates.x, windowCoordinates.y);
     }
     [self.view setNeedsDisplay];
+}
+
+- (IBAction)handleButtonClick:(id)sender {
+  if (sender == self.runTestsButton) {
+    static bool first_run = true;
+    if (first_run) {
+      first_run = false;
+      int argc = 1;
+      char* argv[1];
+      argv[0] = const_cast<char*>("Waterfall");
+      testing::InitGoogleTest(&argc, argv);
+    }
+    int error = RUN_ALL_TESTS();
+    if (error) {
+      NSLog(@"Some Tests Failed");
+      [self.runTestsButton setBackgroundColor: [UIColor redColor]];
+    } else {
+      NSLog(@"All Tests Passed");
+      [self.runTestsButton setBackgroundColor: [UIColor greenColor]];
+    }
+  } else {
+    NSLog(@"Unexpected button click");
+  }
 }
 
 @end
