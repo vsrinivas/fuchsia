@@ -42,8 +42,12 @@ MessagePacket::~MessagePacket() {
 MessagePipe::MessagePipe()
     : dispatcher_alive_{true, true} {
     mutex_init(&lock_);
-    waiter_[0].Satisfiable(MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, 0);
-    waiter_[1].Satisfiable(MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, 0);
+    waiter_[0].set_initial_signals_state(
+            mx_signals_state_t{MX_SIGNAL_WRITABLE,
+                               MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
+    waiter_[1].set_initial_signals_state(
+            mx_signals_state_t{MX_SIGNAL_WRITABLE,
+                               MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
 }
 
 MessagePipe::~MessagePipe() {

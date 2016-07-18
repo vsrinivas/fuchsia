@@ -35,7 +35,7 @@ public:
         DEAD,    // all threads have entered DEAD state and potentially dropped refs on process
     };
 
-    UserProcess(utils::StringPiece name);
+    explicit UserProcess(utils::StringPiece name);
     ~UserProcess();
 
     static UserProcess* GetCurrent() {

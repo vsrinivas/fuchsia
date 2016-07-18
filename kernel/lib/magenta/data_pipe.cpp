@@ -50,6 +50,10 @@ DataPipe::DataPipe(mx_size_t capacity)
     : capacity_(capacity),
       available_(0u) {
     mutex_init(&lock_);
+    producer_.waiter.set_initial_signals_state(
+            mx_signals_state_t{MX_SIGNAL_WRITABLE, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
+    consumer_.waiter.set_initial_signals_state(
+            mx_signals_state_t{0u, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED});
 }
 
 DataPipe::~DataPipe() {

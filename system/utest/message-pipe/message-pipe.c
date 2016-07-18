@@ -77,10 +77,16 @@ static int reader_thread(void* arg) {
     return 0;
 }
 
+mx_signals_t get_satisfied_signals(mx_handle_t handle) {
+    mx_signals_state_t signals_state = {0};
+    mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
+    return (status == ERR_TIMED_OUT) ? signals_state.satisfied : (mx_signals_t)-1;
+}
+
 mx_signals_t get_satisfiable_signals(mx_handle_t handle) {
     mx_signals_state_t signals_state = {0};
     mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-    return (status == ERR_TIMED_OUT) ? signals_state.satisfiable : (mx_signals_t) status;
+    return (status == ERR_TIMED_OUT) ? signals_state.satisfiable : (mx_signals_t)-1;
 }
 
 bool message_pipe_test(void) {
@@ -92,8 +98,12 @@ bool message_pipe_test(void) {
     status = mx_message_pipe_create(h, 0);
     ASSERT_EQ(status, 0, "error in message pipe create");
 
-    ASSERT_EQ(get_satisfiable_signals(h[0]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(get_satisfiable_signals(h[1]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[0]), MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[1]), MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(get_satisfiable_signals(h[0]),
+              MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfiable_signals(h[1]),
+              MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
 
     _pipe[0] = h[0];
     _pipe[2] = h[1];
@@ -104,43 +114,45 @@ bool message_pipe_test(void) {
     _pipe[1] = h[0];
     _pipe[3] = h[1];
 
+    static const uint32_t write_data = 0xdeadbeef;
+    status = mx_message_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
+    ASSERT_EQ(status, NO_ERROR, "error in message write");
+    ASSERT_EQ(get_satisfied_signals(_pipe[0]), MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(get_satisfied_signals(_pipe[2]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
+
     const char* reader = "reader";
     mx_handle_t thread = mx_thread_create(reader_thread, NULL, reader, strlen(reader) + 1);
     ASSERT_GE(thread, 0, "error in thread create");
 
-    uint32_t data = 0xdeadbeef;
-    status = mx_message_write(_pipe[0], &data, sizeof(uint32_t), NULL, 0u, 0u);
-    ASSERT_EQ(status, NO_ERROR, "error in message write");
-    status = mx_message_write(_pipe[1], &data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_message_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
     usleep(1);
 
-    status = mx_message_write(_pipe[0], &data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_message_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
-    status = mx_message_write(_pipe[0], &data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_message_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
     usleep(1);
 
-    status = mx_message_write(_pipe[1], &data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_message_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
     mx_handle_close(_pipe[1]);
-
-    ASSERT_EQ(get_satisfiable_signals(_pipe[3]), MX_SIGNAL_READABLE, "");
+    ASSERT_EQ(get_satisfied_signals(_pipe[3]), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfiable_signals(_pipe[3]), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, "");
 
     usleep(1);
     mx_handle_close(_pipe[0]);
 
     mx_handle_wait_one(thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
 
-    // Since the the other side of pipe[3] is closed, reading the last message makes
-    // the statisfiable signals to become zero.
-    uint32_t num_bytes = sizeof(data);
-    mx_message_read(_pipe[3], &data, &num_bytes, NULL, 0u, 0u);
-    ASSERT_EQ(get_satisfiable_signals(_pipe[3]), 0u, "");
+    // Since the the other side of _pipe[3] is closed, and the read thread read everything from it,
+    // the only satisfied/satisfiable signals should be "peer closed".
+    EXPECT_EQ(get_satisfied_signals(_pipe[3]), MX_SIGNAL_PEER_CLOSED, "");
+    EXPECT_EQ(get_satisfiable_signals(_pipe[3]), MX_SIGNAL_PEER_CLOSED, "");
 
     mx_handle_close(_pipe[2]);
     mx_handle_close(_pipe[3]);
@@ -181,7 +193,7 @@ bool message_pipe_read_error_test(void) {
 
 BEGIN_TEST_CASE(message_pipe_tests)
 RUN_TEST(message_pipe_test)
-// RUN_TEST(message_pipe_read_error_test)
+RUN_TEST(message_pipe_read_error_test)
 END_TEST_CASE(message_pipe_tests)
 
 int main(int argc, char** argv) {

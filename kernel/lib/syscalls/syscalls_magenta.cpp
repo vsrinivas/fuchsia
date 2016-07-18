@@ -101,7 +101,7 @@ struct WaitHelper {
         return  waiter->BeginWait(event, handle, signals, context);
     }
 
-    Waiter::State End(WaitEvent* event) {
+    mx_signals_state_t End(WaitEvent* event) {
         DEBUG_ASSERT(dispatcher);
         auto s = waiter->FinishWait(event);
         dispatcher.reset();
@@ -142,13 +142,12 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     result = WaitEvent::ResultToStatus(event.Wait(t, nullptr));
 
     // Regardless of wait outcome, we must call FinishWait().
-    Waiter::State state = wait_helper.End(&event);
+    auto signals_state = wait_helper.End(&event);
 
     if (result != NO_ERROR && result != ERR_CANCELLED && result != ERR_TIMED_OUT)
         return result;
 
     if (_signals_state) {
-        mx_signals_state_t signals_state = { state.signals, state.satisfiable };
         if (copy_to_user(_signals_state, &signals_state, sizeof(signals_state)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
@@ -226,10 +225,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     // Regardless of wait outcome, we must call FinishWait().
     for (size_t ix = 0; ix != count; ++ix) {
         auto s = waiters[ix].End(&event);
-        if (signals_states) {
-            signals_states[ix].satisfied = s.signals;
-            signals_states[ix].satisfiable = s.satisfiable;
-        }
+        if (signals_states)
+            signals_states[ix] = s;
     }
 
     if (_result_index && WaitEvent::HaveContextForResult(wait_event_result)) {

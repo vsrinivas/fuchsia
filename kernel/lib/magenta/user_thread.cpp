@@ -26,11 +26,13 @@
 #define LOCAL_TRACE 0
 
 UserThread::UserThread(utils::RefPtr<UserProcess> process, thread_start_routine entry, void* arg)
-    : process_(utils::move(process)), entry_(entry), arg_(arg) {
+    : process_(utils::move(process)),
+      entry_(entry),
+      arg_(arg),
+      waiter_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
     id_ = process_->GetNextThreadId();
-    waiter_.Satisfiable(MX_SIGNAL_SIGNALED, 0u);
 }
 
 UserThread::~UserThread() {

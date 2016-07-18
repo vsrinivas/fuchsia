@@ -50,21 +50,24 @@ class WaitEvent;
 
 class Waiter {
 public:
-    struct State {
-        mx_signals_t signals;
-        mx_signals_t satisfiable;
-    };
-
-    Waiter();
+    // Note: The initial state can also be set using SetInitialSignalsState() if the default
+    // constructor must be used for some reason.
+    explicit Waiter(mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u});
 
     Waiter(const Waiter& o) = delete;
     Waiter& operator=(const Waiter& o) = delete;
+
+    // Set the initial signals state. This is an alternative to provide the initial signals state to
+    // the constructor. This does no locking and does not notify anything.
+    void set_initial_signals_state(mx_signals_state_t signals_state) {
+        signals_state_ = signals_state;
+    }
 
     // Start an event-based wait.
     mx_status_t BeginWait(WaitEvent* event, Handle* handle, mx_signals_t signals, uint64_t context);
 
     // End an event-based wait.
-    State FinishWait(WaitEvent* event);
+    mx_signals_state_t FinishWait(WaitEvent* event);
 
     // Register IO Port for state changes.
     bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
@@ -105,8 +108,7 @@ private:
     utils::SinglyLinkedList<WaitNode> nodes_;
 
     // mojo-style signaling.
-    mx_signals_t satisfied_signals_;
-    mx_signals_t satisfiable_signals_;
+    mx_signals_state_t signals_state_;
 
     // io port style signaling.
     utils::RefPtr<IOPortDispatcher> io_port_;

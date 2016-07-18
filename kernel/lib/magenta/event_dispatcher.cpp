@@ -27,9 +27,8 @@ status_t EventDispatcher::Create(uint32_t options, utils::RefPtr<Dispatcher>* di
     return NO_ERROR;
 }
 
-EventDispatcher::EventDispatcher(uint32_t options) {
-    waiter_.Satisfiable(MX_SIGNAL_SIGNALED, 0u);
-}
+EventDispatcher::EventDispatcher(uint32_t options)
+        : waiter_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {}
 
 EventDispatcher::~EventDispatcher() {}
 

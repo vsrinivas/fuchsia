@@ -24,7 +24,8 @@
 
 #define LOCAL_TRACE 0
 
-UserProcess::UserProcess(utils::StringPiece name) {
+UserProcess::UserProcess(utils::StringPiece name)
+    : waiter_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
     id_ = AddProcess(this);
@@ -34,8 +35,6 @@ UserProcess::UserProcess(utils::StringPiece name) {
 
     if (name.length() > 0 && (name.length() < sizeof(name_)))
         strlcpy(name_, name.data(), sizeof(name_));
-
-    waiter_.Satisfiable(MX_SIGNAL_SIGNALED, 0u);
 }
 
 UserProcess::~UserProcess() {
