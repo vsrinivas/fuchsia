@@ -23,11 +23,17 @@ typedef int (*mxr_thread_entry_t)(void*);
 
 typedef struct mxr_thread mxr_thread_t;
 
+#pragma GCC visibility push(hidden)
+
 mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* name, mxr_thread_t** thread_out);
 mx_status_t mxr_thread_join(mxr_thread_t* thread, int* return_value_out);
 mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 
 // get magenta handle to thread or current thread if passed NULL
 mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
+
+void __mxr_thread_main(void);
+
+#pragma GCC visibility pop
 
 __END_CDECLS

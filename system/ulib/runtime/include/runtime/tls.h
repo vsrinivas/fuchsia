@@ -73,6 +73,8 @@ static inline mx_status_t mxr_tls_root_set(mx_tls_root_t* tlsroot) {
 
 #endif
 
+#pragma GCC visibility push(hidden)
+
 mxr_tls_t mxr_tls_allocate(void);
 
 static inline void* mxr_tls_get(mxr_tls_t slot) {
@@ -82,5 +84,7 @@ static inline void* mxr_tls_get(mxr_tls_t slot) {
 static inline void mxr_tls_set(mxr_tls_t slot, void* value) {
     mxr_tls_root_get()->slots[slot] = value;
 }
+
+#pragma GCC visibility pop
 
 __END_CDECLS

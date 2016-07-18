@@ -20,7 +20,11 @@
 extern "C" {
 #endif
 
+#pragma GCC visibility push(hidden)
+
 const char* mx_strstatus(mx_status_t status);
+
+#pragma GCC visibility pop
 
 #ifdef __cplusplus
 }

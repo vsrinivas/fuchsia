@@ -22,8 +22,12 @@
 extern "C" {
 #endif
 
+#pragma GCC visibility push(hidden)
+
 int mxr_get_nprocs(void);
 int mxr_get_nprocs_conf(void);
+
+#pragma GCC visibility pop
 
 #ifdef __cplusplus
 }

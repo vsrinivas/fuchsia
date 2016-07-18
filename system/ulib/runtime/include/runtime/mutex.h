@@ -25,9 +25,13 @@ typedef struct {
 
 #define MXR_MUTEX_INIT ((mxr_mutex_t){0})
 
+#pragma GCC visibility push(hidden)
+
 mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex);
 mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout);
 void mxr_mutex_lock(mxr_mutex_t* mutex);
 void mxr_mutex_unlock(mxr_mutex_t* mutex);
+
+#pragma GCC visibility pop
 
 __END_CDECLS

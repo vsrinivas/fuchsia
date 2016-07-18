@@ -19,6 +19,8 @@
 
 __BEGIN_CDECLS
 
+#pragma GCC visibility push(hidden)
+
 // Parse the argument of _start() and setup the global
 // proc info structure.  Return a pointer to the same.
 mx_proc_info_t* mxr_process_parse_args(void* arg);
@@ -28,5 +30,7 @@ mx_proc_info_t* mxr_process_get_info(void);
 
 // Obtain a handle from proc args, if such a handle exists
 mx_handle_t mxr_process_get_handle(uint32_t id);
+
+#pragma GCC visibility pop
 
 __END_CDECLS

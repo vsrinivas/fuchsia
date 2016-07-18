@@ -25,6 +25,8 @@ typedef struct {
 
 #define MXR_COMPLETION_INIT ((mxr_completion_t){0})
 
+#pragma GCC visibility push(hidden)
+
 // Returns ERR_TIMED_OUT if timeout elapses, and NO_ERROR if woken by
 // a call to mxr_completion_wake or if the completion has already been
 // signalled.
@@ -37,5 +39,7 @@ void mxr_completion_signal(mxr_completion_t* completion);
 
 // Resets the completion's signalled state to unsignaled.
 void mxr_completion_reset(mxr_completion_t* completion);
+
+#pragma GCC visibility pop
 
 __END_CDECLS
