@@ -297,6 +297,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/ldso/dlinfo.c \
     $(LOCAL_DIR)/src/ldso/dlopen.c \
     $(LOCAL_DIR)/src/legacy/cuserid.c \
+    $(LOCAL_DIR)/src/legacy/daemon.c \
     $(LOCAL_DIR)/src/legacy/err.c \
     $(LOCAL_DIR)/src/legacy/euidaccess.c \
     $(LOCAL_DIR)/src/legacy/futimes.c \
@@ -479,6 +480,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/ffs.c \
     $(LOCAL_DIR)/src/misc/ffsl.c \
     $(LOCAL_DIR)/src/misc/ffsll.c \
+    $(LOCAL_DIR)/src/misc/forkpty.c \
     $(LOCAL_DIR)/src/misc/get_current_dir_name.c \
     $(LOCAL_DIR)/src/misc/getauxval.c \
     $(LOCAL_DIR)/src/misc/getdomainname.c \
@@ -494,6 +496,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/initgroups.c \
     $(LOCAL_DIR)/src/misc/ioctl.c \
     $(LOCAL_DIR)/src/misc/issetugid.c \
+    $(LOCAL_DIR)/src/misc/login_tty.c \
     $(LOCAL_DIR)/src/misc/mntent.c \
     $(LOCAL_DIR)/src/misc/openpty.c \
     $(LOCAL_DIR)/src/misc/ptsname.c \
@@ -664,6 +667,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/process/execvp.c \
     $(LOCAL_DIR)/src/process/fexecve.c \
     $(LOCAL_DIR)/src/process/fork.c \
+    $(LOCAL_DIR)/src/process/posix_spawn.c \
     $(LOCAL_DIR)/src/process/posix_spawn_file_actions_addclose.c \
     $(LOCAL_DIR)/src/process/posix_spawn_file_actions_adddup2.c \
     $(LOCAL_DIR)/src/process/posix_spawn_file_actions_addopen.c \
@@ -680,6 +684,8 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/process/posix_spawnattr_setpgroup.c \
     $(LOCAL_DIR)/src/process/posix_spawnattr_setsigdefault.c \
     $(LOCAL_DIR)/src/process/posix_spawnattr_setsigmask.c \
+    $(LOCAL_DIR)/src/process/posix_spawnp.c \
+    $(LOCAL_DIR)/src/process/system.c \
     $(LOCAL_DIR)/src/process/wait.c \
     $(LOCAL_DIR)/src/process/waitid.c \
     $(LOCAL_DIR)/src/process/waitpid.c \
@@ -1110,15 +1116,9 @@ LOCAL_SRCS := \
 #    $(LOCAL_DIR)/src/misc/nftw.c \
 
 # These refer to dup2 or fcntl.
-#    $(LOCAL_DIR)/src/legacy/daemon.c \
 #    $(LOCAL_DIR)/src/legacy/isastream.c \
-#    $(LOCAL_DIR)/src/misc/forkpty.c \
 #    $(LOCAL_DIR)/src/misc/lockf.c \
-#    $(LOCAL_DIR)/src/misc/login_tty.c \
 #    $(LOCAL_DIR)/src/misc/wordexp.c \
-#    $(LOCAL_DIR)/src/process/posix_spawn.c \
-#    $(LOCAL_DIR)/src/process/posix_spawnp.c \
-#    $(LOCAL_DIR)/src/process/system.c \
 #    $(LOCAL_DIR)/src/stdio/popen.c \
 
 # These refer to __crypt_*, __des_setkey, and __do_des, which we do not have.

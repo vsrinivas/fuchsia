@@ -109,6 +109,18 @@ static int stub_stat(const char* fn, struct stat* s) {
 }
 weak_alias(stub_stat, stat);
 
+static int stub_dup(int oldfd) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_dup, dup);
+
+static int stub_dup2(int oldfd, int newfd) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_dup2, dup2);
+
 static int stub_pipe(int pipefd[2]) {
     errno = ENOSYS;
     return -1;
