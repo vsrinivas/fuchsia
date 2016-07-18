@@ -85,19 +85,48 @@ static int io(int s, nbmsg* msg, size_t len, nbmsg* ack) {
     }
 }
 
+typedef struct {
+    FILE* fp;
+    const char *data;
+    size_t datalen;
+} xferdata;
+
+static ssize_t xread(xferdata *xd, void* data, size_t len) {
+    if (xd->fp == NULL) {
+        if (len > xd->datalen) {
+            len = xd->datalen;
+        }
+        memcpy(data, xd->data, len);
+        xd->datalen -= len;
+        xd->data += len;
+        return len;
+    } else {
+        ssize_t r = fread(data, 1, len, xd->fp);
+        if (r == 0) {
+            return ferror(xd->fp) ? -1 : 0;
+        }
+        return r;
+    }
+}
+
 static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, bool boot) {
+    xferdata xd;
     char msgbuf[2048];
     char ackbuf[2048];
     char tmp[INET6_ADDRSTRLEN];
     struct timeval tv;
     nbmsg* msg = (void*)msgbuf;
     nbmsg* ack = (void*)ackbuf;
-    FILE* fp;
     int s, r;
     int count = 0;
     int status = -1;
 
-    if ((fp = fopen(fn, "rb")) == NULL) {
+    if (!strcmp(fn, "(cmdline)")) {
+        xd.fp = NULL;
+        xd.data = name;
+        xd.datalen = strlen(name) + 1;
+        name = "cmdline";
+    } else if ((xd.fp = fopen(fn, "rb")) == NULL) {
         fprintf(stderr, "%s: could not open file %s\n", appname, fn);
         return -1;
     }
@@ -127,12 +156,12 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     msg->cmd = NB_DATA;
     msg->arg = 0;
     do {
-        r = fread(msg->data, 1, 1024, fp);
+        r = xread(&xd, msg->data, 1024);
+        if (r < 0) {
+            fprintf(stderr, "\n%s: error: reading '%s'\n", appname, fn);
+            goto done;
+        }
         if (r == 0) {
-            if (ferror(fp)) {
-                fprintf(stderr, "\n%s: error: reading '%s'\n", appname, fn);
-                goto done;
-            }
             break;
         }
         count += r;
@@ -161,16 +190,18 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         fprintf(stderr, "\n");
     }
 done:
-    if (s >= 0)
+    if (s >= 0) {
         close(s);
-    if (fp != NULL)
-        fclose(fp);
+    }
+    if (xd.fp != NULL) {
+        fclose(xd.fp);
+    }
     return status;
 }
 
 void usage(void) {
     fprintf(stderr,
-            "usage:   %s [ <option> ]* <kernel> [ <ramdisk> ]\n"
+            "usage:   %s [ <option> ]* <kernel> [ <ramdisk> ] [ -- [ <kerneloption> ]* ]\n"
             "\n"
             "options: -1  only boot once, then exit\n",
             appname);
@@ -189,13 +220,20 @@ void drain(int fd) {
 int main(int argc, char** argv) {
     struct sockaddr_in6 addr;
     char tmp[INET6_ADDRSTRLEN];
+    char cmdline[4096];
+    char *cmdnext = cmdline;
     int r, s, n = 1;
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
     int once = 0;
     int status;
 
-    appname = argv[0];
+    cmdline[0] = 0;
+    if (appname == strrchr(argv[0], '/')) {
+        appname++;
+    } else {
+        appname = argv[0];
+    }
 
     while (argc > 1) {
         if (argv[1][0] != '-') {
@@ -208,6 +246,22 @@ int main(int argc, char** argv) {
             }
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
+        } else if (!strcmp(argv[1], "--")) {
+            while (argc > 2) {
+                size_t len = strlen(argv[2]);
+                if (len > (sizeof(cmdline) - 2 - (cmdnext - cmdline))) {
+                    fprintf(stderr, "%s: commandline too large\n", appname);
+                    return -1;
+                }
+                if (cmdnext != cmdline) {
+                    *cmdnext++ = ' ';
+                }
+                memcpy(cmdnext, argv[2], len + 1);
+                cmdnext += len;
+                argc--;
+                argv++;
+            }
+            break;
         } else {
             usage();
         }
@@ -263,7 +317,12 @@ int main(int argc, char** argv) {
         fprintf(stderr, "%s: got beacon from [%s]%d\n", appname,
                 inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
                 ntohs(ra.sin6_port));
-        if (ramdisk_fn) {
+        if (cmdline[0]) {
+            status = xfer(&ra, "(cmdline)", cmdline, false);
+        } else {
+            status = 0;
+        }
+        if ((status == 0) && ramdisk_fn) {
             status = xfer(&ra, ramdisk_fn, "ramdisk.bin", false);
         } else {
             status = 0;
