@@ -13,7 +13,7 @@
 
 // Jump to PC with ARG1 in the first argument register.
 #define CRTJMP(pc, arg1)                                       \
-    __asm__ __volatile__("jmp %*%0"                            \
+    __asm__ __volatile__("jmp *%0"                             \
                          :                                     \
                          : "r"(pc), "D"((unsigned long)(arg1)) \
                          : "memory")
