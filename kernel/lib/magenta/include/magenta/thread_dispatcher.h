@@ -21,13 +21,17 @@ public:
     ThreadDispatcher* get_thread_dispatcher() final { return this; }
 
     StateTracker* get_state_tracker() final;
-    status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
-    status_t MarkExceptionHandled(mx_exception_status_t status);
+
+    // TODO(dje): Was private. Needed for exception handling.
+    // Could provide delegating accessors, but does this need to stay private?
+    UserThread* thread() { return thread_.get(); }
+
+    // exception handling support
+    status_t SetExceptionPort(utils::RefPtr<ExceptionPort> eport);
+    void ResetExceptionPort();
 
 private:
     explicit ThreadDispatcher(utils::RefPtr<UserThread> thread);
-
-    UserThread* thread() { return thread_.get(); }
 
     utils::RefPtr<UserThread> thread_;
 };

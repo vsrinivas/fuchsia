@@ -17,7 +17,7 @@
 
 class Handle;
 class Dispatcher;
-class ProcessDispatcher;
+class ExceptionPort;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
@@ -35,9 +35,10 @@ uint32_t MapHandleToU32(Handle* handle);
 // Maps an integer obtained by MapHandleToU32() back to a Handle.
 Handle* MapU32ToHandle(uint32_t value);
 
-// Set/get the system exception handler.
-void SetSystemExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
-utils::RefPtr<Dispatcher> GetSystemExceptionHandler();
+// Set/get the system exception port.
+mx_status_t SetSystemExceptionPort(utils::RefPtr<ExceptionPort> eport);
+void ResetSystemExceptionPort();
+utils::RefPtr<ExceptionPort> GetSystemExceptionPort();
 
 struct handle_delete {
     inline void operator()(Handle* h) const {

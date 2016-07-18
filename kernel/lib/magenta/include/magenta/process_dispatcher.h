@@ -103,14 +103,23 @@ public:
                               thread_start_routine entry, void* arg,
                               utils::RefPtr<UserThread>* user_thread);
 
-    // exception handling routines
-    status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
-    utils::RefPtr<Dispatcher> exception_handler();
+    // exception handling support
+    status_t SetExceptionPort(utils::RefPtr<ExceptionPort> eport);
+    void ResetExceptionPort();
+    utils::RefPtr<ExceptionPort> exception_port();
 
     // The following two methods can be slow and innacurrate and should only be
     // called from diagnostics code.
     uint32_t HandleStats(uint32_t*handle_type, size_t size) const;
     uint32_t ThreadCount() const;
+
+    // Look up a process given its koid.
+    // Returns nullptr if not found.
+    static utils::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
+
+    // Look up a thread in this process given its koid.
+    // Returns nullptr if not found.
+    utils::RefPtr<UserThread> LookupThreadById(mx_koid_t koid);
 
     // Outputs via the console the current list of processes;
     static void DebugDumpProcessList();
@@ -182,8 +191,7 @@ private:
     // main entry point to the process
     thread_start_routine entry_ = nullptr;
 
-    utils::RefPtr<Dispatcher> exception_handler_;
-    mx_exception_behaviour_t exception_behaviour_ = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
+    utils::RefPtr<ExceptionPort> exception_port_;
     mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
 
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;

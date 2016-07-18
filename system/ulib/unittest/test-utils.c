@@ -200,6 +200,20 @@ mx_handle_t tu_io_port_create(uint32_t options)
     return handle;
 }
 
+void tu_set_system_exception_port(mx_handle_t eport, uint64_t key)
+{
+    mx_status_t status = mx_set_system_exception_port(eport, key, 0);
+    if (status < 0)
+        tu_fatal(__func__, status);
+}
+
+void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key)
+{
+    mx_status_t status = mx_set_exception_port(handle, eport, key, 0);
+    if (status < 0)
+        tu_fatal(__func__, status);
+}
+
 void tu_handle_get_basic_info(mx_handle_t handle, mx_handle_basic_info_t* info)
 {
     mx_status_t status = mx_handle_get_info(handle, MX_INFO_HANDLE_BASIC,

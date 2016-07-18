@@ -19,6 +19,7 @@
 struct IOP_Packet {
     friend struct IOP_PacketListTraits;
 
+    static IOP_Packet* Alloc(mx_size_t size);
     static IOP_Packet* Make(const void* data, mx_size_t size);
     static IOP_Packet* MakeFromUser(const void* data, mx_size_t size);
     static void Delete(IOP_Packet* packet);

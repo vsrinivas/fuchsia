@@ -46,12 +46,10 @@ StateTracker* ThreadDispatcher::get_state_tracker() {
     return thread_->state_tracker();
 }
 
-status_t ThreadDispatcher::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
-    return thread_->SetExceptionHandler(handler, behaviour);
+status_t ThreadDispatcher::SetExceptionPort(utils::RefPtr<ExceptionPort> eport) {
+    return thread_->SetExceptionPort(this, eport);
 }
 
-status_t ThreadDispatcher::MarkExceptionHandled(mx_exception_status_t status) {
-    // TODO(dje): Verify thread is waiting.
-    thread_->WakeFromExceptionHandler(status);
-    return NO_ERROR;
+void ThreadDispatcher::ResetExceptionPort() {
+    return thread_->ResetExceptionPort();
 }

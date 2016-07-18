@@ -171,12 +171,29 @@ MAGENTA_DDKCALL_DEF(3, 3, 200, mx_status_t, io_mapping_get_info, mx_handle_t han
                     uint64_t* out_size)
 
 // exception handlers
-MAGENTA_SYSCALL_DEF(2, 2, 210, mx_status_t, set_system_exception_handler,
-                    mx_handle_t pipe, mx_exception_behaviour_t behaviour)
-MAGENTA_SYSCALL_DEF(3, 3, 211, mx_status_t, set_exception_handler,
-                    mx_handle_t object, mx_handle_t pipe, mx_exception_behaviour_t behaviour)
-MAGENTA_SYSCALL_DEF(2, 2, 212, mx_status_t, mark_exception_handled,
-                    mx_handle_t object, mx_exception_status_t status)
+// TODO(dje): This one can go away once we have a suitable object representing the system.
+MAGENTA_SYSCALL_DEF(3, 3, 210, mx_status_t, set_system_exception_port,
+                    mx_handle_t eport, uint64_t key, uint32_t options)
+MAGENTA_SYSCALL_DEF(4, 4, 211, mx_status_t, set_exception_port,
+                    mx_handle_t object, mx_handle_t eport, uint64_t key, uint32_t options)
+// TODO(dje): The arguments here assume there will only ever be threads that
+// we want to respond to exceptions on. IWBN to have an API that doesn't make
+// that assumption.
+MAGENTA_SYSCALL_DEF(3, 3, 212, mx_status_t, mark_exception_handled,
+                    mx_handle_t process, mx_koid_t tid, mx_exception_status_t status)
+// TODO(dje): Exception handlers get a pid in the exception report but need a process handle to
+// reply to it. Thus we provide a lookup mechanism to go from pid to process handle. The lookup doesn't
+// necessarily have to be directly accomplished via a syscall. This is for bootstrapping for now.
+// Rights checking for this operation (however it is done) is an open issue. For the current support,
+// one possibility is to attach the rights checking to the handle the report came from, which is intuitive.
+// However that's just a handle of an ioport, hardly something one would use to adjudicate process lookup.
+// Another is to attach the rights checking to the handle the exception port was assigned to. This works
+// for most cases: thread, process, and (eventually) debugger. One still needs to provide for the system
+// exception handler, which generally doesn't know about any particular process until it receives an
+// exception from it. Perhaps the system exception handler process itself can have certain rights.
+// So for now |handle| is either a thread or process handle or MX_HANDLE_INVALID for "self process"
+// (for now).
+MAGENTA_SYSCALL_DEF(2, 2, 213, mx_handle_t, process_debug, mx_handle_t handle, mx_koid_t pid)
 
 // IO Ports
 MAGENTA_SYSCALL_DEF(1, 1, 220, mx_handle_t, io_port_create, uint32_t options)

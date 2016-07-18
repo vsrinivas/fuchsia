@@ -16,6 +16,7 @@
 #include <lib/console.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/excp_port.h>
 #include <magenta/handle.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/state_tracker.h>
@@ -39,14 +40,12 @@ constexpr size_t kMaxHandleCount = 32 * 1024;
 mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);
 utils::TypedArena<Handle> handle_arena;
 
-// The system exception handler
-static utils::RefPtr<Dispatcher> system_exception_handler;
-static mx_exception_behaviour_t system_exception_behaviour;
+// The system exception port.
+static utils::RefPtr<ExceptionPort> system_exception_port;
 static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mutex);
 
 void magenta_init(uint level) {
     handle_arena.Init("handles", kMaxHandleCount);
-    system_exception_behaviour = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
 }
 
 Handle* MakeHandle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
@@ -107,16 +106,22 @@ Handle* MapU32ToHandle(uint32_t value) {
     return reinterpret_cast<Handle*>(va);
 }
 
-void SetSystemExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
+mx_status_t SetSystemExceptionPort(utils::RefPtr<ExceptionPort> eport) {
     AutoLock lock(&system_exception_mutex);
-
-    system_exception_handler = handler;
-    system_exception_behaviour = behaviour;
+    if (system_exception_port)
+        return ERR_BAD_STATE; // TODO(dje): ?
+    system_exception_port = eport;
+    return NO_ERROR;
 }
 
-utils::RefPtr<Dispatcher> GetSystemExceptionHandler() {
+void ResetSystemExceptionPort() {
     AutoLock lock(&system_exception_mutex);
-    return system_exception_handler;
+    system_exception_port.reset();
+}
+
+utils::RefPtr<ExceptionPort> GetSystemExceptionPort() {
+    AutoLock lock(&system_exception_mutex);
+    return system_exception_port;
 }
 
 bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired) {

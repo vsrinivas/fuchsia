@@ -20,8 +20,9 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 
+#include <magenta/excp_port.h>
+#include <magenta/io_port_dispatcher.h>
 #include <magenta/magenta.h>
-#include <magenta/msg_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 
 #define LOCAL_TRACE 0
@@ -188,6 +189,12 @@ void UserThread::Exiting() {
     // signal any waiters
     state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
 
+    {
+        AutoLock lock(&exception_lock_);
+        if (exception_port_)
+            exception_port_->OnThreadExit(this);
+    }
+
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);
 
@@ -251,69 +258,56 @@ void UserThread::SetState(State state) {
     state_ = state;
 }
 
-// Exception handling below
-
-status_t UserThread::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
-    AutoLock lock(&exception_lock_);
-
-    exception_handler_ = handler;
-    exception_behaviour_ = behaviour;
-
+status_t UserThread::SetExceptionPort(ThreadDispatcher* td, utils::RefPtr<ExceptionPort> eport) {
+    // Lock both |state_lock_| and |exception_lock_| to ensure the thread
+    // doesn't transition to dead while we're setting the exception handler.
+    AutoLock state_lock(state_lock_);
+    AutoLock excp_lock(&exception_lock_);
+    if (state_ == State::DEAD)
+        return ERR_NOT_FOUND; // TODO(dje): ?
+    if (exception_port_)
+        return ERR_BAD_STATE; // TODO(dje): ?
+    exception_port_ = eport;
     return NO_ERROR;
 }
 
-utils::RefPtr<Dispatcher> UserThread::exception_handler() {
+void UserThread::ResetExceptionPort() {
     AutoLock lock(&exception_lock_);
-    return exception_handler_;
+    exception_port_.reset();
 }
 
-static status_t send_exception_report(utils::RefPtr<Dispatcher> dispatcher, const mx_exception_report_t* report) {
-    LTRACE_ENTRY;
-
-    utils::Array<uint8_t> data;
-    utils::Array<Handle*> handles;
-
-    AllocChecker ac;
-    uint8_t* report_bytes = new (&ac) uint8_t[sizeof(*report)];
-    if (!ac.check())
-        return ERR_NO_MEMORY;
-
-    memcpy(report_bytes, report, sizeof(*report));
-    data.reset(report_bytes, sizeof(*report));
-
-    // TODO(cpu): We should rather deal RefPtr<MessagePipeDispatcher> in the exception code.
-    auto message_pipe = dispatcher->get_message_pipe_dispatcher();
-    DEBUG_ASSERT(message_pipe);
-
-    status_t status = message_pipe->Write(utils::move(data), utils::move(handles));
-    if (status != NO_ERROR)
-        LTRACEF("dispatcher->Write returned %d\n", status);
-    return status;
+utils::RefPtr<ExceptionPort> UserThread::exception_port() {
+    AutoLock lock(&exception_lock_);
+    return exception_port_;
 }
 
-status_t UserThread::WaitForExceptionHandler(utils::RefPtr<Dispatcher> dispatcher, const mx_exception_report_t* report) {
+status_t UserThread::ExceptionHandlerExchange(utils::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&exception_wait_lock_);
-    // Status if handler disappears.
-    exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
+    exception_status_ = MX_EXCEPTION_STATUS_WAITING;
     // Send message, wait for reply.
-    status_t status = send_exception_report(dispatcher, report);
+    status_t status = eport->SendReport(report);
     if (status != NO_ERROR) {
-        LTRACEF("send_exception_report returned %d\n", status);
+        LTRACEF("SendReport returned %d\n", status);
+        exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
         return status;
     }
     status = cond_wait_timeout(&exception_wait_cond_, &exception_wait_lock_, INFINITE_TIME);
     DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
     if (exception_status_ != MX_EXCEPTION_STATUS_RESUME)
-        return ERR_INTERNAL;
+        return ERR_BUSY; // TODO(dje): what to use here???
     return NO_ERROR;
 }
 
-void UserThread::WakeFromExceptionHandler(mx_exception_status_t status) {
+status_t UserThread::MarkExceptionHandled(mx_exception_status_t status) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&exception_wait_lock_);
+    if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
+        return ERR_NOT_BLOCKED;
     exception_status_ = status;
     cond_signal(&exception_wait_cond_);
+    return NO_ERROR;
 }
 
 const char* StateToString(UserThread::State state) {

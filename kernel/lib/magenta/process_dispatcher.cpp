@@ -77,6 +77,7 @@ ProcessDispatcher::~ProcessDispatcher() {
     mutex_destroy(&state_lock_);
     mutex_destroy(&handle_table_lock_);
     mutex_destroy(&thread_list_lock_);
+    mutex_destroy(&exception_lock_);
 
     LTRACE_EXIT_OBJ;
 }
@@ -275,6 +276,12 @@ void ProcessDispatcher::SetState(State s) {
         // signal waiter
         LTRACEF_LEVEL(2, "signalling waiters\n");
         state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
+
+        {
+            AutoLock lock(&exception_lock_);
+            if (exception_port_)
+                exception_port_->OnProcessExit(this);
+        }
     }
 }
 
@@ -360,19 +367,27 @@ status_t ProcessDispatcher::CreateUserThread(utils::StringPiece name,
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::SetExceptionHandler(utils::RefPtr<Dispatcher> handler,
-                                                mx_exception_behaviour_t behaviour) {
-    AutoLock lock(&exception_lock_);
-
-    exception_handler_ = handler;
-    exception_behaviour_ = behaviour;
-
+status_t ProcessDispatcher::SetExceptionPort(utils::RefPtr<ExceptionPort> eport) {
+    // Lock both |state_lock_| and |exception_lock_| to ensure the process
+    // doesn't transition to dead while we're setting the exception handler.
+    AutoLock state_lock(&state_lock_);
+    AutoLock excp_lock(&exception_lock_);
+    if (state_ == State::DEAD)
+        return ERR_NOT_FOUND; // TODO(dje): ?
+    if (exception_port_)
+        return ERR_BAD_STATE; // TODO(dje): ?
+    exception_port_ = eport;
     return NO_ERROR;
 }
 
-utils::RefPtr<Dispatcher> ProcessDispatcher::exception_handler() {
+void ProcessDispatcher::ResetExceptionPort() {
     AutoLock lock(&exception_lock_);
-    return exception_handler_;
+    exception_port_.reset();
+}
+
+utils::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
+    AutoLock lock(&exception_lock_);
+    return exception_port_;
 }
 
 uint32_t ProcessDispatcher::HandleStats(uint32_t* handle_type, size_t size) const {
@@ -409,6 +424,27 @@ void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
     DEBUG_ASSERT(process != nullptr);
     global_process_list_.erase(*process);
     LTRACEF("Removing process %p : koid = %llu\n", process, process->get_koid());
+}
+
+// static
+utils::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
+    LTRACE_ENTRY;
+    AutoLock lock(&global_process_list_mutex_);
+    ProcessDispatcher* process =
+        global_process_list_.find_if([koid](const ProcessDispatcher& p) {
+            return p.get_koid() == koid;
+    });
+    return utils::RefPtr<ProcessDispatcher>(process);
+}
+
+utils::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(&thread_list_lock_);
+    UserThread* thread =
+        thread_list_.find_if([koid](const UserThread& t) {
+            return t.get_koid() == koid;
+    });
+    return utils::RefPtr<UserThread>(thread);
 }
 
 void ProcessDispatcher::DebugDumpProcessList() {

@@ -13,6 +13,7 @@
 #include <lib/dpc.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/excp_port.h>
 #include <magenta/futex_node.h>
 #include <magenta/state_tracker.h>
 
@@ -59,13 +60,14 @@ public:
     const utils::StringPiece name() const { return thread_.name; }
     State state() const { return state_; }
 
-    status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
-    utils::RefPtr<Dispatcher> exception_handler();
+    status_t SetExceptionPort(ThreadDispatcher* td, utils::RefPtr<ExceptionPort> eport);
+    void ResetExceptionPort();
+    utils::RefPtr<ExceptionPort> exception_port();
 
-    // TODO(dje): Support unwinding from this exception and introducing a
-    // different exception.
-    status_t WaitForExceptionHandler(utils::RefPtr<Dispatcher> dispatcher, const mx_exception_report_t* report);
-    void WakeFromExceptionHandler(mx_exception_status_t status);
+    // Note this takes a specific exception port as an argument because there are several:
+    // debugger, thread, process, and system.
+    status_t ExceptionHandlerExchange(utils::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report);
+    status_t MarkExceptionHandled(mx_exception_status_t status);
 
     mx_koid_t get_koid() const { return koid_; }
 
@@ -108,13 +110,11 @@ private:
 
     StateTracker state_tracker_;
 
-    // A thread-level exception handler for this thread.
-    utils::RefPtr<Dispatcher> exception_handler_;
-    mx_exception_behaviour_t exception_behaviour_ = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
+    // A thread-level exception port for this thread.
+    utils::RefPtr<ExceptionPort> exception_port_;
     mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
 
-    // Support for waiting for an exception handler.
-    // Reply from handler.
+    // Support for sending an exception to an exception handler and then waiting for a response.
     mx_exception_status_t exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
     cond_t exception_wait_cond_ = COND_INITIAL_VALUE(exception_wait_cond_);
     mutex_t exception_wait_lock_ = MUTEX_INITIAL_VALUE(exception_wait_lock_);

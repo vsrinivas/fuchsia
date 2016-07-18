@@ -109,6 +109,14 @@ int tu_process_wait_exit(mx_handle_t process);
 
 mx_handle_t tu_io_port_create(uint32_t options);
 
+// Set the system exception port.
+
+void tu_set_system_exception_port(mx_handle_t eport, uint64_t key);
+
+// Set the exception port for |handle| which is a process or thread.
+
+void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key);
+
 // Get basic handle info for |handle|.
 
 void tu_handle_get_basic_info(mx_handle_t handle, mx_handle_basic_info_t* info);

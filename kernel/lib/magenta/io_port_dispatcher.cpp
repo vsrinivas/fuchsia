@@ -20,7 +20,7 @@
 constexpr mx_rights_t kDefaultIOPortRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-IOP_Packet*  Make_IOPacket(mx_size_t size) {
+IOP_Packet* IOP_Packet::Alloc(mx_size_t size) {
     AllocChecker ac;
     auto mem = new (&ac) char [sizeof(IOP_Packet) + size];
     if (!ac.check())
@@ -29,7 +29,7 @@ IOP_Packet*  Make_IOPacket(mx_size_t size) {
 }
 
 IOP_Packet* IOP_Packet::Make(const void* data, mx_size_t size) {
-    auto pk = Make_IOPacket(size);
+    auto pk = Alloc(size);
     if (!pk)
         return nullptr;
     memcpy(reinterpret_cast<char*>(pk) + sizeof(IOP_Packet), data, size);
@@ -37,7 +37,7 @@ IOP_Packet* IOP_Packet::Make(const void* data, mx_size_t size) {
 }
 
 IOP_Packet* IOP_Packet::MakeFromUser(const void* data, mx_size_t size) {
-    auto pk = Make_IOPacket(size);
+    auto pk = Alloc(size);
     if (!pk)
         return nullptr;
 
