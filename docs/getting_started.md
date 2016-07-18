@@ -98,6 +98,16 @@ if necessary and -g to run with a graphical framebuffer.
 
 To exit qemu, enter Ctrl-a x. Use Ctrl-a h to see other commands.
 
+## Building Magenta for all targets
+
+```
+# The -r enables release builds as well
+./scripts/buildall -r
+```
+
+Please build for all targets before submitting to ensure builds work
+on all architectures.
+
 ## Enabling Networking under Qemu (x86-64 only)
 
 The run-magenta-x86-64 script, when given the -N argument will attempt to create
