@@ -34,6 +34,10 @@
             "bootfs_path": "apps/hello_mojo_server"
         },
         {
+            "binary": "shapes",
+            "bootfs_path": "apps/shapes"
+        },
+        {
             "binary": "tiny",
             "bootfs_path": "apps/tiny"
         }
