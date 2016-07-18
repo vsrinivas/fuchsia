@@ -164,6 +164,9 @@ void platform_early_display_init(void) {
     if (bootloader_fb_base == 0) {
         return;
     }
+    if (cmdline_get_bool("early-gfxconsole", true) == false) {
+        return;
+    }
 
     // allocate an offscreen buffer of worst-case size, page aligned
     bits = boot_alloc_mem(8192 + bootloader_fb_height * bootloader_fb_stride * 4);
@@ -187,6 +190,9 @@ void platform_early_display_init(void) {
 static void platform_ensure_display_memtype(uint level)
 {
     if (bootloader_fb_base == 0) {
+        return;
+    }
+    if (cmdline_get_bool("early-gfxconsole", true) == false) {
         return;
     }
     struct display_info info;
