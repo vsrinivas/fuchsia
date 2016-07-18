@@ -72,6 +72,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/descriptor.c \
 	$(LOCAL_DIR)/faults.c \
 	$(LOCAL_DIR)/feature.c \
+	$(LOCAL_DIR)/fpu.c \
 	$(LOCAL_DIR)/gdt.S \
 	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/idt.c \
@@ -81,7 +82,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/mmu_mem_types.c \
 	$(LOCAL_DIR)/mp.c \
-	$(LOCAL_DIR)/registers.c \
 	$(LOCAL_DIR)/thread.c \
 	$(LOCAL_DIR)/user_copy.c \
 

@@ -12,6 +12,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/descriptor.h>
+#include <arch/fpu.h>
 #include <kernel/thread.h>
 
 #include <lib/user_copy.h>
@@ -274,7 +275,11 @@ void x86_exception_handler(x86_iframe_t *frame)
             break;
 
         case X86_INT_DEVICE_NA: {
-            exception_die(frame, "device na fault\n");
+            if (unlikely(!from_user)) {
+                exception_die(frame, "invalid fpu use in kernel\n");
+            }
+            fpu_dev_na_handler();
+            break;
         }
 
         case X86_INT_FPU_FP_ERROR: {
