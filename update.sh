@@ -91,13 +91,20 @@ if [[ ! -f "${SDK_STAMP_PATH}" ]] || [[ "${SDK_HASH}" != "$(cat "${SDK_STAMP_PAT
   echo "${SDK_HASH}" > "${SDK_STAMP_PATH}"
 fi
 
-readonly MKBOOTFS_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/mkbootfs"
-readonly MKBOOTFS_STAMP_PATH="${MKBOOTFS_PATH}.stamp"
-readonly MKBOOTFS_SOURCE="${SCRIPT_ROOT}/../magenta/system/tools/mkbootfs.c"
-readonly MKBOOTFS_HASH="$(cd ${SCRIPT_ROOT}/../magenta && git rev-parse HEAD)"
-if [[ ! -f "${MKBOOTFS_PATH}" || ! -f "${MKBOOTFS_STAMP_PATH}" || "${MKBOOTFS_HASH}" != "$(cat ${MKBOOTFS_STAMP_PATH})" ]]; then
-    echo "Building mkbootfs..."
-    rm -f "${MKBOOTFS_PATH}"
-    gcc "${MKBOOTFS_SOURCE}" -o "${MKBOOTFS_PATH}"
-    echo "${MKBOOTFS_HASH}" > "${MKBOOTFS_STAMP_PATH}"
-fi
+function build_magenta_tool() {
+  local name="${1}"
+  local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
+  local stamp_path="${tool_path}.stamp"
+  local tool_source="${SCRIPT_ROOT}/../magenta/system/tools/${name}.c"
+  local tool_hash="$(cd ${SCRIPT_ROOT}/../magenta && git rev-parse HEAD)"
+  if [[ ! -f "${tool_path}" || ! -f "${stamp_path}" || "${tool_hash}" != "$(cat ${stamp_path})" ]]; then
+      echo "Building ${name}..."
+      rm -f "${tool_path}"
+      gcc "${tool_source}" -o "${tool_path}"
+      echo "${tool_hash}" > "${stamp_path}"
+  fi
+}
+
+build_magenta_tool bootserver
+build_magenta_tool loglistener
+build_magenta_tool mkbootfs

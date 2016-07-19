@@ -6,27 +6,6 @@
 set -e
 
 readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
-readonly TOOL_NAME="ninja"
+readonly TOOL_NAME=$(basename "$0")
 
-case "$(uname -s)" in
-  Darwin)
-    readonly HOST_PLATFORM="mac"
-    ;;
-  Linux)
-    readonly HOST_PLATFORM="linux64"
-    ;;
-  *)
-    echo "Unknown operating system. Cannot run ${TOOL_NAME}."
-    exit 1
-    ;;
-esac
-
-readonly TOOL_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/${TOOL_NAME}"
-
-if [[ ! -x "${TOOL_PATH}" ]]; then
-  echo "Cannot find ${TOOL_PATH}"
-  echo "Did you run update.sh?"
-  exit 1
-fi
-
-exec "${TOOL_PATH}" "$@"
+source "${SCRIPT_ROOT}/exec_tool.sh"
