@@ -312,8 +312,20 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     if (!device->st_gfx)
         goto fail;
 
+    size_t sz = hw_gfx->pixelsize * hw_gfx->stride * (hw_gfx->height - FONT_Y);
+    if ((device->gfx_vmo = mx_vm_object_create(sz)) < 0)
+        goto fail;
+
+    uintptr_t ptr;
+    if (mx_process_vm_map(0, device->gfx_vmo, 0, sz, &ptr,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE) < 0) {
+        mx_handle_close(device->gfx_vmo);
+        goto fail;
+    }
+
     // init the main surface
-    device->gfx = gfx_create_surface(NULL, hw_gfx->width, hw_gfx->height - FONT_Y, hw_gfx->stride, hw_gfx->format, 0);
+    device->gfx = gfx_create_surface((void*) ptr, hw_gfx->width, hw_gfx->height - FONT_Y,
+                                     hw_gfx->stride, hw_gfx->format, 0);
     if (!device->gfx)
         goto fail;
     device->hw_gfx = hw_gfx;
@@ -326,6 +338,10 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
 fail:
     if (device->st_gfx)
         gfx_surface_destroy(device->st_gfx);
+    if (device->gfx_vmo)
+        mx_handle_close(device->gfx_vmo);
+    if (device->gfx)
+        free(device->gfx);
     free(device);
     return ERR_NO_MEMORY;
 }

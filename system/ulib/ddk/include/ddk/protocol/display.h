@@ -34,9 +34,10 @@
 
 typedef struct mx_display_info {
     unsigned format;
-    int width;
-    int height;
-    int stride;
+    unsigned width;
+    unsigned height;
+    unsigned stride;
+    unsigned pixelsize;
     unsigned flags;
 } mx_display_info_t;
 
@@ -53,3 +54,12 @@ typedef struct mx_display_protocol {
     void (*flush)(mx_device_t* dev);
     // flushes the framebuffer
 } mx_display_protocol_t;
+
+
+#define DISPLAY_OP_GET_FB 0x7FFF0001
+typedef struct {
+    mx_handle_t vmo;
+    mx_display_info_t info;
+} ioctl_display_get_fb_t;
+
+#define DISPLAY_OP_FLUSH_FB 2

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <ddk/protocol/console.h>
+#include <ddk/protocol/display.h>
 #include <font/font.h>
 #include <magenta/syscalls.h>
 #include <string.h>
@@ -184,17 +185,35 @@ ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t of
 ssize_t vc_char_ioctl(mx_device_t* dev, uint32_t op,
                       const void* cmd, size_t cmdlen,
                       void* reply, size_t max, void* cookie) {
-    vc_device_t* device = get_vc_device(dev);
+    vc_device_t* vcdev = get_vc_device(dev);
     switch (op) {
     case CONSOLE_OP_GET_DIMENSIONS: {
         ioctl_console_dimensions_t* dims = reply;
         if (sizeof(*dims) < max) {
             return ERR_NOT_ENOUGH_BUFFER;
         }
-        dims->width = device->columns;
-        dims->height = device->rows;
+        dims->width = vcdev->columns;
+        dims->height = vcdev->rows;
         return sizeof(*dims);
     }
+    case DISPLAY_OP_GET_FB: {
+        if (max < sizeof(ioctl_display_get_fb_t)) {
+            return ERR_NOT_ENOUGH_BUFFER;
+        }
+        ioctl_display_get_fb_t* fb = reply;
+        fb->info.format = vcdev->gfx->format;
+        fb->info.width = vcdev->gfx->width;
+        fb->info.height = vcdev->gfx->height;
+        fb->info.stride = vcdev->gfx->stride;
+        fb->info.pixelsize = vcdev->gfx->pixelsize;
+        fb->info.flags = 0;
+        //TODO: take away access to the vmo when the client closes the device
+        fb->vmo = mx_handle_duplicate(vcdev->gfx_vmo, MX_RIGHT_SAME_RIGHTS);
+        return sizeof(ioctl_display_get_fb_t);
+    }
+    case DISPLAY_OP_FLUSH_FB:
+        vc_gfx_invalidate_all(vcdev);
+        return NO_ERROR;
     default:
         return ERR_NOT_SUPPORTED;
     }

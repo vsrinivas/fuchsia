@@ -43,6 +43,8 @@ typedef struct vc_device {
     bool active;
     unsigned flags;
 
+    mx_handle_t gfx_vmo;
+
     // TODO make static
     gfx_surface* gfx;
     // surface to draw on
