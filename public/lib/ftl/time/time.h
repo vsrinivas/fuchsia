@@ -9,8 +9,8 @@
 
 namespace ftl {
 
-typedef std::chrono::steady_clock::time_point TimePoint;
-typedef std::chrono::steady_clock::duration Duration;
+typedef std::chrono::nanoseconds Duration;
+typedef std::chrono::time_point<std::chrono::steady_clock, Duration> TimePoint;
 
 TimePoint Now();
 

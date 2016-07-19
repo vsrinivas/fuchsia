@@ -578,18 +578,10 @@ TEST(RefCountedTest, PublicCtorAndDtor) {
   EXPECT_FALSE(r1);
 }
 
-#ifndef NDEBUG
-#if defined(OS_ANDROID)
-// TODO(vtl): On Android, death tests don't seem to work properly with
-// |assert()| (which presumably calls |abort()|.
-#define MAYBE_DebugChecks DISABLED_DebugChecks
-#else
-#define MAYBE_DebugChecks DebugChecks
-#endif
 // The danger with having a public constructor or destructor is that certain
 // things will compile. You should get some protection by assertions in Debug
 // builds.
-TEST(RefCountedTest, MAYBE_DebugChecks) {
+TEST(RefCountedTest, DebugChecks) {
   {
     MyPublicClass* p = new MyPublicClass();
     EXPECT_DEATH_IF_SUPPORTED(delete p, "!adoption_required_");
@@ -606,7 +598,6 @@ TEST(RefCountedTest, MAYBE_DebugChecks) {
     EXPECT_DEATH_IF_SUPPORTED(delete r.get(), "destruction_started_");
   }
 }
-#endif
 
 // TODO(vtl): Add (threaded) stress tests.
 
