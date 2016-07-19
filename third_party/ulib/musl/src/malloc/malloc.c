@@ -423,7 +423,9 @@ void* realloc(void* p, size_t n) {
     return new;
 }
 
-void free(void* p) {
+// This is static so __donate_heap (below) can call it without PLT
+// indirection.  The public name free is an alias for this.
+static void internal_free(void* p) {
     struct chunk* self = MEM_TO_CHUNK(p);
     struct chunk* next;
     size_t final_size, new_size, size;
@@ -509,4 +511,22 @@ void free(void* p) {
     }
 
     unlock_bin(i);
+}
+
+void free(void*) __attribute__((alias("internal_free")));
+
+// "Donate" a memory block to the heap by setting up a minimal malloc
+// structure and then freeing it.
+void __donate_heap(void* startptr, void* endptr) {
+    size_t start = (size_t)startptr;
+    size_t end = (size_t)endptr;
+    start = (start + OVERHEAD + SIZE_ALIGN - 1) & SIZE_MASK;
+    end = (end & SIZE_MASK) - OVERHEAD;
+    if (start > end || end - start < SIZE_ALIGN)
+        return;
+    struct chunk* z = (struct chunk*)end;
+    MEM_TO_CHUNK(start)->psize = 0 | C_INUSE;
+    MEM_TO_CHUNK(start)->csize = z->psize = (end - start + OVERHEAD) | C_INUSE;
+    z->csize = 0 | C_INUSE;
+    internal_free((void*)start);
 }
