@@ -20,3 +20,4 @@ clang-format
 /out*
 /prebuilt/downloads/*
 /prebuilt/config.mk
+/prebuilt/config.mk.bak
