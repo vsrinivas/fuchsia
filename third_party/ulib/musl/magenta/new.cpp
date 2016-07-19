@@ -16,10 +16,10 @@ void* operator new[](size_t, void* p) {
     return p;
 }
 
-void operator delete(void* p) {
+void operator delete(void* p) noexcept {
     ::free(p);
 }
 
-void operator delete[](void* p) {
+void operator delete[](void* p) noexcept {
     ::free(p);
 }
