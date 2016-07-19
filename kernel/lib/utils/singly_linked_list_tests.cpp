@@ -14,45 +14,70 @@
 
 namespace utils {
 
+template <typename NodeStateType>
+struct OtherListTraits {
+    using PtrTraits = typename NodeStateType::PtrTraits;
+    static NodeStateType& node_state(typename PtrTraits::RefType obj) {
+        return obj.other_list_node_state_;
+    }
+};
+
 template <typename PtrType>
-class ObjTypeBase : public SinglyLinkedListable<PtrType> {
+class SLLTraits {
 public:
-    struct OtherListTraits {
-        using PtrTraits = internal::ContainerPtrTraits<PtrType>;
-        static SinglyLinkedListNodeState<PtrType>& node_state(typename PtrTraits::RefType obj) {
-            return obj.other_list_node_state_;
-        }
-    };
+    using ListType          = SinglyLinkedList<PtrType>;
+    using ListableBaseClass = SinglyLinkedListable<PtrType>;
+    using NodeStateType     = SinglyLinkedListNodeState<PtrType>;
+    using OtherListType     = SinglyLinkedList<PtrType, OtherListTraits<NodeStateType>>;
+};
 
-    explicit ObjTypeBase(size_t val) : val_(val) { live_obj_count_++; }
-    ~ObjTypeBase() { live_obj_count_--; }
-
-    size_t value() const { return val_; }
-    const void* raw_ptr() const { return this; }
+class TestObjBase {
+public:
+    ~TestObjBase() { }
 
     static size_t live_obj_count() { return live_obj_count_; }
     static void ResetLiveObjCount() { live_obj_count_ = 0; }
 
-private:
+protected:
     static size_t live_obj_count_;
-
-    size_t val_;
-    SinglyLinkedListNodeState<PtrType> other_list_node_state_;
 };
 
-template <typename PtrType>
-size_t ObjTypeBase<PtrType>::live_obj_count_ = 0;
+size_t TestObjBase::live_obj_count_ = 0;
 
-struct UnmanagedPtrTraits {
-    class ObjType;
+template <typename _ContainerTraits>
+class TestObj : public TestObjBase,
+                public _ContainerTraits::ListableBaseClass {
+public:
+    using ContainerTraits = _ContainerTraits;
+    using NodeStateType   = typename ContainerTraits::NodeStateType;
+    using PtrTraits       = typename NodeStateType::PtrTraits;
+
+    explicit TestObj(size_t val) : val_(val) { live_obj_count_++; }
+    ~TestObj() { live_obj_count_--; }
+
+    size_t value() const { return val_; }
+    const void* raw_ptr() const { return this; }
+
+private:
+    friend class OtherListTraits<NodeStateType>;
+
+    size_t val_;
+    NodeStateType other_list_node_state_;
+};
+
+template <typename ContainerTraits>
+class RefedTestObj : public TestObj<ContainerTraits>,
+                     public RefCounted<RefedTestObj<ContainerTraits>> {
+public:
+    explicit RefedTestObj(size_t val) : TestObj<ContainerTraits>(val) { }
+};
+
+template <typename _ObjType>
+struct UnmanagedTestTraits {
+    using ObjType      = _ObjType;
     using PtrType      = ObjType*;
     using ConstPtrType = const ObjType*;
-    using ListType     = SinglyLinkedList<PtrType>;
-
-    class ObjType : public ObjTypeBase<PtrType> {
-    public:
-        ObjType(size_t val) : ObjTypeBase(val) { }
-    };
+    using ListType     = typename ObjType::ContainerTraits::ListType;
 
     static PtrType CreateObject(size_t value) { return new ObjType(value); }
 
@@ -62,16 +87,12 @@ struct UnmanagedPtrTraits {
     static bool WasMoved (const ConstPtrType& ptr)      { return ptr != nullptr; }
 };
 
-struct UniquePtrTraits {
-    class ObjType;
+template <typename _ObjType>
+struct UniquePtrTestTraits {
+    using ObjType      = _ObjType;
     using PtrType      = ::utils::unique_ptr<ObjType>;
     using ConstPtrType = const PtrType;
-    using ListType     = SinglyLinkedList<PtrType>;
-
-    class ObjType : public ObjTypeBase<PtrType> {
-    public:
-        ObjType(size_t val) : ObjTypeBase(val) { }
-    };
+    using ListType     = typename ObjType::ContainerTraits::ListType;
 
     static PtrType CreateObject(size_t value) { return PtrType(new ObjType(value)); }
 
@@ -81,17 +102,12 @@ struct UniquePtrTraits {
     static bool WasMoved (const ConstPtrType& ptr)      { return ptr == nullptr; }
 };
 
-struct RefPtrTraits {
-    class ObjType;
+template <typename _ObjType>
+struct RefPtrTestTraits {
+    using ObjType      = _ObjType;
     using PtrType      = ::utils::RefPtr<ObjType>;
     using ConstPtrType = const PtrType;
-    using ListType     = SinglyLinkedList<PtrType>;
-
-    class ObjType : public ObjTypeBase<PtrType>,
-                    public RefCounted<ObjType> {
-    public:
-        ObjType(size_t val) : ObjTypeBase(val) { }
-    };
+    using ListType     = typename ObjType::ContainerTraits::ListType;
 
     static PtrType CreateObject(size_t value) { return AdoptRef(new ObjType(value)); }
 
@@ -134,37 +150,44 @@ protected:
 template <typename Traits>
 class TestEnvironmentSpecialized;
 
-template <>
-class TestEnvironmentSpecialized<UnmanagedPtrTraits> :
-    public TestEnvironmentBase<UnmanagedPtrTraits> {
+template <typename T>
+class TestEnvironmentSpecialized<UnmanagedTestTraits<T>> :
+    public TestEnvironmentBase<UnmanagedTestTraits<T>> {
 protected:
+    using Base = TestEnvironmentBase<UnmanagedTestTraits<T>>;
+    using PtrType = typename Base::PtrType;
+    static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
+
     void ReleaseObject(size_t ndx) {
         ASSERT(ndx < OBJ_COUNT);
-        if (objects_[ndx]) {
-            delete objects_[ndx];
-            objects_[ndx] = nullptr;
-            refs_held_--;
+        if (this->objects_[ndx]) {
+            delete this->objects_[ndx];
+            this->objects_[ndx] = nullptr;
+            this->refs_held_--;
         }
     }
 
     bool HoldingObject(size_t ndx) const {
         ASSERT(ndx < OBJ_COUNT);
-        return !!objects_[ndx];
+        return !!this->objects_[ndx];
     }
 
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
-        using Base = TestEnvironmentBase<UnmanagedPtrTraits>;
         return Base::CreateTrackedObject(ndx, value, true);
     }
 };
 
-template <>
-class TestEnvironmentSpecialized<UniquePtrTraits> :
-    public TestEnvironmentBase<UniquePtrTraits> {
+template <typename T>
+class TestEnvironmentSpecialized<UniquePtrTestTraits<T>> :
+    public TestEnvironmentBase<UniquePtrTestTraits<T>> {
 protected:
+    using Base = TestEnvironmentBase<UniquePtrTestTraits<T>>;
+    using PtrType = typename Base::PtrType;
+    static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
+
     void ReleaseObject(size_t ndx) {
         ASSERT(ndx < OBJ_COUNT);
-        objects_[ndx] = nullptr;
+        this->objects_[ndx] = nullptr;
     }
 
     bool HoldingObject(size_t ndx) const {
@@ -173,17 +196,19 @@ protected:
     }
 
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
-        using Base = TestEnvironmentBase<UniquePtrTraits>;
         return Base::CreateTrackedObject(ndx, value, false);
     }
 };
 
-template <>
-class TestEnvironmentSpecialized<RefPtrTraits> :
-    public TestEnvironmentBase<RefPtrTraits> {
+template <typename T>
+class TestEnvironmentSpecialized<RefPtrTestTraits<T>> :
+    public TestEnvironmentBase<RefPtrTestTraits<T>> {
 protected:
+    using Base = TestEnvironmentBase<RefPtrTestTraits<T>>;
+    using PtrType = typename Base::PtrType;
+    static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
+
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
-        using Base = TestEnvironmentBase<RefPtrTraits>;
         PtrType ret = Base::CreateTrackedObject(ndx, value, hold_ref);
 
         if (hold_ref)
@@ -194,10 +219,10 @@ protected:
 
     void ReleaseObject(size_t ndx) {
         ASSERT(ndx < OBJ_COUNT);
-        objects_[ndx] = nullptr;
+        this->objects_[ndx] = nullptr;
         if (refed_objects_[ndx]) {
             refed_objects_[ndx] = nullptr;
-            refs_held_--;
+            this->refs_held_--;
         }
     }
 
@@ -210,23 +235,15 @@ private:
     PtrType refed_objects_[OBJ_COUNT];
 };
 
-
-#define MAKE_TEST_THUNK(_test_name) \
-static bool _test_name ## Test(void* ctx) { \
-    TestEnvironment<Traits> env; \
-    BEGIN_TEST; \
-    EXPECT_TRUE(env._test_name(), ""); \
-    EXPECT_TRUE(env.Reset(), ""); \
-    END_TEST; \
-}
-
 template <typename Traits>
 class TestEnvironment : public TestEnvironmentSpecialized<Traits> {
 public:
-    using ObjType   = typename TestEnvironmentBase<Traits>::ObjType;
-    using ListType  = typename TestEnvironmentBase<Traits>::ListType;
-    using PtrTraits = typename TestEnvironmentBase<Traits>::PtrTraits;
-    using PtrType   = typename TestEnvironmentBase<Traits>::PtrType;
+    using ObjType         = typename Traits::ObjType;
+    using PtrType         = typename Traits::PtrType;
+    using ContainerTraits = typename ObjType::ContainerTraits;
+    using ListType        = typename ContainerTraits::ListType;
+    using OtherListType   = typename ContainerTraits::OtherListType;
+    using PtrTraits       = typename ListType::PtrTraits;
 
     ~TestEnvironment() { Reset(); }
 
@@ -241,7 +258,7 @@ public:
         refs_held() = 0;
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        ObjTypeBase<PtrType>::ResetLiveObjCount();
+        ObjType::ResetLiveObjCount();
 
         END_TEST;
     }
@@ -519,7 +536,8 @@ public:
         END_TEST;
     }
 
-    bool DoInsertAfter(typename ListType::iterator& iter, size_t pos) {
+    template <typename IterType>
+    bool DoInsertAfter(IterType& iter, size_t pos) {
         BEGIN_TEST;
 
         EXPECT_EQ(ObjType::live_obj_count(), list().size_slow(), "");
@@ -840,7 +858,7 @@ public:
 
         // Create the other type of list that ObjType can exist on and populate
         // it using push_front.
-        SinglyLinkedList<PtrType, typename ObjType::OtherListTraits> other_list;
+        OtherListType other_list;
         for (auto iter = list().begin(); iter != list().end(); ++iter)
             other_list.push_front(utils::move(iter.CopyPointer()));
 
@@ -980,6 +998,14 @@ public:
         END_TEST;
     }
 
+#define MAKE_TEST_THUNK(_test_name) \
+static bool _test_name ## Test(void* ctx) { \
+    TestEnvironment<Traits> env; \
+    BEGIN_TEST; \
+    EXPECT_TRUE(env._test_name(), ""); \
+    EXPECT_TRUE(env.Reset(), ""); \
+    END_TEST; \
+}
     MAKE_TEST_THUNK(Populate);
     MAKE_TEST_THUNK(Clear);
     MAKE_TEST_THUNK(IsEmpty);
@@ -991,6 +1017,7 @@ public:
     MAKE_TEST_THUNK(RvalueOps);
     MAKE_TEST_THUNK(TwoList);
     MAKE_TEST_THUNK(EraseIf);
+#undef MAKE_TEST_THUNK
 
 private:
     // Accessors for base class memebers so we don't have to type
@@ -1006,60 +1033,78 @@ private:
     void ReleaseObject(size_t ndx) { Sp::ReleaseObject(ndx); }
     bool HoldingObject(size_t ndx) const { return Sp::HoldingObject(ndx); }
 };
-#undef MAKE_TEST_THUNK
 
-using UMTE = TestEnvironment<UnmanagedPtrTraits>;
-using UPTE = TestEnvironment<UniquePtrTraits>;
-using RPTE = TestEnvironment<RefPtrTraits>;
+#define MAKE_TEST_OBJECT(_container_type, _ptr_type, _ptr_prefix, _ptr_suffix, _base_type) \
+class _ptr_type ## _container_type ## TestObj :                                            \
+    public _base_type<_container_type ## Traits<                                           \
+        _ptr_prefix _ptr_type ## _container_type ## TestObj _ptr_suffix>> {                \
+public:                                                                                    \
+    explicit _ptr_type ## _container_type ## TestObj(size_t val)                           \
+            : _base_type(val) { }                                                          \
+}
+
+#define MAKE_TEST_OBJECTS(_container_type)                                      \
+    MAKE_TEST_OBJECT(_container_type, Unmanaged,            , *, TestObj);      \
+    MAKE_TEST_OBJECT(_container_type, UniquePtr, unique_ptr<, >, TestObj);      \
+    MAKE_TEST_OBJECT(_container_type, RefPtr,        RefPtr<, >, RefedTestObj)
+
+MAKE_TEST_OBJECTS(SLL);
+
+#undef MAKE_TEST_OBJECTS
+#undef MAKE_TEST_OBJECT
+
+using UM_SLL_TE = TestEnvironment<UnmanagedTestTraits<UnmanagedSLLTestObj>>;
+using UP_SLL_TE = TestEnvironment<UniquePtrTestTraits<UniquePtrSLLTestObj>>;
+using RP_SLL_TE = TestEnvironment<RefPtrTestTraits<RefPtrSLLTestObj>>;
 UNITTEST_START_TESTCASE(single_linked_list_tests)
-UNITTEST("Populate (unmanaged)",    UMTE::PopulateTest)
-UNITTEST("Populate (unique)",       UPTE::PopulateTest)
-UNITTEST("Populate (RefPtr)",       RPTE::PopulateTest)
+UNITTEST("Populate (unmanaged)",    UM_SLL_TE::PopulateTest)
+UNITTEST("Populate (unique)",       UP_SLL_TE::PopulateTest)
+UNITTEST("Populate (RefPtr)",       RP_SLL_TE::PopulateTest)
 
-UNITTEST("Clear (unmanaged)",       UMTE::ClearTest)
-UNITTEST("Clear (unique)",          UPTE::ClearTest)
-UNITTEST("Clear (RefPtr)",          RPTE::ClearTest)
+UNITTEST("Clear (unmanaged)",       UM_SLL_TE::ClearTest)
+UNITTEST("Clear (unique)",          UP_SLL_TE::ClearTest)
+UNITTEST("Clear (RefPtr)",          RP_SLL_TE::ClearTest)
 
-UNITTEST("IsEmpty (unmanaged)",     UMTE::IsEmptyTest)
-UNITTEST("IsEmpty (unique)",        UPTE::IsEmptyTest)
-UNITTEST("IsEmpty (RefPtr)",        RPTE::IsEmptyTest)
+UNITTEST("IsEmpty (unmanaged)",     UM_SLL_TE::IsEmptyTest)
+UNITTEST("IsEmpty (unique)",        UP_SLL_TE::IsEmptyTest)
+UNITTEST("IsEmpty (RefPtr)",        RP_SLL_TE::IsEmptyTest)
 
-UNITTEST("Iterate (unmanaged)",     UMTE::IterateTest)
-UNITTEST("Iterate (unique)",        UPTE::IterateTest)
-UNITTEST("Iterate (RefPtr)",        RPTE::IterateTest)
+UNITTEST("Iterate (unmanaged)",     UM_SLL_TE::IterateTest)
+UNITTEST("Iterate (unique)",        UP_SLL_TE::IterateTest)
+UNITTEST("Iterate (RefPtr)",        RP_SLL_TE::IterateTest)
 
-UNITTEST("InsertAfter (unmanaged)", UMTE::InsertAfterTest)
-UNITTEST("InsertAfter (unique)",    UPTE::InsertAfterTest)
-UNITTEST("InsertAfter (RefPtr)",    RPTE::InsertAfterTest)
+UNITTEST("InsertAfter (unmanaged)", UM_SLL_TE::InsertAfterTest)
+UNITTEST("InsertAfter (unique)",    UP_SLL_TE::InsertAfterTest)
+UNITTEST("InsertAfter (RefPtr)",    RP_SLL_TE::InsertAfterTest)
 
-UNITTEST("PopFront (unmanaged)",    UMTE::PopFrontTest)
-UNITTEST("PopFront (unique)",       UPTE::PopFrontTest)
-UNITTEST("PopFront (RefPtr)",       RPTE::PopFrontTest)
+UNITTEST("PopFront (unmanaged)",    UM_SLL_TE::PopFrontTest)
+UNITTEST("PopFront (unique)",       UP_SLL_TE::PopFrontTest)
+UNITTEST("PopFront (RefPtr)",       RP_SLL_TE::PopFrontTest)
 
-UNITTEST("EraseNext (unmanaged)",   UMTE::EraseNextTest)
-UNITTEST("EraseNext (unique)",      UPTE::EraseNextTest)
-UNITTEST("EraseNext (RefPtr)",      RPTE::EraseNextTest)
+UNITTEST("EraseNext (unmanaged)",   UM_SLL_TE::EraseNextTest)
+UNITTEST("EraseNext (unique)",      UP_SLL_TE::EraseNextTest)
+UNITTEST("EraseNext (RefPtr)",      RP_SLL_TE::EraseNextTest)
 
-UNITTEST("Swap (unmanaged)",        UMTE::SwapTest)
-UNITTEST("Swap (unique)",           UPTE::SwapTest)
-UNITTEST("Swap (RefPtr)",           RPTE::SwapTest)
+UNITTEST("Swap (unmanaged)",        UM_SLL_TE::SwapTest)
+UNITTEST("Swap (unique)",           UP_SLL_TE::SwapTest)
+UNITTEST("Swap (RefPtr)",           RP_SLL_TE::SwapTest)
 
-UNITTEST("Rvalue Ops (unmanaged)",  UMTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (unique)",     UPTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (RefPtr)",     RPTE::RvalueOpsTest)
+UNITTEST("Rvalue Ops (unmanaged)",  UM_SLL_TE::RvalueOpsTest)
+UNITTEST("Rvalue Ops (unique)",     UP_SLL_TE::RvalueOpsTest)
+UNITTEST("Rvalue Ops (RefPtr)",     RP_SLL_TE::RvalueOpsTest)
 
-UNITTEST("TwoList (unmanaged)",     UMTE::TwoListTest)
+UNITTEST("TwoList (unmanaged)",     UM_SLL_TE::TwoListTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("TwoList (unique)",        UPTE::TwoListTest)
+UNITTEST("TwoList (unique)",        UP_SLL_TE::TwoListTest)
 #endif
-UNITTEST("TwoList (RefPtr)",        RPTE::TwoListTest)
+UNITTEST("TwoList (RefPtr)",        RP_SLL_TE::TwoListTest)
 
-UNITTEST("EraseIf (unmanaged)",     UMTE::EraseIfTest)
-UNITTEST("EraseIf (unique)",        UPTE::EraseIfTest)
-UNITTEST("EraseIf (RefPtr)",        RPTE::EraseIfTest)
+UNITTEST("EraseIf (unmanaged)",     UM_SLL_TE::EraseIfTest)
+UNITTEST("EraseIf (unique)",        UP_SLL_TE::EraseIfTest)
+UNITTEST("EraseIf (RefPtr)",        RP_SLL_TE::EraseIfTest)
 
-UNITTEST("Scope (unique)",          UPTE::ScopeTest)
-UNITTEST("Scope (RefPtr)",          RPTE::ScopeTest)
+UNITTEST("Scope (unique)",          UP_SLL_TE::ScopeTest)
+UNITTEST("Scope (RefPtr)",          RP_SLL_TE::ScopeTest)
 UNITTEST_END_TESTCASE(single_linked_list_tests,
                       "sll",
                       "Intrusive singly linked list tests.",
