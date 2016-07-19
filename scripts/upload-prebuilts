@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This script builds Magenta and uploads various binaries to Google Storage.
+
+# This script is expected to be executed on Jenkins, as part of a continuous
+# builds infrastructure.
+
+set -e
+set -x
+
+# We assume the following directory path:
+# ./magenta/scripts
+readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly MAGENTA_ROOT="$( cd "${SCRIPT_DIR}/.." && pwd )"
+
+# Fetch the current git SHA: we upload the prebuilts with a SHA that corresponds
+# to the SHA of the tree we built from.
+cd "${MAGENTA_ROOT}"
+readonly GIT_SHA="$(git log -1 --format=%H)"
+
+# The list of targets to build.
+readonly TARGETS=(
+  "magenta-qemu-arm32"
+  "magenta-qemu-arm64"
+  "magenta-pc-x86-64"
+)
+
+# The list of output files to upload.
+readonly PREBUILTS=(
+  "magenta.bin"
+  "magenta.elf"
+  "tools/bootserver"
+  "tools/loglistener"
+  "tools/mkbootfs"
+)
+
+# Build all the things and upload to Google Storage.
+for target in "${TARGETS[@]}"; do
+  cd "${MAGENTA_ROOT}"
+  make -j6 "${target}"  # -j option reflects the Fuchsia build bot servers.
+
+  arch="${target#*-}"
+  bucket="gs://fuchsia-build/magenta/${arch}"
+
+  # Upload the prebuilts to Google Storage.  We don't do any authentication here
+  # because we assume that the environment has been set up with auth already.
+  # For documentation, see: https://cloud.google.com/storage/docs/authentication
+  cd "${MAGENTA_ROOT}/build-${target}"
+  for prebuilt in "${PREBUILTS[@]}"; do
+    gsutil cp "${prebuilt}" "${bucket}/${prebuilt}/${GIT_SHA}"
+  done
+done
