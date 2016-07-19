@@ -38,12 +38,13 @@ function downloadToolchain() {
 
   # These are files and paths we expect to already exist.
   local common_path="toolchain/${target}/${OS}-${HOSTARCH}"
-  if [ ! -d "${common_path}" ]; then
-    echo "Path ${common_path} does not exist."
+  local version_file="${PREBUILTS_DIR}/versions/${common_path}/version.sha"
+  if [[ ! -f "${version_file}" ]]; then
+    echo "File ${version_file} does not exist."
     echo "Your operating system is probably not supported, aborting."
     exit 1
   fi
-  local required_version="$(cat "${PREBUILTS_DIR}/versions/${common_path}/version.sha" )"
+  local required_version="$(cat "${version_file}" )"
   local prebuilt_url="${GS_BUCKET}/${common_path}/${required_version}"
 
   # These are files and paths we control in this script.
