@@ -93,7 +93,7 @@ static bool doubly_linked_one_list_test(void* context) {
     }
     EXPECT_EQ(5U, dlist.size_slow(), "");
 
-    utils::DoublyLinkedList<Baz> dlist2;
+    utils::DoublyLinkedList<Foo> dlist2;
     dlist2.swap(dlist);
     EXPECT_EQ(0U, dlist.size_slow(), "");
     EXPECT_EQ(5U, dlist2.size_slow(), "");
