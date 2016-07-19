@@ -209,7 +209,6 @@ int test_gpu_readback(int fd)
         return -1;
     }
 
-    // clear magenta, obviously
     glClearColor(1, 0, 0.5, 0.75);
 
     int size = FB_W * FB_H * sizeof(uint32_t);

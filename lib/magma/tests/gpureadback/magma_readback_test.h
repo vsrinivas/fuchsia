@@ -55,6 +55,5 @@ private:
 
     bool is_cleaning_up_ = false;
     bool encountered_async_error_ = false;
-    bool waiting_on_page_flip_ = false;
     bool is_initialized_ = false;
 };

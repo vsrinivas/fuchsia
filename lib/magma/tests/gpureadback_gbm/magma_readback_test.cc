@@ -244,7 +244,6 @@ extern "C" {
 
 int test_gpu_readback(int fd)
 {
-
     MagmaReadbackTest app;
     if (!app.Initialize(fd)) {
         printf("could not initialize app\n");
@@ -253,10 +252,10 @@ int test_gpu_readback(int fd)
 
     printf("app::Initialize SUCCESS\n");
 
-    // clear magenta, obviously
-    glClearColor(1, 0, 1, 1);
+    glClearColor(1, 0, 0.5, 0.75);
 
-    void* data = malloc(FB_W * FB_W * sizeof(uint32_t));
+    int size = FB_W * FB_H * sizeof(uint32_t);
+    auto data = reinterpret_cast<uint32_t*>(malloc(size));
     if (!data) {
         printf("failed to allocate CPU framebuffer\n");
         return -1;
@@ -267,20 +266,19 @@ int test_gpu_readback(int fd)
         return -1;
     }
 
-    uint32_t expected_value = 0xFF00FFFF; // expect magenta, obviously
-    bool has_mismatch = false;
+    uint32_t expected_value = 0xBF8000FF;
+    int mismatches = 0;
     for (int i = 0; i < FB_W * FB_H; i++) {
-        uint32_t curr_val = ((uint32_t*)data)[i];
-        if (curr_val != expected_value) {
-            printf("Value Mismatch at index %d!\n\tExpected 0x%04x, got 0x%04x\n", i, curr_val,
-                   expected_value);
-            has_mismatch = true;
+        if (data[i] != expected_value) {
+            if (mismatches++ < 10)
+                printf("Value Mismatch at index %d - expected 0x%04x, got 0x%04x\n", i,
+                       expected_value, data[i]);
         }
     }
-    if (has_mismatch) {
-        printf("Test Failed!\n");
+    if (mismatches) {
+        printf("****** Test Failed! %d mismatches\n", mismatches);
     } else {
-        printf("All values matched, test passed.\n");
+        printf("****** Test Passed! All values matched.\n");
     }
     free(data);
 
