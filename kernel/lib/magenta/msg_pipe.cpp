@@ -27,7 +27,8 @@ void clean_list(utils::DoublyLinkedList<MessagePacket>* list) {
         delete msg;
     } while (msg);
 }
-}
+
+}  // namespace
 
 void MessagePacket::ReturnHandles() {
     handles.reset();
@@ -54,22 +55,29 @@ MessagePipe::~MessagePipe() {
     // No need to lock. We are single threaded and will not have new requests.
     mutex_destroy(&lock_);
 
-    clean_list(&messages_[0]);
-    clean_list(&messages_[1]);
+    DEBUG_ASSERT(messages_[0].is_empty());
+    DEBUG_ASSERT(messages_[1].is_empty());
 }
 
 void MessagePipe::OnDispatcherDestruction(size_t side) {
-    bool other_alive;
     auto other = other_side(side);
 
-    AutoLock lock(&lock_);
-    dispatcher_alive_[side] = false;
-    other_alive = dispatcher_alive_[other];
+    utils::DoublyLinkedList<MessagePacket> messages_to_destroy;
+    {
+        AutoLock lock(&lock_);
+        dispatcher_alive_[side] = false;
+        messages_to_destroy.swap(messages_[side]);
 
-    if (other_alive) {
-        waiter_[other].UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE, 0u,
-                                   MX_SIGNAL_WRITABLE, true);
+        if (dispatcher_alive_[other]) {
+            mx_signals_t other_satisfiable_clear = MX_SIGNAL_WRITABLE;
+            if (messages_[other].is_empty())
+                other_satisfiable_clear |= MX_SIGNAL_READABLE;
+            waiter_[other].UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE, 0u,
+                                       other_satisfiable_clear, true);
+        }
     }
+
+    clean_list(&messages_to_destroy);
 }
 
 status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {

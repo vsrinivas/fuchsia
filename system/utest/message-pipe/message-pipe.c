@@ -98,7 +98,7 @@ bool message_pipe_test(void) {
 
     mx_handle_t h[2];
     status = mx_message_pipe_create(h, 0);
-    ASSERT_EQ(status, 0, "error in message pipe create");
+    ASSERT_EQ(status, NO_ERROR, "error in message pipe create");
 
     ASSERT_EQ(get_satisfied_signals(h[0]), MX_SIGNAL_WRITABLE, "");
     ASSERT_EQ(get_satisfied_signals(h[1]), MX_SIGNAL_WRITABLE, "");
@@ -117,7 +117,7 @@ bool message_pipe_test(void) {
     ASSERT_EQ(get_satisfied_signals(_pipe[2]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
 
     status = mx_message_pipe_create(h, 0);
-    ASSERT_EQ(status, 0, "error in message pipe create");
+    ASSERT_EQ(status, NO_ERROR, "error in message pipe create");
 
     _pipe[1] = h[0];
     _pipe[3] = h[1];
@@ -167,7 +167,7 @@ bool message_pipe_read_error_test(void) {
     BEGIN_TEST;
     mx_handle_t pipe[2];
     mx_status_t status = mx_message_pipe_create(pipe, 0);
-    ASSERT_EQ(status, 0, "error in message pipe create");
+    ASSERT_EQ(status, NO_ERROR, "error in message pipe create");
 
     // Read from an empty message pipe.
     status = mx_message_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
@@ -198,9 +198,49 @@ bool message_pipe_read_error_test(void) {
     END_TEST;
 }
 
+bool message_pipe_close_test(void) {
+    BEGIN_TEST;
+    mx_handle_t pipe[2];
+    ASSERT_EQ(mx_message_pipe_create(pipe, 0), NO_ERROR, "");
+    mx_handle_t pipe1[2];
+    ASSERT_EQ(mx_message_pipe_create(pipe1, 0), NO_ERROR, "");
+    mx_handle_t pipe2[2];
+    ASSERT_EQ(mx_message_pipe_create(pipe2, 0), NO_ERROR, "");
+
+    // Write pipe1[0] to pipe[0] (to be received by pipe[1]) and pipe2[0] to pipe[1] (to be received
+    // by pipe[0]).
+    ASSERT_EQ(mx_message_write(pipe[0], NULL, 0u, &pipe1[0], 1u, 0u), NO_ERROR, "");
+    pipe1[0] = MX_HANDLE_INVALID;
+    ASSERT_EQ(mx_message_write(pipe[1], NULL, 0u, &pipe2[0], 1u, 0u), NO_ERROR, "");
+    pipe2[0] = MX_HANDLE_INVALID;
+
+    // Close pipe[1]; the former pipe1[0] should be closed, so pipe1[1] should have peer closed.
+    ASSERT_EQ(mx_handle_close(pipe[1]), NO_ERROR, "");
+    pipe[1] = MX_HANDLE_INVALID;
+    ASSERT_EQ(get_satisfied_signals(pipe1[1]), MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfiable_signals(pipe1[1]), MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfied_signals(pipe2[1]), MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(get_satisfiable_signals(pipe2[1]),
+              MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
+
+    // Close pipe[0]; the former pipe2[0] should be closed, so pipe2[1] should have peer closed.
+    ASSERT_EQ(mx_handle_close(pipe[0]), NO_ERROR, "");
+    pipe[0] = MX_HANDLE_INVALID;
+    ASSERT_EQ(get_satisfied_signals(pipe1[1]), MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfiable_signals(pipe1[1]), MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfied_signals(pipe2[1]), MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfiable_signals(pipe2[1]), MX_SIGNAL_PEER_CLOSED, "");
+
+    ASSERT_EQ(mx_handle_close(pipe1[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(pipe2[1]), NO_ERROR, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(message_pipe_tests)
 RUN_TEST(message_pipe_test)
 RUN_TEST(message_pipe_read_error_test)
+RUN_TEST(message_pipe_close_test)
 END_TEST_CASE(message_pipe_tests)
 
 int main(int argc, char** argv) {

@@ -93,6 +93,18 @@ static bool doubly_linked_one_list_test(void* context) {
     }
     EXPECT_EQ(5U, dlist.size_slow(), "");
 
+    utils::DoublyLinkedList<Baz> dlist2;
+    dlist2.swap(dlist);
+    EXPECT_EQ(0U, dlist.size_slow(), "");
+    EXPECT_EQ(5U, dlist2.size_slow(), "");
+    EXPECT_TRUE(dlist2.first() == &baz[0], "");
+    EXPECT_TRUE(dlist2.last() == &baz[4], "");
+    dlist2.swap(dlist);
+    EXPECT_EQ(5U, dlist.size_slow(), "");
+    EXPECT_EQ(0U, dlist2.size_slow(), "");
+    EXPECT_TRUE(dlist.first() == &baz[0], "");
+    EXPECT_TRUE(dlist.last() == &baz[4], "");
+
     prev = 6;
     for (int ix = 0; ix != count; ++ix) {
         auto baz = dlist.pop_back();

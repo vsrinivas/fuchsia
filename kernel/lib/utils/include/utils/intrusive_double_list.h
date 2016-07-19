@@ -169,6 +169,12 @@ public:
         return count;
     }
 
+    void swap(DoublyLinkedList& other) {
+        ValueType* t = head_;
+        head_ = other.head_;
+        other.head_ = t;
+    }
+
 private:
     static ValueType* remove_unsafe(ValueType* obj) {
         auto next = Traits::next(obj);
