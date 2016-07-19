@@ -129,10 +129,7 @@ void* io_memalign(io_alloc_t* ioa, size_t align, size_t size) {
         }
 
         uintptr_t block_end = (uintptr_t)block + block_size;
-        if (ptr > block_end) continue;
-        size_t aligned_block_size = block_end - ptr;
-
-        if (aligned_block_size >= size) {
+        if (ptr < block_end) {
             // pull the block from the free list
             if (prev) {
                 prev->ptr = block->ptr;
@@ -146,6 +143,7 @@ void* io_memalign(io_alloc_t* ioa, size_t align, size_t size) {
             // set ptr to point to beginning of block
             header->ptr = block;
 
+            size_t aligned_block_size = block_end - ptr;
             if (aligned_block_size - size >= MIN_BLOCK_SIZE) {
                 // split our free block
 
