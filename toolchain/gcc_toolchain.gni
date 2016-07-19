@@ -46,6 +46,10 @@ template("gcc_toolchain") {
                              "ld",
                            ])
 
+    # These library switches can apply to all tools below.
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+
     tool("cc") {
       depfile = "{{output}}.d"
       command = "$cc -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
