@@ -94,7 +94,7 @@ if [ "$RELEASE" -eq 1 ]; then
 fi
 
 if [ "$BUILDDIR" == "" ]; then
-  BUILDDIR=build-$PROJECT
+  BUILDDIR="$(dirname "$DIR")/build-$PROJECT"
 fi
 
 # construct the args for qemu
