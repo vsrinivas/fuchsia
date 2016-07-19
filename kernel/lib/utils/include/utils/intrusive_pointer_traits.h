@@ -29,8 +29,7 @@ struct ContainerPtrTraits<T*> {
 
     static constexpr bool IsManaged = false;
 
-    static inline T*       GetRaw(PtrType& ptr)       { return ptr; }
-    static inline const T* GetRaw(const PtrType& ptr) { return ptr; }
+    static inline T*       GetRaw(const PtrType& ptr) { return ptr; }
     static inline PtrType  Copy(RawPtrType& ptr)      { return PtrType(ptr); }
 
     static inline PtrType Take(PtrType& ptr) {
@@ -78,8 +77,7 @@ struct ContainerPtrTraits<::utils::RefPtr<T>> {
 
     static constexpr bool IsManaged = true;
 
-    static inline T*       GetRaw(PtrType& ptr)       { return ptr.get(); }
-    static inline const T* GetRaw(const PtrType& ptr) { return ptr.get(); }
+    static inline T*       GetRaw(const PtrType& ptr) { return ptr.get(); }
     static inline PtrType  Copy(RawPtrType& ptr)      { return PtrType(ptr); }
     static inline PtrType  Take(PtrType& ptr)         { return PtrType(utils::move(ptr)); }
     static inline void     Swap(PtrType& first, PtrType& second) { first.swap(second); }

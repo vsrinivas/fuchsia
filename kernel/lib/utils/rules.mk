@@ -18,10 +18,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/fifo_buffer_tests.cpp \
     $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/hash_tests.cpp \
+    $(LOCAL_DIR)/linked_list_tests.cpp \
     $(LOCAL_DIR)/list_tests.cpp \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/ref_ptr_tests.cpp \
-    $(LOCAL_DIR)/singly_linked_list_tests.cpp \
     $(LOCAL_DIR)/unique_ptr_tests.cpp \
 
 include make/module.mk

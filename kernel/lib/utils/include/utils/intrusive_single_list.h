@@ -152,6 +152,9 @@ template <typename T>
 struct SinglyLinkedListNodeState {
     using PtrTraits = internal::ContainerPtrTraits<T>;
     typename PtrTraits::PtrType next_ = nullptr;
+
+    bool IsValid() const     { return true; }
+    bool InContainer() const { return (next_ != nullptr); }
 };
 
 // DefaultSinglyLinkedListNodeState<T>
@@ -209,7 +212,7 @@ public:
     // contents from one instance of the list to the other (even for unmanaged
     // pointers)
     explicit SinglyLinkedList(SinglyLinkedList<T, NodeTraits>&& other_list) {
-        head_ = PtrTraits::Take(other_list.head_);
+        swap(other_list);
     }
 
     // Rvalue assignment is permitted for managed lists, and when the target is
@@ -217,8 +220,10 @@ public:
     // result in the move of the source contents to the destination.
     SinglyLinkedList& operator=(SinglyLinkedList&& other_list) {
         DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+
         clear();
-        head_ = PtrTraits::Take(other_list.head_);
+        swap(other_list);
+
         return *this;
     }
 
@@ -239,6 +244,9 @@ public:
     const_iterator    end() const { return const_iterator(); }
     const_iterator   cend() const { return const_iterator(); }
 
+    // make_iterator : construct an iterator out of a pointer to an object
+    iterator make_iterator(const PtrType& ptr) { return iterator(PtrTraits::GetRaw(ptr)); }
+
     // is_empty
     //
     // True if the list has at least one element in it, false otherwise.
@@ -256,7 +264,7 @@ public:
     // Push an element onto the front of the lists.  Lvalue and Rvalue
     // versions are supplied in order to support move semantics.  It
     // is an error to attempt to push a nullptr instance of PtrType.
-    void push_front(PtrType&  ptr) { push_front(PtrType(ptr)); }
+    void push_front(const PtrType& ptr) { push_front(PtrType(ptr)); }
     void push_front(PtrType&& ptr) {
         DEBUG_ASSERT(ptr != nullptr);
 
@@ -272,8 +280,10 @@ public:
     // Insert an element after iter in the list.  It is an error to attempt to
     // push a nullptr instance of PtrType, or to attempt to push with iter ==
     // end().
-    void insert_after(iterator& iter, PtrType&  ptr) { insert_after(iter, PtrType(ptr)); }
-    void insert_after(iterator& iter, PtrType&& ptr) {
+    void insert_after(const iterator& iter, const PtrType& ptr) {
+        insert_after(iter, PtrType(ptr));
+    }
+    void insert_after(const iterator& iter, PtrType&& ptr) {
         DEBUG_ASSERT(iter != end());
         DEBUG_ASSERT(ptr != nullptr);
 
@@ -394,7 +404,12 @@ private:
         iterator_impl() { }
         iterator_impl(const iterator_impl& other) { node_ = other.node_; }
 
-        iterator_impl& operator=(const iterator_impl& other) { node_ =  other.node_; return *this; }
+        iterator_impl& operator=(const iterator_impl& other) {
+            node_ =  other.node_;
+            return *this;
+        }
+
+        bool IsValid() const { return node_ != nullptr; }
         bool operator==(const iterator_impl& other) const { return node_ == other.node_; }
         bool operator!=(const iterator_impl& other) const { return node_ != other.node_; }
 
@@ -410,12 +425,8 @@ private:
 
         // Postfix
         iterator_impl operator++(int) {
-            if (!node_) return *this;
             iterator_impl ret(*this);
-
-            auto& ns = NodeTraits::node_state(*node_);
-            node_    = PtrTraits::GetRaw(ns.next_);
-
+            ++(*this);
             return ret;
         }
 
@@ -432,7 +443,7 @@ private:
         typename PtrTraits::RawPtrType node_ = nullptr;
     };
 
-    // Copy construction and Lvalue assignment is disallowed
+    // Copy construction and Lvalue assignment are disallowed
     SinglyLinkedList(const SinglyLinkedList&) = delete;
     SinglyLinkedList& operator=(const SinglyLinkedList&) = delete;
 

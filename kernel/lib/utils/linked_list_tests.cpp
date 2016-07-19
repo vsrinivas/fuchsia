@@ -8,6 +8,7 @@
 #include <err.h>
 #include <unittest.h>
 #include <utils/intrusive_single_list.h>
+#include <utils/newcode_intrusive_double_list.h>
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 #include <utils/unique_ptr.h>
@@ -29,6 +30,15 @@ public:
     using ListableBaseClass = SinglyLinkedListable<PtrType>;
     using NodeStateType     = SinglyLinkedListNodeState<PtrType>;
     using OtherListType     = SinglyLinkedList<PtrType, OtherListTraits<NodeStateType>>;
+};
+
+template <typename PtrType>
+class DLLTraits {
+public:
+    using ListType          = newcode::DoublyLinkedList<PtrType>;
+    using ListableBaseClass = newcode::DoublyLinkedListable<PtrType>;
+    using NodeStateType     = newcode::DoublyLinkedListNodeState<PtrType>;
+    using OtherListType     = newcode::DoublyLinkedList<PtrType, OtherListTraits<NodeStateType>>;
 };
 
 class TestObjBase {
@@ -57,6 +67,9 @@ public:
 
     size_t value() const { return val_; }
     const void* raw_ptr() const { return this; }
+
+    bool operator==(const TestObj<ContainerTraits>& other) const { return this == &other; }
+    bool operator!=(const TestObj<ContainerTraits>& other) const { return this != &other; }
 
 private:
     friend class OtherListTraits<NodeStateType>;
@@ -128,12 +141,14 @@ public:
 
 protected:
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool ref_held) {
-        ASSERT(ndx < OBJ_COUNT);
-        DEBUG_ASSERT(!objects_[ndx]);
+        if ((ndx >= OBJ_COUNT) ||objects_[ndx])
+            return PtrType(nullptr);
 
         PtrType ret = Traits::CreateObject(value);
+        if (ret == nullptr)
+            return PtrType(nullptr);
+
         objects_[ndx] = PtrTraits::GetRaw(ret);
-        DEBUG_ASSERT(objects_[ndx]);
 
         if (ref_held)
             refs_held_++;
@@ -159,8 +174,7 @@ protected:
     static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
 
     void ReleaseObject(size_t ndx) {
-        ASSERT(ndx < OBJ_COUNT);
-        if (this->objects_[ndx]) {
+        if (HoldingObject(ndx)) {
             delete this->objects_[ndx];
             this->objects_[ndx] = nullptr;
             this->refs_held_--;
@@ -168,12 +182,16 @@ protected:
     }
 
     bool HoldingObject(size_t ndx) const {
-        ASSERT(ndx < OBJ_COUNT);
-        return !!this->objects_[ndx];
+        return ((ndx < OBJ_COUNT) && this->objects_[ndx]);
     }
 
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
         return Base::CreateTrackedObject(ndx, value, true);
+    }
+
+    const PtrType& GetInternalReference(size_t ndx) {
+        static const PtrType null_reference(nullptr);
+        return HoldingObject(ndx) ? this->objects_[ndx] : null_reference;
     }
 };
 
@@ -186,17 +204,29 @@ protected:
     static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
 
     void ReleaseObject(size_t ndx) {
-        ASSERT(ndx < OBJ_COUNT);
-        this->objects_[ndx] = nullptr;
+        if (ndx < OBJ_COUNT)
+            this->objects_[ndx] = nullptr;
     }
 
     bool HoldingObject(size_t ndx) const {
-        ASSERT(ndx < OBJ_COUNT);
         return false;
     }
 
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
         return Base::CreateTrackedObject(ndx, value, false);
+    }
+
+    // Note: GetInternalReference for a unique_ptr<> does not make a lot of
+    // sense.  We cannot actually provide a reference, since we are not any.  We
+    // provide an implementation (which returns nullptr) for only one reason.
+    // If someone want to check to make sure that the build breaks when
+    // attempting to make_iterator for a unique_ptr<> container, that the build
+    // fails because the cannot expand the template which implements
+    // make_iterator, not because the specialized test environment lacks an
+    // implementation of GetInternalReference.
+    const PtrType& GetInternalReference(size_t ndx) {
+        static const PtrType null_reference(nullptr);
+        return null_reference;
     }
 };
 
@@ -218,17 +248,22 @@ protected:
     }
 
     void ReleaseObject(size_t ndx) {
-        ASSERT(ndx < OBJ_COUNT);
-        this->objects_[ndx] = nullptr;
-        if (refed_objects_[ndx]) {
-            refed_objects_[ndx] = nullptr;
-            this->refs_held_--;
+        if (ndx < OBJ_COUNT) {
+            this->objects_[ndx] = nullptr;
+            if (refed_objects_[ndx]) {
+                refed_objects_[ndx] = nullptr;
+                this->refs_held_--;
+            }
         }
     }
 
     bool HoldingObject(size_t ndx) const {
-        ASSERT(ndx < OBJ_COUNT);
-        return refed_objects_[ndx] != nullptr;
+        return ((ndx < OBJ_COUNT) && (refed_objects_[ndx] != nullptr));
+    }
+
+    const PtrType& GetInternalReference(size_t ndx) {
+        static const PtrType null_reference(nullptr);
+        return HoldingObject(ndx) ? refed_objects_[ndx] : null_reference;
     }
 
 private:
@@ -244,8 +279,15 @@ public:
     using ListType        = typename ContainerTraits::ListType;
     using OtherListType   = typename ContainerTraits::OtherListType;
     using PtrTraits       = typename ListType::PtrTraits;
+    using SpBase          = TestEnvironmentSpecialized<Traits>;
 
     ~TestEnvironment() { Reset(); }
+
+    // Utility methods used to check if the target of an Erase opertaion is
+    // valid, whether the target of the operation is expressed as an iterator or
+    // as an object pointer.
+    bool ValidTarget(const typename ListType::iterator& target) { return target != list().end(); }
+    bool ValidTarget(const PtrType& target) { return target != nullptr; }
 
     bool Reset() {
         BEGIN_TEST;
@@ -263,7 +305,7 @@ public:
         END_TEST;
     }
 
-    bool Populate() {
+    bool Populate(bool hold_all_refs = false) {
         BEGIN_TEST;
 
         EXPECT_EQ(0U, ObjType::live_obj_count(), "");
@@ -272,12 +314,14 @@ public:
             size_t ndx = OBJ_COUNT - i - 1;
             EXPECT_EQ(i, list().size_slow(), "");
 
-            // Don't hold a reference in the test environment for every 4th
-            // object created.  Note, this only affects RefPtr tests.  Unmanaged
-            // pointers always hold an unmanaged copy of the pointer (so it can
-            // be cleaned up), while unique_ptr tests are not able to hold an
-            // extra copy of the pointer (because it is unique)
-            PtrType new_object = this->CreateTrackedObject(ndx, ndx, (i & 0x3));
+            // Unless explicitly told to do so, don't hold a reference in the
+            // test environment for every 4th object created.  Note, this only
+            // affects RefPtr tests.  Unmanaged pointers always hold an
+            // unmanaged copy of the pointer (so it can be cleaned up), while
+            // unique_ptr tests are not able to hold an extra copy of the
+            // pointer (because it is unique)
+            bool hold_ref = hold_all_refs || (i & 0x3);
+            PtrType new_object = this->CreateTrackedObject(ndx, ndx, hold_ref);
             REQUIRE_NONNULL(new_object, "");
             EXPECT_EQ(new_object->raw_ptr(), objects()[ndx], "");
 
@@ -398,6 +442,59 @@ public:
         END_TEST;
     }
 
+    bool PopBack() {
+        BEGIN_TEST;
+
+        REQUIRE_TRUE(Populate(), "");
+
+        // Remove elements using pop_back.  List should shrink each time we
+        // remove an element, but the number of live objects should only shrink
+        // when we let the last reference go out of scope.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            size_t remaining = OBJ_COUNT - i;
+            size_t obj_ndx   = OBJ_COUNT - i - 1;
+            REQUIRE_TRUE(!list().is_empty(), "");
+            EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
+            EXPECT_EQ(remaining, list().size_slow(), "");
+
+            {
+                // Pop the item and sanity check it against our tracking.
+                PtrType tmp = list().pop_back();
+                EXPECT_NONNULL(tmp, "");
+                EXPECT_EQ(tmp->value(), obj_ndx, "");
+                EXPECT_EQ(objects()[obj_ndx], tmp->raw_ptr(), "");
+
+                // Make sure that the intrusive bookkeeping is up-to-date.
+                auto& ns = ListType::NodeTraits::node_state(*tmp);
+                EXPECT_NULL(ns.next_, "");
+
+                // The list has shrunk, but the object should still be around.
+                EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
+                EXPECT_EQ(remaining - 1, list().size_slow(), "");
+            }
+
+            // If we were not holding onto the object using the test
+            // environment's tracking, the live object count should have
+            // dropped.  Otherwise, it should remain the same.
+            if (!HoldingObject(obj_ndx))
+                EXPECT_EQ(remaining - 1, ObjType::live_obj_count(), "");
+            else
+                EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
+
+            // Let go of the object and verify that it has now gone away.
+            ReleaseObject(obj_ndx);
+            EXPECT_EQ(remaining - 1, ObjType::live_obj_count(), "");
+        }
+
+        // List should be empty now.  Popping anything else should result in a
+        // null pointer.
+        EXPECT_TRUE(list().is_empty(), "");
+        PtrType should_be_null = list().pop_back();
+        EXPECT_NULL(should_be_null, "");
+
+        END_TEST;
+    }
+
     bool EraseNext() {
         BEGIN_TEST;
 
@@ -421,7 +518,8 @@ public:
 
                 // Make sure that the intrusive bookkeeping is up-to-date.
                 auto& ns = ListType::NodeTraits::node_state(*tmp);
-                EXPECT_NULL(ns.next_, "");
+                EXPECT_TRUE(ns.IsValid(), "");
+                EXPECT_FALSE(ns.InContainer(), "");
 
                 // The list has shrunk, but the object should still be around.
                 EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
@@ -452,6 +550,185 @@ public:
         END_TEST;
     }
 
+    template <typename TargetType>
+    bool DoErase(const TargetType& target, size_t ndx, size_t remaining) {
+        BEGIN_TEST;
+
+        REQUIRE_TRUE(ndx < OBJ_COUNT, "");
+        REQUIRE_TRUE(remaining <= OBJ_COUNT, "");
+        REQUIRE_TRUE(!list().is_empty(), "");
+        REQUIRE_TRUE(ValidTarget(target), "");
+        EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
+        EXPECT_EQ(remaining, list().size_slow(), "");
+
+        {
+            // Erase the item and sanity check it against our tracking.
+            PtrType tmp = list().erase(target);
+            EXPECT_NONNULL(tmp, "");
+            EXPECT_EQ(tmp->value(), ndx, "");
+            EXPECT_EQ(objects()[ndx], tmp->raw_ptr(), "");
+
+            // Make sure that the intrusive bookkeeping is up-to-date.
+            auto& ns = ListType::NodeTraits::node_state(*tmp);
+            EXPECT_TRUE(ns.IsValid(), "");
+            EXPECT_FALSE(ns.InContainer(), "");
+
+            // The list has shrunk, but the object should still be around.
+            EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
+            EXPECT_EQ(remaining - 1, list().size_slow(), "");
+        }
+
+        // If we were not holding onto the object using the test
+        // environment's tracking, the live object count should have
+        // dropped.  Otherwise, it should remain the same.
+        if (!HoldingObject(ndx))
+            EXPECT_EQ(remaining - 1, ObjType::live_obj_count(), "");
+        else
+            EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
+
+        // Let go of the object and verify that it has now gone away.
+        ReleaseObject(ndx);
+        EXPECT_EQ(remaining - 1, ObjType::live_obj_count(), "");
+
+        END_TEST;
+    }
+
+    bool Erase() {
+        BEGIN_TEST;
+
+        // Remove all of the elements from the list by erasing from the front.
+        REQUIRE_TRUE(Populate(), "");
+        for (size_t i = 0; i < OBJ_COUNT; ++i)
+            EXPECT_TRUE(DoErase(list().begin(), i, OBJ_COUNT - i), "");
+
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, list().size_slow(), "");
+
+        // Remove all of the elements from the list by erasing from the back.
+        REQUIRE_TRUE(Populate(), "");
+        auto iter = list().end();
+        iter--;
+        for (size_t i = 0; i < OBJ_COUNT; ++i)
+            EXPECT_TRUE(DoErase(iter--, OBJ_COUNT - i - 1, OBJ_COUNT - i), "");
+
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, list().size_slow(), "");
+
+        // Remove all but 2 of the elements from the list by erasing from the middle.
+        static_assert(2 < OBJ_COUNT, "OBJ_COUNT too small to run Erase test!");
+        REQUIRE_TRUE(Populate(), "");
+        iter = list().begin();
+        iter++;
+        for (size_t i = 1; i < OBJ_COUNT - 1; ++i)
+            EXPECT_TRUE(DoErase(iter++, i, OBJ_COUNT - i + 1), "");
+
+        // Attempting to erase end() from a list with more than one element in
+        // it should return nullptr.
+        EXPECT_NULL(list().erase(list().end()), "");
+        EXPECT_TRUE(DoErase(list().begin(), 0, 2), "");
+
+        // Attempting to erase end() from a list with just one element in
+        // it should return nullptr.
+        EXPECT_NULL(list().erase(list().end()), "");
+        EXPECT_TRUE(DoErase(list().begin(), OBJ_COUNT - 1, 1), "");
+
+        // Attempting to erase end() from an empty list should return nullptr.
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, list().size_slow(), "");
+        EXPECT_NULL(list().erase(list().end()), "");
+
+        END_TEST;
+    }
+
+    bool DirectErase() {
+        BEGIN_TEST;
+
+        // Remove all of the elements from the list by erasing using direct node
+        // pointers which should end up always being at the front of the list.
+        REQUIRE_TRUE(Populate(true), "");
+        for (size_t i = 0; i < OBJ_COUNT; ++i)
+            EXPECT_TRUE(DoErase(SpBase::GetInternalReference(i), i, OBJ_COUNT - i), "");
+
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, list().size_slow(), "");
+
+        // Remove all of the elements from the list by erasing using direct node
+        // pointers which should end up always being at the back of the list.
+        REQUIRE_TRUE(Populate(true), "");
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            size_t ndx = OBJ_COUNT - i - 1;
+            EXPECT_TRUE(DoErase(SpBase::GetInternalReference(ndx), ndx, ndx + 1), "");
+        }
+
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, list().size_slow(), "");
+
+        // Remove all of the elements from the list by erasing using direct node
+        // pointers which should end up always being somewhere in the middle of
+        // the list.
+        static_assert(2 < OBJ_COUNT, "OBJ_COUNT too small to run Erase test!");
+        REQUIRE_TRUE(Populate(true), "");
+        for (size_t i = 1; i < OBJ_COUNT - 1; ++i)
+            EXPECT_TRUE(DoErase(SpBase::GetInternalReference(i), i, OBJ_COUNT - i + 1), "");
+
+        // Attempting to erase a nullptr from a list with more than one element
+        // in it should return nullptr.
+        EXPECT_NULL(PtrType(nullptr), "");
+        EXPECT_TRUE(DoErase(SpBase::GetInternalReference(0), 0, 2), "");
+
+        // Attempting to erase a nullptr from a list with just one element in
+        // it should return nullptr.
+        EXPECT_NULL(PtrType(nullptr), "");
+        EXPECT_TRUE(DoErase(SpBase::GetInternalReference(OBJ_COUNT - 1), OBJ_COUNT - 1, 1), "");
+
+        // Attempting to erase a nullptr from an empty list should return nullptr.
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, list().size_slow(), "");
+        EXPECT_NULL(PtrType(nullptr), "");
+
+        END_TEST;
+    }
+
+    template <typename IterType>
+    bool DoIterate(const IterType& begin, const IterType& end) {
+        BEGIN_TEST;
+        IterType iter;
+
+        // Iterate using begin/end
+        size_t i = 0;
+        for (iter = begin; iter != end; ) {
+            // Exercise both -> and * dereferencing
+            REQUIRE_TRUE(iter.IsValid(), "");
+            EXPECT_EQ(objects()[i],   iter->raw_ptr(), "");
+            EXPECT_EQ(objects()[i], (*iter).raw_ptr(), "");
+            EXPECT_EQ(i,   iter->value(), "");
+            EXPECT_EQ(i, (*iter).value(), "");
+
+            // Exercise both pre and postfix increment
+            if ((i++) & 1) iter++;
+            else           ++iter;
+        }
+        EXPECT_FALSE(iter.IsValid(), "");
+
+        // Advancing iter past the end of the list should be a no-op.  Check
+        // both pre and post-fix.
+        iter = end;
+        ++iter;
+        EXPECT_FALSE(iter.IsValid(), "");
+        EXPECT_TRUE(iter == end, "");
+
+        // We know that the iterator  is already at the end of the list, but
+        // perform the explicit assignment in order to check that the assignment
+        // operator is working (the previous version actually exercises the copy
+        // constructor or the explicit rvalue constructor, if supplied)
+        iter = end;
+        iter++;
+        EXPECT_FALSE(iter.IsValid(), "");
+        EXPECT_TRUE(iter == end, "");
+
+        END_TEST;
+    }
+
     bool Iterate() {
         BEGIN_TEST;
 
@@ -459,36 +736,11 @@ public:
         REQUIRE_TRUE(Populate(), "");
         EXPECT_EQ(OBJ_COUNT, list().size_slow(), "");
 
-        // Iterate using normal begin/end
-        size_t i = 0;
-        for (auto iter = list().begin(); iter != list().end(); ) {
-            // Exercise both -> and * dereferencing
-            EXPECT_EQ(objects()[i],   iter->raw_ptr(), "");
-            EXPECT_EQ(objects()[i], (*iter).raw_ptr(), "");
-            EXPECT_EQ(i,   iter->value(), "");
-            EXPECT_EQ(i, (*iter).value(), "");
-
-            // Exercise both pre and postfix increment
-            if ((i++) & 1) iter++;
-            else           ++iter;
-        }
-
-        // Iterate using normal const begin/end
-        i = 0;
-        for (auto iter = list().cbegin(); iter != list().cend(); ) {
-            // Exercise both -> and * dereferencing
-            EXPECT_EQ(objects()[i],   iter->raw_ptr(), "");
-            EXPECT_EQ(objects()[i], (*iter).raw_ptr(), "");
-            EXPECT_EQ(i,   iter->value(), "");
-            EXPECT_EQ(i, (*iter).value(), "");
-
-            // Exercise both pre and postfix increment
-            if ((i++) & 1) iter++;
-            else           ++iter;
-        }
+        EXPECT_TRUE(DoIterate(list().begin(),  list().end()), "");   // Test iterator
+        EXPECT_TRUE(DoIterate(list().cbegin(), list().cend()), "");  // Test const_iterator
 
         // Iterate using the range-based for loop syntax
-        i = 0;
+        size_t i = 0;
         for (auto& obj : list()) {
             EXPECT_EQ(objects()[i], &obj, "");
             EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
@@ -505,39 +757,122 @@ public:
             i++;
         }
 
-        {
-            // Advancing iter past the end of the list should be a no-op.  Check
-            // both pre and post-fix.
-            auto iter = list().end();
-            ++iter;
-            EXPECT_TRUE(iter == list().end(), "");
+        END_TEST;
+    }
 
-            // We know that the iterator  is already at the end of the list, but
-            // perform the explicit assignment in order to check that the assignment
-            // operator is working (the previous version actually exercises the copy
-            // constructor or the explicit rvalue constructor, if supplied)
-            iter = list().end();
-            iter++;
-            EXPECT_TRUE(iter == list().end(), "");
+    template <typename IterType>
+    bool DoIterateDec(const IterType& begin, const IterType& end) {
+        BEGIN_TEST;
+        IterType iter;
+
+        // Backing up one from end() should give us back().  Check both pre
+        // and post-fix behavior.
+        iter = end; --iter;
+        REQUIRE_TRUE(iter.IsValid(), "");
+        REQUIRE_TRUE(iter != end, "");
+        EXPECT_TRUE(list().back() == *iter, "");
+
+        iter = end; iter--;
+        REQUIRE_TRUE(iter.IsValid(), "");
+        REQUIRE_TRUE(iter != end, "");
+        EXPECT_TRUE(list().back() == *iter, "");
+
+        // Make sure that backing up an iterator by one points always points
+        // to the previous object in the list.
+        iter = begin;
+        while (++iter != end) {
+            size_t prev_ndx = iter->value() - 1;
+            REQUIRE_LT(prev_ndx, OBJ_COUNT, "");
+            REQUIRE_NONNULL(objects()[prev_ndx], "");
+
+            auto prev_iter = iter;
+            --prev_iter;
+            REQUIRE_TRUE(prev_iter.IsValid(), "");
+            EXPECT_FALSE(prev_iter == iter, "");
+            EXPECT_TRUE(*prev_iter == *objects()[prev_ndx], "");
+
+            prev_iter = iter;
+            prev_iter--;
+            REQUIRE_TRUE(prev_iter.IsValid(), "");
+            EXPECT_FALSE(prev_iter == iter, "");
+            EXPECT_TRUE(*prev_iter == *objects()[prev_ndx], "");
         }
 
-        {
-            // Same checks as before, but this time with the const_iterator
-            // form.
-            auto iter = list().cend();
-            ++iter;
-            EXPECT_TRUE(iter == list().cend(), "");
+        // Attempting to back up past the beginning should result in an
+        // invalid iterator.
+        iter = begin;
+        REQUIRE_TRUE(iter.IsValid(), "");
+        EXPECT_TRUE(list().front() == *iter, "");
+        --iter;
+        EXPECT_FALSE(iter.IsValid(), "");
 
-            iter = list().cend();
-            iter++;
-            EXPECT_TRUE(iter == list().cend(), "");
+        iter = begin;
+        REQUIRE_TRUE(iter.IsValid(), "");
+        EXPECT_TRUE(list().front() == *iter, "");
+        iter--;
+        EXPECT_FALSE(iter.IsValid(), "");
+
+        END_TEST;
+    }
+
+    bool IterateDec() {
+        BEGIN_TEST;
+
+        // Start by making some objects.
+        REQUIRE_TRUE(Populate(), "");
+        EXPECT_EQ(OBJ_COUNT, list().size_slow(), "");
+
+        EXPECT_TRUE(DoIterateDec(list().begin(),  list().end()), "");   // Test iterator
+        EXPECT_TRUE(DoIterateDec(list().cbegin(), list().cend()), "");  // Test const_iterator
+
+        END_TEST;
+    }
+
+    bool MakeIterator() {
+        BEGIN_TEST;
+
+        // Populate the list.  Hold internal refs to everything we add to the
+        // list.
+        REQUIRE_TRUE(Populate(true), "");
+
+        // For every member of the list, make an iterator using the internal
+        // reference we are holding.  Verify that the iterator is in the
+        // position we expect it to be in.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            auto iter = list().make_iterator(SpBase::GetInternalReference(i));
+
+            REQUIRE_TRUE(iter != list().end(), "");
+            EXPECT_EQ(objects()[i]->value(), iter->value(), "");
+            EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
+
+            auto other_iter = list().begin();
+            for (size_t j = 0; j < i; ++j) {
+                EXPECT_FALSE(other_iter == iter, "");
+                ++other_iter;
+            }
+
+            EXPECT_TRUE(other_iter == iter, "");
         }
+
+        // Creating an iterator using nullptr should result in an iterator which
+        // is equal to end().
+        PtrType null_ptr(nullptr);
+        auto iter       = list().make_iterator(null_ptr);
+        auto other_iter = list().begin();
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_FALSE(other_iter == iter, "");
+            other_iter++;
+        }
+
+        EXPECT_TRUE(iter       == list().end(), "");
+        EXPECT_TRUE(other_iter == list().end(), "");
+        EXPECT_TRUE(other_iter == iter, "");
 
         END_TEST;
     }
 
     template <typename IterType>
-    bool DoInsertAfter(IterType& iter, size_t pos) {
+    bool DoInsertAfter(IterType&& iter, size_t pos) {
         BEGIN_TEST;
 
         EXPECT_EQ(ObjType::live_obj_count(), list().size_slow(), "");
@@ -589,16 +924,18 @@ public:
 
         // Insert some elements after the last element list.
         static constexpr size_t END_INSERT_COUNT = 2;
-        // TODO(johngro) : static assert count/insert count here
+        static_assert(END_INSERT_COUNT <= OBJ_COUNT,
+                      "OBJ_COUNT too small to run InsertAfter test!");
+
         auto iter = list().begin();
         for (size_t i = (OBJ_COUNT - END_INSERT_COUNT); i < OBJ_COUNT; ++i) {
-            EXPECT_TRUE(DoInsertAfter(iter, i), "");
+            REQUIRE_TRUE(DoInsertAfter(iter, i), "");
 
             // Now that we have inserted after, we should be able to advance the
             // iterator to what we just inserted.
             iter++;
 
-            EXPECT_TRUE(iter != list().end(), "");
+            REQUIRE_TRUE(iter != list().end(), "");
             EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
             EXPECT_EQ(objects()[i], (*iter).raw_ptr(), "");
             EXPECT_EQ(i, iter->value(), "");
@@ -616,7 +953,7 @@ public:
         // advance the iterator in the process.
         iter = list().begin();
         for (size_t i = (OBJ_COUNT - END_INSERT_COUNT - 1); i > 0; --i) {
-            EXPECT_TRUE(DoInsertAfter(iter, i), "");
+            REQUIRE_TRUE(DoInsertAfter(iter, i), "");
         }
         EXPECT_TRUE(iter != list().end(), "");
 
@@ -630,6 +967,192 @@ public:
             EXPECT_EQ(objects()[i], &obj, "");
             EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
             EXPECT_EQ(i, obj.value(), "");
+            i++;
+        }
+
+        END_TEST;
+    }
+
+    template <typename TargetType>
+    bool DoInsert(const TargetType& target, size_t pos) {
+        BEGIN_TEST;
+
+        EXPECT_EQ(ObjType::live_obj_count(), list().size_slow(), "");
+        size_t orig_list_len = ObjType::live_obj_count();
+
+        PtrType new_object = this->CreateTrackedObject(pos, pos, true);
+        REQUIRE_NONNULL(new_object, "");
+        EXPECT_EQ(new_object->raw_ptr(), objects()[pos], "");
+
+        if (pos & 1) {
+#if TEST_WILL_NOT_COMPILE || 0
+            list().insert(target, new_object);
+#else
+            list().insert(target, Traits::Transfer(new_object));
+#endif
+            EXPECT_TRUE(Traits::WasTransferred(new_object), "");
+        } else {
+            list().insert(target, utils::move(new_object));
+            EXPECT_TRUE(Traits::WasMoved(new_object), "");
+        }
+
+        // List and number of live object should have grown.
+        EXPECT_EQ(orig_list_len + 1, ObjType::live_obj_count(), "");
+        EXPECT_EQ(orig_list_len + 1, list().size_slow(), "");
+
+        END_TEST;
+    }
+
+    bool Insert() {
+        BEGIN_TEST;
+
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0U, list().size_slow(), "");
+
+        static constexpr size_t END_INSERT_COUNT   = 3;
+        static constexpr size_t START_INSERT_COUNT = 3;
+        static constexpr size_t MID_INSERT_COUNT   = OBJ_COUNT
+                                                   - START_INSERT_COUNT - END_INSERT_COUNT;
+        static_assert((END_INSERT_COUNT <= OBJ_COUNT) &&
+                      (START_INSERT_COUNT <= (OBJ_COUNT - END_INSERT_COUNT)) &&
+                      ((START_INSERT_COUNT + END_INSERT_COUNT) < OBJ_COUNT),
+                      "OBJ_COUNT too small to run Insert test!");
+
+        // Insert some elements at the end of an initially empty list using the
+        // end() iterator accessor.
+        for (size_t i = (OBJ_COUNT - END_INSERT_COUNT); i < OBJ_COUNT; ++i)
+            REQUIRE_TRUE(DoInsert(list().end(), i), "");
+
+        // Insert some elements at the start of a non-empty list using the
+        // begin() iterator accessor.
+        for (size_t i = 0; i < START_INSERT_COUNT; ++i) {
+            size_t ndx = START_INSERT_COUNT - i - 1;
+            REQUIRE_TRUE(DoInsert(list().begin(), ndx), "");
+        }
+
+        // Insert some elements in the middle non-empty list using an iterator
+        // we compute.
+        auto iter = list().begin();
+        for (size_t i = 0; i < START_INSERT_COUNT; ++i)
+            ++iter;
+
+        for (size_t i = 0; i < MID_INSERT_COUNT; ++i) {
+            size_t ndx = START_INSERT_COUNT + i;
+            REQUIRE_TRUE(DoInsert(iter, ndx), "");
+        }
+
+        // iter should be END_INSERT_COUNT from the end of the
+        // list.
+        for (size_t i = 0; i < END_INSERT_COUNT; ++i) {
+            EXPECT_TRUE(iter != list().end(), "");
+            ++iter;
+        }
+        EXPECT_TRUE(++iter == list().end(), "");
+
+        // Check to make sure the list has the expected number of elements, and
+        // that they are in the proper order.
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_EQ(OBJ_COUNT, list().size_slow(), "");
+
+        size_t i = 0;
+        for (const auto& obj : list()) {
+            REQUIRE_LT(i, OBJ_COUNT, "");
+            EXPECT_EQ(objects()[i], &obj, "");
+            EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
+            EXPECT_EQ(i, obj.value(), "");
+            i++;
+        }
+
+        END_TEST;
+    }
+
+    bool DirectInsert() {
+        BEGIN_TEST;
+
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0U, list().size_slow(), "");
+
+        static constexpr size_t END_INSERT_COUNT   = 3;
+        static constexpr size_t START_INSERT_COUNT = 3;
+        static constexpr size_t MID_INSERT_COUNT   = OBJ_COUNT
+                                                   - START_INSERT_COUNT - END_INSERT_COUNT;
+        static_assert((END_INSERT_COUNT <= OBJ_COUNT) &&
+                      (START_INSERT_COUNT <= (OBJ_COUNT - END_INSERT_COUNT)) &&
+                      ((START_INSERT_COUNT + END_INSERT_COUNT) < OBJ_COUNT),
+                      "OBJ_COUNT too small to run DirectInsert test!");
+
+        // Insert some elements at the end of an initially empty list using
+        // nullptr as the obj target.
+        for (size_t i = (OBJ_COUNT - END_INSERT_COUNT); i < OBJ_COUNT; ++i)
+            REQUIRE_TRUE(DoInsert(PtrType(nullptr), i), "");
+
+        // Insert some elements at the start of a non-empty list node pointers
+        // which are always at the start of the list.
+        size_t insert_before_ndx = (OBJ_COUNT - END_INSERT_COUNT);
+        for (size_t i = 0; i < START_INSERT_COUNT; ++i) {
+            size_t ndx = START_INSERT_COUNT - i - 1;
+            REQUIRE_TRUE(DoInsert(SpBase::GetInternalReference(insert_before_ndx), ndx), "");
+            insert_before_ndx = ndx;
+        }
+
+        // Insert some elements in the middle non-empty list.
+        insert_before_ndx = (OBJ_COUNT - END_INSERT_COUNT);
+        for (size_t i = 0; i < MID_INSERT_COUNT; ++i) {
+            size_t ndx = START_INSERT_COUNT + i;
+            REQUIRE_TRUE(DoInsert(SpBase::GetInternalReference(insert_before_ndx), ndx), "");
+        }
+
+        // Check to make sure the list has the expected number of elements, and
+        // that they are in the proper order.
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_EQ(OBJ_COUNT, list().size_slow(), "");
+
+        size_t i = 0;
+        for (const auto& obj : list()) {
+            REQUIRE_LT(i, OBJ_COUNT, "");
+            EXPECT_EQ(objects()[i], &obj, "");
+            EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
+            EXPECT_EQ(i, obj.value(), "");
+            i++;
+        }
+
+        END_TEST;
+    }
+
+    bool PushBack() {
+        BEGIN_TEST;
+
+        EXPECT_EQ(0U, ObjType::live_obj_count(), "");
+
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_EQ(i, list().size_slow(), "");
+
+            PtrType new_object = this->CreateTrackedObject(i, i);
+            REQUIRE_NONNULL(new_object, "");
+            EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
+
+            // Alternate whether or not we move the pointer, or "transfer" it.
+            if (i & 1) {
+#if TEST_WILL_NOT_COMPILE || 0
+                list().push_back(new_object);
+#else
+                list().push_back(Traits::Transfer(new_object));
+#endif
+                EXPECT_TRUE(Traits::WasTransferred(new_object), "");
+            } else {
+                list().push_back(utils::move(new_object));
+                EXPECT_TRUE(Traits::WasMoved(new_object), "");
+            }
+        }
+
+        EXPECT_EQ(OBJ_COUNT, list().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+
+        size_t i = 0;
+        for (const auto& obj : list()) {
+            REQUIRE_LT(i, OBJ_COUNT, "");
+            EXPECT_EQ(objects()[i]->value(), obj.value(), "");
+            EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
             i++;
         }
 
@@ -1010,9 +1533,17 @@ static bool _test_name ## Test(void* ctx) { \
     MAKE_TEST_THUNK(Clear);
     MAKE_TEST_THUNK(IsEmpty);
     MAKE_TEST_THUNK(Iterate);
+    MAKE_TEST_THUNK(IterateDec);
+    MAKE_TEST_THUNK(MakeIterator);
     MAKE_TEST_THUNK(InsertAfter);
+    MAKE_TEST_THUNK(Insert);
+    MAKE_TEST_THUNK(DirectInsert);
+    MAKE_TEST_THUNK(PushBack);
     MAKE_TEST_THUNK(PopFront);
+    MAKE_TEST_THUNK(PopBack);
     MAKE_TEST_THUNK(EraseNext);
+    MAKE_TEST_THUNK(Erase);
+    MAKE_TEST_THUNK(DirectErase);
     MAKE_TEST_THUNK(Swap);
     MAKE_TEST_THUNK(RvalueOps);
     MAKE_TEST_THUNK(TwoList);
@@ -1049,6 +1580,7 @@ public:                                                                         
     MAKE_TEST_OBJECT(_container_type, RefPtr,        RefPtr<, >, RefedTestObj)
 
 MAKE_TEST_OBJECTS(SLL);
+MAKE_TEST_OBJECTS(DLL);
 
 #undef MAKE_TEST_OBJECTS
 #undef MAKE_TEST_OBJECT
@@ -1057,57 +1589,158 @@ using UM_SLL_TE = TestEnvironment<UnmanagedTestTraits<UnmanagedSLLTestObj>>;
 using UP_SLL_TE = TestEnvironment<UniquePtrTestTraits<UniquePtrSLLTestObj>>;
 using RP_SLL_TE = TestEnvironment<RefPtrTestTraits<RefPtrSLLTestObj>>;
 UNITTEST_START_TESTCASE(single_linked_list_tests)
-UNITTEST("Populate (unmanaged)",    UM_SLL_TE::PopulateTest)
-UNITTEST("Populate (unique)",       UP_SLL_TE::PopulateTest)
-UNITTEST("Populate (RefPtr)",       RP_SLL_TE::PopulateTest)
+UNITTEST("Populate (unmanaged)",        UM_SLL_TE::PopulateTest)
+UNITTEST("Populate (unique)",           UP_SLL_TE::PopulateTest)
+UNITTEST("Populate (RefPtr)",           RP_SLL_TE::PopulateTest)
 
-UNITTEST("Clear (unmanaged)",       UM_SLL_TE::ClearTest)
-UNITTEST("Clear (unique)",          UP_SLL_TE::ClearTest)
-UNITTEST("Clear (RefPtr)",          RP_SLL_TE::ClearTest)
+UNITTEST("Clear (unmanaged)",           UM_SLL_TE::ClearTest)
+UNITTEST("Clear (unique)",              UP_SLL_TE::ClearTest)
+UNITTEST("Clear (RefPtr)",              RP_SLL_TE::ClearTest)
 
-UNITTEST("IsEmpty (unmanaged)",     UM_SLL_TE::IsEmptyTest)
-UNITTEST("IsEmpty (unique)",        UP_SLL_TE::IsEmptyTest)
-UNITTEST("IsEmpty (RefPtr)",        RP_SLL_TE::IsEmptyTest)
+UNITTEST("IsEmpty (unmanaged)",         UM_SLL_TE::IsEmptyTest)
+UNITTEST("IsEmpty (unique)",            UP_SLL_TE::IsEmptyTest)
+UNITTEST("IsEmpty (RefPtr)",            RP_SLL_TE::IsEmptyTest)
 
-UNITTEST("Iterate (unmanaged)",     UM_SLL_TE::IterateTest)
-UNITTEST("Iterate (unique)",        UP_SLL_TE::IterateTest)
-UNITTEST("Iterate (RefPtr)",        RP_SLL_TE::IterateTest)
+UNITTEST("Iterate (unmanaged)",         UM_SLL_TE::IterateTest)
+UNITTEST("Iterate (unique)",            UP_SLL_TE::IterateTest)
+UNITTEST("Iterate (RefPtr)",            RP_SLL_TE::IterateTest)
 
-UNITTEST("InsertAfter (unmanaged)", UM_SLL_TE::InsertAfterTest)
-UNITTEST("InsertAfter (unique)",    UP_SLL_TE::InsertAfterTest)
-UNITTEST("InsertAfter (RefPtr)",    RP_SLL_TE::InsertAfterTest)
-
-UNITTEST("PopFront (unmanaged)",    UM_SLL_TE::PopFrontTest)
-UNITTEST("PopFront (unique)",       UP_SLL_TE::PopFrontTest)
-UNITTEST("PopFront (RefPtr)",       RP_SLL_TE::PopFrontTest)
-
-UNITTEST("EraseNext (unmanaged)",   UM_SLL_TE::EraseNextTest)
-UNITTEST("EraseNext (unique)",      UP_SLL_TE::EraseNextTest)
-UNITTEST("EraseNext (RefPtr)",      RP_SLL_TE::EraseNextTest)
-
-UNITTEST("Swap (unmanaged)",        UM_SLL_TE::SwapTest)
-UNITTEST("Swap (unique)",           UP_SLL_TE::SwapTest)
-UNITTEST("Swap (RefPtr)",           RP_SLL_TE::SwapTest)
-
-UNITTEST("Rvalue Ops (unmanaged)",  UM_SLL_TE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (unique)",     UP_SLL_TE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (RefPtr)",     RP_SLL_TE::RvalueOpsTest)
-
-UNITTEST("TwoList (unmanaged)",     UM_SLL_TE::TwoListTest)
+UNITTEST("MakeIterator (unmanaged)",    UM_SLL_TE::MakeIteratorTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("TwoList (unique)",        UP_SLL_TE::TwoListTest)
+UNITTEST("MakeIterator (unique)",       UP_SLL_TE::MakeIteratorTest)
 #endif
-UNITTEST("TwoList (RefPtr)",        RP_SLL_TE::TwoListTest)
+UNITTEST("MakeIterator (RefPtr)",       RP_SLL_TE::MakeIteratorTest)
 
-UNITTEST("EraseIf (unmanaged)",     UM_SLL_TE::EraseIfTest)
-UNITTEST("EraseIf (unique)",        UP_SLL_TE::EraseIfTest)
-UNITTEST("EraseIf (RefPtr)",        RP_SLL_TE::EraseIfTest)
+UNITTEST("InsertAfter (unmanaged)",     UM_SLL_TE::InsertAfterTest)
+UNITTEST("InsertAfter (unique)",        UP_SLL_TE::InsertAfterTest)
+UNITTEST("InsertAfter (RefPtr)",        RP_SLL_TE::InsertAfterTest)
 
-UNITTEST("Scope (unique)",          UP_SLL_TE::ScopeTest)
-UNITTEST("Scope (RefPtr)",          RP_SLL_TE::ScopeTest)
+UNITTEST("PopFront (unmanaged)",        UM_SLL_TE::PopFrontTest)
+UNITTEST("PopFront (unique)",           UP_SLL_TE::PopFrontTest)
+UNITTEST("PopFront (RefPtr)",           RP_SLL_TE::PopFrontTest)
+
+UNITTEST("EraseNext (unmanaged)",       UM_SLL_TE::EraseNextTest)
+UNITTEST("EraseNext (unique)",          UP_SLL_TE::EraseNextTest)
+UNITTEST("EraseNext (RefPtr)",          RP_SLL_TE::EraseNextTest)
+
+UNITTEST("Swap (unmanaged)",            UM_SLL_TE::SwapTest)
+UNITTEST("Swap (unique)",               UP_SLL_TE::SwapTest)
+UNITTEST("Swap (RefPtr)",               RP_SLL_TE::SwapTest)
+
+UNITTEST("Rvalue Ops (unmanaged)",      UM_SLL_TE::RvalueOpsTest)
+UNITTEST("Rvalue Ops (unique)",         UP_SLL_TE::RvalueOpsTest)
+UNITTEST("Rvalue Ops (RefPtr)",         RP_SLL_TE::RvalueOpsTest)
+
+UNITTEST("TwoList (unmanaged)",         UM_SLL_TE::TwoListTest)
+#if TEST_WILL_NOT_COMPILE || 0
+UNITTEST("TwoList (unique)",            UP_SLL_TE::TwoListTest)
+#endif
+UNITTEST("TwoList (RefPtr)",            RP_SLL_TE::TwoListTest)
+
+UNITTEST("EraseIf (unmanaged)",         UM_SLL_TE::EraseIfTest)
+UNITTEST("EraseIf (unique)",            UP_SLL_TE::EraseIfTest)
+UNITTEST("EraseIf (RefPtr)",            RP_SLL_TE::EraseIfTest)
+
+UNITTEST("Scope (unique)",              UP_SLL_TE::ScopeTest)
+UNITTEST("Scope (RefPtr)",              RP_SLL_TE::ScopeTest)
 UNITTEST_END_TESTCASE(single_linked_list_tests,
                       "sll",
                       "Intrusive singly linked list tests.",
+                      NULL, NULL);
+
+using UM_DLL_TE = TestEnvironment<UnmanagedTestTraits<UnmanagedDLLTestObj>>;
+using UP_DLL_TE = TestEnvironment<UniquePtrTestTraits<UniquePtrDLLTestObj>>;
+using RP_DLL_TE = TestEnvironment<RefPtrTestTraits<RefPtrDLLTestObj>>;
+UNITTEST_START_TESTCASE(double_linked_list_tests)
+UNITTEST("Populate (unmanaged)",        UM_DLL_TE::PopulateTest)
+UNITTEST("Populate (unique)",           UP_DLL_TE::PopulateTest)
+UNITTEST("Populate (RefPtr)",           RP_DLL_TE::PopulateTest)
+
+UNITTEST("Clear (unmanaged)",           UM_DLL_TE::ClearTest)
+UNITTEST("Clear (unique)",              UP_DLL_TE::ClearTest)
+UNITTEST("Clear (RefPtr)",              RP_DLL_TE::ClearTest)
+
+UNITTEST("IsEmpty (unmanaged)",         UM_DLL_TE::IsEmptyTest)
+UNITTEST("IsEmpty (unique)",            UP_DLL_TE::IsEmptyTest)
+UNITTEST("IsEmpty (RefPtr)",            RP_DLL_TE::IsEmptyTest)
+
+UNITTEST("Iterate (unmanaged)",         UM_DLL_TE::IterateTest)
+UNITTEST("Iterate (unique)",            UP_DLL_TE::IterateTest)
+UNITTEST("Iterate (RefPtr)",            RP_DLL_TE::IterateTest)
+
+UNITTEST("IterateDec (unmanaged)",      UM_DLL_TE::IterateDecTest)
+UNITTEST("IterateDec (unique)",         UP_DLL_TE::IterateDecTest)
+UNITTEST("IterateDec (RefPtr)",         RP_DLL_TE::IterateDecTest)
+
+UNITTEST("MakeIterator (unmanaged)",    UM_DLL_TE::MakeIteratorTest)
+#if TEST_WILL_NOT_COMPILE || 0
+UNITTEST("MakeIterator (unique)",       UP_DLL_TE::MakeIteratorTest)
+#endif
+UNITTEST("MakeIterator (RefPtr)",       RP_DLL_TE::MakeIteratorTest)
+
+UNITTEST("InsertAfter (unmanaged)",     UM_DLL_TE::InsertAfterTest)
+UNITTEST("InsertAfter (unique)",        UP_DLL_TE::InsertAfterTest)
+UNITTEST("InsertAfter (RefPtr)",        RP_DLL_TE::InsertAfterTest)
+
+UNITTEST("Insert (unmanaged)",          UM_DLL_TE::InsertTest)
+UNITTEST("Insert (unique)",             UP_DLL_TE::InsertTest)
+UNITTEST("Insert (RefPtr)",             RP_DLL_TE::InsertTest)
+
+UNITTEST("DirectInsert (unmanaged)",    UM_DLL_TE::DirectInsertTest)
+#if TEST_WILL_NOT_COMPILE || 0
+UNITTEST("DirectInsert (unique)",       UP_DLL_TE::DirectInsertTest)
+#endif
+UNITTEST("DirectInsert (RefPtr)",       RP_DLL_TE::DirectInsertTest)
+
+UNITTEST("PushBack (unmanaged)",        UM_DLL_TE::PushBackTest)
+UNITTEST("PushBack (unique)",           UP_DLL_TE::PushBackTest)
+UNITTEST("PushBack (RefPtr)",           RP_DLL_TE::PushBackTest)
+
+UNITTEST("PopFront (unmanaged)",        UM_DLL_TE::PopFrontTest)
+UNITTEST("PopFront (unique)",           UP_DLL_TE::PopFrontTest)
+UNITTEST("PopFront (RefPtr)",           RP_DLL_TE::PopFrontTest)
+
+UNITTEST("PopBack (unmanaged)",         UM_DLL_TE::PopBackTest)
+UNITTEST("PopBack (unique)",            UP_DLL_TE::PopBackTest)
+UNITTEST("PopBack (RefPtr)",            RP_DLL_TE::PopBackTest)
+
+UNITTEST("EraseNext (unmanaged)",       UM_DLL_TE::EraseNextTest)
+UNITTEST("EraseNext (unique)",          UP_DLL_TE::EraseNextTest)
+UNITTEST("EraseNext (RefPtr)",          RP_DLL_TE::EraseNextTest)
+
+UNITTEST("Erase (unmanaged)",           UM_DLL_TE::EraseTest)
+UNITTEST("Erase (unique)",              UP_DLL_TE::EraseTest)
+UNITTEST("Erase (RefPtr)",              RP_DLL_TE::EraseTest)
+
+UNITTEST("DirectErase (unmanaged)",     UM_DLL_TE::DirectEraseTest)
+#if TEST_WILL_NOT_COMPILE || 0
+UNITTEST("DirectErase (unique)",        UP_DLL_TE::DirectEraseTest)
+#endif
+UNITTEST("DirectErase (RefPtr)",        RP_DLL_TE::DirectEraseTest)
+
+UNITTEST("Swap (unmanaged)",            UM_DLL_TE::SwapTest)
+UNITTEST("Swap (unique)",               UP_DLL_TE::SwapTest)
+UNITTEST("Swap (RefPtr)",               RP_DLL_TE::SwapTest)
+
+UNITTEST("Rvalue Ops (unmanaged)",      UM_DLL_TE::RvalueOpsTest)
+UNITTEST("Rvalue Ops (unique)",         UP_DLL_TE::RvalueOpsTest)
+UNITTEST("Rvalue Ops (RefPtr)",         RP_DLL_TE::RvalueOpsTest)
+
+UNITTEST("TwoList (unmanaged)",         UM_DLL_TE::TwoListTest)
+#if TEST_WILL_NOT_COMPILE || 0
+UNITTEST("TwoList (unique)",            UP_DLL_TE::TwoListTest)
+#endif
+UNITTEST("TwoList (RefPtr)",            RP_DLL_TE::TwoListTest)
+
+UNITTEST("EraseIf (unmanaged)",         UM_DLL_TE::EraseIfTest)
+UNITTEST("EraseIf (unique)",            UP_DLL_TE::EraseIfTest)
+UNITTEST("EraseIf (RefPtr)",            RP_DLL_TE::EraseIfTest)
+
+UNITTEST("Scope (unique)",              UP_DLL_TE::ScopeTest)
+UNITTEST("Scope (RefPtr)",              RP_DLL_TE::ScopeTest)
+UNITTEST_END_TESTCASE(double_linked_list_tests,
+                      "dll",
+                      "Intrusive doubly linked list tests.",
                       NULL, NULL);
 
 }  // namespace utils
