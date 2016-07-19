@@ -15,6 +15,7 @@
 #include <arch/ops.h>
 #include <platform.h>
 #include <platform/debug.h>
+#include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <arch.h>
 
@@ -34,6 +35,7 @@ static int cmd_chain(int argc, const cmd_args *argv);
 static int cmd_sleep(int argc, const cmd_args *argv);
 static int cmd_crash(int argc, const cmd_args *argv);
 static int cmd_stackstomp(int argc, const cmd_args *argv);
+static int cmd_cmdline(int argc, const cmd_args *argv);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
@@ -53,6 +55,7 @@ STATIC_COMMAND("stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
 #if LK_DEBUGLEVEL > 1
 STATIC_COMMAND("mtest", "simple memory test", &cmd_memtest)
 #endif
+STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("chain", "chain load another binary", &cmd_chain)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
@@ -358,4 +361,34 @@ static int cmd_stackstomp(int argc, const cmd_args *argv)
     return 0;
 }
 
+#define DEBUG_CMDLINE_MAX 1024
+static int cmd_cmdline(int argc, const cmd_args *argv)
+{
+    if (argc == 1) {
+        char cmdline_buf[DEBUG_CMDLINE_MAX];
+        memset(cmdline_buf, 0, DEBUG_CMDLINE_MAX);
+        const char* cmdline = cmdline_get(NULL);
+        for (size_t i = 0; i < DEBUG_CMDLINE_MAX; i++) {
+            if (cmdline[i] == '\0') {
+                if (cmdline[i+1] == '\0') {
+                    break;
+                }
+                cmdline_buf[i] = ' ';
+            } else {
+                cmdline_buf[i] = cmdline[i];
+            }
+        }
+        printf("cmdline: %s\n", cmdline_buf);
+    } else {
+        const char* key = argv[1].str;
+        const char* val = cmdline_get(key);
+        if (!val) {
+            printf("cmdline: %s not found\n", key);
+        } else {
+            printf("cmdline: %s=%s\n", key, val);
+        }
+    }
+
+    return 0;
+}
 

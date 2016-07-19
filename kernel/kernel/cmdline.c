@@ -27,7 +27,7 @@ void cmdline_init(const char* data) {
         }
         if (c == ' ') {
             // spaces become \0's, but do not double up
-            if ((i == 0) || (__kernel_cmdline[i] == 0)) {
+            if ((i == 0) || (__kernel_cmdline[i-1] == 0)) {
                 continue;
             } else {
                 c = 0;
@@ -41,21 +41,23 @@ void cmdline_init(const char* data) {
 }
 
 const char* cmdline_get(const char* key) {
+    if (!key) return __kernel_cmdline;
     unsigned sz = strlen(key);
     const char* ptr = __kernel_cmdline;
     for (;;) {
-        if (strncmp(ptr, key, sz)) {
-            ptr = strchr(ptr, 0) + 1;
-            if (*ptr == 0) {
-                return NULL;
-            }
+        if (!strncmp(ptr, key, sz)) {
+            break;
         }
-        ptr += sz;
-        if (*ptr == '=') {
-             ptr++;
+        ptr = strchr(ptr, 0) + 1;
+        if (*ptr == 0) {
+            return NULL;
         }
-        return ptr;
     }
+    ptr += sz;
+    if (*ptr == '=') {
+        ptr++;
+    }
+    return ptr;
 }
 
 bool cmdline_get_bool(const char* key, bool _default) {

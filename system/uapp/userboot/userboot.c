@@ -59,19 +59,21 @@ const char* cmdline_get(const char* key) {
     unsigned sz = strlen(key);
     const char* ptr = __kernel_cmdline;
     for (;;) {
-        if (strncmp(ptr, key, sz)) {
-            ptr = strchr(ptr, 0) + 1;
-            if (*ptr == 0) {
-                return NULL;
-            }
+        if (!strncmp(ptr, key, sz)) {
+            break;
         }
-        ptr += sz;
-        if (*ptr == '=') {
-             ptr++;
+        ptr = strchr(ptr, 0) + 1;
+        if (*ptr == 0) {
+            return NULL;
         }
-        return ptr;
     }
+    ptr += sz;
+    if (*ptr == '=') {
+        ptr++;
+    }
+    return ptr;
 }
+
 int main(int argc, char** argv) {
     mx_handle_t bootfs_vmo = (mx_handle_t)(uintptr_t)arg;
     uint64_t bootfs_size;
