@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 #include <endian.h>
-#include "tpm_commands.h"
+#include "tpm-commands.h"
 
 uint32_t tpm_init_getrandom(struct tpm_getrandom_cmd *cmd, uint32_t bytes_requested) {
     cmd->hdr.tag = htobe16(TPM_TAG_RQU_COMMAND);

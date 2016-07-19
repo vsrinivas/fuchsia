@@ -38,7 +38,7 @@
 #include <string.h>
 
 #include "tpm.h"
-#include "tpm_commands.h"
+#include "tpm-commands.h"
 
 #define TPM_PHYS_ADDRESS 0xfed40000
 #define TPM_PHYS_LENGTH 0x5000

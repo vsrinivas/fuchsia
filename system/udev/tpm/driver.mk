@@ -16,5 +16,5 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
     $(LOCAL_DIR)/tpm.c \
-    $(LOCAL_DIR)/tpm_proto.c \
-    $(LOCAL_DIR)/tpm_commands.c \
+    $(LOCAL_DIR)/tpm-proto.c \
+    $(LOCAL_DIR)/tpm-commands.c \
