@@ -13,7 +13,6 @@ gcc_toolchain("gcc_${host_cpu}") {
 
   toolchain_cpu = host_cpu
   toolchain_os = host_os
-  is_clang = false
 }
 
 clang_toolchain("clang_${host_cpu}") {

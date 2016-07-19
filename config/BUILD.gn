@@ -17,7 +17,7 @@ config("compiler") {
     cflags += [ "-g" ]
   }
 
-  if (target_os == "fuchsia") {
+  if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
   }
 
@@ -46,7 +46,7 @@ config("default_warnings") {
 config("shared_library_config") {
   configs = []
 
-  if (target_os == "fuchsia") {
+  if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:shared_library_config" ]
   }
 }
@@ -54,7 +54,7 @@ config("shared_library_config") {
 config("executable_config") {
   configs = []
 
-  if (target_os == "fuchsia") {
+  if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:executable_config" ]
   }
 }

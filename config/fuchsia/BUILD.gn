@@ -4,7 +4,7 @@
 
 import("//build/config/sysroot.gni")
 
-assert(target_os == "fuchsia")
+assert(current_os == "fuchsia")
 
 config("compiler") {
   asmflags = []
