@@ -458,6 +458,11 @@ void acpi_poweroff(void)
     }
 }
 
+void acpi_reboot(void)
+{
+    AcpiReset();
+}
+
 status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
 {
     ACPI_TABLE_HEADER *table = NULL;

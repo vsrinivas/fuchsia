@@ -63,6 +63,8 @@ status_t platform_find_pcie_legacy_irq_mapping(struct acpi_pcie_irq_mapping *roo
 
 // Powers off the machine.  Returns on failure
 void acpi_poweroff(void);
+// Reboots the machine.  Returns on failure
+void acpi_reboot(void);
 
 #define POWER_BUTTON_PORT "sys/pwr/sw"
 

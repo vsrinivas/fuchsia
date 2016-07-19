@@ -16,10 +16,8 @@
 #include <dev/interrupt.h>
 #include <platform.h>
 #include <platform/pc.h>
-#include <platform/pc/acpi.h>
 #include <platform/pc/memmap.h>
 #include <platform/console.h>
-#include <platform/keyboard.h>
 #include <platform/debug.h>
 
 static const int uart_baud_rate = 115200;
@@ -90,30 +88,4 @@ void platform_dputc(char c)
 int platform_dgetc(char *c, bool wait)
 {
     return cbuf_read_char(&console_input_buf, c, wait);
-}
-
-void platform_halt(
-        platform_halt_action suggested_action,
-        platform_halt_reason reason)
-{
-    switch (suggested_action) {
-        case HALT_ACTION_SHUTDOWN:
-            printf("Powering off...\n");
-            acpi_poweroff();
-            printf("Power off failed, halting\n");
-            break;
-        case HALT_ACTION_REBOOT:
-            printf("Rebooting...\n");
-            pc_keyboard_reboot();
-            printf("Reboot failed, halting\n");
-            break;
-        case HALT_ACTION_HALT:
-            printf("Halting...\n");
-            break;
-    }
-
-    for (;;) {
-        x86_cli();
-        x86_hlt();
-    }
 }
