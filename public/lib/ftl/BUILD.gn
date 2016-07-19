@@ -7,6 +7,8 @@ static_library("ftl") {
     "arraysize.h",
     "debug/debugger.cc",
     "debug/debugger.h",
+    "functional/closure.h",
+    "functional/wrap_lambda.h",
     "logging.cc",
     "logging.h",
     "macros.h",
@@ -42,6 +44,7 @@ static_library("ftl") {
 executable("ftl_unittests") {
   sources = [
     "arraysize_unittest.cc",
+    "functional/wrap_lambda_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
     "strings/string_number_conversions_unittest.cc",

@@ -68,8 +68,10 @@ class LogMessage {
       !(condition))
 
 #ifndef NDEBUG
+#define FTL_DLOG(severity) FTL_LOG(severity)
 #define FTL_DCHECK(condition) FTL_CHECK(condition)
 #else
+#define FTL_DLOG(severity) FTL_EAT_STREAM_PARAMETERS
 #define FTL_DCHECK(condition) FTL_EAT_STREAM_PARAMETERS
 #endif
 
