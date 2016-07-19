@@ -110,17 +110,17 @@ bool message_pipe_test(void) {
     _pipe[0] = h[0];
     _pipe[2] = h[1];
 
-    status = mx_message_pipe_create(h, 0);
-    ASSERT_EQ(status, 0, "error in message pipe create");
-
-    _pipe[1] = h[0];
-    _pipe[3] = h[1];
-
     static const uint32_t write_data = 0xdeadbeef;
     status = mx_message_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
     ASSERT_EQ(get_satisfied_signals(_pipe[0]), MX_SIGNAL_WRITABLE, "");
     ASSERT_EQ(get_satisfied_signals(_pipe[2]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
+
+    status = mx_message_pipe_create(h, 0);
+    ASSERT_EQ(status, 0, "error in message pipe create");
+
+    _pipe[1] = h[0];
+    _pipe[3] = h[1];
 
     const char* reader = "reader";
     mx_handle_t thread = mx_thread_create(reader_thread, NULL, reader, strlen(reader) + 1);
@@ -143,8 +143,9 @@ bool message_pipe_test(void) {
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
     mx_handle_close(_pipe[1]);
-    ASSERT_EQ(get_satisfied_signals(_pipe[3]), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfiable_signals(_pipe[3]), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, "");
+    // The reader thread is reading from _pipe[3], so we may or may not have "readable".
+    ASSERT_TRUE((get_satisfied_signals(_pipe[3]) & MX_SIGNAL_PEER_CLOSED), "");
+    ASSERT_TRUE((get_satisfiable_signals(_pipe[3]) & MX_SIGNAL_PEER_CLOSED), "");
 
     usleep(1);
     mx_handle_close(_pipe[0]);
