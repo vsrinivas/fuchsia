@@ -95,3 +95,7 @@ source_set("libmsd") {
     "src/sys-driver/magma_system.cpp",
   ]
 }
+
+group("magma_tests"){
+  deps = ["tests"]
+}

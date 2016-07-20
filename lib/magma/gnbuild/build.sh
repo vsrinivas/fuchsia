@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 fuchsia_root=`pwd`
-magenta_build_dir=$fuchsia_root/magenta/build-magenta-pc-uefi
+tools_path=$fuchsia_root/buildtools
+magenta_build_dir=$fuchsia_root/magenta/build-magenta-pc-x86-64
 
 bootfs_output_dir=$fuchsia_root/out/Debug
 build_dir=$1
@@ -23,10 +24,24 @@ rm -rf $bootfs_path
 mkdir -p $bootfs_path/bin
 cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1616
 
+if [ true ]; then
+	ninja -C $build_dir magma_tests
+
+	test_executable=bin/magma_unit_tests
+	cp $build_dir/magma_unit_tests $bootfs_path/$test_executable
+
+	autorun_path=$bootfs_path/autorun
+	echo "echo \"Running Magma Unit Tests\"" >> $autorun_path # for sanity
+	echo "/boot/$test_executable" >> $autorun_path # run the tests
+	echo "msleep 1000" >> $autorun_path # give some time to write out to log listener
+	echo "\`poweroff" >> $autorun_path # rinse and repeat
+fi
+
+
 mkdir -p $bootfs_output_dir
-./buildtools/mkbootfs -v -o $bootfs_output_file @$bootfs_path
+$tools_path/mkbootfs -v -o $bootfs_output_file @$bootfs_path
 
 echo "Recommended bootserver command:"
 echo ""
-echo "$magenta_build_dir/tools/bootserver $magenta_build_dir/magenta.bin $bootfs_output_file"
+echo "$tools_path/bootserver $magenta_build_dir/magenta.bin $bootfs_output_file"
 echo ""

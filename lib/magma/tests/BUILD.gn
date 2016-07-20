@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-declare_args() {
-  magma_build_root = "//magma"
-  mesa_build_root = "//third_party/mesa"
-  expat_build_root = "//third_party/expat"
-  msd_intel_gen_build_root = "//msd-intel-gen"
+group("tests") {
+  deps = [
+    "unit_tests:magma_unit_tests"
+  ]
 }
