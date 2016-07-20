@@ -66,7 +66,8 @@ bool magma_system_create_context(MagmaSystemDevice* dev, int* context_id)
 
 // size - in/out
 // handle - out
-bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out, uint32_t* handle_out)
+bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,
+                        uint32_t* handle_out)
 {
     return msd_alloc(dev->arch(), size, size_out, handle_out);
 }

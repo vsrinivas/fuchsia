@@ -32,7 +32,8 @@ uint32_t magma_system_get_device_id(struct MagmaSystemDevice* dev);
 
 bool magma_system_create_context(struct MagmaSystemDevice* dev, int* context_id);
 
-bool magma_system_alloc(struct MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out, uint32_t* handle_out);
+bool magma_system_alloc(struct MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,
+                        uint32_t* handle_out);
 bool magma_system_free(struct MagmaSystemDevice* dev, uint32_t handle);
 
 bool magma_system_set_tiling_mode(struct MagmaSystemDevice* dev, uint32_t handle,

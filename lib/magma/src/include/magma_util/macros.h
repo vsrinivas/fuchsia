@@ -24,7 +24,7 @@ namespace magma {
 #define DASSERT(...)                                                                               \
     if (!(__VA_ARGS__)) {                                                                          \
         printf("%s:%d ASSERT\n", __FILE__, __LINE__);                                              \
-        assert(false); \
+        assert(false);                                                                             \
     }
 
 static inline int dret(const char* file, int line, int ret)
@@ -39,7 +39,7 @@ static inline int dret(const char* file, int line, int ret)
 #define UNIMPLEMENTED(...)                                                                         \
     do {                                                                                           \
         DLOG("UNIMPLEMENTED: " #__VA_ARGS__);                                                      \
-        DASSERT(false);                                                                             \
+        DASSERT(false);                                                                            \
     } while (0)
 
 static inline uint32_t upper_32_bits(uint64_t n) { return static_cast<uint32_t>(n >> 32); }
@@ -56,19 +56,16 @@ static inline uint32_t round_up_pot_32(uint32_t val, uint32_t power_of_two)
 
 static inline uint64_t round_up_64(uint64_t x, uint64_t y) { return ((x + (y - 1)) / y) * y; }
 
-static inline uint8_t inb(uint16_t _port) {
+static inline uint8_t inb(uint16_t _port)
+{
     uint8_t rv;
-    __asm__ __volatile__("inb %1, %0"
-                         : "=a"(rv)
-                         : "d"(_port));
+    __asm__ __volatile__("inb %1, %0" : "=a"(rv) : "d"(_port));
     return (rv);
 }
 
-static inline void outb(uint8_t _data, uint16_t _port) {
-    __asm__ __volatile__("outb %1, %0"
-                         :
-                         : "d"(_port),
-                           "a"(_data));
+static inline void outb(uint8_t _data, uint16_t _port)
+{
+    __asm__ __volatile__("outb %1, %0" : : "d"(_port), "a"(_data));
 }
 
 } // namespace magma

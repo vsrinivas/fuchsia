@@ -50,8 +50,8 @@ void magma_bufmgr_destroy(drm_intel_bufmgr* bufmgr);
 
 // int magma_bo_exec(drm_intel_bo *bo, int used,
 //               struct drm_clip_rect *cliprects, int num_cliprects, int DR4);
-int magma_bo_mrb_exec(drm_intel_bo* bo, int used, void* cliprects,
-                      int num_cliprects, int DR4, unsigned int flags);
+int magma_bo_mrb_exec(drm_intel_bo* bo, int used, void* cliprects, int num_cliprects, int DR4,
+                      unsigned int flags);
 int magma_bufmgr_check_aperture_space(drm_intel_bo** bo_array, int count);
 
 int magma_bo_emit_reloc(drm_intel_bo* bo, uint32_t offset, drm_intel_bo* target_bo,

@@ -107,8 +107,7 @@
 
 #define INTEL_SNB_D_IDS(info)                                                                      \
     INTEL_VGA_DEVICE(0x0102, info)                                                                 \
-    , INTEL_VGA_DEVICE(0x0112, info), INTEL_VGA_DEVICE(0x0122, info),                              \
-        INTEL_VGA_DEVICE(0x010A, info)
+    , INTEL_VGA_DEVICE(0x0112, info), INTEL_VGA_DEVICE(0x0122, info), INTEL_VGA_DEVICE(0x010A, info)
 
 #define INTEL_SNB_M_IDS(info)                                                                      \
     INTEL_VGA_DEVICE(0x0106, info), INTEL_VGA_DEVICE(0x0116, info), INTEL_VGA_DEVICE(0x0126, info)
@@ -250,8 +249,7 @@
 
 #define INTEL_CHV_IDS(info)                                                                        \
     INTEL_VGA_DEVICE(0x22b0, info)                                                                 \
-    , INTEL_VGA_DEVICE(0x22b1, info), INTEL_VGA_DEVICE(0x22b2, info),                              \
-        INTEL_VGA_DEVICE(0x22b3, info)
+    , INTEL_VGA_DEVICE(0x22b1, info), INTEL_VGA_DEVICE(0x22b2, info), INTEL_VGA_DEVICE(0x22b3, info)
 
 #define INTEL_SKL_GT1_IDS(info)                                                                    \
     INTEL_VGA_DEVICE(0x1906, info)                                                                 \

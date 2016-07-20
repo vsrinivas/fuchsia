@@ -277,13 +277,13 @@ struct drm_stats {
  * Hardware locking flags.
  */
 enum drm_lock_flags {
-    _DRM_LOCK_READY = 0x01,     /**< Wait until hardware is ready for DMA */
-    _DRM_LOCK_QUIESCENT = 0x02, /**< Wait until hardware quiescent */
-    _DRM_LOCK_FLUSH = 0x04,     /**< Flush this context's DMA queue first */
-    _DRM_LOCK_FLUSH_ALL = 0x08, /**< Flush all DMA queues first */
-    /* These *HALT* flags aren't supported yet
-       -- they will be used to support the
-       full-screen DGA-like mode. */
+    _DRM_LOCK_READY = 0x01,      /**< Wait until hardware is ready for DMA */
+    _DRM_LOCK_QUIESCENT = 0x02,  /**< Wait until hardware quiescent */
+    _DRM_LOCK_FLUSH = 0x04,      /**< Flush this context's DMA queue first */
+    _DRM_LOCK_FLUSH_ALL = 0x08,  /**< Flush all DMA queues first */
+                                 /* These *HALT* flags aren't supported yet
+                                    -- they will be used to support the
+                                    full-screen DGA-like mode. */
     _DRM_HALT_ALL_QUEUES = 0x10, /**< Halt all current and future queues */
     _DRM_HALT_CUR_QUEUES = 0x20  /**< Halt all current queues */
 };

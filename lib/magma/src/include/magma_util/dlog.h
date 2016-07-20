@@ -19,11 +19,12 @@
 
 #ifdef DLOG_ENABLE
 
-#define DLOG(...) do {                                                                             \
-    printf("%s:%d ", __FILE__, __LINE__);                                                          \
-    printf(__VA_ARGS__);                                                                           \
-    printf("\n");                                                                                  \
-} while(0)
+#define DLOG(...)                                                                                  \
+    do {                                                                                           \
+        printf("%s:%d ", __FILE__, __LINE__);                                                      \
+        printf(__VA_ARGS__);                                                                       \
+        printf("\n");                                                                              \
+    } while (0)
 
 #else
 #define DLOG
