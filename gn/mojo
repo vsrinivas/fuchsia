@@ -6,8 +6,16 @@
             "bootfs_path": "bin/application_manager"
         },
         {
-            "binary": "mojo_public_unittests",
-            "bootfs_path": "bin/mojo_public_unittests"
+            "binary": "mojo_public_cpp_bindings_unittests",
+            "bootfs_path": "test/mojo_public_cpp_bindings_unittests"
+        },
+        {
+            "binary": "mojo_public_c_bindings_unittests",
+            "bootfs_path": "test/mojo_public_c_bindings_unittests"
+        },
+        {
+            "binary": "mojo_public_c_system_unittests",
+            "bootfs_path": "bin/mojo_public_c_system_unittests"
         },
         {
             "binary": "echo_client",
