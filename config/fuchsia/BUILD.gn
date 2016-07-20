@@ -9,6 +9,8 @@ assert(current_os == "fuchsia")
 config("compiler") {
   asmflags = []
   cflags = []
+  cflags_c = []
+  cflags_cc = []
   ldflags = []
   configs = []
 
@@ -19,7 +21,11 @@ config("compiler") {
     ldflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
   }
 
+  cflags_c += [ "-std=c11" ]
+  cflags_cc += [ "-std=c++14" ]
+
   asmflags += cflags
+  asmflags += cflags_c
 }
 
 config("compiler_cpu") {
