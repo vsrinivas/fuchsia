@@ -26,7 +26,7 @@ extern "C" {
 #include <hw/pci.h>
 }
 
-#include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <runtime/thread.h>
 
