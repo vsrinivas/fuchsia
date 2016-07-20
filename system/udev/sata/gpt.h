@@ -18,6 +18,7 @@
 
 #define GPT_MAGIC (0x5452415020494645ull) // 'EFI PART'
 #define GPT_GUID_STRLEN 37
+#define GPT_NAME_LEN 72
 
 typedef struct gpt {
     uint64_t magic;
@@ -52,6 +53,6 @@ typedef struct gpt_part_device {
     gpt_entry_t gpt_entry;
 } gpt_partdev_t;
 
-#define get_gpt_device(dev) containerof(dev, gpt_partdev_t, device);
+#define get_gpt_device(dev) containerof(dev, gpt_partdev_t, device)
 
 mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev, sata_device_t* disk);

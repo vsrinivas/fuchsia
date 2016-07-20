@@ -62,12 +62,17 @@ static void utf16_to_cstring(char* dst, uint8_t* src, size_t count) {
     }
 }
 
+static size_t gpt_getsize(gpt_partdev_t* dev) {
+    // last LBA is inclusive
+    uint64_t lbacount = dev->gpt_entry.last_lba - dev->gpt_entry.first_lba + 1;
+    return lbacount * dev->disk->sector_sz;
+}
+
+// implement device protocol:
+
 static ssize_t gpt_partdev_read(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie) {
     // read count bytes from LBA (off)
-    xprintf("gpt_partde_read buf=%p count=%zu off=%zu\n", buf, count, off);
-    // FIXME this is probably wrong
     gpt_partdev_t* device = get_gpt_device(dev);
-
     uint64_t off_lba = off / device->disk->sector_sz;
     uint64_t first = device->gpt_entry.first_lba;
     uint64_t last = device->gpt_entry.last_lba;
@@ -108,9 +113,7 @@ static ssize_t gpt_partdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     case BLOCK_OP_GET_SIZE: {
         uint64_t* size = reply;
         if (max < sizeof(*size)) return ERR_NOT_ENOUGH_BUFFER;
-        // last LBA is inclusive
-        uint64_t lbacount = device->gpt_entry.last_lba - device->gpt_entry.first_lba + 1;
-        *size = lbacount * device->disk->sector_sz;
+        *size = gpt_getsize(device);
         return sizeof(*size);
     }
     case BLOCK_OP_GET_BLOCKSIZE: {
@@ -127,20 +130,25 @@ static ssize_t gpt_partdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     }
     case BLOCK_OP_GET_NAME: {
         char* name = reply;
-        utf16_to_cstring(name, device->gpt_entry.name, MIN(max * 2, 72));
-        return strnlen(name, 72 / 2);
+        memset(name, 0, max);
+        // save room for the null terminator
+        utf16_to_cstring(name, device->gpt_entry.name, MIN((max - 1) * 2, GPT_NAME_LEN));
+        return strnlen(name, GPT_NAME_LEN / 2);
     }
     default:
         return ERR_NOT_SUPPORTED;
     }
 }
 
-// implement device protocol:
+static size_t gpt_partdev_getsize(mx_device_t* dev, void* cookie) {
+    return gpt_getsize(get_gpt_device(dev));
+}
 
 static mx_protocol_device_t gpt_partdev_proto = {
     .read = gpt_partdev_read,
     .write = gpt_partdev_write,
     .ioctl = gpt_partdev_ioctl,
+    .get_size = gpt_partdev_getsize,
 };
 
 mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev, sata_device_t* disk) {
@@ -206,7 +214,7 @@ mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev, sata_device_t* disk) {
         char guid[40];
         uint8_to_guid_string(guid, device->gpt_entry.type);
         char pname[40];
-        utf16_to_cstring(pname, device->gpt_entry.name, 72);
+        utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
         xprintf("gpt: partition %u (%s) type=%s name=%s\n", i, device->device.name, guid, pname);
     }
 
