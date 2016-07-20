@@ -126,6 +126,3 @@ int rename(const char* oldpath, const char* newpath) {
 int rmdir(const char* path) {
     return unlink(path);
 }
-int remove(const char* path) {
-    return unlink(path);
-}

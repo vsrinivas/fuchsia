@@ -265,6 +265,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/exit/atexit.c \
     $(LOCAL_DIR)/src/exit/exit.c \
     $(LOCAL_DIR)/src/exit/quick_exit.c \
+    $(LOCAL_DIR)/src/fcntl/creat.c \
     $(LOCAL_DIR)/src/fcntl/openat.c \
     $(LOCAL_DIR)/src/fcntl/posix_fadvise.c \
     $(LOCAL_DIR)/src/fcntl/posix_fallocate.c \
@@ -844,6 +845,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/stdio/putw.c \
     $(LOCAL_DIR)/src/stdio/putwc.c \
     $(LOCAL_DIR)/src/stdio/putwchar.c \
+    $(LOCAL_DIR)/src/stdio/remove.c \
     $(LOCAL_DIR)/src/stdio/rewind.c \
     $(LOCAL_DIR)/src/stdio/scanf.c \
     $(LOCAL_DIR)/src/stdio/setbuf.c \

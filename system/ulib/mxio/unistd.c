@@ -624,10 +624,6 @@ int open(const char* path, int flags, ...) {
     return fd;
 }
 
-int creat(const char* path, mode_t mode) {
-    return open(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
-}
-
 int fstat(int fd, struct stat* s) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {

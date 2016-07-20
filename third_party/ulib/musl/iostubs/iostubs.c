@@ -109,12 +109,6 @@ static int stub_stat(const char* fn, struct stat* s) {
 }
 weak_alias(stub_stat, stat);
 
-static int stub_fcntl(int fcntl) {
-    errno = ENOSYS;
-    return -1;
-}
-weak_alias(stub_fcntl, fcntl);
-
 static int stub_dup(int oldfd) {
     errno = ENOSYS;
     return -1;
@@ -162,3 +156,116 @@ static struct dirent* stub_readdir(DIR* dir) {
     return NULL;
 }
 weak_alias(stub_readdir, readdir);
+
+static int stub_access(const char* path, int mode) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_access, access);
+
+static int stub_chmod(const char* path, mode_t mode) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_chmod, chmod);
+
+static int stub_fchmod(int fd, mode_t mode) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fchmod, fchmod);
+
+static int stub_chown(const char* path, uid_t owner, gid_t group) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_chown, chown);
+
+static int stub_fchown(int fd, uid_t owner, gid_t group) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fchown, fchown);
+
+static int stub_lchown(const char* path, uid_t owner, gid_t group) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_lchown, lchown);
+
+static int stub_creat(const char* path, mode_t mode) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_creat, creat);
+
+static int stub_fcntl(int fd, int cmd, ...) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fcntl, fcntl);
+
+static int stub_fdatasync(int fd) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fdatasync, fdatasync);
+
+static int stub_fsync(int fd) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fsync, fsync);
+
+static int stub_ftruncate(int fd, off_t length) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_ftruncate, ftruncate);
+
+static int stub_truncate(const char* path, off_t length) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_truncate, truncate);
+
+static int stub_mkfifo(const char* path, mode_t mode) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_mkfifo, mkfifo);
+
+static int stub_mknod(const char* path, mode_t mode, dev_t dev) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_mknod, mknod);
+
+static int stub_remove(const char* path) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_remove, remove);
+
+static int stub_rename(const char* oldpath, const char* newpath) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_rename, rename);
+
+static int stub_symlink(const char* oldpath, const char* newpath) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_symlink, symlink);
+
+static void stub_sync(void) {
+    errno = ENOSYS;
+}
+weak_alias(stub_sync, sync);
+
+static mode_t stub_umask(mode_t mask) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_umask, umask);
