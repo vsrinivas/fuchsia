@@ -51,7 +51,7 @@ using HandleUniquePtr = utils::unique_ptr<Handle, handle_delete>;
 
 // (temporary) conversion from mx_time (nanoseconds) to lk_time_t (milliseconds)
 // remove once mx_time_t is converted to 1:1 match mx_time_t
-static inline lk_time_t mx_time_to_lk(mx_time_t mxt) {
+inline lk_time_t mx_time_to_lk(mx_time_t mxt) {
     if (mxt == MX_TIME_INFINITE)
         return INFINITE_TIME;
 
@@ -61,3 +61,8 @@ static inline lk_time_t mx_time_to_lk(mx_time_t mxt) {
     return static_cast<lk_time_t>(temp & 0xffffffff);
 }
 
+// TODO(vtl): This should use mx_time_t, but currently everything operates using lk_time_t.
+inline lk_time_t timeout_to_deadline(lk_time_t now, lk_time_t timeout) {
+    // Note: |lk_time_t| is a |uint32_t|.
+    return (timeout > UINT32_MAX - now) ? INFINITE_TIME : now + timeout;
+}

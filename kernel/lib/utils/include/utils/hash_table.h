@@ -73,6 +73,19 @@ public:
         }
     }
 
+    // TODO(vtl): You can't use |for_each()| to delete elements, since they're
+    // in intrusive lists. This removes each element and executes |fn| on it.
+    // This is a stopgap until we have a smarter HashTable.
+    template <typename UnaryFn>
+    void for_each_remove_and_run(UnaryFn fn) {
+        for (auto& bucket : buckets_) {
+            while (!bucket.is_empty()) {
+                T* obj = bucket.pop_front();
+                fn(obj);
+            }
+        }
+    }
+
 private:
     BucketType& GetBucket(Key key) {
         return buckets_[hashfn_(key) % num_buckets];

@@ -34,6 +34,7 @@ class PciInterruptDispatcher;
 class ProcessDispatcher;
 class ThreadDispatcher;
 class VmObjectDispatcher;
+class WaitSetDispatcher;
 
 class Dispatcher : public utils::RefCounted<Dispatcher> {
 public:
@@ -105,6 +106,10 @@ public:
     }
 
     virtual DataPipeConsumerDispatcher* get_data_pipe_consumer_dispatcher() {
+        return nullptr;
+    }
+
+    virtual WaitSetDispatcher* get_wait_set_dispatcher() {
         return nullptr;
     }
 

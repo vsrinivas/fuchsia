@@ -74,6 +74,7 @@ typedef enum {
     MX_OBJ_TYPE_PCI_DEVICE          = 11,
     MX_OBJ_TYPE_PCI_INT             = 12,
     MX_OBJ_TYPE_LOG                 = 13,
+    MX_OBJ_TYPE_WAIT_SET            = 14,
     MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
 
@@ -169,6 +170,14 @@ typedef struct mx_user_packet {
 // Buffer size limits on the cprng syscalls
 #define MX_CPRNG_DRAW_MAX_LEN        256
 #define MX_CPRNG_ADD_ENTROPY_MAX_LEN 256
+
+// Structures for mx_wait_set_*()
+typedef struct mx_wait_set_result {
+    uint64_t cookie;
+    mx_status_t wait_result;
+    uint32_t reserved;
+    mx_signals_state_t signals_state;
+} mx_wait_set_result_t;
 
 #ifdef __cplusplus
 }
