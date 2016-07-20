@@ -5,7 +5,8 @@
 #include "lib/ftl/synchronization/waitable_event.h"
 
 #include "lib/ftl/logging.h"
-#include "lib/ftl/time/time.h"
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 #include <errno.h>
 #include <time.h>
@@ -19,15 +20,16 @@ template <typename ConditionFn>
 bool WaitWithTimeoutImpl(Mutex* mutex,
                          CondVar* cv,
                          ConditionFn condition,
-                         Duration timeout) FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex) {
+                         TimeDelta timeout)
+    FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex) {
   mutex->AssertHeld();
 
   if (condition())
     return false;
 
   // We may get spurious wakeups.
-  Duration wait_remaining = timeout;
-  TimePoint start = Now();
+  TimeDelta wait_remaining = timeout;
+  TimePoint start = TimePoint::Now();
   while (true) {
     if (cv->WaitWithTimeout(mutex, wait_remaining))
       return true;  // Definitely timed out.
@@ -37,9 +39,9 @@ bool WaitWithTimeoutImpl(Mutex* mutex,
       return false;
 
     // Or the wakeup may have been spurious.
-    TimePoint now = Now();
+    TimePoint now = TimePoint::Now();
     FTL_DCHECK(now >= start);
-    Duration elapsed = now - start;
+    TimeDelta elapsed = now - start;
     // It's possible that we may have timed out anyway.
     if (elapsed >= timeout)
       return true;
@@ -69,7 +71,7 @@ void AutoResetWaitableEvent::Wait() {
   signaled_ = false;
 }
 
-bool AutoResetWaitableEvent::WaitWithTimeout(Duration timeout) {
+bool AutoResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
   MutexLocker locker(&mutex_);
 
   if (signaled_) {
@@ -78,8 +80,8 @@ bool AutoResetWaitableEvent::WaitWithTimeout(Duration timeout) {
   }
 
   // We may get spurious wakeups.
-  Duration wait_remaining = timeout;
-  TimePoint start = Now();
+  TimeDelta wait_remaining = timeout;
+  TimePoint start = TimePoint::Now();
   while (true) {
     if (cv_.WaitWithTimeout(&mutex_, wait_remaining))
       return true;  // Definitely timed out.
@@ -89,9 +91,9 @@ bool AutoResetWaitableEvent::WaitWithTimeout(Duration timeout) {
       break;
 
     // Or the wakeup may have been spurious.
-    TimePoint now = Now();
+    TimePoint now = TimePoint::Now();
     FTL_DCHECK(now >= start);
-    Duration elapsed = now - start;
+    TimeDelta elapsed = now - start;
     // It's possible that we may have timed out anyway.
     if (elapsed >= timeout)
       return true;
@@ -135,7 +137,7 @@ void ManualResetWaitableEvent::Wait() {
   } while (signal_id_ == last_signal_id);
 }
 
-bool ManualResetWaitableEvent::WaitWithTimeout(Duration timeout) {
+bool ManualResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
   MutexLocker locker(&mutex_);
 
   auto last_signal_id = signal_id_;

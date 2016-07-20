@@ -53,7 +53,7 @@ class AutoResetWaitableEvent final {
   // Like |Wait()|, but with a timeout. Also unblocks if |timeout_microseconds|
   // without being signaled in which case it returns true (otherwise, it returns
   // false).
-  bool WaitWithTimeout(Duration timeout);
+  bool WaitWithTimeout(TimeDelta timeout);
 
   // Returns whether this event is in a signaled state or not. For use in tests
   // only (in general, this is racy). Note: Unlike
@@ -96,7 +96,7 @@ class ManualResetWaitableEvent final {
   // Like |Wait()|, but with a timeout. Also unblocks if |timeout_microseconds|
   // without being signaled in which case it returns true (otherwise, it returns
   // false).
-  bool WaitWithTimeout(Duration timeout);
+  bool WaitWithTimeout(TimeDelta timeout);
 
   // Returns whether this event is in a signaled state or not. For use in tests
   // only (in general, this is racy).

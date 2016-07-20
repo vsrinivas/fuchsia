@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/time/time.h"
+#include "lib/ftl/synchronization/sleep.h"
+
+#include <time.h>
 
 namespace ftl {
 
-TimePoint Now() {
-  return std::chrono::steady_clock::now();
+void SleepFor(TimeDelta duration) {
+  struct timespec ts = duration.ToTimespec();
+  nanosleep(&ts, nullptr);
 }
 
 }  // namespace ftl

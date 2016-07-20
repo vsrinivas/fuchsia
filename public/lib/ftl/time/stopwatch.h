@@ -8,7 +8,8 @@
 #define LIB_FTL_TIME_STOP_WATCH_H_
 
 #include "lib/ftl/macros.h"
-#include "lib/ftl/time/time.h"
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace ftl {
 
@@ -20,9 +21,8 @@ class Stopwatch final {
 
   void Start();
 
-  // Returns the amount of time elapsed since the last call to |Start()| (in
-  // microseconds).
-  Duration Elapsed();
+  // Returns the amount of time elapsed since the last call to |Start()|.
+  TimeDelta Elapsed();
 
  private:
   TimePoint start_time_;

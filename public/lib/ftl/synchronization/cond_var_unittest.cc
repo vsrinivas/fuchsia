@@ -20,8 +20,8 @@
 namespace ftl {
 namespace {
 
-constexpr std::chrono::milliseconds kEpsilonTimeout(20);
-constexpr std::chrono::milliseconds kTinyTimeout(100);
+constexpr TimeDelta kEpsilonTimeout = TimeDelta::FromMilliseconds(20);
+constexpr TimeDelta kTinyTimeout = TimeDelta::FromMilliseconds(100);
 
 // Sleeps for a "very small" amount of time.
 void EpsilonRandomSleep() {
@@ -50,9 +50,9 @@ TEST(CondVarTest, Basic) {
     // Note: Theoretically, pthreads is allowed to wake us up spuriously, in
     // which case |WaitWithTimeout()| would return false. (This would also
     // happen if we're interrupted, e.g., by ^Z.)
-    EXPECT_TRUE(cv.WaitWithTimeout(&mu, Duration::zero()));
+    EXPECT_TRUE(cv.WaitWithTimeout(&mu, TimeDelta::Zero()));
     mu.AssertHeld();
-    EXPECT_TRUE(cv.WaitWithTimeout(&mu, std::chrono::microseconds(1)));
+    EXPECT_TRUE(cv.WaitWithTimeout(&mu, TimeDelta::FromMicroseconds(1)));
     mu.AssertHeld();
   }
 
@@ -145,12 +145,12 @@ TEST(CondVarTest, Timeouts) {
   MutexLocker locker(&mu);
 
   for (size_t i = 0; i < arraysize(kTestTimeoutsMs); i++) {
-    Duration timeout = std::chrono::milliseconds(kTestTimeoutsMs[i]);
+    TimeDelta timeout = TimeDelta::FromMilliseconds(kTestTimeoutsMs[i]);
 
     stopwatch.Start();
     // See note in CondVarTest.Basic about spurious wakeups.
     EXPECT_TRUE(cv.WaitWithTimeout(&mu, timeout));
-    Duration elapsed = stopwatch.Elapsed();
+    TimeDelta elapsed = stopwatch.Elapsed();
 
     // It should time out after *at least* the specified amount of time.
     EXPECT_GE(elapsed, timeout);

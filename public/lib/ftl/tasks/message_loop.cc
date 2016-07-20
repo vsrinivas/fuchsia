@@ -57,8 +57,8 @@ void MessageLoop::Run() {
     if (next_run_time == TimePoint()) {
       event_.Wait();
     } else {
-      Duration delay = next_run_time - Now();
-      if (delay > Duration::zero())
+      TimeDelta delay = next_run_time - TimePoint::Now();
+      if (delay > TimeDelta::Zero())
         event_.WaitWithTimeout(delay);
     }
   }
@@ -92,7 +92,7 @@ TimePoint MessageLoop::RunReadyTasks() {
 
     TimePoint next_run_time = queue_.top().target_time();
     if (next_run_time > recent_time_) {
-      recent_time_ = Now();
+      recent_time_ = TimePoint::Now();
       if (next_run_time > recent_time_)
         return next_run_time;
     }

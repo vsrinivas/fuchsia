@@ -12,7 +12,7 @@
 
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
-#include "lib/ftl/time/time.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace ftl {
 
@@ -44,7 +44,7 @@ class CondVar final {
   // for users who want to wait to be signaled or a timeout to have definitely
   // elapsed. With this API, users have to recalculate the timeout when they
   // detect a spurious wakeup.
-  bool WaitWithTimeout(Mutex* mutex, Duration timeout)
+  bool WaitWithTimeout(Mutex* mutex, TimeDelta timeout)
       FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex);
 
   // Signals this condition variable, waking at least one waiting thread if

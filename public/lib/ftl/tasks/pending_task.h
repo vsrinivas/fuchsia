@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "lib/ftl/functional/closure.h"
-#include "lib/ftl/time/time.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace ftl {
 namespace internal {

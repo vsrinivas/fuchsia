@@ -2,19 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/time/stopwatch.h"
+#ifndef LIB_FTL_SYNCHRONIZATION_SLEEP_H_
+#define LIB_FTL_SYNCHRONIZATION_SLEEP_H_
 
+#include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
 
 namespace ftl {
 
-void Stopwatch::Start() {
-  start_time_ = TimePoint::Now();
-}
-
-TimeDelta Stopwatch::Elapsed() {
-  return TimePoint::Now() - start_time_;
-}
+void SleepFor(TimeDelta duration);
 
 }  // namespace ftl
+
+#endif  // LIB_FTL_SYNCHRONIZATION_SLEEP_H_

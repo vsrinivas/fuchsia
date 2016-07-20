@@ -15,19 +15,21 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/synchronization/sleep.h"
 #include "lib/ftl/time/stopwatch.h"
 
 namespace ftl {
 namespace {
 
-constexpr std::chrono::milliseconds kEpsilonTimeout(20);
-constexpr std::chrono::milliseconds kTinyTimeout(100);
-constexpr std::chrono::milliseconds kActionTimeout(10000);
+constexpr TimeDelta kEpsilonTimeout = TimeDelta::FromMilliseconds(20);
+constexpr TimeDelta kTinyTimeout = TimeDelta::FromMilliseconds(100);
+constexpr TimeDelta kActionTimeout = TimeDelta::FromMilliseconds(10000);
 
 // Sleeps for a "very small" amount of time.
 void EpsilonRandomSleep() {
-  std::chrono::milliseconds duration(static_cast<unsigned>(rand()) % 20u);
-  std::this_thread::sleep_for(duration);
+  TimeDelta duration =
+      TimeDelta::FromMilliseconds(static_cast<unsigned>(rand()) % 20u);
+  SleepFor(duration);
 }
 
 // AutoResetWaitableEvent ------------------------------------------------------
@@ -45,18 +47,18 @@ TEST(AutoResetWaitableEventTest, Basic) {
   EXPECT_TRUE(ev.IsSignaledForTest());
   ev.Reset();
   EXPECT_FALSE(ev.IsSignaledForTest());
-  EXPECT_TRUE(ev.WaitWithTimeout(Duration::zero()));
+  EXPECT_TRUE(ev.WaitWithTimeout(TimeDelta::Zero()));
   EXPECT_FALSE(ev.IsSignaledForTest());
-  EXPECT_TRUE(ev.WaitWithTimeout(std::chrono::milliseconds(1)));
+  EXPECT_TRUE(ev.WaitWithTimeout(TimeDelta::FromMilliseconds(1)));
   EXPECT_FALSE(ev.IsSignaledForTest());
   ev.Signal();
   EXPECT_TRUE(ev.IsSignaledForTest());
-  EXPECT_FALSE(ev.WaitWithTimeout(Duration::zero()));
+  EXPECT_FALSE(ev.WaitWithTimeout(TimeDelta::Zero()));
   EXPECT_FALSE(ev.IsSignaledForTest());
-  EXPECT_TRUE(ev.WaitWithTimeout(std::chrono::milliseconds(1)));
+  EXPECT_TRUE(ev.WaitWithTimeout(TimeDelta::FromMilliseconds(1)));
   EXPECT_FALSE(ev.IsSignaledForTest());
   ev.Signal();
-  EXPECT_FALSE(ev.WaitWithTimeout(std::chrono::milliseconds(1)));
+  EXPECT_FALSE(ev.WaitWithTimeout(TimeDelta::FromMilliseconds(1)));
   EXPECT_FALSE(ev.IsSignaledForTest());
 }
 
@@ -81,7 +83,7 @@ TEST(AutoResetWaitableEventTest, MultipleWaiters) {
     // Unfortunately, we can't really wait for the threads to be waiting, so we
     // just sleep for a bit, and count on them having started and advanced to
     // waiting.
-    std::this_thread::sleep_for(kTinyTimeout * 2);
+    SleepFor(kTinyTimeout + kTinyTimeout);
 
     for (size_t j = 0u; j < threads.size(); j++) {
       unsigned old_wake_count = wake_count.load();
@@ -92,13 +94,13 @@ TEST(AutoResetWaitableEventTest, MultipleWaiters) {
 
       // Poll for |wake_count| to change.
       while (wake_count.load() == old_wake_count)
-        std::this_thread::sleep_for(kEpsilonTimeout);
+        SleepFor(kEpsilonTimeout);
 
       EXPECT_FALSE(ev.IsSignaledForTest());
 
       // And once it's changed, wait a little longer, to see if any other
       // threads are awoken (they shouldn't be).
-      std::this_thread::sleep_for(kEpsilonTimeout);
+      SleepFor(kEpsilonTimeout);
 
       EXPECT_EQ(old_wake_count + 1u, wake_count.load());
 
@@ -107,7 +109,7 @@ TEST(AutoResetWaitableEventTest, MultipleWaiters) {
 
     // Having done that, if we signal |ev| now, it should stay signaled.
     ev.Signal();
-    std::this_thread::sleep_for(kEpsilonTimeout);
+    SleepFor(kEpsilonTimeout);
     EXPECT_TRUE(ev.IsSignaledForTest());
 
     for (auto& thread : threads)
@@ -125,11 +127,11 @@ TEST(AutoResetWaitableEventTest, Timeouts) {
   AutoResetWaitableEvent ev;
 
   for (size_t i = 0u; i < arraysize(kTestTimeoutsMs); i++) {
-    Duration timeout = std::chrono::milliseconds(kTestTimeoutsMs[i]);
+    TimeDelta timeout = TimeDelta::FromMilliseconds(kTestTimeoutsMs[i]);
 
     stopwatch.Start();
     EXPECT_TRUE(ev.WaitWithTimeout(timeout));
-    Duration elapsed = stopwatch.Elapsed();
+    TimeDelta elapsed = stopwatch.Elapsed();
 
     // It should time out after *at least* the specified amount of time.
     EXPECT_GE(elapsed, timeout);
@@ -149,15 +151,15 @@ TEST(ManualResetWaitableEventTest, Basic) {
   EXPECT_TRUE(ev.IsSignaledForTest());
   ev.Reset();
   EXPECT_FALSE(ev.IsSignaledForTest());
-  EXPECT_TRUE(ev.WaitWithTimeout(Duration::zero()));
+  EXPECT_TRUE(ev.WaitWithTimeout(TimeDelta::Zero()));
   EXPECT_FALSE(ev.IsSignaledForTest());
-  EXPECT_TRUE(ev.WaitWithTimeout(std::chrono::milliseconds(1)));
+  EXPECT_TRUE(ev.WaitWithTimeout(TimeDelta::FromMilliseconds(1)));
   EXPECT_FALSE(ev.IsSignaledForTest());
   ev.Signal();
   EXPECT_TRUE(ev.IsSignaledForTest());
-  EXPECT_FALSE(ev.WaitWithTimeout(Duration::zero()));
+  EXPECT_FALSE(ev.WaitWithTimeout(TimeDelta::Zero()));
   EXPECT_TRUE(ev.IsSignaledForTest());
-  EXPECT_FALSE(ev.WaitWithTimeout(std::chrono::milliseconds(1)));
+  EXPECT_FALSE(ev.WaitWithTimeout(TimeDelta::FromMilliseconds(1)));
   EXPECT_TRUE(ev.IsSignaledForTest());
 }
 
@@ -212,7 +214,7 @@ TEST(ManualResetWaitableEventTest, SignalMultipleWaitReset) {
     // Unfortunately, we can't really wait for the threads to be waiting, so we
     // just sleep for a bit, and count on them having started and advanced to
     // waiting.
-    std::this_thread::sleep_for(kTinyTimeout * 2);
+    SleepFor(kTinyTimeout + kTinyTimeout);
 
     ev.Signal();
 
@@ -236,11 +238,11 @@ TEST(ManualResetWaitableEventTest, Timeouts) {
   ManualResetWaitableEvent ev;
 
   for (size_t i = 0u; i < arraysize(kTestTimeoutsMs); i++) {
-    Duration timeout = std::chrono::milliseconds(kTestTimeoutsMs[i]);
+    TimeDelta timeout = TimeDelta::FromMilliseconds(kTestTimeoutsMs[i]);
 
     stopwatch.Start();
     EXPECT_TRUE(ev.WaitWithTimeout(timeout));
-    Duration elapsed = stopwatch.Elapsed();
+    TimeDelta elapsed = stopwatch.Elapsed();
 
     // It should time out after *at least* the specified amount of time.
     EXPECT_GE(elapsed, timeout);

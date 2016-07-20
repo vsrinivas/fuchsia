@@ -33,7 +33,7 @@ class IncomingTaskQueue : public TaskRunner {
 
   // |TaskRunner| implementation:
   void PostTask(Closure task) override;
-  void PostDelayedTask(Closure task, Duration delay) override;
+  void PostDelayedTask(Closure task, TimeDelta delay) override;
 
   TaskQueue TakeTaskQueue();
 
@@ -41,7 +41,7 @@ class IncomingTaskQueue : public TaskRunner {
   void ClearDelegate();
 
  private:
-  void AddTask(Closure task, Duration delay);
+  void AddTask(Closure task, TimeDelta delay);
 
   Mutex mutex_;
   TaskQueue incoming_queue_ FTL_GUARDED_BY(mutex_);

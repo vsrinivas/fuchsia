@@ -7,14 +7,14 @@
 
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/time/time.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace ftl {
 
 class TaskRunner : public RefCountedThreadSafe<TaskRunner> {
  public:
   virtual void PostTask(Closure task) = 0;
-  virtual void PostDelayedTask(Closure task, Duration delay) = 0;
+  virtual void PostDelayedTask(Closure task, TimeDelta delay) = 0;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(TaskRunner);

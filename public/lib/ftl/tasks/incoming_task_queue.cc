@@ -10,10 +10,10 @@ namespace ftl {
 namespace internal {
 namespace {
 
-TimePoint GetTargetTime(Duration delay) {
-  if (delay > Duration::zero())
-    return Now() + delay;
-  FTL_DCHECK(delay == Duration::zero());
+TimePoint GetTargetTime(TimeDelta delay) {
+  if (delay > TimeDelta::Zero())
+    return TimePoint::Now() + delay;
+  FTL_DCHECK(delay == TimeDelta::Zero());
   return TimePoint();
 }
 
@@ -26,14 +26,14 @@ IncomingTaskQueue::IncomingTaskQueue() {}
 IncomingTaskQueue::~IncomingTaskQueue() {}
 
 void IncomingTaskQueue::PostTask(Closure task) {
-  AddTask(std::move(task), Duration::zero());
+  AddTask(std::move(task), TimeDelta::Zero());
 }
 
-void IncomingTaskQueue::PostDelayedTask(Closure task, Duration delay) {
+void IncomingTaskQueue::PostDelayedTask(Closure task, TimeDelta delay) {
   AddTask(std::move(task), delay);
 }
 
-void IncomingTaskQueue::AddTask(Closure task, Duration delay) {
+void IncomingTaskQueue::AddTask(Closure task, TimeDelta delay) {
   TimePoint target_time = GetTargetTime(delay);
 
   MutexLocker locker(&mutex_);
