@@ -68,7 +68,7 @@ export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Darwin-x86_64/bin
 
 ## Build Magenta
 
-Build results will be in $SRC/magenta/build-qemu-{arm64,x86-64}
+Build results will be in $SRC/magenta/build-{qemu-arm64,pc-x86-64}
 
 The variable $BUILDDIR in examples below refers to the build output directory
 for the particular build in question.
@@ -80,7 +80,7 @@ cd $SRC/magenta
 make -j32 magenta-qemu-arm64
 
 # for x86-64
-make -j32 magenta-qemu-x86-64
+make -j32 magenta-pc-x86-64
 ```
 
 ## Run Magenta under Qemu
