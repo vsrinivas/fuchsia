@@ -18,7 +18,9 @@ class Stage {
   Stage();
   ~Stage();
 
-  void Resize(SizeI size, float device_pixel_ratio);
+  void Resize(SizeI size,
+              float device_pixel_ratio,
+              SizeI viewport_offset = SizeI(0, 0));
 
   const ViewingVolume& viewing_volume() const { return viewing_volume_; };
   void set_viewing_volume(ViewingVolume value) {
@@ -34,8 +36,11 @@ class Stage {
   const AmbientLight& fill_light() const { return fill_light_; }
   void set_fill_light(AmbientLight value) { fill_light_ = std::move(value); }
 
+  const SizeI& viewport_offset() const { return viewport_offset_; }
+
  private:
   SizeI physical_size_;
+  SizeI viewport_offset_;
   ViewingVolume viewing_volume_;
   DirectionalLight key_light_;
   AmbientLight fill_light_;

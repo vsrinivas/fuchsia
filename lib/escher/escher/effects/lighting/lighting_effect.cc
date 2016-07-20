@@ -4,8 +4,12 @@
 
 #include "escher/effects/lighting/lighting_effect.h"
 
+#include <iostream>
+
 #include "escher/gl/bindings.h"
 #include "escher/rendering/canvas.h"
+
+#include "ftl/logging.h"
 
 namespace escher {
 namespace {
@@ -18,7 +22,7 @@ LightingEffect::LightingEffect() {}
 
 LightingEffect::~LightingEffect() {}
 
-bool LightingEffect::Init(TextureCache* texture_cache) {
+bool LightingEffect::Init(TextureCache* texture_cache, bool use_mipmap) {
   texture_cache_ = texture_cache;
   if (!shader_.Compile() || !blur_.Compile() ||
       !occlusion_detector_.Compile())
@@ -26,6 +30,7 @@ bool LightingEffect::Init(TextureCache* texture_cache) {
   frame_buffer_ = FrameBuffer::Make();
   if (!frame_buffer_)
     return false;
+  use_mipmap_ = use_mipmap;
   full_frame_ = Quad::CreateFillClipSpace(0.0f);
   return true;
 }
@@ -35,8 +40,11 @@ void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
   auto& size = stage.physical_size();
   frame_buffer_.Bind();
 
-  if (!frame_buffer_.color().size().Equals(size))
-    frame_buffer_.SetColor(texture_cache_->GetColorTexture(size));
+  if (!frame_buffer_.color().size().Equals(size)) {
+    frame_buffer_.SetColor(use_mipmap_ ?
+        texture_cache_->GetMipmappedColorTexture(size) :
+        texture_cache_->GetColorTexture(size));
+  }
 
   glClear(GL_COLOR_BUFFER_BIT);
   glUseProgram(occlusion_detector_.program().id());
@@ -60,6 +68,8 @@ void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
   DrawQuad(occlusion_detector_.position(), full_frame_);
 
   if (kFilterLightingBuffer) {
+    // No need to make this texture mipmappable: it is for temporary storage of
+    // the horizontally-filtered shadow image.
     Texture illumination = frame_buffer_.SwapColor(
         texture_cache_->GetColorTexture(size));
     glClear(GL_COLOR_BUFFER_BIT);
@@ -82,8 +92,12 @@ void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
     glEnableVertexAttribArray(blur_.position());
     DrawQuad(blur_.position(), full_frame_);
 
+    if (use_mipmap_)
+      GenerateMipmap(frame_buffer_.color().id());
+
     texture_cache_->PutTexture(std::move(illumination));
   }
+
   glPopGroupMarkerEXT();
 }
 
@@ -103,6 +117,19 @@ void LightingEffect::Draw(const Texture& color) {
   glEnableVertexAttribArray(shader_.position());
   DrawQuad(shader_.position(), full_frame_);
 
+  glPopGroupMarkerEXT();
+}
+
+void LightingEffect::GenerateMipmap(GLuint texture_id) const {
+  glPushGroupMarkerEXT(31, "LightingEffect::GenerateMipmap");
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  GLenum gl_error = glGetError();
+  if (gl_error != GL_NO_ERROR) {
+    std::cerr << "LightingEffect::GenerateMipmap() failed: "
+              << gl_error << std::endl;
+    FTL_DCHECK(false);
+  }
   glPopGroupMarkerEXT();
 }
 

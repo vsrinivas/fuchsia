@@ -20,5 +20,6 @@ typedef UniqueObject<internal::DeleteTexture> UniqueTexture;
 UniqueTexture MakeUniqueTexture();
 UniqueTexture MakeDepthTexture(const SizeI& size);
 UniqueTexture MakeColorTexture(const SizeI& size);
+UniqueTexture MakeMipmappedColorTexture(const SizeI& size);
 
 }  // namespace escher

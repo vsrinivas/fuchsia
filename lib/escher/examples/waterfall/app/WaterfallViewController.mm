@@ -54,6 +54,9 @@ constexpr bool kDrawShadowTestScene = false;
 
   CGSize size = self.view.bounds.size;
   focus_ = glm::vec2(size.width / 2.0f, size.height / 2.0f);
+
+  [self.runTestsButton setBackgroundColor: [UIColor whiteColor]];
+
   [self update];
 }
 
@@ -70,9 +73,20 @@ constexpr bool kDrawShadowTestScene = false;
 - (void)update {
   CGFloat contentScaleFactor = self.view.contentScaleFactor;
   CGSize size = self.view.bounds.size;
-  stage_.Resize(escher::SizeI(size.width * contentScaleFactor,
-                              size.height * contentScaleFactor),
-                contentScaleFactor);
+
+  // iOS GLES 2.0 doesn't support mipmapping of NPOT textures, so make the
+  // stage width/height a power-of-two.
+  CGFloat width = 1.0;
+  CGFloat height = 1.0;
+  constexpr int kEnoughForGigapixelDisplays = 20;
+  for (int i = 0; i < kEnoughForGigapixelDisplays; ++i) {
+    if (width * 2 <= size.width) width *= 2.0;
+    if (height * 2 <= size.height) height *= 2.0;
+  }
+
+  stage_.Resize(escher::SizeI(width, height),
+                contentScaleFactor,
+                escher::SizeI(0, size.height - height));
 }
 
 - (void)glkView:(GLKView*)view drawInRect:(CGRect)rect {

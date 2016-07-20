@@ -26,6 +26,14 @@ Texture TextureCache::GetColorTexture(const SizeI& size) {
   return GetTexture(descriptor);
 }
 
+Texture TextureCache::GetMipmappedColorTexture(const SizeI& size) {
+  TextureDescriptor descriptor;
+  descriptor.size = size;
+  descriptor.factory = MakeMipmappedColorTexture;
+  descriptor.mipmapped = true;
+  return GetTexture(descriptor);
+}
+
 Texture TextureCache::GetTexture(const TextureDescriptor& descriptor) {
   auto it = cache_.find(descriptor);
   if (it == cache_.end())

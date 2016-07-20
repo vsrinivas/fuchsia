@@ -16,11 +16,14 @@ struct TextureDescriptor {
 
   SizeI size;
   TextureFactory factory = nullptr;
+  bool mipmapped = false;
 };
 
 inline bool operator==(const TextureDescriptor& lhs,
                        const TextureDescriptor& rhs) {
-  return lhs.size == rhs.size && lhs.factory == rhs.factory;
+  return lhs.size == rhs.size &&
+         lhs.factory == rhs.factory &&
+         lhs.mipmapped == rhs.mipmapped;
 }
 
 struct TextureDescriptor::Hash {
@@ -29,7 +32,8 @@ struct TextureDescriptor::Hash {
 
   inline size_t operator()(const TextureDescriptor& descriptor) const {
     return descriptor.size.GetHashCode() +
-        reinterpret_cast<intptr_t>(descriptor.factory) * 37;
+           reinterpret_cast<intptr_t>(descriptor.factory) * 37 +
+           (descriptor.mipmapped ? 1 : 0);
   }
 };
 

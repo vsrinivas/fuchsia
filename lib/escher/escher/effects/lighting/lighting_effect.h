@@ -22,7 +22,7 @@ class LightingEffect {
   LightingEffect();
   ~LightingEffect();
 
-  bool Init(TextureCache* texture_cache);
+  bool Init(TextureCache* texture_cache, bool use_mipmap);
 
   void Prepare(const Stage& stage, const Texture& depth);
   void Draw(const Texture& color);
@@ -30,7 +30,10 @@ class LightingEffect {
   const Texture& illumination() const { return frame_buffer_.color(); }
 
  private:
+  void GenerateMipmap(GLuint texture_id) const;
+  
   TextureCache* texture_cache_ = nullptr;
+  bool use_mipmap_ = false;
   FrameBuffer frame_buffer_;
   IlluminationShader shader_;
   IlluminationReconstructionFilter blur_;

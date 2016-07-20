@@ -35,12 +35,12 @@ class Renderer {
 
  private:
   void Blit(GLuint texture_id);
+  void GenerateMipmap(GLuint texture_id) const;
 
   GLuint front_frame_buffer_id_ = 0;
   TextureCache texture_cache_;
   LightingEffect lighting_;
   BlitShader blit_shader_;
-  SizeI size_;
   FrameBuffer unlit_scene_;
   FrameBuffer lit_scene_;
   DepthBasedBlurEffect blur_;

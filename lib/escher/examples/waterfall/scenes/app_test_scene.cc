@@ -77,36 +77,96 @@ escher::Model AppTestScene::GetModel(const escher::ViewingVolume& volume,
 
   // left eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(100.0f, 180.0f),
+      escher::Shape::CreateRect(glm::vec2(25.0f, 180.0f),
                                 glm::vec2(60.0f, 40.0f), 10.0f),
       &green_material_);
 
   // right eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(200.0f, 180.0f),
+      escher::Shape::CreateRect(glm::vec2(125.0f, 180.0f),
                                 glm::vec2(60.0f, 40.0f), 16.0f),
       &green_material_);
 
   // third eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(300.0f, 180.0f),
+      escher::Shape::CreateRect(glm::vec2(225.0f, 180.0f),
                                 glm::vec2(60.0f, 40.0f), 5.0f),
       &checkerboard_material_);
 
   // fourth eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(400.0f, 180.0f),
+      escher::Shape::CreateRect(glm::vec2(325.0f, 180.0f),
                                 glm::vec2(60.0f, 40.0f), 12.0f),
       &checkerboard_material_);
 
   // fifth eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(500.0f, 180.0f),
+      escher::Shape::CreateRect(glm::vec2(425.0f, 180.0f),
                                 glm::vec2(60.0f, 40.0f), 19.0f),
       &checkerboard_material_);
 
+  // sixth eye
+  objects.emplace_back(
+      escher::Shape::CreateRect(glm::vec2(0.0f, 245.0f),
+                                glm::vec2(680.0f, 50.0f), 2.0f),
+      &green_material_);
+
+  // horizontal line segments
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(40.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 2.0f),
+                       &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(100.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 5.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(160.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 9.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(220.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 13.0f),
+                      &canvas_material_);
+
+  // vertical line segments
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(290.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 2.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(330.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 5.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(370.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 9.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(410.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 13.0f),
+                      &canvas_material_);
+
+  // crossed line segments
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(440.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 2.0f),
+                       &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(500.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 5.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(560.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 9.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(620.0f, 270.0f),
+                                                 glm::vec2(40.0f, 1.0f), 13.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(460.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 2.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(520.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 5.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(580.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 9.0f),
+                      &canvas_material_);
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(640.0f, 250.0f),
+                                                 glm::vec2(1.0f, 40.0f), 13.0f),
+                      &canvas_material_);
+
   // null
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(20.0f, 290.0f),
+  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(40.0f, 310.0f),
                                                  glm::vec2(40.0f, 40.0f), 2.0f),
                        &null_material_);
 

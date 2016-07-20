@@ -4,6 +4,7 @@
 
 #include "escher/renderer.h"
 
+#include <iostream>
 #include <math.h>
 #include <utility>
 
@@ -18,6 +19,7 @@ namespace {
 
 constexpr bool kDebugIllumination = false;
 constexpr bool kDepthBasedBlur = true;
+constexpr bool kUseMipmap = true;
 
 }  // namespace
 
@@ -27,7 +29,7 @@ Renderer::~Renderer() {}
 
 bool Renderer::Init() {
   if (!blit_shader_.Compile()) return false;
-  if (!lighting_.Init(&texture_cache_)) return false;
+  if (!lighting_.Init(&texture_cache_, kUseMipmap)) return false;
   if (!blur_.Init(&texture_cache_)) return false;
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -63,11 +65,16 @@ void Renderer::Render(const Stage& stage, const Model& model) {
     lit_scene_.Bind();
 
     if (!lit_scene_.color().size().Equals(size)) {
-      lit_scene_.SetColor(texture_cache_.GetColorTexture(size));
+      lit_scene_.SetColor(kUseMipmap ?
+          texture_cache_.GetMipmappedColorTexture(size) :
+          texture_cache_.GetColorTexture(size));
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
     lighting_.Draw(unlit_scene_.color());
+
+    if (kUseMipmap)
+      GenerateMipmap(lit_scene_.color().id());
 
     blur_.Draw(stage,
                lit_scene_.color(),
@@ -76,6 +83,10 @@ void Renderer::Render(const Stage& stage, const Model& model) {
                front_frame_buffer_id_);
   } else {
     glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
+    glViewport(stage.viewport_offset().width(),
+               stage.viewport_offset().height(),
+               size.width(),
+               size.height());
     glClear(GL_COLOR_BUFFER_BIT);
     lighting_.Draw(unlit_scene_.color());
   }
@@ -90,6 +101,19 @@ void Renderer::Blit(GLuint texture_id) {
   glBindTexture(GL_TEXTURE_2D, texture_id);
   glEnableVertexAttribArray(blit_shader_.position());
   DrawQuad(blit_shader_.position(), Quad::CreateFillClipSpace(0.0f));
+}
+
+void Renderer::GenerateMipmap(GLuint texture_id) const {
+  glPushGroupMarkerEXT(25, "Renderer::GenerateMipmap");
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  GLenum gl_error = glGetError();
+  if (gl_error != GL_NO_ERROR) {
+    std::cerr << "Renderer::GenerateMipmap() failed: "
+              << gl_error << std::endl;
+    FTL_DCHECK(false);
+  }
+  glPopGroupMarkerEXT();
 }
 
 }  // namespace escher

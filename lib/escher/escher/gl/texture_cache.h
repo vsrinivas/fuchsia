@@ -20,6 +20,7 @@ class TextureCache {
 
   Texture GetDepthTexture(const SizeI& size);
   Texture GetColorTexture(const SizeI& size);
+  Texture GetMipmappedColorTexture(const SizeI& size);
 
   Texture GetTexture(const TextureDescriptor& descriptor);
   void PutTexture(Texture texture);
