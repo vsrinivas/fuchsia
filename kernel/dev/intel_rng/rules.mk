@@ -9,18 +9,9 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-PLATFORM := pc
-
 MODULE_SRCS += \
-	$(LOCAL_DIR)/config.c \
-	$(LOCAL_DIR)/debug.c \
-	$(LOCAL_DIR)/pixel2_quirks.c
+	$(LOCAL_DIR)/intel-rng.c \
 
-MODULE_DEPS += \
-    dev/broadwell_chipset_config \
-    dev/i915 \
-    dev/intel_rng \
-    dev/thermal/intel_pch_thermal
+MODULE_DEPS += dev/hw_rng
 
 include make/module.mk
-
