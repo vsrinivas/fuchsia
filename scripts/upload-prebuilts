@@ -18,6 +18,7 @@ set -x
 # ./magenta/scripts
 readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 readonly MAGENTA_ROOT="$( cd "${SCRIPT_DIR}/.." && pwd )"
+readonly GS_BUCKET="gs://fuchsia-build/magenta"
 
 # Fetch the current git SHA: we upload the prebuilts with a SHA that corresponds
 # to the SHA of the tree we built from.
@@ -32,27 +33,23 @@ readonly TARGETS=(
 )
 
 # The list of output files to upload.
-readonly PREBUILTS=(
-  "magenta.bin"
-  "magenta.elf"
-  "tools/bootserver"
-  "tools/loglistener"
-  "tools/mkbootfs"
+declare -A PREBUILTS=(
+  ["build-magenta-qemu-arm32/magenta.bin"]="qemu-arm32/magenta.bin"
+  ["build-magenta-qemu-arm64/magenta.elf"]="qemu-arm64/magenta.elf"
+  ["build-magenta-pc-x86-64/magenta.elf"]="pc-x86-64/magenta.elf"
+  ["build-magenta-pc-x86-64/tools/bootserver"]="tools/bootserver"
+  ["build-magenta-pc-x86-64/tools/loglistener"]="tools/loglistener"
+  ["build-magenta-pc-x86-64/tools/mkbootfs"]="tools/mkbootfs"
 )
 
 # Build all the things and upload to Google Storage.
 for target in "${TARGETS[@]}"; do
-  cd "${MAGENTA_ROOT}"
   make -j6 "${target}"  # -j option reflects the Fuchsia build bot servers.
+done
 
-  arch="${target#*-}"
-  bucket="gs://fuchsia-build/magenta/${arch}"
-
-  # Upload the prebuilts to Google Storage.  We don't do any authentication here
-  # because we assume that the environment has been set up with auth already.
-  # For documentation, see: https://cloud.google.com/storage/docs/authentication
-  cd "${MAGENTA_ROOT}/build-${target}"
-  for prebuilt in "${PREBUILTS[@]}"; do
-    gsutil cp "${prebuilt}" "${bucket}/${prebuilt}/${GIT_SHA}"
-  done
+# Upload the prebuilts to Google Storage.  We don't do any authentication here
+# because we assume that the environment has been set up with auth already.
+# For documentation, see: https://cloud.google.com/storage/docs/authentication
+for key in "${!PREBUILTS[@]}"; do
+  gsutil cp "${key}" "${GS_BUCKET}/${PREBUILTS[$key]}/${GIT_SHA}"
 done
