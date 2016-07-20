@@ -31,3 +31,8 @@ group("msd_tests") {
 config("msd_tests_include_config") {
   include_dirs = [ "tests" ]
 }
+
+# This config allows inclusion of headers via relative paths
+config("msd_src_include_config") {
+  include_dirs = [ "src" ]
+}

@@ -15,13 +15,23 @@
 import("//magma/gnbuild/magma.gni")
 
 source_set("src") {
+  public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
+
   sources = [
+    "address_space.h",
+    "gtt.cc",
+    "gtt.h",
     "msd_buffer.cc",
     "msd_buffer.h",
     "msd_device.cc",
     "msd_device.h",
     "msd_driver.cc",
     "msd_driver.h",
+    "pagetable.h",
+    "register_defs.h",
+    "register_io.cc",
+    "register_io.h",
+    "types.h",
   ]
 
   deps = [
