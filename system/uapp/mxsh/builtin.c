@@ -287,7 +287,7 @@ static int mxc_runtests(int argc, char** argv) {
 
         char name[4096];
         snprintf(name, sizeof(name), "/boot/test/%s", de->d_name);
-        char* argv[] = {name, opts};
+        const char* argv[] = {name, opts};
         mx_handle_t handle = mxio_start_process(name, 2, argv);
         if (handle < 0) {
             printf("FAILURE: Failed to launch %s: %d\n", de->d_name, handle);

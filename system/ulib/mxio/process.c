@@ -34,8 +34,8 @@
 
 #define PROCARGS_BUFFER_SIZE 8192
 
-mx_handle_t mxio_build_procargs(int args_count, char* args[],
-                                int auxv_count, uintptr_t auxv[],
+mx_handle_t mxio_build_procargs(int args_count, const char* const* args,
+                                int auxv_count, const uintptr_t* auxv,
                                 int hnds_count, mx_handle_t* handles,
                                 uint32_t* ids, mx_handle_t proc) {
     union {
@@ -118,7 +118,7 @@ mx_handle_t mxio_build_procargs(int args_count, char* args[],
 
 #define MAX_AUXV_COUNT (8*2)
 
-mx_handle_t mxio_start_process_etc(const char* name, int args_count, char* args[],
+mx_handle_t mxio_start_process_etc(const char* name, int args_count, const char* const* args,
                                    int hnds_count, mx_handle_t* handles, uint32_t* ids) {
     mx_handle_t h, p;
     mx_status_t r;
@@ -182,7 +182,7 @@ mx_status_t mxio_create_subprocess_handles(mx_handle_t* handles, uint32_t* types
     return n;
 }
 
-mx_handle_t mxio_start_process(const char* name, int args_count, char* args[]) {
+mx_handle_t mxio_start_process(const char* name, int args_count, const char* const* args) {
     // worset case slots for all fds plus root handle
     // plus a process handle possibly added by start process
     mx_handle_t hnd[(2 + MAX_MXIO_FD) * MXIO_MAX_HANDLES];
@@ -317,7 +317,7 @@ static mx_status_t load_elf_filename(ctxt* c, elf_handle_t* elf,
 }
 
 mx_status_t mxio_load_elf_filename(mx_handle_t process, const char* filename,
-                                   int* auxv_count, uintptr_t auxv[],
+                                   int* auxv_count, uintptr_t* auxv,
                                    mx_vaddr_t* entry) {
 
     ctxt c;

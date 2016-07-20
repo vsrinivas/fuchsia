@@ -89,7 +89,7 @@ void devmgr_launch(const char* name, const char* app, const char* arg, const cha
         n += r;
     }
     printf("devmgr: launch %s on %s\n", app, device);
-    mxio_start_process_etc(name, arg ? 2 : 1, (char**)args, n, hnd, ids);
+    mxio_start_process_etc(name, arg ? 2 : 1, args, n, hnd, ids);
     return;
 fail:
     while (n > 0) {
@@ -118,7 +118,7 @@ void devmgr_launch_devhost(const char* name, mx_handle_t h,
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
     printf("devmgr: launch: %s %s %s\n", name, arg0, arg1);
-    mx_status_t r = mxio_start_process_etc(name, 3, (char**)args, 2, hnd, ids);
+    mx_status_t r = mxio_start_process_etc(name, 3, args, 2, hnd, ids);
     if (r < 0) {
         printf("devmgr: launch failed: %d\n", r);
     }
