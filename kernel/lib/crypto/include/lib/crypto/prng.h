@@ -9,11 +9,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
 
 namespace crypto {
 
-// This exposes a cryptographically secure PRNG.
+// This exposes a thread-safe cryptographically secure PRNG.
 // This PRNG should be seeded with at least 256 bits of "real" entropy before
 // being used for cryptographic applications.
 class PRNG {
@@ -34,6 +35,7 @@ private:
     PRNG& operator=(const PRNG&) = delete;
 
     clPRNG_CTX ctx_;
+    mutex_t lock_;
 };
 
 } // namespace crypto
