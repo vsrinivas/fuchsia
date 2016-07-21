@@ -18,6 +18,7 @@
 #include <magenta/types.h>
 #include <mxio/vfs.h>
 #include <system/listnode.h>
+#include <runtime/mutex.h>
 
 void vfs_init(vnode_t* root);
 
@@ -55,6 +56,10 @@ ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
 mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len);
 ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len,
                     void* out_data, size_t out_len);
+
+// big vfs lock protects lookup and walk operations
+//TODO: finer grained locking
+extern mxr_mutex_t vfs_lock;
 
 typedef struct iostate {
     union {

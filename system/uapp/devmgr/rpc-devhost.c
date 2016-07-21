@@ -131,7 +131,10 @@ static mx_status_t devhost_remote_remove(devhost_t* dh, devhost_msg_t* msg) {
     if (dev == NULL) {
         return ERR_NOT_FOUND;
     }
-    return ERR_NOT_SUPPORTED;
+
+    proxy_t* proxy = (proxy_t*) dev;
+    list_delete(&proxy->node);
+    return devmgr_device_remove(dev);
 }
 
 static void devhost_remote_died(devhost_t* dh) {

@@ -73,18 +73,18 @@ void device_set_bindable(mx_device_t* dev, bool bindable) {
     DM_UNLOCK();
 }
 
-mx_status_t device_open(mx_device_t* dev, uint32_t flags) {
+mx_status_t device_open(mx_device_t* dev, uint32_t flags, void** cookie) {
     mx_status_t r;
     DM_LOCK();
-    r = devmgr_device_open(dev, flags);
+    r = devmgr_device_open(dev, flags, cookie);
     DM_UNLOCK();
     return r;
 }
 
-mx_status_t device_close(mx_device_t* dev) {
+mx_status_t device_close(mx_device_t* dev, void* cookie) {
     mx_status_t r;
     DM_LOCK();
-    r = devmgr_device_close(dev);
+    r = devmgr_device_close(dev, cookie);
     DM_UNLOCK();
     return r;
 }

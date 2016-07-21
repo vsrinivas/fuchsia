@@ -16,20 +16,11 @@
 
 #include <ddk/device.h>
 
-#define DEV_FLAG_PROTOCOL 1
-// device represents a protocol
+#define DEV_FLAG_DEAD           0x00000001  // being deleted
+#define DEV_FLAG_VERY_DEAD      0x00000002  // safe for ref0 and release()
+#define DEV_FLAG_UNBINDABLE     0x00000004  // nobody may bind to this device
+#define DEV_FLAG_REMOTE         0x00000008  // device lives in a remote devhost
+#define DEV_FLAG_BUSY           0x00000010  // device being created
 
-#define DEV_FLAG_DEAD 2
-// Device has been removed and is waiting for refcount zero
-
-#define DEV_FLAG_UNBINDABLE 4
-// Drivers are not allowed to bind to this device
-
-#define DEV_FLAG_REMOTE 8
-// This driver is not local to devmgr
-
-#define DEV_FLAG_BUSY 16
-// Device manager is actively processing this device
-
-mx_status_t device_open(mx_device_t* dev, uint32_t flags);
-mx_status_t device_close(mx_device_t* dev);
+mx_status_t device_open(mx_device_t* dev, uint32_t flags, void** cookie);
+mx_status_t device_close(mx_device_t* dev, void* cookie);

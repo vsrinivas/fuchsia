@@ -51,7 +51,15 @@ iostate_t* create_iostate(mx_device_t* dev) {
 
 mx_status_t __mx_rio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
-static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
+static mxr_mutex_t rio_lock = MXR_MUTEX_INIT;
+
+// This is called from both the vfs handler thread and console start thread
+// and if not protected by rio_lock, they can step on each other when cloning
+// remoted devices.
+//
+// TODO: eventually this should be integrated with core devmgr locking, but
+//       that will require a bit more work.  This resolves the immediate issue.
+static mx_status_t devmgr_get_handles_etc(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids, void* cookie) {
     mx_status_t r;
     iostate_t* newios;
     if (devmgr_is_remote) {
@@ -61,7 +69,9 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
     // remote device: clone from remote devhost
     // TODO: timeout or handoff
     if (dev->flags & DEV_FLAG_REMOTE) {
+        mxr_mutex_lock(&rio_lock);
         r = __mx_rio_clone(dev->remote, handles, ids);
+        mxr_mutex_unlock(&rio_lock);
         return r;
     }
 
@@ -77,8 +87,7 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
     handles[0] = h[0];
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
-    void* cookie = NULL;
-    if ((r = dev->ops->open(dev, 0, &cookie)) < 0) {
+    if ((r = device_open(dev, 0, &cookie)) < 0) {
         printf("%s_get_handles(%p) open %d\n", name, dev, r);
         goto fail1;
     }
@@ -104,7 +113,7 @@ static mx_status_t __devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, 
     return r;
 
 fail2:
-    dev->ops->close(dev, cookie);
+    device_close(dev, cookie);
 fail1:
     mx_handle_close(h[0]);
     mx_handle_close(h[1]);
@@ -112,19 +121,8 @@ fail1:
     return r;
 }
 
-static mxr_mutex_t rio_lock = MXR_MUTEX_INIT;
-
-// This is called from both the vfs handler thread and console start thread
-// and if not protected by rio_lock, they can step on each other when cloning
-// remoted devices.
-//
-// TODO: eventually this should be integrated with core devmgr locking, but
-//       that will require a bit more work.  This resolves the immediate issue.
 mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
-    mxr_mutex_lock(&rio_lock);
-    mx_status_t r = __devmgr_get_handles(dev, handles, ids);
-    mxr_mutex_unlock(&rio_lock);
-    return r;
+    return devmgr_get_handles_etc(dev, handles, ids, NULL);
 }
 
 mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
@@ -140,19 +138,14 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
 
     switch (MX_RIO_OP(msg->op)) {
     case MX_RIO_CLOSE:
+        device_close(dev, ios->cookie);
         untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
     case MX_RIO_CLONE: {
         xprintf("%s_rio_handler() clone dev %p name '%s'\n", name, dev, dev->name);
-        if (ios->cookie) {
-            // devices that have per-open context cannot
-            // be cloned (at least for now)
-            printf("%s_rio_handler() cannot clone dev %p name '%s'\n", name, dev, dev->name);
-            return ERR_NOT_SUPPORTED;
-        }
         uint32_t ids[VFS_MAX_HANDLES];
-        mx_status_t r = devmgr_get_handles(dev, msg->handle, ids);
+        mx_status_t r = devmgr_get_handles_etc(dev, msg->handle, ids, ios->cookie);
         if (r < 0) {
             return r;
         }

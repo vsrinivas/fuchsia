@@ -40,6 +40,8 @@
 
 #define DEBUG_TRACK_NAMES 1
 
+mxr_mutex_t vfs_lock = MXR_MUTEX_INIT;
+
 static list_node_t iostate_list = LIST_INITIAL_VALUE(iostate_list);
 static mxr_mutex_t iostate_lock = MXR_MUTEX_INIT;
 
@@ -72,7 +74,7 @@ static vnode_t* vfs_root;
 // If nameout is non-NULL, the final segment of the path will not
 // be traversed (useful for stopping at the directory node for a
 // create() op or the like)
-mx_status_t vfs_walk(vnode_t* vn, vnode_t** out, const char* path, const char** nameout) {
+static mx_status_t _vfs_walk(vnode_t* vn, vnode_t** out, const char* path, const char** nameout) {
     const char* nextpath;
     mx_status_t r;
     size_t len;
@@ -99,14 +101,14 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out, const char* path, const char** 
     return ERR_NOT_FOUND;
 }
 
-static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags) {
+static mx_status_t _vfs_open(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags) {
     if ((out == NULL) || (path == NULL) || (path[0] == '/') || (path[0] == 0)) {
         return ERR_INVALID_ARGS;
     }
     xprintf("vfs_open: path='%s' flags=%d\n", path, flags);
     vnode_t* vn;
     mx_status_t r;
-    if ((r = vfs_walk(vndir, &vn, path, NULL)) < 0) {
+    if ((r = _vfs_walk(vndir, &vn, path, NULL)) < 0) {
         return r;
     }
     if ((r = vn->ops->open(&vn, flags)) < 0) {
@@ -117,7 +119,7 @@ static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path, uin
     return NO_ERROR;
 }
 
-static mx_status_t vfs_create(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags, uint32_t mode) {
+static mx_status_t _vfs_create(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags, uint32_t mode) {
     if ((out == NULL) || (path == NULL) || (path[0] == '/') | (path[0] == 0)) {
         xprintf("vfs_create: bogus args\n");
         return ERR_INVALID_ARGS;
@@ -125,12 +127,28 @@ static mx_status_t vfs_create(vnode_t* vndir, vnode_t** out, const char* path, u
     xprintf("vfs_create: path='%s' flags=%d mode=%d\n", path, flags, mode);
     vnode_t* vn;
     mx_status_t r;
-    if ((r = vfs_walk(vfs_root, &vn, path, &path)) < 0) {
+    if ((r = _vfs_walk(vfs_root, &vn, path, &path)) < 0) {
         xprintf("vfs_create: walk r=%d\n", r);
         return r;
     }
     r = vn->ops->create(vn, out, path, strlen(path), mode);
     xprintf("vfs_create: create r=%d\n", r);
+    return r;
+}
+
+static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags) {
+    mx_status_t r;
+    mxr_mutex_lock(&vfs_lock);
+    r = _vfs_open(vndir, out, path, flags);
+    mxr_mutex_unlock(&vfs_lock);
+    return r;
+}
+
+static mx_status_t vfs_create(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags, uint32_t mode) {
+    mx_status_t r;
+    mxr_mutex_lock(&vfs_lock);
+    r = _vfs_create(vndir, out, path, flags, mode);
+    mxr_mutex_unlock(&vfs_lock);
     return r;
 }
 
@@ -344,7 +362,10 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
         if (arg > MXIO_CHUNK_SIZE) {
             return ERR_INVALID_ARGS;
         }
-        mx_status_t r = vn->ops->readdir(vn, &ios->dircookie, msg->data, arg);
+        mx_status_t r;
+        mxr_mutex_lock(&vfs_lock);
+        r = vn->ops->readdir(vn, &ios->dircookie, msg->data, arg);
+        mxr_mutex_unlock(&vfs_lock);
         if (r >= 0) {
             msg->datalen = r;
         }

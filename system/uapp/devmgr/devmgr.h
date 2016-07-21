@@ -46,8 +46,8 @@ void devmgr_device_set_bindable(mx_device_t* dev, bool bindable);
 
 mx_device_t* devmgr_device_root(void);
 
-mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags);
-mx_status_t devmgr_device_close(mx_device_t* dev);
+mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags, void** cookie);
+mx_status_t devmgr_device_close(mx_device_t* dev, void* cookie);
 
 mx_status_t devmgr_control(const char* cmd);
 
@@ -68,6 +68,11 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t*
 
 int devmgr_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did);
 mx_status_t devmgr_create_pcidev(mx_device_t** out, uint32_t index);
+
+void dev_ref_release(mx_device_t* dev);
+static inline void dev_ref_acquire(mx_device_t* dev) {
+    dev->refcount++;
+}
 
 typedef struct devhost_msg devhost_msg_t;
 struct devhost_msg {

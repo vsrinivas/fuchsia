@@ -94,9 +94,12 @@ typedef struct mx_protocol_device {
     // Asks if the device supports a specific protocol.
     // If it does, protocol ops returned via **protocol.
 
-    mx_status_t (*open)(mx_device_t* dev, uint32_t flags, void** cookie_out);
+    mx_status_t (*open)(mx_device_t* dev, uint32_t flags, void** cookie);
     // The optional cookie will be passed to close/read/write/get_size/ioctl
-    // This allows for per-instance context to be tracked
+    // This allows for per-instance context to be tracked.
+    // If a device is cloned and there is an instance cookie, open() will
+    // be called again and that instance cookie will be passed.  The device
+    // may continue using it, or return a different cookie.
 
     mx_status_t (*close)(mx_device_t* dev, void* cookie);
 

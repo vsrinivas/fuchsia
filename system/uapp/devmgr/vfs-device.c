@@ -110,7 +110,7 @@ vnode_t* devfs_get_root(void) {
     return &vnd_root;
 }
 
-mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev) {
+static mx_status_t _devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev) {
     if ((parent == NULL) || (name == NULL)) {
         return ERR_INVALID_ARGS;
     }
@@ -163,7 +163,7 @@ mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_
     return NO_ERROR;
 }
 
-mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) {
+static mx_status_t _devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) {
     if ((parent == NULL) || (dev == NULL) || (dev->vnode == NULL)) {
         return ERR_INVALID_ARGS;
     }
@@ -182,8 +182,25 @@ mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) 
     return NO_ERROR;
 }
 
+mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev) {
+    mx_status_t r;
+    mxr_mutex_lock(&vfs_lock);
+    r = _devfs_add_node(out, parent, name, dev);
+    mxr_mutex_unlock(&vfs_lock);
+    return r;
+}
+
+mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) {
+    mx_status_t r;
+    mxr_mutex_lock(&vfs_lock);
+    r = _devfs_add_link(parent, name, dev);
+    mxr_mutex_unlock(&vfs_lock);
+    return r;
+}
+
 mx_status_t devfs_remove(vnode_t* vn) {
-    printf("devfs_remove(%p)\n", vn);
+    mxr_mutex_lock(&vfs_lock);
+    xprintf("devfs_remove(%p)\n", vn);
     if (vn->pdata) {
         mx_device_t* dev = vn->pdata;
         dev->vnode = NULL;
@@ -192,7 +209,7 @@ mx_status_t devfs_remove(vnode_t* vn) {
 
     // if this vnode is a directory, delete its dnode
     if (vn->dnode) {
-        printf("devfs_remove(%p) dnode not in dn_list?\n", vn);
+        xprintf("devfs_remove(%p) delete dnode\n", vn);
         dn_delete(vn->dnode);
         vn->dnode = NULL;
     }
@@ -206,6 +223,7 @@ mx_status_t devfs_remove(vnode_t* vn) {
         }
         dn_delete(dn);
     }
+    mxr_mutex_unlock(&vfs_lock);
 
     // with all dnodes destroyed, nothing should hold a reference
     // to the vnode and it should be release()'d

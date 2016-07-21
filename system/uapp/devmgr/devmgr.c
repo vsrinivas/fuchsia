@@ -44,6 +44,8 @@
     } while (0)
 #endif
 
+#define TRACE_ADD_REMOVE 0
+
 // if true this is a devhost, not the actual devmgr
 // and devhost_handle is the rpc link to the real devmgr
 bool devmgr_is_remote = false;
@@ -198,17 +200,24 @@ static const char* safename(const char* name) {
     return name ? name : "<noname>";
 }
 
-static void dev_ref_release(mx_device_t* dev) {
+void dev_ref_release(mx_device_t* dev) {
     dev->refcount--;
     if (dev->refcount == 0) {
-        printf("device: %p(%s): ref=0. releasing.\n", dev, safename(dev->name));
-        mx_handle_close(dev->event);
-#if !LIBDRIVER
-        if (dev->vnode) {
-            devfs_remove(dev->vnode);
-            dev->vnode = NULL;
+        if (dev->flags & DEV_FLAG_BUSY) {
+            // this can happen during creation
+            printf("device: %p(%s): ref=0, busy, not releasing\n", dev, safename(dev->name));
+            return;
         }
-#endif
+        printf("device: %p(%s): ref=0. releasing.\n", dev, safename(dev->name));
+
+        if (!(dev->flags & DEV_FLAG_VERY_DEAD)) {
+            printf("device: %p: only mostly dead (this is bad)\n", dev);
+        }
+        if (!list_is_empty(&dev->children)) {
+            printf("device: %p: still has children! not good.\n", dev);
+        }
+
+        mx_handle_close(dev->event);
         DM_UNLOCK();
         dev->ops->release(dev);
         DM_LOCK();
@@ -222,7 +231,7 @@ static mx_status_t devmgr_driver_probe(mx_device_t* dev) {
         return status;
     }
     dev->owner = &remote_driver;
-    dev->refcount++;
+    dev_ref_acquire(dev);
     return NO_ERROR;
 }
 
@@ -246,14 +255,14 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
             return status;
         }
         dev->owner = drv;
-        dev->refcount++;
+        dev_ref_acquire(dev);
         return NO_ERROR;
     }
     if (status < 0) {
         return status;
     }
     dev->owner = &remote_driver;
-    dev->refcount++;
+    dev_ref_acquire(dev);
     return NO_ERROR;
 }
 
@@ -319,8 +328,10 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
         printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
         return ERR_BAD_STATE;
     }
-    xprintf("%s: device add: %p(%s) parent=%p(%s)\n", devmgr_is_remote ? "devhost" : "devmgr",
+#if TRACE_ADD_REMOVE
+    printf("%s: device add: %p(%s) parent=%p(%s)\n", devmgr_is_remote ? "devhost" : "devmgr",
             dev, safename(dev->name), parent, safename(parent->name));
+#endif
 
     if (dev->ops == NULL) {
         printf("device add: %p(%s): NULL ops\n", dev, safename(dev->name));
@@ -348,19 +359,20 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     dev->flags |= DEV_FLAG_BUSY;
 
     // add to the device tree
+    dev_ref_acquire(parent);
     dev->parent = parent;
-    dev->parent->refcount++;
 
     // this is balanced by end of devmgr_device_remove
-    dev->refcount++;
+    dev_ref_acquire(dev);
     list_add_tail(&parent->children, &dev->node);
 
     if (devmgr_is_remote) {
         mx_status_t r = devhost_add(dev, parent);
         if (r < 0) {
             printf("devhost: remote add failed %d\n", r);
-            dev->refcount--;
-            dev->parent->refcount--;
+            dev_ref_release(dev->parent);
+            dev->parent = NULL;
+            dev_ref_release(dev);
             list_delete(&dev->node);
             dev->flags &= (~DEV_FLAG_BUSY);
             return r;
@@ -422,18 +434,32 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
         printf("device: %p: cannot be removed (busy)\n", dev);
         return ERR_BAD_STATE;
     }
-    printf("device: %p: is being removed\n", dev);
-    if (!list_is_empty(&dev->children)) {
-        printf("device: %p: still has children! now orphaned.\n", dev);
-    }
+#if TRACE_ADD_REMOVE
+    printf("device: %p(%s): is being removed\n", dev. safename(dev->name));
+#endif
     dev->flags |= DEV_FLAG_DEAD;
+
+    // remove entry from vfs to avoid any further open() attempts
+#if !LIBDRIVER
+    if (dev->vnode) {
+        xprintf("device: %p: removing vnode\n", dev);
+        devfs_remove(dev->vnode);
+        dev->vnode = NULL;
+    }
+#endif
+
+    // detach from parent, downref parent
     if (dev->parent) {
         list_delete(&dev->node);
         dev_ref_release(dev->parent);
     }
+
+    // remove from list of unbound devices, if on that list
     if (list_in_list(&dev->unode)) {
         list_delete(&dev->unode);
     }
+
+    // detach from owner, call unbind(), downref on behalf of owner
     if (dev->owner) {
         if (dev->owner->ops.unbind) {
             DM_UNLOCK();
@@ -444,30 +470,35 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
         dev_ref_release(dev);
     }
 
+    if (devmgr_is_remote) {
+        xprintf("device: %p: devhost->devmgr remove rpc\n", dev);
+        devhost_remove(dev);
+    }
+    dev->flags |= DEV_FLAG_VERY_DEAD;
+
     // this must be last, since it may result in the device structure being destroyed
     dev_ref_release(dev);
 
     return NO_ERROR;
 }
 
-mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags) {
+mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags, void **cookie) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, safename(dev->name));
         return ERR_BAD_STATE;
     }
-    dev->refcount++;
+    dev_ref_acquire(dev);
     mx_status_t r;
-    void* cookie = NULL;
     DM_UNLOCK();
-    r = dev->ops->open(dev, flags, &cookie);
+    r = dev->ops->open(dev, flags, cookie);
     DM_LOCK();
     return r;
 }
 
-mx_status_t devmgr_device_close(mx_device_t* dev) {
+mx_status_t devmgr_device_close(mx_device_t* dev, void* cookie) {
     mx_status_t r;
     DM_UNLOCK();
-    r = dev->ops->close(dev, NULL);
+    r = dev->ops->close(dev, cookie);
     DM_LOCK();
     dev_ref_release(dev);
     return r;
@@ -514,7 +545,7 @@ void devmgr_init(bool devhost) {
 
     // init device tree
     device_create(&root_dev, &root_driver, "root", &root_device_proto);
-    root_dev->refcount++;
+    dev_ref_acquire(root_dev);
 
 #if !LIBDRIVER
     if (!devhost) {
