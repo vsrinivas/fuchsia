@@ -186,12 +186,16 @@ MAGENTA_SYSCALL_DEF(4, 4, 223, mx_status_t, io_port_bind, mx_handle_t handle, ui
 // Data Pipe
 MAGENTA_SYSCALL_DEF(4, 4, 230, mx_handle_t, data_pipe_create, uint32_t options, mx_size_t element_size,
                     mx_size_t capacity, mx_handle_t* handle)
-MAGENTA_SYSCALL_DEF(4, 4, 231, mx_ssize_t, data_pipe_begin_write, mx_handle_t handle, uint32_t flags,
+MAGENTA_SYSCALL_DEF(4, 4, 231, mx_ssize_t, data_pipe_write, mx_handle_t handle, uint32_t flags,
+                    mx_size_t requested, const void* buffer)
+MAGENTA_SYSCALL_DEF(4, 4, 232, mx_ssize_t, data_pipe_read, mx_handle_t handle, uint32_t flags,
+                    mx_size_t requested, void* buffer)
+MAGENTA_SYSCALL_DEF(4, 4, 233, mx_ssize_t, data_pipe_begin_write, mx_handle_t handle, uint32_t flags,
                     mx_size_t requested,  uintptr_t* buffer)
-MAGENTA_SYSCALL_DEF(2, 2, 232, mx_status_t, data_pipe_end_write, mx_handle_t handle, mx_size_t written)
-MAGENTA_SYSCALL_DEF(4, 4, 233, mx_ssize_t, data_pipe_begin_read, mx_handle_t handle, uint32_t flags,
+MAGENTA_SYSCALL_DEF(2, 2, 234, mx_status_t, data_pipe_end_write, mx_handle_t handle, mx_size_t written)
+MAGENTA_SYSCALL_DEF(4, 4, 235, mx_ssize_t, data_pipe_begin_read, mx_handle_t handle, uint32_t flags,
                     mx_size_t requested, uintptr_t* buffer)
-MAGENTA_SYSCALL_DEF(2, 2, 234, mx_status_t, data_pipe_end_read, mx_handle_t handle, mx_size_t read)
+MAGENTA_SYSCALL_DEF(2, 2, 236, mx_status_t, data_pipe_end_read, mx_handle_t handle, mx_size_t read)
 
 // syscall arg passing tests
 MAGENTA_SYSCALL_DEF(0, 0, 20000, int, syscall_test_0, void)

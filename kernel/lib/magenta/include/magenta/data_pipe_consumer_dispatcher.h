@@ -31,6 +31,8 @@ public:
     DataPipeConsumerDispatcher* get_data_pipe_consumer_dispatcher() final { return this; }
     Waiter* get_waiter() final;
 
+    mx_status_t Read(void* buffer, mx_size_t* requested);
+
     mx_status_t BeginRead(utils::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
     mx_status_t EndRead(mx_size_t read);
 

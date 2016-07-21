@@ -11,7 +11,11 @@
 #include <magenta/handle.h>
 #include <magenta/data_pipe.h>
 
-constexpr mx_rights_t kDefaultDataPipeProducerRights = MX_RIGHT_TRANSFER | MX_RIGHT_WRITE;
+constexpr mx_rights_t kDefaultDataPipeProducerRights =
+    MX_RIGHT_TRANSFER | MX_RIGHT_WRITE | MX_RIGHT_READ;
+
+// TODO(cpu): the producer cannot be 'read' but we need the read right so it
+// can be waited on. Consider a different right for waits.
 
 // static
 mx_status_t DataPipeProducerDispatcher::Create(utils::RefPtr<DataPipe> data_pipe,
@@ -36,6 +40,10 @@ DataPipeProducerDispatcher::~DataPipeProducerDispatcher() {
 
 Waiter* DataPipeProducerDispatcher::get_waiter() {
     return pipe_->get_producer_waiter();
+}
+
+mx_status_t DataPipeProducerDispatcher::Write(const void* buffer, mx_size_t* requested) {
+    return pipe_->ProducerWriteFromUser(buffer, requested);
 }
 
 mx_status_t DataPipeProducerDispatcher::BeginWrite(utils::RefPtr<VmAspace> aspace,

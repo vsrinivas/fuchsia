@@ -31,6 +31,7 @@ public:
     DataPipeProducerDispatcher* get_data_pipe_producer_dispatcher() final { return this; }
     Waiter* get_waiter() final;
 
+    mx_status_t Write(const void* buffer, mx_size_t* requested);
     mx_status_t BeginWrite(utils::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
     mx_status_t EndWrite(mx_size_t written);
 

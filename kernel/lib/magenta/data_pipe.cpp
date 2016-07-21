@@ -6,6 +6,7 @@
 
 #include <magenta/data_pipe.h>
 
+#include <assert.h>
 #include <err.h>
 #include <stddef.h>
 
@@ -18,8 +19,10 @@
 #include <magenta/data_pipe_producer_dispatcher.h>
 #include <magenta/data_pipe_consumer_dispatcher.h>
 
-const auto kMMU_Map_Perms = ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_PERM_USER;
+const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_PERM_USER;
+const auto kDP_Map_Perms_RO = kDP_Map_Perms | ARCH_MMU_FLAG_PERM_RO;
 
+const mx_size_t kMaxDataPipeCapacity = 256 * 1024 * 1024;
 
 mx_status_t DataPipe::Create(mx_size_t capacity,
                              utils::RefPtr<Dispatcher>* producer,
@@ -48,16 +51,20 @@ mx_status_t DataPipe::Create(mx_size_t capacity,
 
 DataPipe::DataPipe(mx_size_t capacity)
     : capacity_(capacity),
-      available_(0u) {
+      free_space_(0u) {
     mutex_init(&lock_);
     producer_.waiter.set_initial_signals_state(
             mx_signals_state_t{MX_SIGNAL_WRITABLE, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
     consumer_.waiter.set_initial_signals_state(
             mx_signals_state_t{0u, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED});
+
+    consumer_.read_only = true;
 }
 
 DataPipe::~DataPipe() {
     mutex_destroy(&lock_);
+    DEBUG_ASSERT(!consumer_.alive);
+    DEBUG_ASSERT(!producer_.alive);
 }
 
 Waiter* DataPipe::get_producer_waiter() {
@@ -69,160 +76,271 @@ Waiter* DataPipe::get_consumer_waiter() {
 }
 
 bool DataPipe::Init() {
+    // We limit the capacity because a vmo can be larger than representable
+    // with the mx_size_t type.
+    if (capacity_ >  kMaxDataPipeCapacity)
+        return false;
+
     vmo_ = VmObject::Create(PMM_ALLOC_FLAG_ANY, ROUNDUP(capacity_, PAGE_SIZE));
     if (!vmo_)
         return false;
 
-    available_ = vmo_->size();
+    free_space_ = static_cast<mx_size_t>(vmo_->size());
     return true;
 }
 
-mx_status_t DataPipe::ProducerWriteBegin(utils::RefPtr<VmAspace> aspace,
-                                         void** ptr, mx_size_t* requested) {
-    AutoLock al(&lock_);
+mx_size_t DataPipe::ComputeSize(mx_size_t from, mx_size_t to, mx_size_t requested) {
+    auto future_cursor = from + requested;
+    if (from > to) {
+        if (future_cursor > vmo_->size())
+            requested = static_cast<mx_size_t>(vmo_->size() - from);
+    } else if (from < to) {
+        if (future_cursor > to)
+            requested = static_cast<mx_size_t>(to - from);
+    }
+    return requested;
+}
 
-    if (producer_.aspace)
+mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, utils::RefPtr<VmAspace> aspace) {
+    DEBUG_ASSERT(vmo_);
+
+    if (ep->aspace && (ep->aspace != aspace)) {
+        // We have been transfered to another process. Unmap and free.
+        // TODO(cpu): Do this at a better time.
+        ep->aspace->FreeRegion(reinterpret_cast<vaddr_t>(ep->vad_start));
+        ep->aspace.reset();
+    }
+
+    // For large requests we can use demand page here instead of commit.
+    auto perms = ep->read_only? kDP_Map_Perms_RO : kDP_Map_Perms;
+    auto status = aspace->MapObject(vmo_, "datapipe", 0u, capacity_,
+                                    reinterpret_cast<void**>(&ep->vad_start), 0,
+                                    VMM_FLAG_COMMIT, perms);
+    if (status < 0)
+        return status;
+
+    ep->aspace = utils::move(aspace);
+    return NO_ERROR;
+}
+
+void DataPipe::UpdateSignals() {
+    if (free_space_ == 0u) {
+        producer_.waiter.UpdateState(0u, MX_SIGNAL_WRITABLE,
+                                     0u, 0u, true);
+        consumer_.waiter.UpdateState(MX_SIGNAL_READABLE, 0u,
+                                     0u, 0u, true);
+    } else if (free_space_ == vmo_->size()) {
+        producer_.waiter.UpdateState(MX_SIGNAL_WRITABLE, 0u,
+                                     0u, 0u, true);
+        consumer_.waiter.UpdateState(0u, MX_SIGNAL_READABLE,
+                                     0u, 0u, true);
+    } else {
+        producer_.waiter.UpdateState(MX_SIGNAL_WRITABLE, 0u,
+                                     0u, 0u, true);
+        consumer_.waiter.UpdateState(MX_SIGNAL_READABLE, 0u,
+                                     0u, 0u, true);
+    }
+}
+
+mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requested) {
+    if (*requested == 0)
+        return ERR_INVALID_ARGS;
+
+    AutoLock al(&lock_);
+    // |expected| > 0 means there is a pending ProducerWriteBegin().
+    if (producer_.expected)
         return ERR_BUSY;  // MOJO_RESULT_BUSY
 
     if (!consumer_.alive)
         return ERR_CHANNEL_CLOSED;  // MOJO_RESULT_FAILED_PRECONDITION
 
-    if (!available_)
+    if (free_space_ == 0u)
         return ERR_NOT_READY;    // MOJO_RESULT_SHOULD_WAIT
 
-    auto future_cursor = producer_.cursor + *requested;
+    *requested = ComputeSize(producer_.cursor, consumer_.cursor, *requested);
 
-    if (producer_.cursor > consumer_.cursor) {
-        if (future_cursor > vmo_->size())
-            *requested = static_cast<mx_size_t>(vmo_->size() - producer_.cursor);
-    } else if (producer_.cursor < consumer_.cursor) {
-        if (future_cursor > consumer_.cursor)
-            *requested = static_cast<mx_size_t>(consumer_.cursor - producer_.cursor);
-    }
-
-    size_t start = ROUNDDOWN(producer_.cursor, PAGE_SIZE);
-    size_t offset = producer_.cursor - start;
-    size_t length = ROUNDUP(*requested + offset, PAGE_SIZE);
-
-    // For large requests we can use demand page here instead of commit.
-    auto status = aspace->MapObject(vmo_, "datap_prod", start, length, ptr, 0,
-                                    VMM_FLAG_COMMIT, kMMU_Map_Perms);
+    size_t written;
+    status_t status = vmo_->WriteUser(ptr, producer_.cursor, *requested, &written);
     if (status < 0)
         return status;
 
-    producer_.vad_start = reinterpret_cast<vaddr_t>(*ptr);
-    producer_.max_size = *requested;
-    producer_.aspace = utils::move(aspace);
+    *requested = written;
 
-    *ptr =  reinterpret_cast<char*>(*ptr) + offset;
+    free_space_ -= written;
+    producer_.cursor += written;
+
+    if (producer_.cursor == vmo_->size())
+        producer_.cursor = 0u;
+
+    UpdateSignals();
+
+    return NO_ERROR;
+}
+
+mx_status_t DataPipe::ProducerWriteBegin(utils::RefPtr<VmAspace> aspace,
+                                         void** ptr, mx_size_t* requested) {
+    if (*requested == 0)
+        return ERR_INVALID_ARGS;
+
+    AutoLock al(&lock_);
+    // |expected| > 0 means there is a pending ProducerWriteBegin().
+    if (producer_.expected)
+        return ERR_BUSY;  // MOJO_RESULT_BUSY
+
+    if (!consumer_.alive)
+        return ERR_CHANNEL_CLOSED;  // MOJO_RESULT_FAILED_PRECONDITION
+
+    if (free_space_ == 0u)
+        return ERR_NOT_READY;    // MOJO_RESULT_SHOULD_WAIT
+
+    auto status = MapVMOIfNeeded(&producer_, utils::move(aspace));
+    if (status < 0)
+        return status;
+
+    *requested = ComputeSize(producer_.cursor, consumer_.cursor, *requested);
+
+    producer_.expected = *requested;
+
+    *ptr =  producer_.vad_start + producer_.cursor;
     return NO_ERROR;
 }
 
 mx_status_t DataPipe::ProducerWriteEnd(mx_size_t written) {
     AutoLock al(&lock_);
 
-    if (!producer_.aspace)
+   if (!producer_.expected)
         return ERR_BAD_STATE;
 
-    if (written > producer_.max_size)
+    if (written > producer_.expected)
         return ERR_INVALID_ARGS;
 
-    auto status = producer_.aspace->FreeRegion(producer_.vad_start);
-    if (status < 0)
-        return status;
-
-    producer_.aspace.reset();
-    producer_.vad_start = 0u;
+    free_space_ -= written;
     producer_.cursor += written;
-
-    available_ -= written;
+    producer_.expected = 0u;
 
     if (producer_.cursor == vmo_->size())
         producer_.cursor = 0u;
+
+    UpdateSignals();
+
+    return NO_ERROR;
+}
+
+mx_status_t DataPipe::ConsumerReadFromUser(void* ptr, mx_size_t* requested) {
+    if (*requested == 0)
+        return ERR_INVALID_ARGS;
+
+    AutoLock al(&lock_);
+    // |expected| > 0 means there is a pending ConsumerReadBegin().
+    if (consumer_.expected)
+        return ERR_BUSY;  // MOJO_RESULT_BUSY
+
+    if (free_space_ == vmo_->size())
+        return ERR_NOT_READY;  // MOJO_RESULT_SHOULD_WAIT
+
+    *requested = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
+
+    size_t read;
+    status_t st = vmo_->ReadUser(ptr, consumer_.cursor, *requested, &read);
+    if (st < 0)
+        return st;
+
+    *requested = read;
+
+    free_space_ += read;
+    consumer_.cursor += read;
+
+    if (consumer_.cursor == vmo_->size())
+        consumer_.cursor = 0u;
+
+    UpdateSignals();
 
     return NO_ERROR;
 }
 
 mx_status_t DataPipe::ConsumerReadBegin(utils::RefPtr<VmAspace> aspace,
                                         void** ptr, mx_size_t* requested) {
+    if (*requested == 0)
+        return ERR_INVALID_ARGS;
+
     AutoLock al(&lock_);
 
-    if (consumer_.aspace)
+    // |expected| > 0 means there is a pending ConsumerReadBegin().
+    if (consumer_.expected)
         return ERR_BUSY;  // MOJO_RESULT_BUSY
 
-    if (available_ == vmo_->size())
+    if (free_space_ == vmo_->size())
         return ERR_NOT_READY;  // MOJO_RESULT_SHOULD_WAIT
 
-    auto future_cursor = consumer_.cursor + *requested;
-
-    if (consumer_.cursor < producer_.cursor) {
-        if (future_cursor > producer_.cursor)
-            *requested = static_cast<mx_size_t>(producer_.cursor - consumer_.cursor);
-    } else if (consumer_.cursor > producer_.cursor) {
-        if (future_cursor > vmo_->size())
-            *requested = static_cast<mx_size_t>(vmo_->size() - consumer_.cursor);
-    }
-
-    size_t start = ROUNDDOWN(consumer_.cursor, PAGE_SIZE);
-    size_t offset = consumer_.cursor - start;
-    size_t length = ROUNDUP(*requested + offset, PAGE_SIZE);
-
-    // For large requests we can use demand page here instead of commit.
-    auto status = aspace->MapObject(vmo_, "datap_cons", start, length, ptr, 0,
-                                    VMM_FLAG_COMMIT, kMMU_Map_Perms | ARCH_MMU_FLAG_PERM_RO);
+    auto status = MapVMOIfNeeded(&consumer_, utils::move(aspace));
     if (status < 0)
         return status;
 
-    consumer_.vad_start = reinterpret_cast<vaddr_t>(*ptr);
-    consumer_.max_size = *requested;
-    consumer_.aspace = utils::move(aspace);
+    *requested = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
 
-    *ptr =  reinterpret_cast<char*>(*ptr) + offset;
+    consumer_.expected = *requested;
+
+    *ptr =  consumer_.vad_start + consumer_.cursor;
     return NO_ERROR;
-
 }
 
 mx_status_t DataPipe::ConsumerReadEnd(mx_size_t read) {
     AutoLock al(&lock_);
 
-    if (!consumer_.aspace)
+   if (!consumer_.expected)
         return ERR_BAD_STATE;
 
-    if (read > producer_.max_size)
+    if (read > consumer_.expected)
         return ERR_INVALID_ARGS;
 
-    auto status = consumer_.aspace->FreeRegion(consumer_.vad_start);
-    if (status < 0)
-        return status;
-
-    consumer_.aspace.reset();
-    consumer_.vad_start = 0u;
+    free_space_ += read;
     consumer_.cursor += read;
-
-    available_ += read;
+    consumer_.expected = 0u;
 
     if (consumer_.cursor == vmo_->size())
         consumer_.cursor = 0u;
+
+    UpdateSignals();
 
     return NO_ERROR;
 }
 
 void DataPipe::OnProducerDestruction() {
     AutoLock al(&lock_);
-    if (producer_.aspace) {
-        mutex_release(&lock_);
-        ProducerWriteEnd(0u);
-        mutex_acquire(&lock_);
-    }
+
     producer_.alive = false;
+
+    if (producer_.aspace) {
+        producer_.aspace->FreeRegion(reinterpret_cast<vaddr_t>(producer_.vad_start));
+        producer_.aspace.reset();
+    }
+
+    if (consumer_.alive) {
+        consumer_.waiter.UpdateState(MX_SIGNAL_PEER_CLOSED, 0u,
+                                     MX_SIGNAL_PEER_CLOSED, 0u,
+                                     true);
+
+        // We can drop the vmo since future reads are not going to succeed.
+        if (free_space_ == vmo_->size())
+            vmo_.reset();
+    }
+
 }
 
 void DataPipe::OnConsumerDestruction() {
     AutoLock al(&lock_);
-    if (consumer_.aspace) {
-        mutex_release(&lock_);
-        ConsumerReadEnd(0u);
-        mutex_acquire(&lock_);
-    }
+
     consumer_.alive = false;
+    vmo_.reset();
+
+    if (consumer_.aspace) {
+        consumer_.aspace->FreeRegion(reinterpret_cast<vaddr_t>(consumer_.vad_start));
+        consumer_.aspace.reset();
+    }
+
+    if (producer_.alive) {
+        producer_.waiter.UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE,
+                                     MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE,
+                                     true);
+    }
 }

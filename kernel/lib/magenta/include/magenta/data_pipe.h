@@ -35,6 +35,9 @@ public:
     Waiter* get_producer_waiter();
     Waiter* get_consumer_waiter();
 
+    mx_status_t ProducerWriteFromUser(const void* ptr, mx_size_t* requested);
+    mx_status_t ConsumerReadFromUser(void* ptr, mx_size_t* requested);
+
     mx_status_t ProducerWriteBegin(utils::RefPtr<VmAspace> aspace, void** ptr, mx_size_t* requested);
     mx_status_t ProducerWriteEnd(mx_size_t written);
 
@@ -47,9 +50,10 @@ public:
 private:
     struct EndPoint {
         bool alive = true;
+        bool read_only = false;
         mx_size_t cursor = 0u;
-        vaddr_t vad_start = 0u;
-        mx_size_t max_size = 0u;
+        char* vad_start = 0u;
+        mx_size_t expected = 0u;
         utils::RefPtr<VmAspace> aspace;
         Waiter waiter;
     };
@@ -57,11 +61,15 @@ private:
     DataPipe(mx_size_t capacity);
     bool Init();
 
+    mx_size_t ComputeSize(mx_size_t from, mx_size_t to, mx_size_t requested);
+    mx_status_t MapVMOIfNeeded(EndPoint* ep, utils::RefPtr<VmAspace> aspace);
+    void UpdateSignals();
+
     const mx_size_t capacity_;
 
     mutex_t lock_;
     EndPoint producer_;
     EndPoint consumer_;
     utils::RefPtr<VmObject> vmo_;
-    uint64_t available_;
+    mx_size_t free_space_;
 };

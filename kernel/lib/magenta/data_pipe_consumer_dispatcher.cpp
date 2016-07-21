@@ -38,6 +38,10 @@ Waiter* DataPipeConsumerDispatcher::get_waiter() {
     return pipe_->get_consumer_waiter();
 }
 
+mx_status_t DataPipeConsumerDispatcher::Read(void* buffer, mx_size_t* requested) {
+    return pipe_->ConsumerReadFromUser(buffer, requested);
+}
+
 mx_status_t DataPipeConsumerDispatcher::BeginRead(utils::RefPtr<VmAspace> aspace,
                                                   void** buffer, mx_size_t* requested) {
     return pipe_->ConsumerReadBegin(utils::move(aspace), buffer, requested);
