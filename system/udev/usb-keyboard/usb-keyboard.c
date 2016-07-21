@@ -69,6 +69,8 @@ typedef struct {
     usb_endpoint_t* ept;
     usb_request_t* req;
 
+    uint32_t flags;
+
     uint8_t mod;
     uint8_t key[MAXKEYS];
 
@@ -76,6 +78,8 @@ typedef struct {
 
     mx_key_fifo_t fifo;
 } kbd_device_t;
+
+#define KBD_DEAD 1
 
 static uint8_t modmap[8] = {
     MX_KEY_LCTRL, MX_KEY_LSHIFT, MX_KEY_LALT, MX_KEY_LWIN,
@@ -191,6 +195,15 @@ static void kbd_int_cb(usb_request_t* req) {
     kbd_device_t* kbd = (kbd_device_t*)req->client_data;
     if ((req->status == NO_ERROR) && (req->transfer_length == INTR_REQ_SIZE)) {
         kbd_process_event(kbd, (void*) req->buffer);
+    } else if (req->status == ERR_CHANNEL_CLOSED) {
+        // ensure that clients know we're dead
+        mxr_mutex_lock(&kbd->fifo.lock);
+        device_state_set(&kbd->dev, DEV_STATE_READABLE);
+        kbd->flags |= KBD_DEAD;
+        mxr_mutex_unlock(&kbd->fifo.lock);
+        // remove our device
+        device_remove(&kbd->dev);
+        return;
     }
 
     req->transfer_length = req->buffer_length;
@@ -203,6 +216,10 @@ static ssize_t kbd_read(mx_device_t* dev, void* buf, size_t len, size_t off, voi
     size_t count = 0;
 
     mxr_mutex_lock(&kbd->fifo.lock);
+    if (kbd->flags & KBD_DEAD) {
+        mxr_mutex_unlock(&kbd->fifo.lock);
+        return ERR_CHANNEL_CLOSED;
+    }
     while (len >= sizeof(mx_key_event_t)) {
         if (mx_key_fifo_read(&kbd->fifo, evt)) {
             break;
