@@ -81,6 +81,17 @@ static mx_status_t log_close(mxio_t* io) {
     return NO_ERROR;
 }
 
+static mx_status_t log_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+    mxio_log_t* log_io = (mxio_log_t*)io;
+
+    handles[0] = mx_handle_duplicate(log_io->handle, MX_RIGHT_SAME_RIGHTS);
+    if (handles[0] < 1) {
+        return handles[0];
+    }
+    types[0] = MX_HND_TYPE_MXIO_LOGGER;
+    return 1;
+}
+
 static mxio_ops_t log_io_ops = {
     .read = mxio_default_read,
     .write = log_write,
@@ -88,7 +99,7 @@ static mxio_ops_t log_io_ops = {
     .misc = mxio_default_misc,
     .close = log_close,
     .open = mxio_default_open,
-    .clone = mxio_default_clone,
+    .clone = log_clone,
     .wait = mxio_default_wait,
     .ioctl = mxio_default_ioctl,
 };
