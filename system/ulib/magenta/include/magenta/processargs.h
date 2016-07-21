@@ -53,6 +53,13 @@ struct mx_proc_args {
     // after the other.
     uint32_t args_off;
     uint32_t args_num;
+
+    // Offset from start of message to environment strings and count of
+    // them.  Environment entries are provided as a set of null-terminated
+    // UTF-8 strings, one after the other.  Canonically each string has
+    // the form "NAME=VALUE", but nothing enforces this.
+    uint32_t environ_off;
+    uint32_t environ_num;
 };
 
 // Handle Info entries associate a type and optional
@@ -103,7 +110,9 @@ struct mx_proc_info {
     int handle_count;
 
     char** argv;
+    char** envp;
     int argc;
+    int envc;
 
     uintptr_t* auxv;
 };

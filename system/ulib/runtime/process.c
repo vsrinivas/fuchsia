@@ -44,6 +44,15 @@ mx_handle_t mxr_process_get_handle(uint32_t info) {
     return h;
 }
 
+static void unpack_strings(uint32_t c, char** v, char* p) {
+    for (uint32_t i = 0; i < c; ++i) {
+        v[i] = p;
+        do {
+            ++p;
+        } while (p[-1] != '\0');
+    }
+}
+
 mx_proc_info_t* mxr_process_parse_args(void* arg) {
     char* data = __proc_data__;
     int avail = sizeof(__proc_data__);
@@ -54,7 +63,7 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     char* msg = NULL;
     mx_proc_args_t* pargs;
     char** argv;
-    uint32_t n;
+    char** envp;
 
     // Avoid calling memset so as not to depend on libc.
     {
@@ -114,18 +123,23 @@ mx_proc_info_t* mxr_process_parse_args(void* arg) {
     if ((sizeof(char*) * pargs->args_num) > (unsigned)avail)
         return pi;
     argv = (void*)data;
+    data += sizeof(char*) * pargs->args_num;
+    avail -= sizeof(char*) * pargs->args_num;
+    unpack_strings(pargs->args_num, argv, msg + pargs->args_off);
 
-    msg = msg + pargs->args_off;
-    for (n = 0; n < pargs->args_num; n++) {
-        argv[n] = msg;
-        while (*msg)
-            msg++;
-        msg++;
-    }
+    // extract environment strings
+    if ((sizeof(char*) * pargs->environ_num) > (unsigned)avail)
+        return pi;
+    envp = (void*)data;
+    data += sizeof(char*) * pargs->environ_num;
+    avail -= sizeof(char*) * pargs->environ_num;
+    unpack_strings(pargs->environ_num, envp, msg + pargs->environ_off);
 
     pi->magic = MX_PROC_INFO_MAGIC;
     pi->version = MX_PROC_INFO_VERSION;
     pi->argc = pargs->args_num;
     pi->argv = argv;
+    pi->envc = pargs->environ_num;
+    pi->envp = envp;
     return pi;
 }
