@@ -62,10 +62,8 @@ readonly TARBALL="/tmp/${GIT_SHA}"
 cp "${SCRIPT_DIR}/upload-toolchain.README.md" "${TOOLCHAIN_DIR}/README.md"
 echo "${GIT_SHA}" >> "${TOOLCHAIN_DIR}/README.md"
 
-# Tar up the toolchain.  Note that we apply a label to the tarball that corresponds
-# to the top level directory packed into the tarball.  This helps us inform the user
-# where the toolchain was installed after download.
-tar jcvf "${TARBALL}" --label "${TOOLCHAIN_DIR}" "${TOOLCHAIN_DIR}"
+# Tar up the toolchain.
+tar jcvf "${TARBALL}" "${TOOLCHAIN_DIR}"
 
 # Upload the prebuilts to Google Storage.  We don't do any authentication here because
 # we assume that the environment has been set up with auth already.  For notes on

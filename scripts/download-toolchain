@@ -64,18 +64,17 @@ function downloadToolchain() {
     echo "${required_version}" > "${stamp_path}"
   fi
 
-  # Record the locations of the various toolchains.  Note that since it's annoying to figure
-  # out the untar'ed directory name, we label the tarball with it in the upload-toolchain script.
-  local tarball_root="$(tar --test-label -jf "${tool_path}")"
+  local toolchain_dir="${target}-5.3.0-${OS}-${HOSTARCH}"
+  # Record the locations of the various toolchains.
   case "${target}" in
     "arm-eabi")
-      TOOLCHAIN_MAKEVARS+=("ARCH_arm_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${tarball_root}/bin/${target}-")
+      TOOLCHAIN_MAKEVARS+=("ARCH_arm_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${toolchain_dir}/bin/${target}-")
       ;;
     "aarch64-elf")
-      TOOLCHAIN_MAKEVARS+=("ARCH_arm64_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${tarball_root}/bin/${target}-")
+      TOOLCHAIN_MAKEVARS+=("ARCH_arm64_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${toolchain_dir}/bin/${target}-")
       ;;
     "x86_64-elf")
-      TOOLCHAIN_MAKEVARS+=("ARCH_x86_64_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${tarball_root}/bin/${target}-")
+      TOOLCHAIN_MAKEVARS+=("ARCH_x86_64_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${toolchain_dir}/bin/${target}-")
       ;;
   esac
 }
