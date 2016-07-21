@@ -3,7 +3,7 @@
 #include "stdio_impl.h"
 
 int __lockfile(FILE* f) {
-    int owner, tid = __pthread_self()->tid;
+    int owner, tid = __thread_get_tid();
     if (f->lock == tid)
         return 0;
     while ((owner = a_cas(&f->lock, 0, tid)))

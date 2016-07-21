@@ -68,7 +68,7 @@ int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restri
     int e, seq, clock = c->_c_clock, cs, oldstate, tmp;
     volatile int* fut;
 
-    if ((m->_m_type & 15) && (m->_m_lock & INT_MAX) != __pthread_self()->tid)
+    if ((m->_m_type & 15) && (m->_m_lock & INT_MAX) != __thread_get_tid())
         return EPERM;
 
     if (ts && ts->tv_nsec >= 1000000000UL)

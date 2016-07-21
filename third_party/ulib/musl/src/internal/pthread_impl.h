@@ -116,6 +116,12 @@ static inline struct pthread* __pthread_self(void) {
     return mxr_tls_get(__pthread_key);
 }
 
+static inline pid_t __thread_get_tid(void) {
+    // TODO(kulakowski) Replace this with the current thread handle's
+    // ID when magenta exposes those.
+    return (pid_t)(intptr_t)mxr_tls_root_get();
+}
+
 int __clone(int (*)(void*), void*, int, void*, ...);
 int __libc_sigaction(int, const struct sigaction*, struct sigaction*);
 int __libc_sigprocmask(int, const sigset_t*, sigset_t*);

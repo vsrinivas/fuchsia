@@ -3,8 +3,7 @@
 int __pthread_mutex_trylock_owner(pthread_mutex_t* m) {
     int old, own;
     int type = m->_m_type & 15;
-    pthread_t self = __pthread_self();
-    int tid = self->tid;
+    int tid = __thread_get_tid();
 
     old = m->_m_lock;
     own = old & 0x7fffffff;

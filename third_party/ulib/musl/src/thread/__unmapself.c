@@ -15,7 +15,7 @@ static void do_unmap() {
 }
 
 void __unmapself(void* base, size_t size) {
-    int tid = __pthread_self()->tid;
+    int tid = __thread_get_tid();
     char* stack = shared_stack + sizeof shared_stack;
     stack -= (uintptr_t)stack % 16;
     while (lock || a_cas(&lock, 0, tid))

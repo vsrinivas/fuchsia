@@ -3,14 +3,12 @@
 #include "futex_impl.h"
 
 int __pthread_mutex_unlock(pthread_mutex_t* m) {
-    pthread_t self;
     int waiters = m->_m_waiters;
     int cont;
     int type = m->_m_type & 15;
 
     if (type != PTHREAD_MUTEX_NORMAL) {
-        self = __pthread_self();
-        if ((m->_m_lock & 0x7fffffff) != self->tid)
+        if ((m->_m_lock & 0x7fffffff) != __thread_get_tid())
             return EPERM;
         if ((type & 3) == PTHREAD_MUTEX_RECURSIVE && m->_m_count)
             return m->_m_count--, 0;

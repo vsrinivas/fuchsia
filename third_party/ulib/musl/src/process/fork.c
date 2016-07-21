@@ -20,8 +20,12 @@ pid_t fork(void) {
     ret = syscall(SYS_clone, SIGCHLD, 0);
 #endif
     if (!ret) {
+        // TODO(kulakowski): NB: fork assumes that the calling thread
+        // is a pthread, and that the created thread in the new
+        // process will therefore also be a pthread.
         pthread_t self = __pthread_self();
-        self->tid = __syscall(SYS_gettid);
+        if (self == NULL)
+            __builtin_trap();
     }
     __restore_sigs(&set);
     __fork_handler(!ret);
