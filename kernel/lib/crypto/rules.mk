@@ -10,6 +10,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/global_prng.cpp \
+    $(LOCAL_DIR)/global_prng_unittest.cpp \
     $(LOCAL_DIR)/hash.cpp \
     $(LOCAL_DIR)/hash_unittest.cpp \
     $(LOCAL_DIR)/prng.cpp \
