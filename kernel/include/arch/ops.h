@@ -72,7 +72,9 @@ static void arch_spinloop_signal(void);
 /* if the arch specific code doesn't override these, implement
  * atomics with compiler builtins.
  */
-#if !ARCH_IMPLEMENTS_ATOMICS
+#if ARCH_IMPLEMENTS_ATOMICS
+#error "only built-in atomics supported"
+#endif
 
 /* strongly ordered versions of the atomic routines as implemented
  * by the compiler with arch-dependent memory barriers.
@@ -150,7 +152,85 @@ static void atomic_store_relaxed(volatile int *ptr, int newval)
     __atomic_store_n(ptr, newval, __ATOMIC_RELAXED);
 }
 
-#endif
+// 64-bit versions. Assumes the compiler/platform is LLP so int is 32 bits.
+
+static inline long long int atomic_swap_64(volatile long long int *ptr, long long int val)
+{
+    return __atomic_exchange_n(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline long long int atomic_add_64(volatile long long int *ptr, long long int val)
+{
+    return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline long long int atomic_and_64(volatile long long int *ptr, long long int val)
+{
+    return __atomic_fetch_and(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline long long int atomic_or_64(volatile long long int *ptr, long long int val)
+{
+    return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline bool atomic_cmpxchg_64(volatile long long int *ptr, long long int *oldval,
+                                     long long int newval)
+{
+    return __atomic_compare_exchange_n(ptr, oldval, newval, false,
+                                       __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+static inline long long int atomic_load_64(volatile long long int *ptr)
+{
+    return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
+}
+
+static inline void atomic_store_64(volatile long long int *ptr, long long int newval)
+{
+    __atomic_store_n(ptr, newval, __ATOMIC_SEQ_CST);
+}
+
+static inline long long unsigned atomic_swap_u64(volatile long long unsigned *ptr,
+                                                 long long unsigned val)
+{
+    return __atomic_exchange_n(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline long long unsigned atomic_add_u64(volatile long long unsigned *ptr,
+                                                long long unsigned val)
+{
+    return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline long long unsigned atomic_and_u64(volatile long long unsigned *ptr,
+                                                 long long unsigned val)
+{
+    return __atomic_fetch_and(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline long long unsigned atomic_or_u64(volatile long long unsigned *ptr,
+                                                long long unsigned val)
+{
+    return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
+}
+
+static inline bool atomic_cmpxchg_u64(volatile long long unsigned *ptr, long long unsigned *oldval,
+                                      long long unsigned newval)
+{
+    return __atomic_compare_exchange_n(ptr, oldval, newval, false,
+                                       __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+static inline long long unsigned atomic_load_u64(volatile long long unsigned *ptr)
+{
+    return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
+}
+
+static inline void atomic_store_u64(volatile long long unsigned *ptr, long long unsigned newval)
+{
+    __atomic_store_n(ptr, newval, __ATOMIC_SEQ_CST);
+}
 
 __END_CDECLS
 
