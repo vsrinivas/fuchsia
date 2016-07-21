@@ -11,7 +11,6 @@ int __clock_gettime(clockid_t, struct timespec*);
 #define NS_PER_S (1000000000ull)
 
 int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct timespec* at) {
-    int r;
     struct timespec to;
     mx_time_t deadline = MX_TIME_INFINITE;
 
@@ -31,12 +30,18 @@ int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct time
         deadline += to.tv_nsec;
     }
 
-    r = mx_futex_wait((void*)addr, val, deadline);
-    // TODO(kulakowski): These return values probably don't make sense
-    // for a magenta call.
-    // if (r != EINTR && r != ETIMEDOUT && r != ECANCELED) r = 0;
-
-    return r;
+    switch (mx_futex_wait((void*)addr, val, deadline)) {
+    case ERR_BUSY:
+        return EAGAIN;
+    case ERR_TIMED_OUT:
+        return ETIMEDOUT;
+    case NO_ERROR:
+        return 0;
+    case ERR_INVALID_ARGS:
+        return EINVAL;
+    default:
+        __builtin_trap();
+    }
 }
 
 int __timedwait(volatile int* addr, int val, clockid_t clk, const struct timespec* at) {
