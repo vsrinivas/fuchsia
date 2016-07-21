@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <platform_buffer.h>
+#include "platform_buffer.h"
 
 PlatformBuffer* PlatformBuffer::Create(uint64_t size)
 {

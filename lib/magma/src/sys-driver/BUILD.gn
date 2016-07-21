@@ -14,17 +14,35 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("main") {
+source_set("sys-driver") {
+  public_deps = [
+    ":platform_buffer",
+    "$magma_build_root:util",
+    "$magma_build_root/include:msd_abi",
+  ]
+
   sources = [
-    "driver_main.cpp",
+    "magma_system.cpp",
   ]
-  deps = [
-    "$magma_build_root:libmsd",
-    "$magma_build_root/src/include:magma_util",
-    "$magma_build_root/tests/gpureadback",
+}
+
+config("platform_buffer_config") {
+  include_dirs = [ "platform_buffer" ]
+}
+
+source_set("platform_buffer") {
+  public_configs = [ ":platform_buffer_config" ]
+
+  public_deps = [
+    "$magma_build_root:util",
+    "$magma_build_root/include:msd_abi",
   ]
-  libs = [
-    "driver",
-    "ddk",
+
+  sources = [
+    "platform_buffer/magenta_platform_buffer.cc",
+    "platform_buffer/platform_buffer.cc",
+    "platform_buffer/platform_buffer.h",
   ]
+
+  libs = [ "ddk" ]
 }

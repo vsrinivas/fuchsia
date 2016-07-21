@@ -20,27 +20,6 @@ group("magma_service_driver") {
   ]
 }
 
-config("libmad_api") {
-  include_dirs = [ "include" ]
-}
-
-config("libmsd_api") {
-  include_dirs = [
-    "include",
-    "include/sys-driver",
-    "include/sys-driver/abi",
-    "src/sys-driver/platform_buffer",
-  ]
-}
-
-config("util_api") {
-  include_dirs = [ "src/include" ]
-}
-
-source_set("util") {
-  public_configs = [ ":util_api" ]
-}
-
 config("libdrm_api") {
   include_dirs = [ "third_party/libdrm" ]
 }
@@ -53,65 +32,47 @@ source_set("libdrm") {
 
   public_configs = [ ":libdrm_api" ]
 
-  configs += [ ":libmsd_api" ]
-
   deps = [
     ":util",
+  ]
+
+  public_deps = [
+    "include:msd_abi",
   ]
 }
 
 source_set("libmad") {
-  public_configs = [ ":libmad_api" ]
-
   sources = [
-    "include/common/magma_defs.h",
-    "include/magma.h",
     "src/app-driver/magma.cpp",
     "src/app-driver/magma_device.cpp",
     "src/app-driver/magma_device.h",
   ]
 
+  public_deps = [
+    "include:mad_abi",
+  ]
+
   deps = [
     ":libdrm",
     ":libmsd",
+    ":util",
+    "include:mad_abi",
+  ]
+}
+
+group("util") {
+  public_deps = [
+    "src/include:magma_util",
   ]
 }
 
 # internal only
 source_set("libmsd") {
-  public_configs = [ ":libmsd_api" ]
-
+  deps = [
+    "src/sys-driver",
+  ]
   public_deps = [
-    ":util",
-    ":platform_buffer",
-  ]
-
-  include_dirs = [ "third_party" ]
-
-  sources = [
-    "include/magma_driver.h",
-    "include/magma_sys_defs.h",
-    "include/magma_sys_driver.h",
-    "include/magma_system.h",
-    "src/sys-driver/magma_system.cpp",
-  ]
-}
-
-source_set("platform_buffer") {
-  public_configs = [ ":libmsd_api" ]
-
-  public_deps = [
-    ":util",
-  ]
-
-  sources = [
-    "src/sys-driver/platform_buffer/platform_buffer.h",
-    "src/sys-driver/platform_buffer/platform_buffer.cc",
-    "src/sys-driver/platform_buffer/magenta_platform_buffer.cc",
-  ]
-
-  libs = [
-    "ddk"
+    "include:msd_abi",
   ]
 }
 
