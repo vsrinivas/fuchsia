@@ -385,6 +385,7 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     }
 
     // add to root device
+    device->device.protocol_id = MX_PROTOCOL_INPUT;
     if (device_add(&device->device, NULL)) {
         free(device);
         return NO_ERROR;

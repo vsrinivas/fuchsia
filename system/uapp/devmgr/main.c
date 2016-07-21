@@ -29,7 +29,7 @@
 
 #include "devmgr.h"
 
-#define VC_COUNT 4
+#define VC_COUNT 3
 
 void devmgr_io_init(void) {
     // setup stdout
@@ -76,19 +76,19 @@ int devicehost(int argc, char** argv) {
 #if !LIBDRIVER
 int console_starter(void* arg) {
     printf("devmgr: vc startup\n");
-    // don't start a shell on vc0, since it is the debug console
-    for (unsigned i = 1; i < VC_COUNT;) {
-        int fd;
-        char name[64];
-        snprintf(name, sizeof(name), "/dev/class/console/vc%u", i);
+    const char* name = "/dev/class/console/vc";
+    // wait for vc server ready
+    int fd;
+    while ((fd = open(name, O_RDWR)) < 0) {
+        mx_nanosleep(100000000ULL);
+    }
+    close(fd);
+    // start the debug log
+    devmgr_launch("dlog", "/boot/bin/dlog", "-f", name);
+    // start a couple vc's
+    for (unsigned i = 0; i < VC_COUNT;) {
         char pname[32];
         snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
-        //printf("? %s\n", name);
-        if ((fd = open(name, O_RDWR)) < 0) {
-            mx_nanosleep(100000000ULL);
-            continue;
-        }
-        close(fd);
         devmgr_launch(pname, "/boot/bin/mxsh", NULL, name);
         i++;
     }

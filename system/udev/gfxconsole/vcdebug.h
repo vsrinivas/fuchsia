@@ -17,10 +17,8 @@
 #include <system/compiler.h>
 #include <stdio.h>
 
-void cprintf(const char* fmt, ...);
-
 #define xprintf(fmt...)   \
     do {                  \
         if (VCDEBUG)      \
-            cprintf(fmt); \
+            printf(fmt); \
     } while (0)

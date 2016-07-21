@@ -15,8 +15,6 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/vc-char.c \
-    $(LOCAL_DIR)/vc-console.c \
     $(LOCAL_DIR)/vc-device.c \
     $(LOCAL_DIR)/vc-gfx.c \
     $(LOCAL_DIR)/textcon.c \

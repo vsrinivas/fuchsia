@@ -158,6 +158,12 @@ int history_down(editstate* es) {
     return 1;
 }
 
+void settitle(const char* title) {
+    char str[10];
+    snprintf(str, sizeof(str), "\033]2;%s\007", title);
+    cputs(str, strlen(str));
+}
+
 int readline(editstate* es) {
     int a, b, c;
     es->len = 0;
@@ -311,6 +317,7 @@ void joinproc(mx_handle_t p) {
         printf("[process(%x): status: %d]\n", p, proc_info.return_code);
     }
 
+    settitle("mxsh");
     mx_handle_close(p);
 }
 
@@ -346,6 +353,13 @@ void command(int argc, char** argv, bool runbg) {
             mx_handle_close(p);
         }
     } else {
+        char* bname = strrchr(argv[0], '/');
+        if (!bname) {
+            bname = argv[0];
+        } else {
+            bname += 1; // point to the first char after the last '/'
+        }
+        settitle(bname);
         joinproc(p);
     }
 }

@@ -19,6 +19,7 @@
 #include <ddk/protocol/keyboard.h>
 
 #include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <font/font.h>
 #include <system/listnode.h>
@@ -40,22 +41,32 @@
 #include "vc.h"
 #include "vcdebug.h"
 
+#define VC_DEVNAME "vc"
+
 // framebuffer
 static gfx_surface hw_gfx;
 
-static mxr_thread_t* input_thread0;
-static mxr_thread_t* input_thread1;
-static mxr_thread_t* logreader_thread;
+#define INPUT_LISTENER_FLAG_RUNNING 1
+
+typedef struct {
+    char dev_name[128];
+    mxr_thread_t* t;
+    int flags;
+    int fd;
+    struct list_node node;
+} input_listener_t;
+
+static struct list_node input_listeners_list = LIST_INITIAL_VALUE(input_listeners_list);
+static mxr_thread_t* input_poll_thread;
+
+// single driver instance
+static bool vc_initialized = false;
 
 static struct list_node vc_list = LIST_INITIAL_VALUE(vc_list);
-static vc_device_t* debug_vc;
+static unsigned vc_count = 0;
 static vc_device_t* active_vc;
 static unsigned active_vc_index;
-static unsigned vc_count;
-static mxr_mutex_t active_lock = MXR_MUTEX_INIT;
-
-// TODO create dynamically
-#define VC_COUNT 4
+static mxr_mutex_t vc_lock = MXR_MUTEX_INIT;
 
 // TODO move this to ulib/gfx
 static gfx_format display_format_to_gfx_format(unsigned display_format) {
@@ -96,31 +107,24 @@ static bool vc_ischar(mx_key_event_t* ev) {
 }
 
 static int vc_input_thread(void* arg) {
-    const char* input_dev = arg;
-    int fd;
-restart:
-    for (;;) {
-        fd = open(input_dev, O_RDONLY);
-        if (fd < 0) {
-            mx_nanosleep(250000000ULL);
-            continue;
-        }
-        break;
-    }
-    printf("vc_input_thread: device opened\n");
+    input_listener_t* listener = arg;
+    assert(listener->flags & INPUT_LISTENER_FLAG_RUNNING);
+    assert(listener->fd >= 0);
+    xprintf("vc: input thread started for %s\n", listener->dev_name);
     mx_key_event_t ev;
     int modifiers = 0;
-
     for (;;) {
-        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
-        int r = read(fd, &ev, sizeof(mx_key_event_t));
+        mxio_wait_fd(listener->fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+        int r = read(listener->fd, &ev, sizeof(mx_key_event_t));
         if (r < 0) {
-            close(fd);
-            goto restart;
+            break; // will be restarted by poll thread if needed
         }
         if ((size_t)(r) != sizeof(mx_key_event_t)) {
             continue;
         }
+        // eat the input if there is no active vc
+        if (!active_vc) continue;
+        // process the key
         int consumed = 0;
         if (ev.pressed) {
             switch (ev.keycode) {
@@ -218,39 +222,88 @@ restart:
             mxr_mutex_unlock(&active_vc->fifo.lock);
         }
     }
+    close(listener->fd);
+    listener->fd = -1;
+    listener->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
+    // keep this in the list so we don't have to alloc again when a new device appears
     return 0;
 }
 
-#define ESCAPE_HIDE_CURSOR "\033[?25l"
+#define DEV_INPUT "/dev/class/input"
 
-static int vc_logreader_thread(void* arg) {
-    mx_handle_t h;
-
-    if ((h = mx_log_create(MX_LOG_FLAG_CONSOLE | MX_LOG_FLAG_READABLE)) < 0) {
-        return h;
-    }
-
-    vc_device_t* vc = debug_vc;
-    // hide cursor in logreader
-    vc_char_write(&vc->device, ESCAPE_HIDE_CURSOR, strlen(ESCAPE_HIDE_CURSOR), 0);
-
-    char buf[MX_LOG_RECORD_MAX];
-    mx_log_record_t* rec = (mx_log_record_t*)buf;
+static int vc_input_devices_poll_thread(void* arg) {
     for (;;) {
-        if (mx_log_read(h, MX_LOG_RECORD_MAX, rec, MX_LOG_FLAG_WAIT) > 0) {
-            char tmp[64];
-            snprintf(tmp, 64, "[%05d.%03d] %c ",
-                     (int)(rec->timestamp / 1000000000ULL),
-                     (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                     (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
-            vc_char_write(&vc->device, tmp, strlen(tmp), 0);
-            vc_char_write(&vc->device, rec->data, rec->datalen, 0);
-            if (rec->data[rec->datalen - 1] != '\n') {
-                vc_char_write(&vc->device, "\n", 1, 0);
+        struct dirent* de;
+        DIR* dir = opendir(DEV_INPUT);
+        if (!dir) {
+            xprintf("vc: error opening %s\n", DEV_INPUT);
+            return ERR_INTERNAL;
+        }
+        char dname[128];
+        char tname[128];
+        mx_status_t status;
+        while ((de = readdir(dir)) != NULL) {
+            snprintf(dname, sizeof(dname), "%s/%s", DEV_INPUT, de->d_name);
+
+            // is there already a listener for this device?
+            bool found = false;
+            input_listener_t* listener = NULL;
+            list_for_every_entry (&input_listeners_list, listener, input_listener_t, node) {
+                if (listener->flags & INPUT_LISTENER_FLAG_RUNNING && !strcmp(listener->dev_name, dname)) {
+                    found = true;
+                    break;
+                }
+            }
+            // do nothing if a listener is already running for this device
+            if (found) continue;
+            // otherwise start a listener for it
+            input_listener_t* free = NULL;
+            list_for_every_entry (&input_listeners_list, listener, input_listener_t, node) {
+                if (!(listener->flags & INPUT_LISTENER_FLAG_RUNNING)) {
+                    free = listener;
+                    break;
+                }
+            }
+            if (!free) {
+                free = calloc(1, sizeof(input_listener_t));
+                if (!free) {
+                    // wait for next loop
+                    break;
+                }
+                list_add_tail(&input_listeners_list, &free->node);
+            }
+            // mark this as running
+            free->flags |= INPUT_LISTENER_FLAG_RUNNING;
+            // open the device
+            strncpy(free->dev_name, dname, sizeof(free->dev_name));
+            free->fd = open(free->dev_name, O_RDONLY);
+            if (free->fd < 0) {
+                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
+                continue;
+            }
+            // start a thread to wait on the fd
+            snprintf(tname, sizeof(tname), "vc-input-%s", de->d_name);
+            status = mxr_thread_create(vc_input_thread, (void*)free, tname, &free->t);
+            if (status < 0) {
+                xprintf("vc: input thread %s did not start (status=%d)\n", tname, status);
+                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
             }
         }
+        closedir(dir);
+        usleep(1000 * 1000); // 1 second
+        //TODO: wait on directory changed (swetland)
     }
-    return 0;
+    return NO_ERROR;
+}
+
+static void __vc_set_active(vc_device_t* dev, unsigned index) {
+    // must be called while holding vc_lock
+    if (active_vc)
+        active_vc->active = false;
+    dev->active = true;
+    active_vc = dev;
+    active_vc->flags &= ~VC_FLAG_HASINPUT;
+    active_vc_index = index;
 }
 
 mx_status_t vc_set_active_console(unsigned console) {
@@ -259,21 +312,18 @@ mx_status_t vc_set_active_console(unsigned console) {
 
     unsigned i = 0;
     vc_device_t* device = NULL;
+    mxr_mutex_lock(&vc_lock);
     list_for_every_entry (&vc_list, device, vc_device_t, node) {
         if (i == console)
             break;
         i++;
     }
-    if (device == active_vc)
+    if (device == active_vc) {
+        mxr_mutex_unlock(&vc_lock);
         return NO_ERROR;
-    mxr_mutex_lock(&active_lock);
-    if (active_vc)
-        active_vc->active = false;
-    device->active = true;
-    active_vc = device;
-    active_vc->flags &= ~VC_FLAG_HASINPUT;
-    active_vc_index = console;
-    mxr_mutex_unlock(&active_lock);
+    }
+    __vc_set_active(device, console);
+    mxr_mutex_unlock(&vc_lock);
     vc_device_render(active_vc);
     return NO_ERROR;
 }
@@ -283,6 +333,7 @@ void vc_get_status_line(char* str, int n) {
     char* ptr = str;
     unsigned i = 0;
     // TODO add process name, etc.
+    mxr_mutex_lock(&vc_lock);
     list_for_every_entry (&vc_list, device, vc_device_t, node) {
         int lines = vc_device_get_scrollback_lines(device);
         int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
@@ -295,29 +346,302 @@ void vc_get_status_line(char* str, int n) {
         ptr += chars;
         i++;
     }
+    mxr_mutex_unlock(&vc_lock);
 }
 
-static mx_driver_t _driver_vc = {
-    .name = "vc",
-    .ops = {},
-};
+// implement device protocol:
 
-extern mx_protocol_device_t vc_device_proto;
-extern mx_protocol_console_t vc_console_proto;
+static mx_status_t vc_device_release(mx_device_t* dev) {
+    vc_device_t* vc = get_vc_device(dev);
 
-static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
-    mx_status_t status;
+    mxr_mutex_lock(&vc_lock);
+    list_delete(&vc->node);
+    vc_count -= 1;
 
-    if (vc_count > 0) {
-        // disallow multiple instances
+    if (vc->active) active_vc = NULL;
+
+    // need to fixup active_vc and active_vc_index after deletion
+    vc_device_t* d = NULL;
+    unsigned i = 0;
+    list_for_every_entry(&vc_list, d, vc_device_t, node) {
+        if (active_vc) {
+            if (d == active_vc) {
+                active_vc_index = i;
+                break;
+            }
+        } else {
+            if (i == active_vc_index) {
+                __vc_set_active(d, i);
+                break;
+            }
+        }
+        i++;
+    }
+    mxr_mutex_unlock(&vc_lock);
+
+    vc_device_free(vc);
+
+    // redraw the status line, or the full screen
+    if (active_vc) vc_device_render(active_vc);
+    return NO_ERROR;
+}
+
+static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+    vc_device_t* vc = get_vc_device(dev);
+
+    mx_key_event_t ev;
+    ssize_t r = 0;
+    mxr_mutex_lock(&vc->fifo.lock);
+    while (count > 0) {
+        if (vc->charcount > 0) {
+            if (count > vc->charcount) {
+                count = vc->charcount;
+            }
+            memcpy(buf, vc->chardata, count);
+            vc->charcount -= count;
+            if (vc->charcount > 0) {
+                memmove(vc->chardata, vc->chardata + count, vc->charcount);
+            }
+            r = count;
+            break;
+        }
+        if (mx_key_fifo_read(&vc->fifo, &ev)) {
+            // TODO: better error?
+            r = 0;
+            break;
+        }
+
+        char* str = vc->chardata;
+        if (ev.pressed) {
+            switch (ev.keycode) {
+            case MX_KEY_LSHIFT:
+                vc->modifiers |= MOD_LSHIFT;
+                break;
+            case MX_KEY_RSHIFT:
+                vc->modifiers |= MOD_RSHIFT;
+                break;
+            case MX_KEY_LCTRL:
+                vc->modifiers |= MOD_LCTRL;
+                break;
+            case MX_KEY_RCTRL:
+                vc->modifiers |= MOD_RCTRL;
+                break;
+            case MX_KEY_LALT:
+                vc->modifiers |= MOD_LALT;
+                break;
+            case MX_KEY_RALT:
+                vc->modifiers |= MOD_RALT;
+                break;
+            case 'a' ... 'z':
+                if (vc->modifiers & MOD_CTRL) {
+                    str[0] = ev.keycode - 'a' + 1;
+                } else {
+                    str[0] = ev.keycode;
+                }
+                vc->charcount = 1;
+                break;
+            case 'A' ... 'Z':
+                if (vc->modifiers & MOD_CTRL) {
+                    str[0] = ev.keycode - 'A' + 1;
+                } else {
+                    str[0] = ev.keycode;
+                }
+                vc->charcount = 1;
+                break;
+
+            // generate special stuff for a few different keys
+            case MX_KEY_RETURN:
+            case MX_KEY_PAD_ENTER:
+                str[0] = '\n';
+                vc->charcount = 1;
+                break;
+            case MX_KEY_BACKSPACE:
+                str[0] = '\b';
+                vc->charcount = 1;
+                break;
+            case MX_KEY_TAB:
+                str[0] = '\t';
+                vc->charcount = 1;
+                break;
+
+            // generate vt100 key codes for arrows
+            case MX_KEY_ARROW_UP:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = 65;
+                vc->charcount = 3;
+                break;
+            case MX_KEY_ARROW_DOWN:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = 66;
+                vc->charcount = 3;
+                break;
+            case MX_KEY_ARROW_RIGHT:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = 67;
+                vc->charcount = 3;
+                break;
+            case MX_KEY_ARROW_LEFT:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = 68;
+                vc->charcount = 3;
+                break;
+
+            default:
+                if (ev.keycode < 0x80) {
+                    str[0] = ev.keycode;
+                    vc->charcount = 1;
+                }
+                break;
+            }
+        } else {
+            switch (ev.keycode) {
+            case MX_KEY_LSHIFT:
+                vc->modifiers &= (~MOD_LSHIFT);
+                break;
+            case MX_KEY_RSHIFT:
+                vc->modifiers &= (~MOD_RSHIFT);
+                break;
+            case MX_KEY_LCTRL:
+                vc->modifiers &= (~MOD_LCTRL);
+                break;
+            case MX_KEY_RCTRL:
+                vc->modifiers &= (~MOD_RCTRL);
+                break;
+            case MX_KEY_LALT:
+                vc->modifiers &= (~MOD_LALT);
+                break;
+            case MX_KEY_RALT:
+                vc->modifiers &= (~MOD_RALT);
+                break;
+            }
+        }
+    }
+    if ((vc->fifo.head == vc->fifo.tail) && (vc->charcount == 0)) {
+        device_state_clr(dev, DEV_STATE_READABLE);
+    }
+    mxr_mutex_unlock(&vc->fifo.lock);
+    return r;
+}
+
+static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+    vc_device_t* vc = get_vc_device(dev);
+    mxr_mutex_lock(&vc->lock);
+    const uint8_t* str = (const uint8_t*)buf;
+    for (size_t i = 0; i < count; i++) {
+        vc->textcon.putc(&vc->textcon, str[i]);
+    }
+    if (!vc->active && !(vc->flags & VC_FLAG_HASINPUT)) {
+        vc->flags |= VC_FLAG_HASINPUT;
+        vc_device_write_status(vc);
+        vc_gfx_invalidate(vc, 0, 0, vc->columns, 1);
+    }
+    mxr_mutex_unlock(&vc->lock);
+    return count;
+}
+
+static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
+    vc_device_t* vc = get_vc_device(dev);
+    switch (op) {
+    case CONSOLE_OP_GET_DIMENSIONS: {
+        ioctl_console_dimensions_t* dims = reply;
+        if (max < sizeof(*dims)) {
+            return ERR_NOT_ENOUGH_BUFFER;
+        }
+        dims->width = vc->columns;
+        dims->height = vc->rows;
+        return sizeof(*dims);
+    }
+    case DISPLAY_OP_GET_FB: {
+        if (max < sizeof(ioctl_display_get_fb_t)) {
+            return ERR_NOT_ENOUGH_BUFFER;
+        }
+        ioctl_display_get_fb_t* fb = reply;
+        fb->info.format = vc->gfx->format;
+        fb->info.width = vc->gfx->width;
+        fb->info.height = vc->gfx->height;
+        fb->info.stride = vc->gfx->stride;
+        fb->info.pixelsize = vc->gfx->pixelsize;
+        fb->info.flags = 0;
+        //TODO: take away access to the vmo when the client closes the device
+        fb->vmo = mx_handle_duplicate(vc->gfx_vmo, MX_RIGHT_SAME_RIGHTS);
+        return sizeof(ioctl_display_get_fb_t);
+    }
+    case DISPLAY_OP_FLUSH_FB:
+        vc_gfx_invalidate_all(vc);
+        return NO_ERROR;
+    default:
         return ERR_NOT_SUPPORTED;
     }
-    // TODO: bind by protocol
-    if (strcmp(dev->name, "bochs_vbe") && strcmp(dev->name, "intel_i915_disp")) {
+}
+
+static mx_protocol_device_t vc_device_proto = {
+    .release = vc_device_release,
+    .read = vc_device_read,
+    .write = vc_device_write,
+    .ioctl = vc_device_ioctl,
+};
+
+static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+    if (!dev_out) return ERR_INVALID_ARGS;
+
+    if (*dev_out != dev) return NO_ERROR;
+
+    mx_status_t status;
+    // create a new instance of vc if no dev_out is passed
+    vc_device_t* device;
+    if ((status = vc_device_alloc(&hw_gfx, &device)) < 0) {
+        return status;
+    }
+
+    // init the new device
+    char name[8];
+    snprintf(name, sizeof(name), "%s%u", dev->name, vc_count);
+    status = device_init(&device->device, dev->owner, name, &vc_device_proto);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    // add the device
+    device->device.protocol_id = MX_PROTOCOL_CONSOLE;
+    status = device_add_instance(&device->device, dev);
+    if (status != NO_ERROR) {
+        vc_device_free(device);
+        return status;
+    }
+
+    // add to the vc list
+    mxr_mutex_lock(&vc_lock);
+    list_add_tail(&vc_list, &device->node);
+    vc_count++;
+    mxr_mutex_unlock(&vc_lock);
+
+    // make this the active vc if it's the first one
+    if (!active_vc) {
+        vc_set_active_console(0);
+    } else {
+        vc_device_render(active_vc);
+    }
+
+    *dev_out = &device->device;
+    return NO_ERROR;
+}
+
+static mx_protocol_device_t vc_root_proto = {
+    .open = vc_root_open,
+};
+
+static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
+    if (vc_initialized) {
+        // disallow multiple instances
         return ERR_NOT_SUPPORTED;
     }
 
     mx_display_protocol_t* disp;
+    mx_status_t status;
     if ((status = device_get_protocol(dev, MX_PROTOCOL_DISPLAY, (void**)&disp)) < 0) {
         return status;
     }
@@ -342,57 +666,33 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
         return status;
     }
 
-    unsigned i;
-    for (i = 0; i < VC_COUNT; i++) {
-        // allocate vc# devices
-        vc_device_t* device;
-        if ((status = vc_device_alloc(&hw_gfx, &device)) < 0) {
-            break;
-        }
-
-        // init the vc device
-        char name[4];
-        snprintf(name, sizeof(name), "vc%u", i);
-        if ((status = device_init(&device->device, &_driver_vc, name, &vc_device_proto)) < 0) {
-            break;
-        }
-        if (i == 0) {
-            strncpy(device->title, "syslog", sizeof(device->title));
-        } else {
-            strncpy(device->title, name, sizeof(device->title));
-        }
-        device->device.protocol_id = MX_PROTOCOL_CONSOLE;
-        device->device.protocol_ops = &vc_console_proto;
-
-        // add devices to root node
-        list_add_tail(&vc_list, &device->node);
-        device_add(&device->device, dev);
-    }
-    if (i == 0) {
-        // TODO: cleanup surface and thread
+    // publish the root vc device. opening this device will create a new vc
+    mx_device_t* device;
+    status = device_create(&device, drv, VC_DEVNAME, &vc_root_proto);
+    if (status != NO_ERROR) {
         return status;
     }
-    vc_count = i;
-    vc_set_active_console(0);
-    // vc0 is the debug console
-    debug_vc = active_vc;
 
-    xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u, count=%u\n", dev->name, info.width, info.height, info.stride, format, i);
-
-    // start input threads
-    // TODO: generalize this to handle any keyboard devices
-    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/class/misc/i8042-keyboard",
-                                    "vc-input-ps2", &input_thread0)) < 0) {
-        printf("vc-input-ps2 thread did not start %d\n", status);
-    }
-    if ((status = mxr_thread_create(vc_input_thread, (void*) "/dev/class/misc/usb-keyboard",
-                                    "vc-input-usb", &input_thread1)) < 0) {
-        printf("vc-input-usb thread did not start %d\n", status);
+    // start a thread to listen for new input devices
+    status = mxr_thread_create(vc_input_devices_poll_thread, NULL, "vc-inputdev-poll", &input_poll_thread);
+    if (status != NO_ERROR) {
+        xprintf("vc: input polling thread did not start (status=%d)\n", status);
     }
 
-    mxr_thread_create(vc_logreader_thread, NULL, "vc-debuglog", &logreader_thread);
+    device->protocol_id = MX_PROTOCOL_CONSOLE;
+    status = device_add(device, dev);
+    if (status != NO_ERROR) {
+        goto fail;
+    }
+
+    vc_initialized = true;
+    xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u\n", dev->name, info.width, info.height, info.stride, format);
 
     return NO_ERROR;
+fail:
+    free(device);
+    // TODO clean up threads
+    return status;
 }
 
 static mx_bind_inst_t binding[] = {

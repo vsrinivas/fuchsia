@@ -19,7 +19,7 @@
 #include <string.h>
 #include <sys/param.h>
 
-#define VCDEBUG 1
+#define VCDEBUG 0
 
 #include "vc.h"
 #include "vcdebug.h"
@@ -288,20 +288,6 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
     vc_gfx_invalidate_all(dev);
 }
 
-mx_protocol_console_t vc_console_proto = {
-    .getsurface = vc_console_getsurface,
-    .invalidate = vc_console_invalidate,
-    .movecursor = vc_console_movecursor,
-    .setpalette = vc_console_setpalette,
-    .readkey = vc_console_readkey,
-};
-
-mx_protocol_device_t vc_device_proto = {
-    .read = vc_char_read,
-    .write = vc_char_write,
-    .ioctl = vc_char_ioctl,
-};
-
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     vc_device_t* device = calloc(1, sizeof(vc_device_t));
     if (!device)
@@ -336,6 +322,11 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     *out_dev = device;
     return NO_ERROR;
 fail:
+    vc_device_free(device);
+    return ERR_NO_MEMORY;
+}
+
+void vc_device_free(vc_device_t* device) {
     if (device->st_gfx)
         gfx_surface_destroy(device->st_gfx);
     if (device->gfx_vmo)
@@ -343,5 +334,4 @@ fail:
     if (device->gfx)
         free(device->gfx);
     free(device);
-    return ERR_NO_MEMORY;
 }

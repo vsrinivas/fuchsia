@@ -101,7 +101,7 @@ static inline void panic(void) {
 #define MX_PROTOCOL_BLOCK 'pBLK'
 #define MX_PROTOCOL_CONSOLE 'pCON'
 #define MX_PROTOCOL_DISPLAY 'pDIS'
-#define MX_PROTOCOL_FB 'pFBU'
+#define MX_PROTOCOL_INPUT 'fINP'
 #define MX_PROTOCOL_PCI 'pPCI'
 #define MX_PROTOCOL_USB_HCI 'pHCI'
 #define MX_PROTOCOL_USB_BUS 'pUBS'

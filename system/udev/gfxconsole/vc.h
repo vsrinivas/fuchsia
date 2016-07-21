@@ -97,9 +97,7 @@ typedef struct vc_device {
 #define VC_FLAG_RESETSCROLL (1 << 1)
 
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev);
-static inline mx_status_t vc_device_free(vc_device_t* dev) {
-    return ERR_NOT_SUPPORTED;
-};
+void vc_device_free(vc_device_t* dev);
 
 mx_status_t vc_set_active_console(unsigned console);
 void vc_get_status_line(char* str, int n);
@@ -120,29 +118,6 @@ static inline uint32_t palette_to_color(vc_device_t* dev, uint8_t color) {
     assert(color <= MAX_COLOR);
     return dev->palette[color];
 }
-
-// device protocol:
-
-mx_status_t vc_device_get_protocol(mx_device_t* dev, uint32_t protocol_id, void** protocol);
-mx_status_t vc_device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags);
-mx_status_t vc_device_close(mx_device_t* dev);
-mx_status_t vc_device_release(mx_device_t* dev);
-
-// console protocol:
-
-mx_handle_t vc_console_getsurface(mx_device_t* dev, uint32_t* width, uint32_t* height);
-void vc_console_invalidate(mx_device_t* dev, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-void vc_console_movecursor(mx_device_t* dev, uint32_t x, uint32_t y, bool visible);
-void vc_console_setpalette(mx_device_t* dev, uint32_t colors[16]);
-mx_status_t vc_console_readkey(mx_device_t* dev, uint32_t flags);
-
-// char protocol:
-
-ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off);
-ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t off);
-ssize_t vc_char_ioctl(mx_device_t* dev, uint32_t op,
-                      const void* cmd, size_t cmdlen,
-                      void* reply, size_t max);
 
 #define MOD_LSHIFT (1 << 0)
 #define MOD_RSHIFT (1 << 1)

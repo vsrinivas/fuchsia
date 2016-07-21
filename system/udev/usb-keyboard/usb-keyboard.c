@@ -300,6 +300,7 @@ found_endpoint:
 
     kbd->fifo.lock = MXR_MUTEX_INIT;
 
+    kbd->dev.protocol_id = MX_PROTOCOL_INPUT;
     device_add(&kbd->dev, dev);
 
     kbd->req->transfer_length = kbd->req->buffer_length;
