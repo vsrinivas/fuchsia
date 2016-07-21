@@ -514,6 +514,7 @@ void devmgr_init(bool devhost) {
 
     // init device tree
     device_create(&root_dev, &root_driver, "root", &root_device_proto);
+    root_dev->refcount++;
 
 #if !LIBDRIVER
     if (!devhost) {
