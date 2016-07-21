@@ -27,12 +27,6 @@ cd src
 ./build/install-build-deps.sh
 mojo/tools/mojob.py gn
 mojo/tools/mojob.py build --release
-
-# We need to patch the mojom bindings generator.  Find the line that says
-#    self.Write(self.GenerateSource(), os.path.join("go", "src",
-# and remove the "go" and "src" arguments.
-# TODO(https://github.com/domokit/mojo/issues/768).
-$EDITOR $MOJO_DIR/src/mojo/public/tools/bindings/generators/mojom_go_generator.py
 ```
 
 ### Download Go dependencies ###
