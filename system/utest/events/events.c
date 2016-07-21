@@ -248,7 +248,29 @@ static bool reset_test(void) {
     status = mx_handle_wait_one(event, MX_SIGNAL_SIGNALED, 1u, NULL);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
 
-    ASSERT_GE(mx_handle_close(event), 0, "error during handle close");
+    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "error during handle close");
+
+    END_TEST;
+}
+
+static bool wait_many_failures_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t handles[2] = {mx_event_create(0u), MX_HANDLE_INVALID};
+    ASSERT_GT(handles[0], MX_HANDLE_INVALID, "Error during event creation");
+
+    mx_signals_t signals[2] = {MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED};
+
+    ASSERT_EQ(mx_handle_wait_many(2u, handles, signals, MX_TIME_INFINITE, NULL, NULL),
+              ERR_INVALID_ARGS, "Wait-many should have failed with ERR_INVALID_ARGS");
+
+    // Signal the event, to check that wait-many cleaned up correctly.
+    ASSERT_EQ(mx_event_signal(handles[0]), NO_ERROR, "Error during event signal");
+
+    // TODO(vtl): Also test other failure code paths: 1. a handle not supporting waiting (i.e., not
+    // having a Waiter), 2. a handle having an I/O port bound.
+
+    ASSERT_EQ(mx_handle_close(handles[0]), NO_ERROR, "Error during handle close");
 
     END_TEST;
 }
@@ -258,6 +280,7 @@ RUN_TEST(basic_test)
 RUN_TEST(user_signals_test)
 RUN_TEST(wait_signals_test)
 RUN_TEST(reset_test)
+RUN_TEST(wait_many_failures_test)
 END_TEST_CASE(event_tests)
 
 int main(int argc, char** argv) {

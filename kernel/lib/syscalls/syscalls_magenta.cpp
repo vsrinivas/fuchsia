@@ -96,9 +96,12 @@ struct WaitHelper {
     mx_status_t Begin(Handle* handle, WaitEvent* event, mx_signals_t signals, uint64_t context) {
         dispatcher = handle->dispatcher();
         waiter = dispatcher->get_waiter();
-        if (!waiter)
-            return ERR_NOT_SUPPORTED;
-        return  waiter->BeginWait(event, handle, signals, context);
+        mx_status_t result = ERR_NOT_SUPPORTED;
+        if (waiter)
+            result = waiter->BeginWait(event, handle, signals, context);
+        if (result != NO_ERROR)
+            dispatcher.reset();
+        return result;
     }
 
     mx_signals_state_t End(WaitEvent* event) {
@@ -194,21 +197,35 @@ mx_status_t sys_handle_wait_many(uint32_t count,
 
     WaitEvent event;
 
+    // We may need to unwind (which can be done outside the lock).
+    result = NO_ERROR;
+    size_t num_added = 0;
     {
         auto up = UserProcess::GetCurrent();
         AutoLock lock(up->handle_table_lock());
 
-        for (size_t ix = 0; ix != count; ++ix) {
-            Handle* handle = up->GetHandle_NoLock(handle_values[ix]);
-            if (!handle)
-                return ERR_INVALID_ARGS;
-            if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
-                return ERR_ACCESS_DENIED;
+        for (; num_added != count; ++num_added) {
+            Handle* handle = up->GetHandle_NoLock(handle_values[num_added]);
+            if (!handle) {
+                result = ERR_INVALID_ARGS;
+                break;
+            }
+            if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ)) {
+                result = ERR_ACCESS_DENIED;
+                break;
+            }
 
-            result = waiters[ix].Begin(handle, &event, signals[ix], static_cast<uint64_t>(ix));
+            result = waiters[num_added].Begin(handle, &event, signals[num_added],
+                                              static_cast<uint64_t>(num_added));
             if (result != NO_ERROR)
-                return result;
+                break;
         }
+    }
+    if (result != NO_ERROR) {
+        DEBUG_ASSERT(num_added < count);
+        for (size_t ix = 0; ix < num_added; ++ix)
+            waiters[ix].End(&event);
+        return result;
     }
 
     lk_time_t t = mx_time_to_lk(timeout);
