@@ -31,3 +31,7 @@
 
 ## Threads
 + [thread_arch_prctl](syscalls/thread_arch_prctl.md)
+
+## Cryptographically Secure RNG
++ [cprng_draw](syscalls/cprng_draw.md)
++ [cprng_add_entropy](syscalls/cprng_add_entropy.md)

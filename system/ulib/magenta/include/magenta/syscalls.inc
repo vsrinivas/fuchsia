@@ -135,6 +135,10 @@ MAGENTA_DDKCALL_DEF(3, 3, 106, mx_status_t, mmap_device_memory, mx_paddr_t paddr
 MAGENTA_DDKCALL_DEF(3, 3, 107, mx_status_t, alloc_device_memory, uint32_t len, mx_paddr_t *out_paddr,
                     void **out_vaddr)
 
+MAGENTA_SYSCALL_DEF(2, 2, 160, mx_ssize_t, cprng_draw, void* buffer, mx_size_t len);
+// TODO(security)
+MAGENTA_SYSCALL_DEF(2, 2, 161, mx_status_t, cprng_add_entropy, void* buffer, mx_size_t len);
+
 // TODO(security)
 MAGENTA_DDKCALL_DEF(4, 4, 170, mx_status_t, bootloader_fb_get_info, uint32_t* format, uint32_t* width,
                     uint32_t* height, uint32_t* stride)

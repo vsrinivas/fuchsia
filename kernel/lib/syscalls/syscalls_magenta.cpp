@@ -13,6 +13,7 @@
 #include <kernel/vm/vm_region.h>
 #include <kernel/vm/vm_object.h>
 #include <lib/console.h>
+#include <lib/crypto/global_prng.h>
 #include <lib/user_copy.h>
 #include <list.h>
 
@@ -49,6 +50,9 @@ constexpr uint32_t kMaxMessageHandles = 1024u;
 
 constexpr uint32_t kMaxWaitHandleCount = 256u;
 constexpr mx_size_t kDefaultDataPipeCapacity = 32 * 1024u;
+
+constexpr mx_size_t kMaxCPRNGDraw = MX_CPRNG_DRAW_MAX_LEN;
+constexpr mx_size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
 
 void sys_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
@@ -1530,4 +1534,39 @@ mx_status_t sys_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
         return ERR_ACCESS_DENIED;
 
     return consumer->EndRead(read);
+}
+
+mx_ssize_t sys_cprng_draw(void* buffer, mx_size_t len) {
+    if (len > kMaxCPRNGDraw)
+        return ERR_INVALID_ARGS;
+
+    uint8_t kernel_buf[kMaxCPRNGDraw];
+
+    auto prng = crypto::GlobalPRNG::GetInstance();
+    prng->Draw(kernel_buf, static_cast<int>(len));
+
+    if (copy_to_user(buffer, kernel_buf, len) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    // Get rid of the stack copy of the random data
+    memset(kernel_buf, 0, sizeof(kernel_buf));
+
+    return len;
+}
+
+mx_status_t sys_cprng_add_entropy(void* buffer, mx_size_t len) {
+    if (len > kMaxCPRNGSeed)
+        return ERR_INVALID_ARGS;
+
+    uint8_t kernel_buf[kMaxCPRNGSeed];
+    if (copy_from_user(kernel_buf, buffer, len) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    auto prng = crypto::GlobalPRNG::GetInstance();
+    prng->AddEntropy(kernel_buf, static_cast<int>(len));
+
+    // Get rid of the stack copy of the random data
+    memset(kernel_buf, 0, sizeof(kernel_buf));
+
+    return NO_ERROR;
 }

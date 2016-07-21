@@ -11,6 +11,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
     lib/console \
+    lib/crypto \
     lib/magenta \
     lib/user_copy \
 

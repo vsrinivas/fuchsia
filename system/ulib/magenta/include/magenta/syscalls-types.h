@@ -168,6 +168,10 @@ typedef struct mx_user_packet {
 #define MX_IOPORT_OPT_128_SLOTS   0
 #define MX_IOPORT_OPT_1K_SLOTS    1
 
+// Buffer size limits on the cprng syscalls
+#define MX_CPRNG_DRAW_MAX_LEN        256
+#define MX_CPRNG_ADD_ENTROPY_MAX_LEN 256
+
 #ifdef __cplusplus
 }
 #endif
