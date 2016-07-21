@@ -16,6 +16,7 @@
 #define _MAGMA_SYS_DRIVER_H_
 
 #include <magma_sys_defs.h>
+#include <platform_buffer_abi.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -41,13 +42,7 @@ uint32_t msd_get_device_id(struct MsdDevice* dev);
 
 bool msd_create_context(struct MsdDevice* dev, ClientId client_id, int* context_id);
 
-bool msd_alloc(struct MsdDevice* dev, uint64_t size, uint64_t* size_out, uint32_t* handle_out);
-bool msd_free(struct MsdDevice* dev, uint32_t handle);
-
 bool msd_set_tiling_mode(struct MsdDevice* dev, uint32_t handle, uint32_t tiling_mode);
-
-bool msd_map(struct MsdDevice* dev, uint32_t handle, void** paddr);
-bool msd_unmap(struct MsdDevice* dev, uint32_t handle, void* addr);
 
 bool msd_set_domain(struct MsdDevice* dev, uint32_t handle, uint32_t read_domains,
                     uint32_t write_domain);

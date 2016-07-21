@@ -28,13 +28,13 @@ config("libmsd_api") {
   include_dirs = [
     "include",
     "include/sys-driver",
+    "include/sys-driver/abi",
+    "src/sys-driver/platform_buffer",
   ]
 }
 
 config("util_api") {
-  include_dirs = [
-    "src/include",
-  ]
+  include_dirs = [ "src/include" ]
 }
 
 source_set("util") {
@@ -83,6 +83,7 @@ source_set("libmsd") {
 
   public_deps = [
     ":util",
+    ":platform_buffer",
   ]
 
   include_dirs = [ "third_party" ]
@@ -96,6 +97,26 @@ source_set("libmsd") {
   ]
 }
 
-group("magma_tests"){
-  deps = ["tests"]
+source_set("platform_buffer") {
+  public_configs = [ ":libmsd_api" ]
+
+  public_deps = [
+    ":util",
+  ]
+
+  sources = [
+    "src/sys-driver/platform_buffer/platform_buffer.h",
+    "src/sys-driver/platform_buffer/platform_buffer.cc",
+    "src/sys-driver/platform_buffer/magenta_platform_buffer.cc",
+  ]
+
+  libs = [
+    "ddk"
+  ]
+}
+
+group("magma_tests") {
+  deps = [
+    "tests",
+  ]
 }

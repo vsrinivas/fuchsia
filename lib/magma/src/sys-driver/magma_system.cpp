@@ -69,12 +69,14 @@ bool magma_system_create_context(MagmaSystemDevice* dev, int* context_id)
 bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,
                         uint32_t* handle_out)
 {
-    return msd_alloc(dev->arch(), size, size_out, handle_out);
+    DLOG("TODO: magma_system_alloc");
+    return false;
 }
 
 bool magma_system_free(struct MagmaSystemDevice* dev, uint32_t handle)
 {
-    return msd_free(dev->arch(), handle);
+    DLOG("TODO: magma_system_free");
+    return false;
 }
 
 bool magma_system_set_tiling_mode(struct MagmaSystemDevice* dev, uint32_t handle,
@@ -85,13 +87,15 @@ bool magma_system_set_tiling_mode(struct MagmaSystemDevice* dev, uint32_t handle
 
 bool magma_system_map(struct MagmaSystemDevice* dev, uint32_t handle, void** paddr)
 {
-    return msd_map(dev->arch(), handle, paddr);
+    DLOG("TODO: magma_system_map");
+    return false;
 }
 
 bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* addr)
 {
-    return msd_unmap(dev->arch(), handle, addr);
-}
+    DLOG("TODO: magma_system_unmap");
+    return false;
+    }
 
 bool magma_system_set_domain(struct MagmaSystemDevice* dev, uint32_t handle, uint32_t read_domains,
                              uint32_t write_domain)

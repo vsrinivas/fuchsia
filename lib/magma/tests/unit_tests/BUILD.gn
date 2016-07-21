@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import("//magma/gnbuild/magma.gni")
+
 executable("magma_unit_tests") {
   sources = [
     "main.cc",
     "hello_world.cc",
+    "test_platform_buffer.cc",
   ]
 
   deps = [
     "//third_party/gtest",
+    "$magma_build_root:platform_buffer",
   ]
 }
