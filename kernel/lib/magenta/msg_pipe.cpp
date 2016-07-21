@@ -73,7 +73,7 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
             if (messages_[other].is_empty())
                 other_satisfiable_clear |= MX_SIGNAL_READABLE;
             waiter_[other].UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE, 0u,
-                                       other_satisfiable_clear, true);
+                                       other_satisfiable_clear);
         }
     }
 
@@ -91,7 +91,7 @@ status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
 
         if (messages_[side].is_empty()) {
             waiter_[side].UpdateState(0u, MX_SIGNAL_READABLE, 0u,
-                                      !other_alive ? MX_SIGNAL_READABLE : 0u, true);
+                                      !other_alive ? MX_SIGNAL_READABLE : 0u);
         }
     }
 
@@ -114,7 +114,7 @@ status_t MessagePipe::Write(size_t side, utils::unique_ptr<MessagePacket> msg) {
 
     messages_[other].push_back(msg.release());
 
-    waiter_[other].UpdateSatisfied(MX_SIGNAL_READABLE, 0u, true);
+    waiter_[other].UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
     return NO_ERROR;
 }
 

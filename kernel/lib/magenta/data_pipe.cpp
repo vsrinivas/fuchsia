@@ -126,19 +126,19 @@ mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, utils::RefPtr<VmAspace> aspac
 void DataPipe::UpdateSignals() {
     if (free_space_ == 0u) {
         producer_.waiter.UpdateState(0u, MX_SIGNAL_WRITABLE,
-                                     0u, 0u, true);
+                                     0u, 0u);
         consumer_.waiter.UpdateState(MX_SIGNAL_READABLE, 0u,
-                                     0u, 0u, true);
+                                     0u, 0u);
     } else if (free_space_ == vmo_->size()) {
         producer_.waiter.UpdateState(MX_SIGNAL_WRITABLE, 0u,
-                                     0u, 0u, true);
+                                     0u, 0u);
         consumer_.waiter.UpdateState(0u, MX_SIGNAL_READABLE,
-                                     0u, 0u, true);
+                                     0u, 0u);
     } else {
         producer_.waiter.UpdateState(MX_SIGNAL_WRITABLE, 0u,
-                                     0u, 0u, true);
+                                     0u, 0u);
         consumer_.waiter.UpdateState(MX_SIGNAL_READABLE, 0u,
-                                     0u, 0u, true);
+                                     0u, 0u);
     }
 }
 
@@ -317,8 +317,7 @@ void DataPipe::OnProducerDestruction() {
 
     if (consumer_.alive) {
         consumer_.waiter.UpdateState(MX_SIGNAL_PEER_CLOSED, 0u,
-                                     MX_SIGNAL_PEER_CLOSED, 0u,
-                                     true);
+                                     MX_SIGNAL_PEER_CLOSED, 0u);
 
         // We can drop the vmo since future reads are not going to succeed.
         if (free_space_ == vmo_->size())
@@ -340,7 +339,6 @@ void DataPipe::OnConsumerDestruction() {
 
     if (producer_.alive) {
         producer_.waiter.UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE,
-                                     MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE,
-                                     true);
+                                     MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE);
     }
 }

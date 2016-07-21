@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include <kernel/spinlock.h>
+#include <kernel/mutex.h>
 
 #include <magenta/types.h>
 #include <magenta/io_port_dispatcher.h>
@@ -53,6 +53,7 @@ public:
     // Note: The initial state can also be set using SetInitialSignalsState() if the default
     // constructor must be used for some reason.
     explicit Waiter(mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u});
+    ~Waiter();
 
     Waiter(const Waiter& o) = delete;
     Waiter& operator=(const Waiter& o) = delete;
@@ -73,18 +74,17 @@ public:
     bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
 
     // Cancel a pending wait started with BeginWait.
-    bool CancelWait(Handle* handle);
+    void CancelWait(Handle* handle);
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.) Returns true if some thread was awoken.
-    bool UpdateState(mx_signals_t satisfied_set_mask,
+    void UpdateState(mx_signals_t satisfied_set_mask,
                      mx_signals_t satisfied_clear_mask,
                      mx_signals_t satisfiable_set_mask,
-                     mx_signals_t satisfiable_clear_mask,
-                     bool yield);
+                     mx_signals_t satisfiable_clear_mask);
 
-    bool UpdateSatisfied(mx_signals_t set_mask, mx_signals_t clear_mask, bool yield) {
-        return UpdateState(set_mask, clear_mask, 0u, 0u, yield);
+    void UpdateSatisfied(mx_signals_t set_mask, mx_signals_t clear_mask) {
+        UpdateState(set_mask, clear_mask, 0u, 0u);
     }
 
 private:
@@ -101,11 +101,11 @@ private:
         uint64_t context;
     };
 
-    bool SignalStateChange_NoLock();
+    void SignalStateChange_NoLock();
 
-    bool SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
+    void SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
 
-    spin_lock_t lock_;
+    mutex_t lock_;
 
     // Active waiters are elements in |nodes_|.
     utils::SinglyLinkedList<WaitNode*> nodes_;

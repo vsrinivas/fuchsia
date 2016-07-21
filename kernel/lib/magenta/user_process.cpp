@@ -249,7 +249,7 @@ void UserProcess::SetState(State s) {
 
         // signal waiter
         LTRACEF_LEVEL(2, "signalling waiters\n");
-        waiter_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u, true);
+        waiter_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
     }
 }
 

@@ -184,7 +184,7 @@ void UserThread::Exiting() {
     DEBUG_ASSERT(state_ == State::DYING);
 
     // signal any waiters
-    waiter_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u, true);
+    waiter_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
 
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);
