@@ -616,14 +616,43 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE;
         off_start = ph->p_offset & -PAGE_SIZE;
+        // TODO(mcgrathr): This should use the copy-on-write flag, but
+        // it doesn't exist yet.  Instead, for now this eagerly copies
+        // the data into a new VMO.
         uint32_t mx_flags = MX_VM_FLAG_FIXED;
         mx_flags |= (ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0;
         mx_flags |= (ph->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0;
         mx_flags |= (ph->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0;
         uintptr_t mapaddr = (uintptr_t)base + this_min;
+        mx_handle_t map_vmo = vmo;
+        size_t map_size = this_max - this_min;
+#if 1
+        // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
+        // This will go away when we have copy-on-write.
+        if (ph->p_flags & PF_W) {
+            size_t data_size =
+                ((ph->p_vaddr + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE) -
+                this_min;
+            mx_handle_t copy_vmo = mx_vm_object_create(data_size);
+            if (copy_vmo < 0)
+                __builtin_trap();
+            uintptr_t window = 0;
+            mx_status_t status = mx_process_vm_map(
+                0, vmo, off_start, data_size, &window, MX_VM_FLAG_PERM_READ);
+            if (status < 0)
+                __builtin_trap();
+            mx_ssize_t n = mx_vm_object_write(copy_vmo, (void*)window,
+                                              0, data_size);
+            mx_process_vm_unmap(0, window, 0);
+            if (n != (mx_ssize_t)data_size)
+                __builtin_trap();
+            map_vmo = copy_vmo;         // Leak the handle.
+            off_start = 0;
+            map_size = data_size;
+        }
+#endif
         mx_status_t status = mx_process_vm_map(current_proc_handle,
-                                               vmo, off_start,
-                                               this_max - this_min,
+                                               map_vmo, off_start, map_size,
                                                &mapaddr, mx_flags);
         if (status < 0) {
         mx_error:
