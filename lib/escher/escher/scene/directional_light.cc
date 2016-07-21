@@ -11,7 +11,7 @@ namespace escher {
 DirectionalLight::DirectionalLight() {
 }
 
-DirectionalLight::DirectionalLight(glm::vec2 direction, float dispersion, float intensity)
+DirectionalLight::DirectionalLight(vec2 direction, float dispersion, float intensity)
   : direction_(std::move(direction)),
     dispersion_(dispersion),
     intensity_(intensity) {

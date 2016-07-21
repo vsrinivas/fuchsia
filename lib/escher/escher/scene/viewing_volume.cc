@@ -23,7 +23,7 @@ ViewingVolume ViewingVolume::CopyWith(float width, float height) {
   return ViewingVolume(width, height, near_, far_);
 }
 
-glm::mat4 ViewingVolume::GetProjectionMatrix() const {
+mat4 ViewingVolume::GetProjectionMatrix() const {
   return glm::ortho<float>(0.0f, width_, height_, 0.0f, -near_, -far_);
 }
 

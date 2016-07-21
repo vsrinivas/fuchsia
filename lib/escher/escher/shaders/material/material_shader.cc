@@ -166,7 +166,7 @@ MaterialShader::MaterialShader(const MaterialShaderDescriptor& descriptor)
 
 MaterialShader::~MaterialShader() {}
 
-void MaterialShader::Use(const glm::mat4& matrix) const {
+void MaterialShader::Use(const mat4& matrix) const {
   glUseProgram(program_.id());
   glEnableVertexAttribArray(position_);
   // TODO(jjosh): simply check if uv_ != -1 ?
@@ -179,7 +179,7 @@ void MaterialShader::Bind(const Stage& stage,
                           const Material& material,
                           const Modifier& modifier) const {
   if (descriptor_.color_binding_type == BindingType::kConstant) {
-    const glm::vec4& color = material.color().constant_value();
+    const vec4& color = material.color().constant_value();
     glUniform4fv(color_, 1, &color[0]);
   }
 
@@ -187,16 +187,16 @@ void MaterialShader::Bind(const Stage& stage,
   if (material.has_texture()) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, material.texture());
-    const glm::mat2& texture_matrix = material.texture_matrix().constant_value();
+    const mat2& texture_matrix = material.texture_matrix().constant_value();
     glUniform4fv(texture_matrix_, 1, &texture_matrix[0][0]);
   }
 
   if (material.displacement().type() == Displacement::Type::kWave) {
     auto& displacement = material.displacement();
-    glm::vec2 wavevector = displacement.end() - displacement.start();
-    glm::vec2 peak = displacement.start() + wavevector / 2.0f;
+    vec2 wavevector = displacement.end() - displacement.start();
+    vec2 peak = displacement.start() + wavevector / 2.0f;
     float wavelength = glm::length(wavevector);
-    glm::vec2 unit_wavevector = wavevector / wavelength;
+    vec2 unit_wavevector = wavevector / wavelength;
     float half_wavenumber = M_PI / wavelength;
     float amplitude =
         0.5f * displacement.max() / -stage.viewing_volume().depth();

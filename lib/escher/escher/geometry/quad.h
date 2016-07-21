@@ -7,6 +7,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#include "escher/geometry/types.h"
+
 namespace escher {
 
 class Quad {
@@ -14,7 +16,7 @@ class Quad {
   Quad();
   Quad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3);
 
-  static Quad CreateFromRect(glm::vec2 position, glm::vec2 size, float z);
+  static Quad CreateFromRect(vec2 position, vec2 size, float z);
   static Quad CreateFillClipSpace(float z);
 
   const float* data() const {

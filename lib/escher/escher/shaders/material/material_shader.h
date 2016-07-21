@@ -28,7 +28,7 @@ class MaterialShader {
   // Prepares the program for use before drawing any number of objects.
   // Must be called whenever switching between shaders and before binding
   // a material.
-  void Use(const glm::mat4& matrix) const;
+  void Use(const mat4& matrix) const;
 
   // Binds the parameters of a material to the shader.
   void Bind(const Stage& stage,

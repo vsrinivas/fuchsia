@@ -8,6 +8,8 @@
 #include "escher/renderer.h"
 #include "ftl/arraysize.h"
 
+using namespace escher;
+
 namespace {
 
 constexpr float kFabSize = 56.0f;
@@ -16,22 +18,21 @@ constexpr float kFabSize = 56.0f;
 
 AppTestScene::AppTestScene() {
   app_bar_material_.set_color(
-      escher::MakeConstantBinding(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)));
+      MakeConstantBinding(vec4(0.0f, 0.0f, 1.0f, 1.0f)));
   canvas_material_.set_color(
-      escher::MakeConstantBinding(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)));
+      MakeConstantBinding(vec4(1.0f, 1.0f, 1.0f, 1.0f)));
   card_material_.set_color(
-      escher::MakeConstantBinding(glm::vec4(1.0f, 1.0f, 0.8f, 1.0f)));
+      MakeConstantBinding(vec4(1.0f, 1.0f, 0.8f, 1.0f)));
   fab_material_.set_color(
-      escher::MakeConstantBinding(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)));
+      MakeConstantBinding(vec4(1.0f, 0.0f, 0.0f, 1.0f)));
   green_material_.set_color(
-      escher::MakeConstantBinding(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)));
+      MakeConstantBinding(vec4(0.0f, 1.0f, 0.0f, 1.0f)));
   // Rotate by 10 degrees and scale by 2.
   constexpr double angle = 3.14159265359 / 18;
   const float c = 5 * cos(angle);
   const float s = 5 * sin(angle);
   checkerboard_material_.set_texture_matrix(
-      escher::MakeConstantBinding(
-          glm::mat2(glm::vec2(c, -s), glm::vec2(s, c))));
+      MakeConstantBinding(mat2(vec2(c, -s), vec2(s, c))));
 }
 
 AppTestScene::~AppTestScene() {}
@@ -52,131 +53,123 @@ void AppTestScene::InitGL() {
   checkerboard_material_.set_texture(texture);
 }
 
-escher::Model AppTestScene::GetModel(const escher::ViewingVolume& volume,
-                                     const glm::vec2& focus) {
-  std::vector<escher::Object> objects;
+Model AppTestScene::GetModel(const ViewingVolume& volume, const vec2& focus) {
+  std::vector<Object> objects;
 
   // canvas
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(0.0f, 0.0f),
-                                glm::vec2(volume.width(), volume.height()),
-                                0.0f),
+      Shape::CreateRect(
+          vec2(0.0f, 0.0f), vec2(volume.width(), volume.height()), 0),
       &canvas_material_);
 
   // app bar
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(0.0f, 0.0f),
-                                glm::vec2(volume.width(), 56.0f), 4.0f),
+      Shape::CreateRect(
+          vec2(0.0f, 0.0f), vec2(volume.width(), 56.0f), 4),
       &app_bar_material_);
 
   // card
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(0.0f, 200.0f),
-                                glm::vec2(volume.width(), 120.0f), 2.0f),
+      Shape::CreateRect(
+          vec2(0.0f, 200.0f), vec2(volume.width(), 120.0f), 2),
       &card_material_);
 
   // left eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(25.0f, 180.0f),
-                                glm::vec2(60.0f, 40.0f), 10.0f),
+      Shape::CreateRect(vec2(25.0f, 180.0f), vec2(60.0f, 40.0f), 10.0f),
       &green_material_);
 
   // right eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(125.0f, 180.0f),
-                                glm::vec2(60.0f, 40.0f), 16.0f),
+      Shape::CreateRect(vec2(125.0f, 180.0f), vec2(60.0f, 40.0f), 16.0f),
       &green_material_);
 
   // third eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(225.0f, 180.0f),
-                                glm::vec2(60.0f, 40.0f), 5.0f),
+      Shape::CreateRect(vec2(225.0f, 180.0f), vec2(60.0f, 40.0f), 5.0f),
       &checkerboard_material_);
 
   // fourth eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(325.0f, 180.0f),
-                                glm::vec2(60.0f, 40.0f), 12.0f),
+      Shape::CreateRect(vec2(325.0f, 180.0f), vec2(60.0f, 40.0f), 12.0f),
       &checkerboard_material_);
 
   // fifth eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(425.0f, 180.0f),
-                                glm::vec2(60.0f, 40.0f), 19.0f),
+      Shape::CreateRect(vec2(425.0f, 180.0f), vec2(60.0f, 40.0f), 19.0f),
       &checkerboard_material_);
 
   // sixth eye
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(0.0f, 245.0f),
-                                glm::vec2(680.0f, 50.0f), 2.0f),
+      Shape::CreateRect(vec2(0.0f, 245.0f), vec2(680.0f, 50.0f), 2.0f),
       &green_material_);
 
   // horizontal line segments
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(40.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 2.0f),
-                       &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(100.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 5.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(160.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 9.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(220.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 13.0f),
-                      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(40.0f, 270.0f), vec2(40.0f, 1.0f), 2.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(100.0f, 270.0f), vec2(40.0f, 1.0f), 5.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(160.0f, 270.0f), vec2(40.0f, 1.0f), 9.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(220.0f, 270.0f), vec2(40.0f, 1.0f), 13.0f),
+      &canvas_material_);
 
   // vertical line segments
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(290.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 2.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(330.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 5.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(370.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 9.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(410.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 13.0f),
-                      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(290.0f, 250.0f), vec2(1.0f, 40.0f), 2.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(330.0f, 250.0f), vec2(1.0f, 40.0f), 5.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(370.0f, 250.0f), vec2(1.0f, 40.0f), 9.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(410.0f, 250.0f), vec2(1.0f, 40.0f), 13.0f),
+      &canvas_material_);
 
   // crossed line segments
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(440.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 2.0f),
-                       &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(500.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 5.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(560.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 9.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(620.0f, 270.0f),
-                                                 glm::vec2(40.0f, 1.0f), 13.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(460.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 2.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(520.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 5.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(580.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 9.0f),
-                      &canvas_material_);
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(640.0f, 250.0f),
-                                                 glm::vec2(1.0f, 40.0f), 13.0f),
-                      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(440.0f, 270.0f), vec2(40.0f, 1.0f), 2.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(500.0f, 270.0f), vec2(40.0f, 1.0f), 5.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(560.0f, 270.0f), vec2(40.0f, 1.0f), 9.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(620.0f, 270.0f), vec2(40.0f, 1.0f), 13.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(460.0f, 250.0f), vec2(1.0f, 40.0f), 2.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(520.0f, 250.0f), vec2(1.0f, 40.0f), 5.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(580.0f, 250.0f), vec2(1.0f, 40.0f), 9.0f),
+      &canvas_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(640.0f, 250.0f), vec2(1.0f, 40.0f), 13.0f),
+      &canvas_material_);
 
   // null
-  objects.emplace_back(escher::Shape::CreateRect(glm::vec2(40.0f, 310.0f),
-                                                 glm::vec2(40.0f, 40.0f), 2.0f),
-                       &null_material_);
+  objects.emplace_back(
+      Shape::CreateRect(vec2(40.0f, 310.0f), vec2(40.0f, 40.0f), 2.0f),
+       &null_material_);
 
   // fabs
   objects.emplace_back(
-      escher::Shape::CreateCircle(focus - glm::vec2(kFabSize, 0.f), kFabSize / 2.0f, 4.0f),
+      Shape::CreateCircle(focus - vec2(kFabSize, 0.f), kFabSize / 2.0f, 4.0f),
       &fab_material_);
   objects.emplace_back(
-      escher::Shape::CreateCircle(focus + glm::vec2(kFabSize, 0.f), kFabSize / 2.0f, 12.0f),
+      Shape::CreateCircle(focus + vec2(kFabSize, 0.f), kFabSize / 2.0f, 12.0f),
       &fab_material_);
 
-  return escher::Model(std::move(objects));
+  return Model(std::move(objects));
 }

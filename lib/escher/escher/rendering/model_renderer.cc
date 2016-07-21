@@ -26,7 +26,7 @@ void ModelRenderer::DrawModel(const Stage& stage, const Model& model) {
   // also need to use multiple rendering passes for certain blending effects.
   glDepthFunc(GL_LEQUAL);
 
-  glm::mat4 matrix = stage.viewing_volume().GetProjectionMatrix();
+  mat4 matrix = stage.viewing_volume().GetProjectionMatrix();
   DrawContext context(*this, stage, matrix);
 
   for (const auto& object : model.objects())
@@ -40,7 +40,7 @@ void ModelRenderer::DrawModel(const Stage& stage, const Model& model) {
 
 ModelRenderer::DrawContext::DrawContext(ModelRenderer& renderer,
                                         const Stage& stage,
-                                        const glm::mat4& matrix)
+                                        const mat4& matrix)
     : renderer_(renderer), stage_(stage), matrix_(matrix) {}
 
 ModelRenderer::DrawContext::~DrawContext() {}

@@ -26,7 +26,7 @@ class ModelRenderer {
    public:
     DrawContext(ModelRenderer& renderer,
                 const Stage& stage,
-                const glm::mat4& matrix);
+                const mat4& matrix);
     ~DrawContext();
 
     void DrawObject(const Object& object);
@@ -40,7 +40,7 @@ class ModelRenderer {
 
     ModelRenderer& renderer_;
     const Stage& stage_;
-    const glm::mat4& matrix_;
+    const mat4& matrix_;
     const MaterialShader* shader_ = nullptr;
   };
 

@@ -17,7 +17,7 @@ class AppTestScene {
   void InitGL();
 
   escher::Model GetModel(const escher::ViewingVolume& volume,
-                         const glm::vec2& focus);
+                         const escher::vec2& focus);
 
  private:
   escher::Material app_bar_material_;

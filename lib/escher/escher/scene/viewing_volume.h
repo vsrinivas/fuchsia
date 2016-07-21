@@ -26,7 +26,7 @@ class ViewingVolume {
 
   float depth() const { return std::abs(near_ - far_); }
 
-  glm::mat4 GetProjectionMatrix() const;
+  mat4 GetProjectionMatrix() const;
 
  private:
   float width_ = 0.0f;

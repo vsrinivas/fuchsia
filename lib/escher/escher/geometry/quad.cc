@@ -24,7 +24,7 @@ Quad::Quad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
   p[3] = p3;
 }
 
-Quad Quad::CreateFromRect(glm::vec2 position, glm::vec2 size, float z) {
+Quad Quad::CreateFromRect(vec2 position, vec2 size, float z) {
   return Quad(glm::vec3(position.x, position.y + size.y, z),
               glm::vec3(position.x + size.x, position.y + size.y, z),
               glm::vec3(position.x + size.x, position.y, z),
@@ -32,7 +32,7 @@ Quad Quad::CreateFromRect(glm::vec2 position, glm::vec2 size, float z) {
 }
 
 Quad Quad::CreateFillClipSpace(float z) {
-  return CreateFromRect(glm::vec2(-1.0f, 1.0f), glm::vec2(2.0f, -2.0f), z);
+  return CreateFromRect(vec2(-1.0f, 1.0f), vec2(2.0f, -2.0f), z);
 }
 
 const unsigned short* Quad::GetIndices() {

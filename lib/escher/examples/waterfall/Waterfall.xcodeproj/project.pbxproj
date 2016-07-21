@@ -60,6 +60,7 @@
 /* Begin PBXFileReference section */
 		693619651D3D5C3200A3679A /* unique_object_unittest.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unique_object_unittest.cc; sourceTree = "<group>"; };
 		693619691D3D5E0500A3679A /* gtest-all.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "gtest-all.cc"; path = "../../../third_party/gtest/src/gtest-all.cc"; sourceTree = "<group>"; };
+		693619711D413AEB00A3679A /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 		696750C21D347C73005B4E7F /* depth_based_blur_effect.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = depth_based_blur_effect.cc; sourceTree = "<group>"; };
 		696750C31D347C73005B4E7F /* depth_based_blur_effect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = depth_based_blur_effect.h; sourceTree = "<group>"; };
 		971538A41D2DC32800EE4821 /* logging.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cc; sourceTree = "<group>"; };
@@ -315,6 +316,7 @@
 				97E733911D1A5C7600F62181 /* quad.h */,
 				97E733921D1A5C7600F62181 /* size_i.cc */,
 				97E733931D1A5C7600F62181 /* size_i.h */,
+				693619711D413AEB00A3679A /* types.h */,
 			);
 			name = geometry;
 			path = ../../escher/geometry;

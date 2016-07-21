@@ -20,8 +20,8 @@ class Material {
   ~Material();
 
   // Base color, default is none.
-  void set_color(const Binding<glm::vec4>& color) { color_ = color; }
-  const Binding<glm::vec4>& color() const { return color_; }
+  void set_color(const Binding<vec4>& color) { color_ = color; }
+  const Binding<vec4>& color() const { return color_; }
 
   enum class DisplacementType {
     kNone,
@@ -39,17 +39,17 @@ class Material {
   GLuint texture() const { return texture_; }
   bool has_texture() const { return texture_ != 0; }
 
-  void set_texture_matrix(const Binding<glm::mat2>& texture_matrix) {
+  void set_texture_matrix(const Binding<mat2>& texture_matrix) {
     texture_matrix_ = texture_matrix;
   }
-  const Binding<glm::mat2>& texture_matrix() const { return texture_matrix_; }
+  const Binding<mat2>& texture_matrix() const { return texture_matrix_; }
 
   // TODO(jeffbrown): Normals.
 
  private:
-  Binding<glm::vec4> color_;
+  Binding<vec4> color_;
   GLuint texture_ = 0;
-  Binding<glm::mat2> texture_matrix_;
+  Binding<mat2> texture_matrix_;
   Displacement displacement_;
 };
 

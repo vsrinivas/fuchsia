@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
 #include <vector>
+
+#include "escher/geometry/types.h"
 
 #include "ftl/macros.h"
 
@@ -25,7 +26,7 @@ class SizeI {
 
   int area() const { return width_ * height_; }
 
-  glm::vec2 AsVec2() const;
+  vec2 AsVec2() const;
   bool Equals(const SizeI& size) const;
   size_t GetHashCode() const;
 

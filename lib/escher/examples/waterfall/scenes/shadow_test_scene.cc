@@ -7,6 +7,8 @@
 #include "ftl/arraysize.h"
 #include "escher/renderer.h"
 
+using namespace escher;
+
 namespace {
 
 constexpr int kElevations[] = {
@@ -18,14 +20,13 @@ constexpr float kPadding = 20.0f;
 }  // namespace
 
 ShadowTestScene::ShadowTestScene() {
-  card_material_.set_color(
-      escher::MakeConstantBinding(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)));
+  card_material_.set_color(MakeConstantBinding(vec4(1.0f, 1.0f, 1.0f, 1.0f)));
 }
 
 ShadowTestScene::~ShadowTestScene() {}
 
-escher::Model ShadowTestScene::GetModel(const escher::ViewingVolume& volume) {
-  std::vector<escher::Object> objects;
+Model ShadowTestScene::GetModel(const ViewingVolume& volume) {
+  std::vector<Object> objects;
 
   float center = volume.width() / 2.0f;
 
@@ -37,19 +38,19 @@ escher::Model ShadowTestScene::GetModel(const escher::ViewingVolume& volume) {
   float tile_size = center - kPadding - kPadding;
 
   objects.emplace_back(
-      escher::Shape::CreateRect(glm::vec2(0.0f, 0.0f),
-                                glm::vec2(volume.width(), volume.height()),
-                                0.0f),
+      Shape::CreateRect(
+          vec2(0.0f, 0.0f), vec2(volume.width(), volume.height()), 0.0f),
       &card_material_);
 
   for (int i = 0; i < arraysize(kElevations); ++i) {
-    objects.emplace_back(escher::Shape::CreateRect(
-                             glm::vec2(left[i % 2], top),
-                             glm::vec2(tile_size, tile_size), kElevations[i]),
-                         &card_material_);
+    objects.emplace_back(
+        Shape::CreateRect(vec2(left[i % 2], top),
+                          vec2(tile_size, tile_size),
+                          kElevations[i]),
+        &card_material_);
     if (i % 2 == 1)
       top += tile_size + kPadding + kPadding;
   }
 
-  return escher::Model(std::move(objects));
+  return Model(std::move(objects));
 }

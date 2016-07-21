@@ -17,7 +17,7 @@ constexpr bool kDrawShadowTestScene = false;
 @interface WaterfallViewController () {
   escher::Stage stage_;
   std::unique_ptr<escher::Renderer> renderer_;
-  glm::vec2 focus_;
+  escher::vec2 focus_;
   AppTestScene app_test_scene_;
   ShadowTestScene shadow_test_scene_;
 }
@@ -53,7 +53,7 @@ constexpr bool kDrawShadowTestScene = false;
   }
 
   CGSize size = self.view.bounds.size;
-  focus_ = glm::vec2(size.width / 2.0f, size.height / 2.0f);
+  focus_ = escher::vec2(size.width / 2.0f, size.height / 2.0f);
 
   [self.runTestsButton setBackgroundColor: [UIColor whiteColor]];
 
@@ -109,8 +109,8 @@ constexpr bool kDrawShadowTestScene = false;
 
 - (void)touchesMoved:(NSSet*)touches withEvent:(UIEvent*)event {
     for (UITouch* touch in touches) {
-        CGPoint windowCoordinates = [touch locationInView:nil];
-        focus_ = glm::vec2(windowCoordinates.x, windowCoordinates.y);
+      CGPoint windowCoordinates = [touch locationInView:nil];
+      focus_ = escher::vec2(windowCoordinates.x, windowCoordinates.y);
     }
     [self.view setNeedsDisplay];
 }
