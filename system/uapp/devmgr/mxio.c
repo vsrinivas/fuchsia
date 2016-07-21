@@ -63,27 +63,14 @@ void devmgr_launch(const char* name, const char* app, const char* arg, const cha
     if (device == NULL) {
         // start with log handles, no stdin
         device = "debuglog";
-        ids[n] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
-        if ((hnd[n] = mx_log_create(0)) < 0) {
-            goto fail;
-        }
-        n++;
-        ids[n] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);
+        ids[n] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1);
         if ((hnd[n] = mx_log_create(0)) < 0) {
             goto fail;
         }
         n++;
     } else {
         // TODO: correct open flags once we have them
-        if ((r = vfs_open_handles(hnd + n, ids + n, 0, device, 0)) < 0) {
-            goto fail;
-        }
-        n += r;
-        if ((r = vfs_open_handles(hnd + n, ids + n, 1, device, 0)) < 0) {
-            goto fail;
-        }
-        n += r;
-        if ((r = vfs_open_handles(hnd + n, ids + n, 2, device, 0)) < 0) {
+        if ((r = vfs_open_handles(hnd + n, ids + n, MXIO_FLAG_USE_FOR_STDIO | 0, device, 0)) < 0) {
             goto fail;
         }
         n += r;

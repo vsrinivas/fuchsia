@@ -128,8 +128,8 @@ static void mxio_exit(void) {
             io->dupcount--;
             if (io->dupcount == 0) {
                 io->ops->close(io);
+                mxio_release(io);
             }
-            mxio_release(io);
         }
     }
     mxr_mutex_unlock(&mxio_lock);
@@ -222,11 +222,22 @@ fail:
 // and thus does not use the mxio_lock
 void __libc_extensions_init(mx_proc_info_t* pi) {
     int n;
+    int stdio_fd = -1;
 
     // extract handles we care about
     for (n = 0; n < pi->handle_count; n++) {
         unsigned arg = MX_HND_INFO_ARG(pi->handle_info[n]);
         mx_handle_t h = pi->handle[n];
+
+        // MXIO uses this bit as a flag to say
+        // that an fd should be duped into 0/1/2
+        // and become all of stdin/out/err
+        if (arg & MXIO_FLAG_USE_FOR_STDIO) {
+            arg &= (~MXIO_FLAG_USE_FOR_STDIO);
+            if (arg < MAX_MXIO_FD) {
+                stdio_fd = arg;
+            }
+        }
 
         switch (MX_HND_INFO_TYPE(pi->handle_info[n])) {
         case MX_HND_TYPE_MXIO_ROOT:
@@ -260,10 +271,16 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
         pi->handle_info[n] = 0;
     }
 
-    // install null stdin/out/err if not init'd
+    mxio_t* use_for_stdio = (stdio_fd >= 0) ? mxio_fdtab[stdio_fd] : NULL;
+
+    // configure stdin/out/err if not init'd
     for (n = 0; n < 3; n++) {
         if (mxio_fdtab[n] == NULL) {
-            mxio_fdtab[n] = mxio_null_create();
+            if (use_for_stdio) {
+                mxio_fdtab[n] = use_for_stdio;
+            } else {
+                mxio_fdtab[n] = mxio_null_create();
+            }
             mxio_fdtab[n]->dupcount++;
         }
     }

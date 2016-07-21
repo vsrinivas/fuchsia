@@ -22,6 +22,11 @@
 
 #define MAX_MXIO_FD 256
 
+// flag on handle args in processargs
+// instructing that this fd should be dup'd to 0/1/2
+// and be used for all of stdio
+#define MXIO_FLAG_USE_FOR_STDIO 0x8000
+
 #define MXIO_NONBLOCKING 1
 
 #define MXIO_PROTOCOL_UNDEFINED 0
