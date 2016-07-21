@@ -100,9 +100,11 @@ static int loader_service_thread(void* arg) {
         // forcibly null-terminate the message data argument
         data[sz - 1] = 0;
 
+        mx_handle_t handle = MX_HANDLE_INVALID;
         switch (msg->opcode) {
         case LOADER_SVC_OP_LOAD_OBJECT:
-            msg->arg = load_object((const char*) msg->data);
+            handle = load_object((const char*) msg->data);
+            msg->arg = handle < 0 ? handle : NO_ERROR;
             break;
         case LOADER_SVC_OP_DEBUG_PRINT:
             fprintf(stderr, "dlsvc: debug: %s\n", (const char*) msg->data);
@@ -120,7 +122,7 @@ static int loader_service_thread(void* arg) {
         msg->reserved0 = 0;
         msg->reserved1 = 0;
         if ((r = mx_message_write(h, msg, sizeof(mx_loader_svc_msg_t),
-                                  &msg->arg, (msg->arg > 0) ? 1 : 0, 0)) < 0) {
+                                  &handle, handle > 0 ? 1 : 0, 0)) < 0) {
             fprintf(stderr, "dlsvc: msg write error: %d\n", r);
             break;
         }
