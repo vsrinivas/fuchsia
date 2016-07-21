@@ -1,36 +1,64 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include <arch/x86/feature.h>
 #include <dev/hw_rng.h>
 
-static bool rdrand64(uint64_t *out) {
-    /* TODO(security): RDRAND by itself is not suitable as a seed.
-     * If we want to fallback to it, we should do further processing,
-     * per Intel's recommendations */
-    bool ret = false;
-    __asm__ volatile ("xor %%al, %%al\r\n"
-                      "rdrand %0\r\n"
-                      "adc $0, %%al\r\n"
-                      : "=r"(*out), "=a"(ret)
-                      :
-                      : "cc");
-    return ret;
-}
-
 static bool rdseed64(uint64_t *out) {
-    bool ret = false;
+    bool success = false;
     __asm__ volatile ("xor %%al, %%al\r\n"
                       "rdseed %0\r\n"
                       "adc $0, %%al\r\n"
-                      : "=r"(*out), "=a"(ret)
+                      : "=r"(*out), "=a"(success)
                       :
                       : "cc");
-    return ret;
+    return success;
 }
 
-typedef bool (*hw_rnd_func)(uint64_t *out);
+/* @brief Get entropy from the CPU using RDSEED.
+ *
+ * len must be at most SSIZE_MAX
+ *
+ * If |block|=true, it will retry the RDSEED instruction until |len| bytes are
+ * written to |buf|.  Otherwise, it will fetch data from RDSEED until either
+ * |len| bytes are written to |buf| or RDSEED is unable to return entropy.
+ *
+ * Returns the number of bytes written to the buffer on success (potentially 0),
+ * and a negative value on error.
+ */
+static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
+    /* TODO(security): Move this to a shared kernel/user lib, so we can write usermode
+     * tests against this code */
+
+    if (len >= SSIZE_MAX) {
+        STATIC_ASSERT(ERR_INVALID_ARGS < 0);
+        return ERR_INVALID_ARGS;
+    }
+
+    if (!x86_feature_test(X86_FEATURE_RDSEED)) {
+        /* We don't have an entropy source */
+        STATIC_ASSERT(ERR_NOT_SUPPORTED < 0);
+        return ERR_NOT_SUPPORTED;
+    }
+
+    size_t written = 0;
+    while (written < len) {
+        uint64_t val = 0;
+        if (!rdseed64(&val)) {
+            if (!block) {
+                break;
+            }
+            continue;
+        }
+        const size_t to_copy = (len < sizeof(val)) ? len : sizeof(val);
+        memcpy(buf + written, &val, to_copy);
+        written += to_copy;
+    }
+    DEBUG_ASSERT(written == len);
+    return (ssize_t)written;
+}
 
 size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
 {
@@ -38,28 +66,9 @@ size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
         return 0;
     }
 
-    hw_rnd_func rnd = NULL;
-    if (x86_feature_test(X86_FEATURE_RDSEED)) {
-        rnd = rdseed64;
-    } else if (x86_feature_test(X86_FEATURE_RDRAND)) {
-        rnd = rdrand64;
-    } else {
-        /* We don't have an entropy source */
+    ssize_t res = get_entropy_from_cpu(buf, len, block);
+    if (res < 0) {
         return 0;
     }
-
-    size_t written = 0;
-    while (written < len) {
-        uint64_t val;
-        if (!rnd(&val)) {
-            if (!block) {
-                return written;
-            }
-            continue;
-        }
-        size_t to_copy = (len < sizeof(val)) ? len : sizeof(val);
-        memcpy(buf, &val, to_copy);
-        written += to_copy;
-    }
-    return written;
+    return (size_t)res;
 }
