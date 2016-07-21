@@ -46,6 +46,7 @@ enum handler_return {
 };
 
 typedef signed long int ssize_t;
+#define SSIZE_MAX LONG_MAX
 
 typedef uint8_t u8;
 typedef uint16_t u16;
