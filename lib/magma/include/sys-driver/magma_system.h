@@ -45,9 +45,6 @@ bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* ad
 bool magma_system_set_domain(struct MagmaSystemDevice* dev, uint32_t handle, uint32_t read_domains,
                              uint32_t write_domain);
 
-bool magma_system_subdata(struct MagmaSystemDevice* dev, uint32_t handle, unsigned long offset,
-                          unsigned long size, const void* data);
-
 bool magma_system_execute_buffer(struct MagmaSystemDevice* dev, struct MagmaExecBuffer* execbuffer);
 
 void magma_system_wait_rendering(struct MagmaSystemDevice* dev, uint32_t handle);

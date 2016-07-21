@@ -35,7 +35,9 @@ bool magma_system_open(MagmaSystemDevice** pdev, uint32_t device_handle)
     DASSERT(dev);
 
     ClientId client_id = get_client_id();
-    if (!msd_open(dev->arch(), client_id)) {
+
+    int ret = msd_device_open(dev->arch(), client_id);
+    if (ret) {
         DLOG("msd_open failed");
         return false;
     }
@@ -48,7 +50,7 @@ bool magma_system_open(MagmaSystemDevice** pdev, uint32_t device_handle)
 
 void magma_system_close(MagmaSystemDevice* dev)
 {
-    msd_close(dev->arch(), dev->client_id());
+    msd_device_close(dev->arch(), dev->client_id());
 
     delete dev;
 }
@@ -56,12 +58,13 @@ void magma_system_close(MagmaSystemDevice* dev)
 // Returns the device id.  0 is an invalid device id.
 uint32_t magma_system_get_device_id(MagmaSystemDevice* dev)
 {
-    return msd_get_device_id(dev->arch());
+    return msd_device_get_id(dev->arch());
 }
 
 bool magma_system_create_context(MagmaSystemDevice* dev, int* context_id)
 {
-    return msd_create_context(dev->arch(), dev->client_id(), context_id);
+    DLOG("TODO: msd_system_create_context");
+    return false;
 }
 
 bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,
@@ -84,7 +87,8 @@ bool magma_system_free(struct MagmaSystemDevice* dev, uint32_t handle)
 bool magma_system_set_tiling_mode(struct MagmaSystemDevice* dev, uint32_t handle,
                                   uint32_t tiling_mode)
 {
-    return msd_set_tiling_mode(dev->arch(), handle, tiling_mode);
+    DLOG("TODO: magma_system_set_tiling_mode");
+    return false;
 }
 
 bool magma_system_map(struct MagmaSystemDevice* dev, uint32_t handle, void** paddr)
@@ -108,21 +112,17 @@ bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* ad
 bool magma_system_set_domain(struct MagmaSystemDevice* dev, uint32_t handle, uint32_t read_domains,
                              uint32_t write_domain)
 {
-    return msd_set_domain(dev->arch(), handle, read_domains, write_domain);
-}
-
-bool magma_system_subdata(struct MagmaSystemDevice* dev, uint32_t handle, unsigned long offset,
-                          unsigned long size, const void* data)
-{
-    return msd_subdata(dev->arch(), handle, offset, size, data);
+    DLOG("TODO: magma_system_set_domain");
+    return false;
 }
 
 bool magma_system_execute_buffer(struct MagmaSystemDevice* dev, struct MagmaExecBuffer* execbuffer)
 {
-    return msd_execute_buffer(dev->arch(), dev->client_id(), execbuffer);
+    DLOG("TODO: magma_system_execute_buffer");
+    return false;
 }
 
 void magma_system_wait_rendering(struct MagmaSystemDevice* dev, uint32_t handle)
 {
-    return msd_wait_rendering(dev->arch(), handle);
+    DLOG("TODO: magma_system_wait_rendering");
 }

@@ -142,9 +142,7 @@ int magma_bo_references(drm_intel_bo* bo, drm_intel_bo* target_bo)
 int magma_bo_subdata(drm_intel_bo* bo, unsigned long offset, unsigned long size, const void* data)
 {
     auto buffer = static_cast<MagmaBuffer*>(bo);
-    DLOG("magma_bo_subdata '%s' offset 0x%lx size 0x%lx data %p", buffer->Name(), offset, size,
-         data);
-    buffer->Subdata(offset, size, data);
+    DLOG("magma_bo_subdata '%s' STUB", buffer->Name());
     return 0;
 }
 

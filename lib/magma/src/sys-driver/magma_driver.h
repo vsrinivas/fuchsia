@@ -15,21 +15,21 @@
 #ifndef _MAGMA_DRIVER_H_
 #define _MAGMA_DRIVER_H_
 
-#include <magma_sys_driver.h>
-#include <magma_util/dlog.h>
-#include <magma_util/macros.h>
+#include "magma_sys_driver.h"
+#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
 
 #include "magma_system_device.h"
 
 class MagmaDriver {
 public:
-    MagmaDriver(MagmaSysDriver* arch) : arch_(arch) {}
+    MagmaDriver(msd_driver* arch) : arch_(arch) {}
 
     MagmaSystemDevice* CreateDevice(void* device)
     {
         DASSERT(!g_device);
 
-        MsdDevice* arch_dev = msd_create_device(arch_, device);
+        msd_device* arch_dev = msd_driver_create_device(arch_, device);
         if (!arch_dev) {
             DLOG("msd_create_device failed");
             return nullptr;
@@ -47,7 +47,7 @@ public:
 
     static MagmaDriver* Create()
     {
-        MagmaSysDriver* arch = msd_create();
+        msd_driver* arch = msd_driver_create();
         if (!arch) {
             DLOG("msd_create returned null");
             return nullptr;
@@ -65,7 +65,7 @@ public:
     static MagmaSystemDevice* GetDevice() { return g_device; }
 
 private:
-    MagmaSysDriver* arch_;
+    msd_driver* arch_;
     static MagmaSystemDevice* g_device;
 };
 

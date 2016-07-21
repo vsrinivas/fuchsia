@@ -14,36 +14,14 @@
 
 #include "magma_sys_driver.h"
 
-void msd_destroy(MagmaSysDriver* arch) {}
+void msd_driver_destroy(msd_driver* arch) {}
 
-MsdDevice* msd_create_device(MagmaSysDriver* arch, void* device) { return nullptr; }
+msd_device* msd_driver_create_device(msd_driver* arch, void* device) { return nullptr; }
 
-void msd_destroy_device(MsdDevice*) { return; }
+void msd_driver_destroy_device(msd_device*) {}
 
-bool msd_open(MsdDevice* dev, ClientId client_id) { return false; }
+int msd_device_open(msd_device* dev, ClientId client_id) { return 0; }
 
-void msd_close(MsdDevice* dev, ClientId client_id) { return; }
+int msd_device_close(msd_device* dev, ClientId client_id) { return 0; }
 
-uint32_t msd_get_device_id(MsdDevice* dev) { return 0; }
-
-bool msd_create_context(MsdDevice* dev, ClientId client_id, int* context_id) { return false; }
-
-bool msd_set_tiling_mode(MsdDevice* dev, uint32_t handle, uint32_t tiling_mode) { return false; }
-
-bool msd_set_domain(MsdDevice* dev, uint32_t handle, uint32_t read_domains, uint32_t write_domain)
-{
-    return false;
-}
-
-bool msd_subdata(MsdDevice* dev, uint32_t handle, unsigned long offset, unsigned long size,
-                 const void* data)
-{
-    return false;
-}
-
-bool msd_execute_buffer(MsdDevice* dev, ClientId client_id, MagmaExecBuffer* execbuffer)
-{
-    return false;
-}
-
-void msd_wait_rendering(MsdDevice* dev, uint32_t handle) { return; }
+uint32_t msd_device_get_id(msd_device* dev) { return 0; }

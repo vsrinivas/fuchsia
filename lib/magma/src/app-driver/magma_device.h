@@ -32,7 +32,6 @@ public:
     bool Alloc(uint64_t size);
     bool Map(bool write);
     bool Unmap();
-    bool Subdata(unsigned long offset, unsigned long size, const void* data);
     void WaitRendering();
 
     MagmaDevice* device() { return device_; }

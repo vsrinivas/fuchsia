@@ -72,11 +72,6 @@ bool MagmaBuffer::Unmap()
     return true;
 }
 
-bool MagmaBuffer::Subdata(unsigned long offset, unsigned long size, const void* data)
-{
-    return magma_system_subdata(device_->sys_dev(), this->handle, offset, size, data);
-}
-
 void MagmaBuffer::WaitRendering()
 {
     return magma_system_wait_rendering(device_->sys_dev(), this->handle);

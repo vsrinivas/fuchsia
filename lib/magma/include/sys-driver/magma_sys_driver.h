@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _MAGMA_SYS_DRIVER_H_
-#define _MAGMA_SYS_DRIVER_H_
+#ifndef MAGMA_SYS_DRIVER_H
+#define MAGMA_SYS_DRIVER_H
 
 #include <magma_sys_defs.h>
 #include <platform_buffer_abi.h>
@@ -22,41 +22,39 @@
 extern "C" {
 #endif
 
-struct MagmaSysDriver;
-struct MsdDevice;
+// The magma system driver... driver :)
+struct msd_driver {
+    int magic_;
+};
+
+// The magma system driver device.
+struct msd_device {
+    int magic_;
+};
 
 // Instantiates a driver instance.
-struct MagmaSysDriver* msd_create(void);
-void msd_destroy(struct MagmaSysDriver* arch);
+struct msd_driver* msd_driver_create(void);
 
-// Creates a device - triggered by device discovery.
-struct MsdDevice* msd_create_device(struct MagmaSysDriver* arch, void* device);
-void msd_destroy_device(struct MsdDevice*);
+// Destroys a driver instance.
+void msd_driver_destroy(struct msd_driver* drv);
 
-// Opens a device - triggered by a client action.
-bool msd_open(struct MsdDevice* dev, ClientId client_id);
-void msd_close(struct MsdDevice* dev, ClientId client_id);
+// Creates a device at system startup.
+struct msd_device* msd_driver_create_device(struct msd_driver* drv, void* device);
+
+// Destroys a device at system shutdown.
+void msd_driver_destroy_device(struct msd_device* token);
+
+// Opens a device for the given client.
+int msd_device_open(struct msd_device* dev, ClientId client_id);
+
+// Closes a device on behalf of the given client.
+int msd_device_close(struct msd_device* dev, ClientId client_id);
 
 // Returns the device id.  0 is an invalid device id.
-uint32_t msd_get_device_id(struct MsdDevice* dev);
-
-bool msd_create_context(struct MsdDevice* dev, ClientId client_id, int* context_id);
-
-bool msd_set_tiling_mode(struct MsdDevice* dev, uint32_t handle, uint32_t tiling_mode);
-
-bool msd_set_domain(struct MsdDevice* dev, uint32_t handle, uint32_t read_domains,
-                    uint32_t write_domain);
-
-bool msd_subdata(struct MsdDevice* dev, uint32_t handle, unsigned long offset, unsigned long size,
-                 const void* data);
-
-bool msd_execute_buffer(struct MsdDevice* dev, ClientId client_id,
-                        struct MagmaExecBuffer* execbuffer);
-
-void msd_wait_rendering(struct MsdDevice* dev, uint32_t handle);
+uint32_t msd_device_get_id(struct msd_device* dev);
 
 #if defined(__cplusplus)
 }
 #endif
 
-#endif /* _MAGMA_SYS_DRIVER_H_ */
+#endif // MAGMA_SYS_DRIVER

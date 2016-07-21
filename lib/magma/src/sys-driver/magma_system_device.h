@@ -15,17 +15,17 @@
 #ifndef _MAGMA_SYSTEM_DEVICE_H_
 #define _MAGMA_SYSTEM_DEVICE_H_
 
+#include "magma_sys_driver.h"
 #include "magma_system_buffer.h"
-#include <magma_sys_driver.h>
 
 #include <map>
 #include <memory>
 
 struct MagmaSystemDevice {
 public:
-    MagmaSystemDevice(MsdDevice* arch_dev) : arch_dev_(arch_dev) {}
+    MagmaSystemDevice(msd_device* arch_dev) : arch_dev_(arch_dev) {}
 
-    MsdDevice* arch() { return arch_dev_; }
+    msd_device* arch() { return arch_dev_; }
 
     void set_client_id(ClientId client_id) { client_id_ = client_id; }
     ClientId client_id() { return client_id_; }
@@ -42,9 +42,12 @@ public:
     // Returns false if no buffer with the given handle exists in the map
     bool FreeBuffer(uint32_t handle);
 
+    // Returns the device id. 0 is invalid.
+    uint32_t GetDeviceId();
+
 private:
     ClientId client_id_{};
-    MsdDevice* arch_dev_;
+    msd_device* arch_dev_;
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
 };
 

@@ -12,8 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "magma_system_device.h"
 #include "gtest/gtest.h"
-#include <magma_system_device.h>
+
+TEST(Magma, MagmaSystemDevice_GetDeviceId)
+{
+    auto dev = MagmaSystemDevice(nullptr);
+
+    uint32_t device_id = dev.GetDeviceId();
+    // For now device_id is invalid
+    EXPECT_EQ(device_id, 0x0000U);
+}
 
 TEST(Magma, MagmaSystemDevice_BufferManagement)
 {

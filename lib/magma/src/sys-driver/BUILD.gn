@@ -23,7 +23,7 @@ source_set("sys-driver") {
 
   sources = [
     "magma_driver.h",
-    "magma_system.cpp",
+    "magma_system.cc",
     "magma_system_buffer.cc",
     "magma_system_buffer.h",
     "magma_system_device.cc",

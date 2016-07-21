@@ -45,3 +45,5 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::LookupBuffer(uint32_t hand
 
     return iter->second;
 }
+
+uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(arch()); }
