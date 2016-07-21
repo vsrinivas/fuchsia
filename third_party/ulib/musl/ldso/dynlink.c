@@ -1139,24 +1139,19 @@ __attribute__((__visibility__("hidden"))) void __dls2(unsigned char* base,
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-static _Noreturn void dls3(mx_proc_info_t* pi, void* start_arg) {
-    static struct dso app, vdso;
-    size_t aux[AUX_CNT], *auxv;
+static _Noreturn void dls3(mx_proc_info_t* pi,
+                           mx_handle_t exec_vmo, void* start_arg) {
+    static struct dso app;
     size_t i;
     char* env_preload = 0;
-    size_t vdso_base;
     int argc = pi->argc;
     char** argv = pi->argv;
     char** argv_orig = argv;
     char** envp = NULL; // TODO(mcgrathr): Get from pi->envp(?) later.
 
     __environ = envp;
-    libc.auxv = auxv = (size_t*)pi->auxv;
-    decode_vec(auxv, aux, AUX_CNT);
-    __hwcap = aux[AT_HWCAP];
-    libc.page_size = aux[AT_PAGESZ];
-    libc.secure = ((aux[0] & 0x7800) != 0x7800 || aux[AT_UID] != aux[AT_EUID] ||
-                   aux[AT_GID] != aux[AT_EGID] || aux[AT_SECURE]);
+
+    libc.page_size = PAGE_SIZE;
 
     /* Setup early thread pointer in builtin_tls for ldso/libc itself to
      * use during dynamic linking. If possible it will also serve as the
@@ -1175,39 +1170,7 @@ static _Noreturn void dls3(mx_proc_info_t* pi, void* start_arg) {
         env_preload = getenv("LD_PRELOAD");
     }
 
-    /* If the main program was already loaded by the kernel,
-     * AT_PHDR will point to some location other than the dynamic
-     * linker's program headers. */
-    if (aux[AT_PHDR] != (size_t)ldso.phdr) {
-        size_t interp_off = 0;
-        size_t tls_image = 0;
-        /* Find load address of the main program, via AT_PHDR vs PT_PHDR. */
-        Phdr* phdr = app.phdr = (void*)aux[AT_PHDR];
-        app.phnum = aux[AT_PHNUM];
-        app.phentsize = aux[AT_PHENT];
-        for (i = aux[AT_PHNUM]; i; i--, phdr = (void*)((char*)phdr + aux[AT_PHENT])) {
-            if (phdr->p_type == PT_PHDR)
-                app.base = (void*)(aux[AT_PHDR] - phdr->p_vaddr);
-            else if (phdr->p_type == PT_INTERP)
-                interp_off = (size_t)phdr->p_vaddr;
-            else if (phdr->p_type == PT_TLS) {
-                tls_image = phdr->p_vaddr;
-                app.tls.len = phdr->p_filesz;
-                app.tls.size = phdr->p_memsz;
-                app.tls.align = phdr->p_align;
-            }
-        }
-        if (app.tls.size)
-            app.tls.image = laddr(&app, tls_image);
-        if (interp_off)
-            ldso.name = laddr(&app, interp_off);
-        if ((aux[0] & (1UL << AT_EXECFN)) && strncmp((char*)aux[AT_EXECFN], "/proc/", 6))
-            app.name = (char*)aux[AT_EXECFN];
-        else
-            app.name = argv[0];
-        kernel_mapped_dso(&app);
-    } else {
-        int fd;
+    if (exec_vmo == MX_HANDLE_INVALID) {
         char* ldname = argv[0];
         size_t l = strlen(ldname);
         if (l >= 3 && !strcmp(ldname + l - 3, "ldd"))
@@ -1234,36 +1197,38 @@ static _Noreturn void dls3(mx_proc_info_t* pi, void* start_arg) {
         argc -= argv - argv_orig;
         if (!argv[0]) {
             debugmsg("musl libc (" LDSO_ARCH ")\n"
-                       "Dynamic Program Loader\n"
-                       "Usage: %s [options] [--] pathname%s\n",
-                    ldname, ldd_mode ? "" : " [args]");
+                     "Dynamic Program Loader\n"
+                     "Usage: %s [options] [--] pathname%s\n",
+                     ldname, ldd_mode ? "" : " [args]");
             _exit(1);
         }
-        fd = open(argv[0], O_RDONLY);
-        if (fd < 0) {
-            debugmsg("%s: cannot load %s: %s\n", ldname, argv[0], strerror(errno));
-            _exit(1);
-        }
-        runtime = 1;
-        Ehdr* ehdr = (void*)map_library(fd, &app);
-        if (!ehdr) {
-            debugmsg("%s: %s: Not a valid dynamic program\n", ldname, argv[0]);
-            _exit(1);
-        }
-        runtime = 0;
-        close(fd);
+
         ldso.name = ldname;
-        app.name = argv[0];
-        aux[AT_ENTRY] = (size_t)laddr(&app, ehdr->e_entry);
-        /* Find the name that would have been used for the dynamic
-         * linker had ldd not taken its place. */
-        if (ldd_mode) {
-            for (i = 0; i < app.phnum; i++) {
-                if (app.phdr[i].p_type == PT_INTERP)
-                    ldso.name = laddr(&app, app.phdr[i].p_vaddr);
-            }
-            debugmsg("\t%s (%p)\n", ldso.name, ldso.base);
+
+        exec_vmo = get_library_vmo(argv[0]);
+        if (exec_vmo < 0) {
+            debugmsg("%s: cannot load %s: %d\n", ldname, argv[0], exec_vmo);
+            _exit(1);
         }
+    }
+
+    Ehdr* ehdr = map_library(exec_vmo, &app);
+    mx_handle_close(exec_vmo);
+    if (!ehdr) {
+        debugmsg("%s: %s: Not a valid dynamic program\n", ldso.name, argv[0]);
+        _exit(1);
+    }
+
+    app.name = argv[0];
+
+    /* Find the name that would have been used for the dynamic
+     * linker had ldd not taken its place. */
+    if (ldd_mode) {
+        for (i = 0; i < app.phnum; i++) {
+            if (app.phdr[i].p_type == PT_INTERP)
+                ldso.name = laddr(&app, app.phdr[i].p_vaddr);
+        }
+        debugmsg("\t%s (%p)\n", ldso.name, ldso.base);
     }
 
     if (app.tls.size) {
@@ -1286,6 +1251,8 @@ static _Noreturn void dls3(mx_proc_info_t* pi, void* start_arg) {
     app.global = 1;
     decode_dyn(&app);
 
+    // TODO(mcgrathr): vdso will be different when we have one
+#if 0
     /* Attach to vdso, if provided by the kernel */
     if (search_vec(auxv, &vdso_base, AT_SYSINFO_EHDR)) {
         Ehdr* ehdr = (void*)vdso_base;
@@ -1305,6 +1272,7 @@ static _Noreturn void dls3(mx_proc_info_t* pi, void* start_arg) {
         vdso.prev = &ldso;
         ldso.next = &vdso;
     }
+#endif
 
     /* Initial dso chain consists only of the app. */
     head = tail = &app;
@@ -1381,7 +1349,7 @@ static _Noreturn void dls3(mx_proc_info_t* pi, void* start_arg) {
 
     errno = 0;
 
-    CRTJMP((void*)aux[AT_ENTRY], start_arg);
+    CRTJMP(laddr(&app, ehdr->e_entry), start_arg);
     for (;;)
         ;
 }
@@ -1390,22 +1358,30 @@ _Noreturn void __dls3(void* start_arg) {
     mx_proc_info_t* pi = mxr_process_parse_args(start_arg);
     __mxr_thread_main();
 
+    mx_handle_t exec_vmo = MX_HANDLE_INVALID;
     for (int i = 0; i < pi->handle_count; ++i) {
-        if (MX_HND_INFO_TYPE(pi->handle_info[i]) == MX_HND_TYPE_LOADER_SVC)
+        switch (MX_HND_INFO_TYPE(pi->handle_info[i])) {
+        case MX_HND_TYPE_LOADER_SVC:
+            if (loader_svc != MX_HANDLE_INVALID ||
+                pi->handle[i] == MX_HANDLE_INVALID)
+                __builtin_trap();
             loader_svc = pi->handle[i];
-        else
+            break;
+        case MX_HND_TYPE_EXEC_VMO:
+            if (exec_vmo != MX_HANDLE_INVALID ||
+                pi->handle[i] == MX_HANDLE_INVALID)
+                __builtin_trap();
+            exec_vmo = pi->handle[i];
+            break;
+        default:
             mx_handle_close(pi->handle[i]);
+            break;
+        }
     }
     if (loader_svc == MX_HANDLE_INVALID)
         __builtin_trap();
 
-    // dls3 relies on getting some key auxv entries.
-    if (pi->proc_args->aux_info_num == 0) {
-        debugmsg("mxr_process_parse_args yielded no auxv entries!\n");
-        _exit(127);
-    }
-
-    dls3(pi, start_arg);
+    dls3(pi, exec_vmo, start_arg);
 }
 
 
@@ -1700,6 +1676,15 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
         __builtin_trap();
     if (reply_size != sizeof msg.header)
         __builtin_trap();
+    if (msg.header.opcode != LOADER_SVC_OP_STATUS)
+        __builtin_trap();
+    if (msg.header.arg != NO_ERROR) {
+        if (handle != MX_HANDLE_INVALID)
+            __builtin_trap();
+        if (msg.header.arg > 0)
+            __builtin_trap();
+        handle = msg.header.arg;
+    }
 
     return handle;
 }

@@ -85,6 +85,10 @@ struct mx_proc_args {
 // Message pipe for dynamic loader service
 #define MX_HND_TYPE_LOADER_SVC 0x200
 
+// VM object handle for the main executable file
+#define MX_HND_TYPE_EXEC_VMO 0x201
+
+
 // Handle types for one-off use and prototyping
 #define MX_HND_TYPE_USER0 0xFFF0
 #define MX_HND_TYPE_USER1 0xFFF1
