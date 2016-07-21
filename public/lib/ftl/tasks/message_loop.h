@@ -20,6 +20,7 @@ namespace ftl {
 class MessageLoop : public internal::TaskQueueDelegate {
  public:
   MessageLoop();
+  explicit MessageLoop(RefPtr<internal::IncomingTaskQueue> incoming_tasks);
   ~MessageLoop() override;
 
   static MessageLoop* GetCurrent();

@@ -15,9 +15,13 @@ thread_local MessageLoop* g_current = nullptr;
 
 }  // namespace
 
-MessageLoop::MessageLoop() {
+MessageLoop::MessageLoop()
+    : MessageLoop(MakeRefCounted<internal::IncomingTaskQueue>()) {}
+
+MessageLoop::MessageLoop(RefPtr<internal::IncomingTaskQueue> incoming_tasks)
+    : incoming_tasks_(std::move(incoming_tasks)) {
   FTL_DCHECK(!g_current) << "At most one message loop per thread.";
-  incoming_tasks_ = MakeRefCounted<internal::IncomingTaskQueue>(this);
+  incoming_tasks_->InitDelegate(this);
   g_current = this;
 }
 

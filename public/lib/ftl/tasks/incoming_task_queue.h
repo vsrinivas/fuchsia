@@ -28,7 +28,7 @@ class TaskQueueDelegate {
 // This object is threadsafe.
 class IncomingTaskQueue : public TaskRunner {
  public:
-  explicit IncomingTaskQueue(TaskQueueDelegate* delegate);
+  IncomingTaskQueue();
   ~IncomingTaskQueue() override;
 
   // |TaskRunner| implementation:
@@ -36,6 +36,8 @@ class IncomingTaskQueue : public TaskRunner {
   void PostDelayedTask(Closure task, Duration delay) override;
 
   TaskQueue TakeTaskQueue();
+
+  void InitDelegate(TaskQueueDelegate* delegate);
   void ClearDelegate();
 
  private:
@@ -46,6 +48,7 @@ class IncomingTaskQueue : public TaskRunner {
   TaskQueueDelegate* delegate_ FTL_GUARDED_BY(mutex_);
 
   unsigned int next_sequence_number_ FTL_GUARDED_BY(mutex_) = 0;
+  bool drop_incoming_tasks_ FTL_GUARDED_BY(mutex_) = false;
   bool drain_scheduled_ FTL_GUARDED_BY(mutex_) = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IncomingTaskQueue);
