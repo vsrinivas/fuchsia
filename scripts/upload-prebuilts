@@ -35,7 +35,10 @@ readonly TARGETS=(
 # The list of output files to upload.
 declare -A PREBUILTS=(
   ["build-magenta-qemu-arm32/magenta.bin"]="qemu-arm32/magenta.bin"
+  ["build-magenta-qemu-arm32/magenta.elf"]="qemu-arm32/magenta.elf"
+  ["build-magenta-qemu-arm64/magenta.bin"]="qemu-arm64/magenta.bin"
   ["build-magenta-qemu-arm64/magenta.elf"]="qemu-arm64/magenta.elf"
+  ["build-magenta-pc-x86-64/magenta.bin"]="pc-x86-64/magenta.bin"
   ["build-magenta-pc-x86-64/magenta.elf"]="pc-x86-64/magenta.elf"
   ["build-magenta-pc-x86-64/tools/bootserver"]="tools/bootserver"
   ["build-magenta-pc-x86-64/tools/loglistener"]="tools/loglistener"
