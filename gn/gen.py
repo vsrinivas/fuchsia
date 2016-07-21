@@ -48,8 +48,12 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Ninja files for Fuchsia")
     parser.add_argument("--modules", "-m", help="comma separted list of modules",
                         default="default")
+    parser.add_argument("--release", "-r", help="generate release mode build files",
+        action="store_true")
     parser.add_argument("--outdir", "-o", help="output directory", default="out/Debug")
     args = parser.parse_args()
+    if args.release:
+        args.outdir = "out/Release"
 
     amalgamation = resolve_imports(args.modules.split(","))
 
@@ -85,7 +89,10 @@ group("default") {
         depfile.write("\n")
     dotfile_path = os.path.join(paths.SCRIPT_DIR, ".gn")
 
-    return gn.run(["gen", outdir_path, "--check"])
+    gn_args = ["gen", outdir_path, "--check"]
+    if args.release:
+        gn_args += [ "--args=is_debug=false" ]
+    return gn.run(gn_args)
 
 
 if __name__ == "__main__":
