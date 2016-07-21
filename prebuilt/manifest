@@ -1,5 +1,8 @@
 magenta/qemu-arm32/magenta.bin
+magenta/qemu-arm32/magenta.elf
+magenta/pc-x86-64/magenta.bin
 magenta/pc-x86-64/magenta.elf
+magenta/qemu-arm64/magenta.bin
 magenta/qemu-arm64/magenta.elf
 magenta/tools/bootserver
 magenta/tools/loglistener
