@@ -88,7 +88,7 @@ TEST(MutexTest, Basic) {
 TEST(MutexTest, AssertHeld) {
   Mutex mutex;
 
-#ifndef NDEBUG
+#ifdef NDEBUG
   // For non-Debug builds, |AssertHeld()| should do nothing.
   mutex.AssertHeld();
 #else
