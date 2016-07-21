@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Debug build.
+  is_debug = true
+}
+
 if (target_os == "") {
   target_os = "fuchsia"
 }
@@ -32,6 +37,12 @@ _shared_binary_target_configs = [
   "//build/config:default_include_dirs",
   "//build/config:default_warnings",
 ]
+if (is_debug) {
+  _shared_binary_target_configs += [ "//build/config:debug" ]
+} else {
+  _shared_binary_target_configs += [ "//build/config:release" ]
+}
+
 _shared_library_target_configs =
     _shared_binary_target_configs + [ "//build/config:shared_library_config" ]
 _executable_target_configs =

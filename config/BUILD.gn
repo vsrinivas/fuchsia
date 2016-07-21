@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/config.gni")
-
 config("compiler") {
   asmflags = []
   cflags = []
@@ -23,6 +21,15 @@ config("compiler") {
 
   asmflags += cflags
   asmflags += cflags_c
+}
+
+config("debug") {
+  cflags = [ "-g", "-O0" ]
+}
+
+config("release") {
+  cflags = [ "-O2" ]
+  defines = [ "NDEBUG=1" ]
 }
 
 config("default_include_dirs") {
