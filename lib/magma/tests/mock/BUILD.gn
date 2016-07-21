@@ -14,40 +14,12 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("sys-driver") {
+source_set("mock_msd") {
   public_deps = [
-    ":platform_buffer",
-    "$magma_build_root:util",
     "$magma_build_root/include:msd_abi",
   ]
 
   sources = [
-    "magma_driver.h",
-    "magma_system.cpp",
-    "magma_system_buffer.cc",
-    "magma_system_buffer.h",
-    "magma_system_device.cc",
-    "magma_system_device.h",
+    "mock_msd.cc",
   ]
-}
-
-config("platform_buffer_config") {
-  include_dirs = [ "platform_buffer" ]
-}
-
-source_set("platform_buffer") {
-  public_configs = [ ":platform_buffer_config" ]
-
-  public_deps = [
-    "$magma_build_root:util",
-    "$magma_build_root/include:msd_abi",
-  ]
-
-  sources = [
-    "platform_buffer/magenta_platform_buffer.cc",
-    "platform_buffer/platform_buffer.cc",
-    "platform_buffer/platform_buffer.h",
-  ]
-
-  libs = [ "ddk" ]
 }

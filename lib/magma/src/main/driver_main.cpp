@@ -30,7 +30,7 @@ extern "C" {
 #include <magenta/types.h>
 #include <runtime/thread.h>
 
-#include <magma_driver.h>
+#include <magma/src/sys-driver/magma_driver.h>
 
 extern "C" {
 #include <gpureadback.h>

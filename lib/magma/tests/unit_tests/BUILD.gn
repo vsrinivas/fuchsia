@@ -18,11 +18,16 @@ executable("magma_unit_tests") {
   sources = [
     "hello_world.cc",
     "main.cc",
+    "test_magma_system_device.cc",
     "test_platform_buffer.cc",
   ]
 
+  include_dirs = [ "$magma_build_root/src/sys-driver" ]
+
   deps = [
+    "$magma_build_root/src/sys-driver",
     "$magma_build_root/src/sys-driver:platform_buffer",
+    "$magma_build_root/tests/mock:mock_msd",
     "//third_party/gtest",
   ]
 }

@@ -19,19 +19,7 @@
 #include <magma_util/dlog.h>
 #include <magma_util/macros.h>
 
-struct MagmaSystemDevice {
-public:
-    MagmaSystemDevice(MsdDevice* arch_dev) : arch_dev_(arch_dev) {}
-
-    MsdDevice* arch() { return arch_dev_; }
-
-    void set_client_id(ClientId client_id) { client_id_ = client_id; }
-    ClientId client_id() { return client_id_; }
-
-private:
-    ClientId client_id_{};
-    MsdDevice* arch_dev_;
-};
+#include "magma_system_device.h"
 
 class MagmaDriver {
 public:

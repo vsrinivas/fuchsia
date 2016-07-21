@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <magma_driver.h>
+#include "magma_driver.h"
 #include <magma_system.h>
 
 #ifdef __linux__
@@ -64,19 +64,21 @@ bool magma_system_create_context(MagmaSystemDevice* dev, int* context_id)
     return msd_create_context(dev->arch(), dev->client_id(), context_id);
 }
 
-// size - in/out
-// handle - out
 bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,
                         uint32_t* handle_out)
 {
-    DLOG("TODO: magma_system_alloc");
-    return false;
+    auto buf = dev->AllocateBuffer(size);
+    if (!buf)
+        return false;
+
+    *size_out = buf->size();
+    *handle_out = buf->handle();
+    return true;
 }
 
 bool magma_system_free(struct MagmaSystemDevice* dev, uint32_t handle)
 {
-    DLOG("TODO: magma_system_free");
-    return false;
+    return dev->FreeBuffer(handle);
 }
 
 bool magma_system_set_tiling_mode(struct MagmaSystemDevice* dev, uint32_t handle,
@@ -87,15 +89,21 @@ bool magma_system_set_tiling_mode(struct MagmaSystemDevice* dev, uint32_t handle
 
 bool magma_system_map(struct MagmaSystemDevice* dev, uint32_t handle, void** paddr)
 {
-    DLOG("TODO: magma_system_map");
-    return false;
+    auto buf = dev->LookupBuffer(handle);
+    if (!buf)
+        return false;
+
+    return buf->platform_buffer()->Map(paddr);
 }
 
 bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* addr)
 {
-    DLOG("TODO: magma_system_unmap");
-    return false;
-    }
+    auto buf = dev->LookupBuffer(handle);
+    if (!buf)
+        return false;
+
+    return buf->platform_buffer()->Unmap();
+}
 
 bool magma_system_set_domain(struct MagmaSystemDevice* dev, uint32_t handle, uint32_t read_domains,
                              uint32_t write_domain)

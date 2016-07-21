@@ -41,7 +41,6 @@ source_set("msd_abi") {
   sources = [
     "common/magma_defs.h",
     "sys-driver/abi/platform_buffer_abi.h",
-    "sys-driver/magma_driver.h",
     "sys-driver/magma_sys_defs.h",
     "sys-driver/magma_sys_driver.h",
     "sys-driver/magma_system.h",
