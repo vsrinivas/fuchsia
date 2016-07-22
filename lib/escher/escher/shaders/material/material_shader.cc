@@ -166,18 +166,17 @@ MaterialShader::MaterialShader(const MaterialShaderDescriptor& descriptor)
 
 MaterialShader::~MaterialShader() {}
 
-void MaterialShader::Use(const mat4& matrix) const {
+void MaterialShader::BindProgram() const {
   glUseProgram(program_.id());
   glEnableVertexAttribArray(position_);
-  // TODO(jjosh): simply check if uv_ != -1 ?
-  if (descriptor_.mask == Modifier::Mask::kCircular)
-    glEnableVertexAttribArray(uv_);
-  glUniformMatrix4fv(matrix_, 1, GL_FALSE, &matrix[0][0]);
+  if (NeedsUV()) glEnableVertexAttribArray(uv_);
 }
 
-void MaterialShader::Bind(const Stage& stage,
-                          const Material& material,
-                          const Modifier& modifier) const {
+void MaterialShader::BindUniforms(const Stage& stage,
+                                  const Material& material,
+                                  const Modifier& modifier,
+                                  const mat4& matrix) const {
+  glUniformMatrix4fv(matrix_, 1, GL_FALSE, &matrix[0][0]);
   if (descriptor_.color_binding_type == BindingType::kConstant) {
     const vec4& color = material.color().constant_value();
     glUniform4fv(color_, 1, &color[0]);

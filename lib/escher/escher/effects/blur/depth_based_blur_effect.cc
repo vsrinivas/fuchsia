@@ -145,18 +145,16 @@ bool DepthBasedBlurEffect::Init(TextureCache* texture_cache) {
       glGetUniformLocation(program_.id(), "u_blur_plane_height");
   FTL_DCHECK(blur_plane_height_ != -1);
   frame_buffer_ = FrameBuffer::Make();
-  glGenBuffers(1, &vertex_buffer_);
-  FTL_DCHECK(vertex_buffer_ != 0);
-  glGenBuffers(1, &index_buffer_);
-  FTL_DCHECK(index_buffer_ != 0);
 
-  glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
+  vertex_buffer_ = MakeUniqueBuffer();
+  glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_.id());
   Quad quad(Quad::CreateFillClipSpace(0.f));
   glBufferData(GL_ARRAY_BUFFER,
       12 * sizeof(GLfloat), quad.data(), GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
+  index_buffer_ = MakeUniqueBuffer();
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_.id());
   glBufferData(GL_ELEMENT_ARRAY_BUFFER,
       6 * sizeof(GLushort), Quad::GetIndices(), GL_STATIC_DRAW);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -197,8 +195,8 @@ void DepthBasedBlurEffect::Draw(const Stage& stage,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   // Index and vertex buffers.
-  glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
+  glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_.id());
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_.id());
   glEnableVertexAttribArray(position_);
   glVertexAttribPointer(position_, 3, GL_FLOAT, GL_FALSE, 0, 0);
   FTL_DCHECK(glGetError() == GL_NO_ERROR);

@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		693619661D3D5C3200A3679A /* unique_object_unittest.cc in Sources */ = {isa = PBXBuildFile; fileRef = 693619651D3D5C3200A3679A /* unique_object_unittest.cc */; };
 		6936196A1D3D5E0500A3679A /* gtest-all.cc in Sources */ = {isa = PBXBuildFile; fileRef = 693619691D3D5E0500A3679A /* gtest-all.cc */; };
+		6936196D1D40610100A3679A /* tessellation.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6936196B1D40610000A3679A /* tessellation.cc */; };
+		693619701D40759400A3679A /* unique_buffer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6936196F1D40759400A3679A /* unique_buffer.cc */; };
+		693619751D415BDF00A3679A /* mesh.cc in Sources */ = {isa = PBXBuildFile; fileRef = 693619741D415BDF00A3679A /* mesh.cc */; };
 		696750C41D347C73005B4E7F /* depth_based_blur_effect.cc in Sources */ = {isa = PBXBuildFile; fileRef = 696750C21D347C73005B4E7F /* depth_based_blur_effect.cc */; };
 		971538A51D2DC32800EE4821 /* logging.cc in Sources */ = {isa = PBXBuildFile; fileRef = 971538A41D2DC32800EE4821 /* logging.cc */; };
 		971538A91D2DC77A00EE4821 /* debugger.cc in Sources */ = {isa = PBXBuildFile; fileRef = 971538A71D2DC77A00EE4821 /* debugger.cc */; };
@@ -60,7 +63,13 @@
 /* Begin PBXFileReference section */
 		693619651D3D5C3200A3679A /* unique_object_unittest.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unique_object_unittest.cc; sourceTree = "<group>"; };
 		693619691D3D5E0500A3679A /* gtest-all.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "gtest-all.cc"; path = "../../../third_party/gtest/src/gtest-all.cc"; sourceTree = "<group>"; };
-		693619711D413AEB00A3679A /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+		6936196B1D40610000A3679A /* tessellation.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tessellation.cc; sourceTree = "<group>"; };
+		6936196C1D40610000A3679A /* tessellation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tessellation.h; sourceTree = "<group>"; };
+		6936196E1D40758500A3679A /* unique_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unique_buffer.h; sourceTree = "<group>"; };
+		6936196F1D40759400A3679A /* unique_buffer.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unique_buffer.cc; sourceTree = "<group>"; };
+		693619721D4147D900A3679A /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+		693619731D415BD400A3679A /* mesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mesh.h; sourceTree = "<group>"; };
+		693619741D415BDF00A3679A /* mesh.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mesh.cc; sourceTree = "<group>"; };
 		696750C21D347C73005B4E7F /* depth_based_blur_effect.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = depth_based_blur_effect.cc; sourceTree = "<group>"; };
 		696750C31D347C73005B4E7F /* depth_based_blur_effect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = depth_based_blur_effect.h; sourceTree = "<group>"; };
 		971538A41D2DC32800EE4821 /* logging.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cc; sourceTree = "<group>"; };
@@ -316,7 +325,9 @@
 				97E733911D1A5C7600F62181 /* quad.h */,
 				97E733921D1A5C7600F62181 /* size_i.cc */,
 				97E733931D1A5C7600F62181 /* size_i.h */,
-				693619711D413AEB00A3679A /* types.h */,
+				6936196B1D40610000A3679A /* tessellation.cc */,
+				6936196C1D40610000A3679A /* tessellation.h */,
+				693619721D4147D900A3679A /* types.h */,
 			);
 			name = geometry;
 			path = ../../escher/geometry;
@@ -326,6 +337,8 @@
 			isa = PBXGroup;
 			children = (
 				97ED1BFE1D24FC090080360C /* bindings.h */,
+				693619741D415BDF00A3679A /* mesh.cc */,
+				693619731D415BD400A3679A /* mesh.h */,
 				97ED1BFF1D24FC090080360C /* texture_cache.cc */,
 				97ED1C001D24FC090080360C /* texture_cache.h */,
 				97ED1C011D24FC090080360C /* texture_descriptor.h */,
@@ -342,6 +355,8 @@
 				97E7339F1D1A5C7F00F62181 /* unique_program.h */,
 				97E733A01D1A5C7F00F62181 /* unique_texture.cc */,
 				97E733A11D1A5C7F00F62181 /* unique_texture.h */,
+				6936196F1D40759400A3679A /* unique_buffer.cc */,
+				6936196E1D40758500A3679A /* unique_buffer.h */,
 			);
 			name = gl;
 			path = ../../escher/gl;
@@ -520,16 +535,19 @@
 				9736D0901D29D0A5001369BA /* canvas.cc in Sources */,
 				97ED1BFC1D24C96F0080360C /* main.m in Sources */,
 				97254BF81D1B92ED002980D5 /* material_shader_factory.cc in Sources */,
+				693619751D415BDF00A3679A /* mesh.cc in Sources */,
 				97E733CC1D1A5C9600F62181 /* blit_shader.cc in Sources */,
 				97ED1C051D24FC090080360C /* texture.cc in Sources */,
 				97ED1C041D24FC090080360C /* texture_cache.cc in Sources */,
 				97E733C61D1A5C9600F62181 /* directional_light.cc in Sources */,
 				9736D08D1D29D098001369BA /* occlusion_detector.cc in Sources */,
 				97E733CB1D1A5C9600F62181 /* viewing_volume.cc in Sources */,
+				6936196D1D40610100A3679A /* tessellation.cc in Sources */,
 				97254BE91D1B92C9002980D5 /* shape.cc in Sources */,
 				97254BF61D1B92ED002980D5 /* material_shader.cc in Sources */,
 				97E733A41D1A5C7F00F62181 /* unique_frame_buffer.cc in Sources */,
 				97ED1BFD1D24C96F0080360C /* WaterfallViewController.mm in Sources */,
+				693619701D40759400A3679A /* unique_buffer.cc in Sources */,
 				97254BFD1D1B934F002980D5 /* model_renderer.cc in Sources */,
 				97E733951D1A5C7600F62181 /* size_i.cc in Sources */,
 				97E733C71D1A5C9600F62181 /* material.cc in Sources */,
@@ -660,6 +678,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				HEADER_SEARCH_PATHS = (
 					../../../../third_party/glm,
 					../../../../third_party/gtest/include,
@@ -678,6 +697,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				HEADER_SEARCH_PATHS = (
 					../../../../third_party/glm,
 					../../../../third_party/gtest/include,

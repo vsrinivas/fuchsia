@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "ftl/macros.h"
+#include "escher/gl/unique_buffer.h"
 #include "escher/gl/unique_frame_buffer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
@@ -18,6 +19,8 @@ class ModelRenderer {
  public:
   ModelRenderer();
   ~ModelRenderer();
+
+  bool Init();
 
   void DrawModel(const Stage& stage, const Model& model);
 
@@ -34,9 +37,10 @@ class ModelRenderer {
    private:
     void DrawRect(const Object& object);
     void DrawCircle(const Object& object);
+    void DrawMesh(const Object& object);
 
-    void BindMaterial(const Material& material, const Modifier& modifier);
-    void UseMaterialShader(const MaterialShader* shader);
+    void BindMaterial(
+        const Material& material, const Modifier& modifier, const mat4& matrix);
 
     ModelRenderer& renderer_;
     const Stage& stage_;
@@ -45,6 +49,8 @@ class ModelRenderer {
   };
 
   MaterialShaderFactory material_shader_factory_;
+
+  ftl::RefPtr<Mesh> circle_mesh_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModelRenderer);
 };

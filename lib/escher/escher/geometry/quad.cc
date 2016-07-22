@@ -17,7 +17,7 @@ constexpr unsigned short g_indices[] = {
 
 Quad::Quad() {}
 
-Quad::Quad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
+Quad::Quad(vec3 p0, vec3 p1, vec3 p2, vec3 p3) {
   p[0] = p0;
   p[1] = p1;
   p[2] = p2;
@@ -25,10 +25,10 @@ Quad::Quad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
 }
 
 Quad Quad::CreateFromRect(vec2 position, vec2 size, float z) {
-  return Quad(glm::vec3(position.x, position.y + size.y, z),
-              glm::vec3(position.x + size.x, position.y + size.y, z),
-              glm::vec3(position.x + size.x, position.y, z),
-              glm::vec3(position.x, position.y, z));
+  return Quad(vec3(position.x, position.y + size.y, z),
+              vec3(position.x + size.x, position.y + size.y, z),
+              vec3(position.x + size.x, position.y, z),
+              vec3(position.x, position.y, z));
 }
 
 Quad Quad::CreateFillClipSpace(float z) {

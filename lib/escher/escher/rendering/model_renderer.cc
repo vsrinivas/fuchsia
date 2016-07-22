@@ -4,15 +4,23 @@
 
 #include "escher/rendering/model_renderer.h"
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
 #include "escher/geometry/quad.h"
+#include "escher/geometry/tessellation.h"
+#include "escher/gl/bindings.h"
 
 namespace escher {
 
 ModelRenderer::ModelRenderer() {}
 
 ModelRenderer::~ModelRenderer() {}
+
+bool ModelRenderer::Init() {
+  circle_mesh_ = ftl::MakeRefCounted<Mesh>(TessellateCircle(3, vec2(0.f), 1.f));
+  return true;
+}
 
 void ModelRenderer::DrawModel(const Stage& stage, const Model& model) {
   glPushGroupMarkerEXT(25, "ModelRenderer::DrawModel");
@@ -53,13 +61,16 @@ void ModelRenderer::DrawContext::DrawObject(const Object& object) {
     case Shape::Type::kCircle:
       DrawCircle(object);
       break;
+    case Shape::Type::kMesh:
+      DrawMesh(object);
+      break;
   }
 }
 
 void ModelRenderer::DrawContext::DrawRect(const Object& object) {
   Modifier modifier;
   const Material& material = *object.material();
-  BindMaterial(material, modifier);
+  BindMaterial(material, modifier, matrix_);
 
   Quad quad = Quad::CreateFromRect(object.shape().position(),
                                    object.shape().size(), object.shape().z());
@@ -76,26 +87,64 @@ void ModelRenderer::DrawContext::DrawRect(const Object& object) {
 }
 
 void ModelRenderer::DrawContext::DrawCircle(const Object& object) {
-  // TODO(jeffbrown): This whole approach to drawing circles is rather
-  // inefficient and ugly but it is sufficient to exercise the pipeline.
   Modifier modifier;
-  modifier.set_mask(Modifier::Mask::kCircular);
-  BindMaterial(*object.material(), modifier);
+  const Shape& shape = object.shape();
+  vec3 translation(shape.position() - vec2(shape.radius()), shape.z());
+  BindMaterial(
+      *object.material(),
+      modifier,
+      glm::scale(
+          glm::translate(matrix_, translation),
+          vec3(shape.radius(), shape.radius(), 1.f)));
 
-  Quad quad = Quad::CreateFromRect(object.shape().position(),
-                                   object.shape().size(), object.shape().z());
-  glVertexAttribPointer(shader_->position(), 3, GL_FLOAT, GL_FALSE, 0,
-                        quad.data());
+  auto& mesh = *renderer_.circle_mesh_.get();
+  glBindBuffer(GL_ARRAY_BUFFER, mesh.vertices().id());
 
-  constexpr GLfloat uv[] = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
-  glVertexAttribPointer(shader_->uv(), 2, GL_FLOAT, GL_FALSE, 0, uv);
+  glVertexAttribPointer(shader_->position(), 3, GL_FLOAT, GL_FALSE, 0, 0);
+  if (shader_->NeedsUV()) {
+    FTL_DCHECK(mesh.has_uv());
+    glVertexAttribPointer(
+        shader_->uv(), 2, GL_FLOAT, GL_FALSE, 0, mesh.uv_offset());
+  }
 
-  glDrawElements(GL_TRIANGLES, Quad::GetIndexCount(), GL_UNSIGNED_SHORT,
-                 Quad::GetIndices());
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indices().id());
+  glDrawElements(
+      GL_TRIANGLES, mesh.num_indices(), GL_UNSIGNED_SHORT, 0);
+
+  // TODO(jjosh): this can be removed once we source all data from VBOs.
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void ModelRenderer::DrawContext::BindMaterial(const Material& material,
-                                              const Modifier& modifier) {
+void ModelRenderer::DrawContext::DrawMesh(const Object& object) {
+  Modifier modifier;
+  const Material& material = *object.material();
+  const Shape& shape = object.shape();
+  BindMaterial(
+      material,
+      modifier,
+      glm::translate(matrix_, vec3(shape.position(), shape.z())));
+
+  const Mesh& mesh = shape.mesh();
+  glBindBuffer(GL_ARRAY_BUFFER, mesh.vertices().id());
+
+  glVertexAttribPointer(shader_->position(), 3, GL_FLOAT, GL_FALSE, 0, 0);
+  if (shader_->NeedsUV()) {
+    FTL_DCHECK(mesh.has_uv());
+    glVertexAttribPointer(
+        shader_->uv(), 2, GL_FLOAT, GL_FALSE, 0, mesh.uv_offset());
+  }
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indices().id());
+  glDrawElements(GL_TRIANGLES, mesh.num_indices(), GL_UNSIGNED_SHORT, 0);
+
+  // TODO(jjosh): this can be removed once we source all data from VBOs.
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void ModelRenderer::DrawContext::BindMaterial(
+    const Material& material, const Modifier& modifier, const mat4& matrix) {
   const MaterialShader* shader =
       renderer_.material_shader_factory_.GetShader(material, modifier);
   if (!shader) {
@@ -103,19 +152,11 @@ void ModelRenderer::DrawContext::BindMaterial(const Material& material,
     exit(1);
   }
 
-  UseMaterialShader(shader);
-  shader->Bind(stage_, material, modifier);
-}
-
-void ModelRenderer::DrawContext::UseMaterialShader(
-    const MaterialShader* shader) {
-  FTL_DCHECK(shader);
-
-  if (shader == shader_)
-    return;
-
-  shader->Use(matrix_);
-  shader_ = shader;
+  if (shader != shader_) {
+    shader->BindProgram();
+    shader_ = shader;
+  }
+  shader->BindUniforms(stage_, material, modifier, matrix);
 }
 
 }  // namespace escher

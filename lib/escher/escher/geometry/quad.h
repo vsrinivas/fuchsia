@@ -14,7 +14,7 @@ namespace escher {
 class Quad {
  public:
   Quad();
-  Quad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3);
+  Quad(vec3 p0, vec3 p1, vec3 p2, vec3 p3);
 
   static Quad CreateFromRect(vec2 position, vec2 size, float z);
   static Quad CreateFillClipSpace(float z);
@@ -27,7 +27,7 @@ class Quad {
   static int GetIndexCount();
 
  private:
-  glm::vec3 p[4] = {};
+  vec3 p[4] = {};
 };
 
 }  // namespace escher

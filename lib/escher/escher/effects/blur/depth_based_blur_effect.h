@@ -8,6 +8,7 @@
 
 #include "escher/gl/frame_buffer.h"
 #include "escher/gl/texture_cache.h"
+#include "escher/gl/unique_buffer.h"
 #include "escher/gl/unique_program.h"
 #include "escher/scene/stage.h"
 
@@ -39,8 +40,8 @@ class DepthBasedBlurEffect {
   GLint tap_ = -1;
   GLint height_converter_ = -1;
   GLint blur_plane_height_ = -1;
-  GLuint vertex_buffer_ = 0;
-  GLuint index_buffer_ = 0;
+  UniqueBuffer vertex_buffer_;
+  UniqueBuffer index_buffer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DepthBasedBlurEffect);
 };

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ftl/macros.h"
+#include "escher/gl/mesh.h"
 #include "escher/scene/model.h"
 #include "escher/scene/viewing_volume.h"
 
@@ -27,6 +28,7 @@ class AppTestScene {
   escher::Material green_material_;
   escher::Material checkerboard_material_;
   escher::Material null_material_;
+  ftl::RefPtr<escher::Mesh> circle_mesh_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AppTestScene);
 };

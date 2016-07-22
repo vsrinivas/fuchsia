@@ -4,6 +4,7 @@
 
 #include "examples/waterfall/scenes/app_test_scene.h"
 
+#include "escher/geometry/tessellation.h"
 #include "escher/gl/bindings.h"
 #include "escher/renderer.h"
 #include "ftl/arraysize.h"
@@ -51,6 +52,9 @@ void AppTestScene::InitGL() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   checkerboard_material_.set_texture(texture);
+
+  circle_mesh_ = ftl::MakeRefCounted<escher::Mesh>(
+      TessellateCircle(3, vec2(0.f, 0.f), 50.f));
 }
 
 Model AppTestScene::GetModel(const ViewingVolume& volume, const vec2& focus) {
@@ -103,6 +107,11 @@ Model AppTestScene::GetModel(const ViewingVolume& volume, const vec2& focus) {
   objects.emplace_back(
       Shape::CreateRect(vec2(0.0f, 245.0f), vec2(680.0f, 50.0f), 2.0f),
       &green_material_);
+
+  // meshes
+  objects.emplace_back(
+      Shape::CreateMesh(circle_mesh_, vec2(650.f, 180.f), 20.0f),
+      &app_bar_material_);
 
   // horizontal line segments
   objects.emplace_back(

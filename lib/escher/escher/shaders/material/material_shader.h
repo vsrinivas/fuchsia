@@ -28,18 +28,20 @@ class MaterialShader {
   // Prepares the program for use before drawing any number of objects.
   // Must be called whenever switching between shaders and before binding
   // a material.
-  void Use(const mat4& matrix) const;
+  void BindProgram() const;
 
   // Binds the parameters of a material to the shader.
-  void Bind(const Stage& stage,
-            const Material& material,
-            const Modifier& modifier) const;
+  void BindUniforms(const Stage& stage,
+                    const Material& material,
+                    const Modifier& modifier,
+                    const mat4& matrix) const;
+
+  bool NeedsUV() const;
 
  private:
   friend class MaterialShaderFactory;
 
   explicit MaterialShader(const MaterialShaderDescriptor& descriptor);
-  bool NeedsUV() const;
   bool Compile();
   std::string GeneratePrologue();
 

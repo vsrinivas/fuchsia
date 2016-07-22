@@ -28,6 +28,7 @@ Renderer::Renderer() {}
 Renderer::~Renderer() {}
 
 bool Renderer::Init() {
+  if (!model_renderer_.Init()) return false;
   if (!blit_shader_.Compile()) return false;
   if (!lighting_.Init(&texture_cache_, kUseMipmap)) return false;
   if (!blur_.Init(&texture_cache_)) return false;
