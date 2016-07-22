@@ -57,7 +57,7 @@ int sys_debug_write(const void* ptr, uint32_t len) {
     LTRACEF("ptr %p, len %d\n", ptr, len);
 
     if (len > kMaxDebugWriteSize)
-        return ERR_TOO_BIG;
+        len = kMaxDebugWriteSize;
 
     char buf[kMaxDebugWriteSize];
     if (magenta_copy_from_user(ptr, buf, len) != NO_ERROR)
