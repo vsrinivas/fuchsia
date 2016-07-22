@@ -7,199 +7,430 @@
 #pragma once
 
 #include <assert.h>
+#include <utils/intrusive_pointer_traits.h>
 
+// Usage and Implementation Notes:
+//
+// utils::DoublyLinkedList<> is a templated intrusive container class which
+// allows users to manage doubly linked lists of objects.
+//
+// utils::DoublyLinkedList<> follows the same patterns as
+// utils::SinglyLinkedList<> and implements a superset of the functionality
+// (including support for managed pointer types).  Please refer to the "Usage
+// Notes" section of utils/intrusive_single_list.h for details.
+//
+// Additional functionality provided by a DoublyLinkedList<> includes...
+// ++ O(k) push_back/pop_back/back (in addition to push_front/pop_front/front)
+// ++ The ability to "insert" in addition to "insert_after"
+// ++ The ability to "erase" in addition to "erase_next"
+// ++ Support for bidirectional iteration.
+//
+// Under the hood, the state of a DoublyLinkedList<> contains a single raw
+// pointer to the object which is the head of the list, or nullptr if the list
+// is empty.  Each object on the list has a DoubleLinkedListNodeState<> which
+// contains one raw pointer (prev) and one managed pointer (next) which are
+// arranged in a ring.  The tail of a non-empty list can be found in O(k) time
+// by following the prev pointer of the head node of the list.
 namespace utils {
 
 template <typename T>
-struct DoublyLinkedListTraits {
-    static T* prev(T* obj) {
-        return obj->list_prev();
-    }
-    static const T* prev(const T* obj) {
-        return obj->list_prev();
-    }
-    static T* next(T* obj) {
-        return obj->list_next();
-    }
-    static const T* next(const T* obj) {
-        return obj->list_next();
-    }
+struct DoublyLinkedListNodeState {
+    using PtrTraits = internal::ContainerPtrTraits<T>;
+    typename PtrTraits::PtrType    next_ = nullptr;
+    typename PtrTraits::RawPtrType prev_ = nullptr;
 
-    static void set_prev(T* obj, T* prev) {
-        return obj->list_set_prev(prev);
-    }
-    static void set_next(T* obj, T* next) {
-        return obj->list_set_next(next);
+    bool IsValid() const     { return ((next_ == nullptr) == (prev_ == nullptr)); }
+    bool InContainer() const { return ((next_ != nullptr) && (prev_ != nullptr)); }
+};
+
+template <typename T>
+struct DefaultDoublyLinkedListTraits {
+    using PtrTraits = internal::ContainerPtrTraits<T>;
+    static DoublyLinkedListNodeState<T>& node_state(typename PtrTraits::RefType obj) {
+        return obj.dll_node_state_;
     }
 };
 
-template <typename T, typename Traits = DoublyLinkedListTraits<T>>
-class DoublyLinkedList {
-public:
-    using ValueType = T;
+template <typename T>
+struct DoublyLinkedListable {
+private:
+    friend class DefaultDoublyLinkedListTraits<T>;
+    DoublyLinkedListNodeState<T> dll_node_state_;
+};
 
-    static void reset(ValueType* obj) {
-        Traits::set_prev(obj, obj);
-        Traits::set_next(obj, obj);
+template <typename T, typename _NodeTraits = DefaultDoublyLinkedListTraits<T>>
+class DoublyLinkedList {
+private:
+    // Private fwd decls of the iterator implementation.
+    template <typename IterTraits> class iterator_impl;
+    class iterator_traits;
+    class const_iterator_traits;
+
+public:
+    // Aliases used to reduce verbosity and expose types/traits to tests
+    using PtrTraits  = internal::ContainerPtrTraits<T>;
+    using NodeTraits = _NodeTraits;
+    using NodeState  = DoublyLinkedListNodeState<T>;
+    using PtrType    = typename PtrTraits::PtrType;
+    using RawPtrType = typename PtrTraits::RawPtrType;
+
+    // Declarations of the standard iterator types.
+    using iterator       = iterator_impl<iterator_traits>;
+    using const_iterator = iterator_impl<const_iterator_traits>;
+
+    // Default construction gives an empty list.
+    constexpr DoublyLinkedList() { }
+
+    // Rvalue construction is permitted, but will result in the move of the list
+    // contents from one instance of the list to the other (even for unmanaged
+    // pointers)
+    explicit DoublyLinkedList(DoublyLinkedList<T, NodeTraits>&& other_list) {
+        swap(other_list);
     }
 
-    constexpr DoublyLinkedList() : head_(nullptr) {}
+    // Rvalue assignment is permitted for managed lists, and when the target is
+    // an empty list of unmanaged pointers.  Like Rvalue construction, it will
+    // result in the move of the source contents to the destination.
+    DoublyLinkedList& operator=(DoublyLinkedList&& other_list) {
+        DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
 
-    DoublyLinkedList (const DoublyLinkedList &) = delete;
-    DoublyLinkedList& operator=(const DoublyLinkedList &) = delete;
+        clear();
+        swap(other_list);
+
+        return *this;
+    }
 
     ~DoublyLinkedList() {
-        DEBUG_ASSERT(is_empty());
+        // It is considered an error to allow a list of unmanaged pointers to
+        // destruct of there are still elements in it.  Managed pointer lists
+        // will automatically release their references to their elements.
+        DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+        clear();
     }
 
-    bool is_empty() const {
-        return (head_ == nullptr);
+    // Standard begin/end, cbegin/cend iterator accessors.
+    iterator        begin()       { return iterator(this, head_); }
+    const_iterator  begin() const { return const_iterator(this, head_); }
+    const_iterator cbegin() const { return const_iterator(this, head_); }
+
+    iterator          end()       { return iterator(this, nullptr); }
+    const_iterator    end() const { return const_iterator(this, nullptr); }
+    const_iterator   cend() const { return const_iterator(this, nullptr); }
+
+    // make_iterator : construct an iterator out of a pointer to an object
+    iterator make_iterator(const PtrType& ptr) { return iterator(this, PtrTraits::GetRaw(ptr)); }
+
+    // is_empty : True if the list has at least one element in it, false otherwise.
+    bool is_empty() const { return head_ == nullptr; }
+
+    // front
+    //
+    // Return a reference to the element at the front of the list without
+    // removing it.  It is an error to call front on an empty list.
+    typename PtrTraits::RefType      front()       { DEBUG_ASSERT(!is_empty()); return *head_; }
+    typename PtrTraits::ConstRefType front() const { DEBUG_ASSERT(!is_empty()); return *head_; }
+
+    // back
+    //
+    // Return a reference to the element at the back of the list without
+    // removing it.  It is an error to call back on an empty list.
+    typename PtrTraits::RefType back() {
+        DEBUG_ASSERT(!is_empty());
+        return *(NodeTraits::node_state(*head_).prev_);
+    }
+
+    typename PtrTraits::ConstRefType back() const {
+        DEBUG_ASSERT(!is_empty());
+        return *(NodeTraits::node_state(*head_).prev_);
+    }
+
+    // push_front : Push an element onto the front of the list.
+    void push_front(const PtrType& ptr) { push_front(PtrType(ptr)); }
+    void push_front(PtrType&& ptr)      { internal_insert(head_, utils::move(ptr)); }
+
+    // push_back : Push an element onto the end of the list.
+    void push_back(const PtrType& ptr) { push_back(PtrType(ptr)); }
+    void push_back(PtrType&& ptr)      { internal_insert(nullptr, utils::move(ptr)); }
+
+    // insert : Insert an element before iter in the list.
+    void insert(const iterator& iter, const PtrType&  ptr) { insert(iter, PtrType(ptr)); }
+    void insert(const iterator& iter, PtrType&& ptr) {
+        DEBUG_ASSERT(iter.list_ == this);
+        internal_insert(iter.node_, utils::move(ptr));
+    }
+
+    void insert(const PtrType& before, const PtrType& ptr) { insert(before, PtrType(ptr)); }
+    void insert(const PtrType& before, PtrType&& ptr) {
+        internal_insert(PtrTraits::GetRaw(before), utils::move(ptr));
+    }
+
+    // insert_after : Insert an element after iter in the list.
+    //
+    // Note: It is an error to attempt to push a nullptr instance of PtrType, or
+    // to attempt to push with iter == end().
+    void insert_after(const iterator& iter, const PtrType& ptr) {
+        insert_after(iter, PtrType(ptr));
+    }
+    void insert_after(const iterator& iter, PtrType&& ptr) {
+        DEBUG_ASSERT(iter.list_ == this);
+        DEBUG_ASSERT(iter.node_);
+
+        auto& ns = NodeTraits::node_state(*iter.node_);
+        auto  next = PtrTraits::GetRaw(ns.next_);
+        internal_insert(next == head_ ? nullptr : next, utils::move(ptr));
+    }
+
+    // pop_front and pop_back
+    //
+    // Removes either the head or the tail of the list and transfers the pointer
+    // to the caller.  If the list is empty, return a nullptr instance of
+    // PtrType.
+    PtrType pop_front() { return internal_erase(head_); }
+    PtrType pop_back()  { return internal_erase(tail()); }
+
+    // erase and erase_next
+    //
+    // Erase the element either at the provided iterator, or immediately after
+    // the provided iterator.  Remove the element in the list either at iter, or
+    // which follows iter.  If there is no element in the list at this position
+    // (iter is end()), return a nullptr instance of PtrType.  It is an error to
+    // attempt to use an iterator from a different instance of this list type to
+    // attempt to erase a node.
+    PtrType erase(const PtrType& ptr) { return internal_erase(PtrTraits::GetRaw(ptr)); }
+    PtrType erase(const iterator& iter) {
+        DEBUG_ASSERT(this == iter.list_);
+        return internal_erase(iter.node_);
+    }
+
+
+    PtrType erase_next(const iterator& iter) {
+        DEBUG_ASSERT(this == iter.list_);
+
+        if (!iter.node_)
+            return PtrType(nullptr);
+
+        auto& ns = NodeTraits::node_state(*iter.node_);
+        auto  next = PtrTraits::GetRaw(ns.next_);
+
+        if (!next)
+            return PtrType(nullptr);
+
+        return internal_erase(next);
     }
 
     void clear() {
-        head_ = nullptr;
-    }
+        if (!is_empty()) {
+            auto& head_ns = NodeTraits::node_state(*head_);
+            auto& tail_ns = NodeTraits::node_state(*head_ns.prev_);
+            DEBUG_ASSERT(tail_ns.next_);
 
-    void push_front(ValueType* obj) {
-        if (!head_) {
-            head_ = obj;
-            reset(head_);
-            return;
-        }
+            PtrType tmp = PtrTraits::Take(tail_ns.next_);
+            do {
+                auto& tmp_ns = NodeTraits::node_state(*tmp);
+                tmp_ns.prev_ = nullptr;
+                tmp = PtrTraits::Take(tmp_ns.next_);
+            } while (tmp);
 
-        auto tail = Traits::prev(head_);
-
-        Traits::set_next(obj, head_);
-        Traits::set_prev(obj, tail);
-        Traits::set_prev(head_, obj);
-        Traits::set_next(tail, obj);
-
-        head_ = obj;
-    }
-
-    void push_back(ValueType* obj) {
-        if (!head_) {
-            head_ = obj;
-            reset(head_);
-            return;
-        }
-
-        auto tail = Traits::prev(head_);
-
-        Traits::set_prev(obj, tail);
-        Traits::set_next(obj, head_);
-        Traits::set_next(tail, obj);
-        Traits::set_prev(head_, obj);
-    }
-
-    void add_after(ValueType *after, ValueType* obj) {
-        auto next = Traits::next(after);
-
-        Traits::set_prev(obj, after);
-        Traits::set_next(obj, next);
-        Traits::set_next(after, obj);
-        Traits::set_prev(next, obj);
-    }
-
-    void add_before(ValueType *before, ValueType* obj) {
-        auto prev = Traits::prev(before);
-
-        Traits::set_prev(obj, prev);
-        Traits::set_next(obj, before);
-        Traits::set_prev(before, obj);
-        Traits::set_next(prev, obj);
-
-        if (head_ == before) {
-            head_ = obj;
+            head_ = nullptr;
         }
     }
 
-    ValueType* pop_front() {
-        return is_empty() ? nullptr : pop_front_unsafe();
+    // swap : swaps the contest of two lists.
+    void swap(DoublyLinkedList<T, NodeTraits>& other) {
+        RawPtrType tmp = head_;
+        head_       = other.head_;
+        other.head_ = tmp;
     }
 
-    ValueType* pop_back() {
-        return is_empty() ? nullptr : remove(Traits::prev(head_));
-    }
-
-    ValueType* remove(ValueType* obj) {
-        return (obj == head_) ? pop_front_unsafe() : remove_unsafe(obj);
-    }
-
-    ValueType* first() {
-        return head_;
-    }
-    const ValueType* first() const {
-        return head_;
-    }
-
-    ValueType* last() {
-        return is_empty() ? nullptr : Traits::prev(head_);
-    }
-
-    const ValueType* last() const {
-        return is_empty() ? nullptr : Traits::prev(head_);
-    }
-
-    ValueType* prev(ValueType* obj) const {
-        return (head_ == obj) ? nullptr : Traits::prev(obj);
-    }
-
-    const ValueType* prev(const ValueType* obj) const {
-        return (head_ == obj) ? nullptr : Traits::prev(obj);
-    }
-
-    ValueType* next(ValueType* obj) const {
-        auto next = Traits::next(obj);
-        return (head_ == next) ? nullptr : next;
-    }
-
-    const ValueType* next(const ValueType* obj) const {
-        auto next = Traits::next(obj);
-        return (head_ == next) ? nullptr : next;
-    }
-
+    // size_slow : count the elements in the list in O(n) fashion
     size_t size_slow() const {
-        size_t count = 0;
-        const ValueType* t = head_;
-        while (t) {
-            ++count;
-            t = next(t);
+        size_t size = 0;
+
+        for (auto iter = cbegin(); iter != cend(); ++iter) {
+            size++;
         }
-        return count;
+
+        return size;
     }
 
-    void swap(DoublyLinkedList& other) {
-        ValueType* t = head_;
-        head_ = other.head_;
-        other.head_ = t;
+    // erase_if
+    //
+    // Find the first member of the list which satisfies the predicate given by
+    // 'fn' and erase it from the list, returning a referenced pointer to the
+    // removed element.  Return nullptr if no element satisfies the predicate.
+    template <typename UnaryFn>
+    PtrType erase_if(UnaryFn fn) {
+        for (auto iter = begin(); iter != end(); ++iter)
+            if (fn(static_cast<typename PtrTraits::ConstRefType>(*iter)))
+                return erase(iter);
+
+        return PtrType(nullptr);
     }
 
 private:
-    static ValueType* remove_unsafe(ValueType* obj) {
-        auto next = Traits::next(obj);
-        auto prev = Traits::prev(obj);
-        Traits::set_prev(next, prev);
-        Traits::set_next(prev, next);
-        Traits::set_prev(obj, nullptr);
-        Traits::set_next(obj, nullptr);
-        return obj;
-    }
+    // The traits of a non-const iterator
+    struct iterator_traits {
+        using RefType    = typename PtrTraits::RefType;
+        using RawPtrType = typename PtrTraits::RawPtrType;
+    };
 
-    ValueType* pop_front_unsafe() {
-        auto list_next = Traits::next(head_);
-        if (list_next == head_) {
-            head_ = nullptr;
-            Traits::set_prev(list_next, nullptr);
-            Traits::set_next(list_next, nullptr);
-            return list_next;
+    // The traits of a const iterator
+    struct const_iterator_traits {
+        using RefType    = typename PtrTraits::ConstRefType;
+        using RawPtrType = typename PtrTraits::ConstRawPtrType;
+    };
+
+    // The shared implementation of the iterator
+    template <class IterTraits>
+    class iterator_impl {
+    public:
+        iterator_impl() { }
+        iterator_impl(const iterator_impl& other) { list_ = other.list_; node_ = other.node_; }
+
+        iterator_impl& operator=(const iterator_impl& other) {
+            list_ = other.list_;
+            node_ = other.node_;
+            return *this;
         }
-        ValueType* t = head_;
-        head_ = list_next;
-        return remove_unsafe(t);
+
+        bool IsValid() const { return node_ != nullptr; }
+        bool operator==(const iterator_impl& other) const { return node_ == other.node_; }
+        bool operator!=(const iterator_impl& other) const { return node_ != other.node_; }
+
+        // Prefix
+        iterator_impl& operator++() {
+            if (!node_)
+                return *this;
+
+            DEBUG_ASSERT(list_);
+
+            auto& ns = NodeTraits::node_state(*node_);
+            auto tmp = PtrTraits::GetRaw(ns.next_);
+            node_    = (tmp == list_->head_) ? nullptr : tmp;
+
+            return *this;
+        }
+
+        iterator_impl& operator--() {
+            DEBUG_ASSERT(!node_ || list_);
+            if (!list_ || (node_ == list_->head_)) {
+                node_ = nullptr;
+                return *this;
+            }
+
+            auto& ns = NodeTraits::node_state(*(node_ ? node_ : list_->head_));
+            node_ = ns.prev_;
+
+            return *this;
+        }
+
+        // Postfix
+        iterator_impl operator++(int) {
+            iterator_impl ret(*this);
+            ++(*this);
+            return ret;
+        }
+
+        iterator_impl operator--(int) {
+            iterator_impl ret(*this);
+            --(*this);
+            return ret;
+        }
+
+        typename PtrTraits::PtrType CopyPointer()          { return PtrTraits::Copy(node_); }
+        typename IterTraits::RefType operator*()     const { DEBUG_ASSERT(node_); return *node_; }
+        typename IterTraits::RawPtrType operator->() const { DEBUG_ASSERT(node_); return node_; }
+
+    private:
+        friend class DoublyLinkedList<T, NodeTraits>;
+        using ListPtrType = const DoublyLinkedList<T, NodeTraits>*;
+
+        iterator_impl(ListPtrType list, typename PtrTraits::RawPtrType node)
+            : list_(list),
+              node_(node) { }
+
+        ListPtrType list_ = nullptr;
+        typename PtrTraits::RawPtrType node_ = nullptr;
+    };
+
+    // Copy construction and Lvalue assignment are disallowed
+    DoublyLinkedList(const DoublyLinkedList&) = delete;
+    DoublyLinkedList& operator=(const DoublyLinkedList&) = delete;
+
+    void take_first_object(PtrType&& ptr) {
+        DEBUG_ASSERT(!head_);
+
+        auto& ptr_ns = NodeTraits::node_state(*ptr);
+        DEBUG_ASSERT(ptr_ns.prev_ == nullptr);
+        DEBUG_ASSERT(ptr_ns.next_ == nullptr);
+
+        head_        = PtrTraits::GetRaw(ptr);
+        ptr_ns.prev_ = PtrTraits::GetRaw(ptr);
+        ptr_ns.next_ = utils::move(ptr);
     }
 
-    ValueType* head_;
+    void internal_insert(RawPtrType before, PtrType&& ptr) {
+        DEBUG_ASSERT(ptr != nullptr);
+
+        if (!head_) {
+            DEBUG_ASSERT(!before);
+            take_first_object(utils::move(ptr));
+            return;
+        }
+
+        auto& ptr_ns    = NodeTraits::node_state(*ptr);
+        auto& before_ns = before ? NodeTraits::node_state(*before)
+                                 : NodeTraits::node_state(*head_);
+        auto& after_ns  = NodeTraits::node_state(*before_ns.prev_);
+
+        DEBUG_ASSERT((   ptr_ns.prev_ == nullptr) && (   ptr_ns.next_ == nullptr));
+        DEBUG_ASSERT((before_ns.prev_ != nullptr) && (before_ns.next_ != nullptr));
+        DEBUG_ASSERT(( after_ns.prev_ != nullptr) && ( after_ns.next_ != nullptr));
+
+        if (before == head_)
+            head_ = PtrTraits::GetRaw(ptr);
+
+        ptr_ns.prev_    = before_ns.prev_;
+        before_ns.prev_ = PtrTraits::GetRaw(ptr);
+        ptr_ns.next_    = utils::move(after_ns.next_);
+        after_ns.next_  = utils::move(ptr);
+    }
+
+    PtrType internal_erase(RawPtrType node) {
+        if (!node)
+            return PtrType(nullptr);
+
+        auto& node_ns = NodeTraits::node_state(*node);
+        DEBUG_ASSERT((node_ns.prev_ != nullptr) && (node_ns.next_ != nullptr));
+
+        if (node == node_ns.prev_) {
+            DEBUG_ASSERT(node == head_);
+            head_         = nullptr;
+            node_ns.prev_ = nullptr;
+            return PtrTraits::Take(node_ns.next_);
+        }
+
+        if (node == head_)
+            head_ = PtrTraits::GetRaw(node_ns.next_);
+
+        auto& next_ns = NodeTraits::node_state(*node_ns.next_);
+        auto& prev_ns = NodeTraits::node_state(*node_ns.prev_);
+
+        next_ns.prev_ = node_ns.prev_;
+        node_ns.prev_ = nullptr;
+        PtrTraits::Swap(prev_ns.next_, node_ns.next_);
+        return PtrTraits::Take(node_ns.next_);
+    }
+
+    RawPtrType tail() {
+        if (!head_)
+            return nullptr;
+        auto& head_ns = NodeTraits::node_state(*head_);
+        return head_ns.prev_;
+    }
+
+    // State consists of just a raw head pointer.
+    RawPtrType head_ = nullptr;
 };
 
 }  // namespace utils

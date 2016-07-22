@@ -10,11 +10,12 @@
 
 #include <magenta/types.h>
 #include <magenta/syscalls-types.h>
+#include <utils/intrusive_double_list.h>
 #include <utils/ref_ptr.h>
 
 class Dispatcher;
 
-class Handle final {
+class Handle final : public utils::DoublyLinkedListable<Handle*> {
 public:
     Handle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
     Handle(const Handle* rhs, mx_rights_t rights);
@@ -24,7 +25,7 @@ public:
 
     ~Handle();
 
-    utils::RefPtr<Dispatcher> dispatcher();
+    utils::RefPtr<Dispatcher> dispatcher() const { return dispatcher_; }
 
     mx_pid_t process_id() const {
         return process_id_;
@@ -38,34 +39,8 @@ public:
         return rights_;
     }
 
-    Handle* list_prev() {
-        return prev_;
-    }
-
-    Handle* list_next() {
-        return next_;
-    }
-
-    const Handle* list_prev() const {
-        return prev_;
-    }
-
-    const Handle* list_next() const {
-        return next_;
-    }
-
-    void list_set_prev(Handle* node) {
-        prev_ = node;
-    }
-
-    void list_set_next(Handle* node) {
-        next_ = node;
-    }
-
 private:
     mx_pid_t process_id_;
     const mx_rights_t rights_;
     utils::RefPtr<Dispatcher> dispatcher_;
-    Handle* prev_;
-    Handle* next_;
 };

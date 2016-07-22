@@ -18,38 +18,22 @@
 
 class Handle;
 
-struct MessagePacket {
-    MessagePacket* next;
-    MessagePacket* prev;
+struct MessagePacket : public utils::DoublyLinkedListable<MessagePacket*> {
+    MessagePacket(utils::Array<uint8_t>&& _data,
+                  utils::Array<Handle*>&& _handles)
+        : data(utils::move(_data)),
+          handles(utils::move(_handles)) { }
+    ~MessagePacket();
+
     utils::Array<uint8_t> data;
     utils::Array<Handle*> handles;
 
-    ~MessagePacket();
-
     void ReturnHandles();
-
-    MessagePacket* list_prev() {
-        return prev;
-    }
-    const MessagePacket* list_prev() const {
-        return prev;
-    }
-    MessagePacket* list_next() {
-        return next;
-    }
-    const MessagePacket* list_next() const {
-        return next;
-    }
-    void list_set_prev(MessagePacket* prv) {
-        prev = prv;
-    }
-    void list_set_next(MessagePacket* nxt) {
-        next = nxt;
-    }
 };
 
 class MessagePipe : public utils::RefCounted<MessagePipe> {
 public:
+    using MessageList = utils::DoublyLinkedList<MessagePacket*>;
     MessagePipe();
     ~MessagePipe();
 
@@ -62,7 +46,7 @@ public:
 
 private:
     bool dispatcher_alive_[2];
-    utils::DoublyLinkedList<MessagePacket> messages_[2];
+    MessageList messages_[2];
     // This lock protects |dispatcher_alive_| and |messages_|.
     mutex_t lock_;
     StateTracker state_tracker_[2];

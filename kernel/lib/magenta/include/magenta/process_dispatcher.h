@@ -23,7 +23,8 @@
 #include <utils/ref_ptr.h>
 #include <utils/string_piece.h>
 
-class ProcessDispatcher : public Dispatcher {
+class ProcessDispatcher : public Dispatcher
+                        , public utils::DoublyLinkedListable<ProcessDispatcher*> {
 public:
     static mx_status_t Create(utils::StringPiece name,
                               utils::RefPtr<Dispatcher>* dispatcher,
@@ -105,16 +106,8 @@ public:
 
     // The following two methods can be slow and innacurrate and should only be
     // called from diagnostics code.
-    uint32_t HandleStats(uint32_t*handle_type, size_t size);
-    uint32_t ThreadCount();
-
-    // Necessary members for using DoublyLinkedList<ProcessDispatcher>.
-    ProcessDispatcher* list_prev() { return prev_; }
-    ProcessDispatcher* list_next() { return next_; }
-    const ProcessDispatcher* list_prev() const { return prev_; }
-    const ProcessDispatcher* list_next() const { return next_; }
-    void list_set_prev(ProcessDispatcher* node) { prev_ = node; }
-    void list_set_next(ProcessDispatcher* node) { next_ = node; }
+    uint32_t HandleStats(uint32_t*handle_type, size_t size) const;
+    uint32_t ThreadCount() const;
 
 private:
     explicit ProcessDispatcher(utils::StringPiece name);
@@ -141,10 +134,10 @@ private:
     int next_thread_id_ = 1;
 
     // protects thread_list_, as well as the UserThread joined_ and detached_ flags
-    mutex_t thread_list_lock_ = MUTEX_INITIAL_VALUE(thread_list_lock_);
+    mutable mutex_t thread_list_lock_ = MUTEX_INITIAL_VALUE(thread_list_lock_);
 
     // list of threads in this process
-    utils::DoublyLinkedList<UserThread> thread_list_;
+    utils::DoublyLinkedList<UserThread*> thread_list_;
 
     // a ref to the main thread
     utils::RefPtr<UserThread> main_thread_;
@@ -153,8 +146,9 @@ private:
     utils::RefPtr<VmAspace> aspace_;
 
     // our list of handles
-    mutex_t handle_table_lock_ = MUTEX_INITIAL_VALUE(handle_table_lock_); // protects |handles_|.
-    utils::DoublyLinkedList<Handle> handles_;
+    mutable mutex_t handle_table_lock_ =
+        MUTEX_INITIAL_VALUE(handle_table_lock_); // protects |handles_|.
+    utils::DoublyLinkedList<Handle*> handles_;
 
     StateTracker state_tracker_;
 
@@ -173,10 +167,6 @@ private:
     utils::RefPtr<Dispatcher> exception_handler_;
     mx_exception_behaviour_t exception_behaviour_ = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
     mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
-
-    // Holds the linked list of processes that magenta.cpp mantains.
-    ProcessDispatcher* prev_ = nullptr;
-    ProcessDispatcher* next_ = nullptr;
 
     // The user-friendly process name. For debug purposes only.
     char name_[THREAD_NAME_LENGTH / 2] = {};

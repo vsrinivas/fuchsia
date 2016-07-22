@@ -43,7 +43,7 @@ utils::TypedArena<Handle> handle_arena;
 // The process list, id and its mutex.
 mutex_t process_mutex = MUTEX_INITIAL_VALUE(process_mutex);
 uint32_t next_process_id = 0u;
-utils::DoublyLinkedList<ProcessDispatcher> process_list;
+utils::DoublyLinkedList<ProcessDispatcher*> process_list;
 
 // The system exception handler
 static utils::RefPtr<Dispatcher> system_exception_handler;
@@ -119,15 +119,15 @@ uint32_t AddProcess(ProcessDispatcher* process) {
 
 void RemoveProcess(ProcessDispatcher* process) {
     AutoLock lock(&process_mutex);
-    process_list.remove(process);
+    process_list.erase(process);
     LTRACEF("Removing process %p : id = %u\n", process, process->id());
 }
 
-char* DebugDumpHandleTypeCount_NoLock(ProcessDispatcher* process) {
+char* DebugDumpHandleTypeCount_NoLock(const ProcessDispatcher& process) {
     static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
 
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
-    uint32_t handle_count = process->HandleStats(types, sizeof(types));
+    uint32_t handle_count = process.HandleStats(types, sizeof(types));
 
     snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
@@ -147,14 +147,14 @@ char* DebugDumpHandleTypeCount_NoLock(ProcessDispatcher* process) {
 void DebugDumpProcessList() {
     AutoLock lock(&process_mutex);
     printf(" id-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n");
-    utils::for_each(&process_list, [](ProcessDispatcher* process) {
+    for (const auto& process : process_list) {
         printf("%3u-%c %3u %s [%s]\n",
-            process->id(),
-            process->StateChar(),
-            process->ThreadCount(),
+            process.id(),
+            process.StateChar(),
+            process.ThreadCount(),
             DebugDumpHandleTypeCount_NoLock(process),
-            process->name().data());
-    });
+            process.name().data());
+    }
 }
 
 void DumpProcessListKeyMap() {

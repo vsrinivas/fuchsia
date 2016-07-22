@@ -20,7 +20,7 @@ size_t other_side(size_t side) {
     return side ? 0u : 1u;
 }
 
-void clean_list(utils::DoublyLinkedList<MessagePacket>* list) {
+void clean_list(MessagePipe::MessageList* list) {
     MessagePacket* msg;
     do {
         msg = list->pop_front();
@@ -62,7 +62,7 @@ MessagePipe::~MessagePipe() {
 void MessagePipe::OnDispatcherDestruction(size_t side) {
     auto other = other_side(side);
 
-    utils::DoublyLinkedList<MessagePacket> messages_to_destroy;
+    MessageList messages_to_destroy;
     {
         AutoLock lock(&lock_);
         dispatcher_alive_[side] = false;

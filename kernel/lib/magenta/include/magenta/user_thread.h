@@ -16,6 +16,7 @@
 #include <magenta/futex_node.h>
 #include <magenta/state_tracker.h>
 
+#include <utils/intrusive_double_list.h>
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 #include <utils/string_piece.h>
@@ -23,7 +24,8 @@
 class ThreadHandle;
 class ProcessDispatcher;
 
-class UserThread : public utils::RefCounted<UserThread> {
+class UserThread : public utils::DoublyLinkedListable<UserThread*>
+                 , public utils::RefCounted<UserThread> {
 public:
     // state of the thread
     enum class State {
@@ -64,14 +66,6 @@ public:
     // different exception.
     status_t WaitForExceptionHandler(utils::RefPtr<Dispatcher> dispatcher, const mx_exception_report_t* report);
     void WakeFromExceptionHandler(mx_exception_status_t status);
-
-    // Necessary members for using DoublyLinkedList<UserThread>.
-    UserThread* list_prev() { return prev_; }
-    UserThread* list_next() { return next_; }
-    const UserThread* list_prev() const { return prev_; }
-    const UserThread* list_next() const { return next_; }
-    void list_set_prev(UserThread* node) { prev_ = node; }
-    void list_set_next(UserThread* node) { next_ = node; }
 
 private:
     UserThread(const UserThread&) = delete;
@@ -122,10 +116,6 @@ private:
     mx_exception_status_t exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
     cond_t exception_wait_cond_ = COND_INITIAL_VALUE(exception_wait_cond_);
     mutex_t exception_wait_lock_ = MUTEX_INITIAL_VALUE(exception_wait_lock_);
-
-    // our linked list members for the ProcessDispatcher list
-    UserThread* prev_ = nullptr;
-    UserThread* next_ = nullptr;
 
     // cleanup dpc structure
     dpc_t cleanup_dpc_ = {};

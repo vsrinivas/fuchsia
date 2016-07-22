@@ -11,23 +11,15 @@
 Handle::Handle(utils::RefPtr<Dispatcher> dispatcher, uint32_t rights)
     : process_id_(0u),
       rights_(rights),
-      dispatcher_(utils::move(dispatcher)),
-      prev_(nullptr),
-      next_(nullptr) {}
+      dispatcher_(utils::move(dispatcher)) { }
 
 Handle::Handle(const Handle* rhs, mx_rights_t rights)
     : process_id_(rhs->process_id_),
       rights_(rights),
-      dispatcher_(rhs->dispatcher_),
-      prev_(nullptr),
-      next_(nullptr) {}
+      dispatcher_(rhs->dispatcher_) { }
 
 Handle::~Handle() {
     // Setting the pid to zero on destruction is critical for the correct
     // operation of the handle lookup.
     process_id_ = 0u;
-}
-
-utils::RefPtr<Dispatcher> Handle::dispatcher() {
-    return dispatcher_;
 }

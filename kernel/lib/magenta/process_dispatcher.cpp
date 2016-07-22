@@ -178,10 +178,10 @@ void ProcessDispatcher::KillAllThreads() {
 
     AutoLock lock(&thread_list_lock_);
 
-    for_each(&thread_list_, [](UserThread* thread) {
-        LTRACEF("killing thread %p\n", thread);
-        thread->Kill();
-    });
+    for (auto& thread : thread_list_) {
+        LTRACEF("killing thread %p\n", &thread);
+        thread.Kill();
+    };
 }
 
 status_t ProcessDispatcher::AddThread(UserThread* t) {
@@ -209,7 +209,7 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
 
     // remove the thread from our list
     AutoLock lock(&thread_list_lock_);
-    thread_list_.remove(t);
+    thread_list_.erase(t);
 
     // drop the ref from the main_thread_ pointer if its being removed
     if (t == main_thread_.get()) {
@@ -248,8 +248,8 @@ void ProcessDispatcher::SetState(State s) {
         LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
         {
             AutoLock lock(&handle_table_lock_);
-            while (handles_.first()) {
-                auto handle = handles_.pop_front();
+            Handle* handle;
+            while ((handle = handles_.pop_front()) != nullptr) {
                 DeleteHandle(handle);
             };
         }
@@ -297,7 +297,7 @@ HandleUniquePtr ProcessDispatcher::RemoveHandle_NoLock(mx_handle_t handle_value)
     auto handle = GetHandle_NoLock(handle_value);
     if (!handle)
         return nullptr;
-    handles_.remove(handle);
+    handles_.erase(handle);
     handle->set_process_id(0u);
 
     return HandleUniquePtr(handle);
@@ -347,21 +347,21 @@ utils::RefPtr<Dispatcher> ProcessDispatcher::exception_handler() {
     return exception_handler_;
 }
 
-uint32_t ProcessDispatcher::HandleStats(uint32_t* handle_type, size_t size) {
+uint32_t ProcessDispatcher::HandleStats(uint32_t* handle_type, size_t size) const {
     AutoLock lock(&handle_table_lock_);
     uint32_t total = 0;
-    utils::for_each(&handles_, [&total, handle_type, size](Handle* handle) {
+    for (const auto& handle : handles_) {
         if (handle_type) {
-            uint32_t type = static_cast<uint32_t>(handle->dispatcher()->GetType());
+            uint32_t type = static_cast<uint32_t>(handle.dispatcher()->GetType());
             if (size > type)
                 ++handle_type[type];
         }
         ++total;
-    });
+    }
     return total;
 }
 
-uint32_t ProcessDispatcher::ThreadCount() {
+uint32_t ProcessDispatcher::ThreadCount() const {
     AutoLock lock(&thread_list_lock_);
     return static_cast<uint32_t>(thread_list_.size_slow());
 }

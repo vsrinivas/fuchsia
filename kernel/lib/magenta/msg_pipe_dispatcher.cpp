@@ -94,7 +94,7 @@ status_t MessagePipeDispatcher::AcceptRead(utils::Array<uint8_t>* data,
 status_t MessagePipeDispatcher::Write(utils::Array<uint8_t> data, utils::Array<Handle*> handles) {
     LTRACE_ENTRY;
     utils::unique_ptr<MessagePacket> msg(
-        new MessagePacket{nullptr, nullptr, utils::move(data), utils::move(handles)});
+        new MessagePacket(utils::move(data), utils::move(handles)));
     if (!msg) return ERR_NO_MEMORY;
 
     return pipe_->Write(side_, utils::move(msg));

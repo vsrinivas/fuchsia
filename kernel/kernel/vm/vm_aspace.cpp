@@ -30,7 +30,7 @@ VmAspace* VmAspace::kernel_aspace_ = nullptr;
 
 // list of all address spaces
 static mutex_t aspace_list_lock = MUTEX_INITIAL_VALUE(aspace_list_lock);
-static utils::DoublyLinkedList<VmAspace> aspaces;
+static utils::DoublyLinkedList<VmAspace*> aspaces;
 
 // called once at boot to initialize the singleton kernel address space
 void VmAspace::KernelAspaceInit() {
@@ -176,7 +176,7 @@ VmAspace::~VmAspace() {
     // pop it out of the global aspace list
     {
         AutoLock a(aspace_list_lock);
-        aspaces.remove(this);
+        aspaces.erase(this);
     }
 
     // destroy the arch portion of the aspace
@@ -228,30 +228,39 @@ status_t VmAspace::AddRegion(utils::RefPtr<VmRegion> r) {
         return ERR_OUT_OF_RANGE;
     }
 
+    // TODO(johngro) : The operation of finding a place for this region should
+    // be O(log).  Replace the O(n) linked list container used here with some
+    // form of O(log) container, when we have one.
+    //
+    // regions are sorted in ascending base address order.  If this region's
+    // base address is before the end of the last region's end, we will not
+    // find a place for it in the list.
     vaddr_t r_end = r->base() + r->size() - 1;
 
     // does it fit in front
-    auto first = regions_.first();
-    if (!first || r_end < first->base()) {
+    auto iter = regions_.begin();
+    if ((iter == regions_.end()) || r_end < iter->base()) {
         // empty list or not empty and fits before the first element
-        regions_.push_front(r.get());
+        regions_.insert(iter, r.get());
         r->AddRef();
         return NO_ERROR;
     }
 
-    for (auto last = regions_.first(); last; last = regions_.next(last)) {
-        // does it go after last?
-        if (r->base() > last->base() + last->size() - 1) {
-            // get the next element in the list
-            auto next = regions_.next(last);
-            if (!next || (r_end < next->base())) {
-                // end of the list or next exists and it goes between them
-                regions_.add_after(last, r.get());
-                r->AddRef();
-                return NO_ERROR;
-            }
+    do {
+        vaddr_t last_end = iter->base() + iter->size() - 1;
+        if (r->base() <= last_end)
+            break;
+
+        ++iter;
+
+        // Does this region fit before the next region?
+        if ((iter == regions_.end()) || (r_end < iter->base())) {
+            regions_.insert(iter, r.get());
+            r->AddRef();
+            return NO_ERROR;
         }
-    }
+    } while (iter != regions_.end());
+
 
     LTRACEF_LEVEL(2, "couldn't find spot\n");
     return ERR_NO_MEMORY;
@@ -273,36 +282,38 @@ __WEAK vaddr_t arch_mmu_pick_spot(arch_aspace_t* aspace, vaddr_t base,
 //
 //  Returns true if the caller has to stop search
 
-static inline bool check_gap(VmAspace* aspace, VmRegion* prev, VmRegion* next, vaddr_t* pva,
-                             vaddr_t align, size_t size, uint arch_mmu_flags) {
+bool VmAspace::CheckGap(const RegionList::iterator& prev,
+                        const RegionList::iterator& next,
+                        vaddr_t* pva, vaddr_t align, size_t region_size, uint arch_mmu_flags) {
     vaddr_t gap_beg; // first byte of a gap
     vaddr_t gap_end; // last byte of a gap
 
     DEBUG_ASSERT(pva);
 
-    if (prev)
+    if (prev.IsValid())
         gap_beg = prev->base() + prev->size();
     else
-        gap_beg = aspace->base();
+        gap_beg = base_;
 
-    if (next) {
+    if (next.IsValid()) {
         if (gap_beg == next->base())
             goto next_gap; // no gap between regions
         gap_end = next->base() - 1;
     } else {
-        if (gap_beg == (aspace->base() + aspace->size()))
+        if (gap_beg == (base_ + size_))
             goto not_found; // no gap at the end of address space. Stop search
-        gap_end = aspace->base() + aspace->size() - 1;
+        gap_end = base_ + size_ - 1;
     }
 
-    *pva = arch_mmu_pick_spot(&aspace->arch_aspace(), gap_beg,
-                              prev ? prev->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID, gap_end,
-                              next ? next->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID, align, size,
-                              arch_mmu_flags);
+    *pva = arch_mmu_pick_spot(&arch_aspace(), gap_beg,
+                              prev.IsValid() ? prev->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID,
+                              gap_end,
+                              next.IsValid() ? next->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID,
+                              align, region_size, arch_mmu_flags);
     if (*pva < gap_beg)
         goto not_found; // address wrapped around
 
-    if (*pva < gap_end && ((gap_end - *pva + 1) >= size)) {
+    if (*pva < gap_end && ((gap_end - *pva + 1) >= region_size)) {
         // we have enough room
         return true; // found spot, stop search
     }
@@ -315,10 +326,10 @@ not_found:
     return true; // not_found: stop search
 }
 
-// search for a spot to allocate for a region of a given size, returning the pointer to the region
-// before in the list
+// search for a spot to allocate for a region of a given size, returning an
+// iterator to the region after it in the list.
 vaddr_t VmAspace::AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                            VmRegion** before) {
+                            RegionList::iterator* after) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
 
@@ -330,24 +341,21 @@ vaddr_t VmAspace::AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags
 
     vaddr_t spot;
 
-    // try to pick spot at the beginning of address space
-    VmRegion* r = nullptr;
-    if (check_gap(this, nullptr, regions_.first(), &spot, align, size, arch_mmu_flags))
-        goto done;
+    // Find the first gap in the address space which can contain a region of the requested size.
+    auto before_iter = regions_.end();
+    auto after_iter  = regions_.begin();
+    do {
+        if (CheckGap(before_iter, after_iter, &spot, align, size, arch_mmu_flags)) {
+            if (after)
+                *after = after_iter;
+            return spot;
+        }
 
-    // search the middle of the list
-    for (r = regions_.first(); r; r = regions_.next(r)) {
-        if (check_gap(this, r, regions_.next(r), &spot, align, size, arch_mmu_flags))
-            goto done;
-    }
+        before_iter = after_iter++;
+    } while (before_iter.IsValid());
 
     // couldn't find anything
     return -1;
-
-done:
-    if (before)
-        *before = r;
-    return spot;
 }
 
 // allocate a region and insert it into the list
@@ -374,10 +382,9 @@ utils::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vad
         }
     } else {
         // allocate a virtual slot for it
-        VmRegion* before;
-
-        vaddr = AllocSpot(size, align_pow2, arch_mmu_flags, &before);
-        LTRACEF_LEVEL(2, "alloc_spot returns 0x%lx, before %p\n", vaddr, before);
+        RegionList::iterator after;
+        vaddr = AllocSpot(size, align_pow2, arch_mmu_flags, &after);
+        LTRACEF_LEVEL(2, "alloc_spot returns 0x%lx, before %p\n", vaddr, after);
 
         if (vaddr == (vaddr_t)-1) {
             LTRACEF_LEVEL(2, "failed to find spot\n");
@@ -388,10 +395,7 @@ utils::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vad
 
         // add it to the region list
         r->AddRef();
-        if (before)
-            regions_.add_after(before, r.get());
-        else
-            regions_.push_front(r.get());
+        regions_.insert(after, r.get());
     }
 
     return utils::move(r);
@@ -403,9 +407,9 @@ VmRegion* VmAspace::FindRegionLocked(vaddr_t vaddr) {
     DEBUG_ASSERT(is_mutex_held(&lock_));
 
     // search the region list
-    for (auto r = regions_.first(); r; r = regions_.next(r)) {
-        if ((vaddr >= r->base()) && (vaddr <= r->base() + r->size() - 1))
-            return r;
+    for (auto iter = regions_.begin(); iter != regions_.end(); ++iter) {
+        if ((vaddr >= iter->base()) && (vaddr <= iter->base() + iter->size() - 1))
+            return iter.CopyPointer();
     }
 
     return nullptr;
@@ -644,7 +648,7 @@ status_t VmAspace::FreeRegion(vaddr_t vaddr) {
         }
 
         // remove it from the address space list
-        regions_.remove(r);
+        regions_.erase(r);
 
         // unmap it
         r->Unmap();
@@ -691,20 +695,21 @@ status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     return r->PageFault(va, flags);
 }
 
-void VmAspace::Dump() {
+void VmAspace::Dump() const {
     DEBUG_ASSERT(magic_ == MAGIC);
     printf("aspace %p: ref %u name '%s' range 0x%lx - 0x%lx size 0x%zx flags 0x%x\n", this,
            ref_count_debug(), name_, base_, base_ + size_ - 1, size_, flags_);
 
     printf("regions:\n");
     AutoLock a(lock_);
-    for (auto r = regions_.first(); r; r = regions_.next(r)) {
-        r->Dump();
+    for (const auto& r : regions_) {
+        r.Dump();
     }
 }
 
 void DumpAllAspaces() {
     AutoLock a(aspace_list_lock);
 
-    utils::for_each(&aspaces, [](VmAspace* a) { a->Dump(); });
+    for (const auto& a : aspaces)
+        a.Dump();
 }

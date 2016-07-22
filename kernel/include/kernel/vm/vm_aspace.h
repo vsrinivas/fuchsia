@@ -17,7 +17,8 @@
 class VmRegion;
 class VmObject;
 
-class VmAspace : public utils::RefCounted<VmAspace> {
+class VmAspace : public utils::DoublyLinkedListable<VmAspace*>
+               , public utils::RefCounted<VmAspace> {
 public:
     // complete initialization, may fail in OOM cases
     status_t Init();
@@ -42,12 +43,6 @@ public:
     size_t size() const { return size_; }
     arch_aspace_t& arch_aspace() { return arch_aspace_; }
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
-
-    // global aspace list
-    void list_set_prev(VmAspace* node) { prev_ = node; }
-    void list_set_next(VmAspace* node) { next_ = node; }
-    VmAspace* list_prev() { return prev_; }
-    VmAspace* list_next() { return next_; }
 
     // map a vm object at a given offset
     status_t MapObject(utils::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
@@ -87,9 +82,11 @@ public:
     // set the per thread aspace pointer to this
     void AttachToThread(thread_t* t);
 
-    void Dump();
+    void Dump() const;
 
 private:
+    using RegionList = utils::DoublyLinkedList<VmRegion*>;
+
     // nocopy
     VmAspace(const VmAspace&) = delete;
     VmAspace& operator=(const VmAspace&) = delete;
@@ -111,8 +108,12 @@ private:
     utils::RefPtr<VmRegion> AllocRegion(const char* name, size_t size, vaddr_t vaddr,
                                         uint8_t align_pow2, uint32_t vmm_flags,
                                         uint arch_mmu_flags);
-    vaddr_t AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags, VmRegion** before);
+    vaddr_t AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
+                      RegionList::iterator* after);
     VmRegion* FindRegionLocked(vaddr_t vaddr);
+    bool CheckGap(const RegionList::iterator& prev,
+                  const RegionList::iterator& next,
+                  vaddr_t* pva, vaddr_t align, size_t region_size, uint arch_mmu_flags);
 
     // magic
     static const uint32_t MAGIC = 0x564d4153; // VMAS
@@ -124,14 +125,11 @@ private:
     uint32_t flags_;
     char name_[32];
 
-    mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
-
-    // pointers for the global list of aspaces
-    VmAspace* prev_ = nullptr;
-    VmAspace* next_ = nullptr;
+    mutable mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
 
     // sorted list of regions
-    utils::DoublyLinkedList<VmRegion> regions_;
+    // TODO(johngro) : This should be some form of O(log) tree.
+    RegionList regions_;
 
     // architecturally specific part of the aspace
     arch_aspace_t arch_aspace_ = {};

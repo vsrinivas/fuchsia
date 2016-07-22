@@ -8,7 +8,7 @@
 #include <err.h>
 #include <unittest.h>
 #include <utils/intrusive_single_list.h>
-#include <utils/newcode_intrusive_double_list.h>
+#include <utils/intrusive_double_list.h>
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 #include <utils/unique_ptr.h>
@@ -35,10 +35,10 @@ public:
 template <typename PtrType>
 class DLLTraits {
 public:
-    using ListType          = newcode::DoublyLinkedList<PtrType>;
-    using ListableBaseClass = newcode::DoublyLinkedListable<PtrType>;
-    using NodeStateType     = newcode::DoublyLinkedListNodeState<PtrType>;
-    using OtherListType     = newcode::DoublyLinkedList<PtrType, OtherListTraits<NodeStateType>>;
+    using ListType          = DoublyLinkedList<PtrType>;
+    using ListableBaseClass = DoublyLinkedListable<PtrType>;
+    using NodeStateType     = DoublyLinkedListNodeState<PtrType>;
+    using OtherListType     = DoublyLinkedList<PtrType, OtherListTraits<NodeStateType>>;
 };
 
 class TestObjBase {

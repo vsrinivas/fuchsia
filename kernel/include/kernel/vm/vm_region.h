@@ -8,13 +8,15 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <utils/intrusive_double_list.h>
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 
 class VmAspace;
 class VmObject;
 
-class VmRegion : public utils::RefCounted<VmRegion> {
+class VmRegion : public utils::DoublyLinkedListable<VmRegion*>
+               , public utils::RefCounted<VmRegion> {
 public:
     static utils::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
                                           uint arch_mmu_flags, const char* name);
@@ -27,14 +29,6 @@ public:
 
     // set base address
     void set_base(vaddr_t vaddr) { base_ = vaddr; }
-
-    // list for aspace
-    void list_set_prev(VmRegion* node) { prev_ = node; }
-    void list_set_next(VmRegion* node) { next_ = node; }
-    VmRegion* list_prev() { return prev_; }
-    VmRegion* list_next() { return next_; }
-    const VmRegion* list_prev() const { return prev_; }
-    const VmRegion* list_next() const { return next_; }
 
     void Dump() const;
 
@@ -86,8 +80,4 @@ private:
     uint64_t object_offset_ = 0;
 
     char name_[32];
-
-    // doubly link list stuff
-    VmRegion* prev_ = nullptr;
-    VmRegion* next_ = nullptr;
 };
