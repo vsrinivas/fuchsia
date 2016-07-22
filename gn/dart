@@ -1,9 +1,13 @@
 {
-    "label": "//dart/runtime/bin:fuchsia_test",
+    "label": "//dart/runtime/bin:dart_no_observatory",
     "binaries": [
         {
-            "binary": "fuchsia_test",
-            "bootfs_path": "bin/fuchsia_test"
+            "binary": "dart_no_observatory",
+            "bootfs_path": "bin/dart"
+        },
+        {
+            "binary": "hello_fuchsia.dart",
+            "bootfs_path": "apps/hello_fuchsia.dart"
         }
     ]
 }
