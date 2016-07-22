@@ -85,7 +85,7 @@ public:
     void Dump() const;
 
 private:
-    using RegionList = utils::DoublyLinkedList<VmRegion*>;
+    using RegionList = utils::DoublyLinkedList<utils::RefPtr<VmRegion>>;
 
     // nocopy
     VmAspace(const VmAspace&) = delete;
@@ -104,13 +104,13 @@ private:
     friend status_t vmm_page_fault_handler(vaddr_t va, uint flags);
 
     // private internal routines
-    status_t AddRegion(utils::RefPtr<VmRegion> r);
+    status_t AddRegion(const utils::RefPtr<VmRegion>& r);
     utils::RefPtr<VmRegion> AllocRegion(const char* name, size_t size, vaddr_t vaddr,
                                         uint8_t align_pow2, uint32_t vmm_flags,
                                         uint arch_mmu_flags);
     vaddr_t AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
                       RegionList::iterator* after);
-    VmRegion* FindRegionLocked(vaddr_t vaddr);
+    utils::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
     bool CheckGap(const RegionList::iterator& prev,
                   const RegionList::iterator& next,
                   vaddr_t* pva, vaddr_t align, size_t region_size, uint arch_mmu_flags);

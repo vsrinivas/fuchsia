@@ -194,8 +194,8 @@ status_t VmAspace::Destroy() {
 
     // tear down and free all of the regions in our address space
     mutex_acquire(&lock_);
-    VmRegion* r;
-    while ((r = regions_.pop_front())) {
+    utils::RefPtr<VmRegion> r;
+    while ((r = regions_.pop_front()) != nullptr) {
         r->Unmap();
 
         mutex_release(&lock_);
@@ -203,9 +203,9 @@ status_t VmAspace::Destroy() {
         // free any resources the region holds
         r->Destroy();
 
-        // free it if we have the last ref
-        if (r->Release())
-            delete r;
+        // Explicitly release the reference.  We don't want to cause the object
+        // to destruct while in the lock.
+        r.reset();
 
         mutex_acquire(&lock_);
     }
@@ -217,7 +217,7 @@ status_t VmAspace::Destroy() {
 
 // add a region to the appropriate spot in the address space list,
 // testing to see if there's a space
-status_t VmAspace::AddRegion(utils::RefPtr<VmRegion> r) {
+status_t VmAspace::AddRegion(const utils::RefPtr<VmRegion>& r) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(r);
 
@@ -243,8 +243,7 @@ status_t VmAspace::AddRegion(utils::RefPtr<VmRegion> r) {
     auto iter = regions_.begin();
     if ((iter == regions_.end()) || r_end < iter->base()) {
         // empty list or not empty and fits before the first element
-        regions_.insert(iter, r.get());
-        r->AddRef();
+        regions_.insert(iter, r);
         return NO_ERROR;
     }
 
@@ -257,8 +256,7 @@ status_t VmAspace::AddRegion(utils::RefPtr<VmRegion> r) {
 
         // Does this region fit before the next region?
         if ((iter == regions_.end()) || (r_end < iter->base())) {
-            regions_.insert(iter, r.get());
-            r->AddRef();
+            regions_.insert(iter, r);
             return NO_ERROR;
         }
     } while (iter != regions_.end());
@@ -396,15 +394,14 @@ utils::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vad
         r->set_base(vaddr);
 
         // add it to the region list
-        r->AddRef();
-        regions_.insert(after, r.get());
+        regions_.insert(after, r);
     }
 
-    return utils::move(r);
+    return r;
 }
 
 // internal find region search routine
-VmRegion* VmAspace::FindRegionLocked(vaddr_t vaddr) {
+utils::RefPtr<VmRegion> VmAspace::FindRegionLocked(vaddr_t vaddr) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(is_mutex_held(&lock_));
 
@@ -420,10 +417,7 @@ VmRegion* VmAspace::FindRegionLocked(vaddr_t vaddr) {
 // return a ref pointer to a region
 utils::RefPtr<VmRegion> VmAspace::FindRegion(vaddr_t vaddr) {
     AutoLock a(lock_);
-
-    auto r = FindRegionLocked(vaddr);
-
-    return utils::RefPtr<VmRegion>(r);
+    return FindRegionLocked(vaddr);
 }
 
 status_t VmAspace::MapObject(utils::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
@@ -640,14 +634,13 @@ status_t VmAspace::FreeRegion(vaddr_t vaddr) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("vaddr 0x%lx\n", vaddr);
 
-    VmRegion* r;
+    utils::RefPtr<VmRegion> r;
     {
         AutoLock a(lock_);
 
         r = FindRegionLocked(vaddr);
-        if (!r) {
+        if (!r)
             return ERR_NOT_FOUND;
-        }
 
         // remove it from the address space list
         regions_.erase(r);
@@ -658,10 +651,6 @@ status_t VmAspace::FreeRegion(vaddr_t vaddr) {
 
     // destroy the region
     r->Destroy();
-
-    // drop a ref and potentially free it
-    if (r->Release())
-        delete r;
 
     return NO_ERROR;
 }

@@ -15,7 +15,7 @@
 class VmAspace;
 class VmObject;
 
-class VmRegion : public utils::DoublyLinkedListable<VmRegion*>
+class VmRegion : public utils::DoublyLinkedListable<utils::RefPtr<VmRegion>>
                , public utils::RefCounted<VmRegion> {
 public:
     static utils::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
