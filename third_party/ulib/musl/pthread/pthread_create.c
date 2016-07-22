@@ -180,10 +180,8 @@ _Noreturn void pthread_exit(void* result) {
     }
 
     for (;;)
-        __syscall(SYS_exit, 0);
+        exit(0);
 }
-
-int __mprotect(void*, size_t, int);
 
 void __do_cleanup_push(struct __ptcb* cb) {
     struct pthread* self = __pthread_self();

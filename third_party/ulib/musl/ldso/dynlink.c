@@ -740,17 +740,6 @@ static size_t count_syms(struct dso* p) {
     return nsym;
 }
 
-static void* dl_mmap(size_t n) {
-    void* p;
-    int prot = PROT_READ | PROT_WRITE, flags = MAP_ANONYMOUS | MAP_PRIVATE;
-#ifdef SYS_mmap2
-    p = (void*)__syscall(SYS_mmap2, 0, n, prot, flags, -1, 0);
-#else
-    p = (void*)__syscall(SYS_mmap, 0, n, prot, flags, -1, 0);
-#endif
-    return p == MAP_FAILED ? 0 : p;
-}
-
 static struct dso* load_library(const char* name, struct dso* needed_by) {
     unsigned char* map;
     struct dso *p, temp_dso = {0};

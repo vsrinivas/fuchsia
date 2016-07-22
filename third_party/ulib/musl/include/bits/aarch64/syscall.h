@@ -1,5 +1,3 @@
-#define SYS_getcwd 17
-#define SYS_fcntl 25
 #define SYS_ioctl 29
 #define SYS_flock 32
 #define SYS_mknodat 33
@@ -9,17 +7,13 @@
 #define SYS_renameat 38
 #define SYS_statfs 43
 #define SYS_fstatfs 44
-#define SYS_truncate 45
-#define SYS_ftruncate 46
 #define SYS_fallocate 47
 #define SYS_faccessat 48
 #define SYS_chdir 49
 #define SYS_fchdir 50
 #define SYS_chroot 51
-#define SYS_fchmod 52
 #define SYS_fchmodat 53
 #define SYS_fchownat 54
-#define SYS_fchown 55
 #define SYS_openat 56
 #define SYS_close 57
 #define SYS_quotactl 60
@@ -32,12 +26,8 @@
 #define SYS_readlinkat 78
 #define SYS_fstatat 79
 #define SYS_fstat 80
-#define SYS_sync 81
-#define SYS_fsync 82
-#define SYS_fdatasync 83
 #define SYS_utimensat 88
 #define SYS_acct 89
-#define SYS_exit 93
 #define SYS_waitid 95
 #define SYS_set_tid_address 96
 #define SYS_set_robust_list 99
@@ -78,8 +68,6 @@
 #define SYS_setdomainname 162
 #define SYS_getrlimit 163
 #define SYS_getrusage 165
-#define SYS_umask 166
-#define SYS_prctl 167
 #define SYS_getcpu 168
 #define SYS_settimeofday 170
 #define SYS_adjtimex 171
@@ -120,9 +108,7 @@
 #define SYS_brk 214
 #define SYS_clone 220
 #define SYS_execve 221
-#define SYS_mmap 222
 #define SYS_fadvise64 223
-#define SYS_mprotect 226
 #define SYS_msync 227
 #define SYS_mlock 228
 #define SYS_munlock 229

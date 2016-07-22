@@ -21,9 +21,8 @@ FILE* fopen(const char* restrict filename, const char* restrict mode) {
     fd = open(filename, flags, 0666);
     if (fd < 0)
         return 0;
-    // TODO(kulakowski) Implement O_CLOEXEC semantics.
     if (flags & O_CLOEXEC)
-        __syscall(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
+        fcntl(fd, F_SETFD, FD_CLOEXEC);
 
     f = __fdopen(fd, mode);
     if (f)

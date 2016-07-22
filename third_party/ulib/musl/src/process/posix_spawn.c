@@ -114,7 +114,7 @@ static int child(void* args_vp) {
      * to a different fd. We don't use F_DUPFD_CLOEXEC above because
      * it would fail on older kernels and atomicity is not needed --
      * in this process there are no threads or signal handlers. */
-    __syscall(SYS_fcntl, p, F_SETFD, FD_CLOEXEC);
+    fcntl(p, F_SETFD, FD_CLOEXEC);
 
     pthread_sigmask(SIG_SETMASK,
                     (attr->__flags & POSIX_SPAWN_SETSIGMASK) ? &attr->__mask : &args->oldmask, 0);

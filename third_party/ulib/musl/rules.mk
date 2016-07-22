@@ -322,7 +322,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/linux/cache.c \
     $(LOCAL_DIR)/src/linux/chroot.c \
     $(LOCAL_DIR)/src/linux/flock.c \
-    $(LOCAL_DIR)/src/linux/prctl.c \
     $(LOCAL_DIR)/src/linux/ptrace.c \
     $(LOCAL_DIR)/src/linux/quotactl.c \
     $(LOCAL_DIR)/src/linux/sbrk.c \

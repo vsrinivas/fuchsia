@@ -15,8 +15,8 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len, int
     if (ret < 0)
         return ret;
     if (flg & SOCK_CLOEXEC)
-        __syscall(SYS_fcntl, ret, F_SETFD, FD_CLOEXEC);
+        fcntl(ret, F_SETFD, FD_CLOEXEC);
     if (flg & SOCK_NONBLOCK)
-        __syscall(SYS_fcntl, ret, F_SETFL, O_NONBLOCK);
+        fcntl(ret, F_SETFL, O_NONBLOCK);
     return ret;
 }
