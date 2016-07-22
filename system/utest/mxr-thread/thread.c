@@ -28,7 +28,7 @@ volatile int threads_done[7];
 static int thread_entry(void* arg) {
     int thread_number = (int)(intptr_t)arg;
     errno = thread_number;
-    printf("thread %d sleeping for .1 seconds\n", thread_number);
+    unittest_printf("thread %d sleeping for .1 seconds\n", thread_number);
     mx_nanosleep(100 * 1000 * 1000);
     EXPECT_EQ(errno, thread_number, "errno changed by someone!");
     threads_done[thread_number] = 1;
