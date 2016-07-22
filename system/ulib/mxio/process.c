@@ -51,6 +51,8 @@ mx_handle_t mxio_build_procargs(int args_count, const char* const* args,
     mx_status_t r;
     int n;
 
+    memset(&msgbuf.msg.pargs, 0, sizeof(mx_proc_args_t));
+
     if (args_count < 1)
         return ERR_INVALID_ARGS;
     // The auxv must have an even number of elements, and the last
