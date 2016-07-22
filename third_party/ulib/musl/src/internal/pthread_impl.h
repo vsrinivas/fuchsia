@@ -134,6 +134,7 @@ void __vm_wait(void);
 void __vm_lock(void);
 void __vm_unlock(void);
 
+// These are guaranteed to only return 0, EINVAL, or ETIMEDOUT.
 int __timedwait(volatile int*, int, clockid_t, const struct timespec*);
 int __timedwait_cp(volatile int*, int, clockid_t, const struct timespec*);
 

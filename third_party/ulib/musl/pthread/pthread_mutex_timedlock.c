@@ -26,7 +26,7 @@ int __pthread_mutex_timedlock(pthread_mutex_t* restrict m, const struct timespec
         a_cas(&m->_m_lock, r, t);
         r = __timedwait(&m->_m_lock, t, CLOCK_REALTIME, at);
         a_dec(&m->_m_waiters);
-        if (r && r != EINTR)
+        if (r)
             break;
     }
     return r;
