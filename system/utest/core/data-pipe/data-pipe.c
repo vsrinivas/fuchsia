@@ -346,7 +346,62 @@ static bool loop_begin_write_read(void) {
     END_TEST;
 }
 
+static bool consumer_signals_when_producer_closed(void) {
+    BEGIN_TEST;
 
+    {
+        mx_handle_t producer;
+        mx_handle_t consumer;
+
+        producer = mx_data_pipe_create(0u, 1u, KB_(1), &consumer);
+        ASSERT_GT(producer, 0, "could not create data pipe producer");
+        ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+        ASSERT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+
+        ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfied signals");
+        ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfiable signals");
+
+        ASSERT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+    }
+
+    {
+        mx_handle_t producer;
+        mx_handle_t consumer;
+
+        producer = mx_data_pipe_create(0u, 1u, KB_(1), &consumer);
+        ASSERT_GT(producer, 0, "could not create data pipe producer");
+        ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+        ASSERT_EQ(mx_data_pipe_write(producer, 0u, 10u, "0123456789"), 10, "write failed");
+
+        ASSERT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+
+        ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfied signals");
+        ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfiable signals");
+
+        char buffer[64];
+        ASSERT_EQ(mx_data_pipe_read(consumer, 0u, 5, buffer), 5, "read failed");
+        ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfied signals");
+        ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfiable signals");
+
+        ASSERT_EQ(mx_data_pipe_read(consumer, 0u, 5, buffer), 5, "read failed");
+        ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfied signals");
+        ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_PEER_CLOSED,
+                  "incorrect satisfiable signals");
+
+        ASSERT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+    }
+
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(data_pipe_tests)
 RUN_TEST(create_destroy_test)
@@ -356,6 +411,7 @@ RUN_TEST(write_read)
 RUN_TEST(begin_write_read)
 RUN_TEST(loop_write_read)
 RUN_TEST(loop_begin_write_read)
+RUN_TEST(consumer_signals_when_producer_closed)
 END_TEST_CASE(data_pipe_tests)
 
 #ifndef BUILD_COMBINED_TESTS
