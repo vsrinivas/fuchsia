@@ -34,6 +34,7 @@ static _Noreturn void usage(const char* progname) {
     option_usage("-e VAR=VALUE", "pass environment variable");
     option_usage("-f FILE", "execute FILE but pass PROGRAM as argv[0]");
     option_usage("-F FD", "execute FD");
+    option_usage("-h", "display this usage message");
     option_usage("-l",
                  "pass mxio_loader_service handle in main bootstrap message");
     option_usage("-L", "force initial loader bootstrap message");
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
     const char* exec_vmo_file = NULL;
     int exec_vmo_fd = -1;
 
-    for (int opt; (opt = getopt(argc, argv, "bd:e:f:lLrsv:")) != -1;) {
+    for (int opt; (opt = getopt(argc, argv, "bd:e:f:F:hlLrsv:")) != -1;) {
         switch (opt) {
         case 'b':
             basic = true;
@@ -104,6 +105,10 @@ int main(int argc, char** argv) {
         case 'f':
             program = optarg;
             break;
+        case 'F':
+            if (sscanf(optarg, "%u", &program_fd) != 1)
+                usage(argv[0]);
+            break;
         case 'L':
             send_loader_message = true;
             break;
@@ -127,6 +132,7 @@ int main(int argc, char** argv) {
             if (sscanf(optarg, "%u", &exec_vmo_fd) != 1)
                 usage(argv[0]);
             break;
+        case 'h':
         default:
             usage(argv[0]);
         }
@@ -204,6 +210,10 @@ int main(int argc, char** argv) {
         check("launchpad_add_handle", status);
     }
 
+    // Note that if both -v and -V were passed, we'll add two separate
+    // MX_HND_TYPE_EXEC_VMO handles to the startup message, which is
+    // unlikely to be useful.  But this program is mainly to test the
+    // library, so it makes all the library calls the user asks for.
     if (exec_vmo_file != NULL) {
         mx_handle_t exec_vmo = launchpad_vmo_from_file(exec_vmo_file);
         if (exec_vmo == ERR_IO) {
