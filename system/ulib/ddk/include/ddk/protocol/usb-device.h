@@ -41,12 +41,18 @@ typedef struct usb_endpoint {
 			 of microframes (i.e. t = 125us * 2^interval) */
 } usb_endpoint_t;
 
+typedef struct usb_class_descriptor {
+    descriptor_header_t* header;
+    list_node_t node;
+} usb_class_descriptor_t;
+
 typedef struct usb_interface {
     usb_interface_descriptor_t* descriptor;
     struct usb_interface* alt_interfaces;
     int num_alt_interfaces;
     usb_endpoint_t* endpoints;
     int num_endpoints;
+    list_node_t class_descriptors;
 } usb_interface_t;
 
 typedef struct usb_configuration {

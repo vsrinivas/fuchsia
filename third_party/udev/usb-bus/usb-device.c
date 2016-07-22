@@ -220,6 +220,7 @@ mx_status_t usb_init_device(usb_device_t* dev) {
                 if (intf->bAlternateSetting == 0) {
                     interface = &interfaces[intf_index++];
                     current_interface = interface;
+                    list_initialize(&interface->class_descriptors);
                     alt_intf_index = 0;
                     int num_alt_interfaces = count_alt_interfaces(intf, end);
                     if (num_alt_interfaces > 0) {
@@ -281,6 +282,14 @@ mx_status_t usb_init_device(usb_device_t* dev) {
                 ep->type = ed->bmAttributes & USB_ENDPOINT_TYPE_MASK;
                 ep->interval = usb_decode_interval(dev->speed, ep->type,
                                                    ed->bInterval);
+            } else {
+                usb_debug("unknown descriptor type: %d\n", ptr->bDescriptorType);
+                if (intf) {
+                    usb_debug("adding to interface\n");
+                    usb_class_descriptor_t* desc = calloc(1, sizeof(usb_class_descriptor_t));
+                    desc->header = ptr;
+                    list_add_tail(&current_interface->class_descriptors, &desc->node);
+                }
             }
 
             ptr = NEXT_DESCRIPTOR(ptr);
@@ -365,6 +374,12 @@ static void usb_interface_free(usb_interface_t* intf) {
         if (alt) {
             usb_interface_free(alt);
         }
+    }
+    usb_class_descriptor_t* cldesc = NULL;
+    usb_class_descriptor_t* tmpdesc = NULL;
+    list_for_every_entry_safe(&intf->class_descriptors, cldesc, tmpdesc,
+            usb_class_descriptor_t, node) {
+        free(cldesc);
     }
     free(intf->alt_interfaces);
     free(intf->endpoints);
