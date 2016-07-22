@@ -18,7 +18,7 @@
 
 class Handle;
 
-struct MessagePacket : public utils::DoublyLinkedListable<MessagePacket*> {
+struct MessagePacket : public utils::DoublyLinkedListable<utils::unique_ptr<MessagePacket>> {
     MessagePacket(utils::Array<uint8_t>&& _data,
                   utils::Array<Handle*>&& _handles)
         : data(utils::move(_data)),
@@ -33,7 +33,7 @@ struct MessagePacket : public utils::DoublyLinkedListable<MessagePacket*> {
 
 class MessagePipe : public utils::RefCounted<MessagePipe> {
 public:
-    using MessageList = utils::DoublyLinkedList<MessagePacket*>;
+    using MessageList = utils::DoublyLinkedList<utils::unique_ptr<MessagePacket>>;
     MessagePipe();
     ~MessagePipe();
 

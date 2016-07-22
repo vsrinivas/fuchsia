@@ -20,14 +20,6 @@ size_t other_side(size_t side) {
     return side ? 0u : 1u;
 }
 
-void clean_list(MessagePipe::MessageList* list) {
-    MessagePacket* msg;
-    do {
-        msg = list->pop_front();
-        delete msg;
-    } while (msg);
-}
-
 }  // namespace
 
 void MessagePacket::ReturnHandles() {
@@ -77,7 +69,7 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
         }
     }
 
-    clean_list(&messages_to_destroy);
+    messages_to_destroy.clear();
 }
 
 status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
@@ -86,7 +78,7 @@ status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
 
     {
         AutoLock lock(&lock_);
-        msg->reset(messages_[side].pop_front());
+        *msg = messages_[side].pop_front();
         other_alive = dispatcher_alive_[other];
 
         if (messages_[side].is_empty()) {
@@ -112,7 +104,7 @@ status_t MessagePipe::Write(size_t side, utils::unique_ptr<MessagePacket> msg) {
         return ERR_BAD_STATE;
     }
 
-    messages_[other].push_back(msg.release());
+    messages_[other].push_back(utils::move(msg));
 
     state_tracker_[other].UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
     return NO_ERROR;
