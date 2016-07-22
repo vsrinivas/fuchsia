@@ -23,8 +23,8 @@ bool instantiate(void*) {
 bool prng_output(void*) {
     BEGIN_TEST;
 
-    static const char kSeed1[] = "abc";
-    static const int kSeed1Size = 3;
+    static const char kSeed1[32] = {'a', 'b', 'c'};
+    static const int kSeed1Size = sizeof(kSeed1);
     static const int kDrawSize = 13;
 
     PRNG prng1(kSeed1, kSeed1Size);
@@ -52,11 +52,13 @@ bool prng_output(void*) {
     EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
 
     // Now verify that different seeds produce different outputs.
-    PRNG prng3("blah", 4);
+    static const char kSeed2[33] = { 'b', 'l', 'a', 'h' };
+    PRNG prng3(kSeed2, sizeof(kSeed2));
     uint8_t out3[kDrawSize];
     prng3.Draw(out3, sizeof(out3));
 
-    PRNG prng4("bleh", 4);
+    static const char kSeed3[33] = { 'b', 'l', 'e', 'h' };
+    PRNG prng4(kSeed3, sizeof(kSeed3));
     uint8_t out4[kDrawSize];
     prng3.Draw(out4, sizeof(out4));
 
