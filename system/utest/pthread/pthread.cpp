@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <assert.h>
 #include <pthread.h>
+
+#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -175,7 +177,7 @@ bool pthread_test(void) {
     log("pthread_cond_timedwait returned\n");
     printf("pthread_cond_timedwait result: %d\n", result);
 
-    EXPECT_EQ(result, ERR_TIMED_OUT, "Lock should have timeout");
+    EXPECT_EQ(result, ETIMEDOUT, "Lock should have timeout");
 
     log("creating mutex threads\n");
     pthread_create(&thread1, NULL, mutex_thread_1, NULL);
