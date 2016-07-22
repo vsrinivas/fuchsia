@@ -14,7 +14,10 @@
 
 #include "magma_system_buffer.h"
 
-MagmaSystemBuffer::MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf)
-    : platform_buf_(std::move(platform_buf))
+MagmaSystemBuffer::MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf,
+                                     msd_platform_buffer* token)
+    : platform_buf_(std::move(platform_buf)), token_(token)
 {
+    // Silence compiler warning.
+    (void)token_;
 }

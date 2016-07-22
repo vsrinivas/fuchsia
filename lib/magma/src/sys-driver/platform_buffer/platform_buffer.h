@@ -15,35 +15,42 @@
 #ifndef PLATFORM_BUFFER_H
 #define PLATFORM_BUFFER_H
 
-#include <magma_util/dlog.h>
-#include <platform_buffer_abi.h>
+#include "platform_buffer_abi.h"
+#include <memory>
 
 class PlatformBuffer {
 public:
-    static PlatformBuffer* Create(uint64_t size);
-    static PlatformBuffer* Create(PlatformBufferToken* token);
+    // Returned token is owned by the returned unique_ptr and will become invalid when the
+    // is released unique_ptr.
+    static std::unique_ptr<PlatformBuffer> Create(uint64_t size, msd_platform_buffer** token_out);
+    static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
+    static std::unique_ptr<PlatformBuffer> Create(msd_platform_buffer* token);
 
     ~PlatformBuffer();
 
     uint64_t size() { return size_; }
-
     uint32_t handle() { return handle_; }
 
-    int Map(void** addr_out);
+    // Refer to c abi docs
+    bool MapCpu(void** addr_out);
+    bool UnmapCpu();
 
-    int Unmap();
+    bool PinPages(uint32_t* num_pages_out);
+    bool UnpinPages();
 
-    int GetBackingStore(BackingStore* backing_store);
+    bool MapPageCpu(uint32_t page_index, void** addr_out);
+    bool UnmapPageCpu(uint32_t page_index);
 
-    PlatformBufferToken* token() { return token_; }
+    bool MapPageBus(uint32_t page_index, uint64_t* addr_out);
+    bool UnmapPageBus(uint32_t page_index);
 
     PlatformBuffer(const PlatformBuffer&) = delete;
     void operator=(const PlatformBuffer&) = delete;
 
 private:
-    PlatformBuffer(PlatformBufferToken* token, uint64_t size, uint32_t handle);
+    PlatformBuffer(msd_platform_buffer* token, uint64_t size, uint32_t handle);
 
-    PlatformBufferToken* token_;
+    msd_platform_buffer* token_;
     uint64_t size_;
     uint32_t handle_;
 };

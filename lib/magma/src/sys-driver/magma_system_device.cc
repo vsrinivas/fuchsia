@@ -13,14 +13,20 @@
 // limitations under the License.
 
 #include "magma_system_device.h"
+#include "magma_util/macros.h"
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::AllocateBuffer(uint64_t size)
 {
-    std::unique_ptr<PlatformBuffer> platform_buffer(PlatformBuffer::Create(size));
-    if (!platform_buffer)
-        return nullptr;
+    msd_platform_buffer* token;
 
-    std::shared_ptr<MagmaSystemBuffer> buffer(new MagmaSystemBuffer(std::move(platform_buffer)));
+    std::unique_ptr<PlatformBuffer> platform_buffer(PlatformBuffer::Create(size, &token));
+    if (!platform_buffer)
+        return DRETP(nullptr, "Failed to create PlatformBuffer");
+
+    std::shared_ptr<MagmaSystemBuffer> buffer(
+        new MagmaSystemBuffer(std::move(platform_buffer), token));
+    if (!buffer)
+        return DRETP(nullptr, "Failed to create MagmaSystemBuffer");
 
     buffer_map_.insert(std::make_pair(buffer->handle(), buffer));
 

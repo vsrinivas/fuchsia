@@ -21,26 +21,48 @@
 extern "C" {
 #endif
 
-struct PlatformBufferToken { int magic_; };
+struct msd_platform_buffer {
+    uint32_t magic_;
+};
 
-// TODO(MA-19) - define BackingStore
-struct BackingStore { int magic_; };
+int msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint64_t size,
+                              uint64_t* size_out, uint32_t* handle_out);
 
-int msd_platform_buffer_alloc(struct PlatformBufferToken** buffer_out, uint64_t size, uint64_t* size_out, uint32_t* handle_out);
+void msd_platform_buffer_incref(struct msd_platform_buffer* buffer);
 
-void msd_platform_buffer_incref(struct PlatformBufferToken* buffer);
+void msd_platform_buffer_decref(struct msd_platform_buffer* buffer);
 
-void msd_platform_buffer_decref(struct PlatformBufferToken* buffer);
+int msd_platform_buffer_get_size(struct msd_platform_buffer* buffer, uint64_t* size_out);
 
-void msd_platform_buffer_get_size(struct PlatformBufferToken* buffer, uint64_t* size_out);
+int msd_platform_buffer_get_handle(struct msd_platform_buffer* buffer, uint32_t* handle_out);
 
-void msd_platform_buffer_get_handle(struct PlatformBufferToken* buffer, uint32_t* handle_out);
+// Returns a cpu virtual address for the entire buffer.
+int msd_platform_buffer_map_cpu(struct msd_platform_buffer* buffer, void** addr_out);
 
-int msd_platform_buffer_get_backing_store(struct PlatformBufferToken* buffer, BackingStore* backing_store);
+// Releases the cpu virtual mapping for the buffer.
+int msd_platform_buffer_unmap_cpu(struct msd_platform_buffer* buffer);
 
-int msd_platform_buffer_map(struct PlatformBufferToken* buffer, void** addr_out);
+// Ensures that the buffer's backing store is physically resident.
+// May be called multiple times.
+// Optionally receive the number of pages pinned.
+int msd_platform_buffer_pin_pages(struct msd_platform_buffer* buffer, uint32_t* num_pages_out);
 
-int msd_platform_buffer_unmap(struct PlatformBufferToken* buffer);
+// Releases a corresponding call to pin.
+int msd_platform_buffer_unpin_pages(struct msd_platform_buffer* buffer);
+
+// Returns a cpu virtual address for the given page.
+int msd_platform_buffer_map_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index,
+                                     void** addr_out);
+
+// Releases any cpu virtual mapping for the given page.
+int msd_platform_buffer_unmap_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index);
+
+// Returns a bus address for the given page (physical address or iommu mapped address).
+int msd_platform_buffer_map_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index,
+                                     uint64_t* addr_out);
+
+// Releases any bus address mapping for the given page.
+int msd_platform_buffer_unmap_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index);
 
 #if defined(__cplusplus)
 }

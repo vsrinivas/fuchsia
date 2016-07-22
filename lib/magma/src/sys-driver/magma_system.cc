@@ -97,7 +97,7 @@ bool magma_system_map(struct MagmaSystemDevice* dev, uint32_t handle, void** pad
     if (!buf)
         return false;
 
-    return buf->platform_buffer()->Map(paddr);
+    return buf->platform_buffer()->MapCpu(paddr);
 }
 
 bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* addr)
@@ -106,7 +106,7 @@ bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* ad
     if (!buf)
         return false;
 
-    return buf->platform_buffer()->Unmap();
+    return buf->platform_buffer()->UnmapCpu();
 }
 
 bool magma_system_set_domain(struct MagmaSystemDevice* dev, uint32_t handle, uint32_t read_domains,

@@ -47,9 +47,17 @@ static inline bool dret_false(const char* file, int line, const char* msg)
 
 #define DRETF(ret, msg) (ret == true ? true : magma::dret_false(__FILE__, __LINE__, msg))
 
+static inline void dret_null(const char* file, int line, const char* msg)
+{
+    printf("%s:%d returning null: %s\n", file, line, msg);
+}
+
+#define DRETP(ret, msg) (ret == nullptr ? magma::dret_false(__FILE__, __LINE__, msg), ret : ret)
+
 #else
 #define DRET(ret) (ret)
 #define DRETF(ret, msg) (ret)
+#define DRETP(ret, msg) (ret)
 #endif
 
 #define UNIMPLEMENTED(...)                                                                         \

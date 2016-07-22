@@ -21,7 +21,7 @@
 
 class MagmaSystemBuffer {
 public:
-    MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf);
+    MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf, msd_platform_buffer* token);
     ~MagmaSystemBuffer() {}
 
     uint64_t size() { return platform_buf_->size(); }
@@ -32,6 +32,7 @@ public:
 
 private:
     std::unique_ptr<PlatformBuffer> platform_buf_;
+    msd_platform_buffer* token_;
 };
 
 #endif //_MAGMA_SYSTEM_BUFFER_H_
