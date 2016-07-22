@@ -50,6 +50,6 @@ int main(int argc, char** argv) {
         mx_message_write(h1, "fail", 5, NULL, 0, 0);
         return -1;
     }
-    printf("helper: done\n");
+    cprintf("helper: done\n");
     return 0;
 }

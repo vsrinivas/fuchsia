@@ -54,7 +54,6 @@ static void* do_work(void* arg) {
 
 bool tls_test(void) {
     BEGIN_TEST;
-#if defined(__x86_64__) || defined(__aarch64__)
     ASSERT_EQ(key_create(&tsd_key1), 0, "Error while key creation");
     ASSERT_EQ(key_create(&tsd_key2), 0, "Error while key creation");
 
@@ -78,7 +77,6 @@ bool tls_test(void) {
         unittest_printf("joining thread: %d\n", thread_2);
         pthread_join(thread3, NULL);
     }
-#endif
     END_TEST;
 }
 

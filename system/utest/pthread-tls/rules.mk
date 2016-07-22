@@ -21,7 +21,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/tls-test.c \
 
-MODULE_NAME := tls-test
+MODULE_NAME := pthread-tls-test
 
 MODULE_DEPS := \
     ulib/musl ulib/mxio ulib/magenta ulib/unittest

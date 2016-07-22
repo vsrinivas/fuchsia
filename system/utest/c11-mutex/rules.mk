@@ -23,7 +23,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := c11-mutex-test
 
-# Depend on musl for now for crt and printf
 MODULE_DEPS := ulib/musl ulib/runtime ulib/mxio ulib/magenta ulib/unittest
 
 include make/module.mk

@@ -175,7 +175,7 @@ bool pthread_test(void) {
     int result = pthread_cond_timedwait(&cond, &mutex, &delay);
     pthread_mutex_unlock(&mutex);
     log("pthread_cond_timedwait returned\n");
-    printf("pthread_cond_timedwait result: %d\n", result);
+    unittest_printf("pthread_cond_timedwait result: %d\n", result);
 
     EXPECT_EQ(result, ETIMEDOUT, "Lock should have timeout");
 
