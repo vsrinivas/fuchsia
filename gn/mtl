@@ -1,5 +1,5 @@
 {
-    "label": "//lib/mtl",
+    "label": [ "//lib/mtl" ],
     "binaries": [
         {
             "binary": "mtl_unittests",

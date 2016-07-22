@@ -18,13 +18,14 @@ class Amalgamation:
         self.binaries = []
 
     def add_config(self, config):
-        if config.get("label"):
-            self.labels.append(config["label"])
+        for label in config.get("labels", []):
+            self.labels.append(label)
         for b in config.get("binaries", []):
             binary = {}
             binary["binary"] = b["binary"]
             binary["bootfs_path"] = b["bootfs_path"]
             self.binaries.append(binary)
+
 
 def resolve_imports(import_queue):
     imported = set(import_queue)
@@ -43,6 +44,7 @@ def resolve_imports(import_queue):
             except Exception as e:
                 print "Failed to parse config %s, error %s" % (config_path, str(e))
     return amalgamation
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Ninja files for Fuchsia")

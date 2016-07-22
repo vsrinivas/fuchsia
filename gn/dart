@@ -1,5 +1,5 @@
 {
-    "label": "//dart/runtime/bin:dart_no_observatory",
+    "labels": [ "//dart/runtime/bin:dart_no_observatory" ],
     "binaries": [
         {
             "binary": "dart_no_observatory",

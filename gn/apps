@@ -1,6 +1,18 @@
 {
-    "label": "//apps/native_viewport",
+    "labels": [
+        "//apps/dart_content_handler",
+        "//apps/logging",
+        "//apps/native_viewport"
+    ],
     "binaries": [
+        {
+            "binary": "dart_content_handler",
+            "bootfs_path": "apps/dart_content_handler"
+        },
+        {
+            "binary": "logging",
+            "bootfs_path": "apps/logging"
+        },
         {
             "binary": "framebuffer",
             "bootfs_path": "apps/framebuffer"
