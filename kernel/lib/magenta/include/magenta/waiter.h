@@ -101,9 +101,9 @@ private:
         uint64_t context;
     };
 
-    void SignalStateChange_NoLock();
+    bool SignalStateChange_NoLock();
 
-    void SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
+    bool SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
 
     mutex_t lock_;
 

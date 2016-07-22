@@ -107,9 +107,9 @@ void Waiter::UpdateState(mx_signals_t satisfied_set_mask,
                          mx_signals_t satisfied_clear_mask,
                          mx_signals_t satisfiable_set_mask,
                          mx_signals_t satisfiable_clear_mask) {
+    bool awoke_threads = false;
     mx_signals_t signal_match = 0u;
     utils::RefPtr<IOPortDispatcher> io_port;
-
     {
         AutoLock lock(&lock_);
 
@@ -133,35 +133,41 @@ void Waiter::UpdateState(mx_signals_t satisfied_set_mask,
                 previous_signals_state.satisfiable == signals_state_.satisfiable)
                 return;
 
-            SignalStateChange_NoLock();
+            awoke_threads |= SignalStateChange_NoLock();
         }
     }
-
     if (io_port)
-        SendIOPortPacket_NoLock(io_port.get(), signal_match);
+        awoke_threads |= SendIOPortPacket_NoLock(io_port.get(), signal_match);
+    if (awoke_threads)
+        thread_yield();
 }
 
 void Waiter::CancelWait(Handle* handle) {
+    bool awoke_threads = false;
     {
         AutoLock lock(&lock_);
 
         for (auto& node : nodes_) {
             if (node.handle == handle)
-                node.event->Signal(WaitEvent::Result::CANCELLED, node.context);
+                awoke_threads |= !!node.event->Signal(WaitEvent::Result::CANCELLED, node.context);
         }
     }
+    if (awoke_threads)
+        thread_yield();
 }
 
-void Waiter::SignalStateChange_NoLock() {
+bool Waiter::SignalStateChange_NoLock() {
+    bool awoke_threads = false;
     for (auto& node : nodes_) {
         if (node.signals & signals_state_.satisfied)
-            node.event->Signal(WaitEvent::Result::SATISFIED, node.context);
+            awoke_threads |= !!node.event->Signal(WaitEvent::Result::SATISFIED, node.context);
         else if (!(node.signals & signals_state_.satisfiable))
-            node.event->Signal(WaitEvent::Result::UNSATISFIABLE, node.context);
+            awoke_threads |= !!node.event->Signal(WaitEvent::Result::UNSATISFIABLE, node.context);
     }
+    return awoke_threads;
 }
 
-void Waiter::SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals) {
+bool Waiter::SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals) {
     IOP_Packet packet ={
         {
             io_port_key_,
@@ -171,5 +177,5 @@ void Waiter::SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t sig
             0u,
         }
     };
-    io_port->Queue(&packet);
+    return io_port->Queue(&packet) == NO_ERROR;
 }
