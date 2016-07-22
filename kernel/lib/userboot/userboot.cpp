@@ -25,18 +25,18 @@
 
 #define USERBOOT_PAYLOAD 0x2000000
 
-static int join_thread(void* arg) {
-    //UserProcess* proc = (UserProcess*)arg;
-
-    // TODO: block on the process in some other way
-    //proc->Join(nullptr);
-    //delete proc;
-    return 0;
-}
-
 extern char __kernel_cmdline[CMDLINE_MAX];
 
-static utils::RefPtr<UserProcess> userboot_process;
+static utils::RefPtr<Dispatcher> userboot_process;
+
+static HandleUniquePtr get_vmo_handle(utils::RefPtr<VmObject> vmo) {
+    mx_rights_t rights;
+    utils::RefPtr<Dispatcher> dispatcher;
+    mx_status_t result = VmObjectDispatcher::Create(utils::move(vmo), &dispatcher, &rights);
+    if (result != NO_ERROR)
+        return nullptr;
+    return HandleUniquePtr(MakeHandle(utils::move(dispatcher), rights));
+}
 
 static int attempt_userboot(const void* userboot, size_t ublen,
                             const void* bootfs, size_t bfslen) {
@@ -50,17 +50,17 @@ static int attempt_userboot(const void* userboot, size_t ublen,
         dprintf(INFO, "userboot: ramdisk  @%p (%zd)\n", rbase, rsize);
     }
 
-    auto proc = utils::AdoptRef(new UserProcess("userboot"));
-    if (!proc) {
-        return ERR_NO_MEMORY;
-    }
-    status_t err = proc->Initialize();
-    if (err != NO_ERROR) {
-        return err;
+    mx_rights_t rights;
+    utils::RefPtr<Dispatcher> proc_disp;
+    mx_status_t st = UserProcess::Create("userboot", &proc_disp, &rights);
+    if (st < 0) {
+        return st;
     }
 
+    auto proc = proc_disp->get_process_dispatcher();
     auto aspace = proc->aspace();
 
+    status_t err;
     ElfLoader::MemFile loader("userboot", aspace, userboot, ublen);
     if ((err = loader.Load()) != NO_ERROR) {
         return err;
@@ -86,18 +86,7 @@ static int attempt_userboot(const void* userboot, size_t ublen,
         }
     }
 
-    // create a Vm Object dispatcher
-    utils::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    mx_status_t result = VmObjectDispatcher::Create(utils::move(vmo), &dispatcher, &rights);
-    if (result != NO_ERROR)
-        return result;
-
-    // create a handle and attach the dispatcher to it
-    HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), rights));
-    if (!handle)
-        return ERR_NO_MEMORY;
-
+    auto handle = get_vmo_handle(vmo);
     mx_handle_t hv = proc->MapHandleToValue(handle.get());
     proc->AddHandle(utils::move(handle));
 
@@ -107,13 +96,8 @@ static int attempt_userboot(const void* userboot, size_t ublen,
         return err;
     }
 
-    // create a thread to Join and delete the UserProcess so we don't leak
-    thread_detach_and_resume(thread_create("join_thread", &join_thread, proc.get(),
-                                           DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
-
-    // hold onto a global ref to this
-    userboot_process = utils::move(proc);
-
+    // hold onto a global ref to the boot process.
+    userboot_process = utils::move(proc_disp);
     return NO_ERROR;
 }
 

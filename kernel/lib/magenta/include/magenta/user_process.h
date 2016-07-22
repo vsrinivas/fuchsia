@@ -23,10 +23,25 @@
 #include <utils/ref_ptr.h>
 #include <utils/string_piece.h>
 
-class Dispatcher;
-
-class UserProcess : public utils::RefCounted<UserProcess> {
+class UserProcess : public Dispatcher {
 public:
+    static mx_status_t Create(utils::StringPiece name,
+                              utils::RefPtr<Dispatcher>* dispatcher,
+                              mx_rights_t* rights);
+
+    static UserProcess* GetCurrent() {
+        UserThread* current = UserThread::GetCurrent();
+        DEBUG_ASSERT(current);
+        return current->process();
+    }
+
+    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
+    UserProcess* get_process_dispatcher() final { return this; }
+
+    StateTracker* get_state_tracker() final { return &state_tracker_; }
+
+    ~UserProcess() final;
+
     // state of the process
     enum class State {
         INITIAL, // initial state, no thread present in process
@@ -34,15 +49,6 @@ public:
         DYING,   // process has delivered kill signal to all threads
         DEAD,    // all threads have entered DEAD state and potentially dropped refs on process
     };
-
-    explicit UserProcess(utils::StringPiece name);
-    ~UserProcess();
-
-    static UserProcess* GetCurrent() {
-        UserThread* current = UserThread::GetCurrent();
-        DEBUG_ASSERT(current);
-        return current->process();
-    }
 
     // Performs initialization on a newly constructed UserProcess
     // If this fails, then the object is invalid and should be deleted
@@ -90,7 +96,6 @@ public:
 
     void Exit(int retcode);
     void Kill();
-    void DispatcherClosed();
 
     status_t GetInfo(mx_process_info_t* info);
 
@@ -112,6 +117,8 @@ public:
     void list_set_next(UserProcess* node) { next_ = node; }
 
 private:
+    explicit UserProcess(utils::StringPiece name);
+
     UserProcess(const UserProcess&) = delete;
     UserProcess& operator=(const UserProcess&) = delete;
 

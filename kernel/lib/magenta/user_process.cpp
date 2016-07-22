@@ -17,12 +17,29 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 
-#include <magenta/dispatcher.h>
 #include <magenta/futex_context.h>
 #include <magenta/magenta.h>
 #include <magenta/user_copy.h>
 
 #define LOCAL_TRACE 0
+
+constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_TRANSFER;
+
+mx_status_t UserProcess::Create(utils::StringPiece name,
+                                utils::RefPtr<Dispatcher>* dispatcher,
+                                mx_rights_t* rights) {
+    auto process = new UserProcess(name);
+    if (!process)
+        return ERR_NO_MEMORY;
+
+    status_t result = process->Initialize();
+    if (result != NO_ERROR)
+        return result;
+
+    *rights = kDefaultProcessRights;
+    *dispatcher = utils::AdoptRef<Dispatcher>(process);
+    return NO_ERROR;
+}
 
 UserProcess::UserProcess(utils::StringPiece name)
     : state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
@@ -39,6 +56,7 @@ UserProcess::UserProcess(utils::StringPiece name)
 
 UserProcess::~UserProcess() {
     LTRACE_ENTRY_OBJ;
+    Kill();
 
     DEBUG_ASSERT(state_ == State::INITIAL || state_ == State::DEAD);
 
@@ -153,13 +171,6 @@ void UserProcess::Kill() {
         // the last thread exiting will transition us to DEAD
         SetState(State::DYING);
     }
-}
-
-// the dispatcher has closed its handle on us, so kill ourselves
-void UserProcess::DispatcherClosed() {
-    LTRACE_ENTRY_OBJ;
-
-    Kill();
 }
 
 void UserProcess::KillAllThreads() {

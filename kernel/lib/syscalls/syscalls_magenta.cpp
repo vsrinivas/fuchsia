@@ -24,7 +24,6 @@
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
@@ -706,7 +705,7 @@ mx_handle_t sys_process_create(const char* name, uint32_t name_len) {
 
     utils::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status_t res = ProcessDispatcher::Create(&dispatcher, &rights, sp);
+    status_t res = UserProcess::Create(sp, &dispatcher, &rights);
     if (res != NO_ERROR)
         return res;
 
@@ -738,9 +737,12 @@ mx_status_t sys_process_start(mx_handle_t handle_value, mx_handle_t arg_handle_v
     if (!arg_handle_value)
         return ERR_INVALID_ARGS;
 
-    mx_handle_t arg_nhv = process->AddHandle(utils::move(arg_handle));
+    auto arg_nhv = process->MapHandleToValue(arg_handle.get());
+    process->AddHandle(utils::move(arg_handle));
 
-    return process->Start(arg_nhv, entry);
+    // TODO(cpu) if Start() fails we want to undo RemoveHandle().
+
+    return process->Start(reinterpret_cast<void*>(arg_nhv), entry);
 }
 
 mx_handle_t sys_event_create(uint32_t options) {
@@ -995,8 +997,8 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
 
-        // get the aspace out of the process dispatcher
-        aspace = process->GetVmAspace();
+        // get the address space out of the process dispatcher
+        aspace = process->aspace();
         if (!aspace)
             return ERR_INVALID_ARGS;
     }
@@ -1042,8 +1044,7 @@ mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
 
-        // get the aspace out of the process dispatcher
-        aspace = process->GetVmAspace();
+        aspace = process->aspace();
         if (!aspace)
             return ERR_INVALID_ARGS;
     }
@@ -1084,8 +1085,7 @@ mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, m
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
 
-        // get the aspace out of the process dispatcher
-        aspace = process->GetVmAspace();
+        aspace = process->aspace();
         if (!aspace)
             return ERR_INVALID_ARGS;
     }

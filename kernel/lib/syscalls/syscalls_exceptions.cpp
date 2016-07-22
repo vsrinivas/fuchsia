@@ -14,7 +14,6 @@
 
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_process.h>

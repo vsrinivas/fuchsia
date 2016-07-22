@@ -28,7 +28,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/pci_io_mapping_dispatcher.cpp \
-    $(LOCAL_DIR)/process_dispatcher.cpp \
     $(LOCAL_DIR)/state_tracker.cpp \
     $(LOCAL_DIR)/thread_dispatcher.cpp \
     $(LOCAL_DIR)/user_copy.cpp \
