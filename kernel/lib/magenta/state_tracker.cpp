@@ -26,59 +26,26 @@ StateTracker::~StateTracker() {
     mutex_destroy(&lock_);
 }
 
-mx_status_t StateTracker::BeginWait(WaitEvent* event,
-                                    Handle* handle,
-                                    mx_signals_t signals,
-                                    uint64_t context) {
-    auto observer = new StateObserver(event, handle, signals, context);
-    if (!observer)
-        return ERR_NO_MEMORY;
-
+mx_status_t StateTracker::AddObserver(StateObserver* observer) {
     bool awoke_threads = false;
-    bool io_port_bound = false;
-
     {
         AutoLock lock(&lock_);
 
-        if (io_port_) {
-            // If an IO port is bound, fail regular waits.
-            io_port_bound = true;
-        } else {
-            observers_.push_front(observer);
-            // The condition may already be satisfiable; if so signal the event now.
-            if (signals & signals_state_.satisfied)
-                awoke_threads |= event->Signal(WaitEvent::Result::SATISFIED, context);
-            // Or the condition may already be unsatisfiable; if so signal the event now.
-            else if (!(signals & signals_state_.satisfiable))
-                awoke_threads |= event->Signal(WaitEvent::Result::UNSATISFIABLE, context);
-        }
-    }
+        if (io_port_)
+            return ERR_BUSY;
 
-    if (io_port_bound) {
-        delete observer;
-        return ERR_BUSY;
+        observers_.push_front(observer);
+        awoke_threads = observer->OnInitialize(signals_state_);
     }
-
     if (awoke_threads)
         thread_yield();
     return NO_ERROR;
 }
 
-mx_signals_state_t StateTracker::FinishWait(WaitEvent* event) {
-    StateObserver* observer = nullptr;
-    mx_signals_state_t rv;
-
-    {
-        AutoLock lock(&lock_);
-        observer = observers_.erase_if([event](const StateObserver& observer) -> bool {
-                return (observer.event == event);
-            });
-        rv = signals_state_;
-    }
-
-    if (observer)
-        delete observer;
-    return rv;
+mx_signals_state_t StateTracker::RemoveObserver(StateObserver* observer) {
+    AutoLock lock(&lock_);
+    observers_.erase_if([observer](const StateObserver& o) -> bool { return &o == observer; });
+    return signals_state_;
 }
 
 bool StateTracker::BindIOPort(utils::RefPtr<IOPortDispatcher> io_port,
@@ -138,7 +105,9 @@ void StateTracker::UpdateState(mx_signals_t satisfied_set_mask,
                 previous_signals_state.satisfiable == signals_state_.satisfiable)
                 return;
 
-            awoke_threads |= SignalStateChange_NoLock();
+            for (auto& observer : observers_) {
+                awoke_threads |= observer.OnStateChange(signals_state_);
+            }
         }
     }
     if (io_port)
@@ -147,34 +116,16 @@ void StateTracker::UpdateState(mx_signals_t satisfied_set_mask,
         thread_yield();
 }
 
-void StateTracker::CancelWait(Handle* handle) {
+void StateTracker::Cancel(Handle* handle) {
     bool awoke_threads = false;
     {
         AutoLock lock(&lock_);
-
         for (auto& observer : observers_) {
-            if (observer.handle == handle) {
-                awoke_threads |= !!observer.event->Signal(WaitEvent::Result::CANCELLED,
-                                                          observer.context);
-            }
+            awoke_threads |= observer.OnCancel(handle);
         }
     }
     if (awoke_threads)
         thread_yield();
-}
-
-bool StateTracker::SignalStateChange_NoLock() {
-    bool awoke_threads = false;
-    for (auto& observer : observers_) {
-        if (observer.signals & signals_state_.satisfied) {
-            awoke_threads |= !!observer.event->Signal(WaitEvent::Result::SATISFIED,
-                                                      observer.context);
-        } else if (!(observer.signals & signals_state_.satisfiable)) {
-            awoke_threads |= !!observer.event->Signal(WaitEvent::Result::UNSATISFIABLE,
-                                                      observer.context);
-        }
-    }
-    return awoke_threads;
 }
 
 bool StateTracker::SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals) {

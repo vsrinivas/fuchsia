@@ -32,6 +32,7 @@
 #include <magenta/user_thread.h>
 #include <magenta/vm_object_dispatcher.h>
 #include <magenta/wait_event.h>
+#include <magenta/wait_state_observer.h>
 
 #include <platform.h>
 #include <stdint.h>
@@ -86,34 +87,6 @@ uint64_t sys_current_time() {
     return current_time_hires() * 1000;  // microseconds to nanoseconds
 }
 
-struct WaitHelper {
-    utils::RefPtr<Dispatcher> dispatcher;
-    StateTracker* state_tracker;
-
-    WaitHelper() : state_tracker(nullptr) {}
-    ~WaitHelper() { DEBUG_ASSERT(dispatcher.get() == nullptr); }
-    WaitHelper(const WaitHelper &) = delete;
-    WaitHelper& operator=(const WaitHelper &) = delete;
-
-    mx_status_t Begin(Handle* handle, WaitEvent* event, mx_signals_t signals, uint64_t context) {
-        dispatcher = handle->dispatcher();
-        state_tracker = dispatcher->get_state_tracker();
-        mx_status_t result = ERR_NOT_SUPPORTED;
-        if (state_tracker)
-            result = state_tracker->BeginWait(event, handle, signals, context);
-        if (result != NO_ERROR)
-            dispatcher.reset();
-        return result;
-    }
-
-    mx_signals_state_t End(WaitEvent* event) {
-        DEBUG_ASSERT(dispatcher);
-        auto s = state_tracker->FinishWait(event);
-        dispatcher.reset();
-        return s;
-    }
-};
-
 mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
@@ -123,7 +96,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     WaitEvent event;
 
     status_t result;
-    WaitHelper wait_helper;
+    WaitStateObserver wait_state_observer;
 
     {
         auto up = ProcessDispatcher::GetCurrent();
@@ -135,7 +108,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
         if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
             return ERR_ACCESS_DENIED;
 
-        result = wait_helper.Begin(handle, &event, signals, 0u);
+        result = wait_state_observer.Begin(&event, handle, signals, 0u);
         if (result != NO_ERROR)
             return result;
     }
@@ -146,8 +119,8 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
 
     result = WaitEvent::ResultToStatus(event.Wait(t, nullptr));
 
-    // Regardless of wait outcome, we must call FinishWait().
-    auto signals_state = wait_helper.End(&event);
+    // Regardless of wait outcome, we must call End().
+    auto signals_state = wait_state_observer.End();
 
     if (_signals_state) {
         if (copy_to_user(_signals_state, &signals_state, sizeof(signals_state)) != NO_ERROR)
@@ -186,8 +159,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         return result;
     utils::unique_ptr<uint32_t[]> signals(reinterpret_cast<mx_signals_t*>(copy));
 
-    utils::unique_ptr<WaitHelper[]> state_trackers(new WaitHelper[count]);
-    if (!state_trackers)
+    utils::unique_ptr<WaitStateObserver[]> wait_state_observers(new WaitStateObserver[count]);
+    if (!wait_state_observers)
         return ERR_NO_MEMORY;
 
     utils::unique_ptr<mx_signals_state_t[]> signals_states;
@@ -217,8 +190,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
                 break;
             }
 
-            result = state_trackers[num_added].Begin(handle, &event, signals[num_added],
-                                                     static_cast<uint64_t>(num_added));
+            result = wait_state_observers[num_added].Begin(&event, handle, signals[num_added],
+                                                           static_cast<uint64_t>(num_added));
             if (result != NO_ERROR)
                 break;
         }
@@ -226,7 +199,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     if (result != NO_ERROR) {
         DEBUG_ASSERT(num_added < count);
         for (size_t ix = 0; ix < num_added; ++ix)
-            state_trackers[ix].End(&event);
+            wait_state_observers[ix].End();
         return result;
     }
 
@@ -238,9 +211,9 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     WaitEvent::Result wait_event_result = event.Wait(t, &context);
     result = WaitEvent::ResultToStatus(wait_event_result);
 
-    // Regardless of wait outcome, we must call FinishWait().
+    // Regardless of wait outcome, we must call End().
     for (size_t ix = 0; ix != count; ++ix) {
-        auto s = state_trackers[ix].End(&event);
+        auto s = wait_state_observers[ix].End();
         if (signals_states)
             signals_states[ix] = s;
     }
@@ -447,9 +420,8 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     }
 
     for (size_t idx = 0u; idx < next_message_num_handles; ++idx) {
-        if (handle_list[idx]->dispatcher()->get_state_tracker()) {
-            handle_list[idx]->dispatcher()->get_state_tracker()->CancelWait(handle_list[idx]);
-        }
+        if (handle_list[idx]->dispatcher()->get_state_tracker())
+            handle_list[idx]->dispatcher()->get_state_tracker()->Cancel(handle_list[idx]);
         HandleUniquePtr handle(handle_list[idx]);
         up->AddHandle(utils::move(handle));
     }

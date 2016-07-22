@@ -68,7 +68,7 @@ Handle* DupHandle(Handle* source, mx_rights_t rights) {
 void DeleteHandle(Handle* handle) {
     StateTracker* state_tracker = handle->dispatcher()->get_state_tracker();
     if (state_tracker) {
-        state_tracker->CancelWait(handle);
+        state_tracker->Cancel(handle);
     } else {
         auto disp = handle->dispatcher();
         // This code is sad but necessary because certain dispatchers

@@ -12,6 +12,7 @@
 
 #include <magenta/types.h>
 #include <magenta/io_port_dispatcher.h>
+#include <magenta/state_observer.h>
 
 #include <utils/intrusive_single_list.h>
 
@@ -65,17 +66,19 @@ public:
         signals_state_ = signals_state;
     }
 
-    // Start an event-based wait.
-    mx_status_t BeginWait(WaitEvent* event, Handle* handle, mx_signals_t signals, uint64_t context);
+    // Add an observer.
+    mx_status_t AddObserver(StateObserver* observer);
 
-    // End an event-based wait.
-    mx_signals_state_t FinishWait(WaitEvent* event);
+    // Remove an observer (which must have been added).
+    mx_signals_state_t RemoveObserver(StateObserver* observer);
 
     // Register IO Port for state changes.
     bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
 
-    // Cancel a pending wait started with BeginWait.
-    void CancelWait(Handle* handle);
+    // Called when observers of the handle's state (e.g., waits on the handle) should be
+    // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being
+    // destroyed or transferred.
+    void Cancel(Handle* handle);
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.) Returns true if some thread was awoken.
@@ -89,21 +92,6 @@ public:
     }
 
 private:
-    struct StateObserver : public utils::SinglyLinkedListable<StateObserver*> {
-        StateObserver(WaitEvent* _event, Handle* _handle, mx_signals_t _signals, uint64_t _context)
-            : event(_event),
-              handle(_handle),
-              signals(_signals),
-              context(_context) { }
-
-        WaitEvent* event;
-        Handle* handle;
-        mx_signals_t signals;
-        uint64_t context;
-    };
-
-    bool SignalStateChange_NoLock();
-
     bool SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
 
     mutex_t lock_;
