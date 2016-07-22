@@ -363,6 +363,20 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p flags 0x%x\n",
             handle_value, _bytes, _num_bytes, _handles, _num_handles, flags);
 
+    auto up = UserProcess::GetCurrent();
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
+    if (!msg_pipe)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
     uint32_t num_bytes = 0;
     uint32_t num_handles = 0;
 
@@ -388,20 +402,6 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
         if (!handles)
             return ERR_NO_MEMORY;
     }
-
-    auto up = UserProcess::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
-
-    auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
-    if (!msg_pipe)
-        return ERR_BAD_HANDLE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
 
     uint32_t next_message_size = 0u;
     uint32_t next_message_num_handles = 0u;
@@ -462,6 +462,22 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
             handle_value, _bytes, num_bytes, _handles, num_handles, flags);
 
+    auto up = UserProcess::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
+    if (!msg_pipe)
+        return ERR_BAD_HANDLE;
+
+    bool is_reply_pipe = msg_pipe->is_reply_pipe();
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
     if (num_bytes != 0u && !_bytes)
         return ERR_INVALID_ARGS;
     if (num_handles != 0u && !_handles)
@@ -494,22 +510,6 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
 
         handles.reset(static_cast<mx_handle_t*>(c_handles));
     }
-
-    auto up = UserProcess::GetCurrent();
-
-    utils::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
-
-    auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
-    if (!msg_pipe)
-        return ERR_BAD_HANDLE;
-
-    bool is_reply_pipe = msg_pipe->is_reply_pipe();
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
 
     utils::Array<Handle*> handle_list(new Handle*[num_handles], num_handles);
     {
