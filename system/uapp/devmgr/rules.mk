@@ -51,6 +51,7 @@ MODULE_SRCS += \
 MODULE_DEPS := \
     ulib/musl \
     ulib/ddk \
+    ulib/launchpad \
     ulib/mxio \
     ulib/gfx \
     ulib/font \

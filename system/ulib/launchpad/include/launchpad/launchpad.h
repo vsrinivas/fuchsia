@@ -51,8 +51,9 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 // message.  All the strings are copied into the launchpad by this
 // call, with no pointers to these argument strings retained.
 // Successive calls replace the previous values.
-mx_status_t launchpad_arguments(launchpad_t* lp, int argc, char** argv);
-mx_status_t launchpad_environ(launchpad_t* lp, char** envp);
+mx_status_t launchpad_arguments(launchpad_t* lp,
+                                int argc, const char* const* argv);
+mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp);
 
 // Clone the mxio root handle into the new process.
 // This will allow mxio-based filesystem access to work in the new process.
@@ -111,5 +112,14 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc);
 // cleared and the handles to transfer might or might not have been
 // cleared.
 mx_status_t launchpad_start(launchpad_t* lp);
+
+// Convenience interface for launching a process in one call with
+// minimal arguments and handles.  This just calls launchpad_create,
+// launchpad_elf_load, launchpad_arguments, launchpad_add_handles,
+// launchpad_start, launchpad_destroy.
+mx_handle_t launchpad_launch_basic(const char* name,
+                                   int argc, const char* const* argv,
+                                   size_t hnds_count, mx_handle_t* handles,
+                                   uint32_t* ids);
 
 __END_CDECLS

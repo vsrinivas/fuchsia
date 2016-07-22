@@ -56,7 +56,7 @@ static void check(const char* call, mx_status_t status) {
 }
 
 int main(int argc, char** argv) {
-    char** env = NULL;
+    const char** env = NULL;
     size_t envsize = 0;
     const char* program = NULL;
     int program_fd = -1;
@@ -164,7 +164,8 @@ int main(int argc, char** argv) {
     mx_status_t status = launchpad_create(program, &lp);
     check("launchpad_create", status);
 
-    status = launchpad_arguments(lp, argc - optind, &argv[optind]);
+    status = launchpad_arguments(lp, argc - optind,
+                                 (const char *const*) &argv[optind]);
     check("launchpad_arguments", status);
 
     status = launchpad_environ(lp, env);

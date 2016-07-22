@@ -98,7 +98,8 @@ mx_handle_t launchpad_get_process_handle(launchpad_t* lp) {
     return lp_proc(lp);
 }
 
-mx_status_t launchpad_arguments(launchpad_t* lp, int argc, char** argv) {
+mx_status_t launchpad_arguments(launchpad_t* lp,
+                                int argc, const char* const* argv) {
     if (argc < 0)
         return ERR_INVALID_ARGS;
 
@@ -130,13 +131,13 @@ mx_status_t launchpad_arguments(launchpad_t* lp, int argc, char** argv) {
     return NO_ERROR;
 }
 
-mx_status_t launchpad_environ(launchpad_t* lp, char** envp) {
+mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp) {
     size_t total = 0;
     char* buffer = NULL;
     uint32_t envc = 0;
 
     if (envp != NULL) {
-        for (char** ep = envp; *ep != NULL; ++ep) {
+        for (const char* const* ep = envp; *ep != NULL; ++ep) {
             total += strlen(*ep) + 1;
             ++envc;
         }
@@ -148,7 +149,7 @@ mx_status_t launchpad_environ(launchpad_t* lp, char** envp) {
             return ERR_NO_MEMORY;
 
         char* p = buffer;
-        for (char** ep = envp; *ep != NULL; ++ep)
+        for (const char* const* ep = envp; *ep != NULL; ++ep)
             p = stpcpy(p, *ep) + 1;
 
         if ((size_t) (p - buffer) != total) {

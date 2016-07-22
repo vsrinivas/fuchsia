@@ -20,6 +20,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <launchpad/launchpad.h>
+
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
@@ -76,7 +78,9 @@ void devmgr_launch(const char* name, const char* app, const char* arg, const cha
         n += r;
     }
     printf("devmgr: launch %s on %s\n", app, device);
-    mxio_start_process_etc(name, arg ? 2 : 1, args, n, hnd, ids);
+    r = launchpad_launch_basic(name, arg ? 2 : 1, args, n, hnd, ids);
+    if (r != NO_ERROR)
+        printf("devmgr: launchpad_launch failed: %d\n", r);
     return;
 fail:
     while (n > 0) {
