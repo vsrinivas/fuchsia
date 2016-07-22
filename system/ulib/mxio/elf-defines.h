@@ -15,12 +15,11 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include <stdint.h>
 
-/* elf defines */
-#define ELF_MAGIC \
-    "\x7f"        \
-    "ELF"
+/* contents of e_ident[EI_MAG0..EI_MAG3] */
+#define ELFMAG "\177ELF"
+#define SELFMAG 4
 
 /* e_ident */
 #define EI_MAG0 0
@@ -96,6 +95,9 @@
 #define EF_ARM_SOFT_FLOAT 0x00000200
 #define EF_ARM_VFP_FLOAT 0x00000400
 #define EF_ARM_MAVERICK_FLOAT 0x00000800
+
+/* e_phnum */
+#define PN_XNUM 0xffff
 
 #define SHT_NULL 0
 #define SHT_PROGBITS 1

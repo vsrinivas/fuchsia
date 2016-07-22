@@ -1,0 +1,256 @@
+// Copyright 2016 The Fuchsia Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
+#include <magenta/processargs.h>
+#include <magenta/syscalls.h>
+#include <mxio/util.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+static void option_usage(const char* option, const char* description) {
+    fprintf(stderr, "\t%-16s%s\n", option, description);
+}
+
+static _Noreturn void usage(const char* progname) {
+    fprintf(stderr, "Usage: %s [OPTIONS] [--] PROGRAM [ARGS...]\n", progname);
+    option_usage("-b", "use basic ELF loading, no PT_INTERP support");
+    option_usage("-d FD", "pass FD with the same descriptor number");
+    option_usage("-d FD:NEWFD", "pass FD as descriptor number NEWFD");
+    option_usage("-e VAR=VALUE", "pass environment variable");
+    option_usage("-f FILE", "execute FILE but pass PROGRAM as argv[0]");
+    option_usage("-F FD", "execute FD");
+    option_usage("-l",
+                 "pass mxio_loader_service handle in main bootstrap message");
+    option_usage("-L", "force initial loader bootstrap message");
+    option_usage("-r", "send mxio filesystem root");
+    option_usage("-s", "shorthand for -r -d 0 -d 1 -d 2");
+    option_usage("-v FILE", "send VMO of FILE as EXEC_VMO handle");
+    option_usage("-V FD", "send VMO of FD as EXEC_VMO handle");
+    exit(1);
+}
+
+static _Noreturn void fail(const char* call, mx_status_t status) {
+    fprintf(stderr, "%s failed: %d\n", call, status);
+    exit(1);
+}
+
+static void check(const char* call, mx_status_t status) {
+    if (status < 0)
+        fail(call, status);
+}
+
+int main(int argc, char** argv) {
+    char** env = NULL;
+    size_t envsize = 0;
+    const char* program = NULL;
+    int program_fd = -1;
+    bool basic = false;
+    bool send_root = false;
+    struct fd { int from, to; } *fds = NULL;
+    size_t nfds = 0;
+    bool send_loader_message = false;
+    bool pass_loader_handle = false;
+    const char* exec_vmo_file = NULL;
+    int exec_vmo_fd = -1;
+
+    for (int opt; (opt = getopt(argc, argv, "bd:e:f:lLrsv:")) != -1;) {
+        switch (opt) {
+        case 'b':
+            basic = true;
+            break;
+        case 'd':;
+            int from, to;
+            switch (sscanf(optarg, "%u:%u", &from, &to)) {
+            default:
+                usage(argv[0]);
+                break;
+            case 1:
+                to = from;
+                // Fall through.
+            case 2:
+                fds = realloc(fds, ++nfds * sizeof(fds[0]));
+                if (fds == NULL) {
+                    perror("realloc");
+                    return 2;
+                }
+                fds[nfds - 1].from = from;
+                fds[nfds - 1].to = to;
+                break;
+            }
+            break;
+        case 'e':
+            env = realloc(env, ++envsize * sizeof(env[0]));
+            if (env == NULL) {
+                perror("realloc");
+                return 2;
+            }
+            env[envsize - 1] = optarg;
+            break;
+        case 'f':
+            program = optarg;
+            break;
+        case 'L':
+            send_loader_message = true;
+            break;
+        case 'l':
+            pass_loader_handle = true;
+            break;
+        case 'r':
+            send_root = true;
+            break;
+        case 's':
+            send_root = true;
+            fds = realloc(fds, (nfds + 3) * sizeof(fds[0]));
+            for (int i = 0; i < 3; ++i)
+                fds[nfds + i].from = fds[nfds + i].to = i;
+            nfds += 3;
+            break;
+        case 'v':
+            exec_vmo_file = optarg;
+            break;
+        case 'V':
+            if (sscanf(optarg, "%u", &exec_vmo_fd) != 1)
+                usage(argv[0]);
+            break;
+        default:
+            usage(argv[0]);
+        }
+    }
+
+    if (optind >= argc)
+        usage(argv[0]);
+
+    mx_handle_t vmo;
+    if (program_fd != -1) {
+        vmo = launchpad_vmo_from_fd(program_fd);
+        if (vmo == ERR_IO) {
+            perror("launchpad_vmo_from_fd");
+            return 2;
+        }
+        check("launchpad_vmo_from_fd", vmo);
+    } else {
+        if (program == NULL)
+            program = argv[optind];
+        vmo = launchpad_vmo_from_file(program);
+        if (vmo == ERR_IO) {
+            perror(program);
+            return 2;
+        }
+        check("launchpad_vmo_from_file", vmo);
+    }
+
+    launchpad_t* lp;
+    mx_status_t status = launchpad_create(program, &lp);
+    check("launchpad_create", status);
+
+    status = launchpad_arguments(lp, argc - optind, &argv[optind]);
+    check("launchpad_arguments", status);
+
+    status = launchpad_environ(lp, env);
+    check("launchpad_environ", status);
+
+    if (send_root) {
+        status = launchpad_clone_mxio_root(lp);
+        check("launchpad_clone_mxio_root", status);
+    }
+
+    for (size_t i = 0; i < nfds; ++i) {
+        status = launchpad_clone_fd(lp, fds[i].from, fds[i].to);
+        check("launchpad_clone_fd", status);
+    }
+
+    if (basic) {
+        status = launchpad_elf_load_basic(lp, vmo);
+        check("launchpad_elf_load_basic", status);
+    } else {
+        status = launchpad_elf_load(lp, vmo);
+        check("launchpad_elf_load", status);
+    }
+
+    if (send_loader_message) {
+        bool already_sending = launchpad_send_loader_message(lp, true);
+        if (!already_sending) {
+            mx_handle_t loader_svc = mxio_loader_service();
+            check("mxio_loader_service", loader_svc);
+            mx_handle_t old = launchpad_use_loader_service(lp, loader_svc);
+            check("launchpad_use_loader_service", old);
+            if (old != MX_HANDLE_INVALID) {
+                fprintf(stderr, "launchpad_use_loader_service returned %#x\n",
+                        old);
+                return 2;
+            }
+        }
+    }
+
+    if (pass_loader_handle) {
+        mx_handle_t loader_svc = mxio_loader_service();
+        check("mxio_loader_service", loader_svc);
+        status = launchpad_add_handle(lp, loader_svc, MX_HND_TYPE_LOADER_SVC);
+        check("launchpad_add_handle", status);
+    }
+
+    if (exec_vmo_file != NULL) {
+        mx_handle_t exec_vmo = launchpad_vmo_from_file(exec_vmo_file);
+        if (exec_vmo == ERR_IO) {
+            perror(exec_vmo_file);
+            return 2;
+        }
+        check("launchpad_vmo_from_file", exec_vmo);
+        status = launchpad_add_handle(lp, exec_vmo, MX_HND_TYPE_EXEC_VMO);
+    }
+
+    if (exec_vmo_fd != -1) {
+        mx_handle_t exec_vmo = launchpad_vmo_from_fd(exec_vmo_fd);
+        if (exec_vmo == ERR_IO) {
+            perror("launchpad_vmo_from_fd");
+            return 2;
+        }
+        check("launchpad_vmo_from_fd", exec_vmo);
+        status = launchpad_add_handle(lp, exec_vmo, MX_HND_TYPE_EXEC_VMO);
+    }
+
+    mx_handle_t proc = launchpad_get_process_handle(lp);
+    check("launchpad_get_process_handle", proc);
+    // TODO(mcgrathr): The kernel doesn't yet allow duplicating a process
+    // handle.
+#if 0
+    proc = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
+    check("mx_handle_duplicate", proc);
+#endif
+
+    status = launchpad_start(lp);
+    check("launchpad_start", status);
+
+    mx_signals_state_t state;
+    status = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED,
+                                MX_TIME_INFINITE, &state);
+    check("mx_handle_wait_one", status);
+
+    mx_process_info_t info;
+    mx_ssize_t n = mx_handle_get_info(proc, MX_INFO_PROCESS,
+                                      &info, sizeof(info));
+    check("mx_handle_get_info", n);
+    if (n != (mx_ssize_t)sizeof(info)) {
+        fprintf(stderr, "mx_handle_get_info short read: %zu != %zu\n",
+                (size_t)n, sizeof(info));
+        exit(2);
+    }
+
+    printf("Process finished with return code %d\n", info.return_code);
+    return info.return_code;
+}

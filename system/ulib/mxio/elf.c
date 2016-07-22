@@ -89,7 +89,7 @@ void elf_close_handle(elf_handle_t* handle) {
 static int verify_eheader(const void* header) {
     const elf_ehdr_t* eheader = header;
 
-    if (memcmp(eheader->e_ident, ELF_MAGIC, 4) != 0)
+    if (memcmp(eheader->e_ident, ELFMAG, SELFMAG) != 0)
         return ERR_NOT_FOUND;
 
 #if WITH_ELF32
