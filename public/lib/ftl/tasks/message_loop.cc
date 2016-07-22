@@ -46,6 +46,8 @@ MessageLoop* MessageLoop::GetCurrent() {
 
 void MessageLoop::Run() {
   FTL_DCHECK(!should_quit_);
+  FTL_CHECK(!is_running_) << "Cannot run a nested message loop.";
+  is_running_ = true;
 
   for (;;) {
     TimePoint next_run_time = RunReadyTasks();
@@ -62,9 +64,13 @@ void MessageLoop::Run() {
   }
 
   should_quit_ = false;
+
+  FTL_DCHECK(is_running_);
+  is_running_ = false;
 }
 
 void MessageLoop::QuitNow() {
+  FTL_DCHECK(is_running_);
   should_quit_ = true;
 }
 

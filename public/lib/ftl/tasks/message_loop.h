@@ -42,6 +42,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
   RefPtr<internal::IncomingTaskQueue> incoming_tasks_;
 
   bool should_quit_ = false;
+  bool is_running_ = false;
   std::priority_queue<internal::PendingTask> queue_;
 
   // A recent snapshot of Time::Now(), used to check delayed_work_queue_.

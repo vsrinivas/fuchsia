@@ -45,7 +45,7 @@ class IncomingTaskQueue : public TaskRunner {
 
   Mutex mutex_;
   TaskQueue incoming_queue_ FTL_GUARDED_BY(mutex_);
-  TaskQueueDelegate* delegate_ FTL_GUARDED_BY(mutex_);
+  TaskQueueDelegate* delegate_ FTL_GUARDED_BY(mutex_) = nullptr;
 
   unsigned int next_sequence_number_ FTL_GUARDED_BY(mutex_) = 0;
   bool drop_incoming_tasks_ FTL_GUARDED_BY(mutex_) = false;

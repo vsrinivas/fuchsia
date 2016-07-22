@@ -65,6 +65,7 @@ executable("ftl_unittests") {
     "synchronization/thread_annotations_unittest.cc",
     "synchronization/thread_checker_unittest.cc",
     "synchronization/waitable_event_unittest.cc",
+    "tasks/message_loop_unittest.cc",
     "test/run_all_unittests.cc",
     "time/time_unittest.cc",
   ]

@@ -27,7 +27,7 @@ bool PendingTask::operator<(const PendingTask& other) const {
     return false;
   if (target_time_ > other.target_time_)
     return true;
-  return sequence_number_ < other.sequence_number_;
+  return sequence_number_ > other.sequence_number_;
 }
 
 }  // namespace internal

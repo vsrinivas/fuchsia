@@ -58,7 +58,7 @@ TaskQueue IncomingTaskQueue::TakeTaskQueue() {
   TaskQueue result;
   {
     MutexLocker locker(&mutex_);
-    if (result.empty())
+    if (incoming_queue_.empty())
       drain_scheduled_ = false;
     else
       incoming_queue_.swap(result);
