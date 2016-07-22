@@ -23,6 +23,7 @@
  * - The system firmware is responsible for initializing the TPM and has
  *   already done so.
  */
+
 #include <assert.h>
 #include <endian.h>
 #include <ddk/device.h>
@@ -203,6 +204,15 @@ mx_status_t tpm_init(mx_driver_t* driver) {
     status = tpm_enable_irq_type(LOCALITY0, IRQ_LOCALITY_CHANGE);
     if (status < 0) {
         goto cleanup_device;
+    }
+
+    // Make a best-effort attempt to give the kernel some more entropy
+    // TODO(security): Perform a more recurring seeding
+    uint8_t buf[32] = { 0 };
+    ssize_t bytes_read = tpm_get_random(dev, buf, sizeof(buf));
+    if (bytes_read > 0) {
+        mx_cprng_add_entropy(buf, bytes_read);
+        memset(buf, 0, sizeof(buf));
     }
 
     return NO_ERROR;
