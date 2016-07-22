@@ -533,6 +533,9 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
                 }
             }
 
+            if (!magenta_rights_check(handle->rights(), MX_RIGHT_TRANSFER))
+                return ERR_ACCESS_DENIED;
+
             handle_list[ix] = handle;
         }
 
