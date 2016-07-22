@@ -18,9 +18,9 @@ static int checker(void* p) {
     struct ctx* c = p;
     int ret;
     int i;
-    if (__syscall(SYS_setregid, __syscall(SYS_getegid), -1) ||
-        __syscall(SYS_setreuid, __syscall(SYS_geteuid), -1))
-        __syscall(SYS_exit, 1);
+    if (setregid(getegid(), -1) ||
+        setreuid(geteuid(), -1))
+        exit(1);
     ret = __syscall(SYS_faccessat, c->fd, c->filename, c->amode, 0);
     for (i = 0; i < sizeof errors / sizeof *errors - 1 && ret != errors[i]; i++)
         ;

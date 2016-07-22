@@ -91,7 +91,7 @@ static int stub_rmdir(const char* path) {
 }
 weak_alias(stub_rmdir, rmdir);
 
-static char *stub_getcwd(char* buf, size_t size) {
+static char* stub_getcwd(char* buf, size_t size) {
     errno = ENOSYS;
     return NULL;
 }

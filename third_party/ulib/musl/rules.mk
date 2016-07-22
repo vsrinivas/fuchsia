@@ -326,7 +326,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/linux/ptrace.c \
     $(LOCAL_DIR)/src/linux/quotactl.c \
     $(LOCAL_DIR)/src/linux/sbrk.c \
-    $(LOCAL_DIR)/src/linux/setgroups.c \
     $(LOCAL_DIR)/src/linux/sethostname.c \
     $(LOCAL_DIR)/src/linux/settimeofday.c \
     $(LOCAL_DIR)/src/linux/stime.c \
@@ -495,8 +494,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/getopt.c \
     $(LOCAL_DIR)/src/misc/getopt_long.c \
     $(LOCAL_DIR)/src/misc/getpriority.c \
-    $(LOCAL_DIR)/src/misc/getresgid.c \
-    $(LOCAL_DIR)/src/misc/getresuid.c \
     $(LOCAL_DIR)/src/misc/getrlimit.c \
     $(LOCAL_DIR)/src/misc/getrusage.c \
     $(LOCAL_DIR)/src/misc/getsubopt.c \
@@ -993,19 +990,9 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/faccessat.c \
     $(LOCAL_DIR)/src/unistd/fchdir.c \
     $(LOCAL_DIR)/src/unistd/fchownat.c \
-    $(LOCAL_DIR)/src/unistd/getegid.c \
-    $(LOCAL_DIR)/src/unistd/geteuid.c \
-    $(LOCAL_DIR)/src/unistd/getgid.c \
-    $(LOCAL_DIR)/src/unistd/getgroups.c \
     $(LOCAL_DIR)/src/unistd/gethostname.c \
     $(LOCAL_DIR)/src/unistd/getlogin.c \
     $(LOCAL_DIR)/src/unistd/getlogin_r.c \
-    $(LOCAL_DIR)/src/unistd/getpgid.c \
-    $(LOCAL_DIR)/src/unistd/getpgrp.c \
-    $(LOCAL_DIR)/src/unistd/getpid.c \
-    $(LOCAL_DIR)/src/unistd/getppid.c \
-    $(LOCAL_DIR)/src/unistd/getsid.c \
-    $(LOCAL_DIR)/src/unistd/getuid.c \
     $(LOCAL_DIR)/src/unistd/linkat.c \
     $(LOCAL_DIR)/src/unistd/nice.c \
     $(LOCAL_DIR)/src/unistd/pause.c \
@@ -1016,18 +1003,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/pwritev.c \
     $(LOCAL_DIR)/src/unistd/readlinkat.c \
     $(LOCAL_DIR)/src/unistd/renameat.c \
-    $(LOCAL_DIR)/src/unistd/setegid.c \
-    $(LOCAL_DIR)/src/unistd/seteuid.c \
-    $(LOCAL_DIR)/src/unistd/setgid.c \
-    $(LOCAL_DIR)/src/unistd/setpgid.c \
     $(LOCAL_DIR)/src/unistd/setpgrp.c \
-    $(LOCAL_DIR)/src/unistd/setregid.c \
-    $(LOCAL_DIR)/src/unistd/setresgid.c \
-    $(LOCAL_DIR)/src/unistd/setresuid.c \
-    $(LOCAL_DIR)/src/unistd/setreuid.c \
-    $(LOCAL_DIR)/src/unistd/setsid.c \
-    $(LOCAL_DIR)/src/unistd/setuid.c \
-    $(LOCAL_DIR)/src/unistd/setxid.c \
     $(LOCAL_DIR)/src/unistd/sleep.c \
     $(LOCAL_DIR)/src/unistd/symlinkat.c \
     $(LOCAL_DIR)/src/unistd/tcgetpgrp.c \
@@ -1299,7 +1275,8 @@ MODULE_SRCS := $(LOCAL_SRCS)
 MODULE_SONAME := c
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/iostubs/iostubs.c \
+    $(LOCAL_DIR)/stubs/idstubs.c \
+    $(LOCAL_DIR)/stubs/iostubs.c \
     $(LOCAL_DIR)/ldso/dlstart.c \
     $(LOCAL_DIR)/ldso/dynlink.c
 
