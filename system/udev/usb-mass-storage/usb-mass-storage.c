@@ -534,12 +534,12 @@ static mx_status_t usb_mass_storage_release(mx_device_t* device) {
     return NO_ERROR;
 }
 
-static ssize_t ums_read(mx_device_t* dev, void* data, size_t len, size_t off, void* cookie) {
+static ssize_t ums_read(mx_device_t* dev, void* data, size_t len, size_t off) {
 
     return 0;
 }
 
-static ssize_t ums_write(mx_device_t* dev, const void* data, size_t len, size_t off, void* cookie) {
+static ssize_t ums_write(mx_device_t* dev, const void* data, size_t len, size_t off) {
     // usb_mass_storage_t* msd = get_usb_mass_storage(dev);
     usb_mass_storage_inquiry(dev, 0);
     usb_mass_storage_request_sense(dev, 0);

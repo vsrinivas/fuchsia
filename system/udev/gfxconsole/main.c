@@ -232,7 +232,7 @@ static int vc_logreader_thread(void* arg) {
 
     vc_device_t* vc = debug_vc;
     // hide cursor in logreader
-    vc_char_write(&vc->device, ESCAPE_HIDE_CURSOR, strlen(ESCAPE_HIDE_CURSOR), 0, NULL);
+    vc_char_write(&vc->device, ESCAPE_HIDE_CURSOR, strlen(ESCAPE_HIDE_CURSOR), 0);
 
     char buf[MX_LOG_RECORD_MAX];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
@@ -243,10 +243,10 @@ static int vc_logreader_thread(void* arg) {
                      (int)(rec->timestamp / 1000000000ULL),
                      (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                      (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
-            vc_char_write(&vc->device, tmp, strlen(tmp), 0, NULL);
-            vc_char_write(&vc->device, rec->data, rec->datalen, 0, NULL);
+            vc_char_write(&vc->device, tmp, strlen(tmp), 0);
+            vc_char_write(&vc->device, rec->data, rec->datalen, 0);
             if (rec->data[rec->datalen - 1] != '\n') {
-                vc_char_write(&vc->device, "\n", 1, 0, NULL);
+                vc_char_write(&vc->device, "\n", 1, 0);
             }
         }
     }

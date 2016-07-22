@@ -46,8 +46,8 @@ void devmgr_device_set_bindable(mx_device_t* dev, bool bindable);
 
 mx_device_t* devmgr_device_root(void);
 
-mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags, void** cookie);
-mx_status_t devmgr_device_close(mx_device_t* dev, void* cookie);
+mx_status_t devmgr_device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags);
+mx_status_t devmgr_device_close(mx_device_t* dev);
 
 mx_status_t devmgr_control(const char* cmd);
 

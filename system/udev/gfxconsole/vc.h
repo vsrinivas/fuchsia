@@ -124,8 +124,8 @@ static inline uint32_t palette_to_color(vc_device_t* dev, uint8_t color) {
 // device protocol:
 
 mx_status_t vc_device_get_protocol(mx_device_t* dev, uint32_t protocol_id, void** protocol);
-mx_status_t vc_device_open(mx_device_t* dev, uint32_t flags);
-mx_status_t vc_device_close(mx_device_t* dev, void* cookie);
+mx_status_t vc_device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags);
+mx_status_t vc_device_close(mx_device_t* dev);
 mx_status_t vc_device_release(mx_device_t* dev);
 
 // console protocol:
@@ -138,11 +138,11 @@ mx_status_t vc_console_readkey(mx_device_t* dev, uint32_t flags);
 
 // char protocol:
 
-ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie);
-ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t off, void* cookie);
+ssize_t vc_char_read(mx_device_t* dev, void* buf, size_t count, size_t off);
+ssize_t vc_char_write(mx_device_t* dev, const void* buf, size_t count, size_t off);
 ssize_t vc_char_ioctl(mx_device_t* dev, uint32_t op,
                       const void* cmd, size_t cmdlen,
-                      void* reply, size_t max, void* cookie);
+                      void* reply, size_t max);
 
 #define MOD_LSHIFT (1 << 0)
 #define MOD_RSHIFT (1 << 1)

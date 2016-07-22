@@ -59,7 +59,7 @@ static mxr_mutex_t rio_lock = MXR_MUTEX_INIT;
 //
 // TODO: eventually this should be integrated with core devmgr locking, but
 //       that will require a bit more work.  This resolves the immediate issue.
-static mx_status_t devmgr_get_handles_etc(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids, void* cookie) {
+mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
     mx_status_t r;
     iostate_t* newios;
     if (devmgr_is_remote) {
@@ -87,10 +87,11 @@ static mx_status_t devmgr_get_handles_etc(mx_device_t* dev, mx_handle_t* handles
     handles[0] = h[0];
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
-    if ((r = device_open(dev, 0, &cookie)) < 0) {
+    if ((r = device_open(dev, &dev, 0)) < 0) {
         printf("%s_get_handles(%p) open %d\n", name, dev, r);
         goto fail1;
     }
+    newios->dev = dev;
 
     if (dev->event > 0) {
         //TODO: read only?
@@ -108,21 +109,16 @@ static mx_status_t devmgr_get_handles_etc(mx_device_t* dev, mx_handle_t* handles
     snprintf(tmp, sizeof(tmp), "device:%s", dev->name);
     track_iostate(newios, tmp);
 
-    newios->cookie = cookie;
     mxio_dispatcher_add(devmgr_rio_dispatcher, h[1], devmgr_rio_handler, newios);
     return r;
 
 fail2:
-    device_close(dev, cookie);
+    device_close(dev);
 fail1:
     mx_handle_close(h[0]);
     mx_handle_close(h[1]);
     free(newios);
     return r;
-}
-
-mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
-    return devmgr_get_handles_etc(dev, handles, ids, NULL);
 }
 
 mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
@@ -138,24 +134,23 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
 
     switch (MX_RIO_OP(msg->op)) {
     case MX_RIO_CLOSE:
-        device_close(dev, ios->cookie);
+        device_close(dev);
         untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
     case MX_RIO_CLONE: {
         xprintf("%s_rio_handler() clone dev %p name '%s'\n", name, dev, dev->name);
         uint32_t ids[VFS_MAX_HANDLES];
-        mx_status_t r = devmgr_get_handles_etc(dev, msg->handle, ids, ios->cookie);
+        mx_status_t r = devmgr_get_handles(dev, msg->handle, ids);
         if (r < 0) {
             return r;
         }
-
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->hcount = r;
         return NO_ERROR;
     }
     case MX_RIO_READ: {
-        mx_status_t r = dev->ops->read(dev, msg->data, arg, ios->io_off, ios->cookie);
+        mx_status_t r = dev->ops->read(dev, msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
@@ -164,7 +159,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
         return r;
     }
     case MX_RIO_WRITE: {
-        mx_status_t r = dev->ops->write(dev, msg->data, len, ios->io_off, ios->cookie);
+        mx_status_t r = dev->ops->write(dev, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
@@ -173,7 +168,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
     }
     case MX_RIO_SEEK: {
         size_t end, n;
-        end = dev->ops->get_size(dev, ios->cookie);
+        end = dev->ops->get_size(dev);
         switch (arg) {
         case SEEK_SET:
             if ((msg->arg2.off < 0) || ((size_t)msg->arg2.off > end)) {
@@ -230,7 +225,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
         vnattr_t* attr = (void*) msg->data;
         memset(attr, 0, sizeof(vnattr_t));
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-        attr->size = dev->ops->get_size(dev, ios->cookie);
+        attr->size = dev->ops->get_size(dev);
         return msg->datalen;
     }
     case MX_RIO_IOCTL: {
@@ -239,7 +234,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
         }
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
-        mx_status_t r = dev->ops->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg, ios->cookie);
+        mx_status_t r = dev->ops->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
             if (msg->arg2.op == IOCTL_DEVICE_GET_HANDLE) {
                 msg->hcount = 1;

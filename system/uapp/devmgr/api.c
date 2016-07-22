@@ -59,6 +59,17 @@ mx_status_t device_add(mx_device_t* dev, mx_device_t* parent) {
     return r;
 }
 
+mx_status_t device_add_instance(mx_device_t* dev, mx_device_t* parent) {
+    mx_status_t r;
+    DM_LOCK();
+    if (dev) {
+        dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
+    }
+    r = devmgr_device_add(dev, parent);
+    DM_UNLOCK();
+    return r;
+}
+
 mx_status_t device_remove(mx_device_t* dev) {
     mx_status_t r;
     DM_LOCK();
@@ -73,18 +84,18 @@ void device_set_bindable(mx_device_t* dev, bool bindable) {
     DM_UNLOCK();
 }
 
-mx_status_t device_open(mx_device_t* dev, uint32_t flags, void** cookie) {
+mx_status_t device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
     mx_status_t r;
     DM_LOCK();
-    r = devmgr_device_open(dev, flags, cookie);
+    r = devmgr_device_open(dev, out, flags);
     DM_UNLOCK();
     return r;
 }
 
-mx_status_t device_close(mx_device_t* dev, void* cookie) {
+mx_status_t device_close(mx_device_t* dev) {
     mx_status_t r;
     DM_LOCK();
-    r = devmgr_device_close(dev, cookie);
+    r = devmgr_device_close(dev);
     DM_UNLOCK();
     return r;
 }

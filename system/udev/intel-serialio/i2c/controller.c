@@ -192,7 +192,7 @@ static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t *dev,
 
 static ssize_t intel_serialio_i2c_ioctl(
     mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len, void* cookie) {
+    void* out_buf, size_t out_len) {
     int ret;
     switch (op) {
     case I2C_BUS_ADD_SLAVE: {

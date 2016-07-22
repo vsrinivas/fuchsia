@@ -66,10 +66,7 @@ typedef struct iostate {
         mx_device_t* dev;
         vnode_t* vn;
     };
-    union {
-        vdircookie_t dircookie;
-        void* cookie;
-    };
+    vdircookie_t dircookie;
     size_t io_off;
 
     list_node_t node;

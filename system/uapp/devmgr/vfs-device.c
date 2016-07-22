@@ -49,7 +49,7 @@ static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
     }
     mx_protocol_device_t* ops = vn->pops;
     if (ops) {
-        attr->size = ops->get_size(dev, NULL);
+        attr->size = ops->get_size(dev);
     }
     return NO_ERROR;
 }

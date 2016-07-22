@@ -134,7 +134,7 @@ static mx_protocol_tpm_t tpm_proto = {
 
 static ssize_t tpm_device_ioctl(mx_device_t* dev, uint32_t op,
                              const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, void* cookie) {
+                             void* out_buf, size_t out_len) {
     switch (op) {
         case TPM_IOCTL_SAVE_STATE: return tpm_save_state(dev);
     }

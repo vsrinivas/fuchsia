@@ -82,11 +82,11 @@ static mx_status_t default_get_protocol(mx_device_t* dev, uint32_t proto_id, voi
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_open(mx_device_t* dev, uint32_t flags, void** cookie) {
+static mx_status_t default_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
     return NO_ERROR;
 }
 
-static mx_status_t default_close(mx_device_t* dev, void* cookie) {
+static mx_status_t default_close(mx_device_t* dev) {
     return NO_ERROR;
 }
 
@@ -94,23 +94,21 @@ static mx_status_t default_release(mx_device_t* dev) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t default_read(mx_device_t* dev, void* buf, size_t count,
-                            size_t off, void* cookie) {
+static ssize_t default_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t default_write(mx_device_t* dev, const void* buf, size_t count,
-                             size_t off, void* cookie) {
+static ssize_t default_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
-static size_t default_get_size(mx_device_t* dev, void* cookie) {
+static size_t default_get_size(mx_device_t* dev) {
     return 0;
 }
 
 static ssize_t default_ioctl(mx_device_t* dev, uint32_t op,
                              const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, void* cookie) {
+                             void* out_buf, size_t out_len) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -203,8 +201,13 @@ static const char* safename(const char* name) {
 void dev_ref_release(mx_device_t* dev) {
     dev->refcount--;
     if (dev->refcount == 0) {
+        if (dev->flags & DEV_FLAG_INSTANCE) {
+            // these don't get removed, so mark dead state here
+            dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
+        }
         if (dev->flags & DEV_FLAG_BUSY) {
-            // this can happen during creation
+            // this can happen if creation fails
+            // the caller to device_add() will free it
             printf("device: %p(%s): ref=0, busy, not releasing\n", dev, safename(dev->name));
             return;
         }
@@ -353,29 +356,32 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     if (dev->event == MX_HANDLE_INVALID && (dev->event = mx_event_create(0)) < 0) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, safename(dev->name), dev->event);
-        return dev->event;
+       return dev->event;
     }
 
     dev->flags |= DEV_FLAG_BUSY;
 
-    // add to the device tree
-    dev_ref_acquire(parent);
-    dev->parent = parent;
-
     // this is balanced by end of devmgr_device_remove
+    // or, for instanced devices, by the last close
     dev_ref_acquire(dev);
-    list_add_tail(&parent->children, &dev->node);
 
-    if (devmgr_is_remote) {
-        mx_status_t r = devhost_add(dev, parent);
-        if (r < 0) {
-            printf("devhost: remote add failed %d\n", r);
-            dev_ref_release(dev->parent);
-            dev->parent = NULL;
-            dev_ref_release(dev);
-            list_delete(&dev->node);
-            dev->flags &= (~DEV_FLAG_BUSY);
-            return r;
+    if (!(dev->flags & DEV_FLAG_INSTANCE)) {
+        // add to the device tree
+        dev_ref_acquire(parent);
+        dev->parent = parent;
+        list_add_tail(&parent->children, &dev->node);
+
+        if (devmgr_is_remote) {
+            mx_status_t r = devhost_add(dev, parent);
+            if (r < 0) {
+                printf("devhost: remote add failed %d\n", r);
+                dev_ref_release(dev->parent);
+                dev->parent = NULL;
+                dev_ref_release(dev);
+                list_delete(&dev->node);
+                dev->flags &= (~DEV_FLAG_BUSY);
+                return r;
+            }
         }
     }
 
@@ -393,7 +399,8 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     }
 
     // add device to devfs
-    if (!devmgr_is_remote && (parent->vnode != NULL)) {
+    // unless we're remote... or its parent is not in devfs... or it's an instance
+    if (!devmgr_is_remote && (parent->vnode != NULL) && !(dev->flags & DEV_FLAG_INSTANCE)) {
         vnode_t* vn;
         if (devfs_add_node(&vn, parent->vnode, dev->name, dev) == NO_ERROR) {
             devmgr_register_with_protocol(dev, dev->protocol_id);
@@ -425,14 +432,24 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     return NO_ERROR;
 }
 
-mx_status_t devmgr_device_remove(mx_device_t* dev) {
-    if (dev->flags & DEV_FLAG_DEAD) {
-        printf("device: %p: cannot be removed (already dead)\n", dev);
-        return ERR_INVALID_ARGS;
+static const char* removal_problem(uint32_t flags) {
+    if (flags & DEV_FLAG_DEAD) {
+        return "already dead";
     }
-    if (dev->flags & DEV_FLAG_BUSY) {
-        printf("device: %p: cannot be removed (busy)\n", dev);
-        return ERR_BAD_STATE;
+    if (flags & DEV_FLAG_BUSY) {
+        return "being created";
+    }
+    if (flags & DEV_FLAG_INSTANCE) {
+        return "ephemeral device";
+    }
+    return "?";
+}
+
+mx_status_t devmgr_device_remove(mx_device_t* dev) {
+    if (dev->flags & (DEV_FLAG_DEAD | DEV_FLAG_BUSY | DEV_FLAG_INSTANCE)) {
+        printf("device: %p(%s): cannot be removed (%s)\n",
+               dev, safename(dev->name), removal_problem(dev->flags));
+        return ERR_INVALID_ARGS;
     }
 #if TRACE_ADD_REMOVE
     printf("device: %p(%s): is being removed\n", dev. safename(dev->name));
@@ -482,7 +499,7 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags, void **cookie) {
+mx_status_t devmgr_device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, safename(dev->name));
         return ERR_BAD_STATE;
@@ -490,15 +507,26 @@ mx_status_t devmgr_device_open(mx_device_t* dev, uint32_t flags, void **cookie) 
     dev_ref_acquire(dev);
     mx_status_t r;
     DM_UNLOCK();
-    r = dev->ops->open(dev, flags, cookie);
+    *out = dev;
+    r = dev->ops->open(dev, out, flags);
     DM_LOCK();
+    if (*out != dev) {
+        // open created a per-instance device for us
+        dev_ref_release(dev);
+
+        dev = *out;
+        if (!(dev->flags & DEV_FLAG_INSTANCE)) {
+            printf("device open: %p(%s) in bad state %x\n", dev, safename(dev->name), flags);
+            panic();
+        }
+    }
     return r;
 }
 
-mx_status_t devmgr_device_close(mx_device_t* dev, void* cookie) {
+mx_status_t devmgr_device_close(mx_device_t* dev) {
     mx_status_t r;
     DM_UNLOCK();
-    r = dev->ops->close(dev, cookie);
+    r = dev->ops->close(dev);
     DM_LOCK();
     dev_ref_release(dev);
     return r;

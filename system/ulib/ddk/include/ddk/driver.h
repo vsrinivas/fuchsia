@@ -76,6 +76,7 @@ mx_status_t device_init(mx_device_t* device, mx_driver_t* driver,
 // fields of the mx_device_t.
 
 mx_status_t device_add(mx_device_t* device, mx_device_t* parent);
+mx_status_t device_add_instance(mx_device_t* device, mx_device_t* parent);
 mx_status_t device_remove(mx_device_t* device);
 
 // Devices are bindable by drivers by default.

@@ -70,7 +70,7 @@ static size_t gpt_getsize(gpt_partdev_t* dev) {
 
 // implement device protocol:
 
-static ssize_t gpt_partdev_read(mx_device_t* dev, void* buf, size_t count, size_t off, void* cookie) {
+static ssize_t gpt_partdev_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
     // read count bytes from LBA (off)
     gpt_partdev_t* device = get_gpt_device(dev);
     uint64_t off_lba = off / device->disk->sector_sz;
@@ -103,11 +103,11 @@ static ssize_t gpt_partdev_read(mx_device_t* dev, void* buf, size_t count, size_
     return c;
 }
 
-static ssize_t gpt_partdev_write(mx_device_t* dev, const void* buf, size_t count, size_t off, void* cookie) {
+static ssize_t gpt_partdev_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t gpt_partdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max, void* cookie) {
+static ssize_t gpt_partdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
     gpt_partdev_t* device = get_gpt_device(dev);
     switch (op) {
     case BLOCK_OP_GET_SIZE: {
@@ -140,7 +140,7 @@ static ssize_t gpt_partdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     }
 }
 
-static size_t gpt_partdev_getsize(mx_device_t* dev, void* cookie) {
+static size_t gpt_partdev_getsize(mx_device_t* dev) {
     return gpt_getsize(get_gpt_device(dev));
 }
 
