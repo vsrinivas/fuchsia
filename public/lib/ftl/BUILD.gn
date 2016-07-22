@@ -12,7 +12,6 @@ static_library("ftl") {
     "logging.cc",
     "logging.h",
     "macros.h",
-    "memory/make_unique.h",
     "memory/ref_counted_internal.h",
     "memory/ref_counted.h",
     "memory/ref_ptr_internal.h",
