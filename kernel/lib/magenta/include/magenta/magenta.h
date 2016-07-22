@@ -17,7 +17,7 @@
 
 class Handle;
 class Dispatcher;
-class UserProcess;
+class ProcessDispatcher;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
@@ -37,10 +37,10 @@ Handle* MapU32ToHandle(uint32_t value);
 
 // Registers a |process|. The return value is a unique id which can serve
 // as a process id.
-uint32_t AddProcess(UserProcess* process);
+uint32_t AddProcess(ProcessDispatcher* process);
 
 // Unregisters |process|.
-void RemoveProcess(UserProcess* process);
+void RemoveProcess(ProcessDispatcher* process);
 
 // Outputs via the console the current list of processes;
 void DebugDumpProcessList();

@@ -21,7 +21,7 @@
 #include <utils/string_piece.h>
 
 class ThreadHandle;
-class UserProcess;
+class ProcessDispatcher;
 
 class UserThread : public utils::RefCounted<UserThread> {
 public:
@@ -34,7 +34,7 @@ public:
         DEAD,        // thread has exited and is not running
     };
 
-    UserThread(utils::RefPtr<UserProcess> process, thread_start_routine entry, void* arg);
+    UserThread(utils::RefPtr<ProcessDispatcher> process, thread_start_routine entry, void* arg);
     ~UserThread();
 
     static UserThread* GetCurrent() {
@@ -50,7 +50,7 @@ public:
     void DispatcherClosed();
 
     // accessors
-    UserProcess* process() { return process_.get(); }
+    ProcessDispatcher* process() { return process_.get(); }
     mx_tid_t id() const { return id_; }
     FutexNode* futex_node() { return &futex_node_; }
     StateTracker* state_tracker() { return &state_tracker_; }
@@ -88,7 +88,7 @@ private:
     void SetState(State);
 
     // a ref pointer back to the parent process
-    utils::RefPtr<UserProcess> process_;
+    utils::RefPtr<ProcessDispatcher> process_;
 
     // A unique thread id within the process.
     mx_tid_t id_ = -1;
@@ -123,7 +123,7 @@ private:
     cond_t exception_wait_cond_ = COND_INITIAL_VALUE(exception_wait_cond_);
     mutex_t exception_wait_lock_ = MUTEX_INITIAL_VALUE(exception_wait_lock_);
 
-    // our linked list members for the UserProcess list
+    // our linked list members for the ProcessDispatcher list
     UserThread* prev_ = nullptr;
     UserThread* next_ = nullptr;
 

@@ -14,9 +14,9 @@
 
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
+#include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
-#include <magenta/user_process.h>
 #include <magenta/user_thread.h>
 
 #include <platform.h>
@@ -39,7 +39,7 @@
 mx_status_t sys_set_system_exception_handler(mx_handle_t pipe_handle, mx_exception_behaviour_t behaviour) {
     LTRACE_ENTRY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> pipe_dispatcher;
     mx_rights_t pipe_rights;
@@ -60,7 +60,7 @@ mx_status_t sys_set_exception_handler(mx_handle_t object_handle,
                                       mx_handle_t pipe_handle, mx_exception_behaviour_t behaviour) {
     LTRACE_ENTRY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> pipe_dispatcher;
     mx_rights_t pipe_rights;
@@ -100,7 +100,7 @@ mx_status_t sys_set_exception_handler(mx_handle_t object_handle,
 mx_status_t sys_mark_exception_handled(mx_handle_t thread_handle, mx_exception_status_t excp_status) {
     LTRACE_ENTRY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     if (excp_status != MX_EXCEPTION_STATUS_NOT_HANDLED &&
         excp_status != MX_EXCEPTION_STATUS_RESUME)

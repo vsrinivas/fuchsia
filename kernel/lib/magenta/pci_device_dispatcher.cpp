@@ -9,7 +9,7 @@
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
 #include <magenta/pci_io_mapping_dispatcher.h>
-#include <magenta/user_process.h>
+#include <magenta/process_dispatcher.h>
 
 #include <assert.h>
 #include <err.h>

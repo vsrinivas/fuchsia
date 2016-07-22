@@ -12,15 +12,14 @@
 #include <lib/console.h>
 #include <lib/elf.h>
 #include <lk/init.h>
-#include <magenta/user_process.h>
-#include <magenta/vm_object_dispatcher.h>
 #include <platform.h>
 #include <stdio.h>
 #include <trace.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/user_process.h>
+#include <magenta/process_dispatcher.h>
+#include <magenta/vm_object_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
 #define USERBOOT_PAYLOAD 0x2000000
@@ -52,7 +51,7 @@ static int attempt_userboot(const void* userboot, size_t ublen,
 
     mx_rights_t rights;
     utils::RefPtr<Dispatcher> proc_disp;
-    mx_status_t st = UserProcess::Create("userboot", &proc_disp, &rights);
+    mx_status_t st = ProcessDispatcher::Create("userboot", &proc_disp, &rights);
     if (st < 0) {
         return st;
     }

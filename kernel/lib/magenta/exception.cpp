@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <trace.h>
 
-#include <magenta/user_process.h>
+#include <magenta/process_dispatcher.h>
 #include <magenta/user_thread.h>
 
 #define LOCAL_TRACE 0

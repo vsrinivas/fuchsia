@@ -21,11 +21,12 @@
 
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
-#include <magenta/user_process.h>
+#include <magenta/process_dispatcher.h>
 
 #define LOCAL_TRACE 0
 
-UserThread::UserThread(utils::RefPtr<UserProcess> process, thread_start_routine entry, void* arg)
+UserThread::UserThread(utils::RefPtr<ProcessDispatcher> process,
+                       thread_start_routine entry, void* arg)
     : process_(utils::move(process)),
       entry_(entry),
       arg_(arg),
@@ -143,7 +144,7 @@ void UserThread::Kill() {
 
     // see if we're already going down.
     // check these ahead of time in case we're recursing from inside an already exiting situation
-    // the recursion path is UserThread::Exiting -> UserProcess::RemoveThread -> clean up handle table ->
+    // the recursion path is UserThread::Exiting -> ProcessDispatcher::RemoveThread -> clean up handle table ->
     // UserThread::DispatcherClosed -> UserThread::Kill
     if (state_ == State::DYING || state_ == State::DEAD)
         return;

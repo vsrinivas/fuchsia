@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/io_mapping_dispatcher.h>
-#include <magenta/user_process.h>
+#include <magenta/process_dispatcher.h>
 
 constexpr mx_rights_t IoMappingDispatcher::kDefaultRights;
 
@@ -65,7 +65,7 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
         !size)
         return ERR_INVALID_ARGS;
 
-    aspace_ = UserProcess::GetCurrent()->aspace();
+    aspace_ = ProcessDispatcher::GetCurrent()->aspace();
     DEBUG_ASSERT(aspace_); // This should never fail.
     if (!aspace_)
         return ERR_INTERNAL;

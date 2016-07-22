@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/user_process.h>
+#include <magenta/process_dispatcher.h>
 
 #include <list.h>
 #include <rand.h>
@@ -25,10 +25,10 @@
 
 constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_TRANSFER;
 
-mx_status_t UserProcess::Create(utils::StringPiece name,
-                                utils::RefPtr<Dispatcher>* dispatcher,
-                                mx_rights_t* rights) {
-    auto process = new UserProcess(name);
+mx_status_t ProcessDispatcher::Create(utils::StringPiece name,
+                                      utils::RefPtr<Dispatcher>* dispatcher,
+                                      mx_rights_t* rights) {
+    auto process = new ProcessDispatcher(name);
     if (!process)
         return ERR_NO_MEMORY;
 
@@ -41,7 +41,7 @@ mx_status_t UserProcess::Create(utils::StringPiece name,
     return NO_ERROR;
 }
 
-UserProcess::UserProcess(utils::StringPiece name)
+ProcessDispatcher::ProcessDispatcher(utils::StringPiece name)
     : state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
@@ -54,7 +54,7 @@ UserProcess::UserProcess(utils::StringPiece name)
         strlcpy(name_, name.data(), sizeof(name_));
 }
 
-UserProcess::~UserProcess() {
+ProcessDispatcher::~ProcessDispatcher() {
     LTRACE_ENTRY_OBJ;
     Kill();
 
@@ -73,7 +73,7 @@ UserProcess::~UserProcess() {
     LTRACE_EXIT_OBJ;
 }
 
-status_t UserProcess::Initialize() {
+status_t ProcessDispatcher::Initialize() {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -90,7 +90,7 @@ status_t UserProcess::Initialize() {
     return NO_ERROR;
 }
 
-status_t UserProcess::Start(void* arg, mx_vaddr_t entry) {
+status_t ProcessDispatcher::Start(void* arg, mx_vaddr_t entry) {
     LTRACE_ENTRY_OBJ;
 
     // grab and hold the state lock across this entire routine, since we're
@@ -101,7 +101,7 @@ status_t UserProcess::Start(void* arg, mx_vaddr_t entry) {
 
     // make sure we're in the right state
     if (state_ != State::INITIAL) {
-        TRACEF("UserProcess has not been loaded\n");
+        TRACEF("ProcessDispatcher has not been loaded\n");
         return ERR_BAD_STATE;
     }
 
@@ -112,7 +112,7 @@ status_t UserProcess::Start(void* arg, mx_vaddr_t entry) {
     // TODO: move the creation of the initial thread to user space
     status_t result;
     // create the first thread
-    auto t = utils::AdoptRef(new UserThread(utils::RefPtr<UserProcess>(this), entry_, arg));
+    auto t = utils::AdoptRef(new UserThread(utils::RefPtr<ProcessDispatcher>(this), entry_, arg));
     if (!t) {
         result = ERR_NO_MEMORY;
     } else {
@@ -137,7 +137,7 @@ status_t UserProcess::Start(void* arg, mx_vaddr_t entry) {
     return NO_ERROR;
 }
 
-void UserProcess::Exit(int retcode) {
+void ProcessDispatcher::Exit(int retcode) {
     LTRACE_ENTRY_OBJ;
 
     {
@@ -154,7 +154,7 @@ void UserProcess::Exit(int retcode) {
     UserThread::GetCurrent()->Exit();
 }
 
-void UserProcess::Kill() {
+void ProcessDispatcher::Kill() {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -173,7 +173,7 @@ void UserProcess::Kill() {
     }
 }
 
-void UserProcess::KillAllThreads() {
+void ProcessDispatcher::KillAllThreads() {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&thread_list_lock_);
@@ -184,7 +184,7 @@ void UserProcess::KillAllThreads() {
     });
 }
 
-status_t UserProcess::AddThread(UserThread* t) {
+status_t ProcessDispatcher::AddThread(UserThread* t) {
     LTRACE_ENTRY_OBJ;
 
     // cannot add thread to dying/dead state
@@ -201,7 +201,7 @@ status_t UserProcess::AddThread(UserThread* t) {
     return NO_ERROR;
 }
 
-void UserProcess::RemoveThread(UserThread* t) {
+void ProcessDispatcher::RemoveThread(UserThread* t) {
     LTRACE_ENTRY_OBJ;
 
     // we're going to check for state and possibly transition below
@@ -223,14 +223,14 @@ void UserProcess::RemoveThread(UserThread* t) {
     }
 }
 
-void UserProcess::SetState(State s) {
+void ProcessDispatcher::SetState(State s) {
     LTRACEF("process %p: state %u (%s)\n", this, static_cast<unsigned int>(s), StateToString(s));
 
     DEBUG_ASSERT(is_mutex_held(&state_lock_));
 
     // look for some invalid state transitions
     if (state_ == State::DEAD && s != State::DEAD) {
-        panic("UserProcess::SetState invalid state transition from DEAD to !DEAD\n");
+        panic("ProcessDispatcher::SetState invalid state transition from DEAD to !DEAD\n");
         return;
     }
 
@@ -265,12 +265,12 @@ void UserProcess::SetState(State s) {
 }
 
 // process handle manipulation routines
-mx_handle_t UserProcess::MapHandleToValue(Handle* handle) {
+mx_handle_t ProcessDispatcher::MapHandleToValue(Handle* handle) {
     auto handle_index = MapHandleToU32(handle) + 1;
     return handle_index ^ handle_rand_;
 }
 
-Handle* UserProcess::GetHandle_NoLock(mx_handle_t handle_value) {
+Handle* ProcessDispatcher::GetHandle_NoLock(mx_handle_t handle_value) {
     auto handle_index = (handle_value ^ handle_rand_) - 1;
     Handle* handle = MapU32ToHandle(handle_index);
     if (!handle)
@@ -278,22 +278,22 @@ Handle* UserProcess::GetHandle_NoLock(mx_handle_t handle_value) {
     return (handle->process_id() == id_) ? handle : nullptr;
 }
 
-void UserProcess::AddHandle(HandleUniquePtr handle) {
+void ProcessDispatcher::AddHandle(HandleUniquePtr handle) {
     AutoLock lock(&handle_table_lock_);
     AddHandle_NoLock(utils::move(handle));
 }
 
-void UserProcess::AddHandle_NoLock(HandleUniquePtr handle) {
+void ProcessDispatcher::AddHandle_NoLock(HandleUniquePtr handle) {
     handle->set_process_id(id_);
     handles_.push_front(handle.release());
 }
 
-HandleUniquePtr UserProcess::RemoveHandle(mx_handle_t handle_value) {
+HandleUniquePtr ProcessDispatcher::RemoveHandle(mx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
     return RemoveHandle_NoLock(handle_value);
 }
 
-HandleUniquePtr UserProcess::RemoveHandle_NoLock(mx_handle_t handle_value) {
+HandleUniquePtr ProcessDispatcher::RemoveHandle_NoLock(mx_handle_t handle_value) {
     auto handle = GetHandle_NoLock(handle_value);
     if (!handle)
         return nullptr;
@@ -303,14 +303,15 @@ HandleUniquePtr UserProcess::RemoveHandle_NoLock(mx_handle_t handle_value) {
     return HandleUniquePtr(handle);
 }
 
-void UserProcess::UndoRemoveHandle_NoLock(mx_handle_t handle_value) {
+void ProcessDispatcher::UndoRemoveHandle_NoLock(mx_handle_t handle_value) {
     auto handle_index = (handle_value ^ handle_rand_) - 1;
     Handle* handle = MapU32ToHandle(handle_index);
     AddHandle_NoLock(HandleUniquePtr(handle));
 }
 
-bool UserProcess::GetDispatcher(mx_handle_t handle_value, utils::RefPtr<Dispatcher>* dispatcher,
-                                uint32_t* rights) {
+bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
+                                      utils::RefPtr<Dispatcher>* dispatcher,
+                                      uint32_t* rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandle_NoLock(handle_value);
     if (!handle)
@@ -321,17 +322,18 @@ bool UserProcess::GetDispatcher(mx_handle_t handle_value, utils::RefPtr<Dispatch
     return true;
 }
 
-status_t UserProcess::GetInfo(mx_process_info_t* info) {
+status_t ProcessDispatcher::GetInfo(mx_process_info_t* info) {
     info->return_code = retcode_;
 
     return NO_ERROR;
 }
 
-mx_tid_t UserProcess::GetNextThreadId() {
+mx_tid_t ProcessDispatcher::GetNextThreadId() {
     return atomic_add(&next_thread_id_, 1);
 }
 
-status_t UserProcess::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
+status_t ProcessDispatcher::SetExceptionHandler(utils::RefPtr<Dispatcher> handler,
+                                                mx_exception_behaviour_t behaviour) {
     AutoLock lock(&exception_lock_);
 
     exception_handler_ = handler;
@@ -340,12 +342,12 @@ status_t UserProcess::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_
     return NO_ERROR;
 }
 
-utils::RefPtr<Dispatcher> UserProcess::exception_handler() {
+utils::RefPtr<Dispatcher> ProcessDispatcher::exception_handler() {
     AutoLock lock(&exception_lock_);
     return exception_handler_;
 }
 
-uint32_t UserProcess::HandleStats(uint32_t* handle_type, size_t size) {
+uint32_t ProcessDispatcher::HandleStats(uint32_t* handle_type, size_t size) {
     AutoLock lock(&handle_table_lock_);
     uint32_t total = 0;
     utils::for_each(&handles_, [&total, handle_type, size](Handle* handle) {
@@ -359,12 +361,12 @@ uint32_t UserProcess::HandleStats(uint32_t* handle_type, size_t size) {
     return total;
 }
 
-uint32_t UserProcess::ThreadCount() {
+uint32_t ProcessDispatcher::ThreadCount() {
     AutoLock lock(&thread_list_lock_);
     return static_cast<uint32_t>(thread_list_.size_slow());
 }
 
-char UserProcess::StateChar() const {
+char ProcessDispatcher::StateChar() const {
     State s = state();
 
     switch (s) {
@@ -380,15 +382,15 @@ char UserProcess::StateChar() const {
     return '?';
 }
 
-const char* StateToString(UserProcess::State state) {
+const char* StateToString(ProcessDispatcher::State state) {
     switch (state) {
-    case UserProcess::State::INITIAL:
+    case ProcessDispatcher::State::INITIAL:
         return "initial";
-    case UserProcess::State::RUNNING:
+    case ProcessDispatcher::State::RUNNING:
         return "running";
-    case UserProcess::State::DYING:
+    case ProcessDispatcher::State::DYING:
         return "dying";
-    case UserProcess::State::DEAD:
+    case ProcessDispatcher::State::DEAD:
         return "dead";
     }
     return "unknown";

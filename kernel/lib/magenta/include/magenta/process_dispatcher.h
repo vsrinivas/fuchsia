@@ -23,24 +23,24 @@
 #include <utils/ref_ptr.h>
 #include <utils/string_piece.h>
 
-class UserProcess : public Dispatcher {
+class ProcessDispatcher : public Dispatcher {
 public:
     static mx_status_t Create(utils::StringPiece name,
                               utils::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
-    static UserProcess* GetCurrent() {
+    static ProcessDispatcher* GetCurrent() {
         UserThread* current = UserThread::GetCurrent();
         DEBUG_ASSERT(current);
         return current->process();
     }
 
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
-    UserProcess* get_process_dispatcher() final { return this; }
+    ProcessDispatcher* get_process_dispatcher() final { return this; }
 
     StateTracker* get_state_tracker() final { return &state_tracker_; }
 
-    ~UserProcess() final;
+    ~ProcessDispatcher() final;
 
     // state of the process
     enum class State {
@@ -50,7 +50,7 @@ public:
         DEAD,    // all threads have entered DEAD state and potentially dropped refs on process
     };
 
-    // Performs initialization on a newly constructed UserProcess
+    // Performs initialization on a newly constructed ProcessDispatcher
     // If this fails, then the object is invalid and should be deleted
     status_t Initialize();
 
@@ -108,19 +108,19 @@ public:
     uint32_t HandleStats(uint32_t*handle_type, size_t size);
     uint32_t ThreadCount();
 
-    // Necessary members for using DoublyLinkedList<UserProcess>.
-    UserProcess* list_prev() { return prev_; }
-    UserProcess* list_next() { return next_; }
-    const UserProcess* list_prev() const { return prev_; }
-    const UserProcess* list_next() const { return next_; }
-    void list_set_prev(UserProcess* node) { prev_ = node; }
-    void list_set_next(UserProcess* node) { next_ = node; }
+    // Necessary members for using DoublyLinkedList<ProcessDispatcher>.
+    ProcessDispatcher* list_prev() { return prev_; }
+    ProcessDispatcher* list_next() { return next_; }
+    const ProcessDispatcher* list_prev() const { return prev_; }
+    const ProcessDispatcher* list_next() const { return next_; }
+    void list_set_prev(ProcessDispatcher* node) { prev_ = node; }
+    void list_set_next(ProcessDispatcher* node) { next_ = node; }
 
 private:
-    explicit UserProcess(utils::StringPiece name);
+    explicit ProcessDispatcher(utils::StringPiece name);
 
-    UserProcess(const UserProcess&) = delete;
-    UserProcess& operator=(const UserProcess&) = delete;
+    ProcessDispatcher(const ProcessDispatcher&) = delete;
+    ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
 
     // Thread lifecycle support
     friend class UserThread;
@@ -175,11 +175,11 @@ private:
     mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
 
     // Holds the linked list of processes that magenta.cpp mantains.
-    UserProcess* prev_ = nullptr;
-    UserProcess* next_ = nullptr;
+    ProcessDispatcher* prev_ = nullptr;
+    ProcessDispatcher* next_ = nullptr;
 
     // The user-friendly process name. For debug purposes only.
     char name_[THREAD_NAME_LENGTH / 2] = {};
 };
 
-const char* StateToString(UserProcess::State state);
+const char* StateToString(ProcessDispatcher::State state);

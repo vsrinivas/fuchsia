@@ -20,8 +20,8 @@
 #include <magenta/magenta.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
+#include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
-#include <magenta/user_process.h>
 
 #include "syscalls_priv.h"
 
@@ -47,7 +47,7 @@ mx_handle_t sys_interrupt_event_create(uint32_t vector, uint32_t flags) {
 
     HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), rights));
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(utils::move(handle));
     return hv;
@@ -59,7 +59,7 @@ mx_status_t sys_interrupt_event_wait(mx_handle_t handle_value) {
     uint32_t rights = 0u;
     utils::RefPtr<Dispatcher> dispatcher;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
         return ERR_INVALID_ARGS;
 
@@ -76,7 +76,7 @@ mx_status_t sys_interrupt_event_complete(mx_handle_t handle_value) {
     uint32_t rights = 0u;
     utils::RefPtr<Dispatcher> dispatcher;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
         return ERR_INVALID_ARGS;
 
@@ -97,7 +97,7 @@ mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len, void** out_vad
     uint arch_mmu_flags =
         ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
 
-    auto aspace = UserProcess::GetCurrent()->aspace();
+    auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     status_t res = aspace->AllocPhysical("user_mmio", len, &vaddr,
                                          PAGE_SIZE_SHIFT, (paddr_t)paddr,
                                          0,  // vmm flags
@@ -123,7 +123,7 @@ mx_status_t sys_alloc_device_memory(uint32_t len, mx_paddr_t* out_paddr, void** 
         return ERR_INVALID_ARGS;
 
     void* vaddr = nullptr;
-    auto aspace = UserProcess::GetCurrent()->aspace();
+    auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     uint arch_mmu_flags =
         ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
 
@@ -201,7 +201,7 @@ mx_handle_t sys_pci_get_nth_device(uint32_t index, mx_pcie_get_nth_info_t* out_i
     if (!handle)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t handle_value = up->MapHandleToValue(handle.get());
 
     if (copy_to_user(reinterpret_cast<uint8_t*>(out_info),
@@ -220,7 +220,7 @@ mx_status_t sys_pci_claim_device(mx_handle_t handle) {
      */
     LTRACEF("handle %u\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -245,7 +245,7 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t handle, bool enable) {
      */
     LTRACEF("handle %u\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -269,7 +269,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t handle) {
      */
     LTRACEF("handle %u\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -294,7 +294,7 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
      */
     LTRACEF("handle %u\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -362,7 +362,7 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
      */
     LTRACEF("handle %u\n", handle_value);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> device_dispatcher;
     uint32_t rights;
 
@@ -396,7 +396,7 @@ mx_status_t sys_pci_interrupt_wait(mx_handle_t handle) {
      * Waits for an interrupt on this handle
      * @param handle Handle associated with a PCI interrupt
      */
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -422,7 +422,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
      */
     LTRACEF("handle %u\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -462,7 +462,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
                                         uint32_t* out_max_irqs) {
     LTRACEF("handle %u\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -499,7 +499,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
                                  uint32_t requested_irq_count) {
     LTRACEF("handle %u\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -528,7 +528,7 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
     if (!out_vaddr || !out_size)
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -543,7 +543,7 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
     // space than the one that this mapping exists in, refuse to tell the user
     // the vaddr/len of the mapping.
     if (!magenta_rights_check(rights, MX_RIGHT_READ) ||
-        (UserProcess::GetCurrent()->aspace() != io_mapping->aspace()))
+        (ProcessDispatcher::GetCurrent()->aspace() != io_mapping->aspace()))
         return ERR_ACCESS_DENIED;
 
     void*    vaddr = reinterpret_cast<void*>(io_mapping->vaddr());

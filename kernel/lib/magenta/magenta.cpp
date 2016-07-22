@@ -17,8 +17,8 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/handle.h>
+#include <magenta/process_dispatcher.h>
 #include <magenta/state_tracker.h>
-#include <magenta/user_process.h>
 
 // The next two includes should be removed. See DeleteHandle().
 #include <magenta/pci_interrupt_dispatcher.h>
@@ -43,7 +43,7 @@ utils::TypedArena<Handle> handle_arena;
 // The process list, id and its mutex.
 mutex_t process_mutex = MUTEX_INITIAL_VALUE(process_mutex);
 uint32_t next_process_id = 0u;
-utils::DoublyLinkedList<UserProcess> process_list;
+utils::DoublyLinkedList<ProcessDispatcher> process_list;
 
 // The system exception handler
 static utils::RefPtr<Dispatcher> system_exception_handler;
@@ -108,7 +108,7 @@ Handle* MapU32ToHandle(uint32_t value) {
     return reinterpret_cast<Handle*>(va);
 }
 
-uint32_t AddProcess(UserProcess* process) {
+uint32_t AddProcess(ProcessDispatcher* process) {
     // Don't call any method of |process|, it is not yet fully constructed.
     AutoLock lock(&process_mutex);
     ++next_process_id;
@@ -117,13 +117,13 @@ uint32_t AddProcess(UserProcess* process) {
     return next_process_id;
 }
 
-void RemoveProcess(UserProcess* process) {
+void RemoveProcess(ProcessDispatcher* process) {
     AutoLock lock(&process_mutex);
     process_list.remove(process);
     LTRACEF("Removing process %p : id = %u\n", process, process->id());
 }
 
-char* DebugDumpHandleTypeCount_NoLock(UserProcess* process) {
+char* DebugDumpHandleTypeCount_NoLock(ProcessDispatcher* process) {
     static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
 
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
@@ -147,7 +147,7 @@ char* DebugDumpHandleTypeCount_NoLock(UserProcess* process) {
 void DebugDumpProcessList() {
     AutoLock lock(&process_mutex);
     printf(" id-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n");
-    utils::for_each(&process_list, [](UserProcess* process) {
+    utils::for_each(&process_list, [](ProcessDispatcher* process) {
         printf("%3u-%c %3u %s [%s]\n",
             process->id(),
             process->StateChar(),

@@ -25,10 +25,10 @@
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
+#include <magenta/process_dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
-#include <magenta/user_process.h>
 #include <magenta/user_thread.h>
 #include <magenta/vm_object_dispatcher.h>
 #include <magenta/wait_event.h>
@@ -57,7 +57,7 @@ constexpr mx_size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
 void sys_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
 
-    UserProcess::GetCurrent()->Exit(retcode);
+    ProcessDispatcher::GetCurrent()->Exit(retcode);
 }
 
 mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
@@ -126,7 +126,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     WaitHelper wait_helper;
 
     {
-        auto up = UserProcess::GetCurrent();
+        auto up = ProcessDispatcher::GetCurrent();
         AutoLock lock(up->handle_table_lock());
 
         Handle* handle = up->GetHandle_NoLock(handle_value);
@@ -203,7 +203,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     result = NO_ERROR;
     size_t num_added = 0;
     {
-        auto up = UserProcess::GetCurrent();
+        auto up = ProcessDispatcher::GetCurrent();
         AutoLock lock(up->handle_table_lock());
 
         for (; num_added != count; ++num_added) {
@@ -261,7 +261,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
 
 mx_status_t sys_handle_close(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     HandleUniquePtr handle(up->RemoveHandle(handle_value));
     if (!handle)
         return ERR_INVALID_ARGS;
@@ -271,7 +271,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
 mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
     LTRACEF("handle %u\n", handle_value);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     HandleUniquePtr dest;
 
     {
@@ -301,7 +301,7 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
 }
 
 mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, mx_size_t info_size) {
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -363,7 +363,7 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p flags 0x%x\n",
             handle_value, _bytes, _num_bytes, _handles, _num_handles, flags);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -462,7 +462,7 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
             handle_value, _bytes, num_bytes, _handles, num_handles, flags);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -586,7 +586,7 @@ mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
     if (!h1)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
     if (copy_to_user(out_handle, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
@@ -608,9 +608,10 @@ mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, 
     if (result != NO_ERROR)
         return result;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
-    auto user_thread = utils::AdoptRef(new UserThread(utils::RefPtr<UserProcess>(up), entry, arg));
+    auto user_thread = utils::AdoptRef(
+        new UserThread(utils::RefPtr<ProcessDispatcher>(up), entry, arg));
     if (!user_thread)
         return ERR_NO_MEMORY;
 
@@ -712,7 +713,7 @@ mx_handle_t sys_process_create(const char* name, uint32_t name_len) {
 
     utils::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status_t res = UserProcess::Create(sp, &dispatcher, &rights);
+    status_t res = ProcessDispatcher::Create(sp, &dispatcher, &rights);
     if (res != NO_ERROR)
         return res;
 
@@ -720,7 +721,7 @@ mx_handle_t sys_process_create(const char* name, uint32_t name_len) {
     if (!handle)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(utils::move(handle));
     return hv;
@@ -729,7 +730,7 @@ mx_handle_t sys_process_create(const char* name, uint32_t name_len) {
 mx_status_t sys_process_start(mx_handle_t handle_value, mx_handle_t arg_handle_value, mx_vaddr_t entry) {
     LTRACEF("handle %u\n", handle_value);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -766,7 +767,7 @@ mx_handle_t sys_event_create(uint32_t options) {
     if (!handle)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(utils::move(handle));
@@ -776,7 +777,7 @@ mx_handle_t sys_event_create(uint32_t options) {
 mx_status_t sys_event_signal(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -796,7 +797,7 @@ mx_status_t sys_event_signal(mx_handle_t handle_value) {
 mx_status_t sys_event_reset(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -821,7 +822,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t set_mask, uint3
     if ((clear_mask & MX_SIGNAL_USER_ALL) != clear_mask)
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
@@ -834,16 +835,16 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t set_mask, uint3
 }
 
 mx_status_t sys_futex_wait(int* value_ptr, int current_value, mx_time_t timeout) {
-    return UserProcess::GetCurrent()->futex_context()->FutexWait(value_ptr, current_value, timeout);
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(value_ptr, current_value, timeout);
 }
 
 mx_status_t sys_futex_wake(int* value_ptr, uint32_t count) {
-    return UserProcess::GetCurrent()->futex_context()->FutexWake(value_ptr, count);
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(value_ptr, count);
 }
 
 mx_status_t sys_futex_requeue(int* wake_ptr, uint32_t wake_count, int current_value,
                               int* requeue_ptr, uint32_t requeue_count) {
-    return UserProcess::GetCurrent()->futex_context()->FutexRequeue(
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(
         wake_ptr, wake_count, current_value, requeue_ptr, requeue_count);
 }
 
@@ -867,7 +868,7 @@ mx_handle_t sys_vm_object_create(uint64_t size) {
     if (!handle)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(utils::move(handle));
@@ -879,7 +880,7 @@ mx_ssize_t sys_vm_object_read(mx_handle_t handle, void* data, uint64_t offset, m
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
 
     // lookup the dispatcher from handle
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -900,7 +901,7 @@ mx_ssize_t sys_vm_object_write(mx_handle_t handle, const void* data, uint64_t of
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
 
     // lookup the dispatcher from handle
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -921,7 +922,7 @@ mx_status_t sys_vm_object_get_size(mx_handle_t handle, uint64_t* _size) {
     LTRACEF("handle %d, sizep %p\n", handle, _size);
 
     // lookup the dispatcher from handle
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -948,7 +949,7 @@ mx_status_t sys_vm_object_set_size(mx_handle_t handle, uint64_t size) {
     LTRACEF("handle %d, size 0x%llx\n", handle, size);
 
     // lookup the dispatcher from handle
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -972,7 +973,7 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
             proc_handle, vmo_handle, offset, len, user_ptr, flags);
 
     // current process
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     // get the vmo dispatcher
     utils::RefPtr<Dispatcher> vmo_dispatcher;
@@ -1031,7 +1032,7 @@ mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_
     LTRACEF("proc handle %d, address 0x%lx, len 0x%lx\n", proc_handle, address, len);
 
     // get a reffed pointer to the address space in the target process
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<VmAspace> aspace;
     if (proc_handle == 0) {
         // handle 0 is magic for 'current process'
@@ -1072,7 +1073,7 @@ mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, m
     LTRACEF("proc handle %d, address 0x%lx, len 0x%lx, prot 0x%x\n", proc_handle, address, len, prot);
 
     // get a reffed pointer to the address space in the target process
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<VmAspace> aspace;
     if (proc_handle == 0) {
         // handle 0 is magic for 'current process'
@@ -1151,7 +1152,7 @@ int sys_log_create(uint32_t flags) {
     if (!handle)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(utils::move(handle));
@@ -1165,7 +1166,7 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, const void* ptr, uint32_
     if (len > DLOG_MAX_ENTRY)
         return ERR_TOO_BIG;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> log_dispatcher;
     uint32_t log_rights;
@@ -1189,7 +1190,7 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, const void* ptr, uint32_
 int sys_log_read(mx_handle_t log_handle, uint32_t len, void* ptr, uint32_t flags) {
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> log_dispatcher;
     uint32_t log_rights;
@@ -1219,7 +1220,7 @@ mx_handle_t sys_io_port_create(uint32_t options) {
     if (!handle)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(utils::move(handle));
@@ -1235,7 +1236,7 @@ mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t 
     if (size < sizeof(iop.u))
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -1266,7 +1267,7 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
     if (!packet)
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -1293,7 +1294,7 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
 mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, mx_signals_t signals) {
     LTRACEF("handle %d source %d\n", handle, source);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     uint32_t rights = 0;
 
     utils::RefPtr<Dispatcher> iop_d;
@@ -1356,7 +1357,7 @@ mx_handle_t sys_data_pipe_create(uint32_t options, mx_size_t element_size, mx_si
     if (!consumer_handle)
         return ERR_NO_MEMORY;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv_producer = up->MapHandleToValue(producer_handle.get());
     mx_handle_t hv_consumer = up->MapHandleToValue(consumer_handle.get());
 
@@ -1376,7 +1377,7 @@ mx_ssize_t sys_data_pipe_write(mx_handle_t handle, uint32_t flags, mx_size_t req
     if (!_buffer)
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -1405,7 +1406,7 @@ mx_ssize_t sys_data_pipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requ
     if (!_buffer)
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -1434,7 +1435,7 @@ mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size
     if (!buffer)
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -1466,7 +1467,7 @@ mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size
 mx_status_t sys_data_pipe_end_write(mx_handle_t handle, mx_size_t written) {
     LTRACEF("handle %d\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -1490,7 +1491,7 @@ mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_
     if (!buffer)
         return ERR_INVALID_ARGS;
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -1522,7 +1523,7 @@ mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_
 mx_status_t sys_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
     LTRACEF("handle %d\n", handle);
 
-    auto up = UserProcess::GetCurrent();
+    auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
