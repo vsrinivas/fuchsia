@@ -74,8 +74,8 @@ static bool create_destroy_test(void) {
     mx_handle_t consumer;
 
     producer = mx_data_pipe_create(0u, 1u, KB_(1), &consumer);
-    ASSERT_GE(producer, 0, "could not create producer data pipe");
-    ASSERT_GE(consumer, 0, "could not create consumer data pipe");
+    ASSERT_GT(producer, 0, "could not create producer data pipe");
+    ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     ASSERT_EQ(get_satisfied_signals(consumer), 0u, "");
     ASSERT_EQ(get_satisfied_signals(producer), MX_SIGNAL_WRITABLE, "");
@@ -117,8 +117,8 @@ static bool loop_write_full(void) {
     mx_status_t status;
 
     producer = mx_data_pipe_create(0u, 1u, KB_(32), &consumer);
-    ASSERT_GE(producer, 0, "could not create producer data pipe");
-    ASSERT_GE(consumer, 0, "could not create consumer data pipe");
+    ASSERT_GT(producer, 0, "could not create producer data pipe");
+    ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     for (int ix = 0; ; ++ix) {
         uintptr_t buffer = 0;
@@ -147,6 +147,44 @@ static bool loop_write_full(void) {
     END_TEST;
 }
 
+static bool simple_read_write(void) {
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+    mx_status_t status;
+
+    producer = mx_data_pipe_create(0u, 1u, KB_(4), &consumer);
+    ASSERT_GT(producer, 0, "data pipe creation failed");
+    ASSERT_GT(consumer, 0, "data pipe creation failed");
+
+    mx_ssize_t written = mx_data_pipe_write(producer, 0u, 4, "hello");
+    ASSERT_EQ(written, 4, "write failed");
+
+    status = mx_handle_close(producer);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    char buffer[64];
+    mx_ssize_t read = mx_data_pipe_read(consumer, 0u, 1, buffer);
+    ASSERT_EQ(read, 1, "read failed");
+
+    uintptr_t bb;
+    read = mx_data_pipe_begin_read(consumer, 0u, sizeof(buffer), &bb);
+    ASSERT_EQ(read, 3, "begin read failed");
+
+    memcpy(&buffer[1], (char*)bb, 3u);
+    int eq = memcmp(buffer, "hell", 4u);
+    ASSERT_EQ(eq, 0, "");
+
+    status = mx_data_pipe_end_read(consumer, 3u);
+    ASSERT_EQ(status, NO_ERROR, "end read failed");
+
+    status = mx_handle_close(consumer);
+    ASSERT_EQ(status, NO_ERROR, "close failed");
+
+    END_TEST;
+}
+
 static bool write_read(void) {
     // Pipe of 32KB. Single write of 12000 bytes and 4 reads of 3000 bytes each.
     BEGIN_TEST;
@@ -155,8 +193,8 @@ static bool write_read(void) {
     mx_status_t status;
 
     producer = mx_data_pipe_create(0u, 1u, KB_(32), &consumer);
-    ASSERT_GE(producer, 0, "could not create producer data pipe");
-    ASSERT_GE(consumer, 0, "could not create consumer data pipe");
+    ASSERT_GT(producer, 0, "could not create producer data pipe");
+    ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     char* buffer = (char*) malloc(4 * 3000u);
     ASSERT_NEQ(buffer, NULL, "failed to alloc");
@@ -246,8 +284,8 @@ static bool loop_write_read(void) {
     mx_status_t status;
 
     producer = mx_data_pipe_create(0u, 1u, KB_(36), &consumer);
-    ASSERT_GE(producer, 0, "could not create producer data pipe");
-    ASSERT_GE(consumer, 0, "could not create consumer data pipe");
+    ASSERT_GT(producer, 0, "could not create producer data pipe");
+    ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     char* buffer = (char*) malloc(KB_(16));
 
@@ -278,8 +316,8 @@ static bool loop_begin_write_read(void) {
     mx_status_t status;
 
     producer = mx_data_pipe_create(0u, 1u, KB_(36), &consumer);
-    ASSERT_GE(producer, 0, "could not create producer data pipe");
-    ASSERT_GE(consumer, 0, "could not create consumer data pipe");
+    ASSERT_GT(producer, 0, "could not create producer data pipe");
+    ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     // The writer goes faster, after 10 rounds the write cursor catches up from behind.
     for (int ix = 0; ; ++ix) {
@@ -312,6 +350,7 @@ static bool loop_begin_write_read(void) {
 
 BEGIN_TEST_CASE(data_pipe_tests)
 RUN_TEST(create_destroy_test)
+RUN_TEST(simple_read_write)
 RUN_TEST(loop_write_full)
 RUN_TEST(write_read)
 RUN_TEST(begin_write_read)
