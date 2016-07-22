@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
         printf("mx_cprng_draw had unexpected return: %ld\n", read);
         return 1;
     }
-    printf("Drew %ld bytes: ", sizeof(buf));
+    printf("Drew %zd bytes: ", sizeof(buf));
     for (unsigned int i = 0; i < sizeof(buf); ++i) {
         printf(" %02x", buf[i]);
     }

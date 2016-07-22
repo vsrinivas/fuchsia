@@ -35,7 +35,12 @@ static void EarlyBootSeed(uint level) {
 
     uint8_t buf[32] = {0};
     // TODO(security): Have the PRNG reseed based on usage
-    size_t fetched = hw_rng_get_entropy(buf, sizeof(buf), true);
+    size_t fetched = 0;
+#if ARCH_X86_64
+    // We currently only have a hardware RNG implemented for x86-64.  If
+    // we're on ARM, go through the fallback (see the security warning below).
+    fetched = hw_rng_get_entropy(buf, sizeof(buf), true);
+#endif
     if (fetched == 0) {
         // We made a blocking request, but it returned 0, so there is no PRNG
         printf("WARNING: System has no entropy source.  It is completely "
