@@ -13,7 +13,7 @@
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 
-#include <magenta/waiter.h>
+#include <magenta/state_tracker.h>
 
 class Handle;
 class VmObject;
@@ -32,8 +32,8 @@ public:
 
     ~DataPipe();
 
-    Waiter* get_producer_waiter();
-    Waiter* get_consumer_waiter();
+    StateTracker* get_producer_state_tracker() { return &producer_.state_tracker; }
+    StateTracker* get_consumer_state_tracker() { return &consumer_.state_tracker; }
 
     mx_status_t ProducerWriteFromUser(const void* ptr, mx_size_t* requested);
     mx_status_t ConsumerReadFromUser(void* ptr, mx_size_t* requested);
@@ -55,7 +55,7 @@ private:
         char* vad_start = 0u;
         mx_size_t expected = 0u;
         utils::RefPtr<VmAspace> aspace;
-        Waiter waiter;
+        StateTracker state_tracker;
     };
 
     DataPipe(mx_size_t capacity);

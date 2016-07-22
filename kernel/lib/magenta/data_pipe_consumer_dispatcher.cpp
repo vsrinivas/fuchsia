@@ -34,8 +34,8 @@ DataPipeConsumerDispatcher::~DataPipeConsumerDispatcher() {
     pipe_->OnConsumerDestruction();
 }
 
-Waiter* DataPipeConsumerDispatcher::get_waiter() {
-    return pipe_->get_consumer_waiter();
+StateTracker* DataPipeConsumerDispatcher::get_state_tracker() {
+    return pipe_->get_consumer_state_tracker();
 }
 
 mx_status_t DataPipeConsumerDispatcher::Read(void* buffer, mx_size_t* requested) {

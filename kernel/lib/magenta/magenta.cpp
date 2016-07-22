@@ -4,20 +4,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <trace.h>
-
 #include <magenta/magenta.h>
 
-#include <lib/console.h>
+#include <trace.h>
 
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
+
 #include <lk/init.h>
+
+#include <lib/console.h>
 
 #include <magenta/dispatcher.h>
 #include <magenta/handle.h>
+#include <magenta/state_tracker.h>
 #include <magenta/user_process.h>
-#include <magenta/waiter.h>
 
 // The next two includes should be removed. See DeleteHandle().
 #include <magenta/pci_interrupt_dispatcher.h>
@@ -65,9 +66,9 @@ Handle* DupHandle(Handle* source, mx_rights_t rights) {
 }
 
 void DeleteHandle(Handle* handle) {
-    Waiter* waiter = handle->dispatcher()->get_waiter();
-    if (waiter) {
-        waiter->CancelWait(handle);
+    StateTracker* state_tracker = handle->dispatcher()->get_state_tracker();
+    if (state_tracker) {
+        state_tracker->CancelWait(handle);
     } else {
         auto disp = handle->dispatcher();
         // This code is sad but necessary because certain dispatchers

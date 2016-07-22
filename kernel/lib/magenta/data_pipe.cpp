@@ -53,9 +53,9 @@ DataPipe::DataPipe(mx_size_t capacity)
     : capacity_(capacity),
       free_space_(0u) {
     mutex_init(&lock_);
-    producer_.waiter.set_initial_signals_state(
+    producer_.state_tracker.set_initial_signals_state(
             mx_signals_state_t{MX_SIGNAL_WRITABLE, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
-    consumer_.waiter.set_initial_signals_state(
+    consumer_.state_tracker.set_initial_signals_state(
             mx_signals_state_t{0u, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED});
 
     consumer_.read_only = true;
@@ -65,14 +65,6 @@ DataPipe::~DataPipe() {
     mutex_destroy(&lock_);
     DEBUG_ASSERT(!consumer_.alive);
     DEBUG_ASSERT(!producer_.alive);
-}
-
-Waiter* DataPipe::get_producer_waiter() {
-    return &producer_.waiter;
-}
-
-Waiter* DataPipe::get_consumer_waiter() {
-    return &consumer_.waiter;
 }
 
 bool DataPipe::Init() {
@@ -125,20 +117,14 @@ mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, utils::RefPtr<VmAspace> aspac
 
 void DataPipe::UpdateSignals() {
     if (free_space_ == 0u) {
-        producer_.waiter.UpdateState(0u, MX_SIGNAL_WRITABLE,
-                                     0u, 0u);
-        consumer_.waiter.UpdateState(MX_SIGNAL_READABLE, 0u,
-                                     0u, 0u);
+        producer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
+        consumer_.state_tracker.UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
     } else if (free_space_ == vmo_->size()) {
-        producer_.waiter.UpdateState(MX_SIGNAL_WRITABLE, 0u,
-                                     0u, 0u);
-        consumer_.waiter.UpdateState(0u, MX_SIGNAL_READABLE,
-                                     0u, 0u);
+        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
+        consumer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
     } else {
-        producer_.waiter.UpdateState(MX_SIGNAL_WRITABLE, 0u,
-                                     0u, 0u);
-        consumer_.waiter.UpdateState(MX_SIGNAL_READABLE, 0u,
-                                     0u, 0u);
+        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
+        consumer_.state_tracker.UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
     }
 }
 
@@ -316,8 +302,11 @@ void DataPipe::OnProducerDestruction() {
     }
 
     if (consumer_.alive) {
-        consumer_.waiter.UpdateState(MX_SIGNAL_PEER_CLOSED, 0u,
-                                     MX_SIGNAL_PEER_CLOSED, 0u);
+        // TODO(vtl): Unset readable satisfiability if there's no data (i.e., readable isn't
+        // satisfied). Also, when data is drained, readable satisfiability should be unset if the
+        // producer is closed.
+        consumer_.state_tracker.UpdateState(MX_SIGNAL_PEER_CLOSED, 0u,
+                                            0u, 0u);
 
         // We can drop the vmo since future reads are not going to succeed.
         if (free_space_ == vmo_->size())
@@ -338,7 +327,7 @@ void DataPipe::OnConsumerDestruction() {
     }
 
     if (producer_.alive) {
-        producer_.waiter.UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE,
-                                     MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE);
+        producer_.state_tracker.UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE,
+                                            0u, MX_SIGNAL_WRITABLE);
     }
 }

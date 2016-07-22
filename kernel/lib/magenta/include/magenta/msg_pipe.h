@@ -10,11 +10,11 @@
 
 #include <kernel/mutex.h>
 
+#include <magenta/state_tracker.h>
+
 #include <utils/array.h>
 #include <utils/intrusive_double_list.h>
 #include <utils/ref_counted.h>
-
-#include <magenta/waiter.h>
 
 class Handle;
 
@@ -58,12 +58,12 @@ public:
     status_t Read(size_t side, utils::unique_ptr<MessagePacket>* msg);
     status_t Write(size_t side, utils::unique_ptr<MessagePacket> msg);
 
-    Waiter* GetWaiter(size_t side);
+    StateTracker* GetStateTracker(size_t side);
 
 private:
     bool dispatcher_alive_[2];
     utils::DoublyLinkedList<MessagePacket> messages_[2];
     // This lock protects |dispatcher_alive_| and |messages_|.
     mutex_t lock_;
-    Waiter waiter_[2];
+    StateTracker state_tracker_[2];
 };

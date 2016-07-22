@@ -18,7 +18,7 @@
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 
-class Waiter;
+class StateTracker;
 
 // The Kernel Objects. Keep this list sorted.
 class DataPipeConsumerDispatcher;
@@ -46,7 +46,7 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
-    virtual Waiter* get_waiter() {
+    virtual StateTracker* get_state_tracker() {
         return nullptr;
     }
 

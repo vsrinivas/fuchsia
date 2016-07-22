@@ -29,12 +29,12 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/pci_io_mapping_dispatcher.cpp \
     $(LOCAL_DIR)/process_dispatcher.cpp \
+    $(LOCAL_DIR)/state_tracker.cpp \
     $(LOCAL_DIR)/thread_dispatcher.cpp \
     $(LOCAL_DIR)/user_copy.cpp \
     $(LOCAL_DIR)/user_process.cpp \
     $(LOCAL_DIR)/user_thread.cpp \
     $(LOCAL_DIR)/vm_object_dispatcher.cpp \
-    $(LOCAL_DIR)/waiter.cpp \
     $(LOCAL_DIR)/wait_event.cpp \
 
 MODULE_DEPS := \

@@ -13,7 +13,7 @@
 #include <kernel/event.h>
 #include <sys/types.h>
 
-// "Event" for use by Waiter. This should be waited on from only a single thread, but may be
+// "Event" for use by StateTracker. This should be waited on from only a single thread, but may be
 // signaled from many threads (Signal() is thread-safe).
 class WaitEvent {
 public:

@@ -40,8 +40,8 @@ ProcessDispatcher::~ProcessDispatcher() {
     process_->DispatcherClosed();
 }
 
-Waiter* ProcessDispatcher::get_waiter() {
-    return process_->waiter();
+StateTracker* ProcessDispatcher::get_state_tracker() {
+    return process_->state_tracker();
 }
 
 status_t ProcessDispatcher::Start(mx_handle_t handle, mx_vaddr_t entry) {

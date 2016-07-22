@@ -9,7 +9,7 @@
 #include <kernel/event.h>
 
 #include <magenta/dispatcher.h>
-#include <magenta/waiter.h>
+#include <magenta/state_tracker.h>
 
 #include <sys/types.h>
 
@@ -23,7 +23,7 @@ public:
     EventDispatcher* get_event_dispatcher() final { return this; }
 
 
-    virtual Waiter* get_waiter() final { return &waiter_; }
+    virtual StateTracker* get_state_tracker() final { return &state_tracker_; }
 
     status_t SignalEvent();
 
@@ -33,5 +33,5 @@ public:
 
 private:
     explicit EventDispatcher(uint32_t options);
-    Waiter waiter_;
+    StateTracker state_tracker_;
 };

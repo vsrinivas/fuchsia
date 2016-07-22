@@ -12,8 +12,8 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/msg_pipe.h>
+#include <magenta/state_tracker.h>
 #include <magenta/types.h>
-#include <magenta/waiter.h>
 
 #include <utils/ref_counted.h>
 #include <utils/unique_ptr.h>
@@ -26,7 +26,7 @@ public:
     ~MessagePipeDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_MESSAGE_PIPE; }
     MessagePipeDispatcher* get_message_pipe_dispatcher() final { return this; }
-    Waiter* get_waiter() final;
+    StateTracker* get_state_tracker() final;
 
     bool is_reply_pipe() const { return (flags_ & MX_FLAG_REPLY_PIPE) ? true : false; }
 

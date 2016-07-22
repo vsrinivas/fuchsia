@@ -21,7 +21,7 @@ public:
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_THREAD; }
     ThreadDispatcher* get_thread_dispatcher() final { return this; }
 
-    Waiter* get_waiter() final;
+    StateTracker* get_state_tracker() final;
     status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
     status_t MarkExceptionHandled(mx_exception_status_t status);
 

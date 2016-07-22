@@ -54,8 +54,8 @@ MessagePipeDispatcher::~MessagePipeDispatcher() {
     mutex_destroy(&lock_);
 }
 
-Waiter* MessagePipeDispatcher::get_waiter() {
-    return pipe_->GetWaiter(side_);
+StateTracker* MessagePipeDispatcher::get_state_tracker() {
+    return pipe_->GetStateTracker(side_);
 }
 
 status_t MessagePipeDispatcher::BeginRead(uint32_t* message_size, uint32_t* handle_count) {

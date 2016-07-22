@@ -25,12 +25,12 @@
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/state_tracker.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_process.h>
 #include <magenta/user_thread.h>
 #include <magenta/vm_object_dispatcher.h>
-#include <magenta/waiter.h>
 #include <magenta/wait_event.h>
 
 #include <platform.h>
@@ -85,20 +85,19 @@ uint64_t sys_current_time() {
 
 struct WaitHelper {
     utils::RefPtr<Dispatcher> dispatcher;
-    Waiter* waiter;
+    StateTracker* state_tracker;
 
-    WaitHelper()
-        : waiter(nullptr) {}
+    WaitHelper() : state_tracker(nullptr) {}
     ~WaitHelper() { DEBUG_ASSERT(dispatcher.get() == nullptr); }
     WaitHelper(const WaitHelper &) = delete;
     WaitHelper& operator=(const WaitHelper &) = delete;
 
     mx_status_t Begin(Handle* handle, WaitEvent* event, mx_signals_t signals, uint64_t context) {
         dispatcher = handle->dispatcher();
-        waiter = dispatcher->get_waiter();
+        state_tracker = dispatcher->get_state_tracker();
         mx_status_t result = ERR_NOT_SUPPORTED;
-        if (waiter)
-            result = waiter->BeginWait(event, handle, signals, context);
+        if (state_tracker)
+            result = state_tracker->BeginWait(event, handle, signals, context);
         if (result != NO_ERROR)
             dispatcher.reset();
         return result;
@@ -106,7 +105,7 @@ struct WaitHelper {
 
     mx_signals_state_t End(WaitEvent* event) {
         DEBUG_ASSERT(dispatcher);
-        auto s = waiter->FinishWait(event);
+        auto s = state_tracker->FinishWait(event);
         dispatcher.reset();
         return s;
     }
@@ -184,8 +183,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         return result;
     utils::unique_ptr<uint32_t[]> signals(reinterpret_cast<mx_signals_t*>(copy));
 
-    utils::unique_ptr<WaitHelper[]> waiters(new WaitHelper[count]);
-    if (!waiters)
+    utils::unique_ptr<WaitHelper[]> state_trackers(new WaitHelper[count]);
+    if (!state_trackers)
         return ERR_NO_MEMORY;
 
     utils::unique_ptr<mx_signals_state_t[]> signals_states;
@@ -215,8 +214,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
                 break;
             }
 
-            result = waiters[num_added].Begin(handle, &event, signals[num_added],
-                                              static_cast<uint64_t>(num_added));
+            result = state_trackers[num_added].Begin(handle, &event, signals[num_added],
+                                                     static_cast<uint64_t>(num_added));
             if (result != NO_ERROR)
                 break;
         }
@@ -224,7 +223,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     if (result != NO_ERROR) {
         DEBUG_ASSERT(num_added < count);
         for (size_t ix = 0; ix < num_added; ++ix)
-            waiters[ix].End(&event);
+            state_trackers[ix].End(&event);
         return result;
     }
 
@@ -238,7 +237,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
 
     // Regardless of wait outcome, we must call FinishWait().
     for (size_t ix = 0; ix != count; ++ix) {
-        auto s = waiters[ix].End(&event);
+        auto s = state_trackers[ix].End(&event);
         if (signals_states)
             signals_states[ix] = s;
     }
@@ -319,7 +318,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
             mx_handle_basic_info_t info = {
                 rights,
                 dispatcher->GetType(),
-                dispatcher->get_waiter() ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
+                dispatcher->get_state_tracker() ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
             };
 
             if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
@@ -445,8 +444,8 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     }
 
     for (size_t idx = 0u; idx < next_message_num_handles; ++idx) {
-        if (handle_list[idx]->dispatcher()->get_waiter()) {
-            handle_list[idx]->dispatcher()->get_waiter()->CancelWait(handle_list[idx]);
+        if (handle_list[idx]->dispatcher()->get_state_tracker()) {
+            handle_list[idx]->dispatcher()->get_state_tracker()->CancelWait(handle_list[idx]);
         }
         HandleUniquePtr handle(handle_list[idx]);
         up->AddHandle(utils::move(handle));
@@ -1308,11 +1307,11 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
-    auto waiter = src_d->get_waiter();
-    if (!waiter)
+    auto state_tracker = src_d->get_state_tracker();
+    if (!state_tracker)
         return ERR_INVALID_ARGS;
 
-    return waiter->BindIOPort(utils::RefPtr<IOPortDispatcher>(ioport), key, signals) ?
+    return state_tracker->BindIOPort(utils::RefPtr<IOPortDispatcher>(ioport), key, signals) ?
         NO_ERROR : ERR_NOT_READY;
 }
 

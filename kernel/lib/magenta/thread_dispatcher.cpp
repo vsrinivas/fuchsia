@@ -39,8 +39,8 @@ ThreadDispatcher::~ThreadDispatcher() {
     thread_->DispatcherClosed();
 }
 
-Waiter* ThreadDispatcher::get_waiter() {
-    return thread_->waiter();
+StateTracker* ThreadDispatcher::get_state_tracker() {
+    return thread_->state_tracker();
 }
 
 status_t ThreadDispatcher::SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {

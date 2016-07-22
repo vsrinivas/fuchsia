@@ -29,7 +29,7 @@ UserThread::UserThread(utils::RefPtr<UserProcess> process, thread_start_routine 
     : process_(utils::move(process)),
       entry_(entry),
       arg_(arg),
-      waiter_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
+      state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
     id_ = process_->GetNextThreadId();
@@ -184,7 +184,7 @@ void UserThread::Exiting() {
     DEBUG_ASSERT(state_ == State::DYING);
 
     // signal any waiters
-    waiter_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
+    state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
 
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);

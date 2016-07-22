@@ -18,15 +18,16 @@
 class Handle;
 class WaitEvent;
 
-// Magenta Waiter
+// Magenta state tracker
 //
+// TODO(vtl): Update this comment once things have settle some more.
 //  Provides the interface between the syscall layer and the kernel object layer
 //  that allows waiting for object state changes. It connects the waitee (which
-//  owns the Waiter object) and (possibly) many waiters.
+//  owns the StateTracker object) and (possibly) many waiters.
 //
 //  The waitee uses Signal/ClearSignal to inform the waiters of state changes.
 //
-//  The Waiter has two styles for notifying waiters. They are mutually exclusive.
+//  The StateTracker has two styles for notifying waiters. They are mutually exclusive.
 //
 //  In the examples that follow, assume a waitee pointed by |handle| and
 //  some |signals| to wait for.
@@ -48,15 +49,15 @@ class WaitEvent;
 //      io_port->Wait(&pk);
 //
 
-class Waiter {
+class StateTracker {
 public:
     // Note: The initial state can also be set using SetInitialSignalsState() if the default
     // constructor must be used for some reason.
-    explicit Waiter(mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u});
-    ~Waiter();
+    explicit StateTracker(mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u});
+    ~StateTracker();
 
-    Waiter(const Waiter& o) = delete;
-    Waiter& operator=(const Waiter& o) = delete;
+    StateTracker(const StateTracker& o) = delete;
+    StateTracker& operator=(const StateTracker& o) = delete;
 
     // Set the initial signals state. This is an alternative to provide the initial signals state to
     // the constructor. This does no locking and does not notify anything.
@@ -88,8 +89,8 @@ public:
     }
 
 private:
-    struct WaitNode : public utils::SinglyLinkedListable<WaitNode*> {
-        WaitNode(WaitEvent* _event, Handle* _handle, mx_signals_t _signals, uint64_t _context)
+    struct StateObserver : public utils::SinglyLinkedListable<StateObserver*> {
+        StateObserver(WaitEvent* _event, Handle* _handle, mx_signals_t _signals, uint64_t _context)
             : event(_event),
               handle(_handle),
               signals(_signals),
@@ -107,8 +108,8 @@ private:
 
     mutex_t lock_;
 
-    // Active waiters are elements in |nodes_|.
-    utils::SinglyLinkedList<WaitNode*> nodes_;
+    // Active observers are elements in |observers_|.
+    utils::SinglyLinkedList<StateObserver*> observers_;
 
     // mojo-style signaling.
     mx_signals_state_t signals_state_;

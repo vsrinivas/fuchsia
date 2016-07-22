@@ -38,8 +38,8 @@ DataPipeProducerDispatcher::~DataPipeProducerDispatcher() {
     pipe_->OnProducerDestruction();
 }
 
-Waiter* DataPipeProducerDispatcher::get_waiter() {
-    return pipe_->get_producer_waiter();
+StateTracker* DataPipeProducerDispatcher::get_state_tracker() {
+    return pipe_->get_producer_state_tracker();
 }
 
 mx_status_t DataPipeProducerDispatcher::Write(const void* buffer, mx_size_t* requested) {

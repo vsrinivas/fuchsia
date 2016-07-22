@@ -12,8 +12,8 @@
 #include <kernel/vm/vm_aspace.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/state_tracker.h>
 #include <magenta/types.h>
-#include <magenta/waiter.h>
 
 #include <utils/ref_counted.h>
 
@@ -29,7 +29,7 @@ public:
     ~DataPipeProducerDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_DATA_PIPE_PRODUCER; }
     DataPipeProducerDispatcher* get_data_pipe_producer_dispatcher() final { return this; }
-    Waiter* get_waiter() final;
+    StateTracker* get_state_tracker() final;
 
     mx_status_t Write(const void* buffer, mx_size_t* requested);
     mx_status_t BeginWrite(utils::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);

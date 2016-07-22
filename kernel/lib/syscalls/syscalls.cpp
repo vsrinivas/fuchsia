@@ -8,10 +8,10 @@
 #include <lib/user_copy.h>
 
 #include <magenta/magenta.h>
+#include <magenta/state_tracker.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_process.h>
 #include <magenta/user_thread.h>
-#include <magenta/waiter.h>
 
 #include <platform.h>
 #include <stdint.h>

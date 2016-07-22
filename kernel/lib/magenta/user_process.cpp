@@ -25,7 +25,7 @@
 #define LOCAL_TRACE 0
 
 UserProcess::UserProcess(utils::StringPiece name)
-    : waiter_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
+    : state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
     id_ = AddProcess(this);
@@ -249,7 +249,7 @@ void UserProcess::SetState(State s) {
 
         // signal waiter
         LTRACEF_LEVEL(2, "signalling waiters\n");
-        waiter_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
+        state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
     }
 }
 

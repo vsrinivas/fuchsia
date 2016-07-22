@@ -14,9 +14,9 @@
 #include <magenta/dispatcher.h>
 #include <magenta/futex_context.h>
 #include <magenta/magenta.h>
+#include <magenta/state_tracker.h>
 #include <magenta/types.h>
 #include <magenta/user_thread.h>
-#include <magenta/waiter.h>
 
 #include <utils/intrusive_double_list.h>
 #include <utils/ref_counted.h>
@@ -77,7 +77,7 @@ public:
     mx_pid_t id() const { return id_; }
     mutex_t& handle_table_lock() { return handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
-    Waiter* waiter() { return &waiter_; }
+    StateTracker* state_tracker() { return &state_tracker_; }
     State state() const { return state_; }
     utils::RefPtr<VmAspace> aspace() { return aspace_; }
     const utils::StringPiece name() const { return name_; }
@@ -149,7 +149,7 @@ private:
     mutex_t handle_table_lock_ = MUTEX_INITIAL_VALUE(handle_table_lock_); // protects |handles_|.
     utils::DoublyLinkedList<Handle> handles_;
 
-    Waiter waiter_;
+    StateTracker state_tracker_;
 
     FutexContext futex_context_;
 

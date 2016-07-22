@@ -29,7 +29,7 @@ public:
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
     ProcessDispatcher* get_process_dispatcher() final { return this; }
 
-    Waiter* get_waiter() final;
+    StateTracker* get_state_tracker() final;
     status_t Start(mx_handle_t handle, mx_vaddr_t pc_vaddr);
     mx_handle_t AddHandle(HandleUniquePtr handle);
     utils::RefPtr<VmAspace> GetVmAspace() { return process_->aspace(); }

@@ -14,7 +14,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/futex_node.h>
-#include <magenta/waiter.h>
+#include <magenta/state_tracker.h>
 
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
@@ -53,7 +53,7 @@ public:
     UserProcess* process() { return process_.get(); }
     mx_tid_t id() const { return id_; }
     FutexNode* futex_node() { return &futex_node_; }
-    Waiter* waiter() { return &waiter_; }
+    StateTracker* state_tracker() { return &state_tracker_; }
     const utils::StringPiece name() const { return thread_.name; }
     State state() const { return state_; }
 
@@ -110,7 +110,7 @@ private:
     // Node for linked list of threads blocked on a futex
     FutexNode futex_node_;
 
-    Waiter waiter_;
+    StateTracker state_tracker_;
 
     // A thread-level exception handler for this thread.
     utils::RefPtr<Dispatcher> exception_handler_;

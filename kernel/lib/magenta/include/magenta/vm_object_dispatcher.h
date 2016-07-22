@@ -7,7 +7,7 @@
 #pragma once
 
 #include <magenta/dispatcher.h>
-#include <magenta/waiter.h>
+#include <magenta/state_tracker.h>
 
 #include <sys/types.h>
 
