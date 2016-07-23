@@ -243,18 +243,20 @@ bool message_pipe_non_transferable(void) {
     mx_handle_t pipe[2];
     ASSERT_EQ(mx_message_pipe_create(pipe, 0), NO_ERROR, "");
     mx_handle_t event = mx_event_create(0u);
-    ASSERT_LE(0, event, "failed to create event");
+    ASSERT_GT(event, 0, "failed to create event");
     mx_handle_basic_info_t event_handle_info;
-    mx_ssize_t get_info_result = mx_handle_get_info(event, MX_INFO_HANDLE_BASIC, &event_handle_info, sizeof(event_handle_info));
-    ASSERT_EQ((mx_ssize_t) sizeof(event_handle_info), get_info_result, "failed to get event info");
+    mx_ssize_t get_info_result = mx_handle_get_info(event, MX_INFO_HANDLE_BASIC, &event_handle_info,
+                                                    sizeof(event_handle_info));
+    ASSERT_EQ(get_info_result, (mx_ssize_t)sizeof(event_handle_info), "failed to get event info");
     mx_rights_t initial_event_rights = event_handle_info.rights;
-    mx_handle_t non_duplicatable_event = mx_handle_duplicate(event, initial_event_rights & ~MX_RIGHT_TRANSFER);
+    mx_handle_t non_transferable_event =
+            mx_handle_duplicate(event, initial_event_rights & ~MX_RIGHT_TRANSFER);
 
-    mx_status_t write_result = mx_message_write(pipe[0], NULL, 0, &non_duplicatable_event, 1u, 0u);
-    EXPECT_EQ(ERR_ACCESS_DENIED, write_result, "message_write should fail with ACCESS_DENIED");
+    mx_status_t write_result = mx_message_write(pipe[0], NULL, 0, &non_transferable_event, 1u, 0u);
+    EXPECT_EQ(write_result, ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
 
-    mx_status_t close_result = mx_handle_close(non_duplicatable_event);
-    EXPECT_EQ(NO_ERROR, close_result, "");
+    mx_status_t close_result = mx_handle_close(non_transferable_event);
+    EXPECT_EQ(close_result, NO_ERROR, "");
 
     END_TEST;
 }
