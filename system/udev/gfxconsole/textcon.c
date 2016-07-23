@@ -373,6 +373,27 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
         moveto(tc, tc->x, y ? (y - 1) : 0);
         break;
     case 'm': // (SGR) Character Attributes
+        for (int i = 0; i < tc->argc; i++) {
+            int n = tc->argn[i];
+            if ((n >= 30) && (n <= 37)) { // set fg
+                tc->fg = n - 30;
+            } else if ((n >= 40) && (n <= 47)) { // set bg
+                tc->bg = n - 40;
+            } else if ((n == 1) && (tc->fg <= 7)) { // bold
+                tc->fg += 8;
+            } else if (n == 0) { // reset
+                tc->fg = 0;
+                tc->bg = 15;
+            } else if (n == 7) { // reverse
+                n = tc->fg;
+                tc->fg = tc->bg;
+                tc->bg = n;
+            } else if (n == 39) { // default fg
+                tc->fg = 0;
+            } else if (n == 49) { // default bg
+                tc->bg = 15;
+            }
+        }
         break;
     case 'r': // set scroll region
         set_scroll(tc, ARG0(1) - 1, ARG1(tc->h));
