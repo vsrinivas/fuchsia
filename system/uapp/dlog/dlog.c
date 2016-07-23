@@ -40,7 +40,9 @@ int main(int argc, char** argv) {
                      (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
             write(1, tmp, strlen(tmp));
             write(1, rec->data, rec->datalen);
-            write(1, "\n", 1);
+            if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
+                write(1, "\n", 1);
+            }
         } else {
             break;
         }
