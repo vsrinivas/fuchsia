@@ -189,8 +189,13 @@ static mx_status_t devmgr_register_with_protocol(mx_device_t* dev, uint32_t prot
         return r;
     }
 
-    // TODO: use 0, 1, ... naming here
-    return devfs_add_link(vnp, dev->name, dev);
+    const char* name = dev->name;
+    if ((proto_id != MX_PROTOCOL_MISC) && (proto_id != MX_PROTOCOL_CONSOLE)) {
+        // request a numeric name
+        name = NULL;
+    }
+
+    return devfs_add_link(vnp, name, dev);
 #endif
 }
 

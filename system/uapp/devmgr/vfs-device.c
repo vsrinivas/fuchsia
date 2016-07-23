@@ -168,13 +168,32 @@ static mx_status_t _devfs_add_link(vnode_t* parent, const char* name, mx_device_
         return ERR_INVALID_ARGS;
     }
 
-    xprintf("devfs_add_link() p=%p name='%s' dev=%p\n", parent, name, dev);
+    xprintf("devfs_add_link() p=%p name='%s' dev=%p\n", parent, name ? name : "###", dev);
     mx_status_t r;
     dnode_t* dn;
-    size_t len = strlen(name);
-    if (dn_lookup(parent->dnode, &dn, name, len) == NO_ERROR) {
+
+    char tmp[8];
+    size_t len;
+    if (name == NULL) {
+        //TODO: something smarter
+        // right now we have so few devices and instances this is not a problem
+        // but it clearly is not optimal
+        for (unsigned n = 0; n < 100; n++) {
+            snprintf(tmp, sizeof(tmp), "%03u", n);
+            if (dn_lookup(parent->dnode, &dn, tmp, 3) != NO_ERROR) {
+                name = tmp;
+                len = 3;
+                goto got_name;
+            }
+        }
         return ERR_ALREADY_EXISTS;
+    } else {
+        len = strlen(name);
+        if (dn_lookup(parent->dnode, &dn, name, len) == NO_ERROR) {
+            return ERR_ALREADY_EXISTS;
+        }
     }
+got_name:
     if ((r = dn_create(&dn, name, len, dev->vnode)) < 0) {
         return r;
     }

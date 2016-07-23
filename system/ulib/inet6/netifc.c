@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
 
 #include <magenta/syscalls.h>
 
@@ -97,13 +99,27 @@ int netifc_timer_expired(void) {
 }
 
 int netifc_open(void) {
-    //TODO: should open any /dev/class/ethernet/... interface
-    //TODO: update once better plumbing exists
-    if ((netfd = open("/dev/class/ethernet/intel-ethernet", O_RDWR)) < 0) {
-        if ((netfd = open("/dev/class/ethernet/usb-ethernet", O_RDWR)) < 0) {
-            return -1;
+    DIR* dir;
+    struct dirent* de;
+
+    if ((dir = opendir("/dev/class/ethernet")) == NULL) {
+        return -1;
+    }
+    while ((de = readdir(dir)) != NULL) {
+        char tmp[128];
+        if (de->d_name[0] == '.') {
+            continue;
+        }
+        snprintf(tmp, sizeof(tmp), "/dev/class/ethernet/%s", de->d_name);
+        if ((netfd = open(tmp, O_RDWR)) >= 0) {
+            break;
         }
     }
+    closedir(dir);
+    if (netfd < 0) {
+        return -1;
+    }
+
     if (read(netfd, netmac, 6) != 6) {
         close(netfd);
         netfd = -1;
