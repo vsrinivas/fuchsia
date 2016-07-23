@@ -12,28 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _INTEL_GEN_H_
-#define _INTEL_GEN_H_
+#ifndef MSD_DEVICE_H
+#define MSD_DEVICE_H
 
-#include <ddk/device.h>
-#include <magma_sys_driver.h>
+#include "magma_sys_driver.h"
+#include "magma_util/macros.h"
 
-struct MsdDevice {
+class MsdDevice : public msd_device {
 public:
-    MsdDevice(mx_device_t* mx_device) {}
+    int Open(ClientId client_id);
+    int Close(ClientId client_id);
 
-    virtual ~MsdDevice() {}
+    uint32_t device_id() { return device_id_; }
+
+    static MsdDevice* cast(msd_device* dev)
+    {
+        DASSERT(dev->magic_ == kMagic);
+        return static_cast<MsdDevice*>(dev);
+    }
+
+private:
+    MsdDevice();
+    ~MsdDevice() {}
+
+    static const uint32_t kMagic = 0x64657669;
+
+    uint32_t device_id_{};
+
+    friend class MsdDriver;
 };
 
-struct MagmaSysDriver {
-public:
-    virtual ~MagmaSysDriver() {}
-
-    virtual MsdDevice* CreateDevice(void* device) = 0;
-    virtual void DestroyDevice(MsdDevice*) = 0;
-
-    static MagmaSysDriver* New();
-    static void Delete(MagmaSysDriver* gen);
-};
-
-#endif // _INTEL_GEN_H_
+#endif // MSD_DEVICE_H

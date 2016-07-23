@@ -15,14 +15,16 @@
 import("//magma/gnbuild/magma.gni")
 
 executable("msd-intel-gen") {
-    sources = [
-        "intel_gen.h",
-        "intel_gen.cpp",
-    ]
+  sources = [
+    "src/msd_device.cc",
+    "src/msd_device.h",
+    "src/msd_driver.cc",
+    "src/msd_driver.h",
+  ]
 
-    deps = [
-        "$magma_build_root:libmsd",
-        "$magma_build_root:util",
-        "$magma_build_root/src/main",
-    ]
+  deps = [
+    "$magma_build_root:libmsd",
+    "$magma_build_root:util",
+    "$magma_build_root/src/main",
+  ]
 }
