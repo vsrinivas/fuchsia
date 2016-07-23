@@ -63,7 +63,7 @@ int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
 
     __mxr_thread_main();
 
-    // TODO(kulakowski) Set up environment
+    __environ = pi->envp;
     __init_tls();
     // TODO(kulakowski) Set up ssp once kernel randomness exists
     // __init_ssp((void*)aux[AT_RANDOM]);
