@@ -16,10 +16,10 @@ rm -f $bootfs_output_file
 
 echo "fuchsia_root=$fuchsia_root build_dir=$build_dir"
 
-./buildtools/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn
+$tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check
 
 echo "Building magma_service_driver"
-ninja -C $build_dir magma_service_driver
+$tools_path/ninja -C $build_dir magma_service_driver
 
 rm -rf $bootfs_path
 mkdir -p $bootfs_path/bin
@@ -27,7 +27,7 @@ cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1616
 
 if true; then
 	echo "Building magma_tests"
-	ninja -C $build_dir magma_tests
+	$tools_path/ninja -C $build_dir magma_tests
 
 	test_executable=bin/magma_unit_tests
 	cp $build_dir/magma_unit_tests $bootfs_path/$test_executable
