@@ -400,7 +400,7 @@ static mx_bind_inst_t binding[] = {
 };
 
 mx_driver_t _driver_usb_hub BUILTIN_DRIVER = {
-    .name = "usb_hub",
+    .name = "usb-hub",
     .ops = {
         .bind = usb_hub_bind,
         .unbind = usb_hub_unbind,

@@ -560,12 +560,14 @@ static int usb_mass_storage_start_thread(void* arg) {
         free(msd);
         return status;
     }
+#if 0
     printf("starting start_thread\n");
     mxr_mutex_lock(&msd->mutex);
     printf("post lock\n");
     printf("post command\n");
     mxr_mutex_unlock(&msd->mutex);
     printf("unlocked\n");
+#endif
 
     // msd->device.protocol_id = MX_PROTOCOL_USB_MASS_STORAGE;
     // msd->device.protocol_ops = &usb_mass_storage_proto;
@@ -575,7 +577,7 @@ static int usb_mass_storage_start_thread(void* arg) {
 }
 
 static mx_status_t usb_mass_storage_bind(mx_driver_t* driver, mx_device_t* device) {
-    printf("starting mass storage probe\n");
+    //printf("starting mass storage probe\n");
     usb_device_protocol_t* protocol;
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
         return ERR_NOT_SUPPORTED;
@@ -595,20 +597,20 @@ static mx_status_t usb_mass_storage_bind(mx_driver_t* driver, mx_device_t* devic
     usb_endpoint_t* bulk_in = NULL;
     usb_endpoint_t* bulk_out = NULL;
     usb_endpoint_t* intr_ep = NULL;
-    printf("NUM OF ENDPOINTS: %d\n", intf->num_endpoints);
+    //printf("NUM OF ENDPOINTS: %d\n", intf->num_endpoints);
     for (int i = 0; i < intf->num_endpoints; i++) {
         usb_endpoint_t* endp = &intf->endpoints[i];
         if (endp->direction == USB_ENDPOINT_OUT) {
             if (endp->type == USB_ENDPOINT_BULK) {
-                printf("HI IM A BULK OUT: %d\n", i);
+                //printf("HI IM A BULK OUT: %d\n", i);
                 bulk_out = endp;
             }
         } else {
             if (endp->type == USB_ENDPOINT_BULK) {
                 bulk_in = endp;
-                printf("HI IM A BULK IN: %d\n", i);
+                //printf("HI IM A BULK IN: %d\n", i);
             } else if (endp->type == USB_ENDPOINT_INTERRUPT) {
-                printf("HI IM A BULK INTERRUPT\n");
+                //printf("HI IM A BULK INTERRUPT\n");
                 intr_ep = endp;
             }
         }
@@ -620,7 +622,6 @@ static mx_status_t usb_mass_storage_bind(mx_driver_t* driver, mx_device_t* devic
 
     usb_mass_storage_t* msd = calloc(1, sizeof(usb_mass_storage_t));
     if (!msd) {
-        printf("Not enough memory for usb_mass_storage_t\n");
         return ERR_NO_MEMORY;
     }
 
@@ -670,7 +671,7 @@ static mx_status_t usb_mass_storage_bind(mx_driver_t* driver, mx_device_t* devic
     // int* lun = (int*)malloc(1);
     char lun = 'a';
     usb_mass_storage_get_max_lun(msd, (void*)&lun);
-    printf("Max lun is: %02x\n", (unsigned char)lun);
+    //printf("Max lun is: %02x\n", (unsigned char)lun);
 
     mxr_thread_t* thread;
     mxr_thread_create(usb_mass_storage_start_thread, msd, "usb_mass_storage_start_thread", &thread);
@@ -679,7 +680,6 @@ static mx_status_t usb_mass_storage_bind(mx_driver_t* driver, mx_device_t* devic
     msd->busy = false;
     msd->tag = 8;
 
-    printf("mass storage bind complete\n");
     return NO_ERROR;
 }
 
@@ -694,7 +694,7 @@ static mx_bind_inst_t binding[] = {
 };
 
 mx_driver_t _driver_usb_mass_storage BUILTIN_DRIVER = {
-    .name = "usb_mass_storage",
+    .name = "usb-mass-storage",
     .ops = {
         // .probe = usb_mass_storage_probe,
         .bind = usb_mass_storage_bind,

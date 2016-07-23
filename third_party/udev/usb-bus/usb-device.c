@@ -422,11 +422,9 @@ mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed speed
         return NULL;
     }
 
-    char name[60];
     usb_device_descriptor_t* descriptor = dev->config.descriptor;
-    snprintf(name, sizeof(name), "usb_device[%04X:%04X %d %d %d]",
-             descriptor->idVendor, descriptor->idProduct,
-             descriptor->bDeviceClass, descriptor->bDeviceSubClass, descriptor->bDeviceProtocol);
+    char name[16];
+    snprintf(name, sizeof(name), "usb-dev-%03d", address);
 
     status = device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
     if (status < 0) {
