@@ -18,16 +18,24 @@
             "bootfs_path": "test/mojo_public_cpp_application_unittests"
         },
         {
-            "binary": "mojo_public_cpp_bindings_unittests",
-            "bootfs_path": "test/mojo_public_cpp_bindings_unittests"
-        },
-        {
-            "binary": "mojo_public_cpp_bindings_unittests",
-            "bootfs_path": "test/mojo_public_cpp_bindings_unittests"
-        },
-        {
             "binary": "mojo_public_cpp_bindings_perftests",
             "bootfs_path": "bin/mojo_public_cpp_bindings_perftests"
+        },
+        {
+            "binary": "mojo_public_cpp_bindings_unittests",
+            "bootfs_path": "test/mojo_public_cpp_bindings_unittests"
+        },
+        {
+            "binary": "mojo_public_cpp_environment_unittests",
+            "bootfs_path": "test/mojo_public_cpp_environment_unittests"
+        },
+        {
+            "binary": "mojo_public_cpp_system_unittests",
+            "bootfs_path": "bin/mojo_public_cpp_system_unittests"
+        },
+        {
+            "binary": "mojo_public_cpp_utility_unittests",
+            "bootfs_path": "test/mojo_public_cpp_utility_unittests"
         },
         {
             "binary": "echo_client",
