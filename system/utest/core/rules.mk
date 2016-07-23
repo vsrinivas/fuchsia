@@ -25,7 +25,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := core-tests
 
-MODULE_DEPS := ulib/musl ulib/runtime ulib/mxio ulib/magenta ulib/unittest
+MODULE_DEPS := ulib/musl ulib/runtime ulib/magenta ulib/unittest
 
 MODULE_DEFINES := BUILD_COMBINED_TESTS=1
 
