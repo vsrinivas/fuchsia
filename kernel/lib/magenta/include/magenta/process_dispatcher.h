@@ -109,6 +109,10 @@ public:
     uint32_t HandleStats(uint32_t*handle_type, size_t size) const;
     uint32_t ThreadCount() const;
 
+    // Outputs via the console the current list of processes;
+    static void DebugDumpProcessList();
+    static void DumpProcessListKeyMap();
+
 private:
     explicit ProcessDispatcher(utils::StringPiece name);
 
@@ -124,6 +128,16 @@ private:
 
     // Kill all threads
     void KillAllThreads();
+
+    // Utility routine used with public debug routines.
+    char* DebugDumpHandleTypeCount_NoLock() const;
+
+    // Add a process to the global process list.  Allocate a new process ID from
+    // the global pool at the same time, and assign it to the process.
+    static void AddProcess(ProcessDispatcher* process);
+
+    // Remove a process from the global process list.
+    static void RemoveProcess(ProcessDispatcher* process);
 
     mx_pid_t id_ = 0;
 
@@ -170,6 +184,11 @@ private:
 
     // The user-friendly process name. For debug purposes only.
     char name_[THREAD_NAME_LENGTH / 2] = {};
+
+    // The global process list, process id generator, and its mutex.
+    static uint32_t next_process_id_;
+    static mutex_t global_process_list_mutex_;
+    static utils::DoublyLinkedList<ProcessDispatcher*> global_process_list_;
 };
 
 const char* StateToString(ProcessDispatcher::State state);

@@ -35,16 +35,6 @@ uint32_t MapHandleToU32(Handle* handle);
 // Maps an integer obtained by MapHandleToU32() back to a Handle.
 Handle* MapU32ToHandle(uint32_t value);
 
-// Registers a |process|. The return value is a unique id which can serve
-// as a process id.
-uint32_t AddProcess(ProcessDispatcher* process);
-
-// Unregisters |process|.
-void RemoveProcess(ProcessDispatcher* process);
-
-// Outputs via the console the current list of processes;
-void DebugDumpProcessList();
-
 // Set/get the system exception handler.
 void SetSystemExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
 utils::RefPtr<Dispatcher> GetSystemExceptionHandler();

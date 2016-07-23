@@ -40,11 +40,6 @@ constexpr size_t kMaxHandleCount = 32 * 1024;
 mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);
 utils::TypedArena<Handle> handle_arena;
 
-// The process list, id and its mutex.
-mutex_t process_mutex = MUTEX_INITIAL_VALUE(process_mutex);
-uint32_t next_process_id = 0u;
-utils::DoublyLinkedList<ProcessDispatcher*> process_list;
-
 // The system exception handler
 static utils::RefPtr<Dispatcher> system_exception_handler;
 static mx_exception_behaviour_t system_exception_behaviour;
@@ -108,71 +103,6 @@ Handle* MapU32ToHandle(uint32_t value) {
     return reinterpret_cast<Handle*>(va);
 }
 
-uint32_t AddProcess(ProcessDispatcher* process) {
-    // Don't call any method of |process|, it is not yet fully constructed.
-    AutoLock lock(&process_mutex);
-    ++next_process_id;
-    process_list.push_back(process);
-    LTRACEF("Adding process %p : id = %u\n", process, next_process_id);
-    return next_process_id;
-}
-
-void RemoveProcess(ProcessDispatcher* process) {
-    AutoLock lock(&process_mutex);
-    process_list.erase(process);
-    LTRACEF("Removing process %p : id = %u\n", process, process->id());
-}
-
-char* DebugDumpHandleTypeCount_NoLock(const ProcessDispatcher& process) {
-    static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
-
-    uint32_t types[MX_OBJ_TYPE_LAST] = {0};
-    uint32_t handle_count = process.HandleStats(types, sizeof(types));
-
-    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u %3u",
-             handle_count,
-             types[1],              // process.
-             types[2],              // thread.
-             types[3],              // vmem
-             types[4],              // msg pipe.
-             types[5],              // event
-             types[6],              // ioport.
-             types[7] + types[8],   // data pipe (both),
-             types[9],              // interrupt.
-             types[10]              // io map
-             );
-    return buf;
-}
-
-void DebugDumpProcessList() {
-    AutoLock lock(&process_mutex);
-    printf(" id-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n");
-    for (const auto& process : process_list) {
-        printf("%3u-%c %3u %s [%s]\n",
-            process.id(),
-            process.StateChar(),
-            process.ThreadCount(),
-            DebugDumpHandleTypeCount_NoLock(process),
-            process.name().data());
-    }
-}
-
-void DumpProcessListKeyMap() {
-    printf("id  : process id number\n");
-    printf("-s  : state: R = running D = dead\n");
-    printf("#t  : number of threads\n");
-    printf("#h  : total number of handles\n");
-    printf("#pr : number of process handles\n");
-    printf("#th : number of thread handles\n");
-    printf("#vm : number of vm map handles\n");
-    printf("#mp : number of message pipe handles\n");
-    printf("#ev : number of event handles\n");
-    printf("#ip : number of io port handles\n");
-    printf("#dp : number of data pipe handles (both)\n");
-    printf("#it : number of interrupt handles\n");
-    printf("#io : number of io map handles\n");
-}
-
 void SetSystemExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour) {
     AutoLock lock(&system_exception_mutex);
 
@@ -205,11 +135,10 @@ static int cmd_magenta(int argc, const cmd_args* argv) {
     }
 
     if (strcmp(argv[1].str, "ps") == 0) {
-
-       if ((argc == 3) && (strcmp(argv[2].str, "help") == 0)) {
-            DumpProcessListKeyMap();
+        if ((argc == 3) && (strcmp(argv[2].str, "help") == 0)) {
+            ProcessDispatcher::DumpProcessListKeyMap();
         } else {
-            DebugDumpProcessList();
+            ProcessDispatcher::DebugDumpProcessList();
         }
     } else {
         printf("unrecognized subcommand\n");
