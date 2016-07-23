@@ -374,7 +374,7 @@ class _InfoMagentaThreads(gdb.Command):
 
 def _print_process_summary(process, number):
   state = str(process["state_"])
-  state = state.replace("UserProcess::", "")
+  state = state.replace("ProcessDispatcher::", "")
   print "%3d %#16x %4u %s" % (
       number, process.address, process["id_"], state)
 
@@ -393,18 +393,18 @@ class _InfoMagentaProcesses(gdb.Command):
   def invoke(self, arg, from_tty):
     # Do this first to make sure the previous value gets cleared out.
     # There's no way to unset a convenience var, so KISS.
-    gdb.execute("set $mx_processes = (UserProcess*[1]) { 0 }")
+    gdb.execute("set $mx_processes = (ProcessDispatcher*[1]) { 0 }")
     tls_entry_lkuser = gdb.parse_and_eval("TLS_ENTRY_LKUSER")
     processes = _get_process_list()
     num_processes = len(processes)
     # The array is origin-1-indexed. Have a null first entry to KISS.
-    gdb.execute("set $mx_processes = (UserProcess*[%d]) { 0 }" % (num_processes + 1))
+    gdb.execute("set $mx_processes = (ProcessDispatcher*[%d]) { 0 }" % (num_processes + 1))
 
     # Populate the array first, before printing the summary, to make sure this
     # gets done even if there's an error during printing.
     num = 1
     for process_ptr in processes:
-      gdb.execute("set $mx_processes[%d] = (UserProcess*) %u" % (num, process_ptr))
+      gdb.execute("set $mx_processes[%d] = (ProcessDispatcher*) %u" % (num, process_ptr))
       num += 1
 
     # Translating gdb values to python often trips over these. Heads up.
@@ -414,7 +414,7 @@ class _InfoMagentaProcesses(gdb.Command):
     gdb.execute("set print symbol off")
 
     print "%3s %-18s %4s %s" % (
-        "Num", "UserProcess*", "Pid", "State")
+        "Num", "ProcessDispatcher*", "Pid", "State")
     # Make sure we restore these when we're done.
     try:
       num = 1
