@@ -4,6 +4,7 @@
         "fortune",
         "ftl",
         "mojo",
-        "mtl"
+        "mtl",
+        "wpa_supplicant"
     ]
 }

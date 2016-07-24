@@ -1,0 +1,9 @@
+{
+    "labels": [ "//third_party/hostap/wpa_supplicant" ],
+    "binaries": [
+        {
+            "binary": "wpa_supplicant",
+            "bootfs_path": "bin/wpa_supplicant"
+        }
+    ]
+}
