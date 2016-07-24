@@ -54,7 +54,6 @@ MODULE_DEPS := \
     ulib/launchpad \
     ulib/mxio \
     ulib/gfx \
-    ulib/font \
     ulib/runtime \
     ulib/magenta
 

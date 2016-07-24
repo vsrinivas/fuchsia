@@ -28,6 +28,7 @@ MODULE_HEADER_DEPS := \
     ulib/musl
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/gfx.c
+    $(LOCAL_DIR)/gfx.c \
+    $(LOCAL_DIR)/font.c \
 
 include make/module.mk

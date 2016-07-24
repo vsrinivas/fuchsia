@@ -14,7 +14,7 @@
 
 #include <assert.h>
 #include <ddk/protocol/console.h>
-#include <font/font.h>
+#include <gfx/font.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>

@@ -21,7 +21,7 @@
 #include <assert.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <font/font.h>
+#include <gfx/font.h>
 #include <system/listnode.h>
 #include <stdio.h>
 #include <stdlib.h>

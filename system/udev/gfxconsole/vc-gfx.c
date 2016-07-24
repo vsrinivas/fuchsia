@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <font/font.h>
+#include <gfx/font.h>
 #include <gfx/gfx.h>
 
 #define VCDEBUG 1
