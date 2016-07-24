@@ -16,36 +16,27 @@
 #include <gfx/gfx.h>
 #include <stdint.h>
 
-#include "font.h"
-
 #if SMALL_FONT
+#include "font-1x.h"
+#define FONT FONT1X
+#else
+#include "font-2x.h"
+#define FONT FONT2X
+#endif
+
 void font_draw_char(gfx_surface* surface, unsigned char c,
                     int x, int y, uint32_t color, uint32_t bgcolor) {
     unsigned i, j;
     unsigned line;
 
+    uint16_t* font = FONT + c * FONT_Y;
     // draw this char into a buffer
     for (i = 0; i < FONT_Y; i++) {
-        line = FONT[c * (FONT_Y * 2) + (i * 2)];
-        for (j = 0; j < FONT_X; j++) {
-            gfx_putpixel(surface, x + j, y + i, (line & 1) ? color : bgcolor);
-            line = line >> 2;
-        }
-    }
-}
-#else
-void font_draw_char(gfx_surface* surface, unsigned char c,
-                    int x, int y, uint32_t color, uint32_t bgcolor) {
-    uint i, j;
-    uint line;
-
-    // draw this char into a buffer
-    for (i = 0; i < FONT_Y; i++) {
-        line = FONT[c * FONT_Y + i];
+        line = *font++;
         for (j = 0; j < FONT_X; j++) {
             gfx_putpixel(surface, x + j, y + i, (line & 1) ? color : bgcolor);
             line = line >> 1;
         }
     }
 }
-#endif
+
