@@ -14,7 +14,7 @@
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/state_observer.h>
 
-#include <utils/intrusive_single_list.h>
+#include <utils/intrusive_double_list.h>
 
 class Handle;
 class WaitEvent;
@@ -97,7 +97,7 @@ private:
     mutex_t lock_;
 
     // Active observers are elements in |observers_|.
-    utils::SinglyLinkedList<StateObserver*> observers_;
+    utils::DoublyLinkedList<StateObserver*> observers_;
 
     // mojo-style signaling.
     mx_signals_state_t signals_state_;

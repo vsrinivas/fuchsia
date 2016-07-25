@@ -44,7 +44,7 @@ mx_status_t StateTracker::AddObserver(StateObserver* observer) {
 
 mx_signals_state_t StateTracker::RemoveObserver(StateObserver* observer) {
     AutoLock lock(&lock_);
-    observers_.erase_if([observer](const StateObserver& o) -> bool { return &o == observer; });
+    observers_.erase(observer);
     return signals_state_;
 }
 

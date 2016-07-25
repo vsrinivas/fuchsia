@@ -8,13 +8,12 @@
 
 #include <magenta/types.h>
 
-#include <utils/intrusive_single_list.h>
+#include <utils/intrusive_double_list.h>
 
 class Handle;
 
 // Observer interface for state maintained by StateTracker.
-// TODO(vtl): This should probably be an intrusive doubly-linked list, so that removal can be fast.
-class StateObserver : public utils::SinglyLinkedListable<StateObserver*> {
+class StateObserver : public utils::DoublyLinkedListable<StateObserver*> {
 public:
     StateObserver() {}
 
