@@ -850,16 +850,23 @@ int editorOpen(char *filename) {
     return 0;
 }
 
+#define UNSAFE_SAVES 1
+
 /* Save the current file on disk. Return 0 on success, 1 on error. */
 int editorSave(void) {
     int len;
     char *buf = editorRowsToString(&len);
+#if UNSAFE_SAVES
+    unlink(E.filename);
+#endif
     int fd = open(E.filename,O_RDWR|O_CREAT,0644);
     if (fd == -1) goto writeerr;
 
+#if !UNSAFE_SAVES
     /* Use truncate + a single write(2) call in order to make saving
      * a bit safer, under the limits of what we can do in a small editor. */
     if (ftruncate(fd,len) == -1) goto writeerr;
+#endif
     if (write(fd,buf,len) != len) goto writeerr;
 
     close(fd);
