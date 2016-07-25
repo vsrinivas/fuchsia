@@ -160,9 +160,16 @@ int history_down(editstate* es) {
 }
 
 void settitle(const char* title) {
-    char str[10];
-    snprintf(str, sizeof(str), "\033]2;%s\007", title);
-    cputs(str, strlen(str));
+    char str[16];
+    int n = snprintf(str, sizeof(str) - 1, "\033]2;%s", title);
+    if (n < 0) {
+        return; // error
+    } else if ((size_t)n >= sizeof(str) - 1) {
+        n = sizeof(str) - 2; // truncated
+    }
+    str[n] = '\007';
+    str[n+1] = '\0';
+    cputs(str, n + 1);
 }
 
 int readline(editstate* es) {
