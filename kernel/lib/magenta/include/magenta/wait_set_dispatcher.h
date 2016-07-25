@@ -17,20 +17,17 @@
 
 #include <sys/types.h>
 
-#include <utils/hash_table.h>
 #include <utils/intrusive_double_list.h>
-#include <utils/intrusive_single_list.h>
+#include <utils/intrusive_hash_table.h>
 #include <utils/ref_ptr.h>
 #include <utils/unique_ptr.h>
 
 class WaitSetDispatcher final : public Dispatcher, public StateObserver {
 public:
-    // A wait set entry. It may be in two linked lists: it is always in a singly-linked list in the
+    // A wait set entry. It may be in two linked lists: it is always in a doubly-linked list in the
     // hash table |entries_| (which owns it) and it is sometimes in the doubly-linked list
     // |triggered_entries_|.
-    // TODO(vtl): Make this use unique_ptr when HashTable supports that.
-    class Entry final : public StateObserver,
-                        public utils::SinglyLinkedListable<Entry*> {
+    class Entry final : public StateObserver {
     public:
         // State transitions:
         //   The normal cycle is:
@@ -55,6 +52,13 @@ public:
             }
         };
 
+        using HashPtrType = utils::unique_ptr<Entry>;
+        struct HashBucketTraits {
+            static utils::DoublyLinkedListNodeState<HashPtrType>& node_state(Entry& obj) {
+                return obj.hash_bucket_node_state_;
+            }
+        };
+
         static status_t Create(mx_signals_t watched_signals,
                                uint64_t cookie,
                                utils::unique_ptr<Entry>* entry);
@@ -63,7 +67,6 @@ public:
 
         // Const, hence these don't care about locking:
         mx_signals_t watched_signals() const { return watched_signals_; }
-        uint64_t cookie() const { return cookie_; }
 
         void Init_NoLock(WaitSetDispatcher* wait_set, Handle* handle);
         State GetState_NoLock() const;
@@ -76,6 +79,10 @@ public:
         bool InTriggeredEntriesList_NoLock() const {
             return triggered_entries_node_state_.InContainer();
         }
+
+        // Hash table support
+        uint64_t GetKey() const { return cookie_; }
+        static uint64_t GetHash(uint64_t key) { return key % kNumBuckets; }
 
     private:
         Entry(mx_signals_t watched_signals, uint64_t cookie);
@@ -108,6 +115,7 @@ public:
         mx_signals_state_t signals_state_ = {0u, 0u};
 
         utils::DoublyLinkedListNodeState<Entry*> triggered_entries_node_state_;
+        utils::DoublyLinkedListNodeState<HashPtrType> hash_bucket_node_state_;
     };
 
     static status_t Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
@@ -132,10 +140,10 @@ public:
                   uint32_t* max_results);
 
 private:
-    static constexpr size_t kNumBuckets = 127u;
-    struct CookieHashFn {
-        uint64_t operator()(uint64_t n) const { return n; }
-    };
+    static constexpr uint64_t kNumBuckets = 127u;
+    using HashTableTraits = utils::DefaultHashTraits<uint64_t, Entry::HashPtrType,
+                                                     uint64_t, kNumBuckets>;
+    using HashBucketType  = utils::DoublyLinkedList<Entry::HashPtrType, Entry::HashBucketTraits>;
 
     WaitSetDispatcher();
 
@@ -170,10 +178,7 @@ private:
     // complicated accounting, both in Wait() and in OnCancel().
     bool cancelled_ = false;
 
-    utils::HashTable<uint64_t, Entry, CookieHashFn, kNumBuckets> entries_;
+    utils::HashTable<HashTableTraits, HashBucketType> entries_;
     utils::DoublyLinkedList<Entry*, Entry::TriggeredEntriesListTraits> triggered_entries_;
     uint32_t num_triggered_entries_ = 0u;
 };
-
-uint64_t GetHashTableKey(const WaitSetDispatcher::Entry* entry);
-void SetHashTableKey(WaitSetDispatcher::Entry* entry, uint64_t key);

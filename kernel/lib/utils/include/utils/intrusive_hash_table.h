@@ -12,7 +12,6 @@
 #include <utils/intrusive_single_list.h>
 
 namespace utils {
-namespace newcode {
 
 // DefaultKeyedObjectTraits defines a default implementation of traits used to
 // manage objects stored in associative containers such as hash-tables and
@@ -430,5 +429,4 @@ private:
 template <typename KeyType, typename PtrType>
 class DefaultHashTable : public HashTable<DefaultHashTraits<KeyType, PtrType>> { };
 
-}  // namespace newcode
 }  // namespace utils

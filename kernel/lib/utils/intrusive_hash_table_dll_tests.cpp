@@ -6,7 +6,7 @@
 
 #include <unittest.h>
 #include <utils/intrusive_double_list.h>
-#include <utils/newcode_hash_table.h>
+#include <utils/intrusive_hash_table.h>
 #include <utils/tests/intrusive_containers/associative_container_test_environment.h>
 #include <utils/tests/intrusive_containers/test_thunks.h>
 
@@ -59,20 +59,19 @@ template <typename PtrType>
 class HTDLLTraits {
 public:
     using KeyType                 = size_t;
-    using HashTraits              = newcode::DefaultHashTraits<KeyType, PtrType>;
+    using HashTraits              = DefaultHashTraits<KeyType, PtrType>;
     using HashType                = typename HashTraits::HashType;
     using TestObjBaseType         = HashedTestObjBase<HashTraits>;
 
-    using ContainerType           = newcode::HashTable<
-                                        newcode::DefaultHashTraits<KeyType, PtrType>,
-                                        DoublyLinkedList<PtrType> >;
+    using ContainerType           = HashTable<DefaultHashTraits<KeyType, PtrType>,
+                                              DoublyLinkedList<PtrType> >;
     using ContainableBaseClass    = DoublyLinkedListable<PtrType>;
     using ContainerStateType      = DoublyLinkedListNodeState<PtrType>;
 
     using OtherContainerStateType = OtherHashState<KeyType, DoublyLinkedListNodeState<PtrType>>;
     using OtherContainerTraits    = OtherHashTraits<OtherContainerStateType>;
     using OtherBucketType         = DoublyLinkedList<PtrType, OtherContainerTraits>;
-    using OtherContainerType      = newcode::HashTable<OtherContainerTraits, OtherBucketType>;
+    using OtherContainerType      = HashTable<OtherContainerTraits, OtherBucketType>;
 };
 
 DEFINE_TEST_OBJECTS(HTDLL);

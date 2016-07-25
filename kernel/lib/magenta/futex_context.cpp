@@ -49,7 +49,7 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
     node->set_next(nullptr);
     node->set_tail(node);
 
-    QueueNodesLocked(futex_key, node);
+    QueueNodesLocked(node);
 
     // Block current thread
     result = node->BlockThread(&lock_, timeout);
@@ -61,12 +61,12 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
     // wait queue, since FutexWake() didn't do that.  We need to re-get the
     // hash table key, because it might have changed if the thread was
     // requeued by FutexRequeue().
-    futex_key = node->hash_key();
-    FutexNode* list_head = futex_table_.get(futex_key);
+    futex_key = node->GetKey();
+    FutexNode* list_head = futex_table_.find(futex_key);
     FutexNode* test = list_head;
     FutexNode* prev = nullptr;
     while (test) {
-        DEBUG_ASSERT(test->hash_key() == futex_key);
+        DEBUG_ASSERT(test->GetKey() == futex_key);
         FutexNode* next = test->next();
         if (test == node) {
             if (prev) {
@@ -79,10 +79,11 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
                 }
             } else {
                 // reset head of futex
-                futex_table_.remove(futex_key);
+                futex_table_.erase(futex_key);
                 if (next) {
                     next->set_tail(list_head->tail());
-                    futex_table_.add(futex_key, next);
+                    DEBUG_ASSERT(next->GetKey() == futex_key);
+                    futex_table_.insert(next);
                 }
             }
             return ERR_TIMED_OUT;
@@ -122,20 +123,20 @@ status_t FutexContext::FutexWake(int* value_ptr, uint32_t count) {
     {
         AutoLock lock(lock_);
 
-        FutexNode* node = futex_table_.get(futex_key);
+        FutexNode* node = futex_table_.erase(futex_key);
         if (!node) {
             // nothing blocked on this futex if we can't find it
             return NO_ERROR;
         }
+        DEBUG_ASSERT(node->GetKey() == futex_key);
 
         FutexNode* wake_head = node;
-        node = node->RemoveFromHead(count, futex_key, futex_key);
+        node = node->RemoveFromHead(count, futex_key, 0u);
         // node is now the new blocked thread list head
 
-        futex_table_.remove(futex_key);
         if (node != nullptr) {
-            // TODO - Add a HashTable::replace() and use that instead of removing and re-adding
-            futex_table_.add(futex_key, node);
+            DEBUG_ASSERT(node->GetKey() == futex_key);
+            futex_table_.insert(node);
         }
 
         // Traversing this list of threads must be done while holding the
@@ -152,6 +153,9 @@ status_t FutexContext::FutexRequeue(int* wake_ptr, uint32_t wake_count, int curr
                                     int* requeue_ptr, uint32_t requeue_count) {
     LTRACE_ENTRY;
 
+    if ((requeue_ptr == nullptr) && requeue_count)
+        return ERR_INVALID_ARGS;
+
     AutoLock lock(lock_);
 
     int value;
@@ -163,23 +167,21 @@ status_t FutexContext::FutexRequeue(int* wake_ptr, uint32_t wake_count, int curr
     uintptr_t requeue_key = reinterpret_cast<uintptr_t>(requeue_ptr);
     if (wake_key == requeue_key) return ERR_INVALID_ARGS;
 
-    FutexNode* node = futex_table_.get(wake_key);
+    // This must happen before RemoveFromHead() calls set_hash_key() on
+    // nodes below, because operations on futex_table_ look at the GetKey
+    // field of the list head nodes for wake_key and requeue_key.
+    FutexNode* node = futex_table_.erase(wake_key);
     if (!node) {
         // nothing blocked on this futex if we can't find it
         return NO_ERROR;
     }
-
-    // This must happen before RemoveFromHead() calls set_hash_key() on
-    // nodes below, because operations on futex_table_ look at the hash_key
-    // field of the list head nodes for wake_key and requeue_key.
-    futex_table_.remove(wake_key);
 
     FutexNode* wake_head;
     if (wake_count == 0) {
         wake_head = nullptr;
     } else {
         wake_head = node;
-        node = node->RemoveFromHead(wake_count, wake_key, wake_key);
+        node = node->RemoveFromHead(wake_count, wake_key, 0u);
     }
 
     // node is now the head of wake_ptr futex after possibly removing some threads to wake
@@ -190,32 +192,29 @@ status_t FutexContext::FutexRequeue(int* wake_ptr, uint32_t wake_count, int curr
             node = node->RemoveFromHead(requeue_count, wake_key, requeue_key);
 
             // now requeue our nodes to requeue_ptr mutex
-            QueueNodesLocked(requeue_key, requeue_head);
+            DEBUG_ASSERT(requeue_head->GetKey() == requeue_key);
+            QueueNodesLocked(requeue_head);
         }
     }
 
     // add any remaining nodes back to wake_key futex
     if (node != nullptr) {
-        futex_table_.add(wake_key, node);
+        DEBUG_ASSERT(node->GetKey() == wake_key);
+        futex_table_.insert(node);
     }
 
     FutexNode::WakeThreads(wake_head);
-
     return NO_ERROR;
 }
 
-void FutexContext::QueueNodesLocked(uintptr_t futex_key, FutexNode* head) {
-    FutexNode* current_head = futex_table_.get(futex_key);
+void FutexContext::QueueNodesLocked(FutexNode* head) {
+    FutexNode* current_head = futex_table_.find(head->GetKey());
+
     if (!current_head) {
         // The current thread is first to block on this futex, so add it to the hash table.
-        futex_table_.add(futex_key, head);
+        futex_table_.insert(head);
     } else {
         // push node for current thread at end of list
         current_head->AppendList(head);
     }
-}
-
-size_t FutexContext::FutexHashFn::operator()(uintptr_t key) const {
-    // Futex address is likely 8 byte aligned, so ignore low 3 bits
-    return static_cast<size_t>((key >> 3) % FUTEX_HASH_BUCKET_COUNT);
 }

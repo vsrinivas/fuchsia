@@ -41,7 +41,7 @@ FutexNode* FutexNode::RemoveFromHead(uint32_t count, uintptr_t old_hash_key,
     FutexNode* node = this;
     FutexNode* last = this;
     for (uint32_t i = 0; i < count && node != nullptr; i++) {
-        DEBUG_ASSERT(node->hash_key() == old_hash_key);
+        DEBUG_ASSERT(node->GetKey() == old_hash_key);
         // For requeuing, update the key so that FutexWait() can remove the
         // thread from its current queue if the wait operation times out.
         node->set_hash_key(new_hash_key);
@@ -67,12 +67,4 @@ void FutexNode::WakeThreads(FutexNode* head) {
         cond_signal(&head->condvar_);
         head = head->next_;
     }
-}
-
-uintptr_t GetHashTableKey(const FutexNode* node) {
-    return node->hash_key();
-}
-
-void SetHashTableKey(FutexNode* node, uintptr_t key) {
-    node->set_hash_key(key);
 }

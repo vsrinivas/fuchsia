@@ -7,12 +7,8 @@
 #pragma once
 
 #include <kernel/mutex.h>
+#include <magenta/futex_node.h>
 #include <magenta/types.h>
-#include <utils/hash_table.h>
-
-#define FUTEX_HASH_BUCKET_COUNT 37
-
-class FutexNode;
 
 // FutexContext is a class that encapsulates support for futex operations.
 // FutexContext uses a hash table keyed on the futex address (a pointer to integer in userspace)
@@ -54,17 +50,12 @@ private:
     FutexContext(const FutexContext&) = delete;
     FutexContext& operator=(const FutexContext&) = delete;
 
-    void QueueNodesLocked(uintptr_t futex_key, FutexNode* head);
-
-    // hash function for our hash table
-    struct FutexHashFn {
-        size_t operator()(uintptr_t key) const;
-    };
+    void QueueNodesLocked(FutexNode* head);
 
     // protects futex_table_
     mutex_t lock_;
 
     // Hash table for futexes in this context.
     // Key is futex address, value is the FutexNode for the head of futex's blocked thread list.
-    utils::HashTable<uintptr_t, FutexNode, FutexHashFn, FUTEX_HASH_BUCKET_COUNT> futex_table_;
+    FutexNode::HashTable futex_table_;
 };

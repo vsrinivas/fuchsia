@@ -11,12 +11,14 @@
 #include <kernel/wait.h>
 #include <list.h>
 #include <magenta/types.h>
-#include <utils/hash_table.h>
+#include <utils/intrusive_hash_table.h>
 
 // Node for linked list of threads blocked on a futex
 // Intended to be embedded within a UserThread Instance
 class FutexNode : public utils::SinglyLinkedListable<FutexNode*> {
 public:
+    using HashTable = utils::DefaultHashTable<uintptr_t, FutexNode*>;
+
     FutexNode();
     ~FutexNode();
 
@@ -46,20 +48,21 @@ public:
         next_ = node;
     }
 
-    uintptr_t hash_key() const {
-        return hash_key_;
+    FutexNode* tail() const {
+        return tail_;
+    }
+
+    void set_tail(FutexNode* tail) {
+        tail_ = tail;
     }
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;
     }
 
-    FutexNode* tail() const {
-        return tail_;
-    }
-    void set_tail(FutexNode* tail) {
-        tail_ = tail;
-    }
+    // Trait implementation for utils::HashTable
+    uintptr_t GetKey() const { return hash_key_; }
+    static size_t GetHash(uintptr_t key) { return (key >> 3) % HashTable::HashTraits::kNumBuckets; }
 
 private:
     // hash_key_ contains the futex address.  This field has two roles:
@@ -80,6 +83,3 @@ private:
     // only valid if this node is the list head
     FutexNode* tail_;
 };
-
-uintptr_t GetHashTableKey(const FutexNode* node);
-void SetHashTableKey(FutexNode* node, uintptr_t key);

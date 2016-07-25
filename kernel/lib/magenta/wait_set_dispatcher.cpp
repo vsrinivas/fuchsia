@@ -189,7 +189,7 @@ bool WaitSetDispatcher::Entry::Trigger_NoLock() {
 constexpr mx_rights_t kDefaultWaitSetRights = MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 // static
-constexpr size_t WaitSetDispatcher::kNumBuckets;
+constexpr uint64_t WaitSetDispatcher::kNumBuckets;
 
 // static
 status_t WaitSetDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
@@ -212,21 +212,21 @@ WaitSetDispatcher::~WaitSetDispatcher() {
 
         triggered_entries_.clear();
 
-        entries_.for_each([](Entry* e) {
+        for (auto& e : entries_) {
             // If we're being destroyed, every entry in |entries_| should be in the ADDED state (since
             // we can't be in the middle of AddEntry() or RemoveEntry().
-            DEBUG_ASSERT(e->GetState_NoLock() == Entry::State::ADDED);
-            e->SetState_NoLock(Entry::State::REMOVED);
-        });
+            DEBUG_ASSERT(e.GetState_NoLock() == Entry::State::ADDED);
+            e.SetState_NoLock(Entry::State::REMOVED);
+        }
     }
+
     // We can only call RemoveObserver() outside the lock.
-    entries_.for_each_remove_and_run([](Entry* e) {
-        DEBUG_ASSERT(e->GetState_NoLock() == Entry::State::REMOVED);
-        if (e->GetDispatcher_NoLock())
-            e->GetDispatcher_NoLock()->get_state_tracker()->RemoveObserver(e);
-        delete e;
-    });
-    entries_.clear();
+    for (auto& e : entries_) {
+        DEBUG_ASSERT(e.GetState_NoLock() == Entry::State::REMOVED);
+        if (e.GetDispatcher_NoLock())
+            e.GetDispatcher_NoLock()->get_state_tracker()->RemoveObserver(&e);
+    }
+    entries_.clear();   // Automatically destroys all Entry objects in entries_
 
     state_tracker_.RemoveObserver(this);
 
@@ -241,15 +241,14 @@ status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* han
         return ERR_NOT_SUPPORTED;
 
     auto e = entry.get();
-    auto cookie = entry->cookie();
     {
         AutoLock lock(&mutex_);
 
-        if (entries_.get(cookie))
+        if (entries_.find(entry->GetKey()) != nullptr)
             return ERR_ALREADY_EXISTS;
 
-        e->Init_NoLock(this, handle);
-        entries_.add(cookie, entry.release());
+        entry->Init_NoLock(this, handle);
+        entries_.insert(utils::move(entry));
     }
     // The entry |e| will remain valid since: we'll remain alive (since our caller better have a ref
     // to us) and since e->Init_NoLock() will set the state to ADD_PENDING and RemoveEntry() won't
@@ -261,10 +260,12 @@ status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* han
     if (result != NO_ERROR) {
         AutoLock lock(&mutex_);
         DEBUG_ASSERT(e->GetState_NoLock() == Entry::State::ADD_PENDING);
-        auto e2 = entries_.remove(cookie);
-        (void)e2;
-        DEBUG_ASSERT(e == e2);
-        delete e;
+        DEBUG_ASSERT(entry == nullptr);
+
+        entry = entries_.erase(*e);
+        DEBUG_ASSERT(e == entry.get());
+
+        // entry destructs as it goes out of scope.
         return result;
     }
 
@@ -280,7 +281,7 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
     {
         AutoLock lock(&mutex_);
 
-        entry.reset(entries_.remove(cookie));
+        entry = entries_.erase(cookie);
         if (!entry)
             return ERR_NOT_FOUND;
 
@@ -296,8 +297,7 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
         if (state == Entry::State::ADD_PENDING) {
             // We're *in* AddEntry() on another thread! Just put it back and pretend it hasn't been
             // added yet.
-            auto cookie = entry->cookie();
-            entries_.add(cookie, entry.release());
+            entries_.insert(utils::move(entry));
             return NO_ERROR;
         }
         DEBUG_ASSERT(state == Entry::State::ADDED);
@@ -343,7 +343,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
     for (uint32_t i = 0; i < *num_results; i++, ++it) {
         DEBUG_ASSERT(it != triggered_entries_.cend());
 
-        results[i].cookie = it->cookie();
+        results[i].cookie = it->GetKey();
         results[i].reserved = 0u;
         if (it->GetHandle_NoLock()) {
             // Not cancelled: satisfied or unsatisfiable.
@@ -419,12 +419,4 @@ status_t WaitSetDispatcher::DoWaitTimeout_NoLock(lk_time_t timeout) {
         if (now >= deadline)
             return ERR_TIMED_OUT;
     }
-}
-
-uint64_t GetHashTableKey(const WaitSetDispatcher::Entry* entry) {
-    return entry->cookie();
-}
-
-void SetHashTableKey(WaitSetDispatcher::Entry* entry, uint64_t key) {
-    DEBUG_ASSERT(key == entry->cookie());
 }
