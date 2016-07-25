@@ -151,10 +151,12 @@ namespace utils {
 template <typename T>
 struct SinglyLinkedListNodeState {
     using PtrTraits = internal::ContainerPtrTraits<T>;
-    typename PtrTraits::PtrType next_ = nullptr;
+    constexpr SinglyLinkedListNodeState() { }
 
     bool IsValid() const     { return true; }
     bool InContainer() const { return (next_ != nullptr); }
+
+    typename PtrTraits::PtrType next_ = nullptr;
 };
 
 // DefaultSinglyLinkedListNodeState<T>
@@ -182,6 +184,9 @@ struct DefaultSinglyLinkedListTraits {
 // Simply derive your object from SinglyLinkedListable and you are done.
 template <typename T>
 struct SinglyLinkedListable {
+public:
+    constexpr SinglyLinkedListable() { }
+
 private:
     friend class DefaultSinglyLinkedListTraits<T>;
     SinglyLinkedListNodeState<T> sll_node_state_;
@@ -364,7 +369,7 @@ public:
     //
     // Find the first member of the list which satisfies the predicate given by
     // 'fn' and erase it from the list, returning a referenced pointer to the
-    // removed element.  Return nullptr if no element satisfies the predicate.
+    // removed element.  Return nullptr if no member satisfies the predicate.
     template <typename UnaryFn>
     PtrType erase_if(UnaryFn fn) {
         using ConstRefType  = typename PtrTraits::ConstRefType;
@@ -382,6 +387,34 @@ public:
         }
 
         return PtrType(nullptr);
+    }
+
+    // find_if
+    //
+    // Find the first member of the list which satisfies the predicate given by
+    // 'fn' and return a const& to the PtrType in the list which refers to it.
+    // Return nullptr if no member satisfies the predicate.
+    template <typename UnaryFn>
+    const PtrType& find_if(UnaryFn fn) {
+        using ConstRefType = typename PtrTraits::ConstRefType;
+        using RefType      = typename PtrTraits::RefType;
+
+        const PtrType* check_me = &head_;
+        while (*check_me != nullptr) {
+            ConstRefType ref = **check_me;
+
+            if (fn(ref))
+                break;
+
+            // Note : there is a small amount of evil at work here (the
+            // const_cast).  It should be safe, however, as we will not modify
+            // the node state.  We just need it to get a const& to the managed
+            // pointer type which points to the node we are looking for.
+            auto& ns = NodeTraits::node_state(const_cast<RefType>(ref));
+            check_me = &ns.next_;
+        }
+
+        return *check_me;
     }
 
 private:

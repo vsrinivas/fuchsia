@@ -170,6 +170,7 @@ protected:
     }
 
     static constexpr size_t OBJ_COUNT = 17;
+
     ListType  list_;
     ObjType*  objects_[OBJ_COUNT] = { nullptr };
     size_t    refs_held_ = 0;
@@ -1474,7 +1475,6 @@ public:
             even_erased++;
         }
 
-        static constexpr size_t EVEN_OBJ_COUNT = (OBJ_COUNT >> 1) + (OBJ_COUNT & 1);
         EXPECT_EQ(EVEN_OBJ_COUNT, even_erased, "");
         EXPECT_EQ(OBJ_COUNT, even_erased + list().size_slow(), "");
         for (const auto& obj : list())
@@ -1490,10 +1490,52 @@ public:
             odd_erased++;
         }
 
-        static constexpr size_t ODD_OBJ_COUNT = (OBJ_COUNT >> 1);
         EXPECT_EQ(ODD_OBJ_COUNT, odd_erased, "");
         EXPECT_EQ(OBJ_COUNT, even_erased + odd_erased, "");
         EXPECT_TRUE(list().is_empty(), "");
+
+        END_TEST;
+    }
+
+    bool FindIf() {
+        BEGIN_TEST;
+
+        // Populate our list.
+        REQUIRE_TRUE(Populate(), "");
+
+        // Find all of the members which should be in the list.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            const auto& ptr = list().find_if(
+                [i](const ObjType& obj) -> bool {
+                    return (obj.value() == i);
+                });
+
+            EXPECT_NONNULL(ptr, "");
+        }
+
+        // Count all of the odd members.
+        size_t total_found = 0;
+        size_t last_found  = 0;
+        while (true) {
+            const auto& ptr = list().find_if(
+                [last_found](const ObjType& obj) -> bool {
+                    return (obj.value() & 1) && (obj.value() > last_found);
+                });
+
+            if (!ptr)
+                break;
+
+            ++total_found;
+            last_found = ptr->value();
+        }
+        EXPECT_EQ(ODD_OBJ_COUNT, total_found, "");
+
+        // Fail to find a members which should not be in the list.
+        const auto& ptr = list().find_if(
+            [](const ObjType& obj) -> bool {
+                return (obj.value() == OBJ_COUNT);
+            });
+        EXPECT_NULL(ptr, "");
 
         END_TEST;
     }
@@ -1561,6 +1603,7 @@ static bool _test_name ## Test(void* ctx) { \
     MAKE_TEST_THUNK(RvalueOps);
     MAKE_TEST_THUNK(TwoList);
     MAKE_TEST_THUNK(EraseIf);
+    MAKE_TEST_THUNK(FindIf);
 #undef MAKE_TEST_THUNK
 
 private:
@@ -1568,7 +1611,9 @@ private:
     // this->base_member all of the time.
     using Sp   = TestEnvironmentSpecialized<Traits>;
     using Base = TestEnvironmentBase<Traits>;
-    static constexpr size_t OBJ_COUNT = Base::OBJ_COUNT;
+    static constexpr size_t OBJ_COUNT      = Base::OBJ_COUNT;
+    static constexpr size_t EVEN_OBJ_COUNT = (OBJ_COUNT >> 1) + (OBJ_COUNT & 1);
+    static constexpr size_t ODD_OBJ_COUNT  = (OBJ_COUNT >> 1);
 
     ListType&  list()      { return this->list_; }
     ObjType**  objects()   { return this->objects_; }
@@ -1653,6 +1698,10 @@ UNITTEST("TwoList (RefPtr)",            RP_SLL_TE::TwoListTest)
 UNITTEST("EraseIf (unmanaged)",         UM_SLL_TE::EraseIfTest)
 UNITTEST("EraseIf (unique)",            UP_SLL_TE::EraseIfTest)
 UNITTEST("EraseIf (RefPtr)",            RP_SLL_TE::EraseIfTest)
+
+UNITTEST("FindIf (unmanaged)",          UM_SLL_TE::FindIfTest)
+UNITTEST("FindIf (unique)",             UP_SLL_TE::FindIfTest)
+UNITTEST("FindIf (RefPtr)",             RP_SLL_TE::FindIfTest)
 
 UNITTEST("Scope (unique)",              UP_SLL_TE::ScopeTest)
 UNITTEST("Scope (RefPtr)",              RP_SLL_TE::ScopeTest)
@@ -1748,6 +1797,10 @@ UNITTEST("TwoList (RefPtr)",            RP_DLL_TE::TwoListTest)
 UNITTEST("EraseIf (unmanaged)",         UM_DLL_TE::EraseIfTest)
 UNITTEST("EraseIf (unique)",            UP_DLL_TE::EraseIfTest)
 UNITTEST("EraseIf (RefPtr)",            RP_DLL_TE::EraseIfTest)
+
+UNITTEST("FindIf (unmanaged)",          UM_DLL_TE::FindIfTest)
+UNITTEST("FindIf (unique)",             UP_DLL_TE::FindIfTest)
+UNITTEST("FindIf (RefPtr)",             RP_DLL_TE::FindIfTest)
 
 UNITTEST("Scope (unique)",              UP_DLL_TE::ScopeTest)
 UNITTEST("Scope (RefPtr)",              RP_DLL_TE::ScopeTest)

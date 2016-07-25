@@ -267,6 +267,28 @@ public:
         return PtrType(nullptr);
     }
 
+    // find_if
+    //
+    // Find the first member of the list which satisfies the predicate given by
+    // 'fn' and return a const& to the PtrType in the list which refers to it.
+    // Return nullptr if no member satisfies the predicate.
+    template <typename UnaryFn>
+    const PtrType& find_if(UnaryFn fn) {
+        using ConstRefType = typename PtrTraits::ConstRefType;
+        using RefType      = typename PtrTraits::RefType;
+
+        for (RefType obj : *this) {
+            if (fn(const_cast<ConstRefType>(obj))) {
+                auto& obj_ns  = NodeTraits::node_state(obj);
+                auto& prev_ns = NodeTraits::node_state(*obj_ns.prev_);
+                return prev_ns.next_;
+            }
+        }
+
+        static PtrType null_ptr(nullptr);
+        return null_ptr;
+    }
+
 private:
     // The traits of a non-const iterator
     struct iterator_traits {
