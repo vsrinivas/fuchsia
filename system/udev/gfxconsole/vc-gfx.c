@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gfx/font.h>
 #include <gfx/gfx.h>
 
 #define VCDEBUG 1
@@ -21,7 +20,8 @@
 #include "vcdebug.h"
 
 void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y) {
-    font_draw_char(dev->gfx, TOCHAR(ch), x * FONT_X, y * FONT_Y, palette_to_color(dev, TOFG(ch)), palette_to_color(dev, TOBG(ch)));
+    gfx_putchar(dev->gfx, dev->font, TOCHAR(ch), x * dev->charw, y * dev->charh,
+                palette_to_color(dev, TOFG(ch)), palette_to_color(dev, TOBG(ch)));
 }
 
 void vc_gfx_invalidate_all(vc_device_t* dev) {
@@ -40,7 +40,8 @@ void vc_gfx_invalidate_status(vc_device_t* dev) {
 void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     if (!dev->active)
         return;
-    unsigned desty = dev->st_gfx->height + y * FONT_Y;
-    gfx_blend(dev->hw_gfx, dev->gfx, x * FONT_X, y * FONT_Y, w * FONT_X, h * FONT_Y, x * FONT_X, desty);
-    gfx_flush_rows(dev->hw_gfx, desty, desty + h * FONT_Y);
+    unsigned desty = dev->st_gfx->height + y * dev->charh;
+    gfx_blend(dev->hw_gfx, dev->gfx, x * dev->charw, y * dev->charh,
+              w * dev->charw, h * dev->charh, x * dev->charw, desty);
+    gfx_flush_rows(dev->hw_gfx, desty, desty + h * dev->charh);
 }

@@ -52,6 +52,7 @@ typedef struct vc_device {
     // status bar surface
     gfx_surface* hw_gfx;
     // backing store
+    const gfx_font* font;
 
     vc_char_t* text_buf;
     // text buffer
@@ -60,6 +61,8 @@ typedef struct vc_device {
 
     unsigned rows, columns;
     // screen size
+    unsigned charw, charh;
+    // size of character cell
     unsigned scrollback_rows;
     // number of rows in scrollback
 

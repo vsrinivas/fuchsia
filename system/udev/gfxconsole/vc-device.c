@@ -14,7 +14,6 @@
 
 #include <assert.h>
 #include <ddk/protocol/console.h>
-#include <gfx/font.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
@@ -58,8 +57,8 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
     dev->lock = MXR_MUTEX_INIT;
 
     // calculate how many rows/columns we have
-    dev->rows = dev->gfx->height / FONT_Y;
-    dev->columns = dev->gfx->width / FONT_X;
+    dev->rows = dev->gfx->height / dev->charh;
+    dev->columns = dev->gfx->width / dev->charw;
     dev->scrollback_rows = SCROLLBACK_ROWS;
 
     // allocate the text buffer
@@ -120,7 +119,8 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
     if (!dev->hide_cursor) {
         vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
         vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
-        gfx_fillrect(dev->gfx, x * FONT_X, y * FONT_Y, FONT_X, FONT_Y, palette_to_color(dev, dev->front_color));
+        gfx_fillrect(dev->gfx, x * dev->charw, y * dev->charh, dev->charw, dev->charh,
+                     palette_to_color(dev, dev->front_color));
         vc_gfx_invalidate(dev, x, y, 1, 1);
     }
     dev->x = x;
@@ -152,10 +152,12 @@ static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
     vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
     int delta = ABS(dir);
     if (dir > 0) {
-        gfx_copyrect(dev->gfx, 0, (y0 + delta) * FONT_Y, dev->gfx->width, (y1 - y0 - delta) * FONT_Y, 0, y0);
+        gfx_copyrect(dev->gfx, 0, (y0 + delta) * dev->charh,
+                     dev->gfx->width, (y1 - y0 - delta) * dev->charh, 0, y0);
         vc_device_invalidate(cookie, 0, y1 - delta, dev->columns, delta);
     } else {
-        gfx_copyrect(dev->gfx, 0, y0, dev->gfx->width, (y1 - y0 - delta) * FONT_Y, 0, (y0 + delta) * FONT_Y);
+        gfx_copyrect(dev->gfx, 0, y0, dev->gfx->width, (y1 - y0 - delta) * dev->charh,
+                     0, (y0 + delta) * dev->charh);
         vc_device_invalidate(cookie, 0, y0, dev->columns, delta);
     }
     gfx_flush(dev->gfx);
@@ -175,7 +177,8 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
         if (dev->hide_cursor) {
             dev->hide_cursor = false;
             vc_tc_movecursor(dev, dev->x, dev->y);
-            gfx_fillrect(dev->gfx, dev->x * FONT_X, dev->y * FONT_Y, FONT_X, FONT_Y, palette_to_color(dev, dev->front_color));
+            gfx_fillrect(dev->gfx, dev->x * dev->charw, dev->y * dev->charh, dev->charw, dev->charh,
+                         palette_to_color(dev, dev->front_color));
             vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
         }
         break;
@@ -236,7 +239,8 @@ void vc_device_write_status(vc_device_t* dev) {
                 state = ESCAPE;
                 p_num = 0;
             } else {
-                font_draw_char(dev->st_gfx, c, idx++ * FONT_X, 0, palette_to_color(dev, fg), palette_to_color(dev, bg));
+                gfx_putchar(dev->st_gfx, dev->font, c, idx++ * dev->charw, 0,
+                            palette_to_color(dev, fg), palette_to_color(dev, bg));
             }
         } else if (state == ESCAPE) {
             if (c >= '0' && c <= '9') {
@@ -277,10 +281,12 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
         return;
     dev->vpy = vpy;
     if (dir > 0) {
-        gfx_copyrect(dev->gfx, 0, delta * FONT_Y, dev->gfx->width, (dev->rows - delta) * FONT_Y, 0, 0);
+        gfx_copyrect(dev->gfx, 0, delta * dev->charh,
+                     dev->gfx->width, (dev->rows - delta) * dev->charh, 0, 0);
         vc_device_invalidate(dev, 0, vpy + dev->rows - delta, dev->columns, delta);
     } else {
-        gfx_copyrect(dev->gfx, 0, 0, dev->gfx->width, (dev->rows - delta) * FONT_Y, 0, delta * FONT_Y);
+        gfx_copyrect(dev->gfx, 0, 0, dev->gfx->width,
+                     (dev->rows - delta) * dev->charh, 0, delta * dev->charh);
         vc_device_invalidate(dev, 0, vpy, dev->columns, delta);
     }
     gfx_flush(dev->gfx);
@@ -293,12 +299,16 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     if (!device)
         return ERR_NO_MEMORY;
 
+    device->font = &font9x16;
+    device->charw = device->font->width;
+    device->charh = device->font->height;
+
     // init the status bar
-    device->st_gfx = gfx_create_surface(NULL, hw_gfx->width, FONT_Y, hw_gfx->stride, hw_gfx->format, 0);
+    device->st_gfx = gfx_create_surface(NULL, hw_gfx->width, device->charh, hw_gfx->stride, hw_gfx->format, 0);
     if (!device->st_gfx)
         goto fail;
 
-    size_t sz = hw_gfx->pixelsize * hw_gfx->stride * (hw_gfx->height - FONT_Y);
+    size_t sz = hw_gfx->pixelsize * hw_gfx->stride * (hw_gfx->height - device->charh);
     if ((device->gfx_vmo = mx_vm_object_create(sz)) < 0)
         goto fail;
 
@@ -310,7 +320,7 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     }
 
     // init the main surface
-    device->gfx = gfx_create_surface((void*) ptr, hw_gfx->width, hw_gfx->height - FONT_Y,
+    device->gfx = gfx_create_surface((void*) ptr, hw_gfx->width, hw_gfx->height - device->charh,
                                      hw_gfx->stride, hw_gfx->format, 0);
     if (!device->gfx)
         goto fail;
