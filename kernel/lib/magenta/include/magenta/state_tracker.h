@@ -92,7 +92,7 @@ public:
     }
 
 private:
-    bool SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals);
+    static bool SendIOPortPacket(IOPortDispatcher* io_port, uint64_t key, mx_signals_t signals);
 
     mutex_t lock_;
 

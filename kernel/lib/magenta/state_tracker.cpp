@@ -82,6 +82,8 @@ void StateTracker::UpdateState(mx_signals_t satisfied_set_mask,
     bool awoke_threads = false;
     mx_signals_t signal_match = 0u;
     utils::RefPtr<IOPortDispatcher> io_port;
+    uint64_t key;
+
     {
         AutoLock lock(&lock_);
 
@@ -98,8 +100,10 @@ void StateTracker::UpdateState(mx_signals_t satisfied_set_mask,
             signal_match = signals_state_.satisfied & io_port_signals_;
             // If there is signal match, we need to ref-up the io port because we are going
             // to call it from outside the lock.
-            if (signal_match)
+            if (signal_match) {
                 io_port = io_port_;
+                key = io_port_key_;
+            }
         } else {
             if (previous_signals_state.satisfied == signals_state_.satisfied &&
                 previous_signals_state.satisfiable == signals_state_.satisfiable)
@@ -111,7 +115,7 @@ void StateTracker::UpdateState(mx_signals_t satisfied_set_mask,
         }
     }
     if (io_port)
-        awoke_threads |= SendIOPortPacket_NoLock(io_port.get(), signal_match);
+        awoke_threads |= SendIOPortPacket(io_port.get(), key, signal_match);
     if (awoke_threads)
         thread_yield();
 }
@@ -128,10 +132,12 @@ void StateTracker::Cancel(Handle* handle) {
         thread_yield();
 }
 
-bool StateTracker::SendIOPortPacket_NoLock(IOPortDispatcher* io_port, mx_signals_t signals) {
+bool StateTracker::SendIOPortPacket(IOPortDispatcher* io_port,
+                                    uint64_t key,
+                                    mx_signals_t signals) {
     IOP_Packet packet ={
         {
-            io_port_key_,
+            key,
             current_time_hires(),
             0u,                     //  TODO(cpu): support bytes (for pipes)
             signals,
