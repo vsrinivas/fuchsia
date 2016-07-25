@@ -13,15 +13,13 @@
 // limitations under the License.
 
 #include "elf.h"
+#include "elf-defines.h"
 
 #include <endian.h>
 #include <limits.h>
 #include <magenta/syscalls.h>
 #include <stdlib.h>
 #include <string.h>
-
-// TODO(mcgrathr): Move this header when the old mxio ELF code is retired.
-#include "../mxio/elf-defines.h"
 
 #ifdef _LP64
 # define MY_ELFCLASS ELFCLASS64

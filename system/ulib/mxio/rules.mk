@@ -22,11 +22,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/dispatcher-v2.c \
-    $(LOCAL_DIR)/elf.c \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/pipe.c \
-    $(LOCAL_DIR)/process.c \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/unistd.c \
     $(LOCAL_DIR)/stubs.c \
