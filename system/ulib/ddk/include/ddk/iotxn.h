@@ -15,7 +15,8 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <system/list.h>
+#include <system/listnode.h>
+#include <ddk/driver.h>
 
 // add to magenta/types.h
 typedef uint64_t mx_off_t;
@@ -89,7 +90,7 @@ struct iotxn {
     // The complete_cb() callback is set by the requestor and is
     // invoked by the 'complete' ops method when it is called by
     // the processor upon completion of the io operation.
-    void (*complete_cb)(iotxn* txn);
+    void (*complete_cb)(iotxn_t* txn);
 
     // structure to this point is 128 bytes
 
@@ -161,5 +162,5 @@ struct iotxn_ops {
 
 
     // free the iotxn -- should be called only by the entity that allocated it
-    void (*relase)(iotxn_t* txn);
+    void (*release)(iotxn_t* txn);
 };
