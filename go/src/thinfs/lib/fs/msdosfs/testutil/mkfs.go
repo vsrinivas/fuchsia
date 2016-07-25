@@ -18,6 +18,7 @@ package testutil
 import (
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -37,7 +38,9 @@ type FileFAT struct {
 // The name of the FAT image is returned.
 func MkfsFAT(t *testing.T, size string, numFATs, numHiddenSectors, sectorsPerCluster, sectorSize int) *FileFAT {
 	// OS X has some difficulties with upper-case arguments to dd.
-	size = strings.ToLower(size)
+	if runtime.GOOS == "darwin" {
+		size = strings.ToLower(size)
+	}
 
 	name := "testfs"
 	seek := "seek=" + size
