@@ -14,10 +14,9 @@
 
 #include <stdio.h>
 
-// TODO: disable logging by default
-#define DLOG_ENABLE
+#define MAGMA_DLOG_ENABLE 0
 
-#ifdef DLOG_ENABLE
+#if DLOG_ENABLE
 
 #define DLOG(...)                                                                                  \
     do {                                                                                           \
@@ -27,5 +26,5 @@
     } while (0)
 
 #else
-#define DLOG
+#define DLOG(...)
 #endif

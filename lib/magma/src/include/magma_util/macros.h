@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define MAGMA_DRET_ENABLE 1
+
 namespace magma {
 
 #define DASSERT(...)                                                                               \
@@ -27,14 +29,28 @@ namespace magma {
         assert(false);                                                                             \
     }
 
+#if MAGMA_DRET_ENABLE
+
 static inline int dret(const char* file, int line, int ret)
 {
-    printf("%s:%d returning error: %d", file, line, ret);
-    printf("\n");
+    printf("%s:%d returning error: %d\n", file, line, ret);
     return ret;
 }
 
 #define DRET(ret) (ret == 0 ? 0 : magma::dret(__FILE__, __LINE__, ret))
+
+static inline bool dret_false(const char* file, int line, const char* msg)
+{
+    printf("%s:%d returning false: %s\n", file, line, msg);
+    return false;
+}
+
+#define DRETF(ret, msg) (ret == true ? true : magma::dret_false(__FILE__, __LINE__, msg))
+
+#else
+#define DRET(ret) (ret)
+#define DRETF(ret, msg) (ret)
+#endif
 
 #define UNIMPLEMENTED(...)                                                                         \
     do {                                                                                           \
