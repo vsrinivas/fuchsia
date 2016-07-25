@@ -25,9 +25,11 @@
 
 #define LOCAL_TRACE 0
 
-UserThread::UserThread(utils::RefPtr<ProcessDispatcher> process,
+UserThread::UserThread(mx_koid_t koid,
+                       utils::RefPtr<ProcessDispatcher> process,
                        thread_start_routine entry, void* arg)
-    : process_(utils::move(process)),
+    : koid_(koid),
+      process_(utils::move(process)),
       entry_(entry),
       arg_(arg),
       state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {

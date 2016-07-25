@@ -13,6 +13,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/data_pipe.cpp \
     $(LOCAL_DIR)/data_pipe_producer_dispatcher.cpp \
     $(LOCAL_DIR)/data_pipe_consumer_dispatcher.cpp \
+    $(LOCAL_DIR)/dispatcher.cpp \
     $(LOCAL_DIR)/event_dispatcher.cpp \
     $(LOCAL_DIR)/exception.cpp \
     $(LOCAL_DIR)/futex_context.cpp \

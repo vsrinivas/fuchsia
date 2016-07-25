@@ -34,8 +34,10 @@ struct MessagePacket : public utils::DoublyLinkedListable<utils::unique_ptr<Mess
 class MessagePipe : public utils::RefCounted<MessagePipe> {
 public:
     using MessageList = utils::DoublyLinkedList<utils::unique_ptr<MessagePacket>>;
-    MessagePipe();
+    MessagePipe(mx_koid_t koid);
     ~MessagePipe();
+
+    mx_koid_t get_koid() const { return koid_; }
 
     void OnDispatcherDestruction(size_t side);
 
@@ -45,6 +47,7 @@ public:
     StateTracker* GetStateTracker(size_t side);
 
 private:
+    const mx_koid_t koid_;
     bool dispatcher_alive_[2];
     MessageList messages_[2];
     // This lock protects |dispatcher_alive_| and |messages_|.

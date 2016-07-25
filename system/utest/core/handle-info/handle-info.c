@@ -56,12 +56,10 @@ bool handle_info_test(void) {
     const mx_rights_t evr = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
                             MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-    if (info.type != MX_OBJ_TYPE_EVENT)
-        CHECK(0, 1, "handle should be an event");
-    if (info.rights != evr)
-        CHECK(0, 1, "wrong set of rights");
-    if (info.props != MX_OBJ_PROP_WAITABLE)
-        CHECK(0, 1, "wrong set of properties");
+    EXPECT_GT(info.koid, 0ULL, "object id should be positive");
+    EXPECT_EQ(info.type, (uint32_t)MX_OBJ_TYPE_EVENT, "handle should be an event");
+    EXPECT_EQ(info.rights, evr, "wrong set of rights");
+    EXPECT_EQ(info.props, (uint32_t)MX_OBJ_PROP_WAITABLE, "");
 
     mx_handle_close(event);
     mx_handle_close(duped);

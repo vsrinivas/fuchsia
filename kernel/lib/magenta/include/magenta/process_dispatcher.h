@@ -100,6 +100,10 @@ public:
 
     status_t GetInfo(mx_process_info_t* info);
 
+    status_t CreateUserThread(utils::StringPiece name,
+                              thread_start_routine entry, void* arg,
+                              utils::RefPtr<UserThread>* user_thread);
+
     // exception handling routines
     status_t SetExceptionHandler(utils::RefPtr<Dispatcher> handler, mx_exception_behaviour_t behaviour);
     utils::RefPtr<Dispatcher> exception_handler();
@@ -139,6 +143,7 @@ private:
     // Remove a process from the global process list.
     static void RemoveProcess(ProcessDispatcher* process);
 
+    // TODO: remove |id_| and use |Dispatcher::koid_|.
     mx_pid_t id_ = 0;
 
     mx_handle_t handle_rand_ = 0;

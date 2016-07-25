@@ -36,7 +36,9 @@ public:
         DEAD,        // thread has exited and is not running
     };
 
-    UserThread(utils::RefPtr<ProcessDispatcher> process, thread_start_routine entry, void* arg);
+    UserThread(mx_koid_t koid,
+               utils::RefPtr<ProcessDispatcher> process,
+               thread_start_routine entry, void* arg);
     ~UserThread();
 
     static UserThread* GetCurrent() {
@@ -67,6 +69,8 @@ public:
     status_t WaitForExceptionHandler(utils::RefPtr<Dispatcher> dispatcher, const mx_exception_report_t* report);
     void WakeFromExceptionHandler(mx_exception_status_t status);
 
+    mx_koid_t get_koid() const { return koid_; }
+
 private:
     UserThread(const UserThread&) = delete;
     UserThread& operator=(const UserThread&) = delete;
@@ -81,10 +85,13 @@ private:
     // change states of the object, do what is appropriate for the state transition
     void SetState(State);
 
+    // The kernel object id. Since UserThread is not a dispatcher, is an 'inner' koid.
+    const mx_koid_t koid_;
+
     // a ref pointer back to the parent process
     utils::RefPtr<ProcessDispatcher> process_;
 
-    // A unique thread id within the process.
+    // A unique thread id within the process. TODO: remove this and use |koid_|.
     mx_tid_t id_ = -1;
 
     // thread start routine and argument pointer

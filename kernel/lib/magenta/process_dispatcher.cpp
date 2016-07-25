@@ -120,24 +120,15 @@ status_t ProcessDispatcher::Start(void* arg, mx_vaddr_t entry) {
     // TODO: move the creation of the initial thread to user space
     status_t result;
     // create the first thread
-    auto t = utils::AdoptRef(new UserThread(utils::RefPtr<ProcessDispatcher>(this), entry_, arg));
-    if (!t) {
-        result = ERR_NO_MEMORY;
-    } else {
-        result = t->Initialize(utils::StringPiece("main thread"));
-    }
-
-    if (result == NO_ERROR) {
-        // we're ready to run now
-        SetState(State::RUNNING);
-    } else {
-        // to be safe, assume process is dead after failed start
+    utils::RefPtr<UserThread> t;
+    result = CreateUserThread("main", entry_, arg, &t);
+    if (result != NO_ERROR) {
         SetState(State::DEAD);
         return result;
     }
-
-    // save a ref to this thread so it doesn't go out of scope
+    // we're ready to run now
     main_thread_ = t;
+    SetState(State::RUNNING);
 
     LTRACEF("starting main thread\n");
     t->Start();
@@ -333,6 +324,23 @@ bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
 status_t ProcessDispatcher::GetInfo(mx_process_info_t* info) {
     info->return_code = retcode_;
 
+    return NO_ERROR;
+}
+
+status_t ProcessDispatcher::CreateUserThread(utils::StringPiece name,
+                                             thread_start_routine entry, void* arg,
+                                             utils::RefPtr<UserThread>* user_thread) {
+    auto ut = utils::AdoptRef(new UserThread(GenerateKernelObjectId(),
+                                             utils::RefPtr<ProcessDispatcher>(this),
+                                             entry, arg));
+    if (!ut)
+        return ERR_NO_MEMORY;
+
+    status_t result = ut->Initialize(name);
+    if (result != NO_ERROR)
+        return result;
+
+    *user_thread = utils::move(ut);
     return NO_ERROR;
 }
 

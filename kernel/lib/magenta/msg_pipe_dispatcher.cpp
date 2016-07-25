@@ -28,7 +28,7 @@ status_t MessagePipeDispatcher::Create(uint32_t flags,
                                        mx_rights_t* rights) {
     LTRACE_ENTRY;
 
-    utils::RefPtr<MessagePipe> pipe = utils::AdoptRef(new MessagePipe());
+    utils::RefPtr<MessagePipe> pipe = utils::AdoptRef(new MessagePipe(GenerateKernelObjectId()));
     if (!pipe) return ERR_NO_MEMORY;
 
     Dispatcher* msgp0 = new MessagePipeDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, pipe);

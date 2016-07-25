@@ -292,6 +292,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
                 return ERR_NOT_ENOUGH_BUFFER;
 
             mx_handle_basic_info_t info = {
+                dispatcher->get_koid(),
                 rights,
                 dispatcher->GetType(),
                 dispatcher->get_state_tracker() ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
@@ -582,12 +583,8 @@ mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, 
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    auto user_thread = utils::AdoptRef(
-        new UserThread(utils::RefPtr<ProcessDispatcher>(up), entry, arg));
-    if (!user_thread)
-        return ERR_NO_MEMORY;
-
-    result = user_thread->Initialize(buf);
+    utils::RefPtr<UserThread> user_thread;
+    result = up->CreateUserThread(sp, entry, arg, &user_thread);
     if (result != NO_ERROR)
         return result;
 

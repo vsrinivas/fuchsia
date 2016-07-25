@@ -35,12 +35,18 @@ class ProcessDispatcher;
 class ThreadDispatcher;
 class VmObjectDispatcher;
 
-
 class Dispatcher : public utils::RefCounted<Dispatcher> {
 public:
+    Dispatcher();
     virtual ~Dispatcher() {}
 
+    mx_koid_t get_koid() const { return koid_; }
+
     virtual mx_obj_type_t GetType() const = 0;
+
+    virtual mx_koid_t get_inner_koid() const {
+        return 0ULL;
+    }
 
     virtual status_t UserSignal(uint32_t set_mask, uint32_t clear_mask) {
         return ERR_NOT_SUPPORTED;
@@ -101,4 +107,10 @@ public:
     virtual DataPipeConsumerDispatcher* get_data_pipe_consumer_dispatcher() {
         return nullptr;
     }
+
+protected:
+    static mx_koid_t GenerateKernelObjectId();
+
+private:
+    const mx_koid_t koid_;
 };

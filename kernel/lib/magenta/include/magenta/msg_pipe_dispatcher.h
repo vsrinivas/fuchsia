@@ -27,6 +27,7 @@ public:
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_MESSAGE_PIPE; }
     MessagePipeDispatcher* get_message_pipe_dispatcher() final { return this; }
     StateTracker* get_state_tracker() final;
+    mx_koid_t get_inner_koid() const final { return pipe_->get_koid(); }
 
     bool is_reply_pipe() const { return (flags_ & MX_FLAG_REPLY_PIPE) ? true : false; }
 

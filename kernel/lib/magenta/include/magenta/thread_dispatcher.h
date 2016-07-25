@@ -19,6 +19,7 @@ public:
 
     virtual ~ThreadDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_THREAD; }
+    mx_koid_t get_inner_koid() const final { return thread_->get_koid(); }
     ThreadDispatcher* get_thread_dispatcher() final { return this; }
 
     StateTracker* get_state_tracker() final;

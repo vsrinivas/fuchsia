@@ -24,11 +24,14 @@ extern "C" {
 // ask clang format not to mess up the indentation:
 // clang-format off
 
-// process id
+// process id. TODO: remove this and use mx_koid_t.
 typedef int32_t mx_pid_t;
 
-// thread id
+// thread id. TODO: remove this and use mx_koid_t.
 typedef int32_t mx_tid_t;
+
+// global kernel object id.
+typedef uint64_t mx_koid_t;
 
 typedef uint32_t mx_exception_behaviour_t;
 #define MX_EXCEPTION_BEHAVIOUR_DEFAULT 0
@@ -87,6 +90,7 @@ typedef enum {
 
 // Returned for topic MX_INFO_HANDLE_BASIC
 typedef struct mx_handle_basic_info {
+    mx_koid_t koid;
     mx_rights_t rights;
     uint32_t type;                // mx_obj_type_t;
     uint32_t props;               // mx_obj_props_t;
