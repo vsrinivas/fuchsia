@@ -20,6 +20,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/hash_tests.cpp \
     $(LOCAL_DIR)/intrusive_container_tests.cpp \
     $(LOCAL_DIR)/intrusive_doubly_linked_list_tests.cpp \
+    $(LOCAL_DIR)/intrusive_hash_table_dll_tests.cpp \
+    $(LOCAL_DIR)/intrusive_hash_table_sll_tests.cpp \
     $(LOCAL_DIR)/intrusive_singly_linked_list_tests.cpp \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/ref_ptr_tests.cpp \
