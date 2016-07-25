@@ -12,11 +12,6 @@
 
 namespace utils {
 
-// TODO(johngro) : Move this implementation back to a list_utils/lambda
-// function based implementation once the API differences between Single
-// and Doubly linked lists have been resolved.
-#define USE_LIST_UTILS 0
-
 // The number of buckets should be a nice prime such as 37, 211, 389 unless
 // The hash function is really good. Lots of cheap hash functions have hidden
 // periods for which the mod with prime above 'mostly' fixes.
@@ -92,5 +87,4 @@ private:
     HashFn hashfn_;
 };
 
-#undef USE_LIST_UTILS
 }  // namespace utils
