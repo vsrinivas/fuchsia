@@ -463,6 +463,10 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, size_t 
                 str[0] = '\t';
                 vc->charcount = 1;
                 break;
+            case MX_KEY_ESC:
+                str[0] = 0x1b;
+                vc->charcount = 1;
+                break;
 
             // generate vt100 key codes for arrows
             case MX_KEY_ARROW_UP:
@@ -488,6 +492,32 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, size_t 
                 str[1] = '[';
                 str[2] = 68;
                 vc->charcount = 3;
+                break;
+            case MX_KEY_HOME:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = 'H';
+                vc->charcount = 3;
+                break;
+            case MX_KEY_END:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = 'F';
+                vc->charcount = 3;
+                break;
+            case MX_KEY_PGUP:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = '5';
+                str[3] = '~';
+                vc->charcount = 4;
+                break;
+            case MX_KEY_PGDN:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = '6';
+                str[3] = '~';
+                vc->charcount = 4;
                 break;
 
             default:
