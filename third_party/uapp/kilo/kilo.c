@@ -150,6 +150,7 @@ enum KEY_ACTION{
         CTRL_H = 8,         /* Ctrl-h */
         TAB = 9,            /* Tab */
         CTRL_L = 12,        /* Ctrl+l */
+        NEWLINE = 10,       /* Newline */
         ENTER = 13,         /* Enter */
         CTRL_Q = 17,        /* Ctrl-q */
         CTRL_S = 19,        /* Ctrl-s */
@@ -282,6 +283,8 @@ int editorReadKey(int fd) {
 
     while(1) {
         switch(c) {
+        case NEWLINE:
+            return ENTER;
         case ESC:    /* escape sequence */
             /* If this is just an ESC, we'll timeout here. */
             if (read(fd,seq,1) == 0) return ESC;
