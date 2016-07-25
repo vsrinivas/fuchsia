@@ -23,6 +23,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS := \
     ulib/magenta \
+    ulib/launchpad \
     ulib/musl \
     ulib/mxio
 
