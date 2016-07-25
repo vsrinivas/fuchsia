@@ -17,6 +17,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
+
 #include <mxio/debug.h>
 #include <mxio/io.h>
 #include <mxio/util.h>
@@ -107,32 +110,32 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    uint8_t* devmgr = ((uint8_t*)bootfs) + devmgr_off;
-    mx_handle_t proc;
-    mx_vaddr_t entry;
-    mx_handle_t h;
-    mx_status_t r;
+    const uint8_t* devmgr = ((uint8_t*)bootfs) + devmgr_off;
 
-    const char pname[] = "devmgr";
-
-    if ((proc = mx_process_create(pname, sizeof(pname))) < 0)
-        return proc;
-    if ((r = mxio_load_elf_mem(proc, &entry, devmgr, devmgr_len))) {
-        cprintf("userboot: elf load of devmgr failed %d\n", r);
-        return r;
+    mx_handle_t proc = MX_HANDLE_INVALID;
+    launchpad_t* lp;
+    status = launchpad_create("devmgr", &lp);
+    if (status == NO_ERROR) {
+        status = launchpad_elf_load_basic(
+            lp, launchpad_vmo_from_mem(devmgr, devmgr_len));
+        if (status == NO_ERROR)
+            status = launchpad_add_handle(lp, bootfs_vmo,
+                                          MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+        if (status == NO_ERROR) {
+            proc = launchpad_start(lp);
+            if (proc < 0)
+                status = proc;
+        }
+        launchpad_destroy(lp);
     }
-
-    mx_handle_t handles[2] = {bootfs_vmo};
-    uint32_t ids[2] = {MX_HND_INFO(MX_HND_TYPE_USER0, 0)};
-
-    if ((h = mxio_build_procargs(1, args, 0, NULL, 1, handles, ids, 0)) < 0) {
-        cprintf("userboot: failed to build devmgr args %d\n", h);
-        return h;
+    if (status != NO_ERROR) {
+        cprintf("userboot: failed to launch devmgr: %d\n", status);
+        return status;
     }
-    mx_process_start(proc, h, entry);
 
     // wait for devmgr to stop
-    r = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+    status = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE,
+                                NULL);
 
     printf("userboot: devmgr exited\n");
 

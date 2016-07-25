@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := userboot
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta
+    ulib/musl ulib/launchpad ulib/mxio ulib/magenta
 
 include make/module.mk
