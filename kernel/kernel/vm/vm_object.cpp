@@ -86,6 +86,9 @@ utils::RefPtr<VmObject> VmObject::Create(uint32_t pmm_alloc_flags, uint64_t size
         return nullptr;
 
     auto err = vmo->Resize(size);
+    if (err == ERR_NO_MEMORY)
+        return nullptr;
+    // Other kinds of failures are not handled yet.
     DEBUG_ASSERT(err == NO_ERROR);
     if (err != NO_ERROR)
         return nullptr;
