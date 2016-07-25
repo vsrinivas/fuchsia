@@ -83,6 +83,12 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo);
 // bootstrap message.
 mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo);
 
+// Discover the entry-point address after a successful call to
+// launchpad_elf_load or launchpad_elf_load_basic.  This can be used
+// in mx_process_start directly rather than calling launchpad_start,
+// to bypass sending the standard startup message.
+mx_status_t launchpad_get_entry_address(launchpad_t* lp, mx_vaddr_t* entry);
+
 // Set the flag saying whether to send an initial bootstrap message
 // for the dynamic linker, and return the old value of the flag.
 // This flag is always cleared by launchpad_elf_load_basic and by a

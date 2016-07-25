@@ -19,33 +19,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 #include <magenta/syscalls.h>
-#include <mxio/util.h>
 #include <unittest/test-utils.h>
 #include <unittest/unittest.h>
-
-static mx_handle_t my_process_create(const char* name, uint32_t name_len) {
-    return mx_process_create(name, name_len);
-}
-
-static mx_status_t my_process_load(mx_handle_t process, const char* elf_file, uintptr_t* out_entry) {
-    int fd = open(elf_file, O_RDONLY);
-    if (fd < 0)
-        return ERR_IO;
-
-    uintptr_t entry = 0;
-    mx_status_t status = mxio_load_elf_fd(process, &entry, fd);
-    close(fd);
-    if (status < 0)
-        return status;
-
-    *out_entry = entry;
-    return NO_ERROR;
-}
-
-static mx_status_t my_process_start(mx_handle_t process, mx_handle_t handle, uintptr_t entry) {
-    return mx_process_start(process, handle, entry);
-}
 
 bool process_test(void) {
     BEGIN_TEST;
@@ -56,24 +34,33 @@ bool process_test(void) {
 
     static const char child_name[] = "child-process";
     unittest_printf("process-test: starting process \"%s\"\n", child_name);
-    child_handle = my_process_create(child_name, sizeof(child_name));
-    unittest_printf("process-test: my_process_create returned %d\n", child_handle);
-    ASSERT_GE(child_handle, 0, "child handle invalid");
 
+    launchpad_t* lp;
+    mx_status_t status = launchpad_create(child_name, &lp);
+
+    unittest_printf("process-test: launchpad_create returned %d\n", status);
+    ASSERT_EQ(status, 0, "launchpad_create failed");
+
+    status = launchpad_elf_load_basic(
+        lp, launchpad_vmo_from_file("/boot/bin/child-process"));
+    unittest_printf("process-test: launchpad_elf_load_basic returned %d\n",
+                    status);
     uintptr_t entry;
-    mx_status_t status = my_process_load(child_handle, "/boot/bin/child-process", &entry);
-    unittest_printf("process-test: my_process_load returned %d\n", status);
+    if (status == NO_ERROR)
+        status = launchpad_get_entry_address(lp, &entry);
     if (status != NO_ERROR) {
         tu_handle_close(pipe1);
-        tu_handle_close(child_handle);
-        ASSERT_TRUE(false, "error loading child process");
+        ASSERT_EQ(status, 0, "error loading child process");
     }
 
-    status = my_process_start(child_handle, pipe2, entry);
-    unittest_printf("process-test: my_process_start returned %d\n", status);
+    child_handle = launchpad_get_process_handle(lp);
+    ASSERT_GE(child_handle, 0, "launchpad_get_process_handle failed");
+
+    status = mx_process_start(child_handle, pipe2, entry);
+    unittest_printf("process-test: mx_process_start returned %d\n", status);
     if (status != NO_ERROR) {
         tu_handle_close(pipe1);
-        tu_handle_close(child_handle);
+        launchpad_destroy(lp);
         ASSERT_TRUE(false, "error starting child process");
     }
 
@@ -102,7 +89,7 @@ bool process_test(void) {
     int return_code = tu_process_get_return_code(child_handle);
     ASSERT_EQ(return_code, 1234, "Invalid child process return code");
 
-    tu_handle_close(child_handle);
+    launchpad_destroy(lp);
 
     END_TEST;
 }

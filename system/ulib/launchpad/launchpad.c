@@ -357,6 +357,13 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
     return status;
 }
 
+mx_status_t launchpad_get_entry_address(launchpad_t* lp, mx_vaddr_t* entry) {
+    if (lp->entry == 0)
+        return ERR_BAD_STATE;
+    *entry = lp->entry;
+    return NO_ERROR;
+}
+
 bool launchpad_send_loader_message(launchpad_t* lp, bool do_send) {
     bool result = lp->loader_message;
     lp->loader_message = do_send;
