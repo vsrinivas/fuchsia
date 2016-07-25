@@ -54,7 +54,8 @@ int pthread_mutexattr_getprotocol(const pthread_mutexattr_t* restrict a, int* re
     return 0;
 }
 int pthread_mutexattr_getrobust(const pthread_mutexattr_t* restrict a, int* restrict robust) {
-    *robust = a->__attr / 4U % 2;
+    // We do not support robust pthread_mutex_ts.
+    *robust = 0;
     return 0;
 }
 

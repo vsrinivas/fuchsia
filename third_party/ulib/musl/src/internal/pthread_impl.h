@@ -39,11 +39,6 @@ struct pthread {
     void** tsd;
     pthread_attr_t attr;
     volatile int dead;
-    struct {
-        volatile void* volatile head;
-        long off;
-        volatile void* volatile pending;
-    } robust_list;
     int unblock_cancel;
     volatile int timer_id;
     locale_t locale;
@@ -77,10 +72,7 @@ struct __timer {
 #define _m_type __u.__i[0]
 #define _m_lock __u.__vi[1]
 #define _m_waiters __u.__vi[2]
-#define _m_prev __u.__p[3]
-#define _m_next __u.__p[4]
 #define _m_count __u.__i[5]
-#define _c_shared __u.__p[0]
 #define _c_seq __u.__vi[2]
 #define _c_waiters __u.__vi[3]
 #define _c_clock __u.__i[4]
@@ -89,7 +81,6 @@ struct __timer {
 #define _c_tail __u.__p[5]
 #define _rw_lock __u.__vi[0]
 #define _rw_waiters __u.__vi[1]
-#define _rw_shared __u.__i[2]
 #define _b_lock __u.__vi[0]
 #define _b_waiters __u.__vi[1]
 #define _b_limit __u.__i[2]

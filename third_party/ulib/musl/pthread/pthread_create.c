@@ -134,21 +134,12 @@ _Noreturn void pthread_exit(void* result) {
     /*     exit(0); */
     /* } */
 
-    /* Process robust list in userspace to handle non-pshared mutexes
-     * and the detached thread case where the robust list head will
-     * be invalid when the kernel would process it. */
+    /* TODO(kulakowski): Pthread robust mutex processing used to occur
+     * inside this vm lock/unlock pair. I don't if there is also
+     * implicitly a need to synchronize on this lock in this function
+     * in any case, so I'm leaving the lock/unlock pair.
+     */
     __vm_lock();
-    volatile void* volatile* rp;
-    while ((rp = self->robust_list.head) && rp != &self->robust_list.head) {
-        pthread_mutex_t* m = (void*)((char*)rp - offsetof(pthread_mutex_t, _m_next));
-        int waiters = m->_m_waiters;
-        self->robust_list.pending = rp;
-        self->robust_list.head = *rp;
-        int cont = a_swap(&m->_m_lock, self->tid | 0x40000000);
-        self->robust_list.pending = 0;
-        if (cont < 0 || waiters)
-            __wake(&m->_m_lock, 1);
-    }
     __vm_unlock();
 
     __do_orphaned_stdio_locks();
@@ -164,11 +155,6 @@ _Noreturn void pthread_exit(void* result) {
          * detached later (== 2), we need to clear it here. */
         if (self->detached == 2)
             __syscall(SYS_set_tid_address, 0);
-
-        /* Robust list will no longer be valid, and was already
-         * processed above, so unregister it with the kernel. */
-        if (self->robust_list.off)
-            __syscall(SYS_set_robust_list, 0, 3 * sizeof(long));
 
         /* Since __unmapself bypasses the normal munmap code path,
          * explicitly wait for vmlock holders first. */

@@ -22,8 +22,6 @@ pid_t fork(void) {
     if (!ret) {
         pthread_t self = __pthread_self();
         self->tid = __syscall(SYS_gettid);
-        self->robust_list.off = 0;
-        self->robust_list.pending = 0;
     }
     __restore_sigs(&set);
     __fork_handler(!ret);

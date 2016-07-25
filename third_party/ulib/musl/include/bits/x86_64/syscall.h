@@ -111,7 +111,6 @@
 #define SYS_faccessat 269
 #define SYS_pselect6 270
 #define SYS_ppoll 271
-#define SYS_set_robust_list 273
 #define SYS_utimensat 280
 #define SYS_fallocate 285
 #define SYS_accept4 288

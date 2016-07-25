@@ -3,7 +3,11 @@
 #include <semaphore.h>
 
 int sem_init(sem_t* sem, int pshared, unsigned value) {
-    if (value > SEM_VALUE_MAX || pshared) {
+    if (pshared) {
+        errno = ENOSYS;
+        return -1;
+    }
+    if (value > SEM_VALUE_MAX) {
         errno = EINVAL;
         return -1;
     }

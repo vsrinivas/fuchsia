@@ -15,7 +15,6 @@ int __init_tp(pthread_t thread) {
     //TODO: Get and set thread ID
     //thread->tid = __syscall(SYS_set_tid_address, &thread->tid);
     thread->locale = &libc.global_locale;
-    thread->robust_list.head = &thread->robust_list.head;
     return 0;
 }
 

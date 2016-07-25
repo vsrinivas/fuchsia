@@ -111,7 +111,6 @@
 #define SYS_faccessat 334
 #define SYS_pselect6 335
 #define SYS_ppoll 336
-#define SYS_set_robust_list 338
 #define SYS_getcpu 345
 #define SYS_utimensat 348
 #define SYS_fallocate 352

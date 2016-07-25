@@ -30,7 +30,6 @@
 #define SYS_acct 89
 #define SYS_waitid 95
 #define SYS_set_tid_address 96
-#define SYS_set_robust_list 99
 #define SYS_getitimer 102
 #define SYS_setitimer 103
 #define SYS_timer_create 107
