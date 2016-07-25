@@ -12,10 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// <unistd.h> declares environ only under _GNU_SOURCE.
+#define _GNU_SOURCE
+
 #include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 
 #include <magenta/syscalls.h>
+#include <mxio/io.h>
 #include <mxio/util.h>
+
+#include <unistd.h>
 
 static mx_status_t add_mxio(launchpad_t* lp,
                             mx_handle_t handles[MXIO_MAX_HANDLES],
@@ -32,7 +39,6 @@ static mx_status_t add_mxio(launchpad_t* lp,
     return status;
 }
 
-
 mx_status_t launchpad_clone_mxio_root(launchpad_t* lp) {
     mx_handle_t handles[MXIO_MAX_HANDLES];
     uint32_t types[MXIO_MAX_HANDLES];
@@ -44,4 +50,40 @@ mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd) {
     uint32_t types[MXIO_MAX_HANDLES];
     return add_mxio(lp, handles, types,
                     mxio_clone_fd(fd, target_fd, handles, types));
+}
+
+static mx_status_t add_all_mxio(launchpad_t* lp) {
+    mx_status_t status = launchpad_clone_mxio_root(lp);
+    for (int fd = 0; status == NO_ERROR && fd < MAX_MXIO_FD; ++fd) {
+        status = launchpad_clone_fd(lp, fd, fd);
+        if (status == ERR_BAD_HANDLE)
+            status = NO_ERROR;
+    }
+    return status;
+}
+
+mx_handle_t launchpad_launch(const char* name,
+                             int argc, const char* const* argv) {
+    launchpad_t* lp;
+
+    const char* filename = argv[0];
+    if (name == NULL)
+        name = filename;
+
+    mx_handle_t proc = MX_HANDLE_INVALID;
+    mx_status_t status = launchpad_create(name, &lp);
+    if (status == NO_ERROR) {
+        status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
+        if (status == NO_ERROR)
+            status = launchpad_arguments(lp, argc, argv);
+        if (status == NO_ERROR)
+            status = launchpad_environ(lp, (const char* const*)environ);
+        if (status == NO_ERROR)
+            status = add_all_mxio(lp);
+        if (status == NO_ERROR)
+            proc = launchpad_start(lp);
+    }
+    launchpad_destroy(lp);
+
+    return status == NO_ERROR ? proc : status;
 }

@@ -239,17 +239,17 @@ int main(int argc, char** argv) {
         status = launchpad_add_handle(lp, exec_vmo, MX_HND_TYPE_EXEC_VMO);
     }
 
+    // This doesn't get ownership of the process handle.
+    // We're just testing the invariant that it returns a valid handle.
     mx_handle_t proc = launchpad_get_process_handle(lp);
     check("launchpad_get_process_handle", proc);
-    // TODO(mcgrathr): The kernel doesn't yet allow duplicating a process
-    // handle.
-#if 0
-    proc = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
-    check("mx_handle_duplicate", proc);
-#endif
 
-    status = launchpad_start(lp);
-    check("launchpad_start", status);
+    // This gives us ownership of the process handle.
+    proc = launchpad_start(lp);
+    check("launchpad_start", proc);
+
+    // The launchpad is done.  Clean it up.
+    launchpad_destroy(lp);
 
     mx_signals_state_t state;
     status = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED,

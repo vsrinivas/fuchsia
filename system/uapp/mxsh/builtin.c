@@ -23,8 +23,8 @@
 
 #include "mxsh.h"
 
+#include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
-#include <mxio/util.h>
 #include <mxio/vfs.h>
 #include <ddk/hexdump.h>
 #include <system/listnode.h>
@@ -288,7 +288,7 @@ static int mxc_runtests(int argc, char** argv) {
         char name[4096];
         snprintf(name, sizeof(name), "/boot/test/%s", de->d_name);
         const char* argv[] = {name, opts};
-        mx_handle_t handle = mxio_start_process(name, 2, argv);
+        mx_handle_t handle = launchpad_launch(name, 2, argv);
         if (handle < 0) {
             printf("FAILURE: Failed to launch %s: %d\n", de->d_name, handle);
             mxc_fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);

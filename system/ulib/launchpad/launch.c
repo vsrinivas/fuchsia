@@ -25,6 +25,7 @@ mx_handle_t launchpad_launch_basic(const char* name,
     if (name == NULL)
         name = filename;
 
+    mx_handle_t proc = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_create(name, &lp);
     if (status == NO_ERROR) {
         status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
@@ -33,9 +34,9 @@ mx_handle_t launchpad_launch_basic(const char* name,
         if (status == NO_ERROR)
             status = launchpad_add_handles(lp, hnds_count, handles, ids);
         if (status == NO_ERROR)
-            status = launchpad_start(lp);
+            proc = launchpad_start(lp);
     }
     launchpad_destroy(lp);
 
-    return status;
+    return status == NO_ERROR ? proc : status;
 }

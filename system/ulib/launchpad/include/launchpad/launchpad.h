@@ -106,20 +106,37 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc);
 // it clears the loader-service handle.  If this succeeds in sending
 // the main bootstrap message, it clears the list of handles to
 // transfer (after they've been transferred) as well as the process
-// handle.  The return value doesn't distinguish failure to send the
-// first or second message from failure to start the process, so on
-// failure the loader-service handle might or might not have been
-// cleared and the handles to transfer might or might not have been
-// cleared.
-mx_status_t launchpad_start(launchpad_t* lp);
+// handle.
+//
+// Returns the process handle on success, giving ownership to the
+// caller.  On failure, the return value doesn't distinguish failure
+// to send the first or second message from failure to start the
+// process, so on failure the loader-service handle might or might
+// not have been cleared and the handles to transfer might or might
+// not have been cleared.
+mx_handle_t launchpad_start(launchpad_t* lp);
 
 // Convenience interface for launching a process in one call with
 // minimal arguments and handles.  This just calls launchpad_create,
 // launchpad_elf_load, launchpad_arguments, launchpad_add_handles,
 // launchpad_start, launchpad_destroy.
+//
+// Returns the process handle on success, giving ownership to the
+// caller; or an error code on failure.
 mx_handle_t launchpad_launch_basic(const char* name,
                                    int argc, const char* const* argv,
                                    size_t hnds_count, mx_handle_t* handles,
                                    uint32_t* ids);
+
+// Convenience interface for launching a process in one call with details
+// inherited from the calling process (environment variables, mxio root,
+// and mxio file descriptors).  This just calls launchpad_create,
+// launchpad_elf_load, launchpad_arguments, launchpad_clone_mxio_root,
+// launchpad_clone_fd, launchpad_start, launchpad_destroy.
+//
+// Returns the process handle on success, giving ownership to the
+// caller; or an error code on failure.
+mx_handle_t launchpad_launch(const char* name,
+                             int argc, const char* const* argv);
 
 __END_CDECLS

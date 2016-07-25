@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/param.h>
 
 enum special_handles {
     HND_LOADER_SVC,
@@ -57,7 +58,6 @@ static void close_handles(mx_handle_t* handles, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         if (handles[i] != MX_HANDLE_INVALID) {
             mx_handle_close(handles[i]);
-            handles[i] = MX_HANDLE_INVALID;
         }
     }
 }
@@ -77,7 +77,8 @@ mx_status_t launchpad_create(const char* name, launchpad_t** result) {
     if (lp == NULL)
         return ERR_NO_MEMORY;
 
-    mx_handle_t proc = mx_process_create(name, strlen(name));
+    uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
+    mx_handle_t proc = mx_process_create(name, name_len);
     if (proc < 0) {
         free(lp);
         return proc;
@@ -88,7 +89,7 @@ mx_status_t launchpad_create(const char* name, launchpad_t** result) {
         *result = lp;
     } else {
         mx_handle_close(proc);
-        free(lp);
+        launchpad_destroy(lp);
     }
 
     return status;
@@ -478,7 +479,7 @@ static void* build_message(launchpad_t* lp, size_t *total_size) {
     return buffer;
 }
 
-mx_status_t launchpad_start(launchpad_t* lp) {
+mx_handle_t launchpad_start(launchpad_t* lp) {
     if (lp->entry == 0)
         return ERR_BAD_STATE;
 
@@ -537,12 +538,11 @@ mx_status_t launchpad_start(launchpad_t* lp) {
         status = mx_process_start(proc, child_bootstrap, lp->entry);
     }
     // process_start consumed child_bootstrap if successful.
-    if (status != NO_ERROR)
-        mx_handle_close(child_bootstrap);
+    if (status == NO_ERROR)
+        return proc;
 
-    // TODO(mcgrathr): Leak the process handle for now, since it can't
-    // be duplicated.
-    //mx_handle_close(proc);
+    mx_handle_close(child_bootstrap);
+    mx_handle_close(proc);
 
     return status;
 }
