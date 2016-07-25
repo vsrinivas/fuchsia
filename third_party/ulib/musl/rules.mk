@@ -1279,7 +1279,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ldso/dlstart.c \
     $(LOCAL_DIR)/ldso/dynlink.c
 
-MODULE_LDFLAGS := -e _dlstart
+# Depend on this source file to get it into the link (and cause
+# rebuilds correctly, unlike putting it in MODULE_LDFLAGS).
+# It's a trivial linker script input file that defines a symbol
+# that cannot be defined from the assembler.
+$(BUILDDIR)/ulib/musl-shared/libmusl-shared.so: $(LOCAL_DIR)/ldso/base.ld
 
 include make/module.mk
 

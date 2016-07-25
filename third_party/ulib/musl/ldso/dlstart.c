@@ -1,13 +1,7 @@
 #include "dynlink.h"
 #include <stddef.h>
 
-#ifndef START
-#define START "_dlstart"
-#endif
-
 #define SHARED
-
-#include "crt_arch.h"
 
 #ifndef GETFUNCSYM
 #define GETFUNCSYM(fp, sym, got)                                                   \
@@ -22,9 +16,16 @@
     } while (0)
 #endif
 
-__attribute__((__visibility__("hidden"))) void _dlstart_c(void* start_arg,
-                                                          size_t base,
-                                                          size_t* dynv) {
+// We can access these with simple PC-relative relocs.
+// _BASE is defined by base.ld to 0, i.e. the lowest address in the DSO image.
+// _DYNAMIC is defined automagically by the linker.
+extern const char _BASE[] __attribute__((visibility("hidden")));
+extern size_t _DYNAMIC[] __attribute__((visibility("hidden")));
+
+__attribute__((__visibility__("hidden"))) void _start(void* start_arg) {
+    size_t base = (size_t)_BASE;
+    size_t* dynv = _DYNAMIC;
+
     size_t i, dyn[DYN_CNT];
     size_t *rel, rel_size;
 
