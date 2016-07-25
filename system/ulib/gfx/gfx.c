@@ -117,6 +117,21 @@ void gfx_copyrect(gfx_surface* surface, unsigned x, unsigned y, unsigned width, 
     surface->copyrect(surface, x, y, width, height, x2, y2);
 }
 
+void gfx_copylines(gfx_surface* dst, gfx_surface* src, unsigned srcy, unsigned dsty, unsigned height) {
+    if ((dst->stride != src->stride) || (dst->format != src->format)) {
+        return;
+    }
+    if ((srcy >= src->height) || ((src->height - srcy) < height)) {
+        return;
+    }
+    if ((dsty >= dst->height) || (dst->height - dsty) < height) {
+        return;
+    }
+    memcpy(dst->ptr + dsty * dst->stride * dst->pixelsize,
+           src->ptr + srcy * src->stride * src->pixelsize,
+           height * src->stride * src->pixelsize);
+}
+
 /**
  * @brief  Fill a rectangle on the screen with a constant color.
  */

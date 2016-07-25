@@ -100,6 +100,9 @@ void gfx_surface_blend(struct gfx_surface* target, struct gfx_surface* source, u
 // blend an area from the source surface to the target surface
 void gfx_blend(struct gfx_surface* target, struct gfx_surface* source, unsigned srcx, unsigned srcy, unsigned width, unsigned height, unsigned destx, unsigned desty);
 
+// copy entire lines from src to dst, which must be the same stride and pixel format
+void gfx_copylines(gfx_surface* dst, gfx_surface* src, unsigned srcy, unsigned dsty, unsigned height);
+
 // ensure the surface is written back to memory and optionally backing store
 void gfx_flush(struct gfx_surface* surface);
 
