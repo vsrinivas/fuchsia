@@ -41,6 +41,9 @@ typedef enum {
 #define GFX_FLAG_FREE_ON_DESTROY (1 << 0) // free the ptr at destroy
 #define GFX_FLAG_FLUSH_CPU_CACHE (1 << 1) // do a cache flush during gfx_flush
 
+typedef struct gfx_surface gfx_surface;
+typedef struct gfx_font gfx_font;
+
 /**
  * @brief  Describe a graphics drawing surface
  *
@@ -50,7 +53,7 @@ typedef enum {
  *
  * @ingroup graphics
  */
-typedef struct gfx_surface {
+struct gfx_surface {
     void* ptr;
     uint32_t flags;
     gfx_format format;
@@ -63,11 +66,18 @@ typedef struct gfx_surface {
 
     // function pointers
     uint32_t (*translate_color)(uint32_t input);
-    void (*copyrect)(struct gfx_surface*, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2);
-    void (*fillrect)(struct gfx_surface*, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color);
-    void (*putpixel)(struct gfx_surface*, unsigned x, unsigned y, unsigned color);
+    void (*copyrect)(gfx_surface*, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2);
+    void (*fillrect)(gfx_surface*, unsigned x, unsigned y, unsigned width, unsigned height, unsigned color);
+    void (*putpixel)(gfx_surface*, unsigned x, unsigned y, unsigned color);
+    void (*putchar)(gfx_surface*, const gfx_font*, unsigned ch, unsigned x, unsigned y, unsigned fg, unsigned bg);
     void (*flush)(unsigned starty, unsigned endy);
-} gfx_surface;
+};
+
+struct gfx_font {
+    uint16_t* data;
+    unsigned width;
+    unsigned height;
+};
 
 // copy a rect from x,y with width x height to x2, y2
 void gfx_copyrect(gfx_surface* surface, unsigned x, unsigned y, unsigned width, unsigned height, unsigned x2, unsigned y2);
@@ -77,6 +87,9 @@ void gfx_fillrect(gfx_surface* surface, unsigned x, unsigned y, unsigned width, 
 
 // draw a pixel at x, y in the surface
 void gfx_putpixel(gfx_surface* surface, unsigned x, unsigned y, unsigned color);
+
+// draw a character at x, y in the surface
+void gfx_putchar(gfx_surface*, const gfx_font*, unsigned ch, unsigned x, unsigned y, unsigned fg, unsigned bg);
 
 // draw a single pixel line between x1,y1 and x2,y1
 void gfx_line(gfx_surface* surface, unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned color);
@@ -109,3 +122,6 @@ void gfx_surface_destroy(struct gfx_surface* surface);
 
 // utility routine to fill the display with a little moire pattern
 void gfx_draw_pattern(void);
+
+extern const gfx_font font9x16;
+extern const gfx_font font18x32;
