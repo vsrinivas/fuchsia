@@ -53,7 +53,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 
-#ifdef __MAGENTA__
+#ifdef __Fuchsia__
 #include <mxio/io.h>
 #include <ddk/protocol/console.h>
 
@@ -237,7 +237,7 @@ void editorAtExit(void) {
 
 /* Raw mode: 1960 magic shit. */
 int enableRawMode(int fd) {
-#ifdef __MAGENTA__
+#ifdef __Fuchsia__
     return 0;
 #else
     struct termios raw;
@@ -356,7 +356,7 @@ int getCursorPosition(int ifd, int ofd, int *rows, int *cols) {
  * call fails the function will try to query the terminal itself.
  * Returns 0 on success, -1 on error. */
 int getWindowSize(int ifd, int ofd, int *rows, int *cols) {
-#ifdef __MAGENTA__
+#ifdef __Fuchsia__
     if (getConsoleSize(rows, cols) == 0) {
         return 0;
     } else {
@@ -383,7 +383,7 @@ int getWindowSize(int ifd, int ofd, int *rows, int *cols) {
             /* Can't recover... */
         }
         return 0;
-#ifndef __MAGENTA__
+#ifndef __Fuchsia__
     } else {
         *cols = ws.ws_col;
         *rows = ws.ws_row;

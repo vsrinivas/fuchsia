@@ -139,7 +139,7 @@ GLOBAL_DEFINES :=
 KERNEL_DEFINES := LK=1 _KERNEL=1
 
 # anything added to USER_DEFINES will be put into $(BUILDDIR)/config-user.h
-USER_DEFINES := __MAGENTA__=1
+USER_DEFINES :=
 
 # Anything added to GLOBAL_SRCDEPS will become a dependency of every source file in the system.
 # Useful for header files that may be included by one or more source files.
@@ -344,19 +344,19 @@ install: all
 globalconfigheader:
 
 $(GLOBAL_CONFIG_HEADER): globalconfigheader
-	@$(call MAKECONFIGHEADER,$@,GLOBAL_DEFINES)
+	@$(call MAKECONFIGHEADER,$@,GLOBAL_DEFINES,"")
 
 # generate a config-kernel.h file with all of the KERNEL_DEFINES laid out in #define format
 kernelconfigheader:
 
 $(KERNEL_CONFIG_HEADER): kernelconfigheader
-	@$(call MAKECONFIGHEADER,$@,KERNEL_DEFINES)
+	@$(call MAKECONFIGHEADER,$@,KERNEL_DEFINES,"")
 
 # generate a config-user.h file with all of the USER_DEFINES laid out in #define format
 userconfigheader:
 
 $(USER_CONFIG_HEADER): userconfigheader
-	@$(call MAKECONFIGHEADER,$@,USER_DEFINES)
+	@$(call MAKECONFIGHEADER,$@,USER_DEFINES,"#define __Fuchsia__ 1")
 
 GENERATED += $(GLOBAL_CONFIG_HEADER) $(KERNEL_CONFIG_HEADER) $(USER_CONFIG_HEADER)
 

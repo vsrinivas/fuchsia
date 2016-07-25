@@ -39,6 +39,7 @@ define TESTANDREPLACEFILE
 endef
 
 # generate a header file at $1 with an expanded variable in $2
+# $3 provides an (optional) raw footer to append to the end
 define MAKECONFIGHEADER
 	$(MKDIR); \
 	rm -f $1.tmp; \
@@ -46,6 +47,7 @@ define MAKECONFIGHEADER
 	for d in `echo $($2) | tr '[:lower:]' '[:upper:]'`; do \
 		echo "#define $$d" | sed "s/=/\ /g;s/-/_/g;s/\//_/g;s/\./_/g;s/\//_/g;s/C++/CPP/g" >> $1.tmp; \
 	done; \
+	echo "$3" >> $1.tmp; \
 	$(call TESTANDREPLACEFILE,$1.tmp,$1)
 endef
 
