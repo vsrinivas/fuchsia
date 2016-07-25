@@ -1011,6 +1011,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/ttyname_r.c \
     $(LOCAL_DIR)/src/unistd/ualarm.c \
     $(LOCAL_DIR)/src/unistd/usleep.c \
+    $(LOCAL_DIR)/stubs/idstubs.c \
     $(LOCAL_DIR)/third_party/complex/__cexp.c \
     $(LOCAL_DIR)/third_party/complex/__cexpf.c \
     $(LOCAL_DIR)/third_party/complex/catan.c \
@@ -1274,7 +1275,6 @@ MODULE_SRCS := $(LOCAL_SRCS)
 MODULE_SONAME := c
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/stubs/idstubs.c \
     $(LOCAL_DIR)/stubs/iostubs.c \
     $(LOCAL_DIR)/ldso/dlstart.c \
     $(LOCAL_DIR)/ldso/dynlink.c
