@@ -22,27 +22,29 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static void option_usage(const char* option, const char* description) {
-    fprintf(stderr, "\t%-16s%s\n", option, description);
+static void option_usage(FILE* out,
+                         const char* option, const char* description) {
+    fprintf(out, "\t%-16s%s\n", option, description);
 }
 
-static _Noreturn void usage(const char* progname) {
-    fprintf(stderr, "Usage: %s [OPTIONS] [--] PROGRAM [ARGS...]\n", progname);
-    option_usage("-b", "use basic ELF loading, no PT_INTERP support");
-    option_usage("-d FD", "pass FD with the same descriptor number");
-    option_usage("-d FD:NEWFD", "pass FD as descriptor number NEWFD");
-    option_usage("-e VAR=VALUE", "pass environment variable");
-    option_usage("-f FILE", "execute FILE but pass PROGRAM as argv[0]");
-    option_usage("-F FD", "execute FD");
-    option_usage("-h", "display this usage message");
-    option_usage("-l",
+static _Noreturn void usage(const char* progname, bool error) {
+    FILE* out = error ? stderr : stdout;
+    fprintf(out, "Usage: %s [OPTIONS] [--] PROGRAM [ARGS...]\n", progname);
+    option_usage(out, "-b", "use basic ELF loading, no PT_INTERP support");
+    option_usage(out, "-d FD", "pass FD with the same descriptor number");
+    option_usage(out, "-d FD:NEWFD", "pass FD as descriptor number NEWFD");
+    option_usage(out, "-e VAR=VALUE", "pass environment variable");
+    option_usage(out, "-f FILE", "execute FILE but pass PROGRAM as argv[0]");
+    option_usage(out, "-F FD", "execute FD");
+    option_usage(out, "-h", "display this usage message and exit");
+    option_usage(out, "-l",
                  "pass mxio_loader_service handle in main bootstrap message");
-    option_usage("-L", "force initial loader bootstrap message");
-    option_usage("-r", "send mxio filesystem root");
-    option_usage("-s", "shorthand for -r -d 0 -d 1 -d 2");
-    option_usage("-v FILE", "send VMO of FILE as EXEC_VMO handle");
-    option_usage("-V FD", "send VMO of FD as EXEC_VMO handle");
-    exit(1);
+    option_usage(out, "-L", "force initial loader bootstrap message");
+    option_usage(out, "-r", "send mxio filesystem root");
+    option_usage(out, "-s", "shorthand for -r -d 0 -d 1 -d 2");
+    option_usage(out, "-v FILE", "send VMO of FILE as EXEC_VMO handle");
+    option_usage(out, "-V FD", "send VMO of FD as EXEC_VMO handle");
+    exit(error ? 1 : 0);
 }
 
 static _Noreturn void fail(const char* call, mx_status_t status) {
@@ -78,7 +80,7 @@ int main(int argc, char** argv) {
             int from, to;
             switch (sscanf(optarg, "%u:%u", &from, &to)) {
             default:
-                usage(argv[0]);
+                usage(argv[0], true);
                 break;
             case 1:
                 to = from;
@@ -107,7 +109,10 @@ int main(int argc, char** argv) {
             break;
         case 'F':
             if (sscanf(optarg, "%u", &program_fd) != 1)
-                usage(argv[0]);
+                usage(argv[0], true);
+            break;
+        case 'h':
+            usage(argv[0], false);
             break;
         case 'L':
             send_loader_message = true;
@@ -130,16 +135,15 @@ int main(int argc, char** argv) {
             break;
         case 'V':
             if (sscanf(optarg, "%u", &exec_vmo_fd) != 1)
-                usage(argv[0]);
+                usage(argv[0], true);
             break;
-        case 'h':
         default:
-            usage(argv[0]);
+            usage(argv[0], true);
         }
     }
 
     if (optind >= argc)
-        usage(argv[0]);
+        usage(argv[0], true);
 
     mx_handle_t vmo;
     if (program_fd != -1) {
