@@ -102,6 +102,16 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
 
 // implement tc callbacks:
 
+static inline void vc_invalidate_lines(vc_device_t* dev, int y, int h) {
+    if (y < dev->invy0) {
+        dev->invy0 = y;
+    }
+    y += h;
+    if (y > dev->invy1) {
+        dev->invy1 = y;
+    }
+}
+
 static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
     vc_device_t* dev = cookie;
     if (dev->flags & VC_FLAG_RESETSCROLL) {
@@ -111,17 +121,17 @@ static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
     if (dev->vpy < 0)
         return;
     vc_device_invalidate(cookie, x0, y0, w, h);
-    vc_gfx_invalidate(dev, x0, y0, w, h);
+    vc_invalidate_lines(dev, y0, h);
 }
 
 static void vc_tc_movecursor(void* cookie, int x, int y) {
     vc_device_t* dev = cookie;
     if (!dev->hide_cursor) {
         vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
-        vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
+        vc_invalidate_lines(dev, dev->y, 1);
         gfx_fillrect(dev->gfx, x * dev->charw, y * dev->charh, dev->charw, dev->charh,
                      palette_to_color(dev, dev->front_color));
-        vc_gfx_invalidate(dev, x, y, 1, 1);
+        vc_invalidate_lines(dev, y, 1);
     }
     dev->x = x;
     dev->y = y;
@@ -160,9 +170,9 @@ static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
                      0, (y0 + delta) * dev->charh);
         vc_device_invalidate(cookie, 0, y0, dev->columns, delta);
     }
-    gfx_flush(dev->gfx);
     vc_device_write_status(dev);
-    vc_gfx_invalidate_all(dev);
+    vc_gfx_invalidate_status(dev);
+    vc_invalidate_lines(dev, 0, dev->rows);
 }
 
 static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen) {
@@ -179,14 +189,14 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
             vc_tc_movecursor(dev, dev->x, dev->y);
             gfx_fillrect(dev->gfx, dev->x * dev->charw, dev->y * dev->charh, dev->charw, dev->charh,
                          palette_to_color(dev, dev->front_color));
-            vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
+            vc_invalidate_lines(dev, dev->y, 1);
         }
         break;
     case TC_HIDE_CURSOR:
         if (!dev->hide_cursor) {
             dev->hide_cursor = true;
             vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
-            vc_gfx_invalidate(dev, dev->x, dev->y, 1, 1);
+            vc_invalidate_lines(dev, dev->y, 1);
         }
     default:; // nothing
     }

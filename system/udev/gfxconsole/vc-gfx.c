@@ -27,13 +27,13 @@ void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y) {
 void vc_gfx_invalidate_all(vc_device_t* dev) {
     if (!dev->active)
         return;
-    gfx_surface_blend(dev->hw_gfx, dev->st_gfx, 0, 0);
-    gfx_surface_blend(dev->hw_gfx, dev->gfx, 0, dev->st_gfx->height);
+    gfx_copylines(dev->hw_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
+    gfx_copylines(dev->hw_gfx, dev->gfx, 0, dev->st_gfx->height, dev->gfx->height);
     gfx_flush(dev->hw_gfx);
 }
 
 void vc_gfx_invalidate_status(vc_device_t* dev) {
-    gfx_surface_blend(dev->hw_gfx, dev->st_gfx, 0, 0);
+    gfx_copylines(dev->hw_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
     gfx_flush_rows(dev->hw_gfx, 0, dev->st_gfx->height);
 }
 
@@ -41,7 +41,11 @@ void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, uns
     if (!dev->active)
         return;
     unsigned desty = dev->st_gfx->height + y * dev->charh;
-    gfx_blend(dev->hw_gfx, dev->gfx, x * dev->charw, y * dev->charh,
-              w * dev->charw, h * dev->charh, x * dev->charw, desty);
+    if ((x == 0) && (w == dev->columns)) {
+        gfx_copylines(dev->hw_gfx, dev->gfx, y * dev->charh, desty, h * dev->charh);
+    } else {
+        gfx_blend(dev->hw_gfx, dev->gfx, x * dev->charw, y * dev->charh,
+                  w * dev->charw, h * dev->charh, x * dev->charw, desty);
+    }
     gfx_flush_rows(dev->hw_gfx, desty, desty + h * dev->charh);
 }

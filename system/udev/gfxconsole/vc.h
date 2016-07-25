@@ -66,6 +66,9 @@ typedef struct vc_device {
     unsigned scrollback_rows;
     // number of rows in scrollback
 
+    int invy0, invy1;
+    // offscreen invalid lines, tracked during textcon drawing
+
     unsigned x, y;
     // cursor
     bool hide_cursor;

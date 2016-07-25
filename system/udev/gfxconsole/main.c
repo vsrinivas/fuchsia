@@ -530,14 +530,19 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, size_t 
 static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
     vc_device_t* vc = get_vc_device(dev);
     mxr_mutex_lock(&vc->lock);
+    vc->invy0 = vc->rows + 1;
+    vc->invy1 = -1;
     const uint8_t* str = (const uint8_t*)buf;
     for (size_t i = 0; i < count; i++) {
         vc->textcon.putc(&vc->textcon, str[i]);
     }
+    if (vc->invy1 >= 0) {
+        vc_gfx_invalidate(vc, 0, vc->invy0, vc->columns, vc->invy1 - vc->invy0);
+    }
     if (!vc->active && !(vc->flags & VC_FLAG_HASINPUT)) {
         vc->flags |= VC_FLAG_HASINPUT;
         vc_device_write_status(vc);
-        vc_gfx_invalidate(vc, 0, 0, vc->columns, 1);
+        vc_gfx_invalidate_status(vc);
     }
     mxr_mutex_unlock(&vc->lock);
     return count;
