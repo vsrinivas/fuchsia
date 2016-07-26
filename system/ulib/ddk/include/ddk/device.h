@@ -16,6 +16,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <ddk/iotxn.h>
 #include <system/listnode.h>
 
 // for ssize_t:
@@ -117,6 +118,9 @@ typedef struct mx_protocol_device {
     ssize_t (*write)(mx_device_t* dev, const void* buf, size_t count, mx_off_t off);
     // attempt to write count bytes at offset off
     // off may be ignored for devices without the concept of a position
+
+    void (*iotxn_queue)(mx_device_t* dev, iotxn_t* txn);
+    // queue an iotxn. iotxn's are always completed by its complete() op
 
     mx_off_t (*get_size)(mx_device_t* dev);
     // optional: return the size (in bytes) of the readable/writable space

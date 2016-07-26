@@ -90,15 +90,6 @@ struct iotxn {
 
     // structure to this point is 128 bytes
 
-    // data payload
-    // (both requestor and processor should use ops methods
-    // to access the data payload and treat these fields
-    // as opaque)
-    mx_size_t data_size;
-    void* data;
-    mx_size_t vmo_offset;
-    mx_handle_t vmo;
-
     // extra requestor data
     // amount of space here depends on extra_size passed when
     // allocating the iotxn
@@ -106,6 +97,7 @@ struct iotxn {
 };
 
 #define iotxn_to(txn, type) ((type*) (txn)->extra)
+#define iotxn_pdata(txn, type) ((type*) (txn)->protocol_data)
 
 
 // create a new iotxn with payload space of data_size
