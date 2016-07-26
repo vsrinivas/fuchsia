@@ -16,51 +16,70 @@
 
 .text
 
+.cfi_sections .eh_frame, .debug_frame
+
+.macro push_reg reg
+    push \reg
+    .cfi_adjust_cfa_offset 8
+    .cfi_rel_offset \reg, 0
+.endm
+.macro pop_reg reg
+    pop \reg
+    .cfi_adjust_cfa_offset -8
+    .cfi_same_value \reg
+.endm
+
 #define MAGENTA_SYSCALL_MAGIC 0x00ff00ff00000000
 
 .macro _syscall nargs, name, n
 .globl \name
 .type \name,STT_FUNC
 \name:
+    .cfi_startproc
+    .cfi_same_value %r10
+    .cfi_same_value %r11
+    .cfi_same_value %r12
+    .cfi_same_value %r13
 .if \nargs <= 6
-    push   %r10
-    push   %r11
-    mov    %rcx, %r10
-    movabs $(MAGENTA_SYSCALL_MAGIC | \n), %rax
+    push_reg %r10
+    push_reg %r11
+    mov      %rcx, %r10
+    movabs   $(MAGENTA_SYSCALL_MAGIC | \n), %rax
     syscall
-    pop    %r11
-    pop    %r10
+    pop_reg  %r11
+    pop_reg  %r10
     ret
 .endif
 .if \nargs == 7
-    push   %r10
-    push   %r11
-    push   %r12
-    mov    0x20(%rsp), %r12
-    mov    %rcx, %r10
-    movabs $(MAGENTA_SYSCALL_MAGIC | \n), %rax
+    push_reg %r10
+    push_reg %r11
+    push_reg %r12
+    mov      0x20(%rsp), %r12
+    mov      %rcx, %r10
+    movabs   $(MAGENTA_SYSCALL_MAGIC | \n), %rax
     syscall
-    pop    %r13
-    pop    %r12
-    pop    %r11
+    pop_reg  %r13
+    pop_reg  %r12
+    pop_reg  %r11
     ret
 .endif
 .if \nargs == 8
-    push   %r10
-    push   %r11
-    push   %r12
-    push   %r13
-    mov    0x28(%rsp), %r12
-    mov    0x30(%rsp), %r13
-    mov    %rcx, %r10
-    movabs $(MAGENTA_SYSCALL_MAGIC | \n), %rax
+    push_reg %r10
+    push_reg %r11
+    push_reg %r12
+    push_reg %r13
+    mov      0x28(%rsp), %r12
+    mov      0x30(%rsp), %r13
+    mov      %rcx, %r10
+    movabs   $(MAGENTA_SYSCALL_MAGIC | \n), %rax
     syscall
-    pop    %r13
-    pop    %r12
-    pop    %r11
-    pop    %r10
+    pop_reg  %r13
+    pop_reg  %r12
+    pop_reg  %r11
+    pop_reg  %r10
     ret
 .endif
+    .cfi_endproc
 .size \name, . - \name
 .endm
 

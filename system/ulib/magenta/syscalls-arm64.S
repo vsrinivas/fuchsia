@@ -16,13 +16,17 @@
 
 .text
 
+.cfi_sections .eh_frame, .debug_frame
+
 .macro syscall name, n
 .globl \name
 .type \name,STT_FUNC
 \name:
+    .cfi_startproc
     mov    x16, #\n
     svc    #0xf0f /* magic value to differentiate magenta syscalls */
     ret
+    .cfi_endproc
 .size \name, . - \name
 .endm
 
@@ -35,4 +39,3 @@
 #endif
 
 #include <magenta/syscalls.inc>
-
