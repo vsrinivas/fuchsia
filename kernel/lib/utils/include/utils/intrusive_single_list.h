@@ -213,6 +213,12 @@ public:
     using iterator       = iterator_impl<iterator_traits>;
     using const_iterator = iterator_impl<const_iterator_traits>;
 
+    // Singly linked lists do not support constant order erase (erase using an
+    // iterator or direct object reference).
+    static constexpr bool SupportsConstantOrderErase = false;
+    static constexpr bool IsAssociative = false;
+    static constexpr bool IsSequenced   = true;
+
     // Default construction gives an empty list.
     constexpr SinglyLinkedList() { }
 
