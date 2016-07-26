@@ -21,8 +21,8 @@
 
 class MsdDevice : public msd_device {
 public:
-    int Open(ClientId client_id);
-    int Close(ClientId client_id);
+    int Open(msd_client_id client_id);
+    int Close(msd_client_id client_id);
 
     uint32_t device_id() { return device_id_; }
 

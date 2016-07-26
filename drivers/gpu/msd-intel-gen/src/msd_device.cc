@@ -19,13 +19,13 @@
 
 MsdDevice::MsdDevice() { magic_ = kMagic; }
 
-int MsdDevice::Open(ClientId client_id)
+int MsdDevice::Open(msd_client_id client_id)
 {
     DLOG("TODO: Open");
     return DRET(-EINVAL);
 }
 
-int MsdDevice::Close(ClientId client_id)
+int MsdDevice::Close(msd_client_id client_id)
 {
     DLOG("TODO: Close");
     return DRET(-EINVAL);
@@ -33,12 +33,12 @@ int MsdDevice::Close(ClientId client_id)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int msd_device_open(msd_device* dev, ClientId client_id)
+int msd_device_open(msd_device* dev, msd_client_id client_id)
 {
     return MsdDevice::cast(dev)->Open(client_id);
 }
 
-int msd_device_close(msd_device* dev, ClientId client_id)
+int msd_device_close(msd_device* dev, msd_client_id client_id)
 {
     MsdDevice::cast(dev)->Close(client_id);
     return 0;
