@@ -28,7 +28,7 @@ typedef struct usb_hci_protocol {
     /* set_address(): Tell the usb device its address
                       Also, allocate the usbdev structure, initialize enpoint 0
                       (including MPS) and return its address. */
-    int (*set_address)(mx_device_t* hcidev, usb_speed speed, int hubport, int hubaddr);
+    int (*set_address)(mx_device_t* hcidev, usb_speed_t speed, int hubport, int hubaddr);
 
     /* finish_device_config(): Another hook for xHCI, returns 0 on success. */
     int (*finish_device_config)(mx_device_t* hcidev, int devaddr, usb_device_config_t* config);

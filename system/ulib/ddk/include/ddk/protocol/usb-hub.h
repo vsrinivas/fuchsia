@@ -25,7 +25,7 @@ typedef struct usb_hub_protocol {
     /* returns 1 if the port is enabled */
     int (*port_enabled)(mx_device_t* dev, int port);
     /* returns speed if port is enabled, negative value if not */
-    usb_speed (*port_speed)(mx_device_t* dev, int port);
+    usb_speed_t (*port_speed)(mx_device_t* dev, int port);
 
     /* enables (powers up) a port (optional) */
     int (*enable_port)(mx_device_t* dev, int port);

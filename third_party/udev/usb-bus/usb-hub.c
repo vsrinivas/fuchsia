@@ -72,7 +72,7 @@ typedef struct usb_hub {
     list_node_t free_intr_reqs;
     mxr_mutex_t mutex;
 
-    usb_speed speed;
+    usb_speed_t speed;
     int num_ports;
     generic_hub_t generic_hub;
 } usb_hub_t;
@@ -140,7 +140,7 @@ usb_hub_port_enabled(mx_device_t* device, const int port) {
     return ret;
 }
 
-static usb_speed
+static usb_speed_t
 usb_hub_port_speed(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
 
@@ -148,8 +148,8 @@ usb_hub_port_speed(mx_device_t* device, const int port) {
     int ret = usb_get_status(hub->device, port, DR_PORT, sizeof(buf), buf);
     if (ret >= 0 && (buf[0] & PORT_ENABLE)) {
         /* SuperSpeed hubs can only have SuperSpeed devices. */
-        if (hub->speed == SUPER_SPEED)
-            return SUPER_SPEED;
+        if (hub->speed == USB_SPEED_SUPER)
+            return USB_SPEED_SUPER;
 
         /*[bit] 10  9  (USB 2.0 port status word)
 		 *      0   0  full speed
@@ -157,7 +157,7 @@ usb_hub_port_speed(mx_device_t* device, const int port) {
 		 *      1   0  high speed
 		 *      1   1  invalid
 		 */
-        ret = (buf[0] >> 9) & 0x3;
+        ret = ((buf[0] >> 9) & 0x3) + 1;
         if (ret != 0x3)
             return ret;
     }
@@ -350,7 +350,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     hub->speed = device_protocol->get_speed(device);
     int address = device_protocol->get_address(device);
 
-    int type = hub->speed == SUPER_SPEED ? 0x2a : 0x29; /* similar enough */
+    int type = hub->speed == USB_SPEED_SUPER ? 0x2a : 0x29; /* similar enough */
     usb_hub_descriptor_t desc;                          /* won't fit the whole thing, we don't care */
     if (usb_get_descriptor(hub->device, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_DEVICE,
                            type, 0, &desc, sizeof(desc)) < 0) {
@@ -369,7 +369,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&hub->free_intr_reqs, &req->node);
     }
 
-    if (hub->speed == SUPER_SPEED)
+    if (hub->speed == USB_SPEED_SUPER)
         usb_hub_set_hub_depth(hub->device);
 
     generic_hub_init(&hub->generic_hub, &hub->hub_device, &usb_hub_protocol, usb_get_bus(device),

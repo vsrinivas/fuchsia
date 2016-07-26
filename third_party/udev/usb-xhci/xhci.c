@@ -478,8 +478,8 @@ xhci_reset_endpoint(xhci_t* xhci, int slot_id, usb_endpoint_t* const ep) {
     /* Clear TT buffer for bulk and control endpoints behind a TT */
     usbdev_t* dev = xhci->devices[slot_id];
     const int hub = dev->hub;
-    if (hub && dev->speed < HIGH_SPEED &&
-        xhci->devices[hub]->speed == HIGH_SPEED) {
+    if (hub && dev->speed < USB_SPEED_HIGH &&
+        xhci->devices[hub]->speed == USB_SPEED_HIGH) {
         /* TODO */;
     }
 

@@ -19,7 +19,7 @@
 
 typedef struct usb_bus_protocol {
     mx_device_t* (*attach_device)(mx_device_t* busdev, mx_device_t* hubdev, int hubaddress, int port,
-                                  usb_speed speed);
+                                  usb_speed_t speed);
     void (*detach_device)(mx_device_t* busdev, mx_device_t* dev);
     void (*root_hub_port_changed)(mx_device_t* busdev, int port);
 

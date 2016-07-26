@@ -21,12 +21,14 @@
 typedef int direction_t;
 typedef int endpoint_type;
 
+// Values in this enum match those used in XHCI and other parts of the USB specification
 typedef enum {
-    FULL_SPEED = 0,
-    LOW_SPEED = 1,
-    HIGH_SPEED = 2,
-    SUPER_SPEED = 3,
-} usb_speed;
+    USB_SPEED_UNDEFINED = 0,
+    USB_SPEED_FULL = 1,
+    USB_SPEED_LOW = 2,
+    USB_SPEED_HIGH = 3,
+    USB_SPEED_SUPER = 4,
+} usb_speed_t;
 
 typedef struct usb_endpoint {
     usb_endpoint_descriptor_t* descriptor;
@@ -82,6 +84,6 @@ typedef struct usb_device_protocol {
                            uint16_t index, void* data, uint16_t length);
 
     mx_status_t (*get_config)(mx_device_t* dev, usb_device_config_t** config);
-    usb_speed (*get_speed)(mx_device_t* device);
+    usb_speed_t (*get_speed)(mx_device_t* device);
     int (*get_address)(mx_device_t* device);
 } usb_device_protocol_t;

@@ -47,7 +47,7 @@
 typedef struct usb_device {
     mx_device_t device;
     int address;
-    usb_speed speed;
+    usb_speed_t speed;
 
     // device's HCI controller and protocol
     mx_device_t* hcidev;
@@ -62,10 +62,10 @@ typedef struct usb_device {
 
 /* Normalize bInterval to log2 of microframes */
 static int
-usb_decode_interval(usb_speed speed, const endpoint_type type, const unsigned char bInterval) {
+usb_decode_interval(usb_speed_t speed, const endpoint_type type, const unsigned char bInterval) {
 #define LOG2(a) ((sizeof(unsigned) << 3) - __builtin_clz(a) - 1)
     switch (speed) {
-    case LOW_SPEED:
+    case USB_SPEED_LOW:
         switch (type) {
         case USB_ENDPOINT_ISOCHRONOUS:
         case USB_ENDPOINT_INTERRUPT:
@@ -73,7 +73,7 @@ usb_decode_interval(usb_speed speed, const endpoint_type type, const unsigned ch
         default:
             return 0;
         }
-    case FULL_SPEED:
+    case USB_SPEED_FULL:
         switch (type) {
         case USB_ENDPOINT_ISOCHRONOUS:
             return (bInterval - 1) + 3;
@@ -82,7 +82,7 @@ usb_decode_interval(usb_speed speed, const endpoint_type type, const unsigned ch
         default:
             return 0;
         }
-    case HIGH_SPEED:
+    case USB_SPEED_HIGH:
         switch (type) {
         case USB_ENDPOINT_ISOCHRONOUS:
         case USB_ENDPOINT_INTERRUPT:
@@ -90,7 +90,7 @@ usb_decode_interval(usb_speed speed, const endpoint_type type, const unsigned ch
         default:
             return LOG2(bInterval);
         }
-    case SUPER_SPEED:
+    case USB_SPEED_SUPER:
         switch (type) {
         case USB_ENDPOINT_ISOCHRONOUS:
         case USB_ENDPOINT_INTERRUPT:
@@ -335,7 +335,7 @@ static mx_status_t usb_queue_request(mx_device_t* device, usb_request_t* request
     return dev->hci_protocol->queue_request(dev->hcidev, dev->address, request);
 }
 
-static usb_speed usb_get_speed(mx_device_t* device) {
+static usb_speed_t usb_get_speed(mx_device_t* device) {
     usb_device_t* dev = get_usb_device(device);
     return dev->speed;
 }
@@ -405,7 +405,7 @@ mx_protocol_device_t usb_device_proto = {
     .release = usb_device_release,
 };
 
-mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed speed) {
+mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed_t speed) {
     usb_device_t* dev = calloc(1, sizeof(usb_device_t));
     if (!dev)
         return NULL;

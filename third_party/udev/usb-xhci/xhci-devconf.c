@@ -62,7 +62,7 @@ xhci_get_rh_port(xhci_t* const xhci, const int hubport, const int hubaddr) {
 }
 
 static int
-xhci_get_tt(xhci_t* const xhci, const usb_speed speed,
+xhci_get_tt(xhci_t* const xhci, const usb_speed_t speed,
             const int hubport, const int hubaddr,
             int* const tt, int* const tt_port) {
     if (!hubaddr)
@@ -70,8 +70,8 @@ xhci_get_tt(xhci_t* const xhci, const usb_speed speed,
     const slotctx_t* const slot = xhci->dev[hubaddr].ctx.slot;
     if ((*tt = SC_GET(TTID, slot))) {
         *tt_port = SC_GET(TTPORT, slot);
-    } else if (speed < HIGH_SPEED &&
-               SC_GET(SPEED1, slot) - 1 == HIGH_SPEED) {
+    } else if (speed < USB_SPEED_HIGH &&
+               SC_GET(SPEED1, slot) == USB_SPEED_HIGH) {
         *tt = hubaddr;
         *tt_port = hubport;
     }
@@ -125,15 +125,15 @@ xhci_make_inputctx(xhci_t* const xhci, const size_t ctxsize) {
     return ic;
 }
 
-static int usb_decode_mps0(usb_speed speed, uint8_t bMaxPacketSize0) {
+static int usb_decode_mps0(usb_speed_t speed, uint8_t bMaxPacketSize0) {
     switch (speed) {
-    case LOW_SPEED:
+    case USB_SPEED_LOW:
         if (bMaxPacketSize0 != 8) {
             xhci_debug("Invalid MPS0: 0x%02x\n", bMaxPacketSize0);
             bMaxPacketSize0 = 8;
         }
         return bMaxPacketSize0;
-    case FULL_SPEED:
+    case USB_SPEED_FULL:
         switch (bMaxPacketSize0) {
         case 8:
         case 16:
@@ -144,13 +144,13 @@ static int usb_decode_mps0(usb_speed speed, uint8_t bMaxPacketSize0) {
             xhci_debug("Invalid MPS0: 0x%02x\n", bMaxPacketSize0);
             return 8;
         }
-    case HIGH_SPEED:
+    case USB_SPEED_HIGH:
         if (bMaxPacketSize0 != 64) {
             xhci_debug("Invalid MPS0: 0x%02x\n", bMaxPacketSize0);
             bMaxPacketSize0 = 64;
         }
         return bMaxPacketSize0;
-    case SUPER_SPEED:
+    case USB_SPEED_SUPER:
         if (bMaxPacketSize0 != 9) {
             xhci_debug("Invalid MPS0: 0x%02x\n", bMaxPacketSize0);
             bMaxPacketSize0 = 9;
@@ -161,7 +161,7 @@ static int usb_decode_mps0(usb_speed speed, uint8_t bMaxPacketSize0) {
     }
 }
 
-int xhci_set_address(mx_device_t* hcidev, usb_speed speed, int hubport, int hubaddr) {
+int xhci_set_address(mx_device_t* hcidev, usb_speed_t speed, int hubport, int hubaddr) {
     xhci_t* const xhci = get_xhci(hcidev);
     const size_t ctxsize = CTXSIZE(xhci);
     devinfo_t* di = NULL;
@@ -201,7 +201,7 @@ int xhci_set_address(mx_device_t* hcidev, usb_speed speed, int hubport, int huba
     *ic->add = (1 << 0) /* Slot Context */ | (1 << 1) /* EP0 Context */;
 
     SC_SET(ROUTE, ic->dev.slot, xhci_gen_route(xhci, hubport, hubaddr));
-    SC_SET(SPEED1, ic->dev.slot, speed + 1);
+    SC_SET(SPEED1, ic->dev.slot, speed);
     SC_SET(CTXENT, ic->dev.slot, 1); /* the endpoint 0 context */
     SC_SET(RHPORT, ic->dev.slot, xhci_get_rh_port(xhci, hubport, hubaddr));
 
@@ -301,7 +301,7 @@ _free_ic_return:
 
 static int
 xhci_finish_hub_config(usbdev_t* const dev, inputctx_t* const ic) {
-    int type = dev->speed == SUPER_SPEED ? 0x2a : 0x29; /* similar enough */
+    int type = dev->speed == USB_SPEED_SUPER ? 0x2a : 0x29; /* similar enough */
     usb_hub_descriptor_t desc;
 
     if (xhci_get_descriptor(dev, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_DEVICE,
@@ -313,7 +313,7 @@ xhci_finish_hub_config(usbdev_t* const dev, inputctx_t* const ic) {
     SC_SET(HUB, ic->dev.slot, 1);
     SC_SET(MTT, ic->dev.slot, 0); /* No support for Multi-TT */
     SC_SET(NPORTS, ic->dev.slot, desc.bNbrPorts);
-    if (dev->speed == HIGH_SPEED)
+    if (dev->speed == USB_SPEED_HIGH)
         SC_SET(TTT, ic->dev.slot,
                (desc.wHubCharacteristics >> 5) & 0x0003);
 
@@ -322,10 +322,10 @@ xhci_finish_hub_config(usbdev_t* const dev, inputctx_t* const ic) {
 
 static size_t
 xhci_bound_interval(usbdev_t* dev, const usb_endpoint_t* const ep) {
-    if ((dev->speed == LOW_SPEED &&
+    if ((dev->speed == USB_SPEED_LOW &&
          (ep->type == USB_ENDPOINT_ISOCHRONOUS ||
           ep->type == USB_ENDPOINT_INTERRUPT)) ||
-        (dev->speed == FULL_SPEED &&
+        (dev->speed == USB_SPEED_FULL &&
          ep->type == USB_ENDPOINT_INTERRUPT)) {
         if (ep->interval < 3)
             return 3;

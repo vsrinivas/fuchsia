@@ -93,13 +93,13 @@ xhci_rh_port_enabled(mx_device_t* device, const int port) {
     return !!(*portsc & PORTSC_PED);
 }
 
-static usb_speed
+static usb_speed_t
 xhci_rh_port_speed(mx_device_t* device, const int port) {
     xhci_t* const xhci = get_xhci(device);
     volatile uint32_t* const portsc = &xhci->opreg->prs[port - 1].portsc;
 
     if (*portsc & PORTSC_PED) {
-        return ((*portsc & PORTSC_PORT_SPEED_MASK) >> PORTSC_PORT_SPEED_START) - 1;
+        return ((*portsc & PORTSC_PORT_SPEED_MASK) >> PORTSC_PORT_SPEED_START);
     } else {
         return -1;
     }

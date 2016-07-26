@@ -200,7 +200,7 @@ typedef transfer_ring_t command_ring_t;
 #define SC_ROUTE_FIELD f1 /* ROUTE - Route String */
 #define SC_ROUTE_START 0
 #define SC_ROUTE_LEN 20
-#define SC_SPEED1_FIELD f1 /* SPEED - Port speed plus one (compared to usb_speed enum) */
+#define SC_SPEED1_FIELD f1 /* SPEED - Port speed (matches usb_speed_t enum) */
 #define SC_SPEED1_START 20
 #define SC_SPEED1_LEN 4
 #define SC_MTT_FIELD f1 /* MTT - Multi Transaction Translator */
@@ -312,7 +312,7 @@ typedef struct usbdev {
     int address; // usb address
     int hub;     // hub, device is attached to
     int port;    // port where device is attached
-    usb_speed speed;
+    usb_speed_t speed;
     struct usb_xhci* hci;
 
     list_node_t req_queue;
@@ -563,7 +563,7 @@ void xhci_rh_check_status_changed(xhci_t* xhci);
 
 void* xhci_align(xhci_t* xhci, const size_t min_align, const size_t size);
 void xhci_init_cycle_ring(xhci_t* const xhci, transfer_ring_t*, const size_t ring_size);
-int xhci_set_address(mx_device_t* hcidev, usb_speed speed, int hubport, int hubaddr);
+int xhci_set_address(mx_device_t* hcidev, usb_speed_t speed, int hubport, int hubaddr);
 int xhci_finish_device_config(mx_device_t* hcidev, int devaddr, usb_device_config_t* config);
 void xhci_destroy_dev(mx_device_t* hcidev, int slot_id);
 

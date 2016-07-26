@@ -32,7 +32,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb-device.h>
 
-mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed speed);
+mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed_t speed);
 
 int usb_set_feature(mx_device_t* device, int endp, int feature, int rtype);
 int usb_get_status(mx_device_t* device, int endp, int rtype, int len, void* data);

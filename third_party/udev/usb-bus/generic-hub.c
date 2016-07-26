@@ -146,7 +146,7 @@ int generic_hub_attach_dev(generic_hub_t* const hub, const int port) {
                 port);
     }
 
-    const usb_speed speed = hub->hub_protocol->port_speed(hub->hubdev, port);
+    const usb_speed_t speed = hub->hub_protocol->port_speed(hub->hubdev, port);
     if (hub->hub_protocol->reset_port)
         usleep(1000 * 10); /* Reset recovery time
 			       (usb20 spec 7.1.7.5) */

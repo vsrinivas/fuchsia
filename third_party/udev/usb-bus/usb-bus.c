@@ -23,8 +23,8 @@ typedef struct usb_bus {
 #define get_usb_bus(dev) containerof(dev, usb_bus_t, device)
 
 static mx_device_t* usb_attach_device(mx_device_t* busdev, mx_device_t* hubdev, int hubaddress,
-                                      int port, usb_speed speed) {
-    static const char* speeds[] = {"full", "low", "high", "super"};
+                                      int port, usb_speed_t speed) {
+    static const char* speeds[] = {"undefined", "full", "low", "high", "super"};
     usb_debug("%sspeed device\n", (speed < sizeof(speeds) / sizeof(char*))
                                       ? speeds[speed]
                                       : "invalid value - no");
