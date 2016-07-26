@@ -36,9 +36,9 @@
  */
 
 #include "libdrm_intel_gen.h"
-#include <common/magma_defs.h>
+#include "common/magma_defs.h"
+#include "magma_util/macros.h"
 #include <errno.h>
-#include <magma_util/macros.h>
 #include <memory.h>
 
 // Alignment must be a power of 2

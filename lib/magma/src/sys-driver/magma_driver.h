@@ -15,9 +15,9 @@
 #ifndef _MAGMA_DRIVER_H_
 #define _MAGMA_DRIVER_H_
 
-#include "magma_sys_driver.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "msd.h"
 
 #include "magma_system_device.h"
 

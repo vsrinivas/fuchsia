@@ -15,9 +15,9 @@
 #ifndef _MAGMA_DEVICE_H_
 #define _MAGMA_DEVICE_H_
 
+#include "magma.h"
+#include "magma_system.h"
 #include <libdrm_intel_gen.h>
-#include <magma.h>
-#include <magma_system.h>
 
 #include <map>
 #include <stdint.h>

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "magma_sys_driver.h"
+#include "msd.h"
 
 void msd_driver_destroy(msd_driver* arch) {}
 

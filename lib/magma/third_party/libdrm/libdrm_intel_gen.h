@@ -38,8 +38,8 @@
 #ifndef LIBDRM_INTEL_GEN_H_
 #define LIBDRM_INTEL_GEN_H_
 
-#include <magma_sys_defs.h>
-#include <magma_util/refcounted.h>
+#include "magma_util/refcounted.h"
+#include "msd_defs.h"
 #include <stdint.h>
 #include <vector>
 

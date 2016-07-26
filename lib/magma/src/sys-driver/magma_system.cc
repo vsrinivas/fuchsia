@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "magma_system.h"
 #include "magma_driver.h"
-#include <magma_system.h>
 
 #ifdef __linux__
 #include <unistd.h>

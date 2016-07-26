@@ -15,7 +15,8 @@
 #ifndef PLATFORM_BUFFER_H
 #define PLATFORM_BUFFER_H
 
-#include "platform_buffer_abi.h"
+#include "magma_util/dlog.h"
+#include "msd_platform_buffer.h"
 #include <memory>
 
 class PlatformBuffer {

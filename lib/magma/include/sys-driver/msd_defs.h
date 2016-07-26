@@ -15,7 +15,7 @@
 #ifndef _MAGMA_SYS_DEFS_H_
 #define _MAGMA_SYS_DEFS_H_
 
-#include <common/magma_defs.h>
+#include "common/magma_defs.h"
 #include <stdint.h>
 
 #if defined(__cplusplus)

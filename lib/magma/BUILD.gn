@@ -57,6 +57,7 @@ source_set("libmad") {
     ":libmsd",
     ":util",
     "include:mad_abi",
+    "src/sys-driver:magma_system_interface",
   ]
 }
 

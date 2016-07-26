@@ -15,8 +15,8 @@
 #ifndef MAGMA_SYS_DRIVER_H
 #define MAGMA_SYS_DRIVER_H
 
-#include <magma_sys_defs.h>
-#include <platform_buffer_abi.h>
+#include "msd_defs.h"
+#include "msd_platform_buffer.h"
 
 #if defined(__cplusplus)
 extern "C" {

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
+#include "magma_util/refcounted.h"
+#include "msd_platform_buffer.h"
 #include <atomic>
 #include <errno.h>
 #include <limits.h> // PAGE_SIZE
 #include <magenta/syscalls-ddk.h>
-#include <magma_util/dlog.h>
-#include <magma_util/macros.h>
-#include <magma_util/refcounted.h>
-#include <platform_buffer_abi.h>
 #include <vector>
 
 class MagentaPlatformPage {

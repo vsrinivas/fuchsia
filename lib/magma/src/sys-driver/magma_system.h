@@ -15,7 +15,7 @@
 #ifndef _MAGMA_SYSTEM_H_
 #define _MAGMA_SYSTEM_H_
 
-#include <magma_sys_defs.h>
+#include <msd_defs.h>
 
 #if defined(__cplusplus)
 extern "C" {

@@ -15,8 +15,8 @@
 #ifndef _MAGMA_SYSTEM_DEVICE_H_
 #define _MAGMA_SYSTEM_DEVICE_H_
 
-#include "magma_sys_driver.h"
 #include "magma_system_buffer.h"
+#include "msd.h"
 
 #include <map>
 #include <memory>

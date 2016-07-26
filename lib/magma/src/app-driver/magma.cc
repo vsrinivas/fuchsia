@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "magma.h"
 #include "magma_device.h"
-#include <magma.h>
-#include <magma_system.h>
+#include "magma_system.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <magma_util/dlog.h>
-#include <magma_util/macros.h>
+#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
 
 drm_intel_bo* magma_bo_alloc(drm_intel_bufmgr* bufmgr, const char* name, unsigned long size,
                              unsigned int alignment)
