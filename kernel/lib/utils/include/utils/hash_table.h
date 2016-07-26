@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <utils/intrusive_single_list.h>
-#include <utils/list_utils.h>
 
 namespace utils {
 

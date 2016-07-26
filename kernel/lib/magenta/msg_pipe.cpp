@@ -12,8 +12,6 @@
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe.h>
 
-#include <utils/list_utils.h>
-
 namespace {
 
 size_t other_side(size_t side) {

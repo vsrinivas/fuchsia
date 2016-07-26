@@ -26,7 +26,6 @@
 
 #include <utils/arena.h>
 #include <utils/intrusive_double_list.h>
-#include <utils/list_utils.h>
 #include <utils/type_support.h>
 
 #define LOCAL_TRACE 0

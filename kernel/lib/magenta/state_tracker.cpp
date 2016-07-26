@@ -13,7 +13,6 @@
 #include <magenta/wait_event.h>
 
 #include <utils/intrusive_single_list.h>
-#include <utils/list_utils.h>
 
 StateTracker::StateTracker(mx_signals_state_t signals_state)
     : signals_state_(signals_state),
