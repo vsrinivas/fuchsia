@@ -97,7 +97,7 @@ private:
     mutex_t lock_;
 
     // Active observers are elements in |observers_|.
-    utils::DoublyLinkedList<StateObserver*> observers_;
+    utils::DoublyLinkedList<StateObserver*, StateObserverListTraits> observers_;
 
     // mojo-style signaling.
     mx_signals_state_t signals_state_;

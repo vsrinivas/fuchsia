@@ -12,8 +12,8 @@
 
 class Handle;
 
-// Observer interface for state maintained by StateTracker.
-class StateObserver : public utils::DoublyLinkedListable<StateObserver*> {
+// Observer base class for state maintained by StateTracker.
+class StateObserver {
 public:
     StateObserver() {}
 
@@ -35,4 +35,18 @@ public:
 
 protected:
     ~StateObserver() {}
+
+private:
+    friend struct StateObserverListTraits;
+    utils::DoublyLinkedListNodeState<StateObserver*> state_observer_list_node_state_;
+};
+
+// For use by StateTracker to maintain a list of StateObservers. (We don't use the default traits so
+// that implementations of StateObserver can themselves use the default traits if they need to be on
+// a different list.)
+struct StateObserverListTraits {
+    inline static utils::DoublyLinkedListNodeState<StateObserver*>& node_state(
+            StateObserver& obj) {
+        return obj.state_observer_list_node_state_;
+    }
 };
