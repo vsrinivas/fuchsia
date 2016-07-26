@@ -115,6 +115,9 @@ public:
     static void DebugDumpProcessList();
     static void DumpProcessListKeyMap();
 
+    uint32_t get_bad_handle_policy() const { return bad_handle_policy_; }
+    mx_status_t set_bad_handle_policy(uint32_t new_policy);
+
 private:
     explicit ProcessDispatcher(utils::StringPiece name);
 
@@ -178,10 +181,11 @@ private:
     mx_exception_behaviour_t exception_behaviour_ = MX_EXCEPTION_BEHAVIOUR_DEFAULT;
     mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
 
+    uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
+
     // The user-friendly process name. For debug purposes only.
     char name_[THREAD_NAME_LENGTH / 2] = {};
 
-    // The global process list and its mutex.
     static mutex_t global_process_list_mutex_;
     static utils::DoublyLinkedList<ProcessDispatcher*> global_process_list_;
 };

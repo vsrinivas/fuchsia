@@ -54,7 +54,7 @@ MAKE_COPY_TO_USER(copy_to_user_iptr, intptr_t);
 #undef MAKE_COPY_TO_USER
 
 #define MAKE_COPY_FROM_USER(name, type) \
-    static inline status_t name(type *dst, type *src) { \
+    static inline status_t name(type *dst, const type *src) { \
         return copy_from_user(dst, src, sizeof(type)); \
     }
 

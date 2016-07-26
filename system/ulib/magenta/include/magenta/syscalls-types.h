@@ -178,10 +178,6 @@ typedef struct mx_exception_packet {
     mx_exception_report_t report;
 } mx_exception_packet_t;
 
-// Buffer size limits on the cprng syscalls
-#define MX_CPRNG_DRAW_MAX_LEN        256
-#define MX_CPRNG_ADD_ENTROPY_MAX_LEN 256
-
 // Structures for mx_wait_set_*()
 typedef struct mx_wait_set_result {
     uint64_t cookie;
@@ -189,6 +185,18 @@ typedef struct mx_wait_set_result {
     uint32_t reserved;
     mx_signals_state_t signals_state;
 } mx_wait_set_result_t;
+
+// Buffer size limits on the cprng syscalls
+#define MX_CPRNG_DRAW_MAX_LEN        256
+#define MX_CPRNG_ADD_ENTROPY_MAX_LEN 256
+
+// Object properties.
+
+#define MX_PROP_BAD_HANDLE_POLICY      1u
+
+#define MX_POLICY_BAD_HANDLE_IGNORE    0u
+#define MX_POLICY_BAD_HANDLE_LOG       1u
+#define MX_POLICY_BAD_HANDLE_EXIT      2u
 
 #ifdef __cplusplus
 }

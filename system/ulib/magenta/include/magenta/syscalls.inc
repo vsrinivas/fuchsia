@@ -209,6 +209,12 @@ MAGENTA_SYSCALL_DEF(2, 4, 242, mx_status_t, wait_set_remove, mx_handle_t wait_se
 MAGENTA_SYSCALL_DEF(5, 7, 243, mx_status_t, wait_set_wait, mx_handle_t wait_set_handle, mx_time_t timeout,
                     uint32_t* num_results, mx_wait_set_result_t* results, uint32_t* max_results);
 
+// Object Properties
+MAGENTA_SYSCALL_DEF(4, 4, 250, mx_status_t, object_get_property, mx_handle_t handle, uint32_t property,
+                    void* value, mx_size_t size)
+MAGENTA_SYSCALL_DEF(4, 4, 251, mx_status_t, object_set_property, mx_handle_t handle, uint32_t property,
+                    const void* value, mx_size_t size)
+
 // syscall arg passing tests
 MAGENTA_SYSCALL_DEF(0, 0, 20000, int, syscall_test_0, void)
 MAGENTA_SYSCALL_DEF(1, 1, 20001, int, syscall_test_1, int a)

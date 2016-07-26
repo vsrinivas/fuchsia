@@ -91,10 +91,14 @@ static bool create_destroy_test(void) {
     uintptr_t buffer = 0;
     mx_ssize_t avail;
 
+    // TODO(cpu): re-enable this code when we have fine grained
+    // control over MX_PROP_BAD_HANDLE_POLICY in the launcher.
+#if 0
     avail = mx_data_pipe_begin_write(consumer, 0u, 100u, &buffer);
     ASSERT_EQ(avail, ERR_BAD_HANDLE, "expected error");
     avail = mx_data_pipe_begin_read(producer, 0u, 100u, &buffer);
     ASSERT_EQ(avail, ERR_BAD_HANDLE, "expected error");
+#endif
 
     avail = mx_data_pipe_write(producer, 0u, 10u, "0123456789");
     ASSERT_EQ(avail, 10, "expected success");

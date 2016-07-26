@@ -58,6 +58,19 @@ constexpr mx_size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
 
 constexpr uint32_t kMaxWaitSetWaitResults = 1024u;
 
+namespace {
+// TODO(cpu): Move this handler to a common place.
+// TODO(cpu): Generate an exception when exception handling lands.
+mx_status_t BadHandle() {
+    auto up = ProcessDispatcher::GetCurrent();
+    if (up->get_bad_handle_policy() == MX_POLICY_BAD_HANDLE_EXIT) {
+        printf("\n[fatal: %s used a bad handle]\n", up->name().data());
+        up->Exit(ERR_BAD_HANDLE);
+    }
+    return ERR_BAD_HANDLE;
+}
+}
+
 void sys_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
 
@@ -255,7 +268,7 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
         AutoLock lock(up->handle_table_lock());
         Handle* source = up->GetHandle_NoLock(handle_value);
         if (!source)
-            return ERR_BAD_HANDLE;
+            return BadHandle();
 
         if (!magenta_rights_check(source->rights(), MX_RIGHT_DUPLICATE))
             return ERR_ACCESS_DENIED;
@@ -283,7 +296,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     switch (topic) {
         case MX_INFO_HANDLE_VALID:
@@ -318,7 +331,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
 
             auto process = dispatcher->get_process_dispatcher();
             if (!process)
-                return ERR_BAD_HANDLE;
+                return BadHandle();
 
             if (!magenta_rights_check(rights, MX_RIGHT_READ))
                 return ERR_ACCESS_DENIED;
@@ -338,6 +351,77 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
     }
 }
 
+mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
+                                    void* _value, mx_size_t size) {
+    if (!_value)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    // TODO:cpu use 'get-info' rights when avaliable.
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    switch (property) {
+        case MX_PROP_BAD_HANDLE_POLICY: {
+            if (size != sizeof(uint32_t))
+                return ERR_NOT_ENOUGH_BUFFER;
+            auto process = dispatcher->get_process_dispatcher();
+            if (!process)
+                return BadHandle();
+            uint32_t value = process->get_bad_handle_policy();
+            if (copy_to_user_u32(reinterpret_cast<uint32_t*>(_value), value) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+
+        }
+        default:
+            return ERR_INVALID_ARGS;
+    }
+
+    return NO_ERROR;
+}
+
+mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
+                                    const void* _value, mx_size_t size) {
+    if (!_value)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
+        return ERR_INVALID_ARGS;
+
+    // TODO:cpu use 'set-info' rights when avaliable.
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    mx_status_t status = ERR_INVALID_ARGS;
+
+    switch (property) {
+        case MX_PROP_BAD_HANDLE_POLICY: {
+            if (size < sizeof(uint32_t))
+                return ERR_NOT_ENOUGH_BUFFER;
+            auto process = dispatcher->get_process_dispatcher();
+            if (!process)
+                return BadHandle();
+            uint32_t value = 0;
+            if (copy_from_user_u32(&value, reinterpret_cast<const uint32_t*>(_value)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            status = process->set_bad_handle_policy(value);
+            break;
+        }
+    }
+
+    return status;
+}
+
 mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _num_bytes,
                              mx_handle_t* _handles, uint32_t* _num_handles, uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p flags 0x%x\n",
@@ -352,7 +436,7 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
 
     auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
     if (!msg_pipe)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -451,7 +535,7 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
 
     auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
     if (!msg_pipe)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     bool is_reply_pipe = msg_pipe->is_reply_pipe();
 
@@ -730,7 +814,7 @@ mx_status_t sys_process_start(mx_handle_t handle_value, mx_handle_t arg_handle_v
 
     auto process = dispatcher->get_process_dispatcher();
     if (!process)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     HandleUniquePtr arg_handle = up->RemoveHandle(arg_handle_value);
     if (!arg_handle_value)
@@ -777,7 +861,7 @@ mx_status_t sys_event_signal(mx_handle_t handle_value) {
 
     auto event = dispatcher->get_event_dispatcher();
     if (!event)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -797,7 +881,7 @@ mx_status_t sys_event_reset(mx_handle_t handle_value) {
 
     auto event = dispatcher->get_event_dispatcher();
     if (!event)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -879,7 +963,7 @@ mx_ssize_t sys_vm_object_read(mx_handle_t handle, void* data, uint64_t offset, m
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -900,7 +984,7 @@ mx_ssize_t sys_vm_object_write(mx_handle_t handle, const void* data, uint64_t of
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -921,7 +1005,7 @@ mx_status_t sys_vm_object_get_size(mx_handle_t handle, uint64_t* _size) {
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     // no rights check, anyone should be able to get the size
 
@@ -948,7 +1032,7 @@ mx_status_t sys_vm_object_set_size(mx_handle_t handle, uint64_t size) {
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -974,7 +1058,7 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
 
     auto vmo = vmo_dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     // get a reffed pointer to the address space in the target process
     utils::RefPtr<VmAspace> aspace;
@@ -991,7 +1075,7 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
 
         auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
-            return ERR_BAD_HANDLE;
+            return BadHandle();
 
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
@@ -1038,7 +1122,7 @@ mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_
 
         auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
-            return ERR_BAD_HANDLE;
+            return BadHandle();
 
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
@@ -1079,7 +1163,7 @@ mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, m
 
         auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
-            return ERR_BAD_HANDLE;
+            return BadHandle();
 
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
@@ -1166,7 +1250,7 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, const void* ptr, uint32_
 
     auto log = log_dispatcher->get_log_dispatcher();
     if (!log)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(log_rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1190,7 +1274,7 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, void* ptr, uint32_t flags
 
     auto log = log_dispatcher->get_log_dispatcher();
     if (!log)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(log_rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1237,7 +1321,7 @@ mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t 
 
     auto ioport = dispatcher->get_io_port_dispatcher();
     if (!ioport)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1264,7 +1348,7 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
 
     auto ioport = dispatcher->get_io_port_dispatcher();
     if (!ioport)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1293,7 +1377,7 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
 
     auto ioport = iop_d->get_io_port_dispatcher();
     if (!ioport)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1378,7 +1462,7 @@ mx_ssize_t sys_data_pipe_write(mx_handle_t handle, uint32_t flags, mx_size_t req
 
     auto producer = dispatcher->get_data_pipe_producer_dispatcher();
     if (!producer)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1407,7 +1491,7 @@ mx_ssize_t sys_data_pipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requ
 
     auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
     if (!consumer)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1436,7 +1520,7 @@ mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size
 
     auto producer = dispatcher->get_data_pipe_producer_dispatcher();
     if (!producer)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1468,7 +1552,7 @@ mx_status_t sys_data_pipe_end_write(mx_handle_t handle, mx_size_t written) {
 
     auto producer = dispatcher->get_data_pipe_producer_dispatcher();
     if (!producer)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1492,7 +1576,7 @@ mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_
 
     auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
     if (!consumer)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1524,7 +1608,7 @@ mx_status_t sys_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
 
     auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
     if (!consumer)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;

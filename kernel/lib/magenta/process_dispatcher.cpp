@@ -472,6 +472,13 @@ char ProcessDispatcher::StateChar() const {
     return '?';
 }
 
+mx_status_t ProcessDispatcher::set_bad_handle_policy(uint32_t new_policy) {
+    if (new_policy > MX_POLICY_BAD_HANDLE_EXIT)
+        return ERR_NOT_SUPPORTED;
+    bad_handle_policy_ = new_policy;
+    return NO_ERROR;
+}
+
 const char* StateToString(ProcessDispatcher::State state) {
     switch (state) {
     case ProcessDispatcher::State::INITIAL:
