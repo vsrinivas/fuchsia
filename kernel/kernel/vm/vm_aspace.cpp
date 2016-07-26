@@ -20,7 +20,6 @@
 #include <trace.h>
 #include <utils/auto_call.h>
 #include <utils/intrusive_double_list.h>
-#include <utils/list_utils.h>
 #include <utils/type_support.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
