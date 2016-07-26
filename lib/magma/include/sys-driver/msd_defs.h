@@ -22,9 +22,9 @@
 extern "C" {
 #endif
 
-typedef uint32_t ClientId;
+typedef uint32_t msd_client_id;
 
-struct MagmaExecBuffer {
+struct msd_exec_buffer {
     uint32_t placeholder;
 };
 

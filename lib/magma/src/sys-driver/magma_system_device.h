@@ -27,8 +27,8 @@ public:
 
     msd_device* arch() { return arch_dev_; }
 
-    void set_client_id(ClientId client_id) { client_id_ = client_id; }
-    ClientId client_id() { return client_id_; }
+    void set_client_id(msd_client_id client_id) { client_id_ = client_id; }
+    msd_client_id client_id() { return client_id_; }
 
     // Allocates a buffer of at least the requested size and adds it to the
     // buffer map. Returns a shared_ptr to the allocated buffer on success
@@ -46,7 +46,7 @@ public:
     uint32_t GetDeviceId();
 
 private:
-    ClientId client_id_{};
+    msd_client_id client_id_{};
     msd_device* arch_dev_;
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
 };

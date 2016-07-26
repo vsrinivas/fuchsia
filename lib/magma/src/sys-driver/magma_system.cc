@@ -17,9 +17,9 @@
 
 #ifdef __linux__
 #include <unistd.h>
-static ClientId get_client_id() { return static_cast<ClientId>(getpid()); }
+static msd_client_id get_client_id() { return static_cast<msd_client_id>(getpid()); }
 #else
-static ClientId get_client_id() { return static_cast<ClientId>(1); }
+static msd_client_id get_client_id() { return static_cast<msd_client_id>(1); }
 #endif // __linux__
 
 MagmaSystemDevice* MagmaDriver::g_device;
@@ -34,7 +34,7 @@ bool magma_system_open(MagmaSystemDevice** pdev, uint32_t device_handle)
     MagmaSystemDevice* dev = MagmaDriver::GetDevice();
     DASSERT(dev);
 
-    ClientId client_id = get_client_id();
+    msd_client_id client_id = get_client_id();
 
     int ret = msd_device_open(dev->arch(), client_id);
     if (ret) {

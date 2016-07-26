@@ -45,10 +45,10 @@ struct msd_device* msd_driver_create_device(struct msd_driver* drv, void* device
 void msd_driver_destroy_device(struct msd_device* token);
 
 // Opens a device for the given client.
-int msd_device_open(struct msd_device* dev, ClientId client_id);
+int msd_device_open(struct msd_device* dev, msd_client_id client_id);
 
 // Closes a device on behalf of the given client.
-int msd_device_close(struct msd_device* dev, ClientId client_id);
+int msd_device_close(struct msd_device* dev, msd_client_id client_id);
 
 // Returns the device id.  0 is an invalid device id.
 uint32_t msd_device_get_id(struct msd_device* dev);
