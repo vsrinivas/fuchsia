@@ -66,6 +66,12 @@ static inline void dret_null(const char* file, int line, const char* msg)
         DASSERT(false);                                                                            \
     } while (0)
 
+#ifndef DISALLOW_COPY_AND_ASSIGN
+#define DISALLOW_COPY_AND_ASSIGN(TypeName)                                                         \
+    TypeName(const TypeName&) = delete;                                                            \
+    void operator=(const TypeName&) = delete
+#endif
+
 static inline uint32_t upper_32_bits(uint64_t n) { return static_cast<uint32_t>(n >> 32); }
 
 static inline uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }

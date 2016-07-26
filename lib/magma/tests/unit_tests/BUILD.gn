@@ -18,6 +18,7 @@ executable("magma_unit_tests") {
   sources = [
     "hello_world.cc",
     "main.cc",
+    "test_address_space_allocator.cc",
     "test_magma_system_device.cc",
     "test_mutex.cc",
     "test_platform_buffer.cc",
@@ -27,6 +28,7 @@ executable("magma_unit_tests") {
   include_dirs = [ "$magma_build_root/src/sys-driver" ]
 
   deps = [
+    "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys-driver",
     "$magma_build_root/src/sys-driver:platform_buffer",
     "$magma_build_root/tests/mock:mock_msd",

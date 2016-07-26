@@ -20,12 +20,14 @@ source_set("magma_util") {
   public_deps = [ "$magma_build_root/include:msd_abi" ]
 
   sources = [
+    "address_space_allocator.h",
     "dlog.h",
     "macros.h",
     "mutex.h",
     "refcounted.h",
     "platform_buffer.cc",
     "platform_buffer.h",
+    "simple_allocator.cc",
+    "simple_allocator.h",
   ]
-
 }
