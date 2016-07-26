@@ -16,7 +16,7 @@
 
 #define MAGMA_DLOG_ENABLE 0
 
-#if DLOG_ENABLE
+#if MAGMA_DLOG_ENABLE
 
 #define DLOG(...)                                                                                  \
     do {                                                                                           \
