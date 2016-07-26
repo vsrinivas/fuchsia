@@ -225,6 +225,10 @@ include top/rules.mk
 include make/recurse.mk
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
+# copy global headers to the sysroot
+$(call copy-dst-src,$(BUILDDIR)/sysroot/include/global/fuchsia-types.h,$(BUILDROOT)/global/include/global/fuchsia-types.h)
+SYSROOT_DEPS += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
+GENERATED += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
 ifneq ($(SYSROOT_MEGA_LIBC),)
 MEGA_LIBC := $(BUILDDIR)/sysroot/lib/libc.a
 # this is a really awful hack, but makes everything

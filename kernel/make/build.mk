@@ -10,6 +10,7 @@ ifeq ($(WITH_LINKER_GC),1)
 GLOBAL_COMPILEFLAGS += -ffunction-sections -fdata-sections
 GLOBAL_LDFLAGS += --gc-sections
 endif
+GLOBAL_COMPILEFLAGS += -I$(BUILDROOT)/global/include
 
 ifneq (,$(EXTRA_BUILDRULES))
 -include $(EXTRA_BUILDRULES)
