@@ -16,49 +16,81 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+
 
 #include <mxio/io.h>
 
+// change this number to change how many bytes are being written/read
+#define TEST_LEN 1024
+
+int write_read_pattern_test(int fd, const char* pattern) {
+    char in[TEST_LEN];
+    int pattern_len = strlen(pattern);
+    // repeat this pattern across the buffer
+    for (int i = 0; i < TEST_LEN; i += pattern_len) {
+        memcpy(in + i, pattern, pattern_len);
+
+    }
+    memcpy(in + (pattern_len * (TEST_LEN/pattern_len)), pattern,
+                 TEST_LEN % pattern_len);
+    printf("Sending the write: \n");
+    for (int i = 0; i < TEST_LEN; i++) {
+        printf("%02x ", ((unsigned char*)in)[i]);
+        if (i % 50 == 49) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+    int w = write(fd, &in, TEST_LEN);
+    printf("the write returned: %02x\n", w);
+
+    // seek back to start
+    lseek(fd, -TEST_LEN, SEEK_CUR);
+    char out[TEST_LEN];
+    read(fd, out, TEST_LEN);
+    printf("here is the results of the read\n");
+    for (int i = 0; i < TEST_LEN; i++) {
+        printf("%02x ", ((unsigned char*)out)[i]);
+        if (i % 50 == 49) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+    printf("memcmp result: %i\n", memcmp(in, out, TEST_LEN));
+    return memcmp(in, out, TEST_LEN);
+}
+
+// writes first block two blocks full of lowercase letters in order, then reads to verify.
+// then writes them full of letters in reverse order and verifies.
 int main(int argc, char** argv) {
     printf("starting\n");
-    unsigned char x;
     int fd = 0;
-    fd = open("/dev/class/usb-msd/usb_mass_storage", O_RDWR);
+    fd = open("/dev/class/misc/usb_mass_storage", O_RDWR);
     if (fd < 0) {
         printf("msd_test: cannot open '%d'\n", fd);
         return -1;
     }
-    int w = write(fd, &x, 1);
-    printf("w was: %02x\n", w);
-    // usleep(100);
 
-    char out[18] = {'a', 'b','c','d','e', 'f', 'g', 'h', 'i',
-                        'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r'};
-        printf("here are original\n");
-    for (int i = 0; i < 36; i++) {
-        printf("%02x ", ((unsigned char*)out)[i]);
+    const char* abc = "abcdefghijklmnopqrstuvwxyz";
+    int status = write_read_pattern_test(fd, abc);
+
+    if (status != 0) {
+        printf("TEST FAILURE: written data and read data do not match\n");
+        return -1;
+    } else {
+        printf("TEST PASSED\n");
     }
-    printf("\n");
-    fflush(stdout);
-    printf("waiting\n");
-    // usleep(5000000);
-    mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
-    printf("got to read\n");
-    // printf("read status: %02x \n", ((uint)read(fd, &out, 36)));
-    // read(fd, &out, 10);
 
-    printf("here are results\n");
-    // printf("here is first one as int before thing %d \n", ((int*)out)[0]);
-    // int* a =(int*)out;
-    // int* b =(int*)(out+1);
-    // *a = 1;
-    // *b = 15;
-    for (int i = 0; i < 36; i++) {
-        printf("%02x ", ((unsigned char*)out)[i]);
+    const char* zyx = "zyxwvutsrqponmlkjihgfedcba";
+    status = write_read_pattern_test(fd, zyx);
+    if (status != 0) {
+        printf("TEST FAILURE: written data and read data do not match\n");
+    } else {
+        printf("TEST PASSED\n");
     }
-    printf("\n");
-    fflush(stdout);
 
-    printf("\n");
-    return 0;
+    return status;
+
+
 }
