@@ -15,8 +15,9 @@
 #ifndef MSD_DEVICE_H
 #define MSD_DEVICE_H
 
-#include "magma_sys_driver.h"
 #include "magma_util/macros.h"
+#include "msd.h"
+#include <ddk/device.h>
 
 class MsdDevice : public msd_device {
 public:

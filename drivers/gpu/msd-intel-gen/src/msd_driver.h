@@ -15,8 +15,8 @@
 #ifndef MSD_DRIVER_H
 #define MSD_DRIVER_H
 
-#include "magma_sys_driver.h"
 #include "magma_util/macros.h"
+#include "msd.h"
 
 class MsdDevice;
 
