@@ -18,6 +18,10 @@ class TimePoint {
   TimePoint() = default;
   static TimePoint Now();
 
+  static constexpr TimePoint Max() {
+    return TimePoint(std::numeric_limits<int64_t>::max());
+  }
+
   // Compute the difference between two time points.
   TimeDelta operator-(TimePoint other) const {
     return TimeDelta::FromNanoseconds(ticks_ - other.ticks_);
@@ -38,7 +42,7 @@ class TimePoint {
   bool operator>=(TimePoint other) const { return ticks_ >= other.ticks_; }
 
  private:
-  explicit TimePoint(int64_t ticks) : ticks_(ticks) {}
+  explicit constexpr TimePoint(int64_t ticks) : ticks_(ticks) {}
 
   int64_t ticks_ = 0;
 };

@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include <limits>
+
 namespace ftl {
 
 // A TimeDelta represents the difference between two time points.
@@ -17,6 +19,9 @@ class TimeDelta {
   TimeDelta() = default;
 
   static constexpr TimeDelta Zero() { return TimeDelta(); }
+  static constexpr TimeDelta Max() {
+    return TimeDelta(std::numeric_limits<int64_t>::max());
+  }
   static constexpr TimeDelta FromNanoseconds(int64_t nanos) {
     return TimeDelta(nanos);
   }
