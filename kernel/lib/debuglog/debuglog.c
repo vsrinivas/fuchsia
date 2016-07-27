@@ -169,23 +169,35 @@ static void cputs(const char* data, size_t len) {
     }
 }
 
+void __kernel_serial_write(const char *str, size_t len);
+void __kernel_console_write(const char *str, size_t len);
+
 static int debuglog_reader(void* arg) {
-    uint8_t buffer[DLOG_MAX_ENTRY];
+    uint8_t buffer[DLOG_MAX_ENTRY + 1];
+    char tmp[DLOG_MAX_ENTRY + 64];
     dlog_record_t* rec = (dlog_record_t*)buffer;
     dlog_reader_t reader;
+    int n;
 
     dlog_reader_init(&reader);
     for (;;) {
         dlog_wait(&reader);
         while (dlog_read(&reader, 0, rec, DLOG_MAX_ENTRY) > 0) {
-            char tmp[64];
-            snprintf(tmp, 64, "[%05d.%03d] %c ",
-                     (int) (rec->timestamp / 1000000000ULL),
-                     (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
-                     (rec->flags & DLOG_FLAG_KERNEL) ? 'K' : 'U');
-            cputs(tmp, strlen(tmp));
-            cputs(rec->data, rec->datalen);
-            platform_dputc('\n');
+            if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
+                rec->data[rec->datalen - 1] = 0;
+            } else {
+                rec->data[rec->datalen] = 0;
+            }
+            n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %c %s\n",
+                         (int) (rec->timestamp / 1000000000ULL),
+                         (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
+                         (rec->flags & DLOG_FLAG_KERNEL) ? 'K' : 'U',
+                         rec->data);
+            if (n > (int)sizeof(tmp)) {
+                n = sizeof(tmp);
+            }
+            __kernel_console_write(tmp, n);
+            __kernel_serial_write(tmp, n);
         }
     }
     return NO_ERROR;

@@ -37,47 +37,10 @@
 #define PRINT_LOCK_FLAGS SPIN_LOCK_FLAG_INTERRUPTS
 #endif
 
-static spin_lock_t print_spin_lock = 0;
-static struct list_node print_callbacks = LIST_INITIAL_VALUE(print_callbacks);
-
-
-#if WITH_DEBUG_LINEBUFFER
-static void __out_count(const char *str, size_t len);
-
-static void out_count(const char *str, size_t len) {
-    thread_t *t = get_current_thread();
-
-    if (t == NULL) {
-        __out_count(str, len);
-        return;
-    }
-
-    char *buf = t->linebuffer;
-    size_t pos = t->linebuffer_pos;
-
-    while (len-- > 0) {
-        char c = *str++;
-        buf[pos++] = c;
-        if (c == '\n') {
-            __out_count(buf, pos);
-            pos = 0;
-            continue;
-        }
-        if (pos == (THREAD_LINEBUFFER_LENGTH - 1)) {
-            buf[pos++] = '\n';
-            __out_count(buf, pos);
-            pos = 0;
-            continue;
-        }
-    }
-    t->linebuffer_pos = pos;
-}
-#else
-#define __out_count out_count
-#endif
 
 static spin_lock_t dputc_spin_lock = 0;
-static void __raw_out_count(const char *str, size_t len) {
+
+void __kernel_serial_write(const char *str, size_t len) {
     spin_lock_saved_state_t state;
     spin_lock_save(&dputc_spin_lock, &state, PRINT_LOCK_FLAGS);
     /* write out the serial port */
@@ -87,8 +50,11 @@ static void __raw_out_count(const char *str, size_t len) {
     spin_unlock_restore(&dputc_spin_lock, state, PRINT_LOCK_FLAGS);
 }
 
-/* print lock must be held when invoking out, outs, outc */
-static void __out_count(const char *str, size_t len)
+
+static spin_lock_t print_spin_lock = 0;
+static struct list_node print_callbacks = LIST_INITIAL_VALUE(print_callbacks);
+
+void __kernel_console_write(const char *str, size_t len)
 {
     print_callback_t *cb;
 
@@ -104,15 +70,52 @@ static void __out_count(const char *str, size_t len)
 
         spin_unlock_restore(&print_spin_lock, state, PRINT_LOCK_FLAGS);
     }
+}
 
+static void __kernel_stdout_write(const char *str, size_t len)
+{
 #if WITH_LIB_DEBUGLOG && !ENABLE_KERNEL_LL_DEBUG
     if (dlog_write(DLOG_FLAG_KERNEL, str, len)) {
-        __raw_out_count(str, len);
+        __kernel_console_write(str, len);
+        __kernel_serial_write(str, len);
     }
 #else
-    __raw_out_count(str, len);
+    __kernel_console_write(str, len);
+    __kernel_serial_write(str, len);
 #endif
 }
+
+
+#if WITH_DEBUG_LINEBUFFER
+static void __kernel_stdout_write_buffered(const char *str, size_t len) {
+    thread_t *t = get_current_thread();
+
+    if (t == NULL) {
+        __kernel_stdout_write(str, len);
+        return;
+    }
+
+    char *buf = t->linebuffer;
+    size_t pos = t->linebuffer_pos;
+
+    while (len-- > 0) {
+        char c = *str++;
+        buf[pos++] = c;
+        if (c == '\n') {
+            __kernel_stdout_write(buf, pos);
+            pos = 0;
+            continue;
+        }
+        if (pos == (THREAD_LINEBUFFER_LENGTH - 1)) {
+            buf[pos++] = '\n';
+            __kernel_stdout_write(buf, pos);
+            pos = 0;
+            continue;
+        }
+    }
+    t->linebuffer_pos = pos;
+}
+#endif
 
 void register_print_callback(print_callback_t *cb)
 {
@@ -136,7 +139,11 @@ void unregister_print_callback(print_callback_t *cb)
 
 static ssize_t __debug_stdio_write(io_handle_t *io, const char *s, size_t len)
 {
-    out_count(s, len);
+#if WITH_DEBUG_LINEBUFFER
+    __kernel_stdout_write_buffered(s, len);
+#else
+    __kernel_stdout_write(s, len);
+#endif
     return len;
 }
 

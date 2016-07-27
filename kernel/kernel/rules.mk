@@ -13,7 +13,6 @@ MODULE_DEPS := \
 	lib/libc \
 	lib/debug \
 	lib/heap \
-	lib/klog \
 
 
 MODULE_SRCS := \

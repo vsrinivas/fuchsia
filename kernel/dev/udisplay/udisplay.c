@@ -6,7 +6,6 @@
 
 #include <dev/udisplay.h>
 #include <lib/gfxconsole.h>
-#include <lib/klog.h>
 #include <kernel/vm.h>
 #include <assert.h>
 #include <stdlib.h>
