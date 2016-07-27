@@ -25,7 +25,7 @@
 
 #include <inttypes.h>
 
-#include <runtime/process.h>
+#include <magenta/processargs.h>
 void __mxr_thread_main(void);
 
 
@@ -1157,13 +1157,16 @@ __attribute__((__visibility__("hidden"))) void __dls2(unsigned char* base,
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-static _Noreturn void dls3(mx_proc_info_t* pi,
-                           mx_handle_t exec_vmo, void* start_arg) {
+static _Noreturn void dls3(mx_handle_t exec_vmo, void* start_arg) {
     static struct dso app;
     size_t i;
     char* env_preload = 0;
-    int argc = pi->argc;
-    char** argv = pi->argv;
+    int argc = 0;
+    // TODO(mcgrathr): Maybe drop all the argv handling here because
+    // launchpad doesn't usually send it.  But maybe instead make
+    // launchpad actually send the args and/or environ for us too? TBD
+    static char* bogon = "";
+    char** argv = &bogon;
     char** argv_orig = argv;
     char** envp = NULL; // TODO(mcgrathr): Get from pi->envp(?) later.
 
@@ -1372,34 +1375,83 @@ static _Noreturn void dls3(mx_proc_info_t* pi,
         ;
 }
 
-_Noreturn void __dls3(void* start_arg) {
-    mx_proc_info_t* pi = mxr_process_parse_args(start_arg);
-    __mxr_thread_main();
+// Read the bootstrap message and minimally decode it.  This doesn't use
+// mxr_process_parse_args because that API is crufty, it closes the handle
+// so it's stale when we pass it on to the main program, and we don't need
+// much of it here.  Explicitly prevent inlining this so that we're sure
+// its stack allocations are popped.
+static __attribute__((noinline)) mx_handle_t read_bootstrap_message(
+    mx_handle_t bootstrap) {
+    uint32_t nbytes = 0;
+    uint32_t nhandles = 0;
+    mx_status_t status = mx_message_read(bootstrap, NULL, &nbytes,
+                                         NULL, &nhandles, 0);
+    if (status == NO_ERROR)
+        return MX_HANDLE_INVALID;
+    if (status != ERR_NOT_ENOUGH_BUFFER)
+        __builtin_trap();
+
+    if (nbytes < sizeof(mx_proc_args_t))
+        __builtin_trap();
+
+    uint8_t buffer[nbytes] __attribute__((aligned(__alignof(mx_proc_args_t))));
+    mx_handle_t handles[nhandles];
+
+    status = mx_message_read(bootstrap, buffer, &nbytes, handles, &nhandles, 0);
+    if (status != NO_ERROR)
+        __builtin_trap();
+    if (nbytes != sizeof(buffer))
+        __builtin_trap();
+    if (nhandles != sizeof(handles) / sizeof(handles[0]))
+        __builtin_trap();
+
+    const mx_proc_args_t* procargs = (void*)buffer;
+    if (procargs->protocol != MX_PROCARGS_PROTOCOL)
+        __builtin_trap();
+    if (procargs->version != MX_PROCARGS_VERSION)
+        __builtin_trap();
+
+    if (procargs->handle_info_off < sizeof(*procargs))
+        __builtin_trap();
+    if (procargs->handle_info_off > nbytes)
+        __builtin_trap();
+    if ((nbytes - procargs->handle_info_off) / sizeof(uint32_t) < nhandles)
+        __builtin_trap();
+    const uint32_t* handle_info = (void*)&buffer[procargs->handle_info_off];
 
     mx_handle_t exec_vmo = MX_HANDLE_INVALID;
-    for (int i = 0; i < pi->handle_count; ++i) {
-        switch (MX_HND_INFO_TYPE(pi->handle_info[i])) {
+    for (int i = 0; i < nhandles; ++i) {
+        switch (MX_HND_INFO_TYPE(handle_info[i])) {
         case MX_HND_TYPE_LOADER_SVC:
             if (loader_svc != MX_HANDLE_INVALID ||
-                pi->handle[i] == MX_HANDLE_INVALID)
+                handles[i] == MX_HANDLE_INVALID)
                 __builtin_trap();
-            loader_svc = pi->handle[i];
+            loader_svc = handles[i];
             break;
         case MX_HND_TYPE_EXEC_VMO:
             if (exec_vmo != MX_HANDLE_INVALID ||
-                pi->handle[i] == MX_HANDLE_INVALID)
+                handles[i] == MX_HANDLE_INVALID)
                 __builtin_trap();
-            exec_vmo = pi->handle[i];
+            exec_vmo = handles[i];
             break;
         default:
-            mx_handle_close(pi->handle[i]);
+            mx_handle_close(handles[i]);
             break;
         }
     }
     if (loader_svc == MX_HANDLE_INVALID)
         __builtin_trap();
 
-    dls3(pi, exec_vmo, start_arg);
+    return exec_vmo;
+}
+
+_Noreturn void __dls3(void* start_arg) {
+    // TODO(mcgrathr): Probably can drop this, but not clear yet.
+    __mxr_thread_main();
+
+    mx_handle_t exec_vmo = read_bootstrap_message((uintptr_t)start_arg);
+
+    dls3(exec_vmo, start_arg);
 }
 
 
