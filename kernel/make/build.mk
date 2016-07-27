@@ -161,14 +161,17 @@ GET_USERAPP_ALIBS = $(foreach DEP,$(call GET_USERAPP_ADEPS,$(1)),$(MODULE_$(DEP)
 # shared library deps are non-recursive
 GET_USERAPP_SOLIBS = $(foreach DEP,$(MODULE_$(1)_SOLIBS),$(MODULE_$(DEP)_LIBNAME).so)
 
+# library modules specifiy libs for .so builds separately
+GET_USERLIB_ALIBS = $(foreach DEP,$(MODULE_$(1)_SO_ALIBS),$(MODULE_$(DEP)_LIBNAME).a)
+GET_USERLIB_SOLIBS = $(foreach DEP,$(MODULE_$(1)_SO_LIBS),$(MODULE_$(DEP)_LIBNAME).so)
+
 # Template for the link rule for a user app
 define link_userapp
 $(1): $(USER_LINKER_SCRIPT) $(LIBC_CRT1_OBJ) $(2) $(3) $(4)
 	@$(MKDIR)
 	@echo linking $$@
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(USER_LINKER_SCRIPT) \
-	$(ARCH_LDFLAGS) $(5) \
-	$(LIBC_CRT1_OBJ) $(2) $(3) $(4) $(LIBGCC) -o $$@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(ARCH_LDFLAGS) $(5) \
+		       $(LIBC_CRT1_OBJ) $(2) $(3) $(4) $(LIBGCC) -o $$@
 endef
 LINK_USERAPP = $(eval $(call link_userapp,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4)),$(strip $(5))))
 
@@ -177,9 +180,8 @@ define link_userlib
 $(1): $(2) $(3) $(4)
 	@$(MKDIR)
 	@echo linking $$@ '(dynamic)'
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) \
-	$(GLOBAL_MODULE_LDFLAGS) $(USERLIB_SOLDFLAGS) \
-	$(6) -shared -soname $(5) $$^ $(LIBGCC) -o $$@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) \
+		       $(6) -shared -soname $(5) $$^ $(LIBGCC) -o $$@
 endef
 LINK_USERLIB = $(eval $(call link_userlib,$(strip $(1)),$(strip $(2)),$(strip $(3)),$(strip $(4)),$(5),$(strip $(6))))
 
@@ -190,14 +192,14 @@ $(foreach app,$(ALLUSER_MODULES),\
 	$(MODULE_$(app)_OBJS),\
 	$(call GET_USERAPP_ALIBS,$(app)),\
 	$(call GET_USERAPP_SOLIBS,$(app)),\
-	$(MODULE_$(app)_LDFLAGS))))
+	$(MODULE_$(app)_LDFLAGS) $(if $(MODULE_$(app)_SHARED),$(USERAPP_SHARED_LDFLAGS),$(USERAPP_LDFLAGS)))))
 
 # For each user lib module, generate a link rule
 $(foreach lib,$(ALLUSER_LIBS),\
 	$(eval $(call LINK_USERLIB,\
 	$(MODULE_$(lib)_LIBNAME).so,\
 	$(MODULE_$(lib)_OBJS),\
-	$(call GET_USERAPP_ALIBS,$(lib)),\
-	$(call GET_USERAPP_SOLIBS,$(lib)),\
-	lib$(MODULE_$(lib)_SONAME).so,\
+	$(call GET_USERLIB_ALIBS,$(lib)),\
+	$(call GET_USERLIB_SOLIBS,$(lib)),\
+	lib$(MODULE_$(lib)_SO_NAME).so,\
 	$(MODULE_$(lib)_LDFLAGS))))

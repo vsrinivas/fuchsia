@@ -60,8 +60,17 @@ modname-check = $(if $(word 2,$(2)),$(error MODULE $(1): resolves to: $(2)),$(if
 
 # First, check if the name resolves directly, in which case, take that.
 # Second, wildcard against each LKINC path as a .../ prefix and make
-# sure that there is only one match (via modname-check)
-modname-make-canonical = $(strip $(if $(wildcard $(1)),$(1),$(call modname-check,$(1),$(foreach pfx,$(LKINC),$(wildcard $(pfx)/$(1))))))
+# sure that there is only one match (via modname-check).  If there is
+# no match and the name ends in -shared, then try canonicalizing the
+# name sans -shared and then append -shared to the canonicalized name.
+modname-make-canonical = \
+    $(call modname-check,$(1),$(call modname-find-canonical,$(1)))
+modname-find-canonical = \
+    $(or $(call modname-expand,$(1)),\
+         $(if $(filter %-shared,$(1)),\
+	      $(addsuffix -shared,$(call modname-expand,$(1:%-shared=%)))))
+modname-expand = \
+    $(if $(wildcard $(1)),$(1),$(wildcard $(addsuffix /$(1),$(LKINC))))
 
 
 define generate-copy-dst-src

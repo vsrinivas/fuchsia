@@ -25,7 +25,9 @@
 #               "" for standard LK module
 # MODULE_LIBS : shared libraries for a userapp or userlib to depend on
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
-# MODULE_SONAME : linkage name for the shared library
+# MODULE_SO_NAME : linkage name for the shared library
+# MODULE_SO_LIBS : shared library deps for the shared library
+# MODULE_SO_STATIC_LIBS : static library deps for the shared library
 
 # the minimum module rules.mk file is as follows:
 #
@@ -44,10 +46,10 @@ GLOBAL_INCLUDES += $(MODULE_SRCDIR)/include
 endif
 
 # configure the module install path for 'usertest' and 'userapp' modules
-ifeq ($(MODULE_TYPE),usertest)
-MODULE_TYPE := userapp
+ifneq (,$(filter usertest%,$(MODULE_TYPE)))
+MODULE_TYPE := $(MODULE_TYPE:usertest%=userapp%)
 MODULE_INSTALL_PATH := test
-else ifeq ($(MODULE_TYPE),userapp)
+else ifneq (,$(filter userapp%,$(MODULE_TYPE)))
 MODULE_INSTALL_PATH := bin
 endif
 
@@ -56,6 +58,8 @@ MODULE_DEPS := $(foreach d,$(MODULE_DEPS),$(call modname-make-canonical,$(d)))
 MODULE_LIBS := $(foreach d,$(MODULE_LIBS),$(call modname-make-canonical,$(d)))
 MODULE_STATIC_LIBS := $(foreach d,$(MODULE_STATIC_LIBS),$(call modname-make-canonical,$(d)))
 MODULE_HEADER_DEPS := $(foreach d,$(MODULE_HEADER_DEPS),$(call modname-make-canonical,$(strip $(d))))
+MODULE_SO_LIBS := $(foreach d,$(MODULE_SO_LIBS),$(call modname-make-canonical,$(d)))
+MODULE_SO_STATIC_LIBS := $(foreach d,$(MODULE_SO_STATIC_LIBS),$(call modname-make-canonical,$(d)))
 
 # add the listed module deps to the global list
 MODULES += $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)
@@ -91,7 +95,7 @@ MODULE_DEFINES += MODULE_HEADER_DEPS=\"$(subst $(SPACE),_,$(MODULE_HEADER_DEPS))
 MODULE_DEFINES += MODULE_TYPE=\"$(subst $(SPACE),_,$(MODULE_TYPE))\"
 
 # Introduce local, libc, system, and dependency include paths
-ifneq (,$(filter userapp userlib,$(MODULE_TYPE)))
+ifneq (,$(filter userapp% userlib,$(MODULE_TYPE)))
 # user app
 MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
 MODULE_COMPILEFLAGS += -Isystem/ulib/system/include
@@ -126,6 +130,12 @@ GENERATED += $(MODULE_CONFIG)
 MODULE_COMPILEFLAGS += --include $(MODULE_CONFIG)
 
 MODULE_SRCDEPS += $(MODULE_CONFIG)
+
+# flag so the link process knows to handle shared apps specially
+ifeq ($(MODULE_TYPE),userapp-shared)
+MODULE_TYPE := userapp
+MODULE_$(MODULE)_SHARED := true
+endif
 
 # include the rules to compile the module's object files
 ifeq ($(MODULE_TYPE),)
@@ -197,12 +207,14 @@ MODULE_$(MODULE)_ALIBS := $(MODULE_STATIC_LIBS)
 MODULE_$(MODULE)_OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 
 # modules that declare a soname desire to be shared libs
-ifneq ($(MODULE_SONAME),)
-MODULE_$(MODULE)_SONAME := $(MODULE_SONAME)
+ifneq ($(MODULE_SO_NAME),)
+MODULE_$(MODULE)_SO_NAME := $(MODULE_SO_NAME)
+MODULE_$(MODULE)_SO_LIBS := $(MODULE_SO_LIBS)
+MODULE_$(MODULE)_SO_ALIBS := $(MODULE_SO_STATIC_LIBS)
 ALLUSER_LIBS += $(MODULE)
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so
 GENERATED += $(MODULE_LIBNAME).so
-USER_MANIFEST_LINES += lib/lib$(MODULE_SONAME).so=$(MODULE_LIBNAME).so.strip
+USER_MANIFEST_LINES += lib/lib$(MODULE_SO_NAME).so=$(MODULE_LIBNAME).so.strip
 endif
 
 # default library objects
@@ -291,4 +303,6 @@ MODULE_NAME :=
 MODULE_EXPORT :=
 MODULE_LIBS :=
 MODULE_STATIC_LIBS :=
-MODULE_SONAME :=
+MODULE_SO_LIBS :=
+MODULE_SO_STATIC_LIBS :=
+MODULE_SO_NAME :=

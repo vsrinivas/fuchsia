@@ -101,8 +101,29 @@ USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=
 
+# Additional flags for statically linking executables.
+USERAPP_LDFLAGS = -T $(USER_LINKER_SCRIPT)
+
+# Additional flags for dynamic linking, both for dynamically-linked
+# executables and for shared libraries.
+USER_DYNAMIC_LDFLAGS := \
+    -z combreloc -z relro -z now -z text \
+    --hash-style=gnu --eh-frame-hdr --build-id
+
 # Additional flags for building shared libraries (ld -shared).
-USERLIB_SOLDFLAGS := -z combreloc -z relro -z now -z text -z defs
+USERLIB_SO_LDFLAGS := $(USER_DYNAMIC_LDFLAGS) -z defs
+
+# This is the string embedded into dynamically-linked executables
+# as PT_INTERP.  The launchpad library looks this up via the
+# "loader service", so it should be a simple name rather than an
+# absolute pathname as is used for this on other systems.
+# TODO(mcgrathr): Probably want to make this ld.so.1 and rejigger
+# the rules for where we install things.
+USER_SHARED_INTERP := libc.so
+
+# Additional flags for building dynamically-linked executables.
+USERAPP_SHARED_LDFLAGS := \
+    $(USER_DYNAMIC_LDFLAGS) -pie -dynamic-linker $(USER_SHARED_INTERP)
 
 # Architecture specific compile flags
 ARCH_COMPILEFLAGS :=

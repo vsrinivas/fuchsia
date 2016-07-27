@@ -13,6 +13,9 @@
 # to two versions of the name resolving to the same rules.mk on disk
 MODULES := $(foreach d,$(strip $(MODULES)),$(call modname-make-canonical,$(strip $(d))))
 
+# A module named foo-shared might actually be defined in foo/rules.mk instead.
+MODULES := $(foreach d,$(MODULES),$(firstword $(wildcard $(d) $(d:%-shared=%))))
+
 # sort and filter out any modules that have already been included
 MODULES := $(sort $(MODULES))
 MODULES := $(filter-out $(ALLMODULES),$(MODULES))
@@ -28,4 +31,3 @@ include $(addsuffix /rules.mk,$(INCMODULES))
 include make/recurse.mk
 
 endif
-
