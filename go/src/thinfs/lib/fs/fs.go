@@ -27,6 +27,9 @@ var (
 	// ErrNotFound indicates that the requested resource was not found.
 	ErrNotFound = os.ErrNotExist
 
+	// ErrReadOnly indicates that the operation failed because it is not a "Read Only" operation.
+	ErrReadOnly = errors.New("operation failed due to read-only permissions")
+
 	// ErrNotEmpty indicates that the caller attempted to remove a non-empty directory.
 	ErrNotEmpty = errors.New("directory is not empty")
 
