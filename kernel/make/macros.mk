@@ -56,7 +56,7 @@ endef
 
 # Check that the expansion $(2) of a module name $(1) resolves to exactly
 # one canonical name, error out (differently) on 0 or >1 matches
-modname-check = $(if $(word 2,$(2)),$(error MODULE $(1): resolves to: $(2)),$(if $(2),$(2),$(error MODULE $(1): unresolvable)))
+modname-check = $(if $(word 2,$(2)),$(error MODULE $(1): resolves to: $(2)),$(if $(strip $(2)),$(2),$(error MODULE $(1): unresolvable)))
 
 # First, check if the name resolves directly, in which case, take that.
 # Second, wildcard against each LKINC path as a .../ prefix and make
