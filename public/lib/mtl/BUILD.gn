@@ -4,8 +4,22 @@
 
 static_library("mtl") {
   sources = [
+    "application/run_application.cc",
+    "data_pipe/blocking_copy.cc",
+    "data_pipe/blocking_copy.h",
+    "data_pipe/data_pipe_drainer.cc",
+    "data_pipe/data_pipe_drainer.h",
+    "data_pipe/files.cc",
+    "data_pipe/files.h",
+    "data_pipe/strings.cc",
+    "data_pipe/strings.h",
+    "environment/default_async_waiter.cc",
+    "environment/default_async_waiter.h",
+    "environment/environment.cc",
     "tasks/incoming_task_queue.cc",
     "tasks/incoming_task_queue.h",
+    "tasks/message_loop_handler.cc",
+    "tasks/message_loop_handler.h",
     "tasks/message_loop.cc",
     "tasks/message_loop.h",
     "tasks/pending_task.cc",
@@ -18,6 +32,13 @@ static_library("mtl") {
 
   public_deps = [
     "//lib/ftl",
+    "//mojo/public/cpp/application",
+    # TODO(abarth): Remove logging_only once we provide our own logging.
+    "//mojo/public/cpp/environment:logging_only",
+    "//mojo/public/cpp/environment",
+    "//mojo/public/cpp/system",
+    "//mojo/public/interfaces/application",
+    "//mojo/system",
   ]
 }
 

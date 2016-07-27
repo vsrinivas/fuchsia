@@ -4,6 +4,8 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
+#include <magenta/syscalls.h>
+
 #include <utility>
 
 #include "lib/ftl/logging.h"
@@ -13,10 +15,16 @@ namespace {
 
 thread_local MessageLoop* g_current = nullptr;
 
+constexpr uint32_t kInvalidWaitManyIndexValue = static_cast<uint32_t>(-1);
+constexpr MessageLoop::HandlerKey kIgnoredKey = 0;
+
 }  // namespace
 
 MessageLoop::MessageLoop()
-    : MessageLoop(ftl::MakeRefCounted<internal::IncomingTaskQueue>()) {}
+    : MessageLoop(ftl::MakeRefCounted<internal::IncomingTaskQueue>()) {
+  event_.reset(mx_event_create(0));
+  FTL_CHECK(!event_.is_error());
+}
 
 MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
@@ -29,6 +37,8 @@ MessageLoop::MessageLoop(
 MessageLoop::~MessageLoop() {
   FTL_DCHECK(g_current == this)
       << "Message loops must be destroyed on their own threads.";
+
+  NotifyHandlers(ftl::TimePoint::Max(), MOJO_RESULT_CANCELLED);
 
   incoming_tasks_->ClearDelegate();
   ReloadQueue();
@@ -45,23 +55,66 @@ MessageLoop* MessageLoop::GetCurrent() {
   return g_current;
 }
 
+MessageLoop::HandlerKey MessageLoop::AddHandler(
+    MessageLoopHandler* handler,
+    MojoHandle handle,
+    MojoHandleSignals handle_signals,
+    ftl::TimeDelta timeout) {
+  FTL_DCHECK(GetCurrent() == this);
+  FTL_DCHECK(handler);
+  FTL_DCHECK(handle != MOJO_HANDLE_INVALID);
+  HandlerData handler_data;
+  handler_data.handler = handler;
+  handler_data.handle = handle;
+  handler_data.signals = handle_signals;
+  if (timeout == ftl::TimeDelta::Max())
+    handler_data.deadline = ftl::TimePoint::Max();
+  else
+    handler_data.deadline = ftl::TimePoint::Now() + timeout;
+  HandlerKey key = next_handler_key_++;
+  handler_data_[key] = handler_data;
+  return key;
+}
+
+void MessageLoop::RemoveHandler(HandlerKey key) {
+  FTL_DCHECK(GetCurrent() == this);
+  handler_data_.erase(key);
+}
+
+bool MessageLoop::HasHandler(HandlerKey key) const {
+  return handler_data_.find(key) != handler_data_.end();
+}
+
+void MessageLoop::NotifyHandlers(ftl::TimePoint now, MojoResult result) {
+  // Make a copy in case someone tries to add/remove new handlers as part of
+  // notifying.
+  const HandleToHandlerData cloned_handlers(handler_data_);
+  for (auto it = cloned_handlers.begin(); it != cloned_handlers.end(); ++it) {
+    if (it->second.deadline > now)
+      continue;
+    // Since we're iterating over a clone of the handlers, verify the handler
+    // is still valid before notifying.
+    if (handler_data_.find(it->first) == handler_data_.end())
+      continue;
+    handler_data_.erase(it->first);
+    it->second.handler->OnHandleError(it->second.handle, result);
+  }
+}
+
 void MessageLoop::Run() {
   FTL_DCHECK(!should_quit_);
   FTL_CHECK(!is_running_) << "Cannot run a nested message loop.";
   is_running_ = true;
 
+  ftl::TimePoint now = ftl::TimePoint::Now();
   for (;;) {
-    ftl::TimePoint next_run_time = RunReadyTasks();
+    ftl::TimePoint next_run_time = RunReadyTasks(now);
     if (should_quit_)
       break;
-
-    if (next_run_time == ftl::TimePoint()) {
-      event_.Wait();
-    } else {
-      ftl::TimeDelta delay = next_run_time - ftl::TimePoint::Now();
-      if (delay > ftl::TimeDelta::Zero())
-        event_.WaitWithTimeout(delay);
-    }
+    now = ftl::TimePoint::Now();
+    now = Wait(now, next_run_time);
+    if (should_quit_)
+      break;
   }
 
   should_quit_ = false;
@@ -70,33 +123,103 @@ void MessageLoop::Run() {
   is_running_ = false;
 }
 
+ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
+                                 ftl::TimePoint next_run_time) {
+  MojoDeadline timeout = 0;
+  if (next_run_time == ftl::TimePoint::Max()) {
+    timeout = MOJO_DEADLINE_INDEFINITE;
+  } else if (next_run_time > now) {
+    timeout = (next_run_time - now).ToMicroseconds();
+  }
+
+  wait_state_.Resize(handler_data_.size() + 1);
+  wait_state_.Set(0, kIgnoredKey, event_.get(), MX_SIGNAL_SIGNALED);
+  size_t i = 1;
+  for (auto it = handler_data_.begin(); it != handler_data_.end(); ++it, ++i) {
+    wait_state_.Set(i, it->first, it->second.handle, it->second.signals);
+    if (it->second.deadline <= now) {
+      timeout = 0;
+    } else if (it->second.deadline != ftl::TimePoint::Max()) {
+      MojoDeadline handle_timeout =
+          (it->second.deadline - now).ToMicroseconds();
+      timeout = std::min(timeout, handle_timeout);
+    }
+  }
+
+  uint32_t result_index = kInvalidWaitManyIndexValue;
+  const MojoResult wait_result =
+      MojoWaitMany(wait_state_.handles.data(), wait_state_.signals.data(),
+                   wait_state_.size(), timeout, &result_index, nullptr);
+
+  // Update now after waiting.
+  now = ftl::TimePoint::Now();
+
+  if (result_index == kInvalidWaitManyIndexValue) {
+    FTL_DCHECK(wait_result == MOJO_RESULT_DEADLINE_EXCEEDED);
+    NotifyHandlers(now, MOJO_RESULT_DEADLINE_EXCEEDED);
+    return now;
+  }
+
+  if (result_index == 0) {
+    FTL_DCHECK(wait_result == MOJO_RESULT_OK);
+    mx_status_t event_status = mx_event_reset(event_.get());
+    FTL_DCHECK(event_status == NO_ERROR);
+    return now;
+  }
+
+  HandlerKey key = wait_state_.keys[result_index];
+  FTL_DCHECK(handler_data_.find(key) != handler_data_.end());
+  const HandlerData& data = handler_data_[key];
+  FTL_DCHECK(data.handle == wait_state_.handles[result_index]);
+  MessageLoopHandler* handler = handler_data_[key].handler;
+  MojoHandle handle = handler_data_[key].handle;
+
+  switch (wait_result) {
+    case MOJO_RESULT_OK:
+      data.handler->OnHandleReady(handle);
+      break;
+    case MOJO_RESULT_INVALID_ARGUMENT:
+    case MOJO_RESULT_CANCELLED:
+    case MOJO_RESULT_BUSY:
+      // These results indicate a bug in "our" code (e.g., race conditions).
+      FTL_DCHECK(false) << "Unexpected wait result: " << wait_result;
+    // Fall through.
+    case MOJO_RESULT_FAILED_PRECONDITION:
+      // Remove the handle first, this way if OnHandleError() tries to remove
+      // the handle our iterator isn't invalidated.
+      handler_data_.erase(handle);
+      handler->OnHandleError(handle, wait_result);
+      break;
+    default:
+      FTL_DCHECK(false) << "Unexpected wait result: " << wait_result;
+      break;
+  }
+
+  return now;
+}
+
 void MessageLoop::QuitNow() {
   FTL_DCHECK(is_running_);
   should_quit_ = true;
 }
 
-void MessageLoop::ScheduleDrainIncomingTasks() {
-  event_.Signal();
+void MessageLoop::PostQuitTask() {
+  task_runner()->PostTask([this]() { QuitNow(); });
 }
 
-ftl::TimePoint MessageLoop::RunReadyTasks() {
+void MessageLoop::ScheduleDrainIncomingTasks() {
+  mx_status_t status = mx_event_signal(event_.get());
+  FTL_DCHECK(status == NO_ERROR);
+}
+
+ftl::TimePoint MessageLoop::RunReadyTasks(ftl::TimePoint now) {
   FTL_DCHECK(!should_quit_);
   ReloadQueue();
 
   while (!queue_.empty() && !should_quit_) {
-    // When we "fall behind", there will be a lot of tasks in the delayed work
-    // queue that are ready to run.  To increase efficiency when we fall behind,
-    // we will only call Now() intermittently, and then process all tasks that
-    // are ready to run before calling it again.  As a result, the more we fall
-    // behind (and have a lot of ready-to-run delayed tasks), the more efficient
-    // we'll be at handling the tasks.
-
     ftl::TimePoint next_run_time = queue_.top().target_time();
-    if (next_run_time > recent_time_) {
-      recent_time_ = ftl::TimePoint::Now();
-      if (next_run_time > recent_time_)
-        return next_run_time;
-    }
+    if (next_run_time > now)
+      return next_run_time;
 
     internal::PendingTask task =
         std::move(const_cast<internal::PendingTask&>(queue_.top()));
@@ -105,7 +228,7 @@ ftl::TimePoint MessageLoop::RunReadyTasks() {
     RunTask(task);
   }
 
-  return ftl::TimePoint();
+  return ftl::TimePoint::Max();
 }
 
 void MessageLoop::ReloadQueue() {
@@ -116,6 +239,21 @@ void MessageLoop::ReloadQueue() {
 void MessageLoop::RunTask(const internal::PendingTask& pending_task) {
   const ftl::Closure& closure = pending_task.closure();
   closure();
+}
+
+void MessageLoop::WaitState::Set(size_t i,
+                                 HandlerKey key,
+                                 MojoHandle handle,
+                                 MojoHandleSignals signals) {
+  keys[i] = key;
+  handles[i] = handle;
+  this->signals[i] = signals;
+}
+
+void MessageLoop::WaitState::Resize(size_t size) {
+  keys.resize(size);
+  handles.resize(size);
+  signals.resize(size);
 }
 
 }  // namespace mtl

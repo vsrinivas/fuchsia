@@ -1,0 +1,223 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "lib/mtl/data_pipe/files.h"
+
+#include <stdio.h>
+#include <unistd.h>
+
+#include <algorithm>
+#include <limits>
+#include <utility>
+
+#include "lib/ftl/files/file_descriptor.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "mojo/public/cpp/environment/async_waiter.h"
+#include "mojo/public/cpp/environment/environment.h"
+
+namespace mtl {
+namespace {
+
+// CopyToFileHandler -----------------------------------------------------------
+
+class CopyToFileHandler {
+ public:
+  CopyToFileHandler(mojo::ScopedDataPipeConsumerHandle source,
+                    ftl::ScopedFD destination,
+                    ftl::TaskRunner* task_runner,
+                    const std::function<void(bool)>& callback);
+
+ private:
+  ~CopyToFileHandler();
+
+  void SendCallback(bool value);
+  void OnHandleReady(MojoResult result);
+  static void WaitComplete(void* context, MojoResult result);
+
+  mojo::ScopedDataPipeConsumerHandle source_;
+  ftl::ScopedFD destination_;
+  ftl::TaskRunner* file_task_runner_;
+  std::function<void(bool)> callback_;
+  const MojoAsyncWaiter* waiter_;
+  MojoAsyncWaitID wait_id_;
+  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(CopyToFileHandler);
+};
+
+CopyToFileHandler::CopyToFileHandler(mojo::ScopedDataPipeConsumerHandle source,
+                                     ftl::ScopedFD destination,
+                                     ftl::TaskRunner* task_runner,
+                                     const std::function<void(bool)>& callback)
+    : source_(std::move(source)),
+      destination_(std::move(destination)),
+      file_task_runner_(task_runner),
+      callback_(callback),
+      waiter_(mojo::Environment::GetDefaultAsyncWaiter()),
+      wait_id_(0),
+      main_runner_(MessageLoop::GetCurrent()->task_runner()) {
+  file_task_runner_->PostTask([this]() { OnHandleReady(MOJO_RESULT_OK); });
+}
+
+CopyToFileHandler::~CopyToFileHandler() {}
+
+void CopyToFileHandler::SendCallback(bool value) {
+  FTL_DCHECK(!wait_id_);
+  destination_.Close();
+  main_runner_->PostTask([this, value]() {
+    auto callback = callback_;
+    delete this;
+    callback(value);
+  });
+}
+
+void CopyToFileHandler::OnHandleReady(MojoResult result) {
+  if (result == MOJO_RESULT_OK) {
+    const void* buffer = nullptr;
+    uint32_t size = 0;
+    result = BeginReadDataRaw(source_.get(), &buffer, &size,
+                              MOJO_READ_DATA_FLAG_NONE);
+    if (result == MOJO_RESULT_OK) {
+      bool write_success = ftl::WriteFileDescriptor(
+          destination_.get(), static_cast<const char*>(buffer), size);
+      result = EndReadDataRaw(source_.get(), size);
+      if (!write_success || result != MOJO_RESULT_OK) {
+        SendCallback(false);
+      } else {
+        file_task_runner_->PostTask(
+            [this]() { OnHandleReady(MOJO_RESULT_OK); });
+      }
+      return;
+    }
+  }
+  if (result == MOJO_RESULT_FAILED_PRECONDITION) {
+    SendCallback(true);
+    return;
+  }
+  if (result == MOJO_RESULT_SHOULD_WAIT) {
+    wait_id_ =
+        waiter_->AsyncWait(source_.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
+                           MOJO_DEADLINE_INDEFINITE, &WaitComplete, this);
+    return;
+  }
+  SendCallback(false);
+}
+
+void CopyToFileHandler::WaitComplete(void* context, MojoResult result) {
+  CopyToFileHandler* handler = static_cast<CopyToFileHandler*>(context);
+  handler->wait_id_ = 0;
+  handler->OnHandleReady(result);
+}
+
+// CopyFromFileHandler ---------------------------------------------------------
+
+class CopyFromFileHandler {
+ public:
+  CopyFromFileHandler(ftl::ScopedFD source,
+                      mojo::ScopedDataPipeProducerHandle destination,
+                      ftl::TaskRunner* task_runner,
+                      const std::function<void(bool)>& callback);
+
+ private:
+  ~CopyFromFileHandler();
+
+  void SendCallback(bool value);
+  void OnHandleReady(MojoResult result);
+  static void WaitComplete(void* context, MojoResult result);
+
+  ftl::ScopedFD source_;
+  mojo::ScopedDataPipeProducerHandle destination_;
+  ftl::TaskRunner* file_task_runner_;
+  std::function<void(bool)> callback_;
+  const MojoAsyncWaiter* waiter_;
+  MojoAsyncWaitID wait_id_;
+  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(CopyFromFileHandler);
+};
+
+CopyFromFileHandler::CopyFromFileHandler(
+    ftl::ScopedFD source,
+    mojo::ScopedDataPipeProducerHandle destination,
+    ftl::TaskRunner* task_runner,
+    const std::function<void(bool)>& callback)
+    : source_(std::move(source)),
+      destination_(std::move(destination)),
+      file_task_runner_(task_runner),
+      callback_(callback),
+      waiter_(mojo::Environment::GetDefaultAsyncWaiter()),
+      wait_id_(0),
+      main_runner_(MessageLoop::GetCurrent()->task_runner()) {
+  file_task_runner_->PostTask([this]() { OnHandleReady(MOJO_RESULT_OK); });
+}
+
+CopyFromFileHandler::~CopyFromFileHandler() {}
+
+void CopyFromFileHandler::SendCallback(bool value) {
+  FTL_DCHECK(!wait_id_);
+  source_.Close();
+  main_runner_->PostTask([this, value]() {
+    auto callback = callback_;
+    delete this;
+    callback(value);
+  });
+}
+
+void CopyFromFileHandler::OnHandleReady(MojoResult result) {
+  if (result == MOJO_RESULT_OK) {
+    void* buffer = nullptr;
+    uint32_t size = 0;
+    result = BeginWriteDataRaw(destination_.get(), &buffer, &size,
+                               MOJO_WRITE_DATA_FLAG_NONE);
+    if (result == MOJO_RESULT_OK) {
+      FTL_DCHECK(size < static_cast<uint32_t>(std::numeric_limits<int>::max()));
+      ssize_t bytes_read = ftl::ReadFileDescriptor(
+          source_.get(), static_cast<char*>(buffer), size);
+      result = EndWriteDataRaw(destination_.get(), std::max(0l, bytes_read));
+      if (bytes_read == -1 || result != MOJO_RESULT_OK) {
+        SendCallback(false);
+      } else if (bytes_read < size) {
+        // Reached EOF. Stop the process.
+        SendCallback(true);
+      } else {
+        file_task_runner_->PostTask(
+            [this]() { OnHandleReady(MOJO_RESULT_OK); });
+      }
+      return;
+    }
+  }
+  if (result == MOJO_RESULT_SHOULD_WAIT) {
+    wait_id_ = waiter_->AsyncWait(
+        destination_.get().value(), MOJO_HANDLE_SIGNAL_WRITABLE,
+        MOJO_DEADLINE_INDEFINITE, &WaitComplete, this);
+    return;
+  }
+  SendCallback(false);
+}
+
+void CopyFromFileHandler::WaitComplete(void* context, MojoResult result) {
+  CopyFromFileHandler* handler = static_cast<CopyFromFileHandler*>(context);
+  handler->wait_id_ = 0;
+  handler->OnHandleReady(result);
+}
+
+}  // namespace
+
+void CopyToFileDescriptor(mojo::ScopedDataPipeConsumerHandle source,
+                          ftl::ScopedFD destination,
+                          ftl::TaskRunner* task_runner,
+                          const std::function<void(bool)>& callback) {
+  new CopyToFileHandler(std::move(source), std::move(destination), task_runner,
+                        callback);
+}
+
+void CopyFromFileDescriptor(ftl::ScopedFD source,
+                            mojo::ScopedDataPipeProducerHandle destination,
+                            ftl::TaskRunner* task_runner,
+                            const std::function<void(bool)>& callback) {
+  new CopyFromFileHandler(std::move(source), std::move(destination),
+                          task_runner, callback);
+}
+
+}  // namespace mtl
