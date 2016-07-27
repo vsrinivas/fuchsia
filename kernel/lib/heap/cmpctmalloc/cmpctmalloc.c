@@ -625,7 +625,10 @@ static void *large_alloc(size_t size)
     size = ROUNDUP(size, 8);
     free_t *free_area = NULL;
     lock();
-    heap_grow(size, &free_area);
+    if (heap_grow(size, &free_area) < 0) {
+        unlock();
+        return NULL;
+    }
     void *result =
         create_allocation_header(free_area, 0, free_area->header.size, free_area->header.left);
     // Normally the 'remaining free space' counter would be decremented when we
