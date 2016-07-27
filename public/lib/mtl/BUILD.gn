@@ -4,19 +4,28 @@
 
 static_library("mtl") {
   sources = [
+    "tasks/incoming_task_queue.cc",
+    "tasks/incoming_task_queue.h",
+    "tasks/message_loop.cc",
+    "tasks/message_loop.h",
+    "tasks/pending_task.cc",
+    "tasks/pending_task.h",
+    "threading/create_thread.cc",
+    "threading/create_thread.h",
     "unique_handle.cc",
     "unique_handle.h",
   ]
 
-  deps = [
+  public_deps = [
     "//lib/ftl",
   ]
 }
 
 executable("mtl_unittests") {
   sources = [
-    "unique_handle_unittest.cc",
+    "tasks/message_loop_unittest.cc",
     "test/run_all_unittests.cc",
+    "unique_handle_unittest.cc",
   ]
 
   deps = [
