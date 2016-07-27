@@ -14,8 +14,9 @@
 
 #include <utils/intrusive_single_list.h>
 
-StateTracker::StateTracker(mx_signals_state_t signals_state)
-    : signals_state_(signals_state),
+StateTracker::StateTracker(bool is_waitable, mx_signals_state_t signals_state)
+    : is_waitable_(is_waitable),
+      signals_state_(signals_state),
       io_port_signals_(0u),
       io_port_key_(0u) {
     mutex_init(&lock_);

@@ -54,7 +54,8 @@ class StateTracker {
 public:
     // Note: The initial state can also be set using SetInitialSignalsState() if the default
     // constructor must be used for some reason.
-    explicit StateTracker(mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u});
+    StateTracker(bool is_waitable = true,
+                 mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u});
     ~StateTracker();
 
     StateTracker(const StateTracker& o) = delete;
@@ -65,6 +66,8 @@ public:
     void set_initial_signals_state(mx_signals_state_t signals_state) {
         signals_state_ = signals_state;
     }
+
+    bool is_waitable() const { return is_waitable_; }
 
     // Add an observer.
     mx_status_t AddObserver(StateObserver* observer);
@@ -94,7 +97,9 @@ public:
 private:
     static bool SendIOPortPacket(IOPortDispatcher* io_port, uint64_t key, mx_signals_t signals);
 
-    mutex_t lock_;
+    const bool is_waitable_;
+
+    mutex_t lock_;  // Protects the members below.
 
     // Active observers are elements in |observers_|.
     utils::DoublyLinkedList<StateObserver*, StateObserverListTraits> observers_;

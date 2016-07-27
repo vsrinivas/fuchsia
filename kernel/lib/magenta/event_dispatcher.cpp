@@ -30,7 +30,7 @@ status_t EventDispatcher::Create(uint32_t options, utils::RefPtr<Dispatcher>* di
 }
 
 EventDispatcher::EventDispatcher(uint32_t options)
-        : state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED | MX_SIGNAL_USER_ALL}) {}
+        : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED | MX_SIGNAL_USER_ALL}) {}
 
 EventDispatcher::~EventDispatcher() {}
 

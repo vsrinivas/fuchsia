@@ -51,7 +51,7 @@ mx_status_t ProcessDispatcher::Create(utils::StringPiece name,
 }
 
 ProcessDispatcher::ProcessDispatcher(utils::StringPiece name)
-    : state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
+    : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
     // Add ourself to the global process list, generating an ID at the same time.

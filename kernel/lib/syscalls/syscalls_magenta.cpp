@@ -292,11 +292,13 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
             if (info_size < sizeof(mx_handle_basic_info_t))
                 return ERR_NOT_ENOUGH_BUFFER;
 
+            bool waitable = dispatcher->get_state_tracker() &&
+                            dispatcher->get_state_tracker()->is_waitable();
             mx_handle_basic_info_t info = {
                 dispatcher->get_koid(),
                 rights,
                 dispatcher->GetType(),
-                dispatcher->get_state_tracker() ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
+                waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
             };
 
             if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
@@ -1291,7 +1293,7 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
         return ERR_ACCESS_DENIED;
 
     auto state_tracker = src_d->get_state_tracker();
-    if (!state_tracker)
+    if (!state_tracker || !state_tracker->is_waitable())
         return ERR_INVALID_ARGS;
 
     return state_tracker->BindIOPort(utils::RefPtr<IOPortDispatcher>(ioport), key, signals) ?

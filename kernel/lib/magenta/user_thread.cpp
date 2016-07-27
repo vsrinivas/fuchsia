@@ -33,7 +33,7 @@ UserThread::UserThread(mx_koid_t koid,
       process_(utils::move(process)),
       entry_(entry),
       arg_(arg),
-      state_tracker_(mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
+      state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
     id_ = process_->GetNextThreadId();
