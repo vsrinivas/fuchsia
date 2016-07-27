@@ -20,7 +20,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/acpi_ec.c \
     $(LOCAL_DIR)/console.c \
     $(LOCAL_DIR)/debug.c \
-    $(LOCAL_DIR)/ide.c \
     $(LOCAL_DIR)/interrupts.c \
     $(LOCAL_DIR)/keyboard.c \
     $(LOCAL_DIR)/memory.c \
@@ -29,7 +28,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/platform.c \
     $(LOCAL_DIR)/power.c \
     $(LOCAL_DIR)/timer.c \
-    $(LOCAL_DIR)/uart.c \
 
 MODULE_DEPS += \
     lib/acpica \
