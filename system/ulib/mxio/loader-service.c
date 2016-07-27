@@ -84,12 +84,18 @@ static int loader_service_thread(void* arg) {
 
     for (;;) {
         if ((r = mx_handle_wait_one(h, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL)) < 0) {
-            fprintf(stderr, "dlsvc: wait error %d\n", r);
+            // This is the normal error for the other end going away,
+            // which happens when the process dies.
+            if (r != ERR_BAD_STATE)
+                fprintf(stderr, "dlsvc: wait error %d\n", r);
             break;
         }
         uint32_t sz = sizeof(data);
         if ((r = mx_message_read(h, msg, &sz, NULL, NULL, 0)) < 0) {
-            fprintf(stderr, "dlsvc: msg read error %d\n", r);
+            // This is the normal error for the other end going away,
+            // which happens when the process dies.
+            if (r != ERR_CHANNEL_CLOSED)
+                fprintf(stderr, "dlsvc: msg read error %d\n", r);
             break;
         }
         if ((sz <= sizeof(mx_loader_svc_msg_t))) {
@@ -127,7 +133,7 @@ static int loader_service_thread(void* arg) {
             break;
         }
     }
-    fprintf(stderr, "dlsvc: done.\n");
+
 done:
     mx_handle_close(h);
     return 0;
