@@ -96,11 +96,11 @@ $(BUILDDIR)/%.elf.lst: $(BUILDDIR)/%.elf
 
 $(BUILDDIR)/%.elf.strip: $(BUILDDIR)/%.elf
 	@echo generating $@
-	$(NOECHO)$(STRIP) -d $< -o $@
+	$(NOECHO)$(STRIP) $< -o $@
 
 $(BUILDDIR)/%.so.strip: $(BUILDDIR)/%.so
 	@echo generating $@
-	$(NOECHO)$(STRIP) -d $< -o $@
+	$(NOECHO)$(STRIP) $< -o $@
 
 # generate a new manifest and compare to see if it differs from the previous one
 .PHONY: usermanifestfile
