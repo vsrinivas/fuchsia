@@ -97,6 +97,10 @@ $(BUILDDIR)/%.elf.strip: $(BUILDDIR)/%.elf
 	@echo generating $@
 	$(NOECHO)$(STRIP) -d $< -o $@
 
+$(BUILDDIR)/%.so.strip: $(BUILDDIR)/%.so
+	@echo generating $@
+	$(NOECHO)$(STRIP) -d $< -o $@
+
 # generate a new manifest and compare to see if it differs from the previous one
 .PHONY: usermanifestfile
 $(USER_MANIFEST): usermanifestfile
