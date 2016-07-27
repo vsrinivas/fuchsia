@@ -70,11 +70,7 @@ class AcquiredBeforeClass1 {
   }
 
 #ifdef NC_ACQUIRED_BEFORE
-  void BadMethod(AcquiredBeforeClass2* c2) {
-    mu_.Lock();
-    c2->NoOp();
-    mu_.Unlock();
-  }
+  void BadMethod(AcquiredBeforeClass2* c2);
 #endif
 
  private:
@@ -106,6 +102,14 @@ class AcquiredBeforeClass2 {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AcquiredBeforeClass2);
 };
+
+#ifdef NC_ACQUIRED_BEFORE
+void AcquiredBeforeClass1::BadMethod(AcquiredBeforeClass2* c2) {
+  mu_.Lock();
+  c2->NoOp();
+  mu_.Unlock();
+}
+#endif
 
 TEST(ThreadAnnotationsTest, AcquiredBefore) {
   AcquiredBeforeClass1 c1;

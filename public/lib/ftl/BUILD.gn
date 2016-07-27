@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("thread_safety_warning") {
+  cflags = [ "-Wthread-safety" ]
+}
+
 static_library("ftl") {
   sources = [
     "arraysize.h",
@@ -49,7 +53,7 @@ static_library("ftl") {
     "time/time.h",
   ]
 
-  cflags = [ "-Wthread-safety" ]
+  public_configs = [ ":thread_safety_warning" ]
 }
 
 executable("ftl_unittests") {
