@@ -178,6 +178,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6913258C1D482DA7009DAE83 /* gl */ = {
+			isa = PBXGroup;
+			children = (
+				97E733961D1A5C7F00F62181 /* gles2 */,
+			);
+			name = gl;
+			sourceTree = "<group>";
+		};
 		693619641D3D5B7E00A3679A /* tests */ = {
 			isa = PBXGroup;
 			children = (
@@ -307,7 +315,7 @@
 			children = (
 				9736D07D1D29D098001369BA /* effects */,
 				97E7338F1D1A5C7600F62181 /* geometry */,
-				97E733961D1A5C7F00F62181 /* gl */,
+				6913258C1D482DA7009DAE83 /* gl */,
 				97E733D21D1A5CA000F62181 /* renderer.cc */,
 				97E733D31D1A5CA000F62181 /* renderer.h */,
 				97254BFA1D1B934F002980D5 /* rendering */,
@@ -333,7 +341,7 @@
 			path = ../../escher/geometry;
 			sourceTree = "<group>";
 		};
-		97E733961D1A5C7F00F62181 /* gl */ = {
+		97E733961D1A5C7F00F62181 /* gles2 */ = {
 			isa = PBXGroup;
 			children = (
 				97ED1BFE1D24FC090080360C /* bindings.h */,
@@ -358,8 +366,8 @@
 				6936196F1D40759400A3679A /* unique_buffer.cc */,
 				6936196E1D40758500A3679A /* unique_buffer.h */,
 			);
-			name = gl;
-			path = ../../escher/gl;
+			name = gles2;
+			path = ../../escher/gl/gles2;
 			sourceTree = "<group>";
 		};
 		97E733A71D1A5C9600F62181 /* scene */ = {

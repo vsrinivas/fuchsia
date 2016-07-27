@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/mesh.h"
+#include "escher/gl/gles2/mesh.h"
 
 #include <alloca.h>
 
@@ -11,6 +11,7 @@
 #include "ftl/logging.h"
 
 namespace escher {
+namespace gles2 {
 
 Mesh::Mesh(const Tessellation& tessellation)
     : indices_(MakeUniqueIndexBuffer(tessellation.indices)),
@@ -62,4 +63,5 @@ Mesh::Mesh(const Tessellation& tessellation)
 
 Mesh::~Mesh() {}
 
+}  // namespace gles2
 }  // namespace escher

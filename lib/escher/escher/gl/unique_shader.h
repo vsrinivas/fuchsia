@@ -4,16 +4,14 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
-#include "escher/gl/unique_object.h"
-
+#if defined(ESCHER_USE_VULKAN_API)
+#error not implemented
+#elif defined(ESCHER_USE_METAL_API)
+#error not implemented
+#else
+#include "escher/gl/gles2/unique_shader.h"
 namespace escher {
-
-typedef UniqueObject<glDeleteShader> UniqueShader;
-UniqueShader MakeUniqueShader(GLenum type, const std::string& source);
-UniqueShader MakeUniqueShader(GLenum type,
-                              const std::vector<std::string>& sources);
-
+using escher::gles2::MakeUniqueShader;
+using escher::gles2::UniqueShader;
 }  // namespace escher
+#endif

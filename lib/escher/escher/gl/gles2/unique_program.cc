@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/unique_program.h"
+#include "escher/gl/gles2/unique_program.h"
 
 #include <iostream>
 #include <vector>
 
 namespace escher {
+namespace gles2 {
+
 UniqueProgram MakeUniqueProgram(UniqueShader vertex_shader,
                                 UniqueShader fragment_shader) {
   UniqueProgram program;
@@ -47,4 +49,5 @@ UniqueProgram MakeUniqueProgram(const std::string& vertex_shader_source,
                            std::move(fragment_shader));
 }
 
+}  // namespace gles2
 }  // namespace escher

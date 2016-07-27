@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/unique_frame_buffer.h"
+#include "escher/gl/gles2/unique_frame_buffer.h"
 
 namespace escher {
+namespace gles2 {
 
 UniqueFrameBuffer MakeUniqueFrameBuffer() {
   GLuint id = 0;
@@ -14,4 +15,5 @@ UniqueFrameBuffer MakeUniqueFrameBuffer() {
   return frame_buffer;
 }
 
+}  // namespace gles2
 }  // namespace escher

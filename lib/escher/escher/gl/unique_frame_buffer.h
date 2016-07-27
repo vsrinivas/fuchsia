@@ -4,18 +4,11 @@
 
 #pragma once
 
-#include "escher/gl/unique_object.h"
-
-namespace escher {
-namespace internal {
-
-inline void DeleteFramebuffer(GLuint id) {
-  glDeleteFramebuffers(1, &id);
-}
-
-}  // internal
-
-typedef UniqueObject<internal::DeleteFramebuffer> UniqueFrameBuffer;
-UniqueFrameBuffer MakeUniqueFrameBuffer();
-
-}  // namespace escher
+#if defined(ESCHER_USE_VULKAN_API)
+#error not implemented
+#elif defined(ESCHER_USE_METAL_API)
+#error not implemented
+#else
+#include "escher/gl/gles2/frame_buffer.h"
+namespace escher { using escher::gles2::FrameBuffer; }
+#endif

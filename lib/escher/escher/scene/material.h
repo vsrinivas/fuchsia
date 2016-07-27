@@ -7,7 +7,7 @@
 #include <glm/mat2x2.hpp>
 #include <glm/vec4.hpp>
 
-#include "escher/gl/bindings.h"
+#include "escher/gl/gles2/bindings.h"
 #include "escher/scene/binding.h"
 #include "escher/scene/displacement.h"
 

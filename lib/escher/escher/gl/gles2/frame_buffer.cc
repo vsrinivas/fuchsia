@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/frame_buffer.h"
+#include "escher/gl/gles2/frame_buffer.h"
 
 #include <iostream>
 
 #include "ftl/logging.h"
 
 namespace escher {
+namespace gles2 {
 
 FrameBuffer::FrameBuffer() {}
 
@@ -85,4 +86,5 @@ bool FrameBuffer::IsBound() {
   return id == frame_buffer_.id();
 }
 
+}  // namespace gles2
 }  // namespace escher

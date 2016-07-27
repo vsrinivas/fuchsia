@@ -4,43 +4,11 @@
 
 #pragma once
 
-#include <utility>
-
-#include "ftl/macros.h"
-#include "escher/gl/bindings.h"
-
-namespace escher {
-
-typedef void (*ObjectDeleter)(const GLuint id);
-
-template <ObjectDeleter Delete>
-class UniqueObject {
- public:
-  UniqueObject() = default;
-  ~UniqueObject() { Reset(); }
-
-  UniqueObject(UniqueObject<Delete>&& other) : id_(other.id_) { other.id_ = 0; }
-
-  UniqueObject<Delete>& operator=(UniqueObject<Delete>&& other) {
-    std::swap(id_, other.id_);
-    return *this;
-  }
-
-  explicit operator bool() const { return id_ != 0; }
-
-  GLuint id() const { return id_; }
-
-  void Reset(GLuint id = 0) {
-    GLuint previous_id = id_;
-    id_ = id;
-    if (previous_id)
-      Delete(previous_id);
-  }
-
- private:
-  GLuint id_ = 0;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(UniqueObject);
-};
-
-}  // namespace escher
+#if defined(ESCHER_USE_VULKAN_API)
+#error not implemented
+#elif defined(ESCHER_USE_METAL_API)
+#error not implemented
+#else
+#include "escher/gl/gles2/unique_object.h"
+namespace escher { using escher::gles2::UniqueObject; }
+#endif

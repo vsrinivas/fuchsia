@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/unique_shader.h"
+#include "escher/gl/gles2/unique_shader.h"
 
 #include <iostream>
 
 namespace escher {
+namespace gles2 {
+
 namespace {
 UniqueShader CompileShader(GLenum type,
                            GLsizei count,
@@ -37,7 +39,6 @@ UniqueShader CompileShader(GLenum type,
 #endif
   return UniqueShader();
 }
-
 }  // namespace
 
 UniqueShader MakeUniqueShader(GLenum type, const std::string& source) {
@@ -58,4 +59,5 @@ UniqueShader MakeUniqueShader(GLenum type,
                        lengths);
 }
 
+}  // namespace gles2
 }  // namespace escher

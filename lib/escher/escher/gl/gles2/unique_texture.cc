@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/unique_texture.h"
+#include "escher/gl/gles2/unique_texture.h"
 
 #include "ftl/logging.h"
 #include <iostream>
 
 namespace escher {
+namespace gles2 {
 
 UniqueTexture MakeUniqueTexture() {
   GLuint id = 0;
@@ -59,4 +60,5 @@ UniqueTexture MakeMipmappedColorTexture(const SizeI& size) {
   return result;
 }
 
+}  // namespace gles2
 }  // namespace escher

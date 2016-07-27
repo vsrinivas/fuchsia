@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/texture_cache.h"
+#include "escher/gl/gles2/texture_cache.h"
 
 #include "ftl/logging.h"
 
 namespace escher {
+namespace gles2 {
 
 TextureCache::TextureCache() {}
 
@@ -52,4 +53,5 @@ void TextureCache::Clear() {
   cache_.clear();
 }
 
+}  // namespace gles2
 }  // namespace escher

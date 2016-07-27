@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/geometry/quad.h"
-#include "escher/gl/bindings.h"
+#include "escher/gl/gles2/bindings.h"
 
 namespace escher {
 

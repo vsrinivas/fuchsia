@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "escher/gl/bindings.h"
+#include "escher/gl/gles2/bindings.h"
 #include "escher/rendering/canvas.h"
 
 #include "ftl/logging.h"

@@ -4,35 +4,11 @@
 
 #pragma once
 
-#include <unordered_map>
-
-#include "ftl/macros.h"
-#include "escher/geometry/size_i.h"
-#include "escher/gl/texture.h"
-#include "escher/gl/unique_texture.h"
-
-namespace escher {
-
-class TextureCache {
- public:
-  TextureCache();
-  ~TextureCache();
-
-  Texture GetDepthTexture(const SizeI& size);
-  Texture GetColorTexture(const SizeI& size);
-  Texture GetMipmappedColorTexture(const SizeI& size);
-
-  Texture GetTexture(const TextureDescriptor& descriptor);
-  void PutTexture(Texture texture);
-
-  void Clear();
-
- private:
-  std::unordered_multimap<TextureDescriptor,
-                          UniqueTexture,
-                          TextureDescriptor::Hash> cache_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(TextureCache);
-};
-
-}  // namespace escher
+#if defined(ESCHER_USE_VULKAN_API)
+#error not implemented
+#elif defined(ESCHER_USE_METAL_API)
+#error not implemented
+#else
+#include "escher/gl/gles2/texture_cache.h"
+namespace escher { using escher::gles2::TextureCache; }
+#endif

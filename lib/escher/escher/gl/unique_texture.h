@@ -4,22 +4,17 @@
 
 #pragma once
 
-#include "escher/geometry/size_i.h"
-#include "escher/gl/unique_object.h"
-
+#if defined(ESCHER_USE_VULKAN_API)
+#error not implemented
+#elif defined(ESCHER_USE_METAL_API)
+#error not implemented
+#else
+#include "escher/gl/gles2/unique_texture.h"
 namespace escher {
-namespace internal {
-
-inline void DeleteTexture(GLuint id) {
-  glDeleteTextures(1, &id);
-}
-
-}  // internal
-
-typedef UniqueObject<internal::DeleteTexture> UniqueTexture;
-UniqueTexture MakeUniqueTexture();
-UniqueTexture MakeDepthTexture(const SizeI& size);
-UniqueTexture MakeColorTexture(const SizeI& size);
-UniqueTexture MakeMipmappedColorTexture(const SizeI& size);
-
+using escher::gles2::MakeUniqueTexture;
+using escher::gles2::MakeDepthTexture;
+using escher::gles2::MakeColorTexture;
+using escher::gles2::MakeMipmappedColorTexture;
+using escher::gles2::UniqueTexture;
 }  // namespace escher
+#endif

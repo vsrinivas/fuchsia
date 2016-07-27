@@ -7,6 +7,7 @@
 #include "ftl/macros.h"
 
 #include "escher/gl/frame_buffer.h"
+#include "escher/gl/texture.h"
 #include "escher/gl/texture_cache.h"
 #include "escher/gl/unique_buffer.h"
 #include "escher/gl/unique_program.h"

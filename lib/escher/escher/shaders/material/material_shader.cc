@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include "ftl/logging.h"
+#include "escher/gl/unique_shader.h"
 #include "escher/shaders/glsl_generator.h"
 
 namespace escher {

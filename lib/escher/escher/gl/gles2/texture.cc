@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/gl/texture.h"
+#include "escher/gl/gles2/texture.h"
 
 namespace escher {
+namespace gles2 {
 
 Texture::Texture() {}
 
@@ -30,4 +31,5 @@ Texture Texture::Make(TextureDescriptor descriptor) {
   return Texture(std::move(descriptor), std::move(texture));
 }
 
+}  // namespace gles2
 }  // namespace escher

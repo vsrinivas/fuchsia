@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "escher/geometry/types.h"
-#include "escher/gl/bindings.h"
+#include "escher/gl/gles2/bindings.h"
 
 namespace escher {
 

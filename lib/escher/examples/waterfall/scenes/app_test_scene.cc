@@ -5,7 +5,7 @@
 #include "examples/waterfall/scenes/app_test_scene.h"
 
 #include "escher/geometry/tessellation.h"
-#include "escher/gl/bindings.h"
+#include "escher/gl/gles2/bindings.h"
 #include "escher/renderer.h"
 #include "ftl/arraysize.h"
 

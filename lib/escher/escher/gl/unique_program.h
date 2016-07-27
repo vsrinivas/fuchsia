@@ -4,17 +4,14 @@
 
 #pragma once
 
-#include <string>
-
-#include "escher/gl/unique_object.h"
-#include "escher/gl/unique_shader.h"
-
+#if defined(ESCHER_USE_VULKAN_API)
+#error not implemented
+#elif defined(ESCHER_USE_METAL_API)
+#error not implemented
+#else
+#include "escher/gl/gles2/unique_program.h"
 namespace escher {
-
-typedef UniqueObject<glDeleteProgram> UniqueProgram;
-UniqueProgram MakeUniqueProgram(UniqueShader vertex_shader,
-                                UniqueShader fragment_shader);
-UniqueProgram MakeUniqueProgram(const std::string& vertex_shader_source,
-                                const std::string& fragment_shader_source);
-
+using escher::gles2::MakeUniqueProgram;
+using escher::gles2::UniqueProgram;
 }  // namespace escher
+#endif
