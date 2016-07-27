@@ -620,13 +620,11 @@ static mx_protocol_device_t vc_device_proto = {
     .ioctl = vc_device_ioctl,
 };
 
+extern mx_driver_t _driver_vc_root;
+
+// opening the root device returns a new vc device instance
 static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    if (!dev_out) return ERR_INVALID_ARGS;
-
-    if (*dev_out != dev) return NO_ERROR;
-
     mx_status_t status;
-    // create a new instance of vc if no dev_out is passed
     vc_device_t* device;
     if ((status = vc_device_alloc(&hw_gfx, &device)) < 0) {
         return status;
@@ -634,18 +632,21 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
 
     // init the new device
     char name[8];
-    snprintf(name, sizeof(name), "%s%u", dev->name, vc_count);
-    status = device_init(&device->device, dev->owner, name, &vc_device_proto);
+    snprintf(name, sizeof(name), "vc%u", vc_count);
+    status = device_init(&device->device, &_driver_vc_root, name, &vc_device_proto);
     if (status != NO_ERROR) {
         return status;
     }
 
-    // add the device
-    device->device.protocol_id = MX_PROTOCOL_CONSOLE;
-    status = device_add_instance(&device->device, dev);
-    if (status != NO_ERROR) {
-        vc_device_free(device);
-        return status;
+    if (dev) {
+        // if called normally, add the instance
+        // if dev is null, we're creating the log console
+        device->device.protocol_id = MX_PROTOCOL_CONSOLE;
+        status = device_add_instance(&device->device, dev);
+        if (status != NO_ERROR) {
+            vc_device_free(device);
+            return status;
+        }
     }
 
     // add to the vc list
@@ -663,6 +664,32 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
 
     *dev_out = &device->device;
     return NO_ERROR;
+}
+
+static int vc_log_reader_thread(void* arg) {
+    mx_device_t* dev = arg;
+    mx_handle_t h;
+
+    if ((h = mx_log_create(MX_LOG_FLAG_READABLE)) < 0) {
+        printf("vc log listener: cannot open log\n");
+        return -1;
+    }
+
+    char buf[MX_LOG_RECORD_MAX];
+    mx_log_record_t* rec = (mx_log_record_t*)buf;
+    while (mx_log_read(h, MX_LOG_RECORD_MAX, rec, MX_LOG_FLAG_WAIT) > 0) {
+        char tmp[64];
+        snprintf(tmp, 64, "[%05d.%03d] %c ",
+                 (int)(rec->timestamp / 1000000000ULL),
+                 (int)((rec->timestamp / 1000000ULL) % 1000ULL),
+                 (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
+        vc_device_write(dev, tmp, strlen(tmp), 0);
+        vc_device_write(dev, rec->data, rec->datalen, 0);
+        if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
+            vc_device_write(dev, "\n", 1, 0);
+        }
+    }
+    return 0;
 }
 
 static mx_protocol_device_t vc_root_proto = {
@@ -722,6 +749,11 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     vc_initialized = true;
     xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u\n", dev->name, info.width, info.height, info.stride, format);
+
+    if (vc_root_open(NULL, &dev, 0) == NO_ERROR) {
+        mxr_thread_t* t;
+        mxr_thread_create(vc_log_reader_thread, dev, "vc-log-reader", &t);
+    }
 
     return NO_ERROR;
 fail:

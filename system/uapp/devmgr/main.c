@@ -83,8 +83,7 @@ int console_starter(void* arg) {
         mx_nanosleep(100000000ULL);
     }
     close(fd);
-    // start the debug log
-    devmgr_launch("dlog", "/boot/bin/dlog", "-f", name);
+
     // start a couple vc's
     for (unsigned i = 0; i < VC_COUNT;) {
         char pname[32];
