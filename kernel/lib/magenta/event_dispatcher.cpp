@@ -8,7 +8,7 @@
 
 #include <assert.h>
 #include <err.h>
-#include <trace.h>
+#include <new.h>
 
 #include <kernel/event.h>
 
@@ -19,8 +19,10 @@ constexpr mx_rights_t kDefaultEventRights =
 
 status_t EventDispatcher::Create(uint32_t options, utils::RefPtr<Dispatcher>* dispatcher,
                                  mx_rights_t* rights) {
-    auto disp = new EventDispatcher(options);
-    if (!disp) return ERR_NO_MEMORY;
+    AllocChecker ac;
+    auto disp = new (&ac) EventDispatcher(options);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
 
     *rights = kDefaultEventRights;
     *dispatcher = utils::AdoptRef<Dispatcher>(disp);

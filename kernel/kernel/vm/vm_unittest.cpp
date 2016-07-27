@@ -11,6 +11,7 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_region.h>
+#include <new.h>
 #include <unittest.h>
 #include <utils/array.h>
 
@@ -466,7 +467,9 @@ static bool vmm_object_tests(void* context) {
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         // create test buffer
-        utils::Array<uint8_t> a(new uint8_t[alloc_size], alloc_size);
+        AllocChecker ac;
+        utils::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
+        EXPECT_TRUE(ac.check(), "");
         fill_region(99, a.get(), alloc_size);
 
         // write to it, make sure it seems to work with valid args
@@ -530,7 +533,8 @@ static bool vmm_object_tests(void* context) {
 
         // test that we can read from it
         unittest_printf("reading back from vm object\n");
-        utils::Array<uint8_t> b(new uint8_t[alloc_size], alloc_size);
+        utils::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
+        EXPECT_TRUE(ac.check(), "");
 
         size_t bytes_read = -1;
         err = vmo->Read(b.get(), 0, alloc_size, &bytes_read);

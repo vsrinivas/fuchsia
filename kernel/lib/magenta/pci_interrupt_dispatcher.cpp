@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <new.h>
+
 #include <kernel/auto_lock.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
@@ -47,10 +49,11 @@ status_t PciInterruptDispatcher::Create(
     if (!device || !out_rights || !out_interrupt)
         return ERR_INVALID_ARGS;
 
+    AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
-    PciInterruptDispatcher*   interrupt_dispatcher = new PciInterruptDispatcher(irq_id);
+    auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id);
     utils::RefPtr<Dispatcher> dispatcher = utils::AdoptRef<Dispatcher>(interrupt_dispatcher);
-    if (!dispatcher)
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     // Attempt to register our dispatcher with the bus driver.

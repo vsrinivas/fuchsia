@@ -7,6 +7,8 @@
 #include <magenta/io_port_dispatcher.h>
 
 #include <err.h>
+#include <new.h>
+
 #include <kernel/auto_lock.h>
 
 static_assert(sizeof(mx_user_packet_t) == sizeof(mx_io_packet_t), "packet size mismatch");
@@ -18,8 +20,9 @@ constexpr mx_rights_t kDefaultIOPortRights =
 mx_status_t IOPortDispatcher::Create(uint32_t options,
                                      utils::RefPtr<Dispatcher>* dispatcher,
                                      mx_rights_t* rights) {
-    auto disp = new IOPortDispatcher(options);
-    if (!disp)
+    AllocChecker ac;
+    auto disp = new (&ac) IOPortDispatcher(options);
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     uint32_t depth = options == MX_IOPORT_OPT_1K_SLOTS ? 1024 : 128;

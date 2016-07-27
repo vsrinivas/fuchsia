@@ -6,6 +6,8 @@
 
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_io_mapping_dispatcher.h>
+
+#include <new.h>
 #include <string.h>
 
 status_t PciIoMappingDispatcher::Create(
@@ -21,9 +23,10 @@ status_t PciIoMappingDispatcher::Create(
     if (!device || !out_rights || !out_dispatcher)
         return ERR_INVALID_ARGS;
 
+    AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
-    PciIoMappingDispatcher* pim_disp = new PciIoMappingDispatcher(device);
-    if (!pim_disp)
+    PciIoMappingDispatcher* pim_disp = new (&ac) PciIoMappingDispatcher(device);
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     // Create a debug name for the mapping.

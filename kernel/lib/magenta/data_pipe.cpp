@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <new.h>
 #include <stddef.h>
 
 #include <kernel/auto_lock.h>
@@ -29,8 +30,9 @@ mx_status_t DataPipe::Create(mx_size_t capacity,
                              utils::RefPtr<Dispatcher>* consumer,
                              mx_rights_t* producer_rights,
                              mx_rights_t* consumer_rights) {
-    utils::RefPtr<DataPipe> pipe = utils::AdoptRef(new DataPipe(capacity));
-    if (!pipe)
+    AllocChecker ac;
+    utils::RefPtr<DataPipe> pipe = utils::AdoptRef(new (&ac) DataPipe(capacity));
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     if (!pipe->Init())

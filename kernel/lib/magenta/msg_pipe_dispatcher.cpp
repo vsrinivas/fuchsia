@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <new.h>
 #include <trace.h>
 
 #include <kernel/auto_lock.h>
@@ -28,14 +29,15 @@ status_t MessagePipeDispatcher::Create(uint32_t flags,
                                        mx_rights_t* rights) {
     LTRACE_ENTRY;
 
-    utils::RefPtr<MessagePipe> pipe = utils::AdoptRef(new MessagePipe(GenerateKernelObjectId()));
-    if (!pipe) return ERR_NO_MEMORY;
+    AllocChecker ac;
+    utils::RefPtr<MessagePipe> pipe = utils::AdoptRef(new (&ac) MessagePipe(GenerateKernelObjectId()));
+    if (!ac.check()) return ERR_NO_MEMORY;
 
-    Dispatcher* msgp0 = new MessagePipeDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, pipe);
-    if (!msgp0) return ERR_NO_MEMORY;
+    Dispatcher* msgp0 = new (&ac) MessagePipeDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, pipe);
+    if (!ac.check()) return ERR_NO_MEMORY;
 
-    Dispatcher* msgp1 = new MessagePipeDispatcher(flags, 1u, pipe);
-    if (!msgp1) return ERR_NO_MEMORY;
+    Dispatcher* msgp1 = new (&ac) MessagePipeDispatcher(flags, 1u, pipe);
+    if (!ac.check()) return ERR_NO_MEMORY;
 
     *rights = kDefaultPipeRights;
     *dispatcher0 = utils::AdoptRef(msgp0);
@@ -93,9 +95,10 @@ status_t MessagePipeDispatcher::AcceptRead(utils::Array<uint8_t>* data,
 
 status_t MessagePipeDispatcher::Write(utils::Array<uint8_t> data, utils::Array<Handle*> handles) {
     LTRACE_ENTRY;
+    AllocChecker ac;
     utils::unique_ptr<MessagePacket> msg(
-        new MessagePacket(utils::move(data), utils::move(handles)));
-    if (!msg) return ERR_NO_MEMORY;
+        new (&ac) MessagePacket(utils::move(data), utils::move(handles)));
+    if (!ac.check()) return ERR_NO_MEMORY;
 
     return pipe_->Write(side_, utils::move(msg));
 }

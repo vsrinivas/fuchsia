@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <new.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
@@ -27,8 +28,9 @@ status_t InterruptDispatcher::Create(uint32_t vector, uint32_t flags,
     status_t result = interrupt_event_create(vector, ie_flags, &ie);
     if (result != NO_ERROR) return result;
 
-    auto disp = new InterruptDispatcher(ie);
-    if (!disp) return ERR_NO_MEMORY;
+    AllocChecker ac;
+    auto disp = new (&ac) InterruptDispatcher(ie);
+    if (!ac.check()) return ERR_NO_MEMORY;
 
     *rights = kDefaultInterruptRights;
     *dispatcher = utils::AdoptRef<Dispatcher>(disp);

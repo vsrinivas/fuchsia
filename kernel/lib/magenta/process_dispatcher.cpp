@@ -7,6 +7,7 @@
 #include <magenta/process_dispatcher.h>
 
 #include <list.h>
+#include <new.h>
 #include <rand.h>
 #include <string.h>
 #include <trace.h>
@@ -35,8 +36,9 @@ utils::DoublyLinkedList<ProcessDispatcher*> ProcessDispatcher::global_process_li
 mx_status_t ProcessDispatcher::Create(utils::StringPiece name,
                                       utils::RefPtr<Dispatcher>* dispatcher,
                                       mx_rights_t* rights) {
-    auto process = new ProcessDispatcher(name);
-    if (!process)
+    AllocChecker ac;
+    auto process = new (&ac) ProcessDispatcher(name);
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     status_t result = process->Initialize();
@@ -330,10 +332,11 @@ status_t ProcessDispatcher::GetInfo(mx_process_info_t* info) {
 status_t ProcessDispatcher::CreateUserThread(utils::StringPiece name,
                                              thread_start_routine entry, void* arg,
                                              utils::RefPtr<UserThread>* user_thread) {
-    auto ut = utils::AdoptRef(new UserThread(GenerateKernelObjectId(),
-                                             utils::RefPtr<ProcessDispatcher>(this),
-                                             entry, arg));
-    if (!ut)
+    AllocChecker ac;
+    auto ut = utils::AdoptRef(new (&ac) UserThread(GenerateKernelObjectId(),
+                                                   utils::RefPtr<ProcessDispatcher>(this),
+                                                   entry, arg));
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     status_t result = ut->Initialize(name);

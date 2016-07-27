@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <new.h>
+
 #include <app/tests.h>
 #include <kernel/thread.h>
 #include <unittest.h>
@@ -33,7 +35,11 @@ static bool ref_counted_test(void* context) {
 
     bool destroyed = false;
     {
-        utils::RefPtr<DestructionTracker> ptr = utils::AdoptRef(new DestructionTracker(&destroyed));
+        AllocChecker ac;
+        utils::RefPtr<DestructionTracker> ptr =
+            utils::AdoptRef(new (&ac) DestructionTracker(&destroyed));
+        EXPECT_TRUE(ac.check(), "");
+
         EXPECT_FALSE(destroyed, "should not be destroyed");
         void* arg = reinterpret_cast<void*>(ptr.get());
 

@@ -6,6 +6,7 @@
 
 #include <app/tests.h>
 #include <err.h>
+#include <new.h>
 #include <unittest.h>
 #include <utils/intrusive_single_list.h>
 #include <utils/intrusive_double_list.h>
@@ -92,7 +93,11 @@ struct UnmanagedTestTraits {
     using ConstPtrType = const ObjType*;
     using ListType     = typename ObjType::ContainerTraits::ListType;
 
-    static PtrType CreateObject(size_t value) { return new ObjType(value); }
+    static PtrType CreateObject(size_t value) {
+        AllocChecker ac;
+        auto r = new (&ac) ObjType(value);
+        return ac.check() ? r : nullptr;
+    }
 
     // Unmanaged pointers never get cleared when being moved or transferred.
     static inline PtrType& Transfer(PtrType& ptr)       { return ptr; }
@@ -107,7 +112,11 @@ struct UniquePtrTestTraits {
     using ConstPtrType = const PtrType;
     using ListType     = typename ObjType::ContainerTraits::ListType;
 
-    static PtrType CreateObject(size_t value) { return PtrType(new ObjType(value)); }
+    static PtrType CreateObject(size_t value) {
+        AllocChecker ac;
+        auto r = new (&ac) ObjType(value);
+        return PtrType(ac.check() ? r : nullptr);
+    }
 
     // Unique pointers always get cleared when being moved or transferred.
     static inline PtrType&& Transfer(PtrType& ptr)      { return utils::move(ptr); }
@@ -122,7 +131,11 @@ struct RefPtrTestTraits {
     using ConstPtrType = const PtrType;
     using ListType     = typename ObjType::ContainerTraits::ListType;
 
-    static PtrType CreateObject(size_t value) { return AdoptRef(new ObjType(value)); }
+    static PtrType CreateObject(size_t value) {
+        AllocChecker ac;
+        auto r = new (&ac) ObjType(value);
+        return AdoptRef(ac.check() ? r : nullptr);
+    }
 
     // RefCounted pointers do not get cleared when being transferred, but do get
     // cleared when being moved.

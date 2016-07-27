@@ -7,14 +7,16 @@
 #include <magenta/log_dispatcher.h>
 
 #include <err.h>
+#include <new.h>
 
 constexpr mx_rights_t kDefaultEventRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE;
 
 status_t LogDispatcher::Create(uint32_t flags, utils::RefPtr<Dispatcher>* dispatcher,
                                mx_rights_t* rights) {
-    auto disp = new LogDispatcher(flags);
-    if (!disp) return ERR_NO_MEMORY;
+    AllocChecker ac;
+    auto disp = new (&ac) LogDispatcher(flags);
+    if (!ac.check()) return ERR_NO_MEMORY;
 
     *rights = kDefaultEventRights;
     *dispatcher = utils::AdoptRef<Dispatcher>(disp);

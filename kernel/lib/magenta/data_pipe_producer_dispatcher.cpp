@@ -7,6 +7,7 @@
 #include <magenta/data_pipe_producer_dispatcher.h>
 
 #include <err.h>
+#include <new.h>
 
 #include <magenta/handle.h>
 #include <magenta/data_pipe.h>
@@ -21,8 +22,9 @@ constexpr mx_rights_t kDefaultDataPipeProducerRights =
 mx_status_t DataPipeProducerDispatcher::Create(utils::RefPtr<DataPipe> data_pipe,
                                                utils::RefPtr<Dispatcher>* dispatcher,
                                                mx_rights_t* rights) {
-    Dispatcher* consumer = new DataPipeProducerDispatcher(utils::move(data_pipe));
-    if (!consumer)
+    AllocChecker ac;
+    Dispatcher* consumer = new (&ac) DataPipeProducerDispatcher(utils::move(data_pipe));
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     *rights = kDefaultDataPipeProducerRights;

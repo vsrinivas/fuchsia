@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <new.h>
 #include <stdint.h>
 
 #include <lib/user_copy.h>
@@ -38,8 +39,9 @@ status_t magenta_copy_user_dynamic(const void* src, uint8_t** dest, size_t len, 
 
     if (len > max_len) return ERR_INVALID_ARGS;
 
-    auto buf = new uint8_t[len];
-    if (!buf) return ERR_NO_MEMORY;
+    AllocChecker ac;
+    auto buf = new (&ac) uint8_t[len];
+    if (!ac.check()) return ERR_NO_MEMORY;
 
     status_t status = copy_from_user(buf, src, len);
     if (status != NO_ERROR) {

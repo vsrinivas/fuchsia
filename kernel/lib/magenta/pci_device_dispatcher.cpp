@@ -13,6 +13,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <new.h>
 #include <trace.h>
 
 constexpr mx_rights_t kDefaultPciDeviceRights =
@@ -41,8 +42,10 @@ status_t PciDeviceDispatcher::Create(uint32_t                   index,
         return status;
 
     DEBUG_ASSERT(device_wrapper);
-    auto disp = new PciDeviceDispatcher(device_wrapper, out_info);
-    if (!disp)
+
+    AllocChecker ac;
+    auto disp = new (&ac) PciDeviceDispatcher(device_wrapper, out_info);
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     *out_dispatcher = utils::AdoptRef<Dispatcher>(disp);
@@ -260,8 +263,10 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Create(
     if (!device)
         return ERR_OUT_OF_RANGE;
 
-    *out_device = utils::AdoptRef<PciDeviceWrapper>(new PciDeviceWrapper(device));
-    if (!*out_device) {
+    AllocChecker ac;
+
+    *out_device = utils::AdoptRef<PciDeviceWrapper>(new (&ac) PciDeviceWrapper(device));
+    if (!ac.check()) {
         pcie_release_device(device);
         return ERR_NO_MEMORY;
     }

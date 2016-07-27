@@ -159,14 +159,15 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         return result;
     utils::unique_ptr<uint32_t[]> signals(reinterpret_cast<mx_signals_t*>(copy));
 
-    utils::unique_ptr<WaitStateObserver[]> wait_state_observers(new WaitStateObserver[count]);
-    if (!wait_state_observers)
+    AllocChecker ac;
+    utils::unique_ptr<WaitStateObserver[]> wait_state_observers(new (&ac) WaitStateObserver[count]);
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     utils::unique_ptr<mx_signals_state_t[]> signals_states;
     if (_signals_states) {
-        signals_states.reset(new mx_signals_state_t[count]);
-        if (!signals_states)
+        signals_states.reset(new (&ac) mx_signals_state_t[count]);
+        if (!ac.check())
             return ERR_NO_MEMORY;
     }
 
@@ -371,9 +372,10 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
 
     utils::unique_ptr<uint32_t[]> handles;
 
+    AllocChecker ac;
     if (num_handles) {
-        handles.reset(new uint32_t[num_handles]());
-        if (!handles)
+        handles.reset(new (&ac) uint32_t[num_handles]());
+        if (!ac.check())
             return ERR_NO_MEMORY;
     }
 
@@ -484,7 +486,11 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
         handles.reset(static_cast<mx_handle_t*>(c_handles));
     }
 
-    utils::Array<Handle*> handle_list(new Handle*[num_handles], num_handles);
+    AllocChecker ac;
+    utils::Array<Handle*> handle_list(new (&ac) Handle*[num_handles], num_handles);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
     {
         // Loop twice, first we collect and validate handles, the second pass
         // we remove them from this process.

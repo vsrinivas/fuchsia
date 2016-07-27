@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <app/tests.h>
+#include <new.h>
 #include <stdio.h>
 #include <unittest.h>
 #include <utils/unique_ptr.h>
@@ -26,9 +27,11 @@ static bool uptr_test_scoped_destruction(void* context) {
     BEGIN_TEST;
     destroy_count = 0;
 
+    AllocChecker ac;
     // Construct and let a unique_ptr fall out of scope.
     {
-        CountingPtr ptr(new int);
+        CountingPtr ptr(new (&ac) int);
+        EXPECT_TRUE(ac.check(), "");
     }
 
     EXPECT_EQ(1, destroy_count, "");
@@ -39,9 +42,12 @@ static bool uptr_test_move(void* context) {
     BEGIN_TEST;
     destroy_count = 0;
 
+    AllocChecker ac;
     // Construct and move into another unique_ptr.
     {
-        CountingPtr ptr(new int);
+        CountingPtr ptr(new (&ac) int);
+        EXPECT_TRUE(ac.check(), "");
+
         CountingPtr ptr2 = utils::move(ptr);
         EXPECT_EQ(ptr.get(), nullptr, "expected ptr to be null");
     }
@@ -73,10 +79,15 @@ static bool uptr_test_diff_scope_swap(void* context) {
     // Construct a pair of unique_ptrs in different scopes, swap them, and verify
     // that the values change places and that the values are destroyed at the
     // correct times.
+
+    AllocChecker ac;
     {
-        CountingPtr ptr1(new int(4));
+        CountingPtr ptr1(new (&ac) int(4));
+        EXPECT_TRUE(ac.check(), "");
         {
-            CountingPtr ptr2(new int(7));
+            CountingPtr ptr2(new (&ac) int(7));
+            EXPECT_TRUE(ac.check(), "");
+
             ptr1.swap(ptr2);
             EXPECT_EQ(7, *ptr1, "");
             EXPECT_EQ(4, *ptr2, "");
@@ -92,7 +103,10 @@ static bool uptr_test_bool_op(void* context) {
     BEGIN_TEST;
     destroy_count = 0;
 
-    CountingPtr foo(new int);
+    AllocChecker ac;
+
+    CountingPtr foo(new (&ac) int);
+    EXPECT_TRUE(ac.check(), "");
     EXPECT_TRUE(static_cast<bool>(foo), "");
 
     foo.reset();
@@ -105,10 +119,14 @@ static bool uptr_test_bool_op(void* context) {
 static bool uptr_test_comparison(void* context) {
     BEGIN_TEST;
 
+    AllocChecker ac;
     // Test comparison operators.
     utils::unique_ptr<int> null_unique;
-    utils::unique_ptr<int> lesser_unique(new int(1));
-    utils::unique_ptr<int> greater_unique(new int(2));
+    utils::unique_ptr<int> lesser_unique(new (&ac) int(1));
+    EXPECT_TRUE(ac.check(), "");
+
+    utils::unique_ptr<int> greater_unique(new (&ac) int(2));
+    EXPECT_TRUE(ac.check(), "");
 
     EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
     if (lesser_unique.get() > greater_unique.get())
@@ -161,9 +179,11 @@ static bool uptr_test_array_scoped_destruction(void* context) {
     BEGIN_TEST;
     destroy_count = 0;
 
+    AllocChecker ac;
     // Construct and let a unique_ptr fall out of scope.
     {
-        CountingArrPtr ptr(new int[1]);
+        CountingArrPtr ptr(new (&ac) int[1]);
+        EXPECT_TRUE(ac.check(), "");
     }
     EXPECT_EQ(1, destroy_count, "");
 
@@ -174,9 +194,12 @@ static bool uptr_test_array_move(void* context) {
     BEGIN_TEST;
     destroy_count = 0;
 
+    AllocChecker ac;
     // Construct and move into another unique_ptr.
     {
-        CountingArrPtr ptr(new int[1]);
+        CountingArrPtr ptr(new (&ac) int[1]);
+        EXPECT_TRUE(ac.check(), "");
+
         CountingArrPtr ptr2 = utils::move(ptr);
         EXPECT_EQ(ptr.get(), nullptr, "expected ptr to be null");
     }
@@ -206,11 +229,17 @@ static bool uptr_test_array_diff_scope_swap(void* context) {
     // Construct a pair of unique_ptrs in different scopes, swap them, and verify
     // that the values change places and that the values are destroyed at the
     // correct times.
+    AllocChecker ac;
+
     {
-        CountingArrPtr ptr1(new int[1]);
+        CountingArrPtr ptr1(new (&ac) int[1]);
+        EXPECT_TRUE(ac.check(), "");
+
         ptr1[0] = 4;
         {
-            CountingArrPtr ptr2(new int[1]);
+            CountingArrPtr ptr2(new (&ac) int[1]);
+            EXPECT_TRUE(ac.check(), "");
+
             ptr2[0] = 7;
             ptr1.swap(ptr2);
             EXPECT_EQ(7, ptr1[0], "");
@@ -227,7 +256,10 @@ static bool uptr_test_array_bool_op(void* context) {
     BEGIN_TEST;
     destroy_count = 0;
 
-    CountingArrPtr foo(new int[1]);
+    AllocChecker ac;
+
+    CountingArrPtr foo(new (&ac) int[1]);
+    EXPECT_TRUE(ac.check(), "");
     EXPECT_TRUE(static_cast<bool>(foo), "");
 
     foo.reset();
@@ -240,9 +272,13 @@ static bool uptr_test_array_bool_op(void* context) {
 static bool uptr_test_array_comparison(void* context) {
     BEGIN_TEST;
 
+    AllocChecker ac;
+
     utils::unique_ptr<int[]> null_unique;
-    utils::unique_ptr<int[]> lesser_unique(new int[1]);
-    utils::unique_ptr<int[]> greater_unique(new int[2]);
+    utils::unique_ptr<int[]> lesser_unique(new (&ac) int[1]);
+    EXPECT_TRUE(ac.check(), "");
+    utils::unique_ptr<int[]> greater_unique(new (&ac) int[2]);
+    EXPECT_TRUE(ac.check(), "");
 
     EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
     if (lesser_unique.get() > greater_unique.get())

@@ -6,6 +6,8 @@
 
 #include <magenta/thread_dispatcher.h>
 
+#include <new.h>
+
 #include <magenta/handle.h>
 #include <trace.h>
 
@@ -17,8 +19,9 @@ constexpr mx_rights_t kDefaultThreadRights =
 // static
 status_t ThreadDispatcher::Create(utils::RefPtr<UserThread> thread, utils::RefPtr<Dispatcher>* dispatcher,
                                   mx_rights_t* rights) {
-    Dispatcher* disp = new ThreadDispatcher(thread);
-    if (!disp)
+    AllocChecker ac;
+    Dispatcher* disp = new (&ac) ThreadDispatcher(thread);
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     *rights = kDefaultThreadRights;

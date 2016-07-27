@@ -15,6 +15,7 @@
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_region.h>
 #include <lk/init.h>
+#include <new.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -140,8 +141,10 @@ utils::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     default:
         panic("Invalid aspace type");
     }
-    auto aspace = utils::AdoptRef(new VmAspace(base, size, flags, name));
-    if (!aspace)
+
+    AllocChecker ac;
+    auto aspace = utils::AdoptRef(new (&ac) VmAspace(base, size, flags, name));
+    if (!ac.check())
         return nullptr;
 
     // initialize the arch specific component to our address space

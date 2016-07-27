@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <new.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
@@ -274,7 +275,11 @@ static status_t send_exception_report(utils::RefPtr<Dispatcher> dispatcher, cons
     utils::Array<uint8_t> data;
     utils::Array<Handle*> handles;
 
-    uint8_t* report_bytes = new uint8_t[sizeof(*report)];
+    AllocChecker ac;
+    uint8_t* report_bytes = new (&ac) uint8_t[sizeof(*report)];
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
     memcpy(report_bytes, report, sizeof(*report));
     data.reset(report_bytes, sizeof(*report));
 

@@ -12,6 +12,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <lib/crypto/prng.h>
+#include <new.h>
 #include <lk/init.h>
 
 namespace crypto {
@@ -22,10 +23,12 @@ PRNG* GetInstance() {
     static PRNG* global_prng = nullptr;
     static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
 
+    AllocChecker ac;
+
     AutoLock guard(lock);
     if (unlikely(!global_prng)) {
-        global_prng = new PRNG(nullptr, 0);
-        ASSERT(global_prng);
+        global_prng = new (&ac) PRNG(nullptr, 0);
+        ASSERT(ac.check());
     }
     return global_prng;
 }

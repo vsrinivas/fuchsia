@@ -12,6 +12,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
 #include <lib/user_copy.h>
+#include <new.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -81,8 +82,9 @@ utils::RefPtr<VmObject> VmObject::Create(uint32_t pmm_alloc_flags, uint64_t size
     if (size > MAX_SIZE)
         return nullptr;
 
-    auto vmo = utils::AdoptRef(new VmObject(pmm_alloc_flags));
-    if (!vmo)
+    AllocChecker ac;
+    auto vmo = utils::AdoptRef(new (&ac) VmObject(pmm_alloc_flags));
+    if (!ac.check())
         return nullptr;
 
     auto err = vmo->Resize(size);
@@ -133,8 +135,9 @@ status_t VmObject::Resize(uint64_t s) {
 
     // allocate a new array
     DEBUG_ASSERT(!page_array_); // no resizing
-    vm_page_t** pa = new vm_page_t* [page_count] {};
-    if (!pa)
+    AllocChecker ac;
+    vm_page_t** pa = new (&ac) vm_page_t* [page_count] {};
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     page_array_.reset(pa, page_count);

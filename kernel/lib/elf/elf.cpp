@@ -14,6 +14,7 @@
 #include <err.h>
 #include <kernel/vm/vm_aspace.h>
 #include <lib/bio.h>
+#include <new.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -98,10 +99,12 @@ status_t File::Load() {
 
     // at this point e_phentsize == sizeof(elf_phdr) so we can use the sizeof
 
+    AllocChecker ac;
+
     // allocate and read in the program headers
     size_t buffer_size = eheader_.e_phnum * sizeof(elf_phdr);
-    pheaders_.reset(new elf_phdr[eheader_.e_phnum], eheader_.e_phnum);
-    if (!pheaders_) {
+    pheaders_.reset(new (&ac) elf_phdr[eheader_.e_phnum], eheader_.e_phnum);
+    if (!ac.check()) {
         LTRACEF("failed to allocate memory for program headers\n");
         return ERR_NO_MEMORY;
     }
@@ -320,9 +323,10 @@ status_t BioToMemFile::Read(uint seg_num, size_t seg_offset, size_t source_offse
     VmObject* vmo = seg_[seg_num].vmo.get();
     DEBUG_ASSERT(vmo);
 
+    AllocChecker ac;
     // allocate a temporary buffer for the read operation
-    utils::Array<uint8_t> temp_buf(new uint8_t[PAGE_SIZE], PAGE_SIZE);
-    if (!temp_buf) return ERR_NO_MEMORY;
+    utils::Array<uint8_t> temp_buf(new (&ac) uint8_t[PAGE_SIZE], PAGE_SIZE);
+    if (!ac.check()) return ERR_NO_MEMORY;
 
     size_t end = offset + len;
     while (offset < end) {

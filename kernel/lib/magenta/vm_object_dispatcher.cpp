@@ -10,6 +10,7 @@
 #include <kernel/vm/vm_object.h>
 
 #include <assert.h>
+#include <new.h>
 #include <err.h>
 #include <trace.h>
 
@@ -19,8 +20,9 @@ constexpr mx_rights_t kDefaultVmoRights =
 status_t VmObjectDispatcher::Create(utils::RefPtr<VmObject> vmo,
                                     utils::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
-    auto disp = new VmObjectDispatcher(utils::move(vmo));
-    if (!disp)
+    AllocChecker ac;
+    auto disp = new (&ac) VmObjectDispatcher(utils::move(vmo));
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     *rights = kDefaultVmoRights;

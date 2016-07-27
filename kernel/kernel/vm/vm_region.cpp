@@ -12,6 +12,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <new.h>
 #include <string.h>
 #include <trace.h>
 #include <utils/type_support.h>
@@ -27,7 +28,9 @@ VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size, uint arch_mmu_fl
 
 utils::RefPtr<VmRegion> VmRegion::Create(VmAspace& aspace, vaddr_t base, size_t size,
                                          uint arch_mmu_flags, const char* name) {
-    return utils::AdoptRef(new VmRegion(aspace, base, size, arch_mmu_flags, name));
+    AllocChecker ac;
+    auto r = utils::AdoptRef(new (&ac) VmRegion(aspace, base, size, arch_mmu_flags, name));
+    return ac.check() ? r : nullptr;
 }
 
 VmRegion::~VmRegion() {
