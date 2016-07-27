@@ -5,6 +5,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+// N.B. The default operator new,new[] are intentionally *not* defined here.
+// We cannot allow their use as the standard says they will never return
+// nullptr. This allows the compiler to optimize out checking the result for
+// nullptr, and since we don't have exceptions (for good reason) there is no
+// way to intelligently recover from failure. Thus they are forbidden.
+// There's no way to intelligently poison them in a way that provides
+// immediate feedback during compilation that they are not allowed, so we
+// have to rely on a linker failure to catch errant uses.
+// See MG-210.
+
 #include <new.h>
 #include <debug.h>
 #include <lib/heap.h>
