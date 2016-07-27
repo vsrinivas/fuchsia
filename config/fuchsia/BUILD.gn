@@ -6,6 +6,10 @@ import("//build/config/sysroot.gni")
 
 assert(current_os == "fuchsia")
 
+config("werror") {
+  cflags = [ "-Werror" ]
+}
+
 config("compiler") {
   asmflags = []
   cflags = []
@@ -14,7 +18,10 @@ config("compiler") {
   ldflags = []
   configs = []
 
-  configs += [ ":compiler_cpu" ]
+  configs += [
+    ":compiler_cpu",
+    ":werror",
+  ]
 
   if (is_clang) {
     cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
