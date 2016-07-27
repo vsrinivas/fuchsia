@@ -28,7 +28,7 @@ import (
 	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bootrecord"
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/clusterManager/fat/fsinfo"
+	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/cluster/fat/fsinfo"
 	"fuchsia.googlesource.com/thinfs/lib/thinio"
 )
 
