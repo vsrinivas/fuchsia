@@ -124,8 +124,16 @@ void StateTracker::Cancel(Handle* handle) {
     bool awoke_threads = false;
     {
         AutoLock lock(&lock_);
-        for (auto& observer : observers_) {
-            awoke_threads |= observer.OnCancel(handle);
+        for (auto it = observers_.begin(); it != observers_.end();) {
+            bool should_remove = false;
+            awoke_threads |= it->OnCancel(handle, &should_remove);
+            if (should_remove) {
+                auto to_remove = it;
+                ++it;
+                observers_.erase(to_remove);
+            } else {
+                ++it;
+            }
         }
     }
     if (awoke_threads)

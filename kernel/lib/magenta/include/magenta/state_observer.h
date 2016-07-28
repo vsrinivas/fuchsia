@@ -29,9 +29,12 @@ public:
 
     // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
     // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may
-    // also be destroyed shortly afterwards.) Returns true if a thread was awoken.
+    // also be destroyed shortly afterwards.) Returns true if a thread was awoken. If the callee
+    // wants to be removed from the calling StateTracker, it should set |*should_remove| to true
+    // (by default, |*should_remove| is false), in which case RemoveObserver() should not be called
+    // for the callee observer.
     // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnCancel(Handle* handle) = 0;
+    virtual bool OnCancel(Handle* handle, bool* should_remove) = 0;
 
 protected:
     ~StateObserver() {}
