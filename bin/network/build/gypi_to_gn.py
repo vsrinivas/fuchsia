@@ -1,1 +1,0 @@
-../../src/build/gypi_to_gn.py
