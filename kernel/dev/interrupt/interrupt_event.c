@@ -59,8 +59,6 @@ static enum handler_return interrupt_event_int_handler(void *arg)
 
     THREAD_LOCK(state);
 
-    DEBUG_ASSERT(!iei->signalled);
-
     mask_interrupt(iei->vector);
 
     // wait up threads waiting for this interrupt
