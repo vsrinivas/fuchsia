@@ -14,28 +14,25 @@
 
 import("//magma/gnbuild/magma.gni")
 
-executable("msd-intel-gen") {
+source_set("unit_tests") {
   sources = [
-    "src/msd_device.cc",
-    "src/msd_device.h",
-    "src/msd_driver.cc",
-    "src/msd_driver.h",
+    "hello_msd.cc",
   ]
 
   deps = [
-    "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/main",
+    "$magma_build_root/src/sys-driver:platform_buffer",
+    "//third_party/gtest",
   ]
 }
 
-group("msd_tests") {
+executable("msd_unit_tests") {
+  sources = [
+    "main.cc",
+  ]
+
   deps = [
-    "tests",
+    ":unit_tests",
+    "//third_party/gtest",
   ]
-}
-
-# This config allows inclusion of headers via relative paths
-config("msd_tests_include_config") {
-  include_dirs = [ "tests" ]
 }
