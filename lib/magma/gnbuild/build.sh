@@ -33,9 +33,23 @@ if true; then
 	cp $build_dir/magma_unit_tests $bootfs_path/$test_executable
 
 	autorun_path=$bootfs_path/autorun
-	echo "echo \"Running Magma Unit Tests\"" >> $autorun_path # for sanity
+	echo "echo Running magma init tests" >> $autorun_path # for sanity
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 	echo "msleep 1000" >> $autorun_path # give some time to write out to log listener
+fi
+
+if true; then
+	echo "Building msd_tests"
+	$tools_path/ninja -C $build_dir msd_tests
+
+	test_executable=bin/msd_unit_tests
+	cp $build_dir/msd_unit_tests $bootfs_path/$test_executable
+
+	autorun_path=$bootfs_path/autorun
+	echo "echo Running MSD unit tests" >> $autorun_path # for sanity
+	echo "/boot/$test_executable" >> $autorun_path # run the tests
+	echo "msleep 1000" >> $autorun_path # give some time to write out to log listener
+
 	echo "\`poweroff" >> $autorun_path # rinse and repeat
 fi
 
