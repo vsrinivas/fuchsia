@@ -32,12 +32,14 @@ public:
     uint64_t size() { return size_; }
     uint32_t handle() { return handle_; }
 
-    // Refer to c abi docs
+    // The following are mostly wrappers around the c abi; see msd_platform_buffer.h
     bool MapCpu(void** addr_out);
     bool UnmapCpu();
 
+    bool PinPages();
     bool PinPages(uint32_t* num_pages_out);
     bool UnpinPages();
+    bool PinnedPageCount(uint32_t* num_pages_out);
 
     bool MapPageCpu(uint32_t page_index, void** addr_out);
     bool UnmapPageCpu(uint32_t page_index);

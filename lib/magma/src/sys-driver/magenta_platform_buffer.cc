@@ -62,8 +62,8 @@ public:
 
     int PinPages();
     int UnpinPages();
+    bool PinnedPageCount(uint32_t* count);
 
-    unsigned int num_pages() { return pages_.size(); }
     MagentaPlatformPage* get_page(unsigned int index) { return pages_[index].get(); }
 
     static MagentaPlatformBuffer* cast(msd_platform_buffer* buffer)
@@ -121,6 +121,15 @@ int MagentaPlatformBuffer::UnpinPages()
     return 0;
 }
 
+bool MagentaPlatformBuffer::PinnedPageCount(uint32_t* count)
+{
+    if (pin_count_ > 0) {
+        *count = pages_.size();
+        return true;
+    }
+    return false;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 int msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint64_t size,
@@ -158,48 +167,52 @@ void msd_platform_buffer_decref(struct msd_platform_buffer* buffer)
     MagentaPlatformBuffer::cast(buffer)->Decref();
 }
 
-int msd_platform_buffer_get_size(struct msd_platform_buffer* buffer, uint64_t* size_out)
+int32_t msd_platform_buffer_get_size(struct msd_platform_buffer* buffer, uint64_t* size_out)
 {
     *size_out = MagentaPlatformBuffer::cast(buffer)->size();
     return 0;
 }
 
-int msd_platform_buffer_get_handle(struct msd_platform_buffer* buffer, uint32_t* handle_out)
+int32_t msd_platform_buffer_get_handle(struct msd_platform_buffer* buffer, uint32_t* handle_out)
 {
     *handle_out = MagentaPlatformBuffer::cast(buffer)->handle();
     return 0;
 }
 
-int msd_platform_buffer_map_cpu(struct msd_platform_buffer* buffer, void** addr_out)
+int32_t msd_platform_buffer_map_cpu(struct msd_platform_buffer* buffer, void** addr_out)
 {
     *addr_out = MagentaPlatformBuffer::cast(buffer)->virt_addr();
     return 0;
 }
 
-int msd_platform_buffer_unmap_cpu(struct msd_platform_buffer* buffer)
+int32_t msd_platform_buffer_unmap_cpu(struct msd_platform_buffer* buffer)
 {
     // Nothing to do.
     return 0;
 }
 
-int msd_platform_buffer_pin_pages(struct msd_platform_buffer* buffer, uint32_t* num_pages_out)
+int32_t msd_platform_buffer_pin_pages(struct msd_platform_buffer* buffer)
 {
     int ret = MagentaPlatformBuffer::cast(buffer)->PinPages();
-    if (ret)
-        return DRET(ret);
-    if (num_pages_out)
-        *num_pages_out = MagentaPlatformBuffer::cast(buffer)->num_pages();
-    return 0;
+    return DRET(ret);
 }
 
-int msd_platform_buffer_unpin_pages(struct msd_platform_buffer* buffer)
+int32_t msd_platform_buffer_unpin_pages(struct msd_platform_buffer* buffer)
 {
     int ret = MagentaPlatformBuffer::cast(buffer)->UnpinPages();
     return DRET(ret);
 }
 
-int msd_platform_buffer_map_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index,
-                                     void** addr_out)
+int32_t msd_platform_buffer_pinned_page_count(struct msd_platform_buffer* buffer,
+                                              uint32_t* num_pages_out)
+{
+    if (!MagentaPlatformBuffer::cast(buffer)->PinnedPageCount(num_pages_out))
+        return DRET(-EINVAL);
+    return 0;
+}
+
+int32_t msd_platform_buffer_map_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index,
+                                         void** addr_out)
 {
     auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
     if (!page)
@@ -208,7 +221,7 @@ int msd_platform_buffer_map_page_cpu(struct msd_platform_buffer* buffer, uint32_
     return 0;
 }
 
-int msd_platform_buffer_unmap_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index)
+int32_t msd_platform_buffer_unmap_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index)
 {
     auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
     if (!page)
@@ -216,8 +229,8 @@ int msd_platform_buffer_unmap_page_cpu(struct msd_platform_buffer* buffer, uint3
     return 0;
 }
 
-int msd_platform_buffer_map_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index,
-                                     uint64_t* addr_out)
+int32_t msd_platform_buffer_map_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index,
+                                         uint64_t* addr_out)
 {
     auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
     if (!page)
@@ -226,7 +239,7 @@ int msd_platform_buffer_map_page_bus(struct msd_platform_buffer* buffer, uint32_
     return 0;
 }
 
-int msd_platform_buffer_unmap_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index)
+int32_t msd_platform_buffer_unmap_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index)
 {
     auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
     if (!page)

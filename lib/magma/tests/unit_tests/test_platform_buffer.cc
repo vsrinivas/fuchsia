@@ -46,9 +46,18 @@ static void TestPlatformBuffer(uint64_t size)
     EXPECT_EQ(ret, true);
 
     unsigned int num_pages;
+    unsigned int pinned_page_count;
+
+    ret = buffer->PinnedPageCount(&pinned_page_count);
+    EXPECT_EQ(ret, false);
+
     ret = buffer->PinPages(&num_pages);
     EXPECT_EQ(ret, true);
     EXPECT_GE(num_pages, buffer->size() / PAGE_SIZE);
+
+    ret = buffer->PinnedPageCount(&pinned_page_count);
+    EXPECT_EQ(ret, true);
+    EXPECT_EQ(num_pages, pinned_page_count);
 
     ret = buffer->MapPageCpu(0, &virt_addr);
     EXPECT_EQ(ret, true);
