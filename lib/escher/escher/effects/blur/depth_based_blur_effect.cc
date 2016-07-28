@@ -239,7 +239,6 @@ void DepthBasedBlurEffect::Draw(const Stage& stage,
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
   glUseProgram(0);
-  texture_cache_->PutTexture(std::move(blurred_color));
   FTL_DCHECK(glGetError() == GL_NO_ERROR);
   glPopGroupMarkerEXT();
 }

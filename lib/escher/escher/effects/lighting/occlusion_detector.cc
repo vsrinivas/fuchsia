@@ -120,7 +120,7 @@ OcclusionDetector::OcclusionDetector() {
 OcclusionDetector::~OcclusionDetector() {
 }
 
-bool OcclusionDetector::Compile() {
+bool OcclusionDetector::Compile(TextureCache* cache) {
   program_ = MakeUniqueProgram(g_vertex_shader, g_fragment_shader);
   if (!program_)
     return false;
@@ -135,7 +135,7 @@ bool OcclusionDetector::Compile() {
   key_light_ = glGetUniformLocation(program_.id(), "u_key_light");
   FTL_DCHECK(key_light_ != -1);
 
-  noise_texture_ = MakeNoiseTexture(SizeI(kNoiseSize, kNoiseSize));
+  noise_texture_ = MakeNoiseTexture(SizeI(kNoiseSize, kNoiseSize), cache);
   return true;
 }
 

@@ -6,36 +6,33 @@
 
 #include "ftl/macros.h"
 #include "escher/geometry/size_i.h"
-#include "escher/gl/gles2/texture_descriptor.h"
-#include "escher/gl/gles2/unique_texture.h"
+#include "escher/gl/texture_descriptor.h"
+#include "escher/gl/gles2/resource.h"
 
 namespace escher {
 namespace gles2 {
 
-class Texture {
+class Texture : public Resource<TextureDescriptor> {
  public:
-  Texture();
-  Texture(TextureDescriptor descriptor, UniqueTexture texture);
-  ~Texture();
+  using Resource<TextureDescriptor>::Resource;
+  Texture() {}
+  Texture(const Texture& other) = default;
+  Texture(Texture&& other) = default;
 
-  Texture(Texture&& other);
-  Texture& operator=(Texture&& other);
+  Texture& operator=(Texture&& other) = default;
 
-  static Texture Make(TextureDescriptor descriptor);
+  const SizeI& size() const { return descriptor().size; }
+  int width() const { return size().width(); }
+  int height() const { return size().height(); }
+  const TextureDescriptor::Format format() const { return descriptor().format; }
 
-  const TextureDescriptor& descriptor() const { return descriptor_; };
-  GLuint id() const { return texture_.id(); }
-  const SizeI& size() const { return descriptor_.size; }
+  // Cube maps, 3D textures, etc. not supported yet.
+  GLenum GetGLTarget() const { return GL_TEXTURE_2D; }
+  GLint GetGLInternalFormat() const;
+  GLenum GetGLFormat() const;
+  GLenum GetGLType() const;
 
-  explicit operator bool() const { return static_cast<bool>(texture_); }
-
-  UniqueTexture TakeUniqueTexture() { return std::move(texture_); }
-
- private:
-  TextureDescriptor descriptor_;
-  UniqueTexture texture_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(Texture);
+  void SetImage(GLubyte* data);
 };
 
 }  // namespace gles2

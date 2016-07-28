@@ -25,7 +25,7 @@ LightingEffect::~LightingEffect() {}
 bool LightingEffect::Init(TextureCache* texture_cache, bool use_mipmap) {
   texture_cache_ = texture_cache;
   if (!shader_.Compile() || !blur_.Compile() ||
-      !occlusion_detector_.Compile())
+      !occlusion_detector_.Compile(texture_cache))
     return false;
   frame_buffer_ = FrameBuffer::Make();
   if (!frame_buffer_)
@@ -94,8 +94,6 @@ void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
 
     if (use_mipmap_)
       GenerateMipmap(frame_buffer_.color().id());
-
-    texture_cache_->PutTexture(std::move(illumination));
   }
 
   glPopGroupMarkerEXT();

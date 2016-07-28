@@ -4,11 +4,35 @@
 
 #pragma once
 
-#if defined(ESCHER_USE_VULKAN_API)
-#error not implemented
-#elif defined(ESCHER_USE_METAL_API)
-#error not implemented
-#else
-#include "escher/gl/gles2/texture_descriptor.h"
-namespace escher { using escher::gles2::TextureDescriptor; }
-#endif
+#include "escher/geometry/size_i.h"
+
+namespace escher {
+
+struct TextureDescriptor {
+  struct Hash;
+  enum class Format { kRGBA, kDepth, kInvalid };
+
+  SizeI size;
+  Format format = Format::kInvalid;
+  bool mipmapped = false;
+};
+
+inline bool operator==(const TextureDescriptor& lhs,
+                       const TextureDescriptor& rhs) {
+  return lhs.size == rhs.size &&
+         lhs.format == rhs.format &&
+         lhs.mipmapped == rhs.mipmapped;
+}
+
+struct TextureDescriptor::Hash {
+  typedef TextureDescriptor argument_type;
+  typedef size_t result_type;
+
+  inline size_t operator()(const TextureDescriptor& descriptor) const {
+    return descriptor.size.GetHashCode() +
+           static_cast<int>(descriptor.format) * 37 +
+           (descriptor.mipmapped ? 1 : 0);
+  }
+};
+
+}  // namespace escher

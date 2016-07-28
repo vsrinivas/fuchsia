@@ -4,12 +4,14 @@
 
 #include "escher/effects/lighting/noise_texture.h"
 
+#include "escher/gl/texture_cache.h"
+
 #include <memory>
 #include <random>
 
 namespace escher {
 
-UniqueTexture MakeNoiseTexture(const SizeI& size) {
+Texture MakeNoiseTexture(const SizeI& size, TextureCache* cache) {
   std::random_device seed;
   std::default_random_engine prng(seed());
   std::uniform_int_distribution<GLubyte> random;
@@ -19,14 +21,8 @@ UniqueTexture MakeNoiseTexture(const SizeI& size) {
   for (int i = 0; i < byte_count; ++i)
     data[i] = random(prng);
 
-  UniqueTexture result = MakeUniqueTexture();
-  glBindTexture(GL_TEXTURE_2D, result.id());
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.width(), size.height(), 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, data.get());
+  Texture result = cache->GetColorTexture(size);
+  result.SetImage(data.get());
   return result;
 }
 

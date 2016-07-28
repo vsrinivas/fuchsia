@@ -7,28 +7,40 @@
 namespace escher {
 namespace gles2 {
 
-Texture::Texture() {}
-
-Texture::Texture(TextureDescriptor descriptor, UniqueTexture texture)
-  : descriptor_(std::move(descriptor)), texture_(std::move(texture)) {}
-
-Texture::~Texture() {}
-
-Texture::Texture(Texture&& other)
-  : descriptor_(std::move(other.descriptor_)),
-    texture_(std::move(other.texture_)) {}
-
-Texture& Texture::operator=(Texture&& other) {
-  std::swap(descriptor_, other.descriptor_);
-  std::swap(texture_, other.texture_);
-  return *this;
+void Texture::SetImage(GLubyte* data) {
+  GLenum target = GetGLTarget();
+  glBindTexture(target, id());
+  glTexImage2D(target, 0, GetGLInternalFormat(),
+               width(), height(),
+               0, GetGLFormat(), GetGLType(), data);
 }
 
-Texture Texture::Make(TextureDescriptor descriptor) {
-  UniqueTexture texture;
-  if (descriptor.factory)
-    texture = descriptor.factory(descriptor.size);
-  return Texture(std::move(descriptor), std::move(texture));
+GLint Texture::GetGLInternalFormat() const {
+  switch (format()) {
+    case TextureDescriptor::Format::kRGBA:
+      return GL_RGBA;
+    case TextureDescriptor::Format::kDepth:
+      return GL_DEPTH_COMPONENT;
+    case TextureDescriptor::Format::kInvalid:
+      FTL_DCHECK(false);
+      return 0;
+  }
+}
+
+GLenum Texture::GetGLFormat() const {
+  return GetGLInternalFormat();
+}
+
+GLenum Texture::GetGLType() const {
+  switch (format()) {
+    case TextureDescriptor::Format::kRGBA:
+      return GL_UNSIGNED_BYTE;
+    case TextureDescriptor::Format::kDepth:
+      return GL_UNSIGNED_SHORT;
+    case TextureDescriptor::Format::kInvalid:
+      FTL_DCHECK(false);
+      return 0;
+  }
 }
 
 }  // namespace gles2

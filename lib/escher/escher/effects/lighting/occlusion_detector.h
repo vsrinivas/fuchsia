@@ -6,7 +6,8 @@
 
 #include "ftl/macros.h"
 #include "escher/gl/unique_program.h"
-#include "escher/gl/unique_texture.h"
+#include "escher/gl/texture.h"
+#include "escher/gl/texture_cache.h"
 
 namespace escher {
 
@@ -15,7 +16,7 @@ class OcclusionDetector {
   OcclusionDetector();
   ~OcclusionDetector();
 
-  bool Compile();
+  bool Compile(TextureCache* cache);
 
   const UniqueProgram& program() const { return program_; }
 
@@ -28,7 +29,7 @@ class OcclusionDetector {
   // Attributes
   GLint position() const { return position_; }
 
-  const UniqueTexture& noise_texture() const { return noise_texture_; }
+  const Texture& noise_texture() const { return noise_texture_; }
 
  private:
   UniqueProgram program_;
@@ -39,7 +40,7 @@ class OcclusionDetector {
   GLint key_light_ = 0;
   GLint position_ = 0;
 
-  UniqueTexture noise_texture_;
+  Texture noise_texture_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OcclusionDetector);
 };

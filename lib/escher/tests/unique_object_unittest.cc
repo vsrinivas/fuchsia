@@ -17,7 +17,7 @@ void ResetTestObject(const GLuint id) {
   g_ids.insert(id);
 }
 
-}
+}  // namespace
 
 TEST(UniqueObject, ResetAndDestroy) {
   g_counter = 0;

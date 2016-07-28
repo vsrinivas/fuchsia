@@ -5,10 +5,11 @@
 #pragma once
 
 #include "escher/geometry/size_i.h"
-#include "escher/gl/unique_texture.h"
+#include "escher/gl/texture.h"
+#include "escher/gl/texture_cache.h"
 
 namespace escher {
 
-UniqueTexture MakeNoiseTexture(const SizeI& size);
+Texture MakeNoiseTexture(const SizeI& size, TextureCache* cache);
 
 }  // namespace escher
