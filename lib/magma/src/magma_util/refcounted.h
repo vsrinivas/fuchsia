@@ -15,8 +15,9 @@
 #ifndef REFCOUNTED_H_
 #define REFCOUNTED_H_
 
+#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
 #include <atomic>
-#include <magma_util/dlog.h>
 
 namespace magma {
 
@@ -26,21 +27,31 @@ public:
 
     void Incref()
     {
+        DASSERT(count_ > 0);
         if (++count_ < 2)
             DLOG("%s: Incref with initial count zero", name_);
     }
 
     void Decref()
     {
+        DASSERT(count_ > 0);
         if (--count_ == 0) {
             DLOG("%s: Decref count now zero", name_);
             Delete();
         }
     }
 
-    int Getref() { return count_; }
+    int Getref()
+    {
+        DASSERT(count_ > 0);
+        return count_;
+    }
 
-    const char* name() { return name_; };
+    const char* name()
+    {
+        DASSERT(count_ > 0);
+        return name_;
+    };
 
 protected:
     virtual ~Refcounted() {}

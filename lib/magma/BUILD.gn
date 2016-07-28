@@ -66,7 +66,7 @@ config("magma_src_include_config") {
   include_dirs = [ "src" ]
 }
 
-# TODO: remove this
+# TODO(MA-29): remove this, just use src/magma_util instead
 group("util") {
   public_deps = [
     "src/magma_util",

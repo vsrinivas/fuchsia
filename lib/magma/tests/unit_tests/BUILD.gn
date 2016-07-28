@@ -19,7 +19,9 @@ executable("magma_unit_tests") {
     "hello_world.cc",
     "main.cc",
     "test_magma_system_device.cc",
+    "test_mutex.cc",
     "test_platform_buffer.cc",
+    "test_refcounted.cc",
   ]
 
   include_dirs = [ "$magma_build_root/src/sys-driver" ]
