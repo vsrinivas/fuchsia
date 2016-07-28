@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <system/compiler.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <system/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -34,12 +34,24 @@ __BEGIN_CDECLS
         return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);                                  \
     }                                                                                           \
                                                                                                 \
+    static inline TYPE atomic_sub##TYPE_NAME(TYPE* ptr, TYPE val) {                             \
+        return __atomic_fetch_sub(ptr, val, __ATOMIC_SEQ_CST);                                  \
+    }                                                                                           \
+                                                                                                \
     static inline TYPE atomic_and##TYPE_NAME(TYPE* ptr, TYPE val) {                             \
         return __atomic_fetch_and(ptr, val, __ATOMIC_SEQ_CST);                                  \
     }                                                                                           \
                                                                                                 \
+    static inline TYPE atomic_xor##TYPE_NAME(TYPE* ptr, TYPE val) {                             \
+        return __atomic_fetch_xor(ptr, val, __ATOMIC_SEQ_CST);                                  \
+    }                                                                                           \
+                                                                                                \
     static inline TYPE atomic_or##TYPE_NAME(TYPE* ptr, TYPE val) {                              \
         return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);                                   \
+    }                                                                                           \
+                                                                                                \
+    static inline TYPE atomic_nand##TYPE_NAME(TYPE* ptr, TYPE val) {                            \
+        return __atomic_fetch_nand(ptr, val, __ATOMIC_SEQ_CST);                                 \
     }                                                                                           \
                                                                                                 \
     static inline bool atomic_cmpxchg##TYPE_NAME(TYPE* ptr, TYPE* oldval, TYPE newval) {        \
@@ -64,12 +76,24 @@ __BEGIN_CDECLS
         return __atomic_fetch_add(ptr, val, __ATOMIC_RELAXED);                                  \
     }                                                                                           \
                                                                                                 \
+    static inline TYPE atomic_sub_relaxed##TYPE_NAME(TYPE* ptr, TYPE val) {                     \
+        return __atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED);                                  \
+    }                                                                                           \
+                                                                                                \
     static inline TYPE atomic_and_relaxed##TYPE_NAME(TYPE* ptr, TYPE val) {                     \
         return __atomic_fetch_and(ptr, val, __ATOMIC_RELAXED);                                  \
     }                                                                                           \
                                                                                                 \
+    static inline TYPE atomic_xor_relaxed##TYPE_NAME(TYPE* ptr, TYPE val) {                     \
+        return __atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED);                                  \
+    }                                                                                           \
+                                                                                                \
     static inline TYPE atomic_or_relaxed##TYPE_NAME(TYPE* ptr, TYPE val) {                      \
         return __atomic_fetch_or(ptr, val, __ATOMIC_RELAXED);                                   \
+    }                                                                                           \
+                                                                                                \
+    static inline TYPE atomic_nand_relaxed##TYPE_NAME(TYPE* ptr, TYPE val) {                    \
+        return __atomic_fetch_nand(ptr, val, __ATOMIC_RELAXED);                                 \
     }                                                                                           \
                                                                                                 \
     static inline TYPE atomic_cmpxchg_relaxed##TYPE_NAME(TYPE* ptr, TYPE oldval, TYPE newval) { \
