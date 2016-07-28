@@ -17,10 +17,28 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
+#include <memory>
 
-// This class contains default implementations of msd_device functionality
-// to override a specific function to contain test logic, inherit from this
-// class, override the desired function
+// These classes contain default implementations of msd_device functionality.
+// To override a specific function to contain test logic, inherit from the
+// desired class, override the desired function, and pass as the msd_abi object
+
+class MsdMockBuffer : public msd_buffer {
+public:
+    MsdMockBuffer(struct msd_platform_buffer* platform_buf) { magic_ = kMagic; }
+    virtual ~MsdMockBuffer() {}
+
+    static MsdMockBuffer* cast(msd_buffer* buf)
+    {
+        DASSERT(buf);
+        DASSERT(buf->magic_ == kMagic);
+        return static_cast<MsdMockBuffer*>(buf);
+    }
+
+private:
+    static const uint32_t kMagic = 0x6d6b6266; // "mkbf" (Mock Buffer)
+};
+
 class MsdMockDevice : public msd_device {
 public:
     MsdMockDevice() { magic_ = kMagic; }
@@ -43,7 +61,7 @@ private:
 
 class MsdMockDriver : public msd_driver {
 public:
-    MsdMockDriver() : test_device_(new MsdMockDevice()) { magic_ = kMagic; }
+    MsdMockDriver() { magic_ = kMagic; }
     virtual ~MsdMockDriver() {}
 
     virtual MsdMockDevice* CreateDevice() { return new MsdMockDevice(); }
@@ -58,8 +76,39 @@ public:
     }
 
 private:
-    MsdMockDevice* test_device_;
     static const uint32_t kMagic = 0x6d6b6472; // "mkdr" (Mock Driver)
+};
+
+// There is no buffermanager concept in the msd abi right now, so this class is
+// for testing purposes only, making it a little different than the other
+// classes in this header
+
+class MsdMockBufferManager {
+public:
+    MsdMockBufferManager() {}
+    virtual ~MsdMockBufferManager() {}
+
+    virtual MsdMockBuffer* CreateBuffer(struct msd_platform_buffer* platform_buf)
+    {
+        return new MsdMockBuffer(platform_buf);
+    }
+
+    virtual void DestroyBuffer(MsdMockBuffer* buf) { delete buf; }
+
+    class ScopedMockBufferManager {
+    public:
+        ScopedMockBufferManager(std::unique_ptr<MsdMockBufferManager> bufmgr)
+        {
+            SetTestBufferManager(std::move(bufmgr));
+        }
+
+        ~ScopedMockBufferManager() { SetTestBufferManager(nullptr); }
+
+        MsdMockBufferManager* get();
+    };
+
+private:
+    static void SetTestBufferManager(std::unique_ptr<MsdMockBufferManager> bufmgr);
 };
 
 #endif

@@ -16,12 +16,18 @@
 #define _MAGMA_SYSTEM_BUFFER_H_
 
 #include "magma_util/platform_buffer.h"
+#include "msd.h"
 
+#include <functional>
 #include <memory>
+
+struct MagmaSystemDevice;
+
+typedef std::unique_ptr<msd_buffer, decltype(&msd_buffer_destroy)> msd_buffer_unique_ptr_t;
 
 class MagmaSystemBuffer {
 public:
-    MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf, msd_platform_buffer* token);
+    static std::unique_ptr<MagmaSystemBuffer> Create(uint64_t size);
     ~MagmaSystemBuffer() {}
 
     uint64_t size() { return platform_buf_->size(); }
@@ -31,8 +37,10 @@ public:
     PlatformBuffer* platform_buffer() { return platform_buf_.get(); }
 
 private:
+    MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf,
+                      msd_buffer_unique_ptr_t msd_buf);
     std::unique_ptr<PlatformBuffer> platform_buf_;
-    msd_platform_buffer* token_;
+    msd_buffer_unique_ptr_t msd_buf_;
 };
 
 #endif //_MAGMA_SYSTEM_BUFFER_H_

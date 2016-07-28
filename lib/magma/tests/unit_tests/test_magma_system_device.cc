@@ -49,30 +49,32 @@ TEST(Magma, MagmaSystemDevice_BufferManagement)
 
     uint64_t test_size = 4096;
 
-    // allocating a zero size buffer should fail
-    EXPECT_EQ(dev.AllocateBuffer(0), nullptr);
+    {
+        // allocating a zero size buffer should fail
+        EXPECT_EQ(dev.AllocateBuffer(0), nullptr);
 
-    auto buf = dev.AllocateBuffer(test_size);
-    // assert because if this fails the rest of this is gonna be bogus anyway
-    ASSERT_NE(buf, nullptr);
-    EXPECT_GE(buf->size(), test_size);
+        auto buf = dev.AllocateBuffer(test_size);
+        // assert because if this fails the rest of this is gonna be bogus anyway
+        ASSERT_NE(buf, nullptr);
+        EXPECT_GE(buf->size(), test_size);
 
-    auto handle = buf->handle();
-    EXPECT_EQ(handle, buf->platform_buffer()->handle());
+        auto handle = buf->handle();
+        EXPECT_EQ(handle, buf->platform_buffer()->handle());
 
-    // should be able to get the buffer by handle
-    auto get_buf = dev.LookupBuffer(handle);
-    EXPECT_NE(get_buf, nullptr);
-    EXPECT_EQ(get_buf, buf); // they are shared ptrs after all
+        // should be able to get the buffer by handle
+        auto get_buf = dev.LookupBuffer(handle);
+        EXPECT_NE(get_buf, nullptr);
+        EXPECT_EQ(get_buf, buf); // they are shared ptrs after all
 
-    // freeing the allocated buffer should work
-    EXPECT_TRUE(dev.FreeBuffer(handle));
+        // freeing the allocated buffer should work
+        EXPECT_TRUE(dev.FreeBuffer(handle));
 
-    // should no longer be able to get it from the map
-    EXPECT_EQ(dev.LookupBuffer(handle), nullptr);
+        // should no longer be able to get it from the map
+        EXPECT_EQ(dev.LookupBuffer(handle), nullptr);
 
-    // should not be able to double free it
-    EXPECT_FALSE(dev.FreeBuffer(handle));
+        // should not be able to double free it
+        EXPECT_FALSE(dev.FreeBuffer(handle));
+    }
 
     msd_driver_destroy_device(msd_dev);
     msd_driver_destroy(msd_drv);

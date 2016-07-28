@@ -32,6 +32,11 @@ struct msd_device {
     int32_t magic_;
 };
 
+// A driver defined buffer that owns a reference to an msd_platform_buffer
+struct msd_buffer {
+    int32_t magic_;
+};
+
 // Instantiates a driver instance.
 struct msd_driver* msd_driver_create(void);
 
@@ -52,6 +57,15 @@ int32_t msd_device_close(struct msd_device* dev, msd_client_id client_id);
 
 // Returns the device id.  0 is an invalid device id.
 uint32_t msd_device_get_id(struct msd_device* dev);
+
+// Creates a buffer that owns a reference to the provided platform buffer
+// The resulting msd_buffer is owned by the caller and must be destroyed
+// Returns NULL on failure.
+struct msd_buffer* msd_buffer_import(struct msd_platform_buffer* platform_buf);
+
+// Destroys |buf|
+// This releases buf's reference to the underlying platform buffer
+void msd_buffer_destroy(struct msd_buffer* buf);
 
 #if defined(__cplusplus)
 }

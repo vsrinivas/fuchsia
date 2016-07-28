@@ -23,9 +23,9 @@
 
 struct MagmaSystemDevice {
 public:
-    MagmaSystemDevice(msd_device* arch_dev) : arch_dev_(arch_dev) {}
+    MagmaSystemDevice(msd_device* msd_dev) : msd_dev_(msd_dev) {}
 
-    msd_device* arch() { return arch_dev_; }
+    msd_device* arch() { return msd_dev_; }
 
     void set_client_id(msd_client_id client_id) { client_id_ = client_id; }
     msd_client_id client_id() { return client_id_; }
@@ -47,7 +47,7 @@ public:
 
 private:
     msd_client_id client_id_{};
-    msd_device* arch_dev_;
+    msd_device* msd_dev_;
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
 };
 
