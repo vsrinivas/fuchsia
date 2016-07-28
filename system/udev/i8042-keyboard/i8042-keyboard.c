@@ -315,6 +315,10 @@ static int i8042_irq_thread(void* arg) {
     for (;;) {
         status = mx_interrupt_event_wait(device->irq);
         if (status == NO_ERROR) {
+            // ack IRQ so we don't lose any IRQs that arrive while processing
+            // (as this is an edge-triggered IRQ)
+            mx_interrupt_event_complete(device->irq);
+
             // keep handling status on the keyboard controller until no bits are set we care about
             bool retry;
             do {
@@ -332,7 +336,6 @@ static int i8042_irq_thread(void* arg) {
                 }
                 // TODO check other status bits here
             } while (retry);
-            mx_interrupt_event_complete(device->irq);
         }
     }
     return 0;
