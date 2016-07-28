@@ -21,8 +21,8 @@ MODULE_TYPE := userlib
 # This library should not depend on libc.
 MODULE_COMPILEFLAGS := -ffreestanding
 
-# kernel code needs magenta headers
-KERNEL_INCLUDES += $(LOCAL_DIR)/include
+# Both kernel and userspace code needs magenta headers.
+GLOBAL_INCLUDES += $(LOCAL_DIR)/include
 
 ifeq ($(ARCH),arm)
 MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm32.S

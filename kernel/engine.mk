@@ -72,6 +72,7 @@ GLOBAL_CONFIG_HEADER := $(BUILDDIR)/config-global.h
 KERNEL_CONFIG_HEADER := $(BUILDDIR)/config-kernel.h
 USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
 
+GLOBAL_INCLUDES := global/include
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_COMPILEFLAGS := -g -finline -include $(GLOBAL_CONFIG_HEADER)
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
@@ -302,7 +303,8 @@ GLOBAL_DEFINES += $(EXTERNAL_DEFINES)
 $(info EXTERNAL_DEFINES = $(EXTERNAL_DEFINES))
 endif
 
-# prefix all of the paths in KERNEL_INCLUDES with -I
+# prefix all of the paths in GLOBAL_INCLUDES and KERNEL_INCLUDES with -I
+GLOBAL_INCLUDES := $(addprefix -I,$(GLOBAL_INCLUDES))
 KERNEL_INCLUDES := $(addprefix -I,$(KERNEL_INCLUDES))
 
 # default to no ccache
@@ -331,6 +333,7 @@ include make/build.mk
 DEPS := $(ALLOBJS:%o=%d)
 
 # put all of the build flags in various config.h files to force a rebuild if any change
+GLOBAL_DEFINES += GLOBAL_INCLUDES=\"$(subst $(SPACE),_,$(GLOBAL_INCLUDES))\"
 GLOBAL_DEFINES += GLOBAL_COMPILEFLAGS=\"$(subst $(SPACE),_,$(GLOBAL_COMPILEFLAGS))\"
 GLOBAL_DEFINES += GLOBAL_OPTFLAGS=\"$(subst $(SPACE),_,$(GLOBAL_OPTFLAGS))\"
 GLOBAL_DEFINES += GLOBAL_CFLAGS=\"$(subst $(SPACE),_,$(GLOBAL_CFLAGS))\"
