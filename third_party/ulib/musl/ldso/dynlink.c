@@ -1045,7 +1045,10 @@ static void dl_debug_state(void) {}
 
 weak_alias(dl_debug_state, _dl_debug_state);
 
+#if 0
+// TODO(mcgrathr): Probably this comes back with working ELF TLS.
 void __init_tls(size_t* auxv) {}
+#endif
 
 __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     pthread_t self = __pthread_self();
