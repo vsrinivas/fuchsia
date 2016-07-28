@@ -1298,8 +1298,8 @@ static _Noreturn void dls3(mx_handle_t exec_vmo, void* start_arg) {
     /* Initial dso chain consists only of the app. */
     head = tail = &app;
 
-    /* Donate unused parts of app and library mapping to malloc */
-    reclaim_gaps(&app);
+    // Donate unused parts of ldso mapping to malloc.
+    // map_library already did this for app.
     reclaim_gaps(&ldso);
 
     /* Load preload/needed libraries, add their symbols to the global
