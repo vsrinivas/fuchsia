@@ -39,16 +39,16 @@ extern enum handler_return platform_irq(struct arm64_iframe_long *frame);
 static void dump_iframe(const struct arm64_iframe_long *iframe)
 {
     printf("iframe %p:\n", iframe);
-    printf("x0  0x%16llx x1  0x%16llx x2  0x%16llx x3  0x%16llx\n", iframe->r[0], iframe->r[1], iframe->r[2], iframe->r[3]);
-    printf("x4  0x%16llx x5  0x%16llx x6  0x%16llx x7  0x%16llx\n", iframe->r[4], iframe->r[5], iframe->r[6], iframe->r[7]);
-    printf("x8  0x%16llx x9  0x%16llx x10 0x%16llx x11 0x%16llx\n", iframe->r[8], iframe->r[9], iframe->r[10], iframe->r[11]);
-    printf("x12 0x%16llx x13 0x%16llx x14 0x%16llx x15 0x%16llx\n", iframe->r[12], iframe->r[13], iframe->r[14], iframe->r[15]);
-    printf("x16 0x%16llx x17 0x%16llx x18 0x%16llx x19 0x%16llx\n", iframe->r[16], iframe->r[17], iframe->r[18], iframe->r[19]);
-    printf("x20 0x%16llx x21 0x%16llx x22 0x%16llx x23 0x%16llx\n", iframe->r[20], iframe->r[21], iframe->r[22], iframe->r[23]);
-    printf("x24 0x%16llx x25 0x%16llx x26 0x%16llx x27 0x%16llx\n", iframe->r[24], iframe->r[25], iframe->r[26], iframe->r[27]);
-    printf("x28 0x%16llx x29 0x%16llx lr  0x%16llx usp 0x%16llx\n", iframe->r[28], iframe->r[29], iframe->lr, iframe->usp);
-    printf("elr 0x%16llx\n", iframe->elr);
-    printf("spsr 0x%16llx\n", iframe->spsr);
+    printf("x0  %#18llx x1  %#18llx x2  %#18llx x3  %#18llx\n", iframe->r[0], iframe->r[1], iframe->r[2], iframe->r[3]);
+    printf("x4  %#18llx x5  %#18llx x6  %#18llx x7  %#18llx\n", iframe->r[4], iframe->r[5], iframe->r[6], iframe->r[7]);
+    printf("x8  %#18llx x9  %#18llx x10 %#18llx x11 %#18llx\n", iframe->r[8], iframe->r[9], iframe->r[10], iframe->r[11]);
+    printf("x12 %#18llx x13 %#18llx x14 %#18llx x15 %#18llx\n", iframe->r[12], iframe->r[13], iframe->r[14], iframe->r[15]);
+    printf("x16 %#18llx x17 %#18llx x18 %#18llx x19 %#18llx\n", iframe->r[18], iframe->r[17], iframe->r[18], iframe->r[19]);
+    printf("x20 %#18llx x21 %#18llx x22 %#18llx x23 %#18llx\n", iframe->r[20], iframe->r[21], iframe->r[22], iframe->r[23]);
+    printf("x24 %#18llx x25 %#18llx x26 %#18llx x27 %#18llx\n", iframe->r[24], iframe->r[25], iframe->r[26], iframe->r[27]);
+    printf("x28 %#18llx x29 %#18llx lr  %#18llx usp %#18llx\n", iframe->r[28], iframe->r[29], iframe->lr, iframe->usp);
+    printf("elr  %#18llx\n", iframe->elr);
+    printf("spsr %#18llx\n", iframe->spsr);
 }
 
 __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint32_t syscall_imm, uint64_t pc)
@@ -283,4 +283,3 @@ void arch_dump_exception_context(arch_exception_context_t *context)
     }
 }
 #endif
-

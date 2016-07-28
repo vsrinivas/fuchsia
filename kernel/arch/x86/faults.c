@@ -40,17 +40,17 @@ static void dump_fault_frame(x86_iframe_t *frame)
     dprintf(CRITICAL, " DS:     %04x  ES:     %04x  FS:   %04x  GS:     %04x\n",
             frame->ds, frame->es, frame->fs, frame->gs);
 #elif ARCH_X86_64
-    dprintf(CRITICAL, " CS:              %4llx RIP: %16llx EFL: %16llx CR2: %16lx\n",
+    dprintf(CRITICAL, " CS:  %#18llx RIP: %#18llx EFL: %#18llx CR2: %#18lx\n",
             frame->cs, frame->ip, frame->flags, x86_get_cr2());
-    dprintf(CRITICAL, " RAX: %16llx RBX: %16llx RCX: %16llx RDX: %16llx\n",
+    dprintf(CRITICAL, " RAX: %#18llx RBX: %#18llx RCX: %#18llx RDX: %#18llx\n",
             frame->rax, frame->rbx, frame->rcx, frame->rdx);
-    dprintf(CRITICAL, " RSI: %16llx RDI: %16llx RBP: %16llx RSP: %16llx\n",
+    dprintf(CRITICAL, " RSI: %#18llx RDI: %#18llx RBP: %#18llx RSP: %#18llx\n",
             frame->rsi, frame->rdi, frame->rbp, frame->user_sp);
-    dprintf(CRITICAL, "  R8: %16llx  R9: %16llx R10: %16llx R11: %16llx\n",
+    dprintf(CRITICAL, "  R8: %#18llx  R9: %#18llx R10: %#18llx R11: %#18llx\n",
             frame->r8, frame->r9, frame->r10, frame->r11);
-    dprintf(CRITICAL, " R12: %16llx R13: %16llx R14: %16llx R15: %16llx\n",
+    dprintf(CRITICAL, " R12: %#18llx R13: %#18llx R14: %#18llx R15: %#18llx\n",
             frame->r12, frame->r13, frame->r14, frame->r15);
-    dprintf(CRITICAL, "errc: %16llx\n",
+    dprintf(CRITICAL, "errc: %#18llx\n",
             frame->err_code);
 #endif
 
@@ -371,5 +371,3 @@ void arch_dump_exception_context(arch_exception_context_t *context)
     }
 }
 #endif
-
-

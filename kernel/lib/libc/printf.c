@@ -142,18 +142,28 @@ __NO_INLINE static char *longlong_to_string(char *buf, unsigned long long n, siz
 static const char hextable[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 static const char hextable_caps[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-__NO_INLINE static char *longlong_to_hexstring(char *buf, unsigned long long u, size_t len, uint flag)
+__NO_INLINE static const char *longlong_to_hexstring(char *buf, unsigned long long u, size_t len, uint flag)
 {
     size_t pos = len;
     const char *table = (flag & CAPSFLAG) ? hextable_caps : hextable;
 
+    // Special case because ALTFLAG does not prepend 0x to 0.
+    if (u == 0)
+        return "0";
+
     buf[--pos] = 0;
+
     do {
         unsigned int digit = u % 16;
         u /= 16;
 
         buf[--pos] = table[digit];
     } while (u != 0);
+
+    if (flag & ALTFLAG) {
+        buf[--pos] = (flag & CAPSFLAG) ? 'X' : 'x';
+        buf[--pos] = '0';
+    }
 
     return &buf[pos];
 }
@@ -529,10 +539,6 @@ hex:
                     (flags & PTRDIFFFLAG) ? (uintptr_t)va_arg(ap, ptrdiff_t) :
                     va_arg(ap, unsigned int);
                 s = longlong_to_hexstring(num_buffer, n, sizeof(num_buffer), flags);
-                if (flags & ALTFLAG) {
-                    OUTPUT_CHAR('0');
-                    OUTPUT_CHAR((flags & CAPSFLAG) ? 'X': 'x');
-                }
                 goto _output_string;
             case 'n':
                 ptr = va_arg(ap, void *);
