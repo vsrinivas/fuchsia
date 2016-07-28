@@ -10,7 +10,7 @@
 #include "escher/gl/unique_program.h"
 #include "escher/scene/material.h"
 #include "escher/scene/stage.h"
-#include "escher/shaders/material/material_shader_descriptor.h"
+#include "escher/shaders/material/material_shader_spec.h"
 #include "escher/shaders/material/modifier.h"
 
 namespace escher {
@@ -41,11 +41,11 @@ class MaterialShader {
  private:
   friend class MaterialShaderFactory;
 
-  explicit MaterialShader(const MaterialShaderDescriptor& descriptor);
+  explicit MaterialShader(const MaterialShaderSpec& spec);
   bool Compile();
   std::string GeneratePrologue();
 
-  const MaterialShaderDescriptor descriptor_;
+  const MaterialShaderSpec spec_;
 
   UniqueProgram program_;
 

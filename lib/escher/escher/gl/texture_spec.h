@@ -8,7 +8,7 @@
 
 namespace escher {
 
-struct TextureDescriptor {
+struct TextureSpec {
   struct Hash;
   enum class Format { kRGBA, kDepth, kInvalid };
 
@@ -17,21 +17,21 @@ struct TextureDescriptor {
   bool mipmapped = false;
 };
 
-inline bool operator==(const TextureDescriptor& lhs,
-                       const TextureDescriptor& rhs) {
+inline bool operator==(const TextureSpec& lhs,
+                       const TextureSpec& rhs) {
   return lhs.size == rhs.size &&
          lhs.format == rhs.format &&
          lhs.mipmapped == rhs.mipmapped;
 }
 
-struct TextureDescriptor::Hash {
-  typedef TextureDescriptor argument_type;
+struct TextureSpec::Hash {
+  typedef TextureSpec argument_type;
   typedef size_t result_type;
 
-  inline size_t operator()(const TextureDescriptor& descriptor) const {
-    return descriptor.size.GetHashCode() +
-           static_cast<int>(descriptor.format) * 37 +
-           (descriptor.mipmapped ? 1 : 0);
+  inline size_t operator()(const TextureSpec& spec) const {
+    return spec.size.GetHashCode() +
+           static_cast<int>(spec.format) * 37 +
+           (spec.mipmapped ? 1 : 0);
   }
 };
 

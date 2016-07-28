@@ -13,16 +13,16 @@ namespace escher {
 // Describes the significant characteristics of a material and the context
 // in which it is being drawn which influence the construction of a
 // material shader.
-struct MaterialShaderDescriptor {
+struct MaterialShaderSpec {
   struct Hash;
 
-  MaterialShaderDescriptor(BindingType color_binding_type,
+  MaterialShaderSpec(BindingType color_binding_type,
                            Displacement::Type displacement,
                            Modifier::Mask mask,
                            bool has_texture);
-  ~MaterialShaderDescriptor();
+  ~MaterialShaderSpec();
 
-  bool operator==(const MaterialShaderDescriptor& other) const;
+  bool operator==(const MaterialShaderSpec& other) const;
   size_t GetHashCode() const;
 
   BindingType color_binding_type;
@@ -31,12 +31,12 @@ struct MaterialShaderDescriptor {
   bool has_texture;
 };
 
-struct MaterialShaderDescriptor::Hash {
-  typedef MaterialShaderDescriptor argument_type;
+struct MaterialShaderSpec::Hash {
+  typedef MaterialShaderSpec argument_type;
   typedef size_t result_type;
 
-  inline size_t operator()(const MaterialShaderDescriptor& descriptor) const {
-    return descriptor.GetHashCode();
+  inline size_t operator()(const MaterialShaderSpec& spec) const {
+    return spec.GetHashCode();
   }
 };
 

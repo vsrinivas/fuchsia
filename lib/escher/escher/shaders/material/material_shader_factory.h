@@ -26,9 +26,9 @@ class MaterialShaderFactory {
                                   const Modifier& modifier);
 
  private:
-  std::unordered_map<MaterialShaderDescriptor,
+  std::unordered_map<MaterialShaderSpec,
                      std::unique_ptr<MaterialShader>,
-                     MaterialShaderDescriptor::Hash>
+                     MaterialShaderSpec::Hash>
       shaders_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MaterialShaderFactory);

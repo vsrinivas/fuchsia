@@ -10,24 +10,24 @@
 namespace escher {
 namespace gles2 {
 
-template <typename ResourceDescriptor>
+template <typename ResourceSpec>
 class Resource {
  public:
-  // It is up to the caller to ensure that the resource descriptor matches the
+  // It is up to the caller to ensure that the resource spec matches the
   // resource identified by 'id'.
-  explicit Resource(ResourceDescriptor descriptor,
+  explicit Resource(ResourceSpec spec,
                     GLuint id,
                     ftl::RefPtr<Need> need = nullptr)
-      : descriptor_(descriptor), id_(id), need_(std::move(need)) {}
+      : spec_(spec), id_(id), need_(std::move(need)) {}
 
   Resource() : id_(0) {}
-  Resource(const Resource<ResourceDescriptor>& other) = default;
-  Resource(Resource<ResourceDescriptor>&& other) = default;
+  Resource(const Resource<ResourceSpec>& other) = default;
+  Resource(Resource<ResourceSpec>&& other) = default;
 
-  Resource& operator=(const Resource<ResourceDescriptor>& other) = default;
-  Resource& operator=(Resource<ResourceDescriptor>&& other) = default;
+  Resource& operator=(const Resource<ResourceSpec>& other) = default;
+  Resource& operator=(Resource<ResourceSpec>&& other) = default;
 
-  const ResourceDescriptor& descriptor() const { return descriptor_; }
+  const ResourceSpec& spec() const { return spec_; }
   const GLuint id() const { return id_; }
 
   explicit operator bool() const { return static_cast<bool>(id_); }
@@ -37,7 +37,7 @@ class Resource {
   bool IsManaged() const { return static_cast<bool>(need_); }
 
  private:
-  ResourceDescriptor descriptor_;
+  ResourceSpec spec_;
   GLuint id_;
   ftl::RefPtr<Need> need_;
 };

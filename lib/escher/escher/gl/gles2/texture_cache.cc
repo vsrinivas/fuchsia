@@ -14,54 +14,54 @@ TextureCache::TextureCache() {}
 TextureCache::~TextureCache() {}
 
 Texture TextureCache::GetDepthTexture(const SizeI& size) {
-  TextureDescriptor descriptor;
-  descriptor.size = size;
-  descriptor.format = TextureDescriptor::Format::kDepth;
-  return GetTexture(descriptor);
+  TextureSpec spec;
+  spec.size = size;
+  spec.format = TextureSpec::Format::kDepth;
+  return GetTexture(spec);
 }
 
 Texture TextureCache::GetColorTexture(const SizeI& size) {
-  TextureDescriptor descriptor;
-  descriptor.size = size;
-  descriptor.format = TextureDescriptor::Format::kRGBA;
-  return GetTexture(descriptor);
+  TextureSpec spec;
+  spec.size = size;
+  spec.format = TextureSpec::Format::kRGBA;
+  return GetTexture(spec);
 }
 
 Texture TextureCache::GetMipmappedColorTexture(const SizeI& size) {
-  TextureDescriptor descriptor;
-  descriptor.size = size;
-  descriptor.format = TextureDescriptor::Format::kRGBA;
-  descriptor.mipmapped = true;
-  return GetTexture(descriptor);
+  TextureSpec spec;
+  spec.size = size;
+  spec.format = TextureSpec::Format::kRGBA;
+  spec.mipmapped = true;
+  return GetTexture(spec);
 }
 
-Texture TextureCache::GetTexture(const TextureDescriptor& descriptor) {
+Texture TextureCache::GetTexture(const TextureSpec& spec) {
   // Find the ID corresponding to a suitable existing texture, or create one.
   GLuint id = 0;
-  auto it = cache_.find(descriptor);
+  auto it = cache_.find(spec);
   if (it != cache_.end()) {
     id = it->second;
     cache_.erase(it);
     FTL_DCHECK(id != 0);
   } else {
-    id = MakeTexture(descriptor);
+    id = MakeTexture(spec);
   }
 
   if (!id)
-    return Texture(descriptor, 0);
+    return Texture(spec, 0);
 
   ++used_texture_count_;
-  // Done this way instead of MakeRefCounted<TextureNeed>(descriptor, id, this)
+  // Done this way instead of MakeRefCounted<TextureNeed>(spec, id, this)
   // so that we don't create a RefPtr<TextureNeed> when we want a RefPtr<Need>.
-  Need* need = new TextureNeed(descriptor, id, this);
-  return Texture(descriptor, id, ftl::AdoptRef(need));
+  Need* need = new TextureNeed(spec, id, this);
+  return Texture(spec, id, ftl::AdoptRef(need));
 }
 
-GLuint TextureCache::MakeTexture(const TextureDescriptor& desc) const {
+GLuint TextureCache::MakeTexture(const TextureSpec& spec) const {
   FTL_DCHECK(glGetError() == GL_NO_ERROR);
 
   // TODO(jjosh): this isn't exhaustive.
-  FTL_DCHECK(desc.format != TextureDescriptor::Format::kDepth || !desc.mipmapped);
+  FTL_DCHECK(spec.format != TextureSpec::Format::kDepth || !spec.mipmapped);
 
   GLuint id = 0;
   glGenTextures(1, &id);
@@ -71,7 +71,7 @@ GLuint TextureCache::MakeTexture(const TextureDescriptor& desc) const {
   }
 
   glBindTexture(GL_TEXTURE_2D, id);
-  if (desc.mipmapped) {
+  if (spec.mipmapped) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -79,7 +79,7 @@ GLuint TextureCache::MakeTexture(const TextureDescriptor& desc) const {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 desc.size.width(), desc.size.height(),
+                 spec.size.width(), spec.size.height(),
                  0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
@@ -91,12 +91,12 @@ GLuint TextureCache::MakeTexture(const TextureDescriptor& desc) const {
 
     GLenum format;
     GLenum type;
-    switch (desc.format) {
-      case TextureDescriptor::Format::kRGBA:
+    switch (spec.format) {
+      case TextureSpec::Format::kRGBA:
         format = GL_RGBA;
         type = GL_UNSIGNED_BYTE;
         break;
-      case TextureDescriptor::Format::kDepth:
+      case TextureSpec::Format::kDepth:
         format = GL_DEPTH_COMPONENT;
         type = GL_UNSIGNED_SHORT;
         break;
@@ -105,7 +105,7 @@ GLuint TextureCache::MakeTexture(const TextureDescriptor& desc) const {
         return 0;
     }
     glTexImage2D(GL_TEXTURE_2D, 0, format,
-                 desc.size.width(), desc.size.height(),
+                 spec.size.width(), spec.size.height(),
                  0, format, type, nullptr);
   }
 
@@ -128,17 +128,17 @@ void TextureCache::Clear() {
   cache_.clear();
 }
 
-void TextureCache::RecieveTexture(TextureDescriptor descriptor, GLuint id) {
-  cache_.emplace(descriptor, id);
+void TextureCache::RecieveTexture(TextureSpec spec, GLuint id) {
+  cache_.emplace(spec, id);
   --used_texture_count_;
 }
 
 TextureCache::TextureNeed::TextureNeed(
-    const TextureDescriptor& descriptor, GLuint id, TextureCache* cache)
-    : descriptor_(descriptor), id_(id), cache_(cache) {}
+    const TextureSpec& spec, GLuint id, TextureCache* cache)
+    : spec_(spec), id_(id), cache_(cache) {}
 
 TextureCache::TextureNeed::~TextureNeed() {
-  cache_->RecieveTexture(std::move(descriptor_), id_);
+  cache_->RecieveTexture(std::move(spec_), id_);
 }
 
 }  // namespace gles2

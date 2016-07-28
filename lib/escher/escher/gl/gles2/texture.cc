@@ -17,11 +17,11 @@ void Texture::SetImage(GLubyte* data) {
 
 GLint Texture::GetGLInternalFormat() const {
   switch (format()) {
-    case TextureDescriptor::Format::kRGBA:
+    case TextureSpec::Format::kRGBA:
       return GL_RGBA;
-    case TextureDescriptor::Format::kDepth:
+    case TextureSpec::Format::kDepth:
       return GL_DEPTH_COMPONENT;
-    case TextureDescriptor::Format::kInvalid:
+    case TextureSpec::Format::kInvalid:
       FTL_DCHECK(false);
       return 0;
   }
@@ -33,11 +33,11 @@ GLenum Texture::GetGLFormat() const {
 
 GLenum Texture::GetGLType() const {
   switch (format()) {
-    case TextureDescriptor::Format::kRGBA:
+    case TextureSpec::Format::kRGBA:
       return GL_UNSIGNED_BYTE;
-    case TextureDescriptor::Format::kDepth:
+    case TextureSpec::Format::kDepth:
       return GL_UNSIGNED_SHORT;
-    case TextureDescriptor::Format::kInvalid:
+    case TextureSpec::Format::kInvalid:
       FTL_DCHECK(false);
       return 0;
   }

@@ -6,25 +6,25 @@
 
 #include "ftl/macros.h"
 #include "escher/geometry/size_i.h"
-#include "escher/gl/texture_descriptor.h"
+#include "escher/gl/texture_spec.h"
 #include "escher/gl/gles2/resource.h"
 
 namespace escher {
 namespace gles2 {
 
-class Texture : public Resource<TextureDescriptor> {
+class Texture : public Resource<TextureSpec> {
  public:
-  using Resource<TextureDescriptor>::Resource;
+  using Resource<TextureSpec>::Resource;
   Texture() {}
   Texture(const Texture& other) = default;
   Texture(Texture&& other) = default;
 
   Texture& operator=(Texture&& other) = default;
 
-  const SizeI& size() const { return descriptor().size; }
+  const SizeI& size() const { return spec().size; }
   int width() const { return size().width(); }
   int height() const { return size().height(); }
-  const TextureDescriptor::Format format() const { return descriptor().format; }
+  const TextureSpec::Format format() const { return spec().format; }
 
   // Cube maps, 3D textures, etc. not supported yet.
   GLenum GetGLTarget() const { return GL_TEXTURE_2D; }

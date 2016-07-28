@@ -6,18 +6,16 @@
 
 #include "escher/gl/texture.h"
 #include "escher/gl/texture_cache.h"
-#include "escher/gl/texture_descriptor.h"
+#include "escher/gl/texture_spec.h"
 
 using namespace escher;
 
 namespace {
 
 class TextureCacheForTest : public TextureCache {
-
-
  protected:
   // Create a new texture.  Return 0 if unsuccessful.
-  virtual GLuint MakeTexture(const TextureDescriptor& descriptor) const {
+  virtual GLuint MakeTexture(const TextureSpec& spec) const {
     return next_texture_id_++;
   }
 
@@ -107,66 +105,66 @@ TEST(TextureCache, TextureAssignment) {
   GLuint mipmapId1 = 0;
   GLuint depthId1 = 0;
 
-  TextureDescriptor colorDesc1;
-  colorDesc1.size = small;
-  colorDesc1.format = TextureDescriptor::Format::kRGBA;
+  TextureSpec colorSpec1;
+  colorSpec1.size = small;
+  colorSpec1.format = TextureSpec::Format::kRGBA;
 
-  TextureDescriptor colorDesc2;
-  colorDesc1.size = large;
-  colorDesc1.format = TextureDescriptor::Format::kRGBA;
+  TextureSpec colorSpec2;
+  colorSpec1.size = large;
+  colorSpec1.format = TextureSpec::Format::kRGBA;
 
-  TextureDescriptor mipmapDesc1;
-  mipmapDesc1.size = small;
-  mipmapDesc1.format = TextureDescriptor::Format::kRGBA;
-  mipmapDesc1.mipmapped = true;
+  TextureSpec mipmapSpec1;
+  mipmapSpec1.size = small;
+  mipmapSpec1.format = TextureSpec::Format::kRGBA;
+  mipmapSpec1.mipmapped = true;
 
-  TextureDescriptor depthDesc1;
-  depthDesc1.size = small;
-  depthDesc1.format = TextureDescriptor::Format::kDepth;
+  TextureSpec depthSpec1;
+  depthSpec1.size = small;
+  depthSpec1.format = TextureSpec::Format::kDepth;
 
-  // Sanity check TextureDescriptor equality.
-  EXPECT_FALSE(colorDesc1 == colorDesc2);
-  EXPECT_FALSE(colorDesc1 == mipmapDesc1);
-  EXPECT_FALSE(colorDesc1 == depthDesc1);
+  // Sanity check TextureSpec equality.
+  EXPECT_FALSE(colorSpec1 == colorSpec2);
+  EXPECT_FALSE(colorSpec1 == mipmapSpec1);
+  EXPECT_FALSE(colorSpec1 == depthSpec1);
 
   {
-    Texture color1 = cache.GetTexture(colorDesc1);
-    Texture color2 = cache.GetTexture(colorDesc2);
-    Texture mipmap1 = cache.GetTexture(mipmapDesc1);
-    Texture depth1 = cache.GetTexture(depthDesc1);
+    Texture color1 = cache.GetTexture(colorSpec1);
+    Texture color2 = cache.GetTexture(colorSpec2);
+    Texture mipmap1 = cache.GetTexture(mipmapSpec1);
+    Texture depth1 = cache.GetTexture(depthSpec1);
 
-    // Descriptors of each Texture should be as expected.
+    // specs of each Texture should be as expected.
     colorId1 = color1.id();
     colorId2 = color2.id();
     mipmapId1 = mipmap1.id();
     depthId1 = depth1.id();
-    EXPECT_EQ(color1.descriptor(), colorDesc1);
-    EXPECT_EQ(color2.descriptor(), colorDesc2);
-    EXPECT_EQ(mipmap1.descriptor(), mipmapDesc1);
-    EXPECT_EQ(depth1.descriptor(), depthDesc1);
+    EXPECT_EQ(color1.spec(), colorSpec1);
+    EXPECT_EQ(color2.spec(), colorSpec2);
+    EXPECT_EQ(mipmap1.spec(), mipmapSpec1);
+    EXPECT_EQ(depth1.spec(), depthSpec1);
 
     EXPECT_EQ(4, cache.GetUsedTextureCount());
     EXPECT_EQ(0, cache.GetUnusedTextureCount());
 
-    // Swap color1 with another Texture with same descriptor.
-    color1 = cache.GetTexture(colorDesc1);
+    // Swap color1 with another Texture with same spec.
+    color1 = cache.GetTexture(colorSpec1);
     EXPECT_NE(colorId1, color1.id());
-    EXPECT_EQ(color1.descriptor(), colorDesc1);
+    EXPECT_EQ(color1.spec(), colorSpec1);
     EXPECT_EQ(4, cache.GetUsedTextureCount());
     EXPECT_EQ(1, cache.GetUnusedTextureCount());
 
     // Swap it again.  This will retrieve the one that was just returned to
     // the cache.
-    color1 = cache.GetTexture(colorDesc1);
+    color1 = cache.GetTexture(colorSpec1);
     EXPECT_EQ(colorId1, color1.id());
     // ... a few more times.
-    color1 = cache.GetTexture(colorDesc1);
+    color1 = cache.GetTexture(colorSpec1);
     EXPECT_NE(colorId1, color1.id());
-    color1 = cache.GetTexture(colorDesc1);
+    color1 = cache.GetTexture(colorSpec1);
     EXPECT_EQ(colorId1, color1.id());
-    color1 = cache.GetTexture(colorDesc1);
+    color1 = cache.GetTexture(colorSpec1);
     EXPECT_NE(colorId1, color1.id());
-    color1 = cache.GetTexture(colorDesc1);
+    color1 = cache.GetTexture(colorSpec1);
     EXPECT_EQ(colorId1, color1.id());
   }
 }

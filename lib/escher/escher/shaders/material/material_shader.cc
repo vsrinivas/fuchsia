@@ -162,8 +162,8 @@ void DefineTextureSymbol(GLSLGenerator& generator, bool has_texture) {
 
 }  // namespace
 
-MaterialShader::MaterialShader(const MaterialShaderDescriptor& descriptor)
-    : descriptor_(descriptor) {}
+MaterialShader::MaterialShader(const MaterialShaderSpec& spec)
+    : spec_(spec) {}
 
 MaterialShader::~MaterialShader() {}
 
@@ -178,12 +178,12 @@ void MaterialShader::BindUniforms(const Stage& stage,
                                   const Modifier& modifier,
                                   const mat4& matrix) const {
   glUniformMatrix4fv(matrix_, 1, GL_FALSE, &matrix[0][0]);
-  if (descriptor_.color_binding_type == BindingType::kConstant) {
+  if (spec_.color_binding_type == BindingType::kConstant) {
     const vec4& color = material.color().constant_value();
     glUniform4fv(color_, 1, &color[0]);
   }
 
-  FTL_DCHECK(material.has_texture() == descriptor_.has_texture);
+  FTL_DCHECK(material.has_texture() == spec_.has_texture);
   if (material.has_texture()) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, material.texture());
@@ -209,9 +209,9 @@ void MaterialShader::BindUniforms(const Stage& stage,
 }
 
 bool MaterialShader::NeedsUV() const {
-  return descriptor_.displacement != Displacement::Type::kNone ||
-         descriptor_.mask != Modifier::Mask::kNone ||
-         descriptor_.has_texture;
+  return spec_.displacement != Displacement::Type::kNone ||
+         spec_.mask != Modifier::Mask::kNone ||
+         spec_.has_texture;
 }
 
 bool MaterialShader::Compile() {
@@ -235,12 +235,12 @@ bool MaterialShader::Compile() {
   matrix_ = glGetUniformLocation(program_.id(), "u_matrix");
   FTL_DCHECK(matrix_ != -1);
 
-  if (descriptor_.color_binding_type == BindingType::kConstant) {
+  if (spec_.color_binding_type == BindingType::kConstant) {
     color_ = glGetUniformLocation(program_.id(), "u_color");
     FTL_DCHECK(color_ != -1);
   }
 
-  if (descriptor_.displacement != Displacement::Type::kNone) {
+  if (spec_.displacement != Displacement::Type::kNone) {
     displacement_params0_ =
         glGetUniformLocation(program_.id(), "u_displacement_params0");
     FTL_DCHECK(displacement_params0_ != -1);
@@ -249,7 +249,7 @@ bool MaterialShader::Compile() {
     FTL_DCHECK(displacement_params1_ != -1);
   }
 
-  if (descriptor_.has_texture) {
+  if (spec_.has_texture) {
     texture_ = glGetUniformLocation(program_.id(), "u_texture");
     texture_matrix_ = glGetUniformLocation(program_.id(), "u_texture_matrix");
     FTL_DCHECK(texture_ != -1);
@@ -269,10 +269,10 @@ bool MaterialShader::Compile() {
 std::string MaterialShader::GeneratePrologue() {
   GLSLGenerator generator;
   DefineBindingSymbol(generator, "COLOR_BINDING",
-                      descriptor_.color_binding_type);
-  DefineDisplacementSymbol(generator, descriptor_.displacement);
-  DefineMaskSymbol(generator, descriptor_.mask);
-  DefineTextureSymbol(generator, descriptor_.has_texture);
+                      spec_.color_binding_type);
+  DefineDisplacementSymbol(generator, spec_.displacement);
+  DefineMaskSymbol(generator, spec_.mask);
+  DefineTextureSymbol(generator, spec_.has_texture);
 
   return generator.GenerateCode();
 }

@@ -13,17 +13,17 @@ MaterialShaderFactory::~MaterialShaderFactory() {}
 const MaterialShader* MaterialShaderFactory::GetShader(
     const Material& material,
     const Modifier& modifier) {
-  MaterialShaderDescriptor descriptor(material.color().type(),
+  MaterialShaderSpec spec(material.color().type(),
                                       material.displacement().type(),
                                       modifier.mask(),
                                       material.has_texture());
 
-  auto it = shaders_.find(descriptor);
+  auto it = shaders_.find(spec);
   if (it == shaders_.end()) {
-    std::unique_ptr<MaterialShader> shader(new MaterialShader(descriptor));
+    std::unique_ptr<MaterialShader> shader(new MaterialShader(spec));
     if (!shader->Compile())
       return nullptr;
-    it = shaders_.emplace(descriptor, std::move(shader)).first;
+    it = shaders_.emplace(spec, std::move(shader)).first;
   }
   return it->second.get();
 }

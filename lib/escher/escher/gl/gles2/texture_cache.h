@@ -18,10 +18,10 @@ class TextureCache {
   TextureCache();
   ~TextureCache();
 
-  Texture GetTexture(const TextureDescriptor& descriptor);
+  Texture GetTexture(const TextureSpec& spec);
 
   // Convenient wrappers around GetTexture() that don't require creation
-  // of a TextureDescriptor.
+  // of a TextureSpec.
   Texture GetDepthTexture(const SizeI& size);
   Texture GetColorTexture(const SizeI& size);
   Texture GetMipmappedColorTexture(const SizeI& size);
@@ -34,31 +34,31 @@ class TextureCache {
 
  protected:
   // Create a new texture.  Return 0 if unsuccessful.  Virtual for testing.
-  virtual GLuint MakeTexture(const TextureDescriptor& descriptor) const;
+  virtual GLuint MakeTexture(const TextureSpec& spec) const;
   // Virtual for testing.
   virtual void DeleteTextures(size_t count, GLuint* ids) const;
 
  private:
   // Receive and cache a texture that is not currently needed.
-  void RecieveTexture(TextureDescriptor descriptor, GLuint id);
+  void RecieveTexture(TextureSpec spec, GLuint id);
 
   // Used to return textures when they are no longer needed.
   class TextureNeed : public Need {
    public:
     TextureNeed(
-        const TextureDescriptor& descriptor, GLuint id, TextureCache* cache);
+        const TextureSpec& spec, GLuint id, TextureCache* cache);
     ~TextureNeed() final;
 
    private:
-    TextureDescriptor descriptor_;
+    TextureSpec spec_;
     GLuint id_;
     TextureCache* cache_;
   };
 
   // Store unused cached textures.
-  std::unordered_multimap<TextureDescriptor,
+  std::unordered_multimap<TextureSpec,
                           GLuint,
-                          TextureDescriptor::Hash> cache_;
+                          TextureSpec::Hash> cache_;
 
   size_t used_texture_count_ = 0;
 

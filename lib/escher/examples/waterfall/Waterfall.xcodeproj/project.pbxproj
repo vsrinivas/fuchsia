@@ -21,7 +21,7 @@
 		97254BE91D1B92C9002980D5 /* shape.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BE71D1B92C9002980D5 /* shape.cc */; };
 		97254BEC1D1B92E5002980D5 /* glsl_generator.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BEA1D1B92E5002980D5 /* glsl_generator.cc */; };
 		97254BF61D1B92ED002980D5 /* material_shader.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BEE1D1B92ED002980D5 /* material_shader.cc */; };
-		97254BF71D1B92ED002980D5 /* material_shader_descriptor.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BF01D1B92ED002980D5 /* material_shader_descriptor.cc */; };
+		97254BF71D1B92ED002980D5 /* material_shader_spec.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BF01D1B92ED002980D5 /* material_shader_spec.cc */; };
 		97254BF81D1B92ED002980D5 /* material_shader_factory.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BF21D1B92ED002980D5 /* material_shader_factory.cc */; };
 		97254BF91D1B92ED002980D5 /* modifier.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BF41D1B92ED002980D5 /* modifier.cc */; };
 		97254BFD1D1B934F002980D5 /* model_renderer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 97254BFB1D1B934F002980D5 /* model_renderer.cc */; };
@@ -87,8 +87,8 @@
 		97254BEB1D1B92E5002980D5 /* glsl_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glsl_generator.h; sourceTree = "<group>"; };
 		97254BEE1D1B92ED002980D5 /* material_shader.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = material_shader.cc; sourceTree = "<group>"; };
 		97254BEF1D1B92ED002980D5 /* material_shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = material_shader.h; sourceTree = "<group>"; };
-		97254BF01D1B92ED002980D5 /* material_shader_descriptor.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = material_shader_descriptor.cc; sourceTree = "<group>"; };
-		97254BF11D1B92ED002980D5 /* material_shader_descriptor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = material_shader_descriptor.h; sourceTree = "<group>"; };
+		97254BF01D1B92ED002980D5 /* material_shader_spec.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = material_shader_spec.cc; sourceTree = "<group>"; };
+		97254BF11D1B92ED002980D5 /* material_shader_spec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = material_shader_spec.h; sourceTree = "<group>"; };
 		97254BF21D1B92ED002980D5 /* material_shader_factory.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = material_shader_factory.cc; sourceTree = "<group>"; };
 		97254BF31D1B92ED002980D5 /* material_shader_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = material_shader_factory.h; sourceTree = "<group>"; };
 		97254BF41D1B92ED002980D5 /* modifier.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = modifier.cc; sourceTree = "<group>"; };
@@ -163,7 +163,7 @@
 		97ED1BFE1D24FC090080360C /* bindings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		97ED1BFF1D24FC090080360C /* texture_cache.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = texture_cache.cc; sourceTree = "<group>"; };
 		97ED1C001D24FC090080360C /* texture_cache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = texture_cache.h; sourceTree = "<group>"; };
-		97ED1C011D24FC090080360C /* texture_descriptor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = texture_descriptor.h; path = ../../escher/gl/texture_descriptor.h; sourceTree = "<group>"; };
+		97ED1C011D24FC090080360C /* texture_spec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = texture_spec.h; sourceTree = "<group>"; };
 		97ED1C031D24FC090080360C /* texture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = texture.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -182,7 +182,7 @@
 		6913258C1D482DA7009DAE83 /* gl */ = {
 			isa = PBXGroup;
 			children = (
-				97ED1C011D24FC090080360C /* texture_descriptor.h */,
+				97ED1C011D24FC090080360C /* texture_spec.h */,
 				97E733961D1A5C7F00F62181 /* gles2 */,
 			);
 			path = gl;
@@ -230,8 +230,8 @@
 			children = (
 				97254BEE1D1B92ED002980D5 /* material_shader.cc */,
 				97254BEF1D1B92ED002980D5 /* material_shader.h */,
-				97254BF01D1B92ED002980D5 /* material_shader_descriptor.cc */,
-				97254BF11D1B92ED002980D5 /* material_shader_descriptor.h */,
+				97254BF01D1B92ED002980D5 /* material_shader_spec.cc */,
+				97254BF11D1B92ED002980D5 /* material_shader_spec.h */,
 				97254BF21D1B92ED002980D5 /* material_shader_factory.cc */,
 				97254BF31D1B92ED002980D5 /* material_shader_factory.h */,
 				97254BF41D1B92ED002980D5 /* modifier.cc */,
@@ -538,7 +538,7 @@
 				691325931D498E56009DAE83 /* texture_cache_unittest.cc in Sources */,
 				97E733941D1A5C7600F62181 /* quad.cc in Sources */,
 				9736D08A1D29D098001369BA /* illumination_shader.cc in Sources */,
-				97254BF71D1B92ED002980D5 /* material_shader_descriptor.cc in Sources */,
+				97254BF71D1B92ED002980D5 /* material_shader_spec.cc in Sources */,
 				97E733D41D1A5CA000F62181 /* renderer.cc in Sources */,
 				97E733C81D1A5C9600F62181 /* model.cc in Sources */,
 				97E733C91D1A5C9600F62181 /* object.cc in Sources */,
