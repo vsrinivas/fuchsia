@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAGMA_SYS_DRIVER_H
-#define MAGMA_SYS_DRIVER_H
+#ifndef _MSD_H_
+#define _MSD_H_
 
 #include "msd_defs.h"
 #include "msd_platform_buffer.h"
@@ -24,12 +24,12 @@ extern "C" {
 
 // The magma system driver... driver :)
 struct msd_driver {
-    int magic_;
+    int32_t magic_;
 };
 
 // The magma system driver device.
 struct msd_device {
-    int magic_;
+    int32_t magic_;
 };
 
 // Instantiates a driver instance.
@@ -42,13 +42,13 @@ void msd_driver_destroy(struct msd_driver* drv);
 struct msd_device* msd_driver_create_device(struct msd_driver* drv, void* device);
 
 // Destroys a device at system shutdown.
-void msd_driver_destroy_device(struct msd_device* token);
+void msd_driver_destroy_device(struct msd_device* dev);
 
-// Opens a device for the given client.
-int msd_device_open(struct msd_device* dev, msd_client_id client_id);
+// Opens a device for the given client. Returns 0 on success
+int32_t msd_device_open(struct msd_device* dev, msd_client_id client_id);
 
-// Closes a device on behalf of the given client.
-int msd_device_close(struct msd_device* dev, msd_client_id client_id);
+// Closes a device on behalf of the given client. Returns 0 on success
+int32_t msd_device_close(struct msd_device* dev, msd_client_id client_id);
 
 // Returns the device id.  0 is an invalid device id.
 uint32_t msd_device_get_id(struct msd_device* dev);
@@ -57,4 +57,4 @@ uint32_t msd_device_get_id(struct msd_device* dev);
 }
 #endif
 
-#endif // MAGMA_SYS_DRIVER
+#endif // _MSD_H_

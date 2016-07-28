@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _MAGMA_SYS_DEFS_H_
-#define _MAGMA_SYS_DEFS_H_
+#ifndef _MSD_DEFS_H_
+#define _MSD_DEFS_H_
 
 #include "common/magma_defs.h"
 #include <stdint.h>
@@ -32,4 +32,4 @@ struct msd_exec_buffer {
 }
 #endif
 
-#endif /* _MAGMA_SYS_DEFS_H_ */
+#endif /* _MSD_DEFS_H_ */
