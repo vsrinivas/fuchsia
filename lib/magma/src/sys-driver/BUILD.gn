@@ -17,7 +17,7 @@ import("//magma/gnbuild/magma.gni")
 source_set("sys-driver") {
   public_deps = [
     ":platform_buffer",
-    "$magma_build_root:util",
+    "$magma_build_root/src/magma_util",
     "$magma_build_root/include:msd_abi",
   ]
 
@@ -42,23 +42,14 @@ source_set("magma_system_interface") {
   ]
 }
 
-config("platform_buffer_config") {
-  include_dirs = [ "platform_buffer" ]
-}
-
 source_set("platform_buffer") {
-  public_configs = [ ":platform_buffer_config" ]
-
   public_deps = [
-    ":magma_system_interface",
-    "$magma_build_root:util",
+    "$magma_build_root/src/magma_util",
     "$magma_build_root/include:msd_abi",
   ]
 
   sources = [
-    "platform_buffer/magenta_platform_buffer.cc",
-    "platform_buffer/platform_buffer.cc",
-    "platform_buffer/platform_buffer.h",
+    "magenta_platform_buffer.cc",
   ]
 
   libs = [ "ddk" ]

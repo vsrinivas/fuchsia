@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "magma_util/platform_buffer.h"
 #include "gtest/gtest.h"
-#include <platform_buffer.h>
 #include <vector>
 
 static void TestPlatformBuffer(uint64_t size)

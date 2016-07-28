@@ -17,10 +17,15 @@ import("//magma/gnbuild/magma.gni")
 source_set("magma_util") {
   public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
+  public_deps = [ "$magma_build_root/include:msd_abi" ]
+
   sources = [
     "dlog.h",
     "macros.h",
     "mutex.h",
     "refcounted.h",
+    "platform_buffer.cc",
+    "platform_buffer.h",
   ]
+
 }
