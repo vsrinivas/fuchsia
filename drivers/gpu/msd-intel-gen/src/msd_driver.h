@@ -30,6 +30,7 @@ public:
 
     static MsdDriver* cast(msd_driver* drv)
     {
+        DASSERT(drv);
         DASSERT(drv->magic_ == kMagic);
         return static_cast<MsdDriver*>(drv);
     }
@@ -38,7 +39,7 @@ private:
     MsdDriver();
     virtual ~MsdDriver() {}
 
-    static const uint32_t kMagic = 0x64726976;
+    static const uint32_t kMagic = 0x64726976; //"driv"
 };
 
 #endif // MSD_DRIVER_H

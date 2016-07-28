@@ -21,13 +21,14 @@
 
 class MsdDevice : public msd_device {
 public:
-    int Open(msd_client_id client_id);
-    int Close(msd_client_id client_id);
+    int32_t Open(msd_client_id client_id);
+    int32_t Close(msd_client_id client_id);
 
     uint32_t device_id() { return device_id_; }
 
     static MsdDevice* cast(msd_device* dev)
     {
+        DASSERT(dev);
         DASSERT(dev->magic_ == kMagic);
         return static_cast<MsdDevice*>(dev);
     }
@@ -36,7 +37,7 @@ private:
     MsdDevice();
     ~MsdDevice() {}
 
-    static const uint32_t kMagic = 0x64657669;
+    static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
 
