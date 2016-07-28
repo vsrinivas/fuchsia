@@ -12,16 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "mock_msd.h"
 #include "msd.h"
 
-void msd_driver_destroy(msd_driver* arch) {}
+struct msd_driver* msd_driver_create(void) { return new MsdMockDriver(); }
 
-msd_device* msd_driver_create_device(msd_driver* arch, void* device) { return nullptr; }
+void msd_driver_destroy(msd_driver* drv) { delete MsdMockDriver::cast(drv); }
 
-void msd_driver_destroy_device(msd_device*) {}
+msd_device* msd_driver_create_device(msd_driver* drv, void* device)
+{
+    // If youre passing something meaningful in here youre #doingitwrong
+    DASSERT(!device);
 
-int msd_device_open(msd_device* dev, msd_client_id client_id) { return 0; }
+    return MsdMockDriver::cast(drv)->CreateDevice();
+}
 
-int msd_device_close(msd_device* dev, msd_client_id client_id) { return 0; }
+void msd_driver_destroy_device(msd_device* dev)
+{
+    // TODO(MA-28) should be
+    // MsdMockDriver::cast(drv)->DestroyDevice(MsdMockDevice::cast(dev));
+    delete MsdMockDevice::cast(dev);
+}
 
-uint32_t msd_device_get_id(msd_device* dev) { return 0; }
+int32_t msd_device_open(msd_device* dev, msd_client_id client_id)
+{
+    return MsdMockDevice::cast(dev)->Open(client_id);
+}
+
+int32_t msd_device_close(msd_device* dev, msd_client_id client_id)
+{
+    return MsdMockDevice::cast(dev)->Close(client_id);
+}
+
+uint32_t msd_device_get_id(msd_device* dev) { return MsdMockDevice::cast(dev)->GetDeviceId(); }
