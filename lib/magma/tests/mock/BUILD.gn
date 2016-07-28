@@ -31,3 +31,16 @@ source_set("mock_msd") {
     "mock_msd.h",
   ]
 }
+
+source_set("mmio") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "mock_mmio.cc",
+    "mock_mmio.h",
+  ]
+}

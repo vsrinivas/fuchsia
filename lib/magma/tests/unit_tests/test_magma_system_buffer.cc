@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "magma_system_device.h"
-#include "mock_msd.h"
+#include "mock/mock_msd.h"
+#include "sys-driver/magma_system_device.h"
 #include "gtest/gtest.h"
 
 class MsdMockBufferManager_Create : public MsdMockBufferManager {

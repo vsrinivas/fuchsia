@@ -66,6 +66,11 @@ config("magma_src_include_config") {
   include_dirs = [ "src" ]
 }
 
+# This config allows inclusion of headers via relative paths from tests
+config("magma_tests_include_config") {
+  include_dirs = [ "tests" ]
+}
+
 # TODO(MA-29): remove this, just use src/magma_util instead
 group("util") {
   public_deps = [

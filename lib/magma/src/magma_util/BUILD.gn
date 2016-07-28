@@ -27,7 +27,14 @@ source_set("magma_util") {
     "refcounted.h",
     "platform_buffer.cc",
     "platform_buffer.h",
+    "platform_device.h",
+    "platform_mmio.h",
     "simple_allocator.cc",
     "simple_allocator.h",
+  ]
+
+  # magenta
+  sources += [
+    "magenta_platform_device.cc",
   ]
 }
