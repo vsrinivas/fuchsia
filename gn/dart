@@ -1,5 +1,10 @@
 {
-    "labels": [ "//dart/runtime/bin:dart_no_observatory" ],
+    "labels": [
+        "//dart/runtime/bin:dart_no_observatory",
+        "//dart/runtime/bin:run_vm_tests",
+        "//dart/runtime/bin:run_vm_tests_fuchsia",
+        "//dart/runtime/bin:fuchsia_vm_tests"
+    ],
     "binaries": [
         {
             "binary": "dart_no_observatory",
@@ -8,6 +13,18 @@
         {
             "binary": "hello_fuchsia.dart",
             "bootfs_path": "apps/hello_fuchsia.dart"
+        },
+        {
+            "binary": "run_vm_tests",
+            "bootfs_path": "bin/dart_vm_tests"
+        },
+        {
+            "binary": "run_vm_tests_fuchsia",
+            "bootfs_path": "bin/run_dart_vm_tests"
+        },
+        {
+            "binary": "fuchsia_vm_tests.txt",
+            "bootfs_path": "apps/dart_vm_tests_list.txt"
         }
     ]
 }
