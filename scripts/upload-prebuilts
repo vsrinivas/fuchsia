@@ -36,18 +36,33 @@ readonly TARGETS=(
 declare -A PREBUILTS=(
   ["build-magenta-qemu-arm32/magenta.bin"]="qemu-arm32/magenta.bin"
   ["build-magenta-qemu-arm32/magenta.elf"]="qemu-arm32/magenta.elf"
+  ["build-magenta-qemu-arm32/upload/sysroot.tgz"]="qemu-arm32/sysroot.tgz"
   ["build-magenta-qemu-arm64/magenta.bin"]="qemu-arm64/magenta.bin"
   ["build-magenta-qemu-arm64/magenta.elf"]="qemu-arm64/magenta.elf"
+  ["build-magenta-qemu-arm64/upload/sysroot.tgz"]="qemu-arm64/sysroot.tgz"
   ["build-magenta-pc-x86-64/magenta.bin"]="pc-x86-64/magenta.bin"
   ["build-magenta-pc-x86-64/magenta.elf"]="pc-x86-64/magenta.elf"
+  ["build-magenta-pc-x86-64/upload/sysroot.tgz"]="pc-x86-64/sysroot.tgz"
   ["build-magenta-pc-x86-64/tools/bootserver"]="tools/bootserver"
   ["build-magenta-pc-x86-64/tools/loglistener"]="tools/loglistener"
   ["build-magenta-pc-x86-64/tools/mkbootfs"]="tools/mkbootfs"
 )
 
-# Build all the things and upload to Google Storage.
+# Make sure sysroot and upload staging directories are clean.
+for target in "${TARGETS[@]}"; do
+  rm -rf "build-${target}/sysroot"
+  rm -rf "build-${target}/upload"
+done
+
+# Build all the things.
 for target in "${TARGETS[@]}"; do
   make -j6 "${target}"  # -j option reflects the Fuchsia build bot servers.
+done
+
+# Bundle up sysroot tarballs
+for target in "${TARGETS[@]}"; do
+ mkdir -p "build-${target}/upload"
+ tar cvzf "build-${target}/upload/sysroot.tgz" "build-${target}/sysroot"
 done
 
 # Upload the prebuilts to Google Storage.  We don't do any authentication here
