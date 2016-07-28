@@ -247,7 +247,7 @@ include make/recurse.mk
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
 # copy global headers to the sysroot
-$(call copy-dst-src,$(BUILDDIR)/sysroot/include/global/fuchsia-types.h,$(BUILDROOT)/global/include/global/fuchsia-types.h)
+$(call copy-dst-src,$(BUILDDIR)/sysroot/include/global/fuchsia-types.h,$(LKMAKEROOT)/global/include/global/fuchsia-types.h)
 SYSROOT_DEPS += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
 GENERATED += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
 ifneq ($(SYSROOT_MEGA_LIBC),)
