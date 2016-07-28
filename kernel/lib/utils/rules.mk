@@ -9,7 +9,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-GLOBAL_INCLUDES += $(LOCAL_DIR)/include
+KERNEL_INCLUDES += $(LOCAL_DIR)/include
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/arena.cpp \

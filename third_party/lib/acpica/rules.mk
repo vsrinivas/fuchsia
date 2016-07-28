@@ -2,7 +2,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-GLOBAL_INCLUDES += $(LOCAL_DIR)/source/include
+KERNEL_INCLUDES += $(LOCAL_DIR)/source/include
 
 # Disable these two warnings to prevent ACPICA from cluttering the
 # build output

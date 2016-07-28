@@ -76,7 +76,7 @@ $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 #
 #$(BUILDDIR)/include-paths.txt:
 #	@echo generating $@
-#	$(NOECHO)echo $(subst -I,,$(sort $(GLOBAL_INCLUDES))) | tr ' ' '\n' > $@
+#	$(NOECHO)echo $(subst -I,,$(sort $(KERNEL_INCLUDES))) | tr ' ' '\n' > $@
 #
 #.PHONY: $(BUILDDIR)/include-paths.txt
 #GENERATED += $(BUILDDIR)/include-paths.txt

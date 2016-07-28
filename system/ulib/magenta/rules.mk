@@ -22,7 +22,7 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := -ffreestanding
 
 # kernel code needs magenta headers
-GLOBAL_INCLUDES += $(LOCAL_DIR)/include
+KERNEL_INCLUDES += $(LOCAL_DIR)/include
 
 ifeq ($(ARCH),arm)
 MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm32.S

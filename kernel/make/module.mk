@@ -42,7 +42,7 @@ MODULE_SRCDIR := $(MODULE)
 
 ifeq ($(MODULE_TYPE),)
 # add a local include dir to the global include path for kernel code
-GLOBAL_INCLUDES += $(MODULE_SRCDIR)/include
+KERNEL_INCLUDES += $(MODULE_SRCDIR)/include
 endif
 
 # configure the module install path for 'usertest' and 'userapp' modules

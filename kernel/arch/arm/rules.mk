@@ -195,7 +195,7 @@ ifeq ($(ENABLE_THUMB),true)
 ARCH_COMPILEFLAGS += -mthumb -D__thumb__ -mthumb-interwork
 endif
 
-GLOBAL_INCLUDES += \
+KERNEL_INCLUDES += \
 	$(LOCAL_DIR)/$(SUBARCH)/include
 
 ifeq ($(SUBARCH),arm)
