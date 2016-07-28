@@ -20,7 +20,7 @@ source_set("main") {
   ]
   deps = [
     "$magma_build_root:libmsd",
-    "$magma_build_root/src/include:magma_util",
+    "$magma_build_root/src/magma_util",
     "$magma_build_root/tests/gpureadback",
   ]
   libs = [

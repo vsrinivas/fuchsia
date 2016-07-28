@@ -12,19 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-config("magma_util_config") {
-  include_dirs = [
-    ".",
-  ]
-}
+import("//magma/gnbuild/magma.gni")
 
 source_set("magma_util") {
-  public_configs = [ ":magma_util_config" ]
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [
-    "magma_util/dlog.h",
-    "magma_util/macros.h",
-    "magma_util/mutex.h",
-    "magma_util/refcounted.h",
+    "dlog.h",
+    "macros.h",
+    "mutex.h",
+    "refcounted.h",
   ]
 }

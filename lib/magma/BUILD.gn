@@ -61,9 +61,15 @@ source_set("libmad") {
   ]
 }
 
+# This config allows inclusion of headers via relative paths from src
+config("magma_src_include_config") {
+  include_dirs = [ "src" ]
+}
+
+# TODO: remove this
 group("util") {
   public_deps = [
-    "src/include:magma_util",
+    "src/magma_util",
   ]
 }
 
