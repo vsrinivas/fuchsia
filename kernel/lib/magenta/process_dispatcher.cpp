@@ -164,6 +164,13 @@ void ProcessDispatcher::Kill() {
     if (state_ == State::DEAD)
         return;
 
+    if (state_ != State::DYING) {
+        // If there isn't an Exit already in progress, set a nonzero exit
+        // status so e.g. crashing tests don't appear to have succeeded.
+        DEBUG_ASSERT(retcode_ == 0);
+        retcode_ = -1;
+    }
+
     // if we have no threads, enter the dead state directly
     if (thread_list_.is_empty()) {
         SetState(State::DEAD);
