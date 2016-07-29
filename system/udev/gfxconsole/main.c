@@ -386,7 +386,7 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
 
     mx_key_event_t ev;
@@ -557,7 +557,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, size_t 
     return r;
 }
 
-static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
     mxr_mutex_lock(&vc->lock);
     vc->invy0 = vc->rows + 1;

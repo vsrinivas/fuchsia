@@ -81,6 +81,9 @@ typedef uintptr_t mx_paddr_t;
 typedef uintptr_t mx_size_t;
 typedef intptr_t mx_ssize_t;
 
+// offset
+typedef uint64_t mx_off_t;
+typedef int64_t mx_rel_off_t;
 
 // Maximum string length for kernel names (process name, thread name, etc)
 #define MX_MAX_NAME_LEN           (32)

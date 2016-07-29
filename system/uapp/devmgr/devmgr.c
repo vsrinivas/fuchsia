@@ -94,15 +94,15 @@ static mx_status_t default_release(mx_device_t* dev) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t default_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t default_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t default_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+static ssize_t default_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
-static size_t default_get_size(mx_device_t* dev) {
+static mx_off_t default_get_size(mx_device_t* dev) {
     return 0;
 }
 

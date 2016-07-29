@@ -359,7 +359,7 @@ static mx_status_t usb_ethernet_release(mx_device_t* device) {
 
 // simplified read/write interface
 
-static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, size_t off) {
+static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
     // special case reading MAC address
     if (len == ETH_MAC_SIZE) {
         usb_ethernet_get_mac_addr(dev, data);
@@ -371,7 +371,7 @@ static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, size_t off) {
     return usb_ethernet_recv(dev, data, len);
 }
 
-static ssize_t eth_write(mx_device_t* dev, const void* data, size_t len, size_t off) {
+static ssize_t eth_write(mx_device_t* dev, const void* data, size_t len, mx_off_t off) {
     return usb_ethernet_send(dev, data, len);
 }
 

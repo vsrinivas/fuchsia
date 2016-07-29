@@ -110,15 +110,15 @@ typedef struct mx_protocol_device {
     // release is called after a device is remove()'d and its
     // refcount hits zero (all closes and unbinds complete)
 
-    ssize_t (*read)(mx_device_t* dev, void* buf, size_t count, size_t off);
+    ssize_t (*read)(mx_device_t* dev, void* buf, size_t count, mx_off_t off);
     // attempt to read count bytes at offset off
     // off may be ignored for devices without the concept of a position
 
-    ssize_t (*write)(mx_device_t* dev, const void* buf, size_t count, size_t off);
+    ssize_t (*write)(mx_device_t* dev, const void* buf, size_t count, mx_off_t off);
     // attempt to write count bytes at offset off
     // off may be ignored for devices without the concept of a position
 
-    size_t (*get_size)(mx_device_t* dev);
+    mx_off_t (*get_size)(mx_device_t* dev);
     // optional: return the size (in bytes) of the readable/writable space
     // of the device.  Will default to 0 (non-seekable) if this is unimplemented
 

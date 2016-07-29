@@ -70,14 +70,14 @@ static size_t gpt_getsize(gpt_partdev_t* dev) {
 
 // implement device protocol:
 
-static ssize_t gpt_partdev_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t gpt_partdev_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     // read count bytes from LBA (off)
     gpt_partdev_t* device = get_gpt_device(dev);
     uint64_t off_lba = off / device->disk->sector_sz;
     uint64_t first = device->gpt_entry.first_lba;
     uint64_t last = device->gpt_entry.last_lba;
     if (first + off_lba > last) {
-        xprintf("%s: offset %zu is past the end of partition!\n", dev->name, off);
+        xprintf("%s: offset %llu is past the end of partition!\n", dev->name, off);
         return ERR_INVALID_ARGS;
     }
     uint64_t c = MIN((last - (first + off_lba)) * device->disk->sector_sz, count);
@@ -103,7 +103,7 @@ static ssize_t gpt_partdev_read(mx_device_t* dev, void* buf, size_t count, size_
     return c;
 }
 
-static ssize_t gpt_partdev_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+static ssize_t gpt_partdev_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -140,7 +140,7 @@ static ssize_t gpt_partdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     }
 }
 
-static size_t gpt_partdev_getsize(mx_device_t* dev) {
+static mx_off_t gpt_partdev_getsize(mx_device_t* dev) {
     return gpt_getsize(get_gpt_device(dev));
 }
 

@@ -72,7 +72,7 @@ static int debug_reader(void* arg) {
     return 0;
 }
 
-static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     uint8_t* data = buf;
     mxr_mutex_lock(&fifo.lock);
     while (count-- > 0) {
@@ -87,7 +87,7 @@ static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, size_t of
     return data - (uint8_t*)buf;
 }
 
-static ssize_t console_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+static ssize_t console_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     return mx_debug_write(buf, count);
 }
 

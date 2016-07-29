@@ -18,10 +18,6 @@
 #include <system/listnode.h>
 #include <ddk/driver.h>
 
-// add to magenta/types.h
-typedef uint64_t mx_off_t;
-
-
 typedef struct iotxn iotxn_t;
 typedef struct iotxn_ops iotxn_ops_t;
 

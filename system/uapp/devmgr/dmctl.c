@@ -22,7 +22,7 @@
 
 #include "devmgr.h"
 
-static ssize_t dmctl_write(mx_device_t* dev, const void* buf, size_t count, size_t off) {
+static ssize_t dmctl_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     char cmd[128];
     if (count < sizeof(cmd)) {
         memcpy(cmd, buf, count);

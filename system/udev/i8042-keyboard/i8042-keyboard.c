@@ -341,7 +341,7 @@ static int i8042_irq_thread(void* arg) {
     return 0;
 }
 
-static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, size_t off) {
+static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     size_t size = sizeof(mx_key_event_t);
     if (count < size || (count % size != 0))
         return ERR_INVALID_ARGS;
