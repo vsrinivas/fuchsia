@@ -56,7 +56,7 @@ done
 
 # Build all the things.
 for target in "${TARGETS[@]}"; do
-  make -j6 "${target}"  # -j option reflects the Fuchsia build bot servers.
+  ENABLE_BUILD_SYSROOT=true make -j6 "${target}"  # -j option reflects the Fuchsia build bot servers.
 done
 
 # Bundle up sysroot tarballs
