@@ -1279,11 +1279,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ldso/dlstart.c \
     $(LOCAL_DIR)/ldso/dynlink.c
 
-# Depend on this source file to get it into the link (and cause
-# rebuilds correctly, unlike putting it in MODULE_LDFLAGS).
-# It's a trivial linker script input file that defines a symbol
-# that cannot be defined from the assembler.
-$(BUILDDIR)/ulib/musl-shared/libmusl-shared.so: $(LOCAL_DIR)/ldso/base.ld
+
+# base.ld is a trivial linker script input file that defines
+# a symbol that cannot be defined from the assembler.
+MODULE_EXTRA_OBJS := $(LOCAL_DIR)/ldso/base.ld
 
 include make/module.mk
 
@@ -1300,8 +1299,9 @@ MODULE_SRCS := $(LOCAL_DIR)/crt/crt1.c
 
 # where our object files will end up
 LOCAL_OUT := $(BUILDDIR)/ulib/musl-crt/$(LOCAL_DIR)
+LOCAL_CRT1_OBJ := $(LOCAL_OUT)/crt/crt1.c.o
 
-# The build needs these globally
-LIBC_CRT1_OBJ := $(LOCAL_OUT)/crt/crt1.c.o
+# install it globally
+$(call copy-dst-src,$(USER_CRT1_OBJ),$(LOCAL_CRT1_OBJ))
 
 include make/module.mk

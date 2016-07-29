@@ -73,6 +73,25 @@ modname-expand = \
     $(if $(wildcard $(1)),$(1),$(wildcard $(addsuffix /$(1),$(LKINC))))
 
 
+# Convert a canonical (full-path) module name to a short (as used
+# in the builddir) module name
+#
+# Recursively strips all the top level directory prefixes
+modname-make-short- = \
+    $(if $(strip $(2)),\
+        $(call modname-make-short-,\
+            $(patsubst $(firstword $(2))%,%,$(1)),\
+            $(wordlist 2,100,$(2))),\
+        $(1))
+
+modname-make-short = $(strip $(call modname-make-short-,$(1),$(LKPREFIXES)))
+
+# Verify that the module name is a short name by checking
+# for the presence of any of the top level directory prefixes
+modname-require-short = \
+    $(if $(filter $(LKPATTERNS),$(1)),\
+        $(error $(MODULE): full path module name $(1) is invalid here),)
+
 define generate-copy-dst-src
 $1: $2
 	@$$(MKDIR)

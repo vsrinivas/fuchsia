@@ -110,6 +110,8 @@ USER_DYNAMIC_LDFLAGS := \
     -z combreloc -z relro -z now -z text \
     --hash-style=gnu --eh-frame-hdr --build-id
 
+USER_CRT1_OBJ := $(BUILDDIR)/ulib/crt1.o
+
 # Additional flags for building shared libraries (ld -shared).
 USERLIB_SO_LDFLAGS := $(USER_DYNAMIC_LDFLAGS) -z defs
 
@@ -212,6 +214,7 @@ USER_MANIFEST_LINES :=
 # construct a slightly prettier version of LKINC with . removed and trailing / added
 # used in module.mk
 LKPREFIXES := $(patsubst %,%/,$(filter-out .,$(LKINC)))
+LKPATTERNS := $(patsubst %,%/%,$(filter-out .,$(LKINC)))
 
 # if someone defines this, the build id will be pulled into lib/version
 BUILDID ?=

@@ -46,31 +46,41 @@ KERNEL_INCLUDES += $(MODULE_SRCDIR)/include
 endif
 
 # configure the module install path for 'usertest' and 'userapp' modules
+# error out if these modules use the deprecated MODULE_DEPS variable
 ifneq (,$(filter usertest%,$(MODULE_TYPE)))
 MODULE_TYPE := $(MODULE_TYPE:usertest%=userapp%)
 MODULE_INSTALL_PATH := test
+ifneq ($(MODULE_DEPS),)
+$(error $(MODULE) usertest modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
+endif
 else ifneq (,$(filter userapp%,$(MODULE_TYPE)))
 MODULE_INSTALL_PATH := bin
+ifneq ($(MODULE_DEPS),)
+$(error $(MODULE) userapp modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
+endif
 endif
 
-# expand deps to canonical paths
-MODULE_DEPS := $(foreach d,$(MODULE_DEPS),$(call modname-make-canonical,$(d)))
-MODULE_LIBS := $(foreach d,$(MODULE_LIBS),$(call modname-make-canonical,$(d)))
-MODULE_STATIC_LIBS := $(foreach d,$(MODULE_STATIC_LIBS),$(call modname-make-canonical,$(d)))
-MODULE_HEADER_DEPS := $(foreach d,$(MODULE_HEADER_DEPS),$(call modname-make-canonical,$(strip $(d))))
-MODULE_SO_LIBS := $(foreach d,$(MODULE_SO_LIBS),$(call modname-make-canonical,$(d)))
-MODULE_SO_STATIC_LIBS := $(foreach d,$(MODULE_SO_STATIC_LIBS),$(call modname-make-canonical,$(d)))
+# ensure that library deps are short-name style
+$(foreach d,$(MODULE_LIBS),$(call modname-require-short,$(d)))
+$(foreach d,$(MODULE_STATIC_LIBS),$(call modname-require-short,$(d)))
+$(foreach d,$(MODULE_SO_LIBS),$(call modname-require-short,$(d)))
+$(foreach d,$(MODULE_SO_STATIC_LIBS),$(call modname-require-short,$(d)))
 
-# add the listed module deps to the global list
-MODULES += $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)
+# all library deps go on the deps list
+MODULE_DEPS += $(MODULE_LIBS) $(MODULE_STATIC_LIBS) $(MODULE_SO_LIBS) $(MODULE_SO_STATIC_LIBS)
 
-# include headers for any type of dependency (generic, static, dynamic, header-only)
-HEADER_MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)
-HEADER_MODULE_DEPS += $(MODULE_HEADER_DEPS)
+# all regular deps contribute to header deps list
+MODULE_HEADER_DEPS += $(MODULE_DEPS)
+
+# expand deps to canonical paths, remove dups
+MODULE_DEPS := $(sort $(foreach d,$(MODULE_DEPS),$(call modname-make-canonical,$(d))))
+MODULE_HEADER_DEPS := $(sort $(foreach d,$(MODULE_HEADER_DEPS),$(call modname-make-canonical,$(strip $(d)))))
+
+# add the module deps to the global list
+MODULES += $(MODULE_DEPS)
 
 # compute our shortname, which has all of the build system prefix paths removed
-MODULE_SHORTNAME = $(MODULE)
-$(foreach pfx,$(LKPREFIXES),$(eval MODULE_SHORTNAME := $(patsubst $(pfx)%,%,$(MODULE_SHORTNAME))))
+MODULE_SHORTNAME = $(call modname-make-short,$(MODULE))
 
 MODULE_BUILDDIR := $(call TOBUILDDIR,$(MODULE_SHORTNAME))
 
@@ -101,7 +111,7 @@ MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
 MODULE_COMPILEFLAGS += -Isystem/ulib/system/include
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/include
-MODULE_COMPILEFLAGS += $(foreach DEP,$(HEADER_MODULE_DEPS),-I$(DEP)/include)
+MODULE_COMPILEFLAGS += $(foreach DEP,$(MODULE_HEADER_DEPS),-I$(DEP)/include)
 else
 # kernel module
 KERNEL_DEFINES += $(addsuffix =1,$(addprefix WITH_,$(MODULE_SHORTNAME)))
@@ -132,9 +142,12 @@ MODULE_COMPILEFLAGS += --include $(MODULE_CONFIG)
 MODULE_SRCDEPS += $(MODULE_CONFIG)
 
 # flag so the link process knows to handle shared apps specially
+ifeq ($(MODULE_TYPE),userapp)
+MODULE_LDFLAGS += $(USERAPP_SHARED_LDFLAGS)
+endif
 ifeq ($(MODULE_TYPE),userapp-static)
 MODULE_TYPE := userapp
-MODULE_$(MODULE)_STATIC := true
+MODULE_LDFLAGS += $(USERAPP_LDFLAGS)
 endif
 
 # include the rules to compile the module's object files
@@ -170,14 +183,6 @@ ifeq ($(MODULE_NAME),)
 MODULE_NAME := $(basename $(notdir $(MODULE)))
 endif
 
-
-#TODO: remove once we've converted all user modules to _LIBS/_STATIC_LIBS usage
-ifeq ($(MODULE_TYPE),userapp)
-ifneq ($(MODULE_DEPS),)
-$(error $(MODULE) userapp/test modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
-endif
-endif
-
 ifeq ($(MODULE_TYPE),)
 ifneq ($(MODULE_LIBS),)
 $(error $(MODULE) kernel modules may not use MODULE_LIBS)
@@ -190,26 +195,40 @@ endif
 ALLMODULE_OBJS := $(ALLMODULE_OBJS) $(MODULE_OBJECT)
 
 else ifeq ($(MODULE_TYPE),userapp)
-MODULE_$(MODULE)_LDFLAGS := $(MODULE_LDFLAGS)
-MODULE_$(MODULE)_SOLIBS := $(MODULE_LIBS)
-MODULE_$(MODULE)_ALIBS := $(MODULE_STATIC_LIBS)
-MODULE_$(MODULE)_OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
 USER_MANIFEST_LINES += $(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 
+MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/$(notdir $(lib)).mod.o)
+MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so)
+
+$(MODULE_USERAPP_OBJECT): _OBJS := $(USER_CRT1_OBJ) $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
+$(MODULE_USERAPP_OBJECT): _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
+$(MODULE_USERAPP_OBJECT): _LDFLAGS := $(MODULE_LDFLAGS)
+$(MODULE_USERAPP_OBJECT): $(USER_LINKER_SCRIPT) $(USER_CRT1_OBJ) $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
+	@$(MKDIR)
+	@echo linking userapp $@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(ARCH_LDFLAGS) $(_LDFLAGS) \
+		$(USER_LINKER_SCRIPT) $(_OBJS) $(_LIBS) $(LIBGCC) -o $@
+
 else ifeq ($(MODULE_TYPE),userlib)
-MODULE_$(MODULE)_LDFLAGS := $(MODULE_LDFLAGS)
-MODULE_$(MODULE)_SOLIBS := $(MODULE_LIBS)
-MODULE_$(MODULE)_ALIBS := $(MODULE_STATIC_LIBS)
-MODULE_$(MODULE)_OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 
 # modules that declare a soname desire to be shared libs
 ifneq ($(MODULE_SO_NAME),)
-MODULE_$(MODULE)_SO_NAME := $(MODULE_SO_NAME)
-MODULE_$(MODULE)_SO_LIBS := $(MODULE_SO_LIBS)
-MODULE_$(MODULE)_SO_ALIBS := $(MODULE_SO_STATIC_LIBS)
+MODULE_ALIBS := $(foreach lib,$(MODULE_SO_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
+MODULE_SOLIBS := $(foreach lib,$(MODULE_SO_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so)
+
+$(MODULE_LIBNAME).so: _OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
+$(MODULE_LIBNAME).so: _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
+$(MODULE_LIBNAME).so: _SONAME := lib$(MODULE_SO_NAME).so
+$(MODULE_LIBNAME).so: _LDFLAGS := $(MODULE_LDFLAGS)
+$(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
+	@$(MKDIR)
+	@echo linking userlib $@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(_LDFLAGS)\
+		-shared -soname $(_SONAME) $(_OBJS) $(_LIBS) $(LIBGCC) -o $@
+
 ALLUSER_LIBS += $(MODULE)
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so
 GENERATED += $(MODULE_LIBNAME).so
