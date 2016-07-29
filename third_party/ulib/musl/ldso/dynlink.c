@@ -626,6 +626,8 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         uintptr_t mapaddr = (uintptr_t)base + this_min;
         mx_handle_t map_vmo = vmo;
         size_t map_size = this_max - this_min;
+        if (map_size == 0)
+            continue;
 #if 1
         // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
         // This will go away when we have copy-on-write.
@@ -633,22 +635,25 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             size_t data_size =
                 ((ph->p_vaddr + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE) -
                 this_min;
-            mx_handle_t copy_vmo = mx_vm_object_create(data_size);
-            if (copy_vmo < 0)
-                __builtin_trap();
-            uintptr_t window = 0;
-            mx_status_t status = mx_process_vm_map(
-                0, vmo, off_start, data_size, &window, MX_VM_FLAG_PERM_READ);
-            if (status < 0)
-                __builtin_trap();
-            mx_ssize_t n = mx_vm_object_write(copy_vmo, (void*)window,
-                                              0, data_size);
-            mx_process_vm_unmap(0, window, 0);
-            if (n != (mx_ssize_t)data_size)
-                __builtin_trap();
-            map_vmo = copy_vmo;         // Leak the handle.
-            off_start = 0;
-            map_size = data_size;
+            if (data_size > 0) {
+                mx_handle_t copy_vmo = mx_vm_object_create(data_size);
+                if (copy_vmo < 0)
+                    __builtin_trap();
+                uintptr_t window = 0;
+                mx_status_t status = mx_process_vm_map(
+                    0, vmo, off_start, data_size, &window,
+                    MX_VM_FLAG_PERM_READ);
+                if (status < 0)
+                    __builtin_trap();
+                mx_ssize_t n = mx_vm_object_write(copy_vmo, (void*)window,
+                                                  0, data_size);
+                mx_process_vm_unmap(0, window, 0);
+                if (n != (mx_ssize_t)data_size)
+                    __builtin_trap();
+                map_vmo = copy_vmo;         // Leak the handle.
+                off_start = 0;
+                map_size = data_size;
+            }
         }
 #endif
         mx_status_t status = mx_process_vm_map(current_proc_handle,
