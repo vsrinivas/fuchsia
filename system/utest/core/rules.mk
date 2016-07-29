@@ -16,7 +16,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += \
     $(wildcard $(LOCAL_DIR)/*/*.c) \
@@ -25,7 +25,8 @@ MODULE_SRCS += \
 
 MODULE_NAME := core-tests
 
-MODULE_DEPS := ulib/musl ulib/runtime ulib/magenta ulib/unittest
+MODULE_STATIC_LIBS := ulib/runtime
+MODULE_LIBS := ulib/unittest ulib/magenta ulib/musl-shared
 
 MODULE_DEFINES := BUILD_COMBINED_TESTS=1
 

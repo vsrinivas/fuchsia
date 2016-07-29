@@ -16,7 +16,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := usertest-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/echo.c \
@@ -25,7 +25,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := echo-test
 
-MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/unittest
+MODULE_LIBS := \
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

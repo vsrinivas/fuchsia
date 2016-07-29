@@ -16,15 +16,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := usertest-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/process.c
 
 MODULE_NAME := process-test
 
-MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/launchpad ulib/magenta ulib/unittest
+MODULE_LIBS := \
+    ulib/unittest ulib/launchpad ulib/mxio ulib/magenta ulib/musl-shared
 
 MODULES += $(LOCAL_DIR)/child-process
 

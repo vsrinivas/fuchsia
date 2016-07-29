@@ -16,14 +16,14 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bad-kernel-access.c
 
 MODULE_NAME := bad-kernel-access-test-crashes
 
-MODULE_DEPS := \
-    ulib/musl ulib/magenta ulib/mxio ulib/ddk ulib/unittest
+MODULE_STATIC_LIBS := ulib/ddk
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

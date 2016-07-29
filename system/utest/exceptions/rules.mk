@@ -16,12 +16,12 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += $(LOCAL_DIR)/exceptions.c
 
 MODULE_NAME := exceptions-test-broken
 
-MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta ulib/unittest
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

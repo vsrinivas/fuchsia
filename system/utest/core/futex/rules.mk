@@ -16,14 +16,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := usertest-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/futex.cpp
 
 MODULE_NAME := futex-test
 
-MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/runtime ulib/unittest
+MODULE_STATIC_LIBS := ulib/runtime
+MODULE_LIBS := \
+    ulib/mxio ulib/magenta ulib/unittest ulib/musl-shared
 
 include make/module.mk

@@ -16,16 +16,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := usertest-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/thread.c \
 
 MODULE_NAME := mxr-thread-test
 
-MODULE_DEPS := \
-    ulib/runtime ulib/musl ulib/mxio ulib/magenta ulib/unittest
+MODULE_STATIC_LIBS := ulib/runtime
+MODULE_LIBS := \
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk
-
-

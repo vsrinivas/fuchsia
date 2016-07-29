@@ -29,4 +29,8 @@ MODULE_DEPS += \
     ulib/magenta \
     ulib/runtime
 
+MODULE_SO_NAME := unittest
+MODULE_SO_STATIC_LIBS := ulib/runtime
+MODULE_SO_LIBS := ulib/magenta ulib/musl-shared
+
 include make/module.mk

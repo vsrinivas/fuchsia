@@ -18,12 +18,13 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_NAME := netsvc
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/netsvc.c \
 
-MODULE_DEPS := \
-    ulib/inet6 ulib/musl ulib/mxio ulib/magenta
+MODULE_DEPS := ulib/inet6
+
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

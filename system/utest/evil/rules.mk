@@ -16,14 +16,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/evil.c
 
 MODULE_NAME := evil-tests
 
-MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

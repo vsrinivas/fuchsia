@@ -16,14 +16,14 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := usertest-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/message-pipe.c \
 
 MODULE_NAME := message-pipe-test
 
-MODULE_DEPS := \
-    ulib/magenta ulib/musl ulib/mxio ulib/unittest
+MODULE_LIBS := \
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

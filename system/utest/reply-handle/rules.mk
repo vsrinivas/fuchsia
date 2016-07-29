@@ -16,15 +16,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := usertest-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/reply-handle.c
 
 MODULE_NAME := reply-handle-test
 
-MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/launchpad ulib/magenta ulib/unittest
+MODULE_LIBS := \
+    ulib/unittest ulib/launchpad ulib/mxio ulib/magenta ulib/musl-shared
 
 MODULES += \
     $(LOCAL_DIR)/helper

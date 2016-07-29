@@ -16,14 +16,14 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := usertest-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/data-pipe.c \
 
 MODULE_NAME := data-pipe-test
 
-MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/unittest
+MODULE_LIBS := \
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

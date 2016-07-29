@@ -16,17 +16,17 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/thread-depth.c
 
 MODULE_NAME := thread-depth-test
 
-MODULE_DEPS := \
-    ulib/magenta \
-    ulib/musl \
+MODULE_STATIC_LIBS := ulib/runtime
+MODULE_LIBS := \
     ulib/mxio \
-    ulib/runtime \
+    ulib/magenta \
+    ulib/musl-shared
 
 include make/module.mk

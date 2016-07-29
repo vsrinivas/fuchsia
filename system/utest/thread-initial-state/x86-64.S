@@ -135,6 +135,6 @@ FUNCTION(thread_entry)
     check_ymm %ymm15
 .Lno_avx:
 
-    jmp mx_thread_exit
+    jmp mx_thread_exit@PLT
 .Lfail:
     jmp print_fail
