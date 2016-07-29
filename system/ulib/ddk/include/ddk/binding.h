@@ -14,6 +14,9 @@
 
 #pragma once
 
+#include <stdint.h>
+
+
 // COAABBBB VVVVVVVV  Condition Opcode paramA paramB Value
 
 #define OP_ABORT  0x0 // if (cond) return no-match
