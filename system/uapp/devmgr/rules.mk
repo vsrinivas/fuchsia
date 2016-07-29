@@ -18,7 +18,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_NAME := devmgr
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-static
 
 # grab sources for all built-in drivers
 # someday these will become dynamically loadable modules

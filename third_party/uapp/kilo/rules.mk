@@ -16,7 +16,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp-shared
+MODULE_TYPE := userapp
 
 MODULE_SRCS += $(LOCAL_DIR)/kilo.c
 

@@ -132,9 +132,9 @@ MODULE_COMPILEFLAGS += --include $(MODULE_CONFIG)
 MODULE_SRCDEPS += $(MODULE_CONFIG)
 
 # flag so the link process knows to handle shared apps specially
-ifeq ($(MODULE_TYPE),userapp-shared)
+ifeq ($(MODULE_TYPE),userapp-static)
 MODULE_TYPE := userapp
-MODULE_$(MODULE)_SHARED := true
+MODULE_$(MODULE)_STATIC := true
 endif
 
 # include the rules to compile the module's object files
@@ -174,7 +174,7 @@ endif
 #TODO: remove once we've converted all user modules to _LIBS/_STATIC_LIBS usage
 ifeq ($(MODULE_TYPE),userapp)
 ifneq ($(MODULE_DEPS),)
-$(error $(MODULE) userapp/usertest modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
+$(error $(MODULE) userapp/test modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
 endif
 endif
 

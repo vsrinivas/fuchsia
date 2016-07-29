@@ -187,7 +187,7 @@ $(foreach app,$(ALLUSER_MODULES),\
 	$(MODULE_$(app)_OBJS),\
 	$(call GET_USERAPP_ALIBS,$(app)),\
 	$(call GET_USERAPP_SOLIBS,$(app)),\
-	$(MODULE_$(app)_LDFLAGS) $(if $(MODULE_$(app)_SHARED),$(USERAPP_SHARED_LDFLAGS),$(USERAPP_LDFLAGS)))))
+	$(MODULE_$(app)_LDFLAGS) $(if $(MODULE_$(app)_STATIC),$(USERAPP_LDFLAGS),$(USERAPP_SHARED_LDFLAGS)))))
 
 # For each user lib module, generate a link rule
 $(foreach lib,$(ALLUSER_LIBS),\
