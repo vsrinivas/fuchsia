@@ -91,7 +91,7 @@ void* memmem(const void*, size_t, const void*, size_t);
 void* memrchr(const void*, int, size_t);
 void* mempcpy(void*, const void*, size_t);
 #ifndef __cplusplus
-char* basename(void);
+char* basename(char*);
 #endif
 #endif
 
