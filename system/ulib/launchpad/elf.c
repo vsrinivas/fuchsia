@@ -215,6 +215,10 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
     end = (end + PAGE_SIZE - 1) & -PAGE_SIZE;
     size_t size = end - start;
 
+    // Nothing to do for an empty segment (degenerate case).
+    if (size == 0)
+        return NO_ERROR;
+
     uintptr_t file_start = (uintptr_t)ph->p_offset;
     uintptr_t file_end = file_start + ph->p_filesz;
     const size_t partial_page = file_end & (PAGE_SIZE - 1);
@@ -228,28 +232,30 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
         uintptr_t data_end =
             (ph->p_offset + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE;
         const size_t data_size = data_end - file_start;
-        mx_handle_t copy_vmo = mx_vm_object_create(data_size);
-        if (copy_vmo < 0)
-            return copy_vmo;
-        uintptr_t window = 0;
-        mx_status_t status = mx_process_vm_map(0, vmo, file_start, data_size,
-                                               &window, MX_VM_FLAG_PERM_READ);
-        if (status < 0) {
-            mx_handle_close(copy_vmo);
-            return status;
+        if (data_size > 0) {
+            mx_handle_t copy_vmo = mx_vm_object_create(data_size);
+            if (copy_vmo < 0)
+                return copy_vmo;
+            uintptr_t window = 0;
+            mx_status_t status = mx_process_vm_map(
+                0, vmo, file_start, data_size, &window, MX_VM_FLAG_PERM_READ);
+            if (status < 0) {
+                mx_handle_close(copy_vmo);
+                return status;
+            }
+            mx_ssize_t n = mx_vm_object_write(copy_vmo, (void*)window,
+                                              0, data_size);
+            mx_process_vm_unmap(0, window, 0);
+            if (n >= 0 && n != (mx_ssize_t)data_size)
+                n = ERR_IO;
+            if (n < 0) {
+                mx_handle_close(copy_vmo);
+                return n;
+            }
+            vmo = copy_vmo;                 // Leak the handle.
+            file_end -= file_start;
+            file_start = 0;
         }
-        mx_ssize_t n = mx_vm_object_write(copy_vmo, (void*)window,
-                                          0, data_size);
-        mx_process_vm_unmap(0, window, 0);
-        if (n >= 0 && n != (mx_ssize_t)data_size)
-            n = ERR_IO;
-        if (n < 0) {
-            mx_handle_close(copy_vmo);
-            return n;
-        }
-        vmo = copy_vmo;                 // Leak the handle.
-        file_end -= file_start;
-        file_start = 0;
     }
 #endif
 
