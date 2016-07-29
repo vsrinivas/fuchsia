@@ -52,10 +52,15 @@ def main():
                         default="default")
     parser.add_argument("--release", "-r", help="generate release mode build files",
         action="store_true")
-    parser.add_argument("--outdir", "-o", help="output directory", default="out/Debug")
+    parser.add_argument("--outdir", "-o", help="output directory", default="out/debug")
+    parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
+                        choices=['x86-64', 'aarch64'])
     args = parser.parse_args()
     if args.release:
-        args.outdir = "out/Release"
+        args.outdir = "out/release"
+
+    # TODO: Do not clobber user specified output dir
+    args.outdir += "-" + args.target_cpu
 
     amalgamation = resolve_imports(args.modules.split(","))
 
@@ -91,10 +96,16 @@ group("default") {
         depfile.write("\n")
     dotfile_path = os.path.join(paths.SCRIPT_DIR, ".gn")
 
-    gn_args = ["gen", outdir_path, "--check"]
+    gn_command = ["gen", outdir_path, "--check"]
+
+    cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
+    gn_args = "--args=target_cpu=\"" + cpu_map[args.target_cpu]  + "\""
+
     if args.release:
-        gn_args += [ "--args=is_debug=false" ]
-    return gn.run(gn_args)
+        gn_args += " is_debug=false"
+    gn_command += [gn_args]
+
+    return gn.run(gn_command)
 
 
 if __name__ == "__main__":
