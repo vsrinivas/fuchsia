@@ -15,9 +15,11 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/block.h>
 
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
+#include <runtime/completion.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -40,42 +42,57 @@
 #define sata_devinfo_u32(base, offs) (((uint32_t)(base)[(offs) + 1] << 16) | ((uint32_t)(base)[(offs)]))
 #define sata_devinfo_u64(base, offs) (((uint64_t)(base)[(offs) + 3] << 48) | ((uint64_t)(base)[(offs) + 2] << 32) | ((uint64_t)(base)[(offs) + 1] << 16) | ((uint32_t)(base)[(offs)]))
 
-mx_status_t sata_read_block_sync(sata_device_t* dev, uint64_t lba, mx_paddr_t mem, size_t mem_sz) {
-    if (!(dev->flags & SATA_FLAG_DMA) || !(dev->flags & SATA_FLAG_LBA48)) return ERR_NOT_SUPPORTED;
-    // send READ DMA EXT
-    memset(&dev->curr_cmd, 0, sizeof(sata_cmd_t));
-    dev->curr_cmd.cmd = SATA_CMD_READ_DMA_EXT;
-    dev->curr_cmd.device = 0x40;
-    dev->curr_cmd.data_phys = mem;
-    if (mem_sz >= 0x400000) { // 4mb hardware limit per prd
-        return ERR_INVALID_ARGS;
-    }
-    bool align = !(mem_sz % dev->sector_sz);
-    if (!align) {
-        xprintf("%s: mem_sz not aligned to sector size\n", dev->device.name);
-    }
-    dev->curr_cmd.data_sz = mem_sz;
-    dev->curr_cmd.lba = lba;
-    dev->curr_cmd.count = align ? mem_sz / dev->sector_sz : mem_sz / dev->sector_sz + 1;
-    mx_status_t status = ahci_port_do_cmd_sync(dev->channel, &dev->curr_cmd);
-    if (status < 0) return status;
-    if (dev->curr_cmd.status != NO_ERROR) return dev->curr_cmd.status;
-    return NO_ERROR;
+#define SATA_FLAG_DMA   (1 << 0)
+#define SATA_FLAG_LBA48 (1 << 1)
+
+typedef struct sata_device {
+    mx_device_t device;
+
+    int port;
+    int flags;
+    int sector_sz;
+} sata_device_t;
+
+#define get_sata_device(dev) containerof(dev, sata_device_t, device)
+
+static void sata_device_identify_complete(iotxn_t* txn) {
+    mxr_completion_signal((mxr_completion_t*)txn->context);
 }
 
-static mx_status_t sata_device_identify(sata_device_t* dev) {
+static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* controller) {
     // send IDENTIFY DEVICE
-    memset(&dev->curr_cmd, 0, sizeof(sata_cmd_t));
-    dev->curr_cmd.cmd = SATA_CMD_IDENTIFY_DEVICE;
-    dev->curr_cmd.data_phys = dev->mem_phys;
-    dev->curr_cmd.data_sz = 512;
-    mx_status_t status = ahci_port_do_cmd_sync(dev->channel, &dev->curr_cmd);
-    if (status < 0) return status;
-    if (dev->curr_cmd.status != NO_ERROR) return dev->curr_cmd.status;
+    iotxn_t* txn;
+    mx_status_t status = iotxn_alloc(&txn, 0, 512, 0);
+    if (status != NO_ERROR) {
+        xprintf("%s: error %d allocating iotxn\n", dev->device.name, status);
+        return status;
+    }
+
+    mxr_completion_t completion = MXR_COMPLETION_INIT;
+
+    sata_pdata_t* pdata = sata_iotxn_pdata(txn);
+    pdata->cmd = SATA_CMD_IDENTIFY_DEVICE;
+    pdata->device = 0;
+    pdata->port = dev->port;
+    txn->protocol = MX_PROTOCOL_SATA;
+    txn->complete_cb = sata_device_identify_complete;
+    txn->context = &completion;
+    txn->length = 512;
+
+    ahci_iotxn_queue(controller, txn);
+    mxr_completion_wait(&completion, MX_TIME_INFINITE);
+
+    if (txn->status != NO_ERROR) {
+        xprintf("%s: error %d in device identify\n", dev->device.name, txn->status);
+    }
+    assert(txn->actual == 512);
 
     // parse results
     int flags = 0;
-    uint16_t* devinfo = dev->mem;
+    uint16_t devinfo[512 / sizeof(uint16_t)];
+    txn->ops->copyfrom(txn, devinfo, 512, 0);
+    txn->ops->release(txn);
+
     char str[41]; // model id is 40 chars
     xprintf("%s: dev info\n", dev->device.name);
     snprintf(str, SATA_DEVINFO_SERIAL_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_SERIAL));
@@ -121,10 +138,52 @@ static mx_status_t sata_device_identify(sata_device_t* dev) {
 
 // implement device protocol:
 
+static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
+    sata_device_t* device = get_sata_device(dev);
+    // TODO implement other block ioctls
+    switch (op) {
+    case BLOCK_OP_GET_BLOCKSIZE: {
+         uint64_t* blksize = reply;
+         if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
+         *blksize = device->sector_sz;
+         return sizeof(*blksize);
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
+static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+    // FIXME write not supported for now
+    if (txn->opcode == IOTXN_OP_WRITE) {
+        txn->ops->complete(txn, ERR_NOT_SUPPORTED, 0);
+        return;
+    }
+
+    // 4mb hardware limit per prd
+    if (txn->length >= 0x400000) {
+        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        return;
+    }
+
+    sata_device_t* device = get_sata_device(dev);
+
+    sata_pdata_t* pdata = sata_iotxn_pdata(txn);
+    pdata->cmd = txn->opcode == IOTXN_OP_READ ? SATA_CMD_READ_DMA_EXT : SATA_CMD_WRITE_DMA_EXT;
+    pdata->device = 0x40;
+    pdata->lba = txn->offset / device->sector_sz;
+    pdata->count = txn->length / device->sector_sz;
+    pdata->port = device->port;
+
+    ahci_iotxn_queue(dev->parent, txn);
+}
+
 static mx_protocol_device_t sata_device_proto = {
+    .ioctl = sata_ioctl,
+    .iotxn_queue = sata_iotxn_queue,
 };
 
-mx_status_t sata_bind(mx_driver_t* drv, mx_device_t* dev, ahci_port_t* port) {
+mx_status_t sata_bind(mx_device_t* dev, int port) {
     // initialize the device
     sata_device_t* device = calloc(1, sizeof(sata_device_t));
     if (!device) {
@@ -133,32 +192,21 @@ mx_status_t sata_bind(mx_driver_t* drv, mx_device_t* dev, ahci_port_t* port) {
     }
 
     char name[8];
-    snprintf(name, sizeof(name), "sata%d", port->nr);
-    mx_status_t status = device_init(&device->device, drv, name, &sata_device_proto);
+    snprintf(name, sizeof(name), "sata%d", port);
+    mx_status_t status = device_init(&device->device, dev->driver, name, &sata_device_proto);
     if (status) {
         xprintf("sata: failed to init device\n");
         goto fail;
     }
 
-    // allocate some dma memory
-    device->mem_sz = PAGE_SIZE;
-    status = mx_alloc_device_memory(device->mem_sz, &device->mem_phys, &device->mem);
-    if (status < 0) {
-        xprintf("%s: error %d allocating dma memory\n", device->device.name, status);
-        goto fail;
-    }
-
-    device->channel = port;
-
-    // add the device
-    device_add(&device->device, dev);
+    device->port = port;
 
     // send device identify
-    sata_device_identify(device);
+    sata_device_identify(device, dev);
 
-    // read partition table
-    // FIXME layering?
-    gpt_bind(drv, &device->device, device);
+    // add the device
+    device->device.protocol_id = MX_PROTOCOL_BLOCK;
+    device_add(&device->device, dev);
 
     return NO_ERROR;
 fail:

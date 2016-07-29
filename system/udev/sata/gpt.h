@@ -46,13 +46,3 @@ typedef struct gpt_entry {
     uint64_t flags;
     uint8_t name[72];
 } gpt_entry_t;
-
-typedef struct gpt_part_device {
-    mx_device_t device;
-    sata_device_t* disk;
-    gpt_entry_t gpt_entry;
-} gpt_partdev_t;
-
-#define get_gpt_device(dev) containerof(dev, gpt_partdev_t, device)
-
-mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev, sata_device_t* disk);

@@ -79,44 +79,42 @@ static int cmd_list_blk(void) {
     char guid[40];
     char name[40];
     char sstr[8];
+    const char* type = NULL;
     uint64_t size;
     int fd;
-    int rc = 0;
+    int rc;
     printf("%-25s %-4s  %-14s %s\n", "DEVNAME", "SIZE", "TYPE", "NAME");
     while ((de = readdir(dir)) != NULL) {
         snprintf(devname, sizeof(devname), "%s/%s", DEV_BLOCK, de->d_name);
         fd = open(devname, O_RDONLY);
         if (fd < 0) {
-            rc = fd;
             printf("Error opening %s\n", devname);
-            goto out;
+            goto devdone;
         }
         rc = mxio_ioctl(fd, BLOCK_OP_GET_SIZE, NULL, 0, &size, sizeof(size));
         if (rc < 0) {
-            printf("Error getting blocksize for %s\n", devname);
-            close(fd);
-            goto out;
+            strncpy(sstr, "N/A", sizeof(sstr));
+        } else {
+            size_to_cstring(sstr, sizeof(sstr), size);
         }
         rc = mxio_ioctl(fd, BLOCK_OP_GET_GUID, NULL, 0, guid, sizeof(guid));
         if (rc < 0) {
-            printf("Error getting GUID for %s\n", devname);
-            close(fd);
-            goto out;
+            type = "N/A";
+        } else {
+            type = guid_to_type(guid);
         }
         memset(name, 0, sizeof(name));
         rc = mxio_ioctl(fd, BLOCK_OP_GET_NAME, NULL, 0, name, sizeof(name));
         if (rc < 0) {
-            printf("Error getting partition name for %s\n", devname);
-            close(fd);
-            goto out;
+            strncpy(name, "N/A", sizeof(name));
         }
-        rc = 0;
+devdone:
         close(fd);
-        printf("%-25s %4s  %-14s %s\n", devname, size_to_cstring(sstr, sizeof(sstr), size), guid_to_type(guid), name);
+        printf("%-25s %4s  %-14s %s\n", devname, sstr, type, name);
     }
 out:
     closedir(dir);
-    return rc;
+    return 0;
 }
 
 static int cmd_read_blk(const char* dev, off_t offset, size_t count) {

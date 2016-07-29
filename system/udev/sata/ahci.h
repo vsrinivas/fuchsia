@@ -18,8 +18,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 
-#include <runtime/completion.h>
-
 #define AHCI_MAX_PORTS    32
 #define AHCI_MAX_COMMANDS 32
 #define AHCI_MAX_PRDS     128 // just a random choice, hardware max is 64k-1
@@ -167,37 +165,4 @@ static_assert(sizeof(ahci_fis_t) == 0x100, "unexpected fis size");
 static_assert(sizeof(ahci_ct_t) == 0x80, "unexpected command table header size");
 static_assert(sizeof(ahci_prd_t) == 0x10, "unexpected prd entry size");
 
-typedef struct ahci_device ahci_device_t;
-typedef struct sata_cmd sata_cmd_t;
-
-typedef struct ahci_cmd {
-    uint8_t cmd;
-    uint16_t count;
-    uint64_t lba;
-    void* data;
-    mx_paddr_t data_phys;
-    mxr_completion_t completion;
-} ahci_cmd_t;
-
-typedef struct ahci_port {
-    int nr; // 0-based
-    ahci_port_reg_t* regs;
-    ahci_cl_t* cl;
-    ahci_fis_t* fis;
-    ahci_ct_t* ct;
-    sata_cmd_t* curr_cmd;
-} ahci_port_t;
-
-struct ahci_device {
-    mx_device_t device;
-    pci_protocol_t* pci;
-    ahci_hba_t* regs;
-    uint64_t regs_size;
-    mx_handle_t regs_handle;
-    mx_handle_t irq_handle;
-    int port_count;
-    ahci_port_t* ports;
-};
-#define get_ahci_device(dev) containerof(dev, ahci_device_t, device)
-
-mx_status_t ahci_port_do_cmd_sync(ahci_port_t* port, sata_cmd_t* cmd);
+void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn);

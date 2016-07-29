@@ -174,6 +174,8 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
         return "input";
     case MX_PROTOCOL_PCI:
         return "pci";
+    case MX_PROTOCOL_SATA:
+        return "sata";
     case MX_PROTOCOL_USB_DEVICE:
         return "usb-device";
     case MX_PROTOCOL_USB_HCI:
@@ -267,6 +269,11 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
 
     xprintf("devmgr: probe dev=%p(%s) drv=%p(%s)\n",
             dev, safename(dev->name), drv, safename(drv->name));
+
+    // don't bind to the driver that published this device
+    if (drv == dev->driver) {
+        return ERR_NOT_SUPPORTED;
+    }
 
     // evaluate the driver's binding program against the device's properties
     if (!devmgr_is_bindable(drv, dev)) {
