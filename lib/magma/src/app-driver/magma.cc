@@ -87,15 +87,14 @@ int magma_bo_gem_export_to_prime(drm_intel_bo* bo, int* prime_fd)
 
 int magma_bo_get_subdata(drm_intel_bo* bo, unsigned long offset, unsigned long size, void* data)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
-    DLOG("magma_bo_get_subdata '%s' STUB\n", buffer->Name());
+    DLOG("magma_bo_get_subdata '%s' STUB\n", MagmaBuffer::cast(bo)->Name());
     return 0;
 }
 
 int magma_bo_get_tiling(drm_intel_bo* bo, uint32_t* tiling_mode, uint32_t* swizzle_mode)
 {
     DLOG("magma_bo_get_tiling - swizzle stubbed");
-    auto buffer = static_cast<MagmaBuffer*>(bo);
+    auto buffer = MagmaBuffer::cast(bo);
     *tiling_mode = buffer->tiling_mode();
     // TODO: if swizzle_mode isn't used, remove it.
     *swizzle_mode = 0xdeadbeef;
@@ -110,7 +109,7 @@ int magma_bo_madvise(drm_intel_bo* bo, int madv)
 
 int magma_bo_map(drm_intel_bo* bo, int write_enable)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
+    auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_map %s", buffer->Name());
     buffer->Map(write_enable);
     return 0;
@@ -125,15 +124,15 @@ int magma_bo_mrb_exec(drm_intel_bo* bo, int used, void* unused, int num_cliprect
 
 void magma_bo_reference(drm_intel_bo* bo)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
+    auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_reference %s", buffer->Name());
     buffer->Incref();
 }
 
 int magma_bo_references(drm_intel_bo* bo, drm_intel_bo* target_bo)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
-    auto target_buffer = static_cast<MagmaBuffer*>(target_bo);
+    auto buffer = MagmaBuffer::cast(bo);
+    auto target_buffer = MagmaBuffer::cast(target_bo);
     DLOG("magma_bo_references bo %s target_bo %s", buffer->Name(), target_buffer->Name());
     return buffer->References(target_buffer);
     return 0;
@@ -141,14 +140,13 @@ int magma_bo_references(drm_intel_bo* bo, drm_intel_bo* target_bo)
 
 int magma_bo_subdata(drm_intel_bo* bo, unsigned long offset, unsigned long size, const void* data)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
-    DLOG("magma_bo_subdata '%s' STUB", buffer->Name());
+    DLOG("magma_bo_subdata '%s' STUB", MagmaBuffer::cast(bo)->Name());
     return 0;
 }
 
 int magma_bo_unmap(drm_intel_bo* bo)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
+    auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_unmap %p", bo);
     if (buffer)
         buffer->Unmap();
@@ -157,7 +155,7 @@ int magma_bo_unmap(drm_intel_bo* bo)
 
 void magma_bo_unreference(drm_intel_bo* bo)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
+    auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_unreference %s", buffer ? buffer->Name() : nullptr);
     if (buffer)
         buffer->Decref();
@@ -165,7 +163,7 @@ void magma_bo_unreference(drm_intel_bo* bo)
 
 void magma_bo_wait_rendering(drm_intel_bo* bo)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
+    auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_wait_rendering %s", buffer->Name());
     buffer->WaitRendering();
 }
@@ -277,8 +275,7 @@ int magma_gem_bo_map_gtt(drm_intel_bo* bo)
 
 int magma_gem_bo_map_unsynchronized(drm_intel_bo* bo)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
-    DLOG("magma_gem_bo_map_unsynchronized %s - using regular map", buffer->Name());
+    DLOG("magma_gem_bo_map_unsynchronized %s - using regular map", MagmaBuffer::cast(bo)->Name());
     const int write_enable = 1;
     return magma_bo_map(bo, write_enable);
 }
@@ -305,7 +302,7 @@ void magma_gem_context_destroy(drm_intel_context* ctx) { DLOG("magma_gem_context
 int magma_gem_bo_context_exec(drm_intel_bo* bo, drm_intel_context* ctx, int used,
                               unsigned int flags)
 {
-    auto buffer = static_cast<MagmaBuffer*>(bo);
+    auto buffer = MagmaBuffer::cast(bo);
     int context_id = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
     DLOG("magma_gem_bo_context_exec buffer '%s' context_id %d", buffer->Name(), context_id);
     // int int_context_id = static_cast<int>(context_id);

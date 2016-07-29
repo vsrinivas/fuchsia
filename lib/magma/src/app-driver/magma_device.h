@@ -39,6 +39,8 @@ public:
     void SetTilingMode(uint32_t tiling_mode);
     uint32_t tiling_mode() { return tiling_mode_; }
 
+    static MagmaBuffer* cast(drm_intel_bo* buffer) { return static_cast<MagmaBuffer*>(buffer); }
+
 private:
     MagmaDevice* device_;
 
