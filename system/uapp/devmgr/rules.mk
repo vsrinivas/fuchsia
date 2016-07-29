@@ -48,7 +48,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mxio.c \
     $(LOCAL_DIR)/main.c
 
-MODULE_DEPS := \
+MODULE_STATIC_LIBS := \
     ulib/musl \
     ulib/ddk \
     ulib/launchpad \

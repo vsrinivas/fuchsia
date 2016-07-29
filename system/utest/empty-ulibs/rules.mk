@@ -23,7 +23,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := empty-libs-test
 
-MODULE_DEPS := \
-	ulib/musl ulib/mxio ulib/magenta ulib/unittest ulib/m ulib/pthread ulib/dl
+MODULE_STATIC_LIBS := \
+	ulib/musl ulib/mxio ulib/magenta ulib/unittest ulib/m ulib/pthread ulib/dl ulib/runtime
 
 include make/module.mk

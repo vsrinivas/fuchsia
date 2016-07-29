@@ -24,7 +24,7 @@ MODULE_SRCS := \
 
 MODULE_NAME := test-driver
 
-MODULE_DEPS := \
-    ulib/musl ulib/magenta ulib/runtime ulib/ddk ulib/driver
+MODULE_STATIC_LIBS := \
+    ulib/musl ulib/mxio ulib/magenta ulib/runtime ulib/ddk ulib/driver
 
 include make/module.mk

@@ -16,13 +16,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += $(LOCAL_DIR)/kilo.c
 
 MODULE_NAME := kilo
 
-MODULE_DEPS := ulib/mxio ulib/musl ulib/magenta ulib/ddk
+MODULE_LIBS := ulib/mxio ulib/musl-shared
+
+MODULE_HEADER_DEPS := ulib/ddk ulib/magenta
 
 MODULE_CFLAGS := -Wno-discarded-qualifiers
 

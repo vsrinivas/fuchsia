@@ -32,15 +32,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/i2c.c
 
-MODULE_DEPS := \
-    ulib/ddk \
-    ulib/magenta \
-    ulib/musl \
-    ulib/mxio
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl-shared
 
 include make/module.mk

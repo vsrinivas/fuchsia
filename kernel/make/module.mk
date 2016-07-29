@@ -172,10 +172,9 @@ endif
 
 
 #TODO: remove once we've converted all user modules to _LIBS/_STATIC_LIBS usage
-ifneq ($(MODULE_TYPE),)
+ifeq ($(MODULE_TYPE),userapp)
 ifneq ($(MODULE_DEPS),)
-#$(warning $(MODULE) user modules should use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
-MODULE_STATIC_LIBS += $(MODULE_DEPS)
+$(error $(MODULE) userapp/usertest modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
 endif
 endif
 

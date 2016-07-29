@@ -23,7 +23,7 @@ MODULE_TYPE := userapp-shared
 MODULE_SRCS += \
     $(LOCAL_DIR)/netsvc.c \
 
-MODULE_DEPS := ulib/inet6
+MODULE_STATIC_LIBS := ulib/inet6
 
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
 

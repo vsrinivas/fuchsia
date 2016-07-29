@@ -147,18 +147,13 @@ GENERATED += $(USER_FS)
 
 
 # generate linkage dependencies for userspace apps after
-# all modules have been evaluated, so we can recursively
-# expand the module dependencies and handle cases like
-# APP A depends on LIB B which depends on LIB C
+# all modules have been evaluated
 #
-# Duplicates are removed from the list with $(sort), which
-# works due to how we're linking binaries now.  If we shift
-# to true .a files we'll need to get fancier here.
-EXPAND_ADEPS = $(1) $(foreach DEP,$(MODULE_$(1)_ALIBS),$(call EXPAND_ADEPS,$(DEP)))
-GET_USERAPP_ADEPS = $(sort $(foreach DEP,$(MODULE_$(1)_ALIBS),$(call EXPAND_ADEPS,$(DEP))))
-GET_USERAPP_ALIBS = $(foreach DEP,$(call GET_USERAPP_ADEPS,$(1)),$(MODULE_$(DEP)_OUTNAME).mod.o)
+# TODO: this whole section may be able to disappear now that
+# we're no longer doing fancy recursive library deps tricks
 
-# shared library deps are non-recursive
+# user app
+GET_USERAPP_ALIBS = $(foreach DEP,$(MODULE_$(1)_ALIBS),$(MODULE_$(DEP)_OUTNAME).mod.o)
 GET_USERAPP_SOLIBS = $(foreach DEP,$(MODULE_$(1)_SOLIBS),$(MODULE_$(DEP)_LIBNAME).so)
 
 # library modules specifiy libs for .so builds separately

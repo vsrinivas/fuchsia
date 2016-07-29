@@ -16,15 +16,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userapp-shared
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
-MODULE_DEPS := \
-    ulib/magenta \
-    ulib/musl \
-    ulib/ddk \
-    ulib/mxio
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl-shared
 
 include make/module.mk
