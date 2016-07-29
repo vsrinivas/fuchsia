@@ -243,6 +243,13 @@ SYSROOT_DEPS += $(SYSROOT_CRT1)
 GENERATED += $(SYSROOT_CRT1)
 endif
 
+ifneq ($(MODULE_SO_NAME),)
+TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
+$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so)
+SYSROOT_DEPS += $(TMP)
+GENERATED += $(TMP)
+endif
+
 ifneq ($(MODULE_EXPORT),)
 
 ifeq ($(filter $(MODULE_EXPORT),$(SYSROOT_MEGA_LIBC)),)
