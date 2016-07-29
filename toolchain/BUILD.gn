@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/toolchain/gcc_toolchain.gni")
+import("//build/config/fuchsia/config.gni")
 
 gcc_toolchain("gcc_${host_cpu}") {
   cc = "gcc"
@@ -19,7 +20,18 @@ clang_toolchain("clang_${host_cpu}") {
   cc = "clang"
   cxx = "clang++"
   ld = cxx
-  ar = "ar"
+  if (host_os == "mac") {
+    # Use the fuchsia sdk's llvm-ar and clang++ instead of the one on the host.
+    clang_cpu = "x86_64"
+    clang_os = "darwin"
+    clang_name = "clang+llvm-$clang_cpu-$clang_os"
+    clang_path = "$fuchsia_sdk/toolchains/$clang_name"
+    prefix = rebase_path("$clang_path/bin/", root_build_dir)
+    ar = "${prefix}llvm-ar"
+  } else {
+    ar = "ar"
+  }
+
   strip = "strip"
 
   toolchain_cpu = host_cpu

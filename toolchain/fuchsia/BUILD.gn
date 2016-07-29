@@ -14,12 +14,12 @@ clang_toolchain("clang_${target_cpu}") {
     assert(false, "Host CPU not supported")
   }
 
-  if (host_os == "mac") {
-    clang_os = "darwin"
-    strip_os = "Darwin"
-  } else if (host_os == "linux") {
+  if (host_os == "linux") {
     clang_os = "linux"
     strip_os = "Linux"
+  } else if (host_os == "mac") {
+    clang_os = "darwin"
+    strip_os = "Darwin"
   } else {
     assert(false, "Host OS not supported")
   }

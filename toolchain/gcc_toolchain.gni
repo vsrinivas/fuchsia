@@ -165,15 +165,16 @@ template("gcc_toolchain") {
       }
       if (invoker.toolchain_os == "mac") {
         command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}}"
+        rspfile_content = "{{inputs_newline}}"
       } else {
         command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
+        rspfile_content = "{{inputs}}"
       }
       if (defined(invoker.strip)) {
         command +=
             " && ${invoker.strip} -S -o \"$outfile\" \"$unstripped_outfile\""
       }
       description = "LINK $outfile"
-      rspfile_content = "{{inputs}}"
       default_output_dir = "{{root_out_dir}}"
       outputs = [
         outfile,
