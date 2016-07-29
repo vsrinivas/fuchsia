@@ -56,6 +56,12 @@ struct TestThunks {
     MAKE_TEST_THUNK(FindByKey);
     MAKE_TEST_THUNK(EraseByKey);
     MAKE_TEST_THUNK(InsertOrFind);
+
+    // Ordered Associative container specific tests
+    MAKE_TEST_THUNK(OrderedIter)
+    MAKE_TEST_THUNK(OrderedReverseIter)
+    MAKE_TEST_THUNK(UpperBound);
+    MAKE_TEST_THUNK(LowerBound);
 };
 #undef MAKE_TEST_THUNK
 

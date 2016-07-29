@@ -126,6 +126,11 @@ public:
 
             REQUIRE_TRUE(SetTestObjKeys(new_object, method), "");
 
+            KeyType obj_key = KeyTraits::GetKey(*new_object);
+            max_key_ = !i
+                     ? obj_key
+                     : KeyTraits::LessThan(max_key_, obj_key) ? obj_key : max_key_;
+
             // Alternate whether or not we move the pointer, or "transfer" it.
             // Transfering means different things for different pointer types.
             // For unmanaged, it just returns a reference to the pointer and
@@ -389,7 +394,7 @@ public:
         END_TEST;
     }
 
-private:
+protected:
     // Accessors for base class memebers so we don't have to type
     // this->base_member all of the time.
     using Sp   = TestEnvironmentSpecialized<TestEnvTraits>;
@@ -408,6 +413,7 @@ private:
 
     Lfsr<KeyType>      key_lfsr_        = Lfsr<KeyType>(0xa2328b73e343fd0f);
     Lfsr<OtherKeyType> other_key_lfsr_  = Lfsr<OtherKeyType>(0xbd5a2efcc5ba8344);
+    KeyType            max_key_         = 0u;
 };
 
 // Explicit declaration of constexpr storage.

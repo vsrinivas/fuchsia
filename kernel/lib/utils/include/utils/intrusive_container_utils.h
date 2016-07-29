@@ -6,7 +6,52 @@
 
 #pragma once
 
+#include <utils/intrusive_pointer_traits.h>
 #include <utils/type_support.h>
+
+namespace utils {
+
+// DefaultKeyedObjectTraits defines a default implementation of traits used to
+// manage objects stored in associative containers such as hash-tables and
+// trees.
+//
+// At a minimum, a class or a struct which is to be used to define the
+// traits of a keyed object must define the following public members.
+//
+// GetKey   : A static method which takes a constant reference to an object (the
+//            type of which is infered from PtrType) and returns a KeyType
+//            instance corresponding to the key for an object.
+// LessThan : A static method which takes two keys (key1 and key2) and returns
+//            true if-and-only-if key1 is considered to be less than key2 for
+//            sorting purposes.
+// EqualTo  : A static method which takes two keys (key1 and key2) and returns
+//            true if-and-only-if key1 is considered to be equal to key2.
+//
+// Rules for keys:
+// ++ The type of key returned by GetKey must be compatible with the key which
+//    was specified for the container.
+// ++ The key for an object must remain constant for as long as the object is
+//    contained within a container.
+// ++ When comparing keys, comparisons must obey basic transative and
+//    commutative properties.  That is to say...
+//    LessThan(A, B) and LessThan(B, C) implies LessThan(A, C)
+//    EqualTo(A, B) and EqualTo(B, C) implies EqualTo(A, C)
+//    EqualTo(A, B) if-and-only-if EqualTo(B, A)
+//    LessThan(A, B) if-and-only-if EqualTo(B, A) or (not LessThan(B, A))
+//
+// DefaultKeyedObjectTraits is a helper class which allows an object to be
+// treated as a keyed-object by implementing a const GetKey method which returns
+// a key of the appropriate type.  The key type must be compatible with the
+// container key type, and must have definitions of the < and == operators for
+// the purpose of generating implementation of LessThan and EqualTo.
+template <typename KeyType, typename ObjType>
+struct DefaultKeyedObjectTraits {
+    static KeyType GetKey(const ObjType& obj)                       { return obj.GetKey(); }
+    static bool LessThan(const KeyType& key1, const KeyType& key2)  { return key1 <  key2; }
+    static bool EqualTo (const KeyType& key1, const KeyType& key2)  { return key1 == key2; }
+};
+
+}  // namespace utils
 
 namespace utils {
 namespace internal {
