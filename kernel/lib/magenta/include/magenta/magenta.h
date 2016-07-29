@@ -66,3 +66,5 @@ inline lk_time_t timeout_to_deadline(lk_time_t now, lk_time_t timeout) {
     // Note: |lk_time_t| is a |uint32_t|.
     return (timeout > UINT32_MAX - now) ? INFINITE_TIME : now + timeout;
 }
+
+mx_status_t magenta_sleep(mx_time_t nanoseconds);

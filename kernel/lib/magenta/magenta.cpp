@@ -121,6 +121,15 @@ bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired) {
     return false;
 }
 
+mx_status_t magenta_sleep(mx_time_t nanoseconds) {
+    lk_time_t t = mx_time_to_lk(nanoseconds);
+    if ((nanoseconds > 0ull) && (t == 0u))
+        t = 1u;
+
+    /* sleep with interruptable flag set */
+    return thread_sleep_etc(t, true);
+}
+
 static int cmd_magenta(int argc, const cmd_args* argv) {
     int rc = 0;
 

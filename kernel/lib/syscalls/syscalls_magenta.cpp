@@ -72,14 +72,7 @@ mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
         return NO_ERROR;
     }
 
-    lk_time_t t = mx_time_to_lk(nanoseconds);
-    if ((nanoseconds > 0ull) && (t == 0u))
-        t = 1u;
-
-    /* sleep with interruptable flag set */
-    status_t err = thread_sleep_etc(t, true);
-
-    return err;
+    return magenta_sleep(nanoseconds);
 }
 
 uint sys_num_cpus(void) {
@@ -141,9 +134,16 @@ mx_status_t sys_handle_wait_many(uint32_t count,
                                  mx_signals_state_t* _signals_states) {
     LTRACEF("count %u\n", count);
 
+    if (!count) {
+        mx_status_t result = magenta_sleep(timeout);
+        if (result != NO_ERROR)
+            return result;
+        return ERR_TIMED_OUT;
+    }
+
     if (!_handle_values || !_signals)
         return ERR_INVALID_ARGS;
-    if (!count || count > kMaxWaitHandleCount)
+    if (count > kMaxWaitHandleCount)
         return ERR_INVALID_ARGS;
 
     uint32_t max_size = kMaxWaitHandleCount * sizeof(uint32_t);

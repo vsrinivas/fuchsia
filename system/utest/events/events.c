@@ -256,6 +256,9 @@ static bool reset_test(void) {
 static bool wait_many_failures_test(void) {
     BEGIN_TEST;
 
+    ASSERT_EQ(mx_handle_wait_many(0u, NULL, NULL, 1u, NULL, NULL),
+              ERR_TIMED_OUT, "wait_many on zero handles should have timed out");
+
     mx_handle_t handles[2] = {mx_event_create(0u), MX_HANDLE_INVALID};
     ASSERT_GT(handles[0], MX_HANDLE_INVALID, "Error during event creation");
 
