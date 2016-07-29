@@ -24,12 +24,6 @@ extern "C" {
 // ask clang format not to mess up the indentation:
 // clang-format off
 
-// process id. TODO: remove this and use mx_koid_t.
-typedef int32_t mx_pid_t;
-
-// thread id. TODO: remove this and use mx_koid_t.
-typedef int32_t mx_tid_t;
-
 // global kernel object id.
 typedef uint64_t mx_koid_t;
 
@@ -47,8 +41,8 @@ typedef struct mx_exception_context {
 
 // data reported to an exception handler
 typedef struct mx_exception_report {
-    mx_pid_t pid;
-    mx_tid_t tid;
+    mx_koid_t pid;
+    mx_koid_t tid;
     mx_vaddr_t pc;
     mx_exception_context_t context;
 } mx_exception_report_t;

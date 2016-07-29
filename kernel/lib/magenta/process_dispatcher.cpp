@@ -28,7 +28,6 @@ static constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ  |
                                                      MX_RIGHT_WRITE |
                                                      MX_RIGHT_TRANSFER;
 
-uint32_t ProcessDispatcher::next_process_id_;     // .bss init'ed to 0
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
     MUTEX_INITIAL_VALUE(global_process_list_mutex_);
 utils::DoublyLinkedList<ProcessDispatcher*> ProcessDispatcher::global_process_list_;
@@ -283,7 +282,7 @@ Handle* ProcessDispatcher::GetHandle_NoLock(mx_handle_t handle_value) {
     Handle* handle = MapU32ToHandle(handle_index);
     if (!handle)
         return nullptr;
-    return (handle->process_id() == id_) ? handle : nullptr;
+    return (handle->process_id() == get_koid()) ? handle : nullptr;
 }
 
 void ProcessDispatcher::AddHandle(HandleUniquePtr handle) {
@@ -292,7 +291,7 @@ void ProcessDispatcher::AddHandle(HandleUniquePtr handle) {
 }
 
 void ProcessDispatcher::AddHandle_NoLock(HandleUniquePtr handle) {
-    handle->set_process_id(id_);
+    handle->set_process_id(get_koid());
     handles_.push_front(handle.release());
 }
 
@@ -354,10 +353,6 @@ status_t ProcessDispatcher::CreateUserThread(utils::StringPiece name,
     return NO_ERROR;
 }
 
-mx_tid_t ProcessDispatcher::GetNextThreadId() {
-    return atomic_add(&next_thread_id_, 1);
-}
-
 status_t ProcessDispatcher::SetExceptionHandler(utils::RefPtr<Dispatcher> handler,
                                                 mx_exception_behaviour_t behaviour) {
     AutoLock lock(&exception_lock_);
@@ -396,26 +391,25 @@ void ProcessDispatcher::AddProcess(ProcessDispatcher* process) {
     // Don't call any method of |process|, it is not yet fully constructed.
     AutoLock lock(&global_process_list_mutex_);
 
-    process->id_ = ++next_process_id_;
     global_process_list_.push_back(process);
 
-    LTRACEF("Adding process %p : id = %u\n", process, process->id_);
+    LTRACEF("Adding process %p : koid = %llu\n", process, process->get_koid());
 }
 
 void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
     AutoLock lock(&global_process_list_mutex_);
 
     global_process_list_.erase(process);
-    LTRACEF("Removing process %p : id = %u\n", process, process->id());
+    LTRACEF("Removing process %p : koid = %llu\n", process, process->get_koid());
 }
 
 void ProcessDispatcher::DebugDumpProcessList() {
     AutoLock lock(&global_process_list_mutex_);
-    printf(" id-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n");
+    printf("%8s-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n", "id");
 
     for (const auto& process : global_process_list_) {
-        printf("%3u-%c %3u %s [%s]\n",
-               process.id(),
+        printf("%8llu-%c %3u %s [%s]\n",
+               process.get_koid(),
                process.StateChar(),
                process.ThreadCount(),
                process.DebugDumpHandleTypeCount_NoLock(),

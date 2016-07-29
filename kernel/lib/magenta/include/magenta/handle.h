@@ -27,11 +27,11 @@ public:
 
     utils::RefPtr<Dispatcher> dispatcher() const { return dispatcher_; }
 
-    mx_pid_t process_id() const {
+    mx_koid_t process_id() const {
         return process_id_;
     }
 
-    void set_process_id(mx_pid_t pid) {
+    void set_process_id(mx_koid_t pid) {
         process_id_ = pid;
     }
 
@@ -40,7 +40,7 @@ public:
     }
 
 private:
-    mx_pid_t process_id_;
+    mx_koid_t process_id_;
     const mx_rights_t rights_;
     utils::RefPtr<Dispatcher> dispatcher_;
 };

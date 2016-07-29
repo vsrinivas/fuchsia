@@ -43,8 +43,8 @@ static void build_exception_report(mx_exception_report_t* report,
                                    arch_exception_context_t* context,
                                    ulong ip) {
     memset(report, 0, sizeof(*report));
-    report->pid = thread->process()->id();
-    report->tid = thread->id();
+    report->pid = thread->process()->get_koid();
+    report->tid = thread->get_koid();
     report->pc = ip;
     build_exception_context(&report->context, exception_type, context);
 }

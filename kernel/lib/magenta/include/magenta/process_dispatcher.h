@@ -81,7 +81,6 @@ public:
                        uint32_t* rights);
 
     // accessors
-    mx_pid_t id() const { return id_; }
     mutex_t& handle_table_lock() { return handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
     StateTracker* state_tracker() { return &state_tracker_; }
@@ -90,7 +89,6 @@ public:
     const utils::StringPiece name() const { return name_; }
 
     char StateChar() const;
-    mx_tid_t GetNextThreadId();
 
     // Starts the process running
     status_t Start(void* arg, mx_vaddr_t vaddr);
@@ -143,14 +141,7 @@ private:
     // Remove a process from the global process list.
     static void RemoveProcess(ProcessDispatcher* process);
 
-    // TODO: remove |id_| and use |Dispatcher::koid_|.
-    mx_pid_t id_ = 0;
-
     mx_handle_t handle_rand_ = 0;
-
-    // The next thread id to assign.
-    // This is an int as we use atomic_add. TODO(dje): wip
-    int next_thread_id_ = 1;
 
     // protects thread_list_, as well as the UserThread joined_ and detached_ flags
     mutable mutex_t thread_list_lock_ = MUTEX_INITIAL_VALUE(thread_list_lock_);
@@ -190,8 +181,7 @@ private:
     // The user-friendly process name. For debug purposes only.
     char name_[THREAD_NAME_LENGTH / 2] = {};
 
-    // The global process list, process id generator, and its mutex.
-    static uint32_t next_process_id_;
+    // The global process list and its mutex.
     static mutex_t global_process_list_mutex_;
     static utils::DoublyLinkedList<ProcessDispatcher*> global_process_list_;
 };

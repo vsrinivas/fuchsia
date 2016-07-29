@@ -35,8 +35,6 @@ UserThread::UserThread(mx_koid_t koid,
       arg_(arg),
       state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
-
-    id_ = process_->GetNextThreadId();
 }
 
 UserThread::~UserThread() {

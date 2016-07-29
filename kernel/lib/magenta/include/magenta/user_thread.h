@@ -55,7 +55,6 @@ public:
 
     // accessors
     ProcessDispatcher* process() { return process_.get(); }
-    mx_tid_t id() const { return id_; }
     FutexNode* futex_node() { return &futex_node_; }
     StateTracker* state_tracker() { return &state_tracker_; }
     const utils::StringPiece name() const { return thread_.name; }
@@ -90,9 +89,6 @@ private:
 
     // a ref pointer back to the parent process
     utils::RefPtr<ProcessDispatcher> process_;
-
-    // A unique thread id within the process. TODO: remove this and use |koid_|.
-    mx_tid_t id_ = -1;
 
     // thread start routine and argument pointer
     thread_start_routine entry_ = nullptr;
