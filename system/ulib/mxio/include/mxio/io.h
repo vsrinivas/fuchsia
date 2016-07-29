@@ -57,6 +57,10 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t t
 // invoke a raw mxio ioctl
 ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 
+// create a pipe, installing one half in a fd, returning the other
+// for transport to another process
+mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type);
+
 #define IOCTL_DEVICE_GET_HANDLE 0x7FFF0001
 
 __END_CDECLS

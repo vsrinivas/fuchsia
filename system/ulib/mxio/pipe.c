@@ -19,6 +19,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
+#include <mxio/util.h>
 
 #include "private.h"
 
@@ -129,6 +130,34 @@ static void mx_pipe_release(mxio_t* io) {
     free(io);
 }
 
+static mx_status_t mx_pipe_wait(mxio_t* io, uint32_t _events, uint32_t* _pending, mx_time_t timeout) {
+    mx_pipe_t* p = (void*)io;
+    uint32_t events = 0;
+    mx_status_t r;
+    mx_signals_state_t pending;
+
+    if (_events & MXIO_EVT_READABLE) {
+        events |= MX_SIGNAL_READABLE;
+    }
+    if (_events & MXIO_EVT_WRITABLE) {
+        events |= MX_SIGNAL_WRITABLE;
+    }
+    if ((r = mx_handle_wait_one(p->h, events, timeout, &pending)) < 0) {
+        return r;
+    }
+    if (_pending) {
+        uint32_t out = 0;
+        if (pending.satisfied & MX_SIGNAL_READABLE) {
+            out |= MXIO_EVT_READABLE;
+        }
+        if (pending.satisfied & MX_SIGNAL_WRITABLE) {
+            out |= MXIO_EVT_WRITABLE;
+        }
+        *_pending = out;
+    }
+    return NO_ERROR;
+}
+
 static mxio_ops_t mx_pipe_ops = {
     .read = mx_pipe_read,
     .write = mx_pipe_write,
@@ -137,7 +166,7 @@ static mxio_ops_t mx_pipe_ops = {
     .close = mx_pipe_close,
     .open = mxio_default_open,
     .clone = mxio_default_clone,
-    .wait = mxio_default_wait,
+    .wait = mx_pipe_wait,
     .ioctl = mxio_default_ioctl,
 };
 
@@ -181,4 +210,31 @@ mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types) {
     types[0] = MX_HND_TYPE_MXIO_PIPE;
     types[1] = MX_HND_TYPE_MXIO_PIPE;
     return 2;
+}
+
+mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type) {
+    mx_handle_t h[2];
+    mx_status_t r;
+    mxio_t* io;
+    int fd;
+    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+        return r;
+    }
+    if ((io = mxio_pipe_create(h[0])) == NULL) {
+        r = ERR_NO_MEMORY;
+        goto fail;
+    }
+    if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
+        mxio_release(io);
+        r = ERR_NO_RESOURCES;
+        goto fail;
+    }
+    *handle = h[1];
+    *type = MX_HND_TYPE_MXIO_PIPE;
+    return fd;
+
+fail:
+    mx_handle_close(h[0]);
+    mx_handle_close(h[1]);
+    return r;
 }
