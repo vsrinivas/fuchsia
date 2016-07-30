@@ -46,6 +46,10 @@ mx_status_t DataPipeConsumerDispatcher::Read(void* buffer, mx_size_t* requested)
 
 mx_status_t DataPipeConsumerDispatcher::BeginRead(utils::RefPtr<VmAspace> aspace,
                                                   void** buffer, mx_size_t* requested) {
+    if (*requested > kMaxDataPipeCapacity) {
+        *requested = kMaxDataPipeCapacity;
+    }
+
     return pipe_->ConsumerReadBegin(utils::move(aspace), buffer, requested);
 }
 

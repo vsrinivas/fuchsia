@@ -277,6 +277,43 @@ static bool begin_write_read(void) {
     END_TEST;
 }
 
+// Test passing very large requests to begin_write/read.
+static bool begin_write_read_large_request(void) {
+    BEGIN_TEST;
+    mx_handle_t producer;
+    mx_handle_t consumer;
+    mx_status_t status;
+
+    producer = mx_data_pipe_create(0u, 1u, KB_(32), &consumer);
+    ASSERT_GE(producer, 0, "could not create producer data pipe");
+    ASSERT_GE(consumer, 0, "could not create consumer data pipe");
+
+    uintptr_t buffer = 0;
+    mx_ssize_t avail = mx_data_pipe_begin_write(producer, 0u, UINTPTR_MAX, &buffer);
+    ASSERT_GT(avail, 0u, "begin_write failed");
+
+    uint32_t data[5] = {7u, 3u, 2u, 8u, 11u};
+    memcpy((void*)buffer, data, sizeof(data));
+    status = mx_data_pipe_end_write(producer, avail);
+    ASSERT_EQ(status, NO_ERROR, "failed to end write");
+
+    status = mx_handle_close(producer);
+    ASSERT_GE(status, NO_ERROR, "failed to close data pipe");
+
+    avail = mx_data_pipe_begin_read(consumer, 0u, UINTPTR_MAX, &buffer);
+    ASSERT_GE(sizeof(data), 0u, "begin_read failed");
+
+    bool equal = (memcmp((void*)buffer, data, sizeof(data)) == 0);
+    ASSERT_EQ(equal, true, "Data does not match");
+
+    status = mx_data_pipe_end_read(consumer, avail);
+    ASSERT_EQ(status, NO_ERROR, "failed to end read");
+
+    status = mx_handle_close(consumer);
+    ASSERT_GE(status, NO_ERROR, "failed to close data pipe");
+    END_TEST;
+}
+
 static bool loop_write_read(void) {
     BEGIN_TEST;
     mx_handle_t producer;
@@ -409,6 +446,7 @@ RUN_TEST(simple_read_write)
 RUN_TEST(loop_write_full)
 RUN_TEST(write_read)
 RUN_TEST(begin_write_read)
+RUN_TEST(begin_write_read_large_request)
 RUN_TEST(loop_write_read)
 RUN_TEST(loop_begin_write_read)
 RUN_TEST(consumer_signals_when_producer_closed)

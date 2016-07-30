@@ -50,6 +50,10 @@ mx_status_t DataPipeProducerDispatcher::Write(const void* buffer, mx_size_t* req
 
 mx_status_t DataPipeProducerDispatcher::BeginWrite(utils::RefPtr<VmAspace> aspace,
                                                    void** buffer, mx_size_t* requested) {
+    if (*requested > kMaxDataPipeCapacity) {
+        *requested = kMaxDataPipeCapacity;
+    }
+
     return pipe_->ProducerWriteBegin(utils::move(aspace), buffer, requested);
 }
 

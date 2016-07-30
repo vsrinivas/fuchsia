@@ -22,6 +22,8 @@ class VmAspace;
 struct PipeConsumer;
 struct PipeProducer;
 
+constexpr mx_size_t kMaxDataPipeCapacity = 256 * 1024 * 1024;
+
 class DataPipe : public utils::RefCounted<DataPipe> {
 public:
     static mx_status_t Create(mx_size_t capacity,
