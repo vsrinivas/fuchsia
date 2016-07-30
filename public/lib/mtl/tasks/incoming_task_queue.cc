@@ -46,8 +46,7 @@ void IncomingTaskQueue::AddTask(ftl::Closure task, ftl::TimeDelta delay) {
   incoming_queue_.emplace_back(std::move(task), target_time,
                                next_sequence_number_++);
 
-  if (was_empty && !drain_scheduled_ && delegate_) {
-    drain_scheduled_ = true;
+  if (was_empty && delegate_) {
     // Notice that we're still holding mutex here. Chromium uses a reader/writer
     // lock to avoid having to hold the queue mutex when calling back into the
     // delegate.
@@ -59,10 +58,7 @@ TaskQueue IncomingTaskQueue::TakeTaskQueue() {
   TaskQueue result;
   {
     ftl::MutexLocker locker(&mutex_);
-    if (incoming_queue_.empty())
-      drain_scheduled_ = false;
-    else
-      incoming_queue_.swap(result);
+    incoming_queue_.swap(result);
   }
   return result;
 }

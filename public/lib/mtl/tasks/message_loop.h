@@ -13,10 +13,10 @@
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/mtl/handles/unique_handle.h"
 #include "lib/mtl/tasks/incoming_task_queue.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 #include "lib/mtl/tasks/pending_task.h"
-#include "lib/mtl/unique_handle.h"
 #include "mojo/public/c/system/wait.h"
 
 namespace mtl {

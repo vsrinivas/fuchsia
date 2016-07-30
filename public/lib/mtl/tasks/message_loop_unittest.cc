@@ -50,6 +50,26 @@ TEST(MessageLoop, CanPostTasksFromTasks) {
   EXPECT_TRUE(did_run);
 }
 
+TEST(MessageLoop, TriplyNestedTasks) {
+  std::vector<std::string> tasks;
+  MessageLoop loop;
+  loop.task_runner()->PostTask([&tasks, &loop]() {
+    tasks.push_back("one");
+    loop.task_runner()->PostTask([&tasks, &loop]() {
+      tasks.push_back("two");
+      loop.task_runner()->PostTask([&tasks, &loop]() {
+        tasks.push_back("three");
+        loop.QuitNow();
+      });
+    });
+  });
+  loop.Run();
+  EXPECT_EQ(3u, tasks.size());
+  EXPECT_EQ("one", tasks[0]);
+  EXPECT_EQ("two", tasks[1]);
+  EXPECT_EQ("three", tasks[2]);
+}
+
 TEST(MessageLoop, CanRunTasksInOrder) {
   std::vector<std::string> tasks;
   MessageLoop loop;

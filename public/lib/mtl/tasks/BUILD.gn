@@ -1,0 +1,22 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("tasks") {
+  sources = [
+    "incoming_task_queue.cc",
+    "incoming_task_queue.h",
+    "message_loop_handler.cc",
+    "message_loop_handler.h",
+    "message_loop.cc",
+    "message_loop.h",
+    "pending_task.cc",
+    "pending_task.h",
+  ]
+
+  public_deps = [
+    "//lib/ftl",
+    "//lib/mtl/handles",
+    "//mojo/public/cpp/system",
+  ]
+}

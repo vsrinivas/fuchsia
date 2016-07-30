@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "lib/ftl/files/scoped_fd.h"
+#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
@@ -20,7 +20,7 @@ namespace mtl {
 // the given |task_runner|.
 void CopyToFileDescriptor(
     mojo::ScopedDataPipeConsumerHandle source,
-    ftl::ScopedFD destination,
+    ftl::UniqueFD destination,
     ftl::TaskRunner* task_runner,
     const std::function<void(bool /*success*/)>& callback);
 
@@ -28,7 +28,7 @@ void CopyToFileDescriptor(
 // |callback| is run upon completion. File writes will be scheduled to the
 // given |task_runner|.
 void CopyFromFileDescriptor(
-    ftl::ScopedFD source,
+    ftl::UniqueFD source,
     mojo::ScopedDataPipeProducerHandle destination,
     ftl::TaskRunner* task_runner,
     const std::function<void(bool /*success*/)>& callback);

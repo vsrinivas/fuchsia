@@ -24,7 +24,7 @@ namespace {
 class CopyToFileHandler {
  public:
   CopyToFileHandler(mojo::ScopedDataPipeConsumerHandle source,
-                    ftl::ScopedFD destination,
+                    ftl::UniqueFD destination,
                     ftl::TaskRunner* task_runner,
                     const std::function<void(bool)>& callback);
 
@@ -36,7 +36,7 @@ class CopyToFileHandler {
   static void WaitComplete(void* context, MojoResult result);
 
   mojo::ScopedDataPipeConsumerHandle source_;
-  ftl::ScopedFD destination_;
+  ftl::UniqueFD destination_;
   ftl::TaskRunner* file_task_runner_;
   std::function<void(bool)> callback_;
   const MojoAsyncWaiter* waiter_;
@@ -47,7 +47,7 @@ class CopyToFileHandler {
 };
 
 CopyToFileHandler::CopyToFileHandler(mojo::ScopedDataPipeConsumerHandle source,
-                                     ftl::ScopedFD destination,
+                                     ftl::UniqueFD destination,
                                      ftl::TaskRunner* task_runner,
                                      const std::function<void(bool)>& callback)
     : source_(std::move(source)),
@@ -64,7 +64,7 @@ CopyToFileHandler::~CopyToFileHandler() {}
 
 void CopyToFileHandler::SendCallback(bool value) {
   FTL_DCHECK(!wait_id_);
-  destination_.Close();
+  destination_.reset();
   main_runner_->PostTask([this, value]() {
     auto callback = callback_;
     delete this;
@@ -114,7 +114,7 @@ void CopyToFileHandler::WaitComplete(void* context, MojoResult result) {
 
 class CopyFromFileHandler {
  public:
-  CopyFromFileHandler(ftl::ScopedFD source,
+  CopyFromFileHandler(ftl::UniqueFD source,
                       mojo::ScopedDataPipeProducerHandle destination,
                       ftl::TaskRunner* task_runner,
                       const std::function<void(bool)>& callback);
@@ -126,7 +126,7 @@ class CopyFromFileHandler {
   void OnHandleReady(MojoResult result);
   static void WaitComplete(void* context, MojoResult result);
 
-  ftl::ScopedFD source_;
+  ftl::UniqueFD source_;
   mojo::ScopedDataPipeProducerHandle destination_;
   ftl::TaskRunner* file_task_runner_;
   std::function<void(bool)> callback_;
@@ -138,7 +138,7 @@ class CopyFromFileHandler {
 };
 
 CopyFromFileHandler::CopyFromFileHandler(
-    ftl::ScopedFD source,
+    ftl::UniqueFD source,
     mojo::ScopedDataPipeProducerHandle destination,
     ftl::TaskRunner* task_runner,
     const std::function<void(bool)>& callback)
@@ -156,7 +156,8 @@ CopyFromFileHandler::~CopyFromFileHandler() {}
 
 void CopyFromFileHandler::SendCallback(bool value) {
   FTL_DCHECK(!wait_id_);
-  source_.Close();
+  destination_.reset();
+  source_.reset();
   main_runner_->PostTask([this, value]() {
     auto callback = callback_;
     delete this;
@@ -205,14 +206,14 @@ void CopyFromFileHandler::WaitComplete(void* context, MojoResult result) {
 }  // namespace
 
 void CopyToFileDescriptor(mojo::ScopedDataPipeConsumerHandle source,
-                          ftl::ScopedFD destination,
+                          ftl::UniqueFD destination,
                           ftl::TaskRunner* task_runner,
                           const std::function<void(bool)>& callback) {
   new CopyToFileHandler(std::move(source), std::move(destination), task_runner,
                         callback);
 }
 
-void CopyFromFileDescriptor(ftl::ScopedFD source,
+void CopyFromFileDescriptor(ftl::UniqueFD source,
                             mojo::ScopedDataPipeProducerHandle destination,
                             ftl::TaskRunner* task_runner,
                             const std::function<void(bool)>& callback) {

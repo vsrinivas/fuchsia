@@ -49,7 +49,6 @@ class IncomingTaskQueue : public ftl::TaskRunner {
 
   unsigned int next_sequence_number_ FTL_GUARDED_BY(mutex_) = 0;
   bool drop_incoming_tasks_ FTL_GUARDED_BY(mutex_) = false;
-  bool drain_scheduled_ FTL_GUARDED_BY(mutex_) = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IncomingTaskQueue);
 };

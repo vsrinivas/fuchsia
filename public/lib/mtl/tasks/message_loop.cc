@@ -23,7 +23,7 @@ constexpr MessageLoop::HandlerKey kIgnoredKey = 0;
 MessageLoop::MessageLoop()
     : MessageLoop(ftl::MakeRefCounted<internal::IncomingTaskQueue>()) {
   event_.reset(mx_event_create(0));
-  FTL_CHECK(!event_.is_error());
+  FTL_CHECK(event_.get() > MX_HANDLE_INVALID);
 }
 
 MessageLoop::MessageLoop(
