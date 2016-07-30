@@ -1,6 +1,7 @@
 {
     "labels": [
         "//apps/dart_content_handler",
+        "//apps/dart_content_handler/examples",
         "//apps/logging",
         "//apps/native_viewport"
     ],
@@ -8,6 +9,10 @@
         {
             "binary": "dart_content_handler",
             "bootfs_path": "apps/dart_content_handler"
+        },
+        {
+            "binary": "hello_dart.dartx",
+            "bootfs_path": "apps/hello_dart.dartx"
         },
         {
             "binary": "logging",
