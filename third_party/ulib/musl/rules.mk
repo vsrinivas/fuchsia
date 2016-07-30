@@ -1272,7 +1272,7 @@ MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_SO_NAME := c
-MODULE_SO_STATIC_LIBS := ulib/magenta ulib/runtime
+MODULE_STATIC_LIBS := ulib/magenta ulib/runtime
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/stubs/iostubs.c \

@@ -33,6 +33,6 @@ MODULE_DEPS += \
 MODULE_EXPORT := launchpad
 
 MODULE_SO_NAME := launchpad
-MODULE_SO_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk

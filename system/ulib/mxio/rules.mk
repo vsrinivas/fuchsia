@@ -38,7 +38,7 @@ MODULE_DEPS += \
 MODULE_EXPORT := mxio
 
 MODULE_SO_NAME := mxio
-MODULE_SO_STATIC_LIBS := ulib/runtime
-MODULE_SO_LIBS := ulib/magenta ulib/musl-shared
+MODULE_STATIC_LIBS := ulib/runtime
+MODULE_LIBS := ulib/magenta ulib/musl-shared
 
 include make/module.mk
