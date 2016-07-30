@@ -22,6 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/io_mapping_dispatcher.cpp \
     $(LOCAL_DIR)/io_port_dispatcher.cpp \
+    $(LOCAL_DIR)/io_port_observer.cpp \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/magenta.cpp \
     $(LOCAL_DIR)/msg_pipe_dispatcher.cpp \

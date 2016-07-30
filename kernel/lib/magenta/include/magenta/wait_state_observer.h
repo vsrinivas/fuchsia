@@ -38,7 +38,8 @@ private:
     // StateObserver implementation:
     bool OnInitialize(mx_signals_state_t initial_state) final;
     bool OnStateChange(mx_signals_state_t new_state) final;
-    bool OnCancel(Handle* handle, bool* should_remove) final;
+    bool OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) final;
+    void OnDidCancel() final {}
 
     bool MaybeSignal(mx_signals_state_t state);
 

@@ -33,8 +33,16 @@ public:
     // wants to be removed from the calling StateTracker, it should set |*should_remove| to true
     // (by default, |*should_remove| is false), in which case RemoveObserver() should not be called
     // for the callee observer.
+    // In addition to |should_remove|, the callee can set |*call_did_cancel| to true if it
+    // wants to be notified after it has been removed from the state tracker list. See
+    // OnDidCancel() below.
     // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnCancel(Handle* handle, bool* should_remove) = 0;
+    virtual bool OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) = 0;
+
+    // Called when the StateTracker has removed all internal references to this observer. This
+    // happens after OnCancel() is called if |call_did_cancel| is set to true. This not called
+    // under the StateTracker's mutex.
+    virtual void OnDidCancel() = 0;
 
 protected:
     ~StateObserver() {}

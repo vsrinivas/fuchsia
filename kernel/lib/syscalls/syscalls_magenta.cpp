@@ -1288,19 +1288,21 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    utils::RefPtr<Dispatcher> src_d;
-    if (!up->GetDispatcher(source, &src_d, &rights))
-        return ERR_INVALID_ARGS;
+    {
+        AutoLock lock(up->handle_table_lock());
 
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+        Handle* src_handle = up->GetHandle_NoLock(source);
+        if (!src_handle)
+            return ERR_INVALID_ARGS;
+        if (!magenta_rights_check(src_handle->rights(), MX_RIGHT_READ))
+            return ERR_ACCESS_DENIED;
 
-    auto state_tracker = src_d->get_state_tracker();
-    if (!state_tracker || !state_tracker->is_waitable())
-        return ERR_INVALID_ARGS;
-
-    return state_tracker->BindIOPort(utils::RefPtr<IOPortDispatcher>(ioport), key, signals) ?
-        NO_ERROR : ERR_NOT_READY;
+        if (signals) {
+            return ioport->Bind(src_handle, signals, key);
+        } else {
+            return ioport->Unbind(src_handle, key);
+        }
+    }
 }
 
 mx_handle_t sys_data_pipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,

@@ -154,7 +154,7 @@ static bool bind_basic_test(void)
     EXPECT_GT(other, 0, "could not create io port");
 
     status = mx_io_port_bind(ioport, -1, other, MX_SIGNAL_SIGNALED);
-    EXPECT_EQ(status, ERR_INVALID_ARGS, "non waitable objects not allowed");
+    EXPECT_EQ(status, ERR_NOT_SUPPORTED, "non waitable objects not allowed");
 
     status = mx_io_port_bind(ioport, -1, event, MX_SIGNAL_SIGNALED);
     EXPECT_EQ(status, NO_ERROR, "failed to bind event");

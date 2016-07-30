@@ -84,7 +84,8 @@ public:
 
         bool OnInitialize(mx_signals_state_t initial_state) final;
         bool OnStateChange(mx_signals_state_t new_state) final;
-        bool OnCancel(Handle* handle, bool* should_remove) final;
+        bool OnCancel(Handle* handle, bool* should_remove, bool* call_uninitialize) final;
+        void OnDidCancel() final {}
 
         // Triggers (including adding to the triggered list). It must not already be triggered
         // (i.e., |is_triggered_| must be false; this will set it to true).
@@ -144,7 +145,8 @@ private:
     // StateObserver implementation:
     bool OnInitialize(mx_signals_state_t initial_state) final;
     bool OnStateChange(mx_signals_state_t new_state) final;
-    bool OnCancel(Handle* handle, bool* should_remove) final;
+    bool OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) final;
+    void OnDidCancel() final {}
 
     // These do the wait on |cv_|. They do *not* check the condition first.
     status_t DoWaitInfinite_NoLock();

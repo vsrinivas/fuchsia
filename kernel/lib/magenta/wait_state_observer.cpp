@@ -54,7 +54,7 @@ bool WaitStateObserver::OnStateChange(mx_signals_state_t new_state) {
     return MaybeSignal(new_state);
 }
 
-bool WaitStateObserver::OnCancel(Handle* handle, bool* should_remove) {
+bool WaitStateObserver::OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) {
     DEBUG_ASSERT(!*should_remove);  // We'll leave it at its default value, which should be false.
     DEBUG_ASSERT(dispatcher_);
 

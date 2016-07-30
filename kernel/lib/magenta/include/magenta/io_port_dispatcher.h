@@ -10,6 +10,7 @@
 #include <kernel/event.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/io_port_observer.h>
 #include <magenta/types.h>
 
 #include <utils/fifo_buffer.h>
@@ -37,13 +38,23 @@ public:
     mx_status_t Queue(const IOP_Packet* packet);
     mx_status_t Wait(IOP_Packet* packet);
 
+    // Called under the handle table lock.
+    mx_status_t Bind(Handle* handle, mx_signals_t signals, uint64_t key);
+    mx_status_t Unbind(Handle* handle, uint64_t key);
+
+    void CancelObserver(IOPortObserver* observer);
+
 private:
     IOPortDispatcher(uint32_t options);
     mx_status_t Init(uint32_t depth);
 
+    utils::unique_ptr<IOPortObserver> MaybeRemoveObserver(IOP_Packet* packet);
+
+    const uint32_t options_;
+
     mutex_t lock_;
     utils::FifoBuffer<IOP_Packet> packets_;
-    uint32_t options_;
+    utils::DoublyLinkedList<IOPortObserver*, IOPortObserverListTraits> observers_;
 
     event_t event_;
 };

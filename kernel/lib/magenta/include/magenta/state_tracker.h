@@ -75,9 +75,6 @@ public:
     // Remove an observer (which must have been added).
     mx_signals_state_t RemoveObserver(StateObserver* observer);
 
-    // Register IO Port for state changes.
-    bool BindIOPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
-
     // Called when observers of the handle's state (e.g., waits on the handle) should be
     // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being
     // destroyed or transferred.
@@ -106,9 +103,4 @@ private:
 
     // mojo-style signaling.
     mx_signals_state_t signals_state_;
-
-    // io port style signaling.
-    utils::RefPtr<IOPortDispatcher> io_port_;
-    mx_signals_t io_port_signals_;
-    uint64_t io_port_key_;
 };

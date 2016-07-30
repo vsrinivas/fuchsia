@@ -6,10 +6,13 @@
 
 #include <magenta/io_port_dispatcher.h>
 
+#include <assert.h>
 #include <err.h>
 #include <new.h>
 
 #include <kernel/auto_lock.h>
+
+#include <magenta/state_tracker.h>
 
 static_assert(sizeof(mx_user_packet_t) == sizeof(mx_io_packet_t), "packet size mismatch");
 
@@ -42,6 +45,10 @@ IOPortDispatcher::IOPortDispatcher(uint32_t options) : options_(options) {
 }
 
 IOPortDispatcher::~IOPortDispatcher() {
+    // The observers hold a ref to the dispatcher so if the dispatcher
+    // is being destroyed there should be no registered observers.
+    DEBUG_ASSERT(observers_.is_empty());
+
     event_destroy(&event_);
     mutex_destroy(&lock_);
 }
@@ -90,3 +97,66 @@ mx_status_t IOPortDispatcher::Wait(IOP_Packet* packet) {
     }
 }
 
+mx_status_t IOPortDispatcher::Bind(Handle* handle, mx_signals_t signals, uint64_t key) {
+    // This method is called under the handle table lock.
+    auto state_tracker = handle->dispatcher()->get_state_tracker();
+    if (!state_tracker || !state_tracker->is_waitable())
+        return ERR_NOT_SUPPORTED;
+
+    AllocChecker ac;
+    auto observer  =
+        new (&ac) IOPortObserver(utils::RefPtr<IOPortDispatcher>(this), handle, signals, key);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
+    {
+        // TODO(cpu) : Currently we allow duplicated handle / key. This is bug MG-227.
+        AutoLock al(&lock_);
+        observers_.push_front(observer);
+    }
+
+    mx_status_t result = state_tracker->AddObserver(observer);
+    if (result != NO_ERROR) {
+        CancelObserver(observer);
+        return result;
+    }
+
+    return NO_ERROR;
+}
+
+mx_status_t IOPortDispatcher::Unbind(Handle* handle, uint64_t key) {
+    // This method is called under the handle table lock.
+    IOPortObserver* observer = nullptr;
+    {
+        AutoLock al(&lock_);
+
+        observer = observers_.find_if([handle, key](const IOPortObserver& ob) {
+            return ((handle == ob.get_handle()) && (key == ob.get_key()));
+        });
+
+        if (!observer)
+            return ERR_BAD_HANDLE;
+
+        // This code could 'race' with IOPortObserver::OnCancel() so the atomic
+        // SetState() ensures that either the rest of this function executes
+        // or the OnDidCancel() + CancelObserver() executes.
+        if (observer->SetState(IOPortObserver::UNBOUND) != IOPortObserver::NEW)
+            return NO_ERROR;
+
+        observers_.erase(*observer);
+    }
+
+    auto dispatcher = handle->dispatcher();
+    dispatcher->get_state_tracker()->RemoveObserver(observer);
+    delete observer;
+    return NO_ERROR;
+}
+
+void IOPortDispatcher::CancelObserver(IOPortObserver* observer) {
+    {
+        AutoLock al(&lock_);
+        observers_.erase(*observer);
+    }
+
+    delete observer;
+}
