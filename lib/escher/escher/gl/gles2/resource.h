@@ -28,7 +28,7 @@ class Resource {
   Resource& operator=(Resource<ResourceSpec>&& other) = default;
 
   const ResourceSpec& spec() const { return spec_; }
-  const GLuint id() const { return id_; }
+  GLuint id() const { return id_; }
 
   explicit operator bool() const { return static_cast<bool>(id_); }
 

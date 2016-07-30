@@ -83,7 +83,7 @@ bool FrameBuffer::CheckStatusIfDebug() {
 bool FrameBuffer::IsBound() {
   GLint id = -1;
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, &id);
-  return id == frame_buffer_.id();
+  return id == static_cast<GLint>(frame_buffer_.id());
 }
 
 }  // namespace gles2

@@ -15,6 +15,9 @@ namespace escher {
 // functions below.  'normals' and 'uvs' may be empty, but otherwise they must
 // must contain the same number of elements as 'positions'.
 struct Tessellation {
+  Tessellation();
+  ~Tessellation();
+
   typedef vec3 position_type;
   typedef vec3 normal_type;
   typedef vec2 uv_type;

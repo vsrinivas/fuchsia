@@ -35,7 +35,7 @@ Mesh::Mesh(const Tessellation& tessellation)
   const auto& positions = tessellation.positions;
   const auto& normals = tessellation.normals;
   const auto& uvs = tessellation.uvs;
-  for (int i = 0; i < positions.size(); ++i) {
+  for (size_t i = 0; i < positions.size(); ++i) {
     // Address of current vertex.
     GLubyte* ptr = bytes + i * stride_;
     // Store vertex position.

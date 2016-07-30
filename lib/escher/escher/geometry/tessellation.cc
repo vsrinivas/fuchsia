@@ -10,6 +10,9 @@
 
 namespace escher {
 
+Tessellation::Tessellation() {}
+Tessellation::~Tessellation() {}
+
 void Tessellation::SanityCheck() const {
   FTL_DCHECK(!positions.empty());
   FTL_DCHECK(normals.empty() || normals.size() == positions.size());
@@ -23,7 +26,7 @@ void Tessellation::SanityCheck() const {
 Tessellation TessellateCircle(int subdivisions, vec2 center, float radius) {
   // Compute the number of vertices in the tessellated circle.
   FTL_DCHECK(subdivisions >= 0);
-  int circle_vertex_count = 4;
+  size_t circle_vertex_count = 4;
   while (subdivisions-- > 0)
       circle_vertex_count *= 2;
 

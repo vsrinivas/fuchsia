@@ -24,7 +24,7 @@ class Texture : public Resource<TextureSpec> {
   const SizeI& size() const { return spec().size; }
   int width() const { return size().width(); }
   int height() const { return size().height(); }
-  const TextureSpec::Format format() const { return spec().format; }
+  TextureSpec::Format format() const { return spec().format; }
 
   // Cube maps, 3D textures, etc. not supported yet.
   GLenum GetGLTarget() const { return GL_TEXTURE_2D; }

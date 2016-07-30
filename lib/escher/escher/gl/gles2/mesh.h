@@ -9,7 +9,7 @@
 
 namespace escher {
 
-class Tessellation;
+struct Tessellation;
 
 namespace gles2 {
 
@@ -21,7 +21,7 @@ class Mesh : public ftl::RefCountedThreadSafe<Mesh>  {
 
   const UniqueBuffer& vertices() const { return vertices_; }
   const UniqueBuffer& indices() const { return indices_; }
-  const GLuint num_indices() const { return num_indices_; }
+  GLuint num_indices() const { return num_indices_; }
 
   GLuint stride() const { return stride_; }
   GLvoid* normal_offset() const {
