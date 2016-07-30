@@ -17,6 +17,9 @@ config("compiler") {
 
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
+  } else {
+    cflags_c += [ "-std=c11" ]
+    cflags_cc += [ "-std=c++11" ]
   }
 
   asmflags += cflags
