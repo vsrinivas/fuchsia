@@ -74,5 +74,5 @@ int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
     __libc_start_init();
 
     // Pass control to the application
-    exit(main(pi->argc, pi->argv, NULL));
+    exit(main(pi->argc, pi->argv, pi->envp));
 }
