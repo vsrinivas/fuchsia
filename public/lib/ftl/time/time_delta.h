@@ -45,11 +45,11 @@ class TimeDelta {
   double ToMillisecondsF() const { return delta_ / (1000.0 * 1000.0); }
   double ToSecondsF() const { return delta_ / (1000.0 * 1000.0 * 1000.0); }
 
-  TimeDelta operator-(TimeDelta other) const {
+  constexpr TimeDelta operator-(TimeDelta other) const {
     return TimeDelta::FromNanoseconds(delta_ - other.delta_);
   }
 
-  TimeDelta operator+(TimeDelta other) const {
+  constexpr TimeDelta operator+(TimeDelta other) const {
     return TimeDelta::FromNanoseconds(delta_ + other.delta_);
   }
 
@@ -64,7 +64,7 @@ class TimeDelta {
     return TimeDelta::FromSeconds(ts.tv_sec) +
            TimeDelta::FromNanoseconds(ts.tv_nsec);
   }
-  constexpr struct timespec ToTimespec() {
+  struct timespec ToTimespec() {
     struct timespec ts {};
     constexpr int64_t kNanosecondsPerSecond = 1000000000ll;
     ts.tv_sec = static_cast<time_t>(ToSeconds());

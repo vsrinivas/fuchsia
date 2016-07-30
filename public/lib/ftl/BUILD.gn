@@ -3,12 +3,16 @@
 # found in the LICENSE file.
 
 config("thread_safety_warning") {
-  cflags = [ "-Wthread-safety" ]
+  if (is_fuchsia) {
+    cflags = [ "-Wthread-safety" ]
+  }
 }
 
 static_library("ftl") {
   sources = [
     "arraysize.h",
+    "command_line.cc",
+    "command_line.h",
     "debug/debugger.cc",
     "debug/debugger.h",
     "files/eintr_wrapper.h",
@@ -59,6 +63,7 @@ static_library("ftl") {
 executable("ftl_unittests") {
   sources = [
     "arraysize_unittest.cc",
+    "command_line_unittest.cc",
     "functional/wrap_lambda_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",

@@ -6,6 +6,7 @@
 
 #ifndef NDEBUG
 #include <errno.h>
+#include <string.h>
 
 #include "lib/ftl/logging.h"
 
