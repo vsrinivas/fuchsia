@@ -5,6 +5,7 @@
 #include "lib/ftl/files/file_descriptor.h"
 
 #include "lib/ftl/files/eintr_wrapper.h"
+#include "lib/ftl/logging.h"
 
 namespace ftl {
 
@@ -22,7 +23,7 @@ ssize_t ReadFileDescriptor(int fd, char* data, ssize_t max_size) {
   ssize_t total = 0;
   for (ssize_t partial = 0; total < max_size; total += partial) {
     partial = HANDLE_EINTR(read(fd, data + total, max_size - total));
-    if (partial < 0)
+    if (partial <= 0)
       return total ? total : partial;
   }
   return total;
