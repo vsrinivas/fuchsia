@@ -253,15 +253,6 @@ GENERATED += $(MODULE_LIBNAME).a
 # up exported libraries, their headers, etc
 ifeq ($(ENABLE_BUILD_SYSROOT),true)
 
-ifeq ($(MODULE_EXPORT),crt)
-# special magic library that's just crt1.o
-MODULE_EXPORT :=
-SYSROOT_CRT1 := $(BUILDDIR)/sysroot/lib/crt1.o
-$(call copy-dst-src,$(SYSROOT_CRT1),$(USER_CRT1_OBJ))
-SYSROOT_DEPS += $(SYSROOT_CRT1)
-GENERATED += $(SYSROOT_CRT1)
-endif
-
 ifneq ($(MODULE_SO_NAME),)
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so)
@@ -270,18 +261,16 @@ GENERATED += $(TMP)
 endif
 
 ifneq ($(MODULE_EXPORT),)
-
-ifeq ($(filter $(MODULE_EXPORT),$(SYSROOT_MEGA_LIBC)),)
-# if this library has not been pulled into the MEGA LIBC, install it
+ifneq ($(MODULE_EXPORT),system)
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_EXPORT).a
 $(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).a)
 SYSROOT_DEPS += $(TMP)
 GENERATED += $(TMP)
-else
-# if it is part of MEGA LIBC, record the objects to include
-SYSROOT_MEGA_LIBC_OBJS += $(MODULE_LIBRARY_OBJS)
+endif
 endif
 
+# only install headers for exported libraries
+ifneq ($(MODULE_EXPORT)$(MODULE_SO_NAME),)
 # for now, unify all headers in one pile
 # TODO: ddk, etc should be packaged separately
 MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
@@ -300,6 +289,7 @@ $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.inc,$(MODULE_SRCDIR)/include/%.i
 SYSROOT_DEPS += $(MODULE_PUBLIC_HEADERS)
 GENERATED += $(MODULE_PUBLIC_HEADERS)
 endif
+
 endif # if ENABLE_BUILD_SYSROOT true
 endif # if MODULE_TYPE userlib
 

@@ -1290,7 +1290,6 @@ include make/module.mk
 # build a fake library to build crt1.o separately
 
 MODULE := $(LOCAL_DIR)-crt
-MODULE_EXPORT := crt
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
