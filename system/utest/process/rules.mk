@@ -24,7 +24,7 @@ MODULE_SRCS += \
 MODULE_NAME := process-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/launchpad ulib/mxio ulib/magenta ulib/musl-shared
+    ulib/unittest ulib/launchpad ulib/mxio ulib/magenta ulib/musl
 
 MODULES += $(LOCAL_DIR)/child-process
 

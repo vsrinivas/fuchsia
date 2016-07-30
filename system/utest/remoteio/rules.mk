@@ -20,7 +20,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest-static
+MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/remoteio.c \
@@ -28,7 +28,7 @@ MODULE_SRCS += \
 MODULE_NAME := remoteio-test
 
 MODULE_DEPS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/unittest
+    ulib/mxio ulib/magenta ulib/unittest ulib/musl
 
 include make/module.mk
 endif

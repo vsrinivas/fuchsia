@@ -24,13 +24,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/unittest.c \
     $(LOCAL_DIR)/hexdump.c
 
-MODULE_DEPS += \
-    ulib/musl \
-    ulib/magenta \
-    ulib/runtime
-
 MODULE_SO_NAME := unittest
 MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk

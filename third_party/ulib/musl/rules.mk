@@ -1252,7 +1252,7 @@ include $(LOCAL_DIR)/src/string/rules.mk
 
 # static library
 
-MODULE := $(LOCAL_DIR)
+MODULE := $(LOCAL_DIR)-static
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_DEPS := ulib/magenta ulib/runtime
@@ -1264,7 +1264,7 @@ include make/module.mk
 
 
 # shared library (which is also the dynamic linker)
-MODULE := $(LOCAL_DIR)-shared
+MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_DEPS := ulib/magenta ulib/runtime

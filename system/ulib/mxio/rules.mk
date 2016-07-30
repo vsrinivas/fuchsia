@@ -30,15 +30,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/stubs.c \
     $(LOCAL_DIR)/loader-service.c \
 
-MODULE_DEPS += \
-    ulib/magenta \
-    ulib/runtime \
-    ulib/musl
-
 MODULE_EXPORT := mxio
 
 MODULE_SO_NAME := mxio
 MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk

@@ -26,7 +26,7 @@ MODULE_SRCS += \
 MODULE_NAME := core-tests
 
 MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/unittest ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/unittest ulib/magenta ulib/musl
 
 MODULE_DEFINES := BUILD_COMBINED_TESTS=1
 

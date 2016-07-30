@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := mxr-tls-test
 
 MODULE_STATIC_LIBS := \
-    ulib/musl ulib/mxio ulib/magenta ulib/runtime ulib/unittest
+    ulib/mxio ulib/magenta ulib/runtime ulib/unittest ulib/musl-static
 
 include make/module.mk

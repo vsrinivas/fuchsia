@@ -23,6 +23,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := crasher
 
-MODULE_LIBS := ulib/mxio ulib/musl-shared
+MODULE_LIBS := ulib/mxio ulib/musl
 
 include make/module.mk

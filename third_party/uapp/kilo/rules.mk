@@ -22,7 +22,7 @@ MODULE_SRCS += $(LOCAL_DIR)/kilo.c
 
 MODULE_NAME := kilo
 
-MODULE_LIBS := ulib/mxio ulib/musl-shared
+MODULE_LIBS := ulib/mxio ulib/musl
 
 MODULE_HEADER_DEPS := ulib/ddk ulib/magenta
 

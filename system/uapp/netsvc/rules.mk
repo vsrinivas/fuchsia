@@ -25,6 +25,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := ulib/inet6
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

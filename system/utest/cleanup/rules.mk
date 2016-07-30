@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := cleanup-test
 
 MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/mxio ulib/unittest ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/mxio ulib/unittest ulib/magenta ulib/musl
 
 include make/module.mk

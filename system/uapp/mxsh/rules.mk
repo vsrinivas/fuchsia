@@ -25,7 +25,7 @@ MODULE_SRCS += \
 MODULE_NAME := mxsh
 
 MODULE_STATIC_LIBS := \
-    ulib/mxio ulib/launchpad ulib/musl ulib/magenta ulib/ddk ulib/runtime
+    ulib/mxio ulib/launchpad ulib/magenta ulib/ddk ulib/runtime ulib/musl-static
 
 USER_MANIFEST_LINES += docs/LICENSE=kernel/LICENSE
 

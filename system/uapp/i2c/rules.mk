@@ -39,6 +39,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := ulib/ddk
 
-MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl-shared
+MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl
 
 include make/module.mk

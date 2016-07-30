@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := userboot
 
 MODULE_STATIC_LIBS := \
-    ulib/musl ulib/launchpad ulib/mxio ulib/magenta ulib/runtime
+    ulib/launchpad ulib/mxio ulib/magenta ulib/runtime ulib/musl-static
 
 include make/module.mk

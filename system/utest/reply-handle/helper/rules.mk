@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := reply-handle-helper
 
 MODULE_STATIC_LIBS := \
-    ulib/mxio ulib/musl ulib/runtime ulib/magenta
+    ulib/mxio ulib/runtime ulib/magenta ulib/musl-static
 
 include make/module.mk

@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := data-pipe-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

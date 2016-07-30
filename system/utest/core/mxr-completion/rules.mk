@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_NAME := mxr-completion-test
 
 MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

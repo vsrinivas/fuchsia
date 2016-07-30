@@ -23,9 +23,7 @@ MODULE_TYPE := userlib
 MODULE_DEPS := \
     ulib/ddk \
     ulib/magenta \
-
-MODULE_HEADER_DEPS := \
-    ulib/musl
+    ulib/musl \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/gfx.c \

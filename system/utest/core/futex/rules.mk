@@ -25,6 +25,6 @@ MODULE_NAME := futex-test
 
 MODULE_STATIC_LIBS := ulib/runtime
 MODULE_LIBS := \
-    ulib/mxio ulib/magenta ulib/unittest ulib/musl-shared
+    ulib/mxio ulib/magenta ulib/unittest ulib/musl
 
 include make/module.mk

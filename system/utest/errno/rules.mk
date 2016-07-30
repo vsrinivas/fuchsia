@@ -23,6 +23,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := errno-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

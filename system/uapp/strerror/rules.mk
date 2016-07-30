@@ -22,6 +22,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/strerror.c
 
 MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

@@ -23,6 +23,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := clock
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl-shared
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

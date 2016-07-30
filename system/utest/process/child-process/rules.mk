@@ -24,6 +24,6 @@ MODULE_SRCS += \
 MODULE_CFLAGS := -Wno-main
 
 MODULE_STATIC_LIBS := \
-    ulib/musl ulib/magenta ulib/mxio ulib/unittest ulib/runtime
+    ulib/magenta ulib/mxio ulib/unittest ulib/runtime ulib/musl-static
 
 include make/module.mk

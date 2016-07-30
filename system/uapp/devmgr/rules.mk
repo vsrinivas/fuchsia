@@ -49,12 +49,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
 MODULE_STATIC_LIBS := \
-    ulib/musl \
     ulib/ddk \
     ulib/launchpad \
     ulib/mxio \
     ulib/gfx \
     ulib/runtime \
-    ulib/magenta
+    ulib/magenta \
+    ulib/musl-static \
 
 include make/module.mk

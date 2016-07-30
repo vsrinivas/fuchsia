@@ -27,6 +27,6 @@ MODULE_STATIC_LIBS := ulib/runtime
 MODULE_LIBS := \
     ulib/mxio \
     ulib/magenta \
-    ulib/musl-shared
+    ulib/musl
 
 include make/module.mk
