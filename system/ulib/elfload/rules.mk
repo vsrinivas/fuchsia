@@ -16,19 +16,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp-static
+MODULE_TYPE := userlib
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/userboot.c
+MODULE_SRCS := $(LOCAL_DIR)/elf-load.c
 
-MODULE_NAME := userboot
-
-MODULE_STATIC_LIBS := \
-    ulib/launchpad \
-    ulib/elfload \
-    ulib/mxio \
-    ulib/musl-static \
-    ulib/magenta \
-    ulib/runtime
+# This library refers to Magenta system calls and so needs libmagenta
+# headers.  But the library itself has no dependencies, so users must
+# ensure that the libmagenta entry points are available.
+MODULE_LIBS := ulib/magenta
 
 include make/module.mk

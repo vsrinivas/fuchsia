@@ -21,6 +21,11 @@
 #define ELFMAG "\177ELF"
 #define SELFMAG 4
 
+#define ELFMAG0 '\x7f'
+#define ELFMAG1 'E'
+#define ELFMAG2 'L'
+#define ELFMAG3 'F'
+
 /* e_ident */
 #define EI_MAG0 0
 #define EI_MAG1 1

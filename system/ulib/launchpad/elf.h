@@ -21,10 +21,6 @@
 
 typedef struct elf_load_info elf_load_info_t;
 
-// These routines use this error code to indicate an invalid file format,
-// including wrong machine, wrong endian, etc. as well as a truncated file.
-#define ERR_ELF_BAD_FORMAT ERR_NOT_FOUND
-
 // Validate the ELF headers and set up for further use.
 // The pointer returned must be passed to elf_load_destroy when finished.
 mx_status_t elf_load_start(mx_handle_t vmo, elf_load_info_t** infop);
@@ -35,14 +31,12 @@ void elf_load_destroy(elf_load_info_t* info);
 // Check if the ELF file has a PT_INTERP header.  On success, *interp
 // is NULL if it had none or a malloc'd string of the contents;
 // *interp_len is strlen(*interp).
-mx_status_t elf_load_find_interp(elf_load_info_t* info, mx_handle_t vmo,
-                                 char** interp, size_t* interp_len);
+mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
+                                char** interp, size_t* interp_len);
 
 // Load the file's segments into the process.
 // If this fails, the state of the process address space is unspecified.
 mx_status_t elf_load_finish(mx_handle_t proc, elf_load_info_t* info,
                             mx_handle_t vmo, mx_vaddr_t* entry);
-
-
 
 #pragma GCC visibility pop

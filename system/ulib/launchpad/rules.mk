@@ -25,14 +25,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mxio.c \
     $(LOCAL_DIR)/vmo.c
 
-MODULE_DEPS += \
-    ulib/magenta \
-    ulib/mxio \
-    ulib/musl
-
 MODULE_EXPORT := launchpad
 
+MODULE_DEPS := ulib/magenta ulib/elfload ulib/mxio
+
 MODULE_SO_NAME := launchpad
+MODULE_STATIC_LIBS := ulib/elfload
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

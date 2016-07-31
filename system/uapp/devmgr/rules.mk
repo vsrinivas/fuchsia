@@ -51,6 +51,7 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     ulib/ddk \
     ulib/launchpad \
+    ulib/elfload \
     ulib/mxio \
     ulib/gfx \
     ulib/runtime \

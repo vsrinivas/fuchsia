@@ -361,7 +361,7 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
     if (status == NO_ERROR) {
         char* interp;
         size_t interp_len;
-        status = elf_load_find_interp(elf, vmo, &interp, &interp_len);
+        status = elf_load_get_interp(elf, vmo, &interp, &interp_len);
         if (status == NO_ERROR) {
             if (interp == NULL) {
                 status = elf_load_finish(lp_proc(lp), elf, vmo, &lp->entry);
