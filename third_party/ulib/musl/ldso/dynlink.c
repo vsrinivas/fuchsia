@@ -26,6 +26,7 @@
 #include <inttypes.h>
 
 #include <magenta/processargs.h>
+#include <runtime/status.h>
 void __mxr_thread_main(void);
 
 
@@ -123,6 +124,7 @@ static size_t static_tls_cnt;
 static pthread_mutex_t init_fini_lock = {._m_type = PTHREAD_MUTEX_RECURSIVE};
 
 static mx_handle_t loader_svc = MX_HANDLE_INVALID;
+static mx_handle_t logger = MX_HANDLE_INVALID;
 
 struct debug* _dl_debug_addr = &debug;
 
@@ -1394,37 +1396,70 @@ static __attribute__((noinline)) mx_handle_t read_bootstrap_message(
     uint32_t nhandles = 0;
     mx_status_t status = mx_message_read(bootstrap, NULL, &nbytes,
                                          NULL, &nhandles, 0);
-    if (status == NO_ERROR)
+    if (status != ERR_NOT_ENOUGH_BUFFER) {
+        error("mx_message_read probe on bootstrap handle %#x failed: %d (%s)",
+              bootstrap, status, mx_strstatus(status));
         return MX_HANDLE_INVALID;
-    if (status != ERR_NOT_ENOUGH_BUFFER)
-        __builtin_trap();
+    }
 
-    if (nbytes < sizeof(mx_proc_args_t))
-        __builtin_trap();
+    if (nbytes < sizeof(mx_proc_args_t)) {
+        error("probed message on bootstrap handle %#x too short: %u < %zu",
+              bootstrap, nbytes, sizeof(mx_proc_args_t));
+        return MX_HANDLE_INVALID;
+    }
 
     uint8_t buffer[nbytes] __attribute__((aligned(__alignof(mx_proc_args_t))));
     mx_handle_t handles[nhandles];
 
-    status = mx_message_read(bootstrap, buffer, &nbytes, handles, &nhandles, 0);
-    if (status != NO_ERROR)
-        __builtin_trap();
-    if (nbytes != sizeof(buffer))
-        __builtin_trap();
-    if (nhandles != sizeof(handles) / sizeof(handles[0]))
-        __builtin_trap();
+    status = mx_message_read(bootstrap, buffer, &nbytes,
+                             handles, &nhandles, 0);
+    if (status != NO_ERROR) {
+        error("mx_message_read on bootstrap handle %#x"
+              " for %u bytes and %u handles failed: %d (%s)",
+              bootstrap, nbytes, nhandles, status, mx_strstatus(status));
+        return MX_HANDLE_INVALID;
+    }
+    if (nbytes != sizeof(buffer)) {
+        error("mx_message_read on bootstrap handle %#x got %u != %zu bytes",
+              bootstrap, nbytes, sizeof(buffer));
+        return MX_HANDLE_INVALID;
+    }
+    if (nhandles != sizeof(handles) / sizeof(handles[0])) {
+        error("mx_message_read on bootstrap handle %#x got %u != %zu handles",
+              bootstrap, nhandles, sizeof(handles) / sizeof(handles[0]));
+        return MX_HANDLE_INVALID;
+    }
 
     const mx_proc_args_t* procargs = (void*)buffer;
-    if (procargs->protocol != MX_PROCARGS_PROTOCOL)
-        __builtin_trap();
-    if (procargs->version != MX_PROCARGS_VERSION)
-        __builtin_trap();
+    if (procargs->protocol != MX_PROCARGS_PROTOCOL) {
+        error("bootstrap protocol %#x != %#x",
+              procargs->protocol, MX_PROCARGS_PROTOCOL);
+        return MX_HANDLE_INVALID;
+    }
+    if (procargs->version != MX_PROCARGS_VERSION) {
+        error("bootstrap version %#x != %#x",
+              procargs->version, MX_PROCARGS_VERSION);
+        return MX_HANDLE_INVALID;
+    }
 
-    if (procargs->handle_info_off < sizeof(*procargs))
-        __builtin_trap();
-    if (procargs->handle_info_off > nbytes)
-        __builtin_trap();
-    if ((nbytes - procargs->handle_info_off) / sizeof(uint32_t) < nhandles)
-        __builtin_trap();
+    if (procargs->handle_info_off < sizeof(*procargs)) {
+        error("malformed bootstrap message: "
+              "handle_info %u < header size %u",
+              procargs->handle_info_off, sizeof(*procargs));
+        return MX_HANDLE_INVALID;
+    }
+    if (procargs->handle_info_off > nbytes) {
+        error("malformed bootstrap message: "
+              "handle_info %u > message size %u",
+              procargs->handle_info_off, nbytes);
+        return MX_HANDLE_INVALID;
+    }
+    if ((nbytes - procargs->handle_info_off) / sizeof(uint32_t) < nhandles) {
+        error("malformed bootstrap message: "
+              "handle_info %u * %u handles > message size %u",
+              procargs->handle_info_off, nhandles, nbytes);
+        return MX_HANDLE_INVALID;
+    }
     const uint32_t* handle_info = (void*)&buffer[procargs->handle_info_off];
 
     mx_handle_t exec_vmo = MX_HANDLE_INVALID;
@@ -1432,23 +1467,33 @@ static __attribute__((noinline)) mx_handle_t read_bootstrap_message(
         switch (MX_HND_INFO_TYPE(handle_info[i])) {
         case MX_HND_TYPE_LOADER_SVC:
             if (loader_svc != MX_HANDLE_INVALID ||
-                handles[i] == MX_HANDLE_INVALID)
-                __builtin_trap();
+                handles[i] == MX_HANDLE_INVALID) {
+                error("bootstrap message bad LOADER_SVC %#x vs %#x",
+                      handles[i], loader_svc);
+            }
             loader_svc = handles[i];
             break;
         case MX_HND_TYPE_EXEC_VMO:
             if (exec_vmo != MX_HANDLE_INVALID ||
-                handles[i] == MX_HANDLE_INVALID)
-                __builtin_trap();
+                handles[i] == MX_HANDLE_INVALID) {
+                error("bootstrap message bad EXEC_VMO %#x vs %#x",
+                      handles[i], exec_vmo);
+            }
             exec_vmo = handles[i];
+            break;
+        case MX_HND_TYPE_MXIO_LOGGER:
+            if (logger != MX_HANDLE_INVALID ||
+                handles[i] == MX_HANDLE_INVALID) {
+                error("bootstrap message bad MXIO_LOGGER %#x vs %#x",
+                      handles[i], logger);
+            }
+            logger = handles[i];
             break;
         default:
             mx_handle_close(handles[i]);
             break;
         }
     }
-    if (loader_svc == MX_HANDLE_INVALID)
-        __builtin_trap();
 
     return exec_vmo;
 }
@@ -1719,74 +1764,123 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 #define LOADER_SVC_MSG_MAX 1024
 
+// This detects recursion via the error function.
+static bool loader_svc_rpc_in_progress;
+
 static mx_handle_t loader_svc_rpc(uint32_t opcode,
                                   const void* data, size_t len) {
+    mx_handle_t handle = MX_HANDLE_INVALID;
     struct {
         mx_loader_svc_msg_t header;
         uint8_t data[LOADER_SVC_MSG_MAX - sizeof(mx_loader_svc_msg_t)];
     } msg;
 
-    if (len >= sizeof msg.data)
-        __builtin_trap();
+    loader_svc_rpc_in_progress = true;
+
+    if (len >= sizeof msg.data) {
+        error("message of %zu bytes too large for loader service protocol",
+              len);
+        handle = ERR_OUT_OF_RANGE;
+        goto out;
+    }
 
     memset(&msg.header, 0, sizeof msg.header);
     msg.header.opcode = opcode;
     memcpy(msg.data, data, len);
     msg.data[len] = 0;
 
-    mx_status_t status = mx_message_write(loader_svc,
-                                          &msg, sizeof msg.header + len + 1,
+    uint32_t nbytes = sizeof msg.header + len + 1;
+    mx_status_t status = mx_message_write(loader_svc, &msg, nbytes,
                                           NULL, 0, 0);
-    if (status != NO_ERROR)
-        __builtin_trap();
+    if (status != NO_ERROR) {
+        error("mx_message_write of %u bytes to loader service: %d (%s)",
+              nbytes, status, mx_strstatus(status));
+        handle = status;
+        goto out;
+    }
 
     status = mx_handle_wait_one(loader_svc, MX_SIGNAL_READABLE,
                                 MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR)
-        __builtin_trap();
+    if (status != NO_ERROR) {
+        error("mx_handle_wait_one for loader service reply: %d (%s)",
+              status, mx_strstatus(status));
+        handle = status;
+        goto out;
+    }
 
-    mx_handle_t handle = MX_HANDLE_INVALID;
-    uint32_t reply_size = sizeof msg.header;
+    uint32_t reply_size = sizeof(msg.header);
     uint32_t handle_count = 1;
     status = mx_message_read(loader_svc, &msg, &reply_size,
                              &handle, &handle_count, 0);
-    if (status != NO_ERROR)
-        __builtin_trap();
-    if (reply_size != sizeof msg.header)
-        __builtin_trap();
-    if (msg.header.opcode != LOADER_SVC_OP_STATUS)
-        __builtin_trap();
+    if (status != NO_ERROR) {
+        error("mx_message_read of %u bytes for loader service reply: %d (%s)",
+              sizeof(msg.header), status, mx_strstatus(status));
+        handle = status;
+        goto out;
+    }
+    if (reply_size != sizeof(msg.header)) {
+        error("loader service reply %u bytes != %u",
+              reply_size, sizeof(msg.header));
+        handle = ERR_INVALID_ARGS;
+        goto out;
+    }
+    if (msg.header.opcode != LOADER_SVC_OP_STATUS) {
+        error("loader service reply opcode %u != %u",
+              msg.header.opcode, LOADER_SVC_OP_STATUS);
+        handle = ERR_INVALID_ARGS;
+        goto out;
+    }
     if (msg.header.arg != NO_ERROR) {
-        if (handle != MX_HANDLE_INVALID)
-            __builtin_trap();
-        if (msg.header.arg > 0)
-            __builtin_trap();
+        if (handle != MX_HANDLE_INVALID) {
+            error("loader service error %d reply contains handle %#x",
+                  msg.header.arg, handle);
+            handle = ERR_INVALID_ARGS;
+            goto out;
+        }
+        if (msg.header.arg > 0) {
+            error("loader service error reply %d > 0", msg.header.arg);
+            handle = ERR_INVALID_ARGS;
+            goto out;
+        }
         handle = msg.header.arg;
     }
 
+out:
+    loader_svc_rpc_in_progress = false;
     return handle;
 }
 
-static void loader_svc_print(const void* buf, size_t len) {
+static mx_handle_t get_library_vmo(const char* name) {
+    if (loader_svc == MX_HANDLE_INVALID) {
+        error("cannot look up \"%s\" with no loader service", name);
+        return MX_HANDLE_INVALID;
+    }
+    return loader_svc_rpc(LOADER_SVC_OP_LOAD_OBJECT, name, strlen(name));
+}
+
+static void log_write(const void* buf, size_t len) {
     // The loader service prints "header: %s\n" when we send %s,
     // so strip a trailing newline.
     if (((const char*)buf)[len - 1] == '\n')
         --len;
-    mx_status_t status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len);
+
+    mx_status_t status;
+    if (logger != MX_HANDLE_INVALID)
+        status = mx_log_write(logger, len, buf, 0);
+    else if (!loader_svc_rpc_in_progress && loader_svc != MX_HANDLE_INVALID)
+        status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len);
+    else
+        status = mx_debug_write(buf, len);
     if (status != NO_ERROR)
         __builtin_trap();
 }
 
-static mx_handle_t get_library_vmo(const char* name) {
-    return loader_svc_rpc(LOADER_SVC_OP_LOAD_OBJECT, name, strlen(name));
-}
-
 static size_t errormsg_write(FILE* f, const unsigned char* buf, size_t len) {
     if (f != NULL && f->wpos > f->wbase)
-        loader_svc_print(f->wbase, f->wpos - f->wbase);
+        log_write(f->wbase, f->wpos - f->wbase);
 
     if (len > 0)
-        loader_svc_print(buf, len);
+        log_write(buf, len);
 
     if (f != NULL) {
         f->wend = f->buf + f->buf_size;
