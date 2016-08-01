@@ -257,7 +257,7 @@ ifeq ($(MODULE_EXPORT),crt)
 # special magic library that's just crt1.o
 MODULE_EXPORT :=
 SYSROOT_CRT1 := $(BUILDDIR)/sysroot/lib/crt1.o
-$(call copy-dst-src,$(SYSROOT_CRT1),$(LIBC_CRT1_OBJ))
+$(call copy-dst-src,$(SYSROOT_CRT1),$(USER_CRT1_OBJ))
 SYSROOT_DEPS += $(SYSROOT_CRT1)
 GENERATED += $(SYSROOT_CRT1)
 endif
