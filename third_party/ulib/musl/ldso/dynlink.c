@@ -26,6 +26,7 @@
 #include <inttypes.h>
 
 #include <magenta/processargs.h>
+#include <runtime/message.h>
 #include <runtime/status.h>
 void __mxr_thread_main(void);
 
@@ -1392,12 +1393,10 @@ static _Noreturn void dls3(mx_handle_t exec_vmo, void* start_arg) {
 // its stack allocations are popped.
 static __attribute__((noinline)) mx_handle_t read_bootstrap_message(
     mx_handle_t bootstrap) {
-    uint32_t nbytes = 0;
-    uint32_t nhandles = 0;
-    mx_status_t status = mx_message_read(bootstrap, NULL, &nbytes,
-                                         NULL, &nhandles, 0);
-    if (status != ERR_NOT_ENOUGH_BUFFER) {
-        error("mx_message_read probe on bootstrap handle %#x failed: %d (%s)",
+    uint32_t nbytes, nhandles;
+    mx_status_t status = mxr_message_size(bootstrap, &nbytes, &nhandles);
+    if (status != NO_ERROR) {
+        error("mxr_message_size bootstrap handle %#x failed: %d (%s)",
               bootstrap, status, mx_strstatus(status));
         return MX_HANDLE_INVALID;
     }
