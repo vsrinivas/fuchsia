@@ -1596,7 +1596,7 @@ mx_status_t sys_wait_set_add(mx_handle_t ws_handle_value,
     // No need to take a ref to the dispatcher, since we're under the handle table lock. :-/
     auto ws_dispatcher = ws_handle->dispatcher()->get_wait_set_dispatcher();
     if (!ws_dispatcher)
-        return ERR_INVALID_ARGS;
+        return ERR_INVALID_ARGS;  // TODO(vtl): ERR_NOT_SUPPORTED instead?
     if (!magenta_rights_check(ws_handle->rights(), MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
@@ -1620,7 +1620,7 @@ mx_status_t sys_wait_set_remove(mx_handle_t ws_handle, uint64_t cookie) {
         return ERR_BAD_HANDLE;
     auto ws_dispatcher = dispatcher->get_wait_set_dispatcher();
     if (!ws_dispatcher)
-        return ERR_INVALID_ARGS;
+        return ERR_INVALID_ARGS;  // TODO(vtl): ERR_NOT_SUPPORTED instead?
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
@@ -1659,7 +1659,7 @@ mx_status_t sys_wait_set_wait(mx_handle_t ws_handle,
         return ERR_BAD_HANDLE;
     auto ws_dispatcher = dispatcher->get_wait_set_dispatcher();
     if (!ws_dispatcher)
-        return ERR_INVALID_ARGS;
+        return ERR_INVALID_ARGS;  // TODO(vtl): ERR_NOT_SUPPORTED instead?
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 

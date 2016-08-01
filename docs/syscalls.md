@@ -35,3 +35,9 @@
 ## Cryptographically Secure RNG
 + [cprng_draw](syscalls/cprng_draw.md)
 + [cprng_add_entropy](syscalls/cprng_add_entropy.md)
+
+## Wait Sets
++ [wait_set_create](syscalls/wait_set_create.md)
++ [wait_set_add](syscalls/wait_set_add.md)
++ [wait_set_remove](syscalls/wait_set_remove.md)
++ [wait_set_wait](syscalls/wait_set_wait.md)
