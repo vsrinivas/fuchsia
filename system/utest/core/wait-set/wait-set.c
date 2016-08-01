@@ -232,6 +232,14 @@ bool wait_set_wait_single_thread_1_test(void) {
                            MX_SIGNAL_SIGNALED | MX_SIGNAL_USER_ALL);
     EXPECT_EQ(found, 2u, "");
 
+    // Can pass null for |results| if |num_results| is zero.
+    num_results = 0u;
+    max_results = (uint32_t)-1;
+    ASSERT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, NULL, &max_results), NO_ERROR,
+                               "");
+    ASSERT_EQ(num_results, 0u, "wrong num_results from mx_wait_set_wait()");
+    EXPECT_EQ(max_results, 3u, "wrong max_results from mx_wait_set_wait()");
+
     EXPECT_EQ(mx_handle_close(ev[2]), NO_ERROR, "");
     num_results = 10u;
     ASSERT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");

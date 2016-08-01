@@ -1668,9 +1668,11 @@ mx_status_t sys_wait_set_wait(mx_handle_t ws_handle,
     if (result == NO_ERROR) {
         if (copy_to_user_u32(_num_results, num_results) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        if (copy_to_user(_results, results.get(), num_results * sizeof(mx_wait_set_result_t)) !=
-                NO_ERROR)
+        if (num_results > 0u) {
+            if (copy_to_user(_results, results.get(), num_results * sizeof(mx_wait_set_result_t)) !=
+                    NO_ERROR)
             return ERR_INVALID_ARGS;
+        }
         if (_max_results) {
             if (copy_to_user_u32(_max_results, max_results) != NO_ERROR)
                 return ERR_INVALID_ARGS;
