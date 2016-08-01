@@ -174,14 +174,18 @@ typedef struct {
 } __attribute__ ((packed)) usb_endpoint_descriptor_t;
 
 typedef struct {
+    uint8_t bDescriptorType;
+    uint16_t wDescriptorLength;
+} __attribute__((packed)) usb_hid_descriptor_entry_t;
+
+typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint16_t bcdHID;
     uint8_t bCountryCode;
     uint8_t bNumDescriptors;
-    uint8_t bReportDescriptorType;
-    uint16_t wReportDescriptorLength;
-} __attribute__ ((packed)) usb_hid_descriptor_t;
+    usb_hid_descriptor_entry_t descriptors[];
+} __attribute__((packed)) usb_hid_descriptor_t;
 
 typedef struct {
     uint8_t bDescLength;
