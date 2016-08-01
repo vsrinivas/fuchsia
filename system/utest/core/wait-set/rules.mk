@@ -23,7 +23,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := wait-set-test
 
-MODULE_DEPS := \
-    ulib/magenta ulib/musl ulib/mxio ulib/unittest
+MODULE_LIBS := \
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl-shared
 
 include make/module.mk
