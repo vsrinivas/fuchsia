@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <compiler.h>
 #include <utils/type_support.h>
 
 namespace utils {
@@ -15,6 +16,11 @@ class RefPtr;
 
 template <typename T>
 RefPtr<T> AdoptRef(T* ptr);
+
+namespace internal {
+template <typename T>
+inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
+}  // namespace internal
 
 // RefPtr<T> holds a reference to an intrusively-refcounted object of type T.
 //
@@ -84,6 +90,12 @@ public:
         r.ptr_ = p;
     }
 
+    T* leak_ref() __WARN_UNUSED_RESULT {
+        T* p = ptr_;
+        ptr_ = nullptr;
+        return p;
+    }
+
     T* get() const {
         return ptr_;
     }
@@ -107,15 +119,20 @@ public:
 private:
     template <typename U>
     friend class RefPtr;
-
     friend RefPtr<T> AdoptRef<T>(T*);
+    friend RefPtr<T> internal::MakeRefPtrNoAdopt<T>(T*);
 
     enum AdoptTag { ADOPT };
+    enum NoAdoptTag { NO_ADOPT };
+
     RefPtr(T* ptr, AdoptTag) : ptr_(ptr) {
 #if (LK_DEBUGLEVEL > 0)
         ptr_->Adopt();
 #endif
     }
+
+    RefPtr(T* ptr, NoAdoptTag) : ptr_(ptr) { }
+
     T* ptr_;
 };
 
@@ -141,5 +158,15 @@ template <typename T>
 inline RefPtr<T> AdoptRef(T* ptr) {
     return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
 }
+
+namespace internal {
+// Constructs a RefPtr from a T* without attempt to either AddRef or Adopt the
+// pointer.  Used by the internals of some intrusive container classes to store
+// sentinels (special invalid pointers) in RefPtr<>s.
+template <typename T>
+inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr) {
+    return RefPtr<T>(ptr, RefPtr<T>::NO_ADOPT);
+}
+}  // namespace internal
 
 }  // namespace utils
