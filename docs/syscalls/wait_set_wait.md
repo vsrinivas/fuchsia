@@ -72,6 +72,9 @@ valid.
 **ERR_ACCESS_DENIED**  *wait_set_handle* does not have the **MX_RIGHT_READ**
 right.
 
+**ERR_TIMED_OUT**  The specified timeout elapsed before any results were
+available.
+
 ## SEE ALSO
 
 [wait_set_create](wait_set_create.md),
