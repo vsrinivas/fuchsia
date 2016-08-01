@@ -125,6 +125,7 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_state_t new_state) {
     if (is_triggered_) {
         is_triggered_ = false;
         bool found = !!wait_set_->triggered_entries_.erase(this);
+        (void)found;
         DEBUG_ASSERT(found);
         DEBUG_ASSERT(wait_set_->num_triggered_entries_ > 0u);
         wait_set_->num_triggered_entries_--;
@@ -255,6 +256,7 @@ status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* han
         AutoLock lock(&mutex_);
         DEBUG_ASSERT(e->GetState_NoLock() == Entry::State::ADD_PENDING);
         auto e2 = entries_.remove(cookie);
+        (void)e2;
         DEBUG_ASSERT(e == e2);
         delete e;
         return result;
@@ -278,6 +280,7 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
 
         if (entry->IsTriggered_NoLock()) {
             bool found = !!triggered_entries_.erase(entry.get());
+            (void)found;
             DEBUG_ASSERT(found);
             DEBUG_ASSERT(num_triggered_entries_ > 0u);
             num_triggered_entries_--;
