@@ -206,6 +206,28 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
     return status;
 }
 
+mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
+    mx_handle_t handle;
+    uint32_t id;
+    int fd;
+
+    if ((target_fd < 0) || (target_fd >= MAX_MXIO_FD)) {
+        return ERR_INVALID_ARGS;
+    }
+    mx_status_t status;
+    if ((status = mxio_pipe_half(&handle, &id)) < 0) {
+        return status;
+    }
+    fd = status;
+    if ((status = launchpad_add_handle(lp, handle, MX_HND_INFO(MX_HND_INFO_TYPE(id), target_fd))) < 0) {
+        close(fd);
+        mx_handle_close(handle);
+        return status;
+    }
+    *fd_out = fd;
+    return NO_ERROR;
+}
+
 mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     if (vmo < 0)
         return vmo;

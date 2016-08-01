@@ -64,6 +64,11 @@ mx_status_t launchpad_clone_mxio_root(launchpad_t* lp);
 // ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
 mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 
+// Attempt to create a pipe and install one end of that pipe as
+// target_fd in the new process and return the other end (if
+// successful) via the fd_out parameter.
+mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd);
+
 // Map in the PT_LOAD segments of the ELF file image found in a VM
 // object.  This does not check the file for a PT_INTERP program
 // header.  This consumes the VM object handle on success but not on
