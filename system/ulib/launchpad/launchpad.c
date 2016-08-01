@@ -74,7 +74,7 @@ mx_status_t launchpad_create(const char* name, launchpad_t** result) {
     lp->stack_size = DEFAULT_STACK_SIZE;
 
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
-    mx_handle_t proc = mx_process_create(name, name_len);
+    mx_handle_t proc = mx_process_create(name, name_len, 0);
     if (proc < 0) {
         free(lp);
         return proc;
@@ -529,18 +529,10 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
         uint32_t id = 0; // -Wall
         switch (i) {
         case HND_SPECIAL_COUNT:;
-            // TODO(mcgrathr): The kernel doesn't permit duplicating a
-            // process handle yet, so we don't actually send it.  But we
-            // keep the structure of this code based on the plan to send
-            // it.  So for now just send a dummy handle instead.
-#if 1
-            mx_handle_t proc = mx_vm_object_create(0);
-#else
             // Duplicate the process handle so we can send it in the
             // loader message and still have it later.
             mx_handle_t proc = mx_handle_duplicate(lp_proc(lp),
                                                    MX_RIGHT_SAME_RIGHTS);
-#endif
             if (proc < 0) {
                 free(msg);
                 return proc;
@@ -669,11 +661,8 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         }
     }
 
-#if 1 // TODO(mcgrathr): later
-    mx_handle_t thread = MX_HANDLE_INVALID;
-#else
     mx_handle_t thread = mx_thread_create(lp_proc(lp), THREAD_NAME,
-                                          strlen(THREAD_NAME));
+                                          strlen(THREAD_NAME), 0);
     if (thread < 0) {
         return thread;
     } else {
@@ -694,7 +683,6 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
             return status;
         }
     }
-#endif
 
     mx_handle_t pipeh[2];
     mx_status_t status = mx_message_pipe_create(pipeh, 0);
@@ -737,14 +725,6 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         return ERR_NOT_ENOUGH_BUFFER;
     }
 
-    // TODO(mcgrathr): The kernel doesn't permit duplicating a process
-    // handle yet, so we don't actually send it.  But we keep the structure
-    // of this code based on the plan to send it.  So for now just send
-    // a dummy handle instead.
-#if 1
-    mx_handle_t proc = lp_proc(lp);
-    lp_proc(lp) = mx_vm_object_create(0);
-#else
     // The proc handle in lp->handles[0] will be consumed by message_write.
     // So we'll need a duplicate to do process operations later.
     mx_handle_t proc = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS);
@@ -754,7 +734,6 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         mx_handle_close(child_bootstrap);
         return proc;
     }
-#endif
 
     status = mx_message_write(to_child, msg, size,
                               lp->handles, lp->handle_count, 0);
@@ -766,12 +745,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
             lp->handles[i] = MX_HANDLE_INVALID;
         lp->handle_count = 0;
         // TODO(mcgrathr): Pass in vdso_base somehow.
-#if 0 // TODO(mcgrathr): later
         status = mx_process_start(proc, thread, lp->entry, sp, child_bootstrap);
-#else
-        (void)sp;
-        status = mx_process_start(proc, child_bootstrap, lp->entry);
-#endif
     }
     mx_handle_close(thread);
     // process_start consumed child_bootstrap if successful.
@@ -780,6 +754,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
 
     mx_handle_close(child_bootstrap);
     mx_handle_close(proc);
+    mx_handle_close(thread);
 
     return status;
 }

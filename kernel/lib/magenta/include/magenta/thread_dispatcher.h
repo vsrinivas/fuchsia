@@ -20,6 +20,8 @@ public:
     mx_koid_t get_inner_koid() const final { return thread_->get_koid(); }
     ThreadDispatcher* get_thread_dispatcher() final { return this; }
 
+    mx_status_t Start(uintptr_t entry, uintptr_t stack, uintptr_t arg) { return thread_->Start(entry, stack, arg); }
+
     StateTracker* get_state_tracker() final;
 
     // TODO(dje): Was private. Needed for exception handling.

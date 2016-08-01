@@ -6,8 +6,9 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 #include <stdio.h>
+#include <system/compiler.h>
 
-extern int thread_entry(void* arg);
+extern void thread_entry(uintptr_t arg);
 
 int print_fail(void) {
     EXPECT_TRUE(false, "Failed");
@@ -15,11 +16,38 @@ int print_fail(void) {
     return 1; // Not reached
 }
 
+// create a thread using the raw magenta api.
+// cannot use a higher level api because they'll use trampoline functions that'll trash
+// registers on entry.
+mx_handle_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg)
+{
+    // preallocated stack to satisfy the thread we create
+    static uint8_t stack[1024] __ALIGNED(16);
+
+    // TODO: get current process handle
+    mx_handle_t process_self_handle = 0;
+
+    mx_handle_t handle = mx_thread_create(process_self_handle, "", 0, 0);
+    if (handle < 0)
+        return handle;
+
+    mx_status_t status = mx_thread_start(handle, (uintptr_t)thread_entry, (uintptr_t)stack + sizeof(stack), arg);
+    if (status < 0)
+        return status;
+
+    return handle;
+}
+
 bool tis_test(void) {
     BEGIN_TEST;
-    void* arg = (void*)0x1234567890abcdef;
-    mx_handle_t handle = mx_thread_create(thread_entry, arg, "", 0);
+#if _LP64
+    uintptr_t arg = 0x1234567890abcdef;
+#else
+    uintptr_t arg = 0x90abcdef;
+#endif
+    mx_handle_t handle = raw_thread_create(thread_entry, arg);
     ASSERT_GE(handle, 0, "Error while thread creation");
+
     mx_status_t status = mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED,
                                                   MX_TIME_INFINITE, NULL);
     ASSERT_GE(status, 0, "Error while thread wait");

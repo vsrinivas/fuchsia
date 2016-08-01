@@ -37,6 +37,9 @@ struct mxr_thread {
 
     uint64_t magic;
 
+    uintptr_t stack;
+    size_t stack_size;
+
     mxr_mutex_t state_lock;
     int state;
 };
@@ -90,7 +93,7 @@ static mx_status_t thread_cleanup(mxr_thread_t* thread, intptr_t* return_value_o
     return NO_ERROR;
 }
 
-static int thread_trampoline(void* ctx) {
+static void thread_trampoline(uintptr_t ctx) {
     mxr_thread_t* thread = (mxr_thread_t*)ctx;
     CHECK_THREAD(thread);
     mxr_thread_exit(thread, thread->entry(thread->arg));
@@ -129,6 +132,27 @@ static size_t local_strlen(const char* s) {
     return len;
 }
 
+// copied from launchpad/stack.h
+// XXX(travisg) put in shared place?
+//
+// Given the (page-aligned) base and size of the stack mapping,
+// compute the appropriate initial SP value for an initial thread
+// according to the C calling convention for the machine.
+static inline uintptr_t sp_from_mapping(mx_vaddr_t base, size_t size) {
+    // Assume stack grows down.
+    mx_vaddr_t sp = base + size;
+#ifdef __x86_64__
+    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
+    // at (%rsp) serves as the return address for the outermost frame.
+    sp -= 8;
+#elif defined(__arm__) || defined(__aarch64__)
+    // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
+#else
+# error what machine?
+#endif
+    return sp;
+}
+
 mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* name, mxr_thread_t** thread_out) {
     mxr_thread_t* thread = NULL;
     mx_status_t status = allocate_thread_page(&thread);
@@ -142,14 +166,48 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
     thread->state = JOINABLE;
     thread->magic = MXR_THREAD_MAGIC;
 
+    // TODO(kulakowski) Track process handle.
+    mx_handle_t self_handle = 0;
+
     if (name == NULL)
         name = "";
     size_t name_length = local_strlen(name) + 1;
-    mx_handle_t handle = mx_thread_create(thread_trampoline, thread, name, name_length);
+    mx_handle_t handle = mx_thread_create(self_handle, name, name_length, 0);
     if (handle < 0) {
         deallocate_thread_page(thread);
         return (mx_status_t)handle;
     }
+
+    // create a new stack for the new thread
+    thread->stack_size = 1024*1024;
+    mx_handle_t thread_stack_vmo = mx_vm_object_create(thread->stack_size);
+    if (thread_stack_vmo < 0) {
+        deallocate_thread_page(thread);
+        mx_handle_close(handle);
+        return thread_stack_vmo;
+    }
+
+    // map it
+    status = mx_process_vm_map(self_handle, thread_stack_vmo, 0, thread->stack_size, &thread->stack,
+            MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_handle_close(thread_stack_vmo);
+    if (status < 0) {
+        deallocate_thread_page(thread);
+        mx_handle_close(handle);
+        return status;
+    }
+
+    // compute the starting address of the stack
+    uintptr_t sp = sp_from_mapping(thread->stack, thread->stack_size);
+
+    // kick off the new thread
+    status = mx_thread_start(handle, (uintptr_t)thread_trampoline, sp, (uintptr_t)thread);
+    if (status < 0) {
+        deallocate_thread_page(thread);
+        mx_handle_close(handle);
+        return status;
+    }
+
     thread->handle = handle;
     return NO_ERROR;
 }

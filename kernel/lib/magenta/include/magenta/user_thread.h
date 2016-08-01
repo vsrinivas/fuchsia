@@ -38,7 +38,7 @@ public:
 
     UserThread(mx_koid_t koid,
                utils::RefPtr<ProcessDispatcher> process,
-               thread_start_routine entry, void* arg);
+               uint32_t flags);
     ~UserThread();
 
     static UserThread* GetCurrent() {
@@ -48,7 +48,7 @@ public:
     // Performs initialization on a newly constructed UserThread
     // If this fails, then the object is invalid and should be deleted
     status_t Initialize(utils::StringPiece name);
-    void Start();
+    status_t Start(uintptr_t entry, uintptr_t stack, uintptr_t arg);
     void Exit() __NO_RETURN;
     void Kill();
     void DispatcherClosed();
@@ -91,15 +91,10 @@ private:
     // a ref pointer back to the parent process
     utils::RefPtr<ProcessDispatcher> process_;
 
-    // thread start routine and argument pointer
-    thread_start_routine entry_ = nullptr;
-    void* arg_ = nullptr;
-
-    // user space stack
-    void* user_stack_ = nullptr;
-
-    // default user space stack size
-    static const int kDefaultStackSize = 256 * PAGE_SIZE;
+    // user thread start routine and argument
+    uintptr_t user_entry_ = 0;
+    uintptr_t user_arg_ = 0;
+    uintptr_t user_stack_ = 0;
 
     // our State
     State state_ = State::INITIAL;

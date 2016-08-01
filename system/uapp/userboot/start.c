@@ -84,6 +84,7 @@ static void bootstrap(mx_handle_t log, struct options* o,
     mx_handle_t bootfs_vmo = MX_HANDLE_INVALID;
     mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
     mx_handle_t* proc_handle_loc = NULL;
+    mx_handle_t* thread_handle_loc = NULL;
     mx_handle_t* stack_vmo_handle_loc = NULL;
     for (uint32_t i = 0; i < nhandles; ++i) {
         switch (MX_HND_INFO_TYPE(handle_info[i])) {
@@ -96,6 +97,9 @@ static void bootstrap(mx_handle_t log, struct options* o,
             break;
         case MX_HND_TYPE_PROC_SELF:
             proc_handle_loc = &handles[i];
+            break;
+        case MX_HND_TYPE_THREAD_SELF:
+            thread_handle_loc = &handles[i];
             break;
         case MX_HND_TYPE_STACK_VMO:
             stack_vmo_handle_loc = &handles[i];
@@ -120,7 +124,7 @@ static void bootstrap(mx_handle_t log, struct options* o,
     mx_handle_t child_start_handle = pipeh[1];
 
     const char* filename = o->value[OPTION_FILENAME];
-    mx_handle_t proc = mx_process_create(filename, strlen(filename));
+    mx_handle_t proc = mx_process_create(filename, strlen(filename), 0);
     if (proc < 0)
         fail(log, proc, "mx_process_create failed\n");
 
@@ -159,6 +163,19 @@ static void bootstrap(mx_handle_t log, struct options* o,
                  "mx_handle_duplicate failed on child process handle\n");
     }
 
+    // create the initial thread in the new process
+    mx_handle_t thread = mx_thread_create(proc, filename, strlen(filename), 0);
+    if (thread < 0)
+        fail(log, thread, "mx_thread_create failed\n");
+
+    if (thread_handle_loc != NULL) {
+        // Reuse the slot for the child's handle.
+        *thread_handle_loc = mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS);
+        if (*thread_handle_loc < 0)
+            fail(log, *thread_handle_loc,
+                 "mx_handle_duplicate failed on child thread handle\n");
+    }
+
     // Now send the bootstrap message, consuming both our VMO handles.
     status = mx_message_write(to_child, buffer, nbytes, handles, nhandles, 0);
     check(log, status, "mx_message_write to child failed\n");
@@ -167,16 +184,7 @@ static void bootstrap(mx_handle_t log, struct options* o,
     // TODO(mcgrathr): Need a way to pass vdso_base to the child's
     // entry-point code so it can actually be used.
     (void)vdso_base;
-#if 0
-    mx_handle_t thread = mx_thread_create(proc, filename, strlen(filename));
-    if (thread < 0)
-        fail(log, thread, "mx_thread_create failed\n");
     status = mx_process_start(proc, thread, entry, sp, child_start_handle);
-    mx_handle_close(thread);
-#else
-    (void)sp;
-    status = mx_process_start(proc, child_start_handle, entry);
-#endif
     check(log, status, "mx_process_start failed\n");
 
     // TODO(mcgrathr): Really there is no reason for this process to stick
@@ -190,6 +198,7 @@ static void bootstrap(mx_handle_t log, struct options* o,
                                 NULL);
     check(log, status, "mx_handle_wait_one on process failed\n");
     mx_handle_close(proc);
+    mx_handle_close(thread);
 }
 
 #define SHUTDOWN_COMMAND "poweroff"

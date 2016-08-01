@@ -7,6 +7,7 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
 #include <runtime/status.h>
+#include <runtime/thread.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
@@ -50,13 +51,15 @@ void tu_handle_close(mx_handle_t handle)
 mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
                              const char* name)
 {
-    if (!name)
-        name = "";
-    mx_handle_t handle = mx_thread_create(entry, arg, name, strlen(name) + 1);
-    if (handle < 0) {
-        tu_fatal(__func__, handle);
+    mxr_thread_t *thread;
+
+    mx_status_t status = mxr_thread_create(entry, arg, name, &thread);
+    if (status < 0) {
+        tu_fatal(__func__, status);
     }
-    return handle;
+
+    // XXX (travisg) leaks a thread structure, and really should return mxr_thread_t
+    return mxr_thread_get_handle(thread);
 }
 
 static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signals,

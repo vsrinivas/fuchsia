@@ -11,11 +11,12 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
+#include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
 #include <system/compiler.h>
 
-typedef int (*thread_start_func_t)(void*);
+typedef intptr_t (*thread_start_func_t)(void*);
 
 #define ASSERT_NOT_REACHED() \
     assert(0)
@@ -55,7 +56,7 @@ static mx_handle_t thread_create(thread_start_func_t entry, void* arg,
                                  const char* name) {
     if (!name)
         name = "";
-    mx_handle_t handle = mx_thread_create(entry, arg, name, strlen(name) + 1);
+    mx_handle_t handle = tu_thread_create(entry, arg, name);
     unittest_printf("created thread, handle %d\n", handle);
     return handle;
 }
@@ -187,7 +188,7 @@ static bool msg_loop(mx_handle_t pipe) {
     return true;
 }
 
-static int worker_thread_func(void* arg) {
+static intptr_t worker_thread_func(void* arg) {
     thread_data_t* data = arg;
     msg_loop(data->pipe);
     unittest_printf("thread %d exiting\n", data->thread_num);

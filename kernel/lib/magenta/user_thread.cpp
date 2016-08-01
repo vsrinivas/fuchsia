@@ -29,11 +29,9 @@
 
 UserThread::UserThread(mx_koid_t koid,
                        utils::RefPtr<ProcessDispatcher> process,
-                       thread_start_routine entry, void* arg)
+                       uint32_t flags)
     : koid_(koid),
       process_(utils::move(process)),
-      entry_(entry),
-      arg_(arg),
       state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 }
@@ -51,10 +49,10 @@ UserThread::~UserThread() {
     LTRACEF("done joining LK thread\n");
     DEBUG_ASSERT_MSG(ret == NO_ERROR, "thread_join returned something other than NO_ERROR\n");
 
-    process_->aspace()->FreeRegion(reinterpret_cast<vaddr_t>(user_stack_));
     cond_destroy(&exception_wait_cond_);
 }
 
+// complete initialization of the thread object outside of the constructor
 status_t UserThread::Initialize(utils::StringPiece name) {
     LTRACE_ENTRY_OBJ;
 
@@ -101,21 +99,31 @@ status_t UserThread::Initialize(utils::StringPiece name) {
     return NO_ERROR;
 }
 
-void UserThread::Start() {
+// start a thread
+status_t UserThread::Start(uintptr_t entry, uintptr_t stack, uintptr_t arg) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
 
-    DEBUG_ASSERT(state_ == State::INITIALIZED);
+    if (state_ != State::INITIALIZED)
+        return ERR_BAD_STATE;
 
-    __UNUSED auto ret = process_->AddThread(this);
+    // save the user space entry state
+    user_entry_ = entry;
+    user_stack_ = stack;
+    user_arg_ = arg;
 
-    // XXX deal with this case differently
-    DEBUG_ASSERT(ret == NO_ERROR);
+    // add ourselves to the process, which may fail if the process is in a dead state
+    auto ret = process_->AddThread(this);
+    if (ret < 0)
+        return ret;
 
+    // mark ourselves as running and resume the kernel thread
     SetState(State::RUNNING);
 
     thread_resume(&thread_);
+
+    return NO_ERROR;
 }
 
 // called in the context of our thread
@@ -236,16 +244,15 @@ int UserThread::StartRoutine(void* arg) {
 
     UserThread* t = (UserThread*)arg;
 
-    // create a user stack for the new thread
-    auto err = t->process_->aspace()->Alloc("user stack", kDefaultStackSize, &t->user_stack_, PAGE_SIZE_SHIFT, 0,
-                                            ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_READ |
-                                            ARCH_MMU_FLAG_PERM_WRITE);
-    LTRACEF("alloc returns %d, stack at %p\n", err, t->user_stack_);
+    // check that the entry point makes sense and we haven't forgotten to set it
+    DEBUG_ASSERT(t->user_entry_);
 
-    LTRACEF("arch_enter_uspace SP: %p PC: %p\n", t->user_stack_, t->entry_);
+    LTRACEF("arch_enter_uspace SP: 0x%lx PC: 0x%lx, ARG: 0x%lx\n", t->user_stack_, t->user_entry_, t->user_arg_);
+
     // switch to user mode and start the process
-    arch_enter_uspace(reinterpret_cast<vaddr_t>(t->entry_),
-                      reinterpret_cast<uintptr_t>(t->user_stack_) + kDefaultStackSize, t->arg_);
+    arch_enter_uspace(reinterpret_cast<vaddr_t>(t->user_entry_),
+                      reinterpret_cast<uintptr_t>(t->user_stack_),
+                      reinterpret_cast<void *>(t->user_arg_)); // TODO: change enter_uspace api to use uinptr_ts
 
     __UNREACHABLE;
 }

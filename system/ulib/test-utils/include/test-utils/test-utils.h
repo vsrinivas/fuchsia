@@ -23,7 +23,7 @@ __BEGIN_CDECLS
 #define TU_WATCHDOG_DURATION_SECONDS 2
 #define TU_WATCHDOG_DURATION_NANOSECONDS ((int64_t) TU_WATCHDOG_DURATION_SECONDS * 1000 * 1000 * 1000)
 
-typedef int (*tu_thread_start_func_t)(void*);
+typedef intptr_t (*tu_thread_start_func_t)(void*);
 
 void* tu_malloc(size_t size);
 

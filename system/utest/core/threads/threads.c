@@ -8,8 +8,10 @@
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
+#include <test-utils/test-utils.h>
+#include <runtime/thread.h>
 
-static int thread_1(void* arg) {
+static intptr_t thread_1(void* arg) {
     unittest_printf("thread 1 sleeping for .1 seconds\n");
     struct timespec t = (struct timespec){
         .tv_sec = 0,
@@ -28,7 +30,7 @@ bool threads_test(void) {
     unittest_printf("Welcome to thread test!\n");
 
     for (int i = 0; i != 4; ++i) {
-        handle = mx_thread_create(thread_1, NULL, "thread 1", 9);
+        handle = tu_thread_create(thread_1, NULL, "thread 1");
         ASSERT_GT(handle, 0, "Error while creating thread");
         unittest_printf("thread:%d created handle %d\n", i, handle);
 
@@ -39,16 +41,11 @@ bool threads_test(void) {
     }
 
     unittest_printf("Attempting to create thread with a super long name. This should fail\n");
-    handle = mx_thread_create(thread_1, NULL,
-                                    "01234567890123456789012345678901234567890123456789012345678901234567890123456789", 81);
-    ASSERT_LT(handle, 0, "Thread creation should have failed");
-    unittest_printf("mx_thread_create returned %u\n", handle);
-
-    unittest_printf("Attempting to create thread with a null. This should fail\n");
-    handle = mx_thread_create(thread_1, NULL, NULL, 0);
-    ASSERT_LT(handle, 0, "Error while creating thread");
-    unittest_printf("mx_thread_create returned %u\n", handle);
-    mx_handle_close(handle);
+    mxr_thread_t *t = NULL;
+    mx_status_t status = mxr_thread_create(thread_1, NULL,
+                                    "01234567890123456789012345678901234567890123456789012345678901234567890123456789", &t);
+    ASSERT_LT(status, 0, "Thread creation should have failed");
+    unittest_printf("mxr_thread_create returned %d\n", status);
 
     END_TEST;
 }

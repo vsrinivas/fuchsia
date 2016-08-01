@@ -7,6 +7,7 @@
 #include <unittest/unittest.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <test-utils/test-utils.h>
 #include <unistd.h>
 
 mx_handle_t _pipe[4];
@@ -33,7 +34,7 @@ mx_handle_t _pipe[4];
  *  14. Reader wake up with pipe 2 closed, closes both pipes and exit.
  */
 
-static int reader_thread(void* arg) {
+static intptr_t reader_thread(void* arg) {
     const unsigned int index = 2;
     mx_handle_t* pipe = &_pipe[index];
     mx_status_t status;
@@ -113,7 +114,7 @@ bool message_pipe_test(void) {
     _pipe[3] = h[1];
 
     const char* reader = "reader";
-    mx_handle_t thread = mx_thread_create(reader_thread, NULL, reader, strlen(reader) + 1);
+    mx_handle_t thread = tu_thread_create(reader_thread, NULL, reader);
     ASSERT_GE(thread, 0, "error in thread create");
 
     status = mx_message_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);

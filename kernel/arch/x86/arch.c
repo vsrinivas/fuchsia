@@ -64,9 +64,6 @@ void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void* thread
 {
     LTRACEF("entry 0x%lx user stack 0x%lx\n", entry_point, user_stack_top);
 
-    DEBUG_ASSERT(IS_ALIGNED(user_stack_top, 16));
-    user_stack_top -= 8; /* start the user stack 8 byte unaligned, which is how the abi expects it */
-
     arch_disable_ints();
 
 #if ARCH_X86_32

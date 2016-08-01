@@ -20,7 +20,7 @@
 // 5 seconds
 #define WATCHDOG_DURATION_TICKS 10
 
-static int thread_func(void* arg);
+static intptr_t thread_func(void* arg);
 
 static const char test_child_path[] = "/boot/test/exception-test";
 static const char test_child_name[] = "exceptions_test_child";
@@ -222,14 +222,14 @@ static bool msg_loop(mx_handle_t pipe)
     return true;
 }
 
-static int thread_func(void* arg)
+static intptr_t thread_func(void* arg)
 {
     unittest_printf("test thread starting\n");
     mx_handle_t msg_pipe = (mx_handle_t) (uintptr_t) arg;
     msg_loop(msg_pipe);
     unittest_printf("test thread exiting\n");
     tu_handle_close(msg_pipe);
-    mx_thread_exit();
+    return 0;
 }
 
 static void test_child(void) __NO_RETURN;
@@ -261,7 +261,7 @@ static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_pipe)
     unittest_printf("Test child started.\n");
 }
 
-static int watchdog_thread_func(void* arg)
+static intptr_t watchdog_thread_func(void* arg)
 {
     for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i)
     {

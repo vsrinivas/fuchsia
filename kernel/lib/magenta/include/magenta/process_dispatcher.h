@@ -28,7 +28,7 @@ class ProcessDispatcher : public Dispatcher
 public:
     static mx_status_t Create(utils::StringPiece name,
                               utils::RefPtr<Dispatcher>* dispatcher,
-                              mx_rights_t* rights);
+                              mx_rights_t* rights, uint32_t flags);
 
     static ProcessDispatcher* GetCurrent() {
         UserThread* current = UserThread::GetCurrent();
@@ -90,16 +90,14 @@ public:
     const utils::StringPiece name() const { return name_; }
 
     // Starts the process running
-    status_t Start(void* arg, mx_vaddr_t vaddr);
+    status_t Start(ThreadDispatcher *thread, uintptr_t entry, uintptr_t stack, mx_handle_t arg);
 
     void Exit(int retcode);
     void Kill();
 
     status_t GetInfo(mx_process_info_t* info);
 
-    status_t CreateUserThread(utils::StringPiece name,
-                              thread_start_routine entry, void* arg,
-                              utils::RefPtr<UserThread>* user_thread);
+    status_t CreateUserThread(utils::StringPiece name, uint32_t flags, utils::RefPtr<UserThread>* user_thread);
 
     // exception handling support
     status_t SetExceptionPort(utils::RefPtr<ExceptionPort> eport);
@@ -127,7 +125,7 @@ private:
     friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
     friend void DumpProcessHandles(mx_koid_t id);
 
-    explicit ProcessDispatcher(utils::StringPiece name);
+    ProcessDispatcher(utils::StringPiece name, uint32_t flags);
 
     ProcessDispatcher(const ProcessDispatcher&) = delete;
     ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
@@ -181,9 +179,6 @@ private:
 
     // process return code
     int retcode_ = 0;
-
-    // main entry point to the process
-    thread_start_routine entry_ = nullptr;
 
     utils::RefPtr<ExceptionPort> exception_port_;
     Mutex exception_lock_;
