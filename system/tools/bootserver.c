@@ -283,9 +283,9 @@ int main(int argc, char** argv) {
     }
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &n, sizeof(n));
     if ((r = bind(s, (void*)&addr, sizeof(addr))) < 0) {
-        fprintf(stderr, "%s: cannot bind to [%s]%d %d\n", appname,
+        fprintf(stderr, "%s: cannot bind to [%s]%d %d: %s\n", appname,
                 inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)),
-                ntohs(addr.sin6_port), r);
+                ntohs(addr.sin6_port), errno, strerror(errno));
         return -1;
     }
 
