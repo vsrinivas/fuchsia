@@ -10,6 +10,7 @@
 
 #include <limits>
 
+#include "lib/ftl/build_config.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 #include "lib/ftl/synchronization/mutex.h"
@@ -26,20 +27,44 @@ namespace {
 bool RelativeTimedWait(TimeDelta timeout_rel,
                        pthread_cond_t* posix_cond_var,
                        pthread_mutex_t* posix_mutex) {
+// Mac has a function to do a relative timed wait directly.
+#if defined(OS_MACOSX)
+  struct timespec timespec_rel = timeout_rel.ToTimespec();
+
+  int error = pthread_cond_timedwait_relative_np(posix_cond_var, posix_mutex,
+                                                 &timespec_rel);
+  FTL_DCHECK_WITH_ERRNO(error == 0 || error == ETIMEDOUT || error == EINTR,
+                        "pthread_cond_timedwait_relative_np", error);
+  return error == ETIMEDOUT;
+#else
   TimePoint timeout_abs = TimePoint::Now() + timeout_rel;
 
   struct timespec timespec_abs = (timeout_abs - TimePoint()).ToTimespec();
 
-  int error =
-      pthread_cond_timedwait(posix_cond_var, posix_mutex, &timespec_abs);
+  int error;
+// Older Android doesn't have |pthread_condattr_setclock()|, but they have
+// |pthread_cond_timedwait_monotonic_np()|.
+#if defined(OS_ANDROID) && defined(HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC)
+  error = pthread_cond_timedwait_monotonic_np(posix_cond_var, posix_mutex,
+                                              &timespec_abs);
+  FTL_DCHECK_WITH_ERRNO(error == 0 || error == ETIMEDOUT || error == EINTR,
+                        "pthread_cond_timedwait_monotonic_np", error);
+#else
+  error = pthread_cond_timedwait(posix_cond_var, posix_mutex, &timespec_abs);
   FTL_DCHECK_WITH_ERRNO(error == 0 || error == ETIMEDOUT || error == EINTR,
                         "pthread_cond_timedwait", error);
+#endif  // defined(OS_ANDROID) && defined(HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC)
   return error == ETIMEDOUT;
+#endif  // defined(OS_MACOSX)
 }
 
 }  // namespace
 
 CondVar::CondVar() {
+// Mac and older Android don't have |pthread_condattr_setclock()| (but they have
+// other timed wait functions we can use).
+#if !defined(OS_MACOSX) && \
+    !(defined(OS_ANDROID) && defined(HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC))
   pthread_condattr_t attr;
   int error = pthread_condattr_init(&attr);
   FTL_DCHECK_WITH_ERRNO(!error, "pthread_condattr_init", error);
@@ -49,6 +74,10 @@ CondVar::CondVar() {
   FTL_DCHECK_WITH_ERRNO(!error, "pthread_cond_init", error);
   error = pthread_condattr_destroy(&attr);
   FTL_DCHECK_WITH_ERRNO(!error, "pthread_condattr_destroy", error);
+#else
+  int error = pthread_cond_init(&impl_, nullptr);
+  FTL_DCHECK_WITH_ERRNO(!error, "pthread_cond_init", error);
+#endif  // !defined(OS_MACOSX) && !(defined(OS_ANDROID)...)
 }
 
 CondVar::~CondVar() {
