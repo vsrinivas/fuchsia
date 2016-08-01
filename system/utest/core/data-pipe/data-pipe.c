@@ -290,7 +290,7 @@ static bool begin_write_read_large_request(void) {
 
     uintptr_t buffer = 0;
     mx_ssize_t avail = mx_data_pipe_begin_write(producer, 0u, UINTPTR_MAX, &buffer);
-    ASSERT_GT(avail, 0u, "begin_write failed");
+    ASSERT_GT(avail, 0, "begin_write failed");
 
     uint32_t data[5] = {7u, 3u, 2u, 8u, 11u};
     memcpy((void*)buffer, data, sizeof(data));
