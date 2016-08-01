@@ -63,4 +63,9 @@ config("executable_config") {
 
 config("static_config") {
   ldflags = [ "-static" ]
+  libs = [
+    "magenta",
+    "mxio",  # TODO: This is wrong, remove when the weak symbols in libc are sorted.
+    "runtime",
+  ]
 }
