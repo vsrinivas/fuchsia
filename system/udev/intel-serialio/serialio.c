@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ddk/protocol/pci.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
 #include <system/listnode.h>
@@ -38,28 +38,30 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_status_t res;
     switch (pci_config->device_id) {
-    case INTEL_BROADWELL_SERIALIO_DMA_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_DMA_DID:
         res = intel_serialio_bind_dma(drv, dev);
         break;
-    case INTEL_BROADWELL_SERIALIO_I2C0_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID:
+    case INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID:
+    case INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID:
+    case INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID:
+    case INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID:
         res = intel_serialio_bind_i2c(drv, dev);
         break;
-    case INTEL_BROADWELL_SERIALIO_I2C1_DID:
-        res = intel_serialio_bind_i2c(drv, dev);
-        break;
-    case INTEL_BROADWELL_SERIALIO_SDIO_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_SDIO_DID:
         res = intel_serialio_bind_sdio(drv, dev);
         break;
-    case INTEL_BROADWELL_SERIALIO_SPI0_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_SPI0_DID:
         res = intel_serialio_bind_spi(drv, dev);
         break;
-    case INTEL_BROADWELL_SERIALIO_SPI1_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_SPI1_DID:
         res = intel_serialio_bind_spi(drv, dev);
         break;
-    case INTEL_BROADWELL_SERIALIO_UART0_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_UART0_DID:
         res = intel_serialio_bind_uart(drv, dev);
         break;
-    case INTEL_BROADWELL_SERIALIO_UART1_DID:
+    case INTEL_WILDCAT_POINT_SERIALIO_UART1_DID:
         res = intel_serialio_bind_uart(drv, dev);
         break;
     default:
@@ -74,14 +76,18 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_DMA_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_I2C0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_I2C1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_SDIO_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_SPI0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_SPI1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_UART0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_BROADWELL_SERIALIO_UART1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_DMA_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_SDIO_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_SPI0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_SPI1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_UART0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_UART1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
 };
 
 mx_driver_t _intel_serialio BUILTIN_DRIVER = {

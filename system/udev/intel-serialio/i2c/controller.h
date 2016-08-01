@@ -15,9 +15,9 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <system/listnode.h>
 #include <runtime/mutex.h>
 #include <stdint.h>
+#include <system/listnode.h>
 
 typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
     uint32_t ctl;
@@ -61,13 +61,8 @@ typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
     uint32_t _reserved4[21];
     uint32_t comp_param1;
     uint32_t comp_ver;
-    uint32_t _reserved5[450];
-    uint32_t resets;
-    uint32_t general;
-    uint32_t _reserved6[1];
-    uint32_t sw_ltr_value;
-    uint32_t auto_ltr_value;
 } intel_serialio_i2c_regs;
+_Static_assert(sizeof(intel_serialio_i2c_regs) <= 0x200, "bad struct");
 
 enum {
     I2C_MAX_FAST_SPEED_HZ = 400000,
@@ -88,7 +83,7 @@ enum {
     CTL_ADDRESSING_MODE_10BIT = 0x1,
 
     CTL_SPEED = 1,
-    CTL_SPEED_STANDARD = 0x0,
+    CTL_SPEED_STANDARD = 0x1,
     CTL_SPEED_FAST = 0x2,
 
     CTL_MASTER_MODE = 0,
@@ -142,10 +137,13 @@ typedef struct intel_serialio_i2c_device {
     mx_device_t device;
 
     intel_serialio_i2c_regs* regs;
+    volatile uint32_t* soft_reset;
+
     uint64_t regs_size;
     mx_handle_t regs_handle;
 
-    uint32_t frequency;
+    uint32_t controller_freq;
+    uint32_t bus_freq;
 
     struct list_node slave_list;
 
@@ -153,7 +151,7 @@ typedef struct intel_serialio_i2c_device {
 } intel_serialio_i2c_device_t;
 
 mx_status_t intel_serialio_i2c_reset_controller(
-    intel_serialio_i2c_device_t *controller);
+    intel_serialio_i2c_device_t* controller);
 
 #define get_intel_serialio_i2c_device(dev) \
     containerof(dev, intel_serialio_i2c_device_t, device)

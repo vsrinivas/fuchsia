@@ -22,11 +22,11 @@
 #include <intel-serialio/serialio.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <system/listnode.h>
 #include <runtime/mutex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <system/listnode.h>
 
 #include "controller.h"
 #include "slave.h"
@@ -138,56 +138,94 @@ remove_slave_finish:
     return NO_ERROR;
 }
 
-static mx_status_t intel_serialio_i2c_set_bus_frequency_locked(
-    mx_device_t *dev, uint32_t frequency) {
-    if (frequency > I2C_MAX_FAST_SPEED_HZ)
-        return ERR_INVALID_ARGS;
+static uint32_t intel_serialio_compute_scl_hcnt(
+    uint32_t controller_freq,
+    uint32_t t_high_nanos,
+    uint32_t t_r_nanos) {
 
-    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
+    uint32_t clock_freq_kilohz = controller_freq / 1000;
 
-    // Assume the base clock_frequency is 100 MHz, as alluded to in the docs.
-    uint32_t clock_frequency = 100 * 1000 * 1000;
+    // We need high count to satisfy highcount + 3 >= clock * (t_HIGH + t_r_max)
+    // Apparently the counter starts as soon as the controller releases SCL, so
+    // include t_r to account for potential delay in rising.
+    //
+    // In terms of units, the division should really be thought of as a
+    // (1 s)/(1000000000 ns) factor to get this into the right scale.
+    uint32_t high_count =
+        (clock_freq_kilohz * (t_high_nanos + t_r_nanos) + 500000);
+    return high_count / 1000000 - 3;
+}
 
-    // Compute high and low counts in multiples of the clock frequency. Make
-    // them approximately equal.
+static uint32_t intel_serialio_compute_scl_lcnt(
+    uint32_t controller_freq,
+    uint32_t t_low_nanos,
+    uint32_t t_f_nanos) {
 
-    uint32_t period = clock_frequency / frequency;
-    uint32_t high_count = period / 2;
-    uint32_t low_count = period - high_count;
+    uint32_t clock_freq_kilohz = controller_freq / 1000;
+
+    // We need low count to satisfy lowcount + 1 >= clock * (t_LOW + t_f_max)
+    // Apparently the counter starts as soon as the controller pulls SCL low, so
+    // include t_f to account for potential delay in falling.
+    //
+    // In terms of units, the division should really be thought of as a
+    // (1 s)/(1000000000 ns) factor to get this into the right scale.
+    uint32_t low_count =
+        (clock_freq_kilohz * (t_low_nanos + t_f_nanos) + 500000);
+    return low_count / 1000000 - 1;
+}
+
+static mx_status_t intel_serialio_configure_bus_timing(
+    intel_serialio_i2c_device_t* device) {
+
+    uint32_t clock_frequency = device->controller_freq;
+
+    // These constants are from the i2c timing requirements
+    uint32_t fs_hcnt = intel_serialio_compute_scl_hcnt(
+        clock_frequency, 600, 300);
+    uint32_t fs_lcnt = intel_serialio_compute_scl_lcnt(
+        clock_frequency, 1300, 300);
+    uint32_t ss_hcnt = intel_serialio_compute_scl_hcnt(
+        clock_frequency, 4000, 300);
+    uint32_t ss_lcnt = intel_serialio_compute_scl_lcnt(
+        clock_frequency, 4700, 300);
 
     // Make sure the counts are within bounds.
-    if (high_count >= (1 << 16) || high_count < 6 ||
-        low_count >= (1 << 16) || low_count < 8) {
+    if (fs_hcnt >= (1 << 16) || fs_hcnt < 6 ||
+        fs_lcnt >= (1 << 16) || fs_lcnt < 8) {
+        return ERR_OUT_OF_RANGE;
+    }
+    if (ss_hcnt >= (1 << 16) || ss_hcnt < 6 ||
+        ss_lcnt >= (1 << 16) || ss_lcnt < 8) {
         return ERR_OUT_OF_RANGE;
     }
 
-    // Disable the controller before changing the frequency.
-    uint32_t orig_en = *REG32(&device->regs->i2c_en);
-    RMWREG32(&device->regs->i2c_en, I2C_EN_ENABLE, 1, 0);
-
-    // Write the computed high and low counts into the fast speed registers.
-    RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, high_count);
-    RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, low_count);
-
-    // Reenable the controller, if it was originally enabled.
-    *REG32(&device->regs->i2c_en) = orig_en;
-
-    device->frequency = frequency;
-
+    RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, fs_hcnt);
+    RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, fs_lcnt);
+    RMWREG32(&device->regs->ss_scl_hcnt, 0, 16, ss_hcnt);
+    RMWREG32(&device->regs->ss_scl_lcnt, 0, 16, ss_lcnt);
     return NO_ERROR;
 }
 
-static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t *dev,
+static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t* dev,
                                                         uint32_t frequency) {
-    mx_status_t status;
+    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
 
-    intel_serialio_i2c_device_t *device = get_intel_serialio_i2c_device(dev);
+    if (frequency != I2C_MAX_FAST_SPEED_HZ &&
+        frequency != I2C_MAX_STANDARD_SPEED_HZ) {
+        return ERR_INVALID_ARGS;
+    }
 
     mxr_mutex_lock(&device->mutex);
-    status = intel_serialio_i2c_set_bus_frequency_locked(dev, frequency);
+    device->bus_freq = frequency;
+
+    unsigned int speed = CTL_SPEED_STANDARD;
+    if (device->bus_freq == I2C_MAX_FAST_SPEED_HZ) {
+        speed = CTL_SPEED_FAST;
+    }
+    RMWREG32(&device->regs->ctl, CTL_SPEED, 2, speed);
     mxr_mutex_unlock(&device->mutex);
 
-    return status;
+    return NO_ERROR;
 }
 
 static ssize_t intel_serialio_i2c_ioctl(
@@ -237,25 +275,30 @@ static mx_protocol_device_t intel_serialio_i2c_device_proto = {
 
 // The controller lock should already be held when entering this function.
 mx_status_t intel_serialio_i2c_reset_controller(
-    intel_serialio_i2c_device_t *device) {
+    intel_serialio_i2c_device_t* device) {
     mx_status_t status = NO_ERROR;
 
-    // Reset the device. These values are reversed in the docs.
-    RMWREG32(&device->regs->resets, 0, 2, 0x0);
-    RMWREG32(&device->regs->resets, 0, 2, 0x3);
-
-    status = intel_serialio_i2c_set_bus_frequency_locked(&device->device,
-                                                         device->frequency);
-    if (status < 0)
-        return status;
+    // Reset the device.
+    RMWREG32(device->soft_reset, 0, 2, 0x0);
+    RMWREG32(device->soft_reset, 0, 2, 0x3);
 
     // Disable the controller.
     RMWREG32(&device->regs->i2c_en, I2C_EN_ENABLE, 1, 0);
 
+    // Reconfigure the bus timing
+    status = intel_serialio_configure_bus_timing(device);
+    if (status < 0)
+        return status;
+
+    unsigned int speed = CTL_SPEED_STANDARD;
+    if (device->bus_freq == I2C_MAX_FAST_SPEED_HZ) {
+        speed = CTL_SPEED_FAST;
+    }
+
     *REG32(&device->regs->ctl) =
         (0x1 << CTL_SLAVE_DISABLE) |
         (0x1 << CTL_RESTART_ENABLE) |
-        (CTL_SPEED_FAST << CTL_SPEED) |
+        (speed << CTL_SPEED) |
         (CTL_MASTER_MODE_ENABLED << CTL_MASTER_MODE);
 
     //XXX Do we need this?
@@ -265,6 +308,58 @@ mx_status_t intel_serialio_i2c_reset_controller(
     *REG32(&device->regs->tx_tl) = 0;
 
     return status;
+}
+
+static mx_status_t intel_serialio_i2c_device_specific_init(
+    intel_serialio_i2c_device_t* device,
+    const pci_config_t* pci_config) {
+
+    static const struct {
+        uint16_t device_ids[16];
+        // Offset of the soft reset register
+        size_t reset_offset;
+        // Internal controller frequency, in hertz
+        uint32_t controller_clock_frequency;
+    } dev_props[] = {
+        {
+            .device_ids = {
+                INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID,
+                INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID,
+                INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID,
+                INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID,
+            },
+            .reset_offset = 0x204,
+            .controller_clock_frequency = 120 * 1000 * 1000,
+        },
+        {
+            .device_ids = {
+                INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID,
+            },
+            .reset_offset = 0x804,
+            .controller_clock_frequency = 100 * 1000 * 1000,
+        },
+    };
+
+    uint16_t device_id = pci_config->device_id;
+
+    for (unsigned int i = 0; i < countof(dev_props); ++i) {
+        const unsigned int num_dev_ids = countof(dev_props[0].device_ids);
+        for (unsigned int dev_idx = 0; dev_idx < num_dev_ids; ++dev_idx) {
+            if (!dev_props[i].device_ids[dev_idx]) {
+                break;
+            }
+            if (dev_props[i].device_ids[dev_idx] != device_id) {
+                continue;
+            }
+
+            device->controller_freq = dev_props[i].controller_clock_frequency;
+            device->soft_reset = (void*)device->regs +
+                                 dev_props[i].reset_offset;
+            return NO_ERROR;
+        }
+    }
+
+    return ERR_NOT_SUPPORTED;
 }
 
 mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
@@ -280,11 +375,15 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     if (!device)
         return ERR_NO_MEMORY;
 
-    // Run the bus at 100KHz by default.
-    device->frequency = 100000;
-
     list_initialize(&device->slave_list);
     memset(&device->mutex, 0, sizeof(device->mutex));
+
+    const pci_config_t* pci_config;
+    mx_handle_t config_handle = pci->get_config(dev, &pci_config);
+    if (config_handle < 0) {
+        status = config_handle;
+        goto fail;
+    }
 
     device->regs_handle = pci->map_mmio(
         dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -294,7 +393,16 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
         goto fail;
     }
 
-    status = device_init(&device->device, drv, "intel_serialio_i2c",
+    // Run the bus at standard speed by default.
+    device->bus_freq = I2C_MAX_STANDARD_SPEED_HZ;
+
+    status = intel_serialio_i2c_device_specific_init(device, pci_config);
+    if (status < 0)
+        goto fail;
+
+    char name[MX_DEVICE_NAME_MAX];
+    snprintf(name, sizeof(name), "i2c-bus-%04x", pci_config->device_id);
+    status = device_init(&device->device, drv, name,
                          &intel_serialio_i2c_device_proto);
     if (status < 0)
         goto fail;
@@ -314,11 +422,14 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
         "reg=%#x regsize=%#x\n",
         device->regs, device->regs_size);
 
+    mx_handle_close(config_handle);
     return NO_ERROR;
 
 fail:
-    if (device->regs_handle >= 0)
+    if (device->regs_handle > 0)
         mx_handle_close(device->regs_handle);
+    if (config_handle)
+        mx_handle_close(config_handle);
     free(device);
 
     return status;
