@@ -120,9 +120,7 @@ USERLIB_SO_LDFLAGS := $(USER_DYNAMIC_LDFLAGS) -z defs
 # as PT_INTERP.  The launchpad library looks this up via the
 # "loader service", so it should be a simple name rather than an
 # absolute pathname as is used for this on other systems.
-# TODO(mcgrathr): Probably want to make this ld.so.1 and rejigger
-# the rules for where we install things.
-USER_SHARED_INTERP := libc.so
+USER_SHARED_INTERP := ld.so.1
 
 # Additional flags for building dynamically-linked executables.
 USERAPP_SHARED_LDFLAGS := \
