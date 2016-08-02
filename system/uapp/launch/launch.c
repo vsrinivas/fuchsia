@@ -97,12 +97,13 @@ int main(int argc, char** argv) {
             }
             break;
         case 'e':
-            env = realloc(env, ++envsize * sizeof(env[0]));
+            env = realloc(env, (++envsize + 1) * sizeof(env[0]));
             if (env == NULL) {
                 perror("realloc");
                 return 2;
             }
             env[envsize - 1] = optarg;
+            env[envsize] = NULL;
             break;
         case 'f':
             program = optarg;
