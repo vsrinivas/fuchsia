@@ -16,8 +16,8 @@
 namespace mtl {
 
 // Asynchronously copies data from source to the destination file descriptor.
-// The given |callback| is run upon completion. File writes will be scheduled to
-// the given |task_runner|.
+// The given |callback| is run upon completion. File writes and |callback| will
+// be scheduled on the given |task_runner|.
 void CopyToFileDescriptor(
     mojo::ScopedDataPipeConsumerHandle source,
     ftl::UniqueFD destination,
@@ -25,8 +25,8 @@ void CopyToFileDescriptor(
     const std::function<void(bool /*success*/)>& callback);
 
 // Asynchronously copies data from source file to the destination. The given
-// |callback| is run upon completion. File writes will be scheduled to the
-// given |task_runner|.
+// |callback| is run upon completion. File reads and |callback| will be
+// scheduled to the given |task_runner|.
 void CopyFromFileDescriptor(
     ftl::UniqueFD source,
     mojo::ScopedDataPipeProducerHandle destination,

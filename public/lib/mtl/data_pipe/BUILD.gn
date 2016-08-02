@@ -16,10 +16,6 @@ source_set("data_pipe") {
     "vector.h",
   ]
 
-  deps = [
-    "//lib/mtl/tasks",
-  ]
-
   public_deps = [
     "//lib/ftl",
     "//mojo/public/cpp/environment",
