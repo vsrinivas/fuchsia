@@ -1,0 +1,13 @@
+{
+    "labels": [ "//libc-tests" ],
+    "binaries": [
+        {
+            "binary": "libc-tests",
+            "bootfs_path": "test/libc-tests"
+        },
+        {
+            "binary": "libc-tests-broken",
+            "bootfs_path": "bin/libc-tests-broken"
+        }
+    ]
+}

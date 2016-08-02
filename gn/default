@@ -5,6 +5,7 @@
         "fortune",
         "ftl",
         "leveldb",
+        "libc-tests",
         "mojo",
         "mtl",
         "re2",
