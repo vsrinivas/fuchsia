@@ -261,11 +261,35 @@ bool message_pipe_non_transferable(void) {
     END_TEST;
 }
 
+bool message_pipe_duplicate_handles(void) {
+    BEGIN_TEST;
+
+    mx_handle_t pipe[2];
+    ASSERT_EQ(mx_message_pipe_create(pipe, 0), NO_ERROR, "");
+
+    mx_handle_t event = mx_event_create(0u);
+    ASSERT_GT(event, 0, "failed to create event");
+
+    mx_handle_t dup_handles[2] = { event, event };
+    mx_status_t write_result = mx_message_write(pipe[0], NULL, 0, dup_handles, 2u, 0u);
+    EXPECT_EQ(write_result, ERR_INVALID_ARGS, "message_write should fail with ERR_INVALID_ARGS");
+
+    mx_status_t close_result = mx_handle_close(event);
+    EXPECT_EQ(close_result, NO_ERROR, "");
+    close_result = mx_handle_close(pipe[0]);
+    EXPECT_EQ(close_result, NO_ERROR, "");
+    close_result = mx_handle_close(pipe[1]);
+    EXPECT_EQ(close_result, NO_ERROR, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(message_pipe_tests)
 RUN_TEST(message_pipe_test)
 RUN_TEST(message_pipe_read_error_test)
 RUN_TEST(message_pipe_close_test)
 RUN_TEST(message_pipe_non_transferable)
+RUN_TEST(message_pipe_duplicate_handles)
 END_TEST_CASE(message_pipe_tests)
 
 #ifndef BUILD_COMBINED_TESTS

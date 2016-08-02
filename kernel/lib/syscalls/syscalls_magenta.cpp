@@ -530,7 +530,16 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
         }
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
-            up->RemoveHandle_NoLock(handles[ix]).release();
+            auto handle = up->RemoveHandle_NoLock(handles[ix]).release();
+            // Passing duplicate handles is not allowed.
+            // If we've already seen this handle flag an error.
+            if (!handle) {
+                // Put back the handles we've already removed.
+                for (size_t idx = 0; idx < ix; ++idx) {
+                    up->UndoRemoveHandle_NoLock(handles[idx]);
+                }
+                return ERR_INVALID_ARGS;
+            }
         }
     }
 
