@@ -21,6 +21,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/port_tests.c \
     $(LOCAL_DIR)/printf_tests.c \
     $(LOCAL_DIR)/sync_ipi_tests.c \
+    $(LOCAL_DIR)/sleep_tests.c \
     $(LOCAL_DIR)/tests.c \
     $(LOCAL_DIR)/thread_tests.c \
     $(LOCAL_DIR)/alloc_checker_tests.cpp \
