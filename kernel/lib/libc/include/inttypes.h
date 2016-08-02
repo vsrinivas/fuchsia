@@ -12,8 +12,8 @@
 #define PRIx32 "x"
 #define PRIu64 "llu"
 #define PRIx64 "llx"
+#define PRIxPTR "lx"
 
 #include <stdint.h>
 
 #endif
-
