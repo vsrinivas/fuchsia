@@ -41,6 +41,25 @@ static bool test_futex_wait_timeout() {
     END_TEST;
 }
 
+// This test checks that the timeout in futex_wait() is respected
+static bool test_futex_wait_timeout_elapsed() {
+    BEGIN_TEST;
+    int futex_value = 0;
+    constexpr time_t kRelativeDeadline = 500 * 1000 * 1000;
+    for (int i = 0; i < 5; ++i) {
+        mx_time_t now = mx_current_time();
+        mx_status_t rc = mx_futex_wait(&futex_value, 0, kRelativeDeadline);
+        ASSERT_EQ(rc, ERR_TIMED_OUT, "wait should time out");
+        mx_time_t elapsed = mx_current_time() - now;
+        if (elapsed < kRelativeDeadline) {
+            unittest_printf("\nelapsed %llu < kRelativeDeadline: %llu\n", elapsed, kRelativeDeadline);
+            EXPECT_TRUE(false, "wait returned early");
+        }
+    }
+    END_TEST;
+}
+
+
 static bool test_futex_wait_bad_address() {
     BEGIN_TEST;
     // Check that the wait address is checked for validity.
@@ -416,6 +435,7 @@ static bool test_event_signalling() {
 BEGIN_TEST_CASE(futex_tests)
 RUN_TEST(test_futex_wait_value_mismatch);
 RUN_TEST(test_futex_wait_timeout);
+RUN_TEST(test_futex_wait_timeout_elapsed);
 RUN_TEST(test_futex_wait_bad_address);
 RUN_TEST(test_futex_wakeup);
 RUN_TEST(test_futex_wakeup_limit);
