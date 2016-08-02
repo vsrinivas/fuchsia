@@ -16,7 +16,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp-static
+MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/mxsh.c \
@@ -24,8 +24,11 @@ MODULE_SRCS += \
 
 MODULE_NAME := mxsh
 
-MODULE_STATIC_LIBS := \
-    ulib/mxio ulib/launchpad ulib/magenta ulib/ddk ulib/runtime ulib/musl-static
+# This is needed only for hexdump8_ex, which ought to live somewhere else.
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := \
+    ulib/mxio ulib/launchpad ulib/magenta ulib/musl
 
 USER_MANIFEST_LINES += docs/LICENSE=kernel/LICENSE
 
