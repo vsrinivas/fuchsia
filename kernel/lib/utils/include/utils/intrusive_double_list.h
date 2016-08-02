@@ -77,6 +77,7 @@ public:
     using NodeState  = DoublyLinkedListNodeState<T>;
     using PtrType    = typename PtrTraits::PtrType;
     using RawPtrType = typename PtrTraits::RawPtrType;
+    using ValueType  = typename PtrTraits::ValueType;
 
     // Declarations of the standard iterator types.
     using iterator       = iterator_impl<iterator_traits>;
@@ -122,7 +123,7 @@ public:
     const_iterator   cend() const { return const_iterator(this, nullptr); }
 
     // make_iterator : construct an iterator out of a pointer to an object
-    iterator make_iterator(const PtrType& ptr) { return iterator(this, PtrTraits::GetRaw(ptr)); }
+    iterator make_iterator(ValueType& obj) { return iterator(this, &obj); }
 
     // is_empty : True if the list has at least one element in it, false otherwise.
     bool is_empty() const { return head_ == nullptr; }
@@ -163,9 +164,9 @@ public:
         internal_insert(iter.node_, utils::move(ptr));
     }
 
-    void insert(const PtrType& before, const PtrType& ptr) { insert(before, PtrType(ptr)); }
-    void insert(const PtrType& before, PtrType&& ptr) {
-        internal_insert(PtrTraits::GetRaw(before), utils::move(ptr));
+    void insert(ValueType& before, const PtrType& ptr) { insert(before, PtrType(ptr)); }
+    void insert(ValueType& before, PtrType&& ptr) {
+        internal_insert(&before, utils::move(ptr));
     }
 
     // insert_after : Insert an element after iter in the list.
@@ -200,7 +201,7 @@ public:
     // (iter is end()), return a nullptr instance of PtrType.  It is an error to
     // attempt to use an iterator from a different instance of this list type to
     // attempt to erase a node.
-    PtrType erase(const PtrType& ptr) { return internal_erase(PtrTraits::GetRaw(ptr)); }
+    PtrType erase(ValueType& obj) { return internal_erase(&obj); }
     PtrType erase(const iterator& iter) {
         DEBUG_ASSERT(this == iter.list_);
         return internal_erase(iter.node_);

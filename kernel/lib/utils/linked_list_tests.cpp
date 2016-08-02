@@ -202,11 +202,6 @@ protected:
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
         return Base::CreateTrackedObject(ndx, value, true);
     }
-
-    const PtrType& GetInternalReference(size_t ndx) {
-        static const PtrType null_reference(nullptr);
-        return HoldingObject(ndx) ? this->objects_[ndx] : null_reference;
-    }
 };
 
 template <typename T>
@@ -228,19 +223,6 @@ protected:
 
     PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
         return Base::CreateTrackedObject(ndx, value, false);
-    }
-
-    // Note: GetInternalReference for a unique_ptr<> does not make a lot of
-    // sense.  We cannot actually provide a reference, since we are not any.  We
-    // provide an implementation (which returns nullptr) for only one reason.
-    // If someone want to check to make sure that the build breaks when
-    // attempting to make_iterator for a unique_ptr<> container, that the build
-    // fails because the cannot expand the template which implements
-    // make_iterator, not because the specialized test environment lacks an
-    // implementation of GetInternalReference.
-    const PtrType& GetInternalReference(size_t ndx) {
-        static const PtrType null_reference(nullptr);
-        return null_reference;
     }
 };
 
@@ -275,11 +257,6 @@ protected:
         return ((ndx < OBJ_COUNT) && (refed_objects_[ndx] != nullptr));
     }
 
-    const PtrType& GetInternalReference(size_t ndx) {
-        static const PtrType null_reference(nullptr);
-        return HoldingObject(ndx) ? refed_objects_[ndx] : null_reference;
-    }
-
 private:
     PtrType refed_objects_[OBJ_COUNT];
 };
@@ -293,7 +270,6 @@ public:
     using ListType        = typename ContainerTraits::ListType;
     using OtherListType   = typename ContainerTraits::OtherListType;
     using PtrTraits       = typename ListType::PtrTraits;
-    using SpBase          = TestEnvironmentSpecialized<Traits>;
 
     ~TestEnvironment() { Reset(); }
 
@@ -301,7 +277,7 @@ public:
     // valid, whether the target of the operation is expressed as an iterator or
     // as an object pointer.
     bool ValidTarget(const typename ListType::iterator& target) { return target != list().end(); }
-    bool ValidTarget(const PtrType& target) { return target != nullptr; }
+    bool ValidTarget(const ObjType& target) { return &target != nullptr; }
 
     bool Reset() {
         BEGIN_TEST;
@@ -565,7 +541,7 @@ public:
     }
 
     template <typename TargetType>
-    bool DoErase(const TargetType& target, size_t ndx, size_t remaining) {
+    bool DoErase(TargetType&& target, size_t ndx, size_t remaining) {
         BEGIN_TEST;
 
         REQUIRE_TRUE(ndx < OBJ_COUNT, "");
@@ -660,8 +636,10 @@ public:
         // Remove all of the elements from the list by erasing using direct node
         // pointers which should end up always being at the front of the list.
         REQUIRE_TRUE(Populate(true), "");
-        for (size_t i = 0; i < OBJ_COUNT; ++i)
-            EXPECT_TRUE(DoErase(SpBase::GetInternalReference(i), i, OBJ_COUNT - i), "");
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            REQUIRE_NONNULL(objects()[i], "");
+            EXPECT_TRUE(DoErase(*objects()[i], i, OBJ_COUNT - i), "");
+        }
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
         EXPECT_EQ(0u, list().size_slow(), "");
@@ -671,7 +649,8 @@ public:
         REQUIRE_TRUE(Populate(true), "");
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
             size_t ndx = OBJ_COUNT - i - 1;
-            EXPECT_TRUE(DoErase(SpBase::GetInternalReference(ndx), ndx, ndx + 1), "");
+            REQUIRE_NONNULL(objects()[ndx], "");
+            EXPECT_TRUE(DoErase(*objects()[ndx], ndx, ndx + 1), "");
         }
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
@@ -682,23 +661,10 @@ public:
         // the list.
         static_assert(2 < OBJ_COUNT, "OBJ_COUNT too small to run Erase test!");
         REQUIRE_TRUE(Populate(true), "");
-        for (size_t i = 1; i < OBJ_COUNT - 1; ++i)
-            EXPECT_TRUE(DoErase(SpBase::GetInternalReference(i), i, OBJ_COUNT - i + 1), "");
-
-        // Attempting to erase a nullptr from a list with more than one element
-        // in it should return nullptr.
-        EXPECT_NULL(PtrType(nullptr), "");
-        EXPECT_TRUE(DoErase(SpBase::GetInternalReference(0), 0, 2), "");
-
-        // Attempting to erase a nullptr from a list with just one element in
-        // it should return nullptr.
-        EXPECT_NULL(PtrType(nullptr), "");
-        EXPECT_TRUE(DoErase(SpBase::GetInternalReference(OBJ_COUNT - 1), OBJ_COUNT - 1, 1), "");
-
-        // Attempting to erase a nullptr from an empty list should return nullptr.
-        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0u, list().size_slow(), "");
-        EXPECT_NULL(PtrType(nullptr), "");
+        for (size_t i = 1; i < OBJ_COUNT - 1; ++i) {
+            REQUIRE_NONNULL(objects()[i], "");
+            EXPECT_TRUE(DoErase(*objects()[i], i, OBJ_COUNT - i + 1), "");
+        }
 
         END_TEST;
     }
@@ -853,7 +819,8 @@ public:
         // reference we are holding.  Verify that the iterator is in the
         // position we expect it to be in.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            auto iter = list().make_iterator(SpBase::GetInternalReference(i));
+            REQUIRE_NONNULL(objects()[i], "");
+            auto iter = list().make_iterator(*objects()[i]);
 
             REQUIRE_TRUE(iter != list().end(), "");
             EXPECT_EQ(objects()[i]->value(), iter->value(), "");
@@ -867,20 +834,6 @@ public:
 
             EXPECT_TRUE(other_iter == iter, "");
         }
-
-        // Creating an iterator using nullptr should result in an iterator which
-        // is equal to end().
-        PtrType null_ptr(nullptr);
-        auto iter       = list().make_iterator(null_ptr);
-        auto other_iter = list().begin();
-        for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            EXPECT_FALSE(other_iter == iter, "");
-            other_iter++;
-        }
-
-        EXPECT_TRUE(iter       == list().end(), "");
-        EXPECT_TRUE(other_iter == list().end(), "");
-        EXPECT_TRUE(other_iter == iter, "");
 
         END_TEST;
     }
@@ -988,7 +941,7 @@ public:
     }
 
     template <typename TargetType>
-    bool DoInsert(const TargetType& target, size_t pos) {
+    bool DoInsert(TargetType&& target, size_t pos) {
         BEGIN_TEST;
 
         EXPECT_EQ(ObjType::live_obj_count(), list().size_slow(), "");
@@ -1096,16 +1049,17 @@ public:
                       "OBJ_COUNT too small to run DirectInsert test!");
 
         // Insert some elements at the end of an initially empty list using
-        // nullptr as the obj target.
+        // the end() iterator as the target.
         for (size_t i = (OBJ_COUNT - END_INSERT_COUNT); i < OBJ_COUNT; ++i)
-            REQUIRE_TRUE(DoInsert(PtrType(nullptr), i), "");
+            REQUIRE_TRUE(DoInsert(list().end(), i), "");
 
         // Insert some elements at the start of a non-empty list node pointers
         // which are always at the start of the list.
         size_t insert_before_ndx = (OBJ_COUNT - END_INSERT_COUNT);
         for (size_t i = 0; i < START_INSERT_COUNT; ++i) {
             size_t ndx = START_INSERT_COUNT - i - 1;
-            REQUIRE_TRUE(DoInsert(SpBase::GetInternalReference(insert_before_ndx), ndx), "");
+            REQUIRE_NONNULL(objects()[insert_before_ndx], "");
+            REQUIRE_TRUE(DoInsert(*objects()[insert_before_ndx], ndx), "");
             insert_before_ndx = ndx;
         }
 
@@ -1113,7 +1067,8 @@ public:
         insert_before_ndx = (OBJ_COUNT - END_INSERT_COUNT);
         for (size_t i = 0; i < MID_INSERT_COUNT; ++i) {
             size_t ndx = START_INSERT_COUNT + i;
-            REQUIRE_TRUE(DoInsert(SpBase::GetInternalReference(insert_before_ndx), ndx), "");
+            REQUIRE_NONNULL(objects()[insert_before_ndx], "");
+            REQUIRE_TRUE(DoInsert(*objects()[insert_before_ndx], ndx), "");
         }
 
         // Check to make sure the list has the expected number of elements, and

@@ -208,6 +208,7 @@ public:
     using PtrTraits  = internal::ContainerPtrTraits<T>;
     using NodeTraits = _NodeTraits;
     using PtrType    = typename PtrTraits::PtrType;
+    using ValueType  = typename PtrTraits::ValueType;
 
     // Declarations of the standard iterator types.
     using iterator       = iterator_impl<iterator_traits>;
@@ -252,8 +253,8 @@ public:
     const_iterator    end() const { return const_iterator(); }
     const_iterator   cend() const { return const_iterator(); }
 
-    // make_iterator : construct an iterator out of a pointer to an object
-    iterator make_iterator(const PtrType& ptr) { return iterator(PtrTraits::GetRaw(ptr)); }
+    // make_iterator : construct an iterator out of a reference to an object.
+    iterator make_iterator(ValueType& obj) { return iterator(&obj); }
 
     // is_empty
     //

@@ -30,8 +30,7 @@ public:
     // |triggered_entries_|.
     // TODO(vtl): Make this use unique_ptr when HashTable supports that.
     class Entry final : public StateObserver,
-                        public utils::SinglyLinkedListable<Entry*>,
-                        public utils::DoublyLinkedListable<Entry*> {
+                        public utils::SinglyLinkedListable<Entry*> {
     public:
         // State transitions:
         //   The normal cycle is:
@@ -50,6 +49,12 @@ public:
         // RemoveObserver().
         enum class State { UNINITIALIZED, ADD_PENDING, ADDED, REMOVED };
 
+        struct TriggeredEntriesListTraits {
+            static utils::DoublyLinkedListNodeState<Entry*>& node_state(Entry& obj) {
+                return obj.triggered_entries_node_state_;
+            }
+        };
+
         static status_t Create(mx_signals_t watched_signals,
                                uint64_t cookie,
                                utils::unique_ptr<Entry>* entry);
@@ -67,6 +72,10 @@ public:
         const utils::RefPtr<Dispatcher>& GetDispatcher_NoLock() const;
         bool IsTriggered_NoLock() const;
         mx_signals_state_t GetSignalsState_NoLock() const;
+
+        bool InTriggeredEntriesList_NoLock() const {
+            return triggered_entries_node_state_.InContainer();
+        }
 
     private:
         Entry(mx_signals_t watched_signals, uint64_t cookie);
@@ -96,6 +105,8 @@ public:
 
         bool is_triggered_ = false;
         mx_signals_state_t signals_state_ = {0u, 0u};
+
+        utils::DoublyLinkedListNodeState<Entry*> triggered_entries_node_state_;
     };
 
     static status_t Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
@@ -158,7 +169,7 @@ private:
     bool cancelled_ = false;
 
     utils::HashTable<uint64_t, Entry, CookieHashFn, kNumBuckets> entries_;
-    utils::DoublyLinkedList<Entry*> triggered_entries_;
+    utils::DoublyLinkedList<Entry*, Entry::TriggeredEntriesListTraits> triggered_entries_;
     uint32_t num_triggered_entries_ = 0u;
 };
 

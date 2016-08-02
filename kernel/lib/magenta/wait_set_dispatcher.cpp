@@ -123,10 +123,10 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_state_t new_state) {
     }
 
     if (is_triggered_) {
+        DEBUG_ASSERT(InTriggeredEntriesList_NoLock());
         is_triggered_ = false;
-        bool found = !!wait_set_->triggered_entries_.erase(this);
-        (void)found;
-        DEBUG_ASSERT(found);
+        wait_set_->triggered_entries_.erase(*this);
+
         DEBUG_ASSERT(wait_set_->num_triggered_entries_ > 0u);
         wait_set_->num_triggered_entries_--;
     }
@@ -279,9 +279,9 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
             return ERR_NOT_FOUND;
 
         if (entry->IsTriggered_NoLock()) {
-            bool found = !!triggered_entries_.erase(entry.get());
-            (void)found;
-            DEBUG_ASSERT(found);
+            DEBUG_ASSERT(entry->InTriggeredEntriesList_NoLock());
+            triggered_entries_.erase(*entry);
+
             DEBUG_ASSERT(num_triggered_entries_ > 0u);
             num_triggered_entries_--;
         }

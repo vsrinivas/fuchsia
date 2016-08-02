@@ -178,7 +178,7 @@ VmAspace::~VmAspace() {
     // pop it out of the global aspace list
     {
         AutoLock a(aspace_list_lock);
-        aspaces.erase(this);
+        aspaces.erase(*this);
     }
 
     // destroy the arch portion of the aspace
@@ -643,7 +643,7 @@ status_t VmAspace::FreeRegion(vaddr_t vaddr) {
             return ERR_NOT_FOUND;
 
         // remove it from the address space list
-        regions_.erase(r);
+        regions_.erase(*r);
 
         // unmap it
         r->Unmap();

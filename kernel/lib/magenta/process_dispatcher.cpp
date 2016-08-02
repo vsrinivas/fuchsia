@@ -216,7 +216,8 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
 
     // remove the thread from our list
     AutoLock lock(&thread_list_lock_);
-    thread_list_.erase(t);
+    DEBUG_ASSERT(t != nullptr);
+    thread_list_.erase(*t);
 
     // drop the ref from the main_thread_ pointer if its being removed
     if (t == main_thread_.get()) {
@@ -304,7 +305,7 @@ HandleUniquePtr ProcessDispatcher::RemoveHandle_NoLock(mx_handle_t handle_value)
     auto handle = GetHandle_NoLock(handle_value);
     if (!handle)
         return nullptr;
-    handles_.erase(handle);
+    handles_.erase(*handle);
     handle->set_process_id(0u);
 
     return HandleUniquePtr(handle);
@@ -399,7 +400,8 @@ void ProcessDispatcher::AddProcess(ProcessDispatcher* process) {
 void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
     AutoLock lock(&global_process_list_mutex_);
 
-    global_process_list_.erase(process);
+    DEBUG_ASSERT(process != nullptr);
+    global_process_list_.erase(*process);
     LTRACEF("Removing process %p : koid = %llu\n", process, process->get_koid());
 }
 
