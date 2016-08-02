@@ -30,6 +30,7 @@
 #define INTEL_I915_VID (0x8086)
 #define INTEL_I915_BROADWELL_DID (0x1616)
 #define INTEL_I915_SKYLAKE_DID (0x1916)
+#define INTEL_I915_SKYLAKE_DID_2 (0x1926)
 
 #define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
 #define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
@@ -212,7 +213,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
     device->device.protocol_ops = &intel_i915_display_proto;
     device_add(&device->device, dev);
 
-    xprintf("initialized intel i915 display driver, reg=0x%x regsize=0x%x fb=0x%x fbsize=0x%x\n",
+    xprintf("initialized intel i915 display driver, reg=%p regsize=0x%llx fb=%p fbsize=0x%llx\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
     return NO_ERROR;
@@ -226,6 +227,7 @@ static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_I915_BROADWELL_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_I915_SKYLAKE_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_I915_SKYLAKE_DID_2),
 };
 
 mx_driver_t _driver_intel_i915 BUILTIN_DRIVER = {
