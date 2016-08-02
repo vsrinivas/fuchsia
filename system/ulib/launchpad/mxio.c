@@ -58,6 +58,8 @@ static mx_status_t add_all_mxio(launchpad_t* lp) {
         status = launchpad_clone_fd(lp, fd, fd);
         if (status == ERR_BAD_HANDLE)
             status = NO_ERROR;
+        if (status == ERR_NOT_SUPPORTED)
+            status = NO_ERROR;
     }
     return status;
 }
