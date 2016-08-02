@@ -14,6 +14,7 @@ either the associated handle or the object associated with the handle.
 | **MX_RIGHT_WRITE** | Allows modification of object state |
 |                    | Allows writing of data to containers (pipes, VM objects, etc) |
 | **MX_RIGHT_EXECUTE** | |
+| **MX_RIGHT_DEBUG** | Placeholder for debugger use, pending audit of all rights usage |
 
 ## See also
 [Kernel Objects](kernel_objects.md),
