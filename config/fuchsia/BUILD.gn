@@ -4,6 +4,11 @@
 
 import("//build/config/sysroot.gni")
 
+declare_args() {
+  # shared enables building shared instead of statically linked executables.
+  shared = false
+}
+
 assert(current_os == "fuchsia")
 
 config("werror") {
@@ -56,9 +61,11 @@ config("shared_library_config") {
 }
 
 config("executable_config") {
-  # TODO(phosek): Until Magenta supports dynamically linked applications,
-  # static linking is the default configuration for Fuchsia.
-  configs = [ ":static_config" ]
+  if (shared) {
+    configs = [ ":shared_config" ]
+  } else {
+    configs = [ ":static_config" ]
+  }
 }
 
 config("static_config") {
@@ -67,5 +74,16 @@ config("static_config") {
     "magenta",
     "mxio",  # TODO: This is wrong, remove when the weak symbols in libc are sorted.
     "runtime",
+  ]
+}
+
+config("shared_config") {
+  libs = [
+    "runtime",
+
+    # TODO: Depending on mxio implicitly is wrong. This is currently needed so
+    # printf() works, but we should wire that in explicitly and require
+    # applications that want to use mxio declare their dependency explicitly.
+    "mxio",
   ]
 }
