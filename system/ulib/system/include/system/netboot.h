@@ -29,6 +29,7 @@
 #define NB_DATA               3 // arg=blocknum, data=data
 #define NB_BOOT               4 // arg=0
 #define NB_QUERY              5 // arg=0, data=hostname (or "*")
+#define NB_SHELL_CMD          6 // arg=0, data=command string
 
 #define NB_ACK                0
 
@@ -49,3 +50,6 @@ typedef struct nbmsg_t {
 
 int netboot_init(void *buf, size_t len);
 int netboot_poll(void);
+
+#define DEBUGLOG_PORT         33337
+#define DEBUGLOG_ACK_PORT     33338

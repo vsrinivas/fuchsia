@@ -12,14 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// for environ
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <mxio/util.h>
+#include <launchpad/launchpad.h>
+
+#include <system/netboot.h>
 
 #define MAX_LOG_LINE (MX_LOG_RECORD_MAX + 32)
 
@@ -55,23 +64,97 @@ typedef struct logpacket {
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
+void run_command(const char* cmd) {
+    printf("net cmd: %s\n", cmd);
+
+    const char* args[] = {
+        "/boot/bin/mxsh", "-c", cmd
+    };
+    mx_handle_t handles[3];
+    uint32_t ids[3];
+
+    if (mxio_clone_root(handles, ids) < 0) {
+        return;
+    }
+    if ((handles[1] = mx_log_create(0)) < 0) {
+        mx_handle_close(handles[0]);
+        return;
+    }
+    if ((handles[2] = mx_log_create(0)) < 0) {
+        mx_handle_close(handles[0]);
+        mx_handle_close(handles[1]);
+        return;
+    }
+    ids[1] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
+    ids[2] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);
+
+    mx_handle_t proc;
+    if ((proc = launchpad_launch_mxio_etc("net:mxsh", 3, args,
+                                          (const char* const*) environ,
+                                          3, handles, ids)) < 0) {
+        printf("error: cannot launch shell\n");
+    }
+}
+
+static const char* hostname = "magenta";
+
 void udp6_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
-    if (dport != 33338)
+
+    bool mcast = (memcmp(daddr, &ip6_ll_all_nodes, sizeof(ip6_addr_t)) == 0);
+
+    if (dport == NB_SERVER_PORT) {
+        nbmsg* msg = data;
+        if ((len < (sizeof(nbmsg) + 1)) ||
+            (msg->magic != NB_MAGIC) ||
+            (msg->arg != 0)) {
+            return;
+        }
+        // null terminate the payload
+        len -= sizeof(nbmsg);
+        msg->data[len - 1] = 0;
+
+        switch (msg->cmd) {
+        case NB_QUERY:
+            if (strcmp((char*)msg->data, "*") &&
+                strcmp((char*)msg->data, hostname)) {
+                break;
+            }
+            size_t dlen = strlen(hostname) + 1;
+            char buf[1024 + sizeof(nbmsg)];
+            if ((dlen + sizeof(nbmsg)) > sizeof(buf)) {
+                return;
+            }
+            msg->cmd = NB_ACK;
+            memcpy(buf, msg, sizeof(nbmsg));
+            memcpy(buf + sizeof(nbmsg), hostname, dlen);
+            udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport);
+            break;
+        case NB_SHELL_CMD:
+            if (!mcast) {
+                run_command((char*) msg->data);
+                return;
+            }
+            break;
+        }
         return;
-    if (len != 8)
-        return;
-    logpacket_t* pkt = data;
-    if (pkt->magic != 0xaeae1123)
-        return;
-    if (pkt->seqno != seqno)
-        return;
-    if (pending) {
-        seqno++;
-        pending = 0;
-        // ensure we stop polling
-        netifc_set_timer(0);
+    }
+
+    if (dport == DEBUGLOG_ACK_PORT) {
+        if ((len != 8) || mcast) {
+            return;
+        }
+        logpacket_t* pkt = data;
+        if ((pkt->magic != 0xaeae1123) || (pkt->seqno != seqno)) {
+            return;
+        }
+        if (pending) {
+            seqno++;
+            pending = 0;
+            // ensure we stop polling
+            netifc_set_timer(0);
+        }
     }
 }
 
@@ -120,7 +203,7 @@ int main(int argc, char** argv) {
         if (netifc_timer_expired()) {
         transmit:
             if (pending) {
-                udp6_send(&pkt, 8 + len, &ip6_ll_all_nodes, 33337, 33338);
+                udp6_send(&pkt, 8 + len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
             }
         }
         //TODO: wakeup early for log traffic too

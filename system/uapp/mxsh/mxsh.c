@@ -453,12 +453,17 @@ void console(void) {
 }
 
 int main(int argc, char** argv) {
+    if ((argc == 3) && (strcmp(argv[1], "-c") == 0)) {
+        execline(argv[2]);
+        return 0;
+    }
     if (argc > 1) {
         execscript(argv[1]);
-    } else {
-        const char* banner = "\033]2;mxsh\007\nMXCONSOLE...\n";
-        cputs(banner, strlen(banner));
-        console();
+        return 0;
     }
+
+    const char* banner = "\033]2;mxsh\007\nMXCONSOLE...\n";
+    cputs(banner, strlen(banner));
+    console();
     return 0;
 }

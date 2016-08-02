@@ -115,20 +115,21 @@ GENERATED += $(USER_MANIFEST)
 MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
 BOOTSERVER := $(BUILDDIR)/tools/bootserver
 LOGLISTENER := $(BUILDDIR)/tools/loglistener
+NETRUNCMD := $(BUILDDIR)/tools/netruncmd
 
 $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
 	@$(MKDIR)
 	$(NOECHO)cc -Wall -I system/ulib/system/include -o $@ $<
 
-GENERATED += $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER)
+GENERATED += $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD)
 
 # Manifest Lines are bootfspath=buildpath
 # Extract the part after the = for each line
 # to generate dependencies
 USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(SPACE),$(strip $(x)))))
 
-$(USER_BOOTFS): $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
+$(USER_BOOTFS): $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
 	@echo generating $@
 	@$(MKDIR)
 	$(NOECHO)$(MKBOOTFS) -o $(USER_BOOTFS) $(USER_MANIFEST)
