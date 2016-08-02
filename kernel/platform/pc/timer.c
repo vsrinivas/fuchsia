@@ -53,6 +53,7 @@ static uint16_t pit_divisor;
 static bool invariant_tsc;
 
 // APIC timer calibration values
+static bool use_tsc_deadline;
 static volatile uint32_t apic_ticks_per_ms = 0;
 static uint8_t apic_divisor = 0;
 
@@ -332,7 +333,12 @@ static void calibrate_tsc(void)
 void platform_init_timer(uint level)
 {
     invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
-    calibrate_apic_timer();
+    use_tsc_deadline = invariant_tsc &&
+            x86_feature_test(X86_FEATURE_TSC_DEADLINE);
+    if (!use_tsc_deadline) {
+        calibrate_apic_timer();
+    }
+
     if (invariant_tsc) {
         calibrate_tsc();
         // Program PIT in the software strobe configuration, but do not load
@@ -361,6 +367,17 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
     if (interval > MAX_TIMER_INTERVAL)
         interval = MAX_TIMER_INTERVAL;
     if (interval < 1) interval = 1;
+
+    if (use_tsc_deadline) {
+        if (UINT64_MAX / interval < tsc_ticks_per_ms) {
+            return ERR_INVALID_ARGS;
+        }
+        uint64_t tsc_interval = interval * tsc_ticks_per_ms;
+        uint64_t deadline = rdtsc() + tsc_interval;
+        LTRACEF("Scheduling oneshot timer: %llu deadline\n", deadline);
+        apic_timer_set_tsc_deadline(deadline, false /* unmasked */);
+        return NO_ERROR;
+    }
 
     uint8_t extra_divisor = 1;
     while (apic_ticks_per_ms > UINT32_MAX / interval / extra_divisor) {

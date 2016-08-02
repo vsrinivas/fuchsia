@@ -48,6 +48,7 @@ void apic_send_broadcast_self_ipi(
 void apic_issue_eoi(void);
 
 status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked);
+void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked);
 status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor);
 uint32_t apic_timer_current_count(void);
 void apic_timer_mask(void);

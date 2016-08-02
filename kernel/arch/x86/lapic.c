@@ -12,6 +12,7 @@
 #include <arch/spinlock.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
+#include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>
 #include <debug.h>
@@ -28,6 +29,8 @@
 #define IA32_APIC_BASE_BSP (1 << 8)
 #define IA32_APIC_BASE_X2APIC_ENABLE (1 << 10)
 #define IA32_APIC_BASE_XAPIC_ENABLE (1 << 11)
+
+#define IA32_TSC_DEADLINE_MSR 0x6E0
 
 #define APIC_PHYS_BASE 0xFEE00000
 
@@ -260,6 +263,9 @@ void apic_timer_stop(void) {
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
     *INIT_COUNT_ADDR = 0;
+    if (x86_feature_test(X86_FEATURE_TSC_DEADLINE)) {
+        write_msr(IA32_TSC_DEADLINE_MSR, 0);
+    }
     arch_interrupt_restore(state, 0);
 }
 
@@ -283,6 +289,24 @@ status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
 cleanup:
     arch_interrupt_restore(state, 0);
     return status;
+}
+
+void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
+    DEBUG_ASSERT(x86_feature_test(X86_FEATURE_TSC_DEADLINE));
+
+    uint32_t timer_config = LVT_VECTOR(X86_INT_APIC_TIMER) |
+            LVT_TIMER_MODE_TSC_DEADLINE;
+    if (masked) {
+        timer_config |= masked;
+    }
+
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, 0);
+
+    write_msr(IA32_TSC_DEADLINE_MSR, deadline);
+    *LVT_TIMER_ADDR = timer_config;
+
+    arch_interrupt_restore(state, 0);
 }
 
 status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
