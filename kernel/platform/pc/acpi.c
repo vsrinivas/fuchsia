@@ -683,6 +683,38 @@ status_t platform_enumerate_interrupt_source_overrides(
     return NO_ERROR;
 }
 
+/* @brief Return information about the High Precision Event Timer, if present.
+ *
+ * @param hpet Descriptor to populate
+ *
+ * @return NO_ERROR on success.
+ */
+status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
+{
+    ACPI_TABLE_HEADER *table = NULL;
+    ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_HPET, 1, &table);
+    if (status != AE_OK) {
+        TRACEF("could not find HPET\n");
+        return ERR_NOT_FOUND;
+    }
+    ACPI_TABLE_HPET *hpet_tbl = (ACPI_TABLE_HPET *)table;
+    if (hpet_tbl->Header.Length != sizeof(ACPI_TABLE_HPET)) {
+        TRACEF("Unexpected HPET table length\n");
+        return ERR_NOT_FOUND;
+    }
+
+    hpet->minimum_tick = hpet_tbl->MinimumTick;
+    hpet->sequence = hpet_tbl->Sequence;
+    hpet->address = hpet_tbl->Address.Address;
+    switch (hpet_tbl->Address.SpaceId) {
+        case ACPI_ADR_SPACE_SYSTEM_IO: hpet->port_io = true; break;
+        case ACPI_ADR_SPACE_SYSTEM_MEMORY: hpet->port_io = false; break;
+        default: return ERR_NOT_SUPPORTED;
+    }
+
+    return NO_ERROR;
+}
+
 /* @brief Find the PCIE config (returns the first one found)
  *
  * @param config The structure to populate with the found config.

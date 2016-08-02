@@ -44,6 +44,14 @@ struct acpi_pcie_irq_mapping {
     struct acpi_irq_signal irqs[MAX_IRQ_SIGNALS];
 };
 
+struct acpi_hpet_descriptor {
+    uint64_t address;
+    bool port_io;
+
+    uint16_t minimum_tick;
+    uint8_t sequence;
+};
+
 void platform_init_acpi_tables(uint levels);
 void platform_init_acpi(void);
 status_t platform_enumerate_cpus(
@@ -60,6 +68,7 @@ status_t platform_enumerate_interrupt_source_overrides(
         uint32_t *num_isos);
 status_t platform_find_pcie_config(struct acpi_pcie_config *config);
 status_t platform_find_pcie_legacy_irq_mapping(struct acpi_pcie_irq_mapping *root_bus_map);
+status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet);
 
 // Powers off the machine.  Returns on failure
 void acpi_poweroff(void);

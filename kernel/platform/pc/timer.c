@@ -22,13 +22,18 @@
 #include <platform.h>
 #include <dev/interrupt.h>
 #include <platform/console.h>
-#include <platform/timer.h>
 #include <platform/pc.h>
+#include <platform/pc/acpi.h>
+#include <platform/pc/hpet.h>
+#include <platform/timer.h>
 #include "platform_p.h"
 
 // Current timer scheme:
-// The PIT is used to calibrate the local APIC timers initially.
-// Afterwards, it is only used for maintaining wall time.
+// The HPET is used to calibrate the local APIC timers and the TSC.  If the
+// HPET is not present, we will fallback to calibrating using the PIT.  If the
+// CPU advertises an invariant TSC, then we will use the TSC for tracking
+// wall time in a tickless manner.  Otherwise, we will use the PIT to generate
+// periodic ticks to update wall time.
 //
 // The local APICs are responsible for handling timer callbacks
 // sent from the scheduler.
@@ -39,7 +44,6 @@ static void *callback_arg[SMP_MAX_CPUS] = {NULL};
 // PIT time accounting info
 static uint64_t next_trigger_time;
 static uint64_t next_trigger_delta;
-static uint64_t ticks_per_ms;
 static uint64_t timer_delta_time;
 static volatile uint64_t timer_current_time;
 static uint16_t pit_divisor;
@@ -61,6 +65,8 @@ uint64_t get_tsc_ticks_per_ms(void) {
 
 #define INTERNAL_FREQ 1193182ULL
 #define INTERNAL_FREQ_3X 3579546ULL
+
+#define INTERNAL_FREQ_TICKS_PER_MS (INTERNAL_FREQ/1000)
 
 /* Maximum amount of time that can be program on the timer to schedule the next
  *  interrupt, in miliseconds */
@@ -170,23 +176,70 @@ static void set_pit_frequency(uint32_t frequency)
     outp(I8253_DATA_REG, pit_divisor >> 8); // MSB
 }
 
+static inline void pit_calibration_cycle_1ms_preamble(void)
+{
+    // Make the PIT run for 1ms
+    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS;
+    // Program PIT in the software strobe configuration, this makes
+    // it just count down.  When it hits 0, it will wrap around and
+    // keep counting, so we need to watch for overflow below.
+    outp(I8253_CONTROL_REG, 0x38);
+    outp(I8253_DATA_REG, init_pic_count & 0xff); // LSB
+}
+
+static inline void pit_calibration_cycle_1ms(void)
+{
+    // Make the PIT run for 1ms, see comments in the preamble
+    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS;
+    outp(I8253_DATA_REG, init_pic_count >> 8); // MSB
+
+    uint16_t count = 0;
+    do {
+        // Latch the count for channel 0 (does not pause the actual
+        // count)
+        outp(I8253_CONTROL_REG, 0x00);
+        count = inp(I8253_DATA_REG);
+        count |= inp(I8253_DATA_REG) << 8;
+    } while (count <= init_pic_count && count != 0);
+}
+
+static inline void pit_calibration_cycle_1ms_cleanup(void)
+{
+    // Stop the PIT by starting a mode change but not writing a counter
+    outp(I8253_CONTROL_REG, 0x38);
+}
+
+static inline void hpet_calibration_cycle_1ms_preamble(void)
+{
+    hpet_enable();
+}
+
+static inline void hpet_calibration_cycle_1ms(void)
+{
+    hpet_wait_ms(1);
+}
+
+static inline void hpet_calibration_cycle_1ms_cleanup(void)
+{
+    hpet_disable();
+}
+
 static void calibrate_apic_timer(void)
 {
     ASSERT(arch_ints_disabled());
-    ASSERT(ticks_per_ms <= 0xffff);
+
+    bool use_hpet = hpet_is_present();
+    TRACEF("Calibrating APIC with %s\n", use_hpet ? "HPET" : "PIT");
 
     apic_divisor = 1;
     while (apic_divisor != 0) {
         uint32_t best_time = UINT32_MAX;
         for (int tries = 0; tries < 3; ++tries) {
-            // Make the PIT run for 1ms
-            uint16_t init_pic_count = ticks_per_ms;
-            // Program PIT in the software strobe configuration, this makes
-            // it just count down.  When it hits 0, it will wrap around and
-            // keep counting, so we need to watch for overflow below.
-            outp(I8253_CONTROL_REG, 0x38);
-            outp(I8253_DATA_REG, init_pic_count & 0xff); // LSB
-            outp(I8253_DATA_REG, init_pic_count >> 8); // MSB
+            if (use_hpet) {
+                hpet_calibration_cycle_1ms_preamble();
+            } else {
+                pit_calibration_cycle_1ms_preamble();
+            }
 
             // Setup APIC timer to count down with interrupt masked
             status_t status = apic_timer_set_oneshot(
@@ -195,14 +248,11 @@ static void calibrate_apic_timer(void)
                     true);
             ASSERT(status == NO_ERROR);
 
-            uint16_t count = 0;
-            do {
-                // Latch the count for channel 0 (does not pause the actual
-                // count)
-                outp(I8253_CONTROL_REG, 0x00);
-                count = inp(I8253_DATA_REG);
-                count |= inp(I8253_DATA_REG) << 8;
-            } while (count <= init_pic_count && count != 0);
+            if (use_hpet) {
+                hpet_calibration_cycle_1ms();
+            } else {
+                pit_calibration_cycle_1ms();
+            }
 
             uint32_t apic_ticks = UINT32_MAX - apic_timer_current_count();
             if (apic_ticks < best_time) {
@@ -210,6 +260,12 @@ static void calibrate_apic_timer(void)
             }
             LTRACEF("Calibration trial %d found %u ticks/ms\n",
                     tries, apic_ticks);
+
+            if (use_hpet) {
+                hpet_calibration_cycle_1ms_cleanup();
+            } else {
+                pit_calibration_cycle_1ms_cleanup();
+            }
         }
 
         // If the APIC ran out of time every time, try again with a higher
@@ -231,31 +287,29 @@ static void calibrate_apic_timer(void)
 static void calibrate_tsc(void)
 {
     ASSERT(arch_ints_disabled());
-    ASSERT(ticks_per_ms <= 0xffff);
+
+    bool use_hpet = hpet_is_present();
+    TRACEF("Calibrating TSC with %s\n", use_hpet ? "HPET" : "PIT");
 
     uint64_t best_time = UINT64_MAX;
     for (int tries = 0; tries < 3; ++tries) {
-        // Make the PIT run for 1ms
-        uint16_t init_pic_count = ticks_per_ms;
-        // Program PIT in the software strobe configuration, this makes
-        // it just count down.  When it hits 0, it will wrap around and
-        // keep counting, so we need to watch for overflow below.
-        outp(I8253_CONTROL_REG, 0x38);
-        outp(I8253_DATA_REG, init_pic_count & 0xff); // LSB
-        outp(I8253_DATA_REG, init_pic_count >> 8); // MSB
+        if (use_hpet) {
+            hpet_calibration_cycle_1ms_preamble();
+        } else {
+            pit_calibration_cycle_1ms_preamble();
+        }
 
         // Use CPUID to serialize the instruction stream
         uint32_t _ignored;
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
         uint64_t start = rdtsc();
-        uint16_t count = 0;
-        do {
-            // Latch the count for channel 0 (does not pause the actual
-            // count)
-            outp(I8253_CONTROL_REG, 0x00);
-            count = inp(I8253_DATA_REG);
-            count |= inp(I8253_DATA_REG) << 8;
-        } while (count <= init_pic_count && count != 0);
+
+        if (use_hpet) {
+            hpet_calibration_cycle_1ms();
+        } else {
+            pit_calibration_cycle_1ms();
+        }
+
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
         uint64_t end = rdtsc();
 
@@ -265,6 +319,11 @@ static void calibrate_tsc(void)
         }
         LTRACEF("Calibration trial %d found %llu ticks/ms\n",
                 tries, tsc_ticks);
+        if (use_hpet) {
+            hpet_calibration_cycle_1ms_cleanup();
+        } else {
+            pit_calibration_cycle_1ms_cleanup();
+        }
     }
 
     tsc_ticks_per_ms = best_time;
@@ -275,7 +334,6 @@ static void calibrate_tsc(void)
 void platform_init_timer(uint level)
 {
     invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
-    ticks_per_ms = INTERNAL_FREQ/1000;
     calibrate_apic_timer();
     if (invariant_tsc) {
         calibrate_tsc();

@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/acpi_ec.c \
     $(LOCAL_DIR)/console.c \
     $(LOCAL_DIR)/debug.c \
+    $(LOCAL_DIR)/hpet.c \
     $(LOCAL_DIR)/interrupts.c \
     $(LOCAL_DIR)/keyboard.c \
     $(LOCAL_DIR)/memory.c \
