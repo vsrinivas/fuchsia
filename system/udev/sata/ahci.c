@@ -33,6 +33,7 @@
 #define INTEL_AHCI_VID      (0x8086)
 #define LYNX_POINT_AHCI_DID (0x8c02)
 #define WILDCAT_AHCI_DID    (0x9c83)
+#define SUNRISE_AHCI_DID    (0x9d03)
 
 #define TRACE 1
 
@@ -501,6 +502,7 @@ static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_AHCI_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, LYNX_POINT_AHCI_DID), // Simics
     BI_MATCH_IF(EQ, BIND_PCI_DID, WILDCAT_AHCI_DID),    // Pixel2
+    BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_AHCI_DID),    // NUC
 };
 
 mx_driver_t _driver_ahci BUILTIN_DRIVER = {
