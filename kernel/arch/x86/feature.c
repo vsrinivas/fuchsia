@@ -92,54 +92,41 @@ bool x86_topology_enumerate(uint8_t level, struct x86_topology_level *info)
 
 void x86_feature_debug(void)
 {
+    static struct {
+        struct x86_cpuid_bit bit;
+        const char *name;
+    } features[] = {
+        { X86_FEATURE_FPU, "fpu" },
+        { X86_FEATURE_SSE, "sse" },
+        { X86_FEATURE_SSE2, "sse2" },
+        { X86_FEATURE_SSE3, "sse3" },
+        { X86_FEATURE_SSSE3, "ssse3" },
+        { X86_FEATURE_SSE4_1, "sse4.1" },
+        { X86_FEATURE_SSE4_2, "sse4.2" },
+        { X86_FEATURE_MMX, "mmx" },
+        { X86_FEATURE_AVX, "avx" },
+        { X86_FEATURE_AVX2, "avx2" },
+        { X86_FEATURE_FXSR, "fxsr" },
+        { X86_FEATURE_XSAVE, "xsave" },
+        { X86_FEATURE_AESNI, "aesni" },
+        { X86_FEATURE_TSC_ADJUST, "tsc_adj" },
+        { X86_FEATURE_SMEP, "smep" },
+        { X86_FEATURE_SMAP, "smap" },
+        { X86_FEATURE_RDRAND, "rdrand" },
+        { X86_FEATURE_RDSEED, "rdseed" },
+        { X86_FEATURE_PKU, "pku" },
+        { X86_FEATURE_SYSCALL, "syscall" },
+        { X86_FEATURE_NX, "nx" },
+        { X86_FEATURE_HUGE_PAGE, "huge" },
+        { X86_FEATURE_RDTSCP, "rdtscp" },
+        { X86_FEATURE_INVAR_TSC, "invar_tsc" },
+        { X86_FEATURE_TSC_DEADLINE, "tsc_deadline" },
+    };
+
     printf("Features:");
-    if (x86_feature_test(X86_FEATURE_FPU))
-        printf(" fpu");
-    if (x86_feature_test(X86_FEATURE_SSE))
-        printf(" sse");
-    if (x86_feature_test(X86_FEATURE_SSE2))
-        printf(" sse2");
-    if (x86_feature_test(X86_FEATURE_SSE3))
-        printf(" sse3");
-    if (x86_feature_test(X86_FEATURE_SSSE3))
-        printf(" ssse3");
-    if (x86_feature_test(X86_FEATURE_SSE4_1))
-        printf(" sse4.1");
-    if (x86_feature_test(X86_FEATURE_SSE4_2))
-        printf(" sse4.2");
-    if (x86_feature_test(X86_FEATURE_MMX))
-        printf(" mmx");
-    if (x86_feature_test(X86_FEATURE_AVX))
-        printf(" avx");
-    if (x86_feature_test(X86_FEATURE_AVX2))
-        printf(" avx2");
-    if (x86_feature_test(X86_FEATURE_FXSR))
-        printf(" fxsr");
-    if (x86_feature_test(X86_FEATURE_XSAVE))
-        printf(" xsave");
-    if (x86_feature_test(X86_FEATURE_AESNI))
-        printf(" aesni");
-    if (x86_feature_test(X86_FEATURE_TSC_ADJUST))
-        printf(" tsc_adj");
-    if (x86_feature_test(X86_FEATURE_SMEP))
-        printf(" smep");
-    if (x86_feature_test(X86_FEATURE_SMAP))
-        printf(" smap");
-    if (x86_feature_test(X86_FEATURE_RDRAND))
-        printf(" rdrand");
-    if (x86_feature_test(X86_FEATURE_RDSEED))
-        printf(" rdseed");
-    if (x86_feature_test(X86_FEATURE_PKU))
-        printf(" pku");
-    if (x86_feature_test(X86_FEATURE_SYSCALL))
-        printf(" syscall");
-    if (x86_feature_test(X86_FEATURE_NX))
-        printf(" nx");
-    if (x86_feature_test(X86_FEATURE_HUGE_PAGE))
-        printf(" huge");
-    if (x86_feature_test(X86_FEATURE_RDTSCP))
-        printf(" rdtscp");
-    if (x86_feature_test(X86_FEATURE_INVAR_TSC))
-        printf(" invar_tsc");
+    for (uint i = 0; i < countof(features); ++i) {
+        if (x86_feature_test(features[i].bit))
+            printf(" %s", features[i].name);
+    }
     printf("\n");
 }
