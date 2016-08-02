@@ -17,6 +17,7 @@
 
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
+                             const char* const* envp,
                              size_t hnds_count, mx_handle_t* handles,
                              uint32_t* ids) {
     launchpad_t* lp;
@@ -31,6 +32,8 @@ mx_handle_t launchpad_launch(const char* name,
         status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
         if (status == NO_ERROR)
             status = launchpad_arguments(lp, argc, argv);
+        if (status == NO_ERROR)
+            status = launchpad_environ(lp, envp);
         if (status == NO_ERROR)
             status = launchpad_add_handles(lp, hnds_count, handles, ids);
         if (status == NO_ERROR)

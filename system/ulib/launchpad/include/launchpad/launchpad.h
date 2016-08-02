@@ -129,13 +129,14 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 
 // Convenience interface for launching a process in one call with
 // minimal arguments and handles.  This just calls launchpad_create,
-// launchpad_elf_load, launchpad_arguments, launchpad_add_handles,
-// launchpad_start, launchpad_destroy.
+// launchpad_elf_load, launchpad_arguments, launchpad_environ,
+// launchpad_add_handles, launchpad_start, launchpad_destroy.
 //
 // Returns the process handle on success, giving ownership to the
 // caller; or an error code on failure.
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
+                             const char* const* envp,
                              size_t hnds_count, mx_handle_t* handles,
                              uint32_t* ids);
 
