@@ -39,4 +39,10 @@ endif
 MODULE_EXPORT := magenta
 MODULE_SO_NAME := magenta
 
+# All the code this DSO is pure read-only/reentrant code that
+# does not need any writable data (except its caller's stack).
+# Make it use a simplified, hardened memory layout.
+MODULE_LDFLAGS := -T $(BUILDDIR)/rodso.ld
+MODULE_EXTRA_OBJS := $(BUILDDIR)/rodso-stamp
+
 include make/module.mk

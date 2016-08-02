@@ -143,3 +143,22 @@ $(USER_FS): $(USER_BOOTFS)
 
 # add the fs image to the clean list
 GENERATED += $(USER_FS)
+
+# There is a wee bit of machine-dependence in the rodso linker script.
+# So we use cpp macros/conditionals for that and generate the actual
+# linker script by preprocessing the source file.
+$(BUILDDIR)/rodso.ld: scripts/rodso.ld.in
+	@echo generating $@
+	$(NOECHO)$(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) \
+		       -E -P -xassembler-with-cpp $< -o $@
+
+# Each DSO target depends on this to ensure that rodso.ld is up to date and
+# that the DSO gets relinked when it changes.  But rodso.ld should not go
+# into the link line as an input; it needs to be specified with -T in
+# MODULE_LDFLAGS instead.  So instead of having a DSO target depend on
+# rodso.ld directly, we generate rodso-stamp as the thing that can be a
+# dependency that harmlessly goes into the link.
+$(BUILDDIR)/rodso-stamp: $(BUILDDIR)/rodso.ld
+	$(NOECHO)echo '/* empty linker script */' > $@
+
+GENERATED += $(BUILDDIR)/rodso.ld $(BUILDDIR)/rodso-stamp
