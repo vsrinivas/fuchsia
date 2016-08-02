@@ -348,7 +348,7 @@ void command(int argc, char** argv, bool runbg) {
     snprintf(tmp, sizeof(tmp), "%s%s",
              (argv[0][0] == '/') ? "" : "/boot/bin/", argv[0]);
     argv[0] = tmp;
-    mx_handle_t p = launchpad_launch(argv[0], argc, (const char* const*)argv);
+    mx_handle_t p = launchpad_launch_mxio(argv[0], argc, (const char* const*)argv);
     if (p < 0) {
         printf("process failed to start (%d)\n", p);
         return;

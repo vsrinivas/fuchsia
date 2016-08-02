@@ -78,10 +78,10 @@ void devmgr_launch(const char* name, const char* app, const char* arg, const cha
         n += r;
     }
     printf("devmgr: launch %s on %s\n", app, device);
-    mx_handle_t proc = launchpad_launch_basic(name, arg ? 2 : 1, args,
-                                              n, hnd, ids);
+    mx_handle_t proc = launchpad_launch(name, arg ? 2 : 1, args,
+                                        n, hnd, ids);
     if (proc < 0)
-        printf("devmgr: launchpad_launch_basic failed: %d\n", proc);
+        printf("devmgr: launchpad_launch failed: %d\n", proc);
     else
         mx_handle_close(proc);
     return;
@@ -112,7 +112,7 @@ void devmgr_launch_devhost(const char* name, mx_handle_t h,
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
     printf("devmgr: launch: %s %s %s\n", name, arg0, arg1);
-    mx_handle_t proc = launchpad_launch_basic(name, 3, args, 2, hnd, ids);
+    mx_handle_t proc = launchpad_launch(name, 3, args, 2, hnd, ids);
     if (proc < 0)
         printf("devmgr: launch failed: %d\n", proc);
     else

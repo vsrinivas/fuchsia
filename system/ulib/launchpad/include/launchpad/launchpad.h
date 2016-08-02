@@ -129,10 +129,10 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 //
 // Returns the process handle on success, giving ownership to the
 // caller; or an error code on failure.
-mx_handle_t launchpad_launch_basic(const char* name,
-                                   int argc, const char* const* argv,
-                                   size_t hnds_count, mx_handle_t* handles,
-                                   uint32_t* ids);
+mx_handle_t launchpad_launch(const char* name,
+                             int argc, const char* const* argv,
+                             size_t hnds_count, mx_handle_t* handles,
+                             uint32_t* ids);
 
 // Convenience interface for launching a process in one call with details
 // inherited from the calling process (environment variables, mxio root,
@@ -142,7 +142,14 @@ mx_handle_t launchpad_launch_basic(const char* name,
 //
 // Returns the process handle on success, giving ownership to the
 // caller; or an error code on failure.
-mx_handle_t launchpad_launch(const char* name,
-                             int argc, const char* const* argv);
+mx_handle_t launchpad_launch_mxio(const char* name,
+                                  int argc, const char* const* argv);
+
+// Same as launchpad_launch_mxio, but also passes additional handles
+// like launchpad_launch.
+mx_handle_t launchpad_launch_mxio_etc(const char* name,
+                                      int argc, const char* const* argv,
+                                      size_t hnds_count, mx_handle_t* handles,
+                                      uint32_t* ids);
 
 __END_CDECLS

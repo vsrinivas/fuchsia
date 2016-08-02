@@ -64,8 +64,10 @@ static mx_status_t add_all_mxio(launchpad_t* lp) {
     return status;
 }
 
-mx_handle_t launchpad_launch(const char* name,
-                             int argc, const char* const* argv) {
+mx_handle_t launchpad_launch_mxio_etc(const char* name,
+                                      int argc, const char* const* argv,
+                                      size_t hnds_count, mx_handle_t* handles,
+                                      uint32_t* ids) {
     launchpad_t* lp;
 
     const char* filename = argv[0];
@@ -83,9 +85,16 @@ mx_handle_t launchpad_launch(const char* name,
         if (status == NO_ERROR)
             status = add_all_mxio(lp);
         if (status == NO_ERROR)
+            status = launchpad_add_handles(lp, hnds_count, handles, ids);
+        if (status == NO_ERROR)
             proc = launchpad_start(lp);
     }
     launchpad_destroy(lp);
 
     return status == NO_ERROR ? proc : status;
+}
+
+mx_handle_t launchpad_launch_mxio(const char* name,
+                                  int argc, const char* const* argv) {
+    return launchpad_launch_mxio_etc(name, argc, argv, 0, NULL, NULL);
 }

@@ -15,10 +15,10 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
-mx_handle_t launchpad_launch_basic(const char* name,
-                                   int argc, const char* const* argv,
-                                   size_t hnds_count, mx_handle_t* handles,
-                                   uint32_t* ids) {
+mx_handle_t launchpad_launch(const char* name,
+                             int argc, const char* const* argv,
+                             size_t hnds_count, mx_handle_t* handles,
+                             uint32_t* ids) {
     launchpad_t* lp;
 
     const char* filename = argv[0];
