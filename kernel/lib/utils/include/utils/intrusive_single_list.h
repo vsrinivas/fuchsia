@@ -153,6 +153,8 @@ struct SinglyLinkedListNodeState {
     using PtrTraits = internal::ContainerPtrTraits<T>;
     constexpr SinglyLinkedListNodeState() { }
 
+    // TODO(johngro) : Either fix InContainer to always be correct, or remove
+    // it.  See MG-225 for details.
     bool IsValid() const     { return true; }
     bool InContainer() const { return (next_ != nullptr); }
 
@@ -185,7 +187,8 @@ struct DefaultSinglyLinkedListTraits {
 template <typename T>
 struct SinglyLinkedListable {
 public:
-    constexpr SinglyLinkedListable() { }
+    bool IsValid() const     { return sll_node_state_.IsValid(); }
+    bool InContainer() const { return sll_node_state_.InContainer(); }
 
 private:
     friend class DefaultSinglyLinkedListTraits<T>;
