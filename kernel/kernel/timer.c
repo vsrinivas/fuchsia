@@ -81,6 +81,9 @@ static void timer_set(timer_t *timer, lk_time_t delay, lk_time_t period, timer_c
         panic("timer %p already in list\n", timer);
     }
 
+    /* Bump the delay, since we're probably straddling a millisecond */
+    delay += 1;
+
     now = current_time();
     timer->scheduled_time = now + delay;
     timer->periodic_time = period;
