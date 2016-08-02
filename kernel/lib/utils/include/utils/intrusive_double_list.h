@@ -54,7 +54,6 @@ struct DefaultDoublyLinkedListTraits {
 template <typename T>
 struct DoublyLinkedListable {
 public:
-    bool IsValid() const     { return dll_node_state_.IsValid(); }
     bool InContainer() const { return dll_node_state_.InContainer(); }
 
 private:

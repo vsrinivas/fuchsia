@@ -187,7 +187,6 @@ struct DefaultSinglyLinkedListTraits {
 template <typename T>
 struct SinglyLinkedListable {
 public:
-    bool IsValid() const     { return sll_node_state_.IsValid(); }
     bool InContainer() const { return sll_node_state_.InContainer(); }
 
 private:
