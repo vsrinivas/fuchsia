@@ -367,7 +367,8 @@ void eth_recv(void* _data, size_t len) {
 
     // require that we are the destination
     if (!ip6_addr_eq(&ll_ip6_addr, &ip->dst) &&
-        !ip6_addr_eq(&snm_ip6_addr, &ip->dst)) {
+        !ip6_addr_eq(&snm_ip6_addr, &ip->dst) &&
+        !ip6_addr_eq(&ip6_ll_all_nodes, &ip->dst)) {
         return;
     }
 
