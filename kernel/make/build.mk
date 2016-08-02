@@ -147,7 +147,7 @@ GENERATED += $(USER_FS)
 # There is a wee bit of machine-dependence in the rodso linker script.
 # So we use cpp macros/conditionals for that and generate the actual
 # linker script by preprocessing the source file.
-$(BUILDDIR)/rodso.ld: scripts/rodso.ld.in
+$(BUILDDIR)/rodso.ld: scripts/rodso.ld.in $(GLOBAL_CONFIG_HEADER)
 	@echo generating $@
 	$(NOECHO)$(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) \
 		       -E -P -xassembler-with-cpp $< -o $@
