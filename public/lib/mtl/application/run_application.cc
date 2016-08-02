@@ -95,9 +95,9 @@ void TerminateApplication(MojoResult result) {
   // so we detect this case by checking if there's a current result holder. Ugh.
   if (!result_holder)
     return;
-  FTL_DCHECK(!result_holder->is_set);
   result_holder->result = result;
 #ifndef NDEBUG
+  FTL_DCHECK(!result_holder->is_set);
   result_holder->is_set = true;
 #endif
 }
