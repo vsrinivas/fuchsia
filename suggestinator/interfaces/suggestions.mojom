@@ -1,0 +1,62 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="modular_services"]
+module suggestinator;
+
+import "common/interfaces/uuid.mojom";
+
+// A Suggestion represents a single context suggestion that can be presented to
+// the user.
+struct Suggestion {
+  // UUID that uniquely identifies this suggestion.
+  common.UUID id;
+
+  // User friendly description of this suggestion.
+  string description;
+
+  // Indicates whether or not selecting this suggestion will create a new
+  // session.
+  bool createsNewSession;
+
+  // URL that points to an icon file that should be displayed for this
+  // suggestion. If the value of this field is null, then there is no icon to
+  // display.
+  string? iconUrl;
+
+  // The theme color that should be used while displaying this suggestion, if
+  // present. This color usually matches a brand theme based on the module(s)
+  // this suggestion is associated with.
+  //
+  // The color is an RGB triplet, the bytes of which are encoded in the least
+  // significant bits of the returned integer. The value of this field will be
+  // -1, if there is no theme color assigned to this suggestion.
+  int32 themeColor;
+};
+
+// Observer interface that can be used to observe changes to the currently
+// provided list of context suggestions.
+interface SuggestionObserver {
+  // Called when there are updates to the list of suggestions that should be
+  // presented to the user. The contents of |suggestions| are sorted by the
+  // relevance of each suggestion and always contains the complete list of
+  // refreshed suggestions.
+  OnSuggestionsUpdated(array<Suggestion> suggestions);
+};
+
+// The Suggestions interface allows clients to observe the current context
+// suggestions and to make a selection to drive the session forward.
+[ServiceName="suggestinator::SuggestionService"]
+interface SuggestionService {
+  // Registers the given SuggestionObserver with Suggestions service. Once
+  // registered, the observer will immediately receive the complete list of
+  // available suggestions and will be asynchronously notified on successive
+  // changes to the list.
+  AddObserver(SuggestionObserver observer);
+
+  // Tells the Suggestions service to select the context suggestion with the
+  // given UUID. Returns the ID of the session that was modified or created as a
+  // result of selecting a suggestion, or null in case of failure.
+  SelectSuggestion(common.UUID suggestion_id) => (string? sessionId);
+};

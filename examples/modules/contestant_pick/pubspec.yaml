@@ -1,0 +1,10 @@
+name: contestant_pick
+dependencies:
+  modular:
+    path: ../../../dart-packages/modular
+  representation_types:
+    path: ../../../examples/representation_types
+modular:
+  targets:
+    - output_name: contestant_pick.mojo
+      entry_point: lib/contestant_pick_module.dart

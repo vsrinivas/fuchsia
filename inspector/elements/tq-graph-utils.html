@@ -1,0 +1,84 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<dom-module id="tq-graph-utils">
+
+  <script>
+
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'tq-graph-utils',
+      properties: {
+          width: {
+              type: Number,
+              value: 0,
+          },
+          height: {
+              type: Number,
+              value: 0,
+          },
+          root: SVGSVGElement,
+          container: SVGElement,
+      },
+      observers: [
+          '_sizeChanged(width, height)'
+      ],
+      attached: function() {
+          this._svg = d3.select(this.root);
+          this._container = d3.select(this.container);
+
+          // D3 zoom behavior.
+          this._zoom = d3.behavior.zoom().on('zoom', () => {
+            this._container.attr('transform',
+                `translate(${d3.event.translate}) scale(${d3.event.scale})`);
+          });
+
+          // Track what we think the center of the SVG area should be.
+          this._center = [0, 0];
+
+          // This provides an overlay that gets the pan and zoom events.
+          this._overlay = this._svg.append('svg:rect')
+              .attr('pointer-events', 'none')
+              .attr('fill', 'transparent')
+              .call(this._zoom)
+
+          this._sizeChanged(this.width, this.height);
+
+          this.listen(window, 'keydown', '_keyHandler');
+          this.listen(window, 'keyup', '_keyHandler');
+      },
+      _keyHandler: function(event) {
+        if ((event.keyIdentifier || event.key) != 'Shift') {
+          // Only care about the shift key.
+          return;
+        }
+
+        if (event.type == 'keyup') {
+          this._overlay.attr('pointer-events', 'none')
+        } else if (event.type == 'keydown') {
+          this._overlay.attr('pointer-events', 'all')
+        }
+      },
+      _sizeChanged: function(width, height) {
+          if (!this._svg) {
+              // DOM isn't set up yet.
+              return
+          }
+
+          // Resize the SVG element and the background:
+          this._svg.attr('width', width).attr('height', height);
+          this._overlay.attr('width', width).attr('height', height);
+
+          // Recenter drawing:
+          let pos = this._zoom.translate();
+          let newCenter = [width/2, height/2]
+          this._zoom.translate([pos[0] - this._center[0] + newCenter[0],
+            pos[1] - this._center[1] + newCenter[1]]);
+          this._center = newCenter;
+          this._zoom.event(this._overlay);
+      },
+    });
+  })();
+  </script>
+</dom-module>

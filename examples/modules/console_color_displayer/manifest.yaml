@@ -1,0 +1,18 @@
+#!mojo https://tq.mojoapps.io/handler.mojo
+
+# Define metadata.
+title: Print color values to the debug console
+url: https://tq.mojoapps.io/console_color_displayer.mojo
+
+# Define capabilities.
+verb: show
+input:
+ - color <rgb>
+
+use:
+ # Define representation schemas used above.
+ - rgb: https://github.com/domokit/modular/wiki/representation#rgb
+
+ # Define semantic labels used above.
+ - color: https://github.com/domokit/modular/wiki/semantic#color
+ - show: http://wordnetweb.princeton.edu/perl/webwn?s=show&i=8

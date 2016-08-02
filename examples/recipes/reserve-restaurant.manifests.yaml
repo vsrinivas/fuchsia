@@ -1,0 +1,55 @@
+verb: pick
+output: person <vcard,foaf>
+url: http://pick.com/
+
+use:
+ - foaf: https://github.com/domokit/modular/wiki/representation#foaf
+ - pick: http://wordnetweb.princeton.edu/perl/webwn?s=pick&i=9
+ - person: https://github.com/domokit/modular/wiki/semantic#person
+ - vcard: https://github.com/domokit/modular/wiki/representation#vcard
+
+---
+verb: pick
+output: restaurant <url>
+
+use:
+ - pick: http://wordnetweb.princeton.edu/perl/webwn?s=pick&i=9
+ - restaurant: https://github.com/domokit/modular/wiki/semantic#restaurant
+ - url: https://github.com/domokit/modular/wiki/representation#url
+
+---
+verb: pick
+output: time <iso-time>
+
+use:
+ - iso-time: https://github.com/domokit/modular/wiki/representation#iso-time
+ - pick: http://wordnetweb.princeton.edu/perl/webwn?s=pick&i=9
+ - time: https://github.com/domokit/modular/wiki/semantic#time
+
+---
+verb: table-reserve
+input:
+  - person+ <vcard>
+  - restaurant <url>
+  - time <iso-time>
+output: table-reservation <icf>
+
+use:
+ - icf: https://github.com/domokit/modular/wiki/representation#icf
+ - iso-time: https://github.com/domokit/modular/wiki/representation#iso-time
+ - person: https://github.com/domokit/modular/wiki/semantic#person
+ - restaurant: https://github.com/domokit/modular/wiki/semantic#restaurant
+ - table-reservation: https://github.com/domokit/modular/wiki/semantic#table-reservation
+ - table-reserve: http://wordnetweb.princeton.edu/perl/webwn?s=reserve&i=9
+ - time: https://github.com/domokit/modular/wiki/semantic#time
+ - url: https://github.com/domokit/modular/wiki/representation#url
+ - vcard: https://github.com/domokit/modular/wiki/representation#vcard
+
+---
+verb: pick
+output: date <iso-time>
+
+use:
+ - date: https://github.com/domokit/modular/wiki/semantic#date
+ - iso-time: https://github.com/domokit/modular/wiki/representation#iso-time
+ - pick: http://wordnetweb.princeton.edu/perl/webwn?s=pick&i=9

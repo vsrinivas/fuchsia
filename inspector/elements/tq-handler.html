@@ -1,0 +1,51 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<dom-module id="tq-handler">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+      }
+
+      /* TODO(ianloic): why can't this be inherited from app-theme.html? */
+      paper-material {
+        border-radius: 2px;
+        height: 100%;
+        padding: 16px 30px;
+        width: calc(98.66% - 16px);
+        margin: 16px auto 32px auto;
+        background: white;
+      }
+    </style>
+
+    <paper-material elevation="1">
+      <h1>Handler</h1>
+      <h2>Manifests</h2>
+      <ul>
+        <template is="dom-repeat" items="{{json.manifests}}" as="manifest">
+          <li>{{manifest.url}} &mdash; <i>{{manifest.title}}</i></li>
+        </template>
+      </ul>
+      <h2>Sessions</h2>
+      <ul>
+        <template is="dom-repeat" items="{{json.sessions}}" as="session">
+          <li>{{session}}</li>
+        </template>
+      </ul>
+    </paper-material>
+  </template>
+  <script>
+    (function() {
+      'use strict';
+
+      Polymer({
+        is: 'tq-handler',
+        properties: {
+          json:  Object,
+        }
+      });
+
+      inspectorElements['handler'] = 'tq-handler';
+    })();
+  </script>
+</dom-module>

@@ -1,0 +1,21 @@
+#!mojo https://tq.mojoapps.io/handler.mojo
+
+# Define metadata.
+title: Pick a color
+url: https://tq.mojoapps.io/color_picker.flx
+
+# Define capabilities.
+verb: pick
+output:
+ - color <rgb>
+display:
+ - card
+
+use:
+ # Define representation schemas used above.
+ - rgb: https://github.com/domokit/modular/wiki/representation#rgb
+
+ # Define semantic labels used above.
+ - card: https://github.com/domokit/modular/wiki/display#card
+ - color: https://github.com/domokit/modular/wiki/semantic#color
+ - pick: http://wordnetweb.princeton.edu/perl/webwn?s=pick&i=9

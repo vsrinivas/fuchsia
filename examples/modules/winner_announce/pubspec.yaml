@@ -1,0 +1,10 @@
+name: winner_announce
+dependencies:
+  modular:
+    path: ../../../dart-packages/modular
+  representation_types:
+    path: ../../../examples/representation_types
+modular:
+  targets:
+    - output_name: winner_announce.mojo
+      entry_point: lib/winner_announce_module.dart

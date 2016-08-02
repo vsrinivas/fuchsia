@@ -1,0 +1,24 @@
+name: handler
+dependencies:
+  collection: any
+  common:
+    path: ../common/dart
+  indexer_client:
+    path: ../indexer/client
+  meta: any
+  modular:
+    path: ../dart-packages/modular
+  parser:
+    path: ../parser
+  quiver: any
+  tuple: any
+  args: any
+dev_dependencies:
+  mojo_apptest: any
+  test: ^0.12.11
+modular:
+  targets:
+    - output_name: handler.mojo
+      entry_point: mojo/main.dart
+    - output_name: handler_test.mojo
+      entry_point: apptest/main.dart

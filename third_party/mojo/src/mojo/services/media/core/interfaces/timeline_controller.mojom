@@ -1,0 +1,40 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="mojo_services"]
+module mojo.media;
+
+import "mojo/services/media/common/interfaces/timelines.mojom";
+
+// Timing controller for a media graph.
+interface MediaTimelineController {
+  // Associates a control site with the controller.
+  AddControlSite(MediaTimelineControlSite control_site);
+
+  // Gets a timeline control site interface for the controller.
+  GetControlSite(MediaTimelineControlSite& control_site);
+};
+
+// Media graph component controlled by a MediaTimelineController.
+interface MediaTimelineControlSite {
+  const uint64 kInitialStatus = 0;
+
+  // Gets the status. To get the status immediately, call
+  // GetStatus(kInitialStatus). To get updates thereafter, pass
+  // the version sent in the previous callback.
+  GetStatus(uint64 version_last_seen) =>
+      (uint64 version, MediaTimelineControlSiteStatus status);
+
+  // Gets a timeline consumer interface for the control site.
+  GetTimelineConsumer(TimelineConsumer& timeline_consumer);
+};
+
+// Status returned by MediaTimelineControlSite's GetStatus method.
+struct MediaTimelineControlSiteStatus {
+  // Current timeline transform.
+  mojo.TimelineTransform timeline_transform;
+
+  // Indicates whether presentation has reached end-of-stream.
+  bool end_of_stream;
+};

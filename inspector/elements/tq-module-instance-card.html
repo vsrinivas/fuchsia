@@ -1,0 +1,32 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<dom-module id="tq-module-instance-card">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+      }
+    </style>
+
+    <paper-card heading="A Card">
+      <div class="card-content">
+        {{json.url}}
+      </div>
+    </paper-card>
+
+  </template>
+  <script>
+    (function() {
+      'use strict';
+
+      Polymer({
+        is: 'tq-module-instance-card',
+        properties: {
+          json:  Object,
+        }
+      });
+
+      inspectorElements['handler'] = 'tq-module-instance-card';
+    })();
+  </script>
+</dom-module>

@@ -1,0 +1,75 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="modular"]
+module modular;
+
+// WTF! @alhaad -  were you drunk when you wrote this?
+import "../../third_party/mojo/src/mojo/services/ui/views/interfaces/views.mojom";
+
+[ServiceName="modular::Composer"]
+// The interface that must be implemented by any module that wants to compose
+// other modules. The proxy to this interface is owned by the handler which
+// decides on the modules being composed based on information provided in the
+// manifest.
+interface Composer {
+  // Called when a new module *instance* is available to be composed as a child
+  // of 'this'.
+  // |id| is a unique identifier for the instance and used to identify the
+  // module instance when |RemoveChild| is called.
+  AddChild(string id, ModuleInstanceDisplayData moduleData);
+
+  // Called when this composer should stop composing the module instance
+  // identified by |id|.
+  // TODO(alhaad); RemoveChild() should return ViewOwner back so that the child
+  // can be reparented. This TODO should be implemented when we want to add
+  // a feature like having modules display a suggestion UI.
+  RemoveChild(string id);
+
+  // Called when the handler wants to update the |display_node_id| associated
+  // with the child |id|. The |display_node_id| will be used by the parent
+  // composing module to map the node in the state graph to the widgets.
+  // TODO(alhaad): This is only a temporary crutch so that I do not have to make
+  // big changes in all our examples.
+  UpdateChild(string id, string display_node_id);
+};
+
+[ServiceName="modular::Composable"]
+// This interface must be implemented by any module that wants to draw a UI.
+// The proxy to this interface is owned by the composer that composes this
+// particular module instance.
+interface Composable {
+  // The |embodiment| the module implementing this should take. A module
+  // instance can take only one embodiment at a time.
+  Display(string embodiment);
+
+  // Notifies the module of a user-requested back navigation.
+  // The module must return true iff it handled the navigation.
+  Back() => (bool was_handled);
+};
+
+// Struct representing the data exposed to the composing parent module by the
+// handler about the child being composed.
+struct ModuleInstanceDisplayData {
+  // Url of the application this module instance is at.
+  string url;
+
+  // A handle to the view owner of this module instance.
+  mojo.ui.ViewOwner view_owner;
+
+  // A handle to the Composable proxy of this module instance.
+  Composable child_interface;
+
+  // List of embodiment strings.
+  // This is the list of all embodiments this module instance can take.
+  // This information is used by the composing parent to call display() on it
+  // appropriately.
+  array<string> embodiments;
+
+  // The suggestion ID for modules that are being composed in the suggestion
+  // embodiment. Used by launcher to associate a composed suggestion with the
+  // associated entry returned from the Suggestion service.
+  // TODO(armansito): Not sure if this should be in a public API.
+  string? live_suggestion_id;
+};

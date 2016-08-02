@@ -1,0 +1,8 @@
+name: common
+dependencies:
+  modular:
+    path: ../../dart-packages/modular
+  modular_services:
+    path: ../../modular_services
+  mojo: any
+  mojo_services: any

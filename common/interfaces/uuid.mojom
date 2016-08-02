@@ -1,0 +1,11 @@
+// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="modular_services"]
+module common;
+
+// A 128-bit universally unique identifier.
+struct UUID {
+  array<uint8, 16> value;
+};

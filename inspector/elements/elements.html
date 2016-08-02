@@ -1,0 +1,36 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<link rel="import" href="dependencies.vulcanized.html">
+
+<script>
+// Registry for elements to handle top-level display of types of JSON.
+let inspectorElements = {};
+</script>
+
+<!-- Style -->
+<link rel="import" href="../styles/app-theme.html">
+<link rel="import" href="../styles/shared-styles.html">
+
+<!-- Element for talking to the inspector server running inside modular -->
+<link rel="import" href="tq-debug-server.html">
+
+<!-- Navigation menu rendering -->
+<link rel="import" href="tq-menu.html">
+
+<!-- Routing: displays the appropriate element for the loaded JSON -->
+<link rel="import" href="tq-main.html">
+
+<!-- Top-level elements -->
+<link rel="import" href="tq-module.html">
+<link rel="import" href="tq-session.html">
+<link rel="import" href="tq-handler.html">
+<link rel="import" href="tq-root.html">
+<link rel="import" href="tq-composition-tree.html">
+
+<!-- Elements used by top-level ones -->
+<link rel="import" href="tq-module-instance-card.html">
+<link rel="import" href="tq-colored-text.html">
+<link rel="import" href="tq-dataflow-blocks.html">
+<link rel="import" href="tq-dataflow-graph.html">
+<link rel="import" href="tq-session-graph.html">
+<link rel="import" href="tq-graph-utils.html">

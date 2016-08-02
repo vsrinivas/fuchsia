@@ -1,0 +1,45 @@
+language: cpp
+sudo: required
+cache:
+  pip: true
+  directories:
+    - $HOME/.pub-cache
+    - $HOME/goma
+dist: trusty
+os:
+  - osx
+  - linux
+env:
+  - ARGS=""
+  - ARGS="--release"
+  - ARGS="--target=android"
+  - ARGS="--target=android --release"
+matrix:
+  exclude:
+    - os: osx
+      env: ARGS=""
+    - os: osx
+      env: ARGS="--release"
+    - os: osx
+      env: ARGS="--target=android --release"
+before_install:
+  - ./modular_tools/continuous_build/before_install.sh
+before_script:
+  - ./modular_tools/continuous_build/setup.sh
+  - export PATH=$(cd ..; pwd -P)/depot_tools:$PATH
+  - export BOTO_CONFIG=$(cd ..; pwd -P)/boto
+script:
+  - bin/modular build $ARGS
+  - |
+    if [ "$ARGS" == "" ]; then
+      bin/modular test $ARGS
+    else
+      bin/modular test $ARGS --no-analyze
+    fi
+after_success:
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then ./modular_tools/deploy $ARGS; fi
+# TODO(tonyg): Re-enable email notifications after the build is stable.
+# notifications:
+#   email:
+#     recipients:
+#       - modular-hackers@google.com

@@ -1,0 +1,10 @@
+name: color_inverter
+dependencies:
+  modular:
+    path: ../../../dart-packages/modular
+  representation_types:
+    path: ../../representation_types
+modular:
+  targets:
+    - output_name: color_inverter.mojo
+      entry_point: lib/color_inverter.dart

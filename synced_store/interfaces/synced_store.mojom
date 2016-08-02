@@ -1,0 +1,66 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="modular_services"]
+module synced_store;
+
+[ServiceName="synced_store::SyncedStore"]
+interface SyncedStore {
+  // Authenticates as the given |username| and if successful, returns
+  // |auth_data|.
+  // TODO(nellv): Define what credentials are necessary to authenticate a user.
+  Authenticate(string username) => (AuthData? auth_data, Status status);
+
+  // Puts multiple key-value pairs in the store. The values are expected to be
+  // the JSON representation of the stored data. If the record addressed by a
+  // key already exists the value is replaced with the new one.
+  Put(map<string, string> key_values) => (Status status);
+
+  // Retrieves the values corresponding to the given keys. An empty map is
+  // returned if none of the keys is found in the store.
+  Get(array<string> keys) => (map<string, string>? key_values, Status status);
+
+  // Retrieves all keys starting with any of the given prefixes and returns the
+  // values associated with them. An empty map is returned if no keys
+  // corresponding to the prefixes is found.
+  GetByPrefix(array<string> key_prefixes)
+      => (map<string, string>? key_values, Status status);
+
+  // Returns all rows whose keys start with the given prefix and whose values
+  // match the given field values. |expected_key_values| is the JSON
+  // representation of all fields expected to be found in the row value.
+  // An empty map is returned if no keys corresponding to the prefixes is found.
+  GetByValueAttributes(string key_prefix, string expected_field_values)
+      => (map<string, string>? key_values, Status status);
+
+  // Adds the observer which is notified upon changes to any key with the given
+  // |key_prefix| and whose value matches the given field values.
+  AddObserver(string key_prefix, string? expected_field_values,
+      SyncedStoreObserver observer) => (Status status);
+
+  enum Status {
+    // The call completed successfully.
+    OK = 0,
+    // The call failed after an internal error.
+    INTERNAL_ERROR,
+    // User authentication failed.
+    AUTHENTICATION_ERROR,
+  };
+};
+
+struct AuthData {
+  // The user's unique id across all authentication providers.
+  string uid;
+  // Display name of the user.
+  string display_name;
+  // The profile image url for the user account.
+  string avatar;
+};
+
+interface SyncedStoreObserver {
+  // Called upon changes on the records. The given map is sparse, meaning that
+  // unchanged keys are omitted. No new |OnChange| calls will be made on this
+  // observer until the callback is executed.
+  OnChange(map<string, string?>? changes) => ();
+};

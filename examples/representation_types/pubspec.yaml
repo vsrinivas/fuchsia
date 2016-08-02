@@ -1,0 +1,7 @@
+name: representation_types
+dependencies:
+  collection: any
+  modular:
+    path: ../../dart-packages/modular
+dev_dependencies:
+  test: ^0.12.11

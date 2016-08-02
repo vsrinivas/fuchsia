@@ -1,0 +1,28 @@
+#!mojo https://tq.mojoapps.io/handler.mojo
+
+verb: pick
+output:
+ - (inverted color)
+
+recipe:
+ - verb: pick
+   output:
+    - (chosen color)
+
+ - verb: invert
+   input:
+    - (chosen color)
+   output:
+    - (inverted color)
+
+ - verb: show
+   input:
+    - (inverted color)
+
+use:
+ - chosen: https://github.com/domokit/modular/wiki/semantic#chosen
+ - color: https://github.com/domokit/modular/wiki/semantic#color
+ - invert: http://wordnetweb.princeton.edu/perl/webwn?s=invert&i=4
+ - inverted: https://github.com/domokit/modular/wiki/semantic#inverted
+ - pick: http://wordnetweb.princeton.edu/perl/webwn?s=pick&i=9
+ - show: http://wordnetweb.princeton.edu/perl/webwn?s=show&i=8

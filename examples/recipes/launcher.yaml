@@ -1,0 +1,30 @@
+#!mojo https://tq.mojoapps.io/handler.mojo
+
+# Initial "empty" recipe to launch the system UI. The idea with the launcher
+# is that we'll start off with an empty session and the session will grow based
+# on user input.
+
+verb: launcher
+
+recipe:
+ - verb: launcher
+   input:
+    # The following is the global list of all users of the system requested by
+    # the module through HandlerService. This list is optional so that the
+    # module can be instantiated without it.
+    - user*
+    - username?
+   # TODO(armansito): This shouldn't be necessary
+   # see https://github.com/domokit/modular/issues/522
+   output:
+    - story
+   # HACK(mesch): If the recipe step doesn't have a url, suggestinator cannot
+   # find the manifest for it, and doesn't know what it composes, thus
+   # losing some suggestions.
+   url: https://tq.mojoapps.io/launcher.flx
+
+use:
+ - launcher: https://github.com/domokit/modular/wiki/verbs#launcher
+ - story: https://github.com/domokit/modular/wiki/semantic#story
+ - user: https://github.com/domokit/modular/wiki/semantic#user
+ - username: https://github.com/domokit/modular/wiki/semantic#username

@@ -1,0 +1,169 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<script src="../scripts/dataflow.js"></script>
+
+<dom-module id="tq-dataflow-io-type">
+  <template>
+    <style>
+    :host {
+      display: block;
+    }
+    .connected {
+      background-color: #ddd;
+    }
+    .io-type-name {
+      font-weight: bold;
+    }
+    .io[data-node-count="0"] {
+      opacity: 0.7;
+    }
+    .io.selected {
+      text-decoration: underline;
+    }
+    </style>
+    <template is="dom-if" if="[[items.length]]">
+      <div class="io-type-name">[[name]]</div>
+    </template>
+    <template is="dom-repeat" items="[[items]]" as="item">
+      <div class="io"
+          on-mouseenter="enter" on-mouseleave="leave" on-click="click"
+          data-nodes$="[[item.nodesString]]"
+          data-node-count$="[[item.nodes.size]]">
+        <span class="pathExpr">[[item.pathExpr]]</span>
+      </div>
+    </template>
+  </template>
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'tq-dataflow-io-type',
+      properties: {
+        ios: Object,
+        name: String,
+        items: {
+          type: Array,
+          computed: 'computeItems(ios)',
+        },
+      },
+      computeItems: (ios) =>
+        Array.from(ios.entries(), (e) => new Object({
+          pathExpr: e[0],
+          nodes: e[1],
+          nodesString: Array.from(e[1]).join(' '),
+        })),
+      _elements: function(item) {
+        let selector = Array.from(event.model.item.nodes).map(
+          (id) => `.io[data-nodes~="${id}"]`).join(', ');
+        if (selector) {
+          return Array.from(document.querySelectorAll(selector));
+        } else {
+          return [];
+        }
+      },
+      enter: function(event) {
+        this._elements(event.model.item).forEach((element) => {
+          element.classList.add('connected');
+        });
+      },
+      leave: function(event) {
+        this._elements(event.model.item).forEach((element) => {
+          element.classList.remove('connected');
+        });
+      },
+      click: function(event) {
+        Array.from(document.querySelectorAll('.io.selected')).forEach(
+          (element) => element.classList.remove('selected'));
+        this._elements(event.model.item).forEach(
+          (element) => element.classList.add('selected'));
+        Array.from(document.querySelectorAll('paper-card.moduleInstance'))
+          .forEach((element) => {
+            if (element.querySelector('#left .io.selected')) {
+              element.classList.add('sink');
+              element.classList.remove('source');
+            } else if (element.querySelector('#right .io.selected')) {
+              element.classList.add('source');
+              element.classList.remove('sink');
+            } else {
+              element.classList.remove('source');
+              element.classList.remove('sink');
+            }
+          });
+      }
+    });
+  })();
+  </script>
+</dom-module>
+
+
+<dom-module id="tq-dataflow-blocks">
+  <template>
+    <style>
+      #right {
+        text-align: right;
+        margin-left: 2em;
+      }
+      paper-card {
+        margin: 16px;
+        width: 30%;
+      }
+      #inputs, #outputs {
+        color:#006064; /* Cyan 900 */
+      }
+      #composes, #displays {
+        color: #FF6F00; /* Amber 900 */
+      }
+      .sink {
+        margin-left: 68%;
+      }
+      paper-card.moduleInstance {
+        transition: margin-left 0.5s;
+      }
+    </style>
+    <div style="display:flex; flex-direction: column;">
+    <template is="dom-repeat" items="[[modules]]" as="module">
+      <template is="dom-repeat" items="[[module.instances]]" as="instance">
+        <paper-card class="moduleInstance" heading="[[instance.label]]">
+          <div class="card-content">
+            <div style="display:flex; flex-direction:row; justify-content: space-between;">
+              <div id="left">
+                <tq-dataflow-io-type id="inputs" name="Inputs"
+                    ios="[[instance.inputs]]"></tq-dataflow-io-type>
+                <tq-dataflow-io-type id="composes" name="Composes"
+                    ios="[[instance.composes]]"></tq-dataflow-io-type>
+              </div>
+              <div id="right">
+                <tq-dataflow-io-type id="outputs" name="Outputs"
+                    ios="[[instance.outputs]]"></tq-dataflow-io-type>
+                <tq-dataflow-io-type id="displays" name="Displays"
+                    ios="[[instance.displays]]"></tq-dataflow-io-type>
+              </div>
+            </div>
+          </div>
+        </paper-card>
+      </template>
+    </template>
+    </div>
+  </template>
+  <script>
+
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'tq-dataflow-blocks',
+      properties: {
+          json: {
+              type: Object,
+              observer: '_jsonChanged',
+          },
+          modules: Object,
+      },
+      _jsonChanged: function() {
+          this.modules = moduleDataflow(this.json);
+      }
+    });
+  })();
+  </script>
+</dom-module>

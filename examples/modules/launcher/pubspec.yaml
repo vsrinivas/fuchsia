@@ -1,0 +1,19 @@
+name: launcher
+dependencies:
+  common:
+    path: ../../../common/dart
+  modular_flutter:
+    path: ../../../dart-packages/modular_flutter
+  modular_services:
+    path: ../../../modular_services
+  representation_types:
+    path: ../../representation_types
+dependency_overrides:
+  flutter:
+    path: ../../../third_party/flutter/packages/flutter
+modular:
+  project_type: flutter
+  targets:
+    - output_name: launcher.flx
+      entry_point: lib/main.dart
+      assets: assets.yaml

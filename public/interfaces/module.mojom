@@ -1,0 +1,30 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="modular"]
+module modular;
+
+import "graph.mojom";
+
+// The interface that modular modules must implement. The Mojo app may implement
+// several modules; the modular handler requests each module through the app's
+// |ServiceProvider|, based on the verb.
+//
+// Destruction of the module instance is signaled by the handler closing its end
+// of the pipe.
+[ServiceName="modular::Module"]
+interface Module {
+  // Called when the module starts.
+  //
+  // |shorthand_table| maps shorthands declared in the module manifest to their
+  // full urls. |Graph| contains the module's view of the session graph, which
+  // can be observed for changes and can be used to apply mutations that modify
+  // the graph.
+  //
+  // |jsonSchemas| is a list of JSON-serialized Schema descriptions defined in
+  // the Module's Manifest or explicitly referenced there as a dependency.
+  OnInitialize(Graph moduleGraph,
+               map<string, string> shorthand_table,
+               array<string> json_schemas);
+};

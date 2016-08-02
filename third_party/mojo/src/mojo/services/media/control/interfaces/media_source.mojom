@@ -1,0 +1,62 @@
+// Copyright 2015 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="mojo_services"]
+module mojo.media;
+
+import "mojo/services/media/common/interfaces/media_metadata.mojom";
+import "mojo/services/media/common/interfaces/media_transport.mojom";
+import "mojo/services/media/common/interfaces/media_types.mojom";
+
+// Produces media streams delivered from a specified origin.
+interface MediaSource {
+  // Special value for GetStatus version_last_seen parameter to get the current
+  // status immediately.
+  const uint64 kInitialStatus = 0;
+
+  // Gets the streams produced by this source.
+  GetStreams() => (array<MediaSourceStreamDescriptor> streams);
+
+  // Gets the producer for the specified stream.
+  GetProducer(uint32 stream_index, MediaProducer& producer);
+
+  // Gets the pull mode producer for the specified stream.
+  GetPullModeProducer(uint32 stream_index, MediaPullModeProducer& producer);
+
+  // Gets the status. To get the status immediately, call
+  // GetStatus(kInitialStatus). To get updates thereafter, pass the version
+  // sent in the previous callback.
+  GetStatus(uint64 version_last_seen)
+      => (uint64 version, MediaSourceStatus status);
+
+  // Prepares the source.
+  Prepare() => ();
+
+  // Primes the source and downstream components.
+  Prime() => ();
+
+  // Flushes the source and downstream components.
+  Flush() => ();
+
+  // Seeks to the specified position, specified in nanoseconds.
+  Seek(int64 position) => ();
+};
+
+// Describes a media stream produced by a source.
+struct MediaSourceStreamDescriptor {
+  // Zero-based index.
+  uint32 index;
+
+  // Media type of the stream after conversion.
+  MediaType media_type;
+
+  // Media type of the stream before conversion (as produced by the demux).
+  MediaType original_media_type;
+};
+
+// Describes the media source.
+struct MediaSourceStatus {
+  // Describes the media.
+  MediaMetadata? metadata;
+};

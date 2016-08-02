@@ -1,0 +1,5 @@
+queue:
+- name: indexing
+  target: cloud-indexer
+  rate: 5/s
+  max_concurrent_requests: 1

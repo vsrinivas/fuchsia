@@ -1,0 +1,10 @@
+name: indexer_client
+dependencies:
+  common:
+    path: ../../common/dart
+  parser:
+    path: ../../parser
+dev_dependencies:
+  modular:
+    path: ../../dart-packages/modular
+  test: ^0.12.11

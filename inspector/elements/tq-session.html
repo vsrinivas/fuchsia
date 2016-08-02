@@ -1,0 +1,102 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<dom-module id="tq-session">
+    <template>
+        <style>
+        </style>
+
+        <paper-material elevation="1">
+            <tq-dataflow-graph id="dfg" json="[[json]]" width="[[graphWidth]]" height="[[graphHeight]]"></tq-dataflow-graph>
+        </paper-material>
+
+        <h1>Data Graph</h1>
+        <paper-material elevation="1">
+            <tq-session-graph id="graph" json="[[json]]" node="{{node}}" width="[[graphWidth]]" height="[[graphHeight]]"></tq-session-graph>
+        </paper-material>
+
+        <paper-dialog id="dialog">
+            <h2>Node: {{node.id}}</h2>
+            <paper-dialog-scrollable>
+                <h3>Labels:</h3>
+                <ul>
+                    <template is="dom-repeat" items="{{node.labels}}" as="label">
+                        <li>{{label}}</li>
+                    </template>
+                </ul>
+                <h3>Values:</h3>
+                <dl>
+                    <template is="dom-repeat" items="{{values_array(node.values)}}" as="value">
+                        <dt>{{value.label}}</dt>
+                        <dd>{{value.value}}</dd>
+                    </template>
+                </dl>
+            </paper-dialog-scrollable>
+            <div class="buttons">
+                <paper-button dialog-confirm autofocus>Accept</paper-button>
+            </div>
+        </paper-dialog>
+
+        <tq-dataflow-blocks json="[[json]]"></tq-dataflow-blocks>
+
+    </template>
+    <script>
+
+    (function() {
+      'use strict';
+
+      function decodeDataURI(uri) {
+          return atob(uri.substr(13))
+      }
+
+      Polymer({
+        is: 'tq-session',
+        properties: {
+            json: {
+                type: Object,
+                observer: '_jsonChanged',
+            },
+            node: {
+                type: Object,
+                notify: true,
+                observer: '_nodeChanged',
+            },
+            dataflowGraph: Object,
+            graphWidth: Number,
+            graphHeight: Number,
+        },
+        attached: function() {
+            this.listen(window, 'resize', '_resizeGraph');
+            this.async(() => this._resizeGraph());
+        },
+        detached: function() {
+            this.unlisten(window, 'resize', '_resizeGraph');
+        },
+        values_array: function(values) {
+            return Object.getOwnPropertyNames(values).map(
+                (l) => new Object({
+                    label:l,
+                    value:decodeDataURI(values[l])
+                }));
+        },
+        _resizeGraph: function() {
+            let rect = this.getBoundingClientRect();
+            this.graphWidth = rect.width;
+            this.graphHeight = Math.max(window.innerHeight - 200, 200);
+        },
+        _nodeChanged: function() {
+            this.$.dialog.open();
+        },
+        _nodeValue: function(id) {
+          let node = this.json.graph.nodes[id];
+          let reprType = Object.getOwnPropertyNames(node.values)[0];
+          let valueUri = node.values[reprType];
+          return valueUri?atob(valueUri.substr(13)):'';
+        },
+        _jsonChanged: function() {
+        },
+      });
+
+      inspectorElements['session'] = 'tq-session';
+    })();
+    </script>
+</dom-module>

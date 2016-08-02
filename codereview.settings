@@ -1,0 +1,5 @@
+# This file is used by gcl to get repository specific information.
+CODE_REVIEW_SERVER: https://chromereviews.googleplex.com
+VIEW_VC: https://goto.google.com/viewvc/chrome-internal?view=rev&revision=
+CC_LIST: modular-reviews@google.com
+PROJECT: modular

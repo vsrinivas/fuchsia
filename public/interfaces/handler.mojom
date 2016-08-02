@@ -1,0 +1,83 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="modular"]
+module modular;
+
+import "graph.mojom";
+
+// This file contains services that may be provided to Modules by the Handler.
+// Not all Modules will be privileged to access these services.
+
+enum HandlerStatus {
+  OK = 0,
+  INVALID_ARGUMENTS,
+  INVALID_JSON,
+  INVALID_RECIPE,
+  INVALID_SESSION_ID,
+  NOT_SUPPORTED
+};
+
+// Allows a module to control sessions. Only privileged modules have access to
+// this service.
+// TODO(armansito): We should make sure of that.
+[ServiceName="modular::HandlerService"]
+interface HandlerService {
+  // Create a new Session, and return its ID.  Returns INVALID_RECIPE if the
+  // recipe cannot be parsed. |recipe| should be a valid JSON string. If
+  // |recipe| is null, a new empty session will be created.
+  CreateSession(string? recipe) => (HandlerStatus status, string? sessionId);
+
+  // Restore a saved Session; return INVALID_SESSION_ID if there is no Session
+  // with that ID.
+  RestoreSession(string sessionId) => (HandlerStatus status);
+
+  // Stop a running Session; return INVALID_SESSION_ID if there is no Session
+  // with that ID.
+  StopSession(string sessionId) => (HandlerStatus status);
+
+  // Creates a temporary session that does not get backed by a ledger by forking
+  // an existing session with |parentSessionId|, such that a copy-on-write
+  // version of the parent session exists within the child session. Returns
+  // INVALID_SESSION_ID, if there is no session with the given ID.
+  //
+  // Calling StopSession on a temporary session destroys all references to that
+  // session, such that it won't be saved to the ledger and can never be
+  // restored.
+  ForkSession(string parentSessionId) =>
+      (HandlerStatus status, string? sessionId);
+
+  // Links the graph with |sessionId| to the module. After this call, module can
+  // fetch list of users to share content with them.
+  LinkSession(string sessionId) => (HandlerStatus status);
+
+  // Adds |jsonAddSteps| to a Session and removes |jsonRemoveSteps| from the
+  // Session. |jsonAddSteps| and |jsonRemoveSteps| should contain JSON strings.
+  // Returns INVALID_SESSION_ID if there is no Session with that ID or
+  // INVALID_JSON if either of |jsonAddSteps| or |jsonRemoveSteps| contains
+  // malformed JSON.
+  UpdateSession(string sessionId, array<string>? jsonAddSteps,
+      array<string>? jsonRemoveSteps) => (HandlerStatus status);
+
+  // Registers a SessionObserver. A successful call to this method will result
+  // in an OnSessionsStarted event with the ids of all currently running
+  // sessions.
+  AddObserver(SessionObserver observer);
+};
+
+// Allows a module to observe as sessions get started and stopped.
+interface SessionObserver {
+  OnSessionsStarted(array<string> sessionIds);
+  OnSessionsStopped(array<string> sessionIds);
+};
+
+// Allows a module to obtain the Graph of sessions that it is interested in.
+// This service is only provided to privileged modules that have the required
+// permissions to access session data.
+[ServiceName="modular::SessionGraphService"]
+interface SessionGraphService {
+  // Returns a proxy to the Graph associated with the session with |sessionId|.
+  // Returns INVALID_SESSION_ID if there is no Session with the given ID.
+  GetGraph(string sessionId, Graph& graph) => (HandlerStatus status);
+};

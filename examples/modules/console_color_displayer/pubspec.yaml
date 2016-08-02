@@ -1,0 +1,10 @@
+name: console_color_displayer
+dependencies:
+  modular:
+    path: ../../../dart-packages/modular
+  representation_types:
+    path: ../../representation_types
+modular:
+  targets:
+    - output_name: console_color_displayer.mojo
+      entry_point: lib/main.dart

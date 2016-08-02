@@ -1,0 +1,32 @@
+# This is a configuration file for devtools (`mojo_run`, `mojo_test) running
+# within a Mojo checkout.
+
+# The content has to parse to a Python dictionary literal. Strings of the form
+# '@{ABC}' are aliases that will be substituted for their values before
+# evaluation:
+#  '@{BUILD_DIR}': path to the output directory
+
+{
+  # Each dev server will be configured as specified and mapped for the
+  # indicated host using --map-origin.
+  'dev_servers': [
+    {
+      'host': 'https://tq.mojoapps.io/',
+      # At this port the server will appear to the shell. That means actually
+      # running on this port when running a Linux shell and being forwarded from
+      # this port when running on Android. Using a fixed port enables caching
+      # server responses between shell runs.
+      'port': 31839,
+      # First matching prefix will apply. Within the directiories specified for
+      # a prefix, first location that contains the requested path will apply.
+      'mappings': [
+        ('examples/recipes/', [
+          'examples/recipes/',
+        ]),
+        ('', [
+          'build/'
+        ]),
+      ],
+    },
+  ],
+}

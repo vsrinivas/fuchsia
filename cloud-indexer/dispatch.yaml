@@ -1,0 +1,6 @@
+dispatch:
+- url: "*/cloudindexer/*"
+  module: cloudindexer
+
+- url: "*/*"
+  module: default
