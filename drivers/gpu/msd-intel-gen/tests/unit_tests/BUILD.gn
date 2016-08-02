@@ -17,11 +17,13 @@ import("//magma/gnbuild/magma.gni")
 source_set("unit_tests") {
   sources = [
     "hello_msd.cc",
+    "test_msd_buffer.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys-driver:platform_buffer",
+    "$msd_intel_gen_build_root/src",
     "//third_party/gtest",
   ]
 }
