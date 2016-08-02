@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -345,10 +347,35 @@ void command(int argc, char** argv, bool runbg) {
         return;
     }
 
+    // Leading FOO=BAR become environment strings prepended to the
+    // inherited environ, just like in a real Bourne shell.
+    const char** envp = (const char**)environ;
+    for (i = 0; i < argc; ++i) {
+        if (strchr(argv[i], '=') == NULL)
+            break;
+    }
+    if (i > 0) {
+        size_t envc = 1;
+        for (char** ep = environ; *ep != NULL; ++ep)
+            ++envc;
+        envp = malloc((i + envc) * sizeof(*envp));
+        if (envp == NULL) {
+            puts("out of memory for environment strings!");
+            return;
+        }
+        memcpy(mempcpy(envp, argv, i * sizeof(*envp)),
+               environ, envc * sizeof(*envp));
+        argc -= i;
+        argv += i;
+    }
+
     snprintf(tmp, sizeof(tmp), "%s%s",
              (argv[0][0] == '/') ? "" : "/boot/bin/", argv[0]);
     argv[0] = tmp;
-    mx_handle_t p = launchpad_launch_mxio(argv[0], argc, (const char* const*)argv);
+    mx_handle_t p = launchpad_launch_mxio_etc(
+        argv[0], argc, (const char* const*)argv, envp, 0, NULL, NULL);
+    if (envp != (const char**)environ)
+        free(envp);
     if (p < 0) {
         printf("process failed to start (%d)\n", p);
         return;

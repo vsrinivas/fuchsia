@@ -152,9 +152,10 @@ mx_handle_t launchpad_launch_mxio(const char* name,
                                   int argc, const char* const* argv);
 
 // Same as launchpad_launch_mxio, but also passes additional handles
-// like launchpad_launch.
+// like launchpad_launch, and uses envp rather than global environ.
 mx_handle_t launchpad_launch_mxio_etc(const char* name,
                                       int argc, const char* const* argv,
+                                      const char* const* envp,
                                       size_t hnds_count, mx_handle_t* handles,
                                       uint32_t* ids);
 
