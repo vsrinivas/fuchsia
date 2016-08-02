@@ -52,6 +52,12 @@ static void callback(const char* path, size_t off, size_t len) {
     bootfiles_count++;
 }
 
+// make debugging less painful
+static const char* env[] = {
+    "LD_DEBUG=1",
+    NULL,
+};
+
 void devmgr_launch(const char* name, const char* app, const char* arg, const char* device) {
     mx_handle_t hnd[5 * VFS_MAX_HANDLES];
     uint32_t ids[5 * VFS_MAX_HANDLES];
@@ -78,8 +84,7 @@ void devmgr_launch(const char* name, const char* app, const char* arg, const cha
         n += r;
     }
     printf("devmgr: launch %s on %s\n", app, device);
-    mx_handle_t proc = launchpad_launch(name, arg ? 2 : 1, args, NULL,
-                                        n, hnd, ids);
+    mx_handle_t proc = launchpad_launch(name, arg ? 2 : 1, args, env, n, hnd, ids);
     if (proc < 0)
         printf("devmgr: launchpad_launch failed: %d\n", proc);
     else
@@ -112,7 +117,7 @@ void devmgr_launch_devhost(const char* name, mx_handle_t h,
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
     printf("devmgr: launch: %s %s %s\n", name, arg0, arg1);
-    mx_handle_t proc = launchpad_launch(name, 3, args, NULL, 2, hnd, ids);
+    mx_handle_t proc = launchpad_launch(name, 3, args, env, 2, hnd, ids);
     if (proc < 0)
         printf("devmgr: launch failed: %d\n", proc);
     else
