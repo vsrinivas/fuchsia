@@ -313,7 +313,6 @@ _free_xhci:
     xhci_free(xhci, (void*)xhci->cr.ring);
     free(xhci->roothub);
     free(xhci->dev);
-    free(xhci);
     /* _free_controller: */
     xhci_destroy_dev(&uxhci->hcidev, 0);
 
