@@ -19,8 +19,10 @@ namespace internal {
 class RefCountedThreadSafeBase {
  public:
   void AddRef() const {
+#ifndef NDEBUG
     FTL_DCHECK(!adoption_required_);
     FTL_DCHECK(!destruction_started_);
+#endif
     ref_count_.fetch_add(1u, std::memory_order_relaxed);
   }
 
@@ -36,8 +38,10 @@ class RefCountedThreadSafeBase {
 
   // Returns true if the object should self-delete.
   bool Release() const {
+#ifndef NDEBUG
     FTL_DCHECK(!adoption_required_);
     FTL_DCHECK(!destruction_started_);
+#endif
     FTL_DCHECK(ref_count_.load(std::memory_order_acquire) != 0u);
     // TODO(vtl): We could add the following:
     //     if (ref_count_.load(std::memory_order_relaxed) == 1u) {
@@ -90,9 +94,11 @@ inline RefCountedThreadSafeBase::RefCountedThreadSafeBase()
 }
 
 inline RefCountedThreadSafeBase::~RefCountedThreadSafeBase() {
+#ifndef NDEBUG
   FTL_DCHECK(!adoption_required_);
   // Should only be destroyed as a result of |Release()|.
   FTL_DCHECK(destruction_started_);
+#endif
 }
 
 }  // namespace internal

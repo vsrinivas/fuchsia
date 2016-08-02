@@ -58,10 +58,11 @@ class LogMessage {
 #define FTL_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::ftl::LogMessageVoidify() & (stream)
 
-#define FTL_EAT_STREAM_PARAMETERS     \
-  true ? (void)0                      \
-       : ::ftl::LogMessageVoidify() & \
-             ::ftl::LogMessage(::ftl::LOG_FATAL, 0, 0, nullptr).stream()
+#define FTL_EAT_STREAM_PARAMETERS(ignored) \
+  true || (ignored)                        \
+      ? (void)0                            \
+      : ::ftl::LogMessageVoidify() &       \
+            ::ftl::LogMessage(::ftl::LOG_FATAL, 0, 0, nullptr).stream()
 
 #define FTL_CHECK(condition)                                              \
   FTL_LAZY_STREAM(                                                        \
@@ -73,8 +74,8 @@ class LogMessage {
 #define FTL_DLOG(severity) FTL_LOG(severity)
 #define FTL_DCHECK(condition) FTL_CHECK(condition)
 #else
-#define FTL_DLOG(severity) FTL_EAT_STREAM_PARAMETERS
-#define FTL_DCHECK(condition) FTL_EAT_STREAM_PARAMETERS
+#define FTL_DLOG(severity) FTL_EAT_STREAM_PARAMETERS(true)
+#define FTL_DCHECK(condition) FTL_EAT_STREAM_PARAMETERS(condition)
 #endif
 
 #endif  // LIB_FTL_LOGGING_H_
