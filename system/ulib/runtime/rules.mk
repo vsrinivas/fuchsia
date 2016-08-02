@@ -22,6 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/completion.c \
     $(LOCAL_DIR)/message.c \
     $(LOCAL_DIR)/mutex.c \
+    $(LOCAL_DIR)/processargs.c \
     $(LOCAL_DIR)/process.c \
     $(LOCAL_DIR)/strstatus.c \
     $(LOCAL_DIR)/thread.c \

@@ -25,8 +25,8 @@
 
 #include <inttypes.h>
 
-#include <magenta/processargs.h>
 #include <runtime/message.h>
+#include <runtime/processargs.h>
 #include <runtime/status.h>
 void __mxr_thread_main(void);
 
@@ -1407,59 +1407,18 @@ static __attribute__((noinline)) mx_handle_t read_bootstrap_message(
         return MX_HANDLE_INVALID;
     }
 
-    uint8_t buffer[nbytes] __attribute__((aligned(__alignof(mx_proc_args_t))));
+    MXR_PROCESSARGS_BUFFER(buffer, nbytes);
     mx_handle_t handles[nhandles];
-
-    status = mx_message_read(bootstrap, buffer, &nbytes,
-                             handles, &nhandles, 0);
+    mx_proc_args_t* procargs;
+    uint32_t* handle_info;
+    status = mxr_processargs_read(bootstrap, buffer, nbytes, handles, nhandles,
+                                  &procargs, &handle_info);
     if (status != NO_ERROR) {
-        error("mx_message_read on bootstrap handle %#x"
-              " for %u bytes and %u handles failed: %d (%s)",
-              bootstrap, nbytes, nhandles, status, mx_strstatus(status));
+        error("bad message of %u bytes, %u handles"
+              " from bootstrap handle %#x: %d (%s)",
+              nbytes, nhandles, bootstrap, status, mx_strstatus(status));
         return MX_HANDLE_INVALID;
     }
-    if (nbytes != sizeof(buffer)) {
-        error("mx_message_read on bootstrap handle %#x got %u != %zu bytes",
-              bootstrap, nbytes, sizeof(buffer));
-        return MX_HANDLE_INVALID;
-    }
-    if (nhandles != sizeof(handles) / sizeof(handles[0])) {
-        error("mx_message_read on bootstrap handle %#x got %u != %zu handles",
-              bootstrap, nhandles, sizeof(handles) / sizeof(handles[0]));
-        return MX_HANDLE_INVALID;
-    }
-
-    const mx_proc_args_t* procargs = (void*)buffer;
-    if (procargs->protocol != MX_PROCARGS_PROTOCOL) {
-        error("bootstrap protocol %#x != %#x",
-              procargs->protocol, MX_PROCARGS_PROTOCOL);
-        return MX_HANDLE_INVALID;
-    }
-    if (procargs->version != MX_PROCARGS_VERSION) {
-        error("bootstrap version %#x != %#x",
-              procargs->version, MX_PROCARGS_VERSION);
-        return MX_HANDLE_INVALID;
-    }
-
-    if (procargs->handle_info_off < sizeof(*procargs)) {
-        error("malformed bootstrap message: "
-              "handle_info %u < header size %u",
-              procargs->handle_info_off, sizeof(*procargs));
-        return MX_HANDLE_INVALID;
-    }
-    if (procargs->handle_info_off > nbytes) {
-        error("malformed bootstrap message: "
-              "handle_info %u > message size %u",
-              procargs->handle_info_off, nbytes);
-        return MX_HANDLE_INVALID;
-    }
-    if ((nbytes - procargs->handle_info_off) / sizeof(uint32_t) < nhandles) {
-        error("malformed bootstrap message: "
-              "handle_info %u * %u handles > message size %u",
-              procargs->handle_info_off, nhandles, nbytes);
-        return MX_HANDLE_INVALID;
-    }
-    const uint32_t* handle_info = (void*)&buffer[procargs->handle_info_off];
 
     mx_handle_t exec_vmo = MX_HANDLE_INVALID;
     for (int i = 0; i < nhandles; ++i) {
