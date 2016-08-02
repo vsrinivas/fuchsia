@@ -2,7 +2,8 @@
 #include <elf.h>
 #include <string.h>
 
-#include <runtime/process.h>
+#include <runtime/message.h>
+#include <runtime/processargs.h>
 
 void __init_tls(void);
 void __mxr_thread_main(void);
@@ -53,16 +54,57 @@ void __libc_extensions_init(uint32_t handle_count,
 // with arg before things start
 void* __libc_intercept_arg(void*) __attribute__((weak));
 
-int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
+_Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* arg) {
     if (&__libc_intercept_arg != NULL)
         arg = __libc_intercept_arg(arg);
 
     // extract process startup information from message pipe in arg
-    mx_proc_info_t* pi = mxr_process_parse_args(arg);
+    mx_handle_t bootstrap = (uintptr_t)arg;
+
+    uint32_t nbytes, nhandles;
+    mx_status_t status = mxr_message_size(bootstrap, &nbytes, &nhandles);
+    if (status != NO_ERROR)
+        nbytes = nhandles = 0;
+
+    MXR_PROCESSARGS_BUFFER(buffer, nbytes);
+    mx_handle_t handles[nhandles];
+    mx_proc_args_t* procargs = NULL;
+    uint32_t* handle_info = NULL;
+    if (status == NO_ERROR)
+        status = mxr_processargs_read(bootstrap, buffer, nbytes,
+                                      handles, nhandles,
+                                      &procargs, &handle_info);
+
+    uint32_t argc = 0;
+    uint32_t envc = 0;
+    if (status == NO_ERROR) {
+        argc = procargs->args_num;
+        envc = procargs->environ_num;
+    }
+
+    // Use a single contiguous buffer for argv and envp, with two
+    // extra words of terminator on the end.  In traditional Unix
+    // process startup, the stack contains argv followed immediately
+    // by envp and that's followed immediately by the auxiliary vector
+    // (auxv), which is in two-word pairs and terminated by zero
+    // words.  Some crufty programs might assume some of that layout,
+    // and it costs us nothing to stay consistent with it here.
+    char* args_and_environ[argc + envc + 1 + 2];
+    char** argv = &args_and_environ[0];
+    char** envp = &args_and_environ[argc];
+    char** dummy_auxv = &args_and_environ[argc + envc + 1];
+    dummy_auxv[0] = dummy_auxv[1] = 0;
+
+    if (status == NO_ERROR)
+        status = mxr_processargs_strings(buffer, nbytes, argv, envp);
+    if (status != NO_ERROR) {
+        argc = 0;
+        argv = envp = NULL;
+    }
 
     __mxr_thread_main();
 
-    __environ = pi->envp;
+    __environ = envp;
     __init_tls();
     // TODO(kulakowski) Set up ssp once kernel randomness exists
     // __init_ssp((void*)aux[AT_RANDOM]);
@@ -70,10 +112,10 @@ int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
 
     // allow companion libraries a chance to poke at this
     if (&__libc_extensions_init != NULL)
-        __libc_extensions_init(pi->handle_count, pi->handle, pi->handle_info);
+        __libc_extensions_init(nhandles, handles, handle_info);
 
     __libc_start_init();
 
     // Pass control to the application
-    exit(main(pi->argc, pi->argv, pi->envp));
+    exit(main(argc, argv, envp));
 }
