@@ -18,7 +18,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_NAME := devmgr
 
-MODULE_TYPE := userapp-static
+MODULE_TYPE := userapp
 
 # grab sources for all built-in drivers
 # someday these will become dynamically loadable modules
@@ -48,6 +48,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mxio.c \
     $(LOCAL_DIR)/main.c
 
+# userboot supports loading via the dynamic linker, so libc (ulib/musl)
+# can be linked dynamically.  But it doesn't support any means to look
+# up other shared libraries, so everything else must be linked statically.
+
 MODULE_STATIC_LIBS := \
     ulib/ddk \
     ulib/hid \
@@ -56,7 +60,8 @@ MODULE_STATIC_LIBS := \
     ulib/mxio \
     ulib/gfx \
     ulib/runtime \
-    ulib/magenta \
-    ulib/musl-static \
+    ulib/magenta
+
+MODULE_LIBS := ulib/musl
 
 include make/module.mk
