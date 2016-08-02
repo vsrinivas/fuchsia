@@ -61,4 +61,10 @@ mxio_t* mxio_logger_create(mx_handle_t);
 // and return a message pipe handle to talk to said service
 mx_handle_t mxio_loader_service(void);
 
+// Examine the set of handles received at process startup for one matching
+// the given id.  If one is found, return it and remove it from the set
+// available to future calls.
+mx_handle_t mxio_get_startup_handle(uint32_t id);
+
+
 __END_CDECLS

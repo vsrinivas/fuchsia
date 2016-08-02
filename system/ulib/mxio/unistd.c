@@ -35,6 +35,7 @@
 #include <mxio/util.h>
 #include <mxio/vfs.h>
 
+#include "private.h"
 #include "unistd.h"
 
 #define MXDEBUG 0
@@ -220,14 +221,15 @@ fail:
 // hook into libc process startup
 // this is called prior to main to set up the mxio world
 // and thus does not use the mxio_lock
-void __libc_extensions_init(mx_proc_info_t* pi) {
-    int n;
+void __libc_extensions_init(uint32_t handle_count,
+                            mx_handle_t handle[],
+                            uint32_t handle_info[]) {
     int stdio_fd = -1;
 
     // extract handles we care about
-    for (n = 0; n < pi->handle_count; n++) {
-        unsigned arg = MX_HND_INFO_ARG(pi->handle_info[n]);
-        mx_handle_t h = pi->handle[n];
+    for (uint32_t n = 0; n < handle_count; n++) {
+        unsigned arg = MX_HND_INFO_ARG(handle_info[n]);
+        mx_handle_t h = handle[n];
 
         // MXIO uses this bit as a flag to say
         // that an fd should be duped into 0/1/2
@@ -239,17 +241,17 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
             }
         }
 
-        switch (MX_HND_INFO_TYPE(pi->handle_info[n])) {
+        switch (MX_HND_INFO_TYPE(handle_info[n])) {
         case MX_HND_TYPE_MXIO_ROOT:
             mxio_root_handle = mxio_remote_create(h, 0);
             break;
         case MX_HND_TYPE_MXIO_REMOTE:
             // remote objects may have a second handle
             // which is for signalling events
-            if (((n + 1) < pi->handle_count) &&
-                (pi->handle_info[n] == pi->handle_info[n + 1])) {
-                mxio_fdtab[arg] = mxio_remote_create(h, pi->handle[n + 1]);
-                pi->handle_info[n + 1] = 0;
+            if (((n + 1) < handle_count) &&
+                (handle_info[n] == handle_info[n + 1])) {
+                mxio_fdtab[arg] = mxio_remote_create(h, handle[n + 1]);
+                handle_info[n + 1] = 0;
             } else {
                 mxio_fdtab[arg] = mxio_remote_create(h, 0);
             }
@@ -267,14 +269,17 @@ void __libc_extensions_init(mx_proc_info_t* pi) {
             // unknown handle, leave it alone
             continue;
         }
-        pi->handle[n] = 0;
-        pi->handle_info[n] = 0;
+        handle[n] = 0;
+        handle_info[n] = 0;
     }
+
+    // Stash the rest for mxio_get_startup_handle callers to see.
+    __mxio_startup_handles_init(handle_count, handle, handle_info);
 
     mxio_t* use_for_stdio = (stdio_fd >= 0) ? mxio_fdtab[stdio_fd] : NULL;
 
     // configure stdin/out/err if not init'd
-    for (n = 0; n < 3; n++) {
+    for (uint32_t n = 0; n < 3; n++) {
         if (mxio_fdtab[n] == NULL) {
             if (use_for_stdio) {
                 mxio_fdtab[n] = use_for_stdio;

@@ -131,3 +131,7 @@ mx_status_t mxio_default_open(mxio_t* io, const char* path, int32_t flags, mxio_
 mx_handle_t mxio_default_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_default_wait(mxio_t* io, uint32_t events, uint32_t* pending, mx_time_t timeout);
 ssize_t mxio_default_ioctl(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
+
+void __mxio_startup_handles_init(uint32_t num, mx_handle_t handles[],
+                                 uint32_t handle_info[])
+    __attribute__((visibility("hidden")));

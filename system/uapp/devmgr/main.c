@@ -19,7 +19,6 @@
 #include <magenta/syscalls-ddk.h>
 #include <mxio/debug.h>
 #include <mxio/util.h>
-#include <runtime/process.h>
 #include <runtime/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +46,7 @@ void devmgr_io_init(void) {
 }
 
 int devicehost(int argc, char** argv) {
-    devhost_handle = mxr_process_get_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
+    devhost_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
     if (devhost_handle <= 0) {
         printf("devhost: no rpc handle?!\n");
         return -1;
@@ -109,7 +108,7 @@ int main(int argc, char** argv) {
     uint64_t bootfs_size;
     uintptr_t bootfs_val;
 
-    bootfs_vmo = mxr_process_get_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    bootfs_vmo = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     status = mx_vm_object_get_size(bootfs_vmo, &bootfs_size);
     if (status < 0) {
         cprintf("devmgr: failed to get bootfs size (%d)\n", status);

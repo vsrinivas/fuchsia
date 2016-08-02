@@ -45,18 +45,17 @@ static void libc_start_init(void) {
 weak_alias(libc_start_init, __libc_start_init);
 
 // hook for extension libraries to init
-static void libc_extensions_init(mx_proc_info_t* pi) {}
-weak_alias(libc_extensions_init, __libc_extensions_init);
+void __libc_extensions_init(uint32_t handle_count,
+                            mx_handle_t handle[],
+                            uint32_t handle_info[]) __attribute__((weak));
 
 // hook to let certain very low level processes muck
 // with arg before things start
-static void* libc_intercept_arg(void* arg) {
-    return arg;
-}
-weak_alias(libc_intercept_arg, __libc_intercept_arg);
+void* __libc_intercept_arg(void*) __attribute__((weak));
 
 int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
-    arg = __libc_intercept_arg(arg);
+    if (&__libc_intercept_arg != NULL)
+        arg = __libc_intercept_arg(arg);
 
     // extract process startup information from message pipe in arg
     mx_proc_info_t* pi = mxr_process_parse_args(arg);
@@ -70,7 +69,9 @@ int __libc_start_main(int (*main)(int, char**, char**), void* arg) {
     __init_security();
 
     // allow companion libraries a chance to poke at this
-    __libc_extensions_init(pi);
+    if (&__libc_extensions_init != NULL)
+        __libc_extensions_init(pi->handle_count, pi->handle, pi->handle_info);
+
     __libc_start_init();
 
     // Pass control to the application
