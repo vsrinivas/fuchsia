@@ -22,7 +22,7 @@
 
 // TODO: allocate via vmo perhaps?
 static char __proc_data__[4096];
-static mx_proc_info_t __proc_info__;
+mx_proc_info_t __proc_info__;
 
 mx_proc_info_t* mxr_process_get_info(void) {
     return &__proc_info__;
