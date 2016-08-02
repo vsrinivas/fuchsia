@@ -33,7 +33,7 @@ static mutex_t aspace_list_lock = MUTEX_INITIAL_VALUE(aspace_list_lock);
 static utils::DoublyLinkedList<VmAspace*> aspaces;
 
 // called once at boot to initialize the singleton kernel address space
-void VmAspace::KernelAspaceInit() {
+void VmAspace::KernelAspaceInitPreHeap() {
     // the singleton kernel address space
     static VmAspace _kernel_aspace(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL,
                                    "kernel");
@@ -44,10 +44,14 @@ void VmAspace::KernelAspaceInit() {
     _kernel_aspace.Adopt();
 #endif
 
-    aspaces.push_front(&_kernel_aspace);
-
     // save a pointer to the singleton kernel address space
     VmAspace::kernel_aspace_ = &_kernel_aspace;
+}
+
+void VmAspace::KernelAspaceInitPostCtors() {
+    // Now that global .ctors are guaranteed to have run, add the singleton
+    // kernel address space to the list of all address spaces.
+    aspaces.push_front(kernel_aspace_);
 }
 
 // simple test routines

@@ -136,9 +136,11 @@ private:
 
     // initialization routines need to construct the singleton kernel address space
     // at a particular points in the bootup process
-    static void KernelAspaceInit();
+    static void KernelAspaceInitPreHeap();
+    static void KernelAspaceInitPostCtors();
     static VmAspace* kernel_aspace_;
     friend void vm_init_preheap(uint level);
+    friend void vm_init_post_ctors(uint level);
 };
 
 void DumpAllAspaces();

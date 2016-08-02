@@ -64,7 +64,7 @@ void vm_init_preheap(uint level) {
     LTRACE_ENTRY;
 
     // allow the vmm a shot at initializing some of its data structures
-    VmAspace::KernelAspaceInit();
+    VmAspace::KernelAspaceInitPreHeap();
 
     // mark all of the kernel pages in use
     LTRACEF("marking all kernel pages as used\n");
@@ -76,6 +76,10 @@ void vm_init_preheap(uint level) {
 
         mark_pages_in_use(boot_alloc_start, boot_alloc_end - boot_alloc_start);
     }
+}
+
+void vm_init_post_ctors(uint level) {
+    VmAspace::KernelAspaceInitPostCtors();
 }
 
 void vm_init_postheap(uint level) {
@@ -305,4 +309,5 @@ STATIC_COMMAND("vm", "vm commands", &cmd_vm)
 STATIC_COMMAND_END(vm);
 
 LK_INIT_HOOK(vm_preheap, &vm_init_preheap, LK_INIT_LEVEL_HEAP - 1);
+LK_INIT_HOOK(vm_post_ctors, &vm_init_post_ctors, LK_INIT_LEVEL_HEAP);
 LK_INIT_HOOK(vm, &vm_init_postheap, LK_INIT_LEVEL_VM);
