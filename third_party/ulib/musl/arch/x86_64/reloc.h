@@ -24,3 +24,19 @@
             : "=r"(*fp)                   \
             :                             \
             : "memory")
+
+// Call the C _dl_start, which returns a dl_start_return_t containing the
+// user entry point and its argument.  Then jump to that entry point with
+// the argument in the first argument register, pushing a zero return
+// address and clearing the frame pointer register so the user entry point
+// is the base of the call stack.
+#define DL_START_ASM                            \
+    __asm__(".globl _start\n"                   \
+            ".type _start,%function\n"          \
+            "_start:\n"                         \
+            "    call _dl_start\n"              \
+            "    and $-16,%rsp\n"               \
+            "    xor %rbp,%rbp\n"               \
+            "    mov %rax,%rdi\n"               \
+            "    push %rbp\n"                   \
+            "    jmp *%rdx");

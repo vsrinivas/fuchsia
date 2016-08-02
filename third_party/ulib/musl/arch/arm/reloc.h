@@ -34,3 +34,23 @@
                          :                                      \
                          : "r"(pc), "r"((unsigned long)(arg1))  \
                          : "memory")
+
+// This is how a C return value can be composed so it will
+// deliver two words to the DL_START_ASM code, below.
+typedef unsigned long long dl_start_return_t;
+#define DL_START_RETURN(entry, arg) \
+    (((uint64_t)(uintptr_t)(entry) << 32) | (uintptr_t)(arg))
+
+// Call the C _dl_start, which returns a dl_start_return_t containing the
+// user entry point and its argument.  Then jump to that entry point with
+// the argument in the first argument register (r0, where it was placed by
+// the C function's return), clearing the return address and frame pointer
+// registers so the user entry point is the base of the call stack.
+#define DL_START_ASM                            \
+    __asm__(".globl _start\n"                   \
+            ".type _start,%function\n"          \
+            "_start:\n"                         \
+            "    bl _dl_start\n"                \
+            "    mov fp, #0\n"                  \
+            "    mov lr, #0\n"                  \
+            "    bx r1");

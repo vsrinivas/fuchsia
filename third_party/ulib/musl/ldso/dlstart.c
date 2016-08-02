@@ -4,15 +4,15 @@
 #define SHARED
 
 #ifndef GETFUNCSYM
-#define GETFUNCSYM(fp, sym, got)                                                   \
-    do {                                                                           \
-        __attribute__((__visibility__("hidden"))) void sym(unsigned char*, void*); \
-        static void (*static_func_ptr)(unsigned char*, void*) = sym;               \
-        __asm__ __volatile__(""                                                    \
-                             : "+m"(static_func_ptr)                               \
-                             :                                                     \
-                             : "memory");                                          \
-        *(fp) = static_func_ptr;                                                   \
+#define GETFUNCSYM(fp, sym, got)                                        \
+    do {                                                                \
+        __attribute__((__visibility__("hidden"))) dl_start_return_t sym(unsigned char*, void*); \
+        static stage2_func static_func_ptr = sym;                       \
+        __asm__ __volatile__(""                                         \
+                             : "+m"(static_func_ptr)                    \
+                             :                                          \
+                             : "memory");                               \
+        *(fp) = static_func_ptr;                                        \
     } while (0)
 #endif
 
@@ -22,7 +22,8 @@
 extern const char _BASE[] __attribute__((visibility("hidden")));
 extern size_t _DYNAMIC[] __attribute__((visibility("hidden")));
 
-__attribute__((__visibility__("hidden"))) void _start(void* start_arg) {
+__attribute__((__visibility__("hidden"))) dl_start_return_t _dl_start(
+    void* start_arg) {
     size_t base = (size_t)_BASE;
     size_t* dynv = _DYNAMIC;
 
@@ -68,5 +69,8 @@ __attribute__((__visibility__("hidden"))) void _start(void* start_arg) {
 
     stage2_func dls2;
     GETFUNCSYM(&dls2, __dls2, base + dyn[DT_PLTGOT]);
-    dls2((void*)base, start_arg);
+    return dls2((void*)base, start_arg);
 }
+
+// This defines _start to call _dl_start and then jump to the entry point.
+DL_START_ASM

@@ -58,7 +58,19 @@ enum {
 #define AUX_CNT 32
 #define DYN_CNT 32
 
-typedef void (*stage2_func)(unsigned char*, void*);
-// stage3_funcs should be __attribute__((noreturn)), but this cannot
-// be expressed in the typedef.
-typedef void (*stage3_func)(void*);
+// This is the return value of the dynamic linker startup functions.
+// They return all the way back to _start so as to pop their stack
+// frames.  The DL_START_ASM code at _start then receives these two
+// values and jumps to the entry point with the argument in place for
+// the C ABI and return address/frame pointer cleared so it's the base
+// of the call stack.
+#ifndef DL_START_RETURN
+typedef struct {
+    void* arg;
+    void* entry;
+} dl_start_return_t;
+#define DL_START_RETURN(entry, arg) (dl_start_return_t) { (arg), (entry) }
+#endif
+
+typedef dl_start_return_t (*stage2_func)(unsigned char*, void*);
+typedef dl_start_return_t (*stage3_func)(void*);

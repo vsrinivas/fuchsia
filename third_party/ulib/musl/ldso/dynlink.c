@@ -1120,8 +1120,8 @@ static void update_tls_size(void) {
  * linker itself, but some of the relocations performed may need to be
  * replaced later due to copy relocations in the main program. */
 
-__attribute__((__visibility__("hidden"))) void __dls2(unsigned char* base,
-                                                      void* start_arg) {
+__attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
+    unsigned char* base, void* start_arg) {
     ldso.base = base;
 
     Ehdr* ehdr = (void*)ldso.base;
@@ -1160,7 +1160,7 @@ __attribute__((__visibility__("hidden"))) void __dls2(unsigned char* base,
      * symbolically as a barrier against moving the address
      * load across the above relocation processing. */
     struct symdef dls3_def = find_sym(&ldso, "__dls3", 0);
-    ((stage3_func)laddr(&ldso, dls3_def.sym->st_value))(start_arg);
+    return ((stage3_func)laddr(&ldso, dls3_def.sym->st_value))(start_arg);
 }
 
 /* Stage 3 of the dynamic linker is called with the dynamic linker/libc
@@ -1168,7 +1168,7 @@ __attribute__((__visibility__("hidden"))) void __dls2(unsigned char* base,
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-static _Noreturn void dls3(mx_handle_t exec_vmo, void* start_arg) {
+static void* dls3(mx_handle_t exec_vmo) {
     static struct dso app;
     size_t i;
     char* env_preload = 0;
@@ -1179,9 +1179,6 @@ static _Noreturn void dls3(mx_handle_t exec_vmo, void* start_arg) {
     static char* bogon = "";
     char** argv = &bogon;
     char** argv_orig = argv;
-    char** envp = NULL; // TODO(mcgrathr): Get from pi->envp(?) later.
-
-    __environ = envp;
 
     libc.page_size = PAGE_SIZE;
 
@@ -1198,8 +1195,13 @@ static _Noreturn void dls3(mx_handle_t exec_vmo, void* start_arg) {
 #endif
 
     /* Only trust user/env if kernel says we're not suid/sgid */
+    bool log_libs = false;
     if (!libc.secure) {
         env_preload = getenv("LD_PRELOAD");
+
+        const char* debug = getenv("LD_DEBUG");
+        if (debug != NULL && debug[0] != '\0')
+            log_libs = true;
     }
 
     if (exec_vmo == MX_HANDLE_INVALID) {
@@ -1379,45 +1381,58 @@ static _Noreturn void dls3(mx_handle_t exec_vmo, void* start_arg) {
     debug.state = 0;
     _dl_debug_state();
 
+    if (log_libs) {
+        for (struct dso* p = &app; p != NULL; p = p->next) {
+            const char* name = p->name[0] == '\0' ? "<application>" : p->name;
+            const char* a = "";
+            const char* b = "";
+            const char* c = "";
+            if (p->soname != NULL && strcmp(name, p->soname)) {
+                a = " (";
+                b = p->soname;
+                c = ")";
+            }
+            if (p->base == p->map)
+                debugmsg("Loaded at [%p,%p): %s%s%s%s\n",
+                         p->map, p->map + p->map_len, name, a, b, c);
+            else
+                debugmsg("Loaded at [%p,%p) bias %p: %s%s%s%s\n",
+                         p->map, p->map + p->map_len, p->base, name, a, b, c);
+        }
+    }
+
     errno = 0;
 
-    CRTJMP(laddr(&app, ehdr->e_entry), start_arg);
-    for (;;)
-        ;
+    return laddr(&app, ehdr->e_entry);
 }
 
-// Read the bootstrap message and minimally decode it.  This doesn't use
-// mxr_process_parse_args because that API is crufty, it closes the handle
-// so it's stale when we pass it on to the main program, and we don't need
-// much of it here.  Explicitly prevent inlining this so that we're sure
-// its stack allocations are popped.
-static __attribute__((noinline)) mx_handle_t read_bootstrap_message(
-    mx_handle_t bootstrap) {
+dl_start_return_t __dls3(void* start_arg) {
+    // TODO(mcgrathr): Probably can drop this, but not clear yet.
+    __mxr_thread_main();
+
+    mx_handle_t bootstrap = (uintptr_t)start_arg;
+
     uint32_t nbytes, nhandles;
     mx_status_t status = mxr_message_size(bootstrap, &nbytes, &nhandles);
     if (status != NO_ERROR) {
         error("mxr_message_size bootstrap handle %#x failed: %d (%s)",
               bootstrap, status, mx_strstatus(status));
-        return MX_HANDLE_INVALID;
-    }
-
-    if (nbytes < sizeof(mx_proc_args_t)) {
-        error("probed message on bootstrap handle %#x too short: %u < %zu",
-              bootstrap, nbytes, sizeof(mx_proc_args_t));
-        return MX_HANDLE_INVALID;
+        nbytes = nhandles = 0;
     }
 
     MXR_PROCESSARGS_BUFFER(buffer, nbytes);
     mx_handle_t handles[nhandles];
     mx_proc_args_t* procargs;
     uint32_t* handle_info;
-    status = mxr_processargs_read(bootstrap, buffer, nbytes, handles, nhandles,
-                                  &procargs, &handle_info);
+    if (status == NO_ERROR)
+        status = mxr_processargs_read(bootstrap, buffer, nbytes,
+                                      handles, nhandles,
+                                      &procargs, &handle_info);
     if (status != NO_ERROR) {
         error("bad message of %u bytes, %u handles"
               " from bootstrap handle %#x: %d (%s)",
               nbytes, nhandles, bootstrap, status, mx_strstatus(status));
-        return MX_HANDLE_INVALID;
+        nbytes = nhandles = 0;
     }
 
     mx_handle_t exec_vmo = MX_HANDLE_INVALID;
@@ -1453,16 +1468,20 @@ static __attribute__((noinline)) mx_handle_t read_bootstrap_message(
         }
     }
 
-    return exec_vmo;
-}
+    // Unpack the environment strings so dls3 can use getenv.
+    char* envp[procargs->environ_num];
+    status = mxr_processargs_strings(buffer, nbytes, NULL, envp);
+    if (status == NO_ERROR)
+        __environ = envp;
 
-_Noreturn void __dls3(void* start_arg) {
-    // TODO(mcgrathr): Probably can drop this, but not clear yet.
-    __mxr_thread_main();
+    void* entry = dls3(exec_vmo);
 
-    mx_handle_t exec_vmo = read_bootstrap_message((uintptr_t)start_arg);
+    // Reset it so there's no dangling pointer to this stack frame.
+    // Presumably the parent will send the same strings in the main
+    // bootstrap message, but that's for __libc_start_main to see.
+    __environ = NULL;
 
-    dls3(exec_vmo, start_arg);
+    return DL_START_RETURN(entry, start_arg);
 }
 
 
@@ -1827,8 +1846,10 @@ static void log_write(const void* buf, size_t len) {
         status = mx_log_write(logger, len, buf, 0);
     else if (!loader_svc_rpc_in_progress && loader_svc != MX_HANDLE_INVALID)
         status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len);
-    else
-        status = mx_debug_write(buf, len);
+    else {
+        int n = mx_debug_write(buf, len);
+        status = n < 0 ? n : NO_ERROR;
+    }
     if (status != NO_ERROR)
         __builtin_trap();
 }
