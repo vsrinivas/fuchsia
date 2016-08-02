@@ -19,7 +19,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define MAGMA_DRET_ENABLE 1
+#define MAGMA_DEBUG 0
+
+#define MAGMA_DRET_ENABLE MAGMA_DEBUG
 
 namespace magma {
 
