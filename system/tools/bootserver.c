@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include "netboot.h"
+#include <system/netboot.h>
 
 static uint32_t cookie = 1;
 static char* appname;

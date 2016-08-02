@@ -25,8 +25,6 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include "netboot.h"
-
 #define MAX_LOG_DATA 1280
 
 typedef struct logpacket {

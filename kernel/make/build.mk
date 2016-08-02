@@ -119,7 +119,7 @@ LOGLISTENER := $(BUILDDIR)/tools/loglistener
 $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)cc -Wall -o $@ $<
+	$(NOECHO)cc -Wall -I system/ulib/system/include -o $@ $<
 
 GENERATED += $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER)
 

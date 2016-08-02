@@ -14,24 +14,30 @@
 
 #pragma once
 
-#define NB_MAGIC	0xAA774217
+#include <stddef.h>
+#include <stdint.h>
 
-#define NB_SERVER_PORT	33330
-#define NB_ADVERT_PORT	33331
+// clang-format off
 
-#define NB_COMMAND		1 // arg=0, data=command
-#define NB_SEND_FILE		2 // arg=0, data=filename
-#define NB_DATA			3 // arg=blocknum, data=data
-#define NB_BOOT			4 // arg=0
+#define NB_MAGIC              0xAA774217
 
-#define NB_ACK			0
+#define NB_SERVER_PORT        33330
+#define NB_ADVERT_PORT        33331
 
-#define NB_ADVERTISE		0x77777777
+#define NB_COMMAND            1 // arg=0, data=command
+#define NB_SEND_FILE          2 // arg=0, data=filename
+#define NB_DATA               3 // arg=blocknum, data=data
+#define NB_BOOT               4 // arg=0
+#define NB_QUERY              5 // arg=0, data=hostname (or "*")
 
-#define NB_ERROR		0x80000000
-#define NB_ERROR_BAD_CMD	0x80000001
-#define NB_ERROR_BAD_PARAM	0x80000002
-#define NB_ERROR_TOO_LARGE	0x80000003
+#define NB_ACK                0
+
+#define NB_ADVERTISE          0x77777777
+
+#define NB_ERROR              0x80000000
+#define NB_ERROR_BAD_CMD      0x80000001
+#define NB_ERROR_BAD_PARAM    0x80000002
+#define NB_ERROR_TOO_LARGE    0x80000003
 
 typedef struct nbmsg_t {
 	uint32_t magic;
