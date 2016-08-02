@@ -380,12 +380,26 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
     struct loader_msg {
         mx_proc_args_t header;
         uint32_t handle_info[HND_SPECIAL_COUNT + 1];
-    } msg;
+        char env[];
+    };
 
-    memset(&msg.header, 0, sizeof(msg.header));
-    msg.header.protocol = MX_PROCARGS_PROTOCOL;
-    msg.header.version = MX_PROCARGS_VERSION;
-    msg.header.handle_info_off = offsetof(struct loader_msg, handle_info);
+    const size_t msg_size = sizeof(struct loader_msg) + lp->env_len;
+    struct loader_msg* msg = malloc(msg_size);
+    if (msg == NULL)
+        return ERR_NO_MEMORY;
+
+    memset(&msg->header, 0, sizeof(msg->header));
+    msg->header.protocol = MX_PROCARGS_PROTOCOL;
+    msg->header.version = MX_PROCARGS_VERSION;
+    msg->header.handle_info_off = offsetof(struct loader_msg, handle_info);
+
+    // Include the environment strings so the dynamic linker can
+    // see options like LD_DEBUG or whatnot.
+    if (lp->envc > 0) {
+        msg->header.environ_off = offsetof(struct loader_msg, env);
+        msg->header.environ_num = lp->envc;
+        memcpy(msg->env, lp->env, lp->env_len);
+    }
 
     // This loop should be completely unrolled.  But using a switch here
     // gives us compiler warnings if we forget to handle any of the special
@@ -408,10 +422,12 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
             mx_handle_t proc = mx_handle_duplicate(lp_proc(lp),
                                                    MX_RIGHT_SAME_RIGHTS);
 #endif
-            if (proc < 0)
+            if (proc < 0) {
+                free(msg);
                 return proc;
+            }
             handles[nhandles] = proc;
-            msg.handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
+            msg->handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
             ++nhandles;
             continue;
 
@@ -425,12 +441,12 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
         }
         if (lp->special_handles[i] != MX_HANDLE_INVALID) {
             handles[nhandles] = lp->special_handles[i];
-            msg.handle_info[nhandles] = id;
+            msg->handle_info[nhandles] = id;
             ++nhandles;
         }
     }
 
-    mx_status_t status = mx_message_write(topipe, &msg, sizeof(msg),
+    mx_status_t status = mx_message_write(topipe, msg, msg_size,
                                           handles, nhandles, 0);
     if (status == NO_ERROR) {
         // message_write consumed all those handles.
@@ -443,6 +459,7 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
         mx_handle_close(handles[nhandles - 1]);
     }
 
+    free(msg);
     return status;
 }
 
