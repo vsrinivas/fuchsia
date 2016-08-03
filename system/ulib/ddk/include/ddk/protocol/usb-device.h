@@ -42,7 +42,7 @@ typedef struct usb_endpoint {
 } usb_endpoint_t;
 
 typedef struct usb_class_descriptor {
-    descriptor_header_t* header;
+    usb_descriptor_header_t* header;
     list_node_t node;
 } usb_class_descriptor_t;
 

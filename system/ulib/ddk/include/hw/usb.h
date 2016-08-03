@@ -122,7 +122,7 @@ typedef struct {
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;
-} __attribute__ ((packed)) descriptor_header_t;
+} __attribute__ ((packed)) usb_descriptor_header_t;
 
 typedef struct {
     uint8_t bLength;

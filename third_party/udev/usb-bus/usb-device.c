@@ -40,7 +40,7 @@
 #include "usb-private.h"
 #include "usb-device.h"
 
-#define NEXT_DESCRIPTOR(header) ((descriptor_header_t*)((void*)header + header->bLength))
+#define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
 
 #define DR_DESC (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE)
 
@@ -107,8 +107,8 @@ usb_decode_interval(usb_speed_t speed, const endpoint_type type, const unsigned 
 static int
 count_interfaces(usb_configuration_descriptor_t* desc) {
     int count = 0;
-    descriptor_header_t* header = NEXT_DESCRIPTOR(desc);
-    descriptor_header_t* end = (descriptor_header_t*)((void*)desc + desc->wTotalLength);
+    usb_descriptor_header_t* header = NEXT_DESCRIPTOR(desc);
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)desc + desc->wTotalLength);
     while (header < end) {
         if (header->bDescriptorType == USB_DT_INTERFACE)
             count++;
@@ -118,9 +118,9 @@ count_interfaces(usb_configuration_descriptor_t* desc) {
 }
 
 static int
-count_alt_interfaces(usb_interface_descriptor_t* desc, descriptor_header_t* end) {
+count_alt_interfaces(usb_interface_descriptor_t* desc, usb_descriptor_header_t* end) {
     int count = 0;
-    descriptor_header_t* header = NEXT_DESCRIPTOR(desc);
+    usb_descriptor_header_t* header = NEXT_DESCRIPTOR(desc);
     while (header < end) {
         if (header->bDescriptorType == USB_DT_INTERFACE) {
             usb_interface_descriptor_t* test = (usb_interface_descriptor_t*)header;
@@ -205,8 +205,8 @@ mx_status_t usb_init_device(usb_device_t* dev) {
         int intf_index = 0;
         int alt_intf_index = 0;
         usb_interface_t* current_interface = NULL;
-        descriptor_header_t* ptr = NEXT_DESCRIPTOR(cd);
-        descriptor_header_t* end = (descriptor_header_t*)((void*)cd + cd->wTotalLength);
+        usb_descriptor_header_t* ptr = NEXT_DESCRIPTOR(cd);
+        usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)cd + cd->wTotalLength);
 
         while (ptr < end) {
             if (ptr->bDescriptorType == USB_DT_INTERFACE) {
