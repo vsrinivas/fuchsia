@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include <fcntl.h>
 #include <stdbool.h>

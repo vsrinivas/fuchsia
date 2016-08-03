@@ -120,7 +120,7 @@ NETRUNCMD := $(BUILDDIR)/tools/netruncmd
 $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)cc -Wall -I system/ulib/system/include -o $@ $<
+	$(NOECHO)cc -std=c99 -Wall -I system/ulib/system/include -o $@ $<
 
 GENERATED += $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD)
 
