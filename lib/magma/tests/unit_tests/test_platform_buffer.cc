@@ -65,7 +65,7 @@ static void TestPlatformBuffer(uint64_t size)
     EXPECT_EQ(check, first_word);
 
     // pin again
-    ret = buffer->PinPages(nullptr);
+    ret = buffer->PinPages();
     EXPECT_EQ(ret, true);
 
     ret = buffer->MapPageCpu(num_pages - 1, &virt_addr);
