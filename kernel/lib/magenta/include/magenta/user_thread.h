@@ -21,7 +21,6 @@
 #include <utils/ref_ptr.h>
 #include <utils/string_piece.h>
 
-class ThreadHandle;
 class ProcessDispatcher;
 
 class UserThread : public utils::DoublyLinkedListable<UserThread*>
