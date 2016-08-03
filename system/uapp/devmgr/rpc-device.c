@@ -15,6 +15,8 @@
 #include "devmgr.h"
 #include "vfs.h"
 
+#include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +24,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/iotxn.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -32,6 +35,7 @@
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
 
+#include <runtime/completion.h>
 #include <runtime/mutex.h>
 
 #include <system/listnode.h>
@@ -121,6 +125,52 @@ fail1:
     return r;
 }
 
+#define TXN_SIZE 0x2000 // max size of rio is 8k
+
+static void sync_io_complete(iotxn_t* txn) {
+    mxr_completion_signal((mxr_completion_t*)txn->context);
+}
+
+static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t count, mx_off_t off) {
+    iotxn_t* txn;
+    mx_status_t status = iotxn_alloc(&txn, 0, TXN_SIZE, 0);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    assert(count <= TXN_SIZE);
+
+    mxr_completion_t completion = MXR_COMPLETION_INIT;
+
+    txn->opcode = opcode;
+    txn->offset = off;
+    txn->length = count;
+    txn->complete_cb = sync_io_complete;
+    txn->context = &completion;
+
+    // if write, write the data to the iotxn
+    if (opcode == IOTXN_OP_WRITE) {
+        txn->ops->copyto(txn, buf, txn->length, 0);
+    }
+
+    dev->ops->iotxn_queue(dev, txn);
+    mxr_completion_wait(&completion, MX_TIME_INFINITE);
+
+    if (txn->status != NO_ERROR) {
+        txn->ops->release(txn);
+        return txn->status;
+    }
+
+    // if read, get the data
+    if (opcode == IOTXN_OP_READ) {
+        txn->ops->copyfrom(txn, buf, txn->actual, 0);
+    }
+
+    ssize_t actual = txn->actual;
+    txn->ops->release(txn);
+    return actual;
+}
+
 mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
     iostate_t* ios = cookie;
     mx_device_t* dev = ios->dev;
@@ -150,7 +200,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
         return NO_ERROR;
     }
     case MX_RIO_READ: {
-        mx_status_t r = dev->ops->read(dev, msg->data, arg, ios->io_off);
+        mx_status_t r = do_sync_io(dev, IOTXN_OP_READ, msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
@@ -159,7 +209,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
         return r;
     }
     case MX_RIO_WRITE: {
-        mx_status_t r = dev->ops->write(dev, msg->data, len, ios->io_off);
+        mx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;

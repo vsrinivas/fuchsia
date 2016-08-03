@@ -37,6 +37,7 @@
 #define LYNX_POINT_AHCI_DID (0x8c02)
 #define WILDCAT_AHCI_DID    (0x9c83)
 #define SUNRISE_AHCI_DID    (0x9d03)
+#define ICH9_AHCI_DID       (0x2922)
 
 #define TRACE 1
 
@@ -170,7 +171,7 @@ static void ahci_port_reset(ahci_port_t* port) {
     ahci_port_enable(port);
 
     // wait for device detect
-    status = ahci_wait_for_set(&port->regs->ssts, AHCI_PORT_SSTS_DET_PRESENT, 10llu * 1000 * 1000 * 1000);
+    status = ahci_wait_for_set(&port->regs->ssts, AHCI_PORT_SSTS_DET_PRESENT, 1llu * 1000 * 1000 * 1000);
     if (status < 0) {
         xprintf("ahci.%d: no device detected\n", port->nr);
     }
@@ -191,7 +192,7 @@ static mx_status_t ahci_port_do_txn(ahci_port_t* port, iotxn_t* txn) {
     mx_paddr_t phys;
     txn->ops->physmap(txn, &phys);
 
-    //xprintf("ahci.%d: do_txn cmd=0x%x device=0x%x lba=0x%llx count=%u phys=0x%lx data_sz=0x%llx\n", port->nr, pdata->cmd, pdata->device, pdata->lba, pdata->count, phys, txn->length);
+    //xprintf("ahci.%d: do_txn cmd=0x%x device=0x%x lba=0x%llx count=%u phys=0x%lx data_sz=0x%llx offset=0x%llx\n", port->nr, pdata->cmd, pdata->device, pdata->lba, pdata->count, phys, txn->length, txn->offset);
 
     // build the command
     ahci_cl_t* cl = port->cl;
@@ -611,6 +612,7 @@ static mx_bind_inst_t binding[] = {
     BI_MATCH_IF(EQ, BIND_PCI_DID, LYNX_POINT_AHCI_DID), // Simics
     BI_MATCH_IF(EQ, BIND_PCI_DID, WILDCAT_AHCI_DID),    // Pixel2
     BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_AHCI_DID),    // NUC
+    BI_MATCH_IF(EQ, BIND_PCI_DID, ICH9_AHCI_DID),       // QEMU
 };
 
 mx_driver_t _driver_ahci BUILTIN_DRIVER = {

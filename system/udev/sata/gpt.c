@@ -231,6 +231,8 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     txn->ops->copyfrom(txn, &header, sizeof(gpt_t), 0);
     if (header.magic != GPT_MAGIC) {
         xprintf("gpt: bad header magic\n");
+        txn->ops->release(txn);
+        return ERR_NOT_SUPPORTED;
     }
 
     xprintf("gpt: found gpt header %u entries @ lba%llu\n", header.entries_count, header.entries);

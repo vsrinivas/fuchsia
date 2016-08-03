@@ -442,7 +442,7 @@ mx_handle_t vfs_create_root_handle(void) {
 static int vfs_watchdog(void* arg) {
     int txn = vfs_txn;
     for (;;) {
-        mx_nanosleep(500000000ULL);
+        mx_nanosleep(1000000000ULL);
         int now = vfs_txn;
         if ((now == txn) && (now != -1)) {
             vnode_t* vn = vfs_txn_vn;

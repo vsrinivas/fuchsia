@@ -116,10 +116,11 @@ else
 fi
 
 if [ "$DISK" -eq 1 ]; then
-    # virtio based block device
     if [ "$ARCH" == "x86-64" ]; then
-        ARGS+=" -drive file=blk.bin,if=virtio,format=raw"
+        # ahci
+        ARGS+=" -drive file=blk.bin,if=none,id=mydisk -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
     else
+        # virtio based block device
         ARGS+=" -drive if=none,file=blk.bin,id=blk,format=raw -device virtio-blk-device,drive=blk"
     fi
 fi

@@ -79,7 +79,7 @@ static void iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offse
 
 static void iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset) {
     iotxn_priv_t* priv = get_priv(txn);
-    size_t count = MIN(length, txn->length - offset);
+    size_t count = MIN(length, priv->data_size - offset);
     memcpy(priv->data + offset, data, count);
 }
 

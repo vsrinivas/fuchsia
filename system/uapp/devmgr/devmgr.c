@@ -380,6 +380,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     DEFAULT_IF_NULL(ops, release);
     DEFAULT_IF_NULL(ops, read);
     DEFAULT_IF_NULL(ops, write);
+    DEFAULT_IF_NULL(ops, iotxn_queue);
     DEFAULT_IF_NULL(ops, get_size);
     DEFAULT_IF_NULL(ops, ioctl);
 

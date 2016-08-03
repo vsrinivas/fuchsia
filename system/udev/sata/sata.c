@@ -15,11 +15,13 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/hexdump.h>
 #include <ddk/protocol/block.h>
 
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <runtime/completion.h>
+#include <sys/param.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -50,7 +52,9 @@ typedef struct sata_device {
 
     int port;
     int flags;
-    int sector_sz;
+
+    mx_size_t sector_sz;
+    mx_off_t capacity; // bytes
 } sata_device_t;
 
 #define get_sata_device(dev) containerof(dev, sata_device_t, device)
@@ -117,17 +121,19 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
         xprintf(" PIO\n");
     }
     if (cap & (1 << 9)) {
-        if (*(devinfo + SATA_DEVINFO_CMD_SET_2) & (1 << 10)) {
-            xprintf("  LBA48 %llu sectors", sata_devinfo_u64(devinfo, SATA_DEVINFO_LBA_CAPACITY_2));
-            flags |= SATA_FLAG_LBA48;
-        } else {
-            xprintf("  LBA %u sectors", sata_devinfo_u32(devinfo, SATA_DEVINFO_LBA_CAPACITY));
-        }
         dev->sector_sz = 512; // default
         if ((*(devinfo + SATA_DEVINFO_SECTOR_SIZE) & 0xd000) == 0x5000) {
             dev->sector_sz = 2 * sata_devinfo_u32(devinfo, SATA_DEVINFO_LOGICAL_SECTOR_SIZE);
         }
-        xprintf(" sector size=%d\n", dev->sector_sz);
+        if (*(devinfo + SATA_DEVINFO_CMD_SET_2) & (1 << 10)) {
+            flags |= SATA_FLAG_LBA48;
+            dev->capacity = sata_devinfo_u64(devinfo, SATA_DEVINFO_LBA_CAPACITY_2) * dev->sector_sz;
+            xprintf("  LBA48");
+        } else {
+            dev->capacity = sata_devinfo_u32(devinfo, SATA_DEVINFO_LBA_CAPACITY) * dev->sector_sz;
+            xprintf("  LBA");
+        }
+        xprintf(" %llu sectors, size=%lu\n", dev->capacity, dev->sector_sz);
     } else {
         xprintf("  CHS unsupported!\n");
     }
@@ -142,6 +148,12 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
     sata_device_t* device = get_sata_device(dev);
     // TODO implement other block ioctls
     switch (op) {
+    case BLOCK_OP_GET_SIZE: {
+        uint64_t* size = reply;
+        if (max < sizeof(*size)) return ERR_NOT_ENOUGH_BUFFER;
+        *size = device->capacity;
+        return sizeof(*size);
+    }
     case BLOCK_OP_GET_BLOCKSIZE: {
          uint64_t* blksize = reply;
          if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
@@ -154,12 +166,6 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
 }
 
 static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    // FIXME write not supported for now
-    if (txn->opcode == IOTXN_OP_WRITE) {
-        txn->ops->complete(txn, ERR_NOT_SUPPORTED, 0);
-        return;
-    }
-
     // 4mb hardware limit per prd
     if (txn->length >= 0x400000) {
         txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
@@ -167,6 +173,16 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     }
 
     sata_device_t* device = get_sata_device(dev);
+
+    // offset must be aligned to block size
+    if (txn->offset % device->sector_sz) {
+        xprintf("%s: offset 0x%llx is not aligned to sector size %lu!\n", dev->name, txn->offset, device->sector_sz);
+        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        return;
+    }
+
+    // constrain to device capacity
+    txn->length = MIN(txn->length, device->capacity - txn->offset);
 
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
     pdata->cmd = txn->opcode == IOTXN_OP_READ ? SATA_CMD_READ_DMA_EXT : SATA_CMD_WRITE_DMA_EXT;
@@ -178,9 +194,15 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     ahci_iotxn_queue(dev->parent, txn);
 }
 
+static mx_off_t sata_getsize(mx_device_t* dev) {
+    sata_device_t* device = get_sata_device(dev);
+    return device->capacity;
+}
+
 static mx_protocol_device_t sata_device_proto = {
     .ioctl = sata_ioctl,
     .iotxn_queue = sata_iotxn_queue,
+    .get_size = sata_getsize,
 };
 
 mx_status_t sata_bind(mx_device_t* dev, int port) {
