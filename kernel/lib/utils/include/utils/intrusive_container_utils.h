@@ -64,8 +64,8 @@ struct KeyEraseUtils<
     using PtrTraits = typename ContainerType::PtrTraits;
     using PtrType   = typename PtrTraits::PtrType;
     using ValueType = typename PtrTraits::ValueType;
-    using KeyType   = typename KeyTraits::KeyType;
 
+    template <typename KeyType>
     static PtrType erase(ContainerType& container, const KeyType& key) {
         return container.erase_if(
             [key](const ValueType& other) -> bool {
@@ -81,8 +81,8 @@ struct KeyEraseUtils<
         typename enable_if<ContainerType::IsAssociative == true, void>::type> {
     using PtrTraits = typename ContainerType::PtrTraits;
     using PtrType   = typename PtrTraits::PtrType;
-    using KeyType   = typename KeyTraits::KeyType;
 
+    template <typename KeyType>
     static PtrType erase(ContainerType& container, const KeyType& key) {
         return container.erase(key);
     }

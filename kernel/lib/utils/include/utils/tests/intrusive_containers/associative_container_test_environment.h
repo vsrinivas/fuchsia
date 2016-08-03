@@ -31,13 +31,13 @@ public:
     using RefAction            = typename TestEnvironment<TestEnvTraits>::RefAction;
     using KeyType              = typename ContainerTraits::KeyType;
 
-    static constexpr KeyType kBannedKeyValue = 0xF00D;
-
     enum class PopulateMethod {
         AscendingKey,
         DescendingKey,
         RandomKey,
     };
+
+    static constexpr KeyType BannedKeyValue() { return 0xF00D; };
 
     bool Populate(ContainerType& container,
                   PopulateMethod method,
@@ -149,7 +149,7 @@ public:
         }
 
         // Fail to look up something which should not be in the collection.
-        const auto& ptr = container().find(kBannedKeyValue);
+        const auto& ptr = container().find(BannedKeyValue());
         EXPECT_NULL(ptr, "");
 
         TestEnvironment<TestEnvTraits>::Reset();
@@ -174,7 +174,7 @@ public:
         size_t remaining = OBJ_COUNT;
 
         // Fail to erase a key which is not in the container.
-        EXPECT_NULL(container().erase(kBannedKeyValue), "");
+        EXPECT_NULL(container().erase(BannedKeyValue()), "");
 
         // Erase all of the even members of the collection by key.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -235,7 +235,6 @@ private:
     void ReleaseObject(size_t ndx) { Sp::ReleaseObject(ndx); }
     bool HoldingObject(size_t ndx) const { return Sp::HoldingObject(ndx); }
 };
-
 
 }  // namespace intrusive_containers
 }  // namespace tests

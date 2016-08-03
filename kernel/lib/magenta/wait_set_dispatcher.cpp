@@ -189,9 +189,6 @@ bool WaitSetDispatcher::Entry::Trigger_NoLock() {
 constexpr mx_rights_t kDefaultWaitSetRights = MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 // static
-constexpr uint64_t WaitSetDispatcher::kNumBuckets;
-
-// static
 status_t WaitSetDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
     AllocChecker ac;
     Dispatcher* d = new (&ac) WaitSetDispatcher();

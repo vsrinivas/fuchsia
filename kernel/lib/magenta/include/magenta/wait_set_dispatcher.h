@@ -82,7 +82,7 @@ public:
 
         // Hash table support
         uint64_t GetKey() const { return cookie_; }
-        static uint64_t GetHash(uint64_t key) { return key % kNumBuckets; }
+        static uint64_t GetHash(uint64_t key) { return key; }
 
     private:
         Entry(mx_signals_t watched_signals, uint64_t cookie);
@@ -140,10 +140,8 @@ public:
                   uint32_t* max_results);
 
 private:
-    static constexpr uint64_t kNumBuckets = 127u;
-    using HashTableTraits = utils::DefaultHashTraits<uint64_t, Entry::HashPtrType,
-                                                     uint64_t, kNumBuckets>;
-    using HashBucketType  = utils::DoublyLinkedList<Entry::HashPtrType, Entry::HashBucketTraits>;
+    using HashPtrType    = Entry::HashPtrType;
+    using HashBucketType = utils::DoublyLinkedList<HashPtrType, Entry::HashBucketTraits>;
 
     WaitSetDispatcher();
 
@@ -178,7 +176,7 @@ private:
     // complicated accounting, both in Wait() and in OnCancel().
     bool cancelled_ = false;
 
-    utils::HashTable<HashTableTraits, HashBucketType> entries_;
+    utils::HashTable<uint64_t, HashPtrType, HashBucketType, uint64_t, 127u> entries_;
     utils::DoublyLinkedList<Entry*, Entry::TriggeredEntriesListTraits> triggered_entries_;
     uint32_t num_triggered_entries_ = 0u;
 };

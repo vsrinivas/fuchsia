@@ -17,7 +17,7 @@
 // Intended to be embedded within a UserThread Instance
 class FutexNode : public utils::SinglyLinkedListable<FutexNode*> {
 public:
-    using HashTable = utils::DefaultHashTable<uintptr_t, FutexNode*>;
+    using HashTable = utils::HashTable<uintptr_t, FutexNode*>;
 
     FutexNode();
     ~FutexNode();
@@ -62,7 +62,7 @@ public:
 
     // Trait implementation for utils::HashTable
     uintptr_t GetKey() const { return hash_key_; }
-    static size_t GetHash(uintptr_t key) { return (key >> 3) % HashTable::HashTraits::kNumBuckets; }
+    static size_t GetHash(uintptr_t key) { return (key >> 3); }
 
 private:
     // hash_key_ contains the futex address.  This field has two roles:

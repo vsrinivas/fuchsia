@@ -20,11 +20,6 @@ namespace utils {
 // At a minimum, a class or a struct which is to be used to define the
 // traits of a keyed object must define the following public members.
 //
-// KeyType  : a typename which defines the type used as the key of an object.
-// PtrType  : The type of the pointer to an object to be stored in the
-//            associative container.  Must be one of the three pointer types
-//            supported by Magenta intrusive containers : T*, unique_ptr<T> or
-//            RefPtr<T>.
 // GetKey   : A static method which takes a constant reference to an object (the
 //            type of which is infered from PtrType) and returns a KeyType
 //            instance corresponding to the key for an object.
@@ -35,6 +30,8 @@ namespace utils {
 //            true if-and-only-if key1 is considered to be equal to key2.
 //
 // Rules for keys:
+// ++ The type of key returned by GetKey must be compatible with the key which
+//    was specified for the container.
 // ++ The key for an object must remain constant for as long as the object is
 //    contained within a container.
 // ++ When comparing keys, comparisons must obey basic transative and
@@ -44,66 +41,62 @@ namespace utils {
 //    EqualTo(A, B) if-and-only-if EqualTo(B, A)
 //    LessThan(A, B) if-and-only-if EqualTo(B, A) or (not LessThan(B, A))
 //
-// DefaultKeyedObjectTraits takes its KeyType and PtrType from template
-// parameters.  It requires its object type to implement a const instance
-// method called GetKey which returns the object's key.  It also requires its
-// KeyType to have defines < and == operators for the purpose of generating
-// implementation of LessThan and EqualTo.
-template <typename _KeyType, typename _PtrType>
+// DefaultKeyedObjectTraits is a helper class which allows an object to be
+// treated as a keyed-object by implementing a const GetKey method which returns
+// a key of the appropriate type.  The key type must be compatible with the
+// container key type, and must have definitions of the < and == operators for
+// the purpose of generating implementation of LessThan and EqualTo.
+template <typename KeyType, typename ObjType>
 struct DefaultKeyedObjectTraits {
-    using KeyType   = _KeyType;
-    using PtrType   = _PtrType;
-    using PtrTraits = internal::ContainerPtrTraits<PtrType>;
-
-    static KeyType GetKey(typename PtrTraits::ConstRefType obj)     { return obj.GetKey(); }
-    static bool LessThan(const KeyType& key1, const KeyType& key2)  { return key1 < key2; }
+    static KeyType GetKey(const ObjType& obj)                       { return obj.GetKey(); }
+    static bool LessThan(const KeyType& key1, const KeyType& key2)  { return key1 <  key2; }
     static bool EqualTo (const KeyType& key1, const KeyType& key2)  { return key1 == key2; }
 };
 
 // DefaultHashTraits defines a default implementation of traits used to
-// define how a specific type of object is to be managed in a particular
-// hash-table of pointers to that object.
+// define the hash function for a hash table.
 //
 // At a minimum, a class or a struct which is to be used to define the
-// hash traits of an object/hash-table pair must define all of the traits of a
-// keyed-object in addition to the following...
+// hash traits of a hashtable must define...
 //
-// HashType    : the typename of an unsigned integer data type which the
-//               chosen hash-function will return.
-// kNumBuckets : A static constexpr member which determines the number of
-//               buckets stored in a hash table.
-// GetHash     : A static method which take a constant reference to a KeyType
-//               and returns a HashType representing the hashed value of the
-//               key.  The value must be on the range from [0, kNumBuckets - 1]
+// GetHash : A static method which take a constant reference to an instance of
+//           the container's KeyType and returns an instance of the container's
+//           HashType representing the hashed value of the key.  The value must
+//           be on the range from [0, Container::kNumBuckets - 1]
 //
-// DefaultHashTraits takes its KeyType, PtrType, HashType and NumBuckets from
-// template parameters.  It requires its object's class to implement a static
-// method called GetHash whose signature an behavior match those of the GetHash
-// trait method described above.
-template <typename _KeyType,
-          typename _PtrType,
-          typename _HashType = size_t,
-          _HashType _NumBuckets = 37>
-struct DefaultHashTraits : public DefaultKeyedObjectTraits<_KeyType, _PtrType> {
-    using KeyType   = _KeyType;
-    using PtrType   = _PtrType;
-    using HashType  = _HashType;
-    using PtrTraits = internal::ContainerPtrTraits<PtrType>;
-    using ValueType = typename PtrTraits::ValueType;
-
-    // The number of buckets should be a nice prime such as 37, 211, 389 unless
-    // The hash function is really good. Lots of cheap hash functions have
-    // hidden periods for which the mod with prime above 'mostly' fixes.
-    static constexpr HashType kNumBuckets = _NumBuckets;
+// DefaultHashTraits generates a compliant implementation of hash traits taking
+// its KeyType, ObjType, HashType and NumBuckets from template parameters.
+// Users of DefaultHashTraits only need to implement a static method of ObjType
+// named GetHash which takes a const reference to a KeyType and returns a
+// HashType.  The default implementation will automatically mod by the number of
+// buckets given in the template parameters.  If the user's hash function
+// already automatically guarantees that the returned hash value will be in the
+// proper range, he/she should implement their own hash traits to avoid the
+// extra div/mod operation.
+template <typename KeyType,
+          typename ObjType,
+          typename HashType,
+          HashType kNumBuckets>
+struct DefaultHashTraits {
+    static_assert(is_unsigned_integer<HashType>::value, "HashTypes must be unsigned integers");
     static HashType GetHash(const KeyType& key) {
-        HashType ret = ValueType::GetHash(key);
-        DEBUG_ASSERT((ret >= 0) && (ret < kNumBuckets));
-        return ret;
+        return static_cast<HashType>(ObjType::GetHash(key) % kNumBuckets);
     }
 };
 
-template <typename _HashTraits,
-          typename _BucketType = SinglyLinkedList<typename _HashTraits::PtrType>>
+template <typename  _KeyType,
+          typename  _PtrType,
+          typename  _BucketType = SinglyLinkedList<_PtrType>,
+          typename  _HashType   = size_t,
+          _HashType _NumBuckets = 37,
+          typename  _KeyTraits  = DefaultKeyedObjectTraits<
+                                    _KeyType,
+                                    typename internal::ContainerPtrTraits<_PtrType>::ValueType>,
+          typename  _HashTraits = DefaultHashTraits<
+                                    _KeyType,
+                                    typename internal::ContainerPtrTraits<_PtrType>::ValueType,
+                                    _HashType,
+                                    _NumBuckets>>
 class HashTable {
 private:
     // Private fwd decls of the iterator implementation.
@@ -112,18 +105,31 @@ private:
     class const_iterator_traits;
 
 public:
-    using HashTraits   = _HashTraits;
-    using BucketType   = _BucketType;
-    using NodeTraits   = typename BucketType::NodeTraits;
-    using PtrType      = typename HashTraits::PtrType;
-    using KeyType      = typename HashTraits::KeyType;
-    using HashType     = typename HashTraits::HashType;
+    // Pointer types/traits
+    using PtrType      = _PtrType;
     using PtrTraits    = internal::ContainerPtrTraits<PtrType>;
     using ValueType    = typename PtrTraits::ValueType;
+
+    // Key types/traits
+    using KeyType      = _KeyType;
+    using KeyTraits    = _KeyTraits;
+
+    // Hash types/traits
+    using HashType     = _HashType;
+    using HashTraits   = _HashTraits;
+
+    // Bucket types/traits
+    using BucketType   = _BucketType;
+    using NodeTraits   = typename BucketType::NodeTraits;
 
     // Declarations of the standard iterator types.
     using iterator       = iterator_impl<iterator_traits>;
     using const_iterator = iterator_impl<const_iterator_traits>;
+
+    // The number of buckets should be a nice prime such as 37, 211, 389 unless
+    // The hash function is really good. Lots of cheap hash functions have
+    // hidden periods for which the mod with prime above 'mostly' fixes.
+    static constexpr HashType kNumBuckets = _NumBuckets;
 
     // Hash tables only support constant order erase if their underlying bucket
     // type does.
@@ -131,8 +137,8 @@ public:
     static constexpr bool IsAssociative = true;
     static constexpr bool IsSequenced   = false;
 
-    static constexpr HashType kNumBuckets = HashTraits::kNumBuckets;
     static_assert(kNumBuckets > 0, "Hash tables must have at least one bucket");
+    static_assert(is_unsigned_integer<HashType>::value, "HashTypes must be unsigned integers");
 
     constexpr HashTable() {}
     ~HashTable() { DEBUG_ASSERT(PtrTraits::IsManaged || is_empty()); }
@@ -148,7 +154,7 @@ public:
 
     // make_iterator : construct an iterator out of a reference to an object.
     iterator make_iterator(ValueType& obj) {
-        HashType ndx = HashTraits::GetHash(HashTraits::GetKey(obj));
+        HashType ndx = GetHash(KeyTraits::GetKey(obj));
         return iterator(this, ndx, buckets_[ndx].make_iterator(obj));
     }
 
@@ -163,14 +169,14 @@ public:
         BucketType& bucket = GetBucket(key);
         return bucket.find_if(
             [key](const ValueType& other) -> bool {
-                return HashTraits::EqualTo(key, HashTraits::GetKey(other));
+                return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
             });
     }
 
     PtrType erase(const KeyType& key) {
         BucketType& bucket = GetBucket(key);
 
-        PtrType ret = internal::KeyEraseUtils<BucketType, HashTraits>::erase(bucket, key);
+        PtrType ret = internal::KeyEraseUtils<BucketType, KeyTraits>::erase(bucket, key);
         if (ret != nullptr)
             --count_;
 
@@ -252,7 +258,8 @@ private:
         using RefType    = typename PtrTraits::RefType;
         using RawPtrType = typename PtrTraits::RawPtrType;
         using IterType   = typename BucketType::iterator;
-        using HTPtrType  = HashTable<HashTraits, BucketType>*;
+        using HTPtrType  = HashTable<KeyType, PtrType, BucketType,
+                                     HashType, kNumBuckets, KeyTraits, HashTraits>*;
 
         static IterType BucketBegin(BucketType& bucket) { return bucket.begin(); }
         static IterType BucketEnd  (BucketType& bucket) { return bucket.end(); }
@@ -263,7 +270,8 @@ private:
         using RefType    = typename PtrTraits::ConstRefType;
         using RawPtrType = typename PtrTraits::ConstRawPtrType;
         using IterType   = typename BucketType::const_iterator;
-        using HTPtrType  = const HashTable<HashTraits, BucketType>*;
+        using HTPtrType  = const HashTable<KeyType, PtrType, BucketType,
+                                           HashType, kNumBuckets, KeyTraits, HashTraits>*;
 
         static IterType BucketBegin(const BucketType& bucket) { return bucket.cbegin(); }
         static IterType BucketEnd  (const BucketType& bucket) { return bucket.cend(); }
@@ -355,7 +363,8 @@ private:
         typename IterTraits::RawPtrType operator->() const { return iter_.operator->(); }
 
     private:
-        friend class HashTable<HashTraits, BucketType>;
+        friend class HashTable<KeyType, PtrType, BucketType,
+                               HashType, kNumBuckets, KeyTraits, HashTraits>;
         using HTPtrType = typename IterTraits::HTPtrType;
         using IterType  = typename IterTraits::IterType;
 
@@ -419,14 +428,17 @@ private:
     HashTable(const HashTable&) = delete;
     HashTable& operator=(const HashTable&) = delete;
 
-    BucketType& GetBucket(const KeyType& key) { return buckets_[HashTraits::GetHash(key)]; }
-    BucketType& GetBucket(const ValueType& obj) { return GetBucket(HashTraits::GetKey(obj)); }
+    BucketType& GetBucket(const KeyType& key) { return buckets_[GetHash(key)]; }
+    BucketType& GetBucket(const ValueType& obj) { return GetBucket(KeyTraits::GetKey(obj)); }
+
+    static HashType GetHash(const KeyType& obj) {
+        HashType ret = HashTraits::GetHash(obj);
+        DEBUG_ASSERT((ret >= 0) && (ret < kNumBuckets));
+        return ret;
+    }
 
     size_t count_ = 0UL;
     BucketType buckets_[kNumBuckets];
 };
-
-template <typename KeyType, typename PtrType>
-class DefaultHashTable : public HashTable<DefaultHashTraits<KeyType, PtrType>> { };
 
 }  // namespace utils

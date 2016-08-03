@@ -14,64 +14,70 @@ namespace utils {
 namespace tests {
 namespace intrusive_containers {
 
-template <typename ContainerStateType>
+using OtherKeyType  = size_t;
+using OtherHashType = uint32_t;
+static constexpr OtherHashType kOtherNumBuckets = 23;
+
+template <typename PtrType>
 struct OtherHashTraits {
-    using HashType        = size_t;
-    using KeyType         = typename ContainerStateType::KeyType;
-    using BucketStateType = typename ContainerStateType::BucketStateType;
-    using PtrTraits       = typename BucketStateType::PtrTraits;
-    using PtrType         = typename PtrTraits::PtrType;
+    using ObjType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
+    using BucketStateType = DoublyLinkedListNodeState<PtrType>;
 
-    static constexpr HashType kNumBuckets = 23;
-
-    static BucketStateType& node_state(typename PtrTraits::RefType obj) {
+    // Linked List Traits
+    static BucketStateType& node_state(ObjType& obj) {
         return obj.other_container_state_.bucket_state_;
     }
 
-    static KeyType GetKey(typename PtrTraits::ConstRefType obj) {
+    // Keyed Object Traits
+    static OtherKeyType GetKey(const ObjType& obj) {
         return obj.other_container_state_.key_;
     }
 
-    static HashType GetHash(const KeyType& key) {
-        return (static_cast<HashType>(key) * 0xaee58187) % kNumBuckets;
+    // Hash Traits
+    static OtherHashType GetHash(const OtherKeyType& key) {
+        return static_cast<OtherHashType>((key * 0xaee58187) % kOtherNumBuckets);
     }
 
     // Set key is a trait which is only used by the tests, not by the containers
     // themselves.
-    static void SetKey(typename PtrTraits::RefType obj, KeyType key) {
+    static void SetKey(ObjType& obj, OtherKeyType key) {
         obj.other_container_state_.key_ = key;
     }
 };
 
-template <typename _KeyType, typename _BucketStateType>
+template <typename PtrType>
 struct OtherHashState {
-    using KeyType         = _KeyType;
-    using BucketStateType = _BucketStateType;
-
 private:
-    friend struct OtherHashTraits<OtherHashState<KeyType, BucketStateType>>;
-
-    KeyType         key_;
-    BucketStateType bucket_state_;
+    friend struct OtherHashTraits<PtrType>;
+    OtherKeyType key_;
+    typename OtherHashTraits<PtrType>::BucketStateType bucket_state_;
 };
 
 template <typename PtrType>
 class HTDLLTraits {
 public:
-    using KeyType                 = size_t;
-    using HashTraits              = DefaultHashTraits<KeyType, PtrType>;
-    using HashType                = typename HashTraits::HashType;
-    using TestObjBaseType         = HashedTestObjBase<HashTraits>;
+    using ObjType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
 
-    using ContainerType           = HashTable<DefaultHashTraits<KeyType, PtrType>,
-                                              DoublyLinkedList<PtrType> >;
+    using ContainerType           = HashTable<size_t, PtrType, DoublyLinkedList<PtrType>>;
     using ContainableBaseClass    = DoublyLinkedListable<PtrType>;
     using ContainerStateType      = DoublyLinkedListNodeState<PtrType>;
+    using KeyType                 = typename ContainerType::KeyType;
+    using HashType                = typename ContainerType::HashType;
 
-    using OtherContainerStateType = OtherHashState<KeyType, DoublyLinkedListNodeState<PtrType>>;
-    using OtherContainerTraits    = OtherHashTraits<OtherContainerStateType>;
+    using OtherContainerTraits    = OtherHashTraits<PtrType>;
+    using OtherContainerStateType = OtherHashState<PtrType>;
     using OtherBucketType         = DoublyLinkedList<PtrType, OtherContainerTraits>;
-    using OtherContainerType      = HashTable<OtherContainerTraits, OtherBucketType>;
+    using OtherContainerType      = HashTable<OtherKeyType,
+                                              PtrType,
+                                              OtherBucketType,
+                                              OtherHashType,
+                                              kOtherNumBuckets,
+                                              OtherContainerTraits,
+                                              OtherContainerTraits>;
+
+    using TestObjBaseType = HashedTestObjBase<typename ContainerType::KeyType,
+                                              typename ContainerType::HashType,
+                                              ContainerType::kNumBuckets>;
 };
 
 DEFINE_TEST_OBJECTS(HTDLL);
@@ -163,7 +169,6 @@ UNITTEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
 UNITTEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
 UNITTEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
 UNITTEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
-
 UNITTEST_END_TESTCASE(hashtable_dll_tests,
                       "htdll",
                       "Intrusive hash table tests (doubly linked list buckets).",

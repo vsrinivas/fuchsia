@@ -70,4 +70,51 @@ template<class T> struct enable_if<true, T> {
     typedef T type;
 };
 
+// is_integral.  By default, T is not integral (aka, not an integer)
+template <typename T>
+struct is_integral : false_type {};
+
+// Specializations.  Every basic integral type needs to be called out.
+template <> struct is_integral<bool>                   : true_type {};
+template <> struct is_integral<char>                   : true_type {};
+template <> struct is_integral<char16_t>               : true_type {};
+template <> struct is_integral<char32_t>               : true_type {};
+template <> struct is_integral<wchar_t>                : true_type {};
+template <> struct is_integral<signed char>            : true_type {};
+template <> struct is_integral<unsigned char>          : true_type {};
+template <> struct is_integral<short int>              : true_type {};
+template <> struct is_integral<unsigned short int>     : true_type {};
+template <> struct is_integral<int>                    : true_type {};
+template <> struct is_integral<unsigned int>           : true_type {};
+template <> struct is_integral<long int>               : true_type {};
+template <> struct is_integral<unsigned long int>      : true_type {};
+template <> struct is_integral<long long int>          : true_type {};
+template <> struct is_integral<unsigned long long int> : true_type {};
+
+// is_floating_point.  By default, T is not a floating point type.
+template <typename T>
+struct is_floating_point : false_type {};
+
+// Specializations.  Every basic floating point type needs to be called out.
+template <> struct is_floating_point<float>       : true_type {};
+template <> struct is_floating_point<double>      : true_type {};
+template <> struct is_floating_point<long double> : true_type {};
+
+// Arithmetic data types are either floats or integers
+template <typename T>
+struct is_arithmetic :
+    integral_constant<bool, is_integral<T>::value || is_floating_point<T>::value> { };
+
+template <typename T>
+struct is_signed : integral_constant<bool, is_arithmetic<T>::value && (T(-1) < T(0))> { };
+
+template <typename T>
+struct is_unsigned : integral_constant<bool, is_arithmetic<T>::value && (T(0) < T(-1))> { };
+
+template <typename T>
+struct is_signed_integer : integral_constant<bool, is_integral<T>::value && (T(-1) < T(0))> { };
+
+template <typename T>
+struct is_unsigned_integer : integral_constant<bool, is_integral<T>::value && (T(0) < T(-1))> { };
+
 }  // namespace utils

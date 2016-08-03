@@ -43,13 +43,9 @@ private:
 
 // The base class for hash-able test objects.  Implements a default hash
 // function accessor as well as inheriting from KeyedTestObjBase
-template <typename HashTraits>
-class HashedTestObjBase : public KeyedTestObjBase<typename HashTraits::KeyType>  {
+template <typename KeyType, typename HashType, HashType kNumBuckets>
+class HashedTestObjBase : public KeyedTestObjBase<KeyType>  {
 public:
-    using KeyType  = typename HashTraits::KeyType;
-    using HashType = typename HashTraits::HashType;
-    static constexpr HashType kNumBuckets = HashTraits::kNumBuckets;
-
     static HashType GetHash(const KeyType& key) {
         // Our simple hash function just multiplies by a big prime and mods by
         // the number of buckets.
