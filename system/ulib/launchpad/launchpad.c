@@ -429,7 +429,7 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
     mx_handle_t handles[HND_SPECIAL_COUNT + 1];
     size_t nhandles = 0;
     for (enum special_handles i = 0; i <= HND_SPECIAL_COUNT; ++i) {
-        uint32_t id;
+        uint32_t id = 0; // -Wall
         switch (i) {
         case HND_SPECIAL_COUNT:;
             // TODO(mcgrathr): The kernel doesn't permit duplicating a
