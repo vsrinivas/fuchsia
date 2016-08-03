@@ -1,3 +1,0 @@
-[submodule "lib/fs/ext2fs/third_party/e2fsprogs"]
-	path = lib/fs/ext2fs/third_party/e2fsprogs
-	url = https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git

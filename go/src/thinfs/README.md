@@ -46,7 +46,6 @@ cd $GOPATH/src/fuchsia.googlesource.com/thinfs
 ```shell
 cd $GOPATH/src/fuchsia.googlesource.com/thinfs
 ./scripts/build_mojom_bindings.sh
-./scripts/build_ext2fs.sh
 ./scripts/build_apps.sh
 ```
 
@@ -56,7 +55,7 @@ cd $GOPATH/src/fuchsia.googlesource.com/thinfs
 ```shell
 cd $MOJO_DIR/
 dd if=/dev/zero of=test.fs bs=4096 count=16384
-mkfs.ext2 $MOJO_DIR/test.fs
+mkfs.fat $MOJO_DIR/test.fs
 ```
 
 ### Run the file system client application ###
