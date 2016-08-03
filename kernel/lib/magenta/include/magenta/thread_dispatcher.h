@@ -10,8 +10,6 @@
 #include <magenta/user_thread.h>
 #include <sys/types.h>
 
-class UserThread;
-
 class ThreadDispatcher : public Dispatcher {
 public:
     static status_t Create(utils::RefPtr<UserThread> thread, utils::RefPtr<Dispatcher>* dispatcher,
