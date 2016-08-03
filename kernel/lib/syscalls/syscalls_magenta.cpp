@@ -617,6 +617,8 @@ mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, 
         return result;
 
     HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), rights));
+    if (!handle)
+        return ERR_NO_MEMORY;
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(utils::move(handle));
