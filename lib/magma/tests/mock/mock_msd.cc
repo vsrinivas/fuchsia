@@ -48,14 +48,24 @@ int32_t msd_device_close(msd_device* dev, msd_client_id client_id)
 
 uint32_t msd_device_get_id(msd_device* dev) { return MsdMockDevice::cast(dev)->GetDeviceId(); }
 
-struct msd_buffer* msd_buffer_import(struct msd_platform_buffer* platform_buf)
+msd_context* msd_device_create_context(msd_device* dev)
+{
+    return MsdMockDevice::cast(dev)->CreateContext();
+}
+
+void msd_device_destroy_context(msd_device* dev, msd_context* ctx)
+{
+    MsdMockDevice::cast(dev)->DestroyContext(MsdMockContext::cast(ctx));
+}
+
+msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
 {
     if (!g_bufmgr)
         g_bufmgr.reset(new MsdMockBufferManager());
     return g_bufmgr->CreateBuffer(platform_buf);
 }
 
-void msd_buffer_destroy(struct msd_buffer* buf)
+void msd_buffer_destroy(msd_buffer* buf)
 {
     if (!g_bufmgr)
         g_bufmgr.reset(new MsdMockBufferManager());

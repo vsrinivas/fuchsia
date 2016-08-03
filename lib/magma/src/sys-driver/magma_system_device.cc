@@ -29,7 +29,7 @@ bool MagmaSystemDevice::FreeBuffer(uint32_t handle)
 {
     auto iter = buffer_map_.find(handle);
     if (iter == buffer_map_.end())
-        return false;
+        return DRETF(false, "MagmaSystemDevice: Attempting to free invalid buffer handle");
 
     buffer_map_.erase(iter);
     return true;
@@ -39,9 +39,32 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::LookupBuffer(uint32_t hand
 {
     auto iter = buffer_map_.find(handle);
     if (iter == buffer_map_.end())
-        return nullptr;
+        return DRETP(nullptr, "MagmaSystemDevice: Attempting to lookup invalid buffer handle");
 
     return iter->second;
+}
+
+bool MagmaSystemDevice::CreateContext(uint32_t* context_id_out)
+{
+    auto ctx = MagmaSystemContext::Create(this);
+    if (!ctx)
+        return DRETF(false, "MagmaSystemDevice: Failed to Create MagmaSystemContext");
+
+    auto context_id = next_context_id_++;
+    DASSERT(context_map_.find(context_id) == context_map_.end());
+
+    context_map_.insert(std::make_pair(context_id, std::move(ctx)));
+    *context_id_out = context_id;
+    return true;
+}
+
+bool MagmaSystemDevice::DestroyContext(uint32_t context_id)
+{
+    auto iter = context_map_.find(context_id);
+    if (iter == context_map_.end())
+        return DRETF(false, "MagmaSystemDevice:Attempting to destroy invalid context id");
+    context_map_.erase(iter);
+    return true;
 }
 
 uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(arch()); }

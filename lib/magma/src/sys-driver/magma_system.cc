@@ -61,10 +61,14 @@ uint32_t magma_system_get_device_id(MagmaSystemDevice* dev)
     return msd_device_get_id(dev->arch());
 }
 
-bool magma_system_create_context(MagmaSystemDevice* dev, int* context_id)
+bool magma_system_create_context(MagmaSystemDevice* dev, uint32_t* context_id_out)
 {
-    DLOG("TODO: msd_system_create_context");
-    return false;
+    return dev->CreateContext(context_id_out);
+}
+
+bool magma_system_destroy_context(struct MagmaSystemDevice* dev, uint32_t context_id)
+{
+    return dev->DestroyContext(context_id);
 }
 
 bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,

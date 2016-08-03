@@ -63,7 +63,7 @@ public:
     MagmaBufferBase* AllocBufferObject(const char* name, uint64_t size, uint32_t align,
                                        uint32_t tiling_mode, uint32_t stride);
 
-    bool CreateContext(int* context_id)
+    bool CreateContext(uint32_t* context_id)
     {
         return magma_system_create_context(sys_dev_, context_id);
     }

@@ -37,6 +37,11 @@ struct msd_buffer {
     int32_t magic_;
 };
 
+// A driver defined context, owned by the magma system context
+struct msd_context {
+    int32_t magic_;
+};
+
 // Instantiates a driver instance.
 struct msd_driver* msd_driver_create(void);
 
@@ -54,6 +59,12 @@ int32_t msd_device_open(struct msd_device* dev, msd_client_id client_id);
 
 // Closes a device on behalf of the given client. Returns 0 on success
 int32_t msd_device_close(struct msd_device* dev, msd_client_id client_id);
+
+// creates a context for the given connection. returns null on failure
+struct msd_context* msd_device_create_context(struct msd_device* dev);
+
+// destroys the given context
+void msd_device_destroy_context(struct msd_device* dev, struct msd_context* ctx);
 
 // Returns the device id.  0 is an invalid device id.
 uint32_t msd_device_get_id(struct msd_device* dev);

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "mock/mock_msd.h"
+#include "sys-driver/magma_system.h"
 #include "sys-driver/magma_system_device.h"
 #include "gtest/gtest.h"
 
@@ -78,4 +79,56 @@ TEST(Magma, MagmaSystemDevice_BufferManagement)
 
     msd_driver_destroy_device(msd_dev);
     msd_driver_destroy(msd_drv);
+}
+
+class MsdMockDevice_ContextManagement : public MsdMockDevice {
+public:
+    MsdMockDevice_ContextManagement() {}
+
+    MsdMockContext* CreateContext() override
+    {
+        active_context_count_++;
+        return MsdMockDevice::CreateContext();
+    }
+
+    void DestroyContext(MsdMockContext* ctx) override
+    {
+        active_context_count_--;
+        MsdMockDevice::DestroyContext(ctx);
+    }
+
+    uint32_t NumActiveContexts() { return active_context_count_; }
+
+private:
+    uint32_t active_context_count_;
+};
+
+TEST(Magma, MagmaSystemDevice_ContextManagement)
+{
+    auto msd_dev = new MsdMockDevice_ContextManagement();
+    auto dev = MagmaSystemDevice(msd_dev);
+
+    EXPECT_EQ(msd_dev->NumActiveContexts(), 0u);
+
+    uint32_t context_id_0;
+    uint32_t context_id_1;
+
+    EXPECT_TRUE(dev.CreateContext(&context_id_0));
+    EXPECT_EQ(msd_dev->NumActiveContexts(), 1u);
+
+    EXPECT_TRUE(magma_system_create_context(&dev, &context_id_1));
+    EXPECT_EQ(msd_dev->NumActiveContexts(), 2u);
+
+    EXPECT_NE(context_id_0, context_id_1);
+
+    EXPECT_TRUE(dev.DestroyContext(context_id_0));
+    EXPECT_EQ(msd_dev->NumActiveContexts(), 1u);
+    EXPECT_FALSE(dev.DestroyContext(context_id_0));
+
+    EXPECT_TRUE(magma_system_destroy_context(&dev, context_id_1));
+    EXPECT_EQ(msd_dev->NumActiveContexts(), 0u);
+    EXPECT_FALSE(magma_system_destroy_context(&dev, context_id_1));
+
+    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemDevice destructor
+    msd_driver_destroy_device(msd_dev);
 }

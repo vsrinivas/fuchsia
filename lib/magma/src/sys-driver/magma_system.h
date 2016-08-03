@@ -30,7 +30,8 @@ void magma_system_close(struct MagmaSystemDevice* dev);
 // Returns the device id.  0 is an invalid device id.
 uint32_t magma_system_get_device_id(struct MagmaSystemDevice* dev);
 
-bool magma_system_create_context(struct MagmaSystemDevice* dev, int* context_id);
+bool magma_system_create_context(struct MagmaSystemDevice* dev, uint32_t* context_id);
+bool magma_system_destroy_context(struct MagmaSystemDevice* dev, uint32_t context_id);
 
 bool magma_system_alloc(struct MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,
                         uint32_t* handle_out);

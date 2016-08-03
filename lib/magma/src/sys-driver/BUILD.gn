@@ -17,8 +17,8 @@ import("//magma/gnbuild/magma.gni")
 source_set("sys-driver") {
   public_deps = [
     ":platform_buffer",
-    "$magma_build_root/src/magma_util",
     "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
   ]
 
   sources = [
@@ -26,6 +26,8 @@ source_set("sys-driver") {
     "magma_system.cc",
     "magma_system_buffer.cc",
     "magma_system_buffer.h",
+    "magma_system_context.cc",
+    "magma_system_context.h",
     "magma_system_device.cc",
     "magma_system_device.h",
   ]
@@ -44,8 +46,8 @@ source_set("magma_system_interface") {
 
 source_set("platform_buffer") {
   public_deps = [
-    "$magma_build_root/src/magma_util",
     "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
   ]
 
   sources = [

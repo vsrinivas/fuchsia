@@ -289,7 +289,7 @@ int magma_gem_bo_wait(drm_intel_bo* bo, int64_t timeout_ns)
 drm_intel_context* magma_gem_context_create(drm_intel_bufmgr* bufmgr)
 {
     DLOG("magma_gem_context_create");
-    int context_id;
+    uint32_t context_id;
     if (bufmgr->CreateContext(&context_id)) {
         DLOG("got hw context id %d", context_id);
         return reinterpret_cast<drm_intel_context*>(context_id);

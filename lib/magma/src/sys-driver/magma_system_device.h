@@ -16,6 +16,7 @@
 #define _MAGMA_SYSTEM_DEVICE_H_
 
 #include "magma_system_buffer.h"
+#include "magma_system_context.h"
 #include "msd.h"
 
 #include <map>
@@ -42,6 +43,9 @@ public:
     // Returns false if no buffer with the given handle exists in the map
     bool FreeBuffer(uint32_t handle);
 
+    bool CreateContext(uint32_t* context_id_out);
+    bool DestroyContext(uint32_t context_id);
+
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
 
@@ -49,6 +53,8 @@ private:
     msd_client_id client_id_{};
     msd_device* msd_dev_;
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
+    std::map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
+    uint32_t next_context_id_{};
 };
 
 #endif //_MAGMA_SYSTEM_DEVICE_H_

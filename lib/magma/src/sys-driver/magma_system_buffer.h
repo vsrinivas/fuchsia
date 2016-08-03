@@ -23,7 +23,7 @@
 
 struct MagmaSystemDevice;
 
-typedef std::unique_ptr<msd_buffer, decltype(&msd_buffer_destroy)> msd_buffer_unique_ptr_t;
+using msd_buffer_unique_ptr_t = std::unique_ptr<msd_buffer, decltype(&msd_buffer_destroy)>;
 
 class MagmaSystemBuffer {
 public:

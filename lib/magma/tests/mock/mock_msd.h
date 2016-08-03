@@ -39,6 +39,22 @@ private:
     static const uint32_t kMagic = 0x6d6b6266; // "mkbf" (Mock Buffer)
 };
 
+class MsdMockContext : public msd_context {
+public:
+    MsdMockContext() { magic_ = kMagic; }
+    virtual ~MsdMockContext() {}
+
+    static MsdMockContext* cast(msd_context* ctx)
+    {
+        DASSERT(ctx);
+        DASSERT(ctx->magic_ == kMagic);
+        return static_cast<MsdMockContext*>(ctx);
+    }
+
+private:
+    static const uint32_t kMagic = 0x6d6b6378; // "mkcx" (Mock Context)
+};
+
 class MsdMockDevice : public msd_device {
 public:
     MsdMockDevice() { magic_ = kMagic; }
@@ -47,6 +63,10 @@ public:
     virtual int32_t Open(msd_client_id client_id) { return 0; }
     virtual int32_t Close(msd_client_id client_id) { return 0; }
     virtual uint32_t GetDeviceId() { return 0; }
+
+    virtual MsdMockContext* CreateContext() { return new MsdMockContext; }
+
+    virtual void DestroyContext(MsdMockContext* ctx) { delete ctx; }
 
     static MsdMockDevice* cast(msd_device* dev)
     {
