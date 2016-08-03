@@ -16,6 +16,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/console.h>
 #include <ddk/protocol/display.h>
+#include <ddk/protocol/input.h>
 #include <ddk/protocol/keyboard.h>
 
 #include <assert.h>
@@ -278,6 +279,14 @@ static int vc_input_devices_poll_thread(void* arg) {
             strncpy(free->dev_name, dname, sizeof(free->dev_name));
             free->fd = open(free->dev_name, O_RDONLY);
             if (free->fd < 0) {
+                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
+                continue;
+            }
+            // test to see if this is a device we can read
+            int proto = INPUT_PROTO_NONE;
+            int rc = mxio_ioctl(free->fd, INPUT_IOCTL_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
+            if (rc > 0 && proto != INPUT_PROTO_KBD) {
+                // skip devices that aren't keyboards
                 free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
                 continue;
             }

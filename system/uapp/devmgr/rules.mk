@@ -50,6 +50,7 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     ulib/ddk \
+    ulib/hid \
     ulib/launchpad \
     ulib/elfload \
     ulib/mxio \

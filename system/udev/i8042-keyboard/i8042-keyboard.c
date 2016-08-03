@@ -14,12 +14,15 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/keyboard.h>
+#include <ddk/common/hid.h>
+#include <ddk/protocol/input.h>
 #include <hw/inout.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
+
+#include <hid/usages.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -40,12 +43,66 @@ typedef struct i8042_keyboard_device {
     mx_handle_t irq;
     mxr_thread_t* irq_thread;
 
-    bool key_lshift;
-    bool key_rshift;
     int last_code;
 
-    mx_key_fifo_t fifo;
+    boot_kbd_report_t report;
+
+    mx_hid_fifo_t fifo;
 } i8042_device_t;
+
+static inline bool is_modifier(uint8_t usage) {
+    return (usage >= HID_USAGE_KEY_LEFT_CTRL && usage <= HID_USAGE_KEY_RIGHT_GUI);
+}
+
+#define MOD_SET 1
+#define MOD_EXISTS 2
+#define MOD_ROLLOVER 3
+static int i8042_modifier(i8042_device_t* dev, uint8_t mod, bool down) {
+    int bit = mod - HID_USAGE_KEY_LEFT_CTRL;
+    if (bit < 0 || bit > 7) return MOD_ROLLOVER;
+    if (down) {
+        if (dev->report.modifier & 1 << bit) {
+            return MOD_EXISTS;
+        } else {
+            dev->report.modifier |= 1 << bit;
+        }
+    } else {
+        dev->report.modifier &= ~(1 << bit);
+    }
+    return MOD_SET;
+}
+
+#define KEY_ADDED 1
+#define KEY_EXISTS 2
+#define KEY_ROLLOVER 3
+static int i8042_add_key(i8042_device_t* dev, uint8_t usage) {
+    for (int i = 0; i < 6; i++) {
+        if (dev->report.usage[i] == usage) return KEY_EXISTS;
+        if (dev->report.usage[i] == 0) {
+            dev->report.usage[i] = usage;
+            return KEY_ADDED;
+        }
+    }
+    return KEY_ROLLOVER;
+}
+
+#define KEY_REMOVED 1
+#define KEY_NOT_FOUND 2
+static int i8042_rm_key(i8042_device_t* dev, uint8_t usage) {
+    int idx = -1;
+    for (int i = 0; i < 6; i++) {
+        if (dev->report.usage[i] == usage) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx == -1) return KEY_NOT_FOUND;
+    for (int i = idx; i < 5; i++) {
+        dev->report.usage[i] = dev->report.usage[i+1];
+    }
+    dev->report.usage[5] = 0;
+    return KEY_REMOVED;
+}
 
 #define get_kbd_device(dev) containerof(dev, i8042_device_t, device)
 
@@ -116,36 +173,81 @@ static inline void i8042_write_command(int val) {
  */
 #define I8042_BUFFER_LENGTH 32
 
-/* scancode translation tables */
-const uint8_t pc_keymap_set1_lower[128] = {
-    /* 0x00 */ 0, MX_KEY_ESC, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', MX_KEY_BACKSPACE, MX_KEY_TAB,
-    /* 0x10 */ 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', MX_KEY_RETURN, MX_KEY_LCTRL, 'a', 's',
-    /* 0x20 */ 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', MX_KEY_LSHIFT, '\\', 'z', 'x', 'c', 'v',
-    /* 0x30 */ 'b', 'n', 'm', ',', '.', '/', MX_KEY_RSHIFT, '*', MX_KEY_LALT, ' ', MX_KEY_CAPSLOCK, MX_KEY_F1, MX_KEY_F2,
-    MX_KEY_F3, MX_KEY_F4, MX_KEY_F5,
-    /* 0x40 */ MX_KEY_F6, MX_KEY_F7, MX_KEY_F8, MX_KEY_F9, MX_KEY_F10, MX_KEY_PAD_NUMLOCK, MX_KEY_SCRLOCK, MX_KEY_PAD_7, MX_KEY_PAD_8,
-    MX_KEY_PAD_9, MX_KEY_PAD_MINUS, MX_KEY_PAD_4, MX_KEY_PAD_5, MX_KEY_PAD_6, MX_KEY_PAD_PLUS, MX_KEY_PAD_1,
-    /* 0x50 */ MX_KEY_PAD_2, MX_KEY_PAD_3, MX_KEY_PAD_0, MX_KEY_PAD_PERIOD, 0, 0, 0, MX_KEY_F11, MX_KEY_F12, 0, 0, 0, 0, 0, 0, 0,
+static const uint8_t hid_report_desc[] = {
+    0x05, 0x01,  // Usage Page (Generic Desktop Ctrls)
+    0x09, 0x06,  // Usage (Keyboard)
+    0xA1, 0x01,  // Collection (Application)
+    0x05, 0x07,  //   Usage Page (Kbrd/Keypad)
+    0x19, 0xE0,  //   Usage Minimum (0xE0)
+    0x29, 0xE7,  //   Usage Maximum (0xE7)
+    0x15, 0x00,  //   Logical Minimum (0)
+    0x25, 0x01,  //   Logical Maximum (1)
+    0x75, 0x01,  //   Report Size (1)
+    0x95, 0x08,  //   Report Count (8)
+    0x81, 0x02,  //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x95, 0x01,  //   Report Count (1)
+    0x75, 0x08,  //   Report Size (8)
+    0x81, 0x01,  //   Input (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x95, 0x05,  //   Report Count (5)
+    0x75, 0x01,  //   Report Size (1)
+    0x05, 0x08,  //   Usage Page (LEDs)
+    0x19, 0x01,  //   Usage Minimum (Num Lock)
+    0x29, 0x05,  //   Usage Maximum (Kana)
+    0x91, 0x02,  //   Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x95, 0x01,  //   Report Count (1)
+    0x75, 0x03,  //   Report Size (3)
+    0x91, 0x01,  //   Output (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x95, 0x06,  //   Report Count (6)
+    0x75, 0x08,  //   Report Size (8)
+    0x15, 0x00,  //   Logical Minimum (0)
+    0x25, 0x65,  //   Logical Maximum (101)
+    0x05, 0x07,  //   Usage Page (Kbrd/Keypad)
+    0x19, 0x00,  //   Usage Minimum (0x00)
+    0x29, 0x65,  //   Usage Maximum (0x65)
+    0x81, 0x00,  //   Input (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,        // End Collection
 };
 
-const uint8_t pc_keymap_set1_upper[128] = {
-    /* 0x00 */ 0, MX_KEY_ESC, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', MX_KEY_BACKSPACE, MX_KEY_TAB,
-    /* 0x10 */ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', MX_KEY_RETURN, MX_KEY_LCTRL, 'A', 'S',
-    /* 0x20 */ 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', MX_KEY_LSHIFT, '|', 'Z', 'X', 'C', 'V',
-    /* 0x30 */ 'B', 'N', 'M', '<', '>', '?', MX_KEY_RSHIFT, '*', MX_KEY_LALT, ' ', MX_KEY_CAPSLOCK, MX_KEY_F1, MX_KEY_F2,
-    MX_KEY_F3, MX_KEY_F4, MX_KEY_F5,
-    /* 0x40 */ MX_KEY_F6, MX_KEY_F7, MX_KEY_F8, MX_KEY_F9, MX_KEY_F10, MX_KEY_PAD_NUMLOCK, MX_KEY_SCRLOCK, MX_KEY_PAD_7, MX_KEY_PAD_8,
-    MX_KEY_PAD_9, MX_KEY_PAD_MINUS, MX_KEY_PAD_4, MX_KEY_PAD_5, MX_KEY_PAD_6, MX_KEY_PAD_PLUS, MX_KEY_PAD_1,
-    /* 0x50 */ MX_KEY_PAD_2, MX_KEY_PAD_3, MX_KEY_PAD_0, MX_KEY_PAD_PERIOD, 0, 0, 0, MX_KEY_F11, MX_KEY_F12, 0, 0, 0, 0, 0, 0, 0,
+static const uint8_t pc_set1_usage_map[128] = {
+    /* 0x00 */ 0, HID_USAGE_KEY_ESC, HID_USAGE_KEY_1, HID_USAGE_KEY_2,
+    /* 0x04 */ HID_USAGE_KEY_3, HID_USAGE_KEY_4, HID_USAGE_KEY_5, HID_USAGE_KEY_6,
+    /* 0x08 */ HID_USAGE_KEY_7, HID_USAGE_KEY_8, HID_USAGE_KEY_9, HID_USAGE_KEY_0,
+    /* 0x0c */ HID_USAGE_KEY_MINUS, HID_USAGE_KEY_EQUAL, HID_USAGE_KEY_BACKSPACE, HID_USAGE_KEY_TAB,
+    /* 0x10 */ HID_USAGE_KEY_Q, HID_USAGE_KEY_W, HID_USAGE_KEY_E, HID_USAGE_KEY_R,
+    /* 0x14 */ HID_USAGE_KEY_T, HID_USAGE_KEY_Y, HID_USAGE_KEY_U, HID_USAGE_KEY_I,
+    /* 0x18 */ HID_USAGE_KEY_O, HID_USAGE_KEY_P, HID_USAGE_KEY_LEFTBRACE, HID_USAGE_KEY_RIGHTBRACE,
+    /* 0x1c */ HID_USAGE_KEY_ENTER, HID_USAGE_KEY_LEFT_CTRL, HID_USAGE_KEY_A, HID_USAGE_KEY_S,
+    /* 0x20 */ HID_USAGE_KEY_D, HID_USAGE_KEY_F, HID_USAGE_KEY_G, HID_USAGE_KEY_H,
+    /* 0x24 */ HID_USAGE_KEY_J, HID_USAGE_KEY_K, HID_USAGE_KEY_L, HID_USAGE_KEY_SEMICOLON,
+    /* 0x28 */ HID_USAGE_KEY_APOSTROPHE, HID_USAGE_KEY_GRAVE, HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_BACKSLASH,
+    /* 0x2c */ HID_USAGE_KEY_Z, HID_USAGE_KEY_X, HID_USAGE_KEY_C, HID_USAGE_KEY_V,
+    /* 0x30 */ HID_USAGE_KEY_B, HID_USAGE_KEY_N, HID_USAGE_KEY_M, HID_USAGE_KEY_COMMA,
+    /* 0x34 */ HID_USAGE_KEY_DOT, HID_USAGE_KEY_SLASH, HID_USAGE_KEY_RIGHT_SHIFT, HID_USAGE_KEY_KP_ASTERISK,
+    /* 0x38 */ HID_USAGE_KEY_LEFT_ALT, HID_USAGE_KEY_SPACE, HID_USAGE_KEY_CAPSLOCK, HID_USAGE_KEY_F1,
+    /* 0x3c */ HID_USAGE_KEY_F2, HID_USAGE_KEY_F3, HID_USAGE_KEY_F4, HID_USAGE_KEY_F5,
+    /* 0x40 */ HID_USAGE_KEY_F6, HID_USAGE_KEY_F7, HID_USAGE_KEY_F8, HID_USAGE_KEY_F9,
+    /* 0x44 */ HID_USAGE_KEY_F10, HID_USAGE_KEY_NUMLOCK, HID_USAGE_KEY_SCROLLLOCK, HID_USAGE_KEY_KP_7,
+    /* 0x48 */ HID_USAGE_KEY_KP_8, HID_USAGE_KEY_KP_9, HID_USAGE_KEY_KP_MINUS, HID_USAGE_KEY_KP_4,
+    /* 0x4c */ HID_USAGE_KEY_KP_5, HID_USAGE_KEY_KP_6, HID_USAGE_KEY_KP_PLUS, HID_USAGE_KEY_KP_1,
+    /* 0x50 */ HID_USAGE_KEY_KP_2, HID_USAGE_KEY_KP_3, HID_USAGE_KEY_KP_0, HID_USAGE_KEY_KP_DOT,
+    /* 0x54 */ 0, 0, 0, HID_USAGE_KEY_F11,
+    /* 0x58 */ HID_USAGE_KEY_F12, 0, 0, 0,
 };
 
-const uint8_t pc_keymap_set1_e0[128] = {
-    /* 0x00 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* 0x10 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, MX_KEY_PAD_ENTER, MX_KEY_RCTRL, 0, 0,
-    /* 0x20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    /* 0x30 */ 0, 0, 0, 0, 0, MX_KEY_PAD_DIVIDE, 0, MX_KEY_PRTSCRN, MX_KEY_RALT, 0, 0, 0, 0, 0, 0, 0,
-    /* 0x40 */ 0, 0, 0, 0, 0, 0, 0, MX_KEY_HOME, MX_KEY_ARROW_UP, MX_KEY_PGUP, 0, MX_KEY_ARROW_LEFT, 0, MX_KEY_ARROW_RIGHT, 0, MX_KEY_END,
-    /* 0x50 */ MX_KEY_ARROW_DOWN, MX_KEY_PGDN, MX_KEY_INS, 0, 0, 0, 0, 0, 0, 0, 0, MX_KEY_LWIN, MX_KEY_RWIN, MX_KEY_MENU, 0, 0};
+static const uint8_t pc_set1_usage_map_e0[128] = {
+    /* 0x00 */ 0, 0, 0, 0, 0, 0, 0, 0,
+    /* 0x08 */ 0, 0, 0, 0, 0, 0, 0, 0,
+    /* 0x10 */ 0, 0, 0, 0, 0, 0, 0, 0,
+    /* 0x18 */ 0, 0, 0, 0, HID_USAGE_KEY_KP_ENTER, HID_USAGE_KEY_RIGHT_CTRL, 0, 0,
+    /* 0x20 */ 0, 0, 0, 0, 0, 0, 0, 0,
+    /* 0x28 */ 0, 0, 0, 0, 0, 0, 0, 0,
+    /* 0x30 */ 0, 0, 0, 0, 0, HID_USAGE_KEY_KP_SLASH, 0, HID_USAGE_KEY_PRINTSCREEN,
+    /* 0x38 */ HID_USAGE_KEY_RIGHT_ALT, 0, 0, 0, 0, 0, 0, 0,
+    /* 0x40 */ 0, 0, 0, 0, 0, 0, 0, HID_USAGE_KEY_HOME,
+    /* 0x48 */ HID_USAGE_KEY_UP, HID_USAGE_KEY_PAGEUP, 0, HID_USAGE_KEY_LEFT, 0, HID_USAGE_KEY_RIGHT, 0, HID_USAGE_KEY_END,
+    /* 0x50 */ HID_USAGE_KEY_DOWN, HID_USAGE_KEY_PAGEDOWN, HID_USAGE_KEY_INSERT, 0, 0, 0, 0, 0,
+    /* 0x58 */ 0, 0, 0, HID_USAGE_KEY_LEFT_GUI, HID_USAGE_KEY_RIGHT_GUI, 0 /* MENU */, 0, 0,
+};
 
 static int i8042_wait_read(void) {
     int i = 0;
@@ -273,29 +375,51 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
     scode &= 0x7f;
 
     // translate the key based on our translation table
-    uint8_t key_code;
+    uint8_t usage;
     if (multi) {
-        key_code = pc_keymap_set1_e0[scode];
-    } else if (dev->key_lshift || dev->key_rshift) {
-        key_code = pc_keymap_set1_upper[scode];
+        usage = pc_set1_usage_map_e0[scode];
     } else {
-        key_code = pc_keymap_set1_lower[scode];
+        usage = pc_set1_usage_map[scode];
+    }
+    if (!usage) return;
+
+    bool rollover = false;
+    if (is_modifier(usage)) {
+        switch (i8042_modifier(dev, usage, !key_up)) {
+        case MOD_EXISTS:
+            return;
+        case MOD_ROLLOVER:
+            rollover = true;
+            break;
+        case MOD_SET:
+        default:
+            break;
+        }
+    } else if (key_up) {
+        if (i8042_rm_key(dev, usage) != KEY_REMOVED) {
+            rollover = true;
+        }
+    } else {
+        switch (i8042_add_key(dev, usage)) {
+        case KEY_EXISTS:
+            return;
+        case KEY_ROLLOVER:
+            rollover = true;
+            break;
+        case KEY_ADDED:
+        default:
+            break;
+        }
     }
 
-    if (key_code == MX_KEY_LSHIFT) {
-        dev->key_lshift = !key_up;
-    } else if (key_code == MX_KEY_RSHIFT) {
-        dev->key_rshift = !key_up;
-    }
+    //cprintf("i8042: scancode=0x%x, keyup=%u, multi=%u: usage=0x%x\n", scode, !!key_up, multi, usage);
 
-    //cprintf("i8042: scancode=0x%x, keyup=%u, multi=%u: keycode=0x%x\n", scode, !!key_up, multi, key_code);
-
-    mx_key_event_t ev = {.keycode = key_code, .pressed = !key_up};
+    const boot_kbd_report_t* report = rollover ? &report_err_rollover : &dev->report;
     mxr_mutex_lock(&dev->fifo.lock);
-    if (dev->fifo.head == dev->fifo.tail) {
+    if (mx_hid_fifo_size(&dev->fifo) == 0) {
         device_state_set(&dev->device, DEV_STATE_READABLE);
     }
-    mx_key_fifo_write(&dev->fifo, &ev);
+    mx_hid_fifo_write(&dev->fifo, (uint8_t*)report, sizeof(*report));
     mxr_mutex_unlock(&dev->fifo.lock);
 }
 
@@ -342,24 +466,73 @@ static int i8042_irq_thread(void* arg) {
 }
 
 static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    size_t size = sizeof(mx_key_event_t);
+    size_t size = sizeof(boot_kbd_report_t);
     if (count < size || (count % size != 0))
         return ERR_INVALID_ARGS;
 
     i8042_device_t* device = get_kbd_device(dev);
-    mx_key_event_t* data = (mx_key_event_t*)buf;
+    boot_kbd_report_t* data = (boot_kbd_report_t*)buf;
     mxr_mutex_lock(&device->fifo.lock);
     while (count > 0) {
-        if (mx_key_fifo_read(&device->fifo, data))
+        if (mx_hid_fifo_read(&device->fifo, (uint8_t*)data, size) < (ssize_t)size)
             break;
         data++;
         count -= size;
     }
-    if (device->fifo.head == device->fifo.tail) {
+    if (mx_hid_fifo_size(&device->fifo) == 0) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
     mxr_mutex_unlock(&device->fifo.lock);
-    return (data - (mx_key_event_t*)buf) * size;
+    return (data - (boot_kbd_report_t*)buf) * size;
+}
+
+static ssize_t i8042_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
+                           void* out_buf, size_t out_len) {
+    switch (op) {
+    case INPUT_IOCTL_GET_PROTOCOL: {
+        if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
+        if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
+        int* reply = out_buf;
+        *reply = INPUT_PROTO_KBD;
+        return sizeof(*reply);
+    }
+
+    case INPUT_IOCTL_GET_REPORT_DESC_SIZE: {
+        if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
+        size_t* reply = out_buf;
+        *reply = sizeof(hid_report_desc);
+        return sizeof(*reply);
+    }
+
+    case INPUT_IOCTL_GET_REPORT_DESC: {
+        if (out_len < sizeof(hid_report_desc)) return ERR_INVALID_ARGS;
+        memcpy(out_buf, &hid_report_desc, sizeof(hid_report_desc));
+        return sizeof(hid_report_desc);
+    }
+
+    case INPUT_IOCTL_GET_NUM_REPORTS: {
+        if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
+        size_t* reply = out_buf;
+        *reply = 1;
+        return sizeof(*reply);
+    }
+
+    case INPUT_IOCTL_GET_REPORT_IDS: {
+        if (out_len < sizeof(input_report_id_t)) return ERR_INVALID_ARGS;
+        input_report_id_t* reply = out_buf;
+        *reply = 0;
+        return sizeof(*reply);
+    }
+
+    case INPUT_IOCTL_GET_REPORT_SIZE:
+    case INPUT_IOCTL_GET_MAX_REPORTSIZE: {
+        if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
+        input_report_size_t* reply = out_buf;
+        *reply = sizeof(boot_kbd_report_t);
+        return sizeof(*reply);
+    }
+    }
+    return ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i8042_release(mx_device_t* dev) {
@@ -371,6 +544,7 @@ static mx_status_t i8042_release(mx_device_t* dev) {
 static mx_protocol_device_t i8042_device_proto = {
     .release = i8042_release,
     .read = i8042_read,
+    .ioctl = i8042_ioctl,
 };
 
 static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
@@ -379,7 +553,7 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     if (!device)
         return ERR_NO_MEMORY;
 
-    device->fifo.lock = MXR_MUTEX_INIT;
+    mx_hid_fifo_init(&device->fifo);
 
     mx_status_t status = device_init(&device->device, driver, "i8042-keyboard", &i8042_device_proto);
     if (status) {
