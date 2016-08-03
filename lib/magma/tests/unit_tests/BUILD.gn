@@ -35,6 +35,7 @@ source_set("magma_util_tests") {
     "test_mmio.cc",
     "test_mutex.cc",
     "test_platform_buffer.cc",
+    "test_platform_device.cc",
     "test_refcounted.cc",
   ]
 

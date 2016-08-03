@@ -20,11 +20,7 @@ extern "C" {
 #include <magenta/types.h>
 #include <runtime/thread.h>
 
-#include <magma/src/sys_driver/magma_driver.h>
-
-extern "C" {
-#include <gpureadback.h>
-}
+#include "magma.h"
 
 #define INTEL_I915_VID (0x8086)
 #define INTEL_I915_BROADWELL_DID (0x1616)
@@ -35,8 +31,6 @@ extern "C" {
 
 #define BACKLIGHT_CTRL_OFFSET (0xc8250)
 #define BACKLIGHT_CTRL_BIT ((uint32_t)(1u << 31))
-
-#define MAGMA_START 1
 
 #define TRACE 1
 
@@ -69,8 +63,6 @@ typedef struct intel_i915_device {
 #define FLAGS_BACKLIGHT 1
 
 #define get_i915_device(dev) containerof(dev, intel_i915_device_t, device)
-
-static int magma_hook(void* dev);
 
 static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable)
 {
@@ -246,7 +238,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
 
     if (MAGMA_START) {
         mxr_thread_t* magma_thread;
-        mxr_thread_create(magma_hook, dev, "magma_hook", &magma_thread);
+        mxr_thread_create(magma_hook, device, "magma_hook", &magma_thread);
     }
 
     return NO_ERROR;
@@ -284,13 +276,24 @@ static int magma_hook(void* param)
     if (!dev->magma_system_device)
         return ERR_INTERNAL;
 
-    xprintf("running magma test in 5s\n");
+    xprintf("running magma tests in 5s\n");
     mx_nanosleep(5000000000);
-    xprintf("running magma test NOW\n");
-    extern void MagmaRunTests(uint32_t device_handle);
-    // MagmaRunTests(device_handle);
+
+#if MAGMA_UNIT_TESTS
+    xprintf("running magma unit tests\n");
+    TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(nullptr));
+    int argc = 1;
+    char* argv[] = {(char*)"driver_main", nullptr};
+    testing::InitGoogleTest(&argc, argv);
+    xprintf("running all tests\n");
+    (void)RUN_ALL_TESTS();
+#endif
+
+#if MAGMA_READBACK_TEST
+    xprintf("running magma readback tests\n");
     uint32_t device_handle = 0xdeadbeef;
     test_gpu_readback(device_handle);
+#endif
 
     xprintf("magma_hook finish\n");
 

@@ -4,15 +4,33 @@
 
 import("//magma/gnbuild/magma.gni")
 
+declare_args() {
+  unit_test = true
+  readback_test = true
+}
+
 source_set("main") {
+  configs += [ "$magma_build_root:magma_tests_include_config" ]
+
   sources = [
     "driver_main.cpp",
   ]
   deps = [
     "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/tests/gpureadback",
   ]
+
+  if (unit_test) {
+    deps += [
+      "$magma_build_root/tests/unit_tests:magma_util_tests",
+      "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
+      "//third_party/gtest",
+    ]
+  }
+  if (readback_test) {
+    deps += [ "$magma_build_root/tests/gpureadback" ]
+  }
+
   libs = [
     "driver",
     "ddk",

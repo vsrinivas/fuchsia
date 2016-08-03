@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 #include "magma_util/macros.h"
+#include "magma_util/platform_device.h"
 #include "mock/mock_mmio.h"
+#include "test_platform_device.h"
 #include "gtest/gtest.h"
 
-static void test_mmio(magma::PlatformMmio* mmio, magma::PlatformMmio::CachePolicy cache_policy)
+static void test_mmio(magma::PlatformMmio* mmio)
 {
+    ASSERT_NE(mmio, nullptr);
+
     // Verify we can write to and read from the mmio space.
     {
         uint32_t expected = 0xdeadbeef;
@@ -32,14 +36,26 @@ static void test_mmio(magma::PlatformMmio* mmio, magma::PlatformMmio::CachePolic
     }
 }
 
+TEST(MagmaUtil, MockMmio)
+{
+    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(8)).get());
+    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(16)).get());
+    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(64)).get());
+    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(1024)).get());
+}
+
 TEST(MagmaUtil, PlatformMmio)
 {
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(8)).get(),
-              magma::PlatformMmio::CACHE_POLICY_CACHED);
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(16)).get(),
-              magma::PlatformMmio::CACHE_POLICY_UNCACHED);
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(64)).get(),
-              magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(1024)).get(),
-              magma::PlatformMmio::CACHE_POLICY_WRITE_COMBINING);
+    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    if (!platform_device) {
+        printf("No platform device\n");
+        return;
+    }
+
+    test_mmio(platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_CACHED).get());
+    test_mmio(platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED).get());
+    test_mmio(
+        platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE).get());
+    test_mmio(
+        platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_WRITE_COMBINING).get());
 }
