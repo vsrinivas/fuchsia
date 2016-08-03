@@ -124,6 +124,9 @@ private:
 
     // LK thread structure
     // put last to ease debugging since this is a pretty large structure
+    // TODO(dje): Revisit eventually: How large? And how frequently are members
+    // of thread_ accessed? [better icache usage if insns can be smaller
+    // from smaller offsets]
     thread_t thread_ = {};
 };
 
