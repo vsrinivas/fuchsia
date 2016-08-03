@@ -139,7 +139,7 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
             } else {
                 cmd |= (DATA_CMD_CMD_READ << DATA_CMD_CMD);
             }
-            if (!len)
+            if (!len && !segment_count)
                 cmd |= (0x1 << DATA_CMD_STOP);
 
             // Write the cmd value.
