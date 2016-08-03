@@ -34,6 +34,8 @@ void msd_platform_buffer_incref(struct msd_platform_buffer* buffer);
 
 void msd_platform_buffer_decref(struct msd_platform_buffer* buffer);
 
+uint32_t msd_platform_buffer_getref(struct msd_platform_buffer* buffer);
+
 int32_t msd_platform_buffer_get_size(struct msd_platform_buffer* buffer, uint64_t* size_out);
 
 int32_t msd_platform_buffer_get_handle(struct msd_platform_buffer* buffer, uint32_t* handle_out);

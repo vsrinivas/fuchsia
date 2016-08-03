@@ -116,3 +116,5 @@ bool PlatformBuffer::UnmapPageBus(unsigned int page_index)
 {
     return msd_platform_buffer_unmap_page_bus(token_, page_index) == 0;
 }
+
+uint32_t PlatformBuffer::GetRefCount() { return msd_platform_buffer_getref(token_); }

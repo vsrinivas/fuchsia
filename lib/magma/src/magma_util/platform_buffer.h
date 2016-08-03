@@ -22,7 +22,7 @@
 class PlatformBuffer {
 public:
     // Returned token is owned by the returned unique_ptr and will become invalid when the
-    // is released unique_ptr.
+    // unique_ptr goes out of scope
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size, msd_platform_buffer** token_out);
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
     static std::unique_ptr<PlatformBuffer> Create(msd_platform_buffer* token);
@@ -46,6 +46,8 @@ public:
 
     bool MapPageBus(uint32_t page_index, uint64_t* addr_out);
     bool UnmapPageBus(uint32_t page_index);
+
+    uint32_t GetRefCount();
 
     PlatformBuffer(const PlatformBuffer&) = delete;
     void operator=(const PlatformBuffer&) = delete;

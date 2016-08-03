@@ -132,7 +132,7 @@ bool MagentaPlatformBuffer::PinnedPageCount(uint32_t* count)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint64_t size,
+int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint64_t size,
                               uint64_t* size_out, uint32_t* handle_out)
 {
     size = magma::round_up_64(size, PAGE_SIZE);
@@ -165,6 +165,11 @@ void msd_platform_buffer_incref(struct msd_platform_buffer* buffer)
 void msd_platform_buffer_decref(struct msd_platform_buffer* buffer)
 {
     MagentaPlatformBuffer::cast(buffer)->Decref();
+}
+
+uint32_t msd_platform_buffer_getref(struct msd_platform_buffer* buffer)
+{
+    return MagentaPlatformBuffer::cast(buffer)->Getref();
 }
 
 int32_t msd_platform_buffer_get_size(struct msd_platform_buffer* buffer, uint64_t* size_out)
