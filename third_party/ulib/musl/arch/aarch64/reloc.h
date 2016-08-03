@@ -36,6 +36,7 @@
 // registers so the user entry point is the base of the call stack.
 #define DL_START_ASM                                            \
     __asm__(".globl _start\n"                                   \
+            ".hidden _start\n"                                  \
             ".type _start,%function\n"                          \
             "_start:\n"                                         \
             "    bl _dl_start\n"                                \
