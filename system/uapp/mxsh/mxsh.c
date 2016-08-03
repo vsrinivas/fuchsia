@@ -15,6 +15,7 @@
 #define _GNU_SOURCE
 
 #include <ctype.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -25,6 +26,7 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -39,6 +41,8 @@
 #include "mxsh.h"
 
 #define LINE_MAX 1024
+
+static bool interactive = false;
 
 void cputc(uint8_t ch) {
     write(1, &ch, 1);
@@ -162,6 +166,9 @@ int history_down(editstate* es) {
 }
 
 void settitle(const char* title) {
+    if (!interactive) {
+        return;
+    }
     char str[16];
     int n = snprintf(str, sizeof(str) - 1, "\033]2;%s", title);
     if (n < 0) {
@@ -314,7 +321,7 @@ void joinproc(mx_handle_t p) {
 
     r = mx_handle_wait_one(p, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, &state);
     if (r != NO_ERROR) {
-        printf("[process(%x): wait failed? %d]\n", p, r);
+        fprintf(stderr, "[process(%x): wait failed? %d]\n", p, r);
         return;
     }
 
@@ -322,9 +329,9 @@ void joinproc(mx_handle_t p) {
     mx_process_info_t proc_info;
     mx_ssize_t ret = mx_handle_get_info(p, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
     if (ret != sizeof(proc_info)) {
-        printf("[process(%x): handle_get_info failed? %ld]\n", p, ret);
+        fprintf(stderr, "[process(%x): handle_get_info failed? %ld]\n", p, ret);
     } else {
-        printf("[process(%x): status: %d]\n", p, proc_info.return_code);
+        fprintf(stderr, "[process(%x): status: %d]\n", p, proc_info.return_code);
     }
 
     settitle("mxsh");
@@ -336,16 +343,36 @@ void* joiner(void* arg) {
     return NULL;
 }
 
-void command(int argc, char** argv, bool runbg) {
-    char tmp[LINE_MAX + 32];
-    int i;
-
-    for (i = 0; builtins[i].name != NULL; i++) {
-        if (strcmp(builtins[i].name, argv[0]))
-            continue;
-        builtins[i].func(argc, argv);
-        return;
+mx_status_t lp_setup(launchpad_t** lp_out,
+                     int argc, const char* const* argv,
+                     const char* const* envp) {
+    launchpad_t* lp;
+    mx_status_t status;
+    if ((status = launchpad_create(argv[0], &lp)) < 0) {
+        return status;
     }
+    if ((status = launchpad_arguments(lp, argc, argv)) < 0) {
+        goto fail;
+    }
+    if ((status = launchpad_environ(lp, envp)) < 0) {
+        goto fail;
+    }
+    if ((status = launchpad_clone_mxio_root(lp)) < 0) {
+        goto fail;
+    }
+    *lp_out = lp;
+    return NO_ERROR;
+
+fail:
+    launchpad_destroy(lp);
+    return status;
+}
+
+mx_status_t command(int argc, char** argv, bool runbg) {
+    char tmp[LINE_MAX + 32];
+    launchpad_t* lp;
+    mx_status_t status = NO_ERROR;
+    int i;
 
     // Leading FOO=BAR become environment strings prepended to the
     // inherited environ, just like in a real Bourne shell.
@@ -361,7 +388,7 @@ void command(int argc, char** argv, bool runbg) {
         envp = malloc((i + envc) * sizeof(*envp));
         if (envp == NULL) {
             puts("out of memory for environment strings!");
-            return;
+            return ERR_NO_MEMORY;
         }
         memcpy(mempcpy(envp, argv, i * sizeof(*envp)),
                environ, envc * sizeof(*envp));
@@ -369,16 +396,65 @@ void command(int argc, char** argv, bool runbg) {
         argv += i;
     }
 
-    snprintf(tmp, sizeof(tmp), "%s%s",
-             (argv[0][0] == '/') ? "" : "/boot/bin/", argv[0]);
-    argv[0] = tmp;
-    mx_handle_t p = launchpad_launch_mxio_etc(
-        argv[0], argc, (const char* const*)argv, envp, 0, NULL, NULL);
-    if (envp != (const char**)environ)
-        free(envp);
-    if (p < 0) {
-        printf("process failed to start (%d)\n", p);
-        return;
+    // Simplistic stdout redirection support
+    int stdout_fd = -1;
+    if ((argc > 0) && (argv[argc - 1][0] == '>')) {
+        const char* fn = argv[argc - 1] + 1;
+        while (isspace(*fn)) {
+            fn++;
+        }
+        unlink(fn);
+        if ((stdout_fd = open(fn, O_WRONLY | O_CREAT)) < 0) {
+            fprintf(stderr, "cannot open '%s' for writing\n", fn);
+            goto done_no_lp;
+        }
+        argc--;
+    }
+
+    if (argc == 0) {
+        goto done_no_lp;
+    }
+
+    for (i = 0; builtins[i].name != NULL; i++) {
+        if (strcmp(builtins[i].name, argv[0]))
+            continue;
+        if (stdout_fd >= 0) {
+            fprintf(stderr, "redirection not supported for builtin functions\n");
+            status = ERR_NOT_SUPPORTED;
+            goto done_no_lp;
+        }
+        settitle(argv[0]);
+        builtins[i].func(argc, argv);
+        settitle("mxsh");
+        goto done_no_lp;
+    }
+
+    //TODO: some kind of PATH processing
+    if (argv[0][0] != '/') {
+        snprintf(tmp, sizeof(tmp), "%s%s", "/boot/bin/", argv[0]);
+        argv[0] = tmp;
+    }
+
+    if ((status = lp_setup(&lp, argc, (const char* const*) argv, envp)) < 0) {
+        fprintf(stderr, "process setup failed (%d)\n", status);
+        goto done_no_lp;
+    }
+
+    if ((status = launchpad_elf_load(lp, launchpad_vmo_from_file(argv[0]))) < 0) {
+        fprintf(stderr, "could not load binary '%s'\n", argv[0]);
+        goto done;
+    }
+
+    // unclone-able files will end up as /dev/null in the launched process
+    launchpad_clone_fd(lp, 0, 0);
+    launchpad_clone_fd(lp, (stdout_fd >= 0) ? stdout_fd : 1, 1);
+    launchpad_clone_fd(lp, 2, 2);
+
+    mx_handle_t p;
+    if ((p = launchpad_start(lp)) < 0) {
+        fprintf(stderr, "process failed to start (%d)\n", p);
+        status = p;
+        goto done;
     }
     if (runbg) {
         // TODO: migrate to a unified waiter thread once we can wait
@@ -397,6 +473,16 @@ void command(int argc, char** argv, bool runbg) {
         settitle(bname);
         joinproc(p);
     }
+done:
+    launchpad_destroy(lp);
+done_no_lp:
+    if (envp != (const char**)environ) {
+        free(envp);
+    }
+    if (stdout_fd >= 0) {
+        close(stdout_fd);
+    }
+    return status;
 }
 
 void execline(char* line) {
@@ -462,6 +548,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    interactive = true;
     const char* banner = "\033]2;mxsh\007\nMXCONSOLE...\n";
     cputs(banner, strlen(banner));
     console();

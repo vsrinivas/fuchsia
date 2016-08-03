@@ -36,13 +36,13 @@ static int mxc_dump(int argc, char** argv) {
     char buf[4096];
 
     if (argc != 2) {
-        printf("usage: dump <filename>\n");
+        fprintf(stderr, "usage: dump <filename>\n");
         return -1;
     }
 
     fd = open(argv[1], O_RDONLY);
     if (fd < 0) {
-        printf("error: cannot open '%s'\n", argv[1]);
+        fprintf(stderr, "error: cannot open '%s'\n", argv[1]);
         return -1;
     }
     off = 0;
@@ -50,7 +50,7 @@ static int mxc_dump(int argc, char** argv) {
         len = read(fd, buf, sizeof(buf));
         if (len <= 0) {
             if (len)
-                printf("error: io\n");
+                fprintf(stderr, "error: io\n");
             break;
         }
         hexdump8_ex(buf, len, off);
@@ -86,7 +86,7 @@ static int mxc_cd(int argc, char** argv) {
         return 0;
     }
     if (chdir(argv[1])) {
-        printf("error: cannot change directory to '%s'\n", argv[1]);
+        fprintf(stderr, "error: cannot change directory to '%s'\n", argv[1]);
         return -1;
     }
     return 0;
@@ -128,11 +128,11 @@ static int mxc_ls(int argc, char** argv) {
     dirln = strlen(dirn);
 
     if (argc > 2) {
-        printf("usage: ls [ <directory> ]\n");
+        fprintf(stderr, "usage: ls [ <directory> ]\n");
         return -1;
     }
     if ((dir = opendir(dirn)) == NULL) {
-        printf("error: cannot open '%s'\n", dirn);
+        fprintf(stderr, "error: cannot open '%s'\n", dirn);
         return -1;
     }
     while((de = readdir(dir)) != NULL) {
@@ -176,34 +176,34 @@ static int mxc_cp(int argc, char** argv) {
     int r, wr;
     int count = 0;
     if (argc != 3) {
-        printf("usage: cp <srcfile> <dstfile>\n");
+        fprintf(stderr, "usage: cp <srcfile> <dstfile>\n");
         return -1;
     }
     if ((fdi = open(argv[1], O_RDONLY)) < 0) {
-        printf("error: cannot open '%s'\n", argv[1]);
+        fprintf(stderr, "error: cannot open '%s'\n", argv[1]);
         return -1;
     }
     if ((fdo = open(argv[2], O_WRONLY | O_CREAT)) < 0) {
-        printf("error: cannot open '%s'\n", argv[2]);
+        fprintf(stderr, "error: cannot open '%s'\n", argv[2]);
         r = fdo;
         goto done;
     }
     for (;;) {
         if ((r = read(fdi, data, sizeof(data))) < 0) {
-            printf("error: failed reading from '%s'\n", argv[1]);
+            fprintf(stderr, "error: failed reading from '%s'\n", argv[1]);
             break;
         }
         if (r == 0) {
             break;
         }
         if ((wr = write(fdo, data, r)) != r) {
-            printf("error: failed writing to '%s'\n", argv[2]);
+            fprintf(stderr, "error: failed writing to '%s'\n", argv[2]);
             r = wr;
             break;
         }
         count += r;
     }
-    printf("[copied %d bytes]\n", count);
+    fprintf(stderr, "[copied %d bytes]\n", count);
 done:
     close(fdi);
     close(fdo);
@@ -212,14 +212,14 @@ done:
 
 static int mxc_rm(int argc, char** argv) {
     if (argc < 2) {
-        printf("usage: rm <filename>\n");
+        fprintf(stderr, "usage: rm <filename>\n");
         return -1;
     }
     while (argc > 1) {
         argc--;
         argv++;
         if (unlink(argv[0])) {
-            printf("error: failed to delete '%s'\n", argv[0]);
+            fprintf(stderr, "error: failed to delete '%s'\n", argv[0]);
         }
     }
     return 0;
@@ -365,12 +365,12 @@ static int mxc_dm(int argc, char** argv) {
     if (fd >= 0) {
         int r = write(fd, argv[1], strlen(argv[1]));
         if (r < 0) {
-            printf("error: cannot write dmctl: %d\n", r);
+            fprintf(stderr, "error: cannot write dmctl: %d\n", r);
         }
         close(fd);
         return r;
     } else {
-        printf("error: cannot open dmctl: %d\n", fd);
+        fprintf(stderr, "error: cannot open dmctl: %d\n", fd);
         return fd;
     }
 }
