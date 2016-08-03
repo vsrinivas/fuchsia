@@ -16,14 +16,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp-static
+MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/helper.c
 
 MODULE_NAME := reply-handle-helper
 
-MODULE_STATIC_LIBS := \
-    ulib/mxio ulib/runtime ulib/magenta ulib/musl-static
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

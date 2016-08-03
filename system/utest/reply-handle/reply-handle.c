@@ -18,6 +18,7 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
@@ -60,7 +61,6 @@ int reply_handle_rw(void) {
     BEGIN_TEST;
 
     mx_handle_t p1[2], p2[2];
-    uintptr_t entry;
     mx_handle_t p;
     mx_status_t r;
     char msg[128];
@@ -79,30 +79,11 @@ int reply_handle_rw(void) {
     EXPECT_GE(r, 0, msg);
 
     // create helper process and pass p1[1] across to it
-    launchpad_t* lp;
-    r = launchpad_create("helper", &lp);
-    snprintf(msg, sizeof(msg), "launchpad_create failed: %d\n", r);
-    ASSERT_EQ(r, 0, msg);
-
-    mx_handle_t vmo = launchpad_vmo_from_file("/boot/bin/reply-handle-helper");
-    snprintf(msg, sizeof(msg), "couldn't open reply-handle-helper %d\n", vmo);
-    ASSERT_GT(vmo, 0, msg);
-
-    r = launchpad_elf_load_basic(lp, vmo);
-    snprintf(msg, sizeof(msg), "couldn't load reply-handle-helper %d\n", r);
-    ASSERT_EQ(r, 0, msg);
-
-    r = launchpad_get_entry_address(lp, &entry);
-    ASSERT_EQ(r, 0, "launchpad_get_entry_address failed");
-
-    p = launchpad_get_process_handle(lp);
-    ASSERT_GT(p, 0, "launchpad_get_process_handle failed");
-
-    r = mx_process_start(p, p1[1], entry);
-    snprintf(msg, sizeof(msg), "process did not start %d\n", r);
-    ASSERT_GE(r, 0, msg);
-
-    launchpad_destroy(lp);
+    const char* argv[] = { "/boot/bin/reply-handle-helper" };
+    uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
+    p = launchpad_launch_mxio_etc(argv[0], 1, argv, NULL, 1, &p1[1], &id);
+    snprintf(msg, sizeof(msg), "launchpad_launch_mxio_etc failed: %d\n", p);
+    ASSERT_GT(p, 0, msg);
 
     mx_signals_state_t pending;
     r = mx_handle_wait_one(p2[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
