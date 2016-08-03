@@ -15,6 +15,5 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/fifo.c \
     $(LOCAL_DIR)/usb-hid.c \
     $(LOCAL_DIR)/usb-report.c \

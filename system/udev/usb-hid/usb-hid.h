@@ -16,9 +16,9 @@
 
 //#define USB_HID_DEBUG 1
 
-#include "fifo.h"
-
 #include <ddk/device.h>
+#include <ddk/common/hid.h>
+#include <ddk/protocol/input.h>
 #include <ddk/protocol/usb-device.h>
 
 #include <stdint.h>
@@ -51,7 +51,7 @@ typedef struct {
     size_t num_reports;
     hid_report_size_t sizes[HID_MAX_REPORT_IDS];
 
-    usb_hid_fifo_t fifo;
+    mx_hid_fifo_t fifo;
 } usb_hid_dev_t;
 
 typedef struct hid_item {

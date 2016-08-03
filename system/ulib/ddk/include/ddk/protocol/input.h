@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 enum {
     INPUT_IOCTL_GET_PROTOCOL = 0,
     INPUT_IOCTL_GET_REPORT_DESC_SIZE = 1,
@@ -38,3 +40,12 @@ typedef struct input_report {
     uint8_t data[];  // report data from the device; length can be determined by
                      // using the GET_REPORT_SIZE ioctl for the id
 } input_report_t;
+
+typedef struct boot_kbd_report {
+    uint8_t id;
+    uint8_t modifier;
+    uint8_t reserved;
+    uint8_t usage[6];
+} __attribute__((packed)) boot_kbd_report_t;
+
+extern const boot_kbd_report_t report_err_rollover;

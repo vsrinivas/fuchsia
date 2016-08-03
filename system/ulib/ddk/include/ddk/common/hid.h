@@ -31,13 +31,13 @@ typedef struct {
     uint32_t tail;
     bool empty;
     mxr_mutex_t lock;
-} usb_hid_fifo_t;
+} mx_hid_fifo_t;
 
-mx_status_t usb_hid_fifo_create(usb_hid_fifo_t** fifo);
-void usb_hid_fifo_init(usb_hid_fifo_t* fifo);
-size_t usb_hid_fifo_size(usb_hid_fifo_t* fifo);
-ssize_t usb_hid_fifo_peek(usb_hid_fifo_t* fifo, uint8_t* out);
-ssize_t usb_hid_fifo_read(usb_hid_fifo_t* fifo, uint8_t* buf, size_t len);
-ssize_t usb_hid_fifo_write(usb_hid_fifo_t* fifo, uint8_t* buf, size_t len);
+mx_status_t mx_hid_fifo_create(mx_hid_fifo_t** fifo);
+void mx_hid_fifo_init(mx_hid_fifo_t* fifo);
+size_t mx_hid_fifo_size(mx_hid_fifo_t* fifo);
+ssize_t mx_hid_fifo_peek(mx_hid_fifo_t* fifo, uint8_t* out);
+ssize_t mx_hid_fifo_read(mx_hid_fifo_t* fifo, uint8_t* buf, size_t len);
+ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, uint8_t* buf, size_t len);
 
-void usb_hid_fifo_dump(usb_hid_fifo_t* fifo);
+void mx_hid_fifo_dump(mx_hid_fifo_t* fifo);

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fifo.h"
 #include "usb-hid.h"
 
 #include <ddk/device.h>
@@ -127,8 +126,8 @@ static ssize_t usb_hid_read(mx_device_t* dev, void* buf, size_t count, mx_off_t 
 
     size_t left;
     mxr_mutex_lock(&hid->fifo.lock);
-    ssize_t r = usb_hid_fifo_read(&hid->fifo, buf, count);
-    left = usb_hid_fifo_size(&hid->fifo);
+    ssize_t r = mx_hid_fifo_read(&hid->fifo, buf, count);
+    left = mx_hid_fifo_size(&hid->fifo);
     if (left == 0) {
         device_state_clr(&hid->dev, DEV_STATE_READABLE);
     }
@@ -203,21 +202,21 @@ static void usb_hid_int_cb(usb_request_t* request) {
     } else if (request->status == NO_ERROR) {
         mxr_mutex_lock(&hid->fifo.lock);
 #ifdef USB_HID_DEBUG
-        usb_hid_fifo_dump(&hid->fifo);
+        mx_hid_fifo_dump(&hid->fifo);
 #endif
-        bool was_empty = usb_hid_fifo_size(&hid->fifo) == 0;
+        bool was_empty = mx_hid_fifo_size(&hid->fifo) == 0;
         ssize_t wrote = 0;
         // Add the report id if it's omitted from the device. This happens if
         // there's only one report and its id is zero.
         if (hid->num_reports == 1 && hid->sizes[0].id == 0) {
-            wrote = usb_hid_fifo_write(&hid->fifo, (uint8_t*)&wrote, 1);
+            wrote = mx_hid_fifo_write(&hid->fifo, (uint8_t*)&wrote, 1);
             if (wrote <= 0) {
                 printf("could not write report id to usb-hid fifo (ret=%lu)\n", wrote);
                 mxr_mutex_unlock(&hid->fifo.lock);
                 goto next_request;
             }
         }
-        wrote = usb_hid_fifo_write(&hid->fifo, request->buffer, request->buffer_length);
+        wrote = mx_hid_fifo_write(&hid->fifo, request->buffer, request->buffer_length);
         if (wrote <= 0) {
             printf("could not write to usb-hid fifo (ret=%lu)\n", wrote);
         } else {
@@ -225,7 +224,7 @@ static void usb_hid_int_cb(usb_request_t* request) {
                 device_state_set(&hid->dev, DEV_STATE_READABLE);
             }
 #ifdef USB_HID_DEBUG
-            usb_hid_fifo_dump(&hid->fifo);
+            mx_hid_fifo_dump(&hid->fifo);
 #endif
         }
         mxr_mutex_unlock(&hid->fifo.lock);
@@ -272,7 +271,7 @@ static mx_status_t usb_hid_dev_create(usb_hid_dev_t** hid) {
         return ERR_NO_MEMORY;
     }
     hid_init_report_sizes(*hid);
-    usb_hid_fifo_init(&(*hid)->fifo);
+    mx_hid_fifo_init(&(*hid)->fifo);
 
     return NO_ERROR;
 }
