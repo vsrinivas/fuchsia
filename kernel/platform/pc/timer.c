@@ -180,10 +180,9 @@ static inline void pit_calibration_cycle_1ms_preamble(void)
 {
     // Make the PIT run for 1ms
     const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS;
-    // Program PIT in the software strobe configuration, this makes
-    // it just count down.  When it hits 0, it will wrap around and
-    // keep counting, so we need to watch for overflow below.
-    outp(I8253_CONTROL_REG, 0x38);
+    // Program PIT in the interrupt on terminal count configuration,
+    // this makes it count down and set the output high when it hits 0.
+    outp(I8253_CONTROL_REG, 0x30);
     outp(I8253_DATA_REG, init_pic_count & 0xff); // LSB
 }
 
@@ -193,14 +192,13 @@ static inline void pit_calibration_cycle_1ms(void)
     const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS;
     outp(I8253_DATA_REG, init_pic_count >> 8); // MSB
 
-    uint16_t count = 0;
+    uint8_t status = 0;
     do {
-        // Latch the count for channel 0 (does not pause the actual
-        // count)
-        outp(I8253_CONTROL_REG, 0x00);
-        count = inp(I8253_DATA_REG);
-        count |= inp(I8253_DATA_REG) << 8;
-    } while (count <= init_pic_count && count != 0);
+        // Send a read-back command that latches the status of ch0
+        outp(I8253_CONTROL_REG, 0xe2);
+        status = inp(I8253_DATA_REG);
+    // Wait for bit 7 (output) to go high and for bit 6 (null count) to go low
+    } while ((status & 0xc0) != 0x80);
 }
 
 static inline void pit_calibration_cycle_1ms_cleanup(void)
