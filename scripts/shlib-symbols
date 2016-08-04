@@ -71,9 +71,8 @@ massage() {
     case "$name" in
     # Linkers sometimes emit these symbols into .dynsym, but they are useless
     # and should not be consider part of the ABI.
-    __bss_start|_etext|_edata|_end)
-      continue
-      ;;
+    __bss_start|__bss_start__|__bss_end__|_bss_end__) continue ;;
+    __data_start|__end__|_stack|_etext|_edata|_end) continue ;;
     esac
 
     case "$type" in
