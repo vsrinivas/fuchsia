@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <string.h>
 
-static int unmask_done;
 static unsigned long handler_set[_NSIG / (8 * sizeof(long))];
 
 void __get_handler_set(sigset_t* set) {
@@ -31,10 +30,17 @@ int __libc_sigaction(int sig, const struct sigaction* restrict sa, struct sigact
              * receive an illegal sigset_t (with them
              * blocked) as part of the ucontext_t passed
              * to the signal handler. */
+            // TODO(kulakowski) Signals: We don't have them, but for
+            // now it's cheap to keep around notes of where they had
+            // to be handled, in case we ever have a mechanism with
+            // similar implications for our threading implementation.
+#if 0
+            static int unmask_done;
             if (!libc.threaded && !unmask_done) {
                 __syscall(SYS_rt_sigprocmask, SIG_UNBLOCK, SIGPT_SET, 0, _NSIG / 8);
                 unmask_done = 1;
             }
+#endif
         }
         ksa.handler = sa->sa_handler;
         ksa.flags = sa->sa_flags | SA_RESTORER;

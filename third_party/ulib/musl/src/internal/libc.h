@@ -20,7 +20,6 @@ struct tls_module {
 };
 
 struct __libc {
-    int threaded;
     int secure;
     size_t* auxv;
     mx_handle_t proc;
