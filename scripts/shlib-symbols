@@ -12,7 +12,6 @@
 #   TYPE(NAME, [ADDRESS,] SIZE)
 # The ADDRESS parameter is included only if the script is given the -a switch.
 # The SIZE is forced to 0 for functions if the script is given the -z switch.
-# Undefined symbols are omitted if the script given the -d switch.
 # The TYPE is one of:
 #   COMMON_OBJECT               STT_COMMON symbol
 #   UNDEFINED                   SHN_UNDEF symbol
@@ -33,11 +32,9 @@ set -o pipefail -e
 
 show_address=false
 zero_function_size=false
-omit_undefined=false
 while [ $# -gt 0 ]; do
   case "$1" in
   -a) show_address=true ;;
-  -d) omit_undefined=true ;;
   -z) zero_function_size=true ;;
   *) break ;;
   esac
@@ -45,7 +42,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ $# -ne 2 ]; then
-  echo >&2 "Usage: $0 [-a] [-d] [-z] NM DSO"
+  echo >&2 "Usage: $0 [-a] [-z] NM DSO"
   exit 2
 fi
 
@@ -101,12 +98,6 @@ massage() {
     if $zero_function_size; then
       case $type in
       FUNCTION|WEAK_FUNCTION) size=0 ;;
-      esac
-    fi
-
-    if $omit_undefined; then
-      case $type in
-        UNDEFINED*) continue ;;
       esac
     fi
 

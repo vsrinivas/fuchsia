@@ -41,7 +41,8 @@ $(MODULE_LIBNAME).abi.stamp: _SONAME := lib$(MODULE_SO_NAME).so
 $(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_LIBNAME).abi.h \
 			     scripts/shlib-symbols
 	@echo generating ABI stub $(@:.abi.stamp=.so.abi)
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(_SONAME) -s \
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) --no-gc-sections \
+		       -shared -soname $(_SONAME) -s \
 		       $< -o $(@:.abi.stamp=.so.abi).new
 # Sanity check that the ABI stub really matches the actual DSO.
 	$(NOECHO)scripts/shlib-symbols '$(NM)' $(@:.abi.stamp=.so.abi).new | \
@@ -56,7 +57,7 @@ $(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_LIBNAME).abi.h \
 	$(NOECHO)touch $@
 
 $(MODULE_LIBNAME).abi.h: $(MODULE_LIBNAME).so scripts/shlib-symbols
-	$(NOECHO)scripts/shlib-symbols -z -d '$(NM)' $< > $@
+	$(NOECHO)scripts/shlib-symbols -z '$(NM)' $< > $@
 
 $(MODULE_LIBNAME).abi.o: $(MODULE_LIBNAME).abi.h scripts/dso-abi.h
 	$(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(ARCH_CFLAGS) \

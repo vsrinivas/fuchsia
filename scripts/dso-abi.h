@@ -47,7 +47,7 @@
 #define UNDEFINED_WEAK(NAME, SIZE) UNDEFINED_1(weak, NAME)
 #define UNDEFINED(NAME, SIZE) UNDEFINED_1(globl, NAME)
 #define UNDEFINED_1(BINDING, NAME) \
-    .pushsection .data,"aw",%progbits; \
+    .pushsection .undefined,"aw",%progbits; \
     .BINDING NAME; \
     .dc.a NAME; \
     .popsection
