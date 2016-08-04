@@ -65,6 +65,8 @@ static_library("ftl") {
     "time/time_delta.h",
     "time/time_point.cc",
     "time/time_point.h",
+    "third_party/icu/icu_utf.h",
+    "third_party/icu/icu_utf.cc",
   ]
 
   public_configs = [ ":thread_safety_warning" ]
