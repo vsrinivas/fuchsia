@@ -17,12 +17,13 @@
 #include <ddk/protocol/console.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/input.h>
-#include <ddk/protocol/keyboard.h>
 
 #include <assert.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <gfx/gfx.h>
+#include <hid/hid.h>
+#include <hid/usages.h>
 #include <system/listnode.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,85 +99,91 @@ static gfx_format display_format_to_gfx_format(unsigned display_format) {
     return format;
 }
 
-static bool vc_ischar(mx_key_event_t* ev) {
-    return ev->pressed && ((ev->keycode >= 1 && ev->keycode <= 0x7f) ||
-                           ev->keycode == MX_KEY_RETURN ||
-                           ev->keycode == MX_KEY_PAD_ENTER ||
-                           ev->keycode == MX_KEY_BACKSPACE ||
-                           ev->keycode == MX_KEY_TAB ||
-                           (ev->keycode >= MX_KEY_ARROW_UP && ev->keycode <= MX_KEY_ARROW_LEFT));
-}
-
 static int vc_input_thread(void* arg) {
     input_listener_t* listener = arg;
     assert(listener->flags & INPUT_LISTENER_FLAG_RUNNING);
     assert(listener->fd >= 0);
     xprintf("vc: input thread started for %s\n", listener->dev_name);
-    mx_key_event_t ev;
+
+    uint8_t report_buf[9];
+    uint8_t* rpt = &report_buf[1];
+    hid_keys_t key_state[2];
+    hid_keys_t key_delta;
+    memset(&key_state[0], 0, sizeof(hid_keys_t));
+    memset(&key_state[1], 0, sizeof(hid_keys_t));
+    int cur_idx = 0;
+    int prev_idx = 1;
     int modifiers = 0;
+
     for (;;) {
         mxio_wait_fd(listener->fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
-        int r = read(listener->fd, &ev, sizeof(mx_key_event_t));
+        int r = read(listener->fd, report_buf, sizeof(report_buf));
         if (r < 0) {
             break; // will be restarted by poll thread if needed
         }
-        if ((size_t)(r) != sizeof(mx_key_event_t)) {
+        if ((size_t)(r) != sizeof(report_buf)) {
             continue;
         }
+        // verify this is report 0
+        if (report_buf[0] != 0) continue;
         // eat the input if there is no active vc
         if (!active_vc) continue;
         // process the key
         int consumed = 0;
-        if (ev.pressed) {
-            switch (ev.keycode) {
+        uint8_t keycode;
+        hid_kbd_parse_report(rpt, &key_state[cur_idx]);
+
+        hid_kbd_pressed_keys(&key_state[prev_idx], &key_state[cur_idx], &key_delta);
+        hid_for_every_key(&key_delta, keycode) {
+            switch (keycode) {
             // modifier keys are special
-            case MX_KEY_LSHIFT:
+            case HID_USAGE_KEY_LEFT_SHIFT:
                 modifiers |= MOD_LSHIFT;
                 break;
-            case MX_KEY_RSHIFT:
+            case HID_USAGE_KEY_RIGHT_SHIFT:
                 modifiers |= MOD_RSHIFT;
                 break;
-            case MX_KEY_LALT:
+            case HID_USAGE_KEY_LEFT_ALT:
                 modifiers |= MOD_LALT;
                 break;
-            case MX_KEY_RALT:
+            case HID_USAGE_KEY_RIGHT_ALT:
                 modifiers |= MOD_RALT;
                 break;
-            case MX_KEY_LCTRL:
+            case HID_USAGE_KEY_LEFT_CTRL:
                 modifiers |= MOD_LCTRL;
                 break;
-            case MX_KEY_RCTRL:
+            case HID_USAGE_KEY_RIGHT_CTRL:
                 modifiers |= MOD_RCTRL;
                 break;
 
-            case MX_KEY_F1:
+            case HID_USAGE_KEY_F1:
                 vc_set_active_console(active_vc_index == 0 ? vc_count - 1 : active_vc_index - 1);
                 consumed = 1;
                 break;
-            case MX_KEY_F2:
+            case HID_USAGE_KEY_F2:
                 vc_set_active_console(active_vc_index == vc_count - 1 ? 0 : active_vc_index + 1);
                 consumed = 1;
                 break;
 
-            case MX_KEY_ARROW_UP:
+            case HID_USAGE_KEY_UP:
                 if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
                     vc_device_scroll_viewport(active_vc, -1);
                     consumed = 1;
                 }
                 break;
-            case MX_KEY_ARROW_DOWN:
+            case HID_USAGE_KEY_DOWN:
                 if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
                     vc_device_scroll_viewport(active_vc, 1);
                     consumed = 1;
                 }
                 break;
-            case MX_KEY_PGUP:
+            case HID_USAGE_KEY_PAGEUP:
                 if (modifiers & MOD_LSHIFT || modifiers & MOD_RSHIFT) {
                     vc_device_scroll_viewport(active_vc, -(active_vc->rows / 2));
                     consumed = 1;
                 }
                 break;
-            case MX_KEY_PGDN:
+            case HID_USAGE_KEY_PAGEDOWN:
                 if (modifiers & MOD_LSHIFT || modifiers & MOD_RSHIFT) {
                     vc_device_scroll_viewport(active_vc, active_vc->rows / 2);
                     consumed = 1;
@@ -186,42 +193,50 @@ static int vc_input_thread(void* arg) {
             // eat everything else
             default:; // nothing
             }
-        } else {
-            switch (ev.keycode) {
+        }
+
+        hid_kbd_released_keys(&key_state[prev_idx], &key_state[cur_idx], &key_delta);
+        hid_for_every_key(&key_delta, keycode) {
+            switch (keycode) {
             // modifier keys are special
-            case MX_KEY_LSHIFT:
+            case HID_USAGE_KEY_LEFT_SHIFT:
                 modifiers &= ~MOD_LSHIFT;
                 break;
-            case MX_KEY_RSHIFT:
+            case HID_USAGE_KEY_RIGHT_SHIFT:
                 modifiers &= ~MOD_RSHIFT;
                 break;
-            case MX_KEY_LALT:
+            case HID_USAGE_KEY_LEFT_ALT:
                 modifiers &= ~MOD_LALT;
                 break;
-            case MX_KEY_RALT:
+            case HID_USAGE_KEY_RIGHT_ALT:
                 modifiers &= ~MOD_RALT;
                 break;
-            case MX_KEY_LCTRL:
+            case HID_USAGE_KEY_LEFT_CTRL:
                 modifiers &= ~MOD_LCTRL;
                 break;
-            case MX_KEY_RCTRL:
+            case HID_USAGE_KEY_RIGHT_CTRL:
                 modifiers &= ~MOD_RCTRL;
                 break;
 
             default:; // nothing
             }
         }
+
         if (!consumed) {
             // TODO: decouple char device from actual device
             // TODO: ensure active vc can't change while this is going on
             mxr_mutex_lock(&active_vc->fifo.lock);
-            if ((active_vc->fifo.head == active_vc->fifo.tail) && (active_vc->charcount == 0)) {
+            if ((mx_hid_fifo_size(&active_vc->fifo) == 0) && (active_vc->charcount == 0)) {
                 active_vc->flags |= VC_FLAG_RESETSCROLL;
                 device_state_set(&active_vc->device, DEV_STATE_READABLE);
             }
-            mx_key_fifo_write(&active_vc->fifo, &ev);
+            mx_hid_fifo_write(&active_vc->fifo, rpt, sizeof(report_buf - 1));
             mxr_mutex_unlock(&active_vc->fifo.lock);
         }
+
+        // swap key states
+        cur_idx = 1 - cur_idx;
+        prev_idx = 1 - prev_idx;
     }
     close(listener->fd);
     listener->fd = -1;
@@ -398,9 +413,12 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
 static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
 
-    mx_key_event_t ev;
+    uint8_t report[8];
+    hid_keys_t key_delta;
     ssize_t r = 0;
     mxr_mutex_lock(&vc->fifo.lock);
+    int cur_idx = vc->key_idx;
+    int prev_idx = 1 - cur_idx;
     while (count > 0) {
         if (vc->charcount > 0) {
             if (count > vc->charcount) {
@@ -414,114 +432,114 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
             r = count;
             break;
         }
-        if (mx_key_fifo_read(&vc->fifo, &ev)) {
+        if (mx_hid_fifo_read(&vc->fifo, report, sizeof(report)) < (ssize_t)sizeof(report)) {
             // TODO: better error?
             r = 0;
             break;
         }
 
+        uint8_t keycode;
         char* str = vc->chardata;
-        if (ev.pressed) {
-            switch (ev.keycode) {
-            case MX_KEY_LSHIFT:
+        hid_kbd_parse_report(report, &vc->key_states[cur_idx]);
+
+        hid_kbd_pressed_keys(&vc->key_states[prev_idx], &vc->key_states[cur_idx], &key_delta);
+        hid_for_every_key(&key_delta, keycode) {
+            uint8_t ch = hid_map_key(keycode, vc->modifiers & MOD_SHIFT, vc->keymap);
+            if (ch) {
+                if (vc->modifiers & MOD_CTRL) {
+                    uint8_t sub = vc->modifiers & MOD_SHIFT ? 'A' : 'a';
+                    str[0] = ch - sub + 1;
+                } else {
+                    str[0] = ch;
+                }
+                vc->charcount = 1;
+                continue;
+            }
+
+            switch (keycode) {
+            case HID_USAGE_KEY_LEFT_SHIFT:
                 vc->modifiers |= MOD_LSHIFT;
                 break;
-            case MX_KEY_RSHIFT:
+            case HID_USAGE_KEY_RIGHT_SHIFT:
                 vc->modifiers |= MOD_RSHIFT;
                 break;
-            case MX_KEY_LCTRL:
+            case HID_USAGE_KEY_LEFT_CTRL:
                 vc->modifiers |= MOD_LCTRL;
                 break;
-            case MX_KEY_RCTRL:
+            case HID_USAGE_KEY_RIGHT_CTRL:
                 vc->modifiers |= MOD_RCTRL;
                 break;
-            case MX_KEY_LALT:
+            case HID_USAGE_KEY_LEFT_ALT:
                 vc->modifiers |= MOD_LALT;
                 break;
-            case MX_KEY_RALT:
+            case HID_USAGE_KEY_RIGHT_ALT:
                 vc->modifiers |= MOD_RALT;
-                break;
-            case 'a' ... 'z':
-                if (vc->modifiers & MOD_CTRL) {
-                    str[0] = ev.keycode - 'a' + 1;
-                } else {
-                    str[0] = ev.keycode;
-                }
-                vc->charcount = 1;
-                break;
-            case 'A' ... 'Z':
-                if (vc->modifiers & MOD_CTRL) {
-                    str[0] = ev.keycode - 'A' + 1;
-                } else {
-                    str[0] = ev.keycode;
-                }
-                vc->charcount = 1;
                 break;
 
             // generate special stuff for a few different keys
-            case MX_KEY_RETURN:
-            case MX_KEY_PAD_ENTER:
+            case HID_USAGE_KEY_ENTER:
+            case HID_USAGE_KEY_KP_ENTER:
                 str[0] = '\n';
                 vc->charcount = 1;
                 break;
-            case MX_KEY_BACKSPACE:
+            case HID_USAGE_KEY_BACKSPACE:
                 str[0] = '\b';
                 vc->charcount = 1;
                 break;
-            case MX_KEY_TAB:
+            case HID_USAGE_KEY_TAB:
                 str[0] = '\t';
                 vc->charcount = 1;
                 break;
-            case MX_KEY_ESC:
+            case HID_USAGE_KEY_ESC:
                 str[0] = 0x1b;
                 vc->charcount = 1;
                 break;
 
             // generate vt100 key codes for arrows
-            case MX_KEY_ARROW_UP:
+            case HID_USAGE_KEY_UP:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = 65;
                 vc->charcount = 3;
                 break;
-            case MX_KEY_ARROW_DOWN:
+            case HID_USAGE_KEY_DOWN:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = 66;
                 vc->charcount = 3;
                 break;
-            case MX_KEY_ARROW_RIGHT:
+            case HID_USAGE_KEY_RIGHT:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = 67;
                 vc->charcount = 3;
                 break;
-            case MX_KEY_ARROW_LEFT:
+            case HID_USAGE_KEY_LEFT:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = 68;
                 vc->charcount = 3;
                 break;
-            case MX_KEY_HOME:
+            case HID_USAGE_KEY_HOME:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = 'H';
                 vc->charcount = 3;
                 break;
-            case MX_KEY_END:
+            case HID_USAGE_KEY_END:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = 'F';
                 vc->charcount = 3;
                 break;
-            case MX_KEY_PGUP:
+            case HID_USAGE_KEY_PAGEUP:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = '5';
                 str[3] = '~';
                 vc->charcount = 4;
                 break;
-            case MX_KEY_PGDN:
+            case HID_USAGE_KEY_PAGEDOWN:
                 str[0] = 0x1b;
                 str[1] = '[';
                 str[2] = '6';
@@ -530,38 +548,43 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
                 break;
 
             default:
-                if (ev.keycode < 0x80) {
-                    str[0] = ev.keycode;
-                    vc->charcount = 1;
-                }
+                // ignore unknown keys; character keys were handled above
                 break;
             }
-        } else {
-            switch (ev.keycode) {
-            case MX_KEY_LSHIFT:
+        }
+
+        hid_kbd_released_keys(&vc->key_states[prev_idx], &vc->key_states[cur_idx], &key_delta);
+        hid_for_every_key(&key_delta, keycode) {
+            switch (keycode) {
+            case HID_USAGE_KEY_LEFT_SHIFT:
                 vc->modifiers &= (~MOD_LSHIFT);
                 break;
-            case MX_KEY_RSHIFT:
+            case HID_USAGE_KEY_RIGHT_SHIFT:
                 vc->modifiers &= (~MOD_RSHIFT);
                 break;
-            case MX_KEY_LCTRL:
+            case HID_USAGE_KEY_LEFT_CTRL:
                 vc->modifiers &= (~MOD_LCTRL);
                 break;
-            case MX_KEY_RCTRL:
+            case HID_USAGE_KEY_RIGHT_CTRL:
                 vc->modifiers &= (~MOD_RCTRL);
                 break;
-            case MX_KEY_LALT:
+            case HID_USAGE_KEY_LEFT_ALT:
                 vc->modifiers &= (~MOD_LALT);
                 break;
-            case MX_KEY_RALT:
+            case HID_USAGE_KEY_RIGHT_ALT:
                 vc->modifiers &= (~MOD_RALT);
                 break;
             }
         }
+
+        // swap key states
+        cur_idx = 1 - cur_idx;
+        prev_idx = 1 - prev_idx;
     }
-    if ((vc->fifo.head == vc->fifo.tail) && (vc->charcount == 0)) {
+    if ((mx_hid_fifo_size(&vc->fifo) == 0) && (vc->charcount == 0)) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
+    vc->key_idx = cur_idx;
     mxr_mutex_unlock(&vc->fifo.lock);
     return r;
 }

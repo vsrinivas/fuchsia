@@ -14,8 +14,9 @@
 
 #include <assert.h>
 #include <ddk/device.h>
-#include <ddk/protocol/keyboard.h>
+#include <ddk/common/hid.h>
 #include <gfx/gfx.h>
+#include <hid/hid.h>
 #include <mxio/vfs.h>
 #include <system/listnode.h>
 #include <runtime/mutex.h>
@@ -85,8 +86,11 @@ typedef struct vc_device {
 
     textcon_t textcon;
 
-    mx_key_fifo_t fifo;
-    // key event fifo
+    mx_hid_fifo_t fifo;
+    hid_keys_t key_states[2];
+    int key_idx;
+    keychar_t* keymap;
+    // hid event fifo
 
     struct list_node node;
     // for virtual console list

@@ -309,6 +309,10 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     if (!device)
         return ERR_NO_MEMORY;
 
+    mx_hid_fifo_init(&device->fifo);
+    // TODO: allow switching keymaps
+    device->keymap = qwerty_map;
+
     device->font = &font9x16;
     device->charw = device->font->width;
     device->charh = device->font->height;

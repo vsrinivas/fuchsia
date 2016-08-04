@@ -319,13 +319,6 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
         if (endpt == NULL) {
             continue;
         }
-        // Do not bind to usb keyboards until the usb-keyboard driver can be
-        // replaced with this one.
-        if (desc->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT &&
-            desc->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
-            printf("usb-hid: skipping USB keyboard\n");
-            return ERR_NOT_SUPPORTED;
-        }
 
         usb_hid_dev_t* hid = NULL;
         mx_status_t status = usb_hid_dev_create(&hid);
