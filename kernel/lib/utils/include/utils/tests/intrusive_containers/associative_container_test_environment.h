@@ -29,6 +29,9 @@ public:
     using PtrTraits            = typename ContainerType::PtrTraits;
     using SpBase               = TestEnvironmentSpecialized<TestEnvTraits>;
     using RefAction            = typename TestEnvironment<TestEnvTraits>::RefAction;
+    using KeyType              = typename ContainerTraits::KeyType;
+
+    static constexpr KeyType kBannedKeyValue = 0xF00D;
 
     enum class PopulateMethod {
         AscendingKey,
@@ -67,7 +70,7 @@ public:
             EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
 
             // Assign a key to the object based on the chosen populate method.
-            typename ContainerTraits::KeyType key = 0;
+            KeyType key = 0;
             switch (method) {
             case PopulateMethod::RandomKey:     // TODO: implement me.  Until then, fall-thru
             case PopulateMethod::AscendingKey:  key = i; break;
@@ -107,53 +110,114 @@ public:
         return Populate(container, PopulateMethod::AscendingKey, ref_action);
     }
 
-    bool InsertAscending() {
+    template <PopulateMethod populate_method>
+    bool DoInsertByKey() {
         BEGIN_TEST;
-        EXPECT_TRUE(Populate(container(), PopulateMethod::AscendingKey), "");
+
+        EXPECT_TRUE(Populate(container(), populate_method), "");
+        TestEnvironment<TestEnvTraits>::Reset();
+
         END_TEST;
     }
 
-    bool InsertDescending() {
+    bool InsertByKey() {
         BEGIN_TEST;
-        EXPECT_TRUE(Populate(container(), PopulateMethod::DescendingKey), "");
+
+        EXPECT_TRUE(DoInsertByKey<PopulateMethod::AscendingKey>(), "");
+        EXPECT_TRUE(DoInsertByKey<PopulateMethod::DescendingKey>(), "");
+        EXPECT_TRUE(DoInsertByKey<PopulateMethod::RandomKey>(), "");
+
         END_TEST;
     }
 
-    bool InsertRandom() {
+    template <PopulateMethod populate_method>
+    bool DoFindByKey() {
         BEGIN_TEST;
-        EXPECT_TRUE(Populate(container(), PopulateMethod::RandomKey), "");
+
+        EXPECT_TRUE(Populate(container(), populate_method), "");
+
+        // Lookup the various items which should be in the collection by key.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            KeyType key   = objects()[i]->GetKey();
+            size_t  value = objects()[i]->value();
+
+            const auto& ptr = container().find(key);
+
+            REQUIRE_NONNULL(ptr, "");
+            EXPECT_EQ(key, ptr->GetKey(), "");
+            EXPECT_EQ(value, ptr->value(), "");
+        }
+
+        // Fail to look up something which should not be in the collection.
+        const auto& ptr = container().find(kBannedKeyValue);
+        EXPECT_NULL(ptr, "");
+
+        TestEnvironment<TestEnvTraits>::Reset();
         END_TEST;
     }
 
-#define MAKE_TEST_THUNK(_test_name) \
-static bool _test_name ## Test(void* ctx) { \
-    AssociativeContainerTestEnvironment<TestEnvTraits> env; \
-    BEGIN_TEST; \
-    EXPECT_TRUE(env._test_name(), ""); \
-    EXPECT_TRUE(env.Reset(), ""); \
-    END_TEST; \
-}
-    // Generic tests
-    MAKE_TEST_THUNK(Clear);
-    MAKE_TEST_THUNK(IsEmpty);
-    MAKE_TEST_THUNK(IterErase);
-    MAKE_TEST_THUNK(ReverseIterErase);
-    MAKE_TEST_THUNK(DirectErase);
-    MAKE_TEST_THUNK(Iterate);
-    MAKE_TEST_THUNK(IterateDec);
-    MAKE_TEST_THUNK(MakeIterator);
-    MAKE_TEST_THUNK(Swap);
-    MAKE_TEST_THUNK(RvalueOps);
-    MAKE_TEST_THUNK(Scope);
-    MAKE_TEST_THUNK(TwoContainer);
-    MAKE_TEST_THUNK(EraseIf);
-    MAKE_TEST_THUNK(FindIf);
+    bool FindByKey() {
+        BEGIN_TEST;
 
-    // Associative container specific tests
-    MAKE_TEST_THUNK(InsertAscending);
-    MAKE_TEST_THUNK(InsertDescending);
-    MAKE_TEST_THUNK(InsertRandom);
-#undef MAKE_TEST_THUNK
+        EXPECT_TRUE(DoFindByKey<PopulateMethod::AscendingKey>(), "");
+        EXPECT_TRUE(DoFindByKey<PopulateMethod::DescendingKey>(), "");
+        EXPECT_TRUE(DoFindByKey<PopulateMethod::RandomKey>(), "");
+
+        END_TEST;
+    }
+
+    template <PopulateMethod populate_method>
+    bool DoEraseByKey() {
+        BEGIN_TEST;
+
+        EXPECT_TRUE(Populate(container(), populate_method), "");
+        size_t remaining = OBJ_COUNT;
+
+        // Fail to erase a key which is not in the container.
+        EXPECT_NULL(container().erase(kBannedKeyValue), "");
+
+        // Erase all of the even members of the collection by key.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            if (objects()[i] == nullptr)
+                continue;
+
+            KeyType key = objects()[i]->GetKey();
+            if (key & 1)
+                continue;
+
+            EXPECT_TRUE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining), "");
+            --remaining;
+        }
+
+        EXPECT_EQ(remaining, container().size_slow(), "");
+
+        // Erase the remaining odd members.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            if (objects()[i] == nullptr)
+                continue;
+
+            KeyType key = objects()[i]->GetKey();
+            EXPECT_TRUE(key & 1, "");
+
+            EXPECT_TRUE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining), "");
+            --remaining;
+        }
+
+        EXPECT_EQ(0u, container().size_slow(), "");
+
+        TestEnvironment<TestEnvTraits>::Reset();
+        END_TEST;
+    }
+
+    bool EraseByKey() {
+        BEGIN_TEST;
+
+        EXPECT_TRUE(DoEraseByKey<PopulateMethod::AscendingKey>(), "");
+        EXPECT_TRUE(DoEraseByKey<PopulateMethod::DescendingKey>(), "");
+        EXPECT_TRUE(DoEraseByKey<PopulateMethod::RandomKey>(), "");
+
+        END_TEST;
+    }
 
 private:
     // Accessors for base class memebers so we don't have to type
@@ -161,6 +225,8 @@ private:
     using Sp   = TestEnvironmentSpecialized<TestEnvTraits>;
     using Base = TestEnvironmentBase<TestEnvTraits>;
     static constexpr size_t OBJ_COUNT = Base::OBJ_COUNT;
+    static constexpr size_t EVEN_OBJ_COUNT = (OBJ_COUNT >> 1) + (OBJ_COUNT & 1);
+    static constexpr size_t ODD_OBJ_COUNT  = (OBJ_COUNT >> 1);
 
     ContainerType& container() { return this->container_; }
     ObjType**      objects()   { return this->objects_; }

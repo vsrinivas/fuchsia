@@ -52,9 +52,9 @@ struct TestThunks {
     MAKE_TEST_THUNK(DirectInsert);
 
     // Associative container specific tests
-    MAKE_TEST_THUNK(InsertAscending);
-    MAKE_TEST_THUNK(InsertDescending);
-    MAKE_TEST_THUNK(InsertRandom);
+    MAKE_TEST_THUNK(InsertByKey);
+    MAKE_TEST_THUNK(FindByKey);
+    MAKE_TEST_THUNK(EraseByKey);
 };
 #undef MAKE_TEST_THUNK
 

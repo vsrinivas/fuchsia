@@ -152,17 +152,17 @@ UNITTEST("FindIf (RefPtr)",              RPTE::FindIfTest)
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
-UNITTEST("InsertAscending (unmanaged)",  UMTE::InsertAscendingTest)
-UNITTEST("InsertAscending (unique)",     UPTE::InsertAscendingTest)
-UNITTEST("InsertAscending (RefPtr)",     RPTE::InsertAscendingTest)
+UNITTEST("InsertByKey (unmanaged)",      UMTE::InsertByKeyTest)
+UNITTEST("InsertByKey (unique)",         UPTE::InsertByKeyTest)
+UNITTEST("InsertByKey (RefPtr)",         RPTE::InsertByKeyTest)
 
-UNITTEST("InsertDescending (unmanaged)", UMTE::InsertDescendingTest)
-UNITTEST("InsertDescending (unique)",    UPTE::InsertDescendingTest)
-UNITTEST("InsertDescending (RefPtr)",    RPTE::InsertDescendingTest)
+UNITTEST("FindByKey (unmanaged)",        UMTE::FindByKeyTest)
+UNITTEST("FindByKey (unique)",           UPTE::FindByKeyTest)
+UNITTEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
 
-UNITTEST("InsertRandom (unmanaged)",     UMTE::InsertRandomTest)
-UNITTEST("InsertRandom (unique)",        UPTE::InsertRandomTest)
-UNITTEST("InsertRandom (RefPtr)",        RPTE::InsertRandomTest)
+UNITTEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
+UNITTEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
+UNITTEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
 
 UNITTEST_END_TESTCASE(hashtable_dll_tests,
                       "htdll",

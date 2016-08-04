@@ -167,8 +167,9 @@ public:
     ~TestEnvironment() { Reset(); }
 
     // Utility methods used to check if the target of an Erase operation is
-    // valid, whether the target of the operation is expressed as an iterator or
-    // as an object pointer.
+    // valid, whether the target of the operation is expressed as an iterator, a
+    // key or as an object pointer.
+    bool ValidTarget(size_t tgt) { return true; }
     bool ValidTarget(const ObjType& target) { return &target != nullptr; }
     bool ValidTarget(const typename ContainerType::iterator& target) {
         return target.IsValid();
@@ -252,7 +253,7 @@ public:
         {
             // Erase the item and sanity check it against our tracking.
             PtrType tmp = container().erase(target);
-            EXPECT_NONNULL(tmp, "");
+            REQUIRE_NONNULL(tmp, "");
             if (check_ndx) {
                 EXPECT_EQ(tmp->value(), ndx, "");
                 EXPECT_EQ(objects()[ndx], tmp->raw_ptr(), "");
