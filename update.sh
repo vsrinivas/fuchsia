@@ -72,8 +72,7 @@ function download_tarball() {
 
   download_file_if_needed "${name}" "${FUCHSIA_URL_BASE}/${base_url}" "${base_path}" ".tar.bz2"
   if [[ -f "${tar_path}" ]]; then
-    rm -rf -- "${untar_dir}"
-    mkdir -- "${untar_dir}"
+    mkdir -p -- "${untar_dir}"
     (cd -- "${untar_dir}" "${tar_path}" && tar xf "${tar_path}")
     rm -f -- "${tar_path}"
   fi
