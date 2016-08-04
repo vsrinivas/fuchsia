@@ -39,6 +39,10 @@ endif
 MODULE_EXPORT := magenta
 MODULE_SO_NAME := magenta
 
+# TODO(mcgrathr): When the vDSO is fully in proper use, then there
+# will be no need for libmagenta.so in the runtime filesystem at all.
+#MODULE_SO_INSTALL_NAME := -
+
 # All the code this DSO is pure read-only/reentrant code that
 # does not need any writable data (except its caller's stack).
 # Make it use a simplified, hardened memory layout.

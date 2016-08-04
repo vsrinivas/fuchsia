@@ -41,15 +41,16 @@ struct bootfile {
     size_t len;
 };
 
-static uint8_t* bootfs = NULL;
-static int bootfiles_count = 0;
-static size_t bootfs_end = 0;
+struct callback_data {
+    uint8_t* bootfs;
+    unsigned int file_count;
+};
 
-static void callback(const char* path, size_t off, size_t len) {
+static void callback(void* arg, const char* path, size_t off, size_t len) {
+    struct callback_data* cd = arg;
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-    bootfs_add_file(path, bootfs + off, len);
-    bootfs_end = off + ((len + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1)));
-    bootfiles_count++;
+    bootfs_add_file(path, cd->bootfs + off, len);
+    ++cd->file_count;
 }
 
 // make debugging less painful
@@ -124,25 +125,46 @@ void devmgr_launch_devhost(const char* name, mx_handle_t h,
         mx_handle_close(proc);
 }
 
-void devmgr_vfs_init(void* _bootfs, size_t len) {
+static unsigned int setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
+    uint64_t size;
+    mx_status_t status = mx_vm_object_get_size(vmo, &size);
+    if (status != NO_ERROR) {
+        cprintf("devmgr: failed to get bootfs #%u size (%d)\n", n, status);
+        return 0;
+    }
+    if (size == 0)
+        return 0;
+    mx_vaddr_t addr;
+    status = mx_process_vm_map(0, vmo, 0, size, &addr, MX_VM_FLAG_PERM_READ);
+    if (status != NO_ERROR) {
+        cprintf("devmgr: failed to map bootfs #%u (%d)\n", n, status);
+        return 0;
+    }
+    struct callback_data cd = {
+        .bootfs = (void*)addr,
+    };
+    bootfs_parse(cd.bootfs, size, &callback, &cd);
+    return cd.file_count;
+}
+
+static void setup_bootfs(void) {
+    mx_handle_t vmo;
+    for (unsigned int n = 0;
+         (vmo = mxio_get_startup_handle(
+             MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, n))) != MX_HANDLE_INVALID;
+        ++n) {
+        unsigned int count = setup_bootfs_vmo(n, vmo);
+        mx_handle_close(vmo);
+        if (count > 0)
+            printf("devmgr: bootfs #%u contains %u file%s\n",
+                   n, count, (count == 1) ? "" : "s");
+    }
+}
+
+void devmgr_vfs_init(void) {
     printf("devmgr: vfs init\n");
 
-    // setup bootfs if present
-    if (_bootfs != NULL) {
-        bootfs = _bootfs;
-        bootfs_parse(bootfs, len, callback);
-
-        // there can be a second bootfs (if passed as initrd)
-        if (bootfs_end < len) {
-            bootfs = (void*) ((char*) bootfs + bootfs_end);
-            bootfs_parse(bootfs, len - bootfs_end, callback);
-        }
-
-        if (bootfiles_count) {
-            printf("devmgr: bootfs contains %d file%s\n",
-                   bootfiles_count, (bootfiles_count == 1) ? "" : "s");
-        }
-    }
+    setup_bootfs();
 
     vfs_init(vfs_get_root());
 

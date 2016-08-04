@@ -66,6 +66,13 @@ struct mx_proc_args {
 // handle to our own process
 #define MX_HND_TYPE_PROC_SELF 1
 
+// handle to the VMO containing the ELF image of the vDSO, to map into children
+#define MX_HND_TYPE_VDSO_VMO 2
+
+// Handle to a VMO containing a bootfs format image.
+// The "arg" field used with this type is a simple ordinal.
+#define MX_HND_TYPE_BOOTFS_VMO 3
+
 // Handle types the mxio library uses
 #define MX_HND_TYPE_MXIO_ROOT 0x10
 #define MX_HND_TYPE_MXIO_REMOTE 0x11
@@ -81,7 +88,6 @@ struct mx_proc_args {
 
 // VM object handle for the main executable file
 #define MX_HND_TYPE_EXEC_VMO 0x201
-
 
 // Handle types for one-off use and prototyping
 #define MX_HND_TYPE_USER0 0xFFF0

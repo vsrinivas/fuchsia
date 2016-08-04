@@ -8,6 +8,8 @@
 #include <kernel/cmdline.h>
 
 char __kernel_cmdline[CMDLINE_MAX];
+unsigned __kernel_cmdline_size;
+unsigned __kernel_cmdline_count;
 
 // import into kernel commandline, converting invalid
 // characters to '.', combining multiple spaces, and
@@ -31,6 +33,7 @@ void cmdline_init(const char* data) {
                 continue;
             } else {
                 c = 0;
+                ++__kernel_cmdline_count;
             }
         }
         __kernel_cmdline[i++] = c;
@@ -38,6 +41,7 @@ void cmdline_init(const char* data) {
     // ensure a double-\0 terminator
     __kernel_cmdline[i++] = 0;
     __kernel_cmdline[i] = 0;
+    __kernel_cmdline_size = i;
 }
 
 const char* cmdline_get(const char* key) {

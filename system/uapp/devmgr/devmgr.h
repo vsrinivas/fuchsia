@@ -60,7 +60,7 @@ void devmgr_dump(void);
 void devmgr_handle_messages(void);
 
 void devmgr_io_init(void);
-void devmgr_vfs_init(void* bootfs, size_t len);
+void devmgr_vfs_init(void);
 void devmgr_launch(const char* name, const char* app, const char* arg, const char* device);
 void devmgr_launch_devhost(const char* name, mx_handle_t h, const char* arg0, const char* arg1);
 

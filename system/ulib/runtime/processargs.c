@@ -72,10 +72,10 @@ static mx_status_t unpack_strings(char* buffer, uint32_t bytes, char* result[],
     char* p = &buffer[off];
     for (uint32_t i = 0; i < num; ++i) {
         result[i] = p;
-        p = memchr(p, '\0', &buffer[bytes] - p);
-        if (p == NULL)
-            return MALFORMED;
-        ++p;
+        do {
+            if (p >= &buffer[bytes])
+                return MALFORMED;
+        } while (*p++ != '\0');
     }
     return NO_ERROR;
 }

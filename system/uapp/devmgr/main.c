@@ -103,29 +103,9 @@ int main(int argc, char** argv) {
 #if LIBDRIVER
     printf("device driver - not a standalone executable\n");
 #else
-    mx_handle_t bootfs_vmo;
-    mx_status_t status;
-    uint64_t bootfs_size;
-    uintptr_t bootfs_val;
-
-    bootfs_vmo = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
-    status = mx_vm_object_get_size(bootfs_vmo, &bootfs_size);
-    if (status < 0) {
-        cprintf("devmgr: failed to get bootfs size (%d)\n", status);
-        return -1;
-    }
-    status = mx_process_vm_map(0, bootfs_vmo, 0, bootfs_size,
-                                     &bootfs_val, MX_VM_FLAG_PERM_READ);
-    if (status < 0) {
-        cprintf("devmgr: failed to map bootfs (%d)\n", status);
-        return -1;
-    }
-
-    //const char* cmdline = (void*) bootfs_val;
-
     printf("devmgr: main()\n");
     devmgr_init(false);
-    devmgr_vfs_init((void*)(bootfs_val + PAGE_SIZE), bootfs_size - PAGE_SIZE);
+    devmgr_vfs_init();
 
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();

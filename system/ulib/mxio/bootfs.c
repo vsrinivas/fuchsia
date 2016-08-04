@@ -37,8 +37,9 @@ static const char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
 #define FSIZ 1
 #define FOFF 2
 
-void bootfs_parse(void* _data, int len,
-                  void (*cb)(const char* fn, size_t off, size_t len)) {
+void bootfs_parse(void* _data, size_t len,
+                  void (*cb)(void*, const char* fn, size_t off, size_t len),
+                  void* cb_arg) {
     uint8_t* data = _data;
     uint8_t* end = data + len;
     char name[BOOTFS_MAX_NAME_LEN];
@@ -74,6 +75,6 @@ void bootfs_parse(void* _data, int len,
         data += header[NLEN];
         name[header[NLEN] - 1] = 0;
 
-        cb(name, header[FOFF], header[FSIZ]);
+        (*cb)(cb_arg, name, header[FOFF], header[FSIZ]);
     }
 }
