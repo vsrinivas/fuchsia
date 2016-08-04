@@ -166,12 +166,6 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
 }
 
 static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    // 4mb hardware limit per prd
-    if (txn->length >= 0x400000) {
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
-        return;
-    }
-
     sata_device_t* device = get_sata_device(dev);
 
     // offset must be aligned to block size

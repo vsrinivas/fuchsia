@@ -200,7 +200,7 @@ static mx_status_t ahci_port_do_txn(ahci_port_t* port, iotxn_t* txn) {
     cl->prdtl_flags_cfl = 0;
     cl->cfl = 5; // 20 bytes
     cl->w = pdata->cmd == SATA_CMD_WRITE_DMA_EXT ? 1 : 0;
-    cl->prdtl = 1; // 1 PRD
+    cl->prdtl = txn->length / AHCI_PRD_MAX_SIZE + 1;
     cl->prdbc = 0;
     memset(port->ct, 0, sizeof(ahci_ct_t));
 
@@ -222,10 +222,20 @@ static mx_status_t ahci_port_do_txn(ahci_port_t* port, iotxn_t* txn) {
         cfis[13] = (pdata->count >> 8) & 0xff;
     }
 
-    ahci_prd_t* prd = (void*)port->ct + sizeof(ahci_ct_t);
+    ahci_prd_t* prd;
+    for (int i = 0; i < cl->prdtl - 1; i++) {
+        prd = (ahci_prd_t*)((void*)port->ct + sizeof(ahci_ct_t)) + i;
+        prd->dba = LO32(phys);
+        prd->dbau = HI32(phys);
+        prd->dbc = ((txn->length - 1) & 0x3fffff); // 0-based byte count
+
+        phys += AHCI_PRD_MAX_SIZE;
+    }
+    // interrupt on last prd completion
+    prd = (ahci_prd_t*)((void*)port->ct + sizeof(ahci_ct_t)) + cl->prdtl - 1;
     prd->dba = LO32(phys);
     prd->dbau = HI32(phys);
-    prd->dbc = (1 << 31) | ((txn->length - 1) & 0x3fffff); // interrupt on completion, 0-based byte count
+    prd->dbc = (1 << 31) | ((txn->length - 1) & 0x3fffff); // interrupt on completion
 
     // start command
     port->running = txn;
@@ -377,8 +387,8 @@ static int ahci_worker_thread(void* arg) {
             ahci_port_do_txn(port, containerof(node, iotxn_t, node));
         }
         // wait here until more commands are queued, or a port becomes idle
-        mxr_completion_reset(&dev->worker_completion);
         mxr_completion_wait(&dev->worker_completion, MX_TIME_INFINITE);
+        mxr_completion_reset(&dev->worker_completion);
     }
     return 0;
 }
@@ -586,12 +596,12 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
 
     // start worker thread (for iotxn queue)
+    device->worker_completion = MXR_COMPLETION_INIT;
     status = mxr_thread_create(ahci_worker_thread, device, "ahci-worker", &device->worker_thread);
     if (status < 0) {
         xprintf("ahci: error %d in worker thread create\n", status);
         goto fail;
     }
-    device->worker_completion = MXR_COMPLETION_INIT;
 
     // add the device for the controller
     device_add(&device->device, dev);

@@ -22,6 +22,8 @@
 #define AHCI_MAX_COMMANDS 32
 #define AHCI_MAX_PRDS     128 // just a random choice, hardware max is 64k-1
 
+#define AHCI_PRD_MAX_SIZE 0x400000 // 4mb
+
 #define AHCI_PORT_INT_CPD (1 << 31)
 #define AHCI_PORT_INT_TFE (1 << 30)
 #define AHCI_PORT_INT_HBF (1 << 29)
