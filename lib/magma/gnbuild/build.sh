@@ -35,7 +35,7 @@ if $autorun_magma_tests; then
 	cp $build_dir/magma_unit_tests $bootfs_path/$test_executable
 
 	autorun_path=$bootfs_path/autorun
-	echo "echo Running magma init tests" >> $autorun_path # for sanity
+	echo "echo Running magma unit tests" >> $autorun_path # for sanity
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 fi
 
