@@ -151,21 +151,32 @@ typedef struct mx_log_record {
 #define MX_LOG_FLAG_READABLE  0x40000000
 
 // Defines and structures for mx_io_port_*()
-typedef struct mx_io_packet {
+
+#define MX_IO_PORT_MAX_PKT_SIZE   128u
+
+#define MX_IO_PORT_PKT_TYPE_KERN  0u
+#define MX_IO_PORT_PKT_TYPE_IOSN  1u
+#define MX_IO_PORT_PKT_TYPE_USER  2u
+
+
+typedef struct mx_packet_header {
     uint64_t key;
+    uint32_t type;
+    uint32_t extra;
+} mx_packet_header_t;
+
+typedef struct mx_io_packet {
+    mx_packet_header_t hdr;
     mx_time_t timestamp;
     mx_size_t bytes;
     mx_signals_t signals;
     uint32_t reserved;
 } mx_io_packet_t;
 
-typedef struct mx_user_packet {
-    uint64_t key;
-    uint64_t param[3];
-} mx_user_packet_t;
-
-#define MX_IOPORT_OPT_128_SLOTS   0
-#define MX_IOPORT_OPT_1K_SLOTS    1
+typedef struct mx_exception_packet {
+    mx_packet_header_t hdr;
+    mx_exception_report_t report;
+} mx_exception_packet_t;
 
 // Buffer size limits on the cprng syscalls
 #define MX_CPRNG_DRAW_MAX_LEN        256

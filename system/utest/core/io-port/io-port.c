@@ -21,6 +21,11 @@
 #define NUM_IO_THREADS 5
 #define NUM_SLOTS 10
 
+typedef struct mx_user_packet {
+    mx_packet_header_t hdr;
+    uint64_t param[8];
+} mx_user_packet_t;
+
 typedef struct t_info {
     volatile mx_status_t error;
     mx_handle_t io_port;
@@ -42,12 +47,12 @@ static int thread_consumer(void* arg)
         if (status < 0) {
             tinfo->error = status;
             break;
-        } else if (us_pkt.key >= NUM_SLOTS) {
+        } else if (us_pkt.hdr.key >= NUM_SLOTS) {
             // expected termination.
             break;
         }
 
-        tinfo->work_count[(int)us_pkt.key] += us_pkt.param[0];
+        tinfo->work_count[(int)us_pkt.hdr.key] += us_pkt.param[0];
         mx_nanosleep(1u);
     };
 
@@ -62,30 +67,28 @@ static bool basic_test(void)
     mx_handle_t io_port = mx_io_port_create(0u);
     EXPECT_GT(io_port, 0, "could not create ioport");
 
-    mx_user_packet_t us_pkt = {0};
+    typedef struct {
+        mx_packet_header_t hdr;
+        char payload[8];
+    } packet_t;
 
-    status = mx_io_port_queue(io_port, &us_pkt, 8u);
+    const packet_t in = {{33u, 255u, 10u}, {164, 5, 7, 9, 99, 253, 1, 66}};
+    packet_t out = {0};
+
+    status = mx_io_port_queue(io_port, &in, 8u);
     EXPECT_EQ(status, ERR_INVALID_ARGS, "expected failure");
 
-    status = mx_io_port_wait(io_port, &us_pkt, 8u);
-    EXPECT_EQ(status, ERR_INVALID_ARGS, "expected failure");
+    status = mx_io_port_queue(io_port, &in, sizeof(in));
+    EXPECT_EQ(status, NO_ERROR, "");
 
-    int slots = 0;
+    status = mx_io_port_wait(io_port, &out, sizeof(out));
+    EXPECT_EQ(status, NO_ERROR, "");
 
-    while (true) {
-        us_pkt.key = 128 - slots;
-        status = mx_io_port_queue(io_port, &us_pkt, sizeof(us_pkt));
-        if (status == ERR_NOT_ENOUGH_BUFFER)
-            break;
-        EXPECT_EQ(status, NO_ERROR, "could not queue");
-        ++slots;
-    }
+    EXPECT_EQ(out.hdr.key, 33u, "key mismatch");
+    EXPECT_EQ(out.hdr.type, MX_IO_PORT_PKT_TYPE_USER, "type mismatch");
+    EXPECT_EQ(out.hdr.extra, 10u, "key mismatch");
 
-    EXPECT_EQ(slots, 128, "incorrect number of slots");
-
-    status = mx_io_port_wait(io_port, &us_pkt, sizeof(us_pkt));
-    EXPECT_EQ(status, NO_ERROR, "failed to dequeue");
-    EXPECT_EQ(us_pkt.key, 128U, "wrong key");
+    //EXPECT_EQ(memcmp(&in.payload, &out.payload, 8u), 0, "data must be the same");
 
     status = mx_handle_close(io_port);
     EXPECT_EQ(status, NO_ERROR, "failed to close ioport");
@@ -112,7 +115,7 @@ static bool thread_pool_test(void)
     mx_user_packet_t us_pkt = {0};
 
     for (size_t ix = 0; ix != NUM_SLOTS + NUM_IO_THREADS; ++ix) {
-        us_pkt.key = ix;
+        us_pkt.hdr.key = ix;
         us_pkt.param[0] = 10 + ix;
         mx_io_port_queue(tinfo.io_port, &us_pkt, sizeof(us_pkt));
     }
@@ -137,7 +140,6 @@ static bool thread_pool_test(void)
 
     END_TEST;
 }
-
 
 static bool bind_basic_test(void)
 {
@@ -181,7 +183,8 @@ typedef struct io_info {
 } io_info_t;
 
 typedef struct report {
-    uintptr_t key;
+    uint64_t key;
+    uint64_t type;
     mx_signals_t signals;
 } report_t;
 
@@ -201,12 +204,12 @@ static int io_reply_thread(void* arg)
             info->error = status;
             break;
         }
-        if (io_pkt.key == 0) {
+        if (io_pkt.hdr.key == 0) {
             // Normal exit.
             break;
         }
 
-        report_t report = { io_pkt.key, io_pkt.signals };
+        report_t report = { io_pkt.hdr.key, io_pkt.hdr.type, io_pkt.signals };
         status = mx_message_write(info->reply_pipe, &report, sizeof(report), NULL, 0, 0u);
         if (status != NO_ERROR) {
             info->error = status;
@@ -255,8 +258,8 @@ static bool bind_events_test(void)
     }
 
     // Queue a final packet to make io_reply_thread exit.
-    mx_user_packet_t us_pkt = {0, {255, 255, 255}};
-    status = mx_io_port_queue(info.io_port, &us_pkt, sizeof(us_pkt));
+    mx_io_packet_t io_pkt = {0};
+    status = mx_io_port_queue(info.io_port, &io_pkt, sizeof(io_pkt));
 
     report_t report;
     uint32_t bytes = sizeof(report);
@@ -268,6 +271,7 @@ static bool bind_events_test(void)
         status = mx_message_read(pipe, &report, &bytes, NULL, NULL, 0u);
         EXPECT_EQ(status, NO_ERROR, "expected valid message");
         EXPECT_EQ(report.signals, MX_SIGNAL_SIGNALED, "invalid signal");
+        EXPECT_EQ(report.type, MX_IO_PORT_PKT_TYPE_IOSN, "invalid type");
     }
 
     status = mxr_thread_join(thread, NULL);

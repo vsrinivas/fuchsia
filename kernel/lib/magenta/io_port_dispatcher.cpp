@@ -10,15 +10,58 @@
 #include <err.h>
 #include <new.h>
 
+#include <arch/user_copy.h>
 #include <kernel/auto_lock.h>
+#include <lib/user_copy.h>
 
 #include <magenta/state_tracker.h>
-
-static_assert(sizeof(mx_user_packet_t) == sizeof(mx_io_packet_t), "packet size mismatch");
-
+#include <magenta/user_copy.h>
 
 constexpr mx_rights_t kDefaultIOPortRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
+
+IOP_Packet*  Make_IOPacket(mx_size_t size) {
+    AllocChecker ac;
+    auto mem = new (&ac) char [sizeof(IOP_Packet) + size];
+    if (!ac.check())
+        return nullptr;
+    return new (mem) IOP_Packet(size);
+}
+
+IOP_Packet* IOP_Packet::Make(const void* data, mx_size_t size) {
+    auto pk = Make_IOPacket(size);
+    if (!pk)
+        return nullptr;
+    memcpy(reinterpret_cast<char*>(pk) + sizeof(IOP_Packet), data, size);
+    return pk;
+}
+
+IOP_Packet* IOP_Packet::MakeFromUser(const void* data, mx_size_t size) {
+    auto pk = Make_IOPacket(size);
+    if (!pk)
+        return nullptr;
+
+    auto header = reinterpret_cast<mx_packet_header_t*>(
+        reinterpret_cast<char*>(pk) + sizeof(IOP_Packet));
+
+    auto status = magenta_copy_from_user(data, header, size);
+    header->type = MX_IO_PORT_PKT_TYPE_USER;
+
+    return (status == NO_ERROR) ? pk : nullptr;
+}
+
+void IOP_Packet::Delete(IOP_Packet* packet) {
+    packet->~IOP_Packet();
+    delete [] reinterpret_cast<char*>(packet);
+}
+
+bool IOP_Packet::CopyToUser(void* data, mx_size_t* size) {
+    if (*size < data_size)
+        return ERR_NOT_ENOUGH_BUFFER;
+    *size = data_size;
+    return copy_to_user(
+        data, reinterpret_cast<char*>(this) + sizeof(IOP_Packet), data_size) == NO_ERROR;
+}
 
 mx_status_t IOPortDispatcher::Create(uint32_t options,
                                      utils::RefPtr<Dispatcher>* dispatcher,
@@ -27,12 +70,6 @@ mx_status_t IOPortDispatcher::Create(uint32_t options,
     auto disp = new (&ac) IOPortDispatcher(options);
     if (!ac.check())
         return ERR_NO_MEMORY;
-
-    uint32_t depth = options == MX_IOPORT_OPT_1K_SLOTS ? 1024 : 128;
-
-    status_t st = disp->Init(depth);
-    if (st < 0)
-        return st;
 
     *rights = kDefaultIOPortRights;
     *dispatcher = utils::AdoptRef<Dispatcher>(disp);
@@ -49,27 +86,20 @@ IOPortDispatcher::~IOPortDispatcher() {
     // is being destroyed there should be no registered observers.
     DEBUG_ASSERT(observers_.is_empty());
 
+    for (auto& pkt : packets_) {
+        IOP_Packet::Delete(&pkt);
+    }
+
     event_destroy(&event_);
     mutex_destroy(&lock_);
 }
 
-mx_status_t IOPortDispatcher::Init(uint32_t depth) {
-    if (!packets_.Init(depth))
-        return ERR_NO_MEMORY;
-    return NO_ERROR;
-}
-
-mx_status_t IOPortDispatcher::Queue(const IOP_Packet* packet) {
+mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
     int wake_count = 0;
     mx_status_t status = NO_ERROR;
     {
         AutoLock al(&lock_);
-        auto tail = packets_.push_tail();
-        if (!tail) {
-            status = ERR_NOT_ENOUGH_BUFFER;
-        } else {
-            *tail = *packet;
-        }
+        packets_.push_back(packet);
         wake_count = event_signal_etc(&event_, false, status);
     }
 
@@ -79,15 +109,12 @@ mx_status_t IOPortDispatcher::Queue(const IOP_Packet* packet) {
     return status;
 }
 
-mx_status_t IOPortDispatcher::Wait(IOP_Packet* packet) {
-    IOP_Packet* head;
+mx_status_t IOPortDispatcher::Wait(IOP_Packet** packet) {
     while (true) {
         {
             AutoLock al(&lock_);
-            head = packets_.pop_head();
-
-            if (head) {
-                *packet = *head;
+            if (!packets_.is_empty()) {
+                *packet = packets_.pop_front();
                 return NO_ERROR;
             }
         }

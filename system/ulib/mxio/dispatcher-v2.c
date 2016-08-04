@@ -63,7 +63,7 @@ static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler) {
 
     // send a synthetic message so we know when it's safe to destroy
     mx_io_packet_t packet;
-    packet.key = (uintptr_t) handler;
+    packet.hdr.key = (uintptr_t) handler;
     packet.signals = MX_SIGNAL_SIGNALED;
     mx_io_port_queue(md->ioport, &packet, sizeof(packet));
 
@@ -82,7 +82,7 @@ again:
             printf("dispatcher: ioport wait failed %d\n", r);
             break;
         }
-        handler_t* handler = (void*) (uintptr_t)packet.key;
+        handler_t* handler = (void*) (uintptr_t)packet.hdr.key;
         if (handler->flags & FLAG_DISCONNECTED) {
             // handler is awaiting gc
             // ignore events for it until we get the synthetic "destroy" event
@@ -129,7 +129,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
     md->lock = MXR_MUTEX_INIT;
-    if ((md->ioport = mx_io_port_create(MX_IOPORT_OPT_128_SLOTS)) < 0) {
+    if ((md->ioport = mx_io_port_create(0u)) < 0) {
         free(md);
         return md->ioport;
     }

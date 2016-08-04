@@ -15,19 +15,43 @@ mx_status_t mx_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size);
 ## DESCRIPTION
 
 **io_port_wait**() is a blocking syscall which causes the caller to
-wait until at least one packet is available. *packet* must not be invalid
-and *size* must be the size of **mx_user_packet_t** or the size
-of **mx_io_packet_t**; both are the same size.
+wait until at least one packet is available. *packet* must not be invalid.
 
 Upon return, if successful *packet* will contain the earliest (in FIFO order)
-available packet data, and the corresponding *key* that was queued
-with **io_port_queue**().
+available packet data with **io_port_queue**().
 
 Unlike **mx_wait_one**() and **mx_wait_many**() only one waiting thread is
 released (per available packet) which makes IO ports amenable to be serviced
 by thread pools.
 
-The *key* field in the packet is the *key* that was in the packet as send
+If using **mx_io_port_queue**() the dequeued packet is of variable size
+but always starts with **mx_packet_header_t** with *type* set to
+**MX_IO_PORT_PKT_TYPE_USER**.
+
+```
+typedef struct mx_packet_header {
+    uint64_t key;
+    uint32_t type;
+    uint32_t extra;
+} mx_packet_header_t;
+
+```
+
+If using **io_port_bind**() the dequeued packet is of type **mx_io_packet_t**
+with *hdr.type* set to **MX_IO_PORT_PKT_TYPE_IOSN**.
+
+```
+typedef struct mx_io_packet {
+    mx_packet_header_t hdr;
+    mx_time_t timestamp;
+    mx_size_t bytes;
+    mx_signals_t signals;
+    uint32_t reserved;
+} mx_io_packet_t;
+
+```
+
+The *key* field in the packet header is the *key* that was in the packet as send
 via **mx_io_port_queue**(), or the *key* that was provided to **mx_io_port_bind**()
 when the binding was made.
 
@@ -42,9 +66,6 @@ pointer or *size* is an invalid packet size.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
 not be waited upon.
-
-**ERR_NOT_ENOUGH_BUFFER** if a packet was lost because the IO port buffer was
-full. This is usually a temporary condition.
 
 
 ## NOTES

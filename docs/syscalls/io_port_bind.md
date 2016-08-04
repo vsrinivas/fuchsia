@@ -18,7 +18,7 @@ mx_status_t mx_io_port_bind(mx_handle_t handle, uintptr_t key,
 **io_port_bind**() binds the waitable kernel object *source* to the IO port
 identified by *handle*. Whenever *source* signals match any of *signals*, the
 magenta kernel queues a packet of type **mx_io_packet_t** to the IO port with
-the key *key*.
+the key *key* and *type* equal to MX_IO_PORT_PKT_TYPE_IOSN.
 
 If the *source* handle was previously bound to an IO port, that bind is
 revoked and replaced with a bind to *handle*.

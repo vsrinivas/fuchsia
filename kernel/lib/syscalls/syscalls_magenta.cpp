@@ -1222,9 +1222,10 @@ mx_handle_t sys_io_port_create(uint32_t options) {
 mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
-    IOP_Packet iop;
+    if (size > MX_IO_PORT_MAX_PKT_SIZE)
+        return ERR_NOT_ENOUGH_BUFFER;
 
-    if (size < sizeof(iop.u))
+    if (size < sizeof(mx_packet_header_t))
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1241,19 +1242,15 @@ mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    if (magenta_copy_from_user(packet, &iop.u, sizeof(iop.u)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    auto iopk = IOP_Packet::MakeFromUser(packet, size);
+    if (!iopk)
+        return ERR_NO_MEMORY;
 
-    return ioport->Queue(&iop);
+    return ioport->Queue(iopk);
 }
 
 mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
-
-    IOP_Packet iop;
-
-    if (size < sizeof(iop.u))
-        return ERR_INVALID_ARGS;
 
     if (!packet)
         return ERR_INVALID_ARGS;
@@ -1272,13 +1269,15 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
-    mx_status_t status = ioport->Wait(&iop);
+    IOP_Packet* iopk = nullptr;
+    mx_status_t status = ioport->Wait(&iopk);
     if (status < 0)
         return status;
 
-    if (copy_to_user(packet, &iop.u, sizeof(iop.u)) != NO_ERROR)
+    if (!iopk->CopyToUser(packet, &size))
         return ERR_INVALID_ARGS;
 
+    IOP_Packet::Delete(iopk);
     return NO_ERROR;
 }
 

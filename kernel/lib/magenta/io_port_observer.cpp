@@ -14,19 +14,22 @@
 
 #include <utils/type_support.h>
 
-mx_status_t SendIOPortPacket(IOPortDispatcher* io_port,
+bool SendIOPortPacket(IOPortDispatcher* io_port,
                              uint64_t key,
                              mx_signals_t signals) {
-    IOP_Packet packet ={
-        {
-            key,
-            current_time_hires(),
-            0u,                     //  TODO(cpu): support bytes (for pipes)
-            signals,
-            0u,
-        }
+    mx_io_packet payload = {
+        { key, MX_IO_PORT_PKT_TYPE_IOSN, 0u},
+        current_time_hires(),
+        0u,                   //  TODO(cpu): support bytes (for pipes)
+        signals,
+        0u
     };
-    return io_port->Queue(&packet) == NO_ERROR;
+
+    auto packet = IOP_Packet::Make(&payload, sizeof(payload));
+    if (!packet)
+      return false;
+
+    return io_port->Queue(packet) == NO_ERROR;
 }
 
 IOPortObserver::IOPortObserver(utils::RefPtr<IOPortDispatcher> io_port,

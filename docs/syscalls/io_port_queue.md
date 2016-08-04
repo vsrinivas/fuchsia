@@ -16,16 +16,23 @@ mx_status_t mx_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t s
 ## DESCRIPTION
 
 **io_port_queue**() attempts to queue a *packet* of *size*
-bytes to the IO port specified by *handle*. The *packet* must be of
-type **mx_user_packet_t** and *size* must be the size of mx_user_packet_t.
+bytes to the IO port specified by *handle*. The *packet* must begin
+with **mx_packet_header_t** and *size* must be the no bigger than
+**MX_IO_PORT_MAX_PKT_SIZE**.
 
 ```
-typedef struct mx_user_packet {
+typedef struct mx_packet_header {
     uint64_t key;
-    uint64_t param[3];
-} mx_user_packet_t;
+    uint32_t type;
+    uint32_t extra;
+} mx_packet_header_t;
 
 ```
+*key* and *exta* values will be preserved and *type* value will be
+internally recorded as **MX_IO_PORT_PKT_TYPE_USER** to signal the
+consumer of the packet that the packet comes from the **io_port_queue**()
+operation as opposed to packets generated from bound handles which
+have the type set to MX_IO_PORT_PKT_TYPE_IOSN.
 
 ## RETURN VALUE
 
@@ -34,19 +41,17 @@ typedef struct mx_user_packet {
 ## ERRORS
 
 **ERR_INVALID_ARGS**  *handle* isn't a valid IO port handle, or
-*packet* is an invalid pointer, or *size* is not equal to the size
-of **mx_user_packet_t**.
+*packet* is an invalid pointer, or *size* is less than the size
+of **mx_packet_header_t**.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_NOT_ENOUGH_BUFFER**  The IO port is full.
+**ERR_NOT_ENOUGH_BUFFER**  If the packet is too big.
 
 ## NOTES
 
-The IO port is full if there are as many outstanding queued
-packets as the capacity of the IO port.
-
 The queue is drained by calling **io_port_wait**().
+
 
 ## SEE ALSO
 
