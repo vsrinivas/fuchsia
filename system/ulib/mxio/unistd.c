@@ -390,7 +390,7 @@ static int status_to_errno(mx_status_t status) {
     case ERR_OUT_OF_RANGE: return EINVAL;
     case ERR_FAULT: return EFAULT;
     case ERR_NO_RESOURCES: return ENOMEM;
-    case ERR_BAD_HANDLE: return EBADFD;
+    case ERR_BAD_HANDLE: return EBADF;
     case ERR_ACCESS_DENIED: return EACCES;
 
     // no translation
@@ -475,7 +475,7 @@ ssize_t read(int fd, void* buf, size_t count) {
 
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
-        return ERRNO(EBADFD);
+        return ERRNO(EBADF);
     }
     ssize_t r = STATUS(io->ops->read(io, buf, count));
     mxio_release(io);
@@ -489,7 +489,7 @@ ssize_t write(int fd, const void* buf, size_t count) {
 
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
-        return ERRNO(EBADFD);
+        return ERRNO(EBADF);
     }
     ssize_t r = STATUS(io->ops->write(io, buf, count));
     mxio_release(io);
@@ -500,7 +500,7 @@ int close(int fd) {
     mxr_mutex_lock(&mxio_lock);
     if ((fd < 0) || (fd >= MAX_MXIO_FD) || (mxio_fdtab[fd] == NULL)) {
         mxr_mutex_unlock(&mxio_lock);
-        return ERRNO(EBADFD);
+        return ERRNO(EBADF);
     }
     mxio_t* io = mxio_fdtab[fd];
     io->dupcount--;
@@ -521,7 +521,7 @@ int close(int fd) {
 static int mxio_dup(int oldfd, int newfd, int starting_fd) {
     mxio_t* io = fd_to_io(oldfd);
     if (io == NULL) {
-        return ERRNO(EBADFD);
+        return ERRNO(EBADF);
     }
     int fd = mxio_bind_to_fd(io, newfd, starting_fd);
     if (fd < 0) {
@@ -600,7 +600,7 @@ int fcntl(int fd, int cmd, ...) {
 off_t lseek(int fd, off_t offset, int whence) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
-        return ERRNO(EBADFD);
+        return ERRNO(EBADF);
     }
     off_t r = STATUS(io->ops->seek(io, offset, whence));
     mxio_release(io);
@@ -610,7 +610,7 @@ off_t lseek(int fd, off_t offset, int whence) {
 static int getdirents(int fd, void* ptr, size_t len) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
-        return ERRNO(EBADFD);
+        return ERRNO(EBADF);
     }
     int r = STATUS(io->ops->misc(io, MX_RIO_READDIR, len, ptr, 0));
     mxio_release(io);
@@ -649,7 +649,7 @@ int open(const char* path, int flags, ...) {
 int fstat(int fd, struct stat* s) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
-        return ERRNO(EBADFD);
+        return ERRNO(EBADF);
     }
     int r = STATUS(mxio_stat(io, s));
     mxio_release(io);

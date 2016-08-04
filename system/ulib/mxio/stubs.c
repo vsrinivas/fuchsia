@@ -38,7 +38,7 @@ static int checkfile(const char* path, int err) {
 static int checkfd(int fd, int err) {
     mxio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
-        errno = EBADFD;
+        errno = EBADF;
         return -1;
     }
     mxio_release(io);
