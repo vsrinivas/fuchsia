@@ -28,6 +28,7 @@ MODULE_STATIC_LIBS := \
     ulib/elfload \
     ulib/mxio \
     ulib/musl-static \
+    ulib/ddk \
     ulib/magenta \
     ulib/runtime
 

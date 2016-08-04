@@ -26,6 +26,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
 
 static size_t devmgr_off = 0;
 static size_t devmgr_len = 0;
@@ -129,7 +130,7 @@ int main(int argc, char** argv) {
         launchpad_destroy(lp);
     }
     if (status != NO_ERROR) {
-        cprintf("userboot: failed to launch devmgr: %d\n", status);
+        cprintf("userboot: failed to launch %s: %d\n", devmgr_fn, status);
         return status;
     }
 
@@ -137,9 +138,12 @@ int main(int argc, char** argv) {
     status = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE,
                                 NULL);
 
-    printf("userboot: devmgr exited\n");
+    cprintf("userboot: %s exited\n", devmgr_fn);
 
     mx_handle_close(proc);
 
+    if (cmdline_get("userboot.shutdown")) {
+        mx_debug_send_command("poweroff", 8);
+    }
     return 0;
 }

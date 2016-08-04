@@ -31,3 +31,8 @@ normal userspace startup process (launching the device manager, etc).
 
 It is useful for alternate boot modes (like a factory test or system
 unit tests).
+
+## userboot.shutdown
+
+If this option is set, userboot will attempt to power off the machine
+when the process it launches exits.
