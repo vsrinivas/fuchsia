@@ -22,7 +22,7 @@ GENERATED += $(MODULE_LIBNAME).a
 # modules that declare a soname desire to be shared libs as well
 ifneq ($(MODULE_SO_NAME),)
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
-MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so)
+MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 
 $(MODULE_LIBNAME).so: _OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 $(MODULE_LIBNAME).so: _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
@@ -34,9 +34,39 @@ $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODU
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(_LDFLAGS)\
 		-shared -soname $(_SONAME) $(_OBJS) $(_LIBS) $(LIBGCC) -o $@
 
+# Only update the .so.abi file if it's changed, so things don't need
+# to be relinked if the ABI didn't change.
+$(MODULE_LIBNAME).so.abi: $(MODULE_LIBNAME).abi.stamp ;
+$(MODULE_LIBNAME).abi.stamp: _SONAME := lib$(MODULE_SO_NAME).so
+$(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_LIBNAME).abi.h \
+			     scripts/shlib-symbols
+	@echo generating ABI stub $(@:.abi.stamp=.so.abi)
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(_SONAME) -s \
+		       $< -o $(@:.abi.stamp=.so.abi).new
+# Sanity check that the ABI stub really matches the actual DSO.
+	$(NOECHO)scripts/shlib-symbols '$(NM)' $(@:.abi.stamp=.so.abi).new | \
+	diff -U0 $(<:.o=.h) -
+# Move it into place only if it's changed.
+	$(NOECHO)\
+	if cmp -s $(@:.abi.stamp=.so.abi).new $(@:.abi.stamp=.so.abi); then \
+	  rm $(@:.abi.stamp=.so.abi).new; \
+	else \
+	  mv -f $(@:.abi.stamp=.so.abi).new $(@:.abi.stamp=.so.abi); \
+	fi
+	$(NOECHO)touch $@
+
+$(MODULE_LIBNAME).abi.h: $(MODULE_LIBNAME).so scripts/shlib-symbols
+	$(NOECHO)scripts/shlib-symbols -z -d '$(NM)' $< > $@
+
+$(MODULE_LIBNAME).abi.o: $(MODULE_LIBNAME).abi.h scripts/dso-abi.h
+	$(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(ARCH_CFLAGS) \
+	      -c -include scripts/dso-abi.h -xassembler-with-cpp $< -o $@
+
 ALLUSER_LIBS += $(MODULE)
-EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so
-GENERATED += $(MODULE_LIBNAME).so
+EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so.abi
+GENERATED += \
+    $(MODULE_LIBNAME).so $(MODULE_LIBNAME).so.abi $(MODULE_LIBNAME).abi.stamp \
+    $(MODULE_LIBNAME).abi.h $(MODULE_LIBNAME).abi.o
 
 ifeq ($(MODULE_SO_INSTALL_NAME),)
 MODULE_SO_INSTALL_NAME := lib/lib$(MODULE_SO_NAME).so
@@ -53,7 +83,7 @@ ifeq ($(ENABLE_BUILD_SYSROOT),true)
 
 ifneq ($(MODULE_SO_NAME),)
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
-$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so)
+$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so.abi)
 SYSROOT_DEPS += $(TMP)
 GENERATED += $(TMP)
 endif

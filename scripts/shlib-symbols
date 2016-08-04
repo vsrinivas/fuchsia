@@ -1,0 +1,119 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This script reads the dynamic symbol table of a DSO (ELF file) via nm
+# and writes out a sequence of lines for each symbol in the DSO's ABI
+# that can be used as C macros.  The macro invocations it writes look like:
+#   TYPE(NAME, [ADDRESS,] SIZE)
+# The ADDRESS parameter is included only if the script is given the -a switch.
+# The SIZE is forced to 0 for functions if the script is given the -z switch.
+# Undefined symbols are omitted if the script given the -d switch.
+# The TYPE is one of:
+#   COMMON_OBJECT               STT_COMMON symbol
+#   UNDEFINED                   SHN_UNDEF symbol
+#   UNDEFINED_WEAK_OBJECT       SHN_UNDEF, STB_WEAK, STT_OBJECT symbol
+#   UNDEFINED_WEAK              SHN_UNDEF, STB_WEAK, STT_FUNC symbol
+#   WEAK_DATA_OBJECT            STB_WEAK, STT_OBJECT symbol
+#   WEAK_FUNCTION               STB_WEAK, STT_FUNC symbol
+#   FUNCTION                    STB_GLOBAL, STT_FUNC symbol
+#   RODATA_OBJECT               STB_GLOBAL, STT_OBJECT symbol in R/O section
+#   DATA_OBJECT                 STB_GLOBAL, STT_OBJECT symbol in R/W section
+#   BSS_OBJECT                  STB_GLOBAL symbol in SHT_NOBITS section
+# (nm actually uses a haphazard combination of ELF symbol details and
+# section details to choose its type letters rather than directly using the
+# ELF symbol bits consistently.  But the type letters map to these symbol
+# details when symbols are defined in the usual ways by a compiler.)
+
+set -o pipefail -e
+
+show_address=false
+zero_function_size=false
+omit_undefined=false
+while [ $# -gt 0 ]; do
+  case "$1" in
+  -a) show_address=true ;;
+  -d) omit_undefined=true ;;
+  -z) zero_function_size=true ;;
+  *) break ;;
+  esac
+  shift
+done
+
+if [ $# -ne 2 ]; then
+  echo >&2 "Usage: $0 [-a] [-d] [-z] NM DSO"
+  exit 2
+fi
+
+NM="$1"
+DSO="$2"
+
+dump_names() {
+  "$NM" -P -g -D -S "$DSO"
+}
+
+massage() {
+  local read name type addr size
+  while read name type addr size; do
+
+    # The numbers are printed in hex, but without a leading "0x" indicator.
+    addr="0x$addr"
+    if [ -z "$size" ]; then
+      size=0
+    else
+      size="0x$size"
+    fi
+
+    case "$name" in
+    # Linkers sometimes emit these symbols into .dynsym, but they are useless
+    # and should not be consider part of the ABI.
+    __bss_start|_etext|_edata|_end)
+      continue
+      ;;
+    esac
+
+    case "$type" in
+    C) type=COMMON_OBJECT ;;
+    U) type=UNDEFINED ;;
+    v) type=UNDEFINED_WEAK_OBJECT ;;
+    w) type=UNDEFINED_WEAK ;;
+    V) type=WEAK_DATA_OBJECT ;;
+    W) type=WEAK_FUNCTION ;;
+    T) type=FUNCTION ;;
+    R) type=RODATA_OBJECT ;;
+    D) type=DATA_OBJECT ;;
+    B) type=BSS_OBJECT ;;
+    *)
+      echo >&2 "$0: Unhandled type '${type}' for symbol '${name}'"
+      exit 1
+      ;;
+    esac
+
+    if $show_address; then
+      address_item=", $addr"
+    else
+      address_item=
+    fi
+
+    if $zero_function_size; then
+      case $type in
+      FUNCTION|WEAK_FUNCTION) size=0 ;;
+      esac
+    fi
+
+    if $omit_undefined; then
+      case $type in
+        UNDEFINED*) continue ;;
+      esac
+    fi
+
+    echo "${type}(${name}${address_item}, ${size})"
+
+  done
+}
+
+dump_names | massage
