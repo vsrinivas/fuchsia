@@ -10,7 +10,7 @@
 #include "escher/effects/blur/depth_based_blur_effect.h"
 #include "escher/effects/lighting/lighting_effect.h"
 #include "escher/geometry/size_i.h"
-#include "escher/gl/frame_buffer.h"
+#include "escher/gl/context.h"
 #include "escher/gl/texture_cache.h"
 #include "escher/rendering/model_renderer.h"
 #include "escher/scene/stage.h"
@@ -41,11 +41,10 @@ class Renderer {
   TextureCache texture_cache_;
   LightingEffect lighting_;
   BlitShader blit_shader_;
-  FrameBuffer unlit_scene_;
-  FrameBuffer lit_scene_;
   DepthBasedBlurEffect blur_;
 
   ModelRenderer model_renderer_;
+  Context context_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };

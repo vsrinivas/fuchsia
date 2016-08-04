@@ -144,7 +144,6 @@ bool DepthBasedBlurEffect::Init(TextureCache* texture_cache) {
   blur_plane_height_ =
       glGetUniformLocation(program_.id(), "u_blur_plane_height");
   FTL_DCHECK(blur_plane_height_ != -1);
-  frame_buffer_ = FrameBuffer::Make();
 
   vertex_buffer_ = MakeUniqueBuffer();
   glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_.id());
@@ -165,19 +164,24 @@ bool DepthBasedBlurEffect::Init(TextureCache* texture_cache) {
 }
 
 void DepthBasedBlurEffect::Draw(const Stage& stage,
+                                Context* context,
                                 const Texture& color,
                                 const Texture& depth,
-                                float blur_plane_height,
-                                GLuint framebuffer_id) {
-  glPushGroupMarkerEXT(17, "BlurEffect::Draw");
+                                const Texture& output,
+                                float blur_plane_height) {
+  // Can relax these if necessary.
+  FTL_DCHECK(output.IsMipmapped());
+  FTL_DCHECK(color.size() == output.size());
 
   auto& size = stage.physical_size();
-  auto& offset = stage.viewport_offset();
   auto& volume = stage.viewing_volume();
 
-  frame_buffer_.Bind();
-  frame_buffer_.SetColor(texture_cache_->GetMipmappedColorTexture(size));
-  glClear(GL_COLOR_BUFFER_BIT);
+  RenderPassSpec pass_spec;
+  RenderPassSpec::ColorAttachment& color_attachment = pass_spec.color[0];
+  color_attachment.texture = texture_cache_->GetMipmappedColorTexture(size);
+  color_attachment.load_action = RenderPassSpec::Attachment::LoadAction::kClear;
+
+  context->BeginRenderPass(pass_spec, "BlurEffect::Draw 1");
 
   // The same VBOs and texture settings are used for both the vertical and
   // horizontal blur passes.
@@ -213,11 +217,13 @@ void DepthBasedBlurEffect::Draw(const Stage& stage,
   glUniform2f(tap_, 0.f, 1.f / size.height());
   glDrawElements(GL_TRIANGLES, Quad::GetIndexCount(), GL_UNSIGNED_SHORT, 0);
 
+  context->EndRenderPass();
+
   // Horizontal blur.
-  Texture blurred_color(frame_buffer_.TakeColor());
-  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
-  glViewport(offset.width(), offset.height(), size.width(), size.height());
-  glClear(GL_COLOR_BUFFER_BIT);
+  Texture blurred_color(std::move(color_attachment.texture));
+  color_attachment.texture = output;
+  context->BeginRenderPass(pass_spec, "BlurEffect::Draw 2");
+
   glUniform2f(tap_, 1.f / size.width(), 0.f);
   glBindTexture(GL_TEXTURE_2D, blurred_color.id());
 
@@ -240,7 +246,8 @@ void DepthBasedBlurEffect::Draw(const Stage& stage,
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
   glUseProgram(0);
   FTL_DCHECK(glGetError() == GL_NO_ERROR);
-  glPopGroupMarkerEXT();
+
+  context->EndRenderPass();
 }
 
 }  // namespace escher

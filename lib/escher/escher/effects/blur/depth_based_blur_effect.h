@@ -6,7 +6,7 @@
 
 #include "ftl/macros.h"
 
-#include "escher/gl/frame_buffer.h"
+#include "escher/gl/context.h"
 #include "escher/gl/texture.h"
 #include "escher/gl/texture_cache.h"
 #include "escher/gl/unique_buffer.h"
@@ -25,14 +25,14 @@ class DepthBasedBlurEffect {
 
   bool Init(TextureCache* texture_cache);
   void Draw(const Stage& stage,
+            Context* context,
             const Texture& color,
             const Texture& depth,
-            float blur_plane_height,
-            GLuint frame_buffer_id);
+            const Texture& output,
+            float blur_plane_height);
 
  private:
   TextureCache* texture_cache_ = nullptr;
-  FrameBuffer frame_buffer_;
 
   UniqueProgram program_;
   GLint position_ = -1;

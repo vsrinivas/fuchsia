@@ -27,26 +27,32 @@ bool LightingEffect::Init(TextureCache* texture_cache, bool use_mipmap) {
   if (!shader_.Compile() || !blur_.Compile() ||
       !occlusion_detector_.Compile(texture_cache))
     return false;
-  frame_buffer_ = FrameBuffer::Make();
-  if (!frame_buffer_)
-    return false;
-  use_mipmap_ = use_mipmap;
   full_frame_ = Quad::CreateFillClipSpace(0.0f);
   return true;
 }
 
-void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
-  glPushGroupMarkerEXT(24, "LightingEffect::Prepare");
-  auto& size = stage.physical_size();
-  frame_buffer_.Bind();
-
-  if (!frame_buffer_.color().size().Equals(size)) {
-    frame_buffer_.SetColor(use_mipmap_ ?
-        texture_cache_->GetMipmappedColorTexture(size) :
-        texture_cache_->GetColorTexture(size));
+void LightingEffect::Apply(
+    const Stage& stage, Context* context,
+    const Texture& unlit_color, const Texture& unlit_depth,
+    const Texture& illumination_out, const Texture& lit_color) {
+  GenerateIllumination(
+      stage, context, unlit_color, unlit_depth, illumination_out);
+  if (kFilterLightingBuffer) {
+    FilterIllumination(stage, context, illumination_out);
   }
+  ApplyIllumination(
+      context, unlit_color, illumination_out, lit_color);
+}
 
-  glClear(GL_COLOR_BUFFER_BIT);
+void LightingEffect::GenerateIllumination(
+    const Stage& stage, Context* context,
+    const Texture& unlit_color, const Texture& unlit_depth,
+    const Texture& illumination_out) {
+  RenderPassSpec pass_spec;
+  pass_spec.color[0].texture = illumination_out;
+
+  context->BeginRenderPass(pass_spec, "LightingEffect::PrepareIllumination");
+
   glUseProgram(occlusion_detector_.program().id());
   glUniform1i(occlusion_detector_.depth_map(), 0);
   glUniform1i(occlusion_detector_.noise(), 1);
@@ -59,7 +65,7 @@ void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
               key_light.intensity());
 
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, depth.id());
+  glBindTexture(GL_TEXTURE_2D, unlit_depth.id());
 
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, occlusion_detector_.noise_texture().id());
@@ -67,68 +73,69 @@ void LightingEffect::Prepare(const Stage& stage, const Texture& depth) {
   glEnableVertexAttribArray(occlusion_detector_.position());
   DrawQuad(occlusion_detector_.position(), full_frame_);
 
-  if (kFilterLightingBuffer) {
-    // No need to make this texture mipmappable: it is for temporary storage of
-    // the horizontally-filtered shadow image.
-    Texture illumination = frame_buffer_.SwapColor(
-        texture_cache_->GetColorTexture(size));
-    glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(blur_.program().id());
-    glUniform1i(blur_.illumination(), 0);
-    glUniform2f(blur_.stride(), 1.0f / size.width(), 0.0f);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, illumination.id());
-
-    glEnableVertexAttribArray(blur_.position());
-    DrawQuad(blur_.position(), full_frame_);
-
-    illumination = frame_buffer_.SwapColor(std::move(illumination));
-    glUniform2f(blur_.stride(), 0.0f, 1.0f / size.height());
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, illumination.id());
-
-    glEnableVertexAttribArray(blur_.position());
-    DrawQuad(blur_.position(), full_frame_);
-
-    if (use_mipmap_)
-      GenerateMipmap(frame_buffer_.color().id());
-  }
-
-  glPopGroupMarkerEXT();
+  context->EndRenderPass();
 }
 
-void LightingEffect::Draw(const Texture& color) {
-  glPushGroupMarkerEXT(21, "LightingEffect::Draw");
+void LightingEffect::FilterIllumination(
+    const Stage& stage, Context* context,
+    const Texture& illumination_out) {
+  RenderPassSpec pass_spec;
+  pass_spec.color[0].texture = illumination_out;
+
+  auto& size = stage.physical_size();
+
+  Texture half_blurred = texture_cache_->GetColorTexture(size);
+  pass_spec.color[0].texture = half_blurred;
+  context->BeginRenderPass(pass_spec, "LightingEffect::FilterIllumination 1");
+
+  glUseProgram(blur_.program().id());
+  glUniform1i(blur_.illumination(), 0);
+  glUniform2f(blur_.stride(), 1.0f / size.width(), 0.0f);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, illumination_out.id());
+
+  glEnableVertexAttribArray(blur_.position());
+  DrawQuad(blur_.position(), full_frame_);
+
+  context->EndRenderPass();
+
+  pass_spec.color[0].texture = illumination_out;
+  context->BeginRenderPass(pass_spec, "LightingEffect::FilterIllumination 2");
+
+  glUniform2f(blur_.stride(), 0.0f, 1.0f / size.height());
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, half_blurred.id());
+
+  glEnableVertexAttribArray(blur_.position());
+  DrawQuad(blur_.position(), full_frame_);
+
+  context->EndRenderPass();
+}
+
+void LightingEffect::ApplyIllumination(Context* context,
+                                       const Texture& unlit_color,
+                                       const Texture& illumination_out,
+                                       const Texture& lit_color) {
+  RenderPassSpec pass_spec;
+  pass_spec.color[0].texture = lit_color;
+  context->BeginRenderPass(pass_spec, "LightingEffect::ApplyIllumination");
 
   glUseProgram(shader_.program().id());
   glUniform1i(shader_.color(), 0);
   glUniform1i(shader_.illumination(), 1);
 
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, color.id());
+  glBindTexture(GL_TEXTURE_2D, unlit_color.id());
 
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, illumination().id());
+  glBindTexture(GL_TEXTURE_2D, illumination_out.id());
 
   glEnableVertexAttribArray(shader_.position());
   DrawQuad(shader_.position(), full_frame_);
 
-  glPopGroupMarkerEXT();
-}
-
-void LightingEffect::GenerateMipmap(GLuint texture_id) const {
-  glPushGroupMarkerEXT(31, "LightingEffect::GenerateMipmap");
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  GLenum gl_error = glGetError();
-  if (gl_error != GL_NO_ERROR) {
-    std::cerr << "LightingEffect::GenerateMipmap() failed: "
-              << gl_error << std::endl;
-    FTL_DCHECK(false);
-  }
-  glPopGroupMarkerEXT();
+  context->EndRenderPass();
 }
 
 }  // namespace escher

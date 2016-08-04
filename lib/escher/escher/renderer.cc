@@ -37,9 +37,6 @@ bool Renderer::Init() {
   glCullFace(GL_BACK);
   glEnable(GL_CULL_FACE);
 
-  unlit_scene_ = FrameBuffer::Make();
-  lit_scene_ = FrameBuffer::Make();
-
   return true;
 }
 
@@ -48,49 +45,54 @@ void Renderer::Render(const Stage& stage, const Model& model) {
 
   auto& size = stage.physical_size();
   glViewport(0, 0, size.width(), size.height());
-  unlit_scene_.Bind();
-  if (!unlit_scene_.color().size().Equals(size)) {
-    unlit_scene_.SetDepth(texture_cache_.GetDepthTexture(size));
-    unlit_scene_.SetColor(texture_cache_.GetColorTexture(size));
+
+  // Draw unlit model.
+  Texture unlit_color, unlit_depth;
+  {
+    RenderPassSpec pass_spec;
+    pass_spec.color[0].texture = texture_cache_.GetColorTexture(size);
+    pass_spec.depth.texture = texture_cache_.GetDepthTexture(size);
+
+    context_.BeginRenderPass(pass_spec, "Renderer::Render draw model");
+    model_renderer_.DrawModel(stage, model);
+    context_.EndRenderPass();
+
+    unlit_color = std::move(pass_spec.color[0].texture);
+    unlit_depth = std::move(pass_spec.depth.texture);
   }
 
-  model_renderer_.DrawModel(stage, model);
+  Texture illumination = texture_cache_.GetColorTexture(size);
+  Texture lit_color = kUseMipmap ?
+      texture_cache_.GetMipmappedColorTexture(size) :
+      texture_cache_.GetColorTexture(size);
+  lighting_.Apply(
+      stage, &context_, unlit_color, unlit_depth, illumination, lit_color);
 
-  lighting_.Prepare(stage, unlit_scene_.depth());
+  if (kUseMipmap)
+    GenerateMipmap(lit_color.id());
 
+  Texture finished;
   if (kDebugIllumination) {
-    glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
-    glClear(GL_COLOR_BUFFER_BIT);
-    Blit(lighting_.illumination().id());
+    finished = std::move(illumination);
   } else if (kDepthBasedBlur && model.blur_plane_height() > 0.0) {
-    lit_scene_.Bind();
-
-    if (!lit_scene_.color().size().Equals(size)) {
-      lit_scene_.SetColor(kUseMipmap ?
-          texture_cache_.GetMipmappedColorTexture(size) :
-          texture_cache_.GetColorTexture(size));
-    }
-
-    glClear(GL_COLOR_BUFFER_BIT);
-    lighting_.Draw(unlit_scene_.color());
-
-    if (kUseMipmap)
-      GenerateMipmap(lit_scene_.color().id());
-
+    finished = texture_cache_.GetMipmappedColorTexture(size);
     blur_.Draw(stage,
-               lit_scene_.color(),
-               unlit_scene_.depth(),
-               model.blur_plane_height(),
-               front_frame_buffer_id_);
+               &context_,
+               lit_color,
+               unlit_depth,
+               finished,
+               model.blur_plane_height());
   } else {
-    glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
-    glViewport(stage.viewport_offset().width(),
-               stage.viewport_offset().height(),
-               size.width(),
-               size.height());
-    glClear(GL_COLOR_BUFFER_BIT);
-    lighting_.Draw(unlit_scene_.color());
+    finished = std::move(lit_color);
   }
+
+  glBindFramebuffer(GL_FRAMEBUFFER, front_frame_buffer_id_);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glViewport(stage.viewport_offset().width(),
+             stage.viewport_offset().height(),
+             size.width(),
+             size.height());
+  Blit(finished.id());
 
   FTL_DCHECK(glGetError() == GL_NO_ERROR);
 }

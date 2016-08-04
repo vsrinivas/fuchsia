@@ -19,12 +19,16 @@ class Texture : public Resource<TextureSpec> {
   Texture(const Texture& other) = default;
   Texture(Texture&& other) = default;
 
+  Texture& operator=(const Texture& other) = default;
   Texture& operator=(Texture&& other) = default;
 
   const SizeI& size() const { return spec().size; }
   int width() const { return size().width(); }
   int height() const { return size().height(); }
   TextureSpec::Format format() const { return spec().format; }
+  bool HasFlag(TextureSpec::Flag flag) const { return spec().HasFlag(flag); }
+  bool IsRenderbuffer() const { return HasFlag(TextureSpec::kRenderbuffer); }
+  bool IsMipmapped() const { return HasFlag(TextureSpec::kMipmapped); }
 
   // Cube maps, 3D textures, etc. not supported yet.
   GLenum GetGLTarget() const { return GL_TEXTURE_2D; }

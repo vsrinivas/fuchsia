@@ -9,9 +9,6 @@
 #elif defined(ESCHER_USE_METAL_API)
 #error not implemented
 #else
-#include "escher/gl/gles2/frame_buffer.h"
-namespace escher {
-using escher::gles2::MakeUniqueFrameBuffer;
-using escher::gles2::FrameBuffer;
-}  // namespace escher
+#include "escher/gl/gles2/context.h"
+namespace escher { using escher::gles2::Context; }
 #endif

@@ -23,7 +23,6 @@ bool ModelRenderer::Init() {
 }
 
 void ModelRenderer::DrawModel(const Stage& stage, const Model& model) {
-  glPushGroupMarkerEXT(25, "ModelRenderer::DrawModel");
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
@@ -43,7 +42,6 @@ void ModelRenderer::DrawModel(const Stage& stage, const Model& model) {
   glDepthFunc(GL_LESS);
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
-  glPopGroupMarkerEXT();
 }
 
 ModelRenderer::DrawContext::DrawContext(ModelRenderer& renderer,

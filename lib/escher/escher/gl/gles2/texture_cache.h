@@ -45,8 +45,7 @@ class TextureCache {
   // Used to return textures when they are no longer needed.
   class TextureNeed : public Need {
    public:
-    TextureNeed(
-        const TextureSpec& spec, GLuint id, TextureCache* cache);
+    TextureNeed(const TextureSpec& spec, GLuint id, TextureCache* cache);
     ~TextureNeed() final;
 
    private:

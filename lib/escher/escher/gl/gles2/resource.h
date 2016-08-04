@@ -42,5 +42,19 @@ class Resource {
   ftl::RefPtr<Need> need_;
 };
 
+template <typename ResourceSpec>
+bool operator==(
+    const Resource<ResourceSpec>& one, const Resource<ResourceSpec>& two) {
+  return one.id() == two.id() &&
+      // Any two resources with ID of zero are considered to be equal.
+      (one.id() == 0 || one.spec() == two.spec());
+}
+
+template <typename ResourceSpec>
+bool operator!=(
+    const Resource<ResourceSpec>& one, const Resource<ResourceSpec>& two) {
+  return !(one == two);
+}
+
 }  // namespace gles2
 }  // namespace escher

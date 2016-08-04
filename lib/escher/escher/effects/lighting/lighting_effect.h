@@ -11,7 +11,7 @@
 #include "escher/effects/lighting/illumination_shader.h"
 #include "escher/effects/lighting/occlusion_detector.h"
 #include "escher/geometry/quad.h"
-#include "escher/gl/frame_buffer.h"
+#include "escher/gl/context.h"
 #include "escher/gl/texture.h"
 #include "escher/gl/texture_cache.h"
 #include "escher/scene/stage.h"
@@ -25,17 +25,25 @@ class LightingEffect {
 
   bool Init(TextureCache* texture_cache, bool use_mipmap);
 
-  void Prepare(const Stage& stage, const Texture& depth);
-  void Draw(const Texture& color);
-
-  const Texture& illumination() const { return frame_buffer_.color(); }
+  void Apply(
+      const Stage& stage, Context* context,
+      const Texture& unlit_color, const Texture& unlit_depth,
+      const Texture& illumination_out, const Texture& lit_color);
 
  private:
-  void GenerateMipmap(GLuint texture_id) const;
-  
+  void GenerateIllumination(
+      const Stage& stage, Context* context,
+      const Texture& unlit_color, const Texture& unlit_depth,
+      const Texture& illumination_out);
+  void FilterIllumination(
+      const Stage& stage, Context* context,
+      const Texture& illumination_out);
+  void ApplyIllumination(Context* context,
+                         const Texture& unlit_color,
+                         const Texture& illumination_out,
+                         const Texture& lit_color);
+
   TextureCache* texture_cache_ = nullptr;
-  bool use_mipmap_ = false;
-  FrameBuffer frame_buffer_;
   IlluminationShader shader_;
   IlluminationReconstructionFilter blur_;
   OcclusionDetector occlusion_detector_;

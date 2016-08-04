@@ -31,7 +31,7 @@ Texture TextureCache::GetMipmappedColorTexture(const SizeI& size) {
   TextureSpec spec;
   spec.size = size;
   spec.format = TextureSpec::Format::kRGBA;
-  spec.mipmapped = true;
+  spec.SetFlag(TextureSpec::Flag::kMipmapped);
   return GetTexture(spec);
 }
 
@@ -60,8 +60,13 @@ Texture TextureCache::GetTexture(const TextureSpec& spec) {
 GLuint TextureCache::MakeTexture(const TextureSpec& spec) const {
   FTL_DCHECK(glGetError() == GL_NO_ERROR);
 
+  // Renderbuffers not supported yet... they're currently created explicitly,
+  // not managed by the cache.
+  FTL_DCHECK(!spec.HasFlag(TextureSpec::Flag::kRenderbuffer));
+
   // TODO(jjosh): this isn't exhaustive.
-  FTL_DCHECK(spec.format != TextureSpec::Format::kDepth || !spec.mipmapped);
+  FTL_DCHECK(spec.format != TextureSpec::Format::kDepth ||
+             !spec.HasFlag(TextureSpec::Flag::kMipmapped));
 
   GLuint id = 0;
   glGenTextures(1, &id);
@@ -71,7 +76,7 @@ GLuint TextureCache::MakeTexture(const TextureSpec& spec) const {
   }
 
   glBindTexture(GL_TEXTURE_2D, id);
-  if (spec.mipmapped) {
+  if (spec.HasFlag(TextureSpec::Flag::kMipmapped)) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

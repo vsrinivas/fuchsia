@@ -116,7 +116,7 @@ TEST(TextureCache, TextureAssignment) {
   TextureSpec mipmapSpec1;
   mipmapSpec1.size = small;
   mipmapSpec1.format = TextureSpec::Format::kRGBA;
-  mipmapSpec1.mipmapped = true;
+  mipmapSpec1.SetFlag(TextureSpec::Flag::kMipmapped);
 
   TextureSpec depthSpec1;
   depthSpec1.size = small;
