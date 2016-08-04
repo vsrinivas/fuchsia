@@ -21,76 +21,71 @@ case "$(uname -s)" in
     ;;
 esac
 
-function download_tool() {
+# download <url> <path>
+function download() {
+  local url="${1}"
+  local path="${2}"
+  curl -f --progress-bar -continue-at=- --location --output "${path}" "${url}"
+}
+
+# download_file_if_needed <name> <url> <base path> <extension>
+function download_file_if_needed() {
   local name="${1}"
-  local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
-  local stamp_path="${tool_path}.stamp"
-  local requested_hash="$(cat "${tool_path}.sha1")"
-  local tool_url="${FUCHSIA_URL_BASE}/${name}/${HOST_PLATFORM}/${requested_hash}"
+  local url="${2}"
+  local base_path="${3}"
+  local extension="${4}"
+
+  local path="${base_path}${extension}"
+  local stamp_path="${base_path}.stamp"
+  local requested_hash="$(cat "${base_path}.sha1")"
 
   if [[ ! -f "${stamp_path}" ]] || [[ "${requested_hash}" != "$(cat "${stamp_path}")" ]]; then
     echo "Downloading ${name}..."
-    rm -f -- "${tool_path}"
-    curl --progress-bar -continue-at=- --location --output "${tool_path}" "${tool_url}"
-    chmod a+x "${tool_path}"
+    rm -f -- "${path}"
+    download "${url}/${requested_hash}" "${path}"
     echo "${requested_hash}" > "${stamp_path}"
   fi
 }
 
-download_tool ninja
+# download_tool <name> <base url>
+function download_tool() {
+  local name="${1}"
+  local base_url="${2}"
+  local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
+  download_file_if_needed "${name}" "${base_url}" "${tool_path}"
+  chmod a+x "${tool_path}"
+}
+
+download_tool ninja "${FUCHSIA_URL_BASE}/ninja/${HOST_PLATFORM}"
 
 # TODO(abarth): gn doesn't follow the normal pattern because we download our
 # copy from Chromium's Google Storage bucket.
-readonly GN_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/gn"
-readonly GN_STAMP_PATH="${GN_PATH}.stamp"
-readonly GN_HASH="$(cat "${GN_PATH}.sha1")"
-readonly GN_BUCKET=chromium-gn
-readonly GN_URL="https://storage.googleapis.com/${GN_BUCKET}/${GN_HASH}"
+download_tool gn "https://storage.googleapis.com/chromium-gn"
 
-if [[ ! -f "${GN_STAMP_PATH}" ]] || [[ "${GN_HASH}" != "$(cat "${GN_STAMP_PATH}")" ]]; then
-  echo "Downloading gn..."
-  rm -f -- "${GN_PATH}"
-  curl --progress-bar -continue-at=- --location --output "${GN_PATH}" "${GN_URL}"
-  chmod a+x "${GN_PATH}"
-  echo "${GN_HASH}" > "${GN_STAMP_PATH}"
-fi
-
+# download_tarball <name> <base url> <untar directory>
 function download_tarball() {
   local name="${1}"
-  local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
-  local stamp_path="${tool_path}.stamp"
-  local requested_hash="$(cat "${tool_path}.sha1")"
-  local tar_path="${tool_path}.tar.bz2"
-  local tool_url="${FUCHSIA_URL_BASE}/${name}/${HOST_PLATFORM}/${requested_hash}"
+  local base_url="${2}"
+  local untar_dir="${3}"
+  local base_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
+  local tar_path="${base_path}.tar.bz2"
 
-  if [[ ! -f "${stamp_path}" || "${requested_hash}" != "$(cat "${stamp_path}")" ]]; then
-    echo "Downloading ${name}..."
-    rm -rf -- "${SCRIPT_ROOT}/${name}"
-    curl --progress-bar -continue-at=- --location --output "${tar_path}" "${tool_url}"
-    (cd -- "${SCRIPT_ROOT}" && tar xf ${tar_path})
+  download_file_if_needed "${name}" "${FUCHSIA_URL_BASE}/${base_url}" "${base_path}" ".tar.bz2"
+  if [[ -f "${tar_path}" ]]; then
+    rm -rf -- "${untar_dir}"
+    mkdir -- "${untar_dir}"
+    (cd -- "${untar_dir}" "${tar_path}" && tar xf "${tar_path}")
     rm -f -- "${tar_path}"
-    echo "${requested_hash}" > "${stamp_path}"
   fi
 }
 
-download_tarball cmake
+# TODO(jamesr): the cmake and sdk tarballs are inconsistent about how they name
+# the uploaded artifact and what directories they expect to be untarred from.
+# There's no good reason for these to be different - unify them.
+download_tarball cmake "cmake/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+download_tarball sdk sdk "${SCRIPT_ROOT}/sdk"
 
-readonly SDK_STAMP_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/sdk.stamp"
-readonly SDK_HASH="$(cat "${SCRIPT_ROOT}/${HOST_PLATFORM}/sdk.sha1")"
-readonly SDK_PATH="${SCRIPT_ROOT}/sdk"
-readonly SDK_TAR_PATH="${SDK_PATH}/sdk.tar.bz2"
-readonly SDK_URL="${FUCHSIA_URL_BASE}/sdk/${SDK_HASH}"
-
-if [[ ! -f "${SDK_STAMP_PATH}" ]] || [[ "${SDK_HASH}" != "$(cat "${SDK_STAMP_PATH}")" ]]; then
-  echo "Downloading Fuchsia SDK..."
-  rm -rf -- "${SDK_PATH}"
-  mkdir -- "${SDK_PATH}"
-  curl --progress-bar -continue-at=- --location --output "${SDK_TAR_PATH}" "${SDK_URL}"
-  (cd -- "${SDK_PATH}" && tar xf sdk.tar.bz2)
-  rm -f -- "${SDK_TAR_PATH}"
-  echo "${SDK_HASH}" > "${SDK_STAMP_PATH}"
-fi
-
+# build_magenta_tool <name>
 function build_magenta_tool() {
   local name="${1}"
   local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
