@@ -211,14 +211,14 @@ static void usb_hid_int_cb(usb_request_t* request) {
         if (hid->num_reports == 1 && hid->sizes[0].id == 0) {
             wrote = mx_hid_fifo_write(&hid->fifo, (uint8_t*)&wrote, 1);
             if (wrote <= 0) {
-                printf("could not write report id to usb-hid fifo (ret=%lu)\n", wrote);
+                printf("could not write report id to usb-hid fifo (ret=%zd)\n", wrote);
                 mxr_mutex_unlock(&hid->fifo.lock);
                 goto next_request;
             }
         }
         wrote = mx_hid_fifo_write(&hid->fifo, request->buffer, request->buffer_length);
         if (wrote <= 0) {
-            printf("could not write to usb-hid fifo (ret=%lu)\n", wrote);
+            printf("could not write to usb-hid fifo (ret=%zd)\n", wrote);
         } else {
             if (was_empty) {
                 device_state_set(&hid->dev, DEV_STATE_READABLE);
