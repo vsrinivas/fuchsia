@@ -25,7 +25,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/hexdump.c
 
 MODULE_SO_NAME := unittest
-MODULE_STATIC_LIBS := ulib/runtime
+
+# launchpad, elfload, mxio are static so that every unittest doesn't have to
+# mention them as a dependency as well.
+# N.B. The order is important. Think ordering of args to the linker.
+MODULE_STATIC_LIBS := ulib/launchpad ulib/elfload ulib/mxio ulib/runtime
 MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk

@@ -44,11 +44,27 @@ char* tu_strdup(const char* s);
 // |what| is typically the name of the function that had the syscall failure,
 // but it can include more descriptive text as desired.
 
-void tu_syscall_fail(const char *what, mx_status_t status);
+void tu_fatal(const char *what, mx_status_t status);
 
 // A wrapper on mx_handle_close.
 
 void tu_handle_close(mx_handle_t handle);
+
+// A wrapper on launchpad_launch.
+
+mx_handle_t tu_launch(const char* name,
+                      int argc, const char* const* argv,
+                      const char* const* envp,
+                      size_t num_handles, mx_handle_t* handles,
+                      uint32_t* handle_ids);
+
+// A wrapper on launchpad_launch_mxio_etc.
+
+mx_handle_t tu_launch_mxio_etc(const char* name,
+                               int argc, const char* const* argv,
+                               const char* const* envp,
+                               size_t num_handles, mx_handle_t* handles,
+                               uint32_t* handle_ids);
 
 // A wrapper on mx_thread_create.
 
@@ -88,5 +104,13 @@ int tu_process_get_return_code(mx_handle_t process);
 // Wait for |process| to exit and then fetch its return code.
 
 int tu_process_wait_exit(mx_handle_t process);
+
+// Create an io port.
+
+mx_handle_t tu_io_port_create(uint32_t options);
+
+// Get basic handle info for |handle|.
+
+void tu_handle_get_basic_info(mx_handle_t handle, mx_handle_basic_info_t* info);
 
 __END_CDECLS
