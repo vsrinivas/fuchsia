@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <link.h>
+#include <magenta/dlfcn.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <stdarg.h>
@@ -748,17 +749,8 @@ static size_t count_syms(struct dso* p) {
     return nsym;
 }
 
-static struct dso* load_library(const char* name, struct dso* needed_by) {
-    unsigned char* map;
-    struct dso *p, temp_dso = {0};
-    size_t alloc_size;
-    int n_th = 0;
+static struct dso* find_library(const char* name) {
     int is_self = 0;
-
-    if (!*name) {
-        errno = EINVAL;
-        return 0;
-    }
 
     /* Catch and block attempts to reload the implementation itself */
     if (name[0] == 'l' && name[1] == 'i' && name[2] == 'b') {
@@ -796,7 +788,7 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
     }
 
     /* Search for the name to see if it's already loaded */
-    for (p = head->next; p; p = p->next) {
+    for (struct dso* p = head->next; p; p = p->next) {
         if (!strcmp(p->name, name) ||
             (p->soname != NULL && !strcmp(p->soname, name))) {
             p->refcnt++;
@@ -804,13 +796,41 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
         }
     }
 
-    mx_handle_t vmo = get_library_vmo(name);
-    if (vmo < 0)
-        return 0;
+    return NULL;
+}
+
+static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
+                                    struct dso* needed_by) {
+    unsigned char* map;
+    struct dso *p, temp_dso = {0};
+    size_t alloc_size;
+    int n_th = 0;
+
     map = noload ? 0 : map_library(vmo, &temp_dso);
-    mx_handle_close(vmo);
     if (!map)
         return 0;
+
+    decode_dyn(&temp_dso);
+    if (temp_dso.soname != NULL) {
+        // Now check again if we opened the same file a second time.
+        // That is, a file with the same DT_SONAME string.
+        p = find_library(temp_dso.soname);
+        if (p != NULL) {
+            unmap_library(&temp_dso);
+            return p;
+        }
+    }
+
+    if (name == NULL) {
+        // If this was loaded by VMO rather than by name, then insist that
+        // it have a SONAME.
+        name = temp_dso.soname;
+        if (name == NULL) {
+            unmap_library(&temp_dso);
+            errno = ENOEXEC;
+            return NULL;
+        }
+    }
 
     /* Allocate storage for the new DSO. When there is TLS, this
      * storage must include a reservation for all pre-existing
@@ -836,7 +856,6 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
         return 0;
     }
     memcpy(p, &temp_dso, sizeof temp_dso);
-    decode_dyn(p);
     p->refcnt = 1;
     p->needed_by = needed_by;
     p->name = p->buf;
@@ -870,6 +889,24 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
 
     if (ldd_mode)
         debugmsg("\t%s => %s (%p)\n", p->soname, name, p->base);
+
+    return p;
+}
+
+static struct dso* load_library(const char* name, struct dso* needed_by) {
+    if (!*name) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    struct dso* p = find_library(name);
+    if (p == NULL) {
+        mx_handle_t vmo = get_library_vmo(name);
+        if (vmo >= 0) {
+            p = load_library_vmo(vmo, name, needed_by);
+            mx_handle_close(vmo);
+        }
+    }
 
     return p;
 }
@@ -1485,16 +1522,13 @@ dl_start_return_t __dls3(void* start_arg) {
 }
 
 
-void* dlopen(const char* file, int mode) {
+static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     struct dso* volatile p, *orig_tail, *next;
     struct tls_module* orig_tls_tail;
     size_t orig_tls_cnt, orig_tls_offset, orig_tls_align;
     size_t i;
     int cs;
     jmp_buf jb;
-
-    if (!file)
-        return head;
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     pthread_rwlock_wrlock(&lock);
@@ -1536,8 +1570,12 @@ void* dlopen(const char* file, int mode) {
         tail->next = 0;
         p = 0;
         goto end;
-    } else
-        p = load_library(file, head);
+    } else {
+        if (vmo != MX_HANDLE_INVALID)
+            p = load_library_vmo(vmo, file, head);
+        else
+            p = load_library(file, head);
+    }
 
     if (!p) {
         error(noload ? "Library %s is not already loaded" : "Error loading shared library %s: %m",
@@ -1582,6 +1620,20 @@ end:
         do_init_fini(orig_tail);
     pthread_setcancelstate(cs, 0);
     return p;
+}
+
+void* dlopen(const char* file, int mode) {
+    if (!file)
+        return head;
+    return dlopen_internal(MX_HANDLE_INVALID, file, mode);
+}
+
+void* dlopen_vmo(mx_handle_t vmo, int mode) {
+    if (vmo < 0 || vmo == MX_HANDLE_INVALID) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return dlopen_internal(vmo, NULL, mode);
 }
 
 __attribute__((__visibility__("hidden"))) int __dl_invalid_handle(void* h) {
