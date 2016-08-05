@@ -279,7 +279,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/internal/procfdname.c \
     $(LOCAL_DIR)/src/internal/shgetc.c \
     $(LOCAL_DIR)/src/internal/syscall_ret.c \
-    $(LOCAL_DIR)/src/internal/vdso.c \
     $(LOCAL_DIR)/src/ipc/ftok.c \
     $(LOCAL_DIR)/src/ipc/msgctl.c \
     $(LOCAL_DIR)/src/ipc/msgget.c \
