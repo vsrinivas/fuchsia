@@ -37,6 +37,7 @@ mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
 // Load the file's segments into the process.
 // If this fails, the state of the process address space is unspecified.
 mx_status_t elf_load_finish(mx_handle_t proc, elf_load_info_t* info,
-                            mx_handle_t vmo, mx_vaddr_t* entry);
+                            mx_handle_t vmo,
+                            mx_vaddr_t* base, mx_vaddr_t* entry);
 
 #pragma GCC visibility pop

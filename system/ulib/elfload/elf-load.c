@@ -287,7 +287,7 @@ mx_status_t elf_load_map_segments(mx_handle_t proc,
         if (base != NULL)
             *base = bias;
         if (entry != NULL)
-            *entry = header->e_entry + bias;
+            *entry = header->e_entry != 0 ? header->e_entry + bias : 0;
     }
     return status;
 }

@@ -243,13 +243,32 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     elf_load_info_t* elf;
     mx_status_t status = elf_load_start(vmo, &elf);
     if (status == NO_ERROR)
-        status = elf_load_finish(lp_proc(lp), elf, vmo, &lp->entry);
+        status = elf_load_finish(lp_proc(lp), elf, vmo, NULL, &lp->entry);
     elf_load_destroy(elf);
 
     if (status == NO_ERROR) {
         lp->loader_message = false;
         mx_handle_close(vmo);
     }
+
+    return status;
+}
+
+mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
+                                     mx_vaddr_t* base, mx_vaddr_t* entry) {
+    if (vmo < 0)
+        return vmo;
+    if (vmo == MX_HANDLE_INVALID)
+        return ERR_INVALID_ARGS;
+
+    elf_load_info_t* elf;
+    mx_status_t status = elf_load_start(vmo, &elf);
+    if (status == NO_ERROR)
+        status = elf_load_finish(lp_proc(lp), elf, vmo, base, entry);
+    elf_load_destroy(elf);
+
+    if (status == NO_ERROR)
+        mx_handle_close(vmo);
 
     return status;
 }
@@ -341,7 +360,8 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
     elf_load_info_t* elf;
     status = elf_load_start(interp_vmo, &elf);
     if (status == NO_ERROR) {
-        status = elf_load_finish(lp_proc(lp), elf, interp_vmo, &lp->entry);
+        status = elf_load_finish(lp_proc(lp), elf, interp_vmo,
+                                 NULL, &lp->entry);
         elf_load_destroy(elf);
     }
     mx_handle_close(interp_vmo);
@@ -370,7 +390,8 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
         status = elf_load_get_interp(elf, vmo, &interp, &interp_len);
         if (status == NO_ERROR) {
             if (interp == NULL) {
-                status = elf_load_finish(lp_proc(lp), elf, vmo, &lp->entry);
+                status = elf_load_finish(lp_proc(lp), elf, vmo,
+                                         NULL, &lp->entry);
                 if (status == NO_ERROR) {
                     lp->loader_message = false;
                     mx_handle_close(vmo);

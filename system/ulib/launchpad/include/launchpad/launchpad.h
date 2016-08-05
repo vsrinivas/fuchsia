@@ -88,6 +88,16 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo);
 // bootstrap message.
 mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo);
 
+// Load an extra ELF file image into the process.  This is similar
+// to launchpad_elf_load_basic, but it does not affect the state of
+// the launchpad's send_loader_message flag and does not set the
+// entrypoint returned by launchpad_get_entry_address and used by
+// launchpad_start.  Instead, if base is not NULL, it's filled with
+// the address at which the image was loaded; if entry is not NULL,
+// it's filled with the image's entrypoint address.
+mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
+                                     mx_vaddr_t* base, mx_vaddr_t* entry);
+
 // Discover the entry-point address after a successful call to
 // launchpad_elf_load or launchpad_elf_load_basic.  This can be used
 // in mx_process_start directly rather than calling launchpad_start,
