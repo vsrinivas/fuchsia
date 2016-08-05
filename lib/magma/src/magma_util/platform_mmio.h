@@ -64,6 +64,10 @@ public:
         return *reinterpret_cast<uint64_t*>(addr(offset));
     }
 
+    // Posting reads serve to ensure that a previous bus write at the same address has completed.
+    uint32_t PostingRead32(uint64_t offset) { return Read32(offset); }
+    uint64_t PostingRead64(uint64_t offset) { return Read64(offset); }
+
     void* addr() { return addr_; }
     uint64_t size() { return size_; }
 
