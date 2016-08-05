@@ -1,0 +1,21 @@
+{
+    "labels": [
+        "//third_party/re2",
+        "//third_party/re2:re2_tests",
+        "//third_party/re2:regexp_benchmark"
+    ],
+    "binaries": [
+        {
+            "binary": "re2_tests",
+            "bootfs_path": "test/re2_tests"
+        },
+        {
+            "binary": "re2_slow_tests",
+            "bootfs_path": "bin/re2_slow_tests"
+        },
+        {
+            "binary": "regexp_benchmark",
+            "bootfs_path": "bin/regexp_benchmark"
+        }
+    ]
+}

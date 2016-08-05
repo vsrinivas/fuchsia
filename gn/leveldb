@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//third_party/leveldb:leveldb_tests"
+    ],
+    "binaries": [
+        {
+            "binary": "leveldb_tests",
+            "bootfs_path": "bin/leveldb_tests"
+        }
+    ]
+}

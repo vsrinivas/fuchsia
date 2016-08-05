@@ -1,5 +1,7 @@
 {
-    "labels": [ "//third_party/hostap/wpa_supplicant" ],
+    "labels": [
+        "//third_party/hostap/wpa_supplicant"
+    ],
     "binaries": [
         {
             "binary": "wpa_supplicant",

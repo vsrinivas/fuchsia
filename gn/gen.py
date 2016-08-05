@@ -8,7 +8,6 @@ import json
 import gn
 import os
 import paths
-import subprocess
 import sys
 
 

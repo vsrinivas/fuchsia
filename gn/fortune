@@ -1,5 +1,7 @@
 {
-    "labels": [ "//bin/fortune" ],
+    "labels": [
+        "//bin/fortune"
+    ],
     "binaries": [
         {
             "binary": "fortune",

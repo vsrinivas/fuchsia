@@ -1,5 +1,7 @@
 {
-    "labels": [ "//mojo" ],
+    "labels": [
+        "//mojo"
+    ],
     "binaries": [
         {
             "binary": "application_manager",

@@ -1,5 +1,7 @@
 {
-    "labels": [ "//lib/ftl" ],
+    "labels": [
+        "//lib/ftl"
+    ],
     "binaries": [
         {
             "binary": "ftl_unittests",
