@@ -204,9 +204,18 @@ void io_free(io_alloc_t* ioa, void* ptr) {
 }
 
 mx_paddr_t io_virt_to_phys(io_alloc_t* ioa, mx_vaddr_t virt_addr) {
-    return virt_addr - ioa->virt_offset;
+    mx_paddr_t result = virt_addr - ioa->virt_offset;
+    if (result < ioa->phys || result >= ioa->phys + ioa->size) {
+        printf("ERROR: bad address %p in io_virt_to_phys\n", (void *)virt_addr);
+        abort();
+    }
+    return result;
 }
 
 mx_vaddr_t io_phys_to_virt(io_alloc_t* ioa, mx_paddr_t phys_addr) {
+    if (phys_addr < ioa->phys || phys_addr >= ioa->phys + ioa->size) {
+        printf("ERROR: bad address %p in io_phys_to_virt\n", (void *)phys_addr);
+        abort();
+    }
     return phys_addr + ioa->virt_offset;
 }
