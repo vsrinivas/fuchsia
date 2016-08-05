@@ -44,4 +44,15 @@ int32_t msd_device_close(msd_device* dev, msd_client_id client_id)
     return 0;
 }
 
+msd_context* msd_device_create_context(msd_device* dev)
+{
+    DLOG("TODO: msd_device_create_context");
+    return nullptr;
+}
+
+void msd_device_destroy_context(msd_device* dev, msd_context* ctx)
+{
+    DLOG("TODO: msd_device_destroy_context");
+}
+
 uint32_t msd_device_get_id(msd_device* dev) { return MsdDevice::cast(dev)->device_id(); }
