@@ -78,4 +78,6 @@ class LogMessage {
 #define FTL_DCHECK(condition) FTL_EAT_STREAM_PARAMETERS(condition)
 #endif
 
+#define FTL_NOTREACHED() FTL_DCHECK(false)
+
 #endif  // LIB_FTL_LOGGING_H_
