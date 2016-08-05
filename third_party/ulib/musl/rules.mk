@@ -316,13 +316,11 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/utmpx.c \
     $(LOCAL_DIR)/src/legacy/valloc.c \
     $(LOCAL_DIR)/src/linux/adjtime.c \
-    $(LOCAL_DIR)/src/linux/brk.c \
     $(LOCAL_DIR)/src/linux/cache.c \
     $(LOCAL_DIR)/src/linux/chroot.c \
     $(LOCAL_DIR)/src/linux/flock.c \
     $(LOCAL_DIR)/src/linux/ptrace.c \
     $(LOCAL_DIR)/src/linux/quotactl.c \
-    $(LOCAL_DIR)/src/linux/sbrk.c \
     $(LOCAL_DIR)/src/linux/sethostname.c \
     $(LOCAL_DIR)/src/linux/settimeofday.c \
     $(LOCAL_DIR)/src/linux/stime.c \
@@ -353,7 +351,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/locale/uselocale.c \
     $(LOCAL_DIR)/src/locale/wcscoll.c \
     $(LOCAL_DIR)/src/locale/wcsxfrm.c \
-    $(LOCAL_DIR)/src/malloc/__brk.c \
     $(LOCAL_DIR)/src/malloc/aligned_alloc.c \
     $(LOCAL_DIR)/src/malloc/calloc.c \
     $(LOCAL_DIR)/src/malloc/expand_heap.c \

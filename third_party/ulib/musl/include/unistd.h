@@ -155,8 +155,6 @@ unsigned ualarm(unsigned, unsigned);
 #define L_SET 0
 #define L_INCR 1
 #define L_XTND 2
-int brk(void*);
-void* sbrk(intptr_t);
 pid_t vfork(void);
 int vhangup(void);
 int chroot(const char*);
