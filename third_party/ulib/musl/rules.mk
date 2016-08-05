@@ -551,9 +551,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/multibyte/wctob.c \
     $(LOCAL_DIR)/src/multibyte/wctomb.c \
     $(LOCAL_DIR)/src/network/accept.c \
-    $(LOCAL_DIR)/src/network/accept4.c \
-    $(LOCAL_DIR)/src/network/bind.c \
-    $(LOCAL_DIR)/src/network/connect.c \
     $(LOCAL_DIR)/src/network/dn_comp.c \
     $(LOCAL_DIR)/src/network/dn_expand.c \
     $(LOCAL_DIR)/src/network/dn_skipname.c \
@@ -571,13 +568,10 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/network/gethostbyname_r.c \
     $(LOCAL_DIR)/src/network/getifaddrs.c \
     $(LOCAL_DIR)/src/network/getnameinfo.c \
-    $(LOCAL_DIR)/src/network/getpeername.c \
     $(LOCAL_DIR)/src/network/getservbyname.c \
     $(LOCAL_DIR)/src/network/getservbyname_r.c \
     $(LOCAL_DIR)/src/network/getservbyport.c \
     $(LOCAL_DIR)/src/network/getservbyport_r.c \
-    $(LOCAL_DIR)/src/network/getsockname.c \
-    $(LOCAL_DIR)/src/network/getsockopt.c \
     $(LOCAL_DIR)/src/network/h_errno.c \
     $(LOCAL_DIR)/src/network/herror.c \
     $(LOCAL_DIR)/src/network/hstrerror.c \
@@ -595,7 +589,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/network/inet_ntoa.c \
     $(LOCAL_DIR)/src/network/inet_ntop.c \
     $(LOCAL_DIR)/src/network/inet_pton.c \
-    $(LOCAL_DIR)/src/network/listen.c \
     $(LOCAL_DIR)/src/network/lookup_ipliteral.c \
     $(LOCAL_DIR)/src/network/lookup_name.c \
     $(LOCAL_DIR)/src/network/lookup_serv.c \
@@ -606,9 +599,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/network/ntohs.c \
     $(LOCAL_DIR)/src/network/proto.c \
     $(LOCAL_DIR)/src/network/recv.c \
-    $(LOCAL_DIR)/src/network/recvfrom.c \
-    $(LOCAL_DIR)/src/network/recvmmsg.c \
-    $(LOCAL_DIR)/src/network/recvmsg.c \
     $(LOCAL_DIR)/src/network/res_init.c \
     $(LOCAL_DIR)/src/network/res_mkquery.c \
     $(LOCAL_DIR)/src/network/res_msend.c \
@@ -618,15 +608,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/network/res_state.c \
     $(LOCAL_DIR)/src/network/resolvconf.c \
     $(LOCAL_DIR)/src/network/send.c \
-    $(LOCAL_DIR)/src/network/sendmmsg.c \
-    $(LOCAL_DIR)/src/network/sendmsg.c \
-    $(LOCAL_DIR)/src/network/sendto.c \
     $(LOCAL_DIR)/src/network/serv.c \
-    $(LOCAL_DIR)/src/network/setsockopt.c \
-    $(LOCAL_DIR)/src/network/shutdown.c \
-    $(LOCAL_DIR)/src/network/sockatmark.c \
-    $(LOCAL_DIR)/src/network/socket.c \
-    $(LOCAL_DIR)/src/network/socketpair.c \
     $(LOCAL_DIR)/src/passwd/fgetgrent.c \
     $(LOCAL_DIR)/src/passwd/fgetpwent.c \
     $(LOCAL_DIR)/src/passwd/fgetspent.c \
@@ -1277,6 +1259,7 @@ MODULE_SO_INSTALL_NAME := lib/$(USER_SHARED_INTERP)
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/stubs/iostubs.c \
+    $(LOCAL_DIR)/stubs/socketstubs.c \
     $(LOCAL_DIR)/ldso/dlstart.c \
     $(LOCAL_DIR)/ldso/dynlink.c
 

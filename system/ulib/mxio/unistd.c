@@ -38,6 +38,8 @@
 #include "private.h"
 #include "unistd.h"
 
+static_assert(MXIO_FLAG_CLOEXEC == FD_CLOEXEC, "Unexpected mxio flags value");
+
 #define MXDEBUG 0
 
 // non-thread-safe emulation of unistd io functions
@@ -573,7 +575,8 @@ int fcntl(int fd, int cmd, ...) {
         }
         GET_INT_ARG(flags);
         // TODO(kulakowski) Implement CLOEXEC.
-        io->flags = (int)(flags & MXIO_FD_FLAGS);
+        io->flags &= ~MXIO_FD_FLAGS;
+        io->flags |= (int32_t)flags & MXIO_FD_FLAGS;
         mxio_release(io);
         return 0;
     }

@@ -16,6 +16,7 @@
 
 #include <magenta/types.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #include <runtime/mutex.h>
 #include <system/atomic.h>
@@ -45,9 +46,13 @@ typedef struct mxio_ops {
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 } mxio_ops_t;
 
-// For now, mxio_t.flags is only used to track the as-yet-unimplement
-// FD_CLOEXEC state.
-#define MXIO_FD_FLAGS ((int32_t)FD_CLOEXEC)
+// mxio_t flags
+#define MXIO_FLAG_CLOEXEC ((int32_t)1 << 0)
+#define MXIO_FLAG_SOCKET ((int32_t)1 << 1)
+
+// The subset of mxio_t per-fd flags queryable via fcntl.
+// Static assertions in unistd.c ensure we aren't colliding.
+#define MXIO_FD_FLAGS MXIO_FLAG_CLOEXEC
 
 typedef struct mxio {
     mxio_ops_t* ops;

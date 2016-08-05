@@ -26,6 +26,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/pipe.c \
     $(LOCAL_DIR)/remoteio.c \
+    $(LOCAL_DIR)/socket.c \
     $(LOCAL_DIR)/unistd.c \
     $(LOCAL_DIR)/startup-handles.c \
     $(LOCAL_DIR)/stubs.c \
