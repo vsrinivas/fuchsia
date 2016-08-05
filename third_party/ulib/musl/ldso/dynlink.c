@@ -481,15 +481,12 @@ static void* choose_load_address(size_t span) {
     // vm_map requires some vm_object handle, so create a dummy one.
     mx_handle_t vmo = mx_vm_object_create(0);
 
-    mx_handle_t current_proc_handle = 0; /* TODO: get from TLS */
-
     // Do a mapping to let the kernel choose an address range.
     // TODO(MG-161): This really ought to be a no-access mapping (PROT_NONE
     // in POSIX terms).  But the kernel currently doesn't allow that, so do
     // a read-only mapping.
     uintptr_t base;
-    mx_status_t status = mx_process_vm_map(current_proc_handle,
-                                           vmo, 0, span, &base,
+    mx_status_t status = mx_process_vm_map(libc.proc, vmo, 0, span, &base,
                                            MX_VM_FLAG_PERM_READ);
     mx_handle_close(vmo);
     if (status < 0) {
@@ -507,7 +504,7 @@ static void* choose_load_address(size_t span) {
     // That is, in the general case of dlopen when there are multiple
     // threads, it's racy.  For the startup case (or any time when there
     // is only one thread), it's fine.
-    status = mx_process_vm_unmap(current_proc_handle, base, 0);
+    status = mx_process_vm_unmap(libc.proc, base, 0);
     if (status < 0) {
         error("vm_unmap failed on reservation %#" PRIxPTR "+%zu: %d\n",
                 base, span, status);
@@ -532,8 +529,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     size_t dyn = 0;
     size_t tls_image = 0;
     size_t i;
-
-    mx_handle_t current_proc_handle = 0; /* TODO: get from TLS */
 
     ssize_t l = mx_vm_object_read(vmo, buf, 0, sizeof buf);
     eh = buf;
@@ -660,9 +655,8 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
 #endif
-        mx_status_t status = mx_process_vm_map(current_proc_handle,
-                                               map_vmo, off_start, map_size,
-                                               &mapaddr, mx_flags);
+        mx_status_t status = mx_process_vm_map(libc.proc, map_vmo, off_start,
+                                               map_size, &mapaddr, mx_flags);
         if (status < 0) {
         mx_error:
             // TODO(mcgrathr): Perhaps this should translate the kernel
@@ -685,8 +679,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                     goto mx_error;
                 }
                 uintptr_t bss_mapaddr = pgbrk;
-                status = mx_process_vm_map(current_proc_handle,
-                                           bss_vmo, 0, bss_len,
+                status = mx_process_vm_map(libc.proc, bss_vmo, 0, bss_len,
                                            &bss_mapaddr, mx_flags);
                 mx_handle_close(bss_vmo);
                 if (status < 0)
@@ -1498,6 +1491,10 @@ dl_start_return_t __dls3(void* start_arg) {
                       handles[i], logger);
             }
             logger = handles[i];
+            break;
+        case MX_HND_TYPE_PROC_SELF:
+            if (0) // TODO(mcgrathr): later
+                libc.proc = handles[i];
             break;
         default:
             mx_handle_close(handles[i]);

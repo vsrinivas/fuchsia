@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <magenta/types.h>
+
 struct __locale_map;
 
 struct __locale_struct {
@@ -21,6 +23,7 @@ struct __libc {
     int threaded;
     int secure;
     size_t* auxv;
+    mx_handle_t proc;
     struct tls_module* tls_head;
     size_t tls_size, tls_align, tls_cnt;
     size_t page_size;

@@ -2,6 +2,7 @@
 #include <elf.h>
 #include <string.h>
 
+#include <magenta/syscalls.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
 
@@ -100,6 +101,22 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* arg) {
     if (status != NO_ERROR) {
         argc = 0;
         argv = envp = NULL;
+    }
+
+    // Find our own process handle in what we were given.
+    for (uint32_t i = 0; i < nhandles; ++i) {
+        if (MX_HND_INFO_TYPE(handle_info[i]) == MX_HND_TYPE_PROC_SELF) {
+            // The handle will have been installed already by dynamic
+            // linker startup, but now we have another one.  They
+            // should of course be handles to the same process, but
+            // just for cleanliness switch to the "main" one.
+            if (libc.proc != MX_HANDLE_INVALID)
+                mx_handle_close(libc.proc);
+            if (0) // TODO(mcgrathr): later
+                libc.proc = handles[i];
+            handles[i] = MX_HANDLE_INVALID;
+            handle_info[i] = 0;
+        }
     }
 
     __mxr_thread_main();

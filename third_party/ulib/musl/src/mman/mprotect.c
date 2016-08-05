@@ -10,7 +10,6 @@ weak_alias(dummy, __vm_wait);
 int __mprotect(void* addr, size_t len, int prot) {
     __vm_wait();
 
-    mx_handle_t current_proc_handle = 0; /* TODO: get from TLS */
     uintptr_t ptr = (uintptr_t)addr;
     /* NOTE: this currently changes protect on the entire region that addr was
      * mapped into. magenta does not yet support changing protection on partial
@@ -20,7 +19,7 @@ int __mprotect(void* addr, size_t len, int prot) {
     mx_prot |= (prot & PROT_READ) ? MX_VM_FLAG_PERM_READ : 0;
     mx_prot |= (prot & PROT_WRITE) ? MX_VM_FLAG_PERM_WRITE : 0;
     mx_prot |= (prot & PROT_EXEC) ? MX_VM_FLAG_PERM_EXECUTE : 0;
-    mx_status_t status = mx_process_vm_protect(current_proc_handle, ptr, 0, mx_prot);
+    mx_status_t status = mx_process_vm_protect(libc.proc, ptr, 0, mx_prot);
     if (!status) return 0;
 
     switch (status) {

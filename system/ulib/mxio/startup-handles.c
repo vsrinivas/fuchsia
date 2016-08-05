@@ -27,6 +27,7 @@ static void shave_front(void) {
            startup_handles[0] == MX_HANDLE_INVALID) {
         --startup_handles_num;
         ++startup_handles;
+        ++startup_handles_info;
     }
 }
 
