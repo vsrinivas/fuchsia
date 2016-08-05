@@ -155,7 +155,7 @@ void apic_io_init(
         apic->version = IO_APIC_VER_VERSION(ver);
         apic->max_redirection_entry = IO_APIC_VER_MAX_REDIR_ENTRY(ver);
         LTRACEF("Found an IO APIC at phys %p, virt %p: ver %08x\n", (void *)paddr, vaddr, ver);
-        if (apic->max_redirection_entry >= IO_APIC_NUM_REDIRECTIONS - 1) {
+        if (apic->max_redirection_entry > IO_APIC_NUM_REDIRECTIONS - 1) {
             TRACEF("IO APIC supports more redirections than kernel: %08x\n",
                    ver);
             apic->max_redirection_entry = IO_APIC_NUM_REDIRECTIONS - 1;
