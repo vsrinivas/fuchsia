@@ -80,8 +80,10 @@ std::string SimplifyPath(std::string path) {
     size_t next_component_start = next_separator + 1;
     ++next_separator;
     size_t component_size = next_component_start - component_start;
-    if (put != component_start && component_size > 0)
-      path.copy(&path[put], component_size, component_start);
+    if (put != component_start && component_size > 0) {
+      path.replace(put, component_size,
+                   path.substr(component_start, component_size));
+    }
     put += component_size;
     get = next_component_start;
     component_start = next_component_start;
@@ -104,8 +106,10 @@ std::string SimplifyPath(std::string path) {
     }
   } else {
     // Otherwise, we need to copy over the last component.
-    if (put != component_start && last_component_size > 0)
-      path.copy(&path[put], last_component_size, component_start);
+    if (put != component_start && last_component_size > 0) {
+      path.replace(put, last_component_size,
+                   path.substr(component_start, last_component_size));
+    }
     put += last_component_size;
   }
 
