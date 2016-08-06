@@ -3,6 +3,7 @@
 
 /* necessary stuff to transplant crc32 and adler32 from zlib */
 #include <inttypes.h>
+#include <stddef.h>
 #include <sys/types.h>
 
 typedef ulong uLong;
