@@ -253,10 +253,13 @@ SYSROOT_DEPS += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
 GENERATED += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
 
 # copy crt*.o files to the sysroot
+# crt1.o is temporary as we'll stop supporting fully static linking
 SYSROOT_CRT1 := $(BUILDDIR)/sysroot/lib/crt1.o
 $(call copy-dst-src,$(SYSROOT_CRT1),$(USER_CRT1_OBJ))
-SYSROOT_DEPS += $(SYSROOT_CRT1)
-GENERATED += $(SYSROOT_CRT1)
+SYSROOT_SCRT1 := $(BUILDDIR)/sysroot/lib/Scrt1.o
+$(call copy-dst-src,$(SYSROOT_SCRT1),$(USER_CRT1_OBJ))
+SYSROOT_DEPS += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
+GENERATED += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
 
 # generate empty compatibility libs
 $(BUILDDIR)/sysroot/lib/libm.a::
