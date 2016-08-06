@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <mxio/util.h>
+
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -26,7 +29,7 @@
 
 // 8K is the max io size of the mxio layer right now
 
-static mx_handle_t load_object(const char* fn) {
+static mx_handle_t default_load_object(void* ignored, const char* fn) {
     char buffer[8192];
     char path[PATH_MAX];
     mx_handle_t vmo = 0;
@@ -76,8 +79,19 @@ fail:
     return err;
 }
 
+struct startup {
+    mxio_loader_service_function_t loader;
+    void* loader_arg;
+    mx_handle_t pipe_handle;
+};
+
 static int loader_service_thread(void* arg) {
-    mx_handle_t h = (mx_handle_t) (uintptr_t) arg;
+    struct startup* startup = arg;
+    mx_handle_t h = startup->pipe_handle;
+    mxio_loader_service_function_t loader = startup->loader;
+    void* loader_arg = startup->loader_arg;
+    free(startup);
+
     uint8_t data[1024];
     mx_loader_svc_msg_t* msg = (void*) data;
     mx_status_t r;
@@ -109,7 +123,7 @@ static int loader_service_thread(void* arg) {
         mx_handle_t handle = MX_HANDLE_INVALID;
         switch (msg->opcode) {
         case LOADER_SVC_OP_LOAD_OBJECT:
-            handle = load_object((const char*) msg->data);
+            handle = (*loader)(loader_arg, (const char*) msg->data);
             msg->arg = handle < 0 ? handle : NO_ERROR;
             break;
         case LOADER_SVC_OP_DEBUG_PRINT:
@@ -139,19 +153,35 @@ done:
     return 0;
 }
 
-mx_handle_t mxio_loader_service(void) {
+mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
+                                void* loader_arg) {
+    if (loader == NULL) {
+        loader = &default_load_object;
+        loader_arg = NULL;
+    }
+
+    struct startup *startup = malloc(sizeof(*startup));
+    if (startup == NULL)
+        return ERR_NO_MEMORY;
+
     mx_handle_t h[2];
     mx_status_t r;
 
     if ((r = mx_message_pipe_create(h, 0)) < 0) {
+        free(startup);
         return r;
     }
 
+    startup->pipe_handle = h[1];
+    startup->loader = loader;
+    startup->loader_arg = loader_arg;
+
     mxr_thread_t* t;
-    if ((r = mxr_thread_create(loader_service_thread, (void*) (uintptr_t) h[1],
+    if ((r = mxr_thread_create(loader_service_thread, startup,
                                "loader-service", &t)) < 0) {
         mx_handle_close(h[0]);
         mx_handle_close(h[1]);
+        free(startup);
         return r;
     }
 

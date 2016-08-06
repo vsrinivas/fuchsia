@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
     if (send_loader_message) {
         bool already_sending = launchpad_send_loader_message(lp, true);
         if (!already_sending) {
-            mx_handle_t loader_svc = mxio_loader_service();
+            mx_handle_t loader_svc = mxio_loader_service(NULL, NULL);
             check("mxio_loader_service", loader_svc);
             mx_handle_t old = launchpad_use_loader_service(lp, loader_svc);
             check("launchpad_use_loader_service", old);
@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
     }
 
     if (pass_loader_handle) {
-        mx_handle_t loader_svc = mxio_loader_service();
+        mx_handle_t loader_svc = mxio_loader_service(NULL, NULL);
         check("mxio_loader_service", loader_svc);
         status = launchpad_add_handle(lp, loader_svc, MX_HND_TYPE_LOADER_SVC);
         check("launchpad_add_handle", status);

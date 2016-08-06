@@ -317,7 +317,7 @@ static mx_status_t setup_loader_svc(launchpad_t* lp) {
     // TODO(mcgrathr): In the long run, this will use some long-running
     // service set up elsewhere and inherited.  For now, just spin up
     // a background thread to implement a dumb service locally.
-    mx_handle_t loader_svc = mxio_loader_service();
+    mx_handle_t loader_svc = mxio_loader_service(NULL, NULL);
     if (loader_svc < 0)
         return loader_svc;
 

@@ -1636,6 +1636,15 @@ void* dlopen_vmo(mx_handle_t vmo, int mode) {
     return dlopen_internal(vmo, NULL, mode);
 }
 
+mx_handle_t dl_set_loader_service(mx_handle_t new_svc) {
+    mx_handle_t old_svc;
+    pthread_rwlock_wrlock(&lock);
+    old_svc = loader_svc;
+    loader_svc = new_svc;
+    pthread_rwlock_unlock(&lock);
+    return old_svc;
+}
+
 __attribute__((__visibility__("hidden"))) int __dl_invalid_handle(void* h) {
     struct dso* p;
     for (p = head; p; p = p->next)

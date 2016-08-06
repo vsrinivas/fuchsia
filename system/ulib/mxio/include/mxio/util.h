@@ -57,9 +57,18 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
 // entire log-lines and flush them on newline or buffer full.
 mxio_t* mxio_logger_create(mx_handle_t);
 
-// Start a thread to resolve loader service requests
-// and return a message pipe handle to talk to said service
-mx_handle_t mxio_loader_service(void);
+// Type of the hook for mxio_loader_service.  The first argument is
+// the one passed to mxio_loader_service, and the second is the file
+// name passed to dlopen or found in a DT_NEEDED entry.
+typedef mx_handle_t (*mxio_loader_service_function_t)(void* loader_arg,
+                                                      const char* file);
+
+// Start a thread to resolve loader service requests and return a
+// message pipe handle to talk to said service.  If the function
+// passed is NULL, a default implementation that reads from the
+// filesystem is used.
+mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
+                                void* loader_arg);
 
 // Examine the set of handles received at process startup for one matching
 // the given id.  If one is found, return it and remove it from the set
