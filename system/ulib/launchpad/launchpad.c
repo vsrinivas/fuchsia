@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/param.h>
+#include <threads.h>
 
 enum special_handles {
     HND_LOADER_SVC,
@@ -46,6 +47,7 @@ struct launchpad {
     size_t handle_alloc;
 
     mx_vaddr_t entry;
+    mx_vaddr_t vdso_base;
 
     mx_handle_t special_handles[HND_SPECIAL_COUNT];
     bool loader_message;
@@ -267,9 +269,6 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
         status = elf_load_finish(lp_proc(lp), elf, vmo, base, entry);
     elf_load_destroy(elf);
 
-    if (status == NO_ERROR)
-        mx_handle_close(vmo);
-
     return status;
 }
 
@@ -403,6 +402,63 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
         }
         elf_load_destroy(elf);
     }
+    return status;
+}
+
+static mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
+static mtx_t vdso_mutex;
+static void vdso_mutex_init(void) {
+    mtx_init(&vdso_mutex, mtx_plain);
+}
+static void vdso_lock(void) {
+    static once_flag once = ONCE_FLAG_INIT;
+    call_once(&once, &vdso_mutex_init);
+    mtx_lock(&vdso_mutex);
+}
+static void vdso_unlock(void) {
+    mtx_unlock(&vdso_mutex);
+}
+static mx_handle_t vdso_get_vmo(void) {
+    if (vdso_vmo == MX_HANDLE_INVALID)
+        vdso_vmo = mxio_get_startup_handle(
+            MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));
+    return vdso_vmo;
+}
+
+mx_handle_t launchpad_get_vdso_vmo(void) {
+    vdso_lock();
+    mx_handle_t result = mx_handle_duplicate(vdso_get_vmo(),
+                                             MX_RIGHT_SAME_RIGHTS);
+    vdso_unlock();
+    return result;
+}
+
+mx_handle_t launchpad_set_vdso_vmo(mx_handle_t new_vdso_vmo) {
+    vdso_lock();
+    mx_handle_t old = vdso_vmo;
+    vdso_vmo = new_vdso_vmo;
+    vdso_unlock();
+    return old;
+}
+
+mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp) {
+    mx_handle_t vdso = launchpad_get_vdso_vmo();
+    if (vdso < 0)
+        return vdso;
+    mx_status_t status = launchpad_add_handle(
+        lp, vdso, MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));
+    if (status != NO_ERROR)
+        mx_handle_close(vdso);
+    return status;
+}
+
+mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo) {
+    if (vmo != MX_HANDLE_INVALID)
+        return launchpad_elf_load_extra(lp, vmo, &lp->vdso_base, NULL);
+    vdso_lock();
+    mx_status_t status = launchpad_elf_load_extra(lp, vdso_get_vmo(),
+                                                  &lp->vdso_base, NULL);
+    vdso_unlock();
     return status;
 }
 
@@ -608,6 +664,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         for (size_t i = 0; i < lp->handle_count; ++i)
             lp->handles[i] = MX_HANDLE_INVALID;
         lp->handle_count = 0;
+        // TODO(mcgrathr): Pass in vdso_base somehow.
         status = mx_process_start(proc, child_bootstrap, lp->entry);
     }
     // process_start consumed child_bootstrap if successful.

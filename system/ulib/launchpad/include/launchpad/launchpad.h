@@ -89,9 +89,10 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo);
 mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo);
 
 // Load an extra ELF file image into the process.  This is similar
-// to launchpad_elf_load_basic, but it does not affect the state of
-// the launchpad's send_loader_message flag and does not set the
-// entrypoint returned by launchpad_get_entry_address and used by
+// to launchpad_elf_load_basic, but it does not consume the VM
+// object handle, does affect the state of the launchpad's
+// send_loader_message flag, and does not set the entrypoint
+// returned by launchpad_get_entry_address and used by
 // launchpad_start.  Instead, if base is not NULL, it's filled with
 // the address at which the image was loaded; if entry is not NULL,
 // it's filled with the image's entrypoint address.
@@ -122,6 +123,38 @@ bool launchpad_send_loader_message(launchpad_t* lp, bool do_send);
 // that handle (after using it to look up the PT_INTERP string).
 mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc);
 
+// This duplicates the globally-held VM object handle for the system
+// vDSO.  The return value is that of mx_handle_duplicate.  If
+// launchpad_set_vdso_vmo has been called with a valid handle, this
+// just duplicates the handle passed in the last call.  Otherwise,
+// the first time the system vDSO is needed it's fetched with
+// mxio_get_startup_handle.
+mx_handle_t launchpad_get_vdso_vmo(void);
+
+// Replace the globally-held VM object handle for the system vDSO.
+// This takes ownership of the given handle, and returns the old
+// handle, of which the caller takes ownership.  It does not check
+// the handle for validity.  If MX_HANDLE_INVALID is passed here,
+// then the next time the system vDSO is needed it will be fetched
+// with mxio_get_startup_handle as if it were the first time.  If
+// the system vDSO has not been needed before this call, then the
+// return value will be MX_HANDLE_INVALID.
+mx_handle_t launchpad_set_vdso_vmo(mx_handle_t vmo);
+
+// Add the VM object handle for the system vDSO to the launchpad, so
+// the launched process will be able to load it into its own
+// children.  This is just shorthand for launchpad_add_handle with
+// the handle returned by launchpad_get_vdso_vmo.
+mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp);
+
+// Load the system vDSO into the launchpad's nascent process.  The
+// given handle is not consumed.  If given MX_HANDLE_INVALID, this
+// uses the VM object that launchpad_get_vdso_vmo would return
+// instead.  This just calls launchpad_elf_load_extra to do the
+// loading, and records the vDSO's base address for launchpad_start
+// to pass to the new process's initial thread.
+mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo);
+
 // Start the process running.  If the send_loader_message flag is
 // set and this succeeds in sending the initial bootstrap message,
 // it clears the loader-service handle.  If this succeeds in sending
@@ -138,9 +171,10 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc);
 mx_handle_t launchpad_start(launchpad_t* lp);
 
 // Convenience interface for launching a process in one call with
-// minimal arguments and handles.  This just calls launchpad_create,
-// launchpad_elf_load, launchpad_arguments, launchpad_environ,
-// launchpad_add_handles, launchpad_start, launchpad_destroy.
+// minimal arguments and handles.  This just calls the functions
+// launchpad_create, launchpad_elf_load, launchpad_load_vdso,
+// launchpad_arguments, launchpad_environ, launchpad_add_handles,
+// launchpad_start, launchpad_destroy.
 //
 // Returns the process handle on success, giving ownership to the
 // caller; or an error code on failure.
@@ -150,11 +184,13 @@ mx_handle_t launchpad_launch(const char* name,
                              size_t hnds_count, mx_handle_t* handles,
                              uint32_t* ids);
 
-// Convenience interface for launching a process in one call with details
-// inherited from the calling process (environment variables, mxio root,
-// and mxio file descriptors).  This just calls launchpad_create,
-// launchpad_elf_load, launchpad_arguments, launchpad_clone_mxio_root,
-// launchpad_clone_fd, launchpad_start, launchpad_destroy.
+// Convenience interface for launching a process in one call with
+// details inherited from the calling process (environment
+// variables, mxio root, and mxio file descriptors).  This just
+// calls the functions launchpad_create, launchpad_elf_load,
+// launchpad_load_vdso, launchpad_arguments, launchpad_add_vdso_vmo,
+// launchpad_clone_mxio_root, launchpad_clone_fd, launchpad_start,
+// launchpad_destroy.
 //
 // Returns the process handle on success, giving ownership to the
 // caller; or an error code on failure.

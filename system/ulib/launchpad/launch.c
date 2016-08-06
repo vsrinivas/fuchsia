@@ -31,6 +31,8 @@ mx_handle_t launchpad_launch(const char* name,
     if (status == NO_ERROR) {
         status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
         if (status == NO_ERROR)
+            status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
+        if (status == NO_ERROR)
             status = launchpad_arguments(lp, argc, argv);
         if (status == NO_ERROR)
             status = launchpad_environ(lp, envp);
