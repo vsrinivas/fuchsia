@@ -1,7 +1,9 @@
 #pragma once
 
 #include <limits.h>
+#include <magenta/types.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -21,7 +23,8 @@ struct tls_module {
 
 struct __libc {
     int secure;
-    size_t* auxv;
+    uintptr_t stack_base;
+    size_t stack_size;
     mx_handle_t proc;
     struct tls_module* tls_head;
     size_t tls_size, tls_align, tls_cnt;

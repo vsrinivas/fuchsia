@@ -55,7 +55,8 @@ void __libc_extensions_init(uint32_t handle_count,
 // with arg before things start
 void* __libc_intercept_arg(void*) __attribute__((weak));
 
-_Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* arg) {
+_Noreturn void __libc_start_main(int (*main)(int, char**, char**),
+                                 uintptr_t stack_end, void* arg) {
     if (&__libc_intercept_arg != NULL)
         arg = __libc_intercept_arg(arg);
 
@@ -103,9 +104,10 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* arg) {
         argv = envp = NULL;
     }
 
-    // Find our own process handle in what we were given.
+    // Find the handles we're interested in among what we were given.
     for (uint32_t i = 0; i < nhandles; ++i) {
-        if (MX_HND_INFO_TYPE(handle_info[i]) == MX_HND_TYPE_PROC_SELF) {
+        switch (MX_HND_INFO_TYPE(handle_info[i])) {
+        case MX_HND_TYPE_PROC_SELF:
             // The handle will have been installed already by dynamic
             // linker startup, but now we have another one.  They
             // should of course be handles to the same process, but
@@ -116,6 +118,26 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* arg) {
                 libc.proc = handles[i];
             handles[i] = MX_HANDLE_INVALID;
             handle_info[i] = 0;
+            break;
+
+        case MX_HND_TYPE_STACK_VMO:;
+            // Assume stack grows down.  The protocol is that our
+            // creator mapped the entire stack VMO and then passed
+            // us the handle.  We know the top of the stack from the
+            // entry point code.  From the VMO we can find the size.
+            // We assume (per protocol) that the whole thing is
+            // mapped.  Thus we know the bounds of our stack.
+            uint64_t stack_vmo_size;
+            status = mx_vm_object_get_size(handles[i], &stack_vmo_size);
+            if (status == NO_ERROR) {
+                libc.stack_size = stack_vmo_size;
+                libc.stack_base = stack_end - libc.stack_size;
+            }
+            // TODO(mcgrathr): Perhaps we should stash this handle
+            // somewhere, or close it?  For now we don't have anything
+            // else we want it for but maybe there will be something.
+            // So leave it to be collected.
+            break;
         }
     }
 

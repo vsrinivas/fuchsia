@@ -6,14 +6,16 @@ LOCAL_COMPILEFLAGS := \
     -I$(LOCAL_DIR)/third_party/include \
 
 ifeq ($(ARCH),arm64)
-LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/aarch64
+MUSL_ARCH := aarch64
 else ifeq ($(ARCH),arm)
-LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/arm
+MUSL_ARCH := arm
 else ifeq ($(SUBARCH),x86-64)
-LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/x86_64
+MUSL_ARCH := x86_64
 else
 $(error Unsupported architecture $(ARCH) for musl build!)
 endif
+
+LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/$(MUSL_ARCH)
 
 # The following are, more or less, from the upstream musl build.  The
 # _XOPEN_SOURCE value in particular is taken from there, and is
@@ -1277,11 +1279,11 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
 
-MODULE_SRCS := $(LOCAL_DIR)/crt/crt1.c
+MODULE_SRCS := $(LOCAL_DIR)/arch/$(MUSL_ARCH)/crt1.S
 
 # where our object files will end up
 LOCAL_OUT := $(BUILDDIR)/ulib/musl-crt/$(LOCAL_DIR)
-LOCAL_CRT1_OBJ := $(LOCAL_OUT)/crt/crt1.c.o
+LOCAL_CRT1_OBJ := $(LOCAL_OUT)/arch/$(MUSL_ARCH)/crt1.S.o
 
 # install it globally
 $(call copy-dst-src,$(USER_CRT1_OBJ),$(LOCAL_CRT1_OBJ))
