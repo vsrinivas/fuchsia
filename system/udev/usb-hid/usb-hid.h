@@ -47,7 +47,7 @@ typedef struct {
     size_t hid_report_desc_len;
     uint8_t* hid_report_desc;
 
-#define HID_MAX_REPORT_IDS 4
+#define HID_MAX_REPORT_IDS 16
     size_t num_reports;
     hid_report_size_t sizes[HID_MAX_REPORT_IDS];
 
