@@ -24,7 +24,7 @@ class CondVar final {
   ~CondVar();
 
   // Atomically releases |*mutex| (which must be held) and blocks on this
-  // condition variable, unlocking and reacquiring |*mutex| when:
+  // condition variable, unblocking and reacquiring |*mutex| when:
   //   * |SignalAll()| is called,
   //   * |Signal()| is called and this thread is scheduled to be the next to be
   //     unblocked, or

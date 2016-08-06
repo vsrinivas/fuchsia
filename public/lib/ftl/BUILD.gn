@@ -50,6 +50,8 @@ static_library("ftl") {
     "strings/utf_codecs.h",
     "synchronization/cond_var.cc",
     "synchronization/cond_var.h",
+    "synchronization/monitor.cc",
+    "synchronization/monitor.h",
     "synchronization/mutex.cc",
     "synchronization/mutex.h",
     "synchronization/sleep.cc",
