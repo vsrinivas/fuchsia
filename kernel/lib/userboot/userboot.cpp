@@ -269,6 +269,14 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (status < 0)
         return status;
     uintptr_t entry = userboot_base + USERBOOT_ENTRY;
+    // TODO(mcgrathr): The rodso-code.sh script uses nm, which lies
+    // about the actual ELF symbol values when they are Thumb function
+    // symbols with the low bit set (it clears the low bit in what it
+    // displays).  We assume that if the kernel is built as Thumb,
+    // userboot's entry point will be too, and Thumbify it.
+#ifdef __thumb__
+    entry |= 1;
+#endif
 
     // Map the vDSO image immediately after the userboot image, where the
     // userboot code expects to find it.  We assume that ASLR won't have
