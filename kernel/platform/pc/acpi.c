@@ -20,7 +20,7 @@
 
 #define LOCAL_TRACE 0
 
-#define ACPI_MAX_INIT_TABLES 16
+#define ACPI_MAX_INIT_TABLES 32
 static ACPI_TABLE_DESC acpi_tables[ACPI_MAX_INIT_TABLES];
 static bool acpi_initialized = false;
 
