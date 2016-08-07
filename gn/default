@@ -4,8 +4,10 @@
         "dart",
         "fortune",
         "ftl",
+        "leveldb",
         "mojo",
         "mtl",
+        "re2",
         "wpa_supplicant"
     ]
 }
