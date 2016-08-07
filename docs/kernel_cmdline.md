@@ -13,7 +13,7 @@ The kernel commandline is passed from the kernel to the userboot process
 and the device manager, so some of the options described below apply to
 those userspace processes, not the kernel itself.
 
-## early-gfxconsole
+## gfxconsole.early=<bool>
 
 This option (enabled by default) requests that the kernel start a graphics
 console during early boot (if possible), to display kernel debug print

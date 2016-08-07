@@ -92,6 +92,8 @@ uint32_t bootloader_fb_window_size;
 static uint32_t bootloader_ramdisk_base;
 static uint32_t bootloader_ramdisk_size;
 
+static bool early_console_disabled;
+
 /* This is a temporary extension to the "zero page" protcol, making use
  * of obsolete fields to pass some additional data from bootloader to
  * kernel in a way that would to badly interact with a Linux kernel booting
@@ -164,7 +166,8 @@ void platform_early_display_init(void) {
     if (bootloader_fb_base == 0) {
         return;
     }
-    if (cmdline_get_bool("early-gfxconsole", true) == false) {
+    if (cmdline_get_bool("gfxconsole.early", true) == false) {
+        early_console_disabled = true;
         return;
     }
 
@@ -192,7 +195,7 @@ static void platform_ensure_display_memtype(uint level)
     if (bootloader_fb_base == 0) {
         return;
     }
-    if (cmdline_get_bool("early-gfxconsole", true) == false) {
+    if (early_console_disabled) {
         return;
     }
     struct display_info info;
@@ -425,8 +428,10 @@ void platform_init(void)
 
     platform_init_acpi();
 
-    // detach the early console - pcie init may move it
-    gfxconsole_bind_display(NULL, NULL);
+    if (!early_console_disabled) {
+        // detach the early console - pcie init may move it
+        gfxconsole_bind_display(NULL, NULL);
+    }
 
     platform_init_pcie();
 }
