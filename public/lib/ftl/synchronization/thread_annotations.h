@@ -27,6 +27,9 @@
 
 #define FTL_PT_GUARDED_BY(x) FTL_THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
 
+#define FTL_ACQUIRE(...) \
+  FTL_THREAD_ANNOTATION_ATTRIBUTE__(acquire_capability(__VA_ARGS__))
+
 #define FTL_ACQUIRED_AFTER(...) \
   FTL_THREAD_ANNOTATION_ATTRIBUTE__(acquired_after(__VA_ARGS__))
 

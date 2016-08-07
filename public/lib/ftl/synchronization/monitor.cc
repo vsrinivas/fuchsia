@@ -37,7 +37,7 @@ MonitorLocker::~MonitorLocker() {
   monitor_->Exit();
 }
 
-void MonitorLocker::Wait() {
+void MonitorLocker::Wait() FTL_NO_THREAD_SAFETY_ANALYSIS {
   monitor_->Wait();
 }
 

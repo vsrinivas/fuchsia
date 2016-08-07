@@ -31,11 +31,11 @@ class Monitor {
   // Gain exclusive access to the monitor. Rather than calling this function
   // directly, consider using |MonitorLocker| to ensure that you call |Exit| to
   // give up exclusive access to the monitor.
-  void Enter();
+  void Enter() FTL_ACQUIRE(mutex_);
 
   // Give up excusive access to the monitor. Rather than calling this function
   // directly, consider using |MonitorLocker| to pair this call with |Enter|.
-  void Exit();
+  void Exit() FTL_UNLOCK_FUNCTION(mutex_);
 
   // Signal that the condition associated with the monitor has occurred. This
   // function will wake up one thread that is waiting on the monitor in |Wait|.
@@ -46,7 +46,7 @@ class Monitor {
   //
   // The thread calling this function must already have entered the monitor,
   // either via |Enter| or by way of a |MonitorLocker|.
-  void Wait();
+  void Wait() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
  private:
   CondVar cv_;
