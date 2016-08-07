@@ -31,6 +31,8 @@
 
 #define MXDEBUG 0
 
+#define WITH_REPLY_PIPE 1
+
 typedef struct mx_rio mx_rio_t;
 struct mx_rio {
     // base mxio io object
@@ -111,6 +113,18 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
         return ERR_INVALID_ARGS;
     }
 
+    mx_handle_t rh = h;
+#if WITH_REPLY_PIPE
+    if (msg.op & MX_RIO_REPLY_PIPE) {
+        if (msg.hcount == 0) {
+            discard_handles(msg.handle, msg.hcount);
+            return ERR_INVALID_ARGS;
+        }
+        msg.hcount--;
+        rh = msg.handle[msg.hcount];
+    }
+#endif
+
     bool is_close = (MX_RIO_OP(msg.op) == MX_RIO_CLOSE);
 
     xprintf("handle_rio: op=%s arg=%d len=%u hsz=%d\n",
@@ -130,8 +144,18 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
         msg.arg = (msg.arg < 0) ? msg.arg : ERR_FAULT;
     }
 
+#if WITH_REPLY_PIPE
+    // The kernel requires that a reply pipe endpoint by
+    // returned as the last handle attached to a write
+    // to that endpoint
+    if (rh != h) {
+        msg.handle[msg.hcount++] = rh;
+    }
+#endif
     msg.op = MX_RIO_STATUS;
-    r = mx_message_write(h, &msg, MX_RIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0);
+    if ((r = mx_message_write(rh, &msg, MX_RIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0)) < 0) {
+        discard_handles(msg.handle, msg.hcount);
+    }
     if (is_close) {
         // signals to not perform a close callback
         return 1;
@@ -169,6 +193,10 @@ void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
     mx_handle_close(h);
 }
 
+#if WITH_REPLY_PIPE
+#define mx_rio_txn_locked mx_rio_txn
+#endif
+
 // on success, msg->hcount indicates number of valid handles in msg->handle
 // on error there are never any handles
 static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
@@ -179,9 +207,21 @@ static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
 
     xprintf("txn h=%x op=%d len=%u\n", rio->h, msg->op, msg->datalen);
     uint32_t dsize = MX_RIO_HDR_SZ + msg->datalen;
-    mx_handle_t rh = rio->h;
 
     mx_status_t r;
+
+#if WITH_REPLY_PIPE
+    mx_handle_t rpipe[2];
+    if ((r = mx_message_pipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
+        return r;
+    }
+    msg->op |= MX_RIO_REPLY_PIPE;
+    msg->handle[msg->hcount++] = rpipe[1];
+    mx_handle_t rh = rpipe[0];
+#else
+    mx_handle_t rh = rio->h;
+#endif
+
     if ((r = mx_message_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
         goto fail_discard_handles;
     }
@@ -193,14 +233,21 @@ static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
     }
     if ((pending.satisfied & MX_SIGNAL_PEER_CLOSED) &&
         !(pending.satisfied & MX_SIGNAL_READABLE)) {
+        mx_handle_close(rh);
         return ERR_CHANNEL_CLOSED;
     }
 
     dsize = MX_RIO_HDR_SZ + MXIO_CHUNK_SIZE;
     msg->hcount = MXIO_MAX_HANDLES + 1;
     if ((r = mx_message_read(rh, msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
-        return r;
+        goto done;
     }
+#if WITH_REPLY_PIPE
+    // the kernel ensures that the reply pipe endpoint is
+    // returned as the last handle in the attached handles
+    msg->hcount--;
+    mx_handle_close(msg->handle[msg->hcount]);
+#endif
     // check for protocol errors
     if (!is_message_reply_valid(msg, dsize) ||
         (MX_RIO_OP(msg->op) != MX_RIO_STATUS)) {
@@ -209,15 +256,22 @@ static mx_status_t mx_rio_txn_locked(mx_rio_t* rio, mx_rio_msg_t* msg) {
     }
     // check for remote error
     if ((r = msg->arg) >= 0) {
-        return r;
+        goto done;
     }
 
 fail_discard_handles:
     discard_handles(msg->handle, msg->hcount);
     msg->hcount = 0;
+done:
+#if WITH_REPLY_PIPE
+    mx_handle_close(rh);
+#endif
     return r;
 }
 
+#if WITH_REPLY_PIPE
+#undef mx_rio_txn_locked
+#else
 static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
     mx_status_t r;
     mxr_mutex_lock(&rio->lock);
@@ -225,6 +279,7 @@ static mx_status_t mx_rio_txn(mx_rio_t* rio, mx_rio_msg_t* msg) {
     mxr_mutex_unlock(&rio->lock);
     return r;
 }
+#endif
 
 static ssize_t mx_rio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
                             size_t in_len, void* out_buf, size_t out_len) {
