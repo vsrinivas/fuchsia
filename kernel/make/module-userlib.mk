@@ -31,7 +31,7 @@ $(MODULE_LIBNAME).so: _LDFLAGS := $(MODULE_LDFLAGS)
 $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
 	@$(MKDIR)
 	@echo linking userlib $@
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(_LDFLAGS)\
+	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(_LDFLAGS)\
 		-shared -soname $(_SONAME) $(_OBJS) $(_LIBS) $(LIBGCC) -o $@
 
 # Only update the .so.abi file if it's changed, so things don't need
@@ -41,7 +41,7 @@ $(MODULE_LIBNAME).abi.stamp: _SONAME := lib$(MODULE_SO_NAME).so
 $(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_LIBNAME).abi.h \
 			     scripts/shlib-symbols
 	@echo generating ABI stub $(@:.abi.stamp=.so.abi)
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) --no-gc-sections \
+	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) --no-gc-sections \
 		       -shared -soname $(_SONAME) -s \
 		       $< -o $(@:.abi.stamp=.so.abi).new
 # Sanity check that the ABI stub really matches the actual DSO.

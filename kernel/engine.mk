@@ -22,6 +22,7 @@ DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
 CLANG ?= 0
+USE_GOLD ?= false
 LKNAME ?= magenta
 
 # special rule for handling make spotless
@@ -323,6 +324,11 @@ CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
 AR := $(TOOLCHAIN_PREFIX)ar
 endif
 LD := $(TOOLCHAIN_PREFIX)ld
+ifeq ($(call TOBOOL,$(USE_GOLD)),true)
+USER_LD := $(LD).gold
+else
+USER_LD := $(LD)
+endif
 OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
 OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
 CPPFILT := $(TOOLCHAIN_PREFIX)c++filt
