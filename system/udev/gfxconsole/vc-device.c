@@ -314,6 +314,17 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     device->keymap = qwerty_map;
 
     device->font = &font9x16;
+    char* fname = getenv("gfxconsole.font");
+    if (fname) {
+        if (!strcmp(fname, "9x16")) {
+            device->font = &font9x16;
+        } else if (!strcmp(fname, "18x32")) {
+            device->font = &font18x32;
+        } else {
+            printf("gfxconsole: no such font '%s'\n", fname);
+        }
+    }
+
     device->charw = device->font->width;
     device->charh = device->font->height;
 

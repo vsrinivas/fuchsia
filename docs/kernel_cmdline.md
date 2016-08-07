@@ -23,6 +23,11 @@ graphics console driver takes over.
 The early kernel console can be slow on some platforms, so if it is not
 needed for debugging it may speed up boot to disable it.
 
+## gfxconsole.font=<name>
+
+This option asks the graphics console to use a specific font.  Currently
+only "9x16" (the default) and "18x32" (a double-size font) are supported.
+
 ## userboot=<path>
 
 This option instructs the userboot process (the first userspace process) to
