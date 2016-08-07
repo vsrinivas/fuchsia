@@ -25,7 +25,11 @@ void cmdline_init(const char* data) {
             break;
         }
         if ((c < ' ') || (c > 127)) {
-            c = '.';
+            if ((c == '\n') || (c == '\r') || (c == '\t')) {
+                c = ' ';
+            } else {
+                c = '.';
+            }
         }
         if (c == ' ') {
             // spaces become \0's, but do not double up
