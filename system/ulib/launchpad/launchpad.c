@@ -456,8 +456,14 @@ mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo) {
     if (vmo != MX_HANDLE_INVALID)
         return launchpad_elf_load_extra(lp, vmo, &lp->vdso_base, NULL);
     vdso_lock();
-    mx_status_t status = launchpad_elf_load_extra(lp, vdso_get_vmo(),
-                                                  &lp->vdso_base, NULL);
+    vmo = vdso_get_vmo();
+    mx_status_t status;
+    if (vmo != MX_HANDLE_INVALID) {
+        status = launchpad_elf_load_extra(lp, vdso_get_vmo(),
+                                          &lp->vdso_base, NULL);
+    } else {
+        status = NO_ERROR;
+    }
     vdso_unlock();
     return status;
 }
