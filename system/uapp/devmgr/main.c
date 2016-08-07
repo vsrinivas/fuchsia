@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+// need environ
+#define _GNU_SOURCE
+
 #include <fcntl.h>
 #include <limits.h>
 #include <magenta/processargs.h>
@@ -104,11 +108,20 @@ int main(int argc, char** argv) {
     printf("device driver - not a standalone executable\n");
 #else
     printf("devmgr: main()\n");
+
+    char** e = environ;
+    while (*e) {
+        printf("cmdline: %s\n", *e++);
+    }
     devmgr_init(false);
     devmgr_vfs_init();
 
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
+
+    // Until crashlogging exists, ensure we see load info
+    // from the linker in the log
+    putenv(strdup("LD_DEBUG=1"));
 
 #if !_MX_KERNEL_HAS_SHELL
     // if no kernel shell on serial uart, start a mxsh there

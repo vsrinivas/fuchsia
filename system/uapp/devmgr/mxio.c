@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// for environ
+#define _GNU_SOURCE
+
 #include "devmgr.h"
 
 #include <limits.h>
@@ -118,7 +121,7 @@ void devmgr_launch_devhost(const char* name, mx_handle_t h,
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
     printf("devmgr: launch: %s %s %s\n", name, arg0, arg1);
-    mx_handle_t proc = launchpad_launch(name, 3, args, env, 2, hnd, ids);
+    mx_handle_t proc = launchpad_launch(name, 3, args, (const char* const*)environ, 2, hnd, ids);
     if (proc < 0)
         printf("devmgr: launch failed: %d\n", proc);
     else
