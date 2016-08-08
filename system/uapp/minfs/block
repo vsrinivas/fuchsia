@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+if [ "x$1" == "x-w" ]; then
+	shift
+	ARG="-g4 -e"
+else
+	ARG="-g1"
+fi
+
+if [ "x$1" == "x" ]; then
+	echo 'usage: block [ -w ] <num>'
+	exit 1
+fi
+
+let "off = $1 * 8192"
+
+xxd $ARG -l 8192 -s "$off" out/fs | more

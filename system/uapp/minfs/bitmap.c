@@ -1,0 +1,131 @@
+// Copyright 2016 The Fuchsia Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "vfs.h"
+
+mx_status_t bitmap_init(bitmap_t* bm, uint32_t max) {
+    // check for overflow
+    if ((max + 63) < max) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // ensure there's space for all the bits
+    bm->bitcount = max;
+    bm->mapcount = (max + 63) / 64;
+
+    if ((bm->map = calloc(bm->mapcount, 64)) == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    bm->end = bm->map + bm->mapcount;
+    return NO_ERROR;
+}
+
+mx_status_t bitmap_resize(bitmap_t* bm, uint32_t max) {
+    if (max > (bm->mapcount * 64)) {
+        return ERR_NO_MEMORY;
+    }
+    bm->bitcount = max;
+    return NO_ERROR;
+}
+
+void bitmap_destroy(bitmap_t* bm) {
+    free(bm->map);
+}
+
+static void bitmap_zero(bitmap_t* bm) {
+    memset(bm->map, 0, bm->bitcount / 8);
+}
+
+// minbit specifies a bit number which is the minimum to allocate at
+// to avoid making all allocations suffer, we round to the nearest
+// multiple of the sub-bitmap storage unit (a uint64_t).
+uint32_t bitmap_alloc(bitmap_t* bm, uint32_t minbit) {
+    uint64_t* bits = bm->map + ((minbit + 63) >> 6);
+    uint64_t* end = bm->end;
+    while (bits < end) {
+        uint64_t v = *bits;
+        uint32_t n;
+        if ((n = __builtin_ffsll(~v)) != 0) {
+            n--;
+            uint32_t ret = ((bits - bm->map) << 6) + n;
+            // If this is end-1, and the map is full
+            // we might attempt to use a bit past the
+            // end.  Ensure that we do not.
+            if (ret >= bm->bitcount) {
+                break;
+            }
+            *bits = v | (1ULL << n);
+            return ret;
+        }
+        bits++;
+    }
+    return BITMAP_FAIL;
+}
+
+#define FAIL_IF(c) do { if (c) { error("fail: %s\n", #c); return -1; } } while (0)
+
+int do_bitmap_test(void) {
+    bitmap_t bm;
+    if (bitmap_init(&bm, 1024)) {
+        error("init failed\n");
+        return -1;
+    }
+    uint32_t n;
+
+    bitmap_set(&bm, 1);
+    bitmap_set(&bm, 64);
+    bitmap_set(&bm, 65);
+    bitmap_set(&bm, 64 + 8);
+    bitmap_alloc(&bm, 63);
+    FAIL_IF(bm.map[0] != 2);
+    FAIL_IF(bm.map[1] != 0x107);
+
+    bitmap_zero(&bm);
+    for (n = 128; n < 1024; n++) {
+        FAIL_IF(bitmap_alloc(&bm, 128) != n);
+    }
+    FAIL_IF(bitmap_alloc(&bm, 128) != BITMAP_FAIL);
+    for (n = 64; n < 128; n++) {
+        FAIL_IF(bitmap_alloc(&bm, 19) != n);
+    }
+    for (n = 0; n < 64; n++) {
+        FAIL_IF(bitmap_alloc(&bm, 0) != n);
+    }
+    FAIL_IF(bitmap_alloc(&bm, 0) != BITMAP_FAIL);
+
+    bitmap_clr(&bm, 793);
+    FAIL_IF(bitmap_alloc(&bm, 0) != 793);
+
+    for (n = 1023; n > 32; n -= 17) {
+        bitmap_clr(&bm, n);
+        FAIL_IF(bitmap_alloc(&bm, 0) != n);
+    }
+
+    bitmap_zero(&bm);
+    for (n = 0; n < 10; n++) {
+        bm.map[n] = -1;
+    }
+    FAIL_IF(bitmap_alloc(&bm, 0) != 640);
+
+    memset(bm.map, 0xFF, bm.bitcount / 8);
+    FAIL_IF(bitmap_alloc(&bm, 0) != BITMAP_FAIL);
+
+    warn("bitmap: ok\n");
+    return 0;
+}
+
