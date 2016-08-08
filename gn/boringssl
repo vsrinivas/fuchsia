@@ -1,0 +1,314 @@
+{
+    "labels": [
+        "//third_party/boringssl:bssl",
+        "//third_party/boringssl:boringssl_tests"
+    ],
+    "binaries": [
+        {
+            "binary": "bssl",
+            "bootfs_path": "bin/bssl"
+        },
+        {
+            "binary": "aes_test",
+            "bootfs_path": "test/boringssl/aes_test"
+        },
+        {
+            "binary": "asn1_test",
+            "bootfs_path": "test/boringssl/asn1_test"
+        },
+        {
+            "binary": "base64_test",
+            "bootfs_path": "test/boringssl/base64_test"
+        },
+        {
+            "binary": "bio_test",
+            "bootfs_path": "test/boringssl/bio_test"
+        },
+        {
+            "binary": "bn_test",
+            "bootfs_path": "test/boringssl/bn_test"
+        },
+        {
+            "binary": "bytestring_test",
+            "bootfs_path": "test/boringssl/bytestring_test"
+        },
+        {
+            "binary": "chacha_test",
+            "bootfs_path": "test/boringssl/chacha_test"
+        },
+        {
+            "binary": "aead_test",
+            "bootfs_path": "test/boringssl/aead_test"
+        },
+        {
+            "binary": "cipher_test",
+            "bootfs_path": "test/boringssl/cipher_test"
+        },
+        {
+            "binary": "cmac_test",
+            "bootfs_path": "test/boringssl/cmac_test"
+        },
+        {
+            "binary": "constant_time_test",
+            "bootfs_path": "test/boringssl/constant_time_test"
+        },
+        {
+            "binary": "ed25519_test",
+            "bootfs_path": "test/boringssl/ed25519_test"
+        },
+        {
+            "binary": "x25519_test",
+            "bootfs_path": "test/boringssl/x25519_test"
+        },
+        {
+            "binary": "spake25519_test",
+            "bootfs_path": "test/boringssl/spake25519_test"
+        },
+        {
+            "binary": "dh_test",
+            "bootfs_path": "test/boringssl/dh_test"
+        },
+        {
+            "binary": "digest_test",
+            "bootfs_path": "test/boringssl/digest_test"
+        },
+        {
+            "binary": "dsa_test",
+            "bootfs_path": "test/boringssl/dsa_test"
+        },
+        {
+            "binary": "ec_test",
+            "bootfs_path": "test/boringssl/ec_test"
+        },
+        {
+            "binary": "example_mul",
+            "bootfs_path": "test/boringssl/example_mul"
+        },
+        {
+            "binary": "ecdsa_test",
+            "bootfs_path": "test/boringssl/ecdsa_test"
+        },
+        {
+            "binary": "err_test",
+            "bootfs_path": "test/boringssl/err_test"
+        },
+        {
+            "binary": "evp_extra_test",
+            "bootfs_path": "test/boringssl/evp_extra_test"
+        },
+        {
+            "binary": "evp_test",
+            "bootfs_path": "test/boringssl/evp_test"
+        },
+        {
+            "binary": "pbkdf_test",
+            "bootfs_path": "test/boringssl/pbkdf_test"
+        },
+        {
+            "binary": "hkdf_test",
+            "bootfs_path": "test/boringssl/hkdf_test"
+        },
+        {
+            "binary": "hmac_test",
+            "bootfs_path": "test/boringssl/hmac_test"
+        },
+        {
+            "binary": "lhash_test",
+            "bootfs_path": "test/boringssl/lhash_test"
+        },
+        {
+            "binary": "gcm_test",
+            "bootfs_path": "test/boringssl/gcm_test"
+        },
+        {
+            "binary": "newhope_test",
+            "bootfs_path": "test/boringssl/newhope_test"
+        },
+        {
+            "binary": "newhope_statistical_test",
+            "bootfs_path": "test/boringssl/newhope_statistical_test"
+        },
+        {
+            "binary": "newhope_vectors_test",
+            "bootfs_path": "test/boringssl/newhope_vectors_test"
+        },
+        {
+            "binary": "obj_test",
+            "bootfs_path": "test/boringssl/obj_test"
+        },
+        {
+            "binary": "pkcs12_test",
+            "bootfs_path": "test/boringssl/pkcs12_test"
+        },
+        {
+            "binary": "pkcs8_test",
+            "bootfs_path": "test/boringssl/pkcs8_test"
+        },
+        {
+            "binary": "poly1305_test",
+            "bootfs_path": "test/boringssl/poly1305_test"
+        },
+        {
+            "binary": "refcount_test",
+            "bootfs_path": "test/boringssl/refcount_test"
+        },
+        {
+            "binary": "rsa_test",
+            "bootfs_path": "test/boringssl/rsa_test"
+        },
+        {
+            "binary": "thread_test",
+            "bootfs_path": "test/boringssl/thread_test"
+        },
+        {
+            "binary": "pkcs7_test",
+            "bootfs_path": "test/boringssl/pkcs7_test"
+        },
+        {
+            "binary": "x509_test",
+            "bootfs_path": "test/boringssl/x509_test"
+        },
+        {
+            "binary": "tab_test",
+            "bootfs_path": "test/boringssl/tab_test"
+        },
+        {
+            "binary": "v3name_test",
+            "bootfs_path": "test/boringssl/v3name_test"
+        },
+        {
+            "binary": "ssl_test",
+            "bootfs_path": "test/boringssl/ssl_test"
+        }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "test/boringssl/data/test.spec",
+            "file": "third_party/boringssl/fuchsia/test.spec"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/bn_tests.txt",
+            "file": "third_party/boringssl/crypto/bn/bn_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_128_gcm_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_128_gcm_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_128_key_wrap_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_128_key_wrap_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_gcm_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_gcm_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_key_wrap_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_key_wrap_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/chacha20_poly1305_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/chacha20_poly1305_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/chacha20_poly1305_old_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/chacha20_poly1305_old_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/rc4_md5_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/rc4_md5_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/rc4_sha1_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/rc4_sha1_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_128_cbc_sha1_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_128_cbc_sha1_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_128_cbc_sha1_tls_implicit_iv_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_128_cbc_sha1_tls_implicit_iv_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_128_cbc_sha256_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_128_cbc_sha256_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_cbc_sha1_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_cbc_sha1_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_cbc_sha1_tls_implicit_iv_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_cbc_sha1_tls_implicit_iv_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_cbc_sha256_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_cbc_sha256_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_cbc_sha384_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_cbc_sha384_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/des_ede3_cbc_sha1_tls_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/des_ede3_cbc_sha1_tls_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/des_ede3_cbc_sha1_tls_implicit_iv_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/des_ede3_cbc_sha1_tls_implicit_iv_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/rc4_md5_ssl3_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/rc4_md5_ssl3_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/rc4_sha1_ssl3_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/rc4_sha1_ssl3_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_128_cbc_sha1_ssl3_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_128_cbc_sha1_ssl3_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_cbc_sha1_ssl3_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_cbc_sha1_ssl3_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/des_ede3_cbc_sha1_ssl3_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/des_ede3_cbc_sha1_ssl3_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_128_ctr_hmac_sha256.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_128_ctr_hmac_sha256.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/aes_256_ctr_hmac_sha256.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/aes_256_ctr_hmac_sha256.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/cipher_tests.txt",
+            "file": "third_party/boringssl/crypto/cipher/test/cipher_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/ed25519_tests.txt",
+            "file": "third_party/boringssl/crypto/curve25519/ed25519_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/evp_tests.txt",
+            "file": "third_party/boringssl/crypto/evp/evp_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/hmac_tests.txt",
+            "file": "third_party/boringssl/crypto/hmac/hmac_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/newhope_tests.txt",
+            "file": "third_party/boringssl/crypto/newhope/newhope_tests.txt"
+        },
+        {
+            "bootfs_path": "test/boringssl/data/poly1305_tests.txt",
+            "file": "third_party/boringssl/crypto/poly1305/poly1305_tests.txt"
+        }
+    ]
+}
