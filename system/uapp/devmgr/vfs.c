@@ -209,7 +209,7 @@ mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
 static vnode_t* volatile vfs_txn_vn;
 static volatile int vfs_txn_op;
 
-static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) {
+static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
     vnode_t* vn = ios->vn;
     uint32_t len = msg->datalen;
@@ -217,14 +217,14 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
     msg->datalen = 0;
 
     vfs_txn_vn = vn;
-    vfs_txn_op = MX_RIO_OP(msg->op);
+    vfs_txn_op = MXRIO_OP(msg->op);
 
     for (unsigned i = 0; i < msg->hcount; i++) {
         mx_handle_close(msg->handle[i]);
     }
 
-    switch (MX_RIO_OP(msg->op)) {
-    case MX_RIO_OPEN: {
+    switch (MXRIO_OP(msg->op)) {
+    case MXRIO_OPEN: {
         if ((len < 1) || (len > 1024)) {
             return ERR_INVALID_ARGS;
         }
@@ -257,13 +257,13 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         xprintf("vfs: open: h=%x\n", msg->handle[0]);
         return NO_ERROR;
     }
-    case MX_RIO_CLOSE:
+    case MXRIO_CLOSE:
         // this will drop the ref on the vn
         vn->ops->close(vn);
         untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
-    case MX_RIO_CLONE: {
+    case MXRIO_CLONE: {
         uint32_t ids[VFS_MAX_HANDLES];
         mx_status_t r = vfs_get_handles(vn, msg->handle, ids, "<clone>");
         if (r < 0) {
@@ -274,7 +274,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         msg->hcount = r;
         return NO_ERROR;
     }
-    case MX_RIO_READ: {
+    case MXRIO_READ: {
         ssize_t r = vn->ops->read(vn, msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -283,7 +283,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         }
         return r;
     }
-    case MX_RIO_WRITE: {
+    case MXRIO_WRITE: {
         ssize_t r = vn->ops->write(vn, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -291,7 +291,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         }
         return r;
     }
-    case MX_RIO_SEEK: {
+    case MXRIO_SEEK: {
         vnattr_t attr;
         mx_status_t r;
         if ((r = vn->ops->getattr(vn, &attr)) < 0) {
@@ -350,7 +350,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         msg->arg2.off = ios->io_off;
         return NO_ERROR;
     }
-    case MX_RIO_STAT: {
+    case MXRIO_STAT: {
         mx_status_t r;
         msg->datalen = sizeof(vnattr_t);
         if ((r = vn->ops->getattr(vn, (vnattr_t*)msg->data)) < 0) {
@@ -358,7 +358,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         }
         return msg->datalen;
     }
-    case MX_RIO_READDIR: {
+    case MXRIO_READDIR: {
         if (arg > MXIO_CHUNK_SIZE) {
             return ERR_INVALID_ARGS;
         }
@@ -371,7 +371,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         }
         return r;
     }
-    case MX_RIO_IOCTL: {
+    case MXRIO_IOCTL: {
         if (len > MXIO_IOCTL_MAX_INPUT) {
             return ERR_INVALID_ARGS;
         }
@@ -385,7 +385,7 @@ static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie)
         }
         return r;
     }
-    case MX_RIO_UNLINK:
+    case MXRIO_UNLINK:
         return vn->ops->unlink(vn, (const char*) msg->data, len);
     default:
         return ERR_NOT_SUPPORTED;
@@ -397,7 +397,7 @@ static mxio_dispatcher_t* vfs_dispatcher;
 static volatile int vfs_txn = -1;
 static int vfs_txn_no = 0;
 
-static mx_status_t vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) {
+static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     vfs_txn_no = (vfs_txn_no + 1) & 0x0FFFFFFF;
     vfs_txn = vfs_txn_no;
     mx_status_t r = _vfs_handler(msg, rh, cookie);
@@ -459,7 +459,7 @@ static int vfs_watchdog(void* arg) {
 
 void vfs_init(vnode_t* root) {
     vfs_root = root;
-    if (mxio_dispatcher_create(&vfs_dispatcher, mxio_rio_handler) == NO_ERROR) {
+    if (mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler) == NO_ERROR) {
         mxio_dispatcher_start(vfs_dispatcher);
     }
     mxr_thread_t* t;

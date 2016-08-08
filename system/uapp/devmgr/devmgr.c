@@ -618,7 +618,7 @@ void devmgr_init(bool devhost) {
     }
 #endif
 
-    mxio_dispatcher_create(&devmgr_rio_dispatcher, mxio_rio_handler);
+    mxio_dispatcher_create(&devmgr_rio_dispatcher, mxrio_handler);
 }
 
 void devmgr_init_builtin_drivers(void) {

@@ -53,7 +53,7 @@ iostate_t* create_iostate(mx_device_t* dev) {
     return ios;
 }
 
-mx_status_t __mx_rio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
+mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
 static mxr_mutex_t rio_lock = MXR_MUTEX_INIT;
 
@@ -74,7 +74,7 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t*
     // TODO: timeout or handoff
     if (dev->flags & DEV_FLAG_REMOTE) {
         mxr_mutex_lock(&rio_lock);
-        r = __mx_rio_clone(dev->remote, handles, ids);
+        r = __mxrio_clone(dev->remote, handles, ids);
         mxr_mutex_unlock(&rio_lock);
         return r;
     }
@@ -171,7 +171,7 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
     return actual;
 }
 
-mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) {
+mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
@@ -182,13 +182,13 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) 
         mx_handle_close(msg->handle[i]);
     }
 
-    switch (MX_RIO_OP(msg->op)) {
-    case MX_RIO_CLOSE:
+    switch (MXRIO_OP(msg->op)) {
+    case MXRIO_CLOSE:
         device_close(dev);
         untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
-    case MX_RIO_CLONE: {
+    case MXRIO_CLONE: {
         xprintf("%s_rio_handler() clone dev %p name '%s'\n", name, dev, dev->name);
         uint32_t ids[VFS_MAX_HANDLES];
         mx_status_t r = devmgr_get_handles(dev, msg->handle, ids);
@@ -199,7 +199,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) 
         msg->hcount = r;
         return NO_ERROR;
     }
-    case MX_RIO_READ: {
+    case MXRIO_READ: {
         mx_status_t r = do_sync_io(dev, IOTXN_OP_READ, msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -208,7 +208,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         return r;
     }
-    case MX_RIO_WRITE: {
+    case MXRIO_WRITE: {
         mx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -216,7 +216,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         return r;
     }
-    case MX_RIO_SEEK: {
+    case MXRIO_SEEK: {
         size_t end, n;
         end = dev->ops->get_size(dev);
         switch (arg) {
@@ -270,7 +270,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) 
         msg->arg2.off = ios->io_off;
         return NO_ERROR;
     }
-    case MX_RIO_STAT: {
+    case MXRIO_STAT: {
         msg->datalen = sizeof(vnattr_t);
         vnattr_t* attr = (void*) msg->data;
         memset(attr, 0, sizeof(vnattr_t));
@@ -278,7 +278,7 @@ mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) 
         attr->size = dev->ops->get_size(dev);
         return msg->datalen;
     }
-    case MX_RIO_IOCTL: {
+    case MXRIO_IOCTL: {
         if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
             return ERR_INVALID_ARGS;
         }

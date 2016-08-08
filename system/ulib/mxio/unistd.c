@@ -355,7 +355,7 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t t
 
 int mxio_stat(mxio_t* io, struct stat* s) {
     vnattr_t attr;
-    int r = io->ops->misc(io, MX_RIO_STAT, sizeof(attr), &attr, 0);
+    int r = io->ops->misc(io, MXRIO_STAT, sizeof(attr), &attr, 0);
     if (r < 0) {
         return ERR_BAD_HANDLE;
     }
@@ -615,7 +615,7 @@ static int getdirents(int fd, void* ptr, size_t len) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, MX_RIO_READDIR, len, ptr, 0));
+    int r = STATUS(io->ops->misc(io, MXRIO_READDIR, len, ptr, 0));
     mxio_release(io);
     return r;
 }
@@ -627,7 +627,7 @@ int unlink(const char* path) {
     if ((r = __mxio_opendir_containing(&io, path, &name)) < 0) {
         return ERROR(r);
     }
-    r = io->ops->misc(io, MX_RIO_UNLINK, 0, (void*) name, strlen(name));
+    r = io->ops->misc(io, MXRIO_UNLINK, 0, (void*) name, strlen(name));
     io->ops->close(io);
     mxio_release(io);
     return STATUS(r);

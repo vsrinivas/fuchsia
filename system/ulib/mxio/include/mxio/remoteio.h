@@ -23,36 +23,36 @@ __BEGIN_CDECLS
 
 // clang-format off
 
-#define MX_RIO_HDR_SZ       (__builtin_offsetof(mx_rio_msg_t, data))
+#define MXRIO_HDR_SZ       (__builtin_offsetof(mxrio_msg_t, data))
 
-#define MX_RIO_MAGIC        0x024F4952 // RIO 0x02
+#define MXRIO_MAGIC        0x024F4952 // RIO 0x02
 
-#define MX_RIO_STATUS       0x00000000
-#define MX_RIO_CLOSE        0x00000001
-#define MX_RIO_CLONE        0x00000002
-#define MX_RIO_OPEN         0x00000003
-#define MX_RIO_MISC         0x00000004
-#define MX_RIO_READ         0x00000005
-#define MX_RIO_WRITE        0x00000006
-#define MX_RIO_SEEK         0x00000007
-#define MX_RIO_STAT         0x00000008
-#define MX_RIO_READDIR      0x00000009
-#define MX_RIO_IOCTL        0x0000000a
-#define MX_RIO_UNLINK       0x0000000b
-#define MX_RIO_NUM_OPS      12
+#define MXRIO_STATUS       0x00000000
+#define MXRIO_CLOSE        0x00000001
+#define MXRIO_CLONE        0x00000002
+#define MXRIO_OPEN         0x00000003
+#define MXRIO_MISC         0x00000004
+#define MXRIO_READ         0x00000005
+#define MXRIO_WRITE        0x00000006
+#define MXRIO_SEEK         0x00000007
+#define MXRIO_STAT         0x00000008
+#define MXRIO_READDIR      0x00000009
+#define MXRIO_IOCTL        0x0000000a
+#define MXRIO_UNLINK       0x0000000b
+#define MXRIO_NUM_OPS      12
 
-#define MX_RIO_OP(n)        ((n) & 0xFFFF)
-#define MX_RIO_REPLY_PIPE   0x01000000
+#define MXRIO_OP(n)        ((n) & 0xFFFF)
+#define MXRIO_REPLY_PIPE   0x01000000
 
-#define MX_RIO_OPNAMES { \
+#define MXRIO_OPNAMES { \
     "status", "close", "clone", "open", \
     "misc", "read", "write", "seek", \
     "stat", "readdir", "ioctl", "unlink" }
 
-typedef struct mx_rio_msg mx_rio_msg_t;
+typedef struct mxrio_msg mxrio_msg_t;
 
-typedef mx_status_t (*mxio_rio_cb_t)(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie);
-// callback to process a mx_rio_msg
+typedef mx_status_t (*mxrio_cb_t)(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
+// callback to process a mxrio_msg
 // - on entry datalen indicates how much valid data is in msg.data[]
 // - return value will be placed in msg.arg, negative is an error,
 //   positive values are opcode-specific
@@ -64,23 +64,23 @@ typedef mx_status_t (*mxio_rio_cb_t)(mx_rio_msg_t* msg, mx_handle_t rh, void* co
 //   reply or error
 
 // process events on h until it fails
-void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie);
+void mxrio_server(mx_handle_t h, mxrio_cb_t cb, void* cookie);
 
 // a mxio_dispatcher_handler suitable for use with a mxio_dispatcher
-mx_status_t mxio_rio_handler(mx_handle_t h, void* cb, void* cookie);
+mx_status_t mxrio_handler(mx_handle_t h, void* cb, void* cookie);
 
 // create a thread to service mxio remote io traffic
-mx_status_t mxio_handler_create(mx_handle_t h, mxio_rio_cb_t cb, void* cookie);
+mx_status_t mxrio_handler_create(mx_handle_t h, mxrio_cb_t cb, void* cookie);
 
 // Pass a message to another server (srv) along with a reply handle (rh)
 // The other server will reply via the reply handle, and this call returns
 // immediately, never blocking.
 // The reply-handle is *not* closed on error, as it's expected the caller
 // will want to send an error back via it.
-mx_status_t mx_rio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mx_rio_msg_t* msg);
+mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg);
 
-struct mx_rio_msg {
-    uint32_t magic;                    // MX_RIO_MAGIC
+struct mxrio_msg {
+    uint32_t magic;                    // MXRIO_MAGIC
     uint32_t op;                       // opcode
     uint32_t datalen;                  // size of data[]
     int32_t arg;                       // tx: argument, rx: return value
