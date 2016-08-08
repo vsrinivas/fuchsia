@@ -12,23 +12,30 @@ import json
 class Amalgamation:
     def __init__(self):
         self.labels = []
-        self.binaries = []
+        self.files = []
         self.config_paths = []
+        self.build_root = ""
 
     def add_config(self, config, config_path):
         self.config_paths.append(config_path)
         for label in config.get("labels", []):
             self.labels.append(label)
         for b in config.get("binaries", []):
-            binary = {}
-            binary["binary"] = b["binary"]
-            binary["bootfs_path"] = b["bootfs_path"]
-            self.binaries.append(binary)
+            file = {}
+            file["file"] = os.path.join(self.build_root, b["binary"])
+            file["bootfs_path"] = b["bootfs_path"]
+            self.files.append(file)
+        for r in config.get("resources", []):
+            file = {}
+            file["file"] = os.path.join(paths.FUCHSIA_ROOT, r["file"])
+            file["bootfs_path"] = r["bootfs_path"]
+            self.files.append(file)
 
 
-def resolve_imports(import_queue):
+def resolve_imports(import_queue, build_root):
     imported = set(import_queue)
     amalgamation = Amalgamation()
+    amalgamation.build_root = build_root
     while import_queue:
         config_name = import_queue.pop()
         config_path = os.path.join(paths.SCRIPT_DIR, config_name)
@@ -54,18 +61,15 @@ def main():
     parser.add_argument("--depfile", help="path to depfile to generate")
     args = parser.parse_args()
 
-    amalgamation = resolve_imports(args.modules.split(","))
+    amalgamation = resolve_imports(args.modules.split(","), args.build_root)
     mkbootfs_dir = os.path.join(paths.SCRIPT_DIR, "mkbootfs")
 
     manifest_dir = os.path.dirname(args.manifest)
     if not os.path.exists(manifest_dir):
         os.makedirs(manifest_dir)
     with open(os.path.join(args.manifest), "w") as manifest:
-        for binary in amalgamation.binaries:
-            binary_path = os.path.join(args.build_root, binary["binary"])
-            manifest.write("""%s=%s
-""" % (binary["bootfs_path"], binary_path))
-
+        for file in amalgamation.files:
+            manifest.write("%s=%s\n" % (file["bootfs_path"], file["file"]))
     if args.depfile != "":
         with open(args.depfile, "w") as f:
             f.write("user.bootfs:")
