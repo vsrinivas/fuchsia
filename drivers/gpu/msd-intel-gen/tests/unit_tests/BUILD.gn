@@ -23,7 +23,7 @@ source_set("unit_tests") {
 
   deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/sys-driver:platform_buffer",
+    "$magma_build_root/src/sys_driver:platform_buffer",
     "$magma_build_root/tests/mock:mmio",
     "$msd_intel_gen_build_root/src",
     "//third_party/gtest",
