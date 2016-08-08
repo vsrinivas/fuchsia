@@ -7,6 +7,10 @@
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/system/wait.h"
 
+#ifndef __Fuchsia__
+#error "Fuchsia is the only supported target platform for this code."
+#endif
+
 namespace mtl {
 
 bool BlockingCopyFrom(
