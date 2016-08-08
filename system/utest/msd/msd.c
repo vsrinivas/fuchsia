@@ -21,29 +21,31 @@
 
 int main(int argc, char** argv) {
     printf("starting\n");
-    // unsigned char x;
+    unsigned char x;
     int fd = 0;
-    fd = open("/dev/class/misc/usb_mass_storage", O_RDWR);
+    fd = open("/dev/class/usb-msd/usb_mass_storage", O_RDWR);
     if (fd < 0) {
         printf("msd_test: cannot open '%d'\n", fd);
         return -1;
     }
-    // int w = write(fd, &x, 1);
-    // printf("w was: %02x\n", w);
-    // // usleep(100);
+    int w = write(fd, &x, 1);
+    printf("w was: %02x\n", w);
+    // usleep(100);
 
-    char out[512];
-    printf("here are original\n");
-    for (int i = 0; i < 512; i++) {
+    char out[18] = {'a', 'b','c','d','e', 'f', 'g', 'h', 'i',
+                        'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r'};
+        printf("here are original\n");
+    for (int i = 0; i < 36; i++) {
         printf("%02x ", ((unsigned char*)out)[i]);
     }
     printf("\n");
-    // fflush(stdout);
+    fflush(stdout);
     printf("waiting\n");
     // usleep(5000000);
-    // mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+    mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
     printf("got to read\n");
-    read(fd, out, 512);
+    // printf("read status: %02x \n", ((uint)read(fd, &out, 36)));
+    // read(fd, &out, 10);
 
     printf("here are results\n");
     // printf("here is first one as int before thing %d \n", ((int*)out)[0]);
@@ -51,7 +53,7 @@ int main(int argc, char** argv) {
     // int* b =(int*)(out+1);
     // *a = 1;
     // *b = 15;
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < 36; i++) {
         printf("%02x ", ((unsigned char*)out)[i]);
     }
     printf("\n");
