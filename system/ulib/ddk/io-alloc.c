@@ -129,7 +129,7 @@ void* io_memalign(io_alloc_t* ioa, size_t align, size_t size) {
         }
 
         uintptr_t block_end = (uintptr_t)block + block_size;
-        if (ptr < block_end) {
+        if (ptr + size < block_end) {
             // pull the block from the free list
             if (prev) {
                 prev->ptr = block->ptr;
