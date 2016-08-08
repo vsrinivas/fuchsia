@@ -77,8 +77,13 @@ void DeleteHandle(Handle* handle) {
                 // This is fine. See for example the LogDispatcher.
         };
     }
-
+    // Calling the handle dtor can cause many things to happen, so it is important
+    // to call it outside the lock.
     handle->~Handle();
+    // Setting the memory to zero is critical for the safe operation of the handle
+    // table lookup.
+    memset(handle, 0, sizeof(Handle));
+
     AutoLock lock(&handle_mutex);
     handle_arena.RawFree(handle);
 }

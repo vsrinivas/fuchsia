@@ -15,5 +15,17 @@ mx_koid_t Dispatcher::GenerateKernelObjectId() {
 }
 
 Dispatcher::Dispatcher()
-    : koid_(GenerateKernelObjectId()) {
+    : koid_(GenerateKernelObjectId()),
+      handle_count_(0u) {
+}
+
+void Dispatcher::add_handle() {
+    atomic_add_relaxed(&handle_count_, 1);
+}
+
+void Dispatcher::remove_handle() {
+    if (atomic_add_release(&handle_count_, -1) == 1) {
+        atomic_fence_acquire();
+        on_zero_handles();
+    }
 }

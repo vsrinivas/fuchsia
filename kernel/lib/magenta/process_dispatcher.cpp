@@ -65,7 +65,6 @@ ProcessDispatcher::ProcessDispatcher(utils::StringPiece name)
 
 ProcessDispatcher::~ProcessDispatcher() {
     LTRACE_ENTRY_OBJ;
-    Kill();
 
     DEBUG_ASSERT(state_ == State::INITIAL || state_ == State::DEAD);
 
@@ -229,6 +228,13 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
         LTRACEF("last thread left the process %p, entering DEAD state\n", this);
         SetState(State::DEAD);
     }
+}
+
+
+void ProcessDispatcher::AllHandlesClosed() {
+    LTRACE_ENTRY_OBJ;
+    // Here we should call Kill(). Currently not advisable since launchpad launcher
+    // closes the handle to each launched process.
 }
 
 void ProcessDispatcher::SetState(State s) {

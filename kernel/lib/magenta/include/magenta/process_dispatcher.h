@@ -36,10 +36,11 @@ public:
         return current->process();
     }
 
+    // Dispatcher implementation
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
     ProcessDispatcher* get_process_dispatcher() final { return this; }
-
     StateTracker* get_state_tracker() final { return &state_tracker_; }
+    void on_zero_handles() final { return AllHandlesClosed(); }
 
     ~ProcessDispatcher() final;
 
@@ -128,6 +129,10 @@ private:
     friend class UserThread;
     status_t AddThread(UserThread* t);
     void RemoveThread(UserThread* t);
+
+    // Called when this object is not longer reachable from user mode. However
+    // kernel code can still have a RefPtr to it.
+    void AllHandlesClosed();
 
     void SetState(State);
 

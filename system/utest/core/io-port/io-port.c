@@ -96,6 +96,30 @@ static bool basic_test(void)
     END_TEST;
 }
 
+static bool queue_and_close_test(void)
+{
+    BEGIN_TEST;
+    mx_status_t status;
+
+    mx_handle_t io_port = mx_io_port_create(0u);
+    EXPECT_GT(io_port, 0, "could not create ioport");
+
+    typedef struct {
+        mx_packet_header_t hdr;
+        int x;
+    } packet_t;
+
+    const packet_t in = {{1u, 2u, 3u}, -1};
+
+    status = mx_io_port_queue(io_port, &in, sizeof(in));
+    EXPECT_EQ(status, NO_ERROR, "expected failure");
+
+    status = mx_handle_close(io_port);
+    EXPECT_EQ(status, NO_ERROR, "failed to close ioport");
+
+    END_TEST;
+}
+
 static bool thread_pool_test(void)
 {
     BEGIN_TEST;
@@ -295,6 +319,7 @@ static bool bind_events_test(void)
 
 BEGIN_TEST_CASE(io_port_tests)
 RUN_TEST(basic_test)
+RUN_TEST(queue_and_close_test)
 RUN_TEST(thread_pool_test)
 RUN_TEST(bind_basic_test)
 RUN_TEST(bind_events_test)

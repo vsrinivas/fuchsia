@@ -43,7 +43,13 @@ public:
 
     mx_koid_t get_koid() const { return koid_; }
 
+    void add_handle();
+
+    void remove_handle();
+
     virtual mx_obj_type_t GetType() const = 0;
+
+    virtual void on_zero_handles() { }
 
     virtual mx_koid_t get_inner_koid() const {
         return 0ULL;
@@ -118,4 +124,5 @@ protected:
 
 private:
     const mx_koid_t koid_;
+    int handle_count_;
 };

@@ -46,6 +46,7 @@ public:
     ~IOPortDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_IOPORT; }
     IOPortDispatcher* get_io_port_dispatcher() final { return this; }
+    void on_zero_handles() final;
 
     mx_status_t Queue(IOP_Packet* packet);
     mx_status_t Wait(IOP_Packet** packet);
@@ -58,13 +59,14 @@ public:
 
 private:
     IOPortDispatcher(uint32_t options);
+    void FreePackets_NoLock();
 
     utils::unique_ptr<IOPortObserver> MaybeRemoveObserver(IOP_Packet* packet);
 
     const uint32_t options_;
-
     mutex_t lock_;
 
+    bool no_clients_;
     utils::DoublyLinkedList<IOPortObserver*, IOPortObserverListTraits> observers_;
     utils::DoublyLinkedList<IOP_Packet*, IOP_PacketListTraits> packets_;
 

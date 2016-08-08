@@ -76,7 +76,9 @@ mx_status_t IOPortDispatcher::Create(uint32_t options,
     return NO_ERROR;
 }
 
-IOPortDispatcher::IOPortDispatcher(uint32_t options) : options_(options) {
+IOPortDispatcher::IOPortDispatcher(uint32_t options)
+    : options_(options),
+      no_clients_(false) {
     mutex_init(&lock_);
     event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
@@ -84,16 +86,25 @@ IOPortDispatcher::IOPortDispatcher(uint32_t options) : options_(options) {
 IOPortDispatcher::~IOPortDispatcher() {
     // The observers hold a ref to the dispatcher so if the dispatcher
     // is being destroyed there should be no registered observers.
+    FreePackets_NoLock();
+
     DEBUG_ASSERT(observers_.is_empty());
-
-    for (auto& pkt : packets_) {
-        IOP_Packet::Delete(&pkt);
-    }
-
-    packets_.clear();
+    DEBUG_ASSERT(packets_.is_empty());
 
     event_destroy(&event_);
     mutex_destroy(&lock_);
+}
+
+void IOPortDispatcher::FreePackets_NoLock() {
+    while (!packets_.is_empty()) {
+        IOP_Packet::Delete(packets_.pop_front());
+    }
+}
+
+void IOPortDispatcher::on_zero_handles() {
+    AutoLock al(&lock_);
+    no_clients_ = true;
+    FreePackets_NoLock();
 }
 
 mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
@@ -101,14 +112,23 @@ mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
     mx_status_t status = NO_ERROR;
     {
         AutoLock al(&lock_);
-        packets_.push_back(packet);
-        wake_count = event_signal_etc(&event_, false, status);
+        if (no_clients_) {
+            status = ERR_NOT_AVAILABLE;
+        } else {
+            packets_.push_back(packet);
+            wake_count = event_signal_etc(&event_, false, status);
+        }
+    }
+
+    if (status != NO_ERROR) {
+        IOP_Packet::Delete(packet);
+        return status;
     }
 
     if (wake_count)
         thread_yield();
 
-    return status;
+    return NO_ERROR;
 }
 
 mx_status_t IOPortDispatcher::Wait(IOP_Packet** packet) {
