@@ -56,6 +56,12 @@ SECTIONS {
     .gnu_hash : { *(.gnu_hash) }
     .dynsym : { *(.dynsym) }
     .dynstr : { *(.dynstr) }
+    .rela.plt : {
+        *(.rela.plt*)
+    }
+    .rel.plt : {
+        *(.rel.plt*)
+    }
     .rela.dyn : {
         *(.rela.*)
     }
@@ -90,32 +96,32 @@ SECTIONS {
      * (or convince the linker not to generate them at all).
      * But the linker doesn't know how to do that.
      */
-    .ignore : {
-        *(.got*)
-        *(.plt*)
-        *(.gnu.warning*)
-    }
+    .got : { *(.got*) }
+    .plt : { *(.plt*) }
 
     . = ALIGN(CONSTANT(MAXPAGESIZE));
     HIDDEN(CODE_START = .);
 
     .text : {
-      *(.text.unlikely .text.*_unlikely .text.unlikely.*)
-      *(.text.exit .text.exit.*)
-      *(.text.startup .text.startup.*)
-      *(.text.hot .text.hot.*)
-      *(.text .stub .text.* .gnu.linkonce.t.*)
-      *(.init .init.* .fini .fini.*)
-      PROVIDE_HIDDEN(_end = .);
+        *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+        *(.text.exit .text.exit.*)
+        *(.text.startup .text.startup.*)
+        *(.text.hot .text.hot.*)
+        *(.text .stub .text.* .gnu.linkonce.t.*)
+        *(.init .init.* .fini .fini.*)
+        *(.gnu.warning)
+        *(.glue_7t) *(.glue_7) *(.vfp11_veneer) *(.v4_bx)
 
-      /*
-       * Pad out the code segment to a page boundary, so that there
-       * is only nop or zero padding visible in the memory image
-       * rather than seeing non-loaded portions of the ELF file
-       * (.shstrtab, section headers, .symtab if not stripped, etc.).
-       */
-      . = ALIGN(CONSTANT(MAXPAGESIZE));
-      HIDDEN(CODE_END = .);
+        PROVIDE_HIDDEN(_end = .);
+
+        /*
+         * Pad out the code segment to a page boundary, so that there
+         * is only nop or zero padding visible in the memory image
+         * rather than seeing non-loaded portions of the ELF file
+         * (.shstrtab, section headers, .symtab if not stripped, etc.).
+         */
+        . = ALIGN(CONSTANT(MAXPAGESIZE));
+        HIDDEN(CODE_END = .);
     } :code
 }
 
