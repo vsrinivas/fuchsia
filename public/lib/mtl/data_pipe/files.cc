@@ -163,7 +163,8 @@ void CopyFromFileHandler::OnHandleReady(MojoResult result) {
       FTL_DCHECK(size < static_cast<uint32_t>(std::numeric_limits<int>::max()));
       ssize_t bytes_read = ftl::ReadFileDescriptor(
           source_.get(), static_cast<char*>(buffer), size);
-      result = EndWriteDataRaw(destination_.get(), std::max(0l, bytes_read));
+      result = EndWriteDataRaw(destination_.get(),
+                               std::max<ssize_t>(0l, bytes_read));
       if (bytes_read == -1 || result != MOJO_RESULT_OK) {
         SendCallback(false);
       } else if (bytes_read < size) {
