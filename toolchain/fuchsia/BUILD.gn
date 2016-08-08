@@ -25,7 +25,7 @@ clang_toolchain("clang_${target_cpu}") {
   }
 
   clang_name = "clang+llvm-$clang_cpu-$clang_os"
-  clang_path = "$fuchsia_sdk/toolchains/$clang_name"
+  clang_path = "$fuchsia_sdk/toolchain/$clang_name"
   prefix = rebase_path("$clang_path/bin/", root_build_dir)
 
   cc = "${prefix}clang"

@@ -6,5 +6,5 @@ assert(target_os == "fuchsia")
 
 declare_args() {
   # Path to Fuchsia SDK.
-  fuchsia_sdk = "//buildtools/sdk"
+  fuchsia_sdk = "//buildtools"
 }

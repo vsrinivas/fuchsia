@@ -12,9 +12,9 @@ if (current_os == target_os && target_sysroot != "") {
 } else if (target_os == "fuchsia") {
   import("//build/config/fuchsia/config.gni")
   if (current_cpu == "arm64") {
-    sysroot = "$fuchsia_sdk/platforms/aarch64-fuchsia"
+    sysroot = "$fuchsia_sdk/sysroot/aarch64-fuchsia"
   } else if (current_cpu == "x64") {
-    sysroot = "$fuchsia_sdk/platforms/x86_64-fuchsia"
+    sysroot = "$fuchsia_sdk/sysroot/x86_64-fuchsia"
   } else {
     sysroot = ""
   }
