@@ -69,18 +69,38 @@ void untrack_iostate(iostate_t* ios) {
 static vnode_t* vfs_root;
 
 // Starting at vnode vn, walk the tree described by the path string,
-// returning the final vnode via out on success.
-//
-// If nameout is non-NULL, the final segment of the path will not
-// be traversed (useful for stopping at the directory node for a
-// create() op or the like)
-static mx_status_t _vfs_walk(vnode_t* vn, vnode_t** out, const char* path, const char** nameout) {
+// until either there is only one path segment remaining in the string
+// or we encounter a vnode that represents a remote filesystem
+static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
+                            const char* path, const char** pathout) {
     const char* nextpath;
     mx_status_t r;
     size_t len;
 
     for (;;) {
+        while (path[0] == '/') {
+            // discard extra leading /s
+            path++;
+        }
+        if (path[0] == 0) {
+            // convert empty initial path of final path segment to "."
+            path = ".";
+        }
+        if (vn->flags & V_FLAG_REMOTE) {
+            // remote filesystem mount, caller must resolve
+            xprintf("vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
+            *out = vn;
+            *pathout = path;
+#if WITH_REPLY_PIPE
+            if (vn->vfs && vn->vfs->remote) {
+                return vn->vfs->remote;
+            }
+#endif
+            return ERR_NOT_FOUND;
+        }
         if ((nextpath = strchr(path, '/')) != NULL) {
+            // path has at least one additional segment
+            // traverse to the next segment
             len = nextpath - path;
             nextpath++;
             xprintf("vfs_walk: vn=%p name='%.*s' nextpath='%s'\n", vn, (int)len, path, nextpath);
@@ -89,67 +109,53 @@ static mx_status_t _vfs_walk(vnode_t* vn, vnode_t** out, const char* path, const
             }
             path = nextpath;
         } else {
-            xprintf("vfs_walk: vn=%p name='%s'\n", vn, path);
-            if (nameout != NULL) {
-                *out = vn;
-                *nameout = path;
-                return 0;
-            }
-            return vn->ops->lookup(vn, out, path, strlen(path));
+            // final path segment, we're done here
+            xprintf("vfs_walk: vn=%p name='%s' (local)\n", vn, path);
+            *out = vn;
+            *pathout = path;
+            return 0;
         }
     }
     return ERR_NOT_FOUND;
 }
 
-static mx_status_t _vfs_open(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags) {
-    if ((out == NULL) || (path == NULL) || (path[0] == '/') || (path[0] == 0)) {
-        return ERR_INVALID_ARGS;
-    }
+static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
+                            const char* path, const char** pathout,
+                            uint32_t flags, uint32_t mode) {
     xprintf("vfs_open: path='%s' flags=%d\n", path, flags);
-    vnode_t* vn;
     mx_status_t r;
-    if ((r = _vfs_walk(vndir, &vn, path, NULL)) < 0) {
+    if ((r = vfs_walk(vndir, &vndir, path, &path)) < 0) {
         return r;
     }
-    if ((r = vn->ops->open(&vn, flags)) < 0) {
-        xprintf("vn open r = %d", r);
+    if (r > 0) {
+        // remote filesystem, return handle and path through to caller
+        *pathout = path;
         return r;
     }
+
+    size_t len = strlen(path);
+    vnode_t* vn;
+
+    if (flags & O_CREAT) {
+        if ((r = vndir->ops->create(vndir, &vn, path, len, mode)) < 0) {
+            if ((r == ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
+                goto try_open;
+            }
+            return r;
+        }
+    } else {
+try_open:
+        if ((r = vndir->ops->lookup(vndir, &vn, path, len)) < 0) {
+            return r;
+        }
+        if ((r = vn->ops->open(&vn, flags)) < 0) {
+            xprintf("vn open r = %d", r);
+            return r;
+        }
+    }
+    *pathout = "";
     *out = vn;
     return NO_ERROR;
-}
-
-static mx_status_t _vfs_create(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags, uint32_t mode) {
-    if ((out == NULL) || (path == NULL) || (path[0] == '/') | (path[0] == 0)) {
-        xprintf("vfs_create: bogus args\n");
-        return ERR_INVALID_ARGS;
-    }
-    xprintf("vfs_create: path='%s' flags=%d mode=%d\n", path, flags, mode);
-    vnode_t* vn;
-    mx_status_t r;
-    if ((r = _vfs_walk(vfs_root, &vn, path, &path)) < 0) {
-        xprintf("vfs_create: walk r=%d\n", r);
-        return r;
-    }
-    r = vn->ops->create(vn, out, path, strlen(path), mode);
-    xprintf("vfs_create: create r=%d\n", r);
-    return r;
-}
-
-static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags) {
-    mx_status_t r;
-    mxr_mutex_lock(&vfs_lock);
-    r = _vfs_open(vndir, out, path, flags);
-    mxr_mutex_unlock(&vfs_lock);
-    return r;
-}
-
-static mx_status_t vfs_create(vnode_t* vndir, vnode_t** out, const char* path, uint32_t flags, uint32_t mode) {
-    mx_status_t r;
-    mxr_mutex_lock(&vfs_lock);
-    r = _vfs_create(vndir, out, path, flags, mode);
-    mxr_mutex_unlock(&vfs_lock);
-    return r;
 }
 
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
@@ -181,8 +187,73 @@ static mx_status_t vfs_get_handles(vnode_t* vn, mx_handle_t* hnds, uint32_t* ids
 
 mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh);
 
+static mx_status_t txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
+                                    const char* path, uint32_t flags, uint32_t mode) {
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    size_t len = strlen(path);
+    msg.op = MXRIO_OPEN;
+    msg.arg = flags;
+    msg.arg2.mode = mode;
+    msg.datalen = len + 1;
+    memcpy(msg.data, path, len + 1);
+    return mxrio_txn_handoff(srv, rh, &msg);
+}
+
 static vnode_t* volatile vfs_txn_vn;
 static volatile int vfs_txn_op;
+
+static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
+                             vnode_t* vn, const char* path,
+                             uint32_t flags, uint32_t mode) {
+    mx_status_t r;
+    mxr_mutex_lock(&vfs_lock);
+    r = vfs_open(vn, &vn, path, &path, flags, mode);
+    mxr_mutex_unlock(&vfs_lock);
+    if (r < 0) {
+        xprintf("vfs: open: r=%d\n", r);
+        return r;
+    }
+#if WITH_REPLY_PIPE
+    if (r > 0) {
+        //TODO: unify remote vnodes and remote devices
+        //      eliminate vfs_get_handles() and the other
+        //      reply pipe path
+        if ((r = txn_handoff_open(r, rh, path, flags, mode)) < 0) {
+            printf("txn_handoff_open() failed %d\n", r);
+            return r;
+        }
+        return ERR_DISPATCHER_INDIRECT;
+    }
+#endif
+    uint32_t ids[VFS_MAX_HANDLES];
+    if ((r = vfs_get_handles(vn, msg->handle, ids, (const char*)msg->data)) < 0) {
+        vn->ops->close(vn);
+        return r;
+    }
+#if WITH_REPLY_PIPE
+    if (ids[0] == 0) {
+        // device is non-local, handle is the server that
+        // can clone it for us, redirect the rpc to there
+        if ((r = txn_handoff_clone(msg->handle[0], rh)) < 0) {
+            printf("txn_handoff_clone() failed %d\n", r);
+            vn_release(vn);
+            return r;
+        }
+        vn_release(vn);
+        return ERR_DISPATCHER_INDIRECT;
+    }
+#endif
+    // drop the ref from open or create
+    // the backend behind get_handles holds the on-going ref
+    vn_release(vn);
+
+    // TODO: ensure this is always true:
+    msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
+    msg->hcount = r;
+    xprintf("vfs: open: h=%x\n", msg->handle[0]);
+    return NO_ERROR;
+}
 
 static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
@@ -200,50 +271,13 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_OPEN: {
+        char* path = (char*) msg->data;
         if ((len < 1) || (len > 1024)) {
             return ERR_INVALID_ARGS;
         }
-        msg->data[len] = 0;
-        xprintf("vfs: open name='%s' flags=%d mode=%lld\n", (const char*)msg->data, arg, msg->arg2.mode);
-
-        mx_status_t r;
-        if (arg & O_CREAT) {
-            r = vfs_create(vn, &vn, (const char*)msg->data, arg, msg->arg2.mode);
-        } else {
-            r = vfs_open(vn, &vn, (const char*)msg->data, arg);
-        }
-        xprintf("vfs: open: r=%d\n", r);
-        if (r < 0) {
-            return r;
-        }
-        uint32_t ids[VFS_MAX_HANDLES];
-        if ((r = vfs_get_handles(vn, msg->handle, ids, (const char*)msg->data)) < 0) {
-            //TODO: maybe should be vn_release()?
-            vn->ops->close(vn);
-            return r;
-        }
-#if WITH_REPLY_PIPE
-        if (ids[0] == 0) {
-            // device is non-local, handle is the server that
-            // can clone it for us, redirect the rpc to there
-            if ((r = txn_handoff_clone(msg->handle[0], rh)) < 0) {
-                printf("txn_handoff_clone() failed %d\n", r);
-                vn_release(vn);
-                return r;
-            }
-            vn_release(vn);
-            return ERR_DISPATCHER_INDIRECT;
-        }
-#endif
-        // drop the ref from open or create
-        // the backend behind get_handles holds the on-going ref
-        vn_release(vn);
-
-        // TODO: ensure this is always true:
-        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
-        msg->hcount = r;
-        xprintf("vfs: open: h=%x\n", msg->handle[0]);
-        return NO_ERROR;
+        path[len] = 0;
+        xprintf("vfs: open name='%s' flags=%d mode=%lld\n", path, arg, msg->arg2.mode);
+        return _vfs_open(msg, rh, vn, path, arg, msg->arg2.mode);
     }
     case MXRIO_CLOSE:
         // this will drop the ref on the vn
@@ -251,17 +285,13 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
-    case MXRIO_CLONE: {
-        uint32_t ids[VFS_MAX_HANDLES];
-        mx_status_t r = vfs_get_handles(vn, msg->handle, ids, "<clone>");
-        if (r < 0) {
-            return r;
+    case MXRIO_CLONE:
+        if ((msg->handle[0] = vfs_create_handle(vn, "<clone>")) < 0) {
+            return msg->handle[0];
         }
-        // TODO: ensure this is always true:
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
-        msg->hcount = r;
+        msg->hcount = 1;
         return NO_ERROR;
-    }
     case MXRIO_READ: {
         ssize_t r = vn->ops->read(vn, msg->data, arg, ios->io_off);
         if (r >= 0) {
