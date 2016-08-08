@@ -55,7 +55,9 @@ iostate_t* create_iostate(mx_device_t* dev) {
 
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
+#if !WITH_REPLY_PIPE
 static mxr_mutex_t rio_lock = MXR_MUTEX_INIT;
+#endif
 
 // This is called from both the vfs handler thread and console start thread
 // and if not protected by rio_lock, they can step on each other when cloning
@@ -73,10 +75,18 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t*
     // remote device: clone from remote devhost
     // TODO: timeout or handoff
     if (dev->flags & DEV_FLAG_REMOTE) {
+#if WITH_REPLY_PIPE
+        // notify caller that their OPEN or CLONE
+        // must be routed to a different server
+        handles[0] = dev->remote;
+        ids[0] = 0;
+        return 1;
+#else
         mxr_mutex_lock(&rio_lock);
         r = __mxrio_clone(dev->remote, handles, ids);
         mxr_mutex_unlock(&rio_lock);
         return r;
+#endif
     }
 
     if ((newios = create_iostate(dev)) == NULL) {
@@ -123,6 +133,13 @@ fail1:
     mx_handle_close(h[1]);
     free(newios);
     return r;
+}
+
+mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    msg.op = MXRIO_CLONE;
+    return mxrio_txn_handoff(srv, rh, &msg);
 }
 
 #define TXN_SIZE 0x2000 // max size of rio is 8k
@@ -195,6 +212,17 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         if (r < 0) {
             return r;
         }
+#if WITH_REPLY_PIPE
+        if (ids[0] == 0) {
+            // device is non-local, handle is the server that
+            // can clone it for us, redirect the rpc to there
+            if ((r = txn_handoff_clone(msg->handle[0], rh)) < 0) {
+                printf("txn_handoff_clone() failed %d\n", r);
+                return r;
+            }
+            return ERR_DISPATCHER_INDIRECT;
+        }
+#endif
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->hcount = r;
         return NO_ERROR;

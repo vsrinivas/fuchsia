@@ -179,6 +179,8 @@ static mx_status_t vfs_get_handles(vnode_t* vn, mx_handle_t* hnds, uint32_t* ids
     return r;
 }
 
+mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh);
+
 static vnode_t* volatile vfs_txn_vn;
 static volatile int vfs_txn_op;
 
@@ -216,10 +218,23 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         uint32_t ids[VFS_MAX_HANDLES];
         if ((r = vfs_get_handles(vn, msg->handle, ids, (const char*)msg->data)) < 0) {
+            //TODO: maybe should be vn_release()?
             vn->ops->close(vn);
             return r;
         }
-
+#if WITH_REPLY_PIPE
+        if (ids[0] == 0) {
+            // device is non-local, handle is the server that
+            // can clone it for us, redirect the rpc to there
+            if ((r = txn_handoff_clone(msg->handle[0], rh)) < 0) {
+                printf("txn_handoff_clone() failed %d\n", r);
+                vn_release(vn);
+                return r;
+            }
+            vn_release(vn);
+            return ERR_DISPATCHER_INDIRECT;
+        }
+#endif
         // drop the ref from open or create
         // the backend behind get_handles holds the on-going ref
         vn_release(vn);

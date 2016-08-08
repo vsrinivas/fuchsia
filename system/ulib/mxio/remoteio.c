@@ -31,8 +31,6 @@
 
 #define MXDEBUG 0
 
-#define WITH_REPLY_PIPE 1
-
 typedef struct mxrio mxrio_t;
 struct mxrio {
     // base mxio io object
