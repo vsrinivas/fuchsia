@@ -36,6 +36,10 @@ attr                    .req x27
 
 .section .text.boot
 FUNCTION(_start)
+.globl arm_reset
+arm_reset:
+    bl      arm64_elX_to_el1
+
 #if WITH_KERNEL_VM
     /* enable caches so atomics and spinlocks work */
     mrs     tmp, sctlr_el1
@@ -100,6 +104,11 @@ FUNCTION(_start)
 .Lnot_device:
 
 .Lmapping_size_loop:
+    ldr     attr, =MMU_PTE_KERNEL_DATA_FLAGS
+    ldr     tmp, =_start
+    subs    size, tmp, vaddr
+    b.hi    .Lmem_type_done
+
     ldr     attr, =MMU_PTE_KERNEL_RO_FLAGS
     ldr     tmp, =__rodata_start
     subs    size, tmp, vaddr

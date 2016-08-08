@@ -790,7 +790,9 @@ void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace)
 
         if (TRACE_CONTEXT_SWITCH)
             TRACEF("ttbr 0x%llx, tcr 0x%llx\n", ttbr, tcr);
-        ARM64_TLBI(aside1, MMU_ARM64_USER_ASID);
+        // do a global flush to work around the ASID implementation being non functional
+        // TODO: implement proper ASID and/or remove the global bit
+        ARM64_TLBI_NOADDR(vmalle1);
     } else {
         tcr = MMU_TCR_FLAGS_KERNEL;
 
