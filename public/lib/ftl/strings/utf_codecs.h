@@ -29,6 +29,8 @@ inline bool IsValidCharacter(uint32_t code_point) {
           (code_point & 0xFFFEu) != 0xFFFEu);
 }
 
+bool IsStringUTF8(const std::string& str);
+
 // ReadUnicodeCharacter --------------------------------------------------------
 
 // Reads a UTF-8 stream, placing the next code point into the given output

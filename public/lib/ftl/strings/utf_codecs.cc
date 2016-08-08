@@ -8,6 +8,20 @@
 
 namespace ftl {
 
+bool IsStringUTF8(const std::string& str) {
+  const char *src = str.data();
+  int32_t src_len = static_cast<int32_t>(str.length());
+  int32_t char_index = 0;
+
+  while (char_index < src_len) {
+    int32_t code_point;
+    FTL_U8_NEXT(src, char_index, src_len, code_point);
+    if (!IsValidCharacter(code_point))
+      return false;
+  }
+  return true;
+}
+
 // ReadUnicodeCharacter --------------------------------------------------------
 
 bool ReadUnicodeCharacter(const char* src,
