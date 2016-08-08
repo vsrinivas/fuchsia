@@ -72,7 +72,7 @@ typedef struct intel_i915_device {
     uint32_t flags;
 
     MagmaDriver* magma_driver;
-    MagmaSystemDevice* magma_system_device;
+    MagmaSystemConnection* magma_system_connection;
 
 } intel_i915_device_t;
 
@@ -290,8 +290,8 @@ static int magma_hook(void* param)
         return ERR_INTERNAL;
 
     xprintf("Creating device\n");
-    dev->magma_system_device = dev->magma_driver->CreateDevice(dev);
-    if (!dev->magma_system_device)
+    dev->magma_system_connection = dev->magma_driver->CreateDevice(dev);
+    if (!dev->magma_system_connection)
         return ERR_INTERNAL;
 
     xprintf("running magma test in 5s\n");

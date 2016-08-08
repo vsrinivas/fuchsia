@@ -28,8 +28,8 @@ source_set("sys_driver") {
     "magma_system_buffer.h",
     "magma_system_context.cc",
     "magma_system_context.h",
-    "magma_system_device.cc",
-    "magma_system_device.h",
+    "magma_system_connection.cc",
+    "magma_system_connection.h",
   ]
 }
 

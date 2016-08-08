@@ -20,7 +20,7 @@ executable("magma_unit_tests") {
     "main.cc",
     "test_address_space_allocator.cc",
     "test_magma_system_buffer.cc",
-    "test_magma_system_device.cc",
+    "test_magma_system_connection.cc",
     "test_mutex.cc",
     "test_mmio.cc",
     "test_platform_buffer.cc",

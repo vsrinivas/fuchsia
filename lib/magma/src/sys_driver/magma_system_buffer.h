@@ -21,8 +21,6 @@
 #include <functional>
 #include <memory>
 
-struct MagmaSystemDevice;
-
 using msd_buffer_unique_ptr_t = std::unique_ptr<msd_buffer, decltype(&msd_buffer_destroy)>;
 
 class MagmaSystemBuffer {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _MAGMA_SYSTEM_DEVICE_H_
-#define _MAGMA_SYSTEM_DEVICE_H_
+#ifndef _MAGMA_SYSTEM_CONNECTION_H_
+#define _MAGMA_SYSTEM_CONNECTION_H_
 
 #include "magma_system_buffer.h"
 #include "magma_system_context.h"
@@ -22,9 +22,9 @@
 #include <map>
 #include <memory>
 
-struct MagmaSystemDevice {
+struct MagmaSystemConnection {
 public:
-    MagmaSystemDevice(msd_device* msd_dev) : msd_dev_(msd_dev) {}
+    MagmaSystemConnection(msd_device* msd_dev) : msd_dev_(msd_dev) {}
 
     msd_device* arch() { return msd_dev_; }
 
@@ -57,4 +57,4 @@ private:
     uint32_t next_context_id_{};
 };
 
-#endif //_MAGMA_SYSTEM_DEVICE_H_
+#endif //_MAGMA_SYSTEM_CONNECTION_H_

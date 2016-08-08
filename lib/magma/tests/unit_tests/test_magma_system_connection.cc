@@ -14,7 +14,7 @@
 
 #include "mock/mock_msd.h"
 #include "sys_driver/magma_system.h"
-#include "sys_driver/magma_system_device.h"
+#include "sys_driver/magma_system_connection.h"
 #include "gtest/gtest.h"
 
 class MsdMockDevice_GetDeviceId : public MsdMockDevice {
@@ -27,26 +27,26 @@ private:
     uint32_t device_id_;
 };
 
-TEST(Magma, MagmaSystemDevice_GetDeviceId)
+TEST(Magma, MagmaSystemConnection_GetDeviceId)
 {
     uint32_t test_id = 0xdeadbeef;
 
     auto msd_dev = new MsdMockDevice_GetDeviceId(test_id);
-    auto dev = MagmaSystemDevice(msd_dev);
+    auto dev = MagmaSystemConnection(msd_dev);
 
     uint32_t device_id = dev.GetDeviceId();
     // For now device_id is invalid
     EXPECT_EQ(device_id, test_id);
 
-    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemDevice destructor
+    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemConnection destructor
     msd_driver_destroy_device(msd_dev);
 }
 
-TEST(Magma, MagmaSystemDevice_BufferManagement)
+TEST(Magma, MagmaSystemConnection_BufferManagement)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemDevice(msd_dev);
+    auto dev = MagmaSystemConnection(msd_dev);
 
     uint64_t test_size = 4096;
 
@@ -103,10 +103,10 @@ private:
     uint32_t active_context_count_;
 };
 
-TEST(Magma, MagmaSystemDevice_ContextManagement)
+TEST(Magma, MagmaSystemConnection_ContextManagement)
 {
     auto msd_dev = new MsdMockDevice_ContextManagement();
-    auto dev = MagmaSystemDevice(msd_dev);
+    auto dev = MagmaSystemConnection(msd_dev);
 
     EXPECT_EQ(msd_dev->NumActiveContexts(), 0u);
 
@@ -129,6 +129,6 @@ TEST(Magma, MagmaSystemDevice_ContextManagement)
     EXPECT_EQ(msd_dev->NumActiveContexts(), 0u);
     EXPECT_FALSE(magma_system_destroy_context(&dev, context_id_1));
 
-    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemDevice destructor
+    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemConnection destructor
     msd_driver_destroy_device(msd_dev);
 }

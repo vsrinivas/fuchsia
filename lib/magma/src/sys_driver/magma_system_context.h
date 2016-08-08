@@ -19,13 +19,14 @@
 #include <memory>
 
 #include "msd.h"
-struct MagmaSystemDevice;
+
+struct MagmaSystemConnection;
 
 using msd_context_unique_ptr_t = std::unique_ptr<msd_context, std::function<void(msd_context*)>>;
 
 class MagmaSystemContext {
 public:
-    static std::unique_ptr<MagmaSystemContext> Create(MagmaSystemDevice* dev);
+    static std::unique_ptr<MagmaSystemContext> Create(MagmaSystemConnection* connection);
 
 private:
     MagmaSystemContext(msd_context_unique_ptr_t msd_ctx) : msd_ctx_(std::move(msd_ctx)) {}

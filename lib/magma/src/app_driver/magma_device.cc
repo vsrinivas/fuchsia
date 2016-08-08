@@ -81,7 +81,7 @@ void MagmaBuffer::WaitRendering()
 
 MagmaDevice* MagmaDevice::Open(uint32_t device_handle, int batch_size)
 {
-    MagmaSystemDevice* sys_dev;
+    MagmaSystemConnection* sys_dev;
     if (!magma_system_open(&sys_dev, device_handle)) {
         DLOG("magma_system_open failed");
         return nullptr;
@@ -97,7 +97,7 @@ MagmaDevice* MagmaDevice::Open(uint32_t device_handle, int batch_size)
     return bufmgr;
 }
 
-MagmaDevice::MagmaDevice(MagmaSystemDevice* sys_dev) : sys_dev_(sys_dev)
+MagmaDevice::MagmaDevice(MagmaSystemConnection* sys_dev) : sys_dev_(sys_dev)
 {
     libdrm_ = new LibdrmIntelGen();
 }

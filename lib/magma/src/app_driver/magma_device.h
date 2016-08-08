@@ -53,7 +53,7 @@ public:
     static MagmaDevice* Open(uint32_t device_handle, int batch_size);
     ~MagmaDevice();
 
-    MagmaSystemDevice* sys_dev() { return sys_dev_; }
+    MagmaSystemConnection* sys_dev() { return sys_dev_; }
 
     uint64_t max_relocs() { return max_relocs_; }
     uint32_t GetDeviceId() { return magma_system_get_device_id(sys_dev_); }
@@ -71,9 +71,9 @@ public:
     bool ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_len, uint32_t flags);
 
 private:
-    MagmaDevice(MagmaSystemDevice* sys_dev);
+    MagmaDevice(MagmaSystemConnection* sys_dev);
 
-    MagmaSystemDevice* sys_dev_;
+    MagmaSystemConnection* sys_dev_;
     LibdrmIntelGen* libdrm_;
 
     uint64_t max_relocs_{};

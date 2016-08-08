@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #include "magma_system_context.h"
-#include "magma_system_device.h"
+#include "magma_system_connection.h"
 #include "magma_util/macros.h"
 
-std::unique_ptr<MagmaSystemContext> MagmaSystemContext::Create(MagmaSystemDevice* dev)
+std::unique_ptr<MagmaSystemContext> MagmaSystemContext::Create(MagmaSystemConnection* dev)
 {
     auto msd_ctx = msd_device_create_context(dev->arch());
     if (!msd_ctx)

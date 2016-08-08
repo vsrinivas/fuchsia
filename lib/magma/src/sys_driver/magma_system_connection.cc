@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "magma_system_device.h"
+#include "magma_system_connection.h"
 #include "magma_util/macros.h"
 
-std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::AllocateBuffer(uint64_t size)
+std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::AllocateBuffer(uint64_t size)
 {
     std::shared_ptr<MagmaSystemBuffer> buffer(MagmaSystemBuffer::Create(size));
     if (!buffer)
@@ -25,30 +25,30 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::AllocateBuffer(uint64_t si
     return buffer;
 }
 
-bool MagmaSystemDevice::FreeBuffer(uint32_t handle)
+bool MagmaSystemConnection::FreeBuffer(uint32_t handle)
 {
     auto iter = buffer_map_.find(handle);
     if (iter == buffer_map_.end())
-        return DRETF(false, "MagmaSystemDevice: Attempting to free invalid buffer handle");
+        return DRETF(false, "MagmaSystemConnection: Attempting to free invalid buffer handle");
 
     buffer_map_.erase(iter);
     return true;
 }
 
-std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::LookupBuffer(uint32_t handle)
+std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint32_t handle)
 {
     auto iter = buffer_map_.find(handle);
     if (iter == buffer_map_.end())
-        return DRETP(nullptr, "MagmaSystemDevice: Attempting to lookup invalid buffer handle");
+        return DRETP(nullptr, "MagmaSystemConnection: Attempting to lookup invalid buffer handle");
 
     return iter->second;
 }
 
-bool MagmaSystemDevice::CreateContext(uint32_t* context_id_out)
+bool MagmaSystemConnection::CreateContext(uint32_t* context_id_out)
 {
     auto ctx = MagmaSystemContext::Create(this);
     if (!ctx)
-        return DRETF(false, "MagmaSystemDevice: Failed to Create MagmaSystemContext");
+        return DRETF(false, "MagmaSystemConnection: Failed to Create MagmaSystemContext");
 
     auto context_id = next_context_id_++;
     DASSERT(context_map_.find(context_id) == context_map_.end());
@@ -58,13 +58,13 @@ bool MagmaSystemDevice::CreateContext(uint32_t* context_id_out)
     return true;
 }
 
-bool MagmaSystemDevice::DestroyContext(uint32_t context_id)
+bool MagmaSystemConnection::DestroyContext(uint32_t context_id)
 {
     auto iter = context_map_.find(context_id);
     if (iter == context_map_.end())
-        return DRETF(false, "MagmaSystemDevice:Attempting to destroy invalid context id");
+        return DRETF(false, "MagmaSystemConnection:Attempting to destroy invalid context id");
     context_map_.erase(iter);
     return true;
 }
 
-uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(arch()); }
+uint32_t MagmaSystemConnection::GetDeviceId() { return msd_device_get_id(arch()); }

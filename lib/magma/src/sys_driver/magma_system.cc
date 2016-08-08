@@ -22,16 +22,16 @@ static msd_client_id get_client_id() { return static_cast<msd_client_id>(getpid(
 static msd_client_id get_client_id() { return static_cast<msd_client_id>(1); }
 #endif // __linux__
 
-MagmaSystemDevice* MagmaDriver::g_device;
+MagmaSystemConnection* MagmaDriver::g_device;
 
-bool magma_system_open(MagmaSystemDevice** pdev, uint32_t device_handle)
+bool magma_system_open(MagmaSystemConnection** pdev, uint32_t device_handle)
 {
     if (device_handle != 0xdeadbeef) {
         DLOG("Unexpected device_handle\n");
         return false;
     }
 
-    MagmaSystemDevice* dev = MagmaDriver::GetDevice();
+    MagmaSystemConnection* dev = MagmaDriver::GetDevice();
     DASSERT(dev);
 
     msd_client_id client_id = get_client_id();
@@ -48,7 +48,7 @@ bool magma_system_open(MagmaSystemDevice** pdev, uint32_t device_handle)
     return true;
 }
 
-void magma_system_close(MagmaSystemDevice* dev)
+void magma_system_close(MagmaSystemConnection* dev)
 {
     msd_device_close(dev->arch(), dev->client_id());
 
@@ -56,22 +56,22 @@ void magma_system_close(MagmaSystemDevice* dev)
 }
 
 // Returns the device id.  0 is an invalid device id.
-uint32_t magma_system_get_device_id(MagmaSystemDevice* dev)
+uint32_t magma_system_get_device_id(MagmaSystemConnection* dev)
 {
     return msd_device_get_id(dev->arch());
 }
 
-bool magma_system_create_context(MagmaSystemDevice* dev, uint32_t* context_id_out)
+bool magma_system_create_context(MagmaSystemConnection* dev, uint32_t* context_id_out)
 {
     return dev->CreateContext(context_id_out);
 }
 
-bool magma_system_destroy_context(struct MagmaSystemDevice* dev, uint32_t context_id)
+bool magma_system_destroy_context(struct MagmaSystemConnection* dev, uint32_t context_id)
 {
     return dev->DestroyContext(context_id);
 }
 
-bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_out,
+bool magma_system_alloc(MagmaSystemConnection* dev, uint64_t size, uint64_t* size_out,
                         uint32_t* handle_out)
 {
     auto buf = dev->AllocateBuffer(size);
@@ -83,19 +83,19 @@ bool magma_system_alloc(MagmaSystemDevice* dev, uint64_t size, uint64_t* size_ou
     return true;
 }
 
-bool magma_system_free(struct MagmaSystemDevice* dev, uint32_t handle)
+bool magma_system_free(struct MagmaSystemConnection* dev, uint32_t handle)
 {
     return dev->FreeBuffer(handle);
 }
 
-bool magma_system_set_tiling_mode(struct MagmaSystemDevice* dev, uint32_t handle,
+bool magma_system_set_tiling_mode(struct MagmaSystemConnection* dev, uint32_t handle,
                                   uint32_t tiling_mode)
 {
     DLOG("TODO: magma_system_set_tiling_mode");
     return false;
 }
 
-bool magma_system_map(struct MagmaSystemDevice* dev, uint32_t handle, void** paddr)
+bool magma_system_map(struct MagmaSystemConnection* dev, uint32_t handle, void** paddr)
 {
     auto buf = dev->LookupBuffer(handle);
     if (!buf)
@@ -104,7 +104,7 @@ bool magma_system_map(struct MagmaSystemDevice* dev, uint32_t handle, void** pad
     return buf->platform_buffer()->MapCpu(paddr);
 }
 
-bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* addr)
+bool magma_system_unmap(struct MagmaSystemConnection* dev, uint32_t handle, void* addr)
 {
     auto buf = dev->LookupBuffer(handle);
     if (!buf)
@@ -113,20 +113,20 @@ bool magma_system_unmap(struct MagmaSystemDevice* dev, uint32_t handle, void* ad
     return buf->platform_buffer()->UnmapCpu();
 }
 
-bool magma_system_set_domain(struct MagmaSystemDevice* dev, uint32_t handle, uint32_t read_domains,
+bool magma_system_set_domain(struct MagmaSystemConnection* dev, uint32_t handle, uint32_t read_domains,
                              uint32_t write_domain)
 {
     DLOG("TODO: magma_system_set_domain");
     return false;
 }
 
-bool magma_system_execute_buffer(struct MagmaSystemDevice* dev, struct MagmaExecBuffer* execbuffer)
+bool magma_system_execute_buffer(struct MagmaSystemConnection* dev, struct MagmaExecBuffer* execbuffer)
 {
     DLOG("TODO: magma_system_execute_buffer");
     return false;
 }
 
-void magma_system_wait_rendering(struct MagmaSystemDevice* dev, uint32_t handle)
+void magma_system_wait_rendering(struct MagmaSystemConnection* dev, uint32_t handle)
 {
     DLOG("TODO: magma_system_wait_rendering");
 }

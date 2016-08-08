@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "magma_system_buffer.h"
-#include "magma_system_device.h"
 #include "magma_util/macros.h"
 
 MagmaSystemBuffer::MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf,
