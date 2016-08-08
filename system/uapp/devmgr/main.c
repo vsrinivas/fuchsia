@@ -76,23 +76,33 @@ int devicehost(int argc, char** argv) {
     return 0;
 }
 
+#define VC_DEVICE "/dev/class/console/vc"
+
 #if !LIBDRIVER
 int console_starter(void* arg) {
+#if !_MX_KERNEL_HAS_SHELL
+    // if no kernel shell on serial uart, start a mxsh there
+    printf("devmgr: shell startup\n");
+    devmgr_launch("mxsh:console", "/boot/bin/mxsh", NULL, "/dev/console");
+#endif
+
+    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, "/dev/console");
+
+    devmgr_launch("mxsh:autorun", "/boot/bin/mxsh", "/boot/autorun", NULL);
+
     printf("devmgr: vc startup\n");
-    const char* name = "/dev/class/console/vc";
     // wait for vc server ready
     int fd;
-    while ((fd = open(name, O_RDWR)) < 0) {
+    while ((fd = open(VC_DEVICE, O_RDWR)) < 0) {
         mx_nanosleep(100000000ULL);
     }
     close(fd);
 
     // start a couple vc's
-    for (unsigned i = 0; i < VC_COUNT;) {
+    for (unsigned i = 0; i < VC_COUNT; i++) {
         char pname[32];
         snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
-        devmgr_launch(pname, "/boot/bin/mxsh", NULL, name);
-        i++;
+        devmgr_launch(pname, "/boot/bin/mxsh", NULL, VC_DEVICE);
     }
     return 0;
 }
@@ -123,20 +133,10 @@ int main(int argc, char** argv) {
     // from the linker in the log
     putenv(strdup("LD_DEBUG=1"));
 
-#if !_MX_KERNEL_HAS_SHELL
-    // if no kernel shell on serial uart, start a mxsh there
-    printf("devmgr: shell startup\n");
-    devmgr_launch("mxsh:console", "/boot/bin/mxsh", NULL, "/dev/console");
-#endif
-
-    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, "/dev/console");
-
     mxr_thread_t* t;
     if ((mxr_thread_create(console_starter, NULL, "console-starter", &t)) == 0) {
         mxr_thread_detach(t);
     }
-
-    devmgr_launch("mxsh:autorun", "/boot/bin/mxsh", "/boot/autorun", NULL);
 
     devmgr_handle_messages();
     printf("devmgr: message handler returned?!\n");

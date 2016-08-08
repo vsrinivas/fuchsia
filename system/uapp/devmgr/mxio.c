@@ -17,6 +17,7 @@
 
 #include "devmgr.h"
 
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,8 +82,13 @@ void devmgr_launch(const char* name, const char* app, const char* arg, const cha
         }
         n++;
     } else {
-        // TODO: correct open flags once we have them
-        if ((r = vfs_open_handles(hnd + n, ids + n, MXIO_FLAG_USE_FOR_STDIO | 0, device, 0)) < 0) {
+        int fd;
+        if ((fd = open(device, O_RDWR)) < 0) {
+            goto fail;
+        }
+        r = mxio_clone_fd(fd, MXIO_FLAG_USE_FOR_STDIO | 0, hnd + n, ids + n);
+        close(fd);
+        if (r < 0) {
             goto fail;
         }
         n += r;

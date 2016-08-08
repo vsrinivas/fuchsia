@@ -26,9 +26,6 @@ void vfs_init(vnode_t* root);
 mx_handle_t vfs_create_root_handle(void);
 mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn);
 
-mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
-                             const char* path, uint32_t flags);
-
 // device fs
 vnode_t* devfs_get_root(void);
 mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev);

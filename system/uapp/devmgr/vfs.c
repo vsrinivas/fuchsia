@@ -179,33 +179,6 @@ static mx_status_t vfs_get_handles(vnode_t* vn, mx_handle_t* hnds, uint32_t* ids
     return r;
 }
 
-mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
-                             const char* path, uint32_t flags) {
-    mx_status_t r;
-    vnode_t* vn;
-
-    if ((path == NULL) || (path[0] != '/')) {
-        return ERR_INVALID_ARGS;
-    }
-
-    if (flags & O_CREAT) {
-        return ERR_NOT_SUPPORTED;
-    }
-    if ((r = vfs_open(vfs_root, &vn, path + 1, flags)) < 0) {
-        return r;
-    }
-    if ((r = vfs_get_handles(vn, hnds, ids, path)) < 0) {
-        return r;
-    }
-    // drop the ref we got from open
-    // the backend behind get_handles holds the on-going ref
-    vn_release(vn);
-    for (int i = 0; i < r; i++) {
-        ids[i] |= (arg & 0xFFFF) << 16;
-    }
-    return r;
-}
-
 static vnode_t* volatile vfs_txn_vn;
 static volatile int vfs_txn_op;
 
