@@ -29,7 +29,7 @@ source_set("mad_abi") {
 config("msd_abi_config") {
   include_dirs = [
     ".",
-    "sys-driver",
+    "sys_driver",
   ]
 }
 
@@ -39,8 +39,8 @@ source_set("msd_abi") {
 
   sources = [
     "common/magma_defs.h",
-    "sys-driver/msd.h",
-    "sys-driver/msd_defs.h",
-    "sys-driver/msd_platform_buffer.h",
+    "sys_driver/msd.h",
+    "sys_driver/msd_defs.h",
+    "sys_driver/msd_platform_buffer.h",
   ]
 }

@@ -14,7 +14,7 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("sys-driver") {
+source_set("sys_driver") {
   public_deps = [
     ":platform_buffer",
     "$magma_build_root/include:msd_abi",

@@ -43,9 +43,9 @@ source_set("libdrm") {
 
 source_set("libmad") {
   sources = [
-    "src/app-driver/magma.cc",
-    "src/app-driver/magma_device.cc",
-    "src/app-driver/magma_device.h",
+    "src/app_driver/magma.cc",
+    "src/app_driver/magma_device.cc",
+    "src/app_driver/magma_device.h",
   ]
 
   public_deps = [
@@ -57,7 +57,7 @@ source_set("libmad") {
     ":libmsd",
     ":util",
     "include:mad_abi",
-    "src/sys-driver:magma_system_interface",
+    "src/sys_driver:magma_system_interface",
   ]
 }
 
@@ -81,7 +81,7 @@ group("util") {
 # internal only
 source_set("libmsd") {
   deps = [
-    "src/sys-driver",
+    "src/sys_driver",
   ]
   public_deps = [
     "include:msd_abi",
