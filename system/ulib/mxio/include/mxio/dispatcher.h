@@ -46,6 +46,10 @@ void mxio_dispatcher_run(mxio_dispatcher_t* md);
 mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, void* cookie);
 
 // dispatcher callback return code that there were no messages to read
-#define ERR_DISPATCHER_NO_WORK -9999
+#define ERR_DISPATCHER_NO_WORK (-9999)
+
+// indicates message handed off to another server
+// used by rio remote handler for deferred reply pipe completion
+#define ERR_DISPATCHER_INDIRECT (-9998)
 
 __END_CDECLS

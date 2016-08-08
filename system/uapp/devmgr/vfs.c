@@ -209,7 +209,7 @@ mx_status_t vfs_open_handles(mx_handle_t* hnds, uint32_t* ids, uint32_t arg,
 static vnode_t* volatile vfs_txn_vn;
 static volatile int vfs_txn_op;
 
-static mx_status_t _vfs_handler(mx_rio_msg_t* msg, void* cookie) {
+static mx_status_t _vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
     vnode_t* vn = ios->vn;
     uint32_t len = msg->datalen;
@@ -397,10 +397,10 @@ static mxio_dispatcher_t* vfs_dispatcher;
 static volatile int vfs_txn = -1;
 static int vfs_txn_no = 0;
 
-static mx_status_t vfs_handler(mx_rio_msg_t* msg, void* cookie) {
+static mx_status_t vfs_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) {
     vfs_txn_no = (vfs_txn_no + 1) & 0x0FFFFFFF;
     vfs_txn = vfs_txn_no;
-    mx_status_t r = _vfs_handler(msg, cookie);
+    mx_status_t r = _vfs_handler(msg, rh, cookie);
     vfs_txn = -1;
     return r;
 }

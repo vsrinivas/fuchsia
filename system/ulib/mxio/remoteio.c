@@ -95,7 +95,7 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
         msg.arg = 0;
         msg.datalen = 0;
         msg.hcount = 0;
-        cb(&msg, cookie);
+        cb(&msg, 0, cookie);
         return NO_ERROR;
     }
 
@@ -130,7 +130,12 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* _cb, void* cookie) {
     xprintf("handle_rio: op=%s arg=%d len=%u hsz=%d\n",
             opname(msg.op), msg.arg, msg.datalen, msg.hcount);
 
-    msg.arg = cb(&msg, cookie);
+    msg.arg = cb(&msg, (rh != h) ? rh : 0, cookie);
+    if (msg.arg == ERR_DISPATCHER_INDIRECT) {
+        // callback is handling the reply itself
+        // and took ownership of the reply handle
+        return 0;
+    }
     if ((msg.arg < 0) || !is_message_valid(&msg)) {
         // in the event of an error response or bad message
         // release all the handles and data payload
@@ -191,6 +196,24 @@ void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie) {
         xprintf("riosvr(%x) done, status=%d\n", h, r);
     }
     mx_handle_close(h);
+}
+
+mx_status_t mx_rio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mx_rio_msg_t* msg) {
+    msg->magic = MX_RIO_MAGIC;
+    msg->handle[0] = rh;
+    msg->hcount = 1;
+    msg->op |= MX_RIO_REPLY_PIPE;
+
+    if (!is_message_valid(msg)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    mx_status_t r;
+    uint32_t dsize = MX_RIO_HDR_SZ + msg->datalen;
+    if ((r = mx_message_write(srv, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
+        return r;
+    }
+    return 0;
 }
 
 #if WITH_REPLY_PIPE

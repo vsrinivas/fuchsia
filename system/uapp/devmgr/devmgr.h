@@ -101,7 +101,7 @@ extern mxr_mutex_t __devmgr_api_lock;
 extern mxio_dispatcher_t* devmgr_rio_dispatcher;
 extern mxio_dispatcher_t* devmgr_devhost_dispatcher;
 
-mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie);
+mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 extern bool __dm_locked;
 

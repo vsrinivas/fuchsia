@@ -171,7 +171,7 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
     return actual;
 }
 
-mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, void* cookie) {
+mx_status_t devmgr_rio_handler(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;

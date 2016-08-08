@@ -51,13 +51,17 @@ __BEGIN_CDECLS
 
 typedef struct mx_rio_msg mx_rio_msg_t;
 
-typedef mx_status_t (*mxio_rio_cb_t)(mx_rio_msg_t* msg, void* cookie);
+typedef mx_status_t (*mxio_rio_cb_t)(mx_rio_msg_t* msg, mx_handle_t rh, void* cookie);
 // callback to process a mx_rio_msg
 // - on entry datalen indicates how much valid data is in msg.data[]
 // - return value will be placed in msg.arg, negative is an error,
 //   positive values are opcode-specific
 // - on non-error return msg.len indicates how much valid data to
 //   send.  On error return msg.len will be set to 0.
+// - if rh is non-zero it is a reply handle which may be used for
+//   deferred replies.  In which case the callback must return
+//   ERR_DISPATCHER_INDIRECT to differentiate this from an immediate
+//   reply or error
 
 // process events on h until it fails
 void mxio_rio_server(mx_handle_t h, mxio_rio_cb_t cb, void* cookie);
@@ -68,6 +72,12 @@ mx_status_t mxio_rio_handler(mx_handle_t h, void* cb, void* cookie);
 // create a thread to service mxio remote io traffic
 mx_status_t mxio_handler_create(mx_handle_t h, mxio_rio_cb_t cb, void* cookie);
 
+// Pass a message to another server (srv) along with a reply handle (rh)
+// The other server will reply via the reply handle, and this call returns
+// immediately, never blocking.
+// The reply-handle is *not* closed on error, as it's expected the caller
+// will want to send an error back via it.
+mx_status_t mx_rio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mx_rio_msg_t* msg);
 
 struct mx_rio_msg {
     uint32_t magic;                    // MX_RIO_MAGIC
