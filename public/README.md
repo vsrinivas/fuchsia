@@ -87,10 +87,6 @@ concrete modules provided in manifests. Semantic labels also define the data
 flow between the steps in the recipe and the structure in which the resulting
 data in the session are organized.
 
-See: [Semantic Label Expression Syntax](https://docs.google.com/document/d/109gDG5TQZVCN1HrBuXAcQoXsomYKOcfFez9oz3tg_y0/edit#heading=h.962kkvg45ptv)
-
-TODO(mesch/tonyg): Move this document here.
-
 ### Module manifest
 
 Every Module must describe its behavior by providing a file named
@@ -105,8 +101,6 @@ At the top level are a series of fields:
   * `input` Optional. A list of expressions describing the inputs of the module.
   * `output` Optional. A list of expressions describing the outputs of the
     module.
-
-TODO(mesch/tonyg): Move [details](https://docs.google.com/document/d/109gDG5TQZVCN1HrBuXAcQoXsomYKOcfFez9oz3tg_y0/edit#heading=h.dsfb221fpebr) here.
 
 ## Examples
 
