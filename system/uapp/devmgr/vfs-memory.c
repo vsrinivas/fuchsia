@@ -172,12 +172,13 @@ mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len)
 }
 
 static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
-                               const char* name, size_t namelen);
+                               const char* name, size_t namelen,
+                               bool isdir);
 
 static mx_status_t mem_create(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode) {
     mnode_t* parent = vn->pdata;
     mnode_t* mem;
-    mx_status_t r = _mem_create(parent, &mem, name, len);
+    mx_status_t r = _mem_create(parent, &mem, name, len, false);
     if (r >= 0) {
         vn_acquire(&mem->vn);
         *out = &mem->vn;
@@ -259,7 +260,8 @@ static mnode_t mem_root = {
 };
 
 static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
-                               const char* name, size_t namelen) {
+                               const char* name, size_t namelen,
+                               bool isdir) {
     if ((parent == NULL) || (parent->vn.dnode == NULL)) {
         return ERR_INVALID_ARGS;
     }
@@ -289,6 +291,10 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
     }
     dn_add_child(parent->vn.dnode, dn);
 
+    if (isdir) {
+        mem->vn.dnode = dn;
+    }
+
     *out = mem;
     return NO_ERROR;
 }
@@ -317,6 +323,8 @@ static mnode_t vfs_root = {
     },
 };
 
+static mnode_t* vn_data;
+
 vnode_t* vfs_get_root(void) {
     if (vfs_root_dn.vnode == NULL) {
         vfs_root_dn.vnode = &vfs_root.vn;
@@ -324,6 +332,17 @@ vnode_t* vfs_get_root(void) {
         dn_add_child(&vfs_root_dn, devfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, bootfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, memfs_get_root()->dnode);
+        _mem_create(&vfs_root, &vn_data, "data", 4, true);
     }
     return &vfs_root.vn;
+}
+
+static vfs_t vfs_data;
+
+// UNSAFE! LOCK!
+mx_status_t vfs_install_remote(mx_handle_t h) {
+    vfs_data.remote = h;
+    vn_data->vn.vfs = &vfs_data;
+    vn_data->vn.flags |= V_FLAG_REMOTE;
+    return NO_ERROR;
 }

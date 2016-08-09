@@ -88,7 +88,7 @@ static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
         }
         if (vn->flags & V_FLAG_REMOTE) {
             // remote filesystem mount, caller must resolve
-            xprintf("vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
+            printf("vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
             *out = vn;
             *pathout = path;
 #if WITH_REPLY_PIPE
