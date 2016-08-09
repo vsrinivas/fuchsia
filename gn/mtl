@@ -1,11 +1,11 @@
 {
+    "labels": [
+        "//lib/mtl"
+    ]
     "binaries": [
         {
             "binary": "mtl_unittests",
             "bootfs_path": "test/mtl_unittests"
         }
-    ],
-    "label": [
-        "//lib/mtl"
     ]
 }
