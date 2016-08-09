@@ -108,6 +108,9 @@ int console_starter(void* arg) {
 }
 #endif
 
+// TODO(johngro) : remove this once MG-234 has been resolved.
+extern void launchpad_call_once_workaround(void);
+
 int main(int argc, char** argv) {
     devmgr_io_init();
     if (argc > 1) {
@@ -117,6 +120,9 @@ int main(int argc, char** argv) {
 #if LIBDRIVER
     printf("device driver - not a standalone executable\n");
 #else
+    // TODO(johngro) : remove this once MG-234 has been resolved.
+    launchpad_call_once_workaround();
+
     printf("devmgr: main()\n");
 
     char** e = environ;

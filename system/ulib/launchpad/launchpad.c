@@ -429,6 +429,12 @@ static mx_handle_t vdso_get_vmo(void) {
     return vdso_vmo;
 }
 
+// TODO(johngro) : remove this once MG-234 has been resolved.
+void launchpad_call_once_workaround(void) {
+    vdso_lock();
+    vdso_unlock();
+}
+
 mx_handle_t launchpad_get_vdso_vmo(void) {
     vdso_lock();
     mx_handle_t result = mx_handle_duplicate(vdso_get_vmo(),
