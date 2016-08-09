@@ -501,10 +501,11 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
     struct loader_msg {
         mx_proc_args_t header;
         uint32_t handle_info[HND_SPECIAL_COUNT + 1];
-        char env[];
+        char args_and_env[];
     };
 
-    const size_t msg_size = sizeof(struct loader_msg) + lp->env_len;
+    const size_t msg_size =
+        sizeof(struct loader_msg) + lp->args_len + lp->env_len;
     struct loader_msg* msg = malloc(msg_size);
     if (msg == NULL)
         return ERR_NO_MEMORY;
@@ -514,12 +515,21 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
     msg->header.version = MX_PROCARGS_VERSION;
     msg->header.handle_info_off = offsetof(struct loader_msg, handle_info);
 
+    // Include the argument strings so the dynamic linker can use argv[0]
+    // in messages it prints.
+    if (lp->argc > 0) {
+        msg->header.args_off = offsetof(struct loader_msg, args_and_env);
+        msg->header.args_num = lp->argc;
+        memcpy(msg->args_and_env, lp->args, lp->args_len);
+    }
+
     // Include the environment strings so the dynamic linker can
     // see options like LD_DEBUG or whatnot.
     if (lp->envc > 0) {
-        msg->header.environ_off = offsetof(struct loader_msg, env);
+        msg->header.environ_off
+            = offsetof(struct loader_msg, args_and_env) + lp->args_len;
         msg->header.environ_num = lp->envc;
-        memcpy(msg->env, lp->env, lp->env_len);
+        memcpy(&msg->args_and_env[lp->args_len], lp->env, lp->env_len);
     }
 
     // This loop should be completely unrolled.  But using a switch here

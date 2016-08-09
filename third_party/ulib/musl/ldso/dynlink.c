@@ -1198,16 +1198,10 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-static void* dls3(mx_handle_t exec_vmo) {
+static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     static struct dso app;
     size_t i;
     char* env_preload = 0;
-    int argc = 0;
-    // TODO(mcgrathr): Maybe drop all the argv handling here because
-    // launchpad doesn't usually send it.  But maybe instead make
-    // launchpad actually send the args and/or environ for us too? TBD
-    static char* bogon = "";
-    char** argv = &bogon;
     char** argv_orig = argv;
 
     libc.page_size = PAGE_SIZE;
@@ -1431,6 +1425,10 @@ static void* dls3(mx_handle_t exec_vmo) {
         }
     }
 
+    // Reset from the argv[0] value so we don't save a dangling pointer
+    // into the caller's stack frame.
+    app.name = "";
+
     errno = 0;
 
     return laddr(&app, ehdr->e_entry);
@@ -1503,12 +1501,13 @@ dl_start_return_t __dls3(void* start_arg) {
     }
 
     // Unpack the environment strings so dls3 can use getenv.
-    char* envp[procargs->environ_num];
-    status = mxr_processargs_strings(buffer, nbytes, NULL, envp);
+    char* argv[procargs->args_num];
+    char* envp[procargs->environ_num + 1];
+    status = mxr_processargs_strings(buffer, nbytes, argv, envp);
     if (status == NO_ERROR)
         __environ = envp;
 
-    void* entry = dls3(exec_vmo);
+    void* entry = dls3(exec_vmo, procargs->args_num, argv);
 
     // Reset it so there's no dangling pointer to this stack frame.
     // Presumably the parent will send the same strings in the main
