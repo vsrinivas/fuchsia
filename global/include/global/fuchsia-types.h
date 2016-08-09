@@ -27,6 +27,10 @@
 // ERR_INVALID_ARGS: an argument is invalid (-ex. null pointer
 #define ERR_INVALID_ARGS (-10)
 
+// ERR_WRONG_TYPE: The subject of the operation is the wrong type to perform the operation.
+// Example: Attempting a message_read on a thread handle.
+#define ERR_WRONG_TYPE (-54)
+
 // ERR_BAD_SYSCALL: syscall number is invalid
 #define ERR_BAD_SYSCALL (-11)
 

@@ -21,6 +21,10 @@ FUCHSIA_ERROR(NO_RESOURCES,         5)
 // ERR_INVALID_ARGS: an argument is invalid, ex. null pointer
 FUCHSIA_ERROR(INVALID_ARGS,        10)
 
+// ERR_WRONG_TYPE: The subject of the operation is the wrong type to perform the operation.
+// Example: Attempting a message_read on a thread handle.
+FUCHSIA_ERROR(WRONG_TYPE,          54)
+
 // ERR_BAD_SYSCALL: syscall number is invalid
 FUCHSIA_ERROR(BAD_SYSCALL,         11)
 
