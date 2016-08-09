@@ -357,6 +357,9 @@ mx_status_t lp_setup(launchpad_t** lp_out,
     if ((status = launchpad_environ(lp, envp)) < 0) {
         goto fail;
     }
+    if ((status = launchpad_add_vdso_vmo(lp)) < 0) {
+        goto fail;
+    }
     if ((status = launchpad_clone_mxio_root(lp)) < 0) {
         goto fail;
     }
@@ -441,7 +444,13 @@ mx_status_t command(int argc, char** argv, bool runbg) {
     }
 
     if ((status = launchpad_elf_load(lp, launchpad_vmo_from_file(argv[0]))) < 0) {
-        fprintf(stderr, "could not load binary '%s'\n", argv[0]);
+        fprintf(stderr, "could not load binary '%s' (%d)\n", argv[0], status);
+        goto done;
+    }
+
+    if ((status = launchpad_load_vdso(lp, MX_HANDLE_INVALID)) < 0) {
+        fprintf(stderr, "could not load vDSO after binary '%s' (%d)\n",
+                argv[0], status);
         goto done;
     }
 

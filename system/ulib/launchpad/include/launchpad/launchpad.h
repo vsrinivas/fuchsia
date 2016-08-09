@@ -188,9 +188,9 @@ mx_handle_t launchpad_launch(const char* name,
 // details inherited from the calling process (environment
 // variables, mxio root, and mxio file descriptors).  This just
 // calls the functions launchpad_create, launchpad_elf_load,
-// launchpad_load_vdso, launchpad_arguments, launchpad_add_vdso_vmo,
-// launchpad_clone_mxio_root, launchpad_clone_fd, launchpad_start,
-// launchpad_destroy.
+// launchpad_load_vdso, launchpad_add_vdso_vmo, launchpad_arguments,
+// launchpad_environ, launchpad_clone_mxio_root, launchpad_clone_fd,
+// launchpad_start, launchpad_destroy.
 //
 // Returns the process handle on success, giving ownership to the
 // caller; or an error code on failure.

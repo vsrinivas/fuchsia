@@ -64,14 +64,20 @@ static const char* env[] = {
 };
 
 void devmgr_launch(const char* name, const char* app, const char* arg, const char* device) {
-    mx_handle_t hnd[5 * VFS_MAX_HANDLES];
-    uint32_t ids[5 * VFS_MAX_HANDLES];
+    mx_handle_t hnd[1 + 5 * VFS_MAX_HANDLES];
+    uint32_t ids[1 + 5 * VFS_MAX_HANDLES];
     unsigned n = 1;
     mx_status_t r;
     const char* args[2] = { app, arg };
 
     ids[0] = MX_HND_TYPE_MXIO_ROOT;
     hnd[0] = vfs_create_root_handle();
+
+    hnd[n] = launchpad_get_vdso_vmo();
+    if (hnd[n] > 0)
+        ids[n++] = MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0);
+    else
+        printf("devmgr: launchpad_get_vdso_vmo failed (%d)\n", hnd[n]);
 
     if (device == NULL) {
         // start with log handles, no stdin

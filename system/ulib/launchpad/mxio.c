@@ -82,6 +82,8 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
         if (status == NO_ERROR)
             status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
         if (status == NO_ERROR)
+            status = launchpad_add_vdso_vmo(lp);
+        if (status == NO_ERROR)
             status = launchpad_arguments(lp, argc, argv);
         if (status == NO_ERROR)
             status = launchpad_environ(lp, envp);
