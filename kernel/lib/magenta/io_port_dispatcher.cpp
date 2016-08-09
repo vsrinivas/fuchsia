@@ -90,6 +90,8 @@ IOPortDispatcher::~IOPortDispatcher() {
         IOP_Packet::Delete(&pkt);
     }
 
+    packets_.clear();
+
     event_destroy(&event_);
     mutex_destroy(&lock_);
 }
