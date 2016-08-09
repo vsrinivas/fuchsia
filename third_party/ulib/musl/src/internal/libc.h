@@ -44,8 +44,6 @@ extern char *__progname, *__progname_full;
 int __lockfile(FILE*) ATTR_LIBC_VISIBILITY;
 void __unlockfile(FILE*) ATTR_LIBC_VISIBILITY;
 
-int __setxid(int, int, int, int);
-
 extern char** __environ;
 
 #undef weak_alias
