@@ -38,11 +38,22 @@ class Monitor {
   void Exit() FTL_UNLOCK_FUNCTION(mutex_);
 
   // Signal that the condition associated with the monitor has occurred. This
-  // function will wake up one thread that is waiting on the monitor in |Wait|.
+  // function will wake up a thread that is waiting on the monitor in |Wait|.
+  // (The call might wake up additional threads because the underlying condition
+  // variable has spurious wakeups.)
   void Signal();
 
   // Wait until the condition associated with the monitor has occurred. This
-  // function will sleep until |Signal| is called.
+  // function will sleep until |Signal| is called or until the underly condition
+  // variable cause a spurious wakeup.
+  //
+  // Callers of this function should check the condition they are waiting on
+  // after |Wait| returns because the . If the
+  // condition is not
+  // satisfied, they should call wait again:
+  //
+  //   while (!HaveSatisfiedCondition())
+  //     monitor.Wait();
   //
   // The thread calling this function must already have entered the monitor,
   // either via |Enter| or by way of a |MonitorLocker|.
