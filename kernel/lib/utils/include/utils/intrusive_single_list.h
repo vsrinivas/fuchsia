@@ -153,8 +153,6 @@ struct SinglyLinkedListNodeState {
     using PtrTraits = internal::ContainerPtrTraits<T>;
     constexpr SinglyLinkedListNodeState() { }
 
-    // TODO(johngro) : Either fix InContainer to always be correct, or remove
-    // it.  See MG-225 for details.
     bool IsValid() const     { return true; }
     bool InContainer() const { return (next_ != nullptr); }
 
@@ -207,6 +205,7 @@ public:
     using PtrTraits  = internal::ContainerPtrTraits<T>;
     using NodeTraits = _NodeTraits;
     using PtrType    = typename PtrTraits::PtrType;
+    using RawPtrType = typename PtrTraits::RawPtrType;
     using ValueType  = typename PtrTraits::ValueType;
 
     // Declarations of the standard iterator types.
@@ -247,6 +246,7 @@ public:
         // will automatically release their references to their elements.
         DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
         clear();
+        PtrTraits::DetachSentinel(head_);
     }
 
     // Standard begin/end, cbegin/cend iterator accessors.
@@ -254,9 +254,9 @@ public:
     const_iterator  begin() const { return const_iterator(PtrTraits::GetRaw(head_)); }
     const_iterator cbegin() const { return const_iterator(PtrTraits::GetRaw(head_)); }
 
-    iterator          end()       { return iterator(); }
-    const_iterator    end() const { return const_iterator(); }
-    const_iterator   cend() const { return const_iterator(); }
+    iterator          end()       { return iterator(sentinel()); }
+    const_iterator    end() const { return const_iterator(sentinel()); }
+    const_iterator   cend() const { return const_iterator(sentinel()); }
 
     // make_iterator : construct an iterator out of a reference to an object.
     iterator make_iterator(ValueType& obj) { return iterator(&obj); }
@@ -264,7 +264,7 @@ public:
     // is_empty
     //
     // True if the list has at least one element in it, false otherwise.
-    bool is_empty() const { return head_ == nullptr; }
+    bool is_empty() const { DEBUG_ASSERT(head_ != nullptr); return PtrTraits::IsSentinel(head_); }
 
     // front
     //
@@ -283,7 +283,7 @@ public:
         DEBUG_ASSERT(ptr != nullptr);
 
         auto& ptr_ns = NodeTraits::node_state(*ptr);
-        DEBUG_ASSERT(ptr_ns.next_ == nullptr);
+        DEBUG_ASSERT(!ptr_ns.InContainer());
 
         ptr_ns.next_ = utils::move(head_);
         head_        = utils::move(ptr);
@@ -298,12 +298,12 @@ public:
         insert_after(iter, PtrType(ptr));
     }
     void insert_after(const iterator& iter, PtrType&& ptr) {
-        DEBUG_ASSERT(iter != end());
+        DEBUG_ASSERT(iter.IsValid());
         DEBUG_ASSERT(ptr != nullptr);
 
         auto& iter_ns = NodeTraits::node_state(*iter.node_);
         auto& ptr_ns  = NodeTraits::node_state(*ptr);
-        DEBUG_ASSERT(ptr_ns.next_ == nullptr);
+        DEBUG_ASSERT(!ptr_ns.InContainer());
 
         PtrTraits::Swap(iter_ns.next_, ptr_ns.next_);
         iter_ns.next_ = utils::move(ptr);
@@ -409,11 +409,12 @@ public:
         using RefType      = typename PtrTraits::RefType;
 
         const PtrType* check_me = &head_;
-        while (*check_me != nullptr) {
+        while (!PtrTraits::IsSentinel(*check_me)) {
+            DEBUG_ASSERT(*check_me != nullptr);
             ConstRefType ref = **check_me;
 
             if (fn(ref))
-                break;
+                return *check_me;
 
             // Note : there is a small amount of evil at work here (the
             // const_cast).  It should be safe, however, as we will not modify
@@ -423,7 +424,8 @@ public:
             check_me = &ns.next_;
         }
 
-        return *check_me;
+        static PtrType null_ptr(nullptr);
+        return null_ptr;
     }
 
 private:
@@ -451,13 +453,13 @@ private:
             return *this;
         }
 
-        bool IsValid() const { return node_ != nullptr; }
+        bool IsValid() const { return (node_ != nullptr) && !PtrTraits::IsSentinel(node_); }
         bool operator==(const iterator_impl& other) const { return node_ == other.node_; }
         bool operator!=(const iterator_impl& other) const { return node_ != other.node_; }
 
         // Prefix
         iterator_impl& operator++() {
-            if (!node_) return *this;
+            if (!IsValid()) return *this;
 
             auto& ns = NodeTraits::node_state(*node_);
             node_    = PtrTraits::GetRaw(ns.next_);
@@ -472,9 +474,20 @@ private:
             return ret;
         }
 
-        typename PtrTraits::PtrType CopyPointer()          { return PtrTraits::Copy(node_); }
-        typename IterTraits::RefType operator*()     const { DEBUG_ASSERT(node_); return *node_; }
-        typename IterTraits::RawPtrType operator->() const { DEBUG_ASSERT(node_); return node_; }
+        typename PtrTraits::PtrType CopyPointer() {
+            DEBUG_ASSERT(IsValid());
+            return PtrTraits::Copy(node_);
+        }
+
+        typename IterTraits::RefType operator*() const {
+            DEBUG_ASSERT(IsValid());
+            return *node_;
+        }
+
+        typename IterTraits::RawPtrType operator->() const {
+            DEBUG_ASSERT(IsValid());
+            return node_;
+        }
 
     private:
         friend class SinglyLinkedList<T, NodeTraits>;
@@ -489,8 +502,12 @@ private:
     SinglyLinkedList(const SinglyLinkedList&) = delete;
     SinglyLinkedList& operator=(const SinglyLinkedList&) = delete;
 
+    constexpr RawPtrType sentinel() const {
+        return reinterpret_cast<RawPtrType>(internal::kContainerSentinelBit);
+    }
+
     // State consists of just a head pointer.
-    PtrType head_ = nullptr;
+    PtrType head_ = PtrTraits::MakeSentinel(sentinel());
 };
 
 }  // namespace utils
