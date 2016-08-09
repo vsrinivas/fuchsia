@@ -265,7 +265,7 @@ static bool wait_many_failures_test(void) {
     mx_signals_t signals[2] = {MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED};
 
     ASSERT_EQ(mx_handle_wait_many(2u, handles, signals, MX_TIME_INFINITE, NULL, NULL),
-              ERR_INVALID_ARGS, "Wait-many should have failed with ERR_INVALID_ARGS");
+              ERR_BAD_HANDLE, "Wait-many should have failed with ERR_BAD_HANDLE");
 
     // Signal the event, to check that wait-many cleaned up correctly.
     ASSERT_EQ(mx_event_signal(handles[0]), NO_ERROR, "Error during event signal");

@@ -94,7 +94,7 @@ bool wait_set_bad_add_remove_test(void) {
     const uint64_t cookie1 = 123u;
     EXPECT_EQ(mx_wait_set_add(MX_HANDLE_INVALID, ev, MX_SIGNAL_SIGNALED, cookie1), ERR_BAD_HANDLE,
               "");
-    EXPECT_EQ(mx_wait_set_add(ws, MX_HANDLE_INVALID, MX_SIGNAL_SIGNALED, cookie1), ERR_INVALID_ARGS,
+    EXPECT_EQ(mx_wait_set_add(ws, MX_HANDLE_INVALID, MX_SIGNAL_SIGNALED, cookie1), ERR_BAD_HANDLE,
               "");
 
     EXPECT_EQ(mx_wait_set_remove(MX_HANDLE_INVALID, cookie1), ERR_BAD_HANDLE, "");

@@ -113,7 +113,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
 
         Handle* handle = up->GetHandle_NoLock(handle_value);
         if (!handle)
-            return ERR_INVALID_ARGS;
+            return BadHandle();
         if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
             return ERR_ACCESS_DENIED;
 
@@ -199,7 +199,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         for (; num_added != count; ++num_added) {
             Handle* handle = up->GetHandle_NoLock(handle_values[num_added]);
             if (!handle) {
-                result = ERR_INVALID_ARGS;
+                result = BadHandle();
                 break;
             }
             if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ)) {
@@ -254,7 +254,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     auto up = ProcessDispatcher::GetCurrent();
     HandleUniquePtr handle(up->RemoveHandle(handle_value));
     if (!handle)
-        return ERR_INVALID_ARGS;
+        return BadHandle();
     return NO_ERROR;
 }
 
@@ -331,7 +331,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
 
             auto process = dispatcher->get_process_dispatcher();
             if (!process)
-                return BadHandle();
+                return ERR_WRONG_TYPE;
 
             if (!magenta_rights_check(rights, MX_RIGHT_READ))
                 return ERR_ACCESS_DENIED;
@@ -361,7 +361,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     // TODO:cpu use 'get-info' rights when avaliable.
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
@@ -373,7 +373,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_NOT_ENOUGH_BUFFER;
             auto process = dispatcher->get_process_dispatcher();
             if (!process)
-                return BadHandle();
+                return ERR_WRONG_TYPE;
             uint32_t value = process->get_bad_handle_policy();
             if (copy_to_user_u32(reinterpret_cast<uint32_t*>(_value), value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
@@ -396,7 +396,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     // TODO:cpu use 'set-info' rights when avaliable.
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
@@ -410,7 +410,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_NOT_ENOUGH_BUFFER;
             auto process = dispatcher->get_process_dispatcher();
             if (!process)
-                return BadHandle();
+                return ERR_WRONG_TYPE;
             uint32_t value = 0;
             if (copy_from_user_u32(&value, reinterpret_cast<const uint32_t*>(_value)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
@@ -432,11 +432,11 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
     if (!msg_pipe)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -531,11 +531,11 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
     if (!msg_pipe)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     bool is_reply_pipe = msg_pipe->is_reply_pipe();
 
@@ -590,7 +590,7 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
         for (size_t ix = 0; ix != num_handles; ++ix) {
             auto handle = up->GetHandle_NoLock(handles[ix]);
             if (!handle)
-                return ERR_INVALID_ARGS;
+                return BadHandle();
 
             if (handle->dispatcher() == dispatcher) {
                 // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
@@ -622,6 +622,7 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
                 for (size_t idx = 0; idx < ix; ++idx) {
                     up->UndoRemoveHandle_NoLock(handles[idx]);
                 }
+                // TODO: more specific error?
                 return ERR_INVALID_ARGS;
             }
         }
@@ -810,11 +811,11 @@ mx_status_t sys_process_start(mx_handle_t handle_value, mx_handle_t arg_handle_v
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto process = dispatcher->get_process_dispatcher();
     if (!process)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     HandleUniquePtr arg_handle = up->RemoveHandle(arg_handle_value);
     if (!arg_handle_value)
@@ -857,11 +858,11 @@ mx_status_t sys_event_signal(mx_handle_t handle_value) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto event = dispatcher->get_event_dispatcher();
     if (!event)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -877,11 +878,11 @@ mx_status_t sys_event_reset(mx_handle_t handle_value) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto event = dispatcher->get_event_dispatcher();
     if (!event)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -902,7 +903,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t set_mask, uint3
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
@@ -959,11 +960,11 @@ mx_ssize_t sys_vm_object_read(mx_handle_t handle, void* data, uint64_t offset, m
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -980,11 +981,11 @@ mx_ssize_t sys_vm_object_write(mx_handle_t handle, const void* data, uint64_t of
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1001,11 +1002,11 @@ mx_status_t sys_vm_object_get_size(mx_handle_t handle, uint64_t* _size) {
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     // no rights check, anyone should be able to get the size
 
@@ -1028,11 +1029,11 @@ mx_status_t sys_vm_object_set_size(mx_handle_t handle, uint64_t size) {
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto vmo = dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1054,11 +1055,11 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
     utils::RefPtr<Dispatcher> vmo_dispatcher;
     uint32_t vmo_rights;
     if (!up->GetDispatcher(vmo_handle, &vmo_dispatcher, &vmo_rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto vmo = vmo_dispatcher->get_vm_object_dispatcher();
     if (!vmo)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     // get a reffed pointer to the address space in the target process
     utils::RefPtr<VmAspace> aspace;
@@ -1071,11 +1072,11 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
         utils::RefPtr<Dispatcher> proc_dispatcher;
         uint32_t proc_rights;
         if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
-            return ERR_INVALID_ARGS;
+            return BadHandle();
 
         auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
-            return BadHandle();
+            return ERR_WRONG_TYPE;
 
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
@@ -1118,11 +1119,11 @@ mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_
         utils::RefPtr<Dispatcher> proc_dispatcher;
         uint32_t proc_rights;
         if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
-            return ERR_INVALID_ARGS;
+            return BadHandle();
 
         auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
-            return BadHandle();
+            return ERR_WRONG_TYPE;
 
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
@@ -1159,11 +1160,11 @@ mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, m
         utils::RefPtr<Dispatcher> proc_dispatcher;
         uint32_t proc_rights;
         if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
-            return ERR_INVALID_ARGS;
+            return BadHandle();
 
         auto process = proc_dispatcher->get_process_dispatcher();
         if (!process)
-            return BadHandle();
+            return ERR_WRONG_TYPE;
 
         if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
@@ -1246,11 +1247,11 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, const void* ptr, uint32_
     utils::RefPtr<Dispatcher> log_dispatcher;
     uint32_t log_rights;
     if (!up->GetDispatcher(log_handle, &log_dispatcher, &log_rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto log = log_dispatcher->get_log_dispatcher();
     if (!log)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(log_rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1270,11 +1271,11 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, void* ptr, uint32_t flags
     utils::RefPtr<Dispatcher> log_dispatcher;
     uint32_t log_rights;
     if (!up->GetDispatcher(log_handle, &log_dispatcher, &log_rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto log = log_dispatcher->get_log_dispatcher();
     if (!log)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(log_rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1317,11 +1318,11 @@ mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t 
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto ioport = dispatcher->get_io_port_dispatcher();
     if (!ioport)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1344,11 +1345,11 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto ioport = dispatcher->get_io_port_dispatcher();
     if (!ioport)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1373,11 +1374,11 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
 
     utils::RefPtr<Dispatcher> iop_d;
     if (!up->GetDispatcher(handle, &iop_d, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto ioport = iop_d->get_io_port_dispatcher();
     if (!ioport)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1458,11 +1459,11 @@ mx_ssize_t sys_data_pipe_write(mx_handle_t handle, uint32_t flags, mx_size_t req
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto producer = dispatcher->get_data_pipe_producer_dispatcher();
     if (!producer)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1487,11 +1488,11 @@ mx_ssize_t sys_data_pipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requ
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
     if (!consumer)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1516,11 +1517,11 @@ mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto producer = dispatcher->get_data_pipe_producer_dispatcher();
     if (!producer)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1548,11 +1549,11 @@ mx_status_t sys_data_pipe_end_write(mx_handle_t handle, mx_size_t written) {
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto producer = dispatcher->get_data_pipe_producer_dispatcher();
     if (!producer)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -1572,11 +1573,11 @@ mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
     if (!consumer)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1604,11 +1605,11 @@ mx_status_t sys_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return BadHandle();
 
     auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
     if (!consumer)
-        return BadHandle();
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -1688,17 +1689,17 @@ mx_status_t sys_wait_set_add(mx_handle_t ws_handle_value,
 
     Handle* ws_handle = up->GetHandle_NoLock(ws_handle_value);
     if (!ws_handle)
-        return ERR_BAD_HANDLE;
+        return BadHandle();
     // No need to take a ref to the dispatcher, since we're under the handle table lock. :-/
     auto ws_dispatcher = ws_handle->dispatcher()->get_wait_set_dispatcher();
     if (!ws_dispatcher)
-        return ERR_INVALID_ARGS;  // TODO(vtl): ERR_NOT_SUPPORTED instead?
+        return ERR_WRONG_TYPE;
     if (!magenta_rights_check(ws_handle->rights(), MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
     Handle* handle = up->GetHandle_NoLock(handle_value);
     if (!handle)
-        return ERR_INVALID_ARGS;  // TODO(vtl): ERR_BAD_HANDLE instead?
+        return BadHandle();
     if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
@@ -1713,10 +1714,10 @@ mx_status_t sys_wait_set_remove(mx_handle_t ws_handle, uint64_t cookie) {
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(ws_handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
+        return BadHandle();
     auto ws_dispatcher = dispatcher->get_wait_set_dispatcher();
     if (!ws_dispatcher)
-        return ERR_INVALID_ARGS;  // TODO(vtl): ERR_NOT_SUPPORTED instead?
+        return ERR_WRONG_TYPE;
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
@@ -1752,10 +1753,10 @@ mx_status_t sys_wait_set_wait(mx_handle_t ws_handle,
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
     if (!up->GetDispatcher(ws_handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
+        return BadHandle();
     auto ws_dispatcher = dispatcher->get_wait_set_dispatcher();
     if (!ws_dispatcher)
-        return ERR_INVALID_ARGS;  // TODO(vtl): ERR_NOT_SUPPORTED instead?
+        return ERR_WRONG_TYPE;
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 

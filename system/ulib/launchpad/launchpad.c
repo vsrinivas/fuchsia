@@ -86,13 +86,17 @@ mx_status_t launchpad_create(const char* name, launchpad_t** result) {
         return proc;
     }
 
+//TODO: chase down the bad handle usage in various tests, etc
+//      and then re-enable once sorted out.
+#if 0
     uint32_t handle_policy = MX_POLICY_BAD_HANDLE_EXIT;
     mx_status_t status = mx_object_set_property(proc, MX_PROP_BAD_HANDLE_POLICY,
                                                 &handle_policy, sizeof(handle_policy));
     if (status != NO_ERROR)
         return status;
+#endif
 
-    status = launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
+    mx_status_t status = launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
     if (status == NO_ERROR) {
         *result = lp;
     } else {

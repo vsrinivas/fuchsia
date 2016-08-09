@@ -61,11 +61,11 @@ mx_status_t sys_interrupt_event_wait(mx_handle_t handle_value) {
 
     auto up = ProcessDispatcher::GetCurrent();
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto interrupt = dispatcher->get_interrupt_dispatcher();
     if (!interrupt)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     return interrupt->InterruptWait();
 }
@@ -78,11 +78,11 @@ mx_status_t sys_interrupt_event_complete(mx_handle_t handle_value) {
 
     auto up = ProcessDispatcher::GetCurrent();
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto interrupt = dispatcher->get_interrupt_dispatcher();
     if (!interrupt)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     return interrupt->InterruptComplete();
 }
@@ -225,11 +225,11 @@ mx_status_t sys_pci_claim_device(mx_handle_t handle) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -250,11 +250,11 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t handle, bool enable) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -274,11 +274,11 @@ mx_status_t sys_pci_reset_device(mx_handle_t handle) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -303,11 +303,11 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
         return ERR_INVALID_ARGS;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -367,11 +367,11 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &device_dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = device_dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -401,11 +401,11 @@ mx_status_t sys_pci_interrupt_wait(mx_handle_t handle) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_interrupt = dispatcher->get_pci_interrupt_dispatcher();
     if (!pci_interrupt)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -427,11 +427,11 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -467,11 +467,11 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
@@ -504,11 +504,11 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto pci_device = dispatcher->get_pci_device_dispatcher();
     if (!pci_device)
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
@@ -533,11 +533,11 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_INVALID_ARGS;
+        return ERR_BAD_HANDLE;
 
     auto io_mapping = dispatcher->get_io_mapping_dispatcher();
     if (!io_mapping || io_mapping->closed())
-        return ERR_BAD_HANDLE;
+        return ERR_WRONG_TYPE;
 
     // If we do not have read rights, or we are calling from a different address
     // space than the one that this mapping exists in, refuse to tell the user
