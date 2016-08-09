@@ -15,6 +15,9 @@ __BEGIN_CDECLS
 struct arch_thread {
     vaddr_t sp;
 
+    /* if non-NULL, address to return to on data fault */
+    void *data_fault_resume;
+
 #if ARM_WITH_VFP
     /* has this thread ever used the floating point state? */
     bool fpused;

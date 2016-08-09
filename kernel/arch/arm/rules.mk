@@ -212,6 +212,8 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/arm/fpu.c \
 	$(LOCAL_DIR)/arm/mmu.c \
 	$(LOCAL_DIR)/arm/thread.c \
+	$(LOCAL_DIR)/arm/user_copy.c \
+	$(LOCAL_DIR)/arm/user_copy.S \
 	$(LOCAL_DIR)/arm/uspace_entry.S
 
 KERNEL_DEFINES += \

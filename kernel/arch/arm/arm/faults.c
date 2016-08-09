@@ -230,6 +230,14 @@ void arm_data_abort_handler(struct arm_fault_frame *frame)
     if (likely(arm_shared_page_fault_handler(frame, fsr, far, false)) == NO_ERROR)
         return;
 
+    // Check if the current thread was expecting a data fault and
+    // we should return to its handler.
+    thread_t *thr = get_current_thread();
+    if (thr->arch.data_fault_resume != NULL) {
+        frame->pc = (uintptr_t)thr->arch.data_fault_resume;
+        return;
+    }
+
     struct fault_handler_table_entry *fault_handler;
     for (fault_handler = __fault_handler_table_start; fault_handler < __fault_handler_table_end; fault_handler++) {
         if (fault_handler->pc == frame->pc) {
@@ -405,4 +413,3 @@ void arch_dump_exception_context(arch_exception_context_t *context)
     }
 }
 #endif
-
