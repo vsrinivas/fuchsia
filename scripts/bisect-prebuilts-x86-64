@@ -17,6 +17,6 @@ readonly DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # it in a temporary location first.
 readonly TEMP_DIR="$(mktemp -d)"
 trap "rm -rf ${TEMP_DIR}" EXIT
-cp "${DIR}/bisect-helper" "${TEMP_DIR}"
+cp "${DIR}/bisect-helper-x86-64" "${TEMP_DIR}"
 git bisect start $@
-git bisect run "${TEMP_DIR}/bisect-helper" "${DIR}"
+git bisect run "${TEMP_DIR}/bisect-helper-x86-64" "${DIR}"
