@@ -779,13 +779,14 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
 }
 
 mx_handle_t sys_process_create(const char* name, uint32_t name_len) {
-    LTRACEF("name %s\n", name);
+    LTRACEF("name %p, len %u\n", name, name_len);
 
     char buf[MX_MAX_NAME_LEN];
     utils::StringPiece sp;
     status_t result = magenta_copy_user_string(name, name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;
+    LTRACEF("name %s\n", buf);
 
     utils::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
