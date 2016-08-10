@@ -191,7 +191,7 @@ static void usb_hid_int_cb(usb_request_t* request) {
     usb_hid_dev_t* hid = (usb_hid_dev_t*)request->client_data;
 #ifdef USB_HID_DEBUG
     printf("usb-hid: callback request status %d\n", request->status);
-    hexdump(request->buffer, request->buffer_length);
+    hexdump(request->buffer, request->transfer_length);
 #endif
 
     if (request->status == ERR_CHANNEL_CLOSED) {
@@ -201,9 +201,6 @@ static void usb_hid_int_cb(usb_request_t* request) {
         return;
     } else if (request->status == NO_ERROR) {
         mxr_mutex_lock(&hid->fifo.lock);
-#ifdef USB_HID_DEBUG
-        mx_hid_fifo_dump(&hid->fifo);
-#endif
         bool was_empty = mx_hid_fifo_size(&hid->fifo) == 0;
         ssize_t wrote = 0;
         // Add the report id if it's omitted from the device. This happens if
@@ -216,16 +213,13 @@ static void usb_hid_int_cb(usb_request_t* request) {
                 goto next_request;
             }
         }
-        wrote = mx_hid_fifo_write(&hid->fifo, request->buffer, request->buffer_length);
+        wrote = mx_hid_fifo_write(&hid->fifo, request->buffer, request->transfer_length);
         if (wrote <= 0) {
             printf("could not write to usb-hid fifo (ret=%zd)\n", wrote);
         } else {
             if (was_empty) {
                 device_state_set(&hid->dev, DEV_STATE_READABLE);
             }
-#ifdef USB_HID_DEBUG
-            mx_hid_fifo_dump(&hid->fifo);
-#endif
         }
         mxr_mutex_unlock(&hid->fifo.lock);
     }
