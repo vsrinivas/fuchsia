@@ -5,6 +5,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include <magenta/syscalls.h>
+#include <runtime/tls.h>
 
 #include <utility>
 
@@ -13,7 +14,21 @@
 namespace mtl {
 namespace {
 
-thread_local MessageLoop* g_current = nullptr;
+// TODO(kulakowski): This should just be a thread_local MessageLoop* g_current, but the thread_local
+// keyword doesn't work yet.
+
+static mxr_tls_t GetMessageLoopTlsKey() {
+    static mxr_tls_t key = mxr_tls_allocate();
+    return key;
+}
+
+MessageLoop* CurrentThreadMessageLoop() {
+    return static_cast<MessageLoop*>(mxr_tls_get(GetMessageLoopTlsKey()));
+}
+
+void SetCurrentThreadMessageLoop(MessageLoop* loop) {
+    mxr_tls_set(GetMessageLoopTlsKey(), loop);
+}
 
 constexpr uint32_t kInvalidWaitManyIndexValue = static_cast<uint32_t>(-1);
 constexpr MessageLoop::HandlerKey kIgnoredKey = 0;
@@ -29,13 +44,13 @@ MessageLoop::MessageLoop()
 MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : incoming_tasks_(std::move(incoming_tasks)) {
-  FTL_DCHECK(!g_current) << "At most one message loop per thread.";
+  FTL_DCHECK(!CurrentThreadMessageLoop()) << "At most one message loop per thread.";
   incoming_tasks_->InitDelegate(this);
-  g_current = this;
+  SetCurrentThreadMessageLoop(this);
 }
 
 MessageLoop::~MessageLoop() {
-  FTL_DCHECK(g_current == this)
+  FTL_DCHECK(CurrentThreadMessageLoop() == this)
       << "Message loops must be destroyed on their own threads.";
 
   NotifyHandlers(ftl::TimePoint::Max(), MOJO_RESULT_CANCELLED);
@@ -48,11 +63,11 @@ MessageLoop::~MessageLoop() {
     queue_.pop();
 
   // Finally, remove ourselves from TLS.
-  g_current = nullptr;
+  SetCurrentThreadMessageLoop(nullptr);
 }
 
 MessageLoop* MessageLoop::GetCurrent() {
-  return g_current;
+  return CurrentThreadMessageLoop();
 }
 
 MessageLoop::HandlerKey MessageLoop::AddHandler(
