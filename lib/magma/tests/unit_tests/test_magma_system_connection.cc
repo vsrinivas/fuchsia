@@ -32,21 +32,18 @@ TEST(Magma, MagmaSystemConnection_GetDeviceId)
     uint32_t test_id = 0xdeadbeef;
 
     auto msd_dev = new MsdMockDevice_GetDeviceId(test_id);
-    auto dev = MagmaSystemDevice(msd_dev);
+    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_driver_destroy_device));
 
     uint32_t device_id = dev.GetDeviceId();
     // For now device_id is invalid
     EXPECT_EQ(device_id, test_id);
-
-    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemConnection destructor
-    msd_driver_destroy_device(msd_dev);
 }
 
 TEST(Magma, MagmaSystemConnection_BufferManagement)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemDevice(msd_dev);
+    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_driver_destroy_device));
     auto connection = dev.Open(0);
     ASSERT_NE(connection, nullptr);
 
@@ -79,7 +76,6 @@ TEST(Magma, MagmaSystemConnection_BufferManagement)
         EXPECT_FALSE(connection->FreeBuffer(handle));
     }
 
-    msd_driver_destroy_device(msd_dev);
     msd_driver_destroy(msd_drv);
 }
 
@@ -109,7 +105,8 @@ TEST(Magma, MagmaSystemConnection_ContextManagement)
 {
     auto msd_connection = new MsdMockConnection_ContextManagement();
 
-    auto dev = MagmaSystemDevice(new MsdMockDevice());
+    auto msd_dev = new MsdMockDevice();
+    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_driver_destroy_device));
     auto connection = MagmaSystemConnection(
         &dev, msd_connection_unique_ptr_t(msd_connection, &msd_connection_close));
 

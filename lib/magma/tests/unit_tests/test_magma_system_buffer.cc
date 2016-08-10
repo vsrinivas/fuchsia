@@ -49,7 +49,7 @@ TEST(Magma, MagmaSystemBuffer_Create)
 
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemDevice(msd_dev);
+    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_driver_destroy_device));
     auto connection = dev.Open(0);
     ASSERT_NE(connection, nullptr);
 
@@ -72,7 +72,5 @@ TEST(Magma, MagmaSystemBuffer_Create)
     EXPECT_TRUE(bufmgr->has_created_buffer());
     EXPECT_TRUE(bufmgr->has_destroyed_buffer());
 
-    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemConnection destructor
-    msd_driver_destroy_device(msd_dev);
     msd_driver_destroy(msd_drv);
 }

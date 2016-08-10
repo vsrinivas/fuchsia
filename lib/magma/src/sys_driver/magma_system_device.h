@@ -15,13 +15,16 @@
 #ifndef _MAGMA_SYSTEM_DEVICE_H_
 #define _MAGMA_SYSTEM_DEVICE_H_
 #include "msd.h"
+#include <functional>
 #include <memory>
 
 class MagmaSystemConnection;
 
+using msd_device_unique_ptr_t = std::unique_ptr<msd_device, std::function<void(msd_device*)>>;
+
 class MagmaSystemDevice {
 public:
-    MagmaSystemDevice(msd_device* msd_dev) : msd_dev_(msd_dev) {}
+    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {}
 
     // Opens a connection to the device. This transfers ownership of this object to the
     // caller for now, since that is the semantics of what will happen when connections are message
@@ -31,13 +34,13 @@ public:
     // returns nullptr on failure
     std::unique_ptr<MagmaSystemConnection> Open(msd_client_id client_id);
 
-    msd_device* arch() { return msd_dev_; }
+    msd_device* arch() { return msd_dev_.get(); }
 
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
 
 private:
-    msd_device* msd_dev_;
+    msd_device_unique_ptr_t msd_dev_;
 };
 
 #endif //_MAGMA_SYSTEM_DEVICE_H_
