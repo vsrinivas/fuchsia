@@ -8,6 +8,7 @@
 
 #include <unittest.h>
 #include <utils/tests/intrusive_containers/base_test_environments.h>
+#include <utils/tests/intrusive_containers/lfsr.h>
 
 namespace utils {
 namespace tests {
@@ -30,6 +31,7 @@ public:
     using SpBase               = TestEnvironmentSpecialized<TestEnvTraits>;
     using RefAction            = typename TestEnvironment<TestEnvTraits>::RefAction;
     using KeyType              = typename ContainerTraits::KeyType;
+    using OtherKeyType         = typename OtherContainerType::KeyType;
 
     enum class PopulateMethod {
         AscendingKey,
@@ -37,7 +39,8 @@ public:
         RandomKey,
     };
 
-    static constexpr KeyType BannedKeyValue() { return 0xF00D; };
+    static constexpr KeyType BannedKeyValue()           { return 0xF00D; };
+    static constexpr OtherKeyType BannedOtherKeyValue() { return 0xF00D; };
 
     bool Populate(ContainerType& container,
                   PopulateMethod method,
@@ -71,15 +74,36 @@ public:
 
             // Assign a key to the object based on the chosen populate method.
             KeyType key = 0;
+            OtherKeyType other_key = 0;
+
             switch (method) {
-            case PopulateMethod::RandomKey:     // TODO: implement me.  Until then, fall-thru
-            case PopulateMethod::AscendingKey:  key = i; break;
-            case PopulateMethod::DescendingKey: key = OBJ_COUNT - i - 1; break;
+                case PopulateMethod::RandomKey:
+                    do {
+                        key = key_lfsr_.GetNext();
+                    } while (key == BannedKeyValue());
+
+                    do {
+                        other_key = other_key_lfsr_.GetNext();
+                    } while (other_key == BannedOtherKeyValue());
+                    break;
+
+                case PopulateMethod::AscendingKey:
+                    key = i;
+                    other_key = static_cast<OtherKeyType>(key + OBJ_COUNT);
+                    break;
+
+                case PopulateMethod::DescendingKey:
+                    key = OBJ_COUNT - i - 1;
+                    other_key = static_cast<OtherKeyType>(key + OBJ_COUNT);
+                    break;
             }
+
+            DEBUG_ASSERT(key != BannedKeyValue());
+            DEBUG_ASSERT(other_key != BannedOtherKeyValue());
 
             // Set the primary key on the object.  Offset the "other" key by OBJ_COUNT
             new_object->SetKey(key);
-            OtherContainerTraits::SetKey(*new_object, key + OBJ_COUNT);
+            OtherContainerTraits::SetKey(*new_object, other_key);
 
             // Alternate whether or not we move the pointer, or "transfer" it.
             // Transfering means different things for different pointer types.
@@ -234,6 +258,9 @@ private:
 
     void ReleaseObject(size_t ndx) { Sp::ReleaseObject(ndx); }
     bool HoldingObject(size_t ndx) const { return Sp::HoldingObject(ndx); }
+
+    Lfsr<KeyType>      key_lfsr_        = Lfsr<KeyType>(0xa2328b73e343fd0f);
+    Lfsr<OtherKeyType> other_key_lfsr_  = Lfsr<OtherKeyType>(0xbd5a2efcc5ba8344);
 };
 
 }  // namespace intrusive_containers

@@ -14,13 +14,13 @@ namespace utils {
 namespace tests {
 namespace intrusive_containers {
 
-using OtherKeyType  = size_t;
+using OtherKeyType  = uint16_t;
 using OtherHashType = uint32_t;
 static constexpr OtherHashType kOtherNumBuckets = 23;
 
 template <typename PtrType>
 struct OtherHashTraits {
-    using ObjType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
+    using ObjType = typename ::utils::internal::ContainerPtrTraits<PtrType>::ValueType;
     using BucketStateType = SinglyLinkedListNodeState<PtrType>;
 
     // Linked List Traits
@@ -56,7 +56,7 @@ private:
 template <typename PtrType>
 class HTSLLTraits {
 public:
-    using ObjType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
+    using ObjType = typename ::utils::internal::ContainerPtrTraits<PtrType>::ValueType;
 
     using ContainerType           = HashTable<size_t, PtrType>;
     using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
