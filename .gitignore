@@ -10,7 +10,7 @@
 /linux64/mkbootfs.stamp
 /linux64/ninja
 /linux64/ninja.stamp
-/linux64/sdk.stamp
+/linux64/toolchain.stamp
 /mac/bootserver
 /mac/bootserver.stamp
 /mac/cmake.stamp
@@ -22,5 +22,6 @@
 /mac/mkbootfs.stamp
 /mac/ninja
 /mac/ninja.stamp
-/mac/sdk.stamp
-/sdk
+/mac/toolchain.stamp
+/toolchain
+/sysroot
