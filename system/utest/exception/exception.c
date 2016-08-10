@@ -32,6 +32,7 @@
 
 static int thread_func(void* arg);
 
+static const char test_child_path[] = "/boot/test/exception-test";
 static const char test_child_name[] = "exceptions_test_child";
 
 // Setting to true when done turns off the watchdog timer.
@@ -259,7 +260,7 @@ static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_pipe)
     mx_handle_t our_pipe, their_pipe;
     tu_message_pipe_create(&our_pipe, &their_pipe);
     const char* const argv[2] = {
-        "/boot/test/exceptions-test",
+        test_child_path,
         test_child_name
     };
     mx_handle_t handles[1] = { their_pipe };

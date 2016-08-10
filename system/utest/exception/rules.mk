@@ -18,9 +18,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
-MODULE_SRCS += $(LOCAL_DIR)/exceptions.c
+MODULE_SRCS += $(LOCAL_DIR)/exception.c
 
-MODULE_NAME := exceptions-test
+MODULE_NAME := exception-test
 
 MODULE_LIBS := \
     ulib/unittest ulib/launchpad ulib/mxio ulib/magenta ulib/musl
