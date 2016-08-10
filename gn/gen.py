@@ -18,8 +18,6 @@ def main():
     parser.add_argument("--release", "-r", help="generate release mode build files",
         action="store_true")
     parser.add_argument("--outdir", "-o", help="output directory", default="out/debug")
-    parser.add_argument("--shared", help="build shared (dynamically linked) executables",
-        action="store_true")
     parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
                         choices=['x86-64', 'aarch64'])
     args = parser.parse_args()
@@ -39,8 +37,6 @@ def main():
 
     if args.release:
         gn_args += " is_debug=false"
-    if args.shared:
-        gn_args += " shared=true"
     gn_command += [gn_args]
 
     return gn.run(gn_command)
