@@ -35,10 +35,31 @@
 #define USB_HID_SUBCLASS_BOOT   0x01
 #define USB_HID_PROTOCOL_KBD    0x01
 #define USB_HID_DESC_REPORT     0x22
+#define USB_HID_OUTPUT_REPORT   0x02
+#define USB_HID_FEATURE_REPORT  0x03
 
 #define HID_DEAD 1
 
 #define to_hid_dev(d) containerof(d, usb_hid_dev_t, dev)
+#define bits_to_bytes(n) (((n) + 7) / 8)
+
+input_report_size_t usb_hid_get_report_size_by_id(usb_hid_dev_t* hid, input_report_id_t id,
+        input_report_type_t type) {
+    for (size_t i = 0; i < hid->num_reports; i++) {
+        if (hid->sizes[i].id < 0) break;
+        if (hid->sizes[i].id == id) {
+            switch (type) {
+            case INPUT_REPORT_INPUT:
+                return bits_to_bytes(hid->sizes[i].in_size);
+            case INPUT_REPORT_OUTPUT:
+                return bits_to_bytes(hid->sizes[i].out_size);
+            case INPUT_REPORT_FEATURE:
+                return bits_to_bytes(hid->sizes[i].feat_size);
+            }
+        }
+    }
+    return 0;
+}
 
 static mx_status_t usb_hid_get_protocol(mx_device_t* dev, void* out_buf, size_t out_len) {
     usb_hid_dev_t* hid = to_hid_dev(dev);
@@ -91,18 +112,13 @@ static mx_status_t usb_hid_get_report_ids(mx_device_t* dev, void* out_buf, size_
 static mx_status_t usb_hid_get_report_size(mx_device_t* dev, const void* in_buf, size_t in_len,
                                            void* out_buf, size_t out_len) {
     usb_hid_dev_t* hid = to_hid_dev(dev);
-    if (in_len < sizeof(input_report_id_t)) return ERR_INVALID_ARGS;
+    if (in_len < sizeof(input_get_report_size_t)) return ERR_INVALID_ARGS;
     if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
 
-    const uint8_t* report_id = in_buf;
+    const input_get_report_size_t* inp = in_buf;
+
     input_report_size_t* reply = out_buf;
-    *reply = 0;
-    for (size_t i = 0; i < hid->num_reports; i++) {
-        if (hid->sizes[i].id < 0) break;
-        if (hid->sizes[i].id == *report_id) {
-            *reply = hid->sizes[i].in_size;
-        }
-    }
+    *reply = usb_hid_get_report_size_by_id(hid, inp->id, inp->type);
     if (*reply == 0)
         return ERR_INVALID_ARGS;
     return sizeof(*reply);
@@ -112,9 +128,44 @@ static mx_status_t usb_hid_get_max_reportsize(mx_device_t* dev, void* out_buf, s
     if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
     usb_hid_dev_t* hid = to_hid_dev(dev);
 
-    int* reply = out_buf;
-    *reply = ((int)hid_max_report_size(hid) + 7) / 8 + 1;
+    input_report_size_t* reply = out_buf;
+    *reply = hid_max_report_size(hid);
+    // Add one to the result for the id header
+    // If the device has multiple report ids, the id will be included, but if
+    // the implicit report id 0 is used, we prepend a zero byte to the reports.
+    // TODO: decide whether to continue doing this or let clients figure out
+    //       whether there's an id in the report
+    *reply = bits_to_bytes(*reply) + 1;
     return sizeof(*reply);
+}
+
+static mx_status_t usb_hid_get_report(mx_device_t* dev, const void* in_buf, size_t in_len,
+                                      void* out_buf, size_t out_len) {
+    usb_hid_dev_t* hid = to_hid_dev(dev);
+    if (in_len < sizeof(input_get_report_t)) return ERR_INVALID_ARGS;
+    const input_get_report_t* inp = in_buf;
+
+    input_report_size_t needed = usb_hid_get_report_size_by_id(hid, inp->id, inp->type);
+    if (needed == 0) return ERR_INVALID_ARGS;
+    if (out_len < (size_t)needed) return ERR_NOT_ENOUGH_BUFFER;
+
+    return hid->usb->control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_GET_REPORT, (inp->type << 8 | inp->id), hid->interface, out_buf, out_len);
+}
+
+static mx_status_t usb_hid_set_report(mx_device_t* dev, const void* in_buf, size_t in_len) {
+
+    usb_hid_dev_t* hid = to_hid_dev(dev);
+    if (in_len < sizeof(input_set_report_t)) return ERR_INVALID_ARGS;
+    const input_set_report_t* inp = in_buf;
+
+    input_report_size_t needed = usb_hid_get_report_size_by_id(hid, inp->id, inp->type);
+    if (needed == 0) return ERR_INVALID_ARGS;
+    if (in_len - sizeof(input_set_report_t) < (size_t)needed) return ERR_INVALID_ARGS;
+
+    return hid->usb->control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_SET_REPORT, (inp->type << 8 | inp->id), hid->interface,
+            (void*)inp->data, in_len - sizeof(input_set_report_t));
 }
 
 static ssize_t usb_hid_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
@@ -159,6 +210,10 @@ static ssize_t usb_hid_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, 
         return usb_hid_get_report_size(dev, in_buf, in_len, out_buf, out_len);
     case INPUT_IOCTL_GET_MAX_REPORTSIZE:
         return usb_hid_get_max_reportsize(dev, out_buf, out_len);
+    case INPUT_IOCTL_GET_REPORT:
+        return usb_hid_get_report(dev, in_buf, in_len, out_buf, out_len);
+    case INPUT_IOCTL_SET_REPORT:
+        return usb_hid_set_report(dev, in_buf, in_len);
     }
     return ERR_NOT_SUPPORTED;
 }
@@ -332,10 +387,16 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
         hid->interface = desc->bInterfaceNumber;
 
         if (desc->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT) {
-            // Use the non-boot protocol
+            // Use the boot protocol for now
             hid->usb->control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-                    USB_HID_SET_PROTOCOL, 1, i, NULL, 0);
+                    USB_HID_SET_PROTOCOL, 0, i, NULL, 0);
             hid->proto = desc->bInterfaceProtocol;
+            if (hid->proto == USB_HID_PROTOCOL_KBD) {
+                // Disable numlock on boot
+                uint8_t zero = 0;
+                hid->usb->control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+                        USB_HID_SET_REPORT, USB_HID_OUTPUT_REPORT << 8, i, &zero, sizeof(zero));
+            }
         }
 
         hid->req = hid->usb->alloc_request(hid->usbdev, hid->endpt, hid->endpt->maxpacketsize);

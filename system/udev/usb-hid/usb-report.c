@@ -56,7 +56,7 @@ void hid_init_report_sizes(usb_hid_dev_t* hid) {
     }
 }
 
-int hid_find_report_id(uint8_t report_id, usb_hid_dev_t* hid) {
+int hid_find_report_id(input_report_id_t report_id, usb_hid_dev_t* hid) {
     for (int i = 0; i < HID_MAX_REPORT_IDS; i++) {
         if (hid->sizes[i].id == report_id) return i;
         if (hid->sizes[i].id == -1) {
@@ -73,12 +73,12 @@ void hid_read_report_sizes(const uint8_t* buf, size_t len, usb_hid_dev_t* hid) {
     hid_item_t item;
     uint32_t report_size = 0;
     uint32_t report_count = 0;
-    uint8_t report_id = 0;
+    input_report_id_t report_id = 0;
     while (buf < end) {
         buf = hid_parse_short_item(buf, end, &item);
         switch (item.bType) {
         case 0: {
-            uint16_t inc = report_size * report_count;
+            input_report_size_t inc = report_size * report_count;
             int idx;
             switch (item.bTag) {
             case 8:
@@ -107,7 +107,7 @@ void hid_read_report_sizes(const uint8_t* buf, size_t len, usb_hid_dev_t* hid) {
                 report_size = (uint32_t)item.data;
                 break;
             case 8:
-                report_id = (uint8_t)item.data;
+                report_id = (input_report_id_t)item.data;
                 break;
             case 9:
                 report_count = (uint32_t)item.data;
@@ -138,7 +138,7 @@ void hid_read_report_sizes(const uint8_t* buf, size_t len, usb_hid_dev_t* hid) {
 #endif
 }
 
-uint16_t hid_max_report_size(usb_hid_dev_t* hid) {
+input_report_size_t hid_max_report_size(usb_hid_dev_t* hid) {
     uint16_t r = 0;
     for (int i = 0; i < HID_MAX_REPORT_IDS; i++) {
         if (hid->sizes[i].id >= 0 &&

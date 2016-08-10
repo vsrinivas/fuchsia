@@ -26,9 +26,9 @@
 
 typedef struct hid_report_size {
     int16_t id;
-    uint16_t in_size;
-    uint16_t out_size;
-    uint16_t feat_size;
+    input_report_size_t in_size;
+    input_report_size_t out_size;
+    input_report_size_t feat_size;
 } hid_report_size_t;
 
 typedef struct {
@@ -63,6 +63,6 @@ typedef struct hid_item {
 
 const uint8_t* hid_parse_short_item(const uint8_t* buf, const uint8_t* end, hid_item_t* item);
 void hid_init_report_sizes(usb_hid_dev_t* hid);
-int hid_find_report_id(uint8_t report_id, usb_hid_dev_t* hid);
+int hid_find_report_id(input_report_id_t report_id, usb_hid_dev_t* hid);
 void hid_read_report_sizes(const uint8_t* buf, size_t len, usb_hid_dev_t* hid);
-uint16_t hid_max_report_size(usb_hid_dev_t* hid);
+input_report_size_t hid_max_report_size(usb_hid_dev_t* hid);

@@ -24,6 +24,9 @@ enum {
     INPUT_IOCTL_GET_REPORT_IDS = 4,
     INPUT_IOCTL_GET_REPORT_SIZE = 5,
     INPUT_IOCTL_GET_MAX_REPORTSIZE = 6,
+
+    INPUT_IOCTL_GET_REPORT = 7,
+    INPUT_IOCTL_SET_REPORT = 8,
 };
 
 enum {
@@ -32,17 +35,34 @@ enum {
     INPUT_PROTO_MOUSE = 2,
 };
 
+enum {
+    INPUT_REPORT_INPUT = 1,
+    INPUT_REPORT_OUTPUT = 2,
+    INPUT_REPORT_FEATURE = 3,
+};
+
 typedef uint8_t input_report_id_t;
+typedef uint8_t input_report_type_t;
 typedef uint16_t input_report_size_t;
 
-typedef struct input_report {
-    uint8_t id;      // report id from the HID descriptor
-    uint8_t data[];  // report data from the device; length can be determined by
-                     // using the GET_REPORT_SIZE ioctl for the id
-} input_report_t;
+typedef struct input_get_report_size {
+    input_report_id_t id;
+    input_report_type_t type;
+} input_get_report_size_t;
+
+typedef struct input_get_report {
+    input_report_id_t id;
+    input_report_type_t type;
+} input_get_report_t;
+
+typedef struct input_set_report {
+    input_report_id_t id;
+    input_report_type_t type;
+    uint8_t data[];
+} input_set_report_t;
 
 typedef struct boot_kbd_report {
-    uint8_t id;
+    input_report_id_t id;
     uint8_t modifier;
     uint8_t reserved;
     uint8_t usage[6];
