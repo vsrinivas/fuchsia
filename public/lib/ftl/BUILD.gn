@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+if (is_android) {
+  import("//build/config/android/config.gni")
+}
+
 config("thread_safety_warning") {
   if (is_fuchsia) {
     cflags = [ "-Wthread-safety" ]
@@ -70,6 +74,10 @@ static_library("ftl") {
     "third_party/icu/icu_utf.h",
     "third_party/icu/icu_utf.cc",
   ]
+
+  if (is_android) {
+    defines = [ "ANDROID_LOG_TAG=$android_log_tag" ]
+  }
 
   public_configs = [ ":thread_safety_warning" ]
 }

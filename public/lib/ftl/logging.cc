@@ -4,8 +4,13 @@
 
 #include <iostream>
 
+#include "lib/ftl/build_config.h"
 #include "lib/ftl/debug/debugger.h"
 #include "lib/ftl/logging.h"
+
+#if defined(OS_ANDROID)
+#include <android/log.h>
+#endif
 
 namespace ftl {
 namespace {
@@ -37,8 +42,30 @@ LogMessage::LogMessage(LogSeverity severity,
 }
 
 LogMessage::~LogMessage() {
-  std::cerr << stream_.str() << std::endl;
+  stream_ << std::endl;
+
+#if defined(OS_ANDROID)
+  android_LogPriority priority =
+      (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
+  switch (severity_) {
+    case LOG_INFO:
+      priority = ANDROID_LOG_INFO;
+      break;
+    case LOG_WARNING:
+      priority = ANDROID_LOG_WARN;
+      break;
+    case LOG_ERROR:
+      priority = ANDROID_LOG_ERROR;
+      break;
+    case LOG_FATAL:
+      priority = ANDROID_LOG_FATAL;
+      break;
+  }
+  __android_log_write(priority, ANDROID_LOG_TAG, stream_.str().c_str());
+#else
+  std::cerr << stream_.str();
   std::cerr.flush();
+#endif
 
   if (severity_ >= LOG_FATAL)
     BreakDebugger();
