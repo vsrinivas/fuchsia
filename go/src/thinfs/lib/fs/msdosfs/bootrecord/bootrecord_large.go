@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 )
 
 const (
@@ -107,22 +107,22 @@ type bpbLarge struct {
 }
 
 func (b *bpbLarge) SectorsPerFAT32() uint32 {
-	return uint32(bits.GetLE32(b.sectorsPerFAT32[:]))
+	return uint32(bitops.GetLE32(b.sectorsPerFAT32[:]))
 }
 func (b *bpbLarge) ExtFlags() uint32 {
-	return uint32(bits.GetLE16(b.extFlags[:]))
+	return uint32(bitops.GetLE16(b.extFlags[:]))
 }
 func (b *bpbLarge) FsVersion() uint32 {
-	return uint32(bits.GetLE16(b.fsVersion[:]))
+	return uint32(bitops.GetLE16(b.fsVersion[:]))
 }
 func (b *bpbLarge) RootCluster() uint32 {
-	return uint32(bits.GetLE32(b.rootCluster[:]))
+	return uint32(bitops.GetLE32(b.rootCluster[:]))
 }
 func (b *bpbLarge) FsInfoSector() uint32 {
-	return uint32(bits.GetLE16(b.fsInfoSector[:]))
+	return uint32(bitops.GetLE16(b.fsInfoSector[:]))
 }
 func (b *bpbLarge) BackupSector() uint32 {
-	return uint32(bits.GetLE16(b.backupSector[:]))
+	return uint32(bitops.GetLE16(b.backupSector[:]))
 }
 
 func (b *bpbLarge) MirroringInfo() (active bool, primaryIndex uint32) {

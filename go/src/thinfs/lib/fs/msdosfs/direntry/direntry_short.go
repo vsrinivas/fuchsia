@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 )
 
 const (
@@ -94,18 +94,18 @@ func (d *shortDirentry) setName(name []uint8) {
 }
 
 func (d *shortDirentry) cluster() uint32 {
-	return (uint32(bits.GetLE16(d.clustHi[:])) << 16) | uint32(bits.GetLE16(d.clustLo[:]))
+	return (uint32(bitops.GetLE16(d.clustHi[:])) << 16) | uint32(bitops.GetLE16(d.clustLo[:]))
 }
 
 func (d *shortDirentry) setCluster(cluster uint32) {
-	bits.PutLE16(d.clustHi[:], uint16(cluster>>16))
-	bits.PutLE16(d.clustLo[:], uint16(cluster))
+	bitops.PutLE16(d.clustHi[:], uint16(cluster>>16))
+	bitops.PutLE16(d.clustLo[:], uint16(cluster))
 }
 
 // lastUpdateTime returns both the time and the date of the last write
 func (d *shortDirentry) lastUpdateTime() time.Time {
-	wDate := bits.GetLE16(d.writeDate[:])
-	wTime := bits.GetLE16(d.writeTime[:])
+	wDate := bitops.GetLE16(d.writeDate[:])
+	wTime := bitops.GetLE16(d.writeTime[:])
 
 	year := int((wDate&dateYearMask)>>dateYearShift) + 1980 // FAT tracks years starting from 1980
 	month := time.Month((wDate & dateMonthMask) >> dateMonthShift)
@@ -135,16 +135,16 @@ func (d *shortDirentry) setLastUpdateTime(t time.Time) {
 	wTime |= (uint16(t.Minute()) << timeMinuteShift) & timeMinuteMask
 	wTime |= (uint16(t.Second()/2) << timeSecondShift) & timeSecondMask
 
-	bits.PutLE16(d.writeDate[:], wDate)
-	bits.PutLE16(d.writeTime[:], wTime)
+	bitops.PutLE16(d.writeDate[:], wDate)
+	bitops.PutLE16(d.writeTime[:], wTime)
 }
 
 func (d *shortDirentry) size() uint32 {
-	return bits.GetLE32(d.fileSize[:])
+	return bitops.GetLE32(d.fileSize[:])
 }
 
 func (d *shortDirentry) setSize(size uint32) {
-	bits.PutLE32(d.fileSize[:], size)
+	bitops.PutLE32(d.fileSize[:], size)
 }
 
 func (d *shortDirentry) isFree() bool {

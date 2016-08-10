@@ -16,7 +16,7 @@ import (
 	"github.com/golang/glog"
 
 	"fuchsia.googlesource.com/thinfs/lib/fs"
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bootrecord"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/cluster/fat/fsinfo"
 	"fuchsia.googlesource.com/thinfs/lib/thinio"
@@ -375,9 +375,9 @@ func (f *FAT) getRawEntry(offset int64) (uint32, error) {
 	}
 	switch f.br.Type() {
 	case bootrecord.FAT32:
-		return bits.GetLE32(buf), nil
+		return bitops.GetLE32(buf), nil
 	case bootrecord.FAT16:
-		return uint32(bits.GetLE16(buf)), nil
+		return uint32(bitops.GetLE16(buf)), nil
 	default:
 		panic("Unknown FAT type")
 	}
@@ -389,9 +389,9 @@ func (f *FAT) setRawEntry(value uint32, offset int64) error {
 	buf := make([]byte, f.br.FATEntrySize())
 	switch f.br.Type() {
 	case bootrecord.FAT32:
-		bits.PutLE32(buf, uint32(value))
+		bitops.PutLE32(buf, uint32(value))
 	case bootrecord.FAT16:
-		bits.PutLE16(buf, uint16(value))
+		bitops.PutLE16(buf, uint16(value))
 	default:
 		panic("Unknown FAT type")
 	}

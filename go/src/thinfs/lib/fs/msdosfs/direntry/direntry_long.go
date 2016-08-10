@@ -7,7 +7,7 @@ package direntry
 import (
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 )
 
 const (
@@ -45,7 +45,7 @@ func (d *longDirentry) nameRaw() []uint16 {
 	nameBuffer := make([]uint16, 0, longDirentLen)
 	writeNamePartToBuffer := func(part []uint8) {
 		for i := 0; i < len(part); i += 2 {
-			charWin := bits.GetLE16(part[i : i+2])
+			charWin := bitops.GetLE16(part[i : i+2])
 			nameBuffer = append(nameBuffer, charWin)
 		}
 	}

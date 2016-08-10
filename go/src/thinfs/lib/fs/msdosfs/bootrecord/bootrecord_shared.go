@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 )
 
 func bootSectorSignatureValid(sig []uint8) error {
-	s := bits.GetLE16(sig)
+	s := bitops.GetLE16(sig)
 	if s != bootSig {
 		return fmt.Errorf("Expected boot signature: %x, but got %x", bootSig, s)
 	}
@@ -70,37 +70,37 @@ type bpbShared struct {
 }
 
 func (b *bpbShared) BytesPerSec() uint32 {
-	return uint32(bits.GetLE16(b.bytesPerSec[:]))
+	return uint32(bitops.GetLE16(b.bytesPerSec[:]))
 }
 func (b *bpbShared) SectorsPerCluster() uint32 {
 	return uint32(b.sectorsPerCluster)
 }
 func (b *bpbShared) NumSectorsReserved() uint32 {
-	return uint32(bits.GetLE16(b.numSectorsReserved[:]))
+	return uint32(bitops.GetLE16(b.numSectorsReserved[:]))
 }
 func (b *bpbShared) NumFATs() uint32 {
 	return uint32(b.numFATs)
 }
 func (b *bpbShared) NumRootEntries() uint32 {
-	return uint32(bits.GetLE16(b.numRootEntries[:]))
+	return uint32(bitops.GetLE16(b.numRootEntries[:]))
 }
 func (b *bpbShared) TotalSectors16() uint32 {
-	return uint32(bits.GetLE16(b.totalSectors16[:]))
+	return uint32(bitops.GetLE16(b.totalSectors16[:]))
 }
 func (b *bpbShared) SectorsPerFAT16() uint32 {
-	return uint32(bits.GetLE16(b.sectorsPerFAT16[:]))
+	return uint32(bitops.GetLE16(b.sectorsPerFAT16[:]))
 }
 func (b *bpbShared) SectorsPerTrack() uint32 {
-	return uint32(bits.GetLE16(b.sectorsPerTrack[:]))
+	return uint32(bitops.GetLE16(b.sectorsPerTrack[:]))
 }
 func (b *bpbShared) NumHeads() uint32 {
-	return uint32(bits.GetLE16(b.numHeads[:]))
+	return uint32(bitops.GetLE16(b.numHeads[:]))
 }
 func (b *bpbShared) SectorsHidden() uint32 {
-	return uint32(bits.GetLE32(b.numSectorsHidden[:]))
+	return uint32(bitops.GetLE32(b.numSectorsHidden[:]))
 }
 func (b *bpbShared) TotalSectors32() uint32 {
-	return uint32(bits.GetLE32(b.totalSectors32[:]))
+	return uint32(bitops.GetLE32(b.totalSectors32[:]))
 }
 func (b *bpbShared) TotalSectors() uint32 {
 	ts16 := b.TotalSectors16()

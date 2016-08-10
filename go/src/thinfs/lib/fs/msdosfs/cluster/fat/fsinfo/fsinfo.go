@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 	"fuchsia.googlesource.com/thinfs/lib/thinio"
 )
 
@@ -40,15 +40,15 @@ type fsInfo struct {
 // Validate verifies the FsInfo is valid.
 func (f *fsInfo) validate() error {
 	// Validate signatures
-	s := bits.GetLE32(f.leadSignature[:])
+	s := bitops.GetLE32(f.leadSignature[:])
 	if s != leadSig {
 		return fmt.Errorf("Expected leading signature: %d, but got %d", leadSig, s)
 	}
-	s = bits.GetLE32(f.innerSignature[:])
+	s = bitops.GetLE32(f.innerSignature[:])
 	if s != innerSig {
 		return fmt.Errorf("Expected inner signature: %d, but got %d", innerSig, s)
 	}
-	s = bits.GetLE32(f.finalSignature[:])
+	s = bitops.GetLE32(f.finalSignature[:])
 	if s != finalSig {
 		return fmt.Errorf("Expected final signature: %d, but got %d", finalSig, s)
 	}
@@ -71,8 +71,8 @@ func ReadHints(d *thinio.Conductor, offset int64) (freeCount, nextFree uint32, e
 		return 0, 0, err
 	}
 
-	freeCount = bits.GetLE32(info.freeCountClusters[:])
-	nextFree = bits.GetLE32(info.nextFreeCluster[:])
+	freeCount = bitops.GetLE32(info.freeCountClusters[:])
+	nextFree = bitops.GetLE32(info.nextFreeCluster[:])
 	if freeCount == UnknownFlag {
 		return 0, 0, errors.New("Unknown free count of clusters")
 	} else if nextFree == UnknownFlag {
@@ -85,7 +85,7 @@ func ReadHints(d *thinio.Conductor, offset int64) (freeCount, nextFree uint32, e
 // "free cluster count".
 func WriteFreeCount(d *thinio.Conductor, offset int64, freeCount uint32) error {
 	b := make([]byte, 4)
-	bits.PutLE32(b, freeCount)
+	bitops.PutLE32(b, freeCount)
 	_, err := d.WriteAt(b, offset+freeCountOffset)
 	return err
 }
@@ -94,7 +94,7 @@ func WriteFreeCount(d *thinio.Conductor, offset int64, freeCount uint32) error {
 // "next free cluster".
 func WriteNextFree(d *thinio.Conductor, offset int64, nextFree uint32) error {
 	b := make([]byte, 4)
-	bits.PutLE32(b, nextFree)
+	bitops.PutLE32(b, nextFree)
 	_, err := d.WriteAt(b, offset+nextFreeClusterOffset)
 	return err
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bits"
+	"fuchsia.googlesource.com/thinfs/lib/bitops"
 )
 
 const (
@@ -364,14 +364,14 @@ func convertUnixToWin(nameUnix string, nameDOS []byte) ([]longDirentry, error) {
 					// There are characters left in the filename
 					var ucs2Char uint16
 					ucs2Char, inputPart = inputPart[0], inputPart[1:]
-					bits.PutLE16(outputPart[i:i+2], ucs2Char)
+					bitops.PutLE16(outputPart[i:i+2], ucs2Char)
 				} else if end == false {
 					// We JUST finished the filename -- insert the NULL terminator
-					bits.PutLE16(outputPart[i:i+2], 0x0000)
+					bitops.PutLE16(outputPart[i:i+2], 0x0000)
 					end = true
 				} else {
 					// The NULL character has already been inserted. Pad with "0xFFFF"
-					bits.PutLE16(outputPart[i:i+2], 0xFFFF)
+					bitops.PutLE16(outputPart[i:i+2], 0xFFFF)
 				}
 			}
 			return inputPart, end
@@ -444,7 +444,7 @@ func convertWinToUnix(callback GetDirentryCallback, startIndex uint, chksum, hig
 		// Returns "true" if a null terminator was seen, "false" otherwise.
 		convFilenamePart := func(part []uint8) (bool, error) {
 			for i := 0; i < len(part); i += 2 {
-				charWin := bits.GetLE16(part[i : i+2])
+				charWin := bitops.GetLE16(part[i : i+2])
 				switch charWin {
 				case 0:
 					// If the name is null terminated, stop writing to the namebuffer.

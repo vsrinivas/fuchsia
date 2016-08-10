@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package bits contains endianness conversion utilities.
-package bits
+package bitops
 
 // GetLE16 gets a 16 bit little endian number from memory.
 func GetLE16(b []byte) uint16 {
