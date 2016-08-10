@@ -148,6 +148,12 @@ try_open:
         if ((r = vndir->ops->lookup(vndir, &vn, path, len)) < 0) {
             return r;
         }
+#if WITH_REPLY_PIPE
+        if (vn->vfs && vn->vfs->remote) {
+            *pathout = ".";
+            return vn->vfs->remote;
+        }
+#endif
         if ((r = vn->ops->open(&vn, flags)) < 0) {
             xprintf("vn open r = %d", r);
             return r;
