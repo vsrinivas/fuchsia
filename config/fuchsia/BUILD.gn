@@ -33,6 +33,7 @@ config("compiler") {
     ldflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
   }
 
+  cflags += [ "-fPIE" ]
   cflags_c += [ "-std=c11" ]
   cflags_cc += [ "-std=c++14" ]
 
@@ -61,23 +62,7 @@ config("shared_library_config") {
 }
 
 config("executable_config") {
-  if (shared) {
-    configs = [ ":shared_config" ]
-  } else {
-    configs = [ ":static_config" ]
-  }
-}
-
-config("static_config") {
-  ldflags = [ "-static" ]
-  libs = [
-    "magenta",
-    "mxio",  # TODO: This is wrong, remove when the weak symbols in libc are sorted.
-    "runtime",
-  ]
-}
-
-config("shared_config") {
+  ldflags = [ "-pie" ]
   libs = [
     "runtime",
 
