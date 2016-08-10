@@ -19,14 +19,19 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/all-tests.c \
-    $(LOCAL_DIR)/unittest.c \
-    $(LOCAL_DIR)/hexdump.c
+    $(LOCAL_DIR)/test-utils.c
 
-MODULE_SO_NAME := unittest
+MODULE_SO_NAME := test-utils
 
-# N.B. mxio, and thus launchpad, cannot appear here. See ./README.md.
-MODULE_STATIC_LIBS := ulib/runtime
+# launchpad, elfload, mxio are static so that every unittest doesn't have to
+# mention them as a dependency as well.
+# N.B. The order is important. Think ordering of args to the linker.
+MODULE_STATIC_LIBS := \
+    ulib/unittest \
+    ulib/launchpad \
+    ulib/elfload \
+    ulib/mxio \
+    ulib/runtime
 MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk

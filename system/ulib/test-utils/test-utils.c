@@ -17,7 +17,7 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
 #include <runtime/status.h>
-#include <unittest/test-utils.h>
+#include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
 #define TU_FAIL_ERRCODE 10

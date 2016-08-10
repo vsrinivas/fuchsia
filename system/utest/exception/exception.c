@@ -22,7 +22,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 #include <system/compiler.h>
-#include <unittest/test-utils.h>
+#include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
 // 0.5 seconds
