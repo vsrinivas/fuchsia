@@ -23,6 +23,8 @@ source_set("src") {
     "gtt.h",
     "msd_buffer.cc",
     "msd_buffer.h",
+    "msd_connection.cc",
+    "msd_connection.h",
     "msd_device.cc",
     "msd_device.h",
     "msd_driver.cc",

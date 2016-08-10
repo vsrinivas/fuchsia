@@ -19,40 +19,17 @@
 
 MsdDevice::MsdDevice() { magic_ = kMagic; }
 
-int32_t MsdDevice::Open(msd_client_id client_id)
+std::unique_ptr<MsdConnection> MsdDevice::Open(msd_client_id client_id)
 {
-    DLOG("TODO: Open");
-    return DRET(-EINVAL);
-}
-
-int32_t MsdDevice::Close(msd_client_id client_id)
-{
-    DLOG("TODO: Close");
-    return DRET(-EINVAL);
+    return std::unique_ptr<MsdConnection>(new MsdConnection());
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-int32_t msd_device_open(msd_device* dev, msd_client_id client_id)
+msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
 {
-    return MsdDevice::cast(dev)->Open(client_id);
-}
-
-int32_t msd_device_close(msd_device* dev, msd_client_id client_id)
-{
-    MsdDevice::cast(dev)->Close(client_id);
-    return 0;
-}
-
-msd_context* msd_device_create_context(msd_device* dev)
-{
-    DLOG("TODO: msd_device_create_context");
-    return nullptr;
-}
-
-void msd_device_destroy_context(msd_device* dev, msd_context* ctx)
-{
-    DLOG("TODO: msd_device_destroy_context");
+    // here we open the connection and transfer ownership of the result across the ABI
+    return MsdDevice::cast(dev)->Open(client_id).release();
 }
 
 uint32_t msd_device_get_id(msd_device* dev) { return MsdDevice::cast(dev)->device_id(); }

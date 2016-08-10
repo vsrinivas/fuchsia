@@ -17,12 +17,14 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
+#include "msd_connection.h"
 #include <ddk/device.h>
 
 class MsdDevice : public msd_device {
 public:
-    int32_t Open(msd_client_id client_id);
-    int32_t Close(msd_client_id client_id);
+    // This takes ownership of the connection so that ownership can be
+    // transferred across the MSD ABI by the caller
+    std::unique_ptr<MsdConnection> Open(msd_client_id client_id);
 
     uint32_t device_id() { return device_id_; }
 
