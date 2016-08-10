@@ -13,11 +13,13 @@
 // limitations under the License.
 
 #include <mxio/util.h>
+#include <mxio/debug.h>
 
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -26,6 +28,22 @@
 #include <magenta/syscalls.h>
 
 #include <runtime/thread.h>
+
+static void log_printf(mx_handle_t log, const char* fmt, ...) {
+    if (log <= 0)
+        return;
+
+    char buf[128];
+    va_list ap;
+    va_start(ap, fmt);
+    // we allow partial writes.
+    int len = vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    if (len < 0)
+        return;
+    len = (len > (int)sizeof(buf)) ? (int)sizeof(buf) : len;
+    mx_log_write(log, len, buf, 0u);
+}
 
 // 8K is the max io size of the mxio layer right now
 
@@ -83,6 +101,7 @@ struct startup {
     mxio_loader_service_function_t loader;
     void* loader_arg;
     mx_handle_t pipe_handle;
+    mx_handle_t syslog_handle;
 };
 
 static int loader_service_thread(void* arg) {
@@ -90,6 +109,7 @@ static int loader_service_thread(void* arg) {
     mx_handle_t h = startup->pipe_handle;
     mxio_loader_service_function_t loader = startup->loader;
     void* loader_arg = startup->loader_arg;
+    mx_handle_t sys_log = startup->syslog_handle;
     free(startup);
 
     uint8_t data[1024];
@@ -127,7 +147,7 @@ static int loader_service_thread(void* arg) {
             msg->arg = handle < 0 ? handle : NO_ERROR;
             break;
         case LOADER_SVC_OP_DEBUG_PRINT:
-            fprintf(stderr, "dlsvc: debug: %s\n", (const char*) msg->data);
+            log_printf(sys_log, "dlsvc: debug: %s\n", (const char*) msg->data);
             msg->arg = NO_ERROR;
             break;
         case LOADER_SVC_OP_DONE:
@@ -172,9 +192,14 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
         return r;
     }
 
+    mx_handle_t sys_log = mx_log_create(0u);
+    if (sys_log <= 0)
+        fprintf(stderr, "dlsvc: log creation failed: error %d\n", sys_log);
+
     startup->pipe_handle = h[1];
     startup->loader = loader;
     startup->loader_arg = loader_arg;
+    startup->syslog_handle = sys_log;
 
     mxr_thread_t* t;
     if ((r = mxr_thread_create(loader_service_thread, startup,
