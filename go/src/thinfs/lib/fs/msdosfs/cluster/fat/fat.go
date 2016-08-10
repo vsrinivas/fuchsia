@@ -15,8 +15,8 @@ import (
 
 	"github.com/golang/glog"
 
-	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/bitops"
+	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bootrecord"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/cluster/fat/fsinfo"
 	"fuchsia.googlesource.com/thinfs/lib/thinio"

@@ -8,19 +8,38 @@ package fs
 import (
 	"errors"
 	"os"
+	"time"
 )
 
 var (
-	// ErrAlreadyExists indicates that requested resource already exists.
-	ErrAlreadyExists = os.ErrExist
+	// ErrInvalidArgs indicates the arguments were invalid
+	ErrInvalidArgs = os.ErrInvalid
 
-	// ErrNotFound indicates that the requested resource was not found.
+	// ErrNotFound indicates that the requested resource was not found
 	ErrNotFound = os.ErrNotExist
 
-	// ErrReadOnly indicates that the operation failed because it is not a "Read Only" operation.
-	ErrReadOnly = errors.New("operation failed due to read-only permissions")
+	// ErrAlreadyExists indicates that requested resource already exists
+	ErrAlreadyExists = os.ErrExist
 
-	// ErrNotEmpty indicates that the caller attempted to remove a non-empty directory.
+	// ErrPermission indicates that the operation failed due to insufficient permissions
+	ErrPermission = os.ErrPermission
+
+	// ErrReadOnly indicates that the operation failed because the underlying resource is read only
+	ErrReadOnly = ErrPermission
+
+	// ErrResourceExhausted indicates that a resource (such as disk space) has been used up
+	ErrResourceExhausted = errors.New("a filesystem resource has been exhausted")
+
+	// ErrFailedPrecondition indicates the system is not in a state where the operation can succeed
+	ErrFailedPrecondition = errors.New("the filesystem is not in a state required for the operation")
+
+	// ErrAborted indicates that due to a system state change, the operation was aborted
+	ErrAborted = errors.New("the operation was aborted")
+
+	// ErrOutOfRange indicates the operation is not in a valid range
+	ErrOutOfRange = errors.New("requested operation would be out of valid range")
+
+	// ErrNotEmpty indicates that the caller attempted to remove a non-empty directory
 	ErrNotEmpty = errors.New("directory is not empty")
 
 	// ErrNotOpen indicates that the caller is attempting to close a file or directory
@@ -28,15 +47,15 @@ var (
 	ErrNotOpen = errors.New("file or directory not open")
 
 	// ErrNotAFile indicatess that the caller attempted to open a file using a path
-	// that did not point to a file.
+	// that did not point to a file
 	ErrNotAFile = errors.New("not a file")
 
 	// ErrNotADir indicates that the caller attempted to open a directory using a path
-	// that did not point to a directory.
+	// that did not point to a directory
 	ErrNotADir = errors.New("not a directory")
 
 	// ErrIsActive indicates that the caller attempted to unlink a directory with active
-	// references.
+	// references
 	ErrIsActive = errors.New("directory has active references")
 )
 
@@ -59,13 +78,75 @@ const (
 type OpenFlags int
 
 const (
-	// OpenFlagCreate indicates that the requested file or directory should be created if it doesn't
-	// already exist.
-	OpenFlagCreate OpenFlags = 1 << iota
-
-	// OpenFlagExclusive indicates that the requested file or directory must not already exist.  It
-	// is only meaningful when used with Create.
+	// OpenFlagRead indicates the file should be opened with read permissions
+	OpenFlagRead OpenFlags = 1 << iota
+	// OpenFlagWrite indicates the file should be opened with write permissions
+	OpenFlagWrite
+	// OpenFlagAppend indicates all writes should append to the file (only valid with "write")
+	OpenFlagAppend
+	// OpenFlagTruncate indicates the file should be truncated before writing (only valid with
+	// "write")
+	OpenFlagTruncate
+	// OpenFlagCreate indicates the file should be created if it does not exist (only valid with
+	// "write")
+	OpenFlagCreate
+	// OpenFlagExclusive indicates that the operation should fail if it already exists (only valid
+	// with "create")
 	OpenFlagExclusive
+	// OpenFlagFile indicates the operation must act on a file
+	OpenFlagFile
+	// OpenFlagDirectory indicates the operation must act on a directory
+	OpenFlagDirectory
+)
+
+// Read returns if the Read permission is active
+func (f OpenFlags) Read() bool {
+	return f&OpenFlagRead != 0
+}
+
+// Write returns if the Write permission is active
+func (f OpenFlags) Write() bool {
+	return f&OpenFlagWrite != 0
+}
+
+// Append returns if the Append permission is active
+func (f OpenFlags) Append() bool {
+	return f&OpenFlagAppend != 0
+}
+
+// Truncate returns if the Truncate flag is active
+func (f OpenFlags) Truncate() bool {
+	return f&OpenFlagTruncate != 0
+}
+
+// Create returns if the Create flag is active
+func (f OpenFlags) Create() bool {
+	return f&OpenFlagCreate != 0
+}
+
+// Exclusive returns if the Exclusive flag is active
+func (f OpenFlags) Exclusive() bool {
+	return f&OpenFlagExclusive != 0
+}
+
+// File returns if the File flag is active
+func (f OpenFlags) File() bool {
+	return f&OpenFlagFile != 0
+}
+
+// Directory returns if the Directory flag is active
+func (f OpenFlags) Directory() bool {
+	return f&OpenFlagDirectory != 0
+}
+
+// Whence is used to explain the meaning of an offset in a file
+const (
+	// WhenceFromCurrent means the offset starts at the current file position
+	WhenceFromCurrent = iota
+	// WhenceFromStart means the offset starts at the beginning of the file
+	WhenceFromStart
+	// WhenceFromEnd means the offset starts at the end of the file
+	WhenceFromEnd
 )
 
 // FileSystemOptions defines the options a client can request for a filesystem.
@@ -115,38 +196,37 @@ type FileSystem interface {
 
 // Directory represents the generic methods that can be taken on directory.
 type Directory interface {
-	// Close closes the directory, decrements the active reference count for it, and frees the
+	// Close closes the file, decrements the active reference count for it, and frees the
 	// blocks pointed to by the file if there are no more active references to it and it is no
 	// longer linked to by any directory.  Returns an error, if any.  The returned error is purely
 	// informational and the close must not be retried.
 	Close() error
 
+	// Stat returns the size, last access time, and last modified time (if known) of the directory.
+	Stat() (int64, *time.Time, *time.Time, error)
+
+	// Touch updates the directory's access and modification times (if they are non-nil).
+	Touch(lastAccess, lastModified *time.Time) error
+
+	// Dup returns a directory which shares all the information as 'this' directory, including the
+	// permissions and file seek position.
+	Dup() (Directory, error)
+
+	// Reopen returns a directory which has a copy of all the information contained in 'this'
+	// directory, except
+	// 1) The flags may be downgraded with the "flags" provided.
+	// 2) The file position is set to either zero or EOF depending on "flags".
+	Reopen(flags OpenFlags) (Directory, error)
+
 	// Read returns the contents of the directory and an error, if any.
 	Read() ([]Dirent, error)
 
-	// OpenFile opens the file pointed to by name.  name is first cleaned with path.Clean().  d is
-	// considered the root directory as well as the current directory for the cleaned path.  OpenFile
-	// will return an error if name does not exist unless the Create flag is provided.  If both the
-	// Create and Exclusive flags are provided then OpenFile will return an error if the requested
-	// file already exists.  OpenFile will return the requested file and an error, if any.  Callers
-	// must close the returned file to ensure that any changes made to the file are persisted to the disk.
-	// For example, if a file is unlinked from its parent directory while there is still an active
-	// reference to it, the underlying inode and blocks for that file will not be freed until the last
-	// active reference has been closed.
-	OpenFile(name string, flags OpenFlags) (File, error)
+	// Open opens the file pointed to by "name".
+	// d is considered the current directory for the "name".
+	Open(name string, flags OpenFlags) (File, Directory, error)
 
-	// OpenDirectory opens the directory pointed to by name.  name is first cleaned with path.Clean().  d is
-	// considered the root directory as well as the current directory for the cleaned path.  OpenDirectory
-	// will return an error if name does not exist unless the Create flag is provided.  If both the
-	// Create and Exclusive flags are provided then OpenDirectory will return an error if the requested
-	// directory already exists.  OpenDirectory will return the requested directory and an error, if any.
-	// Callers must close the returned directory to ensure that changes made to the directory will persist
-	// to the disk.
-	OpenDirectory(name string, flags OpenFlags) (Directory, error)
-
-	// Rename renames the resource pointed to by src to dst.  Both src and dst are first cleaned
-	// with path.Clean().  d is considered both the root and current working directory for the cleaned
-	// paths.  Renaming a file or directory will not affect any active references to that file/directory.
+	// Rename renames the resource pointed to by src to dst.
+	// Renaming a file or directory will not affect any active references to that file/directory.
 	// Rename will not overwrite dst if it already exists.  Returns an error, if any.
 	Rename(src, dst string) error
 
@@ -154,17 +234,16 @@ type Directory interface {
 	// persisted to stable storage.  Returns an error, if any.
 	Flush() error
 
-	// Unlink unlinks target from its parent directory.  target is first cleaned with path.Clean().
-	// d is considered both the root directory and the current working directory for the cleaned
-	// path.  If target points to a directory, then the directory must be empty and it must not have
+	// Unlink unlinks target from its parent directory.
+	// If target points to a directory, then the directory must be empty and it must not have
 	// any active references.  If there are no more directories that link to target, then the blocks
 	// held by target will be freed.  However, if target is a file and there are currently active
 	// references to it then the blocks will not be freed until all the active references have been
-	// closed.  Returns an error, if any.
+	// closed. Returns an error, if any.
 	Unlink(target string) error
 }
 
-// File represents a file on the filesystem.
+// File represents a normal file on the filesystem.
 type File interface {
 	// Close closes the file, decrements the active reference count for it, and frees the blocks
 	// pointed to by the file if there are no more active references to it and it is no longer
@@ -172,12 +251,38 @@ type File interface {
 	// informational and the close must not be retried.
 	Close() error
 
-	// ReadAt implements io.ReaderAt for file.
-	ReadAt(p []byte, off int64) (int, error)
+	// Stat returns the size, last access time, and last modified time of the file.
+	Stat() (int64, *time.Time, *time.Time, error)
 
-	// WriteAt implements io.WriterAt for file.
-	WriteAt(p []byte, off int64) (int, error)
+	// Touch updates the file's access and modification times (if they are non-nil).
+	Touch(lastAccess, lastModified *time.Time) error
 
-	// Size returns the size of the file in bytes and an error, if any.
-	Size() (int64, error)
+	// Dup returns a file which shares all the information as 'this' file, including the
+	// permissions and file seek position.
+	Dup() (File, error)
+
+	// Reopen returns a file which has a copy of all the information contained in 'this' file,
+	// except
+	// 1) The flags may be downgraded with the "flags" provided.
+	// 2) The file position is set to either zero or EOF depending on "flags".
+	Reopen(flags OpenFlags) (File, error)
+
+	// Read reads a maximum of len(p) bytes into "p" into the file at a location decided by "off"
+	// and "whence".
+	Read(p []byte, off int64, whence int) (int, error)
+
+	// Write writes a maximum of len(p) bytes from "p" into the file at a location decided by "off"
+	// and "whence".
+	Write(p []byte, off int64, whence int) (int, error)
+
+	// Truncate reduces the file to the size specified by "size" in bytes.
+	// Truncate does not modify the seek position.
+	Truncate(size uint64) error
+
+	// Tell identifies what the current seek position is.
+	Tell() (int64, error)
+
+	// Seek modified the seek position to offset + some starting position, dependent on whence.
+	// Seek returns the new seek position.
+	Seek(offset int64, whence int) (int64, error)
 }
