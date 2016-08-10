@@ -39,6 +39,8 @@ static void log_write(const void* data, size_t len) {
 
 
 // libc init and io stubs
+// The reason these are here is that the "core" tests intentionally do not
+// use mxio. See ./README.md.
 
 void __libc_extensions_init(mx_proc_info_t* pi) {
 }
