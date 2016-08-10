@@ -12,24 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef MSD_DRIVER_H
+#define MSD_DRIVER_H
+
 #include "magma_util/macros.h"
 #include "msd.h"
-#include <memory>
 
-class MsdDevice;
+class MsdIntelDevice;
 
-class MsdConnection : public msd_connection {
+class MsdIntelDriver : public msd_driver {
 public:
-    MsdConnection() { magic_ = kMagic; }
-    virtual ~MsdConnection() {}
+    MsdIntelDevice* CreateDevice(void* device);
 
-    static MsdConnection* cast(msd_connection* connection)
+    static MsdIntelDriver* Create();
+    static void Destroy(MsdIntelDriver* drv);
+
+    static MsdIntelDriver* cast(msd_driver* drv)
     {
-        DASSERT(connection);
-        DASSERT(connection->magic_ == kMagic);
-        return static_cast<MsdConnection*>(connection);
+        DASSERT(drv);
+        DASSERT(drv->magic_ == kMagic);
+        return static_cast<MsdIntelDriver*>(drv);
     }
 
 private:
-    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
+    MsdIntelDriver();
+    virtual ~MsdIntelDriver() {}
+
+    static const uint32_t kMagic = 0x64726976; //"driv"
 };
+
+#endif // MSD_DRIVER_H

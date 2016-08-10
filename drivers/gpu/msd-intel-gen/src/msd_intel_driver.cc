@@ -12,29 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "msd_driver.h"
+#include "msd_intel_driver.h"
 #include "magma_util/dlog.h"
-#include "msd_device.h"
+#include "msd_intel_device.h"
 
-MsdDriver::MsdDriver() { magic_ = kMagic; }
+MsdIntelDriver::MsdIntelDriver() { magic_ = kMagic; }
 
-MsdDriver* MsdDriver::Create()
+MsdIntelDriver* MsdIntelDriver::Create()
 {
-    auto drv = new MsdDriver();
+    auto drv = new MsdIntelDriver();
     if (!drv) {
-        DLOG("Failed to allocate MsdDriver");
+        DLOG("Failed to allocate MsdIntelDriver");
         return nullptr;
     }
     return drv;
 }
 
-void MsdDriver::Destroy(MsdDriver* drv) { delete drv; }
+void MsdIntelDriver::Destroy(MsdIntelDriver* drv) { delete drv; }
 
-MsdDevice* MsdDriver::CreateDevice(void* device)
+MsdIntelDevice* MsdIntelDriver::CreateDevice(void* device)
 {
-    auto dev = new MsdDevice();
+    auto dev = new MsdIntelDevice();
     if (!dev) {
-        DLOG("Failed to allocate MsdDevice");
+        DLOG("Failed to allocate MsdIntelDevice");
         return nullptr;
     }
     return dev;
@@ -42,13 +42,13 @@ MsdDevice* MsdDriver::CreateDevice(void* device)
 
 //////////////////////////////////////////////////////////////////////////////
 
-msd_driver* msd_driver_create(void) { return MsdDriver::Create(); }
+msd_driver* msd_driver_create(void) { return MsdIntelDriver::Create(); }
 
-void msd_driver_destroy(msd_driver* drv) { MsdDriver::Destroy(MsdDriver::cast(drv)); }
+void msd_driver_destroy(msd_driver* drv) { MsdIntelDriver::Destroy(MsdIntelDriver::cast(drv)); }
 
 msd_device* msd_driver_create_device(msd_driver* drv, void* device)
 {
-    return MsdDriver::cast(drv)->CreateDevice(device);
+    return MsdIntelDriver::cast(drv)->CreateDevice(device);
 }
 
-void msd_driver_destroy_device(msd_device* dev) { delete MsdDevice::cast(dev); }
+void msd_driver_destroy_device(msd_device* dev) { delete MsdIntelDevice::cast(dev); }
