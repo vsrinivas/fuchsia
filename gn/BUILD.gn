@@ -30,7 +30,9 @@ action("mkbootfs") {
                                "--build-root",
                                rebase_path(root_build_dir),
                                "--depfile",
-                               rebase_path(depfile)
+                               rebase_path(depfile),
+                               "--arch",
+                               target_cpu
                              ],
                              "list lines")
 
