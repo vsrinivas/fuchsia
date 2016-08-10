@@ -12,21 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "msd_connection.h"
-#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
+#include "msd.h"
+#include <memory>
 
-void msd_connection_close(msd_connection* connection)
-{
-    delete MsdConnection::cast(connection);
-}
+class MsdIntelDevice;
 
-msd_context* msd_connection_create_context(msd_connection* connection)
-{
-    DLOG("TODO: msd_connection_create_context");
-    return nullptr;
-}
+class MsdIntelConnection : public msd_connection {
+public:
+    MsdIntelConnection() { magic_ = kMagic; }
+    virtual ~MsdIntelConnection() {}
 
-void msd_connection_destroy_context(msd_connection* connection, msd_context* ctx)
-{
-    DLOG("TODO: msd_device_destroy_context");
-}
+    static MsdIntelConnection* cast(msd_connection* connection)
+    {
+        DASSERT(connection);
+        DASSERT(connection->magic_ == kMagic);
+        return static_cast<MsdIntelConnection*>(connection);
+    }
+
+private:
+    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
+};
