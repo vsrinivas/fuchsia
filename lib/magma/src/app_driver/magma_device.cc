@@ -81,8 +81,8 @@ void MagmaBuffer::WaitRendering()
 
 MagmaDevice* MagmaDevice::Open(uint32_t device_handle, int batch_size)
 {
-    MagmaSystemConnection* sys_dev;
-    if (!magma_system_open(&sys_dev, device_handle)) {
+    auto sys_dev = magma_system_open(device_handle);
+    if (!sys_dev) {
         DLOG("magma_system_open failed");
         return nullptr;
     }

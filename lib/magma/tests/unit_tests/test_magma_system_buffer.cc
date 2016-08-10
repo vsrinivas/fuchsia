@@ -49,23 +49,25 @@ TEST(Magma, MagmaSystemBuffer_Create)
 
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemConnection(msd_dev);
+    auto dev = MagmaSystemDevice(msd_dev);
+    auto connection = dev.Open(0);
+    ASSERT_NE(connection, nullptr);
 
     EXPECT_FALSE(bufmgr->has_created_buffer());
     EXPECT_FALSE(bufmgr->has_destroyed_buffer());
 
     {
-        auto buf = dev.AllocateBuffer(0);
+        auto buf = connection->AllocateBuffer(0);
         EXPECT_FALSE(bufmgr->has_created_buffer());
         EXPECT_FALSE(bufmgr->has_destroyed_buffer());
     }
 
     {
-        auto buf = dev.AllocateBuffer(256);
+        auto buf = connection->AllocateBuffer(256);
         EXPECT_TRUE(bufmgr->has_created_buffer());
         EXPECT_FALSE(bufmgr->has_destroyed_buffer());
 
-        dev.FreeBuffer(buf->handle());
+        connection->FreeBuffer(buf->handle());
     }
     EXPECT_TRUE(bufmgr->has_created_buffer());
     EXPECT_TRUE(bufmgr->has_destroyed_buffer());

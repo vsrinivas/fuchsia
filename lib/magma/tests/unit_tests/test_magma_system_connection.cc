@@ -32,7 +32,7 @@ TEST(Magma, MagmaSystemConnection_GetDeviceId)
     uint32_t test_id = 0xdeadbeef;
 
     auto msd_dev = new MsdMockDevice_GetDeviceId(test_id);
-    auto dev = MagmaSystemConnection(msd_dev);
+    auto dev = MagmaSystemDevice(msd_dev);
 
     uint32_t device_id = dev.GetDeviceId();
     // For now device_id is invalid
@@ -46,15 +46,17 @@ TEST(Magma, MagmaSystemConnection_BufferManagement)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemConnection(msd_dev);
+    auto dev = MagmaSystemDevice(msd_dev);
+    auto connection = dev.Open(0);
+    ASSERT_NE(connection, nullptr);
 
     uint64_t test_size = 4096;
 
     {
         // allocating a zero size buffer should fail
-        EXPECT_EQ(dev.AllocateBuffer(0), nullptr);
+        EXPECT_EQ(connection->AllocateBuffer(0), nullptr);
 
-        auto buf = dev.AllocateBuffer(test_size);
+        auto buf = connection->AllocateBuffer(test_size);
         // assert because if this fails the rest of this is gonna be bogus anyway
         ASSERT_NE(buf, nullptr);
         EXPECT_GE(buf->size(), test_size);
@@ -63,38 +65,38 @@ TEST(Magma, MagmaSystemConnection_BufferManagement)
         EXPECT_EQ(handle, buf->platform_buffer()->handle());
 
         // should be able to get the buffer by handle
-        auto get_buf = dev.LookupBuffer(handle);
+        auto get_buf = connection->LookupBuffer(handle);
         EXPECT_NE(get_buf, nullptr);
         EXPECT_EQ(get_buf, buf); // they are shared ptrs after all
 
         // freeing the allocated buffer should work
-        EXPECT_TRUE(dev.FreeBuffer(handle));
+        EXPECT_TRUE(connection->FreeBuffer(handle));
 
         // should no longer be able to get it from the map
-        EXPECT_EQ(dev.LookupBuffer(handle), nullptr);
+        EXPECT_EQ(connection->LookupBuffer(handle), nullptr);
 
         // should not be able to double free it
-        EXPECT_FALSE(dev.FreeBuffer(handle));
+        EXPECT_FALSE(connection->FreeBuffer(handle));
     }
 
     msd_driver_destroy_device(msd_dev);
     msd_driver_destroy(msd_drv);
 }
 
-class MsdMockDevice_ContextManagement : public MsdMockDevice {
+class MsdMockConnection_ContextManagement : public MsdMockConnection {
 public:
-    MsdMockDevice_ContextManagement() {}
+    MsdMockConnection_ContextManagement() {}
 
     MsdMockContext* CreateContext() override
     {
         active_context_count_++;
-        return MsdMockDevice::CreateContext();
+        return MsdMockConnection::CreateContext();
     }
 
     void DestroyContext(MsdMockContext* ctx) override
     {
         active_context_count_--;
-        MsdMockDevice::DestroyContext(ctx);
+        MsdMockConnection::DestroyContext(ctx);
     }
 
     uint32_t NumActiveContexts() { return active_context_count_; }
@@ -105,30 +107,30 @@ private:
 
 TEST(Magma, MagmaSystemConnection_ContextManagement)
 {
-    auto msd_dev = new MsdMockDevice_ContextManagement();
-    auto dev = MagmaSystemConnection(msd_dev);
+    auto msd_connection = new MsdMockConnection_ContextManagement();
 
-    EXPECT_EQ(msd_dev->NumActiveContexts(), 0u);
+    auto dev = MagmaSystemDevice(new MsdMockDevice());
+    auto connection = MagmaSystemConnection(
+        &dev, msd_connection_unique_ptr_t(msd_connection, &msd_connection_close));
+
+    EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
 
     uint32_t context_id_0;
     uint32_t context_id_1;
 
-    EXPECT_TRUE(dev.CreateContext(&context_id_0));
-    EXPECT_EQ(msd_dev->NumActiveContexts(), 1u);
+    EXPECT_TRUE(connection.CreateContext(&context_id_0));
+    EXPECT_EQ(msd_connection->NumActiveContexts(), 1u);
 
-    EXPECT_TRUE(magma_system_create_context(&dev, &context_id_1));
-    EXPECT_EQ(msd_dev->NumActiveContexts(), 2u);
+    EXPECT_TRUE(magma_system_create_context(&connection, &context_id_1));
+    EXPECT_EQ(msd_connection->NumActiveContexts(), 2u);
 
     EXPECT_NE(context_id_0, context_id_1);
 
-    EXPECT_TRUE(dev.DestroyContext(context_id_0));
-    EXPECT_EQ(msd_dev->NumActiveContexts(), 1u);
-    EXPECT_FALSE(dev.DestroyContext(context_id_0));
+    EXPECT_TRUE(connection.DestroyContext(context_id_0));
+    EXPECT_EQ(msd_connection->NumActiveContexts(), 1u);
+    EXPECT_FALSE(connection.DestroyContext(context_id_0));
 
-    EXPECT_TRUE(magma_system_destroy_context(&dev, context_id_1));
-    EXPECT_EQ(msd_dev->NumActiveContexts(), 0u);
-    EXPECT_FALSE(magma_system_destroy_context(&dev, context_id_1));
-
-    // TODO(MA-25) msd device should be destroyed as part of the MagmaSystemConnection destructor
-    msd_driver_destroy_device(msd_dev);
+    EXPECT_TRUE(magma_system_destroy_context(&connection, context_id_1));
+    EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
+    EXPECT_FALSE(magma_system_destroy_context(&connection, context_id_1));
 }

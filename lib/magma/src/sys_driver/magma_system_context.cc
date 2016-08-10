@@ -14,16 +14,19 @@
 
 #include "magma_system_context.h"
 #include "magma_system_connection.h"
+#include "magma_system_device.h"
 #include "magma_util/macros.h"
 
-std::unique_ptr<MagmaSystemContext> MagmaSystemContext::Create(MagmaSystemConnection* dev)
+std::unique_ptr<MagmaSystemContext> MagmaSystemContext::Create(MagmaSystemConnection* connection)
 {
-    auto msd_ctx = msd_device_create_context(dev->arch());
+    auto msd_ctx = msd_connection_create_context(connection->msd_connection());
     if (!msd_ctx)
         return DRETP(nullptr, "Failed to create msd context");
 
-    auto deleter = [dev](msd_context* msd_ctx) {
-        msd_device_destroy_context(dev->arch(), msd_ctx);
+    // capture the connection here on the premise that the connection will always outlive
+    // all of its contexts
+    auto deleter = [connection](msd_context* msd_ctx) {
+        msd_connection_destroy_context(connection->msd_connection(), msd_ctx);
     };
 
     return std::unique_ptr<MagmaSystemContext>(

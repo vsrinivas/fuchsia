@@ -14,6 +14,8 @@
 
 #include "magma_system.h"
 #include "magma_driver.h"
+#include "magma_system_connection.h"
+#include "magma_util/macros.h"
 
 #ifdef __linux__
 #include <unistd.h>
@@ -22,59 +24,49 @@ static msd_client_id get_client_id() { return static_cast<msd_client_id>(getpid(
 static msd_client_id get_client_id() { return static_cast<msd_client_id>(1); }
 #endif // __linux__
 
-MagmaSystemConnection* MagmaDriver::g_device;
+MagmaSystemDevice* MagmaDriver::g_device;
 
-bool magma_system_open(MagmaSystemConnection** pdev, uint32_t device_handle)
+MagmaSystemConnection* magma_system_open(uint32_t device_handle)
 {
-    if (device_handle != 0xdeadbeef) {
-        DLOG("Unexpected device_handle\n");
-        return false;
-    }
+    if (device_handle != 0xdeadbeef)
+        return DRETP(nullptr, "Unexpected device_handle");
 
-    MagmaSystemConnection* dev = MagmaDriver::GetDevice();
+
+    MagmaSystemDevice* dev = MagmaDriver::GetDevice();
     DASSERT(dev);
 
     msd_client_id client_id = get_client_id();
 
-    int ret = msd_device_open(dev->arch(), client_id);
-    if (ret) {
-        DLOG("msd_open failed");
-        return false;
-    }
+    auto connection = dev->Open(client_id);
+    if (!connection)
+        return DRETP(nullptr, "failed to open device");
 
-    dev->set_client_id(client_id);
-
-    *pdev = dev;
-    return true;
+    // Here we release ownership of the connection to the client
+    return connection.release();
 }
 
-void magma_system_close(MagmaSystemConnection* dev)
-{
-    msd_device_close(dev->arch(), dev->client_id());
-
-    delete dev;
-}
+void magma_system_close(MagmaSystemConnection* connection) { delete connection; }
 
 // Returns the device id.  0 is an invalid device id.
-uint32_t magma_system_get_device_id(MagmaSystemConnection* dev)
+uint32_t magma_system_get_device_id(MagmaSystemConnection* connection)
 {
-    return msd_device_get_id(dev->arch());
+    return connection->GetDeviceId();
 }
 
-bool magma_system_create_context(MagmaSystemConnection* dev, uint32_t* context_id_out)
+bool magma_system_create_context(MagmaSystemConnection* connection, uint32_t* context_id_out)
 {
-    return dev->CreateContext(context_id_out);
+    return connection->CreateContext(context_id_out);
 }
 
-bool magma_system_destroy_context(struct MagmaSystemConnection* dev, uint32_t context_id)
+bool magma_system_destroy_context(MagmaSystemConnection* connection, uint32_t context_id)
 {
-    return dev->DestroyContext(context_id);
+    return connection->DestroyContext(context_id);
 }
 
-bool magma_system_alloc(MagmaSystemConnection* dev, uint64_t size, uint64_t* size_out,
+bool magma_system_alloc(MagmaSystemConnection* connection, uint64_t size, uint64_t* size_out,
                         uint32_t* handle_out)
 {
-    auto buf = dev->AllocateBuffer(size);
+    auto buf = connection->AllocateBuffer(size);
     if (!buf)
         return false;
 
@@ -83,50 +75,51 @@ bool magma_system_alloc(MagmaSystemConnection* dev, uint64_t size, uint64_t* siz
     return true;
 }
 
-bool magma_system_free(struct MagmaSystemConnection* dev, uint32_t handle)
+bool magma_system_free(MagmaSystemConnection* connection, uint32_t handle)
 {
-    return dev->FreeBuffer(handle);
+    return connection->FreeBuffer(handle);
 }
 
-bool magma_system_set_tiling_mode(struct MagmaSystemConnection* dev, uint32_t handle,
+bool magma_system_set_tiling_mode(MagmaSystemConnection* connection, uint32_t handle,
                                   uint32_t tiling_mode)
 {
     DLOG("TODO: magma_system_set_tiling_mode");
     return false;
 }
 
-bool magma_system_map(struct MagmaSystemConnection* dev, uint32_t handle, void** paddr)
+bool magma_system_map(MagmaSystemConnection* connection, uint32_t handle, void** paddr)
 {
-    auto buf = dev->LookupBuffer(handle);
+    auto buf = connection->LookupBuffer(handle);
     if (!buf)
         return false;
 
     return buf->platform_buffer()->MapCpu(paddr);
 }
 
-bool magma_system_unmap(struct MagmaSystemConnection* dev, uint32_t handle, void* addr)
+bool magma_system_unmap(MagmaSystemConnection* connection, uint32_t handle, void* addr)
 {
-    auto buf = dev->LookupBuffer(handle);
+    auto buf = connection->LookupBuffer(handle);
     if (!buf)
         return false;
 
     return buf->platform_buffer()->UnmapCpu();
 }
 
-bool magma_system_set_domain(struct MagmaSystemConnection* dev, uint32_t handle, uint32_t read_domains,
-                             uint32_t write_domain)
+bool magma_system_set_domain(MagmaSystemConnection* connection, uint32_t handle,
+                             uint32_t read_domains, uint32_t write_domain)
 {
     DLOG("TODO: magma_system_set_domain");
     return false;
 }
 
-bool magma_system_execute_buffer(struct MagmaSystemConnection* dev, struct MagmaExecBuffer* execbuffer)
+bool magma_system_execute_buffer(MagmaSystemConnection* connection,
+                                 struct MagmaExecBuffer* execbuffer)
 {
     DLOG("TODO: magma_system_execute_buffer");
     return false;
 }
 
-void magma_system_wait_rendering(struct MagmaSystemConnection* dev, uint32_t handle)
+void magma_system_wait_rendering(MagmaSystemConnection* connection, uint32_t handle)
 {
     DLOG("TODO: magma_system_wait_rendering");
 }

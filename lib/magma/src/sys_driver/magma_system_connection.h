@@ -17,19 +17,18 @@
 
 #include "magma_system_buffer.h"
 #include "magma_system_context.h"
+#include "magma_system_device.h"
 #include "msd.h"
 
 #include <map>
 #include <memory>
 
-struct MagmaSystemConnection {
+using msd_connection_unique_ptr_t =
+    std::unique_ptr<msd_connection, std::function<void(msd_connection*)>>;
+
+class MagmaSystemConnection {
 public:
-    MagmaSystemConnection(msd_device* msd_dev) : msd_dev_(msd_dev) {}
-
-    msd_device* arch() { return msd_dev_; }
-
-    void set_client_id(msd_client_id client_id) { client_id_ = client_id; }
-    msd_client_id client_id() { return client_id_; }
+    MagmaSystemConnection(MagmaSystemDevice* device, msd_connection_unique_ptr_t msd_connection);
 
     // Allocates a buffer of at least the requested size and adds it to the
     // buffer map. Returns a shared_ptr to the allocated buffer on success
@@ -46,12 +45,14 @@ public:
     bool CreateContext(uint32_t* context_id_out);
     bool DestroyContext(uint32_t context_id);
 
-    // Returns the device id. 0 is invalid.
-    uint32_t GetDeviceId();
+    uint32_t GetDeviceId() { return device_->GetDeviceId(); }
+
+    msd_connection* msd_connection() { return msd_connection_.get(); }
 
 private:
-    msd_client_id client_id_{};
-    msd_device* msd_dev_;
+    // device is not owned here on the premise that the device outlives all its connections
+    MagmaSystemDevice* device_;
+    msd_connection_unique_ptr_t msd_connection_;
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
     std::map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
     uint32_t next_context_id_{};

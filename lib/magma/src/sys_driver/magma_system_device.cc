@@ -12,26 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _MAGMA_SYSTEM_CONTEXT_H_
-#define _MAGMA_SYSTEM_CONTEXT_H_
+#include "magma_system_device.h"
+#include "magma_system_connection.h"
+#include "magma_util/macros.h"
 
-#include <functional>
-#include <memory>
+uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev_); }
 
-#include "msd.h"
+std::unique_ptr<MagmaSystemConnection> MagmaSystemDevice::Open(msd_client_id client_id)
+{
+    msd_connection* connection = msd_device_open(msd_dev_, client_id);
+    if (!connection)
+        return DRETP(nullptr, "msd_device_open failed");
 
-class MagmaSystemConnection;
-
-using msd_context_unique_ptr_t = std::unique_ptr<msd_context, std::function<void(msd_context*)>>;
-
-class MagmaSystemContext {
-public:
-    static std::unique_ptr<MagmaSystemContext> Create(MagmaSystemConnection* connection);
-
-private:
-    MagmaSystemContext(msd_context_unique_ptr_t msd_ctx) : msd_ctx_(std::move(msd_ctx)) {}
-
-    msd_context_unique_ptr_t msd_ctx_;
-};
-
-#endif // _MAGMA_SYSTEM_CONTEXT_H_
+    return std::unique_ptr<MagmaSystemConnection>(new MagmaSystemConnection(
+        this, msd_connection_unique_ptr_t(connection, &msd_connection_close)));
+}

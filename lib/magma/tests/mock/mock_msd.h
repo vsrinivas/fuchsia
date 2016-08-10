@@ -55,18 +55,33 @@ private:
     static const uint32_t kMagic = 0x6d6b6378; // "mkcx" (Mock Context)
 };
 
+class MsdMockConnection : public msd_connection {
+public:
+    MsdMockConnection() { magic_ = kMagic; }
+    virtual ~MsdMockConnection() {}
+
+    virtual MsdMockContext* CreateContext() { return new MsdMockContext; }
+
+    virtual void DestroyContext(MsdMockContext* ctx) { delete ctx; }
+
+    static MsdMockConnection* cast(msd_connection* connection)
+    {
+        DASSERT(connection);
+        DASSERT(connection->magic_ == kMagic);
+        return static_cast<MsdMockConnection*>(connection);
+    }
+
+private:
+    static const uint32_t kMagic = 0x6d6b636e; // "mkcn" (Mock Connection)
+};
+
 class MsdMockDevice : public msd_device {
 public:
     MsdMockDevice() { magic_ = kMagic; }
     virtual ~MsdMockDevice() {}
 
-    virtual int32_t Open(msd_client_id client_id) { return 0; }
-    virtual int32_t Close(msd_client_id client_id) { return 0; }
+    virtual msd_connection* Open(msd_client_id client_id) { return new MsdMockConnection(); }
     virtual uint32_t GetDeviceId() { return 0; }
-
-    virtual MsdMockContext* CreateContext() { return new MsdMockContext; }
-
-    virtual void DestroyContext(MsdMockContext* ctx) { delete ctx; }
 
     static MsdMockDevice* cast(msd_device* dev)
     {

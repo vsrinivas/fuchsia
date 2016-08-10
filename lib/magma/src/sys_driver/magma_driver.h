@@ -19,28 +19,22 @@
 #include "magma_util/macros.h"
 #include "msd.h"
 
-#include "magma_system_connection.h"
+#include "magma_system_device.h"
 
 class MagmaDriver {
 public:
     MagmaDriver(msd_driver* arch) : arch_(arch) {}
 
-    MagmaSystemConnection* CreateDevice(void* device)
+    MagmaSystemDevice* CreateDevice(void* device)
     {
         DASSERT(!g_device);
 
         msd_device* arch_dev = msd_driver_create_device(arch_, device);
         if (!arch_dev) {
-            DLOG("msd_create_device failed");
-            return nullptr;
+            return DRETP(nullptr, "msd_create_device failed");;
         }
 
-        g_device = new MagmaSystemConnection(arch_dev);
-        if (!g_device) {
-            DLOG("failed to allocate MagmaSystemConnection");
-            // TODO: msd_destroy_device
-            return nullptr;
-        }
+        g_device = new MagmaSystemDevice(arch_dev);
 
         return g_device;
     }
@@ -54,19 +48,15 @@ public:
         }
 
         auto driver = new MagmaDriver(arch);
-        if (!driver) {
-            DLOG("fail to allocate MagmaDriver");
-            return nullptr;
-        }
 
         return driver;
     }
 
-    static MagmaSystemConnection* GetDevice() { return g_device; }
+    static MagmaSystemDevice* GetDevice() { return g_device; }
 
 private:
     msd_driver* arch_;
-    static MagmaSystemConnection* g_device;
+    static MagmaSystemDevice* g_device;
 };
 
 #endif // MAGMA_DRIVER_H

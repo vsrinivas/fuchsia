@@ -36,26 +36,26 @@ void msd_driver_destroy_device(msd_device* dev)
     delete MsdMockDevice::cast(dev);
 }
 
-int32_t msd_device_open(msd_device* dev, msd_client_id client_id)
+msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
 {
     return MsdMockDevice::cast(dev)->Open(client_id);
 }
 
-int32_t msd_device_close(msd_device* dev, msd_client_id client_id)
+void msd_connection_close(msd_connection* connection)
 {
-    return MsdMockDevice::cast(dev)->Close(client_id);
+    delete MsdMockConnection::cast(connection);
 }
 
 uint32_t msd_device_get_id(msd_device* dev) { return MsdMockDevice::cast(dev)->GetDeviceId(); }
 
-msd_context* msd_device_create_context(msd_device* dev)
+msd_context* msd_connection_create_context(msd_connection* dev)
 {
-    return MsdMockDevice::cast(dev)->CreateContext();
+    return MsdMockConnection::cast(dev)->CreateContext();
 }
 
-void msd_device_destroy_context(msd_device* dev, msd_context* ctx)
+void msd_connection_destroy_context(msd_connection* dev, msd_context* ctx)
 {
-    MsdMockDevice::cast(dev)->DestroyContext(MsdMockContext::cast(ctx));
+    MsdMockConnection::cast(dev)->DestroyContext(MsdMockContext::cast(ctx));
 }
 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)

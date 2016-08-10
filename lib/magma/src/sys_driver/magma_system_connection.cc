@@ -13,7 +13,16 @@
 // limitations under the License.
 
 #include "magma_system_connection.h"
+#include "magma_system_device.h"
 #include "magma_util/macros.h"
+
+MagmaSystemConnection::MagmaSystemConnection(MagmaSystemDevice* device,
+                                             msd_connection_unique_ptr_t msd_connection)
+    : device_(device), msd_connection_(std::move(msd_connection))
+{
+    DASSERT(device_);
+    DASSERT(msd_connection_);
+}
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::AllocateBuffer(uint64_t size)
 {
@@ -66,5 +75,3 @@ bool MagmaSystemConnection::DestroyContext(uint32_t context_id)
     context_map_.erase(iter);
     return true;
 }
-
-uint32_t MagmaSystemConnection::GetDeviceId() { return msd_device_get_id(arch()); }
