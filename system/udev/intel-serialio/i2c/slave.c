@@ -246,7 +246,12 @@ static ssize_t intel_serialio_i2c_slave_transfer_ioctl(
         size -= consumed;
         segment_count++;
     }
-    if (out_len < write_len) {
+    if (out_len < read_len) {
+        status = ERR_INVALID_ARGS;
+        goto slave_transfer_ioctl_finish_2;
+    }
+
+    if (in_len < write_len) {
         status = ERR_INVALID_ARGS;
         goto slave_transfer_ioctl_finish_2;
     }
@@ -290,7 +295,7 @@ static ssize_t intel_serialio_i2c_slave_transfer_ioctl(
 
     status = intel_serialio_i2c_slave_transfer(dev, segments, segment_count);
     if (status == NO_ERROR)
-        status = write_len;
+        status = read_len;
 
 slave_transfer_ioctl_finish_1:
     free(segments);
