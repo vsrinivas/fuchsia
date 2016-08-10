@@ -229,16 +229,23 @@ MAGENTA_SYSCALL_DEF(2, 2, 236, mx_status_t, data_pipe_end_read, mx_handle_t hand
 MAGENTA_SYSCALL_DEF(0, 0, 240, mx_handle_t, wait_set_create, void)
 MAGENTA_SYSCALL_DEF(4, 6, 241, mx_status_t, wait_set_add, mx_handle_t wait_set_handle, mx_handle_t handle,
                     mx_signals_t signals, uint64_t cookie)
-MAGENTA_SYSCALL_DEF(2, 4, 242, mx_status_t, wait_set_remove, mx_handle_t wait_set_handle, uint64_t cookie);
+MAGENTA_SYSCALL_DEF(2, 4, 242, mx_status_t, wait_set_remove, mx_handle_t wait_set_handle, uint64_t cookie)
 MAGENTA_SYSCALL_DEF(5, 7, 243, mx_status_t, wait_set_wait, mx_handle_t wait_set_handle, mx_time_t timeout,
                     USER_PTR(uint32_t) num_results, USER_PTR(mx_wait_set_result_t) results,
-                    USER_PTR(uint32_t) max_results);
+                    USER_PTR(uint32_t) max_results)
 
 // Object Properties
 MAGENTA_SYSCALL_DEF(4, 4, 250, mx_status_t, object_get_property, mx_handle_t handle, uint32_t property,
                     USER_PTR(void) value, mx_size_t size)
 MAGENTA_SYSCALL_DEF(4, 4, 251, mx_status_t, object_set_property, mx_handle_t handle, uint32_t property,
                     USER_PTR(const void) value, mx_size_t size)
+
+// Sockets
+MAGENTA_SYSCALL_DEF(2, 2, 280, mx_status_t, socket_create, mx_handle_t out_handles[2], uint32_t flags)
+MAGENTA_SYSCALL_DEF(4, 4, 281, mx_ssize_t, socket_write, mx_handle_t handle, uint32_t flags,
+                    mx_size_t size, const void* buffer)
+MAGENTA_SYSCALL_DEF(4, 4, 282, mx_ssize_t, socket_read, mx_handle_t handle, uint32_t flags,
+                    mx_size_t size, void* buffer)
 
 // syscall arg passing tests
 MAGENTA_SYSCALL_DEF(0, 0, 20000, int, syscall_test_0, void)

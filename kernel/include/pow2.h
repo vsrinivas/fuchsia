@@ -59,6 +59,11 @@ static inline __ALWAYS_INLINE uint modpow2(uint val, uint modp2)
     return val & ((1U << modp2) - 1);
 }
 
+static inline __ALWAYS_INLINE uint64_t modpow2_u64(uint64_t val, uint modp2)
+{
+    return val & ((1U << modp2) - 1);
+}
+
 // Cribbed from:
 // http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 static inline __ALWAYS_INLINE uint32_t round_up_pow2_u32(uint32_t v)

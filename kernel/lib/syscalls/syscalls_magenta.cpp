@@ -27,6 +27,7 @@
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/socket_dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
@@ -1743,4 +1744,87 @@ mx_status_t sys_wait_set_wait(mx_handle_t ws_handle,
     }
 
     return result;
+}
+
+mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
+    LTRACEF("entry out_handle[] %p\n", out_handle);
+
+    if (!out_handle)
+        return ERR_INVALID_ARGS;
+
+    if (flags != 0u)
+        return ERR_INVALID_ARGS;
+
+    utils::RefPtr<Dispatcher> socket0, socket1;
+    mx_rights_t rights;
+    status_t result = SocketDispatcher::Create(flags, &socket0, &socket1, &rights);
+    if (result != NO_ERROR)
+        return result;
+
+    HandleUniquePtr h0(MakeHandle(utils::move(socket0), rights));
+    if (!h0)
+        return ERR_NO_MEMORY;
+
+    HandleUniquePtr h1(MakeHandle(utils::move(socket1), rights));
+    if (!h1)
+        return ERR_NO_MEMORY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
+
+    if (copy_to_user(utils::user_ptr<mx_handle_t>(out_handle), hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    up->AddHandle(utils::move(h0));
+    up->AddHandle(utils::move(h1));
+
+    return NO_ERROR;
+}
+
+mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
+                            mx_size_t size, void const* _buffer) {
+    LTRACEF("handle %d\n", handle);
+
+    if (!_buffer)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return BadHandle();
+
+    auto socket = dispatcher->get_socket_dispatcher();
+    if (!socket)
+        return ERR_WRONG_TYPE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    return socket->Write(_buffer, size, true);
+}
+
+mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
+                           mx_size_t size, void* _buffer) {
+    LTRACEF("handle %d\n", handle);
+
+    if (!_buffer)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return BadHandle();
+
+    auto socket = dispatcher->get_socket_dispatcher();
+    if (!socket)
+        return ERR_WRONG_TYPE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    return socket->Read(_buffer, size, true);
 }

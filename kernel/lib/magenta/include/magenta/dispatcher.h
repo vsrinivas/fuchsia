@@ -31,6 +31,7 @@ class MessagePipeDispatcher;
 class PciDeviceDispatcher;
 class PciInterruptDispatcher;
 class ProcessDispatcher;
+class SocketDispatcher;
 class ThreadDispatcher;
 class VmObjectDispatcher;
 class WaitSetDispatcher;
@@ -113,6 +114,10 @@ public:
     }
 
     virtual WaitSetDispatcher* get_wait_set_dispatcher() {
+        return nullptr;
+    }
+
+    virtual SocketDispatcher* get_socket_dispatcher() {
         return nullptr;
     }
 
