@@ -20,12 +20,12 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
+#include <runtime/mutex.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include <sys/param.h>
-#include <threads.h>
 
 enum special_handles {
     HND_LOADER_SVC,
@@ -410,29 +410,18 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
 }
 
 static mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
-static mtx_t vdso_mutex;
-static void vdso_mutex_init(void) {
-    mtx_init(&vdso_mutex, mtx_plain);
-}
+static mxr_mutex_t vdso_mutex = MXR_MUTEX_INIT;
 static void vdso_lock(void) {
-    static once_flag once = ONCE_FLAG_INIT;
-    call_once(&once, &vdso_mutex_init);
-    mtx_lock(&vdso_mutex);
+    mxr_mutex_lock(&vdso_mutex);
 }
 static void vdso_unlock(void) {
-    mtx_unlock(&vdso_mutex);
+    mxr_mutex_unlock(&vdso_mutex);
 }
 static mx_handle_t vdso_get_vmo(void) {
     if (vdso_vmo == MX_HANDLE_INVALID)
         vdso_vmo = mxio_get_startup_handle(
             MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));
     return vdso_vmo;
-}
-
-// TODO(johngro) : remove this once MG-234 has been resolved.
-void launchpad_call_once_workaround(void) {
-    vdso_lock();
-    vdso_unlock();
 }
 
 mx_handle_t launchpad_get_vdso_vmo(void) {

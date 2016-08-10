@@ -30,7 +30,7 @@ MODULE_EXPORT := launchpad
 MODULE_DEPS := ulib/magenta ulib/elfload ulib/mxio
 
 MODULE_SO_NAME := launchpad
-MODULE_STATIC_LIBS := ulib/elfload
+MODULE_STATIC_LIBS := ulib/elfload ulib/runtime
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
