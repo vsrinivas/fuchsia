@@ -16,27 +16,14 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userlib
+MODULE_TYPE := usertest
 
-MODULE_SRCS := \
-    $(LOCAL_DIR)/completion.c \
-    $(LOCAL_DIR)/message.c \
-    $(LOCAL_DIR)/mutex.c \
-    $(LOCAL_DIR)/once.c \
-    $(LOCAL_DIR)/processargs.c \
-    $(LOCAL_DIR)/process.c \
-    $(LOCAL_DIR)/strstatus.c \
-    $(LOCAL_DIR)/thread.c \
-    $(LOCAL_DIR)/tls.c \
-    $(LOCAL_DIR)/sysinfo.c \
+MODULE_SRCS += \
+    $(LOCAL_DIR)/call_once.c
 
-MODULE_LIBS += \
-    ulib/magenta
+MODULE_NAME := call_once-test
 
-# for stdint.h
-MODULE_HEADER_DEPS += \
-    ulib/musl
-
-MODULE_EXPORT := runtime
+MODULE_STATIC_LIBS := ulib/runtime
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/musl
 
 include make/module.mk
