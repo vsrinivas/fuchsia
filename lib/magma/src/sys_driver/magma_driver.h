@@ -21,15 +21,17 @@
 
 #include "magma_system_device.h"
 
+using msd_driver_unique_ptr_t = std::unique_ptr<msd_driver, std::function<void(msd_driver*)>>;
+
 class MagmaDriver {
 public:
-    MagmaDriver(msd_driver* arch) : arch_(arch) {}
+    MagmaDriver(msd_driver_unique_ptr_t arch) : arch_(std::move(arch)) {}
 
     MagmaSystemDevice* CreateDevice(void* device)
     {
         DASSERT(!g_device);
 
-        msd_device* arch_dev = msd_driver_create_device(arch_, device);
+        msd_device* arch_dev = msd_driver_create_device(arch_.get(), device);
         if (!arch_dev) {
             return DRETP(nullptr, "msd_create_device failed");;
         }
@@ -48,7 +50,7 @@ public:
             return nullptr;
         }
 
-        auto driver = new MagmaDriver(arch);
+        auto driver = new MagmaDriver(msd_driver_unique_ptr_t(arch, msd_driver_destroy));
 
         return driver;
     }
@@ -56,7 +58,7 @@ public:
     static MagmaSystemDevice* GetDevice() { return g_device; }
 
 private:
-    msd_driver* arch_;
+    msd_driver_unique_ptr_t arch_;
     static MagmaSystemDevice* g_device;
 };
 
