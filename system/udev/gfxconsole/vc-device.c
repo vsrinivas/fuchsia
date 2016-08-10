@@ -310,8 +310,17 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
         return ERR_NO_MEMORY;
 
     mx_hid_fifo_init(&device->fifo);
-    // TODO: allow switching keymaps
     device->keymap = qwerty_map;
+    char* keys = getenv("gfxconsole.keymap");
+    if (keys) {
+        if (!strcmp(keys, "qwerty")) {
+            device->keymap = qwerty_map;
+        } else if (!strcmp(keys, "dvorak")) {
+            device->keymap = dvorak_map;
+        } else {
+            printf("gfxconsole: no such keymap '%s'\n", keys);
+        }
+    }
 
     device->font = &font9x16;
     char* fname = getenv("gfxconsole.font");
