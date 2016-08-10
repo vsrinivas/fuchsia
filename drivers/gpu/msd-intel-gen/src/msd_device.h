@@ -37,7 +37,6 @@ public:
 
 private:
     MsdDevice();
-    ~MsdDevice() {}
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

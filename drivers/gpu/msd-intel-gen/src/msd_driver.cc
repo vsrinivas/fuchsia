@@ -40,8 +40,6 @@ MsdDevice* MsdDriver::CreateDevice(void* device)
     return dev;
 }
 
-void MsdDriver::DestroyDevice(MsdDevice* dev) { delete dev; }
-
 //////////////////////////////////////////////////////////////////////////////
 
 msd_driver* msd_driver_create(void) { return MsdDriver::Create(); }
@@ -53,7 +51,4 @@ msd_device* msd_driver_create_device(msd_driver* drv, void* device)
     return MsdDriver::cast(drv)->CreateDevice(device);
 }
 
-void msd_driver_destroy_device(msd_driver* drv, msd_device* dev)
-{
-    MsdDriver::cast(drv)->DestroyDevice(MsdDevice::cast(dev));
-}
+void msd_driver_destroy_device(msd_device* dev) { delete MsdDevice::cast(dev); }

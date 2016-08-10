@@ -23,7 +23,6 @@ class MsdDevice;
 class MsdDriver : public msd_driver {
 public:
     MsdDevice* CreateDevice(void* device);
-    void DestroyDevice(MsdDevice* device);
 
     static MsdDriver* Create();
     static void Destroy(MsdDriver* drv);
