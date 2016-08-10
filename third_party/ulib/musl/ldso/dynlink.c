@@ -1204,6 +1204,11 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     char* env_preload = 0;
     char** argv_orig = argv;
 
+    if (argc < 1 || argv[0] == NULL) {
+        static const char* dummy_argv0 = "";
+        argv = (char**)&dummy_argv0;
+    }
+
     libc.page_size = PAGE_SIZE;
 
     /* Setup early thread pointer in builtin_tls for ldso/libc itself to
