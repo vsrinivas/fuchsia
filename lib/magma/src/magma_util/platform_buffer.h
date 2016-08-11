@@ -19,6 +19,8 @@
 #include "msd_platform_buffer.h"
 #include <memory>
 
+namespace magma {
+
 class PlatformBuffer {
 public:
     // Returned token is owned by the returned unique_ptr and will become invalid when the
@@ -59,5 +61,7 @@ private:
     uint64_t size_;
     uint32_t handle_;
 };
+
+} // namespace magma
 
 #endif // PLATFORM_BUFFER_H

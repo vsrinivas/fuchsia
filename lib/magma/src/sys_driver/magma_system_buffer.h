@@ -32,12 +32,12 @@ public:
     uint32_t handle() { return platform_buf_->handle(); }
 
     // note: this does not relinquish ownership of the PlatformBuffer
-    PlatformBuffer* platform_buffer() { return platform_buf_.get(); }
+    magma::PlatformBuffer* platform_buffer() { return platform_buf_.get(); }
 
 private:
-    MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf,
+    MagmaSystemBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf,
                       msd_buffer_unique_ptr_t msd_buf);
-    std::unique_ptr<PlatformBuffer> platform_buf_;
+    std::unique_ptr<magma::PlatformBuffer> platform_buf_;
     msd_buffer_unique_ptr_t msd_buf_;
 };
 

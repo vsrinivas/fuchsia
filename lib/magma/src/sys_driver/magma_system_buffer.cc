@@ -15,7 +15,7 @@
 #include "magma_system_buffer.h"
 #include "magma_util/macros.h"
 
-MagmaSystemBuffer::MagmaSystemBuffer(std::unique_ptr<PlatformBuffer> platform_buf,
+MagmaSystemBuffer::MagmaSystemBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf,
                                      msd_buffer_unique_ptr_t msd_buf)
     : platform_buf_(std::move(platform_buf)), msd_buf_(std::move(msd_buf))
 {
@@ -25,7 +25,8 @@ std::unique_ptr<MagmaSystemBuffer> MagmaSystemBuffer::Create(uint64_t size)
 {
     msd_platform_buffer* token;
 
-    std::unique_ptr<PlatformBuffer> platform_buffer(PlatformBuffer::Create(size, &token));
+    std::unique_ptr<magma::PlatformBuffer> platform_buffer(
+        magma::PlatformBuffer::Create(size, &token));
     if (!platform_buffer)
         return DRETP(nullptr, "Failed to create PlatformBuffer");
 

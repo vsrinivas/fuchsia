@@ -20,7 +20,7 @@ static void TestPlatformBuffer(uint64_t size)
 {
     printf("TestPlatformBuffer size 0x%llx\n", size);
 
-    std::unique_ptr<PlatformBuffer> buffer = PlatformBuffer::Create(size);
+    std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(size);
     if (size == 0) {
         EXPECT_EQ(buffer, nullptr);
         return;
@@ -97,7 +97,7 @@ static void TestPlatformBuffer(uint64_t size)
     EXPECT_EQ(ret, true);
 }
 
-static void test_buffer_passing(PlatformBuffer* buf, PlatformBuffer* buf1)
+static void test_buffer_passing(magma::PlatformBuffer* buf, magma::PlatformBuffer* buf1)
 {
     EXPECT_EQ(buf1->size(), buf->size());
     EXPECT_EQ(buf1->handle(), buf->handle());
@@ -130,15 +130,15 @@ static void TestPlatformBufferPassing()
     printf("TestPlatformBufferPassing\n");
 
     std::vector<msd_platform_buffer*> token(2);
-    std::vector<std::unique_ptr<PlatformBuffer>> buffer(2);
+    std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
-    buffer[0] = PlatformBuffer::Create(1, &token[0]);
-    buffer[1] = PlatformBuffer::Create(token[0]);
+    buffer[0] = magma::PlatformBuffer::Create(1, &token[0]);
+    buffer[1] = magma::PlatformBuffer::Create(token[0]);
 
     test_buffer_passing(buffer[0].get(), buffer[1].get());
 
     buffer[0] = std::move(buffer[1]);
-    buffer[1] = PlatformBuffer::Create(token[0]);
+    buffer[1] = magma::PlatformBuffer::Create(token[0]);
 
     test_buffer_passing(buffer[0].get(), buffer[1].get());
 }

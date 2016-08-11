@@ -16,6 +16,8 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
+namespace magma {
+
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size,
                                                        msd_platform_buffer** token_out)
 {
@@ -118,3 +120,5 @@ bool PlatformBuffer::UnmapPageBus(unsigned int page_index)
 }
 
 uint32_t PlatformBuffer::GetRefCount() { return msd_platform_buffer_getref(token_); }
+
+} // namespace
