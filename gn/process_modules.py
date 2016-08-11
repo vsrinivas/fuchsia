@@ -78,7 +78,7 @@ def main():
         if args.arch == "x64":
             sysroot_arch_name = "x86_64-fuchsia"
         elif args.arch == "arm64":
-            sysroot_arch_name = "aarch-64-fuchsia"
+            sysroot_arch_name = "aarch64-fuchsia"
         lib_root = os.path.join(
             paths.FUCHSIA_ROOT, "buildtools", "sysroot", sysroot_arch_name, "lib")
         for lib in libs:
