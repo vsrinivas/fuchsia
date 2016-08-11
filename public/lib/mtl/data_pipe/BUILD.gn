@@ -18,6 +18,7 @@ source_set("data_pipe") {
 
   public_deps = [
     "//lib/ftl",
+    "//mojo/public/c:environment",
     "//mojo/public/cpp/environment",
     "//mojo/public/cpp/system",
   ]

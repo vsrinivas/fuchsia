@@ -5,8 +5,9 @@
 #ifndef LIB_MTL_DATA_PIPE_DATA_PIPE_DRAINER_H_
 #define LIB_MTL_DATA_PIPE_DATA_PIPE_DRAINER_H_
 
+#include <mojo/environment/async_waiter.h>
+
 #include "lib/ftl/macros.h"
-#include "mojo/public/c/environment/async_waiter.h"
 #include "mojo/public/cpp/environment/environment.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 

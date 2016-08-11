@@ -4,9 +4,10 @@
 
 #include "lib/mtl/environment/default_async_waiter.h"
 
+#include <mojo/environment/async_waiter.h>
+
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/c/environment/async_waiter.h"
 
 namespace mtl {
 namespace internal {

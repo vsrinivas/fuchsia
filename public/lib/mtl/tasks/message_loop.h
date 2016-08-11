@@ -5,6 +5,8 @@
 #ifndef LIB_MTL_TASKS_MESSAGE_LOOP_H_
 #define LIB_MTL_TASKS_MESSAGE_LOOP_H_
 
+#include <mojo/system/wait.h>
+
 #include <map>
 #include <memory>
 #include <queue>
@@ -17,7 +19,6 @@
 #include "lib/mtl/tasks/incoming_task_queue.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 #include "lib/mtl/tasks/pending_task.h"
-#include "mojo/public/c/system/wait.h"
 
 namespace mtl {
 

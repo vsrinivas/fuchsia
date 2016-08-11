@@ -17,6 +17,7 @@ source_set("tasks") {
   public_deps = [
     "//lib/ftl",
     "//lib/mtl/handles",
+    "//mojo/public/c:system",
     "//mojo/public/cpp/system",
   ]
 }

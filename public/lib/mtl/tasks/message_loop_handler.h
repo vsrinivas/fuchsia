@@ -5,7 +5,7 @@
 #ifndef LIB_MTL_TASKS_MESSAGE_LOOP_HANDLER_H_
 #define LIB_MTL_TASKS_MESSAGE_LOOP_HANDLER_H_
 
-#include "mojo/public/c/system/handle.h"
+#include <mojo/system/handle.h>
 
 namespace mtl {
 

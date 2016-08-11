@@ -12,6 +12,7 @@ source_set("environment") {
   deps = [
     "//lib/ftl",
     "//lib/mtl/tasks",
+    "//mojo/public/c:environment",
     # TODO(abarth): Remove logging_only once we provide our own logging.
     "//mojo/public/cpp/environment:logging_only",
     "//mojo/public/cpp/environment",
