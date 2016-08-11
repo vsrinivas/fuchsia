@@ -12,43 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "msd_intel_driver.h"
+#include "msd_driver.h"
 #include "magma_util/dlog.h"
-#include "msd_intel_device.h"
+#include "msd_device.h"
 
-MsdIntelDriver::MsdIntelDriver() { magic_ = kMagic; }
+MsdDriver::MsdDriver() { magic_ = kMagic; }
 
-MsdIntelDriver* MsdIntelDriver::Create()
+MsdDriver* MsdDriver::Create()
 {
-    auto drv = new MsdIntelDriver();
+    auto drv = new MsdDriver();
     if (!drv) {
-        DLOG("Failed to allocate MsdIntelDriver");
+        DLOG("Failed to allocate MsdDriver");
         return nullptr;
     }
     return drv;
 }
 
-void MsdIntelDriver::Destroy(MsdIntelDriver* drv) { delete drv; }
+void MsdDriver::Destroy(MsdDriver* drv) { delete drv; }
 
-MsdIntelDevice* MsdIntelDriver::CreateDevice(void* device)
+MsdDevice* MsdDriver::CreateDevice(void* device)
 {
-    auto dev = new MsdIntelDevice();
+    auto dev = new MsdDevice();
     if (!dev) {
-        DLOG("Failed to allocate MsdIntelDevice");
+        DLOG("Failed to allocate MsdDevice");
         return nullptr;
     }
     return dev;
 }
 
+void MsdDriver::DestroyDevice(MsdDevice* dev) { delete dev; }
+
 //////////////////////////////////////////////////////////////////////////////
 
-msd_driver* msd_driver_create(void) { return MsdIntelDriver::Create(); }
+msd_driver* msd_driver_create(void) { return MsdDriver::Create(); }
 
-void msd_driver_destroy(msd_driver* drv) { MsdIntelDriver::Destroy(MsdIntelDriver::cast(drv)); }
+void msd_driver_destroy(msd_driver* drv) { MsdDriver::Destroy(MsdDriver::cast(drv)); }
 
 msd_device* msd_driver_create_device(msd_driver* drv, void* device)
 {
-    return MsdIntelDriver::cast(drv)->CreateDevice(device);
+    return MsdDriver::cast(drv)->CreateDevice(device);
 }
 
-void msd_driver_destroy_device(msd_device* dev) { delete MsdIntelDevice::cast(dev); }
+void msd_driver_destroy_device(msd_driver* drv, msd_device* dev)
+{
+    MsdDriver::cast(drv)->DestroyDevice(MsdDevice::cast(dev));
+}

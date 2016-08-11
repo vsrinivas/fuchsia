@@ -12,30 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "msd_intel_buffer.h"
+#include "msd_buffer.h"
 #include "msd.h"
 
-MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<PlatformBuffer> platform_buf)
+MsdBuffer::MsdBuffer(std::unique_ptr<PlatformBuffer> platform_buf)
     : platform_buf_(std::move(platform_buf))
 {
     magic_ = kMagic;
 }
 
-MsdIntelBuffer* MsdIntelBuffer::Create(msd_platform_buffer* platform_buffer_token)
+MsdBuffer* MsdBuffer::Create(msd_platform_buffer* platform_buffer_token)
 {
     auto platform_buf = PlatformBuffer::Create(platform_buffer_token);
     if (!platform_buf)
-        return DRETP(nullptr,
-                     "MsdIntelBuffer::Create: Could not create platform buffer from token");
+        return DRETP(nullptr, "MsdBuffer::Create: Could not create platform buffer from token");
 
-    return new MsdIntelBuffer(std::move(platform_buf));
+    return new MsdBuffer(std::move(platform_buf));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
 {
-    return MsdIntelBuffer::Create(platform_buf);
+    return MsdBuffer::Create(platform_buf);
 }
 
-void msd_buffer_destroy(msd_buffer* buf) { delete MsdIntelBuffer::cast(buf); }
+void msd_buffer_destroy(msd_buffer* buf) { delete MsdBuffer::cast(buf); }

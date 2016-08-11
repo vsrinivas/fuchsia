@@ -12,30 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MSD_BUFFER_H
-#define MSD_BUFFER_H
+#ifndef MSD_DRIVER_H
+#define MSD_DRIVER_H
 
 #include "magma_util/macros.h"
-#include "magma_util/platform_buffer.h"
 #include "msd.h"
-#include <memory>
 
-class MsdIntelBuffer : public msd_buffer {
+class MsdDevice;
+
+class MsdDriver : public msd_driver {
 public:
-    static MsdIntelBuffer* Create(msd_platform_buffer* platform_buffer_token);
+    MsdDevice* CreateDevice(void* device);
+    void DestroyDevice(MsdDevice* device);
 
-    static MsdIntelBuffer* cast(msd_buffer* buf)
+    static MsdDriver* Create();
+    static void Destroy(MsdDriver* drv);
+
+    static MsdDriver* cast(msd_driver* drv)
     {
-        DASSERT(buf);
-        DASSERT(buf->magic_ == kMagic);
-        return static_cast<MsdIntelBuffer*>(buf);
+        DASSERT(drv);
+        DASSERT(drv->magic_ == kMagic);
+        return static_cast<MsdDriver*>(drv);
     }
 
 private:
-    MsdIntelBuffer(std::unique_ptr<PlatformBuffer> platform_buf);
+    MsdDriver();
+    virtual ~MsdDriver() {}
 
-    std::unique_ptr<PlatformBuffer> platform_buf_;
-    static const uint32_t kMagic = 0x62756666; // "buff"
+    static const uint32_t kMagic = 0x64726976; //"driv"
 };
 
-#endif // MSD_BUFFER_H
+#endif // MSD_DRIVER_H

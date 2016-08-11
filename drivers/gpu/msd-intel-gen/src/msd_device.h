@@ -17,34 +17,33 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
-#include "msd_intel_connection.h"
+#include "msd_connection.h"
 #include <ddk/device.h>
 
-class MsdIntelDevice : public msd_device {
+class MsdDevice : public msd_device {
 public:
-
     // This takes ownership of the connection so that ownership can be
     // transferred across the MSD ABI by the caller
-    std::unique_ptr<MsdIntelConnection> Open(msd_client_id client_id);
-
+    std::unique_ptr<MsdConnection> Open(msd_client_id client_id);
 
     uint32_t device_id() { return device_id_; }
 
-    static MsdIntelDevice* cast(msd_device* dev)
+    static MsdDevice* cast(msd_device* dev)
     {
         DASSERT(dev);
         DASSERT(dev->magic_ == kMagic);
-        return static_cast<MsdIntelDevice*>(dev);
+        return static_cast<MsdDevice*>(dev);
     }
 
 private:
-    MsdIntelDevice();
+    MsdDevice();
+    ~MsdDevice() {}
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
 
-    friend class MsdIntelDriver;
+    friend class MsdDriver;
 };
 
 #endif // MSD_DEVICE_H
