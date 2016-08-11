@@ -1,0 +1,257 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="ledger"]
+module ledger;
+
+/*
+ * This file contains definitions of interfaces and data structures to access
+ * the TQ Ledger.
+ */
+
+// Response code for ledger operations.
+enum Status {
+  OK = 0,
+  AUTHENTICATION_ERROR,
+  PAGE_NOT_FOUND,
+  KEY_NOT_FOUND,
+  REFERENCE_NOT_FOUND,
+  IO_ERROR,
+  TRANSACTION_ALREADY_IN_PROGRESS,
+  NO_TRANSACTION_IN_PROGRESS,
+  UNKNOWN_ERROR = -1,
+  // TODO(qsr) Add more.
+};
+
+// For v0/v1 this is just a user identifier to be able to distinguish
+// data per user. Later on, this might contain the cryptographic keys
+// of the user.
+struct Identity {
+  array<uint8> user_id;
+};
+
+[ServiceName="ledger::LedgerFactory"]
+interface LedgerFactory {
+  // Creates a new Ledger for the current client if it doesn't already exist.
+  GetLedger(Identity identity) => (Status status, Ledger? ledger);
+};
+
+interface Ledger {
+  // This is used to bootstrap a namespace. This page allows the client to keep
+  // track of new pages. The identifier of the root page is guaranteed to be
+  // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  GetRootPage() => (Status status, Page? page);
+
+  // Returns the page with the given identifier or an error if the page doesn't
+  // exist.
+  GetPage(array<uint8, 16> id) => (Status status, Page? page);
+
+  // Creates a new page and returns it.
+  NewPage() => (Status status, Page? page);
+
+  // Deletes the page with the given id.
+  DeletePage(array<uint8, 16> id) => (Status status);
+
+  // Set the |ConflictResolverFactory| to use for resolving conflict on pages.
+  // If |factory| is NULL or this method is not called, a global last one wins
+  // policy will be used. If a factory is set and later on disconnected without
+  // calling this method again, no conflict resolution will be done until this
+  // method is called again.
+  SetConflictResolverFactory(ConflictResolverFactory? factory)
+      => (Status status);
+};
+
+// A value streamed to the client using a data pipe.
+struct Stream {
+  uint64 size;
+  handle<data_pipe_consumer> data;
+};
+
+// A value that can be either directly represented by |bytes|, or that is too
+// big to be sent over a message pipe and is then represented by the streamed
+// value |stream|.
+union Value {
+  array<uint8> bytes;
+  Stream stream;
+};
+
+// A reference to a value. The value can be retrieved using |GetReference| or
+// |GetPartialReference|.
+struct Reference {
+  array<uint8> opaque_id;
+};
+
+// A value that is either small enough to be directly embedded in |bytes| or
+// that is referenced in |reference|. The value of the reference can be
+// retrieved by using |Page.GetReference(...)| or
+// |Page.GetPartialReference(...)|. References are immutable.
+union BytesOrReference {
+  array<uint8> bytes;
+  Reference reference;
+};
+
+// A page is the smallest unit of syncable data.
+interface Page {
+  // Returns the identifier for the page.
+  GetId() => (array<uint8, 16> id);
+
+  // Returns a snapshot of the page. All read operations must be done on a
+  // snapshot.
+  GetSnapshot() => (Status status, PageSnapshot? snapshot);
+
+  // Starts watching the page.
+  Watch(PageWatcher watcher) => (Status status);
+
+  // Mutation operations.
+  // Mutations are bundled together into atomic commits. If a transaction is in
+  // progress, the list of mutations bundled together is tied to the current
+  // transaction. If no transaction is in progress, mutations will be bundled
+  // with the following rules:
+  // - A call to either |GetSnapshot()|, |Watch()| or |StartTransaction()| will
+  //   commit any pending mutations.
+  // - All pending mutations will regularly be bundled together and commited.
+  //   They are guaranteed to be persisted as soon as the client receives a
+  //   succesful status.
+  // |Put| can be used for small values that fit inside a mojo message. If the
+  // value is bigger, a reference must be first created using |CreateReference|
+  // and then |PutReference| can be used.
+  Put(array<uint8> key, array<uint8> value) => (Status status);
+  PutReference(array<uint8> key, Reference reference) => (Status status);
+  Delete(array<uint8> key) => (Status status);
+
+  // References.
+  // Create a new reference. The object is not part of any commit. It must be
+  // associated with a key using |PutReference|. The content of the reference
+  // will be the content of the data pipe. If |size| is not negative, the
+  // content size must be equal to |size|, otherwise the call will fail. If
+  // |size| is negative, no validation is done.
+  CreateReference(int64 size, handle<data_pipe_consumer> data)
+      => (Status status, Reference? reference);
+  // Returns the value of the given reference.
+  GetReference(Reference reference) => (Status status, Value? value);
+  // Returns a stream of a part of the value of a given reference.
+  //
+  // Start at the position that is specified by |offset|. If |offset| is less
+  // than 0, starts at |-offset| from the end of the value.
+  // Returns at most |max_size| bytes, If |max_size| is less than 0, returns
+  // everything.
+  GetPartialReference(Reference reference, int64 offset, int64 max_size)
+      => (Status status, Stream? stream);
+
+  // Transactions.
+  // Clients can control the content of a given commit by using a transaction.
+  // Once a transaction is started with |StartTransaction()|, every call to
+  // |Put(...)| and |Delete(...)| will not be visible until either |Commit()|
+  // is called, and all changes are applied in a single commit, or |Rollback()|
+  // is called and all changes are discarded.
+  // Nested transactions are not allowed and an error will be returned if a
+  // client tries to start a new transaction while a previous one is still in
+  // progress.
+  StartTransaction() => (Status status);
+  Commit() => (Status status);
+  Rollback() => (Status status);
+};
+
+// A pair of key and value. The |value| will be NULL if it is too big and
+// should be retrieved through a direct call to |PageSnapshot.Get|.
+struct Entry {
+  array<uint8> key;
+  array<uint8>? value;
+};
+
+// The content of a page at a given time.
+interface PageSnapshot {
+  // Returns all the entries in the database sharing the given key prefix. If
+  // |key_prefix| is NULL, all entries are returned. |entries| are sorted by
+  // |key|.
+  GetAll(array<uint8>? key_prefix) => (Status status, array<Entry>? entries);
+
+  GetKeys(array<uint8>? key_prefix)
+      => (Status status, array<array<uint8>>? keys);
+
+  // Returns the value of a given key.
+  Get(array<uint8> key) => (Status status, Value? value);
+
+  // Returns a stream of a part of the value of a given key.
+  //
+  // Start at the position that is specified by |offset|. If |offset| is less
+  // than 0, starts at |-offset| from the end of the value.
+  // Returns at most |max_size| bytes, If |max_size| is less than 0, returns
+  // everything.
+  GetPartial(array<uint8> key, int64 offset, int64 max_size)
+      => (Status status, Stream? stream);
+
+  // TODO(qsr) Add pagination.
+};
+
+// A change in the page. A NULL |new_value| represents a deletion.
+struct EntryChange {
+  array<uint8> key;
+  BytesOrReference? new_value;
+};
+
+struct PageChange {
+  // The timestamp of this change. This represents the number of microsconds
+  // since Unix epoch (i.e., since "1970-01-01 00:00 UTC", ignoring leap
+  // seconds). This value is set by the device that created the change and is
+  // not synchronized across devices. In particular, there is no guarantee that
+  // the |timestamp| of a follow up change is greater than this one's.
+  int64 timestamp;
+  // |changes| are sorted by |key|.
+  array<EntryChange> changes;
+};
+
+// Interface to watch changes to a page. The initial state is sent
+// immediatetely when the watcher is registered. The client will then receive
+// changes made by other clients or synced from other devices.
+interface PageWatcher {
+  OnInitialState(PageSnapshot snapshot) => ();
+  OnChange(PageChange pageChange) => ();
+};
+
+// This interface let clients control the conflict resolution policy of the
+// ledger. It allows them to either use pre-defined policies, or provide their
+// own implementation. This can be decided on a page-by-page basis.
+interface ConflictResolverFactory {
+  // Returns the conflict resolution policy for the given page.
+  GetPolicy(array<uint8> page_id) => (ConflictResolutionPolicy policy);
+  // Returns a |ConflictResolver| to use for the given page. This will only be
+  // called if |GetPolicy| for the same page returned |CUSTOM|.
+  NewConflictResolver(array<uint8> page_id, ConflictResolver& resolver);
+};
+
+// The different type of conflict resolution.
+enum ConflictResolutionPolicy {
+  // No conflict resolution. Conflicting remote commits are not merged.
+  NONE,
+  // Last one wins. When 2 commits are merged, the resulting commit contains:
+  // All keys/values that do not conflict.
+  // All key/values of the commit with the biggest timestamp (or biggest id, if
+  // the timestamps are the same).
+  LAST_ONE_WINS,
+  // Resolution is delegated to a user provided |ConflictResolver| that will be
+  // created calling |ConflictResolverFactory.NewConflictResolver|. A single
+  // |ConflictResolver| will exist per page. If the |ConflictResolver| is
+  // disconnected, a new one will be requested.
+  CUSTOM,
+};
+
+// Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
+// |ConflictResolverFactory.GetPolicy| returns |CUSTOM| when called for a given
+// page, the |NewConflictResolver| method will be called and will provide a
+// |ConflictResolver|. Each time a conflict is detected, the method
+// |ConflictResolver.Resolve| will be called, and the client will resolve the
+// conflict by returning the final value for all conflicting keys as well as
+// values for any other key that the client wants to change.
+interface ConflictResolver {
+  // Method called when a conflict needs to be resolved. |change1| and
+  // |change2| contain the conflicting keys/values of the 2 branches to merge.
+  // |common_version| is the snapshot of the first common ancestor of the 2
+  // changes and will only be NULL if this version is no longer available.
+  // This method must return a set of changes that will be used to
+  // define the merged commit. For any key in |change1| or |change2|, the key
+  // must be present in |merge_changes|. Any other key can also be present.
+  Resolve(PageChange change1, PageChange change2, PageSnapshot? common_version)
+      => (array<EntryChange>? merge_changes);
+};
