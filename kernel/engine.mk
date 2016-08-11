@@ -22,7 +22,7 @@ DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
 CLANG ?= 0
-USE_GOLD ?= false
+USE_GOLD ?= true
 LKNAME ?= magenta
 
 # special rule for handling make spotless
