@@ -190,6 +190,16 @@ static int vc_input_thread(void* arg) {
                 }
                 break;
 
+            case HID_USAGE_KEY_DELETE:
+                // Provide a CTRL-ALT-DEL reboot sequence
+                if ((modifiers & (MOD_LCTRL | MOD_RCTRL)) &&
+                    (modifiers & (MOD_LALT | MOD_RALT))) {
+                    // TODO: make this real
+                    mx_debug_send_command("reboot", strlen("reboot"));
+                    consumed = 1;
+                }
+                break;
+
             // eat everything else
             default:; // nothing
             }
