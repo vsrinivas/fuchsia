@@ -4,6 +4,7 @@
 
 #include "msd_intel_driver.h"
 #include "magma_util/dlog.h"
+#include "magma_util/macros.h"
 #include "msd_intel_device.h"
 
 MsdIntelDriver::MsdIntelDriver() { magic_ = kMagic; }
@@ -20,13 +21,13 @@ MsdIntelDriver* MsdIntelDriver::Create()
 
 void MsdIntelDriver::Destroy(MsdIntelDriver* drv) { delete drv; }
 
-MsdIntelDevice* MsdIntelDriver::CreateDevice(void* device)
+std::unique_ptr<MsdIntelDevice> MsdIntelDriver::CreateDevice(void* device_handle)
 {
-    auto dev = new MsdIntelDevice();
-    if (!dev) {
-        DLOG("Failed to allocate MsdIntelDevice");
-        return nullptr;
-    }
+    std::unique_ptr<MsdIntelDevice> dev(new MsdIntelDevice());
+
+    if (!dev->Init(device_handle))
+        return DRETP(nullptr, "Failed to initialize MsdIntelDevice");
+
     return dev;
 }
 
@@ -38,7 +39,8 @@ void msd_driver_destroy(msd_driver* drv) { MsdIntelDriver::Destroy(MsdIntelDrive
 
 msd_device* msd_driver_create_device(msd_driver* drv, void* device)
 {
-    return MsdIntelDriver::cast(drv)->CreateDevice(device);
+    // Transfer ownership across the ABI
+    return MsdIntelDriver::cast(drv)->CreateDevice(device).release();
 }
 
 void msd_driver_destroy_device(msd_device* dev) { delete MsdIntelDevice::cast(dev); }

@@ -7,12 +7,13 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
+#include <memory>
 
 class MsdIntelDevice;
 
 class MsdIntelDriver : public msd_driver {
 public:
-    MsdIntelDevice* CreateDevice(void* device);
+    std::unique_ptr<MsdIntelDevice> CreateDevice(void* device);
 
     static MsdIntelDriver* Create();
     static void Destroy(MsdIntelDriver* drv);

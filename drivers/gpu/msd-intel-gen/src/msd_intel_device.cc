@@ -14,6 +14,17 @@ std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id client_id
     return std::unique_ptr<MsdIntelConnection>(new MsdIntelConnection());
 }
 
+bool MsdIntelDevice::Init(void* device_handle)
+{
+    DASSERT(!platform_device_);
+
+    platform_device_ = magma::PlatformDevice::Create(device_handle);
+    if (!platform_device_)
+        return DRETF(false, "failed to create platform device");
+
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)

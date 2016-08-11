@@ -6,9 +6,9 @@
 #define MSD_DEVICE_H
 
 #include "magma_util/macros.h"
+#include "magma_util/platform_device.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
-#include <ddk/device.h>
 
 class MsdIntelDevice : public msd_device {
 public:
@@ -25,12 +25,16 @@ public:
         return static_cast<MsdIntelDevice*>(dev);
     }
 
+    bool Init(void* device_handle);
+
 private:
     MsdIntelDevice();
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
+
+    std::unique_ptr<magma::PlatformDevice> platform_device_;
 
     friend class MsdIntelDriver;
 };
