@@ -65,4 +65,10 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
     return mmio;
 }
 
+std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
+{
+    return std::unique_ptr<PlatformDevice>(
+        new MagentaPlatformDevice(reinterpret_cast<mx_device_t*>(device_handle)));
+}
+
 } // namespace

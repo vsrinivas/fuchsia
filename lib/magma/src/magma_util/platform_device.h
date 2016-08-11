@@ -20,6 +20,8 @@ public:
     {
         return nullptr;
     }
+
+    static std::unique_ptr<PlatformDevice> Create(void* device_handle);
 };
 
 } // namespace magma
