@@ -16,7 +16,7 @@
 #include "msd.h"
 #include "gtest/gtest.h"
 
-TEST(MsdIntelGen, MsdBuffer)
+TEST(MsdBuffer, ImportAndDestroy)
 {
     msd_platform_buffer* platform_buffer_token;
 
