@@ -23,7 +23,7 @@ namespace ftl {
 //
 // See <https://en.wikipedia.org/wiki/Monitor_(synchronization)> for more
 // context.
-class Monitor {
+class FTL_LOCKABLE Monitor {
  public:
   Monitor();
   ~Monitor();
@@ -31,11 +31,11 @@ class Monitor {
   // Gain exclusive access to the monitor. Rather than calling this function
   // directly, consider using |MonitorLocker| to ensure that you call |Exit| to
   // give up exclusive access to the monitor.
-  void Enter() FTL_ACQUIRE(mutex_);
+  void Enter() FTL_EXCLUSIVE_LOCK_FUNCTION();
 
   // Give up excusive access to the monitor. Rather than calling this function
   // directly, consider using |MonitorLocker| to pair this call with |Enter|.
-  void Exit() FTL_UNLOCK_FUNCTION(mutex_);
+  void Exit() FTL_UNLOCK_FUNCTION();
 
   // Signal that the condition associated with the monitor has occurred. This
   // function will wake up a thread that is waiting on the monitor in |Wait|.
@@ -68,13 +68,13 @@ class Monitor {
 
 // Helps ensure that calls to |Monitor::Enter| are paired with calls to
 // |Monitor::Exit|. Typically allocated on the stack.
-class MonitorLocker {
+class FTL_SCOPED_LOCKABLE MonitorLocker {
  public:
   // Enters the given monitor.
-  explicit MonitorLocker(Monitor* monitor);
+  explicit MonitorLocker(Monitor* monitor) FTL_ACQUIRE(monitor);
 
   // Exits the given monitor.
-  ~MonitorLocker();
+  ~MonitorLocker() FTL_UNLOCK_FUNCTION();
 
   // Calls |Wait| on the monitor given to this object's constructor.
   void Wait();
