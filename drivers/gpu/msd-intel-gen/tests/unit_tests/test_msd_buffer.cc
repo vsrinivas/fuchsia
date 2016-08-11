@@ -20,7 +20,7 @@ TEST(MsdIntelGen, MsdBuffer)
 {
     msd_platform_buffer* platform_buffer_token;
 
-    auto platform_buf = PlatformBuffer::Create(4096, &platform_buffer_token);
+    auto platform_buf = magma::PlatformBuffer::Create(4096, &platform_buffer_token);
     ASSERT_NE(platform_buf, nullptr);
     ASSERT_EQ(platform_buf->GetRefCount(), 1u);
 

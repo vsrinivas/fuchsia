@@ -123,7 +123,7 @@ void Gtt::InitPrivatePat()
 
 bool Gtt::InitScratch()
 {
-    scratch_ = PlatformBuffer::Create(PAGE_SIZE);
+    scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE);
 
     if (!scratch_->PinPages())
         return DRETF(false, "PinPages failed");
@@ -202,7 +202,7 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     return true;
 }
 
-static inline void unmap(std::vector<uint64_t>& array, PlatformBuffer* buffer)
+static inline void unmap(std::vector<uint64_t>& array, magma::PlatformBuffer* buffer)
 {
     for (auto addr : array) {
         if (!buffer->UnmapPageBus(addr))
@@ -210,7 +210,7 @@ static inline void unmap(std::vector<uint64_t>& array, PlatformBuffer* buffer)
     }
 }
 
-bool Gtt::Insert(uint64_t addr, PlatformBuffer* buffer, CachingType caching_type)
+bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type)
 {
     DLOG("InsertEntries addr 0x%llx", addr);
 

@@ -36,7 +36,7 @@ public:
 
     // Inserts the pages for the given buffer into page table entries for the allocation at the
     // given address.
-    virtual bool Insert(uint64_t addr, PlatformBuffer* buffer, CachingType caching_type) = 0;
+    virtual bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type) = 0;
 };
 
 #endif // VM_H

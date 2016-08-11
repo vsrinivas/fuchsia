@@ -32,9 +32,9 @@ public:
     }
 
 private:
-    MsdIntelBuffer(std::unique_ptr<PlatformBuffer> platform_buf);
+    MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
-    std::unique_ptr<PlatformBuffer> platform_buf_;
+    std::unique_ptr<magma::PlatformBuffer> platform_buf_;
     static const uint32_t kMagic = 0x62756666; // "buff"
 };
 

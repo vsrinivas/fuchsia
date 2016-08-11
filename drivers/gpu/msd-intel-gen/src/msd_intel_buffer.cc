@@ -15,7 +15,7 @@
 #include "msd_intel_buffer.h"
 #include "msd.h"
 
-MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<PlatformBuffer> platform_buf)
+MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
     : platform_buf_(std::move(platform_buf))
 {
     magic_ = kMagic;
@@ -23,7 +23,7 @@ MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<PlatformBuffer> platform_buf)
 
 MsdIntelBuffer* MsdIntelBuffer::Create(msd_platform_buffer* platform_buffer_token)
 {
-    auto platform_buf = PlatformBuffer::Create(platform_buffer_token);
+    auto platform_buf = magma::PlatformBuffer::Create(platform_buffer_token);
     if (!platform_buf)
         return DRETP(nullptr,
                      "MsdIntelBuffer::Create: Could not create platform buffer from token");

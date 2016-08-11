@@ -20,7 +20,7 @@
 
 class TestGtt {
 public:
-    static PlatformBuffer* scratch_buffer(Gtt* gtt) { return gtt->scratch_buffer(); }
+    static magma::PlatformBuffer* scratch_buffer(Gtt* gtt) { return gtt->scratch_buffer(); }
 };
 
 namespace {
@@ -121,7 +121,7 @@ TEST(Gtt, Init)
     test_gtt_init(1);
 }
 
-static void check_pte_entries(magma::PlatformMmio* mmio, PlatformBuffer* buffer, uint64_t gpu_addr,
+static void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer, uint64_t gpu_addr,
                               CachingType caching_type)
 {
     ASSERT_NE(mmio, nullptr);
@@ -175,13 +175,13 @@ TEST(Gtt, Insert)
 
     // create some buffers
     std::vector<uint64_t> addr(2);
-    std::vector<std::unique_ptr<PlatformBuffer>> buffer(2);
+    std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
-    buffer[0] = PlatformBuffer::Create(1000);
+    buffer[0] = magma::PlatformBuffer::Create(1000);
     ret = gtt->Alloc(buffer[0]->size(), 0, &addr[0]);
     EXPECT_EQ(ret, true);
 
-    buffer[1] = PlatformBuffer::Create(10000);
+    buffer[1] = magma::PlatformBuffer::Create(10000);
     ret = gtt->Alloc(buffer[1]->size(), 0, &addr[1]);
     EXPECT_EQ(ret, true);
 

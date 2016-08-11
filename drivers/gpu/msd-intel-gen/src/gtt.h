@@ -36,14 +36,14 @@ public:
     bool Free(uint64_t addr) override;
 
     bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, PlatformBuffer* buffer, CachingType caching_type) override;
+    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type) override;
 
 private:
     RegisterIo* reg_io() { return reg_io_.get(); }
 
     uint64_t pte_mmio_offset() { return mmio_->size() / 2; }
 
-    PlatformBuffer* scratch_buffer() { return scratch_.get(); }
+    magma::PlatformBuffer* scratch_buffer() { return scratch_.get(); }
 
     bool MapGttMmio(std::shared_ptr<magma::PlatformDevice> platform_device);
     void InitPrivatePat();
@@ -54,7 +54,7 @@ private:
 private:
     std::shared_ptr<RegisterIo> reg_io_;
     std::unique_ptr<magma::PlatformMmio> mmio_;
-    std::unique_ptr<PlatformBuffer> scratch_;
+    std::unique_ptr<magma::PlatformBuffer> scratch_;
     std::unique_ptr<AddressSpaceAllocator> allocator_;
     uint64_t scratch_gpu_addr_;
     uint64_t size_;
