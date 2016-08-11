@@ -417,7 +417,7 @@ status_t sysparam_remove(const char *name)
         return ERR_NOT_FOUND;
 
     if (sysparam_is_locked(param))
-        return ERR_NOT_ALLOWED;
+        return ERR_ACCESS_DENIED;
 
     list_delete(&param->node);
 
@@ -684,8 +684,8 @@ done:
         printf("ERROR invalid argument\n");
     } else if (err == ERR_NOT_FOUND) {
         printf("ERROR not found\n");
-    } else if (err == ERR_NOT_ALLOWED) {
-        printf("ERROR not allowed (locked)\n");
+    } else if (err == ERR_ACCESS_DENIED) {
+        printf("ERROR access denied (locked)\n");
     } else {
         printf("ERROR generic error %d\n", err);
     }

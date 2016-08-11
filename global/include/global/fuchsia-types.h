@@ -47,6 +47,10 @@
 // ERR_ALREADY_EXISTS: attempting to create an entity that already exists at that name or id
 #define ERR_ALREADY_EXISTS (-15)
 
+// ERR_ALREADY_BOUND: The operation failed because the named entity is already owned or controlled
+// by another entity. The operation could succeed later if the current owner releases the entity.
+#define ERR_ALREADY_BOUND (-16)
+
 // ======= Precondition or state errors =======
 // ERR_BAD_STATE: operation failed because the current state of the object does not allow it,
 // or a precondition of the operation is not satisfied
@@ -106,9 +110,6 @@
 
 // TODO: This appears to be used as a bool, does it need a distinct code?
 #define ERR_FAULT (-93)
-
-// TODO: Replace with either ACCESS_DENIED or UNIMPLEMENTED as appropriate
-#define ERR_NOT_ALLOWED (-94)
 
 // TODO: These all seem like state errors, should they just be ERR_BAD_STATE?
 #define ERR_ALREADY_STARTED (-95)

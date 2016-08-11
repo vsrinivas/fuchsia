@@ -380,7 +380,6 @@ static int status_to_errno(mx_status_t status) {
     case ERR_TIMED_OUT: return ETIMEDOUT;
     case ERR_ALREADY_EXISTS: return EEXIST;
     case ERR_CHANNEL_CLOSED: return ENOTCONN;
-    case ERR_NOT_ALLOWED: return EPERM;
     case ERR_BAD_PATH: return ENAMETOOLONG;
     case ERR_IO: return EIO;
     case ERR_NOT_DIR: return ENOTDIR;

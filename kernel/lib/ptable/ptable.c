@@ -758,7 +758,7 @@ status_t ptable_remove(const char *name)
         return ERR_INVALID_ARGS;
 
     if (!strcmp(name, "ptable"))
-        return ERR_NOT_ALLOWED;
+        return ERR_NOT_SUPPORTED;
 
     bool found = false;
     struct ptable_mem_entry *mentry;

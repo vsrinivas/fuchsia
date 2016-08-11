@@ -230,7 +230,7 @@ status_t port_open(const char *name, void *ctx, port_t *port)
                 // not first read port.
                 if (wp->mode & PORT_MODE_UNICAST) {
                     // cannot add a second listener.
-                    rc = ERR_NOT_ALLOWED;
+                    rc = ERR_ALREADY_BOUND;
                     break;
                 }
                 // use the new (small) circular buffer.

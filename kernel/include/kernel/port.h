@@ -62,7 +62,7 @@ status_t port_create(const char *name, port_mode_t mode, port_t *port);
  *
  * Returns ERR_NOT_FOUND if a write-side port with |name| cannot be found.
  *
- * Returns ERR_NOT_ALLOWED if the named port is PORT_MODE_UNICAST and
+ * Returns ERR_ALREADY_BOUND if the named port is PORT_MODE_UNICAST and
  * has already a connected read-side port.
  *
  * Returns NO_ERROR upon success.
