@@ -92,7 +92,7 @@ static int get_report_desc_len(int fd, const char* name, size_t* report_desc_len
     if (rc < 0) {
         lprintf("hid: could not get report descriptor length from %s (status=%d)\n", name, rc);
     } else {
-        lprintf("hid: %s report descriptor len=%lu\n", name, *report_desc_len);
+        lprintf("hid: %s report descriptor len=%zu\n", name, *report_desc_len);
     }
     return rc;
 }
@@ -122,7 +122,7 @@ static int get_num_reports(int fd, const char* name, size_t* num_reports) {
     if (rc < 0) {
         lprintf("hid: could not get number of reports from %s (status=%d)\n", name, rc);
     } else {
-        lprintf("hid: %s num reports: %lu\n", name, *num_reports);
+        lprintf("hid: %s num reports: %zu\n", name, *num_reports);
     }
     return rc;
 }
