@@ -12,6 +12,14 @@
             "bootfs_path": "test/mojo_public_c_bindings_unittests"
         },
         {
+            "binary": "mojo_public_c_common_unittests",
+            "bootfs_path": "test/mojo_public_c_common_unittests"
+        },
+        {
+            "binary": "mojo_public_c_compile_unittests",
+            "bootfs_path": "test/mojo_public_c_compile_unittests"
+        },
+        {
             "binary": "mojo_public_c_system_perftests",
             "bootfs_path": "bin/mojo_public_c_system_perftests"
         },
