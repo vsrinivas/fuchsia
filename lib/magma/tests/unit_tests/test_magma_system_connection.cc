@@ -27,7 +27,7 @@ private:
     uint32_t device_id_;
 };
 
-TEST(Magma, MagmaSystemConnection_GetDeviceId)
+TEST(MagmaSystemConnection, GetDeviceId)
 {
     uint32_t test_id = 0xdeadbeef;
 
@@ -39,7 +39,7 @@ TEST(Magma, MagmaSystemConnection_GetDeviceId)
     EXPECT_EQ(device_id, test_id);
 }
 
-TEST(Magma, MagmaSystemConnection_BufferManagement)
+TEST(MagmaSystemConnection, BufferManagement)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
@@ -101,7 +101,7 @@ private:
     uint32_t active_context_count_;
 };
 
-TEST(Magma, MagmaSystemConnection_ContextManagement)
+TEST(MagmaSystemConnection, ContextManagement)
 {
     auto msd_connection = new MsdMockConnection_ContextManagement();
 

@@ -143,7 +143,7 @@ static void TestPlatformBufferPassing()
     test_buffer_passing(buffer[0].get(), buffer[1].get());
 }
 
-TEST(Magma, PlatformBuffer)
+TEST(MagmaUtil, PlatformBuffer)
 {
     TestPlatformBuffer(0);
     TestPlatformBuffer(1);

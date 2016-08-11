@@ -40,7 +40,7 @@ private:
     bool has_destroyed_buffer_;
 };
 
-TEST(Magma, MagmaSystemBuffer_Create)
+TEST(MagmaSystemBuffer, Create)
 {
     auto scoped_bufmgr = MsdMockBufferManager::ScopedMockBufferManager(
         std::unique_ptr<MsdMockBufferManager_Create>(new MsdMockBufferManager_Create()));

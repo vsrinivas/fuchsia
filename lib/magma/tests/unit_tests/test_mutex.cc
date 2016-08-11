@@ -15,7 +15,7 @@
 #include "magma_util/mutex.h"
 #include "gtest/gtest.h"
 
-TEST(Magma, Mutex)
+TEST(MagmaUtil, Mutex)
 {
     magma::Mutex mutex;
     EXPECT_EQ(mutex.is_locked(), false);

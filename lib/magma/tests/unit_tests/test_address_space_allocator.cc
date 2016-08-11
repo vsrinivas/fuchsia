@@ -133,7 +133,7 @@ static void stress_test_allocator(AddressSpaceAllocator* allocator, uint8_t alig
     }
 }
 
-TEST(Magma, AddressSpaceAllocator_SimpleAllocator)
+TEST(AddressSpaceAllocator, SimpleAllocator)
 {
     test_simple_allocator(SimpleAllocator::Create(0, 4 * PAGE_SIZE).get(), 0);
 

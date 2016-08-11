@@ -44,7 +44,7 @@ private:
 
 } // namespace
 
-TEST(Magma, Refcounted)
+TEST(MagmaUtil, Refcounted)
 {
     TestRefcounted* rc = TestRefcounted::Create();
     EXPECT_EQ(rc->is_deleted(), false);

@@ -42,7 +42,7 @@ static void test_mmio(magma::PlatformMmio* mmio, magma::PlatformMmio::CachePolic
     }
 }
 
-TEST(Mmio, Mock)
+TEST(MagmaUtil, PlatformMmio)
 {
     test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(8)).get(),
               magma::PlatformMmio::CACHE_POLICY_CACHED);
