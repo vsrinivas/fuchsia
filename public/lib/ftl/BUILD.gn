@@ -77,6 +77,7 @@ static_library("ftl") {
 
   if (is_android) {
     defines = [ "ANDROID_LOG_TAG=$android_log_tag" ]
+    libs = [ "log" ]
   }
 
   public_configs = [ ":thread_safety_warning" ]
