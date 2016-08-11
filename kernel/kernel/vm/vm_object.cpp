@@ -124,7 +124,7 @@ status_t VmObject::Resize(uint64_t s) {
     AutoLock a(lock_);
 
     if (size_ != 0) {
-        return ERR_NOT_IMPLEMENTED; // TODO: support resizing an existing object
+        return ERR_NOT_SUPPORTED; // TODO: support resizing an existing object
     }
 
     // compute the number of pages we cover

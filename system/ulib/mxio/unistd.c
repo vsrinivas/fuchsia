@@ -387,7 +387,6 @@ static int status_to_errno(mx_status_t status) {
     case ERR_NOT_SUPPORTED: return ENOTSUP;
     case ERR_TOO_BIG: return E2BIG;
     case ERR_CANCELLED: return ECANCELED;
-    case ERR_NOT_IMPLEMENTED: return ENOTSUP;
     case ERR_BUSY: return EBUSY;
     case ERR_OUT_OF_RANGE: return EINVAL;
     case ERR_FAULT: return EFAULT;

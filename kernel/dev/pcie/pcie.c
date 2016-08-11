@@ -963,7 +963,7 @@ status_t pcie_do_function_level_reset(pcie_device_state_t* dev) {
     if (dev->pcie_caps.has_flr) {
         // TODO: perform function level reset using PCIe Capability Structure.
         TRACEF("TODO(johngro): Implement PCIe Capability FLR\n");
-        ret = ERR_NOT_IMPLEMENTED;
+        ret = ERR_NOT_SUPPORTED;
     }
 
     if (dev->pcie_adv_caps.has_flr) {

@@ -255,7 +255,7 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
             // TODO: implement
             printf("KERN: thread %s faulted on va 0x%lx, different page was present, unhandled\n",
                     get_current_thread()->name, va);
-            return ERR_NOT_IMPLEMENTED;
+            return ERR_NOT_SUPPORTED;
         }
     } else {
         // nothing was mapped there before, map it now

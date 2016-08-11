@@ -710,7 +710,7 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t* de
             return ERR_NOT_SUPPORTED;
 
         /* TODO(johngro) : finish MSI-X implementation. */
-        return ERR_NOT_IMPLEMENTED;
+        return ERR_NOT_SUPPORTED;
 
     default:
         return ERR_INVALID_ARGS;
@@ -771,7 +771,7 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
         /* Right now, there should be no way to get into MSI-X mode */
         case PCIE_IRQ_MODE_MSI_X:
             DEBUG_ASSERT(false);
-            return ERR_NOT_IMPLEMENTED;
+            return ERR_NOT_SUPPORTED;
 
         default:
             /* mode is not one of the valid enum values, this should be impossible */
@@ -792,7 +792,7 @@ status_t pcie_set_irq_mode_internal(pcie_device_state_t*    dev,
     switch (mode) {
     case PCIE_IRQ_MODE_LEGACY: return pcie_enter_legacy_irq_mode(dev, requested_irqs);
     case PCIE_IRQ_MODE_MSI:    return pcie_enter_msi_irq_mode   (dev, requested_irqs);
-    case PCIE_IRQ_MODE_MSI_X:  return ERR_NOT_IMPLEMENTED;
+    case PCIE_IRQ_MODE_MSI_X:  return ERR_NOT_SUPPORTED;
     default:                   return ERR_INVALID_ARGS;
     }
 }
@@ -866,7 +866,7 @@ status_t pcie_mask_unmask_irq_internal(pcie_device_state_t* dev,
     switch (dev->irq.mode) {
     case PCIE_IRQ_MODE_LEGACY: return pcie_mask_unmask_legacy_irq(dev, mask);
     case PCIE_IRQ_MODE_MSI:    return pcie_mask_unmask_msi_irq(dev, irq_id, mask);
-    case PCIE_IRQ_MODE_MSI_X:  return ERR_NOT_IMPLEMENTED;
+    case PCIE_IRQ_MODE_MSI_X:  return ERR_NOT_SUPPORTED;
     default:
         DEBUG_ASSERT(false); /* This should be un-possible! */
         return ERR_INTERNAL;

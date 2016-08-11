@@ -5,7 +5,7 @@
 // ======= Internal failures =======
 FUCHSIA_ERROR(INTERNAL,             1)
 
-// ERR_NOT_SUPPORTED: subject of the operation does not support the operation
+// ERR_NOT_SUPPORTED: The operation is not implemented, supported, or enabled.
 FUCHSIA_ERROR(NOT_SUPPORTED,        2)
 
 // ERR_NOT_FOUND: requested entity is not found
@@ -95,16 +95,13 @@ FUCHSIA_ERROR(RECURSE_TOO_DEEP,    53)
 // TODO: Replace with INVALID_ARGS
 FUCHSIA_ERROR(NOT_VALID,           90)
 
-// TODO: Should just be NOT_SUPPORTED
-FUCHSIA_ERROR(NOT_IMPLEMENTED,     91)
-
 // TODO: Replace with ERR_INVALID_ARGS or ERR_NOT_ENOUGH_BUFFER
 FUCHSIA_ERROR(TOO_BIG,             92)
 
 // TODO: This appears to be used as a bool, does it need a distinct code?
 FUCHSIA_ERROR(FAULT,               93)
 
-// TODO: Replace with either ACCESS_DENIED or NOT_SUPPORTED as appropriate
+// TODO: Replace with either ACCESS_DENIED or UNIMPLEMENTED as appropriate
 FUCHSIA_ERROR(NOT_ALLOWED,         94)
 
 // TODO: These all seem like state errors, should they just be ERR_BAD_STATE?

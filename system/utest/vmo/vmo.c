@@ -117,7 +117,7 @@ bool vmo_resize_test(void) {
     EXPECT_EQ(ERR_NO_MEMORY, status, "vm_object_set_size");
 #else
     status = mx_vm_object_set_size(vmo, len + PAGE_SIZE);
-    EXPECT_EQ(ERR_NOT_IMPLEMENTED, status, "vm_object_set_size");
+    EXPECT_EQ(ERR_NOT_SUPPORTED, status, "vm_object_set_size");
 #endif
 
     // close the handle

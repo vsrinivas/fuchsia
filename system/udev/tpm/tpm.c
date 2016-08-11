@@ -227,7 +227,7 @@ cleanup_device:
 #else
     tpm_proto = tpm_proto;
     tpm_device_proto = tpm_device_proto;
-    return ERR_NOT_IMPLEMENTED;
+    return ERR_NOT_SUPPORTED;
 #endif
 }
 

@@ -91,7 +91,7 @@ mutex_t                g_lock = MUTEX_INITIAL_VALUE(g_lock);
 static inline status_t iobp_map_status(uint32_t status) {
     switch (IOBPS_STATUS(status)) {
         case IOBPS_STATUS_SUCCESS:  return NO_ERROR;
-        case IOBPS_STATUS_NOIMPL:   return ERR_NOT_IMPLEMENTED;
+        case IOBPS_STATUS_NOIMPL:   return ERR_NOT_SUPPORTED;
         case IOBPS_STATUS_PWR_DOWN: return ERR_BAD_STATE;
         default:                    return ERR_INTERNAL;
     }
@@ -324,7 +324,7 @@ status_t bwcc_hide_device(bwcc_device_id_t which, bool hide) {
             break;
 
         case BWCC_DEV_SDIO:
-            ret = ERR_NOT_IMPLEMENTED;
+            ret = ERR_NOT_SUPPORTED;
             goto finished;
 
         default:

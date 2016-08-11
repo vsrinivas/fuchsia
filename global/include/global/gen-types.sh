@@ -15,4 +15,6 @@ cat > fuchsia-types.h << EOF
 #define NO_ERROR (0)
 EOF
 
-tail -n +4 fuchsia-types.def | sed -e 's/FUCHSIA_ERROR(/#define ERR_/' | sed -e 's/,[ ]*/ (-/' >> fuchsia-types.h
+tail -n +4 fuchsia-types.def \
+    | sed -e 's/^FUCHSIA_ERROR( *\([^ ]\+\) *, *\([0-9]\+\) *)/#define ERR_\1 (-\2)/' \
+    >> fuchsia-types.h

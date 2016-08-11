@@ -11,7 +11,7 @@
 // ======= Internal failures =======
 #define ERR_INTERNAL (-1)
 
-// ERR_NOT_SUPPORTED: subject of the operation does not support the operation
+// ERR_NOT_SUPPORTED: The operation is not implemented, supported, or enabled.
 #define ERR_NOT_SUPPORTED (-2)
 
 // ERR_NOT_FOUND: requested entity is not found
@@ -20,11 +20,11 @@
 // ERR_NO_MEMORY: memory allocation failed
 #define ERR_NO_MEMORY (-4)
 
-// ERR_NO_RESOURCES: allocation of resource other than memory failed (handle (-id, etc)
+// ERR_NO_RESOURCES: allocation of resource other than memory failed (handle, id, etc)
 #define ERR_NO_RESOURCES (-5)
 
 // ======= Parameter errors =======
-// ERR_INVALID_ARGS: an argument is invalid (-ex. null pointer
+// ERR_INVALID_ARGS: an argument is invalid, ex. null pointer
 #define ERR_INVALID_ARGS (-10)
 
 // ERR_WRONG_TYPE: The subject of the operation is the wrong type to perform the operation.
@@ -48,7 +48,7 @@
 #define ERR_ALREADY_EXISTS (-15)
 
 // ======= Precondition or state errors =======
-// ERR_BAD_STATE: operation failed because the current state of the object does not allow it (-
+// ERR_BAD_STATE: operation failed because the current state of the object does not allow it,
 // or a precondition of the operation is not satisfied
 #define ERR_BAD_STATE (-20)
 
@@ -101,19 +101,16 @@
 // TODO: Replace with INVALID_ARGS
 #define ERR_NOT_VALID (-90)
 
-// TODO: Should just be NOT_SUPPORTED
-#define ERR_NOT_IMPLEMENTED (-91)
-
 // TODO: Replace with ERR_INVALID_ARGS or ERR_NOT_ENOUGH_BUFFER
 #define ERR_TOO_BIG (-92)
 
-// TODO: This appears to be used as a bool (-does it need a distinct code?
+// TODO: This appears to be used as a bool, does it need a distinct code?
 #define ERR_FAULT (-93)
 
-// TODO: Replace with either ACCESS_DENIED or NOT_SUPPORTED as appropriate
+// TODO: Replace with either ACCESS_DENIED or UNIMPLEMENTED as appropriate
 #define ERR_NOT_ALLOWED (-94)
 
-// TODO: These all seem like state errors (-should they just be ERR_BAD_STATE?
+// TODO: These all seem like state errors, should they just be ERR_BAD_STATE?
 #define ERR_ALREADY_STARTED (-95)
 #define ERR_NOT_BLOCKED (-96)
 #define ERR_THREAD_DETACHED (-97)

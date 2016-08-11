@@ -447,7 +447,7 @@ status_t virtio_net_send_minip_pkt(pktbuf_t *p)
         /* can't handle multi part packets yet */
         PANIC_UNIMPLEMENTED;
 
-        return ERR_NOT_IMPLEMENTED;
+        return ERR_NOT_SUPPORTED;
     }
 
     /* hand the pktbuf off to the nic, it owns the pktbuf from now on out unless it fails */

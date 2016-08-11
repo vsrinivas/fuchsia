@@ -39,8 +39,8 @@ These indicate that the system hit a general error while attempting the operatio
 **INTERNAL**
   The system encountered an otherwise unspecified error while performing the operation.
 
-**UNIMPLEMENTED**
-  The operation is not implemented, supported, or enabled.
+**NOT\_SUPPORTED**
+  The operation is not supported, implemented, or enabled.
 
 **NO\_RESOURCES**
   The system was not able to allocate some resource needed for the operation.
