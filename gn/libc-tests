@@ -8,6 +8,10 @@
         {
             "binary": "libc-tests-broken",
             "bootfs_path": "bin/libc-tests-broken"
+        },
+        {
+            "binary": "libc-large-tests",
+            "bootfs_path": "test/libc-large-tests"
         }
     ]
 }
