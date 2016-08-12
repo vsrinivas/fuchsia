@@ -1,17 +1,17 @@
-## Acer Switch Alpha 12
+# Acer Switch Alpha 12
 
 WARNING:  These are directions to configure the machine and boot an experimental, in-development OS on it.
 
-### Powering the Machine On
+## Powering the Machine On
 To power on you must hold the power button (lefthand side, above the Volume rocker) for several seconds, then let go.  You can safely let go when the tiny blue light on the power button itself turns on (yes, this is really hard to see when you’re holding the power button), or when the display backlight turns on.  If you hold too long it may end up power right back off again.
 
-### Powering the Machine Off
+## Powering the Machine Off
 If you boot into Windows 10 or something hangs or crashes and you need to power things off, Press and Hold the power button until the display shuts off.  To be sure, hold for about 10 seconds total.
 
-### Entering the BIOS
+## Entering the BIOS
 With the machine off, Press and hold Volume Up, then continue to hold while pressing and holding the Power button.  Let go of the Power button when the display backlight turns on.  Alternatively, hold F2 on an attached keyboard while powering the machine on.
 
-### Enabling Magenta Boot
+## Enabling Magenta Boot
 1. Boot the machine and enter the BIOS
 2. Select “Security” from the tabs at the left
 3. Tap the “[clean]” gray bar under “Supervisor Password Is”
@@ -36,13 +36,13 @@ A password is required to modify the secure boot setting, but “disabled” wil
 12. Select “Exit Saving Changes”
 13. Each time the machine boots, press ESC to abort the IPV6 netboot and boot from USB (hack)
 
-### What if you end up in the Windows 10 Setup?
+## What if you end up in the Windows 10 Setup?
 If you don’t enter the BIOS and haven’t installed another OS, You’ll end up on a blue background “Hi there” screen asking you to select country, language, etc.  
 
 1. Press Power and Hold it for about 10 seconds (the screen will turn off after 2-3 seconds).
 2. Boot into the BIOS as described above.
 
-### What if you get stuck in Windows 10 Recovery?
+## What if you get stuck in Windows 10 Recovery?
 It’s possible to end up in a situation where the machine *really* wants to help you recover your failed boots into Windows 10 and dumps you into a recovery screen -- blue background, “Recovery” in the upper left, and some text saying “It looks like Windows didn’t load correctly”.
 
 1. Select “See advanced repair options”
@@ -53,7 +53,7 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 6. The machine should now reboot into the BIOS
 7. Check that “Windows Boot Manager” didn’t get moved to the top of the boot order, fix it if it did
 
-### How to Create a Bootable USB Flash Drive
+## How to Create a Bootable USB Flash Drive
 1. Check out and build GigaBoot20x6: https://fuchsia.googlesource.com/gigaboot20x6
 2. Format your USB Flash Drive with a FAT32 partition as the first partition
 3. Copy gigaboot20x6/out/osboot.efi to EFI/BOOT/BOOTX64.EFI on the USB Flash Drive
