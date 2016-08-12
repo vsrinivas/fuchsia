@@ -172,9 +172,11 @@ static void ahci_port_reset(ahci_port_t* port) {
 
     // wait for device detect
     status = ahci_wait_for_set(&port->regs->ssts, AHCI_PORT_SSTS_DET_PRESENT, 1llu * 1000 * 1000 * 1000);
+#if VERBOSE
     if (status < 0) {
         xprintf("ahci.%d: no device detected\n", port->nr);
     }
+#endif
 
     // clear error
     ahci_write(&port->regs->serr, ahci_read(&port->regs->serr));
