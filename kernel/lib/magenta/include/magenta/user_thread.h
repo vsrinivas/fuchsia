@@ -99,7 +99,7 @@ private:
     void* user_stack_ = nullptr;
 
     // default user space stack size
-    static const int kDefaultStackSize = 16 * PAGE_SIZE;
+    static const int kDefaultStackSize = 256 * PAGE_SIZE;
 
     // our State
     State state_ = State::INITIAL;
