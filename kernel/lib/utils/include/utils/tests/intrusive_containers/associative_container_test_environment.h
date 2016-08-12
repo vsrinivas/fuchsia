@@ -39,8 +39,8 @@ public:
         RandomKey,
     };
 
-    static constexpr KeyType BannedKeyValue()           { return 0xF00D; };
-    static constexpr OtherKeyType BannedOtherKeyValue() { return 0xF00D; };
+    static constexpr KeyType      kBannedKeyValue      = 0xF00D;
+    static constexpr OtherKeyType kBannedOtherKeyValue = 0xF00D;
 
     bool Populate(ContainerType& container,
                   PopulateMethod method,
@@ -80,11 +80,11 @@ public:
                 case PopulateMethod::RandomKey:
                     do {
                         key = key_lfsr_.GetNext();
-                    } while (key == BannedKeyValue());
+                    } while (key == kBannedKeyValue);
 
                     do {
                         other_key = other_key_lfsr_.GetNext();
-                    } while (other_key == BannedOtherKeyValue());
+                    } while (other_key == kBannedOtherKeyValue);
                     break;
 
                 case PopulateMethod::AscendingKey:
@@ -98,8 +98,8 @@ public:
                     break;
             }
 
-            DEBUG_ASSERT(key != BannedKeyValue());
-            DEBUG_ASSERT(other_key != BannedOtherKeyValue());
+            DEBUG_ASSERT(key != kBannedKeyValue);
+            DEBUG_ASSERT(other_key != kBannedOtherKeyValue);
 
             // Set the primary key on the object.  Offset the "other" key by OBJ_COUNT
             new_object->SetKey(key);
@@ -173,7 +173,7 @@ public:
         }
 
         // Fail to look up something which should not be in the collection.
-        const auto& ptr = container().find(BannedKeyValue());
+        const auto& ptr = container().find(kBannedKeyValue);
         EXPECT_NULL(ptr, "");
 
         TestEnvironment<TestEnvTraits>::Reset();
@@ -198,7 +198,7 @@ public:
         size_t remaining = OBJ_COUNT;
 
         // Fail to erase a key which is not in the container.
-        EXPECT_NULL(container().erase(BannedKeyValue()), "");
+        EXPECT_NULL(container().erase(kBannedKeyValue), "");
 
         // Erase all of the even members of the collection by key.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -262,6 +262,15 @@ private:
     Lfsr<KeyType>      key_lfsr_        = Lfsr<KeyType>(0xa2328b73e343fd0f);
     Lfsr<OtherKeyType> other_key_lfsr_  = Lfsr<OtherKeyType>(0xbd5a2efcc5ba8344);
 };
+
+// Explicit declaration of constexpr storage.
+template <typename TestEnvTraits>
+constexpr typename AssociativeContainerTestEnvironment<TestEnvTraits>::KeyType
+AssociativeContainerTestEnvironment<TestEnvTraits>::kBannedKeyValue;
+
+template <typename TestEnvTraits>
+constexpr typename AssociativeContainerTestEnvironment<TestEnvTraits>::OtherKeyType
+AssociativeContainerTestEnvironment<TestEnvTraits>::kBannedOtherKeyValue;
 
 }  // namespace intrusive_containers
 }  // namespace tests

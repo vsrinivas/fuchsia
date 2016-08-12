@@ -441,4 +441,19 @@ private:
     BucketType buckets_[kNumBuckets];
 };
 
+// Explicit declaration of constexpr storage.  Appologies for the macro, but the
+// template declarations are just too hideous with it.
+#define HASH_TABLE_PROP(_type, _name) \
+template <typename KeyType, typename PtrType, typename BucketType, typename HashType, \
+          HashType NumBuckets, typename KeyTraits, typename HashTraits> \
+constexpr _type HashTable<KeyType, PtrType, BucketType, HashType, \
+                          NumBuckets, KeyTraits, HashTraits>::_name
+
+HASH_TABLE_PROP(HashType, kNumBuckets);
+HASH_TABLE_PROP(bool, SupportsConstantOrderErase);
+HASH_TABLE_PROP(bool, IsAssociative);
+HASH_TABLE_PROP(bool, IsSequenced);
+
+#undef HASH_TABLE_PROP
+
 }  // namespace utils

@@ -492,4 +492,12 @@ private:
     PtrType head_ = PtrTraits::MakeSentinel(this);
 };
 
+// Explicit declaration of constexpr storage.
+template <typename T, typename NodeTraits>
+constexpr bool DoublyLinkedList<T, NodeTraits>::SupportsConstantOrderErase;
+template <typename T, typename NodeTraits>
+constexpr bool DoublyLinkedList<T, NodeTraits>::IsAssociative;
+template <typename T, typename NodeTraits>
+constexpr bool DoublyLinkedList<T, NodeTraits>::IsSequenced;
+
 }  // namespace utils

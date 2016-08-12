@@ -510,4 +510,12 @@ private:
     PtrType head_ = PtrTraits::MakeSentinel(sentinel());
 };
 
+// Explicit declaration of constexpr storage.
+template <typename T, typename NodeTraits>
+constexpr bool SinglyLinkedList<T, NodeTraits>::SupportsConstantOrderErase;
+template <typename T, typename NodeTraits>
+constexpr bool SinglyLinkedList<T, NodeTraits>::IsAssociative;
+template <typename T, typename NodeTraits>
+constexpr bool SinglyLinkedList<T, NodeTraits>::IsSequenced;
+
 }  // namespace utils
