@@ -15,6 +15,8 @@ class PlatformDevice {
 public:
     virtual ~PlatformDevice() { DLOG("PlatformDevice dtor"); }
 
+    virtual void* GetDeviceHandle() = 0;
+
     virtual std::unique_ptr<PlatformMmio> CpuMapPciMmio(unsigned int pci_bar,
                                                         PlatformMmio::CachePolicy cache_policy)
     {

@@ -15,6 +15,8 @@ class MagentaPlatformDevice : public PlatformDevice {
 public:
     MagentaPlatformDevice(mx_device_t* mx_device) : mx_device_(mx_device) {}
 
+    void* GetDeviceHandle() override { return mx_device(); }
+
     std::unique_ptr<PlatformMmio> CpuMapPciMmio(unsigned int pci_bar,
                                                 PlatformMmio::CachePolicy cache_policy) override;
 
