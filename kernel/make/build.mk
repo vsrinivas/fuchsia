@@ -163,3 +163,34 @@ $(BUILDDIR)/rodso-stamp: $(BUILDDIR)/rodso.ld
 	$(NOECHO)echo '/* empty linker script */' > $@
 
 GENERATED += $(BUILDDIR)/rodso.ld $(BUILDDIR)/rodso-stamp
+
+# If we're using prebuilt toolchains, check to make sure
+# they are up to date and complain if they are not
+ifneq ($(wildcard $(LKMAKEROOT)/prebuilt/config.mk),)
+# Complain if we haven't run a new enough download script to have
+# the information we need to do the verification
+# TODO: remove at some point in the future
+ifeq ($(PREBUILT_TOOLCHAINS),)
+$(info WARNING:)
+$(info WARNING: prebuilt/config.mk is out of date)
+$(info WARNING: run ./scripts/download-toolchain)
+$(info WARNING:)
+else
+# For each prebuilt toolchain, check if the shafile (checked in)
+# differs from the stamp file (written after downlad), indicating
+# an out of date toolchain
+PREBUILT_STALE :=
+$(foreach tool,$(PREBUILT_TOOLCHAINS),\
+$(eval A := $(shell cat $(PREBUILT_$(tool)_TOOLCHAIN_SHAFILE)))\
+$(eval B := $(shell cat $(PREBUILT_$(tool)_TOOLCHAIN_STAMP)))\
+$(if $(filter-out $(A),$(B)),$(eval PREBUILT_STALE += $(tool))))
+ifneq ($(PREBUILT_STALE),)
+# If there are out of date toolchains, complain:
+$(info WARNING:)
+$(foreach tool,$(PREBUILT_STALE),\
+$(info WARNING: toolchain $(tool) is out of date))
+$(info WARNING: run ./scripts/download-toolchain)
+$(info WARNING:)
+endif
+endif
+endif
