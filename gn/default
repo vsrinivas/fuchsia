@@ -1,6 +1,7 @@
 {
     "imports": [
         "apps",
+        "cmdutils",
         "dart",
         "fortune",
         "ftl",

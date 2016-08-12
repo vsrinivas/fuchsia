@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//bin/cmdutils"
+    ],
+    "binaries": [
+        {
+            "binary": "cowsay",
+            "bootfs_path": "bin/cowsay"
+        }
+    ]
+}
