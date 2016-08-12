@@ -313,6 +313,7 @@ static int vc_input_devices_poll_thread(void* arg) {
             if (rc > 0 && proto != INPUT_PROTO_KBD) {
                 // skip devices that aren't keyboards
                 free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
+                close(free->fd);
                 continue;
             }
             // start a thread to wait on the fd
