@@ -16,17 +16,21 @@ import("//magma/gnbuild/magma.gni")
 
 source_set("unit_tests") {
   sources = [
-    "hello_msd.cc",
     "test_gtt.cc",
-    "test_msd_buffer.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/sys_driver:platform_buffer",
     "$magma_build_root/tests/mock:mmio",
     "$msd_intel_gen_build_root/src",
     "//third_party/gtest",
+  ]
+}
+
+source_set("msd_intel_conformance_tests") {
+  deps = [
+    "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
+    "$msd_intel_gen_build_root/src",
   ]
 }
 
@@ -36,6 +40,7 @@ executable("msd_unit_tests") {
   ]
 
   deps = [
+    ":msd_intel_conformance_tests",
     ":unit_tests",
     "//third_party/gtest",
   ]
