@@ -46,7 +46,7 @@ typedef enum {CSW_SUCCESS, CSW_FAILED, CSW_PHASE_ERROR, CSW_INVALID,
 
 // signatures in header and status
 #define CBW_SIGNATURE               0x43425355
-#define CSW_SIGNATURE               0x55425355
+#define CSW_SIGNATURE               0x53425355
 
 // command lengths
 #define MS_INQUIRY_COMMAND_LENGTH                 6
@@ -70,5 +70,3 @@ typedef enum {CSW_SUCCESS, CSW_FAILED, CSW_PHASE_ERROR, CSW_INVALID,
 #define MS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH 0xFC
 #define MS_READ_CAPACITY10_TRANSFER_LENGTH        0x08
 #define MS_READ_CAPACITY16_TRANSFER_LENGTH        0x20
-
-

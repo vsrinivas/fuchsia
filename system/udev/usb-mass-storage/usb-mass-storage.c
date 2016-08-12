@@ -11,6 +11,7 @@
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <system/listnode.h>
+#include <ddk/protocol/block.h>
 
 #include <endian.h>
 #include <inttypes.h>
@@ -20,6 +21,7 @@
 #include <unistd.h>
 
 #include "ums-hw.h"
+#include "usb-mass-storage.h"
 
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 4
@@ -45,21 +47,23 @@ typedef struct {
 
     bool busy;
     uint8_t tag;
-    uint32_t total_blocks;
+    uint64_t total_blocks;
     uint32_t block_size;
     uint8_t capacity_descriptor;
     uint8_t read_flag;
 
     usb_endpoint_t* bulk_in;
     usb_endpoint_t* bulk_out;
-    usb_endpoint_t* intr_ep;
 
     // pool of free USB requests
     list_node_t free_csw_reqs;
     list_node_t free_read_reqs;
     list_node_t free_write_reqs;
-    list_node_t free_intr_reqs;
     list_node_t queued_reqs;
+
+    // list of queued io transactions
+    list_node_t queued_iotxns;
+
 
     // list of received packets not yet read by upper layer
     list_node_t completed_reads;
@@ -69,6 +73,7 @@ typedef struct {
     mx_signals_t signals;
     mxr_mutex_t mutex;
     mxr_completion_t read_completion;
+
 
 } ums_t;
 #define get_ums(dev) containerof(dev, ums_t, device)
@@ -103,22 +108,22 @@ static mx_status_t ums_reset(ums_t* msd) {
     // TODO: check interface number, see if index needs to be set
     mx_status_t status = msd->usb_p->control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                             | USB_RECIP_INTERFACE, USB_REQ_RESET, 0x00, 0x00, NULL, 0);
-    DEBUG_PRINT(("resetting, status is: %d\n", (int)status));
+    DEBUG_PRINT(("UMS:resetting, status is: %d\n", (int)status));
     status = msd->usb_p->control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
                                            msd->bulk_in->endpoint, NULL, 0);
-    DEBUG_PRINT(("halting in, status is: %d\n", (int)status));
+    DEBUG_PRINT(("UMS:halting in, status is: %d\n", (int)status));
     status = msd->usb_p->control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
                                            msd->bulk_out->endpoint, NULL, 0);
-    DEBUG_PRINT(("halting out, status is: %d\n", (int)status));
+    DEBUG_PRINT(("UMS:halting out, status is: %d\n", (int)status));
     return status;
 }
 
 static mx_status_t ums_get_max_lun(ums_t* msd, void* data) {
     mx_status_t status = msd->usb_p->control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
                                     | USB_RECIP_INTERFACE, USB_REQ_GET_MAX_LUN, 0x00, 0x00, data, 1);
-    DEBUG_PRINT(("getting max lun, status is: %d\n", (int)status));
+    DEBUG_PRINT(("UMS:getting max lun, status is: %d\n", (int)status));
     return status;
 }
 
@@ -126,7 +131,7 @@ static mx_status_t ums_get_endpoint_status(ums_t* msd, usb_endpoint_t* endpoint,
     mx_status_t status = msd->usb_p->control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
                                     | USB_RECIP_INTERFACE, USB_REQ_GET_STATUS, 0x00,
                                     endpoint->endpoint, data, 2);
-    DEBUG_PRINT(("getting endpoint status, status is: %d\n", (int)status));
+    DEBUG_PRINT(("UMS:getting endpoint status, status is: %d\n", (int)status));
     return status;
 }
 
@@ -153,13 +158,13 @@ static usb_request_t* get_free_read(ums_t* msd) {
 
 static mx_status_t ums_queue_request(ums_t* msd, usb_request_t* request) {
     // necessary to make this function because MSD cannot deal with out of order requests
-    DEBUG_PRINT(("in queue request\n"));
+    DEBUG_PRINT(("UMS:in queue request\n"));
     if (!(msd->busy)) {
-        DEBUG_PRINT(("not busy case\n"));
+        DEBUG_PRINT(("UMS:not busy case\n"));
         msd->busy = true;
         return msd->usb_p->queue_request(msd->udev, request);
     } else {
-        DEBUG_PRINT(("busy case\n"));
+        DEBUG_PRINT(("UMS:busy case\n"));
         list_add_tail(&msd->queued_reqs, &request->node);
         return 0;
     }
@@ -199,7 +204,7 @@ static mx_status_t ums_recv_csw(ums_t* msd) {
     usb_request_t* csw_request = containerof(csw_node, usb_request_t, node);
     csw_request->transfer_length = MSD_COMMAND_STATUS_WRAPPER_SIZE;
     memset(csw_request->buffer, 0, csw_request->transfer_length);
-    DEBUG_PRINT(("queued csw request\n"));
+    DEBUG_PRINT(("UMS:queued csw request\n"));
     return ums_queue_request(msd, csw_request);
 }
 
@@ -214,28 +219,29 @@ static mx_status_t ums_queue_read(ums_t* msd, uint16_t transfer_length) {
     return ums_queue_request(msd, read_request);
 }
 
-static mx_status_t ums_queue_write(ums_t* msd, uint16_t transfer_length, const void* data) {
+static mx_status_t ums_queue_write(ums_t* msd, uint16_t transfer_length, iotxn_t* txn) {
     list_node_t* write_node = list_remove_head(&msd->free_write_reqs);
     if (!write_node) {
         return ERR_NOT_ENOUGH_BUFFER;
     }
     usb_request_t* write_request = containerof(write_node, usb_request_t, node);
     write_request->transfer_length = transfer_length;
-    memcpy(write_request->buffer, data, (size_t)transfer_length);
+    txn->ops->copyfrom(txn, write_request->buffer, (size_t)transfer_length, 0);
     return ums_queue_request(msd, write_request);
 }
 
 // return true if valid CSW, else false
 // maybe called process csw?
-static csw_status_t ums_verify_csw(usb_request_t* csw_request, usb_request_t* data_request,
-                                  uint32_t prevtag) {
+static csw_status_t ums_verify_csw(usb_request_t* csw_request, uint32_t prevtag) {
     // check signature is "USBS"
     uint32_t* ptr_32 = (uint32_t*)csw_request->buffer;
     if (letoh32(ptr_32[0]) != CSW_SIGNATURE) {
+        DEBUG_PRINT(("UMS:invalid csw sig, expected:%08x got:%08x \n", CSW_SIGNATURE, letoh32(ptr_32[0])));
         return CSW_INVALID;
     }
     // check if tag matches the tag of last CBW
     if (letoh32(ptr_32[1]) != prevtag) {
+        DEBUG_PRINT(("UMS:csw tag mismatch, expected:%08x got in csw:%08x \n", prevtag, letoh32(ptr_32[1])));
         return CSW_TAG_MISMATCH;
     }
     // check if success is true or not?
@@ -245,81 +251,106 @@ static csw_status_t ums_verify_csw(usb_request_t* csw_request, usb_request_t* da
     } else if (ptr_8[12] == CSW_PHASE_ERROR) {
         return CSW_PHASE_ERROR;
     }
-    // if yes then success, and check data residue, modify transfer length so valid data only is read
-    data_request->transfer_length -= letoh32(ptr_32[2]);
-    // to complete read method so that completed read's transfer length is changed to appropriate
     return CSW_SUCCESS;
 }
 
 static mx_status_t ums_next_request(ums_t* msd) {
-    DEBUG_PRINT(("Trying to dequeue next request\n"));
-    DEBUG_PRINT(("number of requests in list: %d\n", (int)(list_length(&msd->queued_reqs))));
+    DEBUG_PRINT(("UMS:Trying to dequeue next request\n"));
+    DEBUG_PRINT(("UMS:number of requests in list: %d\n", (int)(list_length(&msd->queued_reqs))));
     list_node_t* node = list_remove_head(&msd->queued_reqs);
     if (!node) {
-        DEBUG_PRINT(("no more nodes\n"));
+        DEBUG_PRINT(("UMS:no more nodes\n"));
         msd->busy = false;
         return 0;
     }
-    DEBUG_PRINT(("got node, queuing request\n"));
+    DEBUG_PRINT(("UMS:got node, queuing request\n"));
     usb_request_t* request = containerof(node, usb_request_t, node);
     mx_status_t status = msd->usb_p->queue_request(msd->udev, request);
     return status;
 }
 
 static void ums_read_complete(usb_request_t* request) {
-    DEBUG_PRINT(("STARTING READ COMPLETE\n"));
+    DEBUG_PRINT(("UMS:STARTING READ COMPLETE\n"));
 
     ums_t* msd = (ums_t*)request->client_data;
 
     mxr_mutex_lock(&msd->mutex);
     if (request->status == NO_ERROR) {
         list_add_tail(&msd->completed_reads, &request->node);
-        mxr_completion_signal(&(msd->read_completion));
     } else {
         list_add_head(&msd->queued_reqs, &request->node);
     }
     ums_next_request(msd);
     mxr_mutex_unlock(&msd->mutex);
-    DEBUG_PRINT(("ENDING READ COMPLETE\n"));
+    DEBUG_PRINT(("UMS:ENDING READ COMPLETE\n"));
 }
 
-static void ums_csw_complete(usb_request_t* request) {
-    DEBUG_PRINT(("STARTING CSW COMPLETE\n"));
+static void ums_csw_complete(usb_request_t* csw_request) {
+    DEBUG_PRINT(("UMS:STARTING CSW COMPLETE\n"));
 
-    ums_t* msd = (ums_t*)request->client_data;
+    ums_t* msd = (ums_t*)csw_request->client_data;
 
     mxr_mutex_lock(&msd->mutex);
-    if (request->status == NO_ERROR) {
-        //TODO: verify csw against info
-        list_add_tail(&msd->free_csw_reqs, &request->node);
+    if (csw_request->status == NO_ERROR) {
+        list_add_tail(&msd->free_csw_reqs, &csw_request->node);
     } else {
-        list_add_head(&msd->queued_reqs, &request->node);
+        list_add_head(&msd->queued_reqs, &csw_request->node);
     }
     ums_next_request(msd);
+
+    // TODO: handle error case for CSW by setting iotxn to error and returning
+    list_node_t* iotxn_node = list_remove_head(&msd->queued_iotxns);
+    iotxn_t* curr_txn = containerof(iotxn_node, iotxn_t, node);
+
+    ums_pdata_t* pdata = ums_iotxn_pdata(curr_txn);
+    csw_status_t csw_error = ums_verify_csw(csw_request, pdata->tag);
+    if (csw_error) {
+        // do something
+        DEBUG_PRINT(("UMS:ENCOUNTERED ERROR!!!! CODE %d\n", csw_error));
+        curr_txn->ops->complete(curr_txn, ERR_BAD_STATE, 0);
+        return;
+    }
+    // if head of iotxn list is a read iotxn and CSW reports success, then set its buffer to that
+    // of the latest read request, with limited length based on data residue field in CSW
+    DEBUG_PRINT(("UMS:Got here\n"));
+    if (curr_txn->opcode == IOTXN_OP_READ || pdata->is_driver_io) {
+        DEBUG_PRINT(("UMS:Got in\n"));
+        list_node_t* node = list_remove_head(&msd->completed_reads);
+        DEBUG_PRINT(("UMS:Got node\n"));
+
+
+        if (!node) {
+            DEBUG_PRINT(("UMS:no read node when trying to get last read\n"));
+            curr_txn->ops->complete(curr_txn, ERR_BAD_STATE, 0);
+            return;
+        }
+        usb_request_t* read_request = containerof(node, usb_request_t, node);
+        // data residue field is the 3rd uint32_t in csw buffer
+        uint32_t residue = letoh32(*((uint32_t *)(csw_request->buffer) + 2));
+        uint32_t length = read_request->transfer_length - residue;
+        DEBUG_PRINT(("UMS: residue is %08x\n", residue));
+        DEBUG_PRINT(("UMS: length is %08x\n", length));
+
+        curr_txn->ops->copyto(curr_txn, read_request->buffer, length, 0);
+    }
+    curr_txn->ops->complete(curr_txn, NO_ERROR, curr_txn->length);
     mxr_mutex_unlock(&msd->mutex);
-    DEBUG_PRINT(("ENDING CSW COMPLETE\n"));
+    DEBUG_PRINT(("UMS:ENDING CSW COMPLETE\n"));
 }
 
 static void ums_write_complete(usb_request_t* request) {
-    DEBUG_PRINT(("STARTING WRITE COMPLETE\n"));
+    DEBUG_PRINT(("UMS:STARTING WRITE COMPLETE\n"));
     ums_t* msd = (ums_t*)request->client_data;
     // FIXME what to do with error here?
     mxr_mutex_lock(&msd->mutex);
     list_add_tail(&msd->free_write_reqs, &request->node);
     ums_next_request(msd);
     mxr_mutex_unlock(&msd->mutex);
-    DEBUG_PRINT(("ENDING WRITE COMPLETE\n"));
+    DEBUG_PRINT(("UMS:ENDING WRITE COMPLETE\n"));
 }
 
-static void ums_interrupt_complete(usb_request_t* request) {
-    DEBUG_PRINT(("INTERRUPT HAPPENING?\n"));
-    ums_t* msd = (ums_t*)request->client_data;
-    mxr_mutex_lock(&msd->mutex);
-    list_add_head(&msd->free_intr_reqs, &request->node);
-    mxr_mutex_unlock(&msd->mutex);
-}
 
-mx_status_t ums_inquiry(mx_device_t* device, uint8_t lun) {
+mx_status_t ums_inquiry(mx_device_t* device, uint8_t lun,  uint32_t tag) {
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -331,7 +362,7 @@ mx_status_t ums_inquiry(mx_device_t* device, uint8_t lun) {
     command[0] = MS_INQUIRY;
     // set allocated length in scsi command
     command[4] = MS_INQUIRY_TRANSFER_LENGTH;
-    status = ums_send_cbw(msd, (msd->tag)++, MS_INQUIRY_TRANSFER_LENGTH, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, MS_INQUIRY_TRANSFER_LENGTH, USB_DIR_IN, lun,
                           MS_INQUIRY_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -350,7 +381,7 @@ out:
     return status;
 }
 
-mx_status_t ums_test_unit_ready(mx_device_t* device, uint8_t lun) {
+mx_status_t ums_test_unit_ready(mx_device_t* device, uint8_t lun,  uint32_t tag) {
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -360,7 +391,7 @@ mx_status_t ums_test_unit_ready(mx_device_t* device, uint8_t lun) {
     memset(command, 0, MS_TEST_UNIT_READY_COMMAND_LENGTH);
     // set command type
     command[0] = (char)MS_TEST_UNIT_READY;
-    status = ums_send_cbw(msd, (msd->tag)++, MS_NO_TRANSFER_LENGTH, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, MS_NO_TRANSFER_LENGTH, USB_DIR_IN, lun,
                           MS_TEST_UNIT_READY_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -373,8 +404,8 @@ out:
     return status;
 }
 
-mx_status_t ums_request_sense(mx_device_t* device, uint8_t lun) {
-    DEBUG_PRINT(("starting request sense\n"));
+mx_status_t ums_request_sense(mx_device_t* device, uint8_t lun,  uint32_t tag) {
+    DEBUG_PRINT(("UMS:starting request sense\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -386,7 +417,7 @@ mx_status_t ums_request_sense(mx_device_t* device, uint8_t lun) {
     command[0] = MS_REQUEST_SENSE;
     // set allocated length in scsi command
     command[4] = MS_REQUEST_SENSE_TRANSFER_LENGTH;
-    status = ums_send_cbw(msd, (msd->tag)++, MS_REQUEST_SENSE_TRANSFER_LENGTH, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, MS_REQUEST_SENSE_TRANSFER_LENGTH, USB_DIR_IN, lun,
                             MS_REQUEST_SENSE_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -405,8 +436,8 @@ out:
     return status;
 }
 
-mx_status_t ums_read_format_capacities(mx_device_t* device, uint8_t lun) {
-    DEBUG_PRINT(("starting request sense\n"));
+mx_status_t ums_read_format_capacities(mx_device_t* device, uint8_t lun,  uint32_t tag) {
+    DEBUG_PRINT(("UMS:starting read format capacities\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -418,7 +449,7 @@ mx_status_t ums_read_format_capacities(mx_device_t* device, uint8_t lun) {
     command[0] = MS_READ_FORMAT_CAPACITIES;
     // set allocated length in scsi command
     command[8] = MS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH;
-    status = ums_send_cbw(msd, (msd->tag)++, MS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, MS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH, USB_DIR_IN, lun,
                             MS_READ_FORMAT_CAPACITIES_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -437,8 +468,8 @@ out:
     return status;
 }
 
-mx_status_t ums_read_capacity10(mx_device_t* device, uint8_t lun) {
-    DEBUG_PRINT(("starting request sense\n"));
+mx_status_t ums_read_capacity10(mx_device_t* device, uint8_t lun,  uint32_t tag) {
+    DEBUG_PRINT(("UMS:starting read capacity10\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -448,7 +479,7 @@ mx_status_t ums_read_capacity10(mx_device_t* device, uint8_t lun) {
     memset(command, 0, MS_READ_CAPACITY10_COMMAND_LENGTH);
     // set command type
     command[0] = MS_READ_CAPACITY10;
-    status = ums_send_cbw(msd, (msd->tag)++, MS_READ_CAPACITY10_TRANSFER_LENGTH, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, MS_READ_CAPACITY10_TRANSFER_LENGTH, USB_DIR_IN, lun,
                             MS_READ_CAPACITY10_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -467,8 +498,8 @@ out:
     return status;
 }
 
-mx_status_t ums_read_capacity16(mx_device_t* device, uint8_t lun) {
-    DEBUG_PRINT(("starting request sense\n"));
+mx_status_t ums_read_capacity16(mx_device_t* device, uint8_t lun,  uint32_t tag) {
+    DEBUG_PRINT(("UMS:starting request sense\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -480,7 +511,7 @@ mx_status_t ums_read_capacity16(mx_device_t* device, uint8_t lun) {
     command[0] = MS_READ_CAPACITY16;
     // service action = 10, not sure what that means
     command[1] = 0x10;
-    status = ums_send_cbw(msd, (msd->tag)++, MS_READ_CAPACITY16_TRANSFER_LENGTH, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, MS_READ_CAPACITY16_TRANSFER_LENGTH, USB_DIR_IN, lun,
                             MS_READ_CAPACITY16_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -499,8 +530,8 @@ out:
     return status;
 }
 
-mx_status_t ums_read10(mx_device_t* device, uint8_t lun, uint32_t lba, uint16_t num_blocks) {
-    DEBUG_PRINT(("starting read10\n"));
+mx_status_t ums_read10(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t lba, uint16_t num_blocks) {
+    DEBUG_PRINT(("UMS:starting read10\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -516,7 +547,7 @@ mx_status_t ums_read10(mx_device_t* device, uint8_t lun, uint32_t lba, uint16_t 
     // set transfer length in blocks
     write16be(command + 7, num_blocks);
 
-    status = ums_send_cbw(msd, (msd->tag)++, transfer_length, USB_DIR_IN, lun, MS_READ10_COMMAND_LENGTH, command);
+    status = ums_send_cbw(msd, tag, transfer_length, USB_DIR_IN, lun, MS_READ10_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
     }
@@ -534,8 +565,8 @@ out:
     return status;
 }
 
-mx_status_t ums_read12(mx_device_t* device, uint8_t lun, uint32_t lba, uint32_t num_blocks) {
-    DEBUG_PRINT(("starting read12\n"));
+mx_status_t ums_read12(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t lba, uint32_t num_blocks) {
+    DEBUG_PRINT(("UMS:starting read12\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -551,7 +582,7 @@ mx_status_t ums_read12(mx_device_t* device, uint8_t lun, uint32_t lba, uint32_t 
     // set transfer length in blocks
     write32be(command + 6, num_blocks);
 
-    status = ums_send_cbw(msd, (msd->tag)++, transfer_length, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, transfer_length, USB_DIR_IN, lun,
         MS_READ12_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -570,8 +601,8 @@ out:
     return status;
 }
 
-mx_status_t ums_read16(mx_device_t* device, uint8_t lun, uint64_t lba, uint32_t num_blocks) {
-    DEBUG_PRINT(("starting read16\n"));
+mx_status_t ums_read16(mx_device_t* device, uint8_t lun, uint32_t tag, uint64_t lba, uint32_t num_blocks) {
+    DEBUG_PRINT(("UMS:starting read16\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -587,7 +618,7 @@ mx_status_t ums_read16(mx_device_t* device, uint8_t lun, uint64_t lba, uint32_t 
     // set transfer length in blocks
     write32be(command + 10, num_blocks);
 
-    status = ums_send_cbw(msd, (msd->tag)++, transfer_length, USB_DIR_IN, lun,
+    status = ums_send_cbw(msd, tag, transfer_length, USB_DIR_IN, lun,
                             MS_READ16_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -606,9 +637,9 @@ out:
     return status;
 }
 
-mx_status_t ums_write10(mx_device_t* device, uint8_t lun, uint32_t lba, uint16_t num_blocks,
-                        const void* data) {
-    DEBUG_PRINT(("starting write10\n"));
+mx_status_t ums_write10(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t lba, uint16_t num_blocks,
+                        iotxn_t* txn) {
+    DEBUG_PRINT(("UMS:starting write10\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -625,14 +656,14 @@ mx_status_t ums_write10(mx_device_t* device, uint8_t lun, uint32_t lba, uint16_t
     // set transfer length in blocks
     uint16_t* transfer_len_ptr = (uint16_t*)&(command[7]);
     *transfer_len_ptr = htobe16(num_blocks);
-    status = ums_send_cbw(msd, (msd->tag)++, transfer_length, USB_DIR_OUT, lun,
+    status = ums_send_cbw(msd, tag, transfer_length, USB_DIR_OUT, lun,
                             MS_WRITE10_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
     }
 
     // read request sense response
-    status = ums_queue_write(msd, transfer_length, data);
+    status = ums_queue_write(msd, transfer_length, txn);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
     }
@@ -644,9 +675,9 @@ out:
     return status;
 }
 
-mx_status_t ums_write12(mx_device_t* device, uint8_t lun, uint32_t lba, uint32_t num_blocks,
-                        const void* data) {
-    DEBUG_PRINT(("starting write12\n"));
+mx_status_t ums_write12(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t lba, uint32_t num_blocks,
+                        iotxn_t* txn) {
+    DEBUG_PRINT(("UMS:starting write12\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -663,14 +694,14 @@ mx_status_t ums_write12(mx_device_t* device, uint8_t lun, uint32_t lba, uint32_t
     // set transfer length
     uint32_t* transfer_len_ptr = (uint32_t*)&(command[7]);
     *transfer_len_ptr = htobe32(num_blocks);
-    status = ums_send_cbw(msd, (msd->tag)++, transfer_length, USB_DIR_OUT, lun,
+    status = ums_send_cbw(msd, tag, transfer_length, USB_DIR_OUT, lun,
                             MS_WRITE12_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
     }
 
     // read request sense response
-    status = ums_queue_write(msd, transfer_length, data);
+    status = ums_queue_write(msd, transfer_length, txn);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
     }
@@ -682,9 +713,9 @@ out:
     return status;
 }
 
-mx_status_t ums_write16(mx_device_t* device, uint8_t lun, uint64_t lba, uint32_t num_blocks,
-                        const void* data) {
-    DEBUG_PRINT(("starting write16\n"));
+mx_status_t ums_write16(mx_device_t* device, uint8_t lun, uint32_t tag, uint64_t lba, uint32_t num_blocks,
+                        iotxn_t* txn) {
+    DEBUG_PRINT(("UMS:starting write16\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -701,14 +732,14 @@ mx_status_t ums_write16(mx_device_t* device, uint8_t lun, uint64_t lba, uint32_t
     // set transfer length
     uint32_t* transfer_len_ptr = (uint32_t*)&(command[7]);
     *transfer_len_ptr = htobe32(num_blocks);
-    status = ums_send_cbw(msd, (msd->tag)++, transfer_length, USB_DIR_OUT, lun,
+    status = ums_send_cbw(msd, tag, transfer_length, USB_DIR_OUT, lun,
                             MS_WRITE16_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
     }
 
     // read request sense response
-    status = ums_queue_write(msd, transfer_length, data);
+    status = ums_queue_write(msd, transfer_length, txn);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
     }
@@ -720,8 +751,8 @@ out:
     return status;
 }
 
-mx_status_t ums_toggle_removable(mx_device_t* device, uint8_t lun, bool removable) {
-    DEBUG_PRINT(("starting toggle removable\n"));
+mx_status_t ums_toggle_removable(mx_device_t* device, uint8_t lun, uint32_t tag, bool removable) {
+    DEBUG_PRINT(("UMS:starting toggle removable\n"));
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&msd->mutex);
@@ -731,7 +762,7 @@ mx_status_t ums_toggle_removable(mx_device_t* device, uint8_t lun, bool removabl
     memset(command, 0, MS_TOGGLE_REMOVABLE_COMMAND_LENGTH);
     // set command type
     command[0] = MS_TOGGLE_REMOVABLE;
-    status = ums_send_cbw(msd, (msd->tag)++, MS_NO_TRANSFER_LENGTH, USB_DIR_OUT, lun,
+    status = ums_send_cbw(msd, tag, MS_NO_TRANSFER_LENGTH, USB_DIR_OUT, lun,
                             MS_TOGGLE_REMOVABLE_COMMAND_LENGTH, command);
     if (status == ERR_NOT_ENOUGH_BUFFER) {
         goto out;
@@ -740,36 +771,6 @@ mx_status_t ums_toggle_removable(mx_device_t* device, uint8_t lun, bool removabl
     // recieve CSW
     status = ums_recv_csw(msd);
 out:
-    mxr_mutex_unlock(&msd->mutex);
-    return status;
-}
-
-mx_status_t ums_recv(mx_device_t* device, void* buffer, size_t length) {
-    DEBUG_PRINT(("start of ums_recv\n"));
-    ums_t* msd = get_ums(device);
-    mx_status_t status = NO_ERROR;
-    mxr_mutex_lock(&msd->mutex);
-
-    list_node_t* node = list_remove_head(&msd->completed_reads);
-    if (!node) {
-        mxr_mutex_unlock(&msd->mutex);
-        DEBUG_PRINT(("before wait\n"));
-        mx_status_t wait_status = mxr_completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
-        DEBUG_PRINT(("after wait\n"));
-        mxr_mutex_lock(&msd->mutex);
-        if (wait_status == ERR_TIMED_OUT) {
-            DEBUG_PRINT(("no node :(\n"));
-            // is this right error code to use?
-            status = ERR_NOT_FOUND;
-            goto out;
-        }
-        mxr_completion_reset(&(msd->read_completion));
-        node = list_remove_head(&msd->completed_reads);
-    }
-    usb_request_t* request = containerof(node, usb_request_t, node);
-    memcpy(buffer, request->buffer, request->transfer_length);
-out:
-    DEBUG_PRINT(("got to recv out\n"));
     mxr_mutex_unlock(&msd->mutex);
     return status;
 }
@@ -785,78 +786,131 @@ static mx_status_t ums_close(mx_device_t* dev) {
 static mx_status_t ums_release(mx_device_t* device) {
     ums_t* msd = get_ums(device);
     free(msd);
-
     return NO_ERROR;
 }
 
-static ssize_t ums_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-    DEBUG_PRINT(("starting read\n"));
-    uint32_t block_size = get_ums(dev)->block_size;
-    if (off % block_size != 0) {
-        DEBUG_PRINT(("ERROR: offset not block aligned, read returning 0 bytes\n"));
-        return 0;
-    }
-    if (len % block_size != 0) {
-        DEBUG_PRINT(("ERROR: length of read not block aligned, read returning 0 bytes\n"));
-        return 0;
-    }
-    // TODO: deal with lun
-    uint8_t lun = 0;
-    switch (get_ums(dev)->read_flag) {
-    case USE_READ10:
-        ums_read10(dev, lun, off/block_size, len/block_size);
-        break;
-    case USE_READ12:
-        ums_read12(dev, lun, off/block_size, len/block_size);
-        break;
-    case USE_READ16:
-        ums_read16(dev, lun, off/block_size, len/block_size);
-        break;
-    }
-    DEBUG_PRINT(("data: %p\n", data));
-    DEBUG_PRINT(("len: %d\n", (uint8_t)len));
-    DEBUG_PRINT(("block size: %d\n", block_size));
+static void ums_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+    DEBUG_PRINT(("UMS: start of iotxn_queue. txn->length = 0x%02x\n", (uint32_t)txn->length));
 
-    for (int i = 0; i < 18; i++) {
-        DEBUG_PRINT(("%02x ", ((unsigned char*)(data))[i]));
+    ums_t* msd = get_ums(dev);
+    ums_pdata_t* pdata = ums_iotxn_pdata(txn);
+    pdata->tag = msd->tag;
+    msd->tag += 1;
+
+
+    list_add_tail(&msd->queued_iotxns, &txn->node);
+
+    if(pdata->is_driver_io){
+        switch (pdata->cmd) {
+        case MS_READ_CAPACITY10:
+            ums_read_capacity10(dev, 0, pdata->tag);
+            break;
+        case MS_READ_CAPACITY16:
+            ums_read_capacity16(dev, 0, pdata->tag);
+            break;
+        case MS_INQUIRY:
+            ums_inquiry(dev, 0, pdata->tag);
+            break;
+        case MS_TEST_UNIT_READY:
+            ums_test_unit_ready(dev, 0, pdata->tag);
+            break;
+        case MS_REQUEST_SENSE:
+            ums_request_sense(dev, 0, pdata->tag);
+            break;
+        }
+        DEBUG_PRINT(("UMS:end of is_driver_io, exiting iotxn_queue\n"));
+        return;
     }
-    DEBUG_PRINT(("\n"));
-    ums_recv(dev, data, len);
-    DEBUG_PRINT(("data post recv in read\n"));
-    for (int i = 0; i < 18; i++) {
-        DEBUG_PRINT(("%02x ", ((unsigned char*)(data))[i]));
+
+
+    uint32_t block_size = msd->block_size;
+
+    // offset must be aligned to block size
+    if (txn->offset % block_size) {
+        DEBUG_PRINT(("UMS:offset on iotxn not aligned to block size\n"));
+        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        return;
     }
-    DEBUG_PRINT(("returning this size: %d\n", (uint32_t)(len)));
-    return len;
+
+    if (txn->length % block_size) {
+        DEBUG_PRINT(("UMS:length on iotxn not aligned to block size\n"));
+        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        return;
+    }
+
+    if (txn->opcode == IOTXN_OP_READ){
+        // TODO: deal with lun
+        uint8_t lun = 0;
+        switch (msd->read_flag) {
+        case USE_READ10:
+            // is this proper way to check for exceeding size of expected type?
+            // NO USE SIZEOF CHECK, SEE IOCTL FUNCTION
+            // if(txn->offset > 0xFFFF) {
+            //     DEBUG_PRINT(("UMS:txn offset too large, read10 only takes uint32_t\n"));
+            // }
+            // if(txn->length > 0xFF) {
+            //     DEBUG_PRINT(("UMS:txn length too large, read10 only takes uint16_t\n"));
+            // }
+            ums_read10(dev, lun, pdata->tag, txn->offset/block_size, txn->length/block_size);
+            break;
+        case USE_READ12:
+            // if(txn->offset > 0xFFFF) {
+            //     DEBUG_PRINT(("UMS:txn offset too large, read12 only takes uint32_t\n"));
+            // }
+            // if(txn->length > 0xFFFF) {
+            //     DEBUG_PRINT(("UMS:txn length too large, read12 only takes uint32_t\n"));
+            // }
+            ums_read12(dev, lun, pdata->tag, txn->offset/block_size, txn->length/block_size);
+            break;
+        case USE_READ16:
+            ums_read16(dev, lun, pdata->tag, txn->offset/block_size, txn->length/block_size);
+            break;
+        }
+        // DEBUG_PRINT(("UMS:data: %p\n", data));
+        // TODO: figure out how to make these prints print out bigger stuff
+        DEBUG_PRINT(("UMS: starting read. read len: %d; read offset: %d both in bytes\n", (uint8_t)txn->length, (uint8_t)txn->offset));
+    }else if (txn->opcode == IOTXN_OP_WRITE){
+        // TODO: deal with lun
+        uint8_t lun = 0;
+        DEBUG_PRINT(("UMS: starting write. txn->length = 0x%02x num_blocks = 0x%02x\n", (uint32_t)txn->length, (uint32_t)txn->length/block_size));
+
+        switch (msd->read_flag) {
+
+        case USE_READ10:
+            ums_write10(dev, lun, pdata->tag, txn->offset/block_size, txn->length/block_size, txn);
+            break;
+        case USE_READ12:
+            ums_write12(dev, lun, pdata->tag, txn->offset/block_size, txn->length/block_size, txn);
+            break;
+        case USE_READ16:
+            ums_write16(dev, lun, pdata->tag, txn->offset/block_size, txn->length/block_size, txn);
+            break;
+        }
+        // DEBUG_PRINT(("UMS:data: %p\n", data));
+        // TODO: figure out how to make these prints print out bigger stuff
+        DEBUG_PRINT(("UMS: starting write. read len: %d; read offset: %d both in bytes\n", (uint8_t)txn->length, (uint8_t)txn->offset));
+    }
 }
 
-static ssize_t ums_write(mx_device_t* dev, const void* data, size_t len, mx_off_t off) {
-    DEBUG_PRINT(("starting write\n"));
-    // TODO: deal with lun
-    uint8_t lun = 0;
-    uint32_t block_size = get_ums(dev)->block_size;
-
-    if (off % block_size != 0) {
-        DEBUG_PRINT(("ERROR: offset not block aligned, read returning 0 bytes\n"));
-        return 0;
+static ssize_t ums_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
+    ums_t* msd = get_ums(dev);
+    // TODO implement other block ioctls
+    switch (op) {
+    case BLOCK_OP_GET_SIZE: {
+        uint64_t* size = reply;
+        if (max < sizeof(*size)) return ERR_NOT_ENOUGH_BUFFER;
+        *size = msd->total_blocks;
+        return sizeof(*size);
     }
-    if (len % block_size != 0) {
-        DEBUG_PRINT(("ERROR: length of read not block aligned, read returning 0 bytes\n"));
-        return 0;
+    case BLOCK_OP_GET_BLOCKSIZE: {
+         uint64_t* blksize = reply;
+         if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
+         *blksize = msd->block_size;
+         return sizeof(*blksize);
     }
-
-    switch (get_ums(dev)->read_flag) {
-    case USE_READ10:
-        ums_write10(dev, lun, off/block_size, len/block_size, data);
-        break;
-    case USE_READ12:
-        ums_write12(dev, lun, off/block_size, len/block_size, data);
-        break;
-    case USE_READ16:
-        ums_write16(dev, lun, off/block_size, len/block_size, data);
-        break;
+    default:
+        return ERR_NOT_SUPPORTED;
     }
-    return len;
 }
 
 static mx_off_t ums_get_size(mx_device_t* dev) {
@@ -865,11 +919,21 @@ static mx_off_t ums_get_size(mx_device_t* dev) {
 }
 
 static mx_protocol_device_t ums_device_proto = {
-    .read = ums_read,
-    .write = ums_write,
+    // .read = ums_read,
+    // .write = ums_write,
+    .ioctl = ums_ioctl,
     .release = ums_release,
+    .iotxn_queue = ums_iotxn_queue,
     .get_size = ums_get_size,
 };
+
+static void ums_iotxn_wait_cb(iotxn_t* txn) {
+    DEBUG_PRINT(("UMS:iotxn_wait_cb called\n"));
+    ums_pdata_t* pdata = ums_iotxn_pdata(txn);
+    mxr_completion_signal(pdata->waiter);
+    mxr_completion_reset(pdata->waiter);
+    return;
+}
 
 static int ums_start_thread(void* arg) {
     ums_t* msd = (ums_t*)arg;
@@ -879,31 +943,54 @@ static int ums_start_thread(void* arg) {
         free(msd);
         return status;
     }
-    DEBUG_PRINT(("starting start_thread\n"));
-    ums_read_capacity10(&(msd->device), 0);
-    uint32_t read_capacity[MS_READ_CAPACITY10_TRANSFER_LENGTH];
+    DEBUG_PRINT(("UMS:starting start_thread\n"));
+    iotxn_t* txn;
+    iotxn_alloc(&txn, 0, MS_READ_CAPACITY10_TRANSFER_LENGTH, 0);
+    //TODO: what op goes into txn? not sure if this is proper style but putting -1 here to show its not a std op?
+    txn->opcode = -1;
+    ums_pdata_t* pdata = ums_iotxn_pdata(txn);
+    pdata->is_driver_io = true;
+    pdata->cmd = MS_READ_CAPACITY10;
+    pdata->waiter = &(msd->read_completion);
+    txn->complete_cb = ums_iotxn_wait_cb;
+    ums_iotxn_queue(&msd->device, txn);
+    // ums_read_capacity10(&(msd->device), 0);
+    mxr_completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
+    DEBUG_PRINT(("UMS:in start thread, got past wait\n"));
 
-    ums_recv(&(msd->device), (void*)read_capacity, MS_READ_CAPACITY10_TRANSFER_LENGTH);
+    uint32_t read_capacity[MS_READ_CAPACITY10_TRANSFER_LENGTH];
+    txn->ops->copyfrom(txn, (void*)read_capacity, MS_READ_CAPACITY10_TRANSFER_LENGTH, 0);
     msd->total_blocks = betoh32(read_capacity[0]);
     msd->block_size = betoh32(read_capacity[1]);
     msd->read_flag = USE_READ10;
     if (read_capacity[0] == 0xFFFFFFFF) {
-        ums_read_capacity16(&(msd->device), 0);
-        uint32_t read_capacity[2];
-        ums_recv(&(msd->device), (void*)read_capacity, 8);
-        msd->total_blocks = betoh32(read_capacity[0]);
-        msd->block_size = betoh32(read_capacity[1]);
+        iotxn_t* txn2;
+        iotxn_alloc(&txn2, 0, MS_READ_CAPACITY16_TRANSFER_LENGTH, 0);
+        txn2->opcode = -1;
+        ums_pdata_t* pdata2 = ums_iotxn_pdata(txn2);
+        pdata2->is_driver_io = true;
+        pdata2->cmd = MS_READ_CAPACITY16;
+        pdata2->waiter = &(msd->read_completion);
+        txn2->complete_cb = ums_iotxn_wait_cb;
+        ums_iotxn_queue(&msd->device, txn2);
+        mxr_completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
+        char read_capacity2[MS_READ_CAPACITY16_TRANSFER_LENGTH];
+        txn2->ops->copyfrom(txn2, (void*)read_capacity2, MS_READ_CAPACITY16_TRANSFER_LENGTH, 0);
+        //FIXME whats the best way to unpack a uint64 from start of the buffer and then a 32 directly after that?
+        // msd->total_blocks = betoh64(*((uint64_t*)&read_capacity2));
+        // msd->block_size = betoh32(*((uint32_t*)&read_capacity2 + 8));
         msd->read_flag = USE_READ12;
     }
-    DEBUG_PRINT(("block size is: 0x%08x\n", msd->block_size));
-    DEBUG_PRINT(("total blocks is: 0x%08x\n", msd->total_blocks));
+    DEBUG_PRINT(("UMS:block size is: 0x%08x\n", msd->block_size));
+    // DEBUG_PRINT(("UMS:total blocks is: 0x%08x\n", msd->total_blocks));
+    msd->device.protocol_id = MX_PROTOCOL_BLOCK;
     device_add(&msd->device, msd->udev);
-    DEBUG_PRINT(("reached end of start thread\n"));
+    DEBUG_PRINT(("UMS:reached end of start thread\n"));
     return NO_ERROR;
 }
 
 static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
-    DEBUG_PRINT(("starting mass storage probe\n"));
+    DEBUG_PRINT(("UMS:starting mass storage probe\n"));
     usb_device_protocol_t* protocol;
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
         return ERR_NOT_SUPPORTED;
@@ -917,12 +1004,11 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_interface_t* intf = &config->interfaces[0];
     // find our endpoints
     if (intf->num_endpoints < 2) {
-        DEBUG_PRINT(("ums_bind wrong number of endpoints: %d\n", intf->num_endpoints));
+        DEBUG_PRINT(("UMS:ums_bind wrong number of endpoints: %d\n", intf->num_endpoints));
         return ERR_NOT_SUPPORTED;
     }
     usb_endpoint_t* bulk_in = NULL;
     usb_endpoint_t* bulk_out = NULL;
-    usb_endpoint_t* intr_ep = NULL;
 
     for (int i = 0; i < intf->num_endpoints; i++) {
         usb_endpoint_t* endp = &intf->endpoints[i];
@@ -934,27 +1020,26 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
             if (endp->type == USB_ENDPOINT_BULK) {
                 bulk_in = endp;
             } else if (endp->type == USB_ENDPOINT_INTERRUPT) {
-                DEBUG_PRINT(("BULK INTERRUPT ENDPOINT FOUND\n"));
-                intr_ep = endp;
+                DEBUG_PRINT(("UMS:BULK INTERRUPT ENDPOINT FOUND\n"));
             }
         }
     }
     if (!bulk_in || !bulk_out) {
-        DEBUG_PRINT(("ums_bind could not find endpoints\n"));
+        DEBUG_PRINT(("UMS:ums_bind could not find endpoints\n"));
         return ERR_NOT_SUPPORTED;
     }
 
     ums_t* msd = calloc(1, sizeof(ums_t));
     if (!msd) {
-        DEBUG_PRINT(("Not enough memory for ums_t\n"));
+        DEBUG_PRINT(("UMS:Not enough memory for ums_t\n"));
         return ERR_NO_MEMORY;
     }
 
     list_initialize(&msd->free_read_reqs);
     list_initialize(&msd->free_csw_reqs);
     list_initialize(&msd->free_write_reqs);
-    list_initialize(&msd->free_intr_reqs);
     list_initialize(&msd->queued_reqs);
+    list_initialize(&msd->queued_iotxns);
     list_initialize(&msd->completed_reads);
     list_initialize(&msd->completed_csws);
 
@@ -963,7 +1048,6 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     msd->usb_p = protocol;
     msd->bulk_in = bulk_in;
     msd->bulk_out = bulk_out;
-    msd->intr_ep = intr_ep;
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req = protocol->alloc_request(device, bulk_in, USB_BUF_SIZE);
@@ -990,20 +1074,9 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&msd->free_write_reqs, &req->node);
     }
 
-    if (msd->intr_ep) {
-        for (int i = 0; i < INTR_REQ_COUNT; i++) {
-            usb_request_t* req = protocol->alloc_request(device, intr_ep, intr_ep->maxpacketsize);
-            if (!req)
-                return ERR_NO_MEMORY;
-            req->complete_cb = ums_interrupt_complete;
-            req->client_data = msd;
-            list_add_head(&msd->free_intr_reqs, &req->node);
-        }
-    }
-
     char lun = 'a';
     ums_get_max_lun(msd, (void*)&lun);
-    DEBUG_PRINT(("Max lun is: %02x\n", (unsigned char)lun));
+    DEBUG_PRINT(("UMS:Max lun is: %02x\n", (unsigned char)lun));
 
     msd->busy = false;
     msd->tag = 8;
@@ -1012,7 +1085,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     mxr_thread_create(ums_start_thread, msd, "ums_start_thread", &thread);
     mxr_thread_detach(thread);
 
-    DEBUG_PRINT(("mass storage bind complete\n"));
+    DEBUG_PRINT(("UMS:mass storage bind complete\n"));
     return NO_ERROR;
 }
 
