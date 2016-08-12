@@ -16,23 +16,53 @@ import("//magma/gnbuild/magma.gni")
 
 executable("magma_unit_tests") {
   sources = [
-    "hello_world.cc",
     "main.cc",
-    "test_address_space_allocator.cc",
+  ]
+
+  deps = [
+    ":magma_system_tests",
+    ":magma_util_tests",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("magma_system_tests") {
+  sources = [
     "test_magma_system_buffer.cc",
     "test_magma_system_connection.cc",
-    "test_mutex.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/sys_driver",
+    "$magma_build_root/tests/mock:msd",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("magma_util_tests") {
+  sources = [
+    "test_address_space_allocator.cc",
     "test_mmio.cc",
+    "test_mutex.cc",
     "test_platform_buffer.cc",
     "test_refcounted.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/sys_driver",
     "$magma_build_root/src/sys_driver:platform_buffer",
-    "$magma_build_root/tests/mock:mock_msd",
     "$magma_build_root/tests/mock:mmio",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("msd_abi_conformance_tests") {
+  sources = [
+    "test_msd_buffer.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/sys_driver:platform_buffer",
     "//third_party/gtest",
   ]
 }

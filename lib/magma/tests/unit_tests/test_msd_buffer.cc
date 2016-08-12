@@ -12,8 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "magma_util/platform_buffer.h"
+#include "msd.h"
 #include "gtest/gtest.h"
-TEST(Magma, HelloWorld) {
-  printf("\n\nHELLO WORLD\n\n");
-  EXPECT_EQ(3, 1 + 2);
+
+TEST(MsdBuffer, ImportAndDestroy)
+{
+    msd_platform_buffer* platform_buffer_token;
+
+    auto platform_buf = magma::PlatformBuffer::Create(4096, &platform_buffer_token);
+    ASSERT_NE(platform_buf, nullptr);
+    ASSERT_EQ(platform_buf->GetRefCount(), 1u);
+
+    auto msd_buffer = msd_buffer_import(platform_buffer_token);
+    ASSERT_NE(msd_buffer, nullptr);
+    EXPECT_EQ(platform_buf->GetRefCount(), 2u);
+
+    msd_buffer_destroy(msd_buffer);
+    EXPECT_EQ(platform_buf->GetRefCount(), 1u);
 }
