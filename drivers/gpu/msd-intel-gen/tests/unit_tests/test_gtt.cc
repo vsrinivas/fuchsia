@@ -19,6 +19,8 @@ class MockPlatformDevice : public magma::PlatformDevice {
 public:
     MockPlatformDevice(uint64_t bar0_size) : bar0_size_(bar0_size) {}
 
+    void* GetDeviceHandle() override { return nullptr; }
+
     std::unique_ptr<magma::PlatformMmio>
     CpuMapPciMmio(unsigned int pci_bar, magma::PlatformMmio::CachePolicy cache_policy) override
     {
