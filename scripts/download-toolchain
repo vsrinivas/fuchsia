@@ -33,6 +33,7 @@ readonly INSTALL_DIR="$(cd "${PREBUILTS_DIR}/downloads" && pwd)"
 
 # Download the tools if they don't already exist, or if their versions are out of date.
 TOOLCHAIN_MAKEVARS=()
+PREBUILT_NAMES=()
 function downloadToolchain() {
   local target="${1}"
 
@@ -64,19 +65,25 @@ function downloadToolchain() {
     echo "${required_version}" > "${stamp_path}"
   fi
 
-  local toolchain_dir="${target}-5.3.0-${OS}-${HOSTARCH}"
   # Record the locations of the various toolchains.
+  local toolchain_dir="${target}-5.3.0-${OS}-${HOSTARCH}"
+  local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${MAGENTA_ROOT}}"
   case "${target}" in
     "arm-eabi")
-      TOOLCHAIN_MAKEVARS+=("ARCH_arm_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${toolchain_dir}/bin/${target}-")
+      TOOLCHAIN_MAKEVARS+=("ARCH_arm_TOOLCHAIN_PREFIX = ${relative_install_dir}/${toolchain_dir}/bin/${target}-")
       ;;
     "aarch64-elf")
-      TOOLCHAIN_MAKEVARS+=("ARCH_arm64_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${toolchain_dir}/bin/${target}-")
+      TOOLCHAIN_MAKEVARS+=("ARCH_arm64_TOOLCHAIN_PREFIX = ${relative_install_dir}/${toolchain_dir}/bin/${target}-")
       ;;
     "x86_64-elf")
-      TOOLCHAIN_MAKEVARS+=("ARCH_x86_64_TOOLCHAIN_PREFIX = ${INSTALL_DIR}/${toolchain_dir}/bin/${target}-")
+      TOOLCHAIN_MAKEVARS+=("ARCH_x86_64_TOOLCHAIN_PREFIX = ${relative_install_dir}/${toolchain_dir}/bin/${target}-")
       ;;
   esac
+
+  # Leave some breadcrumbs in the makefile so `make ...` can check if the toolchain is up-to-date.
+  PREBUILT_NAMES+=" ${tool_name}"  # FYI: That's load-bearing leading whitespace.
+  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_STAMP = \$(LKMAKEROOT)${stamp_path#${MAGENTA_ROOT}}")
+  TOOLCHAIN_MAKEVARS+=("PREBUILT_${tool_name}_TOOLCHAIN_SHAFILE = \$(LKMAKEROOT)${version_file#${MAGENTA_ROOT}}")
 }
 
 # We want the toolchains for all target types.
@@ -85,11 +92,15 @@ for target in "${TARGETS[@]}"; do
   downloadToolchain "${target}"
 done
 
-# Update prebuilt/config.mk to point at the toolchains we just installed.
+# Clear old config lines from prebuilt/config.mk.
 readonly ENV_MK="${PREBUILTS_DIR}/config.mk"
 if [[ -f "${ENV_MK}" ]]; then
   sed -i.bak '/ARCH_.*_TOOLCHAIN_PREFIX/d' "${ENV_MK}"
+  sed -i.bak '/PREBUILT_.*/d' "${ENV_MK}"
 fi
+
+# Update prebuilt/config.mk to point at the toolchains we just installed.
+TOOLCHAIN_MAKEVARS+=("PREBUILT_TOOLCHAINS :=${PREBUILT_NAMES[@]}")
 for line in "${TOOLCHAIN_MAKEVARS[@]}"; do
   echo $line >> "${ENV_MK}"
 done
