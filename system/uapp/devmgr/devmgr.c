@@ -237,7 +237,9 @@ void dev_ref_release(mx_device_t* dev) {
             printf("device: %p(%s): ref=0, busy, not releasing\n", dev, safename(dev->name));
             return;
         }
+#if TRACE_ADD_REMOVE
         printf("device: %p(%s): ref=0. releasing.\n", dev, safename(dev->name));
+#endif
 
         if (!(dev->flags & DEV_FLAG_VERY_DEAD)) {
             printf("device: %p: only mostly dead (this is bad)\n", dev);
