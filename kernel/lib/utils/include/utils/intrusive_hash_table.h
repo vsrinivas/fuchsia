@@ -134,8 +134,9 @@ public:
     // Hash tables only support constant order erase if their underlying bucket
     // type does.
     static constexpr bool SupportsConstantOrderErase = BucketType::SupportsConstantOrderErase;
+    static constexpr bool SupportsConstantOrderSize = true;
     static constexpr bool IsAssociative = true;
-    static constexpr bool IsSequenced   = false;
+    static constexpr bool IsSequenced = false;
 
     static_assert(kNumBuckets > 0, "Hash tables must have at least one bucket");
     static_assert(is_unsigned_integer<HashType>::value, "HashTypes must be unsigned integers");
@@ -201,7 +202,6 @@ public:
     }
 
     size_t size()      const { return count_; }
-    size_t size_slow() const { return size(); }
     bool   is_empty()  const { return count_ == 0; }
 
     // erase_if
@@ -451,6 +451,7 @@ constexpr _type HashTable<KeyType, PtrType, BucketType, HashType, \
 
 HASH_TABLE_PROP(HashType, kNumBuckets);
 HASH_TABLE_PROP(bool, SupportsConstantOrderErase);
+HASH_TABLE_PROP(bool, SupportsConstantOrderSize);
 HASH_TABLE_PROP(bool, IsAssociative);
 HASH_TABLE_PROP(bool, IsSequenced);
 

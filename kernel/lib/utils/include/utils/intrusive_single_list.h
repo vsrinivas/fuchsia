@@ -215,8 +215,9 @@ public:
     // Singly linked lists do not support constant order erase (erase using an
     // iterator or direct object reference).
     static constexpr bool SupportsConstantOrderErase = false;
+    static constexpr bool SupportsConstantOrderSize = false;
     static constexpr bool IsAssociative = false;
-    static constexpr bool IsSequenced   = true;
+    static constexpr bool IsSequenced = true;
 
     // Default construction gives an empty list.
     constexpr SinglyLinkedList() { }
@@ -513,6 +514,8 @@ private:
 // Explicit declaration of constexpr storage.
 template <typename T, typename NodeTraits>
 constexpr bool SinglyLinkedList<T, NodeTraits>::SupportsConstantOrderErase;
+template <typename T, typename NodeTraits>
+constexpr bool SinglyLinkedList<T, NodeTraits>::SupportsConstantOrderSize;
 template <typename T, typename NodeTraits>
 constexpr bool SinglyLinkedList<T, NodeTraits>::IsAssociative;
 template <typename T, typename NodeTraits>

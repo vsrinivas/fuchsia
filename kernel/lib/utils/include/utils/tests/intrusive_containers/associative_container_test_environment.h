@@ -42,6 +42,14 @@ public:
     static constexpr KeyType      kBannedKeyValue      = 0xF00D;
     static constexpr OtherKeyType kBannedOtherKeyValue = 0xF00D;
 
+    // Utility method for checking the size of the container via either size()
+    // or size_slow(), depending on whether or not the container supports a
+    // constant order size operation.
+    template <typename CType>
+    static size_t Size(const CType& container) {
+        return SizeUtils<CType>::size(container);
+    }
+
     bool Populate(ContainerType& container,
                   PopulateMethod method,
                   RefAction ref_action = RefAction::HoldSome) {
@@ -50,7 +58,7 @@ public:
         EXPECT_EQ(0U, ObjType::live_obj_count(), "");
 
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            EXPECT_EQ(i, container.size_slow(), "");
+            EXPECT_EQ(i, Size(container), "");
 
             // Unless explicitly told to do so, don't hold a reference in the
             // test environment for every 4th object created.  Note, this only
@@ -124,7 +132,7 @@ public:
             }
         }
 
-        EXPECT_EQ(OBJ_COUNT, container.size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container), "");
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
 
         END_TEST;
@@ -213,7 +221,7 @@ public:
             --remaining;
         }
 
-        EXPECT_EQ(remaining, container().size_slow(), "");
+        EXPECT_EQ(remaining, Size(container()), "");
 
         // Erase the remaining odd members.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -227,7 +235,7 @@ public:
             --remaining;
         }
 
-        EXPECT_EQ(0u, container().size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
 
         TestEnvironment<TestEnvTraits>::Reset();
         END_TEST;

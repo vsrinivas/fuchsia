@@ -28,6 +28,14 @@ public:
     using PtrTraits          = typename ContainerType::PtrTraits;
     using RefAction          = typename TestEnvironment<TestEnvTraits>::RefAction;
 
+    // Utility method for checking the size of the container via either size()
+    // or size_slow(), depending on whether or not the container supports a
+    // constant order size operation.
+    template <typename CType>
+    static size_t Size(const CType& container) {
+        return SizeUtils<CType>::size(container);
+    }
+
     bool Populate(ContainerType& container, RefAction ref_action = RefAction::HoldSome) override {
         BEGIN_TEST;
 
@@ -35,7 +43,7 @@ public:
 
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
             size_t ndx = OBJ_COUNT - i - 1;
-            EXPECT_EQ(i, container.size_slow(), "");
+            EXPECT_EQ(i, Size(container), "");
 
             // Unless explicitly told to do so, don't hold a reference in the
             // test environment for every 4th object created.  Note, this only
@@ -76,7 +84,7 @@ public:
             }
         }
 
-        EXPECT_EQ(OBJ_COUNT, container.size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container), "");
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
 
         END_TEST;
@@ -94,7 +102,7 @@ public:
         EXPECT_EQ(0U, ObjType::live_obj_count(), "");
 
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            EXPECT_EQ(i, container().size_slow(), "");
+            EXPECT_EQ(i, Size(container()), "");
 
             PtrType new_object = this->CreateTrackedObject(i, i);
             REQUIRE_NONNULL(new_object, "");
@@ -114,7 +122,7 @@ public:
             }
         }
 
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
 
         size_t i = 0;
@@ -140,7 +148,7 @@ public:
             size_t remaining = OBJ_COUNT - i;
             REQUIRE_TRUE(!container().is_empty(), "");
             EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-            EXPECT_EQ(remaining, container().size_slow(), "");
+            EXPECT_EQ(remaining, Size(container()), "");
 
             {
                 // Pop the item and sanity check it against our tracking.
@@ -155,7 +163,7 @@ public:
 
                 // The container has shrunk, but the object should still be around.
                 EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-                EXPECT_EQ(remaining - 1, container().size_slow(), "");
+                EXPECT_EQ(remaining - 1, Size(container()), "");
             }
 
             // If we were not holding onto the object using the test
@@ -193,7 +201,7 @@ public:
             size_t obj_ndx   = OBJ_COUNT - i - 1;
             REQUIRE_TRUE(!container().is_empty(), "");
             EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-            EXPECT_EQ(remaining, container().size_slow(), "");
+            EXPECT_EQ(remaining, Size(container()), "");
 
             {
                 // Pop the item and sanity check it against our tracking.
@@ -208,7 +216,7 @@ public:
 
                 // The container has shrunk, but the object should still be around.
                 EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-                EXPECT_EQ(remaining - 1, container().size_slow(), "");
+                EXPECT_EQ(remaining - 1, Size(container()), "");
             }
 
             // If we were not holding onto the object using the test
@@ -245,7 +253,7 @@ public:
             REQUIRE_TRUE(!container().is_empty(), "");
             REQUIRE_TRUE(iter != container().end(), "");
             EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-            EXPECT_EQ(remaining, container().size_slow(), "");
+            EXPECT_EQ(remaining, Size(container()), "");
 
             {
                 // Erase the item and sanity check it against our tracking.
@@ -261,7 +269,7 @@ public:
 
                 // The container has shrunk, but the object should still be around.
                 EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-                EXPECT_EQ(remaining - 1, container().size_slow(), "");
+                EXPECT_EQ(remaining - 1, Size(container()), "");
             }
 
             // If we were not holding onto the object using the test
@@ -280,7 +288,7 @@ public:
         // Iterator should now be one away from the end, and there should be one
         // object left
         EXPECT_EQ(1u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(1u, container().size_slow(), "");
+        EXPECT_EQ(1u, Size(container()), "");
         EXPECT_TRUE(iter != container().end(), "");
         iter++;
         EXPECT_TRUE(iter == container().end(), "");
@@ -292,7 +300,7 @@ public:
     bool DoInsertAfter(IterType&& iter, size_t pos) {
         BEGIN_TEST;
 
-        EXPECT_EQ(ObjType::live_obj_count(), container().size_slow(), "");
+        EXPECT_EQ(ObjType::live_obj_count(), Size(container()), "");
         EXPECT_TRUE(iter != container().end(), "");
 
         size_t orig_container_len = ObjType::live_obj_count();
@@ -319,7 +327,7 @@ public:
 
         // List and number of live object should have grown.
         EXPECT_EQ(orig_container_len + 1, ObjType::live_obj_count(), "");
-        EXPECT_EQ(orig_container_len + 1, container().size_slow(), "");
+        EXPECT_EQ(orig_container_len + 1, Size(container()), "");
 
         // The iterator should not have moved yet.
         EXPECT_TRUE(iter != container().end(), "");
@@ -335,7 +343,7 @@ public:
         // In order to insert_after, we need at least one object already in the
         // container.  Use push_front to make one.
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0U, container().size_slow(), "");
+        EXPECT_EQ(0U, Size(container()), "");
         EXPECT_TRUE(container().is_empty(), "");
         container().push_front(utils::move(this->CreateTrackedObject(0, 0, true)));
 
@@ -377,7 +385,7 @@ public:
         // Check to make sure the container has the expected number of elements, and
         // that they are in the proper order.
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         size_t i = 0;
         for (const auto& obj : container()) {
@@ -394,7 +402,7 @@ public:
     bool DoInsert(TargetType&& target, size_t pos) {
         BEGIN_TEST;
 
-        EXPECT_EQ(ObjType::live_obj_count(), container().size_slow(), "");
+        EXPECT_EQ(ObjType::live_obj_count(), Size(container()), "");
         size_t orig_container_len = ObjType::live_obj_count();
 
         PtrType new_object = this->CreateTrackedObject(pos, pos, true);
@@ -415,7 +423,7 @@ public:
 
         // List and number of live object should have grown.
         EXPECT_EQ(orig_container_len + 1, ObjType::live_obj_count(), "");
-        EXPECT_EQ(orig_container_len + 1, container().size_slow(), "");
+        EXPECT_EQ(orig_container_len + 1, Size(container()), "");
 
         END_TEST;
     }
@@ -424,7 +432,7 @@ public:
         BEGIN_TEST;
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0U, container().size_slow(), "");
+        EXPECT_EQ(0U, Size(container()), "");
 
         static constexpr size_t END_INSERT_COUNT   = 3;
         static constexpr size_t START_INSERT_COUNT = 3;
@@ -469,7 +477,7 @@ public:
         // Check to make sure the container has the expected number of elements, and
         // that they are in the proper order.
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         size_t i = 0;
         for (const auto& obj : container()) {
@@ -487,7 +495,7 @@ public:
         BEGIN_TEST;
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0U, container().size_slow(), "");
+        EXPECT_EQ(0U, Size(container()), "");
 
         static constexpr size_t END_INSERT_COUNT   = 3;
         static constexpr size_t START_INSERT_COUNT = 3;
@@ -524,7 +532,7 @@ public:
         // Check to make sure the container has the expected number of elements,
         // and that they are in the proper order.
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         size_t i = 0;
         for (const auto& obj : container()) {
@@ -572,7 +580,7 @@ public:
 
         // Start by making some objects.
         REQUIRE_TRUE(Populate(container()), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Test iterator
         EXPECT_TRUE(DoSeqIterate(container().begin(),  container().end()), "");
@@ -647,7 +655,7 @@ public:
 
         // Start by making some objects.
         REQUIRE_TRUE(Populate(container()), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Test iterator
         EXPECT_TRUE(DoSeqReverseIterate(container().begin(),  container().end()), "");

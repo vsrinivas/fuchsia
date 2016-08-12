@@ -43,6 +43,22 @@ struct ContainerUtils<ContainerType,
     }
 };
 
+template <typename ContainerType, typename Enable = void>
+struct SizeUtils;
+
+template <typename ContainerType>
+struct SizeUtils<ContainerType,
+                 typename enable_if<ContainerType::SupportsConstantOrderSize == true, void>::type> {
+    static size_t size(const ContainerType& container) { return container.size(); }
+};
+
+template <typename ContainerType>
+struct SizeUtils<ContainerType,
+                 typename enable_if<ContainerType::SupportsConstantOrderSize == false,
+                                    void>::type> {
+    static size_t size(const ContainerType& container) { return container.size_slow(); }
+};
+
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace utils

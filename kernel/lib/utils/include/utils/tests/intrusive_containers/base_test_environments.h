@@ -175,6 +175,14 @@ public:
         return target.IsValid();
     }
 
+    // Utility method for checking the size of the container via either size()
+    // or size_slow(), depending on whether or not the container supports a
+    // constant order size operation.
+    template <typename CType>
+    static size_t Size(const CType& container) {
+        return SizeUtils<CType>::size(container);
+    }
+
     // The default method for populating a container will depend on whether this
     // is a sequence container or an associative container.  Sequenced
     // containers will use an implementation of push_front while associative
@@ -208,7 +216,7 @@ public:
         // should be equal to the number of references being held by the test
         // environment.
         container().clear();
-        EXPECT_EQ(0u, container().size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
         EXPECT_EQ(refs_held(), ObjType::live_obj_count(), "");
 
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -247,7 +255,7 @@ public:
         REQUIRE_TRUE(!container().is_empty(), "");
         REQUIRE_TRUE(ValidTarget(target), "");
         EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-        EXPECT_EQ(remaining, container().size_slow(), "");
+        EXPECT_EQ(remaining, Size(container()), "");
         size_t erased_ndx;
 
         {
@@ -267,7 +275,7 @@ public:
 
             // The container has shrunk, but the object should still be around.
             EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
-            EXPECT_EQ(remaining - 1, container().size_slow(), "");
+            EXPECT_EQ(remaining - 1, Size(container()), "");
         }
 
         // If we were not holding onto the object using the test
@@ -298,7 +306,7 @@ public:
             EXPECT_TRUE(DoErase(container().begin(), i, OBJ_COUNT - i, check_ndx), "");
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0u, container().size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
 
         // Remove all but 2 of the elements from the container by erasing from the middle.
         static_assert(2 < OBJ_COUNT, "OBJ_COUNT too small to run Erase test!");
@@ -320,7 +328,7 @@ public:
 
         // Attempting to erase end() from an empty container should return nullptr.
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0u, container().size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
         EXPECT_NULL(container().erase(container().end()), "");
 
         END_TEST;
@@ -342,7 +350,7 @@ public:
         }
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0u, container().size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
 
         END_TEST;
     }
@@ -360,7 +368,7 @@ public:
         }
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0u, container().size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
 
         // Remove all of the elements from the container by erasing using direct
         // node pointers which should end up always being at the back of the
@@ -373,7 +381,7 @@ public:
         }
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0u, container().size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
 
         // Remove all of the elements from the container by erasing using direct
         // node pointers which should end up always being somewhere in the
@@ -439,7 +447,7 @@ public:
         BEGIN_TEST;
 
         // Both begin and cbegin should both be invalid, and to end/cend
-        REQUIRE_EQ(0u, container().size_slow(), "");
+        REQUIRE_EQ(0u, Size(container()), "");
         EXPECT_FALSE(container().begin().IsValid(), "");
         EXPECT_TRUE (container().begin() == container().end(), "");
 
@@ -472,7 +480,7 @@ public:
 
         // Make some objects.
         REQUIRE_TRUE(Populate(container()), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Both begin and cbegin should both be valid, and not equal to end/cend
         EXPECT_TRUE(container().begin().IsValid(), "");
@@ -571,7 +579,7 @@ public:
 
         // Make sure that backing up from end() for an empty container stays at
         // end.  Check both prefix and postfix decrement operators.
-        REQUIRE_EQ(0u, container().size_slow(), "");
+        REQUIRE_EQ(0u, Size(container()), "");
         auto iter = container().end();
         --iter;
         EXPECT_TRUE(container().end() == iter, "");
@@ -595,7 +603,7 @@ public:
 
         // Making some objects.
         REQUIRE_TRUE(Populate(container()), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Test iterator
         EXPECT_TRUE(DoReverseIterate(container().begin(),  container().end()), "");
@@ -649,7 +657,7 @@ public:
             // Sanity check, swap, then check again.
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
             EXPECT_FALSE(container().is_empty(), "");
-            EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(container()), "");
             EXPECT_TRUE(other_container.is_empty(), "");
 
             for (auto& obj : container()) {
@@ -661,7 +669,7 @@ public:
 
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
             EXPECT_FALSE(other_container.is_empty(), "");
-            EXPECT_EQ(OBJ_COUNT, other_container.size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
             EXPECT_TRUE(container().is_empty(), "");
 
             for (auto& obj : other_container) {
@@ -675,7 +683,7 @@ public:
 
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
             EXPECT_FALSE(container().is_empty(), "");
-            EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(container()), "");
             EXPECT_TRUE(other_container.is_empty(), "");
 
             for (const auto& obj : container())
@@ -703,8 +711,8 @@ public:
 
             // Sanity check
             EXPECT_EQ(OBJ_COUNT + OTHER_COUNT, ObjType::live_obj_count(), "");
-            EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
-            EXPECT_EQ(OTHER_COUNT, other_container.size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(container()), "");
+            EXPECT_EQ(OTHER_COUNT, Size(other_container), "");
 
             // Visit everything in container() once, and everything in
             // other_container twice.
@@ -726,8 +734,8 @@ public:
             container().swap(other_container);
 
             EXPECT_EQ(OBJ_COUNT + OTHER_COUNT, ObjType::live_obj_count(), "");
-            EXPECT_EQ(OBJ_COUNT, other_container.size_slow(), "");
-            EXPECT_EQ(OTHER_COUNT, container().size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
+            EXPECT_EQ(OTHER_COUNT, Size(container()), "");
 
             // Everything in container() should have been visited twice so far,
             // while everything in other_container should have been visited
@@ -739,8 +747,8 @@ public:
             container().swap(other_container);
 
             EXPECT_EQ(OBJ_COUNT + OTHER_COUNT, ObjType::live_obj_count(), "");
-            EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
-            EXPECT_EQ(OTHER_COUNT, other_container.size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(container()), "");
+            EXPECT_EQ(OTHER_COUNT, Size(other_container), "");
 
             for (auto& obj : container())     EXPECT_EQ(1u, obj.visited_count(), "");
             for (auto& obj : other_container) EXPECT_EQ(2u, obj.visited_count(), "");
@@ -770,7 +778,7 @@ public:
         // Populate the internal container.
         REQUIRE_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
         for (auto& obj : container()) {
             REQUIRE_GT(OBJ_COUNT, obj.value(), "");
             EXPECT_EQ(0u, obj.visited_count(), "");
@@ -785,7 +793,7 @@ public:
         ContainerType other_container(utils::move(container()));
 #endif
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, other_container.size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
         EXPECT_TRUE(container().is_empty(), "");
         for (const auto& obj : other_container) {
             REQUIRE_GT(OBJ_COUNT, obj.value(), "");
@@ -810,7 +818,7 @@ public:
 
         // Sanity checks before the assignment
         EXPECT_EQ(OBJ_COUNT + extras_added, ObjType::live_obj_count(), "");
-        EXPECT_EQ(extras_added, container().size_slow(), "");
+        EXPECT_EQ(extras_added, Size(container()), "");
         for (const auto& obj : container()) {
             REQUIRE_GT(EXTRA_COUNT, obj.value(), "");
             EXPECT_EQ(0u, obj.visited_count(), "");
@@ -825,7 +833,7 @@ public:
         // other_container should now be empty, and we should have returned to our
         // starting, post-populated state.
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
         EXPECT_TRUE(other_container.is_empty(), "");
         for (const auto& obj : container()) {
             REQUIRE_GT(OBJ_COUNT, obj.value(), "");
@@ -853,7 +861,7 @@ public:
             // references to anything we add.
             Populate(container, RefAction::HoldNone);
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-            EXPECT_EQ(OBJ_COUNT, container.size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(container), "");
         }  // Let the container go out of scope and clean itself up..
 
         EXPECT_EQ(0U, ObjType::live_obj_count(), "");
@@ -880,8 +888,8 @@ public:
         // The two containers should be the same length, and nothing should have
         // changed about the live object count.
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
-        EXPECT_EQ(OBJ_COUNT, other_container.size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(container()), "");
+        EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
 
         // Make sure that none of the members of container() or other_container
         // have been visited.  Then visit every member of other_container, and
@@ -918,8 +926,8 @@ public:
         container().clear();
 
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(0u, container().size_slow(), "");
-        EXPECT_EQ(OBJ_COUNT, other_container.size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
+        EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
 
         for (auto& obj : other_container)
             EXPECT_EQ(2u, obj.visited_count(), "");
@@ -947,7 +955,7 @@ public:
 
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
             EXPECT_EQ(0u, refs_held(), "");
-            EXPECT_EQ(OBJ_COUNT, other_container.size_slow(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
         }
 
         // Finally, clear() other_container and reset the internal state.  At this
@@ -957,8 +965,8 @@ public:
 
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
         EXPECT_EQ(0u, refs_held(), "");
-        EXPECT_EQ(0u, container().size_slow(), "");
-        EXPECT_EQ(0u, other_container.size_slow(), "");
+        EXPECT_EQ(0u, Size(container()), "");
+        EXPECT_EQ(0u, Size(other_container), "");
 
         END_TEST;
     }
@@ -980,7 +988,7 @@ public:
         }
 
         EXPECT_EQ(EVEN_OBJ_COUNT, even_erased, "");
-        EXPECT_EQ(OBJ_COUNT, even_erased + container().size_slow(), "");
+        EXPECT_EQ(OBJ_COUNT, even_erased + Size(container()), "");
         for (const auto& obj : container())
             EXPECT_TRUE(obj.value() & 1, "");
 

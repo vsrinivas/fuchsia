@@ -85,8 +85,9 @@ public:
     // Doubly linked lists support constant order erase (erase using an iterator
     // or direct object reference).
     static constexpr bool SupportsConstantOrderErase = true;
+    static constexpr bool SupportsConstantOrderSize = false;
     static constexpr bool IsAssociative = false;
-    static constexpr bool IsSequenced   = true;
+    static constexpr bool IsSequenced = true;
 
     // Default construction gives an empty list.
     constexpr DoublyLinkedList() { }
@@ -495,6 +496,8 @@ private:
 // Explicit declaration of constexpr storage.
 template <typename T, typename NodeTraits>
 constexpr bool DoublyLinkedList<T, NodeTraits>::SupportsConstantOrderErase;
+template <typename T, typename NodeTraits>
+constexpr bool DoublyLinkedList<T, NodeTraits>::SupportsConstantOrderSize;
 template <typename T, typename NodeTraits>
 constexpr bool DoublyLinkedList<T, NodeTraits>::IsAssociative;
 template <typename T, typename NodeTraits>
