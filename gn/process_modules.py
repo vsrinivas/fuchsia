@@ -50,7 +50,8 @@ def resolve_imports(import_queue, build_root):
                         import_queue.append(i)
                         imported.add(i)
             except Exception as e:
-                print "Failed to parse config %s, error %s" % (config_path, str(e))
+                sys.stderr.write("Failed to parse config %s, error %s\n" % (config_path, str(e)))
+                return None
     return amalgamation
 
 
@@ -65,8 +66,10 @@ def main():
     args = parser.parse_args()
 
     amalgamation = resolve_imports(args.modules.split(","), args.build_root)
-    mkbootfs_dir = os.path.join(paths.SCRIPT_DIR, "mkbootfs")
+    if not amalgamation:
+        return 1
 
+    mkbootfs_dir = os.path.join(paths.SCRIPT_DIR, "mkbootfs")
     manifest_dir = os.path.dirname(args.manifest)
     if not os.path.exists(manifest_dir):
         os.makedirs(manifest_dir)
@@ -91,7 +94,8 @@ def main():
             for path in amalgamation.config_paths:
                 f.write(" " + path)
 
-    print "\n".join(amalgamation.labels)
+    sys.stdout.write("\n".join(amalgamation.labels))
+    sys.stdout.write("\n")
     return 0
 
 if __name__ == "__main__":
