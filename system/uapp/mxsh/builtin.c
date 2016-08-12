@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,7 +97,6 @@ static const char* modestr(uint32_t mode) {
         return "?";
     }
 }
-
 
 static int mxc_ls(int argc, char** argv) {
     const char* dirn;
@@ -278,9 +278,15 @@ static int mxc_runtests(int argc, char** argv) {
     }
 
     struct dirent* de;
+    struct stat stat_buf;
     while ((de = readdir(dir)) != NULL) {
-        total_count++;
+        char name[11 + NAME_MAX + 1];
+        snprintf(name, sizeof(name), "/boot/test/%s", de->d_name);
+        if (stat(name, &stat_buf) != 0 || !S_ISREG(stat_buf.st_mode)) {
+            continue;
+        }
 
+        total_count++;
         if (verbosity) {
             printf(
                 "\n------------------------------------------------\n"
@@ -290,8 +296,6 @@ static int mxc_runtests(int argc, char** argv) {
 
         char opts[] = {'v','=', verbosity + '0', 0};
 
-        char name[4096];
-        snprintf(name, sizeof(name), "/boot/test/%s", de->d_name);
         const char* argv[] = {name, opts};
         mx_handle_t handle = launchpad_launch_mxio(name, 2, argv);
         if (handle < 0) {
