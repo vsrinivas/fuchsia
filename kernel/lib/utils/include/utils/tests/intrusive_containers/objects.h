@@ -19,7 +19,7 @@ namespace intrusive_containers {
 // many of the object are currently alive.
 class TestObjBase {
 public:
-    TestObjBase()  { ++live_obj_count_; }
+    explicit TestObjBase(size_t) { ++live_obj_count_; }
     ~TestObjBase() { --live_obj_count_; }
 
     static size_t live_obj_count() { return live_obj_count_; }
@@ -34,11 +34,15 @@ private:
 template <typename KeyType>
 class KeyedTestObjBase : public TestObjBase {
 public:
+    explicit KeyedTestObjBase(size_t val)
+        : TestObjBase(val),
+          key_(static_cast<KeyType>(val)) { }
+
     KeyType GetKey() const { return key_; }
     void SetKey(KeyType key) { key_ = key; }
 
 private:
-    KeyType key_ = 0;
+    KeyType key_;
 };
 
 // The base class for hash-able test objects.  Implements a default hash
@@ -46,6 +50,8 @@ private:
 template <typename KeyType, typename HashType, HashType kNumBuckets>
 class HashedTestObjBase : public KeyedTestObjBase<KeyType>  {
 public:
+    explicit HashedTestObjBase(size_t val) : KeyedTestObjBase<KeyType>(val) { }
+
     static HashType GetHash(const KeyType& key) {
         // Our simple hash function just multiplies by a big prime and mods by
         // the number of buckets.
@@ -70,7 +76,9 @@ public:
     using ContainerStateType = typename ContainerTraits::ContainerStateType;
     using PtrTraits          = typename ContainerStateType::PtrTraits;
 
-    explicit TestObj(size_t val) : val_(val) { }
+    explicit TestObj(size_t val)
+        : _ContainerTraits::TestObjBaseType(val),
+          val_(val) { }
 
     size_t value() const { return val_; }
     const void* raw_ptr() const { return this; }

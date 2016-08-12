@@ -636,7 +636,7 @@ public:
             REQUIRE_TRUE(Populate(container()), ""); // Fill the internal container with stuff.
 
             static constexpr size_t OTHER_COUNT = 5;
-            static constexpr size_t OTHER_START = 50000;
+            static constexpr size_t OTHER_START = 10000;
             ObjType* raw_ptrs[OTHER_COUNT];
 
             for (size_t i = 0; i < OTHER_COUNT; ++i) {
@@ -958,7 +958,7 @@ public:
                     return (obj.value() == i);
                 });
 
-            EXPECT_NONNULL(ptr, "");
+            REQUIRE_NONNULL(ptr, "");
             EXPECT_EQ(0u, ptr->visited_count(), "");
             ptr->Visit();
         }
