@@ -60,8 +60,9 @@ $(MODULE_LIBNAME).abi.h: $(MODULE_LIBNAME).so scripts/shlib-symbols
 	$(NOECHO)scripts/shlib-symbols -z '$(NM)' $< > $@
 
 $(MODULE_LIBNAME).abi.o: $(MODULE_LIBNAME).abi.h scripts/dso-abi.h
-	$(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(ARCH_CFLAGS) \
-	      -c -include scripts/dso-abi.h -xassembler-with-cpp $< -o $@
+	$(NOECHO)$(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) \
+		       $(ARCH_CFLAGS) -c -include scripts/dso-abi.h \
+		       -xassembler-with-cpp $< -o $@
 
 ALLUSER_LIBS += $(MODULE)
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so.abi
