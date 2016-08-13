@@ -9,6 +9,7 @@
 #include "magma_util/platform_device.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
+#include "register_io.h"
 
 class MsdIntelDevice : public msd_device {
 public:
@@ -30,13 +31,17 @@ public:
 private:
     MsdIntelDevice();
 
+    RegisterIo* register_io() { return register_io_.get(); }
+
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
+    std::shared_ptr<RegisterIo> register_io_;
 
     friend class MsdIntelDriver;
+    friend class TestMsdIntelDevice;
 };
 
 #endif // MSD_DEVICE_H

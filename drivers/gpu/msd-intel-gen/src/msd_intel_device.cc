@@ -5,7 +5,6 @@
 #include "msd_intel_device.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include <errno.h>
 
 MsdIntelDevice::MsdIntelDevice() { magic_ = kMagic; }
 
@@ -18,9 +17,18 @@ bool MsdIntelDevice::Init(void* device_handle)
 {
     DASSERT(!platform_device_);
 
+    DLOG("Init device_handle %p", device_handle);
+
     platform_device_ = magma::PlatformDevice::Create(device_handle);
     if (!platform_device_)
         return DRETF(false, "failed to create platform device");
+
+    std::unique_ptr<magma::PlatformMmio> mmio(
+        platform_device_->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE));
+    if (!mmio)
+        return DRETF(false, "failed to map pci bar 0");
+
+    register_io_ = std::shared_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
 
     return true;
 }
