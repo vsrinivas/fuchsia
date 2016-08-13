@@ -55,6 +55,7 @@ struct TestThunks {
     MAKE_TEST_THUNK(InsertByKey);
     MAKE_TEST_THUNK(FindByKey);
     MAKE_TEST_THUNK(EraseByKey);
+    MAKE_TEST_THUNK(InsertOrFind);
 };
 #undef MAKE_TEST_THUNK
 

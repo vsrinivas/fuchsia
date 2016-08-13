@@ -170,7 +170,7 @@ public:
     // Utility methods used to check if the target of an Erase operation is
     // valid, whether the target of the operation is expressed as an iterator, a
     // key or as an object pointer.
-    bool ValidEraseTarget(size_t key)      { return container().find(key) != nullptr; }
+    bool ValidEraseTarget(size_t key)      { return container().find(key).IsValid(); }
     bool ValidEraseTarget(ObjType& target) { return NodeTraits::node_state(target).InContainer(); }
     bool ValidEraseTarget(typename ContainerType::iterator& target) {
         return target.IsValid() && NodeTraits::node_state(*target).InContainer();
@@ -1018,14 +1018,14 @@ public:
 
         // Find all of the members which should be in the container.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            const auto& ptr = container().find_if(
+            auto iter = container().find_if(
                 [i](const ObjType& obj) -> bool {
                     return (obj.value() == i);
                 });
 
-            REQUIRE_NONNULL(ptr, "");
-            EXPECT_EQ(0u, ptr->visited_count(), "");
-            ptr->Visit();
+            REQUIRE_TRUE(iter.IsValid(), "");
+            EXPECT_EQ(0u, iter->visited_count(), "");
+            iter->Visit();
         }
 
         // Every member should have been visited once.
@@ -1037,16 +1037,16 @@ public:
         // Count all of the odd members.
         size_t total_found = 0;
         while (true) {
-            const auto& ptr = container().find_if(
+            auto iter = container().find_if(
                 [](const ObjType& obj) -> bool {
                     return (obj.value() & 1) && !obj.visited_count();
                 });
 
-            if (!ptr)
+            if (!iter.IsValid())
                 break;
 
             ++total_found;
-            ptr->Visit();
+            iter->Visit();
         }
         EXPECT_EQ(ODD_OBJ_COUNT, total_found, "");
 
@@ -1056,11 +1056,11 @@ public:
             EXPECT_EQ(obj.value() & 1, obj.visited_count(), "");
 
         // Fail to find a member which should not be in the container.
-        const auto& ptr = container().find_if(
+        auto iter = container().find_if(
             [](const ObjType& obj) -> bool {
                 return (obj.value() == OBJ_COUNT);
             });
-        EXPECT_NULL(ptr, "");
+        EXPECT_FALSE(iter.IsValid(), "");
 
         END_TEST;
     }

@@ -202,11 +202,12 @@ private:
 
 public:
     // Aliases used to reduce verbosity and expose types/traits to tests
-    using PtrTraits  = internal::ContainerPtrTraits<T>;
-    using NodeTraits = _NodeTraits;
-    using PtrType    = typename PtrTraits::PtrType;
-    using RawPtrType = typename PtrTraits::RawPtrType;
-    using ValueType  = typename PtrTraits::ValueType;
+    using PtrTraits     = internal::ContainerPtrTraits<T>;
+    using NodeTraits    = _NodeTraits;
+    using PtrType       = typename PtrTraits::PtrType;
+    using RawPtrType    = typename PtrTraits::RawPtrType;
+    using ValueType     = typename PtrTraits::ValueType;
+    using ContainerType = SinglyLinkedList<T, NodeTraits>;
 
     // Declarations of the standard iterator types.
     using iterator       = iterator_impl<iterator_traits>;
@@ -402,31 +403,22 @@ public:
     // find_if
     //
     // Find the first member of the list which satisfies the predicate given by
-    // 'fn' and return a const& to the PtrType in the list which refers to it.
-    // Return nullptr if no member satisfies the predicate.
+    // 'fn' and return an iterator in the list which refers to it.  Return end()
+    // if no member satisfies the predicate.
     template <typename UnaryFn>
-    const PtrType& find_if(UnaryFn fn) {
-        using ConstRefType = typename PtrTraits::ConstRefType;
-        using RefType      = typename PtrTraits::RefType;
-
-        const PtrType* check_me = &head_;
-        while (!PtrTraits::IsSentinel(*check_me)) {
-            DEBUG_ASSERT(*check_me != nullptr);
-            ConstRefType ref = **check_me;
-
-            if (fn(ref))
-                return *check_me;
-
-            // Note : there is a small amount of evil at work here (the
-            // const_cast).  It should be safe, however, as we will not modify
-            // the node state.  We just need it to get a const& to the managed
-            // pointer type which points to the node we are looking for.
-            auto& ns = NodeTraits::node_state(const_cast<RefType>(ref));
-            check_me = &ns.next_;
+    const_iterator find_if(UnaryFn fn) const {
+        for (auto iter = begin(); iter.IsValid(); ++iter) {
+            if (fn(*iter))
+                return iter;
         }
 
-        static PtrType null_ptr(nullptr);
-        return null_ptr;
+        return end();
+    }
+
+    template <typename UnaryFn>
+    iterator find_if(UnaryFn fn) {
+        const_iterator citer = const_cast<const ContainerType*>(this)->find_if(fn);
+        return iterator(citer.node_);
     }
 
 private:
@@ -475,11 +467,7 @@ private:
             return ret;
         }
 
-        typename PtrTraits::PtrType CopyPointer() {
-            DEBUG_ASSERT(IsValid());
-            return PtrTraits::Copy(node_);
-        }
-
+        typename PtrTraits::PtrType CopyPointer() { return PtrTraits::Copy(node_); }
         typename IterTraits::RefType operator*() const {
             DEBUG_ASSERT(IsValid());
             return *node_;

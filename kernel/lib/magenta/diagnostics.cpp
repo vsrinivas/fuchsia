@@ -125,16 +125,16 @@ void DumpProcessHandles(mx_koid_t id) {
     {
         AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
 
-        ProcessDispatcher* process =
+        auto process_iter =
             ProcessDispatcher::global_process_list_.find_if([id] (const ProcessDispatcher& pd) {
                 return (id == pd.get_koid());
         });
 
-        if (!process) {
+        if (!process_iter.IsValid()) {
             printf("process %lld not found\n", id);
             return;
         }
-        pd = utils::RefPtr<ProcessDispatcher>(process);
+        pd = utils::RefPtr<ProcessDispatcher>(process_iter.CopyPointer());
     }
 
     printf("process [%llu] handles :\n", id);

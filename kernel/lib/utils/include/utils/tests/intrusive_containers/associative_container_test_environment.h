@@ -30,6 +30,7 @@ public:
     using PtrTraits            = typename ContainerType::PtrTraits;
     using SpBase               = TestEnvironmentSpecialized<TestEnvTraits>;
     using RefAction            = typename TestEnvironment<TestEnvTraits>::RefAction;
+    using KeyTraits            = typename ContainerType::KeyTraits;
     using KeyType              = typename ContainerTraits::KeyType;
     using OtherKeyType         = typename OtherContainerType::KeyType;
 
@@ -48,6 +49,48 @@ public:
     template <typename CType>
     static size_t Size(const CType& container) {
         return SizeUtils<CType>::size(container);
+    }
+
+   bool SetTestObjKeys(const PtrType& test_obj, PopulateMethod method) {
+        BEGIN_TEST;
+
+        REQUIRE_NONNULL(test_obj, "");
+        REQUIRE_LT(test_obj->value(), OBJ_COUNT, "");
+
+        // Assign a key to the object based on the chosen populate method.
+        KeyType key = 0;
+        OtherKeyType other_key = 0;
+
+        switch (method) {
+            case PopulateMethod::RandomKey:
+                do {
+                    key = key_lfsr_.GetNext();
+                } while (key == kBannedKeyValue);
+
+                do {
+                    other_key = other_key_lfsr_.GetNext();
+                } while (other_key == kBannedOtherKeyValue);
+                break;
+
+            case PopulateMethod::AscendingKey:
+                key = test_obj->value();
+                other_key = static_cast<OtherKeyType>(key + OBJ_COUNT);
+                break;
+
+            case PopulateMethod::DescendingKey:
+                key = OBJ_COUNT - test_obj->value() - 1;
+                other_key = static_cast<OtherKeyType>(key + OBJ_COUNT);
+                break;
+        }
+
+        DEBUG_ASSERT(key != kBannedKeyValue);
+        DEBUG_ASSERT(other_key != kBannedOtherKeyValue);
+
+        // Set the primary key on the object.  Offset the "other" key by OBJ_COUNT
+        test_obj->SetKey(key);
+        OtherContainerTraits::SetKey(*test_obj, other_key);
+
+        END_TEST;
     }
 
     bool Populate(ContainerType& container,
@@ -80,38 +123,7 @@ public:
             REQUIRE_NONNULL(new_object, "");
             EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
 
-            // Assign a key to the object based on the chosen populate method.
-            KeyType key = 0;
-            OtherKeyType other_key = 0;
-
-            switch (method) {
-                case PopulateMethod::RandomKey:
-                    do {
-                        key = key_lfsr_.GetNext();
-                    } while (key == kBannedKeyValue);
-
-                    do {
-                        other_key = other_key_lfsr_.GetNext();
-                    } while (other_key == kBannedOtherKeyValue);
-                    break;
-
-                case PopulateMethod::AscendingKey:
-                    key = i;
-                    other_key = static_cast<OtherKeyType>(key + OBJ_COUNT);
-                    break;
-
-                case PopulateMethod::DescendingKey:
-                    key = OBJ_COUNT - i - 1;
-                    other_key = static_cast<OtherKeyType>(key + OBJ_COUNT);
-                    break;
-            }
-
-            DEBUG_ASSERT(key != kBannedKeyValue);
-            DEBUG_ASSERT(other_key != kBannedOtherKeyValue);
-
-            // Set the primary key on the object.  Offset the "other" key by OBJ_COUNT
-            new_object->SetKey(key);
-            OtherContainerTraits::SetKey(*new_object, other_key);
+            REQUIRE_TRUE(SetTestObjKeys(new_object, method), "");
 
             // Alternate whether or not we move the pointer, or "transfer" it.
             // Transfering means different things for different pointer types.
@@ -173,16 +185,16 @@ public:
             KeyType key   = objects()[i]->GetKey();
             size_t  value = objects()[i]->value();
 
-            const auto& ptr = container().find(key);
+            auto iter = container().find(key);
 
-            REQUIRE_NONNULL(ptr, "");
-            EXPECT_EQ(key, ptr->GetKey(), "");
-            EXPECT_EQ(value, ptr->value(), "");
+            REQUIRE_TRUE(iter.IsValid(), "");
+            EXPECT_EQ(key, iter->GetKey(), "");
+            EXPECT_EQ(value, iter->value(), "");
         }
 
         // Fail to look up something which should not be in the collection.
-        const auto& ptr = container().find(kBannedKeyValue);
-        EXPECT_NULL(ptr, "");
+        auto iter = container().find(kBannedKeyValue);
+        EXPECT_FALSE(iter.IsValid(), "");
 
         TestEnvironment<TestEnvTraits>::Reset();
         END_TEST;
@@ -247,6 +259,135 @@ public:
         EXPECT_TRUE(DoEraseByKey<PopulateMethod::AscendingKey>(), "");
         EXPECT_TRUE(DoEraseByKey<PopulateMethod::DescendingKey>(), "");
         EXPECT_TRUE(DoEraseByKey<PopulateMethod::RandomKey>(), "");
+
+        END_TEST;
+    }
+
+    template <PopulateMethod populate_method>
+    bool DoInsertOrFind() {
+        BEGIN_TEST;
+
+        for (uint pass_iterator = 0; pass_iterator < 2; ++pass_iterator) {
+            for (size_t i = 0; i < OBJ_COUNT; ++i) {
+                // Create a new tracked object.
+                PtrType new_object = this->CreateTrackedObject(i, i, true);
+                REQUIRE_NONNULL(new_object, "");
+                EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
+                REQUIRE_TRUE(SetTestObjKeys(new_object, populate_method), "");
+
+                // Insert the object into the container using insert_or_find.  There
+                // should be no collision.  Exercise both the move and the copy
+                // version of insert_or_find.
+                typename ContainerType::iterator iter;
+                bool success;
+
+                if (i & 1) {
+#if TEST_WILL_NOT_COMPILE || 0
+                    success = container().insert_or_find(
+                            new_object,
+                            pass_iterator ? &iter : nullptr);
+#else
+                    success = container().insert_or_find(
+                            TestEnvTraits::Transfer(new_object),
+                            pass_iterator ? &iter : nullptr);
+#endif
+                    EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
+                } else {
+                    success = container().insert_or_find(
+                            utils::move(new_object),
+                            pass_iterator ? &iter : nullptr);
+
+                    EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
+                }
+
+                EXPECT_TRUE(success, "");
+
+                // If we passed an iterator to the insert_or_find operation, it
+                // should point to the newly inserted object.
+                if (pass_iterator) {
+                    REQUIRE_TRUE(iter.IsValid(), "");
+                    EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
+                }
+            }
+
+            // If we have not tested passing a non-null iterator yet, reset the
+            // environment and do the test again.
+            if (!pass_iterator)
+                TestEnvironment<TestEnvTraits>::Reset();
+        }
+
+        // Now go over the (populated) container and attempt to insert new
+        // objects which have the same keys as existing objects.  Each of these
+        // attempts should fail, but should find the objects which were inserted
+        // previously.
+        for (uint pass_iterator = 0; pass_iterator < 2; ++pass_iterator) {
+            for (size_t i = 0; i < OBJ_COUNT; ++i) {
+                REQUIRE_NONNULL(objects()[i], "");
+
+                // Create a new non-tracked object; assign it the same key as
+                // the existing object.
+                PtrType new_object = TestEnvTraits::CreateObject(i);
+                REQUIRE_NONNULL(new_object, "");
+                EXPECT_NEQ(new_object->raw_ptr(), objects()[i], "");
+                new_object->SetKey(KeyTraits::GetKey(*objects()[i]));
+
+                // Attempt (but fail) to insert the object into the container
+                // using insert_or_find.  There should be no collision.
+                // Exercise both the move and the copy version of
+                // insert_or_find.
+                typename ContainerType::iterator iter;
+                bool success;
+
+                if (i & 1) {
+#if TEST_WILL_NOT_COMPILE || 0
+                    success = container().insert_or_find(
+                            new_object,
+                            pass_iterator ? &iter : nullptr);
+#else
+                    success = container().insert_or_find(
+                            TestEnvTraits::Transfer(new_object),
+                            pass_iterator ? &iter : nullptr);
+#endif
+                } else {
+                    success = container().insert_or_find(
+                            utils::move(new_object),
+                            pass_iterator ? &iter : nullptr);
+                }
+
+                // The object should not have been inserted.  If an attempt was
+                // made to move the pointer into the collection, it should have
+                // failed and we should still own the pointer.
+                EXPECT_FALSE(success, "");
+                REQUIRE_NONNULL(new_object, "");
+
+                // If we passed an iterator to the insert_or_find operation, it
+                // should point to the object we collided with.
+                if (pass_iterator) {
+                    EXPECT_TRUE(iter.IsValid(), "");
+                    if (iter.IsValid(), "") {
+                        EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
+                        EXPECT_NEQ(PtrTraits::GetRaw(new_object), iter->raw_ptr(), "");
+                        EXPECT_TRUE(KeyTraits::EqualTo(KeyTraits::GetKey(*iter),
+                                                       KeyTraits::GetKey(*new_object)), "");
+                    }
+                }
+
+                // Release the object we failed to insert.
+                TestEnvTraits::ReleaseObject(new_object);
+            }
+        }
+
+        TestEnvironment<TestEnvTraits>::Reset();
+
+        END_TEST;
+    }
+
+    bool InsertOrFind() {
+        BEGIN_TEST;
+
+        EXPECT_TRUE(DoInsertOrFind<PopulateMethod::AscendingKey>(), "");
+        EXPECT_TRUE(DoInsertOrFind<PopulateMethod::DescendingKey>(), "");
+        EXPECT_TRUE(DoInsertOrFind<PopulateMethod::RandomKey>(), "");
 
         END_TEST;
     }

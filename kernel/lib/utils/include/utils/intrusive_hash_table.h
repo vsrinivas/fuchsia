@@ -162,16 +162,69 @@ public:
     void insert(const PtrType& ptr) { insert(PtrType(ptr)); }
     void insert(PtrType&& ptr) {
         DEBUG_ASSERT(ptr != nullptr);
-        GetBucket(*ptr).push_front(utils::move(ptr));
+        KeyType key = KeyTraits::GetKey(*ptr);
+        BucketType& bucket = GetBucket(key);
+
+        // Duplicate keys are disallowed.  Debug assert if someone tries to to
+        // insert an element with a duplicate key.  If the user thought that
+        // there might be a duplicate key in the HashTable already, he/she
+        // should have used insert_or_find() instead.
+        DEBUG_ASSERT(FindInBucket(bucket, key).IsValid() == false);
+
+        bucket.push_front(utils::move(ptr));
         ++count_;
     }
 
-    const PtrType& find(const KeyType& key) {
-        BucketType& bucket = GetBucket(key);
-        return bucket.find_if(
-            [key](const ValueType& other) -> bool {
-                return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
-            });
+    // insert_or_find
+    //
+    // Insert the element pointed to by ptr if it is not already in the
+    // HashTable, or find the element that the ptr collided with instead.
+    //
+    // 'iter' is an optional out parameter pointer to an iterator which
+    // will reference either the newly inserted item, or the item whose key
+    // collided with ptr.
+    //
+    // insert_or_find returns true if there was no collision and the item was
+    // successfully inserted, otherwise it returns false.
+    //
+    bool insert_or_find(const PtrType& ptr, iterator* iter = nullptr) {
+        return insert_or_find(PtrType(ptr), iter);
+    }
+
+    bool insert_or_find(PtrType&& ptr, iterator* iter = nullptr) {
+        DEBUG_ASSERT(ptr != nullptr);
+        KeyType  key         = KeyTraits::GetKey(*ptr);
+        HashType ndx         = GetHash(key);
+        auto&    bucket      = buckets_[ndx];
+        auto     bucket_iter = FindInBucket(bucket, key);
+
+        if (bucket_iter.IsValid()) {
+            if (iter) *iter = iterator(this, ndx, bucket_iter);
+            return false;
+        }
+
+        bucket.push_front(utils::move(ptr));
+        ++count_;
+        if (iter) *iter = iterator(this, ndx, bucket.begin());
+        return true;
+    }
+
+    iterator find(const KeyType& key) {
+        HashType ndx         = GetHash(key);
+        auto&    bucket      = buckets_[ndx];
+        auto     bucket_iter = FindInBucket(bucket, key);
+
+        return bucket_iter.IsValid() ? iterator(this, ndx, bucket_iter)
+                                     : iterator(this, iterator::END);
+    }
+
+    const_iterator find(const KeyType& key) const {
+        HashType    ndx         = GetHash(key);
+        const auto& bucket      = buckets_[ndx];
+        auto        bucket_iter = FindInBucket(bucket, key);
+
+        return bucket_iter.IsValid() ? const_iterator(this, ndx, bucket_iter)
+                                     : const_iterator(this, const_iterator::END);
     }
 
     PtrType erase(const KeyType& key) {
@@ -232,24 +285,24 @@ public:
     // find_if
     //
     // Find the first member of the hash table which satisfies the predicate
-    // given by 'fn' and return a const& to the PtrType in the hash table which
-    // refers to it.  Return nullptr if no member satisfies the predicate.
+    // given by 'fn' and return an iterator to it.  Return end() if no member
+    // satisfies the predicate.
     template <typename UnaryFn>
-    const PtrType& find_if(UnaryFn fn) {
-        static PtrType null_ptr;
-        if (is_empty())
-            return null_ptr;
+    const_iterator find_if(UnaryFn fn) const {
+        for (auto iter = begin(); iter.IsValid(); ++iter)
+            if (fn(*iter))
+                return iter;
 
-        for (HashType i = 0; i < kNumBuckets; ++i) {
-            auto& bucket = buckets_[i];
-            if (!bucket.is_empty()) {
-                const PtrType& ret = bucket.find_if(fn);
-                if (ret != nullptr)
-                    return ret;
-            }
-        }
+        return end();
+    }
 
-        return null_ptr;
+    template <typename UnaryFn>
+    iterator find_if(UnaryFn fn) {
+        for (auto iter = begin(); iter.IsValid(); ++iter)
+            if (fn(*iter))
+                return iter;
+
+        return end();
     }
 
 private:
@@ -258,8 +311,6 @@ private:
         using RefType    = typename PtrTraits::RefType;
         using RawPtrType = typename PtrTraits::RawPtrType;
         using IterType   = typename BucketType::iterator;
-        using HTPtrType  = HashTable<KeyType, PtrType, BucketType,
-                                     HashType, kNumBuckets, KeyTraits, HashTraits>*;
 
         static IterType BucketBegin(BucketType& bucket) { return bucket.begin(); }
         static IterType BucketEnd  (BucketType& bucket) { return bucket.end(); }
@@ -270,8 +321,6 @@ private:
         using RefType    = typename PtrTraits::ConstRefType;
         using RawPtrType = typename PtrTraits::ConstRawPtrType;
         using IterType   = typename BucketType::const_iterator;
-        using HTPtrType  = const HashTable<KeyType, PtrType, BucketType,
-                                           HashType, kNumBuckets, KeyTraits, HashTraits>*;
 
         static IterType BucketBegin(const BucketType& bucket) { return bucket.cbegin(); }
         static IterType BucketEnd  (const BucketType& bucket) { return bucket.cend(); }
@@ -329,7 +378,7 @@ private:
             // buckets to see if they contain any nodes.
             while (bucket_ndx_) {
                 --bucket_ndx_;
-                auto& bucket = hash_table_->buckets_[bucket_ndx_];
+                auto& bucket = GetBucket(bucket_ndx_);
                 if (!bucket.is_empty()) {
                     iter_ = --IterTraits::BucketEnd(bucket);
                     DEBUG_ASSERT(iter_.IsValid());
@@ -340,7 +389,7 @@ private:
             // Looks like we have backed up past the beginning.  Update the
             // bookkeeping to point at the end of the last bucket.
             bucket_ndx_ = kNumBuckets - 1;
-            iter_ = IterTraits::BucketEnd(hash_table_->buckets_[bucket_ndx_]);
+            iter_ = IterTraits::BucketEnd(GetBucket(bucket_ndx_));
 
             return *this;
         }
@@ -363,30 +412,34 @@ private:
         typename IterTraits::RawPtrType operator->() const { return iter_.operator->(); }
 
     private:
-        friend class HashTable<KeyType, PtrType, BucketType,
-                               HashType, kNumBuckets, KeyTraits, HashTraits>;
-        using HTPtrType = typename IterTraits::HTPtrType;
-        using IterType  = typename IterTraits::IterType;
+        using HashTableType = HashTable<KeyType, PtrType, BucketType,
+                                        HashType, kNumBuckets, KeyTraits, HashTraits>;
+        using IterType = typename IterTraits::IterType;
+        friend HashTableType;
 
         enum BeginTag { BEGIN };
         enum EndTag { END };
 
-        iterator_impl(HTPtrType hash_table, BeginTag)
+        iterator_impl(const HashTableType* hash_table, BeginTag)
             : hash_table_(hash_table),
               bucket_ndx_(0),
-              iter_(IterTraits::BucketBegin(hash_table->buckets_[0])) {
+              iter_(IterTraits::BucketBegin(GetBucket(0))) {
             advance_if_invalid_iter();
         }
 
-        iterator_impl(HTPtrType hash_table, EndTag)
+        iterator_impl(const HashTableType* hash_table, EndTag)
             : hash_table_(hash_table),
               bucket_ndx_(kNumBuckets - 1),
-              iter_(IterTraits::BucketEnd(hash_table->buckets_[kNumBuckets - 1])) { }
+              iter_(IterTraits::BucketEnd(GetBucket(kNumBuckets - 1))) { }
 
-        iterator_impl(HTPtrType hash_table, size_t bucket_ndx, IterType iter)
+        iterator_impl(const HashTableType* hash_table, HashType bucket_ndx, const IterType& iter)
             : hash_table_(hash_table),
               bucket_ndx_(bucket_ndx),
               iter_(iter) { }
+
+        BucketType& GetBucket(HashType ndx) {
+            return const_cast<HashTableType*>(hash_table_)->buckets_[ndx];
+        }
 
         void advance_if_invalid_iter() {
             // If the iterator has run off the end of it's current bucket, then
@@ -394,7 +447,7 @@ private:
             if (!iter_.IsValid()) {
                 while (bucket_ndx_ < (kNumBuckets - 1)) {
                     ++bucket_ndx_;
-                    auto& bucket = hash_table_->buckets_[bucket_ndx_];
+                    auto& bucket = GetBucket(bucket_ndx_);
 
                     if (!bucket.is_empty()) {
                         iter_ = IterTraits::BucketBegin(bucket);
@@ -407,8 +460,8 @@ private:
             }
         }
 
-        HTPtrType hash_table_ = nullptr;
-        size_t bucket_ndx_ = 0;
+        const HashTableType* hash_table_ = nullptr;
+        HashType bucket_ndx_ = 0;
         IterType iter_;
     };
 
@@ -419,6 +472,22 @@ private:
             --count_;
 
         return ret;
+    }
+
+    static typename BucketType::iterator FindInBucket(BucketType& bucket,
+                                                      const KeyType& key) {
+        return bucket.find_if(
+            [key](const ValueType& other) -> bool {
+                return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
+            });
+    }
+
+    static typename BucketType::const_iterator FindInBucket(const BucketType& bucket,
+                                                            const KeyType& key) {
+        return bucket.find_if(
+            [key](const ValueType& other) -> bool {
+                return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
+            });
     }
 
     // Iterators need to access our bucket array in order to iterate.

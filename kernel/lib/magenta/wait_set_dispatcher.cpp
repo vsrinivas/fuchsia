@@ -240,11 +240,10 @@ status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* han
     {
         AutoLock lock(&mutex_);
 
-        if (entries_.find(entry->GetKey()) != nullptr)
+        if (!entries_.insert_or_find(utils::move(entry)))
             return ERR_ALREADY_EXISTS;
 
-        entry->Init_NoLock(this, handle);
-        entries_.insert(utils::move(entry));
+        e->Init_NoLock(this, handle);
     }
     // The entry |e| will remain valid since: we'll remain alive (since our caller better have a ref
     // to us) and since e->Init_NoLock() will set the state to ADD_PENDING and RemoveEntry() won't

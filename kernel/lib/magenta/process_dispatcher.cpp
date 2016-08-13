@@ -416,21 +416,18 @@ void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
 utils::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
     LTRACE_ENTRY;
     AutoLock lock(&global_process_list_mutex_);
-    ProcessDispatcher* process =
-        global_process_list_.find_if([koid](const ProcessDispatcher& p) {
-            return p.get_koid() == koid;
-    });
-    return utils::RefPtr<ProcessDispatcher>(process);
+    auto iter = global_process_list_.find_if([koid](const ProcessDispatcher& p) {
+                                                return p.get_koid() == koid;
+                                             });
+    return utils::RefPtr<ProcessDispatcher>(iter.CopyPointer());
 }
 
 utils::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&thread_list_lock_);
-    UserThread* thread =
-        thread_list_.find_if([koid](const UserThread& t) {
-            return t.get_koid() == koid;
-    });
-    return utils::RefPtr<UserThread>(thread);
+
+    auto iter = thread_list_.find_if([koid](const UserThread& t) { return t.get_koid() == koid; });
+    return utils::RefPtr<UserThread>(iter.CopyPointer());
 }
 
 mx_status_t ProcessDispatcher::set_bad_handle_policy(uint32_t new_policy) {

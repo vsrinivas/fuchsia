@@ -133,6 +133,11 @@ struct UnmanagedTestTraits {
         return ac.check() ? r : nullptr;
     }
 
+    static void ReleaseObject(PtrType& ptr) {
+        delete ptr;
+        ptr = nullptr;
+    }
+
     // Unmanaged pointers never get cleared when being moved or transferred.
     static inline PtrType& Transfer(PtrType& ptr)       { return ptr; }
     static bool WasTransferred(const ConstPtrType& ptr) { return ptr != nullptr; }
@@ -152,6 +157,10 @@ struct UniquePtrTestTraits {
         return PtrType(ac.check() ? r : nullptr);
     }
 
+    static void ReleaseObject(PtrType& ptr) {
+        ptr = nullptr;
+    }
+
     // Unique pointers always get cleared when being moved or transferred.
     static inline PtrType&& Transfer(PtrType& ptr)      { return utils::move(ptr); }
     static bool WasTransferred(const ConstPtrType& ptr) { return ptr == nullptr; }
@@ -169,6 +178,10 @@ struct RefPtrTestTraits {
         AllocChecker ac;
         auto r = new (&ac) ObjType(value);
         return AdoptRef(ac.check() ? r : nullptr);
+    }
+
+    static void ReleaseObject(PtrType& ptr) {
+        ptr = nullptr;
     }
 
     // RefCounted pointers do not get cleared when being transferred, but do get

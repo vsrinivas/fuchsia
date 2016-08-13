@@ -33,6 +33,14 @@ struct OtherHashTraits {
         return obj.other_container_state_.key_;
     }
 
+    static bool LessThan(const OtherKeyType& key1, const OtherKeyType& key2) {
+        return key1 <  key2;
+    }
+
+    static bool EqualTo(const OtherKeyType& key1, const OtherKeyType& key2) {
+        return key1 == key2;
+    }
+
     // Hash Traits
     static OtherHashType GetHash(const OtherKeyType& key) {
         return static_cast<OtherHashType>((key * 0xaee58187) % kOtherNumBuckets);
@@ -169,6 +177,10 @@ UNITTEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
 UNITTEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
 UNITTEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
 UNITTEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
+
+UNITTEST("InsertOrFind (unmanaged)",     UMTE::InsertOrFindTest)
+UNITTEST("InsertOrFind (unique)",        UPTE::InsertOrFindTest)
+UNITTEST("InsertOrFind (RefPtr)",        RPTE::InsertOrFindTest)
 UNITTEST_END_TESTCASE(hashtable_dll_tests,
                       "htdll",
                       "Intrusive hash table tests (doubly linked list buckets).",
