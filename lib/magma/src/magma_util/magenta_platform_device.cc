@@ -43,6 +43,8 @@ private:
 std::unique_ptr<PlatformMmio>
 MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePolicy cache_policy)
 {
+    DLOG("CpuMapPciMmio bar %d", pci_bar);
+
     void* protocol;
     mx_status_t status = device_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
     if (status != NO_ERROR)
@@ -59,7 +61,7 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
 
     std::unique_ptr<MagentaPlatformMmio> mmio(new MagentaPlatformMmio(addr, size, handle));
 
-    DLOG("map_mmio bar %d cache_policy %d failed: %d", pci_bar, static_cast<int>(cache_policy),
+    DLOG("map_mmio bar %d cache_policy %d returned: 0x%x", pci_bar, static_cast<int>(cache_policy),
          handle);
 
     return mmio;
@@ -67,6 +69,7 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
 
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
 {
+    DASSERT(device_handle);
     return std::unique_ptr<PlatformDevice>(
         new MagentaPlatformDevice(reinterpret_cast<mx_device_t*>(device_handle)));
 }
