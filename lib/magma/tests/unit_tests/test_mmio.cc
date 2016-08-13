@@ -52,6 +52,30 @@ TEST(MagmaUtil, PlatformMmio)
         return;
     }
 
+    uint32_t pci_bar = 0;
+
+    // Map once
+    auto mmio = platform_device->CpuMapPciMmio(pci_bar, magma::PlatformMmio::CACHE_POLICY_CACHED);
+    EXPECT_NE(mmio, nullptr);
+
+    // Map again same policy
+    auto mmio2 = platform_device->CpuMapPciMmio(pci_bar, magma::PlatformMmio::CACHE_POLICY_CACHED);
+    EXPECT_NE(mmio2, nullptr);
+
+    // Map again different policy
+    auto mmio3 =
+        platform_device->CpuMapPciMmio(pci_bar, magma::PlatformMmio::CACHE_POLICY_UNCACHED);
+    EXPECT_EQ(mmio3, nullptr);
+}
+
+TEST(MagmaUtil, PlatformMmioAccess)
+{
+    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    if (!platform_device) {
+        printf("No platform device\n");
+        return;
+    }
+
     test_mmio(platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_CACHED).get());
     test_mmio(platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED).get());
     test_mmio(
