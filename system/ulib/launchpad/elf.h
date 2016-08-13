@@ -24,6 +24,10 @@ void elf_load_destroy(elf_load_info_t* info);
 mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
                                 char** interp, size_t* interp_len);
 
+// Check if the ELF file has a PT_GNU_STACK header, and return its p_memsz.
+// Returns zero if no header was found.
+size_t elf_load_get_stack_size(elf_load_info_t* info);
+
 // Load the file's segments into the process.
 // If this fails, the state of the process address space is unspecified.
 mx_status_t elf_load_finish(mx_handle_t proc, elf_load_info_t* info,

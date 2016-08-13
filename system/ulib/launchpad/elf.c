@@ -70,3 +70,11 @@ mx_status_t elf_load_finish(mx_handle_t proc, elf_load_info_t* info,
     return elf_load_map_segments(proc, &info->header, info->phdrs, vmo,
                                  base, entry);
 }
+
+size_t elf_load_get_stack_size(elf_load_info_t* info) {
+    for (uint_fast16_t i = 0; i < info->header.e_phnum; ++i) {
+        if (info->phdrs[i].p_type == PT_GNU_STACK)
+            return info->phdrs[i].p_memsz;
+    }
+    return 0;
+}

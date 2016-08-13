@@ -60,7 +60,9 @@ mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd);
 
 // Map in the PT_LOAD segments of the ELF file image found in a VM
-// object.  This does not check the file for a PT_INTERP program
+// object.  If the file has a PT_GNU_STACK program header with a
+// nonzero p_memsz field, this calls launchpad_set_stack_size with
+// that value.  This does not check the file for a PT_INTERP program
 // header.  This consumes the VM object handle on success but not on
 // failure.  If the 'vmo' argument is a negative error code rather
 // than a handle, that result is just returned immediately; so this

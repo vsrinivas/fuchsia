@@ -237,6 +237,12 @@ mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
     return NO_ERROR;
 }
 
+static void check_elf_stack_size(launchpad_t* lp, elf_load_info_t* elf) {
+    size_t elf_stack_size = elf_load_get_stack_size(elf);
+    if (elf_stack_size > 0)
+        launchpad_set_stack_size(lp, elf_stack_size);
+}
+
 mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     if (vmo < 0)
         return vmo;
@@ -247,6 +253,8 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     mx_status_t status = elf_load_start(vmo, &elf);
     if (status == NO_ERROR)
         status = elf_load_finish(lp_proc(lp), elf, vmo, NULL, &lp->entry);
+    if (status == NO_ERROR)
+        check_elf_stack_size(lp, elf);
     elf_load_destroy(elf);
 
     if (status == NO_ERROR) {
@@ -400,6 +408,8 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
                 status = handle_interp(lp, vmo, interp, interp_len);
                 free(interp);
             }
+            if (status == NO_ERROR)
+                check_elf_stack_size(lp, elf);
         }
         elf_load_destroy(elf);
     }
