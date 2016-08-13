@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FTL_FUNCTIONAL_LAMBDA_WRAPPER_H_
-#define LIB_FTL_FUNCTIONAL_LAMBDA_WRAPPER_H_
+#ifndef LIB_FTL_FUNCTIONAL_MAKE_COPYABLE_H_
+#define LIB_FTL_FUNCTIONAL_MAKE_COPYABLE_H_
 
 #include <utility>
 
@@ -14,9 +14,9 @@ namespace ftl {
 namespace internal {
 
 template <typename T>
-class LambdaWrapper {
+class CopyableLambda {
  public:
-  explicit LambdaWrapper(T func)
+  explicit CopyableLambda(T func)
       : impl_(MakeRefCounted<Impl>(std::move(func))) {}
 
   template <typename... ArgType>
@@ -54,10 +54,10 @@ class LambdaWrapper {
 // callers typically erase the type by implicitly converting the return value
 // to an std::function.
 template <typename T>
-internal::LambdaWrapper<T> WrapLambda(T lambda) {
-  return internal::LambdaWrapper<T>(std::move(lambda));
+internal::CopyableLambda<T> MakeCopyable(T lambda) {
+  return internal::CopyableLambda<T>(std::move(lambda));
 }
 
 }  // namespace ftl
 
-#endif  // LIB_FTL_FUNCTIONAL_LAMBDA_WRAPPER_H_
+#endif  // LIB_FTL_FUNCTIONAL_MAKE_COPYABLE_H_
