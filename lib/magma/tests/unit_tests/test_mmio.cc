@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
 #include "magma_util/platform_device.h"
 #include "mock/mock_mmio.h"
-#include "test_platform_device.h"
 #include "gtest/gtest.h"
 
 static void test_mmio(magma::PlatformMmio* mmio)

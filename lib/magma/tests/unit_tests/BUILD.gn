@@ -35,11 +35,11 @@ source_set("magma_util_tests") {
     "test_mmio.cc",
     "test_mutex.cc",
     "test_platform_buffer.cc",
-    "test_platform_device.cc",
     "test_refcounted.cc",
   ]
 
   deps = [
+    "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver:platform_buffer",
     "$magma_build_root/tests/mock:mmio",
