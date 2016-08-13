@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <runtime/tls.h>
 #include <stddef.h>
+#include <string.h>
 #include <sys/mman.h>
 
 #define ROUND(x) (((x) + PAGE_SIZE - 1) & -PAGE_SIZE)
@@ -38,6 +39,10 @@ static int thread_entry(void* arg) {
 
 int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp,
                    void* (*entry)(void*), void* restrict arg) {
+    pthread_attr_t attr = {0};
+    if (attrp)
+        attr = *attrp;
+
     mx_handle_t handle;
 
     mx_tls_root_t* self_tls = mxr_tls_root_get();
@@ -73,8 +78,10 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
         thread->tsd = map + len - __pthread_tsd_size;
     }
 
+    const char* name = attr.__name ? attr.__name : "";
+
     handle = mx_thread_create(thread_entry, &thread->mx_thread_info,
-                              "musl", 5);
+                              name, strlen(name));
     if (handle < 0) {
         __munmap(map, len);
         return handle;

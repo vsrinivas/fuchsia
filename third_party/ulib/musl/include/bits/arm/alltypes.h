@@ -50,6 +50,8 @@ typedef long suseconds_t;
 
 #if defined(__NEED_pthread_attr_t) && !defined(__DEFINED_pthread_attr_t)
 typedef struct {
+    const char* __name;
+    int __c11;
     union {
         int __i[9];
         volatile int __vi[9];
