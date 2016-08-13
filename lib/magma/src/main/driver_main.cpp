@@ -44,6 +44,7 @@ extern "C" {
 
 typedef struct intel_i915_device {
     mx_device_t device;
+    mx_device_t* parent_device;
     void* regs;
     uint64_t regs_size;
     mx_handle_t regs_handle;
@@ -146,7 +147,7 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
 {
-    xprintf("intel_i915_bind start\n");
+    xprintf("intel_i915_bind start mx_device %p\n", dev);
 
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
@@ -230,6 +231,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &intel_i915_display_proto;
+    device->parent_device = dev;
     device_add(&device->device, dev);
 
     xprintf(
@@ -271,17 +273,20 @@ static int magma_hook(void* param)
     if (!dev->magma_driver)
         return ERR_INTERNAL;
 
-    xprintf("Creating device\n");
-    dev->magma_system_device = dev->magma_driver->CreateDevice(dev);
-    if (!dev->magma_system_device)
+    xprintf("Created driver %p\n", dev->magma_driver);
+    dev->magma_system_device = dev->magma_driver->CreateDevice(dev->parent_device);
+    if (!dev->magma_system_device) {
+        xprintf("Failed to create device");
         return ERR_INTERNAL;
+    }
 
+    xprintf("Created device %p\n", dev->magma_system_device);
     xprintf("running magma tests in 5s\n");
     mx_nanosleep(5000000000);
 
 #if MAGMA_UNIT_TESTS
     xprintf("running magma unit tests\n");
-    TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(nullptr));
+    TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(dev->parent_device));
     int argc = 1;
     char* argv[] = {(char*)"driver_main", nullptr};
     testing::InitGoogleTest(&argc, argv);
