@@ -16,7 +16,7 @@ bool Gtt::Init(uint64_t gtt_size, std::shared_ptr<magma::PlatformDevice> platfor
     // address space size
     size_ = (gtt_size / sizeof(gen_pte_t)) * PAGE_SIZE;
 
-    DLOG("Gtt::Init gtt_size (for page tables) 0x%x size (address space) 0x%llx ", gtt_size, size_);
+    DLOG("Gtt::Init gtt_size (for page tables) 0x%llx size (address space) 0x%llx ", gtt_size, size_);
 
     InitPrivatePat();
 
@@ -27,7 +27,7 @@ bool Gtt::Init(uint64_t gtt_size, std::shared_ptr<magma::PlatformDevice> platfor
     if (gtt_size > mmio_->size() / 2)
         return DRETF(false, "mmio space too small for gtt");
 
-    DLOG("mmio_base %p size 0x%llx gtt_size 0x%x", mmio_base(), mmio_size(), gtt_size);
+    DLOG("mmio_base %p size 0x%llx gtt_size 0x%llx", mmio_->addr(), mmio_->size(), gtt_size);
 
     if (!InitScratch())
         return DRETF(false, "InitScratch failed");
@@ -182,9 +182,6 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
 
     for (unsigned int i = 0; i < num_entries; i++) {
         mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + i * sizeof(gen_pte_t));
-        if (i < 20)
-            DLOG("GTT clearing pte (showing only first 20) at gfx_addr 0x%lx to 0x%llx",
-                 &pte_array[i] - &pte_array[0], pte);
     }
 
     mmio_->PostingRead32(pte_offset + (num_entries - 1) * sizeof(gen_pte_t));
@@ -237,7 +234,6 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType cachi
     for (unsigned int i = 0; i < num_pages; i++) {
         auto pte = gen_pte_encode(bus_addr_array[i], caching_type);
         mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + i * sizeof(gen_pte_t));
-        DLOG("GTT inserting pte at 0x%lx to 0x%llx", pte_offset + i * sizeof(gen_pte_t), pte);
     }
 
     uint64_t readback = mmio_->PostingRead64(pte_offset + (num_pages - 1) * sizeof(gen_pte_t));
