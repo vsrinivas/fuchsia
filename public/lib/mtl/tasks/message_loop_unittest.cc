@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/ftl/functional/wrap_lambda.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/system/message_pipe.h"
 
@@ -119,14 +119,14 @@ TEST(MessageLoop, TaskDestructionTime) {
     loop.PostQuitTask();
     loop.Run();
     auto observer1 = std::make_unique<DestructorObserver>(&destructed);
-    task_runner->PostTask(ftl::WrapLambda([p = std::move(observer1)](){}));
+    task_runner->PostTask(ftl::MakeCopyable([p = std::move(observer1)](){}));
     EXPECT_FALSE(destructed);
   }
 
   EXPECT_TRUE(destructed);
   auto observer2 = std::make_unique<DestructorObserver>(&destructed);
   EXPECT_FALSE(destructed);
-  task_runner->PostTask(ftl::WrapLambda([p = std::move(observer2)](){}));
+  task_runner->PostTask(ftl::MakeCopyable([p = std::move(observer2)](){}));
   EXPECT_TRUE(destructed);
 }
 
