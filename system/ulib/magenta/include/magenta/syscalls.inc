@@ -172,9 +172,9 @@ MAGENTA_DDKCALL_DEF(3, 3, 200, mx_status_t, io_mapping_get_info, mx_handle_t han
 
 // exception handlers
 // TODO(dje): This one can go away once we have a suitable object representing the system.
-MAGENTA_SYSCALL_DEF(3, 3, 210, mx_status_t, set_system_exception_port,
+MAGENTA_SYSCALL_DEF(3, 5, 210, mx_status_t, set_system_exception_port,
                     mx_handle_t eport, uint64_t key, uint32_t options)
-MAGENTA_SYSCALL_DEF(4, 4, 211, mx_status_t, set_exception_port,
+MAGENTA_SYSCALL_DEF(4, 5, 211, mx_status_t, set_exception_port,
                     mx_handle_t object, mx_handle_t eport, uint64_t key, uint32_t options)
 // TODO(dje): The arguments here assume there will only ever be threads that
 // we want to respond to exceptions on. IWBN to have an API that doesn't make
@@ -201,7 +201,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 221, mx_status_t, io_port_queue, mx_handle_t handle,
                     const void* packet, mx_size_t size)
 MAGENTA_SYSCALL_DEF(3, 3, 222, mx_status_t, io_port_wait, mx_handle_t handle,
                     void* packet, mx_size_t size)
-MAGENTA_SYSCALL_DEF(4, 4, 223, mx_status_t, io_port_bind, mx_handle_t handle, uint64_t key,
+MAGENTA_SYSCALL_DEF(4, 6, 223, mx_status_t, io_port_bind, mx_handle_t handle, uint64_t key,
                     mx_handle_t source, mx_signals_t signals)
 
 // Data Pipe
