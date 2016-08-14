@@ -9,11 +9,12 @@ sudo: false
 
 cache:
     directories:
+    - prebuilt/config.mk
     - prebuilt/downloads
 
 notifications:
     irc:
         channels:
-            - "chat.freenode.net#fuchsia-dev"
+            - "chat.freenode.net#fuchsia"
         skip_join: true
         use_notice: true
