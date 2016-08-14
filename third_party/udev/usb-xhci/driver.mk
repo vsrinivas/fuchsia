@@ -1,3 +1,5 @@
+ifeq ($(call TOBOOL,$(ENABLE_NEW_USB)),false)
+
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
@@ -8,3 +10,5 @@ DRIVER_SRCS += \
     $(LOCAL_DIR)/xhci-devconf.c \
     $(LOCAL_DIR)/xhci-events.c \
     $(LOCAL_DIR)/xhci-rh.c
+
+endif
