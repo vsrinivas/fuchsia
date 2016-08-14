@@ -10,4 +10,4 @@ echo "Downloading Toolchain"
 ./scripts/download-toolchain
 
 echo "Starting build '$PROJECT'"
-make $PROJECT
+make $PROJECT ENABLE_BUILD_SYSROOT=true

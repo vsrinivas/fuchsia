@@ -1,5 +1,5 @@
 language: c
-script: ./scripts/travis-build.sh
+script: ./scripts/travis-builds.sh
 env:
     - PROJECT=magenta-pc-x86-64
     - PROJECT=magenta-qemu-arm64
