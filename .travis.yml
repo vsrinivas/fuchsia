@@ -5,7 +5,8 @@ env:
     - PROJECT=magenta-qemu-arm64
     - PROJECT=magenta-qemu-arm32
 
-sudo: false
+sudo: required
+dist: trusty
 
 cache:
     directories:
@@ -15,6 +16,6 @@ cache:
 notifications:
     irc:
         channels:
-            - "chat.freenode.net#fuchsia"
+            - "chat.freenode.net#fuchsia-bot"
         skip_join: true
         use_notice: true
