@@ -23,9 +23,16 @@ On Mac with MacPorts:
 port install autoconf automake libtool libpixman pkgconfig glib2
 ```
 
-## Build Toolchains
+## Install Toolchains
 
-Travis has a set of scripts which will download and build suitable gcc toolchains
+If you're developing on Linux or OSX, there are prebuilt toolchain binaries avaiable.
+Just run this script from your Magenta working directory:
+./scripts/download-toolchain
+
+## Build Toolchains (Optional)
+
+If the prebuilt toolchain binaries do not work for you, there are a
+set of scripts which will download and build suitable gcc toolchains
 for building Magenta for ARM32, ARM64, and x86-64 architectures:
 
 ```
@@ -55,6 +62,9 @@ sudo make install
 ```
 
 ## Configure PATH
+
+If you're using the prebuilt toolchains, you can skip this step, since
+the build will find them automatically.
 
 ```
 # on Linux
