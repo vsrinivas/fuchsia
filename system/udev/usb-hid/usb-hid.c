@@ -20,8 +20,6 @@
 #include <ddk/protocol/input.h>
 #include <ddk/protocol/usb-device.h>
 
-#include <hw/usb.h>
-
 #include <ddk/hexdump.h>
 #include <magenta/types.h>
 #include <runtime/mutex.h>

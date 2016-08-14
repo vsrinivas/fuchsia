@@ -32,6 +32,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <hw/usb.h>
+#include <hw/usb-hub.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

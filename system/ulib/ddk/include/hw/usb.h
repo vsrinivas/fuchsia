@@ -66,18 +66,6 @@ __BEGIN_CDECLS;
 #define USB_CLASS_WIRELESS                  0xe0
 #define USB_CLASS_MISC                      0xef
 
-/* Mass storage requests */
-#define USB_MASS_STORAGE_GET_MAX_LUN    0xfe
-#define USB_MASS_STORAGE_RESET          0xff
-
-/* HID Request Values */
-#define USB_HID_GET_REPORT                  0x01
-#define USB_HID_GET_IDLE                    0x02
-#define USB_HID_GET_PROTOCOL                0x03
-#define USB_HID_SET_REPORT                  0x09
-#define USB_HID_SET_IDLE                    0x0A
-#define USB_HID_SET_PROTOCOL                0x0B
-
 /* Descriptor Types */
 #define USB_DT_DEVICE                      0x01
 #define USB_DT_CONFIG                      0x02
@@ -172,42 +160,5 @@ typedef struct {
     uint16_t wMaxPacketSize;
     uint8_t bInterval;
 } __attribute__ ((packed)) usb_endpoint_descriptor_t;
-
-typedef struct {
-    uint8_t bDescriptorType;
-    uint16_t wDescriptorLength;
-} __attribute__((packed)) usb_hid_descriptor_entry_t;
-
-typedef struct {
-    uint8_t bLength;
-    uint8_t bDescriptorType;
-    uint16_t bcdHID;
-    uint8_t bCountryCode;
-    uint8_t bNumDescriptors;
-    usb_hid_descriptor_entry_t descriptors[];
-} __attribute__((packed)) usb_hid_descriptor_t;
-
-typedef struct {
-    uint8_t bDescLength;
-    uint8_t bDescriptorType;
-    uint8_t bNbrPorts;
-    uint16_t wHubCharacteristics;
-    uint8_t bPowerOn2PwrGood;
-    uint8_t bHubContrCurrent;
-    union {
-        // USB 2.0
-        struct {
-            // variable length depending on number of ports
-            uint8_t  DeviceRemovable[4];
-            uint8_t  PortPwrCtrlMask[4];
-        }  __attribute__ ((packed)) hs;
-        // USB 3.0
-        struct {
-            uint8_t bHubHdrDecLat;
-            uint16_t wHubDelay;
-            uint16_t DeviceRemovable;
-        } __attribute__ ((packed)) ss;
-    } __attribute__ ((packed));
-} __attribute__ ((packed)) usb_hub_descriptor_t;
 
 __END_CDECLS;

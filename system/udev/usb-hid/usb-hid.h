@@ -20,6 +20,8 @@
 #include <ddk/common/hid.h>
 #include <ddk/protocol/input.h>
 #include <ddk/protocol/usb-device.h>
+#include <hw/usb.h>
+#include <hw/usb-hid.h>
 
 #include <stdint.h>
 #include <stddef.h>
