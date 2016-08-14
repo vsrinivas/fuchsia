@@ -33,7 +33,7 @@ MODULE_COMPILEFLAGS += \
 # where the segment boundaries and entry points are.
 MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/code-start.h
 $(BUILDDIR)/$(LOCAL_DIR)/code-start.h: \
-    scripts/rodso-code.sh $(vdso-filename) $(userboot-filename)
+    scripts/gen-rodso-code.sh $(vdso-filename) $(userboot-filename)
 	@$(MKDIR)
 	@echo generating $@
 	$(NOECHO)$< '$(NM)' \
