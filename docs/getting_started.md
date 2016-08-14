@@ -27,7 +27,10 @@ port install autoconf automake libtool libpixman pkgconfig glib2
 
 If you're developing on Linux or OSX, there are prebuilt toolchain binaries avaiable.
 Just run this script from your Magenta working directory:
+
+```
 ./scripts/download-toolchain
+```
 
 ## Build Toolchains (Optional)
 
