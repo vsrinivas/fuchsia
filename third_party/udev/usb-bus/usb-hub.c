@@ -31,6 +31,7 @@
 
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/common/usb.h>
 #include <hw/usb.h>
 #include <hw/usb-hub.h>
 #include <stdint.h>
@@ -98,12 +99,11 @@ usb_hub_port_status_changed(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
 
     unsigned short buf[2];
-    int ret = usb_get_status(hub->device, port, DR_PORT, sizeof(buf), buf);
+    int ret = usb_get_status(hub->device, DR_PORT, port, buf, sizeof(buf));
     if (ret >= 0) {
         ret = buf[1] & PORT_CONNECTION;
         if (ret)
-            usb_clear_feature(hub->device, port, SEL_C_PORT_CONNECTION,
-                              DR_PORT);
+            usb_clear_feature(hub->device, DR_PORT, SEL_C_PORT_CONNECTION, port);
     }
     return ret;
 }
@@ -113,7 +113,7 @@ usb_hub_port_connected(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
 
     unsigned short buf[2];
-    int ret = usb_get_status(hub->device, port, DR_PORT, sizeof(buf), buf);
+    int ret = usb_get_status(hub->device, DR_PORT, port, buf, sizeof(buf));
     if (ret >= 0)
         ret = buf[0] & PORT_CONNECTION;
     return ret;
@@ -124,7 +124,7 @@ usb_hub_port_in_reset(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
 
     unsigned short buf[2];
-    int ret = usb_get_status(hub->device, port, DR_PORT, sizeof(buf), buf);
+    int ret = usb_get_status(hub->device, DR_PORT, port, buf, sizeof(buf));
     if (ret >= 0)
         ret = buf[0] & PORT_RESET;
     return ret;
@@ -135,7 +135,7 @@ usb_hub_port_enabled(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
 
     unsigned short buf[2];
-    int ret = usb_get_status(hub->device, port, DR_PORT, sizeof(buf), buf);
+    int ret = usb_get_status(hub->device, DR_PORT, port, buf, sizeof(buf));
     if (ret >= 0)
         ret = buf[0] & PORT_ENABLE;
     return ret;
@@ -146,7 +146,7 @@ usb_hub_port_speed(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
 
     unsigned short buf[2];
-    int ret = usb_get_status(hub->device, port, DR_PORT, sizeof(buf), buf);
+    int ret = usb_get_status(hub->device, DR_PORT, port, buf, sizeof(buf));
     if (ret >= 0 && (buf[0] & PORT_ENABLE)) {
         /* SuperSpeed hubs can only have SuperSpeed devices. */
         if (hub->speed == USB_SPEED_SUPER)
@@ -168,13 +168,13 @@ usb_hub_port_speed(mx_device_t* device, const int port) {
 static int
 usb_hub_enable_port(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
-    return usb_set_feature(hub->device, port, SEL_PORT_POWER, DR_PORT);
+    return usb_set_feature(hub->device, DR_PORT, SEL_PORT_POWER, port);
 }
 
 static int
 usb_hub_start_port_reset(mx_device_t* device, const int port) {
     usb_hub_t* hub = get_hub(device);
-    return usb_set_feature(hub->device, port, SEL_PORT_RESET, DR_PORT);
+    return usb_set_feature(hub->device, DR_PORT, SEL_PORT_RESET, port);
 }
 
 static int
@@ -260,15 +260,15 @@ static void usb_hub_interrupt_complete(usb_request_t* request) {
     while (bitmap < bitmap_end) {
         if (*bitmap & (1 << bit)) {
             unsigned short buf[2];
-            int ret = usb_get_status(hub->device, port, DR_PORT, sizeof(buf), buf);
+            int ret = usb_get_status(hub->device, DR_PORT, port, buf, sizeof(buf));
 
             if (ret >= 0) {
                 if ((buf[0] & PORT_CONNECTION) && (buf[1] & PORT_CONNECTION)) {
                     generic_hub_attach_dev(&hub->generic_hub, port);
-                    usb_clear_feature(hub->device, port, SEL_C_PORT_CONNECTION, DR_PORT);
+                    usb_clear_feature(hub->device, DR_PORT, SEL_C_PORT_CONNECTION, port);
                 } else if (!(buf[0] & PORT_CONNECTION) && (buf[1] & PORT_CONNECTION)) {
                     generic_hub_detach_dev(&hub->generic_hub, port);
-                    usb_clear_feature(hub->device, port, SEL_C_PORT_CONNECTION, DR_PORT);
+                    usb_clear_feature(hub->device, DR_PORT, SEL_C_PORT_CONNECTION, port);
                 }
             }
         }

@@ -33,11 +33,3 @@
 #include <ddk/protocol/usb-device.h>
 
 mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed_t speed);
-
-int usb_set_feature(mx_device_t* device, int endp, int feature, int rtype);
-int usb_get_status(mx_device_t* device, int endp, int rtype, int len, void* data);
-int usb_get_descriptor(mx_device_t* device, int rtype, int descType, int descIdx,
-                       void* data, size_t len);
-int usb_set_configuration(mx_device_t* device);
-int usb_clear_feature(mx_device_t* device, int endp, int feature, int rtype);
-int usb_clear_stall(mx_device_t* device, usb_endpoint_t* ep);

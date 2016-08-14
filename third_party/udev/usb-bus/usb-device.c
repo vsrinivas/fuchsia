@@ -135,6 +135,33 @@ count_alt_interfaces(usb_interface_descriptor_t* desc, usb_descriptor_header_t* 
     return count;
 }
 
+static int usb_get_descriptor(mx_device_t* device, int rtype, int desc_type, int desc_idx,
+                       void* data, size_t len) {
+    usb_device_t* dev = get_usb_device(device);
+    usb_setup_t dr;
+
+    dr.bmRequestType = rtype;
+    dr.bRequest = USB_REQ_GET_DESCRIPTOR;
+    dr.wValue = desc_type << 8 | desc_idx;
+    dr.wIndex = 0;
+    dr.wLength = len;
+
+    return dev->hci_protocol->control(dev->hcidev, dev->address, &dr, len, data);
+}
+
+static int usb_set_configuration(mx_device_t* device) {
+    usb_device_t* dev = get_usb_device(device);
+    usb_setup_t dr;
+
+    dr.bmRequestType = USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
+    dr.bRequest = USB_REQ_SET_CONFIGURATION;
+    dr.wValue = dev->config.configurations[0].descriptor->bConfigurationValue;
+    dr.wIndex = 0;
+    dr.wLength = 0;
+
+    return dev->hci_protocol->control(dev->hcidev, dev->address, &dr, 0, 0);
+}
+
 mx_status_t usb_init_device(usb_device_t* dev) {
     usb_device_config_t* device_config = &dev->config;
     usb_device_descriptor_t* descriptor = malloc(sizeof(usb_device_descriptor_t));
@@ -466,77 +493,4 @@ mx_device_t* usb_create_device(mx_device_t* hcidev, int address, usb_speed_t spe
     dev->device.prop_count = countof(dev->props);
 
     return &dev->device;
-}
-
-int usb_set_feature(mx_device_t* device, int endp, int feature, int rtype) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_setup_t dr;
-
-    dr.bmRequestType = USB_DIR_OUT | USB_TYPE_STANDARD | rtype;
-    dr.bRequest = USB_REQ_SET_FEATURE;
-    dr.wValue = feature;
-    dr.wIndex = endp;
-    dr.wLength = 0;
-
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &dr, 0, 0);
-}
-
-int usb_get_status(mx_device_t* device, int intf, int rtype, int len, void* data) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_setup_t dr;
-
-    dr.bmRequestType = USB_DIR_IN | USB_TYPE_STANDARD | rtype;
-    dr.bRequest = USB_REQ_GET_STATUS;
-    dr.wValue = 0;
-    dr.wIndex = intf;
-    dr.wLength = len;
-
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &dr, len, data);
-}
-
-int usb_get_descriptor(mx_device_t* device, int rtype, int desc_type, int desc_idx,
-                       void* data, size_t len) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_setup_t dr;
-
-    dr.bmRequestType = rtype;
-    dr.bRequest = USB_REQ_GET_DESCRIPTOR;
-    dr.wValue = desc_type << 8 | desc_idx;
-    dr.wIndex = 0;
-    dr.wLength = len;
-
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &dr, len, data);
-}
-
-int usb_set_configuration(mx_device_t* device) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_setup_t dr;
-
-    dr.bmRequestType = USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
-    dr.bRequest = USB_REQ_SET_CONFIGURATION;
-    dr.wValue = dev->config.configurations[0].descriptor->bConfigurationValue;
-    dr.wIndex = 0;
-    dr.wLength = 0;
-
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &dr, 0, 0);
-}
-
-int usb_clear_feature(mx_device_t* device, int endp, int feature, int rtype) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_setup_t dr;
-
-    dr.bmRequestType = USB_DIR_OUT | USB_TYPE_STANDARD | rtype;
-    dr.bRequest = USB_REQ_CLEAR_FEATURE;
-    dr.wValue = feature;
-    dr.wIndex = endp;
-    dr.wLength = 0;
-
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &dr, 0, 0) < 0;
-}
-
-int usb_clear_stall(mx_device_t* device, usb_endpoint_t* ep) {
-    int ret = usb_clear_feature(device, ep->endpoint, USB_ENDPOINT_HALT,
-                                USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_ENDPOINT);
-    ep->toggle = 0;
-    return ret;
 }
