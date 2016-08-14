@@ -9,8 +9,8 @@ sudo: false
 
 cache:
     directories:
-    - prebuilt/config.mk
     - prebuilt/downloads
+    - prebuilt/configs
 
 notifications:
     irc:
