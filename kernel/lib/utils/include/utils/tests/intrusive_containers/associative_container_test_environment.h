@@ -31,7 +31,7 @@ public:
     using SpBase               = TestEnvironmentSpecialized<TestEnvTraits>;
     using RefAction            = typename TestEnvironment<TestEnvTraits>::RefAction;
     using KeyTraits            = typename ContainerType::KeyTraits;
-    using KeyType              = typename ContainerTraits::KeyType;
+    using KeyType              = typename ContainerType::KeyType;
     using OtherKeyType         = typename OtherContainerType::KeyType;
 
     enum class PopulateMethod {
@@ -154,8 +154,7 @@ public:
         return Populate(container, PopulateMethod::AscendingKey, ref_action);
     }
 
-    template <PopulateMethod populate_method>
-    bool DoInsertByKey() {
+    bool DoInsertByKey(PopulateMethod populate_method) {
         BEGIN_TEST;
 
         EXPECT_TRUE(Populate(container(), populate_method), "");
@@ -167,15 +166,14 @@ public:
     bool InsertByKey() {
         BEGIN_TEST;
 
-        EXPECT_TRUE(DoInsertByKey<PopulateMethod::AscendingKey>(), "");
-        EXPECT_TRUE(DoInsertByKey<PopulateMethod::DescendingKey>(), "");
-        EXPECT_TRUE(DoInsertByKey<PopulateMethod::RandomKey>(), "");
+        EXPECT_TRUE(DoInsertByKey(PopulateMethod::AscendingKey), "");
+        EXPECT_TRUE(DoInsertByKey(PopulateMethod::DescendingKey), "");
+        EXPECT_TRUE(DoInsertByKey(PopulateMethod::RandomKey), "");
 
         END_TEST;
     }
 
-    template <PopulateMethod populate_method>
-    bool DoFindByKey() {
+    bool DoFindByKey(PopulateMethod populate_method) {
         BEGIN_TEST;
 
         EXPECT_TRUE(Populate(container(), populate_method), "");
@@ -203,15 +201,14 @@ public:
     bool FindByKey() {
         BEGIN_TEST;
 
-        EXPECT_TRUE(DoFindByKey<PopulateMethod::AscendingKey>(), "");
-        EXPECT_TRUE(DoFindByKey<PopulateMethod::DescendingKey>(), "");
-        EXPECT_TRUE(DoFindByKey<PopulateMethod::RandomKey>(), "");
+        EXPECT_TRUE(DoFindByKey(PopulateMethod::AscendingKey), "");
+        EXPECT_TRUE(DoFindByKey(PopulateMethod::DescendingKey), "");
+        EXPECT_TRUE(DoFindByKey(PopulateMethod::RandomKey), "");
 
         END_TEST;
     }
 
-    template <PopulateMethod populate_method>
-    bool DoEraseByKey() {
+    bool DoEraseByKey(PopulateMethod populate_method) {
         BEGIN_TEST;
 
         EXPECT_TRUE(Populate(container(), populate_method), "");
@@ -256,15 +253,14 @@ public:
     bool EraseByKey() {
         BEGIN_TEST;
 
-        EXPECT_TRUE(DoEraseByKey<PopulateMethod::AscendingKey>(), "");
-        EXPECT_TRUE(DoEraseByKey<PopulateMethod::DescendingKey>(), "");
-        EXPECT_TRUE(DoEraseByKey<PopulateMethod::RandomKey>(), "");
+        EXPECT_TRUE(DoEraseByKey(PopulateMethod::AscendingKey), "");
+        EXPECT_TRUE(DoEraseByKey(PopulateMethod::DescendingKey), "");
+        EXPECT_TRUE(DoEraseByKey(PopulateMethod::RandomKey), "");
 
         END_TEST;
     }
 
-    template <PopulateMethod populate_method>
-    bool DoInsertOrFind() {
+    bool DoInsertOrFind(PopulateMethod populate_method) {
         BEGIN_TEST;
 
         for (uint pass_iterator = 0; pass_iterator < 2; ++pass_iterator) {
@@ -385,9 +381,9 @@ public:
     bool InsertOrFind() {
         BEGIN_TEST;
 
-        EXPECT_TRUE(DoInsertOrFind<PopulateMethod::AscendingKey>(), "");
-        EXPECT_TRUE(DoInsertOrFind<PopulateMethod::DescendingKey>(), "");
-        EXPECT_TRUE(DoInsertOrFind<PopulateMethod::RandomKey>(), "");
+        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::AscendingKey), "");
+        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::DescendingKey), "");
+        EXPECT_TRUE(DoInsertOrFind(PopulateMethod::RandomKey), "");
 
         END_TEST;
     }
