@@ -155,6 +155,7 @@ public:
     using PtrType            = typename TestEnvTraits::PtrType;
     using ContainerTraits    = typename ObjType::ContainerTraits;
     using ContainerType      = typename ContainerTraits::ContainerType;
+    using ContainerChecker   = typename ContainerType::CheckerType;
     using OtherContainerType = typename ContainerTraits::OtherContainerType;
     using PtrTraits          = typename ContainerType::PtrTraits;
     using NodeTraits         = typename ContainerType::NodeTraits;
@@ -194,7 +195,10 @@ public:
     bool Reset() {
         BEGIN_TEST;
 
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
         container().clear();
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+
         for (size_t i = 0; i < OBJ_COUNT; ++i)
             ReleaseObject(i);
 
@@ -666,6 +670,9 @@ public:
                 obj.Visit();
             }
 
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+            EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+
             container().swap(other_container);
 
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
@@ -678,6 +685,9 @@ public:
                 obj.Visit();
             }
 
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+            EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+
             // Swap back to check the case where container() was empty, but other_container
             // had elements.
             container().swap(other_container);
@@ -689,6 +699,9 @@ public:
 
             for (const auto& obj : container())
                 EXPECT_EQ(2u, obj.visited_count(), "");
+
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+            EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
 
             // Reset;
             EXPECT_TRUE(Reset(), "");
@@ -715,6 +728,9 @@ public:
             EXPECT_EQ(OBJ_COUNT, Size(container()), "");
             EXPECT_EQ(OTHER_COUNT, Size(other_container), "");
 
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+            EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+
             // Visit everything in container() once, and everything in
             // other_container twice.
             for (auto& obj : container()) {
@@ -738,6 +754,9 @@ public:
             EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
             EXPECT_EQ(OTHER_COUNT, Size(container()), "");
 
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+            EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+
             // Everything in container() should have been visited twice so far,
             // while everything in other_container should have been visited
             // once.
@@ -750,6 +769,9 @@ public:
             EXPECT_EQ(OBJ_COUNT + OTHER_COUNT, ObjType::live_obj_count(), "");
             EXPECT_EQ(OBJ_COUNT, Size(container()), "");
             EXPECT_EQ(OTHER_COUNT, Size(other_container), "");
+
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+            EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
 
             for (auto& obj : container())     EXPECT_EQ(1u, obj.visited_count(), "");
             for (auto& obj : other_container) EXPECT_EQ(2u, obj.visited_count(), "");
@@ -769,7 +791,6 @@ public:
             EXPECT_EQ(0u, ObjType::live_obj_count(), "");
         }
 
-
         END_TEST;
     }
 
@@ -787,6 +808,8 @@ public:
             obj.Visit();
         }
 
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+
         // Move its contents to a new container using the Rvalue constructor.
 #if TEST_WILL_NOT_COMPILE || 0
         ContainerType other_container(container());
@@ -802,6 +825,9 @@ public:
             EXPECT_EQ(objects()[obj.value()], &obj, "");
             obj.Visit();
         }
+
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
 
         // Move the contents of the other container back to the internal container.  If we
         // are testing managed pointer types, put some objects into the internal
@@ -825,6 +851,9 @@ public:
             EXPECT_EQ(0u, obj.visited_count(), "");
         }
 
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+
 #if TEST_WILL_NOT_COMPILE || 0
         container() = other_container;
 #else
@@ -841,6 +870,9 @@ public:
             EXPECT_EQ(2u, obj.visited_count(), "");
             EXPECT_EQ(objects()[obj.value()], &obj, "");
         }
+
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
 
         END_TEST;
     }
@@ -921,6 +953,9 @@ public:
             }
             EXPECT_TRUE(other_iter == other_container.end(), "");
         }
+
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
 
         // Clear the internal container.  No objects should go away and the other
         // container should be un-affected

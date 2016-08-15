@@ -24,6 +24,7 @@ public:
     using PtrType            = typename TestEnvTraits::PtrType;
     using ContainerTraits    = typename ObjType::ContainerTraits;
     using ContainerType      = typename ContainerTraits::ContainerType;
+    using ContainerChecker   = typename ContainerType::CheckerType;
     using OtherContainerType = typename ContainerTraits::OtherContainerType;
     using PtrTraits          = typename ContainerType::PtrTraits;
     using RefAction          = typename TestEnvironment<TestEnvTraits>::RefAction;
@@ -86,6 +87,7 @@ public:
 
         EXPECT_EQ(OBJ_COUNT, Size(container), "");
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container), "");
 
         END_TEST;
     }

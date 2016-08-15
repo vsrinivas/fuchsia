@@ -33,6 +33,13 @@
 // by following the prev pointer of the head node of the list.
 namespace utils {
 
+// Fwd decl of sanity checker class used by tests.
+namespace tests {
+namespace intrusive_containers {
+class DoublyLinkedListChecker;
+}  // namespace tests
+}  // namespace intrusive_containers
+
 template <typename T>
 struct DoublyLinkedListNodeState {
     using PtrTraits = internal::ContainerPtrTraits<T>;
@@ -77,6 +84,7 @@ public:
     using PtrType       = typename PtrTraits::PtrType;
     using RawPtrType    = typename PtrTraits::RawPtrType;
     using ValueType     = typename PtrTraits::ValueType;
+    using CheckerType   = ::utils::tests::intrusive_containers::DoublyLinkedListChecker;
     using ContainerType = DoublyLinkedList<T, NodeTraits>;
 
     // Declarations of the standard iterator types.
@@ -391,6 +399,9 @@ private:
 
         typename PtrTraits::RawPtrType node_ = nullptr;
     };
+
+    // The test framework's 'checker' class is our friend.
+    friend CheckerType;
 
     // Copy construction and Lvalue assignment are disallowed
     DoublyLinkedList(const DoublyLinkedList&) = delete;

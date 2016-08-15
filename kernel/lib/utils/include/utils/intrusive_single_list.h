@@ -142,6 +142,13 @@
 
 namespace utils {
 
+// Fwd decl of sanity checker class used by tests.
+namespace tests {
+namespace intrusive_containers {
+class SinglyLinkedListChecker;
+}  // namespace tests
+}  // namespace intrusive_containers
+
 // SinglyLinkedListNodeState<T>
 //
 // The state needed to be a member of a SinglyLinkedList<T>.  All members of a
@@ -207,6 +214,7 @@ public:
     using PtrType       = typename PtrTraits::PtrType;
     using RawPtrType    = typename PtrTraits::RawPtrType;
     using ValueType     = typename PtrTraits::ValueType;
+    using CheckerType   = ::utils::tests::intrusive_containers::SinglyLinkedListChecker;
     using ContainerType = SinglyLinkedList<T, NodeTraits>;
 
     // Declarations of the standard iterator types.
@@ -486,6 +494,9 @@ private:
 
         typename PtrTraits::RawPtrType node_ = nullptr;
     };
+
+    // The test framework's 'checker' class is our friend.
+    friend CheckerType;
 
     // Copy construction and Lvalue assignment are disallowed
     SinglyLinkedList(const SinglyLinkedList&) = delete;

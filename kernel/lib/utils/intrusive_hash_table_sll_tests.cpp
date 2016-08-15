@@ -8,6 +8,7 @@
 #include <utils/intrusive_single_list.h>
 #include <utils/intrusive_hash_table.h>
 #include <utils/tests/intrusive_containers/associative_container_test_environment.h>
+#include <utils/tests/intrusive_containers/intrusive_hash_table_checker.h>
 #include <utils/tests/intrusive_containers/test_thunks.h>
 
 namespace utils {
@@ -83,9 +84,9 @@ public:
                                               OtherContainerTraits,
                                               OtherContainerTraits>;
 
-    using TestObjBaseType = HashedTestObjBase<typename ContainerType::KeyType,
-                                              typename ContainerType::HashType,
-                                              ContainerType::kNumBuckets>;
+    using TestObjBaseType  = HashedTestObjBase<typename ContainerType::KeyType,
+                                               typename ContainerType::HashType,
+                                               ContainerType::kNumBuckets>;
 };
 
 DEFINE_TEST_OBJECTS(HTSLL);

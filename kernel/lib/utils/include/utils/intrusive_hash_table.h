@@ -13,6 +13,13 @@
 
 namespace utils {
 
+// Fwd decl of sanity checker class used by tests.
+namespace tests {
+namespace intrusive_containers {
+class HashTableChecker;
+}  // namespace tests
+}  // namespace intrusive_containers
+
 // DefaultKeyedObjectTraits defines a default implementation of traits used to
 // manage objects stored in associative containers such as hash-tables and
 // trees.
@@ -125,6 +132,11 @@ public:
     // Declarations of the standard iterator types.
     using iterator       = iterator_impl<iterator_traits>;
     using const_iterator = iterator_impl<const_iterator_traits>;
+
+    // An alias for the type of this specific HashTable<...> and its test sanity checker.
+    using ContainerType = HashTable<_KeyType, _PtrType, _BucketType, _HashType,
+                                    _NumBuckets, _KeyTraits, _HashTraits>;
+    using CheckerType   = ::utils::tests::intrusive_containers::HashTableChecker;
 
     // The number of buckets should be a nice prime such as 37, 211, 389 unless
     // The hash function is really good. Lots of cheap hash functions have
@@ -412,33 +424,31 @@ private:
         typename IterTraits::RawPtrType operator->() const { return iter_.operator->(); }
 
     private:
-        using HashTableType = HashTable<KeyType, PtrType, BucketType,
-                                        HashType, kNumBuckets, KeyTraits, HashTraits>;
+        friend ContainerType;
         using IterType = typename IterTraits::IterType;
-        friend HashTableType;
 
         enum BeginTag { BEGIN };
         enum EndTag { END };
 
-        iterator_impl(const HashTableType* hash_table, BeginTag)
+        iterator_impl(const ContainerType* hash_table, BeginTag)
             : hash_table_(hash_table),
               bucket_ndx_(0),
               iter_(IterTraits::BucketBegin(GetBucket(0))) {
             advance_if_invalid_iter();
         }
 
-        iterator_impl(const HashTableType* hash_table, EndTag)
+        iterator_impl(const ContainerType* hash_table, EndTag)
             : hash_table_(hash_table),
               bucket_ndx_(kNumBuckets - 1),
               iter_(IterTraits::BucketEnd(GetBucket(kNumBuckets - 1))) { }
 
-        iterator_impl(const HashTableType* hash_table, HashType bucket_ndx, const IterType& iter)
+        iterator_impl(const ContainerType* hash_table, HashType bucket_ndx, const IterType& iter)
             : hash_table_(hash_table),
               bucket_ndx_(bucket_ndx),
               iter_(iter) { }
 
         BucketType& GetBucket(HashType ndx) {
-            return const_cast<HashTableType*>(hash_table_)->buckets_[ndx];
+            return const_cast<ContainerType*>(hash_table_)->buckets_[ndx];
         }
 
         void advance_if_invalid_iter() {
@@ -460,7 +470,7 @@ private:
             }
         }
 
-        const HashTableType* hash_table_ = nullptr;
+        const ContainerType* hash_table_ = nullptr;
         HashType bucket_ndx_ = 0;
         IterType iter_;
     };
@@ -489,6 +499,9 @@ private:
                 return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
             });
     }
+
+    // The test framework's 'checker' class is our friend.
+    friend CheckerType;
 
     // Iterators need to access our bucket array in order to iterate.
     friend iterator;

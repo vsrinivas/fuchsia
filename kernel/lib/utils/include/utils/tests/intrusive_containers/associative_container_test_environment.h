@@ -14,7 +14,7 @@ namespace utils {
 namespace tests {
 namespace intrusive_containers {
 
-// SequenceContainerTestEnvironment<>
+// AssociativeContainerTestEnvironment<>
 //
 // Test environment which defines and implements tests and test utilities which
 // are applicable to all associative containers such as trees and hash-tables.
@@ -25,6 +25,7 @@ public:
     using PtrType              = typename TestEnvTraits::PtrType;
     using ContainerTraits      = typename ObjType::ContainerTraits;
     using ContainerType        = typename ContainerTraits::ContainerType;
+    using ContainerChecker     = typename ContainerType::CheckerType;
     using OtherContainerType   = typename ContainerTraits::OtherContainerType;
     using OtherContainerTraits = typename ContainerTraits::OtherContainerTraits;
     using PtrTraits            = typename ContainerType::PtrTraits;
@@ -51,7 +52,7 @@ public:
         return SizeUtils<CType>::size(container);
     }
 
-   bool SetTestObjKeys(const PtrType& test_obj, PopulateMethod method) {
+    bool SetTestObjKeys(const PtrType& test_obj, PopulateMethod method) {
         BEGIN_TEST;
 
         REQUIRE_NONNULL(test_obj, "");
@@ -146,6 +147,7 @@ public:
 
         EXPECT_EQ(OBJ_COUNT, Size(container), "");
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container), "");
 
         END_TEST;
     }
@@ -158,7 +160,7 @@ public:
         BEGIN_TEST;
 
         EXPECT_TRUE(Populate(container(), populate_method), "");
-        TestEnvironment<TestEnvTraits>::Reset();
+        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
 
         END_TEST;
     }
@@ -194,7 +196,7 @@ public:
         auto iter = const_container().find(kBannedKeyValue);
         EXPECT_FALSE(iter.IsValid(), "");
 
-        TestEnvironment<TestEnvTraits>::Reset();
+        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 
@@ -246,7 +248,7 @@ public:
 
         EXPECT_EQ(0u, Size(container()), "");
 
-        TestEnvironment<TestEnvTraits>::Reset();
+        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 
@@ -309,7 +311,7 @@ public:
             // If we have not tested passing a non-null iterator yet, reset the
             // environment and do the test again.
             if (!pass_iterator)
-                TestEnvironment<TestEnvTraits>::Reset();
+                REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         }
 
         // Now go over the (populated) container and attempt to insert new
@@ -373,8 +375,7 @@ public:
             }
         }
 
-        TestEnvironment<TestEnvTraits>::Reset();
-
+        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 

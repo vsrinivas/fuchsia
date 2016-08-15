@@ -6,6 +6,7 @@
 
 #include <unittest.h>
 #include <utils/intrusive_double_list.h>
+#include <utils/tests/intrusive_containers/intrusive_doubly_linked_list_checker.h>
 #include <utils/tests/intrusive_containers/sequence_container_test_environment.h>
 #include <utils/tests/intrusive_containers/test_thunks.h>
 
