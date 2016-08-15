@@ -17,9 +17,16 @@ public:
 
     virtual void* GetDeviceHandle() = 0;
 
+    virtual bool ReadPciConfig16(uint64_t addr, uint16_t* value)
+    {
+        DLOG("ReadPciConfig16 unimplemented");
+        return false;
+    }
+
     virtual std::unique_ptr<PlatformMmio> CpuMapPciMmio(unsigned int pci_bar,
                                                         PlatformMmio::CachePolicy cache_policy)
     {
+        DLOG("CpuMapPciMmio unimplemented");
         return nullptr;
     }
 

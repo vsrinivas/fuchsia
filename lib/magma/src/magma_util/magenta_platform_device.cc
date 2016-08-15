@@ -67,6 +67,24 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
     return mmio;
 }
 
+bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
+{
+    void* protocol;
+    mx_status_t status = device_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
+    if (status != NO_ERROR)
+        return DRETF(false, "device_get_protocol failed");
+
+    auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
+    const pci_config_t* pci_config;
+    mx_handle_t cfg_handle = pci->get_config(mx_device(), &pci_config);
+    if (cfg_handle < 0)
+        return DRETF(false, "pci get_config failed");
+
+    *value =
+        *reinterpret_cast<const uint16_t*>(reinterpret_cast<const uint8_t*>(pci_config) + addr);
+    return true;
+}
+
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
 {
     DASSERT(device_handle);

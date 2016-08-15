@@ -17,6 +17,8 @@ public:
 
     void* GetDeviceHandle() override { return mx_device(); }
 
+    bool ReadPciConfig16(uint64_t addr, uint16_t* value) override;
+
     std::unique_ptr<PlatformMmio> CpuMapPciMmio(unsigned int pci_bar,
                                                 PlatformMmio::CachePolicy cache_policy) override;
 
