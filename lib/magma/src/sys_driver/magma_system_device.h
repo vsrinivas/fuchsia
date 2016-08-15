@@ -24,7 +24,7 @@ public:
     // returns nullptr on failure
     std::unique_ptr<MagmaSystemConnection> Open(msd_client_id client_id);
 
-    msd_device* arch() { return msd_dev_.get(); }
+    msd_device* msd_dev() { return msd_dev_.get(); }
 
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
