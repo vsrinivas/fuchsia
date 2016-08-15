@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <threads.h>
 
 #include <magenta/syscalls.h>
-#include <runtime/thread.h>
 #include <unittest/unittest.h>
 
 #define NUM_IO_THREADS 5
@@ -120,10 +120,10 @@ static bool thread_pool_test(void)
     tinfo.io_port = mx_io_port_create(0u);
     EXPECT_GT(tinfo.io_port, 0, "could not create ioport");
 
-    mxr_thread_t *threads[NUM_IO_THREADS];
+    thrd_t threads[NUM_IO_THREADS];
     for (size_t ix = 0; ix != NUM_IO_THREADS; ++ix) {
-        status = mxr_thread_create(thread_consumer, &tinfo, "tpool", &threads[ix]);
-        EXPECT_EQ(status, 0, "could not create thread");
+        int ret = thrd_create_with_name(&threads[ix], thread_consumer, &tinfo, "tpool");
+        EXPECT_EQ(ret, thrd_success, "could not create thread");
     }
 
     mx_user_packet_t us_pkt = {0};
@@ -135,8 +135,8 @@ static bool thread_pool_test(void)
     }
 
     for (size_t ix = 0; ix != NUM_IO_THREADS; ++ix) {
-        status = mxr_thread_join(threads[ix], NULL);
-        EXPECT_EQ(status, NO_ERROR, "failed to wait");
+        int ret = thrd_join(threads[ix], NULL);
+        EXPECT_EQ(ret, NO_ERROR, "failed to wait");
     }
 
     EXPECT_EQ(tinfo.error, NO_ERROR, "thread faulted somewhere");
@@ -259,9 +259,9 @@ static bool bind_events_test(void)
         EXPECT_EQ(status, NO_ERROR, "failed to bind event to ioport");
     }
 
-    mxr_thread_t *thread;
-    status = mxr_thread_create(io_reply_thread, &info, "reply", &thread);
-    EXPECT_EQ(status, 0, "could not create thread");
+    thrd_t thread;
+    int ret = thrd_create_with_name(&thread, io_reply_thread, &info, "reply");
+    EXPECT_EQ(ret, thrd_success, "could not create thread");
 
     // Poke at the events in some order, mesages with the events should arrive in order.
     int order[] = {2, 1, 0, 4, 3, 1, 2};
@@ -288,8 +288,8 @@ static bool bind_events_test(void)
         EXPECT_EQ(report.type, MX_IO_PORT_PKT_TYPE_IOSN, "invalid type");
     }
 
-    status = mxr_thread_join(thread, NULL);
-    EXPECT_EQ(status, NO_ERROR, "could not wait for thread");
+    ret = thrd_join(thread, NULL);
+    EXPECT_EQ(ret, thrd_success, "could not wait for thread");
 
     // Test cleanup.
     for (int ix = 0; ix != countof(events); ++ix) {

@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <pthread.h>
 #include <stdio.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <unittest/unittest.h>
-#include <runtime/thread.h>
 
 static const char* msg = "This is a test message, please discard.";
 
@@ -27,9 +26,9 @@ bool cleanup_test(void) {
     mx_signals_state_t pending;
     mx_status_t r;
 
-    mxr_thread_t *thread;
-    mxr_thread_create(watchdog, NULL, "watchdog", &thread);
-    mxr_thread_detach(thread);
+    thrd_t thread;
+    thrd_create_with_name(&thread, watchdog, NULL, "watchdog");
+    thrd_detach(thread);
 
     // TEST1
     // Create a pipe, close one end, try to wait on the other.

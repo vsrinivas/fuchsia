@@ -5,10 +5,10 @@
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
-#include <runtime/thread.h>
 #include <runtime/tls.h>
 
 static uint64_t test_values[] = {
@@ -66,17 +66,16 @@ bool mxr_tls_test(void) {
 
 #define num_threads 64
 
-    mxr_thread_t* threads[num_threads] = {0};
+    thrd_t threads[num_threads] = {0};
 
     for (uintptr_t idx = 0; idx < num_threads; ++idx) {
-        mx_status_t status = mxr_thread_create(test_entry_point, (void*)idx, "mxr tls test", threads + idx);
-        ASSERT_EQ(status, NO_ERROR, "Error while thread creation");
+        int ret = thrd_create_with_name(threads + idx, test_entry_point, (void*)idx, "mxr tls test");
+        ASSERT_EQ(ret, thrd_success, "Error while thread creation");
     }
 
     for (uintptr_t idx = 0; idx < num_threads; ++idx) {
-        mx_status_t status = mxr_thread_join(threads[idx], NULL);
-        if (status != NO_ERROR)
-        ASSERT_EQ(status, NO_ERROR, "Error while thread join");
+        int ret = thrd_join(threads[idx], NULL);
+        ASSERT_EQ(ret, thrd_success, "Error while thread join");
     }
 
     test_entry_point((void*)(uintptr_t)num_threads);

@@ -5,11 +5,12 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <stdint.h>
 #include <system/compiler.h>
 
 __BEGIN_CDECLS
 
-typedef int (*mxr_thread_entry_t)(void*);
+typedef intptr_t (*mxr_thread_entry_t)(void*);
 
 typedef struct mxr_thread mxr_thread_t;
 
@@ -30,12 +31,16 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
 // If a thread is joined, the caller of mxr_thread_join blocks until
 // the other thread is finished running. The return value of the
 // joined thread is placed in return_value_out if non-NULL.
-mx_status_t mxr_thread_join(mxr_thread_t* thread, int* return_value_out);
+mx_status_t mxr_thread_join(mxr_thread_t* thread, intptr_t* return_value_out);
 
 // If a thread is detached, instead of waiting to be joined, it will
 // clean up after itself, and the return value of the thread's
 // entrypoint is ignored.
 mx_status_t mxr_thread_detach(mxr_thread_t* thread);
+
+// Exit from the currently running thread. Equivalent to returning
+// return_value from the the thread's entrypoint.
+_Noreturn void mxr_thread_exit(intptr_t return_value);
 
 // Get a magenta handle to the thread for debugging purposes, or to
 // the current thread if NULL. Note that this is the same handle that

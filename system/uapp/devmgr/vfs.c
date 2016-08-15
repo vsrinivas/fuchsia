@@ -18,8 +18,6 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
-#include <runtime/thread.h>
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -479,8 +477,8 @@ void vfs_init(vnode_t* root) {
     if (mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler) == NO_ERROR) {
         mxio_dispatcher_start(vfs_dispatcher);
     }
-    mxr_thread_t* t;
-    mxr_thread_create(vfs_watchdog, NULL, "vfs-watchdog", &t);
+    thrd_t t;
+    thrd_create_with_name(&t, vfs_watchdog, NULL, "vfs-watchdog");
 }
 
 void vn_acquire(vnode_t* vn) {

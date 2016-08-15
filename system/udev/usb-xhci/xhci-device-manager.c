@@ -564,7 +564,7 @@ static int xhci_device_thread(void* arg) {
 }
 
 void xhci_start_device_thread(xhci_t* xhci) {
-    mxr_thread_create(xhci_device_thread, xhci, "xhci_device_thread", &xhci->device_thread);
+    thrd_create_with_name(&xhci->device_thread, xhci_device_thread, xhci, "xhci_device_thread");
 }
 
 static mx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_address,

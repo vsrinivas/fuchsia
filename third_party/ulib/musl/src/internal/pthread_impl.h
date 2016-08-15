@@ -9,16 +9,10 @@
 #include <signal.h>
 #include <threads.h>
 
+#include <runtime/thread.h>
 #include <runtime/tls.h>
 
 #define pthread __pthread
-
-struct __mx_thread_info {
-    void* (*func)(void*);
-    void* arg;
-    void* tls;
-    int errno_value;
-};
 
 struct pthread {
     struct pthread* self;
@@ -51,8 +45,7 @@ struct pthread {
     void* stdio_locks;
     uintptr_t canary_at_end;
     void** dtv_copy;
-    mx_handle_t handle;
-    struct __mx_thread_info mx_thread_info;
+    mxr_thread_t* mxr_thread;
 };
 
 struct __timer {

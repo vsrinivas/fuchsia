@@ -24,7 +24,6 @@
 #include <unistd.h>
 
 #include <mxio/io.h>
-#include <runtime/thread.h>
 
 #include <magenta/syscalls-ddk.h>
 
@@ -42,14 +41,14 @@ static gfx_surface hw_gfx;
 
 typedef struct {
     char dev_name[128];
-    mxr_thread_t* t;
+    thrd_t t;
     int flags;
     int fd;
     struct list_node node;
 } input_listener_t;
 
 static struct list_node input_listeners_list = LIST_INITIAL_VALUE(input_listeners_list);
-static mxr_thread_t* input_poll_thread;
+static thrd_t input_poll_thread;
 
 // single driver instance
 static bool vc_initialized = false;
@@ -225,7 +224,6 @@ static int vc_input_devices_poll_thread(void* arg) {
         }
         char dname[128];
         char tname[128];
-        mx_status_t status;
         while ((de = readdir(dir)) != NULL) {
             snprintf(dname, sizeof(dname), "%s/%s", DEV_INPUT, de->d_name);
 
@@ -276,9 +274,9 @@ static int vc_input_devices_poll_thread(void* arg) {
             }
             // start a thread to wait on the fd
             snprintf(tname, sizeof(tname), "vc-input-%s", de->d_name);
-            status = mxr_thread_create(vc_input_thread, (void*)free, tname, &free->t);
-            if (status < 0) {
-                xprintf("vc: input thread %s did not start (status=%d)\n", tname, status);
+            int ret = thrd_create_with_name(&free->t, vc_input_thread, (void*)free, tname);
+            if (ret != thrd_success) {
+                xprintf("vc: input thread %s did not start (return value=%d)\n", tname, ret);
                 free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
             }
         }
@@ -734,9 +732,9 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
 
     // start a thread to listen for new input devices
-    status = mxr_thread_create(vc_input_devices_poll_thread, NULL, "vc-inputdev-poll", &input_poll_thread);
-    if (status != NO_ERROR) {
-        xprintf("vc: input polling thread did not start (status=%d)\n", status);
+    int ret = thrd_create_with_name(&input_poll_thread, vc_input_devices_poll_thread, NULL, "vc-inputdev-poll");
+    if (ret != thrd_success) {
+        xprintf("vc: input polling thread did not start (return value=%d)\n", ret);
     }
 
     device->protocol_id = MX_PROTOCOL_CONSOLE;
@@ -750,8 +748,8 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
             dev->name, info.width, info.height, info.stride, info.format);
 
     if (vc_root_open(NULL, &dev, 0) == NO_ERROR) {
-        mxr_thread_t* t;
-        mxr_thread_create(vc_log_reader_thread, dev, "vc-log-reader", &t);
+        thrd_t t;
+        thrd_create_with_name(&t, vc_log_reader_thread, dev, "vc-log-reader");
     }
 
     return NO_ERROR;

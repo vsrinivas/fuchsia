@@ -12,7 +12,6 @@
 #include <hw/reg.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <runtime/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +38,7 @@ typedef struct usb_xhci {
     mx_handle_t irq_handle;
     mx_handle_t mmio_handle;
     mx_handle_t cfg_handle;
-    mxr_thread_t* irq_thread;
+    thrd_t irq_thread;
 } usb_xhci_t;
 #define xhci_to_usb_xhci(dev) containerof(dev, usb_xhci_t, xhci)
 #define dev_to_usb_xhci(dev) containerof(dev, usb_xhci_t, device)
@@ -252,7 +251,7 @@ static int usb_xhci_start_thread(void* arg) {
     xhci_start(&uxhci->xhci);
     device_add(&uxhci->device, &uxhci->device);
 
-    mxr_thread_create(xhci_irq_thread, uxhci, "xhci_irq_thread", &uxhci->irq_thread);
+    thrd_create_with_name(&uxhci->irq_thread, xhci_irq_thread, uxhci, "xhci_irq_thread");
     return 0;
 }
 
@@ -366,9 +365,9 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     uxhci->device.protocol_ops = &xhci_hci_protocol;
 
     // start driver on a separate thread to avoid unnecessary blocking here
-    mxr_thread_t* thread;
-    mxr_thread_create(usb_xhci_start_thread, uxhci, "usb_xhci_start_thread", &thread);
-    mxr_thread_detach(thread);
+    thrd_t thread;
+    thrd_create_with_name(&thread, usb_xhci_start_thread, uxhci, "usb_xhci_start_thread");
+    thrd_detach(thread);
 
     return NO_ERROR;
 

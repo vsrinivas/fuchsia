@@ -10,14 +10,13 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <threads.h>
+#include <unistd.h>
 
 #include <magenta/processargs.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
-
-#include <runtime/thread.h>
 
 static void log_printf(mx_handle_t log, const char* fmt, ...) {
     if (log <= 0)
@@ -191,15 +190,15 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
     startup->loader_arg = loader_arg;
     startup->syslog_handle = sys_log;
 
-    mxr_thread_t* t;
-    if ((r = mxr_thread_create(loader_service_thread, startup,
-                               "loader-service", &t)) < 0) {
+    thrd_t t;
+    int ret = thrd_create_with_name(&t, loader_service_thread, startup, "loader-service");
+    if (ret != thrd_success) {
         mx_handle_close(h[0]);
         mx_handle_close(h[1]);
         free(startup);
-        return r;
+        return ret;
     }
 
-    mxr_thread_detach(t);
+    thrd_detach(t);
     return h[0];
 }

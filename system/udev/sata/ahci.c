@@ -11,7 +11,6 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/thread.h>
 #include <system/listnode.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -78,9 +77,9 @@ typedef struct ahci_device {
     pci_protocol_t* pci;
 
     mx_handle_t irq_handle;
-    mxr_thread_t* irq_thread;
+    thrd_t irq_thread;
 
-    mxr_thread_t* worker_thread;
+    thrd_t worker_thread;
     completion_t worker_completion;
 
     ahci_port_t ports[AHCI_MAX_PORTS];
@@ -583,17 +582,17 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
 
     // start irq thread
-    status = mxr_thread_create(ahci_irq_thread, device, "ahci-irq", &device->irq_thread);
-    if (status < 0) {
-        xprintf("ahci: error %d in irq thread create\n", status);
+    int ret = thrd_create_with_name(&device->irq_thread, ahci_irq_thread, device, "ahci-irq");
+    if (ret != thrd_success) {
+        xprintf("ahci: error %d in irq thread create\n", ret);
         goto fail;
     }
 
     // start worker thread (for iotxn queue)
     device->worker_completion = COMPLETION_INIT;
-    status = mxr_thread_create(ahci_worker_thread, device, "ahci-worker", &device->worker_thread);
-    if (status < 0) {
-        xprintf("ahci: error %d in worker thread create\n", status);
+    ret = thrd_create_with_name(&device->worker_thread, ahci_worker_thread, device, "ahci-worker");
+    if (ret != thrd_success) {
+        xprintf("ahci: error %d in worker thread create\n", ret);
         goto fail;
     }
 
@@ -601,9 +600,9 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev) {
     device_add(&device->device, dev);
 
     // initialize controller and detect devices
-    mxr_thread_t* t;
-    status = mxr_thread_create(ahci_init_thread, device, "ahci-init", &t);
-    if (status < 0) {
+    thrd_t t;
+    ret = thrd_create_with_name(&t, ahci_init_thread, device, "ahci-init");
+    if (ret != thrd_success) {
         xprintf("ahci: error %d in init thread create\n", status);
         goto fail;
     }

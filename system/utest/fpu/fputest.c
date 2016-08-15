@@ -5,11 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
-#include <runtime/thread.h>
 
 #define THREAD_COUNT 8
 #define ITER 1000000
@@ -61,7 +61,7 @@ bool fpu_test(void) {
     unittest_printf("welcome to floating point test\n");
 
     /* test lazy fpu load on separate thread */
-    mxr_thread_t *t[THREAD_COUNT];
+    thrd_t t[THREAD_COUNT];
     double val[countof(t)];
     char name[MX_MAX_NAME_LEN];
 
@@ -69,11 +69,11 @@ bool fpu_test(void) {
     for (unsigned int i = 0; i < countof(t); i++) {
         val[i] = i;
         snprintf(name, sizeof(name), "fpu thread %u", i);
-        mxr_thread_create(float_thread, &val[i], name, &t[i]);
+        thrd_create_with_name(&t[i], float_thread, &val[i], name);
     }
 
     for (unsigned int i = 0; i < countof(t); i++) {
-        mxr_thread_join(t[i], NULL);
+        thrd_join(t[i], NULL);
         void* v = &val[i];
         uint64_t int64_val = *(uint64_t*)v;
 

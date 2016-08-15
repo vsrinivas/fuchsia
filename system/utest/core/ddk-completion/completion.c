@@ -5,12 +5,12 @@
 #include <ddk/completion.h>
 
 #include <magenta/syscalls.h>
-#include <runtime/thread.h>
 #include <unittest/unittest.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 static completion_t completion = COMPLETION_INIT;
 
@@ -49,16 +49,16 @@ static bool test_initializer(void) {
 
 static bool test_completions(void) {
     BEGIN_TEST;
-    mxr_thread_t* signal_thread;
-    mxr_thread_t* wait_thread[NUM_THREADS];
+    thrd_t signal_thread;
+    thrd_t wait_thread[NUM_THREADS];
 
     for (int idx = 0; idx < NUM_THREADS; idx++)
-        mxr_thread_create(completion_thread_wait, NULL, "completion wait", wait_thread + idx);
-    mxr_thread_create(completion_thread_signal, NULL, "completion signal", &signal_thread);
+        thrd_create_with_name(wait_thread + idx, completion_thread_wait, NULL, "completion wait");
+    thrd_create_with_name(&signal_thread, completion_thread_signal, NULL, "completion signal");
 
     for (int idx = 0; idx < NUM_THREADS; idx++)
-        mxr_thread_join(wait_thread[idx], NULL);
-    mxr_thread_join(signal_thread, NULL);
+        thrd_join(wait_thread[idx], NULL);
+    thrd_join(signal_thread, NULL);
 
     END_TEST;
 }

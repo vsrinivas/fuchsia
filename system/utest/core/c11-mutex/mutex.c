@@ -5,7 +5,6 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 #include <runtime/mutex.h>
-#include <runtime/thread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -121,30 +120,30 @@ static bool test_initializer(void) {
 
 static bool test_mutexes(void) {
     BEGIN_TEST;
-    mxr_thread_t *handle1, *handle2, *handle3;
+    thrd_t thread1, thread2, thread3;
 
-    mxr_thread_create(mutex_thread_1, NULL, "thread 1", &handle1);
-    mxr_thread_create(mutex_thread_2, NULL, "thread 2", &handle2);
-    mxr_thread_create(mutex_thread_3, NULL, "thread 3", &handle3);
+    thrd_create_with_name(&thread1, mutex_thread_1, NULL, "thread 1");
+    thrd_create_with_name(&thread2, mutex_thread_2, NULL, "thread 2");
+    thrd_create_with_name(&thread3, mutex_thread_3, NULL, "thread 3");
 
-    mxr_thread_join(handle1, NULL);
-    mxr_thread_join(handle2, NULL);
-    mxr_thread_join(handle3, NULL);
+    thrd_join(thread1, NULL);
+    thrd_join(thread2, NULL);
+    thrd_join(thread3, NULL);
 
     END_TEST;
 }
 
 static bool test_try_mutexes(void) {
     BEGIN_TEST;
-    mxr_thread_t *handle1, *handle2, *handle3;
+    thrd_t thread1, thread2, thread3;
 
-    mxr_thread_create(mutex_try_thread_1, NULL, "thread 1", &handle1);
-    mxr_thread_create(mutex_try_thread_2, NULL, "thread 2", &handle2);
-    mxr_thread_create(mutex_try_thread_3, NULL, "thread 3", &handle3);
+    thrd_create_with_name(&thread1, mutex_try_thread_1, NULL, "thread 1");
+    thrd_create_with_name(&thread2, mutex_try_thread_2, NULL, "thread 2");
+    thrd_create_with_name(&thread3, mutex_try_thread_3, NULL, "thread 3");
 
-    mxr_thread_join(handle1, NULL);
-    mxr_thread_join(handle2, NULL);
-    mxr_thread_join(handle3, NULL);
+    thrd_join(thread1, NULL);
+    thrd_join(thread2, NULL);
+    thrd_join(thread3, NULL);
 
     EXPECT_TRUE(got_lock_1, "failed to get lock 1");
     EXPECT_TRUE(got_lock_2, "failed to get lock 2");

@@ -9,7 +9,6 @@
 #include <ddk/protocol/bluetooth-hci.h>
 #include <ddk/protocol/usb-device.h>
 #include <system/listnode.h>
-#include <runtime/thread.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -366,9 +365,9 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
     queue_acl_read_requests_locked(hci);
     mtx_unlock(&hci->mutex);
 
-    mxr_thread_t* thread;
-    mxr_thread_create(hci_read_thread, hci, "hci_read_thread", &thread);
-    mxr_thread_detach(thread);
+    thrd_t thread;
+    thrd_create_with_name(&thread, hci_read_thread, hci, "hci_read_thread");
+    thrd_detach(thread);
 
     hci->device.protocol_id = MX_PROTOCOL_BLUETOOTH_HCI;
     hci->device.protocol_ops = &hci_proto;

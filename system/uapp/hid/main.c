@@ -18,8 +18,6 @@
 
 #include <system/listnode.h>
 
-#include <runtime/thread.h>
-
 #include <ddk/protocol/input.h>
 
 #define DEV_INPUT "/dev/class/input"
@@ -41,14 +39,14 @@ void usage(void) {
 
 typedef struct {
     char dev_name[128];
-    mxr_thread_t* t;
+    thrd_t t;
     int flags;
     int fd;
     struct list_node node;
 } input_listener_t;
 
 static struct list_node input_listeners_list = LIST_INITIAL_VALUE(input_listeners_list);
-static mxr_thread_t* input_poll_thread;
+static thrd_t input_poll_thread;
 
 static mtx_t print_lock = MTX_INIT;
 #define lprintf(fmt...) \
@@ -229,7 +227,6 @@ static int hid_input_devices_poll_thread(void* arg) {
         }
         char dname[128];
         char tname[128];
-        mx_status_t status;
         while ((de = readdir(dir)) != NULL) {
             snprintf(dname, sizeof(dname), "%s/%s", DEV_INPUT, de->d_name);
 
@@ -265,9 +262,9 @@ static int hid_input_devices_poll_thread(void* arg) {
                 continue;
             }
             snprintf(tname, sizeof(tname), "hid-input-%s", de->d_name);
-            status = mxr_thread_create(hid_input_thread, (void*)free, tname, &free->t);
-            if (status < 0) {
-                printf("hid: input thread %s did not start (status=%d)\n", tname, status);
+            int ret = thrd_create_with_name(&free->t, hid_input_thread, (void*)free, tname);
+            if (ret != thrd_success) {
+                printf("hid: input thread %s did not start (error=%d)\n", tname, ret);
                 free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
             }
         }
@@ -278,12 +275,12 @@ static int hid_input_devices_poll_thread(void* arg) {
 }
 
 int read_reports(int argc, const char** argv) {
-    mx_status_t status = mxr_thread_create(hid_input_devices_poll_thread, NULL, "hid-inputdev-poll", &input_poll_thread);
-    if (status != NO_ERROR) {
-        return status;
+    int ret = thrd_create_with_name(&input_poll_thread, hid_input_devices_poll_thread, NULL, "hid-inputdev-poll");
+    if (ret != thrd_success) {
+        return ret;
     }
 
-    mxr_thread_join(input_poll_thread, NULL);
+    thrd_join(input_poll_thread, NULL);
     return 0;
 }
 

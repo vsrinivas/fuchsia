@@ -15,8 +15,6 @@
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
-#include <runtime/thread.h>
-
 #include "private.h"
 
 #define MXDEBUG 0

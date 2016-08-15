@@ -4,9 +4,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <threads.h>
 #include <time.h>
 
-#include <runtime/thread.h>
 #include <magenta/syscalls.h>
 #include <stdatomic.h>
 
@@ -19,12 +19,12 @@ static int thread_func(void* arg) {
         printf("Created %lld threads, time %lld us\n", val, mx_current_time() / 1000000);
     }
 
-    mxr_thread_t *thread = NULL;
-    mx_status_t status = mxr_thread_create(thread_func, NULL, "depth", &thread);
-    if (status == NO_ERROR) {
-        status = mxr_thread_join(thread, NULL);
-        if (status != NO_ERROR) {
-            printf("Unexpected thread join return: %d\n", status);
+    thrd_t thread;
+    int ret = thrd_create_with_name(&thread, thread_func, NULL, "depth");
+    if (ret == thrd_success) {
+        ret = thrd_join(thread, NULL);
+        if (ret != thrd_success) {
+            printf("Unexpected thread join return: %d\n", ret);
             return 1;
         }
         val = atomic_fetch_sub(&count, 1);
@@ -39,11 +39,11 @@ static int thread_func(void* arg) {
 int main(int argc, char** argv) {
     printf("Running thread depth test...\n");
 
-    mxr_thread_t *thread = NULL;
-    mx_status_t status = mxr_thread_create(thread_func, NULL, "depth", &thread);
-    status = mxr_thread_join(thread, NULL);
-    if (status != NO_ERROR) {
-        printf("Unexpected thread join return: %d\n", status);
+    thrd_t thread;
+    int ret = thrd_create_with_name(&thread, thread_func, NULL, "depth");
+    ret = thrd_join(thread, NULL);
+    if (ret != thrd_success) {
+        printf("Unexpected thread join return: %d\n", ret);
         return 1;
     }
 

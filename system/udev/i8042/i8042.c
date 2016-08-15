@@ -22,7 +22,6 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <runtime/thread.h>
 #include <system/listnode.h>
 
 #define MXDEBUG 0
@@ -33,7 +32,7 @@ typedef struct i8042_device {
     mx_driver_t* drv;
 
     mx_handle_t irq;
-    mxr_thread_t* irq_thread;
+    thrd_t irq_thread;
 
     int last_code;
 
@@ -902,14 +901,14 @@ static mx_status_t i8042_init(mx_driver_t* driver) {
 
     // create irq thread
     const char* name = "i8042-kbd-irq";
-    status = mxr_thread_create(i8042_irq_thread, kbd_device, name, &kbd_device->irq_thread);
-    if (status != NO_ERROR)
+    int ret = thrd_create_with_name(&kbd_device->irq_thread, i8042_irq_thread, kbd_device, name);
+    if (ret != thrd_success)
         goto fail;
 
     if (have_mouse) {
         name = "i8042-mouse-irq";
-        status = mxr_thread_create(i8042_irq_thread, mouse_device, name, &mouse_device->irq_thread);
-        if (status != NO_ERROR) {
+        ret = thrd_create_with_name(&mouse_device->irq_thread, i8042_irq_thread, mouse_device, name);
+        if (ret != thrd_success) {
             printf("i8042: could not create irq thread for mouse\n");
             device_remove(&mouse_device->device);
             free(mouse_device);

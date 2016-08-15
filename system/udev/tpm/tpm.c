@@ -20,7 +20,6 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/thread.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

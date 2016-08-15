@@ -4,12 +4,12 @@
 
 #include <limits.h>
 #include <magenta/syscalls.h>
-#include <runtime/thread.h>
 #include <unittest/unittest.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -67,8 +67,8 @@ public:
         : futex_addr_(futex_addr),
           timeout_in_us_(timeout_in_us),
           state_(STATE_STARTED) {
-        auto ret = mxr_thread_create(wakeup_test_thread, this, "wakeup_test_thread", &thread_);
-        EXPECT_EQ(ret, NO_ERROR, "Error during thread creation");
+        auto ret = thrd_create_with_name(&thread_, wakeup_test_thread, this, "wakeup_test_thread");
+        EXPECT_EQ(ret, thrd_success, "Error during thread creation");
         while (state_ == STATE_STARTED) {
             sched_yield();
         }
@@ -86,7 +86,7 @@ public:
     TestThread& operator=(const TestThread &) = delete;
 
     ~TestThread() {
-        EXPECT_EQ(mxr_thread_join(thread_, NULL), NO_ERROR, "Error during wait");
+        EXPECT_EQ(thrd_join(thread_, NULL), thrd_success, "Error during wait");
     }
 
     void assert_thread_woken() {
@@ -126,7 +126,7 @@ private:
         return 0;
     }
 
-    mxr_thread_t *thread_;
+    thrd_t thread_;
     volatile int* futex_addr_;
     mx_time_t timeout_in_us_;
     volatile enum {
@@ -401,23 +401,23 @@ static int signal_thread3(void* arg) {
 
 static bool test_event_signalling() {
     BEGIN_TEST;
-    mxr_thread_t *handle1, *handle2, *handle3;
+    thrd_t thread1, thread2, thread3;
 
     log("starting signal threads\n");
-    mxr_thread_create(signal_thread1, NULL, "thread 1", &handle1);
-    mxr_thread_create(signal_thread2, NULL, "thread 2", &handle2);
-    mxr_thread_create(signal_thread3, NULL, "thread 3", &handle3);
+    thrd_create_with_name(&thread1, signal_thread1, NULL, "thread 1");
+    thrd_create_with_name(&thread2, signal_thread2, NULL, "thread 2");
+    thrd_create_with_name(&thread3, signal_thread3, NULL, "thread 3");
 
     mx_nanosleep(300 * 1000 * 1000);
     log("signalling event\n");
     event.signal();
 
     log("joining signal threads\n");
-    mxr_thread_join(handle1, NULL);
+    thrd_join(thread1, NULL);
     log("signal_thread 1 joined\n");
-    mxr_thread_join(handle2, NULL);
+    thrd_join(thread2, NULL);
     log("signal_thread 2 joined\n");
-    mxr_thread_join(handle3, NULL);
+    thrd_join(thread3, NULL);
     log("signal_thread 3 joined\n");
     END_TEST;
 }

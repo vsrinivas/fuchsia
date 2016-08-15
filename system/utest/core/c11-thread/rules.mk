@@ -11,7 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/thread.c \
 
-MODULE_NAME := mxr-thread-test
+MODULE_NAME := c11-thread-test
 
 MODULE_STATIC_LIBS := ulib/runtime
 MODULE_LIBS := \

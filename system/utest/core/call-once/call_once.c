@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <runtime/once.h>
-#include <runtime/thread.h>
 #include <stdatomic.h>
+#include <threads.h>
 
 #include <unittest/unittest.h>
 
@@ -46,17 +46,16 @@ bool call_once_two_thread_test(void) {
 
     static mxr_once_t flag = MXR_ONCE_INIT;
 
-    mxr_thread_t* thr;
-    mx_status_t status = mxr_thread_create(&counted_call_thread, &flag,
-                                           "second thread", &thr);
-    EXPECT_EQ(status, 0, "mxr_thread_create");
+    thrd_t thr;
+    int ret = thrd_create_with_name(&thr, &counted_call_thread, &flag, "second thread");
+    EXPECT_EQ(ret, thrd_success, "thrd_create_with_name");
 
     mxr_once(&flag, &counted_call);
     EXPECT_EQ(call_count, 1, "count not 1 after main thread's call");
 
     int thr_result;
-    status = mxr_thread_join(thr, &thr_result);
-    EXPECT_EQ(status, 0, "mxr_thread_join");
+    ret = thrd_join(thr, &thr_result);
+    EXPECT_EQ(ret, thrd_success, "thrd_join");
     EXPECT_EQ(thr_result, 0, "thread return value");
 
     EXPECT_EQ(call_count, 1, "count not 1 after join");

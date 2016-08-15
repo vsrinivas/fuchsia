@@ -10,8 +10,7 @@
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <system/listnode.h>
-
-#include <runtime/thread.h>
+#include <threads.h>
 
 #define MXDEBUG 0
 
@@ -28,7 +27,7 @@ struct mxio_dispatcher {
     list_node_t list;
     mx_handle_t tx;
     mx_handle_t rx;
-    mxr_thread_t* t;
+    thrd_t t;
     mxio_dispatcher_cb_t cb;
 
     mx_handle_t handles[MAX_HANDLERS + 1];
@@ -143,11 +142,11 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
 
 // TODO: protect against double-start
 mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md) {
-    if (mxr_thread_create(mxio_dispatcher_thread, md, "mxio-dispatcher", &md->t)) {
+    if (thrd_create_with_name(&md->t, mxio_dispatcher_thread, md, "mxio-dispatcher") != thrd_success) {
         mxio_dispatcher_destroy(md);
         return ERR_NO_RESOURCES;
     }
-    mxr_thread_detach(md->t);
+    thrd_detach(md->t);
     return NO_ERROR;
 }
 

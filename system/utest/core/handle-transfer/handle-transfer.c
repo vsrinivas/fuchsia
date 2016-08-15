@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <threads.h>
 #include <time.h>
 
 #include <magenta/syscalls.h>
-#include <runtime/thread.h>
 #include <unittest/unittest.h>
 
 // This example tests transfering message pipe handles through message pipes. To do so, it:
@@ -124,16 +124,16 @@ bool handle_transfer_cancel_wait_test(void) {
     snprintf(msg, sizeof(msg), "failed to create message pipe B[0,1]: %d\n", status);
     EXPECT_EQ(status, 0, msg);
 
-    mxr_thread_t *thr;
-    status = mxr_thread_create(thread, A, "write thread", &thr);
-    EXPECT_EQ(status, 0, "failed to create write thread");
+    thrd_t thr;
+    int ret = thrd_create_with_name(&thr, thread, A, "write thread");
+    EXPECT_EQ(ret, thrd_success, "failed to create write thread");
 
     mx_signals_state_t signals_state;
     mx_signals_t signals = MX_SIGNAL_PEER_CLOSED;
     status = mx_handle_wait_one(A[0], signals, 1000 * 1000 * 1000, &signals_state);
     EXPECT_NEQ(ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
 
-    mxr_thread_join(thr, NULL);
+    thrd_join(thr, NULL);
     mx_handle_close(B[1]);
     mx_handle_close(B[0]);
     mx_handle_close(A[1]);

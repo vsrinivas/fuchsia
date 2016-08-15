@@ -14,8 +14,6 @@
 #include <string.h>
 #include <threads.h>
 
-#include <runtime/thread.h>
-
 #define FIFOSIZE 256
 #define FIFOMASK (FIFOSIZE - 1)
 
@@ -93,8 +91,8 @@ mx_status_t console_init(mx_driver_t* driver) {
         if (device_add(dev, NULL) < 0) {
             free(dev);
         } else {
-            mxr_thread_t* t;
-            mxr_thread_create(debug_reader, dev, "debug-reader", &t);
+            thrd_t t;
+            thrd_create_with_name(&t, debug_reader, dev, "debug-reader");
         }
     }
     return NO_ERROR;

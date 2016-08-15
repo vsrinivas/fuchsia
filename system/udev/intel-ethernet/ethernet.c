@@ -11,8 +11,6 @@
 
 #include <system/listnode.h>
 
-#include <runtime/thread.h>
-
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
@@ -36,7 +34,7 @@ struct ethernet_device {
     mx_device_t* pcidev;
     mx_handle_t ioh;
     mx_handle_t irqh;
-    mxr_thread_t* thread;
+    thrd_t thread;
 };
 
 #define get_eth_device(d) containerof(d, ethernet_device_t, dev)
@@ -210,8 +208,8 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
         goto fail;
     }
 
-    mxr_thread_create(irq_thread, edev, "eth-irq-thread", &edev->thread);
-    mxr_thread_detach(edev->thread);
+    thrd_create_with_name(&edev->thread, irq_thread, edev, "eth-irq-thread");
+    thrd_detach(edev->thread);
 
     return NO_ERROR;
 

@@ -2,12 +2,12 @@
 #include <threads.h>
 
 static int __pthread_detach(pthread_t t) {
-    /* Cannot detach a thread that's already exiting */
-    if (!mtx_trylock(&t->exitlock))
-        return pthread_join(t, 0);
-    t->detached = 2;
-    mtx_unlock(&t->exitlock);
-    return 0;
+    switch (mxr_thread_detach(t->mxr_thread)) {
+    case NO_ERROR:
+        return 0;
+    default:
+        return EINVAL;
+    }
 }
 
 weak_alias(__pthread_detach, pthread_detach);

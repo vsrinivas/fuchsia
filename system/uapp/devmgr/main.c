@@ -9,11 +9,11 @@
 #include <magenta/syscalls-ddk.h>
 #include <mxio/debug.h>
 #include <mxio/util.h>
-#include <runtime/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include "devmgr.h"
@@ -126,9 +126,9 @@ int main(int argc, char** argv) {
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
 
-    mxr_thread_t* t;
-    if ((mxr_thread_create(console_starter, NULL, "console-starter", &t)) == 0) {
-        mxr_thread_detach(t);
+    thrd_t t;
+    if ((thrd_create_with_name(&t, console_starter, NULL, "console-starter")) == thrd_success) {
+        thrd_detach(t);
     }
 
     devmgr_handle_messages();

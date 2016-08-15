@@ -26,7 +26,7 @@ enum {
 
 struct mxr_thread {
     mx_handle_t handle;
-    int return_value;
+    intptr_t return_value;
     mxr_thread_entry_t entry;
     void* arg;
 
@@ -75,12 +75,12 @@ static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
     return mx_process_vm_unmap(self_handle, mapping, 0u);
 }
 
-static mx_status_t thread_cleanup(mxr_thread_t* thread, int* return_value_out) {
+static mx_status_t thread_cleanup(mxr_thread_t* thread, intptr_t* return_value_out) {
     mx_status_t status = mx_handle_close(thread->handle);
     thread->handle = 0;
     if (status != NO_ERROR)
         return status;
-    int return_value = thread->return_value;
+    intptr_t return_value = thread->return_value;
     status = deallocate_thread_page(thread);
     if (status != NO_ERROR)
         return status;
@@ -109,20 +109,26 @@ static int thread_trampoline(void* ctx) {
 
     init_tls(thread);
 
-    thread->return_value = thread->entry(thread->arg);
+    mxr_thread_exit(thread->entry(thread->arg));
+}
 
-    mxr_mutex_lock(&thread->state_lock);
-    switch (thread->state) {
+_Noreturn void mxr_thread_exit(intptr_t return_value) {
+    mxr_thread_t* self = mxr_tls_get(MXR_TLS_SLOT_SELF);
+
+    self->return_value = return_value;
+
+    mxr_mutex_lock(&self->state_lock);
+    switch (self->state) {
     case JOINED:
-        mxr_mutex_unlock(&thread->state_lock);
+        mxr_mutex_unlock(&self->state_lock);
         break;
     case JOINABLE:
-        thread->state = DONE;
-        mxr_mutex_unlock(&thread->state_lock);
+        self->state = DONE;
+        mxr_mutex_unlock(&self->state_lock);
         break;
     case DETACHED:
-        mxr_mutex_unlock(&thread->state_lock);
-        thread_cleanup(thread, NULL);
+        mxr_mutex_unlock(&self->state_lock);
+        thread_cleanup(self, NULL);
         break;
     case DONE:
         // Not reached.
@@ -130,7 +136,6 @@ static int thread_trampoline(void* ctx) {
     }
 
     mx_thread_exit();
-    return 0;
 }
 
 // Local implementation so libruntime does not depend on libc.
@@ -165,7 +170,7 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
     return NO_ERROR;
 }
 
-mx_status_t mxr_thread_join(mxr_thread_t* thread, int* return_value_out) {
+mx_status_t mxr_thread_join(mxr_thread_t* thread, intptr_t* return_value_out) {
     mxr_mutex_lock(&thread->state_lock);
     switch (thread->state) {
     case JOINED:

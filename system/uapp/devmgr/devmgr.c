@@ -22,8 +22,6 @@
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
-#include <runtime/thread.h>
-
 #define TRACE 0
 
 #if TRACE
@@ -658,8 +656,8 @@ static int devhost_dispatcher_thread(void* arg) {
 
 void devmgr_handle_messages(void) {
     if (devmgr_devhost_dispatcher) {
-        mxr_thread_t* t;
-        mxr_thread_create(devhost_dispatcher_thread, NULL, "devhost-dispatcher", &t);
+        thrd_t t;
+        thrd_create_with_name(&t, devhost_dispatcher_thread, NULL, "devhost-dispatcher");
     }
     mxio_dispatcher_run(devmgr_rio_dispatcher);
 }

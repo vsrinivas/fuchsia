@@ -12,8 +12,6 @@
 #include <mxio/dispatcher.h>
 #include <system/listnode.h>
 
-#include <runtime/thread.h>
-
 #define MXDEBUG 0
 
 typedef struct {
@@ -31,7 +29,7 @@ struct mxio_dispatcher {
     list_node_t list;
     mx_handle_t ioport;
     mxio_dispatcher_cb_t cb;
-    mxr_thread_t* t;
+    thrd_t t;
 };
 
 static void mxio_dispatcher_destroy(mxio_dispatcher_t* md) {
@@ -132,11 +130,11 @@ mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md) {
     mx_status_t r;
     mtx_lock(&md->lock);
     if (md->t == NULL) {
-        if (mxr_thread_create(mxio_dispatcher_thread, md, "mxio-dispatcher", &md->t)) {
+        if (thrd_create_with_name(&md->t, mxio_dispatcher_thread, md, "mxio-dispatcher") != thrd_success) {
             mxio_dispatcher_destroy(md);
             r = ERR_NO_RESOURCES;
         } else {
-            mxr_thread_detach(md->t);
+            thrd_detach(md->t);
             r = NO_ERROR;
         }
     } else {

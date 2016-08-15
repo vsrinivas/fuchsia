@@ -9,10 +9,10 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-device.h>
 #include <hw/usb-hub.h>
-#include <runtime/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <system/listnode.h>
+#include <threads.h>
 
 //#define TRACE 1
 #if TRACE
@@ -269,12 +269,12 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     req->client_data = hub;
     hub->status_request = req;
 
-    mxr_thread_t* thread;
-    status = mxr_thread_create(usb_hub_thread, hub, "usb_hub_thread", &thread);
-    if (status != NO_ERROR) {
+    thrd_t thread;
+    int ret = thrd_create_with_name(&thread, usb_hub_thread, hub, "usb_hub_thread");
+    if (ret != thrd_success) {
         goto fail;
     }
-    mxr_thread_detach(thread);
+    thrd_detach(thread);
     return NO_ERROR;
 
 fail:

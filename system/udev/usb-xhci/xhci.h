@@ -9,7 +9,6 @@
 #include <hw/usb-hub.h>
 #include <hw/usb.h>
 #include <magenta/types.h>
-#include <runtime/thread.h>
 #include <stdbool.h>
 #include <system/compiler.h>
 #include <system/listnode.h>
@@ -101,7 +100,7 @@ struct xhci {
     uint32_t rh_num_ports;
 
     // device thread stuff
-    mxr_thread_t* device_thread;
+    thrd_t device_thread;
     xhci_slot_t* slots;
 
     // for command processing in xhci-device-manager.c

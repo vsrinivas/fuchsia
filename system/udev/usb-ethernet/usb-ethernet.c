@@ -9,7 +9,6 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-device.h>
 #include <system/listnode.h>
-#include <runtime/thread.h>
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -552,9 +551,9 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&eth->free_intr_reqs, &req->node);
     }
 
-    mxr_thread_t* thread;
-    mxr_thread_create(usb_ethernet_start_thread, eth, "usb_ethernet_start_thread", &thread);
-    mxr_thread_detach(thread);
+    thrd_t thread;
+    thrd_create_with_name(&thread, usb_ethernet_start_thread, eth, "usb_ethernet_start_thread");
+    thrd_detach(thread);
 
     return NO_ERROR;
 }
