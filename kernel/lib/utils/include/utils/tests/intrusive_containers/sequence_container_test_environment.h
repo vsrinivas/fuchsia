@@ -673,9 +673,10 @@ private:
     using Base = TestEnvironmentBase<TestEnvTraits>;
     static constexpr size_t OBJ_COUNT = Base::OBJ_COUNT;
 
-    ContainerType& container() { return this->container_; }
-    ObjType**      objects()   { return this->objects_; }
-    size_t&        refs_held() { return this->refs_held_; }
+    ContainerType&       container()       { return this->container_; }
+    const ContainerType& const_container() { return this->container_; }
+    ObjType**            objects()         { return this->objects_; }
+    size_t&              refs_held()       { return this->refs_held_; }
 
     void ReleaseObject(size_t ndx) { Sp::ReleaseObject(ndx); }
     bool HoldingObject(size_t ndx) const { return Sp::HoldingObject(ndx); }

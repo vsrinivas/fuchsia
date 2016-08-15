@@ -1018,7 +1018,7 @@ public:
 
         // Find all of the members which should be in the container.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            auto iter = container().find_if(
+            auto iter = const_container().find_if(
                 [i](const ObjType& obj) -> bool {
                     return (obj.value() == i);
                 });
@@ -1037,7 +1037,7 @@ public:
         // Count all of the odd members.
         size_t total_found = 0;
         while (true) {
-            auto iter = container().find_if(
+            auto iter = const_container().find_if(
                 [](const ObjType& obj) -> bool {
                     return (obj.value() & 1) && !obj.visited_count();
                 });
@@ -1056,7 +1056,7 @@ public:
             EXPECT_EQ(obj.value() & 1, obj.visited_count(), "");
 
         // Fail to find a member which should not be in the container.
-        auto iter = container().find_if(
+        auto iter = const_container().find_if(
             [](const ObjType& obj) -> bool {
                 return (obj.value() == OBJ_COUNT);
             });
@@ -1074,9 +1074,10 @@ private:
     static constexpr size_t EVEN_OBJ_COUNT = (OBJ_COUNT >> 1) + (OBJ_COUNT & 1);
     static constexpr size_t ODD_OBJ_COUNT  = (OBJ_COUNT >> 1);
 
-    ContainerType& container() { return this->container_; }
-    ObjType**      objects()   { return this->objects_; }
-    size_t&        refs_held() { return this->refs_held_; }
+    ContainerType&       container()       { return this->container_; }
+    const ContainerType& const_container() { return this->container_; }
+    ObjType**            objects()         { return this->objects_; }
+    size_t&              refs_held()       { return this->refs_held_; }
 
     void ReleaseObject(size_t ndx) { Sp::ReleaseObject(ndx); }
     bool HoldingObject(size_t ndx) const { return Sp::HoldingObject(ndx); }

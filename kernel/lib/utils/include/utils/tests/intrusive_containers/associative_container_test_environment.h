@@ -183,7 +183,7 @@ public:
             KeyType key   = objects()[i]->GetKey();
             size_t  value = objects()[i]->value();
 
-            auto iter = container().find(key);
+            auto iter = const_container().find(key);
 
             REQUIRE_TRUE(iter.IsValid(), "");
             EXPECT_EQ(key, iter->GetKey(), "");
@@ -191,7 +191,7 @@ public:
         }
 
         // Fail to look up something which should not be in the collection.
-        auto iter = container().find(kBannedKeyValue);
+        auto iter = const_container().find(kBannedKeyValue);
         EXPECT_FALSE(iter.IsValid(), "");
 
         TestEnvironment<TestEnvTraits>::Reset();
@@ -397,9 +397,10 @@ private:
     static constexpr size_t EVEN_OBJ_COUNT = (OBJ_COUNT >> 1) + (OBJ_COUNT & 1);
     static constexpr size_t ODD_OBJ_COUNT  = (OBJ_COUNT >> 1);
 
-    ContainerType& container() { return this->container_; }
-    ObjType**      objects()   { return this->objects_; }
-    size_t&        refs_held() { return this->refs_held_; }
+    ContainerType&       container()       { return this->container_; }
+    const ContainerType& const_container() { return this->container_; }
+    ObjType**            objects()         { return this->objects_; }
+    size_t&              refs_held()       { return this->refs_held_; }
 
     void ReleaseObject(size_t ndx) { Sp::ReleaseObject(ndx); }
     bool HoldingObject(size_t ndx) const { return Sp::HoldingObject(ndx); }
