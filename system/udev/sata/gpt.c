@@ -11,6 +11,7 @@
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <runtime/mutex.h>
+#include <system/listnode.h>
 #include <sys/param.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -115,10 +116,17 @@ static mx_off_t gpt_getsize(mx_device_t* dev) {
     return getsize(get_gptpart_device(dev));
 }
 
+static mx_status_t gpt_release(mx_device_t* dev) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    free(device);
+    return NO_ERROR;
+}
+
 static mx_protocol_device_t gpt_proto = {
     .ioctl = gpt_ioctl,
     .iotxn_queue = gpt_iotxn_queue,
     .get_size = gpt_getsize,
+    .release = gpt_release,
 };
 
 static void gpt_read_sync_complete(iotxn_t* txn) {
@@ -233,6 +241,15 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
+static mx_status_t gpt_unbind(mx_driver_t* driver, mx_device_t* device) {
+    mx_device_t* dev = NULL;
+    mx_device_t* temp = NULL;
+    list_for_every_entry_safe(&device->children, dev, temp, mx_device_t, node) {
+        device_remove(dev);
+    }
+    return NO_ERROR;
+}
+
 static mx_bind_inst_t binding[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
 };
@@ -241,6 +258,7 @@ mx_driver_t _driver_gpt BUILTIN_DRIVER = {
     .name = "gpt",
     .ops = {
         .bind = gpt_bind,
+        .unbind = gpt_unbind,
     },
     .binding = binding,
     .binding_size = sizeof(binding),

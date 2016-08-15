@@ -86,6 +86,12 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     return gpt;
 }
 
+static void commit(gpt_device_t* gpt, int fd) {
+    printf("commit\n");
+    gpt_device_sync(gpt);
+    mxio_ioctl(fd, BLOCK_OP_RR_PART, NULL, 0, NULL, 0);
+}
+
 static void dump_partitions(const char* dev) {
     int fd;
     gpt_device_t* gpt = init(dev, false, &fd);
@@ -119,7 +125,7 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
     if (!gpt) return;
 
     if (!gpt->valid) {
-        gpt_device_sync(gpt); // generate a default header
+        commit(gpt, fd); // generate a default header
     }
 
     uint8_t type[16];
@@ -129,7 +135,7 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
     int rc = gpt_partition_add(gpt, name, type, guid, offset, blocks, 0);
     if (rc == 0) {
         printf("add partition: name=%s offset=0x%llx blocks=0x%llx\n", name, offset, blocks);
-        gpt_device_sync(gpt);
+        commit(gpt, fd);
     }
 
     gpt_device_release(gpt);
@@ -152,7 +158,7 @@ static void remove_partition(const char* dev, int n) {
     if (rc == 0) {
         char name[37];
         printf("remove partition: n=%d name=%s\n", n, utf16_to_cstring(name, (const uint16_t*)p->name, 36));
-        gpt_device_sync(gpt);
+        commit(gpt, fd);
     }
 
     gpt_device_release(gpt);

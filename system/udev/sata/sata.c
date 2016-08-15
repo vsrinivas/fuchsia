@@ -134,6 +134,8 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
 
 // implement device protocol:
 
+static mx_protocol_device_t sata_device_proto;
+
 static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
     sata_device_t* device = get_sata_device(dev);
     // TODO implement other block ioctls
@@ -145,10 +147,14 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
         return sizeof(*size);
     }
     case BLOCK_OP_GET_BLOCKSIZE: {
-         uint64_t* blksize = reply;
-         if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
-         *blksize = device->sector_sz;
-         return sizeof(*blksize);
+        uint64_t* blksize = reply;
+        if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
+        *blksize = device->sector_sz;
+        return sizeof(*blksize);
+    }
+    case BLOCK_OP_RR_PART: {
+        // rebind to reread the partition table
+        return device_rebind(dev);
     }
     default:
         return ERR_NOT_SUPPORTED;
@@ -183,10 +189,17 @@ static mx_off_t sata_getsize(mx_device_t* dev) {
     return device->capacity;
 }
 
+static mx_status_t sata_release(mx_device_t* dev) {
+    sata_device_t* device = get_sata_device(dev);
+    free(device);
+    return NO_ERROR;
+}
+
 static mx_protocol_device_t sata_device_proto = {
     .ioctl = sata_ioctl,
     .iotxn_queue = sata_iotxn_queue,
     .get_size = sata_getsize,
+    .release = sata_release,
 };
 
 mx_status_t sata_bind(mx_device_t* dev, int port) {

@@ -6,3 +6,4 @@
 #define BLOCK_OP_GET_BLOCKSIZE 2
 #define BLOCK_OP_GET_GUID      3
 #define BLOCK_OP_GET_NAME      4
+#define BLOCK_OP_RR_PART       5
