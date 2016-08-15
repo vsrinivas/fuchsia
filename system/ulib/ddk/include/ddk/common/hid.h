@@ -38,6 +38,6 @@ void mx_hid_fifo_init(mx_hid_fifo_t* fifo);
 size_t mx_hid_fifo_size(mx_hid_fifo_t* fifo);
 ssize_t mx_hid_fifo_peek(mx_hid_fifo_t* fifo, uint8_t* out);
 ssize_t mx_hid_fifo_read(mx_hid_fifo_t* fifo, uint8_t* buf, size_t len);
-ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, uint8_t* buf, size_t len);
+ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, const uint8_t* buf, size_t len);
 
 void mx_hid_fifo_dump(mx_hid_fifo_t* fifo);

@@ -145,9 +145,9 @@ static int get_report_ids(int fd, const char* name, size_t num_reports) {
         arg.id = ids[i];
         arg.type = INPUT_REPORT_INPUT;  // TODO: get all types
         input_report_size_t size;
-        rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_SIZE, &arg, sizeof(arg), &size, sizeof(size));
-        if (rc < 0) {
-            printf("hid: could not get report id size from %s (status=%d)\n", name, rc);
+        int size_rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_SIZE, &arg, sizeof(arg), &size, sizeof(size));
+        if (size_rc < 0) {
+            printf("hid: could not get report id size from %s (status=%d)\n", name, size_rc);
             continue;
         }
         if (i > 0) s = " ";

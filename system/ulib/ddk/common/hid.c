@@ -62,7 +62,7 @@ ssize_t mx_hid_fifo_read(mx_hid_fifo_t* fifo, uint8_t* buf, size_t len) {
     return len;
 }
 
-ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, uint8_t* buf, size_t len) {
+ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, const uint8_t* buf, size_t len) {
     if (!fifo->empty && fifo->tail == fifo->head) return ERR_NOT_ENOUGH_BUFFER;
     if (len > HID_FIFO_SIZE - mx_hid_fifo_size(fifo)) return ERR_NOT_ENOUGH_BUFFER;
 

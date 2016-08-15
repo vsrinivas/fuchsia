@@ -14,17 +14,21 @@
 
 #pragma once
 
-//#define USB_HID_DEBUG 1
-
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/common/hid.h>
 #include <ddk/protocol/input.h>
 #include <ddk/protocol/usb-device.h>
 #include <hw/usb.h>
 #include <hw/usb-hid.h>
 
+#include <runtime/mutex.h>
+#include <system/listnode.h>
+
 #include <stdint.h>
 #include <stddef.h>
+
+#define HID_FLAGS_DEAD 1
 
 typedef struct hid_report_size {
     int16_t id;
@@ -36,6 +40,7 @@ typedef struct hid_report_size {
 typedef struct {
     mx_device_t dev;
     mx_device_t* usbdev;
+    mx_driver_t* drv;
 
     usb_device_protocol_t* usb;
     usb_endpoint_t* endpt;
@@ -47,24 +52,41 @@ typedef struct {
 
     usb_hid_descriptor_t* hid_desc;
     size_t hid_report_desc_len;
-    uint8_t* hid_report_desc;
+    const uint8_t* hid_report_desc;
 
 #define HID_MAX_REPORT_IDS 16
     size_t num_reports;
     hid_report_size_t sizes[HID_MAX_REPORT_IDS];
 
-    mx_hid_fifo_t fifo;
+    // list of opened devices
+    struct list_node instance_list;
+    mxr_mutex_t instance_lock;
 } usb_hid_dev_t;
 
-typedef struct hid_item {
-    uint8_t bSize;
-    uint8_t bType;
-    uint8_t bTag;
-    int64_t data;
-} hid_item_t;
+extern mx_protocol_device_t usb_hid_proto;
 
-const uint8_t* hid_parse_short_item(const uint8_t* buf, const uint8_t* end, hid_item_t* item);
-void hid_init_report_sizes(usb_hid_dev_t* hid);
-int hid_find_report_id(input_report_id_t report_id, usb_hid_dev_t* hid);
-void hid_read_report_sizes(const uint8_t* buf, size_t len, usb_hid_dev_t* hid);
-input_report_size_t hid_max_report_size(usb_hid_dev_t* hid);
+mx_status_t usb_hid_create_dev(usb_hid_dev_t** dev);
+void usb_hid_cleanup_dev(usb_hid_dev_t* dev);
+
+void usb_hid_load_hid_report_desc(usb_hid_dev_t* hid);
+void usb_hid_process_closed(usb_hid_dev_t* hid);
+void usb_hid_process_req(usb_hid_dev_t* hid, const uint8_t* buf, uint16_t len);
+
+typedef struct {
+    mx_device_t dev;
+    usb_hid_dev_t* root;
+
+    uint32_t flags;
+
+    mx_hid_fifo_t fifo;
+
+    struct list_node node;
+} usb_hid_dev_instance_t;
+
+extern mx_protocol_device_t usb_hid_instance_proto;
+
+mx_status_t usb_hid_create_instance(usb_hid_dev_instance_t** dev);
+void usb_hid_cleanup_instance(usb_hid_dev_instance_t* dev);
+
+#define foreach_instance(root, instance) \
+    list_for_every_entry(&root->instance_list, instance, usb_hid_dev_instance_t, node)
