@@ -53,8 +53,11 @@ struct mx_proc_args {
 #define MX_HND_INFO_TYPE(n) ((n)&0xFFFF)
 #define MX_HND_INFO_ARG(n) (((n) >> 16) & 0xFFFF)
 
-// handle to our own process
+// Handle to our own process.
 #define MX_HND_TYPE_PROC_SELF 1
+
+// Handle to the initial thread of our own process.
+#define MX_HND_TYPE_THREAD_SELF 2
 
 // Handle to the VMO containing the ELF image of the system vDSO.  This
 // handle is duplicable, transferable, readable, and executable, but not
@@ -64,7 +67,7 @@ struct mx_proc_args {
 // might create or propagate it on to its children so they can do so.
 // Each process's own vDSO was mapped in by its creator before the
 // process started, its address passed as an argument to entry point.
-#define MX_HND_TYPE_VDSO_VMO 2
+#define MX_HND_TYPE_VDSO_VMO 3
 
 // Handle to the VMO used to map the initial thread's stack.  This
 // handle usually has all rights.  The protocol between process creator
@@ -75,11 +78,11 @@ struct mx_proc_args {
 // calling convention for function entry.  Thus the new process can
 // compute its exact stack bounds by subtracting the size reported by
 // this VMO from the (adjusted back up) initial SP value.
-#define MX_HND_TYPE_STACK_VMO 3
+#define MX_HND_TYPE_STACK_VMO 4
 
 // Handle to a VMO containing a bootfs format image.
 // The "arg" field used with this type is a simple ordinal.
-#define MX_HND_TYPE_BOOTFS_VMO 4
+#define MX_HND_TYPE_BOOTFS_VMO 5
 
 // Handle types the mxio library uses
 #define MX_HND_TYPE_MXIO_ROOT 0x10

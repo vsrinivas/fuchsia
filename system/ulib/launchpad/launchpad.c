@@ -647,6 +647,8 @@ static uintptr_t sp_from_mapping(mx_vaddr_t base, size_t size) {
     return sp;
 }
 
+#define THREAD_NAME "initial"
+
 mx_handle_t launchpad_start(launchpad_t* lp) {
     if (lp->entry == 0)
         return ERR_BAD_STATE;
@@ -678,10 +680,39 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         }
     }
 
+#if 1 // TODO(mcgrathr): later
+    mx_handle_t thread = MX_HANDLE_INVALID;
+#else
+    mx_handle_t thread = mx_thread_create(lp_proc(lp), THREAD_NAME,
+                                          strlen(THREAD_NAME));
+    if (thread < 0) {
+        return thread;
+    } else {
+        // Pass the thread handle down to the child.  The handle we pass
+        // will be consumed by message_write.  So we need a duplicate to
+        // pass to mx_process_start later.
+        mx_handle_t thread_copy =
+            mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS);
+        if (thread_copy < 0) {
+            mx_handle_close(thread);
+            return thread_copy;
+        }
+        mx_status_t status = launchpad_add_handle(lp, thread_copy,
+                                                  MX_HND_TYPE_THREAD_SELF);
+        if (status != NO_ERROR) {
+            mx_handle_close(thread_copy);
+            mx_handle_close(thread);
+            return status;
+        }
+    }
+#endif
+
     mx_handle_t pipeh[2];
     mx_status_t status = mx_message_pipe_create(pipeh, 0);
-    if (status != NO_ERROR)
+    if (status != NO_ERROR) {
+        mx_handle_close(thread);
         return status;
+    }
     mx_handle_t to_child = pipeh[0];
     mx_handle_t child_bootstrap = pipeh[1];
 
@@ -690,6 +721,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         if (status != NO_ERROR) {
             mx_handle_close(to_child);
             mx_handle_close(child_bootstrap);
+            mx_handle_close(thread);
             return status;
         }
     }
@@ -699,6 +731,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
     if (msg == NULL) {
         mx_handle_close(to_child);
         mx_handle_close(child_bootstrap);
+        mx_handle_close(thread);
         return ERR_NO_MEMORY;
     }
 
@@ -711,6 +744,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         free(msg);
         mx_handle_close(to_child);
         mx_handle_close(child_bootstrap);
+        mx_handle_close(thread);
         return ERR_NOT_ENOUGH_BUFFER;
     }
 
@@ -743,10 +777,14 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
             lp->handles[i] = MX_HANDLE_INVALID;
         lp->handle_count = 0;
         // TODO(mcgrathr): Pass in vdso_base somehow.
-        // TODO(mcgrathr): Pass in sp.
+#if 0 // TODO(mcgrathr): later
+        status = mx_process_start(proc, thread, lp->entry, sp, child_bootstrap);
+#else
         (void)sp;
         status = mx_process_start(proc, child_bootstrap, lp->entry);
+#endif
     }
+    mx_handle_close(thread);
     // process_start consumed child_bootstrap if successful.
     if (status == NO_ERROR)
         return proc;
