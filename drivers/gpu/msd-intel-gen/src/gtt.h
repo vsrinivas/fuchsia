@@ -14,12 +14,17 @@
 
 class Gtt : public AddressSpace {
 public:
-    Gtt(std::shared_ptr<RegisterIo> reg_io);
+    class Owner {
+    public:
+        virtual RegisterIo* register_io() = 0;
+    };
+
+    Gtt(Gtt::Owner* owner);
     ~Gtt();
 
     uint64_t size() const { return size_; }
 
-    bool Init(uint64_t gtt_size, std::shared_ptr<magma::PlatformDevice> platform_device);
+    bool Init(uint64_t gtt_size, magma::PlatformDevice* platform_device);
 
     // AddressSpace overrides
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
@@ -29,20 +34,20 @@ public:
     bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type) override;
 
 private:
-    RegisterIo* reg_io() { return reg_io_.get(); }
+    RegisterIo* reg_io() { return owner_->register_io(); }
 
     uint64_t pte_mmio_offset() { return mmio_->size() / 2; }
 
     magma::PlatformBuffer* scratch_buffer() { return scratch_.get(); }
 
-    bool MapGttMmio(std::shared_ptr<magma::PlatformDevice> platform_device);
+    bool MapGttMmio(magma::PlatformDevice* platform_device);
     void InitPrivatePat();
     bool InitScratch();
     bool InitPageTables(uint64_t start);
     bool Clear(uint64_t addr, uint64_t length);
 
 private:
-    std::shared_ptr<RegisterIo> reg_io_;
+    Gtt::Owner* owner_;
     std::unique_ptr<magma::PlatformMmio> mmio_;
     std::unique_ptr<magma::PlatformBuffer> scratch_;
     std::unique_ptr<AddressSpaceAllocator> allocator_;

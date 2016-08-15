@@ -5,14 +5,17 @@
 #ifndef MSD_DEVICE_H
 #define MSD_DEVICE_H
 
+#include "gtt.h"
 #include "magma_util/macros.h"
 #include "magma_util/platform_device.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
 #include "register_io.h"
 
-class MsdIntelDevice : public msd_device {
+class MsdIntelDevice : public msd_device, public Gtt::Owner {
 public:
+    virtual ~MsdIntelDevice() {}
+
     // This takes ownership of the connection so that ownership can be
     // transferred across the MSD ABI by the caller
     std::unique_ptr<MsdIntelConnection> Open(msd_client_id client_id);
@@ -31,14 +34,18 @@ public:
 private:
     MsdIntelDevice();
 
+    // GttOwner
     RegisterIo* register_io() { return register_io_.get(); }
+
+    bool ReadGttSize(unsigned int* gtt_size);
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
-    std::shared_ptr<RegisterIo> register_io_;
+    std::unique_ptr<RegisterIo> register_io_;
+    std::unique_ptr<Gtt> gtt_;
 
     friend class MsdIntelDriver;
     friend class TestMsdIntelDevice;

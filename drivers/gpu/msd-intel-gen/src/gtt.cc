@@ -7,11 +7,11 @@
 #include "register_defs.h"
 #include <vector>
 
-Gtt::Gtt(std::shared_ptr<RegisterIo> reg_io) : reg_io_(reg_io) {}
+Gtt::Gtt(Gtt::Owner* owner) : owner_(owner) { DASSERT(owner_); }
 
 Gtt::~Gtt() { DLOG("Gtt dtor"); }
 
-bool Gtt::Init(uint64_t gtt_size, std::shared_ptr<magma::PlatformDevice> platform_device)
+bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
 {
     // address space size
     size_ = (gtt_size / sizeof(gen_pte_t)) * PAGE_SIZE;
@@ -51,7 +51,7 @@ bool Gtt::InitPageTables(uint64_t start)
     return true;
 }
 
-bool Gtt::MapGttMmio(std::shared_ptr<magma::PlatformDevice> platform_device)
+bool Gtt::MapGttMmio(magma::PlatformDevice* platform_device)
 {
     mmio_ = platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
     if (!mmio_)

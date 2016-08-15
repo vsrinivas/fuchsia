@@ -9,4 +9,6 @@
 #define BDW_PAT_INDEX_LOW 0x40e0
 #define BDW_PAT_INDEX_HIGH 0x40e4
 
+#define GMCH_GFX_CTRL 0x0050
+
 #endif // REGISTER_DEFS_H

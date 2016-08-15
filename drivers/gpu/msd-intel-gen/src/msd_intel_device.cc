@@ -5,6 +5,7 @@
 #include "msd_intel_device.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "register_defs.h"
 
 MsdIntelDevice::MsdIntelDevice() { magic_ = kMagic; }
 
@@ -23,12 +24,37 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!platform_device_)
         return DRETF(false, "failed to create platform device");
 
+    unsigned int gtt_size;
+    if (!ReadGttSize(&gtt_size))
+        return DRETF(false, "failed to read gtt size");
+
+    DLOG("gtt_size 0x%x", gtt_size);
+
     std::unique_ptr<magma::PlatformMmio> mmio(
         platform_device_->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE));
     if (!mmio)
         return DRETF(false, "failed to map pci bar 0");
 
-    register_io_ = std::shared_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
+    register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
+
+    gtt_ = std::unique_ptr<Gtt>(new Gtt(this));
+
+    if (!gtt_->Init(gtt_size, platform_device_.get()))
+        return DRETF(false, "failed to Init gtt");
+
+    return true;
+}
+
+bool MsdIntelDevice::ReadGttSize(unsigned int* gtt_size)
+{
+    DASSERT(platform_device_);
+
+    uint16_t reg;
+    if (!platform_device_->ReadPciConfig16(GMCH_GFX_CTRL, &reg))
+        return DRETF(false, "ReadPciConfig16 failed");
+
+    unsigned int size = (reg >> 6) & 0x3;
+    *gtt_size = (size == 0) ? 0 : (1 << size) * 1024 * 1024;
 
     return true;
 }
