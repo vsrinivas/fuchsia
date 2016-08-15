@@ -438,7 +438,39 @@ public:
     bool Iterate() {
         BEGIN_TEST;
 
-        // Start by making some objects.
+        // Both begin and cbegin should both be invalid, and to end/cend
+        REQUIRE_EQ(0u, Size(container()), "");
+        EXPECT_FALSE(container().begin().IsValid(), "");
+        EXPECT_TRUE (container().begin() == container().end(), "");
+
+        EXPECT_FALSE(container().cbegin().IsValid(), "");
+        EXPECT_TRUE (container().cbegin() == container().cend(), "");
+
+        // Attempting to increment begin() for an empty container should result
+        // in an invalid iterator which is still equal to end().  Check both
+        // prefix and postfix decrement operators.
+        auto iter = container().begin();
+        ++iter;
+        EXPECT_TRUE(container().end() == iter, "");
+        EXPECT_FALSE(iter.IsValid(), "");
+
+        iter = container().begin();
+        iter++;
+        EXPECT_TRUE(container().end() == iter, "");
+        EXPECT_FALSE(iter.IsValid(), "");
+
+        // Check const_iterator as well.
+        auto const_iter = container().cbegin();
+        ++const_iter;
+        EXPECT_TRUE(container().cend() == const_iter, "");
+        EXPECT_FALSE(const_iter.IsValid(), "");
+
+        const_iter = container().cbegin();
+        const_iter++;
+        EXPECT_TRUE(container().cend() == const_iter, "");
+        EXPECT_FALSE(const_iter.IsValid(), "");
+
+        // Make some objects.
         REQUIRE_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
 
@@ -537,7 +569,31 @@ public:
     bool ReverseIterate() {
         BEGIN_TEST;
 
-        // Start by making some objects.
+        // Make sure that backing up from end() for an empty container stays at
+        // end.  Check both prefix and postfix decrement operators.
+        REQUIRE_EQ(0u, Size(container()), "");
+        auto iter = container().end();
+        --iter;
+        EXPECT_TRUE(container().end() == iter, "");
+        EXPECT_FALSE(iter.IsValid(), "");
+
+        iter = container().end();
+        iter--;
+        EXPECT_TRUE(container().end() == iter, "");
+        EXPECT_FALSE(iter.IsValid(), "");
+
+        // Check const_iterator as well.
+        auto const_iter = container().cend();
+        --const_iter;
+        EXPECT_TRUE(container().cend() == const_iter, "");
+        EXPECT_FALSE(const_iter.IsValid(), "");
+
+        const_iter = container().cend();
+        const_iter--;
+        EXPECT_TRUE(container().cend() == const_iter, "");
+        EXPECT_FALSE(const_iter.IsValid(), "");
+
+        // Making some objects.
         REQUIRE_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, container().size_slow(), "");
 
