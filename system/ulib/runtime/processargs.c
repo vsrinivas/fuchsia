@@ -77,6 +77,7 @@ static mx_status_t unpack_strings(char* buffer, uint32_t bytes, char* result[],
                 return MALFORMED;
         } while (*p++ != '\0');
     }
+    result[num] = NULL;
     return NO_ERROR;
 }
 
@@ -87,7 +88,6 @@ mx_status_t mxr_processargs_strings(void* msg, uint32_t bytes,
     if (argv != NULL)
         status = unpack_strings(msg, bytes, argv, pa->args_off, pa->args_num);
     if (envp != NULL && status == NO_ERROR) {
-        envp[pa->environ_num] = NULL;
         status = unpack_strings(msg, bytes, envp,
                                 pa->environ_off, pa->environ_num);
     }

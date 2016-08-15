@@ -1506,7 +1506,7 @@ dl_start_return_t __dls3(void* start_arg) {
     }
 
     // Unpack the environment strings so dls3 can use getenv.
-    char* argv[procargs->args_num];
+    char* argv[procargs->args_num + 1];
     char* envp[procargs->environ_num + 1];
     status = mxr_processargs_strings(buffer, nbytes, argv, envp);
     if (status == NO_ERROR)

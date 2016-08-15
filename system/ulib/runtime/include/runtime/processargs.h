@@ -42,9 +42,9 @@ mx_status_t mxr_processargs_read(mx_handle_t bootstrap,
 // This assumes mxr_processargs_read has already succeeded on the same
 // buffer.  It unpacks the argument and environment strings into arrays
 // provided by the caller.  If not NULL, the argv[] array must have
-// mx_proc_args_t.args_num elements.  If not NULL, the envp[] array must
-// have mx_proc_args_t.environ_num + 1 elements, the last one being filled
-// with a NULL pointer.
+// mx_proc_args_t.args_num + 1 elements.  If not NULL, the envp[] array
+// must have mx_proc_args_t.environ_num + 1 elements.  The last element
+// of each array is filled with a NULL pointer.
 mx_status_t mxr_processargs_strings(void* msg, uint32_t bytes,
                                     char* argv[], char* envp[]);
 

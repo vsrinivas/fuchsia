@@ -90,10 +90,10 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* arg) {
     // (auxv), which is in two-word pairs and terminated by zero
     // words.  Some crufty programs might assume some of that layout,
     // and it costs us nothing to stay consistent with it here.
-    char* args_and_environ[argc + envc + 1 + 2];
+    char* args_and_environ[argc + 1 + envc + 1 + 2];
     char** argv = &args_and_environ[0];
-    char** envp = &args_and_environ[argc];
-    char** dummy_auxv = &args_and_environ[argc + envc + 1];
+    char** envp = &args_and_environ[argc + 1];
+    char** dummy_auxv = &args_and_environ[argc + 1 + envc + 1];
     dummy_auxv[0] = dummy_auxv[1] = 0;
 
     if (status == NO_ERROR)
