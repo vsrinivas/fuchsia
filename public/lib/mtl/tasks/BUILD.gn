@@ -13,7 +13,7 @@ source_set("tasks") {
     "pending_task.cc",
     "pending_task.h",
   ]
-
+  libs = [ "runtime" ]
   public_deps = [
     "//lib/ftl",
     "//lib/mtl/handles",
