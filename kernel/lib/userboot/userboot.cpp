@@ -22,9 +22,12 @@
 #include <magenta/msg_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
+#include <magenta/thread_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
 #include "code-start.h"
+
+static const size_t stack_size = 16 * PAGE_SIZE;
 
 extern char __kernel_cmdline[CMDLINE_MAX];
 extern unsigned __kernel_cmdline_size;
@@ -182,7 +185,9 @@ enum bootstrap_handle_index {
     BOOTSTRAP_VDSO,
     BOOTSTRAP_BOOTFS,
     BOOTSTRAP_RAMDISK,
+    BOOTSTRAP_STACK,
     //BOOTSTRAP_PROC, TODO(mcgrathr): later
+    //BOOTSTRAP_THREAD, TODO(mcgrathr): later
     BOOTSTRAP_HANDLES
 };
 
@@ -216,7 +221,13 @@ static uint32_t prepare_bootstrap_msg(struct bootstrap_message* msg) {
         case BOOTSTRAP_PROC:
             info = MX_HND_INFO(MX_HND_TYPE_PROC_SELF, 0);
             break;
+        case BOOTSTRAP_THREAD:
+            info = MX_HND_INFO(MX_HND_TYPE_THREAD_SELF, 0);
+            break;
 #endif
+        case BOOTSTRAP_STACK:
+            info = MX_HND_INFO(MX_HND_TYPE_STACK_VMO, 0);
+            break;
         case BOOTSTRAP_HANDLES:
             __builtin_unreachable();
         }
@@ -238,7 +249,8 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     auto vdso_vmo = make_vmo_from_memory(vdso_image, VDSO_CODE_END);
     auto userboot_vmo = make_vmo_from_memory(userboot_image,
                                              USERBOOT_CODE_END);
-    if (!vdso_vmo || !userboot_vmo)
+    auto stack_vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, stack_size);
+    if (!vdso_vmo || !userboot_vmo || !stack_vmo)
         return ERR_NO_MEMORY;
 
     HandleUniquePtr handles[BOOTSTRAP_HANDLES];
@@ -249,6 +261,8 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
                                 false, &handles[BOOTSTRAP_RAMDISK]);
     if (status == NO_ERROR)
         status = get_vmo_handle(vdso_vmo, true, &handles[BOOTSTRAP_VDSO]);
+    if (status == NO_ERROR)
+        status = get_vmo_handle(stack_vmo, false, &handles[BOOTSTRAP_STACK]);
     if (status != NO_ERROR)
         return status;
 
@@ -288,6 +302,45 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (status < 0)
         return status;
 
+    // Map the stack anywhere.
+    uintptr_t sp;
+    {
+        void* ptr;
+        status = aspace->MapObject(
+            stack_vmo, "stack", 0, stack_size, &ptr,
+            0, 0, ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+        if (status < 0)
+            return status;
+        sp = (uintptr_t)ptr + stack_size;
+#ifdef __x86_64__
+        // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
+        // at (%rsp) serves as the return address for the outermost frame.
+        sp -= 8;
+#elif defined(__arm__) || defined(__aarch64__)
+        // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
+#else
+# error what machine?
+#endif
+    }
+
+#if 0 // TODO(mcgrathr): later
+    // Create the user thread and stash its handle for the bootstrap message.
+    ThreadDispatcher* thread;
+    {
+        utils::RefPtr<UserThread> ut;
+        status = proc->CreateUserThread("userboot", &ut);
+        if (status < 0)
+            return status;
+        utils::RefPtr<Dispatcher> ut_disp;
+        status = ThreadDispatcher::Create(ut, &ut_disp, &rights);
+        if (status < 0)
+            return status;
+        thread = ut_disp->get_thread_dispatcher();
+        handles[BOOTSTRAP_THREAD] = MakeHandle(utils::move(ut_disp), rights);
+    }
+    DEBUG_ASSERT(thread);
+#endif
+
     mx_handle_t hv;
     {
         // The bootstrap message buffer is too big to fit on a kernel
@@ -309,7 +362,12 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     }
 
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
+#if 0 // TODO(mcgrathr): later
+    status = proc->Start(thread, entry, sp, hv);
+#else
+    (void)sp;
     status = proc->Start((void*)(uintptr_t)hv, entry);
+#endif
     if (status != NO_ERROR) {
         printf("userboot: failed to start process %d\n", status);
         return status;
