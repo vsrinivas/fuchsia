@@ -480,8 +480,9 @@ private:
     }
 
     RawPtrType tail() const {
-        if (!head_)
-            return sentinel();
+        DEBUG_ASSERT(head_ != nullptr);
+        if (PtrTraits::IsSentinel(head_))
+            return PtrTraits::GetRaw(head_);
         return NodeTraits::node_state(*head_).prev_;
     }
 
