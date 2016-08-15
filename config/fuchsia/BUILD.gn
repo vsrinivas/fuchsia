@@ -4,11 +4,6 @@
 
 import("//build/config/sysroot.gni")
 
-declare_args() {
-  # shared enables building shared instead of statically linked executables.
-  shared = false
-}
-
 assert(current_os == "fuchsia")
 
 config("werror") {
@@ -33,7 +28,6 @@ config("compiler") {
     ldflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
   }
 
-  cflags += [ "-fPIE" ]
   cflags_c += [ "-std=c11" ]
   cflags_cc += [ "-std=c++14" ]
 
@@ -62,7 +56,6 @@ config("shared_library_config") {
 }
 
 config("executable_config") {
-  ldflags = [ "-pie" ]
   libs = [
     "runtime",
 
