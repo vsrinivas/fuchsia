@@ -33,12 +33,14 @@
 
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
+#include <system/listnode.h>
 
 #include <mxio/debug.h>
 #define MXDEBUG 0
 
 typedef struct i8042_keyboard_device {
     mx_device_t device;
+    mx_driver_t* drv;
 
     mx_handle_t irq;
     mxr_thread_t* irq_thread;
@@ -47,8 +49,21 @@ typedef struct i8042_keyboard_device {
 
     boot_kbd_report_t report;
 
-    mx_hid_fifo_t fifo;
+    // list of opened devices
+    struct list_node instance_list;
+    mxr_mutex_t instance_lock;
 } i8042_device_t;
+
+typedef struct i8042_keyboard_instance {
+    mx_device_t device;
+    i8042_device_t *root;
+
+    mx_hid_fifo_t fifo;
+    struct list_node node;
+} i8042_instance_t;
+
+#define foreach_instance(root, instance) \
+    list_for_every_entry(&root->instance_list, instance, i8042_instance_t, node)
 
 static inline bool is_modifier(uint8_t usage) {
     return (usage >= HID_USAGE_KEY_LEFT_CTRL && usage <= HID_USAGE_KEY_RIGHT_GUI);
@@ -105,6 +120,7 @@ static int i8042_rm_key(i8042_device_t* dev, uint8_t usage) {
 }
 
 #define get_kbd_device(dev) containerof(dev, i8042_device_t, device)
+#define get_kbd_instance(dev) containerof(dev, i8042_instance_t, device)
 
 #define I8042_COMMAND_REG 0x64
 #define I8042_STATUS_REG 0x64
@@ -415,12 +431,15 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
     //cprintf("i8042: scancode=0x%x, keyup=%u, multi=%u: usage=0x%x\n", scode, !!key_up, multi, usage);
 
     const boot_kbd_report_t* report = rollover ? &report_err_rollover : &dev->report;
-    mxr_mutex_lock(&dev->fifo.lock);
-    if (mx_hid_fifo_size(&dev->fifo) == 0) {
-        device_state_set(&dev->device, DEV_STATE_READABLE);
+    i8042_instance_t* instance;
+    foreach_instance(dev, instance) {
+        mxr_mutex_lock(&instance->fifo.lock);
+        if (mx_hid_fifo_size(&instance->fifo) == 0) {
+            device_state_set(&instance->device, DEV_STATE_READABLE);
+        }
+        mx_hid_fifo_write(&instance->fifo, (uint8_t*)report, sizeof(*report));
+        mxr_mutex_unlock(&instance->fifo.lock);
     }
-    mx_hid_fifo_write(&dev->fifo, (uint8_t*)report, sizeof(*report));
-    mxr_mutex_unlock(&dev->fifo.lock);
 }
 
 static int i8042_irq_thread(void* arg) {
@@ -470,19 +489,19 @@ static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, mx_off_t of
     if (count < size || (count % size != 0))
         return ERR_INVALID_ARGS;
 
-    i8042_device_t* device = get_kbd_device(dev);
+    i8042_instance_t* instance = get_kbd_instance(dev);
     boot_kbd_report_t* data = (boot_kbd_report_t*)buf;
-    mxr_mutex_lock(&device->fifo.lock);
+    mxr_mutex_lock(&instance->fifo.lock);
     while (count > 0) {
-        if (mx_hid_fifo_read(&device->fifo, (uint8_t*)data, size) < (ssize_t)size)
+        if (mx_hid_fifo_read(&instance->fifo, (uint8_t*)data, size) < (ssize_t)size)
             break;
         data++;
         count -= size;
     }
-    if (mx_hid_fifo_size(&device->fifo) == 0) {
+    if (mx_hid_fifo_size(&instance->fifo) == 0) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
-    mxr_mutex_unlock(&device->fifo.lock);
+    mxr_mutex_unlock(&instance->fifo.lock);
     return (data - (boot_kbd_report_t*)buf) * size;
 }
 
@@ -535,16 +554,61 @@ static ssize_t i8042_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, si
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t i8042_release(mx_device_t* dev) {
+static mx_status_t i8042_instance_release(mx_device_t* dev) {
+    i8042_instance_t* inst = get_kbd_instance(dev);
+    mxr_mutex_lock(&inst->root->instance_lock);
+    list_delete(&inst->node);
+    mxr_mutex_unlock(&inst->root->instance_lock);
+    free(inst);
+    return NO_ERROR;
+}
+
+static mx_protocol_device_t i8042_instance_proto = {
+    .read = i8042_read,
+    .ioctl = i8042_ioctl,
+    .release = i8042_instance_release,
+};
+
+static mx_status_t i8042_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+    i8042_device_t* kbd = get_kbd_device(dev);
+
+    i8042_instance_t* inst = calloc(1, sizeof(i8042_instance_t));
+    if (!inst)
+        return ERR_NO_MEMORY;
+
+    mx_hid_fifo_init(&inst->fifo);
+
+    mx_status_t status = device_init(&inst->device, kbd->drv, "i8042-keyboard", &i8042_instance_proto);
+    if (status) {
+        free(inst);
+        return status;
+    }
+
+    inst->device.protocol_id = MX_PROTOCOL_INPUT;
+    status = device_add_instance(&inst->device, dev);
+    if (status != NO_ERROR) {
+        free(inst);
+        return status;
+    }
+    inst->root = kbd;
+
+    mxr_mutex_lock(&kbd->instance_lock);
+    list_add_tail(&kbd->instance_list, &inst->node);
+    mxr_mutex_unlock(&kbd->instance_lock);
+
+    *dev_out = &inst->device;
+    return NO_ERROR;
+}
+
+static mx_status_t i8042_dev_release(mx_device_t* dev) {
     i8042_device_t* device = get_kbd_device(dev);
     free(device);
     return NO_ERROR;
 }
 
 static mx_protocol_device_t i8042_device_proto = {
-    .release = i8042_release,
-    .read = i8042_read,
-    .ioctl = i8042_ioctl,
+    .open = i8042_open,
+    .release = i8042_dev_release,
 };
 
 static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
@@ -553,13 +617,14 @@ static mx_status_t i8042_keyboard_init(mx_driver_t* driver) {
     if (!device)
         return ERR_NO_MEMORY;
 
-    mx_hid_fifo_init(&device->fifo);
-
     mx_status_t status = device_init(&device->device, driver, "i8042-keyboard", &i8042_device_proto);
     if (status) {
         free(device);
         return status;
     }
+    device->drv = driver;
+    device->instance_lock = MXR_MUTEX_INIT;
+    list_initialize(&device->instance_list);
 
     // add to root device
     device->device.protocol_id = MX_PROTOCOL_INPUT;
