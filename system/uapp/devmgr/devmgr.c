@@ -484,7 +484,7 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
         return ERR_INVALID_ARGS;
     }
 #if TRACE_ADD_REMOVE
-    printf("device: %p(%s): is being removed\n", dev. safename(dev->name));
+    printf("device: %p(%s): is being removed\n", dev, safename(dev->name));
 #endif
     dev->flags |= DEV_FLAG_DEAD;
 
