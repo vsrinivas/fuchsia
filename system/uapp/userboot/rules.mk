@@ -42,7 +42,7 @@ MODULE_SO_INSTALL_NAME := -
 MODULE_COMPILEFLAGS += -include $(LOCAL_DIR)/hidden.h
 
 MODULE_STATIC_LIBS := ulib/elfload ulib/runtime ulib/ddk ulib/musl-static
-MODULE_HEADER_LIBS := ulib/magenta
+MODULE_HEADER_DEPS := ulib/magenta
 
 # This generated header lists all the ABI symbols in the vDSO with their
 # addresses.  It's used to generate vdso-syms.ld, below.

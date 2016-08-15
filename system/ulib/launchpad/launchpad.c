@@ -6,6 +6,7 @@
 
 #include <launchpad/launchpad.h>
 #include "elf.h"
+#include "stack.h"
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -17,8 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
-
-#define DEFAULT_STACK_SIZE (64 << 10)
 
 enum special_handles {
     HND_LOADER_SVC,
@@ -637,24 +636,6 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
     }
     lp->stack_size = new_size;
     return old_size;
-}
-
-// Given the (page-aligned) base and size of the stack mapping,
-// compute the appropriate initial SP value for an initial thread
-// according to the C calling convention for the machine.
-static uintptr_t sp_from_mapping(mx_vaddr_t base, size_t size) {
-    // Assume stack grows down.
-    mx_vaddr_t sp = base + size;
-#ifdef __x86_64__
-    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
-    // at (%rsp) serves as the return address for the outermost frame.
-    sp -= 8;
-#elif defined(__arm__) || defined(__aarch64__)
-    // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
-#else
-# error what machine?
-#endif
-    return sp;
 }
 
 #define THREAD_NAME "initial"

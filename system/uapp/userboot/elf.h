@@ -7,6 +7,7 @@
 #pragma GCC visibility push(hidden)
 
 #include <magenta/types.h>
+#include <stddef.h>
 
 struct bootfs;
 
@@ -23,6 +24,6 @@ mx_vaddr_t elf_load_vmo(mx_handle_t log, mx_handle_t proc, mx_handle_t vmo);
 // main executable.
 mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs,
                            mx_handle_t proc, const char* filename,
-                           mx_handle_t to_child);
+                           mx_handle_t to_child, size_t* stack_size);
 
 #pragma GCC visibility pop

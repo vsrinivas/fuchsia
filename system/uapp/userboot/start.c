@@ -7,6 +7,8 @@
 #include "option.h"
 #include "util.h"
 
+#include "../../ulib/launchpad/stack.h"
+
 #pragma GCC visibility push(hidden)
 
 #include <magenta/syscalls.h>
@@ -16,20 +18,22 @@
 #include <stdalign.h>
 #include <stdnoreturn.h>
 #include <string.h>
+#include <sys/param.h>
 
 #pragma GCC visibility pop
 
 static void load_child_process(mx_handle_t log, const struct options* o,
                                mx_handle_t bootfs_vmo, mx_handle_t vdso_vmo,
                                mx_handle_t proc, mx_handle_t to_child,
-                               mx_vaddr_t* entry, mx_vaddr_t* vdso_base) {
+                               mx_vaddr_t* entry, mx_vaddr_t* vdso_base,
+                               size_t* stack_size) {
     // Examine the bootfs image and find the requested file in it.
     struct bootfs bootfs;
     bootfs_mount(log, bootfs_vmo, &bootfs);
 
     // This will handle a PT_INTERP by doing a second lookup in bootfs.
     *entry = elf_load_bootfs(log, &bootfs, proc, o->value[OPTION_FILENAME],
-                             to_child);
+                             to_child, stack_size);
 
     // All done with bootfs!
     bootfs_unmount(log, &bootfs);
@@ -41,9 +45,10 @@ static void load_child_process(mx_handle_t log, const struct options* o,
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
-// 3. Load up a message pipe with the mx_proc_args_t message for the child.
-// 4. Start the child process running.
-// TODO(mcgrathr): 5. Wait for it to die.
+// 3. Create the initial thread and allocate a stack for it.
+// 4. Load up a message pipe with the mx_proc_args_t message for the child.
+// 5. Start the child process running.
+// TODO(mcgrathr): 6. Wait for it to die.
 static void bootstrap(mx_handle_t log, struct options* o,
                       mx_handle_t bootstrap_pipe) {
     // Sample the bootstrap message to see how big it is.
@@ -78,6 +83,7 @@ static void bootstrap(mx_handle_t log, struct options* o,
     mx_handle_t bootfs_vmo = MX_HANDLE_INVALID;
     mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
     mx_handle_t* proc_handle_loc = NULL;
+    mx_handle_t* stack_vmo_handle_loc = NULL;
     for (uint32_t i = 0; i < nhandles; ++i) {
         switch (MX_HND_INFO_TYPE(handle_info[i])) {
         case MX_HND_TYPE_VDSO_VMO:
@@ -89,6 +95,9 @@ static void bootstrap(mx_handle_t log, struct options* o,
             break;
         case MX_HND_TYPE_PROC_SELF:
             proc_handle_loc = &handles[i];
+            break;
+        case MX_HND_TYPE_STACK_VMO:
+            stack_vmo_handle_loc = &handles[i];
             break;
         }
     }
@@ -110,11 +119,28 @@ static void bootstrap(mx_handle_t log, struct options* o,
         fail(log, proc, "mx_process_create failed\n");
 
     mx_vaddr_t entry, vdso_base;
+    size_t stack_size = DEFAULT_STACK_SIZE;
     load_child_process(log, o, bootfs_vmo, vdso_vmo, proc, to_child,
-                       &entry, &vdso_base);
+                       &entry, &vdso_base, &stack_size);
 
-    // TODO(mcgrathr): Need a way to pass vdso_base to the child's
-    // entry-point code so it can actually be used.
+    // Allocate the stack for the child.
+    stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+    mx_handle_t stack_vmo = mx_vm_object_create(stack_size);
+    if (stack_vmo < 0)
+        fail(log, stack_vmo, "mx_vm_object_create failed for child stack\n");
+    mx_vaddr_t stack_base;
+    status = mx_process_vm_map(proc, stack_vmo, 0, stack_size, &stack_base,
+                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    check(log, status, "mx_process_vm_map failed for child stack\n");
+    uintptr_t sp = sp_from_mapping(stack_base, stack_size);
+    if (stack_vmo_handle_loc != NULL) {
+        // This is our own stack VMO handle, but we don't need it for anything.
+        if (*stack_vmo_handle_loc != MX_HANDLE_INVALID)
+            mx_handle_close(*stack_vmo_handle_loc);
+        *stack_vmo_handle_loc = stack_vmo;
+    } else {
+        mx_handle_close(stack_vmo);
+    }
 
     if (proc_handle_loc != NULL) {
         // This is our own proc handle, but we don't need it for anything.
@@ -122,8 +148,9 @@ static void bootstrap(mx_handle_t log, struct options* o,
             mx_handle_close(*proc_handle_loc);
         // Reuse the slot for the child's handle.
         *proc_handle_loc = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
-        check(log, *proc_handle_loc,
-              "mx_handle_duplicate failed on child process handle\n");
+        if (*proc_handle_loc < 0)
+            fail(log, *proc_handle_loc,
+                 "mx_handle_duplicate failed on child process handle\n");
     }
 
     // Now send the bootstrap message, consuming both our VMO handles.
@@ -131,7 +158,19 @@ static void bootstrap(mx_handle_t log, struct options* o,
     check(log, status, "mx_message_write to child failed\n");
     mx_handle_close(to_child);
 
+    // TODO(mcgrathr): Need a way to pass vdso_base to the child's
+    // entry-point code so it can actually be used.
+    (void)vdso_base;
+#if 0
+    mx_handle_t thread = mx_thread_create(proc, filename, strlen(filename));
+    if (thread < 0)
+        fail(log, thread, "mx_thread_create failed\n");
+    status = mx_process_start(proc, thread, entry, sp, child_start_handle);
+    mx_handle_close(thread);
+#else
+    (void)sp;
     status = mx_process_start(proc, child_start_handle, entry);
+#endif
     check(log, status, "mx_process_start failed\n");
 
     // TODO(mcgrathr): Really there is no reason for this process to stick
