@@ -439,7 +439,7 @@ public:
         BEGIN_TEST;
 
         // Both begin and cbegin should both be invalid, and to end/cend
-        REQUIRE_EQ(0u, Size(container()), "");
+        REQUIRE_EQ(0u, container().size_slow(), "");
         EXPECT_FALSE(container().begin().IsValid(), "");
         EXPECT_TRUE (container().begin() == container().end(), "");
 
@@ -571,7 +571,7 @@ public:
 
         // Make sure that backing up from end() for an empty container stays at
         // end.  Check both prefix and postfix decrement operators.
-        REQUIRE_EQ(0u, Size(container()), "");
+        REQUIRE_EQ(0u, container().size_slow(), "");
         auto iter = container().end();
         --iter;
         EXPECT_TRUE(container().end() == iter, "");
