@@ -6,45 +6,12 @@
 #define _MAGMA_DEVICE_H_
 
 #include "magma.h"
+#include "magma_buffer.h"
 #include "magma_system.h"
 #include <libdrm_intel_gen.h>
 
 #include <map>
 #include <stdint.h>
-
-class MagmaDevice;
-
-// Magma is based on intel libdrm.
-// LibdrmIntelGen buffers are based on the api exposed magma_buffer.
-class MagmaBuffer : public LibdrmIntelGen::Buffer {
-public:
-    MagmaBuffer(MagmaDevice* device, const char* name, uint32_t align);
-    ~MagmaBuffer() override;
-
-    bool Alloc(uint64_t size);
-    bool Map(bool write);
-    bool Unmap();
-    void WaitRendering();
-
-    MagmaDevice* device() { return device_; }
-
-    void SetTilingMode(uint32_t tiling_mode);
-    uint32_t tiling_mode() { return tiling_mode_; }
-
-    static MagmaBuffer* cast(magma_buffer* buffer)
-    {
-        DASSERT(buffer);
-        DASSERT(buffer->magic_ == kMagic);
-        return static_cast<MagmaBuffer*>(buffer);
-    }
-
-private:
-    MagmaDevice* device_;
-
-    uint32_t tiling_mode_ = MAGMA_TILING_MODE_NONE;
-
-    static const uint32_t kMagic = 0x62756666; //"buff"
-};
 
 class MagmaDevice : public magma_device {
 public:

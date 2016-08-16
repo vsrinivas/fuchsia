@@ -34,6 +34,8 @@ source_set("libdrm") {
 source_set("libmad") {
   sources = [
     "src/app_driver/magma.cc",
+    "src/app_driver/magma_buffer.cc",
+    "src/app_driver/magma_buffer.h",
     "src/app_driver/magma_device.cc",
     "src/app_driver/magma_device.h",
   ]
