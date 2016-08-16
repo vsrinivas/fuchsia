@@ -17,8 +17,8 @@
 #include <ddk/protocol/usb-device.h>
 #include <stdio.h>
 
-static mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t request,
-                               uint16_t value, uint16_t index, void* data, size_t length) {
+mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t request,
+                        uint16_t value, uint16_t index, void* data, size_t length) {
 
     usb_device_protocol_t* protocol;
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {

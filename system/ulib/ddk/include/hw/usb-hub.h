@@ -22,6 +22,13 @@ __BEGIN_CDECLS;
 #define USB_RECIP_HUB   (USB_TYPE_CLASS | USB_RECIP_DEVICE)
 #define USB_RECIP_PORT  (USB_TYPE_CLASS | USB_RECIP_OTHER)
 
+// Hub requests
+#define USB_HUB_SET_DEPTH       12
+
+// Hub descriptor types
+#define USB_HUB_DESC_TYPE       0x29
+#define USB_HUB_DESC_TYPE_SS    0x2A    // for superspeed hubs
+
 // Hub Class Feature Selectors (USB 2.0 spec Table 11.17)
 #define USB_FEATURE_C_HUB_LOCAL_POWER   0
 #define USB_FEATURE_C_HUB_OVER_CURRENT  1

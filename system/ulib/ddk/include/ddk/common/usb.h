@@ -18,7 +18,7 @@
 
 __BEGIN_CDECLS;
 
-static mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t request,
+mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t request,
                                uint16_t value, uint16_t index, void* data, size_t length);
 
 mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16_t type,
