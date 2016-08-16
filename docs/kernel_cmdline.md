@@ -1,4 +1,4 @@
-# kernel commandline options
+# Magenta Kernel Commandline Options
 
 The Magenta kernel receives a textual commandline from the bootloader,
 which can be used to alter some behaviours of the system.  Kernel commandline
@@ -41,3 +41,25 @@ unit tests).
 
 If this option is set, userboot will attempt to power off the machine
 when the process it launches exits.
+
+
+# How to get pass the commandline to the kernel
+
+## in Qemu, using scripts/run-magenta*
+
+Pass each option using -c, for example:
+```
+./scripts/run-magenta-x86-64 -c gfxconsole.font=18x32 -c gfxconsole.early=false
+```
+
+## in GigaBoot20x6, when netbooting
+
+Pass the kernel commandline at the end, after a -- separator, for example:
+```
+bootserver magenta.bin bootfs.bin -- gfxconsole.font=18x32 gfxconsole.early=false
+```
+
+## in GigaBoot20x6, when booting from USB flash
+
+Create a text file named "cmdline" in the root of the USB flash drive's
+filesystem containing the command line.
