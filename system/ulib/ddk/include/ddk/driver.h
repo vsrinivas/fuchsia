@@ -27,11 +27,7 @@ typedef struct mx_driver_ops {
 
     mx_status_t (*unbind)(mx_driver_t* driver, mx_device_t* device);
     // Notifies the driver that the device is being removed (has
-    // been hot unplugged, etc)
-
-    mx_status_t (*shutdown)(mx_driver_t* driver);
-    // Requests that the driver un-publish children, release the devices
-    // that it's bound to, etc.
+    // been hot unplugged, etc).
 
     mx_status_t (*release)(mx_driver_t* driver);
     // Last call before driver is unloaded.
