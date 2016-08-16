@@ -57,4 +57,10 @@ typedef struct boot_kbd_report {
     uint8_t usage[6];
 } __attribute__((packed)) boot_kbd_report_t;
 
+typedef struct boot_mouse_report {
+    uint8_t buttons;
+    int8_t rel_x;
+    int8_t rel_y;
+} __attribute__((packed)) boot_mouse_report_t;
+
 extern const boot_kbd_report_t report_err_rollover;

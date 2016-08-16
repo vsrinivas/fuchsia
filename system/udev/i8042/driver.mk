@@ -5,4 +5,4 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/i8042-keyboard.c
+    $(LOCAL_DIR)/i8042.c
