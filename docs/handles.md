@@ -30,7 +30,7 @@ logical fields:
 + The rights to the kernel object
 + The process it is bound to (or if its bound to kernel)
 
-The '(rights)[rights.md]' specify what operations on the kernel object are
+The '[rights](rights.md)' specify what operations on the kernel object are
 allowed. It is possible for a single process to have two different
 handles to the same kernel object with different rights.
 
