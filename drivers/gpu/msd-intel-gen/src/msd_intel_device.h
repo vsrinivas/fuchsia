@@ -35,7 +35,11 @@ private:
     MsdIntelDevice();
 
     // GttOwner
-    RegisterIo* register_io() { return register_io_.get(); }
+    RegisterIo* register_io()
+    {
+        DASSERT(register_io_);
+        return register_io_.get();
+    }
 
     bool ReadGttSize(unsigned int* gtt_size);
 
