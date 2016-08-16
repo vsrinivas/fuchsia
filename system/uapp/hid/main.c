@@ -43,6 +43,7 @@ void usage(void) {
     printf("usage: hid [-v] <command> [<args>]\n\n");
     printf("  commands:\n");
     printf("    read\n");
+    printf("    status <devpath>\n");
     printf("    get <devpath> <in|out|feature> <id>\n");
     printf("    set <devpath> <in|out|feature> <id> [0xXX *]\n");
     printf("  all values are parsed as hexadecimal integers\n");
@@ -160,6 +161,10 @@ static int get_report_ids(int fd, const char* name, size_t num_reports) {
 }
 
 static int get_max_report_len(int fd, const char* name, size_t* max_report_len) {
+    size_t tmp;
+    if (max_report_len == NULL) {
+        max_report_len = &tmp;
+    }
     int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_MAX_REPORTSIZE, NULL, 0, max_report_len, sizeof(*max_report_len));
     if (rc < 0) {
         lprintf("hid: could not get max report size from %s (status=%d)\n", name, rc);
@@ -175,11 +180,19 @@ static int get_max_report_len(int fd, const char* name, size_t* max_report_len) 
         if (rc < 0) return rc; \
     } while (0)
 
-#define try_args(fn, fd, name, args...) \
-    do { \
-        int rc = fn(fd, name, args); \
-        if (rc < 0) return rc; \
-    } while (0)
+static int hid_status(int fd, const char* name, size_t* max_report_len) {
+    size_t report_desc_len;
+    size_t num_reports;
+
+    try(get_hid_protocol(fd, name));
+    try(get_report_desc_len(fd, name, &report_desc_len));
+    try(get_report_desc(fd, name, report_desc_len));
+    try(get_num_reports(fd, name, &num_reports));
+    try(get_report_ids(fd, name, num_reports));
+    try(get_max_report_len(fd, name, max_report_len));
+
+    return NO_ERROR;
+}
 
 static int hid_input_thread(void* arg) {
     input_listener_t* listener = arg;
@@ -189,20 +202,8 @@ static int hid_input_thread(void* arg) {
     const char* name = listener->dev_name;
     int fd = listener->fd;
 
-    try(get_hid_protocol(fd, name));
-
-    size_t report_desc_len;
-    try(get_report_desc_len(fd, name, &report_desc_len));
-
-    try(get_report_desc(fd, name, report_desc_len));
-
-    size_t num_reports;
-    try(get_num_reports(fd, name, &num_reports));
-
-    try(get_report_ids(fd, name, num_reports));
-
-    size_t max_report_len;
-    try(get_max_report_len(fd, name, &max_report_len));
+    size_t max_report_len = 0;
+    try(hid_status(fd, name, &max_report_len));
 
     uint8_t* report = calloc(1, max_report_len);
     if (!report) return ERR_NO_MEMORY;
@@ -294,6 +295,22 @@ int read_reports(int argc, const char** argv) {
 
     mxr_thread_join(input_poll_thread, NULL);
     return 0;
+}
+
+int get_status(int argc, const char** argv) {
+    argc--;
+    argv++;
+    if (argc < 1) {
+        usage();
+        return 0;
+    }
+
+    int fd = open(argv[0], O_RDWR);
+    if (fd < 0) {
+        printf("could not open %s: %d\n", argv[0], errno);
+        return -1;
+    }
+    return hid_status(fd, argv[0], NULL);
 }
 
 int get_report(int argc, const char** argv) {
@@ -397,6 +414,7 @@ int main(int argc, const char** argv) {
         argv++;
     }
     if (!strcmp("read", argv[0])) return read_reports(argc, argv);
+    if (!strcmp("status", argv[0])) return get_status(argc, argv);
     if (!strcmp("get", argv[0])) return get_report(argc, argv);
     if (!strcmp("set", argv[0])) return set_report(argc, argv);
     usage();
