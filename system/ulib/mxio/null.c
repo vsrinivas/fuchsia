@@ -33,7 +33,7 @@ mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, uint32_t arg, void* data,
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t mxio_default_open(mxio_t* io, const char* path, int32_t flags, mxio_t** out) {
+mx_status_t mxio_default_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {
     return ERR_NOT_SUPPORTED;
 }
 

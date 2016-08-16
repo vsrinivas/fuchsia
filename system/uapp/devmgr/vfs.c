@@ -112,7 +112,7 @@ static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
 static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
                             const char* path, const char** pathout,
                             uint32_t flags, uint32_t mode) {
-    xprintf("vfs_open: path='%s' flags=%d\n", path, flags);
+    xprintf("vfs_open: path='%s' flags=%d mode=%x\n", path, flags, mode);
     mx_status_t r;
     if ((r = vfs_walk(vndir, &vndir, path, &path)) < 0) {
         return r;

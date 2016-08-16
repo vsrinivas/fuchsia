@@ -84,10 +84,6 @@ ssize_t readlink(const char* restrict path, char* restrict buf, size_t bufsize) 
 }
 
 // creating things we don't have plumbing for yet
-int mkdir(const char* path, mode_t mode) {
-    errno = ENOSYS;
-    return -1;
-}
 int mkfifo(const char *path, mode_t mode) {
     errno = ENOSYS;
     return -1;

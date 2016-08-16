@@ -9,10 +9,10 @@
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
 
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "vfs.h"
 #include "dnode.h"
@@ -168,7 +168,7 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
 static mx_status_t mem_create(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode) {
     mnode_t* parent = vn->pdata;
     mnode_t* mem;
-    mx_status_t r = _mem_create(parent, &mem, name, len, false);
+    mx_status_t r = _mem_create(parent, &mem, name, len, S_ISDIR(mode));
     if (r >= 0) {
         vn_acquire(&mem->vn);
         *out = &mem->vn;

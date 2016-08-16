@@ -200,6 +200,21 @@ done:
     return r;
 }
 
+static int mxc_mkdir(int argc, char** argv) {
+    if (argc < 2) {
+        fprintf(stderr, "usage: mkdir <path>\n");
+        return -1;
+    }
+    while (argc > 1) {
+        argc--;
+        argv++;
+        if (mkdir(argv[0], 0755)) {
+            fprintf(stderr, "error: failed to make directory '%s'\n", argv[0]);
+        }
+    }
+    return 0;
+}
+
 static int mxc_rm(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "usage: rm <filename>\n");
@@ -376,6 +391,7 @@ builtin_t builtins[] = {
     {"dm", mxc_dm, "send command to device manager"},
     {"list", mxc_list, "display a text file with line numbers"},
     {"ls", mxc_ls, "list directory contents"},
+    {"mkdir", mxc_mkdir, "create a directory" },
     {"rm", mxc_rm, "delete a file"},
     {"runtests", mxc_runtests, "run all test programs"},
     {"msleep", mxc_msleep, "pause for milliseconds"},
