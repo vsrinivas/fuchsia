@@ -48,20 +48,6 @@ static mx_status_t vnd_create(vnode_t* vn, vnode_t** out, const char* name, size
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_handle_t vnd_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* ids) {
-    mx_device_t* dev = vn->pdata;
-
-    // if we are a pure directory node (no dev attached)
-    // or we are a dev + directory node with children
-    // fall back to the default gethandles() to get the vnode
-    // handle not the device handles
-    if ((dev == NULL) || (vn->dnode && (!list_is_empty(&vn->dnode->children)))) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    return devmgr_get_handles(dev, handles, ids);
-}
-
 static mx_status_t vnd_unlink(vnode_t* vn, const char* name, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
@@ -76,7 +62,6 @@ static vnode_ops_t vn_device_ops = {
     .getattr = vnd_getattr,
     .readdir = memfs_readdir,
     .create = vnd_create,
-    .gethandles = vnd_gethandles,
     .ioctl = memfs_ioctl,
     .unlink = vnd_unlink,
 };

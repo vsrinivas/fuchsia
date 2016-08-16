@@ -63,10 +63,6 @@ static mx_status_t vnb_create(vnode_t* vn, vnode_t** out, const char* name, size
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t vnb_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* ids) {
-    return ERR_NOT_SUPPORTED;
-}
-
 static vnode_ops_t vn_boot_ops = {
     .release = vnb_release,
     .open = memfs_open,
@@ -77,7 +73,6 @@ static vnode_ops_t vn_boot_ops = {
     .getattr = vnb_getattr,
     .readdir = memfs_readdir,
     .create = vnb_create,
-    .gethandles = vnb_gethandles,
     .ioctl = memfs_ioctl,
     .unlink = memfs_unlink,
 };

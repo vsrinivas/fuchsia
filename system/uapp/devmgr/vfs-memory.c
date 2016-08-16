@@ -176,10 +176,6 @@ static mx_status_t mem_create(vnode_t* vn, vnode_t** out, const char* name, size
     return r;
 }
 
-static mx_status_t mem_gethandles(vnode_t* vn, mx_handle_t* handles, uint32_t* ids) {
-    return ERR_NOT_SUPPORTED;
-}
-
 ssize_t memfs_ioctl(vnode_t* vn, uint32_t op,
                     const void* in_data, size_t in_len,
                     void* out_data, size_t out_len) {
@@ -214,7 +210,6 @@ static vnode_ops_t vn_mem_ops = {
     .getattr = mem_getattr,
     .readdir = memfs_readdir,
     .create = mem_create,
-    .gethandles = mem_gethandles,
     .unlink = memfs_unlink,
 };
 
@@ -228,7 +223,6 @@ static vnode_ops_t vn_mem_ops_dir = {
     .getattr = mem_getattr,
     .readdir = memfs_readdir,
     .create = mem_create,
-    .gethandles = mem_gethandles,
     .unlink = memfs_unlink,
 };
 

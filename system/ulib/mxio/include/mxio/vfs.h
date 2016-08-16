@@ -65,10 +65,6 @@ struct vnode_ops {
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.
 
-    mx_status_t (*gethandles)(vnode_t* vn, mx_handle_t* handles, uint32_t* ids);
-    // Returns up to VFS_MAX_HANDLES representing the remoted open object
-    // Returns ERR_NOT_SUPPORTED if this is a local vnode
-
     ssize_t (*ioctl)(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.

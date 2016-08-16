@@ -281,10 +281,6 @@ static mx_status_t fs_create(vnode_t* _vn, vnode_t** out,
     return NO_ERROR;
 }
 
-static mx_status_t fs_gethandles(vnode_t* _vn, mx_handle_t* handles, uint32_t* ids) {
-    return ERR_NOT_SUPPORTED;
-}
-
 static ssize_t fs_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
                             size_t in_len, void* out_buf, size_t out_len) {
     return ERR_NOT_SUPPORTED;
@@ -309,7 +305,6 @@ vnode_ops_t minfs_ops = {
     .getattr = fs_getattr,
     .readdir = fs_readdir,
     .create = fs_create,
-    .gethandles = fs_gethandles,
     .ioctl = fs_ioctl,
     .unlink = fs_unlink,
 };
