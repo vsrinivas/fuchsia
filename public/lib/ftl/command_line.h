@@ -91,8 +91,8 @@ class CommandLine final {
 
   bool has_argv0() const { return has_argv0_; }
   const std::string& argv0() const { return argv0_; }
-  const std::vector<Option> options() const { return options_; }
-  const std::vector<std::string> positional_args() const {
+  const std::vector<Option>& options() const { return options_; }
+  const std::vector<std::string>& positional_args() const {
     return positional_args_;
   }
 
