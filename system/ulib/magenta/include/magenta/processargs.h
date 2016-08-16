@@ -56,12 +56,30 @@ struct mx_proc_args {
 // handle to our own process
 #define MX_HND_TYPE_PROC_SELF 1
 
-// handle to the VMO containing the ELF image of the vDSO, to map into children
+// Handle to the VMO containing the ELF image of the system vDSO.  This
+// handle is duplicable, transferable, readable, and executable, but not
+// writable.  The contents of the VM object should be treated like any
+// other general-purpose ELF file image of type ET_DYN.  A process only
+// needs this handle so that it can map the vDSO into new processes it
+// might create or propagate it on to its children so they can do so.
+// Each process's own vDSO was mapped in by its creator before the
+// process started, its address passed as an argument to entry point.
 #define MX_HND_TYPE_VDSO_VMO 2
+
+// Handle to the VMO used to map the initial thread's stack.  This
+// handle usually has all rights.  The protocol between process creator
+// and new process is that this entire VM object has been mapped in
+// before the process starts.  The initial value for the SP register in
+// the new process is the high edge of the mapping (assuming stacks grow
+// downwards), adjusted down as required by the particular machine's C
+// calling convention for function entry.  Thus the new process can
+// compute its exact stack bounds by subtracting the size reported by
+// this VMO from the (adjusted back up) initial SP value.
+#define MX_HND_TYPE_STACK_VMO 3
 
 // Handle to a VMO containing a bootfs format image.
 // The "arg" field used with this type is a simple ordinal.
-#define MX_HND_TYPE_BOOTFS_VMO 3
+#define MX_HND_TYPE_BOOTFS_VMO 4
 
 // Handle types the mxio library uses
 #define MX_HND_TYPE_MXIO_ROOT 0x10

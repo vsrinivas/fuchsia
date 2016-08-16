@@ -145,6 +145,12 @@ mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp);
 // to pass to the new process's initial thread.
 mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo);
 
+// Set the size of the initial thread's stack, and return the old setting.
+// The initial setting after launchpad_create is a system default.
+// If this is passed zero, then there will be no stack allocated.
+// Otherwise, the size passed is rounded up to a multiple of the page size.
+size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
+
 // Start the process running.  If the send_loader_message flag is
 // set and this succeeds in sending the initial bootstrap message,
 // it clears the loader-service handle.  If this succeeds in sending

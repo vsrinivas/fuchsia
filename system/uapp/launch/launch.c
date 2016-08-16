@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <magenta/processargs.h>
@@ -32,6 +33,7 @@ static _Noreturn void usage(const char* progname, bool error) {
     option_usage(out, "-L", "force initial loader bootstrap message");
     option_usage(out, "-r", "send mxio filesystem root");
     option_usage(out, "-s", "shorthand for -r -d 0 -d 1 -d 2");
+    option_usage(out, "-S BYTES", "set the initial stack size to BYTES");
     option_usage(out, "-v FILE", "send VMO of FILE as EXEC_VMO handle");
     option_usage(out, "-V FD", "send VMO of FD as EXEC_VMO handle");
     exit(error ? 1 : 0);
@@ -60,8 +62,9 @@ int main(int argc, char** argv) {
     bool pass_loader_handle = false;
     const char* exec_vmo_file = NULL;
     int exec_vmo_fd = -1;
+    size_t stack_size = -1;
 
-    for (int opt; (opt = getopt(argc, argv, "bd:e:f:F:hlLrsv:")) != -1;) {
+    for (int opt; (opt = getopt(argc, argv, "bd:e:f:F:hlLrsS:v:")) != -1;) {
         switch (opt) {
         case 'b':
             basic = true;
@@ -120,6 +123,12 @@ int main(int argc, char** argv) {
             for (int i = 0; i < 3; ++i)
                 fds[nfds + i].from = fds[nfds + i].to = i;
             nfds += 3;
+            break;
+        case 'S':
+            if (sscanf(optarg, "0x%zx", &stack_size) != 1 &&
+                sscanf(optarg, "0%zo", &stack_size) != 1 &&
+                sscanf(optarg, "%zu", &stack_size) != 1)
+                usage(argv[0], true);
             break;
         case 'v':
             exec_vmo_file = optarg;
@@ -228,6 +237,12 @@ int main(int argc, char** argv) {
         }
         check("launchpad_vmo_from_fd", exec_vmo);
         status = launchpad_add_handle(lp, exec_vmo, MX_HND_TYPE_EXEC_VMO);
+    }
+
+    if (stack_size != (size_t)-1) {
+        size_t old_size = launchpad_set_stack_size(lp, stack_size);
+        assert(old_size > 0);
+        assert(old_size < (size_t)-1);
     }
 
     // This doesn't get ownership of the process handle.

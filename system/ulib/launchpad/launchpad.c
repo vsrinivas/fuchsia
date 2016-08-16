@@ -13,9 +13,12 @@
 #include <runtime/mutex.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+
+#define DEFAULT_STACK_SIZE (64 << 10)
 
 enum special_handles {
     HND_LOADER_SVC,
@@ -38,6 +41,8 @@ struct launchpad {
 
     mx_vaddr_t entry;
     mx_vaddr_t vdso_base;
+
+    size_t stack_size;
 
     mx_handle_t special_handles[HND_SPECIAL_COUNT];
     bool loader_message;
@@ -68,6 +73,8 @@ mx_status_t launchpad_create(const char* name, launchpad_t** result) {
     launchpad_t* lp = calloc(1, sizeof(*lp));
     if (lp == NULL)
         return ERR_NO_MEMORY;
+
+    lp->stack_size = DEFAULT_STACK_SIZE;
 
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
     mx_handle_t proc = mx_process_create(name, name_len);
@@ -608,9 +615,68 @@ static void* build_message(launchpad_t* lp, size_t *total_size) {
     return buffer;
 }
 
+size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
+    size_t old_size = lp->stack_size;
+    if (new_size >= (SIZE_MAX & -PAGE_SIZE)) {
+        // Ridiculously large size won't actually work at allocation time,
+        // but at least page rounding won't wrap it around to zero.
+        new_size = SIZE_MAX & -PAGE_SIZE;
+    } else if (new_size > 0) {
+        // Round up to page size.
+        new_size = (new_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+    }
+    lp->stack_size = new_size;
+    return old_size;
+}
+
+// Given the (page-aligned) base and size of the stack mapping,
+// compute the appropriate initial SP value for an initial thread
+// according to the C calling convention for the machine.
+static uintptr_t sp_from_mapping(mx_vaddr_t base, size_t size) {
+    // Assume stack grows down.
+    mx_vaddr_t sp = base + size;
+#ifdef __x86_64__
+    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
+    // at (%rsp) serves as the return address for the outermost frame.
+    sp -= 8;
+#elif defined(__arm__) || defined(__aarch64__)
+    // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
+#else
+# error what machine?
+#endif
+    return sp;
+}
+
 mx_handle_t launchpad_start(launchpad_t* lp) {
     if (lp->entry == 0)
         return ERR_BAD_STATE;
+
+    uintptr_t sp = 0;
+    if (lp->stack_size > 0) {
+        // Allocate the initial thread's stack.
+        mx_handle_t stack_vmo = mx_vm_object_create(lp->stack_size);
+        if (stack_vmo < 0)
+            return stack_vmo;
+        mx_vaddr_t stack_base;
+        mx_status_t status = mx_process_vm_map(
+            lp_proc(lp), stack_vmo, 0, lp->stack_size, &stack_base,
+            MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+        if (status == NO_ERROR) {
+            sp = sp_from_mapping(stack_base, lp->stack_size);
+            // Pass the stack VMO to the process.  Our protocol with the
+            // new process is that we warrant that this is the VMO from
+            // which the initial stack is mapped and that we've exactly
+            // mapped the entire thing, so vm_object_get_size on this in
+            // concert with the initial SP value tells it the exact bounds
+            // of its stack.
+            status = launchpad_add_handle(lp, stack_vmo,
+                                          MX_HND_TYPE_STACK_VMO);
+        }
+        if (status != NO_ERROR) {
+            mx_handle_close(stack_vmo);
+            return status;
+        }
+    }
 
     mx_handle_t pipeh[2];
     mx_status_t status = mx_message_pipe_create(pipeh, 0);
@@ -634,6 +700,18 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         mx_handle_close(to_child);
         mx_handle_close(child_bootstrap);
         return ERR_NO_MEMORY;
+    }
+
+    // Assume the process will read the bootstrap message onto its
+    // initial thread's stack.  If it would need more than half its
+    // stack just to read the message, consider that an unreasonably
+    // large size for the message (presumably arguments and
+    // environment strings that are unreasonably large).
+    if (size > lp->stack_size / 2) {
+        free(msg);
+        mx_handle_close(to_child);
+        mx_handle_close(child_bootstrap);
+        return ERR_NOT_ENOUGH_BUFFER;
     }
 
     // TODO(mcgrathr): The kernel doesn't permit duplicating a process
@@ -665,6 +743,8 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
             lp->handles[i] = MX_HANDLE_INVALID;
         lp->handle_count = 0;
         // TODO(mcgrathr): Pass in vdso_base somehow.
+        // TODO(mcgrathr): Pass in sp.
+        (void)sp;
         status = mx_process_start(proc, child_bootstrap, lp->entry);
     }
     // process_start consumed child_bootstrap if successful.
