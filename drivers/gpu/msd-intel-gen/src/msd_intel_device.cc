@@ -49,6 +49,14 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!gtt_->Init(gtt_size, platform_device_.get()))
         return DRETF(false, "failed to Init gtt");
 
+    render_engine_cs_ =
+        std::unique_ptr<RenderEngineCommandStreamer>(new RenderEngineCommandStreamer());
+
+    default_context_ = std::unique_ptr<MsdIntelContext>(new MsdIntelContext());
+
+    if (!render_engine_cs_->InitContext(default_context_.get()))
+        return DRETF(false, "failed to init render engine command streamer");
+
     return true;
 }
 

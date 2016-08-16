@@ -9,6 +9,8 @@ source_set("src") {
 
   sources = [
     "address_space.h",
+    "engine_command_streamer.cc",
+    "engine_command_streamer.h",
     "gtt.cc",
     "gtt.h",
     "msd_intel_buffer.cc",

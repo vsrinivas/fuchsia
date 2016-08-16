@@ -5,6 +5,7 @@
 #ifndef MSD_DEVICE_H
 #define MSD_DEVICE_H
 
+#include "engine_command_streamer.h"
 #include "gtt.h"
 #include "magma_util/macros.h"
 #include "magma_util/platform_device.h"
@@ -35,7 +36,7 @@ private:
     MsdIntelDevice();
 
     // GttOwner
-    RegisterIo* register_io()
+    RegisterIo* register_io() override
     {
         DASSERT(register_io_);
         return register_io_.get();
@@ -50,6 +51,8 @@ private:
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<Gtt> gtt_;
+    std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
+    std::unique_ptr<MsdIntelContext> default_context_;
 
     friend class MsdIntelDriver;
     friend class TestMsdIntelDevice;

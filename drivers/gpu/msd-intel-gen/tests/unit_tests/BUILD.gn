@@ -8,6 +8,7 @@ source_set("unit_tests") {
   sources = [
     "test_buffer.cc",
     "test_context.cc",
+    "test_engine_command_streamer.cc",
     "test_gtt.cc",
     "test_device.cc",
   ]
