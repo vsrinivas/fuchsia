@@ -5,9 +5,11 @@
 #ifndef _MAGMA_SYSTEM_CONNECTION_H_
 #define _MAGMA_SYSTEM_CONNECTION_H_
 
+#include "magma_system.h"
 #include "magma_system_buffer.h"
 #include "magma_system_context.h"
 #include "magma_system_device.h"
+#include "magma_util/macros.h"
 #include "msd.h"
 
 #include <map>
@@ -16,7 +18,7 @@
 using msd_connection_unique_ptr_t =
     std::unique_ptr<msd_connection, std::function<void(msd_connection*)>>;
 
-class MagmaSystemConnection {
+class MagmaSystemConnection : public magma_system_connection {
 public:
     MagmaSystemConnection(MagmaSystemDevice* device, msd_connection_unique_ptr_t msd_connection);
 
@@ -39,6 +41,13 @@ public:
 
     msd_connection* msd_connection() { return msd_connection_.get(); }
 
+    static MagmaSystemConnection* cast(magma_system_connection* connection)
+    {
+        DASSERT(connection);
+        DASSERT(connection->magic_ == kMagic);
+        return static_cast<MagmaSystemConnection*>(connection);
+    }
+
 private:
     // device is not owned here on the premise that the device outlives all its connections
     MagmaSystemDevice* device_;
@@ -46,6 +55,8 @@ private:
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
     std::map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
     uint32_t next_context_id_{};
+
+    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 };
 
 #endif //_MAGMA_SYSTEM_CONNECTION_H_

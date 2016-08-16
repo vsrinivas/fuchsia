@@ -22,7 +22,7 @@ MagmaConnection* MagmaConnection::Open(uint32_t device_handle, int batch_size)
     return bufmgr;
 }
 
-MagmaConnection::MagmaConnection(MagmaSystemConnection* sys_connection)
+MagmaConnection::MagmaConnection(magma_system_connection* sys_connection)
     : sys_connection_(sys_connection)
 {
     libdrm_ = new LibdrmIntelGen();

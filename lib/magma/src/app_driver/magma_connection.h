@@ -18,7 +18,7 @@ public:
     static MagmaConnection* Open(uint32_t device_handle, int batch_size);
     ~MagmaConnection();
 
-    MagmaSystemConnection* sys_connection() { return sys_connection_; }
+    magma_system_connection* sys_connection() { return sys_connection_; }
 
     uint64_t max_relocs() { return max_relocs_; }
     uint32_t GetDeviceId() { return magma_system_get_device_id(sys_connection_); }
@@ -43,9 +43,9 @@ public:
     }
 
 private:
-    MagmaConnection(MagmaSystemConnection* sys_connection);
+    MagmaConnection(magma_system_connection* sys_connection);
 
-    MagmaSystemConnection* sys_connection_;
+    magma_system_connection* sys_connection_;
     LibdrmIntelGen* libdrm_;
 
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)

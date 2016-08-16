@@ -12,6 +12,7 @@ MagmaSystemConnection::MagmaSystemConnection(MagmaSystemDevice* device,
 {
     DASSERT(device_);
     DASSERT(msd_connection_);
+    magic_ = kMagic;
 }
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::AllocateBuffer(uint64_t size)
