@@ -1,3 +1,7 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 # This is a header only library that everything else in userspace
 # relies on. As such, we take only very minimal dependencies here:
 
