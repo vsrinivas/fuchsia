@@ -95,7 +95,12 @@ mx_status_t VmObjectDispatcher::Map(utils::RefPtr<VmAspace> aspace, uint32_t vmo
         arch_mmu_flags |= ARCH_MMU_FLAG_PERM_NO_EXECUTE;
     }
 
-    auto status = aspace->MapObject(vmo_, "unnamed", offset, len, reinterpret_cast<void**>(_ptr), 0, vmm_flags, arch_mmu_flags);
+    // TODO(teisenbe): Remove this when we have more symbolic debugging working.
+    // This is a hack to make it easier to decode crash addresses
+    const uint min_align_log2 = 20;
+
+    auto status = aspace->MapObject(vmo_, "unnamed", offset, len, reinterpret_cast<void**>(_ptr), min_align_log2,
+                                    vmm_flags, arch_mmu_flags);
     if (status < 0)
         return status;
 
