@@ -284,21 +284,27 @@ int32_t magma_gem_bo_wait(magma_buffer* bo, int64_t timeout_ns)
 magma_context* magma_gem_context_create(magma_connection* connection)
 {
     DLOG("magma_gem_context_create");
-    uint32_t context_id;
-    if (MagmaConnection::cast(connection)->CreateContext(&context_id)) {
-        DLOG("got hw context id %d", context_id);
-        return reinterpret_cast<magma_context*>(context_id);
-    }
-    return nullptr;
+    auto context = MagmaConnection::cast(connection)->CreateContext();
+    if (!context)
+        return DRETP(nullptr, "Could not create context");
+
+    DLOG("got hw context id %d", context->context_id());
+    return context;
 }
 
-void magma_gem_context_destroy(magma_context* ctx) { DLOG("magma_gem_context_destroy - STUB"); }
+void magma_gem_context_destroy(magma_context* ctx)
+{
+    auto context = MagmaContext::cast(ctx);
+    if (!context->connection()->DestroyContext(context)) {
+        DLOG("failed to destroy context. Somehow...");
+    }
+}
 
 int32_t magma_gem_bo_context_exec(magma_buffer* bo, magma_context* ctx, int32_t used,
                                   uint32_t flags)
 {
     auto buffer = MagmaBuffer::cast(bo);
-    int32_t context_id = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
+    int32_t context_id = MagmaContext::cast(ctx)->context_id();
     DLOG("magma_gem_bo_context_exec buffer '%s' context_id %d", buffer->Name(), context_id);
     // int32_t int_context_id = static_cast<int>(context_id);
     buffer->connection()->ExecuteBuffer(buffer, context_id, used, flags);

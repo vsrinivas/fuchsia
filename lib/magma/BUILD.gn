@@ -38,6 +38,7 @@ source_set("libmad") {
     "src/app_driver/magma_buffer.h",
     "src/app_driver/magma_connection.cc",
     "src/app_driver/magma_connection.h",
+    "src/app_driver/magma_context.h",
   ]
 
   public_deps = [

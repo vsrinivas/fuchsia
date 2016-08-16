@@ -28,7 +28,6 @@ struct magma_connection {
 };
 
 struct magma_context {
-    uint32_t context_id;
     int32_t magic_;
 };
 
