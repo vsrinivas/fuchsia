@@ -13,4 +13,8 @@ enum CachingType {
     CACHING_WRITE_THROUGH,
 };
 
-#endif // PAGETABLE_H
+enum EngineCommandStreamerId {
+    RENDER_COMMAND_STREAMER,
+};
+
+#endif // TYPES_H
