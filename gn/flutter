@@ -1,5 +1,15 @@
 {
     "labels": [
         "//flutter"
+    ],
+    "binaries": [
+        {
+            "binary": "flutter_content_handler",
+            "bootfs_path": "apps/flutter_content_handler"
+        },
+        {
+            "binary": "spinning_square.flx",
+            "bootfs_path": "apps/spinning_square.flx"
+        }
     ]
 }

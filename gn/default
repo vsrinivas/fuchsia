@@ -3,6 +3,7 @@
         "apps",
         "cmdutils",
         "dart",
+        "flutter",
         "fortune",
         "ftl",
         "leveldb",
