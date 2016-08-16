@@ -6,6 +6,7 @@ import("//magma/gnbuild/magma.gni")
 
 source_set("unit_tests") {
   sources = [
+    "test_buffer.cc",
     "test_gtt.cc",
     "test_device.cc",
   ]

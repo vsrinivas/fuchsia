@@ -21,6 +21,15 @@ MsdIntelBuffer* MsdIntelBuffer::Create(msd_platform_buffer* platform_buffer_toke
     return new MsdIntelBuffer(std::move(platform_buf));
 }
 
+MsdIntelBuffer* MsdIntelBuffer::Create(uint64_t size)
+{
+    auto platform_buf = magma::PlatformBuffer::Create(size);
+    if (!platform_buf)
+        return DRETP(nullptr, "MsdIntelBuffer::Create: Could not create platform buffer from size");
+
+    return new MsdIntelBuffer(std::move(platform_buf));
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)

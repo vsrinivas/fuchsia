@@ -13,12 +13,19 @@
 class MsdIntelBuffer : public msd_buffer {
 public:
     static MsdIntelBuffer* Create(msd_platform_buffer* platform_buffer_token);
+    static MsdIntelBuffer* Create(uint64_t size);
 
     static MsdIntelBuffer* cast(msd_buffer* buf)
     {
         DASSERT(buf);
         DASSERT(buf->magic_ == kMagic);
         return static_cast<MsdIntelBuffer*>(buf);
+    }
+
+    magma::PlatformBuffer* platform_buffer()
+    {
+        DASSERT(platform_buf_);
+        return platform_buf_.get();
     }
 
 private:
