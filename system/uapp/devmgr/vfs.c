@@ -180,10 +180,13 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
     return sz;
 }
 
-static mx_status_t vfs_get_handles(vnode_t* vn, mx_handle_t* hnds, uint32_t* ids, const char* trackfn) {
+static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir, mx_handle_t* hnds, uint32_t* ids, const char* trackfn) {
     mx_status_t r;
-    if ((r = vn->ops->gethandles(vn, hnds, ids)) == ERR_NOT_SUPPORTED) {
-        // local vnode, we will create the handles
+    if (vn->flags & V_FLAG_DEVICE && !as_dir) {
+        // opening a device, get devmgr handles
+        r = devmgr_get_handles((mx_device_t*)vn->pdata, hnds, ids);
+    } else {
+        // local vnode or device as a directory, we will create the handles
         hnds[0] = vfs_create_handle(vn, trackfn);
         ids[0] = MX_HND_TYPE_MXIO_REMOTE;
         r = 1;
@@ -233,7 +236,7 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
     }
 #endif
     uint32_t ids[VFS_MAX_HANDLES];
-    if ((r = vfs_get_handles(vn, msg->handle, ids, (const char*)msg->data)) < 0) {
+    if ((r = vfs_get_handles(vn, flags & O_DIRECTORY, msg->handle, ids, (const char*)msg->data)) < 0) {
         vn->ops->close(vn);
         return r;
     }
