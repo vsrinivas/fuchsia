@@ -19,7 +19,7 @@ msd_device* msd_driver_create_device(msd_driver* drv, void* device)
     return MsdMockDriver::cast(drv)->CreateDevice();
 }
 
-void msd_driver_destroy_device(msd_device* dev)
+void msd_device_destroy(msd_device* dev)
 {
     // TODO(MA-28) should be
     // MsdMockDriver::cast(drv)->DestroyDevice(MsdMockDevice::cast(dev));
@@ -43,10 +43,7 @@ msd_context* msd_connection_create_context(msd_connection* dev)
     return MsdMockConnection::cast(dev)->CreateContext();
 }
 
-void msd_connection_destroy_context(msd_connection* dev, msd_context* ctx)
-{
-    MsdMockConnection::cast(dev)->DestroyContext(MsdMockContext::cast(ctx));
-}
+void msd_context_destroy(msd_context* ctx) { delete MsdMockContext::cast(ctx); }
 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
 {
@@ -73,3 +70,5 @@ MsdMockBufferManager* MsdMockBufferManager::ScopedMockBufferManager::get()
 {
     return g_bufmgr.get();
 }
+
+MsdMockContext::~MsdMockContext() { connection_->DestroyContext(this); }

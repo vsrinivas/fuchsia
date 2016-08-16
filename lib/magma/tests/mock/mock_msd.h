@@ -29,10 +29,12 @@ private:
     static const uint32_t kMagic = 0x6d6b6266; // "mkbf" (Mock Buffer)
 };
 
+class MsdMockConnection;
+
 class MsdMockContext : public msd_context {
 public:
-    MsdMockContext() { magic_ = kMagic; }
-    virtual ~MsdMockContext() {}
+    MsdMockContext(MsdMockConnection* connection) : connection_(connection) { magic_ = kMagic; }
+    virtual ~MsdMockContext();
 
     static MsdMockContext* cast(msd_context* ctx)
     {
@@ -42,6 +44,7 @@ public:
     }
 
 private:
+    MsdMockConnection* connection_;
     static const uint32_t kMagic = 0x6d6b6378; // "mkcx" (Mock Context)
 };
 
@@ -50,9 +53,9 @@ public:
     MsdMockConnection() { magic_ = kMagic; }
     virtual ~MsdMockConnection() {}
 
-    virtual MsdMockContext* CreateContext() { return new MsdMockContext; }
+    virtual MsdMockContext* CreateContext() { return new MsdMockContext(this); }
 
-    virtual void DestroyContext(MsdMockContext* ctx) { delete ctx; }
+    virtual void DestroyContext(MsdMockContext* ctx) {}
 
     static MsdMockConnection* cast(msd_connection* connection)
     {

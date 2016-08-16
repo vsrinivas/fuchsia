@@ -26,8 +26,7 @@ public:
             return DRETP(nullptr, "msd_create_device failed");;
         }
 
-        g_device =
-            new MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_driver_destroy_device));
+        g_device = new MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
 
         return g_device;
     }

@@ -47,7 +47,7 @@ void msd_driver_destroy(struct msd_driver* drv);
 struct msd_device* msd_driver_create_device(struct msd_driver* drv, void* device);
 
 // Destroys a device at system shutdown.
-void msd_driver_destroy_device(struct msd_device* dev);
+void msd_device_destroy(struct msd_device* dev);
 
 // Returns the device id.  0 is an invalid device id.
 uint32_t msd_device_get_id(struct msd_device* dev);
@@ -62,7 +62,7 @@ void msd_connection_close(struct msd_connection* connection);
 struct msd_context* msd_connection_create_context(struct msd_connection* connection);
 
 // Destroys the given context.
-void msd_connection_destroy_context(struct msd_connection* connection, struct msd_context* ctx);
+void msd_context_destroy(struct msd_context* ctx);
 
 // Creates a buffer that owns a reference to the provided platform buffer
 // The resulting msd_buffer is owned by the caller and must be destroyed

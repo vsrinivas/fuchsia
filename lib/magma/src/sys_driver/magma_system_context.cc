@@ -13,12 +13,6 @@ std::unique_ptr<MagmaSystemContext> MagmaSystemContext::Create(MagmaSystemConnec
     if (!msd_ctx)
         return DRETP(nullptr, "Failed to create msd context");
 
-    // capture the connection here on the premise that the connection will always outlive
-    // all of its contexts
-    auto deleter = [connection](msd_context* msd_ctx) {
-        msd_connection_destroy_context(connection->msd_connection(), msd_ctx);
-    };
-
     return std::unique_ptr<MagmaSystemContext>(
-        new MagmaSystemContext(msd_context_unique_ptr_t(msd_ctx, deleter)));
+        new MagmaSystemContext(msd_context_unique_ptr_t(msd_ctx, &msd_context_destroy)));
 }
