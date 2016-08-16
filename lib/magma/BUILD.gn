@@ -36,8 +36,8 @@ source_set("libmad") {
     "src/app_driver/magma.cc",
     "src/app_driver/magma_buffer.cc",
     "src/app_driver/magma_buffer.h",
-    "src/app_driver/magma_device.cc",
-    "src/app_driver/magma_device.h",
+    "src/app_driver/magma_connection.cc",
+    "src/app_driver/magma_connection.h",
   ]
 
   public_deps = [

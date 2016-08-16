@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma_device.h"
+#include "magma_connection.h"
 
-MagmaDevice* MagmaDevice::Open(uint32_t device_handle, int batch_size)
+MagmaConnection* MagmaConnection::Open(uint32_t device_handle, int batch_size)
 {
-    auto sys_dev = magma_system_open(device_handle);
-    if (!sys_dev) {
+    auto sys_connection = magma_system_open(device_handle);
+    if (!sys_connection) {
         DLOG("magma_system_open failed");
         return nullptr;
     }
 
-    auto bufmgr = new MagmaDevice(sys_dev);
+    auto bufmgr = new MagmaConnection(sys_connection);
     if (!bufmgr->Init(batch_size)) {
         DLOG("Couldn't init bufmgr");
         delete bufmgr;
@@ -22,26 +22,27 @@ MagmaDevice* MagmaDevice::Open(uint32_t device_handle, int batch_size)
     return bufmgr;
 }
 
-MagmaDevice::MagmaDevice(MagmaSystemConnection* sys_dev) : sys_dev_(sys_dev)
+MagmaConnection::MagmaConnection(MagmaSystemConnection* sys_connection)
+    : sys_connection_(sys_connection)
 {
     libdrm_ = new LibdrmIntelGen();
     magic_ = kMagic;
 }
 
-MagmaDevice::~MagmaDevice()
+MagmaConnection::~MagmaConnection()
 {
-    magma_system_close(sys_dev());
+    magma_system_close(sys_connection());
     delete libdrm_;
 }
 
-bool MagmaDevice::Init(uint64_t batch_size)
+bool MagmaConnection::Init(uint64_t batch_size)
 {
     max_relocs_ = LibdrmIntelGen::ComputeMaxRelocs(batch_size);
     return true;
 }
 
-MagmaBuffer* MagmaDevice::AllocBufferObject(const char* name, uint64_t size, uint32_t alignment,
-                                            uint32_t tiling_mode, uint32_t stride)
+MagmaBuffer* MagmaConnection::AllocBufferObject(const char* name, uint64_t size, uint32_t alignment,
+                                                uint32_t tiling_mode, uint32_t stride)
 {
     auto buffer = new MagmaBuffer(this, name, alignment);
     if (!buffer) {
@@ -61,8 +62,8 @@ MagmaBuffer* MagmaDevice::AllocBufferObject(const char* name, uint64_t size, uin
     return buffer;
 }
 
-bool MagmaDevice::ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_len,
-                                uint32_t flags)
+bool MagmaConnection::ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_len,
+                                    uint32_t flags)
 {
     DLOG("TODO: ExecuteBuffer");
     return false;

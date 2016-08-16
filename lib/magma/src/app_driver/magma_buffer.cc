@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "magma_buffer.h"
-#include "magma_device.h"
+#include "magma_connection.h"
 
-MagmaBuffer::MagmaBuffer(MagmaDevice* device, const char* name, uint32_t align)
-    : LibdrmIntelGen::Buffer(name, align), device_(device)
+MagmaBuffer::MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t align)
+    : LibdrmIntelGen::Buffer(name, align), connection_(connection)
 {
     magic_ = kMagic;
 }
@@ -14,7 +14,7 @@ MagmaBuffer::MagmaBuffer(MagmaDevice* device, const char* name, uint32_t align)
 MagmaBuffer::~MagmaBuffer()
 {
     DLOG("~MagmaBuffer");
-    magma_system_free(device_->sys_dev(), this->handle);
+    magma_system_free(connection_->sys_connection(), this->handle);
 
     this->handle = 0xdeadbeef;
     this->size = 0;
@@ -23,7 +23,7 @@ MagmaBuffer::~MagmaBuffer()
 bool MagmaBuffer::Alloc(uint64_t size)
 {
     uint32_t handle;
-    if (!magma_system_alloc(device_->sys_dev(), size, &size, &handle))
+    if (!magma_system_alloc(connection_->sys_connection(), size, &size, &handle))
         return false;
 
     this->handle = static_cast<uint32_t>(handle);
@@ -36,19 +36,19 @@ bool MagmaBuffer::Alloc(uint64_t size)
 
 void MagmaBuffer::SetTilingMode(uint32_t tiling_mode)
 {
-    if (magma_system_set_tiling_mode(device_->sys_dev(), this->handle, tiling_mode))
+    if (magma_system_set_tiling_mode(connection_->sys_connection(), this->handle, tiling_mode))
         tiling_mode_ = tiling_mode;
 }
 
 bool MagmaBuffer::Map(bool write)
 {
     void* addr;
-    if (!magma_system_map(device_->sys_dev(), this->handle, &addr))
+    if (!magma_system_map(connection_->sys_connection(), this->handle, &addr))
         return false;
 
     this->virt = addr;
 
-    if (!magma_system_set_domain(device_->sys_dev(), this->handle, MAGMA_DOMAIN_CPU,
+    if (!magma_system_set_domain(connection_->sys_connection(), this->handle, MAGMA_DOMAIN_CPU,
                                  write ? MAGMA_DOMAIN_CPU : 0))
         return false;
 
@@ -57,7 +57,7 @@ bool MagmaBuffer::Map(bool write)
 
 bool MagmaBuffer::Unmap()
 {
-    if (!magma_system_unmap(device_->sys_dev(), this->handle, this->virt))
+    if (!magma_system_unmap(connection_->sys_connection(), this->handle, this->virt))
         return false;
 
     this->virt = nullptr;
@@ -66,5 +66,5 @@ bool MagmaBuffer::Unmap()
 
 void MagmaBuffer::WaitRendering()
 {
-    return magma_system_wait_rendering(device_->sys_dev(), this->handle);
+    return magma_system_wait_rendering(connection_->sys_connection(), this->handle);
 }

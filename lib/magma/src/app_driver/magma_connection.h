@@ -13,15 +13,15 @@
 #include <map>
 #include <stdint.h>
 
-class MagmaDevice : public magma_device {
+class MagmaConnection : public magma_connection {
 public:
-    static MagmaDevice* Open(uint32_t device_handle, int batch_size);
-    ~MagmaDevice();
+    static MagmaConnection* Open(uint32_t device_handle, int batch_size);
+    ~MagmaConnection();
 
-    MagmaSystemConnection* sys_dev() { return sys_dev_; }
+    MagmaSystemConnection* sys_connection() { return sys_connection_; }
 
     uint64_t max_relocs() { return max_relocs_; }
-    uint32_t GetDeviceId() { return magma_system_get_device_id(sys_dev_); }
+    uint32_t GetDeviceId() { return magma_system_get_device_id(sys_connection_); }
 
     bool Init(uint64_t batch_size);
 
@@ -30,25 +30,25 @@ public:
 
     bool CreateContext(uint32_t* context_id)
     {
-        return magma_system_create_context(sys_dev_, context_id);
+        return magma_system_create_context(sys_connection_, context_id);
     }
 
     bool ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_len, uint32_t flags);
 
-    static MagmaDevice* cast(magma_device* device)
+    static MagmaConnection* cast(magma_connection* device)
     {
         DASSERT(device);
         DASSERT(device->magic_ == kMagic);
-        return static_cast<MagmaDevice*>(device);
+        return static_cast<MagmaConnection*>(device);
     }
 
 private:
-    MagmaDevice(MagmaSystemConnection* sys_dev);
+    MagmaConnection(MagmaSystemConnection* sys_connection);
 
-    MagmaSystemConnection* sys_dev_;
+    MagmaSystemConnection* sys_connection_;
     LibdrmIntelGen* libdrm_;
 
-    static const uint32_t kMagic = 0x64657669; //"devi"
+    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
     uint64_t max_relocs_{};
 };

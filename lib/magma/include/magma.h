@@ -14,16 +14,16 @@
 extern "C" {
 #endif
 
-struct magma_buffer* magma_bo_alloc(struct magma_device* device, const char* name, uint32_t size,
-                                    uint32_t alignment);
-struct magma_buffer* magma_bo_alloc_for_render(struct magma_device* device, const char* name,
-                                               uint32_t size, uint32_t alignment);
-// struct magma_buffer *magma_bo_alloc_userptr(struct magma_device *device,
+struct magma_buffer* magma_bo_alloc(struct magma_connection* connection, const char* name,
+                                    uint32_t size, uint32_t alignment);
+struct magma_buffer* magma_bo_alloc_for_render(struct magma_connection* connection,
+                                               const char* name, uint32_t size, uint32_t alignment);
+// struct magma_buffer *magma_bo_alloc_userptr(struct magma_connection *connection,
 //                     const char *name,
 //                     void *addr, uint32_t tiling_mode,
 //                     uint32_t stride, uint32_t size,
 //                     uint32_t flags);
-struct magma_buffer* magma_bo_alloc_tiled(struct magma_device* device, const char* name,
+struct magma_buffer* magma_bo_alloc_tiled(struct magma_connection* connection, const char* name,
                                           uint32_t size, uint32_t flags, uint32_t tiling_mode,
                                           uint32_t stride);
 
@@ -36,8 +36,8 @@ int32_t magma_bo_subdata(struct magma_buffer* bo, uint32_t offset, uint32_t size
 int32_t magma_bo_get_subdata(struct magma_buffer* bo, uint32_t offset, uint32_t size, void* data);
 void magma_bo_wait_rendering(struct magma_buffer* bo);
 
-void magma_bufmgr_set_debug(struct magma_device* device, int32_t enable_debug);
-void magma_bufmgr_destroy(struct magma_device* device);
+void magma_bufmgr_set_debug(struct magma_connection* connection, int32_t enable_debug);
+void magma_bufmgr_destroy(struct magma_connection* connection);
 
 // int32_t magma_bo_exec(struct magma_buffer *bo, int32_t used,
 //               struct drm_clip_rect *cliprects, int32_t num_cliprects, int32_t DR4);
@@ -66,12 +66,12 @@ int32_t magma_bo_madvise(struct magma_buffer* bo, int32_t madv);
 // int32_t magma_bo_is_reusable(struct magma_buffer *bo);
 int32_t magma_bo_references(struct magma_buffer* bo, struct magma_buffer* target_bo);
 
-struct magma_device* magma_bufmgr_gem_init(int32_t fd, int32_t batch_size);
-struct magma_buffer* magma_bo_gem_create_from_name(struct magma_device* device, const char* name,
-                                                   uint32_t handle);
-void magma_bufmgr_gem_enable_reuse(struct magma_device* device);
-void magma_bufmgr_gem_enable_fenced_relocs(struct magma_device* device);
-// void magma_device_gem_set_vma_cache_size(struct magma_device *device,
+struct magma_connection* magma_bufmgr_gem_init(int32_t fd, int32_t batch_size);
+struct magma_buffer* magma_bo_gem_create_from_name(struct magma_connection* connection,
+                                                   const char* name, uint32_t handle);
+void magma_bufmgr_gem_enable_reuse(struct magma_connection* connection);
+void magma_bufmgr_gem_enable_fenced_relocs(struct magma_connection* connection);
+// void magma_connection_gem_set_vma_cache_size(struct magma_connection *connection,
 //                         int32_t limit);
 int32_t magma_gem_bo_map_unsynchronized(struct magma_buffer* bo);
 int32_t magma_gem_bo_map_gtt(struct magma_buffer* bo);
@@ -81,8 +81,9 @@ int32_t magma_gem_bo_get_reloc_count(struct magma_buffer* bo);
 void magma_gem_bo_clear_relocs(struct magma_buffer* bo, int32_t start);
 // void magma_gem_bo_start_gtt_access(struct magma_buffer *bo, int32_t write_enable);
 
-void magma_device_gem_set_aub_filename(struct magma_device* device, const char* filename);
-void magma_bufmgr_gem_set_aub_dump(struct magma_device* device, int32_t enable);
+void magma_connection_gem_set_aub_filename(struct magma_connection* connection,
+                                           const char* filename);
+void magma_bufmgr_gem_set_aub_dump(struct magma_connection* connection, int32_t enable);
 void magma_gem_bo_aub_dump_bmp(struct magma_buffer* bo, int32_t x1, int32_t y1, int32_t width,
                                int32_t height, enum aub_dump_bmp_format format, int32_t pitch,
                                int32_t offset);
@@ -90,17 +91,17 @@ void magma_bufmgr_gem_set_aub_annotations(struct magma_buffer* bo,
                                           drm_intel_aub_annotation* annotations, unsigned count);
 
 int32_t magma_get_aperture_sizes(int32_t fd, size_t* mappable, size_t* total);
-int32_t magma_bufmgr_gem_get_devid(struct magma_device* device);
+int32_t magma_bufmgr_gem_get_devid(struct magma_connection* connection);
 int32_t magma_gem_bo_wait(struct magma_buffer* bo, int64_t timeout_ns);
 
-struct magma_context* magma_gem_context_create(struct magma_device* device);
+struct magma_context* magma_gem_context_create(struct magma_connection* connection);
 void magma_gem_context_destroy(struct magma_context* ctx);
 int32_t magma_gem_bo_context_exec(struct magma_buffer* bo, struct magma_context* ctx, int32_t used,
                                   uint32_t flags);
 
 int32_t magma_bo_gem_export_to_prime(struct magma_buffer* bo, int32_t* prime_fd);
-struct magma_buffer* magma_bo_gem_create_from_prime(struct magma_device* device, int32_t prime_fd,
-                                                    int32_t size);
+struct magma_buffer* magma_bo_gem_create_from_prime(struct magma_connection* connection,
+                                                    int32_t prime_fd, int32_t size);
 
 struct drm_intel_decode* magma_decode_context_alloc(uint32_t devid);
 void magma_decode_context_free(struct drm_intel_decode* ctx);
@@ -111,7 +112,7 @@ void magma_decode_set_head_tail(struct drm_intel_decode* ctx, uint32_t head, uin
 void magma_decode_set_output_file(struct drm_intel_decode* ctx, FILE* out);
 void magma_decode(struct drm_intel_decode* ctx);
 
-int32_t magma_reg_read(struct magma_device* device, uint32_t offset, uint64_t* result);
+int32_t magma_reg_read(struct magma_connection* connection, uint32_t offset, uint64_t* result);
 
 int32_t magma_get_reset_stats(struct magma_context* ctx, uint32_t* reset_count, uint32_t* active,
                               uint32_t* pending);

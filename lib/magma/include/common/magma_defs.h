@@ -19,11 +19,11 @@
 #define BO_ALLOC_FOR_RENDER (1 << 0)
 
 /* Opaque types */
-typedef struct magma_device drm_intel_bufmgr;
+typedef struct magma_connection drm_intel_bufmgr;
 typedef struct magma_context drm_intel_context;
 typedef struct magma_buffer drm_intel_bo;
 
-struct magma_device {
+struct magma_connection {
     int32_t magic_;
 };
 

@@ -9,13 +9,13 @@
 #include "magma_system.h"
 #include <libdrm_intel_gen.h>
 
-class MagmaDevice;
+class MagmaConnection;
 
 // Magma is based on intel libdrm.
 // LibdrmIntelGen buffers are based on the api exposed magma_buffer.
 class MagmaBuffer : public LibdrmIntelGen::Buffer {
 public:
-    MagmaBuffer(MagmaDevice* device, const char* name, uint32_t align);
+    MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t align);
     ~MagmaBuffer() override;
 
     bool Alloc(uint64_t size);
@@ -23,7 +23,7 @@ public:
     bool Unmap();
     void WaitRendering();
 
-    MagmaDevice* device() { return device_; }
+    MagmaConnection* connection() { return connection_; }
 
     void SetTilingMode(uint32_t tiling_mode);
     uint32_t tiling_mode() { return tiling_mode_; }
@@ -36,7 +36,7 @@ public:
     }
 
 private:
-    MagmaDevice* device_;
+    MagmaConnection* connection_;
 
     uint32_t tiling_mode_ = MAGMA_TILING_MODE_NONE;
 

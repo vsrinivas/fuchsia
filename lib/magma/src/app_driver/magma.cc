@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "magma.h"
-#include "magma_device.h"
+#include "magma_connection.h"
 #include "magma_system.h"
 
 #include <assert.h>
@@ -13,29 +13,29 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
-magma_buffer* magma_bo_alloc(magma_device* device, const char* name, uint32_t size,
+magma_buffer* magma_bo_alloc(magma_connection* connection, const char* name, uint32_t size,
                              uint32_t alignment)
 {
     DLOG("magma_bo_alloc %s size %ld alignment 0x%x", name, size, alignment);
-    return MagmaDevice::cast(device)->AllocBufferObject(name, size, alignment,
-                                                        MAGMA_TILING_MODE_NONE, 0 /*stride*/);
+    return MagmaConnection::cast(connection)
+        ->AllocBufferObject(name, size, alignment, MAGMA_TILING_MODE_NONE, 0 /*stride*/);
 }
 
-magma_buffer* magma_bo_alloc_for_render(magma_device* device, const char* name, uint32_t size,
-                                        uint32_t alignment)
+magma_buffer* magma_bo_alloc_for_render(magma_connection* connection, const char* name,
+                                        uint32_t size, uint32_t alignment)
 {
     UNIMPLEMENTED("magma_bo_alloc_for_render");
     return 0;
 }
 
-magma_buffer* magma_bo_alloc_tiled(magma_device* device, const char* name, uint32_t size,
+magma_buffer* magma_bo_alloc_tiled(magma_connection* connection, const char* name, uint32_t size,
                                    uint32_t flags, uint32_t tiling_mode, uint32_t stride)
 {
     DLOG("magma_bo_alloc_tiled %s size %lu flags 0x%lx tiling_mode 0x%x stride %lu", name, size,
          flags, tiling_mode, stride);
     // TODO: flags?
-    return MagmaDevice::cast(device)->AllocBufferObject(name, size, 0 /*alignment*/, tiling_mode,
-                                                        stride);
+    return MagmaConnection::cast(connection)
+        ->AllocBufferObject(name, size, 0 /*alignment*/, tiling_mode, stride);
 }
 
 int32_t magma_bo_busy(magma_buffer* bo)
@@ -58,13 +58,15 @@ int32_t magma_bo_flink(magma_buffer* bo, uint32_t* name)
     return 0;
 }
 
-magma_buffer* magma_bo_gem_create_from_name(magma_device* device, const char* name, uint32_t handle)
+magma_buffer* magma_bo_gem_create_from_name(magma_connection* connection, const char* name,
+                                            uint32_t handle)
 {
     UNIMPLEMENTED("magma_bo_gem_create_from_name");
     return 0;
 }
 
-magma_buffer* magma_bo_gem_create_from_prime(magma_device* device, int32_t prime_fd, int32_t size)
+magma_buffer* magma_bo_gem_create_from_prime(magma_connection* connection, int32_t prime_fd,
+                                             int32_t size)
 {
     UNIMPLEMENTED("magma_bo_gem_create_from_prime");
     return 0;
@@ -165,40 +167,41 @@ int32_t magma_bufmgr_check_aperture_space(magma_buffer** bo_array, int32_t count
     return 0;
 }
 
-void magma_bufmgr_destroy(magma_device* device)
+void magma_bufmgr_destroy(magma_connection* connection)
 {
     DLOG("magma_bufmgr_destroy");
-    delete device;
+    delete connection;
 }
 
-void magma_bufmgr_gem_enable_fenced_relocs(magma_device* device)
+void magma_bufmgr_gem_enable_fenced_relocs(magma_connection* connection)
 {
     DLOG("magma_bufmgr_gem_enable_fenced_relocs - STUB");
 }
 
-void magma_bufmgr_gem_enable_reuse(magma_device* device)
+void magma_bufmgr_gem_enable_reuse(magma_connection* connection)
 {
     DLOG("magma_bufmgr_gem_enable_reuse - STUB");
 }
 
-int32_t magma_bufmgr_gem_get_devid(magma_device* device)
+int32_t magma_bufmgr_gem_get_devid(magma_connection* connection)
 {
     DLOG("magma_bufmgr_gem_get_devid");
-    int32_t id = static_cast<int>(MagmaDevice::cast(device)->GetDeviceId());
+    int32_t id = static_cast<int>(MagmaConnection::cast(connection)->GetDeviceId());
     DLOG("returning id 0x%x", id);
     return id;
 }
 
-magma_device* magma_bufmgr_gem_init(int32_t device_handle, int32_t batch_size)
+magma_connection* magma_bufmgr_gem_init(int32_t connection_handle, int32_t batch_size)
 {
-    DLOG("magma_bufmgr_gem_init device_handle 0x%x batch_size %d", device_handle, batch_size);
+    DLOG("magma_bufmgr_gem_init connection_handle 0x%x batch_size %d", connection_handle,
+         batch_size);
 
-    auto device = MagmaDevice::Open(device_handle, batch_size);
-    if (!device) {
-        DLOG("Failed to open device");
+    auto connection = MagmaConnection::Open(connection_handle, batch_size);
+    if (!connection) {
+        DLOG("Failed to open connection");
         return nullptr;
     }
-    return device;
+    return connection;
 }
 
 void magma_bufmgr_gem_set_aub_annotations(magma_buffer* bo, drm_intel_aub_annotation* annotations,
@@ -207,12 +210,12 @@ void magma_bufmgr_gem_set_aub_annotations(magma_buffer* bo, drm_intel_aub_annota
     UNIMPLEMENTED("magma_bufmgr_gem_set_aub_annotations");
 }
 
-void magma_bufmgr_gem_set_aub_dump(magma_device* device, int32_t enable)
+void magma_bufmgr_gem_set_aub_dump(magma_connection* connection, int32_t enable)
 {
     UNIMPLEMENTED("magma_bufmgr_gem_set_aub_dump");
 }
 
-void magma_bufmgr_set_debug(magma_device* device, int32_t enable_debug)
+void magma_bufmgr_set_debug(magma_connection* connection, int32_t enable_debug)
 {
     UNIMPLEMENTED("magma_bufmgr_set_debug");
 }
@@ -278,11 +281,11 @@ int32_t magma_gem_bo_wait(magma_buffer* bo, int64_t timeout_ns)
     return 0;
 }
 
-magma_context* magma_gem_context_create(magma_device* device)
+magma_context* magma_gem_context_create(magma_connection* connection)
 {
     DLOG("magma_gem_context_create");
     uint32_t context_id;
-    if (MagmaDevice::cast(device)->CreateContext(&context_id)) {
+    if (MagmaConnection::cast(connection)->CreateContext(&context_id)) {
         DLOG("got hw context id %d", context_id);
         return reinterpret_cast<magma_context*>(context_id);
     }
@@ -298,7 +301,7 @@ int32_t magma_gem_bo_context_exec(magma_buffer* bo, magma_context* ctx, int32_t 
     int32_t context_id = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
     DLOG("magma_gem_bo_context_exec buffer '%s' context_id %d", buffer->Name(), context_id);
     // int32_t int_context_id = static_cast<int>(context_id);
-    buffer->device()->ExecuteBuffer(buffer, context_id, used, flags);
+    buffer->connection()->ExecuteBuffer(buffer, context_id, used, flags);
     return 0;
 }
 
@@ -315,7 +318,7 @@ int32_t magma_get_reset_stats(magma_context* ctx, uint32_t* reset_count, uint32_
     return 0;
 }
 
-int32_t magma_reg_read(magma_device* device, uint32_t offset, uint64_t* result)
+int32_t magma_reg_read(magma_connection* connection, uint32_t offset, uint64_t* result)
 {
     DLOG("magma_reg_read - STUB returning 0");
     return 0;
