@@ -108,7 +108,8 @@ void apic_vm_init(void)
             PAGE_SIZE_SHIFT, // alignment log2
             APIC_PHYS_BASE, // physical address
             0, // vmm flags
-            ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
+            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
+                ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
     if (res != NO_ERROR) {
         panic("Could not allocate APIC management page: %d\n", res);
     }

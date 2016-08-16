@@ -95,7 +95,8 @@ mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len, void** out_vad
 
     void* vaddr = nullptr;
     uint arch_mmu_flags =
-        ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
+        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
+        ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
 
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     status_t res = aspace->AllocPhysical("user_mmio", len, &vaddr,
@@ -125,7 +126,8 @@ mx_status_t sys_alloc_device_memory(uint32_t len, mx_paddr_t* out_paddr, void** 
     void* vaddr = nullptr;
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     uint arch_mmu_flags =
-        ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
+        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
+        ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
 
     status_t res = aspace->AllocContiguous("user_mmio", len, &vaddr,
                                            PAGE_SIZE_SHIFT, VMM_FLAG_COMMIT,

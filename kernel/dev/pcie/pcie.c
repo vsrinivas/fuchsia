@@ -1305,7 +1305,8 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
                 PAGE_SIZE_SHIFT,
                 ecam->io_range.bus_addr,
                 0 /* vmm flags */,
-                ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+                ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+                    ARCH_MMU_FLAG_PERM_WRITE);
         if (status != NO_ERROR) {
             TRACEF("Failed to initialize PCIe bus driver; Failed to map ECAM window "
                    "(0x%zx @ 0x%llx).  Status = %d.\n",

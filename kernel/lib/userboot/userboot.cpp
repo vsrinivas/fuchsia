@@ -89,9 +89,9 @@ static mx_status_t map_dso_segment(utils::RefPtr<VmAspace> aspace,
     strlcat(mapping_name, code ? "-code" : "-rodata", sizeof(mapping_name));
 
     uint vmm_flags = *mapped_address != 0 ? VMM_FLAG_VALLOC_SPECIFIC : 0;
-    uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_RO;
-    if (!code)
-        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_NO_EXECUTE;
+    uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_READ;
+    if (code)
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
 
     size_t len = end_offset - start_offset;
     mx_status_t status = aspace->MapObject(
@@ -308,7 +308,8 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         void* ptr;
         status = aspace->MapObject(
             stack_vmo, "stack", 0, stack_size, &ptr,
-            0, 0, ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+            0, 0, ARCH_MMU_FLAG_PERM_USER |
+            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         if (status < 0)
             return status;
         sp = (uintptr_t)ptr + stack_size;

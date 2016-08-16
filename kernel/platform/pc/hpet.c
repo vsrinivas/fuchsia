@@ -58,7 +58,8 @@ static void hpet_init(uint level)
             PAGE_SIZE_SHIFT, /* alignment log2 */
             hpet_desc.address, /* physical address */
             0, /* vmm flags */
-            ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_UNCACHED_DEVICE);
+            ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+                ARCH_MMU_FLAG_PERM_WRITE);
     if (res != NO_ERROR) {
         return;
     }

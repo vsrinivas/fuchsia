@@ -86,7 +86,8 @@ static status_t intel_i915_map_reg_window(intel_i915_device_t* dev,
                PAGE_SIZE_SHIFT,
                reg_phys,
                0 /* vmm flags */,
-               ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+               ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+                   ARCH_MMU_FLAG_PERM_WRITE);
 
         if (ret == NO_ERROR)
             dev->regs_size = size;
@@ -127,7 +128,8 @@ static status_t intel_i915_map_fb_window(intel_i915_device_t* dev,
                PAGE_SIZE_SHIFT,
                fb_phys,
                0 /* vmm flags */,
-               ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+               ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
+                   ARCH_MMU_FLAG_PERM_WRITE);
 
         if (ret == NO_ERROR)
             dev->framebuffer_size = size;

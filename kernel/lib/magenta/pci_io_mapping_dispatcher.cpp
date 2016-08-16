@@ -99,8 +99,8 @@ status_t PciIoMappingDispatcher::CreateBarMapping(
                     static_cast<size_t>(aligned_size),
                     0 /* vmm flags */,
                     cache_policy |
-                    ARCH_MMU_FLAG_PERM_NO_EXECUTE |
-                    ARCH_MMU_FLAG_PERM_USER,
+                    ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
+                        ARCH_MMU_FLAG_PERM_USER,
                     out_dispatcher,
                     out_rights);
 

@@ -234,7 +234,7 @@ void *AcpiOsMapMemory(
             PAGE_SIZE_SHIFT,
             aligned_address,
             0,
-            ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
     if (status != NO_ERROR) {
         return NULL;
     }

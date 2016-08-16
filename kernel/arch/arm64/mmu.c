@@ -57,22 +57,22 @@ static pte_t mmu_flags_to_pte_attr(uint flags)
             return ERR_INVALID_ARGS;
     }
 
-    switch (flags & (ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_RO)) {
+    switch (flags & (ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE)) {
         case 0:
-            attr |= MMU_PTE_ATTR_AP_P_RW_U_NA;
-            break;
-        case ARCH_MMU_FLAG_PERM_RO:
             attr |= MMU_PTE_ATTR_AP_P_RO_U_NA;
             break;
-        case ARCH_MMU_FLAG_PERM_USER:
-            attr |= MMU_PTE_ATTR_AP_P_RW_U_RW;
+        case ARCH_MMU_FLAG_PERM_WRITE:
+            attr |= MMU_PTE_ATTR_AP_P_RW_U_NA;
             break;
-        case ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_RO:
+        case ARCH_MMU_FLAG_PERM_USER:
             attr |= MMU_PTE_ATTR_AP_P_RO_U_RO;
+            break;
+        case ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE:
+            attr |= MMU_PTE_ATTR_AP_P_RW_U_RW;
             break;
     }
 
-    if (flags & ARCH_MMU_FLAG_PERM_NO_EXECUTE) {
+    if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
         attr |= MMU_PTE_ATTR_UXN | MMU_PTE_ATTR_PXN;
     }
 
@@ -171,21 +171,22 @@ status_t arch_mmu_query(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t *paddr, ui
             default:
                 PANIC_UNIMPLEMENTED;
         }
+        *flags |= ARCH_MMU_FLAG_PERM_READ;
         switch (pte & MMU_PTE_ATTR_AP_MASK) {
             case MMU_PTE_ATTR_AP_P_RW_U_NA:
+                *flags |= ARCH_MMU_FLAG_PERM_WRITE;
                 break;
             case MMU_PTE_ATTR_AP_P_RW_U_RW:
-                *flags |= ARCH_MMU_FLAG_PERM_USER;
+                *flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE;
                 break;
             case MMU_PTE_ATTR_AP_P_RO_U_NA:
-                *flags |= ARCH_MMU_FLAG_PERM_RO;
                 break;
             case MMU_PTE_ATTR_AP_P_RO_U_RO:
-                *flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_RO;
+                *flags |= ARCH_MMU_FLAG_PERM_USER;
                 break;
         }
-        if ((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN)) {
-            *flags |= ARCH_MMU_FLAG_PERM_NO_EXECUTE;
+        if (!((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN))) {
+            *flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
         }
     }
     LTRACEF("va 0x%lx, paddr 0x%lx, flags 0x%x\n",
@@ -614,6 +615,9 @@ int arch_mmu_map(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
     if (!is_valid_vaddr(aspace, vaddr))
         return ERR_OUT_OF_RANGE;
 
+    if (!(flags & ARCH_MMU_FLAG_PERM_READ))
+        return ERR_INVALID_ARGS;
+
     /* paddr and vaddr must be aligned */
     DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
@@ -685,6 +689,9 @@ int arch_mmu_protect(arch_aspace_t *aspace, vaddr_t vaddr, size_t count, uint fl
         return ERR_INVALID_ARGS;
 
     if (!IS_PAGE_ALIGNED(vaddr))
+        return ERR_INVALID_ARGS;
+
+    if (!(flags & ARCH_MMU_FLAG_PERM_READ))
         return ERR_INVALID_ARGS;
 
     int ret;

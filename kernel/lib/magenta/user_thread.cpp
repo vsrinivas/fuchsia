@@ -238,7 +238,8 @@ int UserThread::StartRoutine(void* arg) {
 
     // create a user stack for the new thread
     auto err = t->process_->aspace()->Alloc("user stack", kDefaultStackSize, &t->user_stack_, PAGE_SIZE_SHIFT, 0,
-                                            ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+                                            ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_READ |
+                                            ARCH_MMU_FLAG_PERM_WRITE);
     LTRACEF("alloc returns %d, stack at %p\n", err, t->user_stack_);
 
     LTRACEF("arch_enter_uspace SP: %p PC: %p\n", t->user_stack_, t->entry_);

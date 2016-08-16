@@ -121,7 +121,7 @@ template <int Level>
 static arch_flags_t x86_arch_flags(uint flags) {
     arch_flags_t arch_flags = 0;
 
-    if (!(flags & ARCH_MMU_FLAG_PERM_RO)) arch_flags |= X86_MMU_PG_RW;
+    if (flags & ARCH_MMU_FLAG_PERM_WRITE) arch_flags |= X86_MMU_PG_RW;
 
     if (flags & ARCH_MMU_FLAG_PERM_USER) {
         arch_flags |= X86_MMU_PG_U;
@@ -131,7 +131,7 @@ static arch_flags_t x86_arch_flags(uint flags) {
     }
 
 #if defined(PAE_MODE_ENABLED) || ARCH_X86_64
-    if (flags & ARCH_MMU_FLAG_PERM_NO_EXECUTE) arch_flags |= X86_MMU_PG_NX;
+    if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE)) arch_flags |= X86_MMU_PG_NX;
 
     if (Level > 0) {
         switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
@@ -192,14 +192,14 @@ static arch_flags_t get_x86_intermediate_arch_flags() {
  * @brief Returning the generic mmu flags from x86 arch flags
  */
 static uint arch_mmu_flags(arch_flags_t flags, enum page_table_levels level) {
-    uint mmu_flags = 0;
+    uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
 
-    if (!(flags & X86_MMU_PG_RW)) mmu_flags |= ARCH_MMU_FLAG_PERM_RO;
+    if (flags & X86_MMU_PG_RW) mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
 
     if (flags & X86_MMU_PG_U) mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
 
 #if defined(PAE_MODE_ENABLED) || ARCH_X86_64
-    if (flags & X86_MMU_PG_NX) mmu_flags |= ARCH_MMU_FLAG_PERM_NO_EXECUTE;
+    if (!(flags & X86_MMU_PG_NX)) mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
 
     if (level > 0) {
         switch (flags & X86_MMU_LARGE_PAT_MASK) {
@@ -962,6 +962,9 @@ int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
     if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
     if (count == 0) return NO_ERROR;
 
+    if (!(flags & ARCH_MMU_FLAG_PERM_READ))
+        return ERR_INVALID_ARGS;
+
     DEBUG_ASSERT(aspace->pt_virt);
 
     MappingCursor start = {
@@ -987,6 +990,9 @@ int arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint fl
     if (!x86_mmu_check_vaddr(vaddr)) return ERR_INVALID_ARGS;
     if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
     if (count == 0) return NO_ERROR;
+
+    if (!(flags & ARCH_MMU_FLAG_PERM_READ))
+        return ERR_INVALID_ARGS;
 
     MappingCursor start = {
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,

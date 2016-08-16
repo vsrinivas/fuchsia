@@ -20,8 +20,8 @@
 #include <magenta/handle.h>
 #include <magenta/magenta.h>
 
-const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_NO_EXECUTE | ARCH_MMU_FLAG_PERM_USER;
-const auto kDP_Map_Perms_RO = kDP_Map_Perms | ARCH_MMU_FLAG_PERM_RO;
+const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_USER;
+const auto kDP_Map_Perms_RO = kDP_Map_Perms | ARCH_MMU_FLAG_PERM_READ;
 
 mx_status_t DataPipe::Create(mx_size_t capacity,
                              utils::RefPtr<Dispatcher>* producer,

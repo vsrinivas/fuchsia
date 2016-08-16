@@ -1142,10 +1142,10 @@ mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, m
     uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER;
     switch (prot & (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE)) {
     case MX_VM_FLAG_PERM_READ:
-        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_RO;
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
         break;
     case MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE:
-        // default flags
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         break;
     case 0: // no way to express no permissions
     case MX_VM_FLAG_PERM_WRITE:
@@ -1153,8 +1153,8 @@ mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, m
         return ERR_INVALID_ARGS;
     }
 
-    if ((prot & MX_VM_FLAG_PERM_EXECUTE) == 0) {
-        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_NO_EXECUTE;
+    if (prot & MX_VM_FLAG_PERM_EXECUTE) {
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
     }
 
     return r->Protect(arch_mmu_flags);

@@ -59,7 +59,8 @@ status_t udisplay_bind_gfxconsole(void) {
             PAGE_SIZE_SHIFT,
             g_udisplay.framebuffer_phys,
             0 /* vmm flags */,
-            ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+            ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
+                ARCH_MMU_FLAG_PERM_WRITE);
     if (result) return result;
 
     // bind the display to the gfxconsole

@@ -23,10 +23,11 @@ __BEGIN_CDECLS
 #define ARCH_MMU_FLAG_CACHE_MASK        (3<<0)
 
 #define ARCH_MMU_FLAG_PERM_USER         (1<<2)
-#define ARCH_MMU_FLAG_PERM_RO           (1<<3)
-#define ARCH_MMU_FLAG_PERM_NO_EXECUTE   (1<<4)
-#define ARCH_MMU_FLAG_NS                (1<<5) /* NON-SECURE */
-#define ARCH_MMU_FLAG_INVALID           (1<<6) /* indicates that flags are not specified */
+#define ARCH_MMU_FLAG_PERM_READ         (1<<3)
+#define ARCH_MMU_FLAG_PERM_WRITE        (1<<4)
+#define ARCH_MMU_FLAG_PERM_EXECUTE      (1<<5)
+#define ARCH_MMU_FLAG_NS                (1<<6) /* NON-SECURE */
+#define ARCH_MMU_FLAG_INVALID           (1<<7) /* indicates that flags are not specified */
 
 /* forward declare the per-address space arch-specific context object */
 typedef struct arch_aspace arch_aspace_t;

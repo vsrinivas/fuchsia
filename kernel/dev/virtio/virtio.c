@@ -297,7 +297,9 @@ status_t virtio_alloc_ring(struct virtio_device *dev, uint index, uint16_t len)
 
 #if WITH_KERNEL_VM
     void *vptr;
-    status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "virtio_ring", size, &vptr, 0, VMM_FLAG_COMMIT, ARCH_MMU_FLAG_UNCACHED_DEVICE);
+    status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "virtio_ring", size, &vptr, 0, VMM_FLAG_COMMIT,
+                                        ARCH_MMU_FLAG_UNCACHED_DEVICE |
+                                        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
     if (err < 0)
         return ERR_NO_MEMORY;
 

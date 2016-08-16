@@ -99,31 +99,31 @@ void vm_init_postheap(uint level) {
             .name = "kernel_code",
             .base = (vaddr_t)&__code_start,
             .size = ROUNDUP((size_t)&__code_end - (size_t)&__code_start, PAGE_SIZE),
-            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_RO,
+            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE,
         },
         {
             .name = "kernel_rodata",
             .base = (vaddr_t)&__rodata_start,
             .size = ROUNDUP((size_t)&__rodata_end - (size_t)&__rodata_start, PAGE_SIZE),
-            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_RO | ARCH_MMU_FLAG_PERM_NO_EXECUTE,
+            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ,
         },
         {
             .name = "kernel_data",
             .base = (vaddr_t)&__data_start,
             .size = ROUNDUP((size_t)&__data_end - (size_t)&__data_start, PAGE_SIZE),
-            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_NO_EXECUTE,
+            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
         },
         {
             .name = "kernel_bss",
             .base = (vaddr_t)&__bss_start,
             .size = ROUNDUP((size_t)&__bss_end - (size_t)&__bss_start, PAGE_SIZE),
-            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_NO_EXECUTE,
+            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
         },
         {
             .name = "kernel_bootalloc",
             .base = (vaddr_t)boot_alloc_start,
             .size = ROUNDUP(boot_alloc_end - boot_alloc_start, PAGE_SIZE),
-            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_NO_EXECUTE,
+            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
         },
     };
 
@@ -180,7 +180,7 @@ void vm_init_postheap(uint level) {
                     status = vmm_protect_region(
                         aspace,
                         vaddr,
-                        ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+                        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
                     ASSERT(status == NO_ERROR);
                 }
             }

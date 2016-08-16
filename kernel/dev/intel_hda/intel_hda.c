@@ -467,7 +467,8 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
                              PAGE_SIZE_SHIFT,
                              info->bus_addr,
                              0,
-                             ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+                             ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+                                 ARCH_MMU_FLAG_PERM_WRITE);
 
     if (ret != NO_ERROR) {
         TRACEF("Failed to map register window (0x%llx @ 0x%llx) Status = %d\n",

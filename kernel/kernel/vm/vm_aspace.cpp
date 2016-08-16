@@ -507,8 +507,7 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     auto err = arch_mmu_query(&arch_aspace_, vaddr, nullptr, &arch_mmu_flags);
     if (err) {
         // if it wasn't already mapped, use some sort of strict default
-        arch_mmu_flags =
-            ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_RO | ARCH_MMU_FLAG_PERM_NO_EXECUTE;
+        arch_mmu_flags = ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ;
     }
 
     // build a new region structure without any backing vm object

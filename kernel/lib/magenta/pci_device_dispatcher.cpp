@@ -126,8 +126,7 @@ status_t PciDeviceDispatcher::MapConfig(utils::RefPtr<Dispatcher>* out_mapping,
                                           PCIE_EXTENDED_CONFIG_SIZE,
                                           0 /* vmm flags */,
                                           ARCH_MMU_FLAG_UNCACHED_DEVICE |
-                                          ARCH_MMU_FLAG_PERM_RO         |
-                                          ARCH_MMU_FLAG_PERM_NO_EXECUTE |
+                                          ARCH_MMU_FLAG_PERM_READ        |
                                           ARCH_MMU_FLAG_PERM_USER,
                                           out_mapping,
                                           out_rights);

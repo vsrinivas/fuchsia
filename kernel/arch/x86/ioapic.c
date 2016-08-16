@@ -139,7 +139,7 @@ void apic_io_init(
                     PAGE_SIZE_SHIFT, // alignment log2
                     paddr_page_base, // physical vaddress
                     0, // vmm flags
-                    ARCH_MMU_FLAG_PERM_NO_EXECUTE |
+                    ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
                         ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
             ASSERT(res == NO_ERROR);
             vaddr += paddr - paddr_page_base;

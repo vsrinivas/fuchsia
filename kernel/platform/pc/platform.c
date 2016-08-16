@@ -215,7 +215,8 @@ static void platform_ensure_display_memtype(uint level)
             PAGE_SIZE_SHIFT,
             bootloader_fb_base,
             0 /* vmm flags */,
-            ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+            ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
+                ARCH_MMU_FLAG_PERM_WRITE);
     if (status != NO_ERROR) {
         TRACEF("Failed to map boot_fb: %d\n", status);
         return;

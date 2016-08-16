@@ -225,7 +225,8 @@ static int cmd_vmm(int argc, const cmd_args* argv) {
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 5) ? (uint8_t)argv[4].u : 0u;
         status_t err = vmm_alloc_physical(test_aspace, "physical test", argv[3].u, &ptr, align,
-                                          argv[2].u, 0, ARCH_MMU_FLAG_UNCACHED_DEVICE);
+                                          argv[2].u, 0, ARCH_MMU_FLAG_UNCACHED_DEVICE |
+                                          ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         printf("vmm_alloc_physical returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "alloc_contig")) {
         if (argc < 3)
@@ -234,7 +235,8 @@ static int cmd_vmm(int argc, const cmd_args* argv) {
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
         status_t err =
-            vmm_alloc_contiguous(test_aspace, "contig test", argv[2].u, &ptr, align, 0, 0);
+            vmm_alloc_contiguous(test_aspace, "contig test", argv[2].u, &ptr, align, 0,
+                                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         printf("vmm_alloc_contig returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "free_region")) {
         if (argc < 2)

@@ -79,7 +79,7 @@ status_t x86_bootstrap16_prep(
                 PAGE_SIZE_SHIFT,
                 page_mappings[i].start_paddr,
                 VMM_FLAG_VALLOC_SPECIFIC,
-                0);
+                ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
         if (status != NO_ERROR) {
             TRACEF("Failed to create wakeup bootstrap aspace\n");
             goto cleanup_aspace;
@@ -96,7 +96,7 @@ status_t x86_bootstrap16_prep(
             PAGE_SIZE_SHIFT, // alignment log2
             bootstrap_phys_addr, // physical address
             0, // vmm flags
-            ARCH_MMU_FLAG_PERM_NO_EXECUTE); // arch mmu flags
+            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE); // arch mmu flags
     if (status != NO_ERROR) {
         TRACEF("could not allocate AP bootstrap page: %d\n", status);
         goto cleanup_aspace;

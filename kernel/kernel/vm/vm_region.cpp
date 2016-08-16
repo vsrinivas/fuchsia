@@ -196,12 +196,12 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
         LTRACEF("permission failure: user fault on non user region\n");
         return ERR_ACCESS_DENIED;
     }
-    if ((pf_flags & VMM_PF_FLAG_WRITE) && (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_RO)) {
-        // write to a read only region
-        LTRACEF("permission failure: write fault on read only region\n");
+    if ((pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_WRITE)) {
+        // write to a non-writeable region
+        LTRACEF("permission failure: write fault on non-writable region\n");
         return ERR_ACCESS_DENIED;
     }
-    if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_NO_EXECUTE)) {
+    if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)) {
         // instruction fetch from a no execute region
         LTRACEF("permission failure: execute fault on no execute region\n");
         return ERR_ACCESS_DENIED;

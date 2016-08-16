@@ -236,7 +236,8 @@ static status_t bcc_pci_startup(pcie_device_state_t* pci_device) {
                              PAGE_SIZE_SHIFT,
                              state->rcba_phys,
                              0,
-                             ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_NO_EXECUTE);
+                             ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+                                 ARCH_MMU_FLAG_PERM_WRITE);
 
     if (ret != NO_ERROR) {
         TRACEF("Failed to map register window (0x%x @ 0x%llx) Status = %d\n",

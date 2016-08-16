@@ -80,10 +80,10 @@ mx_status_t VmObjectDispatcher::Map(utils::RefPtr<VmAspace> aspace, uint32_t vmo
     uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER;
     switch (flags & (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE)) {
     case MX_VM_FLAG_PERM_READ:
-        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_RO;
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
         break;
     case MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE:
-        // default flags
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         break;
     case 0: // no way to express no permissions
     case MX_VM_FLAG_PERM_WRITE:
@@ -91,8 +91,8 @@ mx_status_t VmObjectDispatcher::Map(utils::RefPtr<VmAspace> aspace, uint32_t vmo
         return ERR_INVALID_ARGS;
     }
 
-    if ((flags & MX_VM_FLAG_PERM_EXECUTE) == 0) {
-        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_NO_EXECUTE;
+    if (flags & MX_VM_FLAG_PERM_EXECUTE) {
+        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
     }
 
     // TODO(teisenbe): Remove this when we have more symbolic debugging working.
