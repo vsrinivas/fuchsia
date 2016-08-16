@@ -4,6 +4,8 @@
 
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
+#include <utility>
+
 #include "lib/ftl/logging.h"
 
 namespace mtl {
@@ -11,7 +13,10 @@ namespace mtl {
 DataPipeDrainer::DataPipeDrainer(Client* client,
                                  mojo::ScopedDataPipeConsumerHandle source,
                                  const MojoAsyncWaiter* waiter)
-    : client_(client), source_(source.Pass()), waiter_(waiter), wait_id_(0) {
+    : client_(client),
+      source_(std::move(source)),
+      waiter_(waiter),
+      wait_id_(0) {
   FTL_DCHECK(client_);
   ReadData();
 }

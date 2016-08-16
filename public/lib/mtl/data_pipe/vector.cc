@@ -4,6 +4,8 @@
 
 #include "lib/mtl/data_pipe/vector.h"
 
+#include <utility>
+
 #include "lib/ftl/logging.h"
 #include "lib/mtl/data_pipe/blocking_copy.h"
 
@@ -14,7 +16,7 @@ bool BlockingCopyToVector(mojo::ScopedDataPipeConsumerHandle source,
   FTL_CHECK(result);
   result->clear();
   return BlockingCopyFrom(
-      source.Pass(), [result](const void* buffer, uint32_t num_bytes) {
+      std::move(source), [result](const void* buffer, uint32_t num_bytes) {
         const char* chars = static_cast<const char*>(buffer);
         result->insert(result->end(), chars, chars + num_bytes);
         return num_bytes;

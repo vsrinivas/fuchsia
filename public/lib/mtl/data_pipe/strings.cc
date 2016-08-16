@@ -4,6 +4,8 @@
 
 #include "lib/mtl/data_pipe/strings.h"
 
+#include <utility>
+
 #include "lib/ftl/logging.h"
 #include "lib/mtl/data_pipe/blocking_copy.h"
 #include "mojo/public/cpp/system/wait.h"
@@ -15,7 +17,7 @@ bool BlockingCopyToString(mojo::ScopedDataPipeConsumerHandle source,
   FTL_CHECK(result);
   result->clear();
   return BlockingCopyFrom(
-      source.Pass(), [result](const void* buffer, uint32_t num_bytes) {
+      std::move(source), [result](const void* buffer, uint32_t num_bytes) {
         result->append(static_cast<const char*>(buffer), num_bytes);
         return num_bytes;
       });
@@ -62,8 +64,8 @@ mojo::ScopedDataPipeConsumerHandle WriteStringToConsumerHandle(
                                        MOJO_CREATE_DATA_PIPE_OPTIONS_FLAG_NONE,
                                        1, size};
   mojo::DataPipe pipe(options);
-  BlockingCopyFromString(source, pipe.producer_handle.Pass());
-  return pipe.consumer_handle.Pass();
+  BlockingCopyFromString(source, std::move(pipe.producer_handle));
+  return std::move(pipe.consumer_handle);
 }
 
 }  // namespace mtl

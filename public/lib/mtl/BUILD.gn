@@ -18,6 +18,7 @@ executable("mtl_unittests") {
     "handles/unique_handle_unittest.cc",
     "tasks/message_loop_unittest.cc",
     "test/run_all_unittests.cc",
+    "threading/create_thread_unittest.cc",
   ]
 
   deps = [

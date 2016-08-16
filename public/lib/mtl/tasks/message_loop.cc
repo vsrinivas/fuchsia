@@ -14,20 +14,20 @@
 namespace mtl {
 namespace {
 
-// TODO(kulakowski): This should just be a thread_local MessageLoop* g_current, but the thread_local
-// keyword doesn't work yet.
+// TODO(kulakowski): This should just be a thread_local MessageLoop* g_current,
+// but the thread_local keyword doesn't work yet.
 
 static mxr_tls_t GetMessageLoopTlsKey() {
-    static mxr_tls_t key = mxr_tls_allocate();
-    return key;
+  static mxr_tls_t key = mxr_tls_allocate();
+  return key;
 }
 
 MessageLoop* CurrentThreadMessageLoop() {
-    return static_cast<MessageLoop*>(mxr_tls_get(GetMessageLoopTlsKey()));
+  return static_cast<MessageLoop*>(mxr_tls_get(GetMessageLoopTlsKey()));
 }
 
 void SetCurrentThreadMessageLoop(MessageLoop* loop) {
-    mxr_tls_set(GetMessageLoopTlsKey(), loop);
+  mxr_tls_set(GetMessageLoopTlsKey(), loop);
 }
 
 constexpr uint32_t kInvalidWaitManyIndexValue = static_cast<uint32_t>(-1);
@@ -44,7 +44,10 @@ MessageLoop::MessageLoop()
 MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : incoming_tasks_(std::move(incoming_tasks)) {
-  FTL_DCHECK(!CurrentThreadMessageLoop()) << "At most one message loop per thread.";
+  FTL_DCHECK(!CurrentThreadMessageLoop())
+      << "At most one message loop per thread.";
+  event_.reset(mx_event_create(0));
+  FTL_CHECK(event_.get() > MX_HANDLE_INVALID);
   incoming_tasks_->InitDelegate(this);
   SetCurrentThreadMessageLoop(this);
 }
