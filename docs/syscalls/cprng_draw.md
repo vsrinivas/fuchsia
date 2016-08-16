@@ -20,7 +20,7 @@ suitable for cryptographic applications.  It will return at most
 
 ## RETURN VALUE
 
-**mx_cprng_add_entropy**() returns **NO_ERROR** on success.
+**mx_cprng_draw**() returns the number of random bytes drawn into *buffer*.
 
 ## ERRORS
 
