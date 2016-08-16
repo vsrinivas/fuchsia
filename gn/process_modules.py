@@ -90,7 +90,8 @@ def main():
             manifest.write("%s=%s\n" % (file["bootfs_path"], file["file"]))
     if args.depfile != "":
         with open(args.depfile, "w") as f:
-            f.write("user.bootfs:")
+            f.write("user.bootfs: ")
+            f.write(args.manifest)
             for path in amalgamation.config_paths:
                 f.write(" " + path)
 
