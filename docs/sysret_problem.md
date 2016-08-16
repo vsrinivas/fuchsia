@@ -7,7 +7,7 @@ to fault in kernel mode, which is potentially unsafe.  (In contrast, on AMD
 CPUs, SYSRET faults in user mode when used with a non-canonical return
 address.)
 
-Usually the lowest non-negative non-canonical address is 0x0000800000000000
+Usually, the lowest non-negative non-canonical address is 0x0000800000000000
 (== 1 << 47).  One way that a user process could cause the syscall return
 address to be non-canonical is by mapping a 4k executable page immediately
 below that address (at 0x00007ffffffff000), putting a SYSCALL instruction
