@@ -7,6 +7,7 @@
 MagmaBuffer::MagmaBuffer(MagmaDevice* device, const char* name, uint32_t align)
     : LibdrmIntelGen::Buffer(name, align), device_(device)
 {
+    magic_ = kMagic;
 }
 
 MagmaBuffer::~MagmaBuffer()
@@ -90,6 +91,7 @@ MagmaDevice* MagmaDevice::Open(uint32_t device_handle, int batch_size)
 MagmaDevice::MagmaDevice(MagmaSystemConnection* sys_dev) : sys_dev_(sys_dev)
 {
     libdrm_ = new LibdrmIntelGen();
+    magic_ = kMagic;
 }
 
 MagmaDevice::~MagmaDevice()
@@ -104,8 +106,8 @@ bool MagmaDevice::Init(uint64_t batch_size)
     return true;
 }
 
-MagmaBufferBase* MagmaDevice::AllocBufferObject(const char* name, uint64_t size, uint32_t alignment,
-                                                uint32_t tiling_mode, uint32_t stride)
+MagmaBuffer* MagmaDevice::AllocBufferObject(const char* name, uint64_t size, uint32_t alignment,
+                                            uint32_t tiling_mode, uint32_t stride)
 {
     auto buffer = new MagmaBuffer(this, name, alignment);
     if (!buffer) {

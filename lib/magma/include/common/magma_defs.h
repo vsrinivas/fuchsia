@@ -19,12 +19,24 @@
 #define BO_ALLOC_FOR_RENDER (1 << 0)
 
 /* Opaque types */
-typedef struct MagmaDevice drm_intel_bufmgr;
-typedef struct _drm_intel_context drm_intel_context;
-typedef struct MagmaBufferBase drm_intel_bo;
+typedef struct magma_device drm_intel_bufmgr;
+typedef struct magma_context drm_intel_context;
+typedef struct magma_buffer drm_intel_bo;
 
-/* MagmaBufferBase is exposed to the api caller. */
-struct MagmaBufferBase {
+struct magma_device {
+    int32_t magic_;
+};
+
+struct magma_context {
+    uint32_t context_id;
+    int32_t magic_;
+};
+
+/* magma_buffer is exposed to the api caller. */
+struct magma_buffer {
+
+    int32_t magic_;
+
     /**
      * Size in bytes of the buffer object.
      *

@@ -13,75 +13,76 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
-drm_intel_bo* magma_bo_alloc(drm_intel_bufmgr* bufmgr, const char* name, uint32_t size,
+magma_buffer* magma_bo_alloc(magma_device* device, const char* name, uint32_t size,
                              uint32_t alignment)
 {
     DLOG("magma_bo_alloc %s size %ld alignment 0x%x", name, size, alignment);
-    return bufmgr->AllocBufferObject(name, size, alignment, MAGMA_TILING_MODE_NONE, 0 /*stride*/);
+    return MagmaDevice::cast(device)->AllocBufferObject(name, size, alignment,
+                                                        MAGMA_TILING_MODE_NONE, 0 /*stride*/);
 }
 
-drm_intel_bo* magma_bo_alloc_for_render(drm_intel_bufmgr* bufmgr, const char* name,
-                                        uint32_t size, uint32_t alignment)
+magma_buffer* magma_bo_alloc_for_render(magma_device* device, const char* name, uint32_t size,
+                                        uint32_t alignment)
 {
     UNIMPLEMENTED("magma_bo_alloc_for_render");
     return 0;
 }
 
-drm_intel_bo* magma_bo_alloc_tiled(drm_intel_bufmgr* bufmgr, const char* name, uint32_t size,
+magma_buffer* magma_bo_alloc_tiled(magma_device* device, const char* name, uint32_t size,
                                    uint32_t flags, uint32_t tiling_mode, uint32_t stride)
 {
     DLOG("magma_bo_alloc_tiled %s size %lu flags 0x%lx tiling_mode 0x%x stride %lu", name, size,
          flags, tiling_mode, stride);
     // TODO: flags?
-    return bufmgr->AllocBufferObject(name, size, 0 /*alignment*/, tiling_mode, stride);
+    return MagmaDevice::cast(device)->AllocBufferObject(name, size, 0 /*alignment*/, tiling_mode,
+                                                        stride);
 }
 
-int32_t magma_bo_busy(drm_intel_bo* bo)
+int32_t magma_bo_busy(magma_buffer* bo)
 {
     UNIMPLEMENTED("magma_bo_busy");
     return 0;
 }
 
-int32_t magma_bo_emit_reloc(drm_intel_bo* bo, uint32_t offset, drm_intel_bo* target_bo,
-                        uint32_t target_offset, uint32_t read_domains, uint32_t write_domain)
+int32_t magma_bo_emit_reloc(magma_buffer* bo, uint32_t offset, magma_buffer* target_bo,
+                            uint32_t target_offset, uint32_t read_domains, uint32_t write_domain)
 {
     DLOG("TODO magma_bo_emit_reloc - offset 0x%x target_offset 0x%x domains 0x%x 0x%x", offset,
          target_offset, read_domains, write_domain);
     return 0;
 }
 
-int32_t magma_bo_flink(drm_intel_bo* bo, uint32_t* name)
+int32_t magma_bo_flink(magma_buffer* bo, uint32_t* name)
 {
     UNIMPLEMENTED("mamga_bo_flink");
     return 0;
 }
 
-drm_intel_bo* magma_bo_gem_create_from_name(drm_intel_bufmgr* bufmgr, const char* name,
-                                            uint32_t handle)
+magma_buffer* magma_bo_gem_create_from_name(magma_device* device, const char* name, uint32_t handle)
 {
     UNIMPLEMENTED("magma_bo_gem_create_from_name");
     return 0;
 }
 
-drm_intel_bo* magma_bo_gem_create_from_prime(drm_intel_bufmgr* bufmgr, int32_t prime_fd, int32_t size)
+magma_buffer* magma_bo_gem_create_from_prime(magma_device* device, int32_t prime_fd, int32_t size)
 {
     UNIMPLEMENTED("magma_bo_gem_create_from_prime");
     return 0;
 }
 
-int32_t magma_bo_gem_export_to_prime(drm_intel_bo* bo, int32_t* prime_fd)
+int32_t magma_bo_gem_export_to_prime(magma_buffer* bo, int32_t* prime_fd)
 {
     UNIMPLEMENTED("magma_bo_gem_export_to_prime");
     return 0;
 }
 
-int32_t magma_bo_get_subdata(drm_intel_bo* bo, uint32_t offset, uint32_t size, void* data)
+int32_t magma_bo_get_subdata(magma_buffer* bo, uint32_t offset, uint32_t size, void* data)
 {
     DLOG("magma_bo_get_subdata '%s' STUB\n", MagmaBuffer::cast(bo)->Name());
     return 0;
 }
 
-int32_t magma_bo_get_tiling(drm_intel_bo* bo, uint32_t* tiling_mode, uint32_t* swizzle_mode)
+int32_t magma_bo_get_tiling(magma_buffer* bo, uint32_t* tiling_mode, uint32_t* swizzle_mode)
 {
     DLOG("magma_bo_get_tiling - swizzle stubbed");
     auto buffer = MagmaBuffer::cast(bo);
@@ -91,13 +92,13 @@ int32_t magma_bo_get_tiling(drm_intel_bo* bo, uint32_t* tiling_mode, uint32_t* s
     return 0;
 }
 
-int32_t magma_bo_madvise(drm_intel_bo* bo, int32_t madv)
+int32_t magma_bo_madvise(magma_buffer* bo, int32_t madv)
 {
     UNIMPLEMENTED("magma_bo_madvise");
     return 0;
 }
 
-int32_t magma_bo_map(drm_intel_bo* bo, int32_t write_enable)
+int32_t magma_bo_map(magma_buffer* bo, int32_t write_enable)
 {
     auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_map %s", buffer->Name());
@@ -105,21 +106,21 @@ int32_t magma_bo_map(drm_intel_bo* bo, int32_t write_enable)
     return 0;
 }
 
-int32_t magma_bo_mrb_exec(drm_intel_bo* bo, int32_t used, void* unused, int32_t num_cliprects, int32_t DR4,
-                      uint32_t flags)
+int32_t magma_bo_mrb_exec(magma_buffer* bo, int32_t used, void* unused, int32_t num_cliprects,
+                          int32_t DR4, uint32_t flags)
 {
     UNIMPLEMENTED("magma_bo_mrb_exec");
     return 0;
 }
 
-void magma_bo_reference(drm_intel_bo* bo)
+void magma_bo_reference(magma_buffer* bo)
 {
     auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_reference %s", buffer->Name());
     buffer->Incref();
 }
 
-int32_t magma_bo_references(drm_intel_bo* bo, drm_intel_bo* target_bo)
+int32_t magma_bo_references(magma_buffer* bo, magma_buffer* target_bo)
 {
     auto buffer = MagmaBuffer::cast(bo);
     auto target_buffer = MagmaBuffer::cast(target_bo);
@@ -128,13 +129,13 @@ int32_t magma_bo_references(drm_intel_bo* bo, drm_intel_bo* target_bo)
     return 0;
 }
 
-int32_t magma_bo_subdata(drm_intel_bo* bo, uint32_t offset, uint32_t size, const void* data)
+int32_t magma_bo_subdata(magma_buffer* bo, uint32_t offset, uint32_t size, const void* data)
 {
     DLOG("magma_bo_subdata '%s' STUB", MagmaBuffer::cast(bo)->Name());
     return 0;
 }
 
-int32_t magma_bo_unmap(drm_intel_bo* bo)
+int32_t magma_bo_unmap(magma_buffer* bo)
 {
     auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_unmap %p", bo);
@@ -143,7 +144,7 @@ int32_t magma_bo_unmap(drm_intel_bo* bo)
     return 0;
 }
 
-void magma_bo_unreference(drm_intel_bo* bo)
+void magma_bo_unreference(magma_buffer* bo)
 {
     auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_unreference %s", buffer ? buffer->Name() : nullptr);
@@ -151,67 +152,67 @@ void magma_bo_unreference(drm_intel_bo* bo)
         buffer->Decref();
 }
 
-void magma_bo_wait_rendering(drm_intel_bo* bo)
+void magma_bo_wait_rendering(magma_buffer* bo)
 {
     auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_wait_rendering %s", buffer->Name());
     buffer->WaitRendering();
 }
 
-int32_t magma_bufmgr_check_aperture_space(drm_intel_bo** bo_array, int32_t count)
+int32_t magma_bufmgr_check_aperture_space(magma_buffer** bo_array, int32_t count)
 {
     DLOG("magma_bufmgr_check_aperture_space - STUB");
     return 0;
 }
 
-void magma_bufmgr_destroy(drm_intel_bufmgr* bufmgr)
+void magma_bufmgr_destroy(magma_device* device)
 {
     DLOG("magma_bufmgr_destroy");
-    delete bufmgr;
+    delete device;
 }
 
-void magma_bufmgr_gem_enable_fenced_relocs(drm_intel_bufmgr* bufmgr)
+void magma_bufmgr_gem_enable_fenced_relocs(magma_device* device)
 {
     DLOG("magma_bufmgr_gem_enable_fenced_relocs - STUB");
 }
 
-void magma_bufmgr_gem_enable_reuse(drm_intel_bufmgr* bufmgr)
+void magma_bufmgr_gem_enable_reuse(magma_device* device)
 {
     DLOG("magma_bufmgr_gem_enable_reuse - STUB");
 }
 
-int32_t magma_bufmgr_gem_get_devid(drm_intel_bufmgr* bufmgr)
+int32_t magma_bufmgr_gem_get_devid(magma_device* device)
 {
     DLOG("magma_bufmgr_gem_get_devid");
-    int32_t id = static_cast<int>(bufmgr->GetDeviceId());
+    int32_t id = static_cast<int>(MagmaDevice::cast(device)->GetDeviceId());
     DLOG("returning id 0x%x", id);
     return id;
 }
 
-drm_intel_bufmgr* magma_bufmgr_gem_init(int32_t device_handle, int32_t batch_size)
+magma_device* magma_bufmgr_gem_init(int32_t device_handle, int32_t batch_size)
 {
     DLOG("magma_bufmgr_gem_init device_handle 0x%x batch_size %d", device_handle, batch_size);
 
-    auto bufmgr = MagmaDevice::Open(device_handle, batch_size);
-    if (!bufmgr) {
+    auto device = MagmaDevice::Open(device_handle, batch_size);
+    if (!device) {
         DLOG("Failed to open device");
         return nullptr;
     }
-    return bufmgr;
+    return device;
 }
 
-void magma_bufmgr_gem_set_aub_annotations(drm_intel_bo* bo, drm_intel_aub_annotation* annotations,
+void magma_bufmgr_gem_set_aub_annotations(magma_buffer* bo, drm_intel_aub_annotation* annotations,
                                           unsigned count)
 {
     UNIMPLEMENTED("magma_bufmgr_gem_set_aub_annotations");
 }
 
-void magma_bufmgr_gem_set_aub_dump(drm_intel_bufmgr* bufmgr, int32_t enable)
+void magma_bufmgr_gem_set_aub_dump(magma_device* device, int32_t enable)
 {
     UNIMPLEMENTED("magma_bufmgr_gem_set_aub_dump");
 }
 
-void magma_bufmgr_set_debug(drm_intel_bufmgr* bufmgr, int32_t enable_debug)
+void magma_bufmgr_set_debug(magma_device* device, int32_t enable_debug)
 {
     UNIMPLEMENTED("magma_bufmgr_set_debug");
 }
@@ -240,57 +241,58 @@ void magma_decode_set_output_file(struct drm_intel_decode* ctx, FILE* out)
     UNIMPLEMENTED("magma_decode_set_output_file");
 }
 
-void magma_gem_bo_aub_dump_bmp(drm_intel_bo* bo, int32_t x1, int32_t y1, int32_t width, int32_t height,
-                               enum aub_dump_bmp_format format, int32_t pitch, int32_t offset)
+void magma_gem_bo_aub_dump_bmp(magma_buffer* bo, int32_t x1, int32_t y1, int32_t width,
+                               int32_t height, enum aub_dump_bmp_format format, int32_t pitch,
+                               int32_t offset)
 {
     UNIMPLEMENTED("magma_gem_bo_aub_dump_bmp");
 }
 
-void magma_gem_bo_clear_relocs(drm_intel_bo* bo, int32_t start)
+void magma_gem_bo_clear_relocs(magma_buffer* bo, int32_t start)
 {
     DLOG("magma_gem_bo_clear_relocs - STUB");
 }
 
-int32_t magma_gem_bo_get_reloc_count(drm_intel_bo* bo)
+int32_t magma_gem_bo_get_reloc_count(magma_buffer* bo)
 {
     DLOG("magma_gem_bo_get_reloc_count - STUB");
     return 0;
 }
 
-int32_t magma_gem_bo_map_gtt(drm_intel_bo* bo)
+int32_t magma_gem_bo_map_gtt(magma_buffer* bo)
 {
     UNIMPLEMENTED("magma_gem_bo_map_gtt");
     return 0;
 }
 
-int32_t magma_gem_bo_map_unsynchronized(drm_intel_bo* bo)
+int32_t magma_gem_bo_map_unsynchronized(magma_buffer* bo)
 {
     DLOG("magma_gem_bo_map_unsynchronized %s - using regular map", MagmaBuffer::cast(bo)->Name());
     const int32_t write_enable = 1;
     return magma_bo_map(bo, write_enable);
 }
 
-int32_t magma_gem_bo_wait(drm_intel_bo* bo, int64_t timeout_ns)
+int32_t magma_gem_bo_wait(magma_buffer* bo, int64_t timeout_ns)
 {
     UNIMPLEMENTED("magma_gem_bo_wait");
     return 0;
 }
 
-drm_intel_context* magma_gem_context_create(drm_intel_bufmgr* bufmgr)
+magma_context* magma_gem_context_create(magma_device* device)
 {
     DLOG("magma_gem_context_create");
     uint32_t context_id;
-    if (bufmgr->CreateContext(&context_id)) {
+    if (MagmaDevice::cast(device)->CreateContext(&context_id)) {
         DLOG("got hw context id %d", context_id);
-        return reinterpret_cast<drm_intel_context*>(context_id);
+        return reinterpret_cast<magma_context*>(context_id);
     }
     return nullptr;
 }
 
-void magma_gem_context_destroy(drm_intel_context* ctx) { DLOG("magma_gem_context_destroy - STUB"); }
+void magma_gem_context_destroy(magma_context* ctx) { DLOG("magma_gem_context_destroy - STUB"); }
 
-int32_t magma_gem_bo_context_exec(drm_intel_bo* bo, drm_intel_context* ctx, int32_t used,
-                              uint32_t flags)
+int32_t magma_gem_bo_context_exec(magma_buffer* bo, magma_context* ctx, int32_t used,
+                                  uint32_t flags)
 {
     auto buffer = MagmaBuffer::cast(bo);
     int32_t context_id = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
@@ -306,14 +308,14 @@ int32_t magma_get_aperture_sizes(int32_t fd, size_t* mappable, size_t* total)
     return 0;
 }
 
-int32_t magma_get_reset_stats(drm_intel_context* ctx, uint32_t* reset_count, uint32_t* active,
-                          uint32_t* pending)
+int32_t magma_get_reset_stats(magma_context* ctx, uint32_t* reset_count, uint32_t* active,
+                              uint32_t* pending)
 {
     UNIMPLEMENTED("magma_get_reset_stats");
     return 0;
 }
 
-int32_t magma_reg_read(drm_intel_bufmgr* bufmgr, uint32_t offset, uint64_t* result)
+int32_t magma_reg_read(magma_device* device, uint32_t offset, uint64_t* result)
 {
     DLOG("magma_reg_read - STUB returning 0");
     return 0;

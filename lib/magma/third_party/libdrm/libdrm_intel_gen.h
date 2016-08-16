@@ -48,7 +48,7 @@ public:
     struct RelocTargetInfo;
     class BufferRefcount;
 
-    class Buffer : public MagmaBufferBase {
+    class Buffer : public magma_buffer {
     public:
         static const int kInvalidIndex = -1;
 

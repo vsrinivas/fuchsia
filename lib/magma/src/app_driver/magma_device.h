@@ -12,8 +12,10 @@
 #include <map>
 #include <stdint.h>
 
+class MagmaDevice;
+
 // Magma is based on intel libdrm.
-// LibdrmIntelGen buffers are based on the api exposed MagmaBufferBase.
+// LibdrmIntelGen buffers are based on the api exposed magma_buffer.
 class MagmaBuffer : public LibdrmIntelGen::Buffer {
 public:
     MagmaBuffer(MagmaDevice* device, const char* name, uint32_t align);
@@ -29,16 +31,22 @@ public:
     void SetTilingMode(uint32_t tiling_mode);
     uint32_t tiling_mode() { return tiling_mode_; }
 
-    static MagmaBuffer* cast(drm_intel_bo* buffer) { return static_cast<MagmaBuffer*>(buffer); }
+    static MagmaBuffer* cast(magma_buffer* buffer)
+    {
+        DASSERT(buffer);
+        DASSERT(buffer->magic_ == kMagic);
+        return static_cast<MagmaBuffer*>(buffer);
+    }
 
 private:
     MagmaDevice* device_;
 
     uint32_t tiling_mode_ = MAGMA_TILING_MODE_NONE;
+
+    static const uint32_t kMagic = 0x62756666; //"buff"
 };
 
-// Using struct instead of class because of the opaque C type exposed in magma_defs.h
-struct MagmaDevice {
+class MagmaDevice : public magma_device {
 public:
     static MagmaDevice* Open(uint32_t device_handle, int batch_size);
     ~MagmaDevice();
@@ -50,8 +58,8 @@ public:
 
     bool Init(uint64_t batch_size);
 
-    MagmaBufferBase* AllocBufferObject(const char* name, uint64_t size, uint32_t align,
-                                       uint32_t tiling_mode, uint32_t stride);
+    MagmaBuffer* AllocBufferObject(const char* name, uint64_t size, uint32_t align,
+                                   uint32_t tiling_mode, uint32_t stride);
 
     bool CreateContext(uint32_t* context_id)
     {
@@ -60,11 +68,20 @@ public:
 
     bool ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_len, uint32_t flags);
 
+    static MagmaDevice* cast(magma_device* device)
+    {
+        DASSERT(device);
+        DASSERT(device->magic_ == kMagic);
+        return static_cast<MagmaDevice*>(device);
+    }
+
 private:
     MagmaDevice(MagmaSystemConnection* sys_dev);
 
     MagmaSystemConnection* sys_dev_;
     LibdrmIntelGen* libdrm_;
+
+    static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint64_t max_relocs_{};
 };
