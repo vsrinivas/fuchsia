@@ -126,12 +126,7 @@ static mx_status_t usb_hid_get_max_reportsize(usb_hid_dev_t* hid, void* out_buf,
             *reply = hid->sizes[i].in_size;
     }
 
-    // Add one to the result for the id header
-    // If the device has multiple report ids, the id will be included, but if
-    // the implicit report id 0 is used, we prepend a zero byte to the reports.
-    // TODO: decide whether to continue doing this or let clients figure out
-    //       whether there's an id in the report
-    *reply = bits_to_bytes(*reply) + 1;
+    *reply = bits_to_bytes(*reply);
     return sizeof(*reply);
 }
 

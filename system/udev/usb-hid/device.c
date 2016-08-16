@@ -179,18 +179,7 @@ void usb_hid_process_req(usb_hid_dev_t* hid, const uint8_t* buf, uint16_t len) {
     foreach_instance(hid, instance) {
         mxr_mutex_lock(&instance->fifo.lock);
         bool was_empty = mx_hid_fifo_size(&instance->fifo) == 0;
-        ssize_t wrote = 0;
-        // Add the report id if it's omitted from the device. This happens if
-        // there's only one report and its id is zero.
-        if (hid->num_reports == 1 && hid->sizes[0].id == 0) {
-            wrote = mx_hid_fifo_write(&instance->fifo, (uint8_t*)&wrote, 1);
-            if (wrote <= 0) {
-                printf("could not write report id to usb-hid fifo (ret=%zd)\n", wrote);
-                mxr_mutex_unlock(&instance->fifo.lock);
-                continue;
-            }
-        }
-        wrote = mx_hid_fifo_write(&instance->fifo, buf, len);
+        ssize_t wrote = mx_hid_fifo_write(&instance->fifo, buf, len);
         if (wrote <= 0) {
             printf("could not write to usb-hid fifo (ret=%zd)\n", wrote);
         } else {

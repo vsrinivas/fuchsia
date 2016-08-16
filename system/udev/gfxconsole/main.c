@@ -105,8 +105,7 @@ static int vc_input_thread(void* arg) {
     assert(listener->fd >= 0);
     xprintf("vc: input thread started for %s\n", listener->dev_name);
 
-    uint8_t report_buf[9];
-    uint8_t* rpt = &report_buf[1];
+    uint8_t report_buf[8];
     hid_keys_t key_state[2];
     hid_keys_t key_delta;
     memset(&key_state[0], 0, sizeof(hid_keys_t));
@@ -124,14 +123,12 @@ static int vc_input_thread(void* arg) {
         if ((size_t)(r) != sizeof(report_buf)) {
             continue;
         }
-        // verify this is report 0
-        if (report_buf[0] != 0) continue;
         // eat the input if there is no active vc
         if (!active_vc) continue;
         // process the key
         int consumed = 0;
         uint8_t keycode;
-        hid_kbd_parse_report(rpt, &key_state[cur_idx]);
+        hid_kbd_parse_report(report_buf, &key_state[cur_idx]);
 
         hid_kbd_pressed_keys(&key_state[prev_idx], &key_state[cur_idx], &key_delta);
         hid_for_every_key(&key_delta, keycode) {
@@ -240,7 +237,7 @@ static int vc_input_thread(void* arg) {
                 active_vc->flags |= VC_FLAG_RESETSCROLL;
                 device_state_set(&active_vc->device, DEV_STATE_READABLE);
             }
-            mx_hid_fifo_write(&active_vc->fifo, rpt, sizeof(report_buf - 1));
+            mx_hid_fifo_write(&active_vc->fifo, report_buf, sizeof(report_buf));
             mxr_mutex_unlock(&active_vc->fifo.lock);
         }
 

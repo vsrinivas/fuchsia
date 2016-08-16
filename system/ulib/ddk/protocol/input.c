@@ -14,4 +14,4 @@
 
 #include <ddk/protocol/input.h>
 
-const boot_kbd_report_t report_err_rollover = { .id = 1, .usage = {1, 1, 1, 1, 1, 1 } };
+const boot_kbd_report_t report_err_rollover = { .modifier = 1, .usage = {1, 1, 1, 1, 1, 1 } };

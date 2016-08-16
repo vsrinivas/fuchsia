@@ -62,7 +62,6 @@ typedef struct input_set_report {
 } input_set_report_t;
 
 typedef struct boot_kbd_report {
-    input_report_id_t id;
     uint8_t modifier;
     uint8_t reserved;
     uint8_t usage[6];
