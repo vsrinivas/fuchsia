@@ -17,6 +17,16 @@ void* __mmap(void*, size_t, int, int, int, off_t);
 void* __expand_heap(size_t* pn) {
     static unsigned mmap_step;
     size_t n = *pn;
+    // TODO(teisenbe): Remove this and the use of MAP_FIXED below when it's
+    // time to do ASLR.  This is present for now to move the heap away from
+    // other allocations
+#if _LP64
+    // Start the heap at 1TB if we're 64-bit
+    static void *next_base = (void*)(1ULL << 40);
+#else
+    // Start the heap at 1GB if we're 32-bit
+    static void *next_base = (void*)(1ULL << 30);
+#endif
 
     if (n > SIZE_MAX / 2 - PAGE_SIZE) {
         errno = ENOMEM;
@@ -27,10 +37,11 @@ void* __expand_heap(size_t* pn) {
     size_t min = (size_t)PAGE_SIZE << mmap_step / 2;
     if (n < min)
         n = min;
-    void* area = __mmap(0, n, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* area = __mmap(next_base, n, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (area == MAP_FAILED)
         return 0;
     *pn = n;
+    next_base = area + n;
     mmap_step++;
 
     return area;
