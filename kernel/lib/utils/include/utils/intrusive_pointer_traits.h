@@ -88,13 +88,13 @@ struct ContainerPtrTraits<T*> {
 };
 
 // Traits for managing unique pointers.
-template <typename T>
-struct ContainerPtrTraits<::utils::unique_ptr<T>> {
+template <typename T, typename Deleter>
+struct ContainerPtrTraits<::utils::unique_ptr<T, Deleter>> {
     using ValueType       = T;
     using RefType         = T&;
     using ConstRefType    = const T&;
-    using PtrType         = ::utils::unique_ptr<T>;
-    using ConstPtrType    = ::utils::unique_ptr<const T>;
+    using PtrType         = ::utils::unique_ptr<T, Deleter>;
+    using ConstPtrType    = ::utils::unique_ptr<const T, Deleter>;
     using RawPtrType      = T*;
     using ConstRawPtrType = const T*;
 
