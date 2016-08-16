@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// for S_IF*
+#define _XOPEN_SOURCE
+
 #include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #include <mxio/vfs.h>
@@ -111,7 +114,8 @@ int FN(close)(int fd) {
 int FL(mkdir)(const char* path, mode_t mode);
 int FN(mkdir)(const char* path, mode_t mode) {
     PATH_WRAP(path, mkdir, path, mode);
-    int fd = FN(open)(path, O_CREAT | O_EXCL, 0x80000000 | mode);
+    mode = S_IFDIR;
+    int fd = FN(open)(path, O_CREAT | O_EXCL, S_IFDIR | (mode & 0777));
     if (fd >= 0) {
         FN(close)(fd);
         return 0;

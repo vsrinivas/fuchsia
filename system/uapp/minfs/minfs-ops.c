@@ -7,33 +7,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #include <mxio/vfs.h>
 
 #include "minfs-private.h"
 
-
-// obtain the nth block of a vnode
-static block_t* vn_get_block(minfs_vnode_t* vn, uint32_t n, void** bdata) {
-    if (n < MINFS_DIRECT) {
-        n = vn->inode.dnum[n];
-        if (n != 0) {
-            return bcache_get(vn->fs->bc, n, bdata);
-        }
-    }
-    //TODO: indirect blocks
-    return NULL;
-}
-
-static inline void vn_put_block(minfs_vnode_t* vn, block_t* blk) {
-    bcache_put(vn->fs->bc, blk, 0);
-}
-
-static inline void vn_put_block_dirty(minfs_vnode_t* vn, block_t* blk) {
-    bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
-}
-
+// Allocate a new data block from the block bitmap.
+// Return the underlying block (obtained via bcache_get()).
+// If hint is nonzero it indicates which block number
+// to start the search for free blocks from.
 block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** bdata) {
     uint32_t bno = bitmap_alloc(&fs->block_map, hint);
     if ((bno == BITMAP_FAIL) && (hint != 0)) {
@@ -64,6 +48,99 @@ block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** b
     bcache_put(fs->bc, block_abm, BLOCK_DIRTY);
     *out_bno = bno;
     return block;
+}
+
+// Obtain the nth block of a vnode.
+// If alloc is true, allocate that block if it doesn't already exist.
+static block_t* vn_get_block(minfs_vnode_t* vn, uint32_t n, void** bdata, bool alloc) {
+    // direct blocks are simple... is there an entry in dnum[]?
+    if (n < MINFS_DIRECT) {
+        uint32_t bno;
+        if ((bno = vn->inode.dnum[n]) == 0) {
+            if (alloc) {
+                block_t* blk = minfs_new_block(vn->fs, 0, &bno, bdata);
+                if (blk != NULL) {
+                    vn->inode.dnum[n] = bno;
+                    vn->inode.block_count++;
+                    minfs_sync_vnode(vn);
+                }
+                return blk;
+            } else {
+                return NULL;
+            }
+        }
+        return bcache_get(vn->fs->bc, bno, bdata);
+    }
+
+    // for indirect blocks, adjust past the direct blocks
+    n -= MINFS_DIRECT;
+
+    // determine indices into the indirect block list and into
+    // the block list in the indirect block
+    uint32_t i = n / (MINFS_BLOCK_SIZE / sizeof(uint32_t));
+    uint32_t j = n % (MINFS_BLOCK_SIZE / sizeof(uint32_t));
+
+    if (i >= MINFS_INDIRECT) {
+        return NULL;
+    }
+
+    uint32_t ibno;
+    block_t* iblk;
+    uint32_t* ientry;
+    uint32_t iflags = 0;
+
+    // look up the indirect bno
+    if ((ibno = vn->inode.inum[i]) == 0) {
+        if (!alloc) {
+            return NULL;
+        }
+        // allocate a new indirect block
+        if ((iblk = minfs_new_block(vn->fs, 0, &ibno, (void**) &ientry)) == NULL) {
+            return NULL;
+        }
+        // record new indirect block in inode, note that we need to update
+        vn->inode.block_count++;
+        vn->inode.inum[i] = ibno;
+        iflags = BLOCK_DIRTY;
+    } else {
+        if ((iblk = bcache_get(vn->fs->bc, ibno, (void**) &ientry)) == NULL) {
+            error("minfs: cannot read indirect block @%u\n", ibno);
+            return NULL;
+        }
+    }
+
+    uint32_t bno;
+    block_t* blk = NULL;
+    if ((bno = ientry[j]) == 0) {
+        if (alloc) {
+            // allocate a new block
+            blk = minfs_new_block(vn->fs, 0, &bno, bdata);
+            if (blk != NULL) {
+                vn->inode.block_count++;
+                ientry[j] = bno;
+                iflags = BLOCK_DIRTY;
+            }
+        }
+    } else {
+        blk = bcache_get(vn->fs->bc, bno, bdata);
+    }
+
+    // release indirect block, updating if necessary
+    // and update the inode as well if we changed it
+    bcache_put(vn->fs->bc, iblk, iflags);
+    if (iflags & BLOCK_DIRTY) {
+        minfs_sync_vnode(vn);
+    }
+
+    return blk;
+}
+
+static inline void vn_put_block(minfs_vnode_t* vn, block_t* blk) {
+    bcache_put(vn->fs->bc, blk, 0);
+}
+
+static inline void vn_put_block_dirty(minfs_vnode_t* vn, block_t* blk) {
+    bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
 }
 
 
@@ -127,7 +204,7 @@ static mx_status_t vn_dir_for_each(minfs_vnode_t* vn, dir_args_t* args,
     for (unsigned n = 0; n < vn->inode.block_count; n++) {
         block_t* blk;
         void* data;
-        if ((blk = vn_get_block(vn, n, &data)) == NULL) {
+        if ((blk = vn_get_block(vn, n, &data, false)) == NULL) {
             error("vn_dir: vn=%p missing block %u\n", vn, n);
             return ERR_NOT_FOUND;
         }
@@ -249,7 +326,7 @@ static mx_status_t fs_create(vnode_t* _vn, vnode_t** out,
     }
 
     // creating a directory?
-    uint32_t type = (mode & 0x80000000) ? MINFS_TYPE_DIR : MINFS_TYPE_FILE;
+    uint32_t type = S_ISDIR(mode) ? MINFS_TYPE_DIR : MINFS_TYPE_FILE;
 
     // mint a new inode and vnode for it
     minfs_vnode_t* vn;

@@ -34,6 +34,17 @@ all:: out/minfs
 
 -include $(DEPS)
 
+ifneq ($(filter $(MAKECMDGOALS),vg valgrind),)
+EXTRA := valgrind
+endif
+ifneq ($(filter $(MAKECMDGOALS),gdb),)
+EXTRA := gdb -quiet -ex=r --args
+endif
+
+valgrind::
+vg::
+gdb::
+
 out/%.o: %.c
 	@echo Build: $@
 	@mkdir -p $(dir $@)
@@ -48,8 +59,11 @@ clean::
 	@rm -fr out
 
 mkfs: out/minfs
-	out/minfs create out/fs 256M
+	$(EXTRA) out/minfs create out/fs 256M
+
+fsck: out/minfs
+	$(EXTRA) out/minfs check out/fs 256M
 
 test: out/minfs
-	gdb -quiet -ex=r --args out/minfs test out/fs 256M
+	$(EXTRA) out/minfs test out/fs 256M
 
