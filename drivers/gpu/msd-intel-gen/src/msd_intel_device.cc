@@ -24,11 +24,18 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!platform_device_)
         return DRETF(false, "failed to create platform device");
 
+    uint16_t pci_dev_id;
+    if (!platform_device_->ReadPciConfig16(2, &pci_dev_id))
+        return DRETF(false, "ReadPciConfig16 failed");
+
+    device_id_ = pci_dev_id;
+    DLOG("device_id 0x%x", device_id_);
+
     unsigned int gtt_size;
     if (!ReadGttSize(&gtt_size))
         return DRETF(false, "failed to read gtt size");
 
-    DLOG("gtt_size 0x%x", gtt_size);
+    DLOG("gtt_size: %uMB", gtt_size >> 20);
 
     std::unique_ptr<magma::PlatformMmio> mmio(
         platform_device_->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE));
