@@ -22,9 +22,6 @@ if (current_os == "") {
 
 declare_args() {
   # This should not be set as a build argument.
-  is_clang = true
-
-  # This should not be set as a build argument.
   target_toolchain = ""
 
   # This should not be set as a build argument.
@@ -91,16 +88,14 @@ set_defaults("component") {
   configs = _shared_binary_target_configs
 }
 
-if (target_os == "fuchsia" && is_clang) {
-  target_toolchain = "//build/toolchain/fuchsia:clang_${target_cpu}"
+if (target_os == "fuchsia") {
+  target_toolchain = "//build/toolchain/fuchsia:${target_cpu}"
 } else {
   assert(false, "Target OS not supported")
 }
 
-if (host_os == "linux") {
-  host_toolchain = "//build/toolchain:gcc_${host_cpu}"
-} else if (host_os == "mac") {
-  host_toolchain = "//build/toolchain:clang_${host_cpu}"
+if (host_os == "linux" || host_os == "mac") {
+  host_toolchain = "//build/toolchain:host_${host_cpu}"
 } else {
   assert(false, "Host OS not supported")
 }
@@ -111,6 +106,7 @@ is_ios = false
 is_linux = false
 is_mac = false
 is_win = false
+is_clang = true
 
 if (current_os == "fuchsia") {
   is_fuchsia = true

@@ -2,21 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/gcc_toolchain.gni")
+import("//build/toolchain/clang_toolchain.gni")
 import("//build/config/fuchsia/config.gni")
 
-gcc_toolchain("gcc_${host_cpu}") {
-  cc = "gcc"
-  cxx = "g++"
-  ar = "ar"
-  ld = cxx
-  strip = "strip"
-
-  toolchain_cpu = host_cpu
-  toolchain_os = host_os
-}
-
-clang_toolchain("clang_${host_cpu}") {
+clang_toolchain("host_${host_cpu}") {
   if (host_cpu == "arm64") {
     clang_cpu = "aarch64"
   } else if (host_cpu == "x64") {

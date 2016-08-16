@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Defines a toolchain which looks and behaves like gcc (including clang).
+# Defines a clang-based toolchain
 #
 # Parameters
 #
@@ -22,19 +22,16 @@
 #   strip
 #     The strip executable which will be run on all shared libraries and
 #     executables as they're built.
-#
-#   is_clang
-#      Whether the toolchain uses clang instead of gcc.
-template("gcc_toolchain") {
+template("clang_toolchain") {
   toolchain(target_name) {
-    assert(defined(invoker.cc), "gcc_toolchain() must specify a \"cc\" value")
-    assert(defined(invoker.cxx), "gcc_toolchain() must specify a \"cxx\" value")
-    assert(defined(invoker.ar), "gcc_toolchain() must specify a \"ar\" value")
-    assert(defined(invoker.ld), "gcc_toolchain() must specify a \"ld\" value")
+    assert(defined(invoker.cc), "clang_toolchain() must specify a \"cc\" value")
+    assert(defined(invoker.cxx), "clang_toolchain() must specify a \"cxx\" value")
+    assert(defined(invoker.ar), "clang_toolchain() must specify a \"ar\" value")
+    assert(defined(invoker.ld), "clang_toolchain() must specify a \"ld\" value")
     assert(defined(invoker.toolchain_cpu),
-           "gcc_toolchain() must specify a \"toolchain_cpu\"")
+           "clang_toolchain() must specify a \"toolchain_cpu\"")
     assert(defined(invoker.toolchain_os),
-           "gcc_toolchain() must specify a \"toolchain_os\"")
+           "clang_toolchain() must specify a \"toolchain_os\"")
 
     forward_variables_from(invoker,
                            [
@@ -204,36 +201,6 @@ template("gcc_toolchain") {
       target_toolchain = target_toolchain
       target_os = target_os
       target_cpu = target_cpu
-
-      if (defined(invoker.is_clang)) {
-        is_clang = invoker.is_clang
-      }
     }
-  }
-}
-
-template("clang_toolchain") {
-  assert(defined(invoker.cc), "clang_toolchain() must specify a \"cc\" value")
-  assert(defined(invoker.cxx), "clang_toolchain() must specify a \"cxx\" value")
-  assert(defined(invoker.ar), "clang_toolchain() must specify a \"ar\" value")
-  assert(defined(invoker.ld), "clang_toolchain() must specify a \"ld\" value")
-  assert(defined(invoker.toolchain_cpu),
-         "clang_toolchain() must specify a \"toolchain_cpu\"")
-  assert(defined(invoker.toolchain_os),
-         "clang_toolchain() must specify a \"toolchain_os\"")
-
-  gcc_toolchain(target_name) {
-    is_clang = true
-
-    forward_variables_from(invoker,
-                           [
-                             "cc",
-                             "cxx",
-                             "ld",
-                             "ar",
-                             "strip",
-                             "toolchain_cpu",
-                             "toolchain_os",
-                           ])
   }
 }
