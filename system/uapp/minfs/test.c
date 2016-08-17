@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <stdint.h>
 
 #define TRY(func) ({\
     int ret = (func); \
@@ -18,10 +19,19 @@
 
 int run_fs_tests(void) {
     int fd = TRY(open("(@)", O_RDONLY));
-    printf("fd %d\n", fd);
 
     fd = TRY(open("(@)hello.txt", O_CREAT | O_RDWR, 0644));
-    printf("fd %d\n", fd);
+    TRY(write(fd, "Hello, World!\n", 14));
+    TRY(write(fd, "Hello, World!\n", 14));
+    TRY(write(fd, "Hello, World!\n", 14));
+
+    uint8_t* data = malloc(1024*1024);
+    for (int i = 0; i < 1024*1024; i++) data[i] = i;
+    TRY(write(fd, data, 1024*1024));
+
+    struct stat s;
+    TRY(fstat(fd, &s));
+    printf("sz = %d\n", (int) s.st_size);
 
     TRY(mkdir("(@)folder-one", 0755));
     TRY(mkdir("(@)folder-one/folder-two", 0755));

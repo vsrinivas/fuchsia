@@ -129,6 +129,7 @@ struct vnattr {
 #define V_IXOTH 0000001
 
 #define VTYPE_TO_DTYPE(mode) (((mode)&V_TYPE_MASK) >> 12)
+#define DTYPE_TO_VTYPE(type) (((type)&15) << 12)
 
 struct vdirent {
     uint32_t size;

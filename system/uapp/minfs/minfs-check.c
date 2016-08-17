@@ -128,6 +128,43 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
     return NO_ERROR;
 }
 
+const char* check_block(check_t* chk, minfs_t* fs, uint32_t bno) {
+    if (bno < fs->info.dat_block) {
+        return "in metadata area";
+    }
+    if (bno >= fs->info.block_count) {
+        return "out of range";
+    }
+    if (!bitmap_get(&fs->block_map, bno)) {
+        return "not allocated";
+    }
+    return NULL;
+}
+
+mx_status_t check_file(check_t* chk, minfs_t* fs,
+                       minfs_inode_t* inode, uint32_t ino) {
+    uint32_t blocks = 0;
+    for (unsigned n = 0; n < MINFS_DIRECT; n++) {
+        info("%d, ", inode->dnum[n]);
+    }
+    info("\n");
+    for (unsigned n = 0; n < MINFS_DIRECT; n++) {
+        uint32_t bno = inode->dnum[n];
+        if (bno) {
+            blocks++;
+            const char* msg;
+            if ((msg = check_block(chk, fs, bno)) != NULL) {
+                warn("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg);
+            }
+        }
+    }
+    if (blocks != inode->block_count) {
+        warn("check: ino#%u: block count %u, actual blocks %u\n",
+             ino, inode->block_count, blocks);
+    }
+    return NO_ERROR;
+}
+
 mx_status_t check_inode(check_t* chk, minfs_t* fs, uint32_t ino, uint32_t parent) {
     if (bitmap_get(&chk->checked_inodes, ino)) {
         // we've been here before
@@ -157,6 +194,9 @@ mx_status_t check_inode(check_t* chk, minfs_t* fs, uint32_t ino, uint32_t parent
              ino, inode.block_count, inode.link_count, inode.size);
         //TODO: check file blocks exist, are allocated
         //TODO: detect 'shared' blocks
+        if ((status = check_file(chk, fs, &inode, ino)) < 0) {
+            return status;
+        }
     }
     return NO_ERROR;
 }
@@ -169,6 +209,7 @@ mx_status_t minfs_check(bcache_t* bc) {
         error("minfs: could not read info block\n");
         return -1;
     }
+    minfs_dump_info(&info);
     if (minfs_check_info(&info, bcache_max_block(bc))) {
         return -1;
     }

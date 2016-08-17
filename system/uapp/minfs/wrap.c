@@ -99,7 +99,10 @@ int FN(open)(const char* path, int flags, mode_t mode) {
     for (fd = 0; fd < MAXFD; fd++) {
         if (fdtab[fd].vn == NULL) {
             mx_status_t status = vfs_open(fake_root, &fdtab[fd].vn, path + PREFIX_SIZE, flags, mode);
-            STATUS(status);
+            if (status < 0) {
+                STATUS(status);
+            }
+            return fd | FD_MAGIC;
         }
     }
     FAIL(EMFILE);

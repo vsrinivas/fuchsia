@@ -69,7 +69,8 @@ typedef struct {
     uint64_t modify_time;
     uint32_t seq_num;               // bumped when modified
     uint32_t gen_num;               // bumped when deleted
-    uint32_t rsvd[6];
+    uint32_t dirent_count;           // for directories
+    uint32_t rsvd[5];
     uint32_t dnum[MINFS_DIRECT];    // direct blocks
     uint32_t inum[MINFS_INDIRECT];  // indirect blocks
 } minfs_inode_t;

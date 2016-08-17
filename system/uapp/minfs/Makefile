@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CFLAGS := -Wall -std=c11 -g
+CFLAGS := -Wall -std=c11 -g -O0
 CFLAGS += -Werror-implicit-function-declaration
 CFLAGS += -Wstrict-prototypes -Wwrite-strings
 CFLAGS += -I../../ulib/system/include
@@ -58,12 +58,14 @@ clean::
 	@echo Clean
 	@rm -fr out
 
+SIZE := 1024M
+
 mkfs: out/minfs
-	$(EXTRA) out/minfs create out/fs 256M
+	$(EXTRA) out/minfs create out/fs $(SIZE)
 
 fsck: out/minfs
-	$(EXTRA) out/minfs check out/fs 256M
+	$(EXTRA) out/minfs check out/fs $(SIZE)
 
 test: out/minfs
-	$(EXTRA) out/minfs test out/fs 256M
+	$(EXTRA) out/minfs test out/fs $(SIZE)
 

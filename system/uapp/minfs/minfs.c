@@ -176,7 +176,7 @@ mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino) {
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
 #define DE0_SIZE SIZEOF_MINFS_DIRENT(1)
-#define DE1_SIZE SIZEOF_MINFS_DIRENT(2)
+
     // directory entry for self
     minfs_dirent_t* de = (void*) bdata;
     de->ino = ino_self;
@@ -184,18 +184,15 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
     de->namelen = 1;
     de->type = MINFS_TYPE_DIR;
     de->name[0] = '.';
-    // directory entry for parent (also self)
+
+    // directory entry for parent
     de = (void*) bdata + DE0_SIZE;
     de->ino = ino_parent;
-    de->reclen = DE1_SIZE;
+    de->reclen = MINFS_BLOCK_SIZE - DE0_SIZE;
     de->namelen = 2;
     de->type = MINFS_TYPE_DIR;
     de->name[0] = '.';
     de->name[1] = '.';
-    // empty entry for the unused space
-    de = (void*) bdata + DE0_SIZE + DE1_SIZE;
-    de->ino = 0;
-    de->reclen = MINFS_BLOCK_SIZE - DE0_SIZE - DE1_SIZE;
 }
 
 mx_status_t minfs_create(minfs_t** out, bcache_t* bc, minfs_info_t* info) {
@@ -375,6 +372,7 @@ int minfs_mkfs(bcache_t* bc) {
     ino[1].size = MINFS_BLOCK_SIZE;
     ino[1].block_count = 1;
     ino[1].link_count = 2;
+    ino[1].dirent_count = 1;
     ino[1].dnum[0] = info.dat_block;
     bcache_put(bc, blk, BLOCK_DIRTY);
 
