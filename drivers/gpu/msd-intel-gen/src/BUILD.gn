@@ -27,6 +27,8 @@ source_set("src") {
     "register_defs.h",
     "register_io.cc",
     "register_io.h",
+    "ringbuffer.cc",
+    "ringbuffer.h",
     "types.h",
   ]
 
