@@ -56,6 +56,25 @@ static void xhci_command_complete(void* ctx, uint32_t cc, xhci_trb_t* command_tr
     completion_signal(&context->completion);
 }
 
+static uint32_t xhci_get_route_string(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
+    if (hub_address == 0) {
+        return 0;
+    }
+
+    xhci_slot_t* hub_slot = &xhci->slots[hub_address];
+    uint32_t route = XHCI_GET_BITS32(&hub_slot->sc->sc0, SLOT_CTX_ROUTE_STRING_START, SLOT_CTX_ROUTE_STRING_BITS);
+    int shift = 0;
+    while (shift < 20) {
+        if ((route & (0xF << shift)) == 0) {
+            // reached end of parent hub's route string
+            route |= ((port & 0xF) << shift);
+            break;
+        }
+        shift += 4;
+    }
+    return route;
+}
+
 static mx_status_t xhci_address_device(xhci_device_thread_context_t* context, uint32_t hub_address,
                                        uint32_t port, usb_speed_t speed) {
     xhci_t* xhci = context->xhci;
@@ -99,8 +118,7 @@ static mx_status_t xhci_address_device(xhci_device_thread_context_t* context, ui
     XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG | XHCI_ICC_EP_FLAG(0));
 
     // Setup slot context
-    // FIXME calculate route string
-    uint32_t route_string = 0;
+    uint32_t route_string = xhci_get_route_string(xhci, hub_address, port);
     XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_ROUTE_STRING_START, SLOT_CTX_ROUTE_STRING_BITS, route_string);
     XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_SPEED_START, SLOT_CTX_SPEED_BITS, speed);
     XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS, 1);
