@@ -7,16 +7,16 @@
 
 #include "magma.h"
 #include "magma_system.h"
-#include <libdrm_intel_gen.h>
+#include "magma_util/refcounted.h"
 
 class MagmaConnection;
 
 // Magma is based on intel libdrm.
 // LibdrmIntelGen buffers are based on the api exposed magma_buffer.
-class MagmaBuffer : public LibdrmIntelGen::Buffer {
+class MagmaBuffer : public magma_buffer {
 public:
-    MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t align);
-    ~MagmaBuffer() override;
+    MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t alignment);
+    ~MagmaBuffer();
 
     bool Alloc(uint64_t size);
     bool Map(bool write);
@@ -35,8 +35,34 @@ public:
         return static_cast<MagmaBuffer*>(buffer);
     }
 
+    uint64_t alignment() { return alignment_; }
+
+    const char* Name() { return refcount_->name(); }
+    void Incref() { return refcount_->Incref(); }
+    void Decref() { return refcount_->Decref(); }
+
 private:
+    class BufferRefcount : public magma::Refcounted {
+    public:
+        BufferRefcount(const char* name, MagmaBuffer* buffer)
+            : magma::Refcounted(name), buffer_(buffer)
+        {
+        }
+
+        virtual void Delete()
+        {
+            delete buffer_;
+            delete this;
+        }
+
+    private:
+        MagmaBuffer* buffer_;
+    };
+
     MagmaConnection* connection_;
+
+    BufferRefcount* refcount_;
+    uint32_t alignment_{};
 
     uint32_t tiling_mode_ = MAGMA_TILING_MODE_NONE;
 

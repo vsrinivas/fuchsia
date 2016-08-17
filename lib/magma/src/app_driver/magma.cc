@@ -124,10 +124,9 @@ void magma_bo_reference(magma_buffer* bo)
 
 int32_t magma_bo_references(magma_buffer* bo, magma_buffer* target_bo)
 {
-    auto buffer = MagmaBuffer::cast(bo);
-    auto target_buffer = MagmaBuffer::cast(target_bo);
-    DLOG("magma_bo_references bo %s target_bo %s", buffer->Name(), target_buffer->Name());
-    return buffer->References(target_buffer);
+    DLOG("magma_bo_references bo %s target_bo %s", MagmaBuffer::cast(bo)->Name(),
+         MagmaBuffer::cast(target_bo)->Name());
+    UNIMPLEMENTED("magma_bo_references");
     return 0;
 }
 

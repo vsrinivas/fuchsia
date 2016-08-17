@@ -5,8 +5,8 @@
 #include "magma_buffer.h"
 #include "magma_connection.h"
 
-MagmaBuffer::MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t align)
-    : LibdrmIntelGen::Buffer(name, align), connection_(connection)
+MagmaBuffer::MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t alignment)
+    : connection_(connection), refcount_(new BufferRefcount(name, this)), alignment_(alignment)
 {
     magic_ = kMagic;
 }

@@ -25,19 +25,17 @@ MagmaConnection* MagmaConnection::Open(uint32_t device_handle, int batch_size)
 MagmaConnection::MagmaConnection(magma_system_connection* sys_connection)
     : sys_connection_(sys_connection)
 {
-    libdrm_ = new LibdrmIntelGen();
     magic_ = kMagic;
 }
 
 MagmaConnection::~MagmaConnection()
 {
     magma_system_close(sys_connection());
-    delete libdrm_;
 }
 
 bool MagmaConnection::Init(uint64_t batch_size)
 {
-    max_relocs_ = LibdrmIntelGen::ComputeMaxRelocs(batch_size);
+    batch_size_ = batch_size;
     return true;
 }
 

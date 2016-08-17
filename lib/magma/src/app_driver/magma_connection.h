@@ -10,7 +10,6 @@
 #include "magma_context.h"
 #include "magma_system.h"
 #include "magma_util/macros.h"
-#include <libdrm_intel_gen.h>
 
 #include <map>
 #include <stdint.h>
@@ -22,7 +21,6 @@ public:
 
     magma_system_connection* sys_connection() { return sys_connection_; }
 
-    uint64_t max_relocs() { return max_relocs_; }
     uint32_t GetDeviceId() { return magma_system_get_device_id(sys_connection_); }
 
     bool Init(uint64_t batch_size);
@@ -44,7 +42,7 @@ public:
         return magma_system_destroy_context(sys_connection_, context->context_id());
     }
 
-    bool ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_len, uint32_t flags);
+    bool ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_size, uint32_t flags);
 
     static MagmaConnection* cast(magma_connection* device)
     {
@@ -57,11 +55,10 @@ private:
     MagmaConnection(magma_system_connection* sys_connection);
 
     magma_system_connection* sys_connection_;
-    LibdrmIntelGen* libdrm_;
 
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
-    uint64_t max_relocs_{};
+    uint64_t batch_size_{};
 };
 
 #endif // _MAGMA_DEVICE_H_

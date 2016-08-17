@@ -10,27 +10,6 @@ group("magma_service_driver") {
   ]
 }
 
-config("libdrm_api") {
-  include_dirs = [ "third_party/libdrm" ]
-}
-
-source_set("libdrm") {
-  sources = [
-    "third_party/libdrm/libdrm_intel_gen.cpp",
-    "third_party/libdrm/libdrm_intel_gen.h",
-  ]
-
-  public_configs = [ ":libdrm_api" ]
-
-  deps = [
-    ":util",
-  ]
-
-  public_deps = [
-    "include:msd_abi",
-  ]
-}
-
 source_set("libmad") {
   sources = [
     "src/app_driver/magma.cc",
@@ -46,7 +25,6 @@ source_set("libmad") {
   ]
 
   deps = [
-    ":libdrm",
     ":libmsd",
     ":util",
     "include:mad_abi",
