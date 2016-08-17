@@ -170,6 +170,7 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
     switch (param) {
     case TC_SET_TITLE:
         strncpy(dev->title, (char*)arg, sizeof(dev->title));
+        dev->title[sizeof(dev->title) - 1] = '\0';
         vc_device_write_status(dev);
         vc_gfx_invalidate_status(dev);
         break;
