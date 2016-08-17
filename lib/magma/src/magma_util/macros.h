@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <limits.h> // PAGE_SIZE
 
 #define MAGMA_DEBUG 0
 
@@ -63,6 +64,8 @@ static inline void dret_null(const char* file, int line, const char* msg)
     TypeName(const TypeName&) = delete;                                                            \
     void operator=(const TypeName&) = delete
 #endif
+
+static inline bool is_page_aligned(uint64_t val) { return (val & (PAGE_SIZE - 1)) == 0; }
 
 static inline uint32_t upper_32_bits(uint64_t n) { return static_cast<uint32_t>(n >> 32); }
 
