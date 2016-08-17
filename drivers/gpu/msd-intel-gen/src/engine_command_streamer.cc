@@ -5,6 +5,7 @@
 #include "engine_command_streamer.h"
 #include "magma_util/macros.h"
 #include "msd_intel_buffer.h"
+#include "ringbuffer.h"
 
 bool EngineCommandStreamer::InitContext(MsdIntelContext* context)
 {
@@ -17,8 +18,12 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context)
     if (!context_buffer)
         return DRETF(false, "couldn't create context buffer");
 
+    std::unique_ptr<Ringbuffer> ringbuffer(Ringbuffer::Create());
+    if (!ringbuffer)
+        return DRETF(false, "couldn't create ringbuffer");
+
     // Transfer ownership of context_buffer
-    context->InitEngine(id(), std::move(context_buffer));
+    context->SetEngineState(id(), std::move(context_buffer), std::move(ringbuffer));
 
     return true;
 }

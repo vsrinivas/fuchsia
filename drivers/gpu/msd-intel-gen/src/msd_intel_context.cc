@@ -6,13 +6,14 @@
 
 MsdIntelContext::MsdIntelContext() { magic_ = kMagic; }
 
-void MsdIntelContext::InitEngine(EngineCommandStreamerId id,
-                                 std::unique_ptr<MsdIntelBuffer> context_buffer)
+void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
+                                     std::unique_ptr<MsdIntelBuffer> context_buffer,
+                                     std::unique_ptr<Ringbuffer> ringbuffer)
 {
     DASSERT(context_buffer);
 
-    auto iter = context_buffer_map_.find(id);
-    DASSERT(iter == context_buffer_map_.end());
+    auto iter = state_map_.find(id);
+    DASSERT(iter == state_map_.end());
 
-    context_buffer_map_[id] = std::move(context_buffer);
+    state_map_[id] = PerEngineState{std::move(context_buffer), std::move(ringbuffer)};
 }

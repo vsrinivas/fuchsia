@@ -7,6 +7,7 @@
 
 #include "msd.h"
 #include "msd_intel_buffer.h"
+#include "ringbuffer.h"
 #include "types.h"
 #include <map>
 #include <memory>
@@ -15,16 +16,27 @@ class MsdIntelContext : public msd_context {
 public:
     MsdIntelContext();
 
-    void InitEngine(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer);
+    void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
+                        std::unique_ptr<Ringbuffer> ringbuffer);
 
 private:
     MsdIntelBuffer* get_buffer(EngineCommandStreamerId id)
     {
-        auto iter = context_buffer_map_.find(id);
-        return iter == context_buffer_map_.end() ? nullptr : iter->second.get();
+        auto iter = state_map_.find(id);
+        return iter == state_map_.end() ? nullptr : iter->second.context_buffer.get();
+    }
+    Ringbuffer* get_ringbuffer(EngineCommandStreamerId id)
+    {
+        auto iter = state_map_.find(id);
+        return iter == state_map_.end() ? nullptr : iter->second.ringbuffer.get();
     }
 
-    std::map<EngineCommandStreamerId, std::unique_ptr<MsdIntelBuffer>> context_buffer_map_;
+    struct PerEngineState {
+        std::unique_ptr<MsdIntelBuffer> context_buffer;
+        std::unique_ptr<Ringbuffer> ringbuffer;
+    };
+
+    std::map<EngineCommandStreamerId, PerEngineState> state_map_;
 
     friend class TestContext;
 
