@@ -53,7 +53,6 @@ UserThread::~UserThread() {
 
     process_->aspace()->FreeRegion(reinterpret_cast<vaddr_t>(user_stack_));
     cond_destroy(&exception_wait_cond_);
-    mutex_destroy(&exception_wait_lock_);
 }
 
 status_t UserThread::Initialize(utils::StringPiece name) {
@@ -190,7 +189,7 @@ void UserThread::Exiting() {
     state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
 
     {
-        AutoLock lock(&exception_lock_);
+        AutoLock lock(exception_lock_);
         if (exception_port_)
             exception_port_->OnThreadExit(this);
     }
@@ -253,7 +252,7 @@ int UserThread::StartRoutine(void* arg) {
 void UserThread::SetState(State state) {
     LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
 
-    DEBUG_ASSERT(is_mutex_held(&state_lock_));
+    DEBUG_ASSERT(state_lock_.IsHeld());
 
     state_ = state;
 }
@@ -262,7 +261,7 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, utils::RefPtr<Except
     // Lock both |state_lock_| and |exception_lock_| to ensure the thread
     // doesn't transition to dead while we're setting the exception handler.
     AutoLock state_lock(state_lock_);
-    AutoLock excp_lock(&exception_lock_);
+    AutoLock excp_lock(exception_lock_);
     if (state_ == State::DEAD)
         return ERR_NOT_FOUND; // TODO(dje): ?
     if (exception_port_)
@@ -272,18 +271,18 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, utils::RefPtr<Except
 }
 
 void UserThread::ResetExceptionPort() {
-    AutoLock lock(&exception_lock_);
+    AutoLock lock(exception_lock_);
     exception_port_.reset();
 }
 
 utils::RefPtr<ExceptionPort> UserThread::exception_port() {
-    AutoLock lock(&exception_lock_);
+    AutoLock lock(exception_lock_);
     return exception_port_;
 }
 
 status_t UserThread::ExceptionHandlerExchange(utils::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report) {
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&exception_wait_lock_);
+    AutoLock lock(exception_wait_lock_);
     exception_status_ = MX_EXCEPTION_STATUS_WAITING;
     // Send message, wait for reply.
     status_t status = eport->SendReport(report);
@@ -292,7 +291,7 @@ status_t UserThread::ExceptionHandlerExchange(utils::RefPtr<ExceptionPort> eport
         exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
         return status;
     }
-    status = cond_wait_timeout(&exception_wait_cond_, &exception_wait_lock_, INFINITE_TIME);
+    status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME);
     DEBUG_ASSERT(status == NO_ERROR);
     DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
     if (exception_status_ != MX_EXCEPTION_STATUS_RESUME)
@@ -302,7 +301,7 @@ status_t UserThread::ExceptionHandlerExchange(utils::RefPtr<ExceptionPort> eport
 
 status_t UserThread::MarkExceptionHandled(mx_exception_status_t status) {
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&exception_wait_lock_);
+    AutoLock lock(exception_wait_lock_);
     if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
         return ERR_NOT_BLOCKED;
     exception_status_ = status;

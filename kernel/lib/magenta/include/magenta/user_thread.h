@@ -103,7 +103,7 @@ private:
 
     // our State
     State state_ = State::INITIAL;
-    mutex_t state_lock_ = MUTEX_INITIAL_VALUE(state_lock_);
+    Mutex state_lock_;
 
     // Node for linked list of threads blocked on a futex
     FutexNode futex_node_;
@@ -112,12 +112,12 @@ private:
 
     // A thread-level exception port for this thread.
     utils::RefPtr<ExceptionPort> exception_port_;
-    mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
+    Mutex exception_lock_;
 
     // Support for sending an exception to an exception handler and then waiting for a response.
     mx_exception_status_t exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
     cond_t exception_wait_cond_ = COND_INITIAL_VALUE(exception_wait_cond_);
-    mutex_t exception_wait_lock_ = MUTEX_INITIAL_VALUE(exception_wait_lock_);
+    Mutex exception_wait_lock_;
 
     // cleanup dpc structure
     dpc_t cleanup_dpc_ = {};
