@@ -93,14 +93,12 @@ bool HandleInRange(void* addr) {
 }
 
 uint32_t MapHandleToU32(Handle* handle) {
-    auto va = reinterpret_cast<char*>(handle) - reinterpret_cast<char*>(handle_arena.start());
+    auto va = handle - reinterpret_cast<Handle*>(handle_arena.start());
     return static_cast<uint32_t>(va);
 }
 
 Handle* MapU32ToHandle(uint32_t value) {
-    auto va = value + reinterpret_cast<char*>(handle_arena.start());
-    if (value % sizeof(Handle) != 0)
-        return nullptr;
+    auto va = &reinterpret_cast<Handle*>(handle_arena.start())[value];
     if (!HandleInRange(va))
         return nullptr;
     return reinterpret_cast<Handle*>(va);

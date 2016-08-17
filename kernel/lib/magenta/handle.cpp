@@ -10,15 +10,17 @@
 
 Handle::Handle(utils::RefPtr<Dispatcher> dispatcher, uint32_t rights)
     : process_id_(0u),
-      rights_(rights),
-      dispatcher_(utils::move(dispatcher)) {
+      dispatcher_(utils::move(dispatcher)),
+      rights_(rights) {
     dispatcher_->add_handle();
 }
 
 Handle::Handle(const Handle* rhs, mx_rights_t rights)
     : process_id_(rhs->process_id_),
-      rights_(rights),
-      dispatcher_(rhs->dispatcher_) { }
+      dispatcher_(rhs->dispatcher_),
+      rights_(rights) {
+    // The handle is being duplicated, so we don't call |add_handle()|.
+}
 
 Handle::~Handle() {
     dispatcher_->remove_handle();

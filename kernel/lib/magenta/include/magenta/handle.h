@@ -41,6 +41,6 @@ public:
 
 private:
     mx_koid_t process_id_;
-    const mx_rights_t rights_;
     utils::RefPtr<Dispatcher> dispatcher_;
+    const mx_rights_t rights_;
 };

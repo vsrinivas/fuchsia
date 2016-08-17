@@ -6,6 +6,7 @@
 
 #include <magenta/process_dispatcher.h>
 
+#include <assert.h>
 #include <list.h>
 #include <new.h>
 #include <rand.h>
@@ -18,11 +19,14 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 
+#include <lib/crypto/global_prng.h>
+
 #include <magenta/futex_context.h>
 #include <magenta/magenta.h>
 #include <magenta/user_copy.h>
 
 #define LOCAL_TRACE 0
+
 
 static constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ  |
                                                      MX_RIGHT_WRITE |
@@ -31,6 +35,22 @@ static constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ  |
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
     MUTEX_INITIAL_VALUE(global_process_list_mutex_);
 utils::DoublyLinkedList<ProcessDispatcher*> ProcessDispatcher::global_process_list_;
+
+
+mx_handle_t map_handle_to_value(Handle* handle, mx_handle_t mixer) {
+    // Ensure that the last bit of the result is not zero and that
+    // we don't lose upper bits.
+    DEBUG_ASSERT((mixer & 0x1) == 0);
+    DEBUG_ASSERT((MapHandleToU32(handle) & 0xe0000000) == 0);
+
+    auto handle_id = (MapHandleToU32(handle) << 2) | 0x1;
+    return mixer ^ handle_id;
+}
+
+Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
+    auto handle_id = (value ^ mixer) >> 2;
+    return MapU32ToHandle(handle_id);
+}
 
 mx_status_t ProcessDispatcher::Create(utils::StringPiece name,
                                       utils::RefPtr<Dispatcher>* dispatcher,
@@ -57,7 +77,12 @@ ProcessDispatcher::ProcessDispatcher(utils::StringPiece name)
     AddProcess(this);
 
     // Generate handle XOR mask with top bit and bottom two bits cleared
-    handle_rand_ = (rand() << 2) & INT_MAX;
+    uint32_t secret;
+    auto prng = crypto::GlobalPRNG::GetInstance();
+    prng->Draw(&secret, sizeof(secret));
+
+    // Handle values cannot be negative values, so we mask the high bit.
+    handle_rand_ = (secret << 2) & INT_MAX;
 
     if (name.length() > 0 && (name.length() < sizeof(name_)))
         strlcpy(name_, name.data(), sizeof(name_));
@@ -287,13 +312,11 @@ void ProcessDispatcher::SetState(State s) {
 
 // process handle manipulation routines
 mx_handle_t ProcessDispatcher::MapHandleToValue(Handle* handle) {
-    auto handle_index = MapHandleToU32(handle) + 1;
-    return handle_index ^ handle_rand_;
+    return map_handle_to_value(handle, handle_rand_);
 }
 
 Handle* ProcessDispatcher::GetHandle_NoLock(mx_handle_t handle_value) {
-    auto handle_index = (handle_value ^ handle_rand_) - 1;
-    Handle* handle = MapU32ToHandle(handle_index);
+    auto handle = map_value_to_handle(handle_value, handle_rand_);
     if (!handle)
         return nullptr;
     return (handle->process_id() == get_koid()) ? handle : nullptr;
@@ -325,8 +348,7 @@ HandleUniquePtr ProcessDispatcher::RemoveHandle_NoLock(mx_handle_t handle_value)
 }
 
 void ProcessDispatcher::UndoRemoveHandle_NoLock(mx_handle_t handle_value) {
-    auto handle_index = (handle_value ^ handle_rand_) - 1;
-    Handle* handle = MapU32ToHandle(handle_index);
+    auto handle = map_value_to_handle(handle_value, handle_rand_);
     AddHandle_NoLock(HandleUniquePtr(handle));
 }
 
