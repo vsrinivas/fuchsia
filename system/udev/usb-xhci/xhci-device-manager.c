@@ -310,7 +310,28 @@ static mx_status_t xhci_handle_enumerate_device(xhci_device_thread_context_t* co
         printf("xhci_get_descriptor failed\n");
         goto disable_slot_exit;
     }
-    int max_packet_size = context->device_descriptor->bMaxPacketSize0;
+
+    int mps = context->device_descriptor->bMaxPacketSize0;
+    // enforce correct max packet size for ep0
+    switch (speed) {
+        case USB_SPEED_LOW:
+            mps = 8;
+            break;
+        case USB_SPEED_FULL:
+            if (mps != 8 && mps != 16 && mps != 32 && mps != 64) {
+                mps = 8;
+            }
+            break;
+        case USB_SPEED_HIGH:
+            mps = 64;
+            break;
+        case USB_SPEED_SUPER:
+            // bMaxPacketSize0 is an exponent for superspeed devices
+            mps = 1 << mps;
+            break;
+        default:
+            break;
+    }
 
     // update the max packet size in our device context
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&context->input_context[0 * xhci->context_size];
@@ -319,8 +340,7 @@ static mx_status_t xhci_handle_enumerate_device(xhci_device_thread_context_t* co
     memset((void*)ep0c, 0, xhci->context_size);
 
     XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_EP_FLAG(0));
-    // FIXME - sanity check reported max packet size?
-    XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, max_packet_size);
+    XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, mps);
 
     completion_reset(&context->completion);
     xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
