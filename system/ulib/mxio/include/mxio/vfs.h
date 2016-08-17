@@ -13,13 +13,34 @@
 
 __BEGIN_CDECLS
 
-typedef struct vfs vfs_t;
-typedef struct vfs_ops vfs_ops_t;
+// The VFS interface does not declare struct vnode, so
+// that implementations may provide their own and avoid
+// awkward casting between the base implementation and
+// the "subclass" of it.
+//
+// When using the VFS interface with the common helper
+// library and rpc glue, the initial fields of struct
+// vnode *must* be VNODE_BASE_FIELDS as defined below
+//
+// Example:
+//
+// struct vnode {
+//     VNODE_BASE_FIELDS
+//     my_fs_t* fs;
+//     ...
+// };
+//
+// The ops field is used for dispatch and the refcount
+// is used by the generic vn_acquire() and vn_release.
+// The flags field is private to the implementation.
+
+#define VNODE_BASE_FIELDS \
+    vnode_ops_t* ops; \
+    uint32_t flags; \
+    uint32_t refcount;
 
 typedef struct vnode vnode_t;
 typedef struct vnode_ops vnode_ops_t;
-
-typedef struct dnode dnode_t;
 
 typedef struct vnattr vnattr_t;
 typedef struct vdirent vdirent_t;
@@ -36,7 +57,7 @@ struct vnode_ops {
     // Called when refcount reaches zero.
 
     mx_status_t (*open)(vnode_t** vn, uint32_t flags);
-    // Attempts to open vn, refcount++ on success.
+    // Attempts to open *vn, refcount++ on success.
 
     mx_status_t (*close)(vnode_t* vn);
     // Closes vn, refcount--
@@ -64,6 +85,7 @@ struct vnode_ops {
     mx_status_t (*create)(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode);
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.
+    // Mode specifies the type of entity to create.
 
     ssize_t (*ioctl)(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
     // Performs the given ioctl op on vn.
@@ -80,40 +102,13 @@ struct vnattr {
     uint64_t size;
 };
 
-struct vnode {
-    vnode_ops_t* ops;
-    vfs_t* vfs;
-    uint32_t flags;
-    uint32_t refcount;
-    dnode_t* dnode;
-
-    void* pdata;
-    void* pops;
-
-    // all dnodes that point at this vnode
-    list_node_t dn_list;
-    uint32_t dn_count;
-};
-
-struct vfs_ops {
-};
-
-struct vfs {
-    vfs_ops_t* ops;
-    vnode_t* root;
-    mx_handle_t remote;
-};
-
-#define V_FLAG_DEVICE 1
-#define V_FLAG_REMOTE 2
-
 // bits compatible with POSIX stat
 #define V_TYPE_MASK 0170000
 #define V_TYPE_SOCK 0140000
 #define V_TYPE_LINK 0120000
 #define V_TYPE_FILE 0100000
 #define V_TYPE_BDEV 0060000
-#define V_TYPE_DIR 0040000
+#define V_TYPE_DIR  0040000
 #define V_TYPE_CDEV 0020000
 #define V_TYPE_PIPE 0010000
 
@@ -141,15 +136,7 @@ struct vdirent {
     char name[0];
 };
 
-static inline void vn_acquire(vnode_t* vn) {
-    vn->refcount++;
-}
-
+void vn_acquire(vnode_t* vn);
 void vn_release(vnode_t* vn);
-
-// helper for filling out dents
-// returns offset to next vdirent_t on success
-mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
-                            const char* name, size_t len, uint32_t type);
 
 __END_CDECLS

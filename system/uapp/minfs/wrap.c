@@ -14,6 +14,10 @@
 #include <mxio/vfs.h>
 #include "vfs.h"
 
+struct vnode {
+    VNODE_BASE_FIELDS
+};
+
 static mx_status_t do_stat(vnode_t* vn, struct stat* s) {
     vnattr_t a;
     mx_status_t status = vn->ops->getattr(vn, &a);

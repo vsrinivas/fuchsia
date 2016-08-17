@@ -7,6 +7,10 @@
 #include <unistd.h>
 #include "vfs.h"
 
+struct vnode {
+    VNODE_BASE_FIELDS
+};
+
 uint32_t __trace_bits;
 
 void vfs_close(vnode_t* vn) {

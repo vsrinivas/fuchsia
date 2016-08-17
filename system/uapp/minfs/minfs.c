@@ -51,7 +51,7 @@ static inline void bitmap_copy_from(bitmap_t* bm, uint32_t bno, void* data) {
     memcpy(data, bm->map + bno * (MINFS_BLOCK_BITS / 64), MINFS_BLOCK_SIZE);
 }
 
-void minfs_sync_vnode(minfs_vnode_t* vn) {
+void minfs_sync_vnode(vnode_t* vn) {
     block_t* blk;
     void* bdata;
 
@@ -108,18 +108,18 @@ mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out
     return NO_ERROR;
 }
 
-mx_status_t minfs_new_vnode(minfs_t* fs, minfs_vnode_t** out, uint32_t type) {
-    minfs_vnode_t* vn;
+mx_status_t minfs_new_vnode(minfs_t* fs, vnode_t** out, uint32_t type) {
+    vnode_t* vn;
     if ((type != MINFS_TYPE_FILE) && (type != MINFS_TYPE_DIR)) {
         return ERR_INVALID_ARGS;
     }
-    if ((vn = calloc(1, sizeof(minfs_vnode_t))) == NULL) {
+    if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
     vn->inode.magic = MINFS_MAGIC(type);
     vn->inode.link_count = 1;
-    vn->vnode.refcount = 1;
-    vn->vnode.ops = &minfs_ops;
+    vn->refcount = 1;
+    vn->ops = &minfs_ops;
     if (minfs_ino_alloc(fs, &vn->inode, &vn->ino) < 0) {
         free(vn);
         return ERR_NO_RESOURCES;
@@ -134,24 +134,24 @@ mx_status_t minfs_new_vnode(minfs_t* fs, minfs_vnode_t** out, uint32_t type) {
     return 0;
 }
 
-mx_status_t minfs_del_vnode(minfs_vnode_t* vn) {
+mx_status_t minfs_del_vnode(vnode_t* vn) {
     panic("minfs_del_vnode() not implemented\n");
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t minfs_get_vnode(minfs_t* fs, minfs_vnode_t** out, uint32_t ino) {
+mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino) {
     if ((ino < 1) || (ino >= fs->info.inode_count)) {
         return ERR_OUT_OF_RANGE;
     }
-    minfs_vnode_t* vn;
+    vnode_t* vn;
     uint32_t bucket = INO_HASH(ino);
-    list_for_every_entry(fs->vnode_hash + bucket, vn, minfs_vnode_t, hashnode) {
+    list_for_every_entry(fs->vnode_hash + bucket, vn, vnode_t, hashnode) {
         if (vn->ino == ino) {
             *out = vn;
             return NO_ERROR;
         }
     }
-    if ((vn = calloc(1, sizeof(minfs_vnode_t))) == NULL) {
+    if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
     mx_status_t status;
@@ -166,8 +166,8 @@ mx_status_t minfs_get_vnode(minfs_t* fs, minfs_vnode_t** out, uint32_t ino) {
           vn->inode.dnum[3]);
     vn->fs = fs;
     vn->ino = ino;
-    vn->vnode.refcount = 1;
-    vn->vnode.ops = &minfs_ops;
+    vn->refcount = 1;
+    vn->ops = &minfs_ops;
     list_add_tail(fs->vnode_hash + bucket, &vn->hashnode);
 
     *out = vn;
@@ -280,13 +280,13 @@ mx_status_t minfs_mount(vnode_t** out, bcache_t* bc) {
         return -1;
     }
 
-    minfs_vnode_t* vn;
+    vnode_t* vn;
     if (minfs_get_vnode(fs, &vn, 1)) {
         error("minfs: cannot find inode 1\n");
         return -1;
     }
 
-    *out = &vn->vnode;
+    *out = vn;
     return NO_ERROR;
 }
 

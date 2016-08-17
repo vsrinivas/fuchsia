@@ -17,6 +17,10 @@
 
 #include "vfs.h"
 
+struct vnode {
+    VNODE_BASE_FIELDS
+};
+
 typedef struct iostate {
     vnode_t* vn;
     vdircookie_t dircookie;
@@ -214,12 +218,6 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         default:
             return ERR_INVALID_ARGS;
         }
-        if (vn->flags & V_FLAG_DEVICE) {
-            if (n > attr.size) {
-                // devices may not seek past the end
-                return ERR_INVALID_ARGS;
-            }
-        }
         ios->io_off = n;
         msg->arg2.off = ios->io_off;
         return NO_ERROR;
@@ -261,6 +259,10 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     default:
         return ERR_NOT_SUPPORTED;
     }
+}
+
+void vn_acquire(vnode_t* vn) {
+    vn->refcount++;
 }
 
 void vn_release(vnode_t* vn) {

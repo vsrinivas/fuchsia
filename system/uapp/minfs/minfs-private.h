@@ -11,9 +11,6 @@
 #define MINFS_BUCKETS (1 << MINFS_HASH_BITS)
 
 typedef struct minfs minfs_t;
-typedef struct minfs_vnode minfs_vnode_t;
-
-extern vnode_ops_t minfs_ops;
 
 struct minfs {
     bitmap_t block_map;
@@ -22,39 +19,42 @@ struct minfs {
     uint32_t abmblks;
     uint32_t ibmblks;
     minfs_info_t info;
-    vfs_t vfs;
     list_node_t vnode_hash[MINFS_BUCKETS];
 };
 
-struct minfs_vnode {
-    list_node_t hashnode;
-    minfs_t* fs;
-    uint32_t ino;
+struct vnode {
+    // ops, flags, refcount
+    VNODE_BASE_FIELDS
 
-    vnode_t vnode;
+    minfs_t* fs;
+
+    uint32_t ino;
+    uint32_t reserved;
+
+    list_node_t hashnode;
+
     minfs_inode_t inode;
 };
+
+extern vnode_ops_t minfs_ops;
 
 #define INO_HASH(ino) fnv_1a_tiny(ino, MINFS_HASH_BITS)
 
 // instantiate a vnode from an inode
 // the inode must exist in the file system
-mx_status_t minfs_get_vnode(minfs_t* fs, minfs_vnode_t** out, uint32_t ino);
+mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino);
 
 // instantiate a vnode with a new inode
-mx_status_t minfs_new_vnode(minfs_t* fs, minfs_vnode_t** out, uint32_t type);
+mx_status_t minfs_new_vnode(minfs_t* fs, vnode_t** out, uint32_t type);
 
 // delete the inode backing a vnode
-mx_status_t minfs_del_vnode(minfs_vnode_t* vn);
+mx_status_t minfs_del_vnode(vnode_t* vn);
 
 // allocate a new data block and bcache_get_zero() it
 block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** bdata);
 
 // write the inode data of this vnode to disk
-void minfs_sync_vnode(minfs_vnode_t* vn);
-
-#define to_minfs(_vfs) (containerof(_vfs, minfs_t, vfs))
-#define to_minvn(_vn) (containerof(_vn, minfs_vnode_t, vnode))
+void minfs_sync_vnode(vnode_t* vn);
 
 mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max);
 void minfs_dump_info(minfs_info_t* info);
@@ -69,6 +69,6 @@ mx_status_t minfs_check(bcache_t* bc);
 
 mx_status_t minfs_mount(vnode_t** root_out, bcache_t* bc);
 
-mx_status_t minfs_get_vnode(minfs_t* fs, minfs_vnode_t** out, uint32_t ino);
+mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino);
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent);

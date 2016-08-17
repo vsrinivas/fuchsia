@@ -483,6 +483,10 @@ void vfs_init(vnode_t* root) {
     mxr_thread_create(vfs_watchdog, NULL, "vfs-watchdog", &t);
 }
 
+void vn_acquire(vnode_t* vn) {
+    vn->refcount++;
+}
+
 void vn_release(vnode_t* vn) {
     if (vn->refcount == 0) {
         printf("vn %p: ref underflow\n", vn);
