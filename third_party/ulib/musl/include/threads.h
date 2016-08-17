@@ -40,7 +40,9 @@ enum {
 #define ONCE_FLAG_INIT 0
 
 int thrd_create(thrd_t*, thrd_start_t, void*);
+#ifdef _ALL_SOURCE
 int thrd_create_with_name(thrd_t*, thrd_start_t, void*, const char* name);
+#endif
 _Noreturn void thrd_exit(int);
 
 int thrd_detach(thrd_t);
