@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -10,7 +11,6 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/completion.h>
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <system/listnode.h>
@@ -81,7 +81,7 @@ typedef struct ahci_device {
     mxr_thread_t* irq_thread;
 
     mxr_thread_t* worker_thread;
-    mxr_completion_t worker_completion;
+    completion_t worker_completion;
 
     ahci_port_t ports[AHCI_MAX_PORTS];
 } ahci_device_t;
@@ -241,7 +241,7 @@ static void ahci_port_complete_txn(ahci_device_t* dev, int nr, mx_status_t statu
     port->running = NULL;
     txn->ops->complete(txn, status, txn->length); // TODO read out the actual bytes transferred
     // hit the worker thread to do the next txn
-    mxr_completion_signal(&dev->worker_completion);
+    completion_signal(&dev->worker_completion);
 }
 
 static mx_status_t ahci_port_initialize(ahci_port_t* port) {
@@ -350,7 +350,7 @@ void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     mxr_mutex_unlock(&port->lock);
 
     // hit the worker thread
-    mxr_completion_signal(&device->worker_completion);
+    completion_signal(&device->worker_completion);
 }
 
 // worker thread (for iotxn queue):
@@ -379,8 +379,8 @@ static int ahci_worker_thread(void* arg) {
             ahci_port_do_txn(port, containerof(node, iotxn_t, node));
         }
         // wait here until more commands are queued, or a port becomes idle
-        mxr_completion_wait(&dev->worker_completion, MX_TIME_INFINITE);
-        mxr_completion_reset(&dev->worker_completion);
+        completion_wait(&dev->worker_completion, MX_TIME_INFINITE);
+        completion_reset(&dev->worker_completion);
     }
     return 0;
 }
@@ -588,7 +588,7 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
 
     // start worker thread (for iotxn queue)
-    device->worker_completion = MXR_COMPLETION_INIT;
+    device->worker_completion = COMPLETION_INIT;
     status = mxr_thread_create(ahci_worker_thread, device, "ahci-worker", &device->worker_thread);
     if (status < 0) {
         xprintf("ahci: error %d in worker thread create\n", status);

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/usb-device.h>
 #include <hw/usb.h>
-#include <runtime/completion.h>
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <system/listnode.h>
@@ -72,7 +72,7 @@ typedef struct {
     // the last signals we reported
     mx_signals_t signals;
     mxr_mutex_t mutex;
-    mxr_completion_t read_completion;
+    completion_t read_completion;
 
 
 } ums_t;
@@ -930,8 +930,8 @@ static mx_protocol_device_t ums_device_proto = {
 static void ums_iotxn_wait_cb(iotxn_t* txn) {
     DEBUG_PRINT(("UMS:iotxn_wait_cb called\n"));
     ums_pdata_t* pdata = ums_iotxn_pdata(txn);
-    mxr_completion_signal(pdata->waiter);
-    mxr_completion_reset(pdata->waiter);
+    completion_signal(pdata->waiter);
+    completion_reset(pdata->waiter);
     return;
 }
 
@@ -955,7 +955,7 @@ static int ums_start_thread(void* arg) {
     txn->complete_cb = ums_iotxn_wait_cb;
     ums_iotxn_queue(&msd->device, txn);
     // ums_read_capacity10(&(msd->device), 0);
-    mxr_completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
+    completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
     DEBUG_PRINT(("UMS:in start thread, got past wait\n"));
 
     uint32_t read_capacity[MS_READ_CAPACITY10_TRANSFER_LENGTH];
@@ -973,7 +973,7 @@ static int ums_start_thread(void* arg) {
         pdata2->waiter = &(msd->read_completion);
         txn2->complete_cb = ums_iotxn_wait_cb;
         ums_iotxn_queue(&msd->device, txn2);
-        mxr_completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
+        completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
         char read_capacity2[MS_READ_CAPACITY16_TRANSFER_LENGTH];
         txn2->ops->copyfrom(txn2, (void*)read_capacity2, MS_READ_CAPACITY16_TRANSFER_LENGTH, 0);
         //FIXME whats the best way to unpack a uint64 from start of the buffer and then a 32 directly after that?
@@ -1080,7 +1080,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
 
     msd->busy = false;
     msd->tag = 8;
-    msd->read_completion = MXR_COMPLETION_INIT;
+    msd->read_completion = COMPLETION_INIT;
     mxr_thread_t* thread;
     mxr_thread_create(ums_start_thread, msd, "ums_start_thread", &thread);
     mxr_thread_detach(thread);

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -9,7 +10,6 @@
 
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/completion.h>
 #include <runtime/mutex.h>
 #include <sys/param.h>
 #include <assert.h>
@@ -122,7 +122,7 @@ static mx_protocol_device_t gpt_proto = {
 };
 
 static void gpt_read_sync_complete(iotxn_t* txn) {
-    mxr_completion_signal((mxr_completion_t*)txn->context);
+    completion_signal((completion_t*)txn->context);
 }
 
 static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
@@ -145,7 +145,7 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
         xprintf("gpt: error %d allocating iotxn\n", status);
     }
 
-    mxr_completion_t completion = MXR_COMPLETION_INIT;
+    completion_t completion = COMPLETION_INIT;
 
     // read partition table header synchronously (LBA1)
     txn->opcode = IOTXN_OP_READ;
@@ -155,7 +155,7 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     txn->context = &completion;
 
     iotxn_queue(dev, txn);
-    mxr_completion_wait(&completion, MX_TIME_INFINITE);
+    completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {
         xprintf("gpt: error %d reading partition header\n", txn->status);
@@ -187,9 +187,9 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     txn->complete_cb = gpt_read_sync_complete;
     txn->context = &completion;
 
-    mxr_completion_reset(&completion);
+    completion_reset(&completion);
     iotxn_queue(dev, txn);
-    mxr_completion_wait(&completion, MX_TIME_INFINITE);
+    completion_wait(&completion, MX_TIME_INFINITE);
 
     for (unsigned i = 0; i < header.entries_count; i++) {
         if (i * header.entries_sz > txn->actual) break;

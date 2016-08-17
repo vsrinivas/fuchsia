@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/completion.h>
+
 #include <magenta/syscalls.h>
-#include <runtime/completion.h>
-#include <runtime/status.h>
 #include <runtime/thread.h>
 #include <unittest/unittest.h>
 #include <stddef.h>
@@ -12,13 +12,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-static mxr_completion_t completion = MXR_COMPLETION_INIT;
+static completion_t completion = COMPLETION_INIT;
 
 #define ITERATIONS 64
 
 static int completion_thread_wait(void* arg) {
     for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
-        mx_status_t status = mxr_completion_wait(&completion, MX_TIME_INFINITE);
+        mx_status_t status = completion_wait(&completion, MX_TIME_INFINITE);
         ASSERT_EQ(status, NO_ERROR, "completion wait failed!");
     }
 
@@ -27,9 +27,9 @@ static int completion_thread_wait(void* arg) {
 
 static int completion_thread_signal(void* arg) {
     for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
-        mxr_completion_reset(&completion);
+        completion_reset(&completion);
         mx_nanosleep(10000);
-        mxr_completion_signal(&completion);
+        completion_signal(&completion);
     }
 
     return 0;
@@ -38,10 +38,10 @@ static int completion_thread_signal(void* arg) {
 static bool test_initializer(void) {
     BEGIN_TEST;
     // Let's not accidentally break .bss'd completions
-    static mxr_completion_t static_completion;
-    mxr_completion_t completion = MXR_COMPLETION_INIT;
-    int status = memcmp(&static_completion, &completion, sizeof(mxr_completion_t));
-    EXPECT_EQ(status, 0, "mxr_completion's initializer is not all zeroes");
+    static completion_t static_completion;
+    completion_t completion = COMPLETION_INIT;
+    int status = memcmp(&static_completion, &completion, sizeof(completion_t));
+    EXPECT_EQ(status, 0, "completion's initializer is not all zeroes");
     END_TEST;
 }
 
@@ -66,20 +66,20 @@ static bool test_completions(void) {
 static bool test_timeout(void) {
     BEGIN_TEST;
     mx_time_t timeout = 0u;
-    mxr_completion_t completion = MXR_COMPLETION_INIT;
+    completion_t completion = COMPLETION_INIT;
     for (int iteration = 0; iteration < 1000; iteration++) {
         timeout += 2000u;
-        mx_status_t status = mxr_completion_wait(&completion, timeout);
+        mx_status_t status = completion_wait(&completion, timeout);
         ASSERT_EQ(status, ERR_TIMED_OUT, "wait returned spuriously!");
     }
     END_TEST;
 }
 
-BEGIN_TEST_CASE(mxr_completion_tests)
+BEGIN_TEST_CASE(completion_tests)
 RUN_TEST(test_initializer)
 RUN_TEST(test_completions)
 RUN_TEST(test_timeout)
-END_TEST_CASE(mxr_completion_tests)
+END_TEST_CASE(completion_tests)
 
 #ifndef BUILD_COMBINED_TESTS
 int main(int argc, char** argv) {

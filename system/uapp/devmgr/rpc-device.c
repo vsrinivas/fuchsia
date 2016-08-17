@@ -12,6 +12,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/iotxn.h>
@@ -25,7 +26,6 @@
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
 
-#include <runtime/completion.h>
 #include <runtime/mutex.h>
 
 #include <system/listnode.h>
@@ -135,7 +135,7 @@ mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
 #define TXN_SIZE 0x2000 // max size of rio is 8k
 
 static void sync_io_complete(iotxn_t* txn) {
-    mxr_completion_signal((mxr_completion_t*)txn->context);
+    completion_signal((completion_t*)txn->context);
 }
 
 static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t count, mx_off_t off) {
@@ -147,7 +147,7 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
 
     assert(count <= TXN_SIZE);
 
-    mxr_completion_t completion = MXR_COMPLETION_INIT;
+    completion_t completion = COMPLETION_INIT;
 
     txn->opcode = opcode;
     txn->offset = off;
@@ -161,7 +161,7 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
     }
 
     dev->ops->iotxn_queue(dev, txn);
-    mxr_completion_wait(&completion, MX_TIME_INFINITE);
+    completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {
         txn->ops->release(txn);

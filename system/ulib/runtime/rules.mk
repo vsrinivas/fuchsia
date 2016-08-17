@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/completion.c \
     $(LOCAL_DIR)/message.c \
     $(LOCAL_DIR)/mutex.c \
     $(LOCAL_DIR)/once.c \

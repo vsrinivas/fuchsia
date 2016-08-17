@@ -11,9 +11,9 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/completion.c \
 
-MODULE_NAME := mxr-completion-test
+MODULE_NAME := ddk-completion-test
 
-MODULE_STATIC_LIBS := ulib/runtime
+MODULE_STATIC_LIBS := ulib/ddk ulib/runtime
 MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
