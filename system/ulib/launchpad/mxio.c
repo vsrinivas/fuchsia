@@ -5,7 +5,7 @@
 // <unistd.h> declares environ only under _GNU_SOURCE.
 #define _GNU_SOURCE
 
-#include <launchpad/launchpad.h>
+#include "launch.h"
 #include <launchpad/vmo.h>
 
 #include <magenta/syscalls.h>
@@ -65,7 +65,6 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
     if (name == NULL)
         name = filename;
 
-    mx_handle_t proc = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_create(name, &lp);
     if (status == NO_ERROR) {
         status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
@@ -81,12 +80,9 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
             status = add_all_mxio(lp);
         if (status == NO_ERROR)
             status = launchpad_add_handles(lp, hnds_count, handles, ids);
-        if (status == NO_ERROR)
-            proc = launchpad_start(lp);
     }
-    launchpad_destroy(lp);
 
-    return status == NO_ERROR ? proc : status;
+    return finish_launch(lp, status, handles, hnds_count);
 }
 
 mx_handle_t launchpad_launch_mxio(const char* name,

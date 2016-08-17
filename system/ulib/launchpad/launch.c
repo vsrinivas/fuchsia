@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <launchpad/launchpad.h>
+#include "launch.h"
 #include <launchpad/vmo.h>
+#include <magenta/syscalls.h>
 
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
@@ -16,7 +17,6 @@ mx_handle_t launchpad_launch(const char* name,
     if (name == NULL)
         name = filename;
 
-    mx_handle_t proc = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_create(name, &lp);
     if (status == NO_ERROR) {
         status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
@@ -28,10 +28,22 @@ mx_handle_t launchpad_launch(const char* name,
             status = launchpad_environ(lp, envp);
         if (status == NO_ERROR)
             status = launchpad_add_handles(lp, hnds_count, handles, ids);
-        if (status == NO_ERROR)
-            proc = launchpad_start(lp);
+    }
+
+    return finish_launch(lp, status, handles, hnds_count);
+}
+
+mx_handle_t finish_launch(launchpad_t* lp, mx_status_t status,
+                          mx_handle_t handles[], uint32_t handle_count) {
+    mx_handle_t proc;
+    if (status == NO_ERROR) {
+        proc = launchpad_start(lp);
+    } else {
+        // Consume the handles on error.
+        for (uint32_t i = 0; i < handle_count; ++i)
+            mx_handle_close(handles[i]);
+        proc = status;
     }
     launchpad_destroy(lp);
-
-    return status == NO_ERROR ? proc : status;
+    return proc;
 }

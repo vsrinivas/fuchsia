@@ -166,8 +166,8 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 // launchpad_arguments, launchpad_environ, launchpad_add_handles,
 // launchpad_start, launchpad_destroy.
 //
-// Returns the process handle on success, giving ownership to the
-// caller; or an error code on failure.
+// Returns the process handle on success, giving ownership to the caller;
+// or an error code on failure.  In all cases, the handles are consumed.
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
                              const char* const* envp,
@@ -182,13 +182,14 @@ mx_handle_t launchpad_launch(const char* name,
 // launchpad_environ, launchpad_clone_mxio_root, launchpad_clone_fd,
 // launchpad_start, launchpad_destroy.
 //
-// Returns the process handle on success, giving ownership to the
-// caller; or an error code on failure.
+// Returns the process handle on success, giving ownership to the caller;
+// or an error code on failure.
 mx_handle_t launchpad_launch_mxio(const char* name,
                                   int argc, const char* const* argv);
 
 // Same as launchpad_launch_mxio, but also passes additional handles
 // like launchpad_launch, and uses envp rather than global environ.
+// In all cases, the handles are consumed.
 mx_handle_t launchpad_launch_mxio_etc(const char* name,
                                       int argc, const char* const* argv,
                                       const char* const* envp,
