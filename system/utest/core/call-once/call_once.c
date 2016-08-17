@@ -69,7 +69,9 @@ RUN_TEST(call_once_main_thread_test);
 RUN_TEST(call_once_two_thread_test);
 END_TEST_CASE(call_once_tests)
 
+#ifndef BUILD_COMBINED_TESTS
 int main(int argc, char** argv) {
     bool success = unittest_run_all_tests(argc, argv);
     return success ? 0 : -1;
 }
+#endif
