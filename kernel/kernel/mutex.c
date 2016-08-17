@@ -46,6 +46,11 @@ void mutex_destroy(mutex_t *m)
 #endif
 
     THREAD_LOCK(state);
+#if LK_DEBUGLEVEL > 0
+    if (unlikely(m->count > 1 || (m->count == 1 && get_current_thread() != m->holder)))
+        panic("mutex_destroy: thread %p (%s) tried to destroy mutex %p\n",
+              get_current_thread(), get_current_thread()->name, m);
+#endif
     m->magic = 0;
     m->count = 0;
     wait_queue_destroy(&m->wait, true);
@@ -59,11 +64,6 @@ status_t mutex_acquire_timeout_internal(mutex_t *m, lk_time_t timeout)
         if (unlikely(ret < NO_ERROR)) {
             /* if the acquisition timed out, back out the acquire and exit */
             if (likely(ret == ERR_TIMED_OUT)) {
-                /*
-                 * race: the mutex may have been destroyed after the timeout,
-                 * but before we got scheduled again which makes messing with the
-                 * count variable dangerous.
-                 */
                 m->count--;
             }
             /* if there was a general error, it may have been destroyed out from
