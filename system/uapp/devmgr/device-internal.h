@@ -12,6 +12,7 @@
 #define DEV_FLAG_REMOTE         0x00000008  // device lives in a remote devhost
 #define DEV_FLAG_BUSY           0x00000010  // device being created
 #define DEV_FLAG_INSTANCE       0x00000020  // this device was created-on-open
+#define DEV_FLAG_REBIND         0x00000040  // this device is being rebound
 
 mx_status_t device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags);
 mx_status_t device_close(mx_device_t* dev);

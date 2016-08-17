@@ -68,6 +68,14 @@ mx_status_t device_remove(mx_device_t* dev) {
     return r;
 }
 
+mx_status_t device_rebind(mx_device_t* dev) {
+    mx_status_t r;
+    DM_LOCK();
+    r = devmgr_device_rebind(dev);
+    DM_UNLOCK();
+    return r;
+}
+
 void device_set_bindable(mx_device_t* dev, bool bindable) {
     DM_LOCK();
     devmgr_device_set_bindable(dev, bindable);

@@ -287,9 +287,34 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     if (status < 0) {
         return status;
     }
+    if (list_in_list(&dev->unode)) {
+        list_delete(&dev->unode);
+    }
     dev->owner = &remote_driver;
     dev_ref_acquire(dev);
     return NO_ERROR;
+}
+
+static void devmgr_device_probe_all(mx_device_t* dev) {
+    if ((dev->flags & DEV_FLAG_UNBINDABLE) == 0) {
+        if (!device_is_bound(dev)) {
+            // first, look for a specific driver binary for this device
+            if (devmgr_driver_probe(dev) < 0) {
+                // if not found, probe all built-in drivers
+                mx_driver_t* drv = NULL;
+                list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
+                    if (devmgr_device_probe(dev, drv) == NO_ERROR) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // if no driver is bound, add the device to the unmatched list
+        if (!device_is_bound(dev)) {
+            list_add_tail(&unmatched_device_list, &dev->unode);
+        }
+    }
 }
 
 mx_status_t devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
@@ -432,25 +457,8 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     }
 #endif
 
-    if ((dev->flags & DEV_FLAG_UNBINDABLE) == 0) {
-        if (!device_is_bound(dev)) {
-            // first, look for a specific driver binary for this device
-            if (devmgr_driver_probe(dev) < 0) {
-                // if not found, probe all built-in drivers
-                mx_driver_t* drv = NULL;
-                list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-                    if (devmgr_device_probe(dev, drv) == NO_ERROR) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        // if no driver is bound, add the device to the unmatched list
-        if (!device_is_bound(dev)) {
-            list_add_tail(&unmatched_device_list, &dev->unode);
-        }
-    }
+    // probe the device
+    devmgr_device_probe_all(dev);
 
     dev->flags &= (~DEV_FLAG_BUSY);
     return NO_ERROR;
@@ -520,6 +528,34 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
     // this must be last, since it may result in the device structure being destroyed
     dev_ref_release(dev);
 
+    return NO_ERROR;
+}
+
+mx_status_t devmgr_device_rebind(mx_device_t* dev) {
+    dev->flags |= DEV_FLAG_REBIND;
+
+    // remove children
+    mx_device_t* child = NULL;
+    mx_device_t* temp = NULL;
+    list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
+        devmgr_device_remove(child);
+    }
+
+    // detach from owner and call unbind, downref
+    if (dev->owner) {
+        if (dev->owner->ops.unbind) {
+            DM_UNLOCK();
+            dev->owner->ops.unbind(dev->owner, dev);
+            DM_LOCK();
+        }
+        dev->owner = NULL;
+        dev_ref_release(dev);
+    }
+
+    // probe the device again to bind
+    devmgr_device_probe_all(dev);
+
+    dev->flags &= ~DEV_FLAG_REBIND;
     return NO_ERROR;
 }
 
