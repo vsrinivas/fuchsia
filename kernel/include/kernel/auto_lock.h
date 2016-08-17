@@ -18,6 +18,12 @@ public:
     AutoLock(mutex_t& mutex)
         :   AutoLock(&mutex) {}
 
+    AutoLock(Mutex& mutex)
+        :   AutoLock(mutex.GetInternal()) {}
+
+    AutoLock(Mutex* mutex)
+        :   AutoLock(mutex->GetInternal()) {}
+
     ~AutoLock() {
         release();
     }

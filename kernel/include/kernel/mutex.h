@@ -59,5 +59,45 @@ static bool is_mutex_held(const mutex_t *m)
 }
 
 __END_CDECLS;
+
+#ifdef __cplusplus
+class Mutex {
+public:
+    constexpr Mutex() : mutex_(MUTEX_INITIAL_VALUE(mutex_)) { }
+
+    ~Mutex() {
+        mutex_destroy(&mutex_);
+    }
+
+    void Acquire() {
+        mutex_acquire(&mutex_);
+    }
+
+    status_t AcquireTimeout(lk_time_t timeout) {
+        return mutex_acquire_timeout(&mutex_, timeout);
+    }
+
+    void Release() {
+        mutex_release(&mutex_);
+    }
+
+    bool IsHeld() const {
+        return is_mutex_held(&mutex_);
+    }
+
+    mutex_t* GetInternal() {
+        return &mutex_;
+    }
+
+    // suppress default constructors
+    Mutex(const Mutex& am) = delete;
+    Mutex& operator=(const Mutex& am) = delete;
+    Mutex(Mutex&& c) = delete;
+    Mutex& operator=(Mutex&& c) = delete;
+private:
+    mutex_t mutex_;
+};
+#endif
+
 #endif
 
