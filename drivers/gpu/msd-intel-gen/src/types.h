@@ -17,4 +17,8 @@ enum EngineCommandStreamerId {
     RENDER_COMMAND_STREAMER,
 };
 
+enum MemoryDomain {
+    MEMORY_DOMAIN_CPU,
+};
+
 #endif // TYPES_H
