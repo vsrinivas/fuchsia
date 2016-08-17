@@ -117,7 +117,7 @@ void mutex_release_internal(mutex_t *m, bool reschedule)
 /**
  * @brief  Release mutex
  */
-status_t mutex_release(mutex_t *m)
+void mutex_release(mutex_t *m)
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
 
@@ -131,6 +131,5 @@ status_t mutex_release(mutex_t *m)
     THREAD_LOCK(state);
     mutex_release_internal(m, true);
     THREAD_UNLOCK(state);
-    return NO_ERROR;
 }
 

@@ -41,15 +41,15 @@ typedef struct mutex {
 void mutex_init(mutex_t *);
 void mutex_destroy(mutex_t *);
 status_t mutex_acquire_timeout(mutex_t *, lk_time_t); /* try to acquire the mutex with a timeout value */
-status_t mutex_release(mutex_t *);
+void mutex_release(mutex_t *);
 
 /* Internal functions for use by condvar implementation. */
 status_t mutex_acquire_timeout_internal(mutex_t *m, lk_time_t timeout);
 void mutex_release_internal(mutex_t *m, bool reschedule);
 
-static inline status_t mutex_acquire(mutex_t *m)
+static inline void mutex_acquire(mutex_t *m)
 {
-    return mutex_acquire_timeout(m, INFINITE_TIME);
+    mutex_acquire_timeout(m, INFINITE_TIME);
 }
 
 /* does the current thread hold the mutex? */
