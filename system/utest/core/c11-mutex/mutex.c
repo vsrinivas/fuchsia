@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define _ALL_SOURCE // For MTX_INIT.
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 #include <runtime/mutex.h>
@@ -12,7 +13,7 @@
 #include <string.h>
 #include <threads.h>
 
-static mtx_t mutex;
+static mtx_t mutex = MTX_INIT;
 
 static void xlog(const char* str) {
     uint64_t now = mx_current_time();
@@ -153,10 +154,16 @@ static bool test_try_mutexes(void) {
     END_TEST;
 }
 
-static bool test_mtx_size(void) {
-    // musl internally wires up mtx_t to be the same size as mxr_mutex_t.
+static bool test_static_initializer(void) {
     BEGIN_TEST;
-    ASSERT_EQ(sizeof(mtx_t), sizeof(mxr_mutex_t), "mtx_t has an unexpected size!");
+
+    static mtx_t static_mutex = MTX_INIT;
+    mtx_t auto_mutex;
+    memset(&auto_mutex, 0xae, sizeof(auto_mutex));
+    mtx_init(&auto_mutex, mtx_plain);
+
+    EXPECT_BYTES_EQ((const uint8_t*)&static_mutex, (const uint8_t*)&auto_mutex, sizeof(mtx_t), "MTX_INIT and mtx_init differ!");
+
     END_TEST;
 }
 
@@ -164,7 +171,6 @@ BEGIN_TEST_CASE(mtx_tests)
 RUN_TEST(test_initializer)
 RUN_TEST(test_mutexes)
 RUN_TEST(test_try_mutexes)
-RUN_TEST(test_mtx_size)
 END_TEST_CASE(mtx_tests)
 
 #ifndef BUILD_COMBINED_TESTS

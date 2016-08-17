@@ -37,6 +37,10 @@ enum {
     mtx_timed = 2,
 };
 
+#ifdef _ALL_SOURCE
+#define MTX_INIT {{0}}
+#endif
+
 #define ONCE_FLAG_INIT 0
 
 int thrd_create(thrd_t*, thrd_start_t, void*);
