@@ -24,8 +24,8 @@ void* __expand_heap(size_t* pn) {
     // Start the heap at 1TB if we're 64-bit
     static void *next_base = (void*)(1ULL << 40);
 #else
-    // Start the heap at 1GB if we're 32-bit
-    static void *next_base = (void*)(1ULL << 30);
+    // Start the heap at 512MB if we're 32-bit
+    static void *next_base = (void*)(1ULL << 29);
 #endif
 
     if (n > SIZE_MAX / 2 - PAGE_SIZE) {
