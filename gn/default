@@ -3,6 +3,7 @@
         "apps",
         "boringssl",
         "cmdutils",
+        "dropbear",
         "dart",
         "flutter",
         "fonts",

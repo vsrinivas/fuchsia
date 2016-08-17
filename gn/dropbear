@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//third_party/dropbear"
+    ],
+    "binaries": [
+        {
+            "binary": "dropbear",
+            "bootfs_path": "bin/dropbear"
+        }
+    ]
+}
