@@ -82,9 +82,11 @@ struct ContainerPtrTraits<T*> {
         ptr = nullptr;
     }
 
-    static bool IsSentinel(const PtrType& ptr) {
+    static constexpr bool IsSentinel(const PtrType& ptr) {
         return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
     }
+
+    static constexpr bool IsValid(const PtrType& ptr) { return ptr && !IsSentinel(ptr); }
 };
 
 // Traits for managing unique pointers.
@@ -120,6 +122,8 @@ struct ContainerPtrTraits<::utils::unique_ptr<T, Deleter>> {
         return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
     }
 
+    static constexpr bool IsValid(const PtrType& ptr) { return IsValid(ptr.get()); }
+    static constexpr bool IsValid(RawPtrType ptr)     { return ptr && !IsSentinel(ptr); }
 };
 
 // Traits for managing ref_counted pointers.
@@ -155,6 +159,9 @@ struct ContainerPtrTraits<::utils::RefPtr<T>> {
     static constexpr bool IsSentinel(RawPtrType ptr) {
         return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
     }
+
+    static constexpr bool IsValid(const PtrType& ptr) { return IsValid(ptr.get()); }
+    static constexpr bool IsValid(RawPtrType ptr)     { return ptr && !IsSentinel(ptr); }
 };
 
 }  // namespace internal
