@@ -39,11 +39,21 @@ public:
     }
 
     CoreType GetNext() {
-        bool bit = core_ & 1u;
-        core_ = static_cast<CoreType>(core_ >> 1u);
-        if (bit)
-            core_ ^= generator;
-        return core_;
+        CoreType ret  = 0u;
+        CoreType flag = 1u;
+
+        for (size_t i = 0; i < (sizeof(size_t) << 3); ++i) {
+            bool bit = core_ & 1u;
+            core_ = static_cast<CoreType>(core_ >> 1u);
+            if (bit) {
+                core_ ^= generator;
+                ret   |= flag;
+            }
+
+            flag = static_cast<CoreType>(flag << 1u);
+        }
+
+        return ret;
     }
 
 private:
