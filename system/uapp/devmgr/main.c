@@ -113,15 +113,15 @@ int main(int argc, char** argv) {
     while (*e) {
         printf("cmdline: %s\n", *e++);
     }
+    // Until crashlogging exists, ensure we see load info
+    // from the linker in the log
+    putenv(strdup("LD_DEBUG=1"));
+
     devmgr_init(false);
     devmgr_vfs_init();
 
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
-
-    // Until crashlogging exists, ensure we see load info
-    // from the linker in the log
-    putenv(strdup("LD_DEBUG=1"));
 
     mxr_thread_t* t;
     if ((mxr_thread_create(console_starter, NULL, "console-starter", &t)) == 0) {
