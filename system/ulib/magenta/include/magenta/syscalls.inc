@@ -112,8 +112,6 @@ MAGENTA_SYSCALL_DEF(4, 4, 85, mx_status_t, process_vm_protect, mx_handle_t proc_
 
 // Synchronization
 MAGENTA_SYSCALL_DEF(1, 1, 90, mx_handle_t, event_create, uint32_t options)
-MAGENTA_SYSCALL_DEF(1, 1, 91, mx_status_t, event_signal, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(1, 1, 92, mx_status_t, event_reset, mx_handle_t handle)
 MAGENTA_SYSCALL_DEF(3, 4, 93, mx_status_t, futex_wait, int* value_ptr, int current_value, mx_time_t timeout)
 MAGENTA_SYSCALL_DEF(2, 2, 94, mx_status_t, futex_wake, int* value_ptr, uint32_t count)
 MAGENTA_SYSCALL_DEF(5, 5, 95, mx_status_t, futex_requeue, int* wake_ptr, uint32_t wake_count,

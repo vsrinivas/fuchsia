@@ -30,13 +30,14 @@ typedef uint32_t mx_signals_t;
 #define MX_SIGNAL_READABLE        ((mx_signals_t)1u << 0)
 #define MX_SIGNAL_WRITABLE        ((mx_signals_t)1u << 1)
 #define MX_SIGNAL_PEER_CLOSED     ((mx_signals_t)1u << 2)
-#define MX_SIGNAL_SIGNALED        ((mx_signals_t)1u << 3)
 
-#define MX_SIGNAL_USER0           ((mx_signals_t)1u << 4)
-#define MX_SIGNAL_USER1           ((mx_signals_t)1u << 5)
-#define MX_SIGNAL_USER2           ((mx_signals_t)1u << 6)
-#define MX_SIGNAL_USER3           ((mx_signals_t)1u << 7)
-#define MX_SIGNAL_USER_ALL        ((mx_signals_t)15u << 4)
+#define MX_SIGNAL_SIGNALED        MX_SIGNAL_SIGNAL0
+#define MX_SIGNAL_SIGNAL0         ((mx_signals_t)1u << 3)
+#define MX_SIGNAL_SIGNAL1         ((mx_signals_t)1u << 4)
+#define MX_SIGNAL_SIGNAL2         ((mx_signals_t)1u << 5)
+#define MX_SIGNAL_SIGNAL3         ((mx_signals_t)1u << 6)
+#define MX_SIGNAL_SIGNAL4         ((mx_signals_t)1u << 7)
+#define MX_SIGNAL_SIGNAL_ALL      ((mx_signals_t)31u << 3)
 
 typedef struct {
     mx_signals_t satisfied;

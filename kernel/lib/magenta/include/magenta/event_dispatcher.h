@@ -20,14 +20,8 @@ public:
 
     ~EventDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_EVENT; }
-    EventDispatcher* get_event_dispatcher() final { return this; }
-
 
     virtual StateTracker* get_state_tracker() final { return &state_tracker_; }
-
-    status_t SignalEvent();
-
-    status_t ResetEvent();
 
     status_t UserSignal(uint32_t set_mask, uint32_t clear_mask) final;
 

@@ -130,9 +130,9 @@ static inline mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_i
 // State change functions
 // Used by driver to indicate if there's data available to read,
 // or room to write, or an error condition.
-#define DEV_STATE_READABLE MX_SIGNAL_USER0
-#define DEV_STATE_WRITABLE MX_SIGNAL_USER1
-#define DEV_STATE_ERROR MX_SIGNAL_USER2
+#define DEV_STATE_READABLE MX_SIGNAL_SIGNAL0
+#define DEV_STATE_WRITABLE MX_SIGNAL_SIGNAL1
+#define DEV_STATE_ERROR MX_SIGNAL_SIGNAL2
 
 static inline void device_state_set(mx_device_t* dev, mx_signals_t stateflag) {
     mx_object_signal(dev->event, stateflag, 0);

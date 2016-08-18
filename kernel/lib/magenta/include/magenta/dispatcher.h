@@ -23,7 +23,6 @@ class StateTracker;
 // The Kernel Objects. Keep this list sorted.
 class DataPipeConsumerDispatcher;
 class DataPipeProducerDispatcher;
-class EventDispatcher;
 class InterruptDispatcher;
 class IoMappingDispatcher;
 class IOPortDispatcher;
@@ -55,15 +54,13 @@ public:
         return 0ULL;
     }
 
+    // Note that |set_mask| and |clear_mask| are *not* previously validated. Also note that they may
+    // "overlap", and that |clear_mask| should be cleared and then |set_mask| set.
     virtual status_t UserSignal(uint32_t set_mask, uint32_t clear_mask) {
         return ERR_NOT_SUPPORTED;
     }
 
     virtual StateTracker* get_state_tracker() {
-        return nullptr;
-    }
-
-    virtual EventDispatcher* get_event_dispatcher() {
         return nullptr;
     }
 

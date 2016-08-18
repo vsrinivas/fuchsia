@@ -851,53 +851,8 @@ mx_handle_t sys_event_create(uint32_t options) {
     return hv;
 }
 
-mx_status_t sys_event_signal(mx_handle_t handle_value) {
-    LTRACEF("handle %u\n", handle_value);
-
-    auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return BadHandle();
-
-    auto event = dispatcher->get_event_dispatcher();
-    if (!event)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
-
-    return event->SignalEvent();
-}
-
-mx_status_t sys_event_reset(mx_handle_t handle_value) {
-    LTRACEF("handle %u\n", handle_value);
-
-    auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return BadHandle();
-
-    auto event = dispatcher->get_event_dispatcher();
-    if (!event)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
-
-    return event->ResetEvent();
-}
-
 mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t set_mask, uint32_t clear_mask) {
     LTRACEF("handle %u\n", handle_value);
-
-    if ((set_mask & MX_SIGNAL_USER_ALL) != set_mask)
-        return ERR_INVALID_ARGS;
-    if ((clear_mask & MX_SIGNAL_USER_ALL) != clear_mask)
-        return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;

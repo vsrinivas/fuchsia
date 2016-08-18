@@ -30,21 +30,14 @@ status_t EventDispatcher::Create(uint32_t options, utils::RefPtr<Dispatcher>* di
 }
 
 EventDispatcher::EventDispatcher(uint32_t options)
-        : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED | MX_SIGNAL_USER_ALL}) {}
+        : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNAL_ALL}) {}
 
 EventDispatcher::~EventDispatcher() {}
 
-status_t EventDispatcher::SignalEvent() {
-    state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
-    return NO_ERROR;
-}
-
-status_t EventDispatcher::ResetEvent() {
-    state_tracker_.UpdateSatisfied(0, MX_SIGNAL_SIGNALED);
-    return NO_ERROR;
-}
-
 status_t EventDispatcher::UserSignal(uint32_t set_mask, uint32_t clear_mask) {
+    if ((set_mask & ~MX_SIGNAL_SIGNAL_ALL) || (clear_mask & ~MX_SIGNAL_SIGNAL_ALL))
+        return ERR_INVALID_ARGS;
+
     state_tracker_.UpdateSatisfied(set_mask, clear_mask);
     return NO_ERROR;
 }
