@@ -10,6 +10,19 @@
 //#define TRACE 1
 #include "xhci-debug.h"
 
+//#define TRACE_TRBS 1
+#ifdef TRACE_TRBS
+static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
+    int index = trb - ring->start;
+    uint32_t* ptr = (uint32_t *)trb;
+    uint64_t paddr = xhci_virt_to_phys(xhci, (mx_vaddr_t)trb);
+
+    printf("trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
+}
+#else
+#define print_trb(xhci, ring, trb) do {} while (0)
+#endif
+
 int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* data,
                         uint16_t length, int endpoint, int direction, xhci_transfer_context_t* context) {
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n", slot_id, setup, endpoint, length);
@@ -47,8 +60,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
         uint32_t control_bits = (length == 0 ? XFER_TRB_TRT_NONE : (direction == USB_DIR_IN ? XFER_TRB_TRT_IN : XFER_TRB_TRT_OUT));
         control_bits |= XFER_TRB_IDT; // immediate data flag
         trb_set_control(trb, TRB_TRANSFER_SETUP, control_bits);
-        xprintf("setup trb: %08X %08X %08X %08X\n", ((uint32_t*)trb)[0], ((uint32_t*)trb)[1],
-                ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
+        print_trb(xhci, ring, trb);
         xhci_increment_ring(xhci, ring);
     }
 
@@ -77,13 +89,10 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
                 // use TRB_TRANSFER_DATA for first data packet on setup requests
                 control_bits |= (direction == USB_DIR_IN ? XFER_TRB_DIR_IN : XFER_TRB_DIR_OUT);
                 trb_set_control(trb, TRB_TRANSFER_DATA, control_bits);
-                xprintf("data trb: %08X %08X %08X %08X\n", ((uint32_t*)trb)[0], ((uint32_t*)trb)[1],
-                        ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
             } else {
                 trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
-                xprintf("normal trb: %08X %08X %08X %08X\n", ((uint32_t*)trb)[0], ((uint32_t*)trb)[1],
-                        ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
             }
+            print_trb(xhci, ring, trb);
             xhci_increment_ring(xhci, ring);
         }
 
@@ -93,8 +102,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
         XHCI_WRITE64(&trb->ptr, (uint64_t)context);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
-        xprintf("event data trb: %08X %08X %08X %08X\n", ((uint32_t*)trb)[0], ((uint32_t*)trb)[1],
-                ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
+        print_trb(xhci, ring, trb);
         xhci_increment_ring(xhci, ring);
     }
 
@@ -108,8 +116,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
             control_bits |= TRB_CHAIN;
         }
         trb_set_control(trb, TRB_TRANSFER_STATUS, control_bits);
-        xprintf("status trb: %08X %08X %08X %08X\n", ((uint32_t*)trb)[0], ((uint32_t*)trb)[1],
-                ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
+        print_trb(xhci, ring, trb);
         xhci_increment_ring(xhci, ring);
 
         if (length == 0) {
@@ -119,8 +126,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
             XHCI_WRITE64(&trb->ptr, (uint64_t)context);
             XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
             trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
-            xprintf("event data trb: %08X %08X %08X %08X\n", ((uint32_t*)trb)[0], ((uint32_t*)trb)[1],
-                    ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
+            print_trb(xhci, ring, trb);
             xhci_increment_ring(xhci, ring);
         }
     }
@@ -186,17 +192,28 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
     }
 
-    if (!context || !context->transfer_ring) {
-        return;
+    mx_status_t result;
+    switch (cc) {
+        case TRB_CC_SUCCESS:
+        case TRB_CC_SHORT_PACKET:
+            result = length;
+            break;
+        case TRB_CC_STOPPED:
+        case TRB_CC_STOPPED_LENGTH_INVALID:
+        case TRB_CC_STOPPED_SHORT_PACKET:
+            // for these errors the transfer ring may no longer exist,
+            // so it is not safe to attempt to retrieve our transfer context
+            xprintf("ignoring transfer event with cc: %d\n", cc);
+            return;
+        default:
+            // FIXME - how do we report stalls, etc?
+            result = ERR_CHANNEL_CLOSED;
+            break;
     }
 
-    mx_status_t result;
-    if (cc == TRB_CC_SUCCESS || cc == TRB_CC_SHORT_PACKET) {
-        result = length;
-    } else {
-        xprintf("*** transfer error cc: %d\n", cc);
-        // FIXME - appropriate error number
-        result = -1;
+    if (!context) {
+        printf("unable to find transfer context in xhci_handle_transfer_event\n");
+        return;
     }
 
     xhci_transfer_ring_t* ring = context->transfer_ring;
