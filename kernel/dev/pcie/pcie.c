@@ -14,6 +14,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
 #include <list.h>
+#include <lk/init.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
@@ -1136,6 +1137,18 @@ finished:
     MUTEX_RELEASE(bus_drv, bus_rescan_lock);
 }
 
+static void pcie_early_init_hook(uint level) {
+    pcie_bus_driver_state_t* bus_drv = &g_drv_state;
+
+    mutex_init(&bus_drv->bus_topology_lock);
+    mutex_init(&bus_drv->bus_rescan_lock);
+    mutex_init(&bus_drv->legacy_irq_list_lock);
+
+    spin_lock_init (&bus_drv->legacy_irq_handler_lock);
+    list_initialize(&bus_drv->legacy_irq_list);
+}
+LK_INIT_HOOK(pcie_early_init, pcie_early_init_hook, LK_INIT_LEVEL_PLATFORM - 1);
+
 status_t pcie_init(const pcie_init_info_t* init_info) {
     pcie_bus_driver_state_t* bus_drv = &g_drv_state;
     status_t status = NO_ERROR;
@@ -1154,9 +1167,6 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
     status = pcie_init_irqs(bus_drv, init_info);
     if (status != NO_ERROR)
         return status;
-
-    mutex_init(&bus_drv->bus_topology_lock);
-    mutex_init(&bus_drv->bus_rescan_lock);
 
     bus_drv->mmio_lo.io   = init_info->mmio_window_lo;
     bus_drv->mmio_hi.io   = init_info->mmio_window_hi;

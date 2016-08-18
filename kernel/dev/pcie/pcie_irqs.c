@@ -1022,9 +1022,6 @@ status_t pcie_init_irqs(pcie_bus_driver_state_t* bus_drv, const pcie_init_info_t
         return ERR_INVALID_ARGS;
     }
 
-    spin_lock_init (&bus_drv->legacy_irq_handler_lock);
-    mutex_init     (&bus_drv->legacy_irq_list_lock);
-    list_initialize(&bus_drv->legacy_irq_list);
     bus_drv->legacy_irq_swizzle   = init_info->legacy_irq_swizzle;
     bus_drv->alloc_msi_block      = init_info->alloc_msi_block;
     bus_drv->free_msi_block       = init_info->free_msi_block;
