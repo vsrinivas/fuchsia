@@ -31,3 +31,9 @@ typedef struct ums_pdata {
 } ums_pdata_t;
 
 #define ums_iotxn_pdata(txn) iotxn_pdata(txn, ums_pdata_t)
+
+// read flag enums
+#define USE_READ10                  1
+#define USE_READ12                  2
+#define USE_READ16                  3
+
