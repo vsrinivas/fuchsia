@@ -2,8 +2,7 @@
     "labels": [
         "//dart/runtime/bin:dart_no_observatory",
         "//dart/runtime/bin:run_vm_tests",
-        "//dart/runtime/bin:run_vm_tests_fuchsia",
-        "//dart/runtime/bin:fuchsia_vm_tests"
+        "//dart/runtime/bin:run_vm_tests_fuchsia"
     ],
     "binaries": [
         {
@@ -21,10 +20,6 @@
         {
             "binary": "run_vm_tests_fuchsia",
             "bootfs_path": "bin/run_dart_vm_tests"
-        },
-        {
-            "binary": "fuchsia_vm_tests.txt",
-            "bootfs_path": "apps/dart_vm_tests_list.txt"
         }
     ]
 }
