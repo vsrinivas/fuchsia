@@ -14,14 +14,8 @@
 #include <stdlib.h>
 #include <system/listnode.h>
 
-//#define TRACE 1
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
+#define MXDEBUG 0
+#include <mxio/debug.h>
 
 typedef struct usb_hub {
     // the device we are publishing

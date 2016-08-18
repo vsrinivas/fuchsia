@@ -11,8 +11,8 @@
 
 #include "xhci.h"
 
-//#define TRACE 1
-#include "xhci-debug.h"
+#define MXDEBUG 0
+#include <mxio/debug.h>
 
 uint32_t xhci_endpoint_index(usb_endpoint_descriptor_t* ep) {
     uint32_t index = 2 * (ep->bEndpointAddress & ~USB_ENDPOINT_DIR_MASK);

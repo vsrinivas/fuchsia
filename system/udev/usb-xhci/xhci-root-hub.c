@@ -6,8 +6,8 @@
 
 #include "xhci.h"
 
-//#define TRACE 1
-#include "xhci-debug.h"
+#define MXDEBUG 0
+#include <mxio/debug.h>
 
 static void xhci_reset_port(xhci_t* xhci, int port) {
     volatile uint32_t* portsc = &xhci->op_regs->port_regs[port - 1].portsc;
