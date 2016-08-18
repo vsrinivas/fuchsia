@@ -103,6 +103,46 @@ static void usb_hub_port_reset(usb_hub_t* hub, int port) {
     }
 }
 
+static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
+    if (status->wPortChange & USB_PORT_CONNECTION) {
+        if (status->wPortStatus & USB_PORT_CONNECTION) {
+            usb_hub_port_connected(hub, port);
+        } else {
+            usb_hub_port_disconnected(hub, port);
+        }
+        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
+    }
+    if (status->wPortChange & USB_PORT_ENABLE) {
+        xprintf("USB_PORT_ENABLE\n");
+        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port);
+    }
+    if (status->wPortChange & USB_PORT_SUSPEND) {
+        xprintf("USB_PORT_SUSPEND\n");
+        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port);
+    }
+    if (status->wPortChange & USB_PORT_OVER_CURRENT) {
+        xprintf("USB_PORT_OVER_CURRENT\n");
+        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
+    }
+    if (status->wPortChange & USB_PORT_RESET) {
+        if (!(status->wPortStatus & USB_PORT_RESET)) {
+            usb_hub_port_reset(hub, port);
+        }
+        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
+    }
+}
+
+static mx_status_t usb_hub_release(mx_device_t* device) {
+    usb_hub_t* hub = get_hub(device);
+    hub->device_protocol->free_request(hub->usb_device, hub->status_request);
+    free(hub);
+    return NO_ERROR;
+}
+
+static mx_protocol_device_t usb_hub_device_proto = {
+    .release = usb_hub_release,
+};
+
 static int usb_hub_thread(void* arg) {
     usb_hub_t* hub = (usb_hub_t*)arg;
     usb_request_t* request = hub->status_request;
@@ -129,7 +169,11 @@ static int usb_hub_thread(void* arg) {
     }
 
     device_set_bindable(&hub->device, false);
-    device_add(&hub->device, hub->usb_device);
+    result = device_add(&hub->device, hub->usb_device);
+    if (result != NO_ERROR) {
+        usb_hub_release(&hub->device);
+        return result;
+    }
 
     queue_status_request(hub);
 
@@ -156,32 +200,7 @@ static int usb_hub_thread(void* arg) {
                 usb_port_status_t status;
                 mx_status_t result = usb_hub_get_port_status(hub, port, &status);
                 if (result == NO_ERROR) {
-                    if (status.wPortChange & USB_PORT_CONNECTION) {
-                        if (status.wPortStatus & USB_PORT_CONNECTION) {
-                            usb_hub_port_connected(hub, port);
-                        } else {
-                            usb_hub_port_disconnected(hub, port);
-                        }
-                        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
-                    }
-                    if (status.wPortChange & USB_PORT_ENABLE) {
-                        xprintf("USB_PORT_ENABLE\n");
-                        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port);
-                    }
-                    if (status.wPortChange & USB_PORT_SUSPEND) {
-                        xprintf("USB_PORT_SUSPEND\n");
-                        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port);
-                    }
-                    if (status.wPortChange & USB_PORT_OVER_CURRENT) {
-                        xprintf("USB_PORT_OVER_CURRENT\n");
-                        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
-                    }
-                    if (status.wPortChange & USB_PORT_RESET) {
-                        if (!(status.wPortStatus & USB_PORT_RESET)) {
-                            usb_hub_port_reset(hub, port);
-                        }
-                        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
-                    }
+                    usb_hub_handle_port_status(hub, port, &status);
                 }
             }
             port++;
@@ -198,19 +217,9 @@ static int usb_hub_thread(void* arg) {
     return NO_ERROR;
 }
 
-static mx_status_t usb_hub_release(mx_device_t* device) {
-    usb_hub_t* hub = get_hub(device);
-    hub->device_protocol->free_request(hub->usb_device, hub->status_request);
-    free(hub);
-    return NO_ERROR;
-}
-
-static mx_protocol_device_t usb_hub_device_proto = {
-    .release = usb_hub_release,
-};
-
 static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_device_protocol_t* device_protocol = NULL;
+    usb_request_t* req = NULL;
 
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&device_protocol)) {
         return ERR_NOT_SUPPORTED;
@@ -241,26 +250,36 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
 
     status = device_init(&hub->device, driver, "usb-hub", &usb_hub_device_proto);
     if (status != NO_ERROR) {
-        free(hub);
-        return status;
+        goto fail;
     }
 
     hub->usb_device = device;
     hub->device_protocol = device_protocol;
     hub->hub_speed = device_protocol->get_speed(device);
 
-    usb_request_t* req = device_protocol->alloc_request(device, endp, endp->maxpacketsize);
-    if (!req)
-        return ERR_NO_MEMORY;
+    req = device_protocol->alloc_request(device, endp, endp->maxpacketsize);
+    if (!req) {
+        status = ERR_NO_MEMORY;
+        goto fail;
+    }
     req->complete_cb = usb_hub_interrupt_complete;
     req->client_data = hub;
     hub->status_request = req;
 
     mxr_thread_t* thread;
-    mxr_thread_create(usb_hub_thread, hub, "usb_hub_thread", &thread);
+    status = mxr_thread_create(usb_hub_thread, hub, "usb_hub_thread", &thread);
+    if (status != NO_ERROR) {
+        goto fail;
+    }
     mxr_thread_detach(thread);
-
     return NO_ERROR;
+
+fail:
+    if (req) {
+        device_protocol->free_request(device, req);
+    }
+    free(hub);
+    return status;
 }
 
 static mx_status_t usb_hub_unbind(mx_driver_t* drv, mx_device_t* dev) {
