@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/usb-device.h>
 #include <hw/usb.h>
+#include <ddk/completion.h>
 #include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <system/listnode.h>
@@ -23,11 +23,9 @@
 #include "ums-hw.h"
 #include "usb-mass-storage.h"
 
-#define READ_REQ_COUNT 8
-#define WRITE_REQ_COUNT 4
-#define INTR_REQ_COUNT 4
+#define READ_REQ_COUNT 3
+#define WRITE_REQ_COUNT 3
 #define USB_BUF_SIZE 0x8000
-#define INTR_REQ_SIZE 8
 #define MSD_COMMAND_BLOCK_WRAPPER_SIZE 31
 #define MSD_COMMAND_STATUS_WRAPPER_SIZE 13
 
@@ -196,9 +194,10 @@ static mx_status_t ums_send_cbw(ums_t* msd, uint32_t tag, uint32_t transfer_leng
     return ums_queue_request(msd, request);
 }
 
-static mx_status_t ums_recv_csw(ums_t* msd) {
+static mx_status_t ums_queue_csw(ums_t* msd) {
     list_node_t* csw_node = list_remove_head(&msd->free_csw_reqs);
     if (!csw_node) {
+        DEBUG_PRINT(("UMS:error, no CSW reqs left\n"));
         return ERR_NOT_ENOUGH_BUFFER;
     }
     usb_request_t* csw_request = containerof(csw_node, usb_request_t, node);
@@ -212,6 +211,7 @@ static mx_status_t ums_queue_read(ums_t* msd, uint16_t transfer_length) {
     // read request sense response
     list_node_t* read_node = list_remove_head(&msd->free_read_reqs);
     if (!read_node) {
+        DEBUG_PRINT(("UMS:error, no read reqs left\n"));
         return ERR_NOT_ENOUGH_BUFFER;
     }
     usb_request_t* read_request = containerof(read_node, usb_request_t, node);
@@ -222,6 +222,7 @@ static mx_status_t ums_queue_read(ums_t* msd, uint16_t transfer_length) {
 static mx_status_t ums_queue_write(ums_t* msd, uint16_t transfer_length, iotxn_t* txn) {
     list_node_t* write_node = list_remove_head(&msd->free_write_reqs);
     if (!write_node) {
+        DEBUG_PRINT(("UMS:error, no write reqs left\n"));
         return ERR_NOT_ENOUGH_BUFFER;
     }
     usb_request_t* write_request = containerof(write_node, usb_request_t, node);
@@ -332,6 +333,7 @@ static void ums_csw_complete(usb_request_t* csw_request) {
         DEBUG_PRINT(("UMS: length is %08x\n", length));
 
         curr_txn->ops->copyto(curr_txn, read_request->buffer, length, 0);
+        list_add_tail(&msd->free_read_reqs, node);
     }
     curr_txn->ops->complete(curr_txn, NO_ERROR, curr_txn->length);
     mxr_mutex_unlock(&msd->mutex);
@@ -375,7 +377,7 @@ mx_status_t ums_inquiry(mx_device_t* device, uint8_t lun,  uint32_t tag) {
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -398,7 +400,7 @@ mx_status_t ums_test_unit_ready(mx_device_t* device, uint8_t lun,  uint32_t tag)
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -430,7 +432,7 @@ mx_status_t ums_request_sense(mx_device_t* device, uint8_t lun,  uint32_t tag) {
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -462,7 +464,7 @@ mx_status_t ums_read_format_capacities(mx_device_t* device, uint8_t lun,  uint32
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -492,7 +494,7 @@ mx_status_t ums_read_capacity10(mx_device_t* device, uint8_t lun,  uint32_t tag)
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -524,7 +526,7 @@ mx_status_t ums_read_capacity16(mx_device_t* device, uint8_t lun,  uint32_t tag)
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -559,7 +561,7 @@ mx_status_t ums_read10(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t 
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -595,7 +597,7 @@ mx_status_t ums_read12(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t 
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -631,7 +633,7 @@ mx_status_t ums_read16(mx_device_t* device, uint8_t lun, uint32_t tag, uint64_t 
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -669,7 +671,7 @@ mx_status_t ums_write10(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -707,7 +709,7 @@ mx_status_t ums_write12(mx_device_t* device, uint8_t lun, uint32_t tag, uint32_t
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -745,7 +747,7 @@ mx_status_t ums_write16(mx_device_t* device, uint8_t lun, uint32_t tag, uint64_t
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -769,7 +771,7 @@ mx_status_t ums_toggle_removable(mx_device_t* device, uint8_t lun, uint32_t tag,
     }
 
     // recieve CSW
-    status = ums_recv_csw(msd);
+    status = ums_queue_csw(msd);
 out:
     mxr_mutex_unlock(&msd->mutex);
     return status;
@@ -870,6 +872,7 @@ static void ums_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         // TODO: figure out how to make these prints print out bigger stuff
         DEBUG_PRINT(("UMS: starting read. read len: %d; read offset: %d both in bytes\n", (uint8_t)txn->length, (uint8_t)txn->offset));
     }else if (txn->opcode == IOTXN_OP_WRITE){
+
         // TODO: deal with lun
         uint8_t lun = 0;
         DEBUG_PRINT(("UMS: starting write. txn->length = 0x%02x num_blocks = 0x%02x\n", (uint32_t)txn->length, (uint32_t)txn->length/block_size));
@@ -960,7 +963,8 @@ static int ums_start_thread(void* arg) {
 
     uint32_t read_capacity[MS_READ_CAPACITY10_TRANSFER_LENGTH];
     txn->ops->copyfrom(txn, (void*)read_capacity, MS_READ_CAPACITY10_TRANSFER_LENGTH, 0);
-    msd->total_blocks = betoh32(read_capacity[0]);
+    // +1 because this returns the address of the final block, and blocks are zero indexed
+    msd->total_blocks = betoh32(read_capacity[0]) + 1;
     msd->block_size = betoh32(read_capacity[1]);
     msd->read_flag = USE_READ10;
     if (read_capacity[0] == 0xFFFFFFFF) {
@@ -982,7 +986,7 @@ static int ums_start_thread(void* arg) {
         msd->read_flag = USE_READ12;
     }
     DEBUG_PRINT(("UMS:block size is: 0x%08x\n", msd->block_size));
-    // DEBUG_PRINT(("UMS:total blocks is: 0x%08x\n", msd->total_blocks));
+    DEBUG_PRINT(("UMS:total blocks is: %ld\n", (long)msd->total_blocks));
     msd->device.protocol_id = MX_PROTOCOL_BLOCK;
     device_add(&msd->device, msd->udev);
     DEBUG_PRINT(("UMS:reached end of start thread\n"));
