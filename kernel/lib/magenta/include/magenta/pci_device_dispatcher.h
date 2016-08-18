@@ -45,7 +45,7 @@ public:
         PciDeviceWrapper& operator=(const PciDeviceWrapper &) = delete;
         ~PciDeviceWrapper();
 
-        mutex_t              cp_ref_lock_;
+        Mutex                cp_ref_lock_;
         CachePolicyRef       cp_refs_[PCIE_MAX_BAR_REGS];
         pcie_device_state_t* device_;
         bool                 claimed_ = false;
@@ -90,7 +90,7 @@ private:
     // held for the duration of most of our dispatcher API implementations.  It
     // is unsafe to ever attempt to acquire this lock during a callback from the
     // PCI bus driver level.
-    mutex_t lock_;
+    Mutex lock_;
     utils::RefPtr<PciDeviceWrapper> device_;
 
     uint irqs_supported_ = 0;

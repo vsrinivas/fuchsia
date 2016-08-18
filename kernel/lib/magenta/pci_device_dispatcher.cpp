@@ -56,8 +56,6 @@ status_t PciDeviceDispatcher::Create(uint32_t                   index,
 PciDeviceDispatcher::PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
                                          mx_pcie_get_nth_info_t* out_info)
     : device_(device) {
-    mutex_init(&lock_);
-
     const pcie_device_state_t& dev = *device_->device();
     const pcie_config_t* cfg = dev.cfg;
     DEBUG_ASSERT(cfg);
@@ -227,7 +225,6 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
 PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(pcie_device_state_t* device)
     : device_(device) {
     DEBUG_ASSERT(device_);
-    mutex_init(&cp_ref_lock_);
     memset(&cp_refs_, 0, sizeof(cp_refs_));
 }
 
