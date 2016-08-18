@@ -208,6 +208,18 @@ inline RefPtr<T> AdoptRef(T* ptr) {
   return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
 }
 
+// Constructs a |RefPtr<T>| from a plain pointer (to an object that must
+// have already been adoped).  Avoids having to spell out the full type name.
+//
+//   Foo* foo = ...;
+//   auto foo_ref = Ref(foo);
+//
+// (|foo_ref| will be of type |RefPtr<Foo>|.)
+template <typename T>
+inline RefPtr<T> Ref(T* ptr) {
+  return RefPtr<T>(ptr);
+}
+
 // Creates an intrusively reference counted |T|, producing a |RefPtr<T>| (and
 // performing the required adoption). Use like:
 //
