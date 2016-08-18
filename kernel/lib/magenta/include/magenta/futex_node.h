@@ -35,7 +35,7 @@ public:
 
     // block the current thread, releasing the given mutex while the thread
     // is blocked
-    status_t BlockThread(mutex_t* mutex, mx_time_t timeout);
+    status_t BlockThread(Mutex* mutex, mx_time_t timeout);
 
     // wakes the list of threads starting with node |head|
     static void WakeThreads(FutexNode* head);

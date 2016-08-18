@@ -16,14 +16,10 @@
 
 FutexContext::FutexContext() {
     LTRACE_ENTRY;
-
-    mutex_init(&lock_);
 }
 
 FutexContext::~FutexContext() {
     LTRACE_ENTRY;
-
-    mutex_destroy(&lock_);
 }
 
 status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t timeout) {

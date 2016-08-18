@@ -53,7 +53,7 @@ private:
     void QueueNodesLocked(FutexNode* head);
 
     // protects futex_table_
-    mutex_t lock_;
+    Mutex lock_;
 
     // Hash table for futexes in this context.
     // Key is futex address, value is the FutexNode for the head of futex's blocked thread list.

@@ -56,10 +56,10 @@ FutexNode* FutexNode::RemoveFromHead(uint32_t count, uintptr_t old_hash_key,
     return node;
 }
 
-status_t FutexNode::BlockThread(mutex_t* mutex, mx_time_t timeout) {
+status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t timeout) {
     lk_time_t t = mx_time_to_lk(timeout);
 
-    return cond_wait_timeout(&condvar_, mutex, t);
+    return cond_wait_timeout(&condvar_, mutex->GetInternal(), t);
 }
 
 void FutexNode::WakeThreads(FutexNode* head) {
