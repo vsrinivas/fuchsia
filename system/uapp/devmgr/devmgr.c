@@ -150,36 +150,8 @@ mxio_dispatcher_t* devmgr_rio_dispatcher;
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     switch (id) {
-    case MX_PROTOCOL_DEVICE:
-        return "device";
-    case MX_PROTOCOL_MISC:
-        return "misc";
-    case MX_PROTOCOL_BLOCK:
-        return "block";
-    case MX_PROTOCOL_CONSOLE:
-        return "console";
-    case MX_PROTOCOL_DISPLAY:
-        return "display";
-    case MX_PROTOCOL_INPUT:
-        return "input";
-    case MX_PROTOCOL_PCI:
-        return "pci";
-    case MX_PROTOCOL_SATA:
-        return "sata";
-    case MX_PROTOCOL_USB_DEVICE:
-        return "usb-device";
-    case MX_PROTOCOL_USB_HCI:
-        return "usb-hci";
-    case MX_PROTOCOL_USB_BUS:
-        return "usb-bus";
-    case MX_PROTOCOL_USB_HUB:
-        return "usb-hub";
-    case MX_PROTOCOL_ETHERNET:
-        return "ethernet";
-    case MX_PROTOCOL_BLUETOOTH_HCI:
-        return "bluetooth-hci";
-    case MX_PROTOCOL_TPM:
-        return "tpm";
+#define DDK_PROTOCOL_DEF(tag, val, name) case val: return name;
+#include <ddk/protodefs.h>
     default:
         snprintf(buf, PNMAX, "proto-%08x", id);
         return buf;

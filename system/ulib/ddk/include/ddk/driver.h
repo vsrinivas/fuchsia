@@ -83,21 +83,10 @@ static inline void panic(void) {
 }
 
 // Protocol Identifiers
-#define MX_PROTOCOL_DEVICE 'pDEV'
-#define MX_PROTOCOL_MISC 'pMSC'
-#define MX_PROTOCOL_BLOCK 'pBLK'
-#define MX_PROTOCOL_CONSOLE 'pCON'
-#define MX_PROTOCOL_DISPLAY 'pDIS'
-#define MX_PROTOCOL_INPUT 'fINP'
-#define MX_PROTOCOL_PCI 'pPCI'
-#define MX_PROTOCOL_SATA 'pSAT'
-#define MX_PROTOCOL_USB_HCI 'pHCI'
-#define MX_PROTOCOL_USB_BUS 'pUBS'
-#define MX_PROTOCOL_USB_HUB 'pHUB'
-#define MX_PROTOCOL_USB_DEVICE 'pUDV'
-#define MX_PROTOCOL_ETHERNET 'pETH'
-#define MX_PROTOCOL_BLUETOOTH_HCI 'pBTH'
-#define MX_PROTOCOL_TPM 'pTPM'
+#define DDK_PROTOCOL_DEF(tag, val, name) MX_PROTOCOL_##tag = val,
+enum {
+#include <ddk/protodefs.h>
+};
 
 #define BUILTIN_DRIVER       \
     __ALIGNED(sizeof(void*)) \
