@@ -7,7 +7,7 @@
 #include "register_defs.h"
 #include <vector>
 
-Gtt::Gtt(Gtt::Owner* owner) : owner_(owner) { DASSERT(owner_); }
+Gtt::Gtt(Gtt::Owner* owner) : AddressSpace(ADDRESS_SPACE_GTT), owner_(owner) { DASSERT(owner_); }
 
 Gtt::~Gtt() { DLOG("Gtt dtor"); }
 
@@ -166,7 +166,7 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     DASSERT((start & (PAGE_SIZE - 1)) == 0);
     DASSERT((length & (PAGE_SIZE - 1)) == 0);
 
-    const uint64_t max_entries = size() >> PAGE_SHIFT;
+    const uint64_t max_entries = Size() >> PAGE_SHIFT;
     uint64_t first_entry = start >> PAGE_SHIFT;
     uint64_t num_entries = length >> PAGE_SHIFT;
 

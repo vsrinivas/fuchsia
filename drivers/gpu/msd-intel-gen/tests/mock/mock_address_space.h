@@ -1,0 +1,52 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef MOCK_ADDRESS_SPACE_H
+#define MOCK_ADDRESS_SPACE_H
+
+#include "address_space.h"
+#include "magma_util/macros.h"
+#include <map>
+
+class MockAddressSpace : public AddressSpace {
+public:
+    MockAddressSpace(uint64_t base, uint64_t size)
+        : AddressSpace(ADDRESS_SPACE_GTT), size_(size), next_addr_(base)
+    {
+    }
+
+    uint64_t Size() const override { return size_; }
+
+    bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
+    bool Free(uint64_t addr) override;
+    bool Clear(uint64_t addr) override;
+    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type) override;
+
+    bool is_allocated(uint64_t addr)
+    {
+        auto iter = allocations_.find(addr);
+        DASSERT(iter != allocations_.end());
+        return iter->second.allocated;
+    }
+
+    bool is_clear(uint64_t addr)
+    {
+        auto iter = allocations_.find(addr);
+        DASSERT(iter != allocations_.end());
+        return iter->second.clear;
+    }
+
+private:
+    uint64_t size_;
+    uint64_t next_addr_;
+
+    struct Allocation {
+        uint64_t size;
+        bool allocated;
+        bool clear;
+    };
+    std::map<uint64_t, Allocation> allocations_;
+};
+
+#endif // MOCK_ADDRESS_SPACE_H

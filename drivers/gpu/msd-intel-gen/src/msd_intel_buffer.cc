@@ -30,6 +30,83 @@ std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(uint64_t size)
     return std::unique_ptr<MsdIntelBuffer>(new MsdIntelBuffer(std::move(platform_buf)));
 }
 
+bool MsdIntelBuffer::MapGpu(AddressSpace* address_space, uint32_t alignment)
+{
+    DASSERT(!mapping_);
+
+    if (alignment == 0)
+        alignment = PAGE_SIZE;
+
+    uint64_t align_pow2;
+    if (!magma::get_pow2(alignment, &align_pow2))
+        return DRETF(false, "alignment is not power of 2");
+
+    // Casting to uint8_t below
+    DASSERT((align_pow2 & ~0xFF) == 0);
+
+    uint64_t size = platform_buffer()->size();
+    if (size > address_space->Size())
+        return DRETF(false, "buffer size greater than address space size");
+
+    if (!platform_buffer()->PinPages())
+        return DRETF(false, "failed to pin pages");
+
+    gpu_addr_t gpu_addr;
+    if (!address_space->Alloc(size, static_cast<uint8_t>(align_pow2), &gpu_addr))
+        return DRETF(false, "failed to allocate gpu address");
+
+    DLOG("allocated gpu_addr 0x%llx", gpu_addr);
+
+    if (!address_space->Insert(gpu_addr, platform_buffer(), caching_type()))
+        return DRETF(false, "failed to insert into address_space");
+
+    mapping_ = std::unique_ptr<GpuMapping>(new GpuMapping{address_space->id(), gpu_addr});
+
+    return true;
+}
+
+bool MsdIntelBuffer::UnmapGpu(AddressSpace* address_space)
+{
+    DASSERT(mapping_);
+    DASSERT(mapping_->address_space_id == address_space->id());
+
+    bool ret = true;
+
+    if (!platform_buffer()->UnpinPages()) {
+        DLOG("failed to unpin pages");
+        ret = false;
+    }
+
+    if (!address_space->Clear(mapping_->addr)) {
+        DLOG("failed to clear address");
+        ret = false;
+    }
+
+    if (!address_space->Free(mapping_->addr)) {
+        DLOG("failed to free address");
+        ret = false;
+    }
+
+    mapping_.release();
+
+    return DRETF(ret, "error occured while unpinning");
+}
+
+bool MsdIntelBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* addr_out)
+{
+    DASSERT(addr_out);
+
+    if (!mapping_)
+        return DRETF(false, "no mapping");
+
+    if (mapping_->address_space_id != address_space_id)
+        return DRETF(false, "incorrect address space");
+
+    *addr_out = mapping_->addr;
+
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)

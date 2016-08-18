@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MSD_BUFFER_H
-#define MSD_BUFFER_H
+#ifndef MSD_INTEL_BUFFER_H
+#define MSD_INTEL_BUFFER_H
 
+#include "address_space.h"
 #include "magma_util/macros.h"
 #include "magma_util/platform_buffer.h"
 #include "msd.h"
 #include "types.h"
+#include <map>
 #include <memory>
 
 class MsdIntelBuffer : public msd_buffer {
@@ -33,10 +35,25 @@ public:
 
     uint32_t write_domain() { return write_domain_bitfield_; }
 
+    bool MapGpu(AddressSpace* address_space, uint32_t alignment);
+    bool UnmapGpu(AddressSpace* address_space);
+
+    bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* addr_out);
+
 private:
     MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
+    CachingType caching_type() { return caching_type_; }
+
+    struct GpuMapping {
+        AddressSpaceId address_space_id;
+        gpu_addr_t addr;
+    };
+
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
+    std::unique_ptr<GpuMapping> mapping_;
+
+    CachingType caching_type_ = CACHING_LLC;
 
     uint32_t read_domains_bitfield_ = MEMORY_DOMAIN_CPU;
     uint32_t write_domain_bitfield_ = MEMORY_DOMAIN_CPU;
@@ -44,4 +61,4 @@ private:
     static const uint32_t kMagic = 0x62756666; // "buff"
 };
 
-#endif // MSD_BUFFER_H
+#endif // MSD_INTEL_BUFFER_H

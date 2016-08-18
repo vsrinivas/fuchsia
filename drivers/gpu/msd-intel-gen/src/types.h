@@ -7,10 +7,17 @@
 
 typedef uint64_t gen_pte_t;
 
+using gpu_addr_t = uint64_t;
+
 enum CachingType {
     CACHING_NONE,
     CACHING_LLC,
     CACHING_WRITE_THROUGH,
+};
+
+enum AddressSpaceId {
+    ADDRESS_SPACE_GTT,
+    ADDRESS_SPACE_PPGTT,
 };
 
 enum EngineCommandStreamerId {

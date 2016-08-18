@@ -22,7 +22,7 @@ public:
     Gtt(Gtt::Owner* owner);
     ~Gtt();
 
-    uint64_t size() const { return size_; }
+    uint64_t Size() const override { return size_; }
 
     bool Init(uint64_t gtt_size, magma::PlatformDevice* platform_device);
 

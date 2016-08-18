@@ -20,6 +20,7 @@ source_set("unit_tests") {
     "$magma_build_root/tests/mock:mmio",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$msd_intel_gen_build_root/src",
+    "$msd_intel_gen_build_root/tests/mock",
     "//third_party/gtest",
   ]
 }
