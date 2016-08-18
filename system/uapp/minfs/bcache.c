@@ -67,7 +67,7 @@ struct bcache {
     uint32_t blockmax;
 };
 
-#define bno_hash(bno) fnv_1a_tiny(bno, MINFS_HASH_BITS)
+#define bno_hash(bno) fnv1a_tiny(bno, MINFS_HASH_BITS)
 
 static_assert((1<<MINFS_HASH_BITS) == MINFS_BUCKETS,
               "minfs constants disagree");

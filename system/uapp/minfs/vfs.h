@@ -8,6 +8,7 @@
 #include <magenta/types.h>
 #include <mxio/vfs.h>
 
+#include "misc.h"
 
 // VFS Helpers (vfs.c)
 
@@ -105,24 +106,6 @@ void bcache_put(bcache_t* bc, block_t* blk, uint32_t flags);
 mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, uint32_t len);
 
 uint32_t bcache_max_block(bcache_t* bc);
-
-
-// FNV-1a Hash
-// http://www.isthe.com/chongo/tech/comp/fnv/index.html
-
-#define FNV32_PRIME (16777619)
-#define FNV32_OFFSET_BASIS (2166136261)
-
-// for bits 0..15
-static inline uint32_t fnv_1a_tiny(uint32_t n, uint32_t bits) {
-    uint32_t hash = FNV32_OFFSET_BASIS;
-    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME; n >>= 8;
-    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME; n >>= 8;
-    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME; n >>= 8;
-    hash = (hash ^ n) * FNV32_PRIME;
-    return ((hash >> bits) ^ hash) & ((1 << bits) - 1);
-}
-
 
 // General Utilities
 

@@ -38,7 +38,7 @@ struct vnode {
 
 extern vnode_ops_t minfs_ops;
 
-#define INO_HASH(ino) fnv_1a_tiny(ino, MINFS_HASH_BITS)
+#define INO_HASH(ino) fnv1a_tiny(ino, MINFS_HASH_BITS)
 
 // instantiate a vnode from an inode
 // the inode must exist in the file system
