@@ -67,14 +67,14 @@ clean::
 	@echo Clean
 	@rm -fr out
 
-SIZE := 1024M
+FS := out/fs@1024M
 
 mkfs: out/minfs
-	$(EXTRA) out/minfs $(TESTARGS) create out/fs $(SIZE)
+	$(EXTRA) out/minfs $(FS) $(TESTARGS) create
 
 fsck: out/minfs
-	$(EXTRA) out/minfs $(TESTARGS) check out/fs $(SIZE)
+	$(EXTRA) out/minfs $(FS) $(TESTARGS) check
 
 test: out/minfs
-	$(EXTRA) out/minfs $(TESTARGS) test out/fs $(SIZE)
+	$(EXTRA) out/minfs $(FS) $(TESTARGS) test
 

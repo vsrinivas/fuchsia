@@ -81,8 +81,8 @@ int status_to_errno(mx_status_t status) {
 
 vnode_t* fake_root;
 
-#define PATH_PREFIX "(@)"
-#define PREFIX_SIZE 3
+#define PATH_PREFIX "::"
+#define PREFIX_SIZE 2
 
 static inline int check_path(const char* path) {
     if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == NULL)) {

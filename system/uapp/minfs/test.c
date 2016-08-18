@@ -204,8 +204,8 @@ struct {
     { worker_writer, "file0007", MB(8), 0, },
 };
 
-int run_fs_tests(void) {
-    const char* where = "(@)";
+int run_fs_tests(int argc, char** argv) {
+    const char* where = "::";
     for (unsigned n = 0; n < (sizeof(WORK) / sizeof(WORK[0])); n++) {
         if (worker_new(where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags) < 0) {
             return -1;
