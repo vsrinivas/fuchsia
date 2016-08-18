@@ -30,9 +30,6 @@ SECTIONS
         __code_end = .;
     } =0x9090
 
-    ASSERT(LOADADDR(.text.header) + SIZEOF(.text.header) == LOADADDR(.text),
-           "The zero page header is not at the right load address.")
-
     .rodata : ALIGN(4096) {
         __rodata_start = .;
         *(.rodata*)
