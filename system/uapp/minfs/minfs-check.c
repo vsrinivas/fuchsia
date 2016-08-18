@@ -11,6 +11,7 @@
 
 typedef struct check {
     bitmap_t checked_inodes;
+    bitmap_t checked_blocks;
 } check_t;
 
 static mx_status_t check_inode(check_t* chk, minfs_t* fs, uint32_t ino, uint32_t parent);
@@ -41,10 +42,29 @@ static mx_status_t get_inode_nth_bno(minfs_t* fs, minfs_inode_t* inode, uint32_t
     if (n < MINFS_DIRECT) {
         *bno_out = inode->dnum[n];
         return NO_ERROR;
-    } else {
-        //TODO
+    }
+    n -= MINFS_DIRECT;
+    uint32_t i = n / (MINFS_BLOCK_SIZE / sizeof(uint32_t));
+    uint32_t j = n % (MINFS_BLOCK_SIZE / sizeof(uint32_t));
+
+    if (i >= MINFS_INDIRECT) {
         return ERR_OUT_OF_RANGE;
     }
+
+    uint32_t ibno;
+    block_t* iblk;
+    uint32_t* ientry;
+    if ((ibno = inode->inum[i]) == 0) {
+        *bno_out = 0;
+        return NO_ERROR;
+    }
+    if ((iblk = bcache_get(fs->bc, ibno, (void**) &ientry)) == NULL) {
+        return ERR_NOT_FOUND;
+    }
+
+    *bno_out = ientry[j];
+    bcache_put(fs->bc, iblk, 0);
+    return NO_ERROR;
 }
 
 static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* inode,
@@ -128,7 +148,7 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
     return NO_ERROR;
 }
 
-const char* check_block(check_t* chk, minfs_t* fs, uint32_t bno) {
+const char* check_data_block(check_t* chk, minfs_t* fs, uint32_t bno) {
     if (bno < fs->info.dat_block) {
         return "in metadata area";
     }
@@ -138,6 +158,10 @@ const char* check_block(check_t* chk, minfs_t* fs, uint32_t bno) {
     if (!bitmap_get(&fs->block_map, bno)) {
         return "not allocated";
     }
+    if (bitmap_get(&chk->checked_blocks, bno)) {
+        return "double-allocated";
+    }
+    bitmap_set(&chk->checked_blocks, bno);
     return NULL;
 }
 
@@ -147,15 +171,52 @@ mx_status_t check_file(check_t* chk, minfs_t* fs,
     for (unsigned n = 0; n < MINFS_DIRECT; n++) {
         info("%d, ", inode->dnum[n]);
     }
-    info("\n");
-    for (unsigned n = 0; n < MINFS_DIRECT; n++) {
-        uint32_t bno = inode->dnum[n];
+    info("...\n");
+
+    // count and sanity-check indirect blocks
+    for (unsigned n = 0; n < MINFS_INDIRECT; n++) {
+        if (inode->inum[n]) {
+            const char* msg;
+            if ((msg = check_data_block(chk, fs, inode->inum[n])) != NULL) {
+                warn("check: ino#%u: indirect block %u(@%u): %s\n",
+                     ino, n, inode->inum[n], msg);
+            }
+            blocks++;
+        }
+    }
+
+    // count and sanity-check data blocks
+
+    unsigned max = 0;
+    for (unsigned n = 0;;n++) {
+        mx_status_t status;
+        uint32_t bno;
+        if ((status = get_inode_nth_bno(fs, inode, n, &bno)) < 0) {
+            if (status == ERR_OUT_OF_RANGE) {
+                break;
+            } else {
+                return status;
+            }
+        }
         if (bno) {
             blocks++;
             const char* msg;
-            if ((msg = check_block(chk, fs, bno)) != NULL) {
+            if ((msg = check_data_block(chk, fs, bno)) != NULL) {
                 warn("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg);
             }
+            max = n + 1;
+        }
+    }
+    if (max) {
+        unsigned sizeblocks = inode->size / MINFS_BLOCK_SIZE;
+        if (sizeblocks > max) {
+            warn("check: ino#%u: filesize too large\n", ino);
+        } else if (sizeblocks < (max - 1)) {
+            warn("check: ino#%u: filesize too small\n", ino);
+        }
+    } else {
+        if (inode->size) {
+            warn("check: ino#%u: filesize too large\n", ino);
         }
     }
     if (blocks != inode->block_count) {
@@ -183,6 +244,9 @@ mx_status_t check_inode(check_t* chk, minfs_t* fs, uint32_t ino, uint32_t parent
     if (inode.magic == MINFS_MAGIC_DIR) {
         info("ino#%u: DIR blks=%u links=%u\n",
              ino, inode.block_count, inode.link_count);
+        if ((status = check_file(chk, fs, &inode, ino)) < 0) {
+            return status;
+        }
         if ((status = check_directory(chk, fs, &inode, ino, parent, CD_DUMP)) < 0) {
             return status;
         }
@@ -192,8 +256,6 @@ mx_status_t check_inode(check_t* chk, minfs_t* fs, uint32_t ino, uint32_t parent
     } else {
         info("ino#%u: FILE blks=%u links=%u size=%u\n",
              ino, inode.block_count, inode.link_count, inode.size);
-        //TODO: check file blocks exist, are allocated
-        //TODO: detect 'shared' blocks
         if ((status = check_file(chk, fs, &inode, ino)) < 0) {
             return status;
         }
@@ -218,6 +280,9 @@ mx_status_t minfs_check(bcache_t* bc) {
     if ((status = bitmap_init(&chk.checked_inodes, info.inode_count)) < 0) {
         return status;
     }
+    if ((status = bitmap_init(&chk.checked_blocks, info.block_count)) < 0) {
+        return status;
+    }
     minfs_t* fs;
     if ((status = minfs_create(&fs, bc, &info)) < 0) {
         return status;
@@ -229,6 +294,32 @@ mx_status_t minfs_check(bcache_t* bc) {
     //TODO: check root not a directory
     if ((status = check_inode(&chk, fs, 1, 1)) < 0) {
         return status;
+    }
+
+    unsigned missing = 0;
+    for (unsigned n = info.dat_block; n < info.block_count; n++) {
+        if (bitmap_get(&fs->block_map, n)) {
+            if (!bitmap_get(&chk.checked_blocks, n)) {
+                missing++;
+            }
+        }
+    }
+    if (missing) {
+        error("check: %u allocated block%s not in use\n",
+              missing, missing > 1 ? "s" : "");
+    }
+
+    missing = 0;
+    for (unsigned n = 1; n < info.inode_count; n++) {
+        if (bitmap_get(&fs->inode_map, n)) {
+            if (!bitmap_get(&chk.checked_inodes, n)) {
+                missing++;
+            }
+        }
+    }
+    if (missing) {
+        error("check: %u allocated inode%s not in use\n",
+              missing, missing > 1 ? "s" : "");
     }
 
     //TODO: check allocated inodes that were abandoned

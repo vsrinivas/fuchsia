@@ -116,7 +116,11 @@ int worker_rw(worker_t* w, bool do_read) {
 }
 
 int worker_verify(worker_t* w) {
-    return worker_rw(w, true);
+    int r = worker_rw(w, true);
+    if (r == DONE) {
+        close(w->fd);
+    }
+    return r;
 }
 
 int worker_writer(worker_t* w) {
@@ -182,6 +186,18 @@ int do_work(void) {
     return busy_count ? BUSY : DONE;
 }
 
+int do_all_work(void) {
+    for (;;) {
+        int r = do_work();
+        if (r == FAIL) {
+            return -1;
+        }
+        if (r == DONE) {
+            return 0;
+        }
+    }
+}
+
 #define KB(n) ((n) * 1024)
 #define MB(n) ((n) * 1024 * 1024)
 
@@ -201,21 +217,67 @@ struct {
     { worker_writer, "file0007", MB(8), 0, },
 };
 
-int run_fs_tests(int argc, char** argv) {
+int test_rw1(void) {
     const char* where = "::";
     for (unsigned n = 0; n < (sizeof(WORK) / sizeof(WORK[0])); n++) {
         if (worker_new(where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags) < 0) {
             return -1;
         }
     }
+    unlink("::file0007");
+    return do_all_work();
+}
+
+int test_maxfile(void) {
+    int fd = TRY(open("::bigfile", O_CREAT|O_WRONLY, 0644));
+    if (fd < 0) {
+        return -1;
+    }
+    char data[128*1024];
+    memset(data, 0xee, sizeof(data));
+    ssize_t sz = 0;
+    ssize_t r;
     for (;;) {
-        int r = do_work();
-        if (r == FAIL) {
+        if ((r = TRY(write(fd, data, sizeof(data)))) < 0) {
             return -1;
         }
-        if (r == DONE) {
-            return 0;
+        sz += r;
+        if (r < sizeof(data)) {
+            break;
         }
+    }
+    fprintf(stderr, "wrote %d bytes\n", (int) sz);
+    return (r < 0) ? -1 : 0;
+}
+
+int test_basic(void) {
+    TRY(mkdir("::alpha", 0755));
+    TRY(mkdir("::alpha/bravo", 0755));
+    TRY(mkdir("::alpha/bravo/charlie", 0755));
+    TRY(mkdir("::alpha/bravo/charlie/delta", 0755));
+    TRY(mkdir("::alpha/bravo/charlie/delta/echo", 0755));
+    int fd1 = TRY(open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR|O_CREAT, 0644));
+    int fd2 = TRY(open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR, 0644));
+    TRY(write(fd1, "Hello, World!\n", 14));
+    close(fd1);
+    close(fd2);
+    return 0;
+}
+
+int run_fs_tests(int argc, char** argv) {
+    fprintf(stderr, "--- fs tests ---\n");
+    if (argc > 0) {
+        if (!strcmp(argv[0], "maxfile")) {
+            return test_maxfile();
+        }
+        if (!strcmp(argv[0], "rw1")) {
+            return test_rw1();
+        }
+        if (!strcmp(argv[0], "basic")) {
+            return test_basic();
+        }
+        fprintf(stderr, "unknown test: %s\n", argv[0]);
+        return -1;
     }
 
     return 0;

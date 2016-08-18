@@ -13,8 +13,11 @@ struct vnode {
 
 uint32_t __trace_bits;
 
-void vfs_close(vnode_t* vn) {
+mx_status_t vfs_close(vnode_t* vn) {
     trace(VFS, "vfs_close: vn=%p\n", vn);
+    mx_status_t r = vn->ops->close(vn);
+    vn_release(vn);
+    return r;
 }
 
 // Starting at vnode vn, walk the tree described by the path string,
@@ -22,6 +25,7 @@ void vfs_close(vnode_t* vn) {
 // or we encounter a vnode that represents a remote filesystem
 mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
                      const char* path, const char** pathout) {
+    vnode_t* oldvn = NULL;
     const char* nextpath;
     mx_status_t r;
     size_t len;
@@ -44,16 +48,23 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             if ((r = vn->ops->lookup(vn, &vn, path, len))) {
                 return r;
             }
+            if (oldvn) {
+                vn_release(oldvn);
+            }
+            oldvn = vn;
             path = nextpath;
         } else {
             // final path segment, we're done here
             trace(WALK, "vfs_walk: vn=%p name='%s' (local)\n", vn, path);
+            if (oldvn == NULL) {
+                // returning our original vnode, need to upref it
+                vn_acquire(vn);
+            }
             *out = vn;
             *pathout = path;
             return 0;
         }
     }
-    return ERR_NOT_FOUND;
 }
 
 mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
@@ -71,14 +82,20 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
             if ((r == ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
             }
+            vn_release(vndir);
             return r;
+        } else {
+            vn_release(vndir);
         }
     } else {
 try_open:
-        if ((r = vndir->ops->lookup(vndir, &vn, path, len)) < 0) {
+        r = vndir->ops->lookup(vndir, &vn, path, len);
+        vn_release(vndir);
+        if (r < 0) {
             return r;
         }
         if ((r = vn->ops->open(&vn, flags)) < 0) {
+            vn_release(vn);
             return r;
         }
     }
@@ -101,4 +118,24 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
     memcpy(de->name, name, len);
     de->name[len] = 0;
     return sz;
+}
+
+void vn_acquire(vnode_t* vn) {
+    trace(REFS, "acquire vn=%p ref=%u\n", vn, vn->refcount);
+    vn->refcount++;
+}
+
+void vn_release(vnode_t* vn) {
+    trace(REFS, "release vn=%p ref=%u\n", vn, vn->refcount);
+    if (vn->refcount == 0) {
+        panic("vn %p: ref underflow\n", vn);
+    }
+    vn->refcount--;
+    if (vn->refcount == 0) {
+#if 0
+        //TODO: put on idle list
+        trace(VFS, "vfs_release: vn=%p\n", vn);
+        vn->ops->release(vn);
+#endif
+    }
 }

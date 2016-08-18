@@ -70,11 +70,11 @@ clean::
 FS := out/fs@1024M
 
 mkfs: out/minfs
-	$(EXTRA) out/minfs $(FS) $(TESTARGS) create
+	$(EXTRA) out/minfs $(TESTARGS) $(FS) create
 
 fsck: out/minfs
-	$(EXTRA) out/minfs $(FS) $(TESTARGS) check
+	$(EXTRA) out/minfs $(TESTARGS) $(FS) check
 
 test: out/minfs
-	$(EXTRA) out/minfs $(FS) $(TESTARGS) test
+	$(EXTRA) out/minfs $(TESTARGS) $(FS) test
 

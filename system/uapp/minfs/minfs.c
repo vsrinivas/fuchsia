@@ -43,14 +43,6 @@ mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
     return 0;
 }
 
-static inline void bitmap_copy_to(bitmap_t* bm, uint32_t bno, const void* data) {
-    memcpy(bm->map + bno * (MINFS_BLOCK_BITS / 64), data, MINFS_BLOCK_SIZE);
-}
-
-static inline void bitmap_copy_from(bitmap_t* bm, uint32_t bno, void* data) {
-    memcpy(data, bm->map + bno * (MINFS_BLOCK_BITS / 64), MINFS_BLOCK_SIZE);
-}
-
 void minfs_sync_vnode(vnode_t* vn) {
     block_t* blk;
     void* bdata;
@@ -72,12 +64,17 @@ mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out
         return ERR_NO_RESOURCES;
     }
 
-    uint32_t bno_of_ibm = fs->info.ibm_block + (ino / MINFS_BLOCK_BITS);
+    // locate data and block offset of bitmap
+    void *bmdata;
+    uint32_t bmbno;
+    if ((bmdata = minfs_bitmap_block(&fs->inode_map, &bmbno, ino)) == NULL) {
+        panic("inode not in bitmap");
+    }
 
     // obtain the block of the inode bitmap we need
     block_t* block_ibm;
     void* bdata_ibm;
-    if ((block_ibm = bcache_get(fs->bc, bno_of_ibm, &bdata_ibm)) == NULL) {
+    if ((block_ibm = bcache_get(fs->bc, fs->info.ibm_block + bmbno, &bdata_ibm)) == NULL) {
         bitmap_clr(&fs->inode_map, ino);
         return ERR_IO;
     }
@@ -97,7 +94,7 @@ mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out
     //TODO: optional sanity check of both blocks
 
     // write data to blocks in memory
-    bitmap_copy_from(&fs->inode_map, ino / MINFS_BLOCK_BITS, bdata_ibm);
+    memcpy(bdata_ibm, bmdata, MINFS_BLOCK_SIZE);
     memcpy(bdata_ino + off_of_ino, inode, MINFS_INODE_SIZE);
 
     // commit blocks to disk
@@ -147,6 +144,7 @@ mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino) {
     uint32_t bucket = INO_HASH(ino);
     list_for_every_entry(fs->vnode_hash + bucket, vn, vnode_t, hashnode) {
         if (vn->ino == ino) {
+            vn_acquire(vn);
             *out = vn;
             return NO_ERROR;
         }
@@ -243,14 +241,14 @@ void minfs_destroy(minfs_t* fs) {
 
 mx_status_t minfs_load_bitmaps(minfs_t* fs) {
     for (uint32_t n = 0; n < fs->abmblks; n++) {
-        uint32_t mno = n * (MINFS_BLOCK_SIZE / 64);
-        if (bcache_read(fs->bc, fs->info.abm_block + n, fs->block_map.map + mno, 0, MINFS_BLOCK_SIZE)) {
+        void* bmdata = minfs_bitmap_nth_block(&fs->block_map, n);
+        if (bcache_read(fs->bc, fs->info.abm_block + n, bmdata, 0, MINFS_BLOCK_SIZE)) {
             error("minfs: failed reading alloc bitmap\n");
         }
     }
     for (uint32_t n = 0; n < fs->ibmblks; n++) {
-        uint32_t mno = n * (MINFS_BLOCK_SIZE / 64);
-        if (bcache_read(fs->bc, fs->info.ibm_block + n, fs->inode_map.map + mno, 0, MINFS_BLOCK_SIZE)) {
+        void* bmdata = minfs_bitmap_nth_block(&fs->inode_map, n);
+        if (bcache_read(fs->bc, fs->info.ibm_block + n, bmdata, 0, MINFS_BLOCK_SIZE)) {
             error("minfs: failed reading inode bitmap\n");
         }
     }
@@ -344,17 +342,17 @@ int minfs_mkfs(bcache_t* bc) {
 
     // write allocation bitmap
     for (uint32_t n = 0; n < abmblks; n++) {
-        uint32_t mno = n * (MINFS_BLOCK_SIZE / 64);
+        void* bmdata = minfs_bitmap_nth_block(&abm, n);
         blk = bcache_get_zero(bc, info.abm_block + n, &bdata);
-        memcpy(bdata, abm.map + mno, MINFS_BLOCK_SIZE);
+        memcpy(bdata, bmdata, MINFS_BLOCK_SIZE);
         bcache_put(bc, blk, BLOCK_DIRTY);
     }
 
     // write inode bitmap
     for (uint32_t n = 0; n < ibmblks; n++) {
-        uint32_t mno = n * (MINFS_BLOCK_SIZE / 64);
+        void* bmdata = minfs_bitmap_nth_block(&ibm, n);
         blk = bcache_get_zero(bc, info.ibm_block + n, &bdata);
-        memcpy(bdata, ibm.map + mno, MINFS_BLOCK_SIZE);
+        memcpy(bdata, bmdata, MINFS_BLOCK_SIZE);
         bcache_put(bc, blk, BLOCK_DIRTY);
     }
 

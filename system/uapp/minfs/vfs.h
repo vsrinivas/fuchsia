@@ -21,7 +21,7 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
 mx_status_t vfs_find(vnode_t* vndir, vnode_t** out,
                      const char* path, const char** path_out);
 
-void vfs_close(vnode_t* vn);
+mx_status_t vfs_close(vnode_t* vn);
 
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type);
@@ -120,12 +120,13 @@ void bcache_invalidate(bcache_t* bc);
 #define TRACE_MINFS   0x0001
 #define TRACE_VFS     0x0010
 #define TRACE_WALK    0x0020
+#define TRACE_REFS    0x0040
 #define TRACE_BCACHE  0x0100
 #define TRACE_IO      0x0200
 #define TRACE_RPC     0x0400
 #define TRACE_VERBOSE 0x1000
 
-#define TRACE_SOME    0x0211
+#define TRACE_SOME    0x0001
 #define TRACE_ALL     0xFFFF
 
 // Enable trace printf()s

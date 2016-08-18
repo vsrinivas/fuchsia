@@ -14,6 +14,8 @@
 
 #include "minfs-private.h"
 
+//TODO: better bitmap block read/write functions
+
 // Allocate a new data block from the block bitmap.
 // Return the underlying block (obtained via bcache_get()).
 // If hint is nonzero it indicates which block number
@@ -27,10 +29,14 @@ block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** b
         return NULL;
     }
 
+    // obtain the in-memory bitmap block
+    uint32_t bmbno;
+    void *bmdata = minfs_bitmap_block(&fs->block_map, &bmbno, bno);
+
     // obtain the block of the alloc bitmap we need
     block_t* block_abm;
     void* bdata_abm;
-    if ((block_abm = bcache_get(fs->bc, fs->info.abm_block + (bno / MINFS_BLOCK_BITS), &bdata_abm)) == NULL) {
+    if ((block_abm = bcache_get(fs->bc, fs->info.abm_block + bmbno, &bdata_abm)) == NULL) {
         bitmap_clr(&fs->block_map, bno);
         return NULL;
     }
@@ -44,7 +50,7 @@ block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** b
     }
 
     // commit the bitmap
-    memcpy(bdata_abm, fs->block_map.map + ((bno / MINFS_BLOCK_BITS) * (MINFS_BLOCK_BITS / 64)), MINFS_BLOCK_SIZE);
+    memcpy(bdata_abm, bmdata, MINFS_BLOCK_SIZE);
     bcache_put(fs->bc, block_abm, BLOCK_DIRTY);
     *out_bno = bno;
     return block;

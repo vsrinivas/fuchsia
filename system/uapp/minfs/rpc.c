@@ -260,18 +260,3 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         return ERR_NOT_SUPPORTED;
     }
 }
-
-void vn_acquire(vnode_t* vn) {
-    vn->refcount++;
-}
-
-void vn_release(vnode_t* vn) {
-    if (vn->refcount == 0) {
-        printf("vn %p: ref underflow\n", vn);
-        *((int*) 0) = 0;
-    }
-    vn->refcount--;
-    if (vn->refcount == 0) {
-        vn->ops->release(vn);
-    }
-}
