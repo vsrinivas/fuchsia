@@ -51,6 +51,6 @@ private:
     bool dispatcher_alive_[2];
     MessageList messages_[2];
     // This lock protects |dispatcher_alive_| and |messages_|.
-    mutex_t lock_;
+    Mutex lock_;
     StateTracker state_tracker_[2];
 };

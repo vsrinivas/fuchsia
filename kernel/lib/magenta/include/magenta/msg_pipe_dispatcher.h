@@ -42,5 +42,5 @@ private:
     const uint32_t flags_;
     utils::RefPtr<MessagePipe> pipe_;
     utils::unique_ptr<MessagePacket> pending_;
-    mutex_t lock_;
+    Mutex lock_;
 };

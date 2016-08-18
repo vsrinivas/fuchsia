@@ -33,7 +33,6 @@ MessagePacket::~MessagePacket() {
 MessagePipe::MessagePipe(mx_koid_t koid)
     : koid_(koid),
       dispatcher_alive_{true, true} {
-    mutex_init(&lock_);
     state_tracker_[0].set_initial_signals_state(
             mx_signals_state_t{MX_SIGNAL_WRITABLE,
                                MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
@@ -44,8 +43,6 @@ MessagePipe::MessagePipe(mx_koid_t koid)
 
 MessagePipe::~MessagePipe() {
     // No need to lock. We are single threaded and will not have new requests.
-    mutex_destroy(&lock_);
-
     DEBUG_ASSERT(messages_[0].is_empty());
     DEBUG_ASSERT(messages_[1].is_empty());
 }

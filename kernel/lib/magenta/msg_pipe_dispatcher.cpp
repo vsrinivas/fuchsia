@@ -48,12 +48,10 @@ status_t MessagePipeDispatcher::Create(uint32_t flags,
 MessagePipeDispatcher::MessagePipeDispatcher(uint32_t flags,
                                              size_t side, utils::RefPtr<MessagePipe> pipe)
     : side_(side), flags_(flags), pipe_(utils::move(pipe)) {
-    mutex_init(&lock_);
 }
 
 MessagePipeDispatcher::~MessagePipeDispatcher() {
     pipe_->OnDispatcherDestruction(side_);
-    mutex_destroy(&lock_);
 }
 
 StateTracker* MessagePipeDispatcher::get_state_tracker() {
