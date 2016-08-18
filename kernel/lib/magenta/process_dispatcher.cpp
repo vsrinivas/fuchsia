@@ -412,25 +412,6 @@ utils::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
     return exception_port_;
 }
 
-uint32_t ProcessDispatcher::HandleStats(uint32_t* handle_type, size_t size) const {
-    AutoLock lock(&handle_table_lock_);
-    uint32_t total = 0;
-    for (const auto& handle : handles_) {
-        if (handle_type) {
-            uint32_t type = static_cast<uint32_t>(handle.dispatcher()->GetType());
-            if (size > type)
-                ++handle_type[type];
-        }
-        ++total;
-    }
-    return total;
-}
-
-uint32_t ProcessDispatcher::ThreadCount() const {
-    AutoLock lock(&thread_list_lock_);
-    return static_cast<uint32_t>(thread_list_.size_slow());
-}
-
 void ProcessDispatcher::AddProcess(ProcessDispatcher* process) {
     // Don't call any method of |process|, it is not yet fully constructed.
     AutoLock lock(&global_process_list_mutex_);
@@ -467,73 +448,6 @@ utils::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
             return t.get_koid() == koid;
     });
     return utils::RefPtr<UserThread>(thread);
-}
-
-void ProcessDispatcher::DebugDumpProcessList() {
-    AutoLock lock(&global_process_list_mutex_);
-    printf("%8s-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n", "id");
-
-    for (const auto& process : global_process_list_) {
-        printf("%8llu-%c %3u %s [%s]\n",
-               process.get_koid(),
-               process.StateChar(),
-               process.ThreadCount(),
-               process.DebugDumpHandleTypeCount_NoLock(),
-               process.name().data());
-    }
-}
-
-char* ProcessDispatcher::DebugDumpHandleTypeCount_NoLock() const {
-    static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
-
-    uint32_t types[MX_OBJ_TYPE_LAST] = {0};
-    uint32_t handle_count = HandleStats(types, sizeof(types));
-
-    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u %3u",
-             handle_count,
-             types[1],              // process.
-             types[2],              // thread.
-             types[3],              // vmem
-             types[4],              // msg pipe.
-             types[5],              // event
-             types[6],              // ioport.
-             types[7] + types[8],   // data pipe (both),
-             types[9],              // interrupt.
-             types[10]              // io map
-             );
-    return buf;
-}
-
-void ProcessDispatcher::DumpProcessListKeyMap() {
-    printf("id  : process id number\n");
-    printf("-s  : state: R = running D = dead\n");
-    printf("#t  : number of threads\n");
-    printf("#h  : total number of handles\n");
-    printf("#pr : number of process handles\n");
-    printf("#th : number of thread handles\n");
-    printf("#vm : number of vm map handles\n");
-    printf("#mp : number of message pipe handles\n");
-    printf("#ev : number of event handles\n");
-    printf("#ip : number of io port handles\n");
-    printf("#dp : number of data pipe handles (both)\n");
-    printf("#it : number of interrupt handles\n");
-    printf("#io : number of io map handles\n");
-}
-
-char ProcessDispatcher::StateChar() const {
-    State s = state();
-
-    switch (s) {
-    case State::INITIAL:
-        return 'I';
-    case State::RUNNING:
-        return 'R';
-    case State::DYING:
-        return 'Y';
-    case State::DEAD:
-        return 'D';
-    }
-    return '?';
 }
 
 mx_status_t ProcessDispatcher::set_bad_handle_policy(uint32_t new_policy) {

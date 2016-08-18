@@ -138,33 +138,5 @@ mx_status_t magenta_sleep(mx_time_t nanoseconds) {
     return thread_sleep_etc(t, true);
 }
 
-static int cmd_magenta(int argc, const cmd_args* argv) {
-    int rc = 0;
-
-    if (argc < 2) {
-    notenoughargs:
-        printf("not enough arguments:\n");
-    usage:
-        printf("%s ps  : list processes\n", argv[0].str);
-        printf("%s ps  help: display keymap\n", argv[0].str);
-        return -1;
-    }
-
-    if (strcmp(argv[1].str, "ps") == 0) {
-        if ((argc == 3) && (strcmp(argv[2].str, "help") == 0)) {
-            ProcessDispatcher::DumpProcessListKeyMap();
-        } else {
-            ProcessDispatcher::DebugDumpProcessList();
-        }
-    } else {
-        printf("unrecognized subcommand\n");
-        goto usage;
-    }
-    return rc;
-}
-
 LK_INIT_HOOK(magenta, magenta_init, LK_INIT_LEVEL_THREADING);
 
-STATIC_COMMAND_START
-STATIC_COMMAND("mx", "magenta information", &cmd_magenta)
-STATIC_COMMAND_END(mx);

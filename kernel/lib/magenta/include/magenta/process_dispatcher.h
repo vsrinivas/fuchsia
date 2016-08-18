@@ -89,8 +89,6 @@ public:
     utils::RefPtr<VmAspace> aspace() { return aspace_; }
     const utils::StringPiece name() const { return name_; }
 
-    char StateChar() const;
-
     // Starts the process running
     status_t Start(void* arg, mx_vaddr_t vaddr);
 
@@ -110,7 +108,6 @@ public:
 
     // The following two methods can be slow and innacurrate and should only be
     // called from diagnostics code.
-    uint32_t HandleStats(uint32_t*handle_type, size_t size) const;
     uint32_t ThreadCount() const;
 
     // Look up a process given its koid.
@@ -121,14 +118,13 @@ public:
     // Returns nullptr if not found.
     utils::RefPtr<UserThread> LookupThreadById(mx_koid_t koid);
 
-    // Outputs via the console the current list of processes;
-    static void DebugDumpProcessList();
-    static void DumpProcessListKeyMap();
-
     uint32_t get_bad_handle_policy() const { return bad_handle_policy_; }
     mx_status_t set_bad_handle_policy(uint32_t new_policy);
 
 private:
+    friend void DumpProcessList();
+    friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
+
     explicit ProcessDispatcher(utils::StringPiece name);
 
     ProcessDispatcher(const ProcessDispatcher&) = delete;
@@ -147,9 +143,6 @@ private:
 
     // Kill all threads
     void KillAllThreads();
-
-    // Utility routine used with public debug routines.
-    char* DebugDumpHandleTypeCount_NoLock() const;
 
     // Add a process to the global process list.  Allocate a new process ID from
     // the global pool at the same time, and assign it to the process.
