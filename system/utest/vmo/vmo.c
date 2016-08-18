@@ -72,6 +72,37 @@ bool vmo_read_write_test(void) {
     END_TEST;
 }
 
+bool vmo_read_only_map_test(void) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+    mx_handle_t vmo;
+
+    // allocate an object and read/write from it
+    const size_t len = PAGE_SIZE;
+    vmo = mx_vm_object_create(len);
+    EXPECT_LT(0, vmo, "vm_object_create");
+
+    // map it
+    uintptr_t ptr;
+    status = mx_process_vm_map(0, vmo, 0, len, &ptr,
+                                     MX_VM_FLAG_PERM_READ);
+    EXPECT_EQ(NO_ERROR, status, "vm_map");
+    EXPECT_NEQ(0u, ptr, "vm_map");
+
+    status = mx_cprng_draw((void*)ptr, 1);
+    EXPECT_LT(status, 0, "write");
+
+    status = mx_process_vm_unmap(0, ptr, 0);
+    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+
+    // close the handle
+    status = mx_handle_close(vmo);
+    EXPECT_EQ(NO_ERROR, status, "handle_close");
+
+    END_TEST;
+}
+
 bool vmo_resize_test(void) {
     BEGIN_TEST;
 
@@ -120,6 +151,7 @@ bool vmo_resize_test(void) {
 BEGIN_TEST_CASE(vmo_tests)
 RUN_TEST(vmo_create_test);
 RUN_TEST(vmo_read_write_test);
+RUN_TEST(vmo_read_only_map_test);
 RUN_TEST(vmo_resize_test);
 END_TEST_CASE(vmo_tests)
 
