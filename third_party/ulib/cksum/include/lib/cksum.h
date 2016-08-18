@@ -1,10 +1,11 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+#ifndef __CKSUM_H
+#define __CKSUM_H
 
-#pragma once
-
+#ifdef _KERNEL
+#include <compiler.h>
+#else
 #include <system/compiler.h>
+#endif
 
 __BEGIN_CDECLS
 
@@ -28,4 +29,6 @@ unsigned long crc32(unsigned long crc, const unsigned char *buf, unsigned int le
 unsigned long adler32(unsigned long adler, const unsigned char *buf, unsigned int len);
 
 __END_CDECLS
+
+#endif
 

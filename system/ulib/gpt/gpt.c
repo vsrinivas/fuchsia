@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <gpt/gpt.h>
-#include <cksum/cksum.h>
+#include <lib/cksum.h>
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
