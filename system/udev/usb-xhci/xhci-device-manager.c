@@ -20,11 +20,12 @@ typedef struct {
     enum {
         ENUMERATE_DEVICE,
         DISCONNECT_DEVICE,
+        RH_PORT_CONNECTED,
     } command;
     list_node_t node;
     uint32_t hub_address;
     uint32_t port;
-    uint32_t speed;
+    usb_speed_t speed;
 } xhci_device_command_t;
 
 typedef struct {
@@ -79,7 +80,8 @@ static mx_status_t xhci_address_device(xhci_device_thread_context_t* context, ui
                                        uint32_t port, usb_speed_t speed) {
     xhci_t* xhci = context->xhci;
     uint32_t slot_id = context->slot_id;
-    xprintf("xhci_address_device slot_id: %d port: %d hub_address: %d speed: %d\n", slot_id, port, hub_address, speed);
+    xprintf("xhci_address_device slot_id: %d port: %d hub_address: %d speed: %d\n",
+            slot_id, port, hub_address, speed);
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     if (slot->sc)
@@ -584,6 +586,10 @@ static int xhci_device_thread(void* arg) {
             break;
         case DISCONNECT_DEVICE:
             xhci_handle_disconnect_device(&context, command->hub_address, command->port);
+            break;
+        case RH_PORT_CONNECTED:
+            xhci_handle_rh_port_connected(xhci, command->port);
+            break;
         }
     }
 
@@ -599,25 +605,29 @@ void xhci_start_device_thread(xhci_t* xhci) {
     mxr_thread_create(xhci_device_thread, xhci, "xhci_device_thread", &xhci->device_thread);
 }
 
-mx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port, uint32_t speed) {
-    xprintf("xhci_enumerate_device hub_address: %d port: %d speed: %d\n", hub_address, port, speed);
-
-    xhci_device_command_t* command = malloc(sizeof(xhci_device_command_t));
-    if (!command) {
+static mx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_address,
+                                      uint32_t port, usb_speed_t speed) {
+    xhci_device_command_t* device_command = calloc(1, sizeof(xhci_device_command_t));
+    if (!device_command) {
         printf("out of memory\n");
         return ERR_NO_MEMORY;
     }
-    command->command = ENUMERATE_DEVICE;
-    command->hub_address = hub_address;
-    command->port = port;
-    command->speed = speed;
+    device_command->command = command;
+    device_command->hub_address = hub_address;
+    device_command->port = port;
+    device_command->speed = speed;
 
     mxr_mutex_lock(&xhci->command_queue_mutex);
-    list_add_tail(&xhci->command_queue, &command->node);
+    list_add_tail(&xhci->command_queue, &device_command->node);
     completion_signal(&xhci->command_queue_completion);
     mxr_mutex_unlock(&xhci->command_queue_mutex);
 
     return NO_ERROR;
+}
+
+mx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
+                                  usb_speed_t speed) {
+    return xhci_queue_command(xhci, ENUMERATE_DEVICE, hub_address, port, speed);
 }
 
 mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
@@ -634,21 +644,13 @@ mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_
             return NO_ERROR;
         }
     }
-
-    command = malloc(sizeof(xhci_device_command_t));
-    if (!command) {
-        printf("out of memory\n");
-        return ERR_NO_MEMORY;
-    }
-    command->command = DISCONNECT_DEVICE;
-    command->hub_address = hub_address;
-    command->port = port;
-    command->speed = 0;
-
-    list_add_tail(&xhci->command_queue, &command->node);
-    completion_signal(&xhci->command_queue_completion);
     mxr_mutex_unlock(&xhci->command_queue_mutex);
-    return NO_ERROR;
+
+    return xhci_queue_command(xhci, DISCONNECT_DEVICE, hub_address, port, USB_SPEED_UNDEFINED);
+}
+
+mx_status_t xhci_rh_port_connected(xhci_t* xhci, uint32_t port) {
+    return xhci_queue_command(xhci, RH_PORT_CONNECTED, 0, port, USB_SPEED_UNDEFINED);
 }
 
 static void xhci_hub_eval_context_complete(void* ctx, uint32_t cc, xhci_trb_t* command_trb, xhci_trb_t* event_trb) {

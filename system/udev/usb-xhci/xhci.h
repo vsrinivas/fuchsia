@@ -123,9 +123,12 @@ mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_
 void xhci_start_device_thread(xhci_t* xhci);
 mx_status_t xhci_configure_hub(xhci_t* xhci, int slot_id, usb_speed_t speed,
                                usb_hub_descriptor_t* descriptor);
+mx_status_t xhci_rh_port_connected(xhci_t* xhci, uint32_t port);
+mx_status_t xhci_rh_port_disconnected(xhci_t* xhci, uint32_t port);
 
 // xhci-root-hub.c
 void xhci_handle_port_changed_event(xhci_t* xhci, xhci_trb_t* trb);
+void xhci_handle_rh_port_connected(xhci_t* xhci, int port);
 
 // xhci-transfer.c
 mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* data,

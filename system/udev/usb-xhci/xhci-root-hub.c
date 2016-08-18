@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include "xhci.h"
 
@@ -16,14 +17,14 @@ static void xhci_reset_port(xhci_t* xhci, int port) {
     XHCI_WRITE32(portsc, temp);
 }
 
-static void xhci_handle_port_connected(xhci_t* xhci, int port) {
-    xprintf("xhci_handle_port_connected %d\n", port);
-    xhci_reset_port(xhci, port);
-}
+// called from device manager thread
+void xhci_handle_rh_port_connected(xhci_t* xhci, int port) {
+    xprintf("xhci_handle_rh_port_connected %d\n", port);
 
-static void xhci_handle_port_disconnected(xhci_t* xhci, int port) {
-    xprintf("xhci_handle_port_disconnected %d\n", port);
-    xhci_device_disconnected(xhci, 0, port);
+    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
+    usleep(100 * 1000);
+
+    xhci_reset_port(xhci, port);
 }
 
 static void xhci_handle_port_enabled(xhci_t* xhci, int port, int speed) {
@@ -51,9 +52,11 @@ void xhci_handle_port_changed_event(xhci_t* xhci, xhci_trb_t* trb) {
         if (portsc & PORTSC_CSC) {
             // connect status change
             if (connected) {
-                xhci_handle_port_connected(xhci, port);
+                // queue this event on the device manager thread
+                xhci_rh_port_connected(xhci, port);
             } else {
-                xhci_handle_port_disconnected(xhci, port);
+                // this will also queue an event for the device manager
+                xhci_device_disconnected(xhci, 0, port);
             }
         }
         if (portsc & PORTSC_PRC) {

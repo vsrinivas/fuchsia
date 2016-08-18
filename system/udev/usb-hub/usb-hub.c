@@ -79,6 +79,9 @@ static void usb_hub_enable_port(usb_hub_t* hub, int port) {
 }
 
 static void usb_hub_port_connected(usb_hub_t* hub, int port) {
+    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
+    usleep(100 * 1000);
+
     xprintf("port %d usb_hub_port_connected\n", port);
     usb_set_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port);
 }
