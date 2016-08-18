@@ -40,7 +40,7 @@ private:
     uint32_t irq_id_;
     bool     maskable_;
     event_t  event_;
-    mutex_t  lock_;
-    mutex_t  wait_lock_;
+    Mutex lock_;
+    Mutex wait_lock_;
     utils::RefPtr<PciDeviceDispatcher::PciDeviceWrapper> device_;
 };

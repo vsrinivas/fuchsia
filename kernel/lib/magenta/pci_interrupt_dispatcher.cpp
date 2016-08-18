@@ -14,15 +14,11 @@ constexpr mx_rights_t kDefaultPciInterruptRights = MX_RIGHT_READ | MX_RIGHT_TRAN
 
 PciInterruptDispatcher::PciInterruptDispatcher(uint32_t irq_id)
     : irq_id_(irq_id) {
-    mutex_init(&wait_lock_);
-    mutex_init(&lock_);
     event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
     event_destroy(&event_);
-    mutex_destroy(&lock_);
-    mutex_destroy(&wait_lock_);
 }
 
 pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(struct pcie_device_state* dev,
@@ -110,7 +106,7 @@ status_t PciInterruptDispatcher::InterruptWait() {
         // Try to grab the wait_lock.  If we can't, it's because someone is already
         // waiting on the interrupt.  Right now, we only support a single waiter at
         // a time, so tell the user code that we are busy.
-        result = mutex_acquire_timeout(&wait_lock_, 0);
+        result = wait_lock_.AcquireTimeout(0);
         if (result != NO_ERROR) {
             DEBUG_ASSERT(result == ERR_TIMED_OUT);
             return ERR_BUSY;
@@ -125,7 +121,7 @@ status_t PciInterruptDispatcher::InterruptWait() {
                 // Something went horribly wrong.  Be sure to release the wait
                 // lock before we unwind our of the main lock and report our
                 // shameful failure to the caller.
-                mutex_release(&wait_lock_);
+                wait_lock_.Release();
                 return result;
             }
         }
@@ -142,7 +138,7 @@ status_t PciInterruptDispatcher::InterruptWait() {
     // important to release the wait lock before attempting to acquire the main
     // lock.  Failure to do this can produce a lock ordering problem which will
     // lead to deadlock.
-    mutex_release(&wait_lock_);
+    wait_lock_.Release();
     {
         AutoLock lock(&lock_);
         return device_ ? NO_ERROR : ERR_CANCELLED;
