@@ -28,7 +28,9 @@ executable("magma_app_unit_tests") {
 }
 
 source_set("libmad_tests") {
-  sources = []
+  sources = [
+    "test_magma_buffer.cc",
+  ]
 
   deps = [
     "$magma_build_root/include:mad_abi",

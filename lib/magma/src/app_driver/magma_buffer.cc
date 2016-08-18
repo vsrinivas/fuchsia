@@ -9,6 +9,13 @@ MagmaBuffer::MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t
     : connection_(connection), refcount_(new BufferRefcount(name, this)), alignment_(alignment)
 {
     magic_ = kMagic;
+
+    // Reserve the maximum number of relocations you will possibly need so the
+    // vector never gets resized. We don't have any real evidence that resizing
+    // the relocation vector introduces any meaningful performance overhead but
+    // cstout@ is convinced that it could be bad so we do this to be safe.
+    uint32_t max_relocations = connection->batch_size() / sizeof(uint32_t) / 2 - 2;
+    relocations_.reserve(max_relocations);
 }
 
 MagmaBuffer::~MagmaBuffer()
@@ -67,4 +74,11 @@ bool MagmaBuffer::Unmap()
 void MagmaBuffer::WaitRendering()
 {
     return magma_system_wait_rendering(connection_->sys_connection(), this->handle);
+}
+
+void MagmaBuffer::EmitRelocation(uint32_t offset, MagmaBuffer* target, uint32_t target_offset,
+                                 uint32_t read_domains_bitfield, uint32_t write_domains_bitfield)
+{
+    relocations_.emplace_back(offset, target, target_offset, read_domains_bitfield,
+                              write_domains_bitfield);
 }

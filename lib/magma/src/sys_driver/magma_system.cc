@@ -103,7 +103,7 @@ bool magma_system_set_domain(magma_system_connection* connection, uint32_t handl
 }
 
 bool magma_system_execute_buffer(magma_system_connection* connection,
-                                 struct magma_system_exec_buffer* execbuffer)
+                                 struct magma_system_exec_buffer* execbuffer, uint32_t context_id)
 {
     DLOG("TODO: magma_system_execute_buffer");
     return false;

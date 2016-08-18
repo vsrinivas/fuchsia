@@ -44,6 +44,8 @@ public:
 
     bool ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_size, uint32_t flags);
 
+    uint64_t batch_size() { return batch_size_; }
+
     static MagmaConnection* cast(magma_connection* device)
     {
         DASSERT(device);

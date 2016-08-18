@@ -47,8 +47,8 @@ int32_t magma_bo_busy(magma_buffer* bo)
 int32_t magma_bo_emit_reloc(magma_buffer* bo, uint32_t offset, magma_buffer* target_bo,
                             uint32_t target_offset, uint32_t read_domains, uint32_t write_domain)
 {
-    DLOG("TODO magma_bo_emit_reloc - offset 0x%x target_offset 0x%x domains 0x%x 0x%x", offset,
-         target_offset, read_domains, write_domain);
+    MagmaBuffer::cast(bo)->EmitRelocation(offset, MagmaBuffer::cast(target_bo), target_offset,
+                                          read_domains, write_domain);
     return 0;
 }
 
@@ -252,13 +252,12 @@ void magma_gem_bo_aub_dump_bmp(magma_buffer* bo, int32_t x1, int32_t y1, int32_t
 
 void magma_gem_bo_clear_relocs(magma_buffer* bo, int32_t start)
 {
-    DLOG("magma_gem_bo_clear_relocs - STUB");
+    MagmaBuffer::cast(bo)->ClearRelocations(start);
 }
 
 int32_t magma_gem_bo_get_reloc_count(magma_buffer* bo)
 {
-    DLOG("magma_gem_bo_get_reloc_count - STUB");
-    return 0;
+    return MagmaBuffer::cast(bo)->RelocationCount();
 }
 
 int32_t magma_gem_bo_map_gtt(magma_buffer* bo)

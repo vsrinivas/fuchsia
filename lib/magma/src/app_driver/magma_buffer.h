@@ -9,6 +9,9 @@
 #include "magma_system.h"
 #include "magma_util/refcounted.h"
 
+#include <memory>
+#include <vector>
+
 class MagmaConnection;
 
 // Magma is based on intel libdrm.
@@ -41,6 +44,16 @@ public:
     void Incref() { return refcount_->Incref(); }
     void Decref() { return refcount_->Decref(); }
 
+    void EmitRelocation(uint32_t offset, MagmaBuffer* target, uint32_t target_offset,
+                        uint32_t read_domains_bitfield, uint32_t write_domains_bitfield);
+    void ClearRelocations(uint32_t start)
+    {
+        if (start > relocations_.size())
+            return;
+        relocations_.erase(relocations_.begin() + start, relocations_.end());
+    }
+    uint32_t RelocationCount() { return relocations_.size(); }
+
 private:
     class BufferRefcount : public magma::Refcounted {
     public:
@@ -58,6 +71,35 @@ private:
     private:
         MagmaBuffer* buffer_;
     };
+
+    class RelocationEntry {
+    public:
+        RelocationEntry(uint32_t offset, MagmaBuffer* target, uint32_t target_offset,
+                        uint32_t read_domains_bitfield, uint32_t write_domains_bitfield)
+            : offset_(offset), target_(target), target_offset_(target_offset),
+              read_domains_bitfield_(read_domains_bitfield),
+              write_domains_bitfield_(write_domains_bitfield)
+        {
+        }
+
+        void GetAbiRelocationEntry(magma_system_relocation_entry* abi_reloc_out)
+        {
+            abi_reloc_out->offset = offset_;
+            abi_reloc_out->target_buffer = target_->handle;
+            abi_reloc_out->target_offset = target_offset_;
+            abi_reloc_out->read_domains_bitfield = read_domains_bitfield_;
+            abi_reloc_out->write_domains_bitfield = write_domains_bitfield_;
+        }
+
+    private:
+        uint32_t offset_;
+        MagmaBuffer* target_;
+        uint32_t target_offset_;
+        uint32_t read_domains_bitfield_;
+        uint32_t write_domains_bitfield_;
+    };
+
+    std::vector<RelocationEntry> relocations_;
 
     MagmaConnection* connection_;
 
