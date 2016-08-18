@@ -595,8 +595,21 @@ mx_status_t devmgr_driver_remove(mx_driver_t* drv) {
     return ERR_NOT_SUPPORTED;
 }
 
-extern mx_driver_t __start_builtin_drivers[] __WEAK;
-extern mx_driver_t __stop_builtin_drivers[] __WEAK;
+#if !LIBDRIVER
+static const char* proto_names[] = {
+#define DDK_PROTOCOL_DEF(tag, val, name) name,
+#include <ddk/protodefs.h>
+    NULL,
+};
+
+static void prepopulate_protocol_dirs(void) {
+    const char** namep = proto_names;
+    while (*namep) {
+        vnode_t* vnp;
+        devfs_add_node(&vnp, vnclass, *namep++, NULL);
+    }
+}
+#endif
 
 void devmgr_init(bool devhost) {
     xprintf("devmgr: init\n");
@@ -613,6 +626,7 @@ void devmgr_init(bool devhost) {
         vnroot = devfs_get_root();
         root_dev->vnode = vnroot;
         devfs_add_node(&vnclass, vnroot, "class", NULL);
+        prepopulate_protocol_dirs();
 
         mxio_dispatcher_create(&devmgr_devhost_dispatcher, devmgr_handler);
     }
@@ -620,6 +634,9 @@ void devmgr_init(bool devhost) {
 
     mxio_dispatcher_create(&devmgr_rio_dispatcher, mxrio_handler);
 }
+
+extern mx_driver_t __start_builtin_drivers[] __WEAK;
+extern mx_driver_t __stop_builtin_drivers[] __WEAK;
 
 void devmgr_init_builtin_drivers(void) {
     mx_driver_t* drv;
