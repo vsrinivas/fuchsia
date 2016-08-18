@@ -38,6 +38,7 @@ config("compiler_cpu") {
 }
 
 config("shared_library_config") {
+  cflags = [ "-fPIC" ]
 }
 
 config("executable_config") {
