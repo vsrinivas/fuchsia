@@ -53,12 +53,17 @@ block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** b
 // Obtain the nth block of a vnode.
 // If alloc is true, allocate that block if it doesn't already exist.
 static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) {
+#if 0
+    uint32_t hint = ((vn->fs->info.block_count - vn->fs->info.dat_block) / 256) * (vn->ino % 256);
+#else
+    uint32_t hint = 0;
+#endif
     // direct blocks are simple... is there an entry in dnum[]?
     if (n < MINFS_DIRECT) {
         uint32_t bno;
         if ((bno = vn->inode.dnum[n]) == 0) {
             if (alloc) {
-                block_t* blk = minfs_new_block(vn->fs, 0, &bno, bdata);
+                block_t* blk = minfs_new_block(vn->fs, hint, &bno, bdata);
                 if (blk != NULL) {
                     vn->inode.dnum[n] = bno;
                     vn->inode.block_count++;
@@ -114,7 +119,7 @@ static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) 
     if ((bno = ientry[j]) == 0) {
         if (alloc) {
             // allocate a new block
-            blk = minfs_new_block(vn->fs, 0, &bno, bdata);
+            blk = minfs_new_block(vn->fs, hint, &bno, bdata);
             if (blk != NULL) {
                 vn->inode.block_count++;
                 ientry[j] = bno;

@@ -107,6 +107,9 @@ mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, ui
 
 uint32_t bcache_max_block(bcache_t* bc);
 
+// drop all non-busy, non-dirty blocks
+void bcache_invalidate(bcache_t* bc);
+
 // General Utilities
 
 #define panic(fmt...) do { fprintf(stderr, fmt); *((int*) 0) = 0; } while (0)
@@ -121,7 +124,9 @@ uint32_t bcache_max_block(bcache_t* bc);
 #define TRACE_IO      0x0200
 #define TRACE_RPC     0x0400
 #define TRACE_VERBOSE 0x1000
-#define TRACE_ALL     0x0031
+
+#define TRACE_SOME    0x0211
+#define TRACE_ALL     0xFFFF
 
 // Enable trace printf()s
 

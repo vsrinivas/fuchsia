@@ -91,6 +91,22 @@ static const char* modestr(uint32_t mode) {
 
 #define BLOCK_BUSY 0x10
 
+
+void bcache_invalidate(bcache_t* bc) {
+    block_t* blk;
+    uint32_t n = 0;
+    while ((blk = list_remove_head_type(&bc->list_lru, block_t, listnode)) != NULL) {
+        if (blk->flags & BLOCK_BUSY) {
+            panic("blk %p bno %u is busy on lru\n", blk, blk->bno);
+        }
+        // remove from hash, bno to be reassigned
+        list_delete(&blk->hashnode);
+        list_add_tail(&bc->list_free, &blk->listnode);
+        n++;
+    }
+    trace(BCACHE, "[ %d blocks dropped ]\n", n);
+}
+
 static block_t* _bcache_get(bcache_t* bc, uint32_t bno, void** data, uint32_t mode) {
     trace(BCACHE,"bcache_get() bno=%u %s\n",bno,modestr(mode));
     if (bno >= bc->blockmax) {

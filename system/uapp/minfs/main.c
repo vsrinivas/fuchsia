@@ -30,24 +30,32 @@ int do_minfs_mount(bcache_t* bc) {
 #endif
 }
 
-extern vnode_t* fake_root;
-int run_fs_tests(void);
-
-int do_minfs_test(bcache_t* bc) {
 #ifdef __Fuchsia__
+int do_minfs_test(bcache_t* bc) {
     error("not supported\n");
     return -1;
+}
 #else
-    trace_on(TRACE_ALL);
+int run_fs_tests(void);
+
+static bcache_t* the_block_cache;
+void drop_cache(void) {
+    bcache_invalidate(the_block_cache);
+}
+
+extern vnode_t* fake_root;
+
+int do_minfs_test(bcache_t* bc) {
     vnode_t* vn = 0;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
     fprintf(stderr, "mounted minfs, root vnode %p\n", vn);
     fake_root = vn;
+    the_block_cache = bc;
     return run_fs_tests();
-#endif
 }
+#endif
 
 struct {
     const char* name;
@@ -88,6 +96,8 @@ int main(int argc, char** argv) {
 
     while (argc > 1) {
         if (!strcmp(argv[1], "-v")) {
+            trace_on(TRACE_SOME);
+        } else if (!strcmp(argv[1], "-vv")) {
             trace_on(TRACE_ALL);
         } else {
             break;
@@ -97,6 +107,7 @@ int main(int argc, char** argv) {
     }
 
     if ((argc < 2) || (argc > 4)) {
+        fprintf(stderr, "usage: %d\n", argc);
         return usage();
     }
 
@@ -112,6 +123,7 @@ int main(int argc, char** argv) {
         char* end;
         size = strtoull(argv[3], &end, 10);
         if (end == argv[3]) {
+            fprintf(stderr, "minfs: bad size: %s\n", argv[3]);
             return usage();
         }
         switch (end[0]) {
@@ -127,6 +139,7 @@ int main(int argc, char** argv) {
             break;
         }
         if (end[0]) {
+            fprintf(stderr, "minfs: bad size: %s\n", argv[3]);
             return usage();
         }
     }
@@ -141,6 +154,7 @@ int main(int argc, char** argv) {
             goto found;
         }
     }
+    fprintf(stderr, "minfs: unsupported command: %s\n", cmd);
     return usage();
 
 found:

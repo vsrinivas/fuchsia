@@ -154,7 +154,7 @@ ssize_t FN(write)(int fd, const void* buf, size_t count) {
 }
 
 off_t FL(lseek)(int fd, off_t offset, int whence);
-off_t FL(lseek)(int fd, off_t offset, int whence) {
+off_t FN(lseek)(int fd, off_t offset, int whence) {
     file_t* f;
     FILE_WRAP(f, fd, lseek, fd, offset, whence);
 
