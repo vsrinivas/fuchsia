@@ -79,7 +79,6 @@ mx_status_t IOPortDispatcher::Create(uint32_t options,
 IOPortDispatcher::IOPortDispatcher(uint32_t options)
     : options_(options),
       no_clients_(false) {
-    mutex_init(&lock_);
     event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
 
@@ -92,7 +91,6 @@ IOPortDispatcher::~IOPortDispatcher() {
     DEBUG_ASSERT(packets_.is_empty());
 
     event_destroy(&event_);
-    mutex_destroy(&lock_);
 }
 
 void IOPortDispatcher::FreePackets_NoLock() {

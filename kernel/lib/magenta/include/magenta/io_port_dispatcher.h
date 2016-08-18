@@ -65,7 +65,7 @@ private:
     utils::unique_ptr<IOPortObserver> MaybeRemoveObserver(IOP_Packet* packet);
 
     const uint32_t options_;
-    mutex_t lock_;
+    Mutex lock_;
 
     bool no_clients_;
     utils::DoublyLinkedList<IOPortObserver*, IOPortObserverListTraits> observers_;
