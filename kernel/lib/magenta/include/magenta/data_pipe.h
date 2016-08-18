@@ -69,7 +69,7 @@ private:
 
     const mx_size_t capacity_;
 
-    mutex_t lock_;
+    Mutex lock_;
     EndPoint producer_;
     EndPoint consumer_;
     utils::RefPtr<VmObject> vmo_;

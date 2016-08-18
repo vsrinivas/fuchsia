@@ -52,7 +52,6 @@ mx_status_t DataPipe::Create(mx_size_t capacity,
 DataPipe::DataPipe(mx_size_t capacity)
     : capacity_(capacity),
       free_space_(0u) {
-    mutex_init(&lock_);
     producer_.state_tracker.set_initial_signals_state(
         mx_signals_state_t{MX_SIGNAL_WRITABLE, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
     consumer_.state_tracker.set_initial_signals_state(
@@ -62,7 +61,6 @@ DataPipe::DataPipe(mx_size_t capacity)
 }
 
 DataPipe::~DataPipe() {
-    mutex_destroy(&lock_);
     DEBUG_ASSERT(!consumer_.alive);
     DEBUG_ASSERT(!producer_.alive);
 }
