@@ -56,6 +56,10 @@
             "bootfs_path": "test/mojo_public_cpp_utility_unittests"
         },
         {
+            "binary": "mojo_services_geometry_cpp_unittests",
+            "bootfs_path": "test/mojo_services_geometry_cpp_unittests"
+        },
+        {
             "binary": "echo_client",
             "bootfs_path": "apps/echo_client"
         },
