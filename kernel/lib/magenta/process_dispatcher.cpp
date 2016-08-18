@@ -99,11 +99,6 @@ ProcessDispatcher::~ProcessDispatcher() {
     // remove ourself from the global process list
     RemoveProcess(this);
 
-    mutex_destroy(&state_lock_);
-    mutex_destroy(&handle_table_lock_);
-    mutex_destroy(&thread_list_lock_);
-    mutex_destroy(&exception_lock_);
-
     LTRACE_EXIT_OBJ;
 }
 
@@ -266,7 +261,7 @@ void ProcessDispatcher::AllHandlesClosed() {
 void ProcessDispatcher::SetState(State s) {
     LTRACEF("process %p: state %u (%s)\n", this, static_cast<unsigned int>(s), StateToString(s));
 
-    DEBUG_ASSERT(is_mutex_held(&state_lock_));
+    DEBUG_ASSERT(state_lock_.IsHeld());
 
     // look for some invalid state transitions
     if (state_ == State::DEAD && s != State::DEAD) {

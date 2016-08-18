@@ -82,7 +82,7 @@ public:
                        uint32_t* rights);
 
     // accessors
-    mutex_t& handle_table_lock() { return handle_table_lock_; }
+    Mutex& handle_table_lock() { return handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
     StateTracker* state_tracker() { return &state_tracker_; }
     State state() const { return state_; }
@@ -156,7 +156,7 @@ private:
     mx_handle_t handle_rand_ = 0;
 
     // protects thread_list_, as well as the UserThread joined_ and detached_ flags
-    mutable mutex_t thread_list_lock_ = MUTEX_INITIAL_VALUE(thread_list_lock_);
+    mutable Mutex thread_list_lock_;
 
     // list of threads in this process
     utils::DoublyLinkedList<UserThread*> thread_list_;
@@ -168,8 +168,7 @@ private:
     utils::RefPtr<VmAspace> aspace_;
 
     // our list of handles
-    mutable mutex_t handle_table_lock_ =
-        MUTEX_INITIAL_VALUE(handle_table_lock_); // protects |handles_|.
+    mutable Mutex handle_table_lock_; // protects |handles_|.
     utils::DoublyLinkedList<Handle*> handles_;
 
     StateTracker state_tracker_;
@@ -178,7 +177,7 @@ private:
 
     // our state
     State state_ = State::INITIAL;
-    mutex_t state_lock_ = MUTEX_INITIAL_VALUE(state_lock_);
+    Mutex state_lock_;
 
     // process return code
     int retcode_ = 0;
@@ -187,7 +186,7 @@ private:
     thread_start_routine entry_ = nullptr;
 
     utils::RefPtr<ExceptionPort> exception_port_;
-    mutex_t exception_lock_ = MUTEX_INITIAL_VALUE(exception_lock_);
+    Mutex exception_lock_;
 
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
 
