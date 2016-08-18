@@ -7,7 +7,7 @@ module ledger;
 
 /*
  * This file contains definitions of interfaces and data structures to access
- * the TQ Ledger.
+ * the Fuchsia Ledger.
  */
 
 // Response code for ledger operations.
