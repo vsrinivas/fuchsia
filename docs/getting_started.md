@@ -102,7 +102,7 @@ make -j32 magenta-pc-x86-64
 # for aarch64
 ./scripts/run-magenta-arm64
 
-# for i686
+# for x86-64
 ./scripts/run-magenta-x86-64
 ```
 
