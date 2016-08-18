@@ -162,7 +162,7 @@ private:
     StateTracker state_tracker_;
 
     // WARNING: No other locks may be taken under |mutex_|.
-    mutex_t mutex_;  // Protects the following members.
+    Mutex mutex_;  // Protects the following members.
 
     // Associated to |mutex_|. This should be signaled (broadcast) when |triggered_entries_| becomes
     // nonempty or |cancelled_| becomes set.

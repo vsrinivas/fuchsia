@@ -40,7 +40,7 @@ status_t WaitSetDispatcher::Entry::Create(mx_signals_t watched_signals,
 WaitSetDispatcher::Entry::~Entry() {}
 
 void WaitSetDispatcher::Entry::Init_NoLock(WaitSetDispatcher* wait_set, Handle* handle) {
-    DEBUG_ASSERT(is_mutex_held(&wait_set->mutex_));
+    DEBUG_ASSERT(wait_set->mutex_.IsHeld());
 
     DEBUG_ASSERT(state_ == State::UNINITIALIZED);
     state_ = State::ADD_PENDING;
@@ -56,34 +56,34 @@ void WaitSetDispatcher::Entry::Init_NoLock(WaitSetDispatcher* wait_set, Handle* 
 }
 
 WaitSetDispatcher::Entry::State WaitSetDispatcher::Entry::GetState_NoLock() const {
-    // Don't assert |is_mutex_held(&wait_set_->mutex_)| here, since we may get called from
+    // Don't assert |wait_set_->mutex_.IsHeld()| here, since we may get called from
     // WaitSetDispatcher's destructor.
     return state_;
 }
 
 Handle* WaitSetDispatcher::Entry::GetHandle_NoLock() const {
-    DEBUG_ASSERT(is_mutex_held(&wait_set_->mutex_));
+    DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     return handle_;
 }
 
 void WaitSetDispatcher::Entry::SetState_NoLock(State new_state) {
-    DEBUG_ASSERT(is_mutex_held(&wait_set_->mutex_));
+    DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     state_ = new_state;
 }
 
 const utils::RefPtr<Dispatcher>& WaitSetDispatcher::Entry::GetDispatcher_NoLock() const {
-    // Don't assert |is_mutex_held(&wait_set_->mutex_)| here, since we may get called from
+    // Don't assert |wait_set_->mutex_.IsHeld()| here, since we may get called from
     // WaitSetDispatcher's destructor.
     return dispatcher_;
 }
 
 bool WaitSetDispatcher::Entry::IsTriggered_NoLock() const {
-    DEBUG_ASSERT(is_mutex_held(&wait_set_->mutex_));
+    DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     return is_triggered_;
 }
 
 mx_signals_state_t WaitSetDispatcher::Entry::GetSignalsState_NoLock() const {
-    DEBUG_ASSERT(is_mutex_held(&wait_set_->mutex_));
+    DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     return signals_state_;
 }
 
@@ -167,7 +167,7 @@ bool WaitSetDispatcher::Entry::OnCancel(Handle* handle,
 }
 
 bool WaitSetDispatcher::Entry::Trigger_NoLock() {
-    DEBUG_ASSERT(is_mutex_held(&wait_set_->mutex_));
+    DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
 
     DEBUG_ASSERT(!is_triggered_);
     is_triggered_ = true;
@@ -229,7 +229,6 @@ WaitSetDispatcher::~WaitSetDispatcher() {
 
     // Note these can't be destroyed until we've called RemoveObserver() on the remaining entries.
     cond_destroy(&cv_);
-    mutex_destroy(&mutex_);
 }
 
 status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* handle) {
@@ -365,7 +364,6 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
 }
 
 WaitSetDispatcher::WaitSetDispatcher() : state_tracker_(false) {
-    mutex_init(&mutex_);
     cond_init(&cv_);
 
     // This is just so we can observe our own handle's cancellation.
@@ -387,18 +385,18 @@ bool WaitSetDispatcher::OnCancel(Handle* handle, bool* should_remove, bool* call
 }
 
 status_t WaitSetDispatcher::DoWaitInfinite_NoLock() {
-    DEBUG_ASSERT(is_mutex_held(&mutex_));
+    DEBUG_ASSERT(mutex_.IsHeld());
     DEBUG_ASSERT(!num_triggered_entries_ && !cancelled_);
 
     for (;;) {
-        status_t result = cond_wait_timeout(&cv_, &mutex_, INFINITE_TIME);
+        status_t result = cond_wait_timeout(&cv_, mutex_.GetInternal(), INFINITE_TIME);
         if (num_triggered_entries_ || cancelled_ || result != NO_ERROR)
             return result;
     }
 }
 
 status_t WaitSetDispatcher::DoWaitTimeout_NoLock(lk_time_t timeout) {
-    DEBUG_ASSERT(is_mutex_held(&mutex_));
+    DEBUG_ASSERT(mutex_.IsHeld());
     DEBUG_ASSERT(!num_triggered_entries_ && !cancelled_);
 
     // Calculate an absolute deadline.
@@ -408,7 +406,7 @@ status_t WaitSetDispatcher::DoWaitTimeout_NoLock(lk_time_t timeout) {
         return DoWaitInfinite_NoLock();
 
     for (;;) {
-        status_t result = cond_wait_timeout(&cv_, &mutex_, deadline - now);
+        status_t result = cond_wait_timeout(&cv_, mutex_.GetInternal(), deadline - now);
         if (num_triggered_entries_ || cancelled_ || result != NO_ERROR)
             return result;
 
