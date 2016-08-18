@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "minfs-private.h"
@@ -67,12 +68,12 @@ int usage(void) {
 }
 
 off_t get_size(int fd) {
-    off_t off;
-    if ((off = lseek(fd, 0, SEEK_END)) < 0) {
+    struct stat s;
+    if (fstat(fd, &s) < 0) {
         fprintf(stderr, "error: could not find end of file/device\n");
         return 0;
     }
-    return off;
+    return s.st_size;;
 }
 
 
