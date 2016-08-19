@@ -7,8 +7,8 @@
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
+#include <threads.h>
 
-#include <runtime/mutex.h>
 #include <runtime/tls.h>
 
 #define pthread __pthread
@@ -42,9 +42,9 @@ struct pthread {
     int unblock_cancel;
     volatile int timer_id;
     locale_t locale;
-    mxr_mutex_t killlock;
-    mxr_mutex_t exitlock;
-    mxr_mutex_t startlock;
+    mtx_t killlock;
+    mtx_t exitlock;
+    mtx_t startlock;
     unsigned long sigmask[_NSIG / 8 / sizeof(long)];
     char* dlerror_buf;
     int dlerror_flag;

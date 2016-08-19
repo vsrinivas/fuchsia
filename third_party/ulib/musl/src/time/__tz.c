@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <runtime/mutex.h>
+#include <threads.h>
 
 long __timezone = 0;
 int __daylight = 0;
@@ -29,7 +28,7 @@ static char old_tz_buf[32];
 static char* old_tz = old_tz_buf;
 static size_t old_tz_size = sizeof old_tz_buf;
 
-static mxr_mutex_t lock;
+static mtx_t lock;
 
 static int getint(const char** p) {
     unsigned x;
@@ -376,7 +375,7 @@ static long long rule_to_secs(const int* rule, int year) {
 
 void __secs_to_zone(long long t, int local, int* isdst, long* offset, long* oppoff,
                     const char** zonename) {
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
 
     do_tzset();
 
@@ -388,7 +387,7 @@ void __secs_to_zone(long long t, int local, int* isdst, long* offset, long* oppo
             *zonename = (const char*)abbrevs + types[6 * i + 5];
             if (oppoff)
                 *oppoff = (int32_t)zi_read32(types + 6 * alt);
-            mxr_mutex_unlock(&lock);
+            mtx_unlock(&lock);
             return;
         }
     }
@@ -430,7 +429,7 @@ std:
     if (oppoff)
         *oppoff = -dst_off;
     *zonename = __tzname[0];
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     return;
 dst:
     *isdst = 1;
@@ -438,24 +437,24 @@ dst:
     if (oppoff)
         *oppoff = -__timezone;
     *zonename = __tzname[1];
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
 }
 
 void __tzset(void) {
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
     do_tzset();
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
 }
 
 weak_alias(__tzset, tzset);
 
 const char* __tm_to_tzname(const struct tm* tm) {
     const void* p = tm->__tm_zone;
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
     do_tzset();
     if (p != __gmt && p != __tzname[0] && p != __tzname[1] &&
         (!zi || (uintptr_t)p - (uintptr_t)abbrevs >= abbrevs_end - abbrevs))
         p = "";
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     return p;
 }

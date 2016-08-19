@@ -1,3 +1,4 @@
+#define _ALL_SOURCE
 #include "libc.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -9,11 +10,10 @@
 #include <sys/socket.h>
 #include <syslog.h>
 #include <time.h>
+#include <threads.h>
 #include <unistd.h>
 
-#include <runtime/mutex.h>
-
-static mxr_mutex_t lock;
+static mtx_t lock = MTX_INIT;
 static char log_ident[32];
 static int log_opt;
 static int log_facility = LOG_USER;
@@ -21,11 +21,11 @@ static int log_mask = 0xff;
 static int log_fd = -1;
 
 int setlogmask(int maskpri) {
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
     int ret = log_mask;
     if (maskpri)
         log_mask = maskpri;
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     return ret;
 }
 
@@ -37,10 +37,10 @@ static const struct {
 void closelog(void) {
     int cs;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
     close(log_fd);
     log_fd = -1;
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     pthread_setcancelstate(cs, 0);
 }
 
@@ -53,7 +53,7 @@ static void __openlog(void) {
 void openlog(const char* ident, int opt, int facility) {
     int cs;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
 
     if (ident) {
         size_t n = strnlen(ident, sizeof log_ident - 1);
@@ -68,7 +68,7 @@ void openlog(const char* ident, int opt, int facility) {
     if ((opt & LOG_NDELAY) && log_fd < 0)
         __openlog();
 
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     pthread_setcancelstate(cs, 0);
 }
 
@@ -129,9 +129,9 @@ void __vsyslog(int priority, const char* message, va_list ap) {
     if (!(log_mask & LOG_MASK(priority & 7)) || (priority & ~0x3ff))
         return;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
     _vsyslog(priority, message, ap);
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     pthread_setcancelstate(cs, 0);
 }
 

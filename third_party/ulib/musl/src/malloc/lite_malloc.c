@@ -3,8 +3,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-#include <runtime/mutex.h>
+#include <threads.h>
 
 #define ALIGN 16
 
@@ -12,7 +11,7 @@ void* __expand_heap(size_t*);
 
 static void* __simple_malloc(size_t n) {
     static char *cur, *end;
-    static mxr_mutex_t lock;
+    static mtx_t lock;
     size_t align = 1, pad;
     void* p;
 
@@ -21,7 +20,7 @@ static void* __simple_malloc(size_t n) {
     while (align < n && align < ALIGN)
         align += align;
 
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
 
     pad = -(uintptr_t)cur & align - 1;
 
@@ -32,7 +31,7 @@ static void* __simple_malloc(size_t n) {
         size_t m = n;
         char* new = __expand_heap(&m);
         if (!new) {
-            mxr_mutex_unlock(&lock);
+            mtx_unlock(&lock);
             return 0;
         }
         if (new != end) {
@@ -45,7 +44,7 @@ static void* __simple_malloc(size_t n) {
 
     p = cur + pad;
     cur += n;
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     return p;
 }
 

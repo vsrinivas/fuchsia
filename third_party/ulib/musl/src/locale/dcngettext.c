@@ -8,8 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-
-#include <runtime/mutex.h>
+#include <threads.h>
 
 struct binding {
     struct binding* next;
@@ -34,7 +33,7 @@ static char* gettextdir(const char* domainname, size_t* dirlen) {
 }
 
 char* bindtextdomain(const char* domainname, const char* dirname) {
-    static mxr_mutex_t lock;
+    static mtx_t lock;
     struct binding *p, *q;
 
     if (!domainname)
@@ -49,7 +48,7 @@ char* bindtextdomain(const char* domainname, const char* dirname) {
         return 0;
     }
 
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
 
     for (p = bindings; p; p = p->next) {
         if (!strcmp(p->domainname, domainname) && !strcmp(p->dirname, dirname)) {
@@ -60,7 +59,7 @@ char* bindtextdomain(const char* domainname, const char* dirname) {
     if (!p) {
         p = malloc(sizeof *p + domlen + dirlen + 2);
         if (!p) {
-            mxr_mutex_unlock(&lock);
+            mtx_unlock(&lock);
             return 0;
         }
         p->next = bindings;
@@ -79,7 +78,7 @@ char* bindtextdomain(const char* domainname, const char* dirname) {
             a_store(&q->active, 0);
     }
 
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
 
     return (char*)p->dirname;
 }

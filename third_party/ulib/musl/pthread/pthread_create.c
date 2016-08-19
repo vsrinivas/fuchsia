@@ -110,10 +110,10 @@ _Noreturn void pthread_exit(void* result) {
 
     __pthread_tsd_run_dtors();
 
-    mxr_mutex_lock(&self->exitlock);
+    mtx_lock(&self->exitlock);
 
     /* Mark this thread dead before decrementing count */
-    mxr_mutex_lock(&self->killlock);
+    mtx_lock(&self->killlock);
     self->dead = 1;
 
     /* Block all signals before decrementing the live thread count.
@@ -127,7 +127,7 @@ _Noreturn void pthread_exit(void* result) {
      * been blocked. This precludes observation of the thread id
      * as a live thread (with application code running in it) after
      * the thread was reported dead by ESRCH being returned. */
-    mxr_mutex_unlock(&self->killlock);
+    mtx_unlock(&self->killlock);
 
     /* TODO(kulakowski) Thread exit process teardown. */
     /* It's impossible to determine whether this is "the last thread"

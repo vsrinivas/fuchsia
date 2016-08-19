@@ -1,7 +1,6 @@
 #include "libc.h"
 #include <pthread.h>
-
-#include <runtime/mutex.h>
+#include <threads.h>
 
 static struct atfork_funcs {
     void (*prepare)(void);
@@ -10,14 +9,14 @@ static struct atfork_funcs {
     struct atfork_funcs *prev, *next;
 } * funcs;
 
-static mxr_mutex_t lock;
+static mtx_t lock;
 
 void __fork_handler(int who) {
     struct atfork_funcs* p;
     if (!funcs)
         return;
     if (who < 0) {
-        mxr_mutex_lock(&lock);
+        mtx_lock(&lock);
         for (p = funcs; p; p = p->next) {
             if (p->prepare)
                 p->prepare();
@@ -31,7 +30,7 @@ void __fork_handler(int who) {
                 p->child();
             funcs = p;
         }
-        mxr_mutex_unlock(&lock);
+        mtx_unlock(&lock);
     }
 }
 
@@ -40,7 +39,7 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
     if (!new)
         return -1;
 
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
     new->next = funcs;
     new->prev = 0;
     new->prepare = prepare;
@@ -49,6 +48,6 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
     if (funcs)
         funcs->prev = new;
     funcs = new;
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     return 0;
 }

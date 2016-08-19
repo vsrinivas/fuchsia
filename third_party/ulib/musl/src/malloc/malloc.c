@@ -8,8 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-
-#include <runtime/mutex.h>
+#include <threads.h>
 
 #if defined(__GNUC__) && defined(__PIC__)
 #define inline inline __attribute__((always_inline))
@@ -21,7 +20,7 @@ void* __mremap(void*, size_t, size_t, int, ...);
 int __madvise(void*, size_t, int);
 
 struct bin {
-    mxr_mutex_t lock;
+    mtx_t lock;
     struct chunk* head;
     struct chunk* tail;
 };
@@ -29,7 +28,7 @@ struct bin {
 static struct {
     volatile uint64_t binmap;
     struct bin bins[64];
-    mxr_mutex_t free_lock;
+    mtx_t free_lock;
 } mal;
 
 #define SIZE_ALIGN (4 * sizeof(size_t))
@@ -45,13 +44,13 @@ static struct {
 /* Synchronization tools */
 
 static inline void lock_bin(int i) {
-    mxr_mutex_lock(&mal.bins[i].lock);
+    mtx_lock(&mal.bins[i].lock);
     if (!mal.bins[i].head)
         mal.bins[i].head = mal.bins[i].tail = BIN_TO_CHUNK(i);
 }
 
 static inline void unlock_bin(int i) {
-    mxr_mutex_unlock(&mal.bins[i].lock);
+    mtx_unlock(&mal.bins[i].lock);
 }
 
 static int first_set(uint64_t x) {
@@ -130,7 +129,7 @@ void __dump_heap(int x)
 void* __expand_heap(size_t*);
 
 static struct chunk* expand_heap(size_t n) {
-    static mxr_mutex_t heap_lock;
+    static mtx_t heap_lock;
     static void* end;
     void* p;
     struct chunk* w;
@@ -140,11 +139,11 @@ static struct chunk* expand_heap(size_t n) {
      * we need room for an extra zero-sized sentinel chunk. */
     n += SIZE_ALIGN;
 
-    mxr_mutex_lock(&heap_lock);
+    mtx_lock(&heap_lock);
 
     p = __expand_heap(&n);
     if (!p) {
-        mxr_mutex_unlock(&heap_lock);
+        mtx_unlock(&heap_lock);
         return 0;
     }
 
@@ -169,7 +168,7 @@ static struct chunk* expand_heap(size_t n) {
     w = MEM_TO_CHUNK(p);
     w->csize = n | C_INUSE;
 
-    mxr_mutex_unlock(&heap_lock);
+    mtx_unlock(&heap_lock);
 
     return w;
 }
@@ -462,10 +461,10 @@ static void internal_free(void* p) {
             next->psize = final_size | C_INUSE;
             i = bin_index(final_size);
             lock_bin(i);
-            mxr_mutex_lock(&mal.free_lock);
+            mtx_lock(&mal.free_lock);
             if (self->psize & next->csize & C_INUSE)
                 break;
-            mxr_mutex_unlock(&mal.free_lock);
+            mtx_unlock(&mal.free_lock);
             unlock_bin(i);
         }
 
@@ -491,7 +490,7 @@ static void internal_free(void* p) {
 
     self->csize = final_size;
     next->psize = final_size;
-    mxr_mutex_unlock(&mal.free_lock);
+    mtx_unlock(&mal.free_lock);
 
     self->next = BIN_TO_CHUNK(i);
     self->prev = mal.bins[i].tail;

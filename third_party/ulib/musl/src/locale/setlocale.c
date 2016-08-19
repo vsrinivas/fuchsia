@@ -1,11 +1,11 @@
+#define _ALL_SOURCE
 #include "atomic.h"
 #include "libc.h"
 #include "locale_impl.h"
 #include <locale.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <runtime/mutex.h>
+#include <threads.h>
 
 static char buf[LC_ALL * (LOCALE_NAME_MAX + 1)];
 
@@ -23,12 +23,12 @@ static char* setlocale_one_unlocked(int cat, const char* name) {
 char* __strchrnul(const char*, int);
 
 char* setlocale(int cat, const char* name) {
-    static mxr_mutex_t lock;
+    static mtx_t lock = MTX_INIT;
 
     if ((unsigned)cat > LC_ALL)
         return 0;
 
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
 
     /* For LC_ALL, setlocale is required to return a string which
      * encodes the current setting for all categories. The format of
@@ -61,13 +61,13 @@ char* setlocale(int cat, const char* name) {
             s += l + 1;
         }
         *--s = 0;
-        mxr_mutex_unlock(&lock);
+        mtx_unlock(&lock);
         return buf;
     }
 
     char* ret = setlocale_one_unlocked(cat, name);
 
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
 
     return ret;
 }

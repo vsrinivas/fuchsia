@@ -2,7 +2,7 @@
 
 int pthread_getschedparam(pthread_t t, int* restrict policy, struct sched_param* restrict param) {
     int r;
-    mxr_mutex_lock(&t->killlock);
+    mtx_lock(&t->killlock);
     if (t->dead) {
         r = ESRCH;
     } else {
@@ -11,6 +11,6 @@ int pthread_getschedparam(pthread_t t, int* restrict policy, struct sched_param*
             *policy = __syscall(SYS_sched_getscheduler, t->tid);
         }
     }
-    mxr_mutex_unlock(&t->killlock);
+    mtx_unlock(&t->killlock);
     return r;
 }

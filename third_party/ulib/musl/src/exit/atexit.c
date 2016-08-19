@@ -1,8 +1,8 @@
+#define _ALL_SOURCE
 #include "libc.h"
 #include <stdint.h>
 #include <stdlib.h>
-
-#include <runtime/mutex.h>
+#include <threads.h>
 
 void* __dso_handle = NULL;
 
@@ -16,25 +16,25 @@ static struct fl {
 } builtin, *head;
 
 static int slot;
-static mxr_mutex_t lock;
+static mtx_t lock = MTX_INIT;
 
 void __funcs_on_exit(void) {
     void (*func)(void*), *arg;
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
     for (; head; head = head->next, slot = COUNT)
         while (slot-- > 0) {
             func = head->f[slot];
             arg = head->a[slot];
-            mxr_mutex_unlock(&lock);
+            mtx_unlock(&lock);
             func(arg);
-            mxr_mutex_lock(&lock);
+            mtx_lock(&lock);
         }
 }
 
 void __cxa_finalize(void* dso) {}
 
 int __cxa_atexit(void (*func)(void*), void* arg, void* dso) {
-    mxr_mutex_lock(&lock);
+    mtx_lock(&lock);
 
     /* Defer initialization of head so it can be in BSS */
     if (!head)
@@ -44,7 +44,7 @@ int __cxa_atexit(void (*func)(void*), void* arg, void* dso) {
     if (slot == COUNT) {
         struct fl* new_fl = calloc(sizeof(struct fl), 1);
         if (!new_fl) {
-            mxr_mutex_unlock(&lock);
+            mtx_unlock(&lock);
             return -1;
         }
         new_fl->next = head;
@@ -57,7 +57,7 @@ int __cxa_atexit(void (*func)(void*), void* arg, void* dso) {
     head->a[slot] = arg;
     slot++;
 
-    mxr_mutex_unlock(&lock);
+    mtx_unlock(&lock);
     return 0;
 }
 
