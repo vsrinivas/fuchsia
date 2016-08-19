@@ -30,7 +30,7 @@ Handle* DupHandle(Handle* source, mx_rights_t rights);
 void DeleteHandle(Handle* handle);
 
 // Maps a handle created by MakeHandle() to the 0 to 2^32 range.
-uint32_t MapHandleToU32(Handle* handle);
+uint32_t MapHandleToU32(const Handle* handle);
 
 // Maps an integer obtained by MapHandleToU32() back to a Handle.
 Handle* MapU32ToHandle(uint32_t value);

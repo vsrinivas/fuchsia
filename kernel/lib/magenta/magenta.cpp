@@ -92,7 +92,7 @@ bool HandleInRange(void* addr) {
     return handle_arena.in_range(addr);
 }
 
-uint32_t MapHandleToU32(Handle* handle) {
+uint32_t MapHandleToU32(const Handle* handle) {
     auto va = handle - reinterpret_cast<Handle*>(handle_arena.start());
     return static_cast<uint32_t>(va);
 }

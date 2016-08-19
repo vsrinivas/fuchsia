@@ -37,7 +37,7 @@ mutex_t ProcessDispatcher::global_process_list_mutex_ =
 utils::DoublyLinkedList<ProcessDispatcher*> ProcessDispatcher::global_process_list_;
 
 
-mx_handle_t map_handle_to_value(Handle* handle, mx_handle_t mixer) {
+mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
     // Ensure that the last bit of the result is not zero and that
     // we don't lose upper bits.
     DEBUG_ASSERT((mixer & 0x1) == 0);
@@ -311,7 +311,7 @@ void ProcessDispatcher::SetState(State s) {
 }
 
 // process handle manipulation routines
-mx_handle_t ProcessDispatcher::MapHandleToValue(Handle* handle) {
+mx_handle_t ProcessDispatcher::MapHandleToValue(const Handle* handle) const {
     return map_handle_to_value(handle, handle_rand_);
 }
 

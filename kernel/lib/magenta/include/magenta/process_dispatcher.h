@@ -58,7 +58,7 @@ public:
 
     // Map a |handle| to an integer which can be given to usermode as a
     // handle value. Uses MapHandleToU32() plus additional mixing.
-    mx_handle_t MapHandleToValue(Handle* handle);
+    mx_handle_t MapHandleToValue(const Handle* handle) const;
 
     // Maps a handle value into a Handle as long we can verify that
     // it belongs to this process.
@@ -122,8 +122,10 @@ public:
     mx_status_t set_bad_handle_policy(uint32_t new_policy);
 
 private:
+    // The diagnostic code is allow to know about the internals of this code.
     friend void DumpProcessList();
     friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
+    friend void DumpProcessHandles(mx_koid_t id);
 
     explicit ProcessDispatcher(utils::StringPiece name);
 

@@ -42,6 +42,28 @@ char StateChar(const ProcessDispatcher& pd) {
     return '?';
 }
 
+const char* ObjectTypeToString(mx_obj_type_t type) {
+    static_assert(MX_OBJ_TYPE_LAST == 15, "need to update switch below");
+
+    switch (type) {
+        case MX_OBJ_TYPE_PROCESS: return "process";
+        case MX_OBJ_TYPE_THREAD: return "thread";
+        case MX_OBJ_TYPE_VMEM: return "vmo";
+        case MX_OBJ_TYPE_MESSAGE_PIPE: return "msg-pipe";
+        case MX_OBJ_TYPE_EVENT: return "event";
+        case MX_OBJ_TYPE_IOPORT: return "io-port";
+        case MX_OBJ_TYPE_DATA_PIPE_PRODUCER: return "data-pipe-con";
+        case MX_OBJ_TYPE_DATA_PIPE_CONSUMER: return "data-pipe-prod";
+        case MX_OBJ_TYPE_INTERRUPT: return "interrupt";
+        case MX_OBJ_TYPE_IOMAP: return "io-map";
+        case MX_OBJ_TYPE_PCI_DEVICE: return "pci-device";
+        case MX_OBJ_TYPE_PCI_INT: return "pci-interrupt";
+        case MX_OBJ_TYPE_LOG: return "log";
+        case MX_OBJ_TYPE_WAIT_SET: return "wait-set";
+        default: return "???";
+    }
+}
+
 uint32_t BuildHandleStats(const ProcessDispatcher& pd, uint32_t* handle_type, size_t size) {
     AutoLock lock(&pd.handle_table_lock_);
     uint32_t total = 0;
@@ -96,6 +118,39 @@ void DumpProcessList() {
     }
 }
 
+void DumpProcessHandles(mx_koid_t id) {
+    utils::RefPtr<ProcessDispatcher> pd;
+    {
+        AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
+
+        ProcessDispatcher* process =
+            ProcessDispatcher::global_process_list_.find_if([id] (const ProcessDispatcher& pd) {
+                return (id == pd.get_koid());
+        });
+
+        if (!process) {
+            printf("process %lld not found\n", id);
+            return;
+        }
+        pd = utils::RefPtr<ProcessDispatcher>(process);
+    }
+
+    printf("process [%llu] handles :\n", id);
+    printf("handle       koid : type\n");
+
+    AutoLock lock(&pd->handle_table_lock_);
+    uint32_t total = 0;
+    for (const auto& handle : pd->handles_) {
+        auto type = handle.dispatcher()->GetType();
+        printf("%9d %7llu : %s\n",
+            pd->MapHandleToValue(&handle),
+            handle.dispatcher()->get_koid(),
+            ObjectTypeToString(type));
+        ++total;
+    }
+    printf("total: %u handles\n", total);
+}
+
 static int cmd_diagnostics(int argc, const cmd_args* argv) {
     int rc = 0;
 
@@ -104,7 +159,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
         printf("not enough arguments:\n");
     usage:
         printf("%s ps  : list processes\n", argv[0].str);
-        printf("%s ps  help: display keymap\n", argv[0].str);
+        printf("%s ht  <pid> : dump process handles\n", argv[0].str);
         return -1;
     }
 
@@ -114,6 +169,8 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
         } else {
             DumpProcessList();
         }
+    } else if (strcmp(argv[1].str, "ht") == 0) {
+        DumpProcessHandles(argv[2].i);
     } else {
         printf("unrecognized subcommand\n");
         goto usage;
