@@ -15,6 +15,7 @@ source_set("unit_tests") {
   ]
 
   deps = [
+    "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/tests/mock:mmio",
     "$magma_build_root/tests/helper:platform_device_helper",
