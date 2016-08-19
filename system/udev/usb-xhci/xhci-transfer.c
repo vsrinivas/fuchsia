@@ -34,6 +34,9 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
     xhci_transfer_ring_t* ring = &slot->transfer_rings[endpoint];
     if (!ring)
         return ERR_INVALID_ARGS;
+    if (ring->stalled)
+        return ERR_BAD_STATE;
+
     uint32_t interruptor_target = 0;
     const size_t max_transfer_size = 1 << (XFER_TRB_XFER_LENGTH_BITS - 1);
 
@@ -198,6 +201,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_SHORT_PACKET:
             result = length;
             break;
+        case TRB_CC_STALL_ERROR:
+            // FIXME - better error for stall case?
+            result = ERR_BAD_STATE;
+            break;
         case TRB_CC_STOPPED:
         case TRB_CC_STOPPED_LENGTH_INVALID:
         case TRB_CC_STOPPED_SHORT_PACKET:
@@ -219,6 +226,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     xhci_transfer_ring_t* ring = context->transfer_ring;
 
     mxr_mutex_lock(&ring->mutex);
+
+    if (cc == TRB_CC_STALL_ERROR) {
+        ring->stalled = true;
+    }
 
     list_delete(&context->node);
     if (list_is_empty(&ring->pending_requests)) {
