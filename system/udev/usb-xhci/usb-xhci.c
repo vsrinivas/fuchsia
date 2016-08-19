@@ -19,8 +19,8 @@
 
 #include "xhci.h"
 
-#define MXDEBUG 0
-#include <mxio/debug.h>
+//#define TRACE 1
+#include "xhci-debug.h"
 
 #define MAX_SLOTS 255
 

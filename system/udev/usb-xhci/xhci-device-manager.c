@@ -11,8 +11,8 @@
 
 #include "xhci.h"
 
-#define MXDEBUG 0
-#include <mxio/debug.h>
+//#define TRACE 1
+#include "xhci-debug.h"
 
 // list of devices pending result of enable slot command
 // list is kept on xhci_t.command_queue

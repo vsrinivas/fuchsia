@@ -7,8 +7,8 @@
 
 #include "xhci.h"
 
-#define MXDEBUG 0
-#include <mxio/debug.h>
+//#define TRACE 1
+#include "xhci-debug.h"
 
 //#define TRACE_TRBS 1
 #ifdef TRACE_TRBS
@@ -17,7 +17,7 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
     uint32_t* ptr = (uint32_t *)trb;
     uint64_t paddr = xhci_virt_to_phys(xhci, (mx_vaddr_t)trb);
 
-    cprintf("trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
+    printf("trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
 #else
 #define print_trb(xhci, ring, trb) do {} while (0)
