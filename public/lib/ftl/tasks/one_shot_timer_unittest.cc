@@ -24,6 +24,10 @@ class FakeTaskRunner : public TaskRunner {
     last_delay_ = delay;
   }
 
+  bool RunsTasksOnCurrentThread() override {
+    return true;
+  }
+
   void RunOneTask() {
     ASSERT_TRUE(has_tasks());
     Closure task = tasks_.front();

@@ -15,6 +15,7 @@ class TaskRunner : public RefCountedThreadSafe<TaskRunner> {
  public:
   virtual void PostTask(Closure task) = 0;
   virtual void PostDelayedTask(Closure task, TimeDelta delay) = 0;
+  virtual bool RunsTasksOnCurrentThread() = 0;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(TaskRunner);
