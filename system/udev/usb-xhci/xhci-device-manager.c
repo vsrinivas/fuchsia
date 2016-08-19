@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include "xhci.h"
 
@@ -563,13 +564,13 @@ static int xhci_device_thread(void* arg) {
         // wait for a device to enumerate
         completion_wait(&xhci->command_queue_completion, MX_TIME_INFINITE);
 
-        mxr_mutex_lock(&xhci->command_queue_mutex);
+        mtx_lock(&xhci->command_queue_mutex);
         list_node_t* node = list_remove_head(&xhci->command_queue);
         xhci_device_command_t* command = (node ? containerof(node, xhci_device_command_t, node) : NULL);
         if (list_is_empty(&xhci->command_queue)) {
             completion_reset(&xhci->command_queue_completion);
         }
-        mxr_mutex_unlock(&xhci->command_queue_mutex);
+        mtx_unlock(&xhci->command_queue_mutex);
 
         if (!command) {
             printf("ERROR: command_queue_completion was signalled, but no command was found");
@@ -613,10 +614,10 @@ static mx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_ad
     device_command->port = port;
     device_command->speed = speed;
 
-    mxr_mutex_lock(&xhci->command_queue_mutex);
+    mtx_lock(&xhci->command_queue_mutex);
     list_add_tail(&xhci->command_queue, &device_command->node);
     completion_signal(&xhci->command_queue_completion);
-    mxr_mutex_unlock(&xhci->command_queue_mutex);
+    mtx_unlock(&xhci->command_queue_mutex);
 
     return NO_ERROR;
 }
@@ -628,7 +629,7 @@ mx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t p
 
 mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
     xprintf("xhci_device_disconnected %d %d\n", hub_address, port);
-    mxr_mutex_lock(&xhci->command_queue_mutex);
+    mtx_lock(&xhci->command_queue_mutex);
     // check pending device list first
     xhci_device_command_t* command;
     list_for_every_entry (&xhci->command_queue, command, xhci_device_command_t, node) {
@@ -636,11 +637,11 @@ mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_
             command->port == port) {
             xprintf("found on pending list\n");
             list_delete(&command->node);
-            mxr_mutex_unlock(&xhci->command_queue_mutex);
+            mtx_unlock(&xhci->command_queue_mutex);
             return NO_ERROR;
         }
     }
-    mxr_mutex_unlock(&xhci->command_queue_mutex);
+    mtx_unlock(&xhci->command_queue_mutex);
 
     return xhci_queue_command(xhci, DISCONNECT_DEVICE, hub_address, port, USB_SPEED_UNDEFINED);
 }

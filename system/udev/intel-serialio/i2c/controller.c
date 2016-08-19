@@ -12,11 +12,11 @@
 #include <intel-serialio/serialio.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <runtime/mutex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <system/listnode.h>
+#include <threads.h>
 
 #include "controller.h"
 #include "slave.h"
@@ -55,7 +55,7 @@ static mx_status_t intel_serialio_i2c_add_slave(
 
     intel_serialio_i2c_slave_device_t* slave;
 
-    mxr_mutex_lock(&device->mutex);
+    mtx_lock(&device->mutex);
 
     // Make sure a slave with the given address doesn't already exist.
     status = intel_serialio_i2c_find_slave(&slave, device, address);
@@ -82,12 +82,12 @@ static mx_status_t intel_serialio_i2c_add_slave(
     if (status < 0)
         goto fail1;
 
-    mxr_mutex_unlock(&device->mutex);
+    mtx_unlock(&device->mutex);
     return NO_ERROR;
 fail1:
     free(slave);
 fail2:
-    mxr_mutex_unlock(&device->mutex);
+    mtx_unlock(&device->mutex);
     return status;
 }
 
@@ -104,7 +104,7 @@ static mx_status_t intel_serialio_i2c_remove_slave(
 
     intel_serialio_i2c_slave_device_t* slave;
 
-    mxr_mutex_lock(&device->mutex);
+    mtx_lock(&device->mutex);
 
     // Find the slave we're trying to remove.
     status = intel_serialio_i2c_find_slave(&slave, device, address);
@@ -124,7 +124,7 @@ static mx_status_t intel_serialio_i2c_remove_slave(
     free(slave);
 
 remove_slave_finish:
-    mxr_mutex_unlock(&device->mutex);
+    mtx_unlock(&device->mutex);
     return NO_ERROR;
 }
 
@@ -205,7 +205,7 @@ static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t* dev,
         return ERR_INVALID_ARGS;
     }
 
-    mxr_mutex_lock(&device->mutex);
+    mtx_lock(&device->mutex);
     device->bus_freq = frequency;
 
     unsigned int speed = CTL_SPEED_STANDARD;
@@ -213,7 +213,7 @@ static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t* dev,
         speed = CTL_SPEED_FAST;
     }
     RMWREG32(&device->regs->ctl, CTL_SPEED, 2, speed);
-    mxr_mutex_unlock(&device->mutex);
+    mtx_unlock(&device->mutex);
 
     return NO_ERROR;
 }

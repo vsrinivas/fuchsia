@@ -23,9 +23,9 @@ mx_status_t usb_hid_create_instance(usb_hid_dev_instance_t** dev) {
 
 void usb_hid_cleanup_instance(usb_hid_dev_instance_t* dev) {
     if (!(dev->flags & HID_FLAGS_DEAD)) {
-        mxr_mutex_lock(&dev->root->instance_lock);
+        mtx_lock(&dev->root->instance_lock);
         list_delete(&dev->node);
-        mxr_mutex_unlock(&dev->root->instance_lock);
+        mtx_unlock(&dev->root->instance_lock);
     }
     free(dev);
 }
@@ -155,13 +155,13 @@ static ssize_t usb_hid_read_instance(mx_device_t* dev, void* buf, size_t count, 
     }
 
     size_t left;
-    mxr_mutex_lock(&hid->fifo.lock);
+    mtx_lock(&hid->fifo.lock);
     ssize_t r = mx_hid_fifo_read(&hid->fifo, buf, count);
     left = mx_hid_fifo_size(&hid->fifo);
     if (left == 0) {
         device_state_clr(&hid->dev, DEV_STATE_READABLE);
     }
-    mxr_mutex_unlock(&hid->fifo.lock);
+    mtx_unlock(&hid->fifo.lock);
     return r;
 }
 

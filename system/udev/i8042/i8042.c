@@ -19,9 +19,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <system/listnode.h>
 
@@ -45,7 +45,7 @@ typedef struct i8042_device {
 
     // list of opened devices
     struct list_node instance_list;
-    mxr_mutex_t instance_lock;
+    mtx_t instance_lock;
 } i8042_device_t;
 
 typedef struct i8042_instance {
@@ -471,13 +471,13 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
     const boot_kbd_report_t* report = rollover ? &report_err_rollover : &dev->report.kbd;
     i8042_instance_t* instance;
     foreach_instance(dev, instance) {
-        mxr_mutex_lock(&instance->fifo.lock);
+        mtx_lock(&instance->fifo.lock);
         bool set_readable = (mx_hid_fifo_size(&instance->fifo) == 0);
         mx_hid_fifo_write(&instance->fifo, (uint8_t*)report, sizeof(*report));
         if (set_readable) {
             device_state_set(&instance->device, DEV_STATE_READABLE);
         }
-        mxr_mutex_unlock(&instance->fifo.lock);
+        mtx_unlock(&instance->fifo.lock);
     }
 }
 
@@ -504,13 +504,13 @@ static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int 
 
         i8042_instance_t* instance;
         foreach_instance(dev, instance) {
-            mxr_mutex_lock(&instance->fifo.lock);
+            mtx_lock(&instance->fifo.lock);
             bool set_readable = (mx_hid_fifo_size(&instance->fifo) == 0);
             mx_hid_fifo_write(&instance->fifo, (uint8_t*)&dev->report.mouse, sizeof(dev->report.mouse));
             if (set_readable) {
                 device_state_set(&instance->device, DEV_STATE_READABLE);
             }
-            mxr_mutex_unlock(&instance->fifo.lock);
+            mtx_unlock(&instance->fifo.lock);
         }
         memset(&dev->report.mouse, 0, sizeof(dev->report.mouse));
         break;
@@ -577,7 +577,7 @@ static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, mx_off_t of
         return ERR_INVALID_ARGS;
 
     uint8_t* data = buf;
-    mxr_mutex_lock(&instance->fifo.lock);
+    mtx_lock(&instance->fifo.lock);
     while (count > 0) {
         if (mx_hid_fifo_read(&instance->fifo, data, size) < (ssize_t)size)
             break;
@@ -587,7 +587,7 @@ static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, mx_off_t of
     if (mx_hid_fifo_size(&instance->fifo) == 0) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
-    mxr_mutex_unlock(&instance->fifo.lock);
+    mtx_unlock(&instance->fifo.lock);
     return data - (uint8_t*)buf;
 }
 
@@ -669,9 +669,9 @@ static ssize_t i8042_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, si
 
 static mx_status_t i8042_instance_release(mx_device_t* dev) {
     i8042_instance_t* inst = get_i8042_instance(dev);
-    mxr_mutex_lock(&inst->root->instance_lock);
+    mtx_lock(&inst->root->instance_lock);
     list_delete(&inst->node);
-    mxr_mutex_unlock(&inst->root->instance_lock);
+    mtx_unlock(&inst->root->instance_lock);
     free(inst);
     return NO_ERROR;
 }
@@ -706,9 +706,9 @@ static mx_status_t i8042_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t 
     }
     inst->root = i8042;
 
-    mxr_mutex_lock(&i8042->instance_lock);
+    mtx_lock(&i8042->instance_lock);
     list_add_tail(&i8042->instance_list, &inst->node);
-    mxr_mutex_unlock(&i8042->instance_lock);
+    mtx_unlock(&i8042->instance_lock);
 
     *dev_out = &inst->device;
     return NO_ERROR;
@@ -798,7 +798,7 @@ static void i8042_identify(int (*cmd)(uint8_t* param, int command)) {
 }
 
 static mx_status_t i8042_dev_init(i8042_device_t* dev) {
-    dev->instance_lock = MXR_MUTEX_INIT;
+    mtx_init(&dev->instance_lock, mtx_plain);
     list_initialize(&dev->instance_list);
 
     // add to root device

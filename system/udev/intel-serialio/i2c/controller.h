@@ -5,9 +5,9 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <runtime/mutex.h>
 #include <stdint.h>
 #include <system/listnode.h>
+#include <threads.h>
 
 typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
     uint32_t ctl;
@@ -137,7 +137,7 @@ typedef struct intel_serialio_i2c_device {
 
     struct list_node slave_list;
 
-    mxr_mutex_t mutex;
+    mtx_t mutex;
 } intel_serialio_i2c_device_t;
 
 mx_status_t intel_serialio_i2c_reset_controller(

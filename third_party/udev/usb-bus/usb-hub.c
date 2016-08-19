@@ -37,9 +37,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
-#include <runtime/mutex.h>
 #include <system/listnode.h>
 
 #include "generic-hub.h"
@@ -72,7 +72,7 @@ typedef struct usb_hub {
     usb_device_protocol_t* device_protocol;
 
     list_node_t free_intr_reqs;
-    mxr_mutex_t mutex;
+    mtx_t mutex;
 
     usb_speed_t speed;
     int num_ports;
@@ -279,10 +279,10 @@ static void usb_hub_interrupt_complete(usb_request_t* request) {
         }
     }
 
-    mxr_mutex_lock(&hub->mutex);
+    mtx_lock(&hub->mutex);
     list_add_head(&hub->free_intr_reqs, &request->node);
     queue_interrupt_requests_locked(hub);
-    mxr_mutex_unlock(&hub->mutex);
+    mtx_unlock(&hub->mutex);
 }
 
 static mx_status_t usb_hub_release(mx_device_t* device) {
@@ -378,9 +378,9 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     device_set_bindable(&hub->hub_device, false);
     device_add(&hub->hub_device, device);
 
-    mxr_mutex_lock(&hub->mutex);
+    mtx_lock(&hub->mutex);
     queue_interrupt_requests_locked(hub);
-    mxr_mutex_unlock(&hub->mutex);
+    mtx_unlock(&hub->mutex);
 
     return NO_ERROR;
 }

@@ -22,7 +22,7 @@ void mx_hid_fifo_init(mx_hid_fifo_t* fifo) {
     memset(fifo->buf, 0, HID_FIFO_SIZE);
     fifo->head = fifo->tail = 0;
     fifo->empty = true;
-    fifo->lock = MXR_MUTEX_INIT;
+    mtx_init(&fifo->lock, mtx_plain);
 }
 
 size_t mx_hid_fifo_size(mx_hid_fifo_t* fifo) {

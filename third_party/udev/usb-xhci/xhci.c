@@ -172,7 +172,7 @@ void xhci_poll(xhci_t* xhci) {
 
     xhci_rh_check_status_changed(xhci);
 
-    mxr_mutex_lock(&xhci->mutex);
+    mtx_lock(&xhci->mutex);
     xhci_handle_events(xhci);
     // move contents of xhci->completed_reqs to a local list within the mutex
     if (list_is_empty(&xhci->completed_reqs)) {
@@ -185,7 +185,7 @@ void xhci_poll(xhci_t* xhci) {
 
         list_initialize(&xhci->completed_reqs);
     }
-    mxr_mutex_unlock(&xhci->mutex);
+    mtx_unlock(&xhci->mutex);
 
     usb_request_t* request;
     usb_request_t* prev;
@@ -611,13 +611,13 @@ xhci_control(mx_device_t* hcidev, int devaddr, usb_setup_t* const devreq,
         return -1;
     }
 
-    mxr_mutex_lock(&xhci->mutex);
+    mtx_lock(&xhci->mutex);
 
     if (dalen > 0) {
         data = xhci->ep0_buffer;
         if (dalen > EPO_BUFFER_SIZE) {
             xhci_debug("Control transfer too large: %d\n", dalen);
-            mxr_mutex_unlock(&xhci->mutex);
+            mtx_unlock(&xhci->mutex);
             return -1;
         }
         if (out)
@@ -628,7 +628,7 @@ xhci_control(mx_device_t* hcidev, int devaddr, usb_setup_t* const devreq,
     const unsigned ep_state = EC_GET(STATE, epctx);
     if (ep_state > 1) {
         if (xhci_reset_endpoint(xhci, devaddr, NULL)) {
-            mxr_mutex_unlock(&xhci->mutex);
+            mtx_unlock(&xhci->mutex);
             return -1;
         }
     }
@@ -688,14 +688,14 @@ xhci_control(mx_device_t* hcidev, int devaddr, usb_setup_t* const devreq,
                 tr->ring, setup, status,
                 ep_state, EC_GET(STATE, epctx),
                 xhci->opreg->usbsts);
-            mxr_mutex_unlock(&xhci->mutex);
+            mtx_unlock(&xhci->mutex);
             return ret;
         }
     }
 
     if (!out && data != src)
         memcpy(src, data, transferred);
-    mxr_mutex_unlock(&xhci->mutex);
+    mtx_unlock(&xhci->mutex);
     return transferred;
 }
 
@@ -733,13 +733,13 @@ xhci_queue_request(mx_device_t* hcidev, int slot_id, usb_request_t* request) {
         return ERR_TOO_BIG;
     }
 
-    mxr_mutex_lock(&xhci->mutex);
+    mtx_lock(&xhci->mutex);
 
     /* Reset endpoint if it's not running */
     const unsigned ep_state = EC_GET(STATE, epctx);
     if (ep_state > 1) {
         if (xhci_reset_endpoint(xhci, slot_id, ep)) {
-            mxr_mutex_unlock(&xhci->mutex);
+            mtx_unlock(&xhci->mutex);
             return ERR_BAD_STATE;
         }
     }
@@ -752,7 +752,7 @@ xhci_queue_request(mx_device_t* hcidev, int slot_id, usb_request_t* request) {
 
     list_add_tail(&xhci->devices[slot_id]->req_queue, &request->node);
 
-    mxr_mutex_unlock(&xhci->mutex);
+    mtx_unlock(&xhci->mutex);
     return NO_ERROR;
 }
 

@@ -9,8 +9,8 @@
 #include <hid/hid.h>
 #include <mxio/vfs.h>
 #include <system/listnode.h>
-#include <runtime/mutex.h>
 #include <stdbool.h>
+#include <threads.h>
 
 #include "textcon.h"
 
@@ -25,7 +25,7 @@ typedef uint16_t vc_char_t;
 typedef struct vc_device {
     mx_device_t device;
 
-    mxr_mutex_t lock;
+    mtx_t lock;
     // protect output state of the vc
     // fifo.lock below protects input state
 

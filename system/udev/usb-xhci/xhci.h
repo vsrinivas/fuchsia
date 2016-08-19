@@ -9,11 +9,11 @@
 #include <hw/usb-hub.h>
 #include <hw/usb.h>
 #include <magenta/types.h>
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <stdbool.h>
 #include <system/compiler.h>
 #include <system/listnode.h>
+#include <threads.h>
 
 #include "xhci-hw.h"
 
@@ -28,7 +28,7 @@ typedef struct xhci_transfer_ring {
     xhci_trb_t* current;
     uint8_t pcs; // producer cycle status
 
-    mxr_mutex_t mutex;
+    mtx_t mutex;
     list_node_t pending_requests;
     completion_t completion; // signaled when pending_requests is empty
     bool dead;
@@ -106,7 +106,7 @@ struct xhci {
 
     // for command processing in xhci-device-manager.c
     list_node_t command_queue;
-    mxr_mutex_t command_queue_mutex;
+    mtx_t command_queue_mutex;
     completion_t command_queue_completion;
 };
 

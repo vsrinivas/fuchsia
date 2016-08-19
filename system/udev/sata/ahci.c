@@ -11,13 +11,13 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <system/listnode.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include "ahci.h"
@@ -64,7 +64,7 @@ typedef struct ahci_port {
 
     iotxn_t* running;
 
-    mxr_mutex_t lock; // protects txn_list
+    mtx_t lock; // protects txn_list
     list_node_t txn_list;
 } ahci_port_t;
 
@@ -345,9 +345,9 @@ void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     assert(port->flags & (AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT));
 
     // put the cmd on the queue
-    mxr_mutex_lock(&port->lock);
+    mtx_lock(&port->lock);
     list_add_tail(&port->txn_list, &txn->node);
-    mxr_mutex_unlock(&port->lock);
+    mtx_unlock(&port->lock);
 
     // hit the worker thread
     completion_signal(&device->worker_completion);
@@ -370,9 +370,9 @@ static int ahci_worker_thread(void* arg) {
             if (ahci_port_cmd_busy(port, 0)) continue;
 
             // run the next command if not busy
-            mxr_mutex_lock(&port->lock);
+            mtx_lock(&port->lock);
             node = list_remove_head(&port->txn_list);
-            mxr_mutex_unlock(&port->lock);
+            mtx_unlock(&port->lock);
 
             if (!node) continue;
 

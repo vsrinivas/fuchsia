@@ -20,11 +20,11 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 
 #include "tpm.h"
 #include "tpm-commands.h"
@@ -36,7 +36,7 @@
 // that we need to allocate.
 #define MAX_RAND_BYTES 256
 
-mxr_mutex_t tpm_lock = MXR_MUTEX_INIT;
+mtx_t tpm_lock = MTX_INIT;
 void *tpm_base;
 mx_handle_t irq_handle;
 
@@ -53,7 +53,7 @@ static ssize_t tpm_get_random(mx_device_t* dev, void* buf, size_t count) {
         return ERR_NO_MEMORY;
     }
 
-    mxr_mutex_lock(&tpm_lock);
+    mtx_lock(&tpm_lock);
 
     mx_status_t status = tpm_send_cmd(LOCALITY0, (uint8_t*)&cmd, sizeof(cmd));
     if (status != NO_ERROR) {
@@ -83,7 +83,7 @@ static ssize_t tpm_get_random(mx_device_t* dev, void* buf, size_t count) {
     status = bytes_returned;
 cleanup:
     free(resp);
-    mxr_mutex_unlock(&tpm_lock);
+    mtx_unlock(&tpm_lock);
     return status;
 }
 
@@ -92,7 +92,7 @@ static mx_status_t tpm_save_state(mx_device_t *dev) {
     uint32_t resp_len = tpm_init_savestate(&cmd);
     struct tpm_savestate_resp resp;
 
-    mxr_mutex_lock(&tpm_lock);
+    mtx_lock(&tpm_lock);
 
     mx_status_t status = tpm_send_cmd(LOCALITY0, (uint8_t*)&cmd, sizeof(cmd));
     if (status != NO_ERROR) {
@@ -112,7 +112,7 @@ static mx_status_t tpm_save_state(mx_device_t *dev) {
     }
     status = NO_ERROR;
 cleanup:
-    mxr_mutex_unlock(&tpm_lock);
+    mtx_unlock(&tpm_lock);
     return status;
 }
 

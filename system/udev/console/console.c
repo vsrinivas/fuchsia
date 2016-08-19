@@ -12,8 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 
 #define FIFOSIZE 256
@@ -23,9 +23,9 @@ static struct {
     uint8_t data[FIFOSIZE];
     uint32_t head;
     uint32_t tail;
-    mxr_mutex_t lock;
+    mtx_t lock;
 } fifo = {
-    .lock = MXR_MUTEX_INIT,
+    .lock = MTX_INIT,
 };
 
 static mx_status_t fifo_read(uint8_t* out) {
@@ -51,12 +51,12 @@ static int debug_reader(void* arg) {
     printf("debug_reader()\n");
     for (;;) {
         if (mx_debug_read((void*)&ch, 1) == 1) {
-            mxr_mutex_lock(&fifo.lock);
+            mtx_lock(&fifo.lock);
             if (fifo.head == fifo.tail) {
                 device_state_set(dev, DEV_STATE_READABLE);
             }
             fifo_write(ch);
-            mxr_mutex_unlock(&fifo.lock);
+            mtx_unlock(&fifo.lock);
         }
     }
     return 0;
@@ -64,7 +64,7 @@ static int debug_reader(void* arg) {
 
 static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     uint8_t* data = buf;
-    mxr_mutex_lock(&fifo.lock);
+    mtx_lock(&fifo.lock);
     while (count-- > 0) {
         if (fifo_read(data))
             break;
@@ -73,7 +73,7 @@ static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, mx_off_t 
     if (fifo.head == fifo.tail) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
-    mxr_mutex_unlock(&fifo.lock);
+    mtx_unlock(&fifo.lock);
     return data - (uint8_t*)buf;
 }
 

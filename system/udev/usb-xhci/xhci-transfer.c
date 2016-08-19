@@ -4,6 +4,7 @@
 
 #include <hw/usb.h>
 #include <stdio.h>
+#include <threads.h>
 
 #include "xhci.h"
 
@@ -42,7 +43,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
 
     // FIXME handle zero length packets
 
-    mxr_mutex_lock(&ring->mutex);
+    mtx_lock(&ring->mutex);
     context->transfer_ring = ring;
     list_add_tail(&ring->pending_requests, &context->node);
     completion_reset(&ring->completion);
@@ -136,7 +137,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
 
     XHCI_WRITE32(&xhci->doorbells[slot_id], endpoint + 1);
 
-    mxr_mutex_unlock(&ring->mutex);
+    mtx_unlock(&ring->mutex);
 
     return NO_ERROR;
 }
@@ -225,7 +226,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     xhci_transfer_ring_t* ring = context->transfer_ring;
 
-    mxr_mutex_lock(&ring->mutex);
+    mtx_lock(&ring->mutex);
 
     if (cc == TRB_CC_STALL_ERROR) {
         ring->stalled = true;
@@ -236,7 +237,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         completion_signal(&ring->completion);
     }
 
-    mxr_mutex_unlock(&ring->mutex);
+    mtx_unlock(&ring->mutex);
 
     context->callback(result, context->data);
 

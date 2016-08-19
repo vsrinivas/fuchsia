@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/usb-device.h>
 #include <hw/usb.h>
-#include <ddk/completion.h>
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 #include <system/listnode.h>
 #include <ddk/protocol/block.h>
@@ -18,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include "ums-hw.h"
@@ -70,10 +70,9 @@ typedef struct {
 
     // the last signals we reported
     mx_signals_t signals;
-    mxr_mutex_t mutex;
+
+    mtx_t mutex;
     completion_t read_completion;
-
-
 } ums_t;
 #define get_ums(dev) containerof(dev, ums_t, device)
 
@@ -647,7 +646,7 @@ static mx_status_t ums_release(mx_device_t* device) {
 static void ums_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     ums_t* msd = get_ums(dev);
     ums_pdata_t* pdata = ums_iotxn_pdata(txn);
-    mxr_mutex_lock(&msd->mutex);
+    mtx_lock(&msd->mutex);
     pdata->tag = msd->tag;
     list_add_tail(&msd->queued_iotxns, &txn->node);
 
@@ -720,7 +719,7 @@ static void ums_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         ums_write(dev, txn);
     }
 out:
-    mxr_mutex_unlock(&msd->mutex);
+    mtx_unlock(&msd->mutex);
 }
 
 static ssize_t ums_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {

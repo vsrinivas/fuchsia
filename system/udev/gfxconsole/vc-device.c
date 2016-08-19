@@ -44,7 +44,7 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
     assert(dev->gfx);
     assert(dev->hw_gfx);
 
-    dev->lock = MXR_MUTEX_INIT;
+    mtx_init(&dev->lock, mtx_plain);
 
     // calculate how many rows/columns we have
     dev->rows = dev->gfx->height / dev->charh;

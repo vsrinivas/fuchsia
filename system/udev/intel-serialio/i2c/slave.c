@@ -9,10 +9,10 @@
 #include <magenta/types.h>
 #include <mxio/util.h>
 #include <system/listnode.h>
-#include <runtime/mutex.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <threads.h>
 
 #include "controller.h"
 #include "slave.h"
@@ -86,7 +86,7 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
         goto transfer_finish_2;
     }
 
-    mxr_mutex_lock(&controller->mutex);
+    mtx_lock(&controller->mutex);
 
     if (!WAIT_FOR(bus_is_idle(controller))) {
         status = ERR_TIMED_OUT;
@@ -172,7 +172,7 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
 transfer_finish_1:
     if (status < 0)
         intel_serialio_i2c_reset_controller(controller);
-    mxr_mutex_unlock(&controller->mutex);
+    mtx_unlock(&controller->mutex);
 transfer_finish_2:
     return status;
 }

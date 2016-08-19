@@ -12,7 +12,6 @@
 #include <system/listnode.h>
 
 #include <runtime/thread.h>
-#include <runtime/mutex.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
@@ -20,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 typedef mx_status_t status_t;
 #include "ie.h"
@@ -30,7 +30,7 @@ typedef struct ethernet_device ethernet_device_t;
 
 struct ethernet_device {
     ethdev_t eth;
-    mxr_mutex_t lock;
+    mtx_t lock;
     mx_device_t dev;
     pci_protocol_t* pci;
     mx_device_t* pcidev;
@@ -49,11 +49,11 @@ static int irq_thread(void* arg) {
             printf("eth: irq wait failed? %d\n", r);
             break;
         }
-        mxr_mutex_lock(&edev->lock);
+        mtx_lock(&edev->lock);
         if (eth_handle_irq(&edev->eth) & ETH_IRQ_RX) {
             device_state_set(&edev->dev, DEV_STATE_READABLE);
         }
-        mxr_mutex_unlock(&edev->lock);
+        mtx_unlock(&edev->lock);
     }
     return 0;
 }
@@ -61,12 +61,12 @@ static int irq_thread(void* arg) {
 static mx_status_t eth_recv(mx_device_t* dev, void* data, size_t len) {
     ethernet_device_t* edev = get_eth_device(dev);
     mx_status_t r = ERR_BAD_STATE;
-    mxr_mutex_lock(&edev->lock);
+    mtx_lock(&edev->lock);
     r = eth_rx(&edev->eth, data);
     if (r <= 0) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
-    mxr_mutex_unlock(&edev->lock);
+    mtx_unlock(&edev->lock);
     return r;
 }
 
@@ -76,9 +76,9 @@ static mx_status_t eth_send(mx_device_t* dev, const void* data, size_t len) {
         return ERR_INVALID_ARGS;
     }
     mx_status_t r = len;
-    mxr_mutex_lock(&edev->lock);
+    mtx_lock(&edev->lock);
     r = eth_tx(&edev->eth, data, len);
-    mxr_mutex_unlock(&edev->lock);
+    mtx_unlock(&edev->lock);
     return r;
 }
 
@@ -143,7 +143,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
     if ((edev = calloc(1, sizeof(ethernet_device_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
-    edev->lock = MXR_MUTEX_INIT;
+    mtx_init(&edev->lock, mtx_plain);
 
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) {

@@ -8,12 +8,12 @@
 #include <ddk/protocol/bluetooth-hci.h>
 #include <ddk/protocol/usb-device.h>
 #include <system/listnode.h>
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #define EVENT_REQ_COUNT 8
@@ -49,7 +49,7 @@ typedef struct {
     list_node_t free_acl_read_reqs;
     list_node_t free_acl_write_reqs;
 
-    mxr_mutex_t mutex;
+    mtx_t mutex;
 } hci_t;
 #define get_hci(dev) containerof(dev, hci_t, device)
 
@@ -83,7 +83,7 @@ static void queue_interrupt_requests_locked(hci_t* hci) {
 
 static void hci_event_complete(usb_request_t* request) {
     hci_t* hci = (hci_t*)request->client_data;
-    mxr_mutex_lock(&hci->mutex);
+    mtx_lock(&hci->mutex);
     if (request->status == NO_ERROR) {
         uint8_t* buffer = request->buffer;
         size_t length = request->transfer_length;
@@ -137,7 +137,7 @@ out:
     list_add_head(&hci->free_event_reqs, &request->node);
     queue_interrupt_requests_locked(hci);
 out2:
-    mxr_mutex_unlock(&hci->mutex);
+    mtx_unlock(&hci->mutex);
 }
 
 static void hci_acl_read_complete(usb_request_t* request) {
@@ -151,19 +151,19 @@ static void hci_acl_read_complete(usb_request_t* request) {
         }
     }
 
-    mxr_mutex_lock(&hci->mutex);
+    mtx_lock(&hci->mutex);
     list_add_head(&hci->free_acl_read_reqs, &request->node);
     queue_acl_read_requests_locked(hci);
-    mxr_mutex_unlock(&hci->mutex);
+    mtx_unlock(&hci->mutex);
 }
 
 static void hci_acl_write_complete(usb_request_t* request) {
     hci_t* hci = (hci_t*)request->client_data;
 
     // FIXME what to do with error here?
-    mxr_mutex_lock(&hci->mutex);
+    mtx_lock(&hci->mutex);
     list_add_tail(&hci->free_acl_write_reqs, &request->node);
-    mxr_mutex_unlock(&hci->mutex);
+    mtx_unlock(&hci->mutex);
 }
 
 static int hci_read_thread(void* arg) {
@@ -206,19 +206,19 @@ static int hci_read_thread(void* arg) {
             uint32_t length = sizeof(buf);
             status = mx_message_read(handles[1], buf, &length, NULL, 0, 0);
             if (status >= 0) {
-                mxr_mutex_lock(&hci->mutex);
+                mtx_lock(&hci->mutex);
 
                 list_node_t* node;
                 do {
                     node = list_remove_head(&hci->free_acl_write_reqs);
                     if (!node) {
                         // FIXME this is nasty
-                        mxr_mutex_unlock(&hci->mutex);
+                        mtx_unlock(&hci->mutex);
                         usleep(10 * 1000);
-                        mxr_mutex_lock(&hci->mutex);
+                        mtx_lock(&hci->mutex);
                     }
                 } while (!node);
-                mxr_mutex_unlock(&hci->mutex);
+                mtx_unlock(&hci->mutex);
 
                 usb_request_t* request = containerof(node, usb_request_t, node);
                 memcpy(request->buffer, buf, length);
@@ -360,10 +360,10 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         return status;
     }
 
-    mxr_mutex_lock(&hci->mutex);
+    mtx_lock(&hci->mutex);
     queue_interrupt_requests_locked(hci);
     queue_acl_read_requests_locked(hci);
-    mxr_mutex_unlock(&hci->mutex);
+    mtx_unlock(&hci->mutex);
 
     mxr_thread_t* thread;
     mxr_thread_create(hci_read_thread, hci, "hci_read_thread", &thread);

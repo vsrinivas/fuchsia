@@ -8,13 +8,13 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-device.h>
 #include <system/listnode.h>
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include "asix.h"
@@ -54,7 +54,7 @@ typedef struct {
     // the last signals we reported
     mx_signals_t signals;
 
-    mxr_mutex_t mutex;
+    mtx_t mutex;
 } usb_ethernet_t;
 #define get_usb_ethernet(dev) containerof(dev, usb_ethernet_t, device)
 
@@ -177,28 +177,28 @@ static void queue_interrupt_requests_locked(usb_ethernet_t* eth) {
 static void usb_ethernet_read_complete(usb_request_t* request) {
     usb_ethernet_t* eth = (usb_ethernet_t*)request->client_data;
 
-    mxr_mutex_lock(&eth->mutex);
+    mtx_lock(&eth->mutex);
     if (request->status == NO_ERROR) {
         list_add_tail(&eth->completed_reads, &request->node);
     } else {
         requeue_read_request_locked(eth, request);
     }
     update_signals_locked(eth);
-    mxr_mutex_unlock(&eth->mutex);
+    mtx_unlock(&eth->mutex);
 }
 
 static void usb_ethernet_write_complete(usb_request_t* request) {
     usb_ethernet_t* eth = (usb_ethernet_t*)request->client_data;
     // FIXME what to do with error here?
-    mxr_mutex_lock(&eth->mutex);
+    mtx_lock(&eth->mutex);
     list_add_tail(&eth->free_write_reqs, &request->node);
     update_signals_locked(eth);
-    mxr_mutex_unlock(&eth->mutex);
+    mtx_unlock(&eth->mutex);
 }
 
 static void usb_ethernet_interrupt_complete(usb_request_t* request) {
     usb_ethernet_t* eth = (usb_ethernet_t*)request->client_data;
-    mxr_mutex_lock(&eth->mutex);
+    mtx_lock(&eth->mutex);
     if (request->status == NO_ERROR && request->transfer_length == sizeof(eth->status) &&
         memcmp(eth->status, request->buffer, sizeof(eth->status))) {
         //       const uint8_t* b = request->buffer;
@@ -223,14 +223,14 @@ static void usb_ethernet_interrupt_complete(usb_request_t* request) {
 
     list_add_head(&eth->free_intr_reqs, &request->node);
     queue_interrupt_requests_locked(eth);
-    mxr_mutex_unlock(&eth->mutex);
+    mtx_unlock(&eth->mutex);
 }
 
 mx_status_t usb_ethernet_send(mx_device_t* device, const void* buffer, size_t length) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
     mx_status_t status = NO_ERROR;
 
-    mxr_mutex_lock(&eth->mutex);
+    mtx_lock(&eth->mutex);
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
@@ -258,7 +258,7 @@ mx_status_t usb_ethernet_send(mx_device_t* device, const void* buffer, size_t le
 
 out:
     update_signals_locked(eth);
-    mxr_mutex_unlock(&eth->mutex);
+    mtx_unlock(&eth->mutex);
     return status;
 }
 
@@ -266,7 +266,7 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
     usb_ethernet_t* eth = get_usb_ethernet(device);
     mx_status_t status = NO_ERROR;
 
-    mxr_mutex_lock(&eth->mutex);
+    mtx_lock(&eth->mutex);
     int offset = eth->read_offset;
 
     list_node_t* node = list_peek_head(&eth->completed_reads);
@@ -314,7 +314,7 @@ out:
     eth->read_offset = offset;
 
     update_signals_locked(eth);
-    mxr_mutex_unlock(&eth->mutex);
+    mtx_unlock(&eth->mutex);
     return status;
 }
 
@@ -463,9 +463,9 @@ static int usb_ethernet_start_thread(void* arg) {
         return status;
     }
 
-    mxr_mutex_lock(&eth->mutex);
+    mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);
-    mxr_mutex_unlock(&eth->mutex);
+    mtx_unlock(&eth->mutex);
 
     eth->device.protocol_id = MX_PROTOCOL_ETHERNET;
     eth->device.protocol_ops = &usb_ethernet_proto;

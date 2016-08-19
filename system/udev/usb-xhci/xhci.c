@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include "xhci.h"
@@ -159,7 +160,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
                        xhci_command_complete_cb callback, void* context) {
     // FIXME - check that command ring is not full?
 
-    mxr_mutex_lock(&xhci->command_ring.mutex);
+    mtx_lock(&xhci->command_ring.mutex);
 
     xhci_transfer_ring_t* cr = &xhci->command_ring;
     xhci_trb_t* trb = cr->current;
@@ -175,7 +176,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
 
     XHCI_WRITE32(&xhci->doorbells[0], 0);
 
-    mxr_mutex_unlock(&xhci->command_ring.mutex);
+    mtx_unlock(&xhci->command_ring.mutex);
 }
 
 static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_trb) {

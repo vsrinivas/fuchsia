@@ -22,7 +22,7 @@ mx_handle_t mxr_process_get_handle(uint32_t info) {
     mx_proc_info_t* pi = &__proc_info__;
     mx_handle_t h = 0;
 
-    // TODO: locking once mxr_mutex exists
+    // TODO: locking
     for (int n = 0; n < pi->handle_count; n++) {
         if (pi->handle_info[n] == info) {
             h = pi->handle[n];

@@ -6,11 +6,11 @@
 #include <ddk/io-alloc.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
-#include <runtime/mutex.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #define MIN_ALIGN 8
 
@@ -24,7 +24,7 @@ struct io_alloc {
     void* virt;
     size_t size;
     intptr_t virt_offset;
-    mxr_mutex_t mutex;
+    mtx_t mutex;
     io_block_header_t* free_list;
 };
 
@@ -41,7 +41,7 @@ io_alloc_t* io_alloc_init(size_t size) {
     if (!ioa)
         return NULL;
 
-    ioa->mutex = MXR_MUTEX_INIT;
+    mtx_init(&ioa->mutex, mtx_plain);
 
     mx_paddr_t phys;
     void* virt;
@@ -100,7 +100,7 @@ void* io_memalign(io_alloc_t* ioa, size_t align, size_t size) {
     if (align < MIN_ALIGN)
         align = MIN_ALIGN;
 
-    mxr_mutex_lock(&ioa->mutex);
+    mtx_lock(&ioa->mutex);
 
     io_block_header_t* block = ioa->free_list;
     io_block_header_t* prev = NULL;
@@ -162,7 +162,7 @@ void* io_memalign(io_alloc_t* ioa, size_t align, size_t size) {
         block = block->ptr;
     }
 
-    mxr_mutex_unlock(&ioa->mutex);
+    mtx_unlock(&ioa->mutex);
 
     if (!result)
         printf("OUT OF MEMORY!!!\n");
@@ -183,14 +183,14 @@ void io_free(io_alloc_t* ioa, void* ptr) {
     header = header->ptr;
     header->size = size;
 
-    mxr_mutex_lock(&ioa->mutex);
+    mtx_lock(&ioa->mutex);
 
     // add to free list
     // TODO (voydanoff) consider coalescing with previous and next block
     header->ptr = ioa->free_list;
     ioa->free_list = header;
 
-    mxr_mutex_unlock(&ioa->mutex);
+    mtx_unlock(&ioa->mutex);
 }
 
 mx_paddr_t io_virt_to_phys(io_alloc_t* ioa, mx_vaddr_t virt_addr) {

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define _GNU_SOURCE
-
 #include <launchpad/launchpad.h>
 #include "elf.h"
 #include "stack.h"
@@ -11,13 +9,13 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
-#include <runtime/mutex.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <threads.h>
 
 enum special_handles {
     HND_LOADER_SVC,
@@ -416,12 +414,12 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
 }
 
 static mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
-static mxr_mutex_t vdso_mutex = MXR_MUTEX_INIT;
+static mtx_t vdso_mutex = MTX_INIT;
 static void vdso_lock(void) {
-    mxr_mutex_lock(&vdso_mutex);
+    mtx_lock(&vdso_mutex);
 }
 static void vdso_unlock(void) {
-    mxr_mutex_unlock(&vdso_mutex);
+    mtx_unlock(&vdso_mutex);
 }
 static mx_handle_t vdso_get_vmo(void) {
     if (vdso_vmo == MX_HANDLE_INVALID)

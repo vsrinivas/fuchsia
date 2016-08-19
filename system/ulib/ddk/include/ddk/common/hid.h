@@ -4,11 +4,13 @@
 
 #pragma once
 
+#include <magenta/types.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <runtime/mutex.h>
 #include <sys/types.h>
+#include <threads.h>
 
 #ifndef HID_FIFO_SIZE
 #define HID_FIFO_SIZE 4096
@@ -20,7 +22,7 @@ typedef struct {
     uint32_t head;
     uint32_t tail;
     bool empty;
-    mxr_mutex_t lock;
+    mtx_t lock;
 } mx_hid_fifo_t;
 
 mx_status_t mx_hid_fifo_create(mx_hid_fifo_t** fifo);

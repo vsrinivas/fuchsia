@@ -153,21 +153,21 @@ void usb_hid_load_hid_report_desc(usb_hid_dev_t* hid) {
 }
 
 void usb_hid_process_closed(usb_hid_dev_t* hid) {
-    mxr_mutex_lock(&hid->instance_lock);
+    mtx_lock(&hid->instance_lock);
     usb_hid_dev_instance_t* instance;
     foreach_instance(hid, instance) {
         instance->flags |= HID_FLAGS_DEAD;
         device_state_set(&instance->dev, DEV_STATE_READABLE);
     }
-    mxr_mutex_unlock(&hid->instance_lock);
+    mtx_unlock(&hid->instance_lock);
     device_remove(&hid->dev);
 }
 
 void usb_hid_process_req(usb_hid_dev_t* hid, const uint8_t* buf, uint16_t len) {
-    mxr_mutex_lock(&hid->instance_lock);
+    mtx_lock(&hid->instance_lock);
     usb_hid_dev_instance_t* instance;
     foreach_instance(hid, instance) {
-        mxr_mutex_lock(&instance->fifo.lock);
+        mtx_lock(&instance->fifo.lock);
         bool was_empty = mx_hid_fifo_size(&instance->fifo) == 0;
         ssize_t wrote = mx_hid_fifo_write(&instance->fifo, buf, len);
         if (wrote <= 0) {
@@ -177,9 +177,9 @@ void usb_hid_process_req(usb_hid_dev_t* hid, const uint8_t* buf, uint16_t len) {
                 device_state_set(&instance->dev, DEV_STATE_READABLE);
             }
         }
-        mxr_mutex_unlock(&instance->fifo.lock);
+        mtx_unlock(&instance->fifo.lock);
     }
-    mxr_mutex_unlock(&hid->instance_lock);
+    mtx_unlock(&hid->instance_lock);
 }
 
 mx_status_t usb_hid_create_dev(usb_hid_dev_t** hid) {
@@ -188,19 +188,19 @@ mx_status_t usb_hid_create_dev(usb_hid_dev_t** hid) {
         return ERR_NO_MEMORY;
     }
     hid_init_report_sizes(*hid);
-    (*hid)->instance_lock = MXR_MUTEX_INIT;
+    mtx_init(&(*hid)->instance_lock, mtx_plain);
     list_initialize(&((*hid)->instance_list));
     return NO_ERROR;
 }
 
 void usb_hid_cleanup_dev(usb_hid_dev_t* hid) {
     usb_hid_dev_instance_t* instance;
-    mxr_mutex_lock(&hid->instance_lock);
+    mtx_lock(&hid->instance_lock);
     foreach_instance(hid, instance) {
         instance->flags |= HID_FLAGS_DEAD;
         device_state_set(&instance->dev, DEV_STATE_READABLE);
     }
-    mxr_mutex_unlock(&hid->instance_lock);
+    mtx_unlock(&hid->instance_lock);
 
     if (hid->req) {
         hid->usb->free_request(hid->usbdev, hid->req);
@@ -234,9 +234,9 @@ static mx_status_t usb_hid_open_dev(mx_device_t* dev, mx_device_t** dev_out, uin
     }
     inst->root = hid;
 
-    mxr_mutex_lock(&hid->instance_lock);
+    mtx_lock(&hid->instance_lock);
     list_add_tail(&hid->instance_list, &inst->node);
-    mxr_mutex_unlock(&hid->instance_lock);
+    mtx_unlock(&hid->instance_lock);
 
     *dev_out = &inst->dev;
     return NO_ERROR;

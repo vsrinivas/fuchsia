@@ -12,11 +12,11 @@
 #include <hw/usb.h>
 #include <hw/usb-hid.h>
 
-#include <runtime/mutex.h>
 #include <system/listnode.h>
 
 #include <stdint.h>
 #include <stddef.h>
+#include <threads.h>
 
 #define HID_FLAGS_DEAD 1
 
@@ -50,7 +50,7 @@ typedef struct {
 
     // list of opened devices
     struct list_node instance_list;
-    mxr_mutex_t instance_lock;
+    mtx_t instance_lock;
 } usb_hid_dev_t;
 
 extern mx_protocol_device_t usb_hid_proto;

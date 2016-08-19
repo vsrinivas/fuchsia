@@ -20,10 +20,10 @@
 #include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <mxio/io.h>
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 
 #include <magenta/syscalls-ddk.h>
@@ -58,7 +58,7 @@ static struct list_node vc_list = LIST_INITIAL_VALUE(vc_list);
 static unsigned vc_count = 0;
 static vc_device_t* active_vc;
 static unsigned active_vc_index;
-static mxr_mutex_t vc_lock = MXR_MUTEX_INIT;
+static mtx_t vc_lock = MTX_INIT;
 
 // TODO move this to ulib/gfx
 static gfx_format display_format_to_gfx_format(unsigned display_format) {
@@ -222,13 +222,13 @@ static int vc_input_thread(void* arg) {
         if (!consumed) {
             // TODO: decouple char device from actual device
             // TODO: ensure active vc can't change while this is going on
-            mxr_mutex_lock(&active_vc->fifo.lock);
+            mtx_lock(&active_vc->fifo.lock);
             if ((mx_hid_fifo_size(&active_vc->fifo) == 0) && (active_vc->charcount == 0)) {
                 active_vc->flags |= VC_FLAG_RESETSCROLL;
                 device_state_set(&active_vc->device, DEV_STATE_READABLE);
             }
             mx_hid_fifo_write(&active_vc->fifo, report_buf, sizeof(report_buf));
-            mxr_mutex_unlock(&active_vc->fifo.lock);
+            mtx_unlock(&active_vc->fifo.lock);
         }
 
         // swap key states
@@ -334,18 +334,18 @@ mx_status_t vc_set_active_console(unsigned console) {
 
     unsigned i = 0;
     vc_device_t* device = NULL;
-    mxr_mutex_lock(&vc_lock);
+    mtx_lock(&vc_lock);
     list_for_every_entry (&vc_list, device, vc_device_t, node) {
         if (i == console)
             break;
         i++;
     }
     if (device == active_vc) {
-        mxr_mutex_unlock(&vc_lock);
+        mtx_unlock(&vc_lock);
         return NO_ERROR;
     }
     __vc_set_active(device, console);
-    mxr_mutex_unlock(&vc_lock);
+    mtx_unlock(&vc_lock);
     vc_device_render(active_vc);
     return NO_ERROR;
 }
@@ -355,7 +355,7 @@ void vc_get_status_line(char* str, int n) {
     char* ptr = str;
     unsigned i = 0;
     // TODO add process name, etc.
-    mxr_mutex_lock(&vc_lock);
+    mtx_lock(&vc_lock);
     list_for_every_entry (&vc_list, device, vc_device_t, node) {
         int lines = vc_device_get_scrollback_lines(device);
         int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
@@ -368,7 +368,7 @@ void vc_get_status_line(char* str, int n) {
         ptr += chars;
         i++;
     }
-    mxr_mutex_unlock(&vc_lock);
+    mtx_unlock(&vc_lock);
 }
 
 // implement device protocol:
@@ -376,7 +376,7 @@ void vc_get_status_line(char* str, int n) {
 static mx_status_t vc_device_release(mx_device_t* dev) {
     vc_device_t* vc = get_vc_device(dev);
 
-    mxr_mutex_lock(&vc_lock);
+    mtx_lock(&vc_lock);
     list_delete(&vc->node);
     vc_count -= 1;
 
@@ -399,7 +399,7 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
         }
         i++;
     }
-    mxr_mutex_unlock(&vc_lock);
+    mtx_unlock(&vc_lock);
 
     vc_device_free(vc);
 
@@ -414,7 +414,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
     uint8_t report[8];
     hid_keys_t key_delta;
     ssize_t r = 0;
-    mxr_mutex_lock(&vc->fifo.lock);
+    mtx_lock(&vc->fifo.lock);
     int cur_idx = vc->key_idx;
     int prev_idx = 1 - cur_idx;
     while (count > 0) {
@@ -583,13 +583,13 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
         device_state_clr(dev, DEV_STATE_READABLE);
     }
     vc->key_idx = cur_idx;
-    mxr_mutex_unlock(&vc->fifo.lock);
+    mtx_unlock(&vc->fifo.lock);
     return r;
 }
 
 static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
-    mxr_mutex_lock(&vc->lock);
+    mtx_lock(&vc->lock);
     vc->invy0 = vc->rows + 1;
     vc->invy1 = -1;
     const uint8_t* str = (const uint8_t*)buf;
@@ -604,7 +604,7 @@ static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, 
         vc_device_write_status(vc);
         vc_gfx_invalidate_status(vc);
     }
-    mxr_mutex_unlock(&vc->lock);
+    mtx_unlock(&vc->lock);
     return count;
 }
 
@@ -680,10 +680,10 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
     }
 
     // add to the vc list
-    mxr_mutex_lock(&vc_lock);
+    mtx_lock(&vc_lock);
     list_add_tail(&vc_list, &device->node);
     vc_count++;
-    mxr_mutex_unlock(&vc_lock);
+    mtx_unlock(&vc_lock);
 
     // make this the active vc if it's the first one
     if (!active_vc) {

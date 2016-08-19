@@ -38,9 +38,9 @@
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb-hub.h>
 #include <magenta/types.h>
-#include <runtime/mutex.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <threads.h>
 
 #ifdef XHCI_DEBUG
 #define xhci_debug(fmt, args...) printf("%s: " fmt, __func__, ##args)
@@ -534,7 +534,7 @@ typedef struct xhci {
     usb_bus_protocol_t* bus_protocol;
     int num_rh_ports;
 
-    mxr_mutex_t mutex;
+    mtx_t mutex;
 } xhci_t;
 
 typedef struct usb_xhci {
