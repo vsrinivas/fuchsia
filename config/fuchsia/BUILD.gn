@@ -35,6 +35,7 @@ config("compiler_cpu") {
   } else {
     assert(false, "Unsupported architecture")
   }
+  asmflags = cflags
 }
 
 config("shared_library_config") {
