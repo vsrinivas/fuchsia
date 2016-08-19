@@ -233,8 +233,8 @@ static void copyrect8(gfx_surface* surface, unsigned x, unsigned y, unsigned wid
         }
     } else {
         // copy backwards
-        src += height * surface->stride + width;
-        dest += height * surface->stride + width;
+        src += (height-1) * surface->stride + (width-1);
+        dest += (height-1) * surface->stride + (width-1);
 
         unsigned i, j;
         for (i = 0; i < height; i++) {
@@ -284,8 +284,8 @@ static void copyrect16(gfx_surface* surface, unsigned x, unsigned y, unsigned wi
         }
     } else {
         // copy backwards
-        src += height * surface->stride + width;
-        dest += height * surface->stride + width;
+        src += (height-1) * surface->stride + (width-1);
+        dest += (height-1) * surface->stride + (width-1);
 
         unsigned i, j;
         for (i = 0; i < height; i++) {
@@ -335,8 +335,8 @@ static void copyrect32(gfx_surface* surface, unsigned x, unsigned y, unsigned wi
         }
     } else {
         // copy backwards
-        src += height * surface->stride + width;
-        dest += height * surface->stride + width;
+        src += (height-1) * surface->stride + (width-1);
+        dest += (height-1) * surface->stride + (width-1);
 
         unsigned i, j;
         for (i = 0; i < height; i++) {
