@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
@@ -12,7 +13,6 @@
 #include <system/listnode.h>
 
 #include <runtime/thread.h>
-#include <runtime/mutex.h>
 
 #define MXDEBUG 0
 
@@ -27,7 +27,7 @@ typedef struct {
 #define FLAG_DISCONNECTED 1
 
 struct mxio_dispatcher {
-    mxr_mutex_t lock;
+    mtx_t lock;
     list_node_t list;
     mx_handle_t ioport;
     mxio_dispatcher_cb_t cb;
@@ -40,9 +40,9 @@ static void mxio_dispatcher_destroy(mxio_dispatcher_t* md) {
 }
 
 static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler) {
-    mxr_mutex_lock(&md->lock);
+    mtx_lock(&md->lock);
     list_delete(&handler->node);
-    mxr_mutex_unlock(&md->lock);
+    mtx_unlock(&md->lock);
     mx_handle_close(handler->h);
     free(handler);
 }
@@ -118,7 +118,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     }
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
-    md->lock = MXR_MUTEX_INIT;
+    mtx_init(&md->lock, mtx_plain);
     if ((md->ioport = mx_io_port_create(0u)) < 0) {
         free(md);
         return md->ioport;
@@ -130,7 +130,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
 
 mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md) {
     mx_status_t r;
-    mxr_mutex_lock(&md->lock);
+    mtx_lock(&md->lock);
     if (md->t == NULL) {
         if (mxr_thread_create(mxio_dispatcher_thread, md, "mxio-dispatcher", &md->t)) {
             mxio_dispatcher_destroy(md);
@@ -142,7 +142,7 @@ mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md) {
     } else {
         r = ERR_BAD_STATE;
     }
-    mxr_mutex_unlock(&md->lock);
+    mtx_unlock(&md->lock);
     return r;
 }
 
@@ -162,13 +162,13 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, 
     handler->cb = cb;
     handler->cookie = cookie;
 
-    mxr_mutex_lock(&md->lock);
+    mtx_lock(&md->lock);
     list_add_tail(&md->list, &handler->node);
     if ((r = mx_io_port_bind(md->ioport, (uint64_t)(uintptr_t)handler, h,
                              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) < 0) {
         list_delete(&handler->node);
     }
-    mxr_mutex_unlock(&md->lock);
+    mtx_unlock(&md->lock);
 
     if (r < 0) {
         printf("dispatcher: failed to bind: %d\n", r);

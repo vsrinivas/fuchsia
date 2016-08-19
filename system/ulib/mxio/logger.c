@@ -5,16 +5,16 @@
 #include <mxio/io.h>
 
 #include <stdlib.h>
+#include <threads.h>
 
 #include <magenta/syscalls.h>
 
-#include <runtime/mutex.h>
 #include <runtime/tls.h>
 
 #include "private.h"
 
 static int logbuf_tls = -1;
-static mxr_mutex_t logbuf_lock;
+static mtx_t logbuf_lock;
 
 typedef struct mxio_log mxio_log_t;
 struct mxio_log {
@@ -95,11 +95,11 @@ static mxio_ops_t log_io_ops = {
 };
 
 mxio_t* mxio_logger_create(mx_handle_t handle) {
-    mxr_mutex_lock(&logbuf_lock);
+    mtx_lock(&logbuf_lock);
     if (logbuf_tls < 0) {
         logbuf_tls = mxr_tls_allocate();
     }
-    mxr_mutex_unlock(&logbuf_lock);
+    mtx_unlock(&logbuf_lock);
     if (logbuf_tls < 0) {
         return NULL;
     }

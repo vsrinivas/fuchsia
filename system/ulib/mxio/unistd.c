@@ -12,12 +12,11 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-
-#include <runtime/mutex.h>
 
 #include <mxio/debug.h>
 #include <mxio/io.h>
@@ -36,19 +35,19 @@ static_assert(MXIO_FLAG_CLOEXEC == FD_CLOEXEC, "Unexpected mxio flags value");
 // using the mxio transports
 
 mxio_state_t __mxio_global_state = {
-    .lock = MXR_MUTEX_INIT,
-    .cwd_lock = MXR_MUTEX_INIT,
+    .lock = MTX_INIT,
+    .cwd_lock = MTX_INIT,
     .init = true,
     .cwd_path = "/",
 };
 
 void mxio_install_root(mxio_t* root) {
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     if (mxio_root_init) {
         mxio_root_handle = root;
         mxio_root_init = false;
     }
-    mxr_mutex_unlock(&mxio_lock);
+    mtx_unlock(&mxio_lock);
 }
 
 // Attaches an mxio to an fdtab slot.
@@ -57,7 +56,7 @@ void mxio_install_root(mxio_t* root) {
 int mxio_bind_to_fd(mxio_t* io, int fd, int starting_fd) {
     mxio_t* io_to_close = NULL;
 
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     if (fd >= 0) {
         if (fd >= MAX_MXIO_FD) {
             errno = EINVAL;
@@ -90,7 +89,7 @@ ok:
     io->dupcount++;
     mxio_fdtab[fd] = io;
 fail:
-    mxr_mutex_unlock(&mxio_lock);
+    mtx_unlock(&mxio_lock);
     if (io_to_close) {
         io_to_close->ops->close(io_to_close);
         mxio_release(io_to_close);
@@ -100,7 +99,7 @@ fail:
 
 mxio_t* __mxio_fd_to_io(int fd) {
     mxio_t* io = NULL;
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     if ((fd < 0) || (fd >= MAX_MXIO_FD)) {
         io = NULL;
     } else {
@@ -108,12 +107,12 @@ mxio_t* __mxio_fd_to_io(int fd) {
             mxio_acquire(io);
         }
     }
-    mxr_mutex_unlock(&mxio_lock);
+    mtx_unlock(&mxio_lock);
     return io;
 }
 
 static void mxio_exit(void) {
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     for (int fd = 0; fd < MAX_MXIO_FD; fd++) {
         mxio_t* io = mxio_fdtab[fd];
         if (io) {
@@ -125,7 +124,7 @@ static void mxio_exit(void) {
             }
         }
     }
-    mxr_mutex_unlock(&mxio_lock);
+    mtx_unlock(&mxio_lock);
 }
 
 mx_status_t mxio_close(mxio_t* io) {
@@ -144,7 +143,7 @@ static mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_
         return ERR_INVALID_ARGS;
     }
 
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     if (path[0] == '/') {
         iodir = mxio_root_handle;
         path++;
@@ -155,7 +154,7 @@ static mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_
         iodir = mxio_cwd_handle;
     }
     mxio_acquire(iodir);
-    mxr_mutex_unlock(&mxio_lock);
+    mtx_unlock(&mxio_lock);
 
     mx_status_t r = iodir->ops->open(iodir, path, flags, mode, io);
     mxio_release(iodir);
@@ -173,7 +172,7 @@ static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, cons
     }
 
     mxio_t* iodir;
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     if (path[0] == '/') {
         path++;
         iodir = mxio_root_handle;
@@ -181,7 +180,7 @@ static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, cons
         iodir = mxio_cwd_handle;
     }
     mxio_acquire(iodir);
-    mxr_mutex_unlock(&mxio_lock);
+    mtx_unlock(&mxio_lock);
 
     const char* name = strrchr(path, '/');
     if (name == NULL) {
@@ -487,9 +486,9 @@ ssize_t write(int fd, const void* buf, size_t count) {
 }
 
 int close(int fd) {
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     if ((fd < 0) || (fd >= MAX_MXIO_FD) || (mxio_fdtab[fd] == NULL)) {
-        mxr_mutex_unlock(&mxio_lock);
+        mtx_unlock(&mxio_lock);
         return ERRNO(EBADF);
     }
     mxio_t* io = mxio_fdtab[fd];
@@ -497,11 +496,11 @@ int close(int fd) {
     mxio_fdtab[fd] = NULL;
     if (io->dupcount > 0) {
         // still alive in other fdtab slots
-        mxr_mutex_unlock(&mxio_lock);
+        mtx_unlock(&mxio_lock);
         mxio_release(io);
         return NO_ERROR;
     } else {
-        mxr_mutex_unlock(&mxio_lock);
+        mtx_unlock(&mxio_lock);
         int r = io->ops->close(io);
         mxio_release(io);
         return STATUS(r);
@@ -789,7 +788,7 @@ char *getcwd(char* buf, size_t size) {
     }
 
     char* out = NULL;
-    mxr_mutex_lock(&mxio_cwd_lock);
+    mtx_lock(&mxio_cwd_lock);
     size_t len = strlen(mxio_cwd_path) + 1;
     if (len < size) {
         memcpy(buf, mxio_cwd_path, len);
@@ -797,7 +796,7 @@ char *getcwd(char* buf, size_t size) {
     } else {
         errno = ERANGE;
     }
-    mxr_mutex_unlock(&mxio_cwd_lock);
+    mtx_unlock(&mxio_cwd_lock);
 
     if (out == tmp) {
         out = strdup(tmp);
@@ -811,22 +810,22 @@ int chdir(const char* path) {
     if ((r = __mxio_open(&io, path, O_DIRECTORY, 0)) < 0) {
         return STATUS(r);
     }
-    mxr_mutex_lock(&mxio_cwd_lock);
+    mtx_lock(&mxio_cwd_lock);
     update_cwd_path(path);
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     mxio_t* old = mxio_cwd_handle;
     mxio_cwd_handle = io;
     old->ops->close(old);
     mxio_release(old);
-    mxr_mutex_unlock(&mxio_lock);
-    mxr_mutex_unlock(&mxio_cwd_lock);
+    mtx_unlock(&mxio_lock);
+    mtx_unlock(&mxio_cwd_lock);
     return 0;
 }
 
 #define DIR_BUFSIZE 2048
 
 struct __dirstream {
-    mxr_mutex_t lock;
+    mtx_t lock;
     int fd;
     size_t size;
     uint8_t* ptr;
@@ -839,7 +838,7 @@ DIR* opendir(const char* name) {
     if ((dir = calloc(1, sizeof(DIR))) == NULL) {
         return NULL;
     }
-    dir->lock = MXR_MUTEX_INIT;
+    mtx_init(&dir->lock, mtx_plain);
     dir->size = 0;
     if ((dir->fd = open(name, O_DIRECTORY)) < 0) {
         free(dir);
@@ -855,7 +854,7 @@ int closedir(DIR* dir) {
 }
 
 struct dirent *readdir(DIR* dir) {
-    mxr_mutex_lock(&dir->lock);
+    mtx_lock(&dir->lock);
     struct dirent* de = &dir->de;
     for (;;) {
         if (dir->size >= sizeof(vdirent_t)) {
@@ -881,7 +880,7 @@ struct dirent *readdir(DIR* dir) {
         de = NULL;
         break;
     }
-    mxr_mutex_unlock(&dir->lock);
+    mtx_unlock(&dir->lock);
     return de;
 }
 
@@ -909,9 +908,9 @@ int isatty(int fd) {
 
 mode_t umask(mode_t mask) {
     mode_t oldmask;
-    mxr_mutex_lock(&mxio_lock);
+    mtx_lock(&mxio_lock);
     oldmask = __mxio_global_state.umask;
     __mxio_global_state.umask = mask & 0777;
-    mxr_mutex_unlock(&mxio_lock);
+    mtx_unlock(&mxio_lock);
     return oldmask;
 }

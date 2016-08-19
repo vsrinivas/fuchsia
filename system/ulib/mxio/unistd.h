@@ -6,12 +6,13 @@
 
 #include <mxio/io.h>
 #include <limits.h>
+#include <threads.h>
 
 #include "private.h"
 
 typedef struct {
-    mxr_mutex_t lock;
-    mxr_mutex_t cwd_lock;
+    mtx_t lock;
+    mtx_t cwd_lock;
     bool init;
     mode_t umask;
     mxio_t* root;

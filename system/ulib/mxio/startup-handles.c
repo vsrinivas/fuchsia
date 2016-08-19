@@ -5,9 +5,9 @@
 #include <mxio/util.h>
 #include "private.h"
 
-#include <runtime/mutex.h>
+#include <threads.h>
 
-static mxr_mutex_t startup_handles_lock = MXR_MUTEX_INIT;
+static mtx_t startup_handles_lock = MTX_INIT;
 static uint32_t startup_handles_num;
 static mx_handle_t* startup_handles;
 static uint32_t* startup_handles_info;
@@ -39,7 +39,7 @@ __attribute__((visibility("hidden"))) void __mxio_startup_handles_init(
 
 mx_handle_t mxio_get_startup_handle(uint32_t id) {
     mx_handle_t result = MX_HANDLE_INVALID;
-    mxr_mutex_lock(&startup_handles_lock);
+    mtx_lock(&startup_handles_lock);
     for (uint32_t i = 0; i < startup_handles_num; ++i) {
         if (startup_handles_info[i] == id) {
             result = startup_handles[i];
@@ -52,6 +52,6 @@ mx_handle_t mxio_get_startup_handle(uint32_t id) {
             break;
         }
     }
-    mxr_mutex_unlock(&startup_handles_lock);
+    mtx_unlock(&startup_handles_lock);
     return result;
 }

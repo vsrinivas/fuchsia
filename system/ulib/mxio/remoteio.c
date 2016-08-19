@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -15,7 +16,6 @@
 #include <mxio/util.h>
 
 #include <runtime/thread.h>
-#include <runtime/mutex.h>
 
 #include "private.h"
 
@@ -36,7 +36,7 @@ struct mxrio {
 
     // TODO: replace with reply-pipes to allow
     // true multithreaded io
-    mxr_mutex_t lock;
+    mtx_t lock;
 };
 
 static const char* _opnames[] = MXRIO_OPNAMES;
@@ -285,9 +285,9 @@ done:
 #else
 static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
     mx_status_t r;
-    mxr_mutex_lock(&rio->lock);
+    mtx_lock(&rio->lock);
     r = mxrio_txn_locked(rio, msg);
-    mxr_mutex_unlock(&rio->lock);
+    mtx_unlock(&rio->lock);
     return r;
 }
 #endif
@@ -611,7 +611,7 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
     rio->io.refcount = 1;
     rio->h = h;
     rio->e = e;
-    rio->lock = MXR_MUTEX_INIT;
+    mtx_init(&rio->lock, mtx_plain);
     return &rio->io;
 }
 
