@@ -296,8 +296,10 @@ int cmd_transfer(int fd, int argc, const char** argv) {
     if (ret < 0)
         goto cmd_transfer_finish_1;
 
-    for (size_t i = 0; i < out_len; i++)
+    for (size_t i = 0; i < out_len; i++) {
         printf(" %02x", ((uint8_t*)out_buf)[i]);
+        if (i % 32 == 31) printf("\n");
+    }
     printf("\n");
 
     ret = 0;
