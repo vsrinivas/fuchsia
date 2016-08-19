@@ -11,6 +11,7 @@
 #include "magma_util/platform_device.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
+#include "msd_intel_context.h"
 #include "register_io.h"
 
 class MsdIntelDevice : public msd_device, public Gtt::Owner {
@@ -35,7 +36,7 @@ public:
 private:
     MsdIntelDevice();
 
-    // GttOwner
+    // Gtt::Owner
     RegisterIo* register_io() override
     {
         DASSERT(register_io_);

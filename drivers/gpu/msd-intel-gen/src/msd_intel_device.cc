@@ -57,6 +57,9 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!render_engine_cs_->InitContext(default_context_.get()))
         return DRETF(false, "failed to init render engine command streamer");
 
+    if (!default_context_->MapGpu(gtt_.get(), render_engine_cs_->id()))
+        return DRETF(false, "failed to pin default context");
+
     return true;
 }
 
