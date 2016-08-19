@@ -16,7 +16,7 @@
 magma_buffer* magma_bo_alloc(magma_connection* connection, const char* name, uint32_t size,
                              uint32_t alignment)
 {
-    DLOG("magma_bo_alloc %s size %ld alignment 0x%x", name, size, alignment);
+    DLOG("magma_bo_alloc %s size %u alignment 0x%x", name, size, alignment);
     return MagmaConnection::cast(connection)
         ->AllocBufferObject(name, size, alignment, MAGMA_TILING_MODE_NONE, 0 /*stride*/);
 }
@@ -31,7 +31,7 @@ magma_buffer* magma_bo_alloc_for_render(magma_connection* connection, const char
 magma_buffer* magma_bo_alloc_tiled(magma_connection* connection, const char* name, uint32_t size,
                                    uint32_t flags, uint32_t tiling_mode, uint32_t stride)
 {
-    DLOG("magma_bo_alloc_tiled %s size %lu flags 0x%lx tiling_mode 0x%x stride %lu", name, size,
+    DLOG("magma_bo_alloc_tiled %s size %u flags 0x%x tiling_mode 0x%x stride %u", name, size,
          flags, tiling_mode, stride);
     // TODO: flags?
     return MagmaConnection::cast(connection)
