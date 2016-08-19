@@ -176,7 +176,7 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
                 }
             }
         }
-        if (hid->hid_desc == NULL) {
+        if (hid->hid_report_desc == NULL) {
             usb_hid_cleanup_dev(hid);
             return ERR_NOT_SUPPORTED;
         }
