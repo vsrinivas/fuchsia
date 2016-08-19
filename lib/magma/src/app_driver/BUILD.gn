@@ -1,0 +1,22 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+source_set("app_driver") {
+  sources = [
+    "magma.cc",
+    "magma_buffer.cc",
+    "magma_buffer.h",
+    "magma_connection.cc",
+    "magma_connection.h",
+    "magma_context.h",
+  ]
+
+  deps = [
+    "$magma_build_root/include:mad_abi",
+    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/sys_driver:magma_system_interface",
+  ]
+}

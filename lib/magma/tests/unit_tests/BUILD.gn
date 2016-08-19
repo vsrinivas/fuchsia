@@ -4,7 +4,7 @@
 
 import("//magma/gnbuild/magma.gni")
 
-executable("magma_unit_tests") {
+executable("magma_sys_unit_tests") {
   sources = [
     "main.cc",
   ]
@@ -16,6 +16,28 @@ executable("magma_unit_tests") {
   ]
 }
 
+executable("magma_app_unit_tests") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":libmad_tests",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("libmad_tests") {
+  sources = []
+
+  deps = [
+    "$magma_build_root/include:mad_abi",
+    "$magma_build_root/src/app_driver",
+    "$magma_build_root/tests/mock:magma_system",
+    "//third_party/gtest",
+  ]
+}
+
 source_set("magma_system_tests") {
   sources = [
     "test_magma_system_buffer.cc",
@@ -23,6 +45,7 @@ source_set("magma_system_tests") {
   ]
 
   deps = [
+    "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver",
     "$magma_build_root/tests/mock:msd",
     "//third_party/gtest",
@@ -40,9 +63,9 @@ source_set("magma_util_tests") {
   ]
 
   deps = [
-    "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver:platform_buffer",
+    "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
     "//third_party/gtest",
   ]

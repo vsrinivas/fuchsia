@@ -4,27 +4,54 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("magma_util") {
+group("magma_util") {
   public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
-  public_deps = [ "$magma_build_root/include:msd_abi" ]
+  deps = [
+    ":common",
+    ":system",
+  ]
+}
+
+source_set("common") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "dlog.h",
+    "macros.h",
+    "refcounted.h",
+  ]
+}
+
+source_set("system") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  public_deps = [
+    ":platform",
+  ]
 
   sources = [
     "address_space_allocator.h",
-    "dlog.h",
-    "macros.h",
+    "simple_allocator.cc",
+    "simple_allocator.h",
+  ]
+}
+
+source_set("platform") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
     "mutex.h",
-    "refcounted.h",
     "platform_buffer.cc",
     "platform_buffer.h",
     "platform_device.h",
     "platform_mmio.h",
-    "simple_allocator.cc",
-    "simple_allocator.h",
   ]
 
   # magenta
-  sources += [
-    "magenta_platform_device.cc",
+  sources += [ "magenta_platform_device.cc" ]
+
+  public_deps = [
+    "$magma_build_root/include:msd_abi",
   ]
 }

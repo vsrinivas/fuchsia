@@ -30,3 +30,13 @@ source_set("mmio") {
     "mock_mmio.h",
   ]
 }
+
+source_set("magma_system") {
+  sources = [
+    "mock_magma_system.cc",
+  ]
+  deps = [
+    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/sys_driver:magma_system_interface",
+  ]
+}

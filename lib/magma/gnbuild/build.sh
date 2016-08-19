@@ -33,22 +33,34 @@ cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1616\
 mkdir -p $bootfs_path/lib
 cp $tools_path/sysroot/x86_64-fuchsia/lib/*.so* $bootfs_path/lib
 
-autorun_magma_tests=true;
+autorun_magma_app_tests=true;
+autorun_magma_sys_tests=true;
 autorun_msd_tests=true;
 
-if $autorun_magma_tests; then
-	echo "Enabling magma_tests to autorun"
+if $autorun_magma_app_tests; then
+	echo "Enabling magma application driver tests to autorun"
 
-	test_executable=bin/magma_unit_tests
-	cp $build_dir/magma_unit_tests $bootfs_path/$test_executable
+	test_executable=bin/magma_app_unit_tests
+	cp $build_dir/magma_app_unit_tests $bootfs_path/$test_executable
 
 	autorun_path=$bootfs_path/autorun
-	echo "echo Running magma unit tests" >> $autorun_path # for sanity
+	echo "echo Running magma application driver unit tests" >> $autorun_path # for sanity
+	echo "/boot/$test_executable" >> $autorun_path # run the tests
+fi
+
+if $autorun_magma_sys_tests; then
+	echo "Enabling magma system driver tests to autorun"
+
+	test_executable=bin/magma_sys_unit_tests
+	cp $build_dir/magma_sys_unit_tests $bootfs_path/$test_executable
+
+	autorun_path=$bootfs_path/autorun
+	echo "echo Running magma system driver unit tests" >> $autorun_path # for sanity
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 fi
 
 if $autorun_msd_tests; then
-	echo "Enabling msd_tests to autorun"
+	echo "Enabling msd-intel-gen unit tests to autorun"
 
 	test_executable=bin/msd_unit_tests
 	cp $build_dir/msd_unit_tests $bootfs_path/$test_executable

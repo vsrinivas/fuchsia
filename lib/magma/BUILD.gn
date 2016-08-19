@@ -11,24 +11,12 @@ group("magma_service_driver") {
 }
 
 source_set("libmad") {
-  sources = [
-    "src/app_driver/magma.cc",
-    "src/app_driver/magma_buffer.cc",
-    "src/app_driver/magma_buffer.h",
-    "src/app_driver/magma_connection.cc",
-    "src/app_driver/magma_connection.h",
-    "src/app_driver/magma_context.h",
-  ]
-
   public_deps = [
     "include:mad_abi",
   ]
 
   deps = [
-    ":libmsd",
-    ":util",
-    "include:mad_abi",
-    "src/sys_driver:magma_system_interface",
+    "src/app_driver",
   ]
 }
 
