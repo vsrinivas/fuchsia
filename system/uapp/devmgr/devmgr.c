@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -21,7 +22,6 @@
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 
 #define TRACE 0
@@ -42,7 +42,7 @@ bool devmgr_is_remote = false;
 bool __dm_locked = false;
 mx_handle_t devhost_handle;
 
-mxr_mutex_t __devmgr_api_lock = MXR_MUTEX_INIT;
+mtx_t __devmgr_api_lock = MTX_INIT;
 
 #if !LIBDRIVER
 // vnodes for root driver and protocols

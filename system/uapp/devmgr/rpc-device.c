@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <threads.h>
 
 #include <ddk/completion.h>
 #include <ddk/device.h>
@@ -25,8 +26,6 @@
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
-
-#include <runtime/mutex.h>
 
 #include <system/listnode.h>
 
@@ -46,7 +45,7 @@ iostate_t* create_iostate(mx_device_t* dev) {
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
 #if !WITH_REPLY_PIPE
-static mxr_mutex_t rio_lock = MXR_MUTEX_INIT;
+static mtx_t rio_lock = MTX_INIT;
 #endif
 
 // This is called from both the vfs handler thread and console start thread
@@ -72,9 +71,9 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t*
         ids[0] = 0;
         return 1;
 #else
-        mxr_mutex_lock(&rio_lock);
+        mtx_lock(&rio_lock);
         r = __mxrio_clone(dev->remote, handles, ids);
-        mxr_mutex_unlock(&rio_lock);
+        mtx_unlock(&rio_lock);
         return r;
 #endif
     }

@@ -19,21 +19,21 @@
 #include <magenta/syscalls.h>
 
 #include <runtime/thread.h>
-#include <runtime/mutex.h>
 
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #define MXDEBUG 0
 
 #define DEBUG_TRACK_NAMES 1
 
-mxr_mutex_t vfs_lock = MXR_MUTEX_INIT;
+mtx_t vfs_lock = MTX_INIT;
 
 static list_node_t iostate_list = LIST_INITIAL_VALUE(iostate_list);
-static mxr_mutex_t iostate_lock = MXR_MUTEX_INIT;
+static mtx_t iostate_lock = MTX_INIT;
 
 void track_iostate(iostate_t* ios, const char* fn) {
 #if DEBUG_TRACK_NAMES
@@ -41,15 +41,15 @@ void track_iostate(iostate_t* ios, const char* fn) {
         ios->fn = strdup(fn);
     }
 #endif
-    mxr_mutex_lock(&iostate_lock);
+    mtx_lock(&iostate_lock);
     list_add_tail(&iostate_list, &ios->node);
-    mxr_mutex_unlock(&iostate_lock);
+    mtx_unlock(&iostate_lock);
 }
 
 void untrack_iostate(iostate_t* ios) {
-    mxr_mutex_lock(&iostate_lock);
+    mtx_lock(&iostate_lock);
     list_delete(&ios->node);
-    mxr_mutex_unlock(&iostate_lock);
+    mtx_unlock(&iostate_lock);
 #if DEBUG_TRACK_NAMES
     free((void*) ios->fn);
     ios->fn = NULL;
@@ -206,9 +206,9 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
                              vnode_t* vn, const char* path,
                              uint32_t flags, uint32_t mode) {
     mx_status_t r;
-    mxr_mutex_lock(&vfs_lock);
+    mtx_lock(&vfs_lock);
     r = vfs_open(vn, &vn, path, &path, flags, mode);
-    mxr_mutex_unlock(&vfs_lock);
+    mtx_unlock(&vfs_lock);
     if (r < 0) {
         xprintf("vfs: open: r=%d\n", r);
         return r;
@@ -380,9 +380,9 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
             return ERR_INVALID_ARGS;
         }
         mx_status_t r;
-        mxr_mutex_lock(&vfs_lock);
+        mtx_lock(&vfs_lock);
         r = vn->ops->readdir(vn, &ios->dircookie, msg->data, arg);
-        mxr_mutex_unlock(&vfs_lock);
+        mtx_unlock(&vfs_lock);
         if (r >= 0) {
             msg->datalen = r;
         }
@@ -500,9 +500,9 @@ void vn_release(vnode_t* vn) {
 
 void vfs_dump_handles(void) {
     iostate_t* ios;
-    mxr_mutex_lock(&iostate_lock);
+    mtx_lock(&iostate_lock);
     list_for_every_entry(&iostate_list, ios, iostate_t, node) {
         printf("obj %p '%s'\n", ios->vn, ios->fn ? ios->fn : "???");
     }
-    mxr_mutex_unlock(&iostate_lock);
+    mtx_unlock(&iostate_lock);
 }

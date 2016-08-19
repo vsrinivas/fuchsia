@@ -10,10 +10,10 @@
 
 #include <magenta/types.h>
 
-#include <runtime/mutex.h>
-
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
+
+#include <threads.h>
 
 void cprintf(const char* fmt, ...);
 
@@ -87,7 +87,7 @@ mx_status_t devhost_remove(mx_device_t* dev);
 
 extern bool devmgr_is_remote;
 extern mx_handle_t devhost_handle;
-extern mxr_mutex_t __devmgr_api_lock;
+extern mtx_t __devmgr_api_lock;
 
 extern mxio_dispatcher_t* devmgr_rio_dispatcher;
 extern mxio_dispatcher_t* devmgr_devhost_dispatcher;
@@ -104,7 +104,7 @@ static inline void __DM_DIE(const char* fn, int ln) {
 static inline void __DM_LOCK(const char* fn, int ln) {
     //cprintf(devmgr_is_remote ? "X" : "+");
     if (__dm_locked) __DM_DIE(fn, ln);
-    mxr_mutex_lock(&__devmgr_api_lock);
+    mtx_lock(&__devmgr_api_lock);
     cprintf("LOCK: %s: %d\n", fn, ln);
     __dm_locked = true;
 }
@@ -114,17 +114,17 @@ static inline void __DM_UNLOCK(const char* fn, int ln) {
     //cprintf(devmgr_is_remote ? "x" : "-");
     if (!__dm_locked) __DM_DIE(fn, ln);
     __dm_locked = false;
-    mxr_mutex_unlock(&__devmgr_api_lock);
+    mtx_unlock(&__devmgr_api_lock);
 }
 
 #define DM_LOCK() __DM_LOCK(__FILE__, __LINE__)
 #define DM_UNLOCK() __DM_UNLOCK(__FILE__, __LINE__)
 #else
 static inline void DM_LOCK(void) {
-    mxr_mutex_lock(&__devmgr_api_lock);
+    mtx_lock(&__devmgr_api_lock);
 }
 
 static inline void DM_UNLOCK(void) {
-    mxr_mutex_unlock(&__devmgr_api_lock);
+    mtx_unlock(&__devmgr_api_lock);
 }
 #endif

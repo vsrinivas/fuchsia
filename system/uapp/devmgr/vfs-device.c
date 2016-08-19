@@ -178,22 +178,22 @@ got_name:
 
 mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev) {
     mx_status_t r;
-    mxr_mutex_lock(&vfs_lock);
+    mtx_lock(&vfs_lock);
     r = _devfs_add_node(out, parent, name, dev);
-    mxr_mutex_unlock(&vfs_lock);
+    mtx_unlock(&vfs_lock);
     return r;
 }
 
 mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) {
     mx_status_t r;
-    mxr_mutex_lock(&vfs_lock);
+    mtx_lock(&vfs_lock);
     r = _devfs_add_link(parent, name, dev);
-    mxr_mutex_unlock(&vfs_lock);
+    mtx_unlock(&vfs_lock);
     return r;
 }
 
 mx_status_t devfs_remove(vnode_t* vn) {
-    mxr_mutex_lock(&vfs_lock);
+    mtx_lock(&vfs_lock);
     xprintf("devfs_remove(%p)\n", vn);
     if (vn->pdata) {
         mx_device_t* dev = vn->pdata;
@@ -217,7 +217,7 @@ mx_status_t devfs_remove(vnode_t* vn) {
         }
         dn_delete(dn);
     }
-    mxr_mutex_unlock(&vfs_lock);
+    mtx_unlock(&vfs_lock);
 
     // with all dnodes destroyed, nothing should hold a reference
     // to the vnode and it should be release()'d

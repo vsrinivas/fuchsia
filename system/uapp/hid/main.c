@@ -12,12 +12,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 #include <limits.h>
 
 #include <system/listnode.h>
 
-#include <runtime/mutex.h>
 #include <runtime/thread.h>
 
 #include <ddk/protocol/input.h>
@@ -50,12 +50,12 @@ typedef struct {
 static struct list_node input_listeners_list = LIST_INITIAL_VALUE(input_listeners_list);
 static mxr_thread_t* input_poll_thread;
 
-static mxr_mutex_t print_lock = MXR_MUTEX_INIT;
+static mtx_t print_lock = MTX_INIT;
 #define lprintf(fmt...) \
     do { \
-        mxr_mutex_lock(&print_lock); \
+        mtx_lock(&print_lock); \
         printf(fmt); \
-        mxr_mutex_unlock(&print_lock); \
+        mtx_unlock(&print_lock); \
     } while (0)
 
 
@@ -100,10 +100,10 @@ static int get_report_desc(int fd, const char* name, size_t report_desc_len) {
         free(buf);
         return rc;
     }
-    mxr_mutex_lock(&print_lock);
+    mtx_lock(&print_lock);
     printf("hid: %s report descriptor:\n", name);
     print_hex(buf, report_desc_len);
-    mxr_mutex_unlock(&print_lock);
+    mtx_unlock(&print_lock);
     free(buf);
     return rc;
 }
@@ -128,7 +128,7 @@ static int get_report_ids(int fd, const char* name, size_t num_reports) {
         free(ids);
         return rc;
     }
-    mxr_mutex_lock(&print_lock);
+    mtx_lock(&print_lock);
     printf("hid: %s report ids: [", name);
     const char *s = "";
     for (size_t i = 0; i < num_reports; i++) {
@@ -145,7 +145,7 @@ static int get_report_ids(int fd, const char* name, size_t num_reports) {
         printf("%s%d(%d bytes)", s, ids[i], size);
     }
     printf("]\n");
-    mxr_mutex_unlock(&print_lock);
+    mtx_unlock(&print_lock);
     free(ids);
     return rc;
 }
@@ -201,15 +201,15 @@ static int hid_input_thread(void* arg) {
     for (;;) {
         mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(fd, report, max_report_len);
-        mxr_mutex_lock(&print_lock);
+        mtx_lock(&print_lock);
         printf("read returned %d\n", r);
         if (r < 0) {
-            mxr_mutex_unlock(&print_lock);
+            mtx_unlock(&print_lock);
             break;
         }
         printf("hid: input from %s\n", name);
         print_hex(report, r);
-        mxr_mutex_unlock(&print_lock);
+        mtx_unlock(&print_lock);
     }
     free(report);
     lprintf("hid: closing %s\n", name);
