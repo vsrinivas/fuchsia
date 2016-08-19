@@ -170,6 +170,7 @@ BEGIN_TEST_CASE(mtx_tests)
 RUN_TEST(test_initializer)
 RUN_TEST(test_mutexes)
 RUN_TEST(test_try_mutexes)
+RUN_TEST(test_static_initializer)
 END_TEST_CASE(mtx_tests)
 
 #ifndef BUILD_COMBINED_TESTS
