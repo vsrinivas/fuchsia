@@ -833,18 +833,39 @@ struct __dirstream {
     struct dirent de;
 };
 
-DIR* opendir(const char* name) {
-    DIR* dir;
-    if ((dir = calloc(1, sizeof(DIR))) == NULL) {
-        return NULL;
-    }
-    mtx_init(&dir->lock, mtx_plain);
-    dir->size = 0;
-    if ((dir->fd = open(name, O_DIRECTORY)) < 0) {
-        free(dir);
-        return NULL;
+static DIR* internal_opendir(int fd) {
+    DIR* dir = calloc(1, sizeof(*dir));
+    if (dir != NULL) {
+        mtx_init(&dir->lock, mtx_plain);
+        dir->size = 0;
+        dir->fd = fd;
     }
     return dir;
+}
+
+DIR* opendir(const char* name) {
+    int fd = open(name, O_DIRECTORY);
+    if (fd < 0)
+        return NULL;
+    DIR* dir = internal_opendir(fd);
+    if (dir == NULL)
+        close(fd);
+    return dir;
+}
+
+DIR* fdopendir(int fd) {
+    // Check the fd for validity, but we'll just store the fd
+    // number so we don't save the mxio_t pointer.
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        errno = EBADF;
+        return NULL;
+    }
+    // TODO(mcgrathr): Technically this should verify that it's
+    // really a directory and fail with ENOTDIR if not.  But
+    // that's not so easy to do, so don't bother for now.
+    mxio_release(io);
+    return internal_opendir(fd);
 }
 
 int closedir(DIR* dir) {

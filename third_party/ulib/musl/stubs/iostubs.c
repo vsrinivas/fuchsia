@@ -145,6 +145,12 @@ static DIR* stub_opendir(const char* name) {
 }
 weak_alias(stub_opendir, opendir);
 
+static DIR* stub_fdopendir(int fd) {
+    errno = ENOSYS;
+    return NULL;
+}
+weak_alias(stub_fdopendir, fdopendir);
+
 static int stub_closedir(DIR* dir) {
     errno = ENOSYS;
     return -1;
