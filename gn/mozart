@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/compositor"
+    ],
+    "binaries": [
+        {
+            "binary": "compositor_services_apptests",
+            "bootfs_path": "apps/compositor_services_apptests"
+        }
+    ]
+}
