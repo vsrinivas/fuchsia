@@ -157,35 +157,6 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     }
 }
 
-void mxrio_server(mx_handle_t h, mxrio_cb_t cb, void* cookie) {
-    mx_signals_state_t pending;
-    mx_status_t r;
-
-    xprintf("riosvr(%x) starting...\n", h);
-    for (;;) {
-        r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                     MX_TIME_INFINITE, &pending);
-        if (r < 0)
-            break;
-        if (pending.satisfied & MX_SIGNAL_READABLE) {
-            if ((r = mxrio_handler(h, cb, cookie)) != 0) {
-                break;
-            }
-        }
-        if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
-            r = ERR_CHANNEL_CLOSED;
-            break;
-        }
-    }
-    if (r < 0) {
-        mxrio_handler(0, cb, cookie);
-    }
-    if (r != 0) {
-        xprintf("riosvr(%x) done, status=%d\n", h, r);
-    }
-    mx_handle_close(h);
-}
-
 mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg) {
     msg->magic = MXRIO_MAGIC;
     msg->handle[0] = rh;
@@ -239,7 +210,7 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
 
     mx_signals_state_t pending;
     if ((r = mx_handle_wait_one(rh, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                      MX_TIME_INFINITE, &pending)) < 0) {
+                                MX_TIME_INFINITE, &pending)) < 0) {
         return r;
     }
     if ((pending.satisfied & MX_SIGNAL_PEER_CLOSED) &&
@@ -613,37 +584,4 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
     rio->e = e;
     mtx_init(&rio->lock, mtx_plain);
     return &rio->io;
-}
-
-typedef struct {
-    mx_handle_t h;
-    void* cb;
-    void* cookie;
-} mxrio_args_t;
-
-static int mxrio_handler_thread(void* _args) {
-    mxrio_args_t* args = (mxrio_args_t*)_args;
-    mxrio_server(args->h, args->cb, args->cookie);
-    return 0;
-}
-
-mx_status_t mxrio_handler_create(mx_handle_t h, mxrio_cb_t cb, void* cookie) {
-    mxrio_args_t* args;
-    mxr_thread_t* t;
-    if ((args = malloc(sizeof(*args))) == NULL) {
-        goto fail;
-    }
-    args->h = h;
-    args->cb = cb;
-    args->cookie = cookie;
-    if (mxr_thread_create(mxrio_handler_thread, args, "rio-handler", &t) < 0) {
-        goto fail;
-    }
-    mxr_thread_detach(t);
-    return 0;
-fail:
-    xprintf("riosvr: could not install handler %x %p\n", h, cb);
-    mx_handle_close(h);
-    free(args);
-    return ERR_NO_RESOURCES;
 }

@@ -5,9 +5,9 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <system/compiler.h>
 #include <mxio/io.h>
 #include <stdint.h>
+#include <system/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -53,14 +53,8 @@ typedef mx_status_t (*mxrio_cb_t)(mxrio_msg_t* msg, mx_handle_t rh, void* cookie
 //   ERR_DISPATCHER_INDIRECT to differentiate this from an immediate
 //   reply or error
 
-// process events on h until it fails
-void mxrio_server(mx_handle_t h, mxrio_cb_t cb, void* cookie);
-
 // a mxio_dispatcher_handler suitable for use with a mxio_dispatcher
 mx_status_t mxrio_handler(mx_handle_t h, void* cb, void* cookie);
-
-// create a thread to service mxio remote io traffic
-mx_status_t mxrio_handler_create(mx_handle_t h, mxrio_cb_t cb, void* cookie);
 
 // Pass a message to another server (srv) along with a reply handle (rh)
 // The other server will reply via the reply handle, and this call returns
