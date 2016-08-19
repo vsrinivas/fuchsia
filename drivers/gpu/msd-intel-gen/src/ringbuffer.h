@@ -16,7 +16,7 @@ public:
 
     MsdIntelBuffer* buffer() { return buffer_.get(); }
 
-    static const uint32_t kRingbufferSize = 32 * PAGE_SIZE;
+    static constexpr uint32_t kRingbufferSize = 32 * PAGE_SIZE;
 
 private:
     Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer);
