@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// <unistd.h> declares environ only under _GNU_SOURCE.
-#define _GNU_SOURCE
-
 #include "launch.h"
 #include <launchpad/vmo.h>
 
