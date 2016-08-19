@@ -180,7 +180,8 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
 
   if (result_index == 0) {
     FTL_DCHECK(wait_result == MOJO_RESULT_OK);
-    mx_status_t event_status = mx_event_reset(event_.get());
+    mx_status_t event_status =
+        mx_object_signal(event_.get(), 0u, MX_SIGNAL_SIGNALED);
     FTL_DCHECK(event_status == NO_ERROR);
     return now;
   }
@@ -226,7 +227,7 @@ void MessageLoop::PostQuitTask() {
 }
 
 void MessageLoop::ScheduleDrainIncomingTasks() {
-  mx_status_t status = mx_event_signal(event_.get());
+  mx_status_t status = mx_object_signal(event_.get(), MX_SIGNAL_SIGNALED, 0u);
   FTL_DCHECK(status == NO_ERROR);
 }
 
