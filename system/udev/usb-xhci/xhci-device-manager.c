@@ -314,13 +314,14 @@ static mx_status_t xhci_handle_enumerate_device(xhci_device_thread_context_t* co
         printf("unable to get a slot\n");
         return ERR_NO_RESOURCES;
     }
+    xhci_slot_t* slot = &xhci->slots[context->slot_id];
+    memset(slot, 0, sizeof(*slot));
 
     mx_status_t status = xhci_address_device(context, hub_address, port, speed);
     if (status != NO_ERROR || context->cc != TRB_CC_SUCCESS) {
         printf("xhci_address_device failed\n");
         goto disable_slot_exit;
     }
-    xhci_slot_t* slot = &xhci->slots[context->slot_id];
     slot->enabled = true;
 
     // read first 8 bytes of device descriptor to fetch ep0 max packet size
@@ -428,8 +429,10 @@ static mx_status_t xhci_handle_enumerate_device(xhci_device_thread_context_t* co
     xhci_configure_endpoints(context, speed, config_descriptors[0]);
 
     // set configuration
-    result = xhci_control_request(xhci, context->slot_id, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                                  USB_REQ_SET_CONFIGURATION, config_descriptors[0]->bConfigurationValue, 0, NULL, 0);
+    result = xhci_control_request(xhci, context->slot_id,
+                                  USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+                                  USB_REQ_SET_CONFIGURATION,
+                                  config_descriptors[0]->bConfigurationValue, 0, NULL, 0);
     if (result < 0) {
         printf("set configuration failed\n");
         goto free_config_descriptors_exit;
@@ -488,7 +491,6 @@ static mx_status_t xhci_handle_disconnect_device(xhci_device_thread_context_t* c
     }
 
     slot->enabled = false;
-
     xhci_transfer_ring_t* transfer_rings = slot->transfer_rings;
 
     // wait for all requests to complete
@@ -515,17 +517,11 @@ static mx_status_t xhci_handle_disconnect_device(xhci_device_thread_context_t* c
     xhci_stop_endpoint(context, slot_id, 0);
 
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&context->input_context[0 * xhci->context_size];
-    xhci_slot_context_t* sc = (xhci_slot_context_t*)&context->input_context[1 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);
-    memset((void*)sc, 0, xhci->context_size);
     XHCI_WRITE32(&icc->drop_context_flags, drop_flags);
-    XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0));
-    XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
-    XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
-    XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS, 0);
 
     completion_reset(&context->completion);
-    xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
+    xhci_post_command(xhci, TRB_CMD_CONFIGURE_EP, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
                       (slot_id << TRB_SLOT_ID_START), xhci_command_complete, context);
     completion_wait(&context->completion, MX_TIME_INFINITE);
     if (context->cc != TRB_CC_SUCCESS) {
