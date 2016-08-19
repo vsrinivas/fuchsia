@@ -39,6 +39,8 @@ static mx_handle_t get_library_vmo(const char* name);
 #define MAXP2(a, b) (-(-(a) & -(b)))
 #define ALIGN(x, y) ((x) + (y)-1 & -(y))
 
+// This matches struct r_debug in <link.h>.
+// TODO(mcgrathr): Use the type here.
 struct debug {
     int ver;
     void* head;
@@ -53,12 +55,14 @@ struct td_index {
 };
 
 struct dso {
+    // These five fields match struct link_map in <link.h>.
+    // TODO(mcgrathr): Use the type here.
     unsigned char* base;
     char* name;
-    const char* soname;
     size_t* dynv;
     struct dso *next, *prev;
 
+    const char* soname;
     Phdr* phdr;
     int phnum;
     size_t phentsize;
