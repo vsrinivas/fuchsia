@@ -6,12 +6,14 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/hexdump.h>
 #include <ddk/protocol/pci.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <system/listnode.h>
+#include <sys/param.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -59,9 +61,9 @@ typedef struct ahci_port {
     ahci_port_reg_t* regs;
     ahci_cl_t* cl;
     ahci_fis_t* fis;
-    ahci_ct_t* ct;
+    ahci_ct_t* ct[AHCI_MAX_COMMANDS];
 
-    iotxn_t* running;
+    iotxn_t* running[AHCI_MAX_COMMANDS]; // queued commands
 
     mtx_t lock; // protects txn_list
     list_node_t txn_list;
@@ -81,6 +83,8 @@ typedef struct ahci_device {
 
     thrd_t worker_thread;
     completion_t worker_completion;
+
+    uint32_t cap;
 
     ahci_port_t ports[AHCI_MAX_PORTS];
 } ahci_device_t;
@@ -172,37 +176,60 @@ static void ahci_port_reset(ahci_port_t* port) {
 }
 
 static bool ahci_port_cmd_busy(ahci_port_t* port, int slot) {
-    return (ahci_read(&port->regs->sact) | ahci_read(&port->regs->ci)) & slot;
+    return ((ahci_read(&port->regs->sact) | ahci_read(&port->regs->ci)) & slot) || (port->running[slot] != NULL);
 }
 
-static mx_status_t ahci_port_do_txn(ahci_port_t* port, iotxn_t* txn) {
-    assert(port->running == NULL);
-    assert(!ahci_port_cmd_busy(port, 0));
+static bool cmd_is_write(uint8_t cmd) {
+    if (cmd == SATA_CMD_WRITE_DMA ||
+        cmd == SATA_CMD_WRITE_DMA_EXT ||
+        cmd == SATA_CMD_WRITE_FPDMA_QUEUED) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static bool cmd_is_queued(uint8_t cmd) {
+    return (cmd == SATA_CMD_READ_FPDMA_QUEUED) || (cmd == SATA_CMD_WRITE_FPDMA_QUEUED);
+}
+
+static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, iotxn_t* txn) {
+    assert(slot < AHCI_MAX_COMMANDS);
+    assert(!ahci_port_cmd_busy(port, slot));
 
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
     mx_paddr_t phys;
     txn->ops->physmap(txn, &phys);
 
-    //xprintf("ahci.%d: do_txn cmd=0x%x device=0x%x lba=0x%llx count=%u phys=0x%lx data_sz=0x%llx offset=0x%llx\n", port->nr, pdata->cmd, pdata->device, pdata->lba, pdata->count, phys, txn->length, txn->offset);
+    if (dev->cap & AHCI_CAP_NCQ) {
+        if (pdata->cmd == SATA_CMD_READ_DMA_EXT) {
+            pdata->cmd = SATA_CMD_READ_FPDMA_QUEUED;
+        } else if (pdata->cmd == SATA_CMD_WRITE_DMA_EXT) {
+            pdata->cmd = SATA_CMD_WRITE_FPDMA_QUEUED;
+        }
+    }
+
+    //xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%llx count=%u phys=0x%lx data_sz=0x%llx offset=0x%llx\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, phys, txn->length, txn->offset);
 
     // build the command
-    ahci_cl_t* cl = port->cl;
+    ahci_cl_t* cl = port->cl + slot;
     // don't clear the cl since we set up ctba/ctbau at init
     cl->prdtl_flags_cfl = 0;
     cl->cfl = 5; // 20 bytes
-    cl->w = pdata->cmd == SATA_CMD_WRITE_DMA_EXT ? 1 : 0;
+    cl->w = cmd_is_write(pdata->cmd) ? 1 : 0;
     cl->prdtl = txn->length / AHCI_PRD_MAX_SIZE + 1;
     cl->prdbc = 0;
-    memset(port->ct, 0, sizeof(ahci_ct_t));
+    memset(port->ct[slot], 0, sizeof(ahci_ct_t));
 
-    uint8_t* cfis = port->ct->cfis;
+    uint8_t* cfis = port->ct[slot]->cfis;
     cfis[0] = 0x27; // host-to-device
     cfis[1] = 0x80; // command
     cfis[2] = pdata->cmd;
     cfis[7] = pdata->device;
 
     // some commands have lba/count fields
-    if (pdata->cmd == SATA_CMD_READ_DMA_EXT || pdata->cmd == SATA_CMD_WRITE_DMA_EXT) {
+    if (pdata->cmd == SATA_CMD_READ_DMA_EXT ||
+        pdata->cmd == SATA_CMD_WRITE_DMA_EXT) {
         cfis[4] = pdata->lba & 0xff;
         cfis[5] = (pdata->lba >> 8) & 0xff;
         cfis[6] = (pdata->lba >> 16) & 0xff;
@@ -211,34 +238,52 @@ static mx_status_t ahci_port_do_txn(ahci_port_t* port, iotxn_t* txn) {
         cfis[10] = (pdata->lba >> 40) & 0xff;
         cfis[12] = pdata->count & 0xff;
         cfis[13] = (pdata->count >> 8) & 0xff;
+    } else if (cmd_is_queued(pdata->cmd)) {
+        cfis[4] = pdata->lba & 0xff;
+        cfis[5] = (pdata->lba >> 8) & 0xff;
+        cfis[6] = (pdata->lba >> 16) & 0xff;
+        cfis[8] = (pdata->lba >> 24) & 0xff;
+        cfis[9] = (pdata->lba >> 32) & 0xff;
+        cfis[10] = (pdata->lba >> 40) & 0xff;
+        cfis[3] = pdata->count & 0xff;
+        cfis[11] = (pdata->count >> 8) & 0xff;
+        cfis[12] = (slot << 3) & 0xff; // tag
+        cfis[13] = 0; // normal priority
     }
 
-    ahci_prd_t* prd;
-    for (int i = 0; i < cl->prdtl - 1; i++) {
-        prd = (ahci_prd_t*)((void*)port->ct + sizeof(ahci_ct_t)) + i;
+    ahci_prd_t* prd = NULL;
+    for (int i = 0; i < cl->prdtl; i++) {
+        prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t)) + i;
         prd->dba = LO32(phys);
         prd->dbau = HI32(phys);
         prd->dbc = ((txn->length - 1) & 0x3fffff); // 0-based byte count
 
         phys += AHCI_PRD_MAX_SIZE;
     }
-    // interrupt on last prd completion
-    prd = (ahci_prd_t*)((void*)port->ct + sizeof(ahci_ct_t)) + cl->prdtl - 1;
-    prd->dba = LO32(phys);
-    prd->dbau = HI32(phys);
-    prd->dbc = (1 << 31) | ((txn->length - 1) & 0x3fffff); // interrupt on completion
+
+    port->running[slot] = txn;
 
     // start command
-    port->running = txn;
-    ahci_write(&port->regs->ci, 0x1);
+    if (cmd_is_queued(pdata->cmd)) {
+        ahci_write(&port->regs->sact, ahci_read(&port->regs->sact) | (1 << slot));
+    }
+    ahci_write(&port->regs->ci, ahci_read(&port->regs->ci) | (1 << slot));
     return NO_ERROR;
 }
 
-static void ahci_port_complete_txn(ahci_device_t* dev, int nr, mx_status_t status) {
-    ahci_port_t* port = &dev->ports[nr];
-    iotxn_t* txn = port->running;
-    port->running = NULL;
-    txn->ops->complete(txn, status, txn->length); // TODO read out the actual bytes transferred
+static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, mx_status_t status) {
+    iotxn_t* txn;
+    uint32_t sact = ahci_read(&port->regs->sact);
+    for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
+        txn = port->running[i];
+        if (txn == NULL) {
+            continue;
+        }
+        if (!(sact & (1 << i))) {
+            port->running[i] = NULL; // clear state first
+            txn->ops->complete(txn, status, txn->length);
+        }
+    }
     // hit the worker thread to do the next txn
     completion_signal(&dev->worker_completion);
 }
@@ -251,7 +296,7 @@ static mx_status_t ahci_port_initialize(ahci_port_t* port) {
     }
 
     // allocate memory for the command list, FIS receive area, command table and PRDT
-    size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) + 0xec + 0x74 + sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS; // TODO 1 command at a time for now
+    size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS + (sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS) * AHCI_MAX_COMMANDS;
     mx_paddr_t mem_phys;
     void* mem;
     mx_status_t status = mx_alloc_device_memory(mem_sz, &mem_phys, &mem);
@@ -261,29 +306,33 @@ static mx_status_t ahci_port_initialize(ahci_port_t* port) {
     }
 
     // clear memory area
-    // order is command list (1024-byte aligned) / 0xec bytes padding
-    //          FIS receive area (256-byte aligned) / 0x74 bytes padding
+    // order is command list (1024-byte aligned)
+    //          FIS receive area (256-byte aligned)
     //          command table + PRDT (127-byte aligned)
     memset(mem, 0, mem_sz);
 
     // command list
     ahci_write(&port->regs->clb, LO32(mem_phys));
     ahci_write(&port->regs->clbu, HI32(mem_phys));
-    mem_phys += sizeof(ahci_cl_t) + 0xec; // alignment padding
+    mem_phys += sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS;
     port->cl = mem;
-    mem += sizeof(ahci_cl_t) + 0xec;
+    mem += sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS;
 
     // FIS receive area
     ahci_write(&port->regs->fb, LO32(mem_phys));
     ahci_write(&port->regs->fbu, HI32(mem_phys));
-    mem_phys += sizeof(ahci_fis_t) + 0x74; // alignment padding
+    mem_phys += sizeof(ahci_fis_t);
     port->fis = mem;
-    mem += sizeof(ahci_fis_t) + 0x74;
+    mem += sizeof(ahci_fis_t);
 
     // command table, followed by PRDT
-    port->cl[0].ctba = LO32(mem_phys);
-    port->cl[0].ctbau = HI32(mem_phys);
-    port->ct = mem;
+    for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
+        port->cl[i].ctba = LO32(mem_phys);
+        port->cl[i].ctbau = HI32(mem_phys);
+        mem_phys += sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS;
+        port->ct[i] = mem;
+        mem += sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS;
+    }
 
     // clear port interrupts
     ahci_write(&port->regs->is, ahci_read(&port->regs->is));
@@ -357,25 +406,37 @@ void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 static int ahci_worker_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     ahci_port_t* port;
-    list_node_t* node;
+    iotxn_t* txn;
     for (;;) {
         // iterate all the ports and run commands
         for (int i = 0; i < AHCI_MAX_PORTS; i++) {
             port = &dev->ports[i];
             if (!(port->flags & (AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT))) continue;
 
-            // check for port busy
-            // FIXME multiple commands
-            if (ahci_port_cmd_busy(port, 0)) continue;
+            mtx_lock(&port->lock);
+            txn = list_peek_head_type(&port->txn_list, iotxn_t, node);
+            if (!txn) {
+                mtx_unlock(&port->lock);
+                continue;
+            }
+
+            // find a free command tag
+            sata_pdata_t* pdata = sata_iotxn_pdata(txn);
+            int max = MIN(pdata->max_cmd, (int)((dev->cap >> 8) & 0x1f));
+            int i = 0;
+            for (i = 0; i <= max; i++) {
+                if (!ahci_port_cmd_busy(port, i)) break;
+            }
+            if (i > max) {
+                mtx_unlock(&port->lock);
+                continue;
+            }
 
             // run the next command if not busy
-            mtx_lock(&port->lock);
-            node = list_remove_head(&port->txn_list);
+            list_delete(&txn->node);
+
             mtx_unlock(&port->lock);
-
-            if (!node) continue;
-
-            ahci_port_do_txn(port, containerof(node, iotxn_t, node));
+            ahci_do_txn(dev, port, i, txn);
         }
         // wait here until more commands are queued, or a port becomes idle
         completion_wait(&dev->worker_completion, MX_TIME_INFINITE);
@@ -391,25 +452,23 @@ static void ahci_port_irq(ahci_device_t* dev, int nr) {
     // clear interrupt
     uint32_t is = ahci_read(&port->regs->is);
     ahci_write(&port->regs->is, is);
-    if (is & AHCI_PORT_INT_DHR) { // RFIS rcv
-        if (port->running) {
-            ahci_port_complete_txn(dev, nr, NO_ERROR);
-        }
+
+    if (is & AHCI_PORT_INT_DHR) { // RFIS received
+        ahci_port_complete_txn(dev, port, NO_ERROR);
     }
     if (is & AHCI_PORT_INT_PS) { // PSFIS rcv
-        if (port->running) {
-            ahci_port_complete_txn(dev, nr, NO_ERROR);
-        }
+        ahci_port_complete_txn(dev, port, NO_ERROR);
+    }
+    if (is & AHCI_PORT_INT_SDB) { // SDBFIS
+        ahci_port_complete_txn(dev, port, NO_ERROR);
     }
     if (is & AHCI_PORT_INT_PRC) { // PhyRdy change
         uint32_t serr = ahci_read(&port->regs->serr);
         ahci_write(&port->regs->serr, serr & ~0x1);
     }
     if (is & AHCI_PORT_INT_TFE) { // taskfile error
-        if (port->running) {
-            // the current command errored
-            ahci_port_complete_txn(dev, nr, ERR_INTERNAL);
-        }
+        xprintf("tfe error\n");
+        ahci_port_complete_txn(dev, port, ERR_INTERNAL);
     }
 }
 
@@ -449,6 +508,8 @@ static int ahci_init_thread(void* arg) {
 
     // enable ahci mode
     ahci_enable_ahci(dev);
+
+    dev->cap = ahci_read(&dev->regs->cap);
 
     // count number of ports
     uint32_t port_map = ahci_read(&dev->regs->pi);

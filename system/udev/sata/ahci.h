@@ -84,9 +84,10 @@ typedef struct {
     uint32_t vendor[4];     // vendor specific
 } __attribute__((packed)) ahci_port_reg_t;
 
-#define AHCI_GHC_HR (1 << 0)
-#define AHCI_GHC_IE (1 << 1)
-#define AHCI_GHC_AE (1 << 31)
+#define AHCI_CAP_NCQ (1 << 30)
+#define AHCI_GHC_HR  (1 << 0)
+#define AHCI_GHC_IE  (1 << 1)
+#define AHCI_GHC_AE  (1 << 31)
 
 typedef struct {
     uint32_t cap;              // host capabilities

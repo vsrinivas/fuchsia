@@ -6,17 +6,20 @@
 
 #include "ahci.h"
 
-#define SATA_CMD_IDENTIFY_DEVICE 0xec
-#define SATA_CMD_READ_DMA        0xc8
-#define SATA_CMD_READ_DMA_EXT    0x25
-#define SATA_CMD_WRITE_DMA       0xca
-#define SATA_CMD_WRITE_DMA_EXT   0x35
+#define SATA_CMD_IDENTIFY_DEVICE      0xec
+#define SATA_CMD_READ_DMA             0xc8
+#define SATA_CMD_READ_DMA_EXT         0x25
+#define SATA_CMD_READ_FPDMA_QUEUED    0x60
+#define SATA_CMD_WRITE_DMA            0xca
+#define SATA_CMD_WRITE_DMA_EXT        0x35
+#define SATA_CMD_WRITE_FPDMA_QUEUED   0x61
 
 #define SATA_DEVINFO_SERIAL              10
 #define SATA_DEVINFO_FW_REV              23
 #define SATA_DEVINFO_MODEL_ID            27
 #define SATA_DEVINFO_CAP                 49
 #define SATA_DEVINFO_LBA_CAPACITY        60
+#define SATA_DEVINFO_QUEUE_DEPTH         75
 #define SATA_DEVINFO_SATA_CAP            76
 #define SATA_DEVINFO_SATA_CAP2           77
 #define SATA_DEVINFO_MAJOR_VERS          80
@@ -34,6 +37,7 @@ typedef struct sata_pdata {
     uint16_t count; // in blocks
     uint8_t cmd;
     uint8_t device;
+    int max_cmd;
     int port;
 } sata_pdata_t;
 
