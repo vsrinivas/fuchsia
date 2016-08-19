@@ -703,10 +703,16 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, int slot_id, usb_speed_t speed, usb
     }
 
     if (speed == USB_SPEED_SUPER) {
-        // FIXME compute depth
+        // compute hub depth
         int depth = 0;
-        printf("USB_HUB_SET_DEPTH %d\n", depth);
-        result = xhci_control_request(xhci, slot_id, USB_RECIP_PORT, USB_HUB_SET_DEPTH, depth, 0, NULL, 0);
+        while (slot->hub_address != 0) {
+            depth++;
+            slot = &xhci->slots[slot->hub_address];
+        }
+
+        xprintf("USB_HUB_SET_DEPTH %d\n", depth);
+        result = xhci_control_request(xhci, slot_id, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                                      USB_HUB_SET_DEPTH, depth, 0, NULL, 0);
         if (result < 0) {
             printf("USB_HUB_SET_DEPTH failed\n");
         }
