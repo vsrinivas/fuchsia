@@ -231,6 +231,10 @@ void MessageLoop::ScheduleDrainIncomingTasks() {
   FTL_DCHECK(status == NO_ERROR);
 }
 
+bool MessageLoop::RunsTasksOnCurrentThread() {
+  return CurrentThreadMessageLoop() == this;
+}
+
 ftl::TimePoint MessageLoop::RunReadyTasks(ftl::TimePoint now) {
   FTL_DCHECK(!should_quit_);
   ReloadQueue();

@@ -18,6 +18,7 @@ namespace internal {
 class TaskQueueDelegate {
  public:
   virtual void ScheduleDrainIncomingTasks() = 0;
+  virtual bool RunsTasksOnCurrentThread() = 0;
 
  protected:
   virtual ~TaskQueueDelegate();
@@ -34,6 +35,7 @@ class IncomingTaskQueue : public ftl::TaskRunner {
   // |TaskRunner| implementation:
   void PostTask(ftl::Closure task) override;
   void PostDelayedTask(ftl::Closure task, ftl::TimeDelta delay) override;
+  bool RunsTasksOnCurrentThread() override;
 
   TaskQueue TakeTaskQueue();
 

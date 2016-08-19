@@ -5,6 +5,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -22,6 +23,17 @@ TEST(MessageLoop, Current) {
     EXPECT_EQ(&message_loop, MessageLoop::GetCurrent());
   }
   EXPECT_TRUE(MessageLoop::GetCurrent() == nullptr);
+}
+
+TEST(MessageLoop, RunsTasksOnCurrentThread) {
+  MessageLoop loop;
+  EXPECT_TRUE(loop.task_runner()->RunsTasksOnCurrentThread());
+  bool run_on_other_thread;
+  std::thread t([&loop, &run_on_other_thread]() {
+    run_on_other_thread = loop.task_runner()->RunsTasksOnCurrentThread();
+  });
+  t.join();
+  EXPECT_FALSE(run_on_other_thread);
 }
 
 TEST(MessageLoop, CanRunTasks) {

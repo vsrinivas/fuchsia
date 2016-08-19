@@ -54,6 +54,11 @@ void IncomingTaskQueue::AddTask(ftl::Closure task, ftl::TimeDelta delay) {
   }
 }
 
+bool IncomingTaskQueue::RunsTasksOnCurrentThread() {
+  ftl::MutexLocker locker(&mutex_);
+  return delegate_ && delegate_->RunsTasksOnCurrentThread();
+}
+
 TaskQueue IncomingTaskQueue::TakeTaskQueue() {
   TaskQueue result;
   {

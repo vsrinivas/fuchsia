@@ -57,6 +57,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
 
   // |internal::TaskQueueDelegate| implementation:
   void ScheduleDrainIncomingTasks() override;
+  bool RunsTasksOnCurrentThread() override;
 
   void ReloadQueue();
   ftl::TimePoint RunReadyTasks(ftl::TimePoint now);
