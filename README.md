@@ -7,6 +7,12 @@ necessary for the system to boot, talk to hardware, load userspace
 processes and run them, etc.  Fuchsia builds a much larger OS on top
 of this foundation.
 
+The canonical Magenta Git repository is located
+at: https://fuchsia.googlesource.com/magenta
+
+A read-only mirror of the code is present
+at: https://github.com/fuchsia-mirror/magenta
+
 The Magenta Kernel provides syscalls to manage processes, threads,
 virtual memory, inter-process communication, waiting on object state
 changes, and locking (via futexes).

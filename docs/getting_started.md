@@ -1,5 +1,16 @@
 # Quick Start Recipes
 
+## Checking out the source code
+
+The Magenta Git repository is located
+at: https://fuchsia.googlesource.com/magenta
+
+To clone the repository, assuming you setup the $SRC variable
+in your environment:
+```shell
+$ git clone https://fuchsia.googlesource.com/magenta $SRC/magenta
+```
+
 For the purpose of this document, we will assume that Magenta is checked
 out in $SRC/magenta and that we will build toolchains, qemu, etc alongside
 that.  Various make invocations are presented with a "-j32" option for
