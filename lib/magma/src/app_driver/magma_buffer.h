@@ -10,6 +10,7 @@
 #include "magma_util/refcounted.h"
 
 #include <memory>
+#include <set>
 #include <vector>
 
 class MagmaConnection;
@@ -54,7 +55,22 @@ public:
     }
     uint32_t RelocationCount() { return relocations_.size(); }
 
+    class CommandBuffer {
+    public:
+        CommandBuffer(uint32_t batch_buffer_handle, std::set<MagmaBuffer*>& resources);
+        ~CommandBuffer();
+        magma_system_command_buffer* abi_cmd_buf() { return cmd_buf_; }
+    private:
+        magma_system_command_buffer* cmd_buf_;
+    };
+
+    std::unique_ptr<CommandBuffer> PrepareForExecution();
+
 private:
+    void GetAbiExecResource(magma_system_exec_resource* abi_res_out,
+                            magma_system_relocation_entry* relocations_out);
+    void GenerateExecResourceSet(std::set<MagmaBuffer*>& resources);
+
     class BufferRefcount : public magma::Refcounted {
     public:
         BufferRefcount(const char* name, MagmaBuffer* buffer)
@@ -85,12 +101,13 @@ private:
         void GetAbiRelocationEntry(magma_system_relocation_entry* abi_reloc_out)
         {
             abi_reloc_out->offset = offset_;
-            abi_reloc_out->target_buffer = target_->handle;
+            abi_reloc_out->target_buffer_handle = target_->handle;
             abi_reloc_out->target_offset = target_offset_;
             abi_reloc_out->read_domains_bitfield = read_domains_bitfield_;
             abi_reloc_out->write_domains_bitfield = write_domains_bitfield_;
         }
 
+        MagmaBuffer* target() { return target_; }
     private:
         uint32_t offset_;
         MagmaBuffer* target_;
@@ -109,6 +126,8 @@ private:
     uint32_t tiling_mode_ = MAGMA_TILING_MODE_NONE;
 
     static const uint32_t kMagic = 0x62756666; //"buff"
+
+    friend class TestMagmaBuffer;
 };
 
 #endif //_MAGMA_BUFFER_H_

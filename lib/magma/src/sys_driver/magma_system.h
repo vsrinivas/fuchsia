@@ -20,23 +20,24 @@ struct magma_system_connection {
 // the GPU virtual address of the 32 bit word at target_offset in target_buffer.
 struct magma_system_relocation_entry {
     uint32_t offset;                 // offset in the batch buffer
-    uint32_t target_buffer;          // buffer which we are getting addresses from
+    uint32_t target_buffer_handle;   // the buffer to be relocated
     uint32_t target_offset;          // offset in the target buffer
     uint32_t read_domains_bitfield;  // memory domains in which the target is readable
     uint32_t write_domains_bitfield; // memory domains in which the target is writable
 };
 
-// a single batch buffer to be scheduled for execution
-struct magma_system_batch_buffer {
-    uint32_t batch_buffer;
+// a buffer plus its associated relocations referenced by a command buffer
+struct magma_system_exec_resource {
+    uint32_t buffer_handle;
     uint32_t num_relocations;
     struct magma_system_relocation_entry* relocations;
 };
 
-// a collection of batch buffers submitted for execution together
-struct magma_system_exec_buffer {
-    uint32_t num_batch_buffers;
-    struct magma_system_exec_buffer* batch_buffers;
+// A batch buffer to be executed plus the resources required to execute it
+struct magma_system_command_buffer {
+    uint32_t batch_buffer_handle; // the batch buffer to execute
+    uint32_t num_resources;
+    struct magma_system_exec_resource* resources;
 };
 
 // Opens a device - triggered by a client action. returns null on failure
@@ -62,8 +63,9 @@ bool magma_system_unmap(struct magma_system_connection* connection, uint32_t han
 bool magma_system_set_domain(struct magma_system_connection* connection, uint32_t handle,
                              uint32_t read_domains, uint32_t write_domain);
 
-bool magma_system_execute_buffer(struct magma_system_connection* connection,
-                                 struct magma_system_exec_buffer* execbuffer, uint32_t context_id);
+bool magma_system_submit_command_buffer(struct magma_system_connection* connection,
+                                        struct magma_system_command_buffer* command_buffer,
+                                        uint32_t context_id);
 
 void magma_system_wait_rendering(struct magma_system_connection* connection, uint32_t handle);
 

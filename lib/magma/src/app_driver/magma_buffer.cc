@@ -13,7 +13,7 @@ MagmaBuffer::MagmaBuffer(MagmaConnection* connection, const char* name, uint32_t
     // Reserve the maximum number of relocations you will possibly need so the
     // vector never gets resized. We don't have any real evidence that resizing
     // the relocation vector introduces any meaningful performance overhead but
-    // cstout@ is convinced that it could be bad so we do this to be safe.
+    // a certain someone is convinced that it could be bad so we do this to be safe.
     uint32_t max_relocations = connection->batch_size() / sizeof(uint32_t) / 2 - 2;
     relocations_.reserve(max_relocations);
 }
@@ -81,4 +81,58 @@ void MagmaBuffer::EmitRelocation(uint32_t offset, MagmaBuffer* target, uint32_t 
 {
     relocations_.emplace_back(offset, target, target_offset, read_domains_bitfield,
                               write_domains_bitfield);
+}
+
+void MagmaBuffer::GetAbiExecResource(magma_system_exec_resource* abi_res_out,
+                                     magma_system_relocation_entry* relocations_out)
+{
+    abi_res_out->buffer_handle = handle;
+    abi_res_out->num_relocations = relocations_.size();
+    abi_res_out->relocations = relocations_out;
+    uint32_t i = 0;
+    for (auto relocation : relocations_)
+        relocation.GetAbiRelocationEntry(&abi_res_out->relocations[i++]);
+}
+
+void MagmaBuffer::GenerateExecResourceSet(std::set<MagmaBuffer*>& resources)
+{
+    resources.insert(this);
+    for (auto relocation : relocations_) {
+        DASSERT(relocation.target());
+        // only recur if we havent already seen the node to handle cycles safely
+        if (resources.find(relocation.target()) == resources.end()) {
+            relocation.target()->GenerateExecResourceSet(resources);
+        }
+    }
+}
+
+std::unique_ptr<MagmaBuffer::CommandBuffer> MagmaBuffer::PrepareForExecution()
+{
+    std::set<MagmaBuffer*> resources;
+    GenerateExecResourceSet(resources);
+    return std::unique_ptr<CommandBuffer>(new CommandBuffer(handle, resources));
+}
+
+// we do all the memory allocations here so that we have the option of allocating contiguous
+// memory if needed for IPC
+MagmaBuffer::CommandBuffer::CommandBuffer(uint32_t batch_buffer_handle,
+                                          std::set<MagmaBuffer*>& resources)
+{
+    cmd_buf_ = new magma_system_command_buffer();
+    cmd_buf_->batch_buffer_handle = batch_buffer_handle;
+    cmd_buf_->num_resources = resources.size();
+    cmd_buf_->resources = new magma_system_exec_resource[resources.size()];
+    uint32_t i = 0;
+    for (auto resource : resources) {
+        auto relocations = new magma_system_relocation_entry[resource->RelocationCount()];
+        resource->GetAbiExecResource(&cmd_buf_->resources[i++], relocations);
+    }
+}
+MagmaBuffer::CommandBuffer::~CommandBuffer()
+{
+    for (uint32_t i = 0; i < cmd_buf_->num_resources; i++) {
+        delete cmd_buf_->resources[i].relocations;
+    }
+    delete cmd_buf_->resources;
+    delete cmd_buf_;
 }

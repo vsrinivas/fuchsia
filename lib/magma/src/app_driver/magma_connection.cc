@@ -59,10 +59,3 @@ MagmaBuffer* MagmaConnection::AllocBufferObject(const char* name, uint64_t size,
 
     return buffer;
 }
-
-bool MagmaConnection::ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_len,
-                                    uint32_t flags)
-{
-    DLOG("TODO: ExecuteBuffer");
-    return false;
-}

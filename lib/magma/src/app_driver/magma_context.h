@@ -6,7 +6,10 @@
 #define _MAGMA_CONTEXT_H_
 
 #include "magma.h"
+#include "magma_buffer.h"
 #include "magma_system.h"
+
+class MagmaConnection;
 
 class MagmaContext : public magma_context {
 public:
@@ -19,6 +22,8 @@ public:
     uint32_t context_id() { return context_id_; }
 
     MagmaConnection* connection() { return connection_; }
+
+    bool SubmitCommandBuffer(MagmaBuffer* batch_buffer, uint32_t used_batch_len, uint32_t flags);
 
     static MagmaContext* cast(magma_context* context)
     {

@@ -4,17 +4,24 @@
 
 import("//magma/gnbuild/magma.gni")
 
+config("app_driver_config") {
+  include_dirs = [ "." ]
+}
+
 source_set("app_driver") {
+  public_configs = [ ":app_driver_config" ]
+
   sources = [
     "magma.cc",
     "magma_buffer.cc",
     "magma_buffer.h",
     "magma_connection.cc",
     "magma_connection.h",
+    "magma_context.cc",
     "magma_context.h",
   ]
 
-  deps = [
+  public_deps = [
     "$magma_build_root/include:mad_abi",
     "$magma_build_root/src/magma_util:common",
     "$magma_build_root/src/sys_driver:magma_system_interface",

@@ -60,8 +60,9 @@ bool magma_system_set_domain(magma_system_connection* connection, uint32_t handl
     return true;
 }
 
-bool magma_system_execute_buffer(magma_system_connection* connection,
-                                 struct magma_system_exec_buffer* execbuffer, uint32_t context_id)
+bool magma_system_submit_command_buffer(struct magma_system_connection* connection,
+                                        struct magma_system_command_buffer* command_buffer,
+                                        uint32_t context_id)
 {
     return true;
 }

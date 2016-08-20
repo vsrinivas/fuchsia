@@ -96,8 +96,8 @@ int32_t magma_gem_bo_wait(struct magma_buffer* bo, int64_t timeout_ns);
 
 struct magma_context* magma_gem_context_create(struct magma_connection* connection);
 void magma_gem_context_destroy(struct magma_context* ctx);
-int32_t magma_gem_bo_context_exec(struct magma_buffer* bo, struct magma_context* ctx, int32_t used,
-                                  uint32_t flags);
+int32_t magma_gem_bo_context_exec(struct magma_buffer* bo, struct magma_context* ctx,
+                                  int32_t used_batch_len, uint32_t flags);
 
 int32_t magma_bo_gem_export_to_prime(struct magma_buffer* bo, int32_t* prime_fd);
 struct magma_buffer* magma_bo_gem_create_from_prime(struct magma_connection* connection,

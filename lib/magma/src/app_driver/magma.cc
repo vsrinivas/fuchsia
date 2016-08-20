@@ -7,6 +7,7 @@
 #include "magma_system.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -298,14 +299,12 @@ void magma_gem_context_destroy(magma_context* ctx)
     }
 }
 
-int32_t magma_gem_bo_context_exec(magma_buffer* bo, magma_context* ctx, int32_t used,
+int32_t magma_gem_bo_context_exec(magma_buffer* bo, magma_context* ctx, int32_t used_batch_len,
                                   uint32_t flags)
 {
-    auto buffer = MagmaBuffer::cast(bo);
-    int32_t context_id = MagmaContext::cast(ctx)->context_id();
     DLOG("magma_gem_bo_context_exec buffer '%s' context_id %d", buffer->Name(), context_id);
-    // int32_t int_context_id = static_cast<int>(context_id);
-    buffer->connection()->ExecuteBuffer(buffer, context_id, used, flags);
+    if (!MagmaContext::cast(ctx)->SubmitCommandBuffer(MagmaBuffer::cast(bo), used_batch_len, flags))
+        return DRET(-EINVAL);
     return 0;
 }
 

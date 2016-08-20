@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MAGMA_DEVICE_H_
-#define _MAGMA_DEVICE_H_
+#ifndef _MAGMA_CONNECTION_H_
+#define _MAGMA_CONNECTION_H_
 
 #include "magma.h"
 #include "magma_buffer.h"
@@ -42,8 +42,6 @@ public:
         return magma_system_destroy_context(sys_connection_, context->context_id());
     }
 
-    bool ExecuteBuffer(MagmaBuffer* buffer, int context_id, uint32_t batch_size, uint32_t flags);
-
     uint64_t batch_size() { return batch_size_; }
 
     static MagmaConnection* cast(magma_connection* device)
@@ -63,4 +61,4 @@ private:
     uint64_t batch_size_{};
 };
 
-#endif // _MAGMA_DEVICE_H_
+#endif // _MAGMA_CONNECTION_H_
