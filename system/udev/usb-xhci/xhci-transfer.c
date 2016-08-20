@@ -7,6 +7,7 @@
 #include <threads.h>
 
 #include "xhci.h"
+#include "xhci-util.h"
 
 //#define TRACE 1
 #include "xhci-debug.h"
@@ -158,7 +159,7 @@ int xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_
     xhci_sync_transfer_init(&xfer);
 
     mx_status_t result = xhci_queue_transfer(xhci, slot_id, &setup, data, length, 0,
-                                             request_type & USB_DIR_MASK, &xfer.transfer_context);
+                                             request_type & USB_DIR_MASK, &xfer.context);
     if (result != NO_ERROR)
         return result;
 
@@ -251,26 +252,4 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         list_initialize(&ring->pending_requests);
         completion_signal(&ring->completion);
     }
-}
-
-static void xhci_sync_transfer_callback(mx_status_t result, void* data) {
-    xhci_sync_transfer_t* xfer = (xhci_sync_transfer_t*)data;
-    xfer->result = result;
-    completion_signal(&xfer->completion);
-}
-
-void xhci_transfer_context_init(xhci_transfer_context_t* xfer,
-                                void (*callback)(mx_status_t result, void* data), void* data) {
-    xfer->callback = callback;
-    xfer->data = data;
-}
-
-void xhci_sync_transfer_init(xhci_sync_transfer_t* xfer) {
-    completion_reset(&xfer->completion);
-    xhci_transfer_context_init(&xfer->transfer_context, xhci_sync_transfer_callback, xfer);
-}
-
-mx_status_t xhci_sync_transfer_wait(xhci_sync_transfer_t* xfer) {
-    completion_wait(&xfer->completion, MX_TIME_INFINITE);
-    return xfer->result;
 }

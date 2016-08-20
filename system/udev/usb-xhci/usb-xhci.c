@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "xhci.h"
+#include "xhci-util.h"
 
 //#define TRACE 1
 #include "xhci-debug.h"
@@ -141,7 +142,8 @@ usb_request_t* xhci_alloc_request(mx_device_t* device, uint16_t length) {
         free(request);
         return NULL;
     }
-    xhci_transfer_context_init(context, xhci_transfer_callback, request);
+    context->callback = xhci_transfer_callback;
+    context->data = request;
     request->driver_data = context;
 
     // buffers need not be aligned, but 64 byte alignment gives better performance

@@ -57,10 +57,18 @@ typedef struct xhci_slot {
 
 typedef struct xhci xhci_t;
 
-typedef void (*xhci_command_complete_cb)(void* context, uint32_t cc, xhci_trb_t* command_trb,
+typedef void (*xhci_command_complete_cb)(void* data, uint32_t cc, xhci_trb_t* command_trb,
                                          xhci_trb_t* event_trb);
+
 typedef struct {
-    void (*callback)(mx_status_t result, void* data);
+    xhci_command_complete_cb callback;
+    void* data;
+} xhci_command_context_t;
+
+typedef void (*xhci_transfer_complete_cb)(mx_status_t result, void* data);
+
+typedef struct {
+    xhci_transfer_complete_cb callback;
     void* data;
 
     // transfer ring we are queued on
@@ -68,12 +76,6 @@ typedef struct {
     // for transfer ring's list of pending requests
     list_node_t node;
 } xhci_transfer_context_t;
-
-typedef struct {
-    xhci_transfer_context_t transfer_context;
-    completion_t completion;
-    int result;
-} xhci_sync_transfer_t;
 
 struct xhci {
     // MMIO data structures
@@ -87,8 +89,7 @@ struct xhci {
     uint64_t* scratch_pad;
 
     xhci_transfer_ring_t command_ring;
-    xhci_command_complete_cb command_callbacks[COMMAND_RING_SIZE];
-    void* command_callbacks_context[COMMAND_RING_SIZE];
+    xhci_command_context_t* command_contexts[COMMAND_RING_SIZE];
 
     // One event ring for now, but we will have multiple if we use multiple interruptors
     xhci_event_ring_t event_rings[1];
@@ -108,13 +109,18 @@ struct xhci {
     list_node_t command_queue;
     mtx_t command_queue_mutex;
     completion_t command_queue_completion;
+
+    // DMA buffers used by xhci_device_thread in xhci-device-manager.c
+    uint8_t* input_context;
+    usb_device_descriptor_t* device_descriptor;
+    usb_configuration_descriptor_t* config_descriptor;
 };
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
 void xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
-                       xhci_command_complete_cb callback, void* context);
+                       xhci_command_context_t* context);
 
 uint32_t xhci_endpoint_index(usb_endpoint_descriptor_t* ep);
 
@@ -140,10 +146,6 @@ void xhci_cancel_transfers(xhci_t* xhci, xhci_transfer_ring_t* ring);
 mx_status_t xhci_get_descriptor(xhci_t* xhci, int slot_id, uint8_t type, uint16_t value,
                                 uint16_t index, void* data, uint16_t length);
 void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb);
-void xhci_transfer_context_init(xhci_transfer_context_t* xfer,
-                                void (*callback)(mx_status_t result, void* data), void* data);
-void xhci_sync_transfer_init(xhci_sync_transfer_t* xfer);
-mx_status_t xhci_sync_transfer_wait(xhci_sync_transfer_t* xfer);
 
 // xhci-trb.c
 mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* tr, int count);

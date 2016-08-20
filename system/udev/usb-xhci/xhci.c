@@ -157,7 +157,7 @@ void xhci_start(xhci_t* xhci) {
 }
 
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
-                       xhci_command_complete_cb callback, void* context) {
+                       xhci_command_context_t* context) {
     // FIXME - check that command ring is not full?
 
     mtx_lock(&xhci->command_ring.mutex);
@@ -165,8 +165,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
     xhci_transfer_ring_t* cr = &xhci->command_ring;
     xhci_trb_t* trb = cr->current;
     int index = trb - cr->start;
-    xhci->command_callbacks[index] = callback;
-    xhci->command_callbacks_context[index] = context;
+    xhci->command_contexts[index] = context;
 
     XHCI_WRITE64(&trb->ptr, ptr);
     XHCI_WRITE32(&trb->status, 0);
@@ -186,11 +185,12 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
             (event_trb->control >> TRB_SLOT_ID_START), trb_get_type(command_trb), cc);
 
     int index = command_trb - xhci->command_ring.start;
-    xhci_command_complete_cb callback = xhci->command_callbacks[index];
-    void* context = xhci->command_callbacks_context[index];
-    xhci->command_callbacks[index] = NULL;
+    mtx_lock(&xhci->command_ring.mutex);
+    xhci_command_context_t* context = xhci->command_contexts[index];
+    xhci->command_contexts[index] = NULL;
+    mtx_unlock(&xhci->command_ring.mutex);
 
-    callback(context, cc, command_trb, event_trb);
+    context->callback(context->data, cc, command_trb, event_trb);
 }
 
 static void xhci_handle_events(xhci_t* xhci, int interruptor) {
