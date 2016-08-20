@@ -79,7 +79,6 @@ typedef struct {
 list_node_t history = LIST_INITIAL_VALUE(history);
 
 static const char nl[2] = {'\r', '\n'};
-static const char bs[3] = {8, ' ', 8};
 static const char erase_line[5] = {ESC, '[', '2', 'K', '\r'};
 static const char cursor_left[3] = {ESC, '[', 'D'};
 static const char cursor_right[3] = {ESC, '[', 'C'};
