@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import os
+import re
+import subprocess
+import sys
+
+SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+
+name_to_full_path = {}
+
+
+def find_func(find_args, dirname, names):
+    if find_args["path"] != "":  # found something!
+        return
+    if dirname.find("sysroot") != -1:
+        return
+    for name in names:
+        if name == find_args["name"]:
+            find_args["path"] = dirname
+            return
+
+
+def find_file_in_build_dir(name):
+    magenta_build_dir = os.path.join(
+        os.path.dirname(SCRIPT_DIR), "build-magenta-pc-x86-64")
+    # TODO: Make this extensible to look in more paths
+    find_locations = [magenta_build_dir]
+    find_args = {"name": name, "path": ""}
+    found_path = ""
+    for location in find_locations:
+        os.path.walk(location, find_func, find_args)
+        if find_args["path"] != "":
+            found_path = os.path.join(location, find_args["path"], name)
+            break
+    return found_path
+
+
+def find_dso_full_path(dso, exe_name):
+    if dso in name_to_full_path:
+        return name_to_full_path[dso]
+    # First, try an exact match for the filename
+    found_path = find_file_in_build_dir(dso)
+    if found_path == "":
+        # If that fails, and this file doesn't end with .so, try the executable
+        # name
+        if not dso.endswith(".so"):
+            found_path = find_file_in_build_dir(exe_name)
+    if found_path == "":
+        # If that still fails and this looks like an absolute path, try the
+        # last path component
+        if dso.startswith("/"):
+            short_name = dso[dso.rfind("/"):]
+            found_path = find_file_in_build_dir(short_name)
+    if found_path != "":
+        name_to_full_path[dso] = found_path
+    return found_path
+
+
+def main():
+    exe_name = ""
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "-h" or sys.argv[1] == "--help":
+            print "Usage: symbolize (name of executable)"
+            return 0
+        exe_name = sys.argv[1]
+
+    btre = re.compile("^bt#(\d+):")
+    bt_with_offsetre = re.compile(
+        "^bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
+    processed_lines = []
+    for line in sys.stdin:
+        sys.stdout.write(line)
+        if line.startswith("bt#"):
+            m = btre.match(line)
+            if m is not None:
+                frame_num = m.group(1)
+                m = bt_with_offsetre.match(line)
+                if m is not None:
+                    dso = m.group(2)
+                    off = m.group(3)
+                    dso_full_path = find_dso_full_path(dso, exe_name)
+                    if dso_full_path == "":
+                        continue
+                    cmd = ["addr2line", "-ipfe", dso_full_path, off]
+                    addr2line_output = subprocess.check_output(cmd)
+                    processed_lines.append(
+                        "#%s: %s" % (frame_num, addr2line_output))
+                else:
+                    processed_lines.append("#%s: (unknown)\n" % frame_num)
+        else:
+            if len(processed_lines) != 0:
+                print "start of symbolized stack:"
+                sys.stdout.writelines(processed_lines)
+                print "end of symbolized stack"
+                processed_lines = []
+
+if __name__ == '__main__':
+    sys.exit(main())
