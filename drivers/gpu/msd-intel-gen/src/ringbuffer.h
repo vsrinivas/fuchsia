@@ -16,12 +16,14 @@ public:
 
     MsdIntelBuffer* buffer() { return buffer_.get(); }
 
-    static constexpr uint32_t kRingbufferSize = 32 * PAGE_SIZE;
-
 private:
     Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer);
 
     std::unique_ptr<MsdIntelBuffer> buffer_;
+
+    static constexpr uint32_t kRingbufferSize = 32 * PAGE_SIZE;
+
+    friend class TestRingbuffer;
 };
 
 #endif // RINGBUFFER_H

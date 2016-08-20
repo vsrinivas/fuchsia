@@ -5,10 +5,19 @@
 #include "ringbuffer.h"
 #include "gtest/gtest.h"
 
+class TestRingbuffer {
+public:
+    void CreateAndDestroy()
+    {
+        std::unique_ptr<Ringbuffer> ringbuffer(Ringbuffer::Create());
+        ASSERT_NE(ringbuffer, nullptr);
+        uint32_t expected = Ringbuffer::kRingbufferSize;
+        EXPECT_EQ(ringbuffer->size(), expected);
+    }
+};
+
 TEST(Ringbuffer, CreateAndDestroy)
 {
-    std::unique_ptr<Ringbuffer> ringbuffer(Ringbuffer::Create());
-    ASSERT_NE(ringbuffer, nullptr);
-    uint32_t expected = Ringbuffer::kRingbufferSize;
-    EXPECT_EQ(ringbuffer->size(), expected);
+    TestRingbuffer test;
+    test.CreateAndDestroy();
 }
