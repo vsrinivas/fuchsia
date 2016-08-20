@@ -311,6 +311,10 @@ static void* intel_i915_pci_probe(pcie_device_state_t* pci_device) {
     return g_i915_device;
 }
 
+// The whole file is optimized away unless the #ifdef below fires.
+// But don't warn about it.  (We could #ifdef the whole file, but
+// then build errors would go unnoticed.)
+__attribute__((unused))
 static const pcie_driver_fn_table_t INTEL_I815_FN_TABLE = {
     .pcie_probe_fn    = intel_i915_pci_probe,
     .pcie_startup_fn  = intel_i915_pci_startup,
