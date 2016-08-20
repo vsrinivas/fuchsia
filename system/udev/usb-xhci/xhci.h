@@ -32,7 +32,6 @@ typedef struct xhci_transfer_ring {
     list_node_t pending_requests;
     completion_t completion; // signaled when pending_requests is empty
     bool dead;
-    bool stalled;
 } xhci_transfer_ring_t;
 
 typedef struct xhci_event_ring {

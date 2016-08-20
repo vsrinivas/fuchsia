@@ -25,6 +25,40 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
 #define print_trb(xhci, ring, trb) do {} while (0)
 #endif
 
+
+static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
+    xprintf("xhci_reset_endpoint %d %d\n", slot_id, endpoint);
+
+    xhci_slot_t* slot = &xhci->slots[slot_id];
+    xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[endpoint];
+
+    mtx_lock(&transfer_ring->mutex);
+
+    // first reset the endpoint
+    xhci_sync_command_t command;
+    xhci_sync_command_init(&command);
+    uint32_t control = (slot_id << TRB_SLOT_ID_START) |( endpoint <<TRB_ENDPOINT_ID_START);
+    xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
+    int cc = xhci_sync_command_wait(&command);
+
+    if (cc != TRB_CC_SUCCESS) {
+        mtx_unlock(&transfer_ring->mutex);
+        return ERR_INTERNAL;
+    }
+
+    // then move transfer ring's dequeue pointer passed the failed transaction
+    xhci_sync_command_init(&command);
+    uint64_t ptr = xhci_virt_to_phys(xhci, (mx_vaddr_t)transfer_ring->current);
+    ptr |= transfer_ring->pcs;
+    control = (slot_id << TRB_SLOT_ID_START) |( endpoint <<TRB_ENDPOINT_ID_START);
+    xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
+    cc = xhci_sync_command_wait(&command);
+
+    mtx_unlock(&transfer_ring->mutex);
+
+    return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
+}
+
 int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* data,
                         uint16_t length, int endpoint, int direction, xhci_transfer_context_t* context) {
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n", slot_id, setup, endpoint, length);
@@ -36,8 +70,12 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
     xhci_transfer_ring_t* ring = &slot->transfer_rings[endpoint];
     if (!ring)
         return ERR_INVALID_ARGS;
-    if (ring->stalled)
-        return ERR_BAD_STATE;
+
+    // reset endpoint if it is halted
+    xhci_endpoint_context_t* epc = slot->epcs[endpoint];
+    if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
+        xhci_reset_endpoint(xhci, slot_id, endpoint);
+    }
 
     uint32_t interruptor_target = 0;
     const size_t max_transfer_size = 1 << (XFER_TRB_XFER_LENGTH_BITS - 1);
@@ -228,10 +266,6 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     xhci_transfer_ring_t* ring = context->transfer_ring;
 
     mtx_lock(&ring->mutex);
-
-    if (cc == TRB_CC_STALL_ERROR) {
-        ring->stalled = true;
-    }
 
     list_delete(&context->node);
     if (list_is_empty(&ring->pending_requests)) {
