@@ -5,7 +5,7 @@
 #include <runtime/once.h>
 
 #include <magenta/syscalls.h>
-#include <system/atomic.h>
+#include <stdatomic.h>
 #include <stdint.h>
 
 // The default state must be zero to match MXR_ONCE_INIT.
@@ -19,9 +19,10 @@ enum once_state {
 void mxr_once(mxr_once_t* once, void (*func)(void)) {
     while (1) {
         int old_state = UNUSED;
-        if (atomic_cmpxchg(&once->futex, &old_state, RUNNING)) {
+        if (atomic_compare_exchange_strong(&once->futex,
+                                           &old_state, RUNNING)) {
             (*func)();
-            if (atomic_swap(&once->futex, RAN) == WAITING) {
+            if (atomic_exchange(&once->futex, RAN) == WAITING) {
                 mx_status_t status = mx_futex_wake(&once->futex, UINT32_MAX);
                 if (status != NO_ERROR)
                     __builtin_trap();
@@ -33,7 +34,8 @@ void mxr_once(mxr_once_t* once, void (*func)(void)) {
                 return;
 
             case RUNNING:
-                if (!atomic_cmpxchg(&once->futex, &old_state, WAITING))
+                if (!atomic_compare_exchange_strong(&once->futex,
+                                                    &old_state, WAITING))
                     continue;
                 // Fall through.
 

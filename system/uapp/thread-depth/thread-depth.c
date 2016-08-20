@@ -8,12 +8,12 @@
 
 #include <runtime/thread.h>
 #include <magenta/syscalls.h>
-#include <system/atomic.h>
+#include <stdatomic.h>
 
 static uint64_t count = 0;
 
 static int thread_func(void* arg) {
-    uint64_t val = atomic_add_uint64(&count, 1);
+    uint64_t val = atomic_fetch_add(&count, 1);
     val++;
     if (val % 1000 == 0) {
         printf("Created %lld threads, time %lld us\n", val, mx_current_time() / 1000000);
@@ -27,7 +27,7 @@ static int thread_func(void* arg) {
             printf("Unexpected thread join return: %d\n", status);
             return 1;
         }
-        val = atomic_add_uint64(&count, -1);
+        val = atomic_fetch_sub(&count, 1);
         val--;
         if (val % 1000 == 0)
             printf("Joined %lld threads, time %lld us\n", val, mx_current_time() / 1000000);

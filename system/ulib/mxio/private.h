@@ -9,7 +9,7 @@
 #include <sys/types.h>
 
 #include <runtime/mutex.h>
-#include <system/atomic.h>
+#include <stdatomic.h>
 
 typedef struct mxio mxio_t;
 
@@ -107,11 +107,11 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount, m
 void mxio_free(mxio_t* io);
 
 static inline void mxio_acquire(mxio_t* io) {
-    atomic_add_int32(&io->refcount, 1);
+    atomic_fetch_add(&io->refcount, 1);
 }
 
 static inline void mxio_release(mxio_t* io) {
-    if (atomic_add_int32(&io->refcount, -1) == 1) {
+    if (atomic_fetch_sub(&io->refcount, 1) == 1) {
         mxio_free(io);
     }
 }

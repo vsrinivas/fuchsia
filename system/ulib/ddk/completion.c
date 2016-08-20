@@ -6,7 +6,7 @@
 
 #include <limits.h>
 #include <magenta/syscalls.h>
-#include <system/atomic.h>
+#include <stdatomic.h>
 
 enum {
     UNSIGNALED = 0,

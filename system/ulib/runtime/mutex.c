@@ -5,7 +5,7 @@
 #include <runtime/mutex.h>
 
 #include <magenta/syscalls.h>
-#include <system/atomic.h>
+#include <stdatomic.h>
 
 // TODO(kulakowski) Reintroduce (correctly) optimization counting waiters.
 
@@ -19,14 +19,14 @@ enum {
 
 mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex) {
     int futex_value = UNLOCKED;
-    if (!atomic_cmpxchg(&mutex->futex, &futex_value, LOCKED))
+    if (!atomic_compare_exchange_strong(&mutex->futex, &futex_value, LOCKED))
         return ERR_BUSY;
     return NO_ERROR;
 }
 
 mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout) {
     for (;;) {
-        switch (atomic_swap(&mutex->futex, LOCKED)) {
+        switch (atomic_exchange(&mutex->futex, LOCKED)) {
         case UNLOCKED:
             return NO_ERROR;
         case LOCKED: {
