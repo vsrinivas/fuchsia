@@ -58,6 +58,12 @@ struct x86_64_context_switch_frame {
     uint64_t rip;
 };
 
+struct arch_exception_context {
+    bool is_page_fault;
+    x86_iframe_t *frame;
+    uint32_t cr2;
+};
+
 void x86_64_context_switch(vaddr_t *oldsp, vaddr_t newsp);
 void x86_uspace_entry(
         void *thread_arg,

@@ -99,6 +99,11 @@ struct arm_mode_regs {
     uint32_t sys_r13, sys_r14;
 };
 
+struct arch_exception_context {
+    bool iframe;
+    void *frame;
+};
+
 void arm_save_mode_regs(struct arm_mode_regs *regs);
 
 #define GEN_CP_REG_FUNCS(cp, reg, op1, c1, c2, op2) \

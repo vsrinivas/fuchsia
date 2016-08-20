@@ -114,13 +114,6 @@ __WEAK void arm_syscall_handler(struct arm_fault_frame *frame)
     exception_die(frame, "unhandled syscall, halting\n");
 }
 
-#if WITH_LIB_MAGENTA
-struct arch_exception_context {
-    bool iframe;
-    void *frame;
-};
-#endif
-
 void arm_undefined_handler(struct arm_iframe *frame)
 {
     /* look at the undefined instruction, figure out if it's something we can handle */

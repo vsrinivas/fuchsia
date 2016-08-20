@@ -36,7 +36,13 @@ static void build_arch_exception_context(mx_exception_context_t* context,
                                          arch_exception_context_t* arch_context) {
     context->arch.subtype = arch_exception_type;
     context->arch.pc = ip;
-    // TODO(dje): add more stuff
+#if ARCH_X86_64
+    // TODO: cast below is evil; share frame types between user mode and kernel.
+    context->arch.u.x86_64 = *(x86_64_exc_frame_t*)arch_context->frame;
+    context->arch_id = ARCH_ID_X86_64;
+#else
+    context->arch_id = ARCH_ID_UKNOWN;
+#endif
 }
 
 static void build_exception_report(mx_exception_report_t* report,

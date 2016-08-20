@@ -18,12 +18,6 @@
 
 #if WITH_LIB_MAGENTA
 #include <magenta/exception.h>
-
-struct arch_exception_context {
-    bool is_page_fault;
-    x86_iframe_t *frame;
-    ulong cr2;
-};
 #endif
 
 extern enum handler_return platform_irq(x86_iframe_t *frame);
