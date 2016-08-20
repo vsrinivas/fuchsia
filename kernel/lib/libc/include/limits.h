@@ -10,11 +10,11 @@
 #endif
 
 #ifndef LLONG_MAX
-#define LLONG_MAX ((1LL << (CHAR_BIT * sizeof(long long) - 1)) - 1)
+#define LLONG_MAX __LONG_LONG_MAX__
 #endif
 #ifndef ULLONG_MAX
-#define ULLONG_MAX (~0ULL)
+#define ULLONG_MAX (LLONG_MAX * 2ULL + 1ULL)
 #endif
 #ifndef LLONG_MIN
-#define LLONG_MIN (LLONG_MAX + 1)
+#define LLONG_MIN (-LLONG_MAX - 1LL)
 #endif
