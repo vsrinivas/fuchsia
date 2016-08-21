@@ -125,7 +125,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
 uint32_t xhci_endpoint_index(usb_endpoint_descriptor_t* ep);
 
 // xhci-device-manager.c
-mx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port, uint32_t speed);
+mx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port, usb_speed_t speed);
 mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_t port);
 void xhci_start_device_thread(xhci_t* xhci);
 mx_status_t xhci_configure_hub(xhci_t* xhci, int slot_id, usb_speed_t speed,

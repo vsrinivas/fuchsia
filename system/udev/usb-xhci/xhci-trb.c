@@ -8,7 +8,7 @@
 #include "xhci-debug.h"
 
 inline void trb_set_link(xhci_t* xhci, xhci_trb_t* trb, xhci_trb_t* next, bool toggle_cycle) {
-    trb_set_ptr(trb, xhci_virt_to_phys(xhci, (mx_vaddr_t)next));
+    trb_set_ptr(trb, (void *)xhci_virt_to_phys(xhci, (mx_vaddr_t)next));
     trb_set_control(trb, TRB_LINK, (toggle_cycle ? TRB_TC : 0));
 }
 

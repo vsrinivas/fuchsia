@@ -486,11 +486,19 @@ inline uint32_t trb_get_type(xhci_trb_t* trb) {
 }
 
 inline void* trb_get_ptr(xhci_trb_t* trb) {
+#if (UINTPTR_MAX == UINT32_MAX)
+    return (void *)(uint32_t)XHCI_READ64(&trb->ptr);
+#else
     return (void *)XHCI_READ64(&trb->ptr);
+#endif
 }
 
-inline void trb_set_ptr(xhci_trb_t* trb, uint64_t value) {
-    XHCI_WRITE64(&trb->ptr, value);
+inline void trb_set_ptr(xhci_trb_t* trb, void* ptr) {
+#if (UINTPTR_MAX == UINT32_MAX)
+    XHCI_WRITE64(&trb->ptr, (uint32_t)ptr);
+#else
+    XHCI_WRITE64(&trb->ptr, (uint64_t)ptr);
+#endif
 }
 
 inline void trb_set_control(xhci_trb_t* trb, uint32_t type, uint32_t flags) {

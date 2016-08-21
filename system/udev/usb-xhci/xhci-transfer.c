@@ -104,7 +104,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
         // Follow up with event data TRB
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
-        XHCI_WRITE64(&trb->ptr, (uint64_t)context);
+        trb_set_ptr(trb, context);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
         print_trb(xhci, ring, trb);
@@ -128,7 +128,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
             // Follow up with event data TRB
             xhci_trb_t* trb = ring->current;
             xhci_clear_trb(trb);
-            XHCI_WRITE64(&trb->ptr, (uint64_t)context);
+            trb_set_ptr(trb, context);
             XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
             trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
             print_trb(xhci, ring, trb);
@@ -185,12 +185,12 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     xhci_transfer_context_t* context = NULL;
 
     if (control & EVT_TRB_ED) {
-        context = (xhci_transfer_context_t*)trb->ptr;
+        context = (xhci_transfer_context_t*)trb_get_ptr(trb);
     } else {
         trb = xhci_read_trb_ptr(xhci, trb);
         for (int i = 0; i < 5 && trb; i++) {
             if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
-                context = (xhci_transfer_context_t*)trb->ptr;
+                context = (xhci_transfer_context_t*)trb_get_ptr(trb);
                 break;
             }
             trb = xhci_get_next_trb(xhci, trb);
