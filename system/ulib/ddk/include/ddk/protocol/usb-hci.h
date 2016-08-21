@@ -16,23 +16,9 @@ typedef struct usb_hci_protocol {
     int (*control)(mx_device_t* hcidev, int devaddr, usb_setup_t* devreq, int data_length,
                    uint8_t* data);
 
-    /* set_address(): Tell the usb device its address
-                      Also, allocate the usbdev structure, initialize enpoint 0
-                      (including MPS) and return its address. */
-    int (*set_address)(mx_device_t* hcidev, usb_speed_t speed, int hubport, int hubaddr);
-
-    /* finish_device_config(): Another hook for xHCI, returns 0 on success. */
-    int (*finish_device_config)(mx_device_t* hcidev, int devaddr, usb_device_config_t* config);
-
-    /* destroy_device(): Finally, destroy all structures that were allocated during set_address()
-                         and finish_device_config(). */
-    void (*destroy_device)(mx_device_t* hcidev, int devaddr);
-
-    void (*set_bus_device)(mx_device_t* hcidev, mx_device_t* busdev);
-
     // These are only used by hub driver
-    mx_status_t (*configure_hub)(mx_device_t* hcidev, int devaddr, usb_speed_t speed,
+    mx_status_t (*configure_hub)(mx_device_t* dev, int devaddr, usb_speed_t speed,
                  usb_hub_descriptor_t* descriptor);
-    mx_status_t (*hub_device_added)(mx_device_t* hcidev, int devaddr, int port, usb_speed_t speed);
-    mx_status_t (*hub_device_removed)(mx_device_t* hcidev, int devaddr, int port);
+    mx_status_t (*hub_device_added)(mx_device_t* dev, int devaddr, int port, usb_speed_t speed);
+    mx_status_t (*hub_device_removed)(mx_device_t* dev, int devaddr, int port);
 } usb_hci_protocol_t;

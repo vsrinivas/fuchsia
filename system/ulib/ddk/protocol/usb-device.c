@@ -241,8 +241,6 @@ static mx_status_t usb_init_device(usb_device_t* dev, usb_device_descriptor_t* d
                 }
                 usb_endpoint_t* ep = &endpoints[endpoint_index++];
                 ep->descriptor = ed;
-                ep->endpoint = ed->bEndpointAddress;
-                ep->toggle = 0;
                 ep->maxpacketsize = ed->wMaxPacketSize;
                 ep->direction = ed->bEndpointAddress & USB_ENDPOINT_DIR_MASK;
                 ep->type = ed->bmAttributes & USB_ENDPOINT_TYPE_MASK;
@@ -305,11 +303,6 @@ static usb_speed_t usb_get_speed(mx_device_t* device) {
     return dev->speed;
 }
 
-static int usb_get_address(mx_device_t* device) {
-    usb_device_t* dev = get_usb_device(device);
-    return dev->address;
-}
-
 static mx_status_t usb_configure_hub(mx_device_t* device, usb_speed_t speed,
                                      usb_hub_descriptor_t* descriptor) {
     usb_device_t* dev = get_usb_device(device);
@@ -333,7 +326,6 @@ static usb_device_protocol_t _device_protocol = {
     .get_config = usb_get_config,
     .queue_request = usb_queue_request,
     .get_speed = usb_get_speed,
-    .get_address = usb_get_address,
     .configure_hub = usb_configure_hub,
     .hub_device_added = usb_hub_device_added,
     .hub_device_removed = usb_hub_device_removed,

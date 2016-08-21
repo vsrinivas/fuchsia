@@ -25,11 +25,8 @@ typedef struct usb_endpoint {
     usb_endpoint_descriptor_t* descriptor;
     int endpoint;
     direction_t direction;
-    int toggle;
     int maxpacketsize;
     endpoint_type type;
-    int interval; /* expressed as binary logarithm of the number
-			 of microframes (i.e. t = 125us * 2^interval) */
 } usb_endpoint_t;
 
 typedef struct usb_class_descriptor {
@@ -82,7 +79,6 @@ typedef struct usb_device_protocol {
 
     mx_status_t (*get_config)(mx_device_t* dev, usb_device_config_t** config);
     usb_speed_t (*get_speed)(mx_device_t* device);
-    int (*get_address)(mx_device_t* device);
 
     // These are only used by hub driver
     mx_status_t (*configure_hub)(mx_device_t* device, usb_speed_t speed,

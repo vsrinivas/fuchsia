@@ -235,12 +235,6 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,
-
-    // these are unused in new stack
-    // .set_address = xhci_set_address,
-    // .finish_device_config = xhci_finish_device_config,
-    // .destroy_device = xhci_destroy_device,
-    // .set_bus_device = xhci_set_bus_device
 };
 
 static mx_status_t xhci_release(mx_device_t* device) {
