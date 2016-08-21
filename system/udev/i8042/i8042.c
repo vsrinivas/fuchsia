@@ -470,6 +470,7 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
 
     const boot_kbd_report_t* report = rollover ? &report_err_rollover : &dev->report.kbd;
     i8042_instance_t* instance;
+    mtx_lock(&dev->instance_lock);
     foreach_instance(dev, instance) {
         mtx_lock(&instance->fifo.lock);
         bool set_readable = (mx_hid_fifo_size(&instance->fifo) == 0);
@@ -479,6 +480,7 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
         }
         mtx_unlock(&instance->fifo.lock);
     }
+    mtx_unlock(&dev->instance_lock);
 }
 
 static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int flags) {
@@ -503,6 +505,7 @@ static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int 
         dev->report.mouse.buttons &= 0x7;
 
         i8042_instance_t* instance;
+        mtx_lock(&dev->instance_lock);
         foreach_instance(dev, instance) {
             mtx_lock(&instance->fifo.lock);
             bool set_readable = (mx_hid_fifo_size(&instance->fifo) == 0);
@@ -512,6 +515,7 @@ static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int 
             }
             mtx_unlock(&instance->fifo.lock);
         }
+        mtx_unlock(&dev->instance_lock);
         memset(&dev->report.mouse, 0, sizeof(dev->report.mouse));
         break;
         }
