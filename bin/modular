@@ -25,7 +25,7 @@ function ensure_git_repo() {
 
   # If the directory isn't checked out yet, check it out.
   if [ ! -d "$directory/.git" ]; then
-    git clone $repo $directory
+    git clone $repo "$directory"
     git -C "$directory" checkout -q $rev
     return 0
   fi
@@ -35,7 +35,40 @@ function ensure_git_repo() {
   if [ $(git -C "$directory" rev-parse HEAD) != \
        $(git -C "$directory" rev-parse "$rev") ]; then
     git -C "$directory" fetch
-    git -C "$directory" checkout $rev
+    git -C "$directory" checkout -q $rev
+    return 0
+  fi
+
+  return 1
+}
+
+function ensure_git_repo_sparse() {
+  directory="$1"
+  repo="$2"
+  rev="$3"
+  shift 3
+
+  # If the directory isn't checked out yet, set it up for a sparse checkout
+  if [ ! -d "$directory/.git" ]; then
+    if [ -d "$directory" ]; then
+      rm -rf "$directory"
+    fi
+    mkdir -p "$directory"
+    git -C "$directory" init
+    git -C "$directory" config core.sparsecheckout true
+    git -C "$directory" remote add -f origin $repo
+    printf '%s\n' $* > "$directory/.git/info/sparse-checkout"
+    git -C "$directory" checkout -q $rev
+    return 0
+  fi
+
+  # If the directory's HEAD doesn't match the requested revision, fetch the
+  # latest version of the repo and check out the requested revision.
+  if [ $(git -C "$directory" rev-parse HEAD) != \
+       $(git -C "$directory" rev-parse "$rev") ]; then
+    printf '%s\n' $* > "$directory/.git/info/sparse-checkout"
+    git -C "$directory" fetch origin
+    git -C "$directory" checkout -q $rev
     return 0
   fi
 
@@ -65,6 +98,9 @@ MOJO_SDK_REPO=https://github.com/domokit/mojo_sdk.git
 MOJO_SDK_DIR="$MODULAR_ROOT/third_party/mojo/src/mojo/public"
 
 MOJO_VERSION="$(cat $MODULAR_ROOT/MOJO_VERSION)"
+MOJO_REPO=https://github.com/domokit/mojo.git
+MOJO_DIR="$MODULAR_ROOT/third_party/mojo/src"
+MOJO_SPARSE_PATHS="mojo/public/ mojo/services/"
 
 MODULAR_TOOLS_DIR="$MODULAR_ROOT/modular_tools"
 SCRIPT_PATH="$MODULAR_TOOLS_DIR/lib/executable.dart"
@@ -123,7 +159,7 @@ function download_prebuilt() {
   # If building in the modular tree, make sure some other deps are present:
   if [ "$BUILD_IN_TREE" == "true" ]; then
     # Mojo SDK
-    if ensure_git_repo $MOJO_SDK_DIR $MOJO_SDK_REPO $MOJO_SDK_VERSION; then
+    if ensure_git_repo_sparse "$MOJO_DIR" $MOJO_REPO $MOJO_VERSION $MOJO_SPARSE_PATHS; then
       if [ "$(uname -s)" == "Darwin" ]; then
         MOJOM_PLATFORM=mac64
       else

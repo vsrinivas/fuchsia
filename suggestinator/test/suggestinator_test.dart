@@ -15,7 +15,7 @@ import 'package:modular_core/graph/ref.dart';
 import 'package:modular_core/uuid.dart';
 import 'package:parser/manifest.dart';
 import 'package:parser/recipe.dart';
-import 'package:suggestinator/event_logger.dart';
+import 'package:suggestinator/event_log.dart';
 import 'package:suggestinator/session.dart';
 import 'package:suggestinator/session_state_manager.dart';
 import 'package:suggestinator/suggestinator.dart';
@@ -528,8 +528,8 @@ void main() {
   });
 
   group('Suggestion Logging', () {
-    List<EventRecord> log = [];
-    new EventLogger().onRecord.listen(log.add);
+    List<Event> log = [];
+    new EventLog().addObserver(log.add);
 
     test('Added and removed Suggestions', () async {
       final Uuid sessionId = new Uuid.random();
@@ -545,30 +545,26 @@ void main() {
       testProvider.updateCallback([s1], []);
       await getSuggestionsUpdatedFuture();
 
-      expect(log.length, equals(2));
+      expect(log.length, equals(1));
       expect(log[0].toJson()['type'], equals(EventType.SUGGESTIONS_ADDED));
       expect(
           log[0].toJson()['body'],
-          equals({
-            '${s1.id}': {'sessionId': s1.sessionId}
-          }));
-      expect(log[1].toJson()['type'], equals(EventType.SUGGESTIONS_REMOVED));
-      expect(log[1].toJson()['body'], equals({}));
+          equals([
+            {'id': s1.id, 'sessionId': s1.sessionId}
+          ]));
 
       log.clear();
 
       testProvider.updateCallback([s2], []);
       await getSuggestionsUpdatedFuture();
 
-      expect(log.length, equals(2));
+      expect(log.length, equals(1));
       expect(log[0].toJson()['type'], equals(EventType.SUGGESTIONS_ADDED));
       expect(
           log[0].toJson()['body'],
-          equals({
-            '${s2.id}': {'sessionId': s2.sessionId}
-          }));
-      expect(log[1].toJson()['type'], equals(EventType.SUGGESTIONS_REMOVED));
-      expect(log[1].toJson()['body'], equals({}));
+          equals([
+            {'id': s2.id, 'sessionId': s2.sessionId}
+          ]));
 
       log.clear();
 
@@ -579,15 +575,15 @@ void main() {
       expect(log[0].toJson()['type'], equals(EventType.SUGGESTIONS_ADDED));
       expect(
           log[0].toJson()['body'],
-          equals({
-            '${s3.id}': {'sessionId': s3.sessionId}
-          }));
+          equals([
+            {'id': s3.id, 'sessionId': s3.sessionId}
+          ]));
       expect(log[1].toJson()['type'], equals(EventType.SUGGESTIONS_REMOVED));
       expect(
           log[1].toJson()['body'],
-          equals({
-            '${s2.id}': {'sessionId': s2.sessionId}
-          }));
+          equals([
+            {'id': s2.id, 'sessionId': s2.sessionId}
+          ]));
     });
 
     test('Selected Suggestion', () async {
@@ -610,17 +606,17 @@ void main() {
       expect(
           log[0].toJson()['body'],
           equals({
-            'selected': {
-              '${s1.id}': {'sessionId': s1.sessionId}
-            },
+            'selected': [
+              {'id': s1.id, 'sessionId': s1.sessionId}
+            ],
             'notSelected': []
           }));
     });
 
     test('Multiple subscribers', () async {
-      List<EventRecord> log2 = [];
-      List<EventRecord> log3 = [];
-      new EventLogger()..onRecord.listen(log2.add)..onRecord.listen(log3.add);
+      List<Event> log2 = [];
+      List<Event> log3 = [];
+      new EventLog()..addObserver(log2.add)..addObserver(log3.add);
 
       final Uuid sessionId = new Uuid.random();
       testSessionStateManager.startSession(sessionId);
@@ -635,23 +631,23 @@ void main() {
       testProvider.updateCallback([s1], []);
       await getSuggestionsUpdatedFuture();
 
-      expect(log.length, equals(2));
+      expect(log.length, equals(1));
       expect(log[0].toJson()['type'], equals(EventType.SUGGESTIONS_ADDED));
       expect(
           log[0].toJson()['body'],
-          equals({
-            '${s1.id}': {'sessionId': s1.sessionId}
-          }));
-      expect(log[1].toJson()['type'], equals(EventType.SUGGESTIONS_REMOVED));
-      expect(log[1].toJson()['body'], equals({}));
+          equals([
+            {'id': s1.id, 'sessionId': s1.sessionId}
+          ]));
 
       expect(log2.length, log.length);
-      expect(log2[0].toJson(), equals(log[0].toJson()));
-      expect(log2[1].toJson(), equals(log[1].toJson()));
+
+      expect(log2[0].toJson()['type'], equals(log[0].toJson()['type']));
+      expect(log2[0].toJson()['body'], equals(log[0].toJson()['body']));
 
       expect(log3.length, log.length);
-      expect(log3[0].toJson(), equals(log[0].toJson()));
-      expect(log3[1].toJson(), equals(log[1].toJson()));
+
+      expect(log3[0].toJson()['type'], equals(log[0].toJson()['type']));
+      expect(log3[0].toJson()['body'], equals(log[0].toJson()['body']));
     });
   });
 }

@@ -22,8 +22,6 @@
     (function() {
       'use strict';
 
-      const hostPort = 'localhost:1842';
-
       Polymer({
         is: 'tq-debug-server',
         properties: {
@@ -36,12 +34,20 @@
             type: Object,
             notify: true,
           },
+          hostPort: {
+            type: String,
+            value: 'localhost:1842',
+          },
         },
         reload: function() {
           this._pathChanged();
         },
         _getJSON: function(path) {
-          let url = `http://${hostPort}${path || '/'}`;
+          var serverPickerMenu = document.getElementById("serverPickerMenu");
+          if (serverPickerMenu) {
+            this.hostPort = serverPickerMenu.getSelectedServer().hostport;
+          }
+          let url = `http://${this.hostPort}${path || '/'}`;
           return fetch(url)
             .then((response) => response.json())
             .catch((error) => {
@@ -58,7 +64,7 @@
             this._webSocket = null;
           }
           if (this.path) {
-            this._webSocket = new WebSocket(`ws://${hostPort}/ws${this.path}`);
+            this._webSocket = new WebSocket(`ws://${this.hostPort}/ws${this.path}`);
             this._webSocket.onmessage = (event) => {
               var json = JSON.parse(event.data);
               this.json = json;

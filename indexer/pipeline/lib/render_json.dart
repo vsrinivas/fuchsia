@@ -9,7 +9,7 @@ import 'index.dart';
 // TODO(thatguy): Prefer to merge these two json files into one, once
 // Manifests can be serialized in an exportable way.
 String renderJsonIndex(final Index index) {
-  return JSON.encode(index.manifests);
+  return JSON.encode(index.manifests.values.toList());
 }
 
 String renderJsonTypes(final Index index) {

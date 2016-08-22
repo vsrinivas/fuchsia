@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:mojo/core.dart';
 import 'package:mojo/mojo/url_request.mojom.dart';
+import 'package:mojo/mojo/http_header.mojom.dart' as http_header_mojom;
 import 'package:mojo_services/mojo/network_service.mojom.dart';
 import 'package:mojo_services/mojo/url_loader.mojom.dart';
 
@@ -26,13 +27,24 @@ class MojoUriLoader implements UriLoader {
 
   /// Returns the string contents of [uri] or null upon error.
   @override
-  Future<String> getString(Uri uri) {
+  Future<String> getString(final Uri uri, {final Map<String, String> headers}) {
     final UrlLoaderProxy urlLoaderProxy = new UrlLoaderProxy.unbound();
     _networkService.createUrlLoader(urlLoaderProxy);
 
     final UrlRequest urlRequest = new UrlRequest()
       ..url = uri.toString()
       ..autoFollowRedirects = true;
+
+    if (headers != null) {
+      final List<http_header_mojom.HttpHeader> httpHeaders = [];
+      headers.forEach((String key, String value) {
+        var httpHeader = new http_header_mojom.HttpHeader()
+          ..name = key
+          ..value = value;
+        httpHeaders.add(httpHeader);
+      });
+      urlRequest.headers = httpHeaders;
+    }
 
     final Completer<String> completer = new Completer<String>();
 

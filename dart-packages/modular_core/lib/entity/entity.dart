@@ -51,6 +51,13 @@ class Entity {
   /// The [SchemaRegistry] we were initialized with.
   SchemaRegistry registry;
 
+  /// Metadata about this [Entity], such as important timestamps. This gets
+  /// saved and loaded at the [Entity]'s root node.
+  _Metadata _metadata;
+
+  DateTime get creationTime => _metadata.creationTime;
+  DateTime get modifiedTime => _metadata.modifiedTime;
+
   /// For an [Entity] that has already been [save()]ed at [node], returns the
   /// list of [Schema] types used to construct it. Returns empty list otherwise.
   static List<String> typesFromNode(final Node node) {
@@ -59,18 +66,22 @@ class Entity {
 
   /// Constructs a new [Entity] object that will conform to the [Schema]s
   /// specified by [_schemaTypes]. If a [registry] is given, it will use
-  /// it to find the [Schema] descriptions for the types specified. Otherwise
-  /// the global registry is used.
-  Entity(this._schemaTypes, {this.registry}) {
+  /// it to find the [Schema] descriptions for the types specified.
+  Entity._internal(this._schemaTypes, this.registry, {final _Metadata metadata})
+      : _metadata = metadata ?? new _Metadata() {
     _initializeProperties();
   }
+
+  Entity(final List<String> schemaTypes, {final SchemaRegistry registry})
+      : this._internal(schemaTypes, registry);
 
   /// Constructs a new [Entity] object from a [Node], and loads values for
   /// properties automatically. Values that themselves are [Entity]s are
   /// eagerly loaded from the [Graph].
   Entity.fromNode(final Node node, {this.registry})
       : _node = node,
-        _schemaTypes = _loadTypesFromNode(node) {
+        _schemaTypes = _loadTypesFromNode(node),
+        _metadata = _loadMetadataFromNode(node) {
     if (_schemaTypes.isEmpty) {
       // TODO(thatguy): A better exception would be good.
       throw new Exception("No Entity found stored at $node");
@@ -85,7 +96,8 @@ class Entity {
   Entity._fromNode(
       final Node node, this.registry, Map<Node, Entity> nodeEntityMap)
       : _node = node,
-        _schemaTypes = _loadTypesFromNode(node) {
+        _schemaTypes = _loadTypesFromNode(node),
+        _metadata = _loadMetadataFromNode(node) {
     if (_schemaTypes.isEmpty) {
       // TODO(thatguy): A better exception would be good.
       throw new Exception("No Entity found stored at $node");
@@ -101,13 +113,27 @@ class Entity {
 
   factory Entity.fromJson(Map<String, dynamic> json,
           {SchemaRegistry registry}) =>
-      new Entity.fromJsonWithSchemas(json['values'], json['schemas'],
+      new Entity._fromJsonWithSchemasAndMetadata(
+          json['values'], json['schemas'],
+          metadata: new _Metadata.fromJson(json['metadata']),
+          registry: registry);
+
+  factory Entity.fromJsonWithoutMetadata(Map<String, dynamic> json,
+          {SchemaRegistry registry}) =>
+      new Entity._fromJsonWithSchemasAndMetadata(
+          json['values'], json['schemas'],
           registry: registry);
 
   factory Entity.fromJsonWithSchemas(
+          Map<String, dynamic> json, List<String> schemas,
+          {SchemaRegistry registry}) =>
+      new Entity._fromJsonWithSchemasAndMetadata(json, schemas,
+          registry: registry);
+
+  factory Entity._fromJsonWithSchemasAndMetadata(
       Map<String, dynamic> json, List<String> schemas,
-      {SchemaRegistry registry}) {
-    Entity e = new Entity(schemas, registry: registry);
+      {_Metadata metadata, SchemaRegistry registry}) {
+    Entity e = new Entity._internal(schemas, registry, metadata: metadata);
     json.forEach((String name, dynamic value) {
       e._propertyValueMap[name].loadJson(value);
     });
@@ -132,6 +158,9 @@ class Entity {
   /// if [value] does not validate as a type appropriate for assigning to the
   /// parameter [propertyName], throws an [ArgumentError].
   void operator []=(String propertyName, dynamic value) {
+    // Update time of last modification.
+    _metadata.modifiedTime = new DateTime.now();
+
     final _PropertyValue v = _getPropertyValueOrThrow(propertyName);
     v.set(value);
   }
@@ -158,6 +187,8 @@ class Entity {
     _values.forEach((final _PropertyValue property) {
       property.save(mutator, _node, entityNodeMap);
     });
+
+    _saveMetadataToNode(mutator, node, _metadata);
   }
 
   /// Reloads property values from the [Node] from which this Entity was loaded.
@@ -175,6 +206,8 @@ class Entity {
       return;
     }
     _loadPropertiesFromNode({} /* nodeEntityMap */);
+
+    _metadata = _loadMetadataFromNode(_node);
   }
 
   /// Removes all values (except values that are [Entity]s) and their respective
@@ -194,13 +227,19 @@ class Entity {
   String toString() => '$runtimeType($_schemaTypes)';
 
   // Note: entity cycles aren't supported yet.
-  Map<String, dynamic> toJson() =>
-      {'schemas': _schemaTypes, 'values': toJsonWithoutSchemas()};
+  Map<String, dynamic> toJson() => {
+        'schemas': _schemaTypes,
+        'metadata': _metadata.toJson(),
+        'values': toJsonOnlyValues()
+      };
 
-  Map<String, dynamic> toJsonWithoutSchemas() =>
+  Map<String, dynamic> toJsonOnlyValues() =>
       new Map.fromIterable(_values.where((_PropertyValue p) => p.hasValue()),
           key: (_PropertyValue p) => p.propertyName,
           value: (_PropertyValue p) => p.toJson());
+
+  Map<String, dynamic> toJsonWithoutMetadata() =>
+      {'schemas': _schemaTypes, 'values': toJsonOnlyValues()};
 
   void _initializeProperties() {
     _values.clear();
@@ -244,6 +283,37 @@ class Entity {
   }
 
   String toJsonString() => JSON.encode(this.toJson());
+}
+
+/// Stores metadata about an [Entity].
+class _Metadata {
+  static const String _creationTimeLabel = "creationTime";
+  static const String _modifiedTimeLabel = "modifiedTime";
+
+  final DateTime creationTime;
+  DateTime modifiedTime;
+
+  _Metadata() : creationTime = new DateTime.now() {
+    modifiedTime = creationTime;
+  }
+
+  _Metadata._internal(this.creationTime, this.modifiedTime);
+
+  _Metadata.fromJson(final Map<String, dynamic> json)
+      : this._internal(json[_creationTimeLabel], json[_modifiedTimeLabel]);
+
+  _Metadata.fromJsonString(final String jsonString)
+      : this.fromJson(JSON.decode(jsonString, reviver: (key, value) {
+          if (key == _creationTimeLabel || key == _modifiedTimeLabel)
+            return DateTime.parse(value);
+          return value;
+        }));
+
+  Map<String, dynamic> toJson() =>
+      {_creationTimeLabel: creationTime, _modifiedTimeLabel: modifiedTime};
+
+  String toJsonString() =>
+      JSON.encode(toJson(), toEncodable: (o) => o.toIso8601String());
 }
 
 abstract class _PropertyValue {
@@ -464,8 +534,8 @@ class _PropertyValueStorage {
       _edge = mutator.addEdge(parentNode.id, _edgeLabels, valueNode.id);
     } else {
       if (value == null) {
-        // We no longer have a value, but we used to (since
-        // _singleValueEdge != null). We have to delete ourselves.
+        // We no longer have a value, but we used to (since _edge != null). We
+        // have to delete ourselves.
         delete(mutator);
         _edge = null;
         return;
@@ -524,4 +594,23 @@ List<String> _loadTypesFromNode(final Node node) {
   }
   final String jsonTypes = new String.fromCharCodes(typesValue);
   return JSON.decode(jsonTypes);
+}
+
+/// A node with a node value of this type stores a JSON representation of an
+/// [Entity]'s [_Metadata].
+const String _metadataLabel = "internal:entityMetadata";
+
+void _saveMetadataToNode(
+    final GraphMutator mutator, final Node node, _Metadata metadata) {
+  mutator.setValue(node.id, _metadataLabel,
+      new Uint8List.fromList(metadata.toJsonString().codeUnits));
+}
+
+_Metadata _loadMetadataFromNode(final Node node) {
+  final metadataValue = node.getValue(_metadataLabel);
+  if (metadataValue == null) {
+    return new _Metadata();
+  }
+  final String metadata = new String.fromCharCodes(metadataValue);
+  return new _Metadata.fromJsonString(metadata);
 }

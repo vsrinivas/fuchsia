@@ -9,12 +9,13 @@ import 'dart:typed_data';
 
 import 'package:modular_core/log.dart';
 import 'package:modular_core/graph/graph.dart';
+import 'package:modular_core/uuid.dart';
 import 'package:parser/expression.dart' show PathExpr;
+import 'package:parser/recipe.dart';
 import 'package:parser/manifest.dart';
+import 'package:suggestinator/event_log.dart';
 
 export 'dart:io' show IOSink;
-
-const int DEBUG_SERVER_PORT = 1842;
 
 abstract class Inspectable {
   String get inspectorPath;
@@ -26,6 +27,7 @@ class InspectorJSONServer implements Inspectable {
   final Logger _log = log('Inspector');
   final Map<String, Inspectable> _inspectables = {};
   final Map<String, Set<WebSocket>> _listeners = {};
+  final int _debugServerPort;
 
   @override
   final String inspectorPath = '/';
@@ -36,7 +38,7 @@ class InspectorJSONServer implements Inspectable {
   JsonEncoder _jsonEncoder;
   Object _unhandled;
 
-  InspectorJSONServer() {
+  InspectorJSONServer(this._debugServerPort) {
     _jsonEncoder = new JsonEncoder.withIndent('  ', _encodeUnknown);
     publish(this);
     listen();
@@ -140,8 +142,8 @@ class InspectorJSONServer implements Inspectable {
 
   Future<Null> listen() async {
     assert(requestServer == null);
-    requestServer = await HttpServer.bind(
-        InternetAddress.LOOPBACK_IP_V4, DEBUG_SERVER_PORT);
+    requestServer =
+        await HttpServer.bind(InternetAddress.LOOPBACK_IP_V4, _debugServerPort);
     _log.info('Handler Debug Server listening on port ${requestServer.port}');
     await for (HttpRequest request in requestServer) {
       _log.info("Handling request for ${request.uri.path}");
@@ -174,6 +176,10 @@ class InspectorJSONServer implements Inspectable {
 
   void publishGraph(final Graph graph, final String path) {
     publish(new _InspectableGraph(graph, path, this));
+  }
+
+  void publishEventLog(final EventLog events, final String path) {
+    publish(new _InspectableEventLog(events, path, this));
   }
 
   void unpublish(String path) {
@@ -224,8 +230,6 @@ class InspectorJSONServer implements Inspectable {
       };
 
   Map<String, dynamic> manifest(Manifest manifest) {
-    Iterable<String> pathExprs(Iterable<PathExpr> ps) =>
-        ps.map((PathExpr p) => p.toString()) ?? [];
     String themeColor;
     if (manifest.themeColor != null) {
       themeColor = '#' + manifest.themeColor.toRadixString(16).padLeft(6, '0');
@@ -236,12 +240,25 @@ class InspectorJSONServer implements Inspectable {
       'icon': manifest.icon,
       'themeColor': themeColor,
       'verb': manifest.verb.toString(),
-      'input': pathExprs(manifest.input),
-      'output': pathExprs(manifest.output),
-      'display': pathExprs(manifest.display),
-      'compose': pathExprs(manifest.compose),
+      'input': _encodePathExprs(manifest.input),
+      'output': _encodePathExprs(manifest.output),
+      'display': _encodePathExprs(manifest.display),
+      'compose': _encodePathExprs(manifest.compose),
     };
   }
+
+  Map<String, dynamic> step(Step step) => {
+        'scope': step.scope?.toString() ?? '',
+        'verb': step.verb?.toString() ?? '',
+        'input': _encodePathExprs(step.input),
+        'output': _encodePathExprs(step.output),
+        'display': _encodePathExprs(step.display),
+        'compose': _encodePathExprs(step.compose),
+        'url': step.url?.toString()
+      };
+
+  Iterable<String> _encodePathExprs(Iterable<PathExpr> ps) =>
+      ps.map((PathExpr p) => p.toString()) ?? [];
 
   // Given an Iterable of Maps with String ids, return a Map mapping the ids
   // to their Maps.
@@ -254,8 +271,11 @@ class InspectorJSONServer implements Inspectable {
     if (o is Inspectable) {
       return o.inspectorPath;
     }
-    if (o is Uri || o is NodeId || o is EdgeId) {
+    if (o is Uri || o is NodeId || o is EdgeId || o is EventType || o is Uuid) {
       return o.toString();
+    }
+    if (o is DateTime) {
+      return o.toIso8601String();
     }
     if (o is Edge) {
       return edge(o);
@@ -265,6 +285,12 @@ class InspectorJSONServer implements Inspectable {
     }
     if (o is Graph) {
       return graph(o);
+    }
+    if (o is Step) {
+      return step(o);
+    }
+    if (o is Event) {
+      return o.toJson();
     }
     if (o is Iterable<dynamic>) {
       return o.map(_encodeUnknown).toList();
@@ -304,4 +330,26 @@ class _InspectableGraph implements Inspectable {
   }
 
   void graphChanged(GraphEvent event) => _inspector?.push(path, event.toJson());
+}
+
+class _InspectableEventLog implements Inspectable {
+  final EventLog events;
+  final String path;
+  final InspectorJSONServer _inspector;
+
+  _InspectableEventLog(this.events, this.path, this._inspector) {
+    events.addObserver(eventsChanged);
+  }
+
+  @override
+  Future<dynamic> inspectorJSON() => new Future.value(events.toInspectorJson());
+
+  String get inspectorPath => path;
+
+  @override
+  Future<dynamic> onInspectorPost(dynamic json) async {}
+
+  void eventsChanged(final Event event) =>
+      // TODO(dennischeng): Change this to only push the new [event].
+      _inspector?.push(path, events.toInspectorJson());
 }

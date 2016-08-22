@@ -16,6 +16,8 @@ abstract class GraphObservationMixin {
   Map<GraphChangeCallback, List<GraphMutation>> _observers =
       new Map<GraphChangeCallback, List<GraphMutation>>();
 
+  int get observerCount => _observers.length;
+
   // TODO(thatguy): add coalesceMutations flag.
   void addObserver(GraphChangeCallback callback) {
     _observers[callback] = new List<GraphMutation>();

@@ -1,0 +1,370 @@
+#!/usr/bin/python
+
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+"""Deploy script for cloud-indexer."""
+
+import sys
+
+import abc
+import argparse
+import distutils.spawn
+import logging
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+
+# When copying trees, we ignore the Dockerfile, compiled lockfiles, and any
+# other hidden files. This somewhat assumes that there are no files named
+# 'packages' to be copied.
+COPYTREE_IGNORES = ['Dockerfile', '.*', 'packages', 'app.yaml',
+                    'notification-handler.yaml']
+DEFAULT_BUCKET_NAME = 'modular-cloud-indexer.google.com.a.appspot.com'
+TARGET_CHOICES = ('default', 'notification-handler', 'queue', 'dispatch')
+
+# We assume that the deployment script is in the root of the cloud-indexer dir.
+SCRIPT_PATH = os.path.abspath(__file__)
+CLOUD_INDEXER_PATH = os.path.dirname(SCRIPT_PATH)
+
+# Locate our bundled dependencies.
+MODULAR_PATH = os.path.abspath(os.path.join(CLOUD_INDEXER_PATH, '..'))
+FLUTTER_PATH = os.path.join(MODULAR_PATH, 'third_party', 'flutter')
+DART_SDK_PATH = os.path.join(FLUTTER_PATH, 'bin', 'cache', 'dart-sdk')
+PUB_PATH = os.path.join(DART_SDK_PATH, 'bin', 'pub')
+
+# Finally, we assume that gcloud is installed and in the PATH variable.
+GCLOUD_PATH = distutils.spawn.find_executable('gcloud')
+
+
+def copy_and_overwrite(source, destination, ignore=None):
+  """Recursively copies the source directory to the destination directory."""
+  # shutil.copytree throws an exception if the destination directory already
+  # exists. So, we remove the directory before trying to copy.
+  if os.path.exists(destination):
+    shutil.rmtree(destination)
+  shutil.copytree(source, destination, ignore=ignore)
+
+
+class DeployCommand(object):
+  """Abstract command that can be executed using the DeployCommandRunner."""
+
+  __metaclass__ = abc.ABCMeta
+
+  @abc.abstractmethod
+  def setup(self, bucket_name, deploy_path):
+    """Populates deploy_path with the necessary files for deployment.
+
+    Args:
+      bucket_name: The bucket that the cloud-indexer is servicing.
+      deploy_path: The root of the deploy directory.
+
+    Returns:
+      True on success, otherwise returns False.
+    """
+    pass
+
+  @abc.abstractproperty
+  def config_file(self):
+    """The path of the config file relative to the deployment directory."""
+    pass
+
+
+class DefaultModuleCommand(DeployCommand):
+  """Command that deploys the default module."""
+
+  def setup(self, bucket_name, deploy_path):
+    logging.info('Copying default service')
+    default_path = os.path.join(CLOUD_INDEXER_PATH, 'app', 'default')
+    default_deploy_path = os.path.join(deploy_path, 'default')
+    copy_and_overwrite(default_path, default_deploy_path,
+                       ignore=shutil.ignore_patterns(*COPYTREE_IGNORES))
+
+    logging.info('Copying app.yaml')
+    config_deploy_path = os.path.join(default_deploy_path, 'app.yaml')
+    shutil.copyfile(os.path.join(default_path, 'app.yaml'), config_deploy_path)
+    with open(config_deploy_path, 'a') as cf:
+      cf.write('\n'.join([
+          'env_variables:',
+          '  BUCKET_NAME: \'{}\''.format(bucket_name),
+          ''
+      ]))
+    return True
+
+  @property
+  def config_file(self):
+    return 'default/app.yaml'
+
+
+class NotificationHandlerModuleCommand(DeployCommand):
+  """Command that deploys the notification-handler module."""
+
+  def setup(self, bucket_name, deploy_path):
+    # We want to reorganize the notification-handler service such that it can
+    # be deployed using the image google/dart-runtime-base. More details can
+    # be found at https://hub.docker.com/r/google/dart-runtime-base/.
+    notification_handler_path = os.path.join(CLOUD_INDEXER_PATH, 'app',
+                                             'notification-handler')
+    notification_handler_deploy_path = os.path.join(deploy_path,
+                                                    'notification-handler')
+
+    # Generate the lockfile for the local dependencies.
+    logging.info('Running `pub get` in notification-handler service')
+    p = subprocess.Popen([PUB_PATH, 'get'], cwd=notification_handler_path)
+    p.communicate()
+
+    if p.returncode != 0:
+      logging.error('`pub get` in notification-handler failed. Bailing out.')
+      return False
+
+    logging.info('Copying notification-handler service')
+    notification_handler_app_deploy_path = os.path.join(
+        notification_handler_deploy_path, 'app')
+    copy_and_overwrite(notification_handler_path,
+                       notification_handler_app_deploy_path,
+                       ignore=shutil.ignore_patterns(*COPYTREE_IGNORES))
+
+    # Like the Dockerfile, the service configuration file has to be at the root
+    # of the service directory.
+    logging.info('Copying notification-handler.yaml')
+    config_deploy_path = os.path.join(notification_handler_deploy_path,
+                                      'notification-handler.yaml')
+    shutil.copyfile(os.path.join(notification_handler_path,
+                                 'notification-handler.yaml'),
+                    config_deploy_path)
+    with open(config_deploy_path, 'a') as cf:
+      cf.write('\n'.join([
+          'env_variables:',
+          '  BUCKET_NAME: \'{}\''.format(bucket_name),
+          ''
+      ]))
+
+    # Get all the local dependencies inside the lockfile.
+    with open(os.path.join(notification_handler_path, 'pubspec.lock')) as lf:
+      contents = lf.read()
+
+    packages = {}
+    # Anything that is not a descendent of the notification-handler package.
+    # Here, and below, we assume that there are no nested packages.
+    dependencies = re.findall(r'path: "(../\S+)"', contents)
+    for dependency in dependencies:
+      source_path = os.path.abspath(os.path.join(notification_handler_path,
+                                                 dependency))
+
+      logging.info('Copying dependency: %s', source_path)
+      relative_path = os.path.relpath(source_path, MODULAR_PATH)
+      destination_path = os.path.join(notification_handler_deploy_path,
+                                      'pkg', relative_path)
+      copy_and_overwrite(source_path, destination_path,
+                         ignore=shutil.ignore_patterns(*COPYTREE_IGNORES))
+
+      # We can cache this result for later, when we update pubspec.yaml.
+      packages[dependency] = {
+          'pubspec': os.path.relpath(destination_path,
+                                     notification_handler_app_deploy_path),
+          'dockerfile': os.path.join('pkg', relative_path)
+      }
+
+    def match_package(match_object):
+      """Replacement function for relative paths in pubspec.yaml.
+
+      Args:
+        match_object: A match_object passed by re.sub containing a relative path
+            from pubspec.yaml.
+
+      Returns:
+        A string corresponding to the relative path in the deployment directory.
+
+      Raises:
+        KeyError: if there is a mismatch between dependencies in
+            pubspec.yaml and pubspec.lock, e.g. if pubspec.lock is out of date.
+      """
+      return 'path: {}/'.format(
+          packages[match_object.group(1).rstrip('/')]['pubspec'])
+
+    pubspec_path = os.path.join(notification_handler_app_deploy_path,
+                                'pubspec.yaml')
+    logging.info('Updating dependencies with relative paths')
+    with open(pubspec_path, 'r+') as f:
+      contents = f.read()
+      f.seek(0)
+      try:
+        contents = re.sub(r'path: (../\S+)', match_package, contents)
+      except KeyError:
+        logging.error('Dependency mismatch in pubspec.yaml and pubspec.lock')
+        return False
+      f.write(contents)
+      f.truncate()
+
+    # Finally, we create the new Dockerfile based on the
+    # google/dart-runtime-base container image.
+    dockerfile_path = os.path.join(notification_handler_deploy_path,
+                                   'Dockerfile')
+    logging.info('Writing Dockerfile')
+    with open(dockerfile_path, 'w') as f:
+      adds = ['ADD {} {}'.format(os.path.join(v['dockerfile'], 'pubspec.yaml'),
+                                 '{}/'.format(os.path.join('/project',
+                                                           v['dockerfile'])))
+              for v in packages.values()]
+      f.write('\n'.join([
+          'FROM google/dart-runtime-base',
+          'WORKDIR /project/app/',
+          '\n'.join(adds),
+          'ADD app/pubspec.* /project/app/',
+          'RUN pub get',
+          'ADD . /project/',
+          'RUN pub get --offline',
+          ''
+      ]))
+
+    return True
+
+  @property
+  def config_file(self):
+    return 'notification-handler/notification-handler.yaml'
+
+
+class DispatchConfigCommand(DeployCommand):
+  """Deploys the dispatch.yaml configuration file."""
+
+  def setup(self, bucket_name, deploy_path):
+    logging.info('Copying dispatch.yaml')
+    dispatch_config_path = os.path.join(CLOUD_INDEXER_PATH, 'app',
+                                        'dispatch.yaml')
+    shutil.copy2(dispatch_config_path, deploy_path)
+    return True
+
+  @property
+  def config_file(self):
+    return 'dispatch.yaml'
+
+
+class QueueConfigCommand(DeployCommand):
+  """Deploys the queue.yaml configuration file."""
+
+  def setup(self, bucket_name, deploy_path):
+    logging.info('Copying queue.yaml')
+    queue_config_path = os.path.join(CLOUD_INDEXER_PATH, 'app',
+                                     'queue.yaml')
+    shutil.copy2(queue_config_path, deploy_path)
+    return True
+
+  @property
+  def config_file(self):
+    return 'queue.yaml'
+
+
+class DeployCommandRunner(object):
+  """Performs deployment, as specified by the added DeployCommand objects."""
+
+  def __init__(self, bucket_name, deploy_path, dry_run):
+    self.bucket_name = bucket_name
+    self.deploy_path = deploy_path
+    self.dry_run = dry_run
+    self.commands = []
+
+  def add_command(self, command):
+    self.commands.append(command)
+
+  def run(self):
+    """Performs deployment.
+
+    Iterates through the added DeployCommand objects and calls the setup method
+    to populate the deploy directory. Then, if dry_run is not True, invokes
+    gcloud to deploy to the Google Cloud project.
+
+    Returns:
+      True if deployment is successful, otherwise False.
+    """
+    args = [GCLOUD_PATH, 'app', 'deploy']
+    for command in self.commands:
+      if not command.setup(self.bucket_name, self.deploy_path):
+        logging.error('Setup failed for command: %s', command.config_file)
+        return False
+
+      # Appends configuration file to be deployed using gcloud.
+      args.append(command.config_file)
+
+    if self.dry_run:
+      logging.info('Dry run complete! The command we would have ran was:\n%s',
+                   ' '.join(args))
+      return True
+
+    p = subprocess.Popen(args, cwd=self.deploy_path)
+    p.communicate()
+
+    if p.returncode != 0:
+      logging.error('`gcloud app deploy ...` failed. Bailing out.')
+      return False
+
+    return True
+
+
+def main():
+  logging.basicConfig(level=logging.INFO)
+  parser = argparse.ArgumentParser(
+      description='Deploys the cloud-indexer application.')
+  parser.add_argument(
+      '--dry-run',
+      help=('Creates the deploy directory, but does not perform the deployment.'
+            ' Use with --deploy-dir.'),
+      action='store_true')
+  parser.add_argument(
+      '--bucket-name',
+      help=('Uses BUCKET_NAME as the serviced bucket. (default: %(default)s)'),
+      action='store',
+      default=DEFAULT_BUCKET_NAME)
+  parser.add_argument(
+      '--deploy-dir',
+      help=('Uses DEPLOY_DIR as the deployment directory.'),
+      action='store')
+  parser.add_argument(
+      '--targets',
+      help=('Deploys the specified targets. If none are specified, the script'
+            ' deploys all the targets.'),
+      action='store',
+      nargs='*',
+      choices=TARGET_CHOICES,
+      default=TARGET_CHOICES)
+
+  args = parser.parse_args()
+  if args.deploy_dir is None and args.dry_run:
+    logging.warning('deploy.py was invoked with --dry-run but into a temporary '
+                    'directory. Use --deploy-dir to retain deploy output.')
+
+  if args.deploy_dir is None:
+    logging.info('Creating temporary directory')
+    deploy_dir = tempfile.mkdtemp()
+  else:
+    deploy_dir = args.deploy_dir
+
+  targets = set(args.targets)
+  runner = DeployCommandRunner(args.bucket_name, deploy_dir, args.dry_run)
+  if 'default' in targets:
+    runner.add_command(DefaultModuleCommand())
+  if 'notification-handler' in targets:
+    runner.add_command(NotificationHandlerModuleCommand())
+  if 'dispatch' in targets:
+    runner.add_command(DispatchConfigCommand())
+  if 'queue' in targets:
+    runner.add_command(QueueConfigCommand())
+
+  result = 1
+  try:
+    result = 0 if runner.run() else 1
+  except IOError as e:
+    logging.error('I/O error occurred (%i): %s', e.errno, e.strerror)
+  except (RuntimeError, TypeError, NameError) as e:
+    logging.error('An error occurred: %s', e)
+  finally:
+    if args.deploy_dir is None:
+      # We use a finally block to guarantee the temporary folder is deleted.
+      logging.info('Deleting the temporary directory')
+      shutil.rmtree(deploy_dir)
+    sys.exit(result)
+
+
+if __name__ == '__main__':
+  main()

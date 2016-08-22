@@ -482,6 +482,14 @@ class LegacyDemoSuggestion extends Suggestion {
         'addSteps: $addSteps, '
         'removeSteps: $removeSteps)';
   }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'sessionId': session.id,
+        'addSteps': addSteps ?? [],
+        'removeSteps': removeSteps ?? [],
+      };
 }
 
 typedef bool TypeMatchingFunction(final Label l);
@@ -600,77 +608,111 @@ class _TypeBasedSuggestionGenerator {
     Uri.parse('https://tq.mojoapps.io/brothers_restaurant.mojo'),
     Uri.parse('https://tq.mojoapps.io/sommelier.mojo')
   ];
-  LegacyDemoSuggestion _createSuggestionFromManifest(
-      final Session session, final Manifest m,
-      {bool matchedInput}) {
-    return traceSync('$runtimeType._createSuggestionFromManifest', () {
-      // Don't create non-compound suggestion from a manifest if it's blacklisted.
-      if (_blacklist.contains(m.url)) return null;
 
-      final Step newStep = _createStepFromManifest(session, m);
-      if (newStep == null) return null;
-      if (!_canManifestBeComposed(session, m)) return null;
+  // TODO(rosswang): Work out a more consistent way to handle replace
+  // suggestions.
+  Iterable<LegacyDemoSuggestion> _createReplaceSuggestions(
+          final Session session,
+          final Iterable<Manifest> matchingManifests,
+          final Set<Manifest> nonReplaceManifests) =>
+      matchingManifests.expand((m) {
+        // Don't create non-compound suggestion from a manifest if it's
+        // blacklisted.
+        if (_blacklist.contains(m.url)) return [];
 
-      final bool createsSession = session == provider._rootSession;
-      final Step existingStep =
-          _findEquivalentStep(session.recipe.steps, newStep);
-      // TODO(armansito): Handle better descriptions for replacement suggestions.
-      final String description = _getManifestDescription(m);
+        final Step newStep = _createStepFromManifest(session, m);
+        if (newStep == null) return [];
+        if (!_canManifestBeComposed(session, m)) return [];
+
+        final bool createsSession = session == provider._rootSession;
+        final Step existingStep =
+            _findEquivalentStep(session.recipe.steps, newStep);
+        // TODO(armansito): Handle better descriptions for replacement
+        // suggestions.
+        final String description = _getManifestDescription(m);
+
+        final Manifest displayModule =
+            helpers.hasSuggestionDisplayLabel(m.display) ? m : null;
+
+        if (existingStep != null) {
+          // There is already a step in recipe, hence this can only be a replace
+          // suggestion.
+          if (nonReplaceManifests != null) {
+            nonReplaceManifests.remove(m);
+          }
+
+          return [
+            new LegacyDemoSuggestion(provider, session, description,
+                addSteps: [newStep],
+                removeSteps: [existingStep],
+                createsNewSession: createsSession,
+                icon: m.icon,
+                themeColor: m.themeColor,
+                displayModule: displayModule)
+          ];
+        }
+
+        // For manifest matching outputs, we show suggestions(replace) only if
+        // there is a step in recipe whose inputs/outputs all match with the
+        // manifests inputs/outputs.
+        // TODO(ksimbili): This is not entirely correct, but seems to be
+        // sufficient as of now.
+        return [];
+      });
+
+  Iterable<LegacyDemoSuggestion> _createAppendSuggestions(
+      final Session session, final Iterable<Manifest> appendManifests) {
+    final bool createsSession = session == provider._rootSession;
+    return _expandToInteractiveManifests(session, appendManifests)
+        .expand((final List<Manifest> plan) {
+      final Manifest m = plan.last;
+      if (_blacklist.contains(m.url) || !_canManifestBeComposed(session, m))
+        return [];
+
+      final List<Step> steps =
+          plan.map((m) => _createStepFromManifest(session, m)).toList();
+      if (steps.any((s) => s == null)) return [];
+
+      final Set<Step> requiredSteps =
+          generateAllRequiredSteps(session, [steps.first], steps);
+
+      // We concatenate individual manifest descriptions to
+      // describe a compound suggestion.
+      List<String> stepDescriptions = requiredSteps.map((final Step s) {
+        if (s.url == null) return s.verb.toString();
+        return _getManifestDescription(provider.manifestIndex
+            .firstWhere((final Manifest m) => m.url == s.url));
+      }).toList();
 
       final Manifest displayModule =
           helpers.hasSuggestionDisplayLabel(m.display) ? m : null;
 
-      if (existingStep != null) {
-        // There is already a step in recipe, hence this can only be a replace
-        // suggestion.
-        return new LegacyDemoSuggestion(provider, session, description,
-            addSteps: [newStep],
-            removeSteps: [existingStep],
-            createsNewSession: createsSession,
-            icon: m.icon,
-            themeColor: m.themeColor,
-            displayModule: displayModule);
-      }
-
-      if (matchedInput) {
-        Set<Step> requiredSteps =
-            generateAllRequiredSteps(session, [newStep], []);
-
-        // We concatenate individual manifest descriptions to describe a compound
-        // suggestion.
-        List<String> stepDescriptions = requiredSteps.map((final Step s) {
-          if (s.url == null) return s.verb.toString();
-          return _getManifestDescription(provider.manifestIndex
-              .firstWhere((final Manifest m) => m.url == s.url));
-        }).toList();
-        return new LegacyDemoSuggestion(
-            provider, session, stepDescriptions.join(', '),
+      return [
+        new LegacyDemoSuggestion(provider, session, stepDescriptions.join(', '),
             addSteps: requiredSteps.toList(),
             createsNewSession: createsSession,
             icon: m.icon,
             themeColor: m.themeColor,
-            displayModule: displayModule);
-      }
-
-      return null;
-
-      // For manifest matching outputs, we show suggestions(replace) only if
-      // there is a step in recipe whose inputs/outputs all match with the
-      // manifests inputs/outputs.
-      // TODO(ksimbili): This is not entirely correct, but seems to be sufficient
-      // as of now.
-    }); // traceSync
+            displayModule: displayModule)
+      ];
+    });
   }
 
-  List<LegacyDemoSuggestion> _createSuggestions(
-      final Session session, final List<Manifest> manifests,
-      {bool matchedInput}) {
-    return manifests
-        .map((final Manifest m) =>
-            _createSuggestionFromManifest(session, m, matchedInput: true))
-        .where((final LegacyDemoSuggestion s) => s != null)
-        .toList();
-  }
+  Iterable<LegacyDemoSuggestion> _createSuggestions(
+          final Session session, final Iterable<Manifest> matchingManifests,
+          {final bool matchedInput}) =>
+      traceSync('$runtimeType._createSuggestions', () {
+        if (matchedInput) {
+          final Set<Manifest> appendManifests =
+              new Set<Manifest>.from(matchingManifests);
+          return []
+            ..addAll(_createReplaceSuggestions(
+                session, matchingManifests, appendManifests))
+            ..addAll(_createAppendSuggestions(session, appendManifests));
+        } else {
+          return _createReplaceSuggestions(session, matchingManifests, null);
+        }
+      }); // traceSync
 
   List<LegacyDemoSuggestion> generateSuggestions(
       final Session session, TypeMatchingFunction matchFunc) {
@@ -716,7 +758,7 @@ class _TypeBasedSuggestionGenerator {
   List<PathExpr> _replaceSuffixIfMatchesWith(
       List<PathExpr> exprs, PathExpr suffix) {
     return exprs.map((final PathExpr expr) {
-      if (!suffix.isSuffixOf(expr, equality: propertyContainsOther)) {
+      if (!_outputSatisfiesInput(expr, suffix)) {
         return expr;
       }
 
@@ -737,13 +779,11 @@ class _TypeBasedSuggestionGenerator {
       return null;
     }
     List<PathExpr> outputsNotMatchingExpr = step.output
-        .where((final PathExpr o) =>
-            !expr.isSuffixOf(o, equality: propertyContainsOther))
+        .where((final PathExpr o) => !_outputSatisfiesInput(o, expr))
         .toList();
 
     List<PathExpr> outputsMatchingExpr = step.output
-        .where((final PathExpr o) =>
-            expr.isSuffixOf(o, equality: propertyContainsOther))
+        .where((final PathExpr o) => _outputSatisfiesInput(o, expr))
         .toList();
 
     return new Step(
@@ -768,9 +808,72 @@ class _TypeBasedSuggestionGenerator {
           final Session session, final PathExpr inputExpr) =>
       provider.manifestIndex
           .where((final Manifest m) => m.output.any(
-              (final PathExpr outputExpr) => inputExpr.isSuffixOf(outputExpr,
-                  equality: propertyContainsOther)))
+              (final PathExpr outputExpr) =>
+                  _outputSatisfiesInput(outputExpr, inputExpr)))
           .toList();
+
+  static bool _outputSatisfiesInput(
+          final PathExpr output, final PathExpr input) =>
+      input.isSuffixOf(output, equality: propertyContainsOther);
+
+  static bool _sessionSatisfiesInput(
+      final Session session, final PathExpr input) {
+    // HACK(mesch): GraphQuery gratuitously refuses to match if the root segment
+    // is repeated. We avoid the assert() here for now, and should fix either
+    // graph query or its use here. At this place, it's totally fine to have a
+    // repeated expression.
+    final GraphQuery q = pathExprToGraphQuery(input);
+    return !q.validate() || q.match(session.graph).isNotEmpty;
+  }
+
+  static bool _pendingContextSatisfiesInput(
+          final Iterable<Manifest> pendingContext, final PathExpr input) =>
+      pendingContext.any((final Manifest m) =>
+          m.output.any((final PathExpr o) => _outputSatisfiesInput(o, input)));
+
+  Iterable<List<Manifest>> _expandToInteractiveManifests(
+      final Session session, final Iterable<Manifest> initialMatches) {
+    final Set<Manifest> interactive = new Set();
+    final QueueList<List<Manifest>> queue =
+        new QueueList.from(initialMatches.map((m) => [m]));
+    final Set<List<Manifest>> plans = new Set();
+
+    while (queue.isNotEmpty) {
+      final List<Manifest> plan = queue.removeFirst();
+      final Manifest m = plan.last;
+
+      // TODO(rosswang): avoid permutations (at least until we have dataflow)
+      print(plan.map((m) => m.title));
+
+      if (m.display.isNotEmpty) {
+        // interactive; stop searching
+        if (interactive.add(m)) plans.add(plan);
+      } else if (plan.length < 5) {
+        // depth limit
+        queue.addAll(provider.manifestIndex
+            .where((final Manifest next) =>
+                // TODO(rosswang): actually run the conversions too
+                // TODO(rosswang): index the context
+                // TODO(rosswang): allow diamond patterns
+
+                // no replacement yet
+                !plan.contains(next) &&
+                // all inputs are satisfied
+                next.input.every((final PathExpr i) =>
+                    _sessionSatisfiesInput(session, i) ||
+                    _pendingContextSatisfiesInput(plan, i)) &&
+                // benefits from plan; TODO(rosswang): remove this - this does
+                // not cover cases where a derivation from prior context can
+                // enable subsequent transformations (could combine with
+                // generateAllRequiredSteps)
+                next.input.any((final PathExpr i) =>
+                    _pendingContextSatisfiesInput(plan, i)))
+            .map((next) => new List.from(plan)..add(next)));
+      }
+    }
+
+    return plans;
+  }
 
   // Returns the set of additional steps required to meet all inputs in the
   // steps about to be added in the suggestions.
@@ -791,12 +894,7 @@ class _TypeBasedSuggestionGenerator {
             return;
           }
 
-          // HACK(mesch): GraphQuery gratuitously refuses to match if the root
-          // segment is repeated. We avoid the assert() here for now, and should
-          // fix either graph query or its use here. At this place, it's totally
-          // fine to have a repeated expression.
-          final GraphQuery query = pathExprToGraphQuery(i);
-          if (!query.validate() || query.match(session.graph).isNotEmpty) {
+          if (_sessionSatisfiesInput(session, i)) {
             // Graph already has the data. So no need to find a step to generate
             // this input.
             return;
@@ -806,10 +904,8 @@ class _TypeBasedSuggestionGenerator {
           final List<Step> knownSteps =
               requiredSteps.where((final Step requiredStep) {
             return requiredStep != step &&
-                requiredStep.output.any((final PathExpr outputExpr) {
-                  return i.isSuffixOf(outputExpr,
-                      equality: propertyContainsOther);
-                });
+                requiredStep.output.any((final PathExpr outputExpr) =>
+                    _outputSatisfiesInput(outputExpr, i));
           }).toList();
 
           if (knownSteps.isNotEmpty) {
@@ -941,16 +1037,12 @@ class _TypeBasedSuggestionGenerator {
 
   // Generates a default set of suggestions with modules that have no required
   // inputs.
-  List<LegacyDemoSuggestion> generateDefaultSuggestions(final Session session) {
-    return traceSync('$runtimeType.generateDefaultSuggestions', () {
-      return provider.manifestIndex
-          .where(_allInputsAreOptional)
-          .map((final Manifest m) =>
-              _createSuggestionFromManifest(session, m, matchedInput: true))
-          .where((final Suggestion s) => s != null)
+  List<LegacyDemoSuggestion> generateDefaultSuggestions(
+          final Session session) =>
+      _createSuggestions(
+              session, provider.manifestIndex.where(_allInputsAreOptional),
+              matchedInput: true)
           .toList();
-    }); // traceSync
-  }
 }
 
 // This is the representation of an entity. It's associated with an

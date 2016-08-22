@@ -72,22 +72,30 @@ function moduleDataflow(sessionJSON) {
       // node ids.
       let inputMatches = new Map();
       instanceJSON.inputMatches.forEach((match) => {
-        inputMatches.set(match.pathExpr, new Set(match.edges.map((edge) => edge.target)));
+        inputMatches.set(match.pathExpr, new Set(match.edges.map((edge) =>
+                edge.target)));
       });
 
       this.inputs = new Map();
       module.inputs.forEach((ids, pathExpr) => {
-        this.inputs.set(pathExpr, intersection(ids, inputMatches.get(pathExpr)));
+        if (inputMatches.has(pathExpr)) {
+          this.inputs.set(pathExpr, intersection(ids,
+                inputMatches.get(pathExpr)));
+        }
       });
 
       this.composes = new Map();
       module.composes.forEach((ids, pathExpr) => {
-        this.composes.set(pathExpr, intersection(ids, inputMatches.get(pathExpr)));
+        if (inputMatches.has(pathExpr)) {
+          this.composes.set(pathExpr, intersection(ids,
+                inputMatches.get(pathExpr)));
+        }
       });
 
       // Which of the module's outputs/displays were produced by this
       // instance?
-      let outputNodes = new Set(instanceJSON.outputEdges.map((edge) => edge.target));
+      let outputNodes = new Set(instanceJSON.outputEdges.map((edge) =>
+            edge.target));
 
       this.outputs = new Map();
       module.outputs.forEach((ids, pathExpr) => {

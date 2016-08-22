@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:common/mojo_uri_loader.dart';
+import 'package:handler/inspector_json_server.dart';
 import 'package:indexer_client/indexer_client.dart';
 import 'package:modular_core/log.dart';
 import 'package:modular/modular/handler.mojom.dart';
@@ -17,6 +18,8 @@ import 'package:suggestinator/suggestinator.dart';
 
 import 'session_state_manager_mojo.dart';
 import 'suggestion_service.dart';
+
+const int DEBUG_SERVER_PORT = 1843;
 
 class SuggestinatorApplication extends Application {
   static final Logger _log = log('suggestinator.mojo.SuggestinatorApplication');
@@ -54,7 +57,8 @@ class SuggestinatorApplication extends Application {
     _suggestinatorCompleter.complete(new Suggestinator(
         new SessionStateManagerMojo(handlerService, graphService),
         [new LegacyDemoProvider()],
-        manifestIndex));
+        manifestIndex,
+        inspector: new InspectorJSONServer(DEBUG_SERVER_PORT)));
   }
 
   @override // Application

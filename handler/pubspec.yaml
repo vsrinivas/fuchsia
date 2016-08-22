@@ -10,6 +10,8 @@ dependencies:
     path: ../dart-packages/modular
   parser:
     path: ../parser
+  suggestinator:
+    path: ../suggestinator
   quiver: any
   tuple: any
   args: any

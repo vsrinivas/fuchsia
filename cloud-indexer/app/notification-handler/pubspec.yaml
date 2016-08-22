@@ -1,0 +1,11 @@
+name: notification_handler
+version: 0.0.0
+description: Handles manifest file changes from the Modular CDN.
+dependencies:
+  appengine: '^0.3.0'
+  indexer_pipeline:
+    path: ../../../indexer/pipeline
+  mockito: any
+  parser:
+    path: ../../../parser
+  test: any

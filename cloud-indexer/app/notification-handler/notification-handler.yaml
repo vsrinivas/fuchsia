@@ -1,0 +1,4 @@
+service: notification-handler
+runtime: custom
+vm: true
+api_version: 1

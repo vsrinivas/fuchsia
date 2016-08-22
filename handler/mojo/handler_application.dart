@@ -44,6 +44,8 @@ import 'module_runner.dart';
 import 'session_graph_service.dart';
 import 'user_manager.dart';
 
+const int DEBUG_SERVER_PORT = 1842;
+
 /// A runner for a given instance of the handler. Runs a given session in its
 /// own composition tree.
 class HandlerRunner {
@@ -67,7 +69,8 @@ class HandlerRunner {
       this._sessionData,
       final bool startInspector,
       {final bool hasLedger: false})
-      : _inspector = startInspector ? new InspectorJSONServer() : null {
+      : _inspector =
+            startInspector ? new InspectorJSONServer(DEBUG_SERVER_PORT) : null {
     _compositionTree = new CompositionTree(this, _inspector);
     _initializeHandler(url, manifestsFuture, graphStore, hasLedger: hasLedger);
   }

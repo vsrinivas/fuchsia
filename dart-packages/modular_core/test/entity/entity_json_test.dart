@@ -29,7 +29,7 @@ void main() {
   test('serialize simple', () {
     final Entity empty = new Entity(['person'], registry: registry);
     expect(
-        empty.toJson(),
+        empty.toJsonWithoutMetadata(),
         equals({
           "schemas": ["person"],
           "values": {}
@@ -38,7 +38,7 @@ void main() {
     final Entity ian = new Entity(['person'], registry: registry);
     ian['name'] = 'Ian McKellar';
     ian['birthdate'] = new DateTime.utc(1977, 10, 15);
-    final dynamic jian = ian.toJson();
+    final dynamic jian = ian.toJsonWithoutMetadata();
     expect(
         jian,
         equals({
@@ -49,13 +49,15 @@ void main() {
           }
         }));
     expect(
-        jian, equals(new Entity.fromJson(jian, registry: registry).toJson()));
+        jian,
+        equals(new Entity.fromJsonWithoutMetadata(jian, registry: registry)
+            .toJsonWithoutMetadata()));
   });
 
   test('serialize complex', () {
     final Entity empty = new Entity(['family'], registry: registry);
     expect(
-        empty.toJson(),
+        empty.toJsonWithoutMetadata(),
         equals({
           "schemas": ["family"],
           "values": {}
@@ -74,7 +76,7 @@ void main() {
     mckellars['pets'] = ["Bella"];
 
     expect(
-        mckellars.toJson(),
+        mckellars.toJsonWithoutMetadata(),
         equals({
           'schemas': ['family'],
           'values': {
@@ -104,7 +106,7 @@ void main() {
     mckellars['pets'].length = 0;
 
     expect(
-        mckellars.toJson(),
+        mckellars.toJsonWithoutMetadata(),
         equals({
           'schemas': ['family'],
           'values': {
@@ -130,5 +132,38 @@ void main() {
             ]
           }
         }));
+  });
+
+  test('serialize metadata', () {
+    const String creationTimeMetadataLabel = "creationTime";
+    const String modifiedTimeMetadataLabel = "modifiedTime";
+
+    final Entity empty = new Entity(['person'], registry: registry);
+    expect(
+        empty.toJsonWithoutMetadata(),
+        equals({
+          "schemas": ["person"],
+          "values": {}
+        }));
+
+    final Entity ian = new Entity(['person'], registry: registry);
+    ian['name'] = 'Ian McKellar';
+    ian['birthdate'] = new DateTime.utc(1977, 10, 15);
+    final dynamic jian = ian.toJson();
+    expect(
+        jian,
+        equals({
+          "schemas": ["person"],
+          "metadata": {
+            creationTimeMetadataLabel: ian.creationTime,
+            modifiedTimeMetadataLabel: ian.modifiedTime
+          },
+          "values": {
+            "person#name": "Ian McKellar",
+            "person#birthdate": "1977-10-15T00:00:00.000Z",
+          }
+        }));
+    expect(
+        jian, equals(new Entity.fromJson(jian, registry: registry).toJson()));
   });
 }

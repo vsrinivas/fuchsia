@@ -17,17 +17,27 @@ body {
   outline: none;
 }
 
-/* Style the route picker */
+/* Style the route and server pickers */
+
+#routePicker, #serverPicker {
+  margin-left: 1em;
+}
 
 #routePicker {
-  margin-left: 1em;
   width: 400px;
 }
 
-#routePicker .floated-label-placeholder {
+#serverPicker {
+  width: 200px;
+  margin-right: 1em;
+}
+
+#routePicker .floated-label-placeholder,
+#serverPicker .floated-label-placeholder {
   display: none;
 }
 
-#routePicker input {
+#routePicker input,
+#serverPicker input {
   color: inherit;
 }

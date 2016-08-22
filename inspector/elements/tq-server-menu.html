@@ -1,0 +1,59 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<dom-module id="tq-server-menu">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+      }
+    </style>
+
+    <paper-menu class="app-menu" selected="{{selectedIndex}}">
+      <template is="dom-repeat" items="{{servers}}">
+        <paper-item hostport="{{item.hostport}}">{{item.servername}}</paper-item>
+      </template>
+    </paper-menu>
+  </template>
+
+  <script>
+    (function() {
+      'use strict';
+
+      function server(servername, hostport) {
+        this.servername = servername;
+        this.hostport = hostport;
+      }
+
+      Polymer({
+        is: 'tq-server-menu',
+        properties: {
+          name: {
+            type: String,
+            value: 'tq-server-menu',
+          },
+          selectedIndex: {
+            type: Number,
+            value: 0,
+            notify: true,
+            reflectToAttribute: true,
+            observer: '_selectedIndexChanged'
+          },
+          servers: {
+            type: Array,
+            value: function() { return [new server("Handler", "localhost:1842"), new server("Suggestinator", "localhost:1843")]; }
+          },
+        },
+        getSelectedServer: function() {
+          return this.servers[this.selectedIndex];
+        },
+        _selectedIndexChanged: function() {
+          window.location.href = '#';
+          var endpoints = document.getElementById("endpointsInterface");
+          if (endpoints) {
+            endpoints.reload();
+          }
+        },
+      });
+    })();
+  </script>
+</dom-module>

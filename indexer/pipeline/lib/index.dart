@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:parser/expression.dart';
@@ -29,27 +30,59 @@ class Index {
   final Map<Uri, TypeEntry> _representationCounters = <Uri, TypeEntry>{};
   final Map<Uri, TypeEntry> _embodimentCounters = <Uri, TypeEntry>{};
 
-  /// List of recipes.
-  final List<RecipeEntry> recipes = [];
+  /// Map of recipes in the index, where the Uri uniquely identifies the recipe.
+  final Map<Uri, RecipeEntry> recipes = {};
 
-  /// List of manifests.
-  final List<Manifest> manifests = [];
+  /// Map of manifests in the index, where the Uri uniquely identifies the
+  /// manifest.
+  final Map<Uri, Manifest> manifests = {};
+
+  /// Parses the given [jsonIndex] string, as produced by the methods in
+  /// //indexer/pipeline/render_json.dart, and adds its manifests to the index.
+  void addJsonIndex(final String jsonIndex) {
+    final List<Manifest> manifests =
+        JSON.decode(jsonIndex).map((i) => new Manifest.fromJson(i)).toList();
+    manifests.forEach((Manifest manifest) => addParsedManifest(manifest));
+  }
 
   /// Parses the given manifest and adds it to the index.
   void addManifest(final String manifestContent) {
     final Manifest manifest = parseManifest(manifestContent);
-    _addParsedManifest(manifest);
+    addParsedManifest(manifest);
   }
 
   /// Parses the given manifest file and adds its content to the index.
   Future<Null> addManifestFile(final File manifestFile) async {
     final Manifest manifest = await parseManifestFile(manifestFile.path);
-    _addParsedManifest(manifest);
+    addParsedManifest(manifest);
   }
 
-  void _addParsedManifest(final Manifest manifest) {
-    manifests.add(manifest);
+  /// Removes the given manifest from the index.
+  void removeManifest(final String url) {
+    final Uri uri = Uri.parse(url);
+    if (manifests.containsKey(uri)) {
+      final Manifest manifest = manifests[uri];
+      _updateCounters(_forgetLabels, manifest);
+      manifests.remove(uri);
+    }
+  }
 
+  void addParsedManifest(final Manifest manifest) {
+    // Before adding a manifest, remove any existing manifest and its label
+    // counts from the index.
+    removeManifest(manifest.url.toString());
+    manifests[manifest.url] = manifest;
+    _updateCounters(_accountLabels, manifest);
+  }
+
+  /// Updates the counter maps with the provided [manifest] using the
+  /// [labelHandler]. The [labelHandler] takes an individual counter map and a
+  /// list of [Label]s, updating the reference counts and shorthands
+  /// accordingly.
+  void _updateCounters(
+      void labelHandler(
+          final Map<Uri, TypeEntry> counter, final Iterable<Label> labels),
+      final Manifest manifest) {
     // Flat list of all path expressions in the manifest.
     final Iterable<PathExpr> ioPathExpressions = [
       manifest.input,
@@ -61,19 +94,19 @@ class Index {
     ].expand((final List<PathExpr> pathExpressions) => pathExpressions);
 
     // Process verbs.
-    _accountLabels(_verbCounters, [manifest.verb.label]);
+    labelHandler(_verbCounters, [manifest.verb.label]);
 
     Iterable<Label> labelsFromPathExpr(Iterable<PathExpr> exprs) => exprs
         .expand((final PathExpr expr) => expr.properties)
         .expand((final Property property) => property.labels);
 
     // Process semantic labels.
-    _accountLabels(_semanticCounters, labelsFromPathExpr(ioPathExpressions));
-    _accountLabels(
+    labelHandler(_semanticCounters, labelsFromPathExpr(ioPathExpressions));
+    labelHandler(
         _embodimentCounters, labelsFromPathExpr(embodimentPathExpressions));
 
     // Process representation labels.
-    _accountLabels(
+    labelHandler(
         _representationCounters,
         ioPathExpressions
             .expand((final PathExpr expr) => expr.properties)
@@ -83,7 +116,7 @@ class Index {
   /// Adds the given recipe to the index. Note that we currently don't index the
   /// content of a recipe.
   void addRecipe(String name, String url) {
-    recipes.add(new RecipeEntry(name, url));
+    recipes[Uri.parse(url)] = new RecipeEntry(name, url);
   }
 
   List<Map<String, dynamic>> get verbRanking => _rankLabels(_verbCounters);
@@ -101,6 +134,23 @@ class Index {
       counters.putIfAbsent(label.uri, () => new TypeEntry());
       counters[label.uri].referenceCount += 1;
       counters[label.uri].shorthands.add(label.shorthand);
+    }
+  }
+
+  /// Updates the given counter map to neglect the given labels.
+  void _forgetLabels(
+      final Map<Uri, TypeEntry> counters, final Iterable<Label> labels) {
+    for (final Label label in labels) {
+      if (!counters.containsKey(label.uri)) {
+        continue;
+      }
+
+      // Best-effort attempt at forgetting the label. Notice that we do not
+      // remove shorthands as these may be non-unique across manifest files.
+      counters[label.uri].referenceCount -= 1;
+      if (counters[label.uri].referenceCount == 0) {
+        counters.remove(label.uri);
+      }
     }
   }
 

@@ -84,7 +84,7 @@ final String htmlIndexTemplate = '''
 
 String renderHtmlIndex(final Index index) {
   List<Map<String, dynamic>> recipes = [];
-  for (RecipeEntry entry in index.recipes) {
+  for (RecipeEntry entry in index.recipes.values) {
     recipes.add(
         {'name': entry.name, 'url': entry.url, 'makeLink': entry.url != null});
   }

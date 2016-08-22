@@ -21,14 +21,17 @@
         <div class="middle-container">
           <div class="app-name">Modular Inspector</div>
           <tq-debug-server id="endpointsInterface" path="/" json="{{endpoints}}"></tq-debug-server>
-          <paper-dropdown-menu id="routePicker">
-            <tq-menu selected="{{route}}" endpoints="[[endpoints]]" class="dropdown-content"/>
+          <paper-dropdown-menu label="Route" id="routePicker">
+            <tq-route-menu selected="{{route}}" endpoints="[[endpoints]]" class="dropdown-content"/>
           </paper-dropdown-menu>
         </div>
 
         <span class="space"></span>
 
         <!-- Toolbar icons -->
+        <paper-dropdown-menu label="Server" id="serverPicker">
+          <tq-server-menu class="dropdown-content" id="serverPickerMenu"/>
+        </paper-dropdown-menu>
         <paper-toggle-button checked="{{show_raw}}">JSON</paper-toggle-button>
         <paper-icon-button icon="refresh" id="refresh"></paper-icon-button>
 

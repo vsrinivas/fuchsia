@@ -180,7 +180,7 @@ class Property {
       return new String.fromCharCodes(encode(value));
     } else {
       assert(value is Entity);
-      return value.toJsonWithoutSchemas();
+      return value.toJsonOnlyValues();
     }
   }
 

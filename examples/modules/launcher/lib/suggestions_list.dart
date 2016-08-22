@@ -243,7 +243,8 @@ class SuggestionListItem extends StatelessWidget {
             child: new Container(
                 height: _kItemExtent,
                 decoration: new BoxDecoration(
-                    borderRadius: 10.0, backgroundColor: _color),
+                    borderRadius: new BorderRadius.circular(10.0),
+                    backgroundColor: _color),
                 child: child)));
   }
 }

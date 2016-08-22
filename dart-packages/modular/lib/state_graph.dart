@@ -262,7 +262,7 @@ class StateGraph {
       _mutator = new BufferingMutator(_remoteGraph, validating: false,
           onEachMutation: (final GraphMutation mutation) {
         assert(_localGraph != null);
-        _localGraph.mutate((final GraphMutator m) => m.apply(mutation));
+        _localGraph.applyMutations([mutation]);
       });
     }
     return _mutator;

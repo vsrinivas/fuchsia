@@ -55,8 +55,9 @@ enabled](http://developer.android.com/tools/device.html#setting-up)**.
 
 ### Syncing
 
-A `git pull` updates to tip of tree. Running the `modular` command will make
-sure your dependencies are in sync.
+A `git pull` updates to tip of tree. Running the `modular` command will sync
+all non-Dart dependencies. If Dart dependencies change, running
+`./modular_tools/run_pub.py get` will sync those changes.
 
 ### Building
 

@@ -1,0 +1,87 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<dom-module id="tq-event-record-card">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: flex;
+      }
+      paper-card {
+        background: #ddd;
+        margin: 0 auto;
+        margin-bottom: 20px;
+        width: 60%;
+      }
+      #event-timestamp {
+        margin-left: auto;
+        margin-right: 0;
+      }
+    </style>
+
+    <paper-card elevation="4">
+      <paper-header-panel>
+        <paper-toolbar>
+          <div>{{displayType}}</div>
+          <div id="event-timestamp">{{displayTime}}</div>
+        </paper-toolbar>
+      </paper-header-panel>
+      <div class="card-content">
+        <template is="dom-if" if="{{isSuggestionsAddedOrRemoved(displayType)}}">
+          <template is="dom-repeat" items="{{body}}" as="suggestion">
+            <tq-suggestion-record-card suggestionId="[[suggestion.id]]" sessionId="[[suggestion.sessionId]]" addSteps="[[suggestion.addSteps]]" removeSteps="[[suggestion.removeSteps]]">
+            </tq-suggestion-record-card>
+          </template>
+        </template>
+
+        <template is="dom-if" if="{{isSuggestionSelected(displayType)}}">
+          <tq-suggestion-record-card suggestionId="[[body.selected.0.id]]" sessionId="[[body.selected.0.sessionId]]" addSteps="[[body.selected.0.addSteps]]" removeSteps="[[body.selected.0.removeSteps]]">
+          </tq-suggestion-record-card>
+
+          Not Selected
+          <template is="dom-repeat" items="{{body.notSelected}}" as="suggestion">
+            <tq-suggestion-record-card suggestionId="[[suggestion.id]]" sessionId="[[suggestion.sessionId]]" addSteps="[[suggestion.addSteps]]" removeSteps="[[suggestion.removeSteps]]">
+            </tq-suggestion-record-card>
+          </template>
+        </template>
+      </div>
+    </paper-card>
+  </template>
+
+  <script>
+    (function() {
+      'use strict';
+
+      Polymer({
+        is: 'tq-event-record-card',
+        properties: {
+          type: String,
+          displayType: {
+            type: String,
+            computed: '_typeToDisplayString(type)',
+          },
+          time: String,
+          displayTime: {
+            type: Date,
+            computed: '_timeToDisplayString(time)',
+          },
+          body: Object
+        },
+        _typeToDisplayString: function(t) {
+          return t.split(".")[1].replace("_", " ").toLowerCase().replace(/\b[a-z]/g, function(letter) { return letter.toUpperCase(); });
+        },
+        _timeToDisplayString: function(d) {
+          var date = new Date(d);
+          return date.toTimeString().split(" ")[0] + '.' + ('000' + date.getMilliseconds()).substr(-3);
+        },
+        isSuggestionsAddedOrRemoved: function(t) {
+          return t === "Suggestions Added" || t === "Suggestions Removed";
+        },
+        isSuggestionSelected: function(t) {
+          return t === "Suggestion Selected";
+        },
+      });
+
+      inspectorElements['event-record-card'] = 'tq-event-record-card';
+    })();
+  </script>
+</dom-module>

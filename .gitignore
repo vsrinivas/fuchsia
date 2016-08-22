@@ -27,7 +27,7 @@ packages
 /modular_tools/continuous_build/key.p12
 /third_party/android_tools/
 /third_party/flutter/
-/third_party/mojo/src/mojo/public/
+/third_party/mojo/
 /third_party/mojo_devtools/
 /third_party/sysui/
 /inspector/bower_components/

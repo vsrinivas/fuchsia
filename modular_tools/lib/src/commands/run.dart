@@ -165,6 +165,10 @@ class RunCommand extends ModularCommand {
         if (adbResult != 0) {
           throw new Exception("Couldn't forward port 1842 for the inspector.");
         }
+        adbResult = await process('adb', ['forward', 'tcp:1843', 'tcp:1843']);
+        if (adbResult != 0) {
+          throw new Exception("Couldn't forward port 1843 for the inspector.");
+        }
       }
       // Ask the handler to start the debug server.
       argsForHandler.add('--inspector');

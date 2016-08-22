@@ -1,0 +1,44 @@
+<!-- Copyright 2016 The Fuchsia Authors. All rights reserved. -->
+
+<dom-module id="tq-route-menu">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+      }
+    </style>
+
+    <paper-menu class="app-menu" attr-for-selected="data-route" selected="{{selected}}">
+      <template is="dom-repeat" items="{{endpoints.endpoints}}">
+        <paper-item data-route="{{item}}"><a href="/#{{item}}">{{item}}</a></paper-item>
+      </template>
+    </paper-menu>
+  </template>
+
+  <script>
+    (function() {
+      'use strict';
+
+      Polymer({
+        is: 'tq-route-menu',
+        properties: {
+          name: {
+            type: String,
+            value: 'tq-route-menu',
+          },
+          endpoints: Object,
+          selected: {
+            type: String,
+            value: "/",
+            notify: true,
+            reflectToAttribute: true,
+            observer: '_selectedChanged'
+          },
+        },
+        _selectedChanged: function() {
+          window.location.href = '#'+this.selected;
+        }
+      });
+    })();
+  </script>
+</dom-module>

@@ -502,5 +502,92 @@ void main() {
         expect(entity1['property']['int'], equals(10));
       });
     });
+
+    group('metadata:', () {
+      setUp(() {
+        new Schema('type1', [new Property.int('int1')]).publish(registry);
+      });
+
+      test('timestamp values', () {
+        final entity1 = new Entity(['type1'], registry: registry);
+        final entity2 = new Entity(['type1'], registry: registry);
+
+        // Check entity1 was timestamped before entity2 and that its modified
+        // time were initialized correctly (should match creation time).
+        expect(entity1.creationTime.isBefore(entity2.creationTime), isTrue);
+        expect(entity1.modifiedTime, equals(entity1.creationTime));
+
+        entity1['int1'] = 0;
+
+        // entity1's modified time should be updated and should now be after
+        // its creation time as well as all of entity2's timestamps.
+        expect(entity1.modifiedTime.isAfter(entity2.modifiedTime), isTrue);
+        expect(entity1.modifiedTime.isAfter(entity1.creationTime), isTrue);
+
+        entity2['int1'] = 0;
+
+        // Same as above, except this time for entity2.
+        expect(entity2.modifiedTime.isAfter(entity1.modifiedTime), isTrue);
+        expect(entity2.modifiedTime.isAfter(entity2.creationTime), isTrue);
+
+        final entity3 = new Entity(['type1'], registry: registry);
+
+        expect(entity3.creationTime.isAfter(entity1.creationTime), isTrue);
+        expect(entity3.creationTime.isAfter(entity2.creationTime), isTrue);
+        expect(entity3.modifiedTime, equals(entity3.creationTime));
+
+        entity3['int1'] = 0;
+      });
+
+      test('save and reload', () {
+        final MemGraph graph = new MemGraph();
+
+        final entity1 = new Entity(['type1'], registry: registry);
+
+        graph.mutate((GraphMutator mutator) {
+          entity1.save(mutator);
+        });
+        final sameEntity1 =
+            new Entity.fromNode(entity1.node, registry: registry);
+
+        // sameEntity1 should load entity1's metadata from its underlying node.
+        expect(sameEntity1.creationTime, equals(entity1.creationTime));
+        expect(sameEntity1.modifiedTime, equals(entity1.modifiedTime));
+
+        entity1['int1'] = 10;
+
+        // entity1's metadata should update and sameEntity1 will become stale.
+        expect(entity1.creationTime, equals(sameEntity1.creationTime));
+        expect(entity1.modifiedTime.isAfter(sameEntity1.modifiedTime), isTrue);
+
+        graph.mutate((GraphMutator mutator) {
+          entity1.save(mutator);
+        });
+        sameEntity1.reload();
+
+        // sameEntity1 refreshed its metadata.
+        expect(sameEntity1.creationTime, equals(entity1.creationTime));
+        expect(sameEntity1.modifiedTime, equals(entity1.modifiedTime));
+
+        sameEntity1['int1'] = 0;
+
+        expect(sameEntity1.creationTime, equals(entity1.creationTime));
+        expect(sameEntity1.modifiedTime.isAfter(entity1.modifiedTime), isTrue);
+
+        graph.mutate((GraphMutator mutator) {
+          sameEntity1.save(mutator);
+        });
+        entity1.reload();
+
+        expect(entity1.creationTime, equals(sameEntity1.creationTime));
+        expect(entity1.modifiedTime, equals(sameEntity1.modifiedTime));
+
+        final stillSameEntity1 =
+            new Entity.fromNode(sameEntity1.node, registry: registry);
+
+        expect(stillSameEntity1.creationTime, equals(entity1.creationTime));
+        expect(stillSameEntity1.modifiedTime, equals(entity1.modifiedTime));
+      });
+    });
   });
 }

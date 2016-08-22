@@ -26,12 +26,35 @@ import 'simple_graph.dart';
 /// [LazyClonedGraph] is meant to be short-lived, such that it does not have
 /// the opportunity to see or observe changes to the base graph.
 class LazyClonedGraph extends SimpleGraph {
-  LazyClonedGraph(Graph base)
-      : super(new LazyClonedGraphState.forGraph(base), base.nodeIdGenerator,
-            base.edgeIdGenerator) {
-    base.addObserver(_onBaseGraphChanged);
+  final Graph _base;
+
+  LazyClonedGraph(final Graph base)
+      : _base = base,
+        super(new LazyClonedGraphState.forGraph(base), base.nodeIdGenerator,
+            base.edgeIdGenerator) {}
+
+  @override
+  void addObserver(GraphChangeCallback callback) {
+    if (super.observerCount == 0) {
+      // Lazily register the observer so we don't receive events from the base
+      // graph unnecessarily if we have no observers.
+      _base.addObserver(_onBaseGraphChanged);
+    }
+    super.addObserver(callback); // GraphObservationMixin
   }
 
+  @override
+  void removeObserver(GraphChangeCallback callback) {
+    super.removeObserver(callback); // GraphObservationMixin
+    if (super.observerCount == 0) {
+      // Remove our observer so we don't receive events from the base graph
+      // unnecessarily if we have no observers.
+      _base.removeObserver(_onBaseGraphChanged);
+    }
+  }
+
+  // We observe the base graph to see which mutations to forward to our
+  // observers, if any.
   void _onBaseGraphChanged(final GraphEvent event) {
     final Iterable<GraphMutation> baseMutations = event.mutations.coalesced;
     final List<GraphMutation> toNotify = [];

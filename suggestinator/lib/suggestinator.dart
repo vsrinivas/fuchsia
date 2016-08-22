@@ -4,12 +4,13 @@
 
 import 'dart:async';
 
+import 'package:handler/inspector_json_server.dart';
 import 'package:modular_core/graph/async_graph.dart';
 import 'package:modular_core/log.dart';
 import 'package:modular_core/uuid.dart';
 import 'package:parser/manifest.dart';
 
-import 'event_logger.dart';
+import 'event_log.dart';
 import 'session.dart';
 import 'session_state_manager.dart';
 import 'suggestion.dart';
@@ -59,10 +60,20 @@ class Suggestinator {
   /// Returns an unsorted list of all context suggestions.
   Iterable<Suggestion> get suggestions => _suggestions.values;
 
-  final EventLogger eventLog = new EventLogger();
+  final EventLog events = new EventLog();
 
-  Suggestinator(this.sessionStateManager,
-      Iterable<SuggestionProvider> providers, Iterable<Manifest> manifests) {
+  final InspectorJSONServer _inspector;
+
+  Suggestinator(final SessionStateManager sessionStateManager,
+      Iterable<SuggestionProvider> providers, Iterable<Manifest> manifests,
+      {final InspectorJSONServer inspector})
+      : this._internal(sessionStateManager, providers, manifests, inspector);
+
+  Suggestinator._internal(
+      this.sessionStateManager,
+      Iterable<SuggestionProvider> providers,
+      Iterable<Manifest> manifests,
+      this._inspector) {
     assert(sessionStateManager != null);
     sessionStateManager.setSessionLifeCycleCallbacks(
         _onSessionStarted, _onSessionStopped);
@@ -72,6 +83,8 @@ class Suggestinator {
       p.initialize(
           new List.unmodifiable(_manifestIndex), _onSuggestionsUpdated);
     }
+
+    _inspector?.publishEventLog(events, '/suggestinator/events');
   }
 
   // Returns true if we're tracking a session for suggestion generation. Just
@@ -91,7 +104,7 @@ class Suggestinator {
     if (suggestion == null) return null;
 
     // TODO(dennischeng): Log suggestions not selected here as well.
-    eventLog.log(new Event.fromSuggestionSelected(suggestion));
+    events.capture(new Event.fromSuggestionSelected(suggestion));
 
     // Kill the sub-session before applying the suggestion, if any.
     try {
@@ -143,9 +156,9 @@ class Suggestinator {
   Future _onSuggestionsUpdated(
       final Iterable<Suggestion> added, final Iterable<Uuid> removed) async {
     assert(removed.every(_suggestions.containsKey));
-    eventLog
-      ..log(new Event.fromSuggestionsAdded(added))
-      ..log(new Event.fromSuggestionsRemoved(
+    events
+      ..capture(new Event.fromSuggestionsAdded(added))
+      ..capture(new Event.fromSuggestionsRemoved(
           removed.map((final Uuid id) => _suggestions[id])));
 
     // TODO(armansito): Eventually we will perform ranking here. For now we take

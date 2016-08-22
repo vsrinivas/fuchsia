@@ -66,8 +66,7 @@ abstract class Suggestion {
   /// result of applying this suggestion.
   Future<Uuid> apply(final SessionStateManager sessionStateManager);
 
-  // TODO(dennischeng): Include more useful information here.
-  Map<String, dynamic> toJson() => {'sessionId': sessionId};
+  Map<String, dynamic> toJson() => {'id': id, 'sessionId': sessionId};
 }
 
 /// The basic set of data needed to present this suggestion to the user.

@@ -102,19 +102,19 @@ packages:
       name: mojo
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.4.25"
+    version: "0.4.27"
   mojo_sdk:
     description:
       name: mojo_sdk
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.2.29"
+    version: "0.2.31"
   mojo_services:
     description:
       name: mojo_services
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.4.32"
+    version: "0.4.34"
   package_config:
     description:
       name: package_config
