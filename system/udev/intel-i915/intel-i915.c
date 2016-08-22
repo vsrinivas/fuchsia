@@ -189,7 +189,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
         di->height = height;
         di->stride = stride;
     } else {
-        di->format = MX_DISPLAY_FORMAT_RGB_565;
+        di->format = MX_PIXEL_FORMAT_RGB_565;
         di->width = 2560 / 2;
         di->height = 1700 / 2;
         di->stride = 2560 / 2;

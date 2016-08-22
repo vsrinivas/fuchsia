@@ -65,25 +65,25 @@ typedef struct bochs_vbe_device {
 static int mx_display_format_to_bpp(unsigned format) {
     unsigned bpp;
     switch (format) {
-    case MX_DISPLAY_FORMAT_RGB_565:
+    case MX_PIXEL_FORMAT_RGB_565:
         bpp = 16;
         break;
-    case MX_DISPLAY_FORMAT_RGB_332:
+    case MX_PIXEL_FORMAT_RGB_332:
         bpp = 8;
         break;
-    case MX_DISPLAY_FORMAT_RGB_2220:
+    case MX_PIXEL_FORMAT_RGB_2220:
         bpp = 6;
         break;
-    case MX_DISPLAY_FORMAT_ARGB_8888:
+    case MX_PIXEL_FORMAT_ARGB_8888:
         bpp = 32;
         break;
-    case MX_DISPLAY_FORMAT_RGB_x888:
+    case MX_PIXEL_FORMAT_RGB_x888:
         bpp = 24;
         break;
-    case MX_DISPLAY_FORMAT_MONO_1:
+    case MX_PIXEL_FORMAT_MONO_1:
         bpp = 1;
         break;
-    case MX_DISPLAY_FORMAT_MONO_8:
+    case MX_PIXEL_FORMAT_MONO_8:
         bpp = 8;
         break;
     default:
@@ -222,7 +222,7 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev) {
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &bochs_vbe_display_proto;
 
-    device->info.format = MX_DISPLAY_FORMAT_RGB_565;
+    device->info.format = MX_PIXEL_FORMAT_RGB_565;
     device->info.width = 1024;
     device->info.height = 768;
     device->info.stride = 1024;

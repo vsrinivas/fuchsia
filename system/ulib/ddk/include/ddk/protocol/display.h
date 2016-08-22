@@ -6,29 +6,21 @@
 
 #include <ddk/driver.h>
 #include <magenta/types.h>
+#include <magenta/pixelformat.h>
 
 /**
  * protocol/display.h - display protocol definitions
  */
 
-#define MX_DISPLAY_FORMAT_NONE (-1)
-#define MX_DISPLAY_FORMAT_RGB_565 (0)
-#define MX_DISPLAY_FORMAT_RGB_332 (1)
-#define MX_DISPLAY_FORMAT_RGB_2220 (2)
-#define MX_DISPLAY_FORMAT_ARGB_8888 (3)
-#define MX_DISPLAY_FORMAT_RGB_x888 (4)
-#define MX_DISPLAY_FORMAT_MONO_1 (5)
-#define MX_DISPLAY_FORMAT_MONO_8 (6)
-
 #define MX_DISPLAY_FLAG_HW_FRAMEBUFFER (1 << 0)
 
 typedef struct mx_display_info {
-    unsigned format;
-    unsigned width;
-    unsigned height;
-    unsigned stride;
-    unsigned pixelsize;
-    unsigned flags;
+    uint32_t format;
+    uint32_t width;
+    uint32_t height;
+    uint32_t stride;
+    uint32_t pixelsize;
+    uint32_t flags;
 } mx_display_info_t;
 
 typedef struct mx_display_protocol {

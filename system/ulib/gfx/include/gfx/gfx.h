@@ -5,25 +5,14 @@
 #pragma once
 
 #include <inttypes.h>
-#include <magenta/types.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#include <magenta/types.h>
+#include <magenta/pixelformat.h>
+
 // gfx library
-
-// different graphics formats
-typedef enum {
-    GFX_FORMAT_NONE,
-    GFX_FORMAT_RGB_565,
-    GFX_FORMAT_RGB_332,
-    GFX_FORMAT_RGB_2220,
-    GFX_FORMAT_ARGB_8888,
-    GFX_FORMAT_RGB_x888,
-    GFX_FORMAT_MONO,
-
-    GFX_FORMAT_MAX
-} gfx_format;
 
 #define MAX_ALPHA 255
 
@@ -46,7 +35,7 @@ typedef struct gfx_font gfx_font;
 struct gfx_surface {
     void* ptr;
     uint32_t flags;
-    gfx_format format;
+    uint32_t format;
     unsigned width;
     unsigned height;
     unsigned stride;
@@ -106,8 +95,8 @@ static inline void gfx_clear(gfx_surface* surface, unsigned color) {
 }
 
 // surface setup
-gfx_surface* gfx_create_surface(void* ptr, unsigned width, unsigned height, unsigned stride, gfx_format format, uint32_t flags);
-mx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height, unsigned stride, gfx_format format, uint32_t flags);
+gfx_surface* gfx_create_surface(void* ptr, unsigned width, unsigned height, unsigned stride, unsigned format, uint32_t flags);
+mx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height, unsigned stride, unsigned format, uint32_t flags);
 
 // free the surface
 // optionally frees the buffer if the free bit is set

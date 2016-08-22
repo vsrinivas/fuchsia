@@ -60,35 +60,6 @@ static vc_device_t* active_vc;
 static unsigned active_vc_index;
 static mtx_t vc_lock = MTX_INIT;
 
-// TODO move this to ulib/gfx
-static gfx_format display_format_to_gfx_format(unsigned display_format) {
-    gfx_format format;
-    switch (display_format) {
-    case MX_DISPLAY_FORMAT_RGB_565:
-        format = GFX_FORMAT_RGB_565;
-        break;
-    case MX_DISPLAY_FORMAT_RGB_332:
-        format = GFX_FORMAT_RGB_332;
-        break;
-    case MX_DISPLAY_FORMAT_RGB_2220:
-        format = GFX_FORMAT_RGB_2220;
-        break;
-    case MX_DISPLAY_FORMAT_ARGB_8888:
-        format = GFX_FORMAT_ARGB_8888;
-        break;
-    case MX_DISPLAY_FORMAT_RGB_x888:
-        format = GFX_FORMAT_RGB_x888;
-        break;
-    case MX_DISPLAY_FORMAT_MONO_8:
-        format = GFX_FORMAT_MONO;
-        break;
-    default:
-        xprintf("invalid graphics format)");
-        return ERR_INVALID_ARGS;
-    }
-    return format;
-}
-
 static int vc_input_thread(void* arg) {
     input_listener_t* listener = arg;
     assert(listener->flags & INPUT_LISTENER_FLAG_RUNNING);
@@ -750,11 +721,8 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
         return status;
     }
 
-    // get display format
-    gfx_format format = display_format_to_gfx_format(info.format);
-
     // initialize the hw surface
-    if ((status = gfx_init_surface(&hw_gfx, framebuffer, info.width, info.height, info.stride, format, 0)) < 0) {
+    if ((status = gfx_init_surface(&hw_gfx, framebuffer, info.width, info.height, info.stride, info.format, 0)) < 0) {
         return status;
     }
 
@@ -778,7 +746,8 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
 
     vc_initialized = true;
-    xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u\n", dev->name, info.width, info.height, info.stride, format);
+    xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u\n",
+            dev->name, info.width, info.height, info.stride, info.format);
 
     if (vc_root_open(NULL, &dev, 0) == NO_ERROR) {
         mxr_thread_t* t;
