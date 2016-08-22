@@ -118,7 +118,9 @@ int main(int argc, char** argv) {
     // from the linker in the log
     putenv(strdup("LD_DEBUG=1"));
 #else
-    devmgr_launch("crashlogger", "/boot/bin/crashlogger", NULL, NULL);
+    char* disable_crashlogger = getenv("crashlogger.disable");
+    if (!disable_crashlogger)
+        devmgr_launch("crashlogger", "/boot/bin/crashlogger", NULL, NULL);
 #endif
 
     printf("devmgr: load drivers\n");
