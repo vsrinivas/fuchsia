@@ -31,8 +31,8 @@
      *  r9  - arg 6
      *  r10 - arg 4
      *  r11 - modified as part of syscall instruction
-     *  r12 - arg 7 (callee saved in user space, must be copied from stack)
-     *  r13 - arg 8 (callee saved in user space, must be copied from stack)
+     *  r12 - arg 7
+     *  r13 - arg 8
      *  r14 - saved
      *  r15 - saved
      */
@@ -47,7 +47,7 @@ FUNCTION(x86_syscall)
     mov     %gs:PERCPU_KERNEL_SP_OFFSET, %rsp
 
     /* save away the user stack pointer */
-    push     %gs:PERCPU_SAVED_USER_SP_OFFSET
+    push    %gs:PERCPU_SAVED_USER_SP_OFFSET
 
     /* callee saved */
     push    %rbx
@@ -63,25 +63,32 @@ FUNCTION(x86_syscall)
     push    %r13 /* arg 8 */
     push    %r12 /* arg 7 */
 
-    /* fixup arg 4 into the proper register for calling convention */
+    /* move arg 4 into the proper register for calling convention */
     mov     %r10, %rcx
 
     /* call the high level routine */
     call    x86_64_syscall
 
-    /* clean up the stack */
+    /* put everything back */
     pop     %r12
     pop     %r13
-    add     $0x8, %rsp
+    add     $8, %rsp /* skip the saved syscall # stack entry */
+    pop     %rcx /* user RIP */
+    pop     %r11 /* user RFLAGS */
 
-    /* put everything back */
-    pop     %rcx
-    pop     %r11
-
+    /* callee saved regs */
     pop     %r15
     pop     %r14
     pop     %rbp
     pop     %rbx
+
+    /* zero out trashed arg registers */
+    xor     %rdi, %rdi
+    xor     %rsi, %rsi
+    xor     %rdx, %rdx
+    xor     %r10, %r10
+    xor     %r8, %r8
+    xor     %r9, %r9
 
     /* make sure interrupts are disabled */
     cli
