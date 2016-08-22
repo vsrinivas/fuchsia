@@ -77,10 +77,14 @@ source_set("magma_util_tests") {
 source_set("msd_abi_conformance_tests") {
   sources = [
     "test_msd_buffer.cc",
+    "test_msd_context.cc",
+    "test_msd_device.cc",
+    "test_msd_driver.cc",
   ]
 
   deps = [
     "$magma_build_root/src/sys_driver:platform_buffer",
+    "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/gtest",
   ]
 }

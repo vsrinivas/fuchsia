@@ -6,24 +6,22 @@
 #include "msd.h"
 #include "gtest/gtest.h"
 
-TEST(MsdDevice, CreateAndDestroy)
+TEST(MsdContext, CreateAndDestroy)
 {
+
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
     if (!platform_device) {
         printf("No platform device\n");
         return;
     }
 
-    msd_driver* driver = msd_driver_create();
-    ASSERT_NE(driver, nullptr);
+    auto msd_drv = msd_driver_create();
+    auto msd_dev = msd_driver_create_device(msd_drv, platform_device->GetDeviceHandle());
+    auto msd_connection = msd_device_open(msd_dev, 0);
 
-    msd_device* device = msd_driver_create_device(driver, nullptr);
-    EXPECT_EQ(device, nullptr);
+    auto msd_context = msd_connection_create_context(msd_connection);
+    EXPECT_NE(msd_context, nullptr);
 
-    device = msd_driver_create_device(driver, platform_device->GetDeviceHandle());
-    EXPECT_NE(device, nullptr);
-
-    msd_device_destroy(device);
-
-    msd_driver_destroy(driver);
+    // just to catch crashes and such
+    msd_context_destroy(msd_context);
 }

@@ -5,6 +5,8 @@
 import("//magma/gnbuild/magma.gni")
 
 source_set("platform_device_helper") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
   sources = [
     "platform_device_helper.cc",
   ]
