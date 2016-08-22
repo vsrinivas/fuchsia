@@ -45,6 +45,9 @@ def find_file_in_build_dir(name):
 def find_dso_full_path(dso, exe_name):
     if dso in name_to_full_path:
         return name_to_full_path[dso]
+    # The name 'app' indicates the real app name is unknown
+    if dso == "app":
+        return find_file_in_build_dir(exe_name)
     # First, try an exact match for the filename
     found_path = find_file_in_build_dir(dso)
     if found_path == "":
@@ -71,13 +74,17 @@ def main():
             return 0
         exe_name = sys.argv[1]
 
-    btre = re.compile("^bt#(\d+):")
+    btre = re.compile("^.* U bt#(\d+):")
     bt_with_offsetre = re.compile(
-        "^bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
+        "^.* U bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
     processed_lines = []
-    for line in sys.stdin:
-        sys.stdout.write(line)
-        if line.startswith("bt#"):
+    while True:
+        line = sys.stdin.readline()
+        if line == "":
+            break;
+        if not sys.stdin.isatty():
+            sys.stdout.write(line)
+        if line.find(" U bt#") >= 0:
             m = btre.match(line)
             if m is not None:
                 frame_num = m.group(1)
@@ -88,7 +95,7 @@ def main():
                     dso_full_path = find_dso_full_path(dso, exe_name)
                     if dso_full_path == "":
                         continue
-                    cmd = ["addr2line", "-ipfe", dso_full_path, off]
+                    cmd = ["addr2line", "-Cipfe", dso_full_path, off]
                     addr2line_output = subprocess.check_output(cmd)
                     processed_lines.append(
                         "#%s: %s" % (frame_num, addr2line_output))
