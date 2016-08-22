@@ -10,6 +10,8 @@
 
 #include <magenta/syscalls.h>
 
+#include "backtrace.h"
+
 enum : uint32_t {
     EXC_FATAL_PAGE_FAULT,
     EXC_UNDEFINED_INSTRUCTION,
@@ -69,11 +71,13 @@ void process_report(const mx_exception_report_t* report) {
 #if defined(__x86_64__)
         output_frame_x86_64(context.arch.u.x86_64);
         printf("bottom of user stack:\n");
-        dump_memory(context.pid, context.arch.u.x86_64.user_sp, 1024u);
+        dump_memory(context.pid, context.arch.u.x86_64.user_sp, 256u);
+        printf("backtrace:\n");
+        backtrace(context.pid, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp);
 #endif
     } else {
         // TODO: support other architectures.
-        printf("unsuported architecture .. comming soon.\n");
+        printf("unsuported architecture .. coming soon.\n");
     }
 }
 
