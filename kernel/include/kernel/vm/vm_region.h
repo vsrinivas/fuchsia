@@ -26,6 +26,7 @@ public:
     vaddr_t base() const { return base_; }
     size_t size() const { return size_; }
     uint arch_mmu_flags() const { return arch_mmu_flags_; }
+    uint64_t object_offset() const { return object_offset_; }
 
     // set base address
     void set_base(vaddr_t vaddr) { base_ = vaddr; }

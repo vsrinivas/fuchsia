@@ -111,7 +111,7 @@ mx_ssize_t sys_debug_read_memory(uint64_t koid, uintptr_t vaddr, mx_size_t len, 
     if (!vmo)
         return ERR_NO_MEMORY;
 
-    uint64_t offset = vaddr - region->base();
+    uint64_t offset = vaddr - region->base() + region->object_offset();
     size_t read = 0;
 
     status_t st = vmo->ReadUser(buffer, offset, len, &read);
