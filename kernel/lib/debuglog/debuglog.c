@@ -113,7 +113,7 @@ status_t dlog_read_etc(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len
             r = ERR_NOT_ENOUGH_BUFFER;
         } else {
             if (user) {
-                r = copy_to_user(ptr, rec, copylen);
+                r = copy_to_user_unsafe(ptr, rec, copylen);
                 if (r == NO_ERROR) {
                     r = copylen;
                 }

@@ -51,7 +51,7 @@ int sys_debug_read(void* ptr, uint32_t len) {
 
         if (c == '\r')
             c = '\n';
-        if (copy_to_user_u8(uptr, static_cast<uint8_t>(c)) != NO_ERROR)
+        if (copy_to_user_u8_unsafe(uptr, static_cast<uint8_t>(c)) != NO_ERROR)
             break;
     }
     // TODO: fix this cast, which can overflow.

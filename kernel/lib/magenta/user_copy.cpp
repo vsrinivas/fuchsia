@@ -12,7 +12,7 @@
 
 status_t magenta_copy_from_user(const void* src, void* dest, size_t len) {
     if (src == nullptr) return ERR_INVALID_ARGS;
-    status_t status = copy_from_user(dest, src, len);
+    status_t status = copy_from_user_unsafe(dest, src, len);
     if (status != NO_ERROR) {
         return ERR_INVALID_ARGS;
     }
@@ -43,7 +43,7 @@ status_t magenta_copy_user_dynamic(const void* src, uint8_t** dest, size_t len, 
     auto buf = new (&ac) uint8_t[len];
     if (!ac.check()) return ERR_NO_MEMORY;
 
-    status_t status = copy_from_user(buf, src, len);
+    status_t status = copy_from_user_unsafe(buf, src, len);
     if (status != NO_ERROR) {
         delete[] buf;
         return ERR_INVALID_ARGS;

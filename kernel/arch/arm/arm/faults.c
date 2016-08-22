@@ -399,7 +399,7 @@ void arch_dump_exception_context(arch_exception_context_t *context)
     // try to dump the user stack
     if (is_user_address(usp)) {
         uint8_t buf[256];
-        if (copy_from_user(buf, (void *)usp, sizeof(buf)) == NO_ERROR) {
+        if (copy_from_user_unsafe(buf, (void *)usp, sizeof(buf)) == NO_ERROR) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)usp);
             hexdump_ex(buf, sizeof(buf), usp);
         }

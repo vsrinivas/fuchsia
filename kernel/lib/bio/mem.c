@@ -31,7 +31,7 @@ static ssize_t mem_bdev_read(bdev_t *bdev, void *buf, off_t offset, size_t len)
 
     // TODO: This is a hack, we should get rid of it when we have a real loader
     if (is_user_address((vaddr_t)buf)) {
-        status_t status = copy_to_user(buf, (uint8_t *)mem->ptr + offset, len);
+        status_t status = copy_to_user_unsafe(buf, (uint8_t *)mem->ptr + offset, len);
         if (status != NO_ERROR) {
             return status;
         }
@@ -48,7 +48,7 @@ static ssize_t mem_bdev_read_block(struct bdev *bdev, void *buf, bnum_t block, u
 
     LTRACEF("bdev %s, buf %p, block %u, count %u\n", bdev->name, buf, block, count);
 
-    status_t status = copy_to_user(
+    status_t status = copy_to_user_unsafe(
             buf,
             (uint8_t *)mem->ptr + block * BLOCKSIZE,
             count * BLOCKSIZE);

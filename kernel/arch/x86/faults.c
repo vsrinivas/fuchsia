@@ -66,7 +66,7 @@ static void exception_die(x86_iframe_t *frame, const char *msg)
     // try to dump the user stack
     if (is_user_address(frame->user_sp)) {
         uint8_t buf[256];
-        if (copy_from_user(buf, (void *)frame->user_sp, sizeof(buf)) == NO_ERROR) {
+        if (copy_from_user_unsafe(buf, (void *)frame->user_sp, sizeof(buf)) == NO_ERROR) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)frame->user_sp);
             hexdump_ex(buf, sizeof(buf), frame->user_sp);
         }
@@ -358,7 +358,7 @@ void arch_dump_exception_context(arch_exception_context_t *context)
     // try to dump the user stack
     if (context->frame->cs != CODE_64_SELECTOR && is_user_address(context->frame->user_sp)) {
         uint8_t buf[256];
-        if (copy_from_user(buf, (void *)context->frame->user_sp, sizeof(buf)) == NO_ERROR) {
+        if (copy_from_user_unsafe(buf, (void *)context->frame->user_sp, sizeof(buf)) == NO_ERROR) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->user_sp);
             hexdump_ex(buf, sizeof(buf), context->frame->user_sp);
         }

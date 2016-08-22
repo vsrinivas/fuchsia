@@ -25,7 +25,7 @@ status_t copy_from_user_dynamic(
     if (!buf) {
         return ERR_NO_MEMORY;
     }
-    status_t status = copy_from_user(buf, src, len);
+    status_t status = copy_from_user_unsafe(buf, src, len);
     if (status != NO_ERROR) {
         free(buf);
         return status;

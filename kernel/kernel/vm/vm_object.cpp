@@ -441,7 +441,7 @@ status_t VmObject::ReadUser(void* _ptr, uint64_t offset, size_t len, size_t* byt
     // read routine that uses copy_to_user
     uint8_t* ptr = reinterpret_cast<uint8_t*>(_ptr);
     auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> status_t {
-        return copy_to_user(ptr + offset, src, len);
+        return copy_to_user_unsafe(ptr + offset, src, len);
     };
 
     return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
@@ -458,7 +458,7 @@ status_t VmObject::WriteUser(const void* _ptr, uint64_t offset, size_t len, size
     // write routine that uses copy_from_user
     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(_ptr);
     auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> status_t {
-        return copy_from_user(dst, ptr + offset, len);
+        return copy_from_user_unsafe(dst, ptr + offset, len);
     };
 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);

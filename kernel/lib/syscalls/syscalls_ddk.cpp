@@ -107,7 +107,7 @@ mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len, void** out_vad
     if (res != NO_ERROR)
         return res;
 
-    if (copy_to_user(reinterpret_cast<uint8_t*>(out_vaddr), &vaddr, sizeof(void*)) != NO_ERROR) {
+    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_vaddr), &vaddr, sizeof(void*)) != NO_ERROR) {
         aspace->FreeRegion(reinterpret_cast<vaddr_t>(vaddr));
         return ERR_INVALID_ARGS;
     }
@@ -136,8 +136,8 @@ mx_status_t sys_alloc_device_memory(uint32_t len, mx_paddr_t* out_paddr, void** 
         return res;
 
     paddr_t paddr = vaddr_to_paddr(vaddr);
-    if (copy_to_user(reinterpret_cast<uint8_t*>(out_vaddr), &vaddr, sizeof(void*)) != NO_ERROR ||
-        copy_to_user(reinterpret_cast<uint8_t*>(out_paddr), &paddr, sizeof(void*)) != NO_ERROR) {
+    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_vaddr), &vaddr, sizeof(void*)) != NO_ERROR ||
+        copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_paddr), &paddr, sizeof(void*)) != NO_ERROR) {
         aspace->FreeRegion(reinterpret_cast<vaddr_t>(vaddr));
         return ERR_INVALID_ARGS;
     }
@@ -155,7 +155,10 @@ extern uint32_t bootloader_fb_format;
 
 mx_status_t sys_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32_t* height, uint32_t* stride) {
 #if ARCH_X86
-    if (!bootloader_fb_base || copy_to_user_u32(format, bootloader_fb_format) || copy_to_user_u32(width, bootloader_fb_width) || copy_to_user_u32(height, bootloader_fb_height) || copy_to_user_u32(stride, bootloader_fb_stride)) {
+    if (!bootloader_fb_base || copy_to_user_u32_unsafe(format, bootloader_fb_format) ||
+            copy_to_user_u32_unsafe(width, bootloader_fb_width) ||
+            copy_to_user_u32_unsafe(height, bootloader_fb_height) ||
+            copy_to_user_u32_unsafe(stride, bootloader_fb_stride)) {
         return ERR_INVALID_ARGS;
     } else {
         return NO_ERROR;
@@ -206,8 +209,8 @@ mx_handle_t sys_pci_get_nth_device(uint32_t index, mx_pcie_get_nth_info_t* out_i
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t handle_value = up->MapHandleToValue(handle.get());
 
-    if (copy_to_user(reinterpret_cast<uint8_t*>(out_info),
-                     &info, sizeof(*out_info)) != NO_ERROR)
+    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_info),
+                            &info, sizeof(*out_info)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(utils::move(handle));
@@ -483,8 +486,8 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
     if (result != NO_ERROR)
         return result;
 
-    if (copy_to_user(reinterpret_cast<uint8_t*>(out_max_irqs),
-                     &max_irqs, sizeof(*out_max_irqs)) != NO_ERROR)
+    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_max_irqs),
+                            &max_irqs, sizeof(*out_max_irqs)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return result;
@@ -552,11 +555,11 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
     uint64_t size  = io_mapping->size();
     status_t status;
 
-    status = copy_to_user(out_vaddr, &vaddr, sizeof(*out_vaddr));
+    status = copy_to_user_unsafe(out_vaddr, &vaddr, sizeof(*out_vaddr));
     if (status != NO_ERROR)
         return status;
 
-    return copy_to_user(out_size, &size, sizeof(*out_size));
+    return copy_to_user_unsafe(out_size, &size, sizeof(*out_size));
 }
 
 #if ARCH_X86

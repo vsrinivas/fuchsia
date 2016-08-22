@@ -16,6 +16,7 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy.h>
 #include <list.h>
+#include <utils/user_ptr.h>
 
 #include <magenta/data_pipe.h>
 #include <magenta/data_pipe_producer_dispatcher.h>
@@ -99,7 +100,7 @@ uint64_t sys_current_time() {
 mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
-                                mx_signals_state_t* _signals_state) {
+                                utils::user_ptr<mx_signals_state_t> _signals_state) {
     LTRACEF("handle %u\n", handle_value);
 
     WaitEvent event;
@@ -143,8 +144,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
                                  const mx_handle_t* _handle_values,
                                  const mx_signals_t* _signals,
                                  mx_time_t timeout,
-                                 uint32_t* _result_index,
-                                 mx_signals_state_t* _signals_states) {
+                                 utils::user_ptr<uint32_t> _result_index,
+                                 utils::user_ptr<mx_signals_state_t> _signals_states) {
     LTRACEF("count %u\n", count);
 
     if (!count) {
@@ -290,7 +291,8 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
     return dup_hv;
 }
 
-mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, mx_size_t info_size) {
+mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, utils::user_ptr<void> _info,
+                               mx_size_t info_size) {
     auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -317,7 +319,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
                 waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
             };
 
-            if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
+            if (copy_to_user(_info.reinterpret<uint8_t>(), &info, sizeof(info)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
 
             return sizeof(mx_handle_basic_info_t);
@@ -341,7 +343,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
             if (err != NO_ERROR)
                 return err;
 
-            if (copy_to_user(reinterpret_cast<uint8_t*>(_info), &info, sizeof(info)) != NO_ERROR)
+            if (copy_to_user(_info.reinterpret<uint8_t>(), &info, sizeof(info)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
 
             return sizeof(mx_process_info_t);
@@ -352,7 +354,7 @@ mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, void* _info, 
 }
 
 mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
-                                    void* _value, mx_size_t size) {
+                                    utils::user_ptr<void> _value, mx_size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 
@@ -375,7 +377,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ERR_WRONG_TYPE;
             uint32_t value = process->get_bad_handle_policy();
-            if (copy_to_user_u32(reinterpret_cast<uint32_t*>(_value), value) != NO_ERROR)
+            if (copy_to_user_u32(_value.reinterpret<uint32_t>(), value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
 
         }
@@ -387,7 +389,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
 }
 
 mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
-                                    const void* _value, mx_size_t size) {
+                                    utils::user_ptr<const void> _value, mx_size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 
@@ -412,7 +414,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ERR_WRONG_TYPE;
             uint32_t value = 0;
-            if (copy_from_user_u32(&value, reinterpret_cast<const uint32_t*>(_value)) != NO_ERROR)
+            if (copy_from_user_u32(&value, _value.reinterpret<const uint32_t>()) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             status = process->set_bad_handle_policy(value);
             break;
@@ -422,10 +424,11 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     return status;
 }
 
-mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _num_bytes,
-                             mx_handle_t* _handles, uint32_t* _num_handles, uint32_t flags) {
+mx_status_t sys_message_read(mx_handle_t handle_value, utils::user_ptr<void> _bytes,
+                             utils::user_ptr<uint32_t> _num_bytes, utils::user_ptr<mx_handle_t> _handles,
+                             utils::user_ptr<uint32_t> _num_handles, uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p flags 0x%x\n",
-            handle_value, _bytes, _num_bytes, _handles, _num_handles, flags);
+            handle_value, _bytes.get(), _num_bytes.get(), _handles.get(), _num_handles.get(), flags);
 
     auto up = ProcessDispatcher::GetCurrent();
     utils::RefPtr<Dispatcher> dispatcher;
@@ -495,7 +498,7 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     result = msg_pipe->AcceptRead(&bytes, &handle_list);
 
     if (_bytes) {
-        if (copy_to_user(reinterpret_cast<uint8_t*>(_bytes), bytes.get(), num_bytes) != NO_ERROR) {
+        if (copy_to_user(_bytes.reinterpret<uint8_t>(), bytes.get(), num_bytes) != NO_ERROR) {
             // $$$ free handles.
             return ERR_INVALID_ARGS;
         }
@@ -504,7 +507,7 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     if (next_message_num_handles != 0u) {
         for (size_t ix = 0u; ix < next_message_num_handles; ++ix) {
             auto hv = up->MapHandleToValue(handle_list[ix]);
-            if (copy_to_user_32(&_handles[ix], hv) != NO_ERROR) {
+            if (copy_to_user_32_unsafe(&_handles.get()[ix], hv) != NO_ERROR) {
                 // $$$ free handles.
                 return ERR_INVALID_ARGS;
             }
@@ -521,10 +524,10 @@ mx_status_t sys_message_read(mx_handle_t handle_value, void* _bytes, uint32_t* _
     return result;
 }
 
-mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint32_t num_bytes,
-                              const mx_handle_t* _handles, uint32_t num_handles, uint32_t flags) {
+mx_status_t sys_message_write(mx_handle_t handle_value, utils::user_ptr<const void> _bytes, uint32_t num_bytes,
+                              utils::user_ptr<const mx_handle_t> _handles, uint32_t num_handles, uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
-            handle_value, _bytes, num_bytes, _handles, num_handles, flags);
+            handle_value, _bytes.get(), num_bytes, _handles.get(), num_handles, flags);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -557,7 +560,7 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
 
     if (num_bytes) {
         uint8_t* copy;
-        result = magenta_copy_user_dynamic(_bytes, &copy, num_bytes, kMaxMessageSize);
+        result = magenta_copy_user_dynamic(_bytes.get(), &copy, num_bytes, kMaxMessageSize);
         if (result != NO_ERROR)
             return result;
         bytes.reset(copy, num_bytes);
@@ -567,7 +570,7 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
     if (num_handles) {
         void* c_handles;
         status_t status = copy_from_user_dynamic(
-            &c_handles, _handles, num_handles * sizeof(_handles[0]), kMaxMessageHandles);
+            &c_handles, _handles, num_handles * sizeof(_handles.get()[0]), kMaxMessageHandles);
         // |status| can be ERR_NO_MEMORY or ERR_INVALID_ARGS.
         if (status != NO_ERROR)
             return status;
@@ -641,6 +644,8 @@ mx_status_t sys_message_write(mx_handle_t handle_value, const void* _bytes, uint
     return result;
 }
 
+// Note: out_handle is a user_ptr<> but user_ptr<> doesn't currently support arrays.
+// XXX: Can this param just be a user_ptr<mx_handle_t> instead? syscalls.inc would imply that to be the case.
 mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
     LTRACEF("entry out_handle[] %p\n", out_handle);
 
@@ -667,7 +672,7 @@ mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (copy_to_user(out_handle, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+    if (copy_to_user_unsafe(out_handle, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(utils::move(h0));
@@ -729,7 +734,7 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
     switch (op) {
 #ifdef ARCH_X86_64
     case ARCH_SET_FS:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (!x86_is_vaddr_canonical(value))
             return ERR_INVALID_ARGS;
@@ -737,11 +742,11 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
         break;
     case ARCH_GET_FS:
         value = read_msr(X86_MSR_IA32_FS_BASE);
-        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+        if (copy_to_user_uptr_unsafe(value_ptr, value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
     case ARCH_SET_GS:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (!x86_is_vaddr_canonical(value))
             return ERR_INVALID_ARGS;
@@ -749,23 +754,23 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
         break;
     case ARCH_GET_GS:
         value = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
-        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+        if (copy_to_user_uptr_unsafe(value_ptr, value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
     case ARCH_GET_TSC_TICKS_PER_MS:
         value = get_tsc_ticks_per_ms();
-        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+        if (copy_to_user_uptr_unsafe(value_ptr, value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
 #elif ARCH_ARM64
     case ARCH_SET_TPIDRRO_EL0:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         ARM64_WRITE_SYSREG(tpidrro_el0, value);
         break;
 #elif ARCH_ARM
     case ARCH_SET_CP15_READONLY:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         __asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (value));
         ISB;
@@ -950,8 +955,8 @@ mx_ssize_t sys_vm_object_write(mx_handle_t handle, const void* data, uint64_t of
     return vmo->Write(data, len, offset);
 }
 
-mx_status_t sys_vm_object_get_size(mx_handle_t handle, uint64_t* _size) {
-    LTRACEF("handle %d, sizep %p\n", handle, _size);
+mx_status_t sys_vm_object_get_size(mx_handle_t handle, utils::user_ptr<uint64_t> _size) {
+    LTRACEF("handle %d, sizep %p\n", handle, _size.get());
 
     // lookup the dispatcher from handle
     auto up = ProcessDispatcher::GetCurrent();
@@ -971,7 +976,7 @@ mx_status_t sys_vm_object_get_size(mx_handle_t handle, uint64_t* _size) {
     mx_status_t status = vmo->GetSize(&size);
 
     // copy the size back, even if it failed
-    if (copy_to_user(reinterpret_cast<uint8_t*>(_size), &size, sizeof(size)) != NO_ERROR)
+    if (copy_to_user(_size.reinterpret<uint8_t>(), &size, sizeof(size)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return status;
@@ -999,10 +1004,11 @@ mx_status_t sys_vm_object_set_size(mx_handle_t handle, uint64_t size) {
 }
 
 mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
-                               uint64_t offset, mx_size_t len, uintptr_t* user_ptr, uint32_t flags) {
+                               uint64_t offset, mx_size_t len, utils::user_ptr<uintptr_t> user_ptr,
+                               uint32_t flags) {
 
     LTRACEF("proc handle %d, vmo handle %d, offset 0x%llx, len 0x%lx, user_ptr %p, flags 0x%x\n",
-            proc_handle, vmo_handle, offset, len, user_ptr, flags);
+            proc_handle, vmo_handle, offset, len, user_ptr.get(), flags);
 
     // current process
     auto up = ProcessDispatcher::GetCurrent();
@@ -1045,7 +1051,7 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
 
     // copy the user pointer in
     uintptr_t ptr;
-    if (copy_from_user(&ptr, reinterpret_cast<uint8_t*>(user_ptr), sizeof(ptr)) != NO_ERROR)
+    if (copy_from_user(&ptr, user_ptr.reinterpret<uint8_t>(), sizeof(ptr)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     // do the map call
@@ -1054,7 +1060,7 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
         return status;
 
     // copy the user pointer back
-    if (copy_to_user(reinterpret_cast<uint8_t*>(user_ptr), &ptr, sizeof(ptr)) != NO_ERROR)
+    if (copy_to_user(user_ptr.reinterpret<uint8_t>(), &ptr, sizeof(ptr)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
@@ -1192,8 +1198,8 @@ int sys_log_create(uint32_t flags) {
     return hv;
 }
 
-int sys_log_write(mx_handle_t log_handle, uint32_t len, const void* ptr, uint32_t flags) {
-    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr);
+int sys_log_write(mx_handle_t log_handle, uint32_t len, utils::user_ptr<const void> ptr, uint32_t flags) {
+    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr.get());
 
     if (len > DLOG_MAX_ENTRY)
         return ERR_TOO_BIG;
@@ -1213,14 +1219,14 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, const void* ptr, uint32_
         return ERR_ACCESS_DENIED;
 
     char buf[DLOG_MAX_ENTRY];
-    if (magenta_copy_from_user(ptr, buf, len) != NO_ERROR)
+    if (magenta_copy_from_user(ptr.get(), buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return log->Write(buf, len, flags);
 }
 
-int sys_log_read(mx_handle_t log_handle, uint32_t len, void* ptr, uint32_t flags) {
-    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr);
+int sys_log_read(mx_handle_t log_handle, uint32_t len, utils::user_ptr<void> ptr, uint32_t flags) {
+    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr.get());
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -1236,7 +1242,7 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, void* ptr, uint32_t flags
     if (!magenta_rights_check(log_rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
-    return log->ReadFromUser(ptr, len, flags);
+    return log->ReadFromUser(ptr.get(), len, flags);
 }
 
 mx_handle_t sys_io_port_create(uint32_t options) {
@@ -1260,7 +1266,7 @@ mx_handle_t sys_io_port_create(uint32_t options) {
     return hv;
 }
 
-mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t size) {
+mx_status_t sys_io_port_queue(mx_handle_t handle, utils::user_ptr<const void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_IO_PORT_MAX_PKT_SIZE)
@@ -1283,14 +1289,14 @@ mx_status_t sys_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    auto iopk = IOP_Packet::MakeFromUser(packet, size);
+    auto iopk = IOP_Packet::MakeFromUser(packet.get(), size);
     if (!iopk)
         return ERR_NO_MEMORY;
 
     return ioport->Queue(iopk);
 }
 
-mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
+mx_status_t sys_io_port_wait(mx_handle_t handle, utils::user_ptr<void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (!packet)
@@ -1315,7 +1321,7 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, void* packet, mx_size_t size) {
     if (status < 0)
         return status;
 
-    if (!iopk->CopyToUser(packet, &size))
+    if (!iopk->CopyToUser(packet.get(), &size))
         return ERR_INVALID_ARGS;
 
     IOP_Packet::Delete(iopk);
@@ -1394,7 +1400,7 @@ mx_handle_t sys_data_pipe_create(uint32_t options, mx_size_t element_size, mx_si
     mx_handle_t hv_producer = up->MapHandleToValue(producer_handle.get());
     mx_handle_t hv_consumer = up->MapHandleToValue(consumer_handle.get());
 
-    if (copy_to_user_32(_handle, hv_consumer) != NO_ERROR)
+    if (copy_to_user_32_unsafe(_handle, hv_consumer) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(utils::move(producer_handle));
@@ -1489,7 +1495,7 @@ mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size
     if (status != NO_ERROR)
         return status;
 
-    if (copy_to_user_uptr(buffer, user_addr) != NO_ERROR) {
+    if (copy_to_user_uptr_unsafe(buffer, user_addr) != NO_ERROR) {
         producer->EndWrite(0u);
         return ERR_INVALID_ARGS;
     }
@@ -1545,7 +1551,7 @@ mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_
     if (status != NO_ERROR)
         return status;
 
-    if (copy_to_user_uptr(buffer, user_addr) != NO_ERROR) {
+    if (copy_to_user_uptr_unsafe(buffer, user_addr) != NO_ERROR) {
         consumer->EndRead(0u);
         return ERR_INVALID_ARGS;
     }
@@ -1573,7 +1579,7 @@ mx_status_t sys_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
     return consumer->EndRead(read);
 }
 
-mx_ssize_t sys_cprng_draw(void* buffer, mx_size_t len) {
+mx_ssize_t sys_cprng_draw(utils::user_ptr<void> buffer, mx_size_t len) {
     if (len > kMaxCPRNGDraw)
         return ERR_INVALID_ARGS;
 
@@ -1591,7 +1597,7 @@ mx_ssize_t sys_cprng_draw(void* buffer, mx_size_t len) {
     return len;
 }
 
-mx_status_t sys_cprng_add_entropy(void* buffer, mx_size_t len) {
+mx_status_t sys_cprng_add_entropy(utils::user_ptr<void> buffer, mx_size_t len) {
     if (len > kMaxCPRNGSeed)
         return ERR_INVALID_ARGS;
 
@@ -1682,9 +1688,9 @@ mx_status_t sys_wait_set_remove(mx_handle_t ws_handle, uint64_t cookie) {
 
 mx_status_t sys_wait_set_wait(mx_handle_t ws_handle,
                               mx_time_t timeout,
-                              uint32_t* _num_results,
-                              mx_wait_set_result_t* _results,
-                              uint32_t* _max_results) {
+                              utils::user_ptr<uint32_t> _num_results,
+                              utils::user_ptr<mx_wait_set_result_t> _results,
+                              utils::user_ptr<uint32_t> _max_results) {
     LTRACEF("wait set handle %d\n", ws_handle);
 
     uint32_t num_results;

@@ -59,7 +59,7 @@ bool IOP_Packet::CopyToUser(void* data, mx_size_t* size) {
     if (*size < data_size)
         return ERR_NOT_ENOUGH_BUFFER;
     *size = data_size;
-    return copy_to_user(
+    return copy_to_user_unsafe(
         data, reinterpret_cast<char*>(this) + sizeof(IOP_Packet), data_size) == NO_ERROR;
 }
 
