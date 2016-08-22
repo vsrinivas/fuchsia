@@ -126,7 +126,7 @@ static void btprint(dsoinfo_t* list, int n, uintptr_t pc, uintptr_t sp) {
     }
 }
 
-void backtrace(mem_handle_t h, uintptr_t pc, uintptr_t fp) {
+void backtrace(mem_handle_t h, uintptr_t pc, uintptr_t fp, bool print_dsolist) {
     dsoinfo_t* list = fetch_dso_list(h, "app");
     int n = 1;
 
@@ -143,6 +143,9 @@ void backtrace(mem_handle_t h, uintptr_t pc, uintptr_t fp) {
 
     while (list != NULL) {
         dsoinfo_t* next = list->next;
+        if (print_dsolist) {
+            printf("dso: @%p '%s'\n", (void*) list->base, list->name);
+        }
         free(list);
         list = next;
     }

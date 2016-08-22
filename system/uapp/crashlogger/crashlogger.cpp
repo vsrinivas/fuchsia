@@ -73,7 +73,7 @@ void process_report(const mx_exception_report_t* report) {
         printf("bottom of user stack:\n");
         dump_memory(context.pid, context.arch.u.x86_64.user_sp, 256u);
         printf("backtrace:\n");
-        backtrace(context.pid, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp);
+        backtrace(context.pid, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp, true);
 #endif
     } else {
         // TODO: support other architectures.

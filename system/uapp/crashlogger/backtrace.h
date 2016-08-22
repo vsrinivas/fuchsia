@@ -12,6 +12,6 @@ __BEGIN_CDECLS;
 
 typedef uint64_t mem_handle_t;
 
-void backtrace(mem_handle_t, uintptr_t pc, uintptr_t fp);
+void backtrace(mem_handle_t, uintptr_t pc, uintptr_t fp, bool print_dsolist);
 
 __END_CDECLS;
