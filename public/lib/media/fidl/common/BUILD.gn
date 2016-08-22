@@ -1,0 +1,39 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/module_args/mojo.gni")
+import("//mojo/public/mojo_application.gni")
+import("$mojo_sdk_root/mojo/public/mojo_sdk.gni")
+
+source_set("cpp") {
+  sources = [
+    "factory_service_base.cc",
+    "factory_service_base.h",
+    "incident.cc",
+    "incident.h",
+  ]
+
+  deps = [
+    "//base",
+    "//mojo/application",
+    "//mojo/public/cpp/application",
+  ]
+}
+
+mojo_native_application("apptests") {
+  output_name = "services_util_cpp_apptests"
+
+  testonly = true
+
+  sources = [
+    "test/incident_test.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//base",
+    "//mojo/application",
+    "//mojo/application:test_support",
+  ]
+}

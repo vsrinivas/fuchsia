@@ -6,6 +6,7 @@
 .cproject
 .gdb_history
 .gdbinit
+.jiri/
 .landmines
 .project
 .pydevproject
