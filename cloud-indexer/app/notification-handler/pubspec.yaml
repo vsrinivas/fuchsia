@@ -3,9 +3,12 @@ version: 0.0.0
 description: Handles manifest file changes from the Modular CDN.
 dependencies:
   appengine: '^0.3.0'
+  http: any
   indexer_pipeline:
     path: ../../../indexer/pipeline
+  logging: any
   mockito: any
   parser:
     path: ../../../parser
+  shelf: any
   test: any
