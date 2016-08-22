@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 
 #define TRACE 0
 
@@ -52,12 +53,14 @@ struct iotxn_priv {
 
 static list_node_t free_list = LIST_INITIAL_VALUE(free_list);
 static list_node_t clone_list = LIST_INITIAL_VALUE(clone_list); // free list for clones
+static mtx_t free_list_mutex = MTX_INIT;
+static mtx_t clone_list_mutex = MTX_INIT;
 
 static void iotxn_complete(iotxn_t* txn, mx_status_t status, size_t actual) {
     txn->actual = actual;
     txn->status = status;
     if (txn->complete_cb) {
-        txn->complete_cb(txn);
+        txn->complete_cb(txn, txn->cookie);
     }
 }
 
@@ -89,6 +92,8 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     iotxn_priv_t* cpriv = NULL;
     // look in clone list first for something that fits
     bool found = false;
+
+    mtx_lock(&clone_list_mutex);
     list_for_every_entry (&clone_list, clone, iotxn_t, node) {
         cpriv = get_priv(clone);
         if (cpriv->buffer_size >= extra_size) {
@@ -100,8 +105,11 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     if (found) {
         list_delete(&clone->node);
         if (cpriv->buffer_size) memset(cpriv + sizeof(iotxn_priv_t), 0, cpriv->buffer_size);
+        mtx_unlock(&clone_list_mutex);
         goto out;
     }
+    mtx_unlock(&clone_list_mutex);
+
     // didn't find one that fits, allocate a new one
     size_t sz = sizeof(iotxn_priv_t) + extra_size;
     cpriv = calloc(1, sz); // cloned iotxn's don't have to be in contiguous memory
@@ -131,9 +139,13 @@ static void iotxn_release(iotxn_t* txn) {
     xprintf("iotxn_release: txn=%p\n", txn);
     iotxn_priv_t* priv = get_priv(txn);
     if (priv->flags & IOTXN_FLAG_CLONE) {
+        mtx_lock(&clone_list_mutex);
         list_add_tail(&clone_list, &txn->node);
+        mtx_unlock(&clone_list_mutex);
     } else {
+        mtx_lock(&free_list_mutex);
         list_add_tail(&free_list, &txn->node);
+        mtx_unlock(&free_list_mutex);
     }
 }
 
@@ -153,6 +165,8 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     iotxn_priv_t* priv = NULL;
     // look in free list first for something that fits
     bool found = false;
+
+    mtx_lock(&free_list_mutex);
     list_for_every_entry (&free_list, txn, iotxn_t, node) {
         priv = get_priv(txn);
         if (priv->buffer_size >= data_size + extra_size) {
@@ -164,8 +178,11 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     if (found) {
         list_delete(&txn->node);
         memset(&txn, 0, sizeof(iotxn_t) + priv->buffer_size);
+        mtx_unlock(&free_list_mutex);
         goto out;
     }
+    mtx_unlock(&free_list_mutex);
+
     // didn't find one that fits, allocate a new one
     size_t sz = sizeof(iotxn_priv_t) + data_size + extra_size;
     mx_paddr_t phys;

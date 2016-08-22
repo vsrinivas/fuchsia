@@ -49,8 +49,8 @@ typedef struct sata_device {
 
 #define get_sata_device(dev) containerof(dev, sata_device_t, device)
 
-static void sata_device_identify_complete(iotxn_t* txn) {
-    completion_signal((completion_t*)txn->context);
+static void sata_device_identify_complete(iotxn_t* txn, void* cookie) {
+    completion_signal((completion_t*)cookie);
 }
 
 static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* controller) {
@@ -70,7 +70,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     pdata->port = dev->port;
     txn->protocol = MX_PROTOCOL_SATA;
     txn->complete_cb = sata_device_identify_complete;
-    txn->context = &completion;
+    txn->cookie = &completion;
     txn->length = 512;
 
     ahci_iotxn_queue(controller, txn);

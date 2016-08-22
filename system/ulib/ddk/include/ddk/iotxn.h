@@ -65,9 +65,9 @@ struct iotxn {
     // (filled in by requestor, read by processor, type identified by 'protocol')
     uint64_t protocol_data[6];
 
-    // list node and extra data
+    // list node and context
     // the current "owner" of the iotxn may use these however desired
-    // (eg, the reqeustor may use node to hold the iotxn on a free list
+    // (eg, the requestor may use node to hold the iotxn on a free list
     // and when it's queued the processor may use node to hold the iotxn
     // in a transaction queue)
     list_node_t node;
@@ -76,9 +76,11 @@ struct iotxn {
     // The complete_cb() callback is set by the requestor and is
     // invoked by the 'complete' ops method when it is called by
     // the processor upon completion of the io operation.
-    void (*complete_cb)(iotxn_t* txn);
+    void (*complete_cb)(iotxn_t* txn, void* cookie);
+    // Set by requestor for passing data to complete_cb callback
+    void* cookie;
 
-    // structure to this point is 128 bytes
+    // structure to this point is 132 bytes
 
     // extra requestor data
     // amount of space here depends on extra_size passed when

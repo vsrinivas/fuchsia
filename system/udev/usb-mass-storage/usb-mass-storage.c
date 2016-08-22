@@ -755,7 +755,7 @@ static mx_protocol_device_t ums_device_proto = {
     .get_size = ums_get_size,
 };
 
-static void ums_iotxn_wait_cb(iotxn_t* txn) {
+static void ums_iotxn_wait_cb(iotxn_t* txn, void* cookie) {
     ums_pdata_t* pdata = ums_iotxn_pdata(txn);
     completion_signal(pdata->waiter);
     completion_reset(pdata->waiter);

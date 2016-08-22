@@ -129,8 +129,8 @@ static mx_protocol_device_t gpt_proto = {
     .release = gpt_release,
 };
 
-static void gpt_read_sync_complete(iotxn_t* txn) {
-    completion_signal((completion_t*)txn->context);
+static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
+    completion_signal((completion_t*)cookie);
 }
 
 static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
@@ -160,7 +160,7 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     txn->offset = blksize;
     txn->length = blksize;
     txn->complete_cb = gpt_read_sync_complete;
-    txn->context = &completion;
+    txn->cookie = &completion;
 
     iotxn_queue(dev, txn);
     completion_wait(&completion, MX_TIME_INFINITE);
@@ -193,7 +193,7 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     txn->offset = header.entries * blksize;
     txn->length = table_sz;
     txn->complete_cb = gpt_read_sync_complete;
-    txn->context = &completion;
+    txn->cookie = &completion;
 
     completion_reset(&completion);
     iotxn_queue(dev, txn);
