@@ -37,13 +37,14 @@ autorun_magma_app_tests=true;
 autorun_magma_sys_tests=true;
 autorun_msd_tests=true;
 
+autorun_path=$bootfs_path/autorun
+
 if $autorun_magma_app_tests; then
 	echo "Enabling magma application driver tests to autorun"
 
 	test_executable=bin/magma_app_unit_tests
 	cp $build_dir/magma_app_unit_tests $bootfs_path/$test_executable
 
-	autorun_path=$bootfs_path/autorun
 	echo "echo Running magma application driver unit tests" >> $autorun_path # for sanity
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 fi
@@ -54,7 +55,6 @@ if $autorun_magma_sys_tests; then
 	test_executable=bin/magma_sys_unit_tests
 	cp $build_dir/magma_sys_unit_tests $bootfs_path/$test_executable
 
-	autorun_path=$bootfs_path/autorun
 	echo "echo Running magma system driver unit tests" >> $autorun_path # for sanity
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 fi
@@ -65,12 +65,11 @@ if $autorun_msd_tests; then
 	test_executable=bin/msd_unit_tests
 	cp $build_dir/msd_unit_tests $bootfs_path/$test_executable
 
-	autorun_path=$bootfs_path/autorun
 	echo "echo Running MSD unit tests" >> $autorun_path # for sanity
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 fi
 
-if $autorun_magma_tests || $autorun_msd_tests; then
+if $autorun_magma_app_tests || $autorun_magma_sys_tests || $autorun_msd_tests; then
 	echo "msleep 1000" >> $autorun_path # give some time to write out to log listener
 	echo "\`poweroff" >> $autorun_path # rinse and repeat
 fi

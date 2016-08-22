@@ -302,7 +302,8 @@ void magma_gem_context_destroy(magma_context* ctx)
 int32_t magma_gem_bo_context_exec(magma_buffer* bo, magma_context* ctx, int32_t used_batch_len,
                                   uint32_t flags)
 {
-    DLOG("magma_gem_bo_context_exec buffer '%s' context_id %d", buffer->Name(), context_id);
+    DLOG("magma_gem_bo_context_exec buffer '%s' context_id %d", MagmaBuffer::cast(bo)->Name(),
+         MagmaContext::cast(ctx)->context_id());
     if (!MagmaContext::cast(ctx)->SubmitCommandBuffer(MagmaBuffer::cast(bo), used_batch_len, flags))
         return DRET(-EINVAL);
     return 0;
