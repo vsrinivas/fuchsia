@@ -12,8 +12,5 @@ void msd_connection_close(msd_connection* connection)
 
 msd_context* msd_connection_create_context(msd_connection* connection)
 {
-    DLOG("TODO: msd_connection_create_context");
-    return nullptr;
+    return MsdIntelConnection::cast(connection)->CreateContext().release();
 }
-
-void msd_context_destroy(msd_context* ctx) { DLOG("TODO: msd_device_destroy_context"); }

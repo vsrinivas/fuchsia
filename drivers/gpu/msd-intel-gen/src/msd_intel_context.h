@@ -25,6 +25,13 @@ public:
     // Gets the gpu address of the context buffer if pinned.
     bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
 
+    static MsdIntelContext* cast(msd_context* context)
+    {
+        DASSERT(context);
+        DASSERT(context->magic_ == kMagic);
+        return static_cast<MsdIntelContext*>(context);
+    }
+
 private:
     MsdIntelBuffer* get_buffer(EngineCommandStreamerId id)
     {

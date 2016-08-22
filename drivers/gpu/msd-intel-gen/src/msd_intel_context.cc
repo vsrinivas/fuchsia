@@ -90,3 +90,7 @@ bool MsdIntelContext::GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr
 
     return true;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+void msd_context_destroy(msd_context* ctx) { delete MsdIntelContext::cast(ctx); }

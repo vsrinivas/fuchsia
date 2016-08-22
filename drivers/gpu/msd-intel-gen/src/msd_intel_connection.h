@@ -4,6 +4,7 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
+#include "msd_intel_context.h"
 #include <memory>
 
 class MsdIntelDevice;
@@ -12,6 +13,11 @@ class MsdIntelConnection : public msd_connection {
 public:
     MsdIntelConnection() { magic_ = kMagic; }
     virtual ~MsdIntelConnection() {}
+
+    std::unique_ptr<MsdIntelContext> CreateContext()
+    {
+        return std::unique_ptr<MsdIntelContext>(new MsdIntelContext());
+    }
 
     static MsdIntelConnection* cast(msd_connection* connection)
     {
