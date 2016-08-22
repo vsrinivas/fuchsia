@@ -157,6 +157,7 @@ public:
     using ContainerType      = typename ContainerTraits::ContainerType;
     using OtherContainerType = typename ContainerTraits::OtherContainerType;
     using PtrTraits          = typename ContainerType::PtrTraits;
+    using NodeTraits         = typename ContainerType::NodeTraits;
 
     enum class RefAction {
         HoldNone,
@@ -169,10 +170,10 @@ public:
     // Utility methods used to check if the target of an Erase operation is
     // valid, whether the target of the operation is expressed as an iterator, a
     // key or as an object pointer.
-    bool ValidTarget(size_t tgt) { return true; }
-    bool ValidTarget(const ObjType& target) { return &target != nullptr; }
-    bool ValidTarget(const typename ContainerType::iterator& target) {
-        return target.IsValid();
+    bool ValidEraseTarget(size_t key)      { return container().find(key) != nullptr; }
+    bool ValidEraseTarget(ObjType& target) { return NodeTraits::node_state(target).InContainer(); }
+    bool ValidEraseTarget(typename ContainerType::iterator& target) {
+        return target.IsValid() && NodeTraits::node_state(*target).InContainer();
     }
 
     // Utility method for checking the size of the container via either size()
@@ -253,7 +254,7 @@ public:
         REQUIRE_TRUE(ndx < OBJ_COUNT, "");
         REQUIRE_TRUE(remaining <= OBJ_COUNT, "");
         REQUIRE_TRUE(!container().is_empty(), "");
-        REQUIRE_TRUE(ValidTarget(target), "");
+        REQUIRE_TRUE(ValidEraseTarget(target), "");
         EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
         EXPECT_EQ(remaining, Size(container()), "");
         size_t erased_ndx;
