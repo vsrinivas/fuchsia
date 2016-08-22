@@ -12,12 +12,16 @@
 #include <string.h>
 #include <trace.h>
 
+#include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_region.h>
+
 #include <lib/console.h>
 #include <lib/user_copy.h>
 
 #include <lk/init.h>
 #include <platform/debug.h>
 
+#include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
 #include "syscalls_priv.h"
@@ -25,6 +29,7 @@
 #define LOCAL_TRACE 0
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
+constexpr mx_size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 
 #if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
@@ -82,4 +87,37 @@ int sys_debug_send_command(const void* ptr, uint32_t len) {
     buf[len] = '\n';
     buf[len + 1] = 0;
     return console_run_script(buf);
+}
+
+mx_ssize_t sys_debug_read_memory(uint64_t koid, uintptr_t vaddr, mx_size_t len, void* buffer) {
+    if (!buffer)
+        return ERR_INVALID_ARGS;
+    if (len == 0 || len > kMaxDebugReadBlock)
+        return ERR_INVALID_ARGS;
+
+    auto process = ProcessDispatcher::LookupProcessById(koid);
+    if (!process)
+        return ERR_NOT_FOUND;
+
+    auto aspace = process->aspace();
+    if (!aspace)
+        return ERR_BAD_STATE;
+
+    auto region = aspace->FindRegion(vaddr);
+    if (!region)
+        return ERR_NO_MEMORY;
+
+    auto vmo = region->vmo();
+    if (!vmo)
+        return ERR_NO_MEMORY;
+
+    uint64_t offset = vaddr - region->base();
+    size_t read = 0;
+
+    status_t st = vmo->ReadUser(buffer, offset, len, &read);
+
+    if (st < 0)
+        return st;
+
+    return static_cast<mx_ssize_t>(read);
 }

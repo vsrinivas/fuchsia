@@ -58,6 +58,10 @@ MAGENTA_DDKCALL_DEF(2, 2, 5, int, debug_send_command, const void* buffer, uint32
 // Temporary system calls before pending calls to get system info are created.
 MAGENTA_SYSCALL_DEF(0, 0, 6, unsigned int, num_cpus, void)
 
+// Temporary syscall to aid debuggers
+MAGENTA_SYSCALL_DEF(4, 5, 7, mx_ssize_t, debug_read_memory, uint64_t koid, uintptr_t vaddr,
+                    mx_size_t len, void* buffer)
+
 // Logging
 MAGENTA_SYSCALL_DEF(1, 1, 30, mx_handle_t, log_create, uint32_t flags)
 MAGENTA_SYSCALL_DEF(4, 3, 31, mx_status_t, log_write, mx_handle_t handle, uint32_t len,

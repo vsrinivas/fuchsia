@@ -53,6 +53,8 @@ public:
     // page fault in an address into the region
     status_t PageFault(vaddr_t va, uint pf_flags);
 
+    utils::RefPtr<VmObject> vmo();
+
 private:
     // private constructor, use Create()
     VmRegion(VmAspace& aspace, vaddr_t base, size_t size, uint arch_mmu_flags, const char* name);

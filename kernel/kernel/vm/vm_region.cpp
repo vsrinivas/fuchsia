@@ -269,3 +269,5 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
 
     return NO_ERROR;
 }
+
+utils::RefPtr<VmObject> VmRegion::vmo() { return object_; }
