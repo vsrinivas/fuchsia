@@ -13,6 +13,9 @@ MODULE_SRCS += \
 
 MODULE_NAME := crashlogger
 
+# This is needed only for hexdump8_ex, which ought to live somewhere else.
+MODULE_STATIC_LIBS := ulib/ddk
+
 MODULE_LIBS := \
     ulib/mxio ulib/magenta ulib/musl
 

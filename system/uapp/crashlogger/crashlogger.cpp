@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <ddk/hexdump.h>
+
 #include <magenta/syscalls.h>
 
 enum : uint32_t {
@@ -47,13 +49,28 @@ void output_frame_x86_64(const x86_64_exc_frame_t& frame) {
     printf(" errc: %#18llx\n", frame.err_code);
 }
 
+void dump_memory(uint64_t koid, uintptr_t start, uint32_t len) {
+    auto buf = static_cast<uint8_t*>(malloc(len));
+    auto res = mx_debug_read_memory(koid, start, len, buf);
+    if (res < 0) {
+        printf("failed reading %p memory; error : %ld\n", (void*)start, res);
+    } else {
+        hexdump(reinterpret_cast<void*>(start), (uint32_t)res);
+    }
+    free(buf);
+}
+
 void process_report(const mx_exception_report_t* report) {
     auto context = report->context;
     printf("<== fatal exception: process [%llu] thread [%llu]\n", context.pid, context.tid);
     printf("<== %s , PC at 0x%lx\n", exc_type_to_str(context.arch.subtype), context.arch.pc);
 
     if (context.arch_id == ARCH_ID_X86_64) {
+#if defined(__x86_64__)
         output_frame_x86_64(context.arch.u.x86_64);
+        printf("bottom of user stack:\n");
+        dump_memory(context.pid, context.arch.u.x86_64.user_sp, 1024u);
+#endif
     } else {
         // TODO: support other architectures.
         printf("unsuported architecture .. comming soon.\n");
@@ -84,7 +101,6 @@ int main(int argc, char** argv) {
         }
 
         process_report(&packet.report);
-        break;
     }
 
     return 0;
