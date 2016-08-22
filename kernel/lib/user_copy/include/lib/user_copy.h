@@ -13,28 +13,6 @@
 
 __BEGIN_CDECLS
 
-/**
- * @brief Copies data from userspace into a newly allocated buffer
- *
- * Upon a successful call, the returned buffer is owned by the caller.
- * When the caller is done with it, it can be released with free().
- *
- * @param dst A pointer to write the allocated buffer into
- * @param src The userspace buffer to copy
- * @param len The length of the userspace buffer
- * @param max_len The maximum allowed length of the userspace buffer
- *
- * @return NO_ERROR on success
- * @return ERR_NO_MEMORY on allocation failure
- * @return ERR_INVALID_ARGS if len > max_len
- * @return See copy_from_user for other possible errors
- */
-status_t copy_from_user_dynamic(
-        void **dst,
-        const void *src,
-        size_t len,
-        size_t max_len);
-
 inline status_t copy_to_user_unsafe(void* dst, const void* src, size_t len) {
   return arch_copy_to_user(dst, src, len);
 }

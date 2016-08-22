@@ -34,7 +34,7 @@ status_t magenta_copy_user_string(const char* src, size_t src_len, char* buf, si
     return NO_ERROR;
 }
 
-status_t magenta_copy_user_dynamic(const void* src, uint8_t** dest, size_t len, size_t max_len) {
+status_t magenta_copy_user_dynamic(const void* src, void** dest, size_t len, size_t max_len) {
     *dest = nullptr;
 
     if (len > max_len) return ERR_INVALID_ARGS;

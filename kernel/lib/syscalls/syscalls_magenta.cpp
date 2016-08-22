@@ -163,7 +163,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     uint32_t max_size = kMaxWaitHandleCount * sizeof(uint32_t);
     uint32_t bytes_size = static_cast<uint32_t>(sizeof(uint32_t) * count);
 
-    uint8_t* copy;
+    void* copy;
     status_t result;
 
     result = magenta_copy_user_dynamic(_handle_values, &copy, bytes_size, max_size);
@@ -559,18 +559,21 @@ mx_status_t sys_message_write(mx_handle_t handle_value, utils::user_ptr<const vo
     utils::Array<uint8_t> bytes;
 
     if (num_bytes) {
-        uint8_t* copy;
+        void* copy;
         result = magenta_copy_user_dynamic(_bytes.get(), &copy, num_bytes, kMaxMessageSize);
         if (result != NO_ERROR)
             return result;
-        bytes.reset(copy, num_bytes);
+        bytes.reset(reinterpret_cast<uint8_t*>(copy), num_bytes);
     }
 
     utils::unique_ptr<mx_handle_t[], utils::free_delete> handles;
     if (num_handles) {
         void* c_handles;
-        status_t status = copy_from_user_dynamic(
-            &c_handles, _handles, num_handles * sizeof(_handles.get()[0]), kMaxMessageHandles);
+        status_t status = magenta_copy_user_dynamic(
+            _handles.reinterpret<const void>().get(),
+            &c_handles,
+            num_handles * sizeof(_handles.get()[0]),
+            kMaxMessageHandles);
         // |status| can be ERR_NO_MEMORY or ERR_INVALID_ARGS.
         if (status != NO_ERROR)
             return status;
@@ -644,10 +647,9 @@ mx_status_t sys_message_write(mx_handle_t handle_value, utils::user_ptr<const vo
     return result;
 }
 
-// Note: out_handle is a user_ptr<> but user_ptr<> doesn't currently support arrays.
-// XXX: Can this param just be a user_ptr<mx_handle_t> instead? syscalls.inc would imply that to be the case.
-mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
-    LTRACEF("entry out_handle[] %p\n", out_handle);
+mx_status_t sys_message_pipe_create(utils::user_ptr<mx_handle_t> out_handle /* array of size 2 */,
+                                    uint32_t flags) {
+    LTRACEF("entry out_handle[] %p\n", out_handle.get());
 
     if (!out_handle)
         return ERR_INVALID_ARGS;
@@ -672,7 +674,7 @@ mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (copy_to_user_unsafe(out_handle, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+    if (copy_to_user(out_handle, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(utils::move(h0));
@@ -682,19 +684,20 @@ mx_status_t sys_message_pipe_create(mx_handle_t out_handle[2], uint32_t flags) {
     return NO_ERROR;
 }
 
-mx_handle_t sys_thread_create(int (*entry)(void*), void* arg, const char* name, uint32_t name_len) {
+mx_handle_t sys_thread_create(int (*entry)(void*), utils::user_ptr<void> arg,
+                              utils::user_ptr<const char> name, uint32_t name_len) {
     LTRACEF("entry %p\n", entry);
 
     char buf[MX_MAX_NAME_LEN];
     utils::StringPiece sp;
-    status_t result = magenta_copy_user_string(name, name_len, buf, sizeof(buf), &sp);
+    status_t result = magenta_copy_user_string(name.get(), name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     utils::RefPtr<UserThread> user_thread;
-    result = up->CreateUserThread(sp, entry, arg, &user_thread);
+    result = up->CreateUserThread(sp, entry, arg.get(), &user_thread);
     if (result != NO_ERROR)
         return result;
 
@@ -724,8 +727,9 @@ extern "C" {
 uint64_t get_tsc_ticks_per_ms(void);
 };
 
-mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr_t* value_ptr) {
-    LTRACEF("handle %u operation %u value_ptr %p", handle_value, op, value_ptr);
+mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
+                                  utils::user_ptr<uintptr_t> value_ptr) {
+    LTRACEF("handle %u operation %u value_ptr %p", handle_value, op, value_ptr.get());
 
     // TODO(cpu) what to do with |handle_value|?
 
@@ -734,7 +738,7 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
     switch (op) {
 #ifdef ARCH_X86_64
     case ARCH_SET_FS:
-        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (!x86_is_vaddr_canonical(value))
             return ERR_INVALID_ARGS;
@@ -742,11 +746,11 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
         break;
     case ARCH_GET_FS:
         value = read_msr(X86_MSR_IA32_FS_BASE);
-        if (copy_to_user_uptr_unsafe(value_ptr, value) != NO_ERROR)
+        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
     case ARCH_SET_GS:
-        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (!x86_is_vaddr_canonical(value))
             return ERR_INVALID_ARGS;
@@ -754,23 +758,23 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
         break;
     case ARCH_GET_GS:
         value = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
-        if (copy_to_user_uptr_unsafe(value_ptr, value) != NO_ERROR)
+        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
     case ARCH_GET_TSC_TICKS_PER_MS:
         value = get_tsc_ticks_per_ms();
-        if (copy_to_user_uptr_unsafe(value_ptr, value) != NO_ERROR)
+        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
 #elif ARCH_ARM64
     case ARCH_SET_TPIDRRO_EL0:
-        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         ARM64_WRITE_SYSREG(tpidrro_el0, value);
         break;
 #elif ARCH_ARM
     case ARCH_SET_CP15_READONLY:
-        if (copy_from_user_uptr_unsafe(&value, value_ptr) != NO_ERROR)
+        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
             return ERR_INVALID_ARGS;
         __asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (value));
         ISB;
@@ -783,12 +787,12 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op, uintptr
     return NO_ERROR;
 }
 
-mx_handle_t sys_process_create(const char* name, uint32_t name_len) {
-    LTRACEF("name %p, len %u\n", name, name_len);
+mx_handle_t sys_process_create(utils::user_ptr<const char> name, uint32_t name_len) {
+    LTRACEF("name %p, len %u\n", name.get(), name_len);
 
     char buf[MX_MAX_NAME_LEN];
     utils::StringPiece sp;
-    status_t result = magenta_copy_user_string(name, name_len, buf, sizeof(buf), &sp);
+    status_t result = magenta_copy_user_string(name.get(), name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;
     LTRACEF("name %s\n", buf);
