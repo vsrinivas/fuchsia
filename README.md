@@ -18,4 +18,4 @@ be written in any language supported by the shell, and a library is included
 for more rapid development using [Flutter](http://flutter.io/) and Dart.
 
 **Setup, build and run** instructions are in
-[HACKING.md](https://github.com/domokit/modular/blob/master/HACKING.md).
+[HACKING.md](https://fuchsia.googlesource.com/modular/+/master/HACKING.md).
