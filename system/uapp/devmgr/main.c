@@ -109,12 +109,17 @@ int main(int argc, char** argv) {
     while (*e) {
         printf("cmdline: %s\n", *e++);
     }
-    // Until crashlogging exists, ensure we see load info
-    // from the linker in the log
-    putenv(strdup("LD_DEBUG=1"));
 
     devmgr_init(false);
     devmgr_vfs_init();
+
+#if !defined(__x86_64__)
+    // Until crashlogging exists, ensure we see load info
+    // from the linker in the log
+    putenv(strdup("LD_DEBUG=1"));
+#else
+    devmgr_launch("crashlogger", "/boot/bin/crashlogger", NULL, NULL);
+#endif
 
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();
