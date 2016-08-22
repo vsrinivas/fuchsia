@@ -42,16 +42,16 @@ extern vnode_ops_t minfs_ops;
 
 // instantiate a vnode from an inode
 // the inode must exist in the file system
-mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino);
+mx_status_t minfs_vnode_get(minfs_t* fs, vnode_t** out, uint32_t ino);
 
 // instantiate a vnode with a new inode
-mx_status_t minfs_new_vnode(minfs_t* fs, vnode_t** out, uint32_t type);
-
-// delete the inode backing a vnode
-mx_status_t minfs_del_vnode(vnode_t* vn);
+mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type);
 
 // allocate a new data block and bcache_get_zero() it
 block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** bdata);
+
+// free ino in inode bitmap
+mx_status_t minfs_ino_free(minfs_t* fs, uint32_t ino);
 
 // write the inode data of this vnode to disk
 void minfs_sync_vnode(vnode_t* vn);

@@ -132,10 +132,7 @@ void vn_release(vnode_t* vn) {
     }
     vn->refcount--;
     if (vn->refcount == 0) {
-#if 0
-        //TODO: put on idle list
         trace(VFS, "vfs_release: vn=%p\n", vn);
         vn->ops->release(vn);
-#endif
     }
 }

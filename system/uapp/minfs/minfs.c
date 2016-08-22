@@ -58,6 +58,29 @@ void minfs_sync_vnode(vnode_t* vn) {
     bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
 }
 
+mx_status_t minfs_ino_free(minfs_t* fs, uint32_t ino) {
+    // locate data and block offset of bitmap
+    void *bmdata;
+    uint32_t bmbno;
+    if ((bmdata = minfs_bitmap_block(&fs->inode_map, &bmbno, ino)) == NULL) {
+        panic("inode not in bitmap");
+    }
+
+    // obtain the block of the inode bitmap we need
+    block_t* block_ibm;
+    void* bdata_ibm;
+    if ((block_ibm = bcache_get(fs->bc, fs->info.ibm_block + bmbno, &bdata_ibm)) == NULL) {
+        return ERR_IO;
+    }
+
+    // update and commit block to disk
+    bitmap_clr(&fs->inode_map, ino);
+    memcpy(bdata_ibm, bmdata, MINFS_BLOCK_SIZE);
+    bcache_put(fs->bc, block_ibm, BLOCK_DIRTY);
+
+    return NO_ERROR;
+}
+
 mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out) {
     uint32_t ino = bitmap_alloc(&fs->inode_map, 0);
     if (ino == BITMAP_FAIL) {
@@ -105,7 +128,7 @@ mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out
     return NO_ERROR;
 }
 
-mx_status_t minfs_new_vnode(minfs_t* fs, vnode_t** out, uint32_t type) {
+mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type) {
     vnode_t* vn;
     if ((type != MINFS_TYPE_FILE) && (type != MINFS_TYPE_DIR)) {
         return ERR_INVALID_ARGS;
@@ -131,12 +154,7 @@ mx_status_t minfs_new_vnode(minfs_t* fs, vnode_t** out, uint32_t type) {
     return 0;
 }
 
-mx_status_t minfs_del_vnode(vnode_t* vn) {
-    panic("minfs_del_vnode() not implemented\n");
-    return ERR_NOT_SUPPORTED;
-}
-
-mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino) {
+mx_status_t minfs_vnode_get(minfs_t* fs, vnode_t** out, uint32_t ino) {
     if ((ino < 1) || (ino >= fs->info.inode_count)) {
         return ERR_OUT_OF_RANGE;
     }
@@ -276,7 +294,7 @@ mx_status_t minfs_mount(vnode_t** out, bcache_t* bc) {
     }
 
     vnode_t* vn;
-    if (minfs_get_vnode(fs, &vn, 1)) {
+    if (minfs_vnode_get(fs, &vn, 1)) {
         error("minfs: cannot find inode 1\n");
         return -1;
     }
@@ -369,8 +387,8 @@ int minfs_mkfs(bcache_t* bc) {
     ino[1].magic = MINFS_MAGIC_DIR;
     ino[1].size = MINFS_BLOCK_SIZE;
     ino[1].block_count = 1;
-    ino[1].link_count = 2;
-    ino[1].dirent_count = 1;
+    ino[1].link_count = 1;
+    ino[1].dirent_count = 2;
     ino[1].dnum[0] = info.dat_block;
     bcache_put(bc, blk, BLOCK_DIRTY);
 

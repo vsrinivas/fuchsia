@@ -246,6 +246,8 @@ int test_maxfile(void) {
             break;
         }
     }
+    close(fd);
+    unlink("::bigfile");
     fprintf(stderr, "wrote %d bytes\n", (int) sz);
     return (r < 0) ? -1 : 0;
 }
@@ -261,6 +263,11 @@ int test_basic(void) {
     TRY(write(fd1, "Hello, World!\n", 14));
     close(fd1);
     close(fd2);
+    fd1 = TRY(open("::file.txt", O_CREAT|O_RDWR, 0644));
+    close(fd1);
+    TRY(unlink("::file.txt"));
+    TRY(mkdir("::emptydir", 0755));
+    TRY(unlink("::emptydir"));
     return 0;
 }
 

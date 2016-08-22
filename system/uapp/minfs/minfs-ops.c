@@ -56,6 +56,100 @@ block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** b
     return block;
 }
 
+typedef struct {
+    block_t* blk;
+    uint32_t bno;
+    void* data;
+} gbb_ctxt_t;
+
+// helper for updating many bitmap entries
+// if the next entry is in the same block, defer
+// write until a different block is needed
+static mx_status_t get_bitmap_block(minfs_t* fs, gbb_ctxt_t* gbb, uint32_t n) {
+    uint32_t bno = n / MINFS_BLOCK_BITS;
+    if (gbb->blk) {
+        if (gbb->bno == bno) {
+            // same block as before, nothing to do
+            return NO_ERROR;
+        }
+        // write previous block to disk
+        memcpy(gbb->data, bitmap_data(&fs->block_map) + gbb->bno * MINFS_BLOCK_SIZE, MINFS_BLOCK_SIZE);
+        bcache_put(fs->bc, gbb->blk, BLOCK_DIRTY);
+    }
+    gbb->bno = bno;
+    if ((gbb->blk = bcache_get_zero(fs->bc, fs->info.abm_block + bno, &gbb->data)) == NULL) {
+        return ERR_IO;
+    } else {
+        return NO_ERROR;
+    }
+}
+
+static void put_bitmap_block(minfs_t* fs, gbb_ctxt_t* gbb) {
+    if (gbb->blk) {
+        memcpy(gbb->data, bitmap_data(&fs->block_map) + gbb->bno * MINFS_BLOCK_SIZE, MINFS_BLOCK_SIZE);
+        bcache_put(fs->bc, gbb->blk, BLOCK_DIRTY);
+    }
+}
+
+static mx_status_t minfs_inode_destroy(vnode_t* vn) {
+    mx_status_t status;
+    minfs_inode_t inode;
+    gbb_ctxt_t gbb;
+    memset(&gbb, 0, sizeof(gbb));
+
+    trace(MINFS, "inode_destroy() ino=%u\n", vn->ino);
+
+    // save local copy, destroy inode on disk
+    memcpy(&inode, &vn->inode, sizeof(inode));
+    memset(&vn->inode, 0, sizeof(inode));
+    minfs_sync_vnode(vn);
+    minfs_ino_free(vn->fs, vn->ino);
+
+    // release all direct blocks
+    for (unsigned n = 0; n < MINFS_DIRECT; n++) {
+        if (inode.dnum[n] == 0) {
+            continue;
+        }
+        if ((status = get_bitmap_block(vn->fs, &gbb, inode.dnum[n])) < 0) {
+            return status;
+        }
+        bitmap_clr(&vn->fs->block_map, inode.dnum[n]);
+    }
+
+    // release all indirect blocks
+    for (unsigned n = 0; n < MINFS_INDIRECT; n++) {
+        if (inode.inum[n] == 0) {
+            continue;
+        }
+        uint32_t* entry;
+        block_t* blk;
+        if ((blk = bcache_get(vn->fs->bc, inode.inum[n], (void**) &entry)) == NULL) {
+            put_bitmap_block(vn->fs, &gbb);
+            return ERR_IO;
+        }
+        // release the blocks pointed at by the entries in the indirect block
+        for (unsigned m = 0; m < (MINFS_BLOCK_SIZE / sizeof(uint32_t)); m++) {
+            if (entry[m] == 0) {
+                continue;
+            }
+            if ((status = get_bitmap_block(vn->fs, &gbb, entry[m])) < 0) {
+                put_bitmap_block(vn->fs, &gbb);
+                return status;
+            }
+            bitmap_clr(&vn->fs->block_map, entry[m]);
+        }
+        bcache_put(vn->fs->bc, blk, 0);
+        // release the direct block itself
+        if ((status = get_bitmap_block(vn->fs, &gbb, inode.inum[n])) < 0) {
+            return status;
+        }
+        bitmap_clr(&vn->fs->block_map, inode.inum[n]);
+    }
+
+    put_bitmap_block(vn->fs, &gbb);
+    return NO_ERROR;
+}
+
 // Obtain the nth block of a vnode.
 // If alloc is true, allocate that block if it doesn't already exist.
 static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) {
@@ -184,27 +278,26 @@ static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t*
         memcmp(args->name, de->name, args->len)) {
         return DIR_CB_NEXT;
     }
+
     vnode_t* vn;
     mx_status_t status;
-    if ((status = minfs_get_vnode(vndir->fs, &vn, de->ino)) < 0) {
+    if ((status = minfs_vnode_get(vndir->fs, &vn, de->ino)) < 0) {
         return status;
     }
-    // inode w/ link_count zero will be destroyed upon vn_release()
+
+    // directories must be empty (dirent_count == 2)
     if (vn->inode.magic == MINFS_MAGIC_DIR) {
         if (vn->inode.dirent_count != 2) {
             // if we have more than "." and "..", not empty, cannot unlink
+            vn_release(vn);
             return ERR_BAD_STATE;
         }
-        if (vn->inode.link_count != 2) {
-            error("minfs: directory ino#%u linkcount %u\n",
-                  vn->ino, vn->inode.link_count);
-            return ERR_BAD_STATE;
-        }
-        //TODO: release all blocks
-        vn->inode.link_count = 0;
-    } else {
-        vn->inode.link_count--;
     }
+    vn->inode.link_count--;
+
+    //TODO: it would be safer to do this *after* we update the directory block
+    vn_release(vn);
+
     // erase dirent (convert to empty entry), decrement dirent count
     de->ino = 0;
     vndir->inode.dirent_count--;
@@ -274,6 +367,7 @@ static mx_status_t vn_dir_for_each(vnode_t* vn, dir_args_t* args,
                 vn_put_block_dirty(vn, blk);
                 return NO_ERROR;
             case DIR_CB_SAVE_SYNC:
+                vn->inode.seq_num++;
                 vn_put_block_dirty(vn, blk);
                 minfs_sync_vnode(vn);
                 return NO_ERROR;
@@ -291,7 +385,13 @@ static mx_status_t vn_dir_for_each(vnode_t* vn, dir_args_t* args,
 }
 
 static void fs_release(vnode_t* vn) {
-    trace(MINFS, "minfs_release() vn=%p(#%u)\n", vn, vn->ino);
+    trace(MINFS, "minfs_release() vn=%p(#%u)%s\n", vn, vn->ino,
+          vn->inode.link_count ? "" : " link-count is zero");
+    if (vn->inode.link_count == 0) {
+        minfs_inode_destroy(vn);
+        list_delete(&vn->hashnode);
+        free(vn);
+    }
 }
 
 static mx_status_t fs_open(vnode_t** _vn, uint32_t flags) {
@@ -399,7 +499,7 @@ static mx_status_t fs_lookup(vnode_t* vn, vnode_t** out, const char* name, size_
     if ((status = vn_dir_for_each(vn, &args, cb_dir_find)) < 0) {
         return status;
     }
-    if ((status = minfs_get_vnode(vn->fs, &vn, args.ino)) < 0) {
+    if ((status = minfs_vnode_get(vn->fs, &vn, args.ino)) < 0) {
         return status;
     }
     *out = vn;
@@ -518,7 +618,7 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
 
     // mint a new inode and vnode for it
     vnode_t* vn;
-    if ((status = minfs_new_vnode(vndir->fs, &vn, type)) < 0) {
+    if ((status = minfs_vnode_new(vndir->fs, &vn, type)) < 0) {
         return status;
     }
 
@@ -531,10 +631,6 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
         error("minfs_create() dir append failed %d\n", status);
         return status;
     }
-    // bump the directory inode's seqno and dirent count
-    vndir->inode.seq_num++;
-    vndir->inode.dirent_count++;
-    minfs_sync_vnode(vndir);
 
     if (type == MINFS_TYPE_DIR) {
         void* bdata;
@@ -562,6 +658,12 @@ static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len) {
     trace(MINFS, "minfs_unlink() vn=%p(#%u) name='%.*s'\n", vn, vn->ino, (int)len, name);
     if (vn->inode.magic != MINFS_MAGIC_DIR) {
         return ERR_NOT_SUPPORTED;
+    }
+    if ((len == 1) && (name[0] == '.')) {
+        return ERR_BAD_STATE;
+    }
+    if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
+        return ERR_BAD_STATE;
     }
     dir_args_t args = {
         .name = name,

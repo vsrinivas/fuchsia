@@ -9,6 +9,8 @@
 
 #include "minfs-private.h"
 
+#define VERBOSE 1
+
 typedef struct check {
     bitmap_t checked_inodes;
     bitmap_t checked_blocks;
@@ -72,6 +74,7 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
     unsigned eno = 0;
     bool dot = false;
     bool dotdot = false;
+    uint32_t dirent_count = 0;
     for (unsigned n = 0; n < inode->block_count; n++) {
         uint32_t bno;
         mx_status_t status;
@@ -84,7 +87,6 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
             error("check: ino#%u: failed to read block %u (bno=%u)\n", ino, n, bno);
             return status;
         }
-        //TODO: check allocation bitmap for dir page
         uint32_t size = MINFS_BLOCK_SIZE;
         minfs_dirent_t* de = (void*) data;
         while (size > MINFS_DIRENT_SIZE) {
@@ -130,6 +132,7 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
                         return status;
                     }
                 }
+                dirent_count++;
             }
             eno++;
             de = ((void*) de) + rlen;
@@ -138,6 +141,10 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
         if (size > 0) {
             error("check: ino#%u: blk=%u bno=%u dir block not full\n", ino, n, bno);
         }
+    }
+    if (dirent_count != inode->dirent_count) {
+        error("check: ino#%u: dirent_count of %u != %u (actual)\n",
+              ino, inode->dirent_count, dirent_count);
     }
     if (dot == false) {
         error("check: ino#%u: directory missing '.'\n", ino);
@@ -167,11 +174,14 @@ const char* check_data_block(check_t* chk, minfs_t* fs, uint32_t bno) {
 
 mx_status_t check_file(check_t* chk, minfs_t* fs,
                        minfs_inode_t* inode, uint32_t ino) {
-    uint32_t blocks = 0;
+#if VERBOSE
     for (unsigned n = 0; n < MINFS_DIRECT; n++) {
         info("%d, ", inode->dnum[n]);
     }
     info("...\n");
+#endif
+
+    uint32_t blocks = 0;
 
     // count and sanity-check indirect blocks
     for (unsigned n = 0; n < MINFS_INDIRECT; n++) {
@@ -247,9 +257,11 @@ mx_status_t check_inode(check_t* chk, minfs_t* fs, uint32_t ino, uint32_t parent
         if ((status = check_file(chk, fs, &inode, ino)) < 0) {
             return status;
         }
+#if VERBOSE
         if ((status = check_directory(chk, fs, &inode, ino, parent, CD_DUMP)) < 0) {
             return status;
         }
+#endif
         if ((status = check_directory(chk, fs, &inode, ino, parent, CD_RECURSE)) < 0) {
             return status;
         }
