@@ -24,6 +24,9 @@ static const struct {
     { .dev_id = BWCC_DEV_SST,           .dev_name = "Smart Sound DSP" },
 };
 
+extern uint32_t bootloader_fb_base;
+extern uint32_t bootloader_fb_format;
+
 void pixel2_init_quirks(uint level)
 {
     /* If we do not have a CrOS embedded controller, then this cannot be a pixel
@@ -56,6 +59,12 @@ void pixel2_init_quirks(uint level)
         }
     } else {
         pcie_rescan_bus();
+    }
+
+    // The constants used in the custom pixel2 firmware to pass the pixel format
+    // is 1 off from magenta/pixelformat.h. Hack to fix this here.
+    if (bootloader_fb_base) {
+        bootloader_fb_format += 1;
     }
 }
 
