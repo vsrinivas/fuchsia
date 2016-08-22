@@ -76,7 +76,7 @@ USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
 GLOBAL_INCLUDES := global/include
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_COMPILEFLAGS := -g -finline -include $(GLOBAL_CONFIG_HEADER)
-GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
+GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type -Wno-nonnull-compare
 ifeq ($(CLANG),1)
 GLOBAL_COMPILEFLAGS += -Wno-error
 endif
