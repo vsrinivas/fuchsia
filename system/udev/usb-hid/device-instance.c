@@ -9,6 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Until we do full HID parsing, we put mouse and keyboard devices into boot
+// protocol mode. In particular, a mouse will always send 3 byte reports (see
+// ddk/protocol/input.h for the format). This macro sets ioctl return values for
+// boot mouse devices to reflect the boot protocol, rather than what the device
+// itself reports.
+// TODO: update this to include keyboards if we find a keyboard in the wild that
+// needs a hack as well.
+#define BOOT_MOUSE_HACK 1
+
 #define to_hid_instance(d) containerof(d, usb_hid_dev_instance_t, dev)
 #define bits_to_bytes(n) (((n) + 7) / 8)
 
@@ -32,6 +41,11 @@ void usb_hid_cleanup_instance(usb_hid_dev_instance_t* dev) {
 
 static input_report_size_t usb_hid_get_report_size_by_id(usb_hid_dev_t* hid,
         input_report_id_t id, input_report_type_t type) {
+#if BOOT_MOUSE_HACK
+    // Ignore the HID report descriptor from the device, since we're putting the
+    // device into boot protocol mode.
+    if (hid->proto == INPUT_PROTO_MOUSE) return 3;
+#endif
     for (size_t i = 0; i < hid->num_reports; i++) {
         if (hid->sizes[i].id < 0) break;
         if (hid->sizes[i].id == id) {
@@ -76,14 +90,34 @@ static mx_status_t usb_hid_get_num_reports(usb_hid_dev_t* hid, void* out_buf, si
 
     size_t* reply = out_buf;
     *reply = hid->num_reports;
+#if BOOT_MOUSE_HACK
+    if (hid->proto == INPUT_PROTO_MOUSE) *reply = 1;
+#endif
     return sizeof(*reply);
 }
 
 static mx_status_t usb_hid_get_report_ids(usb_hid_dev_t* hid, void* out_buf, size_t out_len) {
+#if BOOT_MOUSE_HACK
+    if (hid->proto == INPUT_PROTO_MOUSE) {
+        if (out_len < sizeof(input_report_id_t)) {
+            return ERR_INVALID_ARGS;
+        }
+    } else {
+        if (out_len < hid->num_reports * sizeof(input_report_id_t))
+        return ERR_INVALID_ARGS;
+    }
+#else
     if (out_len < hid->num_reports * sizeof(input_report_id_t))
         return ERR_INVALID_ARGS;
+#endif
 
     input_report_id_t* reply = out_buf;
+#if BOOT_MOUSE_HACK
+    if (hid->proto == INPUT_PROTO_MOUSE) {
+        *reply = 0;
+        return sizeof(input_report_id_t);
+    }
+#endif
     for (size_t i = 0; i < hid->num_reports; i++) {
         assert(hid->sizes[i].id >= 0);
         *reply++ = (input_report_id_t)hid->sizes[i].id;
@@ -117,6 +151,9 @@ static mx_status_t usb_hid_get_max_reportsize(usb_hid_dev_t* hid, void* out_buf,
     }
 
     *reply = bits_to_bytes(*reply);
+#if BOOT_MOUSE_HACK
+    if (hid->proto == INPUT_PROTO_MOUSE) *reply = 3;
+#endif
     return sizeof(*reply);
 }
 
