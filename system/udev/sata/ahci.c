@@ -442,7 +442,9 @@ static mx_protocol_device_t ahci_device_proto = {
 
 extern mx_protocol_device_t ahci_port_device_proto;
 
-static mx_status_t ahci_initialize(ahci_device_t* dev) {
+static int ahci_init_thread(void* arg) {
+    ahci_device_t* dev = (ahci_device_t*)arg;
+
     // reset
     ahci_hba_reset(dev);
 
@@ -599,7 +601,12 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev) {
     device_add(&device->device, dev);
 
     // initialize controller and detect devices
-    ahci_initialize(device);
+    mxr_thread_t* t;
+    status = mxr_thread_create(ahci_init_thread, device, "ahci-init", &t);
+    if (status < 0) {
+        xprintf("ahci: error %d in init thread create\n", status);
+        goto fail;
+    }
 
     return NO_ERROR;
 fail:
