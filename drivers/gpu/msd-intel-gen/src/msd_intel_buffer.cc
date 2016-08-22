@@ -11,30 +11,31 @@ MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_b
     magic_ = kMagic;
 }
 
-MsdIntelBuffer* MsdIntelBuffer::Create(msd_platform_buffer* platform_buffer_token)
+std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(msd_platform_buffer* platform_buffer_token)
 {
     auto platform_buf = magma::PlatformBuffer::Create(platform_buffer_token);
     if (!platform_buf)
         return DRETP(nullptr,
                      "MsdIntelBuffer::Create: Could not create platform buffer from token");
 
-    return new MsdIntelBuffer(std::move(platform_buf));
+    return std::unique_ptr<MsdIntelBuffer>(new MsdIntelBuffer(std::move(platform_buf)));
 }
 
-MsdIntelBuffer* MsdIntelBuffer::Create(uint64_t size)
+std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(uint64_t size)
 {
     auto platform_buf = magma::PlatformBuffer::Create(size);
     if (!platform_buf)
         return DRETP(nullptr, "MsdIntelBuffer::Create: Could not create platform buffer from size");
 
-    return new MsdIntelBuffer(std::move(platform_buf));
+    return std::unique_ptr<MsdIntelBuffer>(new MsdIntelBuffer(std::move(platform_buf)));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
 {
-    return MsdIntelBuffer::Create(platform_buf);
+    auto buffer = MsdIntelBuffer::Create(platform_buf);
+    return buffer.release();
 }
 
 void msd_buffer_destroy(msd_buffer* buf) { delete MsdIntelBuffer::cast(buf); }

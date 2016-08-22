@@ -10,14 +10,14 @@ TEST(MsdIntelBuffer, CreateAndDestroy)
     std::unique_ptr<MsdIntelBuffer> buffer;
     uint64_t size;
 
-    buffer.reset(MsdIntelBuffer::Create(size = 0));
+    buffer = MsdIntelBuffer::Create(size = 0);
     EXPECT_EQ(buffer, nullptr);
 
-    buffer.reset(MsdIntelBuffer::Create(size = 100));
+    buffer = MsdIntelBuffer::Create(size = 100);
     EXPECT_NE(buffer, nullptr);
     EXPECT_GE(buffer->platform_buffer()->size(), size);
 
-    buffer.reset(MsdIntelBuffer::Create(size = 10000));
+    buffer = MsdIntelBuffer::Create(size = 10000);
     EXPECT_NE(buffer, nullptr);
     EXPECT_GE(buffer->platform_buffer()->size(), size);
 }
