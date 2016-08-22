@@ -56,8 +56,8 @@ void dump_memory(uint64_t koid, uintptr_t start, uint32_t len) {
     auto res = mx_debug_read_memory(koid, start, len, buf);
     if (res < 0) {
         printf("failed reading %p memory; error : %ld\n", (void*)start, res);
-    } else {
-        hexdump(reinterpret_cast<void*>(start), (uint32_t)res);
+    } else if (res != 0) {
+        hexdump(buf, (uint32_t)res);
     }
     free(buf);
 }
