@@ -4,13 +4,53 @@
 
 #include "ringbuffer.h"
 
-std::unique_ptr<Ringbuffer> Ringbuffer::Create()
+Ringbuffer::Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer) : buffer_(std::move(buffer))
 {
-    std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kRingbufferSize));
-    if (!buffer)
-        return DRETP(nullptr, "failed to create MsdIntelBuffer");
-
-    return std::unique_ptr<Ringbuffer>(new Ringbuffer(std::move(buffer)));
+    size_ = buffer_->platform_buffer()->size();
+    DASSERT(magma::is_page_aligned(size_));
 }
 
-Ringbuffer::Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer) : buffer_(std::move(buffer)) {}
+bool Ringbuffer::HasSpace(uint32_t bytes)
+{
+    int32_t space = tail_ - head_;
+    if (space <= 0)
+        space += size_;
+    return static_cast<uint32_t>(space) >= bytes;
+}
+
+bool Ringbuffer::Map(AddressSpace* address_space)
+{
+    DASSERT(!vaddr_);
+
+    if (!buffer()->MapGpu(address_space, PAGE_SIZE))
+        return DRETF(false, "failed to pin");
+
+    void* addr;
+    if (!buffer()->platform_buffer()->MapCpu(&addr)) {
+        if (!buffer()->UnmapGpu(address_space))
+            DLOG("failed to unpin");
+        return DRETF(false, "failed to map");
+    }
+
+    vaddr_ = reinterpret_cast<uint32_t*>(addr);
+    return true;
+}
+
+bool Ringbuffer::Unmap(AddressSpace* address_space)
+{
+    DASSERT(vaddr_);
+
+    bool ret = true;
+
+    if (!buffer()->UnmapGpu(address_space)) {
+        DLOG("failed to unpin");
+        ret = false;
+    }
+
+    if (!buffer()->platform_buffer()->UnmapCpu()) {
+        DLOG("failed to unmap");
+        ret = false;
+    }
+
+    return DRETF(ret, "error");
+}

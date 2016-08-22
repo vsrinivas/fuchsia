@@ -18,9 +18,7 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context)
     if (!context_buffer)
         return DRETF(false, "couldn't create context buffer");
 
-    std::unique_ptr<Ringbuffer> ringbuffer(Ringbuffer::Create());
-    if (!ringbuffer)
-        return DRETF(false, "couldn't create ringbuffer");
+    std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(32 * PAGE_SIZE)));
 
     if (!InitContextBuffer(context_buffer.get(), ringbuffer->size()))
         return DRETF(false, "InitContextBuffer failed");

@@ -35,7 +35,7 @@ bool MsdIntelContext::MapGpu(AddressSpace* address_space, EngineCommandStreamerI
     if (!state.context_buffer->MapGpu(address_space, PAGE_SIZE))
         return DRETF(false, "context pin failed");
 
-    if (!state.ringbuffer->buffer()->MapGpu(address_space, PAGE_SIZE)) {
+    if (!state.ringbuffer->Map(address_space)) {
         state.context_buffer->UnmapGpu(address_space);
         return DRETF(false, "ringbuffer pin failed");
     }
@@ -64,7 +64,7 @@ bool MsdIntelContext::UnmapGpu(AddressSpace* address_space, EngineCommandStreame
         ret = false;
     }
 
-    if (!state.ringbuffer->buffer()->UnmapGpu(address_space)) {
+    if (!state.ringbuffer->Unmap(address_space)) {
         DLOG("ringbuffer unpin failed");
         ret = false;
     }

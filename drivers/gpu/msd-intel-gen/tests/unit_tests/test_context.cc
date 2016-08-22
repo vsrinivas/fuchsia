@@ -20,7 +20,7 @@ public:
         ASSERT_NE(buffer, nullptr);
         auto expected_buffer = buffer.get();
 
-        std::unique_ptr<Ringbuffer> ringbuffer(Ringbuffer::Create());
+        std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE)));
         ASSERT_NE(ringbuffer, nullptr);
         auto expected_ringbuffer = ringbuffer.get();
 
@@ -35,7 +35,8 @@ public:
         std::unique_ptr<MsdIntelContext> context(new MsdIntelContext());
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
-        std::unique_ptr<Ringbuffer> ringbuffer(Ringbuffer::Create());
+        std::unique_ptr<Ringbuffer> ringbuffer(
+            new Ringbuffer(std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE))));
 
         std::unique_ptr<AddressSpace> address_space(
             new MockAddressSpace(0x10000, buffer->platform_buffer()->size() + ringbuffer->size()));
