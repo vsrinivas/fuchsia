@@ -50,6 +50,10 @@ import 'recipe.dart';
 // failure. Parsing functions that start with |parse| throw a
 // |ParseError| on failure.
 
+// RegExp for parsing the `arch` and `modularRevision` fields.
+final RegExp _archRegExp = new RegExp(r'^[a-zA-Z0-9]+-[a-zA-Z0-9]+$');
+final RegExp _modularRevisionRegExp = new RegExp(r'[a-zA-Z0-9]{40}');
+
 /// Tries to parse the given text as a URI. If it succeeds, returns the URI as a
 /// Uri instance. If it fails as indicated by a FormatException, returns null.
 Uri tryParseUri(final String text) {
@@ -492,6 +496,41 @@ void parseSchemas(final ParserState parserState, final YamlNode schemaSection) {
   }
 }
 
+String parseArch(final YamlNode node) {
+  if (node == null) {
+    return null;
+  }
+
+  if (node.value is! String) {
+    throw new ParseError.atNode(node, 'Body of arch: field must be a string');
+  }
+
+  if (!_archRegExp.hasMatch(node.value)) {
+    throw new ParseError.atNode(
+        node, 'Body of arch: not a valid arch string');
+  }
+
+  return node.value;
+}
+
+String parseModularRevision(final YamlNode node) {
+  if (node == null) {
+    return null;
+  }
+
+  if (node.value is! String) {
+    throw new ParseError.atNode(
+        node, 'Body of modularRevision: field must be a string');
+  }
+
+  if (!_modularRevisionRegExp.hasMatch(node.value)) {
+    throw new ParseError.atNode(
+        node, 'Body of modularRevision: invalid SHA1 hash');
+  }
+
+  return node.value;
+}
+
 Uses parseUses(final YamlNode node) {
   final ParserState localParserState = new ParserState();
 
@@ -621,6 +660,8 @@ Manifest _parseManifest(final YamlMap yaml,
     'test',
     'import',
     'schema',
+    'arch',
+    'modularRevision'
   ];
 
   for (final key in yaml.keys) {
@@ -634,6 +675,10 @@ Manifest _parseManifest(final YamlMap yaml,
 
   final Uri icon = parseUrl(yaml.nodes['icon']);
   final int themeColor = parseThemeColor(yaml.nodes['theme-color']);
+
+  final String arch = parseArch(yaml.nodes['arch']);
+  final String modularRevision =
+      parseModularRevision(yaml.nodes['modularRevision']);
 
   // We parse use: next, as it is needed to resolve identifiers in the rest of
   // the manifest. We also accumulate the use sections of transitive imports
@@ -680,7 +725,9 @@ Manifest _parseManifest(final YamlMap yaml,
       title, url, parserState.uses, verb, input, output, display, compose,
       icon: icon,
       themeColor: themeColor,
-      schemas: parserState.schemas.values.toList(growable: false));
+      schemas: parserState.schemas.values.toList(growable: false),
+      arch: arch,
+      modularRevision: modularRevision);
 }
 
 Manifest parseManifest(final String data) {

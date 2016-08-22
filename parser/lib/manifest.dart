@@ -26,12 +26,15 @@ class Manifest {
 
   final List<Schema> schemas;
 
+  final String arch;
+  final String modularRevision;
+
   /// The filename or URL this Manifest was loaded from.
   String src;
 
   Manifest(this.title, this.url, this.use, this.verb, this.input, this.output,
       this.display, this.compose,
-      {this.icon, this.themeColor, this.schemas});
+      {this.icon, this.themeColor, this.schemas, this.arch, this.modularRevision});
 
   /// Creates a dummy manifest from a Step that would match this Step. Used by
   /// tests and simulator.
@@ -83,7 +86,9 @@ class Manifest {
               values['compose'].map((i) => new PathExpr.fromJson(i))),
           icon: values['icon'] != null ? Uri.parse(values['icon']) : null,
           themeColor: values['themeColor'],
-          schemas: schemas);
+          schemas: schemas,
+          arch: values['arch'],
+          modularRevision: values['modularRevision']);
     });
   }
 
@@ -104,6 +109,8 @@ class Manifest {
       'compose': compose,
       'display': display,
       'schemas': schemas,
+      'arch': arch,
+      'modularRevision': modularRevision
     };
   }
 
@@ -115,6 +122,8 @@ class Manifest {
         icon == rhs.icon &&
         themeColor == rhs.themeColor &&
         verb == rhs.verb &&
+        arch == rhs.arch &&
+        modularRevision == rhs.modularRevision &&
         const ListEquality().equals(input, rhs.input) &&
         const ListEquality().equals(output, rhs.output) &&
         const ListEquality().equals(compose, rhs.compose) &&
@@ -128,6 +137,8 @@ class Manifest {
         icon.hashCode ^
         themeColor.hashCode ^
         verb.hashCode ^
+        arch.hashCode ^
+        modularRevision.hashCode ^
         (input == null ? 0 : const ListEquality().hash(input)) ^
         (output == null ? 0 : const ListEquality().hash(output)) ^
         (display == null ? 0 : const ListEquality().hash(display)) ^
@@ -145,6 +156,8 @@ class Manifest {
       "compose: $compose\n"
       "icon: $icon\n"
       "themeColor: $themeColor\n"
+      "arch: $arch\n"
+      "modularRevision: $modularRevision\n"
       "src: $src\n";
 
   /// Used in creating dummy manifests from a recipe Step.
