@@ -186,7 +186,7 @@ void UserThread::Exiting() {
     DEBUG_ASSERT(state_ == State::DYING);
 
     // signal any waiters
-    state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
+    state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_SIGNALED);
 
     {
         AutoLock lock(exception_lock_);

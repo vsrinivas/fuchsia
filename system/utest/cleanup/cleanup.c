@@ -65,7 +65,7 @@ bool cleanup_test(void) {
     r = mx_message_write(p1[0], &msg, sizeof(msg), &event, 1, 0);
     ASSERT_EQ(r, ERR_BAD_STATE, "cleanup-test: unexpected message_write return code");
 
-    r = mx_object_signal(event, MX_SIGNAL_SIGNALED, 0u);
+    r = mx_object_signal(event, 0u, MX_SIGNAL_SIGNALED);
     ASSERT_GE(r, 0, "cleanup-test: unable to signal event!");
     unittest_printf("cleanup-test: SUCCESS, event is alive\n\n");
 

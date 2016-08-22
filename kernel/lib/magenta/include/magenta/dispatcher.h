@@ -56,7 +56,7 @@ public:
 
     // Note that |set_mask| and |clear_mask| are *not* previously validated. Also note that they may
     // "overlap", and that |clear_mask| should be cleared and then |set_mask| set.
-    virtual status_t UserSignal(uint32_t set_mask, uint32_t clear_mask) {
+    virtual status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) {
         return ERR_NOT_SUPPORTED;
     }
 

@@ -266,9 +266,9 @@ static bool bind_events_test(void)
     // Poke at the events in some order, mesages with the events should arrive in order.
     int order[] = {2, 1, 0, 4, 3, 1, 2};
     for (int ix = 0; ix != countof(order); ++ix) {
-        status = mx_object_signal(events[order[ix]], MX_SIGNAL_SIGNALED, 0u);
+        status = mx_object_signal(events[order[ix]], 0u, MX_SIGNAL_SIGNALED);
         EXPECT_EQ(status, NO_ERROR, "could not signal");
-        mx_object_signal(events[order[ix]], 0u, MX_SIGNAL_SIGNALED);
+        mx_object_signal(events[order[ix]], MX_SIGNAL_SIGNALED, 0u);
     }
 
     // Queue a final packet to make io_reply_thread exit.

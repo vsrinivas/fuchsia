@@ -135,13 +135,13 @@ static inline mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_i
 #define DEV_STATE_ERROR MX_SIGNAL_SIGNAL2
 
 static inline void device_state_set(mx_device_t* dev, mx_signals_t stateflag) {
-    mx_object_signal(dev->event, stateflag, 0);
-}
-
-static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
     mx_object_signal(dev->event, 0, stateflag);
 }
 
+static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
+    mx_object_signal(dev->event, stateflag, 0);
+}
+
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
-    mx_object_signal(dev->event, setflag, clearflag);
+    mx_object_signal(dev->event, clearflag, setflag);
 }

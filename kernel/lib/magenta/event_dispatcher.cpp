@@ -34,10 +34,10 @@ EventDispatcher::EventDispatcher(uint32_t options)
 
 EventDispatcher::~EventDispatcher() {}
 
-status_t EventDispatcher::UserSignal(uint32_t set_mask, uint32_t clear_mask) {
+status_t EventDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
     if ((set_mask & ~MX_SIGNAL_SIGNAL_ALL) || (clear_mask & ~MX_SIGNAL_SIGNAL_ALL))
         return ERR_INVALID_ARGS;
 
-    state_tracker_.UpdateSatisfied(set_mask, clear_mask);
+    state_tracker_.UpdateSatisfied(clear_mask, set_mask);
     return NO_ERROR;
 }

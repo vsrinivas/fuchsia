@@ -113,15 +113,15 @@ mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, utils::RefPtr<VmAspace> aspac
 
 void DataPipe::UpdateSignals() {
     if (free_space_ == 0u) {
-        producer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
-        consumer_.state_tracker.UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
+        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
+        consumer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
     } else if (free_space_ == vmo_->size()) {
-        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
-        consumer_.state_tracker.UpdateState(0u, MX_SIGNAL_READABLE,
-                                            0u, producer_.alive ? 0u : MX_SIGNAL_READABLE);
+        producer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
+        consumer_.state_tracker.UpdateState(MX_SIGNAL_READABLE, 0u,
+                                            producer_.alive ? 0u : MX_SIGNAL_READABLE, 0u);
     } else {
-        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
-        consumer_.state_tracker.UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
+        producer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
+        consumer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
     }
 }
 
@@ -300,8 +300,8 @@ void DataPipe::OnProducerDestruction() {
 
     if (consumer_.alive) {
         bool is_empty = (free_space_ == vmo_->size());
-        consumer_.state_tracker.UpdateState(MX_SIGNAL_PEER_CLOSED, 0u,
-                                            0u, is_empty ? MX_SIGNAL_READABLE : 0u);
+        consumer_.state_tracker.UpdateState(0u, MX_SIGNAL_PEER_CLOSED,
+                                            is_empty ? MX_SIGNAL_READABLE : 0u, 0u);
 
         // We can drop the vmo since future reads are not going to succeed.
         if (is_empty)
@@ -321,7 +321,7 @@ void DataPipe::OnConsumerDestruction() {
     }
 
     if (producer_.alive) {
-        producer_.state_tracker.UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE,
-                                            0u, MX_SIGNAL_WRITABLE);
+        producer_.state_tracker.UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED,
+                                            MX_SIGNAL_WRITABLE, 0u);
     }
 }

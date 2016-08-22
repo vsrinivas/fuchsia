@@ -856,7 +856,7 @@ mx_handle_t sys_event_create(uint32_t options) {
     return hv;
 }
 
-mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t set_mask, uint32_t clear_mask) {
+mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
     LTRACEF("handle %u\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -868,7 +868,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t set_mask, uint3
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    return dispatcher->UserSignal(set_mask, clear_mask);
+    return dispatcher->UserSignal(clear_mask, set_mask);
 }
 
 mx_status_t sys_futex_wait(int* value_ptr, int current_value, mx_time_t timeout) {

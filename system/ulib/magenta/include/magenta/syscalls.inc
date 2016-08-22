@@ -85,8 +85,8 @@ MAGENTA_SYSCALL_DEF(4, 4, 44, mx_ssize_t, handle_get_info, mx_handle_t handle, u
                     mx_size_t info_size)
 
 // Generic object operations
-MAGENTA_SYSCALL_DEF(3, 3, 46, mx_status_t, object_signal, mx_handle_t handle, uint32_t set_mask,
-                    uint32_t clear_mask)
+MAGENTA_SYSCALL_DEF(3, 3, 46, mx_status_t, object_signal, mx_handle_t handle, uint32_t clear_mask,
+                    uint32_t set_mask)
 
 // Threads
 MAGENTA_SYSCALL_DEF(4, 4, 50, mx_handle_t, thread_create, int (*entry)(void*), void* arg,

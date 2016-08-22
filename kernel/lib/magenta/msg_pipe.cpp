@@ -60,8 +60,8 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
             mx_signals_t other_satisfiable_clear = MX_SIGNAL_WRITABLE;
             if (messages_[other].is_empty())
                 other_satisfiable_clear |= MX_SIGNAL_READABLE;
-            state_tracker_[other].UpdateState(MX_SIGNAL_PEER_CLOSED, MX_SIGNAL_WRITABLE, 0u,
-                                              other_satisfiable_clear);
+            state_tracker_[other].UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED,
+                                              other_satisfiable_clear, 0u);
         }
     }
 
@@ -78,8 +78,8 @@ status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
         other_alive = dispatcher_alive_[other];
 
         if (messages_[side].is_empty()) {
-            state_tracker_[side].UpdateState(0u, MX_SIGNAL_READABLE, 0u,
-                                             !other_alive ? MX_SIGNAL_READABLE : 0u);
+            state_tracker_[side].UpdateState(MX_SIGNAL_READABLE, 0u,
+                                             !other_alive ? MX_SIGNAL_READABLE : 0u, 0u);
         }
     }
 
@@ -102,7 +102,7 @@ status_t MessagePipe::Write(size_t side, utils::unique_ptr<MessagePacket> msg) {
 
     messages_[other].push_back(utils::move(msg));
 
-    state_tracker_[other].UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
+    state_tracker_[other].UpdateSatisfied(0u, MX_SIGNAL_READABLE);
     return NO_ERROR;
 }
 

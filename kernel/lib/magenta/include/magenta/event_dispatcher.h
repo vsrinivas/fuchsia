@@ -23,7 +23,7 @@ public:
 
     virtual StateTracker* get_state_tracker() final { return &state_tracker_; }
 
-    status_t UserSignal(uint32_t set_mask, uint32_t clear_mask) final;
+    status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) final;
 
 private:
     explicit EventDispatcher(uint32_t options);

@@ -295,7 +295,7 @@ void ProcessDispatcher::SetState(State s) {
 
         // signal waiter
         LTRACEF_LEVEL(2, "signalling waiters\n");
-        state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
+        state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_SIGNALED);
 
         {
             AutoLock lock(&exception_lock_);

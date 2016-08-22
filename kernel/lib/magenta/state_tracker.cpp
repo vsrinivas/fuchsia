@@ -42,10 +42,10 @@ mx_signals_state_t StateTracker::RemoveObserver(StateObserver* observer) {
     return signals_state_;
 }
 
-void StateTracker::UpdateState(mx_signals_t satisfied_set_mask,
-                               mx_signals_t satisfied_clear_mask,
-                               mx_signals_t satisfiable_set_mask,
-                               mx_signals_t satisfiable_clear_mask) {
+void StateTracker::UpdateState(mx_signals_t satisfied_clear_mask,
+                               mx_signals_t satisfied_set_mask,
+                               mx_signals_t satisfiable_clear_mask,
+                               mx_signals_t satisfiable_set_mask) {
     bool awoke_threads = false;
     {
         AutoLock lock(&lock_);

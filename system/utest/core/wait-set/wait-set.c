@@ -186,7 +186,7 @@ bool wait_set_wait_single_thread_1_test(void) {
     EXPECT_EQ(num_results, 5u, "mx_wait_set_wait() modified num_results");
     EXPECT_EQ(max_results, (uint32_t)-1, "mx_wait_set_wait() modified max_results");
 
-    ASSERT_EQ(mx_object_signal(ev[0], MX_SIGNAL_SIGNAL0, 0u), NO_ERROR, "");
+    ASSERT_EQ(mx_object_signal(ev[0], 0u, MX_SIGNAL_SIGNAL0), NO_ERROR, "");
     num_results = 5u;
     max_results = (uint32_t)-1;
     ASSERT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, &max_results), NO_ERROR, "");
@@ -195,7 +195,7 @@ bool wait_set_wait_single_thread_1_test(void) {
     EXPECT_TRUE(check_results(num_results, results, cookie0, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
 
-    ASSERT_EQ(mx_object_signal(ev[1], MX_SIGNAL_SIGNAL0, 0u), NO_ERROR, "");
+    ASSERT_EQ(mx_object_signal(ev[1], 0u, MX_SIGNAL_SIGNAL0), NO_ERROR, "");
     num_results = 5u;
     max_results = (uint32_t)-1;
     ASSERT_EQ(mx_wait_set_wait(ws, 10u, &num_results, results, &max_results), NO_ERROR, "");
@@ -254,7 +254,7 @@ bool wait_set_wait_single_thread_1_test(void) {
 
     // Check that it handles going from satisfied to unsatisfied (but satisfiable and not canceled)
     // properly.
-    ASSERT_EQ(mx_object_signal(ev[0], 0u, MX_SIGNAL_SIGNAL0), NO_ERROR, "");
+    ASSERT_EQ(mx_object_signal(ev[0], MX_SIGNAL_SIGNAL0, 0u), NO_ERROR, "");
     num_results = 10u;
     ASSERT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, NULL), NO_ERROR, "");
     ASSERT_EQ(num_results, 2u, "wrong num_results from mx_wait_set_wait()");
@@ -317,7 +317,7 @@ static int signaler_thread_fn(void* arg) {
     mx_handle_t ev = *(mx_handle_t*)arg;
     assert(ev > 0);
     mx_nanosleep(200 * 1000 * 1000);
-    mx_status_t status = mx_object_signal(ev, MX_SIGNAL_SIGNAL0, 0u);
+    mx_status_t status = mx_object_signal(ev, 0u, MX_SIGNAL_SIGNAL0);
     assert(status == NO_ERROR);
     mx_thread_exit();
     return 0;
@@ -361,7 +361,7 @@ bool wait_set_wait_threaded_test(void) {
     // Join.
     ASSERT_EQ(mx_handle_wait_one(thread, MX_SIGNAL_SIGNAL0, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
-    ASSERT_EQ(mx_object_signal(ev, 0u, MX_SIGNAL_SIGNAL0), NO_ERROR, "");
+    ASSERT_EQ(mx_object_signal(ev, MX_SIGNAL_SIGNAL0, 0u), NO_ERROR, "");
 
     const char closer_name[] = "closer";
     thread = mx_thread_create(closer_thread_fn, &ev, closer_name, sizeof(closer_name));

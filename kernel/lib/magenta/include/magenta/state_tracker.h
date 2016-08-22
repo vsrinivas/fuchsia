@@ -82,13 +82,13 @@ public:
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.) Returns true if some thread was awoken.
-    void UpdateState(mx_signals_t satisfied_set_mask,
-                     mx_signals_t satisfied_clear_mask,
-                     mx_signals_t satisfiable_set_mask,
-                     mx_signals_t satisfiable_clear_mask);
+    void UpdateState(mx_signals_t satisfied_clear_mask,
+                     mx_signals_t satisfied_set_mask,
+                     mx_signals_t satisfiable_clear_mask,
+                     mx_signals_t satisfiable_set_mask);
 
-    void UpdateSatisfied(mx_signals_t set_mask, mx_signals_t clear_mask) {
-        UpdateState(set_mask, clear_mask, 0u, 0u);
+    void UpdateSatisfied(mx_signals_t clear_mask, mx_signals_t set_mask) {
+        UpdateState(clear_mask, set_mask, 0u, 0u);
     }
 
 private:
