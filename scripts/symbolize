@@ -6,6 +6,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import argparse
 import os
 import re
 import subprocess
@@ -27,14 +28,10 @@ def find_func(find_args, dirname, names):
             return
 
 
-def find_file_in_build_dir(name):
-    magenta_build_dir = os.path.join(
-        os.path.dirname(SCRIPT_DIR), "build-magenta-pc-x86-64")
-    # TODO: Make this extensible to look in more paths
-    find_locations = [magenta_build_dir]
+def find_file_in_build_dir(name, build_dirs):
     find_args = {"name": name, "path": ""}
     found_path = ""
-    for location in find_locations:
+    for location in build_dirs:
         os.path.walk(location, find_func, find_args)
         if find_args["path"] != "":
             found_path = os.path.join(location, find_args["path"], name)
@@ -42,37 +39,47 @@ def find_file_in_build_dir(name):
     return found_path
 
 
-def find_dso_full_path(dso, exe_name):
+def find_dso_full_path(dso, exe_name, build_dirs):
     if dso in name_to_full_path:
         return name_to_full_path[dso]
     # The name 'app' indicates the real app name is unknown
     if dso == "app":
-        return find_file_in_build_dir(exe_name)
+        return find_file_in_build_dir(exe_name, build_dirs)
     # First, try an exact match for the filename
-    found_path = find_file_in_build_dir(dso)
+    found_path = find_file_in_build_dir(dso, build_dirs)
     if found_path == "":
         # If that fails, and this file doesn't end with .so, try the executable
         # name
         if not dso.endswith(".so"):
-            found_path = find_file_in_build_dir(exe_name)
+            found_path = find_file_in_build_dir(exe_name, build_dirs)
     if found_path == "":
         # If that still fails and this looks like an absolute path, try the
         # last path component
         if dso.startswith("/"):
             short_name = dso[dso.rfind("/"):]
-            found_path = find_file_in_build_dir(short_name)
+            found_path = find_file_in_build_dir(short_name, build_dirs)
     if found_path != "":
         name_to_full_path[dso] = found_path
     return found_path
 
 
 def main():
-    exe_name = ""
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "-h" or sys.argv[1] == "--help":
-            print "Usage: symbolize (name of executable)"
-            return 0
-        exe_name = sys.argv[1]
+    parser = argparse.ArgumentParser(
+        description="Symbolize a crash from Magenta's crash logger")
+    parser.add_argument("--build-dir", "-b", nargs="*",
+                        help="List of additional build directories to search")
+    parser.add_argument("app", help="Name of primary application")
+    args = parser.parse_args()
+
+    magenta_build_dir = os.path.join(
+        os.path.dirname(SCRIPT_DIR), "build-magenta-pc-x86-64")
+    build_dirs = [magenta_build_dir]
+    if args.build_dir is not None:
+        build_dirs += args.build_dir
+    else:
+        fuchsia_build_dir = os.path.abspath(os.path.join(
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
+        build_dirs.append(fuchsia_build_dir)
 
     btre = re.compile("^.* U bt#(\d+):")
     bt_with_offsetre = re.compile(
@@ -81,7 +88,7 @@ def main():
     while True:
         line = sys.stdin.readline()
         if line == "":
-            break;
+            break
         if not sys.stdin.isatty():
             sys.stdout.write(line)
         if line.find(" U bt#") >= 0:
@@ -92,15 +99,15 @@ def main():
                 if m is not None:
                     dso = m.group(2)
                     off = m.group(3)
-                    dso_full_path = find_dso_full_path(dso, exe_name)
-                    if dso_full_path == "":
+                    dso_full_path = find_dso_full_path(
+                        dso, args.app, build_dirs)
+                    if dso_full_path:
+                        cmd = ["addr2line", "-Cipfe", dso_full_path, off]
+                        addr2line_output = subprocess.check_output(cmd)
+                        processed_lines.append(
+                            "#%s: %s" % (frame_num, addr2line_output))
                         continue
-                    cmd = ["addr2line", "-Cipfe", dso_full_path, off]
-                    addr2line_output = subprocess.check_output(cmd)
-                    processed_lines.append(
-                        "#%s: %s" % (frame_num, addr2line_output))
-                else:
-                    processed_lines.append("#%s: (unknown)\n" % frame_num)
+                processed_lines.append("#%s: (unknown)\n" % frame_num)
         else:
             if len(processed_lines) != 0:
                 print "start of symbolized stack:"
