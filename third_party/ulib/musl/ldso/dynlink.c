@@ -14,6 +14,7 @@
 #include <magenta/dlfcn.h>
 #include <pthread.h>
 #include <setjmp.h>
+#include <stdatomic.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -29,8 +30,7 @@
 #include <runtime/message.h>
 #include <runtime/processargs.h>
 #include <runtime/status.h>
-void __mxr_thread_main(void);
-
+#include <runtime/thread.h>
 
 static void error(const char*, ...);
 static void debugmsg(const char*, ...);
@@ -100,9 +100,8 @@ struct symdef {
     struct dso* dso;
 };
 
-int __init_tp(void*);
-void __init_libc(char**, char*);
-void* __copy_tls(unsigned char*);
+void __init_tp(pthread_t);
+pthread_t __copy_tls(unsigned char*);
 
 static struct builtin_tls {
     char c;
@@ -836,16 +835,12 @@ static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
      * the newly-loaded DSO. */
     alloc_size = sizeof *p + strlen(name) + 1;
     if (runtime && temp_dso.tls.image) {
-        /* TODO(kulakowski) DSO TLS API */
-        /*
         size_t per_th = temp_dso.tls.size + temp_dso.tls.align + sizeof(void*) * (tls_cnt + 3);
-        n_th = libc.threads_minus_1 + 1;
+        n_th = atomic_load(&libc.thread_count);
         if (n_th > SSIZE_MAX / per_th)
             alloc_size = SIZE_MAX;
         else
             alloc_size += n_th * per_th;
-            */
-        a_crash();
     }
     p = calloc(1, alloc_size);
     if (!p) {
@@ -858,8 +853,6 @@ static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
     p->name = p->buf;
     strcpy(p->name, name);
     if (p->tls.image) {
-        // TODO(mcgrathr): ELF TLS support
-        __builtin_trap();
         p->tls_id = ++tls_cnt;
         tls_align = MAXP2(tls_align, p->tls.align);
 #ifdef TLS_ABOVE_TP
@@ -1087,10 +1080,7 @@ static void dl_debug_state(void) {}
 
 weak_alias(dl_debug_state, _dl_debug_state);
 
-#if 0
-// TODO(mcgrathr): Probably this comes back with working ELF TLS.
-void __init_tls(size_t* auxv) {}
-#endif
+void __init_tls(mxr_thread_t* mxr_thread) {}
 
 __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     pthread_t self = __pthread_self();
@@ -1220,12 +1210,7 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
      * thread pointer at runtime. */
     libc.tls_size = sizeof builtin_tls;
     libc.tls_align = tls_align;
-#if 0
-    // TODO(mcgrathr): ELF TLS support
-    if (__init_tp(__copy_tls((void*)builtin_tls)) < 0) {
-        a_crash();
-    }
-#endif
+    __init_tp(__copy_tls((void*)builtin_tls));
 
     /* Only trust user/env if kernel says we're not suid/sgid */
     bool log_libs = false;
@@ -1299,9 +1284,6 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     }
 
     if (app.tls.size) {
-        // TODO(mcgrathr): ELF TLS support
-        __builtin_trap();
-
         libc.tls_head = tls_tail = &app.tls;
         app.tls_id = tls_cnt = 1;
 #ifdef TLS_ABOVE_TP
@@ -1371,8 +1353,6 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 
     update_tls_size();
 
-    // TODO(mcgrathr): ELF TLS support
-#if 0
     if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
         void* initial_tls = calloc(libc.tls_size, 1);
         if (!initial_tls) {
@@ -1380,9 +1360,7 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
                     libc.tls_size);
             _exit(127);
         }
-        if (__init_tp(__copy_tls(initial_tls)) < 0) {
-            a_crash();
-        }
+        __init_tp(__copy_tls(initial_tls));
     } else {
         size_t tmp_tls_size = libc.tls_size;
         pthread_t self = __pthread_self();
@@ -1394,7 +1372,6 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
             a_crash();
         libc.tls_size = tmp_tls_size;
     }
-#endif
     static_tls_cnt = tls_cnt;
 
     if (ldso_fail)

@@ -16,7 +16,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/process.c \
     $(LOCAL_DIR)/strstatus.c \
     $(LOCAL_DIR)/thread.c \
-    $(LOCAL_DIR)/tls.c \
     $(LOCAL_DIR)/sysinfo.c \
 
 MODULE_LIBS += \

@@ -38,21 +38,12 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread, intptr_t* return_value_out);
 // entrypoint is ignored.
 mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 
-// Exit from the currently running thread. Equivalent to returning
-// return_value from the the thread's entrypoint.
-_Noreturn void mxr_thread_exit(intptr_t return_value);
-
-// Get a magenta handle to the thread for debugging purposes, or to
-// the current thread if NULL. Note that this is the same handle that
-// mxr_thread_t uses internally, not a rights-restricted duplicate,
-// and so care must be used to not violate invariants. This primarily
-// means not closing the handle. In particular, anyone wanting to wait
-// on a thread should mxr_thread_join it, not directly wait on this
-// handle.
-mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
+// Exit from the thread. Equivalent to returning return_value from the
+// that thread's entrypoint.
+_Noreturn void mxr_thread_exit(mxr_thread_t* thread, intptr_t return_value);
 
 // A private entrypoint into mxruntime initialization.
-void __mxr_thread_main(void);
+mxr_thread_t* __mxr_thread_main(void);
 
 #pragma GCC visibility pop
 

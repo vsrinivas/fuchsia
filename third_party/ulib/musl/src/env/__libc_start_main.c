@@ -1,13 +1,14 @@
 #include "libc.h"
 #include <elf.h>
+#include <stdatomic.h>
 #include <string.h>
 
 #include <magenta/syscalls.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
+#include <runtime/thread.h>
 
-void __init_tls(void);
-void __mxr_thread_main(void);
+void __init_tls(mxr_thread_t*);
 
 static void dummy(void) {}
 weak_alias(dummy, _init);
@@ -141,10 +142,11 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
         }
     }
 
-    __mxr_thread_main();
+    atomic_fetch_add(&libc.thread_count, 1);
+    mxr_thread_t* mxr_thread = __mxr_thread_main();
 
     __environ = envp;
-    __init_tls();
+    __init_tls(mxr_thread);
     // TODO(kulakowski) Set up ssp once kernel randomness exists
     // __init_ssp((void*)aux[AT_RANDOM]);
     __init_security();

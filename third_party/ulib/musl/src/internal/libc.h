@@ -26,6 +26,7 @@ struct __libc {
     uintptr_t stack_base;
     size_t stack_size;
     mx_handle_t proc;
+    int thread_count;
     struct tls_module* tls_head;
     size_t tls_size, tls_align, tls_cnt;
     size_t page_size;

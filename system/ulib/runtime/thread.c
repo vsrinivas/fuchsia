@@ -6,7 +6,6 @@
 
 #include <limits.h>
 #include <magenta/syscalls.h>
-#include <magenta/tlsroot.h>
 #include <runtime/mutex.h>
 #include <runtime/process.h>
 #include <runtime/tls.h>
@@ -24,18 +23,23 @@ enum {
     DONE,
 };
 
+#define MXR_THREAD_MAGIC 0x97c40acdb29ee45dULL
+
+#define CHECK_THREAD(thread) do { \
+    if (!thread || thread->magic != MXR_THREAD_MAGIC) \
+        __builtin_trap(); \
+    } while (0);
+
 struct mxr_thread {
     mx_handle_t handle;
     intptr_t return_value;
     mxr_thread_entry_t entry;
     void* arg;
 
-    int errno_value;
+    uint64_t magic;
 
     mxr_mutex_t state_lock;
     int state;
-
-    mx_tls_root_t tls_root;
 };
 
 static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
@@ -43,11 +47,7 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
     // somewhere once we have the ability to hint to the vm how and
     // where to allocate threads, stacks, heap etc.
 
-    mx_size_t len = sizeof(mxr_thread_t);
-    // mx_tls_root_t already accounts for 1 tls slot.
-    len += (MXR_TLS_SLOT_MAX - 1) * sizeof(void*);
-    len += PAGE_SIZE - 1;
-    len &= ~(PAGE_SIZE - 1);
+    const mx_size_t len = sizeof(mxr_thread_t);
 
     mx_handle_t vmo = mx_vm_object_create(len);
     if (vmo < 0)
@@ -69,6 +69,7 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
 }
 
 static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
+    CHECK_THREAD(thread);
     // TODO(kulakowski) Track process handle.
     mx_handle_t self_handle = 0;
     uintptr_t mapping = (uintptr_t)thread;
@@ -76,6 +77,7 @@ static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
 }
 
 static mx_status_t thread_cleanup(mxr_thread_t* thread, intptr_t* return_value_out) {
+    CHECK_THREAD(thread);
     mx_status_t status = mx_handle_close(thread->handle);
     thread->handle = 0;
     if (status != NO_ERROR)
@@ -89,46 +91,28 @@ static mx_status_t thread_cleanup(mxr_thread_t* thread, intptr_t* return_value_o
     return NO_ERROR;
 }
 
-static void init_tls(mxr_thread_t* thread) {
-    thread->tls_root.self = &thread->tls_root;
-    thread->tls_root.proc = mxr_process_get_info();
-    thread->tls_root.proc = NULL;
-    thread->tls_root.magic = MX_TLS_ROOT_MAGIC;
-    thread->tls_root.flags = 0;
-    thread->tls_root.maxslots = MXR_TLS_SLOT_MAX;
-    // Avoid calling memset so as not to depend on libc.
-    for (size_t i = 0; i < MXR_TLS_SLOT_MAX; ++i)
-        thread->tls_root.slots[i] = NULL;
-    mxr_tls_root_set(&thread->tls_root);
-    mxr_tls_set(MXR_TLS_SLOT_SELF, &thread->tls_root);
-    mxr_tls_set(MXR_TLS_SLOT_ERRNO, &thread->errno_value);
-}
-
 static int thread_trampoline(void* ctx) {
     mxr_thread_t* thread = (mxr_thread_t*)ctx;
-
-    init_tls(thread);
-
-    mxr_thread_exit(thread->entry(thread->arg));
+    CHECK_THREAD(thread);
+    mxr_thread_exit(thread, thread->entry(thread->arg));
 }
 
-_Noreturn void mxr_thread_exit(intptr_t return_value) {
-    mxr_thread_t* self = mxr_tls_get(MXR_TLS_SLOT_SELF);
+_Noreturn void mxr_thread_exit(mxr_thread_t* thread, intptr_t return_value) {
+    CHECK_THREAD(thread);
+    thread->return_value = return_value;
 
-    self->return_value = return_value;
-
-    mxr_mutex_lock(&self->state_lock);
-    switch (self->state) {
+    mxr_mutex_lock(&thread->state_lock);
+    switch (thread->state) {
     case JOINED:
-        mxr_mutex_unlock(&self->state_lock);
+        mxr_mutex_unlock(&thread->state_lock);
         break;
     case JOINABLE:
-        self->state = DONE;
-        mxr_mutex_unlock(&self->state_lock);
+        thread->state = DONE;
+        mxr_mutex_unlock(&thread->state_lock);
         break;
     case DETACHED:
-        mxr_mutex_unlock(&self->state_lock);
-        thread_cleanup(self, NULL);
+        mxr_mutex_unlock(&thread->state_lock);
+        thread_cleanup(thread, NULL);
         break;
     case DONE:
         // Not reached.
@@ -151,11 +135,13 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
     mx_status_t status = allocate_thread_page(&thread);
     if (status < 0)
         return status;
+    *thread_out = thread;
 
     thread->entry = entry;
     thread->arg = arg;
     thread->state_lock = MXR_MUTEX_INIT;
     thread->state = JOINABLE;
+    thread->magic = MXR_THREAD_MAGIC;
 
     if (name == NULL)
         name = "";
@@ -166,11 +152,11 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
         return (mx_status_t)handle;
     }
     thread->handle = handle;
-    *thread_out = thread;
     return NO_ERROR;
 }
 
 mx_status_t mxr_thread_join(mxr_thread_t* thread, intptr_t* return_value_out) {
+    CHECK_THREAD(thread);
     mxr_mutex_lock(&thread->state_lock);
     switch (thread->state) {
     case JOINED:
@@ -195,6 +181,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread, intptr_t* return_value_out) {
 }
 
 mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
+    CHECK_THREAD(thread);
     mx_status_t status = NO_ERROR;
     mxr_mutex_lock(&thread->state_lock);
     switch (thread->state) {
@@ -216,36 +203,13 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
     return status;
 }
 
-mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
-    mx_handle_t ret = 0;
-
-    if (!thread) {
-        // TODO: get current handle from TLS once we pass it into the thread
-    } else {
-        mxr_mutex_lock(&thread->state_lock);
-
-        if (thread->state != DONE)
-            ret = thread->handle;
-
-        mxr_mutex_unlock(&thread->state_lock);
-    }
-
-    return ret;
-}
-
-void __mxr_thread_main(void) {
-    mxr_tls_t self_slot = mxr_tls_allocate();
-    mxr_tls_t errno_slot = mxr_tls_allocate();
-
-    if (self_slot != MXR_TLS_SLOT_SELF ||
-        errno_slot != MXR_TLS_SLOT_ERRNO)
-        __builtin_trap();
-
+mxr_thread_t* __mxr_thread_main(void) {
     mxr_thread_t* thread = NULL;
     allocate_thread_page(&thread);
-    init_tls(thread);
     thread->state_lock = MXR_MUTEX_INIT;
     thread->state = JOINABLE;
+    thread->magic = MXR_THREAD_MAGIC;
     // TODO(kulakowski) Once the main thread is passed a handle, save it here.
     thread->handle = MX_HANDLE_INVALID;
+    return thread;
 }

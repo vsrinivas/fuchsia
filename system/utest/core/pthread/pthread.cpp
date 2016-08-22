@@ -185,9 +185,17 @@ bool pthread_test(void) {
     END_TEST;
 }
 
+bool pthread_self_main_thread_test(void) {
+    BEGIN_TEST;
+    pthread_t self = pthread_self();
+    pthread_t null = 0;
+    ASSERT_NEQ(self, null, "pthread_self() was NULL");
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(pthread_tests)
 RUN_TEST(pthread_test)
+RUN_TEST(pthread_self_main_thread_test)
 END_TEST_CASE(pthread_tests)
 
 #ifndef BUILD_COMBINED_TESTS

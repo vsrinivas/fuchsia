@@ -19,6 +19,7 @@ struct pthread {
     void **dtv, *unused1, *unused2;
     uintptr_t canary, canary2;
     pid_t tid, pid;
+    int errno_value;
     int tsd_used;
     volatile int cancel, canceldisable, cancelasync;
     int detached;
@@ -104,15 +105,14 @@ struct __timer {
 
 pthread_t __pthread_self_init(void);
 
-extern mxr_tls_t __pthread_key;
-static inline struct pthread* __pthread_self(void) {
-    return mxr_tls_get(__pthread_key);
+static inline pthread_t __pthread_self(void) {
+    return tp_to_pthread(mxr_tp_get());
 }
 
 static inline pid_t __thread_get_tid(void) {
     // TODO(kulakowski) Replace this with the current thread handle's
     // ID when magenta exposes those.
-    return (pid_t)(intptr_t)mxr_tls_root_get();
+    return (pid_t)(intptr_t)__pthread_self();
 }
 
 int __clone(int (*)(void*), void*, int, void*, ...);

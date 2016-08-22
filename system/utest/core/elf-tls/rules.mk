@@ -6,14 +6,14 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest-static
+MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/tls.c \
+    $(LOCAL_DIR)/tls.cpp \
 
-MODULE_NAME := mxr-tls-test
+MODULE_NAME := elf-tls-test
 
-MODULE_STATIC_LIBS := \
-    ulib/mxio ulib/magenta ulib/runtime ulib/unittest ulib/musl-static
+MODULE_LIBS := \
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
