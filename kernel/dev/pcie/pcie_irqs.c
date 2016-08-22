@@ -112,10 +112,10 @@ static enum handler_return pcie_legacy_irq_handler(void *arg) {
 
         if ((status & PCIE_CFG_STATUS_INT_STS) && !(command & PCIE_CFG_COMMAND_INT_DISABLE)) {
             DEBUG_ASSERT(dev);
-            pcie_irq_handler_retval_t irq_ret = PCIE_IRQRET_MASK;
             pcie_irq_handler_state_t* hstate  = &dev->irq.handlers[0];
 
             if (hstate) {
+                pcie_irq_handler_retval_t irq_ret = PCIE_IRQRET_MASK;
                 spin_lock(&hstate->lock);
 
                 if (hstate->handler) {
@@ -133,8 +133,12 @@ static enum handler_return pcie_legacy_irq_handler(void *arg) {
                            pcie_driver_name(dev->driver));
                 }
 
-                if (irq_ret & PCIE_IRQRET_MASK)
+                if (irq_ret & PCIE_IRQRET_MASK) {
                     hstate->masked = true;
+                    pcie_write16(&cfg->base.command, command | PCIE_CFG_COMMAND_INT_DISABLE);
+                }
+
+                spin_unlock(&hstate->lock);
             } else {
                 TRACEF("Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x (driver "
                        "\"%s\"), but no irq handlers have been allocated!  Force "
@@ -142,12 +146,9 @@ static enum handler_return pcie_legacy_irq_handler(void *arg) {
                        legacy_hstate->irq_id,
                        dev->bus_id, dev->dev_id, dev->func_id,
                        pcie_driver_name(dev->driver));
-            }
 
-            if (irq_ret & PCIE_IRQRET_MASK)
                 pcie_write16(&cfg->base.command, command | PCIE_CFG_COMMAND_INT_DISABLE);
-
-            spin_unlock(&hstate->lock);
+            }
         }
     }
 
