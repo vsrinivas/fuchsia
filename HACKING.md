@@ -8,10 +8,9 @@ Hacking on Modular
 Modular supports building for Android from a Linux or Mac host as well as
 building for Linux. Building for Mac isn't yet supported.
 
-1.  Configure [SSH authentication with your GitHub account](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#adding-your-ssh-key-to-the-ssh-agent).
-    Then download the repo:
+1.  Clone the repo:
     ```sh
-    git clone git@github.com:domokit/modular.git
+    git clone https://fuchsia.googlesource.com/modular
     ```
     `cd modular; export MODULAR_HOME=${PWD}`
 
