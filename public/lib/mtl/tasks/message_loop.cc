@@ -14,21 +14,7 @@
 namespace mtl {
 namespace {
 
-// TODO(kulakowski): This should just be a thread_local MessageLoop* g_current,
-// but the thread_local keyword doesn't work yet.
-
-static mxr_tls_t GetMessageLoopTlsKey() {
-  static mxr_tls_t key = mxr_tls_allocate();
-  return key;
-}
-
-MessageLoop* CurrentThreadMessageLoop() {
-  return static_cast<MessageLoop*>(mxr_tls_get(GetMessageLoopTlsKey()));
-}
-
-void SetCurrentThreadMessageLoop(MessageLoop* loop) {
-  mxr_tls_set(GetMessageLoopTlsKey(), loop);
-}
+thread_local MessageLoop* g_current;
 
 constexpr uint32_t kInvalidWaitManyIndexValue = static_cast<uint32_t>(-1);
 constexpr MessageLoop::HandlerKey kIgnoredKey = 0;
@@ -44,16 +30,16 @@ MessageLoop::MessageLoop()
 MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : incoming_tasks_(std::move(incoming_tasks)) {
-  FTL_DCHECK(!CurrentThreadMessageLoop())
+  FTL_DCHECK(!g_current)
       << "At most one message loop per thread.";
   event_.reset(mx_event_create(0));
   FTL_CHECK(event_.get() > MX_HANDLE_INVALID);
   incoming_tasks_->InitDelegate(this);
-  SetCurrentThreadMessageLoop(this);
+  g_current = this;
 }
 
 MessageLoop::~MessageLoop() {
-  FTL_DCHECK(CurrentThreadMessageLoop() == this)
+  FTL_DCHECK(g_current == this)
       << "Message loops must be destroyed on their own threads.";
 
   NotifyHandlers(ftl::TimePoint::Max(), MOJO_RESULT_CANCELLED);
@@ -66,11 +52,11 @@ MessageLoop::~MessageLoop() {
     queue_.pop();
 
   // Finally, remove ourselves from TLS.
-  SetCurrentThreadMessageLoop(nullptr);
+  g_current = nullptr;
 }
 
 MessageLoop* MessageLoop::GetCurrent() {
-  return CurrentThreadMessageLoop();
+  return g_current;
 }
 
 MessageLoop::HandlerKey MessageLoop::AddHandler(
@@ -232,7 +218,7 @@ void MessageLoop::ScheduleDrainIncomingTasks() {
 }
 
 bool MessageLoop::RunsTasksOnCurrentThread() {
-  return CurrentThreadMessageLoop() == this;
+  return g_current == this;
 }
 
 ftl::TimePoint MessageLoop::RunReadyTasks(ftl::TimePoint now) {
