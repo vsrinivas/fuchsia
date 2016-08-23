@@ -18,6 +18,7 @@
 #include <ddk/driver.h>
 #include <ddk/ioctl.h>
 #include <ddk/iotxn.h>
+#include <ddk/protocol/device.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -29,6 +30,8 @@
 #include <mxio/vfs.h>
 
 #include <system/listnode.h>
+
+#include "device-internal.h"
 
 #define MXDEBUG 0
 
@@ -176,6 +179,17 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
     return actual;
 }
 
+static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+    mx_status_t r;
+    if (op == IOCTL_DEVICE_BIND) {
+        const char* drv = in_len > 0 ? (const char*)in_buf : NULL;
+        r = device_bind(dev, drv);
+    } else {
+        r = dev->ops->ioctl(dev, op, in_buf, in_len, out_buf, out_len);
+    }
+    return r;
+}
+
 mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
     mx_device_t* dev = ios->dev;
@@ -300,7 +314,7 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         }
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
-        mx_status_t r = dev->ops->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
+        mx_status_t r = do_ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
             if (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_GET_HANDLE) {
                 msg->hcount = 1;

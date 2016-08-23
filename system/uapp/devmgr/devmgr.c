@@ -265,7 +265,7 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     return NO_ERROR;
 }
 
-static void devmgr_device_probe_all(mx_device_t* dev) {
+static void devmgr_device_probe_all(mx_device_t* dev, bool autobind) {
     if ((dev->flags & DEV_FLAG_UNBINDABLE) == 0) {
         if (!device_is_bound(dev)) {
             // first, look for a specific driver binary for this device
@@ -273,6 +273,9 @@ static void devmgr_device_probe_all(mx_device_t* dev) {
                 // if not found, probe all built-in drivers
                 mx_driver_t* drv = NULL;
                 list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
+                    if (autobind && drv->flags & DRV_FLAG_NO_AUTOBIND) {
+                        continue;
+                    }
                     if (devmgr_device_probe(dev, drv) == NO_ERROR) {
                         break;
                     }
@@ -428,7 +431,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
 #endif
 
     // probe the device
-    devmgr_device_probe_all(dev);
+    devmgr_device_probe_all(dev, true);
 
     dev->flags &= (~DEV_FLAG_BUSY);
     return NO_ERROR;
@@ -501,6 +504,32 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
     return NO_ERROR;
 }
 
+mx_status_t devmgr_device_bind(mx_device_t* dev, const char* drv_name) {
+    if (device_is_bound(dev)) {
+        return ERR_INVALID_ARGS;
+    }
+    if (dev->flags & DEV_FLAG_UNBINDABLE) {
+        return NO_ERROR;
+    }
+    dev->flags |= DEV_FLAG_BUSY;
+    if (!drv_name) {
+        devmgr_device_probe_all(dev, false);
+    } else {
+        // bind the driver with matching name
+        mx_driver_t* drv = NULL;
+        list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
+            if (strcmp(drv->name, drv_name)) {
+                continue;
+            }
+            if (devmgr_device_probe(dev, drv) == NO_ERROR) {
+                break;
+            }
+        }
+    }
+    dev->flags &= ~DEV_FLAG_BUSY;
+    return NO_ERROR;
+}
+
 mx_status_t devmgr_device_rebind(mx_device_t* dev) {
     dev->flags |= DEV_FLAG_REBIND;
 
@@ -523,7 +552,7 @@ mx_status_t devmgr_device_rebind(mx_device_t* dev) {
     }
 
     // probe the device again to bind
-    devmgr_device_probe_all(dev);
+    devmgr_device_probe_all(dev, false);
 
     dev->flags &= ~DEV_FLAG_REBIND;
     return NO_ERROR;
@@ -591,6 +620,14 @@ mx_status_t devmgr_driver_add(mx_driver_t* drv) {
 mx_status_t devmgr_driver_remove(mx_driver_t* drv) {
     // TODO: implement
     return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t devmgr_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
+    if (dev->owner != drv) {
+        return ERR_INVALID_ARGS;
+    }
+
+    return NO_ERROR;
 }
 
 #if !LIBDRIVER

@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <ddk/protocol/device.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
@@ -92,6 +93,13 @@ int console_starter(void* arg) {
         snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
         devmgr_launch(pname, "/boot/bin/mxsh", NULL, VC_DEVICE);
     }
+
+    // FIXME read the partition table here for now
+    while ((fd = open("/dev/class/block/000", O_RDWR)) < 0) {
+        mx_nanosleep(100000000ULL);
+    }
+    mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
+    close(fd);
     return 0;
 }
 #endif

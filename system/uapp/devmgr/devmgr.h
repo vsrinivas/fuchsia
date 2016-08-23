@@ -25,9 +25,11 @@ void cprintf(const char* fmt, ...);
 
 mx_status_t devmgr_driver_add(mx_driver_t* driver);
 mx_status_t devmgr_driver_remove(mx_driver_t* driver);
+mx_status_t devmgr_driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 
 mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent);
 mx_status_t devmgr_device_remove(mx_device_t* dev);
+mx_status_t devmgr_device_bind(mx_device_t* dev, const char* drv_name);
 mx_status_t devmgr_device_rebind(mx_device_t* dev);
 mx_status_t devmgr_device_create(mx_device_t** dev, mx_driver_t* driver,
                                  const char* name, mx_protocol_device_t* ops);

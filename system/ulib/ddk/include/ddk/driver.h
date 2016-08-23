@@ -33,10 +33,14 @@ typedef struct mx_driver_ops {
     // Last call before driver is unloaded.
 } mx_driver_ops_t;
 
+#define DRV_FLAG_NO_AUTOBIND 0x00000001
+
 struct mx_driver {
     const char* name;
 
     mx_driver_ops_t ops;
+
+    uint32_t flags;
 
     struct list_node node;
 
@@ -72,6 +76,7 @@ void device_set_bindable(mx_device_t* dev, bool bindable);
 
 void driver_add(mx_driver_t* driver);
 void driver_remove(mx_driver_t* driver);
+void driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 
 // panic is for handling non-recoverable, non-reportable fatal
 // errors in a way that will get logged.  Right now this just

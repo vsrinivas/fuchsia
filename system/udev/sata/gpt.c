@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <threads.h>
 
 #include "gpt.h"
 #include "sata.h"
@@ -140,12 +141,23 @@ static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
-static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
+typedef struct gpt_bind_info {
+    mx_driver_t* drv;
+    mx_device_t* dev;
+} gpt_bind_info_t;
+
+static int gpt_bind_thread(void* arg) {
+    gpt_bind_info_t* info = (gpt_bind_info_t*)arg;
+    mx_device_t* dev = info->dev;
+    mx_driver_t* drv = info->drv;
+    free(info);
+
+    unsigned partitions = 0; // used to keep track of number of partitions found
     uint64_t blksize;
     ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
     if (rc < 0) {
         xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, dev->name);
-        return rc;
+        goto unbind;
     }
 
     // sanity check the default txn size with the block size
@@ -158,6 +170,7 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     mx_status_t status = iotxn_alloc(&txn, 0, TXN_SIZE, 0);
     if (status != NO_ERROR) {
         xprintf("gpt: error %d allocating iotxn\n", status);
+        goto unbind;
     }
 
     completion_t completion = COMPLETION_INIT;
@@ -174,7 +187,7 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     if (txn->status != NO_ERROR) {
         xprintf("gpt: error %d reading partition header\n", txn->status);
-        return txn->status;
+        goto unbind;
     }
 
     // read the header
@@ -183,7 +196,7 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     if (header.magic != GPT_MAGIC) {
         xprintf("gpt: bad header magic\n");
         txn->ops->release(txn);
-        return ERR_NOT_SUPPORTED;
+        goto unbind;
     }
 
     xprintf("gpt: found gpt header %u entries @ lba%llu\n", header.entries_count, header.entries);
@@ -206,28 +219,28 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     iotxn_queue(dev, txn);
     completion_wait(&completion, MX_TIME_INFINITE);
 
-    for (unsigned i = 0; i < header.entries_count; i++) {
-        if (i * header.entries_sz > txn->actual) break;
+    for (partitions = 0; partitions < header.entries_count; partitions++) {
+        if (partitions * header.entries_sz > txn->actual) break;
 
         gptpart_device_t* device = calloc(1, sizeof(gptpart_device_t));
         if (!device) {
             xprintf("gpt: out of memory!\n");
             txn->ops->release(txn);
-            return ERR_NO_MEMORY;
+            goto unbind;
         }
 
-        char name[8];
-        snprintf(name, sizeof(name), "part%u", i);
+        char name[16];
+        snprintf(name, sizeof(name), "%sp%u", dev->name, partitions);
         status = device_init(&device->device, drv, name, &gpt_proto);
         if (status) {
             xprintf("gpt: failed to init device\n");
             txn->ops->release(txn);
             free(device);
-            return status;
+            goto unbind;
         }
 
         device->blksize = blksize;
-        txn->ops->copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * i);
+        txn->ops->copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
         if (device->gpt_entry.type[0] == 0) {
             free(device);
             break;
@@ -240,11 +253,31 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
         uint8_to_guid_string(guid, device->gpt_entry.type);
         char pname[40];
         utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
-        xprintf("gpt: partition %u (%s) type=%s name=%s\n", i, device->device.name, guid, pname);
+        xprintf("gpt: partition %u (%s) type=%s name=%s\n", partitions, device->device.name, guid, pname);
     }
 
     txn->ops->release(txn);
 
+    return NO_ERROR;
+unbind:
+    if (partitions == 0) {
+        driver_unbind(drv, dev);
+    }
+    return NO_ERROR;
+}
+
+static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
+    gpt_bind_info_t* info = malloc(sizeof(gpt_bind_info_t));
+    info->drv = drv;
+    info->dev = dev;
+
+    // read partition table asynchronously
+    thrd_t t;
+    mx_status_t status = thrd_create_with_name(&t, gpt_bind_thread, info, "gpt-init");
+    if (status < 0) {
+        free(info);
+        return status;
+    }
     return NO_ERROR;
 }
 
@@ -267,6 +300,7 @@ mx_driver_t _driver_gpt BUILTIN_DRIVER = {
         .bind = gpt_bind,
         .unbind = gpt_unbind,
     },
+    .flags = DRV_FLAG_NO_AUTOBIND,
     .binding = binding,
     .binding_size = sizeof(binding),
 };
