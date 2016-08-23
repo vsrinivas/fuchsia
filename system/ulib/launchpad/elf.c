@@ -5,7 +5,6 @@
 #include "elf.h"
 
 #include <elfload/elfload.h>
-#include <elfload/elf-defines.h>
 
 #include <magenta/syscalls.h>
 #include <stdlib.h>

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "bootfs.h"
-#include "elf.h"
+#include "userboot-elf.h"
 #include "option.h"
 #include "util.h"
 

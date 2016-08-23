@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <elfload/elfload.h>
-#include <elfload/elf-defines.h>
 
 #include <endian.h>
 #include <limits.h>

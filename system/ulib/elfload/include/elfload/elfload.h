@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <elf.h>
 #include <magenta/types.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -19,12 +20,12 @@
 
 #ifdef _LP64
 # define MY_ELFCLASS ELFCLASS64
-typedef struct Elf64_Ehdr elf_ehdr_t;
-typedef struct Elf64_Phdr elf_phdr_t;
+typedef Elf64_Ehdr elf_ehdr_t;
+typedef Elf64_Phdr elf_phdr_t;
 #else
 # define MY_ELFCLASS ELFCLASS32
-typedef struct Elf32_Ehdr elf_ehdr_t;
-typedef struct Elf32_Phdr elf_phdr_t;
+typedef Elf32_Ehdr elf_ehdr_t;
+typedef Elf32_Phdr elf_phdr_t;
 #endif
 
 typedef struct {

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "elf.h"
+#include "userboot-elf.h"
 
 #include "bootfs.h"
 #include "util.h"
 
 #pragma GCC visibility push(hidden)
 
+#include <elf.h>
 #include <elfload/elfload.h>
-#include <elfload/elf-defines.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <stdbool.h>

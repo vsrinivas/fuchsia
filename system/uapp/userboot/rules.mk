@@ -10,7 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
-    $(LOCAL_DIR)/elf.c \
+    $(LOCAL_DIR)/userboot-elf.c \
     $(LOCAL_DIR)/option.c \
     $(LOCAL_DIR)/start.c \
     $(LOCAL_DIR)/util.c
