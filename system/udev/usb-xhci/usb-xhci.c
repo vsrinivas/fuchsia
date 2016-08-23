@@ -171,9 +171,11 @@ int xhci_queue_request(mx_device_t* hci_device, int devaddr, usb_request_t* requ
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
     xhci_t* xhci = &uxhci->xhci;
     usb_endpoint_descriptor_t* ep = request->endpoint->descriptor;
+    mx_paddr_t phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)request->buffer);
 
-    return xhci_queue_transfer(xhci, devaddr, NULL, request->buffer, request->transfer_length,
-                               xhci_endpoint_index(ep), ep->bEndpointAddress & USB_ENDPOINT_DIR_MASK,
+    return xhci_queue_transfer(xhci, devaddr, NULL, phys_addr, request->transfer_length,
+                               xhci_endpoint_index(ep->bEndpointAddress),
+                               ep->bEndpointAddress & USB_ENDPOINT_DIR_MASK,
                                (xhci_transfer_context_t*)request->driver_data);
 }
 
@@ -184,19 +186,21 @@ int xhci_control(mx_device_t* hci_device, int devaddr, usb_setup_t* devreq, int 
     bool out = ((devreq->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT);
 
     uint8_t* dma_buffer = NULL;
+    mx_paddr_t phys_addr = 0;
     if (data_length) {
         if (!data || data_length < 0)
             return ERR_INVALID_ARGS;
         dma_buffer = xhci_malloc(xhci, data_length);
         if (!dma_buffer)
             return ERR_NO_MEMORY;
+        phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)dma_buffer);
         if (out) {
             memcpy(dma_buffer, data, data_length);
         }
     }
 
     int result = xhci_control_request(xhci, devaddr, devreq->bmRequestType, devreq->bRequest,
-                                      devreq->wValue, devreq->wIndex, dma_buffer, data_length);
+                                      devreq->wValue, devreq->wIndex, phys_addr, data_length);
     if (result > 0 && !out) {
         if (result > data_length)
             result = data_length;
@@ -236,12 +240,64 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .hub_device_removed = xhci_hub_device_removed,
 };
 
+static void xhci_iotxn_callback(mx_status_t result, void* cookie) {
+    iotxn_t* txn = (iotxn_t *)cookie;
+    mx_status_t status;
+    size_t actual;
+
+    if (result > 0) {
+        actual = result;
+        status = NO_ERROR;
+    } else {
+        actual = 0;
+        status = result;
+    }
+    free(txn->context);
+    txn->context = NULL;
+
+    txn->ops->complete(txn, status, actual);
+}
+
+static void xhci_iotxn_queue(mx_device_t* hci_device, iotxn_t* txn) {
+    usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
+    xhci_t* xhci = &uxhci->xhci;
+    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+    mx_paddr_t phys_addr;
+    txn->ops->physmap(txn, &phys_addr);
+
+    mx_status_t result;
+    xhci_transfer_context_t* context = malloc(sizeof(xhci_transfer_context_t));
+    if (!context) {
+        result = ERR_NO_MEMORY;
+    } else {
+        context->callback = xhci_iotxn_callback;
+        context->data = txn;
+        txn->context = context;
+        uint8_t ep_index = xhci_endpoint_index(data->ep_address);
+        usb_setup_t* setup = (ep_index == 0 ? &data->setup : NULL);
+        uint8_t direction;
+        if (setup) {
+            direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
+        } else {
+            direction = data->ep_address & USB_ENDPOINT_DIR_MASK;
+        }
+
+        result = xhci_queue_transfer(xhci, data->device_id, setup, phys_addr, txn->length,
+                                     ep_index, direction, context);
+    }
+
+    if (result != NO_ERROR) {
+        txn->ops->complete(txn, result, 0);
+    }
+}
+
 static mx_status_t xhci_release(mx_device_t* device) {
     // FIXME - do something here
     return NO_ERROR;
 }
 
 static mx_protocol_device_t xhci_device_proto = {
+    .iotxn_queue = xhci_iotxn_queue,
     .release = xhci_release,
 };
 

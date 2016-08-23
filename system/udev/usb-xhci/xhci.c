@@ -15,9 +15,10 @@
 //#define TRACE 1
 #include "xhci-debug.h"
 
-uint32_t xhci_endpoint_index(usb_endpoint_descriptor_t* ep) {
-    uint32_t index = 2 * (ep->bEndpointAddress & ~USB_ENDPOINT_DIR_MASK);
-    if ((ep->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_OUT)
+uint8_t xhci_endpoint_index(uint8_t ep_address) {
+    if (ep_address == 0) return 0;
+    uint32_t index = 2 * (ep_address & ~USB_ENDPOINT_DIR_MASK);
+    if ((ep_address & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_OUT)
         index--;
     return index;
 }

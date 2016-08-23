@@ -120,7 +120,7 @@ void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context);
 
-uint32_t xhci_endpoint_index(usb_endpoint_descriptor_t* ep);
+uint8_t xhci_endpoint_index(uint8_t ep_address);
 
 // xhci-device-manager.c
 mx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port, usb_speed_t speed);
@@ -136,10 +136,10 @@ void xhci_handle_port_changed_event(xhci_t* xhci, xhci_trb_t* trb);
 void xhci_handle_rh_port_connected(xhci_t* xhci, int port);
 
 // xhci-transfer.c
-mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* data,
+mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
                                 uint16_t length, int ep, int direction, xhci_transfer_context_t* context);
 mx_status_t xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_t request,
-                                 uint16_t value, uint16_t index, void* data, uint16_t length);
+                                 uint16_t value, uint16_t index, mx_paddr_t data, uint16_t length);
 void xhci_cancel_transfers(xhci_t* xhci, xhci_transfer_ring_t* ring);
 mx_status_t xhci_get_descriptor(xhci_t* xhci, int slot_id, uint8_t type, uint16_t value,
                                 uint16_t index, void* data, uint16_t length);

@@ -18,6 +18,7 @@
 #include <ddk/protocol/usb-hci.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
 
@@ -363,6 +364,15 @@ static void usb_configuration_free(usb_configuration_t* config) {
     free(config->descriptor);
 }
 
+static void usb_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
+    usb_device_t* dev = get_usb_device(device);
+    usb_protocol_data_t* usb_data = iotxn_pdata(txn, usb_protocol_data_t);
+    usb_data->device_id = dev->address;
+
+    // forward iotxn to HCI device
+    iotxn_queue(dev->hcidev, txn);
+}
+
 static mx_status_t usb_device_release(mx_device_t* device) {
     usb_device_t* dev = get_usb_device(device);
 
@@ -381,6 +391,7 @@ static mx_status_t usb_device_release(mx_device_t* device) {
 }
 
 static mx_protocol_device_t usb_device_proto = {
+    .iotxn_queue = usb_iotxn_queue,
     .release = usb_device_release,
 };
 

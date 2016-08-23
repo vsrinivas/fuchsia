@@ -59,7 +59,7 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
     return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
 }
 
-int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* data,
+int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
                         uint16_t length, int endpoint, int direction, xhci_transfer_context_t* context) {
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n", slot_id, setup, endpoint, length);
 
@@ -118,7 +118,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
 
             xhci_trb_t* trb = ring->current;
             xhci_clear_trb(trb);
-            XHCI_WRITE64(&trb->ptr, xhci_virt_to_phys(xhci, (mx_vaddr_t)data + (i * max_transfer_size)));
+            XHCI_WRITE64(&trb->ptr, data + (i * max_transfer_size));
             XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, transfer_size);
             uint32_t td_size = packet_count - i - 1;
             XHCI_SET_BITS32(&trb->status, XFER_TRB_TD_SIZE_START, XFER_TRB_TD_SIZE_BITS, td_size);
@@ -182,7 +182,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, void* dat
 }
 
 int xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_t request,
-                         uint16_t value, uint16_t index, void* data, uint16_t length) {
+                         uint16_t value, uint16_t index, mx_paddr_t data, uint16_t length) {
     xprintf("xhci_control_request slot_id: %d type: 0x%02X req: %d value: %d index: %d length: %d\n",
             slot_id, request_type, request, value, index, length);
 
@@ -208,8 +208,9 @@ int xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_
 
 mx_status_t xhci_get_descriptor(xhci_t* xhci, int slot_id, uint8_t type, uint16_t value,
                                 uint16_t index, void* data, uint16_t length) {
+    mx_paddr_t phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)data);
     return xhci_control_request(xhci, slot_id, USB_DIR_IN | type | USB_RECIP_DEVICE,
-                                USB_REQ_GET_DESCRIPTOR, value, index, data, length);
+                                USB_REQ_GET_DESCRIPTOR, value, index, phys_addr, length);
 }
 
 void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {

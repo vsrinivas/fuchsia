@@ -202,7 +202,7 @@ static mx_status_t xhci_configure_endpoints(xhci_t* xhci, uint32_t slot_id, usb_
         } else if (header->bDescriptorType == USB_DT_ENDPOINT && do_endpoints) {
             usb_endpoint_descriptor_t* ep = (usb_endpoint_descriptor_t*)header;
 
-            uint32_t index = xhci_endpoint_index(ep);
+            uint32_t index = xhci_endpoint_index(ep->bEndpointAddress);
             if (max_index < index)
                 max_index = index;
             uint32_t ep_type = ep->bmAttributes & USB_ENDPOINT_TYPE_MASK;
@@ -399,7 +399,7 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     // set configuration
     result = xhci_control_request(xhci, slot_id, USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
                                   USB_REQ_SET_CONFIGURATION,
-                                  config_descriptors[0]->bConfigurationValue, 0, NULL, 0);
+                                  config_descriptors[0]->bConfigurationValue, 0, (mx_paddr_t)NULL, 0);
     if (result < 0) {
         printf("set configuration failed\n");
         goto free_config_descriptors_exit;
@@ -665,8 +665,9 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, int slot_id, usb_speed_t speed, usb
         }
 
         xprintf("USB_HUB_SET_DEPTH %d\n", depth);
-        mx_status_t result = xhci_control_request(xhci, slot_id, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                      USB_HUB_SET_DEPTH, depth, 0, NULL, 0);
+        mx_status_t result = xhci_control_request(xhci, slot_id,
+                                      USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                                      USB_HUB_SET_DEPTH, depth, 0, (mx_paddr_t)NULL, 0);
         if (result < 0) {
             printf("USB_HUB_SET_DEPTH failed\n");
         }

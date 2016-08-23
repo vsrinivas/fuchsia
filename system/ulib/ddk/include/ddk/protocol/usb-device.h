@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/driver.h>
+#include <ddk/device.h>
 #include <hw/usb.h>
 #include <hw/usb-hub.h>
 #include <system/listnode.h>
@@ -68,6 +68,13 @@ typedef struct usb_request {
     // node can be used by client when request is not queued
     list_node_t node;
 } usb_request_t;
+
+// protocol data for iotxns
+typedef struct usb_protocol_data {
+    usb_setup_t setup;      // for control transactions
+    uint32_t device_id;
+    uint8_t ep_address;     // bEndpointAddress from endpoint descriptor
+} usb_protocol_data_t;
 
 typedef struct usb_device_protocol {
     usb_request_t* (*alloc_request)(mx_device_t* dev, usb_endpoint_t* ep, uint16_t length);
