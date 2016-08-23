@@ -149,6 +149,28 @@ status_t unmask_interrupt(unsigned int vector)
     return NO_ERROR;
 }
 
+status_t configure_interrupt(unsigned int vector,
+                             enum interrupt_trigger_mode tm,
+                             enum interrupt_polarity pol)
+{
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&lock, state);
+
+    apic_io_configure_irq(
+            vector,
+            tm,
+            pol,
+            DELIVERY_MODE_FIXED,
+            IO_APIC_IRQ_MASK,
+            DST_MODE_PHYSICAL,
+            0,
+            0);
+
+    spin_unlock_irqrestore(&lock, state);
+
+    return NO_ERROR;
+}
+
 enum handler_return platform_irq(x86_iframe_t *frame)
 {
     // get the current vector

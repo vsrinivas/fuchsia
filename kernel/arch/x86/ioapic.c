@@ -44,9 +44,9 @@
 #define IO_APIC_RTE_REMOTE_IRR (1ULL << 14)
 #define IO_APIC_RTE_DELIVERY_STATUS (1ULL << 12)
 #define IO_APIC_RTE_GET_POLARITY(r) \
-        ((enum io_apic_irq_polarity)(((r) >> 13) & 0x1))
+        ((enum interrupt_polarity)(((r) >> 13) & 0x1))
 #define IO_APIC_RTE_GET_TRIGGER_MODE(r) \
-        ((enum io_apic_irq_trigger_mode)(((r) >> 15) & 0x1))
+        ((enum interrupt_trigger_mode)(((r) >> 15) & 0x1))
 #define IO_APIC_RTE_GET_VECTOR(r) \
         ((uint8_t)((r) & 0xFF))
 
@@ -310,8 +310,8 @@ void apic_io_mask_irq(uint32_t global_irq, bool mask)
 
 void apic_io_configure_irq(
         uint32_t global_irq,
-        enum io_apic_irq_trigger_mode trig_mode,
-        enum io_apic_irq_polarity polarity,
+        enum interrupt_trigger_mode trig_mode,
+        enum interrupt_polarity polarity,
         enum apic_interrupt_delivery_mode del_mode,
         bool mask,
         enum apic_interrupt_dst_mode dst_mode,
@@ -401,8 +401,8 @@ void apic_io_configure_isa_irq(
 {
     ASSERT(isa_irq < NUM_ISA_IRQS);
     uint32_t global_irq = isa_irq;
-    enum io_apic_irq_trigger_mode trig_mode = IRQ_TRIGGER_MODE_EDGE;
-    enum io_apic_irq_polarity polarity = IRQ_POLARITY_ACTIVE_HIGH;
+    enum interrupt_trigger_mode trig_mode = IRQ_TRIGGER_MODE_EDGE;
+    enum interrupt_polarity polarity = IRQ_POLARITY_ACTIVE_HIGH;
     if (isa_overrides[isa_irq].remapped) {
         global_irq = isa_overrides[isa_irq].global_irq;
         trig_mode = isa_overrides[isa_irq].tm;

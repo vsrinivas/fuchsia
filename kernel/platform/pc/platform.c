@@ -352,8 +352,8 @@ void platform_init_pcie(void) {
     // Configure the discovered PCIe IRQs
     for (uint i = 0; i < pcie_root_irq_map.num_irqs; ++i) {
         struct acpi_irq_signal *sig = &pcie_root_irq_map.irqs[i];
-        enum io_apic_irq_trigger_mode trig_mode = IRQ_TRIGGER_MODE_EDGE;
-        enum io_apic_irq_polarity polarity = IRQ_POLARITY_ACTIVE_LOW;
+        enum interrupt_trigger_mode trig_mode = IRQ_TRIGGER_MODE_EDGE;
+        enum interrupt_polarity polarity = IRQ_POLARITY_ACTIVE_LOW;
         if (sig->active_high) {
             polarity = IRQ_POLARITY_ACTIVE_HIGH;
         }

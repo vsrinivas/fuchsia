@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
+#include <dev/interrupt.h>
 #include <kernel/vm.h>
 
 __BEGIN_CDECLS
@@ -67,24 +68,14 @@ struct io_apic_descriptor {
     paddr_t paddr;
 };
 
-enum io_apic_irq_trigger_mode {
-    IRQ_TRIGGER_MODE_EDGE = 0,
-    IRQ_TRIGGER_MODE_LEVEL = 1,
-};
-
-enum io_apic_irq_polarity {
-    IRQ_POLARITY_ACTIVE_HIGH = 0,
-    IRQ_POLARITY_ACTIVE_LOW = 1,
-};
-
 // Information describing an ISA override.  An override can change the
 // global IRQ number and/or change bus signaling characteristics
 // for the specified ISA IRQ.
 struct io_apic_isa_override {
     uint8_t isa_irq;
     bool remapped;
-    enum io_apic_irq_trigger_mode tm;
-    enum io_apic_irq_polarity pol;
+    enum interrupt_trigger_mode tm;
+    enum interrupt_polarity pol;
     uint32_t global_irq;
 };
 
@@ -101,8 +92,8 @@ bool apic_io_is_valid_irq(uint32_t global_irq);
 void apic_io_mask_irq(uint32_t global_irq, bool mask);
 void apic_io_configure_irq(
         uint32_t global_irq,
-        enum io_apic_irq_trigger_mode trig_mode,
-        enum io_apic_irq_polarity polarity,
+        enum interrupt_trigger_mode trig_mode,
+        enum interrupt_polarity polarity,
         enum apic_interrupt_delivery_mode del_mode,
         bool mask,
         enum apic_interrupt_dst_mode dst_mode,

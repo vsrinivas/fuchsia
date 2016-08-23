@@ -312,6 +312,28 @@ status_t unmask_interrupt(unsigned int vector)
     return NO_ERROR;
 }
 
+status_t configure_interrupt(unsigned int vector,
+                             enum interrupt_trigger_mode tm,
+                             enum interrupt_polarity pol)
+{
+    if (vector >= MAX_INT)
+        return ERR_INVALID_ARGS;
+
+    if (tm != IRQ_TRIGGER_MODE_EDGE) {
+        // We don't currently support non-edge triggered interupts via the GIC,
+        // and we pre-initialize everything to edge triggered.
+        // TODO: re-evaluate this.
+        return ERR_NOT_SUPPORTED;
+    }
+
+    if (pol != IRQ_POLARITY_ACTIVE_HIGH) {
+        // TODO: polarity should actually be configure through a GPIO controller
+        return ERR_NOT_SUPPORTED;
+    }
+
+    return NO_ERROR;
+}
+
 unsigned int remap_interrupt(unsigned int vector)
 {
     return vector;
