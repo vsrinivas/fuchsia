@@ -102,6 +102,13 @@ MOJO_REPO=https://github.com/domokit/mojo.git
 MOJO_DIR="$MODULAR_ROOT/third_party/mojo/src"
 MOJO_SPARSE_PATHS="mojo/public/ mojo/services/"
 
+LEDGER_VERSION_PATH=$MODULAR_ROOT/LEDGER_VERSION
+LEDGER_VERSION="$(cat $LEDGER_VERSION_PATH)"
+LEDGER_API_VERSION_PATH=$MODULAR_ROOT/third_party/ledger/LEDGER_API_VERSION
+LEDGER_API_REPO=https://fuchsia.googlesource.com/ledger
+LEDGER_API_DIR="$MODULAR_ROOT/third_party/ledger/api"
+LEDGER_PREBUILT_PATH="$MODULAR_ROOT/third_party/ledger/prebuilt"
+
 MODULAR_TOOLS_DIR="$MODULAR_ROOT/modular_tools"
 SCRIPT_PATH="$MODULAR_TOOLS_DIR/lib/executable.dart"
 
@@ -115,7 +122,7 @@ MOJO_BUCKET_URL="https://mojo.storage.googleapis.com"
 function download_prebuilt() {
   remote_path="$1"
   local_path="$2"
-  curl -o "$local_path" "$MOJO_BUCKET_URL/$remote_path"
+  curl --create-dirs -o "$local_path" "$MOJO_BUCKET_URL/$remote_path"
 }
 
 (
@@ -154,6 +161,22 @@ function download_prebuilt() {
   then
     # remember to configure modular
     CONFIGURE_MODULAR=true
+  fi
+
+  # Download the ledger api
+  if [ ! -f "$LEDGER_API_VERSION_PATH" ] || \
+    [ "$LEDGER_API_VERSION_PATH" -ot "$LEDGER_VERSION_PATH" ]; then
+    download_prebuilt "ledger/$LEDGER_VERSION/LEDGER_API_VERSION" \
+        $LEDGER_API_VERSION_PATH
+    download_prebuilt "ledger/$LEDGER_VERSION/linux-x64/ledger.mojo" \
+        "$LEDGER_PREBUILT_PATH/linux-x64/ledger.mojo"
+    download_prebuilt "ledger/$LEDGER_VERSION/android-arm/ledger.mojo" \
+        "$LEDGER_PREBUILT_PATH/android-arm/ledger.mojo"
+    LEDGER_API_VERSION="$(cat $LEDGER_API_VERSION_PATH)"
+    if ensure_git_repo $LEDGER_API_DIR $LEDGER_API_REPO $LEDGER_API_VERSION
+    then
+      CONFIGURE_MODULAR=true
+    fi
   fi
 
   # If building in the modular tree, make sure some other deps are present:

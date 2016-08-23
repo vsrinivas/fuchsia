@@ -55,6 +55,12 @@ class GenCommand extends ModularCommand {
       return publicPackage;
     }
 
+    final int ledgerPackage = await _generateDartBindings(
+        environment.ledgerRoot, ['out', 'public']);
+    if (ledgerPackage != 0) {
+      return ledgerPackage;
+    }
+
     return 0;
   }
 }
