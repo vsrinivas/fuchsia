@@ -51,7 +51,7 @@ for building Magenta for ARM32, ARM64, and x86-64 architectures:
 
 ```
 cd $SRC
-git clone https://fuchsia.googlesource.com/third_party/gcc_none_toolchains
+git clone https://fuchsia.googlesource.com/third_party/gcc_none_toolchains toolchains
 cd toolchains
 ./doit -a 'arm aarch64 x86_64' -f -j32
 ```
