@@ -34,6 +34,8 @@ typedef struct usb_hub {
 
     usb_speed_t hub_speed;
     int num_ports;
+    // delay after port power in microseconds
+    mx_time_t power_on_delay;
 
     iotxn_t* status_request;
     completion_t completion;
@@ -73,10 +75,11 @@ static void usb_hub_interrupt_complete(iotxn_t* txn, void* cookie) {
 
 static void usb_hub_enable_port(usb_hub_t* hub, int port) {
     usb_set_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_PORT_POWER, port);
+    usleep(hub->power_on_delay);
 }
 
 static void usb_hub_port_connected(usb_hub_t* hub, int port) {
-    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
+    // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
     usleep(100 * 1000);
 
     xprintf("port %d usb_hub_port_connected\n", port);
@@ -89,6 +92,9 @@ static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
 }
 
 static void usb_hub_port_reset(usb_hub_t* hub, int port) {
+    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
+    usleep(100 * 1000);
+
     xprintf("port %d usb_hub_port_reset\n", port);
     usb_speed_t speed = usb_hub_get_port_speed(hub, port);
     if (speed != USB_SPEED_UNDEFINED) {
@@ -99,12 +105,12 @@ static void usb_hub_port_reset(usb_hub_t* hub, int port) {
 
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
     if (status->wPortChange & USB_PORT_CONNECTION) {
+        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
         if (status->wPortStatus & USB_PORT_CONNECTION) {
             usb_hub_port_connected(hub, port);
         } else {
             usb_hub_port_disconnected(hub, port);
         }
-        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
     }
     if (status->wPortChange & USB_PORT_ENABLE) {
         xprintf("USB_PORT_ENABLE\n");
@@ -119,10 +125,10 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
         usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
     }
     if (status->wPortChange & USB_PORT_RESET) {
+        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
         if (!(status->wPortStatus & USB_PORT_RESET)) {
             usb_hub_port_reset(hub, port);
         }
-        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
     }
 }
 
@@ -157,6 +163,12 @@ static int usb_hub_thread(void* arg) {
     }
 
     int num_ports = desc.bNbrPorts;
+    // power on delay in microseconds
+    hub->power_on_delay = desc.bPowerOn2PwrGood * 2 * 1000;
+    if (hub->power_on_delay < 100 * 1000) {
+        // USB 2.0 spec section 9.1.2 recommends atleast 100ms delay after power on
+        hub->power_on_delay = 100 * 1000;
+    }
 
     for (int i = 1; i <= num_ports; i++) {
         usb_hub_enable_port(hub, i);

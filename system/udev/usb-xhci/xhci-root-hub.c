@@ -21,7 +21,7 @@ static void xhci_reset_port(xhci_t* xhci, int port) {
 void xhci_handle_rh_port_connected(xhci_t* xhci, int port) {
     xprintf("xhci_handle_rh_port_connected %d\n", port);
 
-    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
+    // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
     usleep(100 * 1000);
 
     xhci_reset_port(xhci, port);
@@ -29,6 +29,9 @@ void xhci_handle_rh_port_connected(xhci_t* xhci, int port) {
 
 static void xhci_handle_port_enabled(xhci_t* xhci, int port, int speed) {
     xprintf("xhci_handle_port_enabled %d speed: %d\n", port, speed);
+
+    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
+    usleep(100 * 1000);
 
     xhci_enumerate_device(xhci, 0, port, speed);
 }
