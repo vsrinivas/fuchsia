@@ -56,15 +56,6 @@ __END_CDECLS
 #if __cplusplus
 
 template <typename T>
-inline status_t copy_from_user_dynamic(
-        void **dst,
-        utils::user_ptr<const T> src,
-        size_t len,
-        size_t max_len) {
-    return copy_from_user_dynamic(dst, src.get(), len, max_len);
-}
-
-template <typename T>
 inline status_t copy_to_user(utils::user_ptr<T> dst, const void* src, size_t len) {
   return copy_to_user_unsafe(dst.get(), src, len);
 }
