@@ -1,30 +1,20 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include <assert.h>
-#include <debug.h>
-#include <err.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <trace.h>
-#include <arch/ops.h>
-#include <dev/interrupt.h>
-#include <kernel/cond.h>
-#include <kernel/mutex.h>
-#include <kernel/semaphore.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
-#include <kernel/vm.h>
-#include <arch/x86/apic.h>
-#include <arch/x86/interrupts.h>
+#include <threads.h>
 
-#if !ARCH_X86
+#include <hw/inout.h>
+#include <magenta/syscalls.h>
+#include <magenta/syscalls-ddk.h>
+
+#if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"
 #endif
-// Needed for port IO
-#include <arch/x86.h>
 
 #include "acpi.h"
 
@@ -32,6 +22,21 @@
 ACPI_MODULE_NAME    ("osmagenta")
 
 #define LOCAL_TRACE 0
+
+/* Data used for implementing AcpiOsExecute and
+ * AcpiOsWaitEventsComplete */
+static mtx_t os_execute_lock = MTX_INIT;
+static cnd_t os_execute_cond;
+static int os_execute_tasks = 0;
+
+static ACPI_STATUS thrd_status_to_acpi_status(int status) {
+    switch (status) {
+        case thrd_success: return AE_OK;
+        case thrd_nomem: return AE_NO_MEMORY;
+        case thrd_timedout: return AE_TIME;
+        default: return AE_ERROR;
+    }
+}
 
 /**
  * @brief Initialize the OSL subsystem.
@@ -42,6 +47,13 @@ ACPI_MODULE_NAME    ("osmagenta")
  * @return Initialization status
  */
 ACPI_STATUS AcpiOsInitialize() {
+    ACPI_STATUS status = thrd_status_to_acpi_status(
+            cnd_init(&os_execute_cond));
+    if (status != AE_OK) {
+        return status;
+    }
+    /* TODO(teisenbe): be less permissive */
+    mx_mmap_device_io(0, 65536);
     return AE_OK;
 }
 
@@ -54,27 +66,29 @@ ACPI_STATUS AcpiOsInitialize() {
  * @return Termination status
  */
 ACPI_STATUS AcpiOsTerminate() {
+    cnd_destroy(&os_execute_cond);
+
     return AE_OK;
 }
 
-extern uint32_t bootloader_acpi_rsdp;
 /**
  * @brief Obtain the Root ACPI table pointer (RSDP).
  *
  * @return The physical address of the RSDP
  */
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
-    if (bootloader_acpi_rsdp) {
-        return bootloader_acpi_rsdp;
-    } else {
-        ACPI_PHYSICAL_ADDRESS TableAddress = 0;
-        ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
+    ACPI_PHYSICAL_ADDRESS TableAddress = 0;
+    ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
 
-        if (status != AE_OK) {
-            return 0;
-        }
-        return TableAddress;
+    uint32_t uefi_rsdp = mx_acpi_uefi_rsdp();
+    if (uefi_rsdp != 0) {
+        return uefi_rsdp;
     }
+
+    if (status != AE_OK) {
+        return 0;
+    }
+    return TableAddress;
 }
 
 /**
@@ -227,20 +241,13 @@ void *AcpiOsMapMemory(
     // Caution: PhysicalAddress might not be page-aligned, Length might not
     // be a page multiple.
 
-    ACPI_PHYSICAL_ADDRESS aligned_address = ROUNDDOWN(PhysicalAddress, PAGE_SIZE);
-    ACPI_PHYSICAL_ADDRESS end = ROUNDUP(PhysicalAddress + Length, PAGE_SIZE);
+    ACPI_PHYSICAL_ADDRESS aligned_address = PhysicalAddress & ~(PAGE_SIZE - 1);
+    ACPI_PHYSICAL_ADDRESS end = (PhysicalAddress + Length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-    void *vaddr = NULL;
-    status_t status = vmm_alloc_physical(
-            kernel_aspace,
-            "acpi_mapping",
-            end - aligned_address,
-            &vaddr,
-            PAGE_SIZE_SHIFT,
-            aligned_address,
-            0,
-            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+    void* vaddr = NULL;
+    // TODO(teisenbe): Replace this with a VMO-based system
+    mx_status_t status = mx_mmap_device_memory(aligned_address, end - aligned_address,
+                                               MX_CACHE_POLICY_CACHED, &vaddr);
     if (status != NO_ERROR) {
         return NULL;
     }
@@ -256,12 +263,7 @@ void *AcpiOsMapMemory(
  *        identical to the value used in the call to AcpiOsMapMemory.
  */
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-    status_t status = vmm_free_region(kernel_aspace, (vaddr_t)LogicalAddress);
-    if (status != NO_ERROR) {
-        TRACEF("WARNING: ACPI failed to free region %p, size %llu\n",
-               LogicalAddress, (uint64_t)Length);
-    }
+    // TODO(teisenbe): Implement
 }
 
 /**
@@ -292,18 +294,13 @@ void AcpiOsFree(void *Memory) {
  *         executing thread. The value -1 is reserved and must not be returned
  *         by this interface.
  */
-static_assert(sizeof(ACPI_THREAD_ID) >= sizeof(uintptr_t));
+static_assert(sizeof(ACPI_THREAD_ID) >= sizeof(mx_handle_t), "tid size");
 ACPI_THREAD_ID AcpiOsGetThreadId() {
-    // Just use the address of the thread_t
-    return (uintptr_t)get_current_thread();
+    return (uintptr_t)thrd_current();
 }
 
-/* Data and structures used for implementing AcpiOsExecute and
+/* Structures used for implementing AcpiOsExecute and
  * AcpiOsWaitEventsComplete */
-static mutex_t os_execute_lock = MUTEX_INITIAL_VALUE(os_execute_lock);
-static cond_t os_execute_cond = COND_INITIAL_VALUE(os_execute_cond);
-static int os_execute_tasks = 0;
-
 struct acpi_os_task_ctx {
     ACPI_OSD_EXEC_CALLBACK func;
     void *ctx;
@@ -314,10 +311,12 @@ static int acpi_os_task(void *raw_ctx) {
 
     ctx->func(ctx->ctx);
 
-    mutex_acquire(&os_execute_lock);
+    mtx_lock(&os_execute_lock);
     os_execute_tasks--;
-    cond_broadcast(&os_execute_cond);
-    mutex_release(&os_execute_lock);
+    if (os_execute_tasks == 0) {
+        cnd_broadcast(&os_execute_cond);
+    }
+    mtx_unlock(&os_execute_lock);
 
     free(ctx);
     return 0;
@@ -361,27 +360,27 @@ ACPI_STATUS AcpiOsExecute(
     ctx->func = Function;
     ctx->ctx = Context;
 
-    mutex_acquire(&os_execute_lock);
+    mtx_lock(&os_execute_lock);
     os_execute_tasks++;
-    mutex_release(&os_execute_lock);
+    mtx_unlock(&os_execute_lock);
 
-    thread_t *t = thread_create(
-            "acpi_os_exec",
-            acpi_os_task, ctx,
-            DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
-    if (!t) {
+    // TODO(teisenbe): Instead of spawning a thread each time for this,
+    // we should back this with a thread pool.
+    thrd_t thread;
+    ACPI_STATUS status = thrd_status_to_acpi_status(
+            thrd_create(&thread, acpi_os_task, ctx));
+    if (status != AE_OK) {
         free(ctx);
-        mutex_acquire(&os_execute_lock);
+        mtx_lock(&os_execute_lock);
         os_execute_tasks--;
-        cond_broadcast(&os_execute_cond);
-        mutex_release(&os_execute_lock);
-        return AE_NO_MEMORY;
-    }
-    status_t status = thread_detach_and_resume(t);
-    if (status != NO_ERROR) {
-        thread_resume(t);
+        if (os_execute_tasks == 0) {
+            cnd_broadcast(&os_execute_cond);
+        }
+        mtx_unlock(&os_execute_lock);
+        return status;
     }
 
+    thrd_detach(thread);
     return AE_OK;
 }
 
@@ -392,11 +391,11 @@ ACPI_STATUS AcpiOsExecute(
  * AcpiOsExecute have completed.
  */
 void AcpiOsWaitEventsComplete(void) {
-    mutex_acquire(&os_execute_lock);
+    mtx_lock(&os_execute_lock);
     while (os_execute_tasks > 0) {
-        cond_wait_timeout(&os_execute_cond, &os_execute_lock, INFINITE_TIME);
+        cnd_wait(&os_execute_cond, &os_execute_lock);
     }
-    mutex_release(&os_execute_lock);
+    mtx_unlock(&os_execute_lock);
 }
 
 /**
@@ -409,7 +408,7 @@ void AcpiOsSleep(UINT64 Milliseconds) {
         // If we're asked to sleep for a long time (>1.5 months), shorten it
         Milliseconds = UINT32_MAX;
     }
-    thread_sleep(Milliseconds);
+    mx_nanosleep(Milliseconds * 1000000);
 }
 
 /**
@@ -420,7 +419,7 @@ void AcpiOsSleep(UINT64 Milliseconds) {
  * @param Microseconds The amount of time to delay, in microseconds.
  */
 void AcpiOsStall(UINT32 Microseconds) {
-    spin(Microseconds);
+    mx_nanosleep(Microseconds * 1000);
 }
 
 /**
@@ -442,11 +441,14 @@ ACPI_STATUS AcpiOsCreateSemaphore(
         UINT32 MaxUnits,
         UINT32 InitialUnits,
         ACPI_SEMAPHORE *OutHandle) {
-    semaphore_t *sem = malloc(sizeof(semaphore_t));
+    sem_t *sem = malloc(sizeof(sem_t));
     if (!sem) {
         return AE_NO_MEMORY;
     }
-    sem_init(sem, InitialUnits);
+    if (sem_init(sem, 0, InitialUnits) < 0) {
+        free(sem);
+        return AE_ERROR;
+    }
     *OutHandle = sem;
     return AE_OK;
 }
@@ -483,19 +485,11 @@ ACPI_STATUS AcpiOsWaitSemaphore(
         ACPI_SEMAPHORE Handle,
         UINT32 Units,
         UINT16 Time) {
-    // TODO: Implement support for Units > 1
-    ASSERT(Units == 1);
-    lk_time_t timeout = Time;
-    if (Time == 0xffff) {
-        timeout = INFINITE_TIME;
+    // TODO(teisenbe): Implement this when we can calculate an absolute time to wait for
+    // sem_timedwait
+    if (sem_wait(Handle) < 0) {
+        return AE_ERROR;
     }
-    status_t status = sem_timedwait(Handle, timeout);
-    if (status == ERR_TIMED_OUT) {
-        return AE_TIME;
-    }
-    // The API doesn't have any bailout other than timeout, so if this was
-    // unsuccessfuly for some other reason, we can't really do anything...
-    ASSERT(status == NO_ERROR);
     return AE_OK;
 }
 
@@ -513,28 +507,35 @@ ACPI_STATUS AcpiOsSignalSemaphore(
         ACPI_SEMAPHORE Handle,
         UINT32 Units) {
     // TODO: Implement support for Units > 1
-    ASSERT(Units == 1);
+    assert(Units == 1);
 
-    sem_post(Handle, false /* don't reschedule (TODO: revisit?) */);
+    sem_post(Handle);
     return AE_OK;
 }
 
 /**
  * @brief Create a spin lock.
  *
- * @param OutHandle A pointer to a locaton where a handle to the lockis
+ * @param OutHandle A pointer to a locaton where a handle to the lock is
  *        to be returned.
  *
- * @return AE_OK The semaphore was successfully created.
+ * @return AE_OK The lock was successfully created.
  * @return AE_BAD_PARAMETER The OutHandle pointer is NULL.
  * @return AE_NO_MEMORY Insufficient memory to create the lock.
  */
 ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
-    spin_lock_t *lock = malloc(sizeof(spin_lock_t));
+    // Since we don't have a notion of interrupt contex in usermode, just make
+    // these mutexes.
+    mtx_t* lock = malloc(sizeof(mtx_t));
     if (!lock) {
         return AE_NO_MEMORY;
     }
-    spin_lock_init(lock);
+
+    ACPI_STATUS status = thrd_status_to_acpi_status(
+            mtx_init(lock, mtx_plain));
+    if (status != AE_OK) {
+        return status;
+    }
     *OutHandle = lock;
     return AE_OK;
 }
@@ -549,6 +550,7 @@ ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
  * @return AE_BAD_PARAMETER The Handle is invalid.
  */
 void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) {
+    mtx_destroy(Handle);
     free(Handle);
 }
 
@@ -561,9 +563,8 @@ void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) {
  * @return Platform-dependent CPU flags.  To be used when the lock is released.
  */
 ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(Handle, state);
-    return state;
+    mtx_lock(Handle);
+    return 0;
 }
 
 /**
@@ -574,20 +575,30 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
  * @param Flags CPU Flags that were returned from AcpiOsAcquireLock.
  */
 void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
-    spin_unlock_irqrestore(Handle, Flags);
+    mtx_unlock(Handle);
 }
 
 // Wrapper structs for interfacing between our interrupt handler convention and
 // ACPICA's
-struct acpi_irq_wrapper_arg {
+struct acpi_irq_thread_arg {
     ACPI_OSD_HANDLER handler;
+    mx_handle_t irq_handle;
     void *context;
 };
-enum handler_return acpi_irq_wrapper(void *arg) {
-    struct acpi_irq_wrapper_arg *real_arg = (struct acpi_irq_wrapper_arg *)arg;
-    real_arg->handler(real_arg->context);
-    // TODO: Should we do something with the return value from the handler?
-    return INT_NO_RESCHEDULE;
+static int acpi_irq_thread(void *arg) {
+    struct acpi_irq_thread_arg *real_arg = (struct acpi_irq_thread_arg *)arg;
+    while (1) {
+        mx_status_t status = mx_interrupt_event_wait(real_arg->irq_handle);
+        if (status != NO_ERROR) {
+            continue;
+        }
+
+        // TODO: Should we do something with the return value from the handler?
+        real_arg->handler(real_arg->context);
+
+        mx_interrupt_event_complete(real_arg->irq_handle);
+    }
+    return 0;
 }
 
 /**
@@ -622,23 +633,31 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
         return AE_OK;
     }
 
-    ASSERT(InterruptLevel == 0x9); // SCI
-    apic_io_configure_isa_irq(
-        InterruptLevel,
-        DELIVERY_MODE_FIXED,
-        IO_APIC_IRQ_MASK,
-        DST_MODE_PHYSICAL,
-        apic_local_id(),
-        0);
+    assert(InterruptLevel == 0x9); // SCI
 
-    struct acpi_irq_wrapper_arg *arg = malloc(sizeof(*arg));
+    struct acpi_irq_thread_arg *arg = malloc(sizeof(*arg));
     if (!arg) {
         return AE_NO_MEMORY;
     }
+
+    mx_handle_t handle = mx_interrupt_event_create(InterruptLevel, MX_FLAG_REMAP_IRQ);
+    if (handle < 0) {
+        free(arg);
+        return AE_ERROR;
+    }
+
     arg->handler = Handler;
     arg->context = Context;
-    register_int_handler(InterruptLevel, acpi_irq_wrapper, arg);
-    unmask_interrupt(InterruptLevel);
+    arg->irq_handle = handle;
+
+    thrd_t thread;
+    int ret = thrd_create(&thread, acpi_irq_thread, arg);
+    if (ret != 0) {
+        free(arg);
+        return AE_ERROR;
+    }
+    thrd_detach(thread);
+
     return AE_OK;
 }
 
@@ -658,7 +677,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
 ACPI_STATUS AcpiOsRemoveInterruptHandler(
         UINT32 InterruptNumber,
         ACPI_OSD_HANDLER Handler) {
-    PANIC_UNIMPLEMENTED;
+    assert(false);
     return AE_NOT_EXIST;
 }
 
@@ -675,7 +694,7 @@ ACPI_STATUS AcpiOsReadMemory(
         ACPI_PHYSICAL_ADDRESS Address,
         UINT64 *Value,
         UINT32 Width) {
-    PANIC_UNIMPLEMENTED;
+    assert(false);
     return AE_OK;
 }
 
@@ -692,7 +711,7 @@ ACPI_STATUS AcpiOsWriteMemory(
         ACPI_PHYSICAL_ADDRESS Address,
         UINT64 Value,
         UINT32 Width) {
-    PANIC_UNIMPLEMENTED;
+    assert(false);
     return AE_OK;
 }
 
@@ -778,8 +797,6 @@ ACPI_STATUS AcpiOsReadPciConfiguration(
         UINT32 Register,
         UINT64 *Value,
         UINT32 Width) {
-    LTRACEF("Reading PCI ID ptr %p\n", PciId);
-    LTRACEF("Reading PCI: %02x:%02x.%x, reg %#08x, width %u\n", PciId->Bus, PciId->Device, PciId->Function, Register, Width);
     // TODO: Maybe implement for real
     // Pretending the answer is 0 for now makes our hardware targets work fine.
     // On primary target it attempts to read some registers on the LPC endpoint.
@@ -835,7 +852,7 @@ void AcpiOsVprintf(const char *Format, va_list Args) {
  * @return The current value of the system timer in 100-ns units.
  */
 UINT64 AcpiOsGetTimer() {
-    PANIC_UNIMPLEMENTED;
+    assert(false);
     return 0;
 }
 
@@ -851,7 +868,7 @@ UINT64 AcpiOsGetTimer() {
 ACPI_STATUS AcpiOsSignal(
         UINT32 Function,
         void *Info) {
-    PANIC_UNIMPLEMENTED;
+    assert(false);
     return AE_OK;
 }
 

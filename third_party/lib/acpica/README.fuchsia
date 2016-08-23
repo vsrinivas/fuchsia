@@ -8,6 +8,8 @@ Modifications:
 - Added rules.mk
 - Added LICENSE containing copy of source license banner
 - Added source/include/platform/acmagenta.h
-- Modified source/include/platform/acenv.h to use acmagenta.h
+- Added source/include/platform/acfuchsia.h
+- Modified source/include/platform/acenv.h to use acmagenta.h/acfuchsia.h
 - Added source/os_specific/service_layers/osmagenta.c
+- Added source/os_specific/service_layers/osfuchsia.c
 - Moved everything in source/include into source/include/acpica

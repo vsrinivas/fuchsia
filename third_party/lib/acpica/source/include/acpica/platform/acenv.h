@@ -221,6 +221,8 @@
 #elif defined(LK)
 #include "acmagenta.h"
 
+#elif defined(__Fuchsia__)
+#include "acfuchsia.h"
 #else
 
 /* Unknown environment */
