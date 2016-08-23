@@ -107,6 +107,7 @@ is_linux = false
 is_mac = false
 is_win = false
 is_clang = true
+is_component_build = false
 
 if (current_os == "fuchsia") {
   is_fuchsia = true
