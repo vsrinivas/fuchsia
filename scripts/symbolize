@@ -34,7 +34,7 @@ def find_file_in_build_dir(name, build_dirs):
     for location in build_dirs:
         os.path.walk(location, find_func, find_args)
         if find_args["path"] != "":
-            found_path = os.path.join(location, find_args["path"], name)
+            found_path = os.path.abspath(os.path.join(find_args["path"], name))
             break
     return found_path
 
@@ -78,7 +78,7 @@ def main():
         build_dirs += args.build_dir
     else:
         fuchsia_build_dir = os.path.abspath(os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64", "exe.unstripped"))
         build_dirs.append(fuchsia_build_dir)
 
     btre = re.compile("^.* U bt#(\d+):")
