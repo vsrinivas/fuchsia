@@ -87,8 +87,6 @@ def main():
     processed_lines = []
     while True:
         line = sys.stdin.readline()
-        if line == "":
-            break
         if not sys.stdin.isatty():
             sys.stdout.write(line)
         if line.find(" U bt#") >= 0:
@@ -114,6 +112,8 @@ def main():
                 sys.stdout.writelines(processed_lines)
                 print "end of symbolized stack"
                 processed_lines = []
+            if line == "":
+                break;
 
 if __name__ == '__main__':
     sys.exit(main())
