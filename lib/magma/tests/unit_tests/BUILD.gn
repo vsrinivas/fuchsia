@@ -55,6 +55,7 @@ source_set("magma_system_tests") {
 source_set("magma_util_tests") {
   sources = [
     "test_address_space_allocator.cc",
+    "test_macros.cc",
     "test_mmio.cc",
     "test_mutex.cc",
     "test_platform_buffer.cc",

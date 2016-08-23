@@ -71,6 +71,23 @@ static inline uint32_t upper_32_bits(uint64_t n) { return static_cast<uint32_t>(
 
 static inline uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
 
+static inline bool get_pow2(uint64_t val, uint64_t* pow2_out)
+{
+    if (val == 0)
+        return DRETF(false, "zero is not a power of two");
+
+    uint64_t result = 0;
+    while ((val & 1) == 0) {
+        val >>= 1;
+        result++;
+    }
+    if (val >> 1)
+        return DRETF(false, "not a power of 2");
+
+    *pow2_out = result;
+    return true;
+}
+
 static inline bool is_broadwell_gt3(uint32_t device_id) { return (device_id & 0xFFF0) == 0x1620; }
 
 static inline uint32_t round_up_pot_32(uint32_t val, uint32_t power_of_two)
