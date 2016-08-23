@@ -8,6 +8,7 @@
         "ftl",
         "leveldb",
         "libc-tests",
+        "lua",
         "mojo",
         "mtl",
         "re2",

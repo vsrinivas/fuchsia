@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//third_party/lua"
+    ],
+    "binaries": [
+        {
+            "binary": "lua",
+            "bootfs_path": "bin/lua"
+        }
+    ]
+}
