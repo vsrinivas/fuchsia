@@ -7,7 +7,3 @@
 
 # main project for qemu-virt
 TARGET := qemu-virt
-
-MODULES += dev/intel_hda
-
-INTEL_HDA_QEMU_QUIRKS := 1

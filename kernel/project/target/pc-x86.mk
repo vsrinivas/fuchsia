@@ -10,7 +10,3 @@
 ARCH := x86
 SUBARCH ?= x86-32
 TARGET := pc-x86
-
-MODULES += dev/intel_hda
-
-INTEL_HDA_QEMU_QUIRKS := 1
