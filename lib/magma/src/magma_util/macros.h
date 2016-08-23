@@ -88,15 +88,18 @@ static inline bool get_pow2(uint64_t val, uint64_t* pow2_out)
     return true;
 }
 
-static inline bool is_broadwell_gt3(uint32_t device_id) { return (device_id & 0xFFF0) == 0x1620; }
-
-static inline uint32_t round_up_pot_32(uint32_t val, uint32_t power_of_two)
+static inline bool is_pow2(uint64_t val)
 {
-    assert(power_of_two % 2 == 0);
-    return ((val - 1) | (power_of_two - 1)) + 1;
+    uint64_t out;
+    return get_pow2(val, &out);
 }
 
-static inline uint64_t round_up_64(uint64_t x, uint64_t y) { return ((x + (y - 1)) / y) * y; }
+// Note, alignment must be a power of 2
+template <class T> static inline T round_up(T val, uint32_t alignment)
+{
+    DASSERT(is_pow2(alignment));
+    return ((val - 1) | (alignment - 1)) + 1;
+}
 
 static inline uint8_t inb(uint16_t _port)
 {

@@ -125,7 +125,7 @@ bool MagentaPlatformBuffer::PinnedPageCount(uint32_t* count)
 int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint64_t size,
                               uint64_t* size_out, uint32_t* handle_out)
 {
-    size = magma::round_up_64(size, PAGE_SIZE);
+    size = magma::round_up(size, PAGE_SIZE);
     if (size == 0)
         return DRET(-EINVAL);
 

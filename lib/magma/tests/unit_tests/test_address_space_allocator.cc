@@ -45,6 +45,7 @@ static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2
     EXPECT_EQ(ret, true);
     if (ret) {
         EXPECT_EQ(addr, expected_addr);
+        EXPECT_TRUE(addr % (1 << align_pow2) == 0);
         allocs.emplace_back(allocator, addr);
 
         ret = allocator->GetSize(addr, &size);
@@ -62,6 +63,7 @@ static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2
     EXPECT_EQ(ret, allocator->size() >= expected_addr + PAGE_SIZE);
     if (ret) {
         EXPECT_EQ(addr, expected_addr);
+        EXPECT_TRUE(addr % (1 << align_pow2) == 0);
         expected_addr = ALIGN(expected_addr + PAGE_SIZE, 1 << align_pow2);
         allocs.emplace_back(allocator, addr);
     }
@@ -70,6 +72,7 @@ static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2
     EXPECT_EQ(ret, allocator->size() >= expected_addr + PAGE_SIZE);
     if (ret) {
         EXPECT_EQ(addr, expected_addr);
+        EXPECT_TRUE(addr % (1 << align_pow2) == 0);
         expected_addr = ALIGN(expected_addr + PAGE_SIZE, 1 << align_pow2);
         allocs.emplace_back(allocator, addr);
     }
@@ -78,6 +81,7 @@ static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2
     EXPECT_EQ(ret, allocator->size() >= expected_addr + 2 * PAGE_SIZE);
     if (ret) {
         EXPECT_EQ(addr, expected_addr);
+        EXPECT_TRUE(addr % (1 << align_pow2) == 0);
         expected_addr = ALIGN(expected_addr + 2 * PAGE_SIZE, 1 << align_pow2);
         allocs.emplace_back(allocator, addr);
     }
@@ -86,6 +90,7 @@ static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2
     EXPECT_EQ(ret, allocator->size() >= expected_addr + 20 * PAGE_SIZE);
     if (ret) {
         EXPECT_EQ(addr, expected_addr);
+        EXPECT_TRUE(addr % (1 << align_pow2) == 0);
         allocs.emplace_back(allocator, addr);
     }
 }

@@ -8,6 +8,7 @@
 
 #include "simple_allocator.h"
 #include "magma_util/dlog.h"
+#include "magma_util/macros.h"
 #include <limits.h> // PAGE_SIZE
 #include <memory>
 
@@ -16,13 +17,6 @@
 #else
 #error Must define PAGE_SIZE_POW2
 #endif
-
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
-#define ALIGN(a, b) ROUNDUP(a, b)
-#define PAGE_ALIGN(x) ALIGN((x), PAGE_SIZE)
-
-#define IS_ALIGNED(a, b) (!(((uintptr_t)(a)) & (((uintptr_t)(b)) - 1)))
-#define IS_PAGE_ALIGNED(x) IS_ALIGNED((x), PAGE_SIZE)
 
 // Returns true if the gap is good and addr_out is set.
 // Otherwise false is returned and continue_search should be checked.
@@ -50,7 +44,7 @@ bool SimpleAllocator::CheckGap(SimpleAllocator::Region* prev, SimpleAllocator::R
         gap_end = base() + this->size() - 1;
     }
 
-    *addr_out = ALIGN(gap_begin, align);
+    *addr_out = magma::round_up(gap_begin, align);
 
     if (*addr_out < gap_begin) {
         *continue_search_out = false;
@@ -86,11 +80,11 @@ bool SimpleAllocator::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
     DLOG("Alloc size 0x%zx align_pow2 0x%x", size, align_pow2);
     DASSERT(addr_out);
 
-    size = ROUNDUP(size, PAGE_SIZE);
+    size = magma::round_up(size, PAGE_SIZE);
     if (size == 0)
         return DRETF(false, "can't allocate size zero");
 
-    DASSERT(IS_PAGE_ALIGNED(size));
+    DASSERT(magma::is_page_aligned(size));
 
     if (align_pow2 < PAGE_SIZE_POW2)
         align_pow2 = PAGE_SIZE_POW2;
