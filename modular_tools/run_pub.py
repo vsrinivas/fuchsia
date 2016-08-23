@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 _SRC_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_LEDGER_ROOT = os.path.join(_SRC_ROOT, 'third_party', 'ledger')
 _DART_SDK = os.path.join(_SRC_ROOT, 'third_party', 'flutter', 'bin', 'cache',
                          'dart-sdk', 'bin')
 
@@ -26,6 +27,7 @@ def _get_all_packages():
 
   packages.append(os.path.join(_SRC_ROOT, 'third_party', 'flutter', 'packages',
                                'flutter'))
+  packages.append(_LEDGER_ROOT)
   return packages
 
 

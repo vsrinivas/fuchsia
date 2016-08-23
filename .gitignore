@@ -30,6 +30,9 @@ packages
 /third_party/mojo/
 /third_party/mojo_devtools/
 /third_party/sysui/
+/third_party/ledger/api/
+/third_party/ledger/prebuilt/
+/third_party/ledger/LEDGER_API_VERSION
 /inspector/bower_components/
 !/packages/
 /packages/*/packages/

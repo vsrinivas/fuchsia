@@ -58,6 +58,7 @@ class EnvironmentConfiguration {
   }
 
   String get flutterRoot => path.join(modularRoot, 'third_party', 'flutter');
+  String get ledgerRoot => path.join(modularRoot, 'third_party', 'ledger');
   String get dartSdkPath => path.join(flutterRoot, 'bin', 'cache', 'dart-sdk');
   String get devtoolsPath =>
       path.join(modularRoot, 'third_party', 'mojo_devtools');
