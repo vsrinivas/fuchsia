@@ -16,7 +16,7 @@ public:
 
         uint64_t base = 0x10000;
         std::unique_ptr<MockAddressSpace> address_space(
-            new MockAddressSpace(base, magma::round_up_pot_32(batch_size, PAGE_SIZE)));
+            new MockAddressSpace(base, magma::round_up(batch_size, PAGE_SIZE)));
 
         {
             std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch_size));

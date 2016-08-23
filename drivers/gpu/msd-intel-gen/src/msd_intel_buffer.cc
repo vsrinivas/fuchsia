@@ -55,7 +55,8 @@ bool MsdIntelBuffer::MapGpu(AddressSpace* address_space, uint32_t alignment)
     if (!address_space->Alloc(size, static_cast<uint8_t>(align_pow2), &gpu_addr))
         return DRETF(false, "failed to allocate gpu address");
 
-    DLOG("allocated gpu_addr 0x%llx", gpu_addr);
+    DLOG("MapGpu alignment 0x%x (pow2 0x%x) allocated gpu_addr 0x%llx", alignment,
+         static_cast<uint32_t>(align_pow2), gpu_addr);
 
     if (!address_space->Insert(gpu_addr, platform_buffer(), caching_type()))
         return DRETF(false, "failed to insert into address_space");

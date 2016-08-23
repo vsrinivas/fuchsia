@@ -7,9 +7,10 @@
 bool MockAddressSpace::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 {
     DASSERT(magma::is_page_aligned(size));
-    allocations_[next_addr_] = Allocation{size, true, true};
-    *addr_out = next_addr_;
-    next_addr_ += size;
+    uint64_t addr = magma::round_up(next_addr_, 1ul << align_pow2);
+    allocations_[addr] = Allocation{size, true, true};
+    *addr_out = addr;
+    next_addr_ = addr + size;
     return true;
 }
 
