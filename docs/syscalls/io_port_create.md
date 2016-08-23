@@ -41,9 +41,9 @@ In the event of failure, a negative error value is returned. Zero (the
 
 ## SEE ALSO
 
-[io_port_queue](io_port_queue.md).
-[io_port_wait](io_port_wait.md).
-[io_port_bind](io_port_bind.md).
-[handle_close](handle_close.md).
-[handle_duplicate](handle_duplicate.md).
-
+[io_port_queue](io_port_queue.md),
+[io_port_wait](io_port_wait.md),
+[io_port_bind](io_port_bind.md),
+[handle_close](handle_close.md),
+[handle_duplicate](handle_duplicate.md),
+[handle_replace](handle_replace.md).

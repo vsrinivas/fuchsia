@@ -69,8 +69,8 @@ the *handles* array, not its size in bytes.
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
+[handle_replace](handle_replace.md),
 [handle_wait_one](handle_wait_one),
 [handle_wait_many](handle_wait_many.md),
 [message_pipe_create](message_pipe_create.md),
 [message_write](message_write.md).
-

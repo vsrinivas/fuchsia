@@ -64,7 +64,7 @@ public:
     // it belongs to this process.
     Handle* GetHandle_NoLock(mx_handle_t handle_value);
 
-    // Adds |hadle| to this process handle list. The handle->process_id() is
+    // Adds |handle| to this process handle list. The handle->process_id() is
     // set to this process id().
     void AddHandle(HandleUniquePtr handle);
     void AddHandle_NoLock(HandleUniquePtr handle);

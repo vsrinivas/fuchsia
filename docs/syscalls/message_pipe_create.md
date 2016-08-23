@@ -51,8 +51,8 @@ of failure, a negative error value is returned.
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
+[handle_replace](handle_replace.md),
 [handle_wait_one](handle_wait_one),
 [handle_wait_many](handle_wait_many.md),
 [message_read](message_read.md),
 [message_write](message_write.md).
-

@@ -264,7 +264,7 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
     LTRACEF("handle %u\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    HandleUniquePtr dest;
+    mx_handle_t dup_hv;
 
     {
         AutoLock lock(up->handle_table_lock());
@@ -274,6 +274,8 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
 
         if (!magenta_rights_check(source->rights(), MX_RIGHT_DUPLICATE))
             return ERR_ACCESS_DENIED;
+
+        HandleUniquePtr dest;
         if (rights == MX_RIGHT_SAME_RIGHTS) {
             dest.reset(DupHandle(source, source->rights()));
         } else {
@@ -281,15 +283,52 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
                 return ERR_INVALID_ARGS;
             dest.reset(DupHandle(source, rights));
         }
+        if (!dest)
+            return ERR_NO_MEMORY;
+
+        dup_hv = up->MapHandleToValue(dest.get());
+        up->AddHandle_NoLock(utils::move(dest));
     }
 
-    if (!dest)
-        return ERR_NO_MEMORY;
-
-    mx_handle_t dup_hv = up->MapHandleToValue(dest.get());
-
-    up->AddHandle(utils::move(dest));
     return dup_hv;
+}
+
+mx_handle_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights) {
+    LTRACEF("handle %u\n", handle_value);
+
+    auto up = ProcessDispatcher::GetCurrent();
+    HandleUniquePtr source;
+    mx_handle_t replacement_hv;
+
+    {
+        AutoLock lock(up->handle_table_lock());
+        source = up->RemoveHandle_NoLock(handle_value);
+        if (!source)
+            return BadHandle();
+
+        HandleUniquePtr dest;
+        // Used only if |dest| doesn't (successfully) get set below.
+        mx_status_t error = ERR_NO_MEMORY;
+        if (rights == MX_RIGHT_SAME_RIGHTS) {
+            dest.reset(DupHandle(source.get(), source->rights()));
+        } else {
+            if ((source->rights() & rights) != rights)
+                error = ERR_INVALID_ARGS;
+            else
+                dest.reset(DupHandle(source.get(), rights));
+        }
+
+        if (!dest) {
+            // Unwind: put |source| back!
+            up->AddHandle_NoLock(utils::move(source));
+            return error;
+        }
+
+        replacement_hv = up->MapHandleToValue(dest.get());
+        up->AddHandle_NoLock(utils::move(dest));
+    }
+
+    return replacement_hv;
 }
 
 mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, utils::user_ptr<void> _info,

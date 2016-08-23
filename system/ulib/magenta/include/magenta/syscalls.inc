@@ -83,6 +83,7 @@ MAGENTA_SYSCALL_DEF(6, 8, 43, mx_status_t, handle_wait_many, uint32_t count, con
                     USER_PTR(mx_signals_state_t) signals_states)
 MAGENTA_SYSCALL_DEF(4, 4, 44, mx_ssize_t, handle_get_info, mx_handle_t handle, uint32_t topic, USER_PTR(void) info,
                     mx_size_t info_size)
+MAGENTA_SYSCALL_DEF(2, 2, 45, mx_handle_t, handle_replace, mx_handle_t handle, mx_rights_t rights)
 
 // Generic object operations
 MAGENTA_SYSCALL_DEF(3, 3, 46, mx_status_t, object_signal, mx_handle_t handle, uint32_t clear_mask,

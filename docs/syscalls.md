@@ -7,6 +7,7 @@
 
 + [handle_close](syscalls/handle_close.md)
 + [handle_duplicate](syscalls/handle_duplicate.md)
++ [handle_replace](syscalls/handle_replace.md)
 + [handle_wait_many](syscalls/handle_wait_many.md)
 + [handle_wait_one](syscalls/handle_wait_one.md)
 

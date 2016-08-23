@@ -51,7 +51,11 @@ which points to the same kernel object and is bound to the same
 process that issued the syscall:
 + `mx_handle_duplicate`
 
-There is only one syscall that can destroy a handle:
+There is one syscall that creates an equivalent handle (possibly
+with fewer rights), invalidating the original handle:
++ `mx_handle_replace`
+
+There is one syscall that just destroys a handle:
 + `mx_handle_close`
 
 There is only one syscall that takes a handle bound to calling

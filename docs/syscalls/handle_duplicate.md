@@ -36,3 +36,7 @@ positive value), or an error code (negative).
 
 **ERR_NO_MEMORY**  (Temporary) out of memory situation.
 
+## SEE ALSO
+
+[handle_close](handle_close.md),
+[handle_replace](handle_replace.md).

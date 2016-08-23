@@ -8,40 +8,24 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
-#define CHECK(f, expected, message)                                 \
-    do {                                                            \
-        mx_status_t ret = (f);                                                  \
-        char msg[32];                                               \
-        snprintf(msg, sizeof(msg), "Test failed (%s): " #f " returned %d vs. %d\n",     \
-                   message, (int)ret, (int)expected);               \
-        EXPECT_EQ(ret, (int)(expected), msg);                            \
-        if ((ret = (f)) != (expected)) {                            \
-            return __LINE__;                                        \
-        }                                                           \
-    } while (0)
-
 bool handle_info_test(void) {
     BEGIN_TEST;
 
     mx_handle_t event = mx_event_create(0u);
     mx_handle_t duped = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS);
 
-    CHECK(mx_handle_get_info(
-              event, MX_INFO_HANDLE_VALID, NULL, 0u),
-          NO_ERROR, "handle should be valid");
-    CHECK(mx_handle_close(event), NO_ERROR, "failed to close the handle");
-    CHECK(mx_handle_get_info(
-              event, MX_INFO_HANDLE_VALID, NULL, 0u),
-          ERR_BAD_HANDLE, "handle should be valid");
+    ASSERT_EQ(mx_handle_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u), NO_ERROR,
+              "handle should be valid");
+    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close the handle");
+    ASSERT_EQ(mx_handle_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u), ERR_BAD_HANDLE,
+              "handle should be valid");
 
     mx_handle_basic_info_t info = {0};
-    CHECK(mx_handle_get_info(
-              duped, MX_INFO_HANDLE_BASIC, &info, 4u),
-          ERR_NOT_ENOUGH_BUFFER, "bad struct size validation");
+    ASSERT_EQ(mx_handle_get_info(duped, MX_INFO_HANDLE_BASIC, &info, 4u), ERR_NOT_ENOUGH_BUFFER,
+              "bad struct size validation");
 
-    CHECK(mx_handle_get_info(
-              duped, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
-          sizeof(info), "handle should be valid");
+    ASSERT_EQ(mx_handle_get_info(duped, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
+              (mx_ssize_t)sizeof(info), "handle should be valid");
 
     const mx_rights_t evr = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
                             MX_RIGHT_READ | MX_RIGHT_WRITE;
@@ -64,29 +48,34 @@ bool handle_rights_test(void) {
     mx_handle_t duped_ro = mx_handle_duplicate(event, MX_RIGHT_READ);
 
     mx_handle_basic_info_t info = {0};
-    CHECK(mx_handle_get_info(
-              duped_ro, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
-          sizeof(info), "handle should be valid");
+    ASSERT_EQ(mx_handle_get_info(duped_ro, MX_INFO_HANDLE_BASIC, &info, sizeof(info)),
+              (mx_ssize_t)sizeof(info), "handle should be valid");
 
-    if (info.rights != MX_RIGHT_READ)
-        CHECK(0, 1, "wrong set of rights");
+    ASSERT_EQ(info.rights, MX_RIGHT_READ, "wrong set of rights");
 
-    mx_handle_t h;
-
-    h = mx_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS);
-    CHECK(h, ERR_ACCESS_DENIED, "should fail rights check");
+    mx_handle_t h = mx_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS);
+    ASSERT_EQ(h, ERR_ACCESS_DENIED, "should fail rights check");
 
     h = mx_handle_duplicate(event, MX_RIGHT_EXECUTE | MX_RIGHT_READ);
-    CHECK(h, ERR_INVALID_ARGS, "cannot upgrade rights");
+    ASSERT_EQ(h, ERR_INVALID_ARGS, "cannot upgrade rights");
 
-    mx_handle_close(event);
-    mx_handle_close(duped_ro);
+    ASSERT_EQ(mx_handle_replace(duped_ro, MX_RIGHT_EXECUTE | MX_RIGHT_READ), ERR_INVALID_ARGS,
+              "cannot upgrade rights");
+
+    h = mx_handle_replace(duped_ro, MX_RIGHT_SAME_RIGHTS);
+    ASSERT_GT(h, MX_HANDLE_INVALID, "should be able to duplicate handle");
+    // duped_ro should now be invalid.
+
+    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close original handle");
+    ASSERT_EQ(mx_handle_close(duped_ro), ERR_BAD_HANDLE, "replaced handle should be invalid");
+    ASSERT_EQ(mx_handle_close(h), NO_ERROR, "failed to close replacement handle");
 
     END_TEST;
 }
 
 BEGIN_TEST_CASE(handle_info_tests)
 RUN_TEST(handle_info_test)
+RUN_TEST(handle_rights_test)
 END_TEST_CASE(handle_info_tests)
 
 #ifndef BUILD_COMBINED_TESTS
