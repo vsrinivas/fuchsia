@@ -30,11 +30,11 @@ class StandardOutputBase : public AudioOutput {
 
     // State for the job set up once by the output implementation and then used
     // by all tracks.
-    void*    buf;
+    void* buf;
     uint32_t buf_frames;
-    int64_t  start_pts_of;  // start PTS, expressed in output frames.
+    int64_t start_pts_of;  // start PTS, expressed in output frames.
     uint32_t local_to_output_gen;
-    bool     accumulate;
+    bool accumulate;
     const LinearTransform* local_to_output;
 
     // State for the job which is set up for each track during SetupMix
@@ -83,9 +83,9 @@ class StandardOutputBase : public AudioOutput {
   using TrackSetupTask = std::function<bool(const AudioTrackImplPtr& track,
                                             TrackBookkeeping* info)>;
   using TrackProcessTask =
-    std::function<bool(const AudioTrackImplPtr& track,
-                       TrackBookkeeping* info,
-                       const AudioPipe::AudioPacketRefPtr& pkt_ref)>;
+      std::function<bool(const AudioTrackImplPtr& track,
+                         TrackBookkeeping* info,
+                         const AudioPipe::AudioPacketRefPtr& pkt_ref)>;
 
   void ForeachTrack(const TrackSetupTask& setup,
                     const TrackProcessTask& process);

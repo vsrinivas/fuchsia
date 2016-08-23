@@ -18,14 +18,13 @@ namespace audio {
 // to the main event loop.
 static void FinishShutdownSelf(AudioOutputManager* manager,
                                AudioOutputWeakPtr weak_output) {
-  auto output  = weak_output.lock();
+  auto output = weak_output.lock();
   if (output) {
     manager->ShutdownOutput(output);
   }
 }
 
-AudioOutput::AudioOutput(AudioOutputManager* manager)
-  : manager_(manager) {
+AudioOutput::AudioOutput(AudioOutputManager* manager) : manager_(manager) {
   DCHECK(manager_);
 }
 
@@ -77,8 +76,7 @@ MediaResult AudioOutput::Init() {
   return MediaResult::OK;
 }
 
-void AudioOutput::Cleanup() {
-}
+void AudioOutput::Cleanup() {}
 
 MediaResult AudioOutput::InitializeLink(const AudioTrackToOutputLinkPtr& link) {
   DCHECK(link);
@@ -100,15 +98,13 @@ void AudioOutput::ScheduleCallback(LocalTime when) {
   // with absolute time, or with resolution better than microseconds, do so.
   // Until then figure out the relative time for scheduling the task and do so.
   LocalTime now = LocalClock::now();
-  base::TimeDelta sched_time = (now > when)
-    ? base::TimeDelta::FromMicroseconds(0)
-    : base::TimeDelta::FromMicroseconds(
-        local_time::to_usec<int64_t>(when - now));
+  base::TimeDelta sched_time =
+      (now > when) ? base::TimeDelta::FromMicroseconds(0)
+                   : base::TimeDelta::FromMicroseconds(
+                         local_time::to_usec<int64_t>(when - now));
 
   task_runner_->PostNonNestableDelayedTask(
-      FROM_HERE,
-      base::Bind(&ProcessThunk, weak_self_),
-      sched_time);
+      FROM_HERE, base::Bind(&ProcessThunk, weak_self_), sched_time);
 }
 
 void AudioOutput::ShutdownSelf() {
@@ -117,15 +113,14 @@ void AudioOutput::ShutdownSelf() {
   if (!BeginShutdown()) {
     DCHECK(manager_);
     manager_->ScheduleMessageLoopTask(
-        FROM_HERE,
-        base::Bind(&FinishShutdownSelf, manager_, weak_self_));
+        FROM_HERE, base::Bind(&FinishShutdownSelf, manager_, weak_self_));
   }
 }
 
 void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
   // If we are still around by the time this callback fires, enter the procesing
   // lock and dispatch to our derived class's implementation.
-  auto output  = weak_output.lock();
+  auto output = weak_output.lock();
   if (output) {
     base::AutoLock lock(output->processing_lock_);
 
@@ -156,7 +151,7 @@ MediaResult AudioOutput::Init(
   // Stash our callback state and schedule an immediate callback to get things
   // running.
   task_runner_ = task_runner;
-  weak_self_   = self;
+  weak_self_ = self;
   task_runner_->PostNonNestableTask(FROM_HERE,
                                     base::Bind(&ProcessThunk, weak_self_));
 
@@ -170,16 +165,20 @@ bool AudioOutput::BeginShutdown() {
   // been nerfed, although there may still be callbacks in flight.
   base::AutoLock lock(shutdown_lock_);
 
-  if (shutting_down_) { return true; }
+  if (shutting_down_) {
+    return true;
+  }
 
   shutting_down_ = true;
-  task_runner_   = nullptr;
+  task_runner_ = nullptr;
 
   return false;
 }
 
 void AudioOutput::Shutdown() {
-  if (shut_down_) { return; }
+  if (shut_down_) {
+    return;
+  }
 
   // TODO(johngro): Assert that we are running on the audio server's main
   // message loop thread.
@@ -217,4 +216,3 @@ void AudioOutput::Shutdown() {
 }  // namespace audio
 }  // namespace media
 }  // namespace mojo
-

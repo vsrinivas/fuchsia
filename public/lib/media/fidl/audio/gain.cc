@@ -14,9 +14,7 @@ namespace audio {
 constexpr unsigned int Gain::FRACTIONAL_BITS;
 constexpr Gain::AScale Gain::UNITY;
 
-Gain::Gain()
-  : amplitude_scale_(UNITY) {
-}
+Gain::Gain() : amplitude_scale_(UNITY) {}
 
 void Gain::Set(float db_gain) {
   // Compute the amplitude scale factor as a double and sanity check before
@@ -31,4 +29,3 @@ void Gain::Set(float db_gain) {
 }  // namespace audio
 }  // namespace media
 }  // namespace mojo
-

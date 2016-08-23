@@ -18,7 +18,7 @@ namespace audio {
 static constexpr LocalDuration TRIM_PERIOD = local_time::from_msec(10);
 
 ThrottleOutput::ThrottleOutput(AudioOutputManager* manager)
-  : StandardOutputBase(manager) {}
+    : StandardOutputBase(manager) {}
 
 ThrottleOutput::~ThrottleOutput() {}
 
@@ -31,15 +31,15 @@ MediaResult ThrottleOutput::Init() {
   return MediaResult::OK;
 }
 
-bool ThrottleOutput::StartMixJob(MixJob* job,
-                                 const LocalTime& process_start) {
+bool ThrottleOutput::StartMixJob(MixJob* job, const LocalTime& process_start) {
   // Compute our next callback time, and check to see if we are falling behind
   // in the process.
   last_sched_time_ += TRIM_PERIOD;
   if (process_start > last_sched_time_) {
     // TODO(johngro): We are falling behind on our trimming.  We should
     // probably tell someone.
-    last_sched_time_ = process_start + TRIM_PERIOD;;
+    last_sched_time_ = process_start + TRIM_PERIOD;
+    ;
   }
 
   // TODO(johngro): We could optimize this trim operation by scheduling our
@@ -71,4 +71,3 @@ bool ThrottleOutput::FinishMixJob(const MixJob& job) {
 }  // namespace audio
 }  // namespace media
 }  // namespace mojo
-

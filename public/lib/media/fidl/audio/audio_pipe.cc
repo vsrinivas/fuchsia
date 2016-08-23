@@ -13,19 +13,18 @@ namespace mojo {
 namespace media {
 namespace audio {
 
-AudioPipe::AudioPacketRef::AudioPacketRef(
-    SuppliedPacketPtr supplied_packet,
-    AudioServerImpl* server,
-    uint32_t frac_frame_len,
-    int64_t start_pts,
-    int64_t end_pts,
-    uint32_t frame_count)
-  : supplied_packet_(std::move(supplied_packet)),
-    server_(server),
-    frac_frame_len_(frac_frame_len),
-    start_pts_(start_pts),
-    end_pts_(end_pts),
-    frame_count_(frame_count) {
+AudioPipe::AudioPacketRef::AudioPacketRef(SuppliedPacketPtr supplied_packet,
+                                          AudioServerImpl* server,
+                                          uint32_t frac_frame_len,
+                                          int64_t start_pts,
+                                          int64_t end_pts,
+                                          uint32_t frame_count)
+    : supplied_packet_(std::move(supplied_packet)),
+      server_(server),
+      frac_frame_len_(frac_frame_len),
+      start_pts_(start_pts),
+      end_pts_(end_pts),
+      frame_count_(frame_count) {
   DCHECK(supplied_packet_);
   DCHECK(server_);
 }
@@ -35,10 +34,8 @@ AudioPipe::AudioPacketRef::~AudioPacketRef() {
   server_->SchedulePacketCleanup(std::move(supplied_packet_));
 }
 
-AudioPipe::AudioPipe(AudioTrackImpl* owner,
-                     AudioServerImpl* server)
-  : owner_(owner),
-    server_(server) {
+AudioPipe::AudioPipe(AudioTrackImpl* owner, AudioServerImpl* server)
+    : owner_(owner), server_(server) {
   DCHECK(owner_);
   DCHECK(server_);
 }
@@ -71,19 +68,18 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
 
   if ((frame_size > 1) && (supplied_packet->payload_size() % frame_size)) {
     LOG(ERROR) << "Region length (" << supplied_packet->payload_size()
-               << ") is not divisible by by audio frame size ("
-               << frame_size << ")";
+               << ") is not divisible by by audio frame size (" << frame_size
+               << ")";
     Reset();
     return;
   }
 
-  static constexpr uint32_t kMaxFrames = std::numeric_limits<uint32_t>::max()
-                                      >> AudioTrackImpl::PTS_FRACTIONAL_BITS;
+  static constexpr uint32_t kMaxFrames = std::numeric_limits<uint32_t>::max() >>
+                                         AudioTrackImpl::PTS_FRACTIONAL_BITS;
   uint32_t frame_count = (supplied_packet->payload_size() / frame_size);
   if (frame_count > kMaxFrames) {
-    LOG(ERROR) << "Audio frame count ("
-               << frame_count << ") exceeds maximum allowed ("
-               << kMaxFrames  << ")";
+    LOG(ERROR) << "Audio frame count (" << frame_count
+               << ") exceeds maximum allowed (" << kMaxFrames << ")";
     Reset();
     return;
   }
@@ -110,17 +106,14 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   // The end pts is the value we will use for the next packet's start PTS, if
   // the user does not provide an explicit PTS.
   int64_t pts_delta = (static_cast<int64_t>(frame_count)
-                    << AudioTrackImpl::PTS_FRACTIONAL_BITS);
+                       << AudioTrackImpl::PTS_FRACTIONAL_BITS);
   next_pts_ = start_pts + pts_delta;
   next_pts_known_ = true;
 
   owner_->OnPacketReceived(AudioPacketRefPtr(
-        new AudioPacketRef(std::move(supplied_packet),
-                           server_,
-                           frame_count << AudioTrackImpl::PTS_FRACTIONAL_BITS,
-                           start_pts,
-                           next_pts_,
-                           frame_count)));
+      new AudioPacketRef(std::move(supplied_packet), server_,
+                         frame_count << AudioTrackImpl::PTS_FRACTIONAL_BITS,
+                         start_pts, next_pts_, frame_count)));
 
   if (!prime_callback_.is_null() &&
       supplied_packets_outstanding() >= kDemandMinPacketsOutstanding) {

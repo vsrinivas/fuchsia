@@ -40,8 +40,8 @@ class OutputFormatter {
    * @param frames The number of frames to produce.
    */
   virtual void ProduceOutput(const int32_t* source,
-                             void*          dest,
-                             uint32_t       frames) const = 0;
+                             void* dest,
+                             uint32_t frames) const = 0;
 
   /**
    * Fill a destination buffer with silence.
@@ -65,7 +65,7 @@ class OutputFormatter {
 
   AudioMediaTypeDetailsPtr format_;
   uint32_t channels_ = 0;
-  uint32_t bytes_per_sample_  = 0;
+  uint32_t bytes_per_sample_ = 0;
   uint32_t bytes_per_frame_ = 0;
 };
 

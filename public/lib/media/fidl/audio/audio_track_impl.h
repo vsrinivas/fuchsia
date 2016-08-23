@@ -68,11 +68,10 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
   void GetSupportedMediaTypes(
       const GetSupportedMediaTypesCallback& callback) override;
   void SetMediaType(MediaTypePtr media_type) override;
-  void GetPacketConsumer(InterfaceRequest<MediaPacketConsumer> consumer_request)
-      override;
-  void GetTimelineControlPoint(
-      InterfaceRequest<MediaTimelineControlPoint> control_point_request)
-          override;
+  void GetPacketConsumer(
+      InterfaceRequest<MediaPacketConsumer> consumer_request) override;
+  void GetTimelineControlPoint(InterfaceRequest<MediaTimelineControlPoint>
+                                   control_point_request) override;
 
   // Methods called by our AudioPipe.
   //
@@ -84,18 +83,18 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
   void OnPacketReceived(AudioPipe::AudioPacketRefPtr packet);
   bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
 
-  AudioTrackImplWeakPtr     weak_this_;
-  AudioServerImpl*          owner_;
-  Binding<AudioTrack>       track_binding_;
-  Binding<MediaRenderer>    renderer_binding_;
-  AudioPipe                 pipe_;
-  TimelineControlPoint      timeline_control_point_;
-  TimelineRate              frames_per_ns_;
-  LinearTransform::Ratio    frame_to_media_ratio_;
-  uint32_t                  bytes_per_frame_ = 1;
-  AudioMediaTypeDetailsPtr  format_;
+  AudioTrackImplWeakPtr weak_this_;
+  AudioServerImpl* owner_;
+  Binding<AudioTrack> track_binding_;
+  Binding<MediaRenderer> renderer_binding_;
+  AudioPipe pipe_;
+  TimelineControlPoint timeline_control_point_;
+  TimelineRate frames_per_ns_;
+  LinearTransform::Ratio frame_to_media_ratio_;
+  uint32_t bytes_per_frame_ = 1;
+  AudioMediaTypeDetailsPtr format_;
   AudioTrackToOutputLinkSet outputs_;
-  float                     db_gain_ = 0.0;
+  float db_gain_ = 0.0;
 };
 
 }  // namespace audio

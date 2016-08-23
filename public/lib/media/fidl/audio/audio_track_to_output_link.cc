@@ -15,9 +15,7 @@ AudioTrackToOutputLink::Bookkeeping::~Bookkeeping() {}
 
 AudioTrackToOutputLink::AudioTrackToOutputLink(AudioTrackImplWeakPtr track,
                                                AudioOutputWeakPtr output)
-  : track_(track),
-    output_(output),
-    pending_queue_(new PacketQueue) {
+    : track_(track), output_(output), pending_queue_(new PacketQueue) {
 #if !(defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON))
   flush_lock_held_ = false;
 #endif
@@ -29,11 +27,13 @@ AudioTrackToOutputLink::~AudioTrackToOutputLink() {
 
 void AudioTrackToOutputLink::UpdateGain() {
   AudioTrackImplPtr track(GetTrack());
-  AudioOutputPtr    output(GetOutput());
+  AudioOutputPtr output(GetOutput());
 
   // If either side of this relationship is going away, then we are shutting
   // down.  Don't bother to re-calculate the amplitude scale factor.
-  if (!track || !output) { return; }
+  if (!track || !output) {
+    return;
+  }
 
   // Obtain the track gain and, if it is at or below the muted threshold, force
   // the track to be muted and get out.

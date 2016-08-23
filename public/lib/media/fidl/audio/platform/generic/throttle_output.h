@@ -37,4 +37,3 @@ class ThrottleOutput : public StandardOutputBase {
 }  // namespace mojo
 
 #endif  // SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
-

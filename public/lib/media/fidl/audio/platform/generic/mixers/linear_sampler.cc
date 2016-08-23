@@ -16,71 +16,60 @@ namespace mixers {
 
 using utils::ScalerType;
 
-template <size_t   DChCount,
-          typename SType,
-          size_t   SChCount>
+template <size_t DChCount, typename SType, size_t SChCount>
 class LinearSamplerImpl : public LinearSampler {
  public:
-  LinearSamplerImpl()
-    : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1) {
-    Reset();
-  }
+  LinearSamplerImpl() : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1) { Reset(); }
 
-  bool Mix(int32_t*     dst,
-           uint32_t     dst_frames,
-           uint32_t*    dst_offset,
-           const void*  src,
-           uint32_t     frac_src_frames,
-           int32_t*     frac_src_offset,
-           uint32_t     frac_step_size,
+  bool Mix(int32_t* dst,
+           uint32_t dst_frames,
+           uint32_t* dst_offset,
+           const void* src,
+           uint32_t frac_src_frames,
+           int32_t* frac_src_offset,
+           uint32_t frac_step_size,
            Gain::AScale amplitude_scale,
-           bool         accumulate) override;
+           bool accumulate) override;
 
-  void Reset() override {
-    ::memset(filter_data_, 0, sizeof(filter_data_));
-  }
+  void Reset() override { ::memset(filter_data_, 0, sizeof(filter_data_)); }
 
  private:
-  template <ScalerType ScaleType,
-            bool       DoAccumulate>
-  inline bool Mix(int32_t*     dst,
-                  uint32_t     dst_frames,
-                  uint32_t*    dst_offset,
-                  const void*  src,
-                  uint32_t     frac_src_frames,
-                  int32_t*     frac_src_offset,
-                  uint32_t     frac_step_size,
+  template <ScalerType ScaleType, bool DoAccumulate>
+  inline bool Mix(int32_t* dst,
+                  uint32_t dst_frames,
+                  uint32_t* dst_offset,
+                  const void* src,
+                  uint32_t frac_src_frames,
+                  int32_t* frac_src_offset,
+                  uint32_t frac_step_size,
                   Gain::AScale amplitude_scale);
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
-    return ((A * static_cast<int32_t>(FRAC_ONE - alpha))
-          + (B * static_cast<int32_t>(alpha)))
-         >> AudioTrackImpl::PTS_FRACTIONAL_BITS;
+    return ((A * static_cast<int32_t>(FRAC_ONE - alpha)) +
+            (B * static_cast<int32_t>(alpha))) >>
+           AudioTrackImpl::PTS_FRACTIONAL_BITS;
   }
 
   int32_t filter_data_[2 * DChCount];
 };
 
-template <size_t   DChCount,
-          typename SType,
-          size_t   SChCount>
-template <ScalerType ScaleType,
-          bool       DoAccumulate>
+template <size_t DChCount, typename SType, size_t SChCount>
+template <ScalerType ScaleType, bool DoAccumulate>
 inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
-    int32_t*     dst,
-    uint32_t     dst_frames,
-    uint32_t*    dst_offset,
-    const void*  src_void,
-    uint32_t     frac_src_frames,
-    int32_t*     frac_src_offset,
-    uint32_t     frac_step_size,
+    int32_t* dst,
+    uint32_t dst_frames,
+    uint32_t* dst_offset,
+    const void* src_void,
+    uint32_t frac_src_frames,
+    int32_t* frac_src_offset,
+    uint32_t frac_step_size,
     Gain::AScale amplitude_scale) {
   using SR = utils::SrcReader<SType, SChCount, DChCount>;
   using DM = utils::DstMixer<ScaleType, DoAccumulate>;
-  const SType* src  = static_cast<const SType*>(src_void);
-  uint32_t     doff = *dst_offset;
-  int32_t      soff = *frac_src_offset;
-  int32_t      send = static_cast<int32_t>(frac_src_frames - FRAC_ONE);
+  const SType* src = static_cast<const SType*>(src_void);
+  uint32_t doff = *dst_offset;
+  int32_t soff = *frac_src_offset;
+  int32_t send = static_cast<int32_t>(frac_src_frames - FRAC_ONE);
 
   DCHECK_LT(doff, dst_frames);
   DCHECK_GE(frac_src_frames, FRAC_ONE);
@@ -101,9 +90,8 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
         int32_t* out = dst + (doff * DChCount);
 
         for (size_t D = 0; D < DChCount; ++D) {
-          int32_t sample = Interpolate(filter_data_[DChCount + D],
-                                       filter_data_[D],
-                                       -soff);
+          int32_t sample =
+              Interpolate(filter_data_[DChCount + D], filter_data_[D], -soff);
           out[D] = DM::Mix(out[D], sample, amplitude_scale);
         }
 
@@ -130,10 +118,10 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
     // Figure out how many samples we would have produced and update the soff
     // and doff values appropriately.
     if ((doff < dst_frames) && (soff < send)) {
-      uint32_t src_avail = (((send - soff) + frac_step_size - 1)
-                         / frac_step_size);
+      uint32_t src_avail =
+          (((send - soff) + frac_step_size - 1) / frac_step_size);
       uint32_t dst_avail = (dst_frames - doff);
-      uint32_t avail     = std::min(src_avail, dst_avail);
+      uint32_t avail = std::min(src_avail, dst_avail);
 
       soff += avail * frac_step_size;
       doff += avail;
@@ -172,75 +160,63 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   return false;
 }
 
-template <size_t   DChCount,
-          typename SType,
-          size_t   SChCount>
+template <size_t DChCount, typename SType, size_t SChCount>
 bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
-    int32_t*     dst,
-    uint32_t     dst_frames,
-    uint32_t*    dst_offset,
-    const void*  src,
-    uint32_t     frac_src_frames,
-    int32_t*     frac_src_offset,
-    uint32_t     frac_step_size,
+    int32_t* dst,
+    uint32_t dst_frames,
+    uint32_t* dst_offset,
+    const void* src,
+    uint32_t frac_src_frames,
+    int32_t* frac_src_offset,
+    uint32_t frac_step_size,
     Gain::AScale amplitude_scale,
-    bool         accumulate) {
+    bool accumulate) {
   if (amplitude_scale == Gain::UNITY) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(
-                            dst, dst_frames, dst_offset,
-                            src, frac_src_frames, frac_src_offset,
-                            frac_step_size, amplitude_scale)
+                            dst, dst_frames, dst_offset, src, frac_src_frames,
+                            frac_src_offset, frac_step_size, amplitude_scale)
                       : Mix<ScalerType::EQ_UNITY, false>(
-                            dst, dst_frames, dst_offset,
-                            src, frac_src_frames, frac_src_offset,
-                            frac_step_size, amplitude_scale);
+                            dst, dst_frames, dst_offset, src, frac_src_frames,
+                            frac_src_offset, frac_step_size, amplitude_scale);
   } else if (amplitude_scale < Gain::MuteThreshold(15)) {
-    return Mix<ScalerType::MUTED, false>(
-               dst, dst_frames, dst_offset,
-               src, frac_src_frames, frac_src_offset,
-               frac_step_size, amplitude_scale);
+    return Mix<ScalerType::MUTED, false>(dst, dst_frames, dst_offset, src,
+                                         frac_src_frames, frac_src_offset,
+                                         frac_step_size, amplitude_scale);
   } else if (amplitude_scale < Gain::UNITY) {
     return accumulate ? Mix<ScalerType::LT_UNITY, true>(
-                            dst, dst_frames, dst_offset,
-                            src, frac_src_frames, frac_src_offset,
-                            frac_step_size, amplitude_scale)
+                            dst, dst_frames, dst_offset, src, frac_src_frames,
+                            frac_src_offset, frac_step_size, amplitude_scale)
                       : Mix<ScalerType::LT_UNITY, false>(
-                            dst, dst_frames, dst_offset,
-                            src, frac_src_frames, frac_src_offset,
-                            frac_step_size, amplitude_scale);
+                            dst, dst_frames, dst_offset, src, frac_src_frames,
+                            frac_src_offset, frac_step_size, amplitude_scale);
   } else {
     return accumulate ? Mix<ScalerType::GT_UNITY, true>(
-                            dst, dst_frames, dst_offset,
-                            src, frac_src_frames, frac_src_offset,
-                            frac_step_size, amplitude_scale)
+                            dst, dst_frames, dst_offset, src, frac_src_frames,
+                            frac_src_offset, frac_step_size, amplitude_scale)
                       : Mix<ScalerType::GT_UNITY, false>(
-                            dst, dst_frames, dst_offset,
-                            src, frac_src_frames, frac_src_offset,
-                            frac_step_size, amplitude_scale);
+                            dst, dst_frames, dst_offset, src, frac_src_frames,
+                            frac_src_offset, frac_step_size, amplitude_scale);
   }
 }
 
 // Templates used to expand all of the different combinations of the possible
 // Linear Sampler Mixer configurations.
-template <size_t   DChCount,
-          typename SType,
-          size_t   SChCount>
+template <size_t DChCount, typename SType, size_t SChCount>
 static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
                                  const AudioMediaTypeDetailsPtr& dst_format) {
   return MixerPtr(new LinearSamplerImpl<DChCount, SType, SChCount>());
 }
 
-template <size_t   DChCount,
-          typename SType>
+template <size_t DChCount, typename SType>
 static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
                                  const AudioMediaTypeDetailsPtr& dst_format) {
   switch (src_format->channels) {
-  case 1:
-    return SelectLSM<DChCount, SType, 1>(src_format, dst_format);
-  case 2:
-    return SelectLSM<DChCount, SType, 2>(src_format, dst_format);
-  default:
-    return nullptr;
+    case 1:
+      return SelectLSM<DChCount, SType, 1>(src_format, dst_format);
+    case 2:
+      return SelectLSM<DChCount, SType, 2>(src_format, dst_format);
+    default:
+      return nullptr;
   }
 }
 
@@ -248,24 +224,24 @@ template <size_t DChCount>
 static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
                                  const AudioMediaTypeDetailsPtr& dst_format) {
   switch (src_format->sample_format) {
-  case AudioSampleFormat::UNSIGNED_8:
-    return SelectLSM<DChCount, uint8_t>(src_format, dst_format);
-  case AudioSampleFormat::SIGNED_16:
-    return SelectLSM<DChCount, int16_t>(src_format, dst_format);
-  default:
-    return nullptr;
+    case AudioSampleFormat::UNSIGNED_8:
+      return SelectLSM<DChCount, uint8_t>(src_format, dst_format);
+    case AudioSampleFormat::SIGNED_16:
+      return SelectLSM<DChCount, int16_t>(src_format, dst_format);
+    default:
+      return nullptr;
   }
 }
 
 MixerPtr LinearSampler::Select(const AudioMediaTypeDetailsPtr& src_format,
                                const AudioMediaTypeDetailsPtr& dst_format) {
   switch (dst_format->channels) {
-  case 1:
-    return SelectLSM<1>(src_format, dst_format);
-  case 2:
-    return SelectLSM<2>(src_format, dst_format);
-  default:
-    return nullptr;
+    case 1:
+      return SelectLSM<1>(src_format, dst_format);
+    case 2:
+      return SelectLSM<2>(src_format, dst_format);
+    default:
+      return nullptr;
   }
 }
 

@@ -179,4 +179,3 @@ class AudioOutput {
 }  // namespace mojo
 
 #endif  // SERVICES_MEDIA_AUDIO_AUDIO_OUTPUT_H_
-

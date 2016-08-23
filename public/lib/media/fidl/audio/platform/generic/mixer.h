@@ -21,8 +21,8 @@ using MixerPtr = std::unique_ptr<Mixer>;
 
 class Mixer {
  public:
-  static constexpr uint32_t FRAC_ONE =
-    1u << AudioTrackImpl::PTS_FRACTIONAL_BITS;
+  static constexpr uint32_t FRAC_ONE = 1u
+                                       << AudioTrackImpl::PTS_FRACTIONAL_BITS;
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
   virtual ~Mixer();
 
@@ -94,15 +94,15 @@ class Mixer {
   // @return True if the mixer is finished with this source data and will not
   // need it in the future.  False if the mixer has not consumed the entire
   // source buffer and will need more of it in the future.
-  virtual bool Mix(int32_t*     dst,
-                   uint32_t     dst_frames,
-                   uint32_t*    dst_offset,
-                   const void*  src,
-                   uint32_t     frac_src_frames,
-                   int32_t*     frac_src_offset,
-                   uint32_t     frac_step_size,
+  virtual bool Mix(int32_t* dst,
+                   uint32_t dst_frames,
+                   uint32_t* dst_offset,
+                   const void* src,
+                   uint32_t frac_src_frames,
+                   int32_t* frac_src_offset,
+                   uint32_t frac_step_size,
                    Gain::AScale amplitude_scale,
-                   bool         accumulate) = 0;
+                   bool accumulate) = 0;
 
   // Reset
   //

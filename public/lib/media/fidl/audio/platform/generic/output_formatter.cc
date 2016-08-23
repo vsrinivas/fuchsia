@@ -14,13 +14,13 @@ namespace media {
 namespace audio {
 
 // Template to produce destination samples from normalized samples.
-template <typename DType, typename Enable = void> class DstConverter;
+template <typename DType, typename Enable = void>
+class DstConverter;
 
 template <typename DType>
-class DstConverter<DType,
-      typename std::enable_if<
-        std::is_same<DType, int16_t>::value,
-      void>::type> {
+class DstConverter<
+    DType,
+    typename std::enable_if<std::is_same<DType, int16_t>::value, void>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
     return static_cast<DType>(sample);
@@ -28,10 +28,9 @@ class DstConverter<DType,
 };
 
 template <typename DType>
-class DstConverter<DType,
-      typename std::enable_if<
-        std::is_same<DType, uint8_t>::value,
-      void>::type> {
+class DstConverter<
+    DType,
+    typename std::enable_if<std::is_same<DType, uint8_t>::value, void>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
     return static_cast<DType>((sample >> 8) + 0x80);
@@ -39,13 +38,13 @@ class DstConverter<DType,
 };
 
 // Template to fill samples with silence based on sample type.
-template <typename DType, typename Enable = void> class SilenceMaker;
+template <typename DType, typename Enable = void>
+class SilenceMaker;
 
 template <typename DType>
-class SilenceMaker<DType,
-      typename std::enable_if<
-        std::is_same<DType, int16_t>::value,
-      void>::type> {
+class SilenceMaker<
+    DType,
+    typename std::enable_if<std::is_same<DType, int16_t>::value, void>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     ::memset(dest, 0, samples * sizeof(DType));
@@ -53,10 +52,9 @@ class SilenceMaker<DType,
 };
 
 template <typename DType>
-class SilenceMaker<DType,
-      typename std::enable_if<
-        std::is_same<DType, uint8_t>::value,
-      void>::type> {
+class SilenceMaker<
+    DType,
+    typename std::enable_if<std::is_same<DType, uint8_t>::value, void>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     ::memset(dest, 0x80, samples * sizeof(DType));
@@ -69,11 +67,11 @@ template <typename DType, uint32_t DChCount>
 class OutputFormatterImpl : public OutputFormatter {
  public:
   explicit OutputFormatterImpl(const AudioMediaTypeDetailsPtr& format)
-    : OutputFormatter(format, sizeof(DType), DChCount) {}
+      : OutputFormatter(format, sizeof(DType), DChCount) {}
 
   void ProduceOutput(const int32_t* source,
-                     void*          dest_void,
-                     uint32_t       frames) const override {
+                     void* dest_void,
+                     uint32_t frames) const override {
     using DC = DstConverter<DType>;
     DType* dest = static_cast<DType*>(dest_void);
 
@@ -98,10 +96,10 @@ class OutputFormatterImpl : public OutputFormatter {
 OutputFormatter::OutputFormatter(const AudioMediaTypeDetailsPtr& format,
                                  uint32_t bytes_per_sample,
                                  uint32_t channels)
-  : format_(format.Clone()),
-    channels_(channels),
-    bytes_per_sample_(bytes_per_sample),
-    bytes_per_frame_(bytes_per_sample * channels) {}
+    : format_(format.Clone()),
+      channels_(channels),
+      bytes_per_sample_(bytes_per_sample),
+      bytes_per_frame_(bytes_per_sample * channels) {}
 
 OutputFormatter::~OutputFormatter() {}
 
@@ -111,14 +109,13 @@ template <typename DType>
 static inline OutputFormatterPtr SelectOF(
     const AudioMediaTypeDetailsPtr& format) {
   switch (format->channels) {
-  case 1:
-    return OutputFormatterPtr(new OutputFormatterImpl<DType, 1>(format));
-  case 2:
-    return OutputFormatterPtr(new OutputFormatterImpl<DType, 2>(format));
-  default:
-    LOG(ERROR) << "Unsupported output channels "
-               << format->channels;
-    return nullptr;
+    case 1:
+      return OutputFormatterPtr(new OutputFormatterImpl<DType, 1>(format));
+    case 2:
+      return OutputFormatterPtr(new OutputFormatterImpl<DType, 2>(format));
+    default:
+      LOG(ERROR) << "Unsupported output channels " << format->channels;
+      return nullptr;
   }
 }
 
@@ -127,14 +124,14 @@ OutputFormatterPtr OutputFormatter::Select(
   DCHECK(format);
 
   switch (format->sample_format) {
-  case AudioSampleFormat::UNSIGNED_8:
-    return SelectOF<uint8_t>(format);
-  case AudioSampleFormat::SIGNED_16:
-    return SelectOF<int16_t>(format);
-  default:
-    LOG(ERROR) << "Unsupported output sample format "
-               << format->sample_format;
-    return nullptr;
+    case AudioSampleFormat::UNSIGNED_8:
+      return SelectOF<uint8_t>(format);
+    case AudioSampleFormat::SIGNED_16:
+      return SelectOF<int16_t>(format);
+    default:
+      LOG(ERROR) << "Unsupported output sample format "
+                 << format->sample_format;
+      return nullptr;
   }
 }
 

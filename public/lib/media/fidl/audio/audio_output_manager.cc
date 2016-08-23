@@ -14,15 +14,14 @@ namespace mojo {
 namespace media {
 namespace audio {
 
-static constexpr size_t  THREAD_POOL_SZ = 2;
+static constexpr size_t THREAD_POOL_SZ = 2;
 static const std::string THREAD_PREFIX("AudioMixer");
 
 // TODO(johngro): This needs to be replaced with a proper HAL
 extern AudioOutputPtr CreateDefaultAlsaOutput(AudioOutputManager* manager);
 
 AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
-  : server_(server) {
-}
+    : server_(server) {}
 
 AudioOutputManager::~AudioOutputManager() {
   Shutdown();
@@ -48,7 +47,9 @@ MediaResult AudioOutputManager::Init() {
   outputs_.emplace(audio::ThrottleOutput::New(this));
   {
     AudioOutputPtr alsa = CreateDefaultAlsaOutput(this);
-    if (alsa) { outputs_.emplace(alsa); }
+    if (alsa) {
+      outputs_.emplace(alsa);
+    }
   }
 
   // Step #3: Being monitoring for plug/unplug events for pluggable audio
@@ -59,7 +60,7 @@ MediaResult AudioOutputManager::Init() {
 
   // Step #4: Attempt to initialize each of the audio outputs we have created,
   // then kick off the callback engine for each of them.
-  for (auto iter = outputs_.begin(); iter != outputs_.end(); ) {
+  for (auto iter = outputs_.begin(); iter != outputs_.end();) {
     const AudioOutputPtr& output = *iter;
     auto tmp = iter++;
     DCHECK(output);
@@ -67,9 +68,9 @@ MediaResult AudioOutputManager::Init() {
     // Create a sequenced task runner for this output.  It will be used by the
     // output to schedule jobs (such as mixing) on the thread pool.
     scoped_refptr<base::SequencedTaskRunner> task_runner =
-      thread_pool_->GetSequencedTaskRunnerWithShutdownBehavior(
-        thread_pool_->GetSequenceToken(),
-        base::SequencedWorkerPool::SKIP_ON_SHUTDOWN);
+        thread_pool_->GetSequencedTaskRunnerWithShutdownBehavior(
+            thread_pool_->GetSequenceToken(),
+            base::SequencedWorkerPool::SKIP_ON_SHUTDOWN);
 
     MediaResult res = output->Init(output, task_runner);
     if (res != MediaResult::OK) {

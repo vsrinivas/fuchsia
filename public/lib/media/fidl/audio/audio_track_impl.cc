@@ -28,29 +28,29 @@ static const struct {
   uint32_t min_frames_per_second;
   uint32_t max_frames_per_second;
 } kSupportedAudioTypeSets[] = {
-  {
-    .sample_format = AudioSampleFormat::UNSIGNED_8,
-    .min_channels = 1,
-    .max_channels = 2,
-    .min_frames_per_second = 1000,
-    .max_frames_per_second = 48000,
-  },
-  {
-    .sample_format = AudioSampleFormat::SIGNED_16,
-    .min_channels = 1,
-    .max_channels = 2,
-    .min_frames_per_second = 1000,
-    .max_frames_per_second = 48000,
-  },
+    {
+        .sample_format = AudioSampleFormat::UNSIGNED_8,
+        .min_channels = 1,
+        .max_channels = 2,
+        .min_frames_per_second = 1000,
+        .max_frames_per_second = 48000,
+    },
+    {
+        .sample_format = AudioSampleFormat::SIGNED_16,
+        .min_channels = 1,
+        .max_channels = 2,
+        .min_frames_per_second = 1000,
+        .max_frames_per_second = 48000,
+    },
 };
 
 AudioTrackImpl::AudioTrackImpl(InterfaceRequest<AudioTrack> track_request,
                                InterfaceRequest<MediaRenderer> renderer_request,
                                AudioServerImpl* owner)
-  : owner_(owner),
-    track_binding_(this, track_request.Pass()),
-    renderer_binding_(this, renderer_request.Pass()),
-    pipe_(this, owner) {
+    : owner_(owner),
+      track_binding_(this, track_request.Pass()),
+      renderer_binding_(this, renderer_request.Pass()),
+      pipe_(this, owner) {
   CHECK(nullptr != owner_);
 
   track_binding_.set_connection_error_handler([this]() -> void {
@@ -132,15 +132,15 @@ void AudioTrackImpl::GetSupportedMediaTypes(
   // make this difficult.  For now, we just create a trivial descriptor entierly
   // by hand.
   Array<MediaTypeSetPtr> supported_media_types =
-    Array<MediaTypeSetPtr>::New(arraysize(kSupportedAudioTypeSets));
+      Array<MediaTypeSetPtr>::New(arraysize(kSupportedAudioTypeSets));
 
   for (size_t i = 0; i < supported_media_types.size(); ++i) {
     const MediaTypeSetPtr& mts =
-      (supported_media_types[i] = MediaTypeSet::New());
+        (supported_media_types[i] = MediaTypeSet::New());
 
-    mts->medium    = MediaTypeMedium::AUDIO;
+    mts->medium = MediaTypeMedium::AUDIO;
     mts->encodings = Array<String>::New(1);
-    mts->details   = MediaTypeSetDetails::New();
+    mts->details = MediaTypeSetDetails::New();
 
     mts->encodings[0] = MediaType::kAudioEncodingLpcm;
 
@@ -196,10 +196,8 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
     LOG(ERROR) << "Unsupported LPCM configuration requested in "
                   "AudioTrack::Configure.  "
                << "(format = " << cfg->sample_format
-               << ", channels = "
-               << static_cast<uint32_t>(cfg->channels)
-               << ", frames_per_second = " << cfg->frames_per_second
-               << ")";
+               << ", channels = " << static_cast<uint32_t>(cfg->channels)
+               << ", frames_per_second = " << cfg->frames_per_second << ")";
     Shutdown();
     return;
   }
@@ -211,8 +209,7 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   // point timestamps.
   LinearTransform::Ratio frac_scale(1 << PTS_FRACTIONAL_BITS, 1);
   LinearTransform::Ratio frame_scale(LinearTransform::Ratio(1, 1));
-  bool no_loss = LinearTransform::Ratio::Compose(frac_scale,
-                                                 frame_scale,
+  bool no_loss = LinearTransform::Ratio::Compose(frac_scale, frame_scale,
                                                  &frame_to_media_ratio_);
   if (!no_loss) {
     LOG(ERROR) << "Invalid (audio frames:media time ticks) ratio (1/1)";
@@ -342,7 +339,7 @@ void AudioTrackImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
   if (packet->supplied_packet()->packet()->end_of_stream) {
     timeline_control_point_.SetEndOfStreamPts(
         (packet->supplied_packet()->packet()->pts + packet->frame_count()) /
-            frames_per_ns_);
+        frames_per_ns_);
   }
 }
 

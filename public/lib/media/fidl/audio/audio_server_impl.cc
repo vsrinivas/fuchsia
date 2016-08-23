@@ -16,11 +16,9 @@ namespace media {
 namespace audio {
 
 AudioServerImpl::AudioServerImpl()
-  : output_manager_(this),
-    cleanup_queue_(new CleanupQueue) {
-  cleanup_closure_ = base::Bind(
-      &AudioServerImpl::DoPacketCleanup,
-      base::Unretained(this));
+    : output_manager_(this), cleanup_queue_(new CleanupQueue) {
+  cleanup_closure_ =
+      base::Bind(&AudioServerImpl::DoPacketCleanup, base::Unretained(this));
 }
 
 AudioServerImpl::~AudioServerImpl() {
@@ -59,7 +57,7 @@ void AudioServerImpl::Shutdown() {
 }
 
 void AudioServerImpl::CreateTrack(InterfaceRequest<AudioTrack> track,
-    InterfaceRequest<MediaRenderer> renderer) {
+                                  InterfaceRequest<MediaRenderer> renderer) {
   tracks_.insert(AudioTrackImpl::Create(track.Pass(), renderer.Pass(), this));
 }
 

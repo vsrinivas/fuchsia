@@ -18,11 +18,9 @@ constexpr uint32_t Mixer::FRAC_MASK;
 
 Mixer::~Mixer() {}
 
-Mixer::Mixer(uint32_t pos_filter_width,
-             uint32_t neg_filter_width)
-  : pos_filter_width_(pos_filter_width),
-    neg_filter_width_(neg_filter_width) {
-}
+Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
+    : pos_filter_width_(pos_filter_width),
+      neg_filter_width_(neg_filter_width) {}
 
 MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
                        const AudioMediaTypeDetailsPtr* optional_dst_format) {
@@ -31,7 +29,9 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
 
   // If we don't have a destination format, just stick with no-op.  This is
   // probably the ThrottleOutput we are picking a mixer for.
-  if (!optional_dst_format) { return MixerPtr(new mixers::NoOp()); }
+  if (!optional_dst_format) {
+    return MixerPtr(new mixers::NoOp());
+  }
 
   const AudioMediaTypeDetailsPtr& dst_format = *optional_dst_format;
   DCHECK(dst_format);

@@ -62,7 +62,7 @@ class AudioTrackToOutputLink {
   };
 
   using BookkeepingPtr = std::unique_ptr<Bookkeeping>;
-  using PacketQueue    = std::deque<AudioPipe::AudioPacketRefPtr>;
+  using PacketQueue = std::deque<AudioPipe::AudioPacketRefPtr>;
   using PacketQueuePtr = std::unique_ptr<PacketQueue>;
 
   static AudioTrackToOutputLinkPtr New(AudioTrackImplWeakPtr track,

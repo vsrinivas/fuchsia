@@ -20,7 +20,7 @@ class LinearSampler : public Mixer {
 
  protected:
   LinearSampler(uint32_t pos_filter_width, uint32_t neg_filter_width)
-    : Mixer(pos_filter_width, neg_filter_width) {}
+      : Mixer(pos_filter_width, neg_filter_width) {}
 };
 
 }  // namespace mixers
