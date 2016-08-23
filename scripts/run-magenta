@@ -30,6 +30,7 @@ function HELP {
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ARCH=
+AUDIO=0
 BUILD=0
 DISK=0
 BUILDDIR=
@@ -43,9 +44,10 @@ VNC=0
 INITRD=
 CMDLINE=""
 
-while getopts a:bc:dgkm:nNo:ruvx:h FLAG; do
+while getopts a:Abc:dgkm:nNo:ruvx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
+        A) AUDIO=1;;
         b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
         d) DISK=1;;
@@ -141,6 +143,12 @@ if [ "$NET" -eq 2 ]; then
     else
         ARGS+=" -device virtio-net-device,netdev=net0"
     fi
+fi
+
+
+if [ "$AUDIO" -ne 0 ]; then
+    ARGS+=" -soundhw hda"
+    export QEMU_AUDIO_DRV=none
 fi
 
 case $ARCH in
