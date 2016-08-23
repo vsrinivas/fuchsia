@@ -175,9 +175,6 @@ static bool bind_basic_test(void)
     status = mx_io_port_bind(ioport, -1, event, MX_SIGNAL_SIGNALED);
     EXPECT_EQ(status, NO_ERROR, "failed to bind event");
 
-    status = mx_io_port_bind(ioport, -1, event, 0u);
-    EXPECT_EQ(status, NO_ERROR, "failed to unbind event");
-
     status = mx_handle_close(ioport);
     EXPECT_EQ(status, NO_ERROR, "failed to close io port");
 

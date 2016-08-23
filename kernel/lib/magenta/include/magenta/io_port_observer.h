@@ -18,11 +18,18 @@ class IOPortDispatcher;
 
 class IOPortObserver final: public StateObserver {
 public:
-    enum {
-        NEW,          // Initial state, it transitions to either CANCELLED or UNBOUND.
-        CANCELLED,
-        UNBOUND
-    };
+    static IOPortObserver* Create(utils::RefPtr<IOPortDispatcher> io_port,
+                                  Handle* handle,
+                                  mx_signals_t watched_signals,
+                                  uint64_t key);
+
+    // Calling this method causes the object destruction. Use with care.
+    void OnDidCancel() final;
+
+private:
+    IOPortObserver() = delete;
+    IOPortObserver(const IOPortObserver&) = delete;
+    IOPortObserver& operator=(const IOPortObserver&) = delete;
 
     IOPortObserver(utils::RefPtr<IOPortDispatcher> io_port,
                    Handle* handle,
@@ -31,40 +38,15 @@ public:
 
     ~IOPortObserver() = default;
 
-    Handle* get_handle() const { return handle_; }
-    uint64_t get_key() const { return key_; }
-
-    int GetState();
-    int SetState(int new_state);
-
-private:
-    IOPortObserver() = delete;
-    IOPortObserver(const IOPortObserver&) = delete;
-    IOPortObserver& operator=(const IOPortObserver&) = delete;
-
     // StateObserver implementation:
     bool OnInitialize(mx_signals_state_t initial_state) final;
     bool OnStateChange(mx_signals_state_t new_state) final;
     bool OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) final;
-    void OnDidCancel() final;
-
-    bool MaybeSignal(mx_signals_state_t state);
-
-    volatile int state_;
 
     Handle* handle_;
     mx_signals_t watched_signals_;
     uint64_t key_;
 
     utils::RefPtr<IOPortDispatcher> io_port_;
-
-    friend struct IOPortObserverListTraits;
-    utils::DoublyLinkedListNodeState<IOPortObserver*> io_port_list_node_state_;
 };
 
-struct IOPortObserverListTraits {
-    inline static utils::DoublyLinkedListNodeState<IOPortObserver*>& node_state(
-            IOPortObserver& obj) {
-        return obj.io_port_list_node_state_;
-    }
-};

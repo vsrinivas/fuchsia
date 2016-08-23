@@ -41,13 +41,12 @@ static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler) {
     mtx_lock(&md->lock);
     list_delete(&handler->node);
     mtx_unlock(&md->lock);
-    mx_handle_close(handler->h);
     free(handler);
 }
 
 static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler) {
-    // unbind, so we get no further messages
-    mx_io_port_bind(md->ioport, (uint64_t)(uintptr_t)handler, handler->h, 0);
+    // close handle, so we get no further messages
+    mx_handle_close(handler->h);
 
     // send a synthetic message so we know when it's safe to destroy
     mx_io_packet_t packet;

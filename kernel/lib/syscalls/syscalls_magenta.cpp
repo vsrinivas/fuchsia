@@ -23,6 +23,7 @@
 #include <magenta/data_pipe_consumer_dispatcher.h>
 #include <magenta/event_dispatcher.h>
 #include <magenta/io_port_dispatcher.h>
+#include <magenta/io_port_observer.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/msg_pipe_dispatcher.h>
@@ -1375,6 +1376,9 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, utils::user_ptr<void> packet, m
 mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, mx_signals_t signals) {
     LTRACEF("handle %d source %d\n", handle, source);
 
+    if (!signals)
+        return ERR_INVALID_ARGS;
+
     auto up = ProcessDispatcher::GetCurrent();
     uint32_t rights = 0;
 
@@ -1398,11 +1402,18 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
         if (!magenta_rights_check(src_handle->rights(), MX_RIGHT_READ))
             return ERR_ACCESS_DENIED;
 
-        if (signals) {
-            return ioport->Bind(src_handle, signals, key);
-        } else {
-            return ioport->Unbind(src_handle, key);
+        auto state_tracker = src_handle->dispatcher()->get_state_tracker();
+        if (!state_tracker || !state_tracker->is_waitable())
+            return ERR_NOT_SUPPORTED;
+
+        auto observer = IOPortObserver::Create(
+            utils::RefPtr<IOPortDispatcher>(ioport), src_handle, signals, key);
+        if (!observer) {
+            observer->OnDidCancel();
+            return ERR_NO_MEMORY;
         }
+
+        return state_tracker->AddObserver(observer);
     }
 }
 
