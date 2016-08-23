@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/common/usb.h>
 #include <ddk/protocol/input.h>
 #include <ddk/protocol/usb-device.h>
 
@@ -66,7 +67,7 @@ static mx_status_t usb_hid_load_descriptor(usb_interface_t* intf, uint8_t desc_t
 
     size_t desc_len = hid->hid_desc->descriptors[report_desc].wDescriptorLength;
     uint8_t* desc_buf = malloc(desc_len);
-    mx_status_t status = hid->usb->control(hid->usbdev, (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
+    mx_status_t status = usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
             USB_REQ_GET_DESCRIPTOR, desc_type << 8, hid->interface, desc_buf, desc_len);
     if (status < 0) {
         printf("usb_hid error reading report desc 0x%02x: %d\n", desc_type, status);
@@ -145,13 +146,13 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
 
         if (desc->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT) {
             // Use the boot protocol for now
-            hid->usb->control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
                     USB_HID_SET_PROTOCOL, 0, i, NULL, 0);
             hid->proto = desc->bInterfaceProtocol;
             if (hid->proto == USB_HID_PROTOCOL_KBD) {
                 // Disable numlock on boot
                 uint8_t zero = 0;
-                hid->usb->control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+                usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
                         USB_HID_SET_REPORT, USB_HID_OUTPUT_REPORT << 8, i, &zero, sizeof(zero));
             }
         }
@@ -188,7 +189,7 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
             return status;
         }
 
-        hid->usb->control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+        usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
                 USB_HID_SET_IDLE, 0, i, NULL, 0);
 
         hid->req->transfer_length = hid->req->buffer_length;

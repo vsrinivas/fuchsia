@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/common/usb.h>
 #include <ddk/protocol/bluetooth-hci.h>
 #include <ddk/protocol/usb-device.h>
 #include <system/listnode.h>
@@ -190,9 +191,9 @@ static int hci_read_thread(void* arg) {
             uint32_t length = sizeof(buf);
             status = mx_message_read(handles[0], buf, &length, NULL, 0, 0);
             if (status >= 0) {
-                status = hci->device_protocol->control(hci->usb_device,
-                                                       USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                                       0, 0, 0, buf, length);
+                status = usb_control(hci->usb_device,
+                                     USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                                     0, 0, 0, buf, length);
                 if (status < 0) {
                     printf("hci_read_thread control failed\n");
                 }

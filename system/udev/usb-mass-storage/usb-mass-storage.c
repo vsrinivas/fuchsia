@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/common/usb.h>
 #include <ddk/protocol/usb-device.h>
 #include <hw/usb.h>
 #include <runtime/thread.h>
@@ -105,25 +106,25 @@ static mx_status_t ums_reset(ums_t* msd) {
     // value and index not used for first command, though index is supposed to be set to interface number
     // TODO: check interface number, see if index needs to be set
     DEBUG_PRINT(("UMS: performing reset recovery\n"));
-    mx_status_t status = msd->usb_p->control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
+    mx_status_t status = usb_control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                             | USB_RECIP_INTERFACE, USB_REQ_RESET, 0x00, 0x00, NULL, 0);
-    status = msd->usb_p->control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
+    status = usb_control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
                                            msd->bulk_in->endpoint, NULL, 0);
-    status = msd->usb_p->control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
+    status = usb_control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
                                            msd->bulk_out->endpoint, NULL, 0);
     return status;
 }
 
 static mx_status_t ums_get_max_lun(ums_t* msd, void* data) {
-    mx_status_t status = msd->usb_p->control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
+    mx_status_t status = usb_control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
                                     | USB_RECIP_INTERFACE, USB_REQ_GET_MAX_LUN, 0x00, 0x00, data, 1);
     return status;
 }
 
 static mx_status_t ums_get_endpoint_status(ums_t* msd, usb_endpoint_t* endpoint, void* data) {
-    mx_status_t status = msd->usb_p->control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
+    mx_status_t status = usb_control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
                                     | USB_RECIP_INTERFACE, USB_REQ_GET_STATUS, 0x00,
                                     endpoint->endpoint, data, 2);
     return status;

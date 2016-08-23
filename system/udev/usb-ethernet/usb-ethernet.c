@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-device.h>
 #include <system/listnode.h>
@@ -71,15 +72,9 @@ static void update_signals_locked(usb_ethernet_t* eth) {
     }
 }
 
-static mx_status_t usb_ethernet_control(usb_ethernet_t* eth, uint8_t request_type, uint8_t request,
-                                        uint16_t value, uint16_t index, void* data, uint16_t length) {
-    return eth->device_protocol->control(eth->usb_device, request_type, request, value, index, data,
-                                         length);
-}
-
 static mx_status_t usb_ethernet_set_value(usb_ethernet_t* eth, uint8_t request, uint16_t value) {
-    return usb_ethernet_control(eth, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                request, value, 0, NULL, 0);
+    return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                       request, value, 0, NULL, 0);
 }
 
 static mx_status_t usb_ethernet_mdio_read(usb_ethernet_t* eth, uint8_t offset, uint16_t* value) {
@@ -89,9 +84,9 @@ static mx_status_t usb_ethernet_mdio_read(usb_ethernet_t* eth, uint8_t offset, u
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
     }
-    status = usb_ethernet_control(eth, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                  ASIX_REQ_PHY_READ, eth->phy_id, offset,
-                                  value, sizeof(*value));
+    status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         ASIX_REQ_PHY_READ, eth->phy_id, offset,
+                         value, sizeof(*value));
     if (status < 0) {
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
@@ -112,9 +107,9 @@ static mx_status_t usb_ethernet_mdio_write(usb_ethernet_t* eth, uint8_t offset, 
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
     }
-    status = usb_ethernet_control(eth, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                  ASIX_REQ_PHY_WRITE, eth->phy_id, offset,
-                                  &value, sizeof(value));
+    status = usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         ASIX_REQ_PHY_WRITE, eth->phy_id, offset,
+                         &value, sizeof(value));
     if (status < 0) {
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
@@ -384,8 +379,8 @@ static int usb_ethernet_start_thread(void* arg) {
 
     // select the PHY
     uint8_t phy_addr[2];
-    status = usb_ethernet_control(eth, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                  ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr));
+    status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr));
     if (status < 0) {
         printf("ASIX_REQ_READ_PHY_ADDR failed\n");
         return status;
@@ -433,9 +428,9 @@ static int usb_ethernet_start_thread(void* arg) {
         return status;
     }
 
-    status = usb_ethernet_control(eth, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                  ASIX_REQ_IPG_WRITE, ASIX_IPG_DEFAULT | (ASIX_IPG1_DEFAULT << 8),
-                                  ASIX_IPG2_DEFAULT, NULL, 0);
+    status = usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         ASIX_REQ_IPG_WRITE, ASIX_IPG_DEFAULT | (ASIX_IPG1_DEFAULT << 8),
+                         ASIX_IPG2_DEFAULT, NULL, 0);
     if (status < 0) {
         printf("ASIX_REQ_IPG_WRITE failed\n");
         return status;
@@ -447,8 +442,8 @@ static int usb_ethernet_start_thread(void* arg) {
         return status;
     }
 
-    status = usb_ethernet_control(eth, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                  ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr));
+    status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr));
     if (status < 0) {
         printf("ASIX_REQ_NODE_ID_READ failed\n");
         return status;

@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <ddk/common/usb.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -166,7 +167,7 @@ static mx_status_t usb_hid_get_report(usb_hid_dev_t* hid, const void* in_buf, si
     if (needed == 0) return ERR_INVALID_ARGS;
     if (out_len < (size_t)needed) return ERR_NOT_ENOUGH_BUFFER;
 
-    return hid->usb->control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+    return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_REPORT, (inp->type << 8 | inp->id), hid->interface, out_buf, out_len);
 }
 
@@ -179,7 +180,7 @@ static mx_status_t usb_hid_set_report(usb_hid_dev_t* hid, const void* in_buf, si
     if (needed == 0) return ERR_INVALID_ARGS;
     if (in_len - sizeof(input_set_report_t) < (size_t)needed) return ERR_INVALID_ARGS;
 
-    return hid->usb->control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+    return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_REPORT, (inp->type << 8 | inp->id), hid->interface,
             (void*)inp->data, in_len - sizeof(input_set_report_t));
 }
