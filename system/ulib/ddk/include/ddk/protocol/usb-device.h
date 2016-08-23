@@ -79,10 +79,7 @@ typedef struct usb_protocol_data {
 typedef struct usb_device_protocol {
     usb_request_t* (*alloc_request)(mx_device_t* dev, usb_endpoint_t* ep, uint16_t length);
     void (*free_request)(mx_device_t* dev, usb_request_t* request);
-
     mx_status_t (*queue_request)(mx_device_t* dev, usb_request_t* request);
-    mx_status_t (*control)(mx_device_t* dev, uint8_t request_type, uint8_t request, uint16_t value,
-                           uint16_t index, void* data, uint16_t length);
 
     mx_status_t (*get_config)(mx_device_t* dev, usb_device_config_t** config);
     usb_speed_t (*get_speed)(mx_device_t* device);

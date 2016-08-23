@@ -179,39 +179,6 @@ int xhci_queue_request(mx_device_t* hci_device, int devaddr, usb_request_t* requ
                                (xhci_transfer_context_t*)request->driver_data);
 }
 
-int xhci_control(mx_device_t* hci_device, int devaddr, usb_setup_t* devreq, int data_length,
-                 uint8_t* data) {
-    usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
-    xhci_t* xhci = &uxhci->xhci;
-    bool out = ((devreq->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT);
-
-    uint8_t* dma_buffer = NULL;
-    mx_paddr_t phys_addr = 0;
-    if (data_length) {
-        if (!data || data_length < 0)
-            return ERR_INVALID_ARGS;
-        dma_buffer = xhci_malloc(xhci, data_length);
-        if (!dma_buffer)
-            return ERR_NO_MEMORY;
-        phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)dma_buffer);
-        if (out) {
-            memcpy(dma_buffer, data, data_length);
-        }
-    }
-
-    int result = xhci_control_request(xhci, devaddr, devreq->bmRequestType, devreq->bRequest,
-                                      devreq->wValue, devreq->wIndex, phys_addr, data_length);
-    if (result > 0 && !out) {
-        if (result > data_length)
-            result = data_length;
-        memcpy(data, dma_buffer, result);
-    }
-    if (dma_buffer)
-        xhci_free(xhci, dma_buffer);
-
-    return result;
-}
-
 mx_status_t xhci_config_hub(mx_device_t* hci_device, int slot_id, usb_speed_t speed,
                             usb_hub_descriptor_t* descriptor) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
@@ -234,7 +201,6 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .alloc_request = xhci_alloc_request,
     .free_request = xhci_free_request,
     .queue_request = xhci_queue_request,
-    .control = xhci_control,
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,

@@ -274,20 +274,6 @@ static void usb_free_request(mx_device_t* device, usb_request_t* request) {
     dev->hci_protocol->free_request(dev->hcidev, request);
 }
 
-static mx_status_t usb_control_req(mx_device_t* device, uint8_t request_type, uint8_t request,
-                                   uint16_t value, uint16_t index, void* data, uint16_t length) {
-
-    usb_setup_t setup;
-    setup.bmRequestType = request_type;
-    setup.bRequest = request;
-    setup.wValue = value;
-    setup.wIndex = index;
-    setup.wLength = length;
-
-    usb_device_t* dev = get_usb_device(device);
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &setup, length, data);
-}
-
 static mx_status_t usb_get_config(mx_device_t* device, usb_device_config_t** config) {
     usb_device_t* dev = get_usb_device(device);
     *config = &dev->config;
@@ -323,7 +309,6 @@ static mx_status_t usb_hub_device_removed(mx_device_t* device, int port) {
 static usb_device_protocol_t _device_protocol = {
     .alloc_request = usb_alloc_request,
     .free_request = usb_free_request,
-    .control = usb_control_req,
     .get_config = usb_get_config,
     .queue_request = usb_queue_request,
     .get_speed = usb_get_speed,
