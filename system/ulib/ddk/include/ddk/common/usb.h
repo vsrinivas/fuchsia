@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <hw/usb.h>
 
 __BEGIN_CDECLS;
 
@@ -22,5 +23,8 @@ mx_status_t usb_set_configuration(mx_device_t* device, int config);
 mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
 
 mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
+
+// helper function for allocating iotxns for USB transfers
+iotxn_t* usb_alloc_iotxn(usb_endpoint_descriptor_t* ep_desc, size_t data_size, size_t extra_size);
 
 __END_CDECLS;

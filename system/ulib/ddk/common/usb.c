@@ -79,3 +79,19 @@ mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int featu
 mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int feature, int index) {
     return usb_control(device, request_type, USB_REQ_CLEAR_FEATURE, feature, index, NULL, 0);
 }
+
+// helper function for allocating iotxns for USB transfers
+iotxn_t* usb_alloc_iotxn(usb_endpoint_descriptor_t* ep_desc, size_t data_size, size_t extra_size) {
+    iotxn_t* txn;
+
+    mx_status_t status = iotxn_alloc(&txn, 0, data_size, extra_size);
+    if (status != NO_ERROR) {
+        return NULL;
+    }
+    txn->protocol = MX_PROTOCOL_USB_DEVICE;
+
+    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+    data->ep_address = ep_desc->bEndpointAddress;
+
+    return txn;
+}
