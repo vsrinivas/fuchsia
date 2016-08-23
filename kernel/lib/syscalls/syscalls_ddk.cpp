@@ -12,6 +12,7 @@
 #include <string.h>
 #include <trace.h>
 
+#include <dev/interrupt.h>
 #include <dev/udisplay.h>
 #include <kernel/vm.h>
 #include <lib/user_copy.h>
@@ -22,6 +23,7 @@
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/syscalls-types.h>
 #include <magenta/user_copy.h>
 
 #include "syscalls_priv.h"
@@ -202,6 +204,160 @@ mx_status_t sys_set_framebuffer(void* vaddr, uint32_t len, uint32_t format, uint
     udisplay_set_display_info(&di);
 
     return NO_ERROR;
+}
+
+// Lookup routine for IRQ routing for PCIe
+static uint32_t pcie_root_irq_map[PCIE_MAX_DEVICES_PER_BUS][PCIE_MAX_FUNCTIONS_PER_DEVICE][PCIE_MAX_LEGACY_IRQ_PINS];
+static status_t pcie_irq_swizzle_from_table(const pcie_device_state_t* dev, uint pin, uint *irq)
+{
+    DEBUG_ASSERT(dev);
+    DEBUG_ASSERT(pin < 4);
+    if (dev->bus_id != 0) {
+        return ERR_NOT_FOUND;
+    }
+    uint32_t val = pcie_root_irq_map[dev->dev_id][dev->func_id][pin];
+    if (val == MX_PCI_NO_IRQ_MAPPING) {
+        return ERR_NOT_FOUND;
+    }
+    *irq = val;
+    return NO_ERROR;
+}
+
+mx_status_t sys_pci_init(mx_handle_t handle, utils::user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
+
+    auto up = ProcessDispatcher::GetCurrent();
+    utils::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle, &dispatcher, &rights)) {
+        return ERR_BAD_HANDLE;
+    }
+    if (dispatcher->GetType() != MX_OBJ_TYPE_RESOURCE) {
+        return ERR_WRONG_TYPE;
+    }
+    // TODO(security): Add additional access checks
+
+    utils::unique_ptr<mx_pci_init_arg_t, utils::free_delete> arg;
+
+    if (len < sizeof(*arg) || len > MX_PCI_INIT_ARG_MAX_SIZE) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // we have to malloc instead of new since this is a variable-sized structure
+    arg.reset(static_cast<mx_pci_init_arg_t*>(malloc(len)));
+    if (!arg) {
+        return ERR_NO_MEMORY;
+    }
+    {
+        mx_status_t status = copy_from_user(arg.get(), init_buf, len);
+        if (status != NO_ERROR) {
+            return status;
+        }
+    }
+
+    const uint32_t win_count = arg->ecam_window_count;
+    if (len != sizeof(*arg) + sizeof(arg->ecam_windows[0]) * win_count) {
+        return ERR_INVALID_ARGS;
+    }
+
+    if (arg->num_irqs > countof(arg->irqs)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // Configure interrupts
+    for (unsigned int i = 0; i < arg->num_irqs; ++i) {
+        uint32_t irq = arg->irqs[i].global_irq;
+        enum interrupt_trigger_mode tm = IRQ_TRIGGER_MODE_EDGE;
+        if (arg->irqs[i].level_triggered) {
+            tm = IRQ_TRIGGER_MODE_LEVEL;
+        }
+        enum interrupt_polarity pol = IRQ_POLARITY_ACTIVE_LOW;
+        if (arg->irqs[i].active_high) {
+            pol = IRQ_POLARITY_ACTIVE_HIGH;
+        }
+
+        status_t status = configure_interrupt(irq, tm, pol);
+        if (status != NO_ERROR) {
+            return status;
+        }
+    }
+
+    // TODO(teisenbe): For now assume there is only one ECAM
+    if (win_count != 1) {
+        return ERR_INVALID_ARGS;
+    }
+    if (arg->ecam_windows[0].bus_start != 0) {
+        return ERR_INVALID_ARGS;
+    }
+
+    static_assert(sizeof(pcie_root_irq_map) == sizeof(arg->dev_pin_to_global_irq));
+    memcpy(&pcie_root_irq_map, &arg->dev_pin_to_global_irq, sizeof(pcie_root_irq_map));
+
+    if (arg->ecam_windows[0].bus_start > arg->ecam_windows[0].bus_end) {
+        return ERR_INVALID_ARGS;
+    }
+
+#if ARCH_X86
+    // Check for a quirk that we've seen.  Some systems will report overly large
+    // PCIe config regions that collide with architectural registers.
+    unsigned int num_buses = arg->ecam_windows[0].bus_end -
+            arg->ecam_windows[0].bus_start + 1;
+    paddr_t end = arg->ecam_windows[0].base +
+            num_buses * PCIE_ECAM_BYTE_PER_BUS;
+    const paddr_t high_limit = 0xfec00000ULL;
+    if (end > high_limit) {
+        TRACEF("PCIe config space collides with arch devices, truncating\n");
+        end = high_limit;
+        if (end < arg->ecam_windows[0].base) {
+            return ERR_INVALID_ARGS;
+        }
+        arg->ecam_windows[0].size = ROUNDDOWN(end - arg->ecam_windows[0].base,
+                                              PCIE_ECAM_BYTE_PER_BUS);
+        uint64_t new_bus_end = (arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) +
+                arg->ecam_windows[0].bus_start - 1;
+        if (new_bus_end >= PCIE_MAX_BUSSES) {
+            return ERR_INVALID_ARGS;
+        }
+        arg->ecam_windows[0].bus_end = static_cast<uint8_t>(new_bus_end);
+    }
+#endif
+
+    if (arg->ecam_windows[0].size < PCIE_ECAM_BYTE_PER_BUS) {
+        return ERR_INVALID_ARGS;
+    }
+    if (arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS >
+        PCIE_MAX_BUSSES - arg->ecam_windows[0].bus_start) {
+
+        return ERR_INVALID_ARGS;
+    }
+
+    // TODO(johngro): Do not limit this to a single range.  Instead, fetch all
+    // of the ECAM ranges from ACPI, as well as the appropriate bus start/end
+    // ranges.
+    const pcie_ecam_range_t ecam_windows[] = {
+        {
+            .io_range  = {
+                .bus_addr = arg->ecam_windows[0].base,
+                .size = arg->ecam_windows[0].size
+            },
+            .bus_start = 0x00,
+            .bus_end   = static_cast<uint8_t>((arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) - 1),
+        },
+    };
+
+    pcie_init_info_t init_info;
+    platform_pcie_init_info(&init_info);
+
+    // Only override fields if they're NULL
+    if (!init_info.ecam_windows) {
+        init_info.ecam_windows = ecam_windows;
+        init_info.ecam_window_count = countof(ecam_windows);
+    }
+    if (!init_info.legacy_irq_swizzle) {
+        init_info.legacy_irq_swizzle = pcie_irq_swizzle_from_table;
+    }
+
+    return pcie_init(&init_info);
 }
 
 mx_handle_t sys_pci_get_nth_device(uint32_t index, mx_pcie_get_nth_info_t* out_info) {

@@ -478,4 +478,8 @@ static inline const char* pcie_driver_name(const pcie_driver_registration_t* dri
  */
 void pcie_rescan_bus(void);
 
+/* Returns a pointer to reference init information for the platform.
+ * Any NULL fields may be overriden. */
+void platform_pcie_init_info(pcie_init_info_t *out);
+
 __END_CDECLS

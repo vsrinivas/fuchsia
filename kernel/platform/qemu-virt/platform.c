@@ -67,6 +67,11 @@ static pcie_init_info_t PCIE_INIT_INFO = {
     .mask_unmask_msi      = arm_gicv2m_mask_unmask_msi,
 };
 
+void platform_pcie_init_info(pcie_init_info_t *out)
+{
+    memcpy(out, &PCIE_INIT_INFO, sizeof(PCIE_INIT_INFO));
+}
+
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
     /* all of memory */
