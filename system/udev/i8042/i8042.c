@@ -5,31 +5,26 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/common/hid.h>
-#include <ddk/protocol/input.h>
 #include <hw/inout.h>
 
-#include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 
 #include <hid/usages.h>
 
-#include <assert.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/listnode.h>
-
 #define MXDEBUG 0
 #include <mxio/debug.h>
 
+mx_driver_t _driver_i8042;
+
 typedef struct i8042_device {
-    mx_device_t device;
-    mx_driver_t* drv;
+    mx_hid_device_t hiddev;
 
     mx_handle_t irq;
     thrd_t irq_thread;
@@ -41,22 +36,7 @@ typedef struct i8042_device {
         boot_kbd_report_t kbd;
         boot_mouse_report_t mouse;
     } report;
-
-    // list of opened devices
-    struct list_node instance_list;
-    mtx_t instance_lock;
 } i8042_device_t;
-
-typedef struct i8042_instance {
-    mx_device_t device;
-    i8042_device_t *root;
-
-    mx_hid_fifo_t fifo;
-    struct list_node node;
-} i8042_instance_t;
-
-#define foreach_instance(root, instance) \
-    list_for_every_entry(&root->instance_list, instance, i8042_instance_t, node)
 
 static inline bool is_kbd_modifier(uint8_t usage) {
     return (usage >= HID_USAGE_KEY_LEFT_CTRL && usage <= HID_USAGE_KEY_RIGHT_GUI);
@@ -112,8 +92,7 @@ static int i8042_rm_key(i8042_device_t* dev, uint8_t usage) {
     return KEY_REMOVED;
 }
 
-#define get_i8042_device(dev) containerof(dev, i8042_device_t, device)
-#define get_i8042_instance(dev) containerof(dev, i8042_instance_t, device)
+#define get_i8042_device(dev) containerof(dev, i8042_device_t, hiddev)
 
 #define I8042_COMMAND_REG 0x64
 #define I8042_STATUS_REG 0x64
@@ -468,18 +447,7 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
     //cprintf("i8042: scancode=0x%x, keyup=%u, multi=%u: usage=0x%x\n", scode, !!key_up, multi, usage);
 
     const boot_kbd_report_t* report = rollover ? &report_err_rollover : &dev->report.kbd;
-    i8042_instance_t* instance;
-    mtx_lock(&dev->instance_lock);
-    foreach_instance(dev, instance) {
-        mtx_lock(&instance->fifo.lock);
-        bool set_readable = (mx_hid_fifo_size(&instance->fifo) == 0);
-        mx_hid_fifo_write(&instance->fifo, (uint8_t*)report, sizeof(*report));
-        if (set_readable) {
-            device_state_set(&instance->device, DEV_STATE_READABLE);
-        }
-        mtx_unlock(&instance->fifo.lock);
-    }
-    mtx_unlock(&dev->instance_lock);
+    hid_io_queue(&dev->hiddev, (const uint8_t*)report, sizeof(*report));
 }
 
 static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int flags) {
@@ -503,18 +471,7 @@ static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int 
         dev->report.mouse.rel_y = d - ((state << 3) & 0x100);
         dev->report.mouse.buttons &= 0x7;
 
-        i8042_instance_t* instance;
-        mtx_lock(&dev->instance_lock);
-        foreach_instance(dev, instance) {
-            mtx_lock(&instance->fifo.lock);
-            bool set_readable = (mx_hid_fifo_size(&instance->fifo) == 0);
-            mx_hid_fifo_write(&instance->fifo, (uint8_t*)&dev->report.mouse, sizeof(dev->report.mouse));
-            if (set_readable) {
-                device_state_set(&instance->device, DEV_STATE_READABLE);
-            }
-            mtx_unlock(&instance->fifo.lock);
-        }
-        mtx_unlock(&dev->instance_lock);
+        hid_io_queue(&dev->hiddev, (const uint8_t*)&dev->report.mouse, sizeof(dev->report.mouse));
         memset(&dev->report.mouse, 0, sizeof(dev->report.mouse));
         break;
         }
@@ -570,159 +527,6 @@ static int i8042_irq_thread(void* arg) {
     }
     return 0;
 }
-
-static ssize_t i8042_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    i8042_instance_t* instance = get_i8042_instance(dev);
-    i8042_device_t* root = instance->root;
-
-    size_t size = (root->type == INPUT_PROTO_KBD) ? sizeof(boot_kbd_report_t) : sizeof(boot_mouse_report_t);
-    if (count < size || (count % size != 0))
-        return ERR_INVALID_ARGS;
-
-    uint8_t* data = buf;
-    mtx_lock(&instance->fifo.lock);
-    while (count > 0) {
-        if (mx_hid_fifo_read(&instance->fifo, data, size) < (ssize_t)size)
-            break;
-        data += size;
-        count -= size;
-    }
-    if (mx_hid_fifo_size(&instance->fifo) == 0) {
-        device_state_clr(dev, DEV_STATE_READABLE);
-    }
-    mtx_unlock(&instance->fifo.lock);
-    return data - (uint8_t*)buf;
-}
-
-static ssize_t i8042_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len) {
-    i8042_device_t* root = get_i8042_instance(dev)->root;
-    switch (op) {
-    case IOCTL_INPUT_GET_PROTOCOL: {
-        if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
-        int* reply = out_buf;
-        *reply = root->type;
-        return sizeof(*reply);
-    }
-
-    case IOCTL_INPUT_GET_REPORT_DESC_SIZE: {
-        if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
-        size_t* reply = out_buf;
-        switch (root->type) {
-        case INPUT_PROTO_KBD:
-            *reply = sizeof(kbd_hid_report_desc);
-            break;
-        case INPUT_PROTO_MOUSE:
-            *reply = sizeof(mouse_hid_report_desc);
-            break;
-        default:
-            return ERR_BAD_STATE;
-        }
-        return sizeof(*reply);
-    }
-
-    case IOCTL_INPUT_GET_REPORT_DESC: {
-        switch (root->type) {
-        case INPUT_PROTO_KBD:
-            if (out_len < sizeof(kbd_hid_report_desc)) return ERR_INVALID_ARGS;
-            memcpy(out_buf, &kbd_hid_report_desc, sizeof(kbd_hid_report_desc));
-            return sizeof(kbd_hid_report_desc);
-        case INPUT_PROTO_MOUSE:
-            if (out_len < sizeof(mouse_hid_report_desc)) return ERR_INVALID_ARGS;
-            memcpy(out_buf, &mouse_hid_report_desc, sizeof(mouse_hid_report_desc));
-            return sizeof(mouse_hid_report_desc);
-        default:
-            return ERR_BAD_STATE;
-        }
-    }
-
-    case IOCTL_INPUT_GET_NUM_REPORTS: {
-        if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
-        size_t* reply = out_buf;
-        *reply = 1;
-        return sizeof(*reply);
-    }
-
-    case IOCTL_INPUT_GET_REPORT_IDS: {
-        if (out_len < sizeof(input_report_id_t)) return ERR_INVALID_ARGS;
-        input_report_id_t* reply = out_buf;
-        *reply = 0;
-        return sizeof(*reply);
-    }
-
-    case IOCTL_INPUT_GET_REPORT_SIZE:
-    case IOCTL_INPUT_GET_MAX_REPORTSIZE: {
-        if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
-        input_report_size_t* reply = out_buf;
-        switch (root->type) {
-        case INPUT_PROTO_KBD:
-            *reply = sizeof(boot_kbd_report_t);
-            break;
-        case INPUT_PROTO_MOUSE:
-            *reply = sizeof(boot_mouse_report_t);
-            break;
-        default:
-            return ERR_BAD_STATE;
-        }
-        return sizeof(*reply);
-    }
-    }
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t i8042_instance_release(mx_device_t* dev) {
-    i8042_instance_t* inst = get_i8042_instance(dev);
-    mtx_lock(&inst->root->instance_lock);
-    list_delete(&inst->node);
-    mtx_unlock(&inst->root->instance_lock);
-    free(inst);
-    return NO_ERROR;
-}
-
-static mx_protocol_device_t i8042_instance_proto = {
-    .read = i8042_read,
-    .ioctl = i8042_ioctl,
-    .release = i8042_instance_release,
-};
-
-static mx_status_t i8042_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    i8042_device_t* i8042 = get_i8042_device(dev);
-
-    i8042_instance_t* inst = calloc(1, sizeof(i8042_instance_t));
-    if (!inst)
-        return ERR_NO_MEMORY;
-
-    mx_hid_fifo_init(&inst->fifo);
-
-    const char* name = (i8042->type == INPUT_PROTO_MOUSE) ? "i8042-mouse" : "i8042-keyboard";
-    device_init(&inst->device, i8042->drv, name, &i8042_instance_proto);
-
-    inst->device.protocol_id = MX_PROTOCOL_INPUT;
-    mx_status_t status = device_add_instance(&inst->device, dev);
-    if (status != NO_ERROR) {
-        free(inst);
-        return status;
-    }
-    inst->root = i8042;
-
-    mtx_lock(&i8042->instance_lock);
-    list_add_tail(&i8042->instance_list, &inst->node);
-    mtx_unlock(&i8042->instance_lock);
-
-    *dev_out = &inst->device;
-    return NO_ERROR;
-}
-
-static mx_status_t i8042_dev_release(mx_device_t* dev) {
-    i8042_device_t* device = get_i8042_device(dev);
-    free(device);
-    return NO_ERROR;
-}
-
-static mx_protocol_device_t i8042_device_proto = {
-    .open = i8042_open,
-    .release = i8042_dev_release,
-};
 
 static mx_status_t i8042_setup(uint8_t* ctr) {
     // enable I/O port access
@@ -796,15 +600,68 @@ static void i8042_identify(int (*cmd)(uint8_t* param, int command)) {
     cmd(resp, I8042_CMD_SCAN_EN);
 }
 
-static mx_status_t i8042_dev_init(i8042_device_t* dev) {
-    mtx_init(&dev->instance_lock, mtx_plain);
-    list_initialize(&dev->instance_list);
+static mx_status_t i8042_get_descriptor(mx_hid_device_t* dev, uint8_t desc_type,
+        void** data, size_t* len) {
+    i8042_device_t* device = get_i8042_device(dev);
+    const uint8_t* buf = NULL;
+    size_t buflen = 0;
+    if (device->type == INPUT_PROTO_KBD) {
+        buf = (void*)&kbd_hid_report_desc;
+        buflen = sizeof(kbd_hid_report_desc);
+    } else if (device->type == INPUT_PROTO_MOUSE) {
+        buf = (void*)&mouse_hid_report_desc;
+        buflen = sizeof(mouse_hid_report_desc);
+    } else {
+        return ERR_NOT_SUPPORTED;
+    }
 
-    // add to root device
-    dev->device.protocol_id = MX_PROTOCOL_INPUT;
-    mx_status_t status = device_add(&dev->device, NULL);
+    *data = malloc(buflen);
+    *len = buflen;
+    memcpy(*data, buf, buflen);
+    return NO_ERROR;
+}
+
+static mx_status_t i8042_get_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+        void* data, size_t len) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t i8042_set_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+        void* data, size_t len) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t i8042_get_idle(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t* duration) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t i8042_set_idle(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t duration) {
+    return NO_ERROR;
+}
+
+static mx_status_t i8042_get_protocol(mx_hid_device_t* dev, uint8_t* protocol) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t i8042_set_protocol(mx_hid_device_t* dev, uint8_t protocol) {
+    return NO_ERROR;
+}
+
+static hid_bus_ops_t hid_bus_ops = {
+    .get_descriptor = i8042_get_descriptor,
+    .get_report = i8042_get_report,
+    .set_report = i8042_set_report,
+    .get_idle = i8042_get_idle,
+    .set_idle = i8042_set_idle,
+    .get_protocol = i8042_get_protocol,
+    .set_protocol = i8042_set_protocol,
+};
+
+static mx_status_t i8042_dev_init(i8042_device_t* dev) {
+    hid_init_device(&dev->hiddev, &hid_bus_ops, dev->type, true, dev->type);
+    mx_status_t status = hid_add_device(&_driver_i8042, &dev->hiddev, NULL);
     if (status != NO_ERROR) {
-        free(dev);
+        hid_release_device(&dev->hiddev);
         return status;
     }
 
@@ -813,22 +670,42 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev) {
         I8042_CMD_CTL_KBD_DIS : I8042_CMD_CTL_MOUSE_DIS;
     i8042_command(NULL, cmd);
 
+    // TODO: use identity to determine device type, rather than assuming aux ==
+    // mouse
     i8042_identify(dev->type == INPUT_PROTO_KBD ?
             i8042_dev_command : i8042_aux_command);
 
     cmd = dev->type == INPUT_PROTO_KBD ?
         I8042_CMD_CTL_KBD_EN : I8042_CMD_CTL_MOUSE_EN;
     i8042_command(NULL, cmd);
+
+    uint32_t interrupt = dev->type == INPUT_PROTO_KBD ?
+        ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
+    dev->irq = mx_interrupt_event_create(interrupt, MX_FLAG_REMAP_IRQ);
+    if (dev->irq < 0) {
+        hid_release_device(&dev->hiddev);
+        return dev->irq;
+    }
+
+        // create irq thread
+    const char* name = dev->type == INPUT_PROTO_KBD ?
+        "i8042-kbd-irq" : "i8042-mouse-irq";
+    int ret = thrd_create_with_name(&dev->irq_thread, i8042_irq_thread, dev, name);
+    if (ret != thrd_success) {
+        hid_release_device(&dev->hiddev);
+        return ERR_BAD_STATE;
+    }
+
     return NO_ERROR;
 }
 
 static int i8042_init_thread(void* arg) {
-    mx_driver_t* driver = (mx_driver_t*)arg;
     uint8_t ctr = 0;
     mx_status_t status = i8042_setup(&ctr);
     if (status != NO_ERROR) {
         return status;
     }
+
     bool have_mouse = !!(ctr & I8042_CTR_AUXDIS);
 
     // turn on translation
@@ -850,75 +727,33 @@ static int i8042_init_thread(void* arg) {
     if (!kbd_device)
         return ERR_NO_MEMORY;
 
-    device_init(&kbd_device->device, driver, "i8042-keyboard", &i8042_device_proto);
-    kbd_device->drv = driver;
     kbd_device->type = INPUT_PROTO_KBD;
     status = i8042_dev_init(kbd_device);
     if (status != NO_ERROR) {
-        return status;
+        free(kbd_device);
     }
 
-    i8042_device_t* mouse_device = NULL;
+    // Mouse
     if (have_mouse) {
+        i8042_device_t* mouse_device = NULL;
         mouse_device = calloc(1, sizeof(i8042_device_t));
         if (mouse_device) {
-            device_init(&mouse_device->device, driver, "i8042-mouse", &i8042_device_proto);
-            mouse_device->drv = driver;
             mouse_device->type = INPUT_PROTO_MOUSE;
             status = i8042_dev_init(mouse_device);
             if (status != NO_ERROR) {
-                have_mouse = false;
+                free(mouse_device);
             }
-        }
-    }
-
-    // get interrupt wait handle
-    kbd_device->irq = mx_interrupt_event_create(ISA_IRQ_KEYBOARD, MX_FLAG_REMAP_IRQ);
-    if (kbd_device->irq < 0)
-        goto fail;
-
-    if (have_mouse) {
-        mouse_device->irq = mx_interrupt_event_create(ISA_IRQ_MOUSE, MX_FLAG_REMAP_IRQ);
-        if (mouse_device->irq < 0) {
-            printf("i8042: interrupt_event_create failed for mouse\n");
-            device_remove(&mouse_device->device);
-            free(mouse_device);
-            have_mouse = false;
-        }
-    }
-
-    // create irq thread
-    const char* name = "i8042-kbd-irq";
-    int ret = thrd_create_with_name(&kbd_device->irq_thread, i8042_irq_thread, kbd_device, name);
-    if (ret != thrd_success)
-        goto fail;
-
-    if (have_mouse) {
-        name = "i8042-mouse-irq";
-        ret = thrd_create_with_name(&mouse_device->irq_thread, i8042_irq_thread, mouse_device, name);
-        if (ret != thrd_success) {
-            printf("i8042: could not create irq thread for mouse\n");
-            device_remove(&mouse_device->device);
-            free(mouse_device);
         }
     }
 
     xprintf("initialized i8042 driver\n");
 
     return NO_ERROR;
-
-fail:
-    device_remove(&kbd_device->device);
-    free(kbd_device);
-    if (have_mouse) {
-        free(mouse_device);
-    }
-    return status;
 }
 
 static mx_status_t i8042_init(mx_driver_t* driver) {
     thrd_t t;
-    int rc = thrd_create_with_name(&t, i8042_init_thread, driver, "i8042-init");
+    int rc = thrd_create_with_name(&t, i8042_init_thread, NULL, "i8042-init");
     return rc;
 }
 

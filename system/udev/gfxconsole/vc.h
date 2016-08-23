@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include <ddk/device.h>
-#include <ddk/common/hid.h>
+#include <ddk/common/hid-fifo.h>
 #include <gfx/gfx.h>
 #include <hid/hid.h>
 #include <mxio/vfs.h>
