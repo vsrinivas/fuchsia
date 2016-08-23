@@ -19,6 +19,7 @@ set -e
 readonly GS_BUCKET="https://fuchsia-build.storage.googleapis.com/magenta"
 readonly OS="$(uname)"
 readonly HOSTARCH="$(uname -m)"
+readonly GCC_VERSION="6.1.0"
 
 # We assume the following directory structure:
 # ./magenta/scripts
@@ -66,7 +67,7 @@ function downloadToolchain() {
   fi
 
   # Record the locations of the various toolchains.
-  local toolchain_dir="${target}-5.3.0-${OS}-${HOSTARCH}"
+  local toolchain_dir="${target}-${GCC_VERSION}-${OS}-${HOSTARCH}"
   local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${MAGENTA_ROOT}}"
   case "${target}" in
     "arm-eabi")
