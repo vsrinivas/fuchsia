@@ -139,7 +139,8 @@ static mx_protocol_device_t tpm_device_proto = {
 mx_status_t tpm_init(mx_driver_t* driver) {
 #if defined(__x86_64__) || defined(__i386__)
     mx_status_t status = mx_mmap_device_memory(
-            TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH, &tpm_base);
+            TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH,
+            MX_CACHE_POLICY_UNCACHED, &tpm_base);
     if (status != NO_ERROR) {
         return status;
     }

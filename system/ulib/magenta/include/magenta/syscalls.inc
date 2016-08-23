@@ -138,8 +138,8 @@ MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vm_object_set_size, mx_handle_t hand
 
 // temporary syscalls to access port and memory mapped devices
 MAGENTA_DDKCALL_DEF(2, 2, 105, mx_status_t, mmap_device_io, uint32_t io_addr, uint32_t len)
-MAGENTA_DDKCALL_DEF(3, 3, 106, mx_status_t, mmap_device_memory, mx_paddr_t paddr, uint32_t len,
-                    void **out_vaddr)
+MAGENTA_DDKCALL_DEF(4, 4, 106, mx_status_t, mmap_device_memory, mx_paddr_t paddr, uint32_t len,
+                    mx_cache_policy_t cache_policy, USER_PTR(void *) out_vaddr)
 MAGENTA_DDKCALL_DEF(3, 3, 107, mx_status_t, alloc_device_memory, uint32_t len, mx_paddr_t *out_paddr,
                     void **out_vaddr)
 
@@ -240,6 +240,10 @@ MAGENTA_SYSCALL_DEF(4, 4, 250, mx_status_t, object_get_property, mx_handle_t han
                     USER_PTR(void) value, mx_size_t size)
 MAGENTA_SYSCALL_DEF(4, 4, 251, mx_status_t, object_set_property, mx_handle_t handle, uint32_t property,
                     USER_PTR(const void) value, mx_size_t size)
+
+// Privileged syscalls for ACPI support
+MAGENTA_DDKCALL_DEF(0, 0, 260, uint32_t, acpi_uefi_rsdp, void)
+MAGENTA_DDKCALL_DEF(0, 0, 261, mx_status_t, acpi_cache_flush, void)
 
 // Sockets
 MAGENTA_SYSCALL_DEF(2, 2, 280, mx_status_t, socket_create, mx_handle_t out_handles[2], uint32_t flags)

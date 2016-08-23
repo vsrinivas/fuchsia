@@ -15,6 +15,7 @@
 #include <dev/udisplay.h>
 #include <kernel/vm.h>
 #include <lib/user_copy.h>
+#include <utils/user_ptr.h>
 
 #include <magenta/interrupt_dispatcher.h>
 #include <magenta/magenta.h>
@@ -87,7 +88,10 @@ mx_status_t sys_interrupt_event_complete(mx_handle_t handle_value) {
     return interrupt->InterruptComplete();
 }
 
-mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len, void** out_vaddr) {
+mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len,
+                                   mx_cache_policy_t cache_policy,
+                                   utils::user_ptr<void*> out_vaddr) {
+
     LTRACEF("addr 0x%lx len 0x%x\n", paddr, len);
 
     if (!out_vaddr)
@@ -96,7 +100,23 @@ mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len, void** out_vad
     void* vaddr = nullptr;
     uint arch_mmu_flags =
         ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
-        ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
+        ARCH_MMU_FLAG_PERM_USER;
+
+    switch (cache_policy) {
+        case MX_CACHE_POLICY_CACHED:
+            arch_mmu_flags |= ARCH_MMU_FLAG_CACHED;
+            break;
+        case MX_CACHE_POLICY_UNCACHED:
+            arch_mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+            break;
+        case MX_CACHE_POLICY_UNCACHED_DEVICE:
+            arch_mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
+            break;
+        case MX_CACHE_POLICY_WRITE_COMBINING:
+            arch_mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+            break;
+        default: return ERR_INVALID_ARGS;
+    }
 
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     status_t res = aspace->AllocPhysical("user_mmio", len, &vaddr,
@@ -107,7 +127,7 @@ mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len, void** out_vad
     if (res != NO_ERROR)
         return res;
 
-    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_vaddr), &vaddr, sizeof(void*)) != NO_ERROR) {
+    if (copy_to_user(out_vaddr, &vaddr, sizeof(void*)) != NO_ERROR) {
         aspace->FreeRegion(reinterpret_cast<vaddr_t>(vaddr));
         return ERR_INVALID_ARGS;
     }
@@ -577,3 +597,26 @@ mx_status_t sys_mmap_device_io(uint32_t io_addr, uint32_t len) {
     return ERR_NOT_SUPPORTED;
 }
 #endif
+
+uint32_t sys_acpi_uefi_rsdp(void) {
+    // TODO(teisenbe): Use a handle to restrict this to the ACPI process
+#if ARCH_X86
+    extern uint32_t bootloader_acpi_rsdp;
+    return bootloader_acpi_rsdp;
+#endif
+    return 0;
+}
+
+mx_status_t sys_acpi_cache_flush(void) {
+    // TODO(teisenbe): Use a handle to restrict this to the ACPI process
+    // TODO(teisenbe): This should be restricted to when interrupts are
+    // disabled, but we haven't added support for letting the ACPI process
+    // disable interrupts yet.  It only uses this for S-state transitions
+    // like poweroff and (more importantly) sleep.
+#if ARCH_X86
+    __asm__ volatile ("wbinvd");
+    return NO_ERROR;
+#else
+    return ERR_NOT_SUPPORTED;
+#endif
+}
