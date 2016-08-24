@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <common/magma_defs.h>
+#include "magma_defs.h"
 
 #if defined(__cplusplus)
 extern "C" {

@@ -12,31 +12,6 @@
 extern "C" {
 #endif
 
-// The magma system driver... driver :)
-struct msd_driver {
-    int32_t magic_;
-};
-
-// The magma system driver device.
-struct msd_device {
-    int32_t magic_;
-};
-
-// A driver defined connection, owned by the MagmaSystemConnection
-struct msd_connection {
-    int32_t magic_;
-};
-
-// A driver defined buffer that owns a reference to an msd_platform_buffer
-struct msd_buffer {
-    int32_t magic_;
-};
-
-// A driver defined context, owned by the magma system context
-struct msd_context {
-    int32_t magic_;
-};
-
 // Instantiates a driver instance.
 struct msd_driver* msd_driver_create(void);
 
@@ -63,6 +38,9 @@ struct msd_context* msd_connection_create_context(struct msd_connection* connect
 
 // Destroys the given context.
 void msd_context_destroy(struct msd_context* ctx);
+
+// returns 0 on success
+int32_t msd_context_execute_command_buffer(struct magma_system_command_buffer* command_buffer);
 
 // Creates a buffer that owns a reference to the provided platform buffer
 // The resulting msd_buffer is owned by the caller and must be destroyed

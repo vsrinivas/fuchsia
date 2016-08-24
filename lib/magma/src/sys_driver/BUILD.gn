@@ -8,6 +8,7 @@ source_set("sys_driver") {
   public_deps = [
     ":platform_buffer",
     "$magma_build_root/include:msd_abi",
+    "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util",
   ]
 
@@ -22,18 +23,6 @@ source_set("sys_driver") {
     "magma_system_context.h",
     "magma_system_device.cc",
     "magma_system_device.h",
-  ]
-}
-
-config("magma_system_interface_config") {
-  include_dirs = [ "." ]
-}
-
-source_set("magma_system_interface") {
-  public_configs = [ ":magma_system_interface_config" ]
-
-  sources = [
-    "magma_system.h",
   ]
 }
 
