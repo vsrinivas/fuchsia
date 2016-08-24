@@ -13,8 +13,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := c11-thread-test
 
-MODULE_STATIC_LIBS := ulib/runtime
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/musl
+    ulib/unittest ulib/mxio ulib/musl
 
 include make/module.mk

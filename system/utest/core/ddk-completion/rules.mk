@@ -13,7 +13,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := ddk-completion-test
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/runtime
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_STATIC_LIBS := ulib/ddk
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/musl
 
 include make/module.mk

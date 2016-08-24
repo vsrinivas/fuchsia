@@ -4,7 +4,6 @@
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
-#include <runtime/mutex.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

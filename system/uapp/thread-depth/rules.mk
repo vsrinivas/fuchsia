@@ -13,10 +13,8 @@ MODULE_SRCS += \
 
 MODULE_NAME := thread-depth-test
 
-MODULE_STATIC_LIBS := ulib/runtime
 MODULE_LIBS := \
     ulib/mxio \
-    ulib/magenta \
     ulib/musl
 
 include make/module.mk

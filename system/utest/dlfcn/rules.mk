@@ -16,7 +16,7 @@ MODULE_NAME := dlfcn-test
 # This test uses liblaunchpad.so as the test library to dlopen.
 # We don't want it to already be there when we call dlopen, but
 # we use launchpad_vmo_from_file to load it!  So link it statically.
-MODULE_STATIC_LIBS := ulib/launchpad ulib/elfload ulib/runtime
+MODULE_STATIC_LIBS := ulib/launchpad ulib/elfload
 MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
