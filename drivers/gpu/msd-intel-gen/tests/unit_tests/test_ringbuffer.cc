@@ -36,6 +36,9 @@ public:
         ringbuffer->write_tail(dword);
         EXPECT_EQ(vaddr[0], dword);
 
+        EXPECT_FALSE(ringbuffer->HasSpace(size));
+        EXPECT_TRUE(ringbuffer->HasSpace(size - 4));
+
         // Stuff the ringbuffer
         uint32_t max_index = (size >> 2) - 1;
         for (unsigned int i = 1; i < max_index; i++) {

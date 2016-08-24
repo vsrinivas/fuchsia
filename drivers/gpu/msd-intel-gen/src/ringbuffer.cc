@@ -12,10 +12,13 @@ Ringbuffer::Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer) : buffer_(std::mo
 
 bool Ringbuffer::HasSpace(uint32_t bytes)
 {
-    int32_t space = tail_ - head_;
+    int32_t space = head_ - tail_;
     if (space <= 0)
         space += size_;
-    return static_cast<uint32_t>(space) >= bytes;
+    bool ret = static_cast<uint32_t>(space) >= bytes;
+    if (!ret)
+        DLOG("HasSpace: bytes 0x%x space 0x%x", bytes, space);
+    return DRETF(ret, "insufficient space");
 }
 
 bool Ringbuffer::Map(AddressSpace* address_space)
