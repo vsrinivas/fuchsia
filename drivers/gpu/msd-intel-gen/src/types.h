@@ -5,7 +5,9 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-typedef uint64_t gen_pte_t;
+#include <stdint.h>
+
+using gen_pte_t = uint64_t;
 
 using gpu_addr_t = uint64_t;
 
