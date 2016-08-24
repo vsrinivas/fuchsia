@@ -83,6 +83,7 @@ function download_tarball() {
 # There's no good reason for these to be different - unify them.
 download_tarball cmake "cmake/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
 download_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
+download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
 
 function download_sysroot() {
   local arch="${1}"

@@ -4,6 +4,8 @@
 /linux64/cmake.stamp
 /linux64/gn
 /linux64/gn.stamp
+/linux64/go
+/linux64/go.stamp
 /linux64/loglistener
 /linux64/loglistener.stamp
 /linux64/mkbootfs
@@ -16,6 +18,8 @@
 /mac/cmake.stamp
 /mac/gn
 /mac/gn.stamp
+/mac/go
+/mac/go.stamp
 /mac/loglistener
 /mac/loglistener.stamp
 /mac/mkbootfs
