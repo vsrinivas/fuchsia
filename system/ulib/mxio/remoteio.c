@@ -15,6 +15,8 @@
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
+#include <ddk/ioctl.h>
+
 #include "private.h"
 
 #define MXDEBUG 0
@@ -272,7 +274,7 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
         return ERR_INVALID_ARGS;
     }
 
-    if ((op == IOCTL_DEVICE_GET_HANDLE) && (out_len < sizeof(mx_handle_t))) {
+    if ((IOCTL_KIND(op) == IOCTL_KIND_GET_HANDLE) && (out_len < sizeof(mx_handle_t))) {
         return ERR_INVALID_ARGS;
     }
 
@@ -293,7 +295,7 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     }
 
     memcpy(out_buf, msg.data, copy_len);
-    if (op == IOCTL_DEVICE_GET_HANDLE) {
+    if (IOCTL_KIND(op) == IOCTL_KIND_GET_HANDLE) {
         if (msg.hcount > 0) {
             memcpy(out_buf, msg.handle, sizeof(mx_handle_t));
             discard_handles(msg.handle + 1, msg.hcount - 1);

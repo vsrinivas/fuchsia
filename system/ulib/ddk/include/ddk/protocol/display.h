@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <ddk/ioctl.h>
 #include <magenta/types.h>
 #include <magenta/pixelformat.h>
 
@@ -37,11 +38,12 @@ typedef struct mx_display_protocol {
     // flushes the framebuffer
 } mx_display_protocol_t;
 
+#define IOCTL_DISPLAY_GET_FB \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 1)
+#define IOCTL_DISPLAY_FLUSH_FB \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 2)
 
-#define DISPLAY_OP_GET_FB 0x7FFF0001
 typedef struct {
     mx_handle_t vmo;
     mx_display_info_t info;
 } ioctl_display_get_fb_t;
-
-#define DISPLAY_OP_FLUSH_FB 2

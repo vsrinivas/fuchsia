@@ -70,7 +70,7 @@ int cmd_add_slave(int fd, int argc, const char** argv) {
         .chip_address = address,
     };
 
-    int ret = mxio_ioctl(fd, I2C_BUS_ADD_SLAVE,
+    int ret = mxio_ioctl(fd, IOCTL_I2C_BUS_ADD_SLAVE,
                          &add_slave_args, sizeof(add_slave_args),
                          NULL, 0);
     if (ret < 0) {
@@ -98,7 +98,7 @@ int cmd_remove_slave(int fd, int argc, const char** argv) {
         .chip_address = address,
     };
 
-    int ret = mxio_ioctl(fd, I2C_BUS_REMOVE_SLAVE,
+    int ret = mxio_ioctl(fd, IOCTL_I2C_BUS_REMOVE_SLAVE,
                          &remove_slave_args, sizeof(remove_slave_args),
                          NULL, 0);
     if (ret < 0) {
@@ -125,7 +125,7 @@ int cmd_set_bus_frequency(int fd, int argc, const char** argv) {
         .frequency = frequency,
     };
 
-    int ret = mxio_ioctl(fd, I2C_BUS_SET_FREQUENCY,
+    int ret = mxio_ioctl(fd, IOCTL_I2C_BUS_SET_FREQUENCY,
                          &set_bus_frequency_args,
                          sizeof(set_bus_frequency_args),
                          NULL, 0);
@@ -291,7 +291,7 @@ int cmd_transfer(int fd, int argc, const char** argv) {
         }
     }
 
-    ret = mxio_ioctl(fd, I2C_SLAVE_TRANSFER,
+    ret = mxio_ioctl(fd, IOCTL_I2C_SLAVE_TRANSFER,
                      in_buf, in_len, out_buf, out_len);
     if (ret < 0)
         goto cmd_transfer_finish_1;

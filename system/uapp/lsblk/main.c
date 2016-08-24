@@ -81,20 +81,20 @@ static int cmd_list_blk(void) {
             printf("Error opening %s\n", devname);
             goto devdone;
         }
-        rc = mxio_ioctl(fd, BLOCK_OP_GET_SIZE, NULL, 0, &size, sizeof(size));
+        rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &size, sizeof(size));
         if (rc < 0) {
             strncpy(sstr, "N/A", sizeof(sstr));
         } else {
             size_to_cstring(sstr, sizeof(sstr), size);
         }
-        rc = mxio_ioctl(fd, BLOCK_OP_GET_GUID, NULL, 0, guid, sizeof(guid));
+        rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_GUID, NULL, 0, guid, sizeof(guid));
         if (rc < 0) {
             type = "N/A";
         } else {
             type = guid_to_type(guid);
         }
         memset(name, 0, sizeof(name));
-        rc = mxio_ioctl(fd, BLOCK_OP_GET_NAME, NULL, 0, name, sizeof(name));
+        rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_NAME, NULL, 0, name, sizeof(name));
         if (rc < 0) {
             strncpy(name, "N/A", sizeof(name));
         }
@@ -116,7 +116,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
 
     // check that count and offset are aligned to block size
     uint64_t blksize;
-    int rc = mxio_ioctl(fd, BLOCK_OP_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
+    int rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
     if (rc < 0) {
         printf("Error getting block size for %s\n", dev);
         close(fd);

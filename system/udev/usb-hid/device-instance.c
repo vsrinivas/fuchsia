@@ -209,23 +209,23 @@ static ssize_t usb_hid_ioctl_instance(mx_device_t* dev, uint32_t op,
     if (hid->flags & HID_FLAGS_DEAD) return ERR_CHANNEL_CLOSED;
 
     switch (op) {
-    case INPUT_IOCTL_GET_PROTOCOL:
+    case IOCTL_INPUT_GET_PROTOCOL:
         return usb_hid_get_protocol(hid->root, out_buf, out_len);
-    case INPUT_IOCTL_GET_REPORT_DESC_SIZE:
+    case IOCTL_INPUT_GET_REPORT_DESC_SIZE:
         return usb_hid_get_hid_desc_size(hid->root, out_buf, out_len);
-    case INPUT_IOCTL_GET_REPORT_DESC:
+    case IOCTL_INPUT_GET_REPORT_DESC:
         return usb_hid_get_hid_desc(hid->root, out_buf, out_len);
-    case INPUT_IOCTL_GET_NUM_REPORTS:
+    case IOCTL_INPUT_GET_NUM_REPORTS:
         return usb_hid_get_num_reports(hid->root, out_buf, out_len);
-    case INPUT_IOCTL_GET_REPORT_IDS:
+    case IOCTL_INPUT_GET_REPORT_IDS:
         return usb_hid_get_report_ids(hid->root, out_buf, out_len);
-    case INPUT_IOCTL_GET_REPORT_SIZE:
+    case IOCTL_INPUT_GET_REPORT_SIZE:
         return usb_hid_get_report_size(hid->root, in_buf, in_len, out_buf, out_len);
-    case INPUT_IOCTL_GET_MAX_REPORTSIZE:
+    case IOCTL_INPUT_GET_MAX_REPORTSIZE:
         return usb_hid_get_max_reportsize(hid->root, out_buf, out_len);
-    case INPUT_IOCTL_GET_REPORT:
+    case IOCTL_INPUT_GET_REPORT:
         return usb_hid_get_report(hid->root, in_buf, in_len, out_buf, out_len);
-    case INPUT_IOCTL_SET_REPORT:
+    case IOCTL_INPUT_SET_REPORT:
         return usb_hid_set_report(hid->root, in_buf, in_len);
     }
     return ERR_NOT_SUPPORTED;

@@ -16,6 +16,7 @@
 #include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/ioctl.h>
 #include <ddk/iotxn.h>
 
 #include <magenta/syscalls.h>
@@ -303,7 +304,7 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         memcpy(in_buf, msg->data, len);
         mx_status_t r = dev->ops->ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
-            if (msg->arg2.op == IOCTL_DEVICE_GET_HANDLE) {
+            if (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_GET_HANDLE) {
                 msg->hcount = 1;
                 memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
             }

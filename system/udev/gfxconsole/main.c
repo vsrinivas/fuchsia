@@ -265,7 +265,7 @@ static int vc_input_devices_poll_thread(void* arg) {
             }
             // test to see if this is a device we can read
             int proto = INPUT_PROTO_NONE;
-            int rc = mxio_ioctl(free->fd, INPUT_IOCTL_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
+            int rc = mxio_ioctl(free->fd, IOCTL_INPUT_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
             if (rc > 0 && proto != INPUT_PROTO_KBD) {
                 // skip devices that aren't keyboards
                 free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
@@ -580,7 +580,7 @@ static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, 
 static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
     vc_device_t* vc = get_vc_device(dev);
     switch (op) {
-    case CONSOLE_OP_GET_DIMENSIONS: {
+    case IOCTL_CONSOLE_GET_DIMENSIONS: {
         ioctl_console_dimensions_t* dims = reply;
         if (max < sizeof(*dims)) {
             return ERR_NOT_ENOUGH_BUFFER;
@@ -589,7 +589,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         dims->height = vc->rows;
         return sizeof(*dims);
     }
-    case DISPLAY_OP_GET_FB: {
+    case IOCTL_DISPLAY_GET_FB: {
         if (max < sizeof(ioctl_display_get_fb_t)) {
             return ERR_NOT_ENOUGH_BUFFER;
         }
@@ -604,7 +604,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         fb->vmo = mx_handle_duplicate(vc->gfx_vmo, MX_RIGHT_SAME_RIGHTS);
         return sizeof(ioctl_display_get_fb_t);
     }
-    case DISPLAY_OP_FLUSH_FB:
+    case IOCTL_DISPLAY_FLUSH_FB:
         vc_gfx_invalidate_all(vc);
         return NO_ERROR;
     default:

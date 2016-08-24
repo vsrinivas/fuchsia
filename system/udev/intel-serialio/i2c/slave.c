@@ -297,7 +297,7 @@ static ssize_t intel_serialio_i2c_slave_ioctl(
     mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
     void* out_buf, size_t out_len) {
     switch (op) {
-    case I2C_SLAVE_TRANSFER:
+    case IOCTL_I2C_SLAVE_TRANSFER:
         return intel_serialio_i2c_slave_transfer_ioctl(
             dev, op, in_buf, in_len, out_buf, out_len);
         break;

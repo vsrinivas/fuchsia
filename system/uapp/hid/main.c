@@ -67,7 +67,7 @@ static void print_hex(uint8_t* buf, size_t len) {
 
 static int get_hid_protocol(int fd, const char* name) {
     int proto;
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
     if (rc < 0) {
         lprintf("hid: could not get protocol from %s (status=%d)\n", name, rc);
     } else {
@@ -77,7 +77,7 @@ static int get_hid_protocol(int fd, const char* name) {
 }
 
 static int get_report_desc_len(int fd, const char* name, size_t* report_desc_len) {
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_DESC_SIZE, NULL, 0, report_desc_len, sizeof(*report_desc_len));
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_REPORT_DESC_SIZE, NULL, 0, report_desc_len, sizeof(*report_desc_len));
     if (rc < 0) {
         lprintf("hid: could not get report descriptor length from %s (status=%d)\n", name, rc);
     } else {
@@ -92,7 +92,7 @@ static int get_report_desc(int fd, const char* name, size_t report_desc_len) {
         lprintf("hid: out of memory\n");
         return ERR_NO_MEMORY;
     }
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_DESC, NULL, 0, buf, report_desc_len);
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_REPORT_DESC, NULL, 0, buf, report_desc_len);
     if (rc < 0) {
         lprintf("hid: could not get report descriptor from %s (status=%d)\n", name, rc);
         free(buf);
@@ -107,7 +107,7 @@ static int get_report_desc(int fd, const char* name, size_t report_desc_len) {
 }
 
 static int get_num_reports(int fd, const char* name, size_t* num_reports) {
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_NUM_REPORTS, NULL, 0, num_reports, sizeof(*num_reports));
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_NUM_REPORTS, NULL, 0, num_reports, sizeof(*num_reports));
     if (rc < 0) {
         lprintf("hid: could not get number of reports from %s (status=%d)\n", name, rc);
     } else {
@@ -120,7 +120,7 @@ static int get_report_ids(int fd, const char* name, size_t num_reports) {
     input_report_id_t* ids = malloc(num_reports * sizeof(input_report_id_t));
     if (!ids) return ERR_NO_MEMORY;
 
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_IDS, NULL, 0, ids, num_reports * sizeof(input_report_id_t));
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_REPORT_IDS, NULL, 0, ids, num_reports * sizeof(input_report_id_t));
     if (rc < 0) {
         lprintf("hid: could not get report ids from %s (status=%d)\n", name, rc);
         free(ids);
@@ -134,7 +134,7 @@ static int get_report_ids(int fd, const char* name, size_t num_reports) {
         arg.id = ids[i];
         arg.type = INPUT_REPORT_INPUT;  // TODO: get all types
         input_report_size_t size;
-        int size_rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_SIZE, &arg, sizeof(arg), &size, sizeof(size));
+        int size_rc = mxio_ioctl(fd, IOCTL_INPUT_GET_REPORT_SIZE, &arg, sizeof(arg), &size, sizeof(size));
         if (size_rc < 0) {
             printf("hid: could not get report id size from %s (status=%d)\n", name, size_rc);
             continue;
@@ -153,7 +153,7 @@ static int get_max_report_len(int fd, const char* name, size_t* max_report_len) 
     if (max_report_len == NULL) {
         max_report_len = &tmp;
     }
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_MAX_REPORTSIZE, NULL, 0, max_report_len, sizeof(*max_report_len));
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_MAX_REPORTSIZE, NULL, 0, max_report_len, sizeof(*max_report_len));
     if (rc < 0) {
         lprintf("hid: could not get max report size from %s (status=%d)\n", name, rc);
     } else {
@@ -320,7 +320,7 @@ int get_report(int argc, const char** argv) {
     xprintf("hid: getting report size for id=%u type=%u\n", arg.id, arg.type);
 
     input_report_size_t size;
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_SIZE, &arg, sizeof(arg), &size, sizeof(size));
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_REPORT_SIZE, &arg, sizeof(arg), &size, sizeof(size));
     if (rc < 0) {
         printf("hid: could not get report id size from %s (status=%d)\n", argv[0], rc);
         return rc;
@@ -328,7 +328,7 @@ int get_report(int argc, const char** argv) {
     xprintf("hid: report size=%u\n", size);
 
     uint8_t* buf = malloc(size);
-    rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT, &arg, sizeof(arg), buf, size);
+    rc = mxio_ioctl(fd, IOCTL_INPUT_GET_REPORT, &arg, sizeof(arg), buf, size);
     if (rc < 0) {
         printf("hid: could not get report: %d\n", rc);
     } else {
@@ -359,7 +359,7 @@ int set_report(int argc, const char** argv) {
     xprintf("hid: getting report size for id=%u type=%u\n", size_arg.id, size_arg.type);
 
     input_report_size_t size;
-    int rc = mxio_ioctl(fd, INPUT_IOCTL_GET_REPORT_SIZE, &size_arg, sizeof(size_arg), &size, sizeof(size));
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_REPORT_SIZE, &size_arg, sizeof(size_arg), &size, sizeof(size));
     if (rc < 0) {
         printf("hid: could not get report id size from %s (status=%d)\n", argv[0], rc);
         return rc;
@@ -378,7 +378,7 @@ int set_report(int argc, const char** argv) {
     for (int i = 0; i < size; i++) {
         arg->data[i] = strtoul(argv[i+3], NULL, 16);
     }
-    rc = mxio_ioctl(fd, INPUT_IOCTL_SET_REPORT, arg, sizeof(input_set_report_t) + size, NULL, 0);
+    rc = mxio_ioctl(fd, IOCTL_INPUT_SET_REPORT, arg, sizeof(input_set_report_t) + size, NULL, 0);
     if (rc < 0) {
         printf("hid: could not set report: %d\n", rc);
     } else {

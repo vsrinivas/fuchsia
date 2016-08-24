@@ -223,7 +223,7 @@ static ssize_t intel_serialio_i2c_ioctl(
     void* out_buf, size_t out_len) {
     int ret;
     switch (op) {
-    case I2C_BUS_ADD_SLAVE: {
+    case IOCTL_I2C_BUS_ADD_SLAVE: {
         const i2c_ioctl_add_slave_args_t* args = in_buf;
         if (in_len < sizeof(*args))
             return ERR_INVALID_ARGS;
@@ -232,7 +232,7 @@ static ssize_t intel_serialio_i2c_ioctl(
                                            args->chip_address);
         break;
     }
-    case I2C_BUS_REMOVE_SLAVE: {
+    case IOCTL_I2C_BUS_REMOVE_SLAVE: {
         const i2c_ioctl_remove_slave_args_t* args = in_buf;
         if (in_len < sizeof(*args))
             return ERR_INVALID_ARGS;
@@ -241,7 +241,7 @@ static ssize_t intel_serialio_i2c_ioctl(
                                               args->chip_address);
         break;
     }
-    case I2C_BUS_SET_FREQUENCY: {
+    case IOCTL_I2C_BUS_SET_FREQUENCY: {
         const i2c_ioctl_set_bus_frequency_args_t* args = in_buf;
         if (in_len < sizeof(*args))
             return ERR_INVALID_ARGS;

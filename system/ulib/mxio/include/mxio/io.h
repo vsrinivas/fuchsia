@@ -51,6 +51,4 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
 // for transport to another process
 mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type);
 
-#define IOCTL_DEVICE_GET_HANDLE 0x7FFF0001
-
 __END_CDECLS

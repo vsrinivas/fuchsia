@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <ddk/protocol/devmgr.h>
+
 #include <mxio/io.h>
 #include <mxio/vfs.h>
 #include <mxio/remoteio.h>
@@ -62,7 +64,7 @@ static mx_handle_t devmgr_connect(const char* where) {
         return -1;
     }
     mx_handle_t h;
-    if (mxio_ioctl(fd, IOCTL_DEVICE_GET_HANDLE, where, strlen(where) + 1,
+    if (mxio_ioctl(fd, IOCTL_DEVMGR_MOUNT_FS, where, strlen(where) + 1,
                    &h, sizeof(h)) != sizeof(h)) {
         close(fd);
         error("minfs: failed to attach to %s\n", where);

@@ -4,6 +4,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/devmgr.h>
 
 #include <magenta/types.h>
 #include <stdio.h>
@@ -30,7 +31,7 @@ mx_status_t vfs_install_remote(mx_handle_t h);
 static ssize_t dmctl_ioctl(mx_device_t* dev, uint32_t op,
                            const void* in_buf, size_t in_len,
                            void* out_buf, size_t out_len) {
-    if (op != IOCTL_DEVICE_GET_HANDLE) {
+    if (op != IOCTL_DEVMGR_MOUNT_FS) {
         return ERR_NOT_SUPPORTED;
     }
     if (out_len < sizeof(mx_handle_t)) {

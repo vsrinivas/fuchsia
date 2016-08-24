@@ -726,13 +726,13 @@ static ssize_t ums_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
     ums_t* msd = get_ums(dev);
     // TODO implement other block ioctls
     switch (op) {
-    case BLOCK_OP_GET_SIZE: {
+    case IOCTL_BLOCK_GET_SIZE: {
         uint64_t* size = reply;
         if (max < sizeof(*size)) return ERR_NOT_ENOUGH_BUFFER;
         *size = msd->total_blocks;
         return sizeof(*size);
     }
-    case BLOCK_OP_GET_BLOCKSIZE: {
+    case IOCTL_BLOCK_GET_BLOCKSIZE: {
          uint64_t* blksize = reply;
          if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
          *blksize = msd->block_size;

@@ -2,8 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define BLOCK_OP_GET_SIZE      1
-#define BLOCK_OP_GET_BLOCKSIZE 2
-#define BLOCK_OP_GET_GUID      3
-#define BLOCK_OP_GET_NAME      4
-#define BLOCK_OP_RR_PART       5
+#pragma once
+
+#include <ddk/ioctl.h>
+
+#define IOCTL_BLOCK_GET_SIZE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 1)
+#define IOCTL_BLOCK_GET_BLOCKSIZE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 2)
+#define IOCTL_BLOCK_GET_GUID \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 3)
+#define IOCTL_BLOCK_GET_NAME \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 4)
+#define IOCTL_BLOCK_RR_PART \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 5)

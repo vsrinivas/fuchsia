@@ -63,7 +63,7 @@ static time_t time(void* arg) {
 
 static int getConsoleSize(int *rows, int *cols) {
     ioctl_console_dimensions_t dims;
-    ssize_t r = mxio_ioctl(0, CONSOLE_OP_GET_DIMENSIONS, NULL, 0, &dims, sizeof(dims));
+    ssize_t r = mxio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS, NULL, 0, &dims, sizeof(dims));
     if (r != sizeof(dims)) {
         return -1;
     }

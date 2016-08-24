@@ -24,7 +24,7 @@ void print_usage(void) {
 }
 
 int cmd_save_state(int fd, int argc, const char** argv) {
-    int ret = mxio_ioctl(fd, TPM_IOCTL_SAVE_STATE, NULL, 0, NULL, 0);
+    int ret = mxio_ioctl(fd, IOCTL_TPM_SAVE_STATE, NULL, 0, NULL, 0);
     if (ret < 0) {
         printf("Error when saving state: (%d)\n", ret);
         return 1;

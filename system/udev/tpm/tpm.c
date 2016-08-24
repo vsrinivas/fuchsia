@@ -124,7 +124,7 @@ static ssize_t tpm_device_ioctl(mx_device_t* dev, uint32_t op,
                              const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len) {
     switch (op) {
-        case TPM_IOCTL_SAVE_STATE: return tpm_save_state(dev);
+        case IOCTL_TPM_SAVE_STATE: return tpm_save_state(dev);
     }
     return ERR_NOT_SUPPORTED;
 }

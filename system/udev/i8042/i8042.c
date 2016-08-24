@@ -598,14 +598,14 @@ static ssize_t i8042_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, si
                            void* out_buf, size_t out_len) {
     i8042_device_t* root = get_i8042_instance(dev)->root;
     switch (op) {
-    case INPUT_IOCTL_GET_PROTOCOL: {
+    case IOCTL_INPUT_GET_PROTOCOL: {
         if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
         int* reply = out_buf;
         *reply = root->type;
         return sizeof(*reply);
     }
 
-    case INPUT_IOCTL_GET_REPORT_DESC_SIZE: {
+    case IOCTL_INPUT_GET_REPORT_DESC_SIZE: {
         if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
         size_t* reply = out_buf;
         switch (root->type) {
@@ -621,7 +621,7 @@ static ssize_t i8042_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, si
         return sizeof(*reply);
     }
 
-    case INPUT_IOCTL_GET_REPORT_DESC: {
+    case IOCTL_INPUT_GET_REPORT_DESC: {
         switch (root->type) {
         case INPUT_PROTO_KBD:
             if (out_len < sizeof(kbd_hid_report_desc)) return ERR_INVALID_ARGS;
@@ -636,22 +636,22 @@ static ssize_t i8042_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, si
         }
     }
 
-    case INPUT_IOCTL_GET_NUM_REPORTS: {
+    case IOCTL_INPUT_GET_NUM_REPORTS: {
         if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
         size_t* reply = out_buf;
         *reply = 1;
         return sizeof(*reply);
     }
 
-    case INPUT_IOCTL_GET_REPORT_IDS: {
+    case IOCTL_INPUT_GET_REPORT_IDS: {
         if (out_len < sizeof(input_report_id_t)) return ERR_INVALID_ARGS;
         input_report_id_t* reply = out_buf;
         *reply = 0;
         return sizeof(*reply);
     }
 
-    case INPUT_IOCTL_GET_REPORT_SIZE:
-    case INPUT_IOCTL_GET_MAX_REPORTSIZE: {
+    case IOCTL_INPUT_GET_REPORT_SIZE:
+    case IOCTL_INPUT_GET_MAX_REPORTSIZE: {
         if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
         input_report_size_t* reply = out_buf;
         switch (root->type) {

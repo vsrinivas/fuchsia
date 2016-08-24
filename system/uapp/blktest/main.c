@@ -22,7 +22,7 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
     }
     int rc;
     uint64_t size;
-    rc = mxio_ioctl(fd, BLOCK_OP_GET_SIZE, NULL, 0, &size, sizeof(size));
+    rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &size, sizeof(size));
     if (rc != sizeof(size)) {
         printf("Error getting size for %s\n", dev);
         goto fail;

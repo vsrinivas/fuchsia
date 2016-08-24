@@ -63,25 +63,25 @@ static uint64_t getsize(gptpart_device_t* dev) {
 static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
     gptpart_device_t* device = get_gptpart_device(dev);
     switch (op) {
-    case BLOCK_OP_GET_SIZE: {
+    case IOCTL_BLOCK_GET_SIZE: {
         uint64_t* size = reply;
         if (max < sizeof(*size)) return ERR_NOT_ENOUGH_BUFFER;
         *size = getsize(device);
         return sizeof(*size);
     }
-    case BLOCK_OP_GET_BLOCKSIZE: {
+    case IOCTL_BLOCK_GET_BLOCKSIZE: {
         uint64_t* blksize = reply;
         if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
         *blksize = device->blksize;
         return sizeof(*blksize);
     }
-    case BLOCK_OP_GET_GUID: {
+    case IOCTL_BLOCK_GET_GUID: {
         char* guid = reply;
         if (max < GPT_GUID_STRLEN) return ERR_NOT_ENOUGH_BUFFER;
         uint8_to_guid_string(guid, device->gpt_entry.type);
         return GPT_GUID_STRLEN;
     }
-    case BLOCK_OP_GET_NAME: {
+    case IOCTL_BLOCK_GET_NAME: {
         char* name = reply;
         memset(name, 0, max);
         // save room for the null terminator
@@ -134,7 +134,7 @@ static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
 
 static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     uint64_t blksize;
-    ssize_t rc = dev->ops->ioctl(dev, BLOCK_OP_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
+    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
     if (rc < 0) {
         xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, dev->name);
         return rc;
