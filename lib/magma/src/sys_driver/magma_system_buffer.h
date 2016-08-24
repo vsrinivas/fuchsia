@@ -29,6 +29,8 @@ public:
     // note: this does not relinquish ownership of the PlatformBuffer
     magma::PlatformBuffer* platform_buffer() { return platform_buf_.get(); }
 
+    msd_buffer* msd_buf() { return msd_buf_.get(); }
+
 private:
     MagmaSystemBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf,
                       msd_buffer_unique_ptr_t msd_buf);

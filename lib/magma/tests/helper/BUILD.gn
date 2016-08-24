@@ -14,3 +14,15 @@ source_set("platform_device_helper") {
     "$magma_build_root/src/magma_util",
   ]
 }
+
+source_set("command_buffer_helper") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  sources = [
+    "command_buffer_helper.h",
+  ]
+
+  deps = [
+    "$magma_build_root/src/sys_driver",
+  ]
+}

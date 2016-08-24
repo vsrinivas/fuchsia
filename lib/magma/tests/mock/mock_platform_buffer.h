@@ -16,11 +16,8 @@ public:
         magic_ = kMagic;
         handle_ = handle_count_++;
 
+        size_ = magma::round_up(size, PAGE_SIZE);
         num_pages_ = size / PAGE_SIZE;
-        if (size_ % PAGE_SIZE != 0)
-            num_pages_++; // mock out enough pages to cover the whole size
-
-        size_ = num_pages_ * PAGE_SIZE;
         virt_addr_ = new uint8_t[size_]();
     }
     virtual ~MockPlatformBuffer() {}

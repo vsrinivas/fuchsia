@@ -45,11 +45,13 @@ source_set("magma_system_tests") {
   sources = [
     "test_magma_system_buffer.cc",
     "test_magma_system_connection.cc",
+    "test_magma_system_context.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver",
+    "$magma_build_root/tests/helper:command_buffer_helper",
     "$magma_build_root/tests/mock:msd",
     "//third_party/gtest",
   ]

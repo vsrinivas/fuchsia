@@ -23,7 +23,7 @@ static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection*
     return msd_connection_unique_ptr_t(conn, &msd_connection_close);
 }
 
-class MagmaSystemConnection : public magma_system_connection {
+class MagmaSystemConnection : public magma_system_connection, private MagmaSystemContext::Owner {
 public:
     MagmaSystemConnection(MagmaSystemDevice* device, msd_connection_unique_ptr_t msd_connection);
 
@@ -41,6 +41,7 @@ public:
 
     bool CreateContext(uint32_t* context_id_out);
     bool DestroyContext(uint32_t context_id);
+    MagmaSystemContext* LookupContext(uint32_t context_id);
 
     uint32_t GetDeviceId() { return device_->GetDeviceId(); }
 
@@ -60,6 +61,12 @@ private:
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
     std::map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
     uint32_t next_context_id_{};
+
+    // MagmaSystemContext::Owner
+    std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint32_t handle) override
+    {
+        return LookupBuffer(handle);
+    }
 
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 };

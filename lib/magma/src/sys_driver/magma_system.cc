@@ -106,8 +106,11 @@ bool magma_system_submit_command_buffer(struct magma_system_connection* connecti
                                         struct magma_system_command_buffer* command_buffer,
                                         uint32_t context_id)
 {
-    DLOG("TODO: magma_system_execute_buffer");
-    return false;
+    auto context = MagmaSystemConnection::cast(connection)->LookupContext(context_id);
+    if (!context)
+        return DRETF(false, "Attempting to execute command buffer on invalid context");
+
+    return context->ExecuteCommandBuffer(command_buffer);
 }
 
 void magma_system_wait_rendering(magma_system_connection* connection, uint32_t handle)

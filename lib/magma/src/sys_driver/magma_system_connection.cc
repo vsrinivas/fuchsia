@@ -46,9 +46,12 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint32_t 
 
 bool MagmaSystemConnection::CreateContext(uint32_t* context_id_out)
 {
-    auto ctx = MagmaSystemContext::Create(this);
-    if (!ctx)
-        return DRETF(false, "MagmaSystemConnection: Failed to Create MagmaSystemContext");
+    auto msd_ctx = msd_connection_create_context(msd_connection());
+    if (!msd_ctx)
+        return DRETF(false, "Failed to create msd context");
+
+    auto ctx = std::unique_ptr<MagmaSystemContext>(
+        new MagmaSystemContext(this, msd_context_unique_ptr_t(msd_ctx, &msd_context_destroy)));
 
     auto context_id = next_context_id_++;
     DASSERT(context_map_.find(context_id) == context_map_.end());
@@ -65,4 +68,13 @@ bool MagmaSystemConnection::DestroyContext(uint32_t context_id)
         return DRETF(false, "MagmaSystemConnection:Attempting to destroy invalid context id");
     context_map_.erase(iter);
     return true;
+}
+
+MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id)
+{
+    auto iter = context_map_.find(context_id);
+    if (iter == context_map_.end())
+        return DRETP(nullptr, "MagmaSystemConnection: Attempting to lookup invalid context id");
+
+    return iter->second.get();
 }

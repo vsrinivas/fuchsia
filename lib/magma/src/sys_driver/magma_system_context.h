@@ -8,9 +8,8 @@
 #include <functional>
 #include <memory>
 
+#include "magma_system_buffer.h"
 #include "msd.h"
-
-class MagmaSystemConnection;
 
 using msd_context_unique_ptr_t = std::unique_ptr<msd_context, decltype(&msd_context_destroy)>;
 
@@ -21,12 +20,26 @@ static inline msd_context_unique_ptr_t MsdContextUniquePtr(msd_context* context)
 
 class MagmaSystemContext {
 public:
-    static std::unique_ptr<MagmaSystemContext> Create(MagmaSystemConnection* connection);
+    class Owner {
+    public:
+        virtual std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint32_t handle) = 0;
+    };
+
+    MagmaSystemContext(Owner* owner, msd_context_unique_ptr_t msd_ctx)
+        : owner_(owner), msd_ctx_(std::move(msd_ctx))
+    {
+    }
+
+    bool ExecuteCommandBuffer(magma_system_command_buffer* command_buffer);
 
 private:
-    MagmaSystemContext(msd_context_unique_ptr_t msd_ctx) : msd_ctx_(std::move(msd_ctx)) {}
+    msd_context* msd_ctx() { return msd_ctx_.get(); }
+
+    Owner* owner_;
 
     msd_context_unique_ptr_t msd_ctx_;
+
+    friend class CommandBufferHelper;
 };
 
 #endif // _MAGMA_SYSTEM_CONTEXT_H_

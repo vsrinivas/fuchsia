@@ -8,6 +8,7 @@
 #include "magma_util/macros.h"
 #include "msd.h"
 #include <memory>
+#include <vector>
 
 // These classes contain default implementations of msd_device functionality.
 // To override a specific function to contain test logic, inherit from the
@@ -36,6 +37,15 @@ public:
     MsdMockContext(MsdMockConnection* connection) : connection_(connection) { magic_ = kMagic; }
     virtual ~MsdMockContext();
 
+    int32_t ExecuteCommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** exec_resources)
+    {
+        last_submitted_exec_resources_.clear();
+        for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+            last_submitted_exec_resources_.push_back(MsdMockBuffer::cast(exec_resources[i]));
+        }
+        return 0;
+    }
+
     static MsdMockContext* cast(msd_context* ctx)
     {
         DASSERT(ctx);
@@ -43,7 +53,14 @@ public:
         return static_cast<MsdMockContext*>(ctx);
     }
 
+    std::vector<MsdMockBuffer*>& last_submitted_exec_resources()
+    {
+        return last_submitted_exec_resources_;
+    }
+
 private:
+    std::vector<MsdMockBuffer*> last_submitted_exec_resources_;
+
     MsdMockConnection* connection_;
     static const uint32_t kMagic = 0x6d6b6378; // "mkcx" (Mock Context)
 };

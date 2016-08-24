@@ -42,7 +42,13 @@ struct msd_context* msd_connection_create_context(struct msd_connection* connect
 void msd_context_destroy(struct msd_context* ctx);
 
 // returns 0 on success
-int32_t msd_context_execute_command_buffer(struct magma_system_command_buffer* command_buffer);
+// |ctx| is the context in which to execute the command buffer
+// |cmd_buf| is the command buffer to be executed
+// |exec_resources| is all of the buffers referenced by the handles in command_buf->exec_resources
+// in the same order
+int32_t msd_context_execute_command_buffer(struct msd_context* ctx,
+                                           struct magma_system_command_buffer* cmd_buf,
+                                           struct msd_buffer** exec_resources);
 
 // Creates a buffer that owns a reference to the provided platform buffer
 // The resulting msd_buffer is owned by the caller and must be destroyed
