@@ -49,7 +49,7 @@ typedef struct {
     // list of received packets not yet read by upper layer
     list_node_t completed_reads;
     // offset of next packet to process from completed_reads head
-    int read_offset;
+    size_t read_offset;
 
     // the last signals we reported
     mx_signals_t signals;
@@ -140,36 +140,22 @@ static mx_status_t usb_ethernet_wait_for_phy(usb_ethernet_t* eth) {
     return ERR_TIMED_OUT;
 }
 
-static void requeue_read_request_locked(usb_ethernet_t* eth, usb_request_t* req) {
+static void requeue_read_request_locked(usb_ethernet_t* eth, iotxn_t* req) {
     if (eth->online) {
-        req->transfer_length = req->buffer_length;
-        mx_status_t status = eth->device_protocol->queue_request(eth->usb_device, req);
-        if (status != NO_ERROR) {
-            printf("bulk read failed %d\n", status);
-        } else {
-            return;
-        }
+        iotxn_queue(eth->usb_device, req);
     }
-
-    list_add_head(&eth->free_read_reqs, &req->node);
 }
 
 static void queue_interrupt_requests_locked(usb_ethernet_t* eth) {
     list_node_t* node;
     while ((node = list_remove_head(&eth->free_intr_reqs)) != NULL) {
-        usb_request_t* req = containerof(node, usb_request_t, node);
-        req->transfer_length = req->buffer_length;
-        mx_status_t status = eth->device_protocol->queue_request(eth->usb_device, req);
-        if (status != NO_ERROR) {
-            printf("interrupt queue failed %d\n", status);
-            list_add_head(&eth->free_intr_reqs, &req->node);
-            break;
-        }
+        iotxn_t* req = containerof(node, iotxn_t, node);
+        iotxn_queue(eth->usb_device, req);
     }
 }
 
-static void usb_ethernet_read_complete(usb_request_t* request) {
-    usb_ethernet_t* eth = (usb_ethernet_t*)request->client_data;
+static void usb_ethernet_read_complete(iotxn_t* request, void* cookie) {
+    usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
 
     mtx_lock(&eth->mutex);
     if (request->status == NO_ERROR) {
@@ -181,8 +167,8 @@ static void usb_ethernet_read_complete(usb_request_t* request) {
     mtx_unlock(&eth->mutex);
 }
 
-static void usb_ethernet_write_complete(usb_request_t* request) {
-    usb_ethernet_t* eth = (usb_ethernet_t*)request->client_data;
+static void usb_ethernet_write_complete(iotxn_t* request, void* cookie) {
+    usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
     // FIXME what to do with error here?
     mtx_lock(&eth->mutex);
     list_add_tail(&eth->free_write_reqs, &request->node);
@@ -190,28 +176,34 @@ static void usb_ethernet_write_complete(usb_request_t* request) {
     mtx_unlock(&eth->mutex);
 }
 
-static void usb_ethernet_interrupt_complete(usb_request_t* request) {
-    usb_ethernet_t* eth = (usb_ethernet_t*)request->client_data;
+static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
+    usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
     mtx_lock(&eth->mutex);
-    if (request->status == NO_ERROR && request->transfer_length == sizeof(eth->status) &&
-        memcmp(eth->status, request->buffer, sizeof(eth->status))) {
-        //       const uint8_t* b = request->buffer;
-        //       printf("usb_ethernet status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
-        //               b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
-        memcpy(eth->status, request->buffer, sizeof(eth->status));
-        uint8_t bb = eth->status[2];
-        bool online = (bb & 1) != 0;
-        bool was_online = eth->online;
-        eth->online = online;
-        if (online && !was_online) {
-            // Now that we are online, queue all our read requests
-            usb_request_t* req;
-            usb_request_t* prev;
-            list_for_every_entry_safe (&eth->free_read_reqs, req, prev, usb_request_t, node) {
-                list_delete(&req->node);
-                requeue_read_request_locked(eth, req);
+    if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
+        uint8_t status[INTR_REQ_SIZE];
+
+        request->ops->copyfrom(request, status, sizeof(status), 0);
+        if (memcmp(eth->status, status, sizeof(eth->status))) {
+#if 0
+            const uint8_t* b = status;
+            printf("usb_ethernet status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+                   b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
+#endif
+            memcpy(eth->status, status, sizeof(eth->status));
+            uint8_t bb = eth->status[2];
+            bool online = (bb & 1) != 0;
+            bool was_online = eth->online;
+            eth->online = online;
+            if (online && !was_online) {
+                // Now that we are online, queue all our read requests
+                iotxn_t* req;
+                iotxn_t* prev;
+                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
+                    list_delete(&req->node);
+                    requeue_read_request_locked(eth, req);
+                }
+                update_signals_locked(eth);
             }
-            update_signals_locked(eth);
         }
     }
 
@@ -231,24 +223,26 @@ mx_status_t usb_ethernet_send(mx_device_t* device, const void* buffer, size_t le
         status = ERR_NOT_ENOUGH_BUFFER;
         goto out;
     }
-    usb_request_t* request = containerof(node, usb_request_t, node);
-    uint8_t* buf = request->buffer;
-    if (length + sizeof(uint32_t) > request->buffer_length) {
+    iotxn_t* request = containerof(node, iotxn_t, node);
+
+    if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
         status = ERR_INVALID_ARGS;
         goto out;
     }
 
     // write 4 byte packet header
+    uint8_t header[ETH_HEADER_SIZE];
     uint8_t lo = length & 0xFF;
     uint8_t hi = length >> 8;
-    buf[0] = lo;
-    buf[1] = hi;
-    buf[2] = lo ^ 0xFF;
-    buf[3] = hi ^ 0xFF;
-    memcpy(buf + 4, buffer, length);
+    header[0] = lo;
+    header[1] = hi;
+    header[2] = lo ^ 0xFF;
+    header[3] = hi ^ 0xFF;
 
-    request->transfer_length = length + ETH_HEADER_SIZE;
-    status = eth->device_protocol->queue_request(eth->usb_device, request);
+    request->ops->copyto(request, header, ETH_HEADER_SIZE, 0);
+    request->ops->copyto(request, buffer, length, ETH_HEADER_SIZE);
+    request->length = length + ETH_HEADER_SIZE;
+    iotxn_queue(eth->usb_device, request);
 
 out:
     update_signals_locked(eth);
@@ -261,16 +255,15 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
     mx_status_t status = NO_ERROR;
 
     mtx_lock(&eth->mutex);
-    int offset = eth->read_offset;
+    size_t offset = eth->read_offset;
 
     list_node_t* node = list_peek_head(&eth->completed_reads);
     if (!node) {
         status = ERR_BAD_STATE;
         goto out;
     }
-    usb_request_t* request = containerof(node, usb_request_t, node);
-    uint8_t* buf = request->buffer + offset;
-    int remaining = request->transfer_length - offset;
+    iotxn_t* request = containerof(node, iotxn_t, node);
+    int remaining = request->actual - offset;
     if (remaining < 4) {
         printf("usb_ethernet_recv short packet\n");
         status = ERR_NOT_VALID;
@@ -278,11 +271,14 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
         requeue_read_request_locked(eth, request);
         goto out;
     }
-    uint16_t length1 = (buf[0] | (uint16_t)buf[1] << 8) & 0x7FF;
-    uint16_t length2 = (~(buf[2] | (uint16_t)buf[3] << 8)) & 0x7FF;
+
+    uint8_t header[ETH_HEADER_SIZE];
+    request->ops->copyfrom(request, header, ETH_HEADER_SIZE, 0);
+    uint16_t length1 = (header[0] | (uint16_t)header[1] << 8) & 0x7FF;
+    uint16_t length2 = (~(header[2] | (uint16_t)header[3] << 8)) & 0x7FF;
 
     if (length1 != length2) {
-        printf("invalid header: length1: %d length2: %d offset %d\n", length1, length2, offset);
+        printf("invalid header: length1: %d length2: %d offset %ld\n", length1, length2, offset);
         status = ERR_NOT_VALID;
         offset = 0;
         list_remove_head(&eth->completed_reads);
@@ -293,12 +289,12 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
         status = ERR_NOT_ENOUGH_BUFFER;
         goto out;
     }
-    memcpy(buffer, buf + 4, length1);
+    request->ops->copyfrom(request, buffer, length1, ETH_HEADER_SIZE);
     status = length1;
     offset += (length1 + 4);
     if (offset & 1)
         offset++;
-    if (offset >= request->transfer_length) {
+    if (offset >= request->actual) {
         offset = 0;
         list_remove_head(&eth->completed_reads);
         requeue_read_request_locked(eth, request);
@@ -527,27 +523,30 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     eth->intr_ep = intr_ep;
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_in, USB_BUF_SIZE);
+        iotxn_t* req = usb_alloc_iotxn(bulk_in->descriptor, USB_BUF_SIZE, 0);
         if (!req)
             return ERR_NO_MEMORY;
+        req->length = USB_BUF_SIZE;
         req->complete_cb = usb_ethernet_read_complete;
-        req->client_data = eth;
+        req->cookie = eth;
         list_add_head(&eth->free_read_reqs, &req->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_out, USB_BUF_SIZE);
+        iotxn_t* req = usb_alloc_iotxn(bulk_out->descriptor, USB_BUF_SIZE, 0);
         if (!req)
             return ERR_NO_MEMORY;
+        req->length = USB_BUF_SIZE;
         req->complete_cb = usb_ethernet_write_complete;
-        req->client_data = eth;
+        req->cookie = eth;
         list_add_head(&eth->free_write_reqs, &req->node);
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, intr_ep, INTR_REQ_SIZE);
+        iotxn_t* req = usb_alloc_iotxn(intr_ep->descriptor, INTR_REQ_SIZE, 0);
         if (!req)
             return ERR_NO_MEMORY;
+        req->length = INTR_REQ_SIZE;
         req->complete_cb = usb_ethernet_interrupt_complete;
-        req->client_data = eth;
+        req->cookie = eth;
         list_add_head(&eth->free_intr_reqs, &req->node);
     }
 
