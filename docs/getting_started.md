@@ -69,7 +69,6 @@ need to add /path/to/install/bin to your PATH.
 cd $SRC
 git clone https://fuchsia.googlesource.com/third_party/qemu
 cd qemu
-git checkout fuchsia
 ./configure --target-list=arm-softmmu,aarch64-softmmu,x86_64-softmmu
 make -j32
 sudo make install
