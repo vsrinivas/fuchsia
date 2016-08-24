@@ -39,3 +39,15 @@ void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, uns
     }
     gfx_flush_rows(dev->hw_gfx, desty, desty + h * dev->charh);
 }
+
+void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+    if (!dev->active)
+        return;
+    unsigned desty = dev->st_gfx->height + y;
+    if ((x == 0) && (w == dev->columns)) {
+        gfx_copylines(dev->hw_gfx, dev->gfx, y, desty, h);
+    } else {
+        gfx_blend(dev->hw_gfx, dev->gfx, x, y, w, h, x, desty);
+    }
+    gfx_flush_rows(dev->hw_gfx, desty, desty + h);
+}

@@ -42,8 +42,17 @@ typedef struct mx_display_protocol {
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 1)
 #define IOCTL_DISPLAY_FLUSH_FB \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 2)
+#define IOCTL_DISPLAY_FLUSH_FB_REGION \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 3)
 
 typedef struct {
     mx_handle_t vmo;
     mx_display_info_t info;
 } ioctl_display_get_fb_t;
+
+typedef struct {
+    uint32_t x;
+    uint32_t y;
+    uint32_t width;
+    uint32_t height;
+} ioctl_display_region_t;

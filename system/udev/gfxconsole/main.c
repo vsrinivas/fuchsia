@@ -607,6 +607,14 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
     case IOCTL_DISPLAY_FLUSH_FB:
         vc_gfx_invalidate_all(vc);
         return NO_ERROR;
+    case IOCTL_DISPLAY_FLUSH_FB_REGION: {
+        const ioctl_display_region_t* rect = cmd;
+        if (cmdlen < sizeof(*rect)) {
+            return ERR_INVALID_ARGS;
+        }
+        vc_gfx_invalidate_region(vc, rect->x, rect->y, rect->width, rect->height);
+        return NO_ERROR;
+    }
     default:
         return ERR_NOT_SUPPORTED;
     }

@@ -111,7 +111,10 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir);
 
 void vc_gfx_invalidate_all(vc_device_t* dev);
 void vc_gfx_invalidate_status(vc_device_t* dev);
+// invalidates a region in characters
 void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h);
+// invalidates a region in pixels
+void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h);
 void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y);
 
 static inline uint32_t palette_to_color(vc_device_t* dev, uint8_t color) {
