@@ -13,8 +13,6 @@ typedef struct usb_hci_protocol {
     void (*free_request)(mx_device_t* dev, usb_request_t* request);
 
     int (*queue_request)(mx_device_t* hcidev, int devaddr, usb_request_t* request);
-    int (*control)(mx_device_t* hcidev, int devaddr, usb_setup_t* devreq, int data_length,
-                   uint8_t* data);
 
     // These are only used by hub driver
     mx_status_t (*configure_hub)(mx_device_t* dev, int devaddr, usb_speed_t speed,

@@ -38,33 +38,6 @@ typedef struct usb_device {
 } usb_device_t;
 #define get_usb_device(dev) containerof(dev, usb_device_t, device)
 
-static int usb_get_descriptor(mx_device_t* device, int rtype, int desc_type, int desc_idx,
-                       void* data, size_t len) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_setup_t setup;
-
-    setup.bmRequestType = rtype;
-    setup.bRequest = USB_REQ_GET_DESCRIPTOR;
-    setup.wValue = desc_type << 8 | desc_idx;
-    setup.wIndex = 0;
-    setup.wLength = len;
-
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &setup, len, data);
-}
-
-static int usb_set_configuration(mx_device_t* device) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_setup_t setup;
-
-    setup.bmRequestType = USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
-    setup.bRequest = USB_REQ_SET_CONFIGURATION;
-    setup.wValue = dev->config.configurations[0].descriptor->bConfigurationValue;
-    setup.wIndex = 0;
-    setup.wLength = 0;
-
-    return dev->hci_protocol->control(dev->hcidev, dev->address, &setup, 0, 0);
-}
-
 static int count_interfaces(usb_configuration_descriptor_t* desc) {
     int count = 0;
     usb_descriptor_header_t* header = NEXT_DESCRIPTOR(desc);
@@ -98,16 +71,7 @@ static mx_status_t usb_init_device(usb_device_t* dev, usb_device_descriptor_t* d
                                    usb_configuration_descriptor_t** config_descriptors) {
     usb_device_config_t* device_config = &dev->config;
 
-    if (!device_descriptor) {
-        device_descriptor = malloc(sizeof(usb_device_descriptor_t));
-        if (!device_descriptor) return ERR_NO_MEMORY;
-
-    if (usb_get_descriptor(&dev->device, USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_DT_DEVICE, 0, device_descriptor, sizeof(*device_descriptor)) != sizeof(*device_descriptor)) {
-            printf("get_descriptor(USB_DT_DEVICE) failed\n");
-            free(dev);
-            return -1;
-        }
-    }
+    if (!device_descriptor || !config_descriptors) return ERR_INVALID_ARGS;
     device_config->descriptor = device_descriptor;
 
     printf("* found device (0x%04x:0x%04x, USB %x.%x)\n",
@@ -129,32 +93,7 @@ static mx_status_t usb_init_device(usb_device_t* dev, usb_device_descriptor_t* d
     for (int i = 0; i < num_configurations; i++) {
         usb_configuration_t* config = &device_config->configurations[i];
 
-        usb_configuration_descriptor_t* cd = NULL;
-        if (config_descriptors) {
-            cd = config_descriptors[i];
-        } else {
-            usb_configuration_descriptor_t desc;
-            if (usb_get_descriptor(&dev->device, USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_DT_CONFIG, i, &desc, sizeof(desc)) != sizeof(desc)) {
-                printf("first get_descriptor(USB_DT_CONFIG) failed\n");
-                return -1;
-            }
-
-            int length = desc.wTotalLength;
-            usb_configuration_descriptor_t* cd = malloc(length);
-            if (!cd) {
-                printf("could not allocate usb_configuration_descriptor_t\n");
-                return -1;
-            }
-            if (usb_get_descriptor(&dev->device, USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_DT_CONFIG, 0, cd, length) != length) {
-                printf("get_descriptor(USB_DT_CONFIG) failed\n");
-                return -1;
-            }
-            if (cd->wTotalLength != length) {
-                printf("configuration descriptor size changed, aborting\n");
-                return -1;
-            }
-        }
-        config->descriptor = cd;
+        usb_configuration_descriptor_t* cd = config_descriptors[i];
 
         // we can't use cd->bNumInterfaces since it doesn't account for alternate settings
         config->num_interfaces = count_interfaces(cd);
