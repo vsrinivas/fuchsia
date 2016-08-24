@@ -20,6 +20,7 @@ config("compiler") {
     ":werror",
   ]
   asmflags = cflags + cflags_c
+  defines = [ "SYSROOT_VERSION=$sysroot_version" ]
 }
 
 config("compiler_cpu") {
