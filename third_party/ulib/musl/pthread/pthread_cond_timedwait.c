@@ -99,8 +99,6 @@ int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restri
     do
         e = __timedwait_cp(fut, seq, clock, ts);
     while (*fut == seq && !e);
-    if (e == EINTR)
-        e = 0;
 
     oldstate = a_cas(&node.state, WAITING, LEAVING);
 
