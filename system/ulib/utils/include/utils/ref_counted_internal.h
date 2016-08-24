@@ -1,14 +1,11 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #pragma once
 
-#include <assert.h>
+#include <magenta/assert.h>
 #include <magenta/compiler.h>
-#include <debug.h>
 
 namespace utils {
 namespace internal {
@@ -32,7 +29,7 @@ protected:
         return false;
     }
 
-#if (LK_DEBUGLEVEL > 0)
+#if (LK_DEBUGLEVEL > 1)
     void Adopt() {
         DEBUG_ASSERT(!adopted_);
         adopted_ = true;
@@ -46,7 +43,7 @@ protected:
 
 private:
     int ref_count_ = 1;
-#if (LK_DEBUGLEVEL > 0)
+#if (LK_DEBUGLEVEL > 1)
     bool adopted_ = false;
 #endif
 };
