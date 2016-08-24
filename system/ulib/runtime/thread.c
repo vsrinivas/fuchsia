@@ -7,7 +7,6 @@
 #include <limits.h>
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
-#include <runtime/process.h>
 #include <runtime/tls.h>
 #include <stddef.h>
 
