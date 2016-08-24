@@ -113,14 +113,17 @@ void devmgr_launch_devhost(const char* name, mx_handle_t h,
         binname, arg0, arg1,
     };
 
-    mx_handle_t hnd[2];
-    uint32_t ids[2];
+    mx_handle_t hnd[3];
+    uint32_t ids[3];
     ids[0] = MX_HND_TYPE_MXIO_ROOT;
     hnd[0] = vfs_create_root_handle();
     ids[1] = MX_HND_TYPE_USER1;
     hnd[1] = h;
+    ids[2] = MX_HND_TYPE_RESOURCE;
+    hnd[2] = mx_handle_duplicate(root_resource_handle, MX_RIGHT_READ | MX_RIGHT_TRANSFER);
+
     printf("devmgr: launch: %s %s %s\n", name, arg0, arg1);
-    mx_handle_t proc = launchpad_launch(name, 3, args, (const char* const*)environ, 2, hnd, ids);
+    mx_handle_t proc = launchpad_launch(name, 3, args, (const char* const*)environ, 3, hnd, ids);
     if (proc < 0)
         printf("devmgr: launch failed: %d\n", proc);
     else

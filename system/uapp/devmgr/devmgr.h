@@ -96,6 +96,8 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 extern bool __dm_locked;
 
+extern mx_handle_t root_resource_handle;
+
 #if 0
 static inline void __DM_DIE(const char* fn, int ln) {
     cprintf("OOPS: %s: %d\n", fn, ln);

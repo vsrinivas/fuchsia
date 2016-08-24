@@ -20,6 +20,8 @@
 
 #define VC_COUNT 3
 
+mx_handle_t root_resource_handle;
+
 void devmgr_io_init(void) {
     // setup stdout
     uint32_t flags = devmgr_is_remote ? MX_LOG_FLAG_DEVICE : MX_LOG_FLAG_DEVMGR;
@@ -96,6 +98,9 @@ int console_starter(void* arg) {
 
 int main(int argc, char** argv) {
     devmgr_io_init();
+
+    root_resource_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+
     if (argc > 1) {
         return devicehost(argc, argv);
     }
