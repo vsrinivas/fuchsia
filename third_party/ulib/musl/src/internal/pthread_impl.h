@@ -103,7 +103,8 @@ struct __timer {
                                                                     << (32 * (sizeof(long) > 4))})
 #define SIGTIMER_SET ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){0x80000000})
 
-pthread_t __pthread_self_init(void);
+extern void* __pthread_tsd_main[];
+extern volatile size_t __pthread_tsd_size;
 
 static inline pthread_t __pthread_self(void) {
     return tp_to_pthread(mxr_tp_get());

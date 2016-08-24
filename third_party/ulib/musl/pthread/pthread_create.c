@@ -17,8 +17,6 @@
 /* pthread_key_create.c overrides this */
 static volatile size_t dummy = 0;
 weak_alias(dummy, __pthread_tsd_size);
-static void* dummy_tsd[1] = {0};
-weak_alias(dummy_tsd, __pthread_tsd_main);
 
 static void dummy_0(void) {}
 weak_alias(dummy_0, __acquire_ptc);

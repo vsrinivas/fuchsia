@@ -7,8 +7,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-extern char** __environ;
-
 int system(const char* cmd) {
     pid_t pid;
     sigset_t old, reset;

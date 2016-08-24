@@ -4,6 +4,7 @@
 #include "malloc_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
+#include "tls_impl.h"
 #include <ctype.h>
 #include <dlfcn.h>
 #include <elf.h>

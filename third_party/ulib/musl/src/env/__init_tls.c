@@ -1,3 +1,5 @@
+#include "tls_impl.h"
+
 #include "atomic.h"
 #include "libc.h"
 #include "pthread_impl.h"
@@ -10,7 +12,9 @@
 
 #define ROUND(x) (((x) + PAGE_SIZE - 1) & -PAGE_SIZE)
 
-extern void** __pthread_tsd_main;
+/* pthread_key_create.c overrides this */
+static void* dummy_tsd[1] = {0};
+weak_alias(dummy_tsd, __pthread_tsd_main);
 
 void __init_tp(pthread_t thread) {
     thread->self = thread;
@@ -117,6 +121,7 @@ static void static_init_tls(mxr_thread_t* mxr_thread) {
 
     pthread_t self = mem;
     self->mxr_thread = mxr_thread;
+    self->tsd = __pthread_tsd_main;
 }
 
 weak_alias(static_init_tls, __init_tls);

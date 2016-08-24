@@ -1,3 +1,4 @@
+#include "libc.h"
 #include "stdio_impl.h"
 #include "syscall.h"
 #include <errno.h>
@@ -5,8 +6,6 @@
 #include <spawn.h>
 #include <string.h>
 #include <unistd.h>
-
-extern char** __environ;
 
 FILE* popen(const char* cmd, const char* mode) {
     int p[2], op, e;

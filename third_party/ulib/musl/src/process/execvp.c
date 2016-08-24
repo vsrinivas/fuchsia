@@ -5,8 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 
-extern char** __environ;
-
 int __execvpe(const char* file, char* const argv[], char* const envp[]) {
     const char *p, *z, *path = getenv("PATH");
     size_t l, k;

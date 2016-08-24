@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 
-extern char** __environ;
+#include "libc.h"
 
 int clearenv() {
     __environ[0] = 0;
