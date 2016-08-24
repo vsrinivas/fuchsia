@@ -35,6 +35,7 @@ class SocketDispatcher;
 class ThreadDispatcher;
 class VmObjectDispatcher;
 class WaitSetDispatcher;
+class ResourceDispatcher;
 
 class Dispatcher : public utils::RefCounted<Dispatcher> {
 public:
@@ -118,6 +119,10 @@ public:
     }
 
     virtual SocketDispatcher* get_socket_dispatcher() {
+        return nullptr;
+    }
+
+    virtual ResourceDispatcher* get_resource_dispatcher() {
         return nullptr;
     }
 
