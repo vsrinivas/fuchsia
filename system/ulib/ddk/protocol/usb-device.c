@@ -14,8 +14,10 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
+#include <ddk/common/usb.h>
 #include <ddk/protocol/usb-device.h>
 #include <ddk/protocol/usb-hci.h>
+#include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -92,8 +94,8 @@ static mx_status_t usb_init_device(usb_device_t* dev, usb_device_descriptor_t* d
     }
     for (int i = 0; i < num_configurations; i++) {
         usb_configuration_t* config = &device_config->configurations[i];
-
         usb_configuration_descriptor_t* cd = config_descriptors[i];
+        config->descriptor = cd;
 
         // we can't use cd->bNumInterfaces since it doesn't account for alternate settings
         config->num_interfaces = count_interfaces(cd);
@@ -297,6 +299,61 @@ static void usb_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     iotxn_queue(dev->hcidev, txn);
 }
 
+static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
+        const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+    usb_device_t* dev = get_usb_device(device);
+
+    switch (op) {
+    case IOCTL_USB_GET_DEVICE_SPEED: {
+        int* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        *reply = dev->speed;
+        return sizeof(*reply);
+    }
+    case IOCTL_USB_GET_DEVICE_DESC: {
+        usb_device_descriptor_t* descriptor = dev->config.descriptor;
+        if (out_len < sizeof(*descriptor)) return ERR_NOT_ENOUGH_BUFFER;
+        memcpy(out_buf, descriptor, sizeof(*descriptor));
+        return sizeof(*descriptor);
+    }
+    case IOCTL_USB_GET_CONFIG_DESC_SIZE: {
+        usb_configuration_descriptor_t* descriptor = dev->config.configurations[0].descriptor;
+        int* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        *reply = le16toh(descriptor->wTotalLength);
+        return sizeof(*reply);
+    }
+    case IOCTL_USB_GET_CONFIG_DESC: {
+        usb_configuration_descriptor_t* descriptor = dev->config.configurations[0].descriptor;
+        size_t desc_length = le16toh(descriptor->wTotalLength);
+        if (out_len < desc_length) return ERR_NOT_ENOUGH_BUFFER;
+        memcpy(out_buf, descriptor, desc_length);
+        return desc_length;
+    }
+    case IOCTL_USB_GET_STRING_DESC: {
+        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        if (out_len == 0) return 0;
+        int id = *((int *)in_buf);
+        char* string;
+        mx_status_t result = usb_get_string_descriptor(device, id, &string);
+        if (result < 0) return result;
+        size_t length = strlen(string) + 1;
+        if (length > out_len) {
+            // truncate the string
+            memcpy(out_buf, string, out_len - 1);
+            ((char *)out_buf)[out_len - 1] = 0;
+            length = out_len;
+        } else {
+            memcpy(out_buf, string, length);
+        }
+        free(string);
+        return length;
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
 static mx_status_t usb_device_release(mx_device_t* device) {
     usb_device_t* dev = get_usb_device(device);
 
@@ -316,6 +373,7 @@ static mx_status_t usb_device_release(mx_device_t* device) {
 
 static mx_protocol_device_t usb_device_proto = {
     .iotxn_queue = usb_iotxn_queue,
+    .ioctl = usb_device_ioctl,
     .release = usb_device_release,
 };
 

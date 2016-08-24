@@ -15,6 +15,9 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
 mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16_t type,
                                uint16_t index, void* data, size_t length);
 
+// returns string to be freed with free() via out_string
+mx_status_t usb_get_string_descriptor(mx_device_t* device, uint8_t id, char** out_string);
+
 mx_status_t usb_get_status(mx_device_t* device, uint8_t request_type, uint16_t index,
                           void* data, size_t length);
 

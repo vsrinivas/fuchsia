@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/ioctl.h>
 #include <hw/usb.h>
 #include <hw/usb-hub.h>
 #include <system/listnode.h>
@@ -75,6 +76,27 @@ typedef struct usb_protocol_data {
     uint32_t device_id;
     uint8_t ep_address;     // bEndpointAddress from endpoint descriptor
 } usb_protocol_data_t;
+
+// returns the speed of the USB device as a usb_speed_t value
+// call with out_len = sizeof(int)
+#define IOCTL_USB_GET_DEVICE_SPEED      IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 0)
+
+// returns the device's USB device descriptor
+// call with out_len = sizeof(usb_device_descriptor_t)
+#define IOCTL_USB_GET_DEVICE_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 1)
+
+// returns the size of the USB configuration descriptor for the device's current configuration
+// call with out_len = sizeof(int)
+#define IOCTL_USB_GET_CONFIG_DESC_SIZE  IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 2)
+
+// returns the USB configuration descriptor for the device's current configuration
+// call with out_len = value returned from IOCTL_USB_GET_CONFIG_DESC_SIZE
+#define IOCTL_USB_GET_CONFIG_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 3)
+
+// fetches a string descriptor from the USB device
+// string index is passed via in_buf
+// call with in_len = sizeof(int) and out_len = size of buffer to receive string (256 recommended)
+#define IOCTL_USB_GET_STRING_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 4)
 
 typedef struct usb_device_protocol {
     usb_request_t* (*alloc_request)(mx_device_t* dev, usb_endpoint_t* ep, uint16_t length);

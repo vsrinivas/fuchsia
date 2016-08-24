@@ -6,7 +6,9 @@
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/usb-device.h>
+#include <endian.h>
 #include <stdio.h>
+#include <string.h>
 
 static void usb_control_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
@@ -59,6 +61,47 @@ mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16
                                uint16_t index, void* data, size_t length) {
     return usb_control(device, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
                        type << 8 | index, 0, data, length);
+}
+
+mx_status_t usb_get_string_descriptor(mx_device_t* device, uint8_t id, char** out_string) {
+    char string[256];
+    uint16_t buffer[128];
+    uint16_t languages[128];
+    int languageCount = 0;
+
+    string[0] = 0;
+    *out_string = NULL;
+    memset(languages, 0, sizeof(languages));
+
+    // read list of supported languages
+    mx_status_t result = usb_control(device,
+            USB_DIR_IN | USB_TYPE_STANDARD |  USB_RECIP_DEVICE, USB_REQ_GET_DESCRIPTOR,
+            (USB_DT_STRING << 8) | 0, 0, languages, sizeof(languages));
+    if (result < 0) return result;
+    languageCount = (result - 2) / 2;
+
+    for (int i = 1; i <= languageCount; i++) {
+        memset(buffer, 0, sizeof(buffer));
+
+        result = usb_control(device,
+                USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_GET_DESCRIPTOR,
+                (USB_DT_STRING << 8) | id, le16toh(languages[i]), buffer, sizeof(buffer));
+        if (result > 0) {
+            // skip first word, and copy the rest to the string, changing shorts to bytes.
+            result /= 2;
+            int j;
+            for (j = 1; j < result; j++) {
+                string[j - 1] = le16toh(buffer[j]);
+            }
+            string[j - 1] = 0;
+            break;
+        }
+    }
+
+    char* s = strdup(string);
+    if (!s) return ERR_NO_MEMORY;
+    *out_string = s;
+    return NO_ERROR;
 }
 
 mx_status_t usb_get_status(mx_device_t* device, uint8_t request_type, uint16_t index,
