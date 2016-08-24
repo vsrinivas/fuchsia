@@ -6,8 +6,8 @@
 #ifndef GETFUNCSYM
 #define GETFUNCSYM(fp, sym, got)                                        \
     do {                                                                \
-        __attribute__((__visibility__("hidden"))) dl_start_return_t sym(unsigned char*, void*); \
-        static stage2_func static_func_ptr = sym;                       \
+        extern stage2_func sym __attribute__((__visibility__("hidden"))); \
+        static stage2_func* static_func_ptr = sym;                      \
         __asm__ __volatile__(""                                         \
                              : "+m"(static_func_ptr)                    \
                              :                                          \
@@ -16,14 +16,8 @@
     } while (0)
 #endif
 
-// We can access these with simple PC-relative relocs.
-// _BASE is defined by base.ld to 0, i.e. the lowest address in the DSO image.
-// _DYNAMIC is defined automagically by the linker.
-extern const char _BASE[] __attribute__((visibility("hidden")));
-extern size_t _DYNAMIC[] __attribute__((visibility("hidden")));
-
 __attribute__((__visibility__("hidden"))) dl_start_return_t _dl_start(
-    void* start_arg) {
+    void* start_arg, void* vdso) {
     size_t base = (size_t)_BASE;
     size_t* dynv = _DYNAMIC;
 
@@ -67,9 +61,9 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t _dl_start(
         *rel_addr = base + rel[2];
     }
 
-    stage2_func dls2;
+    stage2_func* dls2;
     GETFUNCSYM(&dls2, __dls2, base + dyn[DT_PLTGOT]);
-    return dls2((void*)base, start_arg);
+    return dls2(start_arg, vdso);
 }
 
 // This defines _start to call _dl_start and then jump to the entry point.

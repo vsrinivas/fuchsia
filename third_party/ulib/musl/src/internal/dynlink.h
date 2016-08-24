@@ -72,5 +72,11 @@ typedef struct {
 #define DL_START_RETURN(entry, arg) (dl_start_return_t) { (arg), (entry) }
 #endif
 
-typedef dl_start_return_t (*stage2_func)(unsigned char*, void*);
-typedef dl_start_return_t (*stage3_func)(void*);
+typedef dl_start_return_t stage2_func(void* start_arg, void* vdso);
+typedef dl_start_return_t stage3_func(void* start_arg);
+
+// We can access these with simple PC-relative relocs.
+// _BASE is defined by base.ld to 0, i.e. the lowest address in the DSO image.
+// _DYNAMIC is defined automagically by the linker.
+extern const char _BASE[] __attribute__((visibility("hidden")));
+extern size_t _DYNAMIC[] __attribute__((visibility("hidden")));

@@ -77,7 +77,6 @@ struct dso {
     signed char global;
     char relocated;
     char constructed;
-    char kernel_mapped;
     struct dso **deps, *needed_by;
     struct tls_module tls;
     size_t tls_id;
@@ -113,7 +112,7 @@ static struct builtin_tls {
 #define ADDEND_LIMIT 4096
 static size_t *saved_addends, *apply_addends_to;
 
-static struct dso ldso;
+static struct dso ldso, vdso;
 static struct dso *head, *tail, *fini_head;
 static unsigned long long gencnt;
 static int runtime;
@@ -745,6 +744,18 @@ static size_t count_syms(struct dso* p) {
     return nsym;
 }
 
+static struct dso* find_library_in(struct dso* p, const char* name) {
+    while (p != NULL) {
+        if (!strcmp(p->name, name) ||
+            (p->soname != NULL && !strcmp(p->soname, name))) {
+            ++p->refcnt;
+            break;
+        }
+        p = p->next;
+    }
+    return p;
+}
+
 static struct dso* find_library(const char* name) {
     int is_self = 0;
 
@@ -783,16 +794,27 @@ static struct dso* find_library(const char* name) {
         return &ldso;
     }
 
-    /* Search for the name to see if it's already loaded */
-    for (struct dso* p = head->next; p; p = p->next) {
-        if (!strcmp(p->name, name) ||
-            (p->soname != NULL && !strcmp(p->soname, name))) {
-            p->refcnt++;
-            return p;
+    // First see if it's in the general list.
+    struct dso* p = find_library_in(head, name);
+    if (p == NULL && ldso.prev == NULL) {
+        // ldso is not in the list yet, so the first search didn't notice
+        // anything that is only a dependency of ldso, i.e. the vDSO.
+        // See if the lookup by name matches ldso or its dependencies.
+        p = find_library_in(&ldso, name);
+        if (p != NULL) {
+            // Take it out of its place in the list rooted at ldso.
+            if (p->prev != NULL)
+                p->prev->next = p->next;
+            if (p->next != NULL)
+                p->next->prev = p->prev;
+            // Stick it on the main list.
+            tail->next = p;
+            p->prev = tail;
+            tail = p;
         }
     }
 
-    return NULL;
+    return p;
 }
 
 static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
@@ -1020,7 +1042,6 @@ static void kernel_mapped_dso(struct dso* p) {
     max_addr = (max_addr + PAGE_SIZE - 1) & -PAGE_SIZE;
     p->map = p->base + min_addr;
     p->map_len = max_addr - min_addr;
-    p->kernel_mapped = 1;
 }
 
 void __libc_exit_fini(void) {
@@ -1145,8 +1166,8 @@ static void update_tls_size(void) {
  * replaced later due to copy relocations in the main program. */
 
 __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
-    unsigned char* base, void* start_arg) {
-    ldso.base = base;
+    void* start_arg, void* vdso_map) {
+    ldso.base = _BASE;
 
     Ehdr* ehdr = (void*)ldso.base;
     ldso.name = "libc.so";
@@ -1156,6 +1177,26 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
     ldso.phentsize = ehdr->e_phentsize;
     kernel_mapped_dso(&ldso);
     decode_dyn(&ldso);
+
+    if (vdso_map != NULL) {
+        // The vDSO was mapped in by our creator.  Stitch it in as
+        // a preloaded shared object right away, so ld.so itself
+        // can depend on it and require its symbols.
+
+        vdso.base = vdso_map;
+        vdso.name = "<vDSO>";
+        vdso.global = 1;
+
+        Ehdr* ehdr = vdso_map;
+        vdso.phnum = ehdr->e_phnum;
+        vdso.phdr = laddr(&vdso, ehdr->e_phoff);
+        vdso.phentsize = ehdr->e_phentsize;
+        kernel_mapped_dso(&vdso);
+        decode_dyn(&vdso);
+
+        vdso.prev = &ldso;
+        ldso.next = &vdso;
+    }
 
     /* Prepare storage for to save clobbered REL addends so they
      * can be reused in stage 3. There should be very few. If
@@ -1184,7 +1225,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
      * symbolically as a barrier against moving the address
      * load across the above relocation processing. */
     struct symdef dls3_def = find_sym(&ldso, "__dls3", 0);
-    return ((stage3_func)laddr(&ldso, dls3_def.sym->st_value))(start_arg);
+    return (*(stage3_func*)laddr(&ldso, dls3_def.sym->st_value))(start_arg);
 }
 
 /* Stage 3 of the dynamic linker is called with the dynamic linker/libc
@@ -1299,29 +1340,6 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 
     app.global = 1;
     decode_dyn(&app);
-
-    // TODO(mcgrathr): vdso will be different when we have one
-#if 0
-    /* Attach to vdso, if provided by the kernel */
-    if (search_vec(auxv, &vdso_base, AT_SYSINFO_EHDR)) {
-        Ehdr* ehdr = (void*)vdso_base;
-        Phdr* phdr = vdso.phdr = (void*)(vdso_base + ehdr->e_phoff);
-        vdso.phnum = ehdr->e_phnum;
-        vdso.phentsize = ehdr->e_phentsize;
-        for (i = ehdr->e_phnum; i; i--, phdr = (void*)((char*)phdr + ehdr->e_phentsize)) {
-            if (phdr->p_type == PT_DYNAMIC)
-                vdso.dynv = (void*)(vdso_base + phdr->p_offset);
-            if (phdr->p_type == PT_LOAD)
-                vdso.base = (void*)(vdso_base - phdr->p_vaddr + phdr->p_offset);
-        }
-        vdso.name = "";
-        vdso.global = 1;
-        vdso.relocated = 1;
-        decode_dyn(&vdso);
-        vdso.prev = &ldso;
-        ldso.next = &vdso;
-    }
-#endif
 
     /* Initial dso chain consists only of the app. */
     head = tail = &app;

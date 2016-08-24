@@ -127,6 +127,19 @@ USER_SHARED_INTERP := ld.so.1
 USERAPP_SHARED_LDFLAGS := \
     $(USER_DYNAMIC_LDFLAGS) -pie -dynamic-linker $(USER_SHARED_INTERP)
 
+ifeq ($(call TOBOOL,$(USE_GOLD)),false)
+# BFD ld stupidly insists on resolving dependency DSO's symbols when
+# doing a -shared -z defs link.  To do this it needs to find
+# dependencies' dependencies, which requires -rpath-link.  Gold does
+# not have this misfeature.  Since ulib/musl needs ulib/magenta and
+# everything needs ulib/musl, this covers the actual needs in the
+# build today without resorting to resolving inter-module dependencies
+# to generate -rpath-link in a general fashion.  Eventually we should
+# always use gold or lld for all the user-mode links, and then we'll
+# never need this.
+USERAPP_SHARED_LDFLAGS += -rpath-link $(BUILDDIR)/ulib/magenta
+endif
+
 # Architecture specific compile flags
 ARCH_COMPILEFLAGS :=
 ARCH_CFLAGS :=

@@ -1247,11 +1247,11 @@ include make/module.mk
 MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
-MODULE_DEPS := ulib/magenta ulib/runtime
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCS := $(LOCAL_SRCS)
 
-MODULE_STATIC_LIBS := ulib/magenta ulib/runtime
+MODULE_LIBS := ulib/magenta
+MODULE_STATIC_LIBS := ulib/runtime
 
 # At link time and in DT_SONAME, musl is known as libc.so.  But the
 # (only) place it needs to be installed at runtime is where the
