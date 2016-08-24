@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/framework_ffmpeg/ffmpeg_video_decoder.h"
+
 #include <algorithm>
 
-#include "base/logging.h"
-#include "mojo/services/media/common/cpp/timeline.h"
-#include "mojo/services/media/common/cpp/timeline_rate.h"
-#include "services/media/framework_ffmpeg/ffmpeg_formatting.h"
-#include "services/media/framework_ffmpeg/ffmpeg_video_decoder.h"
+#include "apps/media/cpp/timeline.h"
+#include "apps/media/cpp/timeline_rate.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_formatting.h"
+#include "lib/ftl/logging.h"
 extern "C" {
 #include "third_party/ffmpeg/libavutil/imgutils.h"
 }

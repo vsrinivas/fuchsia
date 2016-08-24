@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/cpp/timeline_rate.h"
+
 #include <limits>
 #include <utility>
 
 #include "mojo/public/cpp/environment/logging.h"
-#include "mojo/services/media/common/cpp/timeline_rate.h"
 
 namespace mojo {
 namespace media {

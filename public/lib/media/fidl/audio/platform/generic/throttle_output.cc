@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/bind.h"
-#include "base/callback.h"
-#include "base/location.h"
-#include "base/logging.h"
-#include "base/time/time.h"
-#include "mojo/services/media/common/cpp/local_time.h"
-#include "services/media/audio/audio_output_manager.h"
-#include "services/media/audio/platform/generic/throttle_output.h"
+#include "apps/media/services/audio/platform/generic/throttle_output.h"
+
+#include "apps/media/cpp/local_time.h"
+#include "apps/media/services/audio/audio_output_manager.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

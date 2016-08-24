@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "services/media/factory_service/media_sink_impl.h"
-#include "services/media/framework/util/conversion_pipeline_builder.h"
-#include "services/media/framework_mojo/mojo_type_conversions.h"
+#include "apps/media/services/media_service/media_sink_impl.h"
+
+#include "apps/media/services/framework/util/conversion_pipeline_builder.h"
+#include "apps/media/services/framework_mojo/mojo_type_conversions.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

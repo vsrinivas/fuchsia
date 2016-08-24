@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/media/factory_service/test/fake_wav_reader.h"
+#include "apps/media/services/media_service/test/fake_wav_reader.h"
 
-#include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace mojo {

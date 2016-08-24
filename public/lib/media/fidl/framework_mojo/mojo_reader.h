@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_READER_H_
-#define SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_READER_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_READER_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_READER_H_
 
 #include <atomic>
 
-#include "base/single_thread_task_runner.h"
-#include "mojo/services/media/core/interfaces/seeking_reader.mojom.h"
-#include "services/media/framework/parts/reader.h"
-#include "services/util/cpp/incident.h"
+#include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "apps/media/services/framework/parts/reader.h"
+#include "apps/media/services/common/incident.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace mojo {
 namespace media {
@@ -75,4 +75,4 @@ class MojoReader : public Reader {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_MOJO_PARTS_MOJO_READER_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_PARTS_MOJO_READER_H_

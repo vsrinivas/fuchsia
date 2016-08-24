@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_ENGINE_H_
-#define SERVICES_MEDIA_FRAMEWORK_ENGINE_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_ENGINE_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_ENGINE_H_
 
 #include <list>
 #include <queue>
 #include <stack>
 #include <unordered_map>
 
-#include "base/synchronization/lock.h"
-#include "services/media/framework/refs.h"
-#include "services/media/framework/stages/stage.h"
+#include "apps/media/services/framework/refs.h"
+#include "apps/media/services/framework/stages/stage.h"
+#include "lib/ftl/synchronization/mutex.h"
 
 namespace mojo {
 namespace media {
@@ -150,4 +150,4 @@ class Engine {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_ENGINE_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_ENGINE_H_

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
-#include "base/logging.h"
-#include "base/message_loop/message_loop.h"
-#include "services/media/framework_mojo/mojo_packet_producer.h"
+#include "apps/media/services/framework_mojo/mojo_packet_producer.h"
+
+#include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace mojo {
 namespace media {

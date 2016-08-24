@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
-#define SERVICES_MEDIA_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
 
 #include <deque>
 
-#include "services/media/framework/models/active_source.h"
-#include "services/media/framework/stages/stage.h"
+#include "apps/media/services/framework/models/active_source.h"
+#include "apps/media/services/framework/stages/stage.h"
 
 namespace mojo {
 namespace media {
@@ -54,4 +54,4 @@ class ActiveSourceStage : public Stage {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_

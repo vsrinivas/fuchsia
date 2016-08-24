@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_
-#define SERVICES_MEDIA_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_
 
 #include <vector>
 
-#include "services/media/framework/models/multistream_source.h"
-#include "services/media/framework/stages/stage.h"
+#include "apps/media/services/framework/models/multistream_source.h"
+#include "apps/media/services/framework/stages/stage.h"
 
 namespace mojo {
 namespace media {
@@ -55,4 +55,4 @@ class MultistreamSourceStage : public Stage {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_

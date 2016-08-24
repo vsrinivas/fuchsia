@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_TYPE_CONVERSIONS_H_
-#define SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_TYPE_CONVERSIONS_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_TYPE_CONVERSIONS_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_TYPE_CONVERSIONS_H_
 
-#include "mojo/services/media/common/interfaces/media_common.mojom.h"
-#include "mojo/services/media/common/interfaces/media_metadata.mojom.h"
-#include "mojo/services/media/common/interfaces/media_types.mojom.h"
-#include "services/media/framework/metadata.h"
-#include "services/media/framework/result.h"
-#include "services/media/framework/types/audio_stream_type.h"
-#include "services/media/framework/types/stream_type.h"
-#include "services/media/framework/types/video_stream_type.h"
+#include "apps/media/interfaces/media_common.mojom.h"
+#include "apps/media/interfaces/media_metadata.mojom.h"
+#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/services/framework/metadata.h"
+#include "apps/media/services/framework/result.h"
+#include "apps/media/services/framework/types/audio_stream_type.h"
+#include "apps/media/services/framework/types/stream_type.h"
+#include "apps/media/services/framework/types/video_stream_type.h"
 
 namespace mojo {
 namespace media {
@@ -141,4 +141,4 @@ struct TypeConverter<std::unique_ptr<media::Bytes>, Array<uint8_t>> {
 
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_TYPE_CONVERSIONS_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_TYPE_CONVERSIONS_H_

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_PARTS_DECODER_H_
-#define SERVICES_MEDIA_FRAMEWORK_PARTS_DECODER_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_DECODER_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_DECODER_H_
 
-#include "services/media/framework/models/transform.h"
-#include "services/media/framework/packet.h"
-#include "services/media/framework/payload_allocator.h"
-#include "services/media/framework/result.h"
-#include "services/media/framework/types/stream_type.h"
+#include "apps/media/services/framework/models/transform.h"
+#include "apps/media/services/framework/packet.h"
+#include "apps/media/services/framework/payload_allocator.h"
+#include "apps/media/services/framework/result.h"
+#include "apps/media/services/framework/types/stream_type.h"
 
 namespace mojo {
 namespace media {
@@ -30,4 +30,4 @@ class Decoder : public Transform {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_PARTS_DECODER_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_DECODER_H_

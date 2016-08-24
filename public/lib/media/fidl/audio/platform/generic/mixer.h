@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXER_H_
-#define SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXER_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXER_H_
+#define APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXER_H_
 
 #include <memory>
 
-#include "mojo/services/media/common/interfaces/media_types.mojom.h"
-#include "services/media/audio/audio_pipe.h"
-#include "services/media/audio/audio_track_impl.h"
-#include "services/media/audio/gain.h"
+#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/services/audio/audio_pipe.h"
+#include "apps/media/services/audio/audio_track_impl.h"
+#include "apps/media/services/audio/gain.h"
 
 namespace mojo {
 namespace media {
@@ -138,4 +138,4 @@ class Mixer {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXER_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXER_H_

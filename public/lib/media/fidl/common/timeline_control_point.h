@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_COMMON_TIMELINE_CONTROL_POINT_H_
-#define SERVICES_MEDIA_COMMON_TIMELINE_CONTROL_POINT_H_
+#ifndef APPS_MEDIA_SERVICES_COMMON_TIMELINE_CONTROL_POINT_H_
+#define APPS_MEDIA_SERVICES_COMMON_TIMELINE_CONTROL_POINT_H_
 
-#include "base/single_thread_task_runner.h"
-#include "base/synchronization/lock.h"
+#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/services/common/mojo_publisher.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/tasks/task_runner.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/media/common/cpp/timeline_function.h"
-#include "mojo/services/media/core/interfaces/timeline_controller.mojom.h"
-#include "services/media/common/mojo_publisher.h"
 
 namespace mojo {
 namespace media {
@@ -104,4 +104,4 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_COMMON_TIMELINE_CONTROL_POINT_H_
+#endif  // APPS_MEDIA_SERVICES_COMMON_TIMELINE_CONTROL_POINT_H_

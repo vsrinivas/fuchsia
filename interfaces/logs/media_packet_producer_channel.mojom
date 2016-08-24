@@ -5,7 +5,7 @@
 [DartPackage="mojo_services"]
 module mojo.media.logs;
 
-import "mojo/services/media/common/interfaces/media_transport.mojom";
+import "apps/media/interfaces/media_transport.mojom";
 
 [ServiceName="mojo::media::logs::MediaPacketProducerChannel"]
 interface MediaPacketProducerChannel {

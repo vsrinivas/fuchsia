@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/audio/platform/generic/standard_output_base.h"
+
 #include <limits>
 
-#include "base/logging.h"
-#include "services/media/audio/audio_track_impl.h"
-#include "services/media/audio/audio_track_to_output_link.h"
-#include "services/media/audio/platform/generic/mixer.h"
-#include "services/media/audio/platform/generic/standard_output_base.h"
+#include "apps/media/services/audio/audio_track_impl.h"
+#include "apps/media/services/audio/audio_track_to_output_link.h"
+#include "apps/media/services/audio/platform/generic/mixer.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

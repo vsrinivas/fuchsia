@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_AUDIO_OUTPUT_MANAGER_H_
-#define SERVICES_MEDIA_AUDIO_AUDIO_OUTPUT_MANAGER_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_AUDIO_OUTPUT_MANAGER_H_
+#define APPS_MEDIA_SERVICES_AUDIO_AUDIO_OUTPUT_MANAGER_H_
 
 #include <set>
 
-#include "base/synchronization/lock.h"
-#include "base/threading/sequenced_worker_pool.h"
-#include "mojo/services/media/common/interfaces/media_common.mojom.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "services/media/audio/audio_output.h"
-#include "services/media/audio/fwd_decls.h"
+#include "apps/media/interfaces/media_common.mojom.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/services/audio/audio_output.h"
+#include "apps/media/services/audio/fwd_decls.h"
+#include "lib/ftl/synchronization/mutex.h"
 
 namespace mojo {
 namespace media {
@@ -108,4 +107,4 @@ class AudioOutputManager {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_AUDIO_OUTPUT_MANAGER_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_AUDIO_OUTPUT_MANAGER_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/services/media/common/cpp/video_converter.h"
+#include "apps/media/cpp/video_converter.h"
 
 namespace mojo {
 namespace media {

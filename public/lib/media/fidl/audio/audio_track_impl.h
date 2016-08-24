@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_AUDIO_TRACK_IMPL_H_
-#define SERVICES_MEDIA_AUDIO_AUDIO_TRACK_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_AUDIO_TRACK_IMPL_H_
+#define APPS_MEDIA_SERVICES_AUDIO_AUDIO_TRACK_IMPL_H_
 
 #include <deque>
 #include <set>
 
-#include "base/synchronization/lock.h"
+#include "apps/media/cpp/linear_transform.h"
+#include "apps/media/interfaces/audio_track.mojom.h"
+#include "apps/media/interfaces/media_renderer.mojom.h"
+#include "apps/media/services/audio/audio_pipe.h"
+#include "apps/media/services/audio/fwd_decls.h"
+#include "apps/media/services/common/timeline_control_point.h"
+#include "lib/ftl/synchronization/mutex.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/callback.h"
-#include "mojo/services/media/audio/interfaces/audio_track.mojom.h"
-#include "mojo/services/media/common/cpp/linear_transform.h"
-#include "mojo/services/media/core/interfaces/media_renderer.mojom.h"
-#include "services/media/audio/audio_pipe.h"
-#include "services/media/audio/fwd_decls.h"
-#include "services/media/common/timeline_control_point.h"
 
 namespace mojo {
 namespace media {
@@ -101,4 +101,4 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_AUDIO_TRACK_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_AUDIO_TRACK_IMPL_H_

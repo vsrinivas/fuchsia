@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXERS_POINT_SAMPLER_H_
-#define SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXERS_POINT_SAMPLER_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXERS_POINT_SAMPLER_H_
+#define APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXERS_POINT_SAMPLER_H_
 
-#include "mojo/services/media/common/interfaces/media_types.mojom.h"
-#include "services/media/audio/platform/generic/mixer.h"
+#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/services/audio/platform/generic/mixer.h"
 
 namespace mojo {
 namespace media {
@@ -28,4 +28,4 @@ class PointSampler : public Mixer {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXERS_POINT_SAMPLER_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXERS_POINT_SAMPLER_H_

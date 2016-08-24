@@ -4,9 +4,10 @@
 
 #include <unordered_map>
 
-#include "base/logging.h"
-#include "services/media/framework/types/video_stream_type.h"
-#include "services/media/framework/util/safe_clone.h"
+#include "apps/media/services/framework/types/video_stream_type.h"
+
+#include "apps/media/services/framework/util/safe_clone.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

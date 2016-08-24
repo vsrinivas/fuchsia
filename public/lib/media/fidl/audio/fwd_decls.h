@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_FWD_DECLS_H__
-#define SERVICES_MEDIA_AUDIO_FWD_DECLS_H__
+#ifndef APPS_MEDIA_SERVICES_AUDIO_FWD_DECLS_H__
+#define APPS_MEDIA_SERVICES_AUDIO_FWD_DECLS_H__
 
 #include <memory>
 #include <set>
@@ -41,4 +41,4 @@ using AudioTrackToOutputLinkSet =
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_FWD_DECLS_H__
+#endif  // APPS_MEDIA_SERVICES_AUDIO_FWD_DECLS_H__

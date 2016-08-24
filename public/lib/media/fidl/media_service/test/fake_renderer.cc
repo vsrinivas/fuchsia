@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/media/factory_service/test/fake_renderer.h"
+#include "apps/media/services/media_service/test/fake_renderer.h"
 
 #include <iomanip>
 #include <iostream>
 #include <limits>
 
-#include "mojo/services/media/common/cpp/timeline.h"
+#include "apps/media/cpp/timeline.h"
 
 namespace mojo {
 namespace media {

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unordered_map>
+#include "apps/media/cpp/video_packet_layout.h"
 
-#include "mojo/services/media/common/cpp/video_packet_layout.h"
+#include <unordered_map>
 
 namespace mojo {
 namespace media {

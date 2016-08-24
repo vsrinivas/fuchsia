@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_IO_CONTEXT_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_IO_CONTEXT_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_IO_CONTEXT_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_IO_CONTEXT_H_
 
 #include <condition_variable>
 #include <mutex>
 
-#include "services/media/framework/parts/reader.h"
+#include "apps/media/services/framework/parts/reader.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
 }
@@ -94,4 +94,4 @@ class AvIoContextOpaque {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_IO_CONTEXT_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_IO_CONTEXT_H_

@@ -2,21 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_MEDIA_COMMON_CPP_TIMELINE_H_
-#define MOJO_SERVICES_MEDIA_COMMON_CPP_TIMELINE_H_
+#ifndef APPS_MEDIA_CPP_TIMELINE_H_
+#define APPS_MEDIA_CPP_TIMELINE_H_
 
-#include <stdint.h>
 #include <chrono>  // NOLINT(build/c++11)
-
-// TODO(johngro): As we add support for other environments, extend this list.
-#if defined(OS_POSIX)
-#include "mojo/services/media/common/cpp/platform/posix/local_time.h"
-#else
-// TODO(johngro): consider adding a #warning or #info to inform the user that
-// they are using the generic implementation of LocalTime, and really should get
-// around to implementing proper platform support ASAP.
-#include "mojo/services/media/common/cpp/platform/generic/local_time.h"
-#endif
+#include <stdint.h>
 
 namespace mojo {
 namespace media {
@@ -26,7 +16,7 @@ class Timeline {
  public:
   // Returns the current local time in nanoseconds since epoch.
   static int64_t local_now() {
-    return local_time::Clock::now().time_since_epoch().count();
+    return std::chrono::steady_clock::now().time_since_epoch().count();
   }
 
   template <typename T>
@@ -50,4 +40,4 @@ class Timeline {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_MEDIA_COMMON_CPP_TIMELINE_H_
+#endif  // APPS_MEDIA_CPP_TIMELINE_H_

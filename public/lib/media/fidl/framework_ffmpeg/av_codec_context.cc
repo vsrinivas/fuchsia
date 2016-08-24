@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "services/media/framework/types/audio_stream_type.h"
-#include "services/media/framework/types/subpicture_stream_type.h"
-#include "services/media/framework/types/text_stream_type.h"
-#include "services/media/framework/types/video_stream_type.h"
-#include "services/media/framework_ffmpeg/av_codec_context.h"
-#include "services/media/framework_ffmpeg/ffmpeg_init.h"
+#include "apps/media/services/framework_ffmpeg/av_codec_context.h"
+
+#include "apps/media/services/framework/types/audio_stream_type.h"
+#include "apps/media/services/framework/types/subpicture_stream_type.h"
+#include "apps/media/services/framework/types/text_stream_type.h"
+#include "apps/media/services/framework/types/video_stream_type.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_init.h"
+#include "lib/ftl/logging.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }

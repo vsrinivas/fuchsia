@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_UTIL_CPP_FACTORY_SERVICE_BASE_H_
-#define MOJO_SERVICES_UTIL_CPP_FACTORY_SERVICE_BASE_H_
+#ifndef APPS_MEDIA_SERVICES_COMMON_FACTORY_SERVICE_BASE_H_
+#define APPS_MEDIA_SERVICES_COMMON_FACTORY_SERVICE_BASE_H_
 
 #include <memory>
 #include <unordered_set>
 
-#include "base/logging.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 
 namespace mojo {
-namespace util {
+namespace media {
 
 class FactoryServiceBase : public ApplicationImplBase {
  public:
@@ -89,7 +89,7 @@ class FactoryServiceBase : public ApplicationImplBase {
     return;                                                       \
   }
 
-}  // namespace util
+}  // namespace media
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_UTIL_CPP_FACTORY_SERVICE_BASE_H_
+#endif  // APPS_MEDIA_SERVICES_COMMON_FACTORY_SERVICE_BASE_H_

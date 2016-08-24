@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_SOURCE_IMPL_H_
-#define SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_SOURCE_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_SOURCE_IMPL_H_
+#define APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_SOURCE_IMPL_H_
 
 #include <vector>
 
-#include "base/single_thread_task_runner.h"
+#include "apps/media/interfaces/media_source.mojom.h"
+#include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "apps/media/services/common/mojo_publisher.h"
+#include "apps/media/services/framework/graph.h"
+#include "apps/media/services/framework/parts/decoder.h"
+#include "apps/media/services/framework/parts/demux.h"
+#include "apps/media/services/framework/parts/null_sink.h"
+#include "apps/media/services/framework/parts/reader.h"
+#include "apps/media/services/framework_mojo/mojo_packet_producer.h"
+#include "apps/media/services/media_service/media_service_impl.h"
+#include "apps/media/services/common/incident.h"
+#include "lib/ftl/tasks/task_runner.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/media/control/interfaces/media_source.mojom.h"
-#include "mojo/services/media/core/interfaces/seeking_reader.mojom.h"
-#include "services/media/common/mojo_publisher.h"
-#include "services/media/factory_service/factory_service.h"
-#include "services/media/framework/graph.h"
-#include "services/media/framework/parts/decoder.h"
-#include "services/media/framework/parts/demux.h"
-#include "services/media/framework/parts/null_sink.h"
-#include "services/media/framework/parts/reader.h"
-#include "services/media/framework_mojo/mojo_packet_producer.h"
-#include "services/util/cpp/incident.h"
 
 namespace mojo {
 namespace media {
@@ -117,4 +117,4 @@ class MediaSourceImpl : public MediaFactoryService::Product<MediaSource>,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_SOURCE_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_SOURCE_IMPL_H_

@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_FORMATTING_H_
-#define SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_FORMATTING_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_FORMATTING_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_FORMATTING_H_
 
-#include "mojo/services/media/common/interfaces/media_common.mojom.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "mojo/services/media/common/interfaces/media_types.mojom.h"
-#include "mojo/services/media/common/interfaces/timelines.mojom.h"
-#include "mojo/services/media/control/interfaces/media_source.mojom.h"
-#include "mojo/services/network/interfaces/network_service.mojom.h"
-#include "services/media/framework/util/formatting.h"
+#include "apps/media/interfaces/media_common.mojom.h"
+#include "apps/media/interfaces/media_source.mojom.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/interfaces/timelines.mojom.h"
+#include "apps/media/services/framework/util/formatting.h"
+#include "mojo/public/interfaces/network/http_header.mojom.h"
+#include "mojo/public/interfaces/network/network_error.mojom.h"
+#include "mojo/public/interfaces/network/url_request.mojom.h"
+#include "mojo/public/interfaces/network/url_response.mojom.h"
 
 namespace mojo {
 namespace media {
@@ -79,4 +82,4 @@ std::ostream& operator<<(std::ostream& os, const Array<T>& value) {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_FORMATTING_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_FORMATTING_H_

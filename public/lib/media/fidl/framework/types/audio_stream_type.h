@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_TYPES_AUDIO_STREAM_TYPE_H_
-#define SERVICES_MEDIA_FRAMEWORK_TYPES_AUDIO_STREAM_TYPE_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_TYPES_AUDIO_STREAM_TYPE_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_TYPES_AUDIO_STREAM_TYPE_H_
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "base/logging.h"
-#include "services/media/framework/types/stream_type.h"
+#include "apps/media/services/framework/types/stream_type.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {
@@ -120,4 +120,4 @@ class AudioStreamTypeSet : public StreamTypeSet {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_TYPES_AUDIO_STREAM_TYPE_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_TYPES_AUDIO_STREAM_TYPE_H_

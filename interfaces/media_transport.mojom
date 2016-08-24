@@ -5,8 +5,8 @@
 [DartPackage="mojo_services"]
 module mojo.media;
 
-import "mojo/services/media/common/interfaces/media_common.mojom";
-import "mojo/services/media/common/interfaces/media_types.mojom";
+import "apps/media/interfaces/media_common.mojom";
+import "apps/media/interfaces/media_types.mojom";
 
 // Describes a fragment of media content, including metadata and a locator for
 // the payload.

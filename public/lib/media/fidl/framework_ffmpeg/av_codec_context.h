@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_CODEC_CONTEXT_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_CODEC_CONTEXT_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_CODEC_CONTEXT_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_CODEC_CONTEXT_H_
 
-#include "services/media/framework/types/stream_type.h"
-#include "services/media/framework/types/video_stream_type.h"
+#include "apps/media/services/framework/types/stream_type.h"
+#include "apps/media/services/framework/types/video_stream_type.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
@@ -43,4 +43,4 @@ AVPixelFormat AVPixelFormatFromPixelFormat(
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_CODEC_CONTEXT_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_CODEC_CONTEXT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_UTIL_SAFE_CLONE_H_
-#define SERVICES_MEDIA_FRAMEWORK_UTIL_SAFE_CLONE_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_UTIL_SAFE_CLONE_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_UTIL_SAFE_CLONE_H_
 
 #include <memory>
 #include <vector>
@@ -37,4 +37,4 @@ std::unique_ptr<std::vector<std::unique_ptr<T>>> SafeClone(
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_UTIL_SAFE_CLONE_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_UTIL_SAFE_CLONE_H_

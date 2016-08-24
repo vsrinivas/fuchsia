@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/synchronization/lock.h"
-#include "services/media/framework_ffmpeg/ffmpeg_init.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_init.h"
+#include "lib/ftl/synchronization/mutex.h"
 
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"

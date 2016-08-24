@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_DEMUX_IMPL_H_
-#define SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_DEMUX_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_DEMUX_IMPL_H_
+#define APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_DEMUX_IMPL_H_
 
 #include <cstdint>
 #include <memory>
 #include <vector>
 
-#include "base/single_thread_task_runner.h"
+#include "apps/media/cpp/flog.h"
+#include "apps/media/interfaces/logs/media_demux_channel.mojom.h"
+#include "apps/media/interfaces/media_demux.mojom.h"
+#include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "apps/media/services/common/mojo_publisher.h"
+#include "apps/media/services/framework/graph.h"
+#include "apps/media/services/framework/parts/demux.h"
+#include "apps/media/services/framework_mojo/mojo_packet_producer.h"
+#include "apps/media/services/media_service/media_service_impl.h"
+#include "apps/media/services/common/incident.h"
+#include "lib/ftl/tasks/task_runner.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/flog/cpp/flog.h"
-#include "mojo/services/media/core/interfaces/media_demux.mojom.h"
-#include "mojo/services/media/core/interfaces/seeking_reader.mojom.h"
-#include "mojo/services/media/logs/interfaces/media_demux_channel.mojom.h"
-#include "services/media/common/mojo_publisher.h"
-#include "services/media/factory_service/factory_service.h"
-#include "services/media/framework/graph.h"
-#include "services/media/framework/parts/demux.h"
-#include "services/media/framework_mojo/mojo_packet_producer.h"
-#include "services/util/cpp/incident.h"
 
 namespace mojo {
 namespace media {
@@ -108,4 +108,4 @@ class MediaDemuxImpl : public MediaFactoryService::Product<MediaDemux>,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_DEMUX_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_DEMUX_IMPL_H_

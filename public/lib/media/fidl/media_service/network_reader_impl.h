@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_NETWORK_READER_IMPL_H_
-#define SERVICES_MEDIA_FACTORY_NETWORK_READER_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_FACTORY_NETWORK_READER_IMPL_H_
+#define APPS_MEDIA_SERVICES_FACTORY_NETWORK_READER_IMPL_H_
 
 #include <memory>
 
+#include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "apps/media/services/media_service/media_service_impl.h"
+#include "apps/media/services/common/incident.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/media/core/interfaces/seeking_reader.mojom.h"
-#include "mojo/services/network/interfaces/network_service.mojom.h"
-#include "services/media/factory_service/factory_service.h"
-#include "services/util/cpp/incident.h"
 
 namespace mojo {
 namespace media {
@@ -59,4 +58,4 @@ class NetworkReaderImpl : public MediaFactoryService::Product<SeekingReader>,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FACTORY_NETWORK_READER_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_FACTORY_NETWORK_READER_IMPL_H_

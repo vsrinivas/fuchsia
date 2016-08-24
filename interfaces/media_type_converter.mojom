@@ -5,8 +5,8 @@
 [DartPackage="mojo_services"]
 module mojo.media;
 
-import "mojo/services/media/common/interfaces/media_transport.mojom";
-import "mojo/services/media/common/interfaces/media_types.mojom";
+import "apps/media/interfaces/media_transport.mojom";
+import "apps/media/interfaces/media_types.mojom";
 
 // Performs a type conversion on a media stream.
 interface MediaTypeConverter {

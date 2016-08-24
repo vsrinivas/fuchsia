@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/services/media/common/cpp/mapped_shared_buffer.h"
+#include "apps/media/cpp/mapped_shared_buffer.h"
 
+#include "apps/media/cpp/fifo_allocator.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
 #include "mojo/public/cpp/environment/logging.h"
 #include "mojo/public/cpp/system/handle.h"
-#include "mojo/services/media/common/cpp/fifo_allocator.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
 
 namespace mojo {
 namespace media {

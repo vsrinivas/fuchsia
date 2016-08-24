@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "services/media/framework/parts/sparse_byte_buffer.h"
+#include "apps/media/services/framework/parts/sparse_byte_buffer.h"
+
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXERS_MIXER_UTILS_H_
-#define SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXERS_MIXER_UTILS_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXERS_MIXER_UTILS_H_
+#define APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXERS_MIXER_UTILS_H_
 
 #include <limits>
 #include <type_traits>
 
-#include "services/media/audio/gain.h"
+#include "apps/media/services/audio/gain.h"
 
 namespace mojo {
 namespace media {
@@ -175,4 +175,4 @@ class DstMixer<ScaleType,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_MIXERS_MIXER_UTILS_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_MIXERS_MIXER_UTILS_H_

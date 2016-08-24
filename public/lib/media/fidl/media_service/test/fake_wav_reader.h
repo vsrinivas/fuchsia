@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_TEST_FAKE_WAV_READER_H_
-#define SERVICES_MEDIA_FACTORY_TEST_FAKE_WAV_READER_H_
+#ifndef APPS_MEDIA_SERVICES_FACTORY_TEST_FAKE_WAV_READER_H_
+#define APPS_MEDIA_SERVICES_FACTORY_TEST_FAKE_WAV_READER_H_
 
 #include <vector>
 
+#include "apps/media/interfaces/seeking_reader.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/system/data_pipe.h"
-#include "mojo/services/media/core/interfaces/seeking_reader.mojom.h"
 
 namespace mojo {
 namespace media {
@@ -81,4 +81,4 @@ class FakeWavReader : public SeekingReader {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FACTORY_TEST_FAKE_WAV_READER_H_
+#endif  // APPS_MEDIA_SERVICES_FACTORY_TEST_FAKE_WAV_READER_H_

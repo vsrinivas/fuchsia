@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_UTIL_CPP_INCIDENT_H_
-#define MOJO_SERVICES_UTIL_CPP_INCIDENT_H_
+#ifndef APPS_MEDIA_SERVICES_COMMON_INCIDENT_H_
+#define APPS_MEDIA_SERVICES_COMMON_INCIDENT_H_
 
 #include <functional>
 #include <vector>
 
-#include "base/synchronization/lock.h"
+#include "lib/ftl/synchronization/mutex.h"
 
 namespace mojo {
+namespace media {
 
 // The Incident class provides a facility for executing code as the consequence
 // of some occurrence. This can be useful for building state machines and
@@ -144,6 +145,7 @@ class ThreadsafeIncident {
   std::vector<std::function<void()>> consequences_;
 };
 
+}  // namespace media
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_UTIL_CPP_INCIDENT_H_
+#endif  // APPS_MEDIA_SERVICES_COMMON_INCIDENT_H_

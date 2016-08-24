@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_MEDIA_COMMON_CPP_SHARED_BUFFER_SET_H_
-#define MOJO_SERVICES_MEDIA_COMMON_CPP_SHARED_BUFFER_SET_H_
+#ifndef APPS_MEDIA_CPP_SHARED_BUFFER_SET_H_
+#define APPS_MEDIA_CPP_SHARED_BUFFER_SET_H_
 
 #include <limits>
 #include <map>
 #include <memory>
 #include <vector>
 
+#include "apps/media/cpp/mapped_shared_buffer.h"
 #include "mojo/public/cpp/system/buffer.h"
 #include "mojo/services/media/common/cpp/mapped_shared_buffer.h"
 
@@ -100,4 +101,4 @@ class SharedBufferSet {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_MEDIA_COMMON_CPP_SHARED_BUFFER_SET_H_
+#endif  // APPS_MEDIA_CPP_SHARED_BUFFER_SET_H_

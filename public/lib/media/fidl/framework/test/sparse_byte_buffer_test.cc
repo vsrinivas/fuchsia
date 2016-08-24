@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/framework/parts/sparse_byte_buffer.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "services/media/framework/parts/sparse_byte_buffer.h"
 
 namespace mojo {
 namespace media {

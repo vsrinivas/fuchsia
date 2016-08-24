@@ -5,19 +5,19 @@
 [DartPackage="mojo_services"]
 module mojo.media;
 
-import "mojo/services/media/common/interfaces/media_types.mojom";
-import "mojo/services/media/control/interfaces/media_player.mojom";
-import "mojo/services/media/control/interfaces/media_sink.mojom";
-import "mojo/services/media/control/interfaces/media_source.mojom";
-import "mojo/services/media/core/interfaces/media_demux.mojom";
-import "mojo/services/media/core/interfaces/media_renderer.mojom";
-import "mojo/services/media/core/interfaces/media_type_converter.mojom";
-import "mojo/services/media/core/interfaces/seeking_reader.mojom";
-import "mojo/services/media/core/interfaces/timeline_controller.mojom";
+import "apps/media/interfaces/media_types.mojom";
+import "apps/media/interfaces/media_player.mojom";
+import "apps/media/interfaces/media_sink.mojom";
+import "apps/media/interfaces/media_source.mojom";
+import "apps/media/interfaces/media_demux.mojom";
+import "apps/media/interfaces/media_renderer.mojom";
+import "apps/media/interfaces/media_type_converter.mojom";
+import "apps/media/interfaces/seeking_reader.mojom";
+import "apps/media/interfaces/timeline_controller.mojom";
 
-// Exposed by the factory service to create media-related agents.
-[ServiceName="mojo::media::MediaFactory"]
-interface MediaFactory {
+// Primary media service definition.
+[ServiceName="mojo::media::MediaService"]
+interface MediaService {
   // Creates a player.
   CreatePlayer(SeekingReader reader,
                MediaRenderer? audio_renderer,

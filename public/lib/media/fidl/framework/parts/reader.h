@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_PARTS_READER_H_
-#define SERVICES_MEDIA_FRAMEWORK_PARTS_READER_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_READER_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_READER_H_
 
 #include <limits>
 #include <memory>
 
-#include "services/media/framework/result.h"
+#include "apps/media/services/framework/result.h"
 
 namespace mojo {
 namespace media {
@@ -41,4 +41,4 @@ class Reader {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_MEDIA_READER_H_
+#endif  // MOJO_MEDIA_SERVICES_READER_H_

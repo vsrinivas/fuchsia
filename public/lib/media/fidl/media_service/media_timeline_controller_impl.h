@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_TIMELINE_CONTROLLER_IMPL_H_
-#define SERVICES_MEDIA_FACTORY_TIMELINE_CONTROLLER_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_FACTORY_TIMELINE_CONTROLLER_IMPL_H_
+#define APPS_MEDIA_SERVICES_FACTORY_TIMELINE_CONTROLLER_IMPL_H_
 
 #include <memory>
 #include <vector>
 
+#include "apps/media/cpp/local_time.h"
+#include "apps/media/cpp/timeline.h"
+#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/services/common/mojo_publisher.h"
+#include "apps/media/services/framework/util/callback_joiner.h"
+#include "apps/media/services/media_service/media_service_impl.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/media/common/cpp/local_time.h"
-#include "mojo/services/media/common/cpp/timeline.h"
-#include "mojo/services/media/common/cpp/timeline_function.h"
-#include "mojo/services/media/core/interfaces/timeline_controller.mojom.h"
-#include "services/media/common/mojo_publisher.h"
-#include "services/media/factory_service/factory_service.h"
-#include "services/media/framework/util/callback_joiner.h"
 
 namespace mojo {
 namespace media {
@@ -156,4 +156,4 @@ class MediaTimelineControllerImpl
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FACTORY_TIMELINE_CONTROLLER_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_FACTORY_TIMELINE_CONTROLLER_IMPL_H_

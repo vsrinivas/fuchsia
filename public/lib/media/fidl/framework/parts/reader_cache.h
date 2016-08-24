@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_PARTS_READER_CACHE_H_
-#define SERVICES_MEDIA_FRAMEWORK_PARTS_READER_CACHE_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_READER_CACHE_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_READER_CACHE_H_
 
 #include <atomic>
 #include <map>
 #include <vector>
 
-#include "base/synchronization/lock.h"
-#include "services/media/framework/parts/reader.h"
-#include "services/media/framework/parts/sparse_byte_buffer.h"
-#include "services/util/cpp/incident.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "apps/media/services/framework/parts/reader.h"
+#include "apps/media/services/framework/parts/sparse_byte_buffer.h"
+#include "apps/media/services/common/incident.h"
 
 namespace mojo {
 namespace media {
@@ -176,4 +176,4 @@ class ReaderCache : public Reader {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_PARTS_READER_CACHE_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_READER_CACHE_H_

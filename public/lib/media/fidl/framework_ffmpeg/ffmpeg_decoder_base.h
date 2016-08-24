@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_DECODER_BASE_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_DECODER_BASE_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_DECODER_BASE_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_DECODER_BASE_H_
 
-#include "services/media/framework/parts/decoder.h"
-#include "services/media/framework_ffmpeg/av_codec_context.h"
-#include "services/media/framework_ffmpeg/av_frame.h"
-#include "services/media/framework_ffmpeg/av_packet.h"
+#include "apps/media/services/framework/parts/decoder.h"
+#include "apps/media/services/framework_ffmpeg/av_codec_context.h"
+#include "apps/media/services/framework_ffmpeg/av_frame.h"
+#include "apps/media/services/framework_ffmpeg/av_packet.h"
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 }
@@ -94,4 +94,4 @@ class FfmpegDecoderBase : public Decoder {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_DECODER_BASE_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_DECODER_BASE_H_

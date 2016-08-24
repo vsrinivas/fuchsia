@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/audio/platform/generic/mixers/point_sampler.h"
+
 #include <algorithm>
 #include <limits>
 
-#include "base/logging.h"
-#include "services/media/audio/audio_track_impl.h"
-#include "services/media/audio/platform/generic/mixers/mixer_utils.h"
-#include "services/media/audio/platform/generic/mixers/point_sampler.h"
+#include "lib/ftl/logging.h"
+#include "apps/media/services/audio/audio_track_impl.h"
+#include "apps/media/services/audio/platform/generic/mixers/mixer_utils.h"
 
 namespace mojo {
 namespace media {

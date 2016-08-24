@@ -5,9 +5,9 @@
 [DartPackage="mojo_services"]
 module mojo.media;
 
-import "mojo/services/media/common/interfaces/media_metadata.mojom";
-import "mojo/services/media/common/interfaces/problem.mojom";
-import "mojo/services/media/common/interfaces/timelines.mojom";
+import "apps/media/interfaces/media_metadata.mojom";
+import "apps/media/interfaces/problem.mojom";
+import "apps/media/interfaces/timelines.mojom";
 
 // Plays media.
 interface MediaPlayer {

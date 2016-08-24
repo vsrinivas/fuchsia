@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_FRAME_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_FRAME_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_FRAME_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_FRAME_H_
 
 extern "C" {
 #include "third_party/ffmpeg/libavutil/frame.h"
@@ -27,4 +27,4 @@ struct AvFrame {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_FRAME_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_FRAME_H_

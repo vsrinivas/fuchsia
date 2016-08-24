@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
-#define SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
+#define APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
 
-#include "base/callback.h"
-#include "mojo/services/media/common/cpp/local_time.h"
-#include "services/media/audio/platform/generic/standard_output_base.h"
+#include "apps/media/cpp/local_time.h"
+#include "apps/media/services/audio/platform/generic/standard_output_base.h"
 
 namespace mojo {
 namespace media {
@@ -36,4 +35,4 @@ class ThrottleOutput : public StandardOutputBase {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_

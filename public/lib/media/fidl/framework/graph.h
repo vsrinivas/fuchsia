@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_GRAPH_H_
-#define SERVICES_MEDIA_FRAMEWORK_GRAPH_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_GRAPH_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_GRAPH_H_
 
 #include <list>
 
-#include "services/media/framework/engine.h"
-#include "services/media/framework/refs.h"
-#include "services/media/framework/stages/active_multistream_source_stage.h"
-#include "services/media/framework/stages/active_sink_stage.h"
-#include "services/media/framework/stages/active_source_stage.h"
-#include "services/media/framework/stages/multistream_source_stage.h"
-#include "services/media/framework/stages/stage.h"
-#include "services/media/framework/stages/transform_stage.h"
+#include "apps/media/services/framework/engine.h"
+#include "apps/media/services/framework/refs.h"
+#include "apps/media/services/framework/stages/active_multistream_source_stage.h"
+#include "apps/media/services/framework/stages/active_sink_stage.h"
+#include "apps/media/services/framework/stages/active_source_stage.h"
+#include "apps/media/services/framework/stages/multistream_source_stage.h"
+#include "apps/media/services/framework/stages/stage.h"
+#include "apps/media/services/framework/stages/transform_stage.h"
 
 namespace mojo {
 namespace media {
@@ -208,4 +208,4 @@ class Graph {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_GRAPH_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_GRAPH_H_

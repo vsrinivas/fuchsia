@@ -7,16 +7,16 @@
 #include <mutex>
 #include <thread>
 
-#include "base/bind.h"
-#include "base/logging.h"
-#include "base/message_loop/message_loop.h"
-#include "services/media/framework/util/safe_clone.h"
-#include "services/media/framework_ffmpeg/av_codec_context.h"
-#include "services/media/framework_ffmpeg/av_format_context.h"
-#include "services/media/framework_ffmpeg/av_io_context.h"
-#include "services/media/framework_ffmpeg/av_packet.h"
-#include "services/media/framework_ffmpeg/ffmpeg_demux.h"
-#include "services/util/cpp/incident.h"
+#include "apps/media/services/framework/util/safe_clone.h"
+#include "apps/media/services/framework_ffmpeg/av_codec_context.h"
+#include "apps/media/services/framework_ffmpeg/av_format_context.h"
+#include "apps/media/services/framework_ffmpeg/av_io_context.h"
+#include "apps/media/services/framework_ffmpeg/av_packet.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_demux.h"
+#include "apps/media/services/common/incident.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/tasks/task_runner.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace mojo {
 namespace media {

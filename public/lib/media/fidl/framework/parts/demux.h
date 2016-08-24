@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_PARTS_DEMUX_H_
-#define SERVICES_MEDIA_FRAMEWORK_PARTS_DEMUX_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_DEMUX_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_DEMUX_H_
 
 #include <memory>
 #include <vector>
 
-#include "services/media/framework/metadata.h"
-#include "services/media/framework/models/active_multistream_source.h"
-#include "services/media/framework/packet.h"
-#include "services/media/framework/parts/reader.h"
-#include "services/media/framework/result.h"
-#include "services/media/framework/types/stream_type.h"
+#include "apps/media/services/framework/metadata.h"
+#include "apps/media/services/framework/models/active_multistream_source.h"
+#include "apps/media/services/framework/packet.h"
+#include "apps/media/services/framework/parts/reader.h"
+#include "apps/media/services/framework/result.h"
+#include "apps/media/services/framework/types/stream_type.h"
 
 namespace mojo {
 namespace media {
@@ -64,4 +64,4 @@ class Demux : public ActiveMultistreamSource {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_PARTS_DEMUX_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_DEMUX_H_

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/media/framework/engine.h"
-#include "services/media/framework/stages/input.h"
-#include "services/media/framework/stages/stage.h"
+#include "apps/media/services/framework/stages/input.h"
+
+#include "apps/media/services/framework/engine.h"
+#include "apps/media/services/framework/stages/stage.h"
 
 namespace mojo {
 namespace media {

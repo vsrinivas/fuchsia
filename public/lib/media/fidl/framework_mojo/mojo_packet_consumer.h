@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_PACKET_CONSUMER_H_
-#define SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_PACKET_CONSUMER_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_PACKET_CONSUMER_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_PACKET_CONSUMER_H_
 
-#include "mojo/services/media/common/cpp/media_packet_consumer_base.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "services/media/framework/models/active_source.h"
+#include "apps/media/cpp/media_packet_consumer_base.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/services/framework/models/active_source.h"
 
 namespace mojo {
 namespace media {
@@ -76,4 +76,4 @@ class MojoPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_PACKET_CONSUMER_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_PACKET_CONSUMER_H_

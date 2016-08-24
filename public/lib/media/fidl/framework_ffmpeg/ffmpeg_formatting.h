@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_FORMATTING_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_FORMATTING_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_FORMATTING_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_FORMATTING_H_
 
 #include <ostream>
 
-#include "services/media/framework/util/formatting.h"
+#include "apps/media/services/framework/util/formatting.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
@@ -112,4 +112,4 @@ std::ostream& operator<<(std::ostream& os, AVFMT_AVOID_NEG_TSFlags value);
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_FORMATTING_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_FORMATTING_H_

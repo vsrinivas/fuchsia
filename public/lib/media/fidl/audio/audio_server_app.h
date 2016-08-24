@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_AUDIO_SERVER_APP_H_
-#define SERVICES_MEDIA_AUDIO_AUDIO_SERVER_APP_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_AUDIO_SERVER_APP_H_
+#define APPS_MEDIA_SERVICES_AUDIO_AUDIO_SERVER_APP_H_
 
+#include "apps/media/interfaces/audio_server.mojom.h"
+#include "apps/media/services/audio/audio_server_impl.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/services/media/audio/interfaces/audio_server.mojom.h"
-#include "services/media/audio/audio_server_impl.h"
 
 namespace mojo {
 namespace media {
@@ -32,4 +32,4 @@ class AudioServerApp : public ApplicationImplBase {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_AUDIO_SERVER_APP_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_AUDIO_SERVER_APP_H_

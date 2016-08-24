@@ -4,8 +4,8 @@
 
 #include <limits>
 
+#include "apps/media/cpp/shared_buffer_set.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/services/media/common/cpp/shared_buffer_set.h"
 
 namespace mojo {
 namespace media {

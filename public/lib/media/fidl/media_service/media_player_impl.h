@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_PLAYER_IMPL_H_
-#define SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_PLAYER_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_PLAYER_IMPL_H_
+#define APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_PLAYER_IMPL_H_
 
 #include <limits>
 #include <vector>
 
+#include "apps/media/cpp/flog.h"
+#include "apps/media/cpp/timeline.h"
+#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/interfaces/logs/media_player_channel.mojom.h"
+#include "apps/media/interfaces/media_service.mojom.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/services/common/mojo_publisher.h"
+#include "apps/media/services/framework/util/callback_joiner.h"
+#include "apps/media/services/media_service/media_service_impl.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/flog/cpp/flog.h"
-#include "mojo/services/media/common/cpp/timeline.h"
-#include "mojo/services/media/common/cpp/timeline_function.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "mojo/services/media/control/interfaces/media_factory.mojom.h"
-#include "mojo/services/media/core/interfaces/seeking_reader.mojom.h"
-#include "mojo/services/media/core/interfaces/timeline_controller.mojom.h"
-#include "mojo/services/media/logs/interfaces/media_player_channel.mojom.h"
-#include "services/media/common/mojo_publisher.h"
-#include "services/media/factory_service/factory_service.h"
-#include "services/media/framework/util/callback_joiner.h"
 
 namespace mojo {
 namespace media {
@@ -150,4 +150,4 @@ class MediaPlayerImpl : public MediaFactoryService::Product<MediaPlayer>,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_PLAYER_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_PLAYER_IMPL_H_

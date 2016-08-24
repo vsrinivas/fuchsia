@@ -4,10 +4,11 @@
 
 #include <limits>
 
-#include "base/logging.h"
-#include "services/media/framework/parts/reader.h"
-#include "services/media/framework_ffmpeg/av_io_context.h"
-#include "services/media/framework_ffmpeg/ffmpeg_init.h"
+#include "apps/media/services/framework_ffmpeg/av_io_context.h"
+
+#include "apps/media/services/framework/parts/reader.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_init.h"
+#include "lib/ftl/logging.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
 }

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "services/util/cpp/factory_service_base.h"
+#include "apps/media/services/common/factory_service_base.h"
+
+#include "lib/ftl/logging.h"
 
 namespace mojo {
-namespace util {
+namespace media {
 
 FactoryServiceBase::ProductBase::ProductBase(FactoryServiceBase* owner)
     : owner_(owner) {
@@ -19,5 +20,5 @@ FactoryServiceBase::FactoryServiceBase() {}
 
 FactoryServiceBase::~FactoryServiceBase() {}
 
-}  // namespace util
+}  // namespace media
 }  // namespace mojo

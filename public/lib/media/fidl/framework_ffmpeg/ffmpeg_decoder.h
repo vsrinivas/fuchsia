@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_DECODER_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_DECODER_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_DECODER_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_DECODER_H_
 
 #include <memory>
 
-#include "services/media/framework/parts/decoder.h"
+#include "apps/media/services/framework/parts/decoder.h"
 
 namespace mojo {
 namespace media {
@@ -25,4 +25,4 @@ class FfmpegDecoder : public Decoder {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_FFMPEG_DECODER_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_FFMPEG_DECODER_H_

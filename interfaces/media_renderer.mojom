@@ -5,9 +5,9 @@
 [DartPackage="mojo_services"]
 module mojo.media;
 
-import "mojo/services/media/common/interfaces/media_transport.mojom";
-import "mojo/services/media/common/interfaces/media_types.mojom";
-import "mojo/services/media/core/interfaces/timeline_controller.mojom";
+import "apps/media/interfaces/media_transport.mojom";
+import "apps/media/interfaces/media_types.mojom";
+import "apps/media/interfaces/timeline_controller.mojom";
 
 // Models a service that renders content.
 interface MediaRenderer {

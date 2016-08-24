@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/media/framework/stages/multistream_source_stage.h"
-#include "services/media/framework/stages/util.h"
+#include "apps/media/services/framework/stages/multistream_source_stage.h"
+
+#include "apps/media/services/framework/stages/util.h"
 
 namespace mojo {
 namespace media {

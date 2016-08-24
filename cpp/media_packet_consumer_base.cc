@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/cpp/media_packet_consumer_base.h"
+
 #include "mojo/public/cpp/environment/logging.h"
 #include "mojo/services/media/common/cpp/media_packet_consumer_base.h"
 

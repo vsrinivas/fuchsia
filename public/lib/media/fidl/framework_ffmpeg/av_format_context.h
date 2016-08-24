@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_FORMAT_CONTEXT_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_FORMAT_CONTEXT_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_FORMAT_CONTEXT_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_FORMAT_CONTEXT_H_
 
-#include "services/media/framework_ffmpeg/av_io_context.h"
-#include "services/media/framework_ffmpeg/ffmpeg_init.h"
+#include "apps/media/services/framework_ffmpeg/av_io_context.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_init.h"
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 #include "third_party/ffmpeg/libavformat/avformat.h"
@@ -46,4 +46,4 @@ struct AvFormatContext {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_FORMAT_CONTEXT_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_FORMAT_CONTEXT_H_

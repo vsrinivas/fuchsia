@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/media/framework_ffmpeg/av_codec_context.h"
-#include "services/media/framework_ffmpeg/ffmpeg_audio_decoder.h"
-#include "services/media/framework_ffmpeg/ffmpeg_decoder.h"
-#include "services/media/framework_ffmpeg/ffmpeg_video_decoder.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_decoder.h"
+
+#include "apps/media/services/framework_ffmpeg/av_codec_context.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_audio_decoder.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_video_decoder.h"
 
 namespace mojo {
 namespace media {

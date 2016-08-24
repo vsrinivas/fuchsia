@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/audio/audio_output_manager.h"
+
 #include <string>
 
-#include "services/media/audio/audio_output.h"
-#include "services/media/audio/audio_output_manager.h"
-#include "services/media/audio/audio_server_impl.h"
-#include "services/media/audio/audio_track_to_output_link.h"
-#include "services/media/audio/platform/generic/throttle_output.h"
+#include "apps/media/services/audio/audio_output.h"
+#include "apps/media/services/audio/audio_server_impl.h"
+#include "apps/media/services/audio/audio_track_to_output_link.h"
+#include "apps/media/services/audio/platform/generic/throttle_output.h"
 
 namespace mojo {
 namespace media {

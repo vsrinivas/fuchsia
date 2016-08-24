@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_REFS_H_
-#define SERVICES_MEDIA_FRAMEWORK_REFS_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_REFS_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_REFS_H_
 
-#include <stdint.h>
+#include <cstddef>
 
 namespace mojo {
 namespace media {
@@ -159,4 +159,4 @@ class OutputRef {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_REFS_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_REFS_H_

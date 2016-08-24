@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
+#include "apps/media/services/media_service/network_reader_impl.h"
+
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/system/data_pipe.h"
-#include "services/media/factory_service/network_reader_impl.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_MODELS_ACTIVE_SINK_H_
-#define SERVICES_MEDIA_FRAMEWORK_MODELS_ACTIVE_SINK_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_MODELS_ACTIVE_SINK_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_MODELS_ACTIVE_SINK_H_
 
-#include "services/media/framework/models/demand.h"
-#include "services/media/framework/models/part.h"
-#include "services/media/framework/packet.h"
-#include "services/media/framework/payload_allocator.h"
+#include "apps/media/services/framework/models/demand.h"
+#include "apps/media/services/framework/models/part.h"
+#include "apps/media/services/framework/packet.h"
+#include "apps/media/services/framework/payload_allocator.h"
 
 namespace mojo {
 namespace media {
@@ -34,4 +34,4 @@ class ActiveSink : public Part {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_MODELS_ACTIVE_SINK_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_MODELS_ACTIVE_SINK_H_

@@ -6,8 +6,8 @@
 
 #include <atomic>
 
-#ifndef SERVICES_MEDIA_AUDIO_GAIN_H_
-#define SERVICES_MEDIA_AUDIO_GAIN_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_GAIN_H_
+#define APPS_MEDIA_SERVICES_AUDIO_GAIN_H_
 
 namespace mojo {
 namespace media {
@@ -66,4 +66,4 @@ class Gain {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_GAIN_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_GAIN_H_

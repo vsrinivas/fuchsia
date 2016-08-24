@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/audio/platform/generic/output_formatter.h"
+
 #include <limits>
 #include <type_traits>
 
-#include "base/logging.h"
-#include "mojo/services/media/common/cpp/linear_transform.h"
-#include "services/media/audio/platform/generic/output_formatter.h"
+#include "apps/media/cpp/linear_transform.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_AUDIO_PIPE_H_
-#define SERVICES_MEDIA_AUDIO_AUDIO_PIPE_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_AUDIO_PIPE_H_
+#define APPS_MEDIA_SERVICES_AUDIO_AUDIO_PIPE_H_
 
 #include <memory>
 
-#include "mojo/services/media/common/cpp/linear_transform.h"
-#include "mojo/services/media/common/cpp/media_packet_consumer_base.h"
-#include "mojo/services/media/core/interfaces/timeline_controller.mojom.h"
-#include "services/media/audio/fwd_decls.h"
+#include "apps/media/cpp/linear_transform.h"
+#include "apps/media/cpp/media_packet_consumer_base.h"
+#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/services/audio/fwd_decls.h"
 
 namespace mojo {
 namespace media {
@@ -103,4 +103,4 @@ class AudioPipe : public MediaPacketConsumerBase {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_AUDIO_PIPE_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_AUDIO_PIPE_H_

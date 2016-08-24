@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "services/media/framework/refs.h"
-#include "services/media/framework/stages/input.h"
-#include "services/media/framework/stages/output.h"
-#include "services/media/framework/stages/stage.h"
+#include "apps/media/services/framework/refs.h"
+
+#include "apps/media/services/framework/stages/input.h"
+#include "apps/media/services/framework/stages/output.h"
+#include "apps/media/services/framework/stages/stage.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/media/factory_service/factory_service.h"
+#include "apps/media/services/media_service/media_service_impl.h"
 
+#include "apps/media/cpp/flog.h"
+#include "apps/media/services/media_service/media_decoder_impl.h"
+#include "apps/media/services/media_service/media_demux_impl.h"
+#include "apps/media/services/media_service/media_player_impl.h"
+#include "apps/media/services/media_service/media_sink_impl.h"
+#include "apps/media/services/media_service/media_source_impl.h"
+#include "apps/media/services/media_service/media_timeline_controller_impl.h"
+//#include "apps/media/services/media_service/network_reader_impl.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/services/flog/cpp/flog.h"
-#include "services/media/factory_service/media_decoder_impl.h"
-#include "services/media/factory_service/media_demux_impl.h"
-#include "services/media/factory_service/media_player_impl.h"
-#include "services/media/factory_service/media_sink_impl.h"
-#include "services/media/factory_service/media_source_impl.h"
-#include "services/media/factory_service/media_timeline_controller_impl.h"
-#include "services/media/factory_service/network_reader_impl.h"
 
 namespace mojo {
 namespace media {

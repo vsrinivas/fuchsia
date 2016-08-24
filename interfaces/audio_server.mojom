@@ -5,8 +5,8 @@
 [DartPackage="mojo_services"]
 module mojo.media;
 
-import "mojo/services/media/audio/interfaces/audio_track.mojom";
-import "mojo/services/media/core/interfaces/media_renderer.mojom";
+import "apps/media/interfaces/audio_track.mojom";
+import "apps/media/interfaces/media_renderer.mojom";
 
 [ServiceName="mojo::media::AudioServer"]
 interface AudioServer {

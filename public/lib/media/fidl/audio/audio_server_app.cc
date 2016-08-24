@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "mojo/environment/scoped_chromium_init.h"
-#include "mojo/public/c/system/main.h"
+#include "apps/media/services/audio/audio_server_app.h"
+
+#include "apps/media/cpp/flog.h"
+#include "lib/ftl/logging.h"
+#include "mojo/public/c/include/mojo/system/main.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/services/flog/cpp/flog.h"
-#include "services/media/audio/audio_server_app.h"
 
 namespace mojo {
 namespace media {

@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_SINK_IMPL_H_
-#define SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_SINK_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_SINK_IMPL_H_
+#define APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_SINK_IMPL_H_
 
 #include <memory>
 
+#include "apps/media/cpp/flog.h"
+#include "apps/media/interfaces/logs/media_sink_channel.mojom.h"
+#include "apps/media/interfaces/media_sink.mojom.h"
+#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/services/framework/graph.h"
+#include "apps/media/services/framework/parts/decoder.h"
+#include "apps/media/services/framework_mojo/mojo_packet_consumer.h"
+#include "apps/media/services/framework_mojo/mojo_packet_producer.h"
+#include "apps/media/services/media_service/media_service_impl.h"
+#include "apps/media/services/common/incident.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/flog/cpp/flog.h"
-#include "mojo/services/media/control/interfaces/media_sink.mojom.h"
-#include "mojo/services/media/core/interfaces/timeline_controller.mojom.h"
-#include "mojo/services/media/logs/interfaces/media_sink_channel.mojom.h"
-#include "services/media/factory_service/factory_service.h"
-#include "services/media/framework/graph.h"
-#include "services/media/framework/parts/decoder.h"
-#include "services/media/framework_mojo/mojo_packet_consumer.h"
-#include "services/media/framework_mojo/mojo_packet_producer.h"
-#include "services/util/cpp/incident.h"
 
 namespace mojo {
 namespace media {
@@ -63,4 +63,4 @@ class MediaSinkImpl : public MediaFactoryService::Product<MediaSink>,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FACTORY_SERVICE_MEDIA_SINK_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_MEDIA_SERVICE_MEDIA_SINK_IMPL_H_

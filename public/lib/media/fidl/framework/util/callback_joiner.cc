@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/media/framework/util/callback_joiner.h"
+#include "apps/media/services/framework/util/callback_joiner.h"
 
 namespace mojo {
 namespace media {

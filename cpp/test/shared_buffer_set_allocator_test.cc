@@ -4,8 +4,8 @@
 
 #include <vector>
 
+#include "apps/media/cpp/shared_buffer_set_allocator.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/services/media/common/cpp/shared_buffer_set_allocator.h"
 
 namespace mojo {
 namespace media {

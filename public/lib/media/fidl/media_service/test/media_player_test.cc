@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/run_loop.h"
+#include "apps/media/interfaces/media_service.mojom.h"
+#include "apps/media/services/framework_mojo/mojo_formatting.h"
+#include "apps/media/services/media_service/test/fake_renderer.h"
+#include "apps/media/services/media_service/test/fake_wav_reader.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/services/media/control/interfaces/media_factory.mojom.h"
-#include "services/media/factory_service/test/fake_renderer.h"
-#include "services/media/factory_service/test/fake_wav_reader.h"
-#include "services/media/framework_mojo/mojo_formatting.h"
+#include "mojo/public/cpp/application/connect.h"
 
 namespace mojo {
 namespace media {

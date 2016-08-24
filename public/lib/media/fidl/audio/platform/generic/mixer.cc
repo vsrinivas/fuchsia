@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "mojo/services/media/common/cpp/linear_transform.h"
-#include "services/media/audio/platform/generic/mixer.h"
-#include "services/media/audio/platform/generic/mixers/linear_sampler.h"
-#include "services/media/audio/platform/generic/mixers/no_op.h"
-#include "services/media/audio/platform/generic/mixers/point_sampler.h"
+#include "apps/media/services/audio/platform/generic/mixer.h"
+
+#include "apps/media/cpp/linear_transform.h"
+#include "apps/media/services/audio/platform/generic/mixers/linear_sampler.h"
+#include "apps/media/services/audio/platform/generic/mixers/no_op.h"
+#include "apps/media/services/audio/platform/generic/mixers/point_sampler.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

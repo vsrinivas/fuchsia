@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "services/media/framework/stages/stage.h"
+#include "apps/media/services/framework/stages/stage.h"
+
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

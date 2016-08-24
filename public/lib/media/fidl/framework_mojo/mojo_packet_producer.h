@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_PACKET_PRODUCER_H_
-#define SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_PACKET_PRODUCER_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_PACKET_PRODUCER_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_PACKET_PRODUCER_H_
 
-#include "base/single_thread_task_runner.h"
+#include "apps/media/cpp/media_packet_producer_base.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/services/framework/models/active_sink.h"
+#include "apps/media/services/framework/payload_allocator.h"
+#include "lib/ftl/tasks/task_runner.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/media/common/cpp/media_packet_producer_base.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "services/media/framework/models/active_sink.h"
-#include "services/media/framework/payload_allocator.h"
 
 namespace mojo {
 namespace media {
@@ -85,4 +85,4 @@ class MojoPacketProducer : private MediaPacketProducerBase,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_MOJO_MOJO_PACKET_PRODUCER_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_MOJO_MOJO_PACKET_PRODUCER_H_

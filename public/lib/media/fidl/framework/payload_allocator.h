@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_PAYLOAD_ALLOCATOR_H_
-#define SERVICES_MEDIA_FRAMEWORK_PAYLOAD_ALLOCATOR_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_PAYLOAD_ALLOCATOR_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_PAYLOAD_ALLOCATOR_H_
 
 #include <stddef.h>
 
@@ -27,4 +27,4 @@ class PayloadAllocator {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_PAYLOAD_ALLOCATOR_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_PAYLOAD_ALLOCATOR_H_

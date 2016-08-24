@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_PARTS_SPARSE_BYTE_BUFFER_H_
-#define SERVICES_MEDIA_FRAMEWORK_PARTS_SPARSE_BYTE_BUFFER_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_SPARSE_BYTE_BUFFER_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_SPARSE_BYTE_BUFFER_H_
 
 #include <map>
 #include <vector>
@@ -104,4 +104,4 @@ bool operator!=(const SparseByteBuffer::Region& a,
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_PARTS_SPARSE_BYTE_BUFFER_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_SPARSE_BYTE_BUFFER_H_

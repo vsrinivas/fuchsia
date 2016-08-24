@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_MEDIA_COMMON_CPP_THREAD_CHECKER_H_
-#define MOJO_SERVICES_MEDIA_COMMON_CPP_THREAD_CHECKER_H_
+#ifndef APPS_MEDIA_CPP_THREAD_CHECKER_H_
+#define APPS_MEDIA_CPP_THREAD_CHECKER_H_
 
 #if defined(NDEBUG)
 
@@ -22,4 +22,4 @@
 
 #endif
 
-#endif  // MOJO_SERVICES_MEDIA_COMMON_CPP_THREAD_CHECKER_H_
+#endif  // APPS_MEDIA_CPP_THREAD_CHECKER_H_

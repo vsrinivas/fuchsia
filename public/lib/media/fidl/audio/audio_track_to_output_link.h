@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_AUDIO_TRACK_TO_OUTPUT_LINK_H_
-#define SERVICES_MEDIA_AUDIO_AUDIO_TRACK_TO_OUTPUT_LINK_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_AUDIO_TRACK_TO_OUTPUT_LINK_H_
+#define APPS_MEDIA_SERVICES_AUDIO_AUDIO_TRACK_TO_OUTPUT_LINK_H_
 
 #include <deque>
 #include <memory>
 
-#include "base/synchronization/lock.h"
-#include "services/media/audio/audio_pipe.h"
-#include "services/media/audio/fwd_decls.h"
-#include "services/media/audio/gain.h"
+#include "apps/media/services/audio/audio_pipe.h"
+#include "apps/media/services/audio/fwd_decls.h"
+#include "apps/media/services/audio/gain.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace mojo {
 namespace media {
@@ -135,4 +136,4 @@ class AudioTrackToOutputLink {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_AUDIO_TRACK_TO_OUTPUT_LINK_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_AUDIO_TRACK_TO_OUTPUT_LINK_H_

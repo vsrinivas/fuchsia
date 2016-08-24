@@ -4,8 +4,8 @@
 
 #include <limits>
 
+#include "apps/media/cpp/timeline_rate.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/services/media/common/cpp/timeline_rate.h"
 
 namespace mojo {
 namespace media {

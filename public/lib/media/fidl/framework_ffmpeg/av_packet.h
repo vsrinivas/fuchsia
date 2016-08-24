@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_PACKET_H_
-#define SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_PACKET_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_PACKET_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_PACKET_H_
 
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
@@ -15,7 +15,7 @@ namespace media {
 namespace ffmpeg {
 
 struct AVPacketDeleter {
-  inline void operator()(AVPacket* ptr) const { av_free_packet(ptr); }
+  inline void operator()(AVPacket* ptr) const { av_packet_unref(ptr); }
 };
 
 using AvPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
@@ -32,4 +32,4 @@ struct AvPacket {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_FFMPEG_AV_PACKET_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_FFMPEG_AV_PACKET_H_

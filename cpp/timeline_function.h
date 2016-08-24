@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_MEDIA_COMMON_CPP_TIMELINE_FUNCTION_H_
-#define MOJO_SERVICES_MEDIA_COMMON_CPP_TIMELINE_FUNCTION_H_
+#ifndef APPS_MEDIA_CPP_TIMELINE_FUNCTION_H_
+#define APPS_MEDIA_CPP_TIMELINE_FUNCTION_H_
 
+#include "apps/media/cpp/timeline_rate.h"
+#include "apps/media/interfaces/timelines.mojom.h"
 #include "mojo/public/cpp/bindings/type_converter.h"
 #include "mojo/public/cpp/environment/logging.h"
 #include "mojo/services/media/common/cpp/timeline_rate.h"
@@ -145,4 +147,4 @@ struct TypeConverter<media::TimelineFunction, TimelineTransformPtr> {
 
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_MEDIA_COMMON_CPP_TIMELINE_FUNCTION_H_
+#endif  // APPS_MEDIA_CPP_TIMELINE_FUNCTION_H_

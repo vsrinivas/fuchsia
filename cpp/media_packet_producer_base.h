@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_MEDIA_COMMON_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
-#define MOJO_SERVICES_MEDIA_COMMON_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
+#ifndef APPS_MEDIA_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
+#define APPS_MEDIA_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
 
 #include <limits>
 #include <mutex>
 
-#include "mojo/services/flog/cpp/flog.h"
-#include "mojo/services/media/common/cpp/shared_buffer_set_allocator.h"
-#include "mojo/services/media/common/cpp/thread_checker.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "mojo/services/media/logs/interfaces/media_packet_producer_channel.mojom.h"
+#include "apps/media/cpp/flog.h"
+#include "apps/media/cpp/shared_buffer_set_allocator.h"
+#include "apps/media/cpp/thread_checker.h"
+#include "apps/media/interfaces/logs/media_packet_producer_channel.mojom.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
 
 namespace mojo {
 namespace media {
@@ -109,4 +109,4 @@ class MediaPacketProducerBase {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_MEDIA_COMMON_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
+#endif  // APPS_MEDIA_CPP_MEDIA_PACKET_PRODUCER_BASE_H_

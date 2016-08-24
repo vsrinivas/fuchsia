@@ -5,7 +5,7 @@
 [DartPackage="mojo_services"]
 module mojo.media;
 
-import "mojo/services/media/common/interfaces/timelines.mojom";
+import "apps/media/interfaces/timelines.mojom";
 
 // Timing controller for a media graph.
 interface MediaTimelineController {

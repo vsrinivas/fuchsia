@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_
-#define SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_
+#define APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_
 
-#include "base/callback.h"
-#include "mojo/services/media/common/cpp/linear_transform.h"
-#include "mojo/services/media/common/cpp/local_time.h"
-#include "mojo/services/media/common/interfaces/media_common.mojom.h"
-#include "mojo/services/media/common/interfaces/media_types.mojom.h"
-#include "services/media/audio/audio_output.h"
-#include "services/media/audio/audio_track_to_output_link.h"
-#include "services/media/audio/gain.h"
-#include "services/media/audio/platform/generic/mixer.h"
-#include "services/media/audio/platform/generic/output_formatter.h"
+#include "apps/media/cpp/linear_transform.h"
+#include "apps/media/cpp/local_time.h"
+#include "apps/media/interfaces/media_common.mojom.h"
+#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/services/audio/audio_output.h"
+#include "apps/media/services/audio/audio_track_to_output_link.h"
+#include "apps/media/services/audio/gain.h"
+#include "apps/media/services/audio/platform/generic/mixer.h"
+#include "apps/media/services/audio/platform/generic/output_formatter.h"
 
 namespace mojo {
 namespace media {
@@ -133,4 +132,4 @@ class StandardOutputBase : public AudioOutput {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_

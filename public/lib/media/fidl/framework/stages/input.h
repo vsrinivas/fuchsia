@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_STAGES_INPUT_H_
-#define SERVICES_MEDIA_FRAMEWORK_STAGES_INPUT_H_
+#ifndef APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_INPUT_H_
+#define APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_INPUT_H_
 
-#include "services/media/framework/models/demand.h"
-#include "services/media/framework/packet.h"
-#include "services/media/framework/refs.h"
+#include "apps/media/services/framework/models/demand.h"
+#include "apps/media/services/framework/packet.h"
+#include "apps/media/services/framework/refs.h"
 
 namespace mojo {
 namespace media {
@@ -70,4 +70,4 @@ class Input {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_STAGES_INPUT_H_
+#endif  // APPS_MEDIA_SERVICES_FRAMEWORK_STAGES_INPUT_H_

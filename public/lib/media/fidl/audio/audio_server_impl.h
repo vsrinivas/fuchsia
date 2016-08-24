@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_AUDIO_AUDIO_SERVER_IMPL_H_
-#define SERVICES_MEDIA_AUDIO_AUDIO_SERVER_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_AUDIO_AUDIO_SERVER_IMPL_H_
+#define APPS_MEDIA_SERVICES_AUDIO_AUDIO_SERVER_IMPL_H_
 
 #include <list>
 #include <set>
 
-#include "base/callback.h"
-#include "base/synchronization/lock.h"
-#include "base/task_runner.h"
-#include "mojo/services/media/audio/interfaces/audio_server.mojom.h"
-#include "mojo/services/media/audio/interfaces/audio_track.mojom.h"
-#include "services/media/audio/audio_output_manager.h"
-#include "services/media/audio/fwd_decls.h"
+#include "apps/media/interfaces/audio_server.mojom.h"
+#include "apps/media/interfaces/audio_track.mojom.h"
+#include "apps/media/services/audio/audio_output_manager.h"
+#include "apps/media/services/audio/fwd_decls.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace mojo {
 namespace media {
@@ -92,4 +91,4 @@ class AudioServerImpl : public AudioServer {
 }  // namespace media
 }  // namespace mojo
 
-#endif  // SERVICES_MEDIA_AUDIO_AUDIO_SERVER_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_AUDIO_AUDIO_SERVER_IMPL_H_

@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
+#include "apps/media/services/media_service/media_player_impl.h"
+
+#include "apps/media/cpp/timeline.h"
+#include "apps/media/services/framework/parts/reader.h"
+#include "apps/media/services/framework/util/callback_joiner.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/connect.h"
-#include "mojo/services/media/common/cpp/timeline.h"
-#include "services/media/factory_service/media_player_impl.h"
-#include "services/media/framework/parts/reader.h"
-#include "services/media/framework/util/callback_joiner.h"
 
 namespace mojo {
 namespace media {

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FACTORY_SERVICE_TEST_FAKE_RENDERER_H_
-#define SERVICES_MEDIA_FACTORY_SERVICE_TEST_FAKE_RENDERER_H_
+#ifndef APPS_MEDIA_SERVICES_MEDIA_SERVICE_TEST_FAKE_RENDERER_H_
+#define APPS_MEDIA_SERVICES_MEDIA_SERVICE_TEST_FAKE_RENDERER_H_
 
 #include <memory>
 #include <queue>
 #include <vector>
 
+#include "apps/media/cpp/media_packet_consumer_base.h"
+#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/interfaces/media_renderer.mojom.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/media/common/cpp/media_packet_consumer_base.h"
-#include "mojo/services/media/common/cpp/timeline_function.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "mojo/services/media/core/interfaces/media_renderer.mojom.h"
 
 namespace mojo {
 namespace media {
@@ -138,4 +138,4 @@ class FakeRenderer : public MediaPacketConsumerBase,
 }  // namespace media
 }  // namespace moj
 
-#endif  // SERVICES_MEDIA_FACTORY_SERVICE_TEST_FAKE_RENDERER_H_
+#endif  // APPS_MEDIA_SERVICES_MEDIA_SERVICE_TEST_FAKE_RENDERER_H_

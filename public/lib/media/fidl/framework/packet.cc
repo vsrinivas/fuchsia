@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "services/media/framework/packet.h"
-#include "services/media/framework/payload_allocator.h"
+#include "apps/media/services/framework/packet.h"
+
+#include "apps/media/services/framework/payload_allocator.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {

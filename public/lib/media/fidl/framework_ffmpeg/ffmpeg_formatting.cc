@@ -4,7 +4,8 @@
 
 #include <ostream>
 
-#include "services/media/framework_ffmpeg/ffmpeg_formatting.h"
+#include "apps/media/services/framework_ffmpeg/ffmpeg_formatting.h"
+
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 #include "third_party/ffmpeg/libavformat/internal.h"
