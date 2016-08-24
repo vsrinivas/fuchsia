@@ -37,13 +37,29 @@ $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODU
 # Only update the .so.abi file if it's changed, so things don't need
 # to be relinked if the ABI didn't change.
 $(MODULE_LIBNAME).so.abi: $(MODULE_LIBNAME).abi.stamp ;
+
+# Link the ABI stub against the same DSOs the real library uses, so the
+# stub gets DT_NEEDED entries.  These are not strictly part of the ABI.
+# But at link time, the linker pays attention to them if the DSO has any
+# undefined symbols.  In some situations, the presence of the undefined
+# symbols actually is part of the ABI, so we can't omit them from the
+# stub.  Since they're there, the linker will want to believe that some
+# other DSO supplies them.  The old GNU linker actually looks for the
+# named DSOs (via -rpath-link) and checks their symbols.  Gold simply
+# notices if any DSO directly included in the link has a DT_NEEDED for
+# another DSO that is not directly included in the link, and in that
+# case doesn't complain about undefined symbols in the directly-included
+# DSO.  LLD never complains about undefined symbols in a DSO included in
+# the link, so if it were the only linker we would not add these
+# DT_NEEDEDs at all.
 $(MODULE_LIBNAME).abi.stamp: _SONAME := lib$(MODULE_SO_NAME).so
-$(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_LIBNAME).abi.h \
-			     scripts/shlib-symbols
+$(MODULE_LIBNAME).abi.stamp: _LIBS := $(MODULE_SOLIBS)
+$(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_SOLIBS) \
+			     $(MODULE_LIBNAME).abi.h scripts/shlib-symbols
 	@echo generating ABI stub $(@:.abi.stamp=.so.abi)
 	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) --no-gc-sections \
 		       -shared -soname $(_SONAME) -s \
-		       $< -o $(@:.abi.stamp=.so.abi).new
+		       $< $(_LIBS) -o $(@:.abi.stamp=.so.abi).new
 # Sanity check that the ABI stub really matches the actual DSO.
 	$(NOECHO)scripts/shlib-symbols '$(NM)' $(@:.abi.stamp=.so.abi).new | \
 	diff -U0 $(<:.o=.h) -
