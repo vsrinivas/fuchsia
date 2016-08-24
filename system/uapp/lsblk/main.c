@@ -41,17 +41,17 @@ static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
 }
 
 static const char* guid_to_type(char* guid) {
-    if (!strcmp("FE3A2A5D-4F32-41A7-25B7-09A38532CCAC", guid)) {
+    if (!strcmp("FE3A2A5D-4F32-41A7-B725-ACCC3285A309", guid)) {
         return "cros kernel";
-    } else if (!strcmp("3CB8E202-3B7E-47DD-3C8A-ECFC3CA1F27F", guid)) {
+    } else if (!strcmp("3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC", guid)) {
         return "cros rootfs";
-    } else if (!strcmp("2E0A753D-9E48-43B0-3783-5E1BCB9251B1", guid)) {
+    } else if (!strcmp("2E0A753D-9E48-43B0-8337-B15192CB1B5E", guid)) {
         return "cros reserved";
-    } else if (!strcmp("CAB6E88E-ABF3-4102-7AA0-D3C1E39BBBD4", guid)) {
+    } else if (!strcmp("CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3", guid)) {
         return "cros firmware";
-    } else if (!strcmp("C12A7328-F81F-11D2-4BBA-3BC93EC9A000", guid)) {
+    } else if (!strcmp("C12A7328-F81F-11D2-BA4B-00A0C93EC93B", guid)) {
         return "efi system";
-    } else if (!strcmp("EBD0A0A2-B9E5-4433-C087-C79926B7B668", guid)) {
+    } else if (!strcmp("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", guid)) {
         return "data";
     } else {
         return "unknown";

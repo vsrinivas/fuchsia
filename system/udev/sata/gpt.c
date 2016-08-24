@@ -41,8 +41,16 @@ typedef struct gptpart_device {
 
 #define get_gptpart_device(dev) containerof(dev, gptpart_device_t, device)
 
+struct guid {
+    uint32_t data1;
+    uint16_t data2;
+    uint16_t data3;
+    uint8_t data4[8];
+};
+
 static void uint8_to_guid_string(char* dst, uint8_t* src) {
-    sprintf(dst, "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", src[3], src[2], src[1], src[0], src[5], src[4], src[7], src[6], src[9], src[8], src[15], src[14], src[13], src[12], src[11], src[10]);
+    struct guid* guid = (struct guid*)src;
+    sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2, guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3], guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
 }
 
 static void utf16_to_cstring(char* dst, uint8_t* src, size_t count) {
