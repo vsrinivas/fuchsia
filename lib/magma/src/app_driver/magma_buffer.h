@@ -57,7 +57,7 @@ public:
 
     class CommandBuffer {
     public:
-        CommandBuffer(uint32_t batch_buffer_handle, std::set<MagmaBuffer*>& resources);
+        CommandBuffer(uint32_t batch_buffer_resource_index, std::set<MagmaBuffer*>& resources);
         ~CommandBuffer();
         magma_system_command_buffer* abi_cmd_buf() { return cmd_buf_; }
     private:
@@ -67,7 +67,8 @@ public:
     std::unique_ptr<CommandBuffer> PrepareForExecution();
 
 private:
-    void GetAbiExecResource(magma_system_exec_resource* abi_res_out,
+    void GetAbiExecResource(std::set<MagmaBuffer*>& resources,
+                            magma_system_exec_resource* abi_res_out,
                             magma_system_relocation_entry* relocations_out);
     void GenerateExecResourceSet(std::set<MagmaBuffer*>& resources);
 
@@ -101,7 +102,8 @@ private:
         void GetAbiRelocationEntry(magma_system_relocation_entry* abi_reloc_out)
         {
             abi_reloc_out->offset = offset_;
-            abi_reloc_out->target_buffer_handle = target_->handle;
+            // We'll overwrite this correctly later
+            abi_reloc_out->target_resource_index = kInvalidResourceIndex;
             abi_reloc_out->target_offset = target_offset_;
             abi_reloc_out->read_domains_bitfield = read_domains_bitfield_;
             abi_reloc_out->write_domains_bitfield = write_domains_bitfield_;
@@ -125,6 +127,7 @@ private:
 
     uint32_t tiling_mode_ = MAGMA_TILING_MODE_NONE;
 
+    static const uint32_t kInvalidResourceIndex = UINT32_MAX;
     static const uint32_t kMagic = 0x62756666; //"buff"
 
     friend class TestMagmaBuffer;

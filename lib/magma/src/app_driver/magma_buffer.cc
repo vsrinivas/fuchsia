@@ -83,15 +83,22 @@ void MagmaBuffer::EmitRelocation(uint32_t offset, MagmaBuffer* target, uint32_t 
                               write_domains_bitfield);
 }
 
-void MagmaBuffer::GetAbiExecResource(magma_system_exec_resource* abi_res_out,
+void MagmaBuffer::GetAbiExecResource(std::set<MagmaBuffer*>& resources,
+                                     magma_system_exec_resource* abi_res_out,
                                      magma_system_relocation_entry* relocations_out)
 {
     abi_res_out->buffer_handle = handle;
+
     abi_res_out->num_relocations = relocations_.size();
     abi_res_out->relocations = relocations_out;
     uint32_t i = 0;
-    for (auto relocation : relocations_)
-        relocation.GetAbiRelocationEntry(&abi_res_out->relocations[i++]);
+    for (auto relocation : relocations_) {
+        auto abi_reloc = &abi_res_out->relocations[i++];
+        relocation.GetAbiRelocationEntry(abi_reloc);
+        auto iter = resources.find(relocation.target());
+        DASSERT(iter != resources.end());
+        abi_reloc->target_resource_index = std::distance(resources.begin(), iter);
+    }
 }
 
 void MagmaBuffer::GenerateExecResourceSet(std::set<MagmaBuffer*>& resources)
@@ -110,22 +117,25 @@ std::unique_ptr<MagmaBuffer::CommandBuffer> MagmaBuffer::PrepareForExecution()
 {
     std::set<MagmaBuffer*> resources;
     GenerateExecResourceSet(resources);
-    return std::unique_ptr<CommandBuffer>(new CommandBuffer(handle, resources));
+    DASSERT(resources.find(this) == resources.begin()); // to make sure the next line is correct
+    uint32_t res_index = 0;
+
+    return std::unique_ptr<CommandBuffer>(new CommandBuffer(res_index, resources));
 }
 
 // we do all the memory allocations here so that we have the option of allocating contiguous
 // memory if needed for IPC
-MagmaBuffer::CommandBuffer::CommandBuffer(uint32_t batch_buffer_handle,
+MagmaBuffer::CommandBuffer::CommandBuffer(uint32_t batch_buffer_resource_index,
                                           std::set<MagmaBuffer*>& resources)
 {
     cmd_buf_ = new magma_system_command_buffer();
-    cmd_buf_->batch_buffer_handle = batch_buffer_handle;
+    cmd_buf_->batch_buffer_resource_index = batch_buffer_resource_index;
     cmd_buf_->num_resources = resources.size();
     cmd_buf_->resources = new magma_system_exec_resource[resources.size()];
     uint32_t i = 0;
     for (auto resource : resources) {
         auto relocations = new magma_system_relocation_entry[resource->RelocationCount()];
-        resource->GetAbiExecResource(&cmd_buf_->resources[i++], relocations);
+        resource->GetAbiExecResource(resources, &cmd_buf_->resources[i++], relocations);
     }
 }
 MagmaBuffer::CommandBuffer::~CommandBuffer()

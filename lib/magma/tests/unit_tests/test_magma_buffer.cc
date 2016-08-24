@@ -54,12 +54,10 @@ public:
         auto cmd_buf = buf0->PrepareForExecution();
         auto abi_cmd_buf = cmd_buf->abi_cmd_buf();
 
-        EXPECT_EQ(abi_cmd_buf->batch_buffer_handle, buf0->handle);
+        EXPECT_EQ(abi_cmd_buf->batch_buffer_resource_index, 0u);
         EXPECT_EQ(abi_cmd_buf->num_resources, 2u);
-        EXPECT_TRUE((abi_cmd_buf->resources[0].buffer_handle == buf0->handle) ||
-                    (abi_cmd_buf->resources[0].buffer_handle == buf1->handle));
-        EXPECT_TRUE((abi_cmd_buf->resources[1].buffer_handle == buf0->handle) ||
-                    (abi_cmd_buf->resources[1].buffer_handle == buf1->handle));
+        EXPECT_TRUE((abi_cmd_buf->resources[0].buffer_handle == buf0->handle));
+        EXPECT_TRUE((abi_cmd_buf->resources[1].buffer_handle == buf1->handle));
     }
 
     static void TestGetAbiExecResource(MagmaConnection* connection)
@@ -77,13 +75,16 @@ public:
         ASSERT_EQ(
             magma_bo_emit_reloc(buf0, offset, buf1, target_offset, read_domains, write_domain), 0);
 
+        std::set<MagmaBuffer*> resource_set;
+        resource_set.insert(buf0);
+        resource_set.insert(buf1);
         magma_system_exec_resource resource;
-        buf0->GetAbiExecResource(&resource,
+        buf0->GetAbiExecResource(resource_set, &resource,
                                  new magma_system_relocation_entry[buf0->RelocationCount()]);
         EXPECT_EQ(resource.buffer_handle, buf0->handle);
         EXPECT_EQ(resource.num_relocations, 1u);
         EXPECT_EQ(resource.relocations[0].offset, offset);
-        EXPECT_EQ(resource.relocations[0].target_buffer_handle, buf1->handle);
+        EXPECT_EQ(resource.relocations[0].target_resource_index, 0u);
         EXPECT_EQ(resource.relocations[0].target_offset, target_offset);
         EXPECT_EQ(resource.relocations[0].read_domains_bitfield, read_domains);
         EXPECT_EQ(resource.relocations[0].write_domains_bitfield, write_domain);
