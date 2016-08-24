@@ -34,7 +34,7 @@ typedef struct {
 
     usb_device_protocol_t* usb;
     usb_endpoint_t* endpt;
-    usb_request_t* req;
+    iotxn_t* txn;
 
     uint32_t flags;
     uint8_t proto;

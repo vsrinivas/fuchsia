@@ -26,29 +26,30 @@
 
 #define to_hid_dev(d) containerof(d, usb_hid_dev_t, dev)
 
-static void usb_interrupt_callback(usb_request_t* request) {
-    usb_hid_dev_t* hid = (usb_hid_dev_t*)request->client_data;
+static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
+    usb_hid_dev_t* hid = (usb_hid_dev_t*)cookie;
 #ifdef USB_HID_DEBUG
-    printf("usb-hid: callback request status %d\n", request->status);
-    hexdump(request->buffer, request->transfer_length);
+    printf("usb-hid: callback request status %d\n", txn->status);
+    hexdump(request->buffer, txn->actual);
 #endif
+    void* buffer;
 
     bool requeue = true;
-    switch (request->status) {
+    switch (txn->status) {
     case ERR_CHANNEL_CLOSED:
         usb_hid_process_closed(hid);
         requeue = false;
         break;
     case NO_ERROR:
-        usb_hid_process_req(hid, request->buffer, request->transfer_length);
+        txn->ops->mmap(txn, &buffer);
+        usb_hid_process_req(hid, buffer, txn->actual);
         break;
     default:
         break;
     }
 
     if (requeue) {
-        request->transfer_length = request->buffer_length;
-        hid->usb->queue_request(hid->usbdev, request);
+        iotxn_queue(hid->usbdev, txn);
     }
 }
 
@@ -157,13 +158,13 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
             }
         }
 
-        hid->req = hid->usb->alloc_request(hid->usbdev, hid->endpt, hid->endpt->maxpacketsize);
-        if (hid->req == NULL) {
+        hid->txn = usb_alloc_iotxn(hid->endpt->descriptor, hid->endpt->maxpacketsize, 0);
+        if (hid->txn == NULL) {
             usb_hid_cleanup_dev(hid);
             return ERR_NO_MEMORY;
         }
-        hid->req->complete_cb = usb_interrupt_callback;
-        hid->req->client_data = hid;
+        hid->txn->complete_cb = usb_interrupt_callback;
+        hid->txn->cookie = hid;
 
         usb_class_descriptor_t* class_desc = NULL;
         list_for_every_entry(&intf->class_descriptors, class_desc,
@@ -192,8 +193,8 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
         usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
                 USB_HID_SET_IDLE, 0, i, NULL, 0);
 
-        hid->req->transfer_length = hid->req->buffer_length;
-        hid->usb->queue_request(hid->usbdev, hid->req);
+        hid->txn->length = hid->endpt->maxpacketsize;
+        iotxn_queue(hid->usbdev, hid->txn);
     }
 
     return NO_ERROR;

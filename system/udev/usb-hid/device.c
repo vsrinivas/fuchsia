@@ -202,8 +202,8 @@ void usb_hid_cleanup_dev(usb_hid_dev_t* hid) {
     }
     mtx_unlock(&hid->instance_lock);
 
-    if (hid->req) {
-        hid->usb->free_request(hid->usbdev, hid->req);
+    if (hid->txn) {
+        hid->txn->ops->release(hid->txn);
     }
     if (hid->hid_report_desc) {
         free((void*)hid->hid_report_desc);
