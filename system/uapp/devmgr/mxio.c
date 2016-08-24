@@ -134,7 +134,7 @@ static unsigned int setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     uint64_t size;
     mx_status_t status = mx_vm_object_get_size(vmo, &size);
     if (status != NO_ERROR) {
-        cprintf("devmgr: failed to get bootfs #%u size (%d)\n", n, status);
+        printf("devmgr: failed to get bootfs #%u size (%d)\n", n, status);
         return 0;
     }
     if (size == 0)
@@ -142,7 +142,7 @@ static unsigned int setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     mx_vaddr_t addr;
     status = mx_process_vm_map(0, vmo, 0, size, &addr, MX_VM_FLAG_PERM_READ);
     if (status != NO_ERROR) {
-        cprintf("devmgr: failed to map bootfs #%u (%d)\n", n, status);
+        printf("devmgr: failed to map bootfs #%u (%d)\n", n, status);
         return 0;
     }
     struct callback_data cd = {

@@ -273,7 +273,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
             return ERR_INVALID_ARGS;
         }
         path[len] = 0;
-        xprintf("vfs: open name='%s' flags=%d mode=%lld\n", path, arg, msg->arg2.mode);
+        xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
         return _vfs_open(msg, rh, vn, path, arg, msg->arg2.mode);
     }
     case MXRIO_CLOSE:

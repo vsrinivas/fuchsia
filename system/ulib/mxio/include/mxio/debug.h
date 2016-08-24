@@ -9,14 +9,11 @@
 
 __BEGIN_CDECLS
 
-// raw console printf, to go away before long
-void cprintf(const char* fmt, ...);
-
 // per-file chatty debug macro
 #define xprintf(fmt...)   \
     do {                  \
         if (MXDEBUG) {    \
-            cprintf(fmt); \
+            printf(fmt); \
         }                 \
     } while (0)
 

@@ -10,7 +10,6 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
-    $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/dispatcher-v2.c \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/null.c \
