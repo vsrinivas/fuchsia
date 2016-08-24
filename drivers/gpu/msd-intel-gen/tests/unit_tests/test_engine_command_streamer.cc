@@ -3,33 +3,60 @@
 // found in the LICENSE file.
 
 #include "engine_command_streamer.h"
+#include "mock/mock_address_space.h"
+#include "mock/mock_mmio.h"
+#include "render_init_batch.h"
 #include "gtest/gtest.h"
 
 class TestContext {
 public:
-    static MsdIntelBuffer* get_buffer(MsdIntelContext* context, EngineCommandStreamerId id)
+    static MsdIntelBuffer* get_context_buffer(MsdIntelContext* context, EngineCommandStreamerId id)
     {
-        return context->get_buffer(id);
+        return context->get_context_buffer(id);
     }
 };
 
-namespace {
-
-class Device {
+class MockStatusPageBuffer {
 public:
-    void Init()
+    MockStatusPageBuffer()
     {
-        context_ = std::unique_ptr<MsdIntelContext>(new MsdIntelContext());
-        render_cs_ =
-            std::unique_ptr<RenderEngineCommandStreamer>(new RenderEngineCommandStreamer());
+        cpu_addr = malloc(PAGE_SIZE);
+        gpu_addr = 0x10000;
+    }
 
-        auto buffer = TestContext::get_buffer(context_.get(), RENDER_COMMAND_STREAMER);
+    ~MockStatusPageBuffer() { free(cpu_addr); }
+
+    void* cpu_addr;
+    gpu_addr_t gpu_addr;
+};
+
+class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
+                                  public ClientContext::Owner,
+                                  public HardwareStatusPage::Owner {
+public:
+    TestEngineCommandStreamer()
+    {
+        register_io_ =
+            std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(8 * 1024 * 1024)));
+
+        context_ = std::unique_ptr<MsdIntelContext>(new ClientContext(this));
+
+        status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
+
+        address_space_ = std::unique_ptr<AddressSpace>(new MockAddressSpace(0, PAGE_SIZE));
+
+        engine_cs_ = RenderEngineCommandStreamer::Create(this, address_space_.get());
+    }
+
+    void InitContext()
+    {
+        auto buffer = TestContext::get_context_buffer(context_.get(), RENDER_COMMAND_STREAMER);
         EXPECT_EQ(buffer, nullptr);
 
-        bool ret = render_cs_->InitContext(context_.get());
+        bool ret = engine_cs_->InitContext(context_.get());
         EXPECT_TRUE(ret);
 
-        buffer = TestContext::get_buffer(context_.get(), RENDER_COMMAND_STREAMER);
+        buffer = TestContext::get_context_buffer(context_.get(), RENDER_COMMAND_STREAMER);
         EXPECT_NE(buffer, nullptr);
         EXPECT_EQ(buffer->platform_buffer()->size(), PAGE_SIZE * 20ul);
 
@@ -92,17 +119,76 @@ public:
         EXPECT_EQ(state[0x43], 0ul);
     }
 
+    void InitHardware()
+    {
+        auto status_page =
+            std::unique_ptr<HardwareStatusPage>(new HardwareStatusPage(this, engine_cs_->id()));
+
+        uint32_t offset =
+            engine_cs_->mmio_base() + EngineCommandStreamer::HardwareStatusPageAddress::kOffset;
+
+        register_io()->Write32(offset, 0);
+
+        engine_cs_->InitHardware(status_page.get());
+
+        EXPECT_EQ(register_io()->Read32(offset), status_page_->gpu_addr);
+    }
+
+    void RenderInit()
+    {
+        ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
+        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+
+        auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
+
+        EXPECT_EQ(ringbuffer->tail(), 0u);
+
+        EXPECT_TRUE(render_cs->RenderInit(context_.get()));
+
+        EXPECT_EQ(ringbuffer->tail(), 0x24u);
+
+        // Consider validating the content of the ring buffer here.
+    }
+
 private:
-    std::unique_ptr<RenderEngineCommandStreamer> render_cs_;
+    RegisterIo* register_io() override
+    {
+        return register_io_.get();
+    }
+
+    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
+    {
+        DASSERT(false);
+        return nullptr;
+    }
+
+    void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override
+    {
+        EXPECT_EQ(id, engine_cs_->id());
+        return status_page_->cpu_addr;
+    }
+
+    gpu_addr_t hardware_status_page_gpu_addr(EngineCommandStreamerId id) override
+    {
+        EXPECT_EQ(id, engine_cs_->id());
+        return status_page_->gpu_addr;
+    }
+
+    std::unique_ptr<RegisterIo> register_io_;
+    std::unique_ptr<AddressSpace> address_space_;
     std::unique_ptr<MsdIntelContext> context_;
+    std::unique_ptr<MockStatusPageBuffer> status_page_;
+    std::unique_ptr<EngineCommandStreamer> engine_cs_;
 };
 
-} // namespace
-
-TEST(RenderEngineCommandStreamer, Init)
+TEST(RenderEngineCommandStreamer, InitContext)
 {
-    {
-        Device device;
-        device.Init();
-    }
+    TestEngineCommandStreamer test;
+    test.InitContext();
+}
+
+TEST(RenderEngineCommandStreamer, InitHardware)
+{
+    TestEngineCommandStreamer test;
+    test.InitHardware();
 }

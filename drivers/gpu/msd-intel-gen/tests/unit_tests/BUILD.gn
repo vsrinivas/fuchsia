@@ -11,6 +11,8 @@ source_set("unit_tests") {
     "test_engine_command_streamer.cc",
     "test_gtt.cc",
     "test_device.cc",
+    "test_hardware_status_page.cc",
+    "test_instructions.cc",
     "test_render_init_batch.cc",
     "test_ringbuffer.cc",
   ]

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_intel_device.h"
+#include "global_context.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "register_defs.h"
@@ -11,7 +12,7 @@ MsdIntelDevice::MsdIntelDevice() { magic_ = kMagic; }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id client_id)
 {
-    return std::unique_ptr<MsdIntelConnection>(new MsdIntelConnection());
+    return std::unique_ptr<MsdIntelConnection>(new MsdIntelConnection(this));
 }
 
 bool MsdIntelDevice::Init(void* device_handle)
@@ -49,16 +50,23 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!gtt_->Init(gtt_size, platform_device_.get()))
         return DRETF(false, "failed to Init gtt");
 
-    render_engine_cs_ =
-        std::unique_ptr<RenderEngineCommandStreamer>(new RenderEngineCommandStreamer());
+    render_engine_cs_ = RenderEngineCommandStreamer::Create(this, gtt_.get());
 
-    default_context_ = std::unique_ptr<MsdIntelContext>(new MsdIntelContext());
+    auto context = std::unique_ptr<GlobalContext>(new GlobalContext());
 
-    if (!render_engine_cs_->InitContext(default_context_.get()))
-        return DRETF(false, "failed to init render engine command streamer");
+    // Creates the context backing store.
+    if (!render_engine_cs_->InitContext(context.get()))
+        return DRETF(false, "render_engine_cs failed to init global context");
 
-    if (!default_context_->MapGpu(gtt_.get(), render_engine_cs_->id()))
-        return DRETF(false, "failed to pin default context");
+    if (!context->Map(gtt_.get(), render_engine_cs_->id()))
+        return DRETF(false, "global context init failed");
+
+    render_engine_cs_->InitHardware(context->hardware_status_page(render_engine_cs_->id()));
+
+    if (!render_engine_cs_->RenderInit(context.get()))
+        return DRETF(false, "render_engine_cs failed RenderInit");
+
+    global_context_ = std::move(context);
 
     return true;
 }

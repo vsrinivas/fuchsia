@@ -3,11 +3,19 @@
 // found in the LICENSE file.
 
 #include "engine_command_streamer.h"
+#include "instructions.h"
 #include "magma_util/macros.h"
 #include "msd_intel_buffer.h"
 #include "ringbuffer.h"
 
-bool EngineCommandStreamer::InitContext(MsdIntelContext* context)
+EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
+                                             uint32_t mmio_base)
+    : owner_(owner), id_(id), mmio_base_(mmio_base)
+{
+    DASSERT(owner);
+}
+
+bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
 {
     DASSERT(context);
 
@@ -27,6 +35,11 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context)
     context->SetEngineState(id(), std::move(context_buffer), std::move(ringbuffer));
 
     return true;
+}
+
+void EngineCommandStreamer::InitHardware(HardwareStatusPage* hardware_status_page)
+{
+    HardwareStatusPageAddress::write(register_io(), mmio_base_, hardware_status_page->gpu_addr());
 }
 
 // Register definitions from BSpec BXML Reference.
@@ -228,7 +241,8 @@ private:
     uint32_t* state_;
 };
 
-bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, uint32_t ringbuffer_size)
+bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer,
+                                              uint32_t ringbuffer_size) const
 {
     DASSERT(buffer->write_domain() == MEMORY_DOMAIN_CPU);
 
@@ -273,6 +287,62 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, uint32_t r
 
     if (!platform_buf->UnmapCpu())
         return DRETF(false, "Couldn't unmap context buffer");
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+std::unique_ptr<RenderEngineCommandStreamer>
+RenderEngineCommandStreamer::Create(EngineCommandStreamer::Owner* owner,
+                                    AddressSpace* address_space)
+{
+    auto buffer = std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(RenderInitBatch::Size()));
+    if (!buffer)
+        return DRETP(nullptr, "failed to allocate render init buffer");
+
+    auto batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatch());
+
+    if (!batch->Init(std::move(buffer), address_space))
+        return DRETP(nullptr, "batch init failed");
+
+    return std::unique_ptr<RenderEngineCommandStreamer>(
+        new RenderEngineCommandStreamer(owner, std::move(batch)));
+}
+
+RenderEngineCommandStreamer::RenderEngineCommandStreamer(
+    EngineCommandStreamer::Owner* owner, std::unique_ptr<RenderInitBatch> init_batch)
+    : EngineCommandStreamer(owner, RENDER_COMMAND_STREAMER, kRenderEngineMmioBase),
+      init_batch_(std::move(init_batch))
+{
+    DASSERT(init_batch_);
+}
+
+bool RenderEngineCommandStreamer::RenderInit(MsdIntelContext* context)
+{
+    DASSERT(init_batch_);
+    uint64_t gpu_addr = init_batch_->GetGpuAddress();
+
+    if (!StartBatchBuffer(context, gpu_addr, false))
+        return DRETF(false, "failed to emit batch");
+
+    // More RenderInit to come.
+
+    return true;
+}
+
+bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu_addr_t gpu_addr,
+                                                   bool ppgtt)
+{
+    auto ringbuffer = context->get_ringbuffer(id());
+
+    uint32_t dword_count = MiBatchBufferStart::kDwordCount + MiNoop::kDwordCount;
+
+    if (!ringbuffer->HasSpace(dword_count * sizeof(uint32_t)))
+        return DRETF(false, "ringbuffer has insufficient space");
+
+    MiBatchBufferStart::write_ringbuffer(ringbuffer, gpu_addr, ppgtt);
+    MiNoop::write_ringbuffer(ringbuffer);
 
     return true;
 }

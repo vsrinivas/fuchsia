@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "global_context.h"
 #include "mock/mock_address_space.h"
 #include "msd_intel_context.h"
 #include "ringbuffer.h"
 #include "gtest/gtest.h"
 
-class TestContext {
+class TestContext : public ClientContext::Owner {
 public:
     void Init()
     {
-        std::unique_ptr<MsdIntelContext> context(new MsdIntelContext());
+        std::unique_ptr<MsdIntelContext> context(new ClientContext(this));
 
         EXPECT_EQ(nullptr, get_buffer(context.get(), RENDER_COMMAND_STREAMER));
         EXPECT_EQ(nullptr, get_ringbuffer(context.get(), RENDER_COMMAND_STREAMER));
@@ -30,9 +31,13 @@ public:
         EXPECT_EQ(expected_ringbuffer, get_ringbuffer(context.get(), RENDER_COMMAND_STREAMER));
     }
 
-    void MapGpu()
+    void Map(bool global)
     {
-        std::unique_ptr<MsdIntelContext> context(new MsdIntelContext());
+        std::unique_ptr<MsdIntelContext> context;
+        if (global)
+            context = std::unique_ptr<MsdIntelContext>(new GlobalContext());
+        else
+            context = std::unique_ptr<MsdIntelContext>(new ClientContext(this));
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
         std::unique_ptr<Ringbuffer> ringbuffer(
@@ -43,18 +48,24 @@ public:
 
         context->SetEngineState(RENDER_COMMAND_STREAMER, std::move(buffer), std::move(ringbuffer));
 
-        EXPECT_FALSE(context->UnmapGpu(address_space.get(), RENDER_COMMAND_STREAMER));
-        EXPECT_TRUE(context->MapGpu(address_space.get(), RENDER_COMMAND_STREAMER));
+        EXPECT_FALSE(context->Unmap(address_space.get(), RENDER_COMMAND_STREAMER));
+        EXPECT_TRUE(context->Map(address_space.get(), RENDER_COMMAND_STREAMER));
         // Already mapped
-        EXPECT_TRUE(context->MapGpu(address_space.get(), RENDER_COMMAND_STREAMER));
-        EXPECT_TRUE(context->UnmapGpu(address_space.get(), RENDER_COMMAND_STREAMER));
-        EXPECT_FALSE(context->UnmapGpu(address_space.get(), RENDER_COMMAND_STREAMER));
+        EXPECT_TRUE(context->Map(address_space.get(), RENDER_COMMAND_STREAMER));
+        EXPECT_TRUE(context->Unmap(address_space.get(), RENDER_COMMAND_STREAMER));
+        EXPECT_FALSE(context->Unmap(address_space.get(), RENDER_COMMAND_STREAMER));
     }
 
 private:
+    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id)
+    {
+        DASSERT(false);
+        return nullptr;
+    }
+
     static MsdIntelBuffer* get_buffer(MsdIntelContext* context, EngineCommandStreamerId id)
     {
-        return context->get_buffer(id);
+        return context->get_context_buffer(id);
     }
 
     static Ringbuffer* get_ringbuffer(MsdIntelContext* context, EngineCommandStreamerId id)
@@ -69,8 +80,14 @@ TEST(MsdIntelContext, Init)
     test.Init();
 }
 
-TEST(MsdIntelContext, MapGpu)
+TEST(MsdIntelContext, ClientMap)
 {
     TestContext test;
-    test.MapGpu();
+    test.Map(false);
+}
+
+TEST(GlobalContext, GlobalMap)
+{
+    TestContext test;
+    test.Map(true);
 }

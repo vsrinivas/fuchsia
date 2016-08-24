@@ -14,7 +14,10 @@
 #include "msd_intel_context.h"
 #include "register_io.h"
 
-class MsdIntelDevice : public msd_device, public Gtt::Owner {
+class MsdIntelDevice : public msd_device,
+                       public Gtt::Owner,
+                       public EngineCommandStreamer::Owner,
+                       public MsdIntelConnection::Owner {
 public:
     virtual ~MsdIntelDevice() {}
 
@@ -36,11 +39,18 @@ public:
 private:
     MsdIntelDevice();
 
-    // Gtt::Owner
+    // Gtt::Owner, EngineCommandStreamer::Owner
     RegisterIo* register_io() override
     {
         DASSERT(register_io_);
         return register_io_.get();
+    }
+
+    // MsdIntelConnection::Owner
+    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
+    {
+        DASSERT(global_context_);
+        return global_context_->hardware_status_page(id);
     }
 
     bool ReadGttSize(unsigned int* gtt_size);
@@ -53,7 +63,7 @@ private:
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
-    std::unique_ptr<MsdIntelContext> default_context_;
+    std::unique_ptr<MsdIntelContext> global_context_;
 
     friend class MsdIntelDriver;
     friend class TestMsdIntelDevice;
