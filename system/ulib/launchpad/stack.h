@@ -17,7 +17,7 @@
 #include <magenta/types.h>
 #include <stdint.h>
 
-#define DEFAULT_STACK_SIZE (64 << 10)
+#define DEFAULT_STACK_SIZE (256 << 10)
 
 // Given the (page-aligned) base and size of the stack mapping,
 // compute the appropriate initial SP value for an initial thread
