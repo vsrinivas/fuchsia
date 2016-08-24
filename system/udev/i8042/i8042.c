@@ -826,7 +826,8 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_status_t i8042_init(mx_driver_t* driver) {
+static int i8042_init_thread(void* arg) {
+    mx_driver_t* driver = (mx_driver_t*)arg;
     uint8_t ctr = 0;
     mx_status_t status = i8042_setup(&ctr);
     if (status != NO_ERROR) {
@@ -926,6 +927,12 @@ fail:
         free(mouse_device);
     }
     return status;
+}
+
+static mx_status_t i8042_init(mx_driver_t* driver) {
+    thrd_t t;
+    int rc = thrd_create_with_name(&t, i8042_init_thread, driver, "i8042-init");
+    return rc;
 }
 
 mx_driver_t _driver_i8042 BUILTIN_DRIVER = {
