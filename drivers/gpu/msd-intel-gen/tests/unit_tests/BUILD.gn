@@ -15,6 +15,7 @@ source_set("msd_unit_tests") {
     "test_instructions.cc",
     "test_render_init_batch.cc",
     "test_ringbuffer.cc",
+    "test_sequencer.cc",
   ]
 
   deps = [

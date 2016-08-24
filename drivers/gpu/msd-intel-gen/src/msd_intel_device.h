@@ -13,6 +13,7 @@
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "register_io.h"
+#include "sequencer.h"
 
 class MsdIntelDevice : public msd_device,
                        public Gtt::Owner,
@@ -46,6 +47,12 @@ private:
         return register_io_.get();
     }
 
+    Sequencer* sequencer() override
+    {
+        DASSERT(sequencer_);
+        return sequencer_.get();
+    }
+
     // MsdIntelConnection::Owner
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
     {
@@ -64,6 +71,7 @@ private:
     std::unique_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
     std::unique_ptr<MsdIntelContext> global_context_;
+    std::unique_ptr<Sequencer> sequencer_;
 
     friend class MsdIntelDriver;
     friend class TestMsdIntelDevice;

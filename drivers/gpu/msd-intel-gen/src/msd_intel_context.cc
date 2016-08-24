@@ -91,6 +91,23 @@ bool MsdIntelContext::GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr
     return true;
 }
 
+bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out)
+{
+    auto iter = state_map_.find(id);
+    if (iter == state_map_.end())
+        return DRETF(false, "couldn't find engine command streamer");
+
+    PerEngineState& state = iter->second;
+    if (state.mapped_address_space_id == kNotMapped)
+        return DRETF(false, "context not mapped");
+
+    if (!state.ringbuffer->GetGpuAddress(static_cast<AddressSpaceId>(state.mapped_address_space_id),
+                                         addr_out))
+        return DRETF(false, "failed to get gpu address");
+
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 void msd_context_destroy(msd_context* ctx) { delete MsdIntelContext::cast(ctx); }

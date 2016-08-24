@@ -5,7 +5,9 @@
 #include "engine_command_streamer.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_mmio.h"
+#include "registers.h"
 #include "render_init_batch.h"
+#include "sequencer.h"
 #include "gtest/gtest.h"
 
 class TestContext {
@@ -34,6 +36,8 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
                                   public ClientContext::Owner,
                                   public HardwareStatusPage::Owner {
 public:
+    static constexpr uint32_t kFirstSequenceNumber = 5;
+
     TestEngineCommandStreamer()
     {
         register_io_ =
@@ -41,28 +45,31 @@ public:
 
         context_ = std::unique_ptr<MsdIntelContext>(new ClientContext(this));
 
-        status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
+        mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 
-        address_space_ = std::unique_ptr<AddressSpace>(new MockAddressSpace(0, PAGE_SIZE));
+        address_space_ = std::unique_ptr<AddressSpace>(new MockAddressSpace(0, PAGE_SIZE * 100));
 
         engine_cs_ = RenderEngineCommandStreamer::Create(this, address_space_.get());
+
+        sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
+
+        hw_status_page_ =
+            std::unique_ptr<HardwareStatusPage>(new HardwareStatusPage(this, engine_cs_->id()));
     }
 
     void InitContext()
     {
-        auto buffer = TestContext::get_context_buffer(context_.get(), RENDER_COMMAND_STREAMER);
+        auto buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
         EXPECT_EQ(buffer, nullptr);
 
-        bool ret = engine_cs_->InitContext(context_.get());
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
 
-        buffer = TestContext::get_context_buffer(context_.get(), RENDER_COMMAND_STREAMER);
+        buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
         EXPECT_NE(buffer, nullptr);
         EXPECT_EQ(buffer->platform_buffer()->size(), PAGE_SIZE * 20ul);
 
         void* addr;
-        ret = buffer->platform_buffer()->MapCpu(&addr);
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(buffer->platform_buffer()->MapCpu(&addr));
 
         uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
         EXPECT_EQ(state[1], 0x1100101Bul);
@@ -71,7 +78,7 @@ public:
         EXPECT_EQ(state[4], 0x2034ul);
         EXPECT_EQ(state[5], 0ul);
         EXPECT_EQ(state[6], 0x2030ul);
-        EXPECT_EQ(state[7], 0ul);
+        EXPECT_EQ(state[7], 0u);
         EXPECT_EQ(state[8], 0x2038ul);
         // state[9] is not set until later
         EXPECT_EQ(state[0xA], 0x203Cul);
@@ -121,33 +128,76 @@ public:
 
     void InitHardware()
     {
-        auto status_page =
-            std::unique_ptr<HardwareStatusPage>(new HardwareStatusPage(this, engine_cs_->id()));
-
-        uint32_t offset =
-            engine_cs_->mmio_base() + EngineCommandStreamer::HardwareStatusPageAddress::kOffset;
+        uint32_t offset = engine_cs_->mmio_base() + registers::HardwareStatusPageAddress::kOffset;
 
         register_io()->Write32(offset, 0);
 
-        engine_cs_->InitHardware(status_page.get());
+        engine_cs_->InitHardware(hw_status_page_.get());
 
-        EXPECT_EQ(register_io()->Read32(offset), status_page_->gpu_addr);
+        EXPECT_EQ(register_io()->Read32(offset), mock_status_page_->gpu_addr);
+
+        EXPECT_EQ(hw_status_page_->read_sequence_number(), (uint32_t)kFirstSequenceNumber);
     }
 
     void RenderInit()
     {
         ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
-        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+
+        InitContext();
+
+        EXPECT_TRUE(context_->Map(address_space_.get(), engine_cs_->id()));
 
         auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
-
+        ASSERT_NE(ringbuffer, nullptr);
         EXPECT_EQ(ringbuffer->tail(), 0u);
+
+        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+
+        register_io_->enable_trace(true);
 
         EXPECT_TRUE(render_cs->RenderInit(context_.get()));
 
         EXPECT_EQ(ringbuffer->tail(), 0x24u);
 
         // Consider validating the content of the ring buffer here.
+
+        gpu_addr_t gpu_addr;
+        EXPECT_TRUE(ringbuffer->GetGpuAddress(address_space_->id(), &gpu_addr));
+
+        void* addr;
+        EXPECT_TRUE(TestContext::get_context_buffer(context_.get(), engine_cs_->id())
+                        ->platform_buffer()
+                        ->MapCpu(&addr));
+
+        uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
+        EXPECT_EQ(state[6], 0x2030ul);
+        EXPECT_EQ(state[7], ringbuffer->tail());
+        EXPECT_EQ(state[8], 0x2038ul);
+        EXPECT_EQ(state[9], gpu_addr);
+
+        EXPECT_TRUE(TestContext::get_context_buffer(context_.get(), engine_cs_->id())
+                        ->platform_buffer()
+                        ->UnmapCpu());
+
+        EXPECT_TRUE(context_->GetGpuAddress(engine_cs_->id(), &gpu_addr));
+
+        uint32_t upper_32_bits = gpu_addr >> 12;
+        uint32_t lower_32_bits = gpu_addr | 0x29;
+        std::vector<uint32_t> submitport_writes{0, 0, upper_32_bits, lower_32_bits};
+        uint32_t write = 0;
+
+        for (auto operation : register_io_->trace()) {
+            if (operation.offset ==
+                EngineCommandStreamer::kRenderEngineMmioBase +
+                    registers::ExeclistSubmitPort::kSubmitOffset) {
+                EXPECT_EQ(operation.type, RegisterIo::Operation::WRITE32);
+                ASSERT_LT(write, submitport_writes.size());
+                EXPECT_EQ(operation.val, submitport_writes[write++]);
+            }
+        }
+        EXPECT_EQ(write, submitport_writes.size());
+
+        EXPECT_TRUE(context_->Unmap(address_space_.get(), engine_cs_->id()));
     }
 
 private:
@@ -156,29 +206,32 @@ private:
         return register_io_.get();
     }
 
+    Sequencer* sequencer() override { return sequencer_.get(); }
+
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
     {
-        DASSERT(false);
-        return nullptr;
+        return hw_status_page_.get();
     }
 
     void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override
     {
         EXPECT_EQ(id, engine_cs_->id());
-        return status_page_->cpu_addr;
+        return mock_status_page_->cpu_addr;
     }
 
     gpu_addr_t hardware_status_page_gpu_addr(EngineCommandStreamerId id) override
     {
         EXPECT_EQ(id, engine_cs_->id());
-        return status_page_->gpu_addr;
+        return mock_status_page_->gpu_addr;
     }
 
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<AddressSpace> address_space_;
     std::unique_ptr<MsdIntelContext> context_;
-    std::unique_ptr<MockStatusPageBuffer> status_page_;
+    std::unique_ptr<MockStatusPageBuffer> mock_status_page_;
     std::unique_ptr<EngineCommandStreamer> engine_cs_;
+    std::unique_ptr<Sequencer> sequencer_;
+    std::unique_ptr<HardwareStatusPage> hw_status_page_;
 };
 
 TEST(RenderEngineCommandStreamer, InitContext)
@@ -191,4 +244,10 @@ TEST(RenderEngineCommandStreamer, InitHardware)
 {
     TestEngineCommandStreamer test;
     test.InitHardware();
+}
+
+TEST(RenderEngineCommandStreamer, RenderInit)
+{
+    TestEngineCommandStreamer test;
+    test.RenderInit();
 }

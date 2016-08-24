@@ -10,6 +10,7 @@
 #include "pagetable.h"
 #include "register_io.h"
 #include "render_init_batch.h"
+#include "sequencer.h"
 #include <memory>
 
 class EngineCommandStreamer {
@@ -17,6 +18,7 @@ public:
     class Owner {
     public:
         virtual RegisterIo* register_io() = 0;
+        virtual Sequencer* sequencer() = 0;
     };
 
     EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base);
@@ -32,6 +34,10 @@ public:
     void InitHardware(HardwareStatusPage* hardware_status_page);
 
 protected:
+    bool SubmitContext(MsdIntelContext* context);
+    bool UpdateContext(MsdIntelContext* context);
+    void SubmitExeclists(MsdIntelContext* context);
+
     // from intel-gfx-prm-osrc-bdw-vol03-gpu_overview_3.pdf p.7
     static constexpr uint32_t kRenderEngineMmioBase = 0x2000;
 
@@ -39,18 +45,9 @@ protected:
 
     uint32_t mmio_base() const { return mmio_base_; }
 
-private:
-    // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.712
-    class HardwareStatusPageAddress {
-    public:
-        static constexpr uint32_t kOffset = 0x80;
-        static void write(RegisterIo* reg_io, uint64_t mmio_base, uint32_t addr)
-        {
-            reg_io->Write32(mmio_base + kOffset, addr);
-            reg_io->mmio()->PostingRead32(mmio_base + kOffset);
-        }
-    };
+    Sequencer* sequencer() { return owner_->sequencer(); }
 
+private:
     virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
 
     bool InitContextBuffer(MsdIntelBuffer* context_buffer, uint32_t ringbuffer_size) const;
@@ -76,7 +73,9 @@ private:
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 
-    bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr, bool ppgtt);
+    bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
+                          AddressSpaceId address_space_id);
+    bool WriteSequenceNumber(MsdIntelContext* context, uint32_t sequence_number);
 
     std::unique_ptr<RenderInitBatch> init_batch_;
 

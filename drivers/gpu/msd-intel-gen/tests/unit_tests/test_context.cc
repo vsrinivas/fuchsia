@@ -33,6 +33,8 @@ public:
 
     void Map(bool global)
     {
+        constexpr uint32_t base = 0x10000;
+
         std::unique_ptr<MsdIntelContext> context;
         if (global)
             context = std::unique_ptr<MsdIntelContext>(new GlobalContext());
@@ -44,15 +46,27 @@ public:
             new Ringbuffer(std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE))));
 
         std::unique_ptr<AddressSpace> address_space(
-            new MockAddressSpace(0x10000, buffer->platform_buffer()->size() + ringbuffer->size()));
+            new MockAddressSpace(base, buffer->platform_buffer()->size() + ringbuffer->size()));
 
         context->SetEngineState(RENDER_COMMAND_STREAMER, std::move(buffer), std::move(ringbuffer));
 
+        // Not mapped
         EXPECT_FALSE(context->Unmap(address_space.get(), RENDER_COMMAND_STREAMER));
+
+        gpu_addr_t gpu_addr;
+        EXPECT_FALSE(context->GetRingbufferGpuAddress(RENDER_COMMAND_STREAMER, &gpu_addr));
+
         EXPECT_TRUE(context->Map(address_space.get(), RENDER_COMMAND_STREAMER));
+        EXPECT_TRUE(context->GetRingbufferGpuAddress(RENDER_COMMAND_STREAMER, &gpu_addr));
+        EXPECT_GE(gpu_addr, base);
+
         // Already mapped
         EXPECT_TRUE(context->Map(address_space.get(), RENDER_COMMAND_STREAMER));
+
+        // Unmap
         EXPECT_TRUE(context->Unmap(address_space.get(), RENDER_COMMAND_STREAMER));
+
+        // Already unmapped
         EXPECT_FALSE(context->Unmap(address_space.get(), RENDER_COMMAND_STREAMER));
     }
 

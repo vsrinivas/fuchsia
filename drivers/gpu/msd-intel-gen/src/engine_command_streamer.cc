@@ -6,6 +6,7 @@
 #include "instructions.h"
 #include "magma_util/macros.h"
 #include "msd_intel_buffer.h"
+#include "registers.h"
 #include "ringbuffer.h"
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
@@ -39,7 +40,13 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
 
 void EngineCommandStreamer::InitHardware(HardwareStatusPage* hardware_status_page)
 {
-    HardwareStatusPageAddress::write(register_io(), mmio_base_, hardware_status_page->gpu_addr());
+    registers::HardwareStatusPageAddress::write(register_io(), mmio_base_,
+                                                hardware_status_page->gpu_addr());
+
+    uint32_t initial_sequence_number = sequencer()->next_sequence_number();
+    hardware_status_page->write_sequence_number(initial_sequence_number);
+
+    DLOG("initialized engine sequence number: 0x%x", initial_sequence_number);
 }
 
 // Register definitions from BSpec BXML Reference.
@@ -84,10 +91,10 @@ public:
     }
 
     // RING_BUFFER_TAIL - Ring Buffer Tail
-    void write_ring_tail_pointer()
+    void write_ring_tail_pointer(uint32_t tail)
     {
         state_[6] = mmio_base_ + 0x30;
-        state_[7] = 0;
+        state_[7] = tail;
     }
 
     // RING_BUFFER_START - Ring Buffer Start
@@ -257,8 +264,8 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer,
     helper.write_load_register_immediate_headers();
     helper.write_context_save_restore_control();
     helper.write_ring_head_pointer();
-    helper.write_ring_tail_pointer();
-    // Ring buffer start is patched in later.
+    // Ring buffer tail and start is patched in later (see UpdateContext).
+    helper.write_ring_tail_pointer(0);
     helper.write_ring_buffer_start(~0);
     helper.write_ring_buffer_control(ringbuffer_size);
     helper.write_batch_buffer_upper_head_pointer();
@@ -289,6 +296,57 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer,
         return DRETF(false, "Couldn't unmap context buffer");
 
     return true;
+}
+
+bool EngineCommandStreamer::SubmitContext(MsdIntelContext* context)
+{
+    if (!UpdateContext(context))
+        return DRETF(false, "UpdateContext failed");
+    SubmitExeclists(context);
+    return true;
+}
+
+bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context)
+{
+    gpu_addr_t gpu_addr;
+    if (!context->GetRingbufferGpuAddress(id(), &gpu_addr))
+        return DRETF(false, "failed to get ringbuffer gpu address");
+
+    void* cpu_addr;
+    if (!context->get_context_buffer(id())->platform_buffer()->MapPageCpu(1, &cpu_addr))
+        return DRETF(false, "failed to map context page 1");
+
+    RegisterStateHelper helper(id(), mmio_base_, reinterpret_cast<uint32_t*>(cpu_addr));
+
+    uint32_t tail = context->get_ringbuffer(id())->tail();
+
+    DLOG("UpdateContext ringbuffer gpu_addr 0x%llx tail 0x%x", gpu_addr, tail);
+
+    helper.write_ring_tail_pointer(tail);
+    helper.write_ring_buffer_start(gpu_addr);
+
+    if (!context->get_context_buffer(id())->platform_buffer()->UnmapPageCpu(1))
+        DLOG("UnmapPageCpu failed");
+
+    return true;
+}
+
+void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
+{
+    gpu_addr_t gpu_addr;
+    if (!context->GetGpuAddress(id(), &gpu_addr)) {
+        // Shouldn't happen.
+        DASSERT(false);
+        gpu_addr = kInvalidGpuAddr;
+    }
+
+    // Use significant bits of context gpu_addr as globally unique context id
+    DASSERT(PAGE_SIZE == 4096);
+    uint64_t descriptor0 =
+        registers::ExeclistSubmitPort::context_descriptor(gpu_addr, gpu_addr >> 12, false);
+    uint64_t descriptor1 = 0;
+
+    registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -323,16 +381,22 @@ bool RenderEngineCommandStreamer::RenderInit(MsdIntelContext* context)
     DASSERT(init_batch_);
     uint64_t gpu_addr = init_batch_->GetGpuAddress();
 
-    if (!StartBatchBuffer(context, gpu_addr, false))
+    if (!StartBatchBuffer(context, gpu_addr, ADDRESS_SPACE_GTT))
         return DRETF(false, "failed to emit batch");
 
-    // More RenderInit to come.
+    uint32_t sequence_number = sequencer()->next_sequence_number();
+
+    if (!WriteSequenceNumber(context, sequence_number))
+        return DRETF(false, "failed to finish batch buffer");
+
+    if (!SubmitContext(context))
+        return DRETF(false, "SubmitContext failed");
 
     return true;
 }
 
 bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu_addr_t gpu_addr,
-                                                   bool ppgtt)
+                                                   AddressSpaceId address_space_id)
 {
     auto ringbuffer = context->get_ringbuffer(id());
 
@@ -341,7 +405,29 @@ bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu
     if (!ringbuffer->HasSpace(dword_count * sizeof(uint32_t)))
         return DRETF(false, "ringbuffer has insufficient space");
 
-    MiBatchBufferStart::write_ringbuffer(ringbuffer, gpu_addr, ppgtt);
+    MiBatchBufferStart::write_ringbuffer(ringbuffer, gpu_addr, address_space_id);
+    MiNoop::write_ringbuffer(ringbuffer);
+
+    return true;
+}
+
+bool RenderEngineCommandStreamer::WriteSequenceNumber(MsdIntelContext* context,
+                                                      uint32_t sequence_number)
+{
+    auto ringbuffer = context->get_ringbuffer(id());
+
+    uint32_t dword_count = MiStoreDataImmediate::kDwordCount + MiNoop::kDwordCount;
+
+    if (!ringbuffer->HasSpace(dword_count * sizeof(uint32_t)))
+        return DRETF(false, "ringbuffer has insufficient space");
+
+    gpu_addr_t gpu_addr =
+        context->hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
+
+    DLOG("writing sequence number update to 0x%x", sequence_number);
+
+    MiStoreDataImmediate::write_ringbuffer(ringbuffer, sequence_number, gpu_addr,
+                                           ADDRESS_SPACE_GTT);
     MiNoop::write_ringbuffer(ringbuffer);
 
     return true;

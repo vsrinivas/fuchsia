@@ -43,6 +43,8 @@ public:
     bool Map(AddressSpace* address_space);
     bool Unmap(AddressSpace* address_space);
 
+    bool GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out);
+
 private:
     MsdIntelBuffer* buffer() { return buffer_.get(); }
 

@@ -57,3 +57,8 @@ bool Ringbuffer::Unmap(AddressSpace* address_space)
 
     return DRETF(ret, "error");
 }
+
+bool Ringbuffer::GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out)
+{
+    return buffer()->GetGpuAddress(id, addr_out);
+}

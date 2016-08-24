@@ -50,6 +50,10 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!gtt_->Init(gtt_size, platform_device_.get()))
         return DRETF(false, "failed to Init gtt");
 
+    // Arbitrary
+    constexpr uint32_t kFirstSequenceNumber = 0x1000;
+    sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
+
     render_engine_cs_ = RenderEngineCommandStreamer::Create(this, gtt_.get());
 
     auto context = std::unique_ptr<GlobalContext>(new GlobalContext());

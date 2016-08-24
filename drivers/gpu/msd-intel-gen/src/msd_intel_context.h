@@ -35,6 +35,7 @@ public:
 
     // Gets the gpu address of the context buffer if mapped.
     bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
+    bool GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
 
     virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
 
@@ -43,6 +44,12 @@ public:
         DASSERT(context);
         DASSERT(context->magic_ == kMagic);
         return static_cast<MsdIntelContext*>(context);
+    }
+
+    MsdIntelBuffer* get_context_buffer(EngineCommandStreamerId id)
+    {
+        auto iter = state_map_.find(id);
+        return iter == state_map_.end() ? nullptr : iter->second.context_buffer.get();
     }
 
     Ringbuffer* get_ringbuffer(EngineCommandStreamerId id)
@@ -54,12 +61,6 @@ public:
 protected:
     bool MapGpu(AddressSpace* address_space, EngineCommandStreamerId id);
     bool UnmapGpu(AddressSpace* address_space, EngineCommandStreamerId id);
-
-    MsdIntelBuffer* get_context_buffer(EngineCommandStreamerId id)
-    {
-        auto iter = state_map_.find(id);
-        return iter == state_map_.end() ? nullptr : iter->second.context_buffer.get();
-    }
 
 private:
     struct PerEngineState {
