@@ -34,8 +34,7 @@ public:
             EXPECT_TRUE(batch->Init(std::move(buffer), address_space.get()));
         }
 
-        gpu_addr_t gpu_addr;
-        EXPECT_TRUE(batch->GetGpuAddress(address_space->id(), &gpu_addr));
+        gpu_addr_t gpu_addr = batch->GetGpuAddress();
         EXPECT_EQ(gpu_addr, base);
 
         void* addr;

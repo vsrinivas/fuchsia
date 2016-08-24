@@ -11,6 +11,8 @@ using gen_pte_t = uint64_t;
 
 using gpu_addr_t = uint64_t;
 
+constexpr gpu_addr_t kInvalidGpuAddr = ~0;
+
 enum CachingType {
     CACHING_NONE,
     CACHING_LLC,

@@ -17,12 +17,13 @@ public:
 
     bool Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace* address_space);
 
-    bool GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out);
+    gpu_addr_t GetGpuAddress();
 
 private:
     MsdIntelBuffer* buffer() { return buffer_.get(); }
 
     std::unique_ptr<MsdIntelBuffer> buffer_;
+    AddressSpaceId address_space_id_;
 
     static const uint32_t relocs_[];
     static const uint32_t batch_[];

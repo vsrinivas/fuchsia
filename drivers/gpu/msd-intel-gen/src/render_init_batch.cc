@@ -59,16 +59,21 @@ bool RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace*
     // Assume ownership.
     buffer_ = std::move(buffer);
 
+    address_space_id_ = address_space->id();
+
     return true;
 }
 
-bool RenderInitBatch::GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out)
+gpu_addr_t RenderInitBatch::GetGpuAddress()
 {
-    if (!buffer_)
-        return DRETF(false, "no buffer");
+    DASSERT(buffer_);
 
-    if (!buffer_->GetGpuAddress(id, addr_out))
-        return DRETF(false, "failed to get gpu address");
+    gpu_addr_t gpu_addr;
+    if (!buffer_->GetGpuAddress(address_space_id_, &gpu_addr)) {
+        // Shouldn't fail.
+        DASSERT(false);
+        return kInvalidGpuAddr;
+    }
 
-    return true;
+    return gpu_addr;
 }
