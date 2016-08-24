@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := c11-thread-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/musl
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := call_once-test
 
 MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

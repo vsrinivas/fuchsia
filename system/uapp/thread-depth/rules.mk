@@ -15,6 +15,7 @@ MODULE_NAME := thread-depth-test
 
 MODULE_LIBS := \
     ulib/mxio \
+    ulib/magenta \
     ulib/musl
 
 include make/module.mk
