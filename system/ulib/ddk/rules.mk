@@ -34,8 +34,7 @@ endif
 
 MODULE_DEPS += \
     ulib/musl \
-    ulib/magenta \
-    ulib/runtime
+    ulib/magenta
 
 MODULE_EXPORT := ddk
 

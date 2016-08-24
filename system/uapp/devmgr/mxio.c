@@ -20,8 +20,6 @@
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
-#include <runtime/tls.h>
-
 #include "vfs.h"
 
 typedef struct bootfile bootfile_t;

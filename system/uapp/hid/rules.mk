@@ -12,8 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
 MODULE_STATIC_LIBS := \
-    ulib/ddk \
-    ulib/runtime
+    ulib/ddk
 
 MODULE_LIBS := \
     ulib/magenta \

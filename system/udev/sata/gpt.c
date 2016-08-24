@@ -10,7 +10,6 @@
 
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/mutex.h>
 #include <system/listnode.h>
 #include <sys/param.h>
 #include <assert.h>

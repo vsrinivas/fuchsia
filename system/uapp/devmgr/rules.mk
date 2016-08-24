@@ -49,8 +49,7 @@ MODULE_STATIC_LIBS := \
     ulib/elfload \
     ulib/mxio \
     ulib/gfx \
-    ulib/runtime \
-    ulib/magenta
+    ulib/magenta \
 
 MODULE_LIBS := ulib/musl
 

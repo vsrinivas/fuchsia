@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <runtime/mutex.h>
 #include <stdatomic.h>
 
 typedef struct mxio mxio_t;

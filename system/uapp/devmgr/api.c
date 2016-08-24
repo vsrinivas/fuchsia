@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtime/mutex.h>
-
 #include "devmgr.h"
 
 // These are the API entry-points from drivers

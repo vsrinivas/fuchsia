@@ -24,7 +24,7 @@ MODULE_SRCS := \
 
 MODULE_HEADER_DEPS := ulib/ddk
 
-MODULE_DEPS := ulib/musl ulib/mxio ulib/runtime ulib/magenta
+MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta
 
 MODULE_EXPORT := driver
 
