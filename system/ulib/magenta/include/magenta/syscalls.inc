@@ -110,7 +110,7 @@ MAGENTA_DDKCALL_DEF(1, 1, 72, mx_status_t, interrupt_event_wait, mx_handle_t han
 
 // Processes
 MAGENTA_SYSCALL_DEF(3, 3, 80, mx_handle_t, process_create, USER_PTR(const char) name, uint32_t name_len, uint32_t flags)
-MAGENTA_SYSCALL_DEF(5, 5, 82, mx_status_t, process_start, mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t entry, uintptr_t stack, mx_handle_t arg_handle)
+MAGENTA_SYSCALL_DEF(6, 6, 82, mx_status_t, process_start, mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t entry, uintptr_t stack, mx_handle_t arg_handle, uintptr_t arg2)
 MAGENTA_SYSCALL_DEF(6, 7, 83, mx_status_t, process_vm_map, mx_handle_t proc_handle, mx_handle_t vmo_handle,
                     uint64_t offset, mx_size_t len, USER_PTR(uintptr_t) ptr, uint32_t flags)
 MAGENTA_SYSCALL_DEF(3, 3, 84, mx_status_t, process_vm_unmap, mx_handle_t proc_handle, uintptr_t address,

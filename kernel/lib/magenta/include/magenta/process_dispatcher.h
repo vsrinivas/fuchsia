@@ -90,7 +90,8 @@ public:
     const utils::StringPiece name() const { return name_; }
 
     // Starts the process running
-    status_t Start(ThreadDispatcher *thread, uintptr_t entry, uintptr_t stack, mx_handle_t arg);
+    status_t Start(ThreadDispatcher *thread, uintptr_t pc, uintptr_t sp,
+                   uintptr_t arg1, uintptr_t arg2);
 
     void Exit(int retcode);
     void Kill();

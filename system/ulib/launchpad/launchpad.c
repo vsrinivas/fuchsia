@@ -744,8 +744,8 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         for (size_t i = 0; i < lp->handle_count; ++i)
             lp->handles[i] = MX_HANDLE_INVALID;
         lp->handle_count = 0;
-        // TODO(mcgrathr): Pass in vdso_base somehow.
-        status = mx_process_start(proc, thread, lp->entry, sp, child_bootstrap);
+        status = mx_process_start(proc, thread, lp->entry, sp,
+                                  child_bootstrap, lp->vdso_base);
     }
     mx_handle_close(thread);
     // process_start consumed child_bootstrap if successful.

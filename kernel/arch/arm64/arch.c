@@ -84,10 +84,7 @@ void arch_chain_load(void *entry, ulong arg0, ulong arg1, ulong arg2, ulong arg3
 }
 
 /* switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to the top of the kernel stack */
-void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void *thread_arg)
-{
-    DEBUG_ASSERT(IS_ALIGNED(user_stack_top, 16));
-
+void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2) {
     thread_t *ct = get_current_thread();
 
     vaddr_t kernel_stack_top = (uintptr_t)ct->stack + ct->stack_size;
@@ -103,12 +100,7 @@ void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void *thread
 
     arch_disable_ints();
 
-    arm64_uspace_entry(
-            kernel_stack_top,
-            user_stack_top,
-            entry_point,
-            spsr,
-            thread_arg);
+    arm64_uspace_entry(arg1, arg2, pc, sp, kernel_stack_top, spsr);
     __UNREACHABLE;
 }
 
@@ -140,4 +132,3 @@ void arm64_secondary_entry(ulong asm_cpu_num)
     lk_secondary_cpu_entry();
 }
 #endif
-

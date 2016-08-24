@@ -48,7 +48,7 @@ public:
     // Performs initialization on a newly constructed UserThread
     // If this fails, then the object is invalid and should be deleted
     status_t Initialize(utils::StringPiece name);
-    status_t Start(uintptr_t entry, uintptr_t stack, uintptr_t arg);
+    status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2);
     void Exit() __NO_RETURN;
     void Kill();
     void DispatcherClosed();
@@ -91,10 +91,11 @@ private:
     // a ref pointer back to the parent process
     utils::RefPtr<ProcessDispatcher> process_;
 
-    // user thread start routine and argument
+    // User thread starting register values.
     uintptr_t user_entry_ = 0;
-    uintptr_t user_arg_ = 0;
-    uintptr_t user_stack_ = 0;
+    uintptr_t user_sp_ = 0;
+    uintptr_t user_arg1_ = 0;
+    uintptr_t user_arg2_ = 0;
 
     // our State
     State state_ = State::INITIAL;

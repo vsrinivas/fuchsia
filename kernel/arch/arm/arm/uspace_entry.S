@@ -6,23 +6,29 @@
 
 #include <asm.h>
 
-// void arm_uspace_entry(void *thread_arg, vaddr_t kstack, vaddr_t *ustack, uint32_t spsr, vaddr_t entry_point) __NO_RETURN;
+// void arm_uspace_entry(uintptr_t arg1, uintptr_t arg2, uint32_t spsr, vaddr_t kstack, uintptr_t sp, uint32_t zero, uintptr_t pc) __NO_RETURN;
+// r0 = arg1
+// r1 = arg2
+// r2 = spsr
+// r3 = kstack
+// [sp] = sp
+// [sp, #4] = 0
+// [sp, #8] = pc
 FUNCTION(arm_uspace_entry)
-    // Move entry_point into LR
-    pop { r14 }
+    // Get the user PC into lr, where it has to be for the magic "movs pc, lr".
+    ldr lr, [sp, #8]
 
-    // Set usermode SP
-    ldmia r2, { sp }^
-    // Set usermode LR
-    mov r2, #0
-    push { r2 }
-    ldmia sp, { lr }^
-    pop { r2 }
+    // Load user-mode sp (5th argument) and lr (6th argument, always zero).
+    ldm sp, {sp, lr}^
 
-    msr spsr, r3
-    mov sp, r1
+    // Install the SPSR; it will be restored into the CPSR by the magic
+    // "movs pc, lr" instruction.
+    msr spsr, r2
 
-    mov r1, #0
+    // Switch to the kernel stack.
+    mov sp, r3
+
+    // Clear other registers.  r0 and r1 are already the userland arguments.
     mov r2, #0
     mov r3, #0
     mov r4, #0
@@ -37,8 +43,9 @@ FUNCTION(arm_uspace_entry)
     // Don't zero r13 and r14, they're per EL (SP and LR)
     // Don't zero r15, it's PC
 
-    mcr p15, 0, r1, c13, c0, 2
-    mcr p15, 0, r1, c13, c0, 3
+    // Clear TLS registers.
+    mcr p15, 0, r2, c13, c0, 2
+    mcr p15, 0, r2, c13, c0, 3
 
-    // thread_arg is already in r0, jump to usermode now
-    movs pc, r14
+    // The user thread arguments are in r0 and r1.  Jump to user mode now.
+    movs pc, lr

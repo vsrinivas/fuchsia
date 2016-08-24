@@ -35,12 +35,9 @@ __BEGIN_CDECLS
 })
 
 void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp);
-void arm64_uspace_entry(
-        vaddr_t kstack,
-        vaddr_t ustack,
-        vaddr_t entry_point,
-        uint32_t spsr,
-        void *thread_arg) __NO_RETURN;
+void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2,
+                        uintptr_t pc, uintptr_t sp,
+                        vaddr_t kstack, uint32_t spsr) __NO_RETURN;
 
 /* exception handling */
 struct arm64_iframe_long {

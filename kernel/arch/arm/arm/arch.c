@@ -9,6 +9,7 @@
 #include <trace.h>
 #include <stdlib.h>
 #include <err.h>
+#include <inttypes.h>
 #include <trace.h>
 #include <stdio.h>
 #include <reg.h>
@@ -412,21 +413,26 @@ static void spinlock_test_secondary(void)
 }
 
 /* switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to the top of the kernel stack */
-void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void *thread_arg)
-{
-    DEBUG_ASSERT(IS_ALIGNED(user_stack_top, 8));
-
+void arch_enter_uspace(uintptr_t pc, uintptr_t sp,
+                       uintptr_t arg1, uintptr_t arg2) {
     thread_t *ct = get_current_thread();
 
     vaddr_t kernel_stack_top = (uintptr_t)ct->stack + ct->stack_size;
     kernel_stack_top = ROUNDDOWN(kernel_stack_top, 8);
 
     uint32_t spsr = CPSR_MODE_USR;
-    spsr |= (entry_point & 1) ? CPSR_THUMB : 0;
+    // An entry point with the low bit set is Thumb code.
+    if (pc & 1)
+        spsr |= CPSR_THUMB;
 
     arch_disable_ints();
 
-    extern void arm_uspace_entry(void *thread_arg, vaddr_t kstack, vaddr_t *ustack, uint32_t spsr, vaddr_t entry_point) __NO_RETURN;
-    arm_uspace_entry(thread_arg, kernel_stack_top, &user_stack_top, spsr, entry_point);
+    extern void arm_uspace_entry(uintptr_t arg1, uintptr_t arg2, uint32_t spsr,
+                                 vaddr_t kstack, uintptr_t sp, uint32_t zero,
+                                 uintptr_t pc) __NO_RETURN;
+    LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#x, %#" PRIxPTR
+            ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
+            arg1, arg2, spsr, kernel_stack_top, sp, pc);
+    arm_uspace_entry(arg1, arg2, spsr, kernel_stack_top, sp, 0, pc);
     __UNREACHABLE;
 }

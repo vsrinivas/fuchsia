@@ -378,7 +378,9 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     }
 
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
-    status = proc->Start(thread, entry, sp, hv);
+
+    // start the process
+    status = proc->Start(thread, entry, sp, hv, vdso_base);
     if (status != NO_ERROR) {
         printf("userboot: failed to start process %d\n", status);
         return status;

@@ -7,22 +7,21 @@
 #include <asm.h>
 #include <arch/x86/descriptor.h>
 
-# x86_uspace_entry(void* thread_arg, vaddr_t ustack, uint64_t rflags, vaddr_t entry_point)
+# x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp, uintptr_t pc, uint64_t rflags)
 FUNCTION(x86_uspace_entry)
     /* push a fake 64bit interrupt stack frame and iret to it */
     pushq $USER_DATA_SELECTOR    # ss
-    pushq %rsi                   # ustack
-    pushq %rdx                   # rflags
+    pushq %rdx                   # sp
+    pushq %r8                    # rflags
     pushq $USER_CODE_64_SELECTOR # cs
-    pushq %rcx                   # entry
+    pushq %rcx                   # pc
 
-    # Clear registers
+    // Clear registers
     xor %rax, %rax
     xor %rbx, %rbx
     xor %rcx, %rcx
     xor %rdx, %rdx
-    xor %rsi, %rsi
-    # Don't clear rdi, since it has the thread arg
+    // Don't clear rdi or rsi, since they have the user arguments.
     xor %rbp, %rbp
     xor %r8, %r8
     xor %r9, %r9
@@ -33,9 +32,9 @@ FUNCTION(x86_uspace_entry)
     xor %r14, %r14
     xor %r15, %r15
 
-    # We do not need to clear extended register state, since the kernel only
-    # uses the general purpose registers, and the extended state is initialized
-    # to a cleared state.
+    // We do not need to clear extended register state, since the kernel only
+    // uses the general purpose registers, and the extended state is initialized
+    // to a cleared state.
 
     swapgs
 

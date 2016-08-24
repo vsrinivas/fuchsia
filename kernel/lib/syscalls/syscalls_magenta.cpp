@@ -802,7 +802,7 @@ mx_handle_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry, uintptr
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    auto status = thread->Start(entry, stack, arg);
+    auto status = thread->Start(entry, stack, arg, 0);
 
     return status;
 }
@@ -908,9 +908,10 @@ mx_handle_t sys_process_create(utils::user_ptr<const char> name, uint32_t name_l
     return hv;
 }
 
-mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t entry, uintptr_t stack, mx_handle_t arg_handle_value) {
-    LTRACEF("phandle %d, thandle %d, entry 0x%lx, stack 0x%lx, arg_handle %d\n",
-            process_handle, thread_handle, entry, stack, arg_handle_value);
+mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t pc, uintptr_t sp, mx_handle_t arg_handle_value, uintptr_t arg2) {
+    LTRACEF("phandle %#x, thandle %#x, pc %#" PRIxPTR ", sp %#" PRIxPTR
+            ", arg_handle %#x, arg2 %#" PRIxPTR "\n",
+            process_handle, thread_handle, pc, sp, arg_handle_value, arg2);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -955,7 +956,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
 
     // TODO(cpu) if Start() fails we want to undo RemoveHandle().
 
-    return process->Start(thread, entry, stack, arg_nhv);
+    return process->Start(thread, pc, sp, arg_nhv, arg2);
 }
 
 mx_handle_t sys_event_create(uint32_t options) {

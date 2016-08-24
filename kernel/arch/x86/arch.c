@@ -14,6 +14,7 @@
 #include <err.h>
 #include <trace.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <arch.h>
 #include <arch/ops.h>
 #include <arch/mp.h>
@@ -60,9 +61,9 @@ void arch_chain_load(void *entry, ulong arg0, ulong arg1, ulong arg2, ulong arg3
     PANIC_UNIMPLEMENTED;
 }
 
-void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void* thread_arg)
-{
-    LTRACEF("entry 0x%lx user stack 0x%lx\n", entry_point, user_stack_top);
+void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
+                       uintptr_t arg1, uintptr_t arg2) {
+    LTRACEF("entry %#" PRIxPTR " user stack %#" PRIxPTR "\n", entry_point, sp);
 
     arch_disable_ints();
 
@@ -84,7 +85,7 @@ void arch_enter_uspace(vaddr_t entry_point, vaddr_t user_stack_top, void* thread
     /* set the KERNEL_GS_BASE msr here, because we're going to swapgs below */
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, 0);
 
-    x86_uspace_entry(thread_arg, user_stack_top, flags, entry_point);
+    x86_uspace_entry(arg1, arg2, sp, entry_point, flags);
     __UNREACHABLE;
 #endif
 }

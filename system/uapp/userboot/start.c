@@ -181,10 +181,8 @@ static void bootstrap(mx_handle_t log, struct options* o,
     check(log, status, "mx_message_write to child failed\n");
     mx_handle_close(to_child);
 
-    // TODO(mcgrathr): Need a way to pass vdso_base to the child's
-    // entry-point code so it can actually be used.
-    (void)vdso_base;
-    status = mx_process_start(proc, thread, entry, sp, child_start_handle);
+    status = mx_process_start(proc, thread, entry, sp,
+                              child_start_handle, vdso_base);
     check(log, status, "mx_process_start failed\n");
 
     // TODO(mcgrathr): Really there is no reason for this process to stick

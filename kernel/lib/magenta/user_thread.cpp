@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
 #include <new.h>
 #include <platform.h>
 #include <string.h>
@@ -100,7 +101,8 @@ status_t UserThread::Initialize(utils::StringPiece name) {
 }
 
 // start a thread
-status_t UserThread::Start(uintptr_t entry, uintptr_t stack, uintptr_t arg) {
+status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
+                           uintptr_t arg1, uintptr_t arg2) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -110,8 +112,9 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t stack, uintptr_t arg) {
 
     // save the user space entry state
     user_entry_ = entry;
-    user_stack_ = stack;
-    user_arg_ = arg;
+    user_sp_ = sp;
+    user_arg1_ = arg1;
+    user_arg2_ = arg2;
 
     // add ourselves to the process, which may fail if the process is in a dead state
     auto ret = process_->AddThread(this);
@@ -247,12 +250,13 @@ int UserThread::StartRoutine(void* arg) {
     // check that the entry point makes sense and we haven't forgotten to set it
     DEBUG_ASSERT(t->user_entry_);
 
-    LTRACEF("arch_enter_uspace SP: 0x%lx PC: 0x%lx, ARG: 0x%lx\n", t->user_stack_, t->user_entry_, t->user_arg_);
+    LTRACEF("arch_enter_uspace SP: %#" PRIxPTR " PC: %#" PRIxPTR
+            ", ARG1: %#" PRIxPTR ", ARG2: %#" PRIxPTR "\n",
+            t->user_sp_, t->user_entry_, t->user_arg1_, t->user_arg2_);
 
     // switch to user mode and start the process
-    arch_enter_uspace(reinterpret_cast<vaddr_t>(t->user_entry_),
-                      reinterpret_cast<uintptr_t>(t->user_stack_),
-                      reinterpret_cast<void *>(t->user_arg_)); // TODO: change enter_uspace api to use uinptr_ts
+    arch_enter_uspace(t->user_entry_, t->user_sp_,
+                      t->user_arg1_, t->user_arg2_);
 
     __UNREACHABLE;
 }

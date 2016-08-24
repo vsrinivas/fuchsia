@@ -65,11 +65,8 @@ struct arch_exception_context {
 };
 
 void x86_64_context_switch(vaddr_t *oldsp, vaddr_t newsp);
-void x86_uspace_entry(
-        void *thread_arg,
-        vaddr_t ustack,
-        uint64_t rflags,
-        vaddr_t entry_point) __NO_RETURN;
+void x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp,
+                      uintptr_t pc, uint64_t rflags) __NO_RETURN;
 
 /* @brief Register all of the CPUs in the system
  *

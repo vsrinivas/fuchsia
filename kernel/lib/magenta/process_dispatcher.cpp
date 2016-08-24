@@ -7,6 +7,7 @@
 #include <magenta/process_dispatcher.h>
 
 #include <assert.h>
+#include <inttypes.h>
 #include <list.h>
 #include <new.h>
 #include <rand.h>
@@ -121,8 +122,11 @@ status_t ProcessDispatcher::Initialize() {
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::Start(ThreadDispatcher *thread, uintptr_t entry, uintptr_t stack, mx_handle_t arg) {
-    LTRACEF("process %p thread %p, entry 0x%lx, stack 0x%lx, arg %d\n", this, thread, entry, stack, arg);
+status_t ProcessDispatcher::Start(ThreadDispatcher *thread, uintptr_t pc,
+                                  uintptr_t sp, uintptr_t arg1, uintptr_t arg2) {
+    LTRACEF("process %p thread %p, entry %#" PRIxPTR ", sp %#" PRIxPTR
+            ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
+            this, thread, pc, sp, arg1, arg2);
 
     // grab and hold the state lock across this entire routine, since we're
     // effectively transitioning from INITIAL to RUNNING
@@ -134,7 +138,7 @@ status_t ProcessDispatcher::Start(ThreadDispatcher *thread, uintptr_t entry, uin
 
     // start the initial thread
     LTRACEF("starting main thread\n");
-    auto status = thread->Start(entry, stack, static_cast<uintptr_t>(arg));
+    auto status = thread->Start(pc, sp, arg1, arg2);
     if (status < 0)
         return status;
 
