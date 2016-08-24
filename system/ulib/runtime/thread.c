@@ -203,6 +203,11 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
     return status;
 }
 
+mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
+    CHECK_THREAD(thread);
+    return thread->handle;
+}
+
 mxr_thread_t* __mxr_thread_main(void) {
     mxr_thread_t* thread = NULL;
     allocate_thread_page(&thread);

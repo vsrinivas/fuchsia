@@ -42,6 +42,13 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 // that thread's entrypoint.
 _Noreturn void mxr_thread_exit(mxr_thread_t* thread, intptr_t return_value);
 
+// Get the mx_handle_t corresponding to the given thread.
+// WARNING:
+// This is intended for debuggers and so on. Holding this wrong could
+// break internal invariants of mxr_thread_t. It is inherently
+// racy. You probably don't need this.
+mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
+
 // A private entrypoint into mxruntime initialization.
 mxr_thread_t* __mxr_thread_main(void);
 
