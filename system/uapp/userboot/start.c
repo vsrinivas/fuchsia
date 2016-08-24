@@ -80,6 +80,7 @@ static void bootstrap(mx_handle_t log, struct options* o,
     // becomes the environment strings for our child.
     parse_options(log, o, environ);
 
+    mx_handle_t resource_root = MX_HANDLE_INVALID;
     mx_handle_t bootfs_vmo = MX_HANDLE_INVALID;
     mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
     mx_handle_t* proc_handle_loc = NULL;
@@ -99,12 +100,17 @@ static void bootstrap(mx_handle_t log, struct options* o,
         case MX_HND_TYPE_STACK_VMO:
             stack_vmo_handle_loc = &handles[i];
             break;
+        case MX_HND_TYPE_RESOURCE:
+            resource_root = handles[i];
+            break;
         }
     }
     if (bootfs_vmo == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no bootfs handle in bootstrap message\n");
     if (vdso_vmo == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no vDSO handle in bootstrap message\n");
+    if (resource_root == MX_HANDLE_INVALID)
+        fail(log, ERR_INVALID_ARGS, "no resource handle in bootstrap message\n");
 
     // Make the message pipe for the bootstrap message.
     mx_handle_t pipeh[2];

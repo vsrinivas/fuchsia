@@ -22,6 +22,7 @@
 #include <magenta/msg_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
+#include <magenta/resource_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
@@ -71,6 +72,16 @@ static mx_status_t get_vmo_handle(utils::RefPtr<VmObject> vmo, bool readonly,
     if (result == NO_ERROR) {
         if (readonly)
             rights &= ~MX_RIGHT_WRITE;
+        *ptr = HandleUniquePtr(MakeHandle(utils::move(dispatcher), rights));
+    }
+    return result;
+}
+
+static mx_status_t get_resource_handle(HandleUniquePtr* ptr) {
+    mx_rights_t rights;
+    utils::RefPtr<Dispatcher> dispatcher;
+    mx_status_t result = ResourceDispatcher::Create(&dispatcher, &rights);
+    if (result == NO_ERROR) {
         *ptr = HandleUniquePtr(MakeHandle(utils::move(dispatcher), rights));
     }
     return result;
@@ -185,6 +196,7 @@ enum bootstrap_handle_index {
     BOOTSTRAP_VDSO,
     BOOTSTRAP_BOOTFS,
     BOOTSTRAP_RAMDISK,
+    BOOTSTRAP_RESOURCE_ROOT,
     BOOTSTRAP_STACK,
     //BOOTSTRAP_PROC, TODO(mcgrathr): later
     //BOOTSTRAP_THREAD, TODO(mcgrathr): later
@@ -216,6 +228,9 @@ static uint32_t prepare_bootstrap_msg(struct bootstrap_message* msg) {
             break;
         case BOOTSTRAP_RAMDISK:
             info = MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, 1);
+            break;
+        case BOOTSTRAP_RESOURCE_ROOT:
+            info = MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0);
             break;
 #if 0 // TODO(mcgrathr): later
         case BOOTSTRAP_PROC:
@@ -263,6 +278,8 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         status = get_vmo_handle(vdso_vmo, true, &handles[BOOTSTRAP_VDSO]);
     if (status == NO_ERROR)
         status = get_vmo_handle(stack_vmo, false, &handles[BOOTSTRAP_STACK]);
+    if (status == NO_ERROR)
+        status = get_resource_handle(&handles[BOOTSTRAP_RESOURCE_ROOT]);
     if (status != NO_ERROR)
         return status;
 
