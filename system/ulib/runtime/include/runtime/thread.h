@@ -38,7 +38,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread, intptr_t* return_value_out);
 // entrypoint is ignored.
 mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 
-// Exit from the thread. Equivalent to returning return_value from the
+// Exit from the thread. Equivalent to returning return_value from
 // that thread's entrypoint.
 _Noreturn void mxr_thread_exit(mxr_thread_t* thread, intptr_t return_value);
 
