@@ -10,6 +10,8 @@
 #include <acpica/acpi.h>
 #include <magenta/syscalls.h>
 
+#include "power.h"
+
 /**
  * @brief  Handle the Power Button Fixed Event
  *
@@ -57,13 +59,6 @@ static void notify_object_handler(ACPI_HANDLE Device, UINT32 Value, void* Contex
     ACPI_FREE(info);
 }
 
-static void acpi_poweroff(void) {
-    ACPI_STATUS status = AcpiEnterSleepStatePrep(5);
-    if (status == AE_OK) {
-        AcpiEnterSleepState(5);
-    }
-}
-
 static int power_button_thread(void* arg) {
     mx_handle_t event = (mx_handle_t)(uintptr_t)arg;
 
@@ -75,7 +70,8 @@ static int power_button_thread(void* arg) {
         if (status != NO_ERROR) {
             break;
         }
-        acpi_poweroff();
+
+        poweroff();
     }
 
     printf("acpi power button thread terminated\n");

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "acpi.h"
 #include "devmgr.h"
 #include "vfs.h"
 
@@ -793,9 +794,11 @@ void devmgr_dump(void) {
 
 mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "help")) {
-        printf("dump   - dump device tree\n"
-               "lsof   - list open remoteio files and devices\n"
-               "crash  - crash the device manager\n"
+        printf("dump     - dump device tree\n"
+               "lsof     - list open remoteio files and devices\n"
+               "crash    - crash the device manager\n"
+               "poweroff - poweroff the system\n"
+               "reboot   - reboot the system\n"
                );
         return NO_ERROR;
     }
@@ -810,8 +813,16 @@ mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "crash")) {
         *((int*)0x1234) = 42;
         return NO_ERROR;
-    } else {
+    }
+    if (!strcmp(cmd, "poweroff")) {
+        devmgr_poweroff();
         return ERR_NOT_SUPPORTED;
     }
+    if (!strcmp(cmd, "reboot")) {
+        devmgr_reboot();
+        return ERR_NOT_SUPPORTED;
+    }
+
+    return ERR_NOT_SUPPORTED;
 }
 #endif

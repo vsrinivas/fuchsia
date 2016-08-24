@@ -232,3 +232,25 @@ mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
     *len = rsp_len;
     return NO_ERROR;
 }
+
+mx_status_t acpisvc_s_state_transition(acpi_handle_t* h, uint8_t target_state) {
+    acpi_cmd_s_state_transition_t cmd = {
+        .hdr = {
+            .version = 0,
+            .cmd = ACPI_CMD_S_STATE_TRANSITION,
+            .len = sizeof(cmd),
+        },
+        .target_state = target_state,
+    };
+
+    acpi_rsp_s_state_transition_t* rsp;
+    size_t rsp_len;
+    mx_status_t status =
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, NULL, 0);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    // This state should be unreachable.
+    abort();
+}

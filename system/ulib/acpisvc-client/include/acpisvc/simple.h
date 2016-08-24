@@ -59,4 +59,10 @@ mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
                                   acpi_rsp_get_pci_init_arg_t** response,
                                   size_t* len);
 
+// Change the system's power state.
+//
+// This command will only succeed if the handle is the ACPI root handle.
+// TODO(teisenbe): Perhaps open this up to a different handle.
+mx_status_t acpisvc_s_state_transition(acpi_handle_t* h, uint8_t target_state);
+
 __END_CDECLS

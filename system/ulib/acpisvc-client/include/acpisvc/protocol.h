@@ -14,6 +14,7 @@ enum {
     ACPI_CMD_LIST_CHILDREN = 1,
     ACPI_CMD_GET_CHILD_HANDLE = 2,
     ACPI_CMD_GET_PCI_INIT_ARG = 3,
+    ACPI_CMD_S_STATE_TRANSITION = 4,
 };
 
 typedef struct {
@@ -71,3 +72,19 @@ typedef struct {
 
     mx_pci_init_arg_t arg;
 } __PACKED acpi_rsp_get_pci_init_arg_t;
+
+// Perform an S-state transition (S5: poweroff, S3: suspend-to-RAM).
+// Also supports reboots.
+enum {
+    ACPI_S_STATE_REBOOT = 1,
+    ACPI_S_STATE_S3 = 2,
+    ACPI_S_STATE_S5 = 3,
+};
+typedef struct {
+    acpi_cmd_hdr_t hdr;
+
+    uint8_t target_state;
+} __PACKED acpi_cmd_s_state_transition_t;
+typedef struct {
+    acpi_rsp_hdr_t hdr;
+} __PACKED acpi_rsp_s_state_transition_t;

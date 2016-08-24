@@ -140,3 +140,13 @@ mx_status_t devmgr_init_pcie(void) {
     free(rsp);
     return status;
 }
+
+void devmgr_poweroff(void) {
+    acpisvc_s_state_transition(&acpi_root, ACPI_S_STATE_S5);
+    mx_debug_send_command("poweroff", sizeof("poweroff"));
+}
+
+void devmgr_reboot(void) {
+    acpisvc_s_state_transition(&acpi_root, ACPI_S_STATE_REBOOT);
+    mx_debug_send_command("reboot", sizeof("reboot"));
+}

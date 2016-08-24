@@ -18,9 +18,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ec.c \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/pci.c \
+    $(LOCAL_DIR)/power.c \
     $(LOCAL_DIR)/powerbtn.c \
     $(LOCAL_DIR)/processor.c
-
 else
 MODULE_SRCS += $(LOCAL_DIR)/dummy.c
 endif

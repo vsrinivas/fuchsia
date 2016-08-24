@@ -14,6 +14,7 @@
 #include <mxio/dispatcher.h>
 
 #include "pci.h"
+#include "power.h"
 
 // Data associated with each message pipe handle
 typedef struct {
@@ -29,12 +30,14 @@ typedef struct {
 static mx_status_t cmd_list_children(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_get_child_handle(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_get_pci_init_arg(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
+static mx_status_t cmd_s_state_transition(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 
 typedef mx_status_t (*cmd_handler_t)(mx_handle_t, acpi_handle_ctx_t*, void*);
 static const cmd_handler_t cmd_table[] = {
         [ACPI_CMD_LIST_CHILDREN] = cmd_list_children,
         [ACPI_CMD_GET_CHILD_HANDLE] = cmd_get_child_handle,
         [ACPI_CMD_GET_PCI_INIT_ARG] = cmd_get_pci_init_arg,
+        [ACPI_CMD_S_STATE_TRANSITION] = cmd_s_state_transition,
 };
 
 static mx_status_t send_error(mx_handle_t h, uint32_t req_id, mx_status_t status);
@@ -397,4 +400,28 @@ cleanup:
     free(arg);
     free(rsp);
     return status;
+}
+
+static mx_status_t cmd_s_state_transition(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
+    acpi_cmd_s_state_transition_t* cmd = _cmd;
+    if (cmd->hdr.len != sizeof(*cmd)) {
+        return send_error(h, cmd->hdr.request_id, ERR_INVALID_ARGS);
+    }
+
+    if (!ctx->root_node) {
+        return send_error(h, cmd->hdr.request_id, ERR_ACCESS_DENIED);
+    }
+
+    switch (cmd->target_state) {
+    case ACPI_S_STATE_REBOOT:
+        reboot();
+        break;
+    case ACPI_S_STATE_S5:
+        poweroff();
+        break;
+    case ACPI_S_STATE_S3: // fall-through since suspend-to-RAM is not yet supported
+    default:
+        return send_error(h, cmd->hdr.request_id, ERR_NOT_SUPPORTED);
+    }
+    return send_error(h, cmd->hdr.request_id, ERR_INTERNAL);
 }
