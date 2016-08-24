@@ -17,11 +17,6 @@ import shutil
 import subprocess
 import tempfile
 
-# When copying trees, we ignore the Dockerfile, compiled lockfiles, and any
-# other hidden files. This somewhat assumes that there are no files named
-# 'packages' to be copied.
-COPYTREE_IGNORES = ['Dockerfile', '.*', 'packages', 'app.yaml',
-                    'notification-handler.yaml']
 DEFAULT_BUCKET_NAME = 'modular-cloud-indexer.google.com.a.appspot.com'
 TARGET_CHOICES = ('default', 'notification-handler', 'queue', 'dispatch')
 
@@ -67,72 +62,51 @@ class DeployCommand(object):
     pass
 
   @abc.abstractproperty
-  def config_file(self):
+  def config_path(self):
     """The path of the config file relative to the deployment directory."""
     pass
 
 
-class DefaultModuleCommand(DeployCommand):
-  """Command that deploys the default module."""
+class DartManagedVMModuleCommand(DeployCommand):
+  """Command that deploys the a Dart Managed VM module."""
+
+  # Base files to be ignored during copying.
+  COPYTREE_IGNORES = ['Dockerfile', '.*', 'packages']
+
+  def __init__(self, service_name, config_name):
+    self.service_name = service_name
+    self.config_name = config_name
+
+    # We ignore the base ignores, as well as the config file.
+    self.ignored_files = DartManagedVMModuleCommand.COPYTREE_IGNORES[:]
+    self.ignored_files.append(config_name)
 
   def setup(self, bucket_name, deploy_path):
-    logging.info('Copying default service')
-    default_path = os.path.join(CLOUD_INDEXER_PATH, 'app', 'default')
-    default_deploy_path = os.path.join(deploy_path, 'default')
-    copy_and_overwrite(default_path, default_deploy_path,
-                       ignore=shutil.ignore_patterns(*COPYTREE_IGNORES))
-
-    logging.info('Copying app.yaml')
-    config_deploy_path = os.path.join(default_deploy_path, 'app.yaml')
-    shutil.copyfile(os.path.join(default_path, 'app.yaml'), config_deploy_path)
-    with open(config_deploy_path, 'a') as cf:
-      cf.write('\n'.join([
-          'env_variables:',
-          '  BUCKET_NAME: \'{}\''.format(bucket_name),
-          ''
-      ]))
-    return True
-
-  @property
-  def config_file(self):
-    return 'default/app.yaml'
-
-
-class NotificationHandlerModuleCommand(DeployCommand):
-  """Command that deploys the notification-handler module."""
-
-  def setup(self, bucket_name, deploy_path):
-    # We want to reorganize the notification-handler service such that it can
-    # be deployed using the image google/dart-runtime-base. More details can
-    # be found at https://hub.docker.com/r/google/dart-runtime-base/.
-    notification_handler_path = os.path.join(CLOUD_INDEXER_PATH, 'app',
-                                             'notification-handler')
-    notification_handler_deploy_path = os.path.join(deploy_path,
-                                                    'notification-handler')
+    # We want to reorganize the service such that it can be deployed using the
+    # image google/dart-runtime-base. More details can be found at
+    # https://hub.docker.com/r/google/dart-runtime-base/.
+    service_path = os.path.join(CLOUD_INDEXER_PATH, 'app', self.service_name)
+    service_deploy_path = os.path.join(deploy_path, self.service_name)
 
     # Generate the lockfile for the local dependencies.
-    logging.info('Running `pub get` in notification-handler service')
-    p = subprocess.Popen([PUB_PATH, 'get'], cwd=notification_handler_path)
+    logging.info('Running `pub get` in %s', self.service_name)
+    p = subprocess.Popen([PUB_PATH, 'get'], cwd=service_path)
     p.communicate()
 
     if p.returncode != 0:
-      logging.error('`pub get` in notification-handler failed. Bailing out.')
+      logging.error('`pub get` in %s failed. Bailing out.', self.service_name)
       return False
 
-    logging.info('Copying notification-handler service')
-    notification_handler_app_deploy_path = os.path.join(
-        notification_handler_deploy_path, 'app')
-    copy_and_overwrite(notification_handler_path,
-                       notification_handler_app_deploy_path,
-                       ignore=shutil.ignore_patterns(*COPYTREE_IGNORES))
+    logging.info('Copying %s service files', self.service_name)
+    service_app_deploy_path = os.path.join(service_deploy_path, 'app')
+    copy_and_overwrite(service_path, service_app_deploy_path,
+                       ignore=shutil.ignore_patterns(*self.ignored_files))
 
     # Like the Dockerfile, the service configuration file has to be at the root
     # of the service directory.
-    logging.info('Copying notification-handler.yaml')
-    config_deploy_path = os.path.join(notification_handler_deploy_path,
-                                      'notification-handler.yaml')
-    shutil.copyfile(os.path.join(notification_handler_path,
-                                 'notification-handler.yaml'),
+    logging.info('Copying %s', self.config_name)
+    config_deploy_path = os.path.join(service_deploy_path, self.config_name)
+    shutil.copyfile(os.path.join(service_path, self.config_name),
                     config_deploy_path)
     with open(config_deploy_path, 'a') as cf:
       cf.write('\n'.join([
@@ -142,28 +116,24 @@ class NotificationHandlerModuleCommand(DeployCommand):
       ]))
 
     # Get all the local dependencies inside the lockfile.
-    with open(os.path.join(notification_handler_path, 'pubspec.lock')) as lf:
+    with open(os.path.join(service_path, 'pubspec.lock')) as lf:
       contents = lf.read()
 
     packages = {}
-    # Anything that is not a descendent of the notification-handler package.
-    # Here, and below, we assume that there are no nested packages.
     dependencies = re.findall(r'path: "(../\S+)"', contents)
     for dependency in dependencies:
-      source_path = os.path.abspath(os.path.join(notification_handler_path,
-                                                 dependency))
+      source_path = os.path.abspath(os.path.join(service_path, dependency))
 
       logging.info('Copying dependency: %s', source_path)
       relative_path = os.path.relpath(source_path, MODULAR_PATH)
-      destination_path = os.path.join(notification_handler_deploy_path,
-                                      'pkg', relative_path)
+      destination_path = os.path.join(service_deploy_path, 'pkg', relative_path)
       copy_and_overwrite(source_path, destination_path,
-                         ignore=shutil.ignore_patterns(*COPYTREE_IGNORES))
+                         ignore=shutil.ignore_patterns(*self.ignored_files))
 
       # We can cache this result for later, when we update pubspec.yaml.
       packages[dependency] = {
           'pubspec': os.path.relpath(destination_path,
-                                     notification_handler_app_deploy_path),
+                                     service_app_deploy_path),
           'dockerfile': os.path.join('pkg', relative_path)
       }
 
@@ -184,8 +154,7 @@ class NotificationHandlerModuleCommand(DeployCommand):
       return 'path: {}/'.format(
           packages[match_object.group(1).rstrip('/')]['pubspec'])
 
-    pubspec_path = os.path.join(notification_handler_app_deploy_path,
-                                'pubspec.yaml')
+    pubspec_path = os.path.join(service_app_deploy_path, 'pubspec.yaml')
     logging.info('Updating dependencies with relative paths')
     with open(pubspec_path, 'r+') as f:
       contents = f.read()
@@ -200,8 +169,7 @@ class NotificationHandlerModuleCommand(DeployCommand):
 
     # Finally, we create the new Dockerfile based on the
     # google/dart-runtime-base container image.
-    dockerfile_path = os.path.join(notification_handler_deploy_path,
-                                   'Dockerfile')
+    dockerfile_path = os.path.join(service_deploy_path, 'Dockerfile')
     logging.info('Writing Dockerfile')
     with open(dockerfile_path, 'w') as f:
       adds = ['ADD {} {}'.format(os.path.join(v['dockerfile'], 'pubspec.yaml'),
@@ -222,8 +190,8 @@ class NotificationHandlerModuleCommand(DeployCommand):
     return True
 
   @property
-  def config_file(self):
-    return 'notification-handler/notification-handler.yaml'
+  def config_path(self):
+    return os.path.join(self.service_name, self.config_name)
 
 
 class DispatchConfigCommand(DeployCommand):
@@ -237,23 +205,8 @@ class DispatchConfigCommand(DeployCommand):
     return True
 
   @property
-  def config_file(self):
+  def config_path(self):
     return 'dispatch.yaml'
-
-
-class QueueConfigCommand(DeployCommand):
-  """Deploys the queue.yaml configuration file."""
-
-  def setup(self, bucket_name, deploy_path):
-    logging.info('Copying queue.yaml')
-    queue_config_path = os.path.join(CLOUD_INDEXER_PATH, 'app',
-                                     'queue.yaml')
-    shutil.copy2(queue_config_path, deploy_path)
-    return True
-
-  @property
-  def config_file(self):
-    return 'queue.yaml'
 
 
 class DeployCommandRunner(object):
@@ -281,15 +234,15 @@ class DeployCommandRunner(object):
     args = [GCLOUD_PATH, 'app', 'deploy']
     for command in self.commands:
       if not command.setup(self.bucket_name, self.deploy_path):
-        logging.error('Setup failed for command: %s', command.config_file)
+        logging.error('Setup failed for command: %s', command.config_path)
         return False
 
       # Appends configuration file to be deployed using gcloud.
-      args.append(command.config_file)
+      args.append(command.config_path)
 
     if self.dry_run:
       logging.info('Dry run complete! The command we would have ran was:\n%s',
-                   ' '.join(args))
+                   ' \\\n  '.join(args))
       return True
 
     p = subprocess.Popen(args, cwd=self.deploy_path)
@@ -343,13 +296,12 @@ def main():
   targets = set(args.targets)
   runner = DeployCommandRunner(args.bucket_name, deploy_dir, args.dry_run)
   if 'default' in targets:
-    runner.add_command(DefaultModuleCommand())
+    runner.add_command(DartManagedVMModuleCommand('default', 'app.yaml'))
   if 'notification-handler' in targets:
-    runner.add_command(NotificationHandlerModuleCommand())
+    runner.add_command(DartManagedVMModuleCommand('notification-handler',
+                                                  'notification-handler.yaml'))
   if 'dispatch' in targets:
     runner.add_command(DispatchConfigCommand())
-  if 'queue' in targets:
-    runner.add_command(QueueConfigCommand())
 
   result = 1
   try:

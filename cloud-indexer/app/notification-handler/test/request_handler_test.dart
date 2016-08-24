@@ -12,9 +12,11 @@ import 'package:notification_handler/request_handler.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:test/test.dart';
 
+import 'message_test_utils.dart';
+
 class MockIndexUpdater extends Mock implements IndexUpdater {}
 
-String _createChangeNotification(
+String createChangeNotification(
     String name, String arch, String revision, String resourceState) {
   return JSON.encode({
     'name': name,
@@ -32,12 +34,29 @@ main() {
     const String testName =
         'services/$testArch/$testRevision/test_manifest.yaml';
 
-    test('Invalid queue name.', () async {
+    const String testSubscription =
+        'projects/subscriptions/test-modular-subscription';
+    const String testMessageId = 'test_message_id';
+
+    test('Invalid push message.', () async {
+      IndexUpdater indexUpdater = new MockIndexUpdater();
+      shelf.Request request = new shelf.Request('POST', testUri);
+      shelf.Response response = await requestHandler(request,
+          indexUpdater: indexUpdater, subscriptionName: testSubscription);
+      expect(response.statusCode, greaterThan(299));
+    });
+
+    test('Invalid subscription.', () async {
       IndexUpdater indexUpdater = new MockIndexUpdater();
       shelf.Request request = new shelf.Request('POST', testUri,
-          headers: {'X-AppEngine-QueueName': 'not-modular-indexing'});
-      shelf.Response response =
-          await requestHandler(request, indexUpdater: indexUpdater);
+          headers: {'X-AppEngine-QueueName': 'indexing'},
+          body: createJsonPushMessage(
+              data: createChangeNotification(
+                  testName, testArch, testRevision, 'exists'),
+              messageId: testMessageId,
+              subscription: 'projects/subscriptions/not-indexing'));
+      shelf.Response response = await requestHandler(request,
+          indexUpdater: indexUpdater, subscriptionName: testSubscription);
       expect(response.statusCode, HttpStatus.OK);
     });
 
@@ -45,10 +64,13 @@ main() {
       IndexUpdater indexUpdater = new MockIndexUpdater();
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
-          body: _createChangeNotification(
-              testName, testArch, testRevision, 'not_exists'));
-      shelf.Response response =
-          await requestHandler(request, indexUpdater: indexUpdater);
+          body: createJsonPushMessage(
+              data: createChangeNotification(
+                  testName, testArch, testRevision, 'not_exists'),
+              messageId: testMessageId,
+              subscription: testSubscription));
+      shelf.Response response = await requestHandler(request,
+          indexUpdater: indexUpdater, subscriptionName: testSubscription);
       expect(response.statusCode, HttpStatus.OK);
     });
 
@@ -59,10 +81,13 @@ main() {
               'Atomic guarantees failed.'));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
-          body: _createChangeNotification(
-              testName, testArch, testRevision, 'exists'));
-      shelf.Response response =
-          await requestHandler(request, indexUpdater: indexUpdater);
+          body: createJsonPushMessage(
+              data: createChangeNotification(
+                  testName, testArch, testRevision, 'exists'),
+              messageId: testMessageId,
+              subscription: testSubscription));
+      shelf.Response response = await requestHandler(request,
+          indexUpdater: indexUpdater, subscriptionName: testSubscription);
       expect(response.statusCode, greaterThan(299));
     });
 
@@ -73,10 +98,13 @@ main() {
               'Internal server error.', HttpStatus.INTERNAL_SERVER_ERROR));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
-          body: _createChangeNotification(
-              testName, testArch, testRevision, 'exists'));
-      shelf.Response response =
-          await requestHandler(request, indexUpdater: indexUpdater);
+          body: createJsonPushMessage(
+              data: createChangeNotification(
+                  testName, testArch, testRevision, 'exists'),
+              messageId: testMessageId,
+              subscription: testSubscription));
+      shelf.Response response = await requestHandler(request,
+          indexUpdater: indexUpdater, subscriptionName: testSubscription);
       expect(response.statusCode, greaterThan(299));
     });
 
@@ -86,10 +114,13 @@ main() {
           (i) => throw new ManifestException('Manifest not found (404).'));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
-          body: _createChangeNotification(
-              testName, testArch, testRevision, 'exists'));
-      shelf.Response response =
-          await requestHandler(request, indexUpdater: indexUpdater);
+          body: createJsonPushMessage(
+              data: createChangeNotification(
+                  testName, testArch, testRevision, 'exists'),
+              messageId: testMessageId,
+              subscription: testSubscription));
+      shelf.Response response = await requestHandler(request,
+          indexUpdater: indexUpdater, subscriptionName: testSubscription);
       expect(response.statusCode, HttpStatus.OK);
     });
 
@@ -99,10 +130,13 @@ main() {
           .thenReturn(new Future.value(null));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
-          body: _createChangeNotification(
-              testName, testArch, testRevision, 'exists'));
-      shelf.Response response =
-          await requestHandler(request, indexUpdater: indexUpdater);
+          body: createJsonPushMessage(
+              data: createChangeNotification(
+                  testName, testArch, testRevision, 'exists'),
+              messageId: testMessageId,
+              subscription: testSubscription));
+      shelf.Response response = await requestHandler(request,
+          indexUpdater: indexUpdater, subscriptionName: testSubscription);
       expect(response.statusCode, HttpStatus.OK);
     });
   });
