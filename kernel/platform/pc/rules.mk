@@ -16,8 +16,6 @@ MODULE_DEPS += \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
-    $(LOCAL_DIR)/acpi_debug.c \
-    $(LOCAL_DIR)/acpi_ec.c \
     $(LOCAL_DIR)/console.c \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/hpet.c \

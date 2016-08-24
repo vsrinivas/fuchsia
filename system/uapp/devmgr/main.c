@@ -6,8 +6,8 @@
 #include <limits.h>
 #include <ddk/protocol/device.h>
 #include <magenta/processargs.h>
-#include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
+#include <magenta/syscalls.h>
 #include <mxio/debug.h>
 #include <mxio/util.h>
 #include <mxio/watcher.h>
@@ -18,6 +18,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include "acpi.h"
 #include "devmgr.h"
 
 #define VC_COUNT 3
@@ -162,6 +163,15 @@ int main(int argc, char** argv) {
     if (!disable_crashlogger)
         devmgr_launch("crashlogger", "/boot/bin/crashlogger", NULL, NULL);
 #endif
+
+    mx_status_t status = devmgr_launch_acpisvc();
+    if (status != NO_ERROR) {
+        return 1;
+    }
+    // Ignore the return value of this; if it fails, it may just be that the
+    // platform doesn't support initing PCIe via ACPI.  If the platform needed
+    // it, it will fail later.
+    devmgr_init_pcie();
 
     printf("devmgr: load drivers\n");
     devmgr_init_builtin_drivers();

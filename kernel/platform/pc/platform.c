@@ -33,7 +33,6 @@
 
 #define LOCAL_TRACE 0
 
-extern void pci_init(void);
 extern status_t x86_alloc_msi_block(uint requested_irqs,
                                     bool can_target_64bit,
                                     bool is_msix,
@@ -75,8 +74,6 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
     { 0 }
 };
 #endif
-
-static struct acpi_pcie_irq_mapping pcie_root_irq_map;
 
 void *_zero_page_boot_params;
 
@@ -312,21 +309,6 @@ status_t platform_mp_prep_cpu_unplug(uint cpu_id)
 
 #endif
 
-static status_t acpi_pcie_irq_swizzle(const pcie_device_state_t* dev, uint pin, uint *irq)
-{
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(pin < 4);
-    if (dev->bus_id != 0) {
-        return ERR_NOT_FOUND;
-    }
-    uint32_t val = pcie_root_irq_map.dev_pin_to_global_irq[dev->dev_id][dev->func_id][pin];
-    if (val == ACPI_NO_IRQ_MAPPING) {
-        return ERR_NOT_FOUND;
-    }
-    *irq = val;
-    return NO_ERROR;
-}
-
 void platform_pcie_init_info(pcie_init_info_t *out)
 {
     *out = (pcie_init_info_t){
@@ -343,95 +325,6 @@ void platform_pcie_init_info(pcie_init_info_t *out)
     };
 }
 
-void platform_init_pcie(void)
-{
-    struct acpi_pcie_config config;
-    status_t status = platform_find_pcie_config(&config);
-    if (status != NO_ERROR) {
-        TRACEF("failed to find PCIe configuration space\n");
-        return;
-    }
-    if (config.start_bus != 0) {
-        TRACEF("PCIe buses that don't start at 0 not currently supported\n");
-        return;
-    }
-    if (config.segment_group != 0) {
-        TRACEF("PCIe segment groups not currently supported\n");
-        return;
-    }
-
-    status = platform_find_pcie_legacy_irq_mapping(&pcie_root_irq_map);
-    if (status != NO_ERROR) {
-        TRACEF("failed to find PCIe IRQ remapping\n");
-        return;
-    }
-
-    // Configure the discovered PCIe IRQs
-    for (uint i = 0; i < pcie_root_irq_map.num_irqs; ++i) {
-        struct acpi_irq_signal *sig = &pcie_root_irq_map.irqs[i];
-        enum interrupt_trigger_mode trig_mode = IRQ_TRIGGER_MODE_EDGE;
-        enum interrupt_polarity polarity = IRQ_POLARITY_ACTIVE_LOW;
-        if (sig->active_high) {
-            polarity = IRQ_POLARITY_ACTIVE_HIGH;
-        }
-        if (sig->level_triggered) {
-            trig_mode = IRQ_TRIGGER_MODE_LEVEL;
-        }
-        apic_io_configure_irq(
-                sig->global_irq,
-                trig_mode,
-                polarity,
-                DELIVERY_MODE_FIXED,
-                IO_APIC_IRQ_MASK,
-                DST_MODE_PHYSICAL,
-                // TODO(teisenbe): Balance IRQs
-                apic_local_id(),
-                0);
-    }
-
-    // Check for a quirk that we've seen.  Some systems will report overly large
-    // PCIe config regions that collide with architectural registers.
-    paddr_t end = config.ecam_phys +
-            (config.end_bus - config.start_bus + 1) * PCIE_ECAM_BYTE_PER_BUS;
-    DEBUG_ASSERT(config.start_bus <= config.end_bus);
-    if (end > HIGH_ADDRESS_LIMIT) {
-        TRACEF("PCIe config space collides with arch devices, truncating\n");
-        end = HIGH_ADDRESS_LIMIT;
-        DEBUG_ASSERT(end >= config.ecam_phys);
-        config.ecam_size = ROUNDDOWN(end - config.ecam_phys, PCIE_ECAM_BYTE_PER_BUS);
-        config.end_bus = (config.ecam_size / PCIE_ECAM_BYTE_PER_BUS) + config.start_bus - 1;
-    }
-
-    // TODO(johngro): Do not limit this to a single range.  Instead, fetch all
-    // of the ECAM ranges from ACPI, as well as the appropriate bus start/end
-    // ranges.
-    DEBUG_ASSERT(config.ecam_size >= PCIE_ECAM_BYTE_PER_BUS);
-    const pcie_ecam_range_t PCIE_ECAM_WINDOWS[] = {
-        {
-            .io_range  = { .bus_addr = config.ecam_phys, .size = config.ecam_size },
-            .bus_start = 0x00,
-            .bus_end   = (uint8_t)(config.ecam_size / PCIE_ECAM_BYTE_PER_BUS) - 1,
-        },
-    };
-
-    const pcie_init_info_t PCIE_INIT_INFO = {
-        .ecam_windows         = PCIE_ECAM_WINDOWS,
-        .ecam_window_count    = countof(PCIE_ECAM_WINDOWS),
-        .mmio_window_lo       = { .bus_addr = pcie_mem_lo_base, .size = pcie_mem_lo_size },
-        .mmio_window_hi       = { .bus_addr = 0,                .size = 0 },
-        .pio_window           = { .bus_addr = pcie_pio_base,    .size = pcie_pio_size },
-        .legacy_irq_swizzle   = acpi_pcie_irq_swizzle,
-        .alloc_msi_block      = x86_alloc_msi_block,
-        .free_msi_block       = x86_free_msi_block,
-        .register_msi_handler = x86_register_msi_handler,
-        .mask_unmask_msi      = NULL,
-    };
-
-    status = pcie_init(&PCIE_INIT_INFO);
-    if (status != NO_ERROR)
-        TRACEF("Failed to initialize PCIe bus driver! (status = %d)\n", status);
-}
-
 void platform_init(void)
 {
     platform_init_debug();
@@ -444,12 +337,8 @@ void platform_init(void)
     platform_init_smp();
 #endif
 
-    platform_init_acpi();
-
     if (!early_console_disabled) {
         // detach the early console - pcie init may move it
         gfxconsole_bind_display(NULL, NULL);
     }
-
-    platform_init_pcie();
 }
