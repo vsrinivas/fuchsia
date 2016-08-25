@@ -15,6 +15,9 @@
 #include <pow2.h>
 
 #include <kernel/auto_lock.h>
+#include <kernel/vm/vm_aspace.h>
+#include <kernel/vm/vm_object.h>
+
 #include <lib/user_copy.h>
 #include <magenta/handle.h>
 
@@ -22,7 +25,7 @@
 
 constexpr mx_rights_t kDefaultSocketRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE;
-constexpr mx_size_t kDeFaultSocketBufferSize = 64 * 1024u;
+constexpr mx_size_t kDeFaultSocketBufferSize = 256 * 1024u;
 
 namespace {
 // Cribbed from pow2.h, we need overloading to correctly deal with 32 and 64 bits.
@@ -32,20 +35,37 @@ template <typename T> T vmodpow2(T val, uint modp2) { return val & ((1U << modp2
 #define INC_POINTER(len_pow2, ptr, inc) vmodpow2(((ptr) + (inc)), len_pow2)
 
 SocketDispatcher::CBuf::~CBuf() {
-    free(buf_);
+    VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(buf_));
 }
 
 bool SocketDispatcher::CBuf::Init(uint32_t len) {
-    buf_ = reinterpret_cast<char*>(malloc(len));
+    vmo_ = VmObject::Create(PMM_ALLOC_FLAG_ANY, len);
+    if (!vmo_)
+        return false;
+
+    void* start = nullptr;
+    auto st = VmAspace::kernel_aspace()->MapObject(
+        vmo_, "socket", 0u, len, &start, PAGE_SIZE_SHIFT,
+        0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+
+    if (st < 0)
+        return false;
+
+    buf_ = reinterpret_cast<char*>(start);
+
     if (!buf_)
         return false;
     len_pow2_ = log2_uint(len);
     return true;
 }
 
-mx_size_t SocketDispatcher::CBuf::available() const {
+mx_size_t SocketDispatcher::CBuf::free() const {
     uint consumed = modpow2((uint)(head_ - tail_), len_pow2_);
     return valpow2(len_pow2_) - consumed - 1;
+}
+
+bool SocketDispatcher::CBuf::empty() const {
+    return tail_ == head_;
 }
 
 mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool from_user) {
@@ -54,7 +74,7 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
     size_t write_len;
     size_t pos = 0;
 
-    while (pos < len && available() > 0) {
+    while (pos < len && (free() > 0)) {
         if (head_ >= tail_) {
             write_len = MIN(valpow2(len_pow2_) - head_, len - pos);
         } else {
@@ -67,16 +87,12 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
         }
 
         if (from_user)
-            copy_from_user(buf_ + head_, mxtl::user_ptr<const char>(buf + pos), write_len);
+            vmo_->WriteUser(buf + pos, head_, write_len, nullptr);
         else
             memcpy(buf_ + head_, buf + pos, write_len);
 
         head_ = INC_POINTER(len_pow2_, head_, write_len);
         pos += write_len;
-    }
-
-    if (head_ != tail_) {
-        // signalled = event_signal(&cbuf->event, false);
     }
     return pos;
 }
@@ -101,18 +117,12 @@ mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user
             }
 
             if (from_user)
-                copy_to_user(mxtl::user_ptr<char>(buf + pos), buf_ + tail_, read_len);
+                vmo_->ReadUser(buf + pos, tail_, read_len, nullptr);
             else
                 memcpy(buf + pos, buf_ + tail_, read_len);
 
             tail_ = INC_POINTER(len_pow2_, tail_, read_len);
             pos += read_len;
-        }
-
-        if (tail_ == head_) {
-            DEBUG_ASSERT(pos > 0);
-            // we've emptied the buffer, unsignal the event
-            // event_unsignal(&cbuf->event);
         }
         ret = pos;
     }
@@ -149,11 +159,12 @@ status_t SocketDispatcher::Create(uint32_t flags,
 
 SocketDispatcher::SocketDispatcher(uint32_t flags)
     : flags_(flags) {
-    mutex_init(&lock_);
+    state_tracker_.set_initial_signals_state(
+            mx_signals_state_t{MX_SIGNAL_WRITABLE,
+                               MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
 }
 
 SocketDispatcher::~SocketDispatcher() {
-    mutex_destroy(&lock_);
 }
 
 mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) {
@@ -178,23 +189,57 @@ void SocketDispatcher::OnPeerZeroHandles() {
         AutoLock lock(&lock_);
         other_.reset();
     }
+    state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED,
+                               MX_SIGNAL_WRITABLE, 0u);
 }
 
 mx_ssize_t SocketDispatcher::Write(const void* src, mx_size_t len, bool from_user) {
-    mxtl::RefPtr<SocketDispatcher> socket;
+    mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
-        socket = other_;
+        if (!other_)
+            return ERR_CHANNEL_CLOSED;
+        other = other_;
     }
-    return socket ? socket->WriteSelf(src, len, from_user) : ERR_NOT_READY;
+
+    auto st = other->WriteSelf(src, len, from_user);
+    return st;
 }
 
 mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from_user) {
     AutoLock lock(&lock_);
-    return cbuf_.Write(src, len, from_user);
+
+    if (!cbuf_.free())
+        return ERR_NOT_READY;
+
+    bool was_empty = cbuf_.empty();
+
+    auto st = cbuf_.Write(src, len, from_user);
+
+    if (was_empty && (st > 0))
+        state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
+
+    if (!cbuf_.free())
+        other_->state_tracker_.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
+
+    return st;
 }
 
 mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
     AutoLock lock(&lock_);
-    return cbuf_.Read(dest, len, from_user);
+
+    if (cbuf_.empty())
+        return ERR_NOT_READY;
+
+    bool was_full = cbuf_.free() == 0u;
+
+    auto st = cbuf_.Read(dest, len, from_user);
+
+    if (cbuf_.empty())
+        state_tracker_.UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
+
+    if (was_full && (st > 0))
+        other_->state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
+
+    return st;
 }

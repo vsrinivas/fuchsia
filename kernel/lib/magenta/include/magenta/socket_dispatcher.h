@@ -16,6 +16,8 @@
 
 #include <mxtl/ref_counted.h>
 
+class VmObject;
+
 class SocketDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
@@ -41,13 +43,15 @@ private:
         bool Init(uint32_t len);
         mx_size_t Write(const void* src, mx_size_t len, bool from_user);
         mx_size_t Read(void* dest, mx_size_t len, bool from_user);
-        mx_size_t available() const;
+        mx_size_t free() const;
+        bool empty() const;
 
     private:
         mx_size_t head_ = 0u;
         mx_size_t tail_ = 0u;
         uint32_t len_pow2_ = 0u;
         char* buf_ = nullptr;
+        mxtl::RefPtr<VmObject> vmo_;
     };
 
     SocketDispatcher(uint32_t flags);
@@ -56,9 +60,9 @@ private:
 
     const uint32_t flags_;
     StateTracker state_tracker_;
-    mxtl::RefPtr<SocketDispatcher> other_;
 
-    // The |lock_| protects cbuf_.
-    mutex_t lock_;
+    // The |lock_| protects cbuf_ and |other_|.
+    Mutex lock_;
     CBuf cbuf_;
+    mxtl::RefPtr<SocketDispatcher> other_;
 };
