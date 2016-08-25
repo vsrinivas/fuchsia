@@ -47,15 +47,25 @@ static utils::RefPtr<VmObject> make_vmo_from_memory(const void* data,
                                                     size_t size) {
     auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, size);
     if (vmo && size > 0) {
-        ASSERT((uintptr_t)data % PAGE_SIZE == 0);
-        ASSERT(size % PAGE_SIZE == 0);
-        // TODO(mcgrathr): Ideally this would steal the pages from the kernel
-        // image rather than copying them into new space.  These pages will
-        // never be used by the kernel again, so it's a waste to keep them in
-        // core as part of the kernel image.
-        size_t written;
-        if (vmo->Write(data, 0, size, &written) < 0 || written != size)
-            vmo.reset();
+        ASSERT(IS_PAGE_ALIGNED((uintptr_t)data));
+        ASSERT(IS_PAGE_ALIGNED(size));
+
+        // do a direct lookup of the physical pages backing the range of the kernel
+        // that these addresses belong to and jam directly into the VMO.
+        // NOTE: relies on the kernel not otherwise owning the pages. If the set up
+        // of the kernel's address space changes so that the pages are attached to a
+        // kernel VMO, this will need to change.
+        paddr_t start_paddr = vaddr_to_paddr(data);
+        ASSERT(start_paddr != 0);
+        for (size_t count = 0; count < size / PAGE_SIZE; count++) {
+            vm_page_t *page = paddr_to_vm_page(start_paddr + count * PAGE_SIZE);
+            ASSERT(page);
+
+            // make sure the page isn't already attached to another object
+            ASSERT(!list_in_list(&page->node));
+
+            vmo->AddPage(page, count * PAGE_SIZE);
+        }
     }
     return vmo;
 }

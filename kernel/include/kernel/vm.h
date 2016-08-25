@@ -178,7 +178,7 @@ size_t pmm_free_kpages(void* ptr, size_t count);
 void* paddr_to_kvaddr(paddr_t pa);
 
 /* virtual to physical */
-paddr_t vaddr_to_paddr(void* va);
+paddr_t vaddr_to_paddr(const void* va);
 
 /* vm_page_t to physical address */
 paddr_t vm_page_to_paddr(const vm_page_t* page);
@@ -195,7 +195,7 @@ typedef struct vmm_aspace vmm_aspace_t;
 vmm_aspace_t* vmm_get_kernel_aspace(void);
 
 /* virtual to container address space */
-struct vmm_aspace* vaddr_to_aspace(void* ptr);
+struct vmm_aspace* vaddr_to_aspace(const void* ptr);
 
 /* retrieve the arch-specific information for this aspace */
 arch_aspace_t* vmm_get_arch_aspace(vmm_aspace_t* aspace);

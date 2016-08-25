@@ -202,7 +202,7 @@ void* paddr_to_kvaddr(paddr_t pa) {
     return nullptr;
 }
 
-paddr_t vaddr_to_paddr(void* ptr) {
+paddr_t vaddr_to_paddr(const void* ptr) {
     vmm_aspace_t* _aspace = vaddr_to_aspace(ptr);
     if (!_aspace)
         return (paddr_t) nullptr;
@@ -217,7 +217,7 @@ paddr_t vaddr_to_paddr(void* ptr) {
     return pa;
 }
 
-vmm_aspace_t* vaddr_to_aspace(void* ptr) {
+vmm_aspace_t* vaddr_to_aspace(const void* ptr) {
     if (is_kernel_address((vaddr_t)ptr)) {
         return vmm_get_kernel_aspace();
     } else if (is_user_address((vaddr_t)ptr)) {
