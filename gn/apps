@@ -3,6 +3,7 @@
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
         "//apps/logging",
+        "//apps/modular",
         "//apps/native_viewport"
     ],
     "binaries": [
@@ -21,6 +22,10 @@
         {
             "binary": "framebuffer",
             "bootfs_path": "apps/framebuffer"
+        },
+        {
+            "binary": "story-manager",
+            "bootfs_path": "apps/story-manager"
         }
     ]
 }
