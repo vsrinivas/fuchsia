@@ -14,6 +14,8 @@
 #define DEV_FLAG_INSTANCE       0x00000020  // this device was created-on-open
 #define DEV_FLAG_REBIND         0x00000040  // this device is being rebound
 
+#define DEV_MAGIC 'MDEV'
+
 mx_status_t device_bind(mx_device_t* dev, const char* drv_name);
 mx_status_t device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags);
 mx_status_t device_close(mx_device_t* dev);

@@ -587,11 +587,7 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev) {
         return ERR_NO_MEMORY;
     }
 
-    status = device_init(&device->device, drv, "ahci", &ahci_device_proto);
-    if (status) {
-        xprintf("ahci: failed to init device\n");
-        goto fail;
-    }
+    device_init(&device->device, drv, "ahci", &ahci_device_proto);
 
     // map register window
     device->regs_handle = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE, (void*)&device->regs, &device->regs_size);

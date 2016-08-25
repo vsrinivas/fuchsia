@@ -199,9 +199,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
     eth_setup_buffers(&edev->eth, iomem, iophys);
     eth_init_hw(&edev->eth);
 
-    if (device_init(&edev->dev, drv, "intel-ethernet", &device_ops)) {
-        goto fail;
-    }
+    device_init(&edev->dev, drv, "intel-ethernet", &device_ops);
     edev->dev.protocol_id = MX_PROTOCOL_ETHERNET;
     edev->dev.protocol_ops = &ethernet_ops;
     if (device_add(&edev->dev, dev)) {

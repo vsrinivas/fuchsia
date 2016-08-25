@@ -640,10 +640,7 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
     // init the new device
     char name[8];
     snprintf(name, sizeof(name), "vc%u", vc_count);
-    status = device_init(&device->device, &_driver_vc_root, name, &vc_device_proto);
-    if (status != NO_ERROR) {
-        return status;
-    }
+    device_init(&device->device, &_driver_vc_root, name, &vc_device_proto);
 
     if (dev) {
         // if called normally, add the instance

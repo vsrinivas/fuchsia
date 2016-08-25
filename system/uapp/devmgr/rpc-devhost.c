@@ -91,10 +91,8 @@ static mx_status_t devhost_remote_add(devhost_t* dh, devhost_msg_t* msg, mx_hand
         r = ERR_NO_MEMORY;
         goto fail0;
     }
-    if ((r = devmgr_device_init(&proxy->device, &proxy_driver,
-                                msg->namedata, &proxy_device_proto)) < 0) {
-        goto fail1;
-    }
+    devmgr_device_init(&proxy->device, &proxy_driver,
+                       msg->namedata, &proxy_device_proto);
     proxy->device.remote = h;
     proxy->device.flags |= DEV_FLAG_REMOTE;
     proxy->device.protocol_id = msg->protocol_id;

@@ -215,9 +215,7 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
 
     // create and add the display (char) device
-    status = device_init(&device->device, drv, "bochs_vbe", &bochs_vbe_device_proto);
-    if (status)
-        goto fail;
+    device_init(&device->device, drv, "bochs_vbe", &bochs_vbe_device_proto);
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &bochs_vbe_display_proto;

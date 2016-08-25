@@ -447,11 +447,7 @@ static int usb_ethernet_start_thread(void* arg) {
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
-    status = device_init(&eth->device, eth->driver, "usb-ethernet", &usb_ethernet_device_proto);
-    if (status != NO_ERROR) {
-        free(eth);
-        return status;
-    }
+    device_init(&eth->device, eth->driver, "usb-ethernet", &usb_ethernet_device_proto);
 
     mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);

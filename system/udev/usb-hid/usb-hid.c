@@ -133,11 +133,7 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
 
         char name[10];
         snprintf(name, sizeof(name), "usb-hid%02d", i);
-        status = device_init(&hid->dev, drv, name, &usb_hid_proto);
-        if (status != NO_ERROR) {
-            usb_hid_cleanup_dev(hid);
-            return status;
-        }
+        device_init(&hid->dev, drv, name, &usb_hid_proto);
 
         hid->usbdev = dev;
         hid->drv = drv;

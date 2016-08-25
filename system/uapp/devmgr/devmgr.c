@@ -290,37 +290,43 @@ static void devmgr_device_probe_all(mx_device_t* dev, bool autobind) {
     }
 }
 
-mx_status_t devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
-                               const char* name, mx_protocol_device_t* ops) {
+void devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
+                        const char* name, mx_protocol_device_t* ops) {
     xprintf("devmgr: init '%s' drv=%p, ops=%p\n", safename(name), driver, ops);
 
-    if (name == NULL)
-        return ERR_INVALID_ARGS;
-    if (strlen(name) > MX_DEVICE_NAME_MAX)
-        return ERR_INVALID_ARGS;
-
     memset(dev, 0, sizeof(mx_device_t));
-    strncpy(dev->namedata, name, MX_DEVICE_NAME_MAX);
-    dev->magic = MX_DEVICE_MAGIC;
+    dev->magic = DEV_MAGIC;
     dev->name = dev->namedata;
     dev->ops = ops;
     dev->driver = driver;
     list_initialize(&dev->children);
-    return NO_ERROR;
+
+    if (name == NULL) {
+        printf("devmgr: dev=%p has null name.\n", dev);
+        name = "invalid";
+        dev->magic = 0;
+    }
+
+    size_t len = strlen(name);
+    if (len >= MX_DEVICE_NAME_MAX) {
+        printf("devmgr: dev=%p name too large '%s'\n", dev, name);
+        len = MX_DEVICE_NAME_MAX - 1;
+        dev->magic = 0;
+    }
+
+    memcpy(dev->namedata, name, len);
+    dev->namedata[len] = 0;
 }
 
 mx_status_t devmgr_device_create(mx_device_t** out, mx_driver_t* driver,
                                  const char* name, mx_protocol_device_t* ops) {
     mx_device_t* dev = malloc(sizeof(mx_device_t));
-    if (dev == NULL)
+    if (dev == NULL) {
         return ERR_NO_MEMORY;
-    mx_status_t status = devmgr_device_init(dev, driver, name, ops);
-    if (status) {
-        free(dev);
-    } else {
-        *out = dev;
     }
-    return status;
+    devmgr_device_init(dev, driver, name, ops);
+    *out = dev;
+    return NO_ERROR;
 }
 
 void devmgr_device_set_bindable(mx_device_t* dev, bool bindable) {
@@ -339,6 +345,9 @@ void devmgr_device_set_bindable(mx_device_t* dev, bool bindable) {
 mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     if (dev == NULL) {
         return ERR_INVALID_ARGS;
+    }
+    if (dev->magic != DEV_MAGIC) {
+        return ERR_BAD_STATE;
     }
     if (parent == NULL) {
         if (devmgr_is_remote) {

@@ -231,13 +231,7 @@ static int gpt_bind_thread(void* arg) {
 
         char name[16];
         snprintf(name, sizeof(name), "%sp%u", dev->name, partitions);
-        status = device_init(&device->device, drv, name, &gpt_proto);
-        if (status) {
-            xprintf("gpt: failed to init device\n");
-            txn->ops->release(txn);
-            free(device);
-            goto unbind;
-        }
+        device_init(&device->device, drv, name, &gpt_proto);
 
         device->blksize = blksize;
         txn->ops->copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);

@@ -57,8 +57,8 @@ struct mx_driver_binding {
 // Device Manager API
 mx_status_t device_create(mx_device_t** device, mx_driver_t* driver,
                           const char* name, mx_protocol_device_t* ops);
-mx_status_t device_init(mx_device_t* device, mx_driver_t* driver,
-                        const char* name, mx_protocol_device_t* ops);
+void device_init(mx_device_t* device, mx_driver_t* driver,
+                 const char* name, mx_protocol_device_t* ops);
 // Devices are created or (if embedded in a driver-specific structure)
 // initialized with the above functions.  The mx_device_t will be completely
 // written during initialization, and after initialization and before calling

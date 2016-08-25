@@ -33,8 +33,8 @@ mx_status_t devmgr_device_bind(mx_device_t* dev, const char* drv_name);
 mx_status_t devmgr_device_rebind(mx_device_t* dev);
 mx_status_t devmgr_device_create(mx_device_t** dev, mx_driver_t* driver,
                                  const char* name, mx_protocol_device_t* ops);
-mx_status_t devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
-                               const char* name, mx_protocol_device_t* ops);
+void devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
+                        const char* name, mx_protocol_device_t* ops);
 void devmgr_device_set_bindable(mx_device_t* dev, bool bindable);
 
 mx_device_t* devmgr_device_root(void);

@@ -220,11 +220,7 @@ static mx_status_t usb_hid_open_dev(mx_device_t* dev, mx_device_t** dev_out, uin
         return ERR_NO_MEMORY;
     }
 
-    status = device_init(&inst->dev, hid->drv, "usb-hid", &usb_hid_instance_proto);
-    if (status != NO_ERROR) {
-        usb_hid_cleanup_instance(inst);
-        return status;
-    }
+    device_init(&inst->dev, hid->drv, "usb-hid", &usb_hid_instance_proto);
 
     inst->dev.protocol_id = MX_PROTOCOL_INPUT;
     status = device_add_instance(&inst->dev, dev);

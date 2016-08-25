@@ -251,10 +251,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
         return ERR_NO_MEMORY;
     }
 
-    status = device_init(&hub->device, driver, "usb-hub", &usb_hub_device_proto);
-    if (status != NO_ERROR) {
-        goto fail;
-    }
+    device_init(&hub->device, driver, "usb-hub", &usb_hub_device_proto);
 
     hub->usb_device = device;
     hub->device_protocol = device_protocol;

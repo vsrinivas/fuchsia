@@ -375,9 +375,7 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     uxhci->cfg_handle = cfg_handle;
     uxhci->pci_proto = pci_proto;
 
-    status = device_init(&uxhci->device, drv, "usb-xhci", &xhci_device_proto);
-    if (status < 0)
-        goto error_return;
+    device_init(&uxhci->device, drv, "usb-xhci", &xhci_device_proto);
 
     status = xhci_init(&uxhci->xhci, mmio);
     if (status < 0)

@@ -176,9 +176,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
 
     // create and add the display (char) device
-    status = device_init(&device->device, drv, "intel_i915_disp", &intel_i915_device_proto);
-    if (status)
-        goto fail;
+    device_init(&device->device, drv, "intel_i915_disp", &intel_i915_device_proto);
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;

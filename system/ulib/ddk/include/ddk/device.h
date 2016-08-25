@@ -23,7 +23,6 @@ typedef struct vnode vnode_t;
 //TODO: multi-char constants are implementation-specific
 //      move to something more ABI-stable
 
-#define MX_DEVICE_MAGIC 'MDEV'
 #define MX_DEVICE_NAME_MAX 32
 
 struct mx_device {

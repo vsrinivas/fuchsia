@@ -764,12 +764,8 @@ static void ums_iotxn_wait_cb(iotxn_t* txn, void* cookie) {
 
 static int ums_start_thread(void* arg) {
     ums_t* msd = (ums_t*)arg;
-    mx_status_t status = device_init(&msd->device, msd->driver, "usb_mass_storage", &ums_device_proto);
-    if (status != NO_ERROR) {
-        free(msd);
-        DEBUG_PRINT(("UMS:returning, got status: %d\n", (uint8_t)status));
-        return status;
-    }
+    device_init(&msd->device, msd->driver, "usb_mass_storage", &ums_device_proto);
+
     iotxn_t* txn;
     iotxn_alloc(&txn, 0, UMS_READ_CAPACITY10_TRANSFER_LENGTH, 0);
     //TODO: what op goes into txn? not sure if this is proper style but putting -1 here to show its not a std op?

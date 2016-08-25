@@ -695,14 +695,10 @@ static mx_status_t i8042_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t 
     mx_hid_fifo_init(&inst->fifo);
 
     const char* name = (i8042->type == INPUT_PROTO_MOUSE) ? "i8042-mouse" : "i8042-keyboard";
-    mx_status_t status = device_init(&inst->device, i8042->drv, name, &i8042_instance_proto);
-    if (status) {
-        free(inst);
-        return status;
-    }
+    device_init(&inst->device, i8042->drv, name, &i8042_instance_proto);
 
     inst->device.protocol_id = MX_PROTOCOL_INPUT;
-    status = device_add_instance(&inst->device, dev);
+    mx_status_t status = device_add_instance(&inst->device, dev);
     if (status != NO_ERROR) {
         free(inst);
         return status;
@@ -854,11 +850,7 @@ static int i8042_init_thread(void* arg) {
     if (!kbd_device)
         return ERR_NO_MEMORY;
 
-    status = device_init(&kbd_device->device, driver, "i8042-keyboard", &i8042_device_proto);
-    if (status) {
-        free(kbd_device);
-        return status;
-    }
+    device_init(&kbd_device->device, driver, "i8042-keyboard", &i8042_device_proto);
     kbd_device->drv = driver;
     kbd_device->type = INPUT_PROTO_KBD;
     status = i8042_dev_init(kbd_device);
@@ -870,17 +862,12 @@ static int i8042_init_thread(void* arg) {
     if (have_mouse) {
         mouse_device = calloc(1, sizeof(i8042_device_t));
         if (mouse_device) {
-            status = device_init(&mouse_device->device, driver, "i8042-mouse", &i8042_device_proto);
-            if (status) {
-                free(mouse_device);
+            device_init(&mouse_device->device, driver, "i8042-mouse", &i8042_device_proto);
+            mouse_device->drv = driver;
+            mouse_device->type = INPUT_PROTO_MOUSE;
+            status = i8042_dev_init(mouse_device);
+            if (status != NO_ERROR) {
                 have_mouse = false;
-            } else {
-                mouse_device->drv = driver;
-                mouse_device->type = INPUT_PROTO_MOUSE;
-                status = i8042_dev_init(mouse_device);
-                if (status != NO_ERROR) {
-                    have_mouse = false;
-                }
             }
         }
     }

@@ -326,10 +326,8 @@ mx_status_t intel_serialio_i2c_slave_device_init(
     };
     snprintf(name, sizeof(name) - 1, "%04x", address);
 
-    status = device_init(&slave->device, cont->driver, name,
-                         &intel_serialio_i2c_slave_device_proto);
-    if (status < 0)
-        return status;
+    device_init(&slave->device, cont->driver, name,
+                &intel_serialio_i2c_slave_device_proto);
 
     slave->chip_address_width = width;
     slave->chip_address = address;

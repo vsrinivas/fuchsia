@@ -232,11 +232,7 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
 
     char name[8];
     snprintf(name, sizeof(name), "sata%d", port);
-    mx_status_t status = device_init(&device->device, dev->driver, name, &sata_device_proto);
-    if (status) {
-        xprintf("sata: failed to init device\n");
-        goto fail;
-    }
+    device_init(&device->device, dev->driver, name, &sata_device_proto);
 
     device->port = port;
 
@@ -248,7 +244,4 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
     device_add(&device->device, dev);
 
     return NO_ERROR;
-fail:
-    free(device);
-    return status;
 }

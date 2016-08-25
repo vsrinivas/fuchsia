@@ -354,11 +354,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&hci->free_acl_write_reqs, &req->node);
     }
 
-    status = device_init(&hci->device, driver, "usb_bt_hci", &hci_device_proto);
-    if (status != NO_ERROR) {
-        free(hci);
-        return status;
-    }
+    device_init(&hci->device, driver, "usb_bt_hci", &hci_device_proto);
 
     mtx_lock(&hci->mutex);
     queue_interrupt_requests_locked(hci);

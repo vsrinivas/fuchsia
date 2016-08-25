@@ -43,15 +43,14 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     }
 
     kpci_device_t* device = calloc(1, sizeof(kpci_device_t));
-    mx_status_t status = ERR_NO_MEMORY;
-    if (!device)
-        goto finished;
+    if (!device) {
+        mx_handle_close(handle);
+        return ERR_NO_MEMORY;
+    }
 
     char name[20];
     snprintf(name, sizeof(name), "%02x:%02x:%02x", info.bus_id, info.dev_id, info.func_id);
-    status = device_init(&device->device, drv, name, &kpci_device_proto);
-    if (status != NO_ERROR)
-        goto finished;
+    device_init(&device->device, drv, name, &kpci_device_proto);
 
     device->device.protocol_id = MX_PROTOCOL_PCI;
     device->device.protocol_ops = &_pci_protocol;
@@ -70,14 +69,8 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     device->device.prop_count = countof(device->props);
 
     memcpy(&device->info, &info, sizeof(info));
-finished:
-    if (status != NO_ERROR) {
-        if (device)
-            free(device);
-        if (handle >= 0)
-            mx_handle_close(handle);
-    }
-    return status;
+
+    return NO_ERROR;
 }
 
 static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {

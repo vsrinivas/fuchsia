@@ -343,11 +343,7 @@ mx_status_t usb_add_device(mx_device_t* hcidev, int address, usb_speed_t speed,
     char name[16];
     snprintf(name, sizeof(name), "usb-dev-%03d", address);
 
-    status = device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
-    if (status < 0) {
-        free(dev);
-        return status;
-    }
+    device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
     dev->device.protocol_id = MX_PROTOCOL_USB_DEVICE;
     dev->device.protocol_ops = &_device_protocol;
 
