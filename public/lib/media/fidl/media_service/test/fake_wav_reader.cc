@@ -4,6 +4,8 @@
 
 #include "apps/media/services/media_service/test/fake_wav_reader.h"
 
+#include <mojo/system/result.h>
+
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace mojo {
@@ -82,7 +84,7 @@ void FakeWavReader::WriteToProducerHandle() {
       continue;
     }
 
-    if (result == MOJO_RESULT_SHOULD_WAIT) {
+    if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
       Environment::GetDefaultAsyncWaiter()->AsyncWait(
           producer_handle_.get().value(), MOJO_HANDLE_SIGNAL_WRITABLE,
           MOJO_DEADLINE_INDEFINITE, FakeWavReader::WriteToProducerHandleStatic,
@@ -90,7 +92,7 @@ void FakeWavReader::WriteToProducerHandle() {
       return;
     }
 
-    if (result == MOJO_RESULT_FAILED_PRECONDITION) {
+    if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       producer_handle_.reset();
@@ -135,7 +137,7 @@ uint8_t FakeWavReader::GetByte(size_t position) {
 void FakeWavReader::WriteToProducerHandleStatic(void* reader_void_ptr,
                                                 MojoResult result) {
   FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(reader_void_ptr);
-  if (result == MOJO_RESULT_ABORTED) {
+  if (result == MOJO_SYSTEM_RESULT_ABORTED) {
     // Run loop has aborted...the app is shutting down.
     return;
   }

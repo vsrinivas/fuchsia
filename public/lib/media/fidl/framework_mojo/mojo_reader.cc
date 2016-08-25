@@ -4,6 +4,8 @@
 
 #include "apps/media/services/framework_mojo/mojo_reader.h"
 
+#include <mojo/system/result.h>
+
 #include <limits>
 #include <string>
 
@@ -110,7 +112,7 @@ void MojoReader::ReadResponseBody() {
   MojoResult result = ReadDataRaw(consumer_handle_.get(), read_at_buffer_,
                                   &byte_count, MOJO_READ_DATA_FLAG_NONE);
 
-  if (result == MOJO_RESULT_SHOULD_WAIT) {
+  if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
     byte_count = 0;
   } else if (result != MOJO_RESULT_OK) {
     LOG(ERROR) << "ReadDataRaw failed " << result;

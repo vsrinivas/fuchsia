@@ -4,6 +4,8 @@
 
 #include "apps/media/services/framework_mojo/mojo_type_conversions.h"
 
+#include <mojo/system/result.h>
+
 #include "apps/media/services/framework/types/audio_stream_type.h"
 #include "apps/media/services/framework/types/subpicture_stream_type.h"
 #include "apps/media/services/framework/types/text_stream_type.h"
@@ -16,27 +18,27 @@ Result ConvertResult(MojoResult mojo_result) {
   switch (mojo_result) {
     case MOJO_RESULT_OK:
       return Result::kOk;
-    case MOJO_RESULT_INTERNAL:
+    case MOJO_SYSTEM_RESULT_INTERNAL:
       return Result::kInternalError;
-    case MOJO_RESULT_UNIMPLEMENTED:
+    case MOJO_SYSTEM_RESULT_UNIMPLEMENTED:
       return Result::kUnsupportedOperation;
-    case MOJO_RESULT_INVALID_ARGUMENT:
+    case MOJO_SYSTEM_RESULT_INVALID_ARGUMENT:
       return Result::kInvalidArgument;
-    case MOJO_RESULT_NOT_FOUND:
+    case MOJO_SYSTEM_RESULT_NOT_FOUND:
       return Result::kNotFound;
-    case MOJO_RESULT_CANCELLED:
-    case MOJO_RESULT_UNKNOWN:
-    case MOJO_RESULT_DEADLINE_EXCEEDED:
-    case MOJO_RESULT_ALREADY_EXISTS:
-    case MOJO_RESULT_PERMISSION_DENIED:
-    case MOJO_RESULT_RESOURCE_EXHAUSTED:
-    case MOJO_RESULT_FAILED_PRECONDITION:
-    case MOJO_RESULT_ABORTED:
-    case MOJO_RESULT_OUT_OF_RANGE:
-    case MOJO_RESULT_UNAVAILABLE:
-    case MOJO_RESULT_DATA_LOSS:
-    case MOJO_RESULT_BUSY:
-    case MOJO_RESULT_SHOULD_WAIT:
+    case MOJO_SYSTEM_RESULT_CANCELLED:
+    case MOJO_SYSTEM_RESULT_UNKNOWN:
+    case MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED:
+    case MOJO_SYSTEM_RESULT_ALREADY_EXISTS:
+    case MOJO_SYSTEM_RESULT_PERMISSION_DENIED:
+    case MOJO_SYSTEM_RESULT_RESOURCE_EXHAUSTED:
+    case MOJO_SYSTEM_RESULT_FAILED_PRECONDITION:
+    case MOJO_SYSTEM_RESULT_ABORTED:
+    case MOJO_SYSTEM_RESULT_OUT_OF_RANGE:
+    case MOJO_SYSTEM_RESULT_UNAVAILABLE:
+    case MOJO_SYSTEM_RESULT_DATA_LOSS:
+    case MOJO_SYSTEM_RESULT_BUSY:
+    case MOJO_SYSTEM_RESULT_SHOULD_WAIT:
     default:
       break;
   }

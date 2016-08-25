@@ -4,6 +4,8 @@
 
 #include "apps/media/cpp/mapped_shared_buffer.h"
 
+#include <mojo/system/result.h>
+
 #include "apps/media/cpp/fifo_allocator.h"
 #include "apps/media/interfaces/media_transport.mojom.h"
 #include "mojo/public/cpp/environment/logging.h"
@@ -54,7 +56,7 @@ MojoResult MappedSharedBuffer::InitInternal(
   if (size == 0 || size > MediaPacketConsumer::kMaxBufferLen) {
     MOJO_DLOG(ERROR) << "MojoGetBufferInformation returned invalid size "
                      << size;
-    return MOJO_RESULT_OUT_OF_RANGE;
+    return MOJO_SYSTEM_RESULT_OUT_OF_RANGE;
   }
 
   size_ = size;
