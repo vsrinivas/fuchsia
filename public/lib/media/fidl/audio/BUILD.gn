@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
 import("//mojo/public/tools/bindings/mojom.gni")
 
 group("audio") {
@@ -11,15 +10,15 @@ group("audio") {
   ]
 }
 
-mojo_native_application("audio_server") {
+executable("audio_server") {
   deps = [
-    "//base",
-    "//mojo/application",
-    "//mojo/services/flog/cpp",
-    "//mojo/services/media/audio/interfaces",
-    "//mojo/services/media/common/cpp",
-    "//mojo/services/media/common/interfaces",
-    "//services/media/common",
+    "//apps/media/cpp",
+    "//apps/media/interfaces",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//apps/media/services/common",
+    "//mojo/public/cpp/application",
+    "//mojo/system",
   ]
 
   sources = [
@@ -38,20 +37,6 @@ mojo_native_application("audio_server") {
     "platform/generic/output_formatter.cc",
     "platform/generic/standard_output_base.cc",
     "platform/generic/throttle_output.cc",
+    "platform/stubs/alsa_output_stub.cc",
   ]
-
-  libs = []
-
-  if (is_linux && !is_android) {
-    sources += [ "platform/linux/alsa_output.cc" ]
-    if (is_fnl) {
-      sources += [ "platform/linux/alsa_output_tinyalsa.cc" ]
-      libs += [ "tinyalsa" ]
-    } else {
-      sources += [ "platform/linux/alsa_output_desktop.cc" ]
-      libs += [ "asound" ]
-    }
-  } else {
-    sources += [ "platform/stubs/alsa_output_stub.cc" ]
-  }
 }

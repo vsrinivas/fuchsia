@@ -2,22 +2,7 @@
 #Use of this source code is governed by a BSD - style license that can be
 #found in the LICENSE file.
 
-import("//build/module_args/mojo.gni")
-import("$mojo_sdk_root/mojo/public/mojo_sdk.gni")
-
-config("default_include_dirs") {
-  include_dirs = [
-    "//",
-    root_gen_dir,
-    "//third_party/ffmpeg",
-  ]
-
-  #TODO(dalesat) : Why is this needed ?
-  if (is_android) {
-    include_dirs +=
-        [ "//third_party/ffmpeg/chromium/config/Chromium/android/arm" ]
-  }
-}
+import("//mojo/public/tools/bindings/mojom.gni")
 
 source_set("framework_ffmpeg") {
   sources = [
@@ -45,10 +30,11 @@ source_set("framework_ffmpeg") {
   ]
 
   deps = [
-    "//base",
-    "//mojo/services/media/common/cpp",
-    "//services/media/framework",
-    "//services/util/cpp",
+    "//apps/media/cpp",
+    "//apps/media/services/common",
+    "//apps/media/services/framework",
+    "//lib/ftl",
+    "//lib/mtl",
     "//third_party/ffmpeg",
   ]
 
@@ -59,6 +45,5 @@ source_set("framework_ffmpeg") {
     "FF_API_GET_BUFFER=0",
   ]
 
-  configs -= [ "//build/config/compiler:default_include_dirs" ]
-  configs += [ ":default_include_dirs" ]
+  include_dirs = [ "//third_party/ffmpeg" ]
 }

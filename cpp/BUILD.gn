@@ -2,16 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/module_args/mojo.gni")
-import("$mojo_sdk_root/mojo/public/mojo_sdk.gni")
+import("//mojo/public/tools/bindings/mojom.gni")
 
 mojo_sdk_source_set("cpp") {
   restrict_external_deps = false
   sources = [
     "fifo_allocator.cc",
     "fifo_allocator.h",
-    "linear_transform.cc",
-    "linear_transform.h",
     "local_time.h",
     "mapped_shared_buffer.cc",
     "mapped_shared_buffer.h",
@@ -37,24 +34,32 @@ mojo_sdk_source_set("cpp") {
     "video_renderer.h",
   ]
 
-  if (is_posix) {
-    sources += [
-      "platform/posix/local_time.cc",
-      "platform/posix/local_time.h",
-    ]
-  } else {
-    sources += [ "platform/generic/local_time.h" ]
-  }
-
   deps = [
-    "$mojo_sdk_root/mojo/public/cpp/environment",
-    "$mojo_sdk_root/mojo/public/cpp/utility",
-    "$mojo_sdk_root/mojo/services/flog/cpp",
-    "$mojo_sdk_root/mojo/services/geometry/interfaces",
-    "$mojo_sdk_root/mojo/services/media/common/interfaces",
-    "$mojo_sdk_root/mojo/services/media/core/interfaces",
-    "$mojo_sdk_root/mojo/services/media/logs/interfaces",
+    "//apps/media/interfaces",
+    "//mojo/public/cpp/environment",
+    "//mojo/public/cpp/utility",
+    "//mojo/services/geometry/interfaces",
   ]
 }
-# Look for unit tests in services/media/common/test
-# TODO(dalesat): Move unit tests here using different test infrastructure.
+
+# TODO(dalesat): fix the test build
+#executable("apptests") {
+#  output_name = "media_cpp_apptests"
+#
+#  testonly = true
+#
+#  sources = [
+#    "test/shared_buffer_set_allocator_test.cc",
+#    "test/shared_buffer_set_test.cc",
+#    "test/timeline_function_test.cc",
+#    "test/timeline_rate_test.cc",
+#  ]
+#
+#  deps = [
+#    ":cpp",
+#    "//mojo/public/cpp/application:standalone",
+#    "//mojo/public/cpp/application:test_support_standalone",
+#    "//mojo/public/cpp/bindings",
+#    "//mojo/system",
+#  ]
+#}

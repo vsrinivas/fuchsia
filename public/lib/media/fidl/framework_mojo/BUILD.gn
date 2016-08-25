@@ -17,15 +17,13 @@ source_set("framework_mojo") {
   ]
 
   deps = [
-    "//base",
+    "//apps/media/cpp",
+    "//apps/media/interfaces",
+    "//apps/media/services/common",
+    "//apps/media/services/framework",
+    "//lib/ftl",
+    "//lib/mtl",
     "//mojo/public/cpp/application",
-    "//mojo/services/media/audio/interfaces",
-    "//mojo/services/media/common/cpp",
-    "//mojo/services/media/common/interfaces",
-    "//mojo/services/media/control/interfaces",
-    "//mojo/services/media/core/interfaces",
-    "//mojo/services/network/interfaces",
-    "//services/media/framework",
-    "//services/util/cpp",
+    "//mojo/public/interfaces/network",
   ]
 }
