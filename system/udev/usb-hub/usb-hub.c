@@ -11,6 +11,7 @@
 #include <hw/usb-hub.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <system/listnode.h>
 #include <threads.h>
 
@@ -34,20 +35,10 @@ typedef struct usb_hub {
     usb_speed_t hub_speed;
     int num_ports;
 
-    usb_request_t* status_request;
+    iotxn_t* status_request;
     completion_t completion;
 } usb_hub_t;
 #define get_hub(dev) containerof(dev, usb_hub_t, device)
-
-static mx_status_t queue_status_request(usb_hub_t* hub) {
-    usb_request_t* request = hub->status_request;
-    request->transfer_length = request->buffer_length;
-    return hub->device_protocol->queue_request(hub->usb_device, request);
-}
-
-static void free_interrupt_request(usb_hub_t* hub, usb_request_t* request) {
-    hub->device_protocol->free_request(hub->usb_device, request);
-}
 
 static mx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
     mx_status_t result = usb_get_status(hub->usb_device, USB_RECIP_PORT, port, status, sizeof(*status));
@@ -74,9 +65,9 @@ static usb_speed_t usb_hub_get_port_speed(usb_hub_t* hub, int port) {
     }
 }
 
-static void usb_hub_interrupt_complete(usb_request_t* request) {
-    xprintf("usb_hub_interrupt_complete got %d %d\n", request->status, request->transfer_length);
-    usb_hub_t* hub = (usb_hub_t*)request->client_data;
+static void usb_hub_interrupt_complete(iotxn_t* txn, void* cookie) {
+    xprintf("usb_hub_interrupt_complete got %d %lld\n", txn->status, txn->actual);
+    usb_hub_t* hub = (usb_hub_t*)cookie;
     completion_signal(&hub->completion);
 }
 
@@ -137,7 +128,7 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
 
 static mx_status_t usb_hub_release(mx_device_t* device) {
     usb_hub_t* hub = get_hub(device);
-    hub->device_protocol->free_request(hub->usb_device, hub->status_request);
+    hub->status_request->ops->release(hub->status_request);
     free(hub);
     return NO_ERROR;
 }
@@ -148,7 +139,7 @@ static mx_protocol_device_t usb_hub_device_proto = {
 
 static int usb_hub_thread(void* arg) {
     usb_hub_t* hub = (usb_hub_t*)arg;
-    usb_request_t* request = hub->status_request;
+    iotxn_t* txn = hub->status_request;
 
     usb_hub_descriptor_t desc;
     int desc_type = (hub->hub_speed == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
@@ -178,17 +169,22 @@ static int usb_hub_thread(void* arg) {
         return result;
     }
 
-    queue_status_request(hub);
+    // bit field for port status bits
+    uint8_t status_buf[128 / 8];
+    memset(status_buf, 0, sizeof(status_buf));
 
     // This loop handles events from our interrupt endpoint
     while (1) {
+        completion_reset(&hub->completion);
+        iotxn_queue(hub->usb_device, txn);
         completion_wait(&hub->completion, MX_TIME_INFINITE);
-        if (request->status != NO_ERROR) {
+        if (txn->status != NO_ERROR) {
             break;
         }
 
-        uint8_t* bitmap = request->buffer;
-        uint8_t* bitmap_end = bitmap + request->transfer_length;
+        txn->ops->copyfrom(txn, status_buf, txn->actual, 0);
+        uint8_t* bitmap = status_buf;
+        uint8_t* bitmap_end = bitmap + txn->actual;
 
         // bit zero is hub status
         if (bitmap[0] & 1) {
@@ -212,9 +208,6 @@ static int usb_hub_thread(void* arg) {
                 bit = 0;
             }
         }
-
-        completion_reset(&hub->completion);
-        queue_status_request(hub);
     }
 
     return NO_ERROR;
@@ -222,8 +215,6 @@ static int usb_hub_thread(void* arg) {
 
 static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_device_protocol_t* device_protocol = NULL;
-    usb_request_t* req = NULL;
-
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&device_protocol)) {
         return ERR_NOT_SUPPORTED;
     }
@@ -265,14 +256,15 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     hub->hub_speed = usb_get_speed(device);
 
     mx_status_t status;
-    req = device_protocol->alloc_request(device, ep_addr, max_packet_size);
-    if (!req) {
+    iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size, 0);
+    if (!txn) {
         status = ERR_NO_MEMORY;
         goto fail;
     }
-    req->complete_cb = usb_hub_interrupt_complete;
-    req->client_data = hub;
-    hub->status_request = req;
+    txn->length = max_packet_size;
+    txn->complete_cb = usb_hub_interrupt_complete;
+    txn->cookie = hub;
+    hub->status_request = txn;
 
     thrd_t thread;
     int ret = thrd_create_with_name(&thread, usb_hub_thread, hub, "usb_hub_thread");
@@ -283,8 +275,8 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     return NO_ERROR;
 
 fail:
-    if (req) {
-        device_protocol->free_request(device, req);
+    if (txn) {
+        txn->ops->release(txn);
     }
     free(hub);
     return status;
