@@ -29,11 +29,6 @@ extern uint32_t bootloader_fb_format;
 
 void pixel2_init_quirks(uint level)
 {
-    /* If we do not have a CrOS embedded controller, then this cannot be a pixel
-     * 2, so we should not try to un-hide these devices. */
-    if (!has_cros_embedded_controller())
-        return;
-
     status_t res = NO_ERROR;
     for (size_t i = 0; i < countof(DEVICES_TO_UNHIDE); ++i) {
         res = bwcc_disable_device(DEVICES_TO_UNHIDE[i].dev_id, false);

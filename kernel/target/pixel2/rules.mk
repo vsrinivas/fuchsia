@@ -11,7 +11,10 @@ MODULE := $(LOCAL_DIR)
 
 PLATFORM := pc
 
-MODULE_SRCS += $(LOCAL_DIR)/config.c
+MODULE_SRCS += \
+	$(LOCAL_DIR)/config.c \
+	$(LOCAL_DIR)/debug.c \
+	$(LOCAL_DIR)/pixel2_quirks.c
 
 MODULE_DEPS += \
     dev/broadwell_chipset_config \
