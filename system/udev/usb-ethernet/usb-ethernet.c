@@ -278,7 +278,7 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
     uint16_t length2 = (~(header[2] | (uint16_t)header[3] << 8)) & 0x7FF;
 
     if (length1 != length2) {
-        printf("invalid header: length1: %d length2: %d offset %ld\n", length1, length2, offset);
+        printf("invalid header: length1: %d length2: %d offset %zu\n", length1, length2, offset);
         status = ERR_NOT_VALID;
         offset = 0;
         list_remove_head(&eth->completed_reads);
