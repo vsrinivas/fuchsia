@@ -7,7 +7,6 @@
 
 #include <arch/x86.h>
 #include <platform.h>
-#include <platform/pc/acpi.h>
 #include <platform/keyboard.h>
 
 void platform_halt(
@@ -16,13 +15,10 @@ void platform_halt(
 {
     switch (suggested_action) {
         case HALT_ACTION_SHUTDOWN:
-            printf("Powering off...\n");
-            acpi_poweroff();
             printf("Power off failed, halting\n");
             break;
         case HALT_ACTION_REBOOT:
             printf("Rebooting...\n");
-            acpi_reboot();
             pc_keyboard_reboot();
             printf("Reboot failed, halting\n");
             break;
