@@ -1,12 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #pragma once
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/intrusive_wavl_tree.h>
 
 namespace utils {
@@ -22,7 +20,7 @@ public:
         using NodeTraits = typename TreeType::NodeTraits;
         using PtrTraits  = typename TreeType::PtrTraits;
 
-        REQUIRE_TRUE(PtrTraits::IsValid(node), "");
+        ASSERT_TRUE(PtrTraits::IsValid(node), "");
         const auto& ns = NodeTraits::node_state(*node);
 
         if (PtrTraits::IsValid(ns.left_)) {
@@ -50,26 +48,26 @@ public:
         if (tree.is_empty()) {
             // If the tree is empty, then the root should be null, and the
             // left/right-most members should be set to the sentinel value.
-            REQUIRE_NULL(tree.root_, "");
-            REQUIRE_EQ(tree.sentinel(), tree.left_most_,  "");
-            REQUIRE_EQ(tree.sentinel(), tree.right_most_, "");
+            ASSERT_NULL(tree.root_, "");
+            ASSERT_EQ(tree.sentinel(), tree.left_most_,  "");
+            ASSERT_EQ(tree.sentinel(), tree.right_most_, "");
             EXPECT_EQ(0u, tree.size(), "");
         } else {
             // If the tree is non-empty, then the root, left-most and
             // right-most pointers should all be valid.  The LR-child of the
             // LR-most element should be the sentinel value.
-            REQUIRE_NONNULL(tree.root_, "");
-            REQUIRE_FALSE(PtrTraits::IsSentinel(tree.root_), "");
+            ASSERT_NONNULL(tree.root_, "");
+            ASSERT_FALSE(PtrTraits::IsSentinel(tree.root_), "");
 
-            REQUIRE_NONNULL(tree.left_most_, "");
-            REQUIRE_FALSE(PtrTraits::IsSentinel(tree.left_most_), "");
-            REQUIRE_EQ(tree.sentinel(),
+            ASSERT_NONNULL(tree.left_most_, "");
+            ASSERT_FALSE(PtrTraits::IsSentinel(tree.left_most_), "");
+            ASSERT_EQ(tree.sentinel(),
                        PtrTraits::GetRaw(NodeTraits::node_state(*tree.left_most_).left_),
                        "");
 
-            REQUIRE_NONNULL(tree.right_most_, "");
-            REQUIRE_FALSE(PtrTraits::IsSentinel(tree.right_most_), "");
-            REQUIRE_EQ(tree.sentinel(),
+            ASSERT_NONNULL(tree.right_most_, "");
+            ASSERT_FALSE(PtrTraits::IsSentinel(tree.right_most_), "");
+            ASSERT_EQ(tree.sentinel(),
                        PtrTraits::GetRaw(NodeTraits::node_state(*tree.right_most_).right_),
                        "");
 
@@ -89,7 +87,7 @@ public:
         // Start by going left until we have determined the depth of the
         // left most node of the tree.
         while (PtrTraits::IsValid(node)) {
-            REQUIRE_TRUE(VerifyParentBackLinks(tree, node), "");
+            ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
 
             auto& ns = NodeTraits::node_state(*node);
             ++cur_depth;
@@ -117,7 +115,7 @@ public:
                 depth = cur_depth;
             ++size;
 
-            REQUIRE_TRUE(VerifyParentBackLinks(tree, node), "");
+            ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
 
             // Verify the rank rule using the tree's observer's implementation.
             // If this sanity check is being run as part of the balance test, it
@@ -125,14 +123,14 @@ public:
             // rank parity is stored in the node, so we cannot rigorously verify
             // the rule.  The default VerifyRankRule implementation will be used
             // instead (which just returns true).
-            REQUIRE_TRUE(Observer::VerifyRankRule(tree, node), "");
+            ASSERT_TRUE(Observer::VerifyRankRule(tree, node), "");
 
             // #2: Can we go right?
             const auto& ns = NodeTraits::node_state(*node);
             if (PtrTraits::IsValid(ns.right_)) {
                 cur_depth++;
                 node = PtrTraits::GetRaw(ns.right_);
-                REQUIRE_TRUE(VerifyParentBackLinks(tree, node), "");
+                ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
 
                 // Now go as far left as we can.
                 while (true) {
@@ -143,7 +141,7 @@ public:
 
                     ++cur_depth;
                     node = PtrTraits::GetRaw(ns.left_);
-                    REQUIRE_TRUE(VerifyParentBackLinks(tree, node), "");
+                    ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
                 }
 
                 // Loop and visit the next node.
@@ -158,8 +156,8 @@ public:
                 bool is_left    = (PtrTraits::GetRaw(parent_ns.left_)  == node);
                 bool is_right   = (PtrTraits::GetRaw(parent_ns.right_) == node);
 
-                REQUIRE_TRUE(is_left != is_right, "");
-                REQUIRE_TRUE(is_left || is_right, "");
+                ASSERT_TRUE(is_left != is_right, "");
+                ASSERT_TRUE(is_left || is_right, "");
 
                 node = parent;
                 --cur_depth;
@@ -176,11 +174,11 @@ public:
         }
 
         // We should have visited all of the nodes by now.
-        REQUIRE_EQ(tree.size(), size, "");
+        ASSERT_EQ(tree.size(), size, "");
 
         // If this is being called from the balance tests, check the balance
         // bounds, and computational complexity bounds.
-        REQUIRE_TRUE(Observer::VerifyBalance(tree, depth), "");
+        ASSERT_TRUE(Observer::VerifyBalance(tree, depth), "");
 
         END_TEST;
     }

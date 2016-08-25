@@ -1,12 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #pragma once
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/tests/intrusive_containers/associative_container_test_environment.h>
 
 namespace utils {
@@ -68,7 +66,7 @@ public:
     bool DoOrderedIter(PopulateMethod populate_method) {
         BEGIN_TEST;
 
-        REQUIRE_TRUE(ACTE::Populate(container(), populate_method), "");
+        ASSERT_TRUE(ACTE::Populate(container(), populate_method), "");
 
         auto iter = container().begin();
         EXPECT_TRUE(iter.IsValid(), "");
@@ -77,7 +75,7 @@ public:
             // None of the associative containers currently support storing
             // mutliple nodes with the same key, therefor the iteration ordering
             // of the keys should be strictly monotonically increasing.
-            REQUIRE_TRUE(prev.IsValid(), "");
+            ASSERT_TRUE(prev.IsValid(), "");
 
             auto iter_key = KeyTraits::GetKey(*iter);
             auto prev_key = KeyTraits::GetKey(*prev);
@@ -88,7 +86,7 @@ public:
             EXPECT_FALSE(KeyTraits::EqualTo(iter_key, prev_key), "");
         }
 
-        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 
@@ -105,7 +103,7 @@ public:
     bool DoOrderedReverseIter(PopulateMethod populate_method) {
         BEGIN_TEST;
 
-        REQUIRE_TRUE(ACTE::Populate(container(), populate_method), "");
+        ASSERT_TRUE(ACTE::Populate(container(), populate_method), "");
 
         auto iter = container().end();
         EXPECT_FALSE(iter.IsValid(), "");
@@ -116,7 +114,7 @@ public:
             // None of the associative containers currently support storing
             // mutliple nodes with the same key, therefor the reverse iteration
             // ordering of the keys should be strictly monotonically decreasing.
-            REQUIRE_TRUE(prev.IsValid(), "");
+            ASSERT_TRUE(prev.IsValid(), "");
 
             auto iter_key = KeyTraits::GetKey(*iter);
             auto prev_key = KeyTraits::GetKey(*prev);
@@ -127,7 +125,7 @@ public:
             EXPECT_FALSE(KeyTraits::EqualTo(iter_key, prev_key), "");
         }
 
-        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 
@@ -150,14 +148,14 @@ public:
         EXPECT_FALSE(found.IsValid(), "");
 
         // Populate the container.
-        REQUIRE_TRUE(ACTE::Populate(container(), populate_method), "");
+        ASSERT_TRUE(ACTE::Populate(container(), populate_method), "");
 
         // For every object we just put into the container compute the bound of
         // obj.key, (obj.key - 1) and (obj.key + 1) using brute force as well as
         // by using (upper|lower)_bound.  Make sure that the result agree.
         for (size_t i = 0; i < ACTE::OBJ_COUNT; ++i) {
             auto ptr = ACTE::objects()[i];
-            REQUIRE_NONNULL(ptr, "");
+            ASSERT_NONNULL(ptr, "");
 
             struct {
                 KeyType key;
@@ -173,7 +171,7 @@ public:
             // bound this/prev/next.
             for (size_t j = 0; j < ACTE::OBJ_COUNT; ++j) {
                 auto tmp = ACTE::objects()[j];
-                REQUIRE_NONNULL(tmp, "");
+                ASSERT_NONNULL(tmp, "");
                 KeyType tmp_key = KeyTraits::GetKey(*tmp);
 
                 for (size_t k = 0; k < countof(tests); ++k) {
@@ -196,7 +194,7 @@ public:
                 // force.  If we did find a bound, it should be the same bound
                 // we found using brute force.
                 if (test.bound != nullptr) {
-                    REQUIRE_TRUE(iter.IsValid(), "");
+                    ASSERT_TRUE(iter.IsValid(), "");
                     EXPECT_EQ(test.bound, iter->raw_ptr(), "");
                 } else {
                     EXPECT_FALSE(iter.IsValid(), "");
@@ -204,7 +202,7 @@ public:
             }
         }
 
-        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 

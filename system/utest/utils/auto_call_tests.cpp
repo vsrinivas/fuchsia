@@ -1,13 +1,9 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include <utils/auto_call.h>
-
-#include <app/tests.h>
-#include <unittest.h>
+#include <unittest/unittest.h>
 
 static volatile int test_func_count;
 
@@ -16,7 +12,7 @@ __NO_INLINE static void test_func()
     test_func_count++;
 }
 
-static bool auto_call_test(void* context)
+static bool auto_call_test()
 {
 //    extern int foo();
 //    int a;
@@ -81,6 +77,6 @@ static bool auto_call_test(void* context)
     END_TEST;
 }
 
-UNITTEST_START_TESTCASE(auto_call_tests)
-UNITTEST("Auto call test", auto_call_test)
-UNITTEST_END_TESTCASE(auto_call_tests, "autocalltests", "Auto call test", NULL, NULL);
+BEGIN_TEST_CASE(auto_call_tests)
+RUN_NAMED_TEST("Auto call test", auto_call_test)
+END_TEST_CASE(auto_call_tests);

@@ -1,12 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #pragma once
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/intrusive_hash_table.h>
 
 namespace utils {
@@ -27,10 +25,10 @@ public:
 
         typename PtrTraits::RawPtrType tmp = PtrTraits::GetRaw(container.head_);
         while (true) {
-            REQUIRE_NONNULL(tmp, "");
+            ASSERT_NONNULL(tmp, "");
 
             if (PtrTraits::IsSentinel(tmp)) {
-                REQUIRE_EQ(container.sentinel(), tmp, "");
+                ASSERT_EQ(container.sentinel(), tmp, "");
                 break;
             }
 

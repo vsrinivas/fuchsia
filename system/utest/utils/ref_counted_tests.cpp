@@ -1,14 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <new.h>
-
-#include <app/tests.h>
-#include <kernel/thread.h>
-#include <unittest.h>
+#include <magenta/cpp.h>
+#include <pthread.h>
+#include <unittest/unittest.h>
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 
@@ -22,15 +18,15 @@ private:
     bool* destroyed_;
 };
 
-static int inc_and_dec(void* arg) {
+static void* inc_and_dec(void* arg) {
     DestructionTracker* tracker = reinterpret_cast<DestructionTracker*>(arg);
     for (size_t i = 0u; i < 500; ++i) {
         utils::RefPtr<DestructionTracker> ptr(tracker);
     }
-    return 0;
+    return nullptr;
 }
 
-static bool ref_counted_test(void* context) {
+static bool ref_counted_test() {
     BEGIN_TEST;
 
     bool destroyed = false;
@@ -43,24 +39,16 @@ static bool ref_counted_test(void* context) {
         EXPECT_FALSE(destroyed, "should not be destroyed");
         void* arg = reinterpret_cast<void*>(ptr.get());
 
-        thread_t* threads[5];
-        threads[0] = thread_create("inc_and_dec thread 0", &inc_and_dec, arg, DEFAULT_PRIORITY,
-                                   DEFAULT_STACK_SIZE);
-        threads[1] = thread_create("inc_and_dec thread 1", &inc_and_dec, arg, DEFAULT_PRIORITY,
-                                   DEFAULT_STACK_SIZE);
-        threads[2] = thread_create("inc_and_dec thread 2", &inc_and_dec, arg, DEFAULT_PRIORITY,
-                                   DEFAULT_STACK_SIZE);
-        threads[3] = thread_create("inc_and_dec thread 3", &inc_and_dec, arg, DEFAULT_PRIORITY,
-                                   DEFAULT_STACK_SIZE);
-        threads[4] = thread_create("inc_and_dec thread 4", &inc_and_dec, arg, DEFAULT_PRIORITY,
-                                   DEFAULT_STACK_SIZE);
-        for (size_t i = 0u; i < 5u; ++i)
-            thread_resume(threads[i]);
+        pthread_t threads[5];
+        for (size_t i = 0u; i < countof(threads); ++i) {
+            int res = pthread_create(&threads[i], NULL, &inc_and_dec, arg);
+            ASSERT_LE(0, res, "Failed to create inc_and_dec thread!");
+        }
 
         inc_and_dec(arg);
 
-        for (size_t i = 0u; i < 5u; ++i)
-            thread_join(threads[i], NULL, INFINITE_TIME);
+        for (size_t i = 0u; i < countof(threads); ++i)
+            pthread_join(threads[i], NULL);
 
         EXPECT_FALSE(destroyed, "should not be destroyed after inc/dec pairs");
     }
@@ -68,6 +56,6 @@ static bool ref_counted_test(void* context) {
     END_TEST;
 }
 
-UNITTEST_START_TESTCASE(ref_counted_tests)
-UNITTEST("Ref Counted", ref_counted_test)
-UNITTEST_END_TESTCASE(ref_counted_tests, "refctests", "Ref Counted Tests", NULL, NULL);
+BEGIN_TEST_CASE(ref_counted_tests)
+RUN_NAMED_TEST("Ref Counted", ref_counted_test)
+END_TEST_CASE(ref_counted_tests);

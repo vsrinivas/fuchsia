@@ -1,10 +1,8 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/intrusive_wavl_tree.h>
 #include <utils/tests/intrusive_containers/intrusive_wavl_tree_checker.h>
 #include <utils/tests/intrusive_containers/ordered_associative_container_test_environment.h>
@@ -145,30 +143,30 @@ public:
         using NodeTraits = typename TreeType::NodeTraits;
         using PtrTraits  = typename TreeType::PtrTraits;
 
-        REQUIRE_TRUE(PtrTraits::IsValid(node), "");
+        ASSERT_TRUE(PtrTraits::IsValid(node), "");
 
         // Check the rank rule.  The rules for a WAVL tree are...
         // 1) All rank differences are either 1 or 2
         // 2) All leaf nodes have rank 0 (by implication, all rank
         //    differences are non-negative)
         const auto& ns = NodeTraits::node_state(*node);
-        REQUIRE_LE(0, ns.rank_, "All ranks must be non-negative.");
+        ASSERT_LE(0, ns.rank_, "All ranks must be non-negative.");
 
         if (!PtrTraits::IsValid(ns.left_) && !PtrTraits::IsValid(ns.right_)) {
-            REQUIRE_EQ(0, ns.rank_, "Leaf nodes must have rank 0!");
+            ASSERT_EQ(0, ns.rank_, "Leaf nodes must have rank 0!");
         } else {
             if (PtrTraits::IsValid(ns.left_)) {
                 auto& left_ns = NodeTraits::node_state(*ns.left_);
                 auto  delta   = ns.rank_ - left_ns.rank_;
-                REQUIRE_LE(1, delta, "Left hand rank difference not on range [1, 2]");
-                REQUIRE_GE(2, delta, "Left hand rank difference not on range [1, 2]");
+                ASSERT_LE(1, delta, "Left hand rank difference not on range [1, 2]");
+                ASSERT_GE(2, delta, "Left hand rank difference not on range [1, 2]");
             }
 
             if (PtrTraits::IsValid(ns.right_)) {
                 auto& right_ns = NodeTraits::node_state(*ns.right_);
                 auto  delta    = ns.rank_ - right_ns.rank_;
-                REQUIRE_LE(1, delta, "Right hand rank difference not on range [1, 2]");
-                REQUIRE_GE(2, delta, "Right hand rank difference not on range [1, 2]");
+                ASSERT_LE(1, delta, "Right hand rank difference not on range [1, 2]");
+                ASSERT_GE(2, delta, "Right hand rank difference not on range [1, 2]");
             }
         }
 
@@ -293,13 +291,13 @@ static bool DoBalanceTestInsert(BalanceTestTree& tree, BalanceTestObj* ptr) {
     BEGIN_TEST;
 
     // The selected object should not be in the tree.
-    REQUIRE_NONNULL(ptr, "");
-    REQUIRE_FALSE(ptr->InContainer(), "");
+    ASSERT_NONNULL(ptr, "");
+    ASSERT_FALSE(ptr->InContainer(), "");
 
     // Put the object into the tree.  Assert that it succeeds, then
     // sanity check the tree.
-    REQUIRE_TRUE(tree.insert_or_find(BalanceTestObjPtr(ptr)), "");
-    REQUIRE_TRUE(WAVLTreeChecker::SanityCheck(tree), "");
+    ASSERT_TRUE(tree.insert_or_find(BalanceTestObjPtr(ptr)), "");
+    ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree), "");
 
     END_TEST;
 }
@@ -308,18 +306,18 @@ static bool DoBalanceTestErase(BalanceTestTree& tree, BalanceTestObj* ptr) {
     BEGIN_TEST;
 
     // The selected object should still be in the tree.
-    REQUIRE_NONNULL(ptr, "");
-    REQUIRE_TRUE(ptr->InContainer(), "");
+    ASSERT_NONNULL(ptr, "");
+    ASSERT_TRUE(ptr->InContainer(), "");
 
     // Erase should find the object and transfer its pointer back to us.
     // The object should no longer be in the tree.
     BalanceTestObjPtr erased = tree.erase(ptr->GetKey());
-    REQUIRE_EQ(ptr, erased.get(), "");
-    REQUIRE_FALSE(ptr->InContainer(), "");
+    ASSERT_EQ(ptr, erased.get(), "");
+    ASSERT_FALSE(ptr->InContainer(), "");
 
     // Run a full sanity check on the tree.  Its depth should be
     // consistent with a tree which has seen both inserts and erases.
-    REQUIRE_TRUE(WAVLTreeChecker::SanityCheck(tree), "");
+    ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree), "");
 
     END_TEST;
 }
@@ -335,7 +333,7 @@ static void ShuffleEraseDeck(const unique_ptr<BalanceTestObj[]>& objects,
     }
 }
 
-static bool WAVLBalanceTest(void*) {
+static bool WAVLBalanceTest() {
     BEGIN_TEST;
 
     WAVLBalanceTestObserver::OpCounts op_counts;
@@ -360,7 +358,7 @@ static bool WAVLBalanceTest(void*) {
     {
         AllocChecker ac;
         objects.reset(new (&ac) BalanceTestObj[kBalanceTestSize]);
-        REQUIRE_TRUE(ac.check(), "Failed to allocate test objects!");
+        ASSERT_TRUE(ac.check(), "Failed to allocate test objects!");
     }
 
     for (size_t seed_ndx = 0; seed_ndx < countof(seeds); ++seed_ndx) {
@@ -393,28 +391,28 @@ static bool WAVLBalanceTest(void*) {
         // the tree.  If anything goes wrong, just abort the test.  If we keep
         // going, we are just going to get an unmanageable amt of errors.
         for (size_t i = 0; i < kBalanceTestSize; ++i)
-            REQUIRE_TRUE(DoBalanceTestInsert(tree, &objects[i]), "");
+            ASSERT_TRUE(DoBalanceTestInsert(tree, &objects[i]), "");
 
         // Shuffle the erase deck.
         ShuffleEraseDeck(objects, rng);
 
         // Erase half of the elements in the tree.
         for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i)
-            REQUIRE_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()), "");
+            ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()), "");
 
         // Put the elements back so that we have inserted some elements into a
         // non-empty tree which has seen erase operations.
         for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i)
-            REQUIRE_TRUE(DoBalanceTestInsert(tree, objects[i].EraseDeckPtr()), "");
+            ASSERT_TRUE(DoBalanceTestInsert(tree, objects[i].EraseDeckPtr()), "");
 
         // Shuffle the erase deck again.
         ShuffleEraseDeck(objects, rng);
 
         // Now erase every element from the tree.
         for (size_t i = 0; i < kBalanceTestSize; ++i)
-            REQUIRE_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()), "");
+            ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()), "");
 
-        REQUIRE_EQ(0u, tree.size(), "");
+        ASSERT_EQ(0u, tree.size(), "");
 
         WAVLBalanceTestObserver::AccumulateObserverOpCounts(op_counts);
     }
@@ -433,118 +431,115 @@ static bool WAVLBalanceTest(void*) {
     END_TEST;
 }
 
-UNITTEST_START_TESTCASE(wavl_tree_tests)
+BEGIN_TEST_CASE(wavl_tree_tests)
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
-UNITTEST("Clear (unmanaged)",            UMTE::ClearTest)
-UNITTEST("Clear (unique)",               UPTE::ClearTest)
-UNITTEST("Clear (RefPtr)",               RPTE::ClearTest)
+RUN_NAMED_TEST("Clear (unmanaged)",            UMTE::ClearTest)
+RUN_NAMED_TEST("Clear (unique)",               UPTE::ClearTest)
+RUN_NAMED_TEST("Clear (RefPtr)",               RPTE::ClearTest)
 
-UNITTEST("IsEmpty (unmanaged)",          UMTE::IsEmptyTest)
-UNITTEST("IsEmpty (unique)",             UPTE::IsEmptyTest)
-UNITTEST("IsEmpty (RefPtr)",             RPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unmanaged)",          UMTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unique)",             UPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (RefPtr)",             RPTE::IsEmptyTest)
 
-UNITTEST("Iterate (unmanaged)",          UMTE::IterateTest)
-UNITTEST("Iterate (unique)",             UPTE::IterateTest)
-UNITTEST("Iterate (RefPtr)",             RPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unmanaged)",          UMTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unique)",             UPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (RefPtr)",             RPTE::IterateTest)
 
-UNITTEST("IterErase (unmanaged)",        UMTE::IterEraseTest)
-UNITTEST("IterErase (unique)",           UPTE::IterEraseTest)
-UNITTEST("IterErase (RefPtr)",           RPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unmanaged)",        UMTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unique)",           UPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (RefPtr)",           RPTE::IterEraseTest)
 
-UNITTEST("DirectErase (unmanaged)",      UMTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unmanaged)",      UMTE::DirectEraseTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("DirectErase (unique)",         UPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unique)",         UPTE::DirectEraseTest)
 #endif
-UNITTEST("DirectErase (RefPtr)",         RPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (RefPtr)",         RPTE::DirectEraseTest)
 
-UNITTEST("MakeIterator (unmanaged)",     UMTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unmanaged)",     UMTE::MakeIteratorTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("MakeIterator (unique)",        UPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unique)",        UPTE::MakeIteratorTest)
 #endif
-UNITTEST("MakeIterator (RefPtr)",        RPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (RefPtr)",        RPTE::MakeIteratorTest)
 
-UNITTEST("ReverseIterErase (unmanaged)", UMTE::ReverseIterEraseTest)
-UNITTEST("ReverseIterErase (unique)",    UPTE::ReverseIterEraseTest)
-UNITTEST("ReverseIterErase (RefPtr)",    RPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unmanaged)", UMTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unique)",    UPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (RefPtr)",    RPTE::ReverseIterEraseTest)
 
-UNITTEST("ReverseIterate (unmanaged)",   UMTE::ReverseIterateTest)
-UNITTEST("ReverseIterate (unique)",      UPTE::ReverseIterateTest)
-UNITTEST("ReverseIterate (RefPtr)",      RPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unmanaged)",   UMTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unique)",      UPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (RefPtr)",      RPTE::ReverseIterateTest)
 
-UNITTEST("Swap (unmanaged)",             UMTE::SwapTest)
-UNITTEST("Swap (unique)",                UPTE::SwapTest)
-UNITTEST("Swap (RefPtr)",                RPTE::SwapTest)
+RUN_NAMED_TEST("Swap (unmanaged)",             UMTE::SwapTest)
+RUN_NAMED_TEST("Swap (unique)",                UPTE::SwapTest)
+RUN_NAMED_TEST("Swap (RefPtr)",                RPTE::SwapTest)
 
-UNITTEST("Rvalue Ops (unmanaged)",       UMTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (unique)",          UPTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (RefPtr)",          RPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unmanaged)",       UMTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unique)",          UPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (RefPtr)",          RPTE::RvalueOpsTest)
 
-UNITTEST("Scope (unique)",               UPTE::ScopeTest)
-UNITTEST("Scope (RefPtr)",               RPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (unique)",               UPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (RefPtr)",               RPTE::ScopeTest)
 
-UNITTEST("TwoContainer (unmanaged)",     UMTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unmanaged)",     UMTE::TwoContainerTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("TwoContainer (unique)",        UPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unique)",        UPTE::TwoContainerTest)
 #endif
-UNITTEST("TwoContainer (RefPtr)",        RPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (RefPtr)",        RPTE::TwoContainerTest)
 
-UNITTEST("EraseIf (unmanaged)",          UMTE::EraseIfTest)
-UNITTEST("EraseIf (unique)",             UPTE::EraseIfTest)
-UNITTEST("EraseIf (RefPtr)",             RPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (unmanaged)",          UMTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (unique)",             UPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (RefPtr)",             RPTE::EraseIfTest)
 
-UNITTEST("FindIf (unmanaged)",           UMTE::FindIfTest)
-UNITTEST("FindIf (unique)",              UPTE::FindIfTest)
-UNITTEST("FindIf (RefPtr)",              RPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (unmanaged)",           UMTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (unique)",              UPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (RefPtr)",              RPTE::FindIfTest)
 
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
-UNITTEST("InsertByKey (unmanaged)",      UMTE::InsertByKeyTest)
-UNITTEST("InsertByKey (unique)",         UPTE::InsertByKeyTest)
-UNITTEST("InsertByKey (RefPtr)",         RPTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (unmanaged)",      UMTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (unique)",         UPTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (RefPtr)",         RPTE::InsertByKeyTest)
 
-UNITTEST("FindByKey (unmanaged)",        UMTE::FindByKeyTest)
-UNITTEST("FindByKey (unique)",           UPTE::FindByKeyTest)
-UNITTEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (unmanaged)",        UMTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (unique)",           UPTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
 
-UNITTEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
-UNITTEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
-UNITTEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
 
-UNITTEST("InsertOrFind (unmanaged)",     UMTE::InsertOrFindTest)
-UNITTEST("InsertOrFind (unique)",        UPTE::InsertOrFindTest)
-UNITTEST("InsertOrFind (RefPtr)",        RPTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (unmanaged)",     UMTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (unique)",        UPTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (RefPtr)",        RPTE::InsertOrFindTest)
 
 ////////////////////////////////////////////////
 // OrderedAssociative container specific tests.
 ////////////////////////////////////////////////
-UNITTEST("OrderedIter (unmanaged)",        UMTE::OrderedIterTest)
-UNITTEST("OrderedIter (unique)",           UPTE::OrderedIterTest)
-UNITTEST("OrderedIter (RefPtr)",           RPTE::OrderedIterTest)
+RUN_NAMED_TEST("OrderedIter (unmanaged)",        UMTE::OrderedIterTest)
+RUN_NAMED_TEST("OrderedIter (unique)",           UPTE::OrderedIterTest)
+RUN_NAMED_TEST("OrderedIter (RefPtr)",           RPTE::OrderedIterTest)
 
-UNITTEST("OrderedReverseIter (unmanaged)", UMTE::OrderedReverseIterTest)
-UNITTEST("OrderedReverseIter (unique)",    UPTE::OrderedReverseIterTest)
-UNITTEST("OrderedReverseIter (RefPtr)",    RPTE::OrderedReverseIterTest)
+RUN_NAMED_TEST("OrderedReverseIter (unmanaged)", UMTE::OrderedReverseIterTest)
+RUN_NAMED_TEST("OrderedReverseIter (unique)",    UPTE::OrderedReverseIterTest)
+RUN_NAMED_TEST("OrderedReverseIter (RefPtr)",    RPTE::OrderedReverseIterTest)
 
-UNITTEST("UpperBound (unmanaged)",         UMTE::UpperBoundTest)
-UNITTEST("UpperBound (unique)",            UPTE::UpperBoundTest)
-UNITTEST("UpperBound (RefPtr)",            RPTE::UpperBoundTest)
+RUN_NAMED_TEST("UpperBound (unmanaged)",         UMTE::UpperBoundTest)
+RUN_NAMED_TEST("UpperBound (unique)",            UPTE::UpperBoundTest)
+RUN_NAMED_TEST("UpperBound (RefPtr)",            RPTE::UpperBoundTest)
 
-UNITTEST("LowerBound (unmanaged)",         UMTE::LowerBoundTest)
-UNITTEST("LowerBound (unique)",            UPTE::LowerBoundTest)
-UNITTEST("LowerBound (RefPtr)",            RPTE::LowerBoundTest)
+RUN_NAMED_TEST("LowerBound (unmanaged)",         UMTE::LowerBoundTest)
+RUN_NAMED_TEST("LowerBound (unique)",            UPTE::LowerBoundTest)
+RUN_NAMED_TEST("LowerBound (RefPtr)",            RPTE::LowerBoundTest)
 
 ////////////////////////////
 // WAVLTree specific tests.
 ////////////////////////////
-UNITTEST("BalanceTest", WAVLBalanceTest)
+RUN_NAMED_TEST("BalanceTest", WAVLBalanceTest)
 
-UNITTEST_END_TESTCASE(wavl_tree_tests,
-                      "wavl",
-                      "Intrusive WAVL tree tests.",
-                      NULL, NULL);
+END_TEST_CASE(wavl_tree_tests);
 
 }  // namespace intrusive_containers
 }  // namespace tests

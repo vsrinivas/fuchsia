@@ -1,12 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #pragma once
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/tests/intrusive_containers/base_test_environments.h>
 #include <utils/tests/intrusive_containers/lfsr.h>
 
@@ -55,8 +53,8 @@ public:
     bool SetTestObjKeys(const PtrType& test_obj, PopulateMethod method) {
         BEGIN_TEST;
 
-        REQUIRE_NONNULL(test_obj, "");
-        REQUIRE_LT(test_obj->value(), OBJ_COUNT, "");
+        ASSERT_NONNULL(test_obj, "");
+        ASSERT_LT(test_obj->value(), OBJ_COUNT, "");
 
         // Assign a key to the object based on the chosen populate method.
         KeyType key = 0;
@@ -121,10 +119,10 @@ public:
             }
 
             PtrType new_object = this->CreateTrackedObject(i, i, hold_ref);
-            REQUIRE_NONNULL(new_object, "");
+            ASSERT_NONNULL(new_object, "");
             EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
 
-            REQUIRE_TRUE(SetTestObjKeys(new_object, method), "");
+            ASSERT_TRUE(SetTestObjKeys(new_object, method), "");
 
             KeyType obj_key = KeyTraits::GetKey(*new_object);
             max_key_ = !i
@@ -165,7 +163,7 @@ public:
         BEGIN_TEST;
 
         EXPECT_TRUE(Populate(container(), populate_method), "");
-        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
 
         END_TEST;
     }
@@ -192,7 +190,7 @@ public:
 
             auto iter = const_container().find(key);
 
-            REQUIRE_TRUE(iter.IsValid(), "");
+            ASSERT_TRUE(iter.IsValid(), "");
             EXPECT_EQ(key, iter->GetKey(), "");
             EXPECT_EQ(value, iter->value(), "");
         }
@@ -201,7 +199,7 @@ public:
         auto iter = const_container().find(kBannedKeyValue);
         EXPECT_FALSE(iter.IsValid(), "");
 
-        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 
@@ -253,7 +251,7 @@ public:
 
         EXPECT_EQ(0u, Size(container()), "");
 
-        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 
@@ -270,13 +268,13 @@ public:
     bool DoInsertOrFind(PopulateMethod populate_method) {
         BEGIN_TEST;
 
-        for (uint pass_iterator = 0; pass_iterator < 2; ++pass_iterator) {
-            for (size_t i = 0; i < OBJ_COUNT; ++i) {
+        for (unsigned int pass_iterator = 0u; pass_iterator < 2u; ++pass_iterator) {
+            for (size_t i = 0u; i < OBJ_COUNT; ++i) {
                 // Create a new tracked object.
                 PtrType new_object = this->CreateTrackedObject(i, i, true);
-                REQUIRE_NONNULL(new_object, "");
+                ASSERT_NONNULL(new_object, "");
                 EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
-                REQUIRE_TRUE(SetTestObjKeys(new_object, populate_method), "");
+                ASSERT_TRUE(SetTestObjKeys(new_object, populate_method), "");
 
                 // Insert the object into the container using insert_or_find.  There
                 // should be no collision.  Exercise both the move and the copy
@@ -308,7 +306,7 @@ public:
                 // If we passed an iterator to the insert_or_find operation, it
                 // should point to the newly inserted object.
                 if (pass_iterator) {
-                    REQUIRE_TRUE(iter.IsValid(), "");
+                    ASSERT_TRUE(iter.IsValid(), "");
                     EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
                 }
             }
@@ -316,21 +314,21 @@ public:
             // If we have not tested passing a non-null iterator yet, reset the
             // environment and do the test again.
             if (!pass_iterator)
-                REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+                ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         }
 
         // Now go over the (populated) container and attempt to insert new
         // objects which have the same keys as existing objects.  Each of these
         // attempts should fail, but should find the objects which were inserted
         // previously.
-        for (uint pass_iterator = 0; pass_iterator < 2; ++pass_iterator) {
-            for (size_t i = 0; i < OBJ_COUNT; ++i) {
-                REQUIRE_NONNULL(objects()[i], "");
+        for (unsigned int pass_iterator = 0u; pass_iterator < 2u; ++pass_iterator) {
+            for (size_t i = 0u; i < OBJ_COUNT; ++i) {
+                ASSERT_NONNULL(objects()[i], "");
 
                 // Create a new non-tracked object; assign it the same key as
                 // the existing object.
                 PtrType new_object = TestEnvTraits::CreateObject(i);
-                REQUIRE_NONNULL(new_object, "");
+                ASSERT_NONNULL(new_object, "");
                 EXPECT_NEQ(new_object->raw_ptr(), objects()[i], "");
                 new_object->SetKey(KeyTraits::GetKey(*objects()[i]));
 
@@ -361,7 +359,7 @@ public:
                 // made to move the pointer into the collection, it should have
                 // failed and we should still own the pointer.
                 EXPECT_FALSE(success, "");
-                REQUIRE_NONNULL(new_object, "");
+                ASSERT_NONNULL(new_object, "");
 
                 // If we passed an iterator to the insert_or_find operation, it
                 // should point to the object we collided with.
@@ -380,7 +378,7 @@ public:
             }
         }
 
-        REQUIRE_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
         END_TEST;
     }
 

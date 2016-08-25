@@ -1,10 +1,8 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/intrusive_single_list.h>
 #include <utils/tests/intrusive_containers/intrusive_singly_linked_list_checker.h>
 #include <utils/tests/intrusive_containers/sequence_container_test_environment.h>
@@ -41,133 +39,130 @@ using UMTE = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
 using UPTE = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtr);
 using RPTE = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
 
-UNITTEST_START_TESTCASE(single_linked_list_tests)
+BEGIN_TEST_CASE(single_linked_list_tests)
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
-UNITTEST("Clear (unmanaged)",             UMTE::ClearTest)
-UNITTEST("Clear (unique)",                UPTE::ClearTest)
-UNITTEST("Clear (RefPtr)",                RPTE::ClearTest)
+RUN_NAMED_TEST("Clear (unmanaged)",             UMTE::ClearTest)
+RUN_NAMED_TEST("Clear (unique)",                UPTE::ClearTest)
+RUN_NAMED_TEST("Clear (RefPtr)",                RPTE::ClearTest)
 
-UNITTEST("IsEmpty (unmanaged)",           UMTE::IsEmptyTest)
-UNITTEST("IsEmpty (unique)",              UPTE::IsEmptyTest)
-UNITTEST("IsEmpty (RefPtr)",              RPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unmanaged)",           UMTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unique)",              UPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (RefPtr)",              RPTE::IsEmptyTest)
 
-UNITTEST("Iterate (unmanaged)",           UMTE::IterateTest)
-UNITTEST("Iterate (unique)",              UPTE::IterateTest)
-UNITTEST("Iterate (RefPtr)",              RPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unmanaged)",           UMTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unique)",              UPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (RefPtr)",              RPTE::IterateTest)
 
 // SinglyLinkedLists cannot perform direct erase operations, nor can they erase
 // using an iterator.
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("IterErase (unmanaged)",         UMTE::IterEraseTest)
-UNITTEST("IterErase (unique)",            UPTE::IterEraseTest)
-UNITTEST("IterErase (RefPtr)",            RPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unmanaged)",         UMTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unique)",            UPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (RefPtr)",            RPTE::IterEraseTest)
 
-UNITTEST("DirectErase (unmanaged)",       UMTE::DirectEraseTest)
-UNITTEST("DirectErase (unique)",          UPTE::DirectEraseTest)
-UNITTEST("DirectErase (RefPtr)",          RPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unmanaged)",       UMTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unique)",          UPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (RefPtr)",          RPTE::DirectEraseTest)
 #endif
 
-UNITTEST("MakeIterator (unmanaged)",      UMTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unmanaged)",      UMTE::MakeIteratorTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("MakeIterator (unique)",         UPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unique)",         UPTE::MakeIteratorTest)
 #endif
-UNITTEST("MakeIterator (RefPtr)",         RPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (RefPtr)",         RPTE::MakeIteratorTest)
 
 // SinglyLinkedLists cannot iterate backwards.
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("ReverseIterErase (unmanaged)",  UMTE::ReverseIterEraseTest)
-UNITTEST("ReverseIterErase (unique)",     UPTE::ReverseIterEraseTest)
-UNITTEST("ReverseIterErase (RefPtr)",     RPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unmanaged)",  UMTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unique)",     UPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (RefPtr)",     RPTE::ReverseIterEraseTest)
 
-UNITTEST("ReverseIterate (unmanaged)",    UMTE::ReverseIterateTest)
-UNITTEST("ReverseIterate (unique)",       UPTE::ReverseIterateTest)
-UNITTEST("ReverseIterate (RefPtr)",       RPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unmanaged)",    UMTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unique)",       UPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (RefPtr)",       RPTE::ReverseIterateTest)
 #endif
 
-UNITTEST("Swap (unmanaged)",              UMTE::SwapTest)
-UNITTEST("Swap (unique)",                 UPTE::SwapTest)
-UNITTEST("Swap (RefPtr)",                 RPTE::SwapTest)
+RUN_NAMED_TEST("Swap (unmanaged)",              UMTE::SwapTest)
+RUN_NAMED_TEST("Swap (unique)",                 UPTE::SwapTest)
+RUN_NAMED_TEST("Swap (RefPtr)",                 RPTE::SwapTest)
 
-UNITTEST("Rvalue Ops (unmanaged)",        UMTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (unique)",           UPTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (RefPtr)",           RPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unmanaged)",        UMTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unique)",           UPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (RefPtr)",           RPTE::RvalueOpsTest)
 
-UNITTEST("Scope (unique)",                UPTE::ScopeTest)
-UNITTEST("Scope (RefPtr)",                RPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (unique)",                UPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (RefPtr)",                RPTE::ScopeTest)
 
-UNITTEST("TwoContainer (unmanaged)",      UMTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unmanaged)",      UMTE::TwoContainerTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("TwoContainer (unique)",         UPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unique)",         UPTE::TwoContainerTest)
 #endif
-UNITTEST("TwoContainer (RefPtr)",         RPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (RefPtr)",         RPTE::TwoContainerTest)
 
-UNITTEST("EraseIf (unmanaged)",           UMTE::EraseIfTest)
-UNITTEST("EraseIf (unique)",              UPTE::EraseIfTest)
-UNITTEST("EraseIf (RefPtr)",              RPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (unmanaged)",           UMTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (unique)",              UPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (RefPtr)",              RPTE::EraseIfTest)
 
-UNITTEST("FindIf (unmanaged)",            UMTE::FindIfTest)
-UNITTEST("FindIf (unique)",               UPTE::FindIfTest)
-UNITTEST("FindIf (RefPtr)",               RPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (unmanaged)",            UMTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (unique)",               UPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (RefPtr)",               RPTE::FindIfTest)
 
 //////////////////////////////////////////
 // Sequence container specific tests.
 //////////////////////////////////////////
-UNITTEST("PushFront (unmanaged)",         UMTE::PushFrontTest)
-UNITTEST("PushFront (unique)",            UPTE::PushFrontTest)
-UNITTEST("PushFront (RefPtr)",            RPTE::PushFrontTest)
+RUN_NAMED_TEST("PushFront (unmanaged)",         UMTE::PushFrontTest)
+RUN_NAMED_TEST("PushFront (unique)",            UPTE::PushFrontTest)
+RUN_NAMED_TEST("PushFront (RefPtr)",            RPTE::PushFrontTest)
 
-UNITTEST("PopFront (unmanaged)",          UMTE::PopFrontTest)
-UNITTEST("PopFront (unique)",             UPTE::PopFrontTest)
-UNITTEST("PopFront (RefPtr)",             RPTE::PopFrontTest)
+RUN_NAMED_TEST("PopFront (unmanaged)",          UMTE::PopFrontTest)
+RUN_NAMED_TEST("PopFront (unique)",             UPTE::PopFrontTest)
+RUN_NAMED_TEST("PopFront (RefPtr)",             RPTE::PopFrontTest)
 
 // Singly linked lists cannot push/pop to/from the back
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("PushBack (unmanaged)",          UMTE::PushBackTest)
-UNITTEST("PushBack (unique)",             UPTE::PushBackTest)
-UNITTEST("PushBack (RefPtr)",             RPTE::PushBackTest)
+RUN_NAMED_TEST("PushBack (unmanaged)",          UMTE::PushBackTest)
+RUN_NAMED_TEST("PushBack (unique)",             UPTE::PushBackTest)
+RUN_NAMED_TEST("PushBack (RefPtr)",             RPTE::PushBackTest)
 
-UNITTEST("PopBack (unmanaged)",           UMTE::PopBackTest)
-UNITTEST("PopBack (unique)",              UPTE::PopBackTest)
-UNITTEST("PopBack (RefPtr)",              RPTE::PopBackTest)
+RUN_NAMED_TEST("PopBack (unmanaged)",           UMTE::PopBackTest)
+RUN_NAMED_TEST("PopBack (unique)",              UPTE::PopBackTest)
+RUN_NAMED_TEST("PopBack (RefPtr)",              RPTE::PopBackTest)
 #endif
 
-UNITTEST("SeqIterate (unmanaged)",        UMTE::SeqIterateTest)
-UNITTEST("SeqIterate (unique)",           UPTE::SeqIterateTest)
-UNITTEST("SeqIterate (RefPtr)",           RPTE::SeqIterateTest)
+RUN_NAMED_TEST("SeqIterate (unmanaged)",        UMTE::SeqIterateTest)
+RUN_NAMED_TEST("SeqIterate (unique)",           UPTE::SeqIterateTest)
+RUN_NAMED_TEST("SeqIterate (RefPtr)",           RPTE::SeqIterateTest)
 
 // SinglyLinkedLists cannot iterate backwards.
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("SeqReverseIterate (unmanaged)", UMTE::SeqReverseIterateTest)
-UNITTEST("SeqReverseIterate (unique)",    UPTE::SeqReverseIterateTest)
-UNITTEST("SeqReverseIterate (RefPtr)",    RPTE::SeqReverseIterateTest)
+RUN_NAMED_TEST("SeqReverseIterate (unmanaged)", UMTE::SeqReverseIterateTest)
+RUN_NAMED_TEST("SeqReverseIterate (unique)",    UPTE::SeqReverseIterateTest)
+RUN_NAMED_TEST("SeqReverseIterate (RefPtr)",    RPTE::SeqReverseIterateTest)
 #endif
 
-UNITTEST("EraseNext (unmanaged)",         UMTE::EraseNextTest)
-UNITTEST("EraseNext (unique)",            UPTE::EraseNextTest)
-UNITTEST("EraseNext (RefPtr)",            RPTE::EraseNextTest)
+RUN_NAMED_TEST("EraseNext (unmanaged)",         UMTE::EraseNextTest)
+RUN_NAMED_TEST("EraseNext (unique)",            UPTE::EraseNextTest)
+RUN_NAMED_TEST("EraseNext (RefPtr)",            RPTE::EraseNextTest)
 
-UNITTEST("InsertAfter (unmanaged)",       UMTE::InsertAfterTest)
-UNITTEST("InsertAfter (unique)",          UPTE::InsertAfterTest)
-UNITTEST("InsertAfter (RefPtr)",          RPTE::InsertAfterTest)
+RUN_NAMED_TEST("InsertAfter (unmanaged)",       UMTE::InsertAfterTest)
+RUN_NAMED_TEST("InsertAfter (unique)",          UPTE::InsertAfterTest)
+RUN_NAMED_TEST("InsertAfter (RefPtr)",          RPTE::InsertAfterTest)
 
 // SinglyLinkedLists cannot perform inserts-before operations, either with an
 // iterator or with a direct object reference.
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("Insert (unmanaged)",            UMTE::InsertTest)
-UNITTEST("Insert (unique)",               UPTE::InsertTest)
-UNITTEST("Insert (RefPtr)",               RPTE::InsertTest)
+RUN_NAMED_TEST("Insert (unmanaged)",            UMTE::InsertTest)
+RUN_NAMED_TEST("Insert (unique)",               UPTE::InsertTest)
+RUN_NAMED_TEST("Insert (RefPtr)",               RPTE::InsertTest)
 
-UNITTEST("DirectInsert (unmanaged)",      UMTE::DirectInsertTest)
-UNITTEST("DirectInsert (unique)",         UPTE::DirectInsertTest)
-UNITTEST("DirectInsert (RefPtr)",         RPTE::DirectInsertTest)
+RUN_NAMED_TEST("DirectInsert (unmanaged)",      UMTE::DirectInsertTest)
+RUN_NAMED_TEST("DirectInsert (unique)",         UPTE::DirectInsertTest)
+RUN_NAMED_TEST("DirectInsert (RefPtr)",         RPTE::DirectInsertTest)
 #endif
 
-UNITTEST_END_TESTCASE(single_linked_list_tests,
-                      "sll",
-                      "Intrusive singly linked list tests.",
-                      NULL, NULL);
+END_TEST_CASE(single_linked_list_tests);
 
 }  // namespace intrusive_containers
 }  // namespace tests

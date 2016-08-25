@@ -1,12 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #pragma once
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/tests/intrusive_containers/base_test_environments.h>
 
 namespace utils {
@@ -63,7 +61,7 @@ public:
             }
 
             PtrType new_object = this->CreateTrackedObject(ndx, ndx, hold_ref);
-            REQUIRE_NONNULL(new_object, "");
+            ASSERT_NONNULL(new_object, "");
             EXPECT_EQ(new_object->raw_ptr(), objects()[ndx], "");
 
             // Alternate whether or not we move the pointer, or "transfer" it.
@@ -107,7 +105,7 @@ public:
             EXPECT_EQ(i, Size(container()), "");
 
             PtrType new_object = this->CreateTrackedObject(i, i);
-            REQUIRE_NONNULL(new_object, "");
+            ASSERT_NONNULL(new_object, "");
             EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
 
             // Alternate whether or not we move the pointer, or "transfer" it.
@@ -129,7 +127,7 @@ public:
 
         size_t i = 0;
         for (const auto& obj : container()) {
-            REQUIRE_LT(i, OBJ_COUNT, "");
+            ASSERT_LT(i, OBJ_COUNT, "");
             EXPECT_EQ(objects()[i]->value(), obj.value(), "");
             EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
             i++;
@@ -141,14 +139,14 @@ public:
     bool PopFront() {
         BEGIN_TEST;
 
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
 
         // Remove elements using pop_front.  List should shrink each time we
         // remove an element, but the number of live objects should only shrink
         // when we let the last reference go out of scope.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
             size_t remaining = OBJ_COUNT - i;
-            REQUIRE_TRUE(!container().is_empty(), "");
+            ASSERT_TRUE(!container().is_empty(), "");
             EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
             EXPECT_EQ(remaining, Size(container()), "");
 
@@ -193,7 +191,7 @@ public:
     bool PopBack() {
         BEGIN_TEST;
 
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
 
         // Remove elements using pop_back.  List should shrink each time we
         // remove an element, but the number of live objects should only shrink
@@ -201,7 +199,7 @@ public:
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
             size_t remaining = OBJ_COUNT - i;
             size_t obj_ndx   = OBJ_COUNT - i - 1;
-            REQUIRE_TRUE(!container().is_empty(), "");
+            ASSERT_TRUE(!container().is_empty(), "");
             EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
             EXPECT_EQ(remaining, Size(container()), "");
 
@@ -246,14 +244,14 @@ public:
     bool EraseNext() {
         BEGIN_TEST;
 
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
 
         // Remove as many elements as we can using erase_next.
         auto iter = container().begin();
         for (size_t i = 1; i < OBJ_COUNT; ++i) {
             size_t remaining = OBJ_COUNT - i + 1;
-            REQUIRE_TRUE(!container().is_empty(), "");
-            REQUIRE_TRUE(iter != container().end(), "");
+            ASSERT_TRUE(!container().is_empty(), "");
+            ASSERT_TRUE(iter != container().end(), "");
             EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
             EXPECT_EQ(remaining, Size(container()), "");
 
@@ -308,11 +306,11 @@ public:
         size_t orig_container_len = ObjType::live_obj_count();
         size_t orig_iter_pos = iter->value();
 
-        REQUIRE_LT(orig_iter_pos, OBJ_COUNT, "");
+        ASSERT_LT(orig_iter_pos, OBJ_COUNT, "");
         EXPECT_EQ(objects()[orig_iter_pos], iter->raw_ptr(), "");
 
         PtrType new_object = this->CreateTrackedObject(pos, pos, true);
-        REQUIRE_NONNULL(new_object, "");
+        ASSERT_NONNULL(new_object, "");
         EXPECT_EQ(new_object->raw_ptr(), objects()[pos], "");
 
         if (pos & 1) {
@@ -356,13 +354,13 @@ public:
 
         auto iter = container().begin();
         for (size_t i = (OBJ_COUNT - END_INSERT_COUNT); i < OBJ_COUNT; ++i) {
-            REQUIRE_TRUE(DoInsertAfter(iter, i), "");
+            ASSERT_TRUE(DoInsertAfter(iter, i), "");
 
             // Now that we have inserted after, we should be able to advance the
             // iterator to what we just inserted.
             iter++;
 
-            REQUIRE_TRUE(iter != container().end(), "");
+            ASSERT_TRUE(iter != container().end(), "");
             EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
             EXPECT_EQ(objects()[i], (*iter).raw_ptr(), "");
             EXPECT_EQ(i, iter->value(), "");
@@ -380,7 +378,7 @@ public:
         // advance the iterator in the process.
         iter = container().begin();
         for (size_t i = (OBJ_COUNT - END_INSERT_COUNT - 1); i > 0; --i) {
-            REQUIRE_TRUE(DoInsertAfter(iter, i), "");
+            ASSERT_TRUE(DoInsertAfter(iter, i), "");
         }
         EXPECT_TRUE(iter != container().end(), "");
 
@@ -408,7 +406,7 @@ public:
         size_t orig_container_len = ObjType::live_obj_count();
 
         PtrType new_object = this->CreateTrackedObject(pos, pos, true);
-        REQUIRE_NONNULL(new_object, "");
+        ASSERT_NONNULL(new_object, "");
         EXPECT_EQ(new_object->raw_ptr(), objects()[pos], "");
 
         if (pos & 1) {
@@ -448,13 +446,13 @@ public:
         // Insert some elements at the end of an initially empty container using the
         // end() iterator accessor.
         for (size_t i = (OBJ_COUNT - END_INSERT_COUNT); i < OBJ_COUNT; ++i)
-            REQUIRE_TRUE(DoInsert(container().end(), i), "");
+            ASSERT_TRUE(DoInsert(container().end(), i), "");
 
         // Insert some elements at the start of a non-empty container using the
         // begin() iterator accessor.
         for (size_t i = 0; i < START_INSERT_COUNT; ++i) {
             size_t ndx = START_INSERT_COUNT - i - 1;
-            REQUIRE_TRUE(DoInsert(container().begin(), ndx), "");
+            ASSERT_TRUE(DoInsert(container().begin(), ndx), "");
         }
 
         // Insert some elements in the middle non-empty container using an iterator
@@ -465,7 +463,7 @@ public:
 
         for (size_t i = 0; i < MID_INSERT_COUNT; ++i) {
             size_t ndx = START_INSERT_COUNT + i;
-            REQUIRE_TRUE(DoInsert(iter, ndx), "");
+            ASSERT_TRUE(DoInsert(iter, ndx), "");
         }
 
         // iter should be END_INSERT_COUNT from the end of the
@@ -483,7 +481,7 @@ public:
 
         size_t i = 0;
         for (const auto& obj : container()) {
-            REQUIRE_LT(i, OBJ_COUNT, "");
+            ASSERT_LT(i, OBJ_COUNT, "");
             EXPECT_EQ(objects()[i], &obj, "");
             EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
             EXPECT_EQ(i, obj.value(), "");
@@ -511,15 +509,15 @@ public:
         // Insert some elements at the end of an initially empty container using
         // the end() iterator as the target.
         for (size_t i = (OBJ_COUNT - END_INSERT_COUNT); i < OBJ_COUNT; ++i)
-            REQUIRE_TRUE(DoInsert(container().end(), i), "");
+            ASSERT_TRUE(DoInsert(container().end(), i), "");
 
         // Insert some elements at the start of a non-empty container node
         // pointers which are always at the start of the container.
         size_t insert_before_ndx = (OBJ_COUNT - END_INSERT_COUNT);
         for (size_t i = 0; i < START_INSERT_COUNT; ++i) {
             size_t ndx = START_INSERT_COUNT - i - 1;
-            REQUIRE_NONNULL(objects()[insert_before_ndx], "");
-            REQUIRE_TRUE(DoInsert(*objects()[insert_before_ndx], ndx), "");
+            ASSERT_NONNULL(objects()[insert_before_ndx], "");
+            ASSERT_TRUE(DoInsert(*objects()[insert_before_ndx], ndx), "");
             insert_before_ndx = ndx;
         }
 
@@ -527,8 +525,8 @@ public:
         insert_before_ndx = (OBJ_COUNT - END_INSERT_COUNT);
         for (size_t i = 0; i < MID_INSERT_COUNT; ++i) {
             size_t ndx = START_INSERT_COUNT + i;
-            REQUIRE_NONNULL(objects()[insert_before_ndx], "");
-            REQUIRE_TRUE(DoInsert(*objects()[insert_before_ndx], ndx), "");
+            ASSERT_NONNULL(objects()[insert_before_ndx], "");
+            ASSERT_TRUE(DoInsert(*objects()[insert_before_ndx], ndx), "");
         }
 
         // Check to make sure the container has the expected number of elements,
@@ -538,7 +536,7 @@ public:
 
         size_t i = 0;
         for (const auto& obj : container()) {
-            REQUIRE_LT(i, OBJ_COUNT, "");
+            ASSERT_LT(i, OBJ_COUNT, "");
             EXPECT_EQ(objects()[i], &obj, "");
             EXPECT_EQ(objects()[i], obj.raw_ptr(), "");
             EXPECT_EQ(i, obj.value(), "");
@@ -555,14 +553,14 @@ public:
 
         // begin() should point to the front of the sequence.
         iter = begin;
-        REQUIRE_TRUE(iter.IsValid(), "");
+        ASSERT_TRUE(iter.IsValid(), "");
         EXPECT_TRUE(container().front() == *iter, "");
 
         // Iterate using begin/end
         size_t i = 0;
         for (iter = begin; iter != end; ) {
             // Exercise both -> and * dereferencing
-            REQUIRE_TRUE(iter.IsValid(), "");
+            ASSERT_TRUE(iter.IsValid(), "");
             EXPECT_EQ(objects()[i],   iter->raw_ptr(), "");
             EXPECT_EQ(objects()[i], (*iter).raw_ptr(), "");
             EXPECT_EQ(i,   iter->value(), "");
@@ -581,7 +579,7 @@ public:
         BEGIN_TEST;
 
         // Start by making some objects.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Test iterator
@@ -619,13 +617,13 @@ public:
         // Backing up one from end() should give us back().  Check both pre
         // and post-fix behavior.
         iter = end; --iter;
-        REQUIRE_TRUE(iter.IsValid(), "");
-        REQUIRE_TRUE(iter != end, "");
+        ASSERT_TRUE(iter.IsValid(), "");
+        ASSERT_TRUE(iter != end, "");
         EXPECT_TRUE(container().back() == *iter, "");
 
         iter = end; iter--;
-        REQUIRE_TRUE(iter.IsValid(), "");
-        REQUIRE_TRUE(iter != end, "");
+        ASSERT_TRUE(iter.IsValid(), "");
+        ASSERT_TRUE(iter != end, "");
         EXPECT_TRUE(container().back() == *iter, "");
 
         // Make sure that backing up an iterator by one points always points
@@ -633,18 +631,18 @@ public:
         iter = begin;
         while (++iter != end) {
             size_t prev_ndx = iter->value() - 1;
-            REQUIRE_LT(prev_ndx, OBJ_COUNT, "");
-            REQUIRE_NONNULL(objects()[prev_ndx], "");
+            ASSERT_LT(prev_ndx, OBJ_COUNT, "");
+            ASSERT_NONNULL(objects()[prev_ndx], "");
 
             auto prev_iter = iter;
             --prev_iter;
-            REQUIRE_TRUE(prev_iter.IsValid(), "");
+            ASSERT_TRUE(prev_iter.IsValid(), "");
             EXPECT_FALSE(prev_iter == iter, "");
             EXPECT_TRUE(*prev_iter == *objects()[prev_ndx], "");
 
             prev_iter = iter;
             prev_iter--;
-            REQUIRE_TRUE(prev_iter.IsValid(), "");
+            ASSERT_TRUE(prev_iter.IsValid(), "");
             EXPECT_FALSE(prev_iter == iter, "");
             EXPECT_TRUE(*prev_iter == *objects()[prev_ndx], "");
         }
@@ -656,7 +654,7 @@ public:
         BEGIN_TEST;
 
         // Start by making some objects.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Test iterator

@@ -1,12 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #pragma once
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/ref_counted.h>
 #include <utils/ref_ptr.h>
 #include <utils/tests/intrusive_containers/objects.h>
@@ -215,7 +213,7 @@ public:
         BEGIN_TEST;
 
         // Start by making some objects.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
 
         // Clear the container.  Afterwards, the number of live objects we have
         // should be equal to the number of references being held by the test
@@ -243,7 +241,7 @@ public:
         BEGIN_TEST;
 
         EXPECT_TRUE(container().is_empty(), "");
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         EXPECT_FALSE(container().is_empty(), "");
         EXPECT_TRUE(Reset(), "");
         EXPECT_TRUE(container().is_empty(), "");
@@ -255,10 +253,10 @@ public:
     bool DoErase(TargetType&& target, size_t ndx, size_t remaining, bool check_ndx = true) {
         BEGIN_TEST;
 
-        REQUIRE_TRUE(ndx < OBJ_COUNT, "");
-        REQUIRE_TRUE(remaining <= OBJ_COUNT, "");
-        REQUIRE_TRUE(!container().is_empty(), "");
-        REQUIRE_TRUE(ValidEraseTarget(target), "");
+        ASSERT_TRUE(ndx < OBJ_COUNT, "");
+        ASSERT_TRUE(remaining <= OBJ_COUNT, "");
+        ASSERT_TRUE(!container().is_empty(), "");
+        ASSERT_TRUE(ValidEraseTarget(target), "");
         EXPECT_EQ(remaining, ObjType::live_obj_count(), "");
         EXPECT_EQ(remaining, Size(container()), "");
         size_t erased_ndx;
@@ -266,7 +264,7 @@ public:
         {
             // Erase the item and sanity check it against our tracking.
             PtrType tmp = container().erase(target);
-            REQUIRE_NONNULL(tmp, "");
+            ASSERT_NONNULL(tmp, "");
             if (check_ndx) {
                 EXPECT_EQ(tmp->value(), ndx, "");
                 EXPECT_EQ(objects()[ndx], tmp->raw_ptr(), "");
@@ -306,7 +304,7 @@ public:
         bool check_ndx = ContainerType::IsSequenced;
 
         // Remove all of the elements from the container by erasing from the front.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         for (size_t i = 0; i < OBJ_COUNT; ++i)
             EXPECT_TRUE(DoErase(container().begin(), i, OBJ_COUNT - i, check_ndx), "");
 
@@ -315,7 +313,7 @@ public:
 
         // Remove all but 2 of the elements from the container by erasing from the middle.
         static_assert(2 < OBJ_COUNT, "OBJ_COUNT too small to run Erase test!");
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         auto iter = container().begin();
         iter++;
         for (size_t i = 1; i < OBJ_COUNT - 1; ++i)
@@ -347,7 +345,7 @@ public:
         bool check_ndx = ContainerType::IsSequenced;
 
         // Remove all of the elements from the container by erasing from the back.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         auto iter = container().end();
         iter--;
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -366,9 +364,9 @@ public:
         // Remove all of the elements from the container by erasing using direct
         // node pointers which should end up always being at the front of the
         // container.
-        REQUIRE_TRUE(Populate(container(), RefAction::HoldAll), "");
+        ASSERT_TRUE(Populate(container(), RefAction::HoldAll), "");
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            REQUIRE_NONNULL(objects()[i], "");
+            ASSERT_NONNULL(objects()[i], "");
             EXPECT_TRUE(DoErase(*objects()[i], i, OBJ_COUNT - i), "");
         }
 
@@ -378,10 +376,10 @@ public:
         // Remove all of the elements from the container by erasing using direct
         // node pointers which should end up always being at the back of the
         // container.
-        REQUIRE_TRUE(Populate(container(), RefAction::HoldAll), "");
+        ASSERT_TRUE(Populate(container(), RefAction::HoldAll), "");
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
             size_t ndx = OBJ_COUNT - i - 1;
-            REQUIRE_NONNULL(objects()[ndx], "");
+            ASSERT_NONNULL(objects()[ndx], "");
             EXPECT_TRUE(DoErase(*objects()[ndx], ndx, ndx + 1), "");
         }
 
@@ -392,9 +390,9 @@ public:
         // node pointers which should end up always being somewhere in the
         // middle of the container.
         static_assert(2 < OBJ_COUNT, "OBJ_COUNT too small to run Erase test!");
-        REQUIRE_TRUE(Populate(container(), RefAction::HoldAll), "");
+        ASSERT_TRUE(Populate(container(), RefAction::HoldAll), "");
         for (size_t i = 1; i < OBJ_COUNT - 1; ++i) {
-            REQUIRE_NONNULL(objects()[i], "");
+            ASSERT_NONNULL(objects()[i], "");
             EXPECT_TRUE(DoErase(*objects()[i], i, OBJ_COUNT - i + 1), "");
         }
 
@@ -410,7 +408,7 @@ public:
         size_t i = 0;
         for (iter = begin; iter != end; ) {
             // Exercise both -> and * dereferencing
-            REQUIRE_TRUE(iter.IsValid(), "");
+            ASSERT_TRUE(iter.IsValid(), "");
 
             EXPECT_EQ(0u, iter->visited_count(), "");
             iter->Visit();
@@ -452,7 +450,7 @@ public:
         BEGIN_TEST;
 
         // Both begin and cbegin should both be invalid, and to end/cend
-        REQUIRE_EQ(0u, Size(container()), "");
+        ASSERT_EQ(0u, Size(container()), "");
         EXPECT_FALSE(container().begin().IsValid(), "");
         EXPECT_TRUE (container().begin() == container().end(), "");
 
@@ -484,7 +482,7 @@ public:
         EXPECT_FALSE(const_iter.IsValid(), "");
 
         // Make some objects.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Both begin and cbegin should both be valid, and not equal to end/cend
@@ -546,18 +544,18 @@ public:
         iter = begin;
         size_t prev_ndx = iter->value();
         while (++iter != end) {
-            REQUIRE_LT(prev_ndx, OBJ_COUNT, "");
-            REQUIRE_NONNULL(objects()[prev_ndx], "");
+            ASSERT_LT(prev_ndx, OBJ_COUNT, "");
+            ASSERT_NONNULL(objects()[prev_ndx], "");
 
             auto prev_iter = iter;
             --prev_iter;
-            REQUIRE_TRUE(prev_iter.IsValid(), "");
+            ASSERT_TRUE(prev_iter.IsValid(), "");
             EXPECT_FALSE(prev_iter == iter, "");
             EXPECT_TRUE(*prev_iter == *objects()[prev_ndx], "");
 
             prev_iter = iter;
             prev_iter--;
-            REQUIRE_TRUE(prev_iter.IsValid(), "");
+            ASSERT_TRUE(prev_iter.IsValid(), "");
             EXPECT_FALSE(prev_iter == iter, "");
             EXPECT_TRUE(*prev_iter == *objects()[prev_ndx], "");
 
@@ -567,12 +565,12 @@ public:
         // Attempting to back up past the beginning should result in an
         // invalid iterator.
         iter = begin;
-        REQUIRE_TRUE(iter.IsValid(), "");
+        ASSERT_TRUE(iter.IsValid(), "");
         --iter;
         EXPECT_FALSE(iter.IsValid(), "");
 
         iter = begin;
-        REQUIRE_TRUE(iter.IsValid(), "");
+        ASSERT_TRUE(iter.IsValid(), "");
         iter--;
         EXPECT_FALSE(iter.IsValid(), "");
 
@@ -584,7 +582,7 @@ public:
 
         // Make sure that backing up from end() for an empty container stays at
         // end.  Check both prefix and postfix decrement operators.
-        REQUIRE_EQ(0u, Size(container()), "");
+        ASSERT_EQ(0u, Size(container()), "");
         auto iter = container().end();
         --iter;
         EXPECT_TRUE(container().end() == iter, "");
@@ -607,7 +605,7 @@ public:
         EXPECT_FALSE(const_iter.IsValid(), "");
 
         // Making some objects.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, Size(container()), "");
 
         // Test iterator
@@ -624,16 +622,16 @@ public:
 
         // Populate the container.  Hold internal refs to everything we add to
         // the container.
-        REQUIRE_TRUE(Populate(container(), RefAction::HoldAll), "");
+        ASSERT_TRUE(Populate(container(), RefAction::HoldAll), "");
 
         // For every member of the container, make an iterator using the
         // internal reference we are holding.  Verify that the iterator is in
         // the position we expect it to be in.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
-            REQUIRE_NONNULL(objects()[i], "");
+            ASSERT_NONNULL(objects()[i], "");
             auto iter = container().make_iterator(*objects()[i]);
 
-            REQUIRE_TRUE(iter != container().end(), "");
+            ASSERT_TRUE(iter != container().end(), "");
             EXPECT_EQ(objects()[i]->value(), iter->value(), "");
             EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
 
@@ -657,7 +655,7 @@ public:
 
         {
             ContainerType other_container; // Make an empty container.
-            REQUIRE_TRUE(Populate(container()), ""); // Fill the internal container with stuff.
+            ASSERT_TRUE(Populate(container()), ""); // Fill the internal container with stuff.
 
             // Sanity check, swap, then check again.
             EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
@@ -666,7 +664,7 @@ public:
             EXPECT_TRUE(other_container.is_empty(), "");
 
             for (auto& obj : container()) {
-                REQUIRE_EQ(0u, obj.visited_count(), "");
+                ASSERT_EQ(0u, obj.visited_count(), "");
                 obj.Visit();
             }
 
@@ -711,7 +709,7 @@ public:
         EXPECT_EQ(0u, ObjType::live_obj_count(), "");
         {
             ContainerType other_container; // Make an empty container.
-            REQUIRE_TRUE(Populate(container()), ""); // Fill the internal container with stuff.
+            ASSERT_TRUE(Populate(container()), ""); // Fill the internal container with stuff.
 
             static constexpr size_t OTHER_COUNT = 5;
             static constexpr size_t OTHER_START = 10000;
@@ -734,12 +732,12 @@ public:
             // Visit everything in container() once, and everything in
             // other_container twice.
             for (auto& obj : container()) {
-                REQUIRE_EQ(0u, obj.visited_count(), "");
+                ASSERT_EQ(0u, obj.visited_count(), "");
                 obj.Visit();
             }
 
             for (const auto& obj : other_container) {
-                REQUIRE_EQ(0u, obj.visited_count(), "");
+                ASSERT_EQ(0u, obj.visited_count(), "");
                 obj.Visit();
                 obj.Visit();
             }
@@ -798,11 +796,11 @@ public:
         BEGIN_TEST;
 
         // Populate the internal container.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
         EXPECT_EQ(OBJ_COUNT, Size(container()), "");
         for (auto& obj : container()) {
-            REQUIRE_GT(OBJ_COUNT, obj.value(), "");
+            ASSERT_GT(OBJ_COUNT, obj.value(), "");
             EXPECT_EQ(0u, obj.visited_count(), "");
             EXPECT_EQ(objects()[obj.value()], &obj, "");
             obj.Visit();
@@ -820,7 +818,7 @@ public:
         EXPECT_EQ(OBJ_COUNT, Size(other_container), "");
         EXPECT_TRUE(container().is_empty(), "");
         for (const auto& obj : other_container) {
-            REQUIRE_GT(OBJ_COUNT, obj.value(), "");
+            ASSERT_GT(OBJ_COUNT, obj.value(), "");
             EXPECT_EQ(1u, obj.visited_count(), "");
             EXPECT_EQ(objects()[obj.value()], &obj, "");
             obj.Visit();
@@ -847,7 +845,7 @@ public:
         EXPECT_EQ(OBJ_COUNT + extras_added, ObjType::live_obj_count(), "");
         EXPECT_EQ(extras_added, Size(container()), "");
         for (const auto& obj : container()) {
-            REQUIRE_GT(EXTRA_COUNT, obj.value(), "");
+            ASSERT_GT(EXTRA_COUNT, obj.value(), "");
             EXPECT_EQ(0u, obj.visited_count(), "");
         }
 
@@ -866,7 +864,7 @@ public:
         EXPECT_EQ(OBJ_COUNT, Size(container()), "");
         EXPECT_TRUE(other_container.is_empty(), "");
         for (const auto& obj : container()) {
-            REQUIRE_GT(OBJ_COUNT, obj.value(), "");
+            ASSERT_GT(OBJ_COUNT, obj.value(), "");
             EXPECT_EQ(2u, obj.visited_count(), "");
             EXPECT_EQ(objects()[obj.value()], &obj, "");
         }
@@ -908,7 +906,7 @@ public:
         // Start by populating the internal container.  We should end up with
         // OBJ_COUNT objects, but we may not be holding internal references to
         // all of them.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
 
         // Create the other type of container that ObjType can exist on and populate
         // it using the default operation for the container type.
@@ -928,8 +926,8 @@ public:
         // have been visited.  Then visit every member of other_container, and
         // make sure that all of the members of container() have been visited
         // once.
-        for (auto& obj : container()) REQUIRE_EQ(0u, obj.visited_count(), "");
-        for (auto& obj : other_container) REQUIRE_EQ(0u, obj.visited_count(), "");
+        for (auto& obj : container()) ASSERT_EQ(0u, obj.visited_count(), "");
+        for (auto& obj : other_container) ASSERT_EQ(0u, obj.visited_count(), "");
 
         for (auto& obj : other_container) {
             obj.Visit();
@@ -947,7 +945,7 @@ public:
         if (OtherContainerType::IsSequenced) {
             auto other_iter = other_container.begin();
             for (const auto& obj : container()) {
-                REQUIRE_FALSE(other_iter == other_container.end(), "");
+                ASSERT_FALSE(other_iter == other_container.end(), "");
                 EXPECT_EQ(OBJ_COUNT - obj.value() - 1, other_iter->value(), "");
                 ++other_iter;
             }
@@ -971,7 +969,7 @@ public:
         if (OtherContainerType::IsSequenced) {
             auto other_iter = other_container.begin();
             for (size_t i = 0; i < OBJ_COUNT; ++i) {
-                REQUIRE_FALSE(other_iter == other_container.end(), "");
+                ASSERT_FALSE(other_iter == other_container.end(), "");
                 EXPECT_EQ(OBJ_COUNT - i - 1, other_iter->value(), "");
                 ++other_iter;
             }
@@ -1011,7 +1009,7 @@ public:
         BEGIN_TEST;
 
         // Populate our container.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
 
         // Erase all of the even members
         size_t even_erased = 0;
@@ -1049,7 +1047,7 @@ public:
         BEGIN_TEST;
 
         // Populate our container.
-        REQUIRE_TRUE(Populate(container()), "");
+        ASSERT_TRUE(Populate(container()), "");
 
         // Find all of the members which should be in the container.
         for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -1058,7 +1056,7 @@ public:
                     return (obj.value() == i);
                 });
 
-            REQUIRE_TRUE(iter.IsValid(), "");
+            ASSERT_TRUE(iter.IsValid(), "");
             EXPECT_EQ(0u, iter->visited_count(), "");
             iter->Visit();
         }

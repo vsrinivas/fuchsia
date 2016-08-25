@@ -1,13 +1,10 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <app/tests.h>
-#include <new.h>
 #include <stdio.h>
-#include <unittest.h>
+#include <magenta/cpp.h>
+#include <unittest/unittest.h>
 #include <utils/unique_ptr.h>
 
 static int destroy_count = 0;
@@ -23,7 +20,7 @@ struct CountingDeleter {
 using CountingPtr    = utils::unique_ptr<int,   CountingDeleter>;
 using CountingArrPtr = utils::unique_ptr<int[], CountingDeleter>;
 
-static bool uptr_test_scoped_destruction(void* context) {
+static bool uptr_test_scoped_destruction() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -38,7 +35,7 @@ static bool uptr_test_scoped_destruction(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_move(void* context) {
+static bool uptr_test_move() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -57,7 +54,7 @@ static bool uptr_test_move(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_null_scoped_destruction(void* context) {
+static bool uptr_test_null_scoped_destruction() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -72,7 +69,7 @@ static bool uptr_test_null_scoped_destruction(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_diff_scope_swap(void* context) {
+static bool uptr_test_diff_scope_swap() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -99,7 +96,7 @@ static bool uptr_test_diff_scope_swap(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_bool_op(void* context) {
+static bool uptr_test_bool_op() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -116,7 +113,7 @@ static bool uptr_test_bool_op(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_comparison(void* context) {
+static bool uptr_test_comparison() {
     BEGIN_TEST;
 
     AllocChecker ac;
@@ -175,7 +172,7 @@ static bool uptr_test_comparison(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_array_scoped_destruction(void* context) {
+static bool uptr_test_array_scoped_destruction() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -190,7 +187,7 @@ static bool uptr_test_array_scoped_destruction(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_array_move(void* context) {
+static bool uptr_test_array_move() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -208,7 +205,7 @@ static bool uptr_test_array_move(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_array_null_scoped_destruction(void* context) {
+static bool uptr_test_array_null_scoped_destruction() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -222,7 +219,7 @@ static bool uptr_test_array_null_scoped_destruction(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_array_diff_scope_swap(void* context) {
+static bool uptr_test_array_diff_scope_swap() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -252,7 +249,7 @@ static bool uptr_test_array_diff_scope_swap(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_array_bool_op(void* context) {
+static bool uptr_test_array_bool_op() {
     BEGIN_TEST;
     destroy_count = 0;
 
@@ -269,7 +266,7 @@ static bool uptr_test_array_bool_op(void* context) {
     END_TEST;
 }
 
-static bool uptr_test_array_comparison(void* context) {
+static bool uptr_test_array_comparison() {
     BEGIN_TEST;
 
     AllocChecker ac;
@@ -327,18 +324,17 @@ static bool uptr_test_array_comparison(void* context) {
     END_TEST;
 }
 
-UNITTEST_START_TESTCASE(unique_ptr)
-UNITTEST("Scoped Destruction",               uptr_test_scoped_destruction)
-UNITTEST("Move",                             uptr_test_move)
-UNITTEST("nullptr Scoped Destruction",       uptr_test_null_scoped_destruction)
-UNITTEST("Different Scope Swapping",         uptr_test_diff_scope_swap)
-UNITTEST("operator bool",                    uptr_test_bool_op)
-UNITTEST("comparison operators",             uptr_test_comparison)
-UNITTEST("Array Scoped Destruction",         uptr_test_array_scoped_destruction)
-UNITTEST("Array Move",                       uptr_test_array_move)
-UNITTEST("Array nullptr Scoped Destruction", uptr_test_array_null_scoped_destruction)
-UNITTEST("Array Different Scope Swapping",   uptr_test_array_diff_scope_swap)
-UNITTEST("Array operator bool",              uptr_test_array_bool_op)
-UNITTEST("Array comparison operators",       uptr_test_array_comparison)
-UNITTEST_END_TESTCASE(unique_ptr, "uptr", "Tests of the utils::unique_ptr<T> class",
-                      NULL, NULL);
+BEGIN_TEST_CASE(unique_ptr)
+RUN_NAMED_TEST("Scoped Destruction",               uptr_test_scoped_destruction)
+RUN_NAMED_TEST("Move",                             uptr_test_move)
+RUN_NAMED_TEST("nullptr Scoped Destruction",       uptr_test_null_scoped_destruction)
+RUN_NAMED_TEST("Different Scope Swapping",         uptr_test_diff_scope_swap)
+RUN_NAMED_TEST("operator bool",                    uptr_test_bool_op)
+RUN_NAMED_TEST("comparison operators",             uptr_test_comparison)
+RUN_NAMED_TEST("Array Scoped Destruction",         uptr_test_array_scoped_destruction)
+RUN_NAMED_TEST("Array Move",                       uptr_test_array_move)
+RUN_NAMED_TEST("Array nullptr Scoped Destruction", uptr_test_array_null_scoped_destruction)
+RUN_NAMED_TEST("Array Different Scope Swapping",   uptr_test_array_diff_scope_swap)
+RUN_NAMED_TEST("Array operator bool",              uptr_test_array_bool_op)
+RUN_NAMED_TEST("Array comparison operators",       uptr_test_array_comparison)
+END_TEST_CASE(unique_ptr);

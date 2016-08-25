@@ -1,12 +1,9 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <app/tests.h>
 #include <stdio.h>
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/type_support.h>
 
 enum Category { CAT_LVALUE, CAT_RVALUE };
@@ -51,7 +48,7 @@ static T make_object(U&& u)
     return T(utils::forward<U>(u));
 }
 
-static bool forward_test(void* context)
+static bool forward_test()
 {
     BEGIN_TEST;
     int val = 42;
@@ -91,6 +88,6 @@ static bool forward_test(void* context)
     END_TEST;
 }
 
-UNITTEST_START_TESTCASE(forward_tests)
-UNITTEST("Forward test", forward_test)
-UNITTEST_END_TESTCASE(forward_tests, "forwardtests", "Forward Tests", NULL, NULL);
+BEGIN_TEST_CASE(forward_tests)
+RUN_NAMED_TEST("Forward test", forward_test)
+END_TEST_CASE(forward_tests);

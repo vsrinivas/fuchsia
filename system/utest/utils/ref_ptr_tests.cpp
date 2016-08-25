@@ -1,12 +1,9 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <app/tests.h>
 #include <stdio.h>
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/ref_ptr.h>
 
 namespace {
@@ -39,7 +36,7 @@ bool RefCallCounter::Release() {
     return false;
 }
 
-static bool ref_ptr_test(void* context) {
+static bool ref_ptr_test() {
     BEGIN_TEST;
     using RefCallPtr = utils::RefPtr<RefCallCounter>;
 
@@ -108,7 +105,7 @@ static bool ref_ptr_test(void* context) {
     END_TEST;
 }
 
-static bool ref_ptr_compare_test(void* context) {
+static bool ref_ptr_compare_test() {
     BEGIN_TEST;
     using RefCallPtr = utils::RefPtr<RefCallCounter>;
 
@@ -144,7 +141,7 @@ static bool ref_ptr_compare_test(void* context) {
 
 } //namespace
 
-UNITTEST_START_TESTCASE(ref_ptr_tests)
-UNITTEST("Ref Pointer", ref_ptr_test)
-UNITTEST("Ref Pointer Comparison", ref_ptr_compare_test)
-UNITTEST_END_TESTCASE(ref_ptr_tests, "refptrtests", "Ref Pointer Tests", NULL, NULL);
+BEGIN_TEST_CASE(ref_ptr_tests)
+RUN_NAMED_TEST("Ref Pointer", ref_ptr_test)
+RUN_NAMED_TEST("Ref Pointer Comparison", ref_ptr_compare_test)
+END_TEST_CASE(ref_ptr_tests);

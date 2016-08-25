@@ -1,10 +1,8 @@
-// Copyright 2016 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <unittest.h>
+#include <unittest/unittest.h>
 #include <utils/intrusive_single_list.h>
 #include <utils/intrusive_hash_table.h>
 #include <utils/tests/intrusive_containers/associative_container_test_environment.h>
@@ -94,104 +92,101 @@ using UMTE = DEFINE_TEST_THUNK(Associative, HTSLL, Unmanaged);
 using UPTE = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtr);
 using RPTE = DEFINE_TEST_THUNK(Associative, HTSLL, RefPtr);
 
-UNITTEST_START_TESTCASE(hashtable_sll_tests)
+BEGIN_TEST_CASE(hashtable_sll_tests)
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
-UNITTEST("Clear (unmanaged)",            UMTE::ClearTest)
-UNITTEST("Clear (unique)",               UPTE::ClearTest)
-UNITTEST("Clear (RefPtr)",               RPTE::ClearTest)
+RUN_NAMED_TEST("Clear (unmanaged)",            UMTE::ClearTest)
+RUN_NAMED_TEST("Clear (unique)",               UPTE::ClearTest)
+RUN_NAMED_TEST("Clear (RefPtr)",               RPTE::ClearTest)
 
-UNITTEST("IsEmpty (unmanaged)",          UMTE::IsEmptyTest)
-UNITTEST("IsEmpty (unique)",             UPTE::IsEmptyTest)
-UNITTEST("IsEmpty (RefPtr)",             RPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unmanaged)",          UMTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (unique)",             UPTE::IsEmptyTest)
+RUN_NAMED_TEST("IsEmpty (RefPtr)",             RPTE::IsEmptyTest)
 
-UNITTEST("Iterate (unmanaged)",          UMTE::IterateTest)
-UNITTEST("Iterate (unique)",             UPTE::IterateTest)
-UNITTEST("Iterate (RefPtr)",             RPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unmanaged)",          UMTE::IterateTest)
+RUN_NAMED_TEST("Iterate (unique)",             UPTE::IterateTest)
+RUN_NAMED_TEST("Iterate (RefPtr)",             RPTE::IterateTest)
 
 // Hashtables with singly linked list bucket can perform direct
 // iterator/reference erase operations, but the operations will be O(n)
-UNITTEST("IterErase (unmanaged)",        UMTE::IterEraseTest)
-UNITTEST("IterErase (unique)",           UPTE::IterEraseTest)
-UNITTEST("IterErase (RefPtr)",           RPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unmanaged)",        UMTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (unique)",           UPTE::IterEraseTest)
+RUN_NAMED_TEST("IterErase (RefPtr)",           RPTE::IterEraseTest)
 
-UNITTEST("DirectErase (unmanaged)",      UMTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unmanaged)",      UMTE::DirectEraseTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("DirectErase (unique)",         UPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (unique)",         UPTE::DirectEraseTest)
 #endif
-UNITTEST("DirectErase (RefPtr)",         RPTE::DirectEraseTest)
+RUN_NAMED_TEST("DirectErase (RefPtr)",         RPTE::DirectEraseTest)
 
-UNITTEST("MakeIterator (unmanaged)",     UMTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unmanaged)",     UMTE::MakeIteratorTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("MakeIterator (unique)",        UPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (unique)",        UPTE::MakeIteratorTest)
 #endif
-UNITTEST("MakeIterator (RefPtr)",        RPTE::MakeIteratorTest)
+RUN_NAMED_TEST("MakeIterator (RefPtr)",        RPTE::MakeIteratorTest)
 
 // HashTables with SinglyLinkedList buckets cannot iterate backwards (because
 // their buckets cannot iterate backwards)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("ReverseIterErase (unmanaged)", UMTE::ReverseIterEraseTest)
-UNITTEST("ReverseIterErase (unique)",    UPTE::ReverseIterEraseTest)
-UNITTEST("ReverseIterErase (RefPtr)",    RPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unmanaged)", UMTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (unique)",    UPTE::ReverseIterEraseTest)
+RUN_NAMED_TEST("ReverseIterErase (RefPtr)",    RPTE::ReverseIterEraseTest)
 
-UNITTEST("ReverseIterate (unmanaged)",   UMTE::ReverseIterateTest)
-UNITTEST("ReverseIterate (unique)",      UPTE::ReverseIterateTest)
-UNITTEST("ReverseIterate (RefPtr)",      RPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unmanaged)",   UMTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (unique)",      UPTE::ReverseIterateTest)
+RUN_NAMED_TEST("ReverseIterate (RefPtr)",      RPTE::ReverseIterateTest)
 #endif
 
 // Hash tables do not support swapping or Rvalue operations (Assignment or
 // construction) as doing so would be an O(n) operation (With 'n' == to the
 // number of buckets in the hashtable)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("Swap (unmanaged)",             UMTE::SwapTest)
-UNITTEST("Swap (unique)",                UPTE::SwapTest)
-UNITTEST("Swap (RefPtr)",                RPTE::SwapTest)
+RUN_NAMED_TEST("Swap (unmanaged)",             UMTE::SwapTest)
+RUN_NAMED_TEST("Swap (unique)",                UPTE::SwapTest)
+RUN_NAMED_TEST("Swap (RefPtr)",                RPTE::SwapTest)
 
-UNITTEST("Rvalue Ops (unmanaged)",       UMTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (unique)",          UPTE::RvalueOpsTest)
-UNITTEST("Rvalue Ops (RefPtr)",          RPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unmanaged)",       UMTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unique)",          UPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (RefPtr)",          RPTE::RvalueOpsTest)
 #endif
 
-UNITTEST("Scope (unique)",               UPTE::ScopeTest)
-UNITTEST("Scope (RefPtr)",               RPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (unique)",               UPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (RefPtr)",               RPTE::ScopeTest)
 
-UNITTEST("TwoContainer (unmanaged)",     UMTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unmanaged)",     UMTE::TwoContainerTest)
 #if TEST_WILL_NOT_COMPILE || 0
-UNITTEST("TwoContainer (unique)",        UPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unique)",        UPTE::TwoContainerTest)
 #endif
-UNITTEST("TwoContainer (RefPtr)",        RPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (RefPtr)",        RPTE::TwoContainerTest)
 
-UNITTEST("EraseIf (unmanaged)",          UMTE::EraseIfTest)
-UNITTEST("EraseIf (unique)",             UPTE::EraseIfTest)
-UNITTEST("EraseIf (RefPtr)",             RPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (unmanaged)",          UMTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (unique)",             UPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (RefPtr)",             RPTE::EraseIfTest)
 
-UNITTEST("FindIf (unmanaged)",           UMTE::FindIfTest)
-UNITTEST("FindIf (unique)",              UPTE::FindIfTest)
-UNITTEST("FindIf (RefPtr)",              RPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (unmanaged)",           UMTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (unique)",              UPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (RefPtr)",              RPTE::FindIfTest)
 
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
-UNITTEST("InsertByKey (unmanaged)",      UMTE::InsertByKeyTest)
-UNITTEST("InsertByKey (unique)",         UPTE::InsertByKeyTest)
-UNITTEST("InsertByKey (RefPtr)",         RPTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (unmanaged)",      UMTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (unique)",         UPTE::InsertByKeyTest)
+RUN_NAMED_TEST("InsertByKey (RefPtr)",         RPTE::InsertByKeyTest)
 
-UNITTEST("FindByKey (unmanaged)",        UMTE::FindByKeyTest)
-UNITTEST("FindByKey (unique)",           UPTE::FindByKeyTest)
-UNITTEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (unmanaged)",        UMTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (unique)",           UPTE::FindByKeyTest)
+RUN_NAMED_TEST("FindByKey (RefPtr)",           RPTE::FindByKeyTest)
 
-UNITTEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
-UNITTEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
-UNITTEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (unmanaged)",       UMTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (unique)",          UPTE::EraseByKeyTest)
+RUN_NAMED_TEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
 
-UNITTEST("InsertOrFind (unmanaged)",     UMTE::InsertOrFindTest)
-UNITTEST("InsertOrFind (unique)",        UPTE::InsertOrFindTest)
-UNITTEST("InsertOrFind (RefPtr)",        RPTE::InsertOrFindTest)
-UNITTEST_END_TESTCASE(hashtable_sll_tests,
-                      "htsll",
-                      "Intrusive hash table tests (singly linked list buckets).",
-                      NULL, NULL);
+RUN_NAMED_TEST("InsertOrFind (unmanaged)",     UMTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (unique)",        UPTE::InsertOrFindTest)
+RUN_NAMED_TEST("InsertOrFind (RefPtr)",        RPTE::InsertOrFindTest)
+END_TEST_CASE(hashtable_sll_tests);
 
 }  // namespace intrusive_containers
 }  // namespace tests
