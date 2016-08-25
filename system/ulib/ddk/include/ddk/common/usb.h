@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/protocol/usb-device.h>
 #include <hw/usb.h>
 
 __BEGIN_CDECLS;
@@ -17,6 +18,8 @@ mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16
 
 // returns string to be freed with free() via out_string
 mx_status_t usb_get_string_descriptor(mx_device_t* device, uint8_t id, char** out_string);
+
+usb_speed_t usb_get_speed(mx_device_t* device);
 
 mx_status_t usb_get_status(mx_device_t* device, uint8_t request_type, uint16_t index,
                           void* data, size_t length);

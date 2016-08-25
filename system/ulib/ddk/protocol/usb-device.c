@@ -226,11 +226,6 @@ static mx_status_t usb_queue_request(mx_device_t* device, usb_request_t* request
     return dev->hci_protocol->queue_request(dev->hcidev, dev->address, request);
 }
 
-static usb_speed_t usb_get_speed(mx_device_t* device) {
-    usb_device_t* dev = get_usb_device(device);
-    return dev->speed;
-}
-
 static mx_status_t usb_configure_hub(mx_device_t* device, usb_speed_t speed,
                                      usb_hub_descriptor_t* descriptor) {
     usb_device_t* dev = get_usb_device(device);
@@ -252,7 +247,6 @@ static usb_device_protocol_t _device_protocol = {
     .free_request = usb_free_request,
     .get_config = usb_get_config,
     .queue_request = usb_queue_request,
-    .get_speed = usb_get_speed,
     .configure_hub = usb_configure_hub,
     .hub_device_added = usb_hub_device_added,
     .hub_device_removed = usb_hub_device_removed,

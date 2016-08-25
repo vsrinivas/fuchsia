@@ -104,7 +104,6 @@ typedef struct usb_device_protocol {
     mx_status_t (*queue_request)(mx_device_t* dev, usb_request_t* request);
 
     mx_status_t (*get_config)(mx_device_t* dev, usb_device_config_t** config);
-    usb_speed_t (*get_speed)(mx_device_t* device);
 
     // These are only used by hub driver
     mx_status_t (*configure_hub)(mx_device_t* device, usb_speed_t speed,

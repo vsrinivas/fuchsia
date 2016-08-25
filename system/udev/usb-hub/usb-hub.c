@@ -255,7 +255,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
 
     hub->usb_device = device;
     hub->device_protocol = device_protocol;
-    hub->hub_speed = device_protocol->get_speed(device);
+    hub->hub_speed = usb_get_speed(device);
 
     req = device_protocol->alloc_request(device, endp, endp->maxpacketsize);
     if (!req) {

@@ -5,7 +5,6 @@
 #include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
-#include <ddk/protocol/usb-device.h>
 #include <endian.h>
 #include <stdio.h>
 #include <string.h>
@@ -102,6 +101,17 @@ mx_status_t usb_get_string_descriptor(mx_device_t* device, uint8_t id, char** ou
     if (!s) return ERR_NO_MEMORY;
     *out_string = s;
     return NO_ERROR;
+}
+
+usb_speed_t usb_get_speed(mx_device_t* device) {
+    int speed;
+    ssize_t result = device->ops->ioctl(device, IOCTL_USB_GET_DEVICE_SPEED, NULL, 0,
+                                        &speed, sizeof(speed));
+    if (result == sizeof(speed)) {
+        return (usb_speed_t)speed;
+    } else {
+        return USB_SPEED_UNDEFINED;
+    }
 }
 
 mx_status_t usb_get_status(mx_device_t* device, uint8_t request_type, uint16_t index,
