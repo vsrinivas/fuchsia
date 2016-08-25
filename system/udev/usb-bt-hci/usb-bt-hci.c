@@ -7,7 +7,6 @@
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/bluetooth-hci.h>
-#include <ddk/protocol/usb-device.h>
 #include <system/listnode.h>
 
 #include <stdio.h>
@@ -28,7 +27,6 @@
 typedef struct {
     mx_device_t device;
     mx_device_t* usb_device;
-    usb_device_protocol_t* device_protocol;
 
     mx_handle_t control_pipe[2];
     mx_handle_t acl_pipe[2];
@@ -52,37 +50,26 @@ typedef struct {
 static void queue_acl_read_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_acl_read_reqs)) != NULL) {
-        usb_request_t* req = containerof(node, usb_request_t, node);
-        req->transfer_length = req->buffer_length;
-        mx_status_t status = hci->device_protocol->queue_request(hci->usb_device, req);
-        if (status != NO_ERROR) {
-            printf("bulk queue queue_request %d\n", status);
-            list_add_head(&hci->free_event_reqs, &req->node);
-            break;
-        }
+        iotxn_t* txn = containerof(node, iotxn_t, node);
+        iotxn_queue(hci->usb_device, txn);
     }
 }
 
 static void queue_interrupt_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_event_reqs)) != NULL) {
-        usb_request_t* req = containerof(node, usb_request_t, node);
-        req->transfer_length = req->buffer_length;
-        mx_status_t status = hci->device_protocol->queue_request(hci->usb_device, req);
-        if (status != NO_ERROR) {
-            printf("interrupt queue_request failed %d\n", status);
-            list_add_head(&hci->free_event_reqs, &req->node);
-            break;
-        }
+        iotxn_t* txn = containerof(node, iotxn_t, node);
+        iotxn_queue(hci->usb_device, txn);
     }
 }
 
-static void hci_event_complete(usb_request_t* request) {
-    hci_t* hci = (hci_t*)request->client_data;
+static void hci_event_complete(iotxn_t* txn, void* cookie) {
+    hci_t* hci = (hci_t*)cookie;
     mtx_lock(&hci->mutex);
-    if (request->status == NO_ERROR) {
-        uint8_t* buffer = request->buffer;
-        size_t length = request->transfer_length;
+    if (txn->status == NO_ERROR) {
+        uint8_t* buffer;
+        txn->ops->mmap(txn, (void **)&buffer);
+        size_t length = txn->actual;
 
         // simple case - packet fits in received data
         if (hci->event_buffer_offset == 0 && length >= 2) {
@@ -130,35 +117,36 @@ static void hci_event_complete(usb_request_t* request) {
     }
 
 out:
-    list_add_head(&hci->free_event_reqs, &request->node);
+    list_add_head(&hci->free_event_reqs, &txn->node);
     queue_interrupt_requests_locked(hci);
 out2:
     mtx_unlock(&hci->mutex);
 }
 
-static void hci_acl_read_complete(usb_request_t* request) {
-    hci_t* hci = (hci_t*)request->client_data;
+static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
+    hci_t* hci = (hci_t*)cookie;
 
-    if (request->status == NO_ERROR) {
-        mx_status_t status = mx_message_write(hci->acl_pipe[0], request->buffer,
-                                                    request->transfer_length, NULL, 0, 0);
+    if (txn->status == NO_ERROR) {
+        void* buffer;
+        txn->ops->mmap(txn, &buffer);
+        mx_status_t status = mx_message_write(hci->acl_pipe[0], buffer, txn->actual, NULL, 0, 0);
         if (status < 0) {
             printf("hci_acl_read_complete failed to write\n");
         }
     }
 
     mtx_lock(&hci->mutex);
-    list_add_head(&hci->free_acl_read_reqs, &request->node);
+    list_add_head(&hci->free_acl_read_reqs, &txn->node);
     queue_acl_read_requests_locked(hci);
     mtx_unlock(&hci->mutex);
 }
 
-static void hci_acl_write_complete(usb_request_t* request) {
-    hci_t* hci = (hci_t*)request->client_data;
+static void hci_acl_write_complete(iotxn_t* txn, void* cookie) {
+    hci_t* hci = (hci_t*)cookie;
 
     // FIXME what to do with error here?
     mtx_lock(&hci->mutex);
-    list_add_tail(&hci->free_acl_write_reqs, &request->node);
+    list_add_tail(&hci->free_acl_write_reqs, &txn->node);
     mtx_unlock(&hci->mutex);
 }
 
@@ -216,14 +204,10 @@ static int hci_read_thread(void* arg) {
                 } while (!node);
                 mtx_unlock(&hci->mutex);
 
-                usb_request_t* request = containerof(node, usb_request_t, node);
-                memcpy(request->buffer, buf, length);
-                request->transfer_length = length;
-                status = hci->device_protocol->queue_request(hci->usb_device, request);
-                if (status < 0) {
-                    printf("hci_read_thread bulk write failed\n");
-                    break;
-                }
+                iotxn_t* txn = containerof(node, iotxn_t, node);
+                txn->ops->copyto(txn, buf, length, 0);
+                txn->length = length;
+                iotxn_queue(hci->usb_device, txn);
             }
         }
     }
@@ -257,11 +241,6 @@ static mx_protocol_device_t hci_device_proto = {
 };
 
 static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
-    usb_device_protocol_t* protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);
@@ -325,31 +304,33 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
     list_initialize(&hci->free_acl_write_reqs);
 
     hci->usb_device = device;
-    hci->device_protocol = protocol;
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, intr_addr, intr_max_packet);
-        if (!req)
+        iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet, 0);
+        if (!txn)
             return ERR_NO_MEMORY;
-        req->complete_cb = hci_event_complete;
-        req->client_data = hci;
-        list_add_head(&hci->free_event_reqs, &req->node);
+        txn->length = intr_max_packet;
+        txn->complete_cb = hci_event_complete;
+        txn->cookie = hci;
+        list_add_head(&hci->free_event_reqs, &txn->node);
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_in_addr, ACL_BUF_SIZE);
-        if (!req)
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, ACL_BUF_SIZE, 0);
+        if (!txn)
             return ERR_NO_MEMORY;
-        req->complete_cb = hci_acl_read_complete;
-        req->client_data = hci;
-        list_add_head(&hci->free_acl_read_reqs, &req->node);
+        txn->length = ACL_BUF_SIZE;
+        txn->complete_cb = hci_acl_read_complete;
+        txn->cookie = hci;
+        list_add_head(&hci->free_acl_read_reqs, &txn->node);
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_out_addr, ACL_BUF_SIZE);
-        if (!req)
+        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, ACL_BUF_SIZE, 0);
+        if (!txn)
             return ERR_NO_MEMORY;
-        req->complete_cb = hci_acl_write_complete;
-        req->client_data = hci;
-        list_add_head(&hci->free_acl_write_reqs, &req->node);
+        txn->length = ACL_BUF_SIZE;
+        txn->complete_cb = hci_acl_write_complete;
+        txn->cookie = hci;
+        list_add_head(&hci->free_acl_write_reqs, &txn->node);
     }
 
     device_init(&hci->device, driver, "usb_bt_hci", &hci_device_proto);
