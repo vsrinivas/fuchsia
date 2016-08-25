@@ -1,0 +1,9 @@
+{
+    "labels": [ "//third_party/speccpu2000" ],
+    "binaries": [
+        {
+            "binary": "176.gcc",
+            "bootfs_path": "benchmarks/176.gcc"
+        }
+    ]
+}
