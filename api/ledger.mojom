@@ -113,11 +113,18 @@ interface Page {
   // - All pending mutations will regularly be bundled together and commited.
   //   They are guaranteed to be persisted as soon as the client receives a
   //   succesful status.
-  // |Put| can be used for small values that fit inside a mojo message. If the
-  // value is bigger, a reference must be first created using |CreateReference|
-  // and then |PutReference| can be used.
+  // |Put| and |PutWithPriority| can be used for small values that fit inside a
+  // mojo message. If the value is bigger, a reference must be first created
+  // using |CreateReference| and then |PutReference| can be used.
+  // |PutWithPriority| and |PutReference| have an additional |priority|
+  // parameter managing the synchronization policy for this value. |Put| uses a
+  // default priority of |Priority.EAGER|. For the list of available priorities
+  // and their definition, see |Priority|.
   Put(array<uint8> key, array<uint8> value) => (Status status);
-  PutReference(array<uint8> key, Reference reference) => (Status status);
+  PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
+      => (Status status);
+  PutReference(array<uint8> key, Reference reference, Priority priority)
+      => (Status status);
   Delete(array<uint8> key) => (Status status);
 
   // References.
@@ -151,6 +158,17 @@ interface Page {
   StartTransaction() => (Status status);
   Commit() => (Status status);
   Rollback() => (Status status);
+};
+
+// The synchronization priority of a reference.
+enum Priority {
+  // EAGER values will be downloaded with the commit and have the same
+  // availability.
+  EAGER = 0,
+  // LAZY values will not be downloaded with their commit but only on demand.
+  // A LAZY value thus may not be available when requested, for example if the
+  // device has no internet connection at request time.
+  LAZY
 };
 
 // A pair of key and value. The |value| will be NULL if it is too big and
