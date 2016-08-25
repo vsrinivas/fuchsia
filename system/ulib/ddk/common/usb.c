@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
 #include <endian.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -134,7 +135,7 @@ mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int fea
 }
 
 // helper function for allocating iotxns for USB transfers
-iotxn_t* usb_alloc_iotxn(usb_endpoint_descriptor_t* ep_desc, size_t data_size, size_t extra_size) {
+iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size) {
     iotxn_t* txn;
 
     mx_status_t status = iotxn_alloc(&txn, 0, data_size, extra_size);
@@ -144,7 +145,105 @@ iotxn_t* usb_alloc_iotxn(usb_endpoint_descriptor_t* ep_desc, size_t data_size, s
     txn->protocol = MX_PROTOCOL_USB_DEVICE;
 
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
-    data->ep_address = ep_desc->bEndpointAddress;
+    data->ep_address = ep_address;
 
     return txn;
+}
+
+// initializes a usb_desc_iter_t
+mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
+    memset(iter, 0, sizeof(*iter));
+
+    int desc_size;
+    ssize_t result = device->ops->ioctl(device, IOCTL_USB_GET_CONFIG_DESC_SIZE, NULL, 0,
+                                        &desc_size, sizeof(desc_size));
+    if (result != sizeof(desc_size)) goto fail;
+
+    uint8_t* desc = malloc(desc_size);
+    if (!desc) return ERR_NO_MEMORY;
+    iter->desc = desc;
+    iter->desc_end = desc + desc_size;
+    iter->current = desc;
+
+    result = device->ops->ioctl(device, IOCTL_USB_GET_CONFIG_DESC, NULL, 0, desc, desc_size);
+    if (result != desc_size) goto fail;
+    return NO_ERROR;
+
+fail:
+    free(iter->desc);
+    if (result < 0) {
+        return result;
+    } else {
+        return ERR_INTERNAL;
+    }
+}
+
+// releases resources in a usb_desc_iter_t
+void usb_desc_iter_release(usb_desc_iter_t* iter) {
+    free(iter->desc);
+    iter->desc = NULL;
+}
+
+// resets iterator to the beginning
+void usb_desc_iter_reset(usb_desc_iter_t* iter) {
+    iter->current = iter->desc;
+}
+
+// returns the next descriptor
+usb_descriptor_header_t* usb_desc_iter_next(usb_desc_iter_t* iter) {
+    usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
+    if (!header) return NULL;
+    iter->current += header->bLength;
+    return header;
+}
+
+// returns the next descriptor without incrementing the iterator
+usb_descriptor_header_t* usb_desc_iter_peek(usb_desc_iter_t* iter) {
+    if (iter->current + sizeof(usb_descriptor_header_t) > iter->desc_end) {
+        return NULL;
+    }
+    usb_descriptor_header_t* header = (usb_descriptor_header_t *)iter->current;
+    if (iter->current + header->bLength > iter->desc_end) {
+        return NULL;
+    }
+    return header;
+}
+
+// returns the next interface descriptor, optionally skipping alternate interfaces
+usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_t* iter, bool skip_alt) {
+    usb_descriptor_header_t* header = usb_desc_iter_next(iter);
+
+    while (header) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            usb_interface_descriptor_t* desc = (usb_interface_descriptor_t *)header;
+            if (!skip_alt || desc->bAlternateSetting == 0) {
+                return desc;
+            }
+        }
+        header = usb_desc_iter_next(iter);
+    }
+    // not found
+    return NULL;
+}
+
+// returns the next endpoint descriptor within the current interface
+usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t* iter) {
+    usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
+    while (header) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            // we are at end of previous interface
+            return NULL;
+        }
+        iter->current += header->bLength;
+        if (header->bDescriptorType == USB_DT_ENDPOINT) {
+            return (usb_endpoint_descriptor_t *)header;
+        }
+        header = usb_desc_iter_peek(iter);
+    }
+    // not found
+    return NULL;
+}
+
+usb_configuration_descriptor_t* usb_desc_iter_get_config_desc(usb_desc_iter_t* iter) {
+    return (usb_configuration_descriptor_t *)iter->desc;
 }
