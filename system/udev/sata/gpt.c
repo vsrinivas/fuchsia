@@ -113,7 +113,7 @@ static void gpt_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         return;
     }
     // constrain if too many bytes are requested
-    txn->length = MIN((last - (first + off_lba)) * device->blksize, txn->length);
+    txn->length = MIN((last - (first + off_lba) + 1) * device->blksize, txn->length);
     // adjust offset
     txn->offset = first * device->blksize + txn->offset;
     iotxn_queue(dev->parent, txn);

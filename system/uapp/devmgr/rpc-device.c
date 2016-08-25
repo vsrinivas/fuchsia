@@ -132,20 +132,18 @@ mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
     return mxrio_txn_handoff(srv, rh, &msg);
 }
 
-#define TXN_SIZE 0x2000 // max size of rio is 8k
-
 static void sync_io_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
 static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t count, mx_off_t off) {
     iotxn_t* txn;
-    mx_status_t status = iotxn_alloc(&txn, 0, TXN_SIZE, 0);
+    mx_status_t status = iotxn_alloc(&txn, 0, MXIO_CHUNK_SIZE, 0);
     if (status != NO_ERROR) {
         return status;
     }
 
-    assert(count <= TXN_SIZE);
+    assert(count <= MXIO_CHUNK_SIZE);
 
     completion_t completion = COMPLETION_INIT;
 

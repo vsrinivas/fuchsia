@@ -20,6 +20,8 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
         printf("Cannot open %s!\n", dev);
         return fd;
     }
+
+    // constrain to device size
     int rc;
     uint64_t size;
     rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &size, sizeof(size));
@@ -31,6 +33,15 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
         count = size;
     }
     count = MIN(count, size - offset);
+
+    // write a multiple of block size
+    uint64_t blksize;
+    mxio_ioctl(fd, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
+    if (rc < 0) {
+        printf("Error getting block size for %s\n", dev);
+        goto fail;
+    }
+    count -= count % blksize;
 
     printf("Writing 0x%02x from offset %llu to %llu (%llu bytes)...", pattern, offset, offset + count, count);
 
