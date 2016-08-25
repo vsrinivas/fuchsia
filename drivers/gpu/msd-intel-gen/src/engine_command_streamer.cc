@@ -47,6 +47,10 @@ void EngineCommandStreamer::InitHardware(HardwareStatusPage* hardware_status_pag
     hardware_status_page->write_sequence_number(initial_sequence_number);
 
     DLOG("initialized engine sequence number: 0x%x", initial_sequence_number);
+
+    registers::GraphicsMode::write(register_io(), mmio_base_,
+                                   registers::GraphicsMode::kExeclistEnable,
+                                   registers::GraphicsMode::kExeclistEnable);
 }
 
 // Register definitions from BSpec BXML Reference.

@@ -128,13 +128,17 @@ public:
 
     void InitHardware()
     {
-        uint32_t offset = engine_cs_->mmio_base() + registers::HardwareStatusPageAddress::kOffset;
-
-        register_io()->Write32(offset, 0);
+        register_io()->Write32(
+            engine_cs_->mmio_base() + registers::HardwareStatusPageAddress::kOffset, 0);
+        register_io()->Write32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset, 0);
 
         engine_cs_->InitHardware(hw_status_page_.get());
 
-        EXPECT_EQ(register_io()->Read32(offset), mock_status_page_->gpu_addr);
+        EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() +
+                                        registers::HardwareStatusPageAddress::kOffset),
+                  mock_status_page_->gpu_addr);
+        EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset),
+                  0x80008000u);
 
         EXPECT_EQ(hw_status_page_->read_sequence_number(), (uint32_t)kFirstSequenceNumber);
     }

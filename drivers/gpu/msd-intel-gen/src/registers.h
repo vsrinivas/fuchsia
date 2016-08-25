@@ -118,6 +118,21 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.618
+class GraphicsMode {
+public:
+    static constexpr uint32_t kOffset = 0x29C;
+    static constexpr uint32_t kExeclistEnable = 1 << 15;
+
+    static void write(RegisterIo* reg_io, uint64_t mmio_base, uint16_t mask, uint16_t val)
+    {
+        uint32_t val32 = mask;
+        val32 = (val32 << 16) | val;
+        reg_io->Write32(mmio_base + kOffset, val32);
+        reg_io->mmio()->PostingRead32(mmio_base + kOffset);
+    }
+};
+
 } // namespace
 
 #endif // REGISTERS_H
