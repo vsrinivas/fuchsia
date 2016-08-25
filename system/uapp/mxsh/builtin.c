@@ -18,7 +18,7 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
 #include <mxio/vfs.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 static int mxc_dump(int argc, char** argv) {
     int fd;

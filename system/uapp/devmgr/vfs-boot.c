@@ -5,7 +5,7 @@
 #include "vfs.h"
 #include "dnode.h"
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <ddk/device.h>
 

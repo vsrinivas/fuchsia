@@ -22,7 +22,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #define MXDEBUG 0
 #include <mxio/debug.h>

@@ -29,7 +29,7 @@
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include "device-internal.h"
 

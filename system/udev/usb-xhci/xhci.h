@@ -10,8 +10,8 @@
 #include <hw/usb.h>
 #include <magenta/types.h>
 #include <stdbool.h>
-#include <system/compiler.h>
-#include <system/listnode.h>
+#include <magenta/compiler.h>
+#include <magenta/listnode.h>
 #include <threads.h>
 
 #include "xhci-hw.h"

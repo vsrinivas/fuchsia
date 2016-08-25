@@ -14,7 +14,7 @@
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 
 typedef intptr_t (*thread_start_func_t)(void*);
 

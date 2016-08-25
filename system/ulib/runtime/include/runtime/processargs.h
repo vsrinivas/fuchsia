@@ -6,7 +6,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/types.h>
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 #include <stdalign.h>
 
 __BEGIN_CDECLS

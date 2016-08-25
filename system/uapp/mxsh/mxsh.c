@@ -24,7 +24,7 @@
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include "mxsh.h"
 

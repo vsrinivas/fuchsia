@@ -12,7 +12,7 @@
 #include <hw/usb.h>
 #include <hw/usb-hid.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <stdint.h>
 #include <stddef.h>

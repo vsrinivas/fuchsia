@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <magenta/types.h>
 #include <mxio/vfs.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <threads.h>
 
 typedef struct dnode dnode_t;

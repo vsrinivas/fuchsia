@@ -12,7 +12,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <sys/param.h>
 #include <assert.h>
 #include <stdlib.h>

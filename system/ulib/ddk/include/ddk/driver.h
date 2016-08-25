@@ -5,8 +5,8 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <system/listnode.h>
-#include <system/compiler.h>
+#include <magenta/listnode.h>
+#include <magenta/compiler.h>
 #include <stdint.h>
 
 typedef struct mx_device mx_device_t;

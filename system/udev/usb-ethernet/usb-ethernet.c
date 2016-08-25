@@ -8,7 +8,7 @@
 #include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-device.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <inttypes.h>
 #include <stdio.h>

@@ -9,7 +9,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <hw/pci.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-ddk.h>

@@ -9,7 +9,7 @@
 #include <ddk/common/usb.h>
 #include <ddk/protocol/usb-device.h>
 #include <hw/usb.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <ddk/protocol/block.h>
 
 #include <endian.h>

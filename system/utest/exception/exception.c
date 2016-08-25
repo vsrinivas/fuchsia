@@ -11,7 +11,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 

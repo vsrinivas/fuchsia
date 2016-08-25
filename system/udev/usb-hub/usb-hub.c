@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <threads.h>
 
 //#define TRACE 1

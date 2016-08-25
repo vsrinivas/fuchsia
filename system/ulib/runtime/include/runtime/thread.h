@@ -7,7 +7,7 @@
 #include <magenta/types.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

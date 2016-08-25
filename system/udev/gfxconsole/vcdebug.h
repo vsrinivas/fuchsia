@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 #include <stdio.h>
 
 #define xprintf(fmt...)   \

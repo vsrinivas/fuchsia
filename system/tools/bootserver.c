@@ -19,7 +19,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <system/netboot.h>
+#include <magenta/netboot.h>
 
 static uint32_t cookie = 1;
 static char* appname;

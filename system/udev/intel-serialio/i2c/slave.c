@@ -8,7 +8,7 @@
 #include <intel-serialio/reg.h>
 #include <magenta/types.h>
 #include <mxio/util.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

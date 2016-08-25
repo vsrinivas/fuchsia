@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdint.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <stdio.h>
 #include <stdlib.h>

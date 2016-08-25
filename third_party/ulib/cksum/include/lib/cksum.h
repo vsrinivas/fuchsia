@@ -1,11 +1,7 @@
 #ifndef __CKSUM_H
 #define __CKSUM_H
 
-#ifdef _KERNEL
-#include <compiler.h>
-#else
-#include <system/compiler.h>
-#endif
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

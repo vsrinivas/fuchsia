@@ -52,7 +52,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 
 #define PRINT_BUFFER_SIZE (512)
 

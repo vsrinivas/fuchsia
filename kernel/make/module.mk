@@ -74,11 +74,11 @@ MODULE_DEFINES += MODULE_SRCS=\"$(subst $(SPACE),_,$(MODULE_SRCS))\"
 MODULE_DEFINES += MODULE_HEADER_DEPS=\"$(subst $(SPACE),_,$(MODULE_HEADER_DEPS))\"
 MODULE_DEFINES += MODULE_TYPE=\"$(subst $(SPACE),_,$(MODULE_TYPE))\"
 
-# Introduce local, libc, system, and dependency include paths
+# Introduce local, libc and dependency include paths
 ifneq ($(MODULE_TYPE),)
 # user module
 MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
-MODULE_COMPILEFLAGS += -Isystem/ulib/system/include
+MODULE_COMPILEFLAGS += -Iglobal/include
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/include
 MODULE_COMPILEFLAGS += $(foreach DEP,$(MODULE_HEADER_DEPS),-I$(DEP)/include)

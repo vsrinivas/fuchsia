@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 #include <mxio/io.h>
 #include <stdint.h>
 

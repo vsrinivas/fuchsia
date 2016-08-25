@@ -8,7 +8,7 @@
 #include <gfx/gfx.h>
 #include <hid/hid.h>
 #include <mxio/vfs.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <stdbool.h>
 #include <threads.h>
 

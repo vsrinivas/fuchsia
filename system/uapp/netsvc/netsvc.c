@@ -15,7 +15,7 @@
 #include <mxio/util.h>
 #include <launchpad/launchpad.h>
 
-#include <system/netboot.h>
+#include <magenta/netboot.h>
 
 #define MAX_LOG_LINE (MX_LOG_RECORD_MAX + 32)
 

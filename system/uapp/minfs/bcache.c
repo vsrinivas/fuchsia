@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include "minfs.h"
 #include "minfs-private.h"

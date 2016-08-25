@@ -6,7 +6,7 @@
 #include "dnode.h"
 #include "devmgr.h"
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <ddk/device.h>
 

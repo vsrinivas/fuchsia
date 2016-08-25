@@ -6,7 +6,7 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 #include <stdio.h>
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 
 extern void thread_entry(uintptr_t arg);
 

@@ -7,7 +7,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <ddk/iotxn.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 // for ssize_t:
 #include <unistd.h>

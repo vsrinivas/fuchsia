@@ -10,7 +10,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #define MXDEBUG 0
 

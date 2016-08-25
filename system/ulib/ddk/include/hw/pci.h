@@ -9,7 +9,7 @@
 #include <endian.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 
 __BEGIN_CDECLS;

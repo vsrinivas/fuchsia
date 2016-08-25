@@ -13,7 +13,7 @@
 
 #include <ddk/device.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>

@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/bluetooth-hci.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <stdio.h>
 #include <stdlib.h>

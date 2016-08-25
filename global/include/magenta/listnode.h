@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 #include <stdbool.h>
 #include <stddef.h>
 

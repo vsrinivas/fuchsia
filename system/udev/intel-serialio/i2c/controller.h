@@ -6,7 +6,7 @@
 
 #include <magenta/types.h>
 #include <stdint.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <threads.h>
 
 typedef struct __attribute__((packed)) intel_serialio_i2c_regs {

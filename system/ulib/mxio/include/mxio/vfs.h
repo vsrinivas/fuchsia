@@ -5,8 +5,8 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <system/listnode.h>
-#include <system/compiler.h>
+#include <magenta/listnode.h>
+#include <magenta/compiler.h>
 
 // ssize_t?
 #include <stdio.h>

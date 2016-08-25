@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 #include <ddk/driver.h>
 
 typedef struct iotxn iotxn_t;

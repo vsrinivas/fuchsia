@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 
 #include "kpci-private.h"
 

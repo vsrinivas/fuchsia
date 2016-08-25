@@ -14,7 +14,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>

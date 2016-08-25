@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include <magenta/types.h>
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 
 #define MAX_MXIO_FD 256
 

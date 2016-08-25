@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <magenta/types.h>
 #include <magenta/device/input.h>

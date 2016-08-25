@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 
-#include <system/compiler.h>
+#include <magenta/compiler.h>
 
 #define TPM_TAG_RQU_COMMAND 193
 #define TPM_TAG_RSP_COMMAND 196

@@ -6,7 +6,7 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
-#include <system/listnode.h>
+#include <magenta/listnode.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
