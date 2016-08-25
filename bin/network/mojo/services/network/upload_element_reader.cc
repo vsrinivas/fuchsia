@@ -4,6 +4,8 @@
 
 #include "base/logging.h"
 
+#include <mojo/system/result.h>
+
 #include "mojo/public/cpp/system/wait.h"
 #include "mojo/services/network/upload_element_reader.h"
 
@@ -22,7 +24,7 @@ MojoResult UploadElementReader::ReadAll(std::ostream *os) {
     uint32_t num_bytes = buf_.size();
     result = ReadDataRaw(pipe_.get(), (void*)buf_.data(),
                          &num_bytes, MOJO_READ_DATA_FLAG_NONE);
-    if (result == MOJO_RESULT_SHOULD_WAIT) {
+    if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
       result = Wait(pipe_.get(),
                     MOJO_HANDLE_SIGNAL_READABLE,
                     MOJO_DEADLINE_INDEFINITE,
@@ -33,8 +35,8 @@ MojoResult UploadElementReader::ReadAll(std::ostream *os) {
 
     if (result != MOJO_RESULT_OK) {
       // If the other end closes the data pipe,
-      // we get MOJO_RESULT_FAILED_PRECONDITION.
-      if (result == MOJO_RESULT_FAILED_PRECONDITION) {
+      // we get MOJO_SYSTEM_RESULT_FAILED_PRECONDITION.
+      if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
         result = MOJO_RESULT_OK;
         break;
       }
@@ -45,7 +47,7 @@ MojoResult UploadElementReader::ReadAll(std::ostream *os) {
     os->write(buf_.data(), num_bytes);
     if (!*os) {
       // TODO(toshik): better result code?
-      result = MOJO_RESULT_RESOURCE_EXHAUSTED;
+      result = MOJO_SYSTEM_RESULT_RESOURCE_EXHAUSTED;
       LOG(ERROR) << "UploadElementReader: result=" << result;
       break;
     }

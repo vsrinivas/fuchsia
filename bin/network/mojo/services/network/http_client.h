@@ -7,6 +7,8 @@
 
 #include "base/logging.h"
 
+#include <mojo/system/result.h>
+
 #include "mojo/public/cpp/system/wait.h"
 #include "mojo/services/network/net_errors.h"
 #include "mojo/services/network/upload_element_reader.h"
@@ -136,7 +138,7 @@ MojoResult URLLoaderImpl::HTTPClient<T>::
                       UploadElementReader>>& element_readers) {
   if (!IsMethodAllowed(method)) {
     LOG(ERROR) << "Method " << method << " is not allowed";
-    return MOJO_RESULT_INVALID_ARGUMENT;
+    return MOJO_SYSTEM_RESULT_INVALID_ARGUMENT;
   }
 
   std::ostream request_header_stream(&request_header_buf_);
@@ -331,7 +333,7 @@ MojoResult URLLoaderImpl::HTTPClient<T>::SendBody() {
       MojoResult result = BeginWriteDataRaw(response_body_stream_.get(),
                                             &buf, &num_bytes,
                                             MOJO_WRITE_DATA_FLAG_NONE);
-      if (result == MOJO_RESULT_SHOULD_WAIT) {
+      if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
         result = Wait(response_body_stream_.get(),
                       MOJO_HANDLE_SIGNAL_WRITABLE,
                       MOJO_DEADLINE_INDEFINITE,
@@ -341,8 +343,8 @@ MojoResult URLLoaderImpl::HTTPClient<T>::SendBody() {
       }
       if (result != MOJO_RESULT_OK) {
         // If the other end closes the data pipe,
-        // MOJO_RESULT_FAILED_PRECONDITION can happen.
-        if (result != MOJO_RESULT_FAILED_PRECONDITION)
+        // MOJO_SYSTEM_RESULT_FAILED_PRECONDITION can happen.
+        if (result != MOJO_SYSTEM_RESULT_FAILED_PRECONDITION)
           LOG(ERROR) << "SendBody: result=" << result;
         return result;
       }
