@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/goma.gni")
+
 # Defines a clang-based toolchain
 #
 # Parameters
@@ -22,6 +24,10 @@
 #   strip
 #     The strip executable which will be run on all shared libraries and
 #     executables as they're built.
+#
+#   use_goma
+#     Override the global use_goma setting, useful to opt-out of goma in a
+#     particular toolchain by setting use_gome = false in it.
 template("clang_toolchain") {
   toolchain(target_name) {
     assert(defined(invoker.cc), "clang_toolchain() must specify a \"cc\" value")
@@ -33,10 +39,19 @@ template("clang_toolchain") {
     assert(defined(invoker.toolchain_os),
            "clang_toolchain() must specify a \"toolchain_os\"")
 
+    if (defined(invoker.use_goma)) {
+      use_goma = invoker.use_goma
+    }
+    if (use_goma) {
+      compiler_prefix = "$goma_dir/gomacc "
+    } else {
+      compiler_prefix = ""
+    }
+
+    cc = compiler_prefix + invoker.cc
+    cxx = compiler_prefix + invoker.cxx
     forward_variables_from(invoker,
                            [
-                             "cc",
-                             "cxx",
                              "ar",
                              "ld",
                            ])
