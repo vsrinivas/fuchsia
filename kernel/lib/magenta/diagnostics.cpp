@@ -153,6 +153,26 @@ void DumpProcessHandles(mx_koid_t id) {
     printf("total: %u handles\n", total);
 }
 
+void KillProcess(mx_koid_t id) {
+    // search the process list and send a kill if found
+    mxtl::RefPtr<ProcessDispatcher> proc_ref;
+
+    // search the process list for our process
+    AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
+    for (auto& process : ProcessDispatcher::global_process_list_) {
+        if (process.get_koid() == id) {
+            proc_ref.reset(&process);
+            break;
+        }
+    }
+
+    // if found, outside of the lock hit it with kill
+    if (proc_ref) {
+        printf("killing process %llu\n", id);
+        proc_ref->Kill();
+    }
+}
+
 static int cmd_diagnostics(int argc, const cmd_args* argv) {
     int rc = 0;
 
@@ -160,8 +180,9 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
     notenoughargs:
         printf("not enough arguments:\n");
     usage:
-        printf("%s ps  : list processes\n", argv[0].str);
-        printf("%s ht  <pid> : dump process handles\n", argv[0].str);
+        printf("%s ps         : list processes\n", argv[0].str);
+        printf("%s ht   <pid> : dump process handles\n", argv[0].str);
+        printf("%s kill <pid> : kill process\n", argv[0].str);
         return -1;
     }
 
@@ -172,7 +193,13 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
             DumpProcessList();
         }
     } else if (strcmp(argv[1].str, "ht") == 0) {
-        DumpProcessHandles(argv[2].i);
+        if (argc < 3)
+            goto usage;
+        DumpProcessHandles(argv[2].u);
+    } else if (strcmp(argv[1].str, "kill") == 0) {
+        if (argc < 3)
+            goto usage;
+        KillProcess(argv[2].u);
     } else {
         printf("unrecognized subcommand\n");
         goto usage;

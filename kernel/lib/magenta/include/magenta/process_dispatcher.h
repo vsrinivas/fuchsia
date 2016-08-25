@@ -125,6 +125,7 @@ private:
     friend void DumpProcessList();
     friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
     friend void DumpProcessHandles(mx_koid_t id);
+    friend void KillProcess(mx_koid_t id);
 
     ProcessDispatcher(mxtl::StringPiece name, uint32_t flags);
 
