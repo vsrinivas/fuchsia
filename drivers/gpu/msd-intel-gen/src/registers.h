@@ -62,6 +62,40 @@ public:
     }
 };
 
+class ActiveHeadPointer {
+public:
+    static constexpr uint32_t kOffset = 0x74;
+    static constexpr uint32_t kUpperOffset = 0x5C;
+
+    static uint64_t read(RegisterIo* reg_io, uint64_t mmio_base)
+    {
+        uint64_t val = reg_io->Read32(mmio_base + kUpperOffset);
+        val = (val << 32) | reg_io->Read32(mmio_base + kOffset);
+        return val;
+    }
+};
+
+// from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.75
+class AllEngineFault {
+public:
+    static constexpr uint32_t kOffset = 0x4094;
+    static constexpr uint32_t kValid = 1;
+    static constexpr uint32_t kEngineShift = 12;
+    static constexpr uint32_t kEngineMask = 0x3;
+    static constexpr uint32_t kSrcShift = 3;
+    static constexpr uint32_t kSrcMask = 0xFF;
+    static constexpr uint32_t kTypeShift = 1;
+    static constexpr uint32_t kTypeMask = 0x3;
+
+    static uint32_t read(RegisterIo* reg_io) { return reg_io->Read32(kOffset); }
+    static void clear(RegisterIo* reg_io) { reg_io->Write32(kOffset, 0); }
+
+    static bool valid(uint32_t val) { return val & kValid; }
+    static uint32_t engine(uint32_t val) { return (val >> kEngineShift) & kEngineMask; }
+    static uint32_t src(uint32_t val) { return (val >> kSrcShift) & kSrcMask; }
+    static uint32_t type(uint32_t val) { return (val >> kTypeShift) & kTypeMask; }
+};
+
 } // namespace
 
 #endif // REGISTERS_H

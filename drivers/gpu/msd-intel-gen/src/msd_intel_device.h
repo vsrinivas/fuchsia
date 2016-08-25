@@ -37,6 +37,21 @@ public:
 
     bool Init(void* device_handle);
 
+    struct DumpState {
+        struct RenderCommandStreamer {
+            uint32_t sequence_number;
+            uint64_t active_head_pointer;
+        } render_cs;
+
+        bool fault_present;
+        uint8_t fault_engine;
+        uint8_t fault_src;
+        uint8_t fault_type;
+    };
+
+    void Dump(DumpState* dump_state);
+    void DumpToString(std::string& dump_string);
+
 private:
     MsdIntelDevice();
 
@@ -61,6 +76,10 @@ private:
     }
 
     bool ReadGttSize(unsigned int* gtt_size);
+
+    void DumpFault(DumpState* dump_out, uint32_t fault);
+
+    MsdIntelContext* global_context() { return global_context_.get(); }
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

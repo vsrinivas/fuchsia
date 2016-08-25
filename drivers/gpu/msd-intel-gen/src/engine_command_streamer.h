@@ -33,6 +33,8 @@ public:
     // Initialize engine command streamer hardware.
     void InitHardware(HardwareStatusPage* hardware_status_page);
 
+    uint64_t GetActiveHeadPointer();
+
 protected:
     bool SubmitContext(MsdIntelContext* context);
     bool UpdateContext(MsdIntelContext* context);

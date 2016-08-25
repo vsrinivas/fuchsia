@@ -349,6 +349,11 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
     registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
 }
 
+uint64_t EngineCommandStreamer::GetActiveHeadPointer()
+{
+    return registers::ActiveHeadPointer::read(register_io(), mmio_base_);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<RenderEngineCommandStreamer>

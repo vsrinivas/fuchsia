@@ -7,6 +7,9 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "register_defs.h"
+#include "registers.h"
+#include <cstdio>
+#include <string>
 
 MsdIntelDevice::MsdIntelDevice() { magic_ = kMagic; }
 
@@ -44,6 +47,9 @@ bool MsdIntelDevice::Init(void* device_handle)
         return DRETF(false, "failed to map pci bar 0");
 
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
+
+    // Clear faults
+    registers::AllEngineFault::clear(register_io_.get());
 
     gtt_ = std::unique_ptr<Gtt>(new Gtt(this));
 
@@ -89,6 +95,53 @@ bool MsdIntelDevice::ReadGttSize(unsigned int* gtt_size)
     return true;
 }
 
+void MsdIntelDevice::Dump(DumpState* dump_out)
+{
+    dump_out->render_cs.sequence_number =
+        global_context_->hardware_status_page(render_engine_cs_->id())->read_sequence_number();
+    dump_out->render_cs.active_head_pointer = render_engine_cs_->GetActiveHeadPointer();
+
+    DumpFault(dump_out, registers::AllEngineFault::read(register_io_.get()));
+}
+
+void MsdIntelDevice::DumpFault(DumpState* dump_out, uint32_t fault)
+{
+    dump_out->fault_present = registers::AllEngineFault::valid(fault);
+    dump_out->fault_engine = registers::AllEngineFault::engine(fault);
+    dump_out->fault_src = registers::AllEngineFault::src(fault);
+    dump_out->fault_type = registers::AllEngineFault::type(fault);
+}
+
+void MsdIntelDevice::DumpToString(std::string& dump_out)
+{
+    DumpState dump_state;
+    Dump(&dump_state);
+
+    const char* fmt = "Device id: 0x%x\n"
+                      "RENDER_COMMAND_STREAMER\n"
+                      "sequence_number 0x%x\n"
+                      "active head pointer: 0x%llx\n";
+    int size = std::snprintf(nullptr, 0, fmt, device_id(), dump_state.render_cs.sequence_number,
+                             dump_state.render_cs.active_head_pointer);
+    std::vector<char> buf(size + 1);
+    std::snprintf(&buf[0], buf.size(), fmt, device_id(), dump_state.render_cs.sequence_number,
+                  dump_state.render_cs.active_head_pointer);
+    dump_out.append(&buf[0]);
+
+    if (dump_state.fault_present) {
+        fmt = "ENGINE FAULT DETECTED\n"
+              "engine 0x%x src 0x%x type 0x%x\n";
+        size = std::snprintf(nullptr, 0, fmt, dump_state.fault_engine, dump_state.fault_src,
+                             dump_state.fault_type);
+        std::vector<char> buf(size + 1);
+        std::snprintf(&buf[0], buf.size(), fmt, dump_state.fault_engine, dump_state.fault_src,
+                      dump_state.fault_type);
+        dump_out.append(&buf[0]);
+    } else {
+        dump_out.append("No engine faults detected.");
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
@@ -98,3 +151,10 @@ msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
 }
 
 uint32_t msd_device_get_id(msd_device* dev) { return MsdIntelDevice::cast(dev)->device_id(); }
+
+void msd_device_dump_status(struct msd_device* dev)
+{
+    std::string dump;
+    MsdIntelDevice::cast(dev)->DumpToString(dump);
+    DLOG("--------------------\n%s\n--------------------\n", dump.c_str());
+}
