@@ -6,6 +6,7 @@
 #define REGISTERS_H
 
 #include "register_io.h"
+#include "types.h"
 
 namespace registers {
 
@@ -94,6 +95,27 @@ public:
     static uint32_t engine(uint32_t val) { return (val >> kEngineShift) & kEngineMask; }
     static uint32_t src(uint32_t val) { return (val >> kSrcShift) & kSrcMask; }
     static uint32_t type(uint32_t val) { return (val >> kTypeShift) & kTypeMask; }
+};
+
+// from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493
+class MultiForceWake {
+public:
+    static constexpr uint32_t kOffset = 0xA188;
+    static constexpr uint32_t kStatusOffset = 0x130044;
+
+    static void reset(RegisterIo* reg_io) { write(reg_io, 0xFFFF, 0); }
+
+    static void write(RegisterIo* reg_io, uint16_t mask, uint16_t val)
+    {
+        uint32_t val32 = mask;
+        val32 = (val32 << 16) | val;
+        reg_io->Write32(kOffset, val32);
+    }
+
+    static uint16_t read_status(RegisterIo* reg_io)
+    {
+        return static_cast<uint16_t>(reg_io->Read32(kStatusOffset));
+    }
 };
 
 } // namespace

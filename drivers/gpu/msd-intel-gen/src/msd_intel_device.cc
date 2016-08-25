@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_intel_device.h"
+#include "forcewake.h"
 #include "global_context.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -47,6 +48,9 @@ bool MsdIntelDevice::Init(void* device_handle)
         return DRETF(false, "failed to map pci bar 0");
 
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
+
+    ForceWake::reset(register_io_.get());
+    ForceWake::request(register_io_.get());
 
     // Clear faults
     registers::AllEngineFault::clear(register_io_.get());
