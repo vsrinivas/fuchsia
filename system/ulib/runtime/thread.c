@@ -37,9 +37,6 @@ struct mxr_thread {
 
     uint64_t magic;
 
-    uintptr_t stack;
-    size_t stack_size;
-
     mxr_mutex_t state_lock;
     int state;
 };
@@ -60,13 +57,14 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
     uintptr_t mapping = 0;
     uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
     mx_status_t status = mx_process_vm_map(self_handle, vmo, 0, len, &mapping, flags);
-    if (status != NO_ERROR) {
-        mx_handle_close(vmo);
-        return status;
-    }
-
     mx_handle_close(vmo);
-    *thread_out = (mxr_thread_t*)mapping;
+    if (status != NO_ERROR)
+        return status;
+    mxr_thread_t* thread = (mxr_thread_t*)mapping;
+    thread->state_lock = MXR_MUTEX_INIT;
+    thread->state = JOINABLE;
+    thread->magic = MXR_THREAD_MAGIC;
+    *thread_out = thread;
     return NO_ERROR;
 }
 
@@ -153,18 +151,11 @@ static inline uintptr_t sp_from_mapping(mx_vaddr_t base, size_t size) {
     return sp;
 }
 
-mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* name, mxr_thread_t** thread_out) {
+mx_status_t mxr_thread_create(const char* name, mxr_thread_t** thread_out) {
     mxr_thread_t* thread = NULL;
     mx_status_t status = allocate_thread_page(&thread);
     if (status < 0)
         return status;
-    *thread_out = thread;
-
-    thread->entry = entry;
-    thread->arg = arg;
-    thread->state_lock = MXR_MUTEX_INIT;
-    thread->state = JOINABLE;
-    thread->magic = MXR_THREAD_MAGIC;
 
     // TODO(kulakowski) Track process handle.
     mx_handle_t self_handle = 0;
@@ -178,37 +169,30 @@ mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* n
         return (mx_status_t)handle;
     }
 
-    // create a new stack for the new thread
-    thread->stack_size = 1024*1024;
-    mx_handle_t thread_stack_vmo = mx_vm_object_create(thread->stack_size);
-    if (thread_stack_vmo < 0) {
-        deallocate_thread_page(thread);
-        mx_handle_close(handle);
-        return thread_stack_vmo;
-    }
+    thread->handle = handle;
 
-    // map it
-    status = mx_process_vm_map(self_handle, thread_stack_vmo, 0, thread->stack_size, &thread->stack,
-            MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-    mx_handle_close(thread_stack_vmo);
-    if (status < 0) {
-        deallocate_thread_page(thread);
-        mx_handle_close(handle);
-        return status;
-    }
+    *thread_out = thread;
+    return NO_ERROR;
+}
+
+mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, mxr_thread_entry_t entry, void* arg) {
+    CHECK_THREAD(thread);
+
+    thread->entry = entry;
+    thread->arg = arg;
 
     // compute the starting address of the stack
-    uintptr_t sp = sp_from_mapping(thread->stack, thread->stack_size);
+    uintptr_t sp = sp_from_mapping(stack_addr, stack_size);
 
     // kick off the new thread
-    status = mx_thread_start(handle, (uintptr_t)thread_trampoline, sp, (uintptr_t)thread);
+    mx_status_t status = mx_thread_start(thread->handle, (uintptr_t)thread_trampoline, sp, (uintptr_t)thread);
     if (status < 0) {
+        mx_handle_t handle = thread->handle;
         deallocate_thread_page(thread);
         mx_handle_close(handle);
         return status;
     }
 
-    thread->handle = handle;
     return NO_ERROR;
 }
 
@@ -268,9 +252,6 @@ mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
 mxr_thread_t* __mxr_thread_main(void) {
     mxr_thread_t* thread = NULL;
     allocate_thread_page(&thread);
-    thread->state_lock = MXR_MUTEX_INIT;
-    thread->state = JOINABLE;
-    thread->magic = MXR_THREAD_MAGIC;
     // TODO(kulakowski) Once the main thread is passed a handle, save it here.
     thread->handle = MX_HANDLE_INVALID;
     return thread;

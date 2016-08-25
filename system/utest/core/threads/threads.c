@@ -42,7 +42,7 @@ bool threads_test(void) {
 
     unittest_printf("Attempting to create thread with a super long name. This should fail\n");
     mxr_thread_t *t = NULL;
-    mx_status_t status = mxr_thread_create(thread_1, NULL,
+    mx_status_t status = mxr_thread_create(
                                     "01234567890123456789012345678901234567890123456789012345678901234567890123456789", &t);
     ASSERT_LT(status, 0, "Thread creation should have failed");
     unittest_printf("mxr_thread_create returned %d\n", status);

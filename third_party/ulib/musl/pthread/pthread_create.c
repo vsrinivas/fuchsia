@@ -59,15 +59,39 @@ static intptr_t start_c11(void* arg) {
     pthread_exit((void*)(intptr_t)start(self->start_arg));
 }
 
+// Allocate stack_size via a vmo, and place the pointer to it in *stack_out.
+static mx_status_t allocate_stack(size_t stack_size, size_t guard_size, uintptr_t* stack_out) {
+    // TODO(kulakowski) Implement guard pages. For now, bypass all the
+    // guard page arithmetic and just map the entire size. When we can
+    // break up mapped regions and have PROT_NONE, the guard stuff is
+    // easy to reintroduce.
+
+    mx_handle_t thread_stack_vmo = mx_vm_object_create(stack_size);
+    if (thread_stack_vmo < 0)
+        return thread_stack_vmo;
+
+    mx_status_t status = mx_process_vm_map(libc.proc, thread_stack_vmo, 0, stack_size, stack_out, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_handle_close(thread_stack_vmo);
+
+    return status;
+}
+
 int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp, void* (*entry)(void*), void* restrict arg) {
     pthread_attr_t attr = {0};
     if (attrp)
         attr = *attrp;
-    size_t size = 0u;
-    size_t guard = 0u;
-    unsigned char *map = 0, *stack = 0, *tsd = 0, *stack_limit;
+
+    const char* name = attr.__name ? attr.__name : "";
+    mxr_thread_t* mxr_thread = NULL;
+    mx_status_t status = mxr_thread_create(name, &mxr_thread);
+    if (status < 0)
+        return EAGAIN;
 
     __acquire_ptc();
+
+    size_t size = 0u;
+    size_t guard_size = 0u;
+    unsigned char *map = 0, *stack = 0, *tsd = 0, *stack_limit;
 
     if (attr._a_stackaddr) {
         size_t need = libc.tls_size + __pthread_tsd_size;
@@ -83,58 +107,52 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
             memset(stack, 0, need);
         } else {
             size = ROUND(need);
-            guard = 0;
         }
     } else {
-        guard = ROUND(DEFAULT_GUARD_SIZE + attr._a_guardsize);
-        size = guard + ROUND(DEFAULT_STACK_SIZE + attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
+        guard_size = ROUND(DEFAULT_GUARD_SIZE + attr._a_guardsize);
+        size = guard_size + ROUND(DEFAULT_STACK_SIZE + attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
     }
 
-    // TODO(kulakowski) Proper stack allocation and guard pages as in
-    // the first branch of the #if below. For now, bypass all the
-    // guard page arithmetic and just map the entire size. When we can
-    // break up mapped regions and have PROT_NONE, the guard stuff is
-    // easy to reintroduce.
-#if 0
+    // At this point:
+    // If the attributes provided a stack, we know to use it.
+    //   - This also accounts for the guard page.
+    //   - If that stack is sufficiently large, also use that for the tsd.
+    //   - Thus:
+    //     - stack size is known
+    //     - stack is known
+    //     - guard_size is known
+    //     - tsd may or may not be known
+    // Otherwise:
+    //   - We use the default guard and default or provided stack size
+    //   - Thus:
+    //     - stack size is known
+    //     - stack is unknown
+    //     - guard_size is unknown
+    //     - tsd is unknown
+
+    // So unless we have already allocated the stack _and_ tsd in the
+    // first case, we are going to allocate here, and possibly set the
+    // stack pointer.
+
     if (!tsd) {
-        if (guard) {
-            map = __mmap(0, size, PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
-            if (map == MAP_FAILED)
-                goto fail;
-            if (__mprotect(map + guard, size - guard, PROT_READ | PROT_WRITE) && errno != ENOSYS) {
-                __munmap(map, size);
-                goto fail;
-            }
-        } else {
-            map = __mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-            if (map == MAP_FAILED)
-                goto fail;
-        }
+        uintptr_t addr = 0u;
+        mx_status_t status = allocate_stack(size, guard_size, &addr);
+        map = (void*)addr;
         tsd = map + size - __pthread_tsd_size;
         if (!stack) {
             stack = tsd - libc.tls_size;
-            stack_limit = map + guard;
+            stack_limit = map + guard_size;
         }
     }
-#else
-    if (!tsd) {
-        map = __mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-        if (map == MAP_FAILED)
-            goto fail;
-        tsd = map + size - __pthread_tsd_size;
-    }
-#endif
 
-    const char* name = attr.__name ? attr.__name : "";
     mxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
     struct pthread* self = __pthread_self();
 
     struct pthread* new = __copy_tls(tsd - libc.tls_size);
     new->map_base = map;
     new->map_size = size;
-    // TODO(kulakowski) Stack size etc.
-    // new->stack = stack;
-    // new->stack_size = stack - stack_limit;
+    new->stack = stack;
+    new->stack_size = stack - stack_limit;
     new->start = entry;
     new->start_arg = arg;
     new->self = new;
@@ -152,10 +170,10 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     // }
     new->unblock_cancel = self->cancel;
     new->CANARY = self->CANARY;
+    new->mxr_thread = mxr_thread;
 
     atomic_fetch_add(&libc.thread_count, 1);
-    // TODO(kulakowski) Separate stack creation here.
-    mx_status_t status = mxr_thread_create(start, new, name, &new->mxr_thread);
+    status = mxr_thread_start(mxr_thread, (uintptr_t)stack_limit, new->stack_size, start, new);
 
     __release_ptc();
 

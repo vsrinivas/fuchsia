@@ -193,9 +193,78 @@ bool pthread_self_main_thread_test(void) {
     END_TEST;
 }
 
+// Pick a stack size well bigger than the default, which is <1MB.
+constexpr size_t stack_size = 16u << 20;
+
+static bool big_stack_check() {
+    // Stack allocate a lot, but less than the full stack size.
+    volatile uint8_t buffer[stack_size / 2];
+    uint8_t value = 0u;
+    for (auto& byte : buffer)
+        byte = value++;
+
+    uint64_t sum = 0u;
+    uint64_t expected_sum = 0u;
+    value = 0u;
+    for (auto& byte : buffer) {
+        sum += byte;
+        expected_sum += value++;
+    }
+
+    ASSERT_EQ(sum, expected_sum, "buffer corrupted");
+
+    return true;
+}
+
+static void* bigger_stack_thread(void* unused) {
+    big_stack_check();
+    return nullptr;
+}
+
+static bool pthread_big_stack_size() {
+    BEGIN_TEST;
+
+    pthread_t thread;
+    pthread_attr_t attr;
+    int result = pthread_attr_init(&attr);
+    ASSERT_EQ(result, 0, "failed to initialize pthread attributes");
+    result = pthread_attr_setstacksize(&attr, stack_size);
+    ASSERT_EQ(result, 0, "failed to set stack size");
+    result = pthread_create(&thread, &attr, bigger_stack_thread, nullptr);
+    ASSERT_EQ(result, 0, "failed to start thread");
+    result = pthread_join(thread, nullptr);
+    ASSERT_EQ(result, 0, "failed to join thread");
+
+    END_TEST;
+}
+
+static bool pthread_big_provided_stack() {
+    BEGIN_TEST;
+
+    void* stack = malloc(stack_size);
+    EXPECT_NEQ(stack, nullptr, "failed to allocate stack");
+
+    pthread_t thread;
+    pthread_attr_t attr;
+    int result = pthread_attr_init(&attr);
+    ASSERT_EQ(result, 0, "failed to initialize pthread attributes");
+    result = pthread_attr_setstack(&attr, stack, stack_size);
+    ASSERT_EQ(result, 0, "failed to set stack size");
+    result = pthread_create(&thread, &attr, bigger_stack_thread, nullptr);
+    ASSERT_EQ(result, 0, "failed to start thread");
+    result = pthread_join(thread, nullptr);
+    ASSERT_EQ(result, 0, "failed to join thread");
+
+    free(stack);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(pthread_tests)
 RUN_TEST(pthread_test)
 RUN_TEST(pthread_self_main_thread_test)
+RUN_TEST(pthread_big_stack_size)
+RUN_TEST(pthread_big_provided_stack)
 END_TEST_CASE(pthread_tests)
 
 #ifndef BUILD_COMBINED_TESTS

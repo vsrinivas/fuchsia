@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <system/compiler.h>
 
@@ -16,14 +17,21 @@ typedef struct mxr_thread mxr_thread_t;
 
 #pragma GCC visibility push(hidden)
 
-// Create and launch a thread. The thread, once constructed, will call
-// entry(arg). If successful, the thread pointer is placed into
-// thread_out, and NO_ERROR is returned. Otherwise a failure status is
-// returned. The thread can return an integer value from entry. The
-// thread should then be either joined or detached.
-mx_status_t mxr_thread_create(mxr_thread_entry_t entry, void* arg, const char* name, mxr_thread_t** thread_out);
+// TODO(kulakowski) Document the possible mx_status_t values from these.
 
-// Once created, threads can be either joined or detached. If a thread
+// Create a thread. If successful, a pointer to the thread structure
+// is returned via thread_out, and NO_ERROR is returned. Otherwise a
+// failure status is returned.
+mx_status_t mxr_thread_create(const char* name, mxr_thread_t** thread_out);
+
+// Start the thread with the given stack, entrypoint, and
+// argument. stack_addr is taken to be the low address of the stack
+// mapping, and should be page aligned. The size of the stack should
+// be a multiple of PAGE_SIZE. When started, the thread will call
+// entry(arg).
+mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, mxr_thread_entry_t entry, void* arg);
+
+// Once started, threads can be either joined or detached. If a thread
 // is joined or detached more than once, ERR_INVALID_ARGS is
 // returned. Some of the resources allocated to a thread are not
 // collected until it returns and it is either joined or detached.

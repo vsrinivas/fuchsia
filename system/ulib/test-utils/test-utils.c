@@ -51,12 +51,31 @@ void tu_handle_close(mx_handle_t handle)
 mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
                              const char* name)
 {
-    mxr_thread_t *thread;
+    const mx_size_t stack_size = 256u << 10;
+    mx_handle_t thread_stack_vmo = mx_vm_object_create(stack_size);
+    if (thread_stack_vmo < 0) {
+        tu_fatal(__func__, thread_stack_vmo);
+    }
 
-    mx_status_t status = mxr_thread_create(entry, arg, name, &thread);
+    uintptr_t stack = 0u;
+    // TODO(kulakowski) Store process self handle.
+    mx_handle_t self_handle = MX_HANDLE_INVALID;
+    mx_status_t status = mx_process_vm_map(self_handle, thread_stack_vmo, 0, stack_size, &stack, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_handle_close(thread_stack_vmo);
     if (status < 0) {
         tu_fatal(__func__, status);
     }
+
+    mxr_thread_t* thread = NULL;
+    status = mxr_thread_create(name, &thread);
+    if (status < 0) {
+        tu_fatal(__func__, status);
+    }
+
+    status = mxr_thread_start(thread, stack, stack_size, entry, arg);
+    if (status < 0) {
+        tu_fatal(__func__, status);
+   }
 
     // XXX (travisg) leaks a thread structure, and really should return mxr_thread_t
     return mxr_thread_get_handle(thread);
