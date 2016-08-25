@@ -51,8 +51,8 @@ typedef struct {
     uint8_t capacity_descriptor;
     uint8_t read_flag;
 
-    usb_endpoint_t* bulk_in;
-    usb_endpoint_t* bulk_out;
+    uint8_t bulk_in_addr;
+    uint8_t bulk_out_addr;
 
     // pool of free USB requests
     list_node_t free_csw_reqs;
@@ -109,23 +109,16 @@ static mx_status_t ums_reset(ums_t* msd) {
                                             | USB_RECIP_INTERFACE, USB_REQ_RESET, 0x00, 0x00, NULL, 0);
     status = usb_control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
-                                           msd->bulk_in->endpoint, NULL, 0);
+                                           msd->bulk_in_addr, NULL, 0);
     status = usb_control(msd->udev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
-                                           msd->bulk_out->endpoint, NULL, 0);
+                                           msd->bulk_out_addr, NULL, 0);
     return status;
 }
 
 static mx_status_t ums_get_max_lun(ums_t* msd, void* data) {
     mx_status_t status = usb_control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
                                     | USB_RECIP_INTERFACE, USB_REQ_GET_MAX_LUN, 0x00, 0x00, data, 1);
-    return status;
-}
-
-static mx_status_t ums_get_endpoint_status(ums_t* msd, usb_endpoint_t* endpoint, void* data) {
-    mx_status_t status = usb_control(msd->udev, USB_DIR_IN | USB_TYPE_CLASS
-                                    | USB_RECIP_INTERFACE, USB_REQ_GET_STATUS, 0x00,
-                                    endpoint->endpoint, data, 2);
     return status;
 }
 
@@ -814,36 +807,44 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
         return ERR_NOT_SUPPORTED;
     }
-    usb_device_config_t* device_config;
-    mx_status_t status = protocol->get_config(device, &device_config);
-    if (status < 0)
-        return status;
 
-    usb_configuration_t* config = &device_config->configurations[0];
-    usb_interface_t* intf = &config->interfaces[0];
     // find our endpoints
-    if (intf->num_endpoints < 2) {
-        DEBUG_PRINT(("UMS:ums_bind wrong number of endpoints: %d\n", intf->num_endpoints));
+    usb_desc_iter_t iter;
+    mx_status_t result = usb_desc_iter_init(device, &iter);
+    if (result < 0) return result;
+
+    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
+    if (!intf) {
+        usb_desc_iter_release(&iter);
         return ERR_NOT_SUPPORTED;
     }
-    usb_endpoint_t* bulk_in = NULL;
-    usb_endpoint_t* bulk_out = NULL;
+    if (intf->bNumEndpoints < 2) {
+        DEBUG_PRINT(("UMS:ums_bind wrong number of endpoints: %d\n", intf->bNumEndpoints));
+        usb_desc_iter_release(&iter);
+        return ERR_NOT_SUPPORTED;
+    }
 
-    for (int i = 0; i < intf->num_endpoints; i++) {
-        usb_endpoint_t* endp = &intf->endpoints[i];
-        if (endp->direction == USB_ENDPOINT_OUT) {
-            if (endp->type == USB_ENDPOINT_BULK) {
-                bulk_out = endp;
+    uint8_t bulk_in_addr = 0;
+    uint8_t bulk_out_addr = 0;
+
+   usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
+    while (endp) {
+        if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
+            if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
+                bulk_out_addr = endp->bEndpointAddress;
             }
         } else {
-            if (endp->type == USB_ENDPOINT_BULK) {
-                bulk_in = endp;
-            } else if (endp->type == USB_ENDPOINT_INTERRUPT) {
+            if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
+                bulk_in_addr = endp->bEndpointAddress;
+            } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
                 DEBUG_PRINT(("UMS:bulk interrupt endpoint found. \nHowever CBI still needs to be implemented so this device probably wont work\n"));
             }
         }
+        endp = usb_desc_iter_next_endpoint(&iter);
     }
-    if (!bulk_in || !bulk_out) {
+    usb_desc_iter_release(&iter);
+
+    if (!bulk_in_addr || !bulk_out_addr) {
         DEBUG_PRINT(("UMS:ums_bind could not find endpoints\n"));
         return ERR_NOT_SUPPORTED;
     }
@@ -865,11 +866,11 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     msd->udev = device;
     msd->driver = driver;
     msd->usb_p = protocol;
-    msd->bulk_in = bulk_in;
-    msd->bulk_out = bulk_out;
+    msd->bulk_in_addr = bulk_in_addr;
+    msd->bulk_out_addr = bulk_out_addr;
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_in, USB_BUF_SIZE);
+        usb_request_t* req = protocol->alloc_request(device, bulk_in_addr, USB_BUF_SIZE);
         if (!req)
             return ERR_NO_MEMORY;
         req->complete_cb = ums_read_complete;
@@ -877,7 +878,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&msd->free_read_reqs, &req->node);
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_in, MSD_COMMAND_STATUS_WRAPPER_SIZE);
+        usb_request_t* req = protocol->alloc_request(device, bulk_in_addr, MSD_COMMAND_STATUS_WRAPPER_SIZE);
         if (!req)
             return ERR_NO_MEMORY;
         req->complete_cb = ums_csw_complete;
@@ -885,7 +886,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&msd->free_csw_reqs, &req->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_out, USB_BUF_SIZE);
+        usb_request_t* req = protocol->alloc_request(device, bulk_out_addr, USB_BUF_SIZE);
         if (!req)
             return ERR_NO_MEMORY;
         req->complete_cb = ums_write_complete;

@@ -35,10 +35,6 @@ typedef struct {
 
     void* intr_queue;
 
-    usb_endpoint_t* bulk_in;
-    usb_endpoint_t* bulk_out;
-    usb_endpoint_t* intr_ep;
-
     // for accumulating HCI events
     uint8_t event_buffer[2 + 255]; // 2 byte header and 0 - 255 data
     size_t event_buffer_offset;
@@ -265,37 +261,42 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
         return ERR_NOT_SUPPORTED;
     }
-    usb_device_config_t* device_config;
-    mx_status_t status = protocol->get_config(device, &device_config);
-    if (status < 0)
-        return status;
 
     // find our endpoints
-    usb_configuration_t* config = &device_config->configurations[0];
-    usb_interface_t* intf = &config->interfaces[0];
-    if (intf->num_endpoints != 3) {
-        printf("hci_bind wrong number of endpoints: %d\n", intf->num_endpoints);
+    usb_desc_iter_t iter;
+    mx_status_t result = usb_desc_iter_init(device, &iter);
+    if (result < 0) return result;
+
+    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
+    if (!intf || intf->bNumEndpoints != 3) {
+        usb_desc_iter_release(&iter);
         return ERR_NOT_SUPPORTED;
     }
-    usb_endpoint_t* bulk_in = NULL;
-    usb_endpoint_t* bulk_out = NULL;
-    usb_endpoint_t* intr_ep = NULL;
 
-    for (int i = 0; i < intf->num_endpoints; i++) {
-        usb_endpoint_t* endp = &intf->endpoints[i];
-        if (endp->direction == USB_ENDPOINT_OUT) {
-            if (endp->type == USB_ENDPOINT_BULK) {
-                bulk_out = endp;
+    uint8_t bulk_in_addr = 0;
+    uint8_t bulk_out_addr = 0;
+    uint8_t intr_addr = 0;
+    uint16_t intr_max_packet = 0;
+
+   usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
+    while (endp) {
+        if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
+            if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
+                bulk_out_addr = endp->bEndpointAddress;
             }
         } else {
-            if (endp->type == USB_ENDPOINT_BULK) {
-                bulk_in = endp;
-            } else if (endp->type == USB_ENDPOINT_INTERRUPT) {
-                intr_ep = endp;
+            if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
+                bulk_in_addr = endp->bEndpointAddress;
+            } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
+                intr_addr = endp->bEndpointAddress;
+                intr_max_packet = usb_ep_max_packet(endp);
             }
         }
+        endp = usb_desc_iter_next_endpoint(&iter);
     }
-    if (!bulk_in || !bulk_out || !intr_ep) {
+    usb_desc_iter_release(&iter);
+
+    if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
         printf("hci_bind could not find endpoints\n");
         return ERR_NOT_SUPPORTED;
     }
@@ -306,7 +307,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         return ERR_NO_MEMORY;
     }
 
-    status = mx_message_pipe_create(hci->control_pipe, 0);
+    mx_status_t status = mx_message_pipe_create(hci->control_pipe, 0);
     if (status < 0) {
         free(hci);
         return ERR_NO_MEMORY;
@@ -325,12 +326,9 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
 
     hci->usb_device = device;
     hci->device_protocol = protocol;
-    hci->bulk_in = bulk_in;
-    hci->bulk_out = bulk_out;
-    hci->intr_ep = intr_ep;
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, intr_ep, intr_ep->maxpacketsize);
+        usb_request_t* req = protocol->alloc_request(device, intr_addr, intr_max_packet);
         if (!req)
             return ERR_NO_MEMORY;
         req->complete_cb = hci_event_complete;
@@ -338,7 +336,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&hci->free_event_reqs, &req->node);
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_in, ACL_BUF_SIZE);
+        usb_request_t* req = protocol->alloc_request(device, bulk_in_addr, ACL_BUF_SIZE);
         if (!req)
             return ERR_NO_MEMORY;
         req->complete_cb = hci_acl_read_complete;
@@ -346,7 +344,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&hci->free_acl_read_reqs, &req->node);
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_out, ACL_BUF_SIZE);
+        usb_request_t* req = protocol->alloc_request(device, bulk_out_addr, ACL_BUF_SIZE);
         if (!req)
             return ERR_NO_MEMORY;
         req->complete_cb = hci_acl_write_complete;

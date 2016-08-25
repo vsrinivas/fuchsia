@@ -6,6 +6,7 @@
 
 // clang-format off
 
+#include <endian.h>
 #include <stdint.h>
 #include <system/compiler.h>
 
@@ -150,5 +151,8 @@ typedef struct {
     uint16_t wMaxPacketSize;
     uint8_t bInterval;
 } __attribute__ ((packed)) usb_endpoint_descriptor_t;
+#define usb_ep_direction(ep)    ((ep)->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
+#define usb_ep_type(ep)         ((ep)->bmAttributes & USB_ENDPOINT_TYPE_MASK)
+#define usb_ep_max_packet(ep)   (le16toh((ep)->wMaxPacketSize))
 
 __END_CDECLS;

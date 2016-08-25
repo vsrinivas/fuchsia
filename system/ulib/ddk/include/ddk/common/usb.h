@@ -31,7 +31,7 @@ mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int featu
 mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
 
 // helper function for allocating iotxns for USB transfers
-iotxn_t* usb_alloc_iotxn(usb_endpoint_descriptor_t* ep_desc, size_t data_size, size_t extra_size);
+iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size);
 
 // Utilities for iterating through descriptors within a device's USB configuration descriptor
 typedef struct {

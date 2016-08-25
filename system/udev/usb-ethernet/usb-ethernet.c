@@ -37,10 +37,6 @@ typedef struct {
     uint8_t status[INTR_REQ_SIZE];
     bool online;
 
-    usb_endpoint_t* bulk_in;
-    usb_endpoint_t* bulk_out;
-    usb_endpoint_t* intr_ep;
-
     // pool of free USB requests
     list_node_t free_read_reqs;
     list_node_t free_write_reqs;
@@ -465,37 +461,40 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
         return ERR_NOT_SUPPORTED;
     }
-    usb_device_config_t* device_config;
-    mx_status_t status = protocol->get_config(device, &device_config);
-    if (status < 0)
-        return status;
 
     // find our endpoints
-    usb_configuration_t* config = &device_config->configurations[0];
-    usb_interface_t* intf = &config->interfaces[0];
-    if (intf->num_endpoints != 3) {
-        printf("usb_ethernet_bind wrong number of endpoints: %d\n", intf->num_endpoints);
+    usb_desc_iter_t iter;
+    mx_status_t result = usb_desc_iter_init(device, &iter);
+    if (result < 0) return result;
+
+    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
+    if (!intf || intf->bNumEndpoints != 3) {
+        usb_desc_iter_release(&iter);
         return ERR_NOT_SUPPORTED;
     }
-    usb_endpoint_t* bulk_in = NULL;
-    usb_endpoint_t* bulk_out = NULL;
-    usb_endpoint_t* intr_ep = NULL;
 
-    for (int i = 0; i < intf->num_endpoints; i++) {
-        usb_endpoint_t* endp = &intf->endpoints[i];
-        if (endp->direction == USB_ENDPOINT_OUT) {
-            if (endp->type == USB_ENDPOINT_BULK) {
-                bulk_out = endp;
+    uint8_t bulk_in_addr = 0;
+    uint8_t bulk_out_addr = 0;
+    uint8_t intr_addr = 0;
+
+   usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
+    while (endp) {
+        if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
+            if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
+                bulk_out_addr = endp->bEndpointAddress;
             }
         } else {
-            if (endp->type == USB_ENDPOINT_BULK) {
-                bulk_in = endp;
-            } else if (endp->type == USB_ENDPOINT_INTERRUPT) {
-                intr_ep = endp;
+            if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
+                bulk_in_addr = endp->bEndpointAddress;
+            } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
+                intr_addr = endp->bEndpointAddress;
             }
         }
+        endp = usb_desc_iter_next_endpoint(&iter);
     }
-    if (!bulk_in || !bulk_out || !intr_ep) {
+    usb_desc_iter_release(&iter);
+
+    if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
         printf("usb_ethernet_bind could not find endpoints\n");
         return ERR_NOT_SUPPORTED;
     }
@@ -514,12 +513,9 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     eth->usb_device = device;
     eth->driver = driver;
     eth->device_protocol = protocol;
-    eth->bulk_in = bulk_in;
-    eth->bulk_out = bulk_out;
-    eth->intr_ep = intr_ep;
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_in->descriptor, USB_BUF_SIZE, 0);
+        iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE, 0);
         if (!req)
             return ERR_NO_MEMORY;
         req->length = USB_BUF_SIZE;
@@ -528,7 +524,7 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&eth->free_read_reqs, &req->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_out->descriptor, USB_BUF_SIZE, 0);
+        iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE, 0);
         if (!req)
             return ERR_NO_MEMORY;
         req->length = USB_BUF_SIZE;
@@ -537,7 +533,7 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
         list_add_head(&eth->free_write_reqs, &req->node);
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(intr_ep->descriptor, INTR_REQ_SIZE, 0);
+        iotxn_t* req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE, 0);
         if (!req)
             return ERR_NO_MEMORY;
         req->length = INTR_REQ_SIZE;

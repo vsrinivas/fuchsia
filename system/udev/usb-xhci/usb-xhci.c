@@ -170,12 +170,11 @@ void xhci_free_request(mx_device_t* device, usb_request_t* request) {
 int xhci_queue_request(mx_device_t* hci_device, int devaddr, usb_request_t* request) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
     xhci_t* xhci = &uxhci->xhci;
-    usb_endpoint_descriptor_t* ep = request->endpoint->descriptor;
     mx_paddr_t phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)request->buffer);
 
     return xhci_queue_transfer(xhci, devaddr, NULL, phys_addr, request->transfer_length,
-                               xhci_endpoint_index(ep->bEndpointAddress),
-                               ep->bEndpointAddress & USB_ENDPOINT_DIR_MASK,
+                               xhci_endpoint_index(request->ep_address),
+                               request->ep_address & USB_ENDPOINT_DIR_MASK,
                                (xhci_transfer_context_t*)request->driver_data);
 }
 

@@ -228,20 +228,27 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
         return ERR_NOT_SUPPORTED;
     }
 
-    usb_device_config_t* device_config;
-    mx_status_t status = device_protocol->get_config(device, &device_config);
-    if (status < 0)
-        return status;
-
     // find our interrupt endpoint
-    usb_configuration_t* config = &device_config->configurations[0];
-    usb_interface_t* intf = &config->interfaces[0];
-    if (intf->num_endpoints != 1) {
-        printf("usb_hub_bind wrong number of endpoints: %d\n", intf->num_endpoints);
+    usb_desc_iter_t iter;
+    mx_status_t result = usb_desc_iter_init(device, &iter);
+    if (result < 0) return result;
+
+    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
+    if (!intf || intf->bNumEndpoints != 1) {
+        usb_desc_iter_release(&iter);
         return ERR_NOT_SUPPORTED;
     }
-    usb_endpoint_t* endp = &intf->endpoints[0];
-    if (endp->type != USB_ENDPOINT_INTERRUPT) {
+
+    uint8_t ep_addr = 0;
+    uint16_t max_packet_size = 0;
+    usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
+    if (endp && usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
+        ep_addr = endp->bEndpointAddress;
+        max_packet_size = usb_ep_max_packet(endp);
+    }
+    usb_desc_iter_release(&iter);
+
+    if (!ep_addr) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -257,7 +264,8 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     hub->device_protocol = device_protocol;
     hub->hub_speed = usb_get_speed(device);
 
-    req = device_protocol->alloc_request(device, endp, endp->maxpacketsize);
+    mx_status_t status;
+    req = device_protocol->alloc_request(device, ep_addr, max_packet_size);
     if (!req) {
         status = ERR_NO_MEMORY;
         goto fail;
