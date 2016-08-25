@@ -5,6 +5,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include <magenta/syscalls.h>
+#include <mojo/system/result.h>
 #include <runtime/tls.h>
 
 #include <utility>
@@ -42,7 +43,7 @@ MessageLoop::~MessageLoop() {
   FTL_DCHECK(g_current == this)
       << "Message loops must be destroyed on their own threads.";
 
-  NotifyHandlers(ftl::TimePoint::Max(), MOJO_RESULT_CANCELLED);
+  NotifyHandlers(ftl::TimePoint::Max(), MOJO_SYSTEM_RESULT_CANCELLED);
 
   incoming_tasks_->ClearDelegate();
   ReloadQueue();
@@ -159,8 +160,8 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   now = ftl::TimePoint::Now();
 
   if (result_index == kInvalidWaitManyIndexValue) {
-    FTL_DCHECK(wait_result == MOJO_RESULT_DEADLINE_EXCEEDED);
-    NotifyHandlers(now, MOJO_RESULT_DEADLINE_EXCEEDED);
+    FTL_DCHECK(wait_result == MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED);
+    NotifyHandlers(now, MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED);
     return now;
   }
 
@@ -183,13 +184,13 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
     case MOJO_RESULT_OK:
       data.handler->OnHandleReady(handle);
       break;
-    case MOJO_RESULT_INVALID_ARGUMENT:
-    case MOJO_RESULT_CANCELLED:
-    case MOJO_RESULT_BUSY:
+    case MOJO_SYSTEM_RESULT_INVALID_ARGUMENT:
+    case MOJO_SYSTEM_RESULT_CANCELLED:
+    case MOJO_SYSTEM_RESULT_BUSY:
       // These results indicate a bug in "our" code (e.g., race conditions).
       FTL_DCHECK(false) << "Unexpected wait result: " << wait_result;
     // Fall through.
-    case MOJO_RESULT_FAILED_PRECONDITION:
+    case MOJO_SYSTEM_RESULT_FAILED_PRECONDITION:
       // Remove the handle first, this way if OnHandleError() tries to remove
       // the handle our iterator isn't invalidated.
       handler_data_.erase(handle);

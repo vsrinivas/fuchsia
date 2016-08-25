@@ -4,6 +4,8 @@
 
 #include "lib/mtl/data_pipe/blocking_copy.h"
 
+#include <mojo/system/result.h>
+
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/system/wait.h"
 
@@ -38,14 +40,14 @@ bool BlockingCopyFrom(
                        << ") in BlockingCopyFrom";
         return false;
       }
-    } else if (result == MOJO_RESULT_SHOULD_WAIT) {
+    } else if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
       result = mojo::Wait(source.get(), MOJO_HANDLE_SIGNAL_READABLE,
                           MOJO_DEADLINE_INDEFINITE, nullptr);
       if (result != MOJO_RESULT_OK) {
         // If the producer handle was closed, then treat as EOF.
-        return result == MOJO_RESULT_FAILED_PRECONDITION;
+        return result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION;
       }
-    } else if (result == MOJO_RESULT_FAILED_PRECONDITION) {
+    } else if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
       // If the producer handle was closed, then treat as EOF.
       return true;
     } else {

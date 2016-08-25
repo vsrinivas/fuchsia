@@ -4,6 +4,8 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
+#include <mojo/system/result.h>
+
 #include <string>
 #include <thread>
 #include <vector>
@@ -296,7 +298,7 @@ TEST(MessageLoop, QuitWhenDeadlineExpired) {
   message_loop.Run();
   EXPECT_EQ(0, handler.ready_count());
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MOJO_RESULT_DEADLINE_EXCEEDED, handler.last_error_result());
+  EXPECT_EQ(MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED, handler.last_error_result());
   EXPECT_FALSE(message_loop.HasHandler(key));
 }
 
@@ -310,7 +312,7 @@ TEST(MessageLoop, Destruction) {
                             MOJO_HANDLE_SIGNAL_READABLE, ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MOJO_RESULT_CANCELLED, handler.last_error_result());
+  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, handler.last_error_result());
 }
 
 class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
@@ -358,8 +360,8 @@ TEST(MessageLoop, MultipleHandleDestruction) {
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
-  EXPECT_EQ(MOJO_RESULT_CANCELLED, odd_handler.last_error_result());
-  EXPECT_EQ(MOJO_RESULT_CANCELLED, even_handler.last_error_result());
+  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, odd_handler.last_error_result());
+  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, even_handler.last_error_result());
 }
 
 class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
@@ -393,7 +395,7 @@ TEST(MessageLoop, AddHandlerOnError) {
                             MOJO_HANDLE_SIGNAL_READABLE, ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MOJO_RESULT_CANCELLED, handler.last_error_result());
+  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, handler.last_error_result());
 }
 
 }  // namespace

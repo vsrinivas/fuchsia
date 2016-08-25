@@ -4,6 +4,8 @@
 
 #include "lib/mtl/data_pipe/strings.h"
 
+#include <mojo/system/result.h>
+
 #include <utility>
 
 #include "lib/ftl/logging.h"
@@ -41,16 +43,16 @@ bool BlockingCopyFromString(
       mojo::EndWriteDataRaw(destination.get(), byte_index);
       if (it == source.end())
         return true;
-    } else if (result == MOJO_RESULT_SHOULD_WAIT) {
+    } else if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
       result = mojo::Wait(destination.get(), MOJO_HANDLE_SIGNAL_WRITABLE,
                           MOJO_DEADLINE_INDEFINITE, nullptr);
       if (result != MOJO_RESULT_OK) {
         // If the consumer handle was closed, then treat as EOF.
-        return result == MOJO_RESULT_FAILED_PRECONDITION;
+        return result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION;
       }
     } else {
       // If the consumer handle was closed, then treat as EOF.
-      return result == MOJO_RESULT_FAILED_PRECONDITION;
+      return result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION;
     }
   }
 }

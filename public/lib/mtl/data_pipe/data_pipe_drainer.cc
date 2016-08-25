@@ -4,6 +4,8 @@
 
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
+#include <mojo/system/result.h>
+
 #include <utility>
 
 #include "lib/ftl/logging.h"
@@ -35,9 +37,9 @@ void DataPipeDrainer::ReadData() {
     client_->OnDataAvailable(buffer, num_bytes);
     EndReadDataRaw(source_.get(), num_bytes);
     WaitForData();
-  } else if (rv == MOJO_RESULT_SHOULD_WAIT) {
+  } else if (rv == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
     WaitForData();
-  } else if (rv == MOJO_RESULT_FAILED_PRECONDITION) {
+  } else if (rv == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
     client_->OnDataComplete();
   } else {
     FTL_DCHECK(false) << "Unhandled MojoResult: " << rv;

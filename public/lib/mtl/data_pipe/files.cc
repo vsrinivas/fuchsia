@@ -4,6 +4,7 @@
 
 #include "lib/mtl/data_pipe/files.h"
 
+#include <mojo/system/result.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -85,11 +86,11 @@ void CopyToFileHandler::OnHandleReady(MojoResult result) {
       return;
     }
   }
-  if (result == MOJO_RESULT_FAILED_PRECONDITION) {
+  if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
     SendCallback(true);
     return;
   }
-  if (result == MOJO_RESULT_SHOULD_WAIT) {
+  if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
     wait_id_ =
         waiter_->AsyncWait(source_.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
                            MOJO_DEADLINE_INDEFINITE, &WaitComplete, this);
@@ -177,7 +178,7 @@ void CopyFromFileHandler::OnHandleReady(MojoResult result) {
       return;
     }
   }
-  if (result == MOJO_RESULT_SHOULD_WAIT) {
+  if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
     wait_id_ = waiter_->AsyncWait(
         destination_.get().value(), MOJO_HANDLE_SIGNAL_WRITABLE,
         MOJO_DEADLINE_INDEFINITE, &WaitComplete, this);

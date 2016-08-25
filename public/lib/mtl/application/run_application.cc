@@ -24,8 +24,9 @@ struct ResultHolder {
 #ifndef NDEBUG
   bool is_set = false;
 #endif
-  // TODO(vtl): The default result should probably be |MOJO_RESULT_UNKNOWN|, but
-  // |ApplicationRunner| always returned |MOJO_RESULT_OK|.
+  // TODO(vtl): The default result should probably be
+  // |MOJO_SYSTEM_RESULT_UNKNOWN|, but |ApplicationRunner| always returned
+  // |MOJO_RESULT_OK|.
   MojoResult result = MOJO_RESULT_OK;
 };
 
