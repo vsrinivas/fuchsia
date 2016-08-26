@@ -10,6 +10,7 @@
 #include <magenta/syscalls-ddk.h>
 #include <mxio/debug.h>
 #include <mxio/util.h>
+#include <mxio/watcher.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,38 +69,64 @@ int devicehost(int argc, char** argv) {
 #define VC_DEVICE "/dev/class/console/vc"
 
 #if !LIBDRIVER
-int console_starter(void* arg) {
+
+static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
+    printf("devmgr: new block device: /dev/class/block/%s\n", name);
+    int fd;
+    if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
+        return NO_ERROR;
+    }
+
+    // probe for partition table
+    mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
+    close(fd);
+
+    return NO_ERROR;
+}
+
+int service_starter(void* arg) {
 #if !_MX_KERNEL_HAS_SHELL
     // if no kernel shell on serial uart, start a mxsh there
     printf("devmgr: shell startup\n");
     devmgr_launch("mxsh:console", "/boot/bin/mxsh", NULL, "/dev/console");
 #endif
 
-    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, "/dev/console");
+    // launch the network service
+    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, NULL);
 
     devmgr_launch("mxsh:autorun", "/boot/bin/mxsh", "/boot/autorun", NULL);
 
-    printf("devmgr: vc startup\n");
-    // wait for vc server ready
-    int fd;
-    while ((fd = open(VC_DEVICE, O_RDWR)) < 0) {
-        mx_nanosleep(100000000ULL);
+    int dirfd;
+    if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
+        mxio_watch_directory(dirfd, block_device_added, NULL);
     }
-    close(fd);
+    close(dirfd);
 
-    // start a couple vc's
+    return 0;
+}
+
+static mx_status_t console_device_added(int dirfd, const char* name, void* cookie) {
+    if (strcmp(name, "vc")) {
+        return NO_ERROR;
+    }
+
+    // start some shells on vcs
     for (unsigned i = 0; i < VC_COUNT; i++) {
         char pname[32];
         snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
         devmgr_launch(pname, "/boot/bin/mxsh", NULL, VC_DEVICE);
     }
 
-    // FIXME read the partition table here for now
-    while ((fd = open("/dev/class/block/000", O_RDWR)) < 0) {
-        mx_nanosleep(100000000ULL);
+    // stop polling
+    return 1;
+}
+
+int virtcon_starter(void* arg) {
+    int dirfd;
+    if ((dirfd = open("/dev/class/console", O_DIRECTORY|O_RDONLY)) >= 0) {
+        mxio_watch_directory(dirfd, console_device_added, NULL);
     }
-    mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
-    close(fd);
+    close(dirfd);
     return 0;
 }
 #endif
@@ -140,7 +167,10 @@ int main(int argc, char** argv) {
     devmgr_init_builtin_drivers();
 
     thrd_t t;
-    if ((thrd_create_with_name(&t, console_starter, NULL, "console-starter")) == thrd_success) {
+    if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
+        thrd_detach(t);
+    }
+    if ((thrd_create_with_name(&t, virtcon_starter, NULL, "virtcon-starter")) == thrd_success) {
         thrd_detach(t);
     }
 
