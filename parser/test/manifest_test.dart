@@ -29,6 +29,8 @@ void main() {
     const String token2 = 'token2';
     const String typeToken1 = 'typeToken1';
     const String typeToken2 = 'typeToken2';
+    const String arch = 'linux-x64';
+    const String modularRevision = 'fbdcf29a4aba9d2325476b2851abd22f0297ae78';
     final Uri verb1 = new Uri.http('verb.tq.io', '1');
     final Uri verb2 = new Uri.http('verb.tq.io', '2');
     final Uri display1 = new Uri.http('display.tq.io', '1');
@@ -147,6 +149,48 @@ void main() {
         theme-color: 'ffaabc'
       ''';
       expect(() => parseManifest(yaml), throwsParseError);
+    });
+
+    test('Parse arch', () {
+      final String yaml = '''
+            arch: $arch
+          ''';
+      final Manifest manifest = parseManifest(yaml);
+      expect(manifest.arch, equals(arch));
+
+      // arch field is optional.
+      final String yaml2 = '''
+            title: $title
+          ''';
+      final Manifest manifest2 = parseManifest(yaml2);
+      expect(manifest2, isNotNull);
+
+      // Invalid arch.
+      final String yaml3 = '''
+            arch: arm64
+          ''';
+      expect(() => parseManifest(yaml3), throwsParseError);
+    });
+
+    test('Parse modularRevision', () {
+      final String yaml = '''
+            modularRevision: $modularRevision
+          ''';
+      final Manifest manifest = parseManifest(yaml);
+      expect(manifest.modularRevision, equals(modularRevision));
+
+      // modularRevision field is optional.
+      final String yaml2 = '''
+            title: $title
+          ''';
+      final Manifest manifest2 = parseManifest(yaml2);
+      expect(manifest2, isNotNull);
+
+      // Invalid modularRevision.
+      final String yaml3 = '''
+            arch: truncated123hash
+          ''';
+      expect(() => parseManifest(yaml3), throwsParseError);
     });
 
     test('Parse inline display uri', () {
@@ -327,6 +371,8 @@ verb: $verb2
             output: $token2
             display: $type1 -> $display1
             compose: $type1 -> $display2
+            arch: $arch
+            modularRevision: $modularRevision
 
             use:
             - $token1: $type1
