@@ -258,10 +258,15 @@ include top/rules.mk
 include make/recurse.mk
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
-# copy global headers to the sysroot
-$(call copy-dst-src,$(BUILDDIR)/sysroot/include/global/fuchsia-types.h,$(LKMAKEROOT)/global/include/global/fuchsia-types.h)
-SYSROOT_DEPS += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
-GENERATED += $(BUILDDIR)/sysroot/include/global/fuchsia-types.h
+# identify global headers to copy to the sysroot
+GLOBAL_HEADERS := $(shell find global/include -name \*\.h)
+GLOBAL_HEADERS := $(patsubst global/include/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
+
+# generate rule to copy them
+$(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.h,global/include/%.h)
+
+SYSROOT_DEPS += $(GLOBAL_HEADERS)
+GENERATED += $(GLOBAL_HEADERS)
 
 # copy crt*.o files to the sysroot
 # crt1.o is temporary as we'll stop supporting fully static linking
