@@ -97,7 +97,7 @@ class ThreadsafeIncident {
   // immediately after this method returns, so there's no guarantee that the
   // result is still valid.
   bool occurred() {
-    base::AutoLock lock(consequences_lock_);
+    ftl::MutexLocker locker(&consequences_mutex_);
     return occurred_;
   }
 
@@ -112,7 +112,7 @@ class ThreadsafeIncident {
   // and when the consequence is actually run.
   void When(const std::function<void()>& consequence) {
     {
-      base::AutoLock lock(consequences_lock_);
+      ftl::MutexLocker locker(&consequences_mutex_);
       if (!occurred_) {
         consequences_.push_back(consequence);
         return;
@@ -130,7 +130,7 @@ class ThreadsafeIncident {
   // Resets this ThreadsafeIncident to initial state and clears the list of
   // consequences.
   void Reset() {
-    base::AutoLock lock(consequences_lock_);
+    ftl::MutexLocker locker(&consequences_mutex_);
     occurred_ = false;
     consequences_.clear();
   }
@@ -140,7 +140,7 @@ class ThreadsafeIncident {
   void Run() { Occur(); }
 
  private:
-  mutable base::Lock consequences_lock_;
+  mutable ftl::Mutex consequences_mutex_;
   bool occurred_ = false;
   std::vector<std::function<void()>> consequences_;
 };

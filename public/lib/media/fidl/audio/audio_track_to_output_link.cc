@@ -16,11 +16,7 @@ AudioTrackToOutputLink::Bookkeeping::~Bookkeeping() {}
 
 AudioTrackToOutputLink::AudioTrackToOutputLink(AudioTrackImplWeakPtr track,
                                                AudioOutputWeakPtr output)
-    : track_(track), output_(output), pending_queue_(new PacketQueue) {
-#if !(defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON))
-  flush_lock_held_ = false;
-#endif
-}
+    : track_(track), output_(output), pending_queue_(new PacketQueue) {}
 
 AudioTrackToOutputLink::~AudioTrackToOutputLink() {
   ReleaseQueue(pending_queue_);
@@ -61,7 +57,7 @@ AudioTrackToOutputLinkPtr AudioTrackToOutputLink::New(
 
 void AudioTrackToOutputLink::PushToPendingQueue(
     const AudioPipe::AudioPacketRefPtr& pkt) {
-  base::AutoLock lock(pending_queue_lock_);
+  ftl::MutexLocker locker(&pending_queue_mutex_);
   pending_queue_->emplace_back(pkt);
 }
 
@@ -82,14 +78,14 @@ void AudioTrackToOutputLink::FlushPendingQueue() {
   PacketQueuePtr new_queue(new PacketQueue);
 
   {
-    base::AutoLock lock(flush_lock_);
+    ftl::MutexLocker locker(&flush_mutex_);
     {
       // TODO(johngro): Assuming that it is impossible to push a new packet
       // while a flush is in progress, it's pretty easy to show that this lock
       // can never be contended.  Because of this, we could consider removing
       // this lock operation (although, flush is a relatively rare operation, so
       // the extra overhead is pretty insignificant.
-      base::AutoLock lock(pending_queue_lock_);
+      ftl::MutexLocker locker(&pending_queue_mutex_);
       pending_queue_.swap(new_queue);
     }
     flushed_ = true;
@@ -100,23 +96,14 @@ void AudioTrackToOutputLink::FlushPendingQueue() {
 
 AudioPipe::AudioPacketRefPtr AudioTrackToOutputLink::LockPendingQueueFront(
     bool* was_flushed) {
-#if !(defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON))
-  // No one had better be holding the flush lock right now.  If someone is, then
-  // we either have multiple threads hitting this operation at the same time
-  // (should be impossible), or an audio output forgot to unlock the front of
-  // the queue before attempting to lock it again.
-  bool was_held = false;
-  flush_lock_held_.compare_exchange_strong(was_held, true);
-  DCHECK(!was_held);
-#endif
-  flush_lock_.Acquire();
+  flush_mutex_.Lock();
 
   DCHECK(was_flushed);
   *was_flushed = flushed_;
   flushed_ = false;
 
   {
-    base::AutoLock lock(pending_queue_lock_);
+    ftl::MutexLocker locker(&pending_queue_mutex_);
     if (pending_queue_->size()) {
       return pending_queue_->front();
     } else {
@@ -129,7 +116,7 @@ void AudioTrackToOutputLink::UnlockPendingQueueFront(
     AudioPipe::AudioPacketRefPtr* pkt,
     bool release_packet) {
   {
-    base::AutoLock lock(pending_queue_lock_);
+    ftl::MutexLocker locker(&pending_queue_mutex_);
 
     // Assert that the user either got no packet when they locked the queue
     // (because the queue was empty), or that they got the front of the queue
@@ -146,12 +133,7 @@ void AudioTrackToOutputLink::UnlockPendingQueueFront(
     }
   }
 
-  flush_lock_.Release();
-#if !(defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON))
-  bool was_held = true;
-  flush_lock_held_.compare_exchange_strong(was_held, false);
-  DCHECK(was_held);
-#endif
+  flush_mutex_.Unlock();
 }
 
 void AudioTrackToOutputLink::ReleaseQueue(const PacketQueuePtr& queue) {

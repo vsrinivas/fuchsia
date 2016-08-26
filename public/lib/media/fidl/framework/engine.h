@@ -135,7 +135,7 @@ class Engine {
   // the demand backlog is empty.
   Stage* PopFromDemandBacklog();
 
-  mutable base::Lock lock_;
+  mutable ftl::Mutex mutex_;
   // supply_backlog_ contains pointers to all the stages that have been supplied
   // (packets or frames) but have not been updated since. demand_backlog_ does
   // the same for demand. The use of queue vs stack here is a guess as to what

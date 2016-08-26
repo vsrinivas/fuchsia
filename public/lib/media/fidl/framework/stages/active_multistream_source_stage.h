@@ -51,7 +51,7 @@ class ActiveMultistreamSourceStage : public Stage {
   std::shared_ptr<ActiveMultistreamSource> source_;
   ActiveMultistreamSource::SupplyCallback supply_function_;
 
-  mutable base::Lock lock_;
+  mutable ftl::Mutex mutex_;
   size_t ended_streams_ = 0;
   bool packet_request_outstanding_ = false;
 };

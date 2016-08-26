@@ -104,9 +104,11 @@ class AudioTrackToOutputLink {
   // operation.  This, in turn, guarantees that audio packets are always
   // returned to the user in the order which they were queued in without forcing
   // AudioTracks to wait to queue new data if a mix operation is in progress.
-  AudioPipe::AudioPacketRefPtr LockPendingQueueFront(bool* was_flushed);
+  AudioPipe::AudioPacketRefPtr LockPendingQueueFront(bool* was_flushed)
+      FTL_ACQUIRE(flush_mutex_);
   void UnlockPendingQueueFront(AudioPipe::AudioPacketRefPtr* pkt,
-                               bool release_packet);
+                               bool release_packet)
+      FTL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(flush_mutex_));
 
   // Bookkeeping access.
   //
@@ -122,14 +124,11 @@ class AudioTrackToOutputLink {
   AudioOutputWeakPtr output_;
   BookkeepingPtr output_bookkeeping_;
 
-  base::Lock flush_lock_;
-  base::Lock pending_queue_lock_;
+  ftl::Mutex flush_mutex_;
+  ftl::Mutex pending_queue_mutex_;
   PacketQueuePtr pending_queue_;
   bool flushed_ = true;
   Gain gain_;
-#if !(defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON))
-  std::atomic<bool> flush_lock_held_;
-#endif
 };
 
 }  // namespace audio

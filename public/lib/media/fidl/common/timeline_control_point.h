@@ -89,8 +89,9 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   MojoPublisher<GetStatusCallback> status_publisher_;
   PrimeRequestedCallback prime_requested_callback_;
 
-  base::Lock lock_;
-  // BEGIN fields synchronized using lock_.
+  ftl::Mutex mutex_;
+  // BEGIN fields synchronized using mutex_.
+  // TODO(dalesat): Use thread annotations throughout apps/media.
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   TimelineFunction current_timeline_function_;
   TimelineFunction pending_timeline_function_;
@@ -98,7 +99,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   uint32_t generation_ = 1;
   int64_t end_of_stream_pts_ = kUnspecifiedTime;
   bool end_of_stream_published_ = false;
-  // END fields synchronized using lock_.
+  // END fields synchronized using mutex_.
 };
 
 }  // namespace media

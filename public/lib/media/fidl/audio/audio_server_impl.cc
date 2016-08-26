@@ -76,7 +76,7 @@ void AudioServerImpl::DoPacketCleanup() {
   std::unique_ptr<CleanupQueue> tmp_queue(new CleanupQueue());
 
   {
-    base::AutoLock lock(cleanup_queue_lock_);
+    ftl::MutexLocker locker(&cleanup_queue_mutex_);
     cleanup_queue_.swap(tmp_queue);
     cleanup_scheduled_ = false;
   }
@@ -94,7 +94,7 @@ void AudioServerImpl::DoPacketCleanup() {
 
 void AudioServerImpl::SchedulePacketCleanup(
     std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet) {
-  base::AutoLock lock(cleanup_queue_lock_);
+  ftl::MutexLocker locker(&cleanup_queue_mutex_);
 
   cleanup_queue_->emplace_back(std::move(supplied_packet));
 

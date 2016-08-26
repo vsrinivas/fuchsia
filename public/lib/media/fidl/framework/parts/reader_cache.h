@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 #include "apps/media/services/framework/parts/reader.h"
 #include "apps/media/services/framework/parts/sparse_byte_buffer.h"
 #include "apps/media/services/common/incident.h"
@@ -130,13 +131,14 @@ class ReaderCache : public Reader {
 
    private:
     // Attempts to progress satisfaction of the current read request.
-    void ServeRequest();
+    void ServeRequest()
+        FTL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(mutex_));
 
     // These fields are stable after Initialize.
     size_t size_ = kUnknownSize;
     bool can_seek_ = false;
 
-    mutable base::Lock lock_;
+    mutable ftl::Mutex mutex_;
     Result result_ = Result::kOk;
     SparseByteBuffer sparse_byte_buffer_;
     SparseByteBuffer::Hole intake_hole_;

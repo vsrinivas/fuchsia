@@ -37,7 +37,7 @@ MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
   MediaResult res = InitializeLink(link);
 
   if (res == MediaResult::OK) {
-    base::AutoLock lock(processing_lock_);
+    ftl::MutexLocker locker(&processing_mutex_);
 
     // Assert that we are the output in this link.
     DCHECK(this == link->GetOutput().get());
@@ -58,7 +58,7 @@ MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
 
 MediaResult AudioOutput::RemoveTrackLink(
     const AudioTrackToOutputLinkPtr& link) {
-  base::AutoLock lock(processing_lock_);
+  ftl::MutexLocker locker(&processing_mutex_);
 
   if (shutting_down_) {
     return MediaResult::SHUTTING_DOWN;
@@ -85,7 +85,7 @@ MediaResult AudioOutput::InitializeLink(const AudioTrackToOutputLinkPtr& link) {
 }
 
 void AudioOutput::ScheduleCallback(LocalTime when) {
-  base::AutoLock lock(shutdown_lock_);
+  ftl::MutexLocker locker(&processing_mutex_);
 
   // If we are in the process of shutting down, then we are no longer permitted
   // to schedule callbacks.
@@ -123,7 +123,7 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
   // lock and dispatch to our derived class's implementation.
   auto output = weak_output.lock();
   if (output) {
-    base::AutoLock lock(output->processing_lock_);
+    ftl::MutexLocker locker(&output->processing_mutex_);
 
     // Make sure that we are not in the process of cleaning up before we start
     // processing.
@@ -164,7 +164,7 @@ bool AudioOutput::BeginShutdown() {
   // be called from either a processing context, or from the audio output
   // manager.  After it finishes, any pending processing callbacks will have
   // been nerfed, although there may still be callbacks in flight.
-  base::AutoLock lock(shutdown_lock_);
+  ftl::MutexLocker locker(&processing_mutex_);
 
   if (shutting_down_) {
     return true;
@@ -187,13 +187,6 @@ void AudioOutput::Shutdown() {
   // Make sure no new callbacks can be generated, and that pending callbacks
   // have been nerfed.
   BeginShutdown();
-
-  // Synchronize with any callbacks in flight.  By acquiring and releasing the
-  // processing lock, we are guaranteed that we have no callbacks which are in
-  // the middle of processing, and that any pending callbacks will be nerfed.
-  // It is safe to destroy this audio output at any point in time after this.
-  processing_lock_.Acquire();
-  processing_lock_.Release();
 
   // Unlink ourselves from all of our tracks.  Then go ahead and clear the track
   // set.

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "apps/media/services/framework_ffmpeg/ffmpeg_init.h"
-#include "lib/ftl/synchronization/mutex.h"
 
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
@@ -13,14 +12,12 @@ namespace mojo {
 namespace media {
 
 void InitFfmpeg() {
-  static base::Lock lock_;
-  static bool initialized_ = false;
-
-  base::AutoLock lock(lock_);
-  if (!initialized_) {
-    initialized_ = true;
+  static bool initialized = [](){
     av_register_all();
-  }
+    return true;
+  }();
+
+  (void)initialized;
 }
 
 }  // namespace media

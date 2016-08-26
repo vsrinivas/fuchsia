@@ -157,8 +157,7 @@ class AudioOutput {
   // cleaning up all resources.
   void Shutdown();
 
-  base::Lock processing_lock_;
-  base::Lock shutdown_lock_;
+  ftl::Mutex processing_mutex_;
   scoped_refptr<base::SequencedTaskRunner> task_runner_;
   AudioOutputWeakPtr weak_self_;
 

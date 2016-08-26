@@ -80,7 +80,7 @@ class AudioServerImpl : public AudioServer {
   std::set<AudioTrackImplPtr> tracks_;
 
   // State for dealing with cleanup tasks.
-  base::Lock cleanup_queue_lock_;
+  ftl::Mutex cleanup_queue_mutex_;
   std::unique_ptr<CleanupQueue> cleanup_queue_;
   bool cleanup_scheduled_ = false;
   bool shutting_down_ = false;

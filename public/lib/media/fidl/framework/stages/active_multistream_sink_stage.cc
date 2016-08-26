@@ -16,17 +16,17 @@ ActiveMultistreamSinkStage::ActiveMultistreamSinkStage(
   ReleaseInput(AllocateInput());
 }
 
-ActiveMultistreamSinkStage::~ActiveMultistreamSinkStage() {
-  base::AutoLock lock(lock_);
-}
+ActiveMultistreamSinkStage::~ActiveMultistreamSinkStage() {}
 
 size_t ActiveMultistreamSinkStage::input_count() const {
-  base::AutoLock lock(lock_);
+  // TODO(dalesat): Provide checks to make sure inputs_.size() is stable when
+  // it needs to be.
+  ftl::MutexLocker locker(&mutex_);
   return inputs_.size();
 };
 
 Input& ActiveMultistreamSinkStage::input(size_t index) {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
   DCHECK_LT(index, inputs_.size());
   return inputs_[index]->input_;
 }
@@ -55,7 +55,7 @@ void ActiveMultistreamSinkStage::Update(Engine* engine) {
   DCHECK(engine);
   DCHECK(sink_);
 
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   for (auto iter = pending_inputs_.begin(); iter != pending_inputs_.end();) {
     DCHECK(*iter < inputs_.size());
@@ -84,7 +84,7 @@ void ActiveMultistreamSinkStage::FlushInput(
 
   sink_->Flush();
 
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
   inputs_[index]->demand_ = Demand::kNegative;
   inputs_[index]->input_.Flush();
 
@@ -96,7 +96,7 @@ void ActiveMultistreamSinkStage::FlushOutput(size_t index) {
 }
 
 size_t ActiveMultistreamSinkStage::AllocateInput() {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   StageInput* input;
   if (unallocated_inputs_.empty()) {
@@ -116,7 +116,7 @@ size_t ActiveMultistreamSinkStage::AllocateInput() {
 }
 
 size_t ActiveMultistreamSinkStage::ReleaseInput(size_t index) {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
   DCHECK(index < inputs_.size());
 
   StageInput* input = inputs_[index].get();
@@ -143,15 +143,17 @@ size_t ActiveMultistreamSinkStage::ReleaseInput(size_t index) {
 
 void ActiveMultistreamSinkStage::UpdateDemand(size_t input_index,
                                               Demand demand) {
-  lock_.Acquire();
-  DCHECK(input_index < inputs_.size());
-  DCHECK(demand != Demand::kNegative);
+  {
+    ftl::MutexLocker locker(&mutex_);
+    DCHECK(input_index < inputs_.size());
+    DCHECK(demand != Demand::kNegative);
 
-  StageInput* input = inputs_[input_index].get();
-  DCHECK(input);
-  input->demand_ = demand;
-  pending_inputs_.push_back(input_index);
-  lock_.Release();
+    StageInput* input = inputs_[input_index].get();
+    DCHECK(input);
+    input->demand_ = demand;
+    pending_inputs_.push_back(input_index);
+  }
+  
   RequestUpdate();
 }
 

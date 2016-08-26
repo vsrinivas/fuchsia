@@ -17,7 +17,7 @@ ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
   DCHECK(source);
 
   supply_function_ = [this](size_t output_index, PacketPtr packet) {
-    lock_.Acquire();
+    mutex_.Lock();
     DCHECK(output_index < outputs_.size());
     DCHECK(outputs_.size() == packets_per_output_.size());
     DCHECK(packet);
@@ -40,7 +40,7 @@ ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
       // We have a packet for an output with non-negative demand that didn't
       // have one before. Request an update. Update will request another
       // packet, if needed.
-      lock_.Release();
+      mutex_.Unlock();
       RequestUpdate();
     } else {
       // We got a packet, but it doesn't change matters, either because the
@@ -49,7 +49,7 @@ ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
       // We can request another packet without having to go through an update.
       source_->RequestPacket();
       packet_request_outstanding_ = true;
-      lock_.Release();
+      mutex_.Unlock();
     }
   };
 
@@ -103,7 +103,7 @@ void ActiveMultistreamSourceStage::UnprepareOutput(
 }
 
 void ActiveMultistreamSourceStage::Update(Engine* engine) {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
   DCHECK(engine);
 
   DCHECK(outputs_.size() == packets_per_output_.size());
@@ -141,7 +141,7 @@ void ActiveMultistreamSourceStage::FlushInput(
 }
 
 void ActiveMultistreamSourceStage::FlushOutput(size_t index) {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
   DCHECK(index < outputs_.size());
   DCHECK(source_);
   outputs_[index].Flush();

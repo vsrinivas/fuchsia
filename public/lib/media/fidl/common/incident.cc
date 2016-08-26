@@ -35,7 +35,7 @@ void ThreadsafeIncident::Occur() {
   std::vector<std::function<void()>> consequences;
 
   {
-    base::AutoLock lock(consequences_lock_);
+    ftl::MutexLocker locker(&consequences_mutex_);
 
     if (occurred_) {
       return;

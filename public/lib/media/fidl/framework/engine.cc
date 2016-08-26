@@ -9,9 +9,7 @@ namespace media {
 
 Engine::Engine() {}
 
-Engine::~Engine() {
-  base::AutoLock lock(lock_);
-}
+Engine::~Engine() {}
 
 void Engine::PrepareInput(const InputRef& input) {
   VisitUpstream(input, [](const InputRef& input, const OutputRef& output,
@@ -46,13 +44,13 @@ void Engine::FlushOutput(const OutputRef& output) {
 
 void Engine::RequestUpdate(Stage* stage) {
   DCHECK(stage);
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
   Update(stage);
   Update();
 }
 
 void Engine::PushToSupplyBacklog(Stage* stage) {
-  lock_.AssertAcquired();
+  mutex_.AssertHeld();
   DCHECK(stage);
 
   packets_produced_ = true;
@@ -63,8 +61,8 @@ void Engine::PushToSupplyBacklog(Stage* stage) {
 }
 
 void Engine::PushToDemandBacklog(Stage* stage) {
-  lock_.AssertAcquired();
-  DCHECK(stage);
+  mutex_.AssertHeld();
+  FTL_DCHECK(stage);
 
   if (!stage->in_demand_backlog_) {
     demand_backlog_.push(stage);
@@ -74,7 +72,7 @@ void Engine::PushToDemandBacklog(Stage* stage) {
 
 void Engine::VisitUpstream(const InputRef& input,
                            const UpstreamVisitor& vistor) {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   std::queue<InputRef> backlog;
   backlog.push(input);
@@ -96,7 +94,7 @@ void Engine::VisitUpstream(const InputRef& input,
 
 void Engine::VisitDownstream(const OutputRef& output,
                              const DownstreamVisitor& vistor) {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   std::queue<OutputRef> backlog;
   backlog.push(output);
@@ -117,7 +115,7 @@ void Engine::VisitDownstream(const OutputRef& output,
 }
 
 void Engine::Update() {
-  lock_.AssertAcquired();
+  mutex_.AssertHeld();
 
   while (true) {
     Stage* stage = PopFromSupplyBacklog();
@@ -137,7 +135,7 @@ void Engine::Update() {
 }
 
 void Engine::Update(Stage* stage) {
-  lock_.AssertAcquired();
+  mutex_.AssertHeld();
 
   DCHECK(stage);
 
@@ -152,7 +150,7 @@ void Engine::Update(Stage* stage) {
 }
 
 Stage* Engine::PopFromSupplyBacklog() {
-  lock_.AssertAcquired();
+  mutex_.AssertHeld();
 
   if (supply_backlog_.empty()) {
     return nullptr;
@@ -166,7 +164,7 @@ Stage* Engine::PopFromSupplyBacklog() {
 }
 
 Stage* Engine::PopFromDemandBacklog() {
-  lock_.AssertAcquired();
+  mutex_.AssertHeld();
 
   if (demand_backlog_.empty()) {
     return nullptr;

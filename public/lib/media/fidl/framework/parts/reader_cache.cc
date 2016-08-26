@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/media/services/framework/parts/reader_cache.h"
+
 #include "lib/ftl/logging.h"
 
 namespace mojo {
@@ -94,7 +95,7 @@ ReaderCache::Store::Store() {}
 ReaderCache::Store::~Store() {}
 
 void ReaderCache::Store::Initialize(Result result, size_t size, bool can_seek) {
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   result_ = result;
   size_ = size;
@@ -111,7 +112,7 @@ void ReaderCache::Store::Describe(const DescribeCallback& callback) {
   Result result;
 
   {
-    base::AutoLock lock(lock_);
+    ftl::MutexLocker locker(&mutex_);
     result = result_;
   }
 
@@ -119,7 +120,7 @@ void ReaderCache::Store::Describe(const DescribeCallback& callback) {
 }
 
 void ReaderCache::Store::SetReadAtRequest(ReadAtRequest* request) {
-  base::AutoLock lock(lock_);
+  mutex_.Lock();
 
   DCHECK(read_request_ == nullptr);
   DCHECK(request->position() < size_);
@@ -133,13 +134,13 @@ void ReaderCache::Store::SetReadAtRequest(ReadAtRequest* request) {
     read_request_remaining_bytes_ = size_ - read_request_position_;
   }
 
-  ServeRequest();
+  ServeRequest();  // unlocks mutex_
 }
 
 size_t ReaderCache::Store::GetIntakePositionAndSize(size_t* size_out) {
   DCHECK(size_out);
 
-  base::AutoLock lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   size_t size = kDefaultReadSize;
 
@@ -166,7 +167,7 @@ size_t ReaderCache::Store::GetIntakePositionAndSize(size_t* size_out) {
 
 void ReaderCache::Store::PutIntakeBuffer(size_t position,
                                          std::vector<uint8_t>&& buffer) {
-  base::AutoLock lock(lock_);
+  mutex_.Lock();
 
   DCHECK(intake_hole_ != sparse_byte_buffer_.null_hole());
   DCHECK(position == intake_hole_.position());
@@ -184,24 +185,26 @@ void ReaderCache::Store::PutIntakeBuffer(size_t position,
 
   intake_hole_ = sparse_byte_buffer_.Fill(intake_hole_, std::move(buffer));
 
-  if (read_request_ != nullptr) {
-    ServeRequest();
-  }
+  ServeRequest();  // unlocks mutex_
 }
 
 void ReaderCache::Store::ReportIntakeError(Result result) {
   DCHECK(result != Result::kOk);
 
-  base::AutoLock lock(lock_);
+  mutex_.Lock();
   result_ = result;
 
-  if (read_request_ != nullptr) {
-    ServeRequest();
-  }
+  ServeRequest();  // unlocks mutex_
 }
 
 void ReaderCache::Store::ServeRequest() {
-  lock_.AssertAcquired();
+  ReadAtRequest* read_request_to_complete = nullptr;
+  Result read_request_result;
+
+  if (read_request_ == nullptr) {
+    mutex_.Unlock();
+    return;
+  }
 
   while (result_ == Result::kOk && read_request_remaining_bytes_ != 0u) {
     read_region_ = sparse_byte_buffer_.FindRegionContaining(
@@ -211,6 +214,7 @@ void ReaderCache::Store::ServeRequest() {
       // to fill this need.
       read_hole_ = sparse_byte_buffer_.FindOrCreateHole(read_request_position_,
                                                         intake_hole_);
+      mutex_.Unlock();
       return;
     }
 
@@ -235,11 +239,14 @@ void ReaderCache::Store::ServeRequest() {
   }
 
   // Done with this request. Complete it.
-  ReadAtRequest* read_request = read_request_;
+  read_request_to_complete = read_request_;
+  read_request_result = result_;
   read_request_ = nullptr;
 
-  base::AutoUnlock unlock(lock_);
-  read_request->Complete(result_);
+  mutex_.Unlock();
+
+  DCHECK(read_request_to_complete);
+  read_request_to_complete->Complete(read_request_result);
 }
 
 ReaderCache::Intake::Intake() {}

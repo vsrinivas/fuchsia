@@ -45,6 +45,7 @@ class ActiveMultistreamSinkStage : public Stage,
 
   void FlushOutput(size_t index) override;
 
+ private:
   // ActiveMultistreamSinkHost implementation.
   size_t AllocateInput() override;
 
@@ -52,7 +53,6 @@ class ActiveMultistreamSinkStage : public Stage,
 
   void UpdateDemand(size_t input_index, Demand demand) override;
 
- private:
   struct StageInput {
     StageInput(size_t index)
         : index_(index), allocated_(false), demand_(Demand::kNegative) {}
@@ -64,7 +64,7 @@ class ActiveMultistreamSinkStage : public Stage,
 
   std::shared_ptr<ActiveMultistreamSink> sink_;
 
-  mutable base::Lock lock_;
+  mutable ftl::Mutex mutex_;
   std::vector<std::unique_ptr<StageInput>> inputs_;
   std::set<size_t> unallocated_inputs_;
   std::list<size_t> pending_inputs_;
