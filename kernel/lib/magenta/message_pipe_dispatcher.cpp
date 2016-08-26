@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/msg_pipe_dispatcher.h>
+#include <magenta/message_pipe_dispatcher.h>
 
 #include <string.h>
 
@@ -16,7 +16,7 @@
 #include <kernel/auto_lock.h>
 
 #include <magenta/handle.h>
-#include <magenta/msg_pipe.h>
+#include <magenta/message_pipe.h>
 
 #define LOCAL_TRACE 0
 

@@ -11,7 +11,7 @@
 #include <kernel/mutex.h>
 
 #include <magenta/dispatcher.h>
-#include <magenta/msg_pipe.h>
+#include <magenta/message_pipe.h>
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 

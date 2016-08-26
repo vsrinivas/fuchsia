@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/message_pipe.h>
+
 #include <err.h>
 #include <stddef.h>
 
 #include <kernel/auto_lock.h>
 #include <magenta/handle.h>
 #include <magenta/magenta.h>
-#include <magenta/msg_pipe.h>
 
 namespace {
 

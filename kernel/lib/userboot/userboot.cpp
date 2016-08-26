@@ -19,7 +19,7 @@
 #include <string.h>
 #include <trace.h>
 
-#include <magenta/msg_pipe_dispatcher.h>
+#include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
 #include <magenta/resource_dispatcher.h>

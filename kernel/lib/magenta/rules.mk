@@ -27,8 +27,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/io_port_observer.cpp \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/magenta.cpp \
-    $(LOCAL_DIR)/msg_pipe_dispatcher.cpp \
-    $(LOCAL_DIR)/msg_pipe.cpp \
+    $(LOCAL_DIR)/message_pipe_dispatcher.cpp \
+    $(LOCAL_DIR)/message_pipe.cpp \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/pci_io_mapping_dispatcher.cpp \

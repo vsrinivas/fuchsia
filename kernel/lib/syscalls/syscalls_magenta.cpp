@@ -26,7 +26,7 @@
 #include <magenta/io_port_observer.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
-#include <magenta/msg_pipe_dispatcher.h>
+#include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/socket_dispatcher.h>
 #include <magenta/state_tracker.h>
