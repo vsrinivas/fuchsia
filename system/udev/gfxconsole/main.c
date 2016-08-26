@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 #include <mxio/io.h>
+#include <mxio/watcher.h>
 
 #include <magenta/syscalls-ddk.h>
 
@@ -37,17 +38,6 @@
 // framebuffer
 static gfx_surface hw_gfx;
 
-#define INPUT_LISTENER_FLAG_RUNNING 1
-
-typedef struct {
-    char dev_name[128];
-    thrd_t t;
-    int flags;
-    int fd;
-    struct list_node node;
-} input_listener_t;
-
-static struct list_node input_listeners_list = LIST_INITIAL_VALUE(input_listeners_list);
 static thrd_t input_poll_thread;
 
 // single driver instance
@@ -60,10 +50,7 @@ static unsigned active_vc_index;
 static mtx_t vc_lock = MTX_INIT;
 
 static int vc_input_thread(void* arg) {
-    input_listener_t* listener = arg;
-    assert(listener->flags & INPUT_LISTENER_FLAG_RUNNING);
-    assert(listener->fd >= 0);
-    xprintf("vc: input thread started for %s\n", listener->dev_name);
+    int fd = (uintptr_t) arg;
 
     uint8_t report_buf[8];
     hid_keys_t key_state[2];
@@ -75,8 +62,8 @@ static int vc_input_thread(void* arg) {
     int modifiers = 0;
 
     for (;;) {
-        mxio_wait_fd(listener->fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
-        int r = read(listener->fd, report_buf, sizeof(report_buf));
+        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+        int r = read(fd, report_buf, sizeof(report_buf));
         if (r < 0) {
             break; // will be restarted by poll thread if needed
         }
@@ -205,86 +192,49 @@ static int vc_input_thread(void* arg) {
         cur_idx = 1 - cur_idx;
         prev_idx = 1 - prev_idx;
     }
-    close(listener->fd);
-    listener->fd = -1;
-    listener->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
-    // keep this in the list so we don't have to alloc again when a new device appears
     return 0;
 }
 
 #define DEV_INPUT "/dev/class/input"
 
-static int vc_input_devices_poll_thread(void* arg) {
-    for (;;) {
-        struct dirent* de;
-        DIR* dir = opendir(DEV_INPUT);
-        if (!dir) {
-            xprintf("vc: error opening %s\n", DEV_INPUT);
-            return ERR_INTERNAL;
-        }
-        char dname[128];
-        char tname[128];
-        while ((de = readdir(dir)) != NULL) {
-            snprintf(dname, sizeof(dname), "%s/%s", DEV_INPUT, de->d_name);
-
-            // is there already a listener for this device?
-            bool found = false;
-            input_listener_t* listener = NULL;
-            list_for_every_entry (&input_listeners_list, listener, input_listener_t, node) {
-                if (listener->flags & INPUT_LISTENER_FLAG_RUNNING && !strcmp(listener->dev_name, dname)) {
-                    found = true;
-                    break;
-                }
-            }
-            // do nothing if a listener is already running for this device
-            if (found) continue;
-            // otherwise start a listener for it
-            input_listener_t* free = NULL;
-            list_for_every_entry (&input_listeners_list, listener, input_listener_t, node) {
-                if (!(listener->flags & INPUT_LISTENER_FLAG_RUNNING)) {
-                    free = listener;
-                    break;
-                }
-            }
-            if (!free) {
-                free = calloc(1, sizeof(input_listener_t));
-                if (!free) {
-                    // wait for next loop
-                    break;
-                }
-                list_add_tail(&input_listeners_list, &free->node);
-            }
-            // mark this as running
-            free->flags |= INPUT_LISTENER_FLAG_RUNNING;
-            // open the device
-            strncpy(free->dev_name, dname, sizeof(free->dev_name));
-            free->fd = open(free->dev_name, O_RDONLY);
-            if (free->fd < 0) {
-                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
-                continue;
-            }
-            // test to see if this is a device we can read
-            int proto = INPUT_PROTO_NONE;
-            int rc = mxio_ioctl(free->fd, IOCTL_INPUT_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
-            if (rc > 0 && proto != INPUT_PROTO_KBD) {
-                // skip devices that aren't keyboards
-                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
-                close(free->fd);
-                continue;
-            }
-            // start a thread to wait on the fd
-            snprintf(tname, sizeof(tname), "vc-input-%s", de->d_name);
-            int ret = thrd_create_with_name(&free->t, vc_input_thread, (void*)free, tname);
-            if (ret != thrd_success) {
-                xprintf("vc: input thread %s did not start (return value=%d)\n", tname, ret);
-                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
-            }
-        }
-        closedir(dir);
-        usleep(1000 * 1000); // 1 second
-        //TODO: wait on directory changed (swetland)
+static mx_status_t vc_input_device_added(int dirfd, const char* fn, void* cookie) {
+    int fd;
+    if ((fd = openat(dirfd, fn, O_RDONLY)) < 0) {
+        return NO_ERROR;
     }
+
+    printf("vc: new input device %s/%s\n", DEV_INPUT, fn);
+
+    // test to see if this is a device we can read
+    int proto = INPUT_PROTO_NONE;
+    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
+    if (rc > 0 && proto != INPUT_PROTO_KBD) {
+        // skip devices that aren't keyboards
+        close(fd);
+        return NO_ERROR;
+    }
+
+    // start a thread to wait on the fd
+    char tname[64];
+    thrd_t t;
+    snprintf(tname, sizeof(tname), "vc-input-%s", fn);
+    int ret = thrd_create_with_name(&t, vc_input_thread, (void*) (uintptr_t) fd, tname);
+    if (ret != thrd_success) {
+        xprintf("vc: input thread %s did not start (return value=%d)\n", tname, ret);
+        close(fd);
+    }
+    thrd_detach(t);
     return NO_ERROR;
+}
+
+static int vc_input_devices_poll_thread(void* arg) {
+    int dirfd;
+    if ((dirfd = open(DEV_INPUT, O_DIRECTORY|O_RDONLY)) < 0) {
+        return -1;
+    }
+    mxio_watch_directory(dirfd, vc_input_device_added, NULL);
+    close(dirfd);
+    return -1;
 }
 
 static void __vc_set_active(vc_device_t* dev, unsigned index) {
