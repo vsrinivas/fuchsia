@@ -75,7 +75,7 @@ struct loader_bootstrap_message {
     char env[sizeof(LOADER_BOOTSTRAP_ENVIRON)];
 };
 
-static void stuff_loader_bootstrap(mx_handle_t log,
+static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
                                    mx_handle_t to_child, mx_handle_t vmo) {
     struct loader_bootstrap_message msg = {
         .header = {
@@ -96,7 +96,7 @@ static void stuff_loader_bootstrap(mx_handle_t log,
     mx_handle_t handles[] = {
         [BOOTSTRAP_EXEC_VMO] = vmo,
         [BOOTSTRAP_LOGGER] = mx_handle_duplicate(log, MX_RIGHT_SAME_RIGHTS),
-        // TODO(mcgrathr): duplicate proc handle
+        [BOOTSTRAP_PROC] = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS),
     };
 
     mx_status_t status = mx_message_write(
@@ -129,7 +129,7 @@ mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs,
 
         print(log, filename, " has PT_INTERP \"", interp, "\"\n", NULL);
 
-        stuff_loader_bootstrap(log, to_child, vmo);
+        stuff_loader_bootstrap(log, proc, to_child, vmo);
 
         mx_handle_t interp_vmo = bootfs_open(log, fs, interp);
         entry = load(log, proc, interp_vmo, NULL, NULL, NULL, true, true);
