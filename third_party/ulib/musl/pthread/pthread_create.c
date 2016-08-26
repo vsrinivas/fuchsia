@@ -136,7 +136,12 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
 
     if (!tsd) {
         uintptr_t addr = 0u;
-        mx_status_t status = allocate_stack(size, guard_size, &addr);
+        status = allocate_stack(size, guard_size, &addr);
+        if (status < 0) {
+            __release_ptc();
+            mxr_thread_destroy(mxr_thread);
+            return EAGAIN;
+        }
         map = (void*)addr;
         tsd = map + size - __pthread_tsd_size;
         if (!stack) {
@@ -186,6 +191,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
         atomic_fetch_sub(&libc.thread_count, 1);
         if (map)
             __munmap(map, size);
+        mxr_thread_destroy(mxr_thread);
         return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
     }
 
@@ -201,9 +207,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
 
     *res = new;
     return 0;
-fail:
-    __release_ptc();
-    return EAGAIN;
 }
 
 _Noreturn void pthread_exit(void* result) {

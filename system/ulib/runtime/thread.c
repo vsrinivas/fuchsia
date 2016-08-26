@@ -244,6 +244,12 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
     return status;
 }
 
+void mxr_thread_destroy(mxr_thread_t* thread) {
+    CHECK_THREAD(thread);
+    mx_handle_close(thread->handle);
+    deallocate_thread_page(thread);
+}
+
 mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
     CHECK_THREAD(thread);
     return thread->handle;

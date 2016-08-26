@@ -50,6 +50,9 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 // that thread's entrypoint.
 _Noreturn void mxr_thread_exit(mxr_thread_t* thread, intptr_t return_value);
 
+// Destroy a created but unstarted thread structure.
+void mxr_thread_destroy(mxr_thread_t* thread);
+
 // Get the mx_handle_t corresponding to the given thread.
 // WARNING:
 // This is intended for debuggers and so on. Holding this wrong could
