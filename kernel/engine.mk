@@ -315,7 +315,7 @@ KERNEL_DEFINES += \
 
 # debug build?
 ifneq ($(DEBUG),)
-KERNEL_DEFINES += \
+GLOBAL_DEFINES += \
 	LK_DEBUGLEVEL=$(DEBUG)
 endif
 
