@@ -22,20 +22,6 @@ typedef enum {
     USB_SPEED_SUPER = 4,
 } usb_speed_t;
 
-typedef struct usb_request {
-    uint8_t* buffer;          // pointer to DMA memory
-    uint16_t buffer_length;   // size of DMA buffer
-    uint16_t transfer_length; // number of bytes to transfer
-    mx_status_t status;
-    void (*complete_cb)(struct usb_request* request);
-    uint8_t ep_address; // bEndpointAddress
-    void* client_data; // for client use
-    void* driver_data; // for driver use
-
-    // node can be used by client when request is not queued
-    list_node_t node;
-} usb_request_t;
-
 // protocol data for iotxns
 typedef struct usb_protocol_data {
     usb_setup_t setup;      // for control transactions
@@ -64,11 +50,9 @@ typedef struct usb_protocol_data {
 // call with in_len = sizeof(int) and out_len = size of buffer to receive string (256 recommended)
 #define IOCTL_USB_GET_STRING_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 4)
 
-typedef struct usb_device_protocol {
-    usb_request_t* (*alloc_request)(mx_device_t* dev, uint8_t ep_address, uint16_t length);
-    void (*free_request)(mx_device_t* dev, usb_request_t* request);
-    mx_status_t (*queue_request)(mx_device_t* dev, usb_request_t* request);
+// ******* FIXME Everything below this line should get moved to a private header file *******
 
+typedef struct usb_device_protocol {
     // These are only used by hub driver
     mx_status_t (*configure_hub)(mx_device_t* device, usb_speed_t speed,
                                     usb_hub_descriptor_t* descriptor);

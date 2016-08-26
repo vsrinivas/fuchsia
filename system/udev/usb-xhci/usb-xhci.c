@@ -118,66 +118,6 @@ static int xhci_irq_thread(void* arg) {
     return 0;
 }
 
-static void xhci_transfer_callback(mx_status_t result, void* data) {
-    usb_request_t* request = (usb_request_t*)data;
-    if (result > 0) {
-        request->transfer_length = result;
-        request->status = NO_ERROR;
-    } else {
-        request->transfer_length = 0;
-        request->status = result;
-    }
-    request->complete_cb(request);
-}
-
-usb_request_t* xhci_alloc_request(mx_device_t* device, uint16_t length) {
-    usb_xhci_t* uxhci = dev_to_usb_xhci(device);
-    usb_request_t* request = calloc(1, sizeof(usb_request_t));
-    if (!request)
-        return NULL;
-
-    xhci_transfer_context_t* context = malloc(sizeof(xhci_transfer_context_t));
-    if (!context) {
-        free(request);
-        return NULL;
-    }
-    context->callback = xhci_transfer_callback;
-    context->data = request;
-    request->driver_data = context;
-
-    // buffers need not be aligned, but 64 byte alignment gives better performance
-    request->buffer = (uint8_t*)xhci_memalign(&uxhci->xhci, 64, length);
-    if (!request->buffer) {
-        free(request->driver_data);
-        free(request);
-        return NULL;
-    }
-    request->buffer_length = length;
-    return request;
-}
-
-void xhci_free_request(mx_device_t* device, usb_request_t* request) {
-    usb_xhci_t* uxhci = dev_to_usb_xhci(device);
-    if (request) {
-        if (request->buffer) {
-            xhci_free(&uxhci->xhci, request->buffer);
-        }
-        free(request->driver_data);
-        free(request);
-    }
-}
-
-int xhci_queue_request(mx_device_t* hci_device, int devaddr, usb_request_t* request) {
-    usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
-    xhci_t* xhci = &uxhci->xhci;
-    mx_paddr_t phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)request->buffer);
-
-    return xhci_queue_transfer(xhci, devaddr, NULL, phys_addr, request->transfer_length,
-                               xhci_endpoint_index(request->ep_address),
-                               request->ep_address & USB_ENDPOINT_DIR_MASK,
-                               (xhci_transfer_context_t*)request->driver_data);
-}
-
 mx_status_t xhci_config_hub(mx_device_t* hci_device, int slot_id, usb_speed_t speed,
                             usb_hub_descriptor_t* descriptor) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
@@ -197,9 +137,6 @@ mx_status_t xhci_hub_device_removed(mx_device_t* hci_device, int hub_address, in
 }
 
 usb_hci_protocol_t xhci_hci_protocol = {
-    .alloc_request = xhci_alloc_request,
-    .free_request = xhci_free_request,
-    .queue_request = xhci_queue_request,
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,

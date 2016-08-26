@@ -52,25 +52,6 @@ static mx_status_t usb_init_device(usb_device_t* dev, usb_device_descriptor_t* d
     return NO_ERROR;
 }
 
-static usb_request_t* usb_alloc_request(mx_device_t* device, uint8_t ep_address, uint16_t length) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_request_t* request = dev->hci_protocol->alloc_request(dev->hcidev, length);
-    if (request) {
-        request->ep_address = ep_address;
-    }
-    return request;
-}
-
-static void usb_free_request(mx_device_t* device, usb_request_t* request) {
-    usb_device_t* dev = get_usb_device(device);
-    dev->hci_protocol->free_request(dev->hcidev, request);
-}
-
-static mx_status_t usb_queue_request(mx_device_t* device, usb_request_t* request) {
-    usb_device_t* dev = get_usb_device(device);
-    return dev->hci_protocol->queue_request(dev->hcidev, dev->address, request);
-}
-
 static mx_status_t usb_configure_hub(mx_device_t* device, usb_speed_t speed,
                                      usb_hub_descriptor_t* descriptor) {
     usb_device_t* dev = get_usb_device(device);
@@ -88,9 +69,6 @@ static mx_status_t usb_hub_device_removed(mx_device_t* device, int port) {
 }
 
 static usb_device_protocol_t _device_protocol = {
-    .alloc_request = usb_alloc_request,
-    .free_request = usb_free_request,
-    .queue_request = usb_queue_request,
     .configure_hub = usb_configure_hub,
     .hub_device_added = usb_hub_device_added,
     .hub_device_removed = usb_hub_device_removed,
