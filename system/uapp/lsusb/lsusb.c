@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include <ddk/hexdump.h>
+#include <hexdump/hexdump.h>
 #include <hw/usb.h>
 #include <magenta/device/usb-device.h>
 

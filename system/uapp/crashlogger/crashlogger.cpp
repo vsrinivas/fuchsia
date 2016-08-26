@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ddk/hexdump.h>
+#include <hexdump/hexdump.h>
 
 #include <magenta/syscalls.h>
 

@@ -11,7 +11,7 @@
 #include <ddk/protocol/input.h>
 #include <ddk/protocol/usb-device.h>
 
-#include <ddk/hexdump.h>
+#include <hexdump/hexdump.h>
 #include <magenta/types.h>
 
 #include <assert.h>

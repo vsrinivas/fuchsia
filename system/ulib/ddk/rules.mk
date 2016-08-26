@@ -18,7 +18,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/protocol/usb-device.c \
     $(LOCAL_DIR)/io-alloc.c \
     $(LOCAL_DIR)/iotxn.c \
-    $(LOCAL_DIR)/hexdump.c \
 
 ifeq ($(ARCH),arm)
 MODULE_SRCS += system/ulib/magenta/syscalls-arm32.S
@@ -35,6 +34,8 @@ endif
 MODULE_DEPS += \
     ulib/musl \
     ulib/magenta
+
+MODULE_STATIC_LIBS := ulib/hexdump
 
 MODULE_EXPORT := ddk
 

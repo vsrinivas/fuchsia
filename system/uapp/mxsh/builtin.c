@@ -14,10 +14,10 @@
 
 #include "mxsh.h"
 
+#include <hexdump/hexdump.h>
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
 #include <mxio/vfs.h>
-#include <ddk/hexdump.h>
 #include <system/listnode.h>
 
 static int mxc_dump(int argc, char** argv) {

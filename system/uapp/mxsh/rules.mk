@@ -14,8 +14,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := mxsh
 
-# This is needed only for hexdump8_ex, which ought to live somewhere else.
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
 
 MODULE_LIBS := \
     ulib/mxio ulib/launchpad ulib/magenta ulib/musl

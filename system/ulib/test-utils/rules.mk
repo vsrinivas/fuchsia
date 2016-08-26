@@ -18,6 +18,7 @@ MODULE_SO_NAME := test-utils
 # N.B. The order is important. Think ordering of args to the linker.
 MODULE_STATIC_LIBS := \
     ulib/unittest \
+    ulib/hexdump \
     ulib/launchpad \
     ulib/elfload \
     ulib/mxio \

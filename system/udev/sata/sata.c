@@ -6,9 +6,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/hexdump.h>
 #include <ddk/protocol/block.h>
 
+#include <hexdump/hexdump.h>
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <sys/param.h>

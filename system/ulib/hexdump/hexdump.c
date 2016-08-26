@@ -6,12 +6,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "hexdump.h"
+#include <hexdump/hexdump.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-void _hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
+void hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     uintptr_t address = (uintptr_t)ptr;
     size_t count;
 
@@ -50,7 +50,7 @@ void _hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     }
 }
 
-void _hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr) {
+void hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     uintptr_t address = (uintptr_t)ptr;
     size_t count;
     size_t i;

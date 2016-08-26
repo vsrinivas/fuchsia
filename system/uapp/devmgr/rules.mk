@@ -44,6 +44,7 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     ulib/ddk \
+    ulib/hexdump \
     ulib/hid \
     ulib/launchpad \
     ulib/elfload \
