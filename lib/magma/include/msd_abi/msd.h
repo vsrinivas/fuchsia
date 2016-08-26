@@ -27,6 +27,8 @@ void msd_device_destroy(struct msd_device* dev);
 // Returns the device id.  0 is an invalid device id.
 uint32_t msd_device_get_id(struct msd_device* dev);
 
+void msd_device_dump_status(struct msd_device* dev);
+
 // Opens a device for the given client. Returns null on failure
 struct msd_connection* msd_device_open(struct msd_device* dev, msd_client_id client_id);
 
