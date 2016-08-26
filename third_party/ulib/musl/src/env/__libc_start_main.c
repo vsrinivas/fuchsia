@@ -113,8 +113,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             // just for cleanliness switch to the "main" one.
             if (libc.proc != MX_HANDLE_INVALID)
                 mx_handle_close(libc.proc);
-            if (0) // TODO(mcgrathr): later
-                libc.proc = handles[i];
+            libc.proc = handles[i];
             handles[i] = MX_HANDLE_INVALID;
             handle_info[i] = 0;
             break;
