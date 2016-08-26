@@ -9,12 +9,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#include <magenta/types.h>
 #include <magenta/syscalls.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
 #include <mxio/io.h>
+#include <mxio/watcher.h>
 
 static int netfd = -1;
 static uint8_t netmac[6];
@@ -72,10 +74,8 @@ int eth_add_mcast_filter(const mac_addr_t* addr) {
 
 static volatile uint64_t net_timer = 0;
 
-#define TIMER_MS(n) (((uint64_t)(n)) * 1000000ULL)
-
 void netifc_set_timer(uint32_t ms) {
-    net_timer = mx_current_time() + TIMER_MS(ms);
+    net_timer = mx_current_time() + MX_MSEC(ms);
 }
 
 int netifc_timer_expired(void) {
@@ -88,33 +88,19 @@ int netifc_timer_expired(void) {
     return 0;
 }
 
-int netifc_open(void) {
-    DIR* dir;
-    struct dirent* de;
+static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
+    printf("netifc: ? /dev/class/ethernet/%s\n", fn);
 
-    if ((dir = opendir("/dev/class/ethernet")) == NULL) {
-        return -1;
-    }
-    while ((de = readdir(dir)) != NULL) {
-        char tmp[128];
-        if (de->d_name[0] == '.') {
-            continue;
-        }
-        snprintf(tmp, sizeof(tmp), "/dev/class/ethernet/%s", de->d_name);
-        if ((netfd = open(tmp, O_RDWR)) >= 0) {
-            break;
-        }
-    }
-    closedir(dir);
-    if (netfd < 0) {
-        return -1;
+    if ((netfd = openat(dirfd, fn, O_RDWR)) < 0) {
+        return NO_ERROR;
     }
 
     if (read(netfd, netmac, 6) != 6) {
         close(netfd);
         netfd = -1;
-        return -1;
+        return NO_ERROR;
     }
+
     ip6_init(netmac);
     for (int i = 0; i < 8; i++) {
         char* buffer = malloc(sizeof(eth_buffer_t) + ETH_BUFFER_SIZE + 32);
@@ -125,7 +111,20 @@ int netifc_open(void) {
             eth_put_buffer(buffer + sizeof(eth_buffer_t));
         }
     }
-    return 0;
+
+    // stop polling
+    return 1;
+}
+
+int netifc_open(void) {
+    int dirfd;
+    if ((dirfd = open("/dev/class/ethernet", O_DIRECTORY|O_RDONLY)) < 0) {
+        return -1;
+    }
+
+    mx_status_t status = mxio_watch_directory(dirfd, netifc_open_cb, NULL);
+    close(dirfd);
+    return (status < 0) ? -1 : 0;
 }
 
 void netifc_close(void) {
@@ -150,7 +149,7 @@ void netifc_poll(void) {
             if (now > net_timer) {
                 break;
             }
-            mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, net_timer - now + TIMER_MS(1));
+            mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, net_timer - now + MX_MSEC(1));
         } else {
             mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         }

@@ -145,10 +145,7 @@ void udp6_recv(void* data, size_t len,
     }
 }
 
-#define TIME_MS(n) (((uint64_t)(n)) * 1000000ULL)
-
 int main(int argc, char** argv) {
-    mx_time_t delay = TIME_MS(200);
     logpacket_t pkt;
     int len = 0;
     if ((loghandle = mx_log_create(MX_LOG_FLAG_READABLE)) < 0) {
@@ -156,15 +153,9 @@ int main(int argc, char** argv) {
     }
 
     printf("netsvc: main()\n");
-    //TODO: non-polling startup once possible
-    for (;;) {
-        mx_nanosleep(delay);
-        if (netifc_open() == 0) {
-            break;
-        }
-        while (delay < TIME_MS(1000)) {
-            delay += TIME_MS(100);
-        }
+    if (netifc_open() != 0) {
+        printf("netsvc: fatal error initialzing network\n");
+        return -1;
     }
 
     printf("netsvc: start\n");
