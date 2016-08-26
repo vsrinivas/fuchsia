@@ -4,8 +4,6 @@
 
 #include "msd_intel_context.h"
 
-MsdIntelContext::MsdIntelContext() { magic_ = kMagic; }
-
 void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
                                      std::unique_ptr<MsdIntelBuffer> context_buffer,
                                      std::unique_ptr<Ringbuffer> ringbuffer)
@@ -110,7 +108,7 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
 
 //////////////////////////////////////////////////////////////////////////////
 
-void msd_context_destroy(msd_context* ctx) { delete MsdIntelContext::cast(ctx); }
+void msd_context_destroy(msd_context* ctx) { delete MsdIntelAbiContext::cast(ctx); }
 
 int32_t msd_context_execute_command_buffer(msd_context* ctx, magma_system_command_buffer* cmd_buf,
                                            msd_buffer** exec_resources)

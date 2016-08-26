@@ -14,9 +14,9 @@
 #include <memory>
 
 // Abstract base context.
-class MsdIntelContext : public msd_context {
+class MsdIntelContext {
 public:
-    MsdIntelContext();
+    MsdIntelContext() {}
 
     virtual ~MsdIntelContext() {}
 
@@ -38,13 +38,6 @@ public:
     bool GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
 
     virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
-
-    static MsdIntelContext* cast(msd_context* context)
-    {
-        DASSERT(context);
-        DASSERT(context->magic_ == kMagic);
-        return static_cast<MsdIntelContext*>(context);
-    }
 
     MsdIntelBuffer* get_context_buffer(EngineCommandStreamerId id)
     {
@@ -71,7 +64,6 @@ private:
 
     std::map<EngineCommandStreamerId, PerEngineState> state_map_;
 
-    static const uint32_t kMagic = 0x63747874; // "ctxt"
     static constexpr int32_t kNotMapped = -1;
 
     friend class TestContext;
@@ -93,6 +85,26 @@ public:
 
 private:
     Owner* owner_;
+};
+
+class MsdIntelAbiContext : public msd_context {
+public:
+    MsdIntelAbiContext(std::shared_ptr<MsdIntelContext> ptr) : ptr_(std::move(ptr))
+    {
+        magic_ = kMagic;
+    }
+
+    static MsdIntelAbiContext* cast(msd_context* context)
+    {
+        DASSERT(context);
+        DASSERT(context->magic_ == kMagic);
+        return static_cast<MsdIntelAbiContext*>(context);
+    }
+    std::shared_ptr<MsdIntelContext> ptr() { return ptr_; }
+
+private:
+    std::shared_ptr<MsdIntelContext> ptr_;
+    static const uint32_t kMagic = 0x63747874; // "ctxt"
 };
 
 #endif // MSD_INTEL_CONTEXT_H

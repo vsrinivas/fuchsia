@@ -13,17 +13,10 @@
 #include <map>
 #include <memory>
 
-class MsdIntelBuffer : public msd_buffer {
+class MsdIntelBuffer {
 public:
     static std::unique_ptr<MsdIntelBuffer> Create(msd_platform_buffer* platform_buffer_token);
     static std::unique_ptr<MsdIntelBuffer> Create(uint64_t size);
-
-    static MsdIntelBuffer* cast(msd_buffer* buf)
-    {
-        DASSERT(buf);
-        DASSERT(buf->magic_ == kMagic);
-        return static_cast<MsdIntelBuffer*>(buf);
-    }
 
     magma::PlatformBuffer* platform_buffer()
     {
@@ -57,7 +50,25 @@ private:
 
     uint32_t read_domains_bitfield_ = MEMORY_DOMAIN_CPU;
     uint32_t write_domain_bitfield_ = MEMORY_DOMAIN_CPU;
+};
 
+class MsdIntelAbiBuffer : public msd_buffer {
+public:
+    MsdIntelAbiBuffer(std::shared_ptr<MsdIntelBuffer> ptr) : ptr_(std::move(ptr))
+    {
+        magic_ = kMagic;
+    }
+
+    static MsdIntelAbiBuffer* cast(msd_buffer* buf)
+    {
+        DASSERT(buf);
+        DASSERT(buf->magic_ == kMagic);
+        return static_cast<MsdIntelAbiBuffer*>(buf);
+    }
+    std::shared_ptr<MsdIntelBuffer> ptr() { return ptr_; }
+
+private:
+    std::shared_ptr<MsdIntelBuffer> ptr_;
     static const uint32_t kMagic = 0x62756666; // "buff"
 };
 

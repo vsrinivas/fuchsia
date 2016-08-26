@@ -158,8 +158,10 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
 
 msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
 {
-    // here we open the connection and transfer ownership of the result across the ABI
-    return MsdIntelDevice::cast(dev)->Open(client_id).release();
+    auto connection = MsdIntelDevice::cast(dev)->Open(client_id);
+    if (!connection)
+        return DRETP(nullptr, "MsdIntelDevice::Open failed");
+    return new MsdIntelAbiConnection(std::move(connection));
 }
 
 uint32_t msd_device_get_id(msd_device* dev) { return MsdIntelDevice::cast(dev)->device_id(); }

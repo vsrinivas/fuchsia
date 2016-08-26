@@ -8,7 +8,6 @@
 MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
     : platform_buf_(std::move(platform_buf))
 {
-    magic_ = kMagic;
 }
 
 std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(msd_platform_buffer* platform_buffer_token)
@@ -113,7 +112,9 @@ bool MsdIntelBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
 {
     auto buffer = MsdIntelBuffer::Create(platform_buf);
-    return buffer.release();
+    if (!buffer)
+        return DRETP(nullptr, "MsdIntelBuffer::Create failed");
+    return new MsdIntelAbiBuffer(std::move(buffer));
 }
 
-void msd_buffer_destroy(msd_buffer* buf) { delete MsdIntelBuffer::cast(buf); }
+void msd_buffer_destroy(msd_buffer* buf) { delete MsdIntelAbiBuffer::cast(buf); }

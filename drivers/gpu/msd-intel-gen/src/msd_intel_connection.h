@@ -11,14 +11,14 @@
 #include "msd_intel_context.h"
 #include <memory>
 
-class MsdIntelConnection : public msd_connection, public ClientContext::Owner {
+class MsdIntelConnection : public ClientContext::Owner {
 public:
     class Owner {
     public:
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
     };
 
-    MsdIntelConnection(Owner* owner) : owner_(owner) { magic_ = kMagic; }
+    MsdIntelConnection(Owner* owner) : owner_(owner) {}
 
     virtual ~MsdIntelConnection() {}
 
@@ -26,13 +26,6 @@ public:
     {
         // Backing store creation deferred until context is used.
         return std::unique_ptr<MsdIntelContext>(new ClientContext(this));
-    }
-
-    static MsdIntelConnection* cast(msd_connection* connection)
-    {
-        DASSERT(connection);
-        DASSERT(connection->magic_ == kMagic);
-        return static_cast<MsdIntelConnection*>(connection);
     }
 
 private:
@@ -45,6 +38,27 @@ private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
     Owner* owner_;
+};
+
+class MsdIntelAbiConnection : public msd_connection {
+public:
+    MsdIntelAbiConnection(std::shared_ptr<MsdIntelConnection> ptr) : ptr_(std::move(ptr))
+    {
+        magic_ = kMagic;
+    }
+
+    static MsdIntelAbiConnection* cast(msd_connection* connection)
+    {
+        DASSERT(connection);
+        DASSERT(connection->magic_ == kMagic);
+        return static_cast<MsdIntelAbiConnection*>(connection);
+    }
+
+    std::shared_ptr<MsdIntelConnection> ptr() { return ptr_; }
+
+private:
+    std::shared_ptr<MsdIntelConnection> ptr_;
+    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 };
 
 #endif // MSD_INTEL_CONNECTION_H
