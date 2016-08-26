@@ -11,8 +11,7 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/lsusb.c
 
-# DDK is needed only for hw/usb.h header file
-MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
+MODULE_STATIC_LIBS := ulib/hexdump
 
 MODULE_LIBS := ulib/mxio ulib/musl
 
