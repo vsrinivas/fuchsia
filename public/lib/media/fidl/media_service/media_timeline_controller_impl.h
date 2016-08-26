@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/cpp/local_time.h"
 #include "apps/media/cpp/timeline.h"
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/interfaces/timeline_controller.mojom.h"
@@ -22,14 +21,14 @@ namespace media {
 
 // Mojo agent that controls timing in a graph.
 class MediaTimelineControllerImpl
-    : public MediaFactoryService::Product<MediaTimelineController>,
+    : public MediaServiceImpl::Product<MediaTimelineController>,
       public MediaTimelineController,
       public MediaTimelineControlPoint,
       public TimelineConsumer {
  public:
   static std::shared_ptr<MediaTimelineControllerImpl> Create(
       InterfaceRequest<MediaTimelineController> request,
-      MediaFactoryService* owner);
+      MediaServiceImpl* owner);
 
   ~MediaTimelineControllerImpl() override;
 
@@ -139,7 +138,7 @@ class MediaTimelineControllerImpl
   };
 
   MediaTimelineControllerImpl(InterfaceRequest<MediaTimelineController> request,
-                              MediaFactoryService* owner);
+                              MediaServiceImpl* owner);
 
   // Takes action when a control point changes its end-of-stream value.
   void HandleControlPointEndOfStreamChange();

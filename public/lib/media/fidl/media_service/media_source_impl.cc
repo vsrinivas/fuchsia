@@ -20,7 +20,7 @@ std::shared_ptr<MediaSourceImpl> MediaSourceImpl::Create(
     InterfaceHandle<SeekingReader> reader,
     const Array<MediaTypeSetPtr>& allowed_media_types,
     InterfaceRequest<MediaSource> request,
-    MediaFactoryService* owner) {
+    MediaServiceImpl* owner) {
   return std::shared_ptr<MediaSourceImpl>(new MediaSourceImpl(
       reader.Pass(), allowed_media_types, request.Pass(), owner));
 }
@@ -29,8 +29,8 @@ MediaSourceImpl::MediaSourceImpl(
     InterfaceHandle<SeekingReader> reader,
     const Array<MediaTypeSetPtr>& allowed_media_types,
     InterfaceRequest<MediaSource> request,
-    MediaFactoryService* owner)
-    : MediaFactoryService::Product<MediaSource>(this, request.Pass(), owner),
+    MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<MediaSource>(this, request.Pass(), owner),
       allowed_media_types_(allowed_media_types.Clone()) {
   DCHECK(reader);
 

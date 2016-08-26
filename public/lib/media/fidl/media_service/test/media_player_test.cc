@@ -16,8 +16,8 @@ namespace media {
 class MediaPlayerTest : public test::ApplicationTestBase {
  public:
   void CreatePlayer() {
-    MediaFactoryPtr factory;
-    ConnectToService(shell(), "mojo:media_factory", GetProxy(&factory));
+    MediaServicePtr media_service;
+    ConnectToService(shell(), "mojo:media_service", GetProxy(&media_service));
 
     fake_renderer_.ExpectPackets({{0, false, 4096, 0x20c39d1e31991800},
                                   {1024, false, 4096, 0xeaf137125d313800},
@@ -46,8 +46,9 @@ class MediaPlayerTest : public test::ApplicationTestBase {
         GetProxy(&fake_renderer_ptr);
     fake_renderer_.Bind(renderer_request.Pass());
 
-    factory->CreatePlayer(fake_reader_ptr.Pass(), fake_renderer_ptr.Pass(),
-                          nullptr, GetProxy(&media_player_));
+    media_service->CreatePlayer(fake_reader_ptr.Pass(),
+                                fake_renderer_ptr.Pass(), nullptr,
+                                GetProxy(&media_player_));
 
     HandleStatusUpdates();
   }

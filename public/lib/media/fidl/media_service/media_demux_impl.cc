@@ -18,15 +18,15 @@ namespace media {
 std::shared_ptr<MediaDemuxImpl> MediaDemuxImpl::Create(
     InterfaceHandle<SeekingReader> reader,
     InterfaceRequest<MediaDemux> request,
-    MediaFactoryService* owner) {
+    MediaServiceImpl* owner) {
   return std::shared_ptr<MediaDemuxImpl>(
       new MediaDemuxImpl(reader.Pass(), request.Pass(), owner));
 }
 
 MediaDemuxImpl::MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
                                InterfaceRequest<MediaDemux> request,
-                               MediaFactoryService* owner)
-    : MediaFactoryService::Product<MediaDemux>(this, request.Pass(), owner) {
+                               MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<MediaDemux>(this, request.Pass(), owner) {
   DCHECK(reader);
 
   task_runner_ = base::MessageLoop::current()->task_runner();

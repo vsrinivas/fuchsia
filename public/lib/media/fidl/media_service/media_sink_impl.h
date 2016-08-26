@@ -24,14 +24,14 @@ namespace media {
 
 // Mojo agent that consumes a stream and delivers it to a destination specified
 // by URL.
-class MediaSinkImpl : public MediaFactoryService::Product<MediaSink>,
+class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
                       public MediaSink {
  public:
   static std::shared_ptr<MediaSinkImpl> Create(
       InterfaceHandle<MediaRenderer> renderer,
       MediaTypePtr media_type,
       InterfaceRequest<MediaSink> request,
-      MediaFactoryService* owner);
+      MediaServiceImpl* owner);
 
   ~MediaSinkImpl() override;
 
@@ -46,7 +46,7 @@ class MediaSinkImpl : public MediaFactoryService::Product<MediaSink>,
   MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
                 MediaTypePtr media_type,
                 InterfaceRequest<MediaSink> request,
-                MediaFactoryService* owner);
+                MediaServiceImpl* owner);
 
   Incident ready_;
   Graph graph_;

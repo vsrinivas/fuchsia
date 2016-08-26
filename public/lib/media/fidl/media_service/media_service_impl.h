@@ -12,19 +12,18 @@
 namespace mojo {
 namespace media {
 
-class MediaFactoryService : public util::FactoryServiceBase,
-                            public MediaFactory {
+class MediaServiceImpl : public FactoryServiceBase, public MediaService {
  public:
-  MediaFactoryService();
+  MediaServiceImpl();
 
-  ~MediaFactoryService() override;
+  ~MediaServiceImpl() override;
 
   // ApplicationImplBase override.
   void OnInitialize() override;
 
   bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override;
 
-  // MediaFactory implementation.
+  // MediaService implementation.
   void CreatePlayer(InterfaceHandle<SeekingReader> reader,
                     InterfaceHandle<MediaRenderer> audio_renderer,
                     InterfaceHandle<MediaRenderer> video_renderer,
@@ -51,7 +50,7 @@ class MediaFactoryService : public util::FactoryServiceBase,
       InterfaceRequest<MediaTimelineController> timeline_controller) override;
 
  private:
-  BindingSet<MediaFactory> bindings_;
+  BindingSet<MediaService> bindings_;
 };
 
 }  // namespace media

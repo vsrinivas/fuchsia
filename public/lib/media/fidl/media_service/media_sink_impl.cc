@@ -16,7 +16,7 @@ std::shared_ptr<MediaSinkImpl> MediaSinkImpl::Create(
     InterfaceHandle<MediaRenderer> renderer,
     MediaTypePtr media_type,
     InterfaceRequest<MediaSink> request,
-    MediaFactoryService* owner) {
+    MediaServiceImpl* owner) {
   return std::shared_ptr<MediaSinkImpl>(new MediaSinkImpl(
       renderer.Pass(), media_type.Pass(), request.Pass(), owner));
 }
@@ -24,8 +24,8 @@ std::shared_ptr<MediaSinkImpl> MediaSinkImpl::Create(
 MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
                              MediaTypePtr media_type,
                              InterfaceRequest<MediaSink> request,
-                             MediaFactoryService* owner)
-    : MediaFactoryService::Product<MediaSink>(this, request.Pass(), owner),
+                             MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<MediaSink>(this, request.Pass(), owner),
       consumer_(MojoPacketConsumer::Create()),
       producer_(MojoPacketProducer::Create()),
       renderer_(MediaRendererPtr::Create(renderer.Pass())) {

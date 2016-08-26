@@ -17,27 +17,27 @@
 namespace mojo {
 namespace media {
 
-MediaFactoryService::MediaFactoryService() {}
+MediaServiceImpl::MediaServiceImpl() {}
 
-MediaFactoryService::~MediaFactoryService() {
+MediaServiceImpl::~MediaServiceImpl() {
   FLOG_DESTROY();
 }
 
-void MediaFactoryService::OnInitialize() {
-  FLOG_INITIALIZE(shell(), "media_factory");
+void MediaServiceImpl::OnInitialize() {
+  FLOG_INITIALIZE(shell(), "media_service");
 }
 
-bool MediaFactoryService::OnAcceptConnection(
+bool MediaServiceImpl::OnAcceptConnection(
     ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<MediaFactory>(
+  service_provider_impl->AddService<MediaService>(
       [this](const ConnectionContext& connection_context,
-             InterfaceRequest<MediaFactory> media_factory_request) {
-        bindings_.AddBinding(this, media_factory_request.Pass());
+             InterfaceRequest<MediaService> media_service_request) {
+        bindings_.AddBinding(this, media_service_request.Pass());
       });
   return true;
 }
 
-void MediaFactoryService::CreatePlayer(
+void MediaServiceImpl::CreatePlayer(
     InterfaceHandle<SeekingReader> reader,
     InterfaceHandle<MediaRenderer> audio_renderer,
     InterfaceHandle<MediaRenderer> video_renderer,
@@ -47,39 +47,40 @@ void MediaFactoryService::CreatePlayer(
                                      this));
 }
 
-void MediaFactoryService::CreateSource(InterfaceHandle<SeekingReader> reader,
-                                       Array<MediaTypeSetPtr> media_types,
-                                       InterfaceRequest<MediaSource> source) {
+void MediaServiceImpl::CreateSource(InterfaceHandle<SeekingReader> reader,
+                                    Array<MediaTypeSetPtr> media_types,
+                                    InterfaceRequest<MediaSource> source) {
   AddProduct(
       MediaSourceImpl::Create(reader.Pass(), media_types, source.Pass(), this));
 }
 
-void MediaFactoryService::CreateSink(InterfaceHandle<MediaRenderer> renderer,
-                                     MediaTypePtr media_type,
-                                     InterfaceRequest<MediaSink> sink) {
+void MediaServiceImpl::CreateSink(InterfaceHandle<MediaRenderer> renderer,
+                                  MediaTypePtr media_type,
+                                  InterfaceRequest<MediaSink> sink) {
   AddProduct(MediaSinkImpl::Create(renderer.Pass(), media_type.Pass(),
                                    sink.Pass(), this));
 }
 
-void MediaFactoryService::CreateDemux(InterfaceHandle<SeekingReader> reader,
-                                      InterfaceRequest<MediaDemux> demux) {
+void MediaServiceImpl::CreateDemux(InterfaceHandle<SeekingReader> reader,
+                                   InterfaceRequest<MediaDemux> demux) {
   AddProduct(MediaDemuxImpl::Create(reader.Pass(), demux.Pass(), this));
 }
 
-void MediaFactoryService::CreateDecoder(
+void MediaServiceImpl::CreateDecoder(
     MediaTypePtr input_media_type,
     InterfaceRequest<MediaTypeConverter> decoder) {
   AddProduct(
       MediaDecoderImpl::Create(input_media_type.Pass(), decoder.Pass(), this));
 }
 
-void MediaFactoryService::CreateNetworkReader(
+void MediaServiceImpl::CreateNetworkReader(
     const String& url,
     InterfaceRequest<SeekingReader> reader) {
-  AddProduct(NetworkReaderImpl::Create(url, reader.Pass(), this));
+  FTL_DCHECK(false) << "CreateNetworkReader not implemented";
+  // AddProduct(NetworkReaderImpl::Create(url, reader.Pass(), this));
 }
 
-void MediaFactoryService::CreateTimelineController(
+void MediaServiceImpl::CreateTimelineController(
     InterfaceRequest<MediaTimelineController> timeline_controller) {
   AddProduct(
       MediaTimelineControllerImpl::Create(timeline_controller.Pass(), this));

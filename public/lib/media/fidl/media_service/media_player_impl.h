@@ -25,7 +25,7 @@ namespace mojo {
 namespace media {
 
 // Mojo agent that renders streams from an origin specified by URL.
-class MediaPlayerImpl : public MediaFactoryService::Product<MediaPlayer>,
+class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
                         public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
@@ -33,7 +33,7 @@ class MediaPlayerImpl : public MediaFactoryService::Product<MediaPlayer>,
       InterfaceHandle<MediaRenderer> audio_renderer,
       InterfaceHandle<MediaRenderer> video_renderer,
       InterfaceRequest<MediaPlayer> request,
-      MediaFactoryService* owner);
+      MediaServiceImpl* owner);
 
   ~MediaPlayerImpl() override;
 
@@ -75,7 +75,7 @@ class MediaPlayerImpl : public MediaFactoryService::Product<MediaPlayer>,
                   InterfaceHandle<MediaRenderer> audio_renderer,
                   InterfaceHandle<MediaRenderer> video_renderer,
                   InterfaceRequest<MediaPlayer> request,
-                  MediaFactoryService* owner);
+                  MediaServiceImpl* owner);
 
   // Takes action based on current state.
   void Update();
@@ -105,7 +105,7 @@ class MediaPlayerImpl : public MediaFactoryService::Product<MediaPlayer>,
       uint64_t version = MediaTimelineControlPoint::kInitialStatus,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
-  MediaFactoryPtr factory_;
+  MediaServicePtr factory_;
   MediaDemuxPtr demux_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;

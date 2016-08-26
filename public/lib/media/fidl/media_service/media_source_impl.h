@@ -25,14 +25,14 @@ namespace mojo {
 namespace media {
 
 // Mojo agent that produces streams from an origin specified by URL.
-class MediaSourceImpl : public MediaFactoryService::Product<MediaSource>,
+class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
                         public MediaSource {
  public:
   static std::shared_ptr<MediaSourceImpl> Create(
       InterfaceHandle<SeekingReader> reader,
       const Array<MediaTypeSetPtr>& allowed_media_types,
       InterfaceRequest<MediaSource> request,
-      MediaFactoryService* owner);
+      MediaServiceImpl* owner);
 
   ~MediaSourceImpl() override;
 
@@ -56,7 +56,7 @@ class MediaSourceImpl : public MediaFactoryService::Product<MediaSource>,
   MediaSourceImpl(InterfaceHandle<SeekingReader> reader,
                   const Array<MediaTypeSetPtr>& allowed_media_types,
                   InterfaceRequest<MediaSource> request,
-                  MediaFactoryService* owner);
+                  MediaServiceImpl* owner);
 
   class Stream {
    public:

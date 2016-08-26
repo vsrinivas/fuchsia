@@ -19,7 +19,7 @@ std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
     InterfaceHandle<MediaRenderer> audio_renderer,
     InterfaceHandle<MediaRenderer> video_renderer,
     InterfaceRequest<MediaPlayer> request,
-    MediaFactoryService* owner) {
+    MediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerImpl>(
       new MediaPlayerImpl(reader.Pass(), audio_renderer.Pass(),
                           video_renderer.Pass(), request.Pass(), owner));
@@ -29,9 +29,9 @@ MediaPlayerImpl::MediaPlayerImpl(InterfaceHandle<SeekingReader> reader,
                                  InterfaceHandle<MediaRenderer> audio_renderer,
                                  InterfaceHandle<MediaRenderer> video_renderer,
                                  InterfaceRequest<MediaPlayer> request,
-                                 MediaFactoryService* owner)
-    : MediaFactoryService::Product<MediaPlayer>(this, request.Pass(), owner) {
-  DCHECK(reader);
+                                 MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<MediaPlayer>(this, request.Pass(), owner) {
+  FTL_DCHECK(reader);
 
   status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
                                              uint64_t version) {
@@ -45,7 +45,7 @@ MediaPlayerImpl::MediaPlayerImpl(InterfaceHandle<SeekingReader> reader,
 
   state_ = State::kWaiting;
 
-  ConnectToService(owner->shell(), "mojo:media_factory", GetProxy(&factory_));
+  ConnectToService(owner->shell(), "mojo:media_service", GetProxy(&factory_));
 
   factory_->CreateDemux(reader.Pass(), GetProxy(&demux_));
   HandleDemuxStatusUpdates();

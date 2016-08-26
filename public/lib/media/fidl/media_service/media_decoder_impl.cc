@@ -14,17 +14,17 @@ namespace media {
 std::shared_ptr<MediaDecoderImpl> MediaDecoderImpl::Create(
     MediaTypePtr input_media_type,
     InterfaceRequest<MediaTypeConverter> request,
-    MediaFactoryService* owner) {
+    MediaServiceImpl* owner) {
   return std::shared_ptr<MediaDecoderImpl>(
       new MediaDecoderImpl(input_media_type.Pass(), request.Pass(), owner));
 }
 
 MediaDecoderImpl::MediaDecoderImpl(MediaTypePtr input_media_type,
                                    InterfaceRequest<MediaTypeConverter> request,
-                                   MediaFactoryService* owner)
-    : MediaFactoryService::Product<MediaTypeConverter>(this,
-                                                       request.Pass(),
-                                                       owner),
+                                   MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<MediaTypeConverter>(this,
+                                                    request.Pass(),
+                                                    owner),
       consumer_(MojoPacketConsumer::Create()),
       producer_(MojoPacketProducer::Create()) {
   DCHECK(input_media_type);

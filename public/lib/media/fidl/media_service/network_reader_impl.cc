@@ -20,15 +20,15 @@ const char* NetworkReaderImpl::kRangeHeaderName = "Range";
 std::shared_ptr<NetworkReaderImpl> NetworkReaderImpl::Create(
     const String& url,
     InterfaceRequest<SeekingReader> request,
-    MediaFactoryService* owner) {
+    MediaServiceImpl* owner) {
   return std::shared_ptr<NetworkReaderImpl>(
       new NetworkReaderImpl(url, request.Pass(), owner));
 }
 
 NetworkReaderImpl::NetworkReaderImpl(const String& url,
                                      InterfaceRequest<SeekingReader> request,
-                                     MediaFactoryService* owner)
-    : MediaFactoryService::Product<SeekingReader>(this, request.Pass(), owner),
+                                     MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<SeekingReader>(this, request.Pass(), owner),
       url_(url) {
   NetworkServicePtr network_service;
 

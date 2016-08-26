@@ -26,13 +26,13 @@ namespace mojo {
 namespace media {
 
 // Mojo agent that decodes a stream.
-class MediaDemuxImpl : public MediaFactoryService::Product<MediaDemux>,
+class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
                        public MediaDemux {
  public:
   static std::shared_ptr<MediaDemuxImpl> Create(
       InterfaceHandle<SeekingReader> reader,
       InterfaceRequest<MediaDemux> request,
-      MediaFactoryService* owner);
+      MediaServiceImpl* owner);
 
   ~MediaDemuxImpl() override;
 
@@ -53,7 +53,7 @@ class MediaDemuxImpl : public MediaFactoryService::Product<MediaDemux>,
  private:
   MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
                  InterfaceRequest<MediaDemux> request,
-                 MediaFactoryService* owner);
+                 MediaServiceImpl* owner);
 
   class Stream {
    public:
