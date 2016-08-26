@@ -80,8 +80,8 @@ static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             *out = vn;
             *pathout = path;
 #if WITH_REPLY_PIPE
-            if (vn->vfs && vn->vfs->remote) {
-                return vn->vfs->remote;
+            if (vn->remote > 0) {
+                return vn->remote;
             }
 #endif
             return ERR_NOT_FOUND;
@@ -137,9 +137,9 @@ try_open:
             return r;
         }
 #if WITH_REPLY_PIPE
-        if (vn->vfs && vn->vfs->remote) {
+        if (vn->remote > 0) {
             *pathout = ".";
-            return vn->vfs->remote;
+            return vn->remote;
         }
 #endif
         if ((r = vn->ops->open(&vn, flags)) < 0) {

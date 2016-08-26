@@ -10,16 +10,14 @@
 #include <system/listnode.h>
 #include <threads.h>
 
-
-typedef struct vfs vfs_t;
-typedef struct vfs_ops vfs_ops_t;
 typedef struct dnode dnode_t;
 
 struct vnode {
     vnode_ops_t* ops;
-    vfs_t* vfs;
     uint32_t flags;
     uint32_t refcount;
+    uint32_t seqcount;
+    mx_handle_t remote;
     dnode_t* dnode;
 
     void* pdata;
@@ -28,15 +26,6 @@ struct vnode {
     // all dnodes that point at this vnode
     list_node_t dn_list;
     uint32_t dn_count;
-};
-
-struct vfs_ops {
-};
-
-struct vfs {
-    vfs_ops_t* ops;
-    vnode_t* root;
-    mx_handle_t remote;
 };
 
 #define V_FLAG_DEVICE 1

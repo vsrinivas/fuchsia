@@ -153,8 +153,9 @@ static mx_status_t _devfs_add_link(vnode_t* parent, const char* name, mx_device_
         //TODO: something smarter
         // right now we have so few devices and instances this is not a problem
         // but it clearly is not optimal
-        for (unsigned n = 0; n < 100; n++) {
-            snprintf(tmp, sizeof(tmp), "%03u", n);
+        // seqcount is used to avoid rapidly re-using device numbers
+        for (unsigned n = 0; n < 1000; n++) {
+            snprintf(tmp, sizeof(tmp), "%03u", (parent->seqcount++) % 1000);
             if (dn_lookup(parent->dnode, &dn, tmp, 3) != NO_ERROR) {
                 name = tmp;
                 len = 3;
