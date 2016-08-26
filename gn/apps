@@ -26,6 +26,10 @@
         {
             "binary": "story-manager",
             "bootfs_path": "apps/story-manager"
+        },
+        {
+            "binary": "story-runner",
+            "bootfs_path": "apps/story-runner"
         }
     ]
 }
