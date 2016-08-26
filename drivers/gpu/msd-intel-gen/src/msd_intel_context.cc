@@ -111,3 +111,9 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
 //////////////////////////////////////////////////////////////////////////////
 
 void msd_context_destroy(msd_context* ctx) { delete MsdIntelContext::cast(ctx); }
+
+int32_t msd_context_execute_command_buffer(msd_context* ctx, magma_system_command_buffer* cmd_buf,
+                                           msd_buffer** exec_resources)
+{
+    return 0;
+}
