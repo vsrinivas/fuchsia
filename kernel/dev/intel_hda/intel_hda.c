@@ -253,7 +253,8 @@ static status_t intel_hda_setup_command_buffers(intel_hda_device_t* dev) {
     /* Determine the ring buffer sizes.  If there are options, make them as
      * large as possible. Even the largest buffers permissible should fit within
      * a single 4k page. */
-    static_assert(PAGE_SIZE >= (HDA_CORB_MAX_BYTES + HDA_RIRB_MAX_BYTES));
+    static_assert(PAGE_SIZE >= (HDA_CORB_MAX_BYTES + HDA_RIRB_MAX_BYTES),
+                  "A page must be large enough to hold the CORB and RIRB buffers!");
 
     ret = intel_hda_setup_command_buffer_size(&r->corbsize, &dev->corb_entry_count);
     if (ret != NO_ERROR)

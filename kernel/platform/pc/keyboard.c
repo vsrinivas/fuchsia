@@ -163,7 +163,7 @@ enum {
     _KEY_LAST,
 } extended_keys;
 
-static_assert(_KEY_LAST < 0x100);
+static_assert(_KEY_LAST < 0x100, "");
 
 /* scancode translation tables */
 const uint8_t pc_keymap_set1_lower[128] = {

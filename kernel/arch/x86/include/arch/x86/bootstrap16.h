@@ -22,6 +22,7 @@
 #define RED_REGISTERS_OFFSET 28
 
 #ifndef ASSEMBLY
+#include <assert.h>
 #include <magenta/compiler.h>
 #include <kernel/vm.h>
 

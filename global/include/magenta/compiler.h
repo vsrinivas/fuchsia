@@ -53,12 +53,6 @@
 #define __DEPRECATED __attribute((deprecated))
 #endif
 
-#ifdef __cplusplus
-#define STATIC_ASSERT(e) static_assert(e, #e)
-#else
-#define STATIC_ASSERT(e) _Static_assert(e, #e)
-#endif
-
 /* compiler fence */
 #define CF do { __asm__ volatile("" ::: "memory"); } while(0)
 
@@ -105,7 +99,6 @@
 #define __DEPRECATED
 #endif
 
-#define STATIC_ASSERT(e)
 #define CF
 
 #endif  // if __GNUC__ || defined(__clang__)

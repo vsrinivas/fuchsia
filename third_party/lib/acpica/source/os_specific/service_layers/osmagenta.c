@@ -292,7 +292,7 @@ void AcpiOsFree(void *Memory) {
  *         executing thread. The value -1 is reserved and must not be returned
  *         by this interface.
  */
-static_assert(sizeof(ACPI_THREAD_ID) >= sizeof(uintptr_t));
+static_assert(sizeof(ACPI_THREAD_ID) >= sizeof(uintptr_t), "");
 ACPI_THREAD_ID AcpiOsGetThreadId() {
     // Just use the address of the thread_t
     return (uintptr_t)get_current_thread();

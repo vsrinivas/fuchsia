@@ -29,6 +29,7 @@
 #include <arch/spinlock.h>
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
+#include <assert.h>
 #include <magenta/compiler.h>
 #include <stdint.h>
 
