@@ -38,6 +38,7 @@
 #include <magenta/wait_set_dispatcher.h>
 #include <magenta/wait_state_observer.h>
 
+#include <inttypes.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -785,8 +786,11 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const c
 
 }
 
-mx_handle_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry, uintptr_t stack, uintptr_t arg) {
-    LTRACEF("handle %d, entry 0x%lx, stack 0x%lx, arg 0x%lx\n", thread_handle, entry, stack, arg);
+mx_handle_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
+                             uintptr_t stack, uintptr_t arg1, uintptr_t arg2) {
+    LTRACEF("handle %#x, entry %#" PRIxPTR ", sp %#" PRIxPTR
+            ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
+            thread_handle, entry, stack, arg1, arg2);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -802,7 +806,7 @@ mx_handle_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry, uintptr
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    auto status = thread->Start(entry, stack, arg, 0);
+    auto status = thread->Start(entry, stack, arg1, arg2);
 
     return status;
 }

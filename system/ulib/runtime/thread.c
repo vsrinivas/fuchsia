@@ -185,7 +185,9 @@ mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t 
     uintptr_t sp = sp_from_mapping(stack_addr, stack_size);
 
     // kick off the new thread
-    mx_status_t status = mx_thread_start(thread->handle, (uintptr_t)thread_trampoline, sp, (uintptr_t)thread);
+    mx_status_t status = mx_thread_start(thread->handle,
+                                         (uintptr_t)thread_trampoline, sp,
+                                         (uintptr_t)thread, 0);
     if (status < 0) {
         mx_handle_t handle = thread->handle;
         deallocate_thread_page(thread);
