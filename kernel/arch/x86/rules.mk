@@ -183,7 +183,6 @@ endif # SUBARCH x86-64
 
 ARCH_OPTFLAGS := -O2
 
-USER_LINKER_SCRIPT := $(SUBARCH_DIR)/user.ld
 LINKER_SCRIPT += $(SUBARCH_BUILDDIR)/kernel.ld
 
 # potentially generated files that should be cleaned out with clean make rule

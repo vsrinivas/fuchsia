@@ -103,9 +103,6 @@ USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=
 
-# Additional flags for statically linking executables.
-USERAPP_LDFLAGS = -T $(USER_LINKER_SCRIPT)
-
 # Additional flags for dynamic linking, both for dynamically-linked
 # executables and for shared libraries.
 USER_DYNAMIC_LDFLAGS := \
@@ -124,7 +121,7 @@ USERLIB_SO_LDFLAGS := $(USER_DYNAMIC_LDFLAGS) -z defs
 USER_SHARED_INTERP := ld.so.1
 
 # Additional flags for building dynamically-linked executables.
-USERAPP_SHARED_LDFLAGS := \
+USERAPP_LDFLAGS := \
     $(USER_DYNAMIC_LDFLAGS) -pie -dynamic-linker $(USER_SHARED_INTERP)
 
 ifeq ($(call TOBOOL,$(USE_GOLD)),false)
@@ -137,7 +134,7 @@ ifeq ($(call TOBOOL,$(USE_GOLD)),false)
 # to generate -rpath-link in a general fashion.  Eventually we should
 # always use gold or lld for all the user-mode links, and then we'll
 # never need this.
-USERAPP_SHARED_LDFLAGS += -rpath-link $(BUILDDIR)/ulib/magenta
+USERAPP_LDFLAGS += -rpath-link $(BUILDDIR)/ulib/magenta
 endif
 
 # Architecture specific compile flags

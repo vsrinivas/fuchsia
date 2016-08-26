@@ -102,9 +102,6 @@ $(info TOOLCHAIN_PREFIX = $(TOOLCHAIN_PREFIX))
 
 ARCH_COMPILEFLAGS += $(ARCH_$(ARCH)_COMPILEFLAGS)
 
-# user space linker script
-USER_LINKER_SCRIPT := $(LOCAL_DIR)/user.ld
-
 ifeq ($(CLANG),1)
 GLOBAL_LDFLAGS += -m aarch64elf
 GLOBAL_MODULE_LDFLAGS += -m aarch64elf
