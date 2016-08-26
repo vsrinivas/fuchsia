@@ -2,9 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("modular") {
+executable("story-runner") {
+  sources = [
+    "main.cc",
+  ]
+
   deps = [
-    "story-manager",
-    "story-runner",
+    "//mojo/public/c:system",
+    "//mojo/system",
   ]
 }
