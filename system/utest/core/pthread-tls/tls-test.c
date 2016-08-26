@@ -25,7 +25,7 @@ static void test_tls(int thread_no) {
               "Error while setting tls value");
     EXPECT_EQ(pthread_setspecific(tsd_key_dtor, &value2), 0,
               "Error while setting tls value");
-    mx_nanosleep(100 * 1000 * 1000);
+    mx_nanosleep(MX_MSEC(100));
     int* v = pthread_getspecific(tsd_key);
     EXPECT_EQ(*v, value1, "wrong TLS value for key");
     v = pthread_getspecific(tsd_key_dtor);

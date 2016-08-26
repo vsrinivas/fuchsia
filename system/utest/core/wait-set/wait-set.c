@@ -317,7 +317,7 @@ static intptr_t signaler_thread_fn(void* arg) {
     assert(arg);
     mx_handle_t ev = *(mx_handle_t*)arg;
     assert(ev > 0);
-    mx_nanosleep(200 * 1000 * 1000);
+    mx_nanosleep(MX_MSEC(200));
     mx_status_t status = mx_object_signal(ev, 0u, MX_SIGNAL_SIGNAL0);
     assert(status == NO_ERROR);
     return 0;
@@ -327,7 +327,7 @@ static intptr_t closer_thread_fn(void* arg) {
     assert(arg);
     mx_handle_t h = *(mx_handle_t*)arg;
     assert(h > 0);
-    mx_nanosleep(200 * 1000 * 1000);
+    mx_nanosleep(MX_MSEC(200));
     mx_status_t status = mx_handle_close(h);
     assert(status == NO_ERROR);
     return 0;

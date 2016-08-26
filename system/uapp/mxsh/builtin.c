@@ -67,7 +67,7 @@ static int mxc_echo(int argc, char** argv) {
 
 static int mxc_msleep(int argc, char** argv) {
     if (argc == 2) {
-        mx_nanosleep(atoi(argv[1]) * 1000000ULL);
+        mx_nanosleep(MX_MSEC(atoi(argv[1])));
     }
     return 0;
 }

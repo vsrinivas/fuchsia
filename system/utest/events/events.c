@@ -41,7 +41,7 @@ static int thread_fn_1(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     do {
-        mx_nanosleep(200 * 1000 * 1000);
+        mx_nanosleep(MX_MSEC(200));
         mx_object_signal(events[1], 0u, MX_SIGNAL_SIGNALED);
     } while (!wait(events[2], events[0]));
 
@@ -52,7 +52,7 @@ static int thread_fn_2(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     while (!wait(events[1], events[0])) {
-        mx_nanosleep(100 * 1000 * 1000);
+        mx_nanosleep(MX_MSEC(100));
         mx_object_signal(events[2], 0u, MX_SIGNAL_SIGNALED);
     }
 
@@ -79,7 +79,7 @@ static bool basic_test(void) {
         ASSERT_EQ(ret, thrd_success, "Error during thread creation");
     }
 
-    mx_nanosleep(400 * 1000 * 1000);
+    mx_nanosleep(MX_MSEC(400));
     mx_object_signal(events[0], 0u, MX_SIGNAL_SIGNALED);
 
     for (int ix = 0; ix != 4; ++ix) {
@@ -96,7 +96,7 @@ static int thread_fn_3(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     do {
-        mx_nanosleep(200 * 1000 * 1000);
+        mx_nanosleep(MX_MSEC(200));
         mx_object_signal(events[1], MX_SIGNAL_SIGNAL_ALL, MX_SIGNAL_SIGNAL1);
     } while (!wait_user(events[2], events[0], MX_SIGNAL_SIGNAL2));
 
@@ -107,7 +107,7 @@ static int thread_fn_4(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
     while (!wait_user(events[1], events[0], MX_SIGNAL_SIGNAL1)) {
-        mx_nanosleep(100 * 1000 * 1000);
+        mx_nanosleep(MX_MSEC(100));
         mx_object_signal(events[2], MX_SIGNAL_SIGNAL_ALL, MX_SIGNAL_SIGNAL2);
     }
 
@@ -134,7 +134,7 @@ static bool user_signals_test(void) {
         ASSERT_EQ(ret, thrd_success, "Error during thread creation");
     }
 
-    mx_nanosleep(400 * 1000 * 1000);
+    mx_nanosleep(MX_MSEC(400));
     mx_object_signal(events[0], 0u, MX_SIGNAL_SIGNALED);
 
     for (int ix = 0; ix != 4; ++ix) {
@@ -148,7 +148,7 @@ static bool user_signals_test(void) {
 }
 
 static int thread_fn_closer(void* arg) {
-    mx_nanosleep(200 * 1000 * 1000);
+    mx_nanosleep(MX_MSEC(200));
 
     mx_handle_t handle = *((mx_handle_t*)arg);
     int rc = (int)mx_handle_close(handle);

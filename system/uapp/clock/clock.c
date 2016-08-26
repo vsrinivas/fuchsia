@@ -12,8 +12,6 @@
 
 #include <magenta/syscalls.h>
 
-#define  ONE_SEC (1000 * 1000 * 1000)
-
 #define  VT_ESC "\033"
 #define  SAVE_CUR  VT_ESC "7"
 #define  REST_CUR  VT_ESC "8"
@@ -54,7 +52,7 @@ int main(int argc, char** argv) {
         char* time = get_rtc_time(rtc_fd);
         if (time)
             print_at(gen_text(time), 1, 50);
-        mx_nanosleep(1u * ONE_SEC);
+        mx_nanosleep(MX_SEC(1));
     }
 
     return 0;
