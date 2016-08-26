@@ -4,40 +4,48 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show HttpStatus;
 
 import 'package:logging/logging.dart';
 import 'package:notification_handler/index_updater.dart';
+import 'package:notification_handler/message.dart';
 import 'package:shelf/shelf.dart' as shelf;
 
 final Logger _logger = new Logger('notification_handler.request_handler');
 
-/// Handles a request from the 'indexing' task queue.
+const String _subscriptionName = 'projects/google.com:modular-cloud-indexer/'
+    'subscriptions/notification-handler';
+
+/// Handles a request from the subscription specified by [subscriptionName].
 ///
 /// Currently, we assume that there is no notion of deleting a module: once a
 /// manifest is removed, we have no means of determining the URL the module is
 /// indexed against.
 Future<shelf.Response> requestHandler(shelf.Request request,
-    {IndexUpdater indexUpdater}) async {
+    {IndexUpdater indexUpdater,
+    String subscriptionName: _subscriptionName}) async {
   // In the case that an IndexUpdater is not provided, we use the one registered
   // to the current service scope.
-  indexUpdater = indexUpdater ?? indexUpdaterService;
-  const String modularQueueName = 'indexing';
+  indexUpdater ??= indexUpdaterService;
 
   if (request.method != 'POST') {
     return new shelf.Response.notFound(null);
   }
 
-  String queueName = request.headers['X-AppEngine-QueueName'];
-  if (queueName != modularQueueName) {
-    // If null, this is a malformed request. If the queue name is incorrect,
-    // the request is not relevant to this handler. In either case, we don't
-    // want to receive any more notifications.
-    _logger.info('Invalid queue name: $queueName');
+  final String pushRequest = await request.readAsString();
+  final Message message = new Message(pushRequest);
+  if (message == null) {
+    _logger.info('Invalid message received.');
+    return new shelf.Response(HttpStatus.BAD_REQUEST);
+  }
+
+  if (message.subscription != subscriptionName) {
+    // Here, we respond OK to stop further requests from being sent.
+    _logger.info('Invalid subscription: ${message.subscription}');
     return new shelf.Response.ok(null);
   }
 
-  Map<String, String> manifestNotification =
-      JSON.decode(await request.readAsString());
+  Map<String, String> manifestNotification = JSON.decode(message.data);
   if (manifestNotification['resource_state'] == 'not_exists') {
     // We currently do not support the deletion of modules. Like before, we send
     // OK to stop receiving notifications.

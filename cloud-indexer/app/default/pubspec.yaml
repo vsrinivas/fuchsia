@@ -1,0 +1,9 @@
+name: cloud_indexer
+version: 0.0.0
+description: Provides an endpoint for changes in the Modular cloud storage.
+dependencies:
+  appengine: '^0.3.0'
+  logging: any
+  mockito: any
+  shelf: any
+  test: any
