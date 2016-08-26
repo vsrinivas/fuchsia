@@ -5,21 +5,22 @@
 #include <threads.h>
 
 #include <sched.h>
-#include <stdatomic.h>
 
 #include <unittest/unittest.h>
 
 static mtx_t mutex = MTX_INIT;
 static cnd_t cond = CND_INIT;
-static atomic_int process_waked;
+static int threads_waked;
 static int threads_started;
+static int threads_woke_first_barrier;
 
 static int cond_thread(void* arg) {
     mtx_lock(&mutex);
     threads_started++;
     cnd_wait(&cond, &mutex);
+    threads_woke_first_barrier++;
     cnd_wait(&cond, &mutex);
-    atomic_fetch_add(&process_waked, 1);
+    threads_waked++;
     mtx_unlock(&mutex);
     return 0;
 }
@@ -33,34 +34,62 @@ bool cnd_test(void) {
     thrd_create(&thread2, cond_thread, (void*)(uintptr_t)1);
     thrd_create(&thread3, cond_thread, (void*)(uintptr_t)2);
 
-    int threads = 0;
-    while (threads != 3) {
-        sched_yield();
+    while (true) {
         mtx_lock(&mutex);
-        threads = threads_started;
+        int threads = threads_started;
         mtx_unlock(&mutex);
+        if (threads == 3) {
+            break;
+        }
+        sched_yield();
     }
 
     int result = cnd_broadcast(&cond);
     EXPECT_EQ(result, thrd_success, "Failed to broadcast");
 
-    int current_count;
-
-    result = cnd_signal(&cond);
-    EXPECT_EQ(result, thrd_success, "Failed to signal");
-    while ((current_count = atomic_load(&process_waked)) != 1) {
+    while (true) {
+        mtx_lock(&mutex);
+        int threads = threads_woke_first_barrier;
+        mtx_unlock(&mutex);
+        if (threads == 3) {
+            break;
+        }
         sched_yield();
     }
 
     result = cnd_signal(&cond);
     EXPECT_EQ(result, thrd_success, "Failed to signal");
-    while ((current_count = atomic_load(&process_waked)) != 2) {
+    while (true) {
+        mtx_lock(&mutex);
+        int threads = threads_waked;
+        mtx_unlock(&mutex);
+        if (threads == 1) {
+            break;
+        }
         sched_yield();
     }
 
     result = cnd_signal(&cond);
     EXPECT_EQ(result, thrd_success, "Failed to signal");
-    while ((current_count = atomic_load(&process_waked)) != 3) {
+    while (true) {
+        mtx_lock(&mutex);
+        int threads = threads_waked;
+        mtx_unlock(&mutex);
+        if (threads == 2) {
+            break;
+        }
+        sched_yield();
+    }
+
+    result = cnd_signal(&cond);
+    EXPECT_EQ(result, thrd_success, "Failed to signal");
+    while (true) {
+        mtx_lock(&mutex);
+        int threads = threads_waked;
+        mtx_unlock(&mutex);
+        if (threads == 3) {
+            break;
+        }
         sched_yield();
     }
 
