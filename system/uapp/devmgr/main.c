@@ -25,6 +25,10 @@
 
 mx_handle_t root_resource_handle;
 
+mx_handle_t get_root_resource(void) {
+    return root_resource_handle;
+}
+
 void devmgr_io_init(void) {
     // setup stdout
     uint32_t flags = devmgr_is_remote ? MX_LOG_FLAG_DEVICE : MX_LOG_FLAG_DEVMGR;

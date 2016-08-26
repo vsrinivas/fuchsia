@@ -17,3 +17,8 @@
 // On the kernel side, we define the type-safe user_ptr<> for syscall user pointer params.
 #define USER_PTR(type) mxtl::user_ptr<type>
 #include <magenta/syscalls.inc>
+
+// Determines if this handle is to a Resource object.
+// Used to provide access to privileged syscalls.
+// Later, Resource objects will be finer-grained.
+mx_status_t validate_resource_handle(mx_handle_t handle);

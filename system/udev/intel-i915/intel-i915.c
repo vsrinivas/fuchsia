@@ -196,7 +196,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     // TODO remove when the gfxconsole moves to user space
     intel_i915_enable_backlight(device, true);
-    mx_set_framebuffer(device->framebuffer, device->framebuffer_size, format, width, height, stride);
+    mx_set_framebuffer(get_root_resource(), device->framebuffer, device->framebuffer_size,
+                       format, width, height, stride);
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &intel_i915_display_proto;

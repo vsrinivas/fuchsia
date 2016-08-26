@@ -827,7 +827,7 @@ mx_status_t devmgr_control(const char* cmd) {
     const char* prefix = "kerneldebug ";
     if (!strncmp(cmd, prefix, strlen(prefix))) {
         const char* arg = cmd + strlen(prefix);
-        return mx_debug_send_command(arg, strlen(arg));
+        return mx_debug_send_command(root_resource_handle, arg, strlen(arg));
     }
 
     return ERR_NOT_SUPPORTED;

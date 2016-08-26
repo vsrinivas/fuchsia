@@ -111,7 +111,9 @@ static void set_hw_mode(bochs_vbe_device_t* dev) {
     bochs_vbe_dispi_write(dev->regs, BOCHS_VBE_DISPI_Y_OFFSET, 0);
     bochs_vbe_dispi_write(dev->regs, BOCHS_VBE_DISPI_ENABLE, 0x41);
 
-    mx_set_framebuffer(dev->framebuffer, dev->framebuffer_size, dev->info.format, dev->info.width, dev->info.height, dev->info.stride);
+    mx_set_framebuffer(get_root_resource(), dev->framebuffer,
+                       dev->framebuffer_size, dev->info.format,
+                       dev->info.width, dev->info.height, dev->info.stride);
 
 #if TRACE
     xprintf("bochs_vbe_set_hw_mode:\n");

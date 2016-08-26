@@ -191,7 +191,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_paddr_t iophys;
     void* iomem;
-    if ((r = mx_alloc_device_memory(ETH_ALLOC, &iophys, &iomem)) < 0) {
+    if ((r = mx_alloc_device_memory(get_root_resource(), ETH_ALLOC, &iophys, &iomem)) < 0) {
         printf("eth: cannot alloc buffers %d\n", r);
         goto fail;
     }

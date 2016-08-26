@@ -53,11 +53,11 @@
 #endif
 
 MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 0, void, exit, (noreturn), int retcode)
-MAGENTA_DDKCALL_DEF(2, 2, 1, int, debug_read, void* buffer, uint32_t length)
+MAGENTA_DDKCALL_DEF(3, 3, 1, int, debug_read, mx_handle_t, void* buffer, uint32_t length)
 MAGENTA_SYSCALL_DEF(2, 2, 2, int, debug_write, const void* buffer, uint32_t length)
 MAGENTA_SYSCALL_DEF(1, 2, 3, mx_status_t, nanosleep, mx_time_t nanoseconds)
 MAGENTA_SYSCALL_DEF(0, 0, 4, mx_time_t, current_time, void)
-MAGENTA_DDKCALL_DEF(2, 2, 5, int, debug_send_command, const void* buffer, uint32_t length)
+MAGENTA_DDKCALL_DEF(3, 3, 5, int, debug_send_command, mx_handle_t, const void* buffer, uint32_t length)
 
 // Temporary system calls before pending calls to get system info are created.
 MAGENTA_SYSCALL_DEF(0, 0, 6, unsigned int, num_cpus, void)
@@ -104,7 +104,7 @@ MAGENTA_SYSCALL_DEF(6, 6, 62, mx_status_t, message_write, mx_handle_t handle, US
                     uint32_t num_bytes, USER_PTR(const mx_handle_t) handles, uint32_t num_handles, uint32_t flags)
 
 // Drivers
-MAGENTA_DDKCALL_DEF(2, 2, 70, mx_handle_t, interrupt_event_create, uint32_t vector, uint32_t flags)
+MAGENTA_DDKCALL_DEF(3, 3, 70, mx_handle_t, interrupt_event_create, mx_handle_t handle, uint32_t vector, uint32_t flags)
 MAGENTA_DDKCALL_DEF(1, 1, 71, mx_status_t, interrupt_event_complete, mx_handle_t handle)
 MAGENTA_DDKCALL_DEF(1, 1, 72, mx_status_t, interrupt_event_wait, mx_handle_t handle)
 
@@ -135,11 +135,11 @@ MAGENTA_SYSCALL_DEF(2, 4, 103, mx_status_t, vm_object_get_size, mx_handle_t hand
 MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vm_object_set_size, mx_handle_t handle, uint64_t size)
 
 // temporary syscalls to access port and memory mapped devices
-MAGENTA_DDKCALL_DEF(2, 2, 105, mx_status_t, mmap_device_io, uint32_t io_addr, uint32_t len)
-MAGENTA_DDKCALL_DEF(4, 4, 106, mx_status_t, mmap_device_memory, mx_paddr_t paddr, uint32_t len,
-                    mx_cache_policy_t cache_policy, USER_PTR(void *) out_vaddr)
-MAGENTA_DDKCALL_DEF(3, 3, 107, mx_status_t, alloc_device_memory, uint32_t len, mx_paddr_t *out_paddr,
-                    void **out_vaddr)
+MAGENTA_DDKCALL_DEF(3, 3, 105, mx_status_t, mmap_device_io, mx_handle_t handle, uint32_t io_addr, uint32_t len)
+MAGENTA_DDKCALL_DEF(5, 5, 106, mx_status_t, mmap_device_memory, mx_handle_t handle, mx_paddr_t paddr,
+                    uint32_t len, mx_cache_policy_t cache_policy, USER_PTR(void *) out_vaddr)
+MAGENTA_DDKCALL_DEF(4, 4, 107, mx_status_t, alloc_device_memory, mx_handle_t handle, uint32_t len,
+                    mx_paddr_t *out_paddr, void **out_vaddr)
 
 MAGENTA_SYSCALL_DEF(2, 2, 160, mx_ssize_t, cprng_draw, USER_PTR(void) buffer, mx_size_t len);
 // TODO(security)
@@ -148,12 +148,12 @@ MAGENTA_SYSCALL_DEF(2, 2, 161, mx_status_t, cprng_add_entropy, USER_PTR(void) bu
 // TODO(security)
 MAGENTA_DDKCALL_DEF(4, 4, 170, mx_status_t, bootloader_fb_get_info, uint32_t* format, uint32_t* width,
                     uint32_t* height, uint32_t* stride)
-MAGENTA_DDKCALL_DEF(6, 6, 171, mx_status_t, set_framebuffer, void* vaddr, uint32_t len, uint32_t format,
-                    uint32_t width, uint32_t height, uint32_t stride)
+MAGENTA_DDKCALL_DEF(7, 7, 171, mx_status_t, set_framebuffer, mx_handle_t handle, void* vaddr,
+                    uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride)
 
 // temporary pci syscalls
 // TODO: remove when the pci driver moves to user space
-MAGENTA_DDKCALL_DEF(2, 2, 180, mx_handle_t, pci_get_nth_device, uint32_t index,
+MAGENTA_DDKCALL_DEF(3, 3, 180, mx_handle_t, pci_get_nth_device, mx_handle_t handle, uint32_t index,
                     mx_pcie_get_nth_info_t* out_info)
 MAGENTA_DDKCALL_DEF(1, 1, 181, mx_status_t, pci_claim_device, mx_handle_t handle)
 MAGENTA_DDKCALL_DEF(2, 2, 182, mx_status_t, pci_enable_bus_master, mx_handle_t handle, bool enable)
@@ -241,8 +241,8 @@ MAGENTA_SYSCALL_DEF(4, 4, 251, mx_status_t, object_set_property, mx_handle_t han
                     USER_PTR(const void) value, mx_size_t size)
 
 // Privileged syscalls for ACPI support
-MAGENTA_DDKCALL_DEF(0, 0, 260, uint32_t, acpi_uefi_rsdp, void)
-MAGENTA_DDKCALL_DEF(0, 0, 261, mx_status_t, acpi_cache_flush, void)
+MAGENTA_DDKCALL_DEF(1, 1, 260, uint32_t, acpi_uefi_rsdp, mx_handle_t handle)
+MAGENTA_DDKCALL_DEF(1, 1, 261, mx_status_t, acpi_cache_flush, mx_handle_t handle)
 
 // Sockets
 MAGENTA_SYSCALL_DEF(2, 2, 280, mx_status_t, socket_create, mx_handle_t out_handles[2], uint32_t flags)

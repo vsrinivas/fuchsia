@@ -24,10 +24,10 @@
 
 #define SHUTDOWN_COMMAND "poweroff"
 
-static noreturn void do_shutdown(mx_handle_t log) {
+static noreturn void do_shutdown(mx_handle_t log, mx_handle_t rroot) {
     print(log, "Process exited.  Executing \"", SHUTDOWN_COMMAND, "\".\n",
           NULL);
-    mx_debug_send_command(SHUTDOWN_COMMAND, strlen(SHUTDOWN_COMMAND));
+    mx_debug_send_command(rroot, SHUTDOWN_COMMAND, strlen(SHUTDOWN_COMMAND));
     print(log, "still here after shutdown!\n", NULL);
     while (true)
         __builtin_trap();
@@ -127,6 +127,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (resource_root == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no resource handle in bootstrap message\n");
 
+    // hand on to the resource root handle
+    mx_handle_t root_resource_handle = mx_handle_duplicate(resource_root, MX_RIGHT_SAME_RIGHTS);
+
     // Make the message pipe for the bootstrap message.
     mx_handle_t pipeh[2];
     status = mx_message_pipe_create(pipeh, 0);
@@ -206,7 +209,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         status = mx_handle_wait_one(
             proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
         check(log, status, "mx_handle_wait_one on process failed\n");
-        do_shutdown(log);
+        do_shutdown(log, root_resource_handle);
     }
 
     // Now we've accomplished our purpose in life, and we can die happy.

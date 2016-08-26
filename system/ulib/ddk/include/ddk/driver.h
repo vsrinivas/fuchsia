@@ -74,6 +74,9 @@ void driver_add(mx_driver_t* driver);
 void driver_remove(mx_driver_t* driver);
 void driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 
+// temporary accessor for root resource handle
+mx_handle_t get_root_resource(void);
+
 // panic is for handling non-recoverable, non-reportable fatal
 // errors in a way that will get logged.  Right now this just
 // does a bogus write to unmapped memory.

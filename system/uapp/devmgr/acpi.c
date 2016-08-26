@@ -48,17 +48,19 @@ mx_status_t devmgr_launch_acpisvc(void) {
         goto cleanup_handles;
     }
 
-    mx_handle_t hnd[3];
-    uint32_t ids[3];
+    mx_handle_t hnd[4];
+    uint32_t ids[4];
     ids[0] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1);
     hnd[0] = logger;
-    ids[1] = MX_HND_TYPE_USER1;
-    hnd[1] = acpi_comm[1];
-    ids[2] = MX_HND_TYPE_USER2;
-    hnd[2] = acpi_ready[1];
+    ids[1] = MX_HND_TYPE_USER0;
+    hnd[1] = mx_handle_duplicate(root_resource_handle, MX_RIGHT_SAME_RIGHTS);
+    ids[2] = MX_HND_TYPE_USER1;
+    hnd[2] = acpi_comm[1];
+    ids[3] = MX_HND_TYPE_USER2;
+    hnd[3] = acpi_ready[1];
 
     printf("devmgr: launch acpisvc\n");
-    mx_handle_t proc = launchpad_launch("acpisvc", 1, args, NULL, 3, hnd, ids);
+    mx_handle_t proc = launchpad_launch("acpisvc", 1, args, NULL, 4, hnd, ids);
     if (proc < 0) {
         printf("devmgr: acpisvc launch failed: %d\n", proc);
         status = proc;
@@ -143,10 +145,10 @@ mx_status_t devmgr_init_pcie(void) {
 
 void devmgr_poweroff(void) {
     acpisvc_s_state_transition(&acpi_root, ACPI_S_STATE_S5);
-    mx_debug_send_command("poweroff", sizeof("poweroff"));
+    mx_debug_send_command(root_resource_handle, "poweroff", sizeof("poweroff"));
 }
 
 void devmgr_reboot(void) {
     acpisvc_s_state_transition(&acpi_root, ACPI_S_STATE_REBOOT);
-    mx_debug_send_command("reboot", sizeof("reboot"));
+    mx_debug_send_command(root_resource_handle, "reboot", sizeof("reboot"));
 }

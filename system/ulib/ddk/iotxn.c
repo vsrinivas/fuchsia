@@ -186,7 +186,7 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     // didn't find one that fits, allocate a new one
     size_t sz = sizeof(iotxn_priv_t) + data_size + extra_size;
     mx_paddr_t phys;
-    mx_status_t status = mx_alloc_device_memory(sz, &phys, (void**)&priv);
+    mx_status_t status = mx_alloc_device_memory(get_root_resource(), sz, &phys, (void**)&priv);
     if (status < 0) {
         xprintf("iotxn: out of memory\n");
         return status;

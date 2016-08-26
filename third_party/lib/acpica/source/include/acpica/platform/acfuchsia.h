@@ -25,7 +25,9 @@
 #error Unexpected architecture
 #endif
 
-#define ACPI_FLUSH_CPU_CACHE() mx_acpi_cache_flush()
+extern mx_handle_t root_resource_handle;
+
+#define ACPI_FLUSH_CPU_CACHE() mx_acpi_cache_flush(root_resource_handle)
 
 // Use the standard library headers
 #define ACPI_USE_STANDARD_HEADERS

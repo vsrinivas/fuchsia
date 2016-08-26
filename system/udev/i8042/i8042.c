@@ -485,10 +485,10 @@ static int i8042_irq_thread(void* arg) {
     // enable I/O port access
     // TODO
     mx_status_t status;
-    status = mx_mmap_device_io(I8042_COMMAND_REG, 1);
+    status = mx_mmap_device_io(get_root_resource(), I8042_COMMAND_REG, 1);
     if (status)
         return 0;
-    status = mx_mmap_device_io(I8042_DATA_REG, 1);
+    status = mx_mmap_device_io(get_root_resource(), I8042_DATA_REG, 1);
     if (status)
         return 0;
 
@@ -530,10 +530,10 @@ static int i8042_irq_thread(void* arg) {
 
 static mx_status_t i8042_setup(uint8_t* ctr) {
     // enable I/O port access
-    mx_status_t status = mx_mmap_device_io(I8042_COMMAND_REG, 1);
+    mx_status_t status = mx_mmap_device_io(get_root_resource(), I8042_COMMAND_REG, 1);
     if (status)
         return status;
-    status = mx_mmap_device_io(I8042_DATA_REG, 1);
+    status = mx_mmap_device_io(get_root_resource(), I8042_DATA_REG, 1);
     if (status)
         return status;
 
@@ -681,7 +681,7 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev) {
 
     uint32_t interrupt = dev->type == INPUT_PROTO_KBD ?
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
-    dev->irq = mx_interrupt_event_create(interrupt, MX_FLAG_REMAP_IRQ);
+    dev->irq = mx_interrupt_event_create(get_root_resource(), interrupt, MX_FLAG_REMAP_IRQ);
     if (dev->irq < 0) {
         hid_release_device(&dev->hiddev);
         return dev->irq;

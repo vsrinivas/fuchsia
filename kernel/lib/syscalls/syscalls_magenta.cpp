@@ -74,6 +74,21 @@ mx_status_t BadHandle() {
 }
 }
 
+mx_status_t validate_resource_handle(mx_handle_t handle) {
+    auto up = ProcessDispatcher::GetCurrent();
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle, &dispatcher, &rights))
+        return BadHandle();
+
+    if (dispatcher->GetType() != MX_OBJ_TYPE_RESOURCE)
+        return ERR_WRONG_TYPE;
+
+    return NO_ERROR;
+}
+
+
 void sys_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
 

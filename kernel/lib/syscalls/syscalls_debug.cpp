@@ -35,8 +35,14 @@ constexpr mx_size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 #include <lib/debuglog.h>
 #endif
 
-int sys_debug_read(void* ptr, uint32_t len) {
+int sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
     LTRACEF("ptr %p\n", ptr);
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
+    }
 
     if (!len)
         return 0;
@@ -74,8 +80,14 @@ int sys_debug_write(const void* ptr, uint32_t len) {
     return len;
 }
 
-int sys_debug_send_command(const void* ptr, uint32_t len) {
+int sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
     LTRACEF("ptr %p, len %d\n", ptr, len);
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
+    }
 
     if (len > kMaxDebugWriteSize)
         return ERR_INVALID_ARGS;

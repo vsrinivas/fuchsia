@@ -299,7 +299,7 @@ static mx_status_t ahci_port_initialize(ahci_port_t* port) {
     size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS + (sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS) * AHCI_MAX_COMMANDS;
     mx_paddr_t mem_phys;
     void* mem;
-    mx_status_t status = mx_alloc_device_memory(mem_sz, &mem_phys, &mem);
+    mx_status_t status = mx_alloc_device_memory(get_root_resource(), mem_sz, &mem_phys, &mem);
     if (status < 0) {
         xprintf("ahci.%d: error %d allocating dma memory\n", port->nr, status);
         return status;

@@ -34,10 +34,12 @@ static mx_protocol_device_t kpci_device_proto = {
     .release = kpci_release,
 };
 
+extern mx_handle_t root_resource_handle;
+
 static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t index) {
     mx_pcie_get_nth_info_t info;
 
-    mx_handle_t handle = mx_pci_get_nth_device(index, &info);
+    mx_handle_t handle = mx_pci_get_nth_device(root_resource_handle, index, &info);
     if (handle < 0) {
         return handle;
     }

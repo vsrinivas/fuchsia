@@ -39,8 +39,14 @@ static_assert(MX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
 static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
-mx_handle_t sys_interrupt_event_create(uint32_t vector, uint32_t flags) {
+mx_handle_t sys_interrupt_event_create(mx_handle_t hrsrc, uint32_t vector, uint32_t flags) {
     LTRACEF("vector %u flags 0x%x\n", vector, flags);
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
@@ -90,11 +96,17 @@ mx_status_t sys_interrupt_event_complete(mx_handle_t handle_value) {
     return interrupt->InterruptComplete();
 }
 
-mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len,
+mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
                                    mxtl::user_ptr<void*> out_vaddr) {
 
     LTRACEF("addr 0x%lx len 0x%x\n", paddr, len);
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
 
     if (!out_vaddr)
         return ERR_INVALID_ARGS;
@@ -137,8 +149,15 @@ mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len,
     return NO_ERROR;
 }
 
-mx_status_t sys_alloc_device_memory(uint32_t len, mx_paddr_t* out_paddr, void** out_vaddr) {
+mx_status_t sys_alloc_device_memory(mx_handle_t hrsrc, uint32_t len,
+                                    mx_paddr_t* out_paddr, void** out_vaddr) {
     LTRACEF("len 0x%x\n", len);
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
 
     if (!out_paddr)
         return ERR_INVALID_ARGS;
@@ -190,7 +209,13 @@ mx_status_t sys_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32
 #endif
 }
 
-mx_status_t sys_set_framebuffer(void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
+mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
+
     intptr_t paddr = vaddr_to_paddr(vaddr);
     udisplay_set_framebuffer(paddr, vaddr, len);
 
@@ -225,17 +250,12 @@ static status_t pcie_irq_swizzle_from_table(const pcie_device_state_t* dev, uint
 
 mx_status_t sys_pci_init(mx_handle_t handle, mxtl::user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
 
-    auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-
-    if (!up->GetDispatcher(handle, &dispatcher, &rights)) {
-        return ERR_BAD_HANDLE;
-    }
-    if (dispatcher->GetType() != MX_OBJ_TYPE_RESOURCE) {
-        return ERR_WRONG_TYPE;
-    }
+    // TODO: finer grained validation
     // TODO(security): Add additional access checks
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
+    }
 
     mxtl::unique_ptr<mx_pci_init_arg_t, mxtl::free_delete> arg;
 
@@ -360,13 +380,19 @@ mx_status_t sys_pci_init(mx_handle_t handle, mxtl::user_ptr<mx_pci_init_arg_t> i
     return pcie_init(&init_info);
 }
 
-mx_handle_t sys_pci_get_nth_device(uint32_t index, mx_pcie_get_nth_info_t* out_info) {
+mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_get_nth_info_t* out_info) {
     /**
      * Returns the pci config of a device.
      * @param index Device index
      * @param out_info Device info (BDF address, vendor id, etc...)
      */
     LTRACE_ENTRY;
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
 
     if (!out_info)
         return ERR_INVALID_ARGS;
@@ -742,20 +768,30 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
 #include <arch/x86/descriptor.h>
 #include <arch/x86/ioport.h>
 
-mx_status_t sys_mmap_device_io(uint32_t io_addr, uint32_t len) {
+mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
+
     LTRACEF("addr 0x%x len 0x%x\n", io_addr, len);
 
     return x86_set_io_bitmap(io_addr, len, 1);
 }
 #else
-mx_status_t sys_mmap_device_io(uint32_t io_addr, uint32_t len) {
+mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len) {
     // doesn't make sense on non-x86
     return ERR_NOT_SUPPORTED;
 }
 #endif
 
-uint32_t sys_acpi_uefi_rsdp(void) {
-    // TODO(teisenbe): Use a handle to restrict this to the ACPI process
+uint32_t sys_acpi_uefi_rsdp(mx_handle_t hrsrc) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
 #if ARCH_X86
     extern uint32_t bootloader_acpi_rsdp;
     return bootloader_acpi_rsdp;
@@ -763,8 +799,12 @@ uint32_t sys_acpi_uefi_rsdp(void) {
     return 0;
 }
 
-mx_status_t sys_acpi_cache_flush(void) {
-    // TODO(teisenbe): Use a handle to restrict this to the ACPI process
+mx_status_t sys_acpi_cache_flush(mx_handle_t hrsrc) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
     // TODO(teisenbe): This should be restricted to when interrupts are
     // disabled, but we haven't added support for letting the ACPI process
     // disable interrupts yet.  It only uses this for S-state transitions

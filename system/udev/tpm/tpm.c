@@ -139,6 +139,7 @@ static mx_protocol_device_t tpm_device_proto = {
 mx_status_t tpm_init(mx_driver_t* driver) {
 #if defined(__x86_64__) || defined(__i386__)
     mx_status_t status = mx_mmap_device_memory(
+            get_root_resource(),
             TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH,
             MX_CACHE_POLICY_UNCACHED, &tpm_base);
     if (status != NO_ERROR) {
@@ -179,7 +180,7 @@ mx_status_t tpm_init(mx_driver_t* driver) {
         goto cleanup_device;
     }
 
-    irq_handle = mx_interrupt_event_create(10, MX_FLAG_REMAP_IRQ);
+    irq_handle = mx_interrupt_event_create(get_root_resource(), 10, MX_FLAG_REMAP_IRQ);
     if (irq_handle < 0) {
         status = irq_handle;
         goto cleanup_device;
