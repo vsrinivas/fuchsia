@@ -89,6 +89,15 @@ __BEGIN_CDECLS;
 
 #define USB_ENDPOINT_HALT                  0x00
 
+// Values in this enum match those used in XHCI and other parts of the USB specification
+typedef enum {
+    USB_SPEED_UNDEFINED = 0,
+    USB_SPEED_FULL = 1,
+    USB_SPEED_LOW = 2,
+    USB_SPEED_HIGH = 3,
+    USB_SPEED_SUPER = 4,
+} usb_speed_t;
+
 /* general USB defines */
 typedef struct {
     uint8_t bmRequestType;

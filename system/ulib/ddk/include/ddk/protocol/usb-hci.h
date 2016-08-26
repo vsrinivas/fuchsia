@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-device.h>
+#include <hw/usb.h>
 #include <hw/usb-hub.h>
 
 typedef struct usb_hci_protocol {

@@ -17,6 +17,7 @@
 #include <ddk/common/usb.h>
 #include <ddk/protocol/usb-device.h>
 #include <ddk/protocol/usb-hci.h>
+#include <magenta/device/usb-device.h>
 #include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -5,6 +5,7 @@
 #include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
+#include <magenta/device/usb-device.h>
 #include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>

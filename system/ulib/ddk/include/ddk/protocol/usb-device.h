@@ -5,22 +5,8 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/ioctl.h>
 #include <hw/usb.h>
 #include <hw/usb-hub.h>
-#include <system/listnode.h>
-
-typedef int direction_t;
-typedef int endpoint_type;
-
-// Values in this enum match those used in XHCI and other parts of the USB specification
-typedef enum {
-    USB_SPEED_UNDEFINED = 0,
-    USB_SPEED_FULL = 1,
-    USB_SPEED_LOW = 2,
-    USB_SPEED_HIGH = 3,
-    USB_SPEED_SUPER = 4,
-} usb_speed_t;
 
 // protocol data for iotxns
 typedef struct usb_protocol_data {
@@ -28,27 +14,6 @@ typedef struct usb_protocol_data {
     uint32_t device_id;
     uint8_t ep_address;     // bEndpointAddress from endpoint descriptor
 } usb_protocol_data_t;
-
-// returns the speed of the USB device as a usb_speed_t value
-// call with out_len = sizeof(int)
-#define IOCTL_USB_GET_DEVICE_SPEED      IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 0)
-
-// returns the device's USB device descriptor
-// call with out_len = sizeof(usb_device_descriptor_t)
-#define IOCTL_USB_GET_DEVICE_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 1)
-
-// returns the size of the USB configuration descriptor for the device's current configuration
-// call with out_len = sizeof(int)
-#define IOCTL_USB_GET_CONFIG_DESC_SIZE  IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 2)
-
-// returns the USB configuration descriptor for the device's current configuration
-// call with out_len = value returned from IOCTL_USB_GET_CONFIG_DESC_SIZE
-#define IOCTL_USB_GET_CONFIG_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 3)
-
-// fetches a string descriptor from the USB device
-// string index is passed via in_buf
-// call with in_len = sizeof(int) and out_len = size of buffer to receive string (256 recommended)
-#define IOCTL_USB_GET_STRING_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 4)
 
 // ******* FIXME Everything below this line should get moved to a private header file *******
 

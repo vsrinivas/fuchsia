@@ -7,15 +7,16 @@
 #include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
 
-#include <ddk/protocol/usb-device.h>
-#include <hw/usb.h>
 #include <ddk/hexdump.h>
+#include <hw/usb.h>
+#include <magenta/device/usb-device.h>
 
 #define DEV_USB_DEVICE "/dev/class/usb-device"
 
