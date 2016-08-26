@@ -24,6 +24,9 @@ typedef int32_t mx_status_t;
 // time in nanoseconds
 typedef uint64_t mx_time_t;
 #define MX_TIME_INFINITE UINT64_MAX
+#define MX_USEC(n) ((mx_time_t)(1000ULL * (n)))
+#define MX_MSEC(n) ((mx_time_t)(1000000ULL * (n)))
+#define MX_SEC(n)  ((mx_time_t)(1000000000ULL * (n)))
 
 typedef uint32_t mx_signals_t;
 #define MX_SIGNAL_NONE            ((mx_signals_t)0u)
