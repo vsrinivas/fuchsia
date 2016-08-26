@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/startup-handles.c \
     $(LOCAL_DIR)/stubs.c \
     $(LOCAL_DIR)/loader-service.c \
+    $(LOCAL_DIR)/watcher.c \
 
 MODULE_EXPORT := mxio
 

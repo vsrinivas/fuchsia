@@ -33,6 +33,9 @@
 // Maxium size for an ioctl input
 #define MXIO_IOCTL_MAX_INPUT 1024
 
+// Maxium length of a filename
+#define MXIO_MAX_FILENAME 255
+
 // events for mxio_wait_fd()
 #define MXIO_EVT_READABLE MX_SIGNAL_SIGNAL0
 #define MXIO_EVT_WRITABLE MX_SIGNAL_SIGNAL1
@@ -50,5 +53,6 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
 // create a pipe, installing one half in a fd, returning the other
 // for transport to another process
 mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type);
+
 
 __END_CDECLS

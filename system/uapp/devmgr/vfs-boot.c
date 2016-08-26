@@ -91,6 +91,7 @@ static vnboot_t vnb_root = {
         .pdata = &vnb_root,
         .dnode = &vnb_root_dn,
         .dn_list = LIST_INITIAL_VALUE(vnb_root.vn.dn_list),
+        .watch_list = LIST_INITIAL_VALUE(vnb_root.vn.watch_list),
     },
 };
 
@@ -111,6 +112,7 @@ static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
     vnb->vn.ops = &vn_boot_ops;
     vnb->vn.pdata = vnb;
     list_initialize(&vnb->vn.dn_list);
+    list_initialize(&vnb->vn.watch_list);
 
     vnb->data = data;
     vnb->datalen = datalen;

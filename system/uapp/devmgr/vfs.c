@@ -17,6 +17,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/device/device.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -252,6 +253,37 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
     return NO_ERROR;
 }
 
+static ssize_t do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len,
+                        void* out_buf, size_t out_len) {
+    if (op == IOCTL_DEVICE_WATCH_DIR) {
+        if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
+            return ERR_INVALID_ARGS;
+        }
+        if (vn->dnode == NULL) {
+            // not a directory
+            return ERR_WRONG_TYPE;
+        }
+        vnode_watcher_t* watcher;
+        if ((watcher = calloc(1, sizeof(vnode_watcher_t))) == NULL) {
+            return ERR_NO_MEMORY;
+        }
+        mx_handle_t h[2];
+        if (mx_message_pipe_create(h, 0) < 0) {
+            free(watcher);
+            return ERR_NO_RESOURCES;
+        }
+        watcher->h = h[1];
+        memcpy(out_buf, h, sizeof(mx_handle_t));
+        mtx_lock(&vfs_lock);
+        list_add_tail(&vn->watch_list, &watcher->node);
+        mtx_unlock(&vfs_lock);
+        xprintf("new watcher vn=%p w=%p\n", vn, watcher);
+        return sizeof(mx_handle_t);
+    } else {
+        return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+    }
+}
+
 static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
     vnode_t* vn = ios->vn;
@@ -393,8 +425,12 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
 
-        ssize_t r = vn->ops->ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+        ssize_t r = do_ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
+            if (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_GET_HANDLE) {
+                msg->hcount = 1;
+                memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
+            }
             msg->arg2.off = 0;
             msg->datalen = r;
         }
@@ -504,3 +540,21 @@ void vfs_dump_handles(void) {
     }
     mtx_unlock(&iostate_lock);
 }
+
+void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
+    xprintf("devfs: notify vn=%p name='%.*s'\n", vn, (int) len, name);
+    vnode_watcher_t* watcher;
+    vnode_watcher_t* tmp;
+    list_for_every_entry_safe(&vn->watch_list, watcher, tmp, vnode_watcher_t, node) {
+        mx_status_t status;
+        if ((status = mx_message_write(watcher->h, name, len, NULL, 0, 0)) < 0) {
+            xprintf("devfs: watcher %p write failed %d\n", watcher, status);
+            list_delete(&watcher->node);
+            mx_handle_close(watcher->h);
+            free(watcher);
+        } else {
+            xprintf("devfs: watcher %p notified\n", watcher);
+        }
+    }
+}
+

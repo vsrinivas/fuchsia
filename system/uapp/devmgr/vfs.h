@@ -26,7 +26,15 @@ struct vnode {
     // all dnodes that point at this vnode
     list_node_t dn_list;
     uint32_t dn_count;
+
+    // all directory watchers
+    list_node_t watch_list;
 };
+
+typedef struct vnode_watcher {
+    list_node_t node;
+    mx_handle_t h;
+} vnode_watcher_t;
 
 #define V_FLAG_DEVICE 1
 #define V_FLAG_REMOTE 2
@@ -38,7 +46,7 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type);
 
 
-
+void vfs_notify_add(vnode_t* vndir, const char* name, size_t namelen);
 void vfs_init(vnode_t* root);
 
 // generate mxremoteio handles

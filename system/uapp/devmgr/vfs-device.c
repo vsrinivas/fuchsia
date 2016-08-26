@@ -78,6 +78,7 @@ static vnode_t vnd_root = {
     .refcount = 1,
     .dnode = &vnd_root_dn,
     .dn_list = LIST_INITIAL_VALUE(vnd_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(vnd_root.watch_list),
 };
 
 vnode_t* devfs_get_root(void) {
@@ -110,6 +111,7 @@ static mx_status_t _devfs_add_node(vnode_t** out, vnode_t* parent, const char* n
         return ERR_NO_MEMORY;
     }
     vn->ops = &vn_device_ops;
+    list_initialize(&vn->watch_list);
 
     if (dev) {
         // attach device
@@ -129,6 +131,8 @@ static mx_status_t _devfs_add_node(vnode_t** out, vnode_t* parent, const char* n
     // add to parent dnode list
     dn_add_child(parent->dnode, dn);
     vn->dnode = dn;
+
+    vfs_notify_add(parent, name, len);
 
     xprintf("devfs_add_node() vn=%p\n", vn);
     if (dev) {
@@ -174,6 +178,7 @@ got_name:
         return r;
     }
     dn_add_child(parent->dnode, dn);
+    vfs_notify_add(parent, name, len);
     return NO_ERROR;
 }
 

@@ -240,6 +240,7 @@ static mnode_t mem_root = {
         .pdata = &mem_root,
         .dnode = &mem_root_dn,
         .dn_list = LIST_INITIAL_VALUE(mem_root.vn.dn_list),
+        .watch_list = LIST_INITIAL_VALUE(mem_root.vn.watch_list),
     },
 };
 
@@ -260,6 +261,7 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
     mem->vn.ops = &vn_mem_ops;
     mem->vn.pdata = mem;
     list_initialize(&mem->vn.dn_list);
+    list_initialize(&mem->vn.watch_list);
 
     mx_status_t r;
     dnode_t* dn;
@@ -304,6 +306,7 @@ static mnode_t vfs_root = {
         .pdata = &vfs_root,
         .dnode = &vfs_root_dn,
         .dn_list = LIST_INITIAL_VALUE(vfs_root.vn.dn_list),
+        .watch_list = LIST_INITIAL_VALUE(vfs_root.vn.watch_list),
     },
 };
 
