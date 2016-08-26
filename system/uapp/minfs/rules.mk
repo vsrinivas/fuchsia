@@ -25,8 +25,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/minfs-ops.c \
     $(LOCAL_DIR)/minfs-check.c \
 
-MODULE_STATIC_LIBS := ulib/ddk
-
 MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl
 
 include make/module.mk

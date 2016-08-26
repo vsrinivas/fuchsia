@@ -11,7 +11,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_DEPS := \
-    ulib/ddk \
     ulib/magenta \
     ulib/musl \
 

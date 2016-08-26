@@ -15,7 +15,7 @@ MODULE_EXPORT := gpt
 
 MODULE_SO_NAME := gpt
 
-MODULE_STATIC_LIBS := ulib/cksum ulib/ddk
+MODULE_STATIC_LIBS := ulib/cksum
 
 MODULE_LIBS := ulib/musl
 

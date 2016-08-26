@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ddk/protocol/devmgr.h>
-
 #include <mxio/io.h>
 #include <mxio/vfs.h>
 #include <mxio/remoteio.h>
@@ -16,6 +14,7 @@
 
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
+#include <magenta/device/devmgr.h>
 
 #include "vfs.h"
 

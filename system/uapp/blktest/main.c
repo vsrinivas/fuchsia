@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/types.h>
-#include <mxio/io.h>
-#include <sys/param.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <sys/param.h>
 
-#include <ddk/protocol/block.h>
+#include <magenta/types.h>
+#include <magenta/device/block.h>
+
+#include <mxio/io.h>
 
 static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pattern) {
     int fd = open(dev, O_RDWR);

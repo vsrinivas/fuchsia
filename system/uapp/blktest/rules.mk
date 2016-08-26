@@ -11,8 +11,6 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
-MODULE_STATIC_LIBS := ulib/ddk
-
 MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl
 
 include make/module.mk

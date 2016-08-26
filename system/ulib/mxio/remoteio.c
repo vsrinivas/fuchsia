@@ -9,13 +9,13 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/device/ioctl.h>
+
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
-
-#include <ddk/ioctl.h>
 
 #include "private.h"
 

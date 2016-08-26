@@ -24,8 +24,6 @@ MODULE_NAME := kilo
 
 MODULE_LIBS := ulib/mxio ulib/musl
 
-MODULE_HEADER_DEPS := ulib/ddk ulib/magenta
-
 MODULE_CFLAGS := -Wno-discarded-qualifiers
 
 USER_MANIFEST_LINES += src/kilo.c=$(LOCAL_DIR)/kilo.c

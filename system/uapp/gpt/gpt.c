@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/hexdump.h>
-#include <ddk/protocol/block.h>
 #include <gpt/gpt.h>
+#include <magenta/device/block.h>
 #include <magenta/syscalls.h> // for mx_cprng_draw
 #include <mxio/io.h>
 #include <stdio.h>

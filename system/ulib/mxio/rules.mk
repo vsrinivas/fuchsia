@@ -24,7 +24,6 @@ MODULE_SRCS += \
 MODULE_EXPORT := mxio
 
 MODULE_SO_NAME := mxio
-MODULE_STATIC_LIBS := ulib/ddk
 MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk

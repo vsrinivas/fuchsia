@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/types.h>
-#include <mxio/io.h>
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
@@ -18,7 +16,10 @@
 
 #include <system/listnode.h>
 
-#include <ddk/protocol/input.h>
+#include <magenta/types.h>
+#include <magenta/device/input.h>
+
+#include <mxio/io.h>
 
 #define DEV_INPUT "/dev/class/input"
 

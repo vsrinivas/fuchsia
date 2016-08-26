@@ -55,7 +55,7 @@
 
 #ifdef __Fuchsia__
 #include <mxio/io.h>
-#include <ddk/protocol/console.h>
+#include <magenta/device/console.h>
 
 static time_t time(void* arg) {
     return 0;

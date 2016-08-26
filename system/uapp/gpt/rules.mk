@@ -11,8 +11,6 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/gpt.c
 
-MODULE_STATIC_LIBS := ulib/ddk
-
 MODULE_LIBS := ulib/unittest ulib/mxio ulib/gpt ulib/magenta ulib/musl
 
 include make/module.mk
