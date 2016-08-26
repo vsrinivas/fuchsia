@@ -474,8 +474,6 @@ std::ostream& operator<<(std::ostream& os, const AVPacket* value) {
   os << begl << "int side_data_elems: " << value->side_data_elems << std::endl;
   os << begl << "int duration: " << value->duration << std::endl;
   os << begl << "int64_t pos: " << value->pos << std::endl;
-  os << begl << "int64_t convergence_duration: " << value->convergence_duration
-     << std::endl;
   return os << outdent;
 }
 

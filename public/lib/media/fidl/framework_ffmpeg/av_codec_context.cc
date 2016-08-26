@@ -68,35 +68,35 @@ std::unique_ptr<StreamType> StreamTypeFromCompressedAudioCodecContext(
     const AVCodecContext& from) {
   const char* encoding;
   switch (from.codec_id) {
-    case CODEC_ID_AAC:
+    case AV_CODEC_ID_AAC:
       encoding = StreamType::kAudioEncodingAac;
       break;
-    case CODEC_ID_AMR_NB:
+    case AV_CODEC_ID_AMR_NB:
       encoding = StreamType::kAudioEncodingAmrNb;
       break;
-    case CODEC_ID_AMR_WB:
+    case AV_CODEC_ID_AMR_WB:
       encoding = StreamType::kAudioEncodingAmrWb;
       break;
-    case CODEC_ID_FLAC:
+    case AV_CODEC_ID_FLAC:
       encoding = StreamType::kAudioEncodingFlac;
       break;
-    case CODEC_ID_GSM_MS:
+    case AV_CODEC_ID_GSM_MS:
       encoding = StreamType::kAudioEncodingGsmMs;
       break;
-    case CODEC_ID_MP3:
+    case AV_CODEC_ID_MP3:
       encoding = StreamType::kAudioEncodingMp3;
       break;
-    case CODEC_ID_PCM_ALAW:
+    case AV_CODEC_ID_PCM_ALAW:
       encoding = StreamType::kAudioEncodingPcmALaw;
       break;
-    case CODEC_ID_PCM_MULAW:
+    case AV_CODEC_ID_PCM_MULAW:
       encoding = StreamType::kAudioEncodingPcmMuLaw;
       break;
-    case CODEC_ID_VORBIS:
+    case AV_CODEC_ID_VORBIS:
       encoding = StreamType::kAudioEncodingVorbis;
       break;
     default:
-      LOG(ERROR) << "unsupported codec_id " << from.codec_id;
+      FTL_LOG(ERROR) << "unsupported codec_id " << from.codec_id;
       abort();
   }
 
@@ -164,22 +164,22 @@ std::unique_ptr<StreamType> StreamTypeFromCompressedVideoCodecContext(
     const AVCodecContext& from) {
   const char* encoding;
   switch (from.codec_id) {
-    case CODEC_ID_H263:
+    case AV_CODEC_ID_H263:
       encoding = StreamType::kVideoEncodingH263;
       break;
-    case CODEC_ID_H264:
+    case AV_CODEC_ID_H264:
       encoding = StreamType::kVideoEncodingH264;
       break;
-    case CODEC_ID_MPEG4:
+    case AV_CODEC_ID_MPEG4:
       encoding = StreamType::kVideoEncodingMpeg4;
       break;
     case AV_CODEC_ID_THEORA:
       encoding = StreamType::kVideoEncodingTheora;
       break;
-    case CODEC_ID_VP3:
+    case AV_CODEC_ID_VP3:
       encoding = StreamType::kVideoEncodingVp3;
       break;
-    case CODEC_ID_VP8:
+    case AV_CODEC_ID_VP8:
       encoding = StreamType::kVideoEncodingVp8;
       break;
     default:
@@ -255,23 +255,23 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
         abort();
     }
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAac) {
-    codec_id = CODEC_ID_AAC;
+    codec_id = AV_CODEC_ID_AAC;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAmrNb) {
-    codec_id = CODEC_ID_AMR_NB;
+    codec_id = AV_CODEC_ID_AMR_NB;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAmrWb) {
-    codec_id = CODEC_ID_AMR_WB;
+    codec_id = AV_CODEC_ID_AMR_WB;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingFlac) {
-    codec_id = CODEC_ID_FLAC;
+    codec_id = AV_CODEC_ID_FLAC;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingGsmMs) {
-    codec_id = CODEC_ID_GSM_MS;
+    codec_id = AV_CODEC_ID_GSM_MS;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingMp3) {
-    codec_id = CODEC_ID_MP3;
+    codec_id = AV_CODEC_ID_MP3;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingPcmALaw) {
-    codec_id = CODEC_ID_PCM_ALAW;
+    codec_id = AV_CODEC_ID_PCM_ALAW;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingPcmMuLaw) {
-    codec_id = CODEC_ID_PCM_MULAW;
+    codec_id = AV_CODEC_ID_PCM_MULAW;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingVorbis) {
-    codec_id = CODEC_ID_VORBIS;
+    codec_id = AV_CODEC_ID_VORBIS;
   } else {
     LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
     abort();
@@ -410,11 +410,11 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
   switch (from.codec_type) {
     case AVMEDIA_TYPE_AUDIO:
       switch (from.codec_id) {
-        case CODEC_ID_PCM_S16BE:
-        case CODEC_ID_PCM_S16LE:
-        case CODEC_ID_PCM_S24BE:
-        case CODEC_ID_PCM_S24LE:
-        case CODEC_ID_PCM_U8:
+        case AV_CODEC_ID_PCM_S16BE:
+        case AV_CODEC_ID_PCM_S16LE:
+        case AV_CODEC_ID_PCM_S24BE:
+        case AV_CODEC_ID_PCM_S24LE:
+        case AV_CODEC_ID_PCM_U8:
           return StreamTypeFromLpcmCodecContext(from);
         default:
           if (from.codec == nullptr) {
