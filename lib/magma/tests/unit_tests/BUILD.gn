@@ -61,6 +61,7 @@ source_set("magma_util_tests") {
     "test_macros.cc",
     "test_mutex.cc",
     "test_refcounted.cc",
+    "test_sleep.cc",
   ]
 
   deps = [
