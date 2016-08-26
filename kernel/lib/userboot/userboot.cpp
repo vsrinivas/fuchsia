@@ -41,6 +41,16 @@ static utils::RefPtr<Dispatcher> userboot_process;
 // gives details about their size and layout.
 extern "C" const char vdso_image[], userboot_image[];
 
+// Hold onto the vmos constructed from pages stolen from the kernel forever.
+// Since user space code may close the last handle to these, we need
+// to make sure they never get destructed to avoid returning the pages to the system.
+//
+// TODO: make this unnecessary by making sure on all archtectures the kernel can
+// tolerate a hole in its mapping. Currently on arm/arm64 this is not possible.
+static utils::RefPtr<VmObject> vdso_vmo;
+static utils::RefPtr<VmObject> userboot_vmo;
+static utils::RefPtr<VmObject> bootfs_vmo;
+static utils::RefPtr<VmObject> rootfs_vmo;
 
 // Make a new VM object populated from some pages we have on hand.
 static utils::RefPtr<VmObject> make_vmo_from_memory(const void* data,
@@ -269,19 +279,20 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %15zu @ %p\n", rsize, rbase);
 
-    auto vdso_vmo = make_vmo_from_memory(vdso_image, VDSO_CODE_END);
-    auto userboot_vmo = make_vmo_from_memory(userboot_image,
+    vdso_vmo = make_vmo_from_memory(vdso_image, VDSO_CODE_END);
+    userboot_vmo = make_vmo_from_memory(userboot_image,
                                              USERBOOT_CODE_END);
     auto stack_vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, stack_size);
     if (!vdso_vmo || !userboot_vmo || !stack_vmo)
         return ERR_NO_MEMORY;
 
     HandleUniquePtr handles[BOOTSTRAP_HANDLES];
-    mx_status_t status = get_vmo_handle(make_vmo_from_memory(bootfs, bfslen),
-                                        false, &handles[BOOTSTRAP_BOOTFS]);
-    if (status == NO_ERROR)
-        status = get_vmo_handle(make_vmo_from_memory(rbase, rsize),
-                                false, &handles[BOOTSTRAP_RAMDISK]);
+    bootfs_vmo = make_vmo_from_memory(bootfs, bfslen);
+    mx_status_t status = get_vmo_handle(bootfs_vmo, false, &handles[BOOTSTRAP_BOOTFS]);
+    if (status == NO_ERROR) {
+        rootfs_vmo = make_vmo_from_memory(rbase, rsize);
+        status = get_vmo_handle(rootfs_vmo, false, &handles[BOOTSTRAP_RAMDISK]);
+    }
     if (status == NO_ERROR)
         status = get_vmo_handle(vdso_vmo, true, &handles[BOOTSTRAP_VDSO]);
     if (status == NO_ERROR)
