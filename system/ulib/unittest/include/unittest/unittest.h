@@ -135,15 +135,19 @@ int unittest_set_verbosity_level(int new_level);
     };                                                                  \
     DEFINE_REGISTER_TEST_CASE(case_name);
 
-#define RUN_TEST(test)                                          \
-    unittest_printf_critical("    %-51s [RUNNING]", #test);     \
-    struct test_info test_info_##test;                          \
-    current_test_info = &test_info_##test;                      \
-    if (!test()) {                                              \
-        all_success = false;                                    \
-    } else {                                                    \
-        unittest_printf_critical(" [PASSED] \n");               \
+#define RUN_NAMED_TEST(name, test)                                  \
+    {                                                               \
+        unittest_printf_critical("    %-51s [RUNNING]", name);      \
+        struct test_info test_info;                                 \
+        current_test_info = &test_info;                             \
+        if (!test()) {                                              \
+            all_success = false;                                    \
+        } else {                                                    \
+            unittest_printf_critical(" [PASSED] \n");               \
+        }                                                           \
     }
+
+#define RUN_TEST(test) RUN_NAMED_TEST(#test, test)
 
 /*
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
@@ -190,6 +194,20 @@ int unittest_set_verbosity_level(int new_level);
         ret;                                               \
     }
 
+#define UT_NULL(actual, msg, ret)                               \
+    if (actual != NULL) {                                       \
+        UNITTEST_TRACEF("%s: %s is non-null!\n", msg, #actual); \
+        current_test_info->all_ok = false;                      \
+        ret;                                                    \
+    }
+
+#define UT_NONNULL(actual, msg, ret)                        \
+    if (actual == NULL) {                                   \
+        UNITTEST_TRACEF("%s: %s is null!\n", msg, #actual); \
+        current_test_info->all_ok = false;                  \
+        ret;                                                \
+    }
+
 #define UT_BYTES_EQ(expected, actual, length, msg, ret)                   \
     if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
         current_test_info->all_ok = false;                                \
@@ -233,6 +251,8 @@ int unittest_set_verbosity_level(int new_level);
 
 #define EXPECT_TRUE(actual, msg) UT_TRUE(actual, msg, DONOT_RET)
 #define EXPECT_FALSE(actual, msg) UT_FALSE(actual, msg, DONOT_RET)
+#define EXPECT_NULL(actual, msg) UT_NULL(actual, msg, DONOT_RET)
+#define EXPECT_NONNULL(actual, msg) UT_NONNULL(actual, msg, DONOT_RET)
 #define EXPECT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, DONOT_RET)
 #define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, DONOT_RET)
 
@@ -260,6 +280,8 @@ int unittest_set_verbosity_level(int new_level);
 
 #define ASSERT_TRUE(actual, msg) UT_TRUE(actual, msg, RET_FALSE)
 #define ASSERT_FALSE(actual, msg) UT_FALSE(actual, msg, RET_FALSE)
+#define ASSERT_NULL(actual, msg) UT_NULL(actual, msg, DONOT_RET)
+#define ASSERT_NONNULL(actual, msg) UT_NONNULL(actual, msg, DONOT_RET)
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
 
