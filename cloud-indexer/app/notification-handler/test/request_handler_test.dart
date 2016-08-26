@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:mockito/mockito.dart';
@@ -16,27 +15,49 @@ import 'message_test_utils.dart';
 
 class MockIndexUpdater extends Mock implements IndexUpdater {}
 
-String createChangeNotification(
-    String name, String arch, String revision, String resourceState) {
-  return JSON.encode({
-    'name': name,
-    'arch': arch,
-    'revision': revision,
-    'resource_state': resourceState
-  });
-}
-
 main() {
   group('requestHandler', () {
     final Uri testUri = Uri.parse('https://test-notification-handler.io/');
     const String testArch = 'test_arch';
     const String testRevision = 'test_revision';
-    const String testName =
-        'services/$testArch/$testRevision/test_manifest.yaml';
 
     const String testSubscription =
         'projects/subscriptions/test-modular-subscription';
     const String testMessageId = 'test_message_id';
+
+    const String jsonManifest = '{'
+        '"title":"Test Entry",'
+        '"url":"https://test.io/module.mojo",'
+        '"icon":"https://test.io/icon.png",'
+        '"themeColor":null,'
+        '"use":{},'
+        '"verb":'
+        '    {"label":{"uri":"https://seek.io","shorthand":"https://seek.io"}},'
+        '"input":[],'
+        '"output":[],'
+        '"compose":[],'
+        '"display":[],'
+        '"schemas":[],'
+        '"arch":"$testArch",'
+        '"modularRevision":"$testRevision"'
+        '}';
+
+    const String malformedJsonManifest = '{'
+        '"title":"Test Entry",'
+        '"url":"https://test.io/module.mojo",'
+        '"icon":"https://test.io/icon.png",'
+        '"themeColor":null,'
+        '"use":{},'
+        '"verb":'
+        '    {"label":{"uri":"https://seek.io","shorthand":"https://seek.io"}},'
+        '"input":[],'
+        '"output":[],'
+        '"compose":[],'
+        '"display":[],'
+        '"schemas":[],'
+        '"arch":"$testArch",'
+        '"modularRevision":"$testRevision"'
+        '}';
 
     test('Invalid push message.', () async {
       IndexUpdater indexUpdater = new MockIndexUpdater();
@@ -51,8 +72,7 @@ main() {
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: createChangeNotification(
-                  testName, testArch, testRevision, 'exists'),
+              data: jsonManifest,
               messageId: testMessageId,
               subscription: 'projects/subscriptions/not-indexing'));
       shelf.Response response = await requestHandler(request,
@@ -60,30 +80,14 @@ main() {
       expect(response.statusCode, HttpStatus.OK);
     });
 
-    test('"not_exists" request.', () async {
-      IndexUpdater indexUpdater = new MockIndexUpdater();
-      shelf.Request request = new shelf.Request('POST', testUri,
-          headers: {'X-AppEngine-QueueName': 'indexing'},
-          body: createJsonPushMessage(
-              data: createChangeNotification(
-                  testName, testArch, testRevision, 'not_exists'),
-              messageId: testMessageId,
-              subscription: testSubscription));
-      shelf.Response response = await requestHandler(request,
-          indexUpdater: indexUpdater, subscriptionName: testSubscription);
-      expect(response.statusCode, HttpStatus.OK);
-    });
-
     test('Atomic guarantee failure.', () async {
       IndexUpdater indexUpdater = new MockIndexUpdater();
-      when(indexUpdater.update(testName, testArch, testRevision)).thenAnswer(
-          (i) => throw new AtomicUpdateFailureException(
-              'Atomic guarantees failed.'));
+      when(indexUpdater.update(jsonManifest)).thenAnswer((i) =>
+          throw new AtomicUpdateFailureException('Atomic guarantees failed.'));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: createChangeNotification(
-                  testName, testArch, testRevision, 'exists'),
+              data: jsonManifest,
               messageId: testMessageId,
               subscription: testSubscription));
       shelf.Response response = await requestHandler(request,
@@ -93,14 +97,13 @@ main() {
 
     test('Cloud storage failure.', () async {
       IndexUpdater indexUpdater = new MockIndexUpdater();
-      when(indexUpdater.update(testName, testArch, testRevision)).thenAnswer(
-          (i) => throw new CloudStorageFailureException(
+      when(indexUpdater.update(jsonManifest)).thenAnswer((i) =>
+          throw new CloudStorageFailureException(
               'Internal server error.', HttpStatus.INTERNAL_SERVER_ERROR));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: createChangeNotification(
-                  testName, testArch, testRevision, 'exists'),
+              data: jsonManifest,
               messageId: testMessageId,
               subscription: testSubscription));
       shelf.Response response = await requestHandler(request,
@@ -110,13 +113,12 @@ main() {
 
     test('Manifest exception.', () async {
       IndexUpdater indexUpdater = new MockIndexUpdater();
-      when(indexUpdater.update(testName, testArch, testRevision)).thenAnswer(
-          (i) => throw new ManifestException('Manifest not found (404).'));
+      when(indexUpdater.update(malformedJsonManifest)).thenAnswer(
+          (i) => throw new ManifestException('Malformed manifest.'));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: createChangeNotification(
-                  testName, testArch, testRevision, 'exists'),
+              data: malformedJsonManifest,
               messageId: testMessageId,
               subscription: testSubscription));
       shelf.Response response = await requestHandler(request,
@@ -126,13 +128,12 @@ main() {
 
     test('Valid notification.', () async {
       IndexUpdater indexUpdater = new MockIndexUpdater();
-      when(indexUpdater.update(testName, testArch, testRevision))
+      when(indexUpdater.update(jsonManifest))
           .thenReturn(new Future.value(null));
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: createChangeNotification(
-                  testName, testArch, testRevision, 'exists'),
+              data: jsonManifest,
               messageId: testMessageId,
               subscription: testSubscription));
       shelf.Response response = await requestHandler(request,

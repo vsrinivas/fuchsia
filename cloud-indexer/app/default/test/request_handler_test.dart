@@ -2,120 +2,159 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show HttpStatus;
+import 'dart:io';
 
+import 'package:cloud_indexer/module_uploader.dart';
 import 'package:cloud_indexer/request_handler.dart';
-import 'package:gcloud/pubsub.dart';
-import 'package:googleapis/pubsub/v1.dart' show DetailedApiRequestError;
+import 'package:cloud_indexer/tarball.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:test/test.dart';
 
-class MockPubSub extends Mock implements PubSub {}
+shelf.Request multipartRequest(
+    Uri uri, String boundary, String name, List<int> bytes) {
+  final Map<String, String> headers = {
+    'Content-Type': 'multipart/form-data; boundary="$boundary"'
+  };
 
-class MockTopic extends Mock implements Topic {}
+  final Iterable<List<int>> requestBody = [
+    '--$boundary\r\n',
+    'Content-Type: application/octet-stream\r\n',
+    'Content-Disposition: form-data; name="$name"\r\n\r\n',
+    bytes,
+    '\r\n--$boundary--\r\n\r\n'
+  ].map((i) => (i is String) ? ASCII.encode(i) : i);
 
-String createChangeNotification(String name, String bucket) =>
-    JSON.encode({'name': name, 'bucket': bucket});
+  return new shelf.Request('POST', uri,
+      headers: headers, body: new Stream.fromIterable(requestBody));
+}
+
+class MockModuleUploader extends Mock implements ModuleUploader {}
 
 main() {
   group('requestHandler', () {
-    const String testArch = 'test_arch';
-    const String testRevision = 'test_revision';
-    const String testName = 'services/$testArch/$testRevision/test_module.yaml';
-    const String testBucketName = 'test-modular-bucket';
-    const String testTopicName = 'projects/topics/test-modular-topic';
+    const String testName = 'module';
+    const String testBoundary = 'gc0p4Jq0M2Yt08jU534c0p';
+    final List<int> testBytes = UTF8.encode('This is a test.');
+    final Uri defaultUri = Uri.parse('https://default-service.io/api/upload');
 
-    final Uri defaultUri = Uri.parse('https://default-service.io/');
+    test('Incorrect path.', () async {
+      ModuleUploader moduleUploader = new MockModuleUploader();
+      shelf.Request request =
+          new shelf.Request('POST', Uri.parse('https://default-service.io/'));
+      shelf.Response response =
+          await requestHandler(request, moduleUploader: moduleUploader);
+      expect(response.statusCode, HttpStatus.NOT_FOUND);
 
-    test('Invalid resource state.', () async {
-      PubSub pubSub = new MockPubSub();
-      shelf.Request request = new shelf.Request('POST', defaultUri);
-      shelf.Response response = await requestHandler(request,
-          pubSub: pubSub, bucketName: testBucketName, topicName: testTopicName);
-
-      // The object change notification service should resend the notification.
-      expect(response.statusCode, greaterThan(299));
+      // Ensure that nothing was processed.
+      verifyNever(moduleUploader.processUpload(any));
     });
 
-    test('Sync request.', () async {
-      PubSub pubSub = new MockPubSub();
-      shelf.Request request = new shelf.Request('POST', defaultUri, headers: {
-        'X-Goog-Resource-State': 'sync',
-        'X-Goog-Resource-Uri': 'https://resource-uri.io/'
-      });
-      shelf.Response response = await requestHandler(request,
-          pubSub: pubSub, bucketName: testBucketName, topicName: testTopicName);
-
-      expect(response.statusCode, HttpStatus.OK);
+    test('Invalid boundary.', () async {
+      ModuleUploader moduleUploader = new MockModuleUploader();
+      shelf.Request request =
+          multipartRequest(defaultUri, 'test"boundary', testName, testBytes);
+      shelf.Response response =
+          await requestHandler(request, moduleUploader: moduleUploader);
+      expect(response.statusCode, HttpStatus.BAD_REQUEST);
+      verifyNever(moduleUploader.processUpload(any));
     });
 
-    test('Invalid bucket.', () async {
-      PubSub pubSub = new MockPubSub();
-      shelf.Request request = new shelf.Request('POST', defaultUri,
-          headers: {'X-Goog-Resource-State': 'exists'},
-          body: createChangeNotification(testName, 'non-modular-bucket'));
-      shelf.Response response = await requestHandler(request,
-          pubSub: pubSub, bucketName: testBucketName, topicName: testTopicName);
-
-      // We want to let the notification pass.
-      expect(response.statusCode, HttpStatus.OK);
+    test('Missing tarball.', () async {
+      ModuleUploader moduleUploader = new MockModuleUploader();
+      shelf.Request request =
+          multipartRequest(defaultUri, testBoundary, 'file', testBytes);
+      shelf.Response response =
+          await requestHandler(request, moduleUploader: moduleUploader);
+      expect(response.statusCode, HttpStatus.BAD_REQUEST);
+      verifyNever(moduleUploader.processUpload(any));
     });
 
-    test('Invalid name.', () async {
-      PubSub pubSub = new MockPubSub();
+    test('Cloud storage failure.', () async {
+      ModuleUploader moduleUploader = new MockModuleUploader();
+      when(moduleUploader.processUpload(any)).thenAnswer((i) =>
+          throw new CloudStorageException(
+              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
 
-      // The name is invalid because it is not a yaml manifest.
-      shelf.Request request = new shelf.Request('POST', defaultUri,
-          headers: {'X-Goog-Resource-State': 'exists'},
-          body: createChangeNotification(
-              'services/test_arch/test_revision/test_module.json',
-              testBucketName));
-      shelf.Response response = await requestHandler(request,
-          pubSub: pubSub, bucketName: testBucketName, topicName: testTopicName);
+      shelf.Request request =
+          multipartRequest(defaultUri, testBoundary, testName, testBytes);
+      shelf.Response response =
+          await requestHandler(request, moduleUploader: moduleUploader);
+      expect(response.statusCode, HttpStatus.INTERNAL_SERVER_ERROR);
 
-      // We want to let the notification pass.
-      expect(response.statusCode, HttpStatus.OK);
+      // Verify that the payload was correctly parsed.
+      Stream<List<int>> data =
+          verify(moduleUploader.processUpload(captureAny)).captured.single;
+      BytesBuilder bytesBuilder = await data.fold(
+          new BytesBuilder(),
+          (BytesBuilder bytesBuilder, List<int> bytes) =>
+              bytesBuilder..add(bytes));
+      expect(bytesBuilder.toBytes(), testBytes);
+    });
+
+    test('Pub/Sub failure.', () async {
+      ModuleUploader moduleUploader = new MockModuleUploader();
+      when(moduleUploader.processUpload(any)).thenAnswer((i) =>
+          throw new CloudStorageException(
+              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
+
+      shelf.Request request =
+          multipartRequest(defaultUri, testBoundary, testName, testBytes);
+      shelf.Response response =
+          await requestHandler(request, moduleUploader: moduleUploader);
+      expect(response.statusCode, HttpStatus.INTERNAL_SERVER_ERROR);
+
+      Stream<List<int>> data =
+          verify(moduleUploader.processUpload(captureAny)).captured.single;
+      BytesBuilder bytesBuilder = await data.fold(
+          new BytesBuilder(),
+          (BytesBuilder bytesBuilder, List<int> bytes) =>
+              bytesBuilder..add(bytes));
+      expect(bytesBuilder.toBytes(), testBytes);
+    });
+
+    test('Tarball failure.', () async {
+      ModuleUploader moduleUploader = new MockModuleUploader();
+      when(moduleUploader.processUpload(any)).thenAnswer((i) =>
+          throw new TarballException('Tarball did not contain a manifest.'));
+
+      shelf.Request request =
+          multipartRequest(defaultUri, testBoundary, testName, testBytes);
+      shelf.Response response =
+          await requestHandler(request, moduleUploader: moduleUploader);
+
+      // In general, we fault the requester should we have a TarballException.
+      expect(response.statusCode, HttpStatus.BAD_REQUEST);
+
+      Stream<List<int>> data =
+          verify(moduleUploader.processUpload(captureAny)).captured.single;
+      BytesBuilder bytesBuilder = await data.fold(
+          new BytesBuilder(),
+          (BytesBuilder bytesBuilder, List<int> bytes) =>
+              bytesBuilder..add(bytes));
+      expect(bytesBuilder.toBytes(), testBytes);
     });
 
     test('Valid request.', () async {
-      PubSub pubSub = new MockPubSub();
-      Topic topic = new MockTopic();
-      when(pubSub.lookupTopic(testTopicName)).thenReturn(topic);
+      ModuleUploader moduleUploader = new MockModuleUploader();
+      when(moduleUploader.processUpload(any))
+          .thenReturn(new Future.value(null));
 
-      shelf.Request request = new shelf.Request('POST', defaultUri,
-          headers: {'X-Goog-Resource-State': 'exists'},
-          body: createChangeNotification(testName, testBucketName));
-      shelf.Response response = await requestHandler(request,
-          pubSub: pubSub, bucketName: testBucketName, topicName: testTopicName);
-
-      Message message = verify(topic.publish(captureAny)).captured[0];
-      Message expectedMessage = new Message.withString(JSON.encode({
-        'name': testName,
-        'arch': testArch,
-        'revision': testRevision,
-        'resource_state': 'exists'
-      }));
-      expect(
-          JSON.decode(message.asString), JSON.decode(expectedMessage.asString));
-
+      shelf.Request request =
+          multipartRequest(defaultUri, testBoundary, testName, testBytes);
+      shelf.Response response =
+          await requestHandler(request, moduleUploader: moduleUploader);
       expect(response.statusCode, HttpStatus.OK);
-    });
 
-    test('Valid request, but Pub/Sub request error.', () async {
-      PubSub pubSub = new MockPubSub();
-      when(pubSub.lookupTopic(testTopicName)).thenAnswer((i) =>
-          throw new DetailedApiRequestError(
-              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
-
-      shelf.Request request = new shelf.Request('POST', defaultUri,
-          headers: {'X-Goog-Resource-State': 'exists'},
-          body: createChangeNotification(testName, testBucketName));
-      shelf.Response response = await requestHandler(request,
-          pubSub: pubSub, bucketName: testBucketName, topicName: testTopicName);
-
-      expect(response.statusCode, greaterThan(299));
+      Stream<List<int>> data =
+          verify(moduleUploader.processUpload(captureAny)).captured.single;
+      BytesBuilder bytesBuilder = await data.fold(
+          new BytesBuilder(),
+          (BytesBuilder bytesBuilder, List<int> bytes) =>
+              bytesBuilder..add(bytes));
+      expect(bytesBuilder.toBytes(), testBytes);
     });
   });
 }

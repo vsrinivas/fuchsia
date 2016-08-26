@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io' show HttpStatus;
 
 import 'package:logging/logging.dart';
@@ -45,22 +44,9 @@ Future<shelf.Response> requestHandler(shelf.Request request,
     return new shelf.Response.ok(null);
   }
 
-  Map<String, String> manifestNotification = JSON.decode(message.data);
-  if (manifestNotification['resource_state'] == 'not_exists') {
-    // We currently do not support the deletion of modules. Like before, we send
-    // OK to stop receiving notifications.
-    _logger.info('Unsupported resource state: \'not_exists\'');
-    return new shelf.Response.ok(null);
-  }
-
-  // Parsing manifest attributes.
-  final String manifestPath = manifestNotification['name'];
-  final String manifestArch = manifestNotification['arch'];
-  final String manifestRevision = manifestNotification['revision'];
-
   try {
-    _logger.info('Starting update for manifest: $manifestPath');
-    await indexUpdater.update(manifestPath, manifestArch, manifestRevision);
+    _logger.info('Starting manifest update.');
+    await indexUpdater.update(message.data);
   } on AtomicUpdateFailureException {
     return new shelf.Response.internalServerError();
   } on CloudStorageFailureException {
@@ -71,6 +57,6 @@ Future<shelf.Response> requestHandler(shelf.Request request,
     return new shelf.Response.ok(null);
   }
 
-  _logger.info('Finished update for manifest: $manifestPath');
+  _logger.info('Finished manifest update.');
   return new shelf.Response.ok(null);
 }

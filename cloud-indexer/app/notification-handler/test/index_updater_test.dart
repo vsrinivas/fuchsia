@@ -21,27 +21,30 @@ class MockObjectsResourceApi extends Mock
 
 main() {
   group('updateManifestUri', () {
+    const String testBucketName = 'test_bucket_name';
+    const String testArch = 'linux-x64';
+    const String testRevision = 'b54f77abb289dcf2e39bc6f78ecab189aaf77a89';
+    const String testPrefix = 'https://storage.googleapis.com/$testBucketName/'
+        'services/$testArch/$testRevision/';
+
     const String testManifest1 = '#!mojo https://tq.mojoapps.io/handler.mojo\n'
         'title: Test Module 1\n'
+        'arch: $testArch\n'
+        'modularRevision: $testRevision\n'
         'icon: https://tq.mojoapps.io/test_module_1/icon.png\n'
         'url: https://tq.mojoapps.io/test_module_1.mojo\n'
         'verb: https://discover.io';
 
     const String testManifest2 = '#!mojo https://tq.mojoapps.io/handler.mojo\n'
         'title: Test Module 2\n'
+        'arch: $testArch\n'
+        'modularRevision: $testRevision\n'
         'url: https://tq.mojoapps.io/test_module_2.mojo\n'
         'verb: https://find.io';
 
-    const String testBucketName = 'test_bucket_name';
-    const String testArch = 'test_arch';
-    const String testRevision = 'test_revision';
-    const String testPrefix = 'https://storage.googleapis.com/$testBucketName/'
-        'services/$testArch/$testRevision/';
-
     test('Update both URI and icon.', () async {
       Manifest manifest = new Manifest.parseYamlString(testManifest1);
-      Manifest updatedManifest =
-          updateManifestUri(manifest, testBucketName, testArch, testRevision);
+      Manifest updatedManifest = updateManifestUri(manifest, testBucketName);
       expect(updatedManifest.url, Uri.parse('${testPrefix}test_module_1.mojo'));
       expect(updatedManifest.icon,
           Uri.parse('${testPrefix}test_module_1/icon.png'));
@@ -49,8 +52,7 @@ main() {
 
     test('Update icon.', () async {
       Manifest manifest = new Manifest.parseYamlString(testManifest2);
-      Manifest updatedManifest =
-          updateManifestUri(manifest, testBucketName, testArch, testRevision);
+      Manifest updatedManifest = updateManifestUri(manifest, testBucketName);
       expect(updatedManifest.url, Uri.parse('${testPrefix}test_module_2.mojo'));
       expect(updatedManifest.icon, null);
     });
@@ -58,34 +60,49 @@ main() {
 
   group('updateIndex', () {
     const String testBucketName = 'test_bucket_name';
-    const String testArch = 'test_arch';
-    const String testRevision = 'test_revision';
+    const String testArch = 'linux-x64';
+    const String testRevision = 'b54f77abb289dcf2e39bc6f78ecab189aaf77a89';
     const String testDirectory = 'services/$testArch/$testRevision/';
-    const String testManifestPath = '${testDirectory}test_manifest.yaml';
     const String testIndexPath = '${testDirectory}index.json';
     const String testPrefix =
         'https://storage.googleapis.com/$testBucketName/$testDirectory';
 
     const String testGeneration = '100001';
 
-    // This is a malformed manifest because 'uri' should be 'url'.
-    const String malformedManifest =
-        '#!mojo https://tq.mojoapps.io/handler.mojo\n'
-        'title: Malformed Manifest\n'
-        'icon: https://tq.mojoapps.io/test_module_1/icon.png\n'
-        'uri: https://tq.mojoapps.io/test_module_1.mojo\n'
-        'verb: https://discover.io';
     const String validManifest = '#!mojo https://tq.mojoapps.io/handler.mojo\n'
         'title: Valid Manifest\n'
+        'arch: $testArch\n'
+        'modularRevision: $testRevision\n'
         'icon: https://tq.mojoapps.io/test_module_1/icon.png\n'
         'url: https://tq.mojoapps.io/test_module_1.mojo\n'
         'verb: https://discover.io';
+
     const String updatedValidManifest =
         '#!mojo https://tq.mojoapps.io/handler.mojo\n'
         'title: Valid Manifest\n'
+        'arch: $testArch\n'
+        'modularRevision: $testRevision\n'
         'icon: ${testPrefix}test_module_1/icon.png\n'
         'url: ${testPrefix}test_module_1.mojo\n'
         'verb: https://discover.io';
+
+    // This jsonManifest is malformed because it is missing its arch field.
+    const String malformedJsonManifest = '{'
+        '"title":"Test Entry",'
+        '"url":"https://test.io/module.mojo",'
+        '"icon":"https://test.io/icon.png",'
+        '"themeColor":null,'
+        '"use":{},'
+        '"verb":'
+        '    {"label":{"uri":"https://seek.io","shorthand":"https://seek.io"}},'
+        '"input":[],'
+        '"output":[],'
+        '"compose":[],'
+        '"display":[],'
+        '"schemas":[],'
+        '"modularRevision":"$testRevision"'
+        '}';
+
     const String jsonIndex = '[{'
         '"title":"Test Entry",'
         '"url":"https://test.io/module.mojo",'
@@ -98,88 +115,32 @@ main() {
         '"output":[],'
         '"compose":[],'
         '"display":[],'
-        '"schemas":[]}]';
+        '"schemas":[],'
+        '"arch":"$testArch",'
+        '"modularRevision":"$testRevision"'
+        '}]';
 
-    test('Malformed manifest.', () async {
-      storage_api.Object indexResource = new storage_api.Object();
-      indexResource.generation = testGeneration;
+    String getJsonManifest(String yamlManifest) =>
+        new Manifest.parseYamlString(yamlManifest).toJsonString();
+    final Matcher throwsManifestException =
+        throwsA(new isInstanceOf<ManifestException>());
+    final Matcher throwsCloudStorageFailureException =
+        throwsA(new isInstanceOf<CloudStorageFailureException>());
+    final Matcher throwsAtomicUpdateFailureException =
+        throwsA(new isInstanceOf<AtomicUpdateFailureException>());
 
-      storage_api.Media indexData = new storage_api.Media(
-          new Stream.fromIterable([jsonIndex.codeUnits]),
-          jsonIndex.codeUnits.length);
-      storage_api.Media manifestData = new storage_api.Media(
-          new Stream.fromIterable([malformedManifest.codeUnits]),
-          malformedManifest.codeUnits.length);
-
+    test('Malformed manifest.', () {
       storage_api.StorageApi api = new MockApi();
       storage_api.ObjectsResourceApi objectsResourceApi =
           new MockObjectsResourceApi();
       when(api.objects).thenReturn(objectsResourceApi);
 
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenReturn(new Future.value(indexResource));
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              ifGenerationMatch: testGeneration,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(indexData));
-      when(objectsResourceApi.get(testBucketName, testManifestPath,
-              ifGenerationMatch: null,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(manifestData));
-
       IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
-      expect(indexUpdater.update(testManifestPath, testArch, testRevision),
-          throwsA(new isInstanceOf<ManifestException>()));
-
-      // Ensure that there were no state changes.
-      verifyNever(objectsResourceApi.insert(null, testBucketName,
-          ifGenerationMatch: testGeneration, uploadMedia: any));
-    });
-
-    test('Failed to fetch manifest.', () async {
-      storage_api.Object indexResource = new storage_api.Object();
-      indexResource.generation = testGeneration;
-
-      storage_api.Media indexData = new storage_api.Media(
-          new Stream.fromIterable([jsonIndex.codeUnits]),
-          jsonIndex.codeUnits.length);
-
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
-
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenReturn(new Future.value(indexResource));
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              ifGenerationMatch: testGeneration,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(indexData));
-      when(objectsResourceApi.get(testBucketName, testManifestPath,
-              ifGenerationMatch: null,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
-              HttpStatus.GATEWAY_TIMEOUT, 'Gateway timeout. Try again later.'));
-
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
-      expect(indexUpdater.update(testManifestPath, testArch, testRevision),
-          throwsA(new isInstanceOf<CloudStorageFailureException>()));
-
-      // Ensure that there were no state changes.
-      verifyNever(objectsResourceApi.insert(null, testBucketName,
-          name: testIndexPath,
-          ifGenerationMatch: testGeneration,
-          uploadMedia: any,
-          downloadOptions: storage_api.DownloadOptions.Metadata));
+      expect(
+          indexUpdater.update(malformedJsonManifest), throwsManifestException);
     });
 
     test('Non-existent index.', () async {
-      storage_api.Media manifestData = new storage_api.Media(
-          new Stream.fromIterable([validManifest.codeUnits]),
-          validManifest.codeUnits.length);
-
       storage_api.StorageApi api = new MockApi();
       storage_api.ObjectsResourceApi objectsResourceApi =
           new MockObjectsResourceApi();
@@ -189,17 +150,13 @@ main() {
               projection: 'full'))
           .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
               HttpStatus.NOT_FOUND, 'Resource not found.'));
-      when(objectsResourceApi.get(testBucketName, testManifestPath,
-              ifGenerationMatch: null,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(manifestData));
 
       Index index = new Index();
       index.addManifest(updatedValidManifest);
       String updatedJsonIndex = renderJsonIndex(index);
 
       IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
-      await indexUpdater.update(testManifestPath, testArch, testRevision);
+      await indexUpdater.update(getJsonManifest(validManifest));
 
       // A generation of '0' indicates that the object must not already be in
       // cloud storage.
@@ -216,16 +173,36 @@ main() {
           await UTF8.decodeStream(resultingIndexData.stream), updatedJsonIndex);
     });
 
-    test('Valid index and manifest.', () async {
+    test('Error fetching index.', () {
+      storage_api.StorageApi api = new MockApi();
+      storage_api.ObjectsResourceApi objectsResourceApi =
+          new MockObjectsResourceApi();
+      when(api.objects).thenReturn(objectsResourceApi);
+
+      when(objectsResourceApi.get(testBucketName, testIndexPath,
+              projection: 'full'))
+          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
+              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
+
+      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      expect(
+          indexUpdater.update(getJsonManifest(validManifest)).whenComplete(() {
+            verifyNever(objectsResourceApi.insert(null, testBucketName,
+                ifGenerationMatch: any,
+                name: testIndexPath,
+                uploadMedia: captureAny,
+                downloadOptions: storage_api.DownloadOptions.Metadata));
+          }),
+          throwsCloudStorageFailureException);
+    });
+
+    test('Error writing index.', () {
       storage_api.Object indexResource = new storage_api.Object();
       indexResource.generation = testGeneration;
 
       storage_api.Media indexData = new storage_api.Media(
           new Stream.fromIterable([jsonIndex.codeUnits]),
           jsonIndex.codeUnits.length);
-      storage_api.Media manifestData = new storage_api.Media(
-          new Stream.fromIterable([validManifest.codeUnits]),
-          validManifest.codeUnits.length);
 
       storage_api.StorageApi api = new MockApi();
       storage_api.ObjectsResourceApi objectsResourceApi =
@@ -239,10 +216,39 @@ main() {
               ifGenerationMatch: testGeneration,
               downloadOptions: storage_api.DownloadOptions.FullMedia))
           .thenReturn(new Future.value(indexData));
-      when(objectsResourceApi.get(testBucketName, testManifestPath,
-              ifGenerationMatch: null,
+      when(objectsResourceApi.insert(null, testBucketName,
+              ifGenerationMatch: any,
+              name: testIndexPath,
+              uploadMedia: any,
+              downloadOptions: storage_api.DownloadOptions.Metadata))
+          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
+              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
+
+      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      expect(indexUpdater.update(getJsonManifest(validManifest)),
+          throwsCloudStorageFailureException);
+    });
+
+    test('Valid index and manifest.', () async {
+      storage_api.Object indexResource = new storage_api.Object();
+      indexResource.generation = testGeneration;
+
+      storage_api.Media indexData = new storage_api.Media(
+          new Stream.fromIterable([jsonIndex.codeUnits]),
+          jsonIndex.codeUnits.length);
+
+      storage_api.StorageApi api = new MockApi();
+      storage_api.ObjectsResourceApi objectsResourceApi =
+          new MockObjectsResourceApi();
+      when(api.objects).thenReturn(objectsResourceApi);
+
+      when(objectsResourceApi.get(testBucketName, testIndexPath,
+              projection: 'full'))
+          .thenReturn(new Future.value(indexResource));
+      when(objectsResourceApi.get(testBucketName, testIndexPath,
+              ifGenerationMatch: testGeneration,
               downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(manifestData));
+          .thenReturn(new Future.value(indexData));
 
       Index index = new Index();
       index.addJsonIndex(jsonIndex);
@@ -250,13 +256,13 @@ main() {
       String updatedJsonIndex = renderJsonIndex(index);
 
       IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
-      await indexUpdater.update(testManifestPath, testArch, testRevision);
+      await indexUpdater.update(getJsonManifest(validManifest));
 
       storage_api.Media resultingIndexData = verify(objectsResourceApi.insert(
               null, testBucketName,
               ifGenerationMatch: testGeneration,
               name: testIndexPath,
-              uploadMedia: captureAny,
+              uploadMedia: captureThat(new isInstanceOf<storage_api.Media>()),
               downloadOptions: storage_api.DownloadOptions.Metadata))
           .captured
           .single;
@@ -265,16 +271,13 @@ main() {
           await UTF8.decodeStream(resultingIndexData.stream), updatedJsonIndex);
     });
 
-    test('Atomic update failure: existing index.', () async {
+    test('Atomic update failure: existing index.', () {
       storage_api.Object indexResource = new storage_api.Object();
       indexResource.generation = testGeneration;
 
       storage_api.Media indexData = new storage_api.Media(
           new Stream.fromIterable([jsonIndex.codeUnits]),
           jsonIndex.codeUnits.length);
-      storage_api.Media manifestData = new storage_api.Media(
-          new Stream.fromIterable([validManifest.codeUnits]),
-          validManifest.codeUnits.length);
 
       storage_api.StorageApi api = new MockApi();
       storage_api.ObjectsResourceApi objectsResourceApi =
@@ -288,28 +291,20 @@ main() {
               ifGenerationMatch: testGeneration,
               downloadOptions: storage_api.DownloadOptions.FullMedia))
           .thenReturn(new Future.value(indexData));
-      when(objectsResourceApi.get(testBucketName, testManifestPath,
-              ifGenerationMatch: null,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(manifestData));
       when(objectsResourceApi.insert(null, testBucketName,
               ifGenerationMatch: testGeneration,
               name: testIndexPath,
-              uploadMedia: captureAny,
+              uploadMedia: any,
               downloadOptions: storage_api.DownloadOptions.Metadata))
           .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
               HttpStatus.PRECONDITION_FAILED, 'Preconditions failed.'));
 
       IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
-      expect(indexUpdater.update(testManifestPath, testArch, testRevision),
-          throwsA(new isInstanceOf<AtomicUpdateFailureException>()));
+      expect(indexUpdater.update(getJsonManifest(validManifest)),
+          throwsAtomicUpdateFailureException);
     });
 
-    test('Atomic update failure: non-existent index.', () async {
-      storage_api.Media manifestData = new storage_api.Media(
-          new Stream.fromIterable([validManifest.codeUnits]),
-          validManifest.codeUnits.length);
-
+    test('Atomic update failure: non-existent index.', () {
       storage_api.StorageApi api = new MockApi();
       storage_api.ObjectsResourceApi objectsResourceApi =
           new MockObjectsResourceApi();
@@ -319,21 +314,17 @@ main() {
               projection: 'full'))
           .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
               HttpStatus.NOT_FOUND, 'Resource not found.'));
-      when(objectsResourceApi.get(testBucketName, testManifestPath,
-              ifGenerationMatch: null,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(manifestData));
       when(objectsResourceApi.insert(null, testBucketName,
               ifGenerationMatch: '0',
               name: testIndexPath,
-              uploadMedia: captureAny,
+              uploadMedia: any,
               downloadOptions: storage_api.DownloadOptions.Metadata))
           .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
               HttpStatus.PRECONDITION_FAILED, 'Preconditions failed.'));
 
       IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
-      expect(indexUpdater.update(testManifestPath, testArch, testRevision),
-          throwsA(new isInstanceOf<AtomicUpdateFailureException>()));
+      expect(indexUpdater.update(getJsonManifest(validManifest)),
+          throwsAtomicUpdateFailureException);
     });
   });
 }

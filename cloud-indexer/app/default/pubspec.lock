@@ -19,6 +19,12 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.3.3"
+  archive:
+    description:
+      name: archive
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.25"
   args:
     description:
       name: args
@@ -175,6 +181,24 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.0.0"
+  modular:
+    description:
+      path: "../../../dart-packages/modular"
+      relative: true
+    source: path
+    version: "0.2.6"
+  modular_core:
+    description:
+      path: "../../../dart-packages/modular_core"
+      relative: true
+    source: path
+    version: "0.2.6"
+  mojo:
+    description:
+      name: mojo
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.4.28"
   package_config:
     description:
       name: package_config
@@ -187,6 +211,12 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.0.1"
+  parser:
+    description:
+      path: "../../../parser"
+      relative: true
+    source: path
+    version: "0.0.0"
   path:
     description:
       name: path
@@ -295,6 +325,12 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.9.0+3"
+  uuid:
+    description:
+      name: uuid
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.5.3"
   watcher:
     description:
       name: watcher

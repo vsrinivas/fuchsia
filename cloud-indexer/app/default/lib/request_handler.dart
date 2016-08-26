@@ -3,79 +3,64 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:gcloud/pubsub.dart';
-import 'package:googleapis/pubsub/v1.dart' show DetailedApiRequestError;
 import 'package:logging/logging.dart';
+import 'package:mime/mime.dart';
 import 'package:shelf/shelf.dart' as shelf;
 
-final Logger _logger = new Logger('cloud_indexer');
-final RegExp _manifestRegExp =
-    new RegExp(r'^services/([^/]+)/([^/]+)/[^/]+.yaml$');
+import 'module_uploader.dart';
+import 'tarball.dart';
 
-const String _topicName =
-    'projects/google.com:modular-cloud-indexer/topics/indexing';
+final Logger _logger = new Logger('cloud_indexer.request_handler');
+final RegExp _boundaryRegExp =
+    new RegExp(r'^.*boundary=(?:"([^"]+)"|([^\s"]+))$');
+
+const String _namePattern = 'name="module"';
 
 Future<shelf.Response> requestHandler(shelf.Request request,
-    {PubSub pubSub, String bucketName, String topicName: _topicName}) async {
-  // Override variables from the service scope or environment depending on
-  // whether they are provided as function arguments.
-  pubSub ??= pubsubService;
-  bucketName ??= Platform.environment['BUCKET_NAME'];
+    {ModuleUploader moduleUploader}) async {
+  // Override variables from the service scope as default values.
+  moduleUploader ??= moduleUploaderService;
 
-  if (request.method != 'POST') {
+  if (request.method != 'POST' || request.url.path != 'api/upload') {
     return new shelf.Response.notFound(null);
   }
 
-  final String resourceState = request.headers['X-Goog-Resource-State'];
-  switch (resourceState) {
-    case 'sync':
-      _logger.info('Sync message received for URI: '
-          '${request.headers['X-Goog-Resource-Uri']}');
-      return new shelf.Response.ok(null);
-    case 'not_exists':
-    case 'exists':
-      _logger.info('State change notification received.');
-      final Map<String, dynamic> changeNotification = await request
-          .read()
-          .transform(UTF8.decoder)
-          .transform(JSON.decoder)
-          .single;
-
-      if (changeNotification['bucket'] != bucketName) {
-        _logger.warning('Invalid bucket name received. Bailing out.');
-        return new shelf.Response.ok(null);
-      }
-
-      String name = changeNotification['name'];
-      Match match = _manifestRegExp.matchAsPrefix(name);
-      if (match == null) {
-        _logger.info('Non-manifest file added. Bailing out.');
-        return new shelf.Response.ok(null);
-      }
-
-      Map<String, String> result = {
-        'name': name,
-        'resource_state': resourceState,
-        'arch': match.group(1),
-        'revision': match.group(2)
-      };
-
-      try {
-        _logger.info('Publishing manifest to be indexed: $name');
-        Topic topic = await pubSub.lookupTopic(topicName);
-        topic.publish(new Message.withString(JSON.encode(result)));
-      } on DetailedApiRequestError catch (e) {
-        _logger.warning(
-            'Failed to publish to indexing topic (${e.status}): ${e.message}');
-        return new shelf.Response.internalServerError();
-      }
-
-      return new shelf.Response.ok(null);
-    default:
-      _logger.info('Resource state $resourceState not supported.');
-      return new shelf.Response(HttpStatus.BAD_REQUEST);
+  String contentType = request.headers['Content-Type'];
+  if (!contentType.startsWith('multipart/form-data')) {
+    // TODO(victorkwan): Update with identifying information once we have
+    // authentication implemented. Here, and below.
+    _logger.info('Invalid content-type received. Bailing out.');
+    return new shelf.Response(HttpStatus.BAD_REQUEST);
   }
+
+  Match boundaryMatch = _boundaryRegExp.matchAsPrefix(contentType);
+  if (boundaryMatch == null) {
+    _logger.info('Invalid boundary received. Bailing out.');
+    return new shelf.Response(HttpStatus.BAD_REQUEST,
+        body: 'Invalid boundary.');
+  }
+
+  String boundary = boundaryMatch.group(1) ?? boundaryMatch.group(2);
+  Stream<MimeMultipart> parts =
+      request.read().transform(new MimeMultipartTransformer(boundary));
+  await for (MimeMultipart part in parts) {
+    String contentDisposition = part.headers['content-disposition'];
+    if (!contentDisposition.contains(_namePattern)) continue;
+
+    try {
+      await moduleUploader.processUpload(part);
+      return new shelf.Response.ok(null);
+    } on CloudStorageException {
+      return new shelf.Response.internalServerError();
+    } on PubSubException {
+      return new shelf.Response.internalServerError();
+    } on TarballException catch (e) {
+      return new shelf.Response(HttpStatus.BAD_REQUEST, body: e.toString());
+    }
+  }
+
+  _logger.info('Request did not contain a tarball. Bailing out.');
+  return new shelf.Response(HttpStatus.BAD_REQUEST, body: 'Missing tarball.');
 }

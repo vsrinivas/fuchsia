@@ -78,25 +78,24 @@ ManifestException _manifestException(String message) {
 /// We assume that all URLs are prefixed with 'https://tq.mojoapps.io' and
 /// should be replaced with a URL in
 /// 'https://storage.googleapis.com/$bucketName/services/$arch/$revision/'.
-Manifest updateManifestUri(
-    Manifest manifest, String bucketName, String arch, String revision) {
+Manifest updateManifestUri(Manifest manifest, String bucketName) {
   final String tqPath = 'https://tq.mojoapps.io';
   final String versionedUrl = 'https://storage.googleapis.com/$bucketName/'
-      'services/$arch/$revision/';
+      'services/${manifest.arch}/${manifest.modularRevision}/';
 
   String relativeUrl = path.relative(manifest.url.toString(), from: tqPath);
   Uri uri = Uri.parse(path.join(versionedUrl, relativeUrl));
 
   Uri icon;
   if (manifest.icon != null) {
-    String relativeIcon =
-        path.relative(manifest.icon.toString(), from: tqPath);
+    String relativeIcon = path.relative(manifest.icon.toString(), from: tqPath);
     icon = Uri.parse(path.join(versionedUrl, relativeIcon));
   }
 
   return new Manifest(manifest.title, uri, manifest.use, manifest.verb,
       manifest.input, manifest.output, manifest.display, manifest.compose,
-      icon: icon, themeColor: manifest.themeColor, schemas: manifest.schemas);
+      icon: icon, themeColor: manifest.themeColor, schemas: manifest.schemas,
+      arch: manifest.arch, modularRevision: manifest.modularRevision);
 }
 
 class IndexUpdater {
@@ -107,6 +106,10 @@ class IndexUpdater {
       : _api = new storage_api.StorageApi(client);
 
   IndexUpdater.fromApi(this._api, this.bucketName);
+
+  static String storageDestinationPath(
+          String arch, String modularRevision, String file) =>
+      path.join('services', arch, modularRevision, file);
 
   Future<storage_api.Object> _getObjectResource(String objectName) =>
       _api.objects.get(bucketName, objectName, projection: 'full');
@@ -126,17 +129,28 @@ class IndexUpdater {
           uploadMedia: objectData,
           downloadOptions: storage_api.DownloadOptions.Metadata);
 
-  /// Updates the index given some [manifestName] to be indexed.
-  ///
-  /// We assume that for some given manifest with name
-  /// services/<arch>/<revision>/manifest.yaml, the index should be located in
-  /// services/<arch>/<revision>/index.json.
-  Future<Null> update(String manifestName, String arch, String revision) async {
+  /// Updates the index given some [jsonManifest] to be indexed.
+  Future<Null> update(String jsonManifest) async {
+    Manifest manifest;
+    try {
+      manifest = new Manifest.fromJsonString(jsonManifest);
+      if (manifest.arch == null || manifest.modularRevision == null) {
+        throw _manifestException(
+            'Manifest did not have `arch` or `modularRevision` fields.');
+      }
+    } on ParseError {
+      throw _manifestException('Error parsing manifest.');
+    } on FormatException {
+      // Currently, some JSON-related exceptions are not handled by
+      // the Manifest.fromJsonString method.
+      throw _manifestException('Error parsing manifest.');
+    }
+
     final Index index = new Index();
-    final String jsonIndexName =
-        path.normalize(path.join(path.dirname(manifestName), 'index.json'));
-    final String htmlIndexName =
-        path.normalize(path.join(path.dirname(manifestName), 'index.html'));
+    final String jsonIndexName = storageDestinationPath(
+        manifest.arch, manifest.modularRevision, 'index.json');
+    final String htmlIndexName = storageDestinationPath(
+        manifest.arch, manifest.modularRevision, 'index.html');
 
     storage_api.Object indexResource;
     try {
@@ -159,29 +173,10 @@ class IndexUpdater {
       }
     }
 
-    try {
-      _logger.info('Fetching manifest from cloud storage.');
-      storage_api.Media manifestData = await _getObjectData(manifestName);
-      String yamlManifest = await UTF8.decodeStream(manifestData.stream);
-      Manifest updatedManifest = updateManifestUri(
-          new Manifest.parseYamlString(yamlManifest),
-          bucketName,
-          arch,
-          revision);
-
-      _logger.info('Updating index.');
-      index.addParsedManifest(updatedManifest);
-    } on storage_api.DetailedApiRequestError catch (e) {
-      switch (e.status) {
-        case HttpStatus.NOT_FOUND:
-          throw _manifestException('Manifest $manifestName not found.');
-        default:
-          throw _cloudStorageFailureException(
-              'Manifest $manifestName could not be fetched.', e.status);
-      }
-    } on ParseError {
-      throw _manifestException('Manifest $manifestName was malformed');
-    }
+    // We add the manifest *after* the older index. This way, the manifest
+    // will overwrite its entry in the index.
+    Manifest updatedManifest = updateManifestUri(manifest, bucketName);
+    index.addParsedManifest(updatedManifest);
 
     List<int> updatedJsonIndex = renderJsonIndex(index).codeUnits;
     storage_api.Media updatedJsonIndexData = new storage_api.Media(
