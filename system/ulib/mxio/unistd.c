@@ -57,39 +57,38 @@ int mxio_bind_to_fd(mxio_t* io, int fd, int starting_fd) {
     mxio_t* io_to_close = NULL;
 
     mtx_lock(&mxio_lock);
-    if (fd >= 0) {
-        if (fd >= MAX_MXIO_FD) {
-            errno = EINVAL;
-            fd = -1;
-            goto fail;
-        } else if (mxio_fdtab[fd]) {
-            io_to_close = mxio_fdtab[fd];
-        }
-    } else {
+    if (fd < 0) {
+        // A negative fd implies that any free fd value can be used
         //TODO: bitmap, ffs, etc
         for (fd = starting_fd; fd < MAX_MXIO_FD; fd++) {
             if (mxio_fdtab[fd] == NULL) {
-                goto ok;
+                goto free_fd_found;
             }
         }
         errno = EMFILE;
-        fd = -1;
-        goto fail;
-    }
-
-ok:
-    if (io_to_close) {
-        io_to_close->dupcount--;
-        if (io_to_close->dupcount > 0) {
-            // still alive in another fdtab slot
-            mxio_release(io_to_close);
-            io_to_close = NULL;
+        mtx_unlock(&mxio_lock);
+        return -1;
+    } else if (fd >= MAX_MXIO_FD) {
+        errno = EINVAL;
+        mtx_unlock(&mxio_lock);
+        return -1;
+    } else {
+        io_to_close = mxio_fdtab[fd];
+        if (io_to_close) {
+            io_to_close->dupcount--;
+            if (io_to_close->dupcount > 0) {
+                // still alive in another fdtab slot
+                mxio_release(io_to_close);
+                io_to_close = NULL;
+            }
         }
     }
+
+free_fd_found:
     io->dupcount++;
     mxio_fdtab[fd] = io;
-fail:
     mtx_unlock(&mxio_lock);
+
     if (io_to_close) {
         io_to_close->ops->close(io_to_close);
         mxio_release(io_to_close);
@@ -98,14 +97,13 @@ fail:
 }
 
 mxio_t* __mxio_fd_to_io(int fd) {
+    if ((fd < 0) || (fd >= MAX_MXIO_FD)) {
+        return NULL;
+    }
     mxio_t* io = NULL;
     mtx_lock(&mxio_lock);
-    if ((fd < 0) || (fd >= MAX_MXIO_FD)) {
-        io = NULL;
-    } else {
-        if ((io = mxio_fdtab[fd]) != NULL) {
-            mxio_acquire(io);
-        }
+    if ((io = mxio_fdtab[fd]) != NULL) {
+        mxio_acquire(io);
     }
     mtx_unlock(&mxio_lock);
     return io;
@@ -189,22 +187,21 @@ static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, cons
         dirpath[1] = 0;
     } else {
         if ((name - path) > (ptrdiff_t)(sizeof(dirpath) - 1)) {
-            r = ERR_INVALID_ARGS;
-            goto fail;
+            mxio_release(iodir);
+            return ERR_INVALID_ARGS;
         }
         memcpy(dirpath, path, name - path);
         dirpath[name - path] = 0;
         name++;
     }
     if (name[0] == 0) {
-        r = ERR_INVALID_ARGS;
-        goto fail;
+        mxio_release(iodir);
+        return ERR_INVALID_ARGS;
     }
 
     *_name = name;
     r = iodir->ops->open(iodir, dirpath, O_DIRECTORY, 0, io);
 
-fail:
     mxio_release(iodir);
     return r;
 }
@@ -528,13 +525,13 @@ int dup(int oldfd) {
 }
 
 int fcntl(int fd, int cmd, ...) {
-    // Note that it is not safe to pull out the int out of the
-    // variadic arguments at the top level, as callers are not
-    // required to pass anything for many of the commands.
-#define GET_INT_ARG(ARG)                        \
-    va_list args;                               \
-    va_start(args, cmd);                        \
-    int ARG = va_arg(args, int);                \
+// Note that it is not safe to pull out the int out of the
+// variadic arguments at the top level, as callers are not
+// required to pass anything for many of the commands.
+#define GET_INT_ARG(ARG)         \
+    va_list args;                \
+    va_start(args, cmd);         \
+    int ARG = va_arg(args, int); \
     va_end(args)
 
     switch (cmd) {
@@ -614,7 +611,7 @@ int unlink(const char* path) {
     if ((r = __mxio_opendir_containing(&io, path, &name)) < 0) {
         return ERROR(r);
     }
-    r = io->ops->misc(io, MXRIO_UNLINK, 0, (void*) name, strlen(name));
+    r = io->ops->misc(io, MXRIO_UNLINK, 0, (void*)name, strlen(name));
     io->ops->close(io);
     mxio_release(io);
     return STATUS(r);
@@ -685,14 +682,13 @@ int mkdir(const char* path, mode_t mode) {
 
     mode = (mode & 0777) | S_IFDIR;
 
-    if ((r = __mxio_open(&io, NULL, path, O_CREAT|O_EXCL|O_RDWR, mode)) < 0) {
+    if ((r = __mxio_open(&io, NULL, path, O_CREAT | O_EXCL | O_RDWR, mode)) < 0) {
         return ERROR(r);
     }
     io->ops->close(io);
     mxio_release(io);
     return 0;
 }
-
 
 int fstat(int fd, struct stat* s) {
     mxio_t* io = fd_to_io(fd);
@@ -779,7 +775,7 @@ static void update_cwd_path(const char* path) {
         }
         if ((seglen == 2) && (path[0] == '.') && (path[1] == '.')) {
             // parent directory, remove the trailing path segment from cwd_path
-            char *x = strrchr(mxio_cwd_path, '/');
+            char* x = strrchr(mxio_cwd_path, '/');
             if (x == NULL) {
                 // shouldn't ever happen
                 goto wat;
@@ -799,7 +795,7 @@ static void update_cwd_path(const char* path) {
             // doesn't fit, shouldn't happen, but...
             goto wat;
         }
-        if(len != 1) {
+        if (len != 1) {
             // if len is 1, path is "/", so don't append a '/'
             mxio_cwd_path[len++] = '/';
         }
@@ -813,7 +809,7 @@ wat:
     return;
 }
 
-char *getcwd(char* buf, size_t size) {
+char* getcwd(char* buf, size_t size) {
     char tmp[PATH_MAX];
     if (buf == NULL) {
         buf = tmp;
@@ -910,12 +906,12 @@ int closedir(DIR* dir) {
     return 0;
 }
 
-struct dirent *readdir(DIR* dir) {
+struct dirent* readdir(DIR* dir) {
     mtx_lock(&dir->lock);
     struct dirent* de = &dir->de;
     for (;;) {
         if (dir->size >= sizeof(vdirent_t)) {
-            vdirent_t* vde = (void*) dir->ptr;
+            vdirent_t* vde = (void*)dir->ptr;
             if (dir->size >= vde->size) {
                 de->d_ino = 0;
                 de->d_off = 0;
