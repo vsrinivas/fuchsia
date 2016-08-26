@@ -7,8 +7,8 @@
 #include <threads.h>
 
 #include <acpisvc/protocol.h>
+#include <magenta/compiler.h>
 #include <magenta/syscalls.h>
-#include <system/compiler.h>
 
 __BEGIN_CDECLS
 
