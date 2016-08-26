@@ -10,7 +10,7 @@
 #ifndef ASSEMBLY
 
 #include <stdbool.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <reg.h>
 #include <arch/arm64.h>
 

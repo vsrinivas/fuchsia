@@ -7,7 +7,7 @@
 #pragma once
 
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdint.h>
 #include <arch/x86.h>
 

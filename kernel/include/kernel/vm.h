@@ -32,7 +32,7 @@
 
 #include <arch.h>
 #include <arch/mmu.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <list.h>
 #include <stdint.h>
 #include <stdlib.h>

@@ -6,7 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <debug.h>
 #include <dev/pcie.h>
 #include <err.h>

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <dev/pcie.h>
 #include <sys/types.h>
 #include <list.h>

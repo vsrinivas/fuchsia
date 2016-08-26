@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <arch/arm/cores.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 /* due to the cp15 accessors below, you're gonna have a bad time if you try
  * to compile in thumb mode. Either compile in ARM only or get a thumb2 capable cpu.

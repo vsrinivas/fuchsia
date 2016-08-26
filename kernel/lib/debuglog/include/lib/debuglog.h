@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <list.h>

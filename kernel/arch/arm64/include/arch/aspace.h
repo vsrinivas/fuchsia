@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <list.h>
 #include <arch/arm64/mmu.h>
 

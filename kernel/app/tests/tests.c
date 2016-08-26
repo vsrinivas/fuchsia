@@ -8,7 +8,7 @@
 #include <app.h>
 #include <debug.h>
 #include <app/tests.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 #if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>

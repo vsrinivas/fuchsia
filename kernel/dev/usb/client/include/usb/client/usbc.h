@@ -8,7 +8,7 @@
 #ifndef __DEV_USBC_H
 #define __DEV_USBC_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>

@@ -9,7 +9,7 @@
 #pragma once
 
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <dev/pci.h>
 #include <dev/pcie_constants.h>
 #include <endian.h>

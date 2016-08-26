@@ -8,7 +8,7 @@
 #ifndef __RAND_H
 #define __RAND_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS;

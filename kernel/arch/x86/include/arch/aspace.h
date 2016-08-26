@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <arch/x86/mmu.h>
 #include <kernel/spinlock.h>
 

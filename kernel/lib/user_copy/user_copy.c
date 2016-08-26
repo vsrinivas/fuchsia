@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdlib.h>
 #include <string.h>
 #include <arch/user_copy.h>

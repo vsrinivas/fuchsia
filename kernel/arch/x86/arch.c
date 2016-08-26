@@ -9,7 +9,7 @@
 
 
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <debug.h>
 #include <err.h>
 #include <trace.h>

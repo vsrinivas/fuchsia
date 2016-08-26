@@ -8,7 +8,7 @@
 #ifndef __STDIO_H
 #define __STDIO_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <printf.h>
 #include <sys/types.h>
 #include <lib/io.h>

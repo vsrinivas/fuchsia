@@ -7,7 +7,7 @@
 #include <lib/crypto/prng.h>
 
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <err.h>
 #include <lib/crypto/cryptolib.h>
 #include <kernel/auto_lock.h>

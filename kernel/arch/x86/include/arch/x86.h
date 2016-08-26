@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stdbool.h>

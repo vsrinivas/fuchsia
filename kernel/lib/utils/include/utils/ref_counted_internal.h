@@ -7,7 +7,7 @@
 #pragma once
 
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <debug.h>
 
 namespace utils {

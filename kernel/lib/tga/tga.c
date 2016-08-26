@@ -16,7 +16,7 @@
 #include <debug.h>
 #include <trace.h>
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <lib/tga.h>
 
 #define LOCAL_TRACE 0

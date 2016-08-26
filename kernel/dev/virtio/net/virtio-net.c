@@ -10,7 +10,7 @@
 #include <debug.h>
 #include <assert.h>
 #include <trace.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <list.h>
 #include <string.h>
 #include <err.h>

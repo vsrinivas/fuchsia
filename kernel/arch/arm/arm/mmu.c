@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <err.h>
 #include <string.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <pow2.h>
 #include <arch.h>
 #include <arch/ops.h>

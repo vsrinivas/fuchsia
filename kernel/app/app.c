@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <app.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <kernel/thread.h>
 
 extern const struct app_descriptor __start_apps[] __WEAK;

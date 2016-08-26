@@ -8,7 +8,7 @@
 #include <debug.h>
 #include <trace.h>
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <err.h>
 #include <string.h>
 #include <ctype.h>

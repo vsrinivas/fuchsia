@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <utils/type_support.h>
 
 namespace utils {

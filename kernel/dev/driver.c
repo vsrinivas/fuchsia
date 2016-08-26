@@ -8,7 +8,7 @@
 
 #include <dev/driver.h>
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <err.h>
 #include <trace.h>
 

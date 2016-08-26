@@ -9,7 +9,7 @@
 #define __HW_USB_H
 
 #include <sys/types.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 /* GLOBAL STATUS VALUES */
 #define STD_COMMAND                 0x00

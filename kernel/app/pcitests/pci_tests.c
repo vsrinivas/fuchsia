@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <platform.h>
 #include <dev/pci.h>
 

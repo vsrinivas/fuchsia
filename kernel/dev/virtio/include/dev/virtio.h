@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <assert.h>
 #include <list.h>
 #include <sys/types.h>

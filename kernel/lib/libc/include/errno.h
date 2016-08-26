@@ -8,7 +8,7 @@
 #ifndef __ERRNO_H
 #define __ERRNO_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

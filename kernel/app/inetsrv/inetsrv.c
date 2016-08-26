@@ -11,7 +11,7 @@
 #include <trace.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <kernel/thread.h>
 #include <lib/minip.h>
 #include <lib/tftp.h>

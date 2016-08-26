@@ -7,7 +7,7 @@
 #ifndef __KERNEL_COND_H
 #define __KERNEL_COND_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <sys/types.h>

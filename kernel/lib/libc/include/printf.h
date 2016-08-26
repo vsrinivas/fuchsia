@@ -9,7 +9,7 @@
 #define __LIB_PRINTF_H
 
 #include <stdarg.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stddef.h>
 
 __BEGIN_CDECLS

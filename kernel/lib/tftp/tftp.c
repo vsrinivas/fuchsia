@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <list.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <endian.h>
 #include <stdbool.h>
 #include <lib/minip.h>

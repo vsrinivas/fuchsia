@@ -8,7 +8,7 @@
 #ifndef __ARCH_H
 #define __ARCH_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS

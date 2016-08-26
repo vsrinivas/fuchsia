@@ -9,7 +9,7 @@
 #define __DEV_USB_H
 
 #include <sys/types.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

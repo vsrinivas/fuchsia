@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <lib/version.h>
 
 #define MAGIC  ((uint32_t)'BSIG')

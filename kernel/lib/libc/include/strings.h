@@ -7,7 +7,7 @@
 #if !defined(__STRINGS_H)
 #define __STRINGS_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS;
 

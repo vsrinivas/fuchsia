@@ -8,7 +8,7 @@
 #ifndef __STDLIB_H
 #define __STDLIB_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <sys/types.h>
 #include <stddef.h>
 #include <malloc.h>

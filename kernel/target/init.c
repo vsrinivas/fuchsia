@@ -8,7 +8,7 @@
 #include <err.h>
 #include <debug.h>
 #include <target.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 /*
  * default implementations of these routines, if the target code

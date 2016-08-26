@@ -24,7 +24,7 @@
 #include <arch/x86/mp.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/registers.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <string.h>

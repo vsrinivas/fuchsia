@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <debug.h>
 #include <kernel/debug.h>
 #include <kernel/thread.h>

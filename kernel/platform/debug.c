@@ -6,7 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <debug.h>
 #include <trace.h>
 

@@ -191,7 +191,7 @@
 
 #include <sys/types.h>
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <arch/arm.h>
 
 __BEGIN_CDECLS

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <utils/ref_ptr.h>
 #include <utils/unique_ptr.h>
 #include <utils/type_support.h>

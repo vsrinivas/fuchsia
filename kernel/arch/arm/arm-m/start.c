@@ -6,7 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdint.h>
 
 /* externals */

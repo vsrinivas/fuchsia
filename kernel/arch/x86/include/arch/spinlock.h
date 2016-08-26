@@ -8,7 +8,7 @@
 #pragma once
 
 #include <arch/x86.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdbool.h>
 
 __BEGIN_CDECLS

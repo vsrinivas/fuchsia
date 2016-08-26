@@ -9,7 +9,7 @@
 #define __PCI_H
 
 #include <sys/types.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 /*
  * PCI access return codes

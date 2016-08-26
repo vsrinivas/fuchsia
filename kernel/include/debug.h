@@ -9,7 +9,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <platform/debug.h>
 
 #if !defined(LK_DEBUGLEVEL)

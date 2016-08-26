@@ -7,7 +7,7 @@
 #ifndef __PLATFORM_ACPI_H
 #define __PLATFORM_ACPI_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 #include <acpica/acpi.h>
 

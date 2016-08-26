@@ -7,7 +7,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

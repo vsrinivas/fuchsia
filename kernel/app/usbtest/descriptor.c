@@ -8,7 +8,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <target.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <usb/client/usb.h>
 #include <usb/client/usbc.h>
 #include <hw/usb.h>

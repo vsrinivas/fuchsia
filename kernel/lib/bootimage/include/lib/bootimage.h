@@ -8,7 +8,7 @@
 #pragma once
 
 #include <sys/types.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <lib/bootimage_struct.h>
 
 typedef struct bootimage bootimage_t;

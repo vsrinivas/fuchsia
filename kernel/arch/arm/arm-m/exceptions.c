@@ -7,7 +7,7 @@
 
 #include <debug.h>
 #include <stdio.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdint.h>
 #include <kernel/thread.h>
 #include <arch/arm/cm.h>

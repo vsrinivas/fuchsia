@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <iovec.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdarg.h>
 
 __BEGIN_CDECLS

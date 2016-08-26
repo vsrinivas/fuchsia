@@ -8,7 +8,7 @@
 #ifndef __ASSERT_H
 #define __ASSERT_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <debug.h>
 
 #define ASSERT(x) \

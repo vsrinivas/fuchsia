@@ -8,7 +8,7 @@
 #ifndef __APP_TESTS_H
 #define __APP_TESTS_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <lib/console.h>
 
 __BEGIN_CDECLS

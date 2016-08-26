@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <platform/pc/acpi.h>
 
 bool hpet_is_present(void);

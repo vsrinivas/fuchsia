@@ -8,7 +8,7 @@
 #ifndef __KERNEL_DEBUG_H
 #define __KERNEL_DEBUG_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS;
 

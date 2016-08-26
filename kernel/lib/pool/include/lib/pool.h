@@ -52,7 +52,7 @@
  * }
  */
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stddef.h>
 #include <stdint.h>
 

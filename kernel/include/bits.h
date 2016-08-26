@@ -8,7 +8,7 @@
 #ifndef __BITS_H
 #define __BITS_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <arch/ops.h>
 
 __BEGIN_CDECLS;

@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <kernel/mp.h>
 
 __BEGIN_CDECLS

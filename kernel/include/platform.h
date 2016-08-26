@@ -9,7 +9,7 @@
 #define __PLATFORM_H
 
 #include <sys/types.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS;
 

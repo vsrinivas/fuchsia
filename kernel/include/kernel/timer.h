@@ -8,7 +8,7 @@
 #ifndef __KERNEL_TIMER_H
 #define __KERNEL_TIMER_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <list.h>
 #include <sys/types.h>
 

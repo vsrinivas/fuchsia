@@ -9,7 +9,7 @@
  * Functions for unit tests.  See lib/unittest/include/unittest.h for usage.
  */
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <debug.h>
 #include <err.h>
 #include <platform.h>

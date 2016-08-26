@@ -41,7 +41,7 @@
 
 #ifndef ASSEMBLY
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <sys/types.h>
 #include <reg.h>
 

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <arch/x86/registers.h>
 #include <sys/types.h>
 

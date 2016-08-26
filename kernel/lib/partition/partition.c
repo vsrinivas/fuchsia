@@ -8,7 +8,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdlib.h>
 #include <arch.h>
 #include <lib/bio.h>

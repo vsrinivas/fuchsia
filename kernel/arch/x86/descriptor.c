@@ -14,7 +14,7 @@
 #include <arch/x86/mp.h>
 #include <arch/arch_ops.h>
 #include <assert.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <err.h>
 #include <string.h>
 #include <trace.h>

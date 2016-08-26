@@ -29,7 +29,7 @@
 #include <arch/spinlock.h>
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdint.h>
 
 __BEGIN_CDECLS

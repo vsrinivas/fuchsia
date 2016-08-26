@@ -152,7 +152,7 @@
 #ifndef ASSEMBLY
 
 #include <sys/types.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>

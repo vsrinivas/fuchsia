@@ -8,7 +8,7 @@
 #ifndef __LIST_H
 #define __LIST_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <stddef.h>
 #include <stdbool.h>
 

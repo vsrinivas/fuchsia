@@ -7,7 +7,7 @@
 
 #include <debug.h>
 #include <err.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <platform.h>
 #include <platform/debug.h>
 #include <kernel/thread.h>

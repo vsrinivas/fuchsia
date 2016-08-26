@@ -8,7 +8,7 @@
 #ifndef __LIB_VERSION_H
 #define __LIB_VERSION_H
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

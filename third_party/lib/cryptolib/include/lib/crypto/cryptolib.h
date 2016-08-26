@@ -22,7 +22,7 @@
 #pragma once
 
 #include <inttypes.h>
-#include <compiler.h>
+#include <magenta/compiler.h>
 
 #define clBIGNUMBYTES 256      // 2048 bit key length max
 #define clBIGNUMWORDS (clBIGNUMBYTES / sizeof(uint32_t))

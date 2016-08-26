@@ -86,7 +86,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <compiler.h>
+#include <magenta/compiler.h>
 #include <trace.h>
 
 __BEGIN_CDECLS
