@@ -40,7 +40,6 @@
 typedef struct {
     mx_device_t device;
     mx_device_t* udev;
-    usb_device_protocol_t* usb_p;
     mx_driver_t* driver;
 
     bool busy;
@@ -122,61 +121,58 @@ static mx_status_t ums_get_max_lun(ums_t* msd, void* data) {
     return status;
 }
 
-static usb_request_t* get_free_write(ums_t* msd) {
+static iotxn_t* get_free_write(ums_t* msd) {
     list_node_t* node = list_remove_head(&msd->free_write_reqs);
     if (!node) {
-        return 0;
+        return NULL;
     }
-    // zero out memory so buffer is clean
-    usb_request_t* request = containerof(node, usb_request_t, node);
-    memset(request->buffer, 0, USB_BUF_SIZE);
-    return request;
+    return containerof(node, iotxn_t, node);
 }
 
-static usb_request_t* get_free_read(ums_t* msd) {
+static iotxn_t* get_free_read(ums_t* msd) {
     list_node_t* node = list_remove_head(&msd->free_read_reqs);
     if (!node) {
-        return 0;
+        return NULL;
     }
-    usb_request_t* request = containerof(node, usb_request_t, node);
-    memset(request->buffer, 0, USB_BUF_SIZE);
-    return request;
+    return containerof(node, iotxn_t, node);
 }
 
-static mx_status_t ums_queue_request(ums_t* msd, usb_request_t* request) {
+static void ums_queue_request(ums_t* msd, iotxn_t* txn) {
     if (!(msd->busy)) {
         msd->busy = true;
-        return msd->usb_p->queue_request(msd->udev, request);
+        iotxn_queue(msd->udev, txn);
     } else {
-        list_add_tail(&msd->queued_reqs, &request->node);
-        return 0;
+        list_add_tail(&msd->queued_reqs, &txn->node);
     }
 }
 
 static mx_status_t ums_send_cbw(ums_t* msd, uint32_t tag, uint32_t transfer_length, uint8_t flags,
                                 uint8_t lun, uint8_t command_len, void* command) {
-    usb_request_t* request = get_free_write(msd);
-    if (!request) {
+    iotxn_t* txn = get_free_write(msd);
+    if (!txn) {
         return ERR_NOT_ENOUGH_BUFFER;
     }
     // CBWs always have 31 bytes
-    request->transfer_length = 31;
+    txn->length = 31;
 
     // first three blocks are 4 byte
-    uint32_t* ptr_32 = (uint32_t*)request->buffer;
-    ptr_32[0] = htole32(CBW_SIGNATURE);
-    ptr_32[1] = htole32(tag);
-    ptr_32[2] = htole32(transfer_length);
+    uint32_t buf_32[3];
+    buf_32[0] = htole32(CBW_SIGNATURE);
+    buf_32[1] = htole32(tag);
+    buf_32[2] = htole32(transfer_length);
+    txn->ops->copyto(txn, buf_32, sizeof(buf_32), 0);
 
-    // get a 1 byte pointer and start at 12 because of uint32's
-    uint8_t* ptr_8 = (uint8_t*)request->buffer;
-    ptr_8[12] = flags;
-    ptr_8[13] = lun;
-    ptr_8[14] = command_len;
+    // get a 3 x 1 byte buffer and start at 12 because of uint32's
+    uint8_t buf_8[3];
+    buf_8[0] = flags;
+    buf_8[1] = lun;
+    buf_8[2] = command_len;
+    txn->ops->copyto(txn, buf_8, sizeof(buf_8), sizeof(buf_32));
 
     // copy command_len bytes from the command passed in into the command_len
-    memcpy(ptr_8 + 15, command, (size_t)command_len);
-    return ums_queue_request(msd, request);
+    txn->ops->copyto(txn, command, command_len, sizeof(buf_32) + sizeof(buf_8));
+    ums_queue_request(msd, txn);
+    return NO_ERROR;
 }
 
 static mx_status_t ums_queue_csw(ums_t* msd) {
@@ -185,10 +181,10 @@ static mx_status_t ums_queue_csw(ums_t* msd) {
         DEBUG_PRINT(("UMS:error, no CSW reqs left\n"));
         return ERR_NOT_ENOUGH_BUFFER;
     }
-    usb_request_t* csw_request = containerof(csw_node, usb_request_t, node);
-    csw_request->transfer_length = MSD_COMMAND_STATUS_WRAPPER_SIZE;
-    memset(csw_request->buffer, 0, csw_request->transfer_length);
-    return ums_queue_request(msd, csw_request);
+    iotxn_t* csw_request = containerof(csw_node, iotxn_t, node);
+    csw_request->length = MSD_COMMAND_STATUS_WRAPPER_SIZE;
+    ums_queue_request(msd, csw_request);
+    return NO_ERROR;
 }
 
 static mx_status_t ums_queue_read(ums_t* msd, uint16_t transfer_length) {
@@ -198,9 +194,10 @@ static mx_status_t ums_queue_read(ums_t* msd, uint16_t transfer_length) {
         DEBUG_PRINT(("UMS:error, no read reqs left\n"));
         return ERR_NOT_ENOUGH_BUFFER;
     }
-    usb_request_t* read_request = containerof(read_node, usb_request_t, node);
-    read_request->transfer_length = transfer_length;
-    return ums_queue_request(msd, read_request);
+    iotxn_t* read_request = containerof(read_node, iotxn_t, node);
+    read_request->length = transfer_length;
+    ums_queue_request(msd, read_request);
+    return NO_ERROR;
 }
 
 static mx_status_t ums_queue_write(ums_t* msd, uint16_t transfer_length, iotxn_t* txn) {
@@ -209,15 +206,21 @@ static mx_status_t ums_queue_write(ums_t* msd, uint16_t transfer_length, iotxn_t
         DEBUG_PRINT(("UMS:error, no write reqs left\n"));
         return ERR_NOT_ENOUGH_BUFFER;
     }
-    usb_request_t* write_request = containerof(write_node, usb_request_t, node);
-    write_request->transfer_length = transfer_length;
-    txn->ops->copyfrom(txn, write_request->buffer, (size_t)transfer_length, 0);
-    return ums_queue_request(msd, write_request);
+    iotxn_t* write_request = containerof(write_node, iotxn_t, node);
+    write_request->length = transfer_length;
+    void* buffer;
+    write_request->ops->mmap(write_request, &buffer);
+    txn->ops->copyfrom(txn, buffer, (size_t)transfer_length, 0);
+    ums_queue_request(msd, write_request);
+    return NO_ERROR;
 }
 
-static csw_status_t ums_verify_csw(usb_request_t* csw_request, uint32_t prevtag) {
+static csw_status_t ums_verify_csw(iotxn_t* csw_request, uint32_t prevtag) {
+    uint8_t buffer[MSD_COMMAND_STATUS_WRAPPER_SIZE];
+    csw_request->ops->copyfrom(csw_request, buffer, sizeof(buffer), 0);
+
     // check signature is "USBS"
-    uint32_t* ptr_32 = (uint32_t*)csw_request->buffer;
+    uint32_t* ptr_32 = (uint32_t*)buffer;
     if (letoh32(ptr_32[0]) != CSW_SIGNATURE) {
         DEBUG_PRINT(("UMS:invalid csw sig, expected:%08x got:%08x \n", CSW_SIGNATURE, letoh32(ptr_32[0])));
         return CSW_INVALID;
@@ -228,7 +231,7 @@ static csw_status_t ums_verify_csw(usb_request_t* csw_request, uint32_t prevtag)
         return CSW_TAG_MISMATCH;
     }
     // check if success is true or not?
-    uint8_t* ptr_8 = (uint8_t*)(csw_request->buffer);
+    uint8_t* ptr_8 = (uint8_t*)buffer;
     if (ptr_8[12] == CSW_FAILED) {
         return CSW_FAILED;
     } else if (ptr_8[12] == CSW_PHASE_ERROR) {
@@ -237,29 +240,28 @@ static csw_status_t ums_verify_csw(usb_request_t* csw_request, uint32_t prevtag)
     return CSW_SUCCESS;
 }
 
-static mx_status_t ums_next_request(ums_t* msd) {
+static void ums_next_request(ums_t* msd) {
     list_node_t* node = list_remove_head(&msd->queued_reqs);
     if (!node) {
         msd->busy = false;
-        return 0;
+        return;
     }
-    usb_request_t* request = containerof(node, usb_request_t, node);
-    mx_status_t status = msd->usb_p->queue_request(msd->udev, request);
-    return status;
+    iotxn_t* txn = containerof(node, iotxn_t, node);
+    iotxn_queue(msd->udev, txn);
 }
 
-static void ums_read_complete(usb_request_t* request) {
-    ums_t* msd = (ums_t*)request->client_data;
-    if (request->status == NO_ERROR) {
-        list_add_tail(&msd->completed_reads, &request->node);
+static void ums_read_complete(iotxn_t* txn, void* cookie) {
+    ums_t* msd = (ums_t*)cookie;
+    if (txn->status == NO_ERROR) {
+        list_add_tail(&msd->completed_reads, &txn->node);
     } else {
-        list_add_head(&msd->queued_reqs, &request->node);
+        list_add_head(&msd->queued_reqs, &txn->node);
     }
     ums_next_request(msd);
 }
 
-static void ums_csw_complete(usb_request_t* csw_request) {
-    ums_t* msd = (ums_t*)csw_request->client_data;
+static void ums_csw_complete(iotxn_t* csw_request, void* cookie) {
+    ums_t* msd = (ums_t*)cookie;
     if (csw_request->status == NO_ERROR) {
         list_add_tail(&msd->free_csw_reqs, &csw_request->node);
     } else {
@@ -290,20 +292,24 @@ static void ums_csw_complete(usb_request_t* csw_request) {
             curr_txn->ops->complete(curr_txn, ERR_BAD_STATE, 0);
             return;
         }
-        usb_request_t* read_request = containerof(node, usb_request_t, node);
-        // data residue field is the 3rd uint32_t in csw buffer
-        uint32_t residue = letoh32(*((uint32_t *)(csw_request->buffer) + 2));
-        uint32_t length = read_request->transfer_length - residue;
-        curr_txn->ops->copyto(curr_txn, read_request->buffer, length, 0);
-        list_add_tail(&msd->free_read_reqs, node);
+         iotxn_t* read_request = containerof(node, iotxn_t, node);
+         // data residue field is the 3rd uint32_t in csw buffer
+         uint32_t temp;
+         csw_request->ops->copyfrom(csw_request, &temp, sizeof(temp), 2 * sizeof(temp));
+         uint32_t residue = letoh32(temp);
+         uint32_t length = read_request->actual - residue;
+         void* buffer;
+         curr_txn->ops->mmap(curr_txn, &buffer);
+         read_request->ops->copyfrom(read_request, buffer, length, 0);
+         list_add_tail(&msd->free_read_reqs, node);
     }
     curr_txn->ops->complete(curr_txn, NO_ERROR, curr_txn->length);
 }
 
-static void ums_write_complete(usb_request_t* request) {
-    ums_t* msd = (ums_t*)request->client_data;
+static void ums_write_complete(iotxn_t* txn, void* cookie) {
+    ums_t* msd = (ums_t*)cookie;
     // FIXME what to do with error here?
-    list_add_tail(&msd->free_write_reqs, &request->node);
+    list_add_tail(&msd->free_write_reqs, &txn->node);
     ums_next_request(msd);
 }
 
@@ -749,10 +755,7 @@ static mx_protocol_device_t ums_device_proto = {
 };
 
 static void ums_iotxn_wait_cb(iotxn_t* txn, void* cookie) {
-    ums_pdata_t* pdata = ums_iotxn_pdata(txn);
-    completion_signal(pdata->waiter);
-    completion_reset(pdata->waiter);
-    return;
+    completion_signal((completion_t *)cookie);
 }
 
 static int ums_start_thread(void* arg) {
@@ -766,10 +769,12 @@ static int ums_start_thread(void* arg) {
     ums_pdata_t* pdata = ums_iotxn_pdata(txn);
     pdata->is_driver_io = true;
     pdata->cmd = UMS_READ_CAPACITY10;
-    pdata->waiter = &(msd->read_completion);
+    txn->cookie = &msd->read_completion;
     txn->complete_cb = ums_iotxn_wait_cb;
+    completion_reset(&msd->read_completion);
     ums_iotxn_queue(&msd->device, txn);
     completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
+
     uint8_t read_capacity[UMS_READ_CAPACITY10_TRANSFER_LENGTH];
     txn->ops->copyfrom(txn, (void*)read_capacity, UMS_READ_CAPACITY10_TRANSFER_LENGTH, 0);
     // +1 because this returns the address of the final block, and blocks are zero indexed
@@ -784,8 +789,9 @@ static int ums_start_thread(void* arg) {
         ums_pdata_t* pdata2 = ums_iotxn_pdata(txn2);
         pdata2->is_driver_io = true;
         pdata2->cmd = UMS_READ_CAPACITY16;
-        pdata2->waiter = &(msd->read_completion);
         txn2->complete_cb = ums_iotxn_wait_cb;
+        txn2->cookie = &msd->read_completion;
+        completion_reset(&msd->read_completion);
         ums_iotxn_queue(&msd->device, txn2);
         completion_wait(&(msd->read_completion), MX_TIME_INFINITE);
         uint8_t read_capacity2[UMS_READ_CAPACITY16_TRANSFER_LENGTH];
@@ -865,33 +871,32 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
 
     msd->udev = device;
     msd->driver = driver;
-    msd->usb_p = protocol;
     msd->bulk_in_addr = bulk_in_addr;
     msd->bulk_out_addr = bulk_out_addr;
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_in_addr, USB_BUF_SIZE);
-        if (!req)
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE, 0);
+        if (!txn)
             return ERR_NO_MEMORY;
-        req->complete_cb = ums_read_complete;
-        req->client_data = msd;
-        list_add_head(&msd->free_read_reqs, &req->node);
+        txn->complete_cb = ums_read_complete;
+        txn->cookie = msd;
+        list_add_head(&msd->free_read_reqs, &txn->node);
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_in_addr, MSD_COMMAND_STATUS_WRAPPER_SIZE);
-        if (!req)
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, MSD_COMMAND_STATUS_WRAPPER_SIZE, 0);
+        if (!txn)
             return ERR_NO_MEMORY;
-        req->complete_cb = ums_csw_complete;
-        req->client_data = msd;
-        list_add_head(&msd->free_csw_reqs, &req->node);
+        txn->complete_cb = ums_csw_complete;
+        txn->cookie = msd;
+        list_add_head(&msd->free_csw_reqs, &txn->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        usb_request_t* req = protocol->alloc_request(device, bulk_out_addr, USB_BUF_SIZE);
-        if (!req)
+        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE, 0);
+        if (!txn)
             return ERR_NO_MEMORY;
-        req->complete_cb = ums_write_complete;
-        req->client_data = msd;
-        list_add_head(&msd->free_write_reqs, &req->node);
+        txn->complete_cb = ums_write_complete;
+        txn->cookie = msd;
+        list_add_head(&msd->free_write_reqs, &txn->node);
     }
 
     uint8_t lun = 0;

@@ -27,7 +27,6 @@ typedef struct ums_pdata {
     // don't set these unless it is a txn called by driver itself
     bool is_driver_io;
     uint8_t cmd;
-    completion_t* waiter;
 } ums_pdata_t;
 
 #define ums_iotxn_pdata(txn) iotxn_pdata(txn, ums_pdata_t)
