@@ -6,15 +6,23 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp-static
+MODULE_TYPE := userapp
 
 MODULE_SRCS := \
     system/udev/intel-ethernet/ethernet.c \
     system/udev/intel-ethernet/ie.c
 
-MODULE_NAME := test-driver
+MODULE_NAME := driver-test
+
+# if named this, this driver will be instantiated by devmgr
+# to handle the intel ethernet device qemu publishes
+#
+#MODULE_NAME := driver-pci-8086-100e
 
 MODULE_STATIC_LIBS := \
-    ulib/mxio ulib/magenta ulib/runtime ulib/ddk ulib/driver ulib/musl-static
+		ulib/ddk ulib/driver
+
+MODULE_LIBS := \
+    ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
