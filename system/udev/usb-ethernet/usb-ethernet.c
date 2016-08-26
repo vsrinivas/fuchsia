@@ -29,7 +29,6 @@
 typedef struct {
     mx_device_t device;
     mx_device_t* usb_device;
-    usb_device_protocol_t* device_protocol;
     mx_driver_t* driver;
 
     uint8_t phy_id;
@@ -457,11 +456,6 @@ static int usb_ethernet_start_thread(void* arg) {
 }
 
 static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
-    usb_device_protocol_t* protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&protocol)) {
-        return ERR_NOT_SUPPORTED;
-    }
-
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);
@@ -512,7 +506,6 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
 
     eth->usb_device = device;
     eth->driver = driver;
-    eth->device_protocol = protocol;
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE, 0);

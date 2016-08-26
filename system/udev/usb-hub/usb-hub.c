@@ -7,7 +7,7 @@
 #include <ddk/common/usb.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb-device.h>
+#include <ddk/protocol/usb-bus.h>
 #include <hw/usb-hub.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +30,9 @@ typedef struct usb_hub {
 
     // Underlying USB device
     mx_device_t* usb_device;
-    usb_device_protocol_t* device_protocol;
+
+    mx_device_t* bus_device;
+    usb_bus_protocol_t* bus_protocol;
 
     usb_speed_t hub_speed;
     int num_ports;
@@ -88,7 +90,7 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
     xprintf("port %d usb_hub_port_disconnected\n", port);
-    hub->device_protocol->hub_device_removed(hub->usb_device, port);
+    hub->bus_protocol->hub_device_removed(hub->bus_device, hub->usb_device, port);
 }
 
 static void usb_hub_port_reset(usb_hub_t* hub, int port) {
@@ -98,8 +100,8 @@ static void usb_hub_port_reset(usb_hub_t* hub, int port) {
     xprintf("port %d usb_hub_port_reset\n", port);
     usb_speed_t speed = usb_hub_get_port_speed(hub, port);
     if (speed != USB_SPEED_UNDEFINED) {
-        xprintf("calling hub_device_added(%d %d)\n", port, speed);
-        hub->device_protocol->hub_device_added(hub->usb_device, port, speed);
+        xprintf("calling device_added(%d %d)\n", port, speed);
+        hub->bus_protocol->hub_device_added(hub->bus_device, hub->usb_device, port, speed);
     }
 }
 
@@ -156,7 +158,7 @@ static int usb_hub_thread(void* arg) {
         return result;
     }
 
-    result = hub->device_protocol->configure_hub(hub->usb_device, hub->hub_speed, &desc);
+    result = hub->bus_protocol->configure_hub(hub->bus_device, hub->usb_device, hub->hub_speed, &desc);
     if (result < 0) {
         printf("configure_hub failed: %d\n", result);
         return result;
@@ -226,8 +228,10 @@ static int usb_hub_thread(void* arg) {
 }
 
 static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
-    usb_device_protocol_t* device_protocol = NULL;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_DEVICE, (void**)&device_protocol)) {
+    mx_device_t* bus_device = device->parent;
+    usb_bus_protocol_t* bus_protocol;
+    if (device_get_protocol(bus_device, MX_PROTOCOL_USB_BUS, (void**)&bus_protocol)) {
+        printf("usb_hub_bind could not find bus device\n");
         return ERR_NOT_SUPPORTED;
     }
 
@@ -264,8 +268,9 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     device_init(&hub->device, driver, "usb-hub", &usb_hub_device_proto);
 
     hub->usb_device = device;
-    hub->device_protocol = device_protocol;
     hub->hub_speed = usb_get_speed(device);
+    hub->bus_device = bus_device;
+    hub->bus_protocol = bus_protocol;
 
     mx_status_t status;
     iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size, 0);

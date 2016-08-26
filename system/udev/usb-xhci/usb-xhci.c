@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-alloc.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 
 #include <hw/reg.h>
@@ -29,8 +30,8 @@ typedef struct usb_xhci {
     // the device we implement
     mx_device_t device;
 
-    // USB devices we created
-    mx_device_t* devices[MAX_SLOTS];
+    mx_device_t* bus_device;
+    usb_bus_protocol_t* bus_protocol;
 
     io_alloc_t* io_alloc;
     pci_protocol_t* pci_proto;
@@ -43,26 +44,31 @@ typedef struct usb_xhci {
 #define xhci_to_usb_xhci(dev) containerof(dev, usb_xhci_t, xhci)
 #define dev_to_usb_xhci(dev) containerof(dev, usb_xhci_t, device)
 
-mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int speed,
+mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed,
                             usb_device_descriptor_t* device_descriptor,
                             usb_configuration_descriptor_t** config_descriptors) {
     usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
     xprintf("xhci_add_new_device\n");
 
-    mx_status_t result = usb_add_device(&uxhci->device, slot_id, speed,
-                                        device_descriptor, config_descriptors,
-                                        &uxhci->devices[slot_id - 1]);
-    return result;
+    if (!uxhci->bus_device || !uxhci->bus_protocol) {
+        printf("no bus device in xhci_add_device\n");
+        return ERR_INTERNAL;
+    }
+
+    return uxhci->bus_protocol->add_device(uxhci->bus_device, slot_id, hub_address, speed,
+                                           device_descriptor, config_descriptors);
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
     usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
     xprintf("xhci_remove_device %d\n", slot_id);
-    int index = slot_id - 1;
-    if (uxhci->devices[index]) {
-        device_remove(uxhci->devices[index]);
-        uxhci->devices[index] = NULL;
+
+    if (!uxhci->bus_device || !uxhci->bus_protocol) {
+        printf("no bus device in xhci_remove_device\n");
+        return;
     }
+
+    uxhci->bus_protocol->remove_device(uxhci->bus_device, slot_id);
 }
 
 void* xhci_malloc(xhci_t* xhci, size_t size) {
@@ -118,25 +124,36 @@ static int xhci_irq_thread(void* arg) {
     return 0;
 }
 
+void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
+    usb_xhci_t* uxhci = dev_to_usb_xhci(device);
+    uxhci->bus_device = busdev;
+    if (busdev) {
+        device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, (void**)&uxhci->bus_protocol);
+    } else {
+        uxhci->bus_protocol = NULL;
+    }
+}
+
 mx_status_t xhci_config_hub(mx_device_t* hci_device, int slot_id, usb_speed_t speed,
                             usb_hub_descriptor_t* descriptor) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
     return xhci_configure_hub(&uxhci->xhci, slot_id, speed, descriptor);
 }
 
-mx_status_t xhci_hub_device_added(mx_device_t* hci_device, int hub_address, int port,
+mx_status_t xhci_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, int port,
                                   usb_speed_t speed) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
     return xhci_enumerate_device(&uxhci->xhci, hub_address, port, speed);
 }
 
-mx_status_t xhci_hub_device_removed(mx_device_t* hci_device, int hub_address, int port) {
+mx_status_t xhci_hub_device_removed(mx_device_t* hci_device, uint32_t hub_address, int port) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
     xhci_device_disconnected(&uxhci->xhci, hub_address, port);
     return NO_ERROR;
 }
 
 usb_hci_protocol_t xhci_hci_protocol = {
+    .set_bus_device = xhci_set_bus_device,
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,
@@ -345,10 +362,8 @@ static mx_status_t usb_xhci_unbind(mx_driver_t* drv, mx_device_t* dev) {
     xprintf("usb_xhci_unbind\n");
     usb_xhci_t* uxhci = dev_to_usb_xhci(dev);
 
-    for (int i = 0; i < MAX_SLOTS; i++) {
-        if (uxhci->devices[i]) {
-            device_remove(uxhci->devices[i]);
-        }
+    if (uxhci->bus_device) {
+        device_remove(uxhci->bus_device);
     }
     return NO_ERROR;
 }

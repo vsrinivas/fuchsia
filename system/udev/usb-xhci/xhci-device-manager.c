@@ -411,7 +411,7 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
         goto free_config_descriptors_exit;
     }
     memcpy(device_descriptor, xhci->device_descriptor, sizeof(usb_device_descriptor_t));
-    xhci_add_device(xhci, slot_id, speed, device_descriptor, config_descriptors);
+    xhci_add_device(xhci, slot_id, hub_address, speed, device_descriptor, config_descriptors);
     return NO_ERROR;
 
 free_config_descriptors_exit:

@@ -82,11 +82,6 @@ static mx_status_t usb_hid_load_descriptor(usb_hid_descriptor_t* hid_desc, uint8
 }
 
 static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
-    usb_device_protocol_t* usb;
-    if (device_get_protocol(dev, MX_PROTOCOL_USB_DEVICE, (void**)&usb) != NO_ERROR) {
-        return ERR_NOT_SUPPORTED;
-    }
-
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(dev, &iter);
     if (result < 0) return result;
@@ -142,7 +137,6 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
 
         hid->usbdev = dev;
         hid->drv = drv;
-        hid->usb = usb;
         hid->interface = intf->bInterfaceNumber;
 
         if (intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT) {

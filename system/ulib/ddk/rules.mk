@@ -15,7 +15,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/common/usb.c \
     $(LOCAL_DIR)/completion.c \
     $(LOCAL_DIR)/protocol/input.c \
-    $(LOCAL_DIR)/protocol/usb-device.c \
     $(LOCAL_DIR)/io-alloc.c \
     $(LOCAL_DIR)/iotxn.c \
 

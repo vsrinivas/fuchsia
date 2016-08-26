@@ -32,7 +32,6 @@ typedef struct {
     mx_device_t* usbdev;
     mx_driver_t* drv;
 
-    usb_device_protocol_t* usb;
     iotxn_t* txn;
 
     uint32_t flags;
