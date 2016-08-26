@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/ioctl.h>
 #include <magenta/types.h>
+#include <magenta/device/console.h>
 
 /**
  * protocol/console.h - console protocol definitions
@@ -31,10 +32,3 @@ typedef struct mx_protocol_console {
     mx_status_t (*readkey)(mx_device_t* dev, uint32_t flags);
 } mx_protocol_console_t;
 
-#define IOCTL_CONSOLE_GET_DIMENSIONS \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_CONSOLE, 1)
-
-typedef struct {
-    uint32_t width;
-    uint32_t height;
-} ioctl_console_dimensions_t;

@@ -4,5 +4,8 @@
 
 #pragma once
 
-#include <magenta/device/device.h>
+#include <magenta/device/ioctl.h>
+
+#define IOCTL_DEVICE_BIND \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 0)
 

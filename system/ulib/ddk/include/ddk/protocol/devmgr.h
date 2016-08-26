@@ -4,7 +4,5 @@
 
 #pragma once
 
-#include <ddk/ioctl.h>
+#include <magenta/device/devmgr.h>
 
-#define IOCTL_DEVMGR_MOUNT_FS \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVMGR, 0)
