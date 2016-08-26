@@ -13,6 +13,8 @@
 #include <map>
 #include <memory>
 
+class CommandBuffer;
+
 // Abstract base context.
 class MsdIntelContext {
 public:
@@ -74,6 +76,7 @@ public:
     class Owner {
     public:
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
+        virtual AddressSpace* exec_address_space() = 0;
     };
 
     ClientContext(Owner* owner) : owner_(owner) {}
@@ -83,13 +86,15 @@ public:
         return owner_->hardware_status_page(id);
     }
 
+    AddressSpace* exec_address_space() { return owner_->exec_address_space(); }
+
 private:
     Owner* owner_;
 };
 
 class MsdIntelAbiContext : public msd_context {
 public:
-    MsdIntelAbiContext(std::shared_ptr<MsdIntelContext> ptr) : ptr_(std::move(ptr))
+    MsdIntelAbiContext(std::shared_ptr<ClientContext> ptr) : ptr_(std::move(ptr))
     {
         magic_ = kMagic;
     }
@@ -100,10 +105,10 @@ public:
         DASSERT(context->magic_ == kMagic);
         return static_cast<MsdIntelAbiContext*>(context);
     }
-    std::shared_ptr<MsdIntelContext> ptr() { return ptr_; }
+    std::shared_ptr<ClientContext> ptr() { return ptr_; }
 
 private:
-    std::shared_ptr<MsdIntelContext> ptr_;
+    std::shared_ptr<ClientContext> ptr_;
     static const uint32_t kMagic = 0x63747874; // "ctxt"
 };
 

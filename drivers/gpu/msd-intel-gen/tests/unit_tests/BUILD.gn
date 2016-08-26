@@ -7,6 +7,7 @@ import("//magma/gnbuild/magma.gni")
 source_set("msd_unit_tests") {
   sources = [
     "test_buffer.cc",
+    "test_command_buffer.cc",
     "test_context.cc",
     "test_device.cc",
     "test_engine_command_streamer.cc",
@@ -22,6 +23,7 @@ source_set("msd_unit_tests") {
   deps = [
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/tests/helper:command_buffer_helper",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
     "$msd_intel_gen_build_root/src",

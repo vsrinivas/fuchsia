@@ -16,16 +16,18 @@ public:
     class Owner {
     public:
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
+        // TODO(MA-71) have the connection own its own PPGTT address space so we dont need this
+        virtual AddressSpace* gtt() = 0;
     };
 
     MsdIntelConnection(Owner* owner) : owner_(owner) {}
 
     virtual ~MsdIntelConnection() {}
 
-    std::unique_ptr<MsdIntelContext> CreateContext()
+    std::unique_ptr<ClientContext> CreateContext()
     {
         // Backing store creation deferred until context is used.
-        return std::unique_ptr<MsdIntelContext>(new ClientContext(this));
+        return std::unique_ptr<ClientContext>(new ClientContext(this));
     }
 
 private:
@@ -34,6 +36,8 @@ private:
     {
         return owner_->hardware_status_page(id);
     }
+
+    AddressSpace* exec_address_space() override { return owner_->gtt(); }
 
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 

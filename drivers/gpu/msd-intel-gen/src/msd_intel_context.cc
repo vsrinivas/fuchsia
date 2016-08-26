@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "msd_intel_context.h"
+#include "command_buffer.h"
+#include <errno.h>
 
 void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
                                      std::unique_ptr<MsdIntelBuffer> context_buffer,

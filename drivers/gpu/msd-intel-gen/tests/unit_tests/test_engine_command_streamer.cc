@@ -228,6 +228,12 @@ private:
         return hw_status_page_.get();
     }
 
+    AddressSpace* exec_address_space() override
+    {
+        DASSERT(false);
+        return nullptr;
+    }
+
     void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override
     {
         EXPECT_EQ(id, engine_cs_->id());

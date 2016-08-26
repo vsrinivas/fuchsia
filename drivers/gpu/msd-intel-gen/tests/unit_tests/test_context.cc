@@ -71,7 +71,13 @@ public:
     }
 
 private:
-    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id)
+    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
+    {
+        DASSERT(false);
+        return nullptr;
+    }
+
+    AddressSpace* exec_address_space() override
     {
         DASSERT(false);
         return nullptr;

@@ -75,6 +75,8 @@ private:
         return global_context_->hardware_status_page(id);
     }
 
+    AddressSpace* gtt() override { return gtt_.get(); }
+
     bool ReadGttSize(unsigned int* gtt_size);
 
     void DumpFault(DumpState* dump_out, uint32_t fault);
@@ -82,8 +84,6 @@ private:
     MsdIntelContext* global_context() { return global_context_.get(); }
 
     RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }
-
-    AddressSpace* gtt() { return gtt_.get(); }
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

@@ -31,6 +31,12 @@ public:
     bool MapGpu(AddressSpace* address_space, uint32_t alignment);
     bool UnmapGpu(AddressSpace* address_space);
 
+    bool IsMappedGpu(AddressSpaceId address_space_id)
+    {
+        // TODO(MA-71) handle multiple address spaces
+        return mapping_ != nullptr && mapping_->address_space_id == address_space_id;
+    }
+
     bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* addr_out);
 
 private:

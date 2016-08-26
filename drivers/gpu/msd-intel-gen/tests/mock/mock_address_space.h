@@ -26,7 +26,8 @@ public:
     bool is_allocated(uint64_t addr)
     {
         auto iter = allocations_.find(addr);
-        DASSERT(iter != allocations_.end());
+        if (iter == allocations_.end())
+            return false;
         return iter->second.allocated;
     }
 
@@ -35,6 +36,13 @@ public:
         auto iter = allocations_.find(addr);
         DASSERT(iter != allocations_.end());
         return iter->second.clear;
+    }
+
+    uint64_t allocated_size(uint64_t addr)
+    {
+        auto iter = allocations_.find(addr);
+        DASSERT(iter != allocations_.end());
+        return iter->second.size;
     }
 
 private:
