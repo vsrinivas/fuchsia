@@ -34,9 +34,6 @@ extern char __kernel_cmdline[CMDLINE_MAX];
 extern unsigned __kernel_cmdline_size;
 extern unsigned __kernel_cmdline_count;
 
-// TODO(mcgrathr): Should go away when process lifetime stuff is fixed.
-static utils::RefPtr<Dispatcher> userboot_process;
-
 // These are defined in assembly by vdso.S; code-start.h
 // gives details about their size and layout.
 extern "C" const char vdso_image[], userboot_image[];
@@ -406,10 +403,6 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         printf("userboot: failed to start process %d\n", status);
         return status;
     }
-
-    // hold onto a global ref to the boot process.
-    // TODO(mcgrathr): This should go away eventually.
-    userboot_process = utils::move(proc_disp);
 
     return NO_ERROR;
 }

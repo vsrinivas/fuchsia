@@ -22,6 +22,17 @@
 
 #pragma GCC visibility pop
 
+#define SHUTDOWN_COMMAND "poweroff"
+
+static noreturn void do_shutdown(mx_handle_t log) {
+    print(log, "Process exited.  Executing \"", SHUTDOWN_COMMAND, "\".\n",
+          NULL);
+    mx_debug_send_command(SHUTDOWN_COMMAND, strlen(SHUTDOWN_COMMAND));
+    print(log, "still here after shutdown!\n", NULL);
+    while (true)
+        __builtin_trap();
+}
+
 static void load_child_process(mx_handle_t log, const struct options* o,
                                mx_handle_t bootfs_vmo, mx_handle_t vdso_vmo,
                                mx_handle_t proc, mx_handle_t to_child,
@@ -48,9 +59,8 @@ static void load_child_process(mx_handle_t log, const struct options* o,
 // 3. Create the initial thread and allocate a stack for it.
 // 4. Load up a message pipe with the mx_proc_args_t message for the child.
 // 5. Start the child process running.
-// TODO(mcgrathr): 6. Wait for it to die.
-static void bootstrap(mx_handle_t log, struct options* o,
-                      mx_handle_t bootstrap_pipe) {
+// 6. Optionally, wait for it to exit and then shut down.
+static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // Sample the bootstrap message to see how big it is.
     uint32_t nbytes;
     uint32_t nhandles;
@@ -78,7 +88,8 @@ static void bootstrap(mx_handle_t log, struct options* o,
 
     // Process the kernel command line, which gives us options and also
     // becomes the environment strings for our child.
-    parse_options(log, o, environ);
+    struct options o;
+    parse_options(log, &o, environ);
 
     mx_handle_t resource_root = MX_HANDLE_INVALID;
     mx_handle_t bootfs_vmo = MX_HANDLE_INVALID;
@@ -123,14 +134,14 @@ static void bootstrap(mx_handle_t log, struct options* o,
     mx_handle_t to_child = pipeh[0];
     mx_handle_t child_start_handle = pipeh[1];
 
-    const char* filename = o->value[OPTION_FILENAME];
+    const char* filename = o.value[OPTION_FILENAME];
     mx_handle_t proc = mx_process_create(filename, strlen(filename), 0);
     if (proc < 0)
         fail(log, proc, "mx_process_create failed\n");
 
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = DEFAULT_STACK_SIZE;
-    load_child_process(log, o, bootfs_vmo, vdso_vmo, proc, to_child,
+    load_child_process(log, &o, bootfs_vmo, vdso_vmo, proc, to_child,
                        &entry, &vdso_base, &stack_size);
 
     // Allocate the stack for the child.
@@ -179,27 +190,34 @@ static void bootstrap(mx_handle_t log, struct options* o,
     // Now send the bootstrap message, consuming both our VMO handles.
     status = mx_message_write(to_child, buffer, nbytes, handles, nhandles, 0);
     check(log, status, "mx_message_write to child failed\n");
-    mx_handle_close(to_child);
+    status = mx_handle_close(to_child);
+    check(log, status, "mx_handle_close failed on message pipe handle\n");
 
+    // Start the process going.
     status = mx_process_start(proc, thread, entry, sp,
                               child_start_handle, vdso_base);
     check(log, status, "mx_process_start failed\n");
+    status = mx_handle_close(thread);
+    check(log, status, "mx_handle_close failed on thread handle\n");
 
-    // TODO(mcgrathr): Really there is no reason for this process to stick
-    // around.  For now, we have to keep the child process handle alive to
-    // prevent the child from being GC-killed by the kernel.  When the
-    // process lifetime management is fixed in the kernel, we can change
-    // this to just let the child go (it will presumably be the
-    // long-running anchor process for the system, or will start one)
-    // and exit immediately.
-    status = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE,
-                                NULL);
-    check(log, status, "mx_handle_wait_one on process failed\n");
-    mx_handle_close(proc);
-    mx_handle_close(thread);
+    if (o.value[OPTION_SHUTDOWN] != NULL) {
+        print(log, "Waiting for ", o.value[OPTION_FILENAME], " to exit...\n",
+              NULL);
+        status = mx_handle_wait_one(
+            proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+        check(log, status, "mx_handle_wait_one on process failed\n");
+        do_shutdown(log);
+    }
+
+    // Now we've accomplished our purpose in life, and we can die happy.
+
+    status = mx_handle_close(proc);
+    check(log, status, "mx_handle_close failed on process handle\n");
+
+    print(log, o.value[OPTION_FILENAME], " started.  userboot exiting.\n",
+          NULL);
+    mx_exit(0);
 }
-
-#define SHUTDOWN_COMMAND "poweroff"
 
 // This is the entry point for the whole show, the very first bit of code
 // to run in user mode.
@@ -210,11 +228,5 @@ noreturn void _start(void* start_arg) {
               NULL);
 
     mx_handle_t bootstrap_pipe = (uintptr_t)start_arg;
-    struct options o;
-    bootstrap(log, &o, bootstrap_pipe);
-
-    if (o.value[OPTION_SHUTDOWN] != NULL)
-        mx_debug_send_command(SHUTDOWN_COMMAND, strlen(SHUTDOWN_COMMAND));
-
-    mx_exit(0);
+    bootstrap(log, bootstrap_pipe);
 }
