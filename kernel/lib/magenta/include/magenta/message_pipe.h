@@ -17,6 +17,8 @@
 #include <utils/ref_counted.h>
 
 class Handle;
+class IOPortDisatcher;
+class IOPortClient;
 
 struct MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
     MessagePacket(mxtl::Array<uint8_t>&& _data,
@@ -45,12 +47,15 @@ public:
     status_t Write(size_t side, mxtl::unique_ptr<MessagePacket> msg);
 
     StateTracker* GetStateTracker(size_t side);
+    status_t SetIOPort(size_t side, mxtl::RefPtr<IOPortDispatcher> io_port,
+                       uint64_t key, mx_signals_t signals);
 
 private:
     const mx_koid_t koid_;
+
+    Mutex lock_;
     bool dispatcher_alive_[2];
     MessageList messages_[2];
-    // This lock protects |dispatcher_alive_| and |messages_|.
-    Mutex lock_;
     StateTracker state_tracker_[2];
+    mxtl::unique_ptr<IOPortClient> iopc_[2];
 };

@@ -17,6 +17,9 @@
 
 #include <magenta/handle.h>
 #include <magenta/message_pipe.h>
+#include <magenta/io_port_client.h>
+
+#include <utils/type_support.h>
 
 #define LOCAL_TRACE 0
 
@@ -99,4 +102,10 @@ status_t MessagePipeDispatcher::Write(mxtl::Array<uint8_t> data, mxtl::Array<Han
     if (!ac.check()) return ERR_NO_MEMORY;
 
     return pipe_->Write(side_, mxtl::move(msg));
+}
+
+status_t MessagePipeDispatcher::SetIOPort(mxtl::RefPtr<IOPortDispatcher> io_port,
+                                          uint64_t key, mx_signals_t signals) {
+    LTRACE_ENTRY;
+    return pipe_->SetIOPort(side_, mxtl::move(io_port), key, signals);
 }

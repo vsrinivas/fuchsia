@@ -18,6 +18,9 @@
 #include <utils/ref_counted.h>
 #include <utils/unique_ptr.h>
 
+class IOPortClient;
+class IOPortDispatcher;
+
 class MessagePipeDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
@@ -34,13 +37,14 @@ public:
     status_t BeginRead(uint32_t* message_size, uint32_t* handle_count);
     status_t AcceptRead(mxtl::Array<uint8_t>* data, mxtl::Array<Handle*>* handles);
     status_t Write(mxtl::Array<uint8_t> data, mxtl::Array<Handle*> handles);
+    status_t SetIOPort(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
 
 private:
     MessagePipeDispatcher(uint32_t flags, size_t side, mxtl::RefPtr<MessagePipe> pipe);
 
     const size_t side_;
     const uint32_t flags_;
+    Mutex lock_;
     mxtl::RefPtr<MessagePipe> pipe_;
     mxtl::unique_ptr<MessagePacket> pending_;
-    Mutex lock_;
 };

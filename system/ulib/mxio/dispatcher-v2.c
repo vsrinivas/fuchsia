@@ -79,20 +79,16 @@ again:
             continue;
         }
         if (packet.signals & MX_SIGNAL_READABLE) {
-            // for now we must drain all readable messages
-            // due to limitations of io ports
-            for (;;) {
-                if ((r = md->cb(handler->h, handler->cb, handler->cookie)) != 0) {
-                    if (r == ERR_DISPATCHER_NO_WORK) {
-                        // no more messages to read
-                        break;
-                    }
+            if ((r = md->cb(handler->h, handler->cb, handler->cookie)) != 0) {
+                if (r == ERR_DISPATCHER_NO_WORK) {
+                    printf("mxio: dispatcher found no work to do!\n");
+                } else {
                     if (r < 0) {
-                        // synthesize a close
+                        // generate a synthetic close.
                         md->cb(0, handler->cb, handler->cookie);
                     }
                     disconnect_handler(md, handler);
-                    goto again;
+                    continue;
                 }
             }
         }

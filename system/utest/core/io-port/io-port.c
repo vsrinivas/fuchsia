@@ -163,23 +163,30 @@ static bool bind_basic_test(void)
     mx_handle_t ioport = mx_io_port_create(0u);
     EXPECT_GT(ioport, 0, "could not create io port");
 
-    mx_handle_t event = mx_event_create(0u);
-    EXPECT_GT(event, 0, "could not create event");
+    mx_handle_t pipe[2];
+    status = mx_message_pipe_create(pipe, 0u);
+    EXPECT_EQ(status, NO_ERROR, "could not create pipe");
 
-    mx_handle_t other = mx_io_port_create(0u);
-    EXPECT_GT(other, 0, "could not create io port");
-
-    status = mx_io_port_bind(ioport, -1, other, MX_SIGNAL_SIGNALED);
-    EXPECT_EQ(status, ERR_NOT_SUPPORTED, "non waitable objects not allowed");
+    mx_handle_t event = mx_io_port_create(0u);
+    EXPECT_GT(event, 0, "could not create io port");
 
     status = mx_io_port_bind(ioport, -1, event, MX_SIGNAL_SIGNALED);
-    EXPECT_EQ(status, NO_ERROR, "failed to bind event");
+    EXPECT_EQ(status, ERR_NOT_SUPPORTED, "non waitable objects not allowed");
+
+    status = mx_io_port_bind(ioport, -1, pipe[0], MX_SIGNAL_READABLE);
+    EXPECT_EQ(status, NO_ERROR, "failed to bind pipe");
+
+    status = mx_io_port_bind(ioport, -2, pipe[1], MX_SIGNAL_READABLE);
+    EXPECT_EQ(status, NO_ERROR, "failed to bind pipe");
 
     status = mx_handle_close(ioport);
     EXPECT_EQ(status, NO_ERROR, "failed to close io port");
 
-    status = mx_handle_close(other);
-    EXPECT_EQ(status, NO_ERROR, "failed to close io port");
+    status = mx_handle_close(pipe[0]);
+    EXPECT_EQ(status, NO_ERROR, "failed to close pipe");
+
+    status = mx_handle_close(pipe[1]);
+    EXPECT_EQ(status, NO_ERROR, "failed to close pipe");
 
     status = mx_handle_close(event);
     EXPECT_EQ(status, NO_ERROR, "failed to close event");
@@ -232,7 +239,7 @@ static int io_reply_thread(void* arg)
     return 0;
 }
 
-static bool bind_events_test(void)
+static bool bind_pipes_test(void)
 {
     BEGIN_TEST;
     mx_status_t status;
@@ -245,14 +252,14 @@ static bool bind_events_test(void)
     status = mx_message_pipe_create(h, 0);
     EXPECT_EQ(status, 0, "could not create pipes");
 
-    mx_handle_t pipe = h[0];
+    mx_handle_t recv_pipe = h[0];
     info.reply_pipe = h[1];
 
-    mx_handle_t events[5];
-    for (int ix = 0; ix != countof(events); ++ix) {
-        events[ix] = mx_event_create(0u);
-        EXPECT_GT(events[ix], 0, "failed to create event");
-        status = mx_io_port_bind(info.io_port, -events[ix], events[ix], MX_SIGNAL_SIGNALED);
+    mx_handle_t pipes[10];
+    for (int ix = 0; ix != countof(pipes) / 2; ++ix) {
+        status = mx_message_pipe_create(&pipes[ix * 2], 0u);
+        EXPECT_EQ(status, NO_ERROR, "failed to create pipe");
+        status = mx_io_port_bind(info.io_port, (ix * 2) + 1, pipes[ix * 2], MX_SIGNAL_READABLE);
         EXPECT_EQ(status, NO_ERROR, "failed to bind event to ioport");
     }
 
@@ -260,12 +267,15 @@ static bool bind_events_test(void)
     int ret = thrd_create_with_name(&thread, io_reply_thread, &info, "reply");
     EXPECT_EQ(ret, thrd_success, "could not create thread");
 
-    // Poke at the events in some order, mesages with the events should arrive in order.
-    int order[] = {2, 1, 0, 4, 3, 1, 2};
+    char msg[] = "=msg0=";
+
+    // Poke at the pipes in some order, mesages with the events should arrive in order.
+    // note that we bound the even pipes so we write to the odd ones.
+    int order[] = {1, 3, 3, 1, 5, 7, 1, 5, 3, 3, 3, 9};
     for (int ix = 0; ix != countof(order); ++ix) {
-        status = mx_object_signal(events[order[ix]], 0u, MX_SIGNAL_SIGNALED);
+        msg[4] = (char)ix;
+        status = mx_message_write(pipes[order[ix]], msg, sizeof(msg), NULL, 0, 0u);
         EXPECT_EQ(status, NO_ERROR, "could not signal");
-        mx_object_signal(events[order[ix]], MX_SIGNAL_SIGNALED, 0u);
     }
 
     // Queue a final packet to make io_reply_thread exit.
@@ -275,22 +285,23 @@ static bool bind_events_test(void)
     report_t report;
     uint32_t bytes = sizeof(report);
 
-    // The messages should match the event poke order.
+    // The messages should match the pipe poke order.
     for (int ix = 0; ix != countof(order); ++ix) {
-        status = mx_handle_wait_one(pipe, MX_SIGNAL_READABLE, 1000000000ULL, NULL);
+        status = mx_handle_wait_one(recv_pipe, MX_SIGNAL_READABLE, 1000000000ULL, NULL);
         EXPECT_EQ(status, NO_ERROR, "failed to wait for pipe");
-        status = mx_message_read(pipe, &report, &bytes, NULL, NULL, 0u);
+        status = mx_message_read(recv_pipe, &report, &bytes, NULL, NULL, 0u);
         EXPECT_EQ(status, NO_ERROR, "expected valid message");
-        EXPECT_EQ(report.signals, MX_SIGNAL_SIGNALED, "invalid signal");
+        EXPECT_EQ(report.signals, MX_SIGNAL_READABLE, "invalid signal");
         EXPECT_EQ(report.type, MX_IO_PORT_PKT_TYPE_IOSN, "invalid type");
+        EXPECT_EQ(report.key, (unsigned long long)order[ix], "wrong order");
     }
 
     ret = thrd_join(thread, NULL);
     EXPECT_EQ(ret, thrd_success, "could not wait for thread");
 
     // Test cleanup.
-    for (int ix = 0; ix != countof(events); ++ix) {
-        status = mx_handle_close(events[ix]);
+    for (int ix = 0; ix != countof(pipes); ++ix) {
+        status = mx_handle_close(pipes[ix]);
         EXPECT_EQ(status, NO_ERROR, "failed closing events");
     }
 
@@ -298,7 +309,7 @@ static bool bind_events_test(void)
     EXPECT_EQ(status, NO_ERROR, "failed to close ioport");
     status = mx_handle_close(info.reply_pipe);
     EXPECT_EQ(status, NO_ERROR, "failed to close pipe 0");
-    status = mx_handle_close(pipe);
+    status = mx_handle_close(recv_pipe);
     EXPECT_EQ(status, NO_ERROR, "failed to close pipe 1");
 
     END_TEST;
@@ -309,7 +320,7 @@ RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
 RUN_TEST(thread_pool_test)
 RUN_TEST(bind_basic_test)
-RUN_TEST(bind_events_test)
+RUN_TEST(bind_pipes_test)
 END_TEST_CASE(io_port_tests)
 
 #ifndef BUILD_COMBINED_TESTS
