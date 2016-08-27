@@ -32,7 +32,7 @@ static void arm64_fpu_load_state(struct thread *t)
 
     LTRACEF("cpu %d, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
 
-    STATIC_ASSERT(sizeof(fpstate->regs) == 16 * 32);
+    static_assert(sizeof(fpstate->regs) == 16 * 32, "");
     __asm__ volatile("ldp     q0, q1, [%0, #(0 * 32)]\n"
                      "ldp     q2, q3, [%0, #(1 * 32)]\n"
                      "ldp     q4, q5, [%0, #(2 * 32)]\n"

@@ -22,7 +22,7 @@ typedef void (*mp_sync_task_t)(void *context);
 
 #define MP_CPU_ALL_BUT_LOCAL (UINT32_MAX)
 #define MP_CPU_ALL (1U<<31)
-STATIC_ASSERT(SMP_MAX_CPUS <= 31);
+static_assert(SMP_MAX_CPUS <= 31, "");
 
 /* by default, mp_mbx_reschedule does not signal to cpus that are running realtime
  * threads. Override this behavior.

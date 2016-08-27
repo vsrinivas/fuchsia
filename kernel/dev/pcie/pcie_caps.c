@@ -63,7 +63,7 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
                                             void*                     hdr,
                                             uint                      capability_version,
                                             uint                      space_left) {
-    STATIC_ASSERT(countof(dev->pcie_caps.chunks) == PCS_CAPS_CHUNK_COUNT);
+    static_assert(countof(dev->pcie_caps.chunks) == PCS_CAPS_CHUNK_COUNT, "");
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(hdr);
     DEBUG_ASSERT(!capability_version);  // Standard caps do not have version encoded in the std hdr
@@ -427,7 +427,7 @@ static status_t pcie_fetch_standard_cap_hdr(pcie_device_state_t*          dev,
     }
 
     /* Read the next header */
-    STATIC_ASSERT(PCIE_CAP_PTR_MAX_VALID <= PCIE_BASE_CONFIG_SIZE);
+    static_assert(PCIE_CAP_PTR_MAX_VALID <= PCIE_BASE_CONFIG_SIZE, "");
     uint space = PCIE_BASE_CONFIG_SIZE - cptr;
     DEBUG_ASSERT(space >= sizeof(pcie_cap_hdr_t));
 
@@ -473,7 +473,7 @@ static status_t pcie_fetch_extended_cap_hdr(pcie_device_state_t*          dev,
     }
 
     /* Read the next header */
-    STATIC_ASSERT(PCIE_EXT_CAP_PTR_MAX_VALID <= PCIE_EXTENDED_CONFIG_SIZE);
+    static_assert(PCIE_EXT_CAP_PTR_MAX_VALID <= PCIE_EXTENDED_CONFIG_SIZE, "");
     uint space = PCIE_EXTENDED_CONFIG_SIZE - cptr;
     DEBUG_ASSERT(space >= sizeof(pcie_ext_cap_hdr_t));
 

@@ -87,22 +87,22 @@ status_t x86_bootstrap16_prep(
         vmm_aspace_t **temp_aspace,
         void **bootstrap_aperature);
 
-STATIC_ASSERT(sizeof(struct x86_ap_bootstrap_data) <= PAGE_SIZE);
-STATIC_ASSERT(sizeof(struct x86_realmode_entry_data) <= PAGE_SIZE);
+static_assert(sizeof(struct x86_ap_bootstrap_data) <= PAGE_SIZE, "");
+static_assert(sizeof(struct x86_realmode_entry_data) <= PAGE_SIZE, "");
 
-STATIC_ASSERT(__offsetof(struct x86_bootstrap16_data, phys_bootstrap_pml4) == BCD_PHYS_BOOTSTRAP_PML4_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_bootstrap16_data, phys_kernel_pml4) == BCD_PHYS_KERNEL_PML4_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_bootstrap16_data, phys_gdtr) == BCD_PHYS_GDTR_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_bootstrap16_data, phys_long_mode_entry) == BCD_PHYS_LM_ENTRY_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_bootstrap16_data, long_mode_cs) == BCD_LM_CS_OFFSET);
+static_assert(__offsetof(struct x86_bootstrap16_data, phys_bootstrap_pml4) == BCD_PHYS_BOOTSTRAP_PML4_OFFSET, "");
+static_assert(__offsetof(struct x86_bootstrap16_data, phys_kernel_pml4) == BCD_PHYS_KERNEL_PML4_OFFSET, "");
+static_assert(__offsetof(struct x86_bootstrap16_data, phys_gdtr) == BCD_PHYS_GDTR_OFFSET, "");
+static_assert(__offsetof(struct x86_bootstrap16_data, phys_long_mode_entry) == BCD_PHYS_LM_ENTRY_OFFSET, "");
+static_assert(__offsetof(struct x86_bootstrap16_data, long_mode_cs) == BCD_LM_CS_OFFSET, "");
 
-STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, hdr) == 0);
-STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, cpu_id_counter) == BCD_CPU_COUNTER_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, cpu_waiting_mask) == BCD_CPU_WAITING_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_ap_bootstrap_data, per_cpu) == BCD_PER_CPU_BASE_OFFSET);
+static_assert(__offsetof(struct x86_ap_bootstrap_data, hdr) == 0, "");
+static_assert(__offsetof(struct x86_ap_bootstrap_data, cpu_id_counter) == BCD_CPU_COUNTER_OFFSET, "");
+static_assert(__offsetof(struct x86_ap_bootstrap_data, cpu_waiting_mask) == BCD_CPU_WAITING_OFFSET, "");
+static_assert(__offsetof(struct x86_ap_bootstrap_data, per_cpu) == BCD_PER_CPU_BASE_OFFSET, "");
 
-STATIC_ASSERT(__offsetof(struct x86_realmode_entry_data, hdr) == 0);
-STATIC_ASSERT(__offsetof(struct x86_realmode_entry_data, registers_ptr) == RED_REGISTERS_OFFSET);
+static_assert(__offsetof(struct x86_realmode_entry_data, hdr) == 0, "");
+static_assert(__offsetof(struct x86_realmode_entry_data, registers_ptr) == RED_REGISTERS_OFFSET, "");
 
 __END_CDECLS
 

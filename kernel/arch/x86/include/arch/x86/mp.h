@@ -69,11 +69,11 @@ struct x86_percpu {
 #endif
 };
 
-STATIC_ASSERT(__offsetof(struct x86_percpu, direct) == PERCPU_DIRECT_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_THREAD_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_percpu, kernel_sp) == PERCPU_KERNEL_SP_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET);
-STATIC_ASSERT(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET);
+static_assert(__offsetof(struct x86_percpu, direct) == PERCPU_DIRECT_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_THREAD_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, kernel_sp) == PERCPU_KERNEL_SP_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET, "");
 
 /* needs to be run very early in the boot process from start.S and as each cpu is brought up */
 void x86_init_percpu(uint8_t cpu_num);
@@ -94,7 +94,7 @@ static inline struct x86_percpu *x86_get_percpu(void)
     /* x86-32 does not yet support SMP and thus does not need a gs: pointer to point
      * at the percpu structure
      */
-    STATIC_ASSERT(SMP_MAX_CPUS == 1);
+    static_assert(SMP_MAX_CPUS == 1, "");
     extern struct x86_percpu bp_percpu;
     return &bp_percpu;
 #endif

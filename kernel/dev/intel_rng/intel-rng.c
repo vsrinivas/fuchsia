@@ -33,13 +33,13 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
      * tests against this code */
 
     if (len >= SSIZE_MAX) {
-        STATIC_ASSERT(ERR_INVALID_ARGS < 0);
+        static_assert(ERR_INVALID_ARGS < 0, "");
         return ERR_INVALID_ARGS;
     }
 
     if (!x86_feature_test(X86_FEATURE_RDSEED)) {
         /* We don't have an entropy source */
-        STATIC_ASSERT(ERR_NOT_SUPPORTED < 0);
+        static_assert(ERR_NOT_SUPPORTED < 0, "");
         return ERR_NOT_SUPPORTED;
     }
 

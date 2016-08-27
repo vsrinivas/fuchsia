@@ -81,7 +81,7 @@ struct __PACKED pch_thermal_registers {
     /* PCI Interrupt Event Enables */
     volatile uint8_t tsgpen;
 };
-STATIC_ASSERT(__offsetof(struct pch_thermal_registers, tsgpen) == 0x84);
+static_assert(__offsetof(struct pch_thermal_registers, tsgpen) == 0x84, "");
 
 #if WITH_LIB_CONSOLE
 extern struct pch_thermal_context g_pch_thermal_context;

@@ -57,9 +57,6 @@ __END_CDECLS
 #define DEBUG_ASSERT_MSG(x, msg, msgargs...) do { } while(0)
 #endif  // if (LK_DEBUGLEVEL > 1)
 
-#ifdef __cplusplus
-#define STATIC_ASSERT(e) static_assert(e, #e)
-#else
-#define STATIC_ASSERT(e) _Static_assert(e, #e)
+#if !defined(__cplusplus) && !defined(static_assert)
 #define static_assert(e, msg) _Static_assert(e, msg)
 #endif

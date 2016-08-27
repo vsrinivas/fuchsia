@@ -254,7 +254,7 @@ static inline __ALWAYS_INLINE uintptr_t __tls_set(uint entry, uintptr_t val)
 
 #define tls_set(e,v) \
     ({ \
-        STATIC_ASSERT((e) < MAX_TLS_ENTRY); \
+        static_assert((e) < MAX_TLS_ENTRY, ""); \
         __tls_set(e, v); \
     })
 

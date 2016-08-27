@@ -40,7 +40,7 @@
 #define HEAP_GROW_SIZE (4 * 1024) /* Grow less aggressively */
 #endif
 
-STATIC_ASSERT(IS_PAGE_ALIGNED(HEAP_GROW_SIZE));
+static_assert(IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 
 // Individual allocations above 4Mbytes are just fetched directly from the
 // block allocator.
@@ -49,7 +49,7 @@ STATIC_ASSERT(IS_PAGE_ALIGNED(HEAP_GROW_SIZE));
 // When we grow the heap we have to have somewhere in the freelist to put the
 // resulting freelist entry, so the freelist has to have a certain number of
 // buckets.
-STATIC_ASSERT(HEAP_GROW_SIZE <= (1u << HEAP_ALLOC_VIRTUAL_BITS));
+static_assert(HEAP_GROW_SIZE <= (1u << HEAP_ALLOC_VIRTUAL_BITS), "");
 
 // Buckets for allocations.  The smallest 15 buckets are 8, 16, 24, etc. up to
 // 120 bytes.  After that we round up to the nearest size that can be written

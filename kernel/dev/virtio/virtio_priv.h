@@ -38,7 +38,7 @@ struct virtio_mmio_config {
     /* 0x100 */ uint32_t config[0];
 };
 
-STATIC_ASSERT(sizeof(struct virtio_mmio_config) == 0x100);
+static_assert(sizeof(struct virtio_mmio_config) == 0x100, "");
 
 #define VIRTIO_MMIO_MAGIC 0x74726976 // 'virt'
 

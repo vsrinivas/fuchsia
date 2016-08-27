@@ -53,7 +53,7 @@ static struct list_node run_queue[NUM_PRIORITIES];
 static uint32_t run_queue_bitmap;
 
 /* make sure the bitmap is large enough to cover our number of priorities */
-STATIC_ASSERT(NUM_PRIORITIES <= sizeof(run_queue_bitmap) * 8);
+static_assert(NUM_PRIORITIES <= sizeof(run_queue_bitmap) * 8, "");
 
 /* the idle thread(s) (statically allocated) */
 #if WITH_SMP
@@ -716,7 +716,7 @@ void thread_resched(void)
 #if THREAD_STACK_BOUNDS_CHECK
     /* check that the old thread has not blown its stack just before pushing its context */
     if (oldthread->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) {
-        STATIC_ASSERT((THREAD_STACK_PADDING_SIZE % sizeof(uint32_t)) == 0);
+        static_assert((THREAD_STACK_PADDING_SIZE % sizeof(uint32_t)) == 0, "");
         uint32_t *s = (uint32_t *)oldthread->stack;
         for (size_t i = 0; i < THREAD_STACK_PADDING_SIZE / sizeof(uint32_t); i++) {
             if (unlikely(s[i] != STACK_DEBUG_WORD)) {

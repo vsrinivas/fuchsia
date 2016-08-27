@@ -23,11 +23,11 @@ struct idt {
 };
 
 #ifdef ARCH_X86_64
-STATIC_ASSERT(sizeof(struct idt_entry) == 16);
-STATIC_ASSERT(sizeof(struct idt) == 16 * 256);
+static_assert(sizeof(struct idt_entry) == 16, "");
+static_assert(sizeof(struct idt) == 16 * 256, "");
 #else
-STATIC_ASSERT(sizeof(struct idt_entry) == 8);
-STATIC_ASSERT(sizeof(struct idt) == 8* 256);
+static_assert(sizeof(struct idt_entry) == 8, "");
+static_assert(sizeof(struct idt) == 8* 256, "");
 #endif
 
 struct idtr {

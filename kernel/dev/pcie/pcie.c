@@ -187,8 +187,8 @@ static status_t pcie_enumerate_bars(pcie_device_state_t* dev) {
     uint8_t header_type = pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
     uint bar_count;
 
-    STATIC_ASSERT(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_DEVICE);
-    STATIC_ASSERT(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_BRIDGE);
+    static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_DEVICE, "");
+    static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_BRIDGE, "");
 
     switch (header_type) {
     case PCI_HEADER_TYPE_STANDARD:

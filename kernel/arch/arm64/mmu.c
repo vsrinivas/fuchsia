@@ -20,10 +20,10 @@
 #define LOCAL_TRACE 0
 #define TRACE_CONTEXT_SWITCH 0
 
-STATIC_ASSERT(((long)KERNEL_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1);
-STATIC_ASSERT(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1);
-STATIC_ASSERT(MMU_KERNEL_SIZE_SHIFT <= 48);
-STATIC_ASSERT(MMU_KERNEL_SIZE_SHIFT >= 25);
+static_assert(((long)KERNEL_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
+static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
+static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
+static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 
 /* the main translation table */
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
