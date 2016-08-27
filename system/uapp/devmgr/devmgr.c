@@ -459,6 +459,25 @@ static const char* removal_problem(uint32_t flags) {
     return "?";
 }
 
+static void devmgr_unbind_children(mx_device_t* dev) {
+    mx_device_t* child = NULL;
+    mx_device_t* temp = NULL;
+#if TRACE_ADD_REMOVE
+    printf("devmgr_unbind_children: %p(%s)\n", dev, safename(dev->name));
+#endif
+    list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
+        // call child's unbind op
+        if (child->ops->unbind) {
+#if TRACE_ADD_REMOVE
+            printf("call unbind child: %p(%s)\n", child, safename(child->name));
+#endif
+            DM_UNLOCK();
+            child->ops->unbind(child);
+            DM_LOCK();
+        }
+    }
+}
+
 mx_status_t devmgr_device_remove(mx_device_t* dev) {
     if (dev->flags & (DEV_FLAG_DEAD | DEV_FLAG_BUSY | DEV_FLAG_INSTANCE)) {
         printf("device: %p(%s): cannot be removed (%s)\n",
@@ -469,6 +488,8 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
     printf("device: %p(%s): is being removed\n", dev, safename(dev->name));
 #endif
     dev->flags |= DEV_FLAG_DEAD;
+
+    devmgr_unbind_children(dev);
 
     // remove entry from vfs to avoid any further open() attempts
 #if !LIBDRIVER
@@ -490,13 +511,8 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
         list_delete(&dev->unode);
     }
 
-    // detach from owner, call unbind(), downref on behalf of owner
+    // detach from owner, downref on behalf of owner
     if (dev->owner) {
-        if (dev->owner->ops.unbind) {
-            DM_UNLOCK();
-            dev->owner->ops.unbind(dev->owner, dev);
-            DM_LOCK();
-        }
         dev->owner = NULL;
         dev_ref_release(dev);
     }
@@ -549,13 +565,10 @@ mx_status_t devmgr_device_rebind(mx_device_t* dev) {
         devmgr_device_remove(child);
     }
 
-    // detach from owner and call unbind, downref
+    devmgr_unbind_children(dev);
+
+    // detach from owner and downref
     if (dev->owner) {
-        if (dev->owner->ops.unbind) {
-            DM_UNLOCK();
-            dev->owner->ops.unbind(dev->owner, dev);
-            DM_LOCK();
-        }
         dev->owner = NULL;
         dev_ref_release(dev);
     }
@@ -635,6 +648,8 @@ mx_status_t devmgr_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     if (dev->owner != drv) {
         return ERR_INVALID_ARGS;
     }
+    dev->owner = NULL;
+    dev_ref_release(dev);
 
     return NO_ERROR;
 }

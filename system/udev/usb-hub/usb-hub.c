@@ -134,6 +134,11 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
     }
 }
 
+static void usb_hub_unbind(mx_device_t* device) {
+    usb_hub_t* hub = get_hub(device);
+    device_remove(&hub->device);
+}
+
 static mx_status_t usb_hub_release(mx_device_t* device) {
     usb_hub_t* hub = get_hub(device);
     hub->status_request->ops->release(hub->status_request);
@@ -142,6 +147,7 @@ static mx_status_t usb_hub_release(mx_device_t* device) {
 }
 
 static mx_protocol_device_t usb_hub_device_proto = {
+    .unbind = usb_hub_unbind,
     .release = usb_hub_release,
 };
 
@@ -299,16 +305,6 @@ fail:
     return status;
 }
 
-static mx_status_t usb_hub_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    //TODO: should avoid using dev->childern
-    mx_device_t* child = NULL;
-    mx_device_t* temp = NULL;
-    list_for_every_entry_safe (&dev->children, child, temp, mx_device_t, node) {
-        device_remove(child);
-    }
-    return NO_ERROR;
-}
-
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB),
@@ -318,7 +314,6 @@ mx_driver_t _driver_usb_hub BUILTIN_DRIVER = {
     .name = "usb-hub",
     .ops = {
         .bind = usb_hub_bind,
-        .unbind = usb_hub_unbind,
     },
     .binding = binding,
     .binding_size = sizeof(binding),

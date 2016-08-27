@@ -124,6 +124,11 @@ static mx_off_t gpt_getsize(mx_device_t* dev) {
     return getsize(get_gptpart_device(dev));
 }
 
+static void gpt_unbind(mx_device_t* dev) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    device_remove(&device->device);
+}
+
 static mx_status_t gpt_release(mx_device_t* dev) {
     gptpart_device_t* device = get_gptpart_device(dev);
     free(device);
@@ -134,6 +139,7 @@ static mx_protocol_device_t gpt_proto = {
     .ioctl = gpt_ioctl,
     .iotxn_queue = gpt_iotxn_queue,
     .get_size = gpt_getsize,
+    .unbind = gpt_unbind,
     .release = gpt_release,
 };
 
@@ -275,15 +281,6 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_status_t gpt_unbind(mx_driver_t* driver, mx_device_t* device) {
-    mx_device_t* dev = NULL;
-    mx_device_t* temp = NULL;
-    list_for_every_entry_safe(&device->children, dev, temp, mx_device_t, node) {
-        device_remove(dev);
-    }
-    return NO_ERROR;
-}
-
 static mx_bind_inst_t binding[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
 };
@@ -292,7 +289,6 @@ mx_driver_t _driver_gpt BUILTIN_DRIVER = {
     .name = "gpt",
     .ops = {
         .bind = gpt_bind,
-        .unbind = gpt_unbind,
     },
     .flags = DRV_FLAG_NO_AUTOBIND,
     .binding = binding,

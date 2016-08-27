@@ -229,6 +229,11 @@ static bluetooth_hci_protocol_t hci_proto = {
     .get_acl_pipe = hci_get_acl_pipe,
 };
 
+static void hci_unbind(mx_device_t* device) {
+    hci_t* hci = get_hci(device);
+    device_remove(&hci->device);
+}
+
 static mx_status_t hci_release(mx_device_t* device) {
     hci_t* hci = get_hci(device);
     free(hci);
@@ -237,6 +242,7 @@ static mx_status_t hci_release(mx_device_t* device) {
 }
 
 static mx_protocol_device_t hci_device_proto = {
+    .unbind = hci_unbind,
     .release = hci_release,
 };
 
@@ -351,11 +357,6 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
     return NO_ERROR;
 }
 
-static mx_status_t hci_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    // TODO - cleanup
-    return NO_ERROR;
-}
-
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
 #if defined(USB_VID) && defined(USB_PID)
@@ -372,7 +373,6 @@ mx_driver_t _driver_usb_bt_hci BUILTIN_DRIVER = {
     .name = "usb_bt_hci",
     .ops = {
         .bind = hci_bind,
-        .unbind = hci_unbind,
     },
     .binding = binding,
     .binding_size = sizeof(binding),

@@ -210,6 +210,15 @@ static void xhci_iotxn_queue(mx_device_t* hci_device, iotxn_t* txn) {
     }
 }
 
+static void xhci_unbind(mx_device_t* dev) {
+    xprintf("usb_xhci_unbind\n");
+    usb_xhci_t* uxhci = dev_to_usb_xhci(dev);
+
+    if (uxhci->bus_device) {
+        device_remove(uxhci->bus_device);
+    }
+}
+
 static mx_status_t xhci_release(mx_device_t* device) {
     // FIXME - do something here
     return NO_ERROR;
@@ -217,6 +226,7 @@ static mx_status_t xhci_release(mx_device_t* device) {
 
 static mx_protocol_device_t xhci_device_proto = {
     .iotxn_queue = xhci_iotxn_queue,
+    .unbind = xhci_unbind,
     .release = xhci_release,
 };
 
@@ -358,16 +368,6 @@ error_return:
     return status;
 }
 
-static mx_status_t usb_xhci_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    xprintf("usb_xhci_unbind\n");
-    usb_xhci_t* uxhci = dev_to_usb_xhci(dev);
-
-    if (uxhci->bus_device) {
-        device_remove(uxhci->bus_device);
-    }
-    return NO_ERROR;
-}
-
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),
@@ -379,7 +379,6 @@ mx_driver_t _driver_usb_xhci BUILTIN_DRIVER = {
     .name = "usb-xhci",
     .ops = {
         .bind = usb_xhci_bind,
-        .unbind = usb_xhci_unbind,
     },
     .binding = binding,
     .binding_size = sizeof(binding),

@@ -631,6 +631,11 @@ out:
     return status;
 }
 
+static void ums_unbind(mx_device_t* device) {
+    ums_t* msd = get_ums(device);
+    device_remove(&msd->device);
+}
+
 static mx_status_t ums_release(mx_device_t* device) {
     ums_t* msd = get_ums(device);
     list_node_t* node;
@@ -749,6 +754,7 @@ static mx_off_t ums_get_size(mx_device_t* dev) {
 
 static mx_protocol_device_t ums_device_proto = {
     .ioctl = ums_ioctl,
+    .unbind = ums_unbind,
     .release = ums_release,
     .iotxn_queue = ums_iotxn_queue,
     .get_size = ums_get_size,
@@ -909,10 +915,6 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     return NO_ERROR;
 }
 
-static mx_status_t ums_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
     BI_MATCH_IF(EQ, BIND_USB_IFC_CLASS, USB_CLASS_MSC),
@@ -922,7 +924,6 @@ mx_driver_t _driver_usb_mass_storage BUILTIN_DRIVER = {
     .name = "usb_mass_storage",
     .ops = {
         .bind = ums_bind,
-        .unbind = ums_unbind,
     },
     .binding = binding,
     .binding_size = sizeof(binding),

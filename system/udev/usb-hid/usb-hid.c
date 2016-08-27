@@ -37,7 +37,6 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
     bool requeue = true;
     switch (txn->status) {
     case ERR_CHANNEL_CLOSED:
-        usb_hid_process_closed(hid);
         requeue = false;
         break;
     case NO_ERROR:

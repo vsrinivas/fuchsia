@@ -203,7 +203,10 @@ static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
     }
 
     list_add_head(&eth->free_intr_reqs, &request->node);
-    queue_interrupt_requests_locked(eth);
+    if (request->status != ERR_CHANNEL_CLOSED) {
+        queue_interrupt_requests_locked(eth);
+    }
+
     mtx_unlock(&eth->mutex);
 }
 
@@ -326,6 +329,11 @@ static ethernet_protocol_t usb_ethernet_proto = {
     .get_mtu = usb_ethernet_get_mtu,
 };
 
+static void usb_ethernet_unbind(mx_device_t* device) {
+    usb_ethernet_t* eth = get_usb_ethernet(device);
+    device_remove(&eth->device);
+}
+
 static mx_status_t usb_ethernet_release(mx_device_t* device) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
     free(eth);
@@ -351,6 +359,7 @@ static ssize_t eth_write(mx_device_t* dev, const void* data, size_t len, mx_off_
 }
 
 static mx_protocol_device_t usb_ethernet_device_proto = {
+    .unbind = usb_ethernet_unbind,
     .release = usb_ethernet_release,
     .read = eth_read,
     .write = eth_write,
@@ -542,11 +551,6 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     return NO_ERROR;
 }
 
-static mx_status_t usb_ethernet_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    // TODO - cleanup
-    return NO_ERROR;
-}
-
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
@@ -557,7 +561,6 @@ mx_driver_t _driver_usb_ethernet BUILTIN_DRIVER = {
     .name = "usb_ethernet",
     .ops = {
         .bind = usb_ethernet_bind,
-        .unbind = usb_ethernet_unbind,
     },
     .binding = binding,
     .binding_size = sizeof(binding),

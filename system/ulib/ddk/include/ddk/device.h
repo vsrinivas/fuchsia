@@ -95,6 +95,9 @@ typedef struct mx_protocol_device {
 
     mx_status_t (*close)(mx_device_t* dev);
 
+    void (*unbind)(mx_device_t* dev);
+    // Notifies the device that its parent is being removed (has been hot unplugged, etc).
+
     mx_status_t (*release)(mx_device_t* dev);
     // Release any resources held by the mx_device_t and free() it.
     // release is called after a device is remove()'d and its

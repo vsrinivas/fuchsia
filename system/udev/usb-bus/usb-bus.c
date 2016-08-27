@@ -248,7 +248,21 @@ static usb_bus_protocol_t _bus_protocol = {
     .hub_device_removed = usb_bus_device_removed,
 };
 
+static void usb_bus_unbind(mx_device_t* dev) {
+    usb_bus_t* bus = get_usb_bus(dev);
+    bus->hci_protocol->set_bus_device(bus->hci_device, NULL);
+
+    for (size_t i = 0; i < countof(bus->devices); i++) {
+        usb_device_t* device = bus->devices[i];
+        if (device) {
+            device_remove(&device->device);
+            bus->devices[i] = NULL;
+        }
+    }
+}
+
 static mx_protocol_device_t usb_bus_device_proto = {
+    .unbind = usb_bus_unbind,
 };
 
 static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {
@@ -281,18 +295,6 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {
     return status;
 }
 
-static mx_status_t usb_bus_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    usb_bus_t* bus = get_usb_bus(dev);
-    bus->hci_protocol->set_bus_device(bus->hci_device, NULL);
-
-    mx_device_t* child = NULL;
-    mx_device_t* temp = NULL;
-    list_for_every_entry_safe (&dev->children, child, temp, mx_device_t, node) {
-        device_remove(child);
-    }
-    return NO_ERROR;
-}
-
 static mx_bind_inst_t binding[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_USB_HCI),
 };
@@ -301,7 +303,6 @@ mx_driver_t _driver_usb_bus BUILTIN_DRIVER = {
     .name = "usb_bus",
     .ops = {
         .bind = usb_bus_bind,
-        .unbind = usb_bus_unbind,
     },
     .binding = binding,
     .binding_size = sizeof(binding),
