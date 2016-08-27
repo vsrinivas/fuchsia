@@ -15,9 +15,9 @@
 
 // Node for linked list of threads blocked on a futex
 // Intended to be embedded within a UserThread Instance
-class FutexNode : public utils::SinglyLinkedListable<FutexNode*> {
+class FutexNode : public mxtl::SinglyLinkedListable<FutexNode*> {
 public:
-    using HashTable = utils::HashTable<uintptr_t, FutexNode*>;
+    using HashTable = mxtl::HashTable<uintptr_t, FutexNode*>;
 
     FutexNode();
     ~FutexNode();
@@ -60,7 +60,7 @@ public:
         hash_key_ = key;
     }
 
-    // Trait implementation for utils::HashTable
+    // Trait implementation for mxtl::HashTable
     uintptr_t GetKey() const { return hash_key_; }
     static size_t GetHash(uintptr_t key) { return (key >> 3); }
 

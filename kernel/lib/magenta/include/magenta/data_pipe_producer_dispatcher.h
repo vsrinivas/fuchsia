@@ -22,8 +22,8 @@ class VmAspace;
 
 class DataPipeProducerDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(utils::RefPtr<DataPipe> data_pipe,
-                              utils::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(mxtl::RefPtr<DataPipe> data_pipe,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~DataPipeProducerDispatcher() final;
@@ -32,11 +32,11 @@ public:
     StateTracker* get_state_tracker() final;
 
     mx_status_t Write(const void* buffer, mx_size_t* requested);
-    mx_status_t BeginWrite(utils::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
+    mx_status_t BeginWrite(mxtl::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
     mx_status_t EndWrite(mx_size_t written);
 
 private:
-    DataPipeProducerDispatcher(utils::RefPtr<DataPipe> pipe);
+    DataPipeProducerDispatcher(mxtl::RefPtr<DataPipe> pipe);
 
-    utils::RefPtr<DataPipe> pipe_;
+    mxtl::RefPtr<DataPipe> pipe_;
 };

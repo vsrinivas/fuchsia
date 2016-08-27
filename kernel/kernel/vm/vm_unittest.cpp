@@ -369,7 +369,7 @@ static bool vmm_object_tests(void* context) {
 
         auto ka = VmAspace::kernel_aspace();
         void* ptr;
-        auto ret = ka->MapObject(utils::move(vmo), "test", 0, alloc_size, &ptr, 0, VMM_FLAG_COMMIT,
+        auto ret = ka->MapObject(mxtl::move(vmo), "test", 0, alloc_size, &ptr, 0, VMM_FLAG_COMMIT,
                                  arch_rw_flags);
         EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
@@ -480,7 +480,7 @@ static bool vmm_object_tests(void* context) {
 
         // create test buffer
         AllocChecker ac;
-        utils::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
+        mxtl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
         EXPECT_TRUE(ac.check(), "");
         fill_region(99, a.get(), alloc_size);
 
@@ -545,7 +545,7 @@ static bool vmm_object_tests(void* context) {
 
         // test that we can read from it
         unittest_printf("reading back from vm object\n");
-        utils::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
+        mxtl::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
         EXPECT_TRUE(ac.check(), "");
 
         size_t bytes_read = -1;

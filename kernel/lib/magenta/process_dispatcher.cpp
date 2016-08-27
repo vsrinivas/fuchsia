@@ -37,7 +37,7 @@ static constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ  |
 
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
     MUTEX_INITIAL_VALUE(global_process_list_mutex_);
-utils::DoublyLinkedList<ProcessDispatcher*> ProcessDispatcher::global_process_list_;
+mxtl::DoublyLinkedList<ProcessDispatcher*> ProcessDispatcher::global_process_list_;
 
 
 mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
@@ -55,8 +55,8 @@ Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
     return MapU32ToHandle(handle_id);
 }
 
-mx_status_t ProcessDispatcher::Create(utils::StringPiece name,
-                                      utils::RefPtr<Dispatcher>* dispatcher,
+mx_status_t ProcessDispatcher::Create(mxtl::StringPiece name,
+                                      mxtl::RefPtr<Dispatcher>* dispatcher,
                                       mx_rights_t* rights, uint32_t flags) {
     AllocChecker ac;
     auto process = new (&ac) ProcessDispatcher(name, flags);
@@ -68,11 +68,11 @@ mx_status_t ProcessDispatcher::Create(utils::StringPiece name,
         return result;
 
     *rights = kDefaultProcessRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(process);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(process);
     return NO_ERROR;
 }
 
-ProcessDispatcher::ProcessDispatcher(utils::StringPiece name, uint32_t flags)
+ProcessDispatcher::ProcessDispatcher(mxtl::StringPiece name, uint32_t flags)
     : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 
@@ -309,7 +309,7 @@ Handle* ProcessDispatcher::GetHandle_NoLock(mx_handle_t handle_value) {
 
 void ProcessDispatcher::AddHandle(HandleUniquePtr handle) {
     AutoLock lock(&handle_table_lock_);
-    AddHandle_NoLock(utils::move(handle));
+    AddHandle_NoLock(mxtl::move(handle));
 }
 
 void ProcessDispatcher::AddHandle_NoLock(HandleUniquePtr handle) {
@@ -338,7 +338,7 @@ void ProcessDispatcher::UndoRemoveHandle_NoLock(mx_handle_t handle_value) {
 }
 
 bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
-                                      utils::RefPtr<Dispatcher>* dispatcher,
+                                      mxtl::RefPtr<Dispatcher>* dispatcher,
                                       uint32_t* rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandle_NoLock(handle_value);
@@ -356,10 +356,10 @@ status_t ProcessDispatcher::GetInfo(mx_process_info_t* info) {
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::CreateUserThread(utils::StringPiece name, uint32_t flags, utils::RefPtr<UserThread>* user_thread) {
+status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread) {
     AllocChecker ac;
-    auto ut = utils::AdoptRef(new (&ac) UserThread(GenerateKernelObjectId(),
-                                                   utils::RefPtr<ProcessDispatcher>(this),
+    auto ut = mxtl::AdoptRef(new (&ac) UserThread(GenerateKernelObjectId(),
+                                                   mxtl::RefPtr<ProcessDispatcher>(this),
                                                    flags));
     if (!ac.check())
         return ERR_NO_MEMORY;
@@ -368,11 +368,11 @@ status_t ProcessDispatcher::CreateUserThread(utils::StringPiece name, uint32_t f
     if (result != NO_ERROR)
         return result;
 
-    *user_thread = utils::move(ut);
+    *user_thread = mxtl::move(ut);
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::SetExceptionPort(utils::RefPtr<ExceptionPort> eport) {
+status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     // Lock both |state_lock_| and |exception_lock_| to ensure the process
     // doesn't transition to dead while we're setting the exception handler.
     AutoLock state_lock(&state_lock_);
@@ -390,7 +390,7 @@ void ProcessDispatcher::ResetExceptionPort() {
     exception_port_.reset();
 }
 
-utils::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
+mxtl::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
     AutoLock lock(&exception_lock_);
     return exception_port_;
 }
@@ -413,21 +413,21 @@ void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
 }
 
 // static
-utils::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
+mxtl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
     LTRACE_ENTRY;
     AutoLock lock(&global_process_list_mutex_);
     auto iter = global_process_list_.find_if([koid](const ProcessDispatcher& p) {
                                                 return p.get_koid() == koid;
                                              });
-    return utils::RefPtr<ProcessDispatcher>(iter.CopyPointer());
+    return mxtl::RefPtr<ProcessDispatcher>(iter.CopyPointer());
 }
 
-utils::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
+mxtl::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&thread_list_lock_);
 
     auto iter = thread_list_.find_if([koid](const UserThread& t) { return t.get_koid() == koid; });
-    return utils::RefPtr<UserThread>(iter.CopyPointer());
+    return mxtl::RefPtr<UserThread>(iter.CopyPointer());
 }
 
 mx_status_t ProcessDispatcher::set_bad_handle_policy(uint32_t new_policy) {

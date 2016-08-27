@@ -48,5 +48,5 @@ private:
     mx_signals_t watched_signals_ = 0u;
     uint64_t context_ = 0u;
 
-    utils::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
+    mxtl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
 };

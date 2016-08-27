@@ -17,7 +17,7 @@ constexpr mx_rights_t kDefaultThreadRights =
     MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
 
 // static
-status_t ThreadDispatcher::Create(utils::RefPtr<UserThread> thread, utils::RefPtr<Dispatcher>* dispatcher,
+status_t ThreadDispatcher::Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,
                                   mx_rights_t* rights) {
     AllocChecker ac;
     Dispatcher* disp = new (&ac) ThreadDispatcher(thread);
@@ -25,12 +25,12 @@ status_t ThreadDispatcher::Create(utils::RefPtr<UserThread> thread, utils::RefPt
         return ERR_NO_MEMORY;
 
     *rights = kDefaultThreadRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 
-ThreadDispatcher::ThreadDispatcher(utils::RefPtr<UserThread> thread)
-    : thread_(utils::move(thread)) {
+ThreadDispatcher::ThreadDispatcher(mxtl::RefPtr<UserThread> thread)
+    : thread_(mxtl::move(thread)) {
     LTRACE_ENTRY_OBJ;
 
     LTRACEF("thread %p\n", get_current_thread());
@@ -46,7 +46,7 @@ StateTracker* ThreadDispatcher::get_state_tracker() {
     return thread_->state_tracker();
 }
 
-status_t ThreadDispatcher::SetExceptionPort(utils::RefPtr<ExceptionPort> eport) {
+status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     return thread_->SetExceptionPort(this, eport);
 }
 

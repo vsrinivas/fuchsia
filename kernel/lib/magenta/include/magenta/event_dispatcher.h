@@ -15,7 +15,7 @@
 
 class EventDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t options, utils::RefPtr<Dispatcher>* dispatcher,
+    static status_t Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
     ~EventDispatcher() final;

@@ -24,8 +24,8 @@
 
 class ProcessDispatcher;
 
-class UserThread : public utils::DoublyLinkedListable<UserThread*>
-                 , public utils::RefCounted<UserThread> {
+class UserThread : public mxtl::DoublyLinkedListable<UserThread*>
+                 , public mxtl::RefCounted<UserThread> {
 public:
     // state of the thread
     enum class State {
@@ -37,7 +37,7 @@ public:
     };
 
     UserThread(mx_koid_t koid,
-               utils::RefPtr<ProcessDispatcher> process,
+               mxtl::RefPtr<ProcessDispatcher> process,
                uint32_t flags);
     ~UserThread();
 
@@ -47,7 +47,7 @@ public:
 
     // Performs initialization on a newly constructed UserThread
     // If this fails, then the object is invalid and should be deleted
-    status_t Initialize(utils::StringPiece name);
+    status_t Initialize(mxtl::StringPiece name);
     status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2);
     void Exit() __NO_RETURN;
     void Kill();
@@ -57,16 +57,16 @@ public:
     ProcessDispatcher* process() { return process_.get(); }
     FutexNode* futex_node() { return &futex_node_; }
     StateTracker* state_tracker() { return &state_tracker_; }
-    const utils::StringPiece name() const { return thread_.name; }
+    const mxtl::StringPiece name() const { return thread_.name; }
     State state() const { return state_; }
 
-    status_t SetExceptionPort(ThreadDispatcher* td, utils::RefPtr<ExceptionPort> eport);
+    status_t SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport);
     void ResetExceptionPort();
-    utils::RefPtr<ExceptionPort> exception_port();
+    mxtl::RefPtr<ExceptionPort> exception_port();
 
     // Note this takes a specific exception port as an argument because there are several:
     // debugger, thread, process, and system.
-    status_t ExceptionHandlerExchange(utils::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report);
+    status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report);
     status_t MarkExceptionHandled(mx_exception_status_t status);
 
     mx_koid_t get_koid() const { return koid_; }
@@ -89,7 +89,7 @@ private:
     const mx_koid_t koid_;
 
     // a ref pointer back to the parent process
-    utils::RefPtr<ProcessDispatcher> process_;
+    mxtl::RefPtr<ProcessDispatcher> process_;
 
     // User thread starting register values.
     uintptr_t user_entry_ = 0;
@@ -107,7 +107,7 @@ private:
     StateTracker state_tracker_;
 
     // A thread-level exception port for this thread.
-    utils::RefPtr<ExceptionPort> exception_port_;
+    mxtl::RefPtr<ExceptionPort> exception_port_;
     Mutex exception_lock_;
 
     // Support for sending an exception to an exception handler and then waiting for a response.

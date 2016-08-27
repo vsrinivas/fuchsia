@@ -37,7 +37,7 @@ class VmObjectDispatcher;
 class WaitSetDispatcher;
 class ResourceDispatcher;
 
-class Dispatcher : public utils::RefCounted<Dispatcher> {
+class Dispatcher : public mxtl::RefCounted<Dispatcher> {
 public:
     Dispatcher();
     virtual ~Dispatcher() {}

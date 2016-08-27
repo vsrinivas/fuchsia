@@ -12,7 +12,7 @@
 
 class LogDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t flags, utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
+    static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
 
     ~LogDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_LOG; }

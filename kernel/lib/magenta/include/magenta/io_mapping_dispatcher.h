@@ -15,7 +15,7 @@ public:
     static status_t Create(const char* dbg_name,
                            paddr_t paddr, size_t size,
                            uint vmm_flags, uint arch_mmu_flags,
-                           utils::RefPtr<Dispatcher>* out_dispatcher,
+                           mxtl::RefPtr<Dispatcher>* out_dispatcher,
                            mx_rights_t* out_rights);
 
     IoMappingDispatcher(const IoMappingDispatcher &) = delete;
@@ -32,7 +32,7 @@ public:
     paddr_t paddr()  const { return paddr_; }
     vaddr_t vaddr()  const { return vaddr_; }
     size_t  size()   const { return size_; }
-    const utils::RefPtr<VmAspace>& aspace() { return aspace_; }
+    const mxtl::RefPtr<VmAspace>& aspace() { return aspace_; }
 
 protected:
     static constexpr mx_rights_t kDefaultRights = MX_RIGHT_READ;
@@ -44,7 +44,7 @@ protected:
                   uint vmm_flags, uint arch_mmu_flags);
 
 private:
-    utils::RefPtr<VmAspace> aspace_;
+    mxtl::RefPtr<VmAspace> aspace_;
     paddr_t                 paddr_;
     vaddr_t                 vaddr_ = 0;
     size_t                  size_;

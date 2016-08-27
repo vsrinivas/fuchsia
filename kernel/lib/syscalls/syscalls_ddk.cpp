@@ -42,17 +42,17 @@ static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
 mx_handle_t sys_interrupt_event_create(uint32_t vector, uint32_t flags) {
     LTRACEF("vector %u flags 0x%x\n", vector, flags);
 
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     status_t result = InterruptDispatcher::Create(vector, flags, &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), rights));
+    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle.get());
-    up->AddHandle(utils::move(handle));
+    up->AddHandle(mxtl::move(handle));
     return hv;
 }
 
@@ -60,7 +60,7 @@ mx_status_t sys_interrupt_event_wait(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
 
     uint32_t rights = 0u;
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
 
     auto up = ProcessDispatcher::GetCurrent();
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
@@ -77,7 +77,7 @@ mx_status_t sys_interrupt_event_complete(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
 
     uint32_t rights = 0u;
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
 
     auto up = ProcessDispatcher::GetCurrent();
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
@@ -92,7 +92,7 @@ mx_status_t sys_interrupt_event_complete(mx_handle_t handle_value) {
 
 mx_status_t sys_mmap_device_memory(uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
-                                   utils::user_ptr<void*> out_vaddr) {
+                                   mxtl::user_ptr<void*> out_vaddr) {
 
     LTRACEF("addr 0x%lx len 0x%x\n", paddr, len);
 
@@ -223,10 +223,10 @@ static status_t pcie_irq_swizzle_from_table(const pcie_device_state_t* dev, uint
     return NO_ERROR;
 }
 
-mx_status_t sys_pci_init(mx_handle_t handle, utils::user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
+mx_status_t sys_pci_init(mx_handle_t handle, mxtl::user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights)) {
@@ -237,7 +237,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, utils::user_ptr<mx_pci_init_arg_t> 
     }
     // TODO(security): Add additional access checks
 
-    utils::unique_ptr<mx_pci_init_arg_t, utils::free_delete> arg;
+    mxtl::unique_ptr<mx_pci_init_arg_t, mxtl::free_delete> arg;
 
     if (len < sizeof(*arg) || len > MX_PCI_INIT_ARG_MAX_SIZE) {
         return ERR_INVALID_ARGS;
@@ -371,14 +371,14 @@ mx_handle_t sys_pci_get_nth_device(uint32_t index, mx_pcie_get_nth_info_t* out_i
     if (!out_info)
         return ERR_INVALID_ARGS;
 
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_pcie_get_nth_info_t info;
     status_t result = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), rights));
+    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -389,7 +389,7 @@ mx_handle_t sys_pci_get_nth_device(uint32_t index, mx_pcie_get_nth_info_t* out_i
                             &info, sizeof(*out_info)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    up->AddHandle(utils::move(handle));
+    up->AddHandle(mxtl::move(handle));
     return handle_value;
 }
 
@@ -402,7 +402,7 @@ mx_status_t sys_pci_claim_device(mx_handle_t handle) {
     LTRACEF("handle %u\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -427,7 +427,7 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t handle, bool enable) {
     LTRACEF("handle %u\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -451,7 +451,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t handle) {
     LTRACEF("handle %u\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -476,7 +476,7 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
     LTRACEF("handle %u\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     // Caller only gets to control the cache policy, nothing else.
@@ -494,17 +494,17 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
         return ERR_ACCESS_DENIED;
 
     mx_rights_t mmio_rights;
-    utils::RefPtr<Dispatcher> mmio_io_mapping;
+    mxtl::RefPtr<Dispatcher> mmio_io_mapping;
     status_t result = pci_device->MapMmio(bar_num, cache_policy, &mmio_io_mapping, &mmio_rights);
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr mmio_handle(MakeHandle(utils::move(mmio_io_mapping), mmio_rights));
+    HandleUniquePtr mmio_handle(MakeHandle(mxtl::move(mmio_io_mapping), mmio_rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
     mx_handle_t ret_val = up->MapHandleToValue(mmio_handle.get());
-    up->AddHandle(utils::move(mmio_handle));
+    up->AddHandle(mxtl::move(mmio_handle));
     return ret_val;
 }
 
@@ -544,7 +544,7 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
     LTRACEF("handle %u\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> device_dispatcher;
+    mxtl::RefPtr<Dispatcher> device_dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &device_dispatcher, &rights))
@@ -557,17 +557,17 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
-    utils::RefPtr<Dispatcher> interrupt_dispatcher;
+    mxtl::RefPtr<Dispatcher> interrupt_dispatcher;
     status_t result = pci_device->MapInterrupt(which_irq, &interrupt_dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(utils::move(interrupt_dispatcher), rights));
+    HandleUniquePtr handle(MakeHandle(mxtl::move(interrupt_dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
     mx_handle_t interrupt_handle = up->MapHandleToValue(handle.get());
-    up->AddHandle(utils::move(handle));
+    up->AddHandle(mxtl::move(handle));
     return interrupt_handle;
 }
 
@@ -578,7 +578,7 @@ mx_status_t sys_pci_interrupt_wait(mx_handle_t handle) {
      * @param handle Handle associated with a PCI interrupt
      */
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -604,7 +604,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
     LTRACEF("handle %u\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -618,17 +618,17 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
         return ERR_ACCESS_DENIED;
 
     mx_rights_t config_rights;
-    utils::RefPtr<Dispatcher> config_io_mapping;
+    mxtl::RefPtr<Dispatcher> config_io_mapping;
     status_t result = pci_device->MapConfig(&config_io_mapping, &config_rights);
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr config_handle(MakeHandle(utils::move(config_io_mapping), config_rights));
+    HandleUniquePtr config_handle(MakeHandle(mxtl::move(config_io_mapping), config_rights));
     if (!config_handle)
         return ERR_NO_MEMORY;
 
     mx_handle_t ret_val = up->MapHandleToValue(config_handle.get());
-    up->AddHandle(utils::move(config_handle));
+    up->AddHandle(mxtl::move(config_handle));
     return ret_val;
 }
 
@@ -644,7 +644,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
     LTRACEF("handle %u\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -681,7 +681,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
     LTRACEF("handle %u\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
@@ -710,7 +710,7 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))

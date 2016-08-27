@@ -26,10 +26,10 @@ VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size, uint arch_mmu_fl
     LTRACEF("%p '%s'\n", this, name_);
 }
 
-utils::RefPtr<VmRegion> VmRegion::Create(VmAspace& aspace, vaddr_t base, size_t size,
+mxtl::RefPtr<VmRegion> VmRegion::Create(VmAspace& aspace, vaddr_t base, size_t size,
                                          uint arch_mmu_flags, const char* name) {
     AllocChecker ac;
-    auto r = utils::AdoptRef(new (&ac) VmRegion(aspace, base, size, arch_mmu_flags, name));
+    auto r = mxtl::AdoptRef(new (&ac) VmRegion(aspace, base, size, arch_mmu_flags, name));
     return ac.check() ? r : nullptr;
 }
 
@@ -84,7 +84,7 @@ int VmRegion::Unmap() {
     return arch_mmu_unmap(&aspace_->arch_aspace(), base_, size_ / PAGE_SIZE);
 }
 
-status_t VmRegion::SetObject(utils::RefPtr<VmObject> o, uint64_t offset) {
+status_t VmRegion::SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("%p '%s', o %p, offset 0x%llx\n", this, name_, &o, offset);
 
@@ -270,4 +270,4 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     return NO_ERROR;
 }
 
-utils::RefPtr<VmObject> VmRegion::vmo() { return object_; }
+mxtl::RefPtr<VmObject> VmRegion::vmo() { return object_; }

@@ -29,10 +29,10 @@
 #define LOCAL_TRACE 0
 
 UserThread::UserThread(mx_koid_t koid,
-                       utils::RefPtr<ProcessDispatcher> process,
+                       mxtl::RefPtr<ProcessDispatcher> process,
                        uint32_t flags)
     : koid_(koid),
-      process_(utils::move(process)),
+      process_(mxtl::move(process)),
       state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 }
@@ -54,7 +54,7 @@ UserThread::~UserThread() {
 }
 
 // complete initialization of the thread object outside of the constructor
-status_t UserThread::Initialize(utils::StringPiece name) {
+status_t UserThread::Initialize(mxtl::StringPiece name) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -269,7 +269,7 @@ void UserThread::SetState(State state) {
     state_ = state;
 }
 
-status_t UserThread::SetExceptionPort(ThreadDispatcher* td, utils::RefPtr<ExceptionPort> eport) {
+status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport) {
     // Lock both |state_lock_| and |exception_lock_| to ensure the thread
     // doesn't transition to dead while we're setting the exception handler.
     AutoLock state_lock(state_lock_);
@@ -287,12 +287,12 @@ void UserThread::ResetExceptionPort() {
     exception_port_.reset();
 }
 
-utils::RefPtr<ExceptionPort> UserThread::exception_port() {
+mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
     AutoLock lock(exception_lock_);
     return exception_port_;
 }
 
-status_t UserThread::ExceptionHandlerExchange(utils::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report) {
+status_t UserThread::ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
     exception_status_ = MX_EXCEPTION_STATUS_WAITING;

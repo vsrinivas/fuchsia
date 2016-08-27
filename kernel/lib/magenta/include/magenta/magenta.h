@@ -21,7 +21,7 @@ class ExceptionPort;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
-Handle* MakeHandle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
+Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
 
 // Duplicate a handle created by MakeHandle().
 Handle* DupHandle(Handle* source, mx_rights_t rights);
@@ -36,9 +36,9 @@ uint32_t MapHandleToU32(const Handle* handle);
 Handle* MapU32ToHandle(uint32_t value);
 
 // Set/get the system exception port.
-mx_status_t SetSystemExceptionPort(utils::RefPtr<ExceptionPort> eport);
+mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
 void ResetSystemExceptionPort();
-utils::RefPtr<ExceptionPort> GetSystemExceptionPort();
+mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort();
 
 struct handle_delete {
     inline void operator()(Handle* h) const {
@@ -48,7 +48,7 @@ struct handle_delete {
 
 bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired);
 
-using HandleUniquePtr = utils::unique_ptr<Handle, handle_delete>;
+using HandleUniquePtr = mxtl::unique_ptr<Handle, handle_delete>;
 
 // (temporary) conversion from mx_time (nanoseconds) to lk_time_t (milliseconds)
 // remove once mx_time_t is converted to 1:1 match mx_time_t

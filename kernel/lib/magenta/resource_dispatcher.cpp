@@ -13,7 +13,7 @@
 constexpr mx_rights_t kDefaultResourceRights =
     MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
 
-status_t ResourceDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher,
+status_t ResourceDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
     AllocChecker ac;
     Dispatcher* disp = new (&ac) ResourceDispatcher();
@@ -21,7 +21,7 @@ status_t ResourceDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher,
         return ERR_NO_MEMORY;
 
     *rights = kDefaultResourceRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 

@@ -60,13 +60,13 @@ static void build_exception_report(mx_exception_report_t* report,
 }
 
 static status_t exception_handler_exchange(UserThread* thread,
-                                           utils::RefPtr<ExceptionPort> eport,
+                                           mxtl::RefPtr<ExceptionPort> eport,
                                            const mx_exception_report_t* report) {
     LTRACE_ENTRY;
     return thread->ExceptionHandlerExchange(eport, report);
 }
 
-static status_t try_exception_handler(utils::RefPtr<ExceptionPort> eport,
+static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
                                       UserThread* thread, const mx_exception_report_t* report) {
     if (!eport)
         return ERR_NOT_FOUND;

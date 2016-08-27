@@ -17,20 +17,20 @@
 constexpr mx_rights_t kDefaultVmoRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
 
-status_t VmObjectDispatcher::Create(utils::RefPtr<VmObject> vmo,
-                                    utils::RefPtr<Dispatcher>* dispatcher,
+status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
+                                    mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
     AllocChecker ac;
-    auto disp = new (&ac) VmObjectDispatcher(utils::move(vmo));
+    auto disp = new (&ac) VmObjectDispatcher(mxtl::move(vmo));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
     *rights = kDefaultVmoRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 
-VmObjectDispatcher::VmObjectDispatcher(utils::RefPtr<VmObject> vmo)
+VmObjectDispatcher::VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo)
     : vmo_(vmo) {}
 
 VmObjectDispatcher::~VmObjectDispatcher() {}
@@ -65,7 +65,7 @@ mx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
     return NO_ERROR;
 }
 
-mx_status_t VmObjectDispatcher::Map(utils::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
+mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
                                     uintptr_t* _ptr, uint32_t flags) {
     DEBUG_ASSERT(aspace);
 

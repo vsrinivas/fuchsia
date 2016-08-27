@@ -32,10 +32,10 @@ static const pcie_driver_registration_t PCIE_DRIVER_REGISTRATION = {
 
 status_t PciDeviceDispatcher::Create(uint32_t                   index,
                                      mx_pcie_get_nth_info_t*    out_info,
-                                     utils::RefPtr<Dispatcher>* out_dispatcher,
+                                     mxtl::RefPtr<Dispatcher>* out_dispatcher,
                                      mx_rights_t*               out_rights) {
     status_t status;
-    utils::RefPtr<PciDeviceWrapper> device_wrapper;
+    mxtl::RefPtr<PciDeviceWrapper> device_wrapper;
 
     status = PciDeviceWrapper::Create(index, &device_wrapper);
     if (status != NO_ERROR)
@@ -48,12 +48,12 @@ status_t PciDeviceDispatcher::Create(uint32_t                   index,
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    *out_dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *out_dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     *out_rights     = kDefaultPciDeviceRights;
     return NO_ERROR;
 }
 
-PciDeviceDispatcher::PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
+PciDeviceDispatcher::PciDeviceDispatcher(mxtl::RefPtr<PciDeviceWrapper> device,
                                          mx_pcie_get_nth_info_t* out_info)
     : device_(device) {
     const pcie_device_state_t& dev = *device_->device();
@@ -115,7 +115,7 @@ status_t PciDeviceDispatcher::ResetDevice() {
     return pcie_do_function_level_reset(device_->device());
 }
 
-status_t PciDeviceDispatcher::MapConfig(utils::RefPtr<Dispatcher>* out_mapping,
+status_t PciDeviceDispatcher::MapConfig(mxtl::RefPtr<Dispatcher>* out_mapping,
                                         mx_rights_t* out_rights) {
     AutoLock lock(&lock_);
     return PciIoMappingDispatcher::Create(device_,
@@ -132,7 +132,7 @@ status_t PciDeviceDispatcher::MapConfig(utils::RefPtr<Dispatcher>* out_mapping,
 
 status_t PciDeviceDispatcher::MapMmio(uint32_t bar_num,
                                       uint32_t cache_policy,
-                                      utils::RefPtr<Dispatcher>* out_mapping,
+                                      mxtl::RefPtr<Dispatcher>* out_mapping,
                                       mx_rights_t* out_rights) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
@@ -155,7 +155,7 @@ status_t PciDeviceDispatcher::MapMmio(uint32_t bar_num,
 }
 
 status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
-                                           utils::RefPtr<Dispatcher>* interrupt_dispatcher,
+                                           mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
                                            mx_rights_t* rights) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
@@ -251,7 +251,7 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Claim() {
 
 status_t PciDeviceDispatcher::PciDeviceWrapper::Create(
         uint32_t index,
-        utils::RefPtr<PciDeviceWrapper>* out_device) {
+        mxtl::RefPtr<PciDeviceWrapper>* out_device) {
     if (!out_device)
         return ERR_INVALID_ARGS;
 
@@ -261,7 +261,7 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Create(
 
     AllocChecker ac;
 
-    *out_device = utils::AdoptRef<PciDeviceWrapper>(new (&ac) PciDeviceWrapper(device));
+    *out_device = mxtl::AdoptRef<PciDeviceWrapper>(new (&ac) PciDeviceWrapper(device));
     if (!ac.check()) {
         pcie_release_device(device);
         return ERR_NO_MEMORY;

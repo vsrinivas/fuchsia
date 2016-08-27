@@ -19,10 +19,10 @@ class PciInterruptDispatcher;
 
 class PciDeviceDispatcher final : public Dispatcher {
 public:
-    class PciDeviceWrapper final : public utils::RefCounted<PciDeviceWrapper> {
+    class PciDeviceWrapper final : public mxtl::RefCounted<PciDeviceWrapper> {
       public:
         static status_t Create(uint32_t index,
-                               utils::RefPtr<PciDeviceWrapper>* out_device);
+                               mxtl::RefPtr<PciDeviceWrapper>* out_device);
 
         status_t Claim();   // Called only from PciDeviceDispatcher while holding dispatcher lock_
 
@@ -33,7 +33,7 @@ public:
         bool claimed() const { return claimed_; }
 
       private:
-        friend class utils::RefPtr<PciDeviceWrapper>;
+        friend class mxtl::RefPtr<PciDeviceWrapper>;
 
         struct CachePolicyRef {
             uint     ref_count;
@@ -53,7 +53,7 @@ public:
 
     static status_t Create(uint32_t                   index,
                            mx_pcie_get_nth_info_t*    out_info,
-                           utils::RefPtr<Dispatcher>* out_dispatcher,
+                           mxtl::RefPtr<Dispatcher>* out_dispatcher,
                            mx_rights_t*               out_rights);
 
     ~PciDeviceDispatcher() final;
@@ -65,14 +65,14 @@ public:
     status_t ClaimDevice();
     status_t EnableBusMaster(bool enable);
     status_t ResetDevice();
-    status_t MapConfig(utils::RefPtr<Dispatcher>* out_mapping,
+    status_t MapConfig(mxtl::RefPtr<Dispatcher>* out_mapping,
                        mx_rights_t* out_rights);
     status_t MapMmio(uint32_t bar_num,
                      uint32_t cache_policy,
-                     utils::RefPtr<Dispatcher>* out_mapping,
+                     mxtl::RefPtr<Dispatcher>* out_mapping,
                      mx_rights_t* out_rights);
     status_t MapInterrupt(int32_t which_irq,
-                          utils::RefPtr<Dispatcher>* interrupt_dispatcher,
+                          mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
                           mx_rights_t* rights);
     status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
     status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count);
@@ -80,7 +80,7 @@ public:
     bool irqs_maskable() const { return irqs_maskable_; }
 
 private:
-    PciDeviceDispatcher(utils::RefPtr<PciDeviceWrapper> device,
+    PciDeviceDispatcher(mxtl::RefPtr<PciDeviceWrapper> device,
                         mx_pcie_get_nth_info_t* out_info);
 
     PciDeviceDispatcher(const PciDeviceDispatcher &) = delete;
@@ -91,7 +91,7 @@ private:
     // is unsafe to ever attempt to acquire this lock during a callback from the
     // PCI bus driver level.
     Mutex lock_;
-    utils::RefPtr<PciDeviceWrapper> device_;
+    mxtl::RefPtr<PciDeviceWrapper> device_;
 
     uint irqs_supported_ = 0;
     bool irqs_maskable_  = false;

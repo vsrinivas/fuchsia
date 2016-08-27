@@ -53,7 +53,7 @@ mx_status_t sys_set_system_exception_port(mx_handle_t handle, uint64_t key, uint
         return NO_ERROR;
     }
 
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
@@ -62,12 +62,12 @@ mx_status_t sys_set_system_exception_port(mx_handle_t handle, uint64_t key, uint
     if (!ioport)
         return ERR_WRONG_TYPE;
 
-    utils::RefPtr<ExceptionPort> eport;
-    mx_status_t status = ExceptionPort::Create(utils::RefPtr<IOPortDispatcher>(ioport), key, &eport);
+    mxtl::RefPtr<ExceptionPort> eport;
+    mx_status_t status = ExceptionPort::Create(mxtl::RefPtr<IOPortDispatcher>(ioport), key, &eport);
     if (status != NO_ERROR)
         return status;
 
-    return SetSystemExceptionPort(utils::move(eport));
+    return SetSystemExceptionPort(mxtl::move(eport));
 }
 
 mx_status_t sys_set_exception_port(mx_handle_t object_handle, mx_handle_t eport_handle,
@@ -89,7 +89,7 @@ mx_status_t sys_set_exception_port(mx_handle_t object_handle, mx_handle_t eport_
             up->ResetExceptionPort();
             return NO_ERROR;
         } else {
-            utils::RefPtr<Dispatcher> dispatcher;
+            mxtl::RefPtr<Dispatcher> dispatcher;
             mx_rights_t rights;
             if (!up->GetDispatcher(object_handle, &dispatcher, &rights))
                 return ERR_BAD_HANDLE;
@@ -113,7 +113,7 @@ mx_status_t sys_set_exception_port(mx_handle_t object_handle, mx_handle_t eport_
         }
     }
 
-    utils::RefPtr<Dispatcher> ioport_dispatcher;
+    mxtl::RefPtr<Dispatcher> ioport_dispatcher;
     mx_rights_t ioport_rights;
     if (!up->GetDispatcher(eport_handle, &ioport_dispatcher, &ioport_rights))
         return ERR_BAD_HANDLE;
@@ -122,16 +122,16 @@ mx_status_t sys_set_exception_port(mx_handle_t object_handle, mx_handle_t eport_
         return ERR_WRONG_TYPE;
     // TODO(dje): rights checking of ioport
 
-    utils::RefPtr<ExceptionPort> eport;
-    mx_status_t status = ExceptionPort::Create(utils::RefPtr<IOPortDispatcher>(ioport), key, &eport);
+    mxtl::RefPtr<ExceptionPort> eport;
+    mx_status_t status = ExceptionPort::Create(mxtl::RefPtr<IOPortDispatcher>(ioport), key, &eport);
     if (status != NO_ERROR)
         return status;
 
     // TODO(dje): Temp hack, MX_HANDLE_INVALID == "this process"
     if (object_handle == MX_HANDLE_INVALID) {
-        return up->SetExceptionPort(utils::move(eport));
+        return up->SetExceptionPort(mxtl::move(eport));
     } else {
-        utils::RefPtr<Dispatcher> dispatcher;
+        mxtl::RefPtr<Dispatcher> dispatcher;
         mx_rights_t rights;
         if (!up->GetDispatcher(object_handle, &dispatcher, &rights))
             return ERR_BAD_HANDLE;
@@ -141,11 +141,11 @@ mx_status_t sys_set_exception_port(mx_handle_t object_handle, mx_handle_t eport_
 
         auto process = dispatcher->get_process_dispatcher();
         if (process)
-            return process->SetExceptionPort(utils::move(eport));
+            return process->SetExceptionPort(mxtl::move(eport));
 
         auto thread = dispatcher->get_thread_dispatcher();
         if (thread)
-            return thread->SetExceptionPort(utils::move(eport));
+            return thread->SetExceptionPort(mxtl::move(eport));
 
         return ERR_WRONG_TYPE;
     }
@@ -166,7 +166,7 @@ mx_status_t sys_mark_exception_handled(mx_handle_t handle, mx_koid_t tid, mx_exc
         return ERR_INVALID_ARGS;
     }
 
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
@@ -189,17 +189,17 @@ mx_status_t sys_mark_exception_handled(mx_handle_t handle, mx_koid_t tid, mx_exc
 
 // Make a handle of |process| that can be used for debugging it.
 
-static mx_handle_t make_process_handle(utils::RefPtr<ProcessDispatcher> process) {
+static mx_handle_t make_process_handle(mxtl::RefPtr<ProcessDispatcher> process) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // Remember, even this wip is just for bootstrapping purposes.
     mx_rights_t process_rights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DEBUG; // TODO(dje): wip
-    utils::RefPtr<Dispatcher> dispatcher(process.get());
-    HandleUniquePtr handle(MakeHandle(utils::move(dispatcher), process_rights));
+    mxtl::RefPtr<Dispatcher> dispatcher(process.get());
+    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), process_rights));
     if (!handle)
         return ERR_NO_MEMORY;
     mx_handle_t hv = up->MapHandleToValue(handle.get());
-    up->AddHandle(utils::move(handle));
+    up->AddHandle(mxtl::move(handle));
     return hv;
 }
 
@@ -222,7 +222,7 @@ mx_handle_t sys_process_debug(mx_handle_t handle, mx_koid_t pid) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
@@ -230,9 +230,9 @@ mx_handle_t sys_process_debug(mx_handle_t handle, mx_koid_t pid) {
     // A thread may be the exception handler for a process.
     auto thread = dispatcher->get_thread_dispatcher();
     if (thread) {
-        utils::RefPtr<ProcessDispatcher> process(thread->thread()->process());
+        mxtl::RefPtr<ProcessDispatcher> process(thread->thread()->process());
         if (process->get_koid() == pid)
-            return make_process_handle(utils::move(process));
+            return make_process_handle(mxtl::move(process));
         return ERR_INVALID_ARGS;
     }
 

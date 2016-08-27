@@ -19,21 +19,21 @@ constexpr mx_rights_t kDefaultDataPipeProducerRights =
 // can be waited on. Consider a different right for waits.
 
 // static
-mx_status_t DataPipeProducerDispatcher::Create(utils::RefPtr<DataPipe> data_pipe,
-                                               utils::RefPtr<Dispatcher>* dispatcher,
+mx_status_t DataPipeProducerDispatcher::Create(mxtl::RefPtr<DataPipe> data_pipe,
+                                               mxtl::RefPtr<Dispatcher>* dispatcher,
                                                mx_rights_t* rights) {
     AllocChecker ac;
-    Dispatcher* consumer = new (&ac) DataPipeProducerDispatcher(utils::move(data_pipe));
+    Dispatcher* consumer = new (&ac) DataPipeProducerDispatcher(mxtl::move(data_pipe));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
     *rights = kDefaultDataPipeProducerRights;
-    *dispatcher = utils::AdoptRef(consumer);
+    *dispatcher = mxtl::AdoptRef(consumer);
     return NO_ERROR;
 }
 
-DataPipeProducerDispatcher::DataPipeProducerDispatcher(utils::RefPtr<DataPipe> pipe)
-    : pipe_(utils::move(pipe)) {
+DataPipeProducerDispatcher::DataPipeProducerDispatcher(mxtl::RefPtr<DataPipe> pipe)
+    : pipe_(mxtl::move(pipe)) {
 }
 
 DataPipeProducerDispatcher::~DataPipeProducerDispatcher() {
@@ -48,13 +48,13 @@ mx_status_t DataPipeProducerDispatcher::Write(const void* buffer, mx_size_t* req
     return pipe_->ProducerWriteFromUser(buffer, requested);
 }
 
-mx_status_t DataPipeProducerDispatcher::BeginWrite(utils::RefPtr<VmAspace> aspace,
+mx_status_t DataPipeProducerDispatcher::BeginWrite(mxtl::RefPtr<VmAspace> aspace,
                                                    void** buffer, mx_size_t* requested) {
     if (*requested > kMaxDataPipeCapacity) {
         *requested = kMaxDataPipeCapacity;
     }
 
-    return pipe_->ProducerWriteBegin(utils::move(aspace), buffer, requested);
+    return pipe_->ProducerWriteBegin(mxtl::move(aspace), buffer, requested);
 }
 
 mx_status_t DataPipeProducerDispatcher::EndWrite(mx_size_t written) {

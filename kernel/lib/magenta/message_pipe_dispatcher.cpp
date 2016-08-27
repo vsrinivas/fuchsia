@@ -24,13 +24,13 @@ constexpr mx_rights_t kDefaultPipeRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ | M
 
 // static
 status_t MessagePipeDispatcher::Create(uint32_t flags,
-                                       utils::RefPtr<Dispatcher>* dispatcher0,
-                                       utils::RefPtr<Dispatcher>* dispatcher1,
+                                       mxtl::RefPtr<Dispatcher>* dispatcher0,
+                                       mxtl::RefPtr<Dispatcher>* dispatcher1,
                                        mx_rights_t* rights) {
     LTRACE_ENTRY;
 
     AllocChecker ac;
-    utils::RefPtr<MessagePipe> pipe = utils::AdoptRef(new (&ac) MessagePipe(GenerateKernelObjectId()));
+    mxtl::RefPtr<MessagePipe> pipe = mxtl::AdoptRef(new (&ac) MessagePipe(GenerateKernelObjectId()));
     if (!ac.check()) return ERR_NO_MEMORY;
 
     Dispatcher* msgp0 = new (&ac) MessagePipeDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, pipe);
@@ -40,14 +40,14 @@ status_t MessagePipeDispatcher::Create(uint32_t flags,
     if (!ac.check()) return ERR_NO_MEMORY;
 
     *rights = kDefaultPipeRights;
-    *dispatcher0 = utils::AdoptRef(msgp0);
-    *dispatcher1 = utils::AdoptRef(msgp1);
+    *dispatcher0 = mxtl::AdoptRef(msgp0);
+    *dispatcher1 = mxtl::AdoptRef(msgp1);
     return NO_ERROR;
 }
 
 MessagePipeDispatcher::MessagePipeDispatcher(uint32_t flags,
-                                             size_t side, utils::RefPtr<MessagePipe> pipe)
-    : side_(side), flags_(flags), pipe_(utils::move(pipe)) {
+                                             size_t side, mxtl::RefPtr<MessagePipe> pipe)
+    : side_(side), flags_(flags), pipe_(mxtl::move(pipe)) {
 }
 
 MessagePipeDispatcher::~MessagePipeDispatcher() {
@@ -74,29 +74,29 @@ status_t MessagePipeDispatcher::BeginRead(uint32_t* message_size, uint32_t* hand
     return result;
 }
 
-status_t MessagePipeDispatcher::AcceptRead(utils::Array<uint8_t>* data,
-                                           utils::Array<Handle*>* handles) {
+status_t MessagePipeDispatcher::AcceptRead(mxtl::Array<uint8_t>* data,
+                                           mxtl::Array<Handle*>* handles) {
     LTRACE_ENTRY;
 
-    utils::unique_ptr<MessagePacket> msg;
+    mxtl::unique_ptr<MessagePacket> msg;
     {
         AutoLock lock(&lock_);
-        msg = utils::move(pending_);
+        msg = mxtl::move(pending_);
         // if there is no message it means another user thread beat us here.
         if (!msg) return ERR_BAD_STATE;
 
-        *data = utils::move(msg->data);
-        *handles = utils::move(msg->handles);
+        *data = mxtl::move(msg->data);
+        *handles = mxtl::move(msg->handles);
     }
     return NO_ERROR;
 }
 
-status_t MessagePipeDispatcher::Write(utils::Array<uint8_t> data, utils::Array<Handle*> handles) {
+status_t MessagePipeDispatcher::Write(mxtl::Array<uint8_t> data, mxtl::Array<Handle*> handles) {
     LTRACE_ENTRY;
     AllocChecker ac;
-    utils::unique_ptr<MessagePacket> msg(
-        new (&ac) MessagePacket(utils::move(data), utils::move(handles)));
+    mxtl::unique_ptr<MessagePacket> msg(
+        new (&ac) MessagePacket(mxtl::move(data), mxtl::move(handles)));
     if (!ac.check()) return ERR_NO_MEMORY;
 
-    return pipe_->Write(side_, utils::move(msg));
+    return pipe_->Write(side_, mxtl::move(msg));
 }

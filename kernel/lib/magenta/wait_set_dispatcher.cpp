@@ -27,7 +27,7 @@
 // static
 status_t WaitSetDispatcher::Entry::Create(mx_signals_t watched_signals,
                                           uint64_t cookie,
-                                          utils::unique_ptr<Entry>* entry) {
+                                          mxtl::unique_ptr<Entry>* entry) {
     AllocChecker ac;
     Entry* e = new (&ac) Entry (watched_signals, cookie);
     if (!ac.check())
@@ -71,7 +71,7 @@ void WaitSetDispatcher::Entry::SetState_NoLock(State new_state) {
     state_ = new_state;
 }
 
-const utils::RefPtr<Dispatcher>& WaitSetDispatcher::Entry::GetDispatcher_NoLock() const {
+const mxtl::RefPtr<Dispatcher>& WaitSetDispatcher::Entry::GetDispatcher_NoLock() const {
     // Don't assert |wait_set_->mutex_.IsHeld()| here, since we may get called from
     // WaitSetDispatcher's destructor.
     return dispatcher_;
@@ -189,13 +189,13 @@ bool WaitSetDispatcher::Entry::Trigger_NoLock() {
 constexpr mx_rights_t kDefaultWaitSetRights = MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 // static
-status_t WaitSetDispatcher::Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
+status_t WaitSetDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
     AllocChecker ac;
     Dispatcher* d = new (&ac) WaitSetDispatcher();
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    *dispatcher = utils::AdoptRef(d);
+    *dispatcher = mxtl::AdoptRef(d);
     *rights = kDefaultWaitSetRights;
     return NO_ERROR;
 }
@@ -231,7 +231,7 @@ WaitSetDispatcher::~WaitSetDispatcher() {
     cond_destroy(&cv_);
 }
 
-status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* handle) {
+status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* handle) {
     auto state_tracker = handle->dispatcher()->get_state_tracker();
     if (!state_tracker || !state_tracker->is_waitable())
         return ERR_NOT_SUPPORTED;
@@ -240,7 +240,7 @@ status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* han
     {
         AutoLock lock(&mutex_);
 
-        if (!entries_.insert_or_find(utils::move(entry)))
+        if (!entries_.insert_or_find(mxtl::move(entry)))
             return ERR_ALREADY_EXISTS;
 
         e->Init_NoLock(this, handle);
@@ -271,8 +271,8 @@ status_t WaitSetDispatcher::AddEntry(utils::unique_ptr<Entry> entry, Handle* han
 }
 
 status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
-    utils::unique_ptr<Entry> entry;
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::unique_ptr<Entry> entry;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     {
         AutoLock lock(&mutex_);
 
@@ -292,7 +292,7 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
         if (state == Entry::State::ADD_PENDING) {
             // We're *in* AddEntry() on another thread! Just put it back and pretend it hasn't been
             // added yet.
-            entries_.insert(utils::move(entry));
+            entries_.insert(mxtl::move(entry));
             return NO_ERROR;
         }
         DEBUG_ASSERT(state == Entry::State::ADDED);

@@ -12,14 +12,14 @@
 constexpr mx_rights_t kDefaultEventRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE;
 
-status_t LogDispatcher::Create(uint32_t flags, utils::RefPtr<Dispatcher>* dispatcher,
+status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
                                mx_rights_t* rights) {
     AllocChecker ac;
     auto disp = new (&ac) LogDispatcher(flags);
     if (!ac.check()) return ERR_NO_MEMORY;
 
     *rights = kDefaultEventRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 

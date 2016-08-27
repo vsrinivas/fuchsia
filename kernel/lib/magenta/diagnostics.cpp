@@ -121,7 +121,7 @@ void DumpProcessList() {
 }
 
 void DumpProcessHandles(mx_koid_t id) {
-    utils::RefPtr<ProcessDispatcher> pd;
+    mxtl::RefPtr<ProcessDispatcher> pd;
     {
         AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
 
@@ -134,7 +134,7 @@ void DumpProcessHandles(mx_koid_t id) {
             printf("process %lld not found\n", id);
             return;
         }
-        pd = utils::RefPtr<ProcessDispatcher>(process_iter.CopyPointer());
+        pd = mxtl::RefPtr<ProcessDispatcher>(process_iter.CopyPointer());
     }
 
     printf("process [%llu] handles :\n", id);

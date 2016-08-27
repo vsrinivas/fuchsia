@@ -18,8 +18,8 @@
 
 class SocketDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t flags, utils::RefPtr<Dispatcher>* dispatcher0,
-                           utils::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
+    static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
+                           mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
 
     ~SocketDispatcher() final;
 
@@ -51,12 +51,12 @@ private:
     };
 
     SocketDispatcher(uint32_t flags);
-    mx_status_t Init(utils::RefPtr<SocketDispatcher> other);
+    mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_ssize_t WriteSelf(const void* src, mx_size_t len, bool from_user);
 
     const uint32_t flags_;
     StateTracker state_tracker_;
-    utils::RefPtr<SocketDispatcher> other_;
+    mxtl::RefPtr<SocketDispatcher> other_;
 
     // The |lock_| protects cbuf_.
     mutex_t lock_;

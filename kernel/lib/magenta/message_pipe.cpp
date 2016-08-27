@@ -69,7 +69,7 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
     messages_to_destroy.clear();
 }
 
-status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
+status_t MessagePipe::Read(size_t side, mxtl::unique_ptr<MessagePacket>* msg) {
     bool other_alive;
     auto other = other_side(side);
 
@@ -89,7 +89,7 @@ status_t MessagePipe::Read(size_t side, utils::unique_ptr<MessagePacket>* msg) {
     return other_alive ? ERR_BAD_STATE : ERR_CHANNEL_CLOSED;
 }
 
-status_t MessagePipe::Write(size_t side, utils::unique_ptr<MessagePacket> msg) {
+status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {
     auto other = other_side(side);
 
     AutoLock lock(&lock_);
@@ -101,7 +101,7 @@ status_t MessagePipe::Write(size_t side, utils::unique_ptr<MessagePacket> msg) {
         return ERR_BAD_STATE;
     }
 
-    messages_[other].push_back(utils::move(msg));
+    messages_[other].push_back(mxtl::move(msg));
 
     state_tracker_[other].UpdateSatisfied(0u, MX_SIGNAL_READABLE);
     return NO_ERROR;

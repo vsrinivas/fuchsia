@@ -11,13 +11,13 @@
 #include <string.h>
 
 status_t PciIoMappingDispatcher::Create(
-        const utils::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
+        const mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
         const char* dbg_tag,
         paddr_t paddr,
         size_t size,
         uint vmm_flags,
         uint arch_mmu_flags,
-        utils::RefPtr<Dispatcher>* out_dispatcher,
+        mxtl::RefPtr<Dispatcher>* out_dispatcher,
         mx_rights_t* out_rights) {
     // Sanity check our args
     if (!device || !out_rights || !out_dispatcher)
@@ -36,7 +36,7 @@ status_t PciIoMappingDispatcher::Create(
              dbg_tag, dev.bus_id, dev.dev_id, dev.func_id);
 
     // Initialize the mapping
-    utils::RefPtr<Dispatcher> disp = utils::AdoptRef<Dispatcher>(pim_disp);
+    mxtl::RefPtr<Dispatcher> disp = mxtl::AdoptRef<Dispatcher>(pim_disp);
     status_t status = pim_disp->Init(name, paddr, size, vmm_flags, arch_mmu_flags);
     if (status != NO_ERROR) {
         pim_disp->Close();
@@ -44,17 +44,17 @@ status_t PciIoMappingDispatcher::Create(
     }
 
     // Success!  Stash the results.
-    *out_dispatcher = utils::move(disp);
+    *out_dispatcher = mxtl::move(disp);
     *out_rights     = IoMappingDispatcher::kDefaultRights;
     return NO_ERROR;
 }
 
 status_t PciIoMappingDispatcher::CreateBarMapping(
-        const utils::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
+        const mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
         uint bar_num,
         uint vmm_flags,
         uint cache_policy,
-        utils::RefPtr<Dispatcher>* out_dispatcher,
+        mxtl::RefPtr<Dispatcher>* out_dispatcher,
         mx_rights_t* out_rights) {
     // Sanity check our args
     if (!device || !out_rights || !out_dispatcher)

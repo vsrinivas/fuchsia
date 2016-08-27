@@ -86,7 +86,7 @@ static bool alloc_checker_new(void* context) {
 #endif
 
     AllocChecker ac;
-    utils::unique_ptr<char[]> arr(new (&ac) char[sz]);
+    mxtl::unique_ptr<char[]> arr(new (&ac) char[sz]);
     EXPECT_EQ(ac.check(), result, "");
 
     END_TEST;

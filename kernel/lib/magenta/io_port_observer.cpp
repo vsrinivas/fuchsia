@@ -32,24 +32,24 @@ mx_status_t SendIOPortPacket(IOPortDispatcher* io_port,
     return io_port->Queue(packet);
 }
 
-IOPortObserver* IOPortObserver::Create(utils::RefPtr<IOPortDispatcher> io_port,
+IOPortObserver* IOPortObserver::Create(mxtl::RefPtr<IOPortDispatcher> io_port,
                                        Handle* handle,
                                        mx_signals_t signals,
                                        uint64_t key) {
     AllocChecker ac;
     auto observer =
-        new (&ac) IOPortObserver(utils::move(io_port), handle, signals, key);
+        new (&ac) IOPortObserver(mxtl::move(io_port), handle, signals, key);
     return ac.check() ? observer : nullptr;
 }
 
-IOPortObserver::IOPortObserver(utils::RefPtr<IOPortDispatcher> io_port,
+IOPortObserver::IOPortObserver(mxtl::RefPtr<IOPortDispatcher> io_port,
                                Handle* handle,
                                mx_signals_t watched_signals,
                                uint64_t key)
     : handle_(handle),
       watched_signals_(watched_signals),
       key_(key),
-      io_port_(utils::move(io_port)) {
+      io_port_(mxtl::move(io_port)) {
 }
 
 bool IOPortObserver::OnInitialize(mx_signals_state_t) {

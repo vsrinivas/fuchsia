@@ -22,8 +22,8 @@ class VmAspace;
 
 class DataPipeConsumerDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(utils::RefPtr<DataPipe> data_pipe,
-                              utils::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(mxtl::RefPtr<DataPipe> data_pipe,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~DataPipeConsumerDispatcher() final;
@@ -33,11 +33,11 @@ public:
 
     mx_status_t Read(void* buffer, mx_size_t* requested);
 
-    mx_status_t BeginRead(utils::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
+    mx_status_t BeginRead(mxtl::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
     mx_status_t EndRead(mx_size_t read);
 
 private:
-    DataPipeConsumerDispatcher(utils::RefPtr<DataPipe> pipe);
+    DataPipeConsumerDispatcher(mxtl::RefPtr<DataPipe> pipe);
 
-    utils::RefPtr<DataPipe> pipe_;
+    mxtl::RefPtr<DataPipe> pipe_;
 };

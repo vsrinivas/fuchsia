@@ -15,7 +15,7 @@ public:
         KERNEL,
     };
 
-    static status_t Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
+    static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
 
     virtual ~ResourceDispatcher() final;
 

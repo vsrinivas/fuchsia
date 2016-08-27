@@ -38,19 +38,19 @@ constexpr size_t kMaxHandleCount = 32 * 1024;
 
 // The handle arena and its mutex.
 mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);
-utils::TypedArena<Handle> handle_arena;
+mxtl::TypedArena<Handle> handle_arena;
 
 // The system exception port.
-static utils::RefPtr<ExceptionPort> system_exception_port;
+static mxtl::RefPtr<ExceptionPort> system_exception_port;
 static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mutex);
 
 void magenta_init(uint level) {
     handle_arena.Init("handles", kMaxHandleCount);
 }
 
-Handle* MakeHandle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
+Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
-    return handle_arena.New(utils::move(dispatcher), rights);
+    return handle_arena.New(mxtl::move(dispatcher), rights);
 }
 
 Handle* DupHandle(Handle* source, mx_rights_t rights) {
@@ -104,7 +104,7 @@ Handle* MapU32ToHandle(uint32_t value) {
     return reinterpret_cast<Handle*>(va);
 }
 
-mx_status_t SetSystemExceptionPort(utils::RefPtr<ExceptionPort> eport) {
+mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     AutoLock lock(&system_exception_mutex);
     if (system_exception_port)
         return ERR_BAD_STATE; // TODO(dje): ?
@@ -117,7 +117,7 @@ void ResetSystemExceptionPort() {
     system_exception_port.reset();
 }
 
-utils::RefPtr<ExceptionPort> GetSystemExceptionPort() {
+mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort() {
     AutoLock lock(&system_exception_mutex);
     return system_exception_port;
 }

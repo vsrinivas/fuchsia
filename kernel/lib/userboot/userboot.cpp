@@ -44,13 +44,13 @@ extern "C" const char vdso_image[], userboot_image[];
 //
 // TODO: make this unnecessary by making sure on all archtectures the kernel can
 // tolerate a hole in its mapping. Currently on arm/arm64 this is not possible.
-static utils::RefPtr<VmObject> vdso_vmo;
-static utils::RefPtr<VmObject> userboot_vmo;
-static utils::RefPtr<VmObject> bootfs_vmo;
-static utils::RefPtr<VmObject> rootfs_vmo;
+static mxtl::RefPtr<VmObject> vdso_vmo;
+static mxtl::RefPtr<VmObject> userboot_vmo;
+static mxtl::RefPtr<VmObject> bootfs_vmo;
+static mxtl::RefPtr<VmObject> rootfs_vmo;
 
 // Make a new VM object populated from some pages we have on hand.
-static utils::RefPtr<VmObject> make_vmo_from_memory(const void* data,
+static mxtl::RefPtr<VmObject> make_vmo_from_memory(const void* data,
                                                     size_t size) {
     auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, size);
     if (vmo && size > 0) {
@@ -78,37 +78,37 @@ static utils::RefPtr<VmObject> make_vmo_from_memory(const void* data,
 }
 
 // Get a handle to a VM object, with full rights except perhaps for writing.
-static mx_status_t get_vmo_handle(utils::RefPtr<VmObject> vmo, bool readonly,
+static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
                                   HandleUniquePtr* ptr) {
     if (!vmo)
         return ERR_NO_MEMORY;
     mx_rights_t rights;
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = VmObjectDispatcher::Create(
-        utils::move(vmo), &dispatcher, &rights);
+        mxtl::move(vmo), &dispatcher, &rights);
     if (result == NO_ERROR) {
         if (readonly)
             rights &= ~MX_RIGHT_WRITE;
-        *ptr = HandleUniquePtr(MakeHandle(utils::move(dispatcher), rights));
+        *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
     }
     return result;
 }
 
 static mx_status_t get_resource_handle(HandleUniquePtr* ptr) {
     mx_rights_t rights;
-    utils::RefPtr<Dispatcher> dispatcher;
+    mxtl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = ResourceDispatcher::Create(&dispatcher, &rights);
     if (result == NO_ERROR) {
-        *ptr = HandleUniquePtr(MakeHandle(utils::move(dispatcher), rights));
+        *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
     }
     return result;
 }
 
 // Map a segment from one of our embedded VM objects.
 // If *mapped_address is zero to begin with, it can go anywhere.
-static mx_status_t map_dso_segment(utils::RefPtr<VmAspace> aspace,
+static mx_status_t map_dso_segment(mxtl::RefPtr<VmAspace> aspace,
                                    const char* name, bool code,
-                                   utils::RefPtr<VmObject> vmo,
+                                   mxtl::RefPtr<VmObject> vmo,
                                    uintptr_t start_offset,
                                    uintptr_t end_offset,
                                    uintptr_t* mapped_address) {
@@ -144,9 +144,9 @@ static mx_status_t map_dso_segment(utils::RefPtr<VmAspace> aspace,
 // Map one of our embedded DSOs from its VM object.
 // If *start_address is zero, it can go anywhere.
 static mx_status_t map_dso_image(const char* name,
-                                 utils::RefPtr<VmAspace> aspace,
+                                 mxtl::RefPtr<VmAspace> aspace,
                                  uintptr_t* start_address,
-                                 utils::RefPtr<VmObject> vmo,
+                                 mxtl::RefPtr<VmObject> vmo,
                                  size_t code_start, size_t code_end) {
     ASSERT(*start_address % PAGE_SIZE == 0);
     ASSERT(code_start % PAGE_SIZE == 0);
@@ -171,15 +171,15 @@ static HandleUniquePtr make_bootstrap_pipe(
     const void* bytes, uint32_t num_bytes,
     HandleUniquePtr handles[], uint32_t num_handles) {
     HandleUniquePtr user_pipe_handle;
-    utils::RefPtr<MessagePipeDispatcher> kernel_pipe;
+    mxtl::RefPtr<MessagePipeDispatcher> kernel_pipe;
     {
-        utils::RefPtr<Dispatcher> mpd0, mpd1;
+        mxtl::RefPtr<Dispatcher> mpd0, mpd1;
         mx_rights_t rights;
         status_t status = MessagePipeDispatcher::Create(
             0, &mpd0, &mpd1, &rights);
         if (status != NO_ERROR)
             return nullptr;
-        user_pipe_handle.reset(MakeHandle(utils::move(mpd0), rights));
+        user_pipe_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
         kernel_pipe.reset(mpd1->get_message_pipe_dispatcher());
     }
     if (!user_pipe_handle)
@@ -188,12 +188,12 @@ static HandleUniquePtr make_bootstrap_pipe(
 
     // Now pack up the bytes and handles to write down the pipe.
     AllocChecker ac;
-    utils::Array<uint8_t> buffer(new (&ac) uint8_t[num_bytes], num_bytes);
+    mxtl::Array<uint8_t> buffer(new (&ac) uint8_t[num_bytes], num_bytes);
     if (!ac.check())
         return nullptr;
     memcpy(buffer.get(), bytes, buffer.size());
 
-    utils::Array<Handle*> handle_list(new (&ac) Handle*[num_handles],
+    mxtl::Array<Handle*> handle_list(new (&ac) Handle*[num_handles],
                                       num_handles);
     if (!ac.check())
         return nullptr;
@@ -201,8 +201,8 @@ static HandleUniquePtr make_bootstrap_pipe(
         handle_list[i] = handles[i].release();
 
     // Here it goes!
-    mx_status_t status = kernel_pipe->Write(utils::move(buffer),
-                                            utils::move(handle_list));
+    mx_status_t status = kernel_pipe->Write(mxtl::move(buffer),
+                                            mxtl::move(handle_list));
     if (status != NO_ERROR)
         return nullptr;
 
@@ -300,7 +300,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         return status;
 
     mx_rights_t rights;
-    utils::RefPtr<Dispatcher> proc_disp;
+    mxtl::RefPtr<Dispatcher> proc_disp;
     status = ProcessDispatcher::Create("userboot", &proc_disp, &rights, 0);
     if (status < 0)
         return status;
@@ -362,16 +362,16 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     // Create the user thread and stash its handle for the bootstrap message.
     ThreadDispatcher* thread;
     {
-        utils::RefPtr<UserThread> ut;
+        mxtl::RefPtr<UserThread> ut;
         status = proc->CreateUserThread("userboot", 0, &ut);
         if (status < 0)
             return status;
-        utils::RefPtr<Dispatcher> ut_disp;
+        mxtl::RefPtr<Dispatcher> ut_disp;
         status = ThreadDispatcher::Create(ut, &ut_disp, &rights);
         if (status < 0)
             return status;
         thread = ut_disp->get_thread_dispatcher();
-        handles[BOOTSTRAP_THREAD].reset(MakeHandle(utils::move(ut_disp), rights));
+        handles[BOOTSTRAP_THREAD].reset(MakeHandle(mxtl::move(ut_disp), rights));
     }
     DEBUG_ASSERT(thread);
 
@@ -380,7 +380,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         // The bootstrap message buffer is too big to fit on a kernel
         // stack, so allocate it.
         AllocChecker ac;
-        utils::unique_ptr<bootstrap_message> msg(new (&ac) bootstrap_message);
+        mxtl::unique_ptr<bootstrap_message> msg(new (&ac) bootstrap_message);
         if (!ac.check())
             return ERR_NO_MEMORY;
 
@@ -392,7 +392,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
             return ERR_NO_MEMORY;
 
         hv = proc->MapHandleToValue(handle.get());
-        proc->AddHandle(utils::move(handle));
+        proc->AddHandle(mxtl::move(handle));
     }
 
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);

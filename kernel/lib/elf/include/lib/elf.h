@@ -94,14 +94,14 @@ private:
 
     // loaded info about the elf file
     elf_ehdr eheader_ = {};           // a copy of the main elf header
-    utils::Array<elf_phdr> pheaders_; // a pointer to a buffer of program headers
+    mxtl::Array<elf_phdr> pheaders_; // a pointer to a buffer of program headers
 };
 
 // partial implementation for loading from something to vmm allocated memory
 class ToMemFile : public File {
 public:
-    ToMemFile(const char* name, utils::RefPtr<VmAspace> aspace)
-        : File(name), aspace_(utils::move(aspace)) {}
+    ToMemFile(const char* name, mxtl::RefPtr<VmAspace> aspace)
+        : File(name), aspace_(mxtl::move(aspace)) {}
     ToMemFile(const ToMemFile &) = delete;
     ToMemFile& operator=(const ToMemFile &) = delete;
     virtual ~ToMemFile() override {}
@@ -115,7 +115,7 @@ public:
 
     // a loaded segment
     struct segment {
-        utils::RefPtr<VmObject> vmo;
+        mxtl::RefPtr<VmObject> vmo;
         vaddr_t va;
         size_t len;
     };
@@ -124,7 +124,7 @@ public:
     segment GetSegment(uint seg_num);
 
 protected:
-    utils::RefPtr<VmAspace> aspace_;
+    mxtl::RefPtr<VmAspace> aspace_;
 
     static const size_t SEG_COUNT = 16;
     segment seg_[SEG_COUNT] = {};
@@ -133,7 +133,7 @@ protected:
 // fully overloaded implementation for loading from memory to vmm allocated memory
 class MemFile : public ToMemFile {
 public:
-    MemFile(const char* name, utils::RefPtr<VmAspace> aspace, const void* src_ptr, size_t src_len);
+    MemFile(const char* name, mxtl::RefPtr<VmAspace> aspace, const void* src_ptr, size_t src_len);
     MemFile(const MemFile &) = delete;
     MemFile& operator=(const MemFile &) = delete;
     virtual ~MemFile() override;
@@ -153,7 +153,7 @@ private:
 // fully overloaded implementation for loading from a block device to vmm allocated memory
 class BioToMemFile : public ToMemFile {
 public:
-    BioToMemFile(const char* name, utils::RefPtr<VmAspace> aspace, struct bdev* bdev,
+    BioToMemFile(const char* name, mxtl::RefPtr<VmAspace> aspace, struct bdev* bdev,
                  uint64_t bdev_offset, uint64_t bdev_len);
     BioToMemFile(const BioToMemFile &) = delete;
     BioToMemFile& operator=(const BioToMemFile &) = delete;

@@ -64,7 +64,7 @@ bool IOP_Packet::CopyToUser(void* data, mx_size_t* size) {
 }
 
 mx_status_t IOPortDispatcher::Create(uint32_t options,
-                                     utils::RefPtr<Dispatcher>* dispatcher,
+                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                      mx_rights_t* rights) {
     AllocChecker ac;
     auto disp = new (&ac) IOPortDispatcher(options);
@@ -72,7 +72,7 @@ mx_status_t IOPortDispatcher::Create(uint32_t options,
         return ERR_NO_MEMORY;
 
     *rights = kDefaultIOPortRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 

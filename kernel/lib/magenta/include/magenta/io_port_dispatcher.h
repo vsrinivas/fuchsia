@@ -26,12 +26,12 @@ struct IOP_Packet {
     IOP_Packet(mx_size_t data_size) : data_size(data_size) {}
     bool CopyToUser(void* data, mx_size_t* size);
 
-    utils::DoublyLinkedListNodeState<IOP_Packet*> iop_lns_;
+    mxtl::DoublyLinkedListNodeState<IOP_Packet*> iop_lns_;
     mx_size_t data_size;
 };
 
 struct IOP_PacketListTraits {
-    inline static utils::DoublyLinkedListNodeState<IOP_Packet*>& node_state(
+    inline static mxtl::DoublyLinkedListNodeState<IOP_Packet*>& node_state(
             IOP_Packet& obj) {
         return obj.iop_lns_;
     }
@@ -40,7 +40,7 @@ struct IOP_PacketListTraits {
 class IOPortDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t options,
-                           utils::RefPtr<Dispatcher>* dispatcher,
+                           mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
     ~IOPortDispatcher() final;
@@ -59,7 +59,7 @@ private:
 
     Mutex lock_;
     bool no_clients_;
-    utils::DoublyLinkedList<IOP_Packet*, IOP_PacketListTraits> packets_;
+    mxtl::DoublyLinkedList<IOP_Packet*, IOP_PacketListTraits> packets_;
 
     event_t event_;
 };

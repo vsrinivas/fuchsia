@@ -12,7 +12,7 @@
 
 class ThreadDispatcher : public Dispatcher {
 public:
-    static status_t Create(utils::RefPtr<UserThread> thread, utils::RefPtr<Dispatcher>* dispatcher,
+    static status_t Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
     virtual ~ThreadDispatcher() final;
@@ -29,11 +29,11 @@ public:
     UserThread* thread() { return thread_.get(); }
 
     // exception handling support
-    status_t SetExceptionPort(utils::RefPtr<ExceptionPort> eport);
+    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
     void ResetExceptionPort();
 
 private:
-    explicit ThreadDispatcher(utils::RefPtr<UserThread> thread);
+    explicit ThreadDispatcher(mxtl::RefPtr<UserThread> thread);
 
-    utils::RefPtr<UserThread> thread_;
+    mxtl::RefPtr<UserThread> thread_;
 };

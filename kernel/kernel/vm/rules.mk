@@ -10,7 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
-    lib/utils \
+    lib/mxtl \
     lib/user_copy
 
 MODULE_SRCS += \

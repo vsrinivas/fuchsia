@@ -12,7 +12,7 @@ constexpr mx_rights_t IoMappingDispatcher::kDefaultRights;
 status_t IoMappingDispatcher::Create(const char* dbg_name,
                                      paddr_t paddr, size_t size,
                                      uint vmm_flags, uint arch_mmu_flags,
-                                     utils::RefPtr<Dispatcher>* out_dispatcher,
+                                     mxtl::RefPtr<Dispatcher>* out_dispatcher,
                                      mx_rights_t* out_rights) {
     if (!out_dispatcher || !out_rights)
         return ERR_INVALID_ARGS;
@@ -26,7 +26,7 @@ status_t IoMappingDispatcher::Create(const char* dbg_name,
     if (status != NO_ERROR) {
         delete disp;
     } else {
-        *out_dispatcher = utils::AdoptRef<Dispatcher>(disp);
+        *out_dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
         *out_rights     = kDefaultRights;
     }
 

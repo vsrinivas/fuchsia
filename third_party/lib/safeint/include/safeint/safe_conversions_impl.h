@@ -18,10 +18,10 @@ namespace internal {
 // for accurate range comparisons between floating point and integer types.
 template <typename NumericType>
 struct MaxExponent {
-  static_assert(utils::numeric_limits<NumericType>::is_specialized,
+  static_assert(mxtl::numeric_limits<NumericType>::is_specialized,
                 "Argument must have numeric_limits defined");
   static const int value = sizeof(NumericType) * 8 + 1 -
-          utils::numeric_limits<NumericType>::is_signed;
+          mxtl::numeric_limits<NumericType>::is_signed;
 };
 
 enum IntegerRepresentation {
@@ -45,11 +45,11 @@ enum NumericRangeRepresentation {
 template <
     typename Dst,
     typename Src,
-    IntegerRepresentation DstSign = utils::numeric_limits<Dst>::is_signed
+    IntegerRepresentation DstSign = mxtl::numeric_limits<Dst>::is_signed
                                             ? INTEGER_REPRESENTATION_SIGNED
                                             : INTEGER_REPRESENTATION_UNSIGNED,
     IntegerRepresentation SrcSign =
-        utils::numeric_limits<Src>::is_signed
+        mxtl::numeric_limits<Src>::is_signed
             ? INTEGER_REPRESENTATION_SIGNED
             : INTEGER_REPRESENTATION_UNSIGNED >
 struct StaticDstRangeRelationToSrcRange;
@@ -134,8 +134,8 @@ constexpr inline RangeConstraint GetRangeConstraint(bool is_in_upper_bound,
 // such that the resulting maximum is represented exactly as a floating point.
 template <typename Dst, typename Src>
 struct NarrowingRange {
-  typedef typename utils::numeric_limits<Src> SrcLimits;
-  typedef typename utils::numeric_limits<Dst> DstLimits;
+  typedef typename mxtl::numeric_limits<Src> SrcLimits;
+  typedef typename mxtl::numeric_limits<Dst> DstLimits;
   // The following logic avoids warnings where the max function is
   // instantiated with invalid values for a bit shift (even though
   // such a function can never be called).
@@ -156,10 +156,10 @@ struct NarrowingRange {
 template <
     typename Dst,
     typename Src,
-    IntegerRepresentation DstSign = utils::numeric_limits<Dst>::is_signed
+    IntegerRepresentation DstSign = mxtl::numeric_limits<Dst>::is_signed
                                             ? INTEGER_REPRESENTATION_SIGNED
                                             : INTEGER_REPRESENTATION_UNSIGNED,
-    IntegerRepresentation SrcSign = utils::numeric_limits<Src>::is_signed
+    IntegerRepresentation SrcSign = mxtl::numeric_limits<Src>::is_signed
                                             ? INTEGER_REPRESENTATION_SIGNED
                                             : INTEGER_REPRESENTATION_UNSIGNED,
     NumericRangeRepresentation DstRange =
@@ -244,9 +244,9 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
 
 template <typename Dst, typename Src>
 inline constexpr RangeConstraint DstRangeRelationToSrcRange(Src value) {
-  static_assert(utils::numeric_limits<Src>::is_specialized,
+  static_assert(mxtl::numeric_limits<Src>::is_specialized,
                 "Argument must be numeric.");
-  static_assert(utils::numeric_limits<Dst>::is_specialized,
+  static_assert(mxtl::numeric_limits<Dst>::is_specialized,
                 "Result must be numeric.");
   return DstRangeRelationToSrcRangeImpl<Dst, Src>::Check(value);
 }

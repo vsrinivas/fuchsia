@@ -24,12 +24,12 @@ const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | 
 const auto kDP_Map_Perms_RO = kDP_Map_Perms | ARCH_MMU_FLAG_PERM_READ;
 
 mx_status_t DataPipe::Create(mx_size_t capacity,
-                             utils::RefPtr<Dispatcher>* producer,
-                             utils::RefPtr<Dispatcher>* consumer,
+                             mxtl::RefPtr<Dispatcher>* producer,
+                             mxtl::RefPtr<Dispatcher>* consumer,
                              mx_rights_t* producer_rights,
                              mx_rights_t* consumer_rights) {
     AllocChecker ac;
-    utils::RefPtr<DataPipe> pipe = utils::AdoptRef(new (&ac) DataPipe(capacity));
+    mxtl::RefPtr<DataPipe> pipe = mxtl::AdoptRef(new (&ac) DataPipe(capacity));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -89,7 +89,7 @@ mx_size_t DataPipe::ComputeSize(mx_size_t from, mx_size_t to, mx_size_t requeste
     return available >= requested ? requested : available;
 }
 
-mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, utils::RefPtr<VmAspace> aspace) {
+mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace) {
     DEBUG_ASSERT(vmo_);
 
     if (ep->aspace && (ep->aspace != aspace)) {
@@ -107,7 +107,7 @@ mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, utils::RefPtr<VmAspace> aspac
     if (status < 0)
         return status;
 
-    ep->aspace = utils::move(aspace);
+    ep->aspace = mxtl::move(aspace);
     return NO_ERROR;
 }
 
@@ -160,7 +160,7 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requeste
     return NO_ERROR;
 }
 
-mx_status_t DataPipe::ProducerWriteBegin(utils::RefPtr<VmAspace> aspace,
+mx_status_t DataPipe::ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace,
                                          void** ptr, mx_size_t* requested) {
     if (*requested == 0)
         return ERR_INVALID_ARGS;
@@ -176,7 +176,7 @@ mx_status_t DataPipe::ProducerWriteBegin(utils::RefPtr<VmAspace> aspace,
     if (free_space_ == 0u)
         return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT
 
-    auto status = MapVMOIfNeeded(&producer_, utils::move(aspace));
+    auto status = MapVMOIfNeeded(&producer_, mxtl::move(aspace));
     if (status < 0)
         return status;
 
@@ -241,7 +241,7 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr, mx_size_t* requested) {
     return NO_ERROR;
 }
 
-mx_status_t DataPipe::ConsumerReadBegin(utils::RefPtr<VmAspace> aspace,
+mx_status_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace,
                                         void** ptr, mx_size_t* requested) {
     if (*requested == 0)
         return ERR_INVALID_ARGS;
@@ -255,7 +255,7 @@ mx_status_t DataPipe::ConsumerReadBegin(utils::RefPtr<VmAspace> aspace,
     if (free_space_ == vmo_->size())
         return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT
 
-    auto status = MapVMOIfNeeded(&consumer_, utils::move(aspace));
+    auto status = MapVMOIfNeeded(&consumer_, mxtl::move(aspace));
     if (status < 0)
         return status;
 

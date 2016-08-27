@@ -17,15 +17,15 @@
 class VmRegion;
 class VmObject;
 
-class VmAspace : public utils::DoublyLinkedListable<VmAspace*>
-               , public utils::RefCounted<VmAspace> {
+class VmAspace : public mxtl::DoublyLinkedListable<VmAspace*>
+               , public mxtl::RefCounted<VmAspace> {
 public:
     // complete initialization, may fail in OOM cases
     status_t Init();
 
     // factory that creates a user/kernel address space based on flags
     // may fail due to resource starvation
-    static utils::RefPtr<VmAspace> Create(uint flags, const char* name);
+    static mxtl::RefPtr<VmAspace> Create(uint flags, const char* name);
 
     void Rename(const char* name);
 
@@ -45,7 +45,7 @@ public:
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
 
     // map a vm object at a given offset
-    status_t MapObject(utils::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
+    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
                        void** ptr, uint8_t align_pow2, uint vmm_flags, uint arch_mmu_flags);
 
     // common routines, mostly used by internal kernel code
@@ -66,7 +66,7 @@ public:
                              uint vmm_flags, uint arch_mmu_flags);
 
     // return a pointer to a region based on virtual address
-    utils::RefPtr<VmRegion> FindRegion(vaddr_t vaddr);
+    mxtl::RefPtr<VmRegion> FindRegion(vaddr_t vaddr);
 
     // free the region at a given address
     status_t FreeRegion(vaddr_t vaddr);
@@ -85,7 +85,7 @@ public:
     void Dump() const;
 
 private:
-    using RegionList = utils::DoublyLinkedList<utils::RefPtr<VmRegion>>;
+    using RegionList = mxtl::DoublyLinkedList<mxtl::RefPtr<VmRegion>>;
 
     // nocopy
     VmAspace(const VmAspace&) = delete;
@@ -96,7 +96,7 @@ private:
 
     // private destructor that can only be used from the ref ptr or vmm_free_aspace
     ~VmAspace();
-    friend utils::RefPtr<VmAspace>;
+    friend mxtl::RefPtr<VmAspace>;
     friend status_t vmm_free_aspace(vmm_aspace_t* _aspace);
 
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
@@ -104,13 +104,13 @@ private:
     friend status_t vmm_page_fault_handler(vaddr_t va, uint flags);
 
     // private internal routines
-    status_t AddRegion(const utils::RefPtr<VmRegion>& r);
-    utils::RefPtr<VmRegion> AllocRegion(const char* name, size_t size, vaddr_t vaddr,
+    status_t AddRegion(const mxtl::RefPtr<VmRegion>& r);
+    mxtl::RefPtr<VmRegion> AllocRegion(const char* name, size_t size, vaddr_t vaddr,
                                         uint8_t align_pow2, uint32_t vmm_flags,
                                         uint arch_mmu_flags);
     vaddr_t AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
                       RegionList::iterator* after);
-    utils::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
+    mxtl::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
     bool CheckGap(const RegionList::iterator& prev,
                   const RegionList::iterator& next,
                   vaddr_t* pva, vaddr_t align, size_t region_size, uint arch_mmu_flags);

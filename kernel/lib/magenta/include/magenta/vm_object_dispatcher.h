@@ -16,7 +16,7 @@ class VmAspace;
 
 class VmObjectDispatcher : public Dispatcher {
 public:
-    static status_t Create(utils::RefPtr<VmObject> vmo, utils::RefPtr<Dispatcher>* dispatcher,
+    static status_t Create(mxtl::RefPtr<VmObject> vmo, mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
     ~VmObjectDispatcher() final;
@@ -29,11 +29,11 @@ public:
     mx_status_t GetSize(uint64_t* size);
 
     // XXX really belongs in process
-    mx_status_t Map(utils::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
+    mx_status_t Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
                     uintptr_t* ptr, uint32_t flags);
 
 private:
-    explicit VmObjectDispatcher(utils::RefPtr<VmObject> vmo);
+    explicit VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo);
 
-    utils::RefPtr<VmObject> vmo_;
+    mxtl::RefPtr<VmObject> vmo_;
 };

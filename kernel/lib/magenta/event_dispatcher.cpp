@@ -17,7 +17,7 @@
 constexpr mx_rights_t kDefaultEventRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-status_t EventDispatcher::Create(uint32_t options, utils::RefPtr<Dispatcher>* dispatcher,
+status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
                                  mx_rights_t* rights) {
     AllocChecker ac;
     auto disp = new (&ac) EventDispatcher(options);
@@ -25,7 +25,7 @@ status_t EventDispatcher::Create(uint32_t options, utils::RefPtr<Dispatcher>* di
         return ERR_NO_MEMORY;
 
     *rights = kDefaultEventRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 

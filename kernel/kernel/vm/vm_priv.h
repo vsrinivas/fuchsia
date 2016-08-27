@@ -33,8 +33,8 @@ extern mutex_t vmm_lock;
 // NOTE: only use unsigned lengths
 template <typename O, typename L>
 static inline bool TrimRange(O& offset, L& len, O trim_to_len) {
-    static_assert(utils::numeric_limits<O>::is_signed == false, "TrimRange requires unsigned type O");
-    static_assert(utils::numeric_limits<L>::is_signed == false, "TrimRange requires unsigned type L");
+    static_assert(mxtl::numeric_limits<O>::is_signed == false, "TrimRange requires unsigned type O");
+    static_assert(mxtl::numeric_limits<L>::is_signed == false, "TrimRange requires unsigned type L");
 
     // trim offset/len to the range
     if (offset + len < offset) return false;  // offset + len wrapped

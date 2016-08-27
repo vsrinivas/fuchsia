@@ -24,10 +24,10 @@
 #include <utils/string_piece.h>
 
 class ProcessDispatcher : public Dispatcher
-                        , public utils::DoublyLinkedListable<ProcessDispatcher*> {
+                        , public mxtl::DoublyLinkedListable<ProcessDispatcher*> {
 public:
-    static mx_status_t Create(utils::StringPiece name,
-                              utils::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(mxtl::StringPiece name,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights, uint32_t flags);
 
     static ProcessDispatcher* GetCurrent() {
@@ -78,7 +78,7 @@ public:
     // back into this process.
     void UndoRemoveHandle_NoLock(mx_handle_t handle_value);
 
-    bool GetDispatcher(mx_handle_t handle_value, utils::RefPtr<Dispatcher>* dispatcher,
+    bool GetDispatcher(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
                        uint32_t* rights);
 
     // accessors
@@ -86,8 +86,8 @@ public:
     FutexContext* futex_context() { return &futex_context_; }
     StateTracker* state_tracker() { return &state_tracker_; }
     State state() const { return state_; }
-    utils::RefPtr<VmAspace> aspace() { return aspace_; }
-    const utils::StringPiece name() const { return name_; }
+    mxtl::RefPtr<VmAspace> aspace() { return aspace_; }
+    const mxtl::StringPiece name() const { return name_; }
 
     // Starts the process running
     status_t Start(ThreadDispatcher *thread, uintptr_t pc, uintptr_t sp,
@@ -98,12 +98,12 @@ public:
 
     status_t GetInfo(mx_process_info_t* info);
 
-    status_t CreateUserThread(utils::StringPiece name, uint32_t flags, utils::RefPtr<UserThread>* user_thread);
+    status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
 
     // exception handling support
-    status_t SetExceptionPort(utils::RefPtr<ExceptionPort> eport);
+    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
     void ResetExceptionPort();
-    utils::RefPtr<ExceptionPort> exception_port();
+    mxtl::RefPtr<ExceptionPort> exception_port();
 
     // The following two methods can be slow and innacurrate and should only be
     // called from diagnostics code.
@@ -111,11 +111,11 @@ public:
 
     // Look up a process given its koid.
     // Returns nullptr if not found.
-    static utils::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
+    static mxtl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
 
     // Look up a thread in this process given its koid.
     // Returns nullptr if not found.
-    utils::RefPtr<UserThread> LookupThreadById(mx_koid_t koid);
+    mxtl::RefPtr<UserThread> LookupThreadById(mx_koid_t koid);
 
     uint32_t get_bad_handle_policy() const { return bad_handle_policy_; }
     mx_status_t set_bad_handle_policy(uint32_t new_policy);
@@ -126,7 +126,7 @@ private:
     friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
     friend void DumpProcessHandles(mx_koid_t id);
 
-    ProcessDispatcher(utils::StringPiece name, uint32_t flags);
+    ProcessDispatcher(mxtl::StringPiece name, uint32_t flags);
 
     ProcessDispatcher(const ProcessDispatcher&) = delete;
     ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
@@ -158,17 +158,17 @@ private:
     mutable Mutex thread_list_lock_;
 
     // list of threads in this process
-    utils::DoublyLinkedList<UserThread*> thread_list_;
+    mxtl::DoublyLinkedList<UserThread*> thread_list_;
 
     // a ref to the main thread
-    utils::RefPtr<UserThread> main_thread_;
+    mxtl::RefPtr<UserThread> main_thread_;
 
     // our address space
-    utils::RefPtr<VmAspace> aspace_;
+    mxtl::RefPtr<VmAspace> aspace_;
 
     // our list of handles
     mutable Mutex handle_table_lock_; // protects |handles_|.
-    utils::DoublyLinkedList<Handle*> handles_;
+    mxtl::DoublyLinkedList<Handle*> handles_;
 
     StateTracker state_tracker_;
 
@@ -181,7 +181,7 @@ private:
     // process return code
     int retcode_ = 0;
 
-    utils::RefPtr<ExceptionPort> exception_port_;
+    mxtl::RefPtr<ExceptionPort> exception_port_;
     Mutex exception_lock_;
 
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
@@ -190,7 +190,7 @@ private:
     char name_[THREAD_NAME_LENGTH / 2] = {};
 
     static mutex_t global_process_list_mutex_;
-    static utils::DoublyLinkedList<ProcessDispatcher*> global_process_list_;
+    static mxtl::DoublyLinkedList<ProcessDispatcher*> global_process_list_;
 };
 
 const char* StateToString(ProcessDispatcher::State state);

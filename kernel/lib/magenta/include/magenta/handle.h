@@ -15,9 +15,9 @@
 
 class Dispatcher;
 
-class Handle final : public utils::DoublyLinkedListable<Handle*> {
+class Handle final : public mxtl::DoublyLinkedListable<Handle*> {
 public:
-    Handle(utils::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
+    Handle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
     Handle(const Handle* rhs, mx_rights_t rights);
 
     Handle(const Handle&) = delete;
@@ -25,7 +25,7 @@ public:
 
     ~Handle();
 
-    utils::RefPtr<Dispatcher> dispatcher() const { return dispatcher_; }
+    mxtl::RefPtr<Dispatcher> dispatcher() const { return dispatcher_; }
 
     mx_koid_t process_id() const {
         return process_id_;
@@ -41,6 +41,6 @@ public:
 
 private:
     mx_koid_t process_id_;
-    utils::RefPtr<Dispatcher> dispatcher_;
+    mxtl::RefPtr<Dispatcher> dispatcher_;
     const mx_rights_t rights_;
 };

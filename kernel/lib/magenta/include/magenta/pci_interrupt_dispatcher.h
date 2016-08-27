@@ -16,11 +16,11 @@ class PciDeviceDispatcher;
 
 class PciInterruptDispatcher final : public Dispatcher {
 public:
-    static status_t Create(const utils::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
+    static status_t Create(const mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
                            uint32_t irq_id,
                            bool maskable,
                            mx_rights_t* out_rights,
-                           utils::RefPtr<Dispatcher>* out_interrupt);
+                           mxtl::RefPtr<Dispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PCI_INT; }
@@ -42,5 +42,5 @@ private:
     event_t  event_;
     Mutex lock_;
     Mutex wait_lock_;
-    utils::RefPtr<PciDeviceDispatcher::PciDeviceWrapper> device_;
+    mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper> device_;
 };

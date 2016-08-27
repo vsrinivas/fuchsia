@@ -175,7 +175,7 @@ __BEGIN_CDECLS
  *
  *  Note:  Manual management of ref-counting in C is a pain.  Effort has been
  *  made to adopt a usage-pattern which will facilitate an eventual transition a
- *  utils::RefCounted<T> C++ style pattern for managing ref-counted devices when
+ *  mxtl::RefCounted<T> C++ style pattern for managing ref-counted devices when
  *  the core code is transitioned to C++.
  *
  */

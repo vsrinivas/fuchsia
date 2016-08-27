@@ -20,9 +20,9 @@
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAspace::MapObject
 
-class VmObject : public utils::RefCounted<VmObject> {
+class VmObject : public mxtl::RefCounted<VmObject> {
 public:
-    static utils::RefPtr<VmObject> Create(uint32_t pmm_alloc_flags, uint64_t size);
+    static mxtl::RefPtr<VmObject> Create(uint32_t pmm_alloc_flags, uint64_t size);
 
     status_t Resize(uint64_t size);
 
@@ -63,7 +63,7 @@ private:
 
     // private destructor, only called from refptr
     ~VmObject();
-    friend utils::RefPtr<VmObject>;
+    friend mxtl::RefPtr<VmObject>;
 
     // fault in a page at a given offset with PF_FLAGS
     vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags);
@@ -93,7 +93,7 @@ private:
     mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
 
     // array of page pointers, one per page offset into the object
-    utils::Array<vm_page_t*> page_array_;
+    mxtl::Array<vm_page_t*> page_array_;
 
     // list of all allocated pages
     list_node page_list_ = LIST_INITIAL_VALUE(page_list_);

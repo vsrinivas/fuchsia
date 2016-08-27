@@ -29,7 +29,7 @@ MODULE_SRCS += \
 MODULE_DEPS += \
     lib/safeint \
     lib/unittest \
-    lib/utils \
+    lib/mxtl \
     lib/crypto \
 
 MODULE_COMPILEFLAGS += -Wno-format -fno-builtin

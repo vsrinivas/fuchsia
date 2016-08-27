@@ -15,10 +15,10 @@
 class VmAspace;
 class VmObject;
 
-class VmRegion : public utils::DoublyLinkedListable<utils::RefPtr<VmRegion>>
-               , public utils::RefCounted<VmRegion> {
+class VmRegion : public mxtl::DoublyLinkedListable<mxtl::RefPtr<VmRegion>>
+               , public mxtl::RefCounted<VmRegion> {
 public:
-    static utils::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
+    static mxtl::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
                                           uint arch_mmu_flags, const char* name);
     ~VmRegion();
 
@@ -34,7 +34,7 @@ public:
     void Dump() const;
 
     // set the object that this region backs
-    status_t SetObject(utils::RefPtr<VmObject> o, uint64_t offset);
+    status_t SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset);
 
     // map in pages from the underlying vm object, optionally committing pages as it goes
     status_t MapRange(size_t offset, size_t len, bool commit);
@@ -54,7 +54,7 @@ public:
     // page fault in an address into the region
     status_t PageFault(vaddr_t va, uint pf_flags);
 
-    utils::RefPtr<VmObject> vmo();
+    mxtl::RefPtr<VmObject> vmo();
 
 private:
     // private constructor, use Create()
@@ -76,10 +76,10 @@ private:
     uint arch_mmu_flags_;
 
     // pointer back to our member address space
-    utils::RefPtr<VmAspace> aspace_;
+    mxtl::RefPtr<VmAspace> aspace_;
 
     // pointer and region of the object we are mapping
-    utils::RefPtr<VmObject> object_;
+    mxtl::RefPtr<VmObject> object_;
     uint64_t object_offset_ = 0;
 
     char name_[32];

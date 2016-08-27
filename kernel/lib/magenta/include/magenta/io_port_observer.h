@@ -18,7 +18,7 @@ class IOPortDispatcher;
 
 class IOPortObserver final: public StateObserver {
 public:
-    static IOPortObserver* Create(utils::RefPtr<IOPortDispatcher> io_port,
+    static IOPortObserver* Create(mxtl::RefPtr<IOPortDispatcher> io_port,
                                   Handle* handle,
                                   mx_signals_t watched_signals,
                                   uint64_t key);
@@ -31,7 +31,7 @@ private:
     IOPortObserver(const IOPortObserver&) = delete;
     IOPortObserver& operator=(const IOPortObserver&) = delete;
 
-    IOPortObserver(utils::RefPtr<IOPortDispatcher> io_port,
+    IOPortObserver(mxtl::RefPtr<IOPortDispatcher> io_port,
                    Handle* handle,
                    mx_signals_t watched_signals,
                    uint64_t key);
@@ -47,6 +47,6 @@ private:
     mx_signals_t watched_signals_;
     uint64_t key_;
 
-    utils::RefPtr<IOPortDispatcher> io_port_;
+    mxtl::RefPtr<IOPortDispatcher> io_port_;
 };
 

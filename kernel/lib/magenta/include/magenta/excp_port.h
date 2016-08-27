@@ -13,10 +13,10 @@
 class UserThread;
 class ProcessDispatcher;
 
-class ExceptionPort : public utils::RefCounted<ExceptionPort> {
+class ExceptionPort : public mxtl::RefCounted<ExceptionPort> {
 public:
-    static mx_status_t Create(utils::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key,
-                              utils::RefPtr<ExceptionPort>* eport);
+    static mx_status_t Create(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key,
+                              mxtl::RefPtr<ExceptionPort>* eport);
     ~ExceptionPort();
 
     mx_status_t SendReport(const mx_exception_report_t* packet);
@@ -25,7 +25,7 @@ public:
     void OnThreadExit(UserThread* thread);
 
 private:
-    ExceptionPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key);
+    ExceptionPort(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key);
 
     ExceptionPort(const ExceptionPort&) = delete;
     ExceptionPort& operator=(const ExceptionPort&) = delete;
@@ -39,6 +39,6 @@ private:
 
     // These aren't locked as once the exception port is created these are
     // immutable (the io port itself has its own locking though).
-    utils::RefPtr<IOPortDispatcher> io_port_;
+    mxtl::RefPtr<IOPortDispatcher> io_port_;
     const uint64_t io_port_key_;
 };

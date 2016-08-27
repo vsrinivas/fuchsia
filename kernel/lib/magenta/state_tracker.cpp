@@ -73,7 +73,7 @@ void StateTracker::Cancel(Handle* handle) {
     bool awoke_threads = false;
     StateObserver* observer = nullptr;
 
-    utils::DoublyLinkedList<StateObserver*, StateObserverListTraits> did_cancel_list;
+    mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits> did_cancel_list;
 
     {
         AutoLock lock(&lock_);

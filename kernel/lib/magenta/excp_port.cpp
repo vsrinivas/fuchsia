@@ -13,17 +13,17 @@
 #define LOCAL_TRACE 0
 
 // static
-mx_status_t ExceptionPort::Create(utils::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key,
-                                  utils::RefPtr<ExceptionPort>* out_eport) {
+mx_status_t ExceptionPort::Create(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key,
+                                  mxtl::RefPtr<ExceptionPort>* out_eport) {
     AllocChecker ac;
-    auto eport = new (&ac) ExceptionPort(utils::move(io_port), io_port_key);
+    auto eport = new (&ac) ExceptionPort(mxtl::move(io_port), io_port_key);
     if (!ac.check())
         return ERR_NO_MEMORY;
-    *out_eport = utils::AdoptRef<ExceptionPort>(eport);
+    *out_eport = mxtl::AdoptRef<ExceptionPort>(eport);
     return NO_ERROR;
 }
 
-ExceptionPort::ExceptionPort(utils::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key)
+ExceptionPort::ExceptionPort(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key)
     : io_port_(io_port), io_port_key_(io_port_key) {
     LTRACE_ENTRY_OBJ;
 }

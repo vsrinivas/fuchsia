@@ -67,7 +67,7 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
         }
 
         if (from_user)
-            copy_from_user(buf_ + head_, utils::user_ptr<const char>(buf + pos), write_len);
+            copy_from_user(buf_ + head_, mxtl::user_ptr<const char>(buf + pos), write_len);
         else
             memcpy(buf_ + head_, buf + pos, write_len);
 
@@ -101,7 +101,7 @@ mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user
             }
 
             if (from_user)
-                copy_to_user(utils::user_ptr<char>(buf + pos), buf_ + tail_, read_len);
+                copy_to_user(mxtl::user_ptr<char>(buf + pos), buf_ + tail_, read_len);
             else
                 memcpy(buf + pos, buf_ + tail_, read_len);
 
@@ -121,17 +121,17 @@ mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user
 
 // static
 status_t SocketDispatcher::Create(uint32_t flags,
-                                  utils::RefPtr<Dispatcher>* dispatcher0,
-                                  utils::RefPtr<Dispatcher>* dispatcher1,
+                                  mxtl::RefPtr<Dispatcher>* dispatcher0,
+                                  mxtl::RefPtr<Dispatcher>* dispatcher1,
                                   mx_rights_t* rights) {
     LTRACE_ENTRY;
 
     AllocChecker ac;
-    auto socket0 = utils::AdoptRef(new (&ac) SocketDispatcher(flags));
+    auto socket0 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    auto socket1 = utils::AdoptRef(new (&ac) SocketDispatcher(flags));
+    auto socket1 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -142,8 +142,8 @@ status_t SocketDispatcher::Create(uint32_t flags,
         return status;
 
     *rights = kDefaultSocketRights;
-    *dispatcher0 = utils::RefPtr<Dispatcher>(socket0.get());
-    *dispatcher1 = utils::RefPtr<Dispatcher>(socket1.get());
+    *dispatcher0 = mxtl::RefPtr<Dispatcher>(socket0.get());
+    *dispatcher1 = mxtl::RefPtr<Dispatcher>(socket1.get());
     return NO_ERROR;
 }
 
@@ -156,16 +156,16 @@ SocketDispatcher::~SocketDispatcher() {
     mutex_destroy(&lock_);
 }
 
-mx_status_t SocketDispatcher::Init(utils::RefPtr<SocketDispatcher> other) {
-    other_ = utils::move(other);
+mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) {
+    other_ = mxtl::move(other);
     return cbuf_.Init(kDeFaultSocketBufferSize) ? NO_ERROR : ERR_NO_MEMORY;
 }
 
 void SocketDispatcher::on_zero_handles() {
-    utils::RefPtr<SocketDispatcher> socket;
+    mxtl::RefPtr<SocketDispatcher> socket;
     {
         AutoLock lock(&lock_);
-        socket = utils::move(other_);
+        socket = mxtl::move(other_);
     }
     if (!socket)
         return;
@@ -181,7 +181,7 @@ void SocketDispatcher::OnPeerZeroHandles() {
 }
 
 mx_ssize_t SocketDispatcher::Write(const void* src, mx_size_t len, bool from_user) {
-    utils::RefPtr<SocketDispatcher> socket;
+    mxtl::RefPtr<SocketDispatcher> socket;
     {
         AutoLock lock(&lock_);
         socket = other_;

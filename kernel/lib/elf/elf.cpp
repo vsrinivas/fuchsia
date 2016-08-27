@@ -196,7 +196,7 @@ status_t ToMemFile::AllocateSegment(vaddr_t vaddr, size_t len, uint seg_num) {
     if (err < 0) return err;
 
     // save the pointer
-    seg_[seg_num].vmo = utils::move(vmo);
+    seg_[seg_num].vmo = mxtl::move(vmo);
     seg_[seg_num].va = (vaddr_t)ptr;
     seg_[seg_num].len = len;
 
@@ -254,7 +254,7 @@ ToMemFile::segment ToMemFile::GetSegment(uint seg_num) {
 
 // memory to memory loader
 
-MemFile::MemFile(const char* name, utils::RefPtr<VmAspace> aspace, const void* src_ptr,
+MemFile::MemFile(const char* name, mxtl::RefPtr<VmAspace> aspace, const void* src_ptr,
                  size_t src_len)
     : ToMemFile(name, aspace), src_ptr_(src_ptr), src_len_(src_len) {}
 
@@ -303,7 +303,7 @@ status_t MemFile::Read(void* ptr, size_t source_offset, size_t len, size_t* byte
 }
 
 // block device to memory loader
-BioToMemFile::BioToMemFile(const char* name, utils::RefPtr<VmAspace> aspace, bdev* bdev,
+BioToMemFile::BioToMemFile(const char* name, mxtl::RefPtr<VmAspace> aspace, bdev* bdev,
                            uint64_t bdev_offset, uint64_t bdev_len)
     : ToMemFile(name, aspace), bdev_(bdev), bdev_offset_(bdev_offset), bdev_len_(bdev_len) {}
 
@@ -325,7 +325,7 @@ status_t BioToMemFile::Read(uint seg_num, size_t seg_offset, size_t source_offse
 
     AllocChecker ac;
     // allocate a temporary buffer for the read operation
-    utils::Array<uint8_t> temp_buf(new (&ac) uint8_t[PAGE_SIZE], PAGE_SIZE);
+    mxtl::Array<uint8_t> temp_buf(new (&ac) uint8_t[PAGE_SIZE], PAGE_SIZE);
     if (!ac.check()) return ERR_NO_MEMORY;
 
     size_t end = offset + len;

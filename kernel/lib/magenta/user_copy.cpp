@@ -20,7 +20,7 @@ status_t magenta_copy_from_user(const void* src, void* dest, size_t len) {
 }
 
 status_t magenta_copy_user_string(const char* src, size_t src_len, char* buf, size_t buf_len,
-                                  utils::StringPiece* sp) {
+                                  mxtl::StringPiece* sp) {
     if (src_len > buf_len) return ERR_INVALID_ARGS;
 
     status_t result = magenta_copy_from_user(src, buf, src_len);
@@ -29,7 +29,7 @@ status_t magenta_copy_user_string(const char* src, size_t src_len, char* buf, si
     // ensure zero termination
     size_t str_len = (src_len == buf_len ? src_len - 1 : src_len);
     buf[str_len] = 0;
-    *sp = utils::StringPiece(buf);
+    *sp = mxtl::StringPiece(buf);
 
     return NO_ERROR;
 }

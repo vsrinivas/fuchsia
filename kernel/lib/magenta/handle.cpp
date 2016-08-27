@@ -8,9 +8,9 @@
 
 #include <magenta/dispatcher.h>
 
-Handle::Handle(utils::RefPtr<Dispatcher> dispatcher, uint32_t rights)
+Handle::Handle(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t rights)
     : process_id_(0u),
-      dispatcher_(utils::move(dispatcher)),
+      dispatcher_(mxtl::move(dispatcher)),
       rights_(rights) {
     dispatcher_->add_handle();
 }

@@ -47,21 +47,21 @@ public:
         enum class State { UNINITIALIZED, ADD_PENDING, ADDED, REMOVED };
 
         struct TriggeredEntriesListTraits {
-            static utils::DoublyLinkedListNodeState<Entry*>& node_state(Entry& obj) {
+            static mxtl::DoublyLinkedListNodeState<Entry*>& node_state(Entry& obj) {
                 return obj.triggered_entries_node_state_;
             }
         };
 
-        using HashPtrType = utils::unique_ptr<Entry>;
+        using HashPtrType = mxtl::unique_ptr<Entry>;
         struct HashBucketTraits {
-            static utils::DoublyLinkedListNodeState<HashPtrType>& node_state(Entry& obj) {
+            static mxtl::DoublyLinkedListNodeState<HashPtrType>& node_state(Entry& obj) {
                 return obj.hash_bucket_node_state_;
             }
         };
 
         static status_t Create(mx_signals_t watched_signals,
                                uint64_t cookie,
-                               utils::unique_ptr<Entry>* entry);
+                               mxtl::unique_ptr<Entry>* entry);
 
         ~Entry();
 
@@ -72,7 +72,7 @@ public:
         State GetState_NoLock() const;
         void SetState_NoLock(State new_state);
         Handle* GetHandle_NoLock() const;
-        const utils::RefPtr<Dispatcher>& GetDispatcher_NoLock() const;
+        const mxtl::RefPtr<Dispatcher>& GetDispatcher_NoLock() const;
         bool IsTriggered_NoLock() const;
         mx_signals_state_t GetSignalsState_NoLock() const;
 
@@ -109,16 +109,16 @@ public:
         Handle* handle_ = nullptr;
         // We mostly need |dispatcher|'s StateTracker, but we need a ref to keep it alive. (This may
         // be non-null even if |handle_| is null if |OnCancel()| has been called.)
-        utils::RefPtr<Dispatcher> dispatcher_;
+        mxtl::RefPtr<Dispatcher> dispatcher_;
 
         bool is_triggered_ = false;
         mx_signals_state_t signals_state_ = {0u, 0u};
 
-        utils::DoublyLinkedListNodeState<Entry*> triggered_entries_node_state_;
-        utils::DoublyLinkedListNodeState<HashPtrType> hash_bucket_node_state_;
+        mxtl::DoublyLinkedListNodeState<Entry*> triggered_entries_node_state_;
+        mxtl::DoublyLinkedListNodeState<HashPtrType> hash_bucket_node_state_;
     };
 
-    static status_t Create(utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
+    static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
 
     ~WaitSetDispatcher() final;
     mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_WAIT_SET; }
@@ -128,7 +128,7 @@ public:
 
     // Adds an entry (previously constructed using Entry::Create()) for the given handle.
     // Note: Since this takes a handle, it should be called under the handle table lock!
-    status_t AddEntry(utils::unique_ptr<Entry> entry, Handle* handle);
+    status_t AddEntry(mxtl::unique_ptr<Entry> entry, Handle* handle);
 
     // Removes an entry (previously added using AddEntry()).
     status_t RemoveEntry(uint64_t cookie);
@@ -141,7 +141,7 @@ public:
 
 private:
     using HashPtrType    = Entry::HashPtrType;
-    using HashBucketType = utils::DoublyLinkedList<HashPtrType, Entry::HashBucketTraits>;
+    using HashBucketType = mxtl::DoublyLinkedList<HashPtrType, Entry::HashBucketTraits>;
 
     WaitSetDispatcher();
 
@@ -176,7 +176,7 @@ private:
     // complicated accounting, both in Wait() and in OnCancel().
     bool cancelled_ = false;
 
-    utils::HashTable<uint64_t, HashPtrType, HashBucketType, uint64_t, 127u> entries_;
-    utils::DoublyLinkedList<Entry*, Entry::TriggeredEntriesListTraits> triggered_entries_;
+    mxtl::HashTable<uint64_t, HashPtrType, HashBucketType, uint64_t, 127u> entries_;
+    mxtl::DoublyLinkedList<Entry*, Entry::TriggeredEntriesListTraits> triggered_entries_;
     uint32_t num_triggered_entries_ = 0u;
 };

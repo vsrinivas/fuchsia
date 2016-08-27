@@ -18,7 +18,7 @@ constexpr mx_rights_t kDefaultInterruptRights =
 
 // static
 status_t InterruptDispatcher::Create(uint32_t vector, uint32_t flags,
-                                     utils::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
+                                     mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
     interrupt_event_t ie;
 
     // convert from MX_FLAG to internal INTERRUPT_EVENT_FLAG
@@ -33,7 +33,7 @@ status_t InterruptDispatcher::Create(uint32_t vector, uint32_t flags,
     if (!ac.check()) return ERR_NO_MEMORY;
 
     *rights = kDefaultInterruptRights;
-    *dispatcher = utils::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 

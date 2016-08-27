@@ -56,17 +56,17 @@ __END_CDECLS
 #if __cplusplus
 
 template <typename T>
-inline status_t copy_to_user(utils::user_ptr<T> dst, const void* src, size_t len) {
+inline status_t copy_to_user(mxtl::user_ptr<T> dst, const void* src, size_t len) {
   return copy_to_user_unsafe(dst.get(), src, len);
 }
 template <typename T>
-inline status_t copy_from_user(void* dst, const utils::user_ptr<T> src, size_t len) {
+inline status_t copy_from_user(void* dst, const mxtl::user_ptr<T> src, size_t len) {
   return copy_from_user_unsafe(dst, src.get(), len);
 }
 
 // Convenience functions for common data types, this time with more C++.
 #define MAKE_COPY_TO_USER(name, type) \
-    static inline status_t name(utils::user_ptr<type> dst, type value) { \
+    static inline status_t name(mxtl::user_ptr<type> dst, type value) { \
         return copy_to_user(dst, &value, sizeof(type)); \
     }
 
@@ -81,10 +81,10 @@ MAKE_COPY_TO_USER(copy_to_user_iptr, intptr_t);
 #undef MAKE_COPY_TO_USER
 
 #define MAKE_COPY_FROM_USER(name, type) \
-    static inline status_t name(type *dst, const utils::user_ptr<const type> src) { \
+    static inline status_t name(type *dst, const mxtl::user_ptr<const type> src) { \
         return copy_from_user(dst, src, sizeof(type)); \
     } \
-    static inline status_t name(type *dst, const utils::user_ptr<type> src) { \
+    static inline status_t name(type *dst, const mxtl::user_ptr<type> src) { \
         return copy_from_user(dst, src, sizeof(type)); \
     }
 

@@ -36,11 +36,11 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(struct pcie_device_st
 }
 
 status_t PciInterruptDispatcher::Create(
-        const utils::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
+        const mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
         uint32_t irq_id,
         bool maskable,
         mx_rights_t* out_rights,
-        utils::RefPtr<Dispatcher>* out_interrupt) {
+        mxtl::RefPtr<Dispatcher>* out_interrupt) {
     // Sanity check our args
     if (!device || !out_rights || !out_interrupt)
         return ERR_INVALID_ARGS;
@@ -48,7 +48,7 @@ status_t PciInterruptDispatcher::Create(
     AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
     auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id);
-    utils::RefPtr<Dispatcher> dispatcher = utils::AdoptRef<Dispatcher>(interrupt_dispatcher);
+    mxtl::RefPtr<Dispatcher> dispatcher = mxtl::AdoptRef<Dispatcher>(interrupt_dispatcher);
     if (!ac.check())
         return ERR_NO_MEMORY;
 

@@ -46,7 +46,7 @@ MODULE_SRCS := \
 
 MODULE_DEPS := \
     lib/dpc \
-    lib/utils \
+    lib/mxtl \
     dev/udisplay \
 
 include make/module.mk
