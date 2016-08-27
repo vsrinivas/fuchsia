@@ -46,6 +46,9 @@ public:
     status_t FutexRequeue(int* wake_ptr, uint32_t wake_count, int current_value, int* requeue_ptr,
                           uint32_t requeue_count);
 
+    // WakeAll wakes all outstanding threads on all futexes.
+    void WakeAll();
+
 private:
     FutexContext(const FutexContext&) = delete;
     FutexContext& operator=(const FutexContext&) = delete;

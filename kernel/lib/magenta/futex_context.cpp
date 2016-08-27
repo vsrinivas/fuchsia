@@ -35,12 +35,17 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
     // operation built on top of futexes would have a race condition that
     // could miss wakeups.
     AutoLock lock(lock_);
+
+    UserThread* t = UserThread::GetCurrent();
+    if (t->state() == UserThread::State::DYING || t->state() == UserThread::State::DEAD)
+        return ERR_BUSY;
+
     int value;
     status_t result = magenta_copy_from_user(value_ptr, &value, sizeof(value));
     if (result != NO_ERROR) return result;
     if (value != current_value) return ERR_BUSY;
 
-    node = UserThread::GetCurrent()->futex_node();
+    node = t->futex_node();
     node->set_hash_key(futex_key);
     node->set_next(nullptr);
     node->set_tail(node);
@@ -110,6 +115,16 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
     // another thread is waiting on the mutex, then that thread won't get
     // woken -- the wakeup from the FutexWake() call would have got lost.
     return NO_ERROR;
+}
+
+void FutexContext::WakeAll() {
+    LTRACE_ENTRY;
+
+    AutoLock lock(lock_);
+    for(auto &entry : futex_table_) {
+        FutexNode::WakeThreads(&entry);
+    }
+    futex_table_.clear();
 }
 
 status_t FutexContext::FutexWake(int* value_ptr, uint32_t count) {

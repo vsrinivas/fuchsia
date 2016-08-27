@@ -199,6 +199,11 @@ void ProcessDispatcher::KillAllThreads() {
         LTRACEF("killing thread %p\n", &thread);
         thread.Kill();
     };
+
+    // Unblock any futexes.
+    // This is issued after all threads are marked as DYING so there
+    // is no chance of a thread calling FutexWait.
+    futex_context_.WakeAll();
 }
 
 status_t ProcessDispatcher::AddThread(UserThread* t) {
