@@ -19,6 +19,11 @@ typedef struct launchpad launchpad_t;
 // Create a new process and a launchpad that will set it up.
 mx_status_t launchpad_create(const char* name, launchpad_t** lp);
 
+// Create a new launchpad for a given existing process handle.
+// On success, the launchpad takes ownership of the process handle.
+mx_status_t launchpad_create_with_process(mx_handle_t proc,
+                                          launchpad_t** result);
+
 // Clean up a launchpad_t, freeing all resources stored therein.
 // TODO(mcgrathr): Currently this closes the process handle but does
 // not kill a process that hasn't been started yet.
@@ -167,6 +172,19 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 // not have been cleared and the handles to transfer might or might
 // not have been cleared.
 mx_handle_t launchpad_start(launchpad_t* lp);
+
+// Start a new thread in the process, assuming this was a launchpad
+// created with launchpad_create_with_process and the process has
+// already started.  The new thread runs the launchpad's entry point
+// just like the initial thread does in the launchpad_start case.
+// The given handle is to a message pipe where the bootstrap
+// messages will be written; the caller retains ownership of this
+// handle.  The other end of this message pipe must already be
+// present in the target process, with the given handle value in the
+// target process's handle space.
+mx_status_t launchpad_start_extra(launchpad_t* lp, const char* thread_name,
+                                  mx_handle_t to_child,
+                                  uintptr_t bootstrap_handle_in_child);
 
 // Convenience interface for launching a process in one call with
 // minimal arguments and handles.  This just calls the functions

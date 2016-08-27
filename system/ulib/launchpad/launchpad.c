@@ -66,31 +66,44 @@ void launchpad_destroy(launchpad_t* lp) {
     free(lp);
 }
 
-mx_status_t launchpad_create(const char* name, launchpad_t** result) {
+mx_status_t launchpad_create_with_process(mx_handle_t proc,
+                                          launchpad_t** result) {
     launchpad_t* lp = calloc(1, sizeof(*lp));
     if (lp == NULL)
         return ERR_NO_MEMORY;
 
     lp->stack_size = DEFAULT_STACK_SIZE;
 
-    uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
-    mx_handle_t proc = mx_process_create(name, name_len, 0);
-    if (proc < 0) {
-        free(lp);
-        return proc;
+    mx_status_t status = launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
+    if (status == NO_ERROR) {
+        *result = lp;
+    } else {
+        launchpad_destroy(lp);
     }
 
-//TODO: chase down the bad handle usage in various tests, etc
+    return status;
+}
+
+mx_status_t launchpad_create(const char* name, launchpad_t** result) {
+    uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
+    mx_handle_t proc = mx_process_create(name, name_len, 0);
+    if (proc < 0)
+        return proc;
+
+//TODO(cpu): chase down the bad handle usage in various tests, etc
 //      and then re-enable once sorted out.
 #if 0
     uint32_t handle_policy = MX_POLICY_BAD_HANDLE_EXIT;
     mx_status_t status = mx_object_set_property(proc, MX_PROP_BAD_HANDLE_POLICY,
                                                 &handle_policy, sizeof(handle_policy));
-    if (status != NO_ERROR)
+    if (status != NO_ERROR) {
+        mx_handle_close(proc);
         return status;
+    }
 #endif
 
-    mx_status_t status = launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
+    launchpad_t* lp;
+    mx_status_t status = launchpad_create_with_process(proc, &lp);
     if (status == NO_ERROR) {
         *result = lp;
     } else {
@@ -628,13 +641,13 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
     return old_size;
 }
 
-#define THREAD_NAME "initial"
-
-mx_handle_t launchpad_start(launchpad_t* lp) {
+static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
+                                 mx_handle_t to_child,
+                                 mx_handle_t* thread, uintptr_t* sp) {
     if (lp->entry == 0)
         return ERR_BAD_STATE;
 
-    uintptr_t sp = 0;
+    *sp = 0;
     if (lp->stack_size > 0) {
         // Allocate the initial thread's stack.
         mx_handle_t stack_vmo = mx_vm_object_create(lp->stack_size);
@@ -645,7 +658,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
             lp_proc(lp), stack_vmo, 0, lp->stack_size, &stack_base,
             MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
         if (status == NO_ERROR) {
-            sp = sp_from_mapping(stack_base, lp->stack_size);
+            *sp = sp_from_mapping(stack_base, lp->stack_size);
             // Pass the stack VMO to the process.  Our protocol with the
             // new process is that we warrant that this is the VMO from
             // which the initial stack is mapped and that we've exactly
@@ -661,44 +674,33 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         }
     }
 
-    mx_handle_t thread = mx_thread_create(lp_proc(lp), THREAD_NAME,
-                                          strlen(THREAD_NAME), 0);
-    if (thread < 0) {
-        return thread;
+    *thread = mx_thread_create(lp_proc(lp), thread_name,
+                               strlen(thread_name), 0);
+    if (*thread < 0) {
+        return *thread;
     } else {
         // Pass the thread handle down to the child.  The handle we pass
         // will be consumed by message_write.  So we need a duplicate to
         // pass to mx_process_start later.
         mx_handle_t thread_copy =
-            mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS);
+            mx_handle_duplicate(*thread, MX_RIGHT_SAME_RIGHTS);
         if (thread_copy < 0) {
-            mx_handle_close(thread);
+            mx_handle_close(*thread);
             return thread_copy;
         }
         mx_status_t status = launchpad_add_handle(lp, thread_copy,
                                                   MX_HND_TYPE_THREAD_SELF);
         if (status != NO_ERROR) {
             mx_handle_close(thread_copy);
-            mx_handle_close(thread);
+            mx_handle_close(*thread);
             return status;
         }
     }
 
-    mx_handle_t pipeh[2];
-    mx_status_t status = mx_message_pipe_create(pipeh, 0);
-    if (status != NO_ERROR) {
-        mx_handle_close(thread);
-        return status;
-    }
-    mx_handle_t to_child = pipeh[0];
-    mx_handle_t child_bootstrap = pipeh[1];
-
     if (lp->loader_message) {
-        status = send_loader_message(lp, to_child);
+        mx_status_t status = send_loader_message(lp, to_child);
         if (status != NO_ERROR) {
-            mx_handle_close(to_child);
-            mx_handle_close(child_bootstrap);
-            mx_handle_close(thread);
+            mx_handle_close(*thread);
             return status;
         }
     }
@@ -706,9 +708,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
     size_t size;
     void* msg = build_message(lp, &size);
     if (msg == NULL) {
-        mx_handle_close(to_child);
-        mx_handle_close(child_bootstrap);
-        mx_handle_close(thread);
+        mx_handle_close(*thread);
         return ERR_NO_MEMORY;
     }
 
@@ -719,42 +719,69 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
     // environment strings that are unreasonably large).
     if (size > lp->stack_size / 2) {
         free(msg);
-        mx_handle_close(to_child);
-        mx_handle_close(child_bootstrap);
-        mx_handle_close(thread);
+        mx_handle_close(*thread);
         return ERR_NOT_ENOUGH_BUFFER;
     }
 
-    // The proc handle in lp->handles[0] will be consumed by message_write.
-    // So we'll need a duplicate to do process operations later.
-    mx_handle_t proc = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS);
-    if (proc < 0) {
-        free(msg);
-        mx_handle_close(to_child);
-        mx_handle_close(child_bootstrap);
-        return proc;
-    }
-
-    status = mx_message_write(to_child, msg, size,
-                              lp->handles, lp->handle_count, 0);
+    mx_status_t status = mx_message_write(to_child, msg, size,
+                                          lp->handles, lp->handle_count, 0);
     free(msg);
-    mx_handle_close(to_child);
     if (status == NO_ERROR) {
         // message_write consumed all the handles.
         for (size_t i = 0; i < lp->handle_count; ++i)
             lp->handles[i] = MX_HANDLE_INVALID;
         lp->handle_count = 0;
+    } else {
+        mx_handle_close(*thread);
+    }
+
+    return status;
+}
+
+mx_handle_t launchpad_start(launchpad_t* lp) {
+    // The proc handle in lp->handles[0] will be consumed by message_write.
+    // So we'll need a duplicate to do process operations later.
+    mx_handle_t proc = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS);
+    if (proc < 0)
+        return proc;
+
+    mx_handle_t pipeh[2];
+    mx_status_t status = mx_message_pipe_create(pipeh, 0);
+    if (status != NO_ERROR) {
+        mx_handle_close(proc);
+        return status;
+    }
+    mx_handle_t to_child = pipeh[0];
+    mx_handle_t child_bootstrap = pipeh[1];
+
+    mx_handle_t thread;
+    uintptr_t sp;
+    status = prepare_start(lp, "initial", to_child, &thread, &sp);
+    mx_handle_close(to_child);
+    if (status == NO_ERROR) {
         status = mx_process_start(proc, thread, lp->entry, sp,
                                   child_bootstrap, lp->vdso_base);
+        mx_handle_close(thread);
     }
-    mx_handle_close(thread);
     // process_start consumed child_bootstrap if successful.
     if (status == NO_ERROR)
         return proc;
 
     mx_handle_close(child_bootstrap);
-    mx_handle_close(proc);
-    mx_handle_close(thread);
+    return status;
+}
 
+mx_status_t launchpad_start_extra(launchpad_t* lp, const char* thread_name,
+                                  mx_handle_t to_child,
+                                  uintptr_t bootstrap_handle_in_child) {
+    mx_handle_t thread;
+    uintptr_t sp;
+    mx_status_t status = prepare_start(lp, thread_name, to_child,
+                                       &thread, &sp);
+    if (status == NO_ERROR) {
+        status = mx_thread_start(thread, lp->entry, sp,
+                                 bootstrap_handle_in_child, lp->vdso_base);
+        mx_handle_close(thread);
+    }
     return status;
 }
