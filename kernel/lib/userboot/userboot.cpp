@@ -9,7 +9,6 @@
 #include <inttypes.h>
 #include <kernel/cmdline.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <lib/console.h>
 #include <lk/init.h>
@@ -79,6 +78,7 @@ static mxtl::RefPtr<VmObject> make_vmo_from_memory(const void* data,
 
 // Get a handle to a VM object, with full rights except perhaps for writing.
 static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
+                                  mxtl::RefPtr<VmObjectDispatcher>* disp_ptr,
                                   HandleUniquePtr* ptr) {
     if (!vmo)
         return ERR_NO_MEMORY;
@@ -87,9 +87,12 @@ static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
     mx_status_t result = VmObjectDispatcher::Create(
         mxtl::move(vmo), &dispatcher, &rights);
     if (result == NO_ERROR) {
+        if (disp_ptr)
+            disp_ptr->reset(dispatcher->get_vm_object_dispatcher());
         if (readonly)
             rights &= ~MX_RIGHT_WRITE;
-        *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
+        if (ptr)
+            *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
     }
     return result;
 }
@@ -106,9 +109,9 @@ static mx_status_t get_resource_handle(HandleUniquePtr* ptr) {
 
 // Map a segment from one of our embedded VM objects.
 // If *mapped_address is zero to begin with, it can go anywhere.
-static mx_status_t map_dso_segment(mxtl::RefPtr<VmAspace> aspace,
+static mx_status_t map_dso_segment(ProcessDispatcher* process,
                                    const char* name, bool code,
-                                   mxtl::RefPtr<VmObject> vmo,
+                                   mxtl::RefPtr<VmObjectDispatcher> vmo,
                                    uintptr_t start_offset,
                                    uintptr_t end_offset,
                                    uintptr_t* mapped_address) {
@@ -116,18 +119,18 @@ static mx_status_t map_dso_segment(mxtl::RefPtr<VmAspace> aspace,
     strlcpy(mapping_name, name, sizeof(mapping_name));
     strlcat(mapping_name, code ? "-code" : "-rodata", sizeof(mapping_name));
 
-    uint vmm_flags = *mapped_address != 0 ? VMM_FLAG_VALLOC_SPECIFIC : 0;
-    uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_READ;
+    uint32_t flags = MX_VM_FLAG_PERM_READ;
     if (code)
-        arch_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+        flags |= MX_VM_FLAG_PERM_EXECUTE;
+    if (*mapped_address != 0)
+        flags |= MX_VM_FLAG_FIXED;
 
     size_t len = end_offset - start_offset;
-    mx_status_t status = aspace->MapObject(
-        vmo, mapping_name, start_offset, len,
-        reinterpret_cast<void**>(mapped_address),
-        0, vmm_flags, arch_mmu_flags);
 
-    if (status < 0) {
+    mx_status_t status = process->Map(vmo, MX_RIGHT_READ, start_offset, len,
+                                      mapped_address, flags);
+
+    if (status != NO_ERROR) {
         dprintf(CRITICAL,
                 "userboot: %s mapping %#" PRIxPTR " @ %#" PRIxPTR
                 " size %#zx failed %d\n",
@@ -144,9 +147,9 @@ static mx_status_t map_dso_segment(mxtl::RefPtr<VmAspace> aspace,
 // Map one of our embedded DSOs from its VM object.
 // If *start_address is zero, it can go anywhere.
 static mx_status_t map_dso_image(const char* name,
-                                 mxtl::RefPtr<VmAspace> aspace,
+                                 ProcessDispatcher* process,
                                  uintptr_t* start_address,
-                                 mxtl::RefPtr<VmObject> vmo,
+                                 mxtl::RefPtr<VmObjectDispatcher> vmo,
                                  size_t code_start, size_t code_end) {
     ASSERT(*start_address % PAGE_SIZE == 0);
     ASSERT(code_start % PAGE_SIZE == 0);
@@ -154,11 +157,11 @@ static mx_status_t map_dso_image(const char* name,
     ASSERT(code_end % PAGE_SIZE == 0);
     ASSERT(code_end > code_start);
 
-    mx_status_t status = map_dso_segment(aspace, name, false, vmo,
+    mx_status_t status = map_dso_segment(process, name, false, vmo,
                                          0, code_start, start_address);
     if (status == 0) {
         uintptr_t code_address = *start_address + code_start;
-        status = map_dso_segment(aspace, name, true, vmo,
+        status = map_dso_segment(process, name, true, vmo,
                                  code_start, code_end, &code_address);
     }
 
@@ -277,23 +280,32 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         dprintf(INFO, "userboot: ramdisk %15zu @ %p\n", rsize, rbase);
 
     vdso_vmo = make_vmo_from_memory(vdso_image, VDSO_CODE_END);
-    userboot_vmo = make_vmo_from_memory(userboot_image,
-                                             USERBOOT_CODE_END);
+    userboot_vmo = make_vmo_from_memory(userboot_image, USERBOOT_CODE_END);
     auto stack_vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, stack_size);
     if (!vdso_vmo || !userboot_vmo || !stack_vmo)
         return ERR_NO_MEMORY;
 
     HandleUniquePtr handles[BOOTSTRAP_HANDLES];
     bootfs_vmo = make_vmo_from_memory(bootfs, bfslen);
-    mx_status_t status = get_vmo_handle(bootfs_vmo, false, &handles[BOOTSTRAP_BOOTFS]);
+    mx_status_t status = get_vmo_handle(bootfs_vmo, false, NULL,
+                                        &handles[BOOTSTRAP_BOOTFS]);
     if (status == NO_ERROR) {
         rootfs_vmo = make_vmo_from_memory(rbase, rsize);
-        status = get_vmo_handle(rootfs_vmo, false, &handles[BOOTSTRAP_RAMDISK]);
+        status = get_vmo_handle(rootfs_vmo, false, NULL,
+                                &handles[BOOTSTRAP_RAMDISK]);
     }
+    mxtl::RefPtr<VmObjectDispatcher> userboot_vmo_dispatcher;
     if (status == NO_ERROR)
-        status = get_vmo_handle(vdso_vmo, true, &handles[BOOTSTRAP_VDSO]);
+        status = get_vmo_handle(userboot_vmo, true,
+                                &userboot_vmo_dispatcher, NULL);
+    mxtl::RefPtr<VmObjectDispatcher> vdso_vmo_dispatcher;
     if (status == NO_ERROR)
-        status = get_vmo_handle(stack_vmo, false, &handles[BOOTSTRAP_STACK]);
+        status = get_vmo_handle(vdso_vmo, true, &vdso_vmo_dispatcher,
+                                &handles[BOOTSTRAP_VDSO]);
+    mxtl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
+    if (status == NO_ERROR)
+        status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
+                                &handles[BOOTSTRAP_STACK]);
     if (status == NO_ERROR)
         status = get_resource_handle(&handles[BOOTSTRAP_RESOURCE_ROOT]);
     if (status != NO_ERROR)
@@ -308,12 +320,11 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     handles[BOOTSTRAP_PROC].reset(MakeHandle(proc_disp, rights));
 
     auto proc = proc_disp->get_process_dispatcher();
-    auto aspace = proc->aspace();
 
     // Map the userboot image anywhere.
     uintptr_t userboot_base = 0;
     status = map_dso_image(
-        "userboot", aspace, &userboot_base, userboot_vmo,
+        "userboot", proc, &userboot_base, mxtl::move(userboot_vmo_dispatcher),
         USERBOOT_CODE_START, USERBOOT_CODE_END);
     if (status < 0)
         return status;
@@ -332,32 +343,30 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     // placed the userboot image so close to the top of the address space
     // that there isn't any room left for the vDSO.
     uintptr_t vdso_base = userboot_base + USERBOOT_CODE_END;
-    status = map_dso_image("vdso", aspace, &vdso_base, vdso_vmo,
+    status = map_dso_image("vdso", proc, &vdso_base,
+                           mxtl::move(vdso_vmo_dispatcher),
                            VDSO_CODE_START, VDSO_CODE_END);
     if (status < 0)
         return status;
 
     // Map the stack anywhere.
     uintptr_t sp;
-    {
-        void* ptr;
-        status = aspace->MapObject(
-            stack_vmo, "stack", 0, stack_size, &ptr,
-            0, 0, ARCH_MMU_FLAG_PERM_USER |
-            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-        if (status < 0)
-            return status;
-        sp = (uintptr_t)ptr + stack_size;
+    status = proc->Map(mxtl::move(stack_vmo_dispatcher),
+                       MX_RIGHT_READ | MX_RIGHT_WRITE,
+                       0, stack_size, &sp,
+                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    if (status != NO_ERROR)
+        return status;
+    sp += stack_size;
 #ifdef __x86_64__
-        // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
-        // at (%rsp) serves as the return address for the outermost frame.
-        sp -= 8;
+    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
+    // at (%rsp) serves as the return address for the outermost frame.
+    sp -= 8;
 #elif defined(__arm__) || defined(__aarch64__)
-        // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
+    // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
 #else
 # error what machine?
 #endif
-    }
 
     // Create the user thread and stash its handle for the bootstrap message.
     ThreadDispatcher* thread;
