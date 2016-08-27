@@ -147,6 +147,16 @@ unsigned int remap_interrupt(unsigned int vector) {
     return vector;
 }
 
+/* dummy handler to satiate magenta pci dependencies
+ *  TODO - remove once pcie dependencies are resolved (see bug MG-246)
+ */
+status_t configure_interrupt(unsigned int vector,
+                             enum interrupt_trigger_mode tm,
+                             enum interrupt_polarity pol)
+{
+    return NO_ERROR;
+}
+
 void register_int_handler(unsigned int vector, int_handler handler, void* arg) {
     if (vector >= MAX_INT)
         panic("register_int_handler: vector out of range %d\n", vector);

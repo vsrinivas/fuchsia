@@ -71,6 +71,15 @@ void platform_init_mmu_mappings(void)
 {
 }
 
+/* empty call to satisfy current pcie dependencies in Magenta
+ *  TODO - remove once pcie dependencies are resolved (see bug MG-246)
+ */
+#include <dev/pcie.h>
+void platform_pcie_init_info(pcie_init_info_t *out)
+{
+
+}
+
 void platform_early_init(void)
 {
     uart_init_early();
