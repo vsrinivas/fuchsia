@@ -12,8 +12,11 @@
 #include <string.h>
 #include <trace.h>
 
+#include <kernel/auto_lock.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_region.h>
+
+#include <mxtl/user_ptr.h>
 
 #include <lib/console.h>
 #include <lib/user_copy.h>
@@ -101,15 +104,80 @@ int sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
     return console_run_script(buf);
 }
 
-mx_ssize_t sys_debug_read_memory(uint64_t koid, uintptr_t vaddr, mx_size_t len, void* buffer) {
-    if (!buffer)
-        return ERR_INVALID_ARGS;
-    if (len == 0 || len > kMaxDebugReadBlock)
+mx_handle_t sys_debug_get_process(mx_handle_t handle, uint64_t koid) {
+    const auto kProcessDebugRights =
+        MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
+    // TODO(cpu): wire |handle| to be a resource handle. For now
+    // check that is zero.
+    if (handle)
         return ERR_INVALID_ARGS;
 
     auto process = ProcessDispatcher::LookupProcessById(koid);
     if (!process)
         return ERR_NOT_FOUND;
+
+    HandleUniquePtr process_h(
+        MakeHandle(mxtl::RefPtr<Dispatcher>(process.get()), kProcessDebugRights));
+    if (!process_h)
+        return ERR_NO_MEMORY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    auto process_hv = up->MapHandleToValue(process_h.get());
+    up->AddHandle(mxtl::move(process_h));
+    return process_hv;
+}
+
+mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<Dispatcher> pd;
+    uint32_t rights;
+    if (!up->GetDispatcher(proc, &pd, &rights))
+        return ERR_BAD_HANDLE;
+
+    auto process = pd->get_process_dispatcher();
+    if (!process)
+        return ERR_WRONG_TYPE;
+
+    // Disallow this call on self.
+    if (process == up)
+        return ERR_INVALID_ARGS;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ | MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    HandleUniquePtr handle = up->RemoveHandle(src_handle);
+    if (!handle)
+        return ERR_BAD_HANDLE;
+
+    auto dest_hv = process->MapHandleToValue(handle.get());
+    process->AddHandle(mxtl::move(handle));
+    return dest_hv;
+}
+
+mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t len, void* buffer) {
+    if (!buffer)
+        return ERR_INVALID_ARGS;
+    if (len == 0 || len > kMaxDebugReadBlock)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<Dispatcher> pd;
+    uint32_t rights;
+    if (!up->GetDispatcher(proc, &pd, &rights))
+        return ERR_BAD_HANDLE;
+
+    auto process = pd->get_process_dispatcher();
+    if (!process)
+        return ERR_WRONG_TYPE;
+
+    // Disallow this call on self.
+    if (process == up)
+        return ERR_INVALID_ARGS;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_READ | MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
 
     auto aspace = process->aspace();
     if (!aspace)

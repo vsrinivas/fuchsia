@@ -51,9 +51,9 @@ void output_frame_x86_64(const x86_64_exc_frame_t& frame) {
     printf(" errc: %#18llx\n", frame.err_code);
 }
 
-void dump_memory(uint64_t koid, uintptr_t start, uint32_t len) {
+void dump_memory(mx_handle_t proc, uintptr_t start, uint32_t len) {
     auto buf = static_cast<uint8_t*>(malloc(len));
-    auto res = mx_debug_read_memory(koid, start, len, buf);
+    auto res = mx_debug_read_memory(proc, start, len, buf);
     if (res < 0) {
         printf("failed reading %p memory; error : %ld\n", (void*)start, res);
     } else if (res != 0) {
@@ -67,13 +67,19 @@ void process_report(const mx_exception_report_t* report) {
     printf("<== fatal exception: process [%llu] thread [%llu]\n", context.pid, context.tid);
     printf("<== %s , PC at 0x%lx\n", exc_type_to_str(context.arch.subtype), context.arch.pc);
 
+    auto process = mx_debug_get_process(0, context.pid);
+    if (process <= 0) {
+        printf("failed to get a handle to [%llu] : error %d\n", context.pid, process);
+        return;
+    }
+
     if (context.arch_id == ARCH_ID_X86_64) {
 #if defined(__x86_64__)
         output_frame_x86_64(context.arch.u.x86_64);
         printf("bottom of user stack:\n");
-        dump_memory(context.pid, context.arch.u.x86_64.user_sp, 256u);
+        dump_memory(process, context.arch.u.x86_64.user_sp, 256u);
         printf("backtrace:\n");
-        backtrace(context.pid, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp, true);
+        backtrace(process, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp, true);
 #endif
     } else {
         // TODO: support other architectures.

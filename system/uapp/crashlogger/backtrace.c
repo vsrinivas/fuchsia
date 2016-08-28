@@ -55,7 +55,7 @@ static void dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base) {
 
 typedef uint64_t mem_handle_t;
 
-static inline mx_status_t read_mem(mem_handle_t h, uint64_t vaddr, void* ptr, size_t len) {
+static inline mx_status_t read_mem(mx_handle_t h, uint64_t vaddr, void* ptr, size_t len) {
     mx_status_t status = mx_debug_read_memory(h, vaddr, len, ptr);
     if (status != (mx_status_t)len) {
         printf("read_mem @%p FAILED %d\n", (void*) (uintptr_t)vaddr, status);
@@ -80,7 +80,7 @@ static mx_status_t fetch_string(mem_handle_t h, uintptr_t vaddr, char* ptr, size
     return NO_ERROR;
 }
 
-dsoinfo_t* fetch_dso_list(mem_handle_t h, const char* name) {
+dsoinfo_t* fetch_dso_list(mx_handle_t h, const char* name) {
     uintptr_t lmap;
     if (read_mem(h, rdebug_vaddr + rdebug_off_lmap, &lmap, sizeof(lmap))) {
         return NULL;
@@ -126,7 +126,7 @@ static void btprint(dsoinfo_t* list, int n, uintptr_t pc, uintptr_t sp) {
     }
 }
 
-void backtrace(mem_handle_t h, uintptr_t pc, uintptr_t fp, bool print_dsolist) {
+void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp, bool print_dsolist) {
     dsoinfo_t* list = fetch_dso_list(h, "app");
     int n = 1;
 
