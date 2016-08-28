@@ -20,8 +20,12 @@
 #define NB_BOOT               4 // arg=0
 #define NB_QUERY              5 // arg=0, data=hostname (or "*")
 #define NB_SHELL_CMD          6 // arg=0, data=command string
+#define NB_OPEN               7 // arg=O_RDONLY|O_WRONLY, data=filename
+#define NB_READ               8 // arg=blocknum
+#define NB_WRITE              9 // arg=blocknum, data=data
+#define NB_CLOSE             10 // arg=0
 
-#define NB_ACK                0
+#define NB_ACK                0 // arg=0 or -err, NB_READ: data=data
 
 #define NB_ADVERTISE          0x77777777
 
@@ -31,11 +35,11 @@
 #define NB_ERROR_TOO_LARGE    0x80000003
 
 typedef struct nbmsg_t {
-	uint32_t magic;
-	uint32_t cookie;
-	uint32_t cmd;
-	uint32_t arg;
-	uint8_t  data[0];
+    uint32_t magic;
+    uint32_t cookie;
+    uint32_t cmd;
+    uint32_t arg;
+    uint8_t  data[0];
 } nbmsg;
 
 int netboot_init(void *buf, size_t len);

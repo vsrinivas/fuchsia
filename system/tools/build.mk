@@ -8,8 +8,9 @@ MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
 BOOTSERVER := $(BUILDDIR)/tools/bootserver
 LOGLISTENER := $(BUILDDIR)/tools/loglistener
 NETRUNCMD := $(BUILDDIR)/tools/netruncmd
+NETCP:= $(BUILDDIR)/tools/netcp
 
-ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD)
+ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP)
 
 $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
@@ -17,6 +18,11 @@ $(BUILDDIR)/tools/%: system/tools/%.c
 	$(NOECHO)cc -std=c99 -Wall -I global/include -o $@ $<
 
 $(BUILDDIR)/tools/netruncmd: system/tools/netruncmd.c system/tools/netprotocol.c
+	@echo compiling $@
+	@$(MKDIR)
+	$(NOECHO)cc -std=c99 -Wall -I global/include -o $@ $^
+
+$(BUILDDIR)/tools/netcp: system/tools/netcp.c system/tools/netprotocol.c
 	@echo compiling $@
 	@$(MKDIR)
 	$(NOECHO)cc -std=c99 -Wall -I global/include -o $@ $^

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "netprotocol.h"
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,16 +15,7 @@
 
 #include <magenta/netboot.h>
 
-#include "netprotocol.h"
-
 static const char* appname;
-
-#define MAXSIZE 1024
-
-typedef struct {
-    struct nbmsg_t hdr;
-    uint8_t data[MAXSIZE];
-} msg;
 
 int main(int argc, char** argv) {
     appname = argv[0];

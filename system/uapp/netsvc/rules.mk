@@ -12,6 +12,7 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/netsvc.c \
+    $(LOCAL_DIR)/netfile.c
 
 MODULE_STATIC_LIBS := ulib/inet6
 

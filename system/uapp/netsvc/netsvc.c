@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "netsvc.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,8 +96,7 @@ void udp6_recv(void* data, size_t len,
     if (dport == NB_SERVER_PORT) {
         nbmsg* msg = data;
         if ((len < (sizeof(nbmsg) + 1)) ||
-            (msg->magic != NB_MAGIC) ||
-            (msg->arg != 0)) {
+            (msg->magic != NB_MAGIC)) {
             return;
         }
         // null terminate the payload
@@ -123,6 +124,19 @@ void udp6_recv(void* data, size_t len,
                 run_command((char*) msg->data);
                 return;
             }
+            break;
+        case NB_OPEN:
+            netfile_open((char*)msg->data, msg->cookie, msg->arg, saddr, sport, dport);
+            break;
+        case NB_READ:
+            netfile_read(msg->cookie, msg->arg, saddr, sport, dport);
+            break;
+        case NB_WRITE:
+            len--; // NB NUL-terminator is not part of the data
+            netfile_write((char*)msg->data, len, msg->cookie, msg->arg, saddr, sport, dport);
+            break;
+        case NB_CLOSE:
+            netfile_close(msg->cookie, saddr, sport, dport);
             break;
         }
         return;
