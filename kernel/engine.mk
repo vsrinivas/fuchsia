@@ -257,6 +257,9 @@ include top/rules.mk
 # modules in the ALLMODULES list
 include make/recurse.mk
 
+# host tools
+include system/tools/build.mk
+
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
 # identify global headers to copy to the sysroot
 GLOBAL_HEADERS := $(shell find global/include -name \*\.h)
