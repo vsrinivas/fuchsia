@@ -1130,6 +1130,44 @@ mx_status_t sys_vm_object_set_size(mx_handle_t handle, uint64_t size) {
     return vmo->SetSize(size);
 }
 
+namespace mxtl {
+
+template <typename T>
+inline RefPtr<T> MakeRef(T* ptr) {
+    return RefPtr<T>(ptr);
+}
+
+}; // namespace mxtl
+
+namespace {
+
+template <typename T>
+mx_status_t with_process_for_map(ProcessDispatcher* up,
+                                 mx_handle_t proc_handle,
+                                 T doit) {
+    if (proc_handle == 0) {
+        // handle 0 is magic for 'current process'
+        // TODO: remove this hack and switch to requiring user to pass the current process handle
+        return doit(up);
+    }
+
+    mx_rights_t proc_rights;
+    mxtl::RefPtr<Dispatcher> proc_dispatcher;
+    if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
+        return BadHandle();
+
+    auto process = proc_dispatcher->get_process_dispatcher();
+    if (!process)
+        return ERR_WRONG_TYPE;
+
+    if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    return doit(process);
+}
+
+}; // anonymous namespace
+
 mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
                                uint64_t offset, mx_size_t len, mxtl::user_ptr<uintptr_t> user_ptr,
                                uint32_t flags) {
@@ -1150,87 +1188,34 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
     if (!vmo)
         return ERR_WRONG_TYPE;
 
-    // get a reffed pointer to the address space in the target process
-    mxtl::RefPtr<VmAspace> aspace;
-    if (proc_handle == 0) {
-        // handle 0 is magic for 'current process'
-        // TODO: remove this hack and switch to requiring user to pass the current process handle
-        aspace = up->aspace();
-    } else {
-        // get the process dispatcher and convert to aspace
-        mxtl::RefPtr<Dispatcher> proc_dispatcher;
-        uint32_t proc_rights;
-        if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
-            return BadHandle();
+    return with_process_for_map(
+        up, proc_handle, [=](ProcessDispatcher* process) {
+            // copy the user pointer in
+            uintptr_t ptr;
+            if (copy_from_user_uptr(&ptr, user_ptr) != NO_ERROR)
+                return ERR_INVALID_ARGS;
 
-        auto process = proc_dispatcher->get_process_dispatcher();
-        if (!process)
-            return ERR_WRONG_TYPE;
+            // do the map call
+            mx_status_t status = process->Map(mxtl::MakeRef(vmo), vmo_rights,
+                                              offset, len, &ptr, flags);
+            if (status != NO_ERROR)
+                return status;
 
-        if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
-            return ERR_ACCESS_DENIED;
+            // copy the user pointer back
+            if (copy_to_user_uptr(user_ptr, ptr) != NO_ERROR)
+                return ERR_INVALID_ARGS;
 
-        // get the address space out of the process dispatcher
-        aspace = process->aspace();
-        if (!aspace)
-            return ERR_INVALID_ARGS;
-    }
-
-    // copy the user pointer in
-    uintptr_t ptr;
-    if (copy_from_user(&ptr, user_ptr.reinterpret<uint8_t>(), sizeof(ptr)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-
-    // do the map call
-    mx_status_t status = vmo->Map(mxtl::move(aspace), vmo_rights, offset, len, &ptr, flags);
-    if (status != NO_ERROR)
-        return status;
-
-    // copy the user pointer back
-    if (copy_to_user(user_ptr.reinterpret<uint8_t>(), &ptr, sizeof(ptr)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-
-    return NO_ERROR;
+            return NO_ERROR;
+        });
 }
 
 mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_size_t len) {
     LTRACEF("proc handle %d, address 0x%lx, len 0x%lx\n", proc_handle, address, len);
 
-    // get a reffed pointer to the address space in the target process
-    auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<VmAspace> aspace;
-    if (proc_handle == 0) {
-        // handle 0 is magic for 'current process'
-        // TODO: remove this hack and switch to requiring user to pass the current process handle
-        aspace = up->aspace();
-    } else {
-        // get the process dispatcher and convert to aspace
-        mxtl::RefPtr<Dispatcher> proc_dispatcher;
-        uint32_t proc_rights;
-        if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
-            return BadHandle();
-
-        auto process = proc_dispatcher->get_process_dispatcher();
-        if (!process)
-            return ERR_WRONG_TYPE;
-
-        if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
-            return ERR_ACCESS_DENIED;
-
-        aspace = process->aspace();
-        if (!aspace)
-            return ERR_INVALID_ARGS;
-    }
-
-    // TODO: support range unmapping
-    // at the moment only support unmapping what is at a given address, signalled with len = 0
-    if (len != 0)
-        return ERR_INVALID_ARGS;
-
-    // TODO: get the unmap call into the dispatcher
-    // It's not really feasible to do it because of the handle 0 hack at the moment, and there's
-    // not a good way to get to the current dispatcher without going through a handle
-    return aspace->FreeRegion(address);
+    return with_process_for_map(ProcessDispatcher::GetCurrent(), proc_handle,
+                                [=](ProcessDispatcher* process) {
+                                    return process->Unmap(address, len);
+                                });
 }
 
 mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, mx_size_t len,

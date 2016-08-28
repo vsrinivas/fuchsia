@@ -26,6 +26,7 @@
 #include <magenta/magenta.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
+#include <magenta/vm_object_dispatcher.h>
 
 #define LOCAL_TRACE 0
 
@@ -454,4 +455,27 @@ const char* StateToString(ProcessDispatcher::State state) {
         return "dead";
     }
     return "unknown";
+}
+
+mx_status_t ProcessDispatcher::Map(
+    mxtl::RefPtr<VmObjectDispatcher> vmo, uint32_t vmo_rights,
+    uint64_t offset, mx_size_t len, uintptr_t* address, uint32_t flags) {
+    mx_status_t status;
+
+    status = vmo->Map(aspace(), vmo_rights, offset, len, address, flags);
+
+    return status;
+}
+
+mx_status_t ProcessDispatcher::Unmap(uintptr_t address, mx_size_t len) {
+    mx_status_t status;
+
+    // TODO: support range unmapping
+    // at the moment only support unmapping what is at a given address, signalled with len = 0
+    if (len != 0)
+        return ERR_INVALID_ARGS;
+
+    status = aspace_->FreeRegion(address);
+
+    return status;
 }
