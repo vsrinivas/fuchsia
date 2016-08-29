@@ -41,7 +41,7 @@ MODULE_SO_INSTALL_NAME := -
 # declarations into the assembly to cover symbols compilers might use.
 MODULE_COMPILEFLAGS += -include $(LOCAL_DIR)/hidden.h
 
-MODULE_STATIC_LIBS := ulib/elfload ulib/runtime ulib/ddk ulib/musl-static
+MODULE_STATIC_LIBS := ulib/elfload ulib/runtime ulib/musl-static
 MODULE_HEADER_DEPS := ulib/magenta
 
 # This generated header lists all the ABI symbols in the vDSO with their

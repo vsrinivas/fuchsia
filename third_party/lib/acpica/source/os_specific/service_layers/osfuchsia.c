@@ -10,7 +10,6 @@
 
 #include <hw/inout.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-ddk.h>
 
 extern mx_handle_t root_resource_handle;
 

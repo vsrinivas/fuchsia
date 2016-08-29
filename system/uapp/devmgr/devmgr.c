@@ -17,7 +17,6 @@
 
 #include <magenta/listnode.h>
 
-#include <magenta/syscalls-ddk.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 

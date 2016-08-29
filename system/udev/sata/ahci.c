@@ -10,7 +10,6 @@
 
 #include <hexdump/hexdump.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 #include <sys/param.h>

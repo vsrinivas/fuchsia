@@ -18,7 +18,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/tpm.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <stdlib.h>
 #include <stdio.h>

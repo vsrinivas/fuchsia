@@ -4,7 +4,7 @@
 
 #include <ddk/iotxn.h>
 #include <ddk/device.h>
-#include <magenta/syscalls-ddk.h>
+#include <magenta/syscalls.h>
 #include <sys/param.h>
 #include <stdlib.h>
 #include <stdio.h>

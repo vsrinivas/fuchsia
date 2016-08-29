@@ -12,7 +12,6 @@
 #pragma GCC visibility push(hidden)
 
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-ddk.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
 #include <stdalign.h>

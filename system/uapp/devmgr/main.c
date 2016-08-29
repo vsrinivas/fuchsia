@@ -6,7 +6,6 @@
 #include <limits.h>
 #include <ddk/protocol/device.h>
 #include <magenta/processargs.h>
-#include <magenta/syscalls-ddk.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
 #include <mxio/util.h>

@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-ddk.h>
 #include "tpm.h"
 
 #define TPM_LOCALITY_BASE(locality) ((uintptr_t)(tpm_base) + ((uintptr_t)(locality) << 12))

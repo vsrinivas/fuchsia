@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <threads.h>
 
-#include <magenta/syscalls-ddk.h>
+#include <magenta/syscalls.h>
 #include <semaphore.h>
 
 /*

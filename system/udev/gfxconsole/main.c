@@ -26,7 +26,7 @@
 #include <mxio/io.h>
 #include <mxio/watcher.h>
 
-#include <magenta/syscalls-ddk.h>
+#include <magenta/syscalls.h>
 
 #define VCDEBUG 1
 

@@ -13,7 +13,6 @@
 
 #include <acpisvc/simple.h>
 #include <magenta/processargs.h>
-#include <magenta/syscalls-ddk.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 

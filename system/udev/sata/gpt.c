@@ -8,7 +8,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/block.h>
 
-#include <magenta/syscalls-ddk.h>
+#include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 #include <sys/param.h>
