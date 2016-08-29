@@ -18,6 +18,33 @@
 #include <mxio/io.h>
 #include <mxio/watcher.h>
 
+// if nonzero, drop 1 in DROP_PACKETS packets at random
+#define DROP_PACKETS 0
+
+#if DROP_PACKETS > 0
+
+//TODO: use libc random() once it's actually random
+
+// Xorshift32 prng
+typedef struct {
+    uint32_t n;
+} rand32_t;
+
+static inline uint32_t rand32(rand32_t* state) {
+    uint32_t n = state->n;
+    n ^= (n << 13);
+    n ^= (n >> 17);
+    n ^= (n << 5);
+    return (state->n = n);
+}
+
+rand32_t rstate = { .n = 0x8716253 };
+#define random() rand32(&rstate)
+
+static int txc;
+static int rxc;
+#endif
+
 static int netfd = -1;
 static uint8_t netmac[6];
 
@@ -63,6 +90,14 @@ void eth_put_buffer(void* data) {
 }
 
 int eth_send(void* data, size_t len) {
+#if DROP_PACKETS
+    txc++;
+    if ((random() % DROP_PACKETS) == 0) {
+        printf("tx drop %d\n", txc);
+        eth_put_buffer(data);
+        return len;
+    }
+#endif
     int r = write(netfd, data, len);
     eth_put_buffer(data);
     return r;
@@ -142,6 +177,13 @@ void netifc_poll(void) {
 
     for (;;) {
         while ((r = read(netfd, buffer, sizeof(buffer))) > 0) {
+#if DROP_PACKETS
+            rxc++;
+            if ((random() % DROP_PACKETS) == 0) {
+                printf("rx drop %d\n", rxc);
+                continue;
+            }
+#endif
             eth_recv(buffer, r);
         }
         if (net_timer) {
