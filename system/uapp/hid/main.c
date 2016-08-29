@@ -20,10 +20,9 @@
 #include <magenta/device/input.h>
 
 #include <mxio/io.h>
+#include <mxio/watcher.h>
 
 #define DEV_INPUT "/dev/class/input"
-
-#define INPUT_LISTENER_FLAG_RUNNING 1
 
 static bool verbose = false;
 #define xprintf(fmt...) do { if (verbose) printf(fmt); } while (0)
@@ -38,15 +37,11 @@ void usage(void) {
     printf("  all values are parsed as hexadecimal integers\n");
 }
 
-typedef struct {
-    char dev_name[128];
-    thrd_t t;
-    int flags;
+typedef struct input_args {
     int fd;
-    struct list_node node;
-} input_listener_t;
+    char name[128];
+} input_args_t;
 
-static struct list_node input_listeners_list = LIST_INITIAL_VALUE(input_listeners_list);
 static thrd_t input_poll_thread;
 
 static mtx_t print_lock = MTX_INIT;
@@ -184,95 +179,63 @@ static int hid_status(int fd, const char* name, size_t* max_report_len) {
 }
 
 static int hid_input_thread(void* arg) {
-    input_listener_t* listener = arg;
-    assert(listener->flags & INPUT_LISTENER_FLAG_RUNNING);
-    assert(listener->fd >= 0);
-    lprintf("hid: input thread started for %s\n", listener->dev_name);
-    const char* name = listener->dev_name;
-    int fd = listener->fd;
+    input_args_t* args = (input_args_t*)arg;
+    lprintf("hid: input thread started for %s\n", args->name);
 
     size_t max_report_len = 0;
-    try(hid_status(fd, name, &max_report_len));
+    try(hid_status(args->fd, args->name, &max_report_len));
 
     uint8_t* report = calloc(1, max_report_len);
     if (!report) return ERR_NO_MEMORY;
 
     for (;;) {
-        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
-        int r = read(fd, report, max_report_len);
+        mxio_wait_fd(args->fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+        int r = read(args->fd, report, max_report_len);
         mtx_lock(&print_lock);
         printf("read returned %d\n", r);
         if (r < 0) {
             mtx_unlock(&print_lock);
             break;
         }
-        printf("hid: input from %s\n", name);
+        printf("hid: input from %s\n", args->name);
         print_hex(report, r);
         mtx_unlock(&print_lock);
     }
     free(report);
-    lprintf("hid: closing %s\n", name);
-    close(fd);
-    listener->fd = -1;
-    listener->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
+    lprintf("hid: closing %s\n", args->name);
+    close(args->fd);
+    free(args);
+    return NO_ERROR;
+}
+
+static mx_status_t hid_input_device_added(int dirfd, const char* fn, void* cookie) {
+    int fd = openat(dirfd, fn, O_RDONLY);
+    if (fd < 0) {
+        return NO_ERROR;
+    }
+
+    input_args_t* args = malloc(sizeof(*args));
+    args->fd = fd;
+    thrd_t t;
+    snprintf(args->name, sizeof(args->name), "hid-input-%s", fn);
+    int ret = thrd_create_with_name(&t, hid_input_thread, (void*)args, args->name);
+    if (ret != thrd_success) {
+        printf("hid: input thread %s did not start (error=%d)\n", args->name, ret);
+        close(fd);
+    }
+    thrd_detach(t);
     return NO_ERROR;
 }
 
 static int hid_input_devices_poll_thread(void* arg) {
-    for (;;) {
-        struct dirent* de;
-        DIR* dir = opendir(DEV_INPUT);
-        if (!dir) {
-            printf("hid: error opening %s\n", DEV_INPUT);
-            return ERR_INTERNAL;
-        }
-        char dname[128];
-        char tname[128];
-        while ((de = readdir(dir)) != NULL) {
-            snprintf(dname, sizeof(dname), "%s/%s", DEV_INPUT, de->d_name);
-
-            // is there already a listener for this device?
-            bool found = false;
-            input_listener_t* listener = NULL;
-            list_for_every_entry(&input_listeners_list, listener, input_listener_t, node) {
-                if ((listener->flags & INPUT_LISTENER_FLAG_RUNNING) && !strcmp(listener->dev_name, dname)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (found) continue;
-            input_listener_t* free = NULL;
-            list_for_every_entry(&input_listeners_list, listener, input_listener_t, node) {
-                if (!(listener->flags & INPUT_LISTENER_FLAG_RUNNING)) {
-                    free = listener;
-                    break;
-                }
-            }
-            if (!free) {
-                free = calloc(1, sizeof(input_listener_t));
-                if (!free) {
-                    break;
-                }
-                list_add_tail(&input_listeners_list, &free->node);
-            }
-            free->flags |= INPUT_LISTENER_FLAG_RUNNING;
-            strncpy(free->dev_name, dname, sizeof(free->dev_name));
-            free->fd = open(free->dev_name, O_RDONLY);
-            if (free->fd < 0) {
-                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
-                continue;
-            }
-            snprintf(tname, sizeof(tname), "hid-input-%s", de->d_name);
-            int ret = thrd_create_with_name(&free->t, hid_input_thread, (void*)free, tname);
-            if (ret != thrd_success) {
-                printf("hid: input thread %s did not start (error=%d)\n", tname, ret);
-                free->flags &= ~INPUT_LISTENER_FLAG_RUNNING;
-            }
-        }
-        closedir(dir);
-        usleep(1000 * 1000);
+    int dirfd = open(DEV_INPUT, O_DIRECTORY|O_RDONLY);
+    if (dirfd < 0) {
+        printf("hid: error opening %s\n", DEV_INPUT);
+        return ERR_INTERNAL;
     }
-    return NO_ERROR;
+    mxio_watch_directory(dirfd, hid_input_device_added, NULL);
+    close(dirfd);
+    return -1;
 }
 
 int read_reports(int argc, const char** argv) {
