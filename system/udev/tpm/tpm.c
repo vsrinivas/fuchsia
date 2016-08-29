@@ -219,7 +219,7 @@ cleanup_device:
 #endif
 }
 
-mx_driver_t _driver_tpm /* BUILTIN_DRIVER */ = {
+mx_driver_t _driver_tpm BUILTIN_DRIVER = {
     .name = "tpm",
     .ops = {
         .init = tpm_init,
