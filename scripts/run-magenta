@@ -19,7 +19,7 @@ function HELP {
     echo "-N                  : run with emulated nic via tun/tap"
     echo "-o <dir>            : build directory"
     echo "-r                  : run release build"
-    echo "-u                  : use uniprocessor"
+    echo "-s <number of cpus> : number of cpus, 1 for uniprocessor, default is 4"
     echo "-v                  : use vnc based display"
     echo "-x <bootfs>         : add eXtra bootfs"
     echo "-h for help"
@@ -38,13 +38,13 @@ GRAPHICS=0
 DO_KVM=0
 MEMSIZE=512
 NET=0
-UP=0
 RELEASE=0
 VNC=0
+SMP=4
 INITRD=
 CMDLINE=""
 
-while getopts a:Abc:dgkm:nNo:ruvx:h FLAG; do
+while getopts a:Abc:dgkm:nNo:rs:vx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         A) AUDIO=1;;
@@ -58,7 +58,7 @@ while getopts a:Abc:dgkm:nNo:ruvx:h FLAG; do
         N) NET=2;;
         o) BUILDDIR=$OPTARG;;
         r) RELEASE=1;;
-        u) UP=1;;
+        s) SMP=$OPTARG;;
         v) VNC=1;;
         x) INITRD=$OPTARG;;
         h) HELP;;
@@ -151,27 +151,22 @@ if [ "$AUDIO" -ne 0 ]; then
     export QEMU_AUDIO_DRV=none
 fi
 
+if [ "$SMP" -ne 1 ]; then
+    ARGS+=" -smp $SMP"
+fi
+
 case $ARCH in
     arm32)
         QEMU=qemu-system-arm
         ARGS+=" -machine virt -cpu cortex-a15 -kernel $BUILDDIR/magenta.elf"
-        if [ "$UP" -eq 0 ]; then
-          ARGS+=" -smp cores=2,sockets=1"
-        fi
         ;;
     arm64)
         QEMU=qemu-system-aarch64
         ARGS+=" -machine virt -cpu cortex-a53 -kernel $BUILDDIR/magenta.elf"
-        if [ "$UP" -eq 0 ]; then
-          ARGS+=" -smp cores=2,sockets=1"
-        fi
         ;;
     x86-64)
         QEMU=qemu-system-x86_64
         ARGS+=" -machine q35 -kernel $BUILDDIR/magenta.bin"
-        if [ "$UP" -eq 0 ]; then
-          ARGS+=" -smp cores=2,threads=2,sockets=1"
-        fi
         if [ $DO_KVM -ne 0 ]; then
           ARGS+=" -enable-kvm -cpu host"
         else
