@@ -45,9 +45,6 @@ MODULE_DEPS += \
 	lib/cbuf \
 	lib/fdt \
 	dev/timer/arm_generic \
-	dev/virtio/block \
-	dev/virtio/gpu \
-	dev/virtio/rng \
 	dev/interrupt \
 	dev/pcie \
 

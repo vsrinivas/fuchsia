@@ -9,12 +9,12 @@
 #include <err.h>
 #include <debug.h>
 #include <trace.h>
+#include <dev/display.h>
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <dev/pcie.h>
 #include <dev/timer/arm_generic.h>
 #include <dev/uart.h>
-#include <dev/virtio.h>
 #include <lk/init.h>
 #include <lib/console.h>
 #include <kernel/cmdline.h>
@@ -231,14 +231,6 @@ void platform_init(void)
 {
     uart_init();
 
-    /* detect any virtio devices */
-    uint virtio_irqs[NUM_VIRTIO_TRANSPORTS];
-    for (int i = 0; i < NUM_VIRTIO_TRANSPORTS; i++) {
-        virtio_irqs[i] = VIRTIO0_INT + i;
-    }
-
-    virtio_mmio_detect((void *)VIRTIO_BASE, NUM_VIRTIO_TRANSPORTS, virtio_irqs);
-
     /* Initialize the MSI allocator */
     status_t ret = arm_gic2vm_msi_init();
     if (ret != NO_ERROR) {
@@ -279,3 +271,15 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     arch_disable_ints();
     for (;;);
 }
+
+/* stub out the hardware rng entropy generator, which doesn't eixst on this platform */
+size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
+    return 0;
+}
+
+/* no built in framebuffer */
+status_t display_get_info(struct display_info *info) {
+    return ERR_NOT_FOUND;
+}
+
+

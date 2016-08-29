@@ -37,10 +37,7 @@ MODULE_DEPS += \
     lib/fdt \
     dev/pcie \
     dev/timer/arm_generic \
-    dev/interrupt/arm_gicv2m \
-    dev/virtio/block \
-    dev/virtio/gpu \
-    dev/virtio/rng \
+    dev/interrupt/arm_gicv2m
 
 KERNEL_DEFINES += \
     MEMBASE=$(MEMBASE) \

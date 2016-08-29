@@ -17,7 +17,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/prng.cpp \
     $(LOCAL_DIR)/prng_unittest.cpp
 
-MODULE_DEPS += lib/unittest
+MODULE_DEPS += dev/hw_rng
 MODULE_DEPS += lib/cryptolib
+MODULE_DEPS += lib/unittest
 
 include make/module.mk

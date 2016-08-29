@@ -282,4 +282,14 @@ __WEAK int platform_pgetc(char *c, bool wait)
     return platform_dgetc(c, wait);
 }
 
+/* stub out the hardware rng entropy generator, which doesn't eixst on this platform */
+size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
+    return 0;
+}
+
+/* no built in framebuffer */
+status_t display_get_info(struct display_info *info) {
+    return ERR_NOT_FOUND;
+}
+
 
