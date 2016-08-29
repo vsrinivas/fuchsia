@@ -480,7 +480,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     return status;
 }
 
-mx_status_t sys_message_read(mx_handle_t handle_value, mxtl::user_ptr<void> _bytes,
+mx_status_t sys_msgpipe_read(mx_handle_t handle_value, mxtl::user_ptr<void> _bytes,
                              mxtl::user_ptr<uint32_t> _num_bytes, mxtl::user_ptr<mx_handle_t> _handles,
                              mxtl::user_ptr<uint32_t> _num_handles, uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p flags 0x%x\n",
@@ -580,7 +580,7 @@ mx_status_t sys_message_read(mx_handle_t handle_value, mxtl::user_ptr<void> _byt
     return result;
 }
 
-mx_status_t sys_message_write(mx_handle_t handle_value, mxtl::user_ptr<const void> _bytes, uint32_t num_bytes,
+mx_status_t sys_msgpipe_write(mx_handle_t handle_value, mxtl::user_ptr<const void> _bytes, uint32_t num_bytes,
                               mxtl::user_ptr<const mx_handle_t> _handles, uint32_t num_handles, uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
             handle_value, _bytes.get(), num_bytes, _handles.get(), num_handles, flags);
@@ -703,8 +703,8 @@ mx_status_t sys_message_write(mx_handle_t handle_value, mxtl::user_ptr<const voi
     return result;
 }
 
-mx_status_t sys_message_pipe_create(mxtl::user_ptr<mx_handle_t> out_handle /* array of size 2 */,
-                                    uint32_t flags) {
+mx_status_t sys_msgpipe_create(mxtl::user_ptr<mx_handle_t> out_handle /* array of size 2 */,
+                               uint32_t flags) {
     LTRACEF("entry out_handle[] %p\n", out_handle.get());
 
     if (!out_handle)
@@ -1027,7 +1027,7 @@ mx_status_t sys_futex_requeue(int* wake_ptr, uint32_t wake_count, int current_va
         wake_ptr, wake_count, current_value, requeue_ptr, requeue_count);
 }
 
-mx_handle_t sys_vm_object_create(uint64_t size) {
+mx_handle_t sys_vmo_create(uint64_t size) {
     LTRACEF("size 0x%llx\n", size);
 
     // create a vm object
@@ -1055,7 +1055,7 @@ mx_handle_t sys_vm_object_create(uint64_t size) {
     return hv;
 }
 
-mx_ssize_t sys_vm_object_read(mx_handle_t handle, void* data, uint64_t offset, mx_size_t len) {
+mx_ssize_t sys_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size_t len) {
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
 
     // lookup the dispatcher from handle
@@ -1076,7 +1076,7 @@ mx_ssize_t sys_vm_object_read(mx_handle_t handle, void* data, uint64_t offset, m
     return vmo->Read(data, len, offset);
 }
 
-mx_ssize_t sys_vm_object_write(mx_handle_t handle, const void* data, uint64_t offset, mx_size_t len) {
+mx_ssize_t sys_vmo_write(mx_handle_t handle, const void* data, uint64_t offset, mx_size_t len) {
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
 
     // lookup the dispatcher from handle
@@ -1097,7 +1097,7 @@ mx_ssize_t sys_vm_object_write(mx_handle_t handle, const void* data, uint64_t of
     return vmo->Write(data, len, offset);
 }
 
-mx_status_t sys_vm_object_get_size(mx_handle_t handle, mxtl::user_ptr<uint64_t> _size) {
+mx_status_t sys_vmo_get_size(mx_handle_t handle, mxtl::user_ptr<uint64_t> _size) {
     LTRACEF("handle %d, sizep %p\n", handle, _size.get());
 
     // lookup the dispatcher from handle
@@ -1124,7 +1124,7 @@ mx_status_t sys_vm_object_get_size(mx_handle_t handle, mxtl::user_ptr<uint64_t> 
     return status;
 }
 
-mx_status_t sys_vm_object_set_size(mx_handle_t handle, uint64_t size) {
+mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     LTRACEF("handle %d, size 0x%llx\n", handle, size);
 
     // lookup the dispatcher from handle
@@ -1183,7 +1183,7 @@ mx_status_t with_process_for_map(ProcessDispatcher* up,
 
 }; // anonymous namespace
 
-mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
+mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
                                uint64_t offset, mx_size_t len, mxtl::user_ptr<uintptr_t> user_ptr,
                                uint32_t flags) {
 
@@ -1224,7 +1224,7 @@ mx_status_t sys_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
         });
 }
 
-mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_size_t len) {
+mx_status_t sys_process_unmap_vm(mx_handle_t proc_handle, uintptr_t address, mx_size_t len) {
     LTRACEF("proc handle %d, address 0x%lx, len 0x%lx\n", proc_handle, address, len);
 
     return with_process_for_map(ProcessDispatcher::GetCurrent(), proc_handle,
@@ -1233,7 +1233,7 @@ mx_status_t sys_process_vm_unmap(mx_handle_t proc_handle, uintptr_t address, mx_
                                 });
 }
 
-mx_status_t sys_process_vm_protect(mx_handle_t proc_handle, uintptr_t address, mx_size_t len,
+mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, mx_size_t len,
                                    uint32_t prot) {
     LTRACEF("proc handle %d, address 0x%lx, len 0x%lx, prot 0x%x\n", proc_handle, address, len, prot);
 
@@ -1372,7 +1372,7 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<void> ptr,
     return log->ReadFromUser(ptr.get(), len, flags);
 }
 
-mx_handle_t sys_io_port_create(uint32_t options) {
+mx_handle_t sys_port_create(uint32_t options) {
     LTRACEF("options %u\n", options);
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -1393,7 +1393,7 @@ mx_handle_t sys_io_port_create(uint32_t options) {
     return hv;
 }
 
-mx_status_t sys_io_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet, mx_size_t size) {
+mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_IO_PORT_MAX_PKT_SIZE)
@@ -1423,7 +1423,7 @@ mx_status_t sys_io_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> pac
     return ioport->Queue(iopk);
 }
 
-mx_status_t sys_io_port_wait(mx_handle_t handle, mxtl::user_ptr<void> packet, mx_size_t size) {
+mx_status_t sys_port_wait(mx_handle_t handle, mxtl::user_ptr<void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (!packet)
@@ -1455,7 +1455,7 @@ mx_status_t sys_io_port_wait(mx_handle_t handle, mxtl::user_ptr<void> packet, mx
     return NO_ERROR;
 }
 
-mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, mx_signals_t signals) {
+mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, mx_signals_t signals) {
     LTRACEF("handle %d source %d\n", handle, source);
 
     if (!signals)
@@ -1489,8 +1489,8 @@ mx_status_t sys_io_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t sourc
     return msg_pipe->SetIOPort(mxtl::RefPtr<IOPortDispatcher>(ioport), key, signals);
  }
 
-mx_handle_t sys_data_pipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,
-                                 mx_handle_t* _handle) {
+mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,
+                                mx_handle_t* _handle) {
     LTRACEF("options %u\n", options);
 
     if (!_handle)
@@ -1536,8 +1536,8 @@ mx_handle_t sys_data_pipe_create(uint32_t options, mx_size_t element_size, mx_si
     return hv_producer;
 }
 
-mx_ssize_t sys_data_pipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requested,
-                               void const* _buffer) {
+mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requested,
+                              void const* _buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!_buffer)
@@ -1565,8 +1565,8 @@ mx_ssize_t sys_data_pipe_write(mx_handle_t handle, uint32_t flags, mx_size_t req
     return written;
 }
 
-mx_ssize_t sys_data_pipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
-                              void* _buffer) {
+mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
+                             void* _buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!_buffer)
@@ -1594,8 +1594,8 @@ mx_ssize_t sys_data_pipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requ
     return read;
 }
 
-mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size_t requested,
-                                     uintptr_t* buffer) {
+mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size_t requested,
+                                    uintptr_t* buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!buffer)
@@ -1630,7 +1630,7 @@ mx_ssize_t sys_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size
     return requested;
 }
 
-mx_status_t sys_data_pipe_end_write(mx_handle_t handle, mx_size_t written) {
+mx_status_t sys_datapipe_end_write(mx_handle_t handle, mx_size_t written) {
     LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1650,8 +1650,8 @@ mx_status_t sys_data_pipe_end_write(mx_handle_t handle, mx_size_t written) {
     return producer->EndWrite(written);
 }
 
-mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
-                                    uintptr_t* buffer) {
+mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
+                                   uintptr_t* buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!buffer)
@@ -1686,7 +1686,7 @@ mx_ssize_t sys_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_
     return requested;
 }
 
-mx_status_t sys_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
+mx_status_t sys_datapipe_end_read(mx_handle_t handle, mx_size_t read) {
     LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1741,7 +1741,7 @@ mx_status_t sys_cprng_add_entropy(mxtl::user_ptr<void> buffer, mx_size_t len) {
     return NO_ERROR;
 }
 
-mx_handle_t sys_wait_set_create(void) {
+mx_handle_t sys_waitset_create(void) {
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_status_t result = WaitSetDispatcher::Create(&dispatcher, &rights);
@@ -1759,10 +1759,10 @@ mx_handle_t sys_wait_set_create(void) {
     return hv;
 }
 
-mx_status_t sys_wait_set_add(mx_handle_t ws_handle_value,
-                             mx_handle_t handle_value,
-                             mx_signals_t signals,
-                             uint64_t cookie) {
+mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
+                            mx_handle_t handle_value,
+                            mx_signals_t signals,
+                            uint64_t cookie) {
     LTRACEF("wait set handle %d, handle %d\n", ws_handle_value, handle_value);
 
     mxtl::unique_ptr<WaitSetDispatcher::Entry> entry;
@@ -1795,7 +1795,7 @@ mx_status_t sys_wait_set_add(mx_handle_t ws_handle_value,
     return ws_dispatcher->AddEntry(mxtl::move(entry), handle);
 }
 
-mx_status_t sys_wait_set_remove(mx_handle_t ws_handle, uint64_t cookie) {
+mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
     LTRACEF("wait set handle %d\n", ws_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1813,11 +1813,11 @@ mx_status_t sys_wait_set_remove(mx_handle_t ws_handle, uint64_t cookie) {
     return ws_dispatcher->RemoveEntry(cookie);
 }
 
-mx_status_t sys_wait_set_wait(mx_handle_t ws_handle,
-                              mx_time_t timeout,
-                              mxtl::user_ptr<uint32_t> _num_results,
-                              mxtl::user_ptr<mx_wait_set_result_t> _results,
-                              mxtl::user_ptr<uint32_t> _max_results) {
+mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
+                             mx_time_t timeout,
+                             mxtl::user_ptr<uint32_t> _num_results,
+                             mxtl::user_ptr<mx_wait_set_result_t> _results,
+                             mxtl::user_ptr<uint32_t> _max_results) {
     LTRACEF("wait set handle %d\n", ws_handle);
 
     uint32_t num_results;

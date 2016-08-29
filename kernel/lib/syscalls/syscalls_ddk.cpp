@@ -39,7 +39,7 @@ static_assert(MX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
 static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
-mx_handle_t sys_interrupt_event_create(mx_handle_t hrsrc, uint32_t vector, uint32_t flags) {
+mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t flags) {
     LTRACEF("vector %u flags 0x%x\n", vector, flags);
 
     // TODO: finer grained validation
@@ -62,7 +62,7 @@ mx_handle_t sys_interrupt_event_create(mx_handle_t hrsrc, uint32_t vector, uint3
     return hv;
 }
 
-mx_status_t sys_interrupt_event_wait(mx_handle_t handle_value) {
+mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
 
     uint32_t rights = 0u;
@@ -79,7 +79,7 @@ mx_status_t sys_interrupt_event_wait(mx_handle_t handle_value) {
     return interrupt->InterruptWait();
 }
 
-mx_status_t sys_interrupt_event_complete(mx_handle_t handle_value) {
+mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
     LTRACEF("handle %u\n", handle_value);
 
     uint32_t rights = 0u;
