@@ -17,6 +17,7 @@
 
 #include <magenta/listnode.h>
 
+#include <magenta/syscalls-ddk.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
@@ -794,11 +795,12 @@ void devmgr_dump(void) {
 
 mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "help")) {
-        printf("dump     - dump device tree\n"
-               "lsof     - list open remoteio files and devices\n"
-               "crash    - crash the device manager\n"
-               "poweroff - poweroff the system\n"
-               "reboot   - reboot the system\n"
+        printf("dump        - dump device tree\n"
+               "lsof        - list open remoteio files and devices\n"
+               "crash       - crash the device manager\n"
+               "poweroff    - poweroff the system\n"
+               "reboot      - reboot the system\n"
+               "kerneldebug - send a command to the kernel\n"
                );
         return NO_ERROR;
     }
@@ -821,6 +823,11 @@ mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "reboot")) {
         devmgr_reboot();
         return ERR_NOT_SUPPORTED;
+    }
+    const char* prefix = "kerneldebug ";
+    if (!strncmp(cmd, prefix, strlen(prefix))) {
+        const char* arg = cmd + strlen(prefix);
+        return mx_debug_send_command(arg, strlen(arg));
     }
 
     return ERR_NOT_SUPPORTED;
