@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <hw/usb.h>
+#include <magenta/hw/usb.h>
 #include <stdbool.h>
 
 typedef struct ethernet_protocol {

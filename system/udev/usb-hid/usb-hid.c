@@ -8,7 +8,7 @@
 #include <ddk/iotxn.h>
 #include <ddk/common/hid.h>
 #include <ddk/common/usb.h>
-#include <hw/usb-hid.h>
+#include <magenta/hw/usb-hid.h>
 
 #include <hexdump/hexdump.h>
 #include <magenta/types.h>

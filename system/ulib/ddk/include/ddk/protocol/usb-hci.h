@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <hw/usb.h>
-#include <hw/usb-hub.h>
+#include <magenta/hw/usb.h>
+#include <magenta/hw/usb-hub.h>
 
 typedef struct usb_hci_protocol {
     void (*set_bus_device)(mx_device_t* dev, mx_device_t* busdev);

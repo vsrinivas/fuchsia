@@ -12,7 +12,7 @@
 #include <sys/types.h> // for status_t
 #endif
 
-#include <global/fuchsia-types.h>
+#include <magenta/fuchsia-types.h>
 
 // Kernel-private errors
 #define ERR_KERNEL_PRIVATE_BASE (-500)

@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <hw/usb.h>
-#include <hw/usb-hub.h>
+#include <magenta/hw/usb.h>
+#include <magenta/hw/usb-hub.h>
 
 // protocol data for iotxns
 typedef struct usb_protocol_data {

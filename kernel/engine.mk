@@ -73,7 +73,7 @@ GLOBAL_CONFIG_HEADER := $(BUILDDIR)/config-global.h
 KERNEL_CONFIG_HEADER := $(BUILDDIR)/config-kernel.h
 USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
 
-GLOBAL_INCLUDES := global/include
+GLOBAL_INCLUDES := system/public system/private
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_COMPILEFLAGS := -g -finline -include $(GLOBAL_CONFIG_HEADER)
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type -Wno-nonnull-compare
@@ -262,8 +262,8 @@ include system/tools/build.mk
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
 # identify global headers to copy to the sysroot
-GLOBAL_HEADERS := $(shell find global/include -name \*\.h)
-GLOBAL_HEADERS := $(patsubst global/include/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
+GLOBAL_HEADERS := $(shell find system/public -name \*\.h)
+GLOBAL_HEADERS := $(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
 
 # generate rule to copy them
 $(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.h,global/include/%.h)

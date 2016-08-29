@@ -15,7 +15,7 @@
 #include <limits.h>
 
 #include <hexdump/hexdump.h>
-#include <hw/usb.h>
+#include <magenta/hw/usb.h>
 #include <magenta/device/usb-device.h>
 
 #define DEV_USB_DEVICE "/dev/class/usb-device"

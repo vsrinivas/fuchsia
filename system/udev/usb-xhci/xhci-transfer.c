@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hw/usb.h>
+#include <magenta/hw/usb.h>
 #include <stdio.h>
 #include <threads.h>
 

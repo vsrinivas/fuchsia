@@ -6,8 +6,8 @@
 
 #include <ddk/completion.h>
 #include <ddk/protocol/usb-device.h>
-#include <hw/usb-hub.h>
-#include <hw/usb.h>
+#include <magenta/hw/usb-hub.h>
+#include <magenta/hw/usb.h>
 #include <magenta/types.h>
 #include <stdbool.h>
 #include <magenta/compiler.h>

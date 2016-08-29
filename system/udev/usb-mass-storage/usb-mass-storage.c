@@ -8,7 +8,7 @@
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/usb-device.h>
-#include <hw/usb.h>
+#include <magenta/hw/usb.h>
 #include <magenta/listnode.h>
 #include <ddk/protocol/block.h>
 

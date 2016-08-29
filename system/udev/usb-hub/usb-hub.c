@@ -8,7 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-bus.h>
-#include <hw/usb-hub.h>
+#include <magenta/hw/usb-hub.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

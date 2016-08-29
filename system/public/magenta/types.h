@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <global/fuchsia-types.h>
+#include <magenta/fuchsia-types.h>
 
 #ifdef __cplusplus
 extern "C" {

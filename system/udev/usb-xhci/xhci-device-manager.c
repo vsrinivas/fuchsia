@@ -4,7 +4,7 @@
 
 #include <ddk/protocol/usb-device.h>
 #include <endian.h>
-#include <hw/usb.h>
+#include <magenta/hw/usb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
