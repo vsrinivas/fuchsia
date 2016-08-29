@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <unittest/unittest.h>
-#include <utils/intrusive_single_list.h>
-#include <utils/intrusive_hash_table.h>
-#include <utils/tests/intrusive_containers/associative_container_test_environment.h>
-#include <utils/tests/intrusive_containers/intrusive_hash_table_checker.h>
-#include <utils/tests/intrusive_containers/test_thunks.h>
+#include <mxtl/intrusive_single_list.h>
+#include <mxtl/intrusive_hash_table.h>
+#include <mxtl/tests/intrusive_containers/associative_container_test_environment.h>
+#include <mxtl/tests/intrusive_containers/intrusive_hash_table_checker.h>
+#include <mxtl/tests/intrusive_containers/test_thunks.h>
 
 namespace mxtl {
 namespace tests {

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <unittest/unittest.h>
-#include <utils/intrusive_wavl_tree.h>
+#include <mxtl/intrusive_wavl_tree.h>
 
 namespace mxtl {
 namespace tests {

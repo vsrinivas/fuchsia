@@ -11,7 +11,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/wait_event.h>
 
-#include <utils/type_support.h>
+#include <mxtl/type_support.h>
 
 WaitStateObserver::WaitStateObserver() {}
 

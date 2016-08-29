@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <unittest/unittest.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/ref_ptr.h>
 
 namespace {
 

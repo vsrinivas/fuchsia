@@ -14,7 +14,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
-#include <utils/ref_counted.h>
+#include <mxtl/ref_counted.h>
 
 class SocketDispatcher final : public Dispatcher {
 public:

@@ -5,9 +5,9 @@
 #pragma once
 
 #include <magenta/cpp.h>
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
-#include <utils/unique_ptr.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
 
 namespace mxtl {
 namespace tests {

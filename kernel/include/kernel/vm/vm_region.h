@@ -8,9 +8,9 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include <utils/intrusive_double_list.h>
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
 
 class VmAspace;
 class VmObject;

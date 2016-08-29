@@ -9,8 +9,8 @@
 #include <stdint.h>
 
 #include <stdlib.h>
-#include <utils/limits.h>
-#include <utils/type_support.h>
+#include <mxtl/limits.h>
+#include <mxtl/type_support.h>
 
 #include <safeint/safe_conversions.h>
 

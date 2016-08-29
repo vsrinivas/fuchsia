@@ -17,10 +17,10 @@
 #include <magenta/futex_node.h>
 #include <magenta/state_tracker.h>
 
-#include <utils/intrusive_double_list.h>
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
-#include <utils/string_piece.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/string_piece.h>
 
 class ProcessDispatcher;
 

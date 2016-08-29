@@ -25,9 +25,9 @@
 #include <magenta/pci_interrupt_dispatcher.h>
 #include <magenta/io_mapping_dispatcher.h>
 
-#include <utils/arena.h>
-#include <utils/intrusive_double_list.h>
-#include <utils/type_support.h>
+#include <mxtl/arena.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/type_support.h>
 
 #define LOCAL_TRACE 0
 

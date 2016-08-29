@@ -7,7 +7,7 @@
 #include <app/tests.h>
 #include <unittest.h>
 
-#include <utils/arena.h>
+#include <mxtl/arena.h>
 
 static int arena_dtor_count = 0;
 

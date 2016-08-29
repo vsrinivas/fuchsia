@@ -20,7 +20,7 @@
 
 #include <sys/types.h>
 
-#include <utils/type_support.h>
+#include <mxtl/type_support.h>
 
 // WaitSetDispatcher::Entry ------------------------------------------------------------------------
 

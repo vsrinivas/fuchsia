@@ -19,9 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <utils/auto_call.h>
-#include <utils/intrusive_double_list.h>
-#include <utils/type_support.h>
+#include <mxtl/auto_call.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/type_support.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 

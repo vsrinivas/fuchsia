@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <utils/intrusive_pointer_traits.h>
-#include <utils/type_support.h>
+#include <mxtl/intrusive_pointer_traits.h>
+#include <mxtl/type_support.h>
 
 namespace mxtl {
 

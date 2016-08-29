@@ -5,7 +5,7 @@
 #pragma once
 
 #include <unittest/unittest.h>
-#include <utils/tests/intrusive_containers/associative_container_test_environment.h>
+#include <mxtl/tests/intrusive_containers/associative_container_test_environment.h>
 
 namespace mxtl {
 namespace tests {

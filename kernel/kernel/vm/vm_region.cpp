@@ -15,7 +15,7 @@
 #include <new.h>
 #include <string.h>
 #include <trace.h>
-#include <utils/type_support.h>
+#include <mxtl/type_support.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 

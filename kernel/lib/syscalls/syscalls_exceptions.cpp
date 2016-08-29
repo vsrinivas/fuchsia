@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <utils/string_piece.h>
+#include <mxtl/string_piece.h>
 
 #include "syscalls_priv.h"
 

@@ -15,8 +15,8 @@
 #include <magenta/magenta.h>
 #include <magenta/types.h>
 
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
 
 class StateTracker;
 

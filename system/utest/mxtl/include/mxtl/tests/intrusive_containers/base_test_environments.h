@@ -5,11 +5,11 @@
 #pragma once
 
 #include <unittest/unittest.h>
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
-#include <utils/tests/intrusive_containers/objects.h>
-#include <utils/tests/intrusive_containers/test_environment_utils.h>
-#include <utils/unique_ptr.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/tests/intrusive_containers/objects.h>
+#include <mxtl/tests/intrusive_containers/test_environment_utils.h>
+#include <mxtl/unique_ptr.h>
 
 namespace mxtl {
 namespace tests {

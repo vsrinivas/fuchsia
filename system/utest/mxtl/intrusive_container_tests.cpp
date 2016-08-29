@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utils/tests/intrusive_containers/objects.h>
+#include <mxtl/tests/intrusive_containers/objects.h>
 
 namespace mxtl {
 namespace tests {

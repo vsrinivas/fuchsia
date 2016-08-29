@@ -12,7 +12,7 @@
 #include <magenta/state_observer.h>
 #include <magenta/types.h>
 
-#include <utils/ref_ptr.h>
+#include <mxtl/ref_ptr.h>
 
 class WaitEvent;
 

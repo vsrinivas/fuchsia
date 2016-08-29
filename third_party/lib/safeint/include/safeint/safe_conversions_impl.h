@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <stdint.h>
 
-#include <utils/limits.h>
+#include <mxtl/limits.h>
 
 namespace safeint {
 namespace internal {

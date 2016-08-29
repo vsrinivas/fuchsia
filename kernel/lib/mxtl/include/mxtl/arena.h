@@ -11,9 +11,9 @@
 
 #include <kernel/vm/vm_object.h>
 
-#include <utils/intrusive_single_list.h>
-#include <utils/ref_ptr.h>
-#include <utils/type_support.h>
+#include <mxtl/intrusive_single_list.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/type_support.h>
 
 namespace mxtl {
 

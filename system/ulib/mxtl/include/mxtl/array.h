@@ -5,7 +5,7 @@
 #pragma once
 
 #include <assert.h>
-#include <utils/unique_ptr.h>
+#include <mxtl/unique_ptr.h>
 
 namespace mxtl {
 

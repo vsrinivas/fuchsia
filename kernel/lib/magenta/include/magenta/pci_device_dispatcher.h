@@ -13,7 +13,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/io_mapping_dispatcher.h>
 #include <sys/types.h>
-#include <utils/intrusive_single_list.h>
+#include <mxtl/intrusive_single_list.h>
 
 class PciInterruptDispatcher;
 

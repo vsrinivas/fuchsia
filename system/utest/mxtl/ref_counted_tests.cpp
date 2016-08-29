@@ -5,8 +5,8 @@
 #include <magenta/cpp.h>
 #include <pthread.h>
 #include <unittest/unittest.h>
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
 
 class DestructionTracker : public mxtl::RefCounted<DestructionTracker> {
 public:

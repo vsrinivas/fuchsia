@@ -10,7 +10,7 @@
 
 #include <magenta/wait_event.h>
 
-#include <utils/intrusive_single_list.h>
+#include <mxtl/intrusive_single_list.h>
 
 StateTracker::StateTracker(bool is_waitable, mx_signals_state_t signals_state)
     : is_waitable_(is_waitable),

@@ -14,7 +14,7 @@
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/state_observer.h>
 
-#include <utils/intrusive_double_list.h>
+#include <mxtl/intrusive_double_list.h>
 
 class Handle;
 class WaitEvent;

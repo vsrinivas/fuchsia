@@ -18,10 +18,10 @@
 #include <magenta/types.h>
 #include <magenta/user_thread.h>
 
-#include <utils/intrusive_double_list.h>
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
-#include <utils/string_piece.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/string_piece.h>
 
 class ProcessDispatcher : public Dispatcher
                         , public mxtl::DoublyLinkedListable<ProcessDispatcher*> {

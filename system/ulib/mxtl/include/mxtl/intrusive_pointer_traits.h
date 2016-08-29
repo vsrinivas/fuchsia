@@ -5,9 +5,9 @@
 #pragma once
 
 #include <magenta/compiler.h>
-#include <utils/ref_ptr.h>
-#include <utils/unique_ptr.h>
-#include <utils/type_support.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
+#include <mxtl/type_support.h>
 
 namespace mxtl {
 namespace internal {

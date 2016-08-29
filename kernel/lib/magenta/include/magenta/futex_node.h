@@ -11,7 +11,7 @@
 #include <kernel/wait.h>
 #include <list.h>
 #include <magenta/types.h>
-#include <utils/intrusive_hash_table.h>
+#include <mxtl/intrusive_hash_table.h>
 
 // Node for linked list of threads blocked on a futex
 // Intended to be embedded within a UserThread Instance

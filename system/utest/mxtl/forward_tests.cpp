@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <unittest/unittest.h>
-#include <utils/type_support.h>
+#include <mxtl/type_support.h>
 
 enum Category { CAT_LVALUE, CAT_RVALUE };
 

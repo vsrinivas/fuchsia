@@ -11,9 +11,9 @@
 #include <kernel/vm.h>
 #include <list.h>
 #include <stdint.h>
-#include <utils/array.h>
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/array.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
 
 // The base vm object that holds a range of bytes of data
 //

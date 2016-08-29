@@ -13,7 +13,7 @@
 #include <kernel/vm/vm_region.h>
 #include <new.h>
 #include <unittest.h>
-#include <utils/array.h>
+#include <mxtl/array.h>
 
 static bool pmm_tests(void* context) {
     BEGIN_TEST;

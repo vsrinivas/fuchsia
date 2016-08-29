@@ -5,10 +5,10 @@
 #pragma once
 
 #include <unittest/unittest.h>
-#include <utils/intrusive_hash_table.h>
-#include <utils/tests/intrusive_containers/intrusive_doubly_linked_list_checker.h>
-#include <utils/tests/intrusive_containers/intrusive_singly_linked_list_checker.h>
-#include <utils/tests/intrusive_containers/test_environment_utils.h>
+#include <mxtl/intrusive_hash_table.h>
+#include <mxtl/tests/intrusive_containers/intrusive_doubly_linked_list_checker.h>
+#include <mxtl/tests/intrusive_containers/intrusive_singly_linked_list_checker.h>
+#include <mxtl/tests/intrusive_containers/test_environment_utils.h>
 
 namespace mxtl {
 namespace tests {

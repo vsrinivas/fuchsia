@@ -5,7 +5,7 @@
 #pragma once
 
 #include <assert.h>
-#include <utils/intrusive_pointer_traits.h>
+#include <mxtl/intrusive_pointer_traits.h>
 
 // Usage Notes:
 //

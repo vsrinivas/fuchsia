@@ -7,7 +7,7 @@
 #include <app/tests.h>
 #include <new.h>
 #include <unittest.h>
-#include <utils/unique_ptr.h>
+#include <mxtl/unique_ptr.h>
 
 static bool alloc_checker_ctor(void* context) {
     BEGIN_TEST;

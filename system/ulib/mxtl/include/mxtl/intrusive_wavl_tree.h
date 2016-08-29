@@ -5,9 +5,9 @@
 #pragma once
 
 #include <assert.h>
-#include <utils/intrusive_container_utils.h>
-#include <utils/intrusive_pointer_traits.h>
-#include <utils/intrusive_wavl_tree_internal.h>
+#include <mxtl/intrusive_container_utils.h>
+#include <mxtl/intrusive_pointer_traits.h>
+#include <mxtl/intrusive_wavl_tree_internal.h>
 
 // Implementation Notes:
 //

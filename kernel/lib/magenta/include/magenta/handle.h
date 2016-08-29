@@ -10,8 +10,8 @@
 
 #include <magenta/types.h>
 #include <magenta/syscalls-types.h>
-#include <utils/intrusive_double_list.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_ptr.h>
 
 class Dispatcher;
 

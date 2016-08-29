@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <magenta/cpp.h>
 #include <unittest/unittest.h>
-#include <utils/unique_ptr.h>
+#include <mxtl/unique_ptr.h>
 
 static int destroy_count = 0;
 

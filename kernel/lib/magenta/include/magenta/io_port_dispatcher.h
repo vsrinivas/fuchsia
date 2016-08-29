@@ -12,7 +12,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/types.h>
 
-#include <utils/fifo_buffer.h>
+#include <mxtl/fifo_buffer.h>
 #include <sys/types.h>
 
 struct IOP_Packet {

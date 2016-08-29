@@ -14,8 +14,8 @@
 #include <lib/elf_defines.h>
 #include <string.h>
 #include <sys/types.h>
-#include <utils/array.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/array.h>
+#include <mxtl/ref_ptr.h>
 
 // based on our bitness, support 32 or 64 bit elf
 #if _LP64

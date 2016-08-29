@@ -15,8 +15,8 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
-#include <utils/ref_counted.h>
-#include <utils/unique_ptr.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/unique_ptr.h>
 
 class IOPortClient;
 class IOPortDispatcher;

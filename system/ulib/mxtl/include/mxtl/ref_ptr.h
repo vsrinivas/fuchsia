@@ -6,7 +6,7 @@
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
-#include <utils/type_support.h>
+#include <mxtl/type_support.h>
 
 namespace mxtl {
 

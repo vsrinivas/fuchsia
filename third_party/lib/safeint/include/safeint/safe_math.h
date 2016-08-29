@@ -6,8 +6,8 @@
 #define BASE_NUMERICS_SAFE_MATH_H_
 
 #include <stddef.h>
-#include <utils/limits.h>
-#include <utils/type_support.h>
+#include <mxtl/limits.h>
+#include <mxtl/type_support.h>
 
 #include <safeint/safe_math_impl.h>
 

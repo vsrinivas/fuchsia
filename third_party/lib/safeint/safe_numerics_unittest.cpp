@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 #define PROVIDE_NUMERIC_LIMITS_UNSPECIALIZED
-#include <utils/limits.h>
-#include <utils/type_support.h>
+#include <mxtl/limits.h>
+#include <mxtl/type_support.h>
 
 #include <unittest.h>
 

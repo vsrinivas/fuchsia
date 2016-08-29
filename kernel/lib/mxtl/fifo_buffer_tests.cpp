@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <unittest.h>
-#include <utils/fifo_buffer.h>
+#include <mxtl/fifo_buffer.h>
 
 namespace {
 

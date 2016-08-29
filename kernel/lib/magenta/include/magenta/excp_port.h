@@ -7,8 +7,8 @@
 #include <magenta/dispatcher.h>
 #include <magenta/io_port_dispatcher.h>
 
-#include <utils/ref_counted.h>
-#include <utils/ref_ptr.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
 
 class UserThread;
 class ProcessDispatcher;

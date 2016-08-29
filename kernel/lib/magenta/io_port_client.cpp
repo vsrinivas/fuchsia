@@ -15,7 +15,7 @@
 
 #include <magenta/state_tracker.h>
 
-#include <utils/type_support.h>
+#include <mxtl/type_support.h>
 
 mx_status_t SendIOPortPacket(IOPortDispatcher* io_port,
                              uint64_t key,

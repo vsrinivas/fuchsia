@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <utils/string_piece.h>
+#include <mxtl/string_piece.h>
 
 status_t magenta_copy_from_user(const void* src, void* dest, size_t len);
 

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/assert.h>
-#include <utils/ref_counted_internal.h>
+#include <mxtl/ref_counted_internal.h>
 
 namespace mxtl {
 

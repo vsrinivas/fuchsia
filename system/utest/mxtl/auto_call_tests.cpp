@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utils/auto_call.h>
+#include <mxtl/auto_call.h>
 #include <unittest/unittest.h>
 
 static volatile int test_func_count;

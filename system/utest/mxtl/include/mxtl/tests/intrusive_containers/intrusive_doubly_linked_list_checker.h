@@ -5,7 +5,7 @@
 #pragma once
 
 #include <unittest/unittest.h>
-#include <utils/intrusive_hash_table.h>
+#include <mxtl/intrusive_hash_table.h>
 
 namespace mxtl {
 namespace tests {

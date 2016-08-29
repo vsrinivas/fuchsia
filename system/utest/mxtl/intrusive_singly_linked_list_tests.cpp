@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <unittest/unittest.h>
-#include <utils/intrusive_single_list.h>
-#include <utils/tests/intrusive_containers/intrusive_singly_linked_list_checker.h>
-#include <utils/tests/intrusive_containers/sequence_container_test_environment.h>
-#include <utils/tests/intrusive_containers/test_thunks.h>
+#include <mxtl/intrusive_single_list.h>
+#include <mxtl/tests/intrusive_containers/intrusive_singly_linked_list_checker.h>
+#include <mxtl/tests/intrusive_containers/sequence_container_test_environment.h>
+#include <mxtl/tests/intrusive_containers/test_thunks.h>
 
 namespace mxtl {
 namespace tests {

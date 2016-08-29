@@ -17,10 +17,10 @@
 
 #include <sys/types.h>
 
-#include <utils/intrusive_double_list.h>
-#include <utils/intrusive_hash_table.h>
-#include <utils/ref_ptr.h>
-#include <utils/unique_ptr.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/intrusive_hash_table.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
 
 class WaitSetDispatcher final : public Dispatcher, public StateObserver {
 public:

@@ -16,7 +16,7 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy.h>
 #include <list.h>
-#include <utils/user_ptr.h>
+#include <mxtl/user_ptr.h>
 
 #include <magenta/data_pipe.h>
 #include <magenta/data_pipe_producer_dispatcher.h>
@@ -44,7 +44,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <utils/string_piece.h>
+#include <mxtl/string_piece.h>
 
 #include "syscalls_priv.h"
 

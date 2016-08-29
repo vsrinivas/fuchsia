@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <utils/type_support.h>
+#include <mxtl/type_support.h>
 
 // RAII class to automatically call a function-like thing as it goes out of
 // scope

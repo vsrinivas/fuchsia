@@ -12,9 +12,9 @@
 
 #include <magenta/state_tracker.h>
 
-#include <utils/array.h>
-#include <utils/intrusive_double_list.h>
-#include <utils/ref_counted.h>
+#include <mxtl/array.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_counted.h>
 
 class Handle;
 class IOPortDisatcher;
