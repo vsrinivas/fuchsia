@@ -200,6 +200,10 @@ mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) 
 
 mx_status_t devfs_remove(vnode_t* vn) {
     mtx_lock(&vfs_lock);
+
+    // hold a reference to ourselves so the rug doesn't get pulled out from under us
+    vn_acquire(vn);
+
     xprintf("devfs_remove(%p)\n", vn);
     if (vn->pdata) {
         mx_device_t* dev = vn->pdata;
@@ -223,6 +227,8 @@ mx_status_t devfs_remove(vnode_t* vn) {
         }
         dn_delete(dn);
     }
+
+    vn_release(vn);
     mtx_unlock(&vfs_lock);
 
     // with all dnodes destroyed, nothing should hold a reference
