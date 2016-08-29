@@ -20,7 +20,9 @@
 
 #include <magenta/netboot.h>
 
-netfile_state netfile;
+netfile_state netfile = {
+    .fd = -1,
+};
 
 void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
                   const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
@@ -30,12 +32,13 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
     m.cmd = NB_ACK;
     m.arg = 0;
 
-    if (netfile.fd > 0) {
-        printf("netsvc: closing still-open %s, replacing with %s\n", netfile.filename, filename);
+    if (netfile.fd >= 0) {
+        printf("netsvc: closing still-open '%s', replacing with '%s'\n", netfile.filename, filename);
         close(netfile.fd);
-        memset(&netfile, 0, sizeof(netfile));
+        netfile.fd = -1;
     }
     netfile.blocknum = 0;
+    netfile.cookie = cookie;
 
     switch (arg) {
     case O_RDONLY:
@@ -45,14 +48,11 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
         netfile.fd = open(filename, O_WRONLY|O_CREAT);
         break;
     default:
-        printf("netsvc: open %s with invalid mode %d\n", filename, arg);
-        m.arg = -EINVAL;
+        printf("netsvc: open '%s' with invalid mode %d\n", filename, arg);
+        errno = -EINVAL;
     }
-    if (netfile.fd == -1) {
+    if (netfile.fd < 0) {
         m.arg = -errno;
-        if (m.arg == 0) {
-            m.arg = -EPERM;
-        }
         udp6_send(&m, sizeof(m), saddr, sport, dport);
         return;
     } else {
@@ -68,35 +68,43 @@ void netfile_read(uint32_t cookie, uint32_t arg,
     m.hdr.magic = NB_MAGIC;
     m.hdr.cookie = cookie;
     m.hdr.cmd = NB_ACK;
-    m.hdr.arg = 0;
 
-    if (!netfile.fd) {
+    if (netfile.fd < 0) {
         printf("netsvc: read, but no open file\n");
         m.hdr.arg = -EBADF;
         udp6_send(&m.hdr, sizeof(m.hdr), saddr, sport, dport);
         return;
     }
-    if (arg != netfile.blocknum) {
-        printf("netsvc: read blocknum is %d, want %d\n", arg, netfile.blocknum);
-        m.hdr.arg = -EPERM;
-        udp6_send(&m.hdr, sizeof(m.hdr), saddr, sport, dport);
-        return;
-    }
-    netfile.blocknum++;
-
-    ssize_t n = read(netfile.fd, m.data, sizeof(m.data));
-    if (n < 0) {
-        n = 0;
-        printf("netsvc: error reading %s: %d\n", netfile.filename, errno);
-        m.hdr.arg = -errno;
-        if (m.hdr.arg == 0) {
+    if (arg == (netfile.blocknum - 1)) {
+        // repeat of last block read, probably due to dropped packet
+        // unless cookie doesn't match, in which case it's an error
+        if (cookie != netfile.cookie) {
             m.hdr.arg = -EIO;
+            udp6_send(&m.hdr, sizeof(m.hdr), saddr, sport, dport);
+            return;
         }
-        close(netfile.fd);
-        memset(&netfile, 0, sizeof(netfile));
+    } else if (arg != netfile.blocknum) {
+        // ignore bogus read requests -- host will timeout if they're confused
+        return;
+    } else {
+        ssize_t n = read(netfile.fd, netfile.data, sizeof(netfile.data));
+        if (n < 0) {
+            n = 0;
+            printf("netsvc: error reading '%s': %d\n", netfile.filename, errno);
+            m.hdr.arg = -errno;
+            close(netfile.fd);
+            netfile.fd = -1;
+            udp6_send(&m.hdr, sizeof(m.hdr), saddr, sport, dport);
+            return;
+        }
+        netfile.datasize = n;
+        netfile.blocknum++;
+        netfile.cookie = cookie;
     }
 
-    udp6_send(&m, sizeof(m.hdr) + n, saddr, sport, dport);
+    m.hdr.arg = arg;
+    memcpy(m.data, netfile.data, netfile.datasize);
+    udp6_send(&m, sizeof(m.hdr) + netfile.datasize, saddr, sport, dport);
 }
 
 void netfile_write(const char* data, size_t len, uint32_t cookie, uint32_t arg,
@@ -112,9 +120,8 @@ void netfile_close(uint32_t cookie,
     m.cmd = NB_ACK;
     m.arg = 0;
 
-    if (!netfile.fd) {
+    if (netfile.fd < 0) {
         printf("netsvc: close, but no open file\n");
-        m.arg = -EBADF;
     } else {
         if (close(netfile.fd)) {
             m.arg = -errno;
@@ -122,7 +129,7 @@ void netfile_close(uint32_t cookie,
                 m.arg = -EIO;
             }
         }
-        memset(&netfile, 0, sizeof(netfile));
+        netfile.fd = -1;
     }
     udp6_send(&m, sizeof(m), saddr, sport, dport);
 }

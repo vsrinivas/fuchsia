@@ -26,7 +26,7 @@
 static uint32_t cookie = 0x12345678;
 
 int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_out) {
-    if (hostname == NULL) {
+    if ((hostname == NULL) || (hostname[0] == 0)) {
         hostname = "*";
     }
     size_t hostname_len = strlen(hostname) + 1;
@@ -117,41 +117,46 @@ int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_
     return -1;
 }
 
+// The netboot protocol ignores response packets that are invalid,
+// retransmits requests if responses don't arrive in a timely
+// fashion, and only returns an error upon eventual timeout or
+// a specific (correctly formed) remote error packet.
 int netboot_txn(int s, msg* in, msg* out, int outlen) {
     ssize_t r;
 
     out->hdr.magic = NB_MAGIC;
     out->hdr.cookie = ++cookie;
 
-    for (int retry = 5; retry > 0; retry--) {
-        write(s, out, outlen);
-        memset(in, 0, sizeof(*in));
-        r = read(s, in, sizeof(*in));
-        if (r >= 0 || errno != ETIMEDOUT) {
-            break;
+    int retry = 5;
+resend:
+    write(s, out, outlen);
+    for (;;) {
+        if ((r = recv(s, in, sizeof(*in), 0)) < 0) {
+            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                if (retry-- > 0) {
+                    goto resend;
+                }
+                errno = ETIMEDOUT;
+            }
+            return -1;
         }
+        if (r < (ssize_t)sizeof(in->hdr)) {
+            fprintf(stderr, "netboot: response too short\n");
+            continue;
+        }
+        if ((in->hdr.magic != NB_MAGIC) ||
+            (in->hdr.cookie != out->hdr.cookie) ||
+            (in->hdr.cmd != NB_ACK)) {
+            fprintf(stderr, "netboot: bad ack header"
+                    " (magic=0x%x, cookie=%x/%x, cmd=%d)\n",
+                    in->hdr.magic, in->hdr.cookie, cookie, in->hdr.cmd);
+            continue;
+        }
+        int arg = in->hdr.arg;
+        if (arg < 0) {
+            errno = -arg;
+            return -1;
+        }
+        return r;
     }
-    if (r < 0) {
-        return -1; // errno set by read
-    }
-    if (r < (ssize_t)sizeof(in->hdr)) {
-        fprintf(stderr, "netboot: response too short\n");
-        errno = EIO;
-        return -1;
-    }
-    if (in->hdr.magic != NB_MAGIC ||
-            in->hdr.cookie != out->hdr.cookie ||
-            in->hdr.cmd != NB_ACK) {
-        fprintf(stderr, "netboot: bad ack header"
-                " (magic=0x%x, cookie=%x/%x, cmd=%d\n",
-                in->hdr.magic, in->hdr.cookie, cookie, in->hdr.cmd);
-        errno = EIO;
-        return -1;
-    }
-    int arg = in->hdr.arg;
-    if (arg < 0) {
-        errno = -arg;
-        return -1;
-    }
-    return r;
 }

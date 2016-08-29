@@ -14,6 +14,9 @@ typedef struct netfile_state_t {
     int      fd;
     char     filename[1024]; // for debugging
     uint32_t blocknum;
+    uint32_t cookie;
+    uint8_t  data[1024];
+    size_t   datasize;
 } netfile_state;
 
 extern netfile_state netfile;
