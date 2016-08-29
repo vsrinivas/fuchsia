@@ -24,7 +24,7 @@ readonly GCC_VERSION="6.1.0"
 # We assume the following directory structure:
 # ./magenta/scripts
 # ./magenta/prebuilt
-readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly SCRIPT_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 readonly MAGENTA_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly PREBUILTS_DIR="$(cd "${MAGENTA_ROOT}/prebuilt" && pwd)"
 
@@ -60,7 +60,7 @@ function downloadToolchain() {
   if [[ ! -f "${stamp_path}" || "${required_version}" != "$(cat ${stamp_path})" ]]; then
     rm -f -- "${tool_path}"
     echo "Downloading ${prebuilt_url}"
-    curl -continue-at=- --location --output "${tool_path}" "${prebuilt_url}"
+    curl --progress-bar -continue-at=- --location --output "${tool_path}" "${prebuilt_url}"
     echo "Unpacking ${tool_path}"
     bzip2 -dc "${tool_path}" | tar -x
     echo "${required_version}" > "${stamp_path}"
