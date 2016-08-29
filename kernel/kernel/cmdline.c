@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <stdlib.h>
 #include <string.h>
 #include <kernel/cmdline.h>
 
@@ -79,4 +80,18 @@ bool cmdline_get_bool(const char* key, bool _default) {
         return false;
     }
     return true;
+}
+
+uint32_t cmdline_get_uint32(const char* key, uint32_t _default) {
+    const char* value_str = cmdline_get(key);
+    if (value_str == NULL || *value_str == '\0') {
+        return _default;
+    }
+
+    char* end;
+    long int value = strtol(value_str, &end, 10);
+    if (*end != '\0') {
+        return _default;
+    }
+    return value;
 }
