@@ -103,12 +103,6 @@ __aeabi_unwind_cpp_pr0 = 0xdeadbeef
 .size \name, . - \name
 .endm
 
-#if LIBDDK
-#define MAGENTA_SYSCALL_DEF(a...)
-#define MAGENTA_DDKCALL_DEF(nargs64, nargs32, n, ret, name, args...) syscall nargs32, mx_##name, n
-#else
-#define MAGENTA_DDKCALL_DEF(a...)
 #define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) syscall nargs32, mx_##name, n
-#endif
 
 #include <magenta/syscalls.inc>
