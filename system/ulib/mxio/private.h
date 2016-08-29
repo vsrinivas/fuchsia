@@ -25,7 +25,9 @@ typedef struct mxio mxio_t;
 
 typedef struct mxio_ops {
     ssize_t (*read)(mxio_t* io, void* data, size_t len);
+    ssize_t (*read_at)(mxio_t* io, void* data, size_t len, off_t offset);
     ssize_t (*write)(mxio_t* io, const void* data, size_t len);
+    ssize_t (*write_at)(mxio_t* io, const void* data, size_t len, off_t offset);
     off_t (*seek)(mxio_t* io, off_t offset, int whence);
     mx_status_t (*misc)(mxio_t* io, uint32_t op, uint32_t maxreply, void* data, size_t len);
     mx_status_t (*close)(mxio_t* io);
@@ -79,8 +81,14 @@ typedef struct mxio {
 static inline ssize_t mxio_read(mxio_t* io, void* data, size_t len) {
     return io->ops->read(io, data, len);
 }
+static inline ssize_t mxio_read_at(mxio_t* io, void* data, size_t len, off_t offset) {
+    return io->ops->read_at(io, data, len, offset);
+}
 static inline ssize_t mxio_write(mxio_t* io, const void* data, size_t len) {
     return io->ops->write(io, data, len);
+}
+static inline ssize_t mxio_write_at(mxio_t* io, const void* data, size_t len, off_t offset) {
+    return io->ops->write_at(io, data, len, offset);
 }
 static inline off_t mxio_seek(mxio_t* io, off_t offset, int whence) {
     return io->ops->seek(io, offset, whence);
@@ -102,7 +110,6 @@ int mxio_pipe_pair(mxio_t** a, mxio_t** b);
 // create a mxio (if possible) from type and handles
 mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount, mxio_t** out);
 
-
 void mxio_free(mxio_t* io);
 
 static inline void mxio_acquire(mxio_t* io) {
@@ -117,7 +124,9 @@ static inline void mxio_release(mxio_t* io) {
 
 // unsupported / do-nothing hooks shared by implementations
 ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len);
+ssize_t mxio_default_read_at(mxio_t* io, void* _data, size_t len, off_t offset);
 ssize_t mxio_default_write(mxio_t* io, const void* _data, size_t len);
+ssize_t mxio_default_write_at(mxio_t* io, const void* _data, size_t len, off_t offset);
 off_t mxio_default_seek(mxio_t* io, off_t offset, int whence);
 mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, uint32_t arg, void* data, size_t len);
 mx_status_t mxio_default_close(mxio_t* io);

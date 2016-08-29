@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include <mxio/io.h>
-#include <mxio/vfs.h>
-#include <mxio/remoteio.h>
 #include <mxio/dispatcher.h>
+#include <mxio/io.h>
+#include <mxio/remoteio.h>
+#include <mxio/vfs.h>
 
-#include <magenta/types.h>
-#include <magenta/syscalls.h>
 #include <magenta/device/devmgr.h>
+#include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 #include "vfs.h"
 
@@ -115,11 +115,11 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         mx_handle_close(msg->handle[i]);
     }
 
-    trace(RPC,"rpc: op=%x, vn=%p\n", msg->op, vn);
+    trace(RPC, "rpc: op=%x, vn=%p\n", msg->op, vn);
 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_OPEN: {
-        char* path = (char*) msg->data;
+        char* path = (char*)msg->data;
         if ((len < 1) || (len > 1024)) {
             return ERR_INVALID_ARGS;
         }
@@ -162,12 +162,23 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         }
         return r;
     }
+    case MXRIO_READ_AT: {
+        ssize_t r = vn->ops->read(vn, msg->data, arg, msg->arg2.off);
+        if (r >= 0) {
+            msg->datalen = r;
+        }
+        return r;
+    }
     case MXRIO_WRITE: {
         ssize_t r = vn->ops->write(vn, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
         }
+        return r;
+    }
+    case MXRIO_WRITE_AT: {
+        ssize_t r = vn->ops->write(vn, msg->data, len, msg->arg2.off);
         return r;
     }
     case MXRIO_SEEK: {
@@ -256,7 +267,7 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         return r;
     }
     case MXRIO_UNLINK:
-        return vn->ops->unlink(vn, (const char*) msg->data, len);
+        return vn->ops->unlink(vn, (const char*)msg->data, len);
     default:
         return ERR_NOT_SUPPORTED;
     }

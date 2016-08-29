@@ -20,9 +20,9 @@
 #include <ddk/iotxn.h>
 #include <ddk/protocol/device.h>
 
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <magenta/processargs.h>
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
@@ -238,12 +238,23 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         }
         return r;
     }
+    case MXRIO_READ_AT: {
+        mx_status_t r = do_sync_io(dev, IOTXN_OP_READ, msg->data, arg, msg->arg2.off);
+        if (r >= 0) {
+            msg->datalen = r;
+        }
+        return r;
+    }
     case MXRIO_WRITE: {
         mx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
         }
+        return r;
+    }
+    case MXRIO_WRITE_AT: {
+        mx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, msg->arg2.off);
         return r;
     }
     case MXRIO_SEEK: {
@@ -302,7 +313,7 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     }
     case MXRIO_STAT: {
         msg->datalen = sizeof(vnattr_t);
-        vnattr_t* attr = (void*) msg->data;
+        vnattr_t* attr = (void*)msg->data;
         memset(attr, 0, sizeof(vnattr_t));
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
         attr->size = dev->ops->get_size(dev);
@@ -329,4 +340,3 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         return ERR_NOT_SUPPORTED;
     }
 }
-

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "vfs.h"
-#include "dnode.h"
 #include "devmgr.h"
+#include "dnode.h"
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
@@ -15,9 +15,9 @@
 
 #include <magenta/listnode.h>
 
+#include <magenta/device/device.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <magenta/device/device.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -50,7 +50,7 @@ void untrack_iostate(iostate_t* ios) {
     list_delete(&ios->node);
     mtx_unlock(&iostate_lock);
 #if DEBUG_TRACK_NAMES
-    free((void*) ios->fn);
+    free((void*)ios->fn);
     ios->fn = NULL;
 #endif
 }
@@ -133,7 +133,7 @@ static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
             return r;
         }
     } else {
-try_open:
+    try_open:
         if ((r = vndir->ops->lookup(vndir, &vn, path, len)) < 0) {
             return r;
         }
@@ -300,7 +300,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_OPEN: {
-        char* path = (char*) msg->data;
+        char* path = (char*)msg->data;
         if ((len < 1) || (len > 1024)) {
             return ERR_INVALID_ARGS;
         }
@@ -330,12 +330,23 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         return r;
     }
+    case MXRIO_READ_AT: {
+        ssize_t r = vn->ops->read(vn, msg->data, arg, msg->arg2.off);
+        if (r >= 0) {
+            msg->datalen = r;
+        }
+        return r;
+    }
     case MXRIO_WRITE: {
         ssize_t r = vn->ops->write(vn, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
             msg->arg2.off = ios->io_off;
         }
+        return r;
+    }
+    case MXRIO_WRITE_AT: {
+        ssize_t r = vn->ops->write(vn, msg->data, len, msg->arg2.off);
         return r;
     }
     case MXRIO_SEEK: {
@@ -437,7 +448,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         return r;
     }
     case MXRIO_UNLINK:
-        return vn->ops->unlink(vn, (const char*) msg->data, len);
+        return vn->ops->unlink(vn, (const char*)msg->data, len);
     default:
         return ERR_NOT_SUPPORTED;
     }
@@ -535,17 +546,17 @@ void vn_release(vnode_t* vn) {
 void vfs_dump_handles(void) {
     iostate_t* ios;
     mtx_lock(&iostate_lock);
-    list_for_every_entry(&iostate_list, ios, iostate_t, node) {
+    list_for_every_entry (&iostate_list, ios, iostate_t, node) {
         printf("obj %p '%s'\n", ios->vn, ios->fn ? ios->fn : "???");
     }
     mtx_unlock(&iostate_lock);
 }
 
 void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
-    xprintf("devfs: notify vn=%p name='%.*s'\n", vn, (int) len, name);
+    xprintf("devfs: notify vn=%p name='%.*s'\n", vn, (int)len, name);
     vnode_watcher_t* watcher;
     vnode_watcher_t* tmp;
-    list_for_every_entry_safe(&vn->watch_list, watcher, tmp, vnode_watcher_t, node) {
+    list_for_every_entry_safe (&vn->watch_list, watcher, tmp, vnode_watcher_t, node) {
         mx_status_t status;
         if ((status = mx_message_write(watcher->h, name, len, NULL, 0, 0)) < 0) {
             xprintf("devfs: watcher %p write failed %d\n", watcher, status);
@@ -557,4 +568,3 @@ void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
         }
     }
 }
-

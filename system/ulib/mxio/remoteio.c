@@ -7,9 +7,9 @@
 #include <string.h>
 #include <threads.h>
 
+#include <magenta/device/ioctl.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <magenta/device/ioctl.h>
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
@@ -309,7 +309,7 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     return r;
 }
 
-static ssize_t mxrio_write(mxio_t* io, const void* _data, size_t len) {
+static ssize_t write_common(uint32_t op, mxio_t* io, const void* _data, size_t len, off_t offset) {
     mxrio_t* rio = (mxrio_t*)io;
     const uint8_t* data = _data;
     ssize_t count = 0;
@@ -321,8 +321,10 @@ static ssize_t mxrio_write(mxio_t* io, const void* _data, size_t len) {
         xfer = (len > MXIO_CHUNK_SIZE) ? MXIO_CHUNK_SIZE : len;
 
         memset(&msg, 0, MXRIO_HDR_SZ);
-        msg.op = MXRIO_WRITE;
+        msg.op = op;
         msg.datalen = xfer;
+        if (op == MXRIO_WRITE_AT)
+            msg.arg2.off = offset;
         memcpy(msg.data, data, xfer);
 
         if ((r = mxrio_txn(rio, &msg)) < 0) {
@@ -337,6 +339,8 @@ static ssize_t mxrio_write(mxio_t* io, const void* _data, size_t len) {
         count += r;
         data += r;
         len -= r;
+        if (op == MXRIO_WRITE_AT)
+            offset += r;
         // stop at short read
         if (r < xfer) {
             break;
@@ -345,7 +349,15 @@ static ssize_t mxrio_write(mxio_t* io, const void* _data, size_t len) {
     return count ? count : r;
 }
 
-static ssize_t mxrio_read(mxio_t* io, void* _data, size_t len) {
+static ssize_t mxrio_write(mxio_t* io, const void* _data, size_t len) {
+    return write_common(MXRIO_WRITE, io, _data, len, 0);
+}
+
+static ssize_t mxrio_write_at(mxio_t* io, const void* _data, size_t len, off_t offset) {
+    return write_common(MXRIO_WRITE_AT, io, _data, len, offset);
+}
+
+static ssize_t read_common(uint32_t op, mxio_t* io, void* _data, size_t len, off_t offset) {
     mxrio_t* rio = (mxrio_t*)io;
     uint8_t* data = _data;
     ssize_t count = 0;
@@ -357,8 +369,10 @@ static ssize_t mxrio_read(mxio_t* io, void* _data, size_t len) {
         xfer = (len > MXIO_CHUNK_SIZE) ? MXIO_CHUNK_SIZE : len;
 
         memset(&msg, 0, MXRIO_HDR_SZ);
-        msg.op = MXRIO_READ;
+        msg.op = op;
         msg.arg = xfer;
+        if (op == MXRIO_READ_AT)
+            msg.arg2.off = offset;
 
         if ((r = mxrio_txn(rio, &msg)) < 0) {
             break;
@@ -373,6 +387,8 @@ static ssize_t mxrio_read(mxio_t* io, void* _data, size_t len) {
         count += r;
         data += r;
         len -= r;
+        if (op == MXRIO_READ_AT)
+            offset += r;
 
         // stop at short read
         if (r < xfer) {
@@ -380,6 +396,14 @@ static ssize_t mxrio_read(mxio_t* io, void* _data, size_t len) {
         }
     }
     return count ? count : r;
+}
+
+static ssize_t mxrio_read(mxio_t* io, void* _data, size_t len) {
+    return read_common(MXRIO_READ, io, _data, len, 0);
+}
+
+static ssize_t mxrio_read_at(mxio_t* io, void* _data, size_t len, off_t offset) {
+    return read_common(MXRIO_READ_AT, io, _data, len, offset);
 }
 
 static off_t mxrio_seek(mxio_t* io, off_t offset, int whence) {
@@ -563,7 +587,9 @@ static mx_status_t mxrio_wait(mxio_t* io, uint32_t events, uint32_t* _pending, m
 
 static mxio_ops_t mx_remote_ops = {
     .read = mxrio_read,
+    .read_at = mxrio_read_at,
     .write = mxrio_write,
+    .write_at = mxrio_write_at,
     .misc = mxrio_misc,
     .seek = mxrio_seek,
     .close = mxrio_close,
