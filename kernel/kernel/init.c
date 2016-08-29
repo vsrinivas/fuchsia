@@ -11,7 +11,6 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <kernel/mp.h>
-#include <kernel/port.h>
 
 void kernel_init(void)
 {
@@ -32,9 +31,5 @@ void kernel_init(void)
     // initialize kernel timers
     dprintf(SPEW, "initializing timers\n");
     timer_init();
-
-    // initialize ports
-    dprintf(SPEW, "initializing ports\n");
-    port_init();
 }
 

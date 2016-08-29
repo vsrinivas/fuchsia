@@ -13,7 +13,6 @@
 #include <lk/init.h>
 
 #include <arch/x86/apic.h>
-#include <kernel/port.h>
 #include <platform/pc/acpi.h>
 
 #define LOCAL_TRACE 0
