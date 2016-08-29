@@ -12,11 +12,17 @@
 int bad_syscall_test(void) {
     BEGIN_TEST;
     void* unmapped_addr = (void*)4096;
-    EXPECT_LT(mx_debug_write(unmapped_addr, 1), 0, "Error: reading unmapped addr");
-    EXPECT_LT(mx_debug_write((void*)KERNEL_ASPACE_BASE - 1, 5), 0, "Error: read crossing kernel boundary");
-    EXPECT_LT(mx_debug_write((void*)KERNEL_ASPACE_BASE, 1), 0, "Error: read into kernel space");
-    EXPECT_EQ(mx_debug_write((void*)&unmapped_addr, sizeof(void*)), (int)sizeof(void*),
-              "Good syscall failed");
+    mx_handle_t h[2];
+    EXPECT_EQ(mx_message_pipe_create(h, 0),
+              0, "Error: message pipe create failed");
+    EXPECT_LT(mx_message_write(h[0], unmapped_addr, 1, NULL, 0, 0),
+              0, "Error: reading unmapped addr");
+    EXPECT_LT(mx_message_write(h[0], (void*)KERNEL_ASPACE_BASE - 1, 5, NULL, 0, 0),
+              0, "Error: read crossing kernel boundary");
+    EXPECT_LT(mx_message_write(h[0], (void*)KERNEL_ASPACE_BASE, 1, NULL, 0, 0),
+              0, "Error: read into kernel space");
+    EXPECT_EQ(mx_message_write(h[0], (void*)&unmapped_addr, sizeof(void*), NULL, 0, 0),
+              0, "Good syscall failed");
     END_TEST;
 }
 
