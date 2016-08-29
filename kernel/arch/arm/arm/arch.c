@@ -19,6 +19,7 @@
 #include <arch/arm.h>
 #include <arch/arm/mmu.h>
 #include <arch/mp.h>
+#include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <lk/main.h>
@@ -114,6 +115,14 @@ void arch_init(void)
 #else
     secondaries_to_init = SMP_MAX_CPUS - 1; /* TODO: get count from somewhere else, or add cpus as they boot */
 #endif
+
+    uint32_t cmdline_max_cpus = cmdline_get_uint32("smp.maxcpus", secondaries_to_init + 1);
+    if (cmdline_max_cpus > SMP_MAX_CPUS || cmdline_max_cpus <= 0) {
+        printf("invalid smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
+        cmdline_max_cpus = SMP_MAX_CPUS;
+    }
+    secondaries_to_init = cmdline_max_cpus - 1;
+
     arm_num_cpus += secondaries_to_init;
 
     lk_init_secondary_cpus(secondaries_to_init);

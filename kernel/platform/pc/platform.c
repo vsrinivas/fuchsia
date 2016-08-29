@@ -254,10 +254,17 @@ void platform_init_smp(void)
         return;
     }
 
+    // Find the CPU count limit
+    uint32_t max_cpus = cmdline_get_uint32("smp.maxcpus", SMP_MAX_CPUS);
+    if (max_cpus > SMP_MAX_CPUS || max_cpus <= 0) {
+        printf("invalid smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
+        max_cpus = SMP_MAX_CPUS;
+    }
+
     printf("Found %d cpus\n", num_cpus);
-    if (num_cpus > SMP_MAX_CPUS) {
-        TRACEF("Clamping number of CPUs to %d\n", SMP_MAX_CPUS);
-        num_cpus = SMP_MAX_CPUS;
+    if (num_cpus > max_cpus) {
+        TRACEF("Clamping number of CPUs to %d\n", max_cpus);
+        num_cpus = max_cpus;
     }
 
     uint32_t *apic_ids = malloc(sizeof(*apic_ids) * num_cpus);
@@ -274,7 +281,7 @@ void platform_init_smp(void)
     }
 
     uint32_t bsp_apic_id = apic_local_id();
-    if (num_cpus == SMP_MAX_CPUS) {
+    if (num_cpus == max_cpus) {
         // If we are at the max number of CPUs, sanity check that the bootstrap
         // processor is in that set, to make sure clamping didn't go awry.
         bool found_bp = false;

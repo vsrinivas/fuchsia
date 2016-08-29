@@ -12,6 +12,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 #include <arch/mp.h>
+#include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
 #include <lk/main.h>
@@ -55,7 +56,13 @@ void arch_init(void)
 
     LTRACEF("midr_el1 0x%llx\n", ARM64_READ_SYSREG(midr_el1));
 
-    secondaries_to_init = SMP_MAX_CPUS - 1; /* TODO: get count from somewhere else, or add cpus as they boot */
+    uint32_t cmdline_max_cpus = cmdline_get_uint32("smp.maxcpus", SMP_MAX_CPUS);
+    if (cmdline_max_cpus > SMP_MAX_CPUS || cmdline_max_cpus <= 0) {
+        printf("invalid smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
+        cmdline_max_cpus = SMP_MAX_CPUS;
+    }
+
+    secondaries_to_init = cmdline_max_cpus - 1; /* TODO: get count from somewhere else, or add cpus as they boot */
 
     lk_init_secondary_cpus(secondaries_to_init);
 

@@ -28,6 +28,11 @@ needed for debugging it may speed up boot to disable it.
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
+## smp.maxcpus=<num>
+
+This option caps the number of CPUs to initialize.  It cannot be greater than
+*SMP\_MAX\_CPUS* for a specific architecture.
+
 ## userboot=<path>
 
 This option instructs the userboot process (the first userspace process) to
