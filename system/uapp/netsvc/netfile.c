@@ -45,7 +45,7 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
         netfile.fd = open(filename, O_RDONLY);
         break;
     case O_WRONLY:
-        netfile.fd = open(filename, O_WRONLY|O_CREAT);
+        netfile.fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
         break;
     default:
         printf("netsvc: open '%s' with invalid mode %d\n", filename, arg);
@@ -109,7 +109,48 @@ void netfile_read(uint32_t cookie, uint32_t arg,
 
 void netfile_write(const char* data, size_t len, uint32_t cookie, uint32_t arg,
                    const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
-    printf("netsvc: netfile_write TODO\n");
+    nbmsg m;
+    m.magic = NB_MAGIC;
+    m.cookie = cookie;
+    m.cmd = NB_ACK;
+    m.arg = 0;
+
+    if (netfile.fd < 0) {
+        printf("netsvc: write, but no open file\n");
+        m.arg = -EBADF;
+        udp6_send(&m, sizeof(m), saddr, sport, dport);
+        return;
+    }
+
+    if (arg == (netfile.blocknum - 1)) {
+        // repeat of last block write, probably due to dropped packet
+        // unless cookie doesn't match, in which case it's an error
+        if (cookie != netfile.cookie) {
+            m.arg = -EIO;
+            udp6_send(&m, sizeof(m), saddr, sport, dport);
+            return;
+        }
+    } else if (arg != netfile.blocknum) {
+        // ignore bogus write requests -- host will timeout if they're confused
+        return;
+    } else {
+        ssize_t n = write(netfile.fd, data, len);
+        if (n != (ssize_t)len) {
+            printf("netsvc: error writing %s: %d\n", netfile.filename, errno);
+            m.arg = -errno;
+            if (m.arg == 0) {
+                m.arg = -EIO;
+            }
+            close(netfile.fd);
+            netfile.fd = -1;
+            udp6_send(&m, sizeof(m), saddr, sport, dport);
+            return;
+        }
+        netfile.blocknum++;
+        netfile.cookie = cookie;
+    }
+
+    udp6_send(&m, sizeof(m), saddr, sport, dport);
 }
 
 void netfile_close(uint32_t cookie,

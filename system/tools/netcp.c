@@ -96,8 +96,81 @@ static int pull_file(int s, const char* dst, const char* src) {
 }
 
 static int push_file(int s, const char* dst, const char* src) {
-    fprintf(stderr, "push_file TODO");
-    return -1;
+    // TODO: push to a temporary file and then relink it after close.
+
+    int r;
+    msg in, out;
+    size_t dst_len = strlen(dst);
+
+    out.hdr.cmd = NB_OPEN;
+    out.hdr.arg = O_WRONLY;
+    memcpy(out.data, dst, dst_len);
+    out.data[dst_len] = 0;
+
+    r = netboot_txn(s, &in, &out, sizeof(out.hdr) + dst_len + 1);
+    if (r < 0) {
+        fprintf(stderr, "%s: error opening remote file %s (%d)\n",
+                appname, src, errno);
+        return r;
+    }
+
+    int fd = open(src, O_RDONLY, 0664);
+    if (!fd) {
+        fprintf(stderr, "%s: cannot open %s for reading: %s\n",
+                appname, dst, strerror(errno));
+        return -1;
+    }
+
+    int n = 0;
+    int len = 0;
+    int blocknum = 0;
+    for (;;) {
+        memset(&out, 0, sizeof(out));
+        out.hdr.cmd = NB_WRITE;
+        out.hdr.arg = blocknum;
+
+        len = read(fd, out.data, sizeof(out.data));
+        if (len < 0) {
+            fprintf(stderr, "%s: error reading block %d (%d)\n",
+                    appname, blocknum, errno);
+            close(fd);
+            return r;
+        }
+        if (len == 0) {
+            break; // EOF
+        }
+
+        r = netboot_txn(s, &in, &out, sizeof(out.hdr) + len + 1);
+        if (r < 0) {
+            fprintf(stderr, "%s: error writing block %d (%d)\n",
+                    appname, blocknum, errno);
+            close(fd);
+            return r;
+        }
+
+        blocknum++;
+        n += len;
+    }
+
+    memset(&out, 0, sizeof(out));
+    out.hdr.cmd = NB_CLOSE;
+    r = netboot_txn(s, &in, &out, sizeof(out.hdr) + 1);
+    if (r < 0) {
+        fprintf(stderr, "%s: remote close failed: %s\n",
+                appname, strerror(errno));
+        close(fd);
+        return r;
+    }
+
+    if (close(fd)) {
+        fprintf(stderr, "%s: local close failed: %s\n",
+                appname, strerror(errno));
+        return -1;
+    }
+
+    fprintf(stderr, "wrote %d bytes\n", n);
+
+    return 0;
 }
 
 int main(int argc, char** argv) {
