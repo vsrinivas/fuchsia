@@ -48,9 +48,9 @@
     mov      %rcx, %r10
     movabs   $(MAGENTA_SYSCALL_MAGIC | \n), %rax
     syscall
-    pop_reg  %r13
     pop_reg  %r12
     pop_reg  %r11
+    pop_reg  %r10
     ret
 .endif
 .if \nargs == 8
