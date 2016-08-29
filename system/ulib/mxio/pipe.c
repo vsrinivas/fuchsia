@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -151,7 +152,7 @@ mxio_t* mxio_pipe_create(mx_handle_t h) {
         return NULL;
     p->io.ops = &mx_pipe_ops;
     p->io.magic = MXIO_MAGIC;
-    p->io.refcount = 1;
+    atomic_init(&p->io.refcount, 1);
     p->h = h;
     return &p->io;
 }

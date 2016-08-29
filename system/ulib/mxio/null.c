@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,6 +74,6 @@ mxio_t* mxio_null_create(void) {
     }
     io->ops = &mx_null_ops;
     io->magic = MXIO_MAGIC;
-    io->refcount = 1;
+    atomic_init(&io->refcount, 1);
     return io;
 }

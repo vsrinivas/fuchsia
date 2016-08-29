@@ -7,13 +7,15 @@
 #include <magenta/compiler.h>
 #include <magenta/types.h>
 
+#include <stdatomic.h>
+
 __BEGIN_CDECLS
 
 typedef struct {
-    int futex;
+    atomic_int futex;
 } mxr_mutex_t;
 
-#define MXR_MUTEX_INIT ((mxr_mutex_t){0})
+#define MXR_MUTEX_INIT ((mxr_mutex_t){})
 
 #pragma GCC visibility push(hidden)
 

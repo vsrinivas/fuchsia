@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -624,7 +625,7 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
         return NULL;
     rio->io.ops = &mx_remote_ops;
     rio->io.magic = MXIO_MAGIC;
-    rio->io.refcount = 1;
+    atomic_init(&rio->io.refcount, 1);
     rio->h = h;
     rio->e = e;
     mtx_init(&rio->lock, mtx_plain);

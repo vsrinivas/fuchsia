@@ -5,9 +5,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdatomic.h>
 
 struct helper_data {
-    int* futex_addr;
+    atomic_int* futex_addr;
     mx_handle_t bootstrap;
 };
 

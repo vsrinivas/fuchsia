@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     if (argc != 2)
         abort();
     uintptr_t addr = strtoul(argv[1], NULL, 0);
-    int* my_futex = (int*)addr;
+    atomic_int* my_futex = (atomic_int*)addr;
 
     // The main test program (i.e. the original resident of this here
     // process) is waiting on this futex.  Wake it up with a value it's

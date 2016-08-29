@@ -7,10 +7,12 @@
 #include <magenta/types.h>
 #include <magenta/compiler.h>
 
+#include <stdatomic.h>
+
 __BEGIN_CDECLS;
 
 typedef struct {
-    int futex;
+    atomic_int futex;
 } completion_t;
 
 #define COMPLETION_INIT ((completion_t){0})

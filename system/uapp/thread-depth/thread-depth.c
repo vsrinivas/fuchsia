@@ -11,7 +11,7 @@
 #include <magenta/syscalls.h>
 #include <stdatomic.h>
 
-static uint64_t count = 0;
+static atomic_uint_fast64_t count = ATOMIC_VAR_INIT(0);
 
 static int thread_func(void* arg) {
     uint64_t val = atomic_fetch_add(&count, 1);
@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    printf("Created %" PRId64 " threads\n", count);
+    // TODO(phosek): The cast here shouldn't be required.
+    printf("Created %" PRIdFAST64 " threads\n", (uint_fast64_t)atomic_load(&count));
     return 0;
 }

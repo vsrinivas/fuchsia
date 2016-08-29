@@ -128,10 +128,10 @@ MAGENTA_SYSCALL_DEF(1, 1, 87, mx_status_t, task_kill, mx_handle_t task_handle);
 MAGENTA_SYSCALL_DEF(1, 1, 90, mx_handle_t, event_create, uint32_t options)
 MAGENTA_SYSCALL_DEF(2, 2, 91, mx_status_t, eventpair_create, USER_PTR(mx_handle_t) out_handles /* [2] */,
                     uint32_t flags)
-MAGENTA_SYSCALL_DEF(3, 4, 93, mx_status_t, futex_wait, int* value_ptr, int current_value, mx_time_t timeout)
-MAGENTA_SYSCALL_DEF(2, 2, 94, mx_status_t, futex_wake, int* value_ptr, uint32_t count)
-MAGENTA_SYSCALL_DEF(5, 5, 95, mx_status_t, futex_requeue, int* wake_ptr, uint32_t wake_count,
-                    int current_value, int* requeue_ptr, uint32_t requeue_count)
+MAGENTA_SYSCALL_DEF(3, 4, 93, mx_status_t, futex_wait, USER_PTR(volatile mx_futex_t) value_ptr, mx_futex_t current_value, mx_time_t timeout)
+MAGENTA_SYSCALL_DEF(2, 2, 94, mx_status_t, futex_wake, USER_PTR(volatile mx_futex_t) value_ptr, uint32_t count)
+MAGENTA_SYSCALL_DEF(5, 5, 95, mx_status_t, futex_requeue, USER_PTR(volatile mx_futex_t) wake_ptr, uint32_t wake_count,
+                    mx_futex_t current_value, int* requeue_ptr, uint32_t requeue_count)
 
 // Memory management
 MAGENTA_SYSCALL_DEF(1, 2, 100, mx_handle_t, vmo_create, uint64_t size)

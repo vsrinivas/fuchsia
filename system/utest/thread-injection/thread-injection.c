@@ -42,7 +42,7 @@ int thread_injection_test(void) {
 
     // Now send our own process handle to the injector, along with
     // some crucial information.
-    int my_futex = 0;
+    atomic_int my_futex = ATOMIC_VAR_INIT(0);
     struct helper_data data = {
         .futex_addr = &my_futex,
         .bootstrap = pipeh[0],

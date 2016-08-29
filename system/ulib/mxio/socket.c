@@ -4,6 +4,7 @@
 
 #include "private.h"
 
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -32,7 +33,7 @@ mxio_t* mxio_socket_create(mx_handle_t h) {
         return NULL;
     p->io.ops = &mx_socket_ops;
     p->io.magic = MXIO_MAGIC;
-    p->io.refcount = 1;
+    atomic_init(&p->io.refcount, 1);
     p->io.flags |= MXIO_FLAG_SOCKET;
     p->h = h;
     return &p->io;

@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include <magenta/types.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,7 +27,7 @@ struct __libc {
     uintptr_t stack_base;
     size_t stack_size;
     mx_handle_t proc;
-    int thread_count;
+    atomic_int thread_count;
     struct tls_module* tls_head;
     size_t tls_size, tls_align, tls_cnt;
     size_t page_size;

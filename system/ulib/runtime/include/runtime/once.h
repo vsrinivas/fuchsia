@@ -5,15 +5,15 @@
 #pragma once
 
 #include <magenta/compiler.h>
+#include <magenta/syscalls-types.h>
 
 __BEGIN_CDECLS
 
 typedef struct {
-    int futex;
+    mx_futex_t futex;
 } mxr_once_t;
 
-#define MXR_ONCE_INIT \
-    { 0 }
+#define MXR_ONCE_INIT ((mxr_once_t){})
 
 #pragma GCC visibility push(hidden)
 

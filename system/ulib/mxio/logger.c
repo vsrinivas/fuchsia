@@ -4,6 +4,7 @@
 
 #include <mxio/io.h>
 
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <threads.h>
 
@@ -95,7 +96,7 @@ mxio_t* mxio_logger_create(mx_handle_t handle) {
     }
     log->io.ops = &log_io_ops;
     log->io.magic = MXIO_MAGIC;
-    log->io.refcount = 1;
+    atomic_init(&log->io.refcount, 1);
     log->handle = handle;
     return &log->io;
 }

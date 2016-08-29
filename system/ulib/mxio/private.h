@@ -48,7 +48,7 @@ typedef struct mxio_ops {
 typedef struct mxio {
     mxio_ops_t* ops;
     uint32_t magic;
-    int32_t refcount;
+    atomic_int_fast32_t refcount;
     int32_t dupcount;
     int32_t flags;
 } mxio_t;

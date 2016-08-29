@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -120,7 +121,7 @@ mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len) {
     }
     vf->io.ops = &vmofile_ops;
     vf->io.magic = MXIO_MAGIC;
-    vf->io.refcount = 1;
+    atomic_init(&vf->io.refcount, 1);
     vf->vmo = h;
     vf->off = off;
     vf->end = off + len;

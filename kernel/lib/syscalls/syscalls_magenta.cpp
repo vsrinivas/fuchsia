@@ -702,18 +702,20 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     return (status == ERR_BAD_HANDLE) ? up->BadHandle(handle_value, ERR_BAD_HANDLE) : status;
 }
 
-mx_status_t sys_futex_wait(int* value_ptr, int current_value, mx_time_t timeout) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(value_ptr, current_value, timeout);
+mx_status_t sys_futex_wait(user_ptr<volatile int> value_ptr, int current_value, mx_time_t timeout) {
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
+        const_cast<int*>(value_ptr.get()), current_value, timeout);
 }
 
-mx_status_t sys_futex_wake(int* value_ptr, uint32_t count) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(value_ptr, count);
+mx_status_t sys_futex_wake(user_ptr<volatile int> value_ptr, uint32_t count) {
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(
+        const_cast<int*>(value_ptr.get()), count);
 }
 
-mx_status_t sys_futex_requeue(int* wake_ptr, uint32_t wake_count, int current_value,
+mx_status_t sys_futex_requeue(user_ptr<volatile int> wake_ptr, uint32_t wake_count, int current_value,
                               int* requeue_ptr, uint32_t requeue_count) {
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(
-        wake_ptr, wake_count, current_value, requeue_ptr, requeue_count);
+        const_cast<int*>(wake_ptr.get()), wake_count, current_value, requeue_ptr, requeue_count);
 }
 
 int sys_log_create(uint32_t flags) {

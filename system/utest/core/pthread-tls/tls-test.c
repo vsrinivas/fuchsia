@@ -12,7 +12,7 @@
 
 static pthread_key_t tsd_key;
 static pthread_key_t tsd_key_dtor;
-static atomic_int dtor_count = 0;
+static atomic_int dtor_count = ATOMIC_VAR_INIT(0);
 
 void dtor(void* unused) {
     atomic_fetch_add(&dtor_count, 1);

@@ -17,7 +17,7 @@ mx_status_t completion_wait(completion_t* completion, mx_time_t timeout) {
     // TODO(kulakowski): With a little more state (a waiters count),
     // this could optimistically spin before entering the kernel.
 
-    int* futex = &completion->futex;
+    atomic_int* futex = &completion->futex;
 
     for (;;) {
         int current_value = atomic_load(futex);
@@ -42,7 +42,7 @@ mx_status_t completion_wait(completion_t* completion, mx_time_t timeout) {
 }
 
 void completion_signal(completion_t* completion) {
-    int* futex = &completion->futex;
+    atomic_int* futex = &completion->futex;
     atomic_store(futex, SIGNALED);
     mx_futex_wake(futex, UINT32_MAX);
 }
