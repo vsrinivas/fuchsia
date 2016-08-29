@@ -18,7 +18,6 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-ddk.h>
 
 #include <mxio/debug.h>
 #include <mxio/io.h>
@@ -481,6 +480,27 @@ done_no_lp:
     return status;
 }
 
+static void send_debug_command(const char* cmd) {
+    const char* prefix = "kerneldebug ";
+    char buf[256];
+    size_t len = strlen(prefix) + strlen(cmd) + 1;
+    if (len > sizeof(buf)) {
+        return;
+    }
+
+    int fd = open("/dev/dmctl", O_WRONLY);
+    if (fd < 0) {
+        return;
+    }
+
+    strcpy(buf, prefix);
+    strncpy(buf + strlen(prefix), cmd, len - strlen(prefix));
+    buf[len - 1] = '\0';
+
+    write(fd, buf, len);
+    close(fd);
+}
+
 void execline(char* line) {
     bool runbg;
     char* argv[32];
@@ -488,7 +508,7 @@ void execline(char* line) {
     int len;
 
     if (line[0] == '`') {
-        mx_debug_send_command(line + 1, strlen(line) - 1);
+        send_debug_command(line + 1);
         return;
     }
     len = strlen(line);

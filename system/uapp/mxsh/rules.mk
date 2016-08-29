@@ -14,7 +14,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := mxsh
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
+MODULE_STATIC_LIBS := ulib/hexdump
 
 MODULE_LIBS := \
     ulib/mxio ulib/launchpad ulib/magenta ulib/musl
