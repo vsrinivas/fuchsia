@@ -10,7 +10,7 @@ LOGLISTENER := $(BUILDDIR)/tools/loglistener
 NETRUNCMD := $(BUILDDIR)/tools/netruncmd
 NETCP:= $(BUILDDIR)/tools/netcp
 
-TOOLS_CFLAGS := -std=c11 -Wall -Isystem/global -Isystem/private
+TOOLS_CFLAGS := -std=c11 -Wall -Isystem/public -Isystem/private
 
 ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP)
 
