@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <math.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/tests/intrusive_containers/intrusive_wavl_tree_checker.h>
 #include <mxtl/tests/intrusive_containers/ordered_associative_container_test_environment.h>
 #include <mxtl/tests/intrusive_containers/test_thunks.h>
 #include <mxtl/intrusive_pointer_traits.h>
+#include <unittest/unittest.h>
 
 namespace mxtl {
 namespace tests {
@@ -177,42 +178,26 @@ public:
     static bool VerifyBalance(const TreeType& tree, uint64_t depth) {
         BEGIN_TEST;
 
-        // Compute the maximum expected depth.  If we have performed no erase
-        // operations, this should be rounddown(log_phi(size) + 1) where phi is
-        // the golden ratio.  Otherwise, this should be rounddown(log_2(size) +
-        // 1).
-        //
-        // TODO(johngro): we have no math library in the kernel.  How are we
-        // going to compute log_phi(size)?
+        // Compute the maximum expected depth.
         uint64_t max_depth = 0;
         if (tree.size()) {
-            for (size_t tmp = tree.size(); tmp; tmp >>= 1)
-                max_depth++;
-
+            // If we have performed erase operations, the max depth should be
+            // rounddown(2 * log_2(N)) + 1.
+            //
             // If we have not performed any erases, then the max depth should be
-            // log_phi(N).  Otherwise it should be 2 * log_2(N)
-            if (!op_counts_.erase_ops_) {
-                // TODO: tweak max_depth properly.  We know that...
-                //
-                // phi = (1 + 5^0.5) / 2
-                // log_phi(N) = log_2(N) / log_2(phi)
-                //
-                // We can approximate log_2(phi) using a rational number and
-                // scale max_depth, but max_depth is currently rounded up to the
-                // nearest integer.  We need to keep it in floating point before
-                // scaling and then rounding up in order to keep our bound as
-                // tight as it should be.
-                //
-                // Restricting things to 32 bit multipliers, we can
-                // approximate...
-                //
-                // X / log_2(phi) ~= (0xb85faf7e * X) / 0x80000000
-                //                 = (0xb85faf7e * X) >> 31
-                max_depth  *= 0xb85faf7e;
-                max_depth >>= 31;
-            } else {
-                max_depth <<= 1;
-            }
+            // rounddown(log_phi(N)) + 1.  We know that...
+            //
+            // phi = (1 + sqrt(5)) / 2
+            // log_phi(N) = log_2(N) / log_2(phi)
+            //
+            // Start by computing log_2(N), then scale by either 2.0, or
+            // (1/log_2(phi)).
+            constexpr double one_over_log2_phi =
+                1.4404200904125563642566021371749229729175567626953125;
+            double log2N = log2(static_cast<double>(tree.size()));
+            double scale = op_counts_.erase_ops_ ? 2.0 : one_over_log2_phi;
+
+            max_depth = static_cast<uint64_t>(log2N * scale) + 1;
         }
 
         size_t total_insert_rotations = op_counts_.insert_rotations_
