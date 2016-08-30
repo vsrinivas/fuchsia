@@ -1,0 +1,49 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines a Dart package
+#
+# Parameters
+#
+#   package_name (required)
+#     Name of the dart package. This is used as an identifier in code that
+#     depends on this package. In general, this should correspond to the path to
+#     the package.  I.e. a dart package in //foo/bar/baz should have the package
+#     name "foo.bar.baz"
+#
+#   deps (optional)
+#     List of labels for Dart packages this package depends on.
+#
+# Example of usage:
+#
+#   dart_package("baz") {
+#     package_name = "foo.bar.baz"
+#     deps = [
+#       "//foo/bar/owl"
+#     ]
+#   }
+template("dart_package") {
+  assert(defined(invoker.package_name), "Must specify package name")
+
+  action(target_name) {
+    script = "//build/dart/gen_dot_packages.py"
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    dot_packages_file = "$target_gen_dir/.packages"
+
+    outputs = [ dot_packages_file ]
+    depfile = "$target_gen_dir/.packages.d"
+
+    args = [ "--out", rebase_path(dot_packages_file, root_build_dir),
+             "--source-dir", rebase_path("."),
+             "--root-build-dir", rebase_path(root_build_dir),
+             "--package-name", invoker.package_name,
+             "--depfile", rebase_path(depfile),
+             "--deps" ] + deps
+  }
+}
