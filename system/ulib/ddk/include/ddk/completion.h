@@ -7,7 +7,7 @@
 #include <magenta/types.h>
 #include <magenta/compiler.h>
 
-__BEGIN_CDECLS
+__BEGIN_CDECLS;
 
 typedef struct {
     int futex;
@@ -28,4 +28,4 @@ void completion_signal(completion_t* completion);
 // Resets the completion's signalled state to unsignaled.
 void completion_reset(completion_t* completion);
 
-__END_CDECLS
+__END_CDECLS;

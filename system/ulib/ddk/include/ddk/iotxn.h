@@ -4,9 +4,12 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 #include <ddk/driver.h>
+
+__BEGIN_CDECLS;
 
 typedef struct iotxn iotxn_t;
 typedef struct iotxn_ops iotxn_ops_t;
@@ -144,3 +147,5 @@ struct iotxn_ops {
     // free the iotxn -- should be called only by the entity that allocated it
     void (*release)(iotxn_t* txn);
 };
+
+__END_CDECLS;

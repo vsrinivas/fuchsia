@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <stdint.h>
 
+__BEGIN_CDECLS;
 
 // COAABBBB VVVVVVVV  Condition Opcode paramA paramB Value
 
@@ -98,3 +100,5 @@ mx_bind_inst_t i915_binding[] = {
     BI_ABORT(),
 };
 #endif
+
+__END_CDECLS;

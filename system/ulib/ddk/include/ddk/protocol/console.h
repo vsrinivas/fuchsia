@@ -6,8 +6,11 @@
 
 #include <ddk/driver.h>
 #include <ddk/ioctl.h>
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <magenta/device/console.h>
+
+__BEGIN_CDECLS;
 
 /**
  * protocol/console.h - console protocol definitions
@@ -32,3 +35,4 @@ typedef struct mx_protocol_console {
     mx_status_t (*readkey)(mx_device_t* dev, uint32_t flags);
 } mx_protocol_console_t;
 
+__END_CDECLS;

@@ -6,6 +6,9 @@
 
 #include <stdint.h>
 #include <ddk/ioctl.h>
+#include <magenta/compiler.h>
+
+__BEGIN_CDECLS;
 
 #define IOCTL_I2C_BUS_ADD_SLAVE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_I2C, 0)
@@ -46,3 +49,5 @@ typedef struct i2c_slave_segment {
     int len;
     uint8_t* buf;
 } i2c_slave_segment_t;
+
+__END_CDECLS;

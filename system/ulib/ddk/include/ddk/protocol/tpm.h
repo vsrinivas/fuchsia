@@ -6,8 +6,11 @@
 
 #include <ddk/driver.h>
 #include <ddk/ioctl.h>
+#include <magenta/compiler.h>
 #include <stddef.h>
 #include <sys/types.h>
+
+__BEGIN_CDECLS;
 
 /* TPM IOCTL commands */
 #define IOCTL_TPM_SAVE_STATE \
@@ -17,3 +20,5 @@ typedef struct mx_protocol_tpm {
     ssize_t (*get_random)(mx_device_t *dev, void *buf, size_t count);
     mx_status_t (*save_state)(mx_device_t *dev);
 } mx_protocol_tpm_t;
+
+__END_CDECLS;

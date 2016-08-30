@@ -5,8 +5,11 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <magenta/compiler.h>
 #include <magenta/hw/usb.h>
 #include <magenta/hw/usb-hub.h>
+
+__BEGIN_CDECLS;
 
 typedef struct usb_bus_protocol {
     mx_status_t (*add_device)(mx_device_t* device, uint32_t device_id, uint32_t hub_id,
@@ -21,3 +24,5 @@ typedef struct usb_bus_protocol {
 
     mx_status_t (*hub_device_removed)(mx_device_t* device, mx_device_t* hub_device, int port);
 } usb_bus_protocol_t;
+
+__END_CDECLS;

@@ -6,6 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/usb-device.h>
+#include <magenta/compiler.h>
 #include <magenta/hw/usb.h>
 
 __BEGIN_CDECLS;

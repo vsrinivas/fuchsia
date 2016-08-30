@@ -6,9 +6,12 @@
 
 #include <ddk/driver.h>
 #include <ddk/ioctl.h>
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <magenta/pixelformat.h>
 #include <magenta/device/display.h>
+
+__BEGIN_CDECLS;
 
 /**
  * protocol/display.h - display protocol definitions
@@ -28,3 +31,4 @@ typedef struct mx_display_protocol {
     // flushes the framebuffer
 } mx_display_protocol_t;
 
+__END_CDECLS;

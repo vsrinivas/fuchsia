@@ -8,10 +8,13 @@
 #include <ddk/driver.h>
 #include <ddk/common/hid-fifo.h>
 #include <ddk/protocol/input.h>
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+__BEGIN_CDECLS;
 
 enum {
     HID_DESC_TYPE_REPORT = 0x22,
@@ -88,3 +91,5 @@ void hid_init_device(mx_hid_device_t* dev, hid_bus_ops_t* bus, uint8_t dev_num,
 mx_status_t hid_add_device(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* parent);
 void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len);
 void hid_release_device(mx_hid_device_t* dev);
+
+__END_CDECLS;

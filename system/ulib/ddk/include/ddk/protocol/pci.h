@@ -4,9 +4,12 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/syscalls-types.h>
 #include <ddk/driver.h>
 #include <hw/pci.h>
+
+__BEGIN_CDECLS;
 
 /**
  * protocols/pci.h - PCI protocol definitions
@@ -35,3 +38,5 @@ typedef struct pci_protocol {
 } pci_protocol_t;
 
 extern pci_protocol_t _pci_protocol;
+
+__END_CDECLS;

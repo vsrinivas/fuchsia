@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 
 #include <stdbool.h>
@@ -11,6 +12,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <threads.h>
+
+__BEGIN_CDECLS;
 
 #ifndef HID_FIFO_SIZE
 #define HID_FIFO_SIZE 4096
@@ -33,3 +36,5 @@ ssize_t mx_hid_fifo_read(mx_hid_fifo_t* fifo, void* buf, size_t len);
 ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, const void* buf, size_t len);
 
 void mx_hid_fifo_dump(mx_hid_fifo_t* fifo);
+
+__END_CDECLS;

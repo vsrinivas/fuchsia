@@ -5,8 +5,11 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <magenta/compiler.h>
 #include <magenta/hw/usb.h>
 #include <stdbool.h>
+
+__BEGIN_CDECLS;
 
 typedef struct ethernet_protocol {
     mx_status_t (*send)(mx_device_t* device, const void* buffer, size_t length);
@@ -18,3 +21,5 @@ typedef struct ethernet_protocol {
 } ethernet_protocol_t;
 
 #define ETH_MAC_SIZE 6
+
+__END_CDECLS;

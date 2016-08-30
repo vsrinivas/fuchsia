@@ -9,6 +9,8 @@
 #include <magenta/compiler.h>
 #include <stdint.h>
 
+__BEGIN_CDECLS;
+
 typedef struct mx_device mx_device_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
 
@@ -95,3 +97,5 @@ enum {
 #define BUILTIN_DRIVER       \
     __ALIGNED(sizeof(void*)) \
     __SECTION("builtin_drivers")
+
+__END_CDECLS;

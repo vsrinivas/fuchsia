@@ -5,6 +5,9 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <magenta/compiler.h>
+
+__BEGIN_CDECLS;
 
 /**
  * protocol/fb.h - framebuffer protocol definitions
@@ -13,3 +16,5 @@
 typedef struct mx_fb_protocol {
     // tbd
 } mx_fb_protocol_t;
+
+__END_CDECLS;

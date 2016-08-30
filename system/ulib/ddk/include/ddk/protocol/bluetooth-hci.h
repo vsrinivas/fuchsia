@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
+
+__BEGIN_CDECLS;
 
 typedef struct bluetooth_hci_protocol {
     // returns message pipe for command & event packets
@@ -12,3 +15,5 @@ typedef struct bluetooth_hci_protocol {
     // returns message pipe for ACL data
     mx_handle_t (*get_acl_pipe)(mx_device_t* device);
 } bluetooth_hci_protocol_t;
+
+__END_CDECLS;

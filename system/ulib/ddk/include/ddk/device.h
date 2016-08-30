@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <ddk/iotxn.h>
@@ -11,6 +12,8 @@
 
 // for ssize_t:
 #include <unistd.h>
+
+__BEGIN_CDECLS;
 
 typedef struct mx_device mx_device_t;
 typedef struct mx_driver mx_driver_t;
@@ -147,3 +150,5 @@ static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
     mx_object_signal(dev->event, clearflag, setflag);
 }
+
+__END_CDECLS;
