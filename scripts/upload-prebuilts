@@ -48,11 +48,8 @@ declare -A PREBUILTS=(
   ["build-magenta-pc-x86-64/tools/mkbootfs"]="tools/mkbootfs"
 )
 
-# Make sure sysroot and upload staging directories are clean.
-for target in "${TARGETS[@]}"; do
-  rm -rf "build-${target}/sysroot"
-  rm -rf "build-${target}/upload"
-done
+# Make sure the build directory is clean
+make spotless
 
 # Build all the things.
 for target in "${TARGETS[@]}"; do
