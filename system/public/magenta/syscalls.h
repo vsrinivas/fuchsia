@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <magenta/process.h>
 #include <stdbool.h>
 
 #include <magenta/syscalls-types.h>
@@ -126,6 +127,21 @@ __MX_SYSCALL mx_status_t mx_wait_set_remove(mx_handle_t waitset_handle, uint64_t
 __MX_SYSCALL mx_status_t mx_wait_set_wait(mx_handle_t waitset_handle, mx_time_t timeout, uint32_t* num_results,
                              mx_waitset_result_t* results, uint32_t* max_results) {
     return mx_waitset_wait(waitset_handle, timeout, num_results, results, max_results);
+}
+
+__MX_SYSCALL mx_handle_t mx_set_system_exception_port(mx_handle_t eport, uint64_t key, uint32_t options) {
+        return mx_object_bind_exception_port(0, eport, key, options);
+}
+__MX_SYSCALL mx_handle_t mx_set_exception_port(mx_handle_t object, mx_handle_t eport,
+                                               uint64_t key, uint32_t options) {
+    if (object == 0) {
+        return mx_process_self();
+    } else {
+        return mx_object_bind_exception_port(object, eport, key, options);
+    }
+}
+__MX_SYSCALL mx_status_t mx_mark_exception_handled(mx_handle_t proc, mx_koid_t tid, mx_exception_status_t status) {
+    return mx_process_handle_exception(proc, tid, status);
 }
 
 #ifdef __cplusplus

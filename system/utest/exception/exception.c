@@ -110,7 +110,7 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
 
 static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid)
 {
-    mx_status_t status = mx_mark_exception_handled(process, tid, MX_EXCEPTION_STATUS_NOT_HANDLED);
+    mx_status_t status = mx_process_handle_exception(process, tid, MX_EXCEPTION_STATUS_NOT_HANDLED);
     if (status < 0)
         tu_fatal("mx_mark_exception_handled", status);
 }
@@ -281,42 +281,44 @@ static intptr_t watchdog_thread_func(void* arg)
 
 static bool test_set_close_set(const char* kind, mx_handle_t object)
 {
+    if (object == 0)
+        object = mx_process_self();
     unittest_printf("%s exception handler set-close-set test\n", kind);
     mx_handle_t eport = tu_io_port_create(0);
     mx_status_t status;
     if (object < 0)
-        status = mx_set_system_exception_port(eport, 0, 0);
+        status = mx_object_bind_exception_port(0, eport, 0, 0);
     else
-        status = mx_set_exception_port(object, eport, 0, 0);
+        status = mx_object_bind_exception_port(object, eport, 0, 0);
     ASSERT_EQ(status, NO_ERROR, "error setting exception port");
     mx_handle_t eport2 = tu_io_port_create(0);
     if (object < 0)
-        status = mx_set_system_exception_port(eport, 0, 0);
+        status = mx_object_bind_exception_port(0, eport, 0, 0);
     else
-        status = mx_set_exception_port(object, eport, 0, 0);
+        status = mx_object_bind_exception_port(object, eport, 0, 0);
     ASSERT_NEQ(status, NO_ERROR, "setting exception port errantly succeeded");
     tu_handle_close(eport2);
     tu_handle_close(eport);
 #if 1 // TODO(dje): wip, close doesn't yet reset the exception port
     if (object < 0)
-        status = mx_set_system_exception_port(MX_HANDLE_INVALID, 0, 0);
+        status = mx_object_bind_exception_port(0, MX_HANDLE_INVALID, 0, 0);
     else
-        status = mx_set_exception_port(object, MX_HANDLE_INVALID, 0, 0);
+        status = mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, 0);
     ASSERT_EQ(status, NO_ERROR, "error resetting exception port");
 #endif
     eport = tu_io_port_create(0);
     // Verify the close removed the previous handler.
     if (object < 0)
-        status = mx_set_system_exception_port(eport, 0, 0);
+        status = mx_object_bind_exception_port(0, eport, 0, 0);
     else
-        status = mx_set_exception_port(object, eport, 0, 0);
+        status = mx_object_bind_exception_port(object, eport, 0, 0);
     ASSERT_EQ(status, NO_ERROR, "error setting exception port (#2)");
     tu_handle_close(eport);
 #if 1 // TODO(dje): wip, close doesn't yet reset the exception port
     if (object < 0)
-        status = mx_set_system_exception_port(MX_HANDLE_INVALID, 0, 0);
+        status = mx_object_bind_exception_port(0, MX_HANDLE_INVALID, 0, 0);
     else
-        status = mx_set_exception_port(object, MX_HANDLE_INVALID, 0, 0);
+        status = mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, 0);
     ASSERT_EQ(status, NO_ERROR, "error resetting exception port");
 #endif
     return true;
@@ -377,7 +379,7 @@ static bool system_handler_test(void)
     finish_basic_test("system", child, eport, our_pipe, MSG_CRASH);
 
 #if 1 // TODO(dje): wip, close doesn't yet reset the exception port
-    mx_status_t status = mx_set_system_exception_port(MX_HANDLE_INVALID, 0, 0);
+    mx_status_t status = mx_object_bind_exception_port(0, MX_HANDLE_INVALID, 0, 0);
     ASSERT_EQ(status, NO_ERROR, "error resetting system exception port");
 #endif
 

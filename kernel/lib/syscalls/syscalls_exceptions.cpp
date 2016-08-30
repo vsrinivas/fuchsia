@@ -31,87 +31,40 @@
 
 #define LOCAL_TRACE 0
 
-// TODO(dje): This is a temp hack as there is no handle of an object
-// provided on which to do rights checking (does the caller have permission
-// to set the system exception port?). When a suitable object that represents
-// the system in this context is created this routine can be deleted in favor
-// of set_exception_port.
+mx_status_t object_unbind_exception_port(mx_handle_t obj_handle) {
+    //TODO: check rights once appropriate right is determined
 
-mx_status_t sys_set_system_exception_port(mx_handle_t handle, uint64_t key, uint32_t options) {
-    LTRACE_ENTRY;
-
-    if (options != 0)
-        return ERR_INVALID_ARGS;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    // TODO(dje): Rights checking is missing because remember this is just
-    // temporary code until there is an object representing the system.
-
-    if (handle == MX_HANDLE_INVALID) {
+    if (obj_handle == MX_HANDLE_INVALID) {
+        //TODO: handle for system exception
         ResetSystemExceptionPort();
         return NO_ERROR;
     }
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
-
-    auto ioport = dispatcher->get_io_port_dispatcher();
-    if (!ioport)
-        return ERR_WRONG_TYPE;
-
-    mxtl::RefPtr<ExceptionPort> eport;
-    mx_status_t status = ExceptionPort::Create(mxtl::RefPtr<IOPortDispatcher>(ioport), key, &eport);
-    if (status != NO_ERROR)
-        return status;
-
-    return SetSystemExceptionPort(mxtl::move(eport));
-}
-
-mx_status_t sys_set_exception_port(mx_handle_t object_handle, mx_handle_t eport_handle,
-                                   uint64_t key, uint32_t options) {
-    LTRACE_ENTRY;
-
-    if (options != 0)
-        return ERR_INVALID_ARGS;
-
     auto up = ProcessDispatcher::GetCurrent();
 
-    // The exception port is removed by passing MX_HANDLE_INVALID for the
-    // eport.
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
+        return ERR_BAD_HANDLE;
 
-    if (eport_handle == MX_HANDLE_INVALID) {
-        // TODO(dje): Rights checking is missing because remember this is just
-        // temporary code until there is an object representing "self".
-        if (object_handle == MX_HANDLE_INVALID) {
-            up->ResetExceptionPort();
-            return NO_ERROR;
-        } else {
-            mxtl::RefPtr<Dispatcher> dispatcher;
-            mx_rights_t rights;
-            if (!up->GetDispatcher(object_handle, &dispatcher, &rights))
-                return ERR_BAD_HANDLE;
-            // TODO(dje): What's the right right here? [READ is a temp hack]
-            if (!magenta_rights_check(rights, MX_RIGHT_READ))
-                return ERR_ACCESS_DENIED;
-
-            auto process = dispatcher->get_process_dispatcher();
-            if (process) {
-                process->ResetExceptionPort();
-                return NO_ERROR;
-            }
-
-            auto thread = dispatcher->get_thread_dispatcher();
-            if (thread) {
-                thread->ResetExceptionPort();
-                return NO_ERROR;
-            }
-
-            return ERR_WRONG_TYPE;
-        }
+    auto process = dispatcher->get_process_dispatcher();
+    if (process) {
+        process->ResetExceptionPort();
+        return NO_ERROR;
     }
+
+    auto thread = dispatcher->get_thread_dispatcher();
+    if (thread) {
+        thread->ResetExceptionPort();
+        return NO_ERROR;
+    }
+
+    return ERR_WRONG_TYPE;
+}
+
+mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key) {
+    //TODO: check rights once appropriate right is determined
+    auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> ioport_dispatcher;
     mx_rights_t ioport_rights;
@@ -120,38 +73,50 @@ mx_status_t sys_set_exception_port(mx_handle_t object_handle, mx_handle_t eport_
     auto ioport = ioport_dispatcher->get_io_port_dispatcher();
     if (!ioport)
         return ERR_WRONG_TYPE;
-    // TODO(dje): rights checking of ioport
 
     mxtl::RefPtr<ExceptionPort> eport;
     mx_status_t status = ExceptionPort::Create(mxtl::RefPtr<IOPortDispatcher>(ioport), key, &eport);
     if (status != NO_ERROR)
         return status;
 
-    // TODO(dje): Temp hack, MX_HANDLE_INVALID == "this process"
-    if (object_handle == MX_HANDLE_INVALID) {
-        return up->SetExceptionPort(mxtl::move(eport));
+    if (obj_handle == MX_HANDLE_INVALID) {
+        //TODO: handle for system exception
+        return SetSystemExceptionPort(mxtl::move(eport));
+    }
+
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
+        return ERR_BAD_HANDLE;
+
+    auto process = dispatcher->get_process_dispatcher();
+    if (process) {
+        return process->SetExceptionPort(mxtl::move(eport));
+    }
+
+    auto thread = dispatcher->get_thread_dispatcher();
+    if (thread) {
+        return thread->SetExceptionPort(mxtl::move(eport));
+    }
+
+    return ERR_WRONG_TYPE;
+}
+
+mx_status_t sys_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle,
+                                           uint64_t key, uint32_t options) {
+    LTRACE_ENTRY;
+
+    if (options != 0)
+        return ERR_INVALID_ARGS;
+
+    if (eport_handle == MX_HANDLE_INVALID) {
+        return object_unbind_exception_port(obj_handle);
     } else {
-        mxtl::RefPtr<Dispatcher> dispatcher;
-        mx_rights_t rights;
-        if (!up->GetDispatcher(object_handle, &dispatcher, &rights))
-            return ERR_BAD_HANDLE;
-        // TODO(dje): What's the right right here? [READ is a temp hack]
-        if (!magenta_rights_check(rights, MX_RIGHT_READ))
-            return ERR_ACCESS_DENIED;
-
-        auto process = dispatcher->get_process_dispatcher();
-        if (process)
-            return process->SetExceptionPort(mxtl::move(eport));
-
-        auto thread = dispatcher->get_thread_dispatcher();
-        if (thread)
-            return thread->SetExceptionPort(mxtl::move(eport));
-
-        return ERR_WRONG_TYPE;
+        return object_bind_exception_port(obj_handle, eport_handle, key);
     }
 }
 
-mx_status_t sys_mark_exception_handled(mx_handle_t handle, mx_koid_t tid, mx_exception_status_t excp_status) {
+mx_status_t sys_process_handle_exception(mx_handle_t handle, mx_koid_t tid, mx_exception_status_t excp_status) {
     LTRACE_ENTRY;
 
     auto up = ProcessDispatcher::GetCurrent();

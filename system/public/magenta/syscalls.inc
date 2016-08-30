@@ -176,15 +176,12 @@ MAGENTA_SYSCALL_DEF(3, 3, 200, mx_status_t, io_mapping_get_info, mx_handle_t han
                     uint64_t* out_size)
 
 // exception handlers
-// TODO(dje): This one can go away once we have a suitable object representing the system.
-MAGENTA_SYSCALL_DEF(3, 5, 210, mx_status_t, set_system_exception_port,
-                    mx_handle_t eport, uint64_t key, uint32_t options)
-MAGENTA_SYSCALL_DEF(4, 5, 211, mx_status_t, set_exception_port,
+MAGENTA_SYSCALL_DEF(4, 5, 211, mx_status_t, object_bind_exception_port,
                     mx_handle_t object, mx_handle_t eport, uint64_t key, uint32_t options)
 // TODO(dje): The arguments here assume there will only ever be threads that
 // we want to respond to exceptions on. IWBN to have an API that doesn't make
 // that assumption.
-MAGENTA_SYSCALL_DEF(3, 3, 212, mx_status_t, mark_exception_handled,
+MAGENTA_SYSCALL_DEF(3, 3, 212, mx_status_t, process_handle_exception,
                     mx_handle_t process, mx_koid_t tid, mx_exception_status_t status)
 // TODO(dje): Exception handlers get a pid in the exception report but need a process handle to
 // reply to it. Thus we provide a lookup mechanism to go from pid to process handle. The lookup doesn't

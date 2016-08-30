@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    mx_status_t status = mx_set_system_exception_port(ex_port, kSysExceptionKey, 0);
+    mx_status_t status = mx_object_bind_exception_port(0, ex_port, kSysExceptionKey, 0);
     if (status < 0) {
         print_error(__LINE__, "unable to set exception port");
         return 1;
