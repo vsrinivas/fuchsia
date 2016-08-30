@@ -19,14 +19,15 @@
 #include <mxtl/user_ptr.h>
 
 #include <magenta/data_pipe.h>
-#include <magenta/data_pipe_producer_dispatcher.h>
 #include <magenta/data_pipe_consumer_dispatcher.h>
+#include <magenta/data_pipe_producer_dispatcher.h>
 #include <magenta/event_dispatcher.h>
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/resource_dispatcher.h>
 #include <magenta/socket_dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/thread_dispatcher.h>
@@ -84,21 +85,11 @@ mx_status_t get_process(ProcessDispatcher* up,
 
 } // anonymous namespace
 
-
 mx_status_t validate_resource_handle(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    if (dispatcher->get_type() != MX_OBJ_TYPE_RESOURCE)
-        return ERR_WRONG_TYPE;
-
-    return NO_ERROR;
+    mxtl::RefPtr<ResourceDispatcher> resource;
+    return up->GetDispatcher(handle, &resource);
 }
-
 
 void sys_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
