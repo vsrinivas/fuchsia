@@ -561,18 +561,12 @@ mx_status_t sys_pci_interrupt_wait(mx_handle_t handle) {
      * @param handle Handle associated with a PCI interrupt
      */
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
-
-    auto pci_interrupt = dispatcher->get_specific<PciInterruptDispatcher>();
-    if (!pci_interrupt)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<PciInterruptDispatcher> pci_interrupt;
+    mx_status_t status =
+        up->GetDispatcher(handle, &pci_interrupt, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     return pci_interrupt->InterruptWait();
 }
