@@ -26,6 +26,7 @@ public:
     bool Map(bool write);
     bool Unmap();
     void WaitRendering();
+    bool References(MagmaBuffer* target);
 
     MagmaConnection* connection() { return connection_; }
 

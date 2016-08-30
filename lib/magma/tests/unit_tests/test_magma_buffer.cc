@@ -41,6 +41,51 @@ TEST(MagmaBuffer, RelocationManagement)
     magma_bufmgr_destroy(connection);
 }
 
+TEST(MagmaBuffer, References)
+{
+    auto connection = magma_bufmgr_gem_init(0xdeadbeef, BATCH_SIZE);
+    ASSERT_NE(connection, nullptr);
+    auto buf0 = magma_bo_alloc(connection, "test buf 0", BUF_SIZE, BUF_ALIGN);
+    ASSERT_NE(buf0, nullptr);
+    auto buf1 = magma_bo_alloc(connection, "test buf 1", BUF_SIZE, BUF_ALIGN);
+    ASSERT_NE(buf1, nullptr);
+    auto buf2 = magma_bo_alloc(connection, "test buf 2", BUF_SIZE, BUF_ALIGN);
+    ASSERT_NE(buf2, nullptr);
+
+    // Direct references
+    EXPECT_EQ(magma_bo_references(buf0, buf1), 0);
+    EXPECT_EQ(magma_bo_references(buf1, buf2), 0);
+    EXPECT_EQ(magma_bo_references(buf0, buf2), 0);
+
+    ASSERT_EQ(magma_bo_emit_reloc(buf0, 0, buf1, 0, 0, 0), 0);
+
+    EXPECT_EQ(magma_bo_references(buf0, buf1), 1);
+    EXPECT_EQ(magma_bo_references(buf1, buf2), 0);
+    EXPECT_EQ(magma_bo_references(buf0, buf2), 0);
+
+    // indirect references
+    ASSERT_EQ(magma_bo_emit_reloc(buf1, 0, buf2, 0, 0, 0), 0);
+
+    EXPECT_EQ(magma_bo_references(buf0, buf1), 1);
+    EXPECT_EQ(magma_bo_references(buf1, buf2), 1);
+    EXPECT_EQ(magma_bo_references(buf0, buf2), 1);
+
+    // Unreference
+    magma_gem_bo_clear_relocs(buf0, 0);
+
+    EXPECT_EQ(magma_bo_references(buf0, buf1), 0);
+    EXPECT_EQ(magma_bo_references(buf1, buf2), 1);
+    EXPECT_EQ(magma_bo_references(buf0, buf2), 0);
+
+    magma_gem_bo_clear_relocs(buf1, 0);
+
+    EXPECT_EQ(magma_bo_references(buf0, buf1), 0);
+    EXPECT_EQ(magma_bo_references(buf1, buf2), 0);
+    EXPECT_EQ(magma_bo_references(buf0, buf2), 0);
+
+    magma_bufmgr_destroy(connection);
+}
+
 class TestMagmaBuffer {
 public:
     static void TestPrepareForExecution(MagmaConnection* connection)

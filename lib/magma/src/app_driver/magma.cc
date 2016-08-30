@@ -127,8 +127,8 @@ int32_t magma_bo_references(magma_buffer* bo, magma_buffer* target_bo)
 {
     DLOG("magma_bo_references bo %s target_bo %s", MagmaBuffer::cast(bo)->Name(),
          MagmaBuffer::cast(target_bo)->Name());
-    UNIMPLEMENTED("magma_bo_references");
-    return 0;
+
+    return MagmaBuffer::cast(bo)->References(MagmaBuffer::cast(target_bo));
 }
 
 int32_t magma_bo_subdata(magma_buffer* bo, uint32_t offset, uint32_t size, const void* data)

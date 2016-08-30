@@ -124,6 +124,16 @@ std::unique_ptr<MagmaBuffer::CommandBuffer> MagmaBuffer::PrepareForExecution()
     return std::unique_ptr<CommandBuffer>(new CommandBuffer(res_index, resources));
 }
 
+bool MagmaBuffer::References(MagmaBuffer* target)
+{
+    for (auto relocation : relocations_) {
+        if (relocation.target() == target ||
+            (relocation.target() != this && relocation.target()->References(target)))
+            return true;
+    }
+    return false;
+}
+
 // we do all the memory allocations here so that we have the option of allocating contiguous
 // memory if needed for IPC
 MagmaBuffer::CommandBuffer::CommandBuffer(uint32_t batch_buffer_resource_index,
