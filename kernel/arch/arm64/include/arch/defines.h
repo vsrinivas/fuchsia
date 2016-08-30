@@ -24,5 +24,13 @@
 #define PAGE_SIZE (1L << PAGE_SIZE_SHIFT)
 #define USER_PAGE_SIZE (1L << USER_PAGE_SIZE_SHIFT)
 
-#define CACHE_LINE 32
+#if ARM64_CPU_CORTEX_A53
+#define CACHE_LINE 64
+#elif ARM64_CPU_CORTEX_A57
+#define CACHE_LINE 64
+#elif ARM64_CPU_CORTEX_A72
+#define CACHE_LINE 64
+#else
+#error "define CACHE_LINE for the specific core"
+#endif
 
