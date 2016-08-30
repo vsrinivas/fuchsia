@@ -308,7 +308,7 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     memcpy(msg.data, data, len);
     msg.data[len] = 0;
 
-    mx_status_t status = mx_message_write(loader_svc,
+    mx_status_t status = mx_msgpipe_write(loader_svc,
                                           &msg, sizeof(msg.header) + len + 1,
                                           NULL, 0, 0);
     if (status != NO_ERROR)
@@ -322,7 +322,7 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     mx_handle_t handle = MX_HANDLE_INVALID;
     uint32_t reply_size = sizeof(msg.header);
     uint32_t handle_count = 1;
-    status = mx_message_read(loader_svc, &msg, &reply_size,
+    status = mx_msgpipe_read(loader_svc, &msg, &reply_size,
                              &handle, &handle_count, 0);
     if (status != NO_ERROR)
         return status;
@@ -570,7 +570,7 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
         }
     }
 
-    mx_status_t status = mx_message_write(topipe, msg, msg_size,
+    mx_status_t status = mx_msgpipe_write(topipe, msg, msg_size,
                                           handles, nhandles, 0);
     if (status == NO_ERROR) {
         // message_write consumed all those handles.
@@ -650,11 +650,11 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     *sp = 0;
     if (lp->stack_size > 0) {
         // Allocate the initial thread's stack.
-        mx_handle_t stack_vmo = mx_vm_object_create(lp->stack_size);
+        mx_handle_t stack_vmo = mx_vmo_create(lp->stack_size);
         if (stack_vmo < 0)
             return stack_vmo;
         mx_vaddr_t stack_base;
-        mx_status_t status = mx_process_vm_map(
+        mx_status_t status = mx_process_map_vm(
             lp_proc(lp), stack_vmo, 0, lp->stack_size, &stack_base,
             MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
         if (status == NO_ERROR) {
@@ -723,7 +723,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         return ERR_NOT_ENOUGH_BUFFER;
     }
 
-    mx_status_t status = mx_message_write(to_child, msg, size,
+    mx_status_t status = mx_msgpipe_write(to_child, msg, size,
                                           lp->handles, lp->handle_count, 0);
     free(msg);
     if (status == NO_ERROR) {
@@ -746,7 +746,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
         return proc;
 
     mx_handle_t pipeh[2];
-    mx_status_t status = mx_message_pipe_create(pipeh, 0);
+    mx_status_t status = mx_msgpipe_create(pipeh, 0);
     if (status != NO_ERROR) {
         mx_handle_close(proc);
         return status;

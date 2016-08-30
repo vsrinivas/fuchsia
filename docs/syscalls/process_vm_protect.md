@@ -1,22 +1,22 @@
-# mx_process_vm_protect
+# mx_process_protect_vm
 
 ## NAME
 
-process_vm_protect - set protection of a memory mapping
+process_protect_vm - set protection of a memory mapping
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_process_vm_protect(mx_handle_t proc_handle,
+mx_status_t mx_process_protect_vm(mx_handle_t proc_handle,
                                   uintptr_t address, mx_size_t len,
                                   uint32_t prot);
 ```
 
 ## DESCRIPTION
 
-**process_vm_protect**() alters the access protections for the memory region
+**process_protect_vm**() alters the access protections for the memory region
 in which *address* is located. The *prot* argument should be either
 PROT_NONE or the bitwise OR of one or more of PROT_READ, PROT_WRITE, and
 PROT_EXEC.
@@ -26,7 +26,7 @@ function.
 
 ## RETURN VALUE
 
-**process_vm_protect**() returns **NO_ERROR** on success.
+**process_protect_vm**() returns **NO_ERROR** on success.
 
 ## ERRORS
 
@@ -45,6 +45,6 @@ PROT_NONE is not yet supported.
 
 ## SEE ALSO
 
-process_vm_map,
-process_vm_unmap
+process_map_vm,
+process_unmap_vm
 

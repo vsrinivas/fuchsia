@@ -87,7 +87,7 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t*
     }
 
     mx_handle_t h[2];
-    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
         free(newios);
         return r;
     }

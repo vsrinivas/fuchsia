@@ -36,12 +36,12 @@ bool serve_echo_request(mx_handle_t handle) {
     // Try to read a message from |in_handle|.
     // First, figure out size.
     uint32_t in_msg_size = 0u;
-    mx_status_t read_status = mx_message_read(handle, NULL, &in_msg_size, NULL, NULL, 0u);
+    mx_status_t read_status = mx_msgpipe_read(handle, NULL, &in_msg_size, NULL, NULL, 0u);
     ASSERT_NEQ(read_status, ERR_NO_MEMORY, "unexpected sizing read status");
 
     unittest_printf("reading message of size %u\n", in_msg_size);
     void* in_msg_buf = calloc(in_msg_size, 1u);
-    read_status = mx_message_read(handle, in_msg_buf, &in_msg_size, NULL, NULL, 0u);
+    read_status = mx_msgpipe_read(handle, in_msg_buf, &in_msg_size, NULL, NULL, 0u);
     ASSERT_EQ(read_status, NO_ERROR, "read failed with status");
 
     // Try to parse message data.
@@ -105,7 +105,7 @@ bool serve_echo_request(mx_handle_t handle) {
     free(in_msg_buf);
 
     mx_status_t write_status =
-        mx_message_write(handle, out_msg_buf, out_msg_size, NULL, 0u, 0u);
+        mx_msgpipe_write(handle, out_msg_buf, out_msg_size, NULL, 0u, 0u);
     free(out_msg_buf);
 
     ASSERT_EQ(write_status, NO_ERROR, "Error while message writing");
@@ -117,7 +117,7 @@ bool serve_echo_request(mx_handle_t handle) {
 bool echo_test(void) {
     BEGIN_TEST;
     mx_handle_t handles[2] = {0};
-    mx_status_t status = mx_message_pipe_create(handles, 0);
+    mx_status_t status = mx_msgpipe_create(handles, 0);
     ASSERT_EQ(status, 0, "could not create message pipe");
     unittest_printf("created message pipe with handle values %u and %u\n", handles[0], handles[1]);
     for (int i = 0; i < 3; i++) {
@@ -132,7 +132,7 @@ bool echo_test(void) {
             4,          // array header: num elems
             0x42424143, // array contents: 'CABB'
         };
-        mx_handle_t status = mx_message_write(handles[1], (void*)buf, sizeof(buf), NULL, 0u, 0u);
+        mx_handle_t status = mx_msgpipe_write(handles[1], (void*)buf, sizeof(buf), NULL, 0u, 0u);
         ASSERT_EQ(status, NO_ERROR, "could not write echo request");
 
         ASSERT_TRUE(serve_echo_request(handles[0]), "serve_echo_request failed");

@@ -56,7 +56,7 @@ IOP_Packet* ExceptionPort::MakePacket(uint64_t key, const mx_exception_report_t*
 
     memcpy(&pkt_data->report, report, size);
     pkt_data->hdr.key = key;
-    pkt_data->hdr.type = MX_IO_PORT_PKT_TYPE_EXCEPTION;
+    pkt_data->hdr.type = MX_PORT_PKT_TYPE_EXCEPTION;
     pkt_data->hdr.extra = 0; // currently unused
 
     return pk;

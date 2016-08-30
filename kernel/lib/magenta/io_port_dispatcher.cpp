@@ -45,7 +45,7 @@ IOP_Packet* IOP_Packet::MakeFromUser(const void* data, mx_size_t size) {
         reinterpret_cast<char*>(pk) + sizeof(IOP_Packet));
 
     auto status = magenta_copy_from_user(data, header, size);
-    header->type = MX_IO_PORT_PKT_TYPE_USER;
+    header->type = MX_PORT_PKT_TYPE_USER;
 
     return (status == NO_ERROR) ? pk : nullptr;
 }

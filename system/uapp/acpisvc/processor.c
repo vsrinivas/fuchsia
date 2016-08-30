@@ -54,7 +54,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
 
     uint32_t num_bytes = 0;
     uint32_t num_handles = 0;
-    mx_status_t status = mx_message_read(h, NULL, &num_bytes, NULL, &num_handles, 0);
+    mx_status_t status = mx_msgpipe_read(h, NULL, &num_bytes, NULL, &num_handles, 0);
     if (status == ERR_BAD_STATE) {
         return ERR_DISPATCHER_NO_WORK;
     } else if (status != ERR_NOT_ENOUGH_BUFFER ||
@@ -65,7 +65,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
     }
 
     uint8_t buf[ACPI_MAX_REQUEST_SIZE];
-    status = mx_message_read(h, buf, &num_bytes, NULL, NULL, 0);
+    status = mx_msgpipe_read(h, buf, &num_bytes, NULL, NULL, 0);
     if (status != NO_ERROR) {
         goto cleanup;
     }
@@ -175,7 +175,7 @@ static mx_status_t send_error(mx_handle_t h, uint32_t req_id, mx_status_t status
         .request_id = req_id,
     };
 
-    return mx_message_write(h, &rsp, sizeof(rsp), NULL, 0, 0);
+    return mx_msgpipe_write(h, &rsp, sizeof(rsp), NULL, 0, 0);
 }
 
 static mx_status_t cmd_list_children(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
@@ -284,7 +284,7 @@ static mx_status_t cmd_list_children(mx_handle_t h, acpi_handle_ctx_t* ctx, void
         goto cleanup;
     }
 
-    status = mx_message_write(h, rsp, rsp_size, NULL, 0, 0);
+    status = mx_msgpipe_write(h, rsp, rsp_size, NULL, 0, 0);
 
 cleanup:
     free(rsp);
@@ -317,7 +317,7 @@ static mx_status_t cmd_get_child_handle(mx_handle_t h, acpi_handle_ctx_t* ctx, v
     child_ctx->root_node = false;
 
     mx_handle_t msg_pipe[2];
-    status = mx_message_pipe_create(msg_pipe, 0);
+    status = mx_msgpipe_create(msg_pipe, 0);
     if (status != NO_ERROR) {
         free(child_ctx);
         return send_error(h, cmd->hdr.request_id, status);
@@ -337,7 +337,7 @@ static mx_status_t cmd_get_child_handle(mx_handle_t h, acpi_handle_ctx_t* ctx, v
         },
     };
 
-    status = mx_message_write(h, &rsp, sizeof(rsp), msg_pipe, 1, 0);
+    status = mx_msgpipe_write(h, &rsp, sizeof(rsp), msg_pipe, 1, 0);
     if (status != NO_ERROR) {
         goto cleanup;
     }
@@ -394,7 +394,7 @@ static mx_status_t cmd_get_pci_init_arg(mx_handle_t h, acpi_handle_ctx_t* ctx, v
     rsp->hdr.request_id = cmd->hdr.request_id,
     memcpy(&rsp->arg, arg, arg_size);
 
-    status = mx_message_write(h, rsp, len, NULL, 0, 0);
+    status = mx_msgpipe_write(h, rsp, len, NULL, 0, 0);
 
 cleanup:
     free(arg);

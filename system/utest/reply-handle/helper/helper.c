@@ -23,7 +23,7 @@ int main(void) {
 
     dsz = sizeof(data);
     hsz = 1;
-    if ((r = mx_message_read(h0, data, &dsz, &h1, &hsz, 0)) < 0) {
+    if ((r = mx_msgpipe_read(h0, data, &dsz, &h1, &hsz, 0)) < 0) {
         printf("helper: failed to read message %d\n", r);
         return -1;
     }
@@ -31,9 +31,9 @@ int main(void) {
         printf("no handle received\n");
         return -1;
     }
-    if ((r = mx_message_write(h1, "okay", 5, &h1, 1, 0)) < 0) {
+    if ((r = mx_msgpipe_write(h1, "okay", 5, &h1, 1, 0)) < 0) {
         printf("helper: failed to write message %d\n", r);
-        mx_message_write(h1, "fail", 5, NULL, 0, 0);
+        mx_msgpipe_write(h1, "fail", 5, NULL, 0, 0);
         return -1;
     }
     puts("helper: done");

@@ -126,7 +126,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             // We assume (per protocol) that the whole thing is
             // mapped.  Thus we know the bounds of our stack.
             uint64_t stack_vmo_size;
-            status = mx_vm_object_get_size(handles[i], &stack_vmo_size);
+            status = mx_vmo_get_size(handles[i], &stack_vmo_size);
             if (status == NO_ERROR) {
                 libc.stack_size = stack_vmo_size;
                 libc.stack_base = stack_end - libc.stack_size;

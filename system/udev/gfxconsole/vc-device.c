@@ -334,11 +334,11 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
         goto fail;
 
     size_t sz = hw_gfx->pixelsize * hw_gfx->stride * (hw_gfx->height - device->charh);
-    if ((device->gfx_vmo = mx_vm_object_create(sz)) < 0)
+    if ((device->gfx_vmo = mx_vmo_create(sz)) < 0)
         goto fail;
 
     uintptr_t ptr;
-    if (mx_process_vm_map(0, device->gfx_vmo, 0, sz, &ptr,
+    if (mx_process_map_vm(0, device->gfx_vmo, 0, sz, &ptr,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE) < 0) {
         mx_handle_close(device->gfx_vmo);
         goto fail;

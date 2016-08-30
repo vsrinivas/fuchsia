@@ -179,7 +179,7 @@ mx_status_t tpm_init(mx_driver_t* driver) {
         goto cleanup_device;
     }
 
-    irq_handle = mx_interrupt_event_create(get_root_resource(), 10, MX_FLAG_REMAP_IRQ);
+    irq_handle = mx_interrupt_create(get_root_resource(), 10, MX_FLAG_REMAP_IRQ);
     if (irq_handle < 0) {
         status = irq_handle;
         goto cleanup_device;

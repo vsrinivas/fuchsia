@@ -29,7 +29,7 @@ static mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
 
     for (;;) {
         sz = len;
-        r = mx_message_read(h, data, &sz, NULL, NULL, 0);
+        r = mx_msgpipe_read(h, data, &sz, NULL, NULL, 0);
         if (r == 0) {
             return sz;
         }
@@ -56,7 +56,7 @@ static ssize_t mx_pipe_write(mxio_t* io, const void* _data, size_t len) {
 
     while (len > 0) {
         size_t xfer = (len > MXIO_CHUNK_SIZE) ? MXIO_CHUNK_SIZE : len;
-        r = mx_message_write(p->h, data, xfer, NULL, 0, 0);
+        r = mx_msgpipe_write(p->h, data, xfer, NULL, 0, 0);
         if (r < 0)
             break;
         len -= xfer;
@@ -174,7 +174,7 @@ mxio_t* mxio_pipe_create(mx_handle_t h) {
 int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
     mx_handle_t h[2];
     mxio_t *a, *b;
-    mx_status_t r = mx_message_pipe_create(h, 0);
+    mx_status_t r = mx_msgpipe_create(h, 0);
     if (r < 0)
         return r;
     if ((a = mxio_pipe_create(h[0])) == NULL) {
@@ -194,7 +194,7 @@ int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
 
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types) {
     mx_status_t r;
-    if ((r = mx_message_pipe_create(handles, 0)) < 0) {
+    if ((r = mx_msgpipe_create(handles, 0)) < 0) {
         return r;
     }
     types[0] = MX_HND_TYPE_MXIO_PIPE;
@@ -207,7 +207,7 @@ mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type) {
     mx_status_t r;
     mxio_t* io;
     int fd;
-    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
         return r;
     }
     if ((io = mxio_pipe_create(h[0])) == NULL) {

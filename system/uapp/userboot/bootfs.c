@@ -14,18 +14,18 @@
 
 void bootfs_mount(mx_handle_t log, mx_handle_t vmo, struct bootfs *fs) {
     uint64_t size;
-    mx_status_t status = mx_vm_object_get_size(vmo, &size);
-    check(log, status, "mx_vm_object_get_size failed on bootfs vmo\n");
+    mx_status_t status = mx_vmo_get_size(vmo, &size);
+    check(log, status, "mx_vmo_get_size failed on bootfs vmo\n");
     uintptr_t addr = 0;
-    status = mx_process_vm_map(0, vmo, 0, size, &addr, MX_VM_FLAG_PERM_READ);
-    check(log, status, "mx_process_vm_map failed on bootfs vmo\n");
+    status = mx_process_map_vm(0, vmo, 0, size, &addr, MX_VM_FLAG_PERM_READ);
+    check(log, status, "mx_process_map_vm failed on bootfs vmo\n");
     fs->contents =  (const void*)addr;
     fs->len = size;
 }
 
 void bootfs_unmount(mx_handle_t log, struct bootfs *fs) {
-    mx_status_t status = mx_process_vm_unmap(0, (uintptr_t)fs->contents, 0);
-    check(log, status, "mx_process_vm_unmap failed\n");
+    mx_status_t status = mx_process_unmap_vm(0, (uintptr_t)fs->contents, 0);
+    check(log, status, "mx_process_unmap_vm failed\n");
 }
 
 
@@ -86,15 +86,15 @@ mx_handle_t bootfs_open(mx_handle_t log,
     if (fs->len - file.offset < file.size)
         fail(log, ERR_INVALID_ARGS, "bogus size in bootfs header!\n");
 
-    mx_handle_t vmo = mx_vm_object_create(file.size);
+    mx_handle_t vmo = mx_vmo_create(file.size);
     if (vmo < 0)
-        fail(log, vmo, "mx_vm_object_create failed\n");
-    mx_ssize_t n = mx_vm_object_write(vmo, &fs->contents[file.offset],
+        fail(log, vmo, "mx_vmo_create failed\n");
+    mx_ssize_t n = mx_vmo_write(vmo, &fs->contents[file.offset],
                                       0, file.size);
     if (n < 0)
-        fail(log, n, "mx_vm_object_write failed\n");
+        fail(log, n, "mx_vmo_write failed\n");
     if (n != (mx_ssize_t)file.size)
-        fail(log, ERR_IO, "mx_vm_object_write short write\n");
+        fail(log, ERR_IO, "mx_vmo_write short write\n");
 
     return vmo;
 }

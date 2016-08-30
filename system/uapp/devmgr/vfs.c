@@ -268,7 +268,7 @@ static ssize_t do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_
             return ERR_NO_MEMORY;
         }
         mx_handle_t h[2];
-        if (mx_message_pipe_create(h, 0) < 0) {
+        if (mx_msgpipe_create(h, 0) < 0) {
             free(watcher);
             return ERR_NO_RESOURCES;
         }
@@ -476,7 +476,7 @@ mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn) {
         return ERR_NO_MEMORY;
     ios->vn = vn;
 
-    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
         free(ios);
         return r;
     }
@@ -558,7 +558,7 @@ void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
     vnode_watcher_t* tmp;
     list_for_every_entry_safe (&vn->watch_list, watcher, tmp, vnode_watcher_t, node) {
         mx_status_t status;
-        if ((status = mx_message_write(watcher->h, name, len, NULL, 0, 0)) < 0) {
+        if ((status = mx_msgpipe_write(watcher->h, name, len, NULL, 0, 0)) < 0) {
             xprintf("devfs: watcher %p write failed %d\n", watcher, status);
             list_delete(&watcher->node);
             mx_handle_close(watcher->h);

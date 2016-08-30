@@ -143,7 +143,7 @@ mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
 
     uint32_t dsz = sizeof(msg);
     uint32_t hcount = 1;
-    if ((r = mx_message_read(h, &msg, &dsz, &hnd, &hcount, 0)) < 0) {
+    if ((r = mx_msgpipe_read(h, &msg, &dsz, &hnd, &hcount, 0)) < 0) {
         if (r == ERR_BAD_STATE) {
             return ERR_DISPATCHER_NO_WORK;
         }
@@ -173,7 +173,7 @@ mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
         goto fail;
     }
     msg.op = DH_OP_STATUS;
-    if ((r = mx_message_write(h, &msg, sizeof(msg), NULL, 0, 0)) < 0) {
+    if ((r = mx_msgpipe_write(h, &msg, sizeof(msg), NULL, 0, 0)) < 0) {
         return r;
     }
     return NO_ERROR;
@@ -218,7 +218,7 @@ mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
 
     mx_handle_t h[2];
     mx_status_t r;
-    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
         free(dh);
         return r;
     }

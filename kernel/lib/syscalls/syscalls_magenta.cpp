@@ -1396,7 +1396,7 @@ mx_handle_t sys_port_create(uint32_t options) {
 mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
-    if (size > MX_IO_PORT_MAX_PKT_SIZE)
+    if (size > MX_PORT_MAX_PKT_SIZE)
         return ERR_NOT_ENOUGH_BUFFER;
 
     if (size < sizeof(mx_packet_header_t))
@@ -1816,7 +1816,7 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
 mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
                              mx_time_t timeout,
                              mxtl::user_ptr<uint32_t> _num_results,
-                             mxtl::user_ptr<mx_wait_set_result_t> _results,
+                             mxtl::user_ptr<mx_waitset_result_t> _results,
                              mxtl::user_ptr<uint32_t> _max_results) {
     LTRACEF("wait set handle %d\n", ws_handle);
 
@@ -1824,7 +1824,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     if (copy_from_user_u32(&num_results, _num_results) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    mxtl::unique_ptr<mx_wait_set_result_t[]> results;
+    mxtl::unique_ptr<mx_waitset_result_t[]> results;
     if (num_results > 0u) {
         if (num_results > kMaxWaitSetWaitResults)
             return ERR_TOO_BIG;
@@ -1832,7 +1832,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
         // TODO(vtl): It kind of sucks that we always have to allocate the indicated maximum size
         // here (namely, |num_results|).
         AllocChecker ac;
-        results.reset(new (&ac) mx_wait_set_result_t[num_results]);
+        results.reset(new (&ac) mx_waitset_result_t[num_results]);
         if (!ac.check())
             return ERR_NO_MEMORY;
     }
@@ -1855,7 +1855,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
         if (copy_to_user_u32(_num_results, num_results) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (num_results > 0u) {
-            if (copy_to_user(_results, results.get(), num_results * sizeof(mx_wait_set_result_t)) !=
+            if (copy_to_user(_results, results.get(), num_results * sizeof(mx_waitset_result_t)) !=
                     NO_ERROR)
             return ERR_INVALID_ARGS;
         }

@@ -1,24 +1,24 @@
-# mx_io_port_queue
+# mx_port_queue
 
 ## NAME
 
-io_port_queue - queue a packet to an IO port
+port_queue - queue a packet to an IO port
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_io_port_queue(mx_handle_t handle, const void* packet, mx_size_t size);
+mx_status_t mx_port_queue(mx_handle_t handle, const void* packet, mx_size_t size);
 
 ```
 
 ## DESCRIPTION
 
-**io_port_queue**() attempts to queue a *packet* of *size*
+**port_queue**() attempts to queue a *packet* of *size*
 bytes to the IO port specified by *handle*. The *packet* must begin
 with **mx_packet_header_t** and *size* must be the no bigger than
-**MX_IO_PORT_MAX_PKT_SIZE**.
+**MX_PORT_MAX_PKT_SIZE**.
 
 ```
 typedef struct mx_packet_header {
@@ -29,14 +29,14 @@ typedef struct mx_packet_header {
 
 ```
 *key* and *exta* values will be preserved and *type* value will be
-internally recorded as **MX_IO_PORT_PKT_TYPE_USER** to signal the
-consumer of the packet that the packet comes from the **io_port_queue**()
+internally recorded as **MX_PORT_PKT_TYPE_USER** to signal the
+consumer of the packet that the packet comes from the **port_queue**()
 operation as opposed to packets generated from bound handles which
-have the type set to MX_IO_PORT_PKT_TYPE_IOSN.
+have the type set to MX_PORT_PKT_TYPE_IOSN.
 
 ## RETURN VALUE
 
-**io_port_queue**() returns **NO_ERROR** on successful queue of a packet.
+**port_queue**() returns **NO_ERROR** on successful queue of a packet.
 
 ## ERRORS
 
@@ -50,12 +50,12 @@ of **mx_packet_header_t**.
 
 ## NOTES
 
-The queue is drained by calling **io_port_wait**().
+The queue is drained by calling **port_wait**().
 
 
 ## SEE ALSO
 
-[io_port_create](io_port_create.md).
-[io_port_wait](io_port_wait.md).
-[io_port_bind](io_port_bind.md).
+[port_create](port_create.md).
+[port_wait](port_wait.md).
+[port_bind](port_bind.md).
 

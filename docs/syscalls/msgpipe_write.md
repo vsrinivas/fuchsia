@@ -1,15 +1,15 @@
-# mx_message_write
+# mx_msgpipe_write
 
 ## NAME
 
-message_write - write a message to a message pipe
+msgpipe_write - write a message to a message pipe
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_message_write(mx_handle_t handle,
+mx_status_t mx_msgpipe_write(mx_handle_t handle,
                              void* bytes, uint32_t num_bytes,
                              mx_handle_t* handles, uint32_t num_handles,
                              uint32_t flags);
@@ -17,7 +17,7 @@ mx_status_t mx_message_write(mx_handle_t handle,
 
 ## DESCRIPTION
 
-**message_write**() attempts to write a message of *num_bytes*
+**msgpipe_write**() attempts to write a message of *num_bytes*
 bytes and *num_handles* handles to the message pipe specified by
 *handle*.  The pointers *handles* and *bytes* may be null if their
 respective sizes are zero.
@@ -29,11 +29,11 @@ If the *handle* message pipe is not a reply pipe, it is invalid
 to include *handle* in the *handles* array.
 
 To create a reply pipe, use MX_FLAG_REPLY_PIPE in the
-**message_pipe_create**() call.
+**msgpipe_create**() call.
 
 ## RETURN VALUE
 
-**message_write**() returns **NO_ERROR** on success.
+**msgpipe_write**() returns **NO_ERROR** on success.
 
 ## ERRORS
 
@@ -68,5 +68,5 @@ array, not its size in bytes.
 [handle_replace](handle_replace.md),
 [handle_wait_one](handle_wait_one),
 [handle_wait_many](handle_wait_many.md),
-[message_pipe_create](message_pipe_create.md),
-[message_read](message_read.md).
+[msgpipe_create](msgpipe_create.md),
+[msgpipe_read](msgpipe_read.md).

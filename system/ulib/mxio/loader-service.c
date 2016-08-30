@@ -56,7 +56,7 @@ static mx_handle_t default_load_object(void* ignored, const char* fn) {
         goto fail;
     }
 
-    if ((vmo = mx_vm_object_create(s.st_size)) < 0) {
+    if ((vmo = mx_vmo_create(s.st_size)) < 0) {
         err = vmo;
         goto fail;
     }
@@ -70,7 +70,7 @@ static mx_handle_t default_load_object(void* ignored, const char* fn) {
             fprintf(stderr, "dlsvc: read error @%zd in '%s'\n", off, path);
             goto fail;
         }
-        if ((r = mx_vm_object_write(vmo, buffer, off, xfer)) != xfer) {
+        if ((r = mx_vmo_write(vmo, buffer, off, xfer)) != xfer) {
             err = (r < 0) ? r : ERR_IO;
             goto fail;
         }
@@ -114,7 +114,7 @@ static int loader_service_thread(void* arg) {
             break;
         }
         uint32_t sz = sizeof(data);
-        if ((r = mx_message_read(h, msg, &sz, NULL, NULL, 0)) < 0) {
+        if ((r = mx_msgpipe_read(h, msg, &sz, NULL, NULL, 0)) < 0) {
             // This is the normal error for the other end going away,
             // which happens when the process dies.
             if (r != ERR_CHANNEL_CLOSED)
@@ -150,7 +150,7 @@ static int loader_service_thread(void* arg) {
         msg->opcode = LOADER_SVC_OP_STATUS;
         msg->reserved0 = 0;
         msg->reserved1 = 0;
-        if ((r = mx_message_write(h, msg, sizeof(mx_loader_svc_msg_t),
+        if ((r = mx_msgpipe_write(h, msg, sizeof(mx_loader_svc_msg_t),
                                   &handle, handle > 0 ? 1 : 0, 0)) < 0) {
             fprintf(stderr, "dlsvc: msg write error: %d\n", r);
             break;
@@ -176,7 +176,7 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
     mx_handle_t h[2];
     mx_status_t r;
 
-    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
         free(startup);
         return r;
     }

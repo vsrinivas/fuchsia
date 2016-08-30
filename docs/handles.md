@@ -60,17 +60,17 @@ There is one syscall that just destroys a handle:
 
 There is only one syscall that takes a handle bound to calling
 process and binds it into kernel (puts the handle in-transit):
-+ `mx_message_write`
++ `mx_msgpipe_write`
 
 There is only one syscall that takes an in-transit handle and
 binds it to the calling process:
-+ `mx_message_read`
++ `mx_msgpipe_read`
 
 The pair of 'message' syscalls above are used to effectively transfer
 a handle from one process to another. The gist is that it is possible
 to connect two processes with a 'message pipe'. To transfer a handle
-the source process calls `mx_message_write` and then the
-destination process calls `mx_message_read` on the same pipe.
+the source process calls `mx_msgpipe_write` and then the
+destination process calls `mx_msgpipe_read` on the same pipe.
 
 Finally, there is a single syscall that gives a new process its
 boostrapping handle, that is, the handle that it can use to

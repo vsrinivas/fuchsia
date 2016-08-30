@@ -493,11 +493,11 @@ static int i8042_irq_thread(void* arg) {
         return 0;
 
     for (;;) {
-        status = mx_interrupt_event_wait(device->irq);
+        status = mx_interrupt_wait(device->irq);
         if (status == NO_ERROR) {
             // ack IRQ so we don't lose any IRQs that arrive while processing
             // (as this is an edge-triggered IRQ)
-            mx_interrupt_event_complete(device->irq);
+            mx_interrupt_complete(device->irq);
 
             // keep handling status on the controller until no bits are set we care about
             bool retry;
@@ -681,7 +681,7 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev) {
 
     uint32_t interrupt = dev->type == INPUT_PROTO_KBD ?
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
-    dev->irq = mx_interrupt_event_create(get_root_resource(), interrupt, MX_FLAG_REMAP_IRQ);
+    dev->irq = mx_interrupt_create(get_root_resource(), interrupt, MX_FLAG_REMAP_IRQ);
     if (dev->irq < 0) {
         hid_release_device(&dev->hiddev);
         return dev->irq;

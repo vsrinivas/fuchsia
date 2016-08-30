@@ -63,7 +63,7 @@ static bool create_destroy_test(void) {
     mx_handle_t producer;
     mx_handle_t consumer;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(1), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(1), &consumer);
     ASSERT_GT(producer, 0, "could not create producer data pipe");
     ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
@@ -73,9 +73,9 @@ static bool create_destroy_test(void) {
     ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, "");
     ASSERT_EQ(get_satisfiable_signals(producer), MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
 
-    status = mx_data_pipe_end_write(producer, 0u);
+    status = mx_datapipe_end_write(producer, 0u);
     ASSERT_EQ(status, ERR_BAD_STATE, "wrong pipe state");
-    status = mx_data_pipe_end_read(consumer, 0u);
+    status = mx_datapipe_end_read(consumer, 0u);
     ASSERT_EQ(status, ERR_BAD_STATE, "wrong pipe state");
 
     uintptr_t buffer = 0;
@@ -84,17 +84,17 @@ static bool create_destroy_test(void) {
     // TODO(cpu): re-enable this code when we have fine grained
     // control over MX_PROP_BAD_HANDLE_POLICY in the launcher.
 #if 0
-    avail = mx_data_pipe_begin_write(consumer, 0u, 100u, &buffer);
+    avail = mx_datapipe_begin_write(consumer, 0u, 100u, &buffer);
     ASSERT_EQ(avail, ERR_BAD_HANDLE, "expected error");
-    avail = mx_data_pipe_begin_read(producer, 0u, 100u, &buffer);
+    avail = mx_datapipe_begin_read(producer, 0u, 100u, &buffer);
     ASSERT_EQ(avail, ERR_BAD_HANDLE, "expected error");
 #endif
 
-    avail = mx_data_pipe_write(producer, 0u, 10u, "0123456789");
+    avail = mx_datapipe_write(producer, 0u, 10u, "0123456789");
     ASSERT_EQ(avail, 10, "expected success");
 
     // We know the data pipe rounds up to page size.
-    avail = mx_data_pipe_begin_write(producer, 0u, 4096u, &buffer);
+    avail = mx_datapipe_begin_write(producer, 0u, 4096u, &buffer);
     ASSERT_EQ(avail, 4086, "expected success");
 
     status = mx_handle_close(producer);
@@ -110,20 +110,20 @@ static bool loop_write_full(void) {
     mx_handle_t consumer;
     mx_status_t status;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(32), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(32), &consumer);
     ASSERT_GT(producer, 0, "could not create producer data pipe");
     ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     for (int ix = 0; ; ++ix) {
         uintptr_t buffer = 0;
-        mx_ssize_t avail = mx_data_pipe_begin_write(producer, 0u, KB_(4), &buffer);
+        mx_ssize_t avail = mx_datapipe_begin_write(producer, 0u, KB_(4), &buffer);
         if (avail < 0) {
             ASSERT_EQ(avail, ERR_NOT_READY, "wrong error");
             ASSERT_EQ(ix, 8, "wrong capacity");
             break;
         }
         memset((void*)buffer, ix, KB_(4));
-        status = mx_data_pipe_end_write(producer, KB_(4));
+        status = mx_datapipe_end_write(producer, KB_(4));
         ASSERT_EQ(status, NO_ERROR, "failed to end write");
     }
 
@@ -148,29 +148,29 @@ static bool simple_read_write(void) {
     mx_handle_t consumer;
     mx_status_t status;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(4), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(4), &consumer);
     ASSERT_GT(producer, 0, "data pipe creation failed");
     ASSERT_GT(consumer, 0, "data pipe creation failed");
 
-    mx_ssize_t written = mx_data_pipe_write(producer, 0u, 4, "hello");
+    mx_ssize_t written = mx_datapipe_write(producer, 0u, 4, "hello");
     ASSERT_EQ(written, 4, "write failed");
 
     status = mx_handle_close(producer);
     ASSERT_EQ(status, NO_ERROR, "");
 
     char buffer[64];
-    mx_ssize_t read = mx_data_pipe_read(consumer, 0u, 1, buffer);
+    mx_ssize_t read = mx_datapipe_read(consumer, 0u, 1, buffer);
     ASSERT_EQ(read, 1, "read failed");
 
     uintptr_t bb;
-    read = mx_data_pipe_begin_read(consumer, 0u, sizeof(buffer), &bb);
+    read = mx_datapipe_begin_read(consumer, 0u, sizeof(buffer), &bb);
     ASSERT_EQ(read, 3, "begin read failed");
 
     memcpy(&buffer[1], (char*)bb, 3u);
     int eq = memcmp(buffer, "hell", 4u);
     ASSERT_EQ(eq, 0, "");
 
-    status = mx_data_pipe_end_read(consumer, 3u);
+    status = mx_datapipe_end_read(consumer, 3u);
     ASSERT_EQ(status, NO_ERROR, "end read failed");
 
     status = mx_handle_close(consumer);
@@ -186,7 +186,7 @@ static bool write_read(void) {
     mx_handle_t consumer;
     mx_status_t status;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(32), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(32), &consumer);
     ASSERT_GT(producer, 0, "could not create producer data pipe");
     ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
@@ -200,7 +200,7 @@ static bool write_read(void) {
         f += 3000u;
     }
 
-    mx_ssize_t written = mx_data_pipe_write(producer, 0u, 4 * 3000u, buffer);
+    mx_ssize_t written = mx_datapipe_write(producer, 0u, 4 * 3000u, buffer);
     ASSERT_EQ(written, 4 * 3000, "write failed");
 
     ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_READABLE, "");
@@ -213,7 +213,7 @@ static bool write_read(void) {
     memset(buffer, 0, 4 * 3000u);
 
     for (int ix= 0; ix != 4; ++ix) {
-        mx_ssize_t read = mx_data_pipe_read(consumer, 0u, 3000u, buffer);
+        mx_ssize_t read = mx_datapipe_read(consumer, 0u, 3000u, buffer);
         ASSERT_EQ(read, 3000, "begin_read failed");
 
         bool equal = test_region((void*)buffer, 3000u, seed[ix]);
@@ -234,12 +234,12 @@ static bool begin_write_read(void) {
     mx_handle_t consumer;
     mx_status_t status;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(32), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(32), &consumer);
     ASSERT_GE(producer, 0, "could not create producer data pipe");
     ASSERT_GE(consumer, 0, "could not create consumer data pipe");
 
     uintptr_t buffer = 0;
-    mx_ssize_t avail = mx_data_pipe_begin_write(producer, 0u, 4 * 3000u, &buffer);
+    mx_ssize_t avail = mx_datapipe_begin_write(producer, 0u, 4 * 3000u, &buffer);
     ASSERT_EQ(avail, 4 * 3000, "begin_write failed");
 
     uint32_t seed[5] = {7u, 0u, 0u, 0u, 0u};
@@ -248,7 +248,7 @@ static bool begin_write_read(void) {
         buffer += 3000u;
     }
 
-    status = mx_data_pipe_end_write(producer, 12000u);
+    status = mx_datapipe_end_write(producer, 12000u);
     ASSERT_EQ(status, NO_ERROR, "failed to end write");
 
     status = mx_handle_close(producer);
@@ -256,13 +256,13 @@ static bool begin_write_read(void) {
 
     for (int ix= 0; ix != 4; ++ix) {
         buffer = 0;
-        avail = mx_data_pipe_begin_read(consumer, 0u, 3000u, &buffer);
+        avail = mx_datapipe_begin_read(consumer, 0u, 3000u, &buffer);
         ASSERT_EQ(avail, 3000, "begin_read failed");
 
         bool equal = test_region((void*)buffer, 3000u, seed[ix]);
         ASSERT_EQ(equal, true, "invalid data");
 
-        status = mx_data_pipe_end_read(consumer, 3000u);
+        status = mx_datapipe_end_read(consumer, 3000u);
         ASSERT_EQ(status, NO_ERROR, "failed to end read");
     }
 
@@ -278,29 +278,29 @@ static bool begin_write_read_large_request(void) {
     mx_handle_t consumer;
     mx_status_t status;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(32), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(32), &consumer);
     ASSERT_GE(producer, 0, "could not create producer data pipe");
     ASSERT_GE(consumer, 0, "could not create consumer data pipe");
 
     uintptr_t buffer = 0;
-    mx_ssize_t avail = mx_data_pipe_begin_write(producer, 0u, UINTPTR_MAX, &buffer);
+    mx_ssize_t avail = mx_datapipe_begin_write(producer, 0u, UINTPTR_MAX, &buffer);
     ASSERT_GT(avail, 0, "begin_write failed");
 
     uint32_t data[5] = {7u, 3u, 2u, 8u, 11u};
     memcpy((void*)buffer, data, sizeof(data));
-    status = mx_data_pipe_end_write(producer, avail);
+    status = mx_datapipe_end_write(producer, avail);
     ASSERT_EQ(status, NO_ERROR, "failed to end write");
 
     status = mx_handle_close(producer);
     ASSERT_GE(status, NO_ERROR, "failed to close data pipe");
 
-    avail = mx_data_pipe_begin_read(consumer, 0u, UINTPTR_MAX, &buffer);
+    avail = mx_datapipe_begin_read(consumer, 0u, UINTPTR_MAX, &buffer);
     ASSERT_GE(sizeof(data), 0u, "begin_read failed");
 
     bool equal = (memcmp((void*)buffer, data, sizeof(data)) == 0);
     ASSERT_EQ(equal, true, "Data does not match");
 
-    status = mx_data_pipe_end_read(consumer, avail);
+    status = mx_datapipe_end_read(consumer, avail);
     ASSERT_EQ(status, NO_ERROR, "failed to end read");
 
     status = mx_handle_close(consumer);
@@ -314,7 +314,7 @@ static bool loop_write_read(void) {
     mx_handle_t consumer;
     mx_status_t status;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(36), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(36), &consumer);
     ASSERT_GT(producer, 0, "could not create producer data pipe");
     ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
@@ -322,14 +322,14 @@ static bool loop_write_read(void) {
 
     // The writer goes faster, after 10 rounds the write cursor catches up from behind.
     for (int ix = 0; ; ++ix) {
-        mx_ssize_t written = mx_data_pipe_write(producer, 0u, KB_(12), buffer);
+        mx_ssize_t written = mx_datapipe_write(producer, 0u, KB_(12), buffer);
         if (written != KB_(12)) {
             ASSERT_EQ(ix, 9, "bad cursor management");
             ASSERT_EQ(written, KB_(9), "bad capacity");
             break;
         }
 
-        mx_ssize_t read = mx_data_pipe_read(consumer, 0u, KB_(9), buffer);
+        mx_ssize_t read = mx_datapipe_read(consumer, 0u, KB_(9), buffer);
         ASSERT_EQ(read, KB_(9), "read failed");
     }
 
@@ -346,14 +346,14 @@ static bool loop_begin_write_read(void) {
     mx_handle_t consumer;
     mx_status_t status;
 
-    producer = mx_data_pipe_create(0u, 1u, KB_(36), &consumer);
+    producer = mx_datapipe_create(0u, 1u, KB_(36), &consumer);
     ASSERT_GT(producer, 0, "could not create producer data pipe");
     ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     // The writer goes faster, after 10 rounds the write cursor catches up from behind.
     for (int ix = 0; ; ++ix) {
         uintptr_t buffer = 0;
-        mx_ssize_t avail = mx_data_pipe_begin_write(producer, 0u, KB_(12), &buffer);
+        mx_ssize_t avail = mx_datapipe_begin_write(producer, 0u, KB_(12), &buffer);
         if (avail != KB_(12)) {
             ASSERT_EQ(ix, 9, "bad cursor management");
             ASSERT_EQ(avail, KB_(9), "bad capacity");
@@ -361,12 +361,12 @@ static bool loop_begin_write_read(void) {
         }
 
         memset((void*)buffer, ix, KB_(12));
-        status = mx_data_pipe_end_write(producer, KB_(12));
+        status = mx_datapipe_end_write(producer, KB_(12));
         ASSERT_EQ(status, NO_ERROR, "failed to end write");
 
-        avail = mx_data_pipe_begin_read(consumer, 0u, KB_(9), &buffer);
+        avail = mx_datapipe_begin_read(consumer, 0u, KB_(9), &buffer);
         ASSERT_EQ(avail, KB_(9), "begin_read failed");
-        status = mx_data_pipe_end_read(consumer, KB_(9));
+        status = mx_datapipe_end_read(consumer, KB_(9));
         ASSERT_EQ(status, NO_ERROR, "failed to end read");
     }
 
@@ -384,7 +384,7 @@ static bool consumer_signals_when_producer_closed(void) {
         mx_handle_t producer;
         mx_handle_t consumer;
 
-        producer = mx_data_pipe_create(0u, 1u, KB_(1), &consumer);
+        producer = mx_datapipe_create(0u, 1u, KB_(1), &consumer);
         ASSERT_GT(producer, 0, "could not create data pipe producer");
         ASSERT_GT(consumer, 0, "could not create data pipe consumer");
 
@@ -402,11 +402,11 @@ static bool consumer_signals_when_producer_closed(void) {
         mx_handle_t producer;
         mx_handle_t consumer;
 
-        producer = mx_data_pipe_create(0u, 1u, KB_(1), &consumer);
+        producer = mx_datapipe_create(0u, 1u, KB_(1), &consumer);
         ASSERT_GT(producer, 0, "could not create data pipe producer");
         ASSERT_GT(consumer, 0, "could not create data pipe consumer");
 
-        ASSERT_EQ(mx_data_pipe_write(producer, 0u, 10u, "0123456789"), 10, "write failed");
+        ASSERT_EQ(mx_datapipe_write(producer, 0u, 10u, "0123456789"), 10, "write failed");
 
         ASSERT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
 
@@ -416,13 +416,13 @@ static bool consumer_signals_when_producer_closed(void) {
                   "incorrect satisfiable signals");
 
         char buffer[64];
-        ASSERT_EQ(mx_data_pipe_read(consumer, 0u, 5, buffer), 5, "read failed");
+        ASSERT_EQ(mx_datapipe_read(consumer, 0u, 5, buffer), 5, "read failed");
         ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                   "incorrect satisfied signals");
         ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                   "incorrect satisfiable signals");
 
-        ASSERT_EQ(mx_data_pipe_read(consumer, 0u, 5, buffer), 5, "read failed");
+        ASSERT_EQ(mx_datapipe_read(consumer, 0u, 5, buffer), 5, "read failed");
         ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_PEER_CLOSED,
                   "incorrect satisfied signals");
         ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_PEER_CLOSED,

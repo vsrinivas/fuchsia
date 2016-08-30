@@ -61,18 +61,18 @@ mx_handle_t tu_launch_mxio_etc(const char* name,
 mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
                              const char* name);
 
-// A wrapper on mx_message_pipe_create.
+// A wrapper on mx_msgpipe_create.
 // For callers that have separate variables for each side of the pipe, this takes two pointers
 // instead of an array of two handles that the syscall has.
 
 void tu_message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1);
 
-// A wrapper on mx_message_write.
+// A wrapper on mx_msgpipe_write.
 
 void tu_message_write(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
                       const mx_handle_t* handles, uint32_t num_handles, uint32_t flags);
 
-// A wrapper on mx_message_read.
+// A wrapper on mx_msgpipe_read.
 
 void tu_message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
                      mx_handle_t* handles, uint32_t* num_handles, uint32_t flags);

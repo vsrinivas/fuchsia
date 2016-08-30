@@ -99,11 +99,11 @@ static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
         [BOOTSTRAP_PROC] = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS),
     };
 
-    mx_status_t status = mx_message_write(
+    mx_status_t status = mx_msgpipe_write(
         to_child, &msg, sizeof(msg),
         handles, sizeof(handles) / sizeof(handles[0]), 0);
     check(log, status,
-          "mx_message_write of loader bootstrap message failed\n");
+          "mx_msgpipe_write of loader bootstrap message failed\n");
 }
 
 mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs,
@@ -119,12 +119,12 @@ mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs,
     if (interp_len > 0) {
         char interp[sizeof(INTERP_PREFIX) + interp_len];
         memcpy(interp, INTERP_PREFIX, sizeof(INTERP_PREFIX) - 1);
-        mx_ssize_t n = mx_vm_object_read(
+        mx_ssize_t n = mx_vmo_read(
             vmo, &interp[sizeof(INTERP_PREFIX) - 1], interp_off, interp_len);
         if (n < 0)
-            fail(log, n, "mx_vm_object_read failed\n");
+            fail(log, n, "mx_vmo_read failed\n");
         if (n != (mx_ssize_t)interp_len)
-            fail(log, ERR_ELF_BAD_FORMAT, "mx_vm_object_read short read\n");
+            fail(log, ERR_ELF_BAD_FORMAT, "mx_vmo_read short read\n");
         interp[sizeof(INTERP_PREFIX) - 1 + interp_len] = '\0';
 
         print(log, filename, " has PT_INTERP \"", interp, "\"\n", NULL);

@@ -19,7 +19,7 @@ int __mprotect(void* addr, size_t len, int prot) {
     mx_prot |= (prot & PROT_READ) ? MX_VM_FLAG_PERM_READ : 0;
     mx_prot |= (prot & PROT_WRITE) ? MX_VM_FLAG_PERM_WRITE : 0;
     mx_prot |= (prot & PROT_EXEC) ? MX_VM_FLAG_PERM_EXECUTE : 0;
-    mx_status_t status = mx_process_vm_protect(libc.proc, ptr, 0, mx_prot);
+    mx_status_t status = mx_process_protect_vm(libc.proc, ptr, 0, mx_prot);
     if (!status) return 0;
 
     switch (status) {

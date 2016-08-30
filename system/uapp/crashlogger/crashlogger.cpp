@@ -82,7 +82,7 @@ void process_report(const mx_exception_report_t* report) {
 }
 
 int main(int argc, char** argv) {
-    mx_handle_t ex_port = mx_io_port_create(0u);
+    mx_handle_t ex_port = mx_port_create(0u);
     if (ex_port < 0) {
         print_error(__LINE__);
         return 1;
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
 
     while (true) {
         mx_exception_packet_t packet;
-        mx_io_port_wait(ex_port, &packet, sizeof(packet));
+        mx_port_wait(ex_port, &packet, sizeof(packet));
         if (packet.hdr.key != kSysExceptionKey) {
             print_error(__LINE__, "invalid crash key");
             return 1;

@@ -42,7 +42,7 @@ mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENA
         return status;
     }
     uint32_t sz = MXIO_MAX_FILENAME;
-    if ((status = mx_message_read(watcher->h, name, &sz, NULL, NULL, 0)) < 0) {
+    if ((status = mx_msgpipe_read(watcher->h, name, &sz, NULL, NULL, 0)) < 0) {
         return status;
     }
     name[sz] = 0;

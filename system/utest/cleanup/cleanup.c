@@ -33,7 +33,7 @@ bool cleanup_test(void) {
     // TEST1
     // Create a pipe, close one end, try to wait on the other.
     test_state = 1;
-    r = mx_message_pipe_create(p1, 0);
+    r = mx_msgpipe_create(p1, 0);
     ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
 
     mx_handle_close(p1[1]);
@@ -54,14 +54,14 @@ bool cleanup_test(void) {
     // fails (because the other end is closed) The event should still
     // be usable from this process.
     test_state = 2;
-    r = mx_message_pipe_create(p1, 0);
+    r = mx_msgpipe_create(p1, 0);
     ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
     mx_handle_close(p1[1]);
 
     mx_handle_t event = mx_event_create(0u);
 
     ASSERT_GE(event, 0, "cleanup-test: event create failed");
-    r = mx_message_write(p1[0], &msg, sizeof(msg), &event, 1, 0);
+    r = mx_msgpipe_write(p1[0], &msg, sizeof(msg), &event, 1, 0);
     ASSERT_EQ(r, ERR_BAD_STATE, "cleanup-test: unexpected message_write return code");
 
     r = mx_object_signal(event, 0u, MX_SIGNAL_SIGNALED);
@@ -81,13 +81,13 @@ bool cleanup_test(void) {
     // be closed and waiting on the opposing handle should
     // signal PEER_CLOSED.
     test_state = 3;
-    r = mx_message_pipe_create(p0, 0);
+    r = mx_msgpipe_create(p0, 0);
     ASSERT_EQ(r, 0, "cleanup-test: pipe create 0 failed");
 
-    r = mx_message_pipe_create(p1, 0);
+    r = mx_msgpipe_create(p1, 0);
     ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
 
-    r = mx_message_write(p0[0], &msg, sizeof(msg), &p1[1], 1, 0);
+    r = mx_msgpipe_write(p0[0], &msg, sizeof(msg), &p1[1], 1, 0);
     ASSERT_GE(r, 0, "cleanup-test: pipe write failed");
 
     mx_handle_close(p0[0]);

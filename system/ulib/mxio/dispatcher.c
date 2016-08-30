@@ -92,7 +92,7 @@ setup:
         if (md->states[count].satisfied & MX_SIGNAL_READABLE) {
             uint32_t sz = sizeof(handler_t);
             handler_t a;
-            if ((r = mx_message_read(md->rx, &a, &sz, NULL, NULL, 0)) < 0) {
+            if ((r = mx_msgpipe_read(md->rx, &a, &sz, NULL, NULL, 0)) < 0) {
                 xprintf("dispatcher: read failure on new handle pipe %d\n", r);
                 break;
             }
@@ -128,7 +128,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
     mx_handle_t h[2];
-    mx_status_t r = mx_message_pipe_create(h, 0);
+    mx_status_t r = mx_msgpipe_create(h, 0);
     if (r < 0) {
         free(md);
         return r;
@@ -163,7 +163,7 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, 
     handler.h = h;
     handler.cb = cb;
     handler.cookie = cookie;
-    if ((r = mx_message_write(md->tx, &handler, sizeof(handler), NULL, 0, 0)) < 0) {
+    if ((r = mx_msgpipe_write(md->tx, &handler, sizeof(handler), NULL, 0, 0)) < 0) {
         return r;
     }
     return 0;

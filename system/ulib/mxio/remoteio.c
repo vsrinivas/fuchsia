@@ -89,7 +89,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
 
     msg.hcount = MXIO_MAX_HANDLES + 1;
     uint32_t dsz = sizeof(msg);
-    if ((r = mx_message_read(h, &msg, &dsz, msg.handle, &msg.hcount, 0)) < 0) {
+    if ((r = mx_msgpipe_read(h, &msg, &dsz, msg.handle, &msg.hcount, 0)) < 0) {
         if (r == ERR_BAD_STATE) {
             return ERR_DISPATCHER_NO_WORK;
         }
@@ -146,7 +146,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     }
 #endif
     msg.op = MXRIO_STATUS;
-    if ((r = mx_message_write(rh, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0)) < 0) {
+    if ((r = mx_msgpipe_write(rh, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0)) < 0) {
         discard_handles(msg.handle, msg.hcount);
     }
     if (is_close) {
@@ -169,7 +169,7 @@ mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg)
 
     mx_status_t r;
     uint32_t dsize = MXRIO_HDR_SZ + msg->datalen;
-    if ((r = mx_message_write(srv, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
+    if ((r = mx_msgpipe_write(srv, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
         return r;
     }
     return 0;
@@ -194,7 +194,7 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
 
 #if WITH_REPLY_PIPE
     mx_handle_t rpipe[2];
-    if ((r = mx_message_pipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
+    if ((r = mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
         return r;
     }
     msg->op |= MXRIO_REPLY_PIPE;
@@ -204,7 +204,7 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
     mx_handle_t rh = rio->h;
 #endif
 
-    if ((r = mx_message_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
+    if ((r = mx_msgpipe_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
         goto fail_discard_handles;
     }
 
@@ -221,7 +221,7 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
 
     dsize = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
     msg->hcount = MXIO_MAX_HANDLES + 1;
-    if ((r = mx_message_read(rh, msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
+    if ((r = mx_msgpipe_read(rh, msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
         goto done;
     }
 #if WITH_REPLY_PIPE

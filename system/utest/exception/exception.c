@@ -126,7 +126,7 @@ static bool test_received_exception(mx_handle_t eport,
                                     mx_koid_t* tid)
 {
     mx_exception_packet_t packet;
-    ASSERT_EQ(mx_io_port_wait(eport, &packet, sizeof(packet)), NO_ERROR, "mx_io_port_wait failed");
+    ASSERT_EQ(mx_port_wait(eport, &packet, sizeof(packet)), NO_ERROR, "mx_port_wait failed");
     const mx_exception_report_t* report = &packet.report;
 
     EXPECT_EQ(packet.hdr.key, 0u, "bad report key");

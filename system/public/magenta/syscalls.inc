@@ -227,7 +227,7 @@ MAGENTA_SYSCALL_DEF(4, 6, 241, mx_status_t, waitset_add, mx_handle_t waitset_han
                     mx_signals_t signals, uint64_t cookie)
 MAGENTA_SYSCALL_DEF(2, 4, 242, mx_status_t, waitset_remove, mx_handle_t waitset_handle, uint64_t cookie)
 MAGENTA_SYSCALL_DEF(5, 7, 243, mx_status_t, waitset_wait, mx_handle_t waitset_handle, mx_time_t timeout,
-                    USER_PTR(uint32_t) num_results, USER_PTR(mx_wait_set_result_t) results,
+                    USER_PTR(uint32_t) num_results, USER_PTR(mx_waitset_result_t) results,
                     USER_PTR(uint32_t) max_results)
 
 // Object Properties

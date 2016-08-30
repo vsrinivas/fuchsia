@@ -66,11 +66,11 @@ static mx_status_t allocate_stack(size_t stack_size, size_t guard_size, uintptr_
     // break up mapped regions and have PROT_NONE, the guard stuff is
     // easy to reintroduce.
 
-    mx_handle_t thread_stack_vmo = mx_vm_object_create(stack_size);
+    mx_handle_t thread_stack_vmo = mx_vmo_create(stack_size);
     if (thread_stack_vmo < 0)
         return thread_stack_vmo;
 
-    mx_status_t status = mx_process_vm_map(libc.proc, thread_stack_vmo, 0, stack_size, stack_out, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_status_t status = mx_process_map_vm(libc.proc, thread_stack_vmo, 0, stack_size, stack_out, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     mx_handle_close(thread_stack_vmo);
 
     return status;

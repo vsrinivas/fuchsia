@@ -13,9 +13,9 @@
 
 ## Message Pipes
 
-+ [message_pipe_create](syscalls/message_pipe_create.md)
-+ [message_read](syscalls/message_read.md)
-+ [message_write](syscalls/message_write.md)
++ [msgpipe_create](syscalls/msgpipe_create.md)
++ [msgpipe_read](syscalls/msgpipe_read.md)
++ [msgpipe_write](syscalls/msgpipe_write.md)
 
 ## Futexes
 
@@ -25,10 +25,10 @@
 
 ## IO Ports
 
-+ [io_port_create](syscalls/io_port_create.md)
-+ [io_port_queue](syscalls/io_port_queue.md)
-+ [io_port_wait](syscalls/io_port_wait.md)
-+ [io_port_bind](syscalls/io_port_bind.md)
++ [port_create](syscalls/port_create.md)
++ [port_queue](syscalls/port_queue.md)
++ [port_wait](syscalls/port_wait.md)
++ [port_bind](syscalls/port_bind.md)
 
 ## Threads
 + [thread_arch_prctl](syscalls/thread_arch_prctl.md)
@@ -38,7 +38,7 @@
 + [cprng_add_entropy](syscalls/cprng_add_entropy.md)
 
 ## Wait Sets
-+ [wait_set_create](syscalls/wait_set_create.md)
-+ [wait_set_add](syscalls/wait_set_add.md)
-+ [wait_set_remove](syscalls/wait_set_remove.md)
-+ [wait_set_wait](syscalls/wait_set_wait.md)
++ [waitset_create](syscalls/waitset_create.md)
++ [waitset_add](syscalls/waitset_add.md)
++ [waitset_remove](syscalls/waitset_remove.md)
++ [waitset_wait](syscalls/waitset_wait.md)

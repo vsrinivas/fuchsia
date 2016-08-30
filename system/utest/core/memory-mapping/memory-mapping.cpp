@@ -31,7 +31,7 @@ bool address_space_limits_test() {
 
 #if defined(__x86_64__)
     size_t page_size = getpagesize();
-    mx_handle_t vmo = mx_vm_object_create(page_size);
+    mx_handle_t vmo = mx_vmo_create(page_size);
     EXPECT_LT(0, vmo, "vm_object_create");
 
     // This is the lowest non-canonical address on x86-64.  We want to
@@ -43,7 +43,7 @@ bool address_space_limits_test() {
 
     // Check that we cannot map a page ending at |noncanon_addr|.
     uintptr_t addr = noncanon_addr - page_size;
-    mx_status_t status = mx_process_vm_map(
+    mx_status_t status = mx_process_map_vm(
         0, vmo, 0, page_size, &addr,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
     EXPECT_EQ(ERR_NO_MEMORY, status, "vm_map");
@@ -52,7 +52,7 @@ bool address_space_limits_test() {
     // verify that the previous check didn't fail for some unexpected
     // reason.
     addr = noncanon_addr - page_size * 2;
-    status = mx_process_vm_map(
+    status = mx_process_map_vm(
         0, vmo, 0, page_size, &addr,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
     EXPECT_EQ(NO_ERROR, status, "vm_map");
@@ -60,13 +60,13 @@ bool address_space_limits_test() {
     // Check that MX_VM_FLAG_FIXED fails on already-mapped locations.
     // Otherwise, the previous mapping could have overwritten
     // something that was in use, which could cause problems later.
-    status = mx_process_vm_map(
+    status = mx_process_map_vm(
         0, vmo, 0, page_size, &addr,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
     EXPECT_EQ(ERR_NO_MEMORY, status, "vm_map");
 
     // Clean up.
-    status = mx_process_vm_unmap(0, addr, 0);
+    status = mx_process_unmap_vm(0, addr, 0);
     EXPECT_EQ(NO_ERROR, status, "vm_unmap");
     status = mx_handle_close(vmo);
     EXPECT_EQ(NO_ERROR, status, "handle_close");

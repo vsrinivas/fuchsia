@@ -185,7 +185,7 @@ int writespam(int opt) {
     mx_status_t r;
     uint64_t count = 0;
 
-    if ((r = mx_message_pipe_create(p, 0)) < 0) {
+    if ((r = mx_msgpipe_create(p, 0)) < 0) {
         printf("cleanup-test: pipe create 0 failed: %d\n", r);
         return -1;
     }
@@ -193,7 +193,7 @@ int writespam(int opt) {
     printf("evil-tests: about to spam data into a pipe\n");
     for (;;) {
         count++;
-        if ((r = mx_message_write(p[0], data, sizeof(data), NULL, 0, 0)) < 0) {
+        if ((r = mx_msgpipe_write(p[0], data, sizeof(data), NULL, 0, 0)) < 0) {
             printf("evil-tests: SUCCESS, writespammer error %d after only %llu writes\n", r, count);
             return 0;
         }
@@ -218,7 +218,7 @@ int handlespam(void) {
     printf("evil-tests: about to create all the handles\n");
     for (;;) {
         mx_status_t status;
-        if ((status = mx_message_pipe_create(p, 0)) < 0) {
+        if ((status = mx_msgpipe_create(p, 0)) < 0) {
             printf("evil-tests: SUCCESS, pipe create failed %d after %llu created\n", status, count);
             return 0;
         }

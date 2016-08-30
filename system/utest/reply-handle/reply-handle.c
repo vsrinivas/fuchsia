@@ -18,30 +18,30 @@ int reply_handle_basic(void) {
     mx_handle_t p1[2], p2[2];
     mx_status_t r;
 
-    r = mx_message_pipe_create(p1, 0);
+    r = mx_msgpipe_create(p1, 0);
     ASSERT_EQ(r, NO_ERROR, "failed to create pipe p1");
 
-    r = mx_message_write(p1[0], "hello", 6, &p1[0], 1, 0);
+    r = mx_msgpipe_write(p1[0], "hello", 6, &p1[0], 1, 0);
     ASSERT_EQ(r, ERR_NOT_SUPPORTED, "expected failure");
 
-    r = mx_message_write(p1[1], "hello", 6, &p1[1], 1, 0);
+    r = mx_msgpipe_write(p1[1], "hello", 6, &p1[1], 1, 0);
     ASSERT_EQ(r, ERR_NOT_SUPPORTED, "expected failure");
 
-    r = mx_message_pipe_create(p2, MX_FLAG_REPLY_PIPE);
+    r = mx_msgpipe_create(p2, MX_FLAG_REPLY_PIPE);
     ASSERT_EQ(r, NO_ERROR, "failed to create pipe p2");
 
-    r = mx_message_write(p2[1], "hello", 6, NULL, 0, 0);
+    r = mx_msgpipe_write(p2[1], "hello", 6, NULL, 0, 0);
     ASSERT_EQ(r, ERR_BAD_STATE, "expected failure");
 
-    r = mx_message_write(p2[1], "hello", 6, &p1[1], 1, 0);
+    r = mx_msgpipe_write(p2[1], "hello", 6, &p1[1], 1, 0);
     ASSERT_EQ(r, ERR_BAD_STATE, "expected failure");
 
     mx_handle_t har1[2] = {p2[1], p1[1]};
-    r = mx_message_write(p2[1], "hello", 6, har1, 2, 0);
+    r = mx_msgpipe_write(p2[1], "hello", 6, har1, 2, 0);
     ASSERT_EQ(r, ERR_BAD_STATE, "expected failure");
 
     mx_handle_t har2[2] = {p1[1], p2[1]};
-    r = mx_message_write(p2[1], "hello", 6, har2, 2, 0);
+    r = mx_msgpipe_write(p2[1], "hello", 6, har2, 2, 0);
     ASSERT_EQ(r, NO_ERROR, "expected success");
 
     END_TEST;
@@ -55,16 +55,16 @@ int reply_handle_rw(void) {
     mx_status_t r;
     char msg[128];
 
-    r = mx_message_pipe_create(p1, 0);
+    r = mx_msgpipe_create(p1, 0);
     snprintf(msg, sizeof(msg), "failed to create pipe1 %d\n", r);
     ASSERT_EQ(r, 0, msg);
 
-    r = mx_message_pipe_create(p2, MX_FLAG_REPLY_PIPE);
+    r = mx_msgpipe_create(p2, MX_FLAG_REPLY_PIPE);
     snprintf(msg, sizeof(msg), "failed to create pipe2 %d\n", r);
     ASSERT_EQ(r, 0, msg);
 
     // send a message and p2[1] through p1[0]
-    r = mx_message_write(p1[0], "hello", 6, &p2[1], 1, 0);
+    r = mx_msgpipe_write(p1[0], "hello", 6, &p2[1], 1, 0);
     snprintf(msg, sizeof(msg), "failed to write message+handle to p1[0] %d\n", r);
     EXPECT_GE(r, 0, msg);
 
@@ -88,7 +88,7 @@ int reply_handle_rw(void) {
     mx_handle_t h;
     uint32_t dsz = sizeof(data) - 1;
     uint32_t hsz = 1;
-    r = mx_message_read(p2[0], data, &dsz, &h, &hsz, 0);
+    r = mx_msgpipe_read(p2[0], data, &dsz, &h, &hsz, 0);
     snprintf(msg, sizeof(msg), "failed to read reply %d\n", r);
     ASSERT_GE(r, 0, msg);
 

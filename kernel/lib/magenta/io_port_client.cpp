@@ -21,7 +21,7 @@ mx_status_t SendIOPortPacket(IOPortDispatcher* io_port,
                              uint64_t key,
                              mx_signals_t signals) {
     mx_io_packet payload = {
-        { key, MX_IO_PORT_PKT_TYPE_IOSN, 0u},
+        { key, MX_PORT_PKT_TYPE_IOSN, 0u},
         current_time_hires(),
         0u,                   //  TODO(cpu): support bytes (for pipes)
         signals,

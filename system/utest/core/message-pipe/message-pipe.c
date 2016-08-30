@@ -48,11 +48,11 @@ static intptr_t reader_thread(void* arg) {
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
         if (states[0].satisfied & MX_SIGNAL_READABLE) {
-            status = mx_message_read(pipe[0], &data, &num_bytes, NULL, 0u, 0u);
+            status = mx_msgpipe_read(pipe[0], &data, &num_bytes, NULL, 0u, 0u);
             ASSERT_EQ(status, NO_ERROR, "error while reading message");
             packets[0] += 1;
         } else if (states[1].satisfied & MX_SIGNAL_READABLE) {
-            status = mx_message_read(pipe[1], &data, &num_bytes, NULL, 0u, 0u);
+            status = mx_msgpipe_read(pipe[1], &data, &num_bytes, NULL, 0u, 0u);
             ASSERT_EQ(status, NO_ERROR, "error while reading message");
             packets[1] += 1;
         } else {
@@ -88,7 +88,7 @@ bool message_pipe_test(void) {
     mx_status_t status;
 
     mx_handle_t h[2];
-    status = mx_message_pipe_create(h, 0);
+    status = mx_msgpipe_create(h, 0);
     ASSERT_EQ(status, NO_ERROR, "error in message pipe create");
 
     ASSERT_EQ(get_satisfied_signals(h[0]), MX_SIGNAL_WRITABLE, "");
@@ -102,12 +102,12 @@ bool message_pipe_test(void) {
     _pipe[2] = h[1];
 
     static const uint32_t write_data = 0xdeadbeef;
-    status = mx_message_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_msgpipe_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
     ASSERT_EQ(get_satisfied_signals(_pipe[0]), MX_SIGNAL_WRITABLE, "");
     ASSERT_EQ(get_satisfied_signals(_pipe[2]), MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
 
-    status = mx_message_pipe_create(h, 0);
+    status = mx_msgpipe_create(h, 0);
     ASSERT_EQ(status, NO_ERROR, "error in message pipe create");
 
     _pipe[1] = h[0];
@@ -117,20 +117,20 @@ bool message_pipe_test(void) {
     mx_handle_t thread = tu_thread_create(reader_thread, NULL, reader);
     ASSERT_GE(thread, 0, "error in thread create");
 
-    status = mx_message_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_msgpipe_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
     usleep(1);
 
-    status = mx_message_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_msgpipe_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
-    status = mx_message_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_msgpipe_write(_pipe[0], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
     usleep(1);
 
-    status = mx_message_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
+    status = mx_msgpipe_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
 
     mx_handle_close(_pipe[1]);
@@ -157,15 +157,15 @@ bool message_pipe_test(void) {
 bool message_pipe_read_error_test(void) {
     BEGIN_TEST;
     mx_handle_t pipe[2];
-    mx_status_t status = mx_message_pipe_create(pipe, 0);
+    mx_status_t status = mx_msgpipe_create(pipe, 0);
     ASSERT_EQ(status, NO_ERROR, "error in message pipe create");
 
     // Read from an empty message pipe.
-    status = mx_message_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
+    status = mx_msgpipe_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
     ASSERT_EQ(status, ERR_BAD_STATE, "read on empty non-closed pipe produced incorrect error");
 
     char data = 'x';
-    status = mx_message_write(pipe[1], &data, 1u, NULL, 0u, 0u);
+    status = mx_msgpipe_write(pipe[1], &data, 1u, NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "write failed");
 
     mx_handle_close(pipe[1]);
@@ -173,13 +173,13 @@ bool message_pipe_read_error_test(void) {
     // Read a message with the peer closed, should yield the message.
     char read_data = '\0';
     uint32_t read_data_size = 1u;
-    status = mx_message_read(pipe[0], &read_data, &read_data_size, NULL, 0u, 0u);
+    status = mx_msgpipe_read(pipe[0], &read_data, &read_data_size, NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "read failed with peer closed but message in the pipe");
     ASSERT_EQ(read_data_size, 1u, "read returned incorrect number of bytes");
     ASSERT_EQ(read_data, 'x', "read returned incorrect data");
 
     // Read from an empty pipe with a closed peer, should yield a channel closed error.
-    status = mx_message_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
+    status = mx_msgpipe_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
     ASSERT_EQ(status, ERR_CHANNEL_CLOSED, "read on empty closed pipe produced incorrect error");
 
     // Waiting for readability should yield a bad state error.
@@ -192,17 +192,17 @@ bool message_pipe_read_error_test(void) {
 bool message_pipe_close_test(void) {
     BEGIN_TEST;
     mx_handle_t pipe[2];
-    ASSERT_EQ(mx_message_pipe_create(pipe, 0), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_create(pipe, 0), NO_ERROR, "");
     mx_handle_t pipe1[2];
-    ASSERT_EQ(mx_message_pipe_create(pipe1, 0), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_create(pipe1, 0), NO_ERROR, "");
     mx_handle_t pipe2[2];
-    ASSERT_EQ(mx_message_pipe_create(pipe2, 0), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_create(pipe2, 0), NO_ERROR, "");
 
     // Write pipe1[0] to pipe[0] (to be received by pipe[1]) and pipe2[0] to pipe[1] (to be received
     // by pipe[0]).
-    ASSERT_EQ(mx_message_write(pipe[0], NULL, 0u, &pipe1[0], 1u, 0u), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_write(pipe[0], NULL, 0u, &pipe1[0], 1u, 0u), NO_ERROR, "");
     pipe1[0] = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_message_write(pipe[1], NULL, 0u, &pipe2[0], 1u, 0u), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_write(pipe[1], NULL, 0u, &pipe2[0], 1u, 0u), NO_ERROR, "");
     pipe2[0] = MX_HANDLE_INVALID;
 
     // Close pipe[1]; the former pipe1[0] should be closed, so pipe1[1] should have peer closed.
@@ -232,7 +232,7 @@ bool message_pipe_non_transferable(void) {
     BEGIN_TEST;
 
     mx_handle_t pipe[2];
-    ASSERT_EQ(mx_message_pipe_create(pipe, 0), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_create(pipe, 0), NO_ERROR, "");
     mx_handle_t event = mx_event_create(0u);
     ASSERT_GT(event, 0, "failed to create event");
     mx_handle_basic_info_t event_handle_info;
@@ -243,7 +243,7 @@ bool message_pipe_non_transferable(void) {
     mx_handle_t non_transferable_event =
             mx_handle_duplicate(event, initial_event_rights & ~MX_RIGHT_TRANSFER);
 
-    mx_status_t write_result = mx_message_write(pipe[0], NULL, 0, &non_transferable_event, 1u, 0u);
+    mx_status_t write_result = mx_msgpipe_write(pipe[0], NULL, 0, &non_transferable_event, 1u, 0u);
     EXPECT_EQ(write_result, ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
 
     mx_status_t close_result = mx_handle_close(non_transferable_event);
@@ -256,13 +256,13 @@ bool message_pipe_duplicate_handles(void) {
     BEGIN_TEST;
 
     mx_handle_t pipe[2];
-    ASSERT_EQ(mx_message_pipe_create(pipe, 0), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_create(pipe, 0), NO_ERROR, "");
 
     mx_handle_t event = mx_event_create(0u);
     ASSERT_GT(event, 0, "failed to create event");
 
     mx_handle_t dup_handles[2] = { event, event };
-    mx_status_t write_result = mx_message_write(pipe[0], NULL, 0, dup_handles, 2u, 0u);
+    mx_status_t write_result = mx_msgpipe_write(pipe[0], NULL, 0, dup_handles, 2u, 0u);
     EXPECT_EQ(write_result, ERR_INVALID_ARGS, "message_write should fail with ERR_INVALID_ARGS");
 
     mx_status_t close_result = mx_handle_close(event);

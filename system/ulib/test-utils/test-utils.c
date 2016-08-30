@@ -52,7 +52,7 @@ mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
                              const char* name)
 {
     const mx_size_t stack_size = 256u << 10;
-    mx_handle_t thread_stack_vmo = mx_vm_object_create(stack_size);
+    mx_handle_t thread_stack_vmo = mx_vmo_create(stack_size);
     if (thread_stack_vmo < 0) {
         tu_fatal(__func__, thread_stack_vmo);
     }
@@ -60,7 +60,7 @@ mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
     uintptr_t stack = 0u;
     // TODO(kulakowski) Store process self handle.
     mx_handle_t self_handle = MX_HANDLE_INVALID;
-    mx_status_t status = mx_process_vm_map(self_handle, thread_stack_vmo, 0, stack_size, &stack, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_status_t status = mx_process_map_vm(self_handle, thread_stack_vmo, 0, stack_size, &stack, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     mx_handle_close(thread_stack_vmo);
     if (status < 0) {
         tu_fatal(__func__, status);
@@ -103,7 +103,7 @@ static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signa
 void tu_message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1)
 {
     mx_handle_t handles[2];
-    mx_status_t status = mx_message_pipe_create(handles, 0);
+    mx_status_t status = mx_msgpipe_create(handles, 0);
     if (status < 0)
         tu_fatal(__func__, status);
     *handle0 = handles[0];
@@ -113,7 +113,7 @@ void tu_message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1)
 void tu_message_write(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
                       const mx_handle_t* handles, uint32_t num_handles, uint32_t flags)
 {
-    mx_status_t status = mx_message_write(handle, bytes, num_bytes, handles, num_handles, flags);
+    mx_status_t status = mx_msgpipe_write(handle, bytes, num_bytes, handles, num_handles, flags);
     if (status < 0)
         tu_fatal(__func__, status);
 }
@@ -121,7 +121,7 @@ void tu_message_write(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
 void tu_message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
                      mx_handle_t* handles, uint32_t* num_handles, uint32_t flags)
 {
-    mx_status_t status = mx_message_read(handle, bytes, num_bytes, handles, num_handles, flags);
+    mx_status_t status = mx_msgpipe_read(handle, bytes, num_bytes, handles, num_handles, flags);
     if (status < 0)
         tu_fatal(__func__, status);
 }
@@ -206,7 +206,7 @@ int tu_process_wait_exit(mx_handle_t process)
 
 mx_handle_t tu_io_port_create(uint32_t options)
 {
-    mx_handle_t handle = mx_io_port_create(options);
+    mx_handle_t handle = mx_port_create(options);
     if (handle < 0)
         tu_fatal(__func__, handle);
     return handle;

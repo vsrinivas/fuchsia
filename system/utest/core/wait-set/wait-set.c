@@ -13,8 +13,8 @@
 bool wait_set_create_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t ws = mx_wait_set_create();
-    ASSERT_GT(ws, 0, "mx_wait_set_create() failed");
+    mx_handle_t ws = mx_waitset_create();
+    ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     mx_handle_basic_info_t ws_info;
     ASSERT_EQ(mx_handle_get_info(ws, MX_INFO_HANDLE_BASIC, &ws_info, sizeof(ws_info)),
@@ -35,31 +35,31 @@ bool wait_set_add_remove_test(void) {
     ASSERT_GT(ev[1], 0, "mx_event_create() failed");
     ASSERT_GT(ev[2], 0, "mx_event_create() failed");
 
-    mx_handle_t ws = mx_wait_set_create();
-    ASSERT_GT(ws, 0, "mx_wait_set_create() failed");
+    mx_handle_t ws = mx_waitset_create();
+    ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     const uint64_t cookie1 = 0u;
-    ASSERT_EQ(mx_wait_set_add(ws, ev[0], MX_SIGNAL_SIGNAL0, cookie1), NO_ERROR, "");
+    ASSERT_EQ(mx_waitset_add(ws, ev[0], MX_SIGNAL_SIGNAL0, cookie1), NO_ERROR, "");
 
     const uint64_t cookie2 = (uint64_t)-1;
-    ASSERT_EQ(mx_wait_set_add(ws, ev[1], MX_SIGNAL_SIGNAL1, cookie2), NO_ERROR, "");
+    ASSERT_EQ(mx_waitset_add(ws, ev[1], MX_SIGNAL_SIGNAL1, cookie2), NO_ERROR, "");
 
     // Can add a handle that's already in there.
     const uint64_t cookie3 = 12345678901234567890ull;
-    ASSERT_EQ(mx_wait_set_add(ws, ev[0], MX_SIGNAL_SIGNAL0 | MX_SIGNAL_SIGNAL1, cookie3), NO_ERROR,
+    ASSERT_EQ(mx_waitset_add(ws, ev[0], MX_SIGNAL_SIGNAL0 | MX_SIGNAL_SIGNAL1, cookie3), NO_ERROR,
               "");
 
     // Remove |cookie1|.
-    ASSERT_EQ(mx_wait_set_remove(ws, cookie1), NO_ERROR, "");
+    ASSERT_EQ(mx_waitset_remove(ws, cookie1), NO_ERROR, "");
 
     // Now can reuse |cookie1|.
-    ASSERT_EQ(mx_wait_set_add(ws, ev[2], MX_SIGNAL_SIGNAL0, cookie1), NO_ERROR, "");
+    ASSERT_EQ(mx_waitset_add(ws, ev[2], MX_SIGNAL_SIGNAL0, cookie1), NO_ERROR, "");
 
     // Can close a handle (|ev[1]|) that's in a wait set.
     EXPECT_EQ(mx_handle_close(ev[1]), NO_ERROR, "");
 
     // And then remove it (|cookie2|).
-    ASSERT_EQ(mx_wait_set_remove(ws, cookie2), NO_ERROR, "");
+    ASSERT_EQ(mx_waitset_remove(ws, cookie2), NO_ERROR, "");
 
     // Close |ev[2]| also.
     EXPECT_EQ(mx_handle_close(ev[2]), NO_ERROR, "");
@@ -79,29 +79,29 @@ bool wait_set_bad_add_remove_test(void) {
     mx_handle_t ev = mx_event_create(0u);
     ASSERT_GT(ev, 0, "mx_event_create() failed");
 
-    mx_handle_t ws = mx_wait_set_create();
-    ASSERT_GT(ws, 0, "mx_wait_set_create() failed");
+    mx_handle_t ws = mx_waitset_create();
+    ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     const uint64_t cookie1 = 123u;
-    EXPECT_EQ(mx_wait_set_add(MX_HANDLE_INVALID, ev, MX_SIGNAL_SIGNAL0, cookie1), ERR_BAD_HANDLE,
+    EXPECT_EQ(mx_waitset_add(MX_HANDLE_INVALID, ev, MX_SIGNAL_SIGNAL0, cookie1), ERR_BAD_HANDLE,
               "");
-    EXPECT_EQ(mx_wait_set_add(ws, MX_HANDLE_INVALID, MX_SIGNAL_SIGNAL0, cookie1), ERR_BAD_HANDLE,
+    EXPECT_EQ(mx_waitset_add(ws, MX_HANDLE_INVALID, MX_SIGNAL_SIGNAL0, cookie1), ERR_BAD_HANDLE,
               "");
 
-    EXPECT_EQ(mx_wait_set_remove(MX_HANDLE_INVALID, cookie1), ERR_BAD_HANDLE, "");
-    EXPECT_EQ(mx_wait_set_remove(ws, cookie1), ERR_NOT_FOUND, "");
+    EXPECT_EQ(mx_waitset_remove(MX_HANDLE_INVALID, cookie1), ERR_BAD_HANDLE, "");
+    EXPECT_EQ(mx_waitset_remove(ws, cookie1), ERR_NOT_FOUND, "");
 
-    EXPECT_EQ(mx_wait_set_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie1), NO_ERROR, "");
-    EXPECT_EQ(mx_wait_set_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie1), ERR_ALREADY_EXISTS, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie1), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie1), ERR_ALREADY_EXISTS, "");
 
     const uint64_t cookie2 = 456u;
-    EXPECT_EQ(mx_wait_set_remove(ws, cookie2), ERR_NOT_FOUND, "");
+    EXPECT_EQ(mx_waitset_remove(ws, cookie2), ERR_NOT_FOUND, "");
 
-    EXPECT_EQ(mx_wait_set_remove(ws, cookie1), NO_ERROR, "");
-    EXPECT_EQ(mx_wait_set_remove(ws, cookie1), ERR_NOT_FOUND, "");
+    EXPECT_EQ(mx_waitset_remove(ws, cookie1), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_remove(ws, cookie1), ERR_NOT_FOUND, "");
 
     // Wait sets aren't waitable.
-    EXPECT_EQ(mx_wait_set_add(ws, ws, 0u, cookie2), ERR_NOT_SUPPORTED, "");
+    EXPECT_EQ(mx_waitset_add(ws, ws, 0u, cookie2), ERR_NOT_SUPPORTED, "");
 
     // TODO(vtl): Test that both handles are properly tested for rights.
 
@@ -114,7 +114,7 @@ bool wait_set_bad_add_remove_test(void) {
 // Checks that |results[0...num_results-1]| contains exactly one result that matches the other
 // parameters (if a result matches |cookie|, the other fields must match as well).
 static bool check_results(uint32_t num_results,
-                          mx_wait_set_result_t* results,
+                          mx_waitset_result_t* results,
                           uint64_t cookie,
                           mx_status_t wait_result,
                           mx_signals_t satisfied,
@@ -153,55 +153,55 @@ bool wait_set_wait_single_thread_1_test(void) {
     ASSERT_GT(ev[1], 0, "mx_event_create() failed");
     ASSERT_GT(ev[2], 0, "mx_event_create() failed");
 
-    mx_handle_t ws = mx_wait_set_create();
-    ASSERT_GT(ws, 0, "mx_wait_set_create() failed");
+    mx_handle_t ws = mx_waitset_create();
+    ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
-    mx_wait_set_result_t results[10] = {};
+    mx_waitset_result_t results[10] = {};
     uint32_t num_results = 5u;
     uint32_t max_results = (uint32_t)-1;
-    EXPECT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, &max_results), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_waitset_wait(ws, 0u, &num_results, results, &max_results), ERR_TIMED_OUT, "");
     // It should leave |num_results| and |max_results| alone on error.
-    EXPECT_EQ(num_results, 5u, "mx_wait_set_wait() modified num_results");
-    EXPECT_EQ(max_results, (uint32_t)-1, "mx_wait_set_wait() modified max_results");
+    EXPECT_EQ(num_results, 5u, "mx_waitset_wait() modified num_results");
+    EXPECT_EQ(max_results, (uint32_t)-1, "mx_waitset_wait() modified max_results");
 
     num_results = 5u;
     // Nonzero timeout and null |max_results| argument.
-    EXPECT_EQ(mx_wait_set_wait(ws, 5u, &num_results, results, NULL), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_waitset_wait(ws, 5u, &num_results, results, NULL), ERR_TIMED_OUT, "");
     // It should leave |num_results| alone on error.
-    EXPECT_EQ(num_results, 5u, "mx_wait_set_wait() modified num_results");
+    EXPECT_EQ(num_results, 5u, "mx_waitset_wait() modified num_results");
 
     const uint64_t cookie0 = 1u;
-    EXPECT_EQ(mx_wait_set_add(ws, ev[0], MX_SIGNAL_SIGNAL0, cookie0), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev[0], MX_SIGNAL_SIGNAL0, cookie0), NO_ERROR, "");
     const uint64_t cookie1a = 2u;
-    EXPECT_EQ(mx_wait_set_add(ws, ev[1], MX_SIGNAL_SIGNAL0, cookie1a), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev[1], MX_SIGNAL_SIGNAL0, cookie1a), NO_ERROR, "");
     const uint64_t cookie2 = 3u;
-    EXPECT_EQ(mx_wait_set_add(ws, ev[2], MX_SIGNAL_SIGNAL0, cookie2), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev[2], MX_SIGNAL_SIGNAL0, cookie2), NO_ERROR, "");
     const uint64_t cookie1b = 4u;
-    EXPECT_EQ(mx_wait_set_add(ws, ev[1], MX_SIGNAL_SIGNAL0, cookie1b), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev[1], MX_SIGNAL_SIGNAL0, cookie1b), NO_ERROR, "");
 
     num_results = 5u;
     max_results = (uint32_t)-1;
     // Nothing signaled; should still time out.
-    EXPECT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, &max_results), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_waitset_wait(ws, 0u, &num_results, results, &max_results), ERR_TIMED_OUT, "");
     // It should leave |num_results| and |max_results| alone on error.
-    EXPECT_EQ(num_results, 5u, "mx_wait_set_wait() modified num_results");
-    EXPECT_EQ(max_results, (uint32_t)-1, "mx_wait_set_wait() modified max_results");
+    EXPECT_EQ(num_results, 5u, "mx_waitset_wait() modified num_results");
+    EXPECT_EQ(max_results, (uint32_t)-1, "mx_waitset_wait() modified max_results");
 
     ASSERT_EQ(mx_object_signal(ev[0], 0u, MX_SIGNAL_SIGNAL0), NO_ERROR, "");
     num_results = 5u;
     max_results = (uint32_t)-1;
-    ASSERT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, &max_results), NO_ERROR, "");
-    ASSERT_EQ(num_results, 1u, "wrong num_results from mx_wait_set_wait()");
-    EXPECT_EQ(max_results, 1u, "wrong max_results from mx_wait_set_wait()");
+    ASSERT_EQ(mx_waitset_wait(ws, 0u, &num_results, results, &max_results), NO_ERROR, "");
+    ASSERT_EQ(num_results, 1u, "wrong num_results from mx_waitset_wait()");
+    EXPECT_EQ(max_results, 1u, "wrong max_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie0, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
 
     ASSERT_EQ(mx_object_signal(ev[1], 0u, MX_SIGNAL_SIGNAL0), NO_ERROR, "");
     num_results = 5u;
     max_results = (uint32_t)-1;
-    ASSERT_EQ(mx_wait_set_wait(ws, 10u, &num_results, results, &max_results), NO_ERROR, "");
-    ASSERT_EQ(num_results, 3u, "wrong num_results from mx_wait_set_wait()");
-    EXPECT_EQ(max_results, 3u, "wrong max_results from mx_wait_set_wait()");
+    ASSERT_EQ(mx_waitset_wait(ws, 10u, &num_results, results, &max_results), NO_ERROR, "");
+    ASSERT_EQ(num_results, 3u, "wrong num_results from mx_waitset_wait()");
+    EXPECT_EQ(max_results, 3u, "wrong max_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie0, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
     EXPECT_TRUE(check_results(num_results, results, cookie1a, NO_ERROR, MX_SIGNAL_SIGNAL0,
@@ -211,10 +211,10 @@ bool wait_set_wait_single_thread_1_test(void) {
 
     num_results = 2u;
     max_results = (uint32_t)-1;
-    ASSERT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, results, &max_results), NO_ERROR,
+    ASSERT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, &max_results), NO_ERROR,
                                "");
-    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_wait_set_wait()");
-    EXPECT_EQ(max_results, 3u, "wrong max_results from mx_wait_set_wait()");
+    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_waitset_wait()");
+    EXPECT_EQ(max_results, 3u, "wrong max_results from mx_waitset_wait()");
     unsigned found = check_results(num_results, results, cookie0, NO_ERROR, MX_SIGNAL_SIGNAL0,
                                    MX_SIGNAL_SIGNAL_ALL);
     found += check_results(num_results, results, cookie1a, NO_ERROR, MX_SIGNAL_SIGNAL0,
@@ -226,15 +226,15 @@ bool wait_set_wait_single_thread_1_test(void) {
     // Can pass null for |results| if |num_results| is zero.
     num_results = 0u;
     max_results = (uint32_t)-1;
-    ASSERT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, NULL, &max_results), NO_ERROR,
+    ASSERT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, NULL, &max_results), NO_ERROR,
                                "");
-    ASSERT_EQ(num_results, 0u, "wrong num_results from mx_wait_set_wait()");
-    EXPECT_EQ(max_results, 3u, "wrong max_results from mx_wait_set_wait()");
+    ASSERT_EQ(num_results, 0u, "wrong num_results from mx_waitset_wait()");
+    EXPECT_EQ(max_results, 3u, "wrong max_results from mx_waitset_wait()");
 
     EXPECT_EQ(mx_handle_close(ev[2]), NO_ERROR, "");
     num_results = 10u;
-    ASSERT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
-    ASSERT_EQ(num_results, 4u, "wrong num_results from mx_wait_set_wait()");
+    ASSERT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
+    ASSERT_EQ(num_results, 4u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie0, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
     EXPECT_TRUE(check_results(num_results, results, cookie1a, NO_ERROR, MX_SIGNAL_SIGNAL0,
@@ -243,10 +243,10 @@ bool wait_set_wait_single_thread_1_test(void) {
                               MX_SIGNAL_SIGNAL_ALL), "");
     EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_CANCELLED, 0u, 0u), "");
 
-    ASSERT_EQ(mx_wait_set_remove(ws, cookie1b), NO_ERROR, "");
+    ASSERT_EQ(mx_waitset_remove(ws, cookie1b), NO_ERROR, "");
     num_results = 10u;
-    ASSERT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, NULL), NO_ERROR, "");
-    ASSERT_EQ(num_results, 3u, "wrong num_results from mx_wait_set_wait()");
+    ASSERT_EQ(mx_waitset_wait(ws, 0u, &num_results, results, NULL), NO_ERROR, "");
+    ASSERT_EQ(num_results, 3u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie0, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
     EXPECT_TRUE(check_results(num_results, results, cookie1a, NO_ERROR, MX_SIGNAL_SIGNAL0,
@@ -257,8 +257,8 @@ bool wait_set_wait_single_thread_1_test(void) {
     // properly.
     ASSERT_EQ(mx_object_signal(ev[0], MX_SIGNAL_SIGNAL0, 0u), NO_ERROR, "");
     num_results = 10u;
-    ASSERT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, NULL), NO_ERROR, "");
-    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_wait_set_wait()");
+    ASSERT_EQ(mx_waitset_wait(ws, 0u, &num_results, results, NULL), NO_ERROR, "");
+    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie1a, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
     EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_CANCELLED, 0u, 0u), "");
@@ -275,27 +275,27 @@ bool wait_set_wait_single_thread_2_test(void) {
 
     // Need something for which can can provoke unsatisfiability.
     mx_handle_t mp[2] = {};
-    ASSERT_EQ(mx_message_pipe_create(mp, 0u), NO_ERROR, "");
+    ASSERT_EQ(mx_msgpipe_create(mp, 0u), NO_ERROR, "");
     ASSERT_GT(mp[0], 0, "mx_event_create() failed");
     ASSERT_GT(mp[1], 0, "mx_event_create() failed");
 
-    mx_handle_t ws = mx_wait_set_create();
-    ASSERT_GT(ws, 0, "mx_wait_set_create() failed");
+    mx_handle_t ws = mx_waitset_create();
+    ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     const uint64_t cookie1 = 987654321098765ull;
-    EXPECT_EQ(mx_wait_set_add(ws, mp[0], MX_SIGNAL_READABLE, cookie1), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, mp[0], MX_SIGNAL_READABLE, cookie1), NO_ERROR, "");
     const uint64_t cookie2 = 789023457890412ull;
-    EXPECT_EQ(mx_wait_set_add(ws, mp[0], MX_SIGNAL_PEER_CLOSED, cookie2), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, mp[0], MX_SIGNAL_PEER_CLOSED, cookie2), NO_ERROR, "");
 
-    mx_wait_set_result_t results[5] = {};
+    mx_waitset_result_t results[5] = {};
     uint32_t num_results = 5u;
-    EXPECT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, NULL), ERR_TIMED_OUT, "");
-    EXPECT_EQ(num_results, 5u, "mx_wait_set_wait() modified num_results");
+    EXPECT_EQ(mx_waitset_wait(ws, 0u, &num_results, results, NULL), ERR_TIMED_OUT, "");
+    EXPECT_EQ(num_results, 5u, "mx_waitset_wait() modified num_results");
 
     EXPECT_EQ(mx_handle_close(mp[1]), NO_ERROR, "");
     num_results = 5u;
-    EXPECT_EQ(mx_wait_set_wait(ws, 0u, &num_results, results, NULL), NO_ERROR, "");
-    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_wait_set_wait()");
+    EXPECT_EQ(mx_waitset_wait(ws, 0u, &num_results, results, NULL), NO_ERROR, "");
+    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie1, ERR_BAD_STATE, MX_SIGNAL_PEER_CLOSED,
                               MX_SIGNAL_PEER_CLOSED), "");
     EXPECT_TRUE(check_results(num_results, results, cookie2, NO_ERROR, MX_SIGNAL_PEER_CLOSED,
@@ -303,8 +303,8 @@ bool wait_set_wait_single_thread_2_test(void) {
 
     EXPECT_EQ(mx_handle_close(mp[0]), NO_ERROR, "");
     num_results = 5u;
-    EXPECT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
-    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_wait_set_wait()");
+    EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
+    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie1, ERR_CANCELLED, 0u, 0u), "");
     EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_CANCELLED, 0u, 0u), "");
 
@@ -339,20 +339,20 @@ bool wait_set_wait_threaded_test(void) {
     mx_handle_t ev = mx_event_create(0u);
     ASSERT_GT(ev, 0, "mx_event_create() failed");
 
-    mx_handle_t ws = mx_wait_set_create();
-    ASSERT_GT(ws, 0, "mx_wait_set_create() failed");
+    mx_handle_t ws = mx_waitset_create();
+    ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     const uint64_t cookie = 123u;
-    EXPECT_EQ(mx_wait_set_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie), NO_ERROR, "");
 
     const char signaler_name[] = "signaler";
     mx_handle_t thread = tu_thread_create(signaler_thread_fn, &ev, signaler_name);
     ASSERT_GT(thread, 0, "tu_thread_create() failed");
 
-    mx_wait_set_result_t results[5] = {};
+    mx_waitset_result_t results[5] = {};
     uint32_t num_results = 5u;
-    EXPECT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
-    ASSERT_EQ(num_results, 1u, "wrong num_results from mx_wait_set_wait()");
+    EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
+    ASSERT_EQ(num_results, 1u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
 
@@ -366,8 +366,8 @@ bool wait_set_wait_threaded_test(void) {
     ASSERT_GT(thread, 0, "tu_thread_create() failed");
 
     num_results = 5u;
-    EXPECT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
-    ASSERT_EQ(num_results, 1u, "wrong num_results from mx_wait_set_wait()");
+    EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
+    ASSERT_EQ(num_results, 1u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie, ERR_CANCELLED, 0u, 0u), "");
 
     // Join.
@@ -384,26 +384,26 @@ bool wait_set_wait_cancelled_test(void) {
     mx_handle_t ev = mx_event_create(0u);
     ASSERT_GT(ev, 0, "mx_event_create() failed");
 
-    mx_handle_t ws = mx_wait_set_create();
-    ASSERT_GT(ws, 0, "mx_wait_set_create() failed");
+    mx_handle_t ws = mx_waitset_create();
+    ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     const uint64_t cookie = 123u;
-    EXPECT_EQ(mx_wait_set_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, ev, MX_SIGNAL_SIGNAL0, cookie), NO_ERROR, "");
 
     // We close the wait set handle!
     const char closer_name[] = "closer";
     mx_handle_t thread = tu_thread_create(closer_thread_fn, &ws, closer_name);
     ASSERT_GT(thread, 0, "tu_thread_create() failed");
 
-    mx_wait_set_result_t results[5] = {};
+    mx_waitset_result_t results[5] = {};
     uint32_t num_results = 5u;
     uint32_t max_results = (uint32_t)-1;
     // There's actually a race here; we could actually get ERR_BAD_HANDLE if we don't start the wait
     // before the thread closes |ws|. But let's hope the thread's sleep is long enough.
-    EXPECT_EQ(mx_wait_set_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), ERR_CANCELLED,
+    EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), ERR_CANCELLED,
               "");
-    EXPECT_EQ(num_results, 5u, "mx_wait_set_wait() modified num_results");
-    EXPECT_EQ(max_results, (uint32_t)-1, "mx_wait_set_wait() modified max_results");
+    EXPECT_EQ(num_results, 5u, "mx_waitset_wait() modified num_results");
+    EXPECT_EQ(max_results, (uint32_t)-1, "mx_waitset_wait() modified max_results");
 
     // Join.
     ASSERT_EQ(mx_handle_wait_one(thread, MX_SIGNAL_SIGNAL0, MX_TIME_INFINITE, NULL), NO_ERROR, "");

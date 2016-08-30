@@ -131,8 +131,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Make the message pipe for the bootstrap message.
     mx_handle_t pipeh[2];
-    status = mx_message_pipe_create(pipeh, 0);
-    check(log, status, "mx_message_pipe_create failed\n");
+    status = mx_msgpipe_create(pipeh, 0);
+    check(log, status, "mx_msgpipe_create failed\n");
     mx_handle_t to_child = pipeh[0];
     mx_handle_t child_start_handle = pipeh[1];
 
@@ -148,13 +148,13 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Allocate the stack for the child.
     stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
-    mx_handle_t stack_vmo = mx_vm_object_create(stack_size);
+    mx_handle_t stack_vmo = mx_vmo_create(stack_size);
     if (stack_vmo < 0)
-        fail(log, stack_vmo, "mx_vm_object_create failed for child stack\n");
+        fail(log, stack_vmo, "mx_vmo_create failed for child stack\n");
     mx_vaddr_t stack_base;
-    status = mx_process_vm_map(proc, stack_vmo, 0, stack_size, &stack_base,
+    status = mx_process_map_vm(proc, stack_vmo, 0, stack_size, &stack_base,
                                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-    check(log, status, "mx_process_vm_map failed for child stack\n");
+    check(log, status, "mx_process_map_vm failed for child stack\n");
     uintptr_t sp = sp_from_mapping(stack_base, stack_size);
     if (stack_vmo_handle_loc != NULL) {
         // This is our own stack VMO handle, but we don't need it for anything.
@@ -190,8 +190,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     }
 
     // Now send the bootstrap message, consuming both our VMO handles.
-    status = mx_message_write(to_child, buffer, nbytes, handles, nhandles, 0);
-    check(log, status, "mx_message_write to child failed\n");
+    status = mx_msgpipe_write(to_child, buffer, nbytes, handles, nhandles, 0);
+    check(log, status, "mx_msgpipe_write to child failed\n");
     status = mx_handle_close(to_child);
     check(log, status, "mx_handle_close failed on message pipe handle\n");
 

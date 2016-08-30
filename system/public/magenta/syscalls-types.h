@@ -255,12 +255,12 @@ typedef struct mx_log_record {
 
 // Defines and structures for mx_io_port_*()
 
-#define MX_IO_PORT_MAX_PKT_SIZE   128u
+#define MX_PORT_MAX_PKT_SIZE   128u
 
-#define MX_IO_PORT_PKT_TYPE_KERN      0u
-#define MX_IO_PORT_PKT_TYPE_IOSN      1u
-#define MX_IO_PORT_PKT_TYPE_USER      2u
-#define MX_IO_PORT_PKT_TYPE_EXCEPTION 3u
+#define MX_PORT_PKT_TYPE_KERN      0u
+#define MX_PORT_PKT_TYPE_IOSN      1u
+#define MX_PORT_PKT_TYPE_USER      2u
+#define MX_PORT_PKT_TYPE_EXCEPTION 3u
 
 typedef struct mx_packet_header {
     uint64_t key;
@@ -282,12 +282,12 @@ typedef struct mx_exception_packet {
 } mx_exception_packet_t;
 
 // Structures for mx_wait_set_*()
-typedef struct mx_wait_set_result {
+typedef struct mx_waitset_result {
     uint64_t cookie;
     mx_status_t wait_result;
     uint32_t reserved;
     mx_signals_state_t signals_state;
-} mx_wait_set_result_t;
+} mx_waitset_result_t;
 
 // Buffer size limits on the cprng syscalls
 #define MX_CPRNG_DRAW_MAX_LEN        256
@@ -300,6 +300,15 @@ typedef struct mx_wait_set_result {
 #define MX_POLICY_BAD_HANDLE_IGNORE    0u
 #define MX_POLICY_BAD_HANDLE_LOG       1u
 #define MX_POLICY_BAD_HANDLE_EXIT      2u
+
+#ifndef DEPRECATE_COMPAT_SYSCALLS
+typedef mx_waitset_result mx_wait_set_result_t;
+#define MX_IO_PORT_MAX_PKT_SIZE MX_PORT_MAX_PKT_SIZE
+#define MX_IO_PORT_PKT_TYPE_KERN MX_PORT_PKT_TYPE_KERN
+#define MX_IO_PORT_PKT_TYPE_IOSN MX_PORT_PKT_TYPE_IOSN
+#define MX_IO_PORT_PKT_TYPE_USER MX_PORT_PKT_TYPE_USER
+#define MX_IO_PORT_PKT_TYPE_EXCEPTION MX_PORT_PKT_TYPE_EXCEPTION
+#endif
 
 #ifdef __cplusplus
 }

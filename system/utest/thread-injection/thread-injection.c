@@ -26,8 +26,8 @@ int thread_injection_test(void) {
     // created the pipe beforehand and told the injector its handle
     // number in this process.
     mx_handle_t pipeh[2];
-    mx_status_t status = mx_message_pipe_create(pipeh, 0);
-    snprintf(msg, sizeof(msg), "mx_message_pipe_create failed: %d", status);
+    mx_status_t status = mx_msgpipe_create(pipeh, 0);
+    snprintf(msg, sizeof(msg), "mx_msgpipe_create failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
     // Start the injector program, which will inject a third program
@@ -52,8 +52,8 @@ int thread_injection_test(void) {
              mx_process_self(), status);
     ASSERT_GT(proc, 0, msg);
 
-    status = mx_message_write(pipeh[0], &data, sizeof(data), &proc, 1, 0);
-    snprintf(msg, sizeof(msg), "mx_message_write failed: %d", status);
+    status = mx_msgpipe_write(pipeh[0], &data, sizeof(data), &proc, 1, 0);
+    snprintf(msg, sizeof(msg), "mx_msgpipe_write failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
     // Now the injector will inject the "injected" program into this process.

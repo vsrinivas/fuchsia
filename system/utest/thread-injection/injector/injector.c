@@ -28,10 +28,10 @@ int main(void) {
     uint32_t bytes = sizeof(data);
     mx_handle_t proc;
     uint32_t nhandles = 1;
-    mx_status_t status = mx_message_read(h, &data, &bytes,
+    mx_status_t status = mx_msgpipe_read(h, &data, &bytes,
                                          &proc, &nhandles, 0);
     if (status < 0) {
-        fprintf(stderr, "mx_message_read: %d\n", h);
+        fprintf(stderr, "mx_msgpipe_read: %d\n", h);
         return 1;
     }
     if (bytes != sizeof(data)) {

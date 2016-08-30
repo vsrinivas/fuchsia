@@ -102,7 +102,7 @@ static bool wait_signalled(mx_handle_t handle, enum wait_result* result) {
 
 static mx_status_t message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1) {
     mx_handle_t h[2];
-    mx_status_t status = mx_message_pipe_create(h, 0);
+    mx_status_t status = mx_msgpipe_create(h, 0);
     *handle0 = h[0];
     *handle1 = h[1];
     return status;
@@ -117,7 +117,7 @@ static bool send_msg(mx_handle_t handle, enum message msg) {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
     mx_status_t status =
-        mx_message_write(handle, &data, sizeof(data), NULL, 0, 0);
+        mx_msgpipe_write(handle, &data, sizeof(data), NULL, 0, 0);
     ASSERT_GE(status, 0, "message write failed");
     return true;
 }
@@ -142,7 +142,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
 
     uint32_t num_bytes = sizeof(data);
 
-    ASSERT_GE(mx_message_read(handle, &data, &num_bytes, NULL, 0, 0), 0,
+    ASSERT_GE(mx_msgpipe_read(handle, &data, &num_bytes, NULL, 0, 0), 0,
               "Error while reading message");
     EXPECT_EQ(num_bytes, sizeof(data), "unexpected message size");
     if (num_bytes != sizeof(data)) {

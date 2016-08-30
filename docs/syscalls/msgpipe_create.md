@@ -1,21 +1,21 @@
-# mx_message_pipe_create
+# mx_msgpipe_create
 
 ## NAME
 
-message_pipe_create - create a message pipe
+msgpipe_create - create a message pipe
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_message_pipe_create(mx_handle_t handles[2], uint32_t flags);
+mx_status_t mx_msgpipe_create(mx_handle_t handles[2], uint32_t flags);
 
 ```
 
 ## DESCRIPTION
 
-**message_pipe_create**() creates a message pipe, a bi-directional
+**msgpipe_create**() creates a message pipe, a bi-directional
 datagram-style message transport capable of sending raw data bytes
 as well as handles from one side to the other.
 
@@ -29,7 +29,7 @@ messages to be written to them), and MX_RIGHT_READ (allowing messages
 to be read from them).
 
 The *flags* can be either 0 or MX_FLAG_REPLY_PIPE. A reply pipe
-behaves like a regular message pipe except for **mx_message_write**()
+behaves like a regular message pipe except for **mx_msgpipe_write**()
 which must include itself as the last handle being transfered.
 
 When *flags* is MX_FLAG_REPLY_PIPE, only *handles[1]* is a reply
@@ -38,7 +38,7 @@ pipe. *handles[0]* is a regular pipe.
 
 ## RETURN VALUE
 
-**message_pipe_create**() returns **NO_ERROR** on success. In the event
+**msgpipe_create**() returns **NO_ERROR** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
@@ -54,5 +54,5 @@ of failure, a negative error value is returned.
 [handle_replace](handle_replace.md),
 [handle_wait_one](handle_wait_one),
 [handle_wait_many](handle_wait_many.md),
-[message_read](message_read.md),
-[message_write](message_write.md).
+[msgpipe_read](msgpipe_read.md),
+[msgpipe_write](msgpipe_write.md).

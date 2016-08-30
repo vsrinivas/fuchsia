@@ -46,7 +46,7 @@ static ssize_t dmctl_ioctl(mx_device_t* dev, uint32_t op,
 
     mx_handle_t h[2];
     mx_status_t r;
-    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
         return r;
     }
     if ((r = vfs_install_remote(h[1])) < 0) {

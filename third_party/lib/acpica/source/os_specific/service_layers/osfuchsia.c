@@ -590,7 +590,7 @@ struct acpi_irq_thread_arg {
 static int acpi_irq_thread(void *arg) {
     struct acpi_irq_thread_arg *real_arg = (struct acpi_irq_thread_arg *)arg;
     while (1) {
-        mx_status_t status = mx_interrupt_event_wait(real_arg->irq_handle);
+        mx_status_t status = mx_interrupt_wait(real_arg->irq_handle);
         if (status != NO_ERROR) {
             continue;
         }
@@ -598,7 +598,7 @@ static int acpi_irq_thread(void *arg) {
         // TODO: Should we do something with the return value from the handler?
         real_arg->handler(real_arg->context);
 
-        mx_interrupt_event_complete(real_arg->irq_handle);
+        mx_interrupt_complete(real_arg->irq_handle);
     }
     return 0;
 }
@@ -642,7 +642,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
         return AE_NO_MEMORY;
     }
 
-    mx_handle_t handle = mx_interrupt_event_create(root_resource_handle, InterruptLevel, MX_FLAG_REMAP_IRQ);
+    mx_handle_t handle = mx_interrupt_create(root_resource_handle, InterruptLevel, MX_FLAG_REMAP_IRQ);
     if (handle < 0) {
         free(arg);
         return AE_ERROR;

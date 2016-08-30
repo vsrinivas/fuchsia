@@ -34,7 +34,7 @@ static mx_status_t wait_for_message(
 
     uint32_t rsp_len = 0;
     uint32_t num_handles_returned = 0;
-    status = mx_message_read(h, NULL, &rsp_len, NULL, &num_handles_returned, 0);
+    status = mx_msgpipe_read(h, NULL, &rsp_len, NULL, &num_handles_returned, 0);
     if (status != ERR_NOT_ENOUGH_BUFFER) {
         return status;
     }
@@ -51,7 +51,7 @@ static mx_status_t wait_for_message(
     }
 
     mx_handle_t handles_returned[MAX_RETURNED_HANDLES];
-    status = mx_message_read(h, rsp, &rsp_len, handles_returned, &num_handles_returned, 0);
+    status = mx_msgpipe_read(h, rsp, &rsp_len, handles_returned, &num_handles_returned, 0);
     if (status != NO_ERROR) {
         free(rsp);
         return status;
@@ -109,7 +109,7 @@ static mx_status_t run_txn(
     acpi_cmd_hdr_t* cmd_hdr = cmd;
     cmd_hdr->request_id = req_id;
 
-    mx_status_t status = mx_message_write(h->pipe, cmd, cmd_len, NULL, 0, 0);
+    mx_status_t status = mx_msgpipe_write(h->pipe, cmd, cmd_len, NULL, 0, 0);
     if (status != NO_ERROR) {
         goto exit;
     }

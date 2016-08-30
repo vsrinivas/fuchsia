@@ -52,7 +52,7 @@ static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler) {
     mx_io_packet_t packet;
     packet.hdr.key = (uint64_t)(uintptr_t)handler;
     packet.signals = MX_SIGNAL_SIGNALED;
-    mx_io_port_queue(md->ioport, &packet, sizeof(packet));
+    mx_port_queue(md->ioport, &packet, sizeof(packet));
 
     // flag so we know to ignore further events
     handler->flags |= FLAG_DISCONNECTED;
@@ -65,7 +65,7 @@ static int mxio_dispatcher_thread(void* _md) {
 again:
     for (;;) {
         mx_io_packet_t packet;
-        if ((r = mx_io_port_wait(md->ioport, &packet, sizeof(packet))) < 0) {
+        if ((r = mx_port_wait(md->ioport, &packet, sizeof(packet))) < 0) {
             printf("dispatcher: ioport wait failed %d\n", r);
             break;
         }
@@ -112,7 +112,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
     mtx_init(&md->lock, mtx_plain);
-    if ((md->ioport = mx_io_port_create(0u)) < 0) {
+    if ((md->ioport = mx_port_create(0u)) < 0) {
         free(md);
         return md->ioport;
     }
@@ -157,7 +157,7 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, 
 
     mtx_lock(&md->lock);
     list_add_tail(&md->list, &handler->node);
-    if ((r = mx_io_port_bind(md->ioport, (uint64_t)(uintptr_t)handler, h,
+    if ((r = mx_port_bind(md->ioport, (uint64_t)(uintptr_t)handler, h,
                              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) < 0) {
         list_delete(&handler->node);
     }

@@ -1,15 +1,15 @@
-# mx_message_read
+# mx_msgpipe_read
 
 ## NAME
 
-message_read - read a message from a message pipe
+msgpipe_read - read a message from a message pipe
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_message_read(mx_handle_t handle,
+mx_status_t mx_msgpipe_read(mx_handle_t handle,
                             void* bytes, uint32_t* num_bytes,
                             mx_handle_t* handles, uint32_t* num_handles,
                             uint32_t flags);
@@ -17,7 +17,7 @@ mx_status_t mx_message_read(mx_handle_t handle,
 
 ## DESCRIPTION
 
-**message_read**() attempts to read the first message from the message
+**msgpipe_read**() attempts to read the first message from the message
 pipe specified by *handle* into the provided *bytes* and/or *handles* 
 buffers.
 
@@ -33,7 +33,7 @@ and may only be read in their entirety.  Partial reads are not possible.
 
 ## RETURN VALUE
 
-**message_read**() returns **NO_ERROR** on success, and the uint32_t's
+**msgpipe_read**() returns **NO_ERROR** on success, and the uint32_t's
 pointed at by *num_bytes* and/or *num_handles* (provided they are
 non-NULL) are updated to reflect the exact size of the byte and handle
 payloads of the message read.
@@ -72,5 +72,5 @@ the *handles* array, not its size in bytes.
 [handle_replace](handle_replace.md),
 [handle_wait_one](handle_wait_one),
 [handle_wait_many](handle_wait_many.md),
-[message_pipe_create](message_pipe_create.md),
-[message_write](message_write.md).
+[msgpipe_create](msgpipe_create.md),
+[msgpipe_write](msgpipe_write.md).

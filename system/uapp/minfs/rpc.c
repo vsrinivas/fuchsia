@@ -41,7 +41,7 @@ static mx_handle_t vfs_create_handle(vnode_t* vn) {
         return ERR_NO_MEMORY;
     ios->vn = vn;
 
-    if ((r = mx_message_pipe_create(h, 0)) < 0) {
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
         free(ios);
         return r;
     }

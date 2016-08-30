@@ -12,10 +12,10 @@
 #include <unistd.h>
 
 mx_handle_t launchpad_vmo_from_mem(const void* data, size_t len) {
-    mx_handle_t vmo = mx_vm_object_create(len);
+    mx_handle_t vmo = mx_vmo_create(len);
     if (vmo < 0)
         return vmo;
-    mx_ssize_t n = mx_vm_object_write(vmo, data, 0, len);
+    mx_ssize_t n = mx_vmo_write(vmo, data, 0, len);
     if (n < 0) {
         mx_handle_close(vmo);
         return n;
@@ -46,7 +46,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
     uint64_t size = st.st_size;
     uint64_t offset = 0;
 
-    mx_handle_t vmo = mx_vm_object_create(size);
+    mx_handle_t vmo = mx_vmo_create(size);
     if (vmo < 0)
         return vmo;
 
@@ -66,7 +66,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
                 errno = ESPIPE;
                 return ERR_IO;
             }
-            mx_ssize_t n = mx_vm_object_write(vmo, buffer, offset, nread);
+            mx_ssize_t n = mx_vmo_write(vmo, buffer, offset, nread);
             if (n < 0) {
                 mx_handle_close(vmo);
                 return n;
@@ -84,7 +84,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
             size_t chunk = size < MAX_WINDOW ? size : MAX_WINDOW;
             size_t window = (chunk + PAGE_SIZE - 1) & -PAGE_SIZE;
             uintptr_t start = 0;
-            mx_status_t status = mx_process_vm_map(
+            mx_status_t status = mx_process_map_vm(
                 current_proc_handle, vmo, offset, window, &start,
                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
             if (status < 0) {
@@ -95,12 +95,12 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
             while (chunk > 0) {
                 ssize_t nread = my_pread(fd, buffer, chunk, offset);
                 if (nread < 0) {
-                    mx_process_vm_unmap(current_proc_handle, start, 0);
+                    mx_process_unmap_vm(current_proc_handle, start, 0);
                     mx_handle_close(vmo);
                     return ERR_IO;
                 }
                 if (nread == 0) {
-                    mx_process_vm_unmap(current_proc_handle, start, 0);
+                    mx_process_unmap_vm(current_proc_handle, start, 0);
                     mx_handle_close(vmo);
                     errno = ESPIPE;
                     return ERR_IO;
@@ -110,7 +110,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
                 size -= nread;
                 chunk -= nread;
             }
-            mx_process_vm_unmap(current_proc_handle, start, 0);
+            mx_process_unmap_vm(current_proc_handle, start, 0);
         }
     }
 

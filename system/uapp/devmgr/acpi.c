@@ -31,12 +31,12 @@ mx_status_t devmgr_launch_acpisvc(void) {
     mx_handle_t acpi_comm[2] = {0};
     mx_handle_t acpi_ready[2] = {0};
 
-    mx_status_t status = mx_message_pipe_create(acpi_comm, 0);
+    mx_status_t status = mx_msgpipe_create(acpi_comm, 0);
     if (status != NO_ERROR) {
         goto cleanup_handles;
     }
 
-    status = mx_message_pipe_create(acpi_ready, 0);
+    status = mx_msgpipe_create(acpi_ready, 0);
     if (status != NO_ERROR) {
         goto cleanup_handles;
     }
