@@ -80,6 +80,43 @@ public:
     bool GetDispatcher(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
                        uint32_t* rights);
 
+    template <typename T>
+    mx_status_t GetDispatcher(mx_handle_t handle_value,
+                              mxtl::RefPtr<T>* dispatcher,
+                              mx_rights_t* out_rights) {
+        mxtl::RefPtr<Dispatcher> generic_dispatcher;
+        if (!GetDispatcher(handle_value, &generic_dispatcher, out_rights))
+            return BadHandle(handle_value, ERR_BAD_HANDLE);
+        *dispatcher = DownCastDispatcher<T>(mxtl::move(generic_dispatcher));
+        if (!*dispatcher)
+            return BadHandle(handle_value, ERR_WRONG_TYPE);
+        return NO_ERROR;
+    }
+
+    template <typename T>
+    mx_status_t GetDispatcher(mx_handle_t handle_value,
+                              mxtl::RefPtr<T>* dispatcher,
+                              mx_rights_t check_rights = 0) {
+        mx_rights_t rights;
+        mx_status_t status = GetDispatcher(handle_value, dispatcher, &rights);
+        if (status == NO_ERROR && check_rights &&
+            !magenta_rights_check(rights, check_rights)) {
+            dispatcher->reset();
+            status = BadHandle(handle_value, ERR_ACCESS_DENIED);
+        }
+        return status;
+    }
+
+    // Called when this process attempts to use an invalid handle,
+    // a handle of the wrong type, or a handle with insufficient rights.
+    mx_status_t BadHandle(mx_handle_t handle_value, mx_status_t error);
+
+    // TODO(mcgrathr): Temporary until everything is converted to use
+    // the new GetDispatcher.
+    mx_status_t BadHandle() {
+        return BadHandle(MX_HANDLE_INVALID, ERR_BAD_HANDLE);
+    }
+
     // accessors
     Mutex& handle_table_lock() { return handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }

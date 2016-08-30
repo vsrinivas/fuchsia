@@ -62,17 +62,28 @@ constexpr mx_size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
 constexpr uint32_t kMaxWaitSetWaitResults = 1024u;
 
 namespace {
+
 // TODO(cpu): Move this handler to a common place.
-// TODO(cpu): Generate an exception when exception handling lands.
 mx_status_t BadHandle() {
     auto up = ProcessDispatcher::GetCurrent();
-    if (up->get_bad_handle_policy() == MX_POLICY_BAD_HANDLE_EXIT) {
-        printf("\n[fatal: %s used a bad handle]\n", up->name().data());
-        up->Exit(ERR_BAD_HANDLE);
+    return up->BadHandle();
+}
+
+mx_status_t get_process(ProcessDispatcher* up,
+                        mx_handle_t proc_handle,
+                        mxtl::RefPtr<ProcessDispatcher>* proc) {
+    if (proc_handle == 0) {
+        // handle 0 is magic for 'current process'
+        // TODO: remove this hack and switch to requiring user to pass the current process handle
+        proc->reset(up);
+        return NO_ERROR;
     }
-    return ERR_BAD_HANDLE;
+
+    return up->GetDispatcher(proc_handle, proc, MX_RIGHT_WRITE);
 }
-}
+
+} // anonymous namespace
+
 
 mx_status_t validate_resource_handle(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -757,25 +768,10 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const c
     // convert process handle to process dispatcher
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> process_dispatcher;
-
-    ProcessDispatcher *process = nullptr;
-    if (process_handle == 0) {
-        // XXX temporary hack to look up 'current process'
-        process = up;
-    } else {
-        mx_rights_t process_rights;
-
-        if (!up->GetDispatcher(process_handle, &process_dispatcher, &process_rights))
-            return BadHandle();
-
-        process = process_dispatcher->get_specific<ProcessDispatcher>();
-        if (!process)
-            return ERR_WRONG_TYPE;
-
-        if (!magenta_rights_check(process_rights, MX_RIGHT_WRITE))
-            return ERR_ACCESS_DENIED;
-    }
+    mxtl::RefPtr<ProcessDispatcher> process;
+    result = get_process(up, process_handle, &process);
+    if (result != NO_ERROR)
+        return result;
 
     // create the thread object
     mxtl::RefPtr<UserThread> user_thread;
@@ -934,17 +930,10 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     auto up = ProcessDispatcher::GetCurrent();
 
     // get process dispatcher
-    mxtl::RefPtr<Dispatcher> process_dispatcher;
-    uint32_t process_rights;
-    if (!up->GetDispatcher(process_handle, &process_dispatcher, &process_rights))
-        return BadHandle();
-
-    auto process = process_dispatcher->get_specific<ProcessDispatcher>();
-    if (!process)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(process_rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<ProcessDispatcher> process;
+    mx_status_t status = get_process(up, process_handle, &process);
+    if (status != NO_ERROR)
+        return status;
 
     // get thread_dispatcher
     mxtl::RefPtr<Dispatcher> thread_dispatcher;
@@ -960,7 +949,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
         return ERR_ACCESS_DENIED;
 
     // test that the thread belongs to the starting process
-    if (thread->thread()->process() != process)
+    if (thread->thread()->process() != process.get())
         return ERR_ACCESS_DENIED;
 
     // XXX test that handle has TRANSFER rights before we remove it from the source process
@@ -1145,35 +1134,6 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     return vmo->SetSize(size);
 }
 
-namespace {
-
-template <typename T>
-mx_status_t with_process_for_map(ProcessDispatcher* up,
-                                 mx_handle_t proc_handle,
-                                 T doit) {
-    if (proc_handle == 0) {
-        // handle 0 is magic for 'current process'
-        // TODO: remove this hack and switch to requiring user to pass the current process handle
-        return doit(up);
-    }
-
-    mx_rights_t proc_rights;
-    mxtl::RefPtr<Dispatcher> proc_dispatcher;
-    if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
-        return BadHandle();
-
-    auto process = proc_dispatcher->get_specific<ProcessDispatcher>();
-    if (!process)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
-
-    return doit(process);
-}
-
-}; // anonymous namespace
-
 mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
                                uint64_t offset, mx_size_t len, mxtl::user_ptr<uintptr_t> user_ptr,
                                uint32_t flags) {
@@ -1194,65 +1154,58 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
     if (!vmo)
         return ERR_WRONG_TYPE;
 
-    return with_process_for_map(
-        up, proc_handle, [=](ProcessDispatcher* process) {
-            // copy the user pointer in
-            uintptr_t ptr;
-            if (copy_from_user_uptr(&ptr, user_ptr) != NO_ERROR)
-                return ERR_INVALID_ARGS;
+    mxtl::RefPtr<ProcessDispatcher> process;
+    auto status = get_process(up, proc_handle, &process);
+    if (status != NO_ERROR)
+        return status;
 
-            // do the map call
-            mx_status_t status = process->Map(mxtl::WrapRefPtr(vmo), vmo_rights,
-                                              offset, len, &ptr, flags);
-            if (status != NO_ERROR)
-                return status;
+    // copy the user pointer in
+    uintptr_t ptr;
+    if (copy_from_user_uptr(&ptr, user_ptr) != NO_ERROR)
+        return ERR_INVALID_ARGS;
 
-            // copy the user pointer back
-            if (copy_to_user_uptr(user_ptr, ptr) != NO_ERROR)
-                return ERR_INVALID_ARGS;
+    // do the map call
+    status = process->Map(mxtl::WrapRefPtr(vmo), vmo_rights,
+                          offset, len, &ptr, flags);
+    if (status != NO_ERROR)
+        return status;
 
-            return NO_ERROR;
-        });
+    // copy the user pointer back
+    if (copy_to_user_uptr(user_ptr, ptr) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
 }
 
 mx_status_t sys_process_unmap_vm(mx_handle_t proc_handle, uintptr_t address, mx_size_t len) {
     LTRACEF("proc handle %d, address 0x%lx, len 0x%lx\n", proc_handle, address, len);
 
-    return with_process_for_map(ProcessDispatcher::GetCurrent(), proc_handle,
-                                [=](ProcessDispatcher* process) {
-                                    return process->Unmap(address, len);
-                                });
+    // current process
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<ProcessDispatcher> proc;
+    auto status = get_process(up, proc_handle, &proc);
+    if (status != NO_ERROR)
+        return status;
+
+    return proc->Unmap(address, len);
 }
 
 mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, mx_size_t len,
                                    uint32_t prot) {
     LTRACEF("proc handle %d, address 0x%lx, len 0x%lx, prot 0x%x\n", proc_handle, address, len, prot);
 
-    // get a reffed pointer to the address space in the target process
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<VmAspace> aspace;
-    if (proc_handle == 0) {
-        // handle 0 is magic for 'current process'
-        // TODO: remove this hack and switch to requiring user to pass the current process handle
-        aspace = up->aspace();
-    } else {
-        // get the process dispatcher and convert to aspace
-        mxtl::RefPtr<Dispatcher> proc_dispatcher;
-        uint32_t proc_rights;
-        if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
-            return BadHandle();
 
-        auto process = proc_dispatcher->get_specific<ProcessDispatcher>();
-        if (!process)
-            return ERR_WRONG_TYPE;
+    mxtl::RefPtr<ProcessDispatcher> process;
+    mx_status_t status = get_process(up, proc_handle, &process);
+    if (status != NO_ERROR)
+        return status;
 
-        if (!magenta_rights_check(proc_rights, MX_RIGHT_WRITE))
-            return ERR_ACCESS_DENIED;
-
-        aspace = process->aspace();
-        if (!aspace)
-            return ERR_INVALID_ARGS;
-    }
+    // get a reffed pointer to the address space in the target process
+    mxtl::RefPtr<VmAspace> aspace = process->aspace();
+    if (!aspace)
+        return ERR_INVALID_ARGS;
 
     // TODO: support range protect
     // at the moment only support protecting what is at a given address, signalled with len = 0

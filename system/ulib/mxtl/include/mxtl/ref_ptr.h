@@ -75,6 +75,14 @@ public:
         return *this;
     }
 
+    // Construct via explicit downcast.
+    // ptr must be the same object as base.ptr_.
+    template <typename baseT>
+    explicit RefPtr(T* ptr, RefPtr<baseT>&& base) : ptr_(ptr) {
+        ASSERT(static_cast<baseT*>(ptr_) == base.ptr_);
+        base.ptr_ = nullptr;
+    }
+
     ~RefPtr() {
         if (ptr_ && ptr_->Release()) delete static_cast<T*>(ptr_);
     }

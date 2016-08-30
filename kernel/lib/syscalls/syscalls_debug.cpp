@@ -162,21 +162,15 @@ mx_handle_t sys_debug_task_get_child(mx_handle_t handle, uint64_t koid) {
 mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> pd;
-    uint32_t rights;
-    if (!up->GetDispatcher(proc, &pd, &rights))
-        return ERR_BAD_HANDLE;
-
-    auto process = pd->get_specific<ProcessDispatcher>();
-    if (!process)
-        return ERR_WRONG_TYPE;
+    mxtl::RefPtr<ProcessDispatcher> process;
+    mx_status_t status = up->GetDispatcher(proc, &process,
+                                           MX_RIGHT_READ | MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     // Disallow this call on self.
-    if (process == up)
+    if (process.get() == up)
         return ERR_INVALID_ARGS;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ | MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
 
     HandleUniquePtr handle = up->RemoveHandle(src_handle);
     if (!handle)
@@ -195,21 +189,15 @@ mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t le
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> pd;
-    uint32_t rights;
-    if (!up->GetDispatcher(proc, &pd, &rights))
-        return ERR_BAD_HANDLE;
-
-    auto process = pd->get_specific<ProcessDispatcher>();
-    if (!process)
-        return ERR_WRONG_TYPE;
+    mxtl::RefPtr<ProcessDispatcher> process;
+    mx_status_t status = up->GetDispatcher(proc, &process,
+                                           MX_RIGHT_READ | MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     // Disallow this call on self.
-    if (process == up)
+    if (process.get() == up)
         return ERR_INVALID_ARGS;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ | MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
 
     auto aspace = process->aspace();
     if (!aspace)

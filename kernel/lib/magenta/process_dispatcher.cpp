@@ -488,3 +488,18 @@ mx_status_t ProcessDispatcher::Unmap(uintptr_t address, mx_size_t len) {
 
     return status;
 }
+
+mx_status_t ProcessDispatcher::BadHandle(mx_handle_t handle_value,
+                                         mx_status_t error) {
+    // TODO(mcgrathr): Maybe treat other errors the same?
+    // This also gets ERR_WRONG_TYPE and ERR_ACCESS_DENIED (for rights checks).
+    if (error != ERR_BAD_HANDLE)
+        return error;
+
+    // TODO(cpu): Generate an exception when exception handling lands.
+    if (get_bad_handle_policy() == MX_POLICY_BAD_HANDLE_EXIT) {
+        printf("\n[fatal: %s used a bad handle]\n", name().data());
+        Exit(error);
+    }
+    return error;
+}
