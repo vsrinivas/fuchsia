@@ -24,13 +24,17 @@
 // used for both command ring and transfer rings
 typedef struct xhci_transfer_ring {
     xhci_trb_t* start;
-    xhci_trb_t* current;
-    uint8_t pcs; // producer cycle status
+    xhci_trb_t* current;        // next to be filled by producer
+    uint8_t pcs;                // producer cycle status
+    xhci_trb_t* dequeue_ptr;    // next to be processed by consumer
+                                // (not used for command ring)
+    size_t size;                // number of TRBs in ring
 
     mtx_t mutex;
-    list_node_t pending_requests;
-    completion_t completion; // signaled when pending_requests is empty
+    list_node_t pending_requests;   // pending transfers that should be completed when ring is dead
+    completion_t completion;        // signaled when pending_requests is empty
     bool dead;
+    list_node_t deferred_txns;      // used by upper layer to defer iotxns when ring is full
 } xhci_transfer_ring_t;
 
 typedef struct xhci_event_ring {
@@ -71,6 +75,8 @@ typedef struct {
 
     // transfer ring we are queued on
     xhci_transfer_ring_t* transfer_ring;
+    // TRB following this transaction, for updating transfer ring dequeue_ptr
+    xhci_trb_t* dequeue_ptr;
     // for transfer ring's list of pending requests
     list_node_t node;
 } xhci_transfer_context_t;
@@ -137,7 +143,8 @@ void xhci_handle_rh_port_connected(xhci_t* xhci, int port);
 
 // xhci-transfer.c
 mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
-                                uint16_t length, int ep, int direction, xhci_transfer_context_t* context);
+                                uint16_t length, int ep, int direction,
+                                xhci_transfer_context_t* context, list_node_t* txn_node);
 mx_status_t xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_t request,
                                  uint16_t value, uint16_t index, mx_paddr_t data, uint16_t length);
 void xhci_cancel_transfers(xhci_t* xhci, xhci_transfer_ring_t* ring);
@@ -148,13 +155,14 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb);
 // xhci-trb.c
 mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* tr, int count);
 void xhci_transfer_ring_free(xhci_t* xhci, xhci_transfer_ring_t* ring);
+size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring);
 mx_status_t xhci_event_ring_init(xhci_t* xhci, int interruptor, int count);
 void xhci_clear_trb(xhci_trb_t* trb);
 void* xhci_read_trb_ptr(xhci_t* xhci, xhci_trb_t* trb);
 xhci_trb_t* xhci_get_next_trb(xhci_t* xhci, xhci_trb_t* trb);
 void xhci_increment_ring(xhci_t* xhci, xhci_transfer_ring_t* ring);
 
-// physical memory management
+// upper layer routines in usb-xhci.c
 void* xhci_malloc(xhci_t* xhci, size_t size);
 void* xhci_memalign(xhci_t* xhci, size_t alignment, size_t size);
 void xhci_free(xhci_t* xhci, void* addr);
@@ -166,3 +174,4 @@ mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
                             usb_device_descriptor_t* device_descriptor,
                             usb_configuration_descriptor_t** config_descriptors);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
+void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring);

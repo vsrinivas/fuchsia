@@ -14,12 +14,15 @@ inline void trb_set_link(xhci_t* xhci, xhci_trb_t* trb, xhci_trb_t* next, bool t
 
 mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* ring, int count) {
     list_initialize(&ring->pending_requests);
+    list_initialize(&ring->deferred_txns);
     completion_signal(&ring->completion);
 
     ring->start = xhci_memalign(xhci, 64, count * sizeof(xhci_trb_t));
     if (!ring->start)
         return ERR_NO_MEMORY;
     ring->current = ring->start;
+    ring->dequeue_ptr = ring->start;
+    ring->size = count - 1;    // subtract 1 for LINK TRB at the end
     ring->pcs = TRB_C;
     trb_set_link(xhci, &ring->start[count - 1], ring->start, true);
     ring->dead = false;
@@ -28,6 +31,20 @@ mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* ring, in
 
 void xhci_transfer_ring_free(xhci_t* xhci, xhci_transfer_ring_t* ring) {
     xhci_free(xhci, (void*)ring->start);
+}
+
+// return the number of free TRBs in the ring
+size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
+    xhci_trb_t* current = ring->current;
+    xhci_trb_t* dequeue_ptr = ring->dequeue_ptr;
+    int size = ring->size;
+
+    if (current < dequeue_ptr) {
+        current += size;
+    }
+
+    int busy_count = current - dequeue_ptr;
+    return size - busy_count;
 }
 
 mx_status_t xhci_event_ring_init(xhci_t* xhci, int interruptor, int count) {

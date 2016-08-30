@@ -25,7 +25,6 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
 #define print_trb(xhci, ring, trb) do {} while (0)
 #endif
 
-
 static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
     xprintf("xhci_reset_endpoint %d %d\n", slot_id, endpoint);
 
@@ -54,14 +53,18 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
     xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
     cc = xhci_sync_command_wait(&command);
 
+    transfer_ring->dequeue_ptr = transfer_ring->current;
+
     mtx_unlock(&transfer_ring->mutex);
 
     return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
 }
 
 int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
-                        uint16_t length, int endpoint, int direction, xhci_transfer_context_t* context) {
-    xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n", slot_id, setup, endpoint, length);
+                        uint16_t length, int endpoint, int direction,
+                        xhci_transfer_context_t* context, list_node_t* txn_node) {
+    xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n",
+            slot_id, setup, endpoint, length);
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     if (!slot->enabled)
@@ -78,11 +81,31 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_
     }
 
     uint32_t interruptor_target = 0;
-    const size_t max_transfer_size = 1 << (XFER_TRB_XFER_LENGTH_BITS - 1);
+    size_t max_transfer_size = 1 << (XFER_TRB_XFER_LENGTH_BITS - 1);
+    size_t data_packets = (length ? (length + max_transfer_size - 1) / max_transfer_size : 0);
+    size_t required_trbs = data_packets + 1;   // add 1 for event data TRB
+    if (setup) {
+        required_trbs += 2;
+    }
+    if (required_trbs > ring->size) {
+        // no way this will ever succeed
+        return ERR_INVALID_ARGS;
+    }
 
     // FIXME handle zero length packets
 
     mtx_lock(&ring->mutex);
+
+    // don't allow queueing new requests if we have deferred requests
+    if (!list_is_empty(&ring->deferred_txns) || required_trbs > xhci_transfer_ring_free_trbs(ring)) {
+        // add txn to deferred_txn list for later processing
+        if (txn_node) {
+            list_add_tail(&ring->deferred_txns, txn_node);
+        }
+        mtx_unlock(&ring->mutex);
+        return ERR_NOT_ENOUGH_BUFFER;
+    }
+
     context->transfer_ring = ring;
     list_add_tail(&ring->pending_requests, &context->node);
     completion_reset(&ring->completion);
@@ -109,10 +132,9 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_
 
     // Data Stage
     if (length > 0) {
-        size_t packet_count = (length + max_transfer_size - 1) / max_transfer_size;
         size_t remaining = length;
 
-        for (size_t i = 0; i < packet_count; i++) {
+        for (size_t i = 0; i < data_packets; i++) {
             size_t transfer_size = (remaining > max_transfer_size ? max_transfer_size : remaining);
             remaining -= transfer_size;
 
@@ -120,7 +142,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_
             xhci_clear_trb(trb);
             XHCI_WRITE64(&trb->ptr, data + (i * max_transfer_size));
             XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, transfer_size);
-            uint32_t td_size = packet_count - i - 1;
+            uint32_t td_size = data_packets - i - 1;
             XHCI_SET_BITS32(&trb->status, XFER_TRB_TD_SIZE_START, XFER_TRB_TD_SIZE_BITS, td_size);
             XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
 
@@ -173,6 +195,8 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_
             xhci_increment_ring(xhci, ring);
         }
     }
+    // update dequeue_ptr to TRB following this transaction
+    context->dequeue_ptr = ring->current;
 
     XHCI_WRITE32(&xhci->doorbells[slot_id], endpoint + 1);
 
@@ -197,7 +221,7 @@ int xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_
     xhci_sync_transfer_init(&xfer);
 
     mx_status_t result = xhci_queue_transfer(xhci, slot_id, &setup, data, length, 0,
-                                             request_type & USB_DIR_MASK, &xfer.context);
+                                             request_type & USB_DIR_MASK, &xfer.context, NULL);
     if (result != NO_ERROR)
         return result;
 
@@ -268,11 +292,15 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     mtx_lock(&ring->mutex);
 
+    // update dequeue_ptr to TRB following this transaction
+    ring->dequeue_ptr = context->dequeue_ptr;
+
     list_delete(&context->node);
     if (list_is_empty(&ring->pending_requests)) {
         completion_signal(&ring->completion);
     }
 
+    bool process_deferred_txns = !list_is_empty(&ring->deferred_txns);
     mtx_unlock(&ring->mutex);
 
     context->callback(result, context->data);
@@ -281,10 +309,16 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         // once we get a transfer error on a dead endpoint we will receive no more events.
         // so complete all remaining pending requests
         // FIXME - find a better way to handle this
-        list_for_every_entry (&ring->pending_requests, context, xhci_transfer_context_t, node) {
+        xhci_transfer_context_t* context;
+        while ((context = list_remove_head_type(&ring->pending_requests,
+                                                xhci_transfer_context_t, node)) != NULL) {
             context->callback(ERR_CHANNEL_CLOSED, context->data);
         }
         list_initialize(&ring->pending_requests);
         completion_signal(&ring->completion);
+    }
+
+    if (process_deferred_txns) {
+        xhci_process_deferred_txns(xhci, ring);
     }
 }

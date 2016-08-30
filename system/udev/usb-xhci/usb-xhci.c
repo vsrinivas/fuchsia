@@ -177,36 +177,76 @@ static void xhci_iotxn_callback(mx_status_t result, void* cookie) {
     txn->ops->complete(txn, status, actual);
 }
 
-static void xhci_iotxn_queue(mx_device_t* hci_device, iotxn_t* txn) {
-    usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
-    xhci_t* xhci = &uxhci->xhci;
+static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+    if (data->device_id > xhci->max_slots) {
+         return ERR_INVALID_ARGS;
+     }
+    uint8_t ep_index = xhci_endpoint_index(data->ep_address);
+    if (ep_index >= XHCI_NUM_EPS) {
+         return ERR_INVALID_ARGS;
+    }
     mx_paddr_t phys_addr;
     txn->ops->physmap(txn, &phys_addr);
 
-    mx_status_t result;
     xhci_transfer_context_t* context = malloc(sizeof(xhci_transfer_context_t));
     if (!context) {
-        result = ERR_NO_MEMORY;
-    } else {
-        context->callback = xhci_iotxn_callback;
-        context->data = txn;
-        txn->context = context;
-        uint8_t ep_index = xhci_endpoint_index(data->ep_address);
-        usb_setup_t* setup = (ep_index == 0 ? &data->setup : NULL);
-        uint8_t direction;
-        if (setup) {
-            direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
-        } else {
-            direction = data->ep_address & USB_ENDPOINT_DIR_MASK;
-        }
-
-        result = xhci_queue_transfer(xhci, data->device_id, setup, phys_addr, txn->length,
-                                     ep_index, direction, context);
+        return ERR_NO_MEMORY;
     }
 
-    if (result != NO_ERROR) {
-        txn->ops->complete(txn, result, 0);
+    context->callback = xhci_iotxn_callback;
+    context->data = txn;
+    txn->context = context;
+    usb_setup_t* setup = (ep_index == 0 ? &data->setup : NULL);
+    uint8_t direction;
+    if (setup) {
+        direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
+    } else {
+        direction = data->ep_address & USB_ENDPOINT_DIR_MASK;
+    }
+    return xhci_queue_transfer(xhci, data->device_id, setup, phys_addr, txn->length,
+                                 ep_index, direction, context, &txn->node);
+}
+
+void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring) {
+    list_node_t list;
+    list_node_t* node;
+    iotxn_t* txn;
+
+    list_initialize(&list);
+
+    mtx_lock(&ring->mutex);
+    // make a copy of deferred_txns list so we can operate on it safely outside of the mutex
+    while ((node = list_remove_head(&ring->deferred_txns)) != NULL) {
+        list_add_tail(&list, node);
+    }
+    list_initialize(&ring->deferred_txns);
+    mtx_unlock(&ring->mutex);
+
+    if (ring->dead) {
+        while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
+            txn->ops->complete(txn, ERR_CHANNEL_CLOSED, 0);
+        }
+        return;
+    }
+
+    // requeue all deferred transactions
+    // this will either add them to the transfer ring or put them back on deferred_txns list
+    while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
+        mx_status_t status = xhci_do_iotxn_queue(xhci, txn);
+        if (status != NO_ERROR && status != ERR_NOT_ENOUGH_BUFFER) {
+            txn->ops->complete(txn, status, 0);
+        }
+    }
+}
+
+static void xhci_iotxn_queue(mx_device_t* hci_device, iotxn_t* txn) {
+    usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
+    xhci_t* xhci = &uxhci->xhci;
+
+    mx_status_t status = xhci_do_iotxn_queue(xhci, txn);
+    if (status != NO_ERROR && status != ERR_NOT_ENOUGH_BUFFER) {
+        txn->ops->complete(txn, status, 0);
     }
 }
 
