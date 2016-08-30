@@ -1402,24 +1402,17 @@ mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requ
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto producer = dispatcher->get_specific<DataPipeProducerDispatcher>();
-    if (!producer)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<DataPipeProducerDispatcher> producer;
+    mx_status_t status = up->GetDispatcher(handle, &producer, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     // TODO(vtl): Handle write flags.
 
     mx_size_t written = requested;
-    mx_status_t st = producer->Write(_buffer, &written);
-    if (st < 0)
-        return st;
+    status = producer->Write(_buffer, &written);
+    if (status < 0)
+        return status;
 
     return written;
 }
@@ -1471,17 +1464,10 @@ mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, uintptr_
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto producer = dispatcher->get_specific<DataPipeProducerDispatcher>();
-    if (!producer)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<DataPipeProducerDispatcher> producer;
+    mx_status_t status = up->GetDispatcher(handle, &producer, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     // TODO(vtl): Handle (disallow) write flags.
 
@@ -1505,17 +1491,10 @@ mx_status_t sys_datapipe_end_write(mx_handle_t handle, mx_size_t written) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto producer = dispatcher->get_specific<DataPipeProducerDispatcher>();
-    if (!producer)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<DataPipeProducerDispatcher> producer;
+    mx_status_t status = up->GetDispatcher(handle, &producer, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     return producer->EndWrite(written);
 }
