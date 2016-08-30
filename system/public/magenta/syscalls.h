@@ -129,20 +129,6 @@ __MX_SYSCALL mx_status_t mx_wait_set_wait(mx_handle_t waitset_handle, mx_time_t 
     return mx_waitset_wait(waitset_handle, timeout, num_results, results, max_results);
 }
 
-__MX_SYSCALL mx_handle_t mx_set_system_exception_port(mx_handle_t eport, uint64_t key, uint32_t options) {
-        return mx_object_bind_exception_port(MX_HANDLE_INVALID, eport, key, options);
-}
-__MX_SYSCALL mx_handle_t mx_set_exception_port(mx_handle_t object, mx_handle_t eport,
-                                               uint64_t key, uint32_t options) {
-    if (object == MX_HANDLE_INVALID) {
-        object = mx_process_self();
-    }
-    return mx_object_bind_exception_port(object, eport, key, options);
-}
-__MX_SYSCALL mx_status_t mx_mark_exception_handled(mx_handle_t proc, mx_koid_t tid, mx_exception_status_t status) {
-    return mx_process_handle_exception(proc, tid, status);
-}
-
 #ifdef __cplusplus
 }
 #endif

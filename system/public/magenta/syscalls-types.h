@@ -125,6 +125,17 @@ typedef enum {
     MX_EXCEPTION_STATUS_RESUME = 1
 } mx_exception_status_t;
 
+// Flags for mx_task_resume()
+#define MX_RESUME_EXCEPTION (1)
+// Indicates that we should resume the thread from stopped-in-exception state
+// (default resume does not do so)
+
+#define MX_RESUME_NOT_HANDLED (2)
+// Only meaningful when combined with MX_RESUME_EXCEPTION
+// Indicates that instead of resuming from the faulting instruction we instead
+// let any additional exception handlers (eg, system after process) take a shot
+// at it, and if there are no additional handlers, the thread will terminate
+
 // Valid topics for mx_handle_get_info.
 typedef enum {
     MX_INFO_HANDLE_VALID,

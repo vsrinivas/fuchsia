@@ -110,7 +110,8 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
 
 static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid)
 {
-    mx_status_t status = mx_process_handle_exception(process, tid, MX_EXCEPTION_STATUS_NOT_HANDLED);
+    mx_handle_t thread = mx_debug_task_get_child(process, tid);
+    mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
     if (status < 0)
         tu_fatal("mx_mark_exception_handled", status);
 }

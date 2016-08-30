@@ -116,38 +116,33 @@ mx_status_t sys_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t e
     }
 }
 
-mx_status_t sys_process_handle_exception(mx_handle_t handle, mx_koid_t tid, mx_exception_status_t excp_status) {
+mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     LTRACE_ENTRY;
 
-    auto up = ProcessDispatcher::GetCurrent();
-
-    switch (excp_status)
-    {
-    case MX_EXCEPTION_STATUS_NOT_HANDLED:
-    case MX_EXCEPTION_STATUS_RESUME:
-    case MX_EXCEPTION_STATUS_HANDLER_GONE: // TODO(dje): ???
-        break;
-    default:
+    if (options & (~(MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED)))
         return ERR_INVALID_ARGS;
-    }
+
+    auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = dispatcher->get_process_dispatcher();
-    if (!process)
+    auto thread = dispatcher->get_thread_dispatcher();
+    if (!thread)
         return ERR_WRONG_TYPE;
 
-    // TODO(dje): What's the right right here? [READ is a temp hack]
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    if (options & MX_RESUME_EXCEPTION) {
+        mx_exception_status_t estatus;
+        if (options & MX_RESUME_NOT_HANDLED) {
+            estatus = MX_EXCEPTION_STATUS_NOT_HANDLED;
+        } else {
+            estatus = MX_EXCEPTION_STATUS_RESUME;
+        }
+        return thread->thread()->MarkExceptionHandled(estatus);
+    }
 
-    // The thread must come from |process|.
-    auto thread = process->LookupThreadById(tid);
-    if (!thread)
-        return ERR_INVALID_ARGS;
-
-    return thread->MarkExceptionHandled(excp_status);
+    //TODO: generic thread suspend/resume
+    return ERR_NOT_SUPPORTED;
 }

@@ -115,6 +115,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 84, mx_status_t, process_unmap_vm, mx_handle_t proc_ha
                     mx_size_t len)
 MAGENTA_SYSCALL_DEF(4, 4, 85, mx_status_t, process_protect_vm, mx_handle_t proc_handle, uintptr_t address,
                     mx_size_t len, uint32_t prot);
+MAGENTA_SYSCALL_DEF(2, 2, 86, mx_status_t, task_resume, mx_handle_t task_handle, uint32_t options);
 
 // Synchronization
 MAGENTA_SYSCALL_DEF(1, 1, 90, mx_handle_t, event_create, uint32_t options)
@@ -178,11 +179,6 @@ MAGENTA_SYSCALL_DEF(3, 3, 200, mx_status_t, io_mapping_get_info, mx_handle_t han
 // exception handlers
 MAGENTA_SYSCALL_DEF(4, 5, 211, mx_status_t, object_bind_exception_port,
                     mx_handle_t object, mx_handle_t eport, uint64_t key, uint32_t options)
-// TODO(dje): The arguments here assume there will only ever be threads that
-// we want to respond to exceptions on. IWBN to have an API that doesn't make
-// that assumption.
-MAGENTA_SYSCALL_DEF(3, 3, 212, mx_status_t, process_handle_exception,
-                    mx_handle_t process, mx_koid_t tid, mx_exception_status_t status)
 
 // IO Ports
 MAGENTA_SYSCALL_DEF(1, 1, 220, mx_handle_t, port_create, uint32_t options)
