@@ -39,3 +39,9 @@ $(MODULE_USERAPP_OBJECT): $(USER_CRT1_OBJ) $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $
 	@echo linking userapp $@
 	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) $(ARCH_LDFLAGS) $(_LDFLAGS) \
 		$(_OBJS) $(_LIBS) $(LIBGCC) -o $@
+
+# build list and debugging files if asked to
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
+EXTRA_BUILDDEPS += $(MODULE_USERAPP_OBJECT).lst
+EXTRA_BUILDDEPS += $(MODULE_USERAPP_OBJECT).sym
+endif

@@ -303,10 +303,6 @@ all:: $(EXTRA_BUILDDEPS) $(SYSROOT_DEPS)
 # make the build depend on all of the user apps
 all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
-all:: $(foreach app,$(ALLUSER_APPS),$(app).lst $(app).dump)
-endif
-
 # add some automatic configuration defines
 KERNEL_DEFINES += \
 	PROJECT_$(PROJECT)=1 \

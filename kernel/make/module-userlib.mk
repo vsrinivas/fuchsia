@@ -34,6 +34,12 @@ $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODU
 	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(_LDFLAGS)\
 		-shared -soname $(_SONAME) $(_OBJS) $(_LIBS) $(LIBGCC) -o $@
 
+# build list and debugging files if asked to
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
+EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so.lst
+EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so.sym
+endif
+
 # Only update the .so.abi file if it's changed, so things don't need
 # to be relinked if the ABI didn't change.
 $(MODULE_LIBNAME).so.abi: $(MODULE_LIBNAME).abi.stamp ;
