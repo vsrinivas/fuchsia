@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <magenta/compiler.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
