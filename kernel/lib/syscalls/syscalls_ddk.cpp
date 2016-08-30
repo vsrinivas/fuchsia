@@ -666,26 +666,20 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
-
-    auto io_mapping = dispatcher->get_specific<IoMappingDispatcher>();
-    if (!io_mapping || io_mapping->closed())
-        return ERR_WRONG_TYPE;
+    mxtl::RefPtr<IoMappingDispatcher> io_mapping;
+    mx_status_t status = up->GetDispatcher(handle, &io_mapping, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     // If we do not have read rights, or we are calling from a different address
     // space than the one that this mapping exists in, refuse to tell the user
     // the vaddr/len of the mapping.
-    if (!magenta_rights_check(rights, MX_RIGHT_READ) ||
-        (ProcessDispatcher::GetCurrent()->aspace() != io_mapping->aspace()))
+    if (ProcessDispatcher::GetCurrent()->aspace() != io_mapping->aspace())
         return ERR_ACCESS_DENIED;
 
     void*    vaddr = reinterpret_cast<void*>(io_mapping->vaddr());
     uint64_t size  = io_mapping->size();
-    status_t status;
 
     status = copy_to_user_unsafe(out_vaddr, &vaddr, sizeof(*out_vaddr));
     if (status != NO_ERROR)
