@@ -336,6 +336,17 @@ static void usb_ethernet_unbind(mx_device_t* device) {
 
 static mx_status_t usb_ethernet_release(mx_device_t* device) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
+    iotxn_t* txn;
+    while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
+        txn->ops->release(txn);
+    }
+    while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
+        txn->ops->release(txn);
+    }
+    while ((txn = list_remove_head_type(&eth->free_intr_reqs, iotxn_t, node)) != NULL) {
+        txn->ops->release(txn);
+    }
+
     free(eth);
     return NO_ERROR;
 }
@@ -373,7 +384,7 @@ static int usb_ethernet_start_thread(void* arg) {
                                                 ASIX_GPIO_GPO2EN | ASIX_GPIO_GPO_2 | ASIX_GPIO_RSE);
     if (status < 0) {
         printf("ASIX_REQ_WRITE_GPIOS failed\n");
-        return status;
+        goto fail;
     }
 
     // select the PHY
@@ -382,49 +393,49 @@ static int usb_ethernet_start_thread(void* arg) {
                          ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr));
     if (status < 0) {
         printf("ASIX_REQ_READ_PHY_ADDR failed\n");
-        return status;
+        goto fail;
     }
     eth->phy_id = phy_addr[1];
     int embed_phy = (eth->phy_id & 0x1F) == 0x10 ? 1 : 0;
     status = usb_ethernet_set_value(eth, ASIX_REQ_SW_PHY_SELECT, embed_phy);
     if (status < 0) {
         printf("ASIX_REQ_SW_PHY_SELECT failed\n");
-        return status;
+        goto fail;
     }
 
     // Reset
     status = usb_ethernet_set_value(eth, ASIX_REQ_SW_RESET, ASIX_RESET_PRL | ASIX_RESET_IPPD);
     if (status < 0) {
         printf("ASIX_REQ_SW_RESET failed\n");
-        return status;
+        goto fail;
     }
     status = usb_ethernet_set_value(eth, ASIX_REQ_SW_RESET, 0);
     if (status < 0) {
         printf("ASIX_REQ_SW_RESET failed\n");
-        return status;
+        goto fail;
     }
     status = usb_ethernet_set_value(eth, ASIX_REQ_SW_RESET,
                                     (embed_phy ? ASIX_RESET_IPRL : ASIX_RESET_PRTE));
     if (status < 0) {
         printf("ASIX_REQ_SW_RESET failed\n");
-        return status;
+        goto fail;
     }
     status = usb_ethernet_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, 0);
     if (status < 0) {
         printf("ASIX_REQ_RX_CONTROL_WRITE failed\n");
-        return status;
+        goto fail;
     }
 
     status = usb_ethernet_wait_for_phy(eth);
     if (status < 0) {
-        return status;
+        goto fail;
     }
 
     uint16_t medium = ASIX_MEDIUM_MODE_FD | ASIX_MEDIUM_MODE_AC | ASIX_MEDIUM_MODE_RFC | ASIX_MEDIUM_MODE_TFC | ASIX_MEDIUM_MODE_JFE | ASIX_MEDIUM_MODE_RE | ASIX_MEDIUM_MODE_PS;
     status = usb_ethernet_set_value(eth, ASIX_REQ_MEDIUM_MODE, medium);
     if (status < 0) {
         printf("ASIX_REQ_MEDIUM_MODE failed\n");
-        return status;
+        goto fail;
     }
 
     status = usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
@@ -432,20 +443,20 @@ static int usb_ethernet_start_thread(void* arg) {
                          ASIX_IPG2_DEFAULT, NULL, 0);
     if (status < 0) {
         printf("ASIX_REQ_IPG_WRITE failed\n");
-        return status;
+        goto fail;
     }
 
     status = usb_ethernet_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, ASIX_RX_CTRL_AMALL | ASIX_RX_CTRL_AB | ASIX_RX_CTRL_S0);
     if (status < 0) {
         printf("ASIX_REQ_RX_CONTROL_WRITE failed\n");
-        return status;
+        goto fail;
     }
 
     status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr));
     if (status < 0) {
         printf("ASIX_REQ_NODE_ID_READ failed\n");
-        return status;
+        goto fail;
     }
     printf("usb_ethernet MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
@@ -459,9 +470,12 @@ static int usb_ethernet_start_thread(void* arg) {
 
     eth->device.protocol_id = MX_PROTOCOL_ETHERNET;
     eth->device.protocol_ops = &usb_ethernet_proto;
-    device_add(&eth->device, eth->usb_device);
+    status = device_add(&eth->device, eth->usb_device);
+    if (status == NO_ERROR) return NO_ERROR;
 
-    return NO_ERROR;
+fail:
+    usb_ethernet_release(&eth->device);
+    return status;
 }
 
 static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
@@ -516,10 +530,13 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     eth->usb_device = device;
     eth->driver = driver;
 
+    mx_status_t status = NO_ERROR;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE, 0);
-        if (!req)
-            return ERR_NO_MEMORY;
+        if (!req) {
+            status = ERR_NO_MEMORY;
+            goto fail;
+        }
         req->length = USB_BUF_SIZE;
         req->complete_cb = usb_ethernet_read_complete;
         req->cookie = eth;
@@ -527,8 +544,10 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE, 0);
-        if (!req)
-            return ERR_NO_MEMORY;
+        if (!req) {
+            status = ERR_NO_MEMORY;
+            goto fail;
+        }
         req->length = USB_BUF_SIZE;
         req->complete_cb = usb_ethernet_write_complete;
         req->cookie = eth;
@@ -536,8 +555,10 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE, 0);
-        if (!req)
-            return ERR_NO_MEMORY;
+        if (!req) {
+            status = ERR_NO_MEMORY;
+            goto fail;
+        }
         req->length = INTR_REQ_SIZE;
         req->complete_cb = usb_ethernet_interrupt_complete;
         req->cookie = eth;
@@ -549,6 +570,11 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     thrd_detach(thread);
 
     return NO_ERROR;
+
+fail:
+    printf("usb_ethernet_bind failed: %d\n", status);
+    usb_ethernet_release(&eth->device);
+    return status;
 }
 
 static mx_bind_inst_t binding[] = {

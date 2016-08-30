@@ -652,11 +652,17 @@ static void ums_unbind(mx_device_t* device) {
 
 static mx_status_t ums_release(mx_device_t* device) {
     ums_t* msd = get_ums(device);
-    list_node_t* node;
-    list_for_every(&(msd->free_csw_reqs), node) {
-        // msd->usb_p.free_request();
-        // msd->usb_p.free_request(containerof(node, usb_request_t, node));
+    iotxn_t* txn;
+    while ((txn = list_remove_head_type(&msd->free_csw_reqs, iotxn_t, node)) != NULL) {
+        txn->ops->release(txn);
     }
+    while ((txn = list_remove_head_type(&msd->free_read_reqs, iotxn_t, node)) != NULL) {
+        txn->ops->release(txn);
+    }
+    while ((txn = list_remove_head_type(&msd->free_write_reqs, iotxn_t, node)) != NULL) {
+        txn->ops->release(txn);
+    }
+
     free(msd);
     return NO_ERROR;
 }
@@ -739,7 +745,7 @@ static int ums_start_thread(void* arg) {
     mx_status_t status = ums_inquiry(msd, inquiry_data);
     if (status < 0) {
         printf("ums_inquiry failed: %d\n", status);
-        return status;
+        goto fail;
     }
 
     bool ready = false;
@@ -750,13 +756,13 @@ static int ums_start_thread(void* arg) {
             break;
         } else if (status != ERR_BAD_STATE) {
             printf("ums_test_unit_ready failed: %d\n", status);
-            return status;
+            goto fail;
         } else {
             uint8_t request_sense_data[UMS_REQUEST_SENSE_TRANSFER_LENGTH];
             status = ums_request_sense(msd, request_sense_data);
             if (status != NO_ERROR) {
                 printf("request_sense_data failed: %d\n", status);
-                return status;
+                goto fail;
             }
             // wait a bit before trying ums_test_unit_ready again
             usleep(100 * 1000);
@@ -764,14 +770,14 @@ static int ums_start_thread(void* arg) {
     }
     if (!ready) {
         printf("gave up waiting for ums_test_unit_ready to succeed\n");
-        return status;
+        goto fail;
     }
 
     uint8_t read_capacity10_data[UMS_READ_CAPACITY10_TRANSFER_LENGTH];
     status = ums_read_capacity10(msd, read_capacity10_data);
     if (status < 0) {
         printf("read_capacity10 failed: %d\n", status);
-        return status;
+        goto fail;
     }
 
     // +1 because this returns the address of the final block, and blocks are zero indexed
@@ -783,7 +789,7 @@ static int ums_start_thread(void* arg) {
         status = ums_read_capacity16(msd, read_capacity16_data);
         if (status < 0) {
             printf("read_capacity16 failed: %d\n", status);
-            return status;
+            goto fail;
         }
 
         msd->total_blocks = read64be((uint8_t*)&read_capacity16_data);
@@ -797,10 +803,13 @@ static int ums_start_thread(void* arg) {
     DEBUG_PRINT(("UMS:total blocks is: %lld\n", msd->total_blocks));
     DEBUG_PRINT(("UMS:total size is: %lld\n", msd->total_blocks * msd->block_size));
     msd->device.protocol_id = MX_PROTOCOL_BLOCK;
-    device_add(&msd->device, msd->udev);
-    DEBUG_PRINT(("UMS:successfully added UMS device\n"));
+    status = device_add(&msd->device, msd->udev);
+    if (status == NO_ERROR) return NO_ERROR;
 
-    return NO_ERROR;
+fail:
+    printf("ums_start_thread failed\n");
+    ums_release(&msd->device);
+    return status;
 }
 
 static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
@@ -863,26 +872,33 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     msd->bulk_in_addr = bulk_in_addr;
     msd->bulk_out_addr = bulk_out_addr;
 
+    mx_status_t status = NO_ERROR;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE, 0);
-        if (!txn)
-            return ERR_NO_MEMORY;
+        if (!txn) {
+            status = ERR_NO_MEMORY;
+            goto fail;
+        }
         txn->complete_cb = ums_read_complete;
         txn->cookie = msd;
         list_add_head(&msd->free_read_reqs, &txn->node);
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, UMS_COMMAND_STATUS_WRAPPER_SIZE, 0);
-        if (!txn)
-            return ERR_NO_MEMORY;
+        if (!txn) {
+            status = ERR_NO_MEMORY;
+            goto fail;
+        }
         txn->length = UMS_COMMAND_STATUS_WRAPPER_SIZE;
         // complete_cb and cookie are set later
         list_add_head(&msd->free_csw_reqs, &txn->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE, 0);
-        if (!txn)
-            return ERR_NO_MEMORY;
+        if (!txn) {
+            status = ERR_NO_MEMORY;
+            goto fail;
+        }
         txn->complete_cb = ums_write_complete;
         txn->cookie = msd;
         list_add_head(&msd->free_write_reqs, &txn->node);
@@ -899,6 +915,11 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     thrd_detach(thread);
 
     return NO_ERROR;
+
+fail:
+    printf("ums_bind failed: %d\n", status);
+    ums_release(&msd->device);
+    return status;
 }
 
 static mx_bind_inst_t binding[] = {
