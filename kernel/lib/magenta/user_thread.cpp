@@ -176,7 +176,7 @@ void UserThread::Kill() {
 
 void UserThread::DispatcherClosed() {
     LTRACE_ENTRY_OBJ;
-
+    dispatcher_ = nullptr;
     Kill();
 }
 

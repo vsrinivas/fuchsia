@@ -23,6 +23,7 @@
 #include <mxtl/string_piece.h>
 
 class ProcessDispatcher;
+class ThreadDispatcher;
 
 class UserThread : public mxtl::DoublyLinkedListable<UserThread*>
                  , public mxtl::RefCounted<UserThread> {
@@ -55,6 +56,8 @@ public:
 
     // accessors
     ProcessDispatcher* process() { return process_.get(); }
+    ThreadDispatcher* dispatcher() { return dispatcher_; }
+
     FutexNode* futex_node() { return &futex_node_; }
     StateTracker* state_tracker() { return &state_tracker_; }
     const mxtl::StringPiece name() const { return thread_.name; }
@@ -70,6 +73,7 @@ public:
     status_t MarkExceptionHandled(mx_exception_status_t status);
 
     mx_koid_t get_koid() const { return koid_; }
+    void set_dispatcher(ThreadDispatcher* dispatcher) { dispatcher_ = dispatcher; }
 
 private:
     UserThread(const UserThread&) = delete;
@@ -90,6 +94,8 @@ private:
 
     // a ref pointer back to the parent process
     mxtl::RefPtr<ProcessDispatcher> process_;
+    // a naked pointer back to the containing thread dispatcher.
+    ThreadDispatcher* dispatcher_ = nullptr;
 
     // User thread starting register values.
     uintptr_t user_entry_ = 0;
