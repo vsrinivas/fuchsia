@@ -1423,17 +1423,10 @@ mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t reque
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto consumer = dispatcher->get_specific<DataPipeConsumerDispatcher>();
-    if (!consumer)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<DataPipeConsumerDispatcher> consumer;
+    mx_status_t status = up->GetDispatcher(handle, &consumer, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     if (flags & ~MX_DATAPIPE_READ_FLAG_MASK)
         return ERR_NOT_SUPPORTED;
@@ -1452,9 +1445,9 @@ mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t reque
         return ERR_INVALID_ARGS;
 
     mx_size_t read = requested;
-    mx_status_t st = consumer->Read(_buffer, &read, all_or_none, discard, peek);
-    if (st < 0)
-        return st;
+    status = consumer->Read(_buffer, &read, all_or_none, discard, peek);
+    if (status < 0)
+        return status;
 
     return read;
 }
@@ -1504,17 +1497,10 @@ mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, uintptr_t
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto consumer = dispatcher->get_specific<DataPipeConsumerDispatcher>();
-    if (!consumer)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<DataPipeConsumerDispatcher> consumer;
+    mx_status_t status = up->GetDispatcher(handle, &consumer, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     // Currently, no flags are supported with two-phase read.
     if (flags)
@@ -1540,17 +1526,10 @@ mx_status_t sys_datapipe_end_read(mx_handle_t handle, mx_size_t read) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto consumer = dispatcher->get_specific<DataPipeConsumerDispatcher>();
-    if (!consumer)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<DataPipeConsumerDispatcher> consumer;
+    mx_status_t status = up->GetDispatcher(handle, &consumer, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     return consumer->EndRead(read);
 }
