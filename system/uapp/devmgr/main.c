@@ -74,18 +74,45 @@ int devicehost(int argc, char** argv) {
 
 #if !LIBDRIVER
 
+static const uint8_t minfs_magic[16] = {
+    0x21, 0x4d, 0x69, 0x6e, 0x46, 0x53, 0x21, 0x00,
+    0x04, 0xd3, 0xd3, 0xd3, 0xd3, 0x00, 0x50, 0x38,
+};
+
+static const uint8_t gpt_magic[16] = {
+    0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54,
+    0x00, 0x00, 0x01, 0x00, 0x5c, 0x00, 0x00, 0x00,
+};
+
+
 
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
+    uint8_t data[4096];
     printf("devmgr: new block device: /dev/class/block/%s\n", name);
     int fd;
     if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
         return NO_ERROR;
     }
 
-    // probe for partition table
-    mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
-    close(fd);
+    if (read(fd, data, sizeof(data)) != sizeof(data)) {
+        close(fd);
+        printf("devmgr: cannot read: /dev/class/block/%s\n", name);
+        return NO_ERROR;
+    }
 
+    if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
+        printf("devmgr: /dev/class/block/%s: GPT?\n", name);
+        // probe for partition table
+        mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
+    } else if(!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
+        char path[MXIO_MAX_FILENAME + 64];
+        snprintf(path, sizeof(path), "/dev/class/block/%s", name);
+        const char* argv[] = { "/boot/bin/minfs", path, "mount" };
+        printf("devmgr: /dev/class/block/%s: minfs?\n", name);
+        devmgr_launch("minfs:/data", 3, argv, -1);
+    }
+
+    close(fd);
     return NO_ERROR;
 }
 

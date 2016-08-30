@@ -11,7 +11,7 @@
 // clang-format off
 
 #define MINFS_MAGIC0         (0x002153466e694d21ULL)
-#define MINFS_MAGIC1         (0x22385077ADACABAAULL)
+#define MINFS_MAGIC1         (0x385000d3d3d3d304ULL)
 #define MINFS_VERSION        0x00000001
 
 #define MINFS_FLAG_CLEAN     1

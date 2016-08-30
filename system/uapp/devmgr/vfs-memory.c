@@ -329,7 +329,6 @@ mx_status_t vfs_install_remote(mx_handle_t h) {
     if (vn_data->vn.remote > 0) {
         mx_handle_close(vn_data->vn.remote);
     }
-    printf("INSTALL %u\n", h);
     vn_data->vn.remote = h;
     vn_data->vn.flags |= V_FLAG_REMOTE;
     mtx_unlock(&vfs_lock);
