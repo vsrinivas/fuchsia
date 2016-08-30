@@ -1606,19 +1606,19 @@ mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
 
     Handle* ws_handle = up->GetHandle_NoLock(ws_handle_value);
     if (!ws_handle)
-        return BadHandle();
+        return up->BadHandle(ws_handle_value, ERR_BAD_HANDLE);
     // No need to take a ref to the dispatcher, since we're under the handle table lock. :-/
     auto ws_dispatcher = ws_handle->dispatcher()->get_specific<WaitSetDispatcher>();
     if (!ws_dispatcher)
-        return ERR_WRONG_TYPE;
+        return up->BadHandle(ws_handle_value, ERR_WRONG_TYPE);
     if (!magenta_rights_check(ws_handle->rights(), MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+        return up->BadHandle(ws_handle_value, ERR_ACCESS_DENIED);
 
     Handle* handle = up->GetHandle_NoLock(handle_value);
     if (!handle)
-        return BadHandle();
+        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
     if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+        return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
     return ws_dispatcher->AddEntry(mxtl::move(entry), handle);
 }
@@ -1628,15 +1628,11 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(ws_handle, &dispatcher, &rights))
-        return BadHandle();
-    auto ws_dispatcher = dispatcher->get_specific<WaitSetDispatcher>();
-    if (!ws_dispatcher)
-        return ERR_WRONG_TYPE;
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<WaitSetDispatcher> ws_dispatcher;
+    mx_status_t status =
+        up->GetDispatcher(ws_handle, &ws_dispatcher, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     return ws_dispatcher->RemoveEntry(cookie);
 }
@@ -1667,15 +1663,11 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(ws_handle, &dispatcher, &rights))
-        return BadHandle();
-    auto ws_dispatcher = dispatcher->get_specific<WaitSetDispatcher>();
-    if (!ws_dispatcher)
-        return ERR_WRONG_TYPE;
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<WaitSetDispatcher> ws_dispatcher;
+    mx_status_t status =
+        up->GetDispatcher(ws_handle, &ws_dispatcher, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     uint32_t max_results = 0u;
     mx_status_t result = ws_dispatcher->Wait(timeout, &num_results, results.get(), &max_results);
