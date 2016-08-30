@@ -1732,17 +1732,10 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto socket = dispatcher->get_specific<SocketDispatcher>();
-    if (!socket)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<SocketDispatcher> socket;
+    mx_status_t status = up->GetDispatcher(handle, &socket, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     return flags == MX_SOCKET_CONTROL?
         socket->OOB_Write(_buffer, size, true) :
@@ -1758,17 +1751,10 @@ mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto socket = dispatcher->get_specific<SocketDispatcher>();
-    if (!socket)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<SocketDispatcher> socket;
+    mx_status_t status = up->GetDispatcher(handle, &socket, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     return flags == MX_SOCKET_CONTROL?
         socket->OOB_Read(_buffer, size, true) :
