@@ -302,7 +302,7 @@ typedef struct mx_waitset_result {
 #define MX_POLICY_BAD_HANDLE_EXIT      2u
 
 #ifndef DEPRECATE_COMPAT_SYSCALLS
-typedef mx_waitset_result mx_wait_set_result_t;
+typedef struct mx_waitset_result mx_wait_set_result_t;
 #define MX_IO_PORT_MAX_PKT_SIZE MX_PORT_MAX_PKT_SIZE
 #define MX_IO_PORT_PKT_TYPE_KERN MX_PORT_PKT_TYPE_KERN
 #define MX_IO_PORT_PKT_TYPE_IOSN MX_PORT_PKT_TYPE_IOSN
