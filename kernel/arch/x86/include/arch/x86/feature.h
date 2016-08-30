@@ -147,8 +147,9 @@ static inline uint8_t x86_physical_address_width(void)
 #define X86_TOPOLOGY_CORE 2
 
 struct x86_topology_level {
-    /* The number of bits of the APIC ID that encode this level */
-    uint8_t num_bits;
+    /* The number of bits to right shift to identify the next-higher topological
+     * level */
+    uint8_t right_shift;
     /* The type of relationship this level describes (hyperthread/core/etc) */
     uint8_t type;
 };

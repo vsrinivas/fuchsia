@@ -85,7 +85,7 @@ bool x86_topology_enumerate(uint8_t level, struct x86_topology_level *info)
         return false;
     }
 
-    info->num_bits = eax & 0x1f;
+    info->right_shift = eax & 0x1f;
     info->type = type;
     return true;
 }

@@ -11,6 +11,7 @@
 #include <err.h>
 #include <trace.h>
 #include <arch/x86/apic.h>
+#include <arch/x86/cpu_topology.h>
 #include <arch/x86/mmu.h>
 #include <platform.h>
 #include "platform_p.h"
@@ -254,6 +255,35 @@ void platform_init_smp(void)
         return;
     }
 
+    uint32_t *apic_ids = malloc(sizeof(*apic_ids) * num_cpus);
+    if (apic_ids == NULL) {
+        TRACEF("failed to allocate apic_ids table, disabling SMP\n");
+        return;
+    }
+
+    uint32_t real_num_cpus;
+    status = platform_enumerate_cpus(apic_ids, num_cpus, &real_num_cpus);
+    if (status != NO_ERROR || num_cpus != real_num_cpus) {
+        TRACEF("failed to enumerate CPUs, disabling SMP\n");
+        free(apic_ids);
+        return;
+    }
+
+    // Filter out hyperthreads if we've been told not to init them
+    bool use_ht = cmdline_get_bool("smp.ht", true);
+    if (!use_ht) {
+        for (uint32_t i = 0; i < num_cpus; ++i) {
+            x86_cpu_topology_t topo;
+            x86_cpu_topology_decode(apic_ids[i], &topo);
+
+            if (topo.smt_id != 0) {
+                // Delete this CPU from the list
+                apic_ids[i] = apic_ids[num_cpus - 1];
+                num_cpus--;
+            }
+        }
+    }
+
     // Find the CPU count limit
     uint32_t max_cpus = cmdline_get_uint32("smp.maxcpus", SMP_MAX_CPUS);
     if (max_cpus > SMP_MAX_CPUS || max_cpus <= 0) {
@@ -267,23 +297,10 @@ void platform_init_smp(void)
         num_cpus = max_cpus;
     }
 
-    uint32_t *apic_ids = malloc(sizeof(*apic_ids) * num_cpus);
-    if (apic_ids == NULL) {
-        TRACEF("failed to allocate apic_ids table, disabling SMP\n");
-        return;
-    }
-    uint32_t real_num_cpus;
-    status = platform_enumerate_cpus(apic_ids, num_cpus, &real_num_cpus);
-    if (status != NO_ERROR) {
-        TRACEF("failed to enumerate CPUs, disabling SMP\n");
-        free(apic_ids);
-        return;
-    }
-
     uint32_t bsp_apic_id = apic_local_id();
-    if (num_cpus == max_cpus) {
-        // If we are at the max number of CPUs, sanity check that the bootstrap
-        // processor is in that set, to make sure clamping didn't go awry.
+    if (num_cpus == max_cpus || !use_ht) {
+        // If we are at the max number of CPUs, or have filtered out
+        // hyperthreads, sanity check that the bootstrap processor is in the set.
         bool found_bp = false;
         for (unsigned int i = 0; i < num_cpus; ++i) {
             if (apic_ids[i] == bsp_apic_id) {

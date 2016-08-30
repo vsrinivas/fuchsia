@@ -33,6 +33,11 @@ only "9x16" (the default) and "18x32" (a double-size font) are supported.
 This option caps the number of CPUs to initialize.  It cannot be greater than
 *SMP\_MAX\_CPUS* for a specific architecture.
 
+## smp.ht=<bool>
+
+This option can be used to disable the initialization of hyperthread logical
+CPUs.  Defaults to true.
+
 ## userboot=<path>
 
 This option instructs the userboot process (the first userspace process) to
