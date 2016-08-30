@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "command_buffer.h"
+#include "engine_command_streamer.h"
+#include "msd_intel_context.h"
 
 CommandBuffer::~CommandBuffer()
 {
@@ -30,13 +32,24 @@ void CommandBuffer::UnmapResourcesGpu(AddressSpace* address_space)
     }
 }
 
-bool CommandBuffer::PrepareForExecution()
+bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
 {
+    DASSERT(engine);
+
     locked_context_ = context_.lock();
     if (!locked_context_)
         return DRETF(false, "context has already been deleted, aborting");
 
     auto address_space = locked_context_->exec_address_space();
+
+    if (!locked_context_->IsInitializedForEngine(engine->id())) {
+        if (!engine->InitContext(locked_context_.get()))
+            return DRETF(false, "failed to intialize context");
+    }
+
+    if (!locked_context_->Map(address_space, engine->id()))
+        return DRETF(false, "failed to map context");
+
     std::vector<gpu_addr_t> resource_gpu_addresses;
     resource_gpu_addresses.reserve(cmd_buf_->num_resources);
     if (!MapResourcesGpu(address_space, resource_gpu_addresses))
@@ -44,6 +57,11 @@ bool CommandBuffer::PrepareForExecution()
 
     if (!PatchRelocations(resource_gpu_addresses))
         return DRETF(false, "failed to patch relocations");
+
+    batch_buffer_gpu_addr_ = resource_gpu_addresses[cmd_buf_->batch_buffer_resource_index];
+
+    prepared_to_execute_ = true;
+    engine_id_ = engine->id();
 
     return true;
 }

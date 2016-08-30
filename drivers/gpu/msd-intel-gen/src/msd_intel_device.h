@@ -98,6 +98,7 @@ private:
 
     friend class MsdIntelDriver;
     friend class TestMsdIntelDevice;
+    friend class TestCommandBuffer;
 };
 
 #endif // MSD_DEVICE_H

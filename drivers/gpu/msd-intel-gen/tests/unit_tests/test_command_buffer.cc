@@ -83,7 +83,27 @@ public:
     // so this is just to make sure it doesnt fail in the real GTT
     void TestPrepareForExecution()
     {
-        EXPECT_TRUE(cmd_buf_->PrepareForExecution());
+
+        auto engine = MsdIntelDevice::cast(helper_->dev()->msd_dev())->render_engine_cs();
+        EXPECT_TRUE(cmd_buf_->PrepareForExecution(engine));
+
+        auto ctx = cmd_buf_->context();
+
+        EXPECT_NE(ctx, nullptr);
+        EXPECT_NE(cmd_buf_->batch_buffer_gpu_addr(), kInvalidGpuAddr);
+
+        // Check that context is initialized correctly
+        EXPECT_TRUE(ctx->IsInitializedForEngine(engine->id()));
+        EXPECT_NE(ctx->get_ringbuffer(engine->id()), nullptr);
+        EXPECT_NE(ctx->get_context_buffer(engine->id()), nullptr);
+
+        // Check that context is mapped correctly
+        gpu_addr_t addr;
+        EXPECT_TRUE(ctx->GetGpuAddress(engine->id(), &addr));
+        EXPECT_NE(addr, kInvalidGpuAddr);
+        EXPECT_TRUE(ctx->GetRingbufferGpuAddress(engine->id(), &addr));
+        EXPECT_NE(addr, kInvalidGpuAddr);
+
         cmd_buf_.reset();
     }
 

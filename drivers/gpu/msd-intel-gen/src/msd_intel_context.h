@@ -53,6 +53,11 @@ public:
         return iter == state_map_.end() ? nullptr : iter->second.ringbuffer.get();
     }
 
+    bool IsInitializedForEngine(EngineCommandStreamerId id)
+    {
+        return state_map_.find(id) != state_map_.end();
+    }
+
 protected:
     bool MapGpu(AddressSpace* address_space, EngineCommandStreamerId id);
     bool UnmapGpu(AddressSpace* address_space, EngineCommandStreamerId id);

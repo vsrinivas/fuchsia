@@ -8,8 +8,12 @@
 #include "msd.h"
 #include "msd_intel_buffer.h"
 #include "msd_intel_context.h"
+#include "msd_intel_device.h"
 #include <memory>
 #include <vector>
+
+class ClientContext;
+class EngineCommandStreamer;
 
 class CommandBuffer {
 public:
@@ -27,7 +31,20 @@ public:
     // mapped addresses, and locks the weak reference to the context for the rest of the lifetime
     // of this object
     // this should be called only when we are ready to submit the CommandBuffer for execution
-    bool PrepareForExecution();
+    bool PrepareForExecution(EngineCommandStreamer* engine);
+
+    // only valid after PrepareForExecution succeeds
+    ClientContext* context()
+    {
+        DASSERT(prepared_to_execute_);
+        return locked_context_.get();
+    }
+
+    gpu_addr_t batch_buffer_gpu_addr()
+    {
+        DASSERT(prepared_to_execute_);
+        return batch_buffer_gpu_addr_;
+    }
 
 private:
     CommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** exec_resources,
@@ -58,6 +75,9 @@ private:
     bool prepared_to_execute_;
     // valid only when prepared_to_execute_ is true
     std::shared_ptr<ClientContext> locked_context_;
+    gpu_addr_t batch_buffer_gpu_addr_;
+    EngineCommandStreamerId engine_id_;
+    // ---------------------------- //
 
     friend class TestCommandBuffer;
 };
