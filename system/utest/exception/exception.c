@@ -134,7 +134,7 @@ static bool test_received_exception(mx_handle_t eport,
     if (strcmp(kind, "system") == 0) {
         // Test mx_process_debug. System exception handlers don't already have
         // a handle on the process so this is a good place to test this.
-        mx_handle_t debug_child = mx_process_debug(MX_HANDLE_INVALID, report->context.pid);
+        mx_handle_t debug_child = mx_debug_task_get_child(MX_HANDLE_INVALID, report->context.pid);
         if (debug_child < 0)
             tu_fatal("mx_process_debug", debug_child);
         mx_handle_basic_info_t process_info;
@@ -142,14 +142,8 @@ static bool test_received_exception(mx_handle_t eport,
         ASSERT_EQ(process_info.koid, report->context.pid, "mx_process_debug got pid mismatch");
         tu_handle_close(debug_child);
     } else if (strcmp(kind, "process") == 0) {
-#if 0 // MX_HND_TYPE_PROC_SELF doesn't work yet
-        mx_handle_t self = mxio_get_startup_handle(MX_HND_TYPE_PROC_SELF);
-        if (self == MX_HANDLE_INVALID)
-            tu_fatal("mxio_get_startup_handle", ERR_BAD_HANDLE - 1000);
-#else
-        mx_handle_t self = MX_HANDLE_INVALID;
-#endif
-        mx_handle_t debug_child = mx_process_debug(self, report->context.pid);
+        mx_handle_t self = mx_process_self();
+        mx_handle_t debug_child = mx_debug_task_get_child(self, report->context.pid);
         if (debug_child < 0)
             tu_fatal("mx_process_debug", debug_child);
         mx_handle_basic_info_t process_info;

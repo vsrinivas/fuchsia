@@ -67,7 +67,7 @@ void process_report(const mx_exception_report_t* report) {
     printf("<== fatal exception: process [%llu] thread [%llu]\n", context.pid, context.tid);
     printf("<== %s , PC at 0x%lx\n", exc_type_to_str(context.arch.subtype), context.arch.pc);
 
-    auto process = mx_debug_get_process(0, context.pid);
+    auto process = mx_debug_task_get_child(0, context.pid);
     if (process <= 0) {
         printf("failed to get a handle to [%llu] : error %d\n", context.pid, process);
         return;

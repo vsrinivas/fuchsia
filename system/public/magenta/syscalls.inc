@@ -59,7 +59,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 5, int, debug_send_command, mx_handle_t, const void* b
 MAGENTA_SYSCALL_DEF(0, 0, 6, unsigned int, num_cpus, void)
 
 // Temporary syscall to aid debuggers
-MAGENTA_SYSCALL_DEF(2, 3, 7, mx_handle_t, debug_get_process, mx_handle_t handle, uint64_t koid)
+MAGENTA_SYSCALL_DEF(2, 3, 7, mx_handle_t, debug_task_get_child, mx_handle_t handle, uint64_t koid)
 MAGENTA_SYSCALL_DEF(2, 2, 8, mx_handle_t, debug_transfer_handle, mx_handle_t proc, mx_handle_t handle)
 MAGENTA_SYSCALL_DEF(4, 4, 9, mx_ssize_t, debug_read_memory, mx_handle_t proc, uintptr_t vaddr,
                     mx_size_t len, void* buffer)
@@ -183,19 +183,6 @@ MAGENTA_SYSCALL_DEF(4, 5, 211, mx_status_t, object_bind_exception_port,
 // that assumption.
 MAGENTA_SYSCALL_DEF(3, 3, 212, mx_status_t, process_handle_exception,
                     mx_handle_t process, mx_koid_t tid, mx_exception_status_t status)
-// TODO(dje): Exception handlers get a pid in the exception report but need a process handle to
-// reply to it. Thus we provide a lookup mechanism to go from pid to process handle. The lookup doesn't
-// necessarily have to be directly accomplished via a syscall. This is for bootstrapping for now.
-// Rights checking for this operation (however it is done) is an open issue. For the current support,
-// one possibility is to attach the rights checking to the handle the report came from, which is intuitive.
-// However that's just a handle of an ioport, hardly something one would use to adjudicate process lookup.
-// Another is to attach the rights checking to the handle the exception port was assigned to. This works
-// for most cases: thread, process, and (eventually) debugger. One still needs to provide for the system
-// exception handler, which generally doesn't know about any particular process until it receives an
-// exception from it. Perhaps the system exception handler process itself can have certain rights.
-// So for now |handle| is either a thread or process handle or MX_HANDLE_INVALID for "self process"
-// (for now).
-MAGENTA_SYSCALL_DEF(2, 2, 213, mx_handle_t, process_debug, mx_handle_t handle, mx_koid_t pid)
 
 // IO Ports
 MAGENTA_SYSCALL_DEF(1, 1, 220, mx_handle_t, port_create, uint32_t options)
