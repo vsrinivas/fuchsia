@@ -21,17 +21,11 @@ mx_status_t dn_create(dnode_t** out, const char* name, size_t len, vnode_t* vn) 
     if ((len > DN_NAME_MAX) || (len < 1)) {
         return ERR_INVALID_ARGS;
     }
-    if (len > DN_NAME_INLINE) {
-        dn = calloc(1, sizeof(dnode_t) + len - DN_NAME_INLINE);
-    } else {
-        dn = calloc(1, sizeof(dnode_t));
-    }
-    if (dn == NULL) {
+
+    if ((dn = calloc(1, sizeof(dnode_t) + len)) == NULL) {
         return ERR_NO_MEMORY;
     }
-    dn->name = dn->namedata;
     dn->flags = len;
-    dn->refcount = 1;
     dn->vnode = vn;
     if (vn != NULL) {
         vn_acquire(vn);
@@ -39,24 +33,10 @@ mx_status_t dn_create(dnode_t** out, const char* name, size_t len, vnode_t* vn) 
         vn->dn_count++;
     }
     list_initialize(&dn->children);
-    memcpy(dn->namedata, name, len);
-    dn->namedata[len] = 0;
+    memcpy(dn->name, name, len);
     *out = dn;
     return NO_ERROR;
 }
-
-#if 0
-void dn_release(dnode_t* dn) {
-    if (!(dn->flags & DN_DEAD)) {
-        printf("dn_release(%p) not dead!\n", dn);
-        panic();
-    }
-    dn->refcount--;
-    if (dn->refcount == 0) {
-        dn_delete(dn);
-    }
-}
-#endif
 
 void dn_delete(dnode_t* dn) {
     // detach from parent

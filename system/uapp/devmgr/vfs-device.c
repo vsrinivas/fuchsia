@@ -69,7 +69,6 @@ static vnode_ops_t vn_device_ops = {
 static dnode_t vnd_root_dn = {
     .name = "dev",
     .flags = 3,
-    .refcount = 1,
     .children = LIST_INITIAL_VALUE(vnd_root_dn.children),
 };
 

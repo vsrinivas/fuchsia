@@ -10,7 +10,6 @@
 typedef struct dnode dnode_t;
 
 #define DN_NAME_MAX 255
-#define DN_NAME_INLINE 47
 #define DN_NAME_LEN(flags) ((flags) & 0xFF)
 
 #define DN_TYPE_MASK    0xF00
@@ -22,25 +21,16 @@ typedef struct dnode dnode_t;
 
 struct dnode {
     dnode_t* parent;
-    const char* name;
-    uint32_t flags;
-    uint32_t refcount;
     vnode_t* vnode;
     list_node_t children;
     list_node_t dn_entry; // entry in parent's list
     list_node_t vn_entry; // entry in vnode's list
-    char namedata[DN_NAME_INLINE + 1];
+    uint32_t flags;
+    char name[];
 };
 
 mx_status_t dn_create(dnode_t** dn, const char* name, size_t len, vnode_t* vn);
 void dn_delete(dnode_t* dn);
-
-#if 0
-static inline void dn_acquire(dnode_t* dn) {
-    dn->refcount++;
-}
-void dn_release(dnode_t* dn);
-#endif
 
 mx_status_t dn_lookup(dnode_t* dn, dnode_t** out, const char* name, size_t len);
 

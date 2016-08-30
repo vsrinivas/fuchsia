@@ -80,7 +80,6 @@ static vnode_ops_t vn_boot_ops = {
 static dnode_t vnb_root_dn = {
     .name = "boot",
     .flags = 4,
-    .refcount = 1,
     .children = LIST_INITIAL_VALUE(vnb_root_dn.children),
 };
 
