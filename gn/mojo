@@ -4,6 +4,10 @@
     ],
     "binaries": [
         {
+            "binary": "libmojo.so",
+            "bootfs_path": "lib/libmojo.so"
+        },
+        {
             "binary": "application_manager",
             "bootfs_path": "bin/application_manager"
         },
