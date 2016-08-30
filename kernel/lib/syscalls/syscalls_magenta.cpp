@@ -498,18 +498,12 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value, mxtl::user_ptr<void> _byt
             handle_value, _bytes.get(), _num_bytes.get(), _handles.get(), _num_handles.get(), flags);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return BadHandle();
-
-    auto msg_pipe = dispatcher->get_specific<MessagePipeDispatcher>();
-    if (!msg_pipe)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
+    mx_status_t status = up->GetDispatcher(handle_value, &msg_pipe,
+                                           MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     uint32_t num_bytes = 0;
     uint32_t num_handles = 0;
@@ -598,19 +592,13 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value, mxtl::user_ptr<const voi
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return BadHandle();
-
-    auto msg_pipe = dispatcher->get_specific<MessagePipeDispatcher>();
-    if (!msg_pipe)
-        return ERR_WRONG_TYPE;
+    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
+    mx_status_t status = up->GetDispatcher(handle_value, &msg_pipe,
+                                           MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     bool is_reply_pipe = msg_pipe->is_reply_pipe();
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
 
     if (num_bytes != 0u && !_bytes)
         return ERR_INVALID_ARGS;
@@ -665,7 +653,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value, mxtl::user_ptr<const voi
             if (!handle)
                 return BadHandle();
 
-            if (handle->dispatcher() == dispatcher) {
+            if (handle->dispatcher().get() == static_cast<Dispatcher*>(msg_pipe.get())) {
                 // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
                 if (!is_reply_pipe) {
                     return ERR_NOT_SUPPORTED;
@@ -1419,16 +1407,10 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    mxtl::RefPtr<Dispatcher> source_d;
-    if (!up->GetDispatcher(source, &source_d, &rights))
-        return BadHandle();
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
-
-    auto msg_pipe = source_d->get_specific<MessagePipeDispatcher>();
-    if (!msg_pipe)
-        return ERR_NOT_SUPPORTED;
+    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
+    mx_status_t status = up->GetDispatcher(source, &msg_pipe, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     return msg_pipe->SetIOPort(mxtl::WrapRefPtr(ioport), key, signals);
  }
