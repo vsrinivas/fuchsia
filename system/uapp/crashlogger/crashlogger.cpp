@@ -85,6 +85,15 @@ void process_report(const mx_exception_report_t* report) {
         // TODO: support other architectures.
         printf("unsuported architecture .. coming soon.\n");
     }
+
+    auto thread = mx_debug_task_get_child(process, context.tid);
+    if (thread <= 0) {
+        printf("failed to get a handle to [%llu] : error %d\n", context.pid, process);
+        return;
+    }
+
+    // allow the thread (and then process) to die:
+    mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
 }
 
 int main(int argc, char** argv) {
