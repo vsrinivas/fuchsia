@@ -33,6 +33,9 @@ enum {
     HID_DEV_CLASS_KBD = 1,
     HID_DEV_CLASS_POINTER = 2,
     HID_DEV_CLASS_KBD_POINTER = 3,
+
+    HID_DEV_CLASS_FIRST = HID_DEV_CLASS_OTHER,
+    HID_DEV_CLASS_LAST = HID_DEV_CLASS_KBD_POINTER,
 };
 
 typedef struct hid_report_size {

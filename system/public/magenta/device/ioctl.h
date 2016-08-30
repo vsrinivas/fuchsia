@@ -27,6 +27,7 @@
 #define IOCTL_FAMILY_I2C            0x14
 #define IOCTL_FAMILY_TPM            0x15
 #define IOCTL_FAMILY_USB            0x16
+#define IOCTL_FAMILY_HID            0x17
 
 // IOCTL constructor
 // --K-FFNN

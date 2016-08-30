@@ -12,10 +12,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/hid.c \
     $(LOCAL_DIR)/keymaps.c \
 
-MODULE_DEPS += \
+MODULE_EXPORT := hid
+MODULE_SO_NAME := hid
+
+MODULE_LIBS := \
     ulib/magenta \
     ulib/musl
-
-MODULE_EXPORT := hid
 
 include make/module.mk

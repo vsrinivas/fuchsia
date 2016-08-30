@@ -6,6 +6,7 @@
 #include <hid/usages.h>
 
 #include <string.h>
+#include <strings.h>
 
 #define KEYSET(bitmap,n) (bitmap[(n) >> 5] |= (1 << ((n) & 31)))
 #define KEYCLR(bitmap,n) (bitmap[(n) >> 5] &= ~(1 << ((n) & 31)))
