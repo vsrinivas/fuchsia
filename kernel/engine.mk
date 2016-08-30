@@ -267,7 +267,7 @@ GLOBAL_HEADERS := $(shell find system/public -name \*\.h)
 GLOBAL_HEADERS := $(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
 
 # generate rule to copy them
-$(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.h,global/include/%.h)
+$(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.h,system/public/%.h)
 
 SYSROOT_DEPS += $(GLOBAL_HEADERS)
 GENERATED += $(GLOBAL_HEADERS)
