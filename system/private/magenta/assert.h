@@ -7,6 +7,7 @@
 #include <magenta/compiler.h>
 
 #if _KERNEL
+#include <debug.h>
 #define PANIC(fmt, args...) panic(fmt, args)
 #else  // if _KERNEL
 __BEGIN_CDECLS
