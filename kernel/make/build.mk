@@ -26,40 +26,12 @@ $(OUTLKBIN): $(OUTLKELF)
 	@echo generating image: $@
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
 
-$(OUTLKELF).hex: $(OUTLKELF)
-	@echo generating hex file: $@
-	$(NOECHO)$(OBJCOPY) -O ihex $< $@
-
 $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
 	@echo linking $@
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -dT $(LINKER_SCRIPT) \
 		$(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LIBGCC) -o $@
 	$(NOECHO)$(SIZECMD) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
 	$(NOECHO)$(SIZECMD) $@
-
-$(OUTLKELF).sym: $(OUTLKELF)
-	@echo generating symbols: $@
-	$(NOECHO)$(OBJDUMP) -t $< | $(CPPFILT) > $@
-
-$(OUTLKELF).sym.sorted: $(OUTLKELF)
-	@echo generating sorted symbols: $@
-	$(NOECHO)$(OBJDUMP) -t $< | $(CPPFILT) | sort > $@
-
-$(OUTLKELF).lst: $(OUTLKELF)
-	@echo generating listing: $@
-	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -d $< | $(CPPFILT) > $@
-
-$(OUTLKELF).debug.lst: $(OUTLKELF)
-	@echo generating listing: $@
-	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -S $< | $(CPPFILT) > $@
-
-$(OUTLKELF).dump: $(OUTLKELF)
-	@echo generating objdump: $@
-	$(NOECHO)$(OBJDUMP) -x $< > $@
-
-$(OUTLKELF).size: $(OUTLKELF)
-	@echo generating size map: $@
-	$(NOECHO)$(NM) -S --size-sort $< > $@
 
 $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 	@echo generating $@
@@ -83,23 +55,35 @@ $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 #.PHONY: $(BUILDDIR)/user-include-paths.txt
 #GENERATED += $(BUILDDIR)/user-include-paths.txt
 
-# userspace app debug info rules
+# debug info rules
 
-$(BUILDDIR)/%.elf.dump: $(BUILDDIR)/%.elf
+$(BUILDDIR)/%.dump: $(BUILDDIR)/%
 	@echo generating $@
 	$(NOECHO)$(OBJDUMP) -x $< > $@
 
-$(BUILDDIR)/%.elf.lst: $(BUILDDIR)/%.elf
-	@echo generating $@
-	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -d $< > $@
+$(BUILDDIR)/%.lst: $(BUILDDIR)/%
+	@echo generating listing: $@
+	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -Cd $< > $@
 
-$(BUILDDIR)/%.elf.strip: $(BUILDDIR)/%.elf
+$(BUILDDIR)/%.debug.lst: $(BUILDDIR)/%
+	@echo generating debug listing: $@
+	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -CS $< > $@
+
+$(BUILDDIR)/%.strip: $(BUILDDIR)/%
 	@echo generating $@
 	$(NOECHO)$(STRIP) $< -o $@
 
-$(BUILDDIR)/%.so.strip: $(BUILDDIR)/%.so
-	@echo generating $@
-	$(NOECHO)$(STRIP) $< -o $@
+$(BUILDDIR)/%.sym: $(BUILDDIR)/%
+	@echo generating symbols: $@
+	$(NOECHO)$(OBJDUMP) -Ct $< > $@
+
+$(BUILDDIR)/%.sym.sorted: $(BUILDDIR)/%
+	@echo generating sorted symbols: $@
+	$(NOECHO)$(OBJDUMP) -Ct $< | sort > $@
+
+$(BUILDDIR)/%.size: $(BUILDDIR)/%
+	@echo generating size map: $@
+	$(NOECHO)$(NM) -S --size-sort $< > $@
 
 # generate a new manifest and compare to see if it differs from the previous one
 .PHONY: usermanifestfile
