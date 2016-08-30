@@ -111,12 +111,6 @@ public:
     // a handle of the wrong type, or a handle with insufficient rights.
     mx_status_t BadHandle(mx_handle_t handle_value, mx_status_t error);
 
-    // TODO(mcgrathr): Temporary until everything is converted to use
-    // the new GetDispatcher.
-    mx_status_t BadHandle() {
-        return BadHandle(MX_HANDLE_INVALID, ERR_BAD_HANDLE);
-    }
-
     // accessors
     Mutex& handle_table_lock() { return handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }

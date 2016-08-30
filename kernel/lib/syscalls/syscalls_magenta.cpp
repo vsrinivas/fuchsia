@@ -64,12 +64,6 @@ constexpr uint32_t kMaxWaitSetWaitResults = 1024u;
 
 namespace {
 
-// TODO(cpu): Move this handler to a common place.
-mx_status_t BadHandle() {
-    auto up = ProcessDispatcher::GetCurrent();
-    return up->BadHandle();
-}
-
 mx_status_t get_process(ProcessDispatcher* up,
                         mx_handle_t proc_handle,
                         mxtl::RefPtr<ProcessDispatcher>* proc) {
@@ -133,9 +127,9 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
 
         Handle* handle = up->GetHandle_NoLock(handle_value);
         if (!handle)
-            return BadHandle();
+            return up->BadHandle(handle_value, ERR_BAD_HANDLE);
         if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
-            return ERR_ACCESS_DENIED;
+            return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
         result = wait_state_observer.Begin(&event, handle, signals, 0u);
         if (result != NO_ERROR)
@@ -219,7 +213,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         for (; num_added != count; ++num_added) {
             Handle* handle = up->GetHandle_NoLock(handle_values[num_added]);
             if (!handle) {
-                result = BadHandle();
+                result = up->BadHandle(handle_values[num_added], ERR_BAD_HANDLE);
                 break;
             }
             if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ)) {
@@ -274,7 +268,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     auto up = ProcessDispatcher::GetCurrent();
     HandleUniquePtr handle(up->RemoveHandle(handle_value));
     if (!handle)
-        return BadHandle();
+        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
     return NO_ERROR;
 }
 
@@ -288,10 +282,10 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
         AutoLock lock(up->handle_table_lock());
         Handle* source = up->GetHandle_NoLock(handle_value);
         if (!source)
-            return BadHandle();
+            return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
         if (!magenta_rights_check(source->rights(), MX_RIGHT_DUPLICATE))
-            return ERR_ACCESS_DENIED;
+            return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
         HandleUniquePtr dest;
         if (rights == MX_RIGHT_SAME_RIGHTS) {
@@ -322,7 +316,7 @@ mx_handle_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights) {
         AutoLock lock(up->handle_table_lock());
         source = up->RemoveHandle_NoLock(handle_value);
         if (!source)
-            return BadHandle();
+            return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
         HandleUniquePtr dest;
         // Used only if |dest| doesn't (successfully) get set below.
@@ -356,7 +350,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, mxtl::user_pt
     uint32_t rights;
 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
+        return up->BadHandle(handle, ERR_BAD_HANDLE);
 
     switch (topic) {
         case MX_INFO_HANDLE_VALID:
@@ -421,7 +415,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return BadHandle();
+        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
     // TODO:cpu use 'get-info' rights when avaliable.
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
@@ -456,11 +450,11 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return BadHandle();
+        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
     // TODO:cpu use 'set-info' rights when avaliable.
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+        return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
     mx_status_t status = ERR_INVALID_ARGS;
 
@@ -470,7 +464,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_NOT_ENOUGH_BUFFER;
             auto process = dispatcher->get_specific<ProcessDispatcher>();
             if (!process)
-                return ERR_WRONG_TYPE;
+                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
             uint32_t value = 0;
             if (copy_from_user_u32(&value, _value.reinterpret<const uint32_t>()) != NO_ERROR)
                 return ERR_INVALID_ARGS;
@@ -642,7 +636,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value, mxtl::user_ptr<const voi
         for (size_t ix = 0; ix != num_handles; ++ix) {
             auto handle = up->GetHandle_NoLock(handles[ix]);
             if (!handle)
-                return BadHandle();
+                return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
 
             if (handle->dispatcher().get() == static_cast<Dispatcher*>(msg_pipe.get())) {
                 // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
@@ -654,7 +648,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value, mxtl::user_ptr<const voi
             }
 
             if (!magenta_rights_check(handle->rights(), MX_RIGHT_TRANSFER))
-                return ERR_ACCESS_DENIED;
+                return up->BadHandle(handles[ix], ERR_ACCESS_DENIED);
 
             handle_list[ix] = handle;
         }
@@ -959,9 +953,9 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     uint32_t rights;
 
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return BadHandle();
+        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+        return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
     return dispatcher->UserSignal(clear_mask, set_mask);
 }
