@@ -468,10 +468,10 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* 
     }
 
     discard_handles(msg.handle, msg.hcount);
-    if (r > (int)maxreply) {
+    if (msg.datalen > maxreply) {
         return ERR_IO;
     }
-    memcpy(ptr, msg.data, r);
+    memcpy(ptr, msg.data, msg.datalen);
     return r;
 }
 
