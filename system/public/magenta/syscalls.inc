@@ -196,11 +196,11 @@ MAGENTA_SYSCALL_DEF(4, 4, 231, mx_ssize_t, datapipe_write, mx_handle_t handle, u
                     mx_size_t requested, const void* buffer)
 MAGENTA_SYSCALL_DEF(4, 4, 232, mx_ssize_t, datapipe_read, mx_handle_t handle, uint32_t flags,
                     mx_size_t requested, void* buffer)
-MAGENTA_SYSCALL_DEF(4, 4, 233, mx_ssize_t, datapipe_begin_write, mx_handle_t handle, uint32_t flags,
-                    mx_size_t requested,  uintptr_t* buffer)
+MAGENTA_SYSCALL_DEF(3, 3, 233, mx_ssize_t, datapipe_begin_write, mx_handle_t handle, uint32_t flags,
+                    uintptr_t* buffer)
 MAGENTA_SYSCALL_DEF(2, 2, 234, mx_status_t, datapipe_end_write, mx_handle_t handle, mx_size_t written)
-MAGENTA_SYSCALL_DEF(4, 4, 235, mx_ssize_t, datapipe_begin_read, mx_handle_t handle, uint32_t flags,
-                    mx_size_t requested, uintptr_t* buffer)
+MAGENTA_SYSCALL_DEF(3, 3, 235, mx_ssize_t, datapipe_begin_read, mx_handle_t handle, uint32_t flags,
+                    uintptr_t* buffer)
 MAGENTA_SYSCALL_DEF(2, 2, 236, mx_status_t, datapipe_end_read, mx_handle_t handle, mx_size_t read)
 
 // Wait sets

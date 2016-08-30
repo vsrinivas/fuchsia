@@ -32,7 +32,7 @@ public:
     StateTracker* get_state_tracker() final;
 
     mx_status_t Write(const void* buffer, mx_size_t* requested);
-    mx_status_t BeginWrite(mxtl::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
+    mx_ssize_t BeginWrite(mxtl::RefPtr<VmAspace> aspace, void** buffer);
     mx_status_t EndWrite(mx_size_t written);
 
 private:

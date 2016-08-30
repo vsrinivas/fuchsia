@@ -1496,10 +1496,17 @@ mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_siz
     if (!_handle)
         return ERR_INVALID_ARGS;
 
-    // TODO(cpu): support different element sizes.
-    if (element_size != 1u)
+    if (element_size == 0u)
         return ERR_INVALID_ARGS;
 
+    if (capacity % element_size != 0u)
+        return ERR_INVALID_ARGS;
+
+    if (!capacity) {
+        capacity = kDefaultDataPipeCapacity - (kDefaultDataPipeCapacity % element_size);
+        if (!capacity)
+            capacity = element_size;
+    }
 
     mxtl::RefPtr<Dispatcher> producer_dispatcher;
     mx_rights_t producer_rights;
@@ -1507,11 +1514,8 @@ mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_siz
     mxtl::RefPtr<Dispatcher> consumer_dispatcher;
     mx_rights_t consumer_rights;
 
-    mx_status_t result = DataPipe::Create(capacity ? capacity : kDefaultDataPipeCapacity,
-                                          &producer_dispatcher,
-                                          &consumer_dispatcher,
-                                          &producer_rights,
-                                          &consumer_rights);
+    mx_status_t result = DataPipe::Create(element_size, capacity, &producer_dispatcher,
+                                          &consumer_dispatcher, &producer_rights, &consumer_rights);
     if (result != NO_ERROR)
         return result;
 
@@ -1594,8 +1598,7 @@ mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t reque
     return read;
 }
 
-mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size_t requested,
-                                    uintptr_t* buffer) {
+mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, uintptr_t* buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!buffer)
@@ -1615,19 +1618,19 @@ mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size_
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    mx_status_t status;
     uintptr_t user_addr = 0u;
 
-    status = producer->BeginWrite(up->aspace(), reinterpret_cast<void**>(&user_addr), &requested);
-    if (status != NO_ERROR)
-        return status;
+    mx_ssize_t result = producer->BeginWrite(up->aspace(), reinterpret_cast<void**>(&user_addr));
+    if (result < 0)
+        return result;
+    DEBUG_ASSERT(result > 0);
 
     if (copy_to_user_uptr_unsafe(buffer, user_addr) != NO_ERROR) {
         producer->EndWrite(0u);
         return ERR_INVALID_ARGS;
     }
 
-    return requested;
+    return result;
 }
 
 mx_status_t sys_datapipe_end_write(mx_handle_t handle, mx_size_t written) {
@@ -1650,8 +1653,7 @@ mx_status_t sys_datapipe_end_write(mx_handle_t handle, mx_size_t written) {
     return producer->EndWrite(written);
 }
 
-mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
-                                   uintptr_t* buffer) {
+mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, uintptr_t* buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!buffer)
@@ -1671,19 +1673,19 @@ mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_t
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
-    mx_status_t status;
     uintptr_t user_addr = 0u;
 
-    status = consumer->BeginRead(up->aspace(), reinterpret_cast<void**>(&user_addr), &requested);
-    if (status != NO_ERROR)
-        return status;
+    mx_ssize_t result = consumer->BeginRead(up->aspace(), reinterpret_cast<void**>(&user_addr));
+    if (result < 0)
+        return result;
+    DEBUG_ASSERT(result > 0);
 
     if (copy_to_user_uptr_unsafe(buffer, user_addr) != NO_ERROR) {
         consumer->EndRead(0u);
         return ERR_INVALID_ARGS;
     }
 
-    return requested;
+    return result;
 }
 
 mx_status_t sys_datapipe_end_read(mx_handle_t handle, mx_size_t read) {

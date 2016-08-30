@@ -103,13 +103,13 @@ __MX_SYSCALL mx_ssize_t mx_data_pipe_read(mx_handle_t handle, uint32_t flags, mx
     return mx_datapipe_read(handle, flags, requested, buffer);
 }
 __MX_SYSCALL mx_ssize_t mx_data_pipe_begin_write(mx_handle_t handle, uint32_t flags, mx_size_t requested, uintptr_t* buffer) {
-    return mx_datapipe_begin_write(handle, flags, requested, buffer);
+    return mx_datapipe_begin_write(handle, flags, buffer);
 }
 __MX_SYSCALL mx_status_t mx_data_pipe_end_write(mx_handle_t handle, mx_size_t written) {
     return mx_datapipe_end_write(handle, written);
 }
 __MX_SYSCALL mx_ssize_t mx_data_pipe_begin_read(mx_handle_t handle, uint32_t flags, mx_size_t requested, uintptr_t* buffer) {
-    return mx_datapipe_begin_read(handle, flags, requested, buffer);
+    return mx_datapipe_begin_read(handle, flags, buffer);
 }
 __MX_SYSCALL mx_status_t mx_data_pipe_end_read(mx_handle_t handle, mx_size_t read) {
     return mx_datapipe_end_read(handle, read);

@@ -82,6 +82,10 @@
 // ERR_NOT_AVAILABLE: object is owned or controlled by another entity
 #define ERR_NOT_AVAILABLE (-26)    // NEW
 
+// ERR_SHOULD_WAIT: The operation cannot be performed currently but potentially could succeed if the
+// caller waits for a prerequisite to be satisfied.
+#define ERR_SHOULD_WAIT (-27)
+
 // ======= Permission check errors =======
 #define ERR_ACCESS_DENIED (-30)
 

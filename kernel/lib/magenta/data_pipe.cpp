@@ -23,13 +23,14 @@
 const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_USER;
 const auto kDP_Map_Perms_RO = kDP_Map_Perms | ARCH_MMU_FLAG_PERM_READ;
 
-mx_status_t DataPipe::Create(mx_size_t capacity,
+mx_status_t DataPipe::Create(mx_size_t element_size,
+                             mx_size_t capacity,
                              mxtl::RefPtr<Dispatcher>* producer,
                              mxtl::RefPtr<Dispatcher>* consumer,
                              mx_rights_t* producer_rights,
                              mx_rights_t* consumer_rights) {
     AllocChecker ac;
-    mxtl::RefPtr<DataPipe> pipe = mxtl::AdoptRef(new (&ac) DataPipe(capacity));
+    mxtl::RefPtr<DataPipe> pipe = mxtl::AdoptRef(new (&ac) DataPipe(element_size, capacity));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -49,8 +50,9 @@ mx_status_t DataPipe::Create(mx_size_t capacity,
     return NO_ERROR;
 }
 
-DataPipe::DataPipe(mx_size_t capacity)
-    : capacity_(capacity),
+DataPipe::DataPipe(mx_size_t element_size, mx_size_t capacity)
+    : element_size_(element_size),
+      capacity_(capacity),
       free_space_(0u) {
     producer_.state_tracker.set_initial_signals_state(
         mx_signals_state_t{MX_SIGNAL_WRITABLE, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
@@ -66,30 +68,25 @@ DataPipe::~DataPipe() {
 }
 
 bool DataPipe::Init() {
-    // We limit the capacity because a vmo can be larger than representable
-    // with the mx_size_t type.
+    // We limit the capacity because a vmo can be larger than representable with the mx_size_t type.
     if (capacity_ > kMaxDataPipeCapacity)
         return false;
 
     vmo_ = VmObject::Create(PMM_ALLOC_FLAG_ANY, ROUNDUP(capacity_, PAGE_SIZE));
     if (!vmo_)
         return false;
+    DEBUG_ASSERT(vmo_->size() >= capacity_);
 
-    free_space_ = static_cast<mx_size_t>(vmo_->size());
+    free_space_ = capacity_;
     return true;
 }
 
-mx_size_t DataPipe::ComputeSize(mx_size_t from, mx_size_t to, mx_size_t requested) {
-    mx_size_t available;
-    if (from >= to) {
-        available = static_cast<mx_size_t>(vmo_->size() - from);
-    } else {
-        available = static_cast<mx_size_t>(to - from);
-    }
+mx_size_t DataPipe::ComputeSize(mx_size_t from, mx_size_t to, mx_size_t requested) const {
+    mx_size_t available = (from >= to) ? capacity_ - from : to - from;
     return available >= requested ? requested : available;
 }
 
-mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace) {
+mx_status_t DataPipe::MapVMOIfNeededNoLock(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace) {
     DEBUG_ASSERT(vmo_);
 
     if (ep->aspace && (ep->aspace != aspace)) {
@@ -111,11 +108,13 @@ mx_status_t DataPipe::MapVMOIfNeeded(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace
     return NO_ERROR;
 }
 
-void DataPipe::UpdateSignals() {
+void DataPipe::UpdateSignalsNoLock() {
+    // TODO(vtl): Should be non-writable during a two-phase write and non-readable during a
+    // two-phase read.
     if (free_space_ == 0u) {
         producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
         consumer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
-    } else if (free_space_ == vmo_->size()) {
+    } else if (free_space_ == capacity_) {
         producer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
         consumer_.state_tracker.UpdateState(MX_SIGNAL_READABLE, 0u,
                                             producer_.alive ? 0u : MX_SIGNAL_READABLE, 0u);
@@ -126,21 +125,26 @@ void DataPipe::UpdateSignals() {
 }
 
 mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requested) {
-    if (*requested == 0)
-        return ERR_INVALID_ARGS;
-
     AutoLock al(&lock_);
+
     // |expected| > 0 means there is a pending ProducerWriteBegin().
     if (producer_.expected)
-        return ERR_BUSY; // MOJO_RESULT_BUSY
+        return ERR_BUSY;
+
+    if (*requested % element_size_ != 0u)
+        return ERR_INVALID_ARGS;
 
     if (!consumer_.alive)
         return ERR_REMOTE_CLOSED;
 
+    if (*requested == 0u)
+        return NO_ERROR;
+
     if (free_space_ == 0u)
-        return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT
+        return ERR_SHOULD_WAIT;
 
     *requested = ComputeSize(producer_.cursor, consumer_.cursor, *requested);
+    DEBUG_ASSERT(*requested % element_size_ == 0u);
 
     size_t written;
     status_t status = vmo_->WriteUser(ptr, producer_.cursor, *requested, &written);
@@ -152,40 +156,37 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requeste
     free_space_ -= written;
     producer_.cursor += written;
 
-    if (producer_.cursor == vmo_->size())
+    if (producer_.cursor == capacity_)
         producer_.cursor = 0u;
 
-    UpdateSignals();
+    UpdateSignalsNoLock();
 
     return NO_ERROR;
 }
 
-mx_status_t DataPipe::ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace,
-                                         void** ptr, mx_size_t* requested) {
-    if (*requested == 0)
-        return ERR_INVALID_ARGS;
-
+mx_ssize_t DataPipe::ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr) {
     AutoLock al(&lock_);
+
     // |expected| > 0 means there is a pending ProducerWriteBegin().
     if (producer_.expected)
-        return ERR_BUSY; // MOJO_RESULT_BUSY
+        return ERR_BUSY;
 
     if (!consumer_.alive)
         return ERR_REMOTE_CLOSED;
 
     if (free_space_ == 0u)
-        return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT
+        return ERR_SHOULD_WAIT;
 
-    auto status = MapVMOIfNeeded(&producer_, mxtl::move(aspace));
+    auto status = MapVMOIfNeededNoLock(&producer_, mxtl::move(aspace));
     if (status < 0)
         return status;
 
-    *requested = ComputeSize(producer_.cursor, consumer_.cursor, *requested);
-
-    producer_.expected = *requested;
+    producer_.expected = ComputeSize(producer_.cursor, consumer_.cursor, capacity_);
+    DEBUG_ASSERT(producer_.expected > 0u);
+    DEBUG_ASSERT(producer_.expected % element_size_ == 0u);
 
     *ptr = producer_.vad_start + producer_.cursor;
-    return NO_ERROR;
+    return static_cast<mx_ssize_t>(producer_.expected);
 }
 
 mx_status_t DataPipe::ProducerWriteEnd(mx_size_t written) {
@@ -194,34 +195,44 @@ mx_status_t DataPipe::ProducerWriteEnd(mx_size_t written) {
     if (!producer_.expected)
         return ERR_BAD_STATE;
 
-    if (written > producer_.expected)
+    if (written > producer_.expected || written % element_size_ != 0u) {
+        // An invalid end-write still terminates the read.
+        producer_.expected = 0u;
+        UpdateSignalsNoLock();
         return ERR_INVALID_ARGS;
+    }
 
     free_space_ -= written;
     producer_.cursor += written;
     producer_.expected = 0u;
 
-    if (producer_.cursor == vmo_->size())
+    if (producer_.cursor == capacity_)
         producer_.cursor = 0u;
 
-    UpdateSignals();
+    UpdateSignalsNoLock();
 
     return NO_ERROR;
 }
 
 mx_status_t DataPipe::ConsumerReadFromUser(void* ptr, mx_size_t* requested) {
-    if (*requested == 0)
-        return ERR_INVALID_ARGS;
-
     AutoLock al(&lock_);
+
     // |expected| > 0 means there is a pending ConsumerReadBegin().
     if (consumer_.expected)
-        return ERR_BUSY; // MOJO_RESULT_BUSY
+        return ERR_BUSY;
 
-    if (free_space_ == vmo_->size())
-        return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT
+    if (*requested % element_size_ != 0u)
+        return ERR_INVALID_ARGS;
+
+    if (*requested == 0)
+        return NO_ERROR;
+
+    // TODO(vtl): Should probably return something else if |!producer_.alive|.
+    if (free_space_ == capacity_)
+        return ERR_SHOULD_WAIT;
 
     *requested = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
+    DEBUG_ASSERT(*requested % element_size_ == 0u);
 
     size_t read;
     status_t st = vmo_->ReadUser(ptr, consumer_.cursor, *requested, &read);
@@ -233,38 +244,35 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr, mx_size_t* requested) {
     free_space_ += read;
     consumer_.cursor += read;
 
-    if (consumer_.cursor == vmo_->size())
+    if (consumer_.cursor == capacity_)
         consumer_.cursor = 0u;
 
-    UpdateSignals();
+    UpdateSignalsNoLock();
 
     return NO_ERROR;
 }
 
-mx_status_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace,
-                                        void** ptr, mx_size_t* requested) {
-    if (*requested == 0)
-        return ERR_INVALID_ARGS;
-
+mx_ssize_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr) {
     AutoLock al(&lock_);
 
     // |expected| > 0 means there is a pending ConsumerReadBegin().
     if (consumer_.expected)
-        return ERR_BUSY; // MOJO_RESULT_BUSY
+        return ERR_BUSY;
 
-    if (free_space_ == vmo_->size())
-        return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT
+    // TODO(vtl): Should probably return something else if |!producer_.alive|.
+    if (free_space_ == capacity_)
+        return ERR_SHOULD_WAIT;
 
-    auto status = MapVMOIfNeeded(&consumer_, mxtl::move(aspace));
+    auto status = MapVMOIfNeededNoLock(&consumer_, mxtl::move(aspace));
     if (status < 0)
         return status;
 
-    *requested = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
-
-    consumer_.expected = *requested;
+    consumer_.expected = ComputeSize(consumer_.cursor, producer_.cursor, capacity_);
+    DEBUG_ASSERT(consumer_.expected > 0u);
+    DEBUG_ASSERT(consumer_.expected % element_size_ == 0u);
 
     *ptr = consumer_.vad_start + consumer_.cursor;
-    return NO_ERROR;
+    return static_cast<mx_ssize_t>(consumer_.expected);
 }
 
 mx_status_t DataPipe::ConsumerReadEnd(mx_size_t read) {
@@ -273,17 +281,21 @@ mx_status_t DataPipe::ConsumerReadEnd(mx_size_t read) {
     if (!consumer_.expected)
         return ERR_BAD_STATE;
 
-    if (read > consumer_.expected)
+    if (read > consumer_.expected || read % element_size_ != 0u) {
+        // An invalid end-read still terminates the read.
+        consumer_.expected = 0u;
+        UpdateSignalsNoLock();
         return ERR_INVALID_ARGS;
+    }
 
     free_space_ += read;
     consumer_.cursor += read;
     consumer_.expected = 0u;
 
-    if (consumer_.cursor == vmo_->size())
+    if (consumer_.cursor == capacity_)
         consumer_.cursor = 0u;
 
-    UpdateSignals();
+    UpdateSignalsNoLock();
 
     return NO_ERROR;
 }
@@ -299,7 +311,7 @@ void DataPipe::OnProducerDestruction() {
     }
 
     if (consumer_.alive) {
-        bool is_empty = (free_space_ == vmo_->size());
+        bool is_empty = (free_space_ == capacity_);
         consumer_.state_tracker.UpdateState(0u, MX_SIGNAL_PEER_CLOSED,
                                             is_empty ? MX_SIGNAL_READABLE : 0u, 0u);
 

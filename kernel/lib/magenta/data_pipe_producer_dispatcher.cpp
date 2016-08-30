@@ -48,13 +48,8 @@ mx_status_t DataPipeProducerDispatcher::Write(const void* buffer, mx_size_t* req
     return pipe_->ProducerWriteFromUser(buffer, requested);
 }
 
-mx_status_t DataPipeProducerDispatcher::BeginWrite(mxtl::RefPtr<VmAspace> aspace,
-                                                   void** buffer, mx_size_t* requested) {
-    if (*requested > kMaxDataPipeCapacity) {
-        *requested = kMaxDataPipeCapacity;
-    }
-
-    return pipe_->ProducerWriteBegin(mxtl::move(aspace), buffer, requested);
+mx_ssize_t DataPipeProducerDispatcher::BeginWrite(mxtl::RefPtr<VmAspace> aspace, void** buffer) {
+    return pipe_->ProducerWriteBegin(mxtl::move(aspace), buffer);
 }
 
 mx_status_t DataPipeProducerDispatcher::EndWrite(mx_size_t written) {

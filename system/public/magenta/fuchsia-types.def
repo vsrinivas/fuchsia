@@ -76,6 +76,10 @@ FUCHSIA_ERROR(REMOTE_CLOSED,       25)
 // ERR_NOT_AVAILABLE: object is owned or controlled by another entity
 FUCHSIA_ERROR(NOT_AVAILABLE,       26)    // NEW
 
+// ERR_SHOULD_WAIT: The operation cannot be performed currently but potentially could succeed if the
+// caller waits for a prerequisite to be satisfied.
+FUCHSIA_ERROR(SHOULD_WAIT,         27)
+
 // ======= Permission check errors =======
 FUCHSIA_ERROR(ACCESS_DENIED,       30)
 

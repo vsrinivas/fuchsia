@@ -33,7 +33,7 @@ public:
 
     mx_status_t Read(void* buffer, mx_size_t* requested);
 
-    mx_status_t BeginRead(mxtl::RefPtr<VmAspace> aspace, void** buffer, mx_size_t* requested);
+    mx_ssize_t BeginRead(mxtl::RefPtr<VmAspace> aspace, void** buffer);
     mx_status_t EndRead(mx_size_t read);
 
 private:
