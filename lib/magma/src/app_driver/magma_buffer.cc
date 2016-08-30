@@ -117,8 +117,9 @@ std::unique_ptr<MagmaBuffer::CommandBuffer> MagmaBuffer::PrepareForExecution()
 {
     std::set<MagmaBuffer*> resources;
     GenerateExecResourceSet(resources);
-    DASSERT(resources.find(this) == resources.begin()); // to make sure the next line is correct
-    uint32_t res_index = 0;
+    auto iter = resources.find(this);
+    DASSERT(iter != resources.end());
+    uint32_t res_index = std::distance(resources.begin(), iter);
 
     return std::unique_ptr<CommandBuffer>(new CommandBuffer(res_index, resources));
 }
