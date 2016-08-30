@@ -111,7 +111,7 @@ function build_magenta_tool() {
   if [[ ! -f "${tool_path}" || ! -f "${stamp_path}" || "${tool_hash}" != "$(cat ${stamp_path})" ]]; then
       echo "Building ${name}..."
       rm -f "${tool_path}"
-      gcc "${tool_source}" -I "${SCRIPT_ROOT}/../magenta/global/include" -o "${tool_path}" && echo "${tool_hash}" > "${stamp_path}"
+      gcc "${tool_source}" -I "${SCRIPT_ROOT}/../magenta/system/public" -o "${tool_path}" && echo "${tool_hash}" > "${stamp_path}"
   fi
 }
 
