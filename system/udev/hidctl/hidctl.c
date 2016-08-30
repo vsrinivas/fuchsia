@@ -124,8 +124,10 @@ static ssize_t hidctl_ioctl(mx_device_t* dev, uint32_t op,
 static mx_status_t hidctl_release(mx_device_t* dev) {
     hidctl_instance_t* inst = from_mx_device(dev);
     hid_release_device(&inst->hiddev);
-    free(inst->hid_report_desc);
-    device_remove(&inst->hiddev.dev);
+    if (inst->hid_report_desc) {
+        free(inst->hid_report_desc);
+        device_remove(&inst->hiddev.dev);
+    }
     free(inst);
     return NO_ERROR;
 }
