@@ -1284,17 +1284,10 @@ mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto ioport = dispatcher->get_specific<IOPortDispatcher>();
-    if (!ioport)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<IOPortDispatcher> ioport;
+    mx_status_t status = up->GetDispatcher(handle, &ioport, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     auto iopk = IOP_Packet::MakeFromUser(packet.get(), size);
     if (!iopk)
@@ -1311,20 +1304,13 @@ mx_status_t sys_port_wait(mx_handle_t handle, mxtl::user_ptr<void> packet, mx_si
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
-
-    auto ioport = dispatcher->get_specific<IOPortDispatcher>();
-    if (!ioport)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<IOPortDispatcher> ioport;
+    mx_status_t status = up->GetDispatcher(handle, &ioport, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     IOP_Packet* iopk = nullptr;
-    mx_status_t status = ioport->Wait(&iopk);
+    status = ioport->Wait(&iopk);
     if (status < 0)
         return status;
 
@@ -1342,25 +1328,21 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    uint32_t rights = 0;
 
-    mxtl::RefPtr<Dispatcher> iop_d;
-    if (!up->GetDispatcher(handle, &iop_d, &rights))
-        return BadHandle();
-
-    auto ioport = iop_d->get_specific<IOPortDispatcher>();
-    if (!ioport)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
-
-    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
-    mx_status_t status = up->GetDispatcher(source, &msg_pipe, MX_RIGHT_READ);
+    mxtl::RefPtr<IOPortDispatcher> ioport;
+    mx_status_t status = up->GetDispatcher(handle, &ioport, MX_RIGHT_WRITE);
     if (status != NO_ERROR)
         return status;
 
-    return msg_pipe->SetIOPort(mxtl::WrapRefPtr(ioport), key, signals);
+    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
+    status = up->GetDispatcher(source, &msg_pipe, MX_RIGHT_READ);
+    if (status != NO_ERROR) {
+        if (status == ERR_WRONG_TYPE)
+            status = ERR_NOT_SUPPORTED;
+        return status;
+    }
+
+    return msg_pipe->SetIOPort(mxtl::move(ioport), key, signals);
  }
 
 mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,

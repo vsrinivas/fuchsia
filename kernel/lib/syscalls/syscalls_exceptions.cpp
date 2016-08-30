@@ -66,17 +66,13 @@ mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport
     //TODO: check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> ioport_dispatcher;
-    mx_rights_t ioport_rights;
-    if (!up->GetDispatcher(eport_handle, &ioport_dispatcher, &ioport_rights))
-        return ERR_BAD_HANDLE;
-    auto ioport = ioport_dispatcher->get_specific<IOPortDispatcher>();
-    if (!ioport)
-        return ERR_WRONG_TYPE;
+    mxtl::RefPtr<IOPortDispatcher> ioport;
+    mx_status_t status = up->GetDispatcher(eport_handle, &ioport);
+    if (status != NO_ERROR)
+        return status;
 
     mxtl::RefPtr<ExceptionPort> eport;
-    mx_status_t status = ExceptionPort::Create(mxtl::WrapRefPtr(ioport),
-                                               key, &eport);
+    status = ExceptionPort::Create(mxtl::move(ioport), key, &eport);
     if (status != NO_ERROR)
         return status;
 
