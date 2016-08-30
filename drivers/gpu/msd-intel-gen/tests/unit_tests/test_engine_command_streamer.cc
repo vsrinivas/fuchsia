@@ -234,6 +234,12 @@ private:
         return nullptr;
     }
 
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
+    {
+        DASSERT(false);
+        return false;
+    }
+
     void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override
     {
         EXPECT_EQ(id, engine_cs_->id());

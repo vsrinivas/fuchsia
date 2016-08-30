@@ -5,6 +5,7 @@
 #ifndef MSD_INTEL_CONTEXT_H
 #define MSD_INTEL_CONTEXT_H
 
+#include "command_buffer.h"
 #include "hardware_status_page.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
@@ -12,8 +13,6 @@
 #include "types.h"
 #include <map>
 #include <memory>
-
-class CommandBuffer;
 
 // Abstract base context.
 class MsdIntelContext {
@@ -82,9 +81,15 @@ public:
     public:
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
         virtual AddressSpace* exec_address_space() = 0;
+        virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
     };
 
     ClientContext(Owner* owner) : owner_(owner) {}
+
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+    {
+        return owner_->ExecuteCommandBuffer(std::move(cmd_buf));
+    }
 
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
     {

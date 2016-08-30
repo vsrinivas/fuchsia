@@ -6,6 +6,7 @@
 #include "device_id.h"
 #include "instructions.h"
 #include "magma_util/macros.h"
+#include "magma_util/sleep.h"
 #include "msd_intel_buffer.h"
 #include "registers.h"
 #include "ringbuffer.h"
@@ -396,12 +397,73 @@ RenderEngineCommandStreamer::RenderEngineCommandStreamer(
 bool RenderEngineCommandStreamer::RenderInit(MsdIntelContext* context)
 {
     DASSERT(init_batch_);
-    uint64_t gpu_addr = init_batch_->GetGpuAddress();
+    uint32_t sequence_number = sequencer()->next_sequence_number();
+    return ExecBatch(context, init_batch_->GetGpuAddress(), sequence_number);
+}
 
-    if (!StartBatchBuffer(context, gpu_addr, ADDRESS_SPACE_GTT))
-        return DRETF(false, "failed to emit batch");
+bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+{
+    DLOG("preparing command buffer for execution");
+    if (!cmd_buf->PrepareForExecution(this))
+        return DRETF(false, "Failed to prepare command buffer for execution");
 
     uint32_t sequence_number = sequencer()->next_sequence_number();
+
+    DLOG("Executing command buffer batch buffer with sequence number 0x%x", sequence_number);
+    if (!ExecBatch(cmd_buf->context(), cmd_buf->batch_buffer_gpu_addr(), sequence_number))
+        return DRETF(false, "failed to exec command buffer");
+
+    // keep the command buffer alive until execution completes
+    outstanding_command_buffers_.emplace(
+        OutstandingCommandBuffer{sequence_number, std::move(cmd_buf)});
+
+    // wait synchronously for the GPU because im a terrible person
+    return WaitRendering(sequence_number);
+}
+
+bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
+{
+    DLOG("WaitRendering on sequence number 0x%x", sequence_number);
+    // Dont wait for something you havent executed
+    DASSERT(!outstanding_command_buffers_.empty());
+    DASSERT(sequence_number <= outstanding_command_buffers_.back().sequence_number);
+
+    // TODO(MA-82): Handle sequence number wrapping
+    if (sequence_number < outstanding_command_buffers_.front().sequence_number)
+        return true;
+
+    auto status_page =
+        outstanding_command_buffers_.front().cmd_buf->context()->hardware_status_page(id());
+
+    while (!outstanding_command_buffers_.empty()) {
+        uint32_t last_completed_sequence = status_page->read_sequence_number();
+
+        DLOG("WaitRendering loop last_completed_sequence: 0x%x", last_completed_sequence);
+
+        // pop all completed command buffers
+        while (!outstanding_command_buffers_.empty() &&
+               outstanding_command_buffers_.front().sequence_number <= last_completed_sequence) {
+            DLOG("WaitRendering popping command buffer with sequence_number: 0x%x",
+                 outstanding_command_buffers_.front().sequence_number);
+            outstanding_command_buffers_.pop();
+        }
+
+        if (last_completed_sequence >= sequence_number)
+            return true; // were done here
+
+        // wait cause were not done here
+        magma::msleep(1);
+    }
+
+    DASSERT(false); // the asserts at the top should stop us from getting here
+    return false;
+}
+
+bool RenderEngineCommandStreamer::ExecBatch(MsdIntelContext* context, gpu_addr_t batch_address,
+                                            uint32_t sequence_number)
+{
+    if (!StartBatchBuffer(context, batch_address, ADDRESS_SPACE_GTT))
+        return DRETF(false, "failed to emit batch");
 
     if (!WriteSequenceNumber(context, sequence_number))
         return DRETF(false, "failed to finish batch buffer");

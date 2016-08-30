@@ -12,6 +12,7 @@
 #include "render_init_batch.h"
 #include "sequencer.h"
 #include <memory>
+#include <queue>
 
 class EngineCommandStreamer {
 public:
@@ -34,6 +35,8 @@ public:
     void InitHardware(HardwareStatusPage* hardware_status_page);
 
     uint64_t GetActiveHeadPointer();
+
+    virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
 
 protected:
     bool SubmitContext(MsdIntelContext* context);
@@ -69,6 +72,8 @@ public:
 
     bool RenderInit(MsdIntelContext* context);
 
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+
 private:
     RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
                                 std::unique_ptr<RenderInitBatch> init_batch);
@@ -77,11 +82,20 @@ private:
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 
+    bool ExecBatch(MsdIntelContext* context, gpu_addr_t batch_address, uint32_t sequence_number);
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                           AddressSpaceId address_space_id);
     bool WriteSequenceNumber(MsdIntelContext* context, uint32_t sequence_number);
+    bool WaitRendering(uint32_t sequence_number);
 
     std::unique_ptr<RenderInitBatch> init_batch_;
+
+    struct OutstandingCommandBuffer {
+        uint32_t sequence_number;
+        std::unique_ptr<CommandBuffer> cmd_buf;
+    };
+
+    std::queue<OutstandingCommandBuffer> outstanding_command_buffers_;
 
     friend class TestEngineCommandStreamer;
 };

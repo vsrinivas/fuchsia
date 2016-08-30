@@ -7,8 +7,7 @@
 
 #include "msd.h"
 #include "msd_intel_buffer.h"
-#include "msd_intel_context.h"
-#include "msd_intel_device.h"
+
 #include <memory>
 #include <vector>
 

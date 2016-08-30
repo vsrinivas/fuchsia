@@ -115,5 +115,8 @@ void msd_context_destroy(msd_context* ctx) { delete MsdIntelAbiContext::cast(ctx
 int32_t msd_context_execute_command_buffer(msd_context* ctx, magma_system_command_buffer* cmd_buf,
                                            msd_buffer** exec_resources)
 {
+    if (!MsdIntelAbiContext::cast(ctx)->ptr()->ExecuteCommandBuffer(
+            CommandBuffer::Create(cmd_buf, exec_resources, MsdIntelAbiContext::cast(ctx)->ptr())))
+        return DRET(-EINVAL);
     return 0;
 }

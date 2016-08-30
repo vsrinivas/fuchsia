@@ -5,8 +5,10 @@
 #include "command_buffer.h"
 #include "helper/command_buffer_helper.h"
 #include "helper/platform_device_helper.h"
+#include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
 #include "msd_intel_context.h"
+#include "msd_intel_device.h"
 #include "gtest/gtest.h"
 
 class TestCommandBuffer {
@@ -79,8 +81,6 @@ public:
         }
     }
 
-    // The other tests test all the behavior of this function against the mock address space
-    // so this is just to make sure it doesnt fail in the real GTT
     void TestPrepareForExecution()
     {
 
@@ -103,8 +103,57 @@ public:
         EXPECT_NE(addr, kInvalidGpuAddr);
         EXPECT_TRUE(ctx->GetRingbufferGpuAddress(engine->id(), &addr));
         EXPECT_NE(addr, kInvalidGpuAddr);
-
         cmd_buf_.reset();
+    }
+
+    void TestExecute()
+    {
+        auto target_buffer = MsdIntelBuffer::Create(PAGE_SIZE);
+        ASSERT_NE(target_buffer, nullptr);
+
+        void* target_cpu_addr;
+        gpu_addr_t target_gpu_addr;
+
+        auto device = MsdIntelDevice::cast(helper_->dev()->msd_dev());
+        auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
+        auto addr_space = context->exec_address_space();
+
+        ASSERT_TRUE(target_buffer->platform_buffer()->MapCpu(&target_cpu_addr));
+        ASSERT_TRUE(target_buffer->MapGpu(addr_space, PAGE_SIZE));
+        ASSERT_TRUE(target_buffer->GetGpuAddress(addr_space->id(), &target_gpu_addr));
+        *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0;
+
+        auto batch_buf_index = cmd_buf_->cmd_buf_->batch_buffer_resource_index;
+        auto batch_buf = cmd_buf_->exec_resources_[batch_buf_index];
+        void* batch_cpu_addr;
+
+        ASSERT_TRUE(batch_buf->platform_buffer()->MapCpu(&batch_cpu_addr));
+        uint32_t expected_val = 0xdeadbeef;
+        uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
+
+        static constexpr uint32_t kDwordCount = 4;
+        static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
+        // store dword
+        *batch_ptr++ = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt;
+        *batch_ptr++ = magma::lower_32_bits(target_gpu_addr);
+        *batch_ptr++ = magma::upper_32_bits(target_gpu_addr);
+        *batch_ptr++ = expected_val;
+
+        // batch end
+        *batch_ptr++ = (0xA << 23);
+
+        EXPECT_TRUE(helper_->Execute());
+
+        {
+            std::string dump;
+            device->DumpToString(dump);
+            DLOG("dump: %s", dump.c_str());
+        }
+
+        magma::msleep(100);
+
+        uint32_t target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
+        EXPECT_EQ(target_val, expected_val);
     }
 
 private:
@@ -133,3 +182,5 @@ TEST(CommandBuffer, MapUnmapResourcesGpu)
 TEST(CommandBuffer, PatchRelocations) { TestCommandBuffer::Create()->TestPatchRelocations(); }
 
 TEST(CommandBuffer, PrepareForExecution) { TestCommandBuffer::Create()->TestPrepareForExecution(); }
+
+TEST(CommandBuffer, Execute) { TestCommandBuffer::Create()->TestExecute(); }

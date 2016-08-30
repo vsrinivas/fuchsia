@@ -77,6 +77,11 @@ private:
 
     AddressSpace* gtt() override { return gtt_.get(); }
 
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
+    {
+        return render_engine_cs_->ExecuteCommandBuffer(std::move(cmd_buf));
+    }
+
     bool ReadGttSize(unsigned int* gtt_size);
 
     void DumpFault(DumpState* dump_out, uint32_t fault);

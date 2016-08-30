@@ -5,6 +5,7 @@
 #ifndef MSD_INTEL_CONNECTION_H
 #define MSD_INTEL_CONNECTION_H
 
+#include "command_buffer.h"
 #include "engine_command_streamer.h"
 #include "magma_util/macros.h"
 #include "msd.h"
@@ -18,6 +19,7 @@ public:
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
         // TODO(MA-71) have the connection own its own PPGTT address space so we dont need this
         virtual AddressSpace* gtt() = 0;
+        virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
     };
 
     MsdIntelConnection(Owner* owner) : owner_(owner) {}
@@ -38,6 +40,11 @@ private:
     }
 
     AddressSpace* exec_address_space() override { return owner_->gtt(); }
+
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
+    {
+        return owner_->ExecuteCommandBuffer(std::move(cmd_buf));
+    }
 
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 

@@ -83,6 +83,12 @@ private:
         return nullptr;
     }
 
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
+    {
+        DASSERT(false);
+        return false;
+    }
+
     static MsdIntelBuffer* get_buffer(MsdIntelContext* context, EngineCommandStreamerId id)
     {
         return context->get_context_buffer(id);
