@@ -1227,17 +1227,10 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<const voi
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> log_dispatcher;
-    uint32_t log_rights;
-    if (!up->GetDispatcher(log_handle, &log_dispatcher, &log_rights))
-        return BadHandle();
-
-    auto log = log_dispatcher->get_specific<LogDispatcher>();
-    if (!log)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(log_rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<LogDispatcher> log;
+    mx_status_t status = up->GetDispatcher(log_handle, &log, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     char buf[DLOG_MAX_ENTRY];
     if (magenta_copy_from_user(ptr.get(), buf, len) != NO_ERROR)
@@ -1251,17 +1244,10 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<void> ptr,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> log_dispatcher;
-    uint32_t log_rights;
-    if (!up->GetDispatcher(log_handle, &log_dispatcher, &log_rights))
-        return BadHandle();
-
-    auto log = log_dispatcher->get_specific<LogDispatcher>();
-    if (!log)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(log_rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<LogDispatcher> log;
+    mx_status_t status = up->GetDispatcher(log_handle, &log, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     return log->ReadFromUser(ptr.get(), len, flags);
 }
