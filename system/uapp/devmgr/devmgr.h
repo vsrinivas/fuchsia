@@ -54,7 +54,7 @@ void devmgr_handle_messages(void);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
-void devmgr_launch(const char* name, const char* app, const char* arg, const char* device);
+void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd);
 void devmgr_launch_devhost(const char* name, mx_handle_t h, const char* arg0, const char* arg1);
 
 mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids);

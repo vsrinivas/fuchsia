@@ -50,48 +50,45 @@ static const char* env[] = {
     NULL,
 };
 
-void devmgr_launch(const char* name, const char* app, const char* arg, const char* device) {
-    mx_handle_t hnd[1 + 5 * VFS_MAX_HANDLES];
-    uint32_t ids[1 + 5 * VFS_MAX_HANDLES];
+void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd) {
+    mx_handle_t hnd[2 * VFS_MAX_HANDLES];
+    uint32_t ids[2 * VFS_MAX_HANDLES];
     unsigned n = 1;
     mx_status_t r;
-    const char* args[2] = { app, arg };
 
     ids[0] = MX_HND_TYPE_MXIO_ROOT;
     hnd[0] = vfs_create_root_handle();
 
     hnd[n] = launchpad_get_vdso_vmo();
-    if (hnd[n] > 0)
+    if (hnd[n] > 0) {
         ids[n++] = MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0);
-    else
+    } else {
         printf("devmgr: launchpad_get_vdso_vmo failed (%d)\n", hnd[n]);
+    }
 
-    if (device == NULL) {
-        // start with log handles, no stdin
-        device = "debuglog";
+    if (stdiofd < 0) {
+        // use system log for stdio
         ids[n] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1);
         if ((hnd[n] = mx_log_create(0)) < 0) {
             goto fail;
         }
         n++;
     } else {
-        int fd;
-        if ((fd = open(device, O_RDWR)) < 0) {
-            goto fail;
-        }
-        r = mxio_clone_fd(fd, MXIO_FLAG_USE_FOR_STDIO | 0, hnd + n, ids + n);
-        close(fd);
+        // use provided fd for stdio
+        r = mxio_clone_fd(stdiofd, MXIO_FLAG_USE_FOR_STDIO | 0, hnd + n, ids + n);
+        close(stdiofd);
         if (r < 0) {
             goto fail;
         }
         n += r;
     }
-    printf("devmgr: launch %s on %s\n", app, device);
-    mx_handle_t proc = launchpad_launch(name, arg ? 2 : 1, args, env, n, hnd, ids);
-    if (proc < 0)
+    printf("devmgr: launch %s (%s)\n", argv[0], name);
+    mx_handle_t proc = launchpad_launch(name, argc, argv, env, n, hnd, ids);
+    if (proc < 0) {
         printf("devmgr: launchpad_launch failed: %d\n", proc);
-    else
+    } else {
         mx_handle_close(proc);
+    }
     return;
 fail:
     while (n > 0) {

@@ -74,6 +74,7 @@ int devicehost(int argc, char** argv) {
 
 #if !LIBDRIVER
 
+
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
     printf("devmgr: new block device: /dev/class/block/%s\n", name);
     int fd;
@@ -88,17 +89,24 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
     return NO_ERROR;
 }
 
+static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
+static const char* argv_mxsh[] = { "/boot/bin/mxsh" };
+static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun" };
+
 int service_starter(void* arg) {
 #if !_MX_KERNEL_HAS_SHELL
     // if no kernel shell on serial uart, start a mxsh there
     printf("devmgr: shell startup\n");
-    devmgr_launch("mxsh:console", "/boot/bin/mxsh", NULL, "/dev/console");
+    int fd;
+    if ((fd = open("/dev/console", O_RDWR)) >= 0) {
+        devmgr_launch("mxsh:console", 1, argv_mxsh, fd);
+    }
 #endif
 
     // launch the network service
-    devmgr_launch("netsvc", "/boot/bin/netsvc", NULL, NULL);
+    devmgr_launch("netsvc", 1, argv_netsvc, -1);;
 
-    devmgr_launch("mxsh:autorun", "/boot/bin/mxsh", "/boot/autorun", NULL);
+    devmgr_launch("mxsh:autorun", 2, argv_mxsh_autorun, -1);
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
@@ -116,9 +124,10 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
 
     // start some shells on vcs
     for (unsigned i = 0; i < VC_COUNT; i++) {
-        char pname[32];
-        snprintf(pname, sizeof(pname), "mxsh:vc%u", i);
-        devmgr_launch(pname, "/boot/bin/mxsh", NULL, VC_DEVICE);
+        int fd;
+        if ((fd = openat(dirfd, name, O_RDWR)) >= 0) {
+            devmgr_launch("mxsh:vc", 1, argv_mxsh, fd);
+        }
     }
 
     // stop polling
@@ -162,9 +171,10 @@ int main(int argc, char** argv) {
     // from the linker in the log
     putenv(strdup("LD_DEBUG=1"));
 #else
-    char* disable_crashlogger = getenv("crashlogger.disable");
-    if (!disable_crashlogger)
-        devmgr_launch("crashlogger", "/boot/bin/crashlogger", NULL, NULL);
+    if (!getenv("crashlogger.disable")) {
+        static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
+        devmgr_launch("crashlogger", 1, argv_crashlogger, -1);
+    }
 #endif
 
     mx_status_t status = devmgr_launch_acpisvc();
