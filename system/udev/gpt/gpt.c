@@ -20,7 +20,6 @@
 #include <threads.h>
 
 #include "gpt.h"
-#include "sata.h"
 
 #define TRACE 1
 

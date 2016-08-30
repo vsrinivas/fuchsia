@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "gpt.h"
 #include "sata.h"
 
 #define TRACE 1

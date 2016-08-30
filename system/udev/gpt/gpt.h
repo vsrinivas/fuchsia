@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "sata.h"
-
 #define GPT_MAGIC (0x5452415020494645ull) // 'EFI PART'
 #define GPT_GUID_STRLEN 37
 #define GPT_NAME_LEN 72
