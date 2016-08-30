@@ -202,7 +202,7 @@ static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
     }
 
     list_add_head(&eth->free_intr_reqs, &request->node);
-    if (request->status != ERR_CHANNEL_CLOSED) {
+    if (request->status != ERR_REMOTE_CLOSED) {
         queue_interrupt_requests_locked(eth);
     }
 

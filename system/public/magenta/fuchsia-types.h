@@ -75,8 +75,9 @@
 // specific code(s).
 #define ERR_CANCELLED (-24)
 
-// ERR_CHANNEL_CLOSED: operation will never succeed because other end does not exist
-#define ERR_CHANNEL_CLOSED (-25)   // RENAME to ERR_REMOTE_CLOSED
+// ERR_REMOTE_CLOSED: The operation failed because the remote end of the subject of the operation
+// was closed.
+#define ERR_REMOTE_CLOSED (-25)
 
 // ERR_NOT_AVAILABLE: object is owned or controlled by another entity
 #define ERR_NOT_AVAILABLE (-26)    // NEW

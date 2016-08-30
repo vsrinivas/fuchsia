@@ -68,7 +68,7 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     if (!slot->enabled)
-        return ERR_CHANNEL_CLOSED;
+        return ERR_REMOTE_CLOSED;
 
     xhci_transfer_ring_t* ring = &slot->transfer_rings[endpoint];
     if (!ring)
@@ -279,7 +279,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             return;
         default:
             // FIXME - how do we report stalls, etc?
-            result = ERR_CHANNEL_CLOSED;
+            result = ERR_REMOTE_CLOSED;
             break;
     }
 
@@ -312,7 +312,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         xhci_transfer_context_t* context;
         while ((context = list_remove_head_type(&ring->pending_requests,
                                                 xhci_transfer_context_t, node)) != NULL) {
-            context->callback(ERR_CHANNEL_CLOSED, context->data);
+            context->callback(ERR_REMOTE_CLOSED, context->data);
         }
         list_initialize(&ring->pending_requests);
         completion_signal(&ring->completion);

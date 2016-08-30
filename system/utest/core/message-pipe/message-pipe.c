@@ -180,7 +180,7 @@ bool message_pipe_read_error_test(void) {
 
     // Read from an empty pipe with a closed peer, should yield a channel closed error.
     status = mx_msgpipe_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
-    ASSERT_EQ(status, ERR_CHANNEL_CLOSED, "read on empty closed pipe produced incorrect error");
+    ASSERT_EQ(status, ERR_REMOTE_CLOSED, "read on empty closed pipe produced incorrect error");
 
     // Waiting for readability should yield a bad state error.
     status = mx_handle_wait_one(pipe[0], MX_SIGNAL_READABLE, 0u, NULL);

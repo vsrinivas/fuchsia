@@ -90,7 +90,7 @@ status_t MessagePipe::Read(size_t side, mxtl::unique_ptr<MessagePacket>* msg) {
 
     if (*msg)
         return NO_ERROR;
-    return other_alive ? ERR_BAD_STATE : ERR_CHANNEL_CLOSED;
+    return other_alive ? ERR_BAD_STATE : ERR_REMOTE_CLOSED;
 }
 
 status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {

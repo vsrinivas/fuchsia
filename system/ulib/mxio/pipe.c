@@ -41,7 +41,7 @@ static mx_status_t mxu_blocking_read(mx_handle_t h, void* data, size_t len) {
             if (pending.satisfied & MX_SIGNAL_READABLE)
                 continue;
             if (pending.satisfied & MX_SIGNAL_PEER_CLOSED)
-                return ERR_CHANNEL_CLOSED;
+                return ERR_REMOTE_CLOSED;
             return ERR_INTERNAL;
         }
         return r;

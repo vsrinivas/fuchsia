@@ -36,7 +36,7 @@ static mx_status_t devhost_rpc(mx_handle_t h, devhost_msg_t* msg, mx_handle_t ha
         return r;
     }
     if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
-        return ERR_CHANNEL_CLOSED;
+        return ERR_REMOTE_CLOSED;
     }
     uint32_t dsz = sizeof(*msg);
     if ((r = mx_msgpipe_read(h, msg, &dsz, NULL, NULL, 0)) < 0) {

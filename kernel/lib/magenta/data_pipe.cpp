@@ -135,7 +135,7 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requeste
         return ERR_BUSY; // MOJO_RESULT_BUSY
 
     if (!consumer_.alive)
-        return ERR_CHANNEL_CLOSED; // MOJO_RESULT_FAILED_PRECONDITION
+        return ERR_REMOTE_CLOSED;
 
     if (free_space_ == 0u)
         return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT
@@ -171,7 +171,7 @@ mx_status_t DataPipe::ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace,
         return ERR_BUSY; // MOJO_RESULT_BUSY
 
     if (!consumer_.alive)
-        return ERR_CHANNEL_CLOSED; // MOJO_RESULT_FAILED_PRECONDITION
+        return ERR_REMOTE_CLOSED;
 
     if (free_space_ == 0u)
         return ERR_NOT_READY; // MOJO_RESULT_SHOULD_WAIT

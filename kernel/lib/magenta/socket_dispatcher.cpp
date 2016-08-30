@@ -198,7 +198,7 @@ mx_ssize_t SocketDispatcher::Write(const void* src, mx_size_t len, bool from_use
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_CHANNEL_CLOSED;
+            return ERR_REMOTE_CLOSED;
         other = other_;
     }
 

@@ -225,7 +225,7 @@ void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring) {
 
     if (ring->dead) {
         while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
-            txn->ops->complete(txn, ERR_CHANNEL_CLOSED, 0);
+            txn->ops->complete(txn, ERR_REMOTE_CLOSED, 0);
         }
         return;
     }

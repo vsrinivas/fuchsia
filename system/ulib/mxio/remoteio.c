@@ -216,7 +216,7 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
     if ((pending.satisfied & MX_SIGNAL_PEER_CLOSED) &&
         !(pending.satisfied & MX_SIGNAL_READABLE)) {
         mx_handle_close(rh);
-        return ERR_CHANNEL_CLOSED;
+        return ERR_REMOTE_CLOSED;
     }
 
     dsize = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;

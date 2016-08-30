@@ -84,7 +84,7 @@ setup:
                 }
             }
             if (md->states[i].satisfied & MX_SIGNAL_PEER_CLOSED) {
-                remove_handler(md, handler, ERR_CHANNEL_CLOSED);
+                remove_handler(md, handler, ERR_REMOTE_CLOSED);
                 goto setup;
             }
             i++;

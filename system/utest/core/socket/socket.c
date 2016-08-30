@@ -55,7 +55,7 @@ static bool socket_basic(void) {
     mx_handle_close(h[1]);
 
     ssize = mx_socket_write(h[0], 0u, sizeof(write_data[1]), &write_data[1]);
-    ASSERT_EQ(ssize, ERR_CHANNEL_CLOSED, "");
+    ASSERT_EQ(ssize, ERR_REMOTE_CLOSED, "");
 
     mx_handle_close(h[0]);
     END_TEST;

@@ -51,7 +51,7 @@ pointers.
 
 **ERR_BAD_STATE**  The message pipe contained no messages to read.
 
-**ERR_CHANNEL_CLOSED**  The other side of the message pipe is closed.
+**ERR_REMOTE_CLOSED**  The other side of the message pipe is closed.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

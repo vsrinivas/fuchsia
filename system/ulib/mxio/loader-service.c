@@ -117,7 +117,7 @@ static int loader_service_thread(void* arg) {
         if ((r = mx_msgpipe_read(h, msg, &sz, NULL, NULL, 0)) < 0) {
             // This is the normal error for the other end going away,
             // which happens when the process dies.
-            if (r != ERR_CHANNEL_CLOSED)
+            if (r != ERR_REMOTE_CLOSED)
                 fprintf(stderr, "dlsvc: msg read error %d\n", r);
             break;
         }

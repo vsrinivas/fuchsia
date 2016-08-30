@@ -211,7 +211,7 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
     mx_hid_instance_t* hid = to_hid_instance(dev);
 
     if (hid->flags & HID_FLAGS_DEAD) {
-        return ERR_CHANNEL_CLOSED;
+        return ERR_REMOTE_CLOSED;
     }
 
     size_t left;
@@ -228,7 +228,7 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
 static ssize_t hid_ioctl_instance(mx_device_t* dev, uint32_t op,
         const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     mx_hid_instance_t* hid = to_hid_instance(dev);
-    if (hid->flags & HID_FLAGS_DEAD) return ERR_CHANNEL_CLOSED;
+    if (hid->flags & HID_FLAGS_DEAD) return ERR_REMOTE_CLOSED;
 
     switch (op) {
     case IOCTL_INPUT_GET_PROTOCOL:
