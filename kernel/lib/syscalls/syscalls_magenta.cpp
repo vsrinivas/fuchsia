@@ -1020,19 +1020,13 @@ mx_handle_t sys_vmo_create(uint64_t size) {
 mx_ssize_t sys_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size_t len) {
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
 
-    // lookup the dispatcher from handle
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
 
-    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
-    if (!vmo)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    // lookup the dispatcher from handle
+    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    mx_status_t status = up->GetDispatcher(handle, &vmo, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     // do the read operation
     return vmo->Read(data, len, offset);
@@ -1041,19 +1035,13 @@ mx_ssize_t sys_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size
 mx_ssize_t sys_vmo_write(mx_handle_t handle, const void* data, uint64_t offset, mx_size_t len) {
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
 
-    // lookup the dispatcher from handle
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
 
-    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
-    if (!vmo)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    // lookup the dispatcher from handle
+    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    mx_status_t status = up->GetDispatcher(handle, &vmo, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     // do the write operation
     return vmo->Write(data, len, offset);
@@ -1062,22 +1050,19 @@ mx_ssize_t sys_vmo_write(mx_handle_t handle, const void* data, uint64_t offset, 
 mx_status_t sys_vmo_get_size(mx_handle_t handle, mxtl::user_ptr<uint64_t> _size) {
     LTRACEF("handle %d, sizep %p\n", handle, _size.get());
 
-    // lookup the dispatcher from handle
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
 
-    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
-    if (!vmo)
-        return ERR_WRONG_TYPE;
+    // lookup the dispatcher from handle
+    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    mx_status_t status = up->GetDispatcher(handle, &vmo);
+    if (status != NO_ERROR)
+        return status;
 
     // no rights check, anyone should be able to get the size
 
     // do the operation
     uint64_t size = 0;
-    mx_status_t status = vmo->GetSize(&size);
+    status = vmo->GetSize(&size);
 
     // copy the size back, even if it failed
     if (copy_to_user(_size.reinterpret<uint8_t>(), &size, sizeof(size)) != NO_ERROR)
@@ -1089,19 +1074,13 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, mxtl::user_ptr<uint64_t> _size)
 mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     LTRACEF("handle %d, size 0x%llx\n", handle, size);
 
-    // lookup the dispatcher from handle
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return BadHandle();
 
-    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
-    if (!vmo)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    // lookup the dispatcher from handle
+    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    mx_status_t status = up->GetDispatcher(handle, &vmo, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     // do the operation
     return vmo->SetSize(size);
@@ -1118,17 +1097,15 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     // get the vmo dispatcher
-    mxtl::RefPtr<Dispatcher> vmo_dispatcher;
+    mxtl::RefPtr<VmObjectDispatcher> vmo;
     uint32_t vmo_rights;
-    if (!up->GetDispatcher(vmo_handle, &vmo_dispatcher, &vmo_rights))
-        return BadHandle();
+    mx_status_t status = up->GetDispatcher(vmo_handle, &vmo, &vmo_rights);
+    if (status != NO_ERROR)
+        return status;
 
-    auto vmo = vmo_dispatcher->get_specific<VmObjectDispatcher>();
-    if (!vmo)
-        return ERR_WRONG_TYPE;
-
+    // get process dispatcher
     mxtl::RefPtr<ProcessDispatcher> process;
-    auto status = get_process(up, proc_handle, &process);
+    status = get_process(up, proc_handle, &process);
     if (status != NO_ERROR)
         return status;
 
@@ -1138,7 +1115,7 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
         return ERR_INVALID_ARGS;
 
     // do the map call
-    status = process->Map(mxtl::WrapRefPtr(vmo), vmo_rights,
+    status = process->Map(mxtl::move(vmo), vmo_rights,
                           offset, len, &ptr, flags);
     if (status != NO_ERROR)
         return status;
