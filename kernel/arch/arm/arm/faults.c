@@ -17,6 +17,11 @@
 #include <magenta/exception.h>
 #endif
 
+struct arch_exception_context {
+    bool iframe;
+    void *frame;
+};
+
 struct fault_handler_table_entry {
     uint32_t pc;
     uint32_t fault_handler;
@@ -382,7 +387,7 @@ void arm_prefetch_abort_handler(struct arm_fault_frame *frame)
 }
 
 #if WITH_LIB_MAGENTA
-void arch_dump_exception_context(arch_exception_context_t *context)
+void arch_dump_exception_context(const arch_exception_context_t *context)
 {
     // based on context, this could have been a iframe or a full fault frame
     uint32_t usp = 0;
@@ -404,5 +409,12 @@ void arch_dump_exception_context(arch_exception_context_t *context)
             hexdump_ex(buf, sizeof(buf), usp);
         }
     }
+}
+
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_context_t *mx_context)
+{
+    mx_context->arch_id = ARCH_ID_UNKNOWN;
+
+    // TODO: implement for arm32
 }
 #endif

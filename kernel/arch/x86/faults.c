@@ -20,6 +20,12 @@
 #include <magenta/exception.h>
 #endif
 
+struct arch_exception_context {
+    bool is_page_fault;
+    x86_iframe_t *frame;
+    uint32_t cr2;
+};
+
 extern enum handler_return platform_irq(x86_iframe_t *frame);
 
 static void dump_fault_frame(x86_iframe_t *frame)
@@ -347,7 +353,7 @@ __WEAK uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint
 }
 
 #if WITH_LIB_MAGENTA
-void arch_dump_exception_context(arch_exception_context_t *context)
+void arch_dump_exception_context(const arch_exception_context_t *context)
 {
     if (context->is_page_fault) {
         x86_dump_pfe(context->frame, context->cr2);
@@ -364,4 +370,13 @@ void arch_dump_exception_context(arch_exception_context_t *context)
         }
     }
 }
+
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_context_t *mx_context)
+{
+    mx_context->arch_id = ARCH_ID_X86_64;
+
+    // for now do a direct copy of the exception context frame
+    mx_context->arch.u.x86_64 = *(x86_64_exc_frame_t*)arch_context->frame;
+}
+
 #endif

@@ -20,6 +20,12 @@
 
 #define LOCAL_TRACE 0
 
+struct arch_exception_context {
+    struct arm64_iframe_long *frame;
+    uint64_t far;
+    uint32_t esr;
+};
+
 struct fault_handler_table_entry {
     uint64_t pc;
     uint64_t fault_handler;
@@ -243,7 +249,7 @@ void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int whic
 }
 
 #if WITH_LIB_MAGENTA
-void arch_dump_exception_context(arch_exception_context_t *context)
+void arch_dump_exception_context(const arch_exception_context_t *context)
 {
     uint32_t ec = BITS_SHIFT(context->esr, 31, 26);
     uint32_t iss = BITS(context->esr, 24, 0);
@@ -275,5 +281,13 @@ void arch_dump_exception_context(arch_exception_context_t *context)
             hexdump_ex(buf, sizeof(buf), context->frame->usp);
         }
     }
+}
+
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_context_t *mx_context)
+{
+    mx_context->arch_id = ARCH_ID_ARM_64;
+
+    // for now do a direct copy of the exception context frame
+    mx_context->arch.u.arm_64 = *(arm64_exc_frame_t*)arch_context->frame;
 }
 #endif
