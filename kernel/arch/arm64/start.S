@@ -45,7 +45,9 @@ arm_reset:
     mrs     tmp, sctlr_el1
     orr     tmp, tmp, #(1<<12) /* Enable icache */
     orr     tmp, tmp, #(1<<2)  /* Enable dcache/ucache */
-    bic     tmp, tmp, #(1<<3)  /* Disable Stack Alignment Check */ /* TODO: don't use unaligned stacks */
+    orr     tmp, tmp, #(1<<3)  /* Enable Stack Alignment Check EL1 */
+    orr     tmp, tmp, #(1<<4)  /* Enable Stack Alignment Check EL0 */
+    bic     tmp, tmp, #(1<<1)  /* Disable Alignment Checking for EL1 EL0 */
     msr     sctlr_el1, tmp
 
     /* set up the mmu according to mmu_initial_mappings */
@@ -399,6 +401,7 @@ DATA(page_tables_not_ready)
     .align 4
 DATA(__stack)
     .skip ARCH_DEFAULT_STACK_SIZE * SMP_MAX_CPUS
+    .align 16
 DATA(__stack_end)
 
 #if WITH_KERNEL_VM
