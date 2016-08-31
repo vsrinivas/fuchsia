@@ -8,14 +8,14 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include <mxtl/intrusive_double_list.h>
+#include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
 class VmAspace;
 class VmObject;
 
-class VmRegion : public mxtl::DoublyLinkedListable<mxtl::RefPtr<VmRegion>>
+class VmRegion : public mxtl::WAVLTreeContainable<mxtl::RefPtr<VmRegion>>
                , public mxtl::RefCounted<VmRegion> {
 public:
     static mxtl::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
@@ -55,6 +55,9 @@ public:
     status_t PageFault(vaddr_t va, uint pf_flags);
 
     mxtl::RefPtr<VmObject> vmo();
+
+    // WAVL tree key function
+    vaddr_t GetKey() const { return base(); }
 
 private:
     // private constructor, use Create()

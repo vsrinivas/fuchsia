@@ -11,6 +11,7 @@
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
@@ -85,7 +86,7 @@ public:
     void Dump() const;
 
 private:
-    using RegionList = mxtl::DoublyLinkedList<mxtl::RefPtr<VmRegion>>;
+    using RegionTree = mxtl::WAVLTree<vaddr_t, mxtl::RefPtr<VmRegion>>;
 
     // nocopy
     VmAspace(const VmAspace&) = delete;
@@ -109,10 +110,10 @@ private:
                                         uint8_t align_pow2, uint32_t vmm_flags,
                                         uint arch_mmu_flags);
     vaddr_t AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                      RegionList::iterator* after);
+                      RegionTree::iterator* after);
     mxtl::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
-    bool CheckGap(const RegionList::iterator& prev,
-                  const RegionList::iterator& next,
+    bool CheckGap(const RegionTree::iterator& prev,
+                  const RegionTree::iterator& next,
                   vaddr_t* pva, vaddr_t align, size_t region_size, uint arch_mmu_flags);
 
     // magic
@@ -127,9 +128,8 @@ private:
 
     mutable mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
 
-    // sorted list of regions
-    // TODO(johngro) : This should be some form of O(log) tree.
-    RegionList regions_;
+    // ordered tree of regions
+    RegionTree regions_;
 
     // architecturally specific part of the aspace
     arch_aspace_t arch_aspace_ = {};

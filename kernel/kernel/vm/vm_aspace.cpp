@@ -234,40 +234,27 @@ status_t VmAspace::AddRegion(const mxtl::RefPtr<VmRegion>& r) {
         return ERR_OUT_OF_RANGE;
     }
 
-    // TODO(johngro) : The operation of finding a place for this region should
-    // be O(log).  Replace the O(n) linked list container used here with some
-    // form of O(log) container, when we have one.
-    //
     // regions are sorted in ascending base address order.  If this region's
     // base address is before the end of the last region's end, we will not
     // find a place for it in the list.
     vaddr_t r_end = r->base() + r->size() - 1;
 
-    // does it fit in front
-    auto iter = regions_.begin();
-    if ((iter == regions_.end()) || r_end < iter->base()) {
-        // empty list or not empty and fits before the first element
-        regions_.insert(iter, r);
-        return NO_ERROR;
+    auto next_region = regions_.upper_bound(r_end);
+    if (next_region != regions_.begin()) {
+        auto prev_region = next_region;
+        --prev_region;
+        if (prev_region.IsValid()) {
+            vaddr_t prev_end = prev_region->base() + prev_region->size() - 1;
+            if (prev_end >= r->base()) {
+                // Overlaps with previous
+                LTRACEF_LEVEL(2, "couldn't find spot\n");
+                return ERR_NO_MEMORY;
+            }
+        }
     }
 
-    do {
-        vaddr_t last_end = iter->base() + iter->size() - 1;
-        if (r->base() <= last_end)
-            break;
-
-        ++iter;
-
-        // Does this region fit before the next region?
-        if ((iter == regions_.end()) || (r_end < iter->base())) {
-            regions_.insert(iter, r);
-            return NO_ERROR;
-        }
-    } while (iter != regions_.end());
-
-
-    LTRACEF_LEVEL(2, "couldn't find spot\n");
-    return ERR_NO_MEMORY;
+    regions_.insert(r);
+    return NO_ERROR;
 }
 
 //
@@ -286,8 +273,8 @@ __WEAK vaddr_t arch_mmu_pick_spot(arch_aspace_t* aspace, vaddr_t base,
 //
 //  Returns true if the caller has to stop search
 
-bool VmAspace::CheckGap(const RegionList::iterator& prev,
-                        const RegionList::iterator& next,
+bool VmAspace::CheckGap(const RegionTree::iterator& prev,
+                        const RegionTree::iterator& next,
                         vaddr_t* pva, vaddr_t align, size_t region_size, uint arch_mmu_flags) {
     vaddr_t gap_beg; // first byte of a gap
     vaddr_t gap_end; // last byte of a gap
@@ -333,7 +320,7 @@ not_found:
 // search for a spot to allocate for a region of a given size, returning an
 // iterator to the region after it in the list.
 vaddr_t VmAspace::AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                            RegionList::iterator* after) {
+                            RegionTree::iterator* after) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
 
@@ -386,7 +373,7 @@ mxtl::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vadd
         }
     } else {
         // allocate a virtual slot for it
-        RegionList::iterator after;
+        RegionTree::iterator after;
         vaddr = AllocSpot(size, align_pow2, arch_mmu_flags, &after);
         LTRACEF_LEVEL(2, "alloc_spot returns 0x%lx, before %p\n", vaddr, after);
 
@@ -398,7 +385,7 @@ mxtl::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vadd
         r->set_base(vaddr);
 
         // add it to the region list
-        regions_.insert(after, r);
+        regions_.insert(r);
     }
 
     return r;
@@ -409,11 +396,19 @@ mxtl::RefPtr<VmRegion> VmAspace::FindRegionLocked(vaddr_t vaddr) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(is_mutex_held(&lock_));
 
-    // search the region list
-    for (auto iter = regions_.begin(); iter != regions_.end(); ++iter) {
-        if ((vaddr >= iter->base()) && (vaddr <= iter->base() + iter->size() - 1))
-            return iter.CopyPointer();
+    // Find the region that includes vaddr + 1 or further, ours should be
+    // before it.
+    auto iter = regions_.upper_bound(vaddr);
+    --iter;
+
+    // If iter is invalid, the upper bound was either the beginning of the list,
+    // or the end of an empty list.
+    if (!iter.IsValid()) {
+        return nullptr;
     }
+
+    if ((vaddr >= iter->base()) && (vaddr <= iter->base() + iter->size() - 1))
+        return iter.CopyPointer();
 
     return nullptr;
 }
