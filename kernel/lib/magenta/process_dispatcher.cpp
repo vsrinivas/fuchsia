@@ -250,8 +250,17 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
 
 void ProcessDispatcher::AllHandlesClosed() {
     LTRACE_ENTRY_OBJ;
-    // Here we should call Kill(). Currently not advisable since launchpad launcher
-    // closes the handle to each launched process.
+
+    // check that we're not already entering a dead state
+    // note this is checked outside of a mutex to avoid a reentrant case where the
+    // process is already being destroyed, the handle table is being cleaned up, and
+    // the last ref to itself is being dropped. In that case it recurses into this function
+    // and would wedge up if Kill() is called
+    if (state_ == State::DYING || state_ == State::DEAD)
+        return;
+
+    // last handle going away acts as a kill to the process object
+    Kill();
 }
 
 void ProcessDispatcher::SetState(State s) {

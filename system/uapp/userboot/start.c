@@ -62,6 +62,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // Sample the bootstrap message to see how big it is.
     uint32_t nbytes;
     uint32_t nhandles;
+
     mx_status_t status = mxr_message_size(bootstrap_pipe, &nbytes, &nhandles);
     check(log, status, "mxr_message_size failed on bootstrap pipe!\n");
 
@@ -165,23 +166,24 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     }
 
     if (proc_handle_loc != NULL) {
-        // This is our own proc handle, but we don't need it for anything.
-        if (*proc_handle_loc != MX_HANDLE_INVALID)
-            mx_handle_close(*proc_handle_loc);
         // Reuse the slot for the child's handle.
+        // NOTE: This leaks the current process handle, which is not explicitly
+        // closed here or it'd immediately stop this process. Will be cleaned up
+        // when the current process exits below.
         *proc_handle_loc = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
         if (*proc_handle_loc < 0)
             fail(log, *proc_handle_loc,
                  "mx_handle_duplicate failed on child process handle\n");
     }
 
-    // create the initial thread in the new process
+    // Create the initial thread in the new process
     mx_handle_t thread = mx_thread_create(proc, filename, strlen(filename), 0);
     if (thread < 0)
         fail(log, thread, "mx_thread_create failed\n");
 
     if (thread_handle_loc != NULL) {
         // Reuse the slot for the child's handle.
+        // NOTE: Leaks the current thread handle the same way as the process handle.
         *thread_handle_loc = mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS);
         if (*thread_handle_loc < 0)
             fail(log, *thread_handle_loc,

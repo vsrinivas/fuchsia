@@ -19,7 +19,7 @@ Handle::Handle(const Handle* rhs, mx_rights_t rights)
     : process_id_(rhs->process_id_),
       dispatcher_(rhs->dispatcher_),
       rights_(rights) {
-    // The handle is being duplicated, so we don't call |add_handle()|.
+    dispatcher_->add_handle();
 }
 
 Handle::~Handle() {
