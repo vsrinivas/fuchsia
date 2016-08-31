@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <elf.h>
 #include <inttypes.h>
 #include <link.h>
 #include <stddef.h>
@@ -16,13 +17,13 @@
 
 extern struct r_debug* _dl_debug_addr;
 
-#define BUILDIDSZ 0x14
+#define MAX_BUILDID_SIZE 64
 
 typedef struct dsoinfo dsoinfo_t;
 struct dsoinfo {
     dsoinfo_t* next;
     uintptr_t base;
-    char buildid[BUILDIDSZ * 2 + 1];
+    char buildid[MAX_BUILDID_SIZE * 2 + 1];
     char name[];
 };
 
@@ -36,7 +37,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
         return NULL;
     }
     memcpy(dso->name, name, len + 1);
-    memset(dso->buildid, 'x', BUILDIDSZ * 2);
+    memset(dso->buildid, 'x', sizeof(dso->buildid) - 1);
     dso->base = base;
     while (*list != NULL) {
         if ((*list)->base < dso->base) {
@@ -92,13 +93,6 @@ static mx_status_t fetch_string(mem_handle_t h, uintptr_t vaddr, char* ptr, size
 #define phdr_off_offset offsetof(Elf64_Phdr, p_offset)
 #define phdr_off_filesz offsetof(Elf64_Phdr, p_filesz)
 
-typedef struct {
-    uint32_t namesz;
-    uint32_t descsz;
-    uint32_t type;
-    uint32_t name;
-} notehdr;
-
 void fetch_build_id(mx_handle_t h, dsoinfo_t* dso) {
     uint64_t vaddr = dso->base;
     uint8_t tmp[4];
@@ -127,25 +121,41 @@ void fetch_build_id(mx_handle_t h, dsoinfo_t* dso) {
             read_mem(h, phaddr + phdr_off_filesz, &size, sizeof(size))) {
             return;
         }
-        if (size < 0x24) {
-            continue;
-        }
-        notehdr hdr;
-        if (read_mem(h, vaddr + off, &hdr, sizeof(hdr))) {
+        struct {
+            Elf32_Nhdr hdr;
+            char name[sizeof("GNU")];
+        } hdr;
+        while (size > sizeof(hdr)) {
+            if (read_mem(h, vaddr + off, &hdr, sizeof(hdr))) {
+                return;
+            }
+            size_t header_size =
+                sizeof(Elf32_Nhdr) + ((hdr.hdr.n_namesz + 3) & -4);
+            size_t payload_size = (hdr.hdr.n_descsz + 3) & -4;
+            off += header_size;
+            size -= header_size;
+            uint64_t payload_vaddr = vaddr + off;
+            off += payload_size;
+            size -= payload_size;
+            if (hdr.hdr.n_type != NT_GNU_BUILD_ID ||
+                hdr.hdr.n_namesz != sizeof("GNU") ||
+                memcmp(hdr.name, "GNU", sizeof("GNU")) != 0) {
+                continue;
+            }
+            if (hdr.hdr.n_descsz > MAX_BUILDID_SIZE) {
+                snprintf(dso->buildid, sizeof(dso->buildid),
+                         "build_id_too_large_%u", hdr.hdr.n_descsz);
+            } else {
+                uint8_t buildid[MAX_BUILDID_SIZE];
+                if (read_mem(h, payload_vaddr, buildid, hdr.hdr.n_descsz)) {
+                    return;
+                }
+                for (uint32_t i = 0; i < hdr.hdr.n_descsz; ++i) {
+                    snprintf(&dso->buildid[i * 2], 3, "%02x", buildid[i]);
+                }
+            }
             return;
         }
-        if ((hdr.namesz != 4) || (hdr.descsz != 0x14) ||
-            (hdr.type != 3) || (hdr.name != 0x554e47)) {
-            continue;
-        }
-        uint8_t buildid[BUILDIDSZ];
-        if (read_mem(h, vaddr + off + sizeof(hdr), buildid, sizeof(buildid))) {
-            return;
-        }
-        for (n = 0; n < BUILDIDSZ; n++) {
-            sprintf(dso->buildid + n * 2, "%02x", buildid[n]);
-        }
-        return;
     }
 }
 
