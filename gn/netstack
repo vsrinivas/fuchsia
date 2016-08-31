@@ -1,0 +1,15 @@
+{
+    "labels": [
+        "//apps/netstack"
+    ],
+    "binaries": [
+        {
+            "binary": "netstack",
+            "bootfs_path": "bin/netstack"
+        },
+        {
+            "binary": "sockettest",
+            "bootfs_path": "bin/sockettest"
+        }
+    ]
+}
