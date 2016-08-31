@@ -22,12 +22,13 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
 #include <magenta/resource_dispatcher.h>
+#include <magenta/stack.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
 #include "code-start.h"
 
-static const size_t stack_size = 16 * PAGE_SIZE;
+static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
 
 extern char __kernel_cmdline[CMDLINE_MAX];
 extern unsigned __kernel_cmdline_size;
@@ -350,23 +351,14 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         return status;
 
     // Map the stack anywhere.
-    uintptr_t sp;
+    uintptr_t stack_base;
     status = proc->Map(mxtl::move(stack_vmo_dispatcher),
                        MX_RIGHT_READ | MX_RIGHT_WRITE,
-                       0, stack_size, &sp,
+                       0, stack_size, &stack_base,
                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     if (status != NO_ERROR)
         return status;
-    sp += stack_size;
-#ifdef __x86_64__
-    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
-    // at (%rsp) serves as the return address for the outermost frame.
-    sp -= 8;
-#elif defined(__arm__) || defined(__aarch64__)
-    // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
-#else
-# error what machine?
-#endif
+    uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
 
     // Create the user thread and stash its handle for the bootstrap message.
     ThreadDispatcher* thread;

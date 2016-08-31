@@ -7,10 +7,9 @@
 #include "option.h"
 #include "util.h"
 
-#include "../../ulib/launchpad/stack.h"
-
 #pragma GCC visibility push(hidden)
 
+#include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
@@ -142,7 +141,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         fail(log, proc, "mx_process_create failed\n");
 
     mx_vaddr_t entry, vdso_base;
-    size_t stack_size = DEFAULT_STACK_SIZE;
+    size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
     load_child_process(log, &o, bootfs_vmo, vdso_vmo, proc, to_child,
                        &entry, &vdso_base, &stack_size);
 
@@ -155,7 +154,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_process_map_vm(proc, stack_vmo, 0, stack_size, &stack_base,
                                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     check(log, status, "mx_process_map_vm failed for child stack\n");
-    uintptr_t sp = sp_from_mapping(stack_base, stack_size);
+    uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
     if (stack_vmo_handle_loc != NULL) {
         // This is our own stack VMO handle, but we don't need it for anything.
         if (*stack_vmo_handle_loc != MX_HANDLE_INVALID)

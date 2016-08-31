@@ -5,6 +5,7 @@
 #include <runtime/thread.h>
 
 #include <limits.h>
+#include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
 #include <runtime/tls.h>
@@ -130,27 +131,6 @@ static size_t local_strlen(const char* s) {
     return len;
 }
 
-// copied from launchpad/stack.h
-// XXX(travisg) put in shared place?
-//
-// Given the (page-aligned) base and size of the stack mapping,
-// compute the appropriate initial SP value for an initial thread
-// according to the C calling convention for the machine.
-static inline uintptr_t sp_from_mapping(mx_vaddr_t base, size_t size) {
-    // Assume stack grows down.
-    mx_vaddr_t sp = base + size;
-#ifdef __x86_64__
-    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
-    // at (%rsp) serves as the return address for the outermost frame.
-    sp -= 8;
-#elif defined(__arm__) || defined(__aarch64__)
-    // The ARMv7 and ARMv8 ABIs both just require that SP be aligned.
-#else
-# error what machine?
-#endif
-    return sp;
-}
-
 mx_status_t mxr_thread_create(const char* name, mxr_thread_t** thread_out) {
     mxr_thread_t* thread = NULL;
     mx_status_t status = allocate_thread_page(&thread);
@@ -182,7 +162,7 @@ mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t 
     thread->arg = arg;
 
     // compute the starting address of the stack
-    uintptr_t sp = sp_from_mapping(stack_addr, stack_size);
+    uintptr_t sp = compute_initial_stack_pointer(stack_addr, stack_size);
 
     // kick off the new thread
     mx_status_t status = mx_thread_start(thread->handle,

@@ -4,9 +4,10 @@
 
 #include <launchpad/launchpad.h>
 #include "elf.h"
-#include "stack.h"
 
+#include <magenta/assert.h>
 #include <magenta/processargs.h>
+#include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 #include <stdbool.h>
@@ -72,7 +73,7 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
     if (lp == NULL)
         return ERR_NO_MEMORY;
 
-    lp->stack_size = DEFAULT_STACK_SIZE;
+    lp->stack_size = MAGENTA_DEFAULT_STACK_SIZE;
 
     mx_status_t status = launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
     if (status == NO_ERROR) {
@@ -658,7 +659,8 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             lp_proc(lp), stack_vmo, 0, lp->stack_size, &stack_base,
             MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
         if (status == NO_ERROR) {
-            *sp = sp_from_mapping(stack_base, lp->stack_size);
+            DEBUG_ASSERT(lp->stack_size % PAGE_SIZE == 0);
+            *sp = compute_initial_stack_pointer(stack_base, lp->stack_size);
             // Pass the stack VMO to the process.  Our protocol with the
             // new process is that we warrant that this is the VMO from
             // which the initial stack is mapped and that we've exactly
