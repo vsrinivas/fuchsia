@@ -16,6 +16,7 @@
 #include <kernel/thread.h>
 #include <lk/init.h>
 #include <lk/main.h>
+#include <inttypes.h>
 #include <platform.h>
 #include <trace.h>
 
@@ -107,6 +108,9 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
 
     arch_disable_ints();
 
+    LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#x, %#" PRIxPTR
+            ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
+            arg1, arg2, spsr, kernel_stack_top, sp, pc);
     arm64_uspace_entry(arg1, arg2, pc, sp, kernel_stack_top, spsr);
     __UNREACHABLE;
 }
