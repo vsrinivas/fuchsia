@@ -86,7 +86,7 @@ $(BUILDDIR)/%.size: $(BUILDDIR)/%
 	$(NOECHO)$(NM) -S --size-sort $< > $@
 
 $(BUILDDIR)/%.id: $(BUILDDIR)/%
-	@echo `readelf -n $< | grep 'Build ID:' | sed 's/.*: //g'` > $@
+	@echo `LC_ALL=C $(READELF) -n $< | grep 'Build ID:' | sed 's/.*: //g'` > $@
 
 # generate a new manifest and compare to see if it differs from the previous one
 .PHONY: usermanifestfile
