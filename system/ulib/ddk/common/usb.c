@@ -156,7 +156,7 @@ mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
     memset(iter, 0, sizeof(*iter));
 
     int desc_size;
-    ssize_t result = device->ops->ioctl(device, IOCTL_USB_GET_CONFIG_DESC_SIZE, NULL, 0,
+    ssize_t result = device->ops->ioctl(device, IOCTL_USB_GET_DESCRIPTORS_SIZE, NULL, 0,
                                         &desc_size, sizeof(desc_size));
     if (result != sizeof(desc_size)) goto fail;
 
@@ -166,7 +166,7 @@ mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
     iter->desc_end = desc + desc_size;
     iter->current = desc;
 
-    result = device->ops->ioctl(device, IOCTL_USB_GET_CONFIG_DESC, NULL, 0, desc, desc_size);
+    result = device->ops->ioctl(device, IOCTL_USB_GET_DESCRIPTORS, NULL, 0, desc, desc_size);
     if (result != desc_size) goto fail;
     return NO_ERROR;
 

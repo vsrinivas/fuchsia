@@ -41,6 +41,16 @@ static int list_device(const char* device_id, bool verbose) {
         return fd;
     }
 
+    int device_type;
+    ret = mxio_ioctl(fd, IOCTL_USB_GET_DEVICE_TYPE, NULL, 0, &device_type, sizeof(device_type));
+    if (ret != sizeof(device_type)) {
+        printf("IOCTL_USB_GET_DEVICE_TYPE failed for %s\n", devname);
+        goto out;
+    }
+    if (device_type != USB_DEVICE_TYPE_DEVICE) {
+        goto out;
+    }
+
     ret = mxio_ioctl(fd, IOCTL_USB_GET_DEVICE_DESC, NULL, 0, &device_desc, sizeof(device_desc));
     if (ret != sizeof(device_desc)) {
         printf("IOCTL_USB_GET_DEVICE_DESC failed for %s\n", devname);

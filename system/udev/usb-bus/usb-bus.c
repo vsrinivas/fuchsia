@@ -19,32 +19,48 @@
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 #include <magenta/device/usb.h>
+#include <magenta/listnode.h>
 #include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+// Represents either a USB top-level device or an inteface within a composite device
 typedef struct usb_device {
     mx_device_t device;
+    // either USB_DEVICE_TYPE_DEVICE or USB_DEVICE_TYPE_INTERFACE
+    int device_type;
+    // ID assigned by host controller
     uint32_t device_id;
+    // device_id of the hub we are attached to (or zero for root hub)
     uint32_t hub_id;
     usb_speed_t speed;
 
     mx_device_t* hci_device;
 
+    // descriptors for top-level devices
     usb_device_descriptor_t* device_desc;
     usb_configuration_descriptor_t** config_descs;
+    // descriptors for composite device children
+    usb_interface_descriptor_t* interface_desc;
+    size_t interface_desc_length;
 
-    mx_device_prop_t props[9];
+    mx_device_prop_t props[7];
+
+    // list child devices (for USB composite devices)
+    list_node_t children;
+    list_node_t node;
 } usb_device_t;
 #define get_usb_device(dev) containerof(dev, usb_device_t, device)
 
+// Represents a USB bus, which manages all devices for a USB host controller
 typedef struct usb_bus {
     mx_device_t device;
 
     mx_device_t* hci_device;
     usb_hci_protocol_t* hci_protocol;
 
+    // top-level USB devices, indexed by device_id
     usb_device_t* devices[256];
 } usb_bus_t;
 #define get_usb_bus(dev) containerof(dev, usb_bus_t, device)
@@ -66,7 +82,26 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
         const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     usb_device_t* dev = get_usb_device(device);
 
+    if (dev->device_type == USB_DEVICE_TYPE_INTERFACE) {
+        switch (op) {
+        case IOCTL_USB_GET_DEVICE_DESC:
+        case IOCTL_USB_GET_CONFIG_DESC_SIZE:
+        case IOCTL_USB_GET_CONFIG_DESC:
+        // go ask Dad
+        return device->parent->ops->ioctl(device->parent, op, in_buf, in_len, out_buf, out_len);
+        default:
+            break;
+            // fall through to next switch statement
+        }
+    }
+
     switch (op) {
+    case IOCTL_USB_GET_DEVICE_TYPE: {
+        int* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        *reply = dev->device_type;
+        return sizeof(*reply);
+    }
     case IOCTL_USB_GET_DEVICE_SPEED: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
@@ -93,6 +128,34 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
         memcpy(out_buf, descriptor, desc_length);
         return desc_length;
     }
+    case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
+        size_t desc_length = 0;
+        if (dev->interface_desc) {
+            desc_length = dev->interface_desc_length;
+        } else {
+            usb_configuration_descriptor_t* descriptor = dev->config_descs[0];
+            desc_length = le16toh(descriptor->wTotalLength);
+        }
+        int* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        *reply = desc_length;
+        return sizeof(*reply);
+    }
+    case IOCTL_USB_GET_DESCRIPTORS: {
+        void* descriptors = NULL;
+        size_t desc_length = 0;
+        if (dev->interface_desc) {
+            descriptors = dev->interface_desc;
+            desc_length = dev->interface_desc_length;
+        } else {
+            usb_configuration_descriptor_t* descriptor = dev->config_descs[0];
+            descriptors = descriptor;
+            desc_length = le16toh(descriptor->wTotalLength);
+        }
+        if (out_len < desc_length) return ERR_NOT_ENOUGH_BUFFER;
+        memcpy(out_buf, descriptors, desc_length);
+        return desc_length;
+    }
     case IOCTL_USB_GET_STRING_DESC: {
         if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
         if (out_len == 0) return 0;
@@ -117,6 +180,15 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
     }
 }
 
+static void usb_device_unbind(mx_device_t* device) {
+    usb_device_t* dev = get_usb_device(device);
+
+    usb_device_t* child;
+    while ((child = list_remove_head_type(&dev->children, usb_device_t, node)) != NULL) {
+        device_remove(&child->device);
+    }
+}
+
 static mx_status_t usb_device_release(mx_device_t* device) {
     usb_device_t* dev = get_usb_device(device);
 
@@ -127,6 +199,8 @@ static mx_status_t usb_device_release(mx_device_t* device) {
     }
     free(dev->device_desc);
     free(dev->config_descs);
+    free(dev->interface_desc);
+    free(dev);
 
     return NO_ERROR;
 }
@@ -134,8 +208,99 @@ static mx_status_t usb_device_release(mx_device_t* device) {
 static mx_protocol_device_t usb_device_proto = {
     .iotxn_queue = usb_iotxn_queue,
     .ioctl = usb_device_ioctl,
+    .unbind = usb_device_unbind,
     .release = usb_device_release,
 };
+
+static mx_status_t usb_bus_add_interface(usb_bus_t* bus, usb_device_t* parent,
+                                         usb_device_descriptor_t* device_descriptor,
+                                         usb_interface_descriptor_t* interface_desc,
+                                         size_t interface_desc_length) {
+    usb_device_t* dev = calloc(1, sizeof(usb_device_t));
+    if (!dev)
+        return ERR_NO_MEMORY;
+
+    list_initialize(&dev->children);
+    dev->device_type = USB_DEVICE_TYPE_INTERFACE;
+    dev->hci_device = bus->hci_device;
+    dev->device_id = parent->device_id;
+    dev->hub_id = parent->hub_id;
+    dev->speed = parent->speed;
+    dev->interface_desc = interface_desc;
+    dev->interface_desc_length = interface_desc_length;
+
+    char name[20];
+    snprintf(name, sizeof(name), "usb-dev-%03d-%d", parent->device_id, interface_desc->bInterfaceNumber);
+
+    device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
+    dev->device.protocol_id = MX_PROTOCOL_USB;
+
+    int count = 0;
+    dev->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_DEVICE_TYPE, 0, USB_DEVICE_TYPE_INTERFACE };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_descriptor->idVendor };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_descriptor->idProduct };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, interface_desc->bInterfaceClass };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, interface_desc->bInterfaceSubClass };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, interface_desc->bInterfaceProtocol };
+    dev->device.props = dev->props;
+    dev->device.prop_count = count;
+
+    mx_status_t status = device_add(&dev->device, &parent->device);
+    if (status == NO_ERROR) {
+        list_add_head(&parent->children, &dev->node);
+    } else {
+        free(dev);
+    }
+    return status;
+}
+
+#define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
+
+static mx_status_t usb_bus_add_interfaces(usb_bus_t* bus, usb_device_t* parent,
+                                          usb_device_descriptor_t* device_descriptor,
+                                          usb_configuration_descriptor_t* config) {
+    mx_status_t result = NO_ERROR;
+
+    // Iterate through interfaces in first configuration and create devices for them
+    usb_descriptor_header_t* header = NEXT_DESCRIPTOR(config);
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)config + config->wTotalLength);
+
+    while (header < end) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
+            // find end of current interface descriptor
+            usb_descriptor_header_t* next = NEXT_DESCRIPTOR(intf_desc);
+            while (next < end) {
+                if (next->bDescriptorType == USB_DT_INTERFACE) {
+                    usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)next;
+                    // include alternate interfaces in the current interface
+                    if (test_intf->bAlternateSetting == 0) {
+                        // found next top level interface
+                        break;
+                    }
+                }
+                next = NEXT_DESCRIPTOR(next);
+            }
+
+            size_t length = (void *)next - (void *)intf_desc;
+            usb_interface_descriptor_t* intf_copy = malloc(length);
+            if (!intf_copy) return ERR_NO_MEMORY;
+            memcpy(intf_copy, intf_desc, length);
+
+            mx_status_t status = usb_bus_add_interface(bus, parent, device_descriptor, intf_copy, length);
+            if (status != NO_ERROR) {
+                result = status;
+            }
+
+            header = next;
+        } else {
+            header = NEXT_DESCRIPTOR(header);
+        }
+    }
+
+    return result;
+}
 
 mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, uint32_t hub_id,
                                usb_speed_t speed, usb_device_descriptor_t* device_descriptor,
@@ -145,10 +310,16 @@ mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, uint32_t
     if (!device_descriptor || !config_descriptors) return ERR_INVALID_ARGS;
     if (device_id >= countof(bus->devices)) return ERR_INVALID_ARGS;
 
+    printf("* found USB device (0x%04x:0x%04x, USB %x.%x)\n",
+              device_descriptor->idVendor, device_descriptor->idProduct,
+              device_descriptor->bcdUSB >> 8, device_descriptor->bcdUSB & 0xff);
+
     usb_device_t* dev = calloc(1, sizeof(usb_device_t));
     if (!dev)
         return ERR_NO_MEMORY;
 
+    list_initialize(&dev->children);
+    dev->device_type = USB_DEVICE_TYPE_DEVICE;
     dev->hci_device = bus->hci_device;
     dev->device_id = device_id;
     dev->hub_id = hub_id;
@@ -156,43 +327,42 @@ mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, uint32_t
     dev->device_desc = device_descriptor;
     dev->config_descs = config_descriptors;
 
-    usb_device_descriptor_t* descriptor = dev->device_desc;
     char name[16];
     snprintf(name, sizeof(name), "usb-dev-%03d", device_id);
 
     device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
     dev->device.protocol_id = MX_PROTOCOL_USB;
 
-    // Find first interface descriptor
-    usb_configuration_descriptor_t* config_desc = dev->config_descs[0];
-    usb_interface_descriptor_t* ifcdesc = (usb_interface_descriptor_t *)((uint8_t *)config_desc + config_desc->bLength);
-    if (ifcdesc->bDescriptorType != USB_DT_INTERFACE) ifcdesc = NULL;
-
-    dev->props[0] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
-    dev->props[1] = (mx_device_prop_t){ BIND_USB_VID, 0, descriptor->idVendor };
-    dev->props[2] = (mx_device_prop_t){ BIND_USB_PID, 0, descriptor->idProduct };
-    dev->props[3] = (mx_device_prop_t){ BIND_USB_CLASS, 0, descriptor->bDeviceClass };
-    dev->props[4] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, descriptor->bDeviceSubClass };
-    dev->props[5] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, descriptor->bDeviceProtocol };
-    // TODO: either we should publish device-per-interface
-    // or we need to come up with a better way to represent
-    // the various interface properties
-    dev->props[6] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, ifcdesc ? ifcdesc->bInterfaceClass : 0 };
-    dev->props[7] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, ifcdesc ? ifcdesc->bInterfaceSubClass : 0 };
-    dev->props[8] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, ifcdesc ? ifcdesc->bInterfaceProtocol : 0 };
+    int count = 0;
+    dev->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_DEVICE_TYPE, 0, USB_DEVICE_TYPE_DEVICE };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_descriptor->idVendor };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_descriptor->idProduct };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, device_descriptor->bDeviceClass };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, device_descriptor->bDeviceSubClass };
+    dev->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, device_descriptor->bDeviceProtocol };
     dev->device.props = dev->props;
-    dev->device.prop_count = countof(dev->props);
+    dev->device.prop_count = count;
 
-    mx_status_t status = device_add(&dev->device, device);
+    if (device_descriptor->bDeviceClass == 0) {
+        // For now, do not allow binding to root of a composite device so clients will bind to
+        // the child interfaces instead. We may remove this restriction later if the need arises
+        // and we have a good mechanism for prioritizing which devices a driver binds to.
+        device_set_bindable(&bus->device, false);
+    }
+
+    mx_status_t status = device_add(&dev->device, &bus->device);
     if (status == NO_ERROR) {
-        printf("* found device (0x%04x:0x%04x, USB %x.%x)\n",
-                  device_descriptor->idVendor, device_descriptor->idProduct,
-                  device_descriptor->bcdUSB >> 8, device_descriptor->bcdUSB & 0xff);
-
         bus->devices[device_id] = dev;
     } else {
         free(dev);
     }
+
+    if (status == NO_ERROR && device_descriptor->bDeviceClass == 0) {
+        // add children for composite device interfaces
+        status = usb_bus_add_interfaces(bus, dev, device_descriptor, config_descriptors[0]);
+    }
+
     return status;
 }
 

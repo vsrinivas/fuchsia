@@ -78,6 +78,7 @@ __BEGIN_CDECLS;
 #define BIND_USB_IFC_CLASS    0x0205
 #define BIND_USB_IFC_SUBCLASS 0x0206
 #define BIND_USB_IFC_PROTOCOL 0x0207
+#define BIND_USB_DEVICE_TYPE  0x0208
 
 typedef struct mx_bind_inst {
     uint32_t op;
