@@ -85,6 +85,9 @@ $(BUILDDIR)/%.size: $(BUILDDIR)/%
 	@echo generating size map: $@
 	$(NOECHO)$(NM) -S --size-sort $< > $@
 
+$(BUILDDIR)/%.id: $(BUILDDIR)/%
+	@echo `readelf -n $< | grep 'Build ID:' | sed 's/.*: //g'` > $@
+
 # generate a new manifest and compare to see if it differs from the previous one
 .PHONY: usermanifestfile
 $(USER_MANIFEST): usermanifestfile

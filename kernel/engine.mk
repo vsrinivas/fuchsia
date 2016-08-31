@@ -199,6 +199,9 @@ EXTRA_BUILDDEPS :=
 # any rules you put here will be depended on in clean builds
 EXTRA_CLEANDEPS :=
 
+# build ids
+EXTRA_IDFILES :=
+
 # any objects you put here get linked with the final image
 EXTRA_OBJS :=
 
@@ -262,6 +265,19 @@ include make/recurse.mk
 
 # host tools
 include system/tools/build.mk
+
+ifneq ($(EXTRA_IDFILES),)
+$(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
+	@echo generating $@
+	@rm -f $@.tmp
+	@for f in $(EXTRA_IDFILES); do \
+	echo `cat $$f` `echo $$f | sed 's/\.id$$//g'` >> $@.tmp; \
+	done; \
+	mv $@.tmp $@
+
+EXTRA_BUILDDEPS += $(BUILDDIR)/ids.txt
+GENERATED += $(BUILDDIR)/ids.txt
+endif
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
 # identify global headers to copy to the sysroot
@@ -349,6 +365,7 @@ USER_LD := $(LD)
 endif
 OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
 OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
+READELF := $(TOOLCHAIN_PREFIX)readelf
 CPPFILT := $(TOOLCHAIN_PREFIX)c++filt
 SIZE := $(TOOLCHAIN_PREFIX)size
 NM := $(TOOLCHAIN_PREFIX)nm

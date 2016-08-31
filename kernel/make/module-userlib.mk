@@ -34,6 +34,8 @@ $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODU
 	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(_LDFLAGS)\
 		-shared -soname $(_SONAME) $(_OBJS) $(_LIBS) $(LIBGCC) -o $@
 
+EXTRA_IDFILES += $(MODULE_LIBNAME).so.id
+
 # build list and debugging files if asked to
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so.lst
