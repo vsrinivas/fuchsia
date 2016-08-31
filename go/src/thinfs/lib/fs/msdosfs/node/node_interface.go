@@ -7,6 +7,7 @@ package node
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/metadata"
 )
@@ -31,7 +32,7 @@ type Node interface {
 	// Write-access methods, which may modify the contents of the Node
 	MoveNode(newParent Node, newDirentIndex uint)
 	RemoveChild(direntIndex uint)
-	SetSize(size int64) error                 // Modify the number of bytes accessible within the node
+	SetSize(size int64) error                 // Change node size. Shrinking can remove clusters
 	WriteAt(p []byte, off int64) (int, error) // Implements io.WriterAt
 	RefUp()                                   // Increment refs
 	RefDown(numRefs int) error                // Decrement refs, possibly delete clusters if they're unused
@@ -48,6 +49,7 @@ type Node interface {
 	ReadAt(p []byte, off int64) (int, error) // Implements io.ReaderAt
 	RefCount() int                           // Number of external references ('refs') to the node
 	IsRoot() bool                            // True iff the node corresponds to the root of a filesystem
+	MTime() time.Time                        // Get last modified time of node, if known
 
 	// Accessible without a lock
 	IsDirectory() bool    // True iff the node corresponds to a directory

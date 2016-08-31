@@ -6,6 +6,7 @@ package node
 
 import (
 	"sync"
+	"time"
 
 	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/bootrecord"
@@ -35,13 +36,14 @@ type node struct {
 	size        int64         // The size of the node.
 	references  int           // The number of open files/directories referencing this node.
 	deleted     bool          // "true" if this node has been deleted.
+	mtime       time.Time     // Last modified time of node
 }
 
 // New makes a new node.
 //
 // If 'parent' is not nil, then parent.Child(direntIndex) is set to the new node, and node.Parent()
 // is set to the parent.
-func New(info *metadata.Info, isDirectory bool, parent Node, direntIndex uint, startCluster uint32, refs bool) (Node, error) {
+func New(info *metadata.Info, isDirectory bool, parent Node, direntIndex uint, startCluster uint32, mtime time.Time, refs bool) (Node, error) {
 	// Node is not open anywhere else -- let's open it now.
 	numRefs := 0
 	if refs {
@@ -52,6 +54,7 @@ func New(info *metadata.Info, isDirectory bool, parent Node, direntIndex uint, s
 		isDirectory: isDirectory,
 		parent:      parent,
 		direntIndex: direntIndex,
+		mtime:       mtime,
 		references:  numRefs,
 	}
 
@@ -76,18 +79,36 @@ func (n *node) Info() *metadata.Info {
 	return n.info
 }
 
-// SetSize attempts to modify the acceptable in-memory "size" of a node without modifying the usable
-// clusters.
+// SetSize attempts to modify the acceptable in-memory "size" of a node.
+// Node sizes can be overestimated up to the nearest cluster.
 //
-// It is possible for a node to, for example, use a couple of clusters, but have a size of "zero".
-// This method lets a user of the node modify the usable space within the allocated clusters.
+// If 'SetSize' renders some clusters inaccessible, it frees them.
 func (n *node) SetSize(size int64) error {
+	clusterSize := int64(n.info.Br.ClusterSize())
+	maxSize := clusterSize * int64(len(n.clusters))
 	if n.deleted {
 		panic("Should not modify size of deleted node")
-	} else if int64(n.info.Br.ClusterSize())*int64(len(n.clusters)) < size {
+	} else if maxSize < size {
 		return ErrNoSpace
+	} else if !n.IsRoot() && n.isDirectory && size <= 0 {
+		panic("Should not attempt to set size of non-root directory to less than or equal to zero")
 	}
 	n.size = size
+
+	numClustersRequired := (size + clusterSize - 1) / clusterSize
+	if n.IsRoot() && numClustersRequired == 0 {
+		// The root directory requires at least one cluster
+		numClustersRequired = 1
+	}
+	if numClustersRequired < int64(len(n.clusters)) {
+		// Reduce clusters to the required size
+		clusterToDelete := n.clusters[numClustersRequired]
+		n.clusters = n.clusters[:numClustersRequired]
+		// Make a best-effort attempt to delete the clusters.
+		// If an I/O error occurs, clusters may be lost until FAT fsck executes, but the filesystem
+		// will not actually be corrupted.
+		n.info.ClusterMgr.ClusterDelete(clusterToDelete)
+	}
 	return nil
 }
 
@@ -135,10 +156,8 @@ func (n *node) RefDown(numRefs int) error {
 // len(buf).
 func (n *node) ReadAt(buf []byte, off int64) (int, error) {
 	// Short-circuit the cases where offset is reading out of bounds
-	if off < 0 {
+	if off < 0 || n.size <= off {
 		return 0, ErrBadArgument
-	} else if off > n.size {
-		return 0, ErrEOF
 	}
 	clusterSize := int64(n.info.Br.ClusterSize())
 	bytesRead := 0
@@ -183,7 +202,7 @@ func (n *node) ReadAt(buf []byte, off int64) (int, error) {
 // error if the number of bytes written is less than len(buf).
 func (n *node) WriteAt(buf []byte, off int64) (int, error) {
 	if n.info.Readonly {
-		return 0, fs.ErrReadOnly
+		return 0, fs.ErrPermission
 	} else if off < 0 {
 		return 0, ErrBadArgument
 	}
@@ -246,8 +265,15 @@ func (n *node) WriteAt(buf []byte, off int64) (int, error) {
 			n.size = off
 		}
 		if err != nil {
+			if bytesWritten > 0 {
+				n.mtime = time.Now()
+			}
 			return bytesWritten, err
 		}
+	}
+
+	if bytesWritten > 0 {
+		n.mtime = time.Now()
 	}
 
 	// We successfully wrote as many bytes as possible, but the request was still for an unmanagable
@@ -290,6 +316,10 @@ func (n *node) IsRoot() bool {
 
 func (n *node) Size() int64 {
 	return n.size
+}
+
+func (n *node) MTime() time.Time {
+	return n.mtime
 }
 
 func (n *node) Parent() (Node, uint) {

@@ -6,6 +6,7 @@ package node
 
 import (
 	"sync"
+	"time"
 
 	"fuchsia.googlesource.com/thinfs/lib/fs"
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs/metadata"
@@ -73,11 +74,8 @@ func (r *root) RefDown(numRefs int) error {
 func (r *root) ReadAt(buf []byte, off int64) (int, error) {
 	bytesToRead := len(buf)
 
-	if off < 0 {
+	if off < 0 || r.size <= off {
 		return 0, ErrBadArgument
-	} else if off >= r.size {
-		// Would the start of this read extend beyond the end of root? If so, don't read.
-		bytesToRead = 0
 	} else if off+int64(bytesToRead) > r.size {
 		// Would the end of this read extend beyond the end of root? If so, read less.
 		bytesToRead = int(r.size - off)
@@ -96,7 +94,7 @@ func (r *root) ReadAt(buf []byte, off int64) (int, error) {
 
 func (r *root) WriteAt(buf []byte, off int64) (int, error) {
 	if r.info.Readonly {
-		return 0, fs.ErrReadOnly
+		return 0, fs.ErrPermission
 	}
 
 	bytesToWrite := len(buf)
@@ -143,6 +141,10 @@ func (r *root) NumClusters() int {
 
 func (r *root) IsRoot() bool {
 	return true
+}
+
+func (r *root) MTime() time.Time {
+	return time.Time{}
 }
 
 func (r *root) Size() int64 {

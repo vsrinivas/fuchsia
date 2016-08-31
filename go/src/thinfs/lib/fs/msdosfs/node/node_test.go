@@ -7,6 +7,7 @@ package node
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 
@@ -75,7 +76,7 @@ func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) Node {
 		isDirectory := true
 		direntIndex := uint(0)
 		startCluster := info.Br.RootCluster()
-		root, err := New(info, isDirectory, nil, direntIndex, startCluster, true)
+		root, err := New(info, isDirectory, nil, direntIndex, startCluster, time.Time{}, true)
 		if err != nil {
 			t.Fatal(err)
 		} else if root.Info() != info {
@@ -108,7 +109,7 @@ func checkedMakeRoot(t *testing.T, info *metadata.Info, fat32 bool) Node {
 }
 
 func checkedMakeNode(t *testing.T, info *metadata.Info, parent Node, direntIndex uint, isDirectory bool) Node {
-	node, err := New(info, isDirectory, parent, direntIndex, 0, true)
+	node, err := New(info, isDirectory, parent, direntIndex, 0, time.Time{}, true)
 	if err != nil {
 		t.Fatal(err)
 	} else if node.Info() != info {
@@ -190,40 +191,33 @@ func TestSingleNodeReadWrite(t *testing.T) {
 		}
 		verifyBuffer(bufCombined)
 
-		// Adjust the size of the node (trim down to buf1)
-		numClusters := n.NumClusters()
-		if err := n.SetSize(int64(len(buf1))); err != nil {
-			t.Fatal(err)
-		} else if n.NumClusters() != numClusters {
-			t.Fatal("Modifying the size shouldn't change the underlying cluster count, but it did")
-		}
-		verifyBuffer(buf1)
-
-		// Adjust the size back to the 'actual' size
-		if err := n.SetSize(int64(len(bufCombined))); err != nil {
-			t.Fatal(err)
-		}
-		verifyBuffer(bufCombined)
-
 		// This is somewhat cheating, but force the filesystem to become readonly
 		n.Info().Readonly = true
 		// We can still read
 		verifyBuffer(bufCombined)
 		// We cannot write
-		if _, err := n.WriteAt(buf1, 0); err != fs.ErrReadOnly {
+		if _, err := n.WriteAt(buf1, 0); err != fs.ErrPermission {
 			t.Fatal("Expected ReadOnly error")
 		}
 		n.Info().Readonly = false
 
 		// TEST: Edge cases of reading / writing
 
-		// A large read should fail with EOF; it's out of bounds
-		readbuf := make([]byte, 1)
+		// A large read should fail with ErrBadArguments; it's out of bounds
+		readbuf := make([]byte, 10)
 		largeOffset := int64(len(bufCombined) + 10)
-		if l, err := n.ReadAt(readbuf, largeOffset); err != ErrEOF {
-			t.Fatal("Expected an EOF error")
+		if l, err := n.ReadAt(readbuf, largeOffset); err != ErrBadArgument {
+			t.Fatal("Expected a bad argument error")
 		} else if l != 0 {
 			t.Fatalf("Unexpected read length: %d (expected %d)", l, 0)
+		}
+
+		// A large read should fail with ErrEOF; it's only partially out of bounds
+		largeOffset = int64(len(bufCombined) - len(readbuf)/2)
+		if l, err := n.ReadAt(readbuf, largeOffset); err != ErrEOF {
+			t.Fatal("Expected an EOF error")
+		} else if l != len(readbuf)/2 {
+			t.Fatalf("Unexpected read length: %d (expected %d)", l, len(readbuf)/2)
 		}
 
 		// A large write can succeed; it will just force the file to allocate clusters
@@ -295,6 +289,81 @@ func TestSingleNodeReadWrite(t *testing.T) {
 	doTest(file)
 
 	cleanup(fileBackedFAT, info)
+}
+
+func TestSetSize(t *testing.T) {
+	doTest := func(fat32, isDir, isRoot bool) {
+		// Set up filesystem (we do abnormal truncation in this test, so we recerate the filesystem
+		// for each test case).
+		var fileBackedFAT *testutil.FileFAT
+		var info *metadata.Info
+		if fat32 {
+			fileBackedFAT, info = setupFAT32(t, "1G", false)
+		} else {
+			fileBackedFAT, info = setupFAT16(t, "10M", false)
+		}
+		defer cleanup(fileBackedFAT, info)
+
+		// Create the target node
+		var n Node
+		if isRoot {
+			n = checkedMakeRoot(t, info, fat32)
+		} else {
+			r := checkedMakeRoot(t, info, fat32)
+			n = checkedMakeNode(t, info, r, 0, isDir)
+		}
+
+		// We want to test everything EXCEPT FAT-16's root, which does not use clusters
+		nodeUsesClusters := fat32 || !isRoot
+		// Normal directories should never have a size set to "zero", since they will hold "." and
+		// ".." entries. This would cause a panic.
+		canHaveZeroSize := !isDir || isRoot
+
+		numClustersStart := 3
+		buf := testutil.MakeRandomBuffer(int(info.Br.ClusterSize()) * numClustersStart)
+		if _, err := n.WriteAt(buf, 0); err != nil {
+			t.Fatal(err)
+		} else if nodeUsesClusters && n.NumClusters() != numClustersStart {
+			t.Fatal("Unexpected number of starting clusters")
+		}
+		// Adjust the size of the node (trim down to one cluster)
+		newLen := int64(info.Br.ClusterSize())
+		if err := n.SetSize(newLen); err != nil {
+			t.Fatal(err)
+		}
+
+		if nodeUsesClusters && n.NumClusters() != 1 {
+			t.Fatal("Modifying the size should have reduced the number of clusters, but it didn't")
+		}
+
+		if canHaveZeroSize {
+			if err := n.SetSize(0); err != nil {
+				t.Fatal(err)
+			} else if nodeUsesClusters {
+				if fat32 && isRoot {
+					if n.NumClusters() != 1 {
+						t.Fatal("Truncating to zero should have left the file with a single cluster")
+					}
+				} else if n.NumClusters() != 0 {
+					t.Fatal("Truncating to zero should have left the file with no clusters")
+				}
+			}
+		}
+	}
+
+	glog.Info("Testing FAT32 Root")
+	doTest( /* fat32= */ true /* isDir= */, true /* isRoot= */, true)
+	glog.Info("Testing FAT32 Directory")
+	doTest( /* fat32= */ true /* isDir= */, true /* isRoot= */, false)
+	glog.Info("Testing FAT32 File")
+	doTest( /* fat32= */ true /* isDir= */, false /* isRoot= */, false)
+
+	glog.Info("Testing FAT16 Root")
+	doTest( /* fat32= */ false /* isDir= */, true /* isRoot= */, true)
+	glog.Info("Testing FAT16 Directory")
+	doTest( /* fat32= */ false /* isDir= */, true /* isRoot= */, false)
+	glog.Info("Testing FAT16 File")
+	doTest( /* fat32= */ false /* isDir= */, false /* isRoot= */, false)
 }
 
 func TestSingleNodeRefs(t *testing.T) {
@@ -562,11 +631,13 @@ func TestNodePanicRefUpAfterDelete(t *testing.T) {
 	t.Fatal("Expected panic")
 }
 
+// There is no reason why users of the node package should need to modify the size of deleted nodes.
+// As a precaution, panic if incorrect behavior is exhibited.
 func TestNodePanicSetSizeAfterDelete(t *testing.T) {
 	fileBackedFAT, info := setupFAT32(t, "1G", false)
 	defer cleanup(fileBackedFAT, info)
 	root := checkedMakeRoot(t, info /* fat32= */, true)
-	foo := checkedMakeNode(t, info, root, 0, true)
+	foo := checkedMakeNode(t, info, root, 0, false)
 	foo.MarkDeleted()
 	defer func() {
 		if r := recover(); r == nil {
@@ -574,6 +645,22 @@ func TestNodePanicSetSizeAfterDelete(t *testing.T) {
 		}
 	}()
 	foo.SetSize(0)
+	t.Fatal("Expected panic")
+}
+
+// Non-root directories require space for "." and ".." entries.
+// If their size could be set to zero, it would become invalid.
+func TestNodePanicSetSizeNonRootDirectory(t *testing.T) {
+	fileBackedFAT, info := setupFAT32(t, "1G", false)
+	defer cleanup(fileBackedFAT, info)
+	root := checkedMakeRoot(t, info /* fat32= */, true)
+	dir := checkedMakeNode(t, info, root, 0, true)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Recover returned without a panic")
+		}
+	}()
+	dir.SetSize(0)
 	t.Fatal("Expected panic")
 }
 
