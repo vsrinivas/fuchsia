@@ -43,7 +43,7 @@ static void callback(void* arg, const char* path, size_t off, size_t len) {
 }
 
 static const char* env[] = {
-#if !defined(__x86_64__)
+#if !(defined(__x86_64__) || defined(__aarch64__))
     // make debugging less painful
     "LD_DEBUG=1",
 #endif

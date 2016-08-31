@@ -98,8 +98,10 @@ KERNEL_CPPFLAGS :=
 KERNEL_ASMFLAGS :=
 
 # User space compile flags
-USER_COMPILEFLAGS := -fno-omit-frame-pointer -include $(USER_CONFIG_HEADER) -fPIC -D_ALL_SOURCE=1
+USER_COMPILEFLAGS := -include $(USER_CONFIG_HEADER) -fPIC -D_ALL_SOURCE=1
 USER_COMPILEFLAGS += -DDEPRECATE_COMPAT_SYSCALLS=1
+#TODO: remove once userspace backtracing is smarter
+USER_COMPILEFLAGS += -fno-omit-frame-pointer
 USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=

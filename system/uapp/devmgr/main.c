@@ -193,15 +193,15 @@ int main(int argc, char** argv) {
     devmgr_init(false);
     devmgr_vfs_init();
 
-#if !defined(__x86_64__)
-    // Until crashlogging exists, ensure we see load info
-    // from the linker in the log
-    putenv(strdup("LD_DEBUG=1"));
-#else
+#if defined(__x86_64__) || defined(__aarch64__)
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
         devmgr_launch("crashlogger", 1, argv_crashlogger, -1);
     }
+#else
+    // Until crashlogging exists, ensure we see load info
+    // from the linker in the log
+    putenv(strdup("LD_DEBUG=1"));
 #endif
 
     mx_status_t status = devmgr_launch_acpisvc();

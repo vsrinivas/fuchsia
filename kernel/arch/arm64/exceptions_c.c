@@ -16,12 +16,6 @@
 #if WITH_LIB_MAGENTA
 #include <lib/user_copy.h>
 #include <magenta/exception.h>
-
-struct arch_exception_context {
-    struct arm64_iframe_long *frame;
-    uint64_t far;
-    uint32_t esr;
-};
 #endif
 
 #define LOCAL_TRACE 0

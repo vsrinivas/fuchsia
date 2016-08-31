@@ -51,6 +51,27 @@ void output_frame_x86_64(const x86_64_exc_frame_t& frame) {
     printf(" errc: %#18llx\n", frame.err_code);
 }
 
+void output_frame_arm64(const arm64_exc_frame_t& frame) {
+    printf(" x0  %#18llx x1  %#18llx x2  %#18llx x3  %#18llx\n",
+           frame.r[0], frame.r[1], frame.r[2], frame.r[3]);
+    printf(" x4  %#18llx x5  %#18llx x6  %#18llx x7  %#18llx\n",
+           frame.r[4], frame.r[5], frame.r[6], frame.r[7]);
+    printf(" x8  %#18llx x9  %#18llx x10 %#18llx x11 %#18llx\n",
+           frame.r[8], frame.r[9], frame.r[10], frame.r[11]);
+    printf(" x12 %#18llx x13 %#18llx x14 %#18llx x15 %#18llx\n",
+           frame.r[12], frame.r[13], frame.r[14], frame.r[15]);
+    printf(" x16 %#18llx x17 %#18llx x18 %#18llx x19 %#18llx\n",
+           frame.r[16], frame.r[17], frame.r[18], frame.r[19]);
+    printf(" x20 %#18llx x21 %#18llx x22 %#18llx x23 %#18llx\n",
+           frame.r[20], frame.r[21], frame.r[22], frame.r[23]);
+    printf(" x24 %#18llx x25 %#18llx x26 %#18llx x27 %#18llx\n",
+           frame.r[24], frame.r[25], frame.r[26], frame.r[27]);
+    printf(" x28 %#18llx x29 %#18llx lr  %#18llx usp %#18llx\n",
+           frame.r[28], frame.r[29], frame.lr, frame.usp);
+    printf(" elr %#18llx psr %#18llx\n",
+           frame.elr, frame.spsr);
+};
+
 void dump_memory(mx_handle_t proc, uintptr_t start, uint32_t len) {
     auto buf = static_cast<uint8_t*>(malloc(len));
     auto res = mx_debug_read_memory(proc, start, len, buf);
@@ -80,6 +101,14 @@ void process_report(const mx_exception_report_t* report) {
         dump_memory(process, context.arch.u.x86_64.user_sp, 256u);
         printf("backtrace:\n");
         backtrace(process, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp, true);
+#endif
+    } else if (context.arch_id == ARCH_ID_ARM_64) {
+#if defined(__aarch64__)
+        output_frame_arm64(context.arch.u.arm_64);
+        printf("bottom of user stack:\n");
+        dump_memory(process, context.arch.u.arm_64.usp, 256u);
+        printf("backtrace:\n");
+        backtrace(process, context.arch.u.arm_64.elr, context.arch.u.arm_64.usp, true);
 #endif
     } else {
         // TODO: support other architectures.
