@@ -5,7 +5,7 @@
 #include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
-#include <magenta/device/usb-device.h>
+#include <magenta/device/usb.h>
 #include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,7 +21,7 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
 
     mx_status_t status = iotxn_alloc(&txn, 0, length, 0);
     if (status != NO_ERROR) return status;
-    txn->protocol = MX_PROTOCOL_USB_DEVICE;
+    txn->protocol = MX_PROTOCOL_USB;
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
 
     // fill in protocol data
@@ -143,7 +143,7 @@ iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size
     if (status != NO_ERROR) {
         return NULL;
     }
-    txn->protocol = MX_PROTOCOL_USB_DEVICE;
+    txn->protocol = MX_PROTOCOL_USB;
 
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     data->ep_address = ep_address;

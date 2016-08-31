@@ -7,7 +7,6 @@
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb-device.h>
 #include <magenta/listnode.h>
 
 #include <inttypes.h>
@@ -578,7 +577,7 @@ fail:
 }
 
 static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
 };

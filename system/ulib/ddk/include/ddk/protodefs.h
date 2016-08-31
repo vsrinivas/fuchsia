@@ -17,9 +17,9 @@ DDK_PROTOCOL_DEF(MISC,           'pMSC', "misc")
 DDK_PROTOCOL_DEF(PCI,            'pPCI', "pci")
 DDK_PROTOCOL_DEF(SATA,           'pSAT', "sata")
 DDK_PROTOCOL_DEF(TPM,            'pTPM', "tpm")
+DDK_PROTOCOL_DEF(USB,            'pUSB', "usb")
 DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci")
 DDK_PROTOCOL_DEF(USB_BUS,        'pUBS', "usb-bus")
-DDK_PROTOCOL_DEF(USB_DEVICE,     'pUDV', "usb-device")
 DDK_PROTOCOL_DEF(BLUETOOTH_HCI,  'pBHC', "bt-hci")
 #undef DDK_PROTOCOL_DEF
 #endif

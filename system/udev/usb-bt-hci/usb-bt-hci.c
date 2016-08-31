@@ -380,7 +380,7 @@ fail:
 }
 
 static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
 #if defined(USB_VID) && defined(USB_PID)
     BI_ABORT_IF(NE, BIND_USB_VID, USB_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, USB_PID),

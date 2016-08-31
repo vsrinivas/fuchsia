@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <ddk/protocol/usb-device.h>
+#include <ddk/protocol/usb.h>
 #include <magenta/compiler.h>
 #include <magenta/hw/usb.h>
 

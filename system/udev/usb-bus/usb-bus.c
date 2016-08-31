@@ -15,10 +15,10 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
-#include <ddk/protocol/usb-device.h>
 #include <ddk/protocol/usb-hci.h>
-#include <magenta/device/usb-device.h>
+#include <magenta/device/usb.h>
 #include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -161,14 +161,14 @@ mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, uint32_t
     snprintf(name, sizeof(name), "usb-dev-%03d", device_id);
 
     device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
-    dev->device.protocol_id = MX_PROTOCOL_USB_DEVICE;
+    dev->device.protocol_id = MX_PROTOCOL_USB;
 
     // Find first interface descriptor
     usb_configuration_descriptor_t* config_desc = dev->config_descs[0];
     usb_interface_descriptor_t* ifcdesc = (usb_interface_descriptor_t *)((uint8_t *)config_desc + config_desc->bLength);
     if (ifcdesc->bDescriptorType != USB_DT_INTERFACE) ifcdesc = NULL;
 
-    dev->props[0] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB_DEVICE };
+    dev->props[0] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
     dev->props[1] = (mx_device_prop_t){ BIND_USB_VID, 0, descriptor->idVendor };
     dev->props[2] = (mx_device_prop_t){ BIND_USB_PID, 0, descriptor->idProduct };
     dev->props[3] = (mx_device_prop_t){ BIND_USB_CLASS, 0, descriptor->bDeviceClass };

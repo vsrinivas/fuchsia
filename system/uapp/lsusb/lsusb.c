@@ -16,9 +16,9 @@
 
 #include <hexdump/hexdump.h>
 #include <magenta/hw/usb.h>
-#include <magenta/device/usb-device.h>
+#include <magenta/device/usb.h>
 
-#define DEV_USB_DEVICE "/dev/class/usb-device"
+#define DEV_USB "/dev/class/usb"
 
 static void get_string_desc(int fd, int index, char* buf, int buflen) {
     buf[0] = 0;
@@ -34,7 +34,7 @@ static int list_device(const char* device_id, bool verbose) {
     product[0] = 0;
     int ret = 0;
 
-    snprintf(devname, sizeof(devname), "%s/%s", DEV_USB_DEVICE, device_id);
+    snprintf(devname, sizeof(devname), "%s/%s", DEV_USB, device_id);
     int fd = open(devname, O_RDONLY);
     if (fd < 0) {
         printf("Error opening %s\n", devname);
@@ -160,9 +160,9 @@ out:
 
 static int list_devices(bool verbose) {
     struct dirent* de;
-    DIR* dir = opendir(DEV_USB_DEVICE);
+    DIR* dir = opendir(DEV_USB);
     if (!dir) {
-        printf("Error opening %s\n", DEV_USB_DEVICE);
+        printf("Error opening %s\n", DEV_USB);
         return -1;
     }
 

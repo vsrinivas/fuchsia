@@ -7,7 +7,6 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
-#include <ddk/protocol/usb-device.h>
 #include <magenta/hw/usb.h>
 #include <magenta/listnode.h>
 #include <ddk/protocol/block.h>
@@ -923,7 +922,7 @@ fail:
 }
 
 static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB_DEVICE),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_MATCH_IF(EQ, BIND_USB_IFC_CLASS, USB_CLASS_MSC),
 };
 

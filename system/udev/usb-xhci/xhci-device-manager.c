@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/usb-device.h>
 #include <endian.h>
 #include <magenta/hw/usb.h>
 #include <stdio.h>
