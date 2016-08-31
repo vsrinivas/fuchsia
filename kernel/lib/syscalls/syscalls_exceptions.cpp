@@ -75,7 +75,8 @@ mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport
         return ERR_WRONG_TYPE;
 
     mxtl::RefPtr<ExceptionPort> eport;
-    mx_status_t status = ExceptionPort::Create(mxtl::RefPtr<IOPortDispatcher>(ioport), key, &eport);
+    mx_status_t status = ExceptionPort::Create(mxtl::WrapRefPtr(ioport),
+                                               key, &eport);
     if (status != NO_ERROR)
         return status;
 

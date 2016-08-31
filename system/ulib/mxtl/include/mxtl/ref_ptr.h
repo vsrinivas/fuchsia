@@ -158,6 +158,12 @@ inline RefPtr<T> AdoptRef(T* ptr) {
     return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
 }
 
+// Convenience wrapper to construct a RefPtr with argument type deduction.
+template <typename T>
+inline RefPtr<T> WrapRefPtr(T* ptr) {
+    return RefPtr<T>(ptr);
+}
+
 namespace internal {
 // Constructs a RefPtr from a T* without attempt to either AddRef or Adopt the
 // pointer.  Used by the internals of some intrusive container classes to store

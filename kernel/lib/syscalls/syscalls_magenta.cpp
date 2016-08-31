@@ -1145,15 +1145,6 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     return vmo->SetSize(size);
 }
 
-namespace mxtl {
-
-template <typename T>
-inline RefPtr<T> MakeRef(T* ptr) {
-    return RefPtr<T>(ptr);
-}
-
-}; // namespace mxtl
-
 namespace {
 
 template <typename T>
@@ -1211,7 +1202,7 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
                 return ERR_INVALID_ARGS;
 
             // do the map call
-            mx_status_t status = process->Map(mxtl::MakeRef(vmo), vmo_rights,
+            mx_status_t status = process->Map(mxtl::WrapRefPtr(vmo), vmo_rights,
                                               offset, len, &ptr, flags);
             if (status != NO_ERROR)
                 return status;
@@ -1486,7 +1477,7 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
     if (!msg_pipe)
         return ERR_NOT_SUPPORTED;
 
-    return msg_pipe->SetIOPort(mxtl::RefPtr<IOPortDispatcher>(ioport), key, signals);
+    return msg_pipe->SetIOPort(mxtl::WrapRefPtr(ioport), key, signals);
  }
 
 mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,

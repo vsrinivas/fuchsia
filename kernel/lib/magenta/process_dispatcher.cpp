@@ -374,7 +374,7 @@ status_t ProcessDispatcher::GetInfo(mx_process_info_t* info) {
 status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread) {
     AllocChecker ac;
     auto ut = mxtl::AdoptRef(new (&ac) UserThread(GenerateKernelObjectId(),
-                                                   mxtl::RefPtr<ProcessDispatcher>(this),
+                                                   mxtl::WrapRefPtr(this),
                                                    flags));
     if (!ac.check())
         return ERR_NO_MEMORY;
@@ -434,7 +434,7 @@ mxtl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t k
     auto iter = global_process_list_.find_if([koid](const ProcessDispatcher& p) {
                                                 return p.get_koid() == koid;
                                              });
-    return mxtl::RefPtr<ProcessDispatcher>(iter.CopyPointer());
+    return mxtl::WrapRefPtr(iter.CopyPointer());
 }
 
 mxtl::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
@@ -442,7 +442,7 @@ mxtl::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
     AutoLock lock(&thread_list_lock_);
 
     auto iter = thread_list_.find_if([koid](const UserThread& t) { return t.get_koid() == koid; });
-    return mxtl::RefPtr<UserThread>(iter.CopyPointer());
+    return mxtl::WrapRefPtr(iter.CopyPointer());
 }
 
 mx_status_t ProcessDispatcher::set_bad_handle_policy(uint32_t new_policy) {

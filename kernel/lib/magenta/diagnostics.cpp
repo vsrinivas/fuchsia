@@ -134,7 +134,7 @@ void DumpProcessHandles(mx_koid_t id) {
             printf("process %lld not found\n", id);
             return;
         }
-        pd = mxtl::RefPtr<ProcessDispatcher>(process_iter.CopyPointer());
+        pd.reset(process_iter.CopyPointer());
     }
 
     printf("process [%llu] handles :\n", id);
