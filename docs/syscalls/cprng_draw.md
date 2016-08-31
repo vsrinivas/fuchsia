@@ -28,6 +28,9 @@ suitable for cryptographic applications.  It will return at most
 
 **ERR_INVALID_ARGS**  *buffer* is not a valid user space pointer.
 
+There are no other error conditions.  If its arguments are valid,
+**mx_cprng_draw**() will succeed.
+
 ## BUGS
 
 This syscall should be rate-limited.
