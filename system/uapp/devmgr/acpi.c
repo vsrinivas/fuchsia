@@ -143,11 +143,11 @@ mx_status_t devmgr_init_pcie(void) {
 }
 
 void devmgr_poweroff(void) {
-    acpisvc_s_state_transition(&acpi_root, ACPI_S_STATE_S5);
+    acpi_s_state_transition(&acpi_root, ACPI_S_STATE_S5);
     mx_debug_send_command(root_resource_handle, "poweroff", sizeof("poweroff"));
 }
 
 void devmgr_reboot(void) {
-    acpisvc_s_state_transition(&acpi_root, ACPI_S_STATE_REBOOT);
+    acpi_s_state_transition(&acpi_root, ACPI_S_STATE_REBOOT);
     mx_debug_send_command(root_resource_handle, "reboot", sizeof("reboot"));
 }

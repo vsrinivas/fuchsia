@@ -63,6 +63,6 @@ mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
 //
 // This command will only succeed if the handle is the ACPI root handle.
 // TODO(teisenbe): Perhaps open this up to a different handle.
-mx_status_t acpisvc_s_state_transition(acpi_handle_t* h, uint8_t target_state);
+mx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state);
 
 __END_CDECLS

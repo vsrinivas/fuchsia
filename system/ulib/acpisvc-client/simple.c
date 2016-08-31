@@ -233,7 +233,7 @@ mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
     return NO_ERROR;
 }
 
-mx_status_t acpisvc_s_state_transition(acpi_handle_t* h, uint8_t target_state) {
+mx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state) {
     acpi_cmd_s_state_transition_t cmd = {
         .hdr = {
             .version = 0,
