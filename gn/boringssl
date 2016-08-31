@@ -5,6 +5,14 @@
     ],
     "binaries": [
         {
+            "binary": "libcrypto.so",
+            "bootfs_path": "lib/libcrypto.so"
+        },
+        {
+            "binary": "libssl.so",
+            "bootfs_path": "lib/libssl.so"
+        },
+        {
             "binary": "bssl",
             "bootfs_path": "bin/bssl"
         },
