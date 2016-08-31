@@ -312,6 +312,11 @@ typedef struct mx_waitset_result {
 #define MX_POLICY_BAD_HANDLE_LOG       1u
 #define MX_POLICY_BAD_HANDLE_EXIT      2u
 
+// Socket flags and limits.
+
+#define MX_SOCKET_CONTROL                1u
+#define MX_SOCKET_CONTROL_MAX_LEN     1024u
+
 #ifndef DEPRECATE_COMPAT_SYSCALLS
 typedef struct mx_waitset_result mx_wait_set_result_t;
 #define MX_IO_PORT_MAX_PKT_SIZE MX_PORT_MAX_PKT_SIZE

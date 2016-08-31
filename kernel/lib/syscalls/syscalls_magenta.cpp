@@ -1917,7 +1917,9 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
-    return socket->Write(_buffer, size, true);
+    return flags == MX_SOCKET_CONTROL?
+        socket->OOB_Write(_buffer, size, true) :
+        socket->Write(_buffer, size, true);
 }
 
 mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
@@ -1941,5 +1943,7 @@ mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
-    return socket->Read(_buffer, size, true);
+    return flags == MX_SOCKET_CONTROL?
+        socket->OOB_Read(_buffer, size, true) :
+        socket->Read(_buffer, size, true);
 }

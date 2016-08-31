@@ -32,8 +32,16 @@ public:
     void on_zero_handles() final;
 
     // Socket methods.
-    mx_ssize_t Write(const void* src, mx_size_t len, bool from_user);
+    mx_ssize_t Write(const void* src, mx_size_t len, bool from_user) {
+        return WriteHelper(src, len, from_user, false);
+    }
+    mx_ssize_t OOB_Write(const void* src, mx_size_t len, bool from_user) {
+        return WriteHelper(src, len, from_user, true);
+    }
+
     mx_ssize_t Read(void* dest, mx_size_t len, bool from_user);
+    mx_ssize_t OOB_Read(void* dest, mx_size_t len, bool from_user);
+
     void OnPeerZeroHandles();
 
 private:
@@ -56,13 +64,17 @@ private:
 
     SocketDispatcher(uint32_t flags);
     mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
+    mx_ssize_t WriteHelper(const void* src, mx_size_t len, bool from_user, bool is_oob);
     mx_ssize_t WriteSelf(const void* src, mx_size_t len, bool from_user);
+    mx_ssize_t OOB_WriteSelf(const void* src, mx_size_t len, bool from_user);
 
     const uint32_t flags_;
     StateTracker state_tracker_;
 
-    // The |lock_| protects cbuf_ and |other_|.
+    // The |lock_| protects all members below.
     Mutex lock_;
     CBuf cbuf_;
     mxtl::RefPtr<SocketDispatcher> other_;
+    mx_size_t oob_len_;
+    char oob_[MX_SOCKET_CONTROL_MAX_LEN];
 };

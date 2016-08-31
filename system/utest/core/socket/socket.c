@@ -112,10 +112,62 @@ static bool socket_signals(void) {
     END_TEST;
 }
 
+static bool socket_oob(void) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+    mx_ssize_t ssize;
+    mx_signals_t signals[2];
+
+    mx_handle_t h[2];
+    status = mx_socket_create(h, 0);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    static const uint32_t write_data[] = { 0xdeadbeef, 0xc0ffee };
+    ssize = mx_socket_write(h[0], MX_SOCKET_CONTROL, sizeof(write_data), &write_data);
+    ASSERT_EQ(ssize, (int)sizeof(write_data), "");
+
+    ssize = mx_socket_write(h[0], MX_SOCKET_CONTROL, sizeof(write_data[1]), &write_data[1]);
+    ASSERT_EQ(ssize, ERR_SHOULD_WAIT, "");
+
+    signals[0] = get_satisfied_signals(h[0]);
+    signals[1] = get_satisfied_signals(h[1]);
+
+    ASSERT_EQ(signals[0], MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals[1], MX_SIGNAL_WRITABLE | MX_SIGNAL_SIGNALED, "");
+
+    uint32_t read_data[4];
+    ssize = mx_socket_read(h[0], MX_SOCKET_CONTROL, sizeof(read_data), read_data);
+    ASSERT_EQ(ssize, ERR_SHOULD_WAIT, "");
+
+    signals[0] = get_satisfied_signals(h[0]);
+    signals[1] = get_satisfied_signals(h[1]);
+
+    ASSERT_EQ(signals[0], MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals[1], MX_SIGNAL_WRITABLE | MX_SIGNAL_SIGNALED, "");
+
+    ssize = mx_socket_read(h[1], MX_SOCKET_CONTROL, sizeof(read_data) + 10, read_data);
+    ASSERT_EQ(ssize, (int)sizeof(write_data), "");
+
+    ASSERT_EQ(read_data[0], write_data[0], "");
+
+    signals[0] = get_satisfied_signals(h[0]);
+    signals[1] = get_satisfied_signals(h[1]);
+
+    ASSERT_EQ(signals[0], MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals[1], MX_SIGNAL_WRITABLE, "");
+
+    ssize = mx_socket_read(h[1], MX_SOCKET_CONTROL, sizeof(read_data) + 10, read_data);
+    ASSERT_EQ(ssize, ERR_SHOULD_WAIT, "");
+
+    END_TEST;
+}
+
 
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
 RUN_TEST(socket_signals)
+RUN_TEST(socket_oob)
 END_TEST_CASE(socket_tests)
 
 #ifndef BUILD_COMBINED_TESTS
