@@ -173,7 +173,7 @@ static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir, mx_handle_t* hnds, 
     mx_status_t r;
     if (vn->flags & V_FLAG_DEVICE && !as_dir) {
         // opening a device, get devmgr handles
-        r = devmgr_get_handles((mx_device_t*)vn->pdata, hnds, ids);
+        r = devmgr_get_handles((mx_device_t*)vn->pdata, NULL, hnds, ids);
     } else {
         // local vnode or device as a directory, we will create the handles
         hnds[0] = vfs_create_handle(vn, trackfn);

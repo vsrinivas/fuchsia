@@ -58,7 +58,7 @@ static mtx_t rio_lock = MTX_INIT;
 //
 // TODO: eventually this should be integrated with core devmgr locking, but
 //       that will require a bit more work.  This resolves the immediate issue.
-mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t* ids) {
+mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path, mx_handle_t* handles, uint32_t* ids) {
     mx_status_t r;
     iostate_t* newios;
     if (devmgr_is_remote) {
@@ -94,7 +94,7 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, mx_handle_t* handles, uint32_t*
     handles[0] = h[0];
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
-    if ((r = device_open(dev, &dev, 0)) < 0) {
+    if ((r = device_openat(dev, &dev, path, 0)) < 0) {
         printf("%s_get_handles(%p) open %d\n", name, dev, r);
         goto fail1;
     }
@@ -207,10 +207,23 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
+    case MXRIO_OPEN:
+        if ((len < 1) || (len > 1024)) {
+            return ERR_INVALID_ARGS;
+        }
+        msg->data[len] = 0;
+        // fallthrough
     case MXRIO_CLONE: {
-        xprintf("%s_rio_handler() clone dev %p name '%s'\n", name, dev, dev->name);
         uint32_t ids[VFS_MAX_HANDLES];
-        mx_status_t r = devmgr_get_handles(dev, msg->handle, ids);
+        mx_status_t r;
+        if (MXRIO_OP(msg->op) == MXRIO_OPEN) {
+            xprintf("%s_rio_handler() open dev %p name '%s' at '%s'\n",
+                    name, dev, dev->name, (char*) msg->data);
+            r = devmgr_get_handles(dev, (char*) msg->data, msg->handle, ids);
+        } else {
+            xprintf("%s_rio_handler() clone dev %p name '%s'\n", name, dev, dev->name);
+            r = devmgr_get_handles(dev, NULL, msg->handle, ids);
+        }
         if (r < 0) {
             return r;
         }

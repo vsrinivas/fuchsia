@@ -75,6 +75,10 @@ static mx_status_t default_open(mx_device_t* dev, mx_device_t** out, uint32_t fl
     return NO_ERROR;
 }
 
+static mx_status_t default_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static mx_status_t default_close(mx_device_t* dev) {
     return NO_ERROR;
 }
@@ -122,6 +126,7 @@ static ssize_t default_ioctl(mx_device_t* dev, uint32_t op,
 static mx_protocol_device_t root_device_proto = {
     .get_protocol = default_get_protocol,
     .open = default_open,
+    .openat = default_openat,
     .close = default_close,
     .release = default_release,
     .read = default_read,
@@ -372,6 +377,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     mx_protocol_device_t* ops = dev->ops;
     DEFAULT_IF_NULL(ops, get_protocol)
     DEFAULT_IF_NULL(ops, open);
+    DEFAULT_IF_NULL(ops, openat);
     DEFAULT_IF_NULL(ops, close);
     DEFAULT_IF_NULL(ops, release);
     DEFAULT_IF_NULL(ops, read);
@@ -577,7 +583,7 @@ mx_status_t devmgr_device_rebind(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-mx_status_t devmgr_device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
+mx_status_t devmgr_device_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, dev->name);
         return ERR_BAD_STATE;
@@ -586,7 +592,11 @@ mx_status_t devmgr_device_open(mx_device_t* dev, mx_device_t** out, uint32_t fla
     mx_status_t r;
     DM_UNLOCK();
     *out = dev;
-    r = dev->ops->open(dev, out, flags);
+    if (path) {
+        r = dev->ops->openat(dev, out, path, flags);
+    } else {
+        r = dev->ops->open(dev, out, flags);
+    }
     DM_LOCK();
     if (*out != dev) {
         // open created a per-instance device for us
