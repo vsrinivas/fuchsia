@@ -516,13 +516,11 @@ mx_status_t hid_add_device(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* 
             return ERR_NOT_SUPPORTED;
         }
 
+        // Disable numlock
         if (dev->dev_class == HID_DEV_CLASS_KBD) {
             uint8_t zero = 0;
-            status = dev->ops->set_report(dev, HID_REPORT_TYPE_OUTPUT, 0, &zero, sizeof(zero));
-            if (status < 0) {
-                printf("W: could not disable NUMLOCK: %d\n", status);
-                // continue anyway
-            }
+            dev->ops->set_report(dev, HID_REPORT_TYPE_OUTPUT, 0, &zero, sizeof(zero));
+            // ignore failure for now
         }
     }
 
