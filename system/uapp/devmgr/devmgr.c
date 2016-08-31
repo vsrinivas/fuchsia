@@ -181,10 +181,6 @@ static mx_status_t devmgr_register_with_protocol(mx_device_t* dev, uint32_t prot
 #endif
 }
 
-static const char* safename(const char* name) {
-    return name ? name : "<noname>";
-}
-
 void dev_ref_release(mx_device_t* dev) {
     dev->refcount--;
     if (dev->refcount == 0) {
@@ -195,11 +191,11 @@ void dev_ref_release(mx_device_t* dev) {
         if (dev->flags & DEV_FLAG_BUSY) {
             // this can happen if creation fails
             // the caller to device_add() will free it
-            printf("device: %p(%s): ref=0, busy, not releasing\n", dev, safename(dev->name));
+            printf("device: %p(%s): ref=0, busy, not releasing\n", dev, dev->name);
             return;
         }
 #if TRACE_ADD_REMOVE
-        printf("device: %p(%s): ref=0. releasing.\n", dev, safename(dev->name));
+        printf("device: %p(%s): ref=0. releasing.\n", dev, dev->name);
 #endif
 
         if (!(dev->flags & DEV_FLAG_VERY_DEAD)) {
@@ -231,7 +227,7 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     mx_status_t status;
 
     xprintf("devmgr: probe dev=%p(%s) drv=%p(%s)\n",
-            dev, safename(dev->name), drv, safename(drv->name));
+            dev, dev->name, drv, drv->name ? drv->name : "<NULL>");
 
     // don't bind to the driver that published this device
     if (drv == dev->driver) {
@@ -293,11 +289,11 @@ static void devmgr_device_probe_all(mx_device_t* dev, bool autobind) {
 
 void devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
                         const char* name, mx_protocol_device_t* ops) {
-    xprintf("devmgr: init '%s' drv=%p, ops=%p\n", safename(name), driver, ops);
+    xprintf("devmgr: init '%s' drv=%p, ops=%p\n",
+            name ? name : "<NULL>", driver, ops);
 
     memset(dev, 0, sizeof(mx_device_t));
     dev->magic = DEV_MAGIC;
-    dev->name = dev->namedata;
     dev->ops = ops;
     dev->driver = driver;
     list_initialize(&dev->children);
@@ -315,8 +311,8 @@ void devmgr_device_init(mx_device_t* dev, mx_driver_t* driver,
         dev->magic = 0;
     }
 
-    memcpy(dev->namedata, name, len);
-    dev->namedata[len] = 0;
+    memcpy(dev->name, name, len);
+    dev->name[len] = 0;
 }
 
 mx_status_t devmgr_device_create(mx_device_t** out, mx_driver_t* driver,
@@ -352,7 +348,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     }
     if (parent == NULL) {
         if (devmgr_is_remote) {
-            //printf("device add: %p(%s): not allowed in devhost\n", dev, safename(dev->name));
+            //printf("device add: %p(%s): not allowed in devhost\n", dev, dev->name);
             return ERR_NOT_SUPPORTED;
         }
         parent = root_dev;
@@ -364,11 +360,11 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     }
 #if TRACE_ADD_REMOVE
     printf("%s: device add: %p(%s) parent=%p(%s)\n", devmgr_is_remote ? "devhost" : "devmgr",
-            dev, safename(dev->name), parent, safename(parent->name));
+            dev, dev->name, parent, parent->name);
 #endif
 
     if (dev->ops == NULL) {
-        printf("device add: %p(%s): NULL ops\n", dev, safename(dev->name));
+        printf("device add: %p(%s): NULL ops\n", dev, dev->name);
         return ERR_INVALID_ARGS;
     }
 
@@ -387,7 +383,7 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     // Don't create an event handle if we alredy have one
     if (dev->event == MX_HANDLE_INVALID && (dev->event = mx_event_create(0)) < 0) {
         printf("device add: %p(%s): cannot create event: %d\n",
-               dev, safename(dev->name), dev->event);
+               dev, dev->name, dev->event);
        return dev->event;
     }
 
@@ -464,13 +460,13 @@ static void devmgr_unbind_children(mx_device_t* dev) {
     mx_device_t* child = NULL;
     mx_device_t* temp = NULL;
 #if TRACE_ADD_REMOVE
-    printf("devmgr_unbind_children: %p(%s)\n", dev, safename(dev->name));
+    printf("devmgr_unbind_children: %p(%s)\n", dev, dev->name);
 #endif
     list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
         // call child's unbind op
         if (child->ops->unbind) {
 #if TRACE_ADD_REMOVE
-            printf("call unbind child: %p(%s)\n", child, safename(child->name));
+            printf("call unbind child: %p(%s)\n", child, child->name);
 #endif
             DM_UNLOCK();
             child->ops->unbind(child);
@@ -482,11 +478,11 @@ static void devmgr_unbind_children(mx_device_t* dev) {
 mx_status_t devmgr_device_remove(mx_device_t* dev) {
     if (dev->flags & (DEV_FLAG_DEAD | DEV_FLAG_BUSY | DEV_FLAG_INSTANCE)) {
         printf("device: %p(%s): cannot be removed (%s)\n",
-               dev, safename(dev->name), removal_problem(dev->flags));
+               dev, dev->name, removal_problem(dev->flags));
         return ERR_INVALID_ARGS;
     }
 #if TRACE_ADD_REMOVE
-    printf("device: %p(%s): is being removed\n", dev, safename(dev->name));
+    printf("device: %p(%s): is being removed\n", dev, dev->name);
 #endif
     dev->flags |= DEV_FLAG_DEAD;
 
@@ -583,7 +579,7 @@ mx_status_t devmgr_device_rebind(mx_device_t* dev) {
 
 mx_status_t devmgr_device_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
-        printf("device open: %p(%s) is dead!\n", dev, safename(dev->name));
+        printf("device open: %p(%s) is dead!\n", dev, dev->name);
         return ERR_BAD_STATE;
     }
     dev_ref_acquire(dev);
@@ -598,7 +594,7 @@ mx_status_t devmgr_device_open(mx_device_t* dev, mx_device_t** out, uint32_t fla
 
         dev = *out;
         if (!(dev->flags & DEV_FLAG_INSTANCE)) {
-            printf("device open: %p(%s) in bad state %x\n", dev, safename(dev->name), flags);
+            printf("device open: %p(%s) in bad state %x\n", dev, dev->name, flags);
             panic();
         }
     }
@@ -615,7 +611,7 @@ mx_status_t devmgr_device_close(mx_device_t* dev) {
 }
 
 mx_status_t devmgr_driver_add(mx_driver_t* drv) {
-    xprintf("driver add: %p(%s)\n", drv, safename(drv->name));
+    xprintf("driver add: %p(%s)\n", drv, drv->name);
 
     if (drv->ops.init) {
         mx_status_t r;

@@ -65,7 +65,7 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
     msg.arg = 0;
     msg.device_id = parent->remote_id;
     msg.protocol_id = dev->protocol_id;
-    memcpy(msg.namedata, dev->namedata, sizeof(dev->namedata));
+    memcpy(msg.namedata, dev->name, sizeof(dev->name));
     r = devhost_rpc(devhost_handle, &msg, h[1]);
     //printf("devhost_add() %d\n", r);
     if (r == NO_ERROR) {

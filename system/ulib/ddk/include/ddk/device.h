@@ -23,15 +23,10 @@ typedef struct mx_protocol_device mx_protocol_device_t;
 
 typedef struct vnode vnode_t;
 
-//TODO: multi-char constants are implementation-specific
-//      move to something more ABI-stable
-
-#define MX_DEVICE_NAME_MAX 32
+#define MX_DEVICE_NAME_MAX 31
 
 struct mx_device {
     uintptr_t magic;
-
-    const char* name;
 
     mx_protocol_device_t* ops;
 
@@ -73,7 +68,7 @@ struct mx_device {
     uint32_t prop_count;
     // properties for driver binding
 
-    char namedata[MX_DEVICE_NAME_MAX + 1];
+    char name[MX_DEVICE_NAME_MAX + 1];
 };
 
 // mx_device_t objects must be created or initialized by the driver manager's
