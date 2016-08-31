@@ -11,6 +11,10 @@ static_library("mtl") {
     "//lib/mtl/tasks",
     "//lib/mtl/threading",
   ]
+
+  deps = [
+    "//mojo/system:libmojo",
+  ]
 }
 
 executable("mtl_unittests") {
@@ -23,7 +27,6 @@ executable("mtl_unittests") {
 
   deps = [
     ":mtl",
-    "//mojo/system",
     "//third_party/gtest",
   ]
 }
