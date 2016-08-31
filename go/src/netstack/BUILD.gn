@@ -1,0 +1,54 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("netstack") {
+  testonly = true
+
+  deps = [
+    ":app",
+    "//apps/netstack/tests",
+  ]
+}
+
+executable("app") {
+  output_name = "netstack"
+
+  sources = [
+    "dispatcher.c",
+    "dispatcher.h",
+    "handle_watcher.c",
+    "handle_watcher.h",
+    "iostate.c",
+    "iostate.h",
+    "main.c",
+    "multiplexer.h",
+    "net_init.h",
+    "net_socket.h",
+    "request_queue.c",
+    "request_queue.h",
+    "socket_functions.c",
+    "socket_functions.h",
+    "trace.c",
+    "trace.h",
+  ]
+
+  sources += [
+    "ports/lwip/multiplexer-lwip.c",
+    "ports/lwip/net_init-lwip.c",
+    "ports/lwip/net_socket-lwip.c",
+  ]
+
+  if (is_debug) {
+    defines = [ "NETSTACK_DEBUG" ]
+  }
+
+  libs = [
+    "mxio",
+    "magenta",
+  ]
+
+  deps = [
+    "//third_party/lwip",
+  ]
+}
