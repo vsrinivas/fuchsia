@@ -10,6 +10,6 @@ __BEGIN_CDECLS;
 
 #include <inttypes.h>
 
-void backtrace(mx_handle_t, uintptr_t pc, uintptr_t fp, bool print_dsolist);
+void backtrace(mx_handle_t, uintptr_t pc, uintptr_t fp);
 
 __END_CDECLS;

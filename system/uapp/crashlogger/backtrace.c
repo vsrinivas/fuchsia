@@ -16,34 +16,39 @@
 
 extern struct r_debug* _dl_debug_addr;
 
+#define BUILDIDSZ 0x14
+
 typedef struct dsoinfo dsoinfo_t;
 struct dsoinfo {
     dsoinfo_t* next;
     uintptr_t base;
+    char buildid[BUILDIDSZ * 2 + 1];
     char name[];
 };
 
-static void dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base) {
+static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base) {
     if (!strcmp(name, "libc.so")) {
         name = "libmusl.so";
     }
     size_t len = strlen(name);
     dsoinfo_t* dso = calloc(1, sizeof(dsoinfo_t) + len + 1);
     if (dso == NULL) {
-        return;
+        return NULL;
     }
     memcpy(dso->name, name, len + 1);
+    memset(dso->buildid, 'x', BUILDIDSZ * 2);
     dso->base = base;
     while (*list != NULL) {
         if ((*list)->base < dso->base) {
             dso->next = *list;
             *list = dso;
-            return;
+            return dso;
         }
         list = &((*list)->next);
     }
     *list = dso;
     dso->next = NULL;
+    return dso;
 }
 
 #define rdebug_vaddr ((uintptr_t) _dl_debug_addr)
@@ -80,6 +85,70 @@ static mx_status_t fetch_string(mem_handle_t h, uintptr_t vaddr, char* ptr, size
     return NO_ERROR;
 }
 
+#define ehdr_off_phoff offsetof(Elf64_Ehdr, e_phoff)
+#define ehdr_off_phnum offsetof(Elf64_Ehdr, e_phnum)
+
+#define phdr_off_type offsetof(Elf64_Phdr, p_type)
+#define phdr_off_offset offsetof(Elf64_Phdr, p_offset)
+#define phdr_off_filesz offsetof(Elf64_Phdr, p_filesz)
+
+typedef struct {
+    uint32_t namesz;
+    uint32_t descsz;
+    uint32_t type;
+    uint32_t name;
+} notehdr;
+
+void fetch_build_id(mx_handle_t h, dsoinfo_t* dso) {
+    uint64_t vaddr = dso->base;
+    uint8_t tmp[4];
+    if (read_mem(h, vaddr, tmp, 4) ||
+        memcmp(tmp, ELFMAG, SELFMAG)) {
+        return;
+    }
+    Elf64_Off phoff;
+    Elf64_Half num;
+    if (read_mem(h, vaddr + ehdr_off_phoff, &phoff, sizeof(phoff)) ||
+        read_mem(h, vaddr + ehdr_off_phnum, &num, sizeof(num))) {
+        return;
+    }
+    for (unsigned n = 0; n < num; n++) {
+        uint64_t phaddr = vaddr + phoff + (n * sizeof(Elf64_Phdr));
+        Elf64_Word type;
+        if (read_mem(h, phaddr + phdr_off_type, &type, sizeof(type))) {
+            return;
+        }
+        if (type != PT_NOTE) {
+            continue;
+        }
+        Elf64_Off off;
+        Elf64_Word size;
+        if (read_mem(h, phaddr + phdr_off_offset, &off, sizeof(off)) ||
+            read_mem(h, phaddr + phdr_off_filesz, &size, sizeof(size))) {
+            return;
+        }
+        if (size < 0x24) {
+            continue;
+        }
+        notehdr hdr;
+        if (read_mem(h, vaddr + off, &hdr, sizeof(hdr))) {
+            return;
+        }
+        if ((hdr.namesz != 4) || (hdr.descsz != 0x14) ||
+            (hdr.type != 3) || (hdr.name != 0x554e47)) {
+            continue;
+        }
+        uint8_t buildid[BUILDIDSZ];
+        if (read_mem(h, vaddr + off + sizeof(hdr), buildid, sizeof(buildid))) {
+            return;
+        }
+        for (n = 0; n < BUILDIDSZ; n++) {
+            sprintf(dso->buildid + n * 2, "%02x", buildid[n]);
+        }
+        return;
+    }
+}
+
 dsoinfo_t* fetch_dso_list(mx_handle_t h, const char* name) {
     uintptr_t lmap;
     if (read_mem(h, rdebug_vaddr + rdebug_off_lmap, &lmap, sizeof(lmap))) {
@@ -103,7 +172,10 @@ dsoinfo_t* fetch_dso_list(mx_handle_t h, const char* name) {
         if (fetch_string(h, str, dsoname, sizeof(dsoname))) {
             break;
         }
-        dsolist_add(&dsolist, dsoname[0] ? dsoname : name, base);
+        dsoinfo_t* dso = dsolist_add(&dsolist, dsoname[0] ? dsoname : name, base);
+        if (dso != NULL) {
+            fetch_build_id(h, dso);
+        }
         lmap = next;
     }
 
@@ -126,9 +198,14 @@ static void btprint(dsoinfo_t* list, int n, uintptr_t pc, uintptr_t sp) {
     }
 }
 
-void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp, bool print_dsolist) {
+void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp) {
     dsoinfo_t* list = fetch_dso_list(h, "app");
     int n = 1;
+
+    for (dsoinfo_t* dso = list; dso != NULL; dso = dso->next) {
+        printf("dso: id=%s base=%p name=%s\n",
+               dso->buildid, (void*)dso->base, dso->name);
+    }
 
     btprint(list, n++, pc, fp);
     while ((fp >= 0x1000000) && (n < 50)) {
@@ -143,9 +220,6 @@ void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp, bool print_dsolist) {
 
     while (list != NULL) {
         dsoinfo_t* next = list->next;
-        if (print_dsolist) {
-            printf("dso: @%p '%s'\n", (void*) list->base, list->name);
-        }
         free(list);
         list = next;
     }

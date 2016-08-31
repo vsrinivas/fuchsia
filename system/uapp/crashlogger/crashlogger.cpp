@@ -99,16 +99,16 @@ void process_report(const mx_exception_report_t* report) {
         output_frame_x86_64(context.arch.u.x86_64);
         printf("bottom of user stack:\n");
         dump_memory(process, context.arch.u.x86_64.user_sp, 256u);
-        printf("backtrace:\n");
-        backtrace(process, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp, true);
+        printf("arch: x86_64\n");
+        backtrace(process, context.arch.u.x86_64.ip, context.arch.u.x86_64.rbp);
 #endif
     } else if (context.arch_id == ARCH_ID_ARM_64) {
 #if defined(__aarch64__)
         output_frame_arm64(context.arch.u.arm_64);
         printf("bottom of user stack:\n");
         dump_memory(process, context.arch.u.arm_64.usp, 256u);
-        printf("backtrace:\n");
-        backtrace(process, context.arch.u.arm_64.elr, context.arch.u.arm_64.usp, true);
+        printf("arch: aarch64\n");
+        backtrace(process, context.arch.u.arm_64.elr, context.arch.u.arm_64.usp);
 #endif
     } else {
         // TODO: support other architectures.
