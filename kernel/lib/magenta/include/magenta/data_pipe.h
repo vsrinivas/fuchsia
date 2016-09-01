@@ -39,11 +39,15 @@ public:
     StateTracker* get_consumer_state_tracker() { return &consumer_.state_tracker; }
 
     mx_status_t ProducerWriteFromUser(const void* ptr, mx_size_t* requested);
-    mx_status_t ConsumerReadFromUser(void* ptr, mx_size_t* requested);
-
     mx_ssize_t ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr);
     mx_status_t ProducerWriteEnd(mx_size_t written);
 
+    mx_status_t ConsumerReadFromUser(void* ptr,
+                                     mx_size_t* requested,
+                                     bool all_or_none,
+                                     bool discard,
+                                     bool peek);
+    mx_ssize_t ConsumerQuery();
     mx_ssize_t ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr);
     mx_status_t ConsumerReadEnd(mx_size_t read);
 

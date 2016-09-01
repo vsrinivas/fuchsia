@@ -31,8 +31,8 @@ public:
     DataPipeConsumerDispatcher* get_data_pipe_consumer_dispatcher() final { return this; }
     StateTracker* get_state_tracker() final;
 
-    mx_status_t Read(void* buffer, mx_size_t* requested);
-
+    mx_status_t Read(void* buffer, mx_size_t* requested, bool all_or_none, bool discard, bool peek);
+    mx_ssize_t Query();
     mx_ssize_t BeginRead(mxtl::RefPtr<VmAspace> aspace, void** buffer);
     mx_status_t EndRead(mx_size_t read);
 

@@ -1535,9 +1535,6 @@ mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requ
                               void const* _buffer) {
     LTRACEF("handle %d\n", handle);
 
-    if (!_buffer)
-        return ERR_INVALID_ARGS;
-
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -1552,6 +1549,8 @@ mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requ
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
 
+    // TODO(vtl): Handle write flags.
+
     mx_size_t written = requested;
     mx_status_t st = producer->Write(_buffer, &written);
     if (st < 0)
@@ -1563,9 +1562,6 @@ mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requ
 mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
                              void* _buffer) {
     LTRACEF("handle %d\n", handle);
-
-    if (!_buffer)
-        return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -1581,8 +1577,24 @@ mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t reque
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
+    if (flags & ~MX_DATAPIPE_READ_FLAG_MASK)
+        return ERR_NOT_SUPPORTED;
+
+    bool all_or_none = flags & MX_DATAPIPE_READ_FLAG_ALL_OR_NONE;
+    bool discard = flags & MX_DATAPIPE_READ_FLAG_DISCARD;
+    bool query = flags & MX_DATAPIPE_READ_FLAG_QUERY;
+    bool peek = flags & MX_DATAPIPE_READ_FLAG_PEEK;
+    if (query) {
+        if (discard || peek)
+            return ERR_INVALID_ARGS;
+        // Note: We ignore "all or none".
+        return consumer->Query();
+    }
+    if (discard && peek)
+        return ERR_INVALID_ARGS;
+
     mx_size_t read = requested;
-    mx_status_t st = consumer->Read(_buffer, &read);
+    mx_status_t st = consumer->Read(_buffer, &read, all_or_none, discard, peek);
     if (st < 0)
         return st;
 
@@ -1591,9 +1603,6 @@ mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t reque
 
 mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, uintptr_t* buffer) {
     LTRACEF("handle %d\n", handle);
-
-    if (!buffer)
-        return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -1608,6 +1617,8 @@ mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, uintptr_
 
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return ERR_ACCESS_DENIED;
+
+    // TODO(vtl): Handle (disallow) write flags.
 
     uintptr_t user_addr = 0u;
 
@@ -1647,9 +1658,6 @@ mx_status_t sys_datapipe_end_write(mx_handle_t handle, mx_size_t written) {
 mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, uintptr_t* buffer) {
     LTRACEF("handle %d\n", handle);
 
-    if (!buffer)
-        return ERR_INVALID_ARGS;
-
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -1663,6 +1671,10 @@ mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, uintptr_t
 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
+
+    // Currently, no flags are supported with two-phase read.
+    if (flags)
+        return (flags & ~MX_DATAPIPE_READ_FLAG_MASK) ? ERR_NOT_SUPPORTED : ERR_INVALID_ARGS;
 
     uintptr_t user_addr = 0u;
 

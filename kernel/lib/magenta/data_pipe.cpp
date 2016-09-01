@@ -146,6 +146,9 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requeste
     *requested = ComputeSize(producer_.cursor, consumer_.cursor, *requested);
     DEBUG_ASSERT(*requested % element_size_ == 0u);
 
+    if (!ptr)
+        return ERR_INVALID_ARGS;
+
     size_t written;
     status_t status = vmo_->WriteUser(ptr, producer_.cursor, *requested, &written);
     if (status < 0)
@@ -214,7 +217,13 @@ mx_status_t DataPipe::ProducerWriteEnd(mx_size_t written) {
     return NO_ERROR;
 }
 
-mx_status_t DataPipe::ConsumerReadFromUser(void* ptr, mx_size_t* requested) {
+mx_status_t DataPipe::ConsumerReadFromUser(void* ptr,
+                                           mx_size_t* requested,
+                                           bool all_or_none,
+                                           bool discard,
+                                           bool peek) {
+    DEBUG_ASSERT(!discard || !peek);
+
     AutoLock al(&lock_);
 
     // |expected| > 0 means there is a pending ConsumerReadBegin().
@@ -231,18 +240,27 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr, mx_size_t* requested) {
     if (free_space_ == capacity_)
         return ERR_SHOULD_WAIT;
 
-    *requested = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
-    DEBUG_ASSERT(*requested % element_size_ == 0u);
+    mx_size_t available = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
+    DEBUG_ASSERT(available % element_size_ == 0u);
+    if (all_or_none && available != *requested)
+        return ERR_OUT_OF_RANGE;
+    *requested = available;
 
-    size_t read;
-    status_t st = vmo_->ReadUser(ptr, consumer_.cursor, *requested, &read);
-    if (st < 0)
-        return st;
+    if (!discard) {
+        if (!ptr)
+            return ERR_INVALID_ARGS;
 
-    *requested = read;
+        size_t read;
+        status_t st = vmo_->ReadUser(ptr, consumer_.cursor, *requested, &read);
+        if (st != NO_ERROR)
+            return st;
+        DEBUG_ASSERT(read == *requested);
+        if (peek)
+            return NO_ERROR;
+    }
 
-    free_space_ += read;
-    consumer_.cursor += read;
+    free_space_ += *requested;
+    consumer_.cursor += *requested;
 
     if (consumer_.cursor == capacity_)
         consumer_.cursor = 0u;
@@ -250,6 +268,21 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr, mx_size_t* requested) {
     UpdateSignalsNoLock();
 
     return NO_ERROR;
+}
+
+mx_ssize_t DataPipe::ConsumerQuery() {
+    AutoLock al(&lock_);
+
+    // |expected| > 0 means there is a pending ConsumerReadBegin().
+    if (consumer_.expected)
+        return ERR_BUSY;
+
+    if (free_space_ == capacity_)
+        return 0;
+
+    mx_size_t available = ComputeSize(consumer_.cursor, producer_.cursor, capacity_);
+    DEBUG_ASSERT(available % element_size_ == 0u);
+    return static_cast<mx_ssize_t>(available);
 }
 
 mx_ssize_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr) {

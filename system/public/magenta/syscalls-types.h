@@ -264,7 +264,7 @@ typedef struct mx_log_record {
 #define MX_LOG_FLAG_WAIT      0x80000000
 #define MX_LOG_FLAG_READABLE  0x40000000
 
-// Defines and structures for mx_io_port_*()
+// Defines and structures for mx_port_*()
 
 #define MX_PORT_MAX_PKT_SIZE   128u
 
@@ -292,13 +292,23 @@ typedef struct mx_exception_packet {
     mx_exception_report_t report;
 } mx_exception_packet_t;
 
-// Structures for mx_wait_set_*()
+// Structure for mx_waitset_*():
+
 typedef struct mx_waitset_result {
     uint64_t cookie;
     mx_status_t wait_result;
     uint32_t reserved;
     mx_signals_state_t signals_state;
 } mx_waitset_result_t;
+
+// Defines for mx_datapipe_*():
+
+// DISCARD, QUERY, and PEEK are mutually exclusive.
+#define MX_DATAPIPE_READ_FLAG_ALL_OR_NONE   1u
+#define MX_DATAPIPE_READ_FLAG_DISCARD       2u
+#define MX_DATAPIPE_READ_FLAG_QUERY         4u
+#define MX_DATAPIPE_READ_FLAG_PEEK          8u
+#define MX_DATAPIPE_READ_FLAG_MASK          15u
 
 // Buffer size limits on the cprng syscalls
 #define MX_CPRNG_DRAW_MAX_LEN        256

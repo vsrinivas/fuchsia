@@ -506,6 +506,153 @@ static bool element_size_errors(void) {
     END_TEST;
 }
 
+static bool query_peek_discard(void) {
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 1u, 0u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 0,
+              "incorrect read (query) result");
+
+    EXPECT_EQ(mx_datapipe_write(producer, 0u, 10u, "0123456789"), 10, "write failed");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 10,
+              "incorrect read (query) result");
+
+    char buffer[100];
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_PEEK, 4u, buffer), 4,
+              "read (peek) failed");
+    EXPECT_EQ(memcmp(buffer, "0123", 4u), 0, "incorrect data from read (peek)");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 10,
+              "incorrect read (query) result");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_DISCARD, 2u, NULL), 2,
+              "incorrect read (discard) result");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 8,
+              "incorrect read (query) result");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_PEEK, 20u, buffer), 8,
+              "read (peek) failed");
+    EXPECT_EQ(memcmp(buffer, "23456789", 4u), 0, "incorrect data from read (peek)");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+
+    END_TEST;
+}
+
+static bool read_all_or_none(void) {
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 1u, 0u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    EXPECT_EQ(mx_datapipe_write(producer, 0u, 10u, "0123456789"), 10, "write failed");
+
+    char buffer[100];
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_ALL_OR_NONE, 11u, buffer),
+              ERR_OUT_OF_RANGE, "incorrect read result");
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_ALL_OR_NONE, 10u, buffer), 10,
+              "read failed");
+    EXPECT_EQ(memcmp(buffer, "0123456789", 10u), 0, "incorrect data from read");
+
+    EXPECT_EQ(mx_datapipe_write(producer, 0u, 10u, "abcdefghij"), 10, "write failed");
+
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_ALL_OR_NONE | MX_DATAPIPE_READ_FLAG_PEEK, 11u,
+                               buffer),
+              ERR_OUT_OF_RANGE, "incorrect read (peek) result");
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_ALL_OR_NONE | MX_DATAPIPE_READ_FLAG_PEEK, 10u,
+                               buffer),
+              10, "read (peek) failed");
+    EXPECT_EQ(memcmp(buffer, "abcdefghij", 10u), 0, "incorrect data from read");
+
+    // Note: "query" ignores "all or none".
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_ALL_OR_NONE | MX_DATAPIPE_READ_FLAG_QUERY, 0u,
+                               NULL),
+              10, "incorrect read (query) result");
+
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_ALL_OR_NONE | MX_DATAPIPE_READ_FLAG_DISCARD,
+                               11u, NULL),
+              ERR_OUT_OF_RANGE, "incorrect read (discard) result");
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_ALL_OR_NONE | MX_DATAPIPE_READ_FLAG_DISCARD,
+                               10u, NULL),
+              10, "read (discard) failed");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 0,
+              "incorrect read (query) result");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+
+    END_TEST;
+}
+
+static bool read_invalid_flags(void) {
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 1u, 0u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    char buffer[100];
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_DISCARD | MX_DATAPIPE_READ_FLAG_QUERY, 1u,
+                               buffer),
+              ERR_INVALID_ARGS, "incorrect read result");
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_DISCARD | MX_DATAPIPE_READ_FLAG_PEEK, 1u,
+                               buffer),
+              ERR_INVALID_ARGS, "incorrect read result");
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_QUERY | MX_DATAPIPE_READ_FLAG_PEEK, 1u,
+                               buffer),
+              ERR_INVALID_ARGS, "incorrect read result");
+    EXPECT_EQ(mx_datapipe_read(consumer,
+                               MX_DATAPIPE_READ_FLAG_DISCARD | MX_DATAPIPE_READ_FLAG_QUERY |
+                                   MX_DATAPIPE_READ_FLAG_PEEK, 1u, buffer),
+              ERR_INVALID_ARGS, "incorrect read result");
+    // Unknown flags.
+    EXPECT_EQ(mx_datapipe_read(consumer, ~MX_DATAPIPE_READ_FLAG_MASK, 1u, buffer),
+              ERR_NOT_SUPPORTED, "incorrect read result");
+
+    // Two-phase read currently doesn't support any flags.
+    uintptr_t ptr;
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, MX_DATAPIPE_READ_FLAG_ALL_OR_NONE, &ptr),
+              ERR_INVALID_ARGS, "incorrect begin_read result");
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, MX_DATAPIPE_READ_FLAG_DISCARD, &ptr),
+              ERR_INVALID_ARGS, "incorrect begin_read result");
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, &ptr), ERR_INVALID_ARGS,
+              "incorrect begin_read result");
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, MX_DATAPIPE_READ_FLAG_PEEK, &ptr), ERR_INVALID_ARGS,
+              "incorrect begin_read result");
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, ~MX_DATAPIPE_READ_FLAG_MASK, &ptr),
+              ERR_NOT_SUPPORTED, "incorrect begin_read result");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(data_pipe_tests)
 RUN_TEST(create_destroy_test)
 RUN_TEST(simple_read_write)
@@ -517,6 +664,9 @@ RUN_TEST(loop_begin_write_read)
 RUN_TEST(consumer_signals_when_producer_closed)
 RUN_TEST(nontrivial_element_size);
 RUN_TEST(element_size_errors);
+RUN_TEST(query_peek_discard);
+RUN_TEST(read_all_or_none);
+RUN_TEST(read_invalid_flags);
 END_TEST_CASE(data_pipe_tests)
 
 #ifndef BUILD_COMBINED_TESTS
