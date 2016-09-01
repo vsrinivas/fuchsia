@@ -39,7 +39,7 @@ static bool socket_basic(void) {
     ASSERT_EQ(status, NO_ERROR, "");
 
     ssize = mx_socket_read(h[0], 0u, sizeof(read_data), read_data);
-    ASSERT_EQ(ssize, ERR_NOT_READY, "");
+    ASSERT_EQ(ssize, ERR_SHOULD_WAIT, "");
 
     static const uint32_t write_data[] = { 0xdeadbeef, 0xc0ffee };
     ssize = mx_socket_write(h[0], 0u, sizeof(write_data[0]), &write_data[0]);

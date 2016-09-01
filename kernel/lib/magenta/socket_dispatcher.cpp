@@ -210,7 +210,7 @@ mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from
     AutoLock lock(&lock_);
 
     if (!cbuf_.free())
-        return ERR_NOT_READY;
+        return ERR_SHOULD_WAIT;
 
     bool was_empty = cbuf_.empty();
 
@@ -229,7 +229,7 @@ mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
     AutoLock lock(&lock_);
 
     if (cbuf_.empty())
-        return ERR_NOT_READY;
+        return ERR_SHOULD_WAIT;
 
     bool was_full = cbuf_.free() == 0u;
 
