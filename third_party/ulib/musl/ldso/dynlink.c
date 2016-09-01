@@ -518,6 +518,34 @@ static void* choose_load_address(size_t span) {
     return (void*)base;
 }
 
+// TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
+// This will go away when we have copy-on-write.
+static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
+                                    off_t *off_start, size_t *map_size) {
+    mx_handle_t copy_vmo = _mx_vmo_create(data_size);
+    if (copy_vmo < 0)
+        return copy_vmo;
+    uintptr_t window = 0;
+    mx_status_t status = _mx_process_map_vm(libc.proc, vmo,
+                                            *off_start, data_size, &window,
+                                            MX_VM_FLAG_PERM_READ);
+    if (status < 0) {
+        _mx_handle_close(copy_vmo);
+        return status;
+    }
+    mx_ssize_t n = _mx_vmo_write(copy_vmo, (void*)window, 0, data_size);
+    _mx_process_unmap_vm(libc.proc, window, 0);
+    if (n >= 0 && n != (mx_ssize_t)data_size)
+        n = ERR_IO;
+    if (n < 0) {
+        mx_handle_close(copy_vmo);
+        return n;
+    }
+    *off_start = 0;
+    *map_size = data_size;
+    return copy_vmo;
+}
+
 static void* map_library(mx_handle_t vmo, struct dso* dso) {
     Ehdr buf[(896 + sizeof(Ehdr)) / sizeof(Ehdr)];
     void* allocated_buf = 0;
@@ -618,9 +646,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE;
         off_start = ph->p_offset & -PAGE_SIZE;
-        // TODO(mcgrathr): This should use the copy-on-write flag, but
-        // it doesn't exist yet.  Instead, for now this eagerly copies
-        // the data into a new VMO.
         uint32_t mx_flags = MX_VM_FLAG_FIXED;
         mx_flags |= (ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0;
         mx_flags |= (ph->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0;
@@ -630,46 +655,37 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         size_t map_size = this_max - this_min;
         if (map_size == 0)
             continue;
-#if 1
-        // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
-        // This will go away when we have copy-on-write.
+
+        mx_status_t status;
         if (ph->p_flags & PF_W) {
             size_t data_size =
                 ((ph->p_vaddr + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE) -
                 this_min;
             if (data_size > 0) {
-                mx_handle_t copy_vmo = _mx_vmo_create(data_size);
-                if (copy_vmo < 0)
-                    __builtin_trap();
-                uintptr_t window = 0;
-                mx_status_t status = _mx_process_map_vm(
-                    0, vmo, off_start, data_size, &window,
-                    MX_VM_FLAG_PERM_READ);
-                if (status < 0)
-                    __builtin_trap();
-                mx_ssize_t n = _mx_vmo_write(copy_vmo, (void*)window,
-                                             0, data_size);
-                _mx_process_unmap_vm(0, window, 0);
-                if (n != (mx_ssize_t)data_size)
-                    __builtin_trap();
-                map_vmo = copy_vmo;         // Leak the handle.
-                off_start = 0;
-                map_size = data_size;
+                map_vmo = get_writable_vmo(vmo, data_size,
+                                           &off_start, &map_size);
+                if (map_vmo < 0) {
+                    status = map_vmo;
+                mx_error:
+                    // TODO(mcgrathr): Perhaps this should translate the
+                    // kernel error in 'status' into an errno value.  Or
+                    // perhaps it should just assert that the kernel error
+                    // was among an expected set.  Probably all failures of
+                    // these kernel calls should either be totally fatal or
+                    // should translate into ENOMEM.
+                    errno = ENOMEM;
+                    goto error;
+                }
             }
         }
-#endif
-        mx_status_t status = _mx_process_map_vm(libc.proc, map_vmo, off_start,
-                                                map_size, &mapaddr, mx_flags);
-        if (status < 0) {
-        mx_error:
-            // TODO(mcgrathr): Perhaps this should translate the kernel
-            // error in 'status' into an errno value.  Or perhaps it should
-            // just assert that the kernel error was among an expected set.
-            // Probably all failures of these kernel calls should either
-            // be totally fatal or should translate into ENOMEM.
-            errno = ENOMEM;
-            goto error;
-        }
+
+        status = _mx_process_map_vm(libc.proc, map_vmo, off_start,
+                                    map_size, &mapaddr, mx_flags);
+        if (map_vmo != vmo)
+            _mx_handle_close(map_vmo);
+        if (status != NO_ERROR)
+            goto mx_error;
+
         if (ph->p_memsz > ph->p_filesz) {
             size_t brk = (size_t)base + ph->p_vaddr + ph->p_filesz;
             size_t pgbrk = brk + PAGE_SIZE - 1 & -PAGE_SIZE;
@@ -690,7 +706,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
     }
-done_mapping:
+
     dso->base = base;
     dso->dynv = laddr(dso, dyn);
     if (dso->tls.size)
