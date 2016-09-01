@@ -8,5 +8,6 @@ group("ledger") {
   deps = [
     "//apps/ledger/api",
     "//apps/ledger/convert",
+    "//apps/ledger/glue",
   ]
 }
