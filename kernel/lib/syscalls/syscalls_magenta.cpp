@@ -784,29 +784,21 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const c
 
 }
 
-mx_handle_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
+mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
                              uintptr_t stack, uintptr_t arg1, uintptr_t arg2) {
     LTRACEF("handle %#x, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
             thread_handle, entry, stack, arg1, arg2);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    if (!up->GetDispatcher(thread_handle, &dispatcher, &rights))
-        return BadHandle();
+    mxtl::RefPtr<ThreadDispatcher> thread;
+    mx_status_t status = up->GetDispatcher(thread_handle, &thread,
+                                           MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
-    auto thread = dispatcher->get_specific<ThreadDispatcher>();
-    if (!thread)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
-
-    auto status = thread->Start(entry, stack, arg1, arg2);
-
-    return status;
+    return thread->Start(entry, stack, arg1, arg2);
 }
 
 void sys_thread_exit() {
@@ -924,17 +916,10 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
         return status;
 
     // get thread_dispatcher
-    mxtl::RefPtr<Dispatcher> thread_dispatcher;
-    uint32_t thread_rights;
-    if (!up->GetDispatcher(thread_handle, &thread_dispatcher, &thread_rights))
-        return BadHandle();
-
-    auto thread = thread_dispatcher->get_specific<ThreadDispatcher>();
-    if (!thread)
-        return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(thread_rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
+    mxtl::RefPtr<ThreadDispatcher> thread;
+    status = up->GetDispatcher(thread_handle, &thread, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     // test that the thread belongs to the starting process
     if (thread->thread()->process() != process.get())
@@ -951,7 +936,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
 
     // TODO(cpu) if Start() fails we want to undo RemoveHandle().
 
-    return process->Start(thread, pc, sp, arg_nhv, arg2);
+    return process->Start(mxtl::move(thread), pc, sp, arg_nhv, arg2);
 }
 
 mx_handle_t sys_event_create(uint32_t options) {

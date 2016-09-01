@@ -123,8 +123,9 @@ status_t ProcessDispatcher::Initialize() {
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::Start(ThreadDispatcher *thread, uintptr_t pc,
-                                  uintptr_t sp, uintptr_t arg1, uintptr_t arg2) {
+status_t ProcessDispatcher::Start(mxtl::RefPtr<ThreadDispatcher> thread,
+                                  uintptr_t pc, uintptr_t sp,
+                                  uintptr_t arg1, uintptr_t arg2) {
     LTRACEF("process %p thread %p, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
             this, thread, pc, sp, arg1, arg2);
