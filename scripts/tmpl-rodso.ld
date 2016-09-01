@@ -44,6 +44,16 @@
 SECTIONS {
     . = 0 + SIZEOF_HEADERS;
 
+    /*
+     * Match the non-allocated Gold version note specially, so
+     * it doesn't go into the allocated .note section below.
+     * With BFD ld, the .note clause could use:
+     *     INPUT_SECTION_FLAGS(SHF_ALLOC) *(.note*)
+     * so as not to match any non-allocated note sections generically.
+     * But gold and lld do not support the INPUT_SECTION_FLAGS keyword.
+     */
+    .note.gnu.gold-version : { *(.note.gnu.gold-version) }
+
     .note : {
         *(.note*)
     } :rodata :note
