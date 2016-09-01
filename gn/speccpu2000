@@ -6,6 +6,10 @@
             "bootfs_path": "benchmarks/164.gzip"
         },
         {
+            "binary": "175.vpr",
+            "bootfs_path": "benchmarks/175.vpr"
+        },
+        {
             "binary": "176.gcc",
             "bootfs_path": "benchmarks/176.gcc"
         },
@@ -42,6 +46,14 @@
         {
           "file": "third_party/speccpu2000/164.gzip/data/ref/input/input.source",
           "bootfs_path": "benchmarks/data/164.gzip/input.source"
+        },
+        {
+          "file": "third_party/speccpu2000/175.vpr/data/ref/input/net.in",
+          "bootfs_path": "benchmarks/data/175.vpr/net.in"
+        },
+        {
+          "file": "third_party/speccpu2000/175.vpr/data/ref/input/arch.in",
+          "bootfs_path": "benchmarks/data/175.vpr/arch.in"
         },
         {
           "file": "third_party/speccpu2000/177.mesa/data/ref/input/mesa.in",
