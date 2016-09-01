@@ -6,6 +6,7 @@
         "flutter",
         "fortune",
         "ftl",
+        "ledger",
         "leveldb",
         "libc-tests",
         "lua",

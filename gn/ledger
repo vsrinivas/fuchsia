@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/ledger"
+    ],
+    "binaries": [
+        {
+            "binary": "convert_unittests",
+            "bootfs_path": "test/convert_unittests"
+        }
+    ]
+}
