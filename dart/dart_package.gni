@@ -24,7 +24,18 @@
 #     ]
 #   }
 template("dart_package") {
-  assert(defined(invoker.package_name), "Must specify package name")
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  } else if (defined(invoker.infer_package_name) && invoker.infer_package_name) {
+    target_dir = get_label_info(target_name, "dir")
+    print("inferring name from $target_dir")
+    package_name = exec_script("//build/dart/label_to_package_name.py",
+                               [ target_dir ],
+                               "trim string")
+    print("package_name is inferred as ${package_name}")
+  } else {
+    assert(false, "Must specify either a package_name or infer_package_name")
+  }
 
   action(target_name) {
     script = "//build/dart/gen_dot_packages.py"
@@ -36,14 +47,23 @@ template("dart_package") {
 
     dot_packages_file = "$target_gen_dir/.packages"
 
-    outputs = [ dot_packages_file ]
+    outputs = [
+      dot_packages_file,
+    ]
     depfile = "$target_gen_dir/.packages.d"
 
-    args = [ "--out", rebase_path(dot_packages_file, root_build_dir),
-             "--source-dir", rebase_path("."),
-             "--root-build-dir", rebase_path(root_build_dir),
-             "--package-name", invoker.package_name,
-             "--depfile", rebase_path(depfile),
-             "--deps" ] + deps
+    args = [
+             "--out",
+             rebase_path(dot_packages_file, root_build_dir),
+             "--source-dir",
+             rebase_path("."),
+             "--root-build-dir",
+             rebase_path(root_build_dir),
+             "--package-name",
+             package_name,
+             "--depfile",
+             rebase_path(depfile),
+             "--deps",
+           ] + deps
   }
 }
