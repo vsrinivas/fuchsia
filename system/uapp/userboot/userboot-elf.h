@@ -12,7 +12,8 @@
 struct bootfs;
 
 // Returns the base address (p_vaddr bias).
-mx_vaddr_t elf_load_vmo(mx_handle_t log, mx_handle_t proc, mx_handle_t vmo);
+mx_vaddr_t elf_load_vmo(mx_handle_t log, mx_handle_t proc_self,
+                        mx_handle_t proc, mx_handle_t vmo);
 
 // Returns the entry point address in the child, either to the named
 // executable or to the PT_INTERP file loaded instead.  If the main
@@ -22,8 +23,9 @@ mx_vaddr_t elf_load_vmo(mx_handle_t log, mx_handle_t proc, mx_handle_t vmo);
 // sent down the to_child pipe to prime the interpreter (presumably
 // the dynamic linker) with the given log handle and a VMO for the
 // main executable.
-mx_vaddr_t elf_load_bootfs(mx_handle_t log, struct bootfs *fs,
-                           mx_handle_t proc, const char* filename,
-                           mx_handle_t to_child, size_t* stack_size);
+mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t proc_self,
+                           struct bootfs *fs, mx_handle_t proc,
+                           const char* filename, mx_handle_t to_child,
+                           size_t* stack_size);
 
 #pragma GCC visibility pop

@@ -140,14 +140,15 @@ static mx_status_t choose_load_bias(mx_handle_t proc,
 
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
 // This will go away when we have copy-on-write.
-static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
+static mx_handle_t get_writable_vmo(mx_handle_t proc_self,
+                                    mx_handle_t vmo, size_t data_size,
                                     uintptr_t* file_start,
                                     uintptr_t* file_end) {
     mx_handle_t copy_vmo = mx_vmo_create(data_size);
     if (copy_vmo < 0)
         return copy_vmo;
     uintptr_t window = 0;
-    mx_status_t status = mx_process_map_vm(0, vmo,
+    mx_status_t status = mx_process_map_vm(proc_self, vmo,
                                            *file_start, data_size, &window,
                                            MX_VM_FLAG_PERM_READ);
     if (status < 0) {
@@ -155,7 +156,7 @@ static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
         return status;
     }
     mx_ssize_t n = mx_vmo_write(copy_vmo, (void*)window, 0, data_size);
-    mx_process_unmap_vm(0, window, 0);
+    mx_process_unmap_vm(proc_self, window, 0);
     if (n >= 0 && n != (mx_ssize_t)data_size)
         n = ERR_IO;
     if (n < 0) {
@@ -230,7 +231,8 @@ static mx_status_t finish_load_segment(
     return status;
 }
 
-static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
+static mx_status_t load_segment(mx_handle_t proc_self,
+                                mx_handle_t proc, mx_handle_t vmo,
                                 uintptr_t bias, const elf_phdr_t* ph) {
     // The p_vaddr can start in the middle of a page, but the
     // semantics are that all the whole pages containing the
@@ -261,7 +263,7 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
                                    file_start, file_end, partial_page);
 
     // For a writable segment, we need a writable VMO.
-    mx_handle_t writable_vmo = get_writable_vmo(vmo, data_size,
+    mx_handle_t writable_vmo = get_writable_vmo(proc_self, vmo, data_size,
                                                 &file_start, &file_end);
     if (writable_vmo < 0)
         return writable_vmo;
@@ -272,7 +274,7 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
     return status;
 }
 
-mx_status_t elf_load_map_segments(mx_handle_t proc,
+mx_status_t elf_load_map_segments(mx_handle_t proc_self, mx_handle_t proc,
                                   const elf_load_header_t* header,
                                   const elf_phdr_t phdrs[],
                                   mx_handle_t vmo,
@@ -285,7 +287,7 @@ mx_status_t elf_load_map_segments(mx_handle_t proc,
 
     for (uint_fast16_t i = 0; status == NO_ERROR && i < header->e_phnum; ++i) {
         if (phdrs[i].p_type == PT_LOAD)
-            status = load_segment(proc, vmo, bias, &phdrs[i]);
+            status = load_segment(proc_self, proc, vmo, bias, &phdrs[i]);
     }
 
     if (status == NO_ERROR) {

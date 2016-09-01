@@ -6,6 +6,7 @@
 
 #include <elfload/elfload.h>
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <stdlib.h>
 
@@ -66,8 +67,8 @@ mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
 mx_status_t elf_load_finish(mx_handle_t proc, elf_load_info_t* info,
                             mx_handle_t vmo,
                             mx_vaddr_t* base, mx_vaddr_t* entry) {
-    return elf_load_map_segments(proc, &info->header, info->phdrs, vmo,
-                                 base, entry);
+    return elf_load_map_segments(mx_process_self(), proc,
+                                 &info->header, info->phdrs, vmo, base, entry);
 }
 
 size_t elf_load_get_stack_size(elf_load_info_t* info) {
