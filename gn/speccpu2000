@@ -10,6 +10,10 @@
             "bootfs_path": "benchmarks/177.mesa"
         },
         {
+            "binary": "181.mcf",
+            "bootfs_path": "benchmarks/181.mcf"
+        },
+        {
             "binary": "183.equake",
             "bootfs_path": "benchmarks/183.equake"
         }
@@ -18,6 +22,10 @@
         {
           "file": "third_party/speccpu2000/177.mesa/data/ref/input/mesa.in",
           "bootfs_path": "benchmarks/data/177.mesa/mesa.mesh"
+        },
+        {
+          "file": "third_party/speccpu2000/181.mcf/data/ref/input/inp.in",
+          "bootfs_path": "benchmarks/data/181.mcf/inp.in"
         },
         {
           "file": "third_party/speccpu2000/183.equake/data/ref/input/inp.in",
