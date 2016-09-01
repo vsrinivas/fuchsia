@@ -17,7 +17,7 @@ bool wait_set_create_test(void) {
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     mx_handle_basic_info_t ws_info;
-    ASSERT_EQ(mx_handle_get_info(ws, MX_INFO_HANDLE_BASIC, &ws_info, sizeof(ws_info)),
+    ASSERT_EQ(mx_object_get_info(ws, MX_INFO_HANDLE_BASIC, &ws_info, sizeof(ws_info)),
               (mx_ssize_t)sizeof(ws_info), "");
     EXPECT_EQ(ws_info.rights, MX_RIGHT_READ | MX_RIGHT_WRITE, "");
     EXPECT_EQ(ws_info.type, (uint32_t)MX_OBJ_TYPE_WAIT_SET, "");

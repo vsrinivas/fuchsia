@@ -187,12 +187,12 @@ mx_handle_t tu_launch_mxio_etc(const char* name,
 int tu_process_get_return_code(mx_handle_t process)
 {
     mx_process_info_t info;
-    mx_ssize_t ret = mx_handle_get_info(process, MX_INFO_PROCESS, &info, sizeof(info));
+    mx_ssize_t ret = mx_object_get_info(process, MX_INFO_PROCESS, &info, sizeof(info));
     if (ret < 0)
         tu_fatal("get process info", ret);
     if (ret != sizeof(info)) {
         // Bleah. Kernel/App mismatch?
-        unittest_printf("%s: unexpected result from mx_handle_get_info\n", __func__);
+        unittest_printf("%s: unexpected result from mx_object_get_info\n", __func__);
         exit(TU_FAIL_ERRCODE);
     }
     return info.return_code;
@@ -230,7 +230,7 @@ void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key)
 
 void tu_handle_get_basic_info(mx_handle_t handle, mx_handle_basic_info_t* info)
 {
-    mx_status_t status = mx_handle_get_info(handle, MX_INFO_HANDLE_BASIC,
+    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC,
                                             info, sizeof(*info));
     if (status < 0)
         tu_fatal(__func__, status);

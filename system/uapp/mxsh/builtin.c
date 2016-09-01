@@ -316,7 +316,7 @@ static int mxc_runtests(int argc, char** argv) {
 
         // read the return code
         mx_process_info_t proc_info;
-        mx_ssize_t info_status = mx_handle_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
+        mx_ssize_t info_status = mx_object_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
         mx_handle_close(handle);
 
         if (info_status != sizeof(proc_info)) {

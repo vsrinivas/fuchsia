@@ -263,11 +263,11 @@ int main(int argc, char** argv) {
     check("mx_handle_wait_one", status);
 
     mx_process_info_t info;
-    mx_ssize_t n = mx_handle_get_info(proc, MX_INFO_PROCESS,
+    mx_ssize_t n = mx_object_get_info(proc, MX_INFO_PROCESS,
                                       &info, sizeof(info));
-    check("mx_handle_get_info", n);
+    check("mx_object_get_info", n);
     if (n != (mx_ssize_t)sizeof(info)) {
-        fprintf(stderr, "mx_handle_get_info short read: %zu != %zu\n",
+        fprintf(stderr, "mx_object_get_info short read: %zu != %zu\n",
                 (size_t)n, sizeof(info));
         exit(2);
     }

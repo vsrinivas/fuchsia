@@ -347,7 +347,7 @@ mx_handle_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights) {
     return replacement_hv;
 }
 
-mx_ssize_t sys_handle_get_info(mx_handle_t handle, uint32_t topic, mxtl::user_ptr<void> _info,
+mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, mxtl::user_ptr<void> _info,
                                mx_size_t info_size) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;

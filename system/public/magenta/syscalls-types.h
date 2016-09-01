@@ -136,12 +136,12 @@ typedef enum {
 // let any additional exception handlers (eg, system after process) take a shot
 // at it, and if there are no additional handlers, the thread will terminate
 
-// Valid topics for mx_handle_get_info.
+// Valid topics for mx_object_get_info.
 typedef enum {
     MX_INFO_HANDLE_VALID,
     MX_INFO_HANDLE_BASIC,
     MX_INFO_PROCESS,
-} mx_handle_info_topic_t;
+} mx_object_info_topic_t;
 
 typedef enum {
     MX_OBJ_TYPE_NONE                = 0,

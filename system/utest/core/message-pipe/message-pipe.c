@@ -236,7 +236,7 @@ bool message_pipe_non_transferable(void) {
     mx_handle_t event = mx_event_create(0u);
     ASSERT_GT(event, 0, "failed to create event");
     mx_handle_basic_info_t event_handle_info;
-    mx_ssize_t get_info_result = mx_handle_get_info(event, MX_INFO_HANDLE_BASIC, &event_handle_info,
+    mx_ssize_t get_info_result = mx_object_get_info(event, MX_INFO_HANDLE_BASIC, &event_handle_info,
                                                     sizeof(event_handle_info));
     ASSERT_EQ(get_info_result, (mx_ssize_t)sizeof(event_handle_info), "failed to get event info");
     mx_rights_t initial_event_rights = event_handle_info.rights;
