@@ -329,7 +329,6 @@ static int cmd_crash(int argc, const cmd_args *argv)
     if (argc > 1) {
         if (!strcmp(argv[1].str, "thread")) {
             thread_t *t = thread_create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
-            t->tls[0] = 0;
             thread_resume(t);
 
             thread_join(t, NULL, INFINITE_TIME);

@@ -209,12 +209,6 @@ thread_t *thread_create_etc(
     /* save whether or not we need to free the thread struct and/or stack */
     t->flags = flags;
 
-    /* inheirit thread local storage from the parent */
-    thread_t *current_thread = get_current_thread();
-    int i;
-    for (i=0; i < MAX_TLS_ENTRY; i++)
-        t->tls[i] = current_thread->tls[i];
-
     if (likely(alt_trampoline == NULL)) {
         alt_trampoline = initial_thread_func;
     }
@@ -1192,14 +1186,6 @@ void dump_thread(thread_t *t)
 #if WITH_KERNEL_VM
     dprintf(INFO, "\taspace %p\n", t->aspace);
 #endif
-    if (MAX_TLS_ENTRY > 0) {
-        dprintf(INFO, "\ttls:");
-        int i;
-        for (i=0; i < MAX_TLS_ENTRY; i++) {
-            dprintf(INFO, " 0x%lx", t->tls[i]);
-        }
-        dprintf(INFO, "\n");
-    }
     arch_dump_thread(t);
 }
 

@@ -43,7 +43,7 @@ public:
     ~UserThread();
 
     static UserThread* GetCurrent() {
-        return reinterpret_cast<UserThread*>(tls_get(TLS_ENTRY_LKUSER));
+        return reinterpret_cast<UserThread*>(get_current_thread()->user_thread);
     }
 
     // Performs initialization on a newly constructed UserThread

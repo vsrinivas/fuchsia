@@ -89,7 +89,7 @@ status_t UserThread::Initialize(mxtl::StringPiece name) {
     thread_set_exit_callback(&thread_, &ThreadExitCallback, reinterpret_cast<void*>(this));
 
     // set the per-thread pointer
-    thread_.tls[TLS_ENTRY_LKUSER] = reinterpret_cast<uintptr_t>(this);
+    lkthread->user_thread = reinterpret_cast<void*>(this);
 
     // associate the proc's address space with this thread
     process_->aspace()->AttachToThread(lkthread);

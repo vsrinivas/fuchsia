@@ -93,6 +93,9 @@ typedef struct thread {
     vmm_aspace_t *aspace;
 #endif
 
+    /* pointer to user thread if one exists for this thread */
+    void* user_thread;
+
     /* accounting information */
     lk_bigtime_t last_started_running_us;
     /* Total time in THREAD_RUNNING state.  If the thread is currently in
@@ -120,16 +123,9 @@ typedef struct thread {
     thread_start_routine entry;
     void *arg;
 
-#if WITH_DEBUG_LINEBUFFER
-    int linebuffer_pos;
-#endif
-
     /* return code */
     int retcode;
     struct wait_queue retcode_wait_queue;
-
-    /* thread local storage */
-    uintptr_t tls[MAX_TLS_ENTRY];
 
     /* callbacks particular events */
     thread_exit_callback_t exit_callback;
@@ -138,6 +134,7 @@ typedef struct thread {
     char name[THREAD_NAME_LENGTH];
 #if WITH_DEBUG_LINEBUFFER
     /* buffering for debug/klog output */
+    int linebuffer_pos;
     char linebuffer[THREAD_LINEBUFFER_LENGTH];
 #endif
 } thread_t;
@@ -238,25 +235,6 @@ static inline bool thread_lock_held(void)
 {
     return spin_lock_held(&thread_lock);
 }
-
-/* thread local storage */
-static inline __ALWAYS_INLINE uintptr_t tls_get(uint entry)
-{
-    return get_current_thread()->tls[entry];
-}
-
-static inline __ALWAYS_INLINE uintptr_t __tls_set(uint entry, uintptr_t val)
-{
-    uintptr_t oldval = get_current_thread()->tls[entry];
-    get_current_thread()->tls[entry] = val;
-    return oldval;
-}
-
-#define tls_set(e,v) \
-    ({ \
-        static_assert((e) < MAX_TLS_ENTRY, ""); \
-        __tls_set(e, v); \
-    })
 
 /* thread level statistics */
 #if THREAD_STATS
