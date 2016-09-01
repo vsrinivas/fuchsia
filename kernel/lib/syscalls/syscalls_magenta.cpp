@@ -1018,6 +1018,43 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     return process->Start(mxtl::move(thread), pc, sp, arg_nhv, arg2);
 }
 
+// helper routine for sys_task_kill
+template <typename T>
+static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t rights) {
+    auto task = dispatcher->get_specific<T>();
+    if (!task)
+        return ERR_WRONG_TYPE;
+
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return ERR_ACCESS_DENIED;
+
+    task->Kill();
+    return NO_ERROR;
+}
+
+mx_status_t sys_task_kill(mx_handle_t task_handle) {
+    LTRACEF("handle %#x\n", task_handle);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // get dispatcher to the handle passed in
+    // use the bool version of GetDispatcher to just get a raw dispatcher
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    if (!up->GetDispatcher(task_handle, &dispatcher, &rights))
+        return up->BadHandle(task_handle, ERR_BAD_HANDLE);
+
+    // see if it's a process or thread and dispatch accordingly
+    switch (dispatcher->get_type()) {
+        case MX_OBJ_TYPE_PROCESS:
+            return kill_task<ProcessDispatcher>(mxtl::move(dispatcher), rights);
+        case MX_OBJ_TYPE_THREAD:
+            return kill_task<ThreadDispatcher>(mxtl::move(dispatcher), rights);
+        default:
+            return ERR_WRONG_TYPE;
+    }
+}
+
 mx_handle_t sys_event_create(uint32_t options) {
     LTRACEF("options 0x%x\n", options);
 

@@ -118,7 +118,10 @@ MAGENTA_SYSCALL_DEF(3, 3, 84, mx_status_t, process_unmap_vm, mx_handle_t proc_ha
                     mx_size_t len)
 MAGENTA_SYSCALL_DEF(4, 4, 85, mx_status_t, process_protect_vm, mx_handle_t proc_handle, uintptr_t address,
                     mx_size_t len, uint32_t prot);
+
+// Shared between process and threads
 MAGENTA_SYSCALL_DEF(2, 2, 86, mx_status_t, task_resume, mx_handle_t task_handle, uint32_t options);
+MAGENTA_SYSCALL_DEF(1, 1, 87, mx_status_t, task_kill, mx_handle_t task_handle);
 
 // Synchronization
 MAGENTA_SYSCALL_DEF(1, 1, 90, mx_handle_t, event_create, uint32_t options)

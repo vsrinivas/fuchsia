@@ -20,6 +20,7 @@ public:
     mx_koid_t get_inner_koid() const final { return thread_->get_koid(); }
 
     mx_status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2) { return thread_->Start(pc, sp, arg1, arg2); }
+    void Kill() { thread_->Kill(); }
 
     StateTracker* get_state_tracker() final;
 
