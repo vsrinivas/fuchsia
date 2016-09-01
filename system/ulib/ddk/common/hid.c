@@ -646,7 +646,7 @@ mx_status_t hid_add_device(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* 
 
     status = dev->ops->set_idle(dev, 0, 0);
     if (status != NO_ERROR) {
-        printf("W: set_idle failed: %d\n", status);
+        printf("W: set_idle failed for %s: %d\n", name, status);
         // continue anyway
     }
 

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <ddk/ioctl.h>
+#include <magenta/device/ioctl.h>
 #include <magenta/compiler.h>
 
 __BEGIN_CDECLS;
