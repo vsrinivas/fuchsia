@@ -2,6 +2,10 @@
     "labels": [ "//third_party/speccpu2000" ],
     "binaries": [
         {
+            "binary": "164.gzip",
+            "bootfs_path": "benchmarks/164.gzip"
+        },
+        {
             "binary": "176.gcc",
             "bootfs_path": "benchmarks/176.gcc"
         },
@@ -19,6 +23,26 @@
         }
     ],
     "resources": [
+        {
+          "file": "third_party/speccpu2000/164.gzip/data/ref/input/input.graphic",
+          "bootfs_path": "benchmarks/data/164.gzip/input.graphic"
+        },
+        {
+          "file": "third_party/speccpu2000/164.gzip/data/ref/input/input.log",
+          "bootfs_path": "benchmarks/data/164.gzip/input.log"
+        },
+        {
+          "file": "third_party/speccpu2000/164.gzip/data/ref/input/input.program",
+          "bootfs_path": "benchmarks/data/164.gzip/input.program"
+        },
+        {
+          "file": "third_party/speccpu2000/164.gzip/data/ref/input/input.random",
+          "bootfs_path": "benchmarks/data/164.gzip/input.random"
+        },
+        {
+          "file": "third_party/speccpu2000/164.gzip/data/ref/input/input.source",
+          "bootfs_path": "benchmarks/data/164.gzip/input.source"
+        },
         {
           "file": "third_party/speccpu2000/177.mesa/data/ref/input/mesa.in",
           "bootfs_path": "benchmarks/data/177.mesa/mesa.mesh"
