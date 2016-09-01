@@ -38,14 +38,16 @@ typedef struct i2c_ioctl_set_bus_frequency_args {
     uint32_t frequency;
 } i2c_ioctl_set_bus_frequency_args_t;
 
+#define I2C_SEGMENT_TYPE_END   0
+#define I2C_SEGMENT_TYPE_READ  1
+#define I2C_SEGMENT_TYPE_WRITE 2
 typedef struct i2c_slave_ioctl_segment {
-    int read;
+    int type;
     int len;
-    uint8_t buf[];
 } i2c_slave_ioctl_segment_t;
 
 typedef struct i2c_slave_segment {
-    int read;
+    int type;
     int len;
     uint8_t* buf;
 } i2c_slave_segment_t;

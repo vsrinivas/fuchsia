@@ -5,13 +5,13 @@
 #include <assert.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 #include <intel-serialio/reg.h>
 #include <intel-serialio/serialio.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <magenta/device/i2c.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
