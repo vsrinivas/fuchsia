@@ -17,6 +17,30 @@ metadata.
 Reading the boot sector is one of the first steps required when mounting a FAT
 filesystem.
 
+## [Clusters & FAT](cluster)
+
+The FAT filesystem manages allocation of chunks of the disk through objects
+called "clusters", which reside in the File Allocation Table (FAT). These
+clusters are a linked list of allocated chunks of disk, but they are stored in a
+linear, reserved portion of the disk.
+
+The FAT can be viewed as a large array of clusters. The value at FAT[N] will
+store information about cluster "N", which corresponds to some linearly-mapped
+portion of the disk's free address space, f(N). The particular value can have
+many meanings:
+  - If FAT[N] = FREE, then cluster "N" is not allocated to any file.
+  - If FAT[N] = EOF, then cluster "N" is allocated, but it is the last cluster
+    allocated to a particular file.
+  - If FAT[N] = M, then cluster "N" is allocated, as well as cluster "M". To
+    continue looking up information about the chain of clusters allocated to the
+    file, look at FAT[M].
+
+Cluster management is full of edge-cases and special values (such as "reserved"
+clusters, varying constants between FAT12/16/32, and the opportunity for race
+conditions). To simplify this behavior, the cluster package wraps the FAT in a
+thread-safe interface, which can be used to allocate, delete, and observe
+clusters.
+
 ## [Direntry & FAT Filenames](direntry)
 
 Support for FAT filenames is complex:
