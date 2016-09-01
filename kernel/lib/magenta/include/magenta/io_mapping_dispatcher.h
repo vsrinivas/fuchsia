@@ -22,8 +22,7 @@ public:
     IoMappingDispatcher& operator=(const IoMappingDispatcher &) = delete;
 
     ~IoMappingDispatcher();
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_IOMAP; }
-    IoMappingDispatcher* get_io_mapping_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_IOMAP; }
 
     // TODO(cpu): this should be removed when device waiting is refactored.
     virtual void Close();

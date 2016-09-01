@@ -26,8 +26,7 @@ public:
     ~SocketDispatcher() final;
 
     // Dispatcher implementation.
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_SOCKET; }
-    SocketDispatcher* get_socket_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_SOCKET; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
 

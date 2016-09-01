@@ -121,9 +121,7 @@ public:
     static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
 
     ~WaitSetDispatcher() final;
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_WAIT_SET; }
-    WaitSetDispatcher* get_wait_set_dispatcher() final { return this; }
-
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_WAIT_SET; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
 
     // Adds an entry (previously constructed using Entry::Create()) for the given handle.

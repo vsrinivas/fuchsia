@@ -37,8 +37,7 @@ public:
     }
 
     // Dispatcher implementation
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PROCESS; }
-    ProcessDispatcher* get_process_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PROCESS; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final { return AllHandlesClosed(); }
 

@@ -89,7 +89,7 @@ static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
         mxtl::move(vmo), &dispatcher, &rights);
     if (result == NO_ERROR) {
         if (disp_ptr)
-            disp_ptr->reset(dispatcher->get_vm_object_dispatcher());
+            disp_ptr->reset(dispatcher->get_specific<VmObjectDispatcher>());
         if (readonly)
             rights &= ~MX_RIGHT_WRITE;
         if (ptr)
@@ -184,7 +184,7 @@ static HandleUniquePtr make_bootstrap_pipe(
         if (status != NO_ERROR)
             return nullptr;
         user_pipe_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
-        kernel_pipe.reset(mpd1->get_message_pipe_dispatcher());
+        kernel_pipe.reset(mpd1->get_specific<MessagePipeDispatcher>());
     }
     if (!user_pipe_handle)
         return nullptr;
@@ -320,7 +320,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
 
     handles[BOOTSTRAP_PROC].reset(MakeHandle(proc_disp, rights));
 
-    auto proc = proc_disp->get_process_dispatcher();
+    auto proc = proc_disp->get_specific<ProcessDispatcher>();
 
     // Map the userboot image anywhere.
     uintptr_t userboot_base = 0;
@@ -371,7 +371,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         status = ThreadDispatcher::Create(ut, &ut_disp, &rights);
         if (status < 0)
             return status;
-        thread = ut_disp->get_thread_dispatcher();
+        thread = ut_disp->get_specific<ThreadDispatcher>();
         handles[BOOTSTRAP_THREAD].reset(MakeHandle(mxtl::move(ut_disp), rights));
     }
     DEBUG_ASSERT(thread);

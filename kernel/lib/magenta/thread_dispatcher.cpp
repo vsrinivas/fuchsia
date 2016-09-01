@@ -24,7 +24,7 @@ status_t ThreadDispatcher::Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    thread->set_dispatcher(disp->get_thread_dispatcher());
+    thread->set_dispatcher(disp->get_specific<ThreadDispatcher>());
 
     *rights = kDefaultThreadRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);

@@ -20,8 +20,7 @@ public:
                            mx_rights_t* rights);
 
     ~VmObjectDispatcher() final;
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_VMEM; }
-    VmObjectDispatcher* get_vm_object_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMEM; }
 
     mx_ssize_t Read(void* user_data, mx_size_t length, uint64_t offset);
     mx_ssize_t Write(const void* user_data, mx_size_t length, uint64_t offset);

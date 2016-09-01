@@ -139,7 +139,7 @@ mx_handle_t sys_debug_task_get_child(mx_handle_t handle, uint64_t koid) {
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = dispatcher->get_process_dispatcher();
+    auto process = dispatcher->get_specific<ProcessDispatcher>();
     if (process) {
         auto thread = process->LookupThreadById(koid);
         if (!thread)
@@ -167,7 +167,7 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     if (!up->GetDispatcher(proc, &pd, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = pd->get_process_dispatcher();
+    auto process = pd->get_specific<ProcessDispatcher>();
     if (!process)
         return ERR_WRONG_TYPE;
 
@@ -200,7 +200,7 @@ mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t le
     if (!up->GetDispatcher(proc, &pd, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = pd->get_process_dispatcher();
+    auto process = pd->get_specific<ProcessDispatcher>();
     if (!process)
         return ERR_WRONG_TYPE;
 

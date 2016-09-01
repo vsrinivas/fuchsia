@@ -19,7 +19,7 @@ public:
                            mx_rights_t* rights);
 
     ~EventDispatcher() final;
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_EVENT; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_EVENT; }
 
     virtual StateTracker* get_state_tracker() final { return &state_tracker_; }
 

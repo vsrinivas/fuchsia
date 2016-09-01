@@ -71,7 +71,7 @@ uint32_t BuildHandleStats(const ProcessDispatcher& pd, uint32_t* handle_type, si
     uint32_t total = 0;
     for (const auto& handle : pd.handles_) {
         if (handle_type) {
-            uint32_t type = static_cast<uint32_t>(handle.dispatcher()->GetType());
+            uint32_t type = static_cast<uint32_t>(handle.dispatcher()->get_type());
             if (size > type)
                 ++handle_type[type];
         }
@@ -143,7 +143,7 @@ void DumpProcessHandles(mx_koid_t id) {
     AutoLock lock(&pd->handle_table_lock_);
     uint32_t total = 0;
     for (const auto& handle : pd->handles_) {
-        auto type = handle.dispatcher()->GetType();
+        auto type = handle.dispatcher()->get_type();
         printf("%9d %7llu : %s\n",
             pd->MapHandleToValue(&handle),
             handle.dispatcher()->get_koid(),

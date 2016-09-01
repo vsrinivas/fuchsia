@@ -15,8 +15,7 @@ public:
     static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
 
     ~LogDispatcher() final;
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_LOG; }
-    LogDispatcher* get_log_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_LOG; }
 
     status_t Write(const void* ptr, size_t len, uint32_t flags);
     status_t Read(void* ptr, size_t len, uint32_t flags);

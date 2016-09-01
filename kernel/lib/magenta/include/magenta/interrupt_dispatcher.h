@@ -19,8 +19,7 @@ public:
     InterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
 
     virtual ~InterruptDispatcher() final;
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_INTERRUPT; }
-    InterruptDispatcher* get_interrupt_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_INTERRUPT; }
 
     // Wait for an interrupt.
     status_t InterruptWait();

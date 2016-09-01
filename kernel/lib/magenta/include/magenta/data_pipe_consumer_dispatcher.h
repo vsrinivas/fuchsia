@@ -27,8 +27,7 @@ public:
                               mx_rights_t* rights);
 
     ~DataPipeConsumerDispatcher() final;
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_DATA_PIPE_CONSUMER; }
-    DataPipeConsumerDispatcher* get_data_pipe_consumer_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_DATA_PIPE_CONSUMER; }
     StateTracker* get_state_tracker() final;
 
     mx_status_t Read(void* buffer, mx_size_t* requested, bool all_or_none, bool discard, bool peek);

@@ -82,7 +82,7 @@ mx_status_t validate_resource_handle(mx_handle_t handle) {
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    if (dispatcher->GetType() != MX_OBJ_TYPE_RESOURCE)
+    if (dispatcher->get_type() != MX_OBJ_TYPE_RESOURCE)
         return ERR_WRONG_TYPE;
 
     return NO_ERROR;
@@ -371,7 +371,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, mxtl::user_pt
             mx_handle_basic_info_t info = {
                 dispatcher->get_koid(),
                 rights,
-                dispatcher->GetType(),
+                dispatcher->get_type(),
                 waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
             };
 
@@ -387,7 +387,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, mxtl::user_pt
             if (info_size < sizeof(mx_process_info_t))
                 return ERR_NOT_ENOUGH_BUFFER;
 
-            auto process = dispatcher->get_process_dispatcher();
+            auto process = dispatcher->get_specific<ProcessDispatcher>();
             if (!process)
                 return ERR_WRONG_TYPE;
 
@@ -429,7 +429,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
         case MX_PROP_BAD_HANDLE_POLICY: {
             if (size != sizeof(uint32_t))
                 return ERR_NOT_ENOUGH_BUFFER;
-            auto process = dispatcher->get_process_dispatcher();
+            auto process = dispatcher->get_specific<ProcessDispatcher>();
             if (!process)
                 return ERR_WRONG_TYPE;
             uint32_t value = process->get_bad_handle_policy();
@@ -466,7 +466,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
         case MX_PROP_BAD_HANDLE_POLICY: {
             if (size < sizeof(uint32_t))
                 return ERR_NOT_ENOUGH_BUFFER;
-            auto process = dispatcher->get_process_dispatcher();
+            auto process = dispatcher->get_specific<ProcessDispatcher>();
             if (!process)
                 return ERR_WRONG_TYPE;
             uint32_t value = 0;
@@ -493,7 +493,7 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value, mxtl::user_ptr<void> _byt
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
         return BadHandle();
 
-    auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
+    auto msg_pipe = dispatcher->get_specific<MessagePipeDispatcher>();
     if (!msg_pipe)
         return ERR_WRONG_TYPE;
 
@@ -592,7 +592,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value, mxtl::user_ptr<const voi
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
         return BadHandle();
 
-    auto msg_pipe = dispatcher->get_message_pipe_dispatcher();
+    auto msg_pipe = dispatcher->get_specific<MessagePipeDispatcher>();
     if (!msg_pipe)
         return ERR_WRONG_TYPE;
 
@@ -769,7 +769,7 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const c
         if (!up->GetDispatcher(process_handle, &process_dispatcher, &process_rights))
             return BadHandle();
 
-        process = process_dispatcher->get_process_dispatcher();
+        process = process_dispatcher->get_specific<ProcessDispatcher>();
         if (!process)
             return ERR_WRONG_TYPE;
 
@@ -813,7 +813,7 @@ mx_handle_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
     if (!up->GetDispatcher(thread_handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto thread = dispatcher->get_thread_dispatcher();
+    auto thread = dispatcher->get_specific<ThreadDispatcher>();
     if (!thread)
         return ERR_WRONG_TYPE;
 
@@ -939,7 +939,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     if (!up->GetDispatcher(process_handle, &process_dispatcher, &process_rights))
         return BadHandle();
 
-    auto process = process_dispatcher->get_process_dispatcher();
+    auto process = process_dispatcher->get_specific<ProcessDispatcher>();
     if (!process)
         return ERR_WRONG_TYPE;
 
@@ -952,7 +952,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     if (!up->GetDispatcher(thread_handle, &thread_dispatcher, &thread_rights))
         return BadHandle();
 
-    auto thread = thread_dispatcher->get_thread_dispatcher();
+    auto thread = thread_dispatcher->get_specific<ThreadDispatcher>();
     if (!thread)
         return ERR_WRONG_TYPE;
 
@@ -1065,7 +1065,7 @@ mx_ssize_t sys_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto vmo = dispatcher->get_vm_object_dispatcher();
+    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
     if (!vmo)
         return ERR_WRONG_TYPE;
 
@@ -1086,7 +1086,7 @@ mx_ssize_t sys_vmo_write(mx_handle_t handle, const void* data, uint64_t offset, 
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto vmo = dispatcher->get_vm_object_dispatcher();
+    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
     if (!vmo)
         return ERR_WRONG_TYPE;
 
@@ -1107,7 +1107,7 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, mxtl::user_ptr<uint64_t> _size)
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto vmo = dispatcher->get_vm_object_dispatcher();
+    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
     if (!vmo)
         return ERR_WRONG_TYPE;
 
@@ -1134,7 +1134,7 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto vmo = dispatcher->get_vm_object_dispatcher();
+    auto vmo = dispatcher->get_specific<VmObjectDispatcher>();
     if (!vmo)
         return ERR_WRONG_TYPE;
 
@@ -1162,7 +1162,7 @@ mx_status_t with_process_for_map(ProcessDispatcher* up,
     if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
         return BadHandle();
 
-    auto process = proc_dispatcher->get_process_dispatcher();
+    auto process = proc_dispatcher->get_specific<ProcessDispatcher>();
     if (!process)
         return ERR_WRONG_TYPE;
 
@@ -1190,7 +1190,7 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
     if (!up->GetDispatcher(vmo_handle, &vmo_dispatcher, &vmo_rights))
         return BadHandle();
 
-    auto vmo = vmo_dispatcher->get_vm_object_dispatcher();
+    auto vmo = vmo_dispatcher->get_specific<VmObjectDispatcher>();
     if (!vmo)
         return ERR_WRONG_TYPE;
 
@@ -1242,7 +1242,7 @@ mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, m
         if (!up->GetDispatcher(proc_handle, &proc_dispatcher, &proc_rights))
             return BadHandle();
 
-        auto process = proc_dispatcher->get_process_dispatcher();
+        auto process = proc_dispatcher->get_specific<ProcessDispatcher>();
         if (!process)
             return ERR_WRONG_TYPE;
 
@@ -1329,7 +1329,7 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<const voi
     if (!up->GetDispatcher(log_handle, &log_dispatcher, &log_rights))
         return BadHandle();
 
-    auto log = log_dispatcher->get_log_dispatcher();
+    auto log = log_dispatcher->get_specific<LogDispatcher>();
     if (!log)
         return ERR_WRONG_TYPE;
 
@@ -1353,7 +1353,7 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<void> ptr,
     if (!up->GetDispatcher(log_handle, &log_dispatcher, &log_rights))
         return BadHandle();
 
-    auto log = log_dispatcher->get_log_dispatcher();
+    auto log = log_dispatcher->get_specific<LogDispatcher>();
     if (!log)
         return ERR_WRONG_TYPE;
 
@@ -1400,7 +1400,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto ioport = dispatcher->get_io_port_dispatcher();
+    auto ioport = dispatcher->get_specific<IOPortDispatcher>();
     if (!ioport)
         return ERR_WRONG_TYPE;
 
@@ -1427,7 +1427,7 @@ mx_status_t sys_port_wait(mx_handle_t handle, mxtl::user_ptr<void> packet, mx_si
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto ioport = dispatcher->get_io_port_dispatcher();
+    auto ioport = dispatcher->get_specific<IOPortDispatcher>();
     if (!ioport)
         return ERR_WRONG_TYPE;
 
@@ -1459,7 +1459,7 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
     if (!up->GetDispatcher(handle, &iop_d, &rights))
         return BadHandle();
 
-    auto ioport = iop_d->get_io_port_dispatcher();
+    auto ioport = iop_d->get_specific<IOPortDispatcher>();
     if (!ioport)
         return ERR_WRONG_TYPE;
 
@@ -1473,7 +1473,7 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
         return ERR_ACCESS_DENIED;
 
-    auto msg_pipe = source_d->get_message_pipe_dispatcher();
+    auto msg_pipe = source_d->get_specific<MessagePipeDispatcher>();
     if (!msg_pipe)
         return ERR_NOT_SUPPORTED;
 
@@ -1542,7 +1542,7 @@ mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requ
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto producer = dispatcher->get_data_pipe_producer_dispatcher();
+    auto producer = dispatcher->get_specific<DataPipeProducerDispatcher>();
     if (!producer)
         return ERR_WRONG_TYPE;
 
@@ -1570,7 +1570,7 @@ mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t reque
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
+    auto consumer = dispatcher->get_specific<DataPipeConsumerDispatcher>();
     if (!consumer)
         return ERR_WRONG_TYPE;
 
@@ -1611,7 +1611,7 @@ mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, uintptr_
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto producer = dispatcher->get_data_pipe_producer_dispatcher();
+    auto producer = dispatcher->get_specific<DataPipeProducerDispatcher>();
     if (!producer)
         return ERR_WRONG_TYPE;
 
@@ -1645,7 +1645,7 @@ mx_status_t sys_datapipe_end_write(mx_handle_t handle, mx_size_t written) {
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto producer = dispatcher->get_data_pipe_producer_dispatcher();
+    auto producer = dispatcher->get_specific<DataPipeProducerDispatcher>();
     if (!producer)
         return ERR_WRONG_TYPE;
 
@@ -1665,7 +1665,7 @@ mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, uintptr_t
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
+    auto consumer = dispatcher->get_specific<DataPipeConsumerDispatcher>();
     if (!consumer)
         return ERR_WRONG_TYPE;
 
@@ -1701,7 +1701,7 @@ mx_status_t sys_datapipe_end_read(mx_handle_t handle, mx_size_t read) {
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto consumer = dispatcher->get_data_pipe_consumer_dispatcher();
+    auto consumer = dispatcher->get_specific<DataPipeConsumerDispatcher>();
     if (!consumer)
         return ERR_WRONG_TYPE;
 
@@ -1785,7 +1785,7 @@ mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
     if (!ws_handle)
         return BadHandle();
     // No need to take a ref to the dispatcher, since we're under the handle table lock. :-/
-    auto ws_dispatcher = ws_handle->dispatcher()->get_wait_set_dispatcher();
+    auto ws_dispatcher = ws_handle->dispatcher()->get_specific<WaitSetDispatcher>();
     if (!ws_dispatcher)
         return ERR_WRONG_TYPE;
     if (!magenta_rights_check(ws_handle->rights(), MX_RIGHT_WRITE))
@@ -1809,7 +1809,7 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
     uint32_t rights;
     if (!up->GetDispatcher(ws_handle, &dispatcher, &rights))
         return BadHandle();
-    auto ws_dispatcher = dispatcher->get_wait_set_dispatcher();
+    auto ws_dispatcher = dispatcher->get_specific<WaitSetDispatcher>();
     if (!ws_dispatcher)
         return ERR_WRONG_TYPE;
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
@@ -1848,7 +1848,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     uint32_t rights;
     if (!up->GetDispatcher(ws_handle, &dispatcher, &rights))
         return BadHandle();
-    auto ws_dispatcher = dispatcher->get_wait_set_dispatcher();
+    auto ws_dispatcher = dispatcher->get_specific<WaitSetDispatcher>();
     if (!ws_dispatcher)
         return ERR_WRONG_TYPE;
     if (!magenta_rights_check(rights, MX_RIGHT_READ))
@@ -1922,7 +1922,7 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto socket = dispatcher->get_socket_dispatcher();
+    auto socket = dispatcher->get_specific<SocketDispatcher>();
     if (!socket)
         return ERR_WRONG_TYPE;
 
@@ -1948,7 +1948,7 @@ mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return BadHandle();
 
-    auto socket = dispatcher->get_socket_dispatcher();
+    auto socket = dispatcher->get_specific<SocketDispatcher>();
     if (!socket)
         return ERR_WRONG_TYPE;
 

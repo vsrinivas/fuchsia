@@ -47,13 +47,13 @@ mx_status_t object_unbind_exception_port(mx_handle_t obj_handle) {
     if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = dispatcher->get_process_dispatcher();
+    auto process = dispatcher->get_specific<ProcessDispatcher>();
     if (process) {
         process->ResetExceptionPort();
         return NO_ERROR;
     }
 
-    auto thread = dispatcher->get_thread_dispatcher();
+    auto thread = dispatcher->get_specific<ThreadDispatcher>();
     if (thread) {
         thread->ResetExceptionPort();
         return NO_ERROR;
@@ -70,7 +70,7 @@ mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport
     mx_rights_t ioport_rights;
     if (!up->GetDispatcher(eport_handle, &ioport_dispatcher, &ioport_rights))
         return ERR_BAD_HANDLE;
-    auto ioport = ioport_dispatcher->get_io_port_dispatcher();
+    auto ioport = ioport_dispatcher->get_specific<IOPortDispatcher>();
     if (!ioport)
         return ERR_WRONG_TYPE;
 
@@ -90,12 +90,12 @@ mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport
     if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = dispatcher->get_process_dispatcher();
+    auto process = dispatcher->get_specific<ProcessDispatcher>();
     if (process) {
         return process->SetExceptionPort(mxtl::move(eport));
     }
 
-    auto thread = dispatcher->get_thread_dispatcher();
+    auto thread = dispatcher->get_specific<ThreadDispatcher>();
     if (thread) {
         return thread->SetExceptionPort(mxtl::move(eport));
     }
@@ -130,7 +130,7 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto thread = dispatcher->get_thread_dispatcher();
+    auto thread = dispatcher->get_specific<ThreadDispatcher>();
     if (!thread)
         return ERR_WRONG_TYPE;
 

@@ -23,8 +23,7 @@ public:
                            mxtl::RefPtr<Dispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_PCI_INT; }
-    PciInterruptDispatcher* get_pci_interrupt_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PCI_INT; }
 
     // TODO(cpu): this should be removed when device waiting is refactored.
     void Close();

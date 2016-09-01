@@ -18,10 +18,7 @@ public:
     static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
 
     virtual ~ResourceDispatcher() final;
-
-    mx_obj_type_t GetType() const final { return MX_OBJ_TYPE_RESOURCE; }
-
-    ResourceDispatcher* get_resource_dispatcher() final { return this; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_RESOURCE; }
 
     virtual Type GetResourceType() const final { return Type::KERNEL; }
 

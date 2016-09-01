@@ -67,10 +67,10 @@ void DeleteHandle(Handle* handle) {
         // This code is sad but necessary because certain dispatchers
         // have complicated Close() logic which cannot be untangled at
         // this time.
-        switch (disp->GetType()) {
-            case MX_OBJ_TYPE_PCI_INT: disp->get_pci_interrupt_dispatcher()->Close();
+        switch (disp->get_type()) {
+            case MX_OBJ_TYPE_PCI_INT: disp->get_specific<PciInterruptDispatcher>()->Close();
                 break;
-            case MX_OBJ_TYPE_IOMAP: disp->get_io_mapping_dispatcher()->Close();
+            case MX_OBJ_TYPE_IOMAP: disp->get_specific<IoMappingDispatcher>()->Close();
                 break;
             default:  break;
                 // This is fine. See for example the LogDispatcher.
