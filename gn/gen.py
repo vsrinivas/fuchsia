@@ -20,6 +20,8 @@ def main():
     parser.add_argument("--outdir", "-o", help="output directory", default="out/debug")
     parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
                         choices=['x86-64', 'aarch64'])
+    parser.add_argument("--goma", help="use goma", metavar="GOMADIR",
+                        nargs='?', const=True, default=False)
     args = parser.parse_args()
     if args.release:
         args.outdir = "out/release"
@@ -37,6 +39,13 @@ def main():
 
     if args.release:
         gn_args += " is_debug=false"
+    if args.goma:
+        gn_args += " use_goma=true"
+        if type(args.goma) is str:
+            path = os.path.abspath(args.goma)
+            if not os.path.exists(path):
+                parser.error('invalid goma path: %s' % path)
+            gn_args += " goma_dir=\"" + path + "\""
     gn_command += [gn_args]
 
     return gn.run(gn_command)
