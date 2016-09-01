@@ -138,69 +138,43 @@ static mx_status_t choose_load_bias(mx_handle_t proc,
     return NO_ERROR;
 }
 
-static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
-                                uintptr_t bias, const elf_phdr_t* ph) {
-    const uint32_t flags =
-        // TODO(mcgrathr): This should use the copy-on-write flag, but
-        // it doesn't exist yet.  Instead, for now this eagerly copies
-        // the data into a new VMO.
-        MX_VM_FLAG_FIXED |
+// TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
+// This will go away when we have copy-on-write.
+static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
+                                    uintptr_t* file_start,
+                                    uintptr_t* file_end) {
+    mx_handle_t copy_vmo = mx_vmo_create(data_size);
+    if (copy_vmo < 0)
+        return copy_vmo;
+    uintptr_t window = 0;
+    mx_status_t status = mx_process_map_vm(0, vmo,
+                                           *file_start, data_size, &window,
+                                           MX_VM_FLAG_PERM_READ);
+    if (status < 0) {
+        mx_handle_close(copy_vmo);
+        return status;
+    }
+    mx_ssize_t n = mx_vmo_write(copy_vmo, (void*)window, 0, data_size);
+    mx_process_unmap_vm(0, window, 0);
+    if (n >= 0 && n != (mx_ssize_t)data_size)
+        n = ERR_IO;
+    if (n < 0) {
+        mx_handle_close(copy_vmo);
+        return n;
+    }
+    *file_end -= *file_start;
+    *file_start = 0;
+    return copy_vmo;
+}
+
+static mx_status_t finish_load_segment(
+    mx_handle_t proc, mx_handle_t vmo, const elf_phdr_t* ph,
+    uintptr_t start, size_t size,
+    uintptr_t file_start, uintptr_t file_end, size_t partial_page) {
+    const uint32_t flags = MX_VM_FLAG_FIXED |
         ((ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0) |
         ((ph->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0) |
         ((ph->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0);
-
-    // The p_vaddr can start in the middle of a page, but the
-    // semantics are that all the whole pages containing the
-    // p_vaddr+p_filesz range are mapped in.
-    uintptr_t start = (uintptr_t)ph->p_vaddr + bias;
-    uintptr_t end = start + ph->p_memsz;
-    start &= -PAGE_SIZE;
-    end = (end + PAGE_SIZE - 1) & -PAGE_SIZE;
-    size_t size = end - start;
-
-    // Nothing to do for an empty segment (degenerate case).
-    if (size == 0)
-        return NO_ERROR;
-
-    uintptr_t file_start = (uintptr_t)ph->p_offset;
-    uintptr_t file_end = file_start + ph->p_filesz;
-    const size_t partial_page = file_end & (PAGE_SIZE - 1);
-    file_start &= -PAGE_SIZE;
-    file_end &= -PAGE_SIZE;
-
-#if 1
-    // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
-    // This will go away when we have copy-on-write.
-    if (ph->p_flags & PF_W) {
-        uintptr_t data_end =
-            (ph->p_offset + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE;
-        const size_t data_size = data_end - file_start;
-        if (data_size > 0) {
-            mx_handle_t copy_vmo = mx_vmo_create(data_size);
-            if (copy_vmo < 0)
-                return copy_vmo;
-            uintptr_t window = 0;
-            mx_status_t status = mx_process_map_vm(
-                0, vmo, file_start, data_size, &window, MX_VM_FLAG_PERM_READ);
-            if (status < 0) {
-                mx_handle_close(copy_vmo);
-                return status;
-            }
-            mx_ssize_t n = mx_vmo_write(copy_vmo, (void*)window,
-                                              0, data_size);
-            mx_process_unmap_vm(0, window, 0);
-            if (n >= 0 && n != (mx_ssize_t)data_size)
-                n = ERR_IO;
-            if (n < 0) {
-                mx_handle_close(copy_vmo);
-                return n;
-            }
-            vmo = copy_vmo;                 // Leak the handle.
-            file_end -= file_start;
-            file_start = 0;
-        }
-    }
-#endif
 
     if (ph->p_filesz == ph->p_memsz)
         // Straightforward segment, map all the whole pages from the file.
@@ -253,6 +227,48 @@ static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
                                            size, &start, flags);
     mx_handle_close(bss_vmo);
 
+    return status;
+}
+
+static mx_status_t load_segment(mx_handle_t proc, mx_handle_t vmo,
+                                uintptr_t bias, const elf_phdr_t* ph) {
+    // The p_vaddr can start in the middle of a page, but the
+    // semantics are that all the whole pages containing the
+    // p_vaddr+p_filesz range are mapped in.
+    uintptr_t start = (uintptr_t)ph->p_vaddr + bias;
+    uintptr_t end = start + ph->p_memsz;
+    start &= -PAGE_SIZE;
+    end = (end + PAGE_SIZE - 1) & -PAGE_SIZE;
+    size_t size = end - start;
+
+    // Nothing to do for an empty segment (degenerate case).
+    if (size == 0)
+        return NO_ERROR;
+
+    uintptr_t file_start = (uintptr_t)ph->p_offset;
+    uintptr_t file_end = file_start + ph->p_filesz;
+    const size_t partial_page = file_end & (PAGE_SIZE - 1);
+    file_start &= -PAGE_SIZE;
+    file_end &= -PAGE_SIZE;
+
+    uintptr_t data_end =
+        (ph->p_offset + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE;
+    const size_t data_size = data_end - file_start;
+
+    // With no writable data, it's the simple case.
+    if (!(ph->p_flags & PF_W) || data_size == 0)
+        return finish_load_segment(proc, vmo, ph, start, size,
+                                   file_start, file_end, partial_page);
+
+    // For a writable segment, we need a writable VMO.
+    mx_handle_t writable_vmo = get_writable_vmo(vmo, data_size,
+                                                &file_start, &file_end);
+    if (writable_vmo < 0)
+        return writable_vmo;
+    mx_status_t status = finish_load_segment(proc, writable_vmo, ph,
+                                             start, size, file_start,
+                                             file_end, partial_page);
+    mx_handle_close(writable_vmo);
     return status;
 }
 
