@@ -13,6 +13,6 @@ void _panic(void* caller, const char* fmt, ...) {
 
     // call the exit syscall in a loop to satisfy NO_RETURN compiler semantics
     for (;;) {
-        mx_exit(1);
+        _mx_exit(1);
     }
 }

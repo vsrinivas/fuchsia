@@ -12,3 +12,5 @@
 // outside its own image, to where the vDSO will be found at runtime.
 #define FUNCTION(name, address, size) \
     PROVIDE_HIDDEN(name = CODE_END + address);
+
+#define WEAK_FUNCTION(name, address, size) FUNCTION(name, address, size)

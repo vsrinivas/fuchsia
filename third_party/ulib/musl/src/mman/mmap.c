@@ -48,7 +48,7 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         // round up to page size
         len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-        mx_handle_t vmo = mx_vmo_create(len);
+        mx_handle_t vmo = _mx_vmo_create(len);
         if (vmo < 0)
             return MAP_FAILED;
 
@@ -60,9 +60,9 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         mx_flags |= (flags & MAP_FIXED) ? MX_VM_FLAG_FIXED : 0;
 
         uintptr_t ptr = (uintptr_t)start;
-        mx_status_t status = mx_process_map_vm(libc.proc, vmo, 0, len,
-                                               &ptr, mx_flags);
-        mx_handle_close(vmo);
+        mx_status_t status = _mx_process_map_vm(libc.proc, vmo, 0, len,
+                                                &ptr, mx_flags);
+        _mx_handle_close(vmo);
         // TODO: map this as shared if we ever implement forking
         if (status < 0) {
             return MAP_FAILED;

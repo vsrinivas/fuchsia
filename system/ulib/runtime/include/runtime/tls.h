@@ -39,7 +39,8 @@ static inline void* mxr_tp_get(void) {
 static inline void mxr_tp_set(void* tp) {
     // TODO(kulakowski) Thread self handle.
     mx_handle_t self = 0;
-    mx_status_t status = mx_thread_arch_prctl(self, ARCH_SET_CP15_READONLY, (uintptr_t*)&tp);
+    mx_status_t status = _mx_thread_arch_prctl(
+        self, ARCH_SET_CP15_READONLY, (uintptr_t*)&tp);
     if (status != NO_ERROR)
         __builtin_trap();
 }
@@ -54,7 +55,8 @@ static inline void* mxr_tp_get(void) {
 static inline void mxr_tp_set(void* tp) {
     // TODO(kulakowski) Thread self handle.
     mx_handle_t self = 0;
-    mx_status_t status = mx_thread_arch_prctl(self, ARCH_SET_FS, (uintptr_t*)&tp);
+    mx_status_t status = _mx_thread_arch_prctl(
+        self, ARCH_SET_FS, (uintptr_t*)&tp);
     if (status != NO_ERROR)
         __builtin_trap();
 }

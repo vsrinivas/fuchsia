@@ -12,7 +12,7 @@ void __wait(volatile int* addr, volatile int* waiters, int val) {
     if (waiters)
         a_inc(waiters);
     while (*addr == val) {
-        mx_futex_wait((void*)addr, val, MX_TIME_INFINITE);
+        _mx_futex_wait((void*)addr, val, MX_TIME_INFINITE);
     }
     if (waiters)
         a_dec(waiters);

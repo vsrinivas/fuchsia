@@ -12,7 +12,7 @@ int thrd_sleep(const struct timespec* req, struct timespec* rem) {
     // which reports back how much time is remaining. Until then,
     // always report back 0 timeout remaining.
 
-    int ret = mx_nanosleep(__timespec_to_mx_time_t(*req));
+    int ret = _mx_nanosleep(__timespec_to_mx_time_t(*req));
     assert(ret == 0);
     if (rem) {
         *rem = (struct timespec){

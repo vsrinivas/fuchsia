@@ -52,8 +52,8 @@ static inline void unlock(volatile int* l) {
 
 static inline void unlock_requeue(volatile int* l, volatile int* r) {
     a_store(l, 0);
-    mx_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0, (void*)r,
-                     /* requeue count */ 1);
+    _mx_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0,
+                      (void*)r, /* requeue count */ 1);
 }
 
 enum {

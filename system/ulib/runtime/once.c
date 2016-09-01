@@ -23,7 +23,7 @@ void mxr_once(mxr_once_t* once, void (*func)(void)) {
                                            &old_state, RUNNING)) {
             (*func)();
             if (atomic_exchange(&once->futex, RAN) == WAITING) {
-                mx_status_t status = mx_futex_wake(&once->futex, UINT32_MAX);
+                mx_status_t status = _mx_futex_wake(&once->futex, UINT32_MAX);
                 if (status != NO_ERROR)
                     __builtin_trap();
             }
@@ -41,7 +41,7 @@ void mxr_once(mxr_once_t* once, void (*func)(void)) {
 
             case WAITING:;
                 mx_status_t status =
-                    mx_futex_wait(&once->futex, WAITING, MX_TIME_INFINITE);
+                    _mx_futex_wait(&once->futex, WAITING, MX_TIME_INFINITE);
                 if (status != NO_ERROR && status != ERR_BUSY)
                     __builtin_trap();
                 continue;

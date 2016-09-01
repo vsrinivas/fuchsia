@@ -5,6 +5,6 @@
 _Noreturn void abort(void) {
     for (;;) {
         __builtin_trap();
-        mx_exit(-1);
+        _mx_exit(-1);
     }
 }

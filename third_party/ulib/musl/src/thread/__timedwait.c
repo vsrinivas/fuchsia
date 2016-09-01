@@ -34,7 +34,7 @@ int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct time
     // races with this call. But this is indistinguishable from
     // otherwise being woken up just before someone else changes the
     // value. Therefore this functions returns 0 in that case.
-    switch (mx_futex_wait((void*)addr, val, deadline)) {
+    switch (_mx_futex_wait((void*)addr, val, deadline)) {
     case NO_ERROR:
     case ERR_BUSY:
         return 0;

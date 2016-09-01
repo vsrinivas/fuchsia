@@ -40,9 +40,9 @@ __aeabi_unwind_cpp_pr0 = 0xdeadbeef
 .endm
 
 .macro syscall nargs, name, n
-.globl \name
-.type \name,STT_FUNC
-\name:
+.globl _\name
+.type _\name,STT_FUNC
+_\name:
     .fnstart
     .cfi_startproc
     .cfi_same_value r4
@@ -100,7 +100,11 @@ __aeabi_unwind_cpp_pr0 = 0xdeadbeef
 .endif
     .cfi_endproc
     .fnend
-.size \name, . - \name
+.size _\name, . - _\name
+.weak \name
+.type \name,STT_FUNC
+\name = _\name
+.size \name, . - _\name
 .endm
 
 #define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) syscall nargs32, mx_##name, n

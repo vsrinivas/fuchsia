@@ -112,7 +112,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             // should of course be handles to the same process, but
             // just for cleanliness switch to the "main" one.
             if (libc.proc != MX_HANDLE_INVALID)
-                mx_handle_close(libc.proc);
+                _mx_handle_close(libc.proc);
             libc.proc = handles[i];
             handles[i] = MX_HANDLE_INVALID;
             handle_info[i] = 0;
@@ -126,7 +126,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             // We assume (per protocol) that the whole thing is
             // mapped.  Thus we know the bounds of our stack.
             uint64_t stack_vmo_size;
-            status = mx_vmo_get_size(handles[i], &stack_vmo_size);
+            status = _mx_vmo_get_size(handles[i], &stack_vmo_size);
             if (status == NO_ERROR) {
                 libc.stack_size = stack_vmo_size;
                 libc.stack_base = stack_end - libc.stack_size;

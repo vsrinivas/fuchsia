@@ -89,7 +89,7 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
             a_spin();
         a_inc(&inst->finished);
         while (inst->finished == 1)
-            mx_futex_wait((int*)&inst->finished, 1, MX_TIME_INFINITE);
+            _mx_futex_wait((int*)&inst->finished, 1, MX_TIME_INFINITE);
         return PTHREAD_BARRIER_SERIAL_THREAD;
     }
 
