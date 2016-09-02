@@ -1,0 +1,73 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// libunwind
+
+libunwind_options = [
+	"CMAKE_BUILD_TYPE=Release",
+	"CMAKE_BUILD_WITH_INSTALL_RPATH=ON",
+	"CMAKE_INSTALL_PREFIX=''",
+	"CMAKE_TOOLCHAIN_FILE=$SrcDir/third_party/llvm/cmake/platforms/Fuchsia.cmake",
+	"CMAKE_EXE_LINKER_FLAGS='-nodefaultlibs -lc'",
+	"LLVM_PATH=$SrcDir/third_party/llvm",
+	"LLVM_ENABLE_LIBCXX=ON",
+	"LIBUNWIND_ENABLE_SHARED=ON",
+	"LIBUNWIND_ENABLE_STATIC=ON",
+]
+
+cmake(
+	name = "libunwind_cmake_aarch64",
+	env = [ "CXXFLAGS='-I$SrcDir/third_party/llvm/projects/libcxx/include'" ],
+	src = "$SrcDir/third_party/llvm/projects/libunwind",
+	options = cmake_host_tools + libunwind_options + [
+		"CMAKE_SHARED_LINKER_FLAGS='$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-aarch64.a'",
+		"LIBUNWIND_TARGET_TRIPLE='aarch64-fuchsia'",
+		"LIBUNWIND_SYSROOT=$OutDir/sysroot/aarch64-fuchsia",
+	],
+	deps = [ "musl_aarch64" ],
+	buildDir = "$OutDir/build-libunwind-aarch64-fuchsia",
+)
+
+ninja(
+	name = "libunwind_aarch64",
+	ninjaFile = "$OutDir/build-libunwind-aarch64-fuchsia/build.ninja",
+	env = [ "DESTDIR=$OutDir/sysroot/aarch64-fuchsia" ],
+	targets = [ "install" ],
+)
+
+cmake(
+	name = "libunwind_cmake_x86_64",
+	env = [ "CXXFLAGS='-I$SrcDir/third_party/llvm/projects/libcxx/include'" ],
+	src = "$SrcDir/third_party/llvm/projects/libunwind",
+	options = cmake_host_tools + libunwind_options + [
+		"CMAKE_SHARED_LINKER_FLAGS='$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-x86_64.a'",
+		"LIBUNWIND_TARGET_TRIPLE='x86_64-fuchsia'",
+		"LIBUNWIND_SYSROOT=$OutDir/sysroot/x86_64-fuchsia",
+	],
+	deps = [ "musl_x86_64" ],
+	buildDir = "$OutDir/build-libunwind-x86_64-fuchsia",
+)
+
+ninja(
+	name = "libunwind_x86_64",
+	ninjaFile = "$OutDir/build-libunwind-x86_64-fuchsia/build.ninja",
+	env = [ "DESTDIR=$OutDir/sysroot/x86_64-fuchsia" ],
+	targets = [ "install" ],
+)
+
+alias(
+	name = "libunwind",
+	deps = [
+		"libunwind_aarch64",
+		"libunwind_x86_64",
+	],
+)
+
+clean(
+	name = "libunwind-clean",
+	dirs = [
+		"$OutDir/build-libunwind-aarch64-fuchsia",
+		"$OutDir/build-libunwind-x86_64-fuchsia",
+	]
+)

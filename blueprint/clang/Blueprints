@@ -1,0 +1,71 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// clang/llvm
+
+cmake(
+	name = "clang_cmake",
+	src = "$SrcDir/third_party/llvm",
+	options = cmake_host_tools + [
+		"CMAKE_BUILD_TYPE=Release",
+		"CMAKE_INSTALL_PREFIX=''",
+		"LLVM_APPEND_VC_REV=ON",
+		"LLVM_ENABLE_LIBCXX=ON",
+		"LLVM_TARGETS_TO_BUILD='ARM;AArch64;X86'",
+		"LLVM_INSTALL_TOOLCHAIN_ONLY=ON",
+		"LLVM_TOOLCHAIN_TOOLS='llvm-ar;llvm-ranlib;llvm-dwarfdump;llvm-objdump;llvm-readobj;llvm-nm;llvm-size;llvm-symbolizer'",
+		// Don't build 32-bit version of compiler-rt which currently
+		// fails to link because 32-bit version of libc++ is missing.
+		"CAN_TARGET_i386=FALSE",
+		"CAN_TARGET_i686=FALSE",
+	],
+	buildDir = "$OutDir/build-llvm-$HostTriple",
+)
+
+ninja(
+	name = "clang",
+	ninjaFile = "$OutDir/build-llvm-$HostTriple/build.ninja",
+	env = [
+		"LD_LIBRARY_PATH=$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/lib",
+		"DESTDIR=$OutDir/toolchain/clang+llvm-$HostTriple",
+	],
+	targets = [ "install" ],
+)
+
+// compiler-rt
+
+cmake(
+	name = "compiler-rt_cmake",
+	env = [ "CFLAGS='-fPIC -isystem $SrcDir/magenta/third_party/ulib/musl/include'" ],
+	src = "$SrcDir/third_party/llvm/projects/compiler-rt/lib/builtins",
+	options = [
+		"CMAKE_C_COMPILER=$OutDir/toolchain/clang+llvm-$HostTriple/bin/clang",
+		"CMAKE_CXX_COMPILER=$OutDir/toolchain/clang+llvm-$HostTriple/bin/clang++",
+		"CMAKE_AR=$OutDir/toolchain/clang+llvm-$HostTriple/bin/llvm-ar",
+		"CMAKE_NM=$OutDir/toolchain/clang+llvm-$HostTriple/bin/llvm-nm",
+		"CMAKE_RANLIB=$OutDir/toolchain/clang+llvm-$HostTriple/bin/llvm-ranlib",
+		"CMAKE_OBJDUMP=$OutDir/toolchain/clang+llvm-$HostTriple/bin/llvm-objdump",
+		"CMAKE_BUILD_TYPE=Release",
+		"CMAKE_INSTALL_PREFIX=''",
+		"CMAKE_TOOLCHAIN_FILE=$SrcDir/third_party/llvm/cmake/platforms/Fuchsia.cmake",
+		"LLVM_CONFIG_PATH=$OutDir/build-llvm-$HostTriple/bin/llvm-config",
+	],
+	deps = [ "clang" ],
+	buildDir = "$OutDir/build-compiler-rt-aarch64+x86_64",
+)
+
+ninja(
+	name = "compiler-rt",
+	env = [ "DESTDIR=$OutDir/toolchain/clang+llvm-$HostTriple" ],
+	ninjaFile = "$OutDir/build-compiler-rt-aarch64+x86_64/build.ninja",
+	targets = [ "install" ],
+)
+
+clean(
+	name = "clang-clean",
+	dirs = [
+		"$OutDir/build-llvm-$HostTriple",
+		"$OutDir/build-compiler-rt-aarch64+x86_64",
+	]
+)

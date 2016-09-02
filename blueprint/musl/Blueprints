@@ -1,0 +1,70 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// musl
+
+magenta_flags = [
+	"BUILDROOT=$OutDir",
+	"ENABLE_BUILD_SYSROOT=true",
+]
+
+// TODO: We should be using prebuilts instead of building musl ourselves.
+
+make(
+	name = "musl_make_aarch64",
+	env = [ "PATH=$SrcDir/magenta/prebuilt/downloads/aarch64-elf-5.3.0-${HostOS}-x86_64/bin:$$PATH" ],
+	targets = magenta_flags + [ "magenta-qemu-arm64" ],
+	makefile = "$SrcDir/magenta/makefile",
+	outputs = [
+		"$OutDir/build-magenta-qemu-arm64/sysroot/lib",
+		"$OutDir/build-magenta-qemu-arm64/sysroot/include",
+	],
+)
+
+copy(
+	name = "musl_aarch64",
+	sources = [
+		"$OutDir/build-magenta-qemu-arm64/sysroot/lib",
+		"$OutDir/build-magenta-qemu-arm64/sysroot/include",
+	],
+	destination = "$OutDir/sysroot/aarch64-fuchsia",
+)
+
+// TODO: We should be using prebuilts instead of building musl ourselves.
+
+make(
+	name = "musl_make_x86_64",
+	env = [ "PATH=$SrcDir/magenta/prebuilt/downloads/x86_64-elf-5.3.0-${HostOS}-x86_64/bin:$$PATH" ],
+	targets = magenta_flags + [ "magenta-pc-x86-64" ],
+	makefile = "$SrcDir/magenta/makefile",
+	outputs = [
+		"$OutDir/build-magenta-pc-x86-64/sysroot/lib",
+		"$OutDir/build-magenta-pc-x86-64/sysroot/include",
+	],
+)
+
+copy(
+	name = "musl_x86_64",
+	sources = [
+		"$OutDir/build-magenta-pc-x86-64/sysroot/lib",
+		"$OutDir/build-magenta-pc-x86-64/sysroot/include",
+	],
+	destination = "$OutDir/sysroot/x86_64-fuchsia",
+)
+
+alias(
+	name = "musl",
+	deps = [
+		"musl_aarch64",
+		"musl_x86_64",
+	],
+)
+
+clean(
+	name = "musl-clean",
+	dirs = [
+		"$OutDir/build-magenta-qemu-arm64",
+		"$OutDir/build-magenta-pc-x86-64",
+	]
+)

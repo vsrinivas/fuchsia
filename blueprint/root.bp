@@ -1,0 +1,56 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+subdirs = [
+  "binutils",
+  "clang",
+  "musl",
+  "libcxxabi",
+  "libcxx",
+  "libunwind",
+]
+
+cmake_host_tools = [
+	"CMAKE_C_COMPILER=$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/bin/clang",
+	"CMAKE_CXX_COMPILER=$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/bin/clang++",
+	"CMAKE_AR=$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/bin/llvm-ar",
+	"CMAKE_NM=$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/bin/llvm-nm",
+	"CMAKE_RANLIB=$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/bin/llvm-ranlib",
+	"CMAKE_OBJDUMP=$SrcDir/buildtools/toolchain/clang+llvm-$HostTriple/bin/llvm-objdump",
+]
+
+alias(
+	name = "toolchain",
+	deps = [
+		"clang",
+		"compiler-rt",
+	]
+)
+
+clean(
+	name = "toolchain-distclean",
+	dirs = [ "$OutDir/toolchain" ],
+	deps = [ "clang-clean" ]
+)
+
+alias(
+	name = "sysroot",
+	deps = [
+		"musl",
+		"libcxxabi",
+		"libcxx",
+		"libunwind",
+	]
+)
+
+clean(
+	name = "sysroot-distclean",
+	dirs = [ "$OutDir/sysroot" ],
+	deps = [
+		"musl-clean",
+		"libcxxabi-clean",
+		"libcxx-clean",
+		"libunwind-clean",
+	]
+)

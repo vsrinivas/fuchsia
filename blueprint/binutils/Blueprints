@@ -1,0 +1,49 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Clang toolchain cannot build Magenta at the moment as the kernel build uses
+// a linker script which relies on a behavior not (yet) supported by LLD linker.
+// To work around this limitation, in case you want to build Magenta using
+// Clang, e.g. for development or testing purposes, you can build Binutils
+// separately for use with Clang.
+
+script(
+	name = "binutils_configure",
+	script = "$SrcDir/third_party/binutils-gdb/configure",
+	env = [ "PATH=$OutDir/toolchain/clang+llvm-$HostTriple/bin:$$PATH" ],
+	args = [
+		"CC=$OutDir/toolchain/clang+llvm-$HostTriple/bin/clang",
+		"CXX=$OutDir/toolchain/clang+llvm-$HostTriple/bin/clang++",
+		"AR=$OutDir/toolchain/clang+llvm-$HostTriple/bin/llvm-ar",
+		"NM=$OutDir/toolchain/clang+llvm-$HostTriple/bin/llvm-nm",
+		"RANLIB=$OutDir/toolchain/clang+llvm-$HostTriple/bin/llvm-ranlib",
+		"LDFLAGS=\"$$([[ \"$$(uname)\" == \"Linux\" ]] && echo '-fuse-ld=lld')\"",
+		"--prefix=",
+		"--program-prefix=",
+		"--target=x86_64-elf",
+		"--enable-targets=aarch64-elf,x86_64-elf",
+		"--enable-deterministic-archives",
+		"--disable-werror", // Clang's -Werror checks are too strict
+		"--disable-nls", // Reduces dependencies and compile time
+		"--disable-gas", // We're using LLVM's integrated assembler
+		"--disable-gdb", // We don't need gdb to build the kernel
+		"--disable-sim", // We don't need a simulator either
+	],
+	genFiles = [ "$OutDir/build-binutils-$HostTriple/Makefile" ],
+	workingDir = "$OutDir/build-binutils-$HostTriple",
+	deps = [ "clang" ],
+)
+
+make(
+	name = "binutils_make",
+	makefile = "$OutDir/build-binutils-$HostTriple/Makefile",
+	targets = [ "all" ],
+)
+
+make(
+	name = "binutils",
+	makefile = "$OutDir/build-binutils-$HostTriple/Makefile",
+	targets = [ "DESTDIR=$OutDir/binutils-$HostTriple", "install" ],
+	deps = [ "binutils_make" ],
+)
