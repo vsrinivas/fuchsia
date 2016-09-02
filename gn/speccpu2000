@@ -18,6 +18,10 @@
             "bootfs_path": "benchmarks/177.mesa"
         },
         {
+            "binary": "179.art",
+            "bootfs_path": "benchmarks/179.art"
+        },
+        {
             "binary": "181.mcf",
             "bootfs_path": "benchmarks/181.mcf"
         },
@@ -58,6 +62,18 @@
         {
           "file": "third_party/speccpu2000/177.mesa/data/ref/input/mesa.in",
           "bootfs_path": "benchmarks/data/177.mesa/mesa.mesh"
+        },
+        {
+          "file": "third_party/speccpu2000/179.art/data/ref/input/c756hel.in",
+          "bootfs_path": "benchmarks/data/179.art/c756hel.in"
+        },
+        {
+          "file": "third_party/speccpu2000/179.art/data/ref/input/a10.img",
+          "bootfs_path": "benchmarks/data/179.art/a10.img"
+        },
+        {
+          "file": "third_party/speccpu2000/179.art/data/ref/input/hc.img",
+          "bootfs_path": "benchmarks/data/179.art/hc.img"
         },
         {
           "file": "third_party/speccpu2000/181.mcf/data/ref/input/inp.in",
