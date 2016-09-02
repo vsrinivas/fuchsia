@@ -19,6 +19,7 @@ static_library("mtl") {
 
 executable("mtl_unittests") {
   sources = [
+    "data_pipe/data_pipe_drainer_unittest.cc",
     "handles/unique_handle_unittest.cc",
     "tasks/message_loop_unittest.cc",
     "test/run_all_unittests.cc",
