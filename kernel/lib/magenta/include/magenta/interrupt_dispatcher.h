@@ -6,30 +6,32 @@
 
 #pragma once
 
-#include <dev/interrupt_event.h>
 #include <magenta/dispatcher.h>
+#include <magenta/state_tracker.h>
 #include <sys/types.h>
 
-class InterruptDispatcher final : public Dispatcher {
+class InterruptDispatcher : public Dispatcher {
 public:
-    static status_t Create(uint32_t vector, uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
-                           mx_rights_t* rights);
-
-    InterruptDispatcher(const InterruptDispatcher &) = delete;
     InterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
 
-    virtual ~InterruptDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_INTERRUPT; }
+    StateTracker* get_state_tracker() final { return &state_tracker_; }
 
-    // Wait for an interrupt.
-    status_t InterruptWait();
+    status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) final {
+        if ((set_mask & ~MX_SIGNAL_SIGNALED) || (clear_mask & ~MX_SIGNAL_SIGNALED))
+            return ERR_INVALID_ARGS;
+
+        state_tracker_.UpdateSatisfied(clear_mask, set_mask);
+        return NO_ERROR;
+    }
+
     // Notify the system that the caller has finished processing the interrupt.
     // Required before the handle can be waited upon again.
-    status_t InterruptComplete();
+    virtual status_t InterruptComplete() = 0;
 
-private:
-    explicit InterruptDispatcher(interrupt_event_t ie);
+protected:
+    InterruptDispatcher()
+        : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) { }
 
-    interrupt_event_t interrupt_event_;
-    bool signaled_;
+    IrqStateTracker state_tracker_;
 };

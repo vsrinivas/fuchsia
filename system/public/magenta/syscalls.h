@@ -52,9 +52,6 @@ __MX_SYSCALL mx_handle_t mx_interrupt_event_create(mx_handle_t handle, uint32_t 
 __MX_SYSCALL mx_status_t mx_interrupt_event_complete(mx_handle_t handle) {
     return mx_interrupt_complete(handle);
 }
-__MX_SYSCALL mx_status_t mx_interrupt_event_wait(mx_handle_t handle) {
-    return mx_interrupt_wait(handle);
-}
 
 __MX_SYSCALL mx_status_t mx_process_vm_map(mx_handle_t proc_handle, mx_handle_t vmo_handle,
                                             uint64_t offset, mx_size_t len, uintptr_t* ptr, uint32_t flags) {

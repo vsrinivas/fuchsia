@@ -19,6 +19,7 @@
 #include <mxtl/user_ptr.h>
 
 #include <magenta/interrupt_dispatcher.h>
+#include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
@@ -50,7 +51,7 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t fl
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status_t result = InterruptDispatcher::Create(vector, flags, &dispatcher, &rights);
+    status_t result = InterruptEventDispatcher::Create(vector, flags, &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 
@@ -60,18 +61,6 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t fl
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(mxtl::move(handle));
     return hv;
-}
-
-mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
-    LTRACEF("handle %u\n", handle_value);
-
-    auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<InterruptDispatcher> interrupt;
-    mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
-    if (status != NO_ERROR)
-        return status;
-
-    return interrupt->InterruptWait();
 }
 
 mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {

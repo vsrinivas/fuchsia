@@ -195,8 +195,7 @@ static mx_status_t get_status_data_avail(enum locality loc, bool* data_avail) {
 }
 
 static mx_status_t wait_for_data_avail(enum locality loc) {
-    // TODO(teisenbe): Add a timeout to this?  We need support for timeouts
-    // on the mx_interrupt_wait call below first.
+    // TODO(teisenbe): Add a timeout to this?
     while (1) {
         bool data_avail = false;
         mx_status_t st = get_status_data_avail(loc, &data_avail);
@@ -207,7 +206,7 @@ static mx_status_t wait_for_data_avail(enum locality loc) {
             return NO_ERROR;
         }
 
-        st = mx_interrupt_wait(irq_handle);
+        st = mx_handle_wait_one(irq_handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
         if (st < 0) {
             return st;
         }

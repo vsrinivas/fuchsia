@@ -22,7 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/futex_context.cpp \
     $(LOCAL_DIR)/futex_node.cpp \
     $(LOCAL_DIR)/handle.cpp \
-    $(LOCAL_DIR)/interrupt_dispatcher.cpp \
+    $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
     $(LOCAL_DIR)/io_mapping_dispatcher.cpp \
     $(LOCAL_DIR)/io_port_client.cpp \
     $(LOCAL_DIR)/io_port_dispatcher.cpp \
@@ -48,6 +48,7 @@ MODULE_SRCS := \
 MODULE_DEPS := \
     lib/dpc \
     lib/mxtl \
+    dev/interrupt \
     dev/udisplay \
 
 include make/module.mk

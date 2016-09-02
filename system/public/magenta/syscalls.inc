@@ -107,7 +107,6 @@ MAGENTA_SYSCALL_DEF(6, 6, 62, mx_status_t, msgpipe_write, mx_handle_t handle, US
 // Drivers
 MAGENTA_SYSCALL_DEF(3, 3, 70, mx_handle_t, interrupt_create, mx_handle_t handle, uint32_t vector, uint32_t flags)
 MAGENTA_SYSCALL_DEF(1, 1, 71, mx_status_t, interrupt_complete, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(1, 1, 72, mx_status_t, interrupt_wait, mx_handle_t handle)
 
 // Processes
 MAGENTA_SYSCALL_DEF(3, 3, 80, mx_handle_t, process_create, USER_PTR(const char) name, uint32_t name_len, uint32_t flags)

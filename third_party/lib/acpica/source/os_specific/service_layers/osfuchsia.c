@@ -590,7 +590,10 @@ struct acpi_irq_thread_arg {
 static int acpi_irq_thread(void *arg) {
     struct acpi_irq_thread_arg *real_arg = (struct acpi_irq_thread_arg *)arg;
     while (1) {
-        mx_status_t status = mx_interrupt_wait(real_arg->irq_handle);
+        mx_status_t status = mx_handle_wait_one(real_arg->irq_handle,
+                                                MX_SIGNAL_SIGNALED,
+                                                MX_TIME_INFINITE,
+                                                NULL);
         if (status != NO_ERROR) {
             continue;
         }
