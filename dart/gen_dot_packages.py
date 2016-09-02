@@ -39,8 +39,15 @@ def main():
       if not dep.startswith("//"):
         print "Error, expected dependency label to start with //"
         return 1
+      target_base = dep[2:]
+      target_sep = string.rfind(target_base, ":")
+      if target_sep != -1:
+        target_name = target_base[target_sep+1:]
+        target_base = target_base[:target_sep]
+      else:
+        target_name = target_base[target_base.rfind("/")+1:]
       dep_dot_packages_path = os.path.join(
-          args.root_build_dir, "gen", dep[2:], ".packages")
+          args.root_build_dir, "gen", target_base, "%s.packages" % target_name)
       dependent_files.append(dep_dot_packages_path)
       with open(dep_dot_packages_path) as dep_dot_packages:
         dot_packages.write(dep_dot_packages.read())

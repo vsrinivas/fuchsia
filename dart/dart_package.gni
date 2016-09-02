@@ -48,18 +48,23 @@ template("dart_package") {
       deps += invoker.deps
     }
 
-    dot_packages_file = "$target_gen_dir/.packages"
+    dot_packages_file = "$target_gen_dir/$target_name.packages"
 
     outputs = [
       dot_packages_file,
     ]
-    depfile = "$target_gen_dir/.packages.d"
+    depfile = "$dot_packages_file.d"
+
+    source_dir = "."
+    if (defined(invoker.source_dir)) {
+      source_dir = invoker.source_dir
+    }
 
     args = [
              "--out",
              rebase_path(dot_packages_file, root_build_dir),
              "--source-dir",
-             rebase_path("."),
+             rebase_path(source_dir),
              "--root-build-dir",
              rebase_path(root_build_dir),
              "--package-name",
