@@ -20,9 +20,6 @@ main() {
     final Uri testUri = Uri.parse('https://test-notification-handler.io/');
     const String testArch = 'test_arch';
     const String testRevision = 'test_revision';
-
-    const String testSubscription =
-        'projects/subscriptions/test-modular-subscription';
     const String testMessageId = 'test_message_id';
 
     const String jsonManifest = '{'
@@ -62,22 +59,9 @@ main() {
     test('Invalid push message.', () async {
       IndexUpdater indexUpdater = new MockIndexUpdater();
       shelf.Request request = new shelf.Request('POST', testUri);
-      shelf.Response response = await requestHandler(request,
-          indexUpdater: indexUpdater, subscriptionName: testSubscription);
+      shelf.Response response =
+          await requestHandler(request, indexUpdater: indexUpdater);
       expect(response.statusCode, greaterThan(299));
-    });
-
-    test('Invalid subscription.', () async {
-      IndexUpdater indexUpdater = new MockIndexUpdater();
-      shelf.Request request = new shelf.Request('POST', testUri,
-          headers: {'X-AppEngine-QueueName': 'indexing'},
-          body: createJsonPushMessage(
-              data: jsonManifest,
-              messageId: testMessageId,
-              subscription: 'projects/subscriptions/not-indexing'));
-      shelf.Response response = await requestHandler(request,
-          indexUpdater: indexUpdater, subscriptionName: testSubscription);
-      expect(response.statusCode, HttpStatus.OK);
     });
 
     test('Atomic guarantee failure.', () async {
@@ -87,11 +71,9 @@ main() {
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: jsonManifest,
-              messageId: testMessageId,
-              subscription: testSubscription));
-      shelf.Response response = await requestHandler(request,
-          indexUpdater: indexUpdater, subscriptionName: testSubscription);
+              data: jsonManifest, messageId: testMessageId));
+      shelf.Response response =
+          await requestHandler(request, indexUpdater: indexUpdater);
       expect(response.statusCode, greaterThan(299));
     });
 
@@ -103,11 +85,9 @@ main() {
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: jsonManifest,
-              messageId: testMessageId,
-              subscription: testSubscription));
-      shelf.Response response = await requestHandler(request,
-          indexUpdater: indexUpdater, subscriptionName: testSubscription);
+              data: jsonManifest, messageId: testMessageId));
+      shelf.Response response =
+          await requestHandler(request, indexUpdater: indexUpdater);
       expect(response.statusCode, greaterThan(299));
     });
 
@@ -118,11 +98,9 @@ main() {
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: malformedJsonManifest,
-              messageId: testMessageId,
-              subscription: testSubscription));
-      shelf.Response response = await requestHandler(request,
-          indexUpdater: indexUpdater, subscriptionName: testSubscription);
+              data: malformedJsonManifest, messageId: testMessageId));
+      shelf.Response response =
+          await requestHandler(request, indexUpdater: indexUpdater);
       expect(response.statusCode, HttpStatus.OK);
     });
 
@@ -133,11 +111,9 @@ main() {
       shelf.Request request = new shelf.Request('POST', testUri,
           headers: {'X-AppEngine-QueueName': 'indexing'},
           body: createJsonPushMessage(
-              data: jsonManifest,
-              messageId: testMessageId,
-              subscription: testSubscription));
-      shelf.Response response = await requestHandler(request,
-          indexUpdater: indexUpdater, subscriptionName: testSubscription);
+              data: jsonManifest, messageId: testMessageId));
+      shelf.Response response =
+          await requestHandler(request, indexUpdater: indexUpdater);
       expect(response.statusCode, HttpStatus.OK);
     });
   });

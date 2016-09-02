@@ -5,10 +5,9 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:gcloud/pubsub.dart';
+import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:gcloud/service_scope.dart' as ss;
-import 'package:gcloud/storage.dart';
-import 'package:googleapis/pubsub/v1.dart' show DetailedApiRequestError;
+import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:parser/manifest.dart';
 import 'package:parser/parse_error.dart';
@@ -69,34 +68,22 @@ class ModuleUploader {
   static const String _defaultTopicName =
       'projects/google.com:modular-cloud-indexer/topics/indexing';
 
-  final Topic _topic;
-  final Bucket _bucket;
+  final PubSubTopicWrapper _pubSubTopicWrapper;
+  final StorageBucketWrapper _storageBucketWrapper;
 
-  ModuleUploader(this._topic, this._bucket);
+  ModuleUploader(this._pubSubTopicWrapper, this._storageBucketWrapper);
 
   /// Creates an instance of a [ModuleUploader].
   ///
   /// Note that the [ModuleUploader] requires that it is instantiated within a
   /// gcloud service scope with access to the Pub/Sub and Storage services.
-  static Future<ModuleUploader> createModuleUploader(
-      {PubSub pubSub,
-      String topicName: _defaultTopicName,
-      Storage storage,
-      String bucketName}) async {
+  factory ModuleUploader.fromClient(http.Client client,
+      {String topicName: _defaultTopicName, String bucketName}) {
     // In the case these are not set, we use default values from the service
     // scope and environment.
-    pubSub ??= pubsubService;
-    storage ??= storageService;
     bucketName ??= Platform.environment['BUCKET_NAME'];
-
-    Topic topic;
-    try {
-      topic = await pubSub.lookupTopic(topicName);
-    } on DetailedApiRequestError catch (e) {
-      throw _pubSubException(e.status, e.message);
-    }
-
-    return new ModuleUploader(topic, storage.bucket(bucketName));
+    return new ModuleUploader(new PubSubTopicWrapper(client, topicName),
+        new StorageBucketWrapper(client, bucketName));
   }
 
   static String storageDestinationPath(
@@ -139,18 +126,19 @@ class ModuleUploader {
       String destinationPath =
           storageDestinationPath(manifest.arch, manifest.modularRevision, file);
       try {
-        Stream<List<int>> fileStream = tarball.openRead(file);
-        await fileStream.pipe(_bucket.write(destinationPath));
+        await tarball
+            .openRead(file)
+            .pipe(_storageBucketWrapper.writeObject(destinationPath));
       } on DetailedApiRequestError catch (e) {
         throw _cloudStorageException(e.status, 'Failed to write file: $file');
       }
     }
 
     try {
-      _topic.publish(new Message.withString(manifest.toJsonString()));
+      // Finally, we attempt to publish to the indexing topic.
+      await _pubSubTopicWrapper.publish(manifest.toJsonString());
     } on DetailedApiRequestError catch (e) {
-      throw _pubSubException(
-          e.status, 'Failed to add module to indexing queue.');
+      throw _pubSubException(e.status, 'Failed to publish indexing task');
     }
   }
 }

@@ -7,16 +7,14 @@ import 'dart:io';
 
 import 'package:cloud_indexer/module_uploader.dart';
 import 'package:cloud_indexer/tarball.dart';
-import 'package:gcloud/pubsub.dart';
-import 'package:gcloud/storage.dart';
-import 'package:googleapis/pubsub/v1.dart' show DetailedApiRequestError;
+import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:mockito/mockito.dart';
 import 'package:parser/manifest.dart';
 import 'package:test/test.dart';
 
-class MockTopic extends Mock implements Topic {}
+class MockTopicWrapper extends Mock implements PubSubTopicWrapper {}
 
-class MockBucket extends Mock implements Bucket {}
+class MockBucketWrapper extends Mock implements StorageBucketWrapper {}
 
 class MockTarball implements Tarball {
   final Map<String, String> _files;
@@ -40,6 +38,7 @@ class MockTarball implements Tarball {
 
 class FakeSink<T> implements StreamSink<T> {
   final List<T> events = [];
+  final Completer _doneCompleter = new Completer();
 
   bool _closed = false;
   bool _addingStream = false;
@@ -56,16 +55,24 @@ class FakeSink<T> implements StreamSink<T> {
 
   void addError(errorEvent, [StackTrace stackTrace]) => _validateState();
 
-  Future addStream(Stream<T> stream) async {
+  Future addStream(Stream<T> stream) {
     _validateState();
-    await for (T event in stream) {
-      events.add(event);
-    }
+    _addingStream = true;
+    Completer completer = new Completer();
+    stream.listen(events.add, onError: addError, onDone: completer.complete);
+    return completer.future.then((_) {
+      _addingStream = false;
+    });
   }
 
-  Future get done async => events;
+  Future get done => _doneCompleter.future;
 
-  Future close() => done;
+  Future close() {
+    if (_addingStream) throw new StateError('Cannot close when adding stream.');
+    _closed = true;
+    _doneCompleter.complete(events);
+    return done;
+  }
 }
 
 main() {
@@ -99,33 +106,34 @@ main() {
       otherPath: otherPathContents
     };
 
-    final Matcher throwsTarballException =
-        throwsA(new isInstanceOf<TarballException>());
+    final Matcher isTarballException = new isInstanceOf<TarballException>();
 
-    final Matcher throwsCloudStorageException =
-        throwsA(new isInstanceOf<CloudStorageException>());
+    final Matcher isCloudStorageException =
+        new isInstanceOf<CloudStorageException>();
 
-    final Matcher throwsPubSubException =
-        throwsA(new isInstanceOf<PubSubException>());
+    final Matcher isPubSubException = new isInstanceOf<PubSubException>();
 
-    test('Missing manifest.', () {
-      final Topic topic = new MockTopic();
-      final Bucket bucket = new MockBucket();
+    test('Missing manifest.', () async {
+      final PubSubTopicWrapper topic = new MockTopicWrapper();
+      final StorageBucketWrapper bucket = new MockBucketWrapper();
 
       final Tarball tarball = new MockTarball({otherPath: otherPathContents});
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
-      expect(
-          moduleUploader.processTarball(tarball).whenComplete(() {
-            verifyNever(bucket.write(any));
-            verifyNever(topic.publish(any));
-          }),
-          throwsTarballException);
+      try {
+        await moduleUploader.processTarball(tarball);
+      } catch (e) {
+        expect(e, isTarballException);
+      } finally {
+        verifyNever(bucket.writeObjectAsBytes(any, any));
+        verifyNever(bucket.writeObject(any));
+        verifyNever(topic.publish(any));
+      }
     });
 
-    test('Invalid manifests.', () {
-      final Topic topic = new MockTopic();
-      final Bucket bucket = new MockBucket();
+    test('Invalid manifests.', () async {
+      final PubSubTopicWrapper topic = new MockTopicWrapper();
+      final StorageBucketWrapper bucket = new MockBucketWrapper();
 
       final Tarball tarball1 =
           new MockTarball({manifestPath: invalidManifest1});
@@ -133,68 +141,79 @@ main() {
           new MockTarball({manifestPath: invalidManifest2});
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
-      expect(
-          moduleUploader.processTarball(tarball1).whenComplete(() {
-            verifyNever(bucket.write(any));
-            verifyNever(topic.publish(any));
-          }),
-          throwsTarballException);
+      try {
+        await moduleUploader.processTarball(tarball1);
+      } catch (e) {
+        expect(e, isTarballException);
+      } finally {
+        verifyNever(bucket.writeObjectAsBytes(any, any));
+        verifyNever(bucket.writeObject(any));
+        verifyNever(topic.publish(any));
+      }
 
-      expect(
-          moduleUploader.processTarball(tarball2).whenComplete(() {
-            verifyNever(bucket.write(any));
-            verifyNever(topic.publish(any));
-          }),
-          throwsTarballException);
+      try {
+        await moduleUploader.processTarball(tarball2);
+      } catch (e) {
+        expect(e, isTarballException);
+      } finally {
+        verifyNever(bucket.writeObjectAsBytes(any, any));
+        verifyNever(bucket.writeObject(any));
+        verifyNever(topic.publish(any));
+      }
     });
 
-    test('Cloud storage failure.', () {
-      final Topic topic = new MockTopic();
-      final Bucket bucket = new MockBucket();
-      when(bucket.write(otherDestinationPath)).thenAnswer((i) =>
+    test('Cloud storage failure.', () async {
+      final PubSubTopicWrapper topic = new MockTopicWrapper();
+      final StorageBucketWrapper bucket = new MockBucketWrapper();
+
+      when(bucket.writeObject(otherDestinationPath)).thenAnswer((i) =>
           throw new DetailedApiRequestError(
               HttpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error.'));
 
       final Tarball tarball = new MockTarball(validPayload);
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
-      expect(
-          moduleUploader.processTarball(tarball).whenComplete(() {
-            // The manifest should never be copied.
-            verifyNever(bucket.write(manifestDestinationPath));
-            verifyNever(topic.publish(any));
-          }),
-          throwsCloudStorageException);
+      try {
+        await moduleUploader.processTarball(tarball);
+      } catch (e) {
+        expect(e, isCloudStorageException);
+      } finally {
+        // The manifest should never be copied.
+        verifyNever(bucket.writeObjectAsBytes(manifestDestinationPath, any));
+        verifyNever(bucket.writeObject(manifestDestinationPath));
+        verifyNever(topic.publish(any));
+      }
     });
 
-    test('Pub/Sub failure.', () {
-      final Topic topic = new MockTopic();
-      final Bucket bucket = new MockBucket();
+    test('Pub/Sub failure.', () async {
+      final PubSubTopicWrapper topic = new MockTopicWrapper();
+      final StorageBucketWrapper bucket = new MockBucketWrapper();
       final StreamSink<List<int>> sink = new FakeSink<List<int>>();
-      when(bucket.write(otherDestinationPath)).thenReturn(sink);
-      when(topic.publish(any)).thenAnswer((i) =>
-          throw new DetailedApiRequestError(
-              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error.'));
+      when(bucket.writeObject(otherDestinationPath)).thenReturn(sink);
+      when(topic.publish(any)).thenAnswer((i) => throw new PubSubException(
+          HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
 
       final Tarball tarball = new MockTarball(validPayload);
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
-      expect(
-          moduleUploader.processTarball(tarball).whenComplete(() async {
-            verifyNever(bucket.write(manifestDestinationPath));
-            List<List<int>> events = await sink.done;
-            List<int> payload = events.fold(
-                [], (List<int> data, List<int> bytes) => data..addAll(bytes));
-            expect(payload, validPayload[otherPath].codeUnits);
-          }),
-          throwsPubSubException);
+      try {
+        await moduleUploader.processTarball(tarball);
+      } catch (e) {
+        expect(e, isPubSubException);
+      } finally {
+        verifyNever(bucket.writeObject(manifestDestinationPath));
+        List<List<int>> events = await sink.done;
+        List<int> payload = events
+            .fold([], (List<int> data, List<int> bytes) => data..addAll(bytes));
+        expect(payload, validPayload[otherPath].codeUnits);
+      }
     });
 
     test('Valid request.', () async {
-      final Topic topic = new MockTopic();
-      final Bucket bucket = new MockBucket();
+      final PubSubTopicWrapper topic = new MockTopicWrapper();
+      final StorageBucketWrapper bucket = new MockBucketWrapper();
       final StreamSink<List<int>> sink = new FakeSink<List<int>>();
-      when(bucket.write(otherDestinationPath)).thenReturn(sink);
+      when(bucket.writeObject(otherDestinationPath)).thenReturn(sink);
 
       final Tarball tarball = new MockTarball(validPayload);
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
@@ -205,11 +224,10 @@ main() {
           .fold([], (List<int> data, List<int> bytes) => data..addAll(bytes));
       expect(payload, validPayload[otherPath].codeUnits);
 
-      Message message = verify(topic.publish(captureAny)).captured.single;
+      String data = verify(topic.publish(captureAny)).captured.single;
       Manifest manifest = new Manifest.parseYamlString(validManifest);
-      expect(message.asBytes,
-          new Message.withBytes(manifest.toJsonString().codeUnits).asBytes);
-      verifyNever(bucket.write(manifestDestinationPath));
+      expect(data, manifest.toJsonString());
+      verifyNever(bucket.writeObject(manifestDestinationPath));
     });
   });
 }

@@ -69,37 +69,40 @@ main() {
     Stream<List<int>> gzipDataStream() =>
         new Stream.fromFuture(new Future.value(gzipData));
 
-    test('list', () {
-      withTarball(gzipDataStream(), (Tarball tarball) async {
-        expect(await tarball.list().toList(), unorderedEquals(testFiles.keys));
-      });
-    });
+    test(
+        'list',
+        () => withTarball(gzipDataStream(), (Tarball tarball) async {
+              expect(await tarball.list().toList(),
+                  unorderedEquals(testFiles.keys));
+            }));
 
-    test('readAsString', () {
-      withTarball(gzipDataStream(), (Tarball tarball) async {
-        expect(await tarball.readAsString('manifest.yaml'),
-            testFiles['manifest.yaml']);
-      });
-    });
+    test(
+        'readAsString',
+        () => withTarball(gzipDataStream(), (Tarball tarball) async {
+              expect(await tarball.readAsString('manifest.yaml'),
+                  testFiles['manifest.yaml']);
+            }));
 
-    test('readAsString, non-existent file.', () {
-      withTarball(gzipDataStream(), (Tarball tarball) {
-        expect(tarball.readAsString('manifest.json'), throwsTarballException);
-      });
-    });
+    test(
+        'readAsString, non-existent file.',
+        () => withTarball(gzipDataStream(), (Tarball tarball) {
+              expect(tarball.readAsString('manifest.json'),
+                  throwsTarballException);
+            }));
 
-    test('openRead', () {
-      withTarball(gzipDataStream(), (Tarball tarball) async {
-        expect(await UTF8.decodeStream(tarball.openRead('hello/world.txt')),
-            testFiles['hello/world.txt']);
-      });
-    });
+    test(
+        'openRead',
+        () => withTarball(gzipDataStream(), (Tarball tarball) async {
+              expect(
+                  await UTF8.decodeStream(tarball.openRead('hello/world.txt')),
+                  testFiles['hello/world.txt']);
+            }));
 
-    test('openRead, non-existent file.', () {
-      withTarball(gzipDataStream(), (Tarball tarball) {
-        expect(UTF8.decodeStream(tarball.openRead('hello/world.md')),
-            throwsTarballException);
-      });
-    });
+    test(
+        'openRead, non-existent file.',
+        () => withTarball(gzipDataStream(), (Tarball tarball) {
+              expect(tarball.openRead('hello/world.md').drain(),
+                  throwsTarballException);
+            }));
   });
 }

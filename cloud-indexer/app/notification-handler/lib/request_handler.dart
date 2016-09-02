@@ -3,26 +3,23 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show HttpStatus;
 
+import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:logging/logging.dart';
 import 'package:notification_handler/index_updater.dart';
-import 'package:notification_handler/message.dart';
 import 'package:shelf/shelf.dart' as shelf;
 
 final Logger _logger = new Logger('notification_handler.request_handler');
 
-const String _subscriptionName = 'projects/google.com:modular-cloud-indexer/'
-    'subscriptions/notification-handler';
-
-/// Handles a request from the subscription specified by [subscriptionName].
+/// Handles a Pub/Sub push message.
 ///
 /// Currently, we assume that there is no notion of deleting a module: once a
 /// manifest is removed, we have no means of determining the URL the module is
 /// indexed against.
 Future<shelf.Response> requestHandler(shelf.Request request,
-    {IndexUpdater indexUpdater,
-    String subscriptionName: _subscriptionName}) async {
+    {IndexUpdater indexUpdater}) async {
   // In the case that an IndexUpdater is not provided, we use the one registered
   // to the current service scope.
   indexUpdater ??= indexUpdaterService;
@@ -33,22 +30,22 @@ Future<shelf.Response> requestHandler(shelf.Request request,
     return new shelf.Response.notFound(null);
   }
 
-  final String pushRequest = await request.readAsString();
-  final Message message = new Message(pushRequest);
-  if (message == null) {
-    _logger.info('Invalid message received.');
+  PubsubMessage message;
+  try {
+    message = new ReceivedMessage.fromJson(await request
+            .read()
+            .transform(UTF8.decoder)
+            .transform(JSON.decoder)
+            .single)
+        .message;
+  } on FormatException {
+    _logger.info('Failed to decode Pub/Sub message.');
     return new shelf.Response(HttpStatus.BAD_REQUEST);
-  }
-
-  if (message.subscription != subscriptionName) {
-    // Here, we respond OK to stop further requests from being sent.
-    _logger.info('Invalid subscription: ${message.subscription}');
-    return new shelf.Response.ok(null);
   }
 
   try {
     _logger.info('Starting manifest update.');
-    await indexUpdater.update(message.data);
+    await indexUpdater.update(UTF8.decode(message.dataAsBytes));
   } on AtomicUpdateFailureException {
     return new shelf.Response.internalServerError();
   } on CloudStorageFailureException {

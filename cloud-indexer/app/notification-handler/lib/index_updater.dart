@@ -6,8 +6,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 
+import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:gcloud/service_scope.dart' as ss;
-import 'package:googleapis/storage/v1.dart' as storage_api;
 import 'package:http/http.dart' as http;
 import 'package:indexer_pipeline/index.dart';
 import 'package:indexer_pipeline/render_html.dart';
@@ -94,40 +94,24 @@ Manifest updateManifestUri(Manifest manifest, String bucketName) {
 
   return new Manifest(manifest.title, uri, manifest.use, manifest.verb,
       manifest.input, manifest.output, manifest.display, manifest.compose,
-      icon: icon, themeColor: manifest.themeColor, schemas: manifest.schemas,
-      arch: manifest.arch, modularRevision: manifest.modularRevision);
+      icon: icon,
+      themeColor: manifest.themeColor,
+      schemas: manifest.schemas,
+      arch: manifest.arch,
+      modularRevision: manifest.modularRevision);
 }
 
 class IndexUpdater {
-  final String bucketName;
-  final storage_api.StorageApi _api;
+  final StorageBucketWrapper _storageBucketWrapper;
 
-  IndexUpdater(http.Client client, this.bucketName)
-      : _api = new storage_api.StorageApi(client);
+  IndexUpdater(this._storageBucketWrapper);
 
-  IndexUpdater.fromApi(this._api, this.bucketName);
+  IndexUpdater.fromClient(http.Client client, String bucketName)
+      : _storageBucketWrapper = new StorageBucketWrapper(client, bucketName);
 
   static String storageDestinationPath(
           String arch, String modularRevision, String file) =>
       path.join('services', arch, modularRevision, file);
-
-  Future<storage_api.Object> _getObjectResource(String objectName) =>
-      _api.objects.get(bucketName, objectName, projection: 'full');
-
-  Future<storage_api.Media> _getObjectData(String objectName,
-          {String generation}) =>
-      _api.objects.get(bucketName, objectName,
-          downloadOptions: storage_api.DownloadOptions.FullMedia,
-          ifGenerationMatch: generation);
-
-  Future<storage_api.Object> _insertObjectData(
-          String objectName, storage_api.Media objectData,
-          {String generation}) =>
-      _api.objects.insert(null, bucketName,
-          ifGenerationMatch: generation,
-          name: objectName,
-          uploadMedia: objectData,
-          downloadOptions: storage_api.DownloadOptions.Metadata);
 
   /// Updates the index given some [jsonManifest] to be indexed.
   Future<Null> update(String jsonManifest) async {
@@ -152,14 +136,14 @@ class IndexUpdater {
     final String htmlIndexName = storageDestinationPath(
         manifest.arch, manifest.modularRevision, 'index.html');
 
-    storage_api.Object indexResource;
+    String indexGeneration;
     try {
       _logger.info('Fetching index from cloud storage.');
-      indexResource = await _getObjectResource(jsonIndexName);
-      storage_api.Media indexData = await _getObjectData(jsonIndexName,
-          generation: indexResource.generation);
-      index.addJsonIndex(await UTF8.decodeStream(indexData.stream));
-    } on storage_api.DetailedApiRequestError catch (e) {
+      indexGeneration =
+          await _storageBucketWrapper.getObjectGeneration(jsonIndexName);
+      index.addJsonIndex(await UTF8.decodeStream(_storageBucketWrapper
+          .readObject(jsonIndexName, generation: indexGeneration)));
+    } on DetailedApiRequestError catch (e) {
       switch (e.status) {
         case HttpStatus.NOT_FOUND:
           // If the index cannot be found, it's likely it didn't exist. In which
@@ -175,20 +159,20 @@ class IndexUpdater {
 
     // We add the manifest *after* the older index. This way, the manifest
     // will overwrite its entry in the index.
-    Manifest updatedManifest = updateManifestUri(manifest, bucketName);
+    Manifest updatedManifest =
+        updateManifestUri(manifest, _storageBucketWrapper.bucketName);
     index.addParsedManifest(updatedManifest);
 
     List<int> updatedJsonIndex = renderJsonIndex(index).codeUnits;
-    storage_api.Media updatedJsonIndexData = new storage_api.Media(
-        new Stream.fromIterable([updatedJsonIndex]), updatedJsonIndex.length);
     try {
-      // If the indexResource is null, this means that the index did not exist.
-      // In which case, we need to guarantee that the file does not exist when
-      // we write back to cloud storage - this is made possible with '0'.
+      // If the indexGeneration is null, the index did not exist. In which case,
+      // we need to guarantee that the file does not exist when we write back to
+      // cloud storage - this is made possible with '0'.
       _logger.info('Writing JSON index back to cloud storage.');
-      await _insertObjectData(jsonIndexName, updatedJsonIndexData,
-          generation: indexResource?.generation ?? '0');
-    } on storage_api.DetailedApiRequestError catch (e) {
+      await _storageBucketWrapper.writeObjectAsBytes(
+          jsonIndexName, updatedJsonIndex,
+          generation: indexGeneration ?? '0');
+    } on DetailedApiRequestError catch (e) {
       if (e.status == HttpStatus.PRECONDITION_FAILED) {
         throw _atomicUpdateFailureException('Index changed during updating.');
       }
@@ -198,15 +182,14 @@ class IndexUpdater {
     }
 
     List<int> updatedHtmlIndex = renderHtmlIndex(index).codeUnits;
-    storage_api.Media updatedHtmlIndexData = new storage_api.Media(
-        new Stream.fromIterable([updatedHtmlIndex]), updatedHtmlIndex.length);
     try {
       // TODO(victorkwan): In the future, we would want to expose the HTML
       // index by generating it on a separate endpoint. For now, we
       // optimistically update the HTML index in cloud storage.
       _logger.info('Writing HTML index back to cloud storage.');
-      await _insertObjectData(htmlIndexName, updatedHtmlIndexData);
-    } on storage_api.DetailedApiRequestError catch (e) {
+      await _storageBucketWrapper.writeObjectAsBytes(
+          htmlIndexName, updatedHtmlIndex);
+    } on DetailedApiRequestError catch (e) {
       _logger.warning(
           'HTML index could not be updated, but JSON index is up to date '
           '(${e.status}).');

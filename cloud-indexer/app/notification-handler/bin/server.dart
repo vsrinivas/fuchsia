@@ -16,7 +16,7 @@ main(List<String> args) {
   useLoggingPackageAdaptor();
   withAppEngineServices(() {
     return ss.fork(() {
-      IndexUpdater indexUpdater = new IndexUpdater(
+      IndexUpdater indexUpdater = new IndexUpdater.fromClient(
           authClientService, Platform.environment['BUCKET_NAME']);
       registerIndexUpdaterService(indexUpdater);
       return runAppEngine((HttpRequest request) {

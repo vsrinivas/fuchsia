@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:googleapis/storage/v1.dart' as storage_api;
+import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:indexer_pipeline/index.dart';
 import 'package:indexer_pipeline/render_json.dart';
 import 'package:mockito/mockito.dart';
@@ -14,10 +14,7 @@ import 'package:notification_handler/index_updater.dart';
 import 'package:parser/manifest.dart';
 import 'package:test/test.dart';
 
-class MockApi extends Mock implements storage_api.StorageApi {}
-
-class MockObjectsResourceApi extends Mock
-    implements storage_api.ObjectsResourceApi {}
+class MockBucketWrapper extends Mock implements StorageBucketWrapper {}
 
 main() {
   group('updateManifestUri', () {
@@ -130,199 +127,136 @@ main() {
         throwsA(new isInstanceOf<AtomicUpdateFailureException>());
 
     test('Malformed manifest.', () {
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
+      StorageBucketWrapper storageBucketWrapper = new MockBucketWrapper();
+      when(storageBucketWrapper.bucketName).thenReturn(testBucketName);
 
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      IndexUpdater indexUpdater = new IndexUpdater(storageBucketWrapper);
       expect(
           indexUpdater.update(malformedJsonManifest), throwsManifestException);
     });
 
     test('Non-existent index.', () async {
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
-
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
+      StorageBucketWrapper storageBucketWrapper = new MockBucketWrapper();
+      when(storageBucketWrapper.getObjectGeneration(testIndexPath)).thenAnswer(
+          (i) => throw new DetailedApiRequestError(
               HttpStatus.NOT_FOUND, 'Resource not found.'));
+      when(storageBucketWrapper.readObject(testIndexPath, generation: any))
+          .thenAnswer((i) => throw new DetailedApiRequestError(
+              HttpStatus.NOT_FOUND, 'Resource not found.'));
+      when(storageBucketWrapper.bucketName).thenReturn(testBucketName);
 
       Index index = new Index();
       index.addManifest(updatedValidManifest);
       String updatedJsonIndex = renderJsonIndex(index);
 
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      IndexUpdater indexUpdater = new IndexUpdater(storageBucketWrapper);
       await indexUpdater.update(getJsonManifest(validManifest));
 
       // A generation of '0' indicates that the object must not already be in
-      // cloud storage.
-      storage_api.Media resultingIndexData = verify(objectsResourceApi.insert(
-              null, testBucketName,
-              ifGenerationMatch: '0',
-              name: testIndexPath,
-              uploadMedia: captureAny,
-              downloadOptions: storage_api.DownloadOptions.Metadata))
+      // cloud storage. Also, the object should be written using
+      // writeObjectAsBytes as the index is a smaller object.
+      List<int> bytes = verify(storageBucketWrapper
+              .writeObjectAsBytes(testIndexPath, captureAny, generation: '0'))
           .captured
           .single;
-
-      expect(
-          await UTF8.decodeStream(resultingIndexData.stream), updatedJsonIndex);
+      expect(UTF8.decode(bytes), updatedJsonIndex);
     });
 
-    test('Error fetching index.', () {
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
+    test('Error fetching index.', () async {
+      StorageBucketWrapper storageBucketWrapper = new MockBucketWrapper();
+      when(storageBucketWrapper.getObjectGeneration(testIndexPath)).thenAnswer(
+          (i) => throw new DetailedApiRequestError(
+              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal sever error.'));
+      when(storageBucketWrapper.readObject(testIndexPath, generation: any))
+          .thenAnswer((i) => throw new DetailedApiRequestError(
+              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal sever error.'));
+      when(storageBucketWrapper.bucketName).thenReturn(testBucketName);
 
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
-              HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
-
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
-      expect(
-          indexUpdater.update(getJsonManifest(validManifest)).whenComplete(() {
-            verifyNever(objectsResourceApi.insert(null, testBucketName,
-                ifGenerationMatch: any,
-                name: testIndexPath,
-                uploadMedia: captureAny,
-                downloadOptions: storage_api.DownloadOptions.Metadata));
-          }),
-          throwsCloudStorageFailureException);
+      IndexUpdater indexUpdater = new IndexUpdater(storageBucketWrapper);
+      try {
+        await indexUpdater.update(getJsonManifest(validManifest));
+      } catch (e) {
+        expect(e, new isInstanceOf<CloudStorageFailureException>());
+      } finally {
+        verifyNever(storageBucketWrapper.writeObjectAsBytes(testBucketName, any,
+            generation: any));
+      }
     });
 
     test('Error writing index.', () {
-      storage_api.Object indexResource = new storage_api.Object();
-      indexResource.generation = testGeneration;
-
-      storage_api.Media indexData = new storage_api.Media(
-          new Stream.fromIterable([jsonIndex.codeUnits]),
-          jsonIndex.codeUnits.length);
-
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
-
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenReturn(new Future.value(indexResource));
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              ifGenerationMatch: testGeneration,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(indexData));
-      when(objectsResourceApi.insert(null, testBucketName,
-              ifGenerationMatch: any,
-              name: testIndexPath,
-              uploadMedia: any,
-              downloadOptions: storage_api.DownloadOptions.Metadata))
-          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
+      StorageBucketWrapper storageBucketWrapper = new MockBucketWrapper();
+      when(storageBucketWrapper.getObjectGeneration(testIndexPath))
+          .thenReturn(testGeneration);
+      when(storageBucketWrapper.readObject(testIndexPath, generation: any))
+          .thenReturn(new Stream.fromIterable([jsonIndex.codeUnits]));
+      when(storageBucketWrapper.writeObjectAsBytes(testIndexPath, any,
+              generation: any))
+          .thenAnswer((i) => throw new DetailedApiRequestError(
               HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
+      when(storageBucketWrapper.bucketName).thenReturn(testBucketName);
 
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      IndexUpdater indexUpdater = new IndexUpdater(storageBucketWrapper);
       expect(indexUpdater.update(getJsonManifest(validManifest)),
           throwsCloudStorageFailureException);
     });
 
     test('Valid index and manifest.', () async {
-      storage_api.Object indexResource = new storage_api.Object();
-      indexResource.generation = testGeneration;
-
-      storage_api.Media indexData = new storage_api.Media(
-          new Stream.fromIterable([jsonIndex.codeUnits]),
-          jsonIndex.codeUnits.length);
-
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
-
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenReturn(new Future.value(indexResource));
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              ifGenerationMatch: testGeneration,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(indexData));
+      StorageBucketWrapper storageBucketWrapper = new MockBucketWrapper();
+      when(storageBucketWrapper.getObjectGeneration(testIndexPath))
+          .thenReturn(testGeneration);
+      when(storageBucketWrapper.readObject(testIndexPath, generation: any))
+          .thenReturn(new Stream.fromIterable([jsonIndex.codeUnits]));
+      when(storageBucketWrapper.writeObjectAsBytes(testIndexPath, any,
+              generation: any))
+          .thenReturn(testGeneration);
+      when(storageBucketWrapper.bucketName).thenReturn(testBucketName);
 
       Index index = new Index();
       index.addJsonIndex(jsonIndex);
       index.addManifest(updatedValidManifest);
       String updatedJsonIndex = renderJsonIndex(index);
 
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      IndexUpdater indexUpdater = new IndexUpdater(storageBucketWrapper);
       await indexUpdater.update(getJsonManifest(validManifest));
 
-      storage_api.Media resultingIndexData = verify(objectsResourceApi.insert(
-              null, testBucketName,
-              ifGenerationMatch: testGeneration,
-              name: testIndexPath,
-              uploadMedia: captureThat(new isInstanceOf<storage_api.Media>()),
-              downloadOptions: storage_api.DownloadOptions.Metadata))
+      List<int> bytes = verify(storageBucketWrapper.writeObjectAsBytes(
+              testIndexPath, captureAny,
+              generation: testGeneration))
           .captured
           .single;
-
-      expect(
-          await UTF8.decodeStream(resultingIndexData.stream), updatedJsonIndex);
+      expect(UTF8.decode(bytes), updatedJsonIndex);
     });
 
     test('Atomic update failure: existing index.', () {
-      storage_api.Object indexResource = new storage_api.Object();
-      indexResource.generation = testGeneration;
-
-      storage_api.Media indexData = new storage_api.Media(
-          new Stream.fromIterable([jsonIndex.codeUnits]),
-          jsonIndex.codeUnits.length);
-
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
-
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenReturn(new Future.value(indexResource));
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              ifGenerationMatch: testGeneration,
-              downloadOptions: storage_api.DownloadOptions.FullMedia))
-          .thenReturn(new Future.value(indexData));
-      when(objectsResourceApi.insert(null, testBucketName,
-              ifGenerationMatch: testGeneration,
-              name: testIndexPath,
-              uploadMedia: any,
-              downloadOptions: storage_api.DownloadOptions.Metadata))
-          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
+      StorageBucketWrapper storageBucketWrapper = new MockBucketWrapper();
+      when(storageBucketWrapper.getObjectGeneration(testIndexPath))
+          .thenReturn(testGeneration);
+      when(storageBucketWrapper.readObject(testIndexPath,
+              generation: testGeneration))
+          .thenReturn(new Stream.fromIterable([jsonIndex.codeUnits]));
+      when(storageBucketWrapper.writeObjectAsBytes(testIndexPath, any,
+              generation: testGeneration))
+          .thenAnswer((i) => throw new DetailedApiRequestError(
               HttpStatus.PRECONDITION_FAILED, 'Preconditions failed.'));
+      when(storageBucketWrapper.bucketName).thenReturn(testBucketName);
 
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      IndexUpdater indexUpdater = new IndexUpdater(storageBucketWrapper);
       expect(indexUpdater.update(getJsonManifest(validManifest)),
           throwsAtomicUpdateFailureException);
     });
 
     test('Atomic update failure: non-existent index.', () {
-      storage_api.StorageApi api = new MockApi();
-      storage_api.ObjectsResourceApi objectsResourceApi =
-          new MockObjectsResourceApi();
-      when(api.objects).thenReturn(objectsResourceApi);
-
-      when(objectsResourceApi.get(testBucketName, testIndexPath,
-              projection: 'full'))
-          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
+      StorageBucketWrapper storageBucketWrapper = new MockBucketWrapper();
+      when(storageBucketWrapper.getObjectGeneration(testIndexPath)).thenAnswer(
+          (i) => throw new DetailedApiRequestError(
               HttpStatus.NOT_FOUND, 'Resource not found.'));
-      when(objectsResourceApi.insert(null, testBucketName,
-              ifGenerationMatch: '0',
-              name: testIndexPath,
-              uploadMedia: any,
-              downloadOptions: storage_api.DownloadOptions.Metadata))
-          .thenAnswer((i) => throw new storage_api.DetailedApiRequestError(
+      when(storageBucketWrapper.writeObjectAsBytes(testIndexPath, any,
+              generation: '0'))
+          .thenAnswer((i) => throw new DetailedApiRequestError(
               HttpStatus.PRECONDITION_FAILED, 'Preconditions failed.'));
+      when(storageBucketWrapper.bucketName).thenReturn(testBucketName);
 
-      IndexUpdater indexUpdater = new IndexUpdater.fromApi(api, testBucketName);
+      IndexUpdater indexUpdater = new IndexUpdater(storageBucketWrapper);
       expect(indexUpdater.update(getJsonManifest(validManifest)),
           throwsAtomicUpdateFailureException);
     });

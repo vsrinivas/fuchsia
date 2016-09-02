@@ -4,6 +4,8 @@ description: Provides an endpoint for changes in the Modular cloud storage.
 dependencies:
   appengine: '^0.3.0'
   archive: any
+  cloud_indexer_common:
+    path: ../common
   logging: any
   mime: any
   mockito: any

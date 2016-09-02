@@ -55,6 +55,12 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.1.0"
+  cloud_indexer_common:
+    description:
+      path: "../common"
+      relative: true
+    source: path
+    version: "0.0.0"
   collection:
     description:
       name: collection

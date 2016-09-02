@@ -8,11 +8,8 @@ import 'package:appengine/appengine.dart';
 import 'package:cloud_indexer/auth_manager.dart';
 import 'package:cloud_indexer/module_uploader.dart';
 import 'package:cloud_indexer/request_handler.dart';
-import 'package:gcloud/pubsub.dart';
 import 'package:gcloud/service_scope.dart' as ss;
 import 'package:shelf/shelf_io.dart' as io;
-
-const String _projectName = 'modular-cloud-indexer';
 
 main(List<String> args) {
   int port = 8080;
@@ -20,13 +17,11 @@ main(List<String> args) {
   useLoggingPackageAdaptor();
   withAppEngineServices(() {
     return ss.fork(() async {
-      final PubSub pubSub = new PubSub(authClientService, _projectName);
-      registerPubSubService(pubSub);
       final AuthManager authManager =
           new AuthManager.fromClient(authClientService);
       registerAuthManagerService(authManager);
       final ModuleUploader moduleUploader =
-          await ModuleUploader.createModuleUploader(pubSub: pubSub);
+          new ModuleUploader.fromClient(authClientService);
       registerModuleUploaderService(moduleUploader);
       return runAppEngine((HttpRequest request) {
         return io.handleRequest(request, requestHandler);
