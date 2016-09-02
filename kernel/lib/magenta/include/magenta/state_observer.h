@@ -15,7 +15,12 @@ class Handle;
 // Observer base class for state maintained by StateTracker.
 class StateObserver {
 public:
-    StateObserver() {}
+    enum class IrqDisposition {
+        IRQ_UNSAFE, // OnStateChange is not safe to call from an IRQ
+        IRQ_SAFE,   // OnStateChange is safe to call from an IRQ
+    };
+
+    explicit StateObserver(IrqDisposition irq_disposition) : irq_disposition_(irq_disposition) { }
 
     // Called when this object is added to a StateTracker, to give it the initial state. Returns
     // true if a thread was awoken.
@@ -24,8 +29,9 @@ public:
 
     // Called whenever the state changes, to give it the new state. Returns true if a thread was
     // awoken.
-    // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnStateChange(mx_signals_state_t new_state) = 0;
+    // WARNING: This is called under StateTracker's lock and may be called from an IRQ (instead of a
+    // thread) if irq_safe() is true.
+    virtual bool OnStateChange(mx_signals_state_t new_state);
 
     // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
     // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may
@@ -44,12 +50,26 @@ public:
     // under the StateTracker's mutex.
     virtual void OnDidCancel() = 0;
 
+    // True if this StateObserver may be signalled (OnStateChange) safely from an IRQ context.
+    // StateObserver implementations which claim to be "irq safe" must take care to only perform
+    // operations which are safe to perform from either a thread or an irq context.  In
+    // particular...
+    //
+    // ++ Synchronization should be done using things like atomic operations and spin_locks with
+    //    IRQs disabled.  Mutexes, or anything which might attempt to suspend a thread are not
+    //    allowed.
+    // ++ Triggering a reschedule event (usually via signalling an event_t) is not allowed.
+    // ++ Sleeping is not allowed.
+    // ++ O(n) operations are not allowed.
+    bool irq_safe() const { return irq_disposition_ == IrqDisposition::IRQ_SAFE; }
+
 protected:
     ~StateObserver() {}
 
 private:
     friend struct StateObserverListTraits;
     mxtl::DoublyLinkedListNodeState<StateObserver*> state_observer_list_node_state_;
+    const IrqDisposition irq_disposition_;
 };
 
 // For use by StateTracker to maintain a list of StateObservers. (We don't use the default traits so

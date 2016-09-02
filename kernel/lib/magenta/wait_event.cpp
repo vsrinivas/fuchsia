@@ -57,5 +57,8 @@ bool WaitEvent::Signal(WaitEvent::Result result, uint64_t context) {
 
     result_ = result;
     context_ = context;
+
+    // WARNING: Never request a reschedule when signaling this event.  It is
+    // possible that this WaitEvent is being signaled from IRQ context.
     return !!event_signal_etc(&event_, false, NO_ERROR);
 }

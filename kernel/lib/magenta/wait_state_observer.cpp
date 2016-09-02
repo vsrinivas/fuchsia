@@ -13,8 +13,6 @@
 
 #include <mxtl/type_support.h>
 
-WaitStateObserver::WaitStateObserver() {}
-
 WaitStateObserver::~WaitStateObserver() {
     DEBUG_ASSERT(!dispatcher_);
 }

@@ -27,5 +27,5 @@ public:
 
 private:
     explicit EventDispatcher(uint32_t options);
-    StateTracker state_tracker_;
+    NonIrqStateTracker state_tracker_;
 };

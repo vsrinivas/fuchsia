@@ -18,7 +18,7 @@ class WaitEvent;
 
 class WaitStateObserver final : public StateObserver {
 public:
-    WaitStateObserver();
+    WaitStateObserver() : StateObserver(IrqDisposition::IRQ_SAFE) { }
     ~WaitStateObserver();
 
     // This should be called under the handle table lock. If this succeeds, End() must be called

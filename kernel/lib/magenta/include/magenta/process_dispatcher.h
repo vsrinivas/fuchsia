@@ -206,7 +206,7 @@ private:
     mutable Mutex handle_table_lock_; // protects |handles_|.
     mxtl::DoublyLinkedList<Handle*> handles_;
 
-    StateTracker state_tracker_;
+    NonIrqStateTracker state_tracker_;
 
     FutexContext futex_context_;
 

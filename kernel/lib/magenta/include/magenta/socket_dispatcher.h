@@ -68,7 +68,7 @@ private:
     mx_ssize_t OOB_WriteSelf(const void* src, mx_size_t len, bool from_user);
 
     const uint32_t flags_;
-    StateTracker state_tracker_;
+    NonIrqStateTracker state_tracker_;
 
     // The |lock_| protects all members below.
     Mutex lock_;
