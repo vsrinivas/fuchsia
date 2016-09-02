@@ -9,46 +9,11 @@
 #include <stdint.h>
 
 #include <kernel/mutex.h>
-
-#include <magenta/types.h>
-#include <magenta/io_port_dispatcher.h>
 #include <magenta/state_observer.h>
-
+#include <magenta/types.h>
 #include <mxtl/intrusive_double_list.h>
 
 class Handle;
-class WaitEvent;
-
-// Magenta state tracker
-//
-// TODO(vtl): Update this comment once things have settle some more.
-//  Provides the interface between the syscall layer and the kernel object layer
-//  that allows waiting for object state changes. It connects the waitee (which
-//  owns the StateTracker object) and (possibly) many waiters.
-//
-//  The waitee uses Signal/ClearSignal to inform the waiters of state changes.
-//
-//  The StateTracker has two styles for notifying waiters. They are mutually exclusive.
-//
-//  In the examples that follow, assume a waitee pointed by |handle| and
-//  some |signals| to wait for.
-//
-//  Style 1: Using BeginWait / FinishWait. Assume an existing |event|
-//
-//      auto waiter = handle->dispatcher()->get_waiter();
-//      waiter->BeginWait(&event, handle, signals, 0);
-//
-//      event.Wait(timeout);
-//      waiter->FinishWait(&event);
-//
-//  Style 2: Using IOPorts. Assume an existing |io_port|.
-//
-//      auto waiter = handle->dispatcher()->get_waiter();
-//      waiter->BindIOPOrt(io_port, key, signals);
-//
-//      IOP_Packet pk;
-//      io_port->Wait(&pk);
-//
 
 class StateTracker {
 public:
@@ -81,7 +46,7 @@ public:
     void Cancel(Handle* handle);
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
-    // setting satisfiable signals should not wake anyone.) Returns true if some thread was awoken.
+    // setting satisfiable signals should not wake anyone.)
     void UpdateState(mx_signals_t satisfied_clear_mask,
                      mx_signals_t satisfied_set_mask,
                      mx_signals_t satisfiable_clear_mask,
@@ -92,8 +57,6 @@ public:
     }
 
 private:
-    static bool SendIOPortPacket(IOPortDispatcher* io_port, uint64_t key, mx_signals_t signals);
-
     const bool is_waitable_;
 
     mutex_t lock_;  // Protects the members below.

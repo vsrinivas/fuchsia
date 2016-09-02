@@ -13,6 +13,7 @@
 
 #include <kernel/mutex.h>
 
+#include <magenta/io_port_dispatcher.h>
 #include <magenta/state_tracker.h>
 
 #include <mxtl/type_support.h>

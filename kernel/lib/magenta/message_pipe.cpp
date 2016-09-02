@@ -7,11 +7,13 @@
 #include <magenta/message_pipe.h>
 
 #include <err.h>
+#include <new.h>
 #include <stddef.h>
 
 #include <kernel/auto_lock.h>
 
 #include <magenta/handle.h>
+#include <magenta/io_port_dispatcher.h>
 #include <magenta/io_port_client.h>
 #include <magenta/magenta.h>
 

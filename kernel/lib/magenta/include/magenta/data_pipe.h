@@ -9,12 +9,11 @@
 #include <stdint.h>
 
 #include <kernel/mutex.h>
-
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
-
 #include <magenta/state_tracker.h>
 
+class Dispatcher;
 class Handle;
 class VmObject;
 class VmAspace;

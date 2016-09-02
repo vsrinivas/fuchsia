@@ -7,10 +7,7 @@
 #include <magenta/state_tracker.h>
 
 #include <kernel/auto_lock.h>
-
 #include <magenta/wait_event.h>
-
-#include <mxtl/intrusive_single_list.h>
 
 StateTracker::StateTracker(bool is_waitable, mx_signals_state_t signals_state)
     : is_waitable_(is_waitable),
@@ -61,7 +58,7 @@ void StateTracker::UpdateState(mx_signals_t satisfied_clear_mask,
             return;
 
         for (auto& observer : observers_) {
-            awoke_threads |= observer.OnStateChange(signals_state_);
+            awoke_threads = observer.OnStateChange(signals_state_) || awoke_threads;
         }
 
     }
@@ -80,7 +77,7 @@ void StateTracker::Cancel(Handle* handle) {
         for (auto it = observers_.begin(); it != observers_.end();) {
             bool should_remove = false;
             bool call_did_cancel = false;
-            awoke_threads |= it->OnCancel(handle, &should_remove, &call_did_cancel);
+            awoke_threads = it->OnCancel(handle, &should_remove, &call_did_cancel) || awoke_threads;
             if (should_remove) {
                 auto to_remove = it;
                 ++it;

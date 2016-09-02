@@ -17,6 +17,7 @@
 
 #include <magenta/handle.h>
 #include <magenta/message_pipe.h>
+#include <magenta/io_port_dispatcher.h>
 #include <magenta/io_port_client.h>
 
 #include <mxtl/type_support.h>

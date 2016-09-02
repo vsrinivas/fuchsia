@@ -11,13 +11,14 @@
 #include <kernel/mutex.h>
 
 #include <magenta/state_tracker.h>
+#include <magenta/syscalls-types.h>
 
 #include <mxtl/array.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 
 class Handle;
-class IOPortDisatcher;
+class IOPortDispatcher;
 class IOPortClient;
 
 struct MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
