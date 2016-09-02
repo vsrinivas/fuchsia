@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "vfs.h"
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
-#include "vfs.h"
 
 struct vnode {
     VNODE_BASE_FIELDS
@@ -45,11 +45,13 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             len = nextpath - path;
             nextpath++;
             trace(WALK, "vfs_walk: vn=%p name='%.*s' nextpath='%s'\n", vn, (int)len, path, nextpath);
-            if ((r = vn->ops->lookup(vn, &vn, path, len))) {
-                return r;
-            }
+            r = vn->ops->lookup(vn, &vn, path, len);
             if (oldvn) {
+                // release the old vnode, even if there was an error
                 vn_release(oldvn);
+            }
+            if (r) {
+                return r;
             }
             oldvn = vn;
             path = nextpath;
@@ -88,7 +90,7 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
             vn_release(vndir);
         }
     } else {
-try_open:
+    try_open:
         r = vndir->ops->lookup(vndir, &vn, path, len);
         vn_release(vndir);
         if (r < 0) {
