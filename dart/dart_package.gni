@@ -20,6 +20,11 @@
 #   deps (optional)
 #     List of labels for Dart packages this package depends on.
 #
+#   non_dart_deps (optional)
+#     List of labels this package depends on that are not Dart packages. This
+#     includes things like actions that generate Dart code. It typically doesn't
+#     need to be set.
+#
 # Example of usage:
 #
 #   dart_package("baz") {
@@ -43,9 +48,14 @@ template("dart_package") {
   action(target_name) {
     script = "//build/dart/gen_dot_packages.py"
 
-    deps = []
+    dart_deps = []
     if (defined(invoker.deps)) {
-      deps += invoker.deps
+      dart_deps += invoker.deps
+    }
+
+    deps = dart_deps
+    if (defined(invoker.non_dart_deps)) {
+      deps += invoker.non_dart_deps
     }
 
     dot_packages_file = "$target_gen_dir/$target_name.packages"
@@ -72,6 +82,6 @@ template("dart_package") {
              "--depfile",
              rebase_path(depfile),
              "--deps",
-           ] + deps
+           ] + dart_deps
   }
 }
