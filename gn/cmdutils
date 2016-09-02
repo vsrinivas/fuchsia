@@ -6,6 +6,10 @@
         {
             "binary": "cowsay",
             "bootfs_path": "bin/cowsay"
+        },
+        {
+            "binary": "time",
+            "bootfs_path": "bin/time"
         }
     ]
 }
