@@ -131,7 +131,12 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     xhci_post_command(xhci, TRB_CMD_ADDRESS_DEVICE, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
                       (slot_id << TRB_SLOT_ID_START), &command.context);
     int cc = xhci_sync_command_wait(&command);
-    return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
+    if (cc == TRB_CC_SUCCESS) {
+        return NO_ERROR;
+    } else {
+        printf("xhci_address_device failed cc: %d\n", cc);
+        return ERR_INTERNAL;
+    }
 }
 
 #define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
@@ -284,9 +289,8 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     xhci_slot_t* slot = &xhci->slots[slot_id];
     memset(slot, 0, sizeof(*slot));
 
-    mx_status_t status = xhci_address_device(xhci, slot_id, hub_address, port, speed);
-    if (status != NO_ERROR) {
-        printf("xhci_address_device failed\n");
+    result = xhci_address_device(xhci, slot_id, hub_address, port, speed);
+    if (result != NO_ERROR) {
         goto disable_slot_exit;
     }
     slot->enabled = true;
