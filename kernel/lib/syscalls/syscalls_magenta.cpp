@@ -1330,11 +1330,14 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
     return msg_pipe->SetIOPort(mxtl::move(ioport), key, signals);
  }
 
+// TODO(vtl): _consumer_handle should presumably be an mxtl::user_ptr instead. Also, do we want to
+// provide the producer handle as an out parameter (possibly in the same way as in msgpipe_create,
+// instead of overloading the return value)?
 mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,
-                                mx_handle_t* _handle) {
+                                mx_handle_t* _consumer_handle) {
     LTRACEF("options %u\n", options);
 
-    if (!_handle)
+    if (!_consumer_handle)
         return ERR_INVALID_ARGS;
 
     if (element_size == 0u)
@@ -1372,7 +1375,7 @@ mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_siz
     mx_handle_t hv_producer = up->MapHandleToValue(producer_handle.get());
     mx_handle_t hv_consumer = up->MapHandleToValue(consumer_handle.get());
 
-    if (copy_to_user_32_unsafe(_handle, hv_consumer) != NO_ERROR)
+    if (copy_to_user_32_unsafe(_consumer_handle, hv_consumer) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(producer_handle));
@@ -1381,14 +1384,14 @@ mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_siz
     return hv_producer;
 }
 
-mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requested,
-                              void const* _buffer) {
-    LTRACEF("handle %d\n", handle);
+mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_size_t requested,
+                              const void* _buffer) {
+    LTRACEF("handle %d\n", producer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<DataPipeProducerDispatcher> producer;
-    mx_status_t status = up->GetDispatcher(handle, &producer, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcher(producer_handle, &producer, MX_RIGHT_WRITE);
     if (status != NO_ERROR)
         return status;
 
@@ -1402,14 +1405,14 @@ mx_ssize_t sys_datapipe_write(mx_handle_t handle, uint32_t flags, mx_size_t requ
     return written;
 }
 
-mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t requested,
+mx_ssize_t sys_datapipe_read(mx_handle_t consumer_handle, uint32_t flags, mx_size_t requested,
                              void* _buffer) {
-    LTRACEF("handle %d\n", handle);
+    LTRACEF("handle %d\n", consumer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<DataPipeConsumerDispatcher> consumer;
-    mx_status_t status = up->GetDispatcher(handle, &consumer, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcher(consumer_handle, &consumer, MX_RIGHT_READ);
     if (status != NO_ERROR)
         return status;
 
@@ -1437,13 +1440,14 @@ mx_ssize_t sys_datapipe_read(mx_handle_t handle, uint32_t flags, mx_size_t reque
     return read;
 }
 
-mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, uintptr_t* buffer) {
-    LTRACEF("handle %d\n", handle);
+mx_ssize_t sys_datapipe_begin_write(mx_handle_t producer_handle, uint32_t flags,
+                                    uintptr_t* buffer) {
+    LTRACEF("handle %d\n", producer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<DataPipeProducerDispatcher> producer;
-    mx_status_t status = up->GetDispatcher(handle, &producer, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcher(producer_handle, &producer, MX_RIGHT_WRITE);
     if (status != NO_ERROR)
         return status;
 
@@ -1464,26 +1468,26 @@ mx_ssize_t sys_datapipe_begin_write(mx_handle_t handle, uint32_t flags, uintptr_
     return result;
 }
 
-mx_status_t sys_datapipe_end_write(mx_handle_t handle, mx_size_t written) {
-    LTRACEF("handle %d\n", handle);
+mx_status_t sys_datapipe_end_write(mx_handle_t producer_handle, mx_size_t written) {
+    LTRACEF("handle %d\n", producer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<DataPipeProducerDispatcher> producer;
-    mx_status_t status = up->GetDispatcher(handle, &producer, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcher(producer_handle, &producer, MX_RIGHT_WRITE);
     if (status != NO_ERROR)
         return status;
 
     return producer->EndWrite(written);
 }
 
-mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, uintptr_t* buffer) {
-    LTRACEF("handle %d\n", handle);
+mx_ssize_t sys_datapipe_begin_read(mx_handle_t consumer_handle, uint32_t flags, uintptr_t* buffer) {
+    LTRACEF("handle %d\n", consumer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<DataPipeConsumerDispatcher> consumer;
-    mx_status_t status = up->GetDispatcher(handle, &consumer, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcher(consumer_handle, &consumer, MX_RIGHT_READ);
     if (status != NO_ERROR)
         return status;
 
@@ -1506,13 +1510,13 @@ mx_ssize_t sys_datapipe_begin_read(mx_handle_t handle, uint32_t flags, uintptr_t
     return result;
 }
 
-mx_status_t sys_datapipe_end_read(mx_handle_t handle, mx_size_t read) {
-    LTRACEF("handle %d\n", handle);
+mx_status_t sys_datapipe_end_read(mx_handle_t consumer_handle, mx_size_t read) {
+    LTRACEF("handle %d\n", consumer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<DataPipeConsumerDispatcher> consumer;
-    mx_status_t status = up->GetDispatcher(handle, &consumer, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcher(consumer_handle, &consumer, MX_RIGHT_READ);
     if (status != NO_ERROR)
         return status;
 
