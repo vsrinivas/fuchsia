@@ -78,6 +78,7 @@ static void hpet_init(uint level)
             PAGE_SIZE, /* size */
             (void **)&hpet_regs, /* returned virtual address */
             PAGE_SIZE_SHIFT, /* alignment log2 */
+            0, /* min alloc gap */
             (paddr_t)hpet_desc.address, /* physical address */
             0, /* vmm flags */
             ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |

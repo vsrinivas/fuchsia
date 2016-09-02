@@ -54,7 +54,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     // Allocate the control zone, ddemand paged.
     sprintf(vname, "%s_ctrl", name);
     st = vmm_alloc(kspace, vname, count * sizeof(Node), &start, PAGE_SIZE_SHIFT,
-                   0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+                   0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
     if (st < 0)
         return st;
 
@@ -73,7 +73,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
     st = vmm_aspace_to_obj(kspace)->MapObject(
             vmo_, vname, 0u, data_mem_sz, &start, PAGE_SIZE_SHIFT,
-            0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+            0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
 
     if (st < 0)
         return st;

@@ -46,8 +46,9 @@ public:
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
 
     // map a vm object at a given offset
-    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
-                       void** ptr, uint8_t align_pow2, uint vmm_flags, uint arch_mmu_flags);
+    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
+                       size_t size, void** ptr, uint8_t align_pow2, size_t min_alloc_gap,
+                       uint vmm_flags, uint arch_mmu_flags);
 
     // common routines, mostly used by internal kernel code
 
@@ -55,16 +56,17 @@ public:
     status_t ReserveSpace(const char* name, size_t size, vaddr_t vaddr);
 
     // allocate a vm region mapping a physical range of memory
-    status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                           paddr_t paddr, uint vmm_flags, uint arch_mmu_flags);
+    status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_log2,
+                           size_t min_alloc_gap, paddr_t paddr,
+                           uint vmm_flags, uint arch_mmu_flags);
 
     // allocate a block of virtual memory
-    status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
-                   uint arch_mmu_flags);
+    status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                   size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
 
     // allocate a block of virtual memory with physically contiguous backing pages
     status_t AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                             uint vmm_flags, uint arch_mmu_flags);
+                             size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
 
     // return a pointer to a region based on virtual address
     mxtl::RefPtr<VmRegion> FindRegion(vaddr_t vaddr);
@@ -107,14 +109,14 @@ private:
     // private internal routines
     status_t AddRegion(const mxtl::RefPtr<VmRegion>& r);
     mxtl::RefPtr<VmRegion> AllocRegion(const char* name, size_t size, vaddr_t vaddr,
-                                        uint8_t align_pow2, uint32_t vmm_flags,
-                                        uint arch_mmu_flags);
-    vaddr_t AllocSpot(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                      RegionTree::iterator* after);
+                                       uint8_t align_pow2, size_t min_alloc_gap,
+                                       uint vmm_flags, uint arch_mmu_flags);
+    vaddr_t AllocSpot(size_t size, uint8_t align_pow2, size_t min_alloc_gap,
+                      uint arch_mmu_flags, RegionTree::iterator* after);
     mxtl::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
     bool CheckGap(const RegionTree::iterator& prev,
                   const RegionTree::iterator& next,
-                  vaddr_t* pva, vaddr_t align, size_t region_size, uint arch_mmu_flags);
+                  vaddr_t* pva, vaddr_t align, size_t region_size, size_t min_gap, uint arch_mmu_flags);
 
     // magic
     static const uint32_t MAGIC = 0x564d4153; // VMAS

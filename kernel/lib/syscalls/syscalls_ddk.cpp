@@ -113,7 +113,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
 
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     status_t res = aspace->AllocPhysical("user_mmio", len, &vaddr,
-                                         PAGE_SIZE_SHIFT, (paddr_t)paddr,
+                                         PAGE_SIZE_SHIFT, 0, (paddr_t)paddr,
                                          0,  // vmm flags
                                          arch_mmu_flags);
 
@@ -150,7 +150,7 @@ mx_status_t sys_alloc_device_memory(mx_handle_t hrsrc, uint32_t len,
         ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
 
     status_t res = aspace->AllocContiguous("user_mmio", len, &vaddr,
-                                           PAGE_SIZE_SHIFT, VMM_FLAG_COMMIT,
+                                           PAGE_SIZE_SHIFT, 0, VMM_FLAG_COMMIT,
                                            arch_mmu_flags);
     if (res != NO_ERROR)
         return res;

@@ -156,7 +156,7 @@ mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_
         return ERR_ACCESS_DENIED;
     }
 
-    auto status = aspace->MapObject(vmo_, "unnamed", offset, len, reinterpret_cast<void**>(_ptr), 0,
+    auto status = aspace->MapObject(vmo_, "unnamed", offset, len, reinterpret_cast<void**>(_ptr), 0, 0,
                                     vmm_flags, arch_mmu_flags);
     if (status < 0)
         return status;

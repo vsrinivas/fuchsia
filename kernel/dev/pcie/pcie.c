@@ -1307,6 +1307,7 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
                 ecam->io_range.size,
                 &window->vaddr,
                 PAGE_SIZE_SHIFT,
+                0 /* min alloc gap */,
                 ecam->io_range.bus_addr,
                 0 /* vmm flags */,
                 ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |

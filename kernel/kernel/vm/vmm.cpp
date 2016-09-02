@@ -35,31 +35,33 @@ status_t vmm_reserve_space(vmm_aspace_t* _aspace, const char* name, size_t size,
 }
 
 status_t vmm_alloc_physical(vmm_aspace_t* _aspace, const char* name, size_t size, void** ptr,
-                            uint8_t align_pow2, paddr_t paddr, uint vmm_flags,
+                            uint8_t align_pow2, size_t min_alloc_gap, paddr_t paddr, uint vmm_flags,
                             uint arch_mmu_flags) {
     auto aspace = vmm_aspace_to_obj(_aspace);
     if (!aspace)
         return ERR_INVALID_ARGS;
 
-    return aspace->AllocPhysical(name, size, ptr, align_pow2, paddr, vmm_flags, arch_mmu_flags);
+    return aspace->AllocPhysical(name, size, ptr, align_pow2, min_alloc_gap, paddr,
+                                 vmm_flags, arch_mmu_flags);
 }
 
 status_t vmm_alloc_contiguous(vmm_aspace_t* _aspace, const char* name, size_t size, void** ptr,
-                              uint8_t align_pow2, uint vmm_flags, uint arch_mmu_flags) {
+                              uint8_t align_pow2, size_t min_alloc_gap,
+                              uint vmm_flags, uint arch_mmu_flags) {
     auto aspace = vmm_aspace_to_obj(_aspace);
     if (!aspace)
         return ERR_INVALID_ARGS;
 
-    return aspace->AllocContiguous(name, size, ptr, align_pow2, vmm_flags, arch_mmu_flags);
+    return aspace->AllocContiguous(name, size, ptr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
 }
 
 status_t vmm_alloc(vmm_aspace_t* _aspace, const char* name, size_t size, void** ptr,
-                   uint8_t align_pow2, uint vmm_flags, uint arch_mmu_flags) {
+                   uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags) {
     auto aspace = vmm_aspace_to_obj(_aspace);
     if (!aspace)
         return ERR_INVALID_ARGS;
 
-    return aspace->Alloc(name, size, ptr, align_pow2, vmm_flags, arch_mmu_flags);
+    return aspace->Alloc(name, size, ptr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
 }
 
 status_t vmm_protect_region(vmm_aspace_t* _aspace, vaddr_t va, uint arch_mmu_flags) {
@@ -223,7 +225,7 @@ static int cmd_vmm(int argc, const cmd_args* argv) {
 
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
-        status_t err = vmm_alloc(test_aspace, "alloc test", argv[2].u, &ptr, align, 0, 0);
+        status_t err = vmm_alloc(test_aspace, "alloc test", argv[2].u, &ptr, align, 0, 0, 0);
         printf("vmm_alloc returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "alloc_physical")) {
         if (argc < 4)
@@ -232,7 +234,7 @@ static int cmd_vmm(int argc, const cmd_args* argv) {
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 5) ? (uint8_t)argv[4].u : 0u;
         status_t err = vmm_alloc_physical(test_aspace, "physical test", argv[3].u, &ptr, align,
-                                          argv[2].u, 0, ARCH_MMU_FLAG_UNCACHED_DEVICE |
+                                          0, argv[2].u, 0, ARCH_MMU_FLAG_UNCACHED_DEVICE |
                                           ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         printf("vmm_alloc_physical returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "alloc_contig")) {
@@ -242,7 +244,7 @@ static int cmd_vmm(int argc, const cmd_args* argv) {
         void* ptr = (void*)0x99;
         uint8_t align = (argc >= 4) ? (uint8_t)argv[3].u : 0u;
         status_t err =
-            vmm_alloc_contiguous(test_aspace, "contig test", argv[2].u, &ptr, align, 0,
+            vmm_alloc_contiguous(test_aspace, "contig test", argv[2].u, &ptr, align, 0, 0,
                                  ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         printf("vmm_alloc_contig returns %d, ptr %p\n", err, ptr);
     } else if (!strcmp(argv[1].str, "free_region")) {

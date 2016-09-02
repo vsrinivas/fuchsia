@@ -101,7 +101,7 @@ mx_status_t DataPipe::MapVMOIfNeededNoLock(EndPoint* ep, mxtl::RefPtr<VmAspace> 
     // For large requests we can use demand page here instead of commit.
     auto perms = ep->read_only ? kDP_Map_Perms_RO : kDP_Map_Perms;
     auto status = aspace->MapObject(vmo_, "datapipe", 0u, capacity_,
-                                    reinterpret_cast<void**>(&ep->vad_start), 0,
+                                    reinterpret_cast<void**>(&ep->vad_start), 0, 0,
                                     VMM_FLAG_COMMIT, perms);
     if (status < 0)
         return status;

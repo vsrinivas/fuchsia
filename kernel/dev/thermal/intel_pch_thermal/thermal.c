@@ -103,6 +103,7 @@ static status_t pch_thermal_startup(struct pcie_device_state* pci_device)
             size,
             &vaddr,
             PAGE_SIZE_SHIFT,
+            0,
             bar_info->bus_addr,
             0,
             ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |

@@ -53,7 +53,7 @@ bool SocketDispatcher::CBuf::Init(uint32_t len) {
 
     void* start = nullptr;
     auto st = VmAspace::kernel_aspace()->MapObject(
-        vmo_, "socket", 0u, len, &start, PAGE_SIZE_SHIFT,
+        vmo_, "socket", 0u, len, &start, PAGE_SIZE_SHIFT, 0,
         0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
 
     if (st < 0)

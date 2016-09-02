@@ -74,7 +74,7 @@ public:
         auto kspace = vmm_get_kernel_aspace();
         void* start = nullptr;
         status_t st = vmm_alloc(kspace, "fifo-buffer", sizeof(T) * buffer_count, &start,
-                                PAGE_SIZE_SHIFT, 0,
+                                PAGE_SIZE_SHIFT, 0, 0,
                                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         if (st < 0)
           return false;

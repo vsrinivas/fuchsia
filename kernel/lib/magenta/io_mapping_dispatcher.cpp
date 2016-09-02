@@ -78,6 +78,7 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
                                   size,
                                   reinterpret_cast<void**>(&vaddr_),
                                   PAGE_SIZE_SHIFT,
+                                  0,
                                   paddr,
                                   vmm_flags,
                                   arch_mmu_flags);

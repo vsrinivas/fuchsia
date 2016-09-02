@@ -53,6 +53,7 @@ status_t udisplay_bind_gfxconsole(void) {
             g_udisplay.framebuffer_size,
             &g_udisplay.framebuffer_virt,
             PAGE_SIZE_SHIFT,
+            0 /* min alloc gap */,
             g_udisplay.framebuffer_phys,
             0 /* vmm flags */,
             ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |

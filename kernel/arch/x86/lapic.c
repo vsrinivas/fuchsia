@@ -106,6 +106,7 @@ void apic_vm_init(void)
             PAGE_SIZE, // size
             &apic_virt_base, // returned virtual address
             PAGE_SIZE_SHIFT, // alignment log2
+            0, // min alloc gap
             APIC_PHYS_BASE, // physical address
             0, // vmm flags
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |

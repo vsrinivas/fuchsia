@@ -137,6 +137,7 @@ void apic_io_init(
                     PAGE_SIZE, // size
                     &vaddr, // requested virtual vaddress
                     PAGE_SIZE_SHIFT, // alignment log2
+                    0, // min alloc gap
                     paddr_page_base, // physical vaddress
                     0, // vmm flags
                     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |

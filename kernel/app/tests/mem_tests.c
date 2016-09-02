@@ -179,7 +179,7 @@ usage:
         }
 
         /* allocate a region to test in */
-        status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "memtest", len, &ptr, 0, 0,
+        status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "memtest", len, &ptr, 0, 0, 0,
                                             ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         if (err < 0) {
             printf("error %d allocating test region\n", err);
