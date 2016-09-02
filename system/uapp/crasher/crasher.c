@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// defined in cpp_specific.cpp.
+int cpp_out_of_mem(void);
+
 typedef struct {
     const char* name;
     int (*func)(volatile unsigned int*);
@@ -65,6 +68,10 @@ int undefined(volatile unsigned int* unused) {
     return 0;
 }
 
+int oom(volatile unsigned int* unused) {
+    return cpp_out_of_mem();
+}
+
 command_t commands[] = {
     {"write0", blind_write, "write to address 0x0"},
     {"read0", blind_read, "read address 0x0"},
@@ -72,6 +79,7 @@ command_t commands[] = {
     {"stackov", stack_overflow, "overflow the stack (recursive)"},
     {"und", undefined, "undefined instruction"},
     {"nx_run", nx_run, "run in no-execute memory"},
+    {"oom", oom, "out of memory c++ death"},
     {NULL, NULL, NULL}};
 
 int main(int argc, char** argv) {

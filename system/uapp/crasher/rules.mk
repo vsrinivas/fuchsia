@@ -10,9 +10,10 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/crasher.c \
+    $(LOCAL_DIR)/cpp_specific.cpp \
 
 MODULE_NAME := crasher
 
-MODULE_LIBS := ulib/mxio ulib/musl
+MODULE_LIBS := ulib/mxio ulib/musl ulib/mxcpp
 
 include make/module.mk
