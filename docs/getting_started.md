@@ -146,6 +146,19 @@ sudo ifconfig qemu up
 
 This is sufficient to enable link local IPv6 (as the loglistener tool uses).
 
+## Copying files to and from Magenta
+
+With local link IPv6 configured, the host tool ./build-magenta-ARCH/tools/netcp
+can be used to copy files.
+
+```
+# Copy the file myprogram to Magenta
+netcp myprogram :/tmp/myprogram
+
+# Copy the file myprogram back to the host
+netcp :/tmp/myprogram myprogram
+```
+
 ## Including Additional Userspace Files
 
 The Magenta build creates a bootfs image containing necessary userspace components
