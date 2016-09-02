@@ -16,6 +16,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/diagnostics.cpp \
     $(LOCAL_DIR)/dispatcher.cpp \
     $(LOCAL_DIR)/event_dispatcher.cpp \
+    $(LOCAL_DIR)/event_pair_dispatcher.cpp \
     $(LOCAL_DIR)/exception.cpp \
     $(LOCAL_DIR)/excp_port.cpp \
     $(LOCAL_DIR)/futex_context.cpp \

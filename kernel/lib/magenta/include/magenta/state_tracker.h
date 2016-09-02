@@ -39,6 +39,8 @@ public:
                              mx_signals_t satisfiable_clear_mask,
                              mx_signals_t satisfiable_set_mask) = 0;
 
+    virtual mx_signals_state_t GetSignalsState() = 0;
+
     bool is_waitable() const { return is_waitable_; }
 
 protected:
@@ -121,6 +123,8 @@ public:
                      mx_signals_t satisfied_set_mask,
                      mx_signals_t satisfiable_clear_mask,
                      mx_signals_t satisfiable_set_mask) final;
+
+    mx_signals_state_t GetSignalsState() final;
 
     void UpdateSatisfied(mx_signals_t clear_mask, mx_signals_t set_mask) {
         UpdateState(clear_mask, set_mask, 0u, 0u);

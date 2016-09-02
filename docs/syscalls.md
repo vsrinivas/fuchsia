@@ -7,6 +7,9 @@
 + [handle_wait_many](syscalls/handle_wait_many.md)
 + [handle_wait_one](syscalls/handle_wait_one.md)
 
+## Objects
++ [object_signal](syscalls/object_signal.md)
+
 ## Threads
 + [nanosleep](syscalls/nano_sleep.md)
 + [thread_arch_prctl](syscalls/thread_arch_prctl.md)
@@ -34,6 +37,10 @@
 + [port_queue](syscalls/port_queue.md)
 + [port_wait](syscalls/port_wait.md)
 + [port_bind](syscalls/port_bind.md)
+
+## Events and Event Pairs
++ [event_create](syscalls/event_create.md)
++ [eventpair_create](syscalls/eventpair_create.md)
 
 ## Futexes
 + [futex_wait](syscalls/futex_wait.md)

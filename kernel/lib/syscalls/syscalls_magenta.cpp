@@ -23,6 +23,7 @@
 #include <magenta/data_pipe_consumer_dispatcher.h>
 #include <magenta/data_pipe_producer_dispatcher.h>
 #include <magenta/event_dispatcher.h>
+#include <magenta/event_pair_dispatcher.h>
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
@@ -1076,6 +1077,39 @@ mx_handle_t sys_event_create(uint32_t options) {
     return hv;
 }
 
+mx_status_t sys_eventpair_create(mxtl::user_ptr<mx_handle_t> out_handles /* array of size 2 */,
+                                 uint32_t flags) {
+    LTRACEF("entry out_handles[] %p\n", out_handles.get());
+
+    if (flags != 0u)  // No flags defined/supported yet.
+        return ERR_NOT_SUPPORTED;
+
+    mxtl::RefPtr<Dispatcher> epd0, epd1;
+    mx_rights_t rights;
+    status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
+    if (result != NO_ERROR)
+        return result;
+
+    HandleUniquePtr h0(MakeHandle(mxtl::move(epd0), rights));
+    if (!h0)
+        return ERR_NO_MEMORY;
+
+    HandleUniquePtr h1(MakeHandle(mxtl::move(epd1), rights));
+    if (!h1)
+        return ERR_NO_MEMORY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
+
+    if (copy_to_user(out_handles, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    up->AddHandle(mxtl::move(h0));
+    up->AddHandle(mxtl::move(h1));
+
+    return NO_ERROR;
+}
+
 mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
     LTRACEF("handle %u\n", handle_value);
 
@@ -1088,7 +1122,8 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
-    return dispatcher->UserSignal(clear_mask, set_mask);
+    mx_status_t status = dispatcher->UserSignal(clear_mask, set_mask);
+    return (status == ERR_BAD_HANDLE) ? up->BadHandle(handle_value, ERR_BAD_HANDLE) : status;
 }
 
 mx_status_t sys_futex_wait(int* value_ptr, int current_value, mx_time_t timeout) {

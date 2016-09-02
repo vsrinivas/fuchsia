@@ -21,11 +21,9 @@ void DumpProcessListKeyMap() {
     printf("#th : number of thread handles\n");
     printf("#vm : number of vm map handles\n");
     printf("#mp : number of message pipe handles\n");
-    printf("#ev : number of event handles\n");
+    printf("#ev : number of event and event pair handles\n");
     printf("#ip : number of io port handles\n");
     printf("#dp : number of data pipe handles (both)\n");
-    printf("#it : number of interrupt handles\n");
-    printf("#io : number of io map handles\n");
 }
 
 char StateChar(const ProcessDispatcher& pd) {
@@ -43,7 +41,7 @@ char StateChar(const ProcessDispatcher& pd) {
 }
 
 const char* ObjectTypeToString(mx_obj_type_t type) {
-    static_assert(MX_OBJ_TYPE_LAST == 17, "need to update switch below");
+    static_assert(MX_OBJ_TYPE_LAST == 18, "need to update switch below");
 
     switch (type) {
         case MX_OBJ_TYPE_PROCESS: return "process";
@@ -62,6 +60,7 @@ const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_WAIT_SET: return "wait-set";
         case MX_OBJ_TYPE_SOCKET: return "socket";
         case MX_OBJ_TYPE_RESOURCE: return "resource";
+        case MX_OBJ_TYPE_EVENT_PAIR: return "event-pair";
         default: return "???";
     }
 }
@@ -91,17 +90,17 @@ char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
-             types[1],              // process.
-             types[2],              // thread.
-             types[3],              // vmem
-             types[4],              // msg pipe.
-             types[5],              // event
-             types[6],              // ioport.
-             types[7] + types[8],   // data pipe (both sides),
-             types[9],              // interrupt.
-             types[10]              // io map
+             types[MX_OBJ_TYPE_PROCESS],
+             types[MX_OBJ_TYPE_THREAD],
+             types[MX_OBJ_TYPE_VMEM],
+             types[MX_OBJ_TYPE_MESSAGE_PIPE],
+             // Events and event pairs:
+             types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
+             types[MX_OBJ_TYPE_IOPORT],
+             // Both sides of data pipes:
+             types[MX_OBJ_TYPE_DATA_PIPE_PRODUCER] + types[MX_OBJ_TYPE_DATA_PIPE_CONSUMER]
              );
     return buf;
 }

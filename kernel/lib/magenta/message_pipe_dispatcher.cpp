@@ -41,7 +41,10 @@ status_t MessagePipeDispatcher::Create(uint32_t flags,
     if (!ac.check()) return ERR_NO_MEMORY;
 
     Dispatcher* msgp1 = new (&ac) MessagePipeDispatcher(flags, 1u, pipe);
-    if (!ac.check()) return ERR_NO_MEMORY;
+    if (!ac.check()) {
+        delete msgp0;
+        return ERR_NO_MEMORY;
+    }
 
     *rights = kDefaultPipeRights;
     *dispatcher0 = mxtl::AdoptRef(msgp0);

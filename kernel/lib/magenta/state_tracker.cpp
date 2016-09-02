@@ -63,47 +63,6 @@ mx_signals_state_t StateTrackerImpl<Traits>::RemoveObserver(StateObserver* obser
 }
 
 template <typename Traits>
-bool StateTrackerImpl<Traits>::UpdateStateInternal(mx_signals_t satisfied_clear_mask,
-                                                   mx_signals_t satisfied_set_mask,
-                                                   mx_signals_t satisfiable_clear_mask,
-                                                   mx_signals_t satisfiable_set_mask) {
-    bool awoke_threads = false;
-    {
-        AutoLock lock(&lock_);
-
-        auto previous_signals_state = signals_state_;
-        signals_state_.satisfied &= ~satisfied_clear_mask;
-        signals_state_.satisfied |= satisfied_set_mask;
-        signals_state_.satisfiable &= ~satisfiable_clear_mask;
-        signals_state_.satisfiable |= satisfiable_set_mask;
-
-        if (previous_signals_state.satisfied == signals_state_.satisfied &&
-            previous_signals_state.satisfiable == signals_state_.satisfiable)
-            return false;
-
-        for (auto& observer : observers_) {
-            awoke_threads = observer.OnStateChange(signals_state_) || awoke_threads;
-        }
-
-    }
-
-    return awoke_threads;
-}
-
-template <typename Traits>
-void StateTrackerImpl<Traits>::UpdateState(mx_signals_t satisfied_clear_mask,
-                                           mx_signals_t satisfied_set_mask,
-                                           mx_signals_t satisfiable_clear_mask,
-                                           mx_signals_t satisfiable_set_mask) {
-    if (UpdateStateInternal(satisfied_clear_mask,
-                            satisfied_set_mask,
-                            satisfiable_clear_mask,
-                            satisfiable_set_mask)) {
-        thread_yield();
-    }
-}
-
-template <typename Traits>
 void StateTrackerImpl<Traits>::Cancel(Handle* handle) {
     bool awoke_threads = false;
     StateObserver* observer = nullptr;
@@ -135,6 +94,53 @@ void StateTrackerImpl<Traits>::Cancel(Handle* handle) {
 
     if (awoke_threads)
         thread_yield();
+}
+
+template <typename Traits>
+void StateTrackerImpl<Traits>::UpdateState(mx_signals_t satisfied_clear_mask,
+                                           mx_signals_t satisfied_set_mask,
+                                           mx_signals_t satisfiable_clear_mask,
+                                           mx_signals_t satisfiable_set_mask) {
+    if (UpdateStateInternal(satisfied_clear_mask,
+                            satisfied_set_mask,
+                            satisfiable_clear_mask,
+                            satisfiable_set_mask)) {
+        thread_yield();
+    }
+}
+
+template <typename Traits>
+mx_signals_state_t StateTrackerImpl<Traits>::GetSignalsState() {
+    AutoLock lock(&lock_);
+    return signals_state_;
+}
+
+template <typename Traits>
+bool StateTrackerImpl<Traits>::UpdateStateInternal(mx_signals_t satisfied_clear_mask,
+                                                   mx_signals_t satisfied_set_mask,
+                                                   mx_signals_t satisfiable_clear_mask,
+                                                   mx_signals_t satisfiable_set_mask) {
+    bool awoke_threads = false;
+    {
+        AutoLock lock(&lock_);
+
+        auto previous_signals_state = signals_state_;
+        signals_state_.satisfied &= ~satisfied_clear_mask;
+        signals_state_.satisfied |= satisfied_set_mask;
+        signals_state_.satisfiable &= ~satisfiable_clear_mask;
+        signals_state_.satisfiable |= satisfiable_set_mask;
+
+        if (previous_signals_state.satisfied == signals_state_.satisfied &&
+            previous_signals_state.satisfiable == signals_state_.satisfiable)
+            return false;
+
+        for (auto& observer : observers_) {
+            awoke_threads = observer.OnStateChange(signals_state_) || awoke_threads;
+        }
+
+    }
+
+    return awoke_threads;
 }
 
 }  // namespace internal
