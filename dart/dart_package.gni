@@ -6,11 +6,16 @@
 #
 # Parameters
 #
-#   package_name (required)
+#   package_name (optional)
 #     Name of the dart package. This is used as an identifier in code that
 #     depends on this package. In general, this should correspond to the path to
 #     the package.  I.e. a dart package in //foo/bar/baz should have the package
 #     name "foo.bar.baz"
+#
+#   infer_package_name (optional)
+#     Infer the package name based on the path to the package.
+#
+#     NOTE: Either package_name or infer_package_name must be set.
 #
 #   deps (optional)
 #     List of labels for Dart packages this package depends on.
