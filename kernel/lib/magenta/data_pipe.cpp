@@ -236,14 +236,13 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr,
     if (*requested == 0)
         return NO_ERROR;
 
-    // TODO(vtl): Should probably return something else if |!producer_.alive|.
     if (free_space_ == capacity_)
-        return ERR_SHOULD_WAIT;
+        return producer_.alive ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;
 
     mx_size_t available = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
     DEBUG_ASSERT(available % element_size_ == 0u);
     if (all_or_none && available != *requested)
-        return ERR_OUT_OF_RANGE;
+        return producer_.alive ? ERR_OUT_OF_RANGE : ERR_REMOTE_CLOSED;
     *requested = available;
 
     if (!discard) {
@@ -292,9 +291,8 @@ mx_ssize_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr
     if (consumer_.expected)
         return ERR_BUSY;
 
-    // TODO(vtl): Should probably return something else if |!producer_.alive|.
     if (free_space_ == capacity_)
-        return ERR_SHOULD_WAIT;
+        return producer_.alive ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;
 
     auto status = MapVMOIfNeededNoLock(&consumer_, mxtl::move(aspace));
     if (status < 0)
