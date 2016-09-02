@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:appengine/appengine.dart';
+import 'package:cloud_indexer/auth_manager.dart';
 import 'package:cloud_indexer/module_uploader.dart';
 import 'package:cloud_indexer/request_handler.dart';
 import 'package:gcloud/pubsub.dart';
@@ -21,6 +22,9 @@ main(List<String> args) {
     return ss.fork(() async {
       final PubSub pubSub = new PubSub(authClientService, _projectName);
       registerPubSubService(pubSub);
+      final AuthManager authManager =
+          new AuthManager.fromClient(authClientService);
+      registerAuthManagerService(authManager);
       final ModuleUploader moduleUploader =
           await ModuleUploader.createModuleUploader(pubSub: pubSub);
       registerModuleUploaderService(moduleUploader);

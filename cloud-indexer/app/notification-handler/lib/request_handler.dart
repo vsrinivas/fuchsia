@@ -27,6 +27,8 @@ Future<shelf.Response> requestHandler(shelf.Request request,
   // to the current service scope.
   indexUpdater ??= indexUpdaterService;
 
+  // TODO(victorkwan): Provide authentication checks once these are available
+  // on Managed VMs: https://code.google.com/p/cloud-pubsub/issues/detail?id=32
   if (request.method != 'POST') {
     return new shelf.Response.notFound(null);
   }

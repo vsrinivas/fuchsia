@@ -9,6 +9,7 @@ import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
 import 'package:shelf/shelf.dart' as shelf;
 
+import 'auth_manager.dart';
 import 'module_uploader.dart';
 import 'tarball.dart';
 
@@ -19,9 +20,16 @@ final RegExp _boundaryRegExp =
 const String _namePattern = 'name="module"';
 
 Future<shelf.Response> requestHandler(shelf.Request request,
-    {ModuleUploader moduleUploader}) async {
+    {ModuleUploader moduleUploader, AuthManager authManager}) async {
   // Override variables from the service scope as default values.
   moduleUploader ??= moduleUploaderService;
+  authManager ??= authManagerService;
+
+  final String email =
+      await authManager.authenticatedUser(request.headers['Authorization']);
+  if (email == null) {
+    return new shelf.Response.forbidden(null);
+  }
 
   if (request.method != 'POST' || request.url.path != 'api/upload') {
     return new shelf.Response.notFound(null);
@@ -29,8 +37,6 @@ Future<shelf.Response> requestHandler(shelf.Request request,
 
   String contentType = request.headers['Content-Type'];
   if (!contentType.startsWith('multipart/form-data')) {
-    // TODO(victorkwan): Update with identifying information once we have
-    // authentication implemented. Here, and below.
     _logger.info('Invalid content-type received. Bailing out.');
     return new shelf.Response(HttpStatus.BAD_REQUEST);
   }
