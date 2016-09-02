@@ -130,8 +130,10 @@ int service_starter(void* arg) {
     }
 #endif
 
-    // launch the network service
-    devmgr_launch("netsvc", 1, argv_netsvc, -1);;
+    if (getenv("netsvc.disable") == NULL) {
+        // launch the network service
+        devmgr_launch("netsvc", 1, argv_netsvc, -1);
+    }
 
     devmgr_launch("mxsh:autorun", 2, argv_mxsh_autorun, -1);
 
@@ -220,8 +222,11 @@ int main(int argc, char** argv) {
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
         thrd_detach(t);
     }
-    if ((thrd_create_with_name(&t, virtcon_starter, NULL, "virtcon-starter")) == thrd_success) {
-        thrd_detach(t);
+    if (getenv("virtcon.disable") == NULL) {
+        if ((thrd_create_with_name(&t, virtcon_starter, NULL,
+                                   "virtcon-starter")) == thrd_success) {
+            thrd_detach(t);
+        }
     }
 
     devmgr_handle_messages();
