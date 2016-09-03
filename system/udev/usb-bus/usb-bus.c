@@ -180,13 +180,12 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
     }
 }
 
-static void usb_device_unbind(mx_device_t* device) {
-    usb_device_t* dev = get_usb_device(device);
-
+static void usb_device_remove(usb_device_t* dev) {
     usb_device_t* child;
     while ((child = list_remove_head_type(&dev->children, usb_device_t, node)) != NULL) {
         device_remove(&child->device);
     }
+    device_remove(&dev->device);
 }
 
 static mx_status_t usb_device_release(mx_device_t* device) {
@@ -208,7 +207,6 @@ static mx_status_t usb_device_release(mx_device_t* device) {
 static mx_protocol_device_t usb_device_proto = {
     .iotxn_queue = usb_iotxn_queue,
     .ioctl = usb_device_ioctl,
-    .unbind = usb_device_unbind,
     .release = usb_device_release,
 };
 
@@ -381,7 +379,7 @@ static void usb_bus_do_remove_device(usb_bus_t* bus, uint32_t device_id) {
             }
         }
 
-        device_remove(&device->device);
+        usb_device_remove(device);
         bus->devices[device_id] = NULL;
     }
 }
