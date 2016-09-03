@@ -38,34 +38,40 @@ static void xhci_handle_port_enabled(xhci_t* xhci, int port, int speed) {
 
 void xhci_handle_port_changed_event(xhci_t* xhci, xhci_trb_t* trb) {
     volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
-    uint32_t port = XHCI_GET_BITS32(&trb->ptr_low, EVT_TRB_PORT_ID_START, EVT_TRB_PORT_ID_BITS);
-    uint32_t portsc = XHCI_READ32(&port_regs[port - 1].portsc);
-    uint32_t speed = (portsc & XHCI_MASK(PORTSC_SPEED_START, PORTSC_SPEED_BITS)) >> PORTSC_SPEED_START;
+//  uint32_t port = XHCI_GET_BITS32(&trb->ptr_low, EVT_TRB_PORT_ID_START, EVT_TRB_PORT_ID_BITS);
 
-    xprintf("xhci_handle_port_changed_event port: %d speed: %d\n", port, speed);
+    xprintf("xhci_handle_port_changed_event\n");
 
-    uint32_t status_bits = portsc & PORTSC_STATUS_BITS;
-    if (status_bits) {
-        bool connected = !!(portsc & PORTSC_CCS);
-        bool enabled = !!(portsc & PORTSC_PED);
+    // ignore the port number contained in the event and scan all root hub ports
+    // other wise we tend to miss superspeed devices
+    for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
+        uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
+        uint32_t speed = (portsc & XHCI_MASK(PORTSC_SPEED_START, PORTSC_SPEED_BITS)) >> PORTSC_SPEED_START;
 
-        // set change bits to acknowledge
-        XHCI_WRITE32(&port_regs[port - 1].portsc, (portsc & PORTSC_CONTROL_BITS) | status_bits);
+        uint32_t status_bits = portsc & PORTSC_STATUS_BITS;
+        if (status_bits) {
+            bool connected = !!(portsc & PORTSC_CCS);
+            bool enabled = !!(portsc & PORTSC_PED);
+            int port = i + 1;
 
-        if (portsc & PORTSC_CSC) {
-            // connect status change
-            if (connected) {
-                // queue this event on the device manager thread
-                xhci_rh_port_connected(xhci, port);
-            } else {
-                // this will also queue an event for the device manager
-                xhci_device_disconnected(xhci, 0, port);
+            // set change bits to acknowledge
+            XHCI_WRITE32(&port_regs[port - 1].portsc, (portsc & PORTSC_CONTROL_BITS) | status_bits);
+
+            if (portsc & PORTSC_CSC) {
+                // connect status change
+                if (connected) {
+                    // queue this event on the device manager thread
+                    xhci_rh_port_connected(xhci, port);
+                } else {
+                    // this will also queue an event for the device manager
+                    xhci_device_disconnected(xhci, 0, port);
+                }
             }
-        }
-        if (portsc & PORTSC_PRC) {
-            // port reset change
-            if (enabled) {
-                xhci_handle_port_enabled(xhci, port, speed);
+            if (portsc & PORTSC_PRC) {
+                // port reset change
+                if (enabled) {
+                    xhci_handle_port_enabled(xhci, port, speed);
+                }
             }
         }
     }
