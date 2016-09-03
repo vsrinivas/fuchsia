@@ -461,28 +461,25 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
     slot->enabled = false;
     xhci_transfer_ring_t* transfer_rings = slot->transfer_rings;
 
-    // wait for all requests to complete
-    xprintf("waiting for requests to complete\n");
+    uint32_t drop_flags = 0;
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
         xhci_transfer_ring_t* transfer_ring = &transfer_rings[i];
         if (transfer_ring->start) {
-            transfer_ring->dead = true;
-            completion_wait(&transfer_ring->completion, MX_TIME_INFINITE);
-            xhci_transfer_ring_free(xhci, transfer_ring);
-        }
-    }
-    xprintf("requests completed\n");
-
-    xhci_remove_device(xhci, slot_id);
-
-    uint32_t drop_flags = 0;
-    for (int i = 1; i < XHCI_NUM_EPS; i++) {
-        if (transfer_rings[i].start) {
             xhci_stop_endpoint(xhci, slot_id, i);
             drop_flags |= XHCI_ICC_EP_FLAG(i);
+
+            // complete pending requests
+            xhci_transfer_context_t* context;
+            while ((context = list_remove_head_type(&transfer_ring->pending_requests,
+                                                    xhci_transfer_context_t, node)) != NULL) {
+                context->callback(ERR_REMOTE_CLOSED, context->data);
+            }
+            // and any deferred requests
+            xhci_process_deferred_txns(xhci, transfer_ring, true);
         }
     }
-    xhci_stop_endpoint(xhci, slot_id, 0);
+
+    xhci_remove_device(xhci, slot_id);
 
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&xhci->input_context[0 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);

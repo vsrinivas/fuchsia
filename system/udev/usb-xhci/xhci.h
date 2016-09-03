@@ -32,8 +32,6 @@ typedef struct xhci_transfer_ring {
 
     mtx_t mutex;
     list_node_t pending_requests;   // pending transfers that should be completed when ring is dead
-    completion_t completion;        // signaled when pending_requests is empty
-    bool dead;
     list_node_t deferred_txns;      // used by upper layer to defer iotxns when ring is full
 } xhci_transfer_ring_t;
 
@@ -174,4 +172,4 @@ mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
                             usb_device_descriptor_t* device_descriptor,
                             usb_configuration_descriptor_t** config_descriptors);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
-void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring);
+void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed);

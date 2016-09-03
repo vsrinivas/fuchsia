@@ -208,7 +208,7 @@ static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
                                  ep_index, direction, context, &txn->node);
 }
 
-void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring) {
+void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed) {
     list_node_t list;
     list_node_t* node;
     iotxn_t* txn;
@@ -223,7 +223,7 @@ void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring) {
     list_initialize(&ring->deferred_txns);
     mtx_unlock(&ring->mutex);
 
-    if (ring->dead) {
+    if (closed) {
         while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
             txn->ops->complete(txn, ERR_REMOTE_CLOSED, 0);
         }

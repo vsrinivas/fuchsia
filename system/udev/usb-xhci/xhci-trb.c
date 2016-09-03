@@ -15,7 +15,6 @@ inline void trb_set_link(xhci_t* xhci, xhci_trb_t* trb, xhci_trb_t* next, bool t
 mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* ring, int count) {
     list_initialize(&ring->pending_requests);
     list_initialize(&ring->deferred_txns);
-    completion_signal(&ring->completion);
 
     ring->start = xhci_memalign(xhci, 64, count * sizeof(xhci_trb_t));
     if (!ring->start)
@@ -25,7 +24,6 @@ mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* ring, in
     ring->size = count - 1;    // subtract 1 for LINK TRB at the end
     ring->pcs = TRB_C;
     trb_set_link(xhci, &ring->start[count - 1], ring->start, true);
-    ring->dead = false;
     return NO_ERROR;
 }
 

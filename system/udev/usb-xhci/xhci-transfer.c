@@ -108,7 +108,6 @@ int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_
 
     context->transfer_ring = ring;
     list_add_tail(&ring->pending_requests, &context->node);
-    completion_reset(&ring->completion);
 
     if (setup) {
         // Setup Stage
@@ -295,30 +294,15 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // update dequeue_ptr to TRB following this transaction
     ring->dequeue_ptr = context->dequeue_ptr;
 
+    // remove context from pending_requests
     list_delete(&context->node);
-    if (list_is_empty(&ring->pending_requests)) {
-        completion_signal(&ring->completion);
-    }
 
     bool process_deferred_txns = !list_is_empty(&ring->deferred_txns);
     mtx_unlock(&ring->mutex);
 
     context->callback(result, context->data);
 
-    if (ring->dead) {
-        // once we get a transfer error on a dead endpoint we will receive no more events.
-        // so complete all remaining pending requests
-        // FIXME - find a better way to handle this
-        xhci_transfer_context_t* context;
-        while ((context = list_remove_head_type(&ring->pending_requests,
-                                                xhci_transfer_context_t, node)) != NULL) {
-            context->callback(ERR_REMOTE_CLOSED, context->data);
-        }
-        list_initialize(&ring->pending_requests);
-        completion_signal(&ring->completion);
-    }
-
     if (process_deferred_txns) {
-        xhci_process_deferred_txns(xhci, ring);
+        xhci_process_deferred_txns(xhci, ring, false);
     }
 }
