@@ -69,6 +69,8 @@ __BEGIN_CDECLS;
 #define USB_DT_HID                         0x21
 #define USB_DT_HIDREPORT                   0x22
 #define USB_DT_HIDPHYSICAL                 0x23
+#define USB_DT_SS_EP_COMPANION             0x30
+#define USB_DT_SS_ISOCH_EP_COMPANION       0x31
 
 /* USB device feature selectors */
 #define USB_DEVICE_SELF_POWERED            0x00
@@ -114,7 +116,7 @@ typedef struct {
 
 typedef struct {
     uint8_t bLength;
-    uint8_t bDescriptorType;
+    uint8_t bDescriptorType;    // USB_DT_DEVICE
     uint16_t bcdUSB;
     uint8_t bDeviceClass;
     uint8_t bDeviceSubClass;
@@ -131,7 +133,7 @@ typedef struct {
 
 typedef struct {
     uint8_t bLength;
-    uint8_t bDescriptorType;
+    uint8_t bDescriptorType;    // USB_DT_CONFIG
     uint16_t wTotalLength;
     uint8_t bNumInterfaces;
     uint8_t bConfigurationValue;
@@ -142,7 +144,7 @@ typedef struct {
 
 typedef struct {
     uint8_t bLength;
-    uint8_t bDescriptorType;
+    uint8_t bDescriptorType;    // USB_DT_INTERFACE
     uint8_t bInterfaceNumber;
     uint8_t bAlternateSetting;
     uint8_t bNumEndpoints;
@@ -154,7 +156,7 @@ typedef struct {
 
 typedef struct {
     uint8_t bLength;
-    uint8_t bDescriptorType;
+    uint8_t bDescriptorType;    // USB_DT_ENDPOINT
     uint8_t bEndpointAddress;
     uint8_t bmAttributes;
     uint16_t wMaxPacketSize;
@@ -163,5 +165,20 @@ typedef struct {
 #define usb_ep_direction(ep)    ((ep)->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
 #define usb_ep_type(ep)         ((ep)->bmAttributes & USB_ENDPOINT_TYPE_MASK)
 #define usb_ep_max_packet(ep)   (le16toh((ep)->wMaxPacketSize))
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_SS_EP_COMPANION
+    uint8_t bMaxBurst;
+    uint8_t bmAttributes;
+    uint16_t wBytesPerInterval;
+} __attribute__ ((packed)) usb_ss_ep_comp_descriptor_t;
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_SS_ISOCH_EP_COMPANION
+    uint16_t wReserved;
+    uint16_t wBytesPerInterval;
+} __attribute__ ((packed)) usb_ss_isoch_ep_comp_descriptor_t;
 
 __END_CDECLS;
