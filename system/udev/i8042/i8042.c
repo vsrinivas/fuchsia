@@ -602,6 +602,10 @@ static void i8042_identify(int (*cmd)(uint8_t* param, int command)) {
 
 static mx_status_t i8042_get_descriptor(mx_hid_device_t* dev, uint8_t desc_type,
         void** data, size_t* len) {
+    if (desc_type != HID_DESC_TYPE_REPORT) {
+        return ERR_NOT_FOUND;
+    }
+
     i8042_device_t* device = get_i8042_device(dev);
     const uint8_t* buf = NULL;
     size_t buflen = 0;
