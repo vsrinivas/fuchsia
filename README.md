@@ -11,11 +11,24 @@ specifying goals and semantic data types along side traditional typed
 function inputs and outputs, and letting the system work out how those
 semantic goals are satisfied and what services are employed.
 
-## Writing for the Modular platform
-
-Modular runs in any [Mojo](https://github.com/domokit/mojo) shell. Modules may
-be written in any language supported by the shell, and a library is included
-for more rapid development using [Flutter](http://flutter.io/) and Dart.
-
-**Setup, build and run** instructions are in
+**Setup, build and run** instructions for Linux / Android are in
 [HACKING.md](https://fuchsia.googlesource.com/modular/+/master/HACKING.md).
+
+
+**Setup, build and run** instructions for Fuchsia are
+[here](https://fuchsia.googlesource.com/manifest/+/master/README.md). Once setup
+is done, you can refer to the following cheatsheet for Modular:
+
+```sh
+export ROOT_DIR=/path/to/fuchsia/root
+
+# Generate ninja files with modular autorun in bootfs. Modular autorun will
+# launch story-manager.
+$ROOT_DIR/packages/gn/gen.py -m modular-autorun
+```
+
+Alternatively, you can run the following bash script:
+
+```sh
+./apps/modular/fuchsia-scripts/build-and-run.sh
+```

@@ -5,10 +5,14 @@
 executable("story-manager") {
   sources = [
     "main.cc",
+    "story-manager-app.h",
+    "story-manager-app.cc",
   ]
 
   deps = [
+    "//lib/ftl",
     "//mojo/public/c:system",
+    "//mojo/public/cpp/application:standalone",
     "//mojo/system",
   ]
 }
