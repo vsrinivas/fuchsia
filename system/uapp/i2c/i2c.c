@@ -163,6 +163,7 @@ int cmd_read(int fd, int argc, const char** argv) {
 
     for (int i = 0; i < length; i++) {
         printf(" %02x", buf[i]);
+        if (i % 32 == 31) printf("\n");
     }
     printf("\n");
 

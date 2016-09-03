@@ -202,7 +202,8 @@ static ssize_t intel_serialio_i2c_slave_read(
         .buf = buf,
         .len = count,
     };
-    return intel_serialio_i2c_slave_transfer(dev, &segment, 1);
+    mx_status_t status = intel_serialio_i2c_slave_transfer(dev, &segment, 1);
+    return status == NO_ERROR ? (ssize_t)count : status;
 }
 
 static ssize_t intel_serialio_i2c_slave_write(
@@ -212,7 +213,8 @@ static ssize_t intel_serialio_i2c_slave_write(
         .buf = (void*)buf,
         .len = count,
     };
-    return intel_serialio_i2c_slave_transfer(dev, &segment, 1);
+    mx_status_t status = intel_serialio_i2c_slave_transfer(dev, &segment, 1);
+    return status == NO_ERROR ? (ssize_t)count : status;
 }
 
 static ssize_t intel_serialio_i2c_slave_transfer_ioctl(
