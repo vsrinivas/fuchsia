@@ -69,8 +69,6 @@ void DeleteHandle(Handle* handle) {
         // have complicated Close() logic which cannot be untangled at
         // this time.
         switch (disp->get_type()) {
-            case MX_OBJ_TYPE_PCI_INT: disp->get_specific<PciInterruptDispatcher>()->Close();
-                break;
             case MX_OBJ_TYPE_IOMAP: disp->get_specific<IoMappingDispatcher>()->Close();
                 break;
             default:  break;

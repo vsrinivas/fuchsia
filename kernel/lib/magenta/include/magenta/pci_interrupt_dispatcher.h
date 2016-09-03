@@ -7,14 +7,13 @@
 #pragma once
 
 #include <dev/pcie.h>
-#include <kernel/event.h>
-#include <magenta/dispatcher.h>
+#include <magenta/interrupt_dispatcher.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <sys/types.h>
 
 class PciDeviceDispatcher;
 
-class PciInterruptDispatcher final : public Dispatcher {
+class PciInterruptDispatcher final : public InterruptDispatcher {
 public:
     static status_t Create(const mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
                            uint32_t irq_id,
@@ -23,23 +22,17 @@ public:
                            mxtl::RefPtr<Dispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PCI_INT; }
-
-    // TODO(cpu): this should be removed when device waiting is refactored.
-    void Close();
-
-    status_t InterruptWait();
+    status_t InterruptComplete() final;
 
 private:
     static pcie_irq_handler_retval_t IrqThunk(struct pcie_device_state* dev,
                                               uint irq_id,
                                               void* ctx);
-    PciInterruptDispatcher(uint32_t irq);
+    PciInterruptDispatcher(uint32_t irq_id, bool maskable)
+        : irq_id_(irq_id),
+          maskable_(maskable) { }
 
-    uint32_t irq_id_;
-    bool     maskable_;
-    event_t  event_;
-    Mutex lock_;
-    Mutex wait_lock_;
+    const uint32_t irq_id_;
+    const bool     maskable_;
     mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper> device_;
 };

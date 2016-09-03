@@ -58,10 +58,6 @@ static mx_handle_t pci_map_interrupt(mx_device_t* dev, int which_irq) {
     return mx_pci_map_interrupt(device->handle, which_irq);
 }
 
-static mx_status_t pci_wait_interrupt(mx_handle_t handle) {
-    return mx_pci_interrupt_wait(handle);
-}
-
 static mx_handle_t pci_get_config(mx_device_t* dev, const pci_config_t** config) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
@@ -109,7 +105,6 @@ pci_protocol_t _pci_protocol = {
     .reset_device = pci_reset_device,
     .map_mmio = pci_map_mmio,
     .map_interrupt = pci_map_interrupt,
-    .pci_wait_interrupt = pci_wait_interrupt,
     .get_config = pci_get_config,
     .query_irq_mode_caps = pci_query_irq_mode_caps,
     .set_irq_mode = pci_set_irq_mode,

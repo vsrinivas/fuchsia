@@ -475,7 +475,7 @@ static int ahci_irq_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     mx_status_t status;
     for (;;) {
-        status = dev->pci->pci_wait_interrupt(dev->irq_handle);
+        status = mx_handle_wait_one(dev->irq_handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
         if (status) {
             xprintf("ahci: error %d waiting for interrupt\n", status);
             continue;

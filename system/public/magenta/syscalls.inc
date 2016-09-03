@@ -171,13 +171,12 @@ MAGENTA_SYSCALL_DEF(5, 5, 185, mx_status_t, pci_io_write, mx_handle_t handle, ui
 MAGENTA_SYSCALL_DEF(5, 5, 186, mx_status_t, pci_io_read, mx_handle_t handle, uint32_t bar_num,
                     uint32_t offset, uint32_t len, uint32_t* out_value)
 MAGENTA_SYSCALL_DEF(2, 2, 187, mx_handle_t, pci_map_interrupt, mx_handle_t handle, int32_t which_irq)
-MAGENTA_SYSCALL_DEF(1, 1, 188, mx_status_t, pci_interrupt_wait, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(1, 1, 189, mx_handle_t, pci_map_config, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(4, 4, 190, mx_status_t, pci_query_irq_mode_caps, mx_handle_t handle,
+MAGENTA_SYSCALL_DEF(1, 1, 188, mx_handle_t, pci_map_config, mx_handle_t handle)
+MAGENTA_SYSCALL_DEF(4, 4, 189, mx_status_t, pci_query_irq_mode_caps, mx_handle_t handle,
                     mx_pci_irq_mode_t mode, uint32_t* out_max_irqs)
-MAGENTA_SYSCALL_DEF(4, 4, 191, mx_status_t, pci_set_irq_mode, mx_handle_t handle, mx_pci_irq_mode_t mode,
+MAGENTA_SYSCALL_DEF(4, 4, 190, mx_status_t, pci_set_irq_mode, mx_handle_t handle, mx_pci_irq_mode_t mode,
                     uint32_t requested_irq_count)
-MAGENTA_SYSCALL_DEF(3, 3, 192, mx_status_t, pci_init, mx_handle_t handle, USER_PTR(mx_pci_init_arg_t) init_buf, uint32_t len)
+MAGENTA_SYSCALL_DEF(3, 3, 191, mx_status_t, pci_init, mx_handle_t handle, USER_PTR(mx_pci_init_arg_t) init_buf, uint32_t len)
 
 // I/O mapping objects
 MAGENTA_SYSCALL_DEF(3, 3, 200, mx_status_t, io_mapping_get_info, mx_handle_t handle, void** out_vaddr,

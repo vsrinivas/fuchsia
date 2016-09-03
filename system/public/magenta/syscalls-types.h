@@ -156,12 +156,11 @@ typedef enum {
     MX_OBJ_TYPE_INTERRUPT           = 9,
     MX_OBJ_TYPE_IOMAP               = 10,
     MX_OBJ_TYPE_PCI_DEVICE          = 11,
-    MX_OBJ_TYPE_PCI_INT             = 12,
-    MX_OBJ_TYPE_LOG                 = 13,
-    MX_OBJ_TYPE_WAIT_SET            = 14,
-    MX_OBJ_TYPE_SOCKET              = 15,
-    MX_OBJ_TYPE_RESOURCE            = 16,
-    MX_OBJ_TYPE_EVENT_PAIR          = 17,
+    MX_OBJ_TYPE_LOG                 = 12,
+    MX_OBJ_TYPE_WAIT_SET            = 13,
+    MX_OBJ_TYPE_SOCKET              = 14,
+    MX_OBJ_TYPE_RESOURCE            = 15,
+    MX_OBJ_TYPE_EVENT_PAIR          = 16,
     MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
 

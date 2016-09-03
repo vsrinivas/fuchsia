@@ -513,7 +513,7 @@ mx_status_t sys_pci_io_read(mx_handle_t handle, uint32_t bar_num, uint32_t offse
 
 mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
     /**
-     * Returns a handle that can be waited on in sys_pci_interrupt_wait.
+     * Returns a handle that can be waited on.
      * @param handle Handle associated with a PCI device
      * @param which_irq Identifier for an IRQ, returned in sys_pci_get_nth_device, or -1 for legacy
      * interrupts
@@ -541,23 +541,6 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
     mx_handle_t interrupt_handle = up->MapHandleToValue(handle.get());
     up->AddHandle(mxtl::move(handle));
     return interrupt_handle;
-}
-
-mx_status_t sys_pci_interrupt_wait(mx_handle_t handle) {
-    /**
-     * TODO: perhaps unify all IRQ types in the kernel
-     * Waits for an interrupt on this handle
-     * @param handle Handle associated with a PCI interrupt
-     */
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<PciInterruptDispatcher> pci_interrupt;
-    mx_status_t status =
-        up->GetDispatcher(handle, &pci_interrupt, MX_RIGHT_READ);
-    if (status != NO_ERROR)
-        return status;
-
-    return pci_interrupt->InterruptWait();
 }
 
 mx_handle_t sys_pci_map_config(mx_handle_t handle) {
