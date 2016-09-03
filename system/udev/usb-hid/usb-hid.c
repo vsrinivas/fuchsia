@@ -211,8 +211,8 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
         mx_status_t status = hid_add_device(drv, &usbhid->hiddev, dev);
         if (status != NO_ERROR) {
             usb_desc_iter_release(&iter);
-            free(usbhid);
             hid_release_device(&usbhid->hiddev);
+            free(usbhid);
             return status;
         }
 
