@@ -1,0 +1,11 @@
+{
+    "imports": [
+      "default"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "autorun",
+            "file": "apps/modular/fuchsia-scripts/autorun"
+        }
+    ]
+}
