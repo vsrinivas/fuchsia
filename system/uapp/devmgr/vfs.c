@@ -80,11 +80,9 @@ static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             xprintf("vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
             *out = vn;
             *pathout = path;
-#if WITH_REPLY_PIPE
             if (vn->remote > 0) {
                 return vn->remote;
             }
-#endif
             return ERR_NOT_FOUND;
         }
         if ((nextpath = strchr(path, '/')) != NULL) {
@@ -137,12 +135,10 @@ static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
         if ((r = vndir->ops->lookup(vndir, &vn, path, len)) < 0) {
             return r;
         }
-#if WITH_REPLY_PIPE
         if (vn->remote > 0) {
             *pathout = ".";
             return vn->remote;
         }
-#endif
         if ((r = vn->ops->open(&vn, flags)) < 0) {
             xprintf("vn open r = %d", r);
             return r;
@@ -212,7 +208,6 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
         xprintf("vfs: open: r=%d\n", r);
         return r;
     }
-#if WITH_REPLY_PIPE
     if (r > 0) {
         //TODO: unify remote vnodes and remote devices
         //      eliminate vfs_get_handles() and the other
@@ -223,13 +218,11 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
         }
         return ERR_DISPATCHER_INDIRECT;
     }
-#endif
     uint32_t ids[VFS_MAX_HANDLES];
     if ((r = vfs_get_handles(vn, flags & O_DIRECTORY, msg->handle, ids, (const char*)msg->data)) < 0) {
         vn->ops->close(vn);
         return r;
     }
-#if WITH_REPLY_PIPE
     if (ids[0] == 0) {
         // device is non-local, handle is the server that
         // can clone it for us, redirect the rpc to there
@@ -241,7 +234,6 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
         vn_release(vn);
         return ERR_DISPATCHER_INDIRECT;
     }
-#endif
     // drop the ref from open or create
     // the backend behind get_handles holds the on-going ref
     vn_release(vn);

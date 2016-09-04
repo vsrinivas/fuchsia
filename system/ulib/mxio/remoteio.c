@@ -102,7 +102,6 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     }
 
     mx_handle_t rh = h;
-#if WITH_REPLY_PIPE
     if (msg.op & MXRIO_REPLY_PIPE) {
         if (msg.hcount == 0) {
             discard_handles(msg.handle, msg.hcount);
@@ -111,7 +110,6 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         msg.hcount--;
         rh = msg.handle[msg.hcount];
     }
-#endif
 
     bool is_close = (MXRIO_OP(msg.op) == MXRIO_CLOSE);
 
@@ -137,14 +135,13 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         msg.arg = (msg.arg < 0) ? msg.arg : ERR_FAULT;
     }
 
-#if WITH_REPLY_PIPE
     // The kernel requires that a reply pipe endpoint by
     // returned as the last handle attached to a write
     // to that endpoint
     if (rh != h) {
         msg.handle[msg.hcount++] = rh;
     }
-#endif
+
     msg.op = MXRIO_STATUS;
     if ((r = mx_msgpipe_write(rh, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0)) < 0) {
         discard_handles(msg.handle, msg.hcount);
@@ -175,13 +172,9 @@ mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg)
     return 0;
 }
 
-#if WITH_REPLY_PIPE
-#define mxrio_txn_locked mxrio_txn
-#endif
-
 // on success, msg->hcount indicates number of valid handles in msg->handle
 // on error there are never any handles
-static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
+static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
     msg->magic = MXRIO_MAGIC;
     if (!is_message_valid(msg)) {
         return ERR_INVALID_ARGS;
@@ -192,7 +185,6 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
 
     mx_status_t r;
 
-#if WITH_REPLY_PIPE
     static thread_local mx_handle_t *rpipe = NULL;
     if (rpipe == NULL) {
         if ((rpipe = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
@@ -206,20 +198,14 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
     }
     msg->op |= MXRIO_REPLY_PIPE;
     msg->handle[msg->hcount++] = rpipe[1];
-    mx_handle_t rh = rpipe[0];
-#else
-    mx_handle_t rh = rio->h;
-#endif
 
     if ((r = mx_msgpipe_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
-#if WITH_REPLY_PIPE
         msg->hcount--;
-#endif
         goto fail_discard_handles;
     }
 
     mx_signals_state_t pending;
-    if ((r = mx_handle_wait_one(rh, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    if ((r = mx_handle_wait_one(rpipe[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &pending)) < 0) {
         goto fail_close_reply_pipe;
     }
@@ -231,14 +217,15 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
 
     dsize = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
     msg->hcount = MXIO_MAX_HANDLES + 1;
-    if ((r = mx_msgpipe_read(rh, msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
+    if ((r = mx_msgpipe_read(rpipe[0], msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
         goto fail_close_reply_pipe;
     }
-#if WITH_REPLY_PIPE
-    // the kernel ensures that the reply pipe endpoint is
-    // returned as the last handle in the attached handles
-    msg->hcount--;
-#endif
+
+    // The kernel ensures that the reply pipe endpoint is
+    // returned as the last handle in the message's handles.
+    // The handle number may have changed, so update it.
+    rpipe[1] = msg->handle[--msg->hcount];
+
     // check for protocol errors
     if (!is_message_reply_valid(msg, dsize) ||
         (MXRIO_OP(msg->op) != MXRIO_STATUS)) {
@@ -263,27 +250,13 @@ fail_close_reply_pipe:
     // close the near end and try to replace it.
     // If that fails, free rpipe and let the next
     // txn try again.
-#if WITH_REPLY_PIPE
     mx_handle_close(rpipe[0]);
     if (mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE) < 0) {
         free(rpipe);
         rpipe = NULL;
     }
-#endif
     return r;
 }
-
-#if WITH_REPLY_PIPE
-#undef mxrio_txn_locked
-#else
-static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
-    mx_status_t r;
-    mtx_lock(&rio->lock);
-    r = mxrio_txn_locked(rio, msg);
-    mtx_unlock(&rio->lock);
-    return r;
-}
-#endif
 
 static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
                            size_t in_len, void* out_buf, size_t out_len) {

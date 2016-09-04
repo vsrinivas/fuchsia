@@ -118,8 +118,4 @@ struct mxrio_msg {
 // * handle[0] used to pass reference to second directory handle
 // ** handle[0] used to pass reference to target object
 
-// allow for de-featuring this if it proves problematic
-// TODO: make permanent if not
-#define WITH_REPLY_PIPE 1
-
 __END_CDECLS
