@@ -20,6 +20,7 @@
 
 #include <lib/console.h>
 #include <lib/user_copy.h>
+#include <lib/ktrace.h>
 
 #include <lk/init.h>
 #include <platform/debug.h>
@@ -220,4 +221,24 @@ mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t le
         return st;
 
     return static_cast<mx_ssize_t>(read);
+}
+
+mx_ssize_t sys_ktrace_read(mx_handle_t handle, void* ptr, uint32_t off, uint32_t len) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
+    }
+
+    return ktrace_read_user(ptr, off, len);
+}
+
+mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t options) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
+    }
+
+    return ktrace_control(action, options);
 }

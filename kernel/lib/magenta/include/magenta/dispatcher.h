@@ -11,6 +11,8 @@
 
 #include <kernel/event.h>
 
+#include <lib/ktrace.h>
+
 #include <magenta/handle.h>
 #include <magenta/magenta.h>
 #include <magenta/types.h>
@@ -50,7 +52,11 @@ DECLARE_DISPTAG(ResourceDispatcher, MX_OBJ_TYPE_RESOURCE)
 class Dispatcher : public mxtl::RefCounted<Dispatcher> {
 public:
     Dispatcher();
-    virtual ~Dispatcher() {}
+    virtual ~Dispatcher() {
+#if WITH_LIB_KTRACE
+        ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
+#endif
+    }
 
     mx_koid_t get_koid() const { return koid_; }
 

@@ -15,6 +15,7 @@
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy.h>
+#include <lib/ktrace.h>
 #include <list.h>
 #include <mxtl/user_ptr.h>
 
@@ -121,8 +122,8 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     status_t result;
     WaitStateObserver wait_state_observer;
 
+    auto up = ProcessDispatcher::GetCurrent();
     {
-        auto up = ProcessDispatcher::GetCurrent();
         AutoLock lock(up->handle_table_lock());
 
         Handle* handle = up->GetHandle_NoLock(handle_value);
@@ -140,10 +141,25 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     if ((timeout > 0ull) && (t == 0u))
         t = 1u;
 
+#if WITH_LIB_KTRACE
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+    uint32_t koid;
+    if (up->GetDispatcher(handle_value, &dispatcher, &rights)) {
+        koid = (uint32_t)dispatcher->get_koid();
+    } else {
+        koid = 0;
+    }
+    ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)timeout, (uint32_t)(timeout >> 32));
+#endif
     result = WaitEvent::ResultToStatus(event.Wait(t, nullptr));
 
     // Regardless of wait outcome, we must call End().
     auto signals_state = wait_state_observer.End();
+
+#if WITH_LIB_KTRACE
+    ktrace(TAG_WAIT_ONE_DONE, koid, signals_state.satisfied, result, 0);
+#endif
 
     if (_signals_state) {
         if (copy_to_user(_signals_state, &signals_state, sizeof(signals_state)) != NO_ERROR)
@@ -567,6 +583,8 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value, mxtl::user_ptr<void> _byt
         up->AddHandle(mxtl::move(handle));
     }
 
+    ktrace(TAG_MSGPIPE_READ, (uint32_t)msg_pipe->get_koid(),
+           next_message_size, next_message_num_handles, 0);
     return result;
 }
 
@@ -684,6 +702,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value, mxtl::user_ptr<const voi
         }
     }
 
+    ktrace(TAG_MSGPIPE_WRITE, (uint32_t)msg_pipe->get_koid(), num_bytes, num_handles, 0);
     return result;
 }
 
@@ -703,6 +722,9 @@ mx_status_t sys_msgpipe_create(mxtl::user_ptr<mx_handle_t> out_handle /* array o
     if (result != NO_ERROR)
         return result;
 
+    uint64_t id0 = mpd0->get_koid();
+    uint64_t id1 = mpd1->get_koid();
+
     HandleUniquePtr h0(MakeHandle(mxtl::move(mpd0), rights));
     if (!h0)
         return ERR_NO_MEMORY;
@@ -719,6 +741,8 @@ mx_status_t sys_msgpipe_create(mxtl::user_ptr<mx_handle_t> out_handle /* array o
 
     up->AddHandle(mxtl::move(h0));
     up->AddHandle(mxtl::move(h1));
+
+    ktrace(TAG_MSGPIPE_CREATE, (uint32_t)id0, (uint32_t)id1, flags, 0);
 
     LTRACE_EXIT;
     return NO_ERROR;
@@ -759,14 +783,18 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const c
     if (result != NO_ERROR)
         return result;
 
+    uint32_t koid = (uint32_t)thread_dispatcher->get_koid();
+    ktrace(TAG_THREAD_CREATE, koid, (uint32_t)process->get_koid(), 0, 0);
+    ktrace_name(TAG_THREAD_NAME, koid, buf);
+
     HandleUniquePtr handle(MakeHandle(mxtl::move(thread_dispatcher), thread_rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(mxtl::move(handle));
-    return hv;
 
+    return hv;
 }
 
 mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
@@ -783,6 +811,7 @@ mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
     if (status != NO_ERROR)
         return status;
 
+    ktrace(TAG_THREAD_START, (uint32_t)thread->get_koid(), 0, 0, 0);
     return thread->Start(entry, stack, arg1, arg2);
 }
 
@@ -877,6 +906,10 @@ mx_handle_t sys_process_create(mxtl::user_ptr<const char> name, uint32_t name_le
     if (res != NO_ERROR)
         return res;
 
+    uint32_t koid = (uint32_t)dispatcher->get_koid();
+    ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
+    ktrace_name(TAG_PROC_NAME, koid, buf);
+
     HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
@@ -884,6 +917,7 @@ mx_handle_t sys_process_create(mxtl::user_ptr<const char> name, uint32_t name_le
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(mxtl::move(handle));
+
     return hv;
 }
 
@@ -920,6 +954,9 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     process->AddHandle(mxtl::move(arg_handle));
 
     // TODO(cpu) if Start() fails we want to undo RemoveHandle().
+
+    ktrace(TAG_PROC_START, (uint32_t)thread->get_koid(),
+           (uint32_t)process->get_koid(), 0, 0);
 
     return process->Start(mxtl::move(thread), pc, sp, arg_nhv, arg2);
 }
@@ -1246,6 +1283,8 @@ mx_handle_t sys_port_create(uint32_t options) {
     if (result != NO_ERROR)
         return result;
 
+    uint32_t koid = (uint32_t)dispatcher->get_koid();
+
     HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
@@ -1255,6 +1294,7 @@ mx_handle_t sys_port_create(uint32_t options) {
     mx_handle_t hv = up->MapHandleToValue(handle.get());
     up->AddHandle(mxtl::move(handle));
 
+    ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
     return hv;
 }
 
@@ -1278,6 +1318,8 @@ mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet
     if (!iopk)
         return ERR_NO_MEMORY;
 
+    ktrace(TAG_PORT_QUEUE, (uint32_t)ioport->get_koid(), (uint32_t)size, 0, 0);
+
     return ioport->Queue(iopk);
 }
 
@@ -1294,8 +1336,11 @@ mx_status_t sys_port_wait(mx_handle_t handle, mxtl::user_ptr<void> packet, mx_si
     if (status != NO_ERROR)
         return status;
 
+    ktrace(TAG_PORT_WAIT, (uint32_t)ioport->get_koid(), 0, 0, 0);
+
     IOP_Packet* iopk = nullptr;
     status = ioport->Wait(&iopk);
+    ktrace(TAG_PORT_WAIT_DONE, (uint32_t)ioport->get_koid(), status, 0, 0);
     if (status < 0)
         return status;
 
