@@ -5,6 +5,8 @@
 #include <ddk/common/hid.h>
 #include <ddk/common/hid-fifo.h>
 
+#include <magenta/listnode.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -354,32 +356,72 @@ static int hid_find_report_id(input_report_id_t report_id, mx_hid_device_t* dev)
     return -1;
 }
 
+typedef struct hid_global_state {
+    uint32_t rpt_size;
+    uint32_t rpt_count;
+    input_report_id_t rpt_id;
+    list_node_t node;
+} hid_global_state_t;
+
+static mx_status_t hid_push_global_state(list_node_t* stack, hid_global_state_t* state) {
+    hid_global_state_t* entry = malloc(sizeof(*entry));
+    if (entry == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    entry->rpt_size = state->rpt_size;
+    entry->rpt_count = state->rpt_count;
+    entry->rpt_id = state->rpt_id;
+    list_add_tail(stack, &entry->node);
+    return NO_ERROR;
+}
+
+static mx_status_t hid_pop_global_state(list_node_t* stack, hid_global_state_t* state) {
+    hid_global_state_t* entry = list_remove_tail_type(stack, hid_global_state_t, node);
+    if (entry == NULL) {
+        return ERR_BAD_STATE;
+    }
+    state->rpt_size = entry->rpt_size;
+    state->rpt_count = entry->rpt_count;
+    state->rpt_id = entry->rpt_id;
+    free(entry);
+    return NO_ERROR;
+}
+
+static void hid_clear_global_state(list_node_t* stack) {
+    hid_global_state_t* state, *tmp;
+    list_for_every_entry_safe(stack, state, tmp, hid_global_state_t, node) {
+        list_delete(&state->node);
+        free(state);
+    }
+}
+
 static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
     const uint8_t* buf = dev->hid_report_desc;
     const uint8_t* end = buf + dev->hid_report_desc_len;
     hid_item_t item;
-    uint32_t rpt_size = 0;
-    uint32_t rpt_count = 0;
-    input_report_id_t rpt_id = 0;
+    hid_global_state_t state;
+    memset(&state, 0, sizeof(state));
+    list_node_t global_stack;
+    list_initialize(&global_stack);
     while (buf < end) {
         buf = hid_parse_short_item(buf, end, &item);
         switch (item.bType) {
         case HID_ITEM_TYPE_MAIN: {
-            input_report_size_t inc = rpt_size * rpt_count;
+            input_report_size_t inc = state.rpt_size * state.rpt_count;
             int idx;
             switch (item.bTag) {
             case HID_ITEM_MAIN_TAG_INPUT:
-                idx = hid_find_report_id(rpt_id, dev);
+                idx = hid_find_report_id(state.rpt_id, dev);
                 if (idx < 0) return ERR_NOT_SUPPORTED;
                 dev->sizes[idx].in_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_OUTPUT:
-                idx = hid_find_report_id(rpt_id, dev);
+                idx = hid_find_report_id(state.rpt_id, dev);
                 if (idx < 0) return ERR_NOT_SUPPORTED;
                 dev->sizes[idx].out_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_FEATURE:
-                idx = hid_find_report_id(rpt_id, dev);
+                idx = hid_find_report_id(state.rpt_id, dev);
                 if (idx < 0) return ERR_NOT_SUPPORTED;
                 dev->sizes[idx].feat_size += inc;
                 break;
@@ -391,18 +433,20 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
         case HID_ITEM_TYPE_GLOBAL:
             switch (item.bTag) {
             case HID_ITEM_GLOBAL_TAG_REPORT_SIZE:
-                rpt_size = (uint32_t)item.data;
+                state.rpt_size = (uint32_t)item.data;
                 break;
             case HID_ITEM_GLOBAL_TAG_REPORT_ID:
-                rpt_id = (input_report_id_t)item.data;
+                state.rpt_id = (input_report_id_t)item.data;
                 break;
             case HID_ITEM_GLOBAL_TAG_REPORT_COUNT:
-                rpt_count = (uint32_t)item.data;
+                state.rpt_count = (uint32_t)item.data;
                 break;
             case HID_ITEM_GLOBAL_TAG_PUSH:
+                hid_push_global_state(&global_stack, &state);
+                break;
             case HID_ITEM_GLOBAL_TAG_POP:
-                printf("HID push/pop not supported!\n");
-                return ERR_NOT_SUPPORTED;
+                hid_pop_global_state(&global_stack, &state);
+                break;
             default:
                 break;
             }
@@ -410,6 +454,7 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
             break;
         }
     }
+    hid_clear_global_state(&global_stack);
     return NO_ERROR;
 }
 
