@@ -27,7 +27,7 @@ typedef mx_status_t (*mxio_dispatcher_cb_t)(mx_handle_t h, void* cb, void* cooki
 mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t cb);
 
 // create a thread for a dispatcher and start it running
-mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md);
+mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md, const char* name);
 
 // run the dispatcher loop on the current thread, never to return
 void mxio_dispatcher_run(mxio_dispatcher_t* md);

@@ -193,7 +193,7 @@ static mx_handle_t mxio_multiloader(void) {
         if ((r = mxio_dispatcher_create(&dispatcher, multiloader_cb)) < 0) {
             goto done;
         }
-        if ((r = mxio_dispatcher_start(dispatcher)) < 0) {
+        if ((r = mxio_dispatcher_start(dispatcher, "loader-service-dispatcher")) < 0) {
             //TODO: destroy dispatcher once support exists
             dispatcher = NULL;
             goto done;

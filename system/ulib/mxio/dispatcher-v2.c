@@ -121,11 +121,11 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     return NO_ERROR;
 }
 
-mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md) {
+mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md, const char* name) {
     mx_status_t r;
     mtx_lock(&md->lock);
     if (md->t == NULL) {
-        if (thrd_create_with_name(&md->t, mxio_dispatcher_thread, md, "mxio-dispatcher") != thrd_success) {
+        if (thrd_create_with_name(&md->t, mxio_dispatcher_thread, md, name) != thrd_success) {
             mxio_dispatcher_destroy(md);
             r = ERR_NO_RESOURCES;
         } else {

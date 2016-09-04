@@ -514,7 +514,7 @@ static int vfs_watchdog(void* arg) {
 void vfs_init(vnode_t* root) {
     vfs_root = root;
     if (mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler) == NO_ERROR) {
-        mxio_dispatcher_start(vfs_dispatcher);
+        mxio_dispatcher_start(vfs_dispatcher, "vfs-rio-dispatcher");
     }
     thrd_t t;
     thrd_create_with_name(&t, vfs_watchdog, NULL, "vfs-watchdog");
