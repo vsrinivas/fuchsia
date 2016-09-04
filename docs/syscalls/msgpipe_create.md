@@ -23,16 +23,16 @@ Two handles are returned on success, providing access to both sides
 of the message pipe.  Messages written to one handle may be read
 from the opposite.
 
-The handles will have MX_RIGHT_TRANSFER (allowing them to be sent
-to another process via message pipe write), MX_RIGHT_WRITE (allowing
-messages to be written to them), and MX_RIGHT_READ (allowing messages
+The handles will have *MX_RIGHT_TRANSFER* (allowing them to be sent
+to another process via message pipe write), *MX_RIGHT_WRITE* (allowing
+messages to be written to them), and *MX_RIGHT_READ* (allowing messages
 to be read from them).
 
-The *flags* can be either 0 or MX_FLAG_REPLY_PIPE. A reply pipe
+The *flags* can be either 0 or *MX_FLAG_REPLY_PIPE*. A reply pipe
 behaves like a regular message pipe except for **mx_msgpipe_write**()
 which must include itself as the last handle being transfered.
 
-When *flags* is MX_FLAG_REPLY_PIPE, only *handles[1]* is a reply
+When *flags* is *MX_FLAG_REPLY_PIPE*, only *handles[1]* is a reply
 pipe. *handles[0]* is a regular pipe.
 
 
@@ -43,7 +43,8 @@ of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *handles* is an invalid pointer or NULL.
+**ERR_INVALID_ARGS**  *handles* is an invalid pointer or NULL or
+*flags* is any value other than 0 or *MX_FLAG_REPLY_PIPE*.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

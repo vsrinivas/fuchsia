@@ -18,7 +18,7 @@ mx_status_t mx_msgpipe_read(mx_handle_t handle,
 ## DESCRIPTION
 
 **msgpipe_read**() attempts to read the first message from the message
-pipe specified by *handle* into the provided *bytes* and/or *handles* 
+pipe specified by *handle* into the provided *bytes* and/or *handles*
 buffers.
 
 The pointers *num_bytes* and *num_handles* are used to specify the
@@ -40,12 +40,15 @@ payloads of the message read.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *handle* isn't a valid message pipe handle, or
-*num_bytes* (if non-NULL) is an invalid pointer, or *num_handles* (if
-non-NULL) is an invalid pointer, or *bytes* is non-NULL but
-*num_bytes* is NULL, or *handles* is non-NULL but *num_handles*
-is null, or *handles* or *num_handles* (if non-NULL) are invalid
-pointers.
+**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *handle* is not a message pipe handle.
+
+**ERR_INVALID_ARGS**  *num_bytes* (if non-NULL) is an invalid pointer
+or *num_handles* (if non-NULL) is an invalid pointer, or *bytes* is
+non-NULL but *num_bytes* is NULL, or *handles* is non-NULL but
+*num_handles* is null, or *handles* or *num_handles* (if non-NULL) are
+invalid pointers.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 
