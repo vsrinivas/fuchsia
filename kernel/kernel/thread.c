@@ -29,6 +29,7 @@
 #include <platform.h>
 #include <target.h>
 #include <lib/heap.h>
+#include <lib/ktrace.h>
 #if WITH_KERNEL_VM
 #include <kernel/vm.h>
 #endif
@@ -668,6 +669,11 @@ void thread_resched(void)
     if (thread_is_idle(newthread)) {
         thread_stats[cpu].last_idle_timestamp = current_time_hires();
     }
+#endif
+
+#if WITH_LIB_KTRACE
+    ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),
+           (uint32_t)(uintptr_t)oldthread, (uint32_t)(uintptr_t)newthread);
 #endif
 
     KEVLOG_THREAD_SWITCH(oldthread, newthread);

@@ -95,6 +95,9 @@ typedef struct thread {
 
     /* pointer to user thread if one exists for this thread */
     void* user_thread;
+#if WITH_LIB_KTRACE
+    uint64_t user_tid;
+#endif
 
     /* accounting information */
     lk_bigtime_t last_started_running_us;
