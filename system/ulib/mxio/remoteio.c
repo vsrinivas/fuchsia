@@ -193,9 +193,16 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
     mx_status_t r;
 
 #if WITH_REPLY_PIPE
-    mx_handle_t rpipe[2];
-    if ((r = mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
-        return r;
+    static thread_local mx_handle_t *rpipe = NULL;
+    if (rpipe == NULL) {
+        if ((rpipe = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
+            return ERR_NO_MEMORY;
+        }
+        if ((r = mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
+            free(rpipe);
+            rpipe = NULL;
+            return r;
+        }
     }
     msg->op |= MXRIO_REPLY_PIPE;
     msg->handle[msg->hcount++] = rpipe[1];
@@ -205,30 +212,32 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
 #endif
 
     if ((r = mx_msgpipe_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
+#if WITH_REPLY_PIPE
+        msg->hcount--;
+#endif
         goto fail_discard_handles;
     }
 
     mx_signals_state_t pending;
     if ((r = mx_handle_wait_one(rh, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &pending)) < 0) {
-        return r;
+        goto fail_close_reply_pipe;
     }
     if ((pending.satisfied & MX_SIGNAL_PEER_CLOSED) &&
         !(pending.satisfied & MX_SIGNAL_READABLE)) {
-        mx_handle_close(rh);
-        return ERR_REMOTE_CLOSED;
+        r = ERR_REMOTE_CLOSED;
+        goto fail_close_reply_pipe;
     }
 
     dsize = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
     msg->hcount = MXIO_MAX_HANDLES + 1;
     if ((r = mx_msgpipe_read(rh, msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
-        goto done;
+        goto fail_close_reply_pipe;
     }
 #if WITH_REPLY_PIPE
     // the kernel ensures that the reply pipe endpoint is
     // returned as the last handle in the attached handles
     msg->hcount--;
-    mx_handle_close(msg->handle[msg->hcount]);
 #endif
     // check for protocol errors
     if (!is_message_reply_valid(msg, dsize) ||
@@ -237,16 +246,29 @@ static mx_status_t mxrio_txn_locked(mxrio_t* rio, mxrio_msg_t* msg) {
         goto fail_discard_handles;
     }
     // check for remote error
-    if ((r = msg->arg) >= 0) {
-        goto done;
+    if ((r = msg->arg) < 0) {
+        goto fail_discard_handles;
     }
+    return r;
 
 fail_discard_handles:
+    // We failed either writing at all (still have the handles)
+    // or after reading (need to abandon any handles we received)
     discard_handles(msg->handle, msg->hcount);
     msg->hcount = 0;
-done:
+    return r;
+
+fail_close_reply_pipe:
+    // We lost the far end of the reply pipe, so
+    // close the near end and try to replace it.
+    // If that fails, free rpipe and let the next
+    // txn try again.
 #if WITH_REPLY_PIPE
-    mx_handle_close(rh);
+    mx_handle_close(rpipe[0]);
+    if (mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE) < 0) {
+        free(rpipe);
+        rpipe = NULL;
+    }
 #endif
     return r;
 }
