@@ -13,6 +13,7 @@ MODULES += \
     lib/syscalls \
     lib/userboot \
     lib/debuglog \
+    lib/ktrace \
 
 # include all ulib, uapp, and utest from system/...
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/ulib/*/rules.mk))
