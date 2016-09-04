@@ -15,8 +15,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include <magenta/ktrace.h>
 #include <magenta/listnode.h>
-
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
@@ -806,6 +806,8 @@ mx_status_t devmgr_control(const char* cmd) {
                "poweroff    - poweroff the system\n"
                "reboot      - reboot the system\n"
                "kerneldebug - send a command to the kernel\n"
+               "ktraceoff   - stop kernel tracing\n"
+               "ktraceon    - start kernel tracing\n"
                );
         return NO_ERROR;
     }
@@ -834,7 +836,15 @@ mx_status_t devmgr_control(const char* cmd) {
         const char* arg = cmd + strlen(prefix);
         return mx_debug_send_command(root_resource_handle, arg, strlen(arg));
     }
-
+    if (!strcmp(cmd, "ktraceon")) {
+        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_START, GRP_ALL);
+        return NO_ERROR;
+    }
+    if (!strcmp(cmd, "ktraceoff")) {
+        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_STOP, 0);
+        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_REWIND, 0);
+        return NO_ERROR;
+    }
     return ERR_NOT_SUPPORTED;
 }
 #endif
