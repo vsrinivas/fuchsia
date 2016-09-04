@@ -1,0 +1,248 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <assert.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <hid/acer12.h>
+#include <hid/usages.h>
+
+#include <magenta/types.h>
+#include <magenta/device/display.h>
+#include <magenta/device/input.h>
+#include <magenta/syscalls.h>
+#include <mxio/io.h>
+
+#define DEV_INPUT       "/dev/class/input"
+#define VIRTUAL_CONSOLE "/dev/class/console/vc"
+#define CLEAR_BTN_SIZE 50
+#define I2C_HID_DEBUG 0
+
+// Array of colors for each finger
+uint32_t colors[] = {
+    0x00ff0000,
+    0x0000ff00,
+    0x000000ff,
+    0x00ffff00,
+    0x00ff00ff,
+    0x0000ffff,
+    0x00000000,
+    0x00f0f0f0,
+    0x00f00f00,
+    0x000ff000,
+};
+
+void acer12_touch_dump(acer12_touch_t* rpt) {
+    printf("report id: %u\n", rpt->rpt_id);
+    for (int i = 0; i < 5; i++) {
+        printf("finger %d\n", i);
+        printf("  finger_id: %u\n", rpt->fingers[i].finger_id);
+        printf("    tswitch: %u\n", acer12_finger_id_tswitch(rpt->fingers[i].finger_id));
+        printf("    contact: %u\n", acer12_finger_id_contact(rpt->fingers[i].finger_id));
+        printf("  width:  %u\n", rpt->fingers[i].width);
+        printf("  height: %u\n", rpt->fingers[i].height);
+        printf("  x:      %u\n", rpt->fingers[i].x);
+        printf("  y:      %u\n", rpt->fingers[i].y);
+    }
+    printf("scan_time: %u\n", rpt->scan_time);
+    printf("contact count: %u\n", rpt->contact_count);
+}
+
+inline uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
+    return (z * screen_dim) / rpt_dim;
+}
+
+void draw_points(uint32_t* pixels, uint32_t color, uint32_t x, uint32_t y, uint8_t width, uint8_t height, uint32_t fbwidth, uint32_t fbheight) {
+    uint32_t xrad = (width + 1) / 2;
+    uint32_t yrad = (height + 1) / 2;
+
+    uint32_t xmin = (xrad > x) ? 0 : x - xrad;
+    uint32_t xmax = (xrad > fbwidth - x) ? fbwidth : x + xrad;
+    uint32_t ymin = (yrad > y) ? 0 : y - yrad;
+    uint32_t ymax = (yrad > fbheight - y) ? fbheight : y + yrad;
+
+    for (uint32_t px = xmin; px < xmax; px++) {
+        for (uint32_t py = ymin; py < ymax; py++) {
+            *(pixels + py * fbwidth + px) = color;
+        }
+    }
+}
+
+inline uint32_t get_color(uint8_t c) {
+    return colors[c];
+}
+
+void clear_screen(void* buf, ioctl_display_get_fb_t* fb) {
+    memset(buf, 0xff, fb->info.pixelsize * fb->info.stride * fb->info.height);
+    draw_points((uint32_t*)buf, 0xff00ff, fb->info.stride - (CLEAR_BTN_SIZE / 2), (CLEAR_BTN_SIZE / 2),
+            CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, fb->info.stride, fb->info.height);
+}
+
+void process_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+        ioctl_display_get_fb_t* fb) {
+    acer12_touch_t* rpt = buf;
+    if (len < sizeof(*rpt)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
+        return;
+    }
+#if I2C_HID_DEBUG
+    acer12_touch_dump(rpt);
+#endif
+    for (uint8_t c = 0; c < 5; c++) {
+        if (!acer12_finger_id_tswitch(rpt->fingers[c].finger_id)) continue;
+        uint32_t x = scale32(rpt->fingers[c].x, fb->info.width, ACER12_X_MAX);
+        uint32_t y = scale32(rpt->fingers[c].y, fb->info.height, ACER12_Y_MAX);
+        uint32_t width = 2 * rpt->fingers[c].width;
+        uint32_t height = 2 * rpt->fingers[c].height;
+        uint32_t color = get_color(acer12_finger_id_contact(rpt->fingers[c].finger_id));
+        draw_points(pixels, color, x, y, width, height, fb->info.stride, fb->info.height);
+    }
+
+    if (acer12_finger_id_tswitch(rpt->fingers[0].finger_id)) {
+        uint32_t x = scale32(rpt->fingers[0].x, fb->info.width, ACER12_X_MAX);
+        uint32_t y = scale32(rpt->fingers[0].y, fb->info.height, ACER12_Y_MAX);
+        if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
+            clear_screen(pixels, fb);
+        }
+    }
+    ssize_t ret = mxio_ioctl(vcfd, IOCTL_DISPLAY_FLUSH_FB, 0, 0, 0, 0);
+    if (ret < 0) {
+        printf("failed to flush: %zd\n", ret);
+    }
+}
+
+int main(int argc, char* argv[]) {
+    int vcfd = open(VIRTUAL_CONSOLE, O_RDWR);
+    if (vcfd < 0) {
+        printf("failed to open %s: %d\n", VIRTUAL_CONSOLE, errno);
+        return -1;
+    }
+
+    ioctl_display_get_fb_t fb;
+    ssize_t ret = mxio_ioctl(vcfd, IOCTL_DISPLAY_GET_FB, NULL, 0, &fb, sizeof(fb));
+    if (ret < 0) {
+        printf("failed to get FB: %zd\n", ret);
+        return -1;
+    }
+    if (fb.info.pixelsize != 4) {
+        printf("only 32-bit framebuffers are supported for now!\n");
+        return -1;
+    }
+
+    printf("format = %d\n", fb.info.format);
+    printf("width = %d\n", fb.info.width);
+    printf("height = %d\n", fb.info.height);
+    printf("stride = %d\n", fb.info.stride);
+    printf("pixelsize = %d\n", fb.info.pixelsize);
+    printf("flags = 0x%x\n", fb.info.flags);
+
+
+    size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
+    uintptr_t fbo;
+    mx_status_t status = _mx_process_map_vm(0, fb.vmo, 0, size, &fbo, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    if (status < 0) {
+        printf("couldn't map fb: %d\n", status);
+        return -1;
+    }
+    uint32_t* pixels32 = (uint32_t*)fbo;
+
+    // Scan /dev/class/input to find the touchscreen
+    struct dirent* de;
+    DIR* dir = opendir(DEV_INPUT);
+    if (!dir) {
+        printf("failed to open %s: %d\n", DEV_INPUT, errno);
+        return -1;
+    }
+
+    int touchfd = -1;
+    size_t rpt_desc_len = 0;
+    uint8_t* rpt_desc = NULL;
+    while ((de = readdir(dir)) != NULL) {
+        char devname[128];
+        snprintf(devname, sizeof(devname), "%s/%s", DEV_INPUT, de->d_name);
+        touchfd = open(devname, O_RDONLY);
+        if (touchfd < 0) {
+            printf("failed to open %s: %d\n", devname, errno);
+            continue;
+        }
+
+        ret = mxio_ioctl(touchfd, IOCTL_INPUT_GET_REPORT_DESC_SIZE, NULL, 0, &rpt_desc_len, sizeof(rpt_desc_len));
+        if (ret < 0) {
+            printf("failed to get report descriptor length for %s: %zd\n", devname, ret);
+            touchfd = -1;
+            continue;
+        }
+        if (rpt_desc_len != ACER12_RPT_DESC_LEN) {
+            rpt_desc_len = 0;
+            touchfd = -1;
+            continue;
+        }
+
+        rpt_desc = malloc(rpt_desc_len);
+        if (rpt_desc == NULL) {
+            printf("no memory!\n");
+            return -1;
+        }
+        ret = mxio_ioctl(touchfd, IOCTL_INPUT_GET_REPORT_DESC, NULL, 0, rpt_desc, rpt_desc_len);
+        if (ret < 0) {
+            printf("failed to get report descriptor for %s: %zd\n", devname, ret);
+            rpt_desc_len = 0;
+            free(rpt_desc);
+            rpt_desc = NULL;
+            touchfd = -1;
+            continue;
+        }
+        if (!memcmp(rpt_desc, acer12_touch_report_desc, ACER12_RPT_DESC_LEN)) {
+            // Found the touchscreen
+            printf("touchscreen: %s\n", devname);
+            break;
+        }
+        touchfd = -1;
+    }
+    closedir(dir);
+
+    if (touchfd < 0) {
+        printf("could not find a touchscreen!\n");
+        return -1;
+    }
+    assert(rpt_desc_len > 0);
+    assert(rpt_desc);
+
+    size_t max_rpt_sz = 0;
+    ret = mxio_ioctl(touchfd, IOCTL_INPUT_GET_MAX_REPORTSIZE, NULL, 0, &max_rpt_sz, sizeof(max_rpt_sz));
+    if (ret < 0) {
+        printf("failed to get max report size: %zd\n", ret);
+        return -1;
+    }
+    void* buf = malloc(max_rpt_sz);
+    if (buf == NULL) {
+        printf("no memory!\n");
+        return -1;
+    }
+
+    clear_screen((void*)fbo, &fb);
+    while (1) {
+        mxio_wait_fd(touchfd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+        ssize_t r = read(touchfd, buf, max_rpt_sz);
+        if (r < 0) {
+            printf("touchscreen read error: %zd\n", r);
+            break;
+        }
+        process_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+    }
+
+    free(rpt_desc);
+    close(touchfd);
+    _mx_process_unmap_vm(0, fbo, size);
+    close(vcfd);
+    return 0;
+}
