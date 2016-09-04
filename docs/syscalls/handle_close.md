@@ -23,5 +23,5 @@ reclaimed by the kernel if no other handles to it exist.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *handle* isn't a valid handle.
+**ERR_BAD_HANDLE**  *handle* isn't a valid handle.
 
