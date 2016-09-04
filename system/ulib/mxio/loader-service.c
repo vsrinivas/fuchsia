@@ -4,6 +4,7 @@
 
 #include <mxio/util.h>
 #include <mxio/debug.h>
+#include <mxio/dispatcher.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -93,6 +94,56 @@ struct startup {
     mx_handle_t syslog_handle;
 };
 
+static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function_t loader,
+                                     void* loader_arg, mx_handle_t sys_log) {
+    uint8_t data[1024];
+    mx_loader_svc_msg_t* msg = (void*) data;
+    uint32_t sz = sizeof(data);
+    mx_status_t r;
+    if ((r = mx_msgpipe_read(h, msg, &sz, NULL, NULL, 0)) < 0) {
+        // This is the normal error for the other end going away,
+        // which happens when the process dies.
+        if (r != ERR_REMOTE_CLOSED)
+            fprintf(stderr, "dlsvc: msg read error %d\n", r);
+        return r;
+    }
+    if ((sz <= sizeof(mx_loader_svc_msg_t))) {
+        fprintf(stderr, "dlsvc: runt message\n");
+        return ERR_IO;
+    }
+
+    // forcibly null-terminate the message data argument
+    data[sz - 1] = 0;
+
+    mx_handle_t handle = MX_HANDLE_INVALID;
+    switch (msg->opcode) {
+    case LOADER_SVC_OP_LOAD_OBJECT:
+        handle = (*loader)(loader_arg, (const char*) msg->data);
+        msg->arg = handle < 0 ? handle : NO_ERROR;
+        break;
+    case LOADER_SVC_OP_DEBUG_PRINT:
+        log_printf(sys_log, "dlsvc: debug: %s\n", (const char*) msg->data);
+        msg->arg = NO_ERROR;
+        break;
+    case LOADER_SVC_OP_DONE:
+        return ERR_REMOTE_CLOSED;
+    default:
+        fprintf(stderr, "dlsvc: invalid opcode 0x%x\n", msg->opcode);
+        msg->arg = ERR_INVALID_ARGS;
+        break;
+    }
+
+    msg->opcode = LOADER_SVC_OP_STATUS;
+    msg->reserved0 = 0;
+    msg->reserved1 = 0;
+    if ((r = mx_msgpipe_write(h, msg, sizeof(mx_loader_svc_msg_t),
+                              &handle, handle > 0 ? 1 : 0, 0)) < 0) {
+        fprintf(stderr, "dlsvc: msg write error: %d\n", r);
+        return r;
+    }
+    return NO_ERROR;
+}
+
 static int loader_service_thread(void* arg) {
     struct startup* startup = arg;
     mx_handle_t h = startup->pipe_handle;
@@ -101,8 +152,6 @@ static int loader_service_thread(void* arg) {
     mx_handle_t sys_log = startup->syslog_handle;
     free(startup);
 
-    uint8_t data[1024];
-    mx_loader_svc_msg_t* msg = (void*) data;
     mx_status_t r;
 
     for (;;) {
@@ -113,46 +162,7 @@ static int loader_service_thread(void* arg) {
                 fprintf(stderr, "dlsvc: wait error %d\n", r);
             break;
         }
-        uint32_t sz = sizeof(data);
-        if ((r = mx_msgpipe_read(h, msg, &sz, NULL, NULL, 0)) < 0) {
-            // This is the normal error for the other end going away,
-            // which happens when the process dies.
-            if (r != ERR_REMOTE_CLOSED)
-                fprintf(stderr, "dlsvc: msg read error %d\n", r);
-            break;
-        }
-        if ((sz <= sizeof(mx_loader_svc_msg_t))) {
-            fprintf(stderr, "dlsvc: runt message\n");
-            break;
-        }
-
-        // forcibly null-terminate the message data argument
-        data[sz - 1] = 0;
-
-        mx_handle_t handle = MX_HANDLE_INVALID;
-        switch (msg->opcode) {
-        case LOADER_SVC_OP_LOAD_OBJECT:
-            handle = (*loader)(loader_arg, (const char*) msg->data);
-            msg->arg = handle < 0 ? handle : NO_ERROR;
-            break;
-        case LOADER_SVC_OP_DEBUG_PRINT:
-            log_printf(sys_log, "dlsvc: debug: %s\n", (const char*) msg->data);
-            msg->arg = NO_ERROR;
-            break;
-        case LOADER_SVC_OP_DONE:
-            goto done;
-        default:
-            fprintf(stderr, "dlsvc: invalid opcode 0x%x\n", msg->opcode);
-            msg->arg = ERR_INVALID_ARGS;
-            break;
-        }
-
-        msg->opcode = LOADER_SVC_OP_STATUS;
-        msg->reserved0 = 0;
-        msg->reserved1 = 0;
-        if ((r = mx_msgpipe_write(h, msg, sizeof(mx_loader_svc_msg_t),
-                                  &handle, handle > 0 ? 1 : 0, 0)) < 0) {
-            fprintf(stderr, "dlsvc: msg write error: %d\n", r);
+        if ((r = handle_loader_rpc(h, loader, loader_arg, sys_log)) < 0) {
             break;
         }
     }
@@ -162,11 +172,57 @@ done:
     return 0;
 }
 
+
+static mx_handle_t dispatcher_log;
+static mx_status_t multiloader_cb(mx_handle_t h, void* cb, void* cookie) {
+    if (h == 0) {
+        // close notification, which we can ignore
+        return 0;
+    }
+    return handle_loader_rpc(h, default_load_object, NULL, dispatcher_log);
+}
+
+static mxio_dispatcher_t* dispatcher;
+static mtx_t dispatcher_lock;
+
+static mx_handle_t mxio_multiloader(void) {
+    mx_status_t r;
+
+    mtx_lock(&dispatcher_lock);
+    if (dispatcher == NULL) {
+        if ((r = mxio_dispatcher_create(&dispatcher, multiloader_cb)) < 0) {
+            goto done;
+        }
+        if ((r = mxio_dispatcher_start(dispatcher)) < 0) {
+            //TODO: destroy dispatcher once support exists
+            dispatcher = NULL;
+            goto done;
+        }
+        if ((dispatcher_log = mx_log_create(0)) < 0) {
+            // unlikely to fail, but we'll keep going without it if so
+            dispatcher_log = MX_HANDLE_INVALID;
+        }
+    }
+    mx_handle_t h[2];
+    if ((r = mx_msgpipe_create(h, 0)) < 0) {
+        goto done;
+    }
+    if ((r = mxio_dispatcher_add(dispatcher, h[1], NULL, NULL)) < 0) {
+        mx_handle_close(h[0]);
+        mx_handle_close(h[1]);
+    } else {
+        r = h[0];
+    }
+
+done:
+    mtx_unlock(&dispatcher_lock);
+    return r;
+}
+
 mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
                                 void* loader_arg) {
     if (loader == NULL) {
-        loader = &default_load_object;
-        loader_arg = NULL;
+        return mxio_multiloader();
     }
 
     struct startup *startup = malloc(sizeof(*startup));
