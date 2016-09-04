@@ -9,10 +9,11 @@ BOOTSERVER := $(BUILDDIR)/tools/bootserver
 LOGLISTENER := $(BUILDDIR)/tools/loglistener
 NETRUNCMD := $(BUILDDIR)/tools/netruncmd
 NETCP:= $(BUILDDIR)/tools/netcp
+KTRACEDUMP:= $(BUILDDIR)/tools/ktracedump
 
 TOOLS_CFLAGS := -std=c11 -Wall -Isystem/public -Isystem/private
 
-ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP)
+ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(KTRACEDUMP)
 
 $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
