@@ -218,7 +218,32 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
 
     size_t left;
     mtx_lock(&hid->fifo.lock);
-    ssize_t r = mx_hid_fifo_read(&hid->fifo, buf, count);
+    size_t xfer;
+    uint8_t rpt_id = 0;
+    if (hid->root->num_reports > 1) {
+        ssize_t r = mx_hid_fifo_peek(&hid->fifo, &rpt_id);
+        if (r < 1) {
+            printf("error reading hid device: fifo empty!\n");
+            mtx_unlock(&hid->fifo.lock);
+            return ERR_BAD_STATE;
+        }
+    }
+    xfer = hid_get_report_size_by_id(hid->root, rpt_id, INPUT_REPORT_INPUT);
+    if (xfer == 0) {
+        printf("error reading hid device: unknown report id (%u)!\n", rpt_id);
+        mtx_unlock(&hid->fifo.lock);
+        return ERR_BAD_STATE;
+    }
+    if (hid->root->num_reports > 1) {
+        // account for the report id
+        xfer++;
+    }
+    if (xfer > count) {
+        printf("next report: %zd, read count: %zd\n", xfer, count);
+        mtx_unlock(&hid->fifo.lock);
+        return ERR_NOT_ENOUGH_BUFFER;
+    }
+    ssize_t r = mx_hid_fifo_read(&hid->fifo, buf, xfer);
     left = mx_hid_fifo_size(&hid->fifo);
     if (left == 0) {
         device_state_clr(&hid->dev, DEV_STATE_READABLE);
