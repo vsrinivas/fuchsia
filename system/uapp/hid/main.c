@@ -30,8 +30,7 @@ static bool verbose = false;
 void usage(void) {
     printf("usage: hid [-v] <command> [<args>]\n\n");
     printf("  commands:\n");
-    printf("    read\n");
-    printf("    status <devpath>\n");
+    printf("    read [<devpath> [num reads]]\n");
     printf("    get <devpath> <in|out|feature> <id>\n");
     printf("    set <devpath> <in|out|feature> <id> [0xXX *]\n");
     printf("  all values are parsed as hexadecimal integers\n");
@@ -40,6 +39,7 @@ void usage(void) {
 typedef struct input_args {
     int fd;
     char name[128];
+    unsigned long int num_reads;
 } input_args_t;
 
 static thrd_t input_poll_thread;
@@ -188,7 +188,7 @@ static int hid_input_thread(void* arg) {
     uint8_t* report = calloc(1, max_report_len);
     if (!report) return ERR_NO_MEMORY;
 
-    for (;;) {
+    for (uint32_t i = 0; i < args->num_reads; i++) {
         mxio_wait_fd(args->fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(args->fd, report, max_report_len);
         mtx_lock(&print_lock);
@@ -216,6 +216,9 @@ static mx_status_t hid_input_device_added(int dirfd, const char* fn, void* cooki
 
     input_args_t* args = malloc(sizeof(*args));
     args->fd = fd;
+    // TODO: support setting num_reads across all devices. requires a way to
+    // signal shutdown to all input threads.
+    args->num_reads = ULONG_MAX;
     thrd_t t;
     snprintf(args->name, sizeof(args->name), "hid-input-%s", fn);
     int ret = thrd_create_with_name(&t, hid_input_thread, (void*)args, args->name);
@@ -239,16 +242,6 @@ static int hid_input_devices_poll_thread(void* arg) {
 }
 
 int read_reports(int argc, const char** argv) {
-    int ret = thrd_create_with_name(&input_poll_thread, hid_input_devices_poll_thread, NULL, "hid-inputdev-poll");
-    if (ret != thrd_success) {
-        return ret;
-    }
-
-    thrd_join(input_poll_thread, NULL);
-    return 0;
-}
-
-int get_status(int argc, const char** argv) {
     argc--;
     argv++;
     if (argc < 1) {
@@ -261,7 +254,37 @@ int get_status(int argc, const char** argv) {
         printf("could not open %s: %d\n", argv[0], errno);
         return -1;
     }
-    return hid_status(fd, argv[0], NULL);
+    input_args_t* args = calloc(1, sizeof(*args));
+    args->fd = fd;
+    args->num_reads = ULONG_MAX;
+    if (argc > 1) {
+        errno = 0;
+        args->num_reads = strtoul(argv[1], NULL, 10);
+        if (errno) {
+            usage();
+            free(args);
+            return 0;
+        }
+    }
+    strlcpy(args->name, argv[0], sizeof(args->name));
+    thrd_t t;
+    int ret = thrd_create_with_name(&t, hid_input_thread, (void*)args, args->name);
+    if (ret != thrd_success) {
+        printf("hid: input thread %s did not start (error=%d)\n", args->name, ret);
+        close(fd);
+    }
+    thrd_join(t, NULL);
+    return 0;
+}
+
+int readall_reports(int argc, const char** argv) {
+    int ret = thrd_create_with_name(&input_poll_thread, hid_input_devices_poll_thread, NULL, "hid-inputdev-poll");
+    if (ret != thrd_success) {
+        return ret;
+    }
+
+    thrd_join(input_poll_thread, NULL);
+    return 0;
 }
 
 int get_report(int argc, const char** argv) {
@@ -364,8 +387,13 @@ int main(int argc, const char** argv) {
         argc--;
         argv++;
     }
-    if (!strcmp("read", argv[0])) return read_reports(argc, argv);
-    if (!strcmp("status", argv[0])) return get_status(argc, argv);
+    if (!strcmp("read", argv[0])) {
+        if (argc > 1) {
+            return read_reports(argc, argv);
+        } else {
+            return readall_reports(argc, argv);
+        }
+    }
     if (!strcmp("get", argv[0])) return get_report(argc, argv);
     if (!strcmp("set", argv[0])) return set_report(argc, argv);
     usage();
