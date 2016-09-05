@@ -234,10 +234,16 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
         mtx_unlock(&hid->fifo.lock);
         return ERR_BAD_STATE;
     }
+#if BOOT_MOUSE_HACK
+    if (hid->root->dev_class != HID_DEV_CLASS_POINTER) {
+#endif
     if (hid->root->num_reports > 1) {
         // account for the report id
         xfer++;
     }
+#if BOOT_MOUSE_HACK
+    }
+#endif
     if (xfer > count) {
         printf("next report: %zd, read count: %zd\n", xfer, count);
         mtx_unlock(&hid->fifo.lock);
