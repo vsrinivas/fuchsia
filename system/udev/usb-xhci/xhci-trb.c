@@ -65,6 +65,11 @@ mx_status_t xhci_event_ring_init(xhci_t* xhci, int interruptor, int count) {
     return NO_ERROR;
 }
 
+void xhci_event_ring_free(xhci_t* xhci, int interruptor) {
+    xhci_event_ring_t* ring = &xhci->event_rings[interruptor];
+    xhci_free(xhci, (void *)ring->start);
+}
+
 void xhci_clear_trb(xhci_trb_t* trb) {
     XHCI_WRITE64(&trb->ptr, 0);
     XHCI_WRITE32(&trb->status, 0);

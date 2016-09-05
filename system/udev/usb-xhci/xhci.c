@@ -24,6 +24,8 @@ uint8_t xhci_endpoint_index(uint8_t ep_address) {
 }
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
+    mx_status_t result = NO_ERROR;
+
     list_initialize(&xhci->command_queue);
 
     xhci->cap_regs = (xhci_cap_regs_t*)mmio;
@@ -42,21 +44,24 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
                                          HCSPARAMS1_MAX_PORTS_BITS);
     xhci->context_size = (XHCI_READ32(hccparams1) & HCCPARAMS1_CSZ ? 64 : 32);
 
+    uint32_t scratch_pad_bufs = XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_HI_START,
+                                                HCSPARAMS2_MAX_SBBUF_HI_BITS);
+
     // allocate array to hold our slots
     // add 1 to allow 1-based indexing of slots
     xhci->slots = (xhci_slot_t*)calloc(xhci->max_slots + 1, sizeof(xhci_slot_t));
     if (!xhci->slots) {
-        return ERR_NO_MEMORY;
+        result = ERR_NO_MEMORY;
+        goto fail;
     }
 
     // Allocate DMA memory for various things
     xhci->dcbaa = xhci_memalign(xhci, 64, (xhci->max_slots + 1) * sizeof(uint64_t));
     if (!xhci->dcbaa) {
-        return ERR_NO_MEMORY;
+        result = ERR_NO_MEMORY;
+        goto fail;
     }
 
-    uint32_t scratch_pad_bufs = XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_HI_START,
-                                                HCSPARAMS2_MAX_SBBUF_HI_BITS);
     scratch_pad_bufs <<= HCSPARAMS2_MAX_SBBUF_LO_BITS;
     scratch_pad_bufs |= XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_LO_START,
                                         HCSPARAMS2_MAX_SBBUF_LO_BITS);
@@ -64,32 +69,49 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     if (scratch_pad_bufs > 0) {
         xhci->scratch_pad = xhci_memalign(xhci, 64, scratch_pad_bufs * sizeof(uint64_t));
         if (!xhci->scratch_pad) {
-            return ERR_NO_MEMORY;
+            result = ERR_NO_MEMORY;
+            goto fail;
         }
         uint32_t page_size = XHCI_READ32(&xhci->op_regs->pagesize) << 12;
 
         for (uint32_t i = 0; i < scratch_pad_bufs; i++) {
             void* page = xhci_memalign(xhci, page_size, page_size);
             if (!page) {
-                return ERR_NO_MEMORY;
+                result = ERR_NO_MEMORY;
+                goto fail;
             }
             xhci->scratch_pad[i] = xhci_virt_to_phys(xhci, (mx_vaddr_t)page);
         }
         xhci->dcbaa[0] = xhci_virt_to_phys(xhci, (mx_vaddr_t)xhci->scratch_pad);
     }
 
-    mx_status_t status = xhci_transfer_ring_init(xhci, &xhci->command_ring, COMMAND_RING_SIZE);
-    if (status != NO_ERROR) {
+    result = xhci_transfer_ring_init(xhci, &xhci->command_ring, COMMAND_RING_SIZE);
+    if (result != NO_ERROR) {
         printf("xhci_command_ring_init failed\n");
-        return status;
+        goto fail;
     }
-    status = xhci_event_ring_init(xhci, 0, EVENT_RING_SIZE);
-    if (status != NO_ERROR) {
+    result = xhci_event_ring_init(xhci, 0, EVENT_RING_SIZE);
+    if (result != NO_ERROR) {
         printf("xhci_event_ring_init failed\n");
-        return status;
+        goto fail;
     }
 
     return NO_ERROR;
+
+fail:
+    xhci_event_ring_free(xhci, 0);
+    xhci_transfer_ring_free(xhci, &xhci->command_ring);
+    if (xhci->scratch_pad) {
+        for (size_t i = 0; i < scratch_pad_bufs; i++) {
+            if (xhci->scratch_pad[i]) {
+                xhci_free(xhci, (void *)xhci_phys_to_virt(xhci, (mx_paddr_t)xhci->scratch_pad[i]));
+            }
+        }
+        xhci_free(xhci, xhci->scratch_pad);
+    }
+    xhci_free(xhci, xhci->dcbaa);
+    free(xhci->slots);
+    return result;
 }
 
 static void xhci_update_erdp(xhci_t* xhci, int interruptor) {

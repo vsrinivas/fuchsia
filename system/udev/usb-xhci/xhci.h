@@ -155,6 +155,7 @@ mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* tr, int 
 void xhci_transfer_ring_free(xhci_t* xhci, xhci_transfer_ring_t* ring);
 size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring);
 mx_status_t xhci_event_ring_init(xhci_t* xhci, int interruptor, int count);
+void xhci_event_ring_free(xhci_t* xhci, int interruptor);
 void xhci_clear_trb(xhci_trb_t* trb);
 void* xhci_read_trb_ptr(xhci_t* xhci, xhci_trb_t* trb);
 xhci_trb_t* xhci_get_next_trb(xhci_t* xhci, xhci_trb_t* trb);
