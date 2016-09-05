@@ -1,6 +1,7 @@
 {
     "imports": [
         "apps",
+        "boringssl",
         "cmdutils",
         "dart",
         "flutter",

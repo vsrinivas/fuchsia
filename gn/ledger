@@ -6,6 +6,14 @@
         {
             "binary": "convert_unittests",
             "bootfs_path": "test/convert_unittests"
+        },
+        {
+            "binary": "ledger_abax",
+            "bootfs_path": "apps/ledger"
+        },
+        {
+            "binary": "ledger_abax_apptests",
+            "bootfs_path": "apps/ledger_abax_apptests"
         }
     ]
 }
