@@ -447,13 +447,13 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             uint32_t value = process->get_bad_handle_policy();
             if (copy_to_user_u32(_value.reinterpret<uint32_t>(), value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-
+            return NO_ERROR;
         }
         default:
             return ERR_INVALID_ARGS;
     }
 
-    return NO_ERROR;
+    __UNREACHABLE;
 }
 
 mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
