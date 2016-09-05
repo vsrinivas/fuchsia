@@ -153,21 +153,23 @@ static int i2c_hid_irq_thread(void* arg) {
     // IRQ, we just poll.
     while (true) {
         usleep(I2C_POLL_INTERVAL_USEC);
-        ssize_t ret = dev->i2cdev->ops->read(dev->i2cdev, buf, len, 0);
-        if (ret < 2) {
-            printf("i2c-hid: short read!!!\n");
-            break;
+        while (true) {
+            ssize_t ret = dev->i2cdev->ops->read(dev->i2cdev, buf, len, 0);
+            if (ret < 2) {
+                printf("i2c-hid: short read (%zd < 2)!!!\n", ret);
+                break;
+            }
+            uint16_t report_len = letoh16(*(uint16_t*)buf);
+            if (report_len == 0xffff || report_len == 0x3fff) {
+                // nothing to read
+                break;
+            }
+            if (ret < report_len) {
+                printf("i2c-hid: short read (%zd < %u)!!!\n", ret, report_len);
+                break;
+            }
+            hid_io_queue(&dev->hiddev, buf + 2, report_len - 2);
         }
-        uint16_t report_len = letoh16(*(uint16_t*)buf);
-        if (report_len == 0xffff) {
-            // nothing to read
-            continue;
-        }
-        if (ret < report_len) {
-            printf("i2c-hid: short read!!!\n");
-            break;
-        }
-        hid_io_queue(&dev->hiddev, buf + 2, report_len - 2);
     }
 
     // TODO: figure out how to clean up
