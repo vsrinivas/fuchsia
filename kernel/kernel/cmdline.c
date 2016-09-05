@@ -89,7 +89,7 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default) {
     }
 
     char* end;
-    long int value = strtol(value_str, &end, 10);
+    long int value = strtol(value_str, &end, 0);
     if (*end != '\0') {
         return _default;
     }
