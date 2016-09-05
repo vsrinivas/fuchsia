@@ -423,7 +423,9 @@ static void hid_clear_global_state(list_node_t* stack) {
 static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
     const uint8_t* buf = dev->hid_report_desc;
     const uint8_t* end = buf + dev->hid_report_desc_len;
+    mx_status_t status = NO_ERROR;
     hid_item_t item;
+
     hid_global_state_t state;
     memset(&state, 0, sizeof(state));
     list_node_t global_stack;
@@ -437,17 +439,26 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
             switch (item.bTag) {
             case HID_ITEM_MAIN_TAG_INPUT:
                 idx = hid_find_report_id(state.rpt_id, dev);
-                if (idx < 0) return ERR_NOT_SUPPORTED;
+                if (idx < 0) {
+                    status = ERR_NOT_SUPPORTED;
+                    goto done;
+                }
                 dev->sizes[idx].in_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_OUTPUT:
                 idx = hid_find_report_id(state.rpt_id, dev);
-                if (idx < 0) return ERR_NOT_SUPPORTED;
+                if (idx < 0) {
+                    status = ERR_NOT_SUPPORTED;
+                    goto done;
+                }
                 dev->sizes[idx].out_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_FEATURE:
                 idx = hid_find_report_id(state.rpt_id, dev);
-                if (idx < 0) return ERR_NOT_SUPPORTED;
+                if (idx < 0) {
+                    status = ERR_NOT_SUPPORTED;
+                    goto done;
+                }
                 dev->sizes[idx].feat_size += inc;
                 break;
             default:
@@ -467,10 +478,16 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
                 state.rpt_count = (uint32_t)item.data;
                 break;
             case HID_ITEM_GLOBAL_TAG_PUSH:
-                hid_push_global_state(&global_stack, &state);
+                status = hid_push_global_state(&global_stack, &state);
+                if (status != NO_ERROR) {
+                    goto done;
+                }
                 break;
             case HID_ITEM_GLOBAL_TAG_POP:
-                hid_pop_global_state(&global_stack, &state);
+                status = hid_pop_global_state(&global_stack, &state);
+                if (status != NO_ERROR) {
+                    goto done;
+                }
                 break;
             default:
                 break;
@@ -479,8 +496,9 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
             break;
         }
     }
+done:
     hid_clear_global_state(&global_stack);
-    return NO_ERROR;
+    return status;
 }
 
 static inline void hid_init_report_sizes(mx_hid_device_t* dev) {
