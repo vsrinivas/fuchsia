@@ -22,7 +22,12 @@ DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
 USE_CLANG ?= false
+USE_LLD ?= false
+ifeq ($(call TOBOOL,$(USE_LLD)),true)
+USE_GOLD := false
+else
 USE_GOLD ?= true
+endif
 LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
@@ -369,6 +374,9 @@ CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
 AR := $(TOOLCHAIN_PREFIX)ar
 endif
 LD := $(TOOLCHAIN_PREFIX)ld
+ifeq ($(call TOBOOL,$(USE_LLD)),true)
+LD := $(LD).lld
+endif
 ifeq ($(call TOBOOL,$(USE_GOLD)),true)
 USER_LD := $(LD).gold
 else
