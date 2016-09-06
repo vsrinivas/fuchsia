@@ -7,7 +7,7 @@
 #include <ddk/completion.h>
 
 #include "xhci.h"
-#include "xhci-hw.h"
+#include "xhci-transfer.h"
 
 typedef struct {
     xhci_command_context_t context;

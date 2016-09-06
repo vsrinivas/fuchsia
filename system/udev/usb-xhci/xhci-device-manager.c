@@ -4,12 +4,14 @@
 
 #include <endian.h>
 #include <magenta/hw/usb.h>
+#include <magenta/hw/usb-hub.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 
-#include "xhci.h"
+#include "xhci-device-manager.h"
+#include "xhci-root-hub.h"
 #include "xhci-util.h"
 
 //#define TRACE 1

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <threads.h>
 
-#include "xhci.h"
+#include "xhci-transfer.h"
 #include "xhci-util.h"
 
 //#define TRACE 1

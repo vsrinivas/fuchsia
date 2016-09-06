@@ -11,6 +11,9 @@
 #include <unistd.h>
 
 #include "xhci.h"
+#include "xhci-device-manager.h"
+#include "xhci-root-hub.h"
+#include "xhci-transfer.h"
 
 //#define TRACE 1
 #include "xhci-debug.h"

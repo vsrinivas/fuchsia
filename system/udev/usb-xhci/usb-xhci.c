@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-alloc.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 
@@ -18,6 +19,7 @@
 #include <string.h>
 
 #include "xhci.h"
+#include "xhci-device-manager.h"
 #include "xhci-util.h"
 
 //#define TRACE 1
