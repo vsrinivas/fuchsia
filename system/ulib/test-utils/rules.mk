@@ -17,12 +17,13 @@ MODULE_SO_NAME := test-utils
 # mention them as a dependency as well.
 # N.B. The order is important. Think ordering of args to the linker.
 MODULE_STATIC_LIBS := \
-    ulib/unittest \
-    ulib/hexdump \
     ulib/launchpad \
     ulib/elfload \
     ulib/mxio \
     ulib/runtime
-MODULE_LIBS := ulib/magenta ulib/musl
+MODULE_LIBS := \
+    ulib/unittest \
+    ulib/musl \
+    ulib/magenta
 
 include make/module.mk
