@@ -13,6 +13,13 @@ namespace files {
 // this function will terminate the process.
 std::string GetCurrentDirectory();
 
+// Returns whether the given path is a directory.
+bool IsDirectory(const std::string& path);
+
+// Create a directory at the given path. If necessary, creates any intermediary
+// directory.
+bool CreateDirectory(const std::string& path);
+
 }  // namespace files
 
 #endif  // LIB_FTL_FILES_DIRECTORY_H_

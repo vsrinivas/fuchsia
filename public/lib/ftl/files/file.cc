@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "lib/ftl/files/eintr_wrapper.h"
@@ -17,8 +18,7 @@ namespace files {
 
 bool WriteFile(const std::string& path, const char* data, ssize_t size) {
   ftl::UniqueFD fd(HANDLE_EINTR(creat(path.c_str(), 0666)));
-  if (!fd.is_valid())
-    return false;
+  if (!fd.is_valid()) return false;
   return ftl::WriteFileDescriptor(fd.get(), data, size);
 }
 
@@ -27,8 +27,7 @@ bool ReadFileToString(const std::string& path, std::string* result) {
   result->clear();
 
   ftl::UniqueFD fd(open(path.c_str(), O_RDONLY));
-  if (!fd.is_valid())
-    return false;
+  if (!fd.is_valid()) return false;
 
   constexpr size_t kBufferSize = 1 << 16;
   size_t offset = 0;
@@ -45,6 +44,15 @@ bool ReadFileToString(const std::string& path, std::string* result) {
   }
 
   result->resize(offset + bytes_read);
+  return true;
+}
+
+bool GetFileSize(const std::string& path, int64_t* size) {
+  struct stat stat_buffer;
+  if (stat(path.c_str(), &stat_buffer) != 0) {
+    return false;
+  }
+  *size = stat_buffer.st_size;
   return true;
 }
 

@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/files/path.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/path.h"
+#include "lib/ftl/files/scoped_temp_dir.h"
 
 namespace files {
 namespace {
@@ -129,6 +131,35 @@ TEST(Path, GetDirectoryName) {
   EXPECT_EQ("/", GetDirectoryName("/a"));
   EXPECT_EQ("/a", GetDirectoryName("/a/"));
   EXPECT_EQ("a", GetDirectoryName("a/"));
+}
+
+TEST(Path, DeletePath) {
+  ScopedTempDir dir;
+
+  std::string sub_dir = dir.path() + "/dir";
+  CreateDirectory(sub_dir);
+  EXPECT_TRUE(IsDirectory(sub_dir));
+  EXPECT_TRUE(DeletePath(sub_dir, false));
+  EXPECT_FALSE(IsDirectory(sub_dir));
+}
+
+TEST(Path, DeletePathRecursively) {
+  ScopedTempDir dir;
+
+  std::string sub_dir = dir.path() + "/dir";
+  CreateDirectory(sub_dir);
+  EXPECT_TRUE(IsDirectory(sub_dir));
+  std::string sub_sub_dir = sub_dir + "/dir";
+  CreateDirectory(sub_sub_dir);
+  EXPECT_TRUE(IsDirectory(sub_sub_dir));
+
+  EXPECT_FALSE(DeletePath(sub_dir, false));
+  EXPECT_TRUE(IsDirectory(sub_dir));
+  EXPECT_TRUE(IsDirectory(sub_sub_dir));
+
+  EXPECT_TRUE(DeletePath(sub_dir, true));
+  EXPECT_FALSE(IsDirectory(sub_dir));
+  EXPECT_FALSE(IsDirectory(sub_sub_dir));
 }
 
 }  // namespace

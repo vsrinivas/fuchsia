@@ -29,6 +29,8 @@ static_library("ftl") {
     "files/file.h",
     "files/path.cc",
     "files/path.h",
+    "files/scoped_temp_dir.cc",
+    "files/scoped_temp_dir.h",
     "files/symlink.cc",
     "files/symlink.h",
     "files/unique_fd.cc",
@@ -90,7 +92,9 @@ executable("ftl_unittests") {
   sources = [
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
+    "files/file_unittest.cc",
     "files/path_unittest.cc",
+    "files/scoped_temp_dir_unittest.cc",
     "functional/make_copyable_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
