@@ -9,6 +9,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/interrupt_event.c
+    $(LOCAL_DIR)/empty.c
 
 include make/module.mk

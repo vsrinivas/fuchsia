@@ -19,7 +19,6 @@
 #include <platform/pc/acpi.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
-#include <dev/interrupt_event.h>
 #include <dev/pcie.h>
 #include <dev/uart.h>
 #include <arch/mmu.h>

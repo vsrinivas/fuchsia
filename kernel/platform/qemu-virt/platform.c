@@ -23,7 +23,6 @@
 #include <platform.h>
 #include <platform/gic.h>
 #include <dev/interrupt.h>
-#include <dev/interrupt_event.h>
 #include <platform/qemu-virt.h>
 #include <libfdt.h>
 #include "platform_p.h"
