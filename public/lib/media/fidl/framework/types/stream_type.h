@@ -84,7 +84,7 @@ class StreamType {
 template <typename T>
 struct Range {
   Range(T min_param, T max_param) : min(min_param), max(max_param) {
-    DCHECK(min_param <= max_param);
+    FTL_DCHECK(min_param <= max_param);
   }
 
   T min;

@@ -15,23 +15,23 @@ Output::Output() : demand_(Demand::kNegative), copy_allocator_(nullptr) {}
 Output::~Output() {}
 
 void Output::Connect(const InputRef& input) {
-  DCHECK(input.valid());
-  DCHECK(!mate_);
+  FTL_DCHECK(input.valid());
+  FTL_DCHECK(!mate_);
   mate_ = input;
 }
 
 Input& Output::actual_mate() const {
-  DCHECK(mate_.valid());
+  FTL_DCHECK(mate_.valid());
   return mate_.actual();
 }
 
 void Output::SetCopyAllocator(PayloadAllocator* copy_allocator) {
-  DCHECK(connected());
+  FTL_DCHECK(connected());
   copy_allocator_ = copy_allocator;
 }
 
 Demand Output::demand() const {
-  DCHECK(connected());
+  FTL_DCHECK(connected());
 
   // Return negative demand if mate() already has a packet.
   // We check demand_ here to possibly avoid the second check.
@@ -43,9 +43,9 @@ Demand Output::demand() const {
 }
 
 void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
-  DCHECK(packet);
-  DCHECK(engine);
-  DCHECK(connected());
+  FTL_DCHECK(packet);
+  FTL_DCHECK(engine);
+  FTL_DCHECK(connected());
 
   if (copy_allocator_ != nullptr) {
     // Need to copy the packet due to an allocation conflict.
@@ -57,7 +57,7 @@ void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
     } else {
       buffer = copy_allocator_->AllocatePayloadBuffer(size);
       if (buffer == nullptr) {
-        LOG(WARNING) << "allocator starved copying output";
+        FTL_LOG(WARNING) << "allocator starved copying output";
         return;
       }
       memcpy(buffer, packet->payload(), size);

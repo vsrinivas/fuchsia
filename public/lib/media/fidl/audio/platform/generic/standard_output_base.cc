@@ -59,7 +59,7 @@ void StandardOutputBase::Process() {
   //
   // If the next sched time has not arrived yet, don't attempt to mix anything.
   // Just trim the queues and move on.
-  DCHECK(next_sched_time_known_);
+  FTL_DCHECK(next_sched_time_known_);
   if (now >= next_sched_time_) {
     // Clear the flag, if the implementation does not set this flag by calling
     // SetNextSchedTime during the cycle, we consider it to be an error and shut
@@ -78,9 +78,9 @@ void StandardOutputBase::Process() {
       // If we have a mix job, then we must have an output formatter, and an
       // intermediate buffer allocated, and it must be large enough for the mix
       // job we were given.
-      DCHECK(mix_buf_);
-      DCHECK(output_formatter_);
-      DCHECK_LE(cur_mix_job_.buf_frames, mix_buf_frames_);
+      FTL_DCHECK(mix_buf_);
+      FTL_DCHECK(output_formatter_);
+      FTL_DCHECK(cur_mix_job_.buf_frames <= mix_buf_frames_);
 
       // Fill the intermediate buffer with silence.
       size_t bytes_to_zero = sizeof(int32_t) * cur_mix_job_.buf_frames *
@@ -154,10 +154,10 @@ StandardOutputBase::TrackBookkeeping* StandardOutputBase::AllocBookkeeping() {
 }
 
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
-  DCHECK_GT(output_formatter_->channels(), 0u);
-  DCHECK_GT(max_mix_frames, 0u);
-  DCHECK_LE(max_mix_frames, std::numeric_limits<uint32_t>::max() /
-                                output_formatter_->channels());
+  FTL_DCHECK(output_formatter_->channels() > 0u);
+  FTL_DCHECK(max_mix_frames > 0u);
+  FTL_DCHECK(max_mix_frames <= std::numeric_limits<uint32_t>::max() /
+                                   output_formatter_->channels());
 
   mix_buf_frames_ = max_mix_frames;
   mix_buf_.reset(new int32_t[mix_buf_frames_ * output_formatter_->channels()]);
@@ -185,7 +185,7 @@ void StandardOutputBase::ForeachTrack(const TrackSetupTask& setup,
     // we are building with no-rtti
     TrackBookkeeping* info =
         static_cast<TrackBookkeeping*>(link->output_bookkeeping().get());
-    DCHECK(info);
+    FTL_DCHECK(info);
 
     // Make sure that the mapping between the track's frame time domain and
     // local time is up to date.
@@ -244,7 +244,7 @@ bool StandardOutputBase::SetupMix(const AudioTrackImplPtr& track,
                                   TrackBookkeeping* info) {
   // If we need to recompose our transformation from output frame space to input
   // fractional frames, do so now.
-  DCHECK(info);
+  FTL_DCHECK(info);
   info->UpdateOutputTrans(cur_mix_job_);
   cur_mix_job_.frames_produced = 0;
 
@@ -256,15 +256,15 @@ bool StandardOutputBase::ProcessMix(
     TrackBookkeeping* info,
     const AudioPipe::AudioPacketRefPtr& packet) {
   // Sanity check our parameters.
-  DCHECK(info);
-  DCHECK(packet);
+  FTL_DCHECK(info);
+  FTL_DCHECK(packet);
 
   // We had better have a valid job, or why are we here?
-  DCHECK(cur_mix_job_.buf_frames);
-  DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
+  FTL_DCHECK(cur_mix_job_.buf_frames);
+  FTL_DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
 
   // We also must have selected a mixer, or we are in trouble.
-  DCHECK(info->mixer);
+  FTL_DCHECK(info->mixer);
   Mixer& mixer = *(info->mixer);
 
   // If this track is currently paused (or being sampled extremely slowly), our
@@ -291,9 +291,9 @@ bool StandardOutputBase::ProcessMix(
   bool good = info->out_frames_to_track_frames.DoForwardTransform(
       cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced,
       &first_sample_ftf);
-  DCHECK(good);
+  FTL_DCHECK(good);
 
-  DCHECK(frames_left);
+  FTL_DCHECK(frames_left);
   int64_t final_sample_ftf =
       first_sample_ftf +
       ((frames_left - 1) * static_cast<int64_t>(info->step_size));
@@ -305,7 +305,7 @@ bool StandardOutputBase::ProcessMix(
   }
 
   // Figure out the PTS of the final frame of audio in our input packet.
-  DCHECK((packet->end_pts() - packet->start_pts()) >= Mixer::FRAC_ONE);
+  FTL_DCHECK((packet->end_pts() - packet->start_pts()) >= Mixer::FRAC_ONE);
   int64_t final_pts = packet->end_pts() - Mixer::FRAC_ONE;
 
   // If the PTS of the final frame of audio in our input is before the negative
@@ -341,17 +341,17 @@ bool StandardOutputBase::ProcessMix(
     input_offset_64 += output_offset_64 * info->step_size;
   }
 
-  DCHECK_GE(output_offset_64, 0);
-  DCHECK_LT(output_offset_64, static_cast<int64_t>(frames_left));
-  DCHECK_LE(input_offset_64, std::numeric_limits<int32_t>::max());
-  DCHECK_GE(input_offset_64, std::numeric_limits<int32_t>::min());
+  FTL_DCHECK(output_offset_64 >= 0);
+  FTL_DCHECK(output_offset_64 < static_cast<int64_t>(frames_left));
+  FTL_DCHECK(input_offset_64 <= std::numeric_limits<int32_t>::max());
+  FTL_DCHECK(input_offset_64 >= std::numeric_limits<int32_t>::min());
 
   uint32_t output_offset = static_cast<uint32_t>(output_offset_64);
   int32_t frac_input_offset = static_cast<int32_t>(input_offset_64);
 
   // Looks like we are ready to go. Mix.
-  DCHECK_LE(packet->frac_frame_len(),
-            static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  FTL_DCHECK(packet->frac_frame_len() <=
+             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
   if (frac_input_offset >= static_cast<int32_t>(packet->frac_frame_len())) {
     frac_input_offset -= packet->frac_frame_len();
@@ -360,12 +360,12 @@ bool StandardOutputBase::ProcessMix(
         buf, frames_left, &output_offset, packet->supplied_packet()->payload(),
         packet->frac_frame_len(), &frac_input_offset, info->step_size,
         info->amplitude_scale, cur_mix_job_.accumulate);
-    DCHECK_LE(output_offset, frames_left);
+    FTL_DCHECK(output_offset <= frames_left);
 
     if (!consumed_source) {
       // Looks like we didn't consume all of this region.  Assert that we have
       // produced all of our frames and we are done.
-      DCHECK(output_offset == frames_left);
+      FTL_DCHECK(output_offset == frames_left);
       return false;
     }
 
@@ -373,7 +373,7 @@ bool StandardOutputBase::ProcessMix(
   }
 
   cur_mix_job_.frames_produced += output_offset;
-  DCHECK_LE(cur_mix_job_.frames_produced, cur_mix_job_.buf_frames);
+  FTL_DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
   return true;
 }
 
@@ -382,7 +382,7 @@ bool StandardOutputBase::SetupTrim(const AudioTrackImplPtr& track,
   // Compute the cutoff time we will use to decide wether or not to trim
   // packets.  ForeachTracks has already updated our transformation, no need
   // for us to do so here.
-  DCHECK(info);
+  FTL_DCHECK(info);
 
   int64_t local_now_ticks = LocalClock::now().time_since_epoch().count();
 
@@ -409,7 +409,7 @@ bool StandardOutputBase::ProcessTrim(
     const AudioTrackImplPtr& track,
     TrackBookkeeping* info,
     const AudioPipe::AudioPacketRefPtr& pkt_ref) {
-  DCHECK(pkt_ref);
+  FTL_DCHECK(pkt_ref);
 
   // If the presentation end of this packet is in the future, stop trimming.
   if (pkt_ref->end_pts() > trim_threshold_) {
@@ -424,7 +424,7 @@ void StandardOutputBase::TrackBookkeeping::UpdateTrackTrans(
   LinearTransform tmp;
   uint32_t gen;
 
-  DCHECK(track);
+  FTL_DCHECK(track);
   track->SnapshotRateTrans(&tmp, &gen);
 
   // If the local time -> media time transformation has not changed since the
@@ -440,10 +440,10 @@ void StandardOutputBase::TrackBookkeeping::UpdateTrackTrans(
 
   lt_to_track_frames.a_zero = tmp.a_zero;
   good = scale.DoForwardTransform(tmp.b_zero, &lt_to_track_frames.b_zero);
-  DCHECK(good);
+  FTL_DCHECK(good);
   good = LinearTransform::Ratio::Compose(scale.scale, tmp.scale,
                                          &lt_to_track_frames.scale);
-  DCHECK(good);
+  FTL_DCHECK(good);
 
   // Update the generation, and invalidate the output to track generation.
   lt_to_track_frames_gen = gen;
@@ -455,8 +455,8 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
   // We should not be here unless we have a valid mix job.  From our point of
   // view, this means that we have a job which supplies a valid transformation
   // from local time to output frames.
-  DCHECK(job.local_to_output);
-  DCHECK(job.local_to_output_gen != MixJob::INVALID_GENERATION);
+  FTL_DCHECK(job.local_to_output);
+  FTL_DCHECK(job.local_to_output_gen != MixJob::INVALID_GENERATION);
 
   // If our generations match, we don't need to re-compute anything.  Just use
   // what we have already.
@@ -469,7 +469,7 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
   //
   // TODO(johngro): Don't assume that 0 means invalid.  Make it a proper
   // constant defined somewhere.
-  DCHECK(lt_to_track_frames_gen);
+  FTL_DCHECK(lt_to_track_frames_gen);
 
   // Compose the job supplied transformation from local to output with the
   // track supplied mapping from local to fraction input frames to produce a
@@ -497,7 +497,7 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
   // empty offsets.
   LinearTransform tmp(0, lt_to_track_frames.scale, 0);
   bool good = tmp.DoForwardTransform(intermediate, &track_frame_offset);
-  DCHECK(good);
+  FTL_DCHECK(good);
 
   dst.a_zero = job.local_to_output->b_zero;
   dst.b_zero = lt_to_track_frames.b_zero + track_frame_offset;
@@ -509,8 +509,7 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
                                    job.local_to_output->scale.numerator);
   good = LinearTransform::Ratio::Compose(tmp_ratio, lt_to_track_frames.scale,
                                          &dst.scale);
-  ;
-  DCHECK(good);
+  FTL_DCHECK(good);
 
   // Finally, compute the step size in fractional frames.  IOW, every time we
   // move forward one output frame, how many fractional frames of input do we
@@ -529,9 +528,9 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
 
     good = tmp.DoForwardTransform(1, &tmp_step_size);
 
-    DCHECK(good);
-    DCHECK_GE(tmp_step_size, 0);
-    DCHECK_LE(tmp_step_size, std::numeric_limits<uint32_t>::max());
+    FTL_DCHECK(good);
+    FTL_DCHECK(tmp_step_size >= 0);
+    FTL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
 
     step_size = static_cast<uint32_t>(tmp_step_size);
   }

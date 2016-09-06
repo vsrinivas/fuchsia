@@ -98,7 +98,7 @@ AudioPipe::AudioPacketRefPtr AudioTrackToOutputLink::LockPendingQueueFront(
     bool* was_flushed) {
   flush_mutex_.Lock();
 
-  DCHECK(was_flushed);
+  FTL_DCHECK(was_flushed);
   *was_flushed = flushed_;
   flushed_ = false;
 
@@ -121,9 +121,9 @@ void AudioTrackToOutputLink::UnlockPendingQueueFront(
     // Assert that the user either got no packet when they locked the queue
     // (because the queue was empty), or that they got the front of the queue
     // and that the front of the queue has not changed.
-    DCHECK(pkt);
-    DCHECK((*pkt == nullptr) ||
-           (pending_queue_->size() && (*pkt == pending_queue_->front())));
+    FTL_DCHECK(pkt);
+    FTL_DCHECK((*pkt == nullptr) ||
+               (pending_queue_->size() && (*pkt == pending_queue_->front())));
 
     if (*pkt) {
       *pkt = nullptr;

@@ -8,7 +8,7 @@
 
 #include "apps/media/cpp/fifo_allocator.h"
 #include "apps/media/interfaces/media_transport.mojom.h"
-#include "mojo/public/cpp/environment/logging.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/system/handle.h"
 
 namespace mojo {
@@ -21,7 +21,7 @@ MappedSharedBuffer::~MappedSharedBuffer() {
 }
 
 MojoResult MappedSharedBuffer::InitNew(uint64_t size) {
-  MOJO_DCHECK(size > 0);
+  FTL_DCHECK(size > 0);
 
   buffer_.reset(new SharedBuffer(size));
   handle_.reset();
@@ -30,7 +30,7 @@ MojoResult MappedSharedBuffer::InitNew(uint64_t size) {
 }
 
 MojoResult MappedSharedBuffer::InitFromHandle(ScopedSharedBufferHandle handle) {
-  MOJO_DCHECK(handle.is_valid());
+  FTL_DCHECK(handle.is_valid());
 
   buffer_.reset();
   handle_ = handle.Pass();
@@ -40,7 +40,7 @@ MojoResult MappedSharedBuffer::InitFromHandle(ScopedSharedBufferHandle handle) {
 
 MojoResult MappedSharedBuffer::InitInternal(
     const ScopedSharedBufferHandle& handle) {
-  MOJO_DCHECK(handle.is_valid());
+  FTL_DCHECK(handle.is_valid());
 
   // Query the buffer for its size.
   MojoBufferInformation info;
@@ -49,12 +49,12 @@ MojoResult MappedSharedBuffer::InitInternal(
   uint64_t size = info.num_bytes;
 
   if (result != MOJO_RESULT_OK) {
-    MOJO_DLOG(ERROR) << "MojoGetBufferInformation failed, result " << result;
+    FTL_DLOG(ERROR) << "MojoGetBufferInformation failed, result " << result;
     return result;
   }
 
   if (size == 0 || size > MediaPacketConsumer::kMaxBufferLen) {
-    MOJO_DLOG(ERROR) << "MojoGetBufferInformation returned invalid size "
+    FTL_DLOG(ERROR) << "MojoGetBufferInformation returned invalid size "
                      << size;
     return MOJO_SYSTEM_RESULT_OUT_OF_RANGE;
   }
@@ -68,12 +68,12 @@ MojoResult MappedSharedBuffer::InitInternal(
                      size, &ptr, MOJO_MAP_BUFFER_FLAG_NONE);
 
   if (result != MOJO_RESULT_OK) {
-    MOJO_DLOG(ERROR) << "MapBuffer failed, result " << result;
+    FTL_DLOG(ERROR) << "MapBuffer failed, result " << result;
     Reset();
     return result;
   }
 
-  MOJO_DCHECK(ptr);
+  FTL_DCHECK(ptr);
 
   buffer_ptr_.reset(reinterpret_cast<uint8_t*>(ptr));
 
@@ -98,41 +98,41 @@ uint64_t MappedSharedBuffer::size() const {
 }
 
 ScopedSharedBufferHandle MappedSharedBuffer::GetDuplicateHandle() const {
-  MOJO_DCHECK(initialized());
+  FTL_DCHECK(initialized());
   ScopedSharedBufferHandle handle;
   if (buffer_) {
     handle = DuplicateHandle(buffer_->handle.get());
   } else {
-    MOJO_DCHECK(handle_.is_valid());
+    FTL_DCHECK(handle_.is_valid());
     handle = DuplicateHandle(handle_.get());
   }
-  MOJO_DCHECK(handle.is_valid());
+  FTL_DCHECK(handle.is_valid());
   return handle;
 }
 
 bool MappedSharedBuffer::Validate(uint64_t offset, uint64_t size) {
-  MOJO_DCHECK(buffer_ptr_);
+  FTL_DCHECK(buffer_ptr_);
   return offset < size_ && size <= size_ - offset;
 }
 
 void* MappedSharedBuffer::PtrFromOffset(uint64_t offset) const {
-  MOJO_DCHECK(buffer_ptr_);
+  FTL_DCHECK(buffer_ptr_);
 
   if (offset == FifoAllocator::kNullOffset) {
     return nullptr;
   }
 
-  MOJO_DCHECK(offset < size_);
+  FTL_DCHECK(offset < size_);
   return buffer_ptr_.get() + offset;
 }
 
 uint64_t MappedSharedBuffer::OffsetFromPtr(void* ptr) const {
-  MOJO_DCHECK(buffer_ptr_);
+  FTL_DCHECK(buffer_ptr_);
   if (ptr == nullptr) {
     return FifoAllocator::kNullOffset;
   }
   uint64_t offset = reinterpret_cast<uint8_t*>(ptr) - buffer_ptr_.get();
-  MOJO_DCHECK(offset < size_);
+  FTL_DCHECK(offset < size_);
   return offset;
 }
 

@@ -66,7 +66,7 @@ class Metadata {
   std::string genre_;
   std::string composer_;
 
-  DISALLOW_COPY_AND_ASSIGN(Metadata);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Metadata);
 };
 
 }  // namespace media

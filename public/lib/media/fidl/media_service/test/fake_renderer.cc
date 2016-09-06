@@ -74,14 +74,14 @@ void FakeRenderer::GetSupportedMediaTypes(
 }
 
 void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
-  MOJO_DCHECK(media_type);
-  MOJO_DCHECK(media_type->details);
+  FTL_DCHECK(media_type);
+  FTL_DCHECK(media_type->details);
   if (media_type->details->is_video()) {
     const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-    MOJO_DCHECK(details);
+    FTL_DCHECK(details);
   } else if (media_type->details->is_audio()) {
     const AudioMediaTypeDetailsPtr& details = media_type->details->get_audio();
-    MOJO_DCHECK(details);
+    FTL_DCHECK(details);
   }
 }
 
@@ -97,7 +97,7 @@ void FakeRenderer::GetTimelineControlPoint(
 
 void FakeRenderer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
-  MOJO_DCHECK(supplied_packet);
+  FTL_DCHECK(supplied_packet);
   if (supplied_packet->packet()->end_of_stream) {
     end_of_stream_ = true;
     SendStatusUpdates();
@@ -184,8 +184,8 @@ void FakeRenderer::Prime(const PrimeCallback& callback) {
 void FakeRenderer::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
-  MOJO_DCHECK(timeline_transform);
-  MOJO_DCHECK(timeline_transform->reference_delta != 0);
+  FTL_DCHECK(timeline_transform);
+  FTL_DCHECK(timeline_transform->reference_delta != 0);
 
   if (timeline_transform->subject_time != kUnspecifiedTime) {
     end_of_stream_ = false;

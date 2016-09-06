@@ -9,7 +9,7 @@ namespace media {
 
 ActiveSourceStage::ActiveSourceStage(std::shared_ptr<ActiveSource> source)
     : source_(source), prepared_(false) {
-  DCHECK(source_);
+  FTL_DCHECK(source_);
 
   supply_function_ = [this](PacketPtr packet) {
     bool packets_was_empty_ = packets_.empty();
@@ -29,7 +29,7 @@ size_t ActiveSourceStage::input_count() const {
 };
 
 Input& ActiveSourceStage::input(size_t index) {
-  CHECK(false) << "input requested from source";
+  FTL_CHECK(false) << "input requested from source";
   abort();
 }
 
@@ -38,20 +38,20 @@ size_t ActiveSourceStage::output_count() const {
 }
 
 Output& ActiveSourceStage::output(size_t index) {
-  DCHECK_EQ(index, 0u);
+  FTL_DCHECK(index == 0u);
   return output_;
 }
 
 PayloadAllocator* ActiveSourceStage::PrepareInput(size_t index) {
-  CHECK(false) << "PrepareInput called on source";
+  FTL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
 void ActiveSourceStage::PrepareOutput(size_t index,
                                       PayloadAllocator* allocator,
                                       const UpstreamCallback& callback) {
-  DCHECK_EQ(index, 0u);
-  DCHECK(source_);
+  FTL_DCHECK(index == 0u);
+  FTL_DCHECK(source_);
 
   if (source_->can_accept_allocator()) {
     // Give the source the provided allocator or the default if non was
@@ -69,15 +69,15 @@ void ActiveSourceStage::PrepareOutput(size_t index,
 
 void ActiveSourceStage::UnprepareOutput(size_t index,
                                         const UpstreamCallback& callback) {
-  DCHECK_EQ(index, 0u);
-  DCHECK(source_);
+  FTL_DCHECK(index == 0u);
+  FTL_DCHECK(source_);
 
   source_->set_allocator(nullptr);
   output_.SetCopyAllocator(nullptr);
 }
 
 void ActiveSourceStage::Update(Engine* engine) {
-  DCHECK(engine);
+  FTL_DCHECK(engine);
 
   Demand demand = output_.demand();
 
@@ -92,11 +92,11 @@ void ActiveSourceStage::Update(Engine* engine) {
 
 void ActiveSourceStage::FlushInput(size_t index,
                                    const DownstreamCallback& callback) {
-  CHECK(false) << "FlushInput called on source";
+  FTL_CHECK(false) << "FlushInput called on source";
 }
 
 void ActiveSourceStage::FlushOutput(size_t index) {
-  DCHECK(source_);
+  FTL_DCHECK(source_);
   output_.Flush();
   source_->Flush();
   packets_.clear();

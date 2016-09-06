@@ -44,7 +44,7 @@ NetworkReaderImpl::NetworkReaderImpl(const String& url,
   url_loader_->Start(url_request.Pass(), [this](URLResponsePtr response) {
     // TODO(dalesat): Handle redirects.
     if (response->status_code != kStatusOk) {
-      LOG(WARNING) << "HEAD response status code " << response->status_code;
+      FTL_LOG(WARNING) << "HEAD response status code " << response->status_code;
       result_ = response->status_code == kStatusNotFound
                     ? MediaResult::NOT_FOUND
                     : MediaResult::UNKNOWN_ERROR;
@@ -101,19 +101,20 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
       request->headers[0] = header.Pass();
     }
 
-    url_loader_->Start(request.Pass(), [this,
-                                        callback](URLResponsePtr response) {
-      if (response->status_code != kStatusOk &&
-          response->status_code != kStatusPartialContent) {
-        LOG(WARNING) << "GET response status code " << response->status_code;
-        result_ = MediaResult::UNKNOWN_ERROR;
-        callback.Run(result_, ScopedHandleBase<DataPipeConsumerHandle>());
-        return;
-      }
+    url_loader_->Start(
+        request.Pass(), [this, callback](URLResponsePtr response) {
+          if (response->status_code != kStatusOk &&
+              response->status_code != kStatusPartialContent) {
+            FTL_LOG(WARNING) << "GET response status code "
+                             << response->status_code;
+            result_ = MediaResult::UNKNOWN_ERROR;
+            callback.Run(result_, ScopedHandleBase<DataPipeConsumerHandle>());
+            return;
+          }
 
-      DCHECK(response->body.is_valid());
-      callback.Run(result_, response->body.Pass());
-    });
+          FTL_DCHECK(response->body.is_valid());
+          callback.Run(result_, response->body.Pass());
+        });
   });
 }
 

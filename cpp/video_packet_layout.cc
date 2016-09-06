@@ -49,27 +49,27 @@ const VideoPacketLayout::PixelFormatInfo& VideoPacketLayout::InfoForPixelFormat(
       {PixelFormat::MJPEG, {1, {0}, {Extent(1, 1)}}},
       {PixelFormat::MT21, {2, {1, 2}, {Extent(1, 1), Extent(2, 2)}}}};
 
-  MOJO_DCHECK(table.find(pixel_format) != table.end());
+  FTL_DCHECK(table.find(pixel_format) != table.end());
   return table.find(pixel_format)->second;
 }
 
 size_t VideoPacketLayout::PixelFormatInfo::RowCount(size_t plane,
                                                     size_t height) const {
-  MOJO_DCHECK(plane < plane_count_);
+  FTL_DCHECK(plane < plane_count_);
   const int sample_height = sample_size_for_plane(plane).height();
   return RoundUpToAlign(height, sample_height) / sample_height;
 }
 
 size_t VideoPacketLayout::PixelFormatInfo::ColumnCount(size_t plane,
                                                        size_t width) const {
-  MOJO_DCHECK(plane < plane_count_);
+  FTL_DCHECK(plane < plane_count_);
   const size_t sample_width = sample_size_for_plane(plane).width();
   return RoundUpToAlign(width, sample_width) / sample_width;
 }
 
 size_t VideoPacketLayout::PixelFormatInfo::BytesPerRow(size_t plane,
                                                        size_t width) const {
-  MOJO_DCHECK(plane < plane_count_);
+  FTL_DCHECK(plane < plane_count_);
   return bytes_per_element_for_plane(plane) * ColumnCount(plane, width);
 }
 
@@ -79,7 +79,7 @@ VideoPacketLayout::Extent VideoPacketLayout::PixelFormatInfo::AlignedSize(
   const Extent adjusted =
       Extent(RoundUpToAlign(unaligned_size.width(), alignment.width()),
              RoundUpToAlign(unaligned_size.height(), alignment.height()));
-  MOJO_DCHECK((adjusted.width() % alignment.width() == 0) &&
+  FTL_DCHECK((adjusted.width() % alignment.width() == 0) &&
               (adjusted.height() % alignment.height() == 0));
   return adjusted;
 }
@@ -130,7 +130,7 @@ VideoPacketLayout::VideoPacketLayout(PixelFormat pixel_format,
 
   // Adding an extra line due to overreads. See comment in BuildFrameLayout
   // in services/media/framework/types/video_stream_type.cc.
-  MOJO_DCHECK(static_cast<size_t>(kUPlaneIndex) < plane_count_);
+  FTL_DCHECK(static_cast<size_t>(kUPlaneIndex) < plane_count_);
   size_ += line_stride_[kUPlaneIndex] + kFrameSizePadding;
 }
 

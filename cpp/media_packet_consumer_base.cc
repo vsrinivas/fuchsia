@@ -4,8 +4,7 @@
 
 #include "apps/media/cpp/media_packet_consumer_base.h"
 
-#include "mojo/public/cpp/environment/logging.h"
-#include "mojo/services/media/common/cpp/media_packet_consumer_base.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {
@@ -30,14 +29,14 @@ uint64_t SizeOf(const ScopedSharedBufferHandle& handle) {
 // Checks the condition, and, if it's false, calls Fail and returns.
 #define RCHECK(condition, message) \
   if (!(condition)) {              \
-    MOJO_DLOG(ERROR) << message;   \
+    FTL_DLOG(ERROR) << message;    \
     Fail();                        \
     return;                        \
   }
 
 MediaPacketConsumerBase::MediaPacketConsumerBase() : binding_(this) {
   Reset();
-  MOJO_DCHECK(counter_);
+  FTL_DCHECK(counter_);
 }
 
 MediaPacketConsumerBase::~MediaPacketConsumerBase() {
@@ -122,8 +121,8 @@ void MediaPacketConsumerBase::PullDemandUpdate(
   if (!get_demand_update_callback_.is_null()) {
     // There's already a pending request. This isn't harmful, but it indicates
     // that the client doesn't know what it's doing.
-    MOJO_DLOG(WARNING) << "PullDemandUpdate was called when another "
-                          "PullDemandUpdate call was pending";
+    FTL_DLOG(WARNING) << "PullDemandUpdate was called when another "
+                         "PullDemandUpdate call was pending";
     FLOG(log_channel_, RespondingToGetDemandUpdate(demand_.Clone()));
     get_demand_update_callback_.Run(demand_.Clone());
   }
@@ -137,7 +136,7 @@ void MediaPacketConsumerBase::AddPayloadBuffer(
     uint32_t payload_buffer_id,
     ScopedSharedBufferHandle payload_buffer) {
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  MOJO_DCHECK(payload_buffer.is_valid());
+  FTL_DCHECK(payload_buffer.is_valid());
   FLOG(log_channel_,
        AddPayloadBufferRequested(payload_buffer_id, SizeOf(payload_buffer)));
   MojoResult result = counter_->buffer_set().AddBuffer(payload_buffer_id,
@@ -155,7 +154,7 @@ void MediaPacketConsumerBase::SupplyPacket(
     MediaPacketPtr media_packet,
     const SupplyPacketCallback& callback) {
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  MOJO_DCHECK(media_packet);
+  FTL_DCHECK(media_packet);
 
   void* payload;
   if (media_packet->payload_size == 0) {
@@ -239,9 +238,9 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
       payload_(payload),
       callback_(callback),
       counter_(counter) {
-  MOJO_DCHECK(packet_);
-  MOJO_DCHECK(!callback.is_null());
-  MOJO_DCHECK(counter_);
+  FTL_DCHECK(packet_);
+  FTL_DCHECK(!callback.is_null());
+  FTL_DCHECK(counter_);
   counter_->OnPacketArrival();
 }
 

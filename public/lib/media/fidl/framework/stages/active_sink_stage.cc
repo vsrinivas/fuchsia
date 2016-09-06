@@ -9,7 +9,7 @@ namespace media {
 
 ActiveSinkStage::ActiveSinkStage(std::shared_ptr<ActiveSink> sink)
     : sink_(sink) {
-  DCHECK(sink_);
+  FTL_DCHECK(sink_);
 
   demand_function_ = [this](Demand demand) {
     if (sink_demand_ != demand) {
@@ -28,7 +28,7 @@ size_t ActiveSinkStage::input_count() const {
 };
 
 Input& ActiveSinkStage::input(size_t index) {
-  DCHECK_EQ(index, 0u);
+  FTL_DCHECK(index == 0u);
   return input_;
 }
 
@@ -37,24 +37,24 @@ size_t ActiveSinkStage::output_count() const {
 }
 
 Output& ActiveSinkStage::output(size_t index) {
-  CHECK(false) << "output requested from sink";
+  FTL_CHECK(false) << "output requested from sink";
   abort();
 }
 
 PayloadAllocator* ActiveSinkStage::PrepareInput(size_t index) {
-  DCHECK_EQ(index, 0u);
+  FTL_DCHECK(index == 0u);
   return sink_->allocator();
 }
 
 void ActiveSinkStage::PrepareOutput(size_t index,
                                     PayloadAllocator* allocator,
                                     const UpstreamCallback& callback) {
-  CHECK(false) << "PrepareOutput called on sink";
+  FTL_CHECK(false) << "PrepareOutput called on sink";
 }
 
 void ActiveSinkStage::Update(Engine* engine) {
-  DCHECK(engine);
-  DCHECK(sink_);
+  FTL_DCHECK(engine);
+  FTL_DCHECK(sink_);
 
   if (input_.packet_from_upstream()) {
     sink_demand_ =
@@ -66,14 +66,14 @@ void ActiveSinkStage::Update(Engine* engine) {
 
 void ActiveSinkStage::FlushInput(size_t index,
                                  const DownstreamCallback& callback) {
-  DCHECK(sink_);
+  FTL_DCHECK(sink_);
   input_.Flush();
   sink_->Flush();
   sink_demand_ = Demand::kNegative;
 }
 
 void ActiveSinkStage::FlushOutput(size_t index) {
-  CHECK(false) << "FlushOutput called on sink";
+  FTL_CHECK(false) << "FlushOutput called on sink";
 }
 
 }  // namespace media

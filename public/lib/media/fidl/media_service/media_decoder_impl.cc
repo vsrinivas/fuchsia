@@ -27,13 +27,13 @@ MediaDecoderImpl::MediaDecoderImpl(MediaTypePtr input_media_type,
                                                     owner),
       consumer_(MojoPacketConsumer::Create()),
       producer_(MojoPacketProducer::Create()) {
-  DCHECK(input_media_type);
+  FTL_DCHECK(input_media_type);
 
   std::unique_ptr<StreamType> input_stream_type =
       input_media_type.To<std::unique_ptr<StreamType>>();
 
   if (Decoder::Create(*input_stream_type, &decoder_) != Result::kOk) {
-    LOG(WARNING) << "Couldn't find decoder for stream type";
+    FTL_LOG(WARNING) << "Couldn't find decoder for stream type";
     UnbindAndReleaseFromOwner();
     return;
   }
@@ -52,7 +52,7 @@ MediaDecoderImpl::MediaDecoderImpl(MediaTypePtr input_media_type,
 
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](const MediaPacketConsumer::FlushCallback& callback) {
-        DCHECK(producer_);
+        FTL_DCHECK(producer_);
         graph_.FlushOutput(consumer_ref.output());
         producer_->FlushConnection(callback);
       });
@@ -63,7 +63,7 @@ MediaDecoderImpl::MediaDecoderImpl(MediaTypePtr input_media_type,
 MediaDecoderImpl::~MediaDecoderImpl() {}
 
 void MediaDecoderImpl::GetOutputType(const GetOutputTypeCallback& callback) {
-  DCHECK(decoder_);
+  FTL_DCHECK(decoder_);
   callback.Run(MediaType::From(decoder_->output_stream_type()));
 }
 

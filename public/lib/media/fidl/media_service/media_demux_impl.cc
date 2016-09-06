@@ -27,10 +27,10 @@ MediaDemuxImpl::MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
                                InterfaceRequest<MediaDemux> request,
                                MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaDemux>(this, request.Pass(), owner) {
-  DCHECK(reader);
+  FTL_DCHECK(reader);
 
   task_runner_ = base::MessageLoop::current()->task_runner();
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
@@ -170,8 +170,8 @@ MediaDemuxImpl::Stream::Stream(OutputRef output,
                                std::unique_ptr<StreamType> stream_type,
                                Graph* graph)
     : stream_type_(std::move(stream_type)), graph_(graph), output_(output) {
-  DCHECK(stream_type_);
-  DCHECK(graph);
+  FTL_DCHECK(stream_type_);
+  FTL_DCHECK(graph);
 
   producer_ = MojoPacketProducer::Create();
   graph_->ConnectOutputToPart(output_, graph_->Add(producer_));
@@ -185,13 +185,13 @@ MediaTypePtr MediaDemuxImpl::Stream::media_type() const {
 
 void MediaDemuxImpl::Stream::BindPacketProducer(
     InterfaceRequest<MediaPacketProducer> producer) {
-  DCHECK(producer_);
+  FTL_DCHECK(producer_);
   producer_->Bind(producer.Pass());
 }
 
 void MediaDemuxImpl::Stream::FlushConnection(
     const MojoPacketProducer::FlushConnectionCallback callback) {
-  DCHECK(producer_);
+  FTL_DCHECK(producer_);
   producer_->FlushConnection(callback);
 }
 

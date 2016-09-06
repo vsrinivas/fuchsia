@@ -49,8 +49,8 @@ int Score(const AudioStreamType& in_type,
         score += 3;
         break;
       default:
-        NOTREACHED() << "unsupported sample format "
-                     << out_type_set.sample_format();
+        FTL_DCHECK(false) << "unsupported sample format "
+                          << out_type_set.sample_format();
     }
   }
 
@@ -102,8 +102,8 @@ AddResult AddTransformsForCompressedAudio(
     Graph* graph,
     OutputRef* output,
     std::unique_ptr<StreamType>* out_type) {
-  DCHECK(out_type);
-  DCHECK(graph);
+  FTL_DCHECK(out_type);
+  FTL_DCHECK(graph);
 
   // See if we have a matching audio type.
   for (const std::unique_ptr<StreamTypeSet>& out_type_set : out_type_sets) {
@@ -127,8 +127,8 @@ AddResult AddTransformsForCompressedAudio(
     return AddResult::kFailed;
   }
 
-  DCHECK_EQ((*best)->medium(), StreamType::Medium::kAudio);
-  DCHECK((*best)->IncludesEncoding(StreamType::kAudioEncodingLpcm));
+  FTL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
+  FTL_DCHECK((*best)->IncludesEncoding(StreamType::kAudioEncodingLpcm));
 
   // Need to decode. Create a decoder and go from there.
   std::shared_ptr<Decoder> decoder;
@@ -155,8 +155,8 @@ AddResult AddTransformsForCompressedVideo(
     Graph* graph,
     OutputRef* output,
     std::unique_ptr<StreamType>* out_type) {
-  DCHECK(out_type);
-  DCHECK(graph);
+  FTL_DCHECK(out_type);
+  FTL_DCHECK(graph);
 
   // TODO(dalesat): See if we already have a matching video type.
 
@@ -184,8 +184,8 @@ AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
                                Graph* graph,
                                OutputRef* output,
                                std::unique_ptr<StreamType>* out_type) {
-  DCHECK(graph);
-  DCHECK(out_type);
+  FTL_DCHECK(graph);
+  FTL_DCHECK(out_type);
 
   // TODO(dalesat): Room for more intelligence here wrt transform ordering and
   // transforms that handle more than one conversion.
@@ -200,14 +200,14 @@ AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
 
   if (!out_type_set.channels().contains(in_type.channels())) {
     // TODO(dalesat): Insert mixdown/up transform.
-    NOTREACHED() << "conversion requires mixdown/up - not supported";
+    FTL_DCHECK(false) << "conversion requires mixdown/up - not supported";
     *out_type = nullptr;
     return AddResult::kFailed;
   }
 
   if (!out_type_set.frames_per_second().contains(in_type.frames_per_second())) {
     // TODO(dalesat): Insert resampler.
-    NOTREACHED() << "conversion requires resampling - not supported";
+    FTL_DCHECK(false) << "conversion requires resampling - not supported";
     *out_type = nullptr;
     return AddResult::kFailed;
   }
@@ -233,19 +233,19 @@ AddResult AddTransformsForLpcm(
     Graph* graph,
     OutputRef* output,
     std::unique_ptr<StreamType>* out_type) {
-  DCHECK(graph);
-  DCHECK(out_type);
+  FTL_DCHECK(graph);
+  FTL_DCHECK(out_type);
 
   const std::unique_ptr<StreamTypeSet>* best =
       FindBestLpcm(in_type, out_type_sets);
   if (best == nullptr) {
     // TODO(dalesat): Support a compressed output type by encoding.
-    NOTREACHED() << "conversion using encoder not supported";
+    FTL_DCHECK(false) << "conversion using encoder not supported";
     *out_type = nullptr;
     return AddResult::kFailed;
   }
 
-  DCHECK_EQ((*best)->medium(), StreamType::Medium::kAudio);
+  FTL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
 
   return AddTransformsForLpcm(in_type, *(*best)->audio(), graph, output,
                               out_type);
@@ -261,8 +261,8 @@ AddResult AddTransforms(
     Graph* graph,
     OutputRef* output,
     std::unique_ptr<StreamType>* out_type) {
-  DCHECK(graph);
-  DCHECK(out_type);
+  FTL_DCHECK(graph);
+  FTL_DCHECK(out_type);
 
   switch (in_type.medium()) {
     case StreamType::Medium::kAudio:
@@ -282,7 +282,8 @@ AddResult AddTransforms(
                                                graph, output, out_type);
       }
     default:
-      NOTREACHED() << "conversion not supported for medium" << in_type.medium();
+      FTL_DCHECK(false) << "conversion not supported for medium"
+                        << in_type.medium();
       *out_type = nullptr;
       return AddResult::kFailed;
   }
@@ -296,9 +297,9 @@ bool BuildConversionPipeline(
     Graph* graph,
     OutputRef* output,
     std::unique_ptr<StreamType>* out_type) {
-  DCHECK(graph);
-  DCHECK(output);
-  DCHECK(out_type);
+  FTL_DCHECK(graph);
+  FTL_DCHECK(output);
+  FTL_DCHECK(out_type);
 
   OutputRef out = *output;
   const StreamType* type_to_convert = &in_type;

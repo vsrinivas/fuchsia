@@ -13,17 +13,17 @@ namespace media {
 
 // For checking preconditions when handling mojo requests.
 // Checks the condition, and, if it's false, resets and calls return.
-#define RCHECK(condition)                                         \
-  if (!(condition)) {                                             \
-    LOG(ERROR) << "request precondition failed: " #condition "."; \
-    PostReset();                                                \
-    return;                                                       \
+#define RCHECK(condition)                                             \
+  if (!(condition)) {                                                 \
+    FTL_LOG(ERROR) << "request precondition failed: " #condition "."; \
+    PostReset();                                                      \
+    return;                                                           \
   }
 
 TimelineControlPoint::TimelineControlPoint()
     : control_point_binding_(this), consumer_binding_(this) {
   task_runner_ = base::MessageLoop::current()->task_runner();
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
 
   ftl::MutexLocker locker(&mutex_);
   ClearPendingTimelineFunction(false);
@@ -75,7 +75,7 @@ void TimelineControlPoint::Reset() {
 void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
                                                    TimelineFunction* out,
                                                    uint32_t* generation) {
-  DCHECK(out);
+  FTL_DCHECK(out);
   ftl::MutexLocker locker(&mutex_);
   ApplyPendingChanges(reference_time);
   *out = current_timeline_function_;

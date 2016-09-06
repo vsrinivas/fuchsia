@@ -39,7 +39,7 @@ AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
     case AV_SAMPLE_FMT_DBLP:
     case AV_SAMPLE_FMT_NB:
     default:
-      LOG(ERROR) << "unsupported av_sample_format " << av_sample_format;
+      FTL_LOG(ERROR) << "unsupported av_sample_format " << av_sample_format;
       abort();
   }
 }
@@ -183,7 +183,7 @@ std::unique_ptr<StreamType> StreamTypeFromCompressedVideoCodecContext(
       encoding = StreamType::kVideoEncodingVp8;
       break;
     default:
-      LOG(ERROR) << "unsupported codec_id " << from.codec_id;
+      FTL_LOG(ERROR) << "unsupported codec_id " << from.codec_id;
       abort();
   }
 
@@ -227,7 +227,7 @@ std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecContext(
 // Creates an AVCodecContext from an AudioStreamType.
 AvCodecContextPtr AVCodecContextFromAudioStreamType(
     const AudioStreamType& stream_type) {
-  DCHECK(stream_type.medium() == StreamType::Medium::kAudio);
+  FTL_DCHECK(stream_type.medium() == StreamType::Medium::kAudio);
 
   AVCodecID codec_id;
   AVSampleFormat sample_format = AV_SAMPLE_FMT_NONE;
@@ -251,7 +251,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
         sample_format = AV_SAMPLE_FMT_FLT;
         break;
       default:
-        LOG(ERROR) << "unsupported sample format";
+        FTL_LOG(ERROR) << "unsupported sample format";
         abort();
     }
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAac) {
@@ -273,7 +273,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
   } else if (stream_type.encoding() == StreamType::kAudioEncodingVorbis) {
     codec_id = AV_CODEC_ID_VORBIS;
   } else {
-    LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
+    FTL_LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
     abort();
   }
 
@@ -310,7 +310,7 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
   } else if (stream_type.encoding() == StreamType::kVideoEncodingVp8) {
     codec_id = AV_CODEC_ID_VP8;
   } else {
-    LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
+    FTL_LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
     abort();
   }
 
@@ -341,7 +341,7 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
 AvCodecContextPtr AVCodecContextFromTextStreamType(
     const TextStreamType& stream_type) {
   // TODO(dalesat): Implement.
-  LOG(ERROR) << "AVCodecContextFromTextStreamType not implemented";
+  FTL_LOG(ERROR) << "AVCodecContextFromTextStreamType not implemented";
   abort();
 }
 
@@ -349,7 +349,7 @@ AvCodecContextPtr AVCodecContextFromTextStreamType(
 AvCodecContextPtr AVCodecContextFromSubpictureStreamType(
     const SubpictureStreamType& stream_type) {
   // TODO(dalesat): Implement.
-  LOG(ERROR) << "AVCodecContextFromSupictureStreamType not implemented";
+  FTL_LOG(ERROR) << "AVCodecContextFromSupictureStreamType not implemented";
   abort();
 }
 
@@ -438,7 +438,7 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
     case AVMEDIA_TYPE_ATTACHMENT:
     case AVMEDIA_TYPE_NB:
     default:
-      LOG(ERROR) << "unsupported code type " << from.codec_type;
+      FTL_LOG(ERROR) << "unsupported code type " << from.codec_type;
       abort();
   }
 }

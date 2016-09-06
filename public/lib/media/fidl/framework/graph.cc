@@ -16,7 +16,7 @@ Graph::~Graph() {
 }
 
 void Graph::RemovePart(PartRef part) {
-  DCHECK(part.valid());
+  FTL_DCHECK(part.valid());
 
   Stage* stage = part.stage_;
 
@@ -44,8 +44,8 @@ void Graph::RemovePart(PartRef part) {
 }
 
 PartRef Graph::Connect(const OutputRef& output, const InputRef& input) {
-  DCHECK(output.valid());
-  DCHECK(input.valid());
+  FTL_DCHECK(output.valid());
+  FTL_DCHECK(input.valid());
 
   if (output.connected()) {
     DisconnectOutput(output);
@@ -61,30 +61,30 @@ PartRef Graph::Connect(const OutputRef& output, const InputRef& input) {
 }
 
 PartRef Graph::ConnectParts(PartRef upstream_part, PartRef downstream_part) {
-  DCHECK(upstream_part.valid());
-  DCHECK(downstream_part.valid());
+  FTL_DCHECK(upstream_part.valid());
+  FTL_DCHECK(downstream_part.valid());
   Connect(upstream_part.output(), downstream_part.input());
   return downstream_part;
 }
 
 PartRef Graph::ConnectOutputToPart(const OutputRef& output,
                                    PartRef downstream_part) {
-  DCHECK(output.valid());
-  DCHECK(downstream_part.valid());
+  FTL_DCHECK(output.valid());
+  FTL_DCHECK(downstream_part.valid());
   Connect(output, downstream_part.input());
   return downstream_part;
 }
 
 PartRef Graph::ConnectPartToInput(PartRef upstream_part,
                                   const InputRef& input) {
-  DCHECK(upstream_part.valid());
-  DCHECK(input.valid());
+  FTL_DCHECK(upstream_part.valid());
+  FTL_DCHECK(input.valid());
   Connect(upstream_part.output(), input);
   return input.part();
 }
 
 void Graph::DisconnectOutput(const OutputRef& output) {
-  DCHECK(output.valid());
+  FTL_DCHECK(output.valid());
 
   if (!output.connected()) {
     return;
@@ -93,7 +93,7 @@ void Graph::DisconnectOutput(const OutputRef& output) {
   Input& mate = output.mate().actual();
 
   if (mate.prepared()) {
-    CHECK(false) << "attempt to disconnect prepared output";
+    FTL_CHECK(false) << "attempt to disconnect prepared output";
     return;
   }
 
@@ -102,7 +102,7 @@ void Graph::DisconnectOutput(const OutputRef& output) {
 }
 
 void Graph::DisconnectInput(const InputRef& input) {
-  DCHECK(input.valid());
+  FTL_DCHECK(input.valid());
 
   if (!input.connected()) {
     return;
@@ -111,7 +111,7 @@ void Graph::DisconnectInput(const InputRef& input) {
   Output& mate = input.mate().actual();
 
   if (input.actual().prepared()) {
-    CHECK(false) << "attempt to disconnect prepared input";
+    FTL_CHECK(false) << "attempt to disconnect prepared input";
     return;
   }
 
@@ -120,7 +120,7 @@ void Graph::DisconnectInput(const InputRef& input) {
 }
 
 void Graph::RemovePartsConnectedToPart(PartRef part) {
-  DCHECK(part.valid());
+  FTL_DCHECK(part.valid());
 
   std::deque<PartRef> to_remove{part};
 
@@ -141,7 +141,7 @@ void Graph::RemovePartsConnectedToPart(PartRef part) {
 }
 
 void Graph::RemovePartsConnectedToOutput(const OutputRef& output) {
-  DCHECK(output.valid());
+  FTL_DCHECK(output.valid());
 
   if (!output.connected()) {
     return;
@@ -153,7 +153,7 @@ void Graph::RemovePartsConnectedToOutput(const OutputRef& output) {
 }
 
 void Graph::RemovePartsConnectedToInput(const InputRef& input) {
-  DCHECK(input.valid());
+  FTL_DCHECK(input.valid());
 
   if (!input.connected()) {
     return;
@@ -183,17 +183,17 @@ void Graph::Prepare() {
 }
 
 void Graph::PrepareInput(const InputRef& input) {
-  DCHECK(input.valid());
+  FTL_DCHECK(input.valid());
   engine_.PrepareInput(input);
 }
 
 void Graph::FlushOutput(const OutputRef& output) {
-  DCHECK(output);
+  FTL_DCHECK(output);
   engine_.FlushOutput(output);
 }
 
 void Graph::FlushAllOutputs(PartRef part) {
-  DCHECK(part.valid());
+  FTL_DCHECK(part.valid());
   size_t output_count = part.output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
     FlushOutput(part.output(output_index));

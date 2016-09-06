@@ -13,7 +13,7 @@ namespace media {
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)),
       av_frame_ptr_(ffmpeg::AvFrame::Create()) {
-  DCHECK(av_codec_context_);
+  FTL_DCHECK(av_codec_context_);
 }
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {}
@@ -23,7 +23,7 @@ std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
 }
 
 void FfmpegDecoderBase::Flush() {
-  DCHECK(av_codec_context_);
+  FTL_DCHECK(av_codec_context_);
   avcodec_flush_buffers(av_codec_context_.get());
 }
 
@@ -31,9 +31,9 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
                                         bool new_input,
                                         PayloadAllocator* allocator,
                                         PacketPtr* output) {
-  DCHECK(input);
-  DCHECK(allocator);
-  DCHECK(output);
+  FTL_DCHECK(input);
+  FTL_DCHECK(allocator);
+  FTL_DCHECK(output);
 
   *output = nullptr;
 
@@ -50,12 +50,12 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
   }
 
   if (frame_decoded) {
-    DCHECK(allocator);
+    FTL_DCHECK(allocator);
     *output = CreateOutputPacket(*av_frame_ptr_, allocator);
     av_frame_unref(av_frame_ptr_.get());
   }
 
-  CHECK(input_bytes_used <= av_packet_.size)
+  FTL_CHECK(input_bytes_used <= av_packet_.size)
       << "Ffmpeg decoder read beyond end of packet";
   av_packet_.size -= input_bytes_used;
   av_packet_.data += input_bytes_used;
@@ -84,7 +84,7 @@ bool FfmpegDecoderBase::UnprepareInputPacket(const PacketPtr& input,
   if (input->end_of_stream()) {
     // Indicate end of stream. This happens when we're draining for the last
     // time, so there should be no output packet yet.
-    DCHECK(*output == nullptr);
+    FTL_DCHECK(*output == nullptr);
     *output = CreateOutputEndOfStreamPacket();
   }
 

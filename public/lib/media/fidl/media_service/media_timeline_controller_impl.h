@@ -91,23 +91,24 @@ class MediaTimelineControllerImpl
       callback_joiner_.Spawn();
 
       std::shared_ptr<TimelineTransition> this_ptr = shared_from_this();
-      DCHECK(!this_ptr.unique());
+      FTL_DCHECK(!this_ptr.unique());
 
-      return [this_ptr](bool completed) {
-        DCHECK(this_ptr);
-        if (!completed && !this_ptr->cancelled_) {
-          LOG(WARNING)
-              << "A control point transition was cancelled unexpectedly.";
-        }
-        this_ptr->callback_joiner_.Complete();
-      };
+      return
+          [this_ptr](bool completed) {
+            FTL_DCHECK(this_ptr);
+            if (!completed && !this_ptr->cancelled_) {
+              FTL_LOG(WARNING)
+                  << "A control point transition was cancelled unexpectedly.";
+            }
+            this_ptr->callback_joiner_.Complete();
+          };
     }
 
     // Cancels this transition.
     void Cancel() {
-      DCHECK(!cancelled_);
+      FTL_DCHECK(!cancelled_);
       cancelled_ = true;
-      DCHECK(callback_.is_null());
+      FTL_DCHECK(callback_.is_null());
       callback_.Run(false);
       callback_.reset();
       completed_callback_.reset();
@@ -116,7 +117,7 @@ class MediaTimelineControllerImpl
     // Specifies a callback to be called if and when the transition is complete.
     // The callback will never be called if the transition is cancelled.
     void WhenCompleted(const mojo::Callback<void()>& completed_callback) {
-      DCHECK(completed_callback_.is_null());
+      FTL_DCHECK(completed_callback_.is_null());
       if (callback_.is_null() && !cancelled_) {
         completed_callback.Run();
       } else {

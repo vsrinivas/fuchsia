@@ -53,7 +53,7 @@ AudioTrackImpl::AudioTrackImpl(InterfaceRequest<AudioTrack> track_request,
       track_binding_(this, track_request.Pass()),
       renderer_binding_(this, renderer_request.Pass()),
       pipe_(this, owner) {
-  CHECK(nullptr != owner_);
+  FTL_CHECK(nullptr != owner_);
 
   track_binding_.set_connection_error_handler([this]() -> void {
     if (!renderer_binding_.is_bound()) {
@@ -75,8 +75,8 @@ AudioTrackImpl::AudioTrackImpl(InterfaceRequest<AudioTrack> track_request,
 
 AudioTrackImpl::~AudioTrackImpl() {
   // assert that we have been cleanly shutdown already.
-  MOJO_DCHECK(!track_binding_.is_bound());
-  MOJO_DCHECK(!renderer_binding_.is_bound());
+  FTL_DCHECK(!track_binding_.is_bound());
+  FTL_DCHECK(!renderer_binding_.is_bound());
 }
 
 AudioTrackImplPtr AudioTrackImpl::Create(
@@ -96,11 +96,12 @@ void AudioTrackImpl::Shutdown() {
   }
 
   // If we are unbound, then we have already been shut down and are just waiting
-  // for the service to destroy us.  Run some DCHECK sanity checks and get out.
+  // for the service to destroy us.  Run some FTL_DCHECK sanity checks and get
+  // out.
   if (!renderer_binding_.is_bound()) {
-    DCHECK(!pipe_.is_bound());
-    DCHECK(!timeline_control_point_.is_bound());
-    DCHECK(!outputs_.size());
+    FTL_DCHECK(!pipe_.is_bound());
+    FTL_DCHECK(!timeline_control_point_.is_bound());
+    FTL_DCHECK(!outputs_.size());
     return;
   }
 
@@ -114,7 +115,7 @@ void AudioTrackImpl::Shutdown() {
   timeline_control_point_.Reset();
   outputs_.clear();
 
-  DCHECK(owner_);
+  FTL_DCHECK(owner_);
   AudioTrackImplPtr thiz = weak_this_.lock();
   owner_->RemoveTrack(thiz);
 }
@@ -163,7 +164,7 @@ void AudioTrackImpl::GetSupportedMediaTypes(
 void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   // Are we already configured?
   if (pipe_.is_bound()) {
-    LOG(ERROR) << "Attempting to reconfigure a configured audio track.";
+    FTL_LOG(ERROR) << "Attempting to reconfigure a configured audio track.";
     Shutdown();
     return;
   }
@@ -172,8 +173,8 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   if ((media_type->medium != MediaTypeMedium::AUDIO) ||
       (media_type->encoding != MediaType::kAudioEncodingLpcm) ||
       (!media_type->details->is_audio())) {
-    LOG(ERROR) << "Unsupported configuration requested in "
-                  "AudioTrack::Configure.  Media type must be LPCM audio.";
+    FTL_LOG(ERROR) << "Unsupported configuration requested in "
+                      "AudioTrack::Configure.  Media type must be LPCM audio.";
     Shutdown();
     return;
   }
@@ -195,11 +196,11 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   }
 
   if (i >= arraysize(kSupportedAudioTypeSets)) {
-    LOG(ERROR) << "Unsupported LPCM configuration requested in "
-                  "AudioTrack::Configure.  "
-               << "(format = " << cfg->sample_format
-               << ", channels = " << static_cast<uint32_t>(cfg->channels)
-               << ", frames_per_second = " << cfg->frames_per_second << ")";
+    FTL_LOG(ERROR) << "Unsupported LPCM configuration requested in "
+                   << "AudioTrack::Configure.  "
+                   << "(format = " << cfg->sample_format
+                   << ", channels = " << static_cast<uint32_t>(cfg->channels)
+                   << ", frames_per_second = " << cfg->frames_per_second << ")";
     Shutdown();
     return;
   }
@@ -214,7 +215,7 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   bool no_loss = LinearTransform::Ratio::Compose(frac_scale, frame_scale,
                                                  &frame_to_media_ratio_);
   if (!no_loss) {
-    LOG(ERROR) << "Invalid (audio frames:media time ticks) ratio (1/1)";
+    FTL_LOG(ERROR) << "Invalid (audio frames:media time ticks) ratio (1/1)";
     Shutdown();
     return;
   }
@@ -235,7 +236,7 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
       break;
 
     default:
-      DCHECK(false);
+      FTL_DCHECK(false) << "unrecognized sample format";
       bytes_per_frame_ = 2;
       break;
   }
@@ -260,8 +261,8 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
   AudioTrackImplPtr strong_this(weak_this_.lock());
-  DCHECK(strong_this);
-  DCHECK(owner_);
+  FTL_DCHECK(strong_this);
+  FTL_DCHECK(owner_);
   owner_->GetOutputManager().SelectOutputsForTrack(strong_this);
 }
 
@@ -278,7 +279,8 @@ void AudioTrackImpl::GetTimelineControlPoint(
 
 void AudioTrackImpl::SetGain(float db_gain) {
   if (db_gain >= AudioTrack::kMaxGain) {
-    LOG(ERROR) << "Gain value too large (" << db_gain << ") for audio track.";
+    FTL_LOG(ERROR) << "Gain value too large (" << db_gain
+                   << ") for audio track.";
     Shutdown();
     return;
   }
@@ -286,22 +288,22 @@ void AudioTrackImpl::SetGain(float db_gain) {
   db_gain_ = db_gain;
 
   for (const auto& output : outputs_) {
-    DCHECK(output);
+    FTL_DCHECK(output);
     output->UpdateGain();
   }
 }
 
 void AudioTrackImpl::AddOutput(AudioTrackToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
-  DCHECK(link);
+  FTL_DCHECK(link);
   auto res = outputs_.emplace(link);
-  DCHECK(res.second);
+  FTL_DCHECK(res.second);
   link->UpdateGain();
 }
 
 void AudioTrackImpl::RemoveOutput(AudioTrackToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
-  DCHECK(link);
+  FTL_DCHECK(link);
 
   auto iter = outputs_.find(link);
   if (iter != outputs_.end()) {
@@ -310,7 +312,7 @@ void AudioTrackImpl::RemoveOutput(AudioTrackToOutputLinkPtr link) {
     // TODO(johngro): that's odd.  I can't think of a reason why we we should
     // not be able to find this link in our set of outputs... should we log
     // something about this?
-    DCHECK(false);
+    FTL_DCHECK(false);
   }
 }
 
@@ -332,9 +334,9 @@ void AudioTrackImpl::SnapshotRateTrans(LinearTransform* out,
 }
 
 void AudioTrackImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
-  DCHECK(packet);
+  FTL_DCHECK(packet);
   for (const auto& output : outputs_) {
-    DCHECK(output);
+    FTL_DCHECK(output);
     output->PushToPendingQueue(packet);
   }
 
@@ -348,7 +350,7 @@ void AudioTrackImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
 bool AudioTrackImpl::OnFlushRequested(
     const MediaPacketConsumer::FlushCallback& cbk) {
   for (const auto& output : outputs_) {
-    DCHECK(output);
+    FTL_DCHECK(output);
     output->FlushPendingQueue();
   }
   cbk.Run();

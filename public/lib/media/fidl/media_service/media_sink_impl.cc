@@ -29,8 +29,8 @@ MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
       consumer_(MojoPacketConsumer::Create()),
       producer_(MojoPacketProducer::Create()),
       renderer_(MediaRendererPtr::Create(renderer.Pass())) {
-  DCHECK(renderer_);
-  DCHECK(media_type);
+  FTL_DCHECK(renderer_);
+  FTL_DCHECK(media_type);
 
   PartRef consumer_ref = graph_.Add(consumer_);
   PartRef producer_ref = graph_.Add(producer_);
@@ -38,7 +38,7 @@ MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](const MediaPacketConsumer::FlushCallback& callback) {
         ready_.When([this, consumer_ref, callback]() {
-          DCHECK(producer_);
+          FTL_DCHECK(producer_);
           graph_.FlushOutput(consumer_ref.output());
           producer_->FlushConnection(callback);
         });
@@ -62,7 +62,7 @@ MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
                                 &graph_, &out, &producer_stream_type);
     if (!result) {
       // Failed to build conversion pipeline.
-      LOG(WARNING) << "failed to build conversion pipeline";
+      FTL_LOG(WARNING) << "failed to build conversion pipeline";
       // TODO(dalesat): Add problem reporting.
       return;
     }
@@ -93,7 +93,7 @@ void MediaSinkImpl::GetPacketConsumer(
 
 void MediaSinkImpl::GetTimelineControlPoint(
     InterfaceRequest<MediaTimelineControlPoint> req) {
-  DCHECK(renderer_);
+  FTL_DCHECK(renderer_);
   renderer_->GetTimelineControlPoint(req.Pass());
 }
 

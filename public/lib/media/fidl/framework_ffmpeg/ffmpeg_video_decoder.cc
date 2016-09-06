@@ -19,7 +19,7 @@ namespace media {
 
 FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
-  DCHECK(context());
+  FTL_DCHECK(context());
 
   context()->opaque = this;
   context()->get_buffer2 = AllocateBufferForAvFrame;
@@ -45,12 +45,12 @@ int FfmpegVideoDecoder::Decode(const AVPacket& av_packet,
                                const ffmpeg::AvFramePtr& av_frame_ptr,
                                PayloadAllocator* allocator,
                                bool* frame_decoded_out) {
-  DCHECK(allocator);
-  DCHECK(frame_decoded_out);
-  DCHECK(context());
-  DCHECK(av_frame_ptr);
+  FTL_DCHECK(allocator);
+  FTL_DCHECK(frame_decoded_out);
+  FTL_DCHECK(context());
+  FTL_DCHECK(av_frame_ptr);
 
-  DCHECK(av_packet.pts != AV_NOPTS_VALUE);
+  FTL_DCHECK(av_packet.pts != AV_NOPTS_VALUE);
 
   // Use the provided allocator (for allocations in AllocateBufferForAvFrame).
   allocator_ = allocator;
@@ -77,7 +77,7 @@ void FfmpegVideoDecoder::Flush() {
 
 PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  PayloadAllocator* allocator) {
-  DCHECK(allocator);
+  FTL_DCHECK(allocator);
 
   // Recover the pts deposited in Decode and divide it by frames per nanosecond
   // to get the pts in nanoseconds.
@@ -99,12 +99,12 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
   // decoding on multiple threads. Be sure to avoid using self->context().
 
   // CODEC_CAP_DR1 is required in order to do allocation this way.
-  DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
+  FTL_DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
 
   FfmpegVideoDecoder* self =
       reinterpret_cast<FfmpegVideoDecoder*>(av_codec_context->opaque);
-  DCHECK(self);
-  DCHECK(self->allocator_);
+  FTL_DCHECK(self);
+  FTL_DCHECK(self->allocator_);
 
   Extent visible_size(av_codec_context->width, av_codec_context->height);
   const int result =
@@ -118,8 +118,8 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
   // are not overread / overwritten.  See ff_init_buffer_info() for details.
 
   // When lowres is non-zero, dimensions should be divided by 2^(lowres), but
-  // since we don't use this, just DCHECK that it's zero.
-  DCHECK_EQ(av_codec_context->lowres, 0);
+  // since we don't use this, just FTL_DCHECK that it's zero.
+  FTL_DCHECK(av_codec_context->lowres == 0);
   Extent coded_size(
       std::max(visible_size.width(),
                static_cast<size_t>(av_codec_context->coded_width)),
@@ -142,23 +142,23 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
     self->coded_size_ = coded_size;
   } else {
     if (av_codec_context->colorspace != self->colorspace_) {
-      LOG(WARNING) << " colorspace changed to " << av_codec_context->colorspace
-                   << std::endl;
+      FTL_LOG(WARNING) << " colorspace changed to "
+                       << av_codec_context->colorspace << std::endl;
     }
     if (coded_size.width() != self->coded_size_.width()) {
-      LOG(WARNING) << " coded_size width changed to " << coded_size.width()
-                   << std::endl;
+      FTL_LOG(WARNING) << " coded_size width changed to " << coded_size.width()
+                       << std::endl;
     }
     if (coded_size.height() != self->coded_size_.height()) {
-      LOG(WARNING) << " coded_size height changed to " << coded_size.height()
-                   << std::endl;
+      FTL_LOG(WARNING) << " coded_size height changed to "
+                       << coded_size.height() << std::endl;
     }
     self->colorspace_ = av_codec_context->colorspace;
     self->coded_size_ = coded_size;
   }
 
   if (buffer == nullptr) {
-    LOG(ERROR) << "failed to allocate buffer of size " << frame_layout.size;
+    FTL_LOG(ERROR) << "failed to allocate buffer of size " << frame_layout.size;
     return -1;
   }
 
@@ -177,7 +177,7 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
   av_frame->format = av_codec_context->pix_fmt;
   av_frame->reordered_opaque = av_codec_context->reordered_opaque;
 
-  DCHECK(av_frame->data[0] == buffer);
+  FTL_DCHECK(av_frame->data[0] == buffer);
   av_frame->buf[0] = av_buffer_create(buffer, frame_layout.size,
                                       ReleaseBufferForAvFrame, self->allocator_,
                                       0);  // flags
@@ -187,8 +187,8 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
 
 void FfmpegVideoDecoder::ReleaseBufferForAvFrame(void* opaque,
                                                  uint8_t* buffer) {
-  DCHECK(opaque);
-  DCHECK(buffer);
+  FTL_DCHECK(opaque);
+  FTL_DCHECK(buffer);
   PayloadAllocator* allocator = reinterpret_cast<PayloadAllocator*>(opaque);
   allocator->ReleasePayloadBuffer(buffer);
 }

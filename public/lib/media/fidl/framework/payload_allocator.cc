@@ -24,12 +24,12 @@ class DefaultAllocator : public PayloadAllocator {
 };
 
 void* DefaultAllocator::AllocatePayloadBuffer(size_t size) {
-  DCHECK(size > 0);
+  FTL_DCHECK(size > 0);
   return std::malloc(static_cast<size_t>(size));
 }
 
 void DefaultAllocator::ReleasePayloadBuffer(void* buffer) {
-  DCHECK(buffer);
+  FTL_DCHECK(buffer);
   std::free(buffer);
 }
 

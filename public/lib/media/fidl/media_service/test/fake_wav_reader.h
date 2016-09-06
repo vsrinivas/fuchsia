@@ -23,7 +23,7 @@ class FakeWavReader : public SeekingReader {
   ~FakeWavReader() override;
 
   void SetSize(uint64_t size) {
-    MOJO_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize +
+    FTL_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize +
                            kDataChunkHeaderSize);
     size_ = size;
     WriteHeader();

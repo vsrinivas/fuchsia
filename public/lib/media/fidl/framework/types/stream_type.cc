@@ -42,22 +42,22 @@ StreamType::StreamType(Medium medium,
 StreamType::~StreamType() {}
 
 const AudioStreamType* StreamType::audio() const {
-  LOG(ERROR) << "audio method called on non-audio stream type";
+  FTL_LOG(ERROR) << "audio method called on non-audio stream type";
   return nullptr;
 }
 
 const VideoStreamType* StreamType::video() const {
-  LOG(ERROR) << "video method called on non-video stream type";
+  FTL_LOG(ERROR) << "video method called on non-video stream type";
   return nullptr;
 }
 
 const TextStreamType* StreamType::text() const {
-  LOG(ERROR) << "text method called on non-text stream type";
+  FTL_LOG(ERROR) << "text method called on non-text stream type";
   return nullptr;
 }
 
 const SubpictureStreamType* StreamType::subpicture() const {
-  LOG(ERROR) << "subpicture method called on non-subpicture stream type";
+  FTL_LOG(ERROR) << "subpicture method called on non-subpicture stream type";
   return nullptr;
 }
 
@@ -72,22 +72,23 @@ StreamTypeSet::StreamTypeSet(StreamType::Medium medium,
 StreamTypeSet::~StreamTypeSet() {}
 
 const AudioStreamTypeSet* StreamTypeSet::audio() const {
-  LOG(ERROR) << "audio method called on non-audio stream type set";
+  FTL_LOG(ERROR) << "audio method called on non-audio stream type set";
   return nullptr;
 }
 
 const VideoStreamTypeSet* StreamTypeSet::video() const {
-  LOG(ERROR) << "video method called on non-video stream type set";
+  FTL_LOG(ERROR) << "video method called on non-video stream type set";
   return nullptr;
 }
 
 const TextStreamTypeSet* StreamTypeSet::text() const {
-  LOG(ERROR) << "text method called on non-text stream type set";
+  FTL_LOG(ERROR) << "text method called on non-text stream type set";
   return nullptr;
 }
 
 const SubpictureStreamTypeSet* StreamTypeSet::subpicture() const {
-  LOG(ERROR) << "subpicture method called on non-subpicture stream type set";
+  FTL_LOG(ERROR)
+      << "subpicture method called on non-subpicture stream type set";
   return nullptr;
 }
 

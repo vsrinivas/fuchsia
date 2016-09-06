@@ -74,10 +74,10 @@ void VideoRenderer::GetSupportedMediaTypes(
 }
 
 void VideoRenderer::SetMediaType(MediaTypePtr media_type) {
-  MOJO_DCHECK(media_type);
-  MOJO_DCHECK(media_type->details);
+  FTL_DCHECK(media_type);
+  FTL_DCHECK(media_type->details);
   const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-  MOJO_DCHECK(details);
+  FTL_DCHECK(details);
 
   converter_.SetMediaType(media_type);
 }
@@ -94,7 +94,7 @@ void VideoRenderer::GetTimelineControlPoint(
 
 void VideoRenderer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
-  MOJO_DCHECK(supplied_packet);
+  FTL_DCHECK(supplied_packet);
   if (supplied_packet->packet()->end_of_stream) {
     end_of_stream_pts_ = supplied_packet->packet()->pts;
   }
@@ -153,8 +153,8 @@ void VideoRenderer::Prime(const PrimeCallback& callback) {
 void VideoRenderer::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
-  MOJO_DCHECK(timeline_transform);
-  MOJO_DCHECK(timeline_transform->reference_delta != 0);
+  FTL_DCHECK(timeline_transform);
+  FTL_DCHECK(timeline_transform->reference_delta != 0);
 
   if (timeline_transform->subject_time != kUnspecifiedTime &&
       end_of_stream_pts_ != kUnspecifiedTime) {

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "apps/media/interfaces/media_transport.mojom.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {
@@ -41,13 +42,13 @@ class VideoPacketLayout {
   struct PixelFormatInfo {
     // Returns the number of bytes per element for the specified plane.
     size_t bytes_per_element_for_plane(size_t plane) const {
-      MOJO_DCHECK(plane < plane_count_);
+      FTL_DCHECK(plane < plane_count_);
       return bytes_per_element_[plane];
     }
 
     // Returns the sample size of the specified plane.
     const Extent& sample_size_for_plane(size_t plane) const {
-      MOJO_DCHECK(plane < plane_count_);
+      FTL_DCHECK(plane < plane_count_);
       return sample_size_[plane];
     }
 
@@ -99,12 +100,12 @@ class VideoPacketLayout {
   size_t size() const { return size_; }
 
   size_t line_stride_for_plane(size_t plane) {
-    MOJO_DCHECK(plane < plane_count_);
+    FTL_DCHECK(plane < plane_count_);
     return line_stride_[plane];
   }
 
   size_t plane_offset_for_plane(size_t plane) {
-    MOJO_DCHECK(plane < plane_count_);
+    FTL_DCHECK(plane < plane_count_);
     return plane_offset_[plane];
   }
 

@@ -19,7 +19,7 @@ namespace media {
 void AVIOContextDeleter::operator()(AVIOContext* context) const {
   AvIoContextOpaque* av_io_context =
       reinterpret_cast<AvIoContextOpaque*>(context->opaque);
-  DCHECK(av_io_context);
+  FTL_DCHECK(av_io_context);
   delete av_io_context;
   av_free(context->buffer);
   av_free(context);
@@ -79,13 +79,14 @@ AvIoContextOpaque::AvIoContextOpaque(std::shared_ptr<Reader> reader)
 }
 
 int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
-  DCHECK(position_ >= 0);
+  FTL_DCHECK(position_ >= 0);
 
   if (position_ >= size_) {
     return 0;
   }
 
-  DCHECK(static_cast<uint64_t>(position_) < std::numeric_limits<size_t>::max());
+  FTL_DCHECK(static_cast<uint64_t>(position_) <
+             std::numeric_limits<size_t>::max());
 
   Result read_at_result;
   size_t read_at_bytes_read;
@@ -100,7 +101,7 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
   WaitForCallback();
 
   if (read_at_result != Result::kOk) {
-    LOG(ERROR) << "read failed";
+    FTL_LOG(ERROR) << "read failed";
     return AVERROR(EIO);
   }
 
@@ -118,23 +119,23 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
       break;
     case SEEK_END:
       if (size_ == -1) {
-        LOG(WARNING) << "whence of SEEK_END, size unknown";
+        FTL_LOG(WARNING) << "whence of SEEK_END, size unknown";
         return AVERROR(EIO);
       }
       position_ = size_ + offset;
       break;
     case AVSEEK_SIZE:
       if (size_ == -1) {
-        LOG(WARNING) << "whence of AVSEEK_SIZE, size unknown";
+        FTL_LOG(WARNING) << "whence of AVSEEK_SIZE, size unknown";
         return AVERROR(EIO);
       }
       return size_;
     default:
-      LOG(ERROR) << "unrecognized whence value " << whence;
+      FTL_LOG(ERROR) << "unrecognized whence value " << whence;
       return AVERROR(EIO);
   }
 
-  CHECK(size_ == -1 || position_ < size_) << "position out of range";
+  FTL_CHECK(size_ == -1 || position_ < size_) << "position out of range";
   return position_;
 }
 

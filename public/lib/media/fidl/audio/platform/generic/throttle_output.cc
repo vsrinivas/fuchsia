@@ -61,7 +61,7 @@ bool ThrottleOutput::StartMixJob(MixJob* job, const LocalTime& process_start) {
 
 bool ThrottleOutput::FinishMixJob(const MixJob& job) {
   // Since we never start any jobs, this should never be called.
-  DCHECK(false);
+  FTL_DCHECK(false);
   return false;
 }
 

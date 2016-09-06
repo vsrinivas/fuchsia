@@ -14,14 +14,14 @@ ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
     : outputs_(source->stream_count()),
       packets_per_output_(source->stream_count()),
       source_(source) {
-  DCHECK(source);
+  FTL_DCHECK(source);
 
   supply_function_ = [this](size_t output_index, PacketPtr packet) {
     mutex_.Lock();
-    DCHECK(output_index < outputs_.size());
-    DCHECK(outputs_.size() == packets_per_output_.size());
-    DCHECK(packet);
-    DCHECK(packet_request_outstanding_);
+    FTL_DCHECK(output_index < outputs_.size());
+    FTL_DCHECK(outputs_.size() == packets_per_output_.size());
+    FTL_DCHECK(packet);
+    FTL_DCHECK(packet_request_outstanding_);
 
     packet_request_outstanding_ = false;
 
@@ -63,7 +63,7 @@ size_t ActiveMultistreamSourceStage::input_count() const {
 };
 
 Input& ActiveMultistreamSourceStage::input(size_t index) {
-  CHECK(false) << "input requested from source";
+  FTL_CHECK(false) << "input requested from source";
   abort();
 }
 
@@ -72,12 +72,12 @@ size_t ActiveMultistreamSourceStage::output_count() const {
 }
 
 Output& ActiveMultistreamSourceStage::output(size_t index) {
-  DCHECK(index < outputs_.size());
+  FTL_DCHECK(index < outputs_.size());
   return outputs_[index];
 }
 
 PayloadAllocator* ActiveMultistreamSourceStage::PrepareInput(size_t index) {
-  CHECK(false) << "PrepareInput called on source";
+  FTL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
@@ -85,7 +85,7 @@ void ActiveMultistreamSourceStage::PrepareOutput(
     size_t index,
     PayloadAllocator* allocator,
     const UpstreamCallback& callback) {
-  DCHECK(index < outputs_.size());
+  FTL_DCHECK(index < outputs_.size());
 
   if (allocator != nullptr) {
     // Currently, we don't support a source that uses provided allocators. If
@@ -98,15 +98,15 @@ void ActiveMultistreamSourceStage::PrepareOutput(
 void ActiveMultistreamSourceStage::UnprepareOutput(
     size_t index,
     const UpstreamCallback& callback) {
-  DCHECK(index < outputs_.size());
+  FTL_DCHECK(index < outputs_.size());
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
 void ActiveMultistreamSourceStage::Update(Engine* engine) {
   ftl::MutexLocker locker(&mutex_);
-  DCHECK(engine);
+  FTL_DCHECK(engine);
 
-  DCHECK(outputs_.size() == packets_per_output_.size());
+  FTL_DCHECK(outputs_.size() == packets_per_output_.size());
 
   bool need_packet = false;
 
@@ -137,13 +137,13 @@ void ActiveMultistreamSourceStage::Update(Engine* engine) {
 void ActiveMultistreamSourceStage::FlushInput(
     size_t index,
     const DownstreamCallback& callback) {
-  CHECK(false) << "FlushInput called on source";
+  FTL_CHECK(false) << "FlushInput called on source";
 }
 
 void ActiveMultistreamSourceStage::FlushOutput(size_t index) {
   ftl::MutexLocker locker(&mutex_);
-  DCHECK(index < outputs_.size());
-  DCHECK(source_);
+  FTL_DCHECK(index < outputs_.size());
+  FTL_DCHECK(source_);
   outputs_[index].Flush();
   packets_per_output_[index].clear();
   ended_streams_ = 0;

@@ -77,7 +77,7 @@ class Stage {
 
  protected:
   void RequestUpdate() {
-    DCHECK(update_callback_);
+    FTL_DCHECK(update_callback_);
     update_callback_(this);
   }
 

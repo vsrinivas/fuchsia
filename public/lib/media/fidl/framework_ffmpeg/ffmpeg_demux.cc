@@ -87,7 +87,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
               static_cast<size_t>(av_packet->size),
               av_packet->data),
           av_packet_(std::move(av_packet)) {
-      DCHECK(av_packet_->size >= 0);
+      FTL_DCHECK(av_packet_->size >= 0);
     }
 
     ffmpeg::AvPacketPtr av_packet_;
@@ -150,7 +150,7 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
     : reader_(reader) {
   task_runner_ = base::MessageLoop::current()->task_runner();
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
   ffmpeg_thread_ = std::thread([this]() { Worker(); });
 }
 
@@ -204,7 +204,7 @@ void FfmpegDemuxImpl::Worker() {
 
   io_context_ = AvIoContext::Create(reader_);
   if (!io_context_) {
-    LOG(ERROR) << "AvIoContext::Create failed";
+    FTL_LOG(ERROR) << "AvIoContext::Create failed";
     result_ = Result::kInternalError;
     ReportProblem("ProblemInternal", "AvIoContext::Create failed");
     init_complete_.Occur();
@@ -213,7 +213,7 @@ void FfmpegDemuxImpl::Worker() {
 
   format_context_ = AvFormatContext::OpenInput(io_context_);
   if (!format_context_) {
-    LOG(ERROR) << "AvFormatContext::OpenInput failed";
+    FTL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
     result_ = Result::kInternalError;
     ReportProblem("ProblemAssetNotFound", "");
     init_complete_.Occur();
@@ -222,7 +222,7 @@ void FfmpegDemuxImpl::Worker() {
 
   int r = avformat_find_stream_info(format_context_.get(), nullptr);
   if (r < 0) {
-    LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
+    FTL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
     result_ = Result::kInternalError;
     ReportProblem("ProblemInternal", "avformat_find_stream_info failed");
     init_complete_.Occur();
@@ -280,7 +280,7 @@ void FfmpegDemuxImpl::Worker() {
     if (seek_position != kNotSeeking) {
       int r = av_seek_frame(format_context_.get(), -1, seek_position / 1000, 0);
       if (r < 0) {
-        LOG(WARNING) << "av_seek_frame failed, result " << r;
+        FTL_LOG(WARNING) << "av_seek_frame failed, result " << r;
       }
       next_stream_to_end_ = -1;
       seek_callback();
@@ -289,16 +289,16 @@ void FfmpegDemuxImpl::Worker() {
     if (packet_requested) {
       size_t stream_index;
       PacketPtr packet = PullPacket(&stream_index);
-      DCHECK(packet);
+      FTL_DCHECK(packet);
 
-      DCHECK(supply_callback_);
+      FTL_DCHECK(supply_callback_);
       supply_callback_(stream_index, std::move(packet));
     }
   }
 }
 
 PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
-  DCHECK(stream_index_out);
+  FTL_DCHECK(stream_index_out);
 
   if (next_stream_to_end_ != -1) {
     // We're producing end-of-stream packets for all the streams.
@@ -320,17 +320,17 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   // TODO(dalesat): What if the packet has no PTS or duration?
   next_pts_ = av_packet->pts + av_packet->duration;
   // TODO(dalesat): Implement packet side data.
-  DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
-  DCHECK(av_packet->side_data_elems == 0);
+  FTL_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
+  FTL_DCHECK(av_packet->side_data_elems == 0);
 
   return DemuxPacket::Create(std::move(av_packet));
 }
 
 PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
-  DCHECK(next_stream_to_end_ >= 0);
+  FTL_DCHECK(next_stream_to_end_ >= 0);
 
   if (static_cast<std::size_t>(next_stream_to_end_) >= streams_.size()) {
-    NOTREACHED() << "PullPacket called after all streams have ended";
+    FTL_DCHECK(false) << "PullPacket called after all streams have ended";
     return nullptr;
   }
 

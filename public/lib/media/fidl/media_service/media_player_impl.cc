@@ -319,7 +319,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
                                     size_t index,
                                     const MediaTypePtr& input_media_type,
                                     const std::function<void()>& callback) {
-  DCHECK(factory_);
+  FTL_DCHECK(factory_);
 
   demux_->GetPacketProducer(index, GetProxy(&stream->encoded_producer_));
 
@@ -363,9 +363,9 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
 void MediaPlayerImpl::CreateSink(Stream* stream,
                                  const MediaTypePtr& input_media_type,
                                  const std::function<void()>& callback) {
-  DCHECK(input_media_type);
-  DCHECK(stream->decoded_producer_);
-  DCHECK(factory_);
+  FTL_DCHECK(input_media_type);
+  FTL_DCHECK(stream->decoded_producer_);
+  FTL_DCHECK(factory_);
 
   factory_->CreateSink(stream->renderer_.Pass(), input_media_type.Clone(),
                        GetProxy(&stream->sink_));

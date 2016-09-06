@@ -26,19 +26,19 @@ AudioPipe::AudioPacketRef::AudioPacketRef(SuppliedPacketPtr supplied_packet,
       start_pts_(start_pts),
       end_pts_(end_pts),
       frame_count_(frame_count) {
-  DCHECK(supplied_packet_);
-  DCHECK(server_);
+  FTL_DCHECK(supplied_packet_);
+  FTL_DCHECK(server_);
 }
 
 AudioPipe::AudioPacketRef::~AudioPacketRef() {
-  DCHECK(server_);
+  FTL_DCHECK(server_);
   server_->SchedulePacketCleanup(std::move(supplied_packet_));
 }
 
 AudioPipe::AudioPipe(AudioTrackImpl* owner, AudioServerImpl* server)
     : owner_(owner), server_(server) {
-  DCHECK(owner_);
-  DCHECK(server_);
+  FTL_DCHECK(owner_);
+  FTL_DCHECK(server_);
 }
 
 AudioPipe::~AudioPipe() {}
@@ -47,7 +47,7 @@ void AudioPipe::PrimeRequested(
     const MediaTimelineControlPoint::PrimeCallback& cbk) {
   if (!prime_callback_.is_null()) {
     // Prime was already requested. Complete the old one and warn.
-    LOG(WARNING) << "multiple prime requests received";
+    FTL_LOG(WARNING) << "multiple prime requests received";
     prime_callback_.Run();
   }
   prime_callback_ = cbk;
@@ -56,8 +56,8 @@ void AudioPipe::PrimeRequested(
 }
 
 void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
-  DCHECK(supplied_packet);
-  DCHECK(owner_);
+  FTL_DCHECK(supplied_packet);
+  FTL_DCHECK(owner_);
 
   // Start by making sure that the region we are receiving is made from an
   // integral number of audio frames.  Count the total number of frames in the
@@ -68,9 +68,9 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   uint32_t frame_size = owner_->BytesPerFrame();
 
   if ((frame_size > 1) && (supplied_packet->payload_size() % frame_size)) {
-    LOG(ERROR) << "Region length (" << supplied_packet->payload_size()
-               << ") is not divisible by by audio frame size (" << frame_size
-               << ")";
+    FTL_LOG(ERROR) << "Region length (" << supplied_packet->payload_size()
+                   << ") is not divisible by by audio frame size ("
+                   << frame_size << ")";
     Reset();
     return;
   }
@@ -79,8 +79,8 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
                                          AudioTrackImpl::PTS_FRACTIONAL_BITS;
   uint32_t frame_count = (supplied_packet->payload_size() / frame_size);
   if (frame_count > kMaxFrames) {
-    LOG(ERROR) << "Audio frame count (" << frame_count
-               << ") exceeds maximum allowed (" << kMaxFrames << ")";
+    FTL_LOG(ERROR) << "Audio frame count (" << frame_count
+                   << ") exceeds maximum allowed (" << kMaxFrames << ")";
     Reset();
     return;
   }
@@ -92,9 +92,10 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
     // units of fractional frames.
     LinearTransform tmp(0, owner_->FractionalFrameToMediaTimeRatio(), 0);
     if (!tmp.DoForwardTransform(supplied_packet->packet()->pts, &start_pts)) {
-      LOG(ERROR) << "Overflow while transforming explicitly provided PTS ("
-                 << supplied_packet->packet()->pts
-                 << ") during SendPacket on MediaPipe transporting audio data.";
+      FTL_LOG(ERROR)
+          << "Overflow while transforming explicitly provided PTS ("
+          << supplied_packet->packet()->pts
+          << ") during SendPacket on MediaPipe transporting audio data.";
       Reset();
       return;
     }
@@ -126,7 +127,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
 }
 
 void AudioPipe::OnFlushRequested(const FlushCallback& cbk) {
-  DCHECK(owner_);
+  FTL_DCHECK(owner_);
   next_pts_known_ = false;
   owner_->OnFlushRequested(cbk);
 }

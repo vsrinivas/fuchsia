@@ -22,8 +22,8 @@ class Bytes {
   static std::unique_ptr<Bytes> Create(const uint8_t* data, size_t size) {
     std::unique_ptr<Bytes> result = Create(size);
     if (size != 0) {
-      DCHECK(result->data());
-      DCHECK(data);
+      FTL_DCHECK(result->data());
+      FTL_DCHECK(data);
       std::memcpy(result->data(), data, size);
     }
     return result;

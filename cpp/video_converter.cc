@@ -63,14 +63,14 @@ void VideoConverter::BuildColorspaceTable() {
 }
 
 void VideoConverter::SetMediaType(const MediaTypePtr& media_type) {
-  MOJO_DCHECK(media_type);
-  MOJO_DCHECK(media_type->medium == MediaTypeMedium::VIDEO);
-  MOJO_DCHECK(media_type->encoding == MediaType::kVideoEncodingUncompressed);
-  MOJO_DCHECK(media_type->details);
+  FTL_DCHECK(media_type);
+  FTL_DCHECK(media_type->medium == MediaTypeMedium::VIDEO);
+  FTL_DCHECK(media_type->encoding == MediaType::kVideoEncodingUncompressed);
+  FTL_DCHECK(media_type->details);
 
   const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-  MOJO_DCHECK(details);
-  MOJO_DCHECK(details->pixel_format == PixelFormat::YV12)
+  FTL_DCHECK(details);
+  FTL_DCHECK(details->pixel_format == PixelFormat::YV12)
       << "only YV12 video conversion is currently implemented";
 
   layout_ =
@@ -97,12 +97,12 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
                                   uint32_t view_height,
                                   void* payload,
                                   uint64_t payload_size) {
-  MOJO_DCHECK(rgba_buffer != nullptr);
-  MOJO_DCHECK(view_width != 0);
-  MOJO_DCHECK(view_height != 0);
-  MOJO_DCHECK(payload != nullptr);
-  MOJO_DCHECK(payload_size != 0);
-  MOJO_DCHECK(media_type_set_)
+  FTL_DCHECK(rgba_buffer != nullptr);
+  FTL_DCHECK(view_width != 0);
+  FTL_DCHECK(view_height != 0);
+  FTL_DCHECK(payload != nullptr);
+  FTL_DCHECK(payload_size != 0);
+  FTL_DCHECK(media_type_set_)
       << "need to call SetMediaType before ConvertFrame";
 
   uint32_t height = std::min(layout_.height(), view_height);

@@ -64,8 +64,8 @@ class AudioStreamType : public StreamType {
   }
 
   uint64_t frame_count(uint64_t size) const {
-    DCHECK(bytes_per_frame() != 0);
-    DCHECK(size % bytes_per_frame() == 0);
+    FTL_DCHECK(bytes_per_frame() != 0);
+    FTL_DCHECK(size % bytes_per_frame() == 0);
     return size / bytes_per_frame();
   }
 

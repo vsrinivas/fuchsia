@@ -52,27 +52,27 @@ const VideoStreamType::PixelFormatInfo& VideoStreamType::InfoForPixelFormat(
       {PixelFormat::kMjpeg, {1, {0}, {Extent(1, 1)}}},
       {PixelFormat::kMt21, {2, {1, 2}, {Extent(1, 1), Extent(2, 2)}}}};
 
-  DCHECK(table.find(pixel_format) != table.end());
+  FTL_DCHECK(table.find(pixel_format) != table.end());
   return table.find(pixel_format)->second;
 }
 
 size_t VideoStreamType::PixelFormatInfo::RowCount(size_t plane,
                                                   size_t height) const {
-  DCHECK(plane < plane_count);
+  FTL_DCHECK(plane < plane_count);
   const int sample_height = sample_size_for_plane(plane).height();
   return RoundUpToAlign(height, sample_height) / sample_height;
 }
 
 size_t VideoStreamType::PixelFormatInfo::ColumnCount(size_t plane,
                                                      size_t width) const {
-  DCHECK(plane < plane_count);
+  FTL_DCHECK(plane < plane_count);
   const size_t sample_width = sample_size_for_plane(plane).width();
   return RoundUpToAlign(width, sample_width) / sample_width;
 }
 
 size_t VideoStreamType::PixelFormatInfo::BytesPerRow(size_t plane,
                                                      size_t width) const {
-  DCHECK(plane < plane_count);
+  FTL_DCHECK(plane < plane_count);
   return bytes_per_element_for_plane(plane) * ColumnCount(plane, width);
 }
 
@@ -82,8 +82,8 @@ VideoStreamType::Extent VideoStreamType::PixelFormatInfo::AlignedSize(
   const Extent adjusted =
       Extent(RoundUpToAlign(unaligned_size.width(), alignment.width()),
              RoundUpToAlign(unaligned_size.height(), alignment.height()));
-  DCHECK((adjusted.width() % alignment.width() == 0) &&
-         (adjusted.height() % alignment.height() == 0));
+  FTL_DCHECK((adjusted.width() % alignment.width() == 0) &&
+             (adjusted.height() % alignment.height() == 0));
   return adjusted;
 }
 
@@ -102,7 +102,7 @@ VideoStreamType::Extent VideoStreamType::PixelFormatInfo::CommonAlignment()
 void VideoStreamType::PixelFormatInfo::BuildFrameLayout(
     const Extent& coded_size,
     FrameLayout* frame_layout) const {
-  DCHECK(frame_layout != nullptr);
+  FTL_DCHECK(frame_layout != nullptr);
 
   size_t size = 0;
   Extent aligned_size = AlignedSize(coded_size);
@@ -122,7 +122,7 @@ void VideoStreamType::PixelFormatInfo::BuildFrameLayout(
   // The extra line of UV being allocated is because h264 chroma MC overreads
   // by one line in some cases, see avcodec_align_dimensions2() and
   // h264_chromamc.asm:put_h264_chroma_mc4_ssse3().
-  DCHECK(static_cast<size_t>(kUPlaneIndex) < plane_count);
+  FTL_DCHECK(static_cast<size_t>(kUPlaneIndex) < plane_count);
   size += frame_layout->line_stride[kUPlaneIndex] + kFrameSizePadding;
 
   frame_layout->plane_count = plane_count;

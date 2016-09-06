@@ -11,7 +11,7 @@ namespace media {
 
 FactoryServiceBase::ProductBase::ProductBase(FactoryServiceBase* owner)
     : owner_(owner) {
-  DCHECK(owner_);
+  FTL_DCHECK(owner_);
 }
 
 FactoryServiceBase::ProductBase::~ProductBase() {}

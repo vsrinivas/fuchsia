@@ -20,7 +20,7 @@ namespace media {
 MojoReader::MojoReader(InterfaceHandle<SeekingReader> seeking_reader)
     : seeking_reader_(SeekingReaderPtr::Create(seeking_reader.Pass())) {
   task_runner_ = base::MessageLoop::current()->task_runner();
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
 
   read_in_progress_ = false;
 
@@ -45,10 +45,10 @@ void MojoReader::ReadAt(size_t position,
                         uint8_t* buffer,
                         size_t bytes_to_read,
                         const ReadAtCallback& callback) {
-  DCHECK(buffer);
-  DCHECK(bytes_to_read);
+  FTL_DCHECK(buffer);
+  FTL_DCHECK(bytes_to_read);
 
-  DCHECK(!read_in_progress_)
+  FTL_DCHECK(!read_in_progress_)
       << "ReadAt called while previous call still in progress";
   read_in_progress_ = true;
   read_at_position_ = position;
@@ -68,7 +68,7 @@ void MojoReader::ContinueReadAt() {
       return;
     }
 
-    DCHECK(read_at_position_ < size_);
+    FTL_DCHECK(read_at_position_ < size_);
 
     if (read_at_position_ + read_at_bytes_to_read_ > size_) {
       read_at_bytes_to_read_ = size_ - read_at_position_;
@@ -107,7 +107,7 @@ void MojoReader::ContinueReadAt() {
 }
 
 void MojoReader::ReadResponseBody() {
-  DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
+  FTL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
   uint32_t byte_count = static_cast<uint32_t>(read_at_bytes_remaining_);
   MojoResult result = ReadDataRaw(consumer_handle_.get(), read_at_buffer_,
                                   &byte_count, MOJO_READ_DATA_FLAG_NONE);
@@ -115,7 +115,7 @@ void MojoReader::ReadResponseBody() {
   if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
     byte_count = 0;
   } else if (result != MOJO_RESULT_OK) {
-    LOG(ERROR) << "ReadDataRaw failed " << result;
+    FTL_LOG(ERROR) << "ReadDataRaw failed " << result;
     FailReadAt(result);
     return;
   }
@@ -153,7 +153,7 @@ void MojoReader::ReadResponseBodyStatic(void* reader_void_ptr,
                                         MojoResult result) {
   MojoReader* reader = reinterpret_cast<MojoReader*>(reader_void_ptr);
   if (result != MOJO_RESULT_OK) {
-    LOG(ERROR) << "AsyncWait failed " << result;
+    FTL_LOG(ERROR) << "AsyncWait failed " << result;
     reader->FailReadAt(result);
     return;
   }

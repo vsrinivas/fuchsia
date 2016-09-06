@@ -64,10 +64,10 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
 
-  DCHECK_LE(frac_src_frames,
-            static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-  DCHECK_LT(soff, static_cast<int32_t>(frac_src_frames));
-  DCHECK_GE(soff, 0);
+  FTL_DCHECK(frac_src_frames <=
+             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  FTL_DCHECK(soff < static_cast<int32_t>(frac_src_frames));
+  FTL_DCHECK(soff >= 0);
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.

@@ -14,7 +14,7 @@ Engine::~Engine() {}
 void Engine::PrepareInput(const InputRef& input) {
   VisitUpstream(input, [](const InputRef& input, const OutputRef& output,
                           const Stage::UpstreamCallback& callback) {
-    DCHECK(!input.actual().prepared());
+    FTL_DCHECK(!input.actual().prepared());
     PayloadAllocator* allocator = input.stage_->PrepareInput(input.index_);
     input.actual().set_prepared(true);
     output.stage_->PrepareOutput(output.index_, allocator, callback);
@@ -24,7 +24,7 @@ void Engine::PrepareInput(const InputRef& input) {
 void Engine::UnprepareInput(const InputRef& input) {
   VisitUpstream(input, [](const InputRef& input, const OutputRef& output,
                           const Stage::UpstreamCallback& callback) {
-    DCHECK(input.actual().prepared());
+    FTL_DCHECK(input.actual().prepared());
     input.stage_->UnprepareInput(input.index_);
     output.stage_->UnprepareOutput(output.index_, callback);
   });
@@ -36,14 +36,14 @@ void Engine::FlushOutput(const OutputRef& output) {
   }
   VisitDownstream(output, [](const OutputRef& output, const InputRef& input,
                              const Stage::DownstreamCallback& callback) {
-    DCHECK(input.actual().prepared());
+    FTL_DCHECK(input.actual().prepared());
     output.stage_->FlushOutput(output.index_);
     input.stage_->FlushInput(input.index_, callback);
   });
 }
 
 void Engine::RequestUpdate(Stage* stage) {
-  DCHECK(stage);
+  FTL_DCHECK(stage);
   ftl::MutexLocker locker(&mutex_);
   Update(stage);
   Update();
@@ -51,7 +51,7 @@ void Engine::RequestUpdate(Stage* stage) {
 
 void Engine::PushToSupplyBacklog(Stage* stage) {
   mutex_.AssertHeld();
-  DCHECK(stage);
+  FTL_DCHECK(stage);
 
   packets_produced_ = true;
   if (!stage->in_supply_backlog_) {
@@ -80,8 +80,8 @@ void Engine::VisitUpstream(const InputRef& input,
   while (!backlog.empty()) {
     InputRef input = backlog.front();
     backlog.pop();
-    DCHECK(input.valid());
-    DCHECK(input.connected());
+    FTL_DCHECK(input.valid());
+    FTL_DCHECK(input.connected());
 
     const OutputRef& output = input.mate();
     Stage* output_stage = output.stage_;
@@ -102,8 +102,8 @@ void Engine::VisitDownstream(const OutputRef& output,
   while (!backlog.empty()) {
     OutputRef output = backlog.front();
     backlog.pop();
-    DCHECK(output.valid());
-    DCHECK(output.connected());
+    FTL_DCHECK(output.valid());
+    FTL_DCHECK(output.connected());
 
     const InputRef& input = output.mate();
     Stage* input_stage = input.stage_;
@@ -137,7 +137,7 @@ void Engine::Update() {
 void Engine::Update(Stage* stage) {
   mutex_.AssertHeld();
 
-  DCHECK(stage);
+  FTL_DCHECK(stage);
 
   packets_produced_ = false;
 
@@ -158,7 +158,7 @@ Stage* Engine::PopFromSupplyBacklog() {
 
   Stage* stage = supply_backlog_.front();
   supply_backlog_.pop();
-  DCHECK(stage->in_supply_backlog_);
+  FTL_DCHECK(stage->in_supply_backlog_);
   stage->in_supply_backlog_ = false;
   return stage;
 }
@@ -172,7 +172,7 @@ Stage* Engine::PopFromDemandBacklog() {
 
   Stage* stage = demand_backlog_.top();
   demand_backlog_.pop();
-  DCHECK(stage->in_demand_backlog_);
+  FTL_DCHECK(stage->in_demand_backlog_);
   stage->in_demand_backlog_ = false;
   return stage;
 }

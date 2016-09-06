@@ -72,11 +72,11 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   int32_t soff = *frac_src_offset;
   int32_t send = static_cast<int32_t>(frac_src_frames - FRAC_ONE);
 
-  DCHECK_LT(doff, dst_frames);
-  DCHECK_GE(frac_src_frames, FRAC_ONE);
-  DCHECK_LE(frac_src_frames,
-            static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-  DCHECK((soff >= 0) || (static_cast<uint32_t>(-soff) < FRAC_ONE));
+  FTL_DCHECK(doff < dst_frames);
+  FTL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FTL_DCHECK(frac_src_frames <=
+             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  FTL_DCHECK((soff >= 0) || (static_cast<uint32_t>(-soff) < FRAC_ONE));
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets and hold onto

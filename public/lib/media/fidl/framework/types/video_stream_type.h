@@ -87,12 +87,12 @@ class VideoStreamType : public StreamType {
   // Describes the layout of a frame of a particular extent.
   struct FrameLayout {
     size_t line_stride_for_plane(size_t plane) {
-      DCHECK(plane < plane_count);
+      FTL_DCHECK(plane < plane_count);
       return line_stride[plane];
     }
 
     size_t plane_offset_for_plane(size_t plane) {
-      DCHECK(plane < plane_count);
+      FTL_DCHECK(plane < plane_count);
       return plane_offset[plane];
     }
 
@@ -106,13 +106,13 @@ class VideoStreamType : public StreamType {
   struct PixelFormatInfo {
     // Returns the number of bytes per element for the specified plane.
     size_t bytes_per_element_for_plane(size_t plane) const {
-      DCHECK(plane < plane_count);
+      FTL_DCHECK(plane < plane_count);
       return bytes_per_element[plane];
     }
 
     // Returns the sample size of the specified plane.
     const Extent& sample_size_for_plane(size_t plane) const {
-      DCHECK(plane < plane_count);
+      FTL_DCHECK(plane < plane_count);
       return sample_size[plane];
     }
 

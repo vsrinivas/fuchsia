@@ -21,7 +21,7 @@ void Gain::Set(float db_gain) {
   // Compute the amplitude scale factor as a double and sanity check before
   // converting to the fixed point representation.
   double amp_scale = pow(10.0, db_gain / 20.0);
-  DCHECK(amp_scale < (1u << ((sizeof(AScale) * 8) - FRACTIONAL_BITS)));
+  FTL_DCHECK(amp_scale < (1u << ((sizeof(AScale) * 8) - FRACTIONAL_BITS)));
 
   amp_scale *= static_cast<double>(UNITY);
   amplitude_scale_.store(static_cast<AScale>(amp_scale));

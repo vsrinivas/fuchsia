@@ -78,7 +78,7 @@ class Packet {
 };
 
 inline void PacketDeleter::operator()(Packet* ptr) const {
-  DCHECK(ptr);
+  FTL_DCHECK(ptr);
   ptr->Release();
 }
 

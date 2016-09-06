@@ -124,7 +124,7 @@ class Graph {
   // Adds a part to the graph.
   template <typename T>
   PartRef Add(std::shared_ptr<T> t_ptr) {
-    DCHECK(t_ptr);
+    FTL_DCHECK(t_ptr);
     return Add(StageCreator<T>::Create(t_ptr));
   }
 

@@ -47,16 +47,16 @@ class AudioServerImpl : public AudioServer {
   // Schedule a closure to run on the server's main message loop.
   void ScheduleMessageLoopTask(const tracked_objects::Location& from_here,
                                const base::Closure& task) {
-    DCHECK(task_runner_);
+    FTL_DCHECK(task_runner_);
     bool success = task_runner_->PostTask(from_here, task);
-    DCHECK(success);
+    FTL_DCHECK(success);
   }
 
   // Removes a track from the set of active tracks.
   void RemoveTrack(AudioTrackImplPtr track) {
     size_t removed;
     removed = tracks_.erase(track);
-    DCHECK(removed);
+    FTL_DCHECK(removed);
   }
 
   // Accessor for our encapsulated output manager.

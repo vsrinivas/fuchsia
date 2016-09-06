@@ -53,7 +53,7 @@ class FfmpegDecoderBase : public Decoder {
                  static_cast<size_t>(av_buffer_ref->size),
                  av_buffer_ref->data),
           av_buffer_ref_(av_buffer_ref) {
-      DCHECK(av_buffer_ref->size >= 0);
+      FTL_DCHECK(av_buffer_ref->size >= 0);
     }
 
     AVBufferRef* av_buffer_ref_;

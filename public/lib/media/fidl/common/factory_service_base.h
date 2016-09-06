@@ -30,7 +30,7 @@ class FactoryServiceBase : public ApplicationImplBase {
     // Tells the factory service to release this product.
     void ReleaseFromOwner() {
       size_t erased = owner_->products_.erase(shared_from_this());
-      DCHECK(erased);
+      FTL_DCHECK(erased);
     }
 
    private:
@@ -47,7 +47,7 @@ class FactoryServiceBase : public ApplicationImplBase {
             InterfaceRequest<Interface> request,
             FactoryServiceBase* owner)
         : ProductBase(owner), binding_(impl, request.Pass()) {
-      DCHECK(impl);
+      FTL_DCHECK(impl);
       binding_.set_connection_error_handler([this]() { ReleaseFromOwner(); });
     }
 
@@ -82,11 +82,11 @@ class FactoryServiceBase : public ApplicationImplBase {
 // Checks the condition, and, if it's false, unbinds, releases from the owner
 // and calls return. Doesn't support stream arguments.
 // TODO(dalesat): Support stream arguments.
-#define RCHECK(condition)                                         \
-  if (!(condition)) {                                             \
-    LOG(ERROR) << "request precondition failed: " #condition "."; \
-    UnbindAndReleaseFromOwner();                                  \
-    return;                                                       \
+#define RCHECK(condition)                                             \
+  if (!(condition)) {                                                 \
+    FTL_LOG(ERROR) << "request precondition failed: " #condition "."; \
+    UnbindAndReleaseFromOwner();                                      \
+    return;                                                           \
   }
 
 }  // namespace media

@@ -23,8 +23,8 @@ void MojoPacketConsumer::SetFlushRequestedCallback(
 
 void MojoPacketConsumer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
-  MOJO_DCHECK(supplied_packet);
-  MOJO_DCHECK(supply_callback_);
+  FTL_DCHECK(supplied_packet);
+  FTL_DCHECK(supply_callback_);
   supply_callback_(PacketImpl::Create(std::move(supplied_packet)));
 }
 

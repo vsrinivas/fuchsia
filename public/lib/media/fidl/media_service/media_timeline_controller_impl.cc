@@ -227,14 +227,14 @@ MediaTimelineControllerImpl::TimelineTransition::TimelineTransition(
                              reference_delta,
                              subject_delta),
       callback_(callback) {
-  DCHECK(!callback_.is_null());
+  FTL_DCHECK(!callback_.is_null());
   callback_joiner_.WhenJoined([this]() {
     if (cancelled_) {
-      DCHECK(callback_.is_null());
+      FTL_DCHECK(callback_.is_null());
       return;
     }
 
-    DCHECK(!callback_.is_null());
+    FTL_DCHECK(!callback_.is_null());
     callback_.Run(true);
     callback_.reset();
     if (!completed_callback_.is_null()) {

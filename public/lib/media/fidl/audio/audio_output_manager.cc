@@ -26,8 +26,8 @@ AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
 
 AudioOutputManager::~AudioOutputManager() {
   Shutdown();
-  DCHECK_EQ(outputs_.size(), 0u);
-  DCHECK(!thread_pool_);
+  FTL_DCHECK(outputs_.size() == 0u);
+  FTL_DCHECK(!thread_pool_);
 }
 
 MediaResult AudioOutputManager::Init() {
@@ -64,7 +64,7 @@ MediaResult AudioOutputManager::Init() {
   for (auto iter = outputs_.begin(); iter != outputs_.end();) {
     const AudioOutputPtr& output = *iter;
     auto tmp = iter++;
-    DCHECK(output);
+    FTL_DCHECK(output);
 
     // Create a sequenced task runner for this output.  It will be used by the
     // output to schedule jobs (such as mixing) on the thread pool.
@@ -87,7 +87,7 @@ MediaResult AudioOutputManager::Init() {
 void AudioOutputManager::Shutdown() {
   // Are we already shutdown (or were we never successfully initialized?)
   if (thread_pool_ == nullptr) {
-    DCHECK_EQ(outputs_.size(), 0u);
+    FTL_DCHECK(outputs_.size() == 0u);
     return;
   }
 
@@ -116,7 +116,7 @@ void AudioOutputManager::Shutdown() {
 void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
   // No one should be calling this method if we have been shut down (or never
   // successfully started).
-  DCHECK(thread_pool_);
+  FTL_DCHECK(thread_pool_);
 
   auto iter = outputs_.find(output);
   if (iter != outputs_.end()) {
@@ -128,15 +128,15 @@ void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
 void AudioOutputManager::SelectOutputsForTrack(AudioTrackImplPtr track) {
   // TODO(johngro): Someday, base this on policy.  For now, every track gets
   // assigned to every output in the system.
-  DCHECK(track);
+  FTL_DCHECK(track);
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
 
   for (auto output : outputs_) {
     auto link = AudioTrackToOutputLink::New(track, output);
-    DCHECK(output);
-    DCHECK(link);
+    FTL_DCHECK(output);
+    FTL_DCHECK(link);
 
     // If we cannot add this link to the output, it's because the output is in
     // the process of shutting down (we didn't want to hang out with that guy
@@ -150,7 +150,7 @@ void AudioOutputManager::SelectOutputsForTrack(AudioTrackImplPtr track) {
 void AudioOutputManager::ScheduleMessageLoopTask(
     const tracked_objects::Location& from_here,
     const base::Closure& task) {
-  DCHECK(server_);
+  FTL_DCHECK(server_);
   server_->ScheduleMessageLoopTask(from_here, task);
 }
 

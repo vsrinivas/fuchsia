@@ -7,10 +7,8 @@
 
 #include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/interfaces/timelines.mojom.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/bindings/type_converter.h"
-#include "mojo/public/cpp/environment/logging.h"
-#include "mojo/services/media/common/cpp/timeline_rate.h"
-#include "mojo/services/media/common/interfaces/timelines.mojom.h"
 
 namespace mojo {
 namespace media {
@@ -39,7 +37,7 @@ class TimelineFunction {
       int64_t subject_time,
       const TimelineRate& rate,  // subject_delta / reference_delta
       int64_t subject_input) {
-    MOJO_DCHECK(rate.reference_delta() != 0u);
+    FTL_DCHECK(rate.reference_delta() != 0u);
     return Apply(subject_time, reference_time, rate.Inverse(), subject_input);
   }
 
@@ -80,7 +78,7 @@ class TimelineFunction {
   // Applies the inverse of the function. Returns TimelineRate::kOverflow on
   // overflow.
   int64_t ApplyInverse(int64_t subject_input) const {
-    MOJO_DCHECK(rate_.reference_delta() != 0u);
+    FTL_DCHECK(rate_.reference_delta() != 0u);
     return ApplyInverse(reference_time_, subject_time_, rate_, subject_input);
   }
 
@@ -91,7 +89,7 @@ class TimelineFunction {
 
   // Returns a timeline function that is the inverse if this timeline function.
   TimelineFunction Inverse() const {
-    MOJO_DCHECK(rate_.reference_delta() != 0u);
+    FTL_DCHECK(rate_.reference_delta() != 0u);
     return TimelineFunction(subject_time_, reference_time_, rate_.Inverse());
   }
 

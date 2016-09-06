@@ -22,7 +22,7 @@ void FakeWavReader::WriteHeader() {
   WriteHeader4CC("RIFF");
   WriteHeaderUint32(size_ - kChunkSizeDeficit);
   WriteHeader4CC("WAVE");  // Format
-  MOJO_DCHECK(header_.size() == kMasterChunkHeaderSize);
+  FTL_DCHECK(header_.size() == kMasterChunkHeaderSize);
 
   // Format subchunk.
   WriteHeader4CC("fmt ");
@@ -35,13 +35,13 @@ void FakeWavReader::WriteHeader() {
   // Block alignment (frame size in bytes).
   WriteHeaderUint16(kSamplesPerFrame * kBitsPerSample / 8);
   WriteHeaderUint16(kBitsPerSample);
-  MOJO_DCHECK(header_.size() == kMasterChunkHeaderSize + kFormatChunkSize);
+  FTL_DCHECK(header_.size() == kMasterChunkHeaderSize + kFormatChunkSize);
 
   // Data subchunk.
   WriteHeader4CC("data");
   WriteHeaderUint32(size_ - kMasterChunkHeaderSize - kFormatChunkSize -
                     kChunkSizeDeficit);
-  MOJO_DCHECK(header_.size() ==
+  FTL_DCHECK(header_.size() ==
               kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
 }
 
@@ -56,14 +56,14 @@ void FakeWavReader::Describe(const DescribeCallback& callback) {
 }
 
 void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
-  MOJO_DCHECK(!producer_handle_.is_valid())
+  FTL_DCHECK(!producer_handle_.is_valid())
       << "ReadAt request received with previous datapipe still open";
   ScopedDataPipeConsumerHandle consumer_handle;
   MojoResult result =
       CreateDataPipe(nullptr, &producer_handle_, &consumer_handle);
-  MOJO_DCHECK(result == MOJO_RESULT_OK);
-  MOJO_DCHECK(producer_handle_.is_valid());
-  MOJO_DCHECK(consumer_handle.is_valid());
+  FTL_DCHECK(result == MOJO_RESULT_OK);
+  FTL_DCHECK(producer_handle_.is_valid());
+  FTL_DCHECK(consumer_handle.is_valid());
   callback.Run(MediaResult::OK, consumer_handle.Pass());
 
   position_ = position;
@@ -79,7 +79,7 @@ void FakeWavReader::WriteToProducerHandle() {
     MojoResult result = WriteDataRaw(producer_handle_.get(), &byte, &byte_count,
                                      MOJO_WRITE_DATA_FLAG_NONE);
     if (result == MOJO_RESULT_OK) {
-      MOJO_DCHECK(byte_count == 1);
+      FTL_DCHECK(byte_count == 1);
       ++position_;
       continue;
     }
@@ -99,12 +99,12 @@ void FakeWavReader::WriteToProducerHandle() {
       return;
     }
 
-    MOJO_DCHECK(false) << "WriteDataRaw failed, " << result;
+    FTL_DCHECK(false) << "WriteDataRaw failed, " << result;
   }
 }
 
 void FakeWavReader::WriteHeader4CC(const std::string& value) {
-  MOJO_DCHECK(value.size() == 4);
+  FTL_DCHECK(value.size() == 4);
   header_.push_back(static_cast<uint8_t>(value[0]));
   header_.push_back(static_cast<uint8_t>(value[1]));
   header_.push_back(static_cast<uint8_t>(value[2]));

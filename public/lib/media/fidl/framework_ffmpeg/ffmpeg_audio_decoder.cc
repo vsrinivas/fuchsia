@@ -11,8 +11,8 @@ namespace media {
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
-  DCHECK(context());
-  DCHECK(context()->channels > 0);
+  FTL_DCHECK(context());
+  FTL_DCHECK(context()->channels > 0);
 
   context()->opaque = this;
   context()->get_buffer2 = AllocateBufferForAvFrame;
@@ -36,10 +36,10 @@ int FfmpegAudioDecoder::Decode(const AVPacket& av_packet,
                                const ffmpeg::AvFramePtr& av_frame_ptr,
                                PayloadAllocator* allocator,
                                bool* frame_decoded_out) {
-  DCHECK(allocator);
-  DCHECK(frame_decoded_out);
-  DCHECK(context());
-  DCHECK(av_frame_ptr);
+  FTL_DCHECK(allocator);
+  FTL_DCHECK(frame_decoded_out);
+  FTL_DCHECK(context());
+  FTL_DCHECK(av_frame_ptr);
 
   if (next_pts_ == Packet::kUnknownPts) {
     if (av_packet.pts == AV_NOPTS_VALUE) {
@@ -68,7 +68,7 @@ int FfmpegAudioDecoder::Decode(const AVPacket& av_packet,
 
 PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  PayloadAllocator* allocator) {
-  DCHECK(allocator);
+  FTL_DCHECK(allocator);
 
   int64_t pts = av_frame.pts;
   if (pts == AV_NOPTS_VALUE) {
@@ -83,8 +83,8 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
     // was allocated from the default allocator. That buffer will get released
     // later in ReleaseBufferForAvFrame. We need a new buffer for the
     // interleaved frames, which we get from the provided allocator.
-    DCHECK(stream_type_);
-    DCHECK(stream_type_->audio());
+    FTL_DCHECK(stream_type_);
+    FTL_DCHECK(stream_type_->audio());
     uint64_t payload_size =
         stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
     void* payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
@@ -112,12 +112,12 @@ int FfmpegAudioDecoder::AllocateBufferForAvFrame(
     AVFrame* av_frame,
     int flags) {
   // CODEC_CAP_DR1 is required in order to do allocation this way.
-  DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
+  FTL_DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
 
   FfmpegAudioDecoder* self =
       reinterpret_cast<FfmpegAudioDecoder*>(av_codec_context->opaque);
-  DCHECK(self);
-  DCHECK(self->allocator_);
+  FTL_DCHECK(self);
+  FTL_DCHECK(self->allocator_);
 
   AVSampleFormat av_sample_format =
       static_cast<AVSampleFormat>(av_frame->format);
@@ -126,7 +126,7 @@ int FfmpegAudioDecoder::AllocateBufferForAvFrame(
       &av_frame->linesize[0], av_codec_context->channels, av_frame->nb_samples,
       av_sample_format, FfmpegAudioDecoder::kChannelAlign);
   if (buffer_size < 0) {
-    LOG(WARNING) << "av_samples_get_buffer_size failed";
+    FTL_LOG(WARNING) << "av_samples_get_buffer_size failed";
     return buffer_size;
   }
 
@@ -142,11 +142,11 @@ int FfmpegAudioDecoder::AllocateBufferForAvFrame(
     int bytes_per_channel = buffer_size / channels;
     uint8_t* channel_buffer = buffer;
 
-    DCHECK(buffer != nullptr || bytes_per_channel == 0);
+    FTL_DCHECK(buffer != nullptr || bytes_per_channel == 0);
 
     if (channels <= AV_NUM_DATA_POINTERS) {
       // The buffer pointers will fit in av_frame->data.
-      DCHECK_EQ(av_frame->extended_data, av_frame->data);
+      FTL_DCHECK(av_frame->extended_data == av_frame->data);
       for (int channel = 0; channel < channels; ++channel) {
         av_frame->data[channel] = channel_buffer;
         channel_buffer += bytes_per_channel;
@@ -182,8 +182,8 @@ int FfmpegAudioDecoder::AllocateBufferForAvFrame(
 
 void FfmpegAudioDecoder::ReleaseBufferForAvFrame(void* opaque,
                                                  uint8_t* buffer) {
-  DCHECK(opaque);
-  DCHECK(buffer);
+  FTL_DCHECK(opaque);
+  FTL_DCHECK(buffer);
   PayloadAllocator* allocator = reinterpret_cast<PayloadAllocator*>(opaque);
   allocator->ReleasePayloadBuffer(buffer);
 }

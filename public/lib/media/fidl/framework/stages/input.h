@@ -31,7 +31,7 @@ class Input {
 
   // Breaks a connection. Called only by the engine.
   void Disconnect() {
-    DCHECK(!prepared_);
+    FTL_DCHECK(!prepared_);
     mate_ = nullptr;
   }
 

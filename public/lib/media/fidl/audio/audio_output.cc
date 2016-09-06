@@ -26,11 +26,11 @@ static void FinishShutdownSelf(AudioOutputManager* manager,
 }
 
 AudioOutput::AudioOutput(AudioOutputManager* manager) : manager_(manager) {
-  DCHECK(manager_);
+  FTL_DCHECK(manager_);
 }
 
 AudioOutput::~AudioOutput() {
-  DCHECK(!task_runner_ && shutting_down_);
+  FTL_DCHECK(!task_runner_ && shutting_down_);
 }
 
 MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
@@ -40,14 +40,14 @@ MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
     ftl::MutexLocker locker(&processing_mutex_);
 
     // Assert that we are the output in this link.
-    DCHECK(this == link->GetOutput().get());
+    FTL_DCHECK(this == link->GetOutput().get());
 
     if (shutting_down_) {
       return MediaResult::SHUTTING_DOWN;
     }
 
     auto insert_result = links_.emplace(link);
-    DCHECK(insert_result.second);
+    FTL_DCHECK(insert_result.second);
   } else {
     // TODO(johngro): Output didn't like this track for some reason...  Should
     // probably log something about this.
@@ -80,7 +80,7 @@ MediaResult AudioOutput::Init() {
 void AudioOutput::Cleanup() {}
 
 MediaResult AudioOutput::InitializeLink(const AudioTrackToOutputLinkPtr& link) {
-  DCHECK(link);
+  FTL_DCHECK(link);
   return MediaResult::OK;
 }
 
@@ -90,10 +90,10 @@ void AudioOutput::ScheduleCallback(LocalTime when) {
   // If we are in the process of shutting down, then we are no longer permitted
   // to schedule callbacks.
   if (shutting_down_) {
-    DCHECK(!task_runner_);
+    FTL_DCHECK(!task_runner_);
     return;
   }
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
 
   // TODO(johngro):  Someday, if there is ever a way to schedule delayed tasks
   // with absolute time, or with resolution better than microseconds, do so.
@@ -112,7 +112,7 @@ void AudioOutput::ShutdownSelf() {
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
   if (!BeginShutdown()) {
-    DCHECK(manager_);
+    FTL_DCHECK(manager_);
     manager_->ScheduleMessageLoopTask(
         FROM_HERE, base::Bind(&FinishShutdownSelf, manager_, weak_self_));
   }
@@ -136,8 +136,8 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
 MediaResult AudioOutput::Init(
     const AudioOutputPtr& self,
     scoped_refptr<base::SequencedTaskRunner> task_runner) {
-  DCHECK(this == self.get());
-  DCHECK(task_runner);
+  FTL_DCHECK(this == self.get());
+  FTL_DCHECK(task_runner);
 
   // If our derived class failed to initialize, don't bother to hold onto the
   // state we will need drive our callback engine.  Begin the process of
@@ -191,7 +191,7 @@ void AudioOutput::Shutdown() {
   // Unlink ourselves from all of our tracks.  Then go ahead and clear the track
   // set.
   for (const auto& link : links_) {
-    DCHECK(link);
+    FTL_DCHECK(link);
     AudioTrackImplPtr track = link->GetTrack();
     if (track) {
       track->RemoveOutput(link);

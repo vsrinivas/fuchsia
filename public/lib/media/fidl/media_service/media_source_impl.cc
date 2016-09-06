@@ -32,10 +32,10 @@ MediaSourceImpl::MediaSourceImpl(
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaSource>(this, request.Pass(), owner),
       allowed_media_types_(allowed_media_types.Clone()) {
-  DCHECK(reader);
+  FTL_DCHECK(reader);
 
   task_runner_ = base::MessageLoop::current()->task_runner();
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
@@ -47,14 +47,14 @@ MediaSourceImpl::MediaSourceImpl(
 
   std::shared_ptr<Reader> reader_ptr = MojoReader::Create(reader.Pass());
   if (!reader_ptr) {
-    LOG(ERROR) << "couldn't create reader";
+    FTL_LOG(ERROR) << "couldn't create reader";
     // TODO(dalesat): Add problem reporting.
     return;
   }
 
   demux_ = Demux::Create(reader_ptr);
   if (!demux_) {
-    LOG(ERROR) << "couldn't create demux";
+    FTL_LOG(ERROR) << "couldn't create demux";
     // TODO(dalesat): Add problem reporting.
     return;
   }
@@ -184,8 +184,8 @@ MediaSourceImpl::Stream::Stream(
         allowed_stream_types,
     Graph* graph)
     : original_stream_type_(std::move(stream_type)), graph_(graph) {
-  DCHECK(original_stream_type_);
-  DCHECK(graph);
+  FTL_DCHECK(original_stream_type_);
+  FTL_DCHECK(graph);
 
   output_ = output;
 
@@ -197,7 +197,7 @@ MediaSourceImpl::Stream::Stream(
                                       &stream_type_)) {
     // Can't convert to any allowed type.
     // TODO(dalesat): Indicate this in some way other than blowing up.
-    LOG(ERROR) << "can't convert to any allowed type";
+    FTL_LOG(ERROR) << "can't convert to any allowed type";
     abort();
   }
 }

@@ -20,20 +20,20 @@ AudioServerImpl::AudioServerImpl()
 
 AudioServerImpl::~AudioServerImpl() {
   Shutdown();
-  DCHECK(cleanup_queue_);
-  DCHECK_EQ(cleanup_queue_->size(), 0u);
+  FTL_DCHECK(cleanup_queue_);
+  FTL_DCHECK(cleanup_queue_->empty());
 }
 
 void AudioServerImpl::Initialize() {
   // Stash a pointer to our task runner.
-  DCHECK(base::MessageLoop::current());
+  FTL_DCHECK(base::MessageLoop::current());
   task_runner_ = base::MessageLoop::current()->task_runner();
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
 
   // Set up our output manager.
   MediaResult res = output_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
-  DCHECK(res == MediaResult::OK);
+  FTL_DCHECK(res == MediaResult::OK);
 }
 
 void AudioServerImpl::Shutdown() {
@@ -46,7 +46,7 @@ void AudioServerImpl::Shutdown() {
     size_t size_before = tracks_.size();
     (*tracks_.begin())->Shutdown();
     size_t size_after = tracks_.size();
-    DCHECK_LT(size_after, size_before);
+    FTL_DCHECK(size_after < size_before);
   }
 
   output_manager_.Shutdown();
@@ -99,9 +99,9 @@ void AudioServerImpl::SchedulePacketCleanup(
   cleanup_queue_->emplace_back(std::move(supplied_packet));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
-    DCHECK(task_runner_);
+    FTL_DCHECK(task_runner_);
     cleanup_scheduled_ = task_runner_->PostTask(FROM_HERE, cleanup_closure_);
-    DCHECK(cleanup_scheduled_);
+    FTL_DCHECK(cleanup_scheduled_);
   }
 }
 

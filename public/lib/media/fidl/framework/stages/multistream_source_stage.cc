@@ -12,7 +12,7 @@ namespace media {
 MultistreamSourceStage::MultistreamSourceStage(
     std::shared_ptr<MultistreamSource> source)
     : source_(source), ended_streams_(0) {
-  DCHECK(source);
+  FTL_DCHECK(source);
   outputs_.resize(source->stream_count());
 }
 
@@ -23,7 +23,7 @@ size_t MultistreamSourceStage::input_count() const {
 };
 
 Input& MultistreamSourceStage::input(size_t index) {
-  CHECK(false) << "input requested from source";
+  FTL_CHECK(false) << "input requested from source";
   abort();
 }
 
@@ -32,19 +32,19 @@ size_t MultistreamSourceStage::output_count() const {
 }
 
 Output& MultistreamSourceStage::output(size_t index) {
-  DCHECK(index < outputs_.size());
+  FTL_DCHECK(index < outputs_.size());
   return outputs_[index];
 }
 
 PayloadAllocator* MultistreamSourceStage::PrepareInput(size_t index) {
-  CHECK(false) << "PrepareInput called on source";
+  FTL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
 void MultistreamSourceStage::PrepareOutput(size_t index,
                                            PayloadAllocator* allocator,
                                            const UpstreamCallback& callback) {
-  DCHECK(index < outputs_.size());
+  FTL_DCHECK(index < outputs_.size());
 
   if (allocator != nullptr) {
     // Currently, we don't support a source that uses provided allocators. If
@@ -56,16 +56,16 @@ void MultistreamSourceStage::PrepareOutput(size_t index,
 
 void MultistreamSourceStage::UnprepareOutput(size_t index,
                                              const UpstreamCallback& callback) {
-  DCHECK(index < outputs_.size());
+  FTL_DCHECK(index < outputs_.size());
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
 void MultistreamSourceStage::Update(Engine* engine) {
-  DCHECK(engine);
+  FTL_DCHECK(engine);
 
   while (true) {
     if (cached_packet_ && HasPositiveDemand(outputs_)) {
-      DCHECK(cached_packet_output_index_ < outputs_.size());
+      FTL_DCHECK(cached_packet_output_index_ < outputs_.size());
       Output& output = outputs_[cached_packet_output_index_];
 
       if (output.demand() != Demand::kNegative) {
@@ -86,8 +86,8 @@ void MultistreamSourceStage::Update(Engine* engine) {
 
     // Pull a packet from the source.
     cached_packet_ = source_->PullPacket(&cached_packet_output_index_);
-    DCHECK(cached_packet_);
-    DCHECK(cached_packet_output_index_ < outputs_.size());
+    FTL_DCHECK(cached_packet_);
+    FTL_DCHECK(cached_packet_output_index_ < outputs_.size());
 
     if (cached_packet_->end_of_stream()) {
       ended_streams_++;
@@ -97,12 +97,12 @@ void MultistreamSourceStage::Update(Engine* engine) {
 
 void MultistreamSourceStage::FlushInput(size_t index,
                                         const DownstreamCallback& callback) {
-  CHECK(false) << "FlushInput called on source";
+  FTL_CHECK(false) << "FlushInput called on source";
 }
 
 void MultistreamSourceStage::FlushOutput(size_t index) {
-  DCHECK(index < outputs_.size());
-  DCHECK(source_);
+  FTL_DCHECK(index < outputs_.size());
+  FTL_DCHECK(source_);
   outputs_[index].Flush();
   source_->Flush();
   cached_packet_.reset(nullptr);

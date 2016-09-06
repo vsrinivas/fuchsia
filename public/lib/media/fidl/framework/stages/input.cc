@@ -15,19 +15,19 @@ Input::Input() : prepared_(false) {}
 Input::~Input() {}
 
 void Input::Connect(const OutputRef& output) {
-  DCHECK(output.valid());
-  DCHECK(!mate_);
+  FTL_DCHECK(output.valid());
+  FTL_DCHECK(!mate_);
   mate_ = output;
 }
 
 Output& Input::actual_mate() const {
-  DCHECK(mate_.valid());
+  FTL_DCHECK(mate_.valid());
   return mate_.actual();
 }
 
 void Input::SetDemand(Demand demand, Engine* engine) const {
-  DCHECK(engine);
-  DCHECK(connected());
+  FTL_DCHECK(engine);
+  FTL_DCHECK(connected());
 
   if (actual_mate().UpdateDemandFromInput(demand)) {
     engine->PushToDemandBacklog(mate().stage_);
@@ -35,8 +35,8 @@ void Input::SetDemand(Demand demand, Engine* engine) const {
 }
 
 bool Input::SupplyPacketFromOutput(PacketPtr packet) {
-  DCHECK(packet);
-  DCHECK(!packet_from_upstream_);
+  FTL_DCHECK(packet);
+  FTL_DCHECK(!packet_from_upstream_);
   packet_from_upstream_ = std::move(packet);
   return true;
 }

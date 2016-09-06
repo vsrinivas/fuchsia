@@ -85,7 +85,7 @@ StreamType::Medium Convert(MediaTypeMedium media_type_medium) {
     case MediaTypeMedium::SUBPICTURE:
       return StreamType::Medium::kSubpicture;
   }
-  LOG(ERROR) << "unrecognized medium";
+  FTL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
@@ -102,7 +102,7 @@ AudioStreamType::SampleFormat Convert(AudioSampleFormat audio_sample_format) {
     case AudioSampleFormat::FLOAT:
       return AudioStreamType::SampleFormat::kFloat;
   }
-  LOG(ERROR) << "unrecognized sample format";
+  FTL_LOG(ERROR) << "unrecognized sample format";
   abort();
 }
 
@@ -135,7 +135,7 @@ VideoStreamType::VideoProfile Convert(VideoProfile video_profile) {
     case VideoProfile::H264_MULTIVIEW_HIGH:
       return VideoStreamType::VideoProfile::kH264MultiviewHigh;
   }
-  LOG(ERROR);
+  FTL_LOG(ERROR);
   abort();
 }
 
@@ -205,7 +205,7 @@ MediaTypeMedium Convert(StreamType::Medium medium) {
       return MediaTypeMedium::SUBPICTURE;
   }
 
-  LOG(ERROR) << "unrecognized medium";
+  FTL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
@@ -223,7 +223,7 @@ AudioSampleFormat Convert(AudioStreamType::SampleFormat sample_format) {
       return AudioSampleFormat::FLOAT;
   }
 
-  LOG(ERROR) << "unrecognized sample format";
+  FTL_LOG(ERROR) << "unrecognized sample format";
   abort();
 }
 
@@ -257,7 +257,7 @@ VideoProfile Convert(VideoStreamType::VideoProfile video_profile) {
       return VideoProfile::H264_MULTIVIEW_HIGH;
   }
 
-  LOG(ERROR) << "unrecognized video profile";
+  FTL_LOG(ERROR) << "unrecognized video profile";
   abort();
 }
 
@@ -297,7 +297,7 @@ PixelFormat Convert(VideoStreamType::PixelFormat pixel_format) {
       return PixelFormat::MT21;
   }
 
-  LOG(ERROR) << "unrecognized pixel format";
+  FTL_LOG(ERROR) << "unrecognized pixel format";
   abort();
 }
 
@@ -315,7 +315,7 @@ ColorSpace Convert(VideoStreamType::ColorSpace color_space) {
       return ColorSpace::SD_REC601;
   }
 
-  LOG(ERROR) << "unrecognized color space";
+  FTL_LOG(ERROR) << "unrecognized color space";
   abort();
 }
 
@@ -365,7 +365,7 @@ bool KnownEncodingsMatch() {
 media::MediaTypePtr
 TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
     const std::unique_ptr<media::StreamType>& input) {
-  DCHECK(KnownEncodingsMatch());
+  FTL_DCHECK(KnownEncodingsMatch());
 
   if (input == nullptr) {
     return nullptr;
@@ -435,14 +435,14 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
     }
   }
 
-  LOG(ERROR) << "unrecognized medium";
+  FTL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
 std::unique_ptr<media::StreamType>
 TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
     const media::MediaTypePtr& input) {
-  DCHECK(KnownEncodingsMatch());
+  FTL_DCHECK(KnownEncodingsMatch());
 
   if (!input) {
     return nullptr;
@@ -482,7 +482,7 @@ TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
 media::MediaTypeSetPtr
 TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
     Convert(const std::unique_ptr<media::StreamTypeSet>& input) {
-  DCHECK(KnownEncodingsMatch());
+  FTL_DCHECK(KnownEncodingsMatch());
 
   if (input == nullptr) {
     return nullptr;
@@ -543,14 +543,14 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
     }
   }
 
-  LOG(ERROR) << "unrecognized medium";
+  FTL_LOG(ERROR) << "unrecognized medium";
   abort();
 }
 
 std::unique_ptr<media::StreamTypeSet> TypeConverter<
     std::unique_ptr<media::StreamTypeSet>,
     media::MediaTypeSetPtr>::Convert(const media::MediaTypeSetPtr& input) {
-  DCHECK(KnownEncodingsMatch());
+  FTL_DCHECK(KnownEncodingsMatch());
 
   if (!input) {
     return nullptr;

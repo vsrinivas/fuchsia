@@ -13,55 +13,55 @@ namespace mojo {
 namespace media {
 
 size_t PartRef::input_count() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return stage_->input_count();
 }
 
 InputRef PartRef::input(size_t index) const {
-  DCHECK(valid());
-  DCHECK(index < stage_->input_count());
+  FTL_DCHECK(valid());
+  FTL_DCHECK(index < stage_->input_count());
   return InputRef(stage_, index);
 }
 
 InputRef PartRef::input() const {
-  DCHECK(valid());
-  DCHECK(stage_->input_count() == 1);
+  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_->input_count() == 1);
   return InputRef(stage_, 0);
 }
 
 size_t PartRef::output_count() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return stage_->output_count();
 }
 
 OutputRef PartRef::output(size_t index) const {
-  DCHECK(valid());
-  DCHECK(index < stage_->output_count());
+  FTL_DCHECK(valid());
+  FTL_DCHECK(index < stage_->output_count());
   return OutputRef(stage_, index);
 }
 
 OutputRef PartRef::output() const {
-  DCHECK(valid());
-  DCHECK(stage_->output_count() == 1);
+  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_->output_count() == 1);
   return OutputRef(stage_, 0);
 }
 
 bool InputRef::connected() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return actual().connected();
 }
 
 const OutputRef& InputRef::mate() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return actual().mate();
 }
 
 InputRef::InputRef(Stage* stage, size_t index) : stage_(stage), index_(index) {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
 }
 
 Input& InputRef::actual() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return stage_->input(index_);
 }
 
@@ -70,22 +70,22 @@ bool InputRef::valid() const {
 }
 
 bool OutputRef::connected() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return actual().connected();
 }
 
 const InputRef& OutputRef::mate() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return actual().mate();
 }
 
 OutputRef::OutputRef(Stage* stage, size_t index)
     : stage_(stage), index_(index) {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
 }
 
 Output& OutputRef::actual() const {
-  DCHECK(valid());
+  FTL_DCHECK(valid());
   return stage_->output(index_);
 }
 

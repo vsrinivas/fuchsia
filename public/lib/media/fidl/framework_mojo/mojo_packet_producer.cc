@@ -12,7 +12,7 @@ namespace media {
 
 MojoPacketProducer::MojoPacketProducer() : binding_(this) {
   task_runner_ = base::MessageLoop::current()->task_runner();
-  DCHECK(task_runner_);
+  FTL_DCHECK(task_runner_);
 }
 
 MojoPacketProducer::~MojoPacketProducer() {}
@@ -40,7 +40,7 @@ void MojoPacketProducer::SetDemandCallback(
 }
 
 Demand MojoPacketProducer::SupplyPacket(PacketPtr packet) {
-  DCHECK(packet);
+  FTL_DCHECK(packet);
 
   bool end_of_stream = packet->end_of_stream();
 
@@ -58,7 +58,7 @@ Demand MojoPacketProducer::SupplyPacket(PacketPtr packet) {
 
 void MojoPacketProducer::Connect(InterfaceHandle<MediaPacketConsumer> consumer,
                                  const ConnectCallback& callback) {
-  DCHECK(consumer);
+  FTL_DCHECK(consumer);
   MediaPacketProducerBase::Connect(
       MediaPacketConsumerPtr::Create(std::move(consumer)).Pass(), callback);
 }
@@ -81,18 +81,18 @@ void MojoPacketProducer::ReleasePayloadBuffer(void* buffer) {
 
 void MojoPacketProducer::OnDemandUpdated(uint32_t min_packets_outstanding,
                                          int64_t min_pts) {
-  DCHECK(demand_callback_);
+  FTL_DCHECK(demand_callback_);
   demand_callback_(CurrentDemand());
 }
 
 void MojoPacketProducer::SendPacket(Packet* packet_raw_ptr) {
-  DCHECK(packet_raw_ptr);
+  FTL_DCHECK(packet_raw_ptr);
 
   ProducePacket(packet_raw_ptr->payload(), packet_raw_ptr->size(),
                 packet_raw_ptr->pts(), packet_raw_ptr->end_of_stream(),
                 [this, packet_raw_ptr]() {
                   PacketPtr packet = PacketPtr(packet_raw_ptr);
-                  DCHECK(demand_callback_);
+                  FTL_DCHECK(demand_callback_);
                   demand_callback_(CurrentDemand());
                 });
 }

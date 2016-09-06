@@ -52,7 +52,7 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
           result = new LpcmReformatterImpl<uint8_t, float>(in_type, out_type);
           break;
         default:
-          NOTREACHED() << "unsupported sample format";
+          FTL_DCHECK(false) << "unsupported sample format";
           result = nullptr;
           break;
       }
@@ -73,7 +73,7 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
           result = new LpcmReformatterImpl<int16_t, float>(in_type, out_type);
           break;
         default:
-          NOTREACHED() << "unsupported sample format";
+          FTL_DCHECK(false) << "unsupported sample format";
           result = nullptr;
           break;
       }
@@ -94,7 +94,7 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
           result = new LpcmReformatterImpl<int32_t, float>(in_type, out_type);
           break;
         default:
-          NOTREACHED() << "unsupported sample format";
+          FTL_DCHECK(false) << "unsupported sample format";
           result = nullptr;
           break;
       }
@@ -115,13 +115,13 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
           result = new LpcmReformatterImpl<float, float>(in_type, out_type);
           break;
         default:
-          NOTREACHED() << "unsupported sample format";
+          FTL_DCHECK(false) << "unsupported sample format";
           result = nullptr;
           break;
       }
       break;
     default:
-      NOTREACHED() << "unsupported sample format";
+      FTL_DCHECK(false) << "unsupported sample format";
       result = nullptr;
       break;
   }
@@ -134,16 +134,15 @@ LpcmReformatterImpl<TIn, TOut>::LpcmReformatterImpl(
     const AudioStreamType& in_type,
     const AudioStreamTypeSet& out_type)
     : in_type_(in_type),
-      out_type_(
-          in_type.encoding(),
-          nullptr,
-          out_type.sample_format() == AudioStreamType::SampleFormat::kAny
-              ? in_type.sample_format()
-              : out_type.sample_format(),
-          in_type.channels(),
-          in_type.frames_per_second()) {
-  DCHECK(in_type.encoding() == StreamType::kAudioEncodingLpcm);
-  DCHECK(in_type.encoding_parameters() == nullptr);
+      out_type_(in_type.encoding(),
+                nullptr,
+                out_type.sample_format() == AudioStreamType::SampleFormat::kAny
+                    ? in_type.sample_format()
+                    : out_type.sample_format(),
+                in_type.channels(),
+                in_type.frames_per_second()) {
+  FTL_DCHECK(in_type.encoding() == StreamType::kAudioEncodingLpcm);
+  FTL_DCHECK(in_type.encoding_parameters() == nullptr);
 }
 
 template <typename TIn, typename TOut>
@@ -230,9 +229,9 @@ bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
     bool new_input,
     PayloadAllocator* allocator,
     PacketPtr* output) {
-  DCHECK(input);
-  DCHECK(allocator);
-  DCHECK(output);
+  FTL_DCHECK(input);
+  FTL_DCHECK(allocator);
+  FTL_DCHECK(output);
 
   uint64_t in_size = input->size();
   if (in_size == 0) {
@@ -247,7 +246,7 @@ bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
 
   void* buffer = allocator->AllocatePayloadBuffer(out_size);
   if (buffer == nullptr) {
-    LOG(WARNING) << "lpcm reformatter starved for buffers";
+    FTL_LOG(WARNING) << "lpcm reformatter starved for buffers";
     // Starved for buffer space. Can't process now.
     *output = nullptr;
     return false;

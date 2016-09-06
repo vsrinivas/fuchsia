@@ -9,7 +9,7 @@
 
 #include <limits>
 
-#include "mojo/public/cpp/environment/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {
@@ -77,20 +77,20 @@ class TimelineRate {
     // than kFloatFactor. kFloatFactor's value was chosen because floats have
     // a 23-bit mantissa, and operations with a larger factor would sacrifice
     // precision.
-    MOJO_DCHECK(rate_as_float >= 0.0f);
+    FTL_DCHECK(rate_as_float >= 0.0f);
     Reduce(&subject_delta_, &reference_delta_);
   }
 
   TimelineRate(uint32_t subject_delta, uint32_t reference_delta)
       : subject_delta_(subject_delta), reference_delta_(reference_delta) {
-    MOJO_DCHECK(reference_delta != 0);
+    FTL_DCHECK(reference_delta != 0);
     Reduce(&subject_delta_, &reference_delta_);
   }
 
   // Returns the inverse of the rate. DCHECKs if the subject_delta of this
   // rate is zero.
   TimelineRate Inverse() const {
-    MOJO_DCHECK(subject_delta_ != 0);
+    FTL_DCHECK(subject_delta_ != 0);
     return TimelineRate(reference_delta_, subject_delta_);
   }
 
