@@ -300,7 +300,7 @@ void ProcessDispatcher::SetState(State s) {
         aspace_->Destroy();
 
         // signal waiter
-        LTRACEF_LEVEL(2, "signalling waiters\n");
+        LTRACEF_LEVEL(2, "signaling waiters\n");
         state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_SIGNALED);
 
         {
@@ -481,7 +481,7 @@ mx_status_t ProcessDispatcher::Unmap(uintptr_t address, mx_size_t len) {
     mx_status_t status;
 
     // TODO: support range unmapping
-    // at the moment only support unmapping what is at a given address, signalled with len = 0
+    // at the moment only support unmapping what is at a given address, signaled with len = 0
     if (len != 0)
         return ERR_INVALID_ARGS;
 

@@ -17,7 +17,7 @@ typedef struct {
 
 // Returns ERR_TIMED_OUT if timeout elapses, and NO_ERROR if woken by
 // a call to completion_wake or if the completion has already been
-// signalled.
+// signaled.
 mx_status_t completion_wait(completion_t* completion, mx_time_t timeout);
 
 // Awakens all waiters on the completion, and marks the it as
@@ -25,7 +25,7 @@ mx_status_t completion_wait(completion_t* completion, mx_time_t timeout);
 // completion will also see the signal and immediately return.
 void completion_signal(completion_t* completion);
 
-// Resets the completion's signalled state to unsignaled.
+// Resets the completion's signaled state to unsignaled.
 void completion_reset(completion_t* completion);
 
 __END_CDECLS;

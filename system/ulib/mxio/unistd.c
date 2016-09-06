@@ -235,7 +235,7 @@ void __libc_extensions_init(uint32_t handle_count,
             break;
         case MX_HND_TYPE_MXIO_REMOTE:
             // remote objects may have a second handle
-            // which is for signalling events
+            // which is for signaling events
             if (((n + 1) < handle_count) &&
                 (handle_info[n] == handle_info[n + 1])) {
                 mxio_fdtab[arg] = mxio_remote_create(h, handle[n + 1]);

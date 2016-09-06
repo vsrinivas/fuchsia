@@ -33,7 +33,7 @@ public:
         INITIAL,     // newly created thread
         INITIALIZED, // LK thread state is initialized
         RUNNING,     // thread is running
-        DYING,       // thread has been signalled for kill, but has not exited yet
+        DYING,       // thread has been signaled for kill, but has not exited yet
         DEAD,        // thread has exited and is not running
     };
 

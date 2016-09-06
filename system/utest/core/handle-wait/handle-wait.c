@@ -84,7 +84,7 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     return true;
 }
 
-static bool wait_signalled(mx_handle_t handle, enum wait_result* result) {
+static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     mx_signals_state_t signals_state;
     mx_signals_t signals = MX_SIGNAL_SIGNALED;
     int64_t timeout = MX_TIME_INFINITE;
@@ -95,7 +95,7 @@ static bool wait_signalled(mx_handle_t handle, enum wait_result* result) {
     }
     ASSERT_GE(status, 0, "handle wait one failed");
     ASSERT_NEQ(signals_state.satisfied & MX_SIGNAL_SIGNALED, 0u,
-               "unexpected return in wait_signalled");
+               "unexpected return in wait_signaled");
     *result = WAIT_SIGNALLED;
     return true;
 }
@@ -167,7 +167,7 @@ static bool msg_loop(mx_handle_t pipe) {
             send_msg(pipe, MSG_PONG);
             break;
         case MSG_WAIT_THREAD2:
-            ASSERT_TRUE(wait_signalled(thread2_handle, &result),
+            ASSERT_TRUE(wait_signaled(thread2_handle, &result),
                         "Error during wait signal call");
             switch (result) {
             case WAIT_SIGNALLED:
@@ -237,8 +237,8 @@ bool handle_wait_test(void) {
     send_msg(thread1_pipe[0], MSG_EXIT);
     send_msg(thread2_pipe[0], MSG_EXIT);
     enum wait_result result;
-    wait_signalled(thread1_handle, &result);
-    wait_signalled(thread2_handle_dup, &result);
+    wait_signaled(thread1_handle, &result);
+    wait_signaled(thread2_handle_dup, &result);
     END_TEST;
 }
 

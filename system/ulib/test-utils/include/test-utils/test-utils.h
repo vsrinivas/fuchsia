@@ -82,10 +82,10 @@ void tu_message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
 // The call fails and the process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
 bool tu_wait_readable(mx_handle_t handle);
 
-// Wait for |handle| to be signalled (MX_SIGNAL_SIGNALED).
+// Wait for |handle| to be signaled (MX_SIGNAL_SIGNALED).
 // The call fails and the process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
 
-void tu_wait_signalled(mx_handle_t handle);
+void tu_wait_signaled(mx_handle_t handle);
 
 // Fetch the return code of |process|.
 

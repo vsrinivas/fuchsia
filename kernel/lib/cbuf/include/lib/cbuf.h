@@ -118,7 +118,7 @@ static inline size_t cbuf_peek_write(cbuf_t *cbuf, iovec_t *regions) {
  * @param[in] len The maximum number of bytes to write to the cbuf.
  * @param[in] flags May contain any valid combination of CBUF_WRITE_FLAGS.
  *   - CBUF_WRITE_FLAG_CANRECHEDULE Signals rescheduling policy passed through
- *     to the internal event when signalling the event to indicate that there is
+ *     to the internal event when signaling the event to indicate that there is
  *     now data in the buffer to be read.
  *   - CBUF_WRITE_FLAG_NOFILL When set, and the buf parameter is NULL, do not
  *     fill the internal cbuf with zeros.  Instead, simply advance the write

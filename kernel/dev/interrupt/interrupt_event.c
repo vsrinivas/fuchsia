@@ -19,7 +19,7 @@
 typedef struct interrupt_event_impl {
     int magic;
     struct list_node node;
-    bool signalled;
+    bool signaled;
     int woken_count;
     unsigned int vector;
     uint flags;
@@ -29,7 +29,7 @@ typedef struct interrupt_event_impl {
 #define INTERRUPT_EVENT_INITIAL_VALUE(iei, initial, _vector, _flags) \
 { \
     .magic = INTERRUPT_EVENT_MAGIC, \
-    .signalled = initial, \
+    .signaled = initial, \
     .woken_count = 0, \
     .vector = _vector, \
     .flags = _flags, \
@@ -64,8 +64,8 @@ static enum handler_return interrupt_event_int_handler(void *arg)
     // wait up threads waiting for this interrupt
     iei->woken_count = wait_queue_wake_all(&iei->wait, false, NO_ERROR);
     if (iei->woken_count <= 0) {
-        // if no threads are woken up, mark the interrupt as signalled
-        iei->signalled = true;
+        // if no threads are woken up, mark the interrupt as signaled
+        iei->signaled = true;
     }
 
     THREAD_UNLOCK(state);
@@ -131,7 +131,7 @@ void interrupt_destroy(interrupt_event_t ie)
     THREAD_LOCK(state);
 
     iei->magic = 0;
-    iei->signalled = false;
+    iei->signaled = false;
     iei->flags = 0;
     wait_queue_destroy(&iei->wait, true);
 
@@ -147,9 +147,9 @@ status_t interrupt_event_wait(interrupt_event_t ie)
 
     THREAD_LOCK(state);
 
-    if (iei->signalled) {
+    if (iei->signaled) {
         // has pending interrupt, fall through
-        iei->signalled = false;
+        iei->signaled = false;
     } else {
         ret = wait_queue_block(&iei->wait, INFINITE_TIME);
     }

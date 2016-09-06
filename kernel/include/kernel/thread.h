@@ -194,7 +194,7 @@ status_t thread_detach_and_resume(thread_t *t);
 status_t thread_set_real_time(thread_t *t);
 
 /* wait for at least delay amount of time. interruptable may return early with ERR_INTERRUPTED
- * if thread is signalled for kill.
+ * if thread is signaled for kill.
  */
 status_t thread_sleep_etc(lk_time_t delay, bool interruptable);
 

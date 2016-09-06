@@ -19,7 +19,7 @@ __BEGIN_CDECLS;
 
 typedef struct event {
     int magic;
-    bool signalled;
+    bool signaled;
     uint flags;
     wait_queue_t wait;
 } event_t;
@@ -29,7 +29,7 @@ typedef struct event {
 #define EVENT_INITIAL_VALUE(e, initial, _flags) \
 { \
     .magic = EVENT_MAGIC, \
-    .signalled = initial, \
+    .signaled = initial, \
     .flags = _flags, \
     .wait = WAIT_QUEUE_INITIAL_VALUE((e).wait), \
 }

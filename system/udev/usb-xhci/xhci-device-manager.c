@@ -537,7 +537,7 @@ static int xhci_device_thread(void* arg) {
         mtx_unlock(&xhci->command_queue_mutex);
 
         if (!command) {
-            printf("ERROR: command_queue_completion was signalled, but no command was found");
+            printf("ERROR: command_queue_completion was signaled, but no command was found");
             break;
         }
 

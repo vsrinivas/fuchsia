@@ -50,7 +50,7 @@ public:
     // under the StateTracker's mutex.
     virtual void OnDidCancel() = 0;
 
-    // True if this StateObserver may be signalled (OnStateChange) safely from an IRQ context.
+    // True if this StateObserver may be signaled (OnStateChange) safely from an IRQ context.
     // StateObserver implementations which claim to be "irq safe" must take care to only perform
     // operations which are safe to perform from either a thread or an irq context.  In
     // particular...
@@ -58,7 +58,7 @@ public:
     // ++ Synchronization should be done using things like atomic operations and spin_locks with
     //    IRQs disabled.  Mutexes, or anything which might attempt to suspend a thread are not
     //    allowed.
-    // ++ Triggering a reschedule event (usually via signalling an event_t) is not allowed.
+    // ++ Triggering a reschedule event (usually via signaling an event_t) is not allowed.
     // ++ Sleeping is not allowed.
     // ++ O(n) operations are not allowed.
     bool irq_safe() const { return irq_disposition_ == IrqDisposition::IRQ_SAFE; }

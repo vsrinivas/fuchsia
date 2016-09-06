@@ -905,7 +905,7 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
  * other threads are running.  When the timer expires, this thread will
  * be placed at the head of the run queue.
  *
- * interruptable argument allows this routine to return early if the thread was signalled
+ * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
 status_t thread_sleep_etc(lk_time_t delay, bool interruptable)

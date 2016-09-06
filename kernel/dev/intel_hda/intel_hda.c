@@ -409,9 +409,9 @@ pcie_irq_handler_retval_t intel_hda_pci_irq_handler(struct pcie_device_state* pc
     REG_CLR_BITS(32, r, intctl, HDA_REG_INTCTL_GIE);
 
     /* Add this device to the work thread's pending work list, and make certain
-     * that it is signalled to wake up.  If the pending work list was not
+     * that it is signaled to wake up.  If the pending work list was not
      * already empty, then we should be able to assert that the thread is
-     * currently being signalled and that there is no need to force an immediate
+     * currently being signaled and that there is no need to force an immediate
      * reschedule.  If we just went from 0 devices to 1 device on the pending
      * work list, we need to make sure to wake up the work thread and request a
      * resched. */

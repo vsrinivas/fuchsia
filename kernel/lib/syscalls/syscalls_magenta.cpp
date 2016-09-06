@@ -1274,7 +1274,7 @@ mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, m
         return ERR_INVALID_ARGS;
 
     // TODO: support range protect
-    // at the moment only support protecting what is at a given address, signalled with len = 0
+    // at the moment only support protecting what is at a given address, signaled with len = 0
     if (len != 0)
         return ERR_INVALID_ARGS;
 

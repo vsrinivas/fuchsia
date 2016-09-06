@@ -342,7 +342,7 @@ static bool thread_set_close_set_test(void)
         tu_thread_create(thread_func, (void*) (uintptr_t) their_pipe, "thread-set-close-set");
     test_set_close_set("thread", thread);
     send_msg(our_pipe, MSG_DONE);
-    tu_wait_signalled(thread);
+    tu_wait_signaled(thread);
     END_TEST;
 }
 
@@ -354,7 +354,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
     mx_koid_t tid;
     test_received_exception(eport, kind, child, false, &tid);
     resume_thread_from_exception(child, tid);
-    tu_wait_signalled(child);
+    tu_wait_signaled(child);
 
     tu_handle_close(child);
     tu_handle_close(eport);
@@ -429,7 +429,7 @@ static bool process_gone_notification_test(void)
     ASSERT_EQ(tid, 0u, "tid not zero");
     // there's no reply to a "gone" notification
 
-    tu_wait_signalled(child);
+    tu_wait_signaled(child);
     tu_handle_close(child);
 
     tu_handle_close(eport);
@@ -457,7 +457,7 @@ static bool thread_gone_notification_test(void)
     ASSERT_GT(tid, 0u, "tid not >= 0");
     // there's no reply to a "gone" notification
 
-    tu_wait_signalled(thread);
+    tu_wait_signaled(thread);
     tu_handle_close(thread);
 
     tu_handle_close(eport);
@@ -489,6 +489,6 @@ int main(int argc, char **argv)
     bool success = unittest_run_all_tests(argc, argv);
 
     done_tests = true;
-    tu_wait_signalled(watchdog_thread_handle);
+    tu_wait_signaled(watchdog_thread_handle);
     return success ? 0 : -1;
 }

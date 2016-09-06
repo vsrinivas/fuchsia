@@ -144,7 +144,7 @@ bool tu_wait_readable(mx_handle_t handle)
     return true;
 }
 
-void tu_wait_signalled(mx_handle_t handle)
+void tu_wait_signaled(mx_handle_t handle)
 {
     mx_signals_t signals = MX_SIGNAL_SIGNALED;
     mx_signals_state_t signals_state;
@@ -200,7 +200,7 @@ int tu_process_get_return_code(mx_handle_t process)
 
 int tu_process_wait_exit(mx_handle_t process)
 {
-    tu_wait_signalled(process);
+    tu_wait_signaled(process);
     return tu_process_get_return_code(process);
 }
 
