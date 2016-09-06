@@ -13,6 +13,8 @@ import subprocess
 import sys
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+PREBUILTS_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(SCRIPT_DIR), "prebuilt",
+                                                  "downloads"))
 
 name_to_full_path = {}
 
@@ -63,6 +65,17 @@ def find_dso_full_path(dso, exe_name, build_dirs):
     return found_path
 
 
+def addr2line_path(arch):
+    if sys.platform.startswith("linux"):
+        platform = "Linux"
+    elif sys.platform.startswith("darwin"):
+        platform = "Darwin"
+    else:
+        raise Exception("Unsupported platform!")
+    return "%s/%s-elf-6.1.0-%s-x86_64/bin/%s-elf-addr2line" % (PREBUILTS_BASE_DIR, arch, platform,
+                                                               arch)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Symbolize a crash from Magenta's crash logger")
@@ -74,7 +87,7 @@ def main():
     magenta_build_dir = os.path.join(
         os.path.dirname(SCRIPT_DIR), "build-magenta-pc-x86-64")
     build_dirs = [magenta_build_dir]
-    if args.build_dir is not None:
+    if args.build_dir:
         build_dirs += args.build_dir
     else:
         fuchsia_build_dir = os.path.abspath(os.path.join(
@@ -84,24 +97,35 @@ def main():
     btre = re.compile("^.* U bt#(\d+):")
     bt_with_offsetre = re.compile(
         "^.* U bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
+    arch_re = re.compile("^.* U arch: ([\\S]+)$")
+    arch = "x86_64"
     processed_lines = []
     while True:
         line = sys.stdin.readline()
         if not sys.stdin.isatty():
             sys.stdout.write(line)
-        if line.find(" U bt#") >= 0:
+        if line.find(" U ") >= 0:
+            m = arch_re.match(line)
+            if m:
+                arch = m.group(1)
+                continue
             m = btre.match(line)
-            if m is not None:
+            if m:
                 frame_num = m.group(1)
                 m = bt_with_offsetre.match(line)
-                if m is not None:
+                if m:
                     dso = m.group(2)
                     off = m.group(3)
                     dso_full_path = find_dso_full_path(
                         dso, args.app, build_dirs)
                     if dso_full_path:
-                        cmd = ["addr2line", "-Cipfe", dso_full_path, off]
-                        addr2line_output = subprocess.check_output(cmd)
+                        cmd = [
+                            addr2line_path(arch), "-Cipfe", dso_full_path, off]
+                        try:
+                            addr2line_output = subprocess.check_output(cmd)
+                        except Exception as e:
+                            print "Calling addr2line failed: command %s error %s" % (cmd, e)
+                            continue
                         processed_lines.append(
                             "#%s: %s" % (frame_num, addr2line_output))
                         continue
@@ -113,7 +137,7 @@ def main():
                 print "end of symbolized stack"
                 processed_lines = []
             if line == "":
-                break;
+                break
 
 if __name__ == '__main__':
     sys.exit(main())
