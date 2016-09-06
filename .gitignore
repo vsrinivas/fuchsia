@@ -19,6 +19,6 @@ clang-format
 *_BASE_*
 *.sublime-*
 /out*
-/prebuilt/downloads/*
+/prebuilt/downloads/
 /prebuilt/config.mk
 /prebuilt/config.mk.bak
