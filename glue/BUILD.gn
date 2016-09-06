@@ -10,10 +10,6 @@ source_set("glue") {
     "crypto/hash.h",
     "crypto/rand.cc",
     "crypto/rand.h",
-    "files/file_util.cc",
-    "files/file_util.h",
-    "files/scoped_temp_dir.cc",
-    "files/scoped_temp_dir.h",
   ]
 
   deps = [

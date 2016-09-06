@@ -11,8 +11,6 @@
 #include "apps/ledger/abax/page_impl.h"
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/ledger/glue/crypto/rand.h"
-#include "apps/ledger/glue/files/file_util.h"
-#include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
