@@ -4,6 +4,15 @@
 
 #include "lib/ftl/files/scoped_temp_dir.h"
 
+#include "lib/ftl/build_config.h"
+
+// mkdtemp - required include file
+#if defined(OS_MACOSX)
+#include <unistd.h>
+#else
+#include <stdlib.h>
+#endif
+
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"
 
