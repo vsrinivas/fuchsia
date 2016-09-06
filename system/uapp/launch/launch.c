@@ -262,8 +262,8 @@ int main(int argc, char** argv) {
                                 MX_TIME_INFINITE, &state);
     check("mx_handle_wait_one", status);
 
-    mx_process_info_t info;
-    mx_ssize_t n = mx_object_get_info(proc, MX_INFO_PROCESS,
+    mx_info_process_t info;
+    mx_ssize_t n = mx_object_get_info(proc, MX_INFO_PROCESS, sizeof(info.rec),
                                       &info, sizeof(info));
     check("mx_object_get_info", n);
     if (n != (mx_ssize_t)sizeof(info)) {
@@ -272,6 +272,6 @@ int main(int argc, char** argv) {
         exit(2);
     }
 
-    printf("Process finished with return code %d\n", info.return_code);
-    return info.return_code;
+    printf("Process finished with return code %d\n", info.rec.return_code);
+    return info.rec.return_code;
 }

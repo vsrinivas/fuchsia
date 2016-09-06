@@ -138,7 +138,7 @@ typedef enum {
 
 // Valid topics for mx_object_get_info.
 typedef enum {
-    MX_INFO_HANDLE_VALID,
+    MX_INFO_HANDLE_VALID = 1,
     MX_INFO_HANDLE_BASIC,
     MX_INFO_PROCESS,
 } mx_object_info_topic_t;
@@ -169,19 +169,39 @@ typedef enum {
     MX_OBJ_PROP_WAITABLE        = 1,
 } mx_obj_props_t;
 
-// Returned for topic MX_INFO_HANDLE_BASIC
-typedef struct mx_handle_basic_info {
+// Common MX_INFO header
+typedef struct mx_info_header {
+    uint32_t topic;              // identifies the info struct
+    uint16_t avail_topic_size;   // “native” size of the struct
+    uint16_t topic_size;         // size of the returned struct (<=topic_size)
+    uint32_t avail_count;        // number of records the kernel has
+    uint32_t count;              // number of records returned (limited by buffer size)
+} mx_info_header_t;
+
+#define mx_info_nth_record(rec, n) (&(rec)[n])
+
+typedef struct mx_record_handle_basic {
     mx_koid_t koid;
     mx_rights_t rights;
     uint32_t type;                // mx_obj_type_t;
     uint32_t props;               // mx_obj_props_t;
-} mx_handle_basic_info_t;
+} mx_record_handle_basic_t;
+
+// Returned for topic MX_INFO_HANDLE_BASIC
+typedef struct mx_info_handle_basic {
+    mx_info_header_t hdr;
+    mx_record_handle_basic_t rec;
+} mx_info_handle_basic_t;
+
+typedef struct mx_record_process {
+    int return_code;
+} mx_record_process_t;
 
 // Returned for topic MX_INFO_PROCESS
-typedef struct mx_process_info {
-    int return_code;
-} mx_process_info_t;
-
+typedef struct mx_info_process {
+    mx_info_header_t hdr;
+    mx_record_process_t rec;
+} mx_info_process_t;
 
 // Defines and structures related to mx_pci_*()
 // Info returned to dev manager for PCIe devices when probing.

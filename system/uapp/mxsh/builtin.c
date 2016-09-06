@@ -315,8 +315,9 @@ static int mxc_runtests(int argc, char** argv) {
         }
 
         // read the return code
-        mx_process_info_t proc_info;
-        mx_ssize_t info_status = mx_object_get_info(handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info));
+        mx_info_process_t proc_info;
+        mx_ssize_t info_status = mx_object_get_info(handle, MX_INFO_PROCESS, sizeof(proc_info.rec),
+                &proc_info, sizeof(proc_info));
         mx_handle_close(handle);
 
         if (info_status != sizeof(proc_info)) {
@@ -326,11 +327,11 @@ static int mxc_runtests(int argc, char** argv) {
             continue;
         }
 
-        if (proc_info.return_code == 0) {
+        if (proc_info.rec.return_code == 0) {
             printf("PASSED: %s passed\n", de->d_name);
         } else {
-            printf("FAILED: %s exited with nonzero status: %d\n", de->d_name, proc_info.return_code);
-            mxc_fail_test(&failures, de->d_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
+            printf("FAILED: %s exited with nonzero status: %d\n", de->d_name, proc_info.rec.return_code);
+            mxc_fail_test(&failures, de->d_name, FAILED_NONZERO_RETURN_CODE, proc_info.rec.return_code);
             failed_count++;
         }
     }

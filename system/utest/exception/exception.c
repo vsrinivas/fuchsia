@@ -138,18 +138,18 @@ static bool test_received_exception(mx_handle_t eport,
         mx_handle_t debug_child = mx_debug_task_get_child(MX_HANDLE_INVALID, report->context.pid);
         if (debug_child < 0)
             tu_fatal("mx_process_debug", debug_child);
-        mx_handle_basic_info_t process_info;
+        mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(debug_child, &process_info);
-        ASSERT_EQ(process_info.koid, report->context.pid, "mx_process_debug got pid mismatch");
+        ASSERT_EQ(process_info.rec.koid, report->context.pid, "mx_process_debug got pid mismatch");
         tu_handle_close(debug_child);
     } else if (strcmp(kind, "process") == 0) {
         mx_handle_t self = mx_process_self();
         mx_handle_t debug_child = mx_debug_task_get_child(self, report->context.pid);
         if (debug_child < 0)
             tu_fatal("mx_process_debug", debug_child);
-        mx_handle_basic_info_t process_info;
+        mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(debug_child, &process_info);
-        ASSERT_EQ(process_info.koid, report->context.pid, "mx_process_debug got pid mismatch");
+        ASSERT_EQ(process_info.rec.koid, report->context.pid, "mx_process_debug got pid mismatch");
         tu_handle_close(debug_child);
     } else if (strcmp(kind, "thread") == 0) {
         // TODO(dje)
@@ -157,9 +157,9 @@ static bool test_received_exception(mx_handle_t eport,
 
     // Verify the exception was from |process|.
     if (process != MX_HANDLE_INVALID) {
-        mx_handle_basic_info_t process_info;
+        mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(process, &process_info);
-        ASSERT_EQ(process_info.koid, report->context.pid, "wrong process in exception report");
+        ASSERT_EQ(process_info.rec.koid, report->context.pid, "wrong process in exception report");
     }
 
     unittest_printf("exception received from %s handler: pid %llu, tid %llu\n",

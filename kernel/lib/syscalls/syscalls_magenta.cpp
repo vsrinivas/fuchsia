@@ -359,65 +359,122 @@ mx_handle_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights) {
     return replacement_hv;
 }
 
-mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, mxtl::user_ptr<void> _info,
-                               mx_size_t info_size) {
+mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topic_size,
+                            mxtl::user_ptr<void> _buffer, mx_size_t buffer_size) {
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return up->BadHandle(handle, ERR_BAD_HANDLE);
+    LTRACEF("handle %u topic %u topic_size %u buffer %p buffer_size %lu\n",
+            handle, topic, topic_size, _buffer.get(), buffer_size);
 
     switch (topic) {
-        case MX_INFO_HANDLE_VALID:
+        case MX_INFO_HANDLE_VALID: {
+            mxtl::RefPtr<Dispatcher> dispatcher;
+            uint32_t rights;
+
+            // test that the handle is valid at all, return error if it's not
+            if (!up->GetDispatcher(handle, &dispatcher, &rights))
+                return ERR_BAD_HANDLE;
             return NO_ERROR;
+        }
         case MX_INFO_HANDLE_BASIC: {
-            if (!_info)
+            mxtl::RefPtr<Dispatcher> dispatcher;
+            uint32_t rights;
+
+            if (!up->GetDispatcher(handle, &dispatcher, &rights))
+                return up->BadHandle(handle, ERR_BAD_HANDLE);
+
+            // test that they've asking for an appropriate version
+            if (topic_size != 0 && topic_size != sizeof(mx_record_handle_basic_t))
                 return ERR_INVALID_ARGS;
 
-            if (info_size < sizeof(mx_handle_basic_info_t))
+            // make sure they passed us a buffer
+            if (!_buffer)
+                return ERR_INVALID_ARGS;
+
+            // test that we have at least enough target buffer to support the header and one record
+            if (buffer_size < sizeof(mx_info_header_t) + topic_size)
                 return ERR_NOT_ENOUGH_BUFFER;
 
-            bool waitable = dispatcher->get_state_tracker() &&
-                            dispatcher->get_state_tracker()->is_waitable();
-            mx_handle_basic_info_t info = {
-                dispatcher->get_koid(),
-                rights,
-                dispatcher->get_type(),
-                waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE
-            };
+            // build the info structure
+            mx_info_handle_basic_t info = {};
 
-            if (copy_to_user(_info.reinterpret<uint8_t>(), &info, sizeof(info)) != NO_ERROR)
+            // fill in the header
+            info.hdr.topic = topic;
+            info.hdr.avail_topic_size = sizeof(info.rec);
+            info.hdr.topic_size = topic_size;
+            info.hdr.avail_count = 1;
+            info.hdr.count = 1;
+
+            mx_size_t tocopy;
+            if (topic_size == 0) {
+                // just copy the header
+                tocopy = sizeof(info.hdr);
+            } else {
+                bool waitable = dispatcher->get_state_tracker() &&
+                            dispatcher->get_state_tracker()->is_waitable();
+
+                // copy the header and the record
+                info.rec.koid = dispatcher->get_koid();
+                info.rec.rights = rights;
+                info.rec.type = dispatcher->get_type();
+                info.rec.props = waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE;
+
+                tocopy = sizeof(info);
+            }
+
+            if (copy_to_user(_buffer.reinterpret<uint8_t>(), &info, tocopy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
 
-            return sizeof(mx_handle_basic_info_t);
+            return tocopy;
         }
         case MX_INFO_PROCESS: {
-            if (!_info)
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ProcessDispatcher> process;
+            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
+            if (error < 0)
+                return error;
+
+            // test that they've asking for an appropriate version
+            if (topic_size != 0 && topic_size != sizeof(mx_record_process_t))
                 return ERR_INVALID_ARGS;
 
-            if (info_size < sizeof(mx_process_info_t))
+            // make sure they passed us a buffer
+            if (!_buffer)
+                return ERR_INVALID_ARGS;
+
+            // test that we have at least enough target buffer to support the header and one record
+            if (buffer_size < sizeof(mx_info_header_t) + topic_size)
                 return ERR_NOT_ENOUGH_BUFFER;
 
-            auto process = dispatcher->get_specific<ProcessDispatcher>();
-            if (!process)
-                return ERR_WRONG_TYPE;
+            // build the info structure
+            mx_info_process_t info = {};
 
-            if (!magenta_rights_check(rights, MX_RIGHT_READ))
-                return ERR_ACCESS_DENIED;
+            // fill in the header
+            info.hdr.topic = topic;
+            info.hdr.avail_topic_size = sizeof(info.rec);
+            info.hdr.topic_size = topic_size;
+            info.hdr.avail_count = 1;
+            info.hdr.count = 1;
 
-            mx_process_info_t info;
-            auto err = process->GetInfo(&info);
-            if (err != NO_ERROR)
-                return err;
+            mx_size_t tocopy;
+            if (topic_size == 0) {
+                // just copy the header
+                tocopy = sizeof(info.hdr);
+            } else {
+                auto err = process->GetInfo(&info.rec);
+                if (err != NO_ERROR)
+                    return err;
 
-            if (copy_to_user(_info.reinterpret<uint8_t>(), &info, sizeof(info)) != NO_ERROR)
+                tocopy = sizeof(info);
+            }
+
+            if (copy_to_user(_buffer.reinterpret<uint8_t>(), &info, tocopy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
 
-            return sizeof(mx_process_info_t);
+            return tocopy;
         }
         default:
-            return ERR_INVALID_ARGS;
+            return ERR_NOT_FOUND;
     }
 }
 

@@ -186,8 +186,8 @@ mx_handle_t tu_launch_mxio_etc(const char* name,
 
 int tu_process_get_return_code(mx_handle_t process)
 {
-    mx_process_info_t info;
-    mx_ssize_t ret = mx_object_get_info(process, MX_INFO_PROCESS, &info, sizeof(info));
+    mx_info_process_t info;
+    mx_ssize_t ret = mx_object_get_info(process, MX_INFO_PROCESS, sizeof(info.rec), &info, sizeof(info));
     if (ret < 0)
         tu_fatal("get process info", ret);
     if (ret != sizeof(info)) {
@@ -195,7 +195,7 @@ int tu_process_get_return_code(mx_handle_t process)
         unittest_printf("%s: unexpected result from mx_object_get_info\n", __func__);
         exit(TU_FAIL_ERRCODE);
     }
-    return info.return_code;
+    return info.rec.return_code;
 }
 
 int tu_process_wait_exit(mx_handle_t process)
@@ -228,9 +228,9 @@ void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key)
         tu_fatal(__func__, status);
 }
 
-void tu_handle_get_basic_info(mx_handle_t handle, mx_handle_basic_info_t* info)
+void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info)
 {
-    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC,
+    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info->rec),
                                             info, sizeof(*info));
     if (status < 0)
         tu_fatal(__func__, status);

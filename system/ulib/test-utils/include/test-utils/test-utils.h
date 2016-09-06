@@ -109,6 +109,6 @@ void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key);
 
 // Get basic handle info for |handle|.
 
-void tu_handle_get_basic_info(mx_handle_t handle, mx_handle_basic_info_t* info);
+void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info);
 
 __END_CDECLS

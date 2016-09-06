@@ -126,7 +126,7 @@ public:
     void Exit(int retcode);
     void Kill();
 
-    status_t GetInfo(mx_process_info_t* info);
+    status_t GetInfo(mx_record_process_t* info);
 
     status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
 

@@ -366,7 +366,7 @@ bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
     return true;
 }
 
-status_t ProcessDispatcher::GetInfo(mx_process_info_t* info) {
+status_t ProcessDispatcher::GetInfo(mx_record_process_t* info) {
     info->return_code = retcode_;
 
     return NO_ERROR;
