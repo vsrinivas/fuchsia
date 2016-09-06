@@ -22,3 +22,4 @@ clang-format
 /prebuilt/downloads/
 /prebuilt/config.mk
 /prebuilt/config.mk.bak
+/AnalysisResult/

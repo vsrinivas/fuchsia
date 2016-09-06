@@ -1,0 +1,103 @@
+#!/bin/bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# To apply magenta analyzers when building Magenta, you should build it
+# with Clang. For instructions on how to build Magenta with Clang see
+# https://fuchsia.googlesource.com/manifest/
+# Note: you also need to set your path to point to your clang in
+# TOOLCHAIN_PREFIX.
+
+# These are the default checkers for clang and are always on by defualt,
+# unless they are explicitley disabled
+CHECKERS_TO_DISABLE="\
+  core.CallAndMessage \
+  core.DynamicTypePropagation \
+  core.DivideZero \
+  core.NonNullParamChecker \
+  core.NullDereference \
+  core.StackAddressEscape \
+  core.UndefinedBinaryOperatorResult \
+  core.VLASize \
+  core.builtin.BuiltinFunctions \
+  core.builtin.NoReturnFunctions \
+  core.uninitialized.ArraySubscript \
+  core.uninitialized.Assign \
+  core.uninitialized.Branch \
+  core.uninitialized.CapturedBlockVariable \
+  core.uninitialized.UndefReturn \
+  cplusplus.NewDelete \
+  cplusplus.NewDeleteLeaks \
+  cplusplus.SelfAssignment \
+  deadcode.DeadStores \
+  nullability.NullPassedToNonnull \
+  nullability.NullReturnedFromNonnull \
+  security.insecureAPI.UncheckedReturn \
+  security.insecureAPI.getpw \
+  security.insecureAPI.gets \
+  security.insecureAPI.mkstemp \
+  security.insecureAPI.mktemp \
+  security.insecureAPI.vfork \
+  unix.API \
+  unix.Malloc \
+  unix.MallocSizeof \
+  unix.MismatchedDeallocator \
+  unix.Vfork \
+  unix.cstring.BadSizeArg \
+  unix.cstring.NullArg \
+"
+
+# Magenta specific checkers
+CHECKERS_TO_ENABLE="\
+  magenta.SpinLock \
+  magenta.MutexChecker \
+"
+
+# Disable default checkers
+for i in $CHECKERS_TO_DISABLE; do
+  CHECKERS="$CHECKERS -disable-checker $i"
+done
+
+# Enable magenta checkers
+for i in $CHECKERS_TO_ENABLE; do
+  CHECKERS="$CHECKERS -enable-checker $i"
+done
+
+#echo $CHECKERS
+PREFIX=
+LIB=
+OUT_DIR="AnalysisResult"
+
+function HELP {
+  echo "help:"
+  echo "-p <toolchain prefix> : path to the directory containing bin/clang"
+  echo "-l <libgcc>           : path to libgcc"
+  echo "-o <output dir>       : path to output dir (default: AnalysisResult)"
+  echo "-h for help"
+  exit 1
+}
+
+while getopts "p:l:o:h" opt; do
+  case $opt in
+    p) PREFIX=$OPTARG;;
+    l) LIB=$OPTARG;;
+    o) OUT_DIR=$OPTARG;;
+    h) HELP;;
+    \?)
+      echo "Inavlid option"
+      HELP
+  esac
+done
+
+SCAN_BUILD=$PREFIX/scan-build
+
+$SCAN_BUILD $CHECKERS -o $OUT_DIR make \
+                                      CLANG=1 \
+                                      FUCHSIA=1 \
+                                      TOOLCHAIN_PREFIX=$PREFIX/ \
+                                      LIBGCC=$LIB/ \
+                                      ARCH_x86_64_TOOLCHAIN_PREFIX=$PREFIX/
