@@ -36,30 +36,28 @@ mojo_sdk_source_set("cpp") {
 
   deps = [
     "//apps/media/interfaces",
-    "//mojo/public/cpp/environment",
-    "//mojo/public/cpp/utility",
+    "//lib/ftl",
+    "//mojo/public/cpp/system",
     "//mojo/services/geometry/interfaces",
   ]
 }
 
-# TODO(dalesat): fix the test build
-#executable("apptests") {
-#  output_name = "media_cpp_apptests"
-#
-#  testonly = true
-#
-#  sources = [
-#    "test/shared_buffer_set_allocator_test.cc",
-#    "test/shared_buffer_set_test.cc",
-#    "test/timeline_function_test.cc",
-#    "test/timeline_rate_test.cc",
-#  ]
-#
-#  deps = [
-#    ":cpp",
-#    "//mojo/public/cpp/application:standalone",
-#    "//mojo/public/cpp/application:test_support_standalone",
-#    "//mojo/public/cpp/bindings",
-#    "//mojo/system",
-#  ]
-#}
+executable("apptests") {
+  output_name = "media_cpp_apptests"
+
+  sources = [
+    "test/run_all_tests.cc",
+    "test/shared_buffer_set_allocator_test.cc",
+    "test/shared_buffer_set_test.cc",
+    "test/timeline_function_test.cc",
+    "test/timeline_rate_test.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//mojo/public/cpp/environment:standalone",
+    "//mojo/public/cpp/system",
+    "//mojo/system",
+    "//third_party/gtest",
+  ]
+}

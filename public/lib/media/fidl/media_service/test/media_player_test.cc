@@ -2,20 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mojo/system/main.h>
+
 #include "apps/media/interfaces/media_service.mojom.h"
 #include "apps/media/services/framework_mojo/mojo_formatting.h"
 #include "apps/media/services/media_service/test/fake_renderer.h"
 #include "apps/media/services/media_service/test/fake_wav_reader.h"
+#include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/application/application_test_base.h"
+#include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
+#include "mojo/public/cpp/application/run_application.h"
 
 namespace mojo {
 namespace media {
+namespace test {
 
-class MediaPlayerTest : public test::ApplicationTestBase {
+class MediaPlayerTester : public ApplicationImplBase {
  public:
-  void CreatePlayer() {
+  void OnInitialize() override {
+    FTL_LOG(INFO) << "MediaPlayerTest starting";
+
     MediaServicePtr media_service;
     ConnectToService(shell(), "mojo:media_service", GetProxy(&media_service));
 
@@ -51,6 +58,7 @@ class MediaPlayerTest : public test::ApplicationTestBase {
                                 GetProxy(&media_player_));
 
     HandleStatusUpdates();
+    media_player_->Play();
   }
 
   void HandleStatusUpdates(uint64_t version = MediaPlayer::kInitialStatus,
@@ -58,7 +66,9 @@ class MediaPlayerTest : public test::ApplicationTestBase {
     if (status) {
       if (status->end_of_stream) {
         ended_ = true;
-        base::MessageLoop::current()->QuitWhenIdle();
+        FTL_LOG(INFO) << "MediaPlayerTest "
+                      << (fake_renderer_.expected() ? "SUCCEEDED" : "FAILED");
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
       }
     }
 
@@ -75,13 +85,13 @@ class MediaPlayerTest : public test::ApplicationTestBase {
   bool ended_ = false;
 };
 
-// Tests MediaPlayerTest::Basic.
-TEST_F(MediaPlayerTest, Basic) {
-  CreatePlayer();
-  media_player_->Play();
-  base::RunLoop().Run();
-  EXPECT_TRUE(fake_renderer_.expected());
-}
-
+}  // namespace test
 }  // namespace media
 }  // namespace mojo
+
+MojoResult MojoMain(MojoHandle application_request) {
+  FTL_DCHECK(application_request != MOJO_HANDLE_INVALID)
+      << "Must be hosted by application_manager";
+  mojo::media::test::MediaPlayerTester tester;
+  return mojo::RunApplication(application_request, &tester);
+}

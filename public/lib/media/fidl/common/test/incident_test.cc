@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include "apps/media/services/common/incident.h"
-#include "mojo/public/cpp/application/application_test_base.h"
+
+#include "gtest/gtest.h"
 
 namespace mojo {
 namespace media {
-
-class IncidentTest : public test::ApplicationTestBase {};
+namespace {
 
 // Tests whether Incident::Occur and Incident::Reset have the right effect on
 // Incident::occurred.
-TEST_F(IncidentTest, Basics) {
+TEST(IncidentTest, Basics) {
   Incident under_test;
 
   EXPECT_FALSE(under_test.occurred());
@@ -33,7 +33,7 @@ TEST_F(IncidentTest, Basics) {
 
 // Tests whether a consequence registered with Incident::When runs only after
 // Incident::Occur is called.
-TEST_F(IncidentTest, When_Delayed) {
+TEST(IncidentTest, When_Delayed) {
   Incident under_test;
 
   // These two together should be a no-op.
@@ -50,7 +50,7 @@ TEST_F(IncidentTest, When_Delayed) {
 
 // Tests whether a consequence registered with Incident::When runs immediately
 // when Incident::Occur was called first.
-TEST_F(IncidentTest, When_Immediate) {
+TEST(IncidentTest, When_Immediate) {
   Incident under_test;
 
   under_test.Occur();
@@ -62,7 +62,7 @@ TEST_F(IncidentTest, When_Immediate) {
 
 // Tests whether a consequence registered with Incident::When runs
 // Incident::Reset is called before Incident::Occur (it shouldn't).
-TEST_F(IncidentTest, When_Reset) {
+TEST(IncidentTest, When_Reset) {
   Incident under_test;
 
   bool consequence_ran = false;
@@ -78,7 +78,7 @@ TEST_F(IncidentTest, When_Reset) {
 
 // Tests whether a consequences registered with Incident::When run in the
 // correct order.
-TEST_F(IncidentTest, When_Order) {
+TEST(IncidentTest, When_Order) {
   Incident under_test;
   int sequence_counter = 0;
 
@@ -99,7 +99,7 @@ TEST_F(IncidentTest, When_Order) {
 
 // Tests whether a consequence registered with Incident::When runs when
 // Incident::Occur is never called and the Incident is deleted (it shouldn't).
-TEST_F(IncidentTest, When_After_Delete) {
+TEST(IncidentTest, When_After_Delete) {
   bool consequence_ran = false;
 
   {
@@ -110,11 +110,9 @@ TEST_F(IncidentTest, When_After_Delete) {
   EXPECT_FALSE(consequence_ran);
 }
 
-class ThreadsafeIncidentTest : public test::ApplicationTestBase {};
-
 // Tests whether ThreadsafeIncident::Occur and ThreadsafeIncident::Reset have
 // the right effect on ThreadsafeIncident::occurred.
-TEST_F(ThreadsafeIncidentTest, Basics) {
+TEST(ThreadsafeIncidentTest, Basics) {
   ThreadsafeIncident under_test;
 
   EXPECT_FALSE(under_test.occurred());
@@ -135,7 +133,7 @@ TEST_F(ThreadsafeIncidentTest, Basics) {
 
 // Tests whether a consequence registered with ThreadsafeIncident::When runs
 // only after ThreadsafeIncident::Occur is called.
-TEST_F(ThreadsafeIncidentTest, When_Delayed) {
+TEST(ThreadsafeIncidentTest, When_Delayed) {
   ThreadsafeIncident under_test;
 
   // These two together should be a no-op.
@@ -152,7 +150,7 @@ TEST_F(ThreadsafeIncidentTest, When_Delayed) {
 
 // Tests whether a consequence registered with ThreadsafeIncident::When runs
 // immediately when ThreadsafeIncident::Occur was called first.
-TEST_F(ThreadsafeIncidentTest, When_Immediate) {
+TEST(ThreadsafeIncidentTest, When_Immediate) {
   ThreadsafeIncident under_test;
 
   under_test.Occur();
@@ -165,7 +163,7 @@ TEST_F(ThreadsafeIncidentTest, When_Immediate) {
 // Tests whether a consequence registered with ThreadsafeIncident::When runs
 // ThreadsafeIncident::Reset is called before ThreadsafeIncident::Occur (it
 // shouldn't).
-TEST_F(ThreadsafeIncidentTest, When_Reset) {
+TEST(ThreadsafeIncidentTest, When_Reset) {
   ThreadsafeIncident under_test;
 
   bool consequence_ran = false;
@@ -181,7 +179,7 @@ TEST_F(ThreadsafeIncidentTest, When_Reset) {
 
 // Tests whether a consequences registered with ThreadsafeIncident::When run in
 // the correct order.
-TEST_F(ThreadsafeIncidentTest, When_Order) {
+TEST(ThreadsafeIncidentTest, When_Order) {
   ThreadsafeIncident under_test;
   int sequence_counter = 0;
 
@@ -203,7 +201,7 @@ TEST_F(ThreadsafeIncidentTest, When_Order) {
 // Tests whether a consequence registered with ThreadsafeIncident::When runs
 // when ThreadsafeIncident::Occur is never called and the ThreadsafeIncident is
 // deleted (it shouldn't).
-TEST_F(ThreadsafeIncidentTest, When_After_Delete) {
+TEST(ThreadsafeIncidentTest, When_After_Delete) {
   bool consequence_ran = false;
 
   {
@@ -214,5 +212,6 @@ TEST_F(ThreadsafeIncidentTest, When_After_Delete) {
   EXPECT_FALSE(consequence_ran);
 }
 
+}  // namespace
 }  // namespace media
 }  // namespace mojo

@@ -7,7 +7,8 @@
 #include "mojo/public/cpp/application/run_application.h"
 
 MojoResult MojoMain(MojoHandle application_request) {
-  mojo::ScopedChromiumInit init;
-  mojo::media::MediaFactoryService media_factory_service;
-  return mojo::RunApplication(application_request, &media_factory_service);
+  FTL_DCHECK(application_request != MOJO_HANDLE_INVALID)
+      << "Must be hosted by application_manager";
+  mojo::media::MediaServiceImpl media_service;
+  return mojo::RunApplication(application_request, &media_service);
 }

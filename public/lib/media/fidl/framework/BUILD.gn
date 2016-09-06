@@ -89,24 +89,20 @@ source_set("framework") {
   ]
 }
 
-# TODO(dalesat): fix the test build
-#executable("apptests") {
-#  output_name = "media_framework_apptests"
-#
-#  testonly = true
-#
-#  sources = [
-#    "test/main.cc",
-#    "test/sparse_byte_buffer_test.cc",
-#  ]
-#
-#  deps = [
-#    ":framework",
-#    "//apps/media/services/common",
-#    "//apps/media/services/framework_create",
-#    "//mojo/public/cpp/application",
-#    "//mojo/public/cpp/application:test_support",
-#    "//mojo/public/cpp/bindings",
-#    "//mojo/system",
-#  ]
-#}
+executable("apptests") {
+  output_name = "media_framework_apptests"
+
+  sources = [
+    "test/run_all_tests.cc",
+    "test/sparse_byte_buffer_test.cc",
+  ]
+
+  deps = [
+    ":framework",
+    "//apps/media/services/common",
+    "//apps/media/services/framework_create",
+    "//mojo/public/cpp/bindings",
+    "//mojo/system",
+    "//third_party/gtest",
+  ]
+}

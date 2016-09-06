@@ -2,81 +2,80 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/cpp/shared_buffer_set_allocator.h"
+
 #include <vector>
 
-#include "apps/media/cpp/shared_buffer_set_allocator.h"
-#include "mojo/public/cpp/application/application_test_base.h"
+#include "gtest/gtest.h"
 
 namespace mojo {
 namespace media {
+namespace {
 
-class SharedBufferSetAllocatorTest : public test::ApplicationTestBase {
- public:
-  static const uint64_t kSmallAlloc = 100;
-  static const uint64_t kLargeAlloc = 256 * 1024;
+static const uint64_t kSmallAlloc = 100;
+static const uint64_t kLargeAlloc = 256 * 1024;
 
-  void* AllocateRegion(SharedBufferSetAllocator* under_test,
-                       uint64_t size,
-                       uint32_t* new_buffer_id_out) {
-    // Do an allocation.
-    void* region = under_test->AllocateRegion(size);
-    EXPECT_TRUE(region);
+uint32_t VerifyBufferAdd(SharedBufferSetAllocator* under_test) {
+  uint32_t buffer_id;
+  ScopedSharedBufferHandle handle;
+  EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &handle));
+  EXPECT_TRUE(handle.is_valid());
+  return buffer_id;
+}
 
-    *new_buffer_id_out = VerifyBufferAdd(under_test);
+void VerifyNoBufferUpdate(SharedBufferSetAllocator* under_test) {
+  uint32_t buffer_id;
+  ScopedSharedBufferHandle handle;
+  EXPECT_FALSE(under_test->PollForBufferUpdate(&buffer_id, &handle));
+}
 
-    // Make sure no additional buffer was created unexpectedly.
-    VerifyNoBufferUpdate(under_test);
+void* AllocateRegion(SharedBufferSetAllocator* under_test,
+                     uint64_t size,
+                     uint32_t* new_buffer_id_out) {
+  // Do an allocation.
+  void* region = under_test->AllocateRegion(size);
+  EXPECT_TRUE(region);
 
-    SharedBufferSet::Locator locator = under_test->LocatorFromPtr(region);
-    EXPECT_EQ(*new_buffer_id_out, locator.buffer_id());
+  *new_buffer_id_out = VerifyBufferAdd(under_test);
 
-    return region;
-  }
+  // Make sure no additional buffer was created unexpectedly.
+  VerifyNoBufferUpdate(under_test);
 
-  void* AllocateRegion(SharedBufferSetAllocator* under_test,
-                       uint64_t size,
-                       uint32_t expected_existing_buffer) {
-    // Do an allocation.
-    void* region = under_test->AllocateRegion(size);
-    EXPECT_TRUE(region);
+  SharedBufferSet::Locator locator = under_test->LocatorFromPtr(region);
+  EXPECT_EQ(*new_buffer_id_out, locator.buffer_id());
 
-    // Make sure no buffer was created unexpectedly.
-    VerifyNoBufferUpdate(under_test);
+  return region;
+}
 
-    SharedBufferSet::Locator locator = under_test->LocatorFromPtr(region);
-    EXPECT_EQ(expected_existing_buffer, locator.buffer_id());
+void* AllocateRegion(SharedBufferSetAllocator* under_test,
+                     uint64_t size,
+                     uint32_t expected_existing_buffer) {
+  // Do an allocation.
+  void* region = under_test->AllocateRegion(size);
+  EXPECT_TRUE(region);
 
-    return region;
-  }
+  // Make sure no buffer was created unexpectedly.
+  VerifyNoBufferUpdate(under_test);
 
-  uint32_t VerifyBufferAdd(SharedBufferSetAllocator* under_test) {
-    uint32_t buffer_id;
-    ScopedSharedBufferHandle handle;
-    EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &handle));
-    EXPECT_TRUE(handle.is_valid());
-    return buffer_id;
-  }
+  SharedBufferSet::Locator locator = under_test->LocatorFromPtr(region);
+  EXPECT_EQ(expected_existing_buffer, locator.buffer_id());
 
-  uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
-                              uint32_t expected_buffer_id) {
-    uint32_t buffer_id;
-    ScopedSharedBufferHandle handle;
-    EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &handle));
-    EXPECT_EQ(expected_buffer_id, buffer_id);
-    EXPECT_FALSE(handle.is_valid());
-    return buffer_id;
-  }
+  return region;
+}
 
-  void VerifyNoBufferUpdate(SharedBufferSetAllocator* under_test) {
-    uint32_t buffer_id;
-    ScopedSharedBufferHandle handle;
-    EXPECT_FALSE(under_test->PollForBufferUpdate(&buffer_id, &handle));
-  }
-};
+uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
+                            uint32_t expected_buffer_id) {
+  uint32_t buffer_id;
+  ScopedSharedBufferHandle handle;
+  EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &handle));
+  EXPECT_EQ(expected_buffer_id, buffer_id);
+  EXPECT_FALSE(handle.is_valid());
+  return buffer_id;
+}
 
 // Tests SharedBufferSetAllocator::AllocateRegion and ReleaseRegion for small
 // allocations.
-TEST_F(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
+TEST(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
   SharedBufferSetAllocator under_test;
 
   uint32_t buffer_id;
@@ -92,7 +91,7 @@ TEST_F(SharedBufferSetAllocatorTest, TwoSmallAllocations) {
 
 // Tests SharedBufferSetAllocator::AllocateRegion and ReleaseRegion for large
 // allocations.
-TEST_F(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
+TEST(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
   SharedBufferSetAllocator under_test;
 
   uint32_t buffer_id_0;
@@ -110,7 +109,7 @@ TEST_F(SharedBufferSetAllocatorTest, TwoLargeAllocations) {
 
 // Tests SharedBufferSetAllocator::AllocateRegion and ReleaseRegion for small
 // allocations that require a new buffer.
-TEST_F(SharedBufferSetAllocatorTest, ManySmallAllocations) {
+TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
   SharedBufferSetAllocator under_test;
 
   std::vector<void*> first_buffer_allocations;
@@ -159,5 +158,6 @@ TEST_F(SharedBufferSetAllocatorTest, ManySmallAllocations) {
   AllocateRegion(&under_test, kSmallAlloc, second_buffer_id);
 }
 
+} // namespace
 }  // namespace media
 }  // namespace mojo

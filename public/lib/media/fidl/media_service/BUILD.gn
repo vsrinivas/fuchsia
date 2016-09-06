@@ -39,32 +39,26 @@ executable("media_service") {
   ]
 }
 
-# TODO(dalesat): fix the test build
-#executable("apptests") {
-#  output_name = "media_service_apptests"
-#
-#  testonly = true
-#
-#  sources = [
-#    "test/fake_renderer.cc",
-#    "test/fake_renderer.h",
-#    "test/fake_wav_reader.cc",
-#    "test/fake_wav_reader.h",
-#    "test/main.cc",
-#    "test/media_player_test.cc",
-#  ]
-#
-#  deps = [
-#    ":media_service",
-#    "//apps/media/cpp",
-#    "//apps/media/interfaces",
-#    "//apps/media/services/framework_create",
-#    "//apps/media/services/framework_mojo",
-#    "//lib/mtl",
-#    "//mojo/public/cpp/application",
-#    "//mojo/public/cpp/application:test_support",
-#    "//mojo/public/cpp/bindings",
-#    "//mojo/system",
-#  ]
-#}
-#
+executable("apptests") {
+  output_name = "media_service_apptests"
+
+  sources = [
+    "test/fake_renderer.cc",
+    "test/fake_renderer.h",
+    "test/fake_wav_reader.cc",
+    "test/fake_wav_reader.h",
+    "test/media_player_test.cc",
+  ]
+
+  deps = [
+    ":media_service",
+    "//apps/media/cpp",
+    "//apps/media/interfaces",
+    "//apps/media/services/framework_create",
+    "//apps/media/services/framework_mojo",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/system",
+  ]
+}
