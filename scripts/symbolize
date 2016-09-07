@@ -41,9 +41,26 @@ def find_file_in_build_dir(name, build_dirs):
     return found_path
 
 
-def find_dso_full_path(dso, exe_name, build_dirs):
+def buildid_to_full_path(buildid, build_dirs):
+    for build_dir in build_dirs:
+        id_file_path = os.path.join(build_dir, "ids.txt")
+        if os.path.exists(id_file_path):
+            with open(id_file_path) as id_file:
+                for line in id_file:
+                    id, path = line.split()
+                    if id == buildid:
+                        return path
+    return None
+
+
+def find_dso_full_path(dso, exe_name, name_to_buildid, build_dirs):
     if dso in name_to_full_path:
         return name_to_full_path[dso]
+    if dso in name_to_buildid:
+        found_path = buildid_to_full_path(name_to_buildid[dso], build_dirs)
+        if found_path:
+            name_to_full_path[dso] = found_path
+            return found_path
     # The name 'app' indicates the real app name is unknown
     if dso == "app":
         return find_file_in_build_dir(exe_name, build_dirs)
@@ -81,7 +98,7 @@ def main():
         description="Symbolize a crash from Magenta's crash logger")
     parser.add_argument("--build-dir", "-b", nargs="*",
                         help="List of additional build directories to search")
-    parser.add_argument("app", help="Name of primary application")
+    parser.add_argument("app", nargs="?", help="Name of primary application")
     args = parser.parse_args()
 
     magenta_build_dir = os.path.join(
@@ -91,7 +108,7 @@ def main():
         build_dirs += args.build_dir
     else:
         fuchsia_build_dir = os.path.abspath(os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64", "exe.unstripped"))
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
         build_dirs.append(fuchsia_build_dir)
 
     btre = re.compile("^.* U bt#(\d+):")
@@ -99,6 +116,8 @@ def main():
         "^.* U bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
     arch_re = re.compile("^.* U arch: ([\\S]+)$")
     arch = "x86_64"
+    build_id_re = re.compile("^.* U dso: id=([0-9a-z]+) base=0x[0-9a-z]+ name=([\\S]+)$")
+    name_to_buildid = {}
     processed_lines = []
     while True:
         line = sys.stdin.readline()
@@ -109,6 +128,12 @@ def main():
             if m:
                 arch = m.group(1)
                 continue
+            m = build_id_re.match(line)
+            if m:
+                buildid = m.group(1)
+                name = m.group(2)
+                name_to_buildid[name] = buildid
+                continue
             m = btre.match(line)
             if m:
                 frame_num = m.group(1)
@@ -117,7 +142,7 @@ def main():
                     dso = m.group(2)
                     off = m.group(3)
                     dso_full_path = find_dso_full_path(
-                        dso, args.app, build_dirs)
+                        dso, args.app, name_to_buildid, build_dirs)
                     if dso_full_path:
                         cmd = [
                             addr2line_path(arch), "-Cipfe", dso_full_path, off]
@@ -136,6 +161,7 @@ def main():
                 sys.stdout.writelines(processed_lines)
                 print "end of symbolized stack"
                 processed_lines = []
+                name_to_buildid = {}
             if line == "":
                 break
 
