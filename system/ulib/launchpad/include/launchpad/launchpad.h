@@ -59,6 +59,11 @@ mx_status_t launchpad_clone_mxio_root(launchpad_t* lp);
 // ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
 mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 
+// Convenience function to add all mxio handles to the launchpad.
+// This calls launchpad_clone_mxio_root and then launchpad_clone_fd for each
+// fd in the calling process.
+mx_status_t launchpad_add_all_mxio(launchpad_t* lp);
+
 // Attempt to create a pipe and install one end of that pipe as
 // target_fd in the new process and return the other end (if
 // successful) via the fd_out parameter.

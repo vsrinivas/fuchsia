@@ -39,7 +39,7 @@ mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd) {
                     mxio_clone_fd(fd, target_fd, handles, types));
 }
 
-static mx_status_t add_all_mxio(launchpad_t* lp) {
+mx_status_t launchpad_add_all_mxio(launchpad_t* lp) {
     mx_status_t status = launchpad_clone_mxio_root(lp);
     for (int fd = 0; status == NO_ERROR && fd < MAX_MXIO_FD; ++fd) {
         status = launchpad_clone_fd(lp, fd, fd);
@@ -74,7 +74,7 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
         if (status == NO_ERROR)
             status = launchpad_environ(lp, envp);
         if (status == NO_ERROR)
-            status = add_all_mxio(lp);
+            status = launchpad_add_all_mxio(lp);
         if (status == NO_ERROR)
             status = launchpad_add_handles(lp, hnds_count, handles, ids);
     }
