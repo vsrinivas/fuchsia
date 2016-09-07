@@ -111,8 +111,7 @@ status_t MessagePipeDispatcher::Write(mxtl::Array<uint8_t> data, mxtl::Array<Han
     return pipe_->Write(side_, mxtl::move(msg));
 }
 
-status_t MessagePipeDispatcher::SetIOPort(mxtl::RefPtr<IOPortDispatcher> io_port,
-                                          uint64_t key, mx_signals_t signals) {
+status_t MessagePipeDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client) {
     LTRACE_ENTRY;
-    return pipe_->SetIOPort(side_, mxtl::move(io_port), key, signals);
+    return pipe_->SetIOPort(side_, mxtl::move(client));
 }

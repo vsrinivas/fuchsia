@@ -21,6 +21,7 @@
 #include <kernel/vm/vm_object.h>
 
 #include <magenta/handle.h>
+#include <magenta/io_port_client.h>
 #include <magenta/user_copy.h>
 
 #define LOCAL_TRACE 0
@@ -189,12 +190,23 @@ void SocketDispatcher::on_zero_handles() {
 }
 
 void SocketDispatcher::OnPeerZeroHandles() {
-    {
-        AutoLock lock(&lock_);
-        other_.reset();
-    }
+    AutoLock lock(&lock_);
+    other_.reset();
     state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED,
                                MX_SIGNAL_WRITABLE, 0u);
+    if (iopc_)
+        iopc_->Signal(MX_SIGNAL_PEER_CLOSED, &lock_);
+}
+
+status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client) {
+    if (iopc_)
+        return ERR_BAD_STATE;
+
+    if ((client->get_trigger_signals() & ~(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) != 0)
+        return ERR_INVALID_ARGS;
+
+    iopc_ = mxtl::move(client);
+    return NO_ERROR;
 }
 
 mx_ssize_t SocketDispatcher::WriteHelper(const void* src, mx_size_t len,
@@ -223,8 +235,12 @@ mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from
 
     auto st = cbuf_.Write(src, len, from_user);
 
-    if (was_empty && (st > 0))
-        state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
+    if (st > 0) {
+        if (was_empty)
+            state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
+        if (iopc_)
+            iopc_->Signal(MX_SIGNAL_READABLE, st, &lock_);
+    }
 
     if (!cbuf_.free())
         other_->state_tracker_.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
@@ -248,6 +264,8 @@ mx_ssize_t SocketDispatcher::OOB_WriteSelf(const void* src, mx_size_t len, bool 
 
     oob_len_ = len;
     state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_SIGNALED);
+    if (iopc_)
+        iopc_->Signal(MX_SIGNAL_SIGNALED, &lock_);
     return len;
 }
 

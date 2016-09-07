@@ -106,11 +106,12 @@ status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {
         return ERR_BAD_STATE;
     }
 
+    auto size = msg->data.size();
     messages_[other].push_back(mxtl::move(msg));
 
     state_tracker_[other].UpdateSatisfied(0u, MX_SIGNAL_READABLE);
     if (iopc_[other])
-        iopc_[other]->Signal(MX_SIGNAL_READABLE, &lock_);
+        iopc_[other]->Signal(MX_SIGNAL_READABLE, size, &lock_);
     return NO_ERROR;
 }
 
@@ -118,16 +119,14 @@ StateTracker* MessagePipe::GetStateTracker(size_t side) {
     return &state_tracker_[side];
 }
 
-status_t MessagePipe::SetIOPort(size_t side, mxtl::RefPtr<IOPortDispatcher> io_port,
-                                uint64_t key, mx_signals_t signals) {
+status_t MessagePipe::SetIOPort(size_t side, mxtl::unique_ptr<IOPortClient> client) {
     AutoLock lock(&lock_);
     if (iopc_[side])
         return ERR_BAD_STATE;
 
-    if ((signals & ~(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) != 0)
+    if ((client->get_trigger_signals() & ~(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) != 0)
         return ERR_INVALID_ARGS;
 
-    AllocChecker ac;
-    iopc_[side].reset(new (&ac) IOPortClient(mxtl::move(io_port), key, signals));
-    return ac.check()? NO_ERROR : ERR_NO_MEMORY;
+    iopc_[side] = mxtl::move(client);
+    return NO_ERROR;
 }

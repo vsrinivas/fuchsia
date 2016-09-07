@@ -8,8 +8,6 @@
 
 #include <stdint.h>
 
-#include <magenta/dispatcher.h>
-#include <magenta/state_observer.h>
 #include <magenta/types.h>
 
 #include <mxtl/ref_ptr.h>
@@ -20,11 +18,14 @@ class Mutex;
 class IOPortClient {
 public:
     IOPortClient(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
+    ~IOPortClient();
 
-    IOPortClient() = default;
+    mx_signals_t get_trigger_signals() const { return signals_; }
     bool Signal(mx_signals_t signals, const Mutex* mutex);
+    bool Signal(mx_signals_t signals, mx_size_t byte_count, const Mutex* mutex);
 
 private:
+    IOPortClient() = delete;
     IOPortClient(const IOPortClient&) = delete;
     IOPortClient& operator=(const IOPortClient&) = delete;
 

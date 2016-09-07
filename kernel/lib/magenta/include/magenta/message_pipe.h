@@ -45,8 +45,7 @@ public:
     status_t Write(size_t side, mxtl::unique_ptr<MessagePacket> msg);
 
     StateTracker* GetStateTracker(size_t side);
-    status_t SetIOPort(size_t side, mxtl::RefPtr<IOPortDispatcher> io_port,
-                       uint64_t key, mx_signals_t signals);
+    status_t SetIOPort(size_t side, mxtl::unique_ptr<IOPortClient> client);
 
 private:
     using MessageList = mxtl::DoublyLinkedList<mxtl::unique_ptr<MessagePacket>>;

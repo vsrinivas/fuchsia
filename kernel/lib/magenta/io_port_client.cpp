@@ -20,11 +20,12 @@
 
 mx_status_t SendIOPortPacket(IOPortDispatcher* io_port,
                              uint64_t key,
+                             mx_size_t count,
                              mx_signals_t signals) {
     mx_io_packet payload = {
         { key, MX_PORT_PKT_TYPE_IOSN, 0u},
         current_time_hires(),
-        0u,                   //  TODO(cpu): support bytes (for pipes)
+        count,
         signals,
         0u
     };
@@ -41,7 +42,13 @@ IOPortClient::IOPortClient(mxtl::RefPtr<IOPortDispatcher> io_port,
     : key_(key), signals_(signals), io_port_(mxtl::move(io_port)) {
 }
 
+IOPortClient::~IOPortClient() {}
+
 bool IOPortClient::Signal(mx_signals_t signals, const Mutex* mutex) {
+    return Signal(signals, 0u, mutex);
+}
+
+bool IOPortClient::Signal(mx_signals_t signals, mx_size_t count, const Mutex* mutex) {
     DEBUG_ASSERT(mutex->IsHeld());
     if ((signals & signals_) == 0)
         return true;
@@ -49,7 +56,7 @@ bool IOPortClient::Signal(mx_signals_t signals, const Mutex* mutex) {
     if (!io_port_)
         return true;
 
-    auto status = SendIOPortPacket(io_port_.get(), key_, signals);
+    auto status = SendIOPortPacket(io_port_.get(), key_, count, signals);
     if (status == ERR_NOT_AVAILABLE) {
         // This means that the io_port has no clients but it is held
         // alive by our reference. Release the ref.

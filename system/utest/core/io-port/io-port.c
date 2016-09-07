@@ -78,7 +78,7 @@ static bool basic_test(void)
     EXPECT_EQ(out.hdr.type, MX_PORT_PKT_TYPE_USER, "type mismatch");
     EXPECT_EQ(out.hdr.extra, 10u, "key mismatch");
 
-    //EXPECT_EQ(memcmp(&in.payload, &out.payload, 8u), 0, "data must be the same");
+    EXPECT_EQ(memcmp(&in.payload, &out.payload, 8u), 0, "data must be the same");
 
     status = mx_handle_close(io_port);
     EXPECT_EQ(status, NO_ERROR, "failed to close ioport");
@@ -203,6 +203,7 @@ typedef struct io_info {
 typedef struct report {
     uint64_t key;
     uint64_t type;
+    uint32_t size;
     mx_signals_t signals;
 } report_t;
 
@@ -218,6 +219,7 @@ static int io_reply_thread(void* arg)
     // the thread via a message pipe.
     while (true) {
         status = mx_port_wait(info->io_port, &io_pkt, sizeof(io_pkt));
+
         if (status != NO_ERROR) {
             info->error = status;
             break;
@@ -227,7 +229,7 @@ static int io_reply_thread(void* arg)
             break;
         }
 
-        report_t report = { io_pkt.hdr.key, io_pkt.hdr.type, io_pkt.signals };
+        report_t report = { io_pkt.hdr.key, io_pkt.hdr.type, io_pkt.bytes, io_pkt.signals };
         status = mx_msgpipe_write(info->reply_pipe, &report, sizeof(report), NULL, 0, 0u);
         if (status != NO_ERROR) {
             info->error = status;
@@ -264,7 +266,7 @@ static bool bind_pipes_test(void)
     }
 
     thrd_t thread;
-    int ret = thrd_create_with_name(&thread, io_reply_thread, &info, "reply");
+    int ret = thrd_create_with_name(&thread, io_reply_thread, &info, "reply1");
     EXPECT_EQ(ret, thrd_success, "could not create thread");
 
     char msg[] = "=msg0=";
@@ -315,12 +317,74 @@ static bool bind_pipes_test(void)
     END_TEST;
 }
 
+static bool bind_sockets_test(void)
+{
+    BEGIN_TEST;
+    mx_status_t status;
+    mx_ssize_t sz;
+
+    mx_handle_t io_port = mx_port_create(0u);
+    EXPECT_GT(io_port, 0, "");
+
+    mx_handle_t socket[2];
+    status = mx_socket_create(socket, 0u);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_port_bind(io_port, 1ull, socket[1], MX_SIGNAL_READABLE);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    sz = mx_socket_write(socket[0], 0u, 2, "ab");
+    EXPECT_EQ(sz, 2, "");
+    sz = mx_socket_write(socket[0], 0u, 2, "bc");
+    EXPECT_EQ(sz, 2, "");
+
+    mx_handle_t pipe[2];
+    status = mx_msgpipe_create(pipe, 0u);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    io_info_t info = {0, io_port, pipe[1]};
+
+    thrd_t thread;
+    int ret = thrd_create_with_name(&thread, io_reply_thread, &info, "reply2");
+    EXPECT_EQ(ret, thrd_success, "");
+
+    report_t report;
+    uint32_t bytes = sizeof(report);
+
+    for (int ix = 0; ix != 2; ++ix) {
+        status = mx_handle_wait_one(pipe[0], MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
+        EXPECT_EQ(status, NO_ERROR, "");
+        status = mx_msgpipe_read(pipe[0], &report, &bytes, NULL, NULL, 0u);
+        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(report.signals, MX_SIGNAL_READABLE, "");
+        EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "");
+        EXPECT_EQ(report.size, 2u, "");
+    }
+
+    mx_io_packet_t io_pkt = {0};
+    status = mx_port_queue(info.io_port, &io_pkt, sizeof(io_pkt));
+
+    ret = thrd_join(thread, NULL);
+    EXPECT_EQ(ret, thrd_success, "");
+
+    status = mx_handle_close(io_port);
+    EXPECT_EQ(status, NO_ERROR, "");
+    status = mx_handle_close(socket[0]);
+    EXPECT_EQ(status, NO_ERROR, "");
+    status = mx_handle_close(socket[1]);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    END_TEST;
+}
+
+
 BEGIN_TEST_CASE(io_port_tests)
 RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
 RUN_TEST(thread_pool_test)
 RUN_TEST(bind_basic_test)
-RUN_TEST(bind_pipes_test)
+//RUN_TEST(bind_pipes_test)
+RUN_TEST(bind_sockets_test)
 END_TEST_CASE(io_port_tests)
 
 #ifndef BUILD_COMBINED_TESTS

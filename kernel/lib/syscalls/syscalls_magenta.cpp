@@ -1238,16 +1238,22 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
     if (status != NO_ERROR)
         return status;
 
-    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
-    status = up->GetDispatcher(source, &msg_pipe, MX_RIGHT_READ);
-    if (status != NO_ERROR) {
-        if (status == ERR_WRONG_TYPE)
-            status = ERR_NOT_SUPPORTED;
-        return status;
-    }
+    mxtl::RefPtr<Dispatcher> source_disp;
+    uint32_t rights;
+    if (!up->GetDispatcher(source, &source_disp, &rights))
+        return up->BadHandle(source, ERR_BAD_HANDLE);
 
-    return msg_pipe->SetIOPort(mxtl::move(ioport), key, signals);
- }
+    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    AllocChecker ac;
+    mxtl::unique_ptr<IOPortClient> client(
+        new (&ac) IOPortClient(mxtl::move(ioport), key, signals));
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
+    return source_disp->set_port_client(mxtl::move(client));
+}
 
 // TODO(vtl): _consumer_handle should presumably be an mxtl::user_ptr instead. Also, do we want to
 // provide the producer handle as an out parameter (possibly in the same way as in msgpipe_create,

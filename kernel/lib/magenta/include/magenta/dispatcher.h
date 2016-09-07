@@ -14,13 +14,13 @@
 #include <lib/ktrace.h>
 
 #include <magenta/handle.h>
+#include <magenta/io_port_client.h>
 #include <magenta/magenta.h>
 #include <magenta/types.h>
 
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
-
-class StateTracker;
+#include <mxtl/unique_ptr.h>
 
 template <typename T> struct DispatchTag;
 
@@ -49,6 +49,8 @@ DECLARE_DISPTAG(EventPairDispatcher, MX_OBJ_TYPE_EVENT_PAIR)
 
 #undef DECLARE_DISPTAG
 
+class StateTracker;
+
 class Dispatcher : public mxtl::RefCounted<Dispatcher> {
 public:
     Dispatcher();
@@ -67,6 +69,8 @@ public:
     virtual mx_obj_type_t get_type() const = 0;
 
     virtual StateTracker* get_state_tracker() { return nullptr; }
+
+    virtual status_t set_port_client(mxtl::unique_ptr<IOPortClient>) { return ERR_NOT_SUPPORTED; }
 
     virtual void on_zero_handles() { }
 
