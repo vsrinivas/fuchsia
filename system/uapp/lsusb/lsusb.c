@@ -131,8 +131,8 @@ static int list_device(const char* device_id, bool verbose) {
         printf("    wTotalLength                  %d\n", le16toh(config_desc->wTotalLength));
         printf("    bNumInterfaces                %d\n", config_desc->bNumInterfaces);
         printf("    bConfigurationValue           %d\n", config_desc->bConfigurationValue);
-        get_string_desc(fd, config_desc->bConfigurationValue, string_buf, sizeof(string_buf));
-        printf("    iConfiguration                %d %s\n", config_desc->bConfigurationValue, string_buf);
+        get_string_desc(fd, config_desc->iConfiguration, string_buf, sizeof(string_buf));
+        printf("    iConfiguration                %d %s\n", config_desc->iConfiguration, string_buf);
         printf("    bmAttributes                  0x%02X\n", config_desc->bmAttributes);
         printf("    bMaxPower                     %d\n", config_desc->bMaxPower);
 
