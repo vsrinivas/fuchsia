@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("zip") {
+  sources = [
+    "memory_io.cc",
+    "memory_io.h",
+    "unique_unzipper.cc",
+    "unique_unzipper.h",
+    "unique_zipper.cc",
+    "unique_zipper.h",
+    "unzipper.cc",
+    "unzipper.h",
+    "zipper.cc",
+    "zipper.h",
+  ]
+
+  public_deps = [
+    "//lib/ftl",
+    "//third_party/zlib:minizip",
+  ]
+}
