@@ -8,6 +8,10 @@
             "bootfs_path": "apps/flutter_content_handler"
         },
         {
+            "binary": "flutter_wtf_unittests",
+            "bootfs_path": "bin/flutter_wtf_unittests"
+        },
+        {
             "binary": "spinning_square.flx",
             "bootfs_path": "apps/spinning_square.flx"
         }
