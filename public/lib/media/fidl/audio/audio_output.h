@@ -14,6 +14,7 @@
 #include "apps/media/services/audio/audio_track_impl.h"
 #include "apps/media/services/audio/fwd_decls.h"
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace mojo {
@@ -73,7 +74,7 @@ class AudioOutput {
   // AudioOutputManager's base::SequencedWorkerPool.  While successive callbacks
   // may not execute on the same thread, they are guaranteed to execute in a
   // serialized fashion.
-  virtual void Process() = 0;
+  virtual void Process() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
 
   // InitializeLink
   //
@@ -113,7 +114,9 @@ class AudioOutput {
   //
   // Check the shutting down flag.  Only the base class may modify the flag, but
   // derived classes are free to check it at any time.
-  inline bool shutting_down() const { return shutting_down_; }
+  inline bool shutting_down() const FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+    return shutting_down_;
+  }
 
   // TODO(johngro): Order this by priority.  Figure out how we are going to be
   // able to quickly find a track with a specific priority in order to optimize
@@ -125,6 +128,8 @@ class AudioOutput {
   // links.
   AudioTrackToOutputLinkSet links_;
   AudioOutputManager* manager_;
+
+  ftl::Mutex mutex_;
 
  private:
   // It's always nice when you manager is also your friend.  Seriously though,
@@ -157,7 +162,6 @@ class AudioOutput {
   // cleaning up all resources.
   void Shutdown();
 
-  ftl::Mutex processing_mutex_;
   scoped_refptr<base::SequencedTaskRunner> task_runner_;
   AudioOutputWeakPtr weak_self_;
 
@@ -168,7 +172,7 @@ class AudioOutput {
 
   // TODO(johngro): Eliminate the shutting down flag and just use the
   // task_runner_'s nullness for this test?
-  volatile bool shutting_down_ = false;
+  volatile bool shutting_down_ FTL_GUARDED_BY(mutex_) = false;
   volatile bool shut_down_ = false;
 };
 

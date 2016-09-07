@@ -14,7 +14,7 @@ SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
 void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
   MOJO_DCHECK(size != 0);
 
-  std::lock_guard<std::mutex> lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   Locator locator;
 
@@ -30,7 +30,7 @@ void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
 void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
   MOJO_DCHECK(ptr != nullptr);
 
-  std::lock_guard<std::mutex> lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   Locator locator = LocatorFromPtr(ptr);
   MOJO_DCHECK(locator.buffer_id() < buffers_.size());
@@ -48,7 +48,7 @@ bool SharedBufferSetAllocator::PollForBufferUpdate(
   MOJO_DCHECK(buffer_id_out != nullptr);
   MOJO_DCHECK(handle_out != nullptr);
 
-  std::lock_guard<std::mutex> lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   if (buffer_updates_.empty()) {
     return false;

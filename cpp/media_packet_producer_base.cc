@@ -4,7 +4,7 @@
 
 #include "apps/media/cpp/media_packet_producer_base.h"
 
-#include "mojo/public/cpp/environment/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace media {
@@ -16,14 +16,14 @@ MediaPacketProducerBase::MediaPacketProducerBase() {
 }
 
 MediaPacketProducerBase::~MediaPacketProducerBase() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 }
 
 void MediaPacketProducerBase::Connect(
     MediaPacketConsumerPtr consumer,
     const MediaPacketProducer::ConnectCallback& callback) {
-  CHECK_THREAD(thread_checker_);
-  MOJO_DCHECK(consumer);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FTL_DCHECK(consumer);
 
   FLOG(log_channel_, Connecting());
 
@@ -35,7 +35,7 @@ void MediaPacketProducerBase::Connect(
 }
 
 void MediaPacketProducerBase::Reset() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FLOG(log_channel_, Resetting());
   Disconnect();
   allocator_.Reset();
@@ -43,13 +43,13 @@ void MediaPacketProducerBase::Reset() {
 
 void MediaPacketProducerBase::FlushConsumer(
     const MediaPacketConsumer::FlushCallback& callback) {
-  CHECK_THREAD(thread_checker_);
-  MOJO_DCHECK(consumer_.is_bound());
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FTL_DCHECK(consumer_.is_bound());
 
   FLOG(log_channel_, RequestingFlush());
 
   {
-    std::lock_guard<std::mutex> lock(lock_);
+    ftl::MutexLocker locker(&mutex_);
     end_of_stream_ = false;
   }
 
@@ -87,8 +87,8 @@ void MediaPacketProducerBase::ProducePacket(
     int64_t pts,
     bool end_of_stream,
     const ProducePacketCallback& callback) {
-  CHECK_THREAD(thread_checker_);
-  MOJO_DCHECK(size == 0 || payload != nullptr);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FTL_DCHECK(size == 0 || payload != nullptr);
 
   if (!consumer_.is_bound()) {
     callback();
@@ -107,7 +107,7 @@ void MediaPacketProducerBase::ProducePacket(
   uint32_t packets_outstanding;
 
   {
-    std::lock_guard<std::mutex> lock(lock_);
+    ftl::MutexLocker locker(&mutex_);
     packets_outstanding = ++packets_outstanding_;
     pts_last_produced_ = pts;
     end_of_stream_ = end_of_stream;
@@ -134,12 +134,12 @@ void MediaPacketProducerBase::ProducePacket(
   consumer_->SupplyPacket(
       media_packet.Pass(),
       [this, callback, label](MediaPacketDemandPtr demand) {
-        CHECK_THREAD(thread_checker_);
+        FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
         uint32_t packets_outstanding;
 
         {
-          std::lock_guard<std::mutex> lock(lock_);
+          ftl::MutexLocker locker(&mutex_);
           packets_outstanding = --packets_outstanding_;
         }
 
@@ -156,7 +156,7 @@ void MediaPacketProducerBase::ProducePacket(
 
 bool MediaPacketProducerBase::ShouldProducePacket(
     uint32_t additional_packets_outstanding) {
-  std::lock_guard<std::mutex> lock(lock_);
+  ftl::MutexLocker locker(&mutex_);
 
   // Shouldn't send any more after end of stream.
   if (end_of_stream_) {
@@ -175,25 +175,25 @@ bool MediaPacketProducerBase::ShouldProducePacket(
 }
 
 void MediaPacketProducerBase::OnFailure() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 }
 
 void MediaPacketProducerBase::HandleDemandUpdate(MediaPacketDemandPtr demand) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (demand) {
     UpdateDemand(*demand);
   }
 
   if (consumer_.is_bound()) {
     consumer_->PullDemandUpdate([this](MediaPacketDemandPtr demand) {
-      CHECK_THREAD(thread_checker_);
+      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
       HandleDemandUpdate(demand.Pass());
     });
   }
 }
 
 void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   if (flush_in_progress_) {
     // While flushing, we ignore demand changes, because the consumer may have
@@ -204,7 +204,7 @@ void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
   bool updated = false;
 
   {
-    std::lock_guard<std::mutex> lock(lock_);
+    ftl::MutexLocker locker(&mutex_);
     if (demand_.min_packets_outstanding != demand.min_packets_outstanding ||
         demand_.min_pts != demand.min_pts) {
       demand_.min_packets_outstanding = demand.min_packets_outstanding;

@@ -16,7 +16,7 @@ namespace media {
 #define RCHECK(condition)                                         \
   if (!(condition)) {                                             \
     LOG(ERROR) << "request precondition failed: " #condition "."; \
-    ResetUnsafe();                                                \
+    PostReset();                                                \
     return;                                                       \
   }
 
@@ -26,7 +26,7 @@ TimelineControlPoint::TimelineControlPoint()
   DCHECK(task_runner_);
 
   ftl::MutexLocker locker(&mutex_);
-  ClearPendingTimelineFunctionUnsafe(false);
+  ClearPendingTimelineFunction(false);
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
@@ -36,7 +36,7 @@ TimelineControlPoint::TimelineControlPoint()
           status = MediaTimelineControlPointStatus::New();
           status->timeline_transform =
               TimelineTransform::From(current_timeline_function_);
-          status->end_of_stream = ReachedEndOfStreamUnsafe();
+          status->end_of_stream = ReachedEndOfStream();
         }
         callback.Run(version, status.Pass());
       });
@@ -65,7 +65,7 @@ void TimelineControlPoint::Reset() {
   {
     ftl::MutexLocker locker(&mutex_);
     current_timeline_function_ = TimelineFunction();
-    ClearPendingTimelineFunctionUnsafe(false);
+    ClearPendingTimelineFunction(false);
     generation_ = 1;
   }
 
@@ -77,13 +77,13 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
                                                    uint32_t* generation) {
   DCHECK(out);
   ftl::MutexLocker locker(&mutex_);
-  ApplyPendingChangesUnsafe(reference_time);
+  ApplyPendingChanges(reference_time);
   *out = current_timeline_function_;
   if (generation) {
     *generation = generation_;
   }
 
-  if (ReachedEndOfStreamUnsafe() && !end_of_stream_published_) {
+  if (ReachedEndOfStream() && !end_of_stream_published_) {
     end_of_stream_published_ = true;
     task_runner_->PostTask(
         FROM_HERE, base::Bind(&MojoPublisher<GetStatusCallback>::SendUpdates,
@@ -99,7 +99,7 @@ void TimelineControlPoint::SetEndOfStreamPts(int64_t end_of_stream_pts) {
   }
 }
 
-bool TimelineControlPoint::ReachedEndOfStreamUnsafe() {
+bool TimelineControlPoint::ReachedEndOfStream() {
   mutex_.AssertHeld();
 
   return end_of_stream_pts_ != kUnspecifiedTime &&
@@ -152,7 +152,7 @@ void TimelineControlPoint::SetTimelineTransform(
                              : timeline_transform->subject_time;
 
   // Eject any previous pending change.
-  ClearPendingTimelineFunctionUnsafe(false);
+  ClearPendingTimelineFunction(false);
 
   // Queue up the new pending change.
   pending_timeline_function_ = TimelineFunction(
@@ -162,16 +162,16 @@ void TimelineControlPoint::SetTimelineTransform(
   set_timeline_transform_callback_ = callback;
 }
 
-void TimelineControlPoint::ApplyPendingChangesUnsafe(int64_t reference_time) {
+void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
   mutex_.AssertHeld();
 
-  if (!TimelineFunctionPendingUnsafe() ||
+  if (!TimelineFunctionPending() ||
       pending_timeline_function_.reference_time() > reference_time) {
     return;
   }
 
   current_timeline_function_ = pending_timeline_function_;
-  ClearPendingTimelineFunctionUnsafe(true);
+  ClearPendingTimelineFunction(true);
 
   ++generation_;
 
@@ -180,7 +180,7 @@ void TimelineControlPoint::ApplyPendingChangesUnsafe(int64_t reference_time) {
                             base::Unretained(&status_publisher_)));
 }
 
-void TimelineControlPoint::ClearPendingTimelineFunctionUnsafe(bool completed) {
+void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
   mutex_.AssertHeld();
 
   pending_timeline_function_ =
@@ -193,7 +193,7 @@ void TimelineControlPoint::ClearPendingTimelineFunctionUnsafe(bool completed) {
   }
 }
 
-void TimelineControlPoint::ResetUnsafe() {
+void TimelineControlPoint::PostReset() {
   mutex_.AssertHeld();
   task_runner_->PostTask(FROM_HERE, base::Bind(&TimelineControlPoint::Reset,
                                                base::Unretained(this)));

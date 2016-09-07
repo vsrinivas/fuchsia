@@ -126,8 +126,8 @@ class AudioTrackToOutputLink {
 
   ftl::Mutex flush_mutex_;
   ftl::Mutex pending_queue_mutex_;
-  PacketQueuePtr pending_queue_;
-  bool flushed_ = true;
+  PacketQueuePtr pending_queue_ FTL_GUARDED_BY(pending_queue_mutex_);
+  bool flushed_ FTL_GUARDED_BY(flush_mutex_) = true;
   Gain gain_;
 };
 

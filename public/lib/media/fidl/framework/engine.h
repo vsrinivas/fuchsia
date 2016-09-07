@@ -13,6 +13,7 @@
 #include "apps/media/services/framework/refs.h"
 #include "apps/media/services/framework/stages/stage.h"
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace mojo {
 namespace media {
@@ -142,9 +143,9 @@ class Engine {
   // will yield the best results. It's possible that only a single backlog is
   // required.
   // TODO(dalesat): Determine the best ordering and implement it.
-  std::queue<Stage*> supply_backlog_;
-  std::stack<Stage*> demand_backlog_;
-  bool packets_produced_;
+  std::queue<Stage*> supply_backlog_ FTL_GUARDED_BY(mutex_);
+  std::stack<Stage*> demand_backlog_ FTL_GUARDED_BY(mutex_);
+  bool packets_produced_ FTL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media

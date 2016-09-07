@@ -35,7 +35,7 @@ void ThreadsafeIncident::Occur() {
   std::vector<std::function<void()>> consequences;
 
   {
-    ftl::MutexLocker locker(&consequences_mutex_);
+    ftl::MutexLocker locker(&mutex_);
 
     if (occurred_) {
       return;

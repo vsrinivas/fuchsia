@@ -13,6 +13,7 @@
 #include "apps/media/services/audio/audio_output_manager.h"
 #include "apps/media/services/audio/fwd_decls.h"
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace mojo {
@@ -81,8 +82,9 @@ class AudioServerImpl : public AudioServer {
 
   // State for dealing with cleanup tasks.
   ftl::Mutex cleanup_queue_mutex_;
-  std::unique_ptr<CleanupQueue> cleanup_queue_;
-  bool cleanup_scheduled_ = false;
+  std::unique_ptr<CleanupQueue> cleanup_queue_
+      FTL_GUARDED_BY(cleanup_queue_mutex_);
+  bool cleanup_scheduled_ FTL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;
   base::Closure cleanup_closure_;
 };

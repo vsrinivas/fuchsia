@@ -12,6 +12,7 @@
 #include "apps/media/services/framework/models/active_multistream_sink.h"
 #include "apps/media/services/framework/stages/stage.h"
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace mojo {
 namespace media {
@@ -65,9 +66,9 @@ class ActiveMultistreamSinkStage : public Stage,
   std::shared_ptr<ActiveMultistreamSink> sink_;
 
   mutable ftl::Mutex mutex_;
-  std::vector<std::unique_ptr<StageInput>> inputs_;
-  std::set<size_t> unallocated_inputs_;
-  std::list<size_t> pending_inputs_;
+  std::vector<std::unique_ptr<StageInput>> inputs_ FTL_GUARDED_BY(mutex_);
+  std::set<size_t> unallocated_inputs_ FTL_GUARDED_BY(mutex_);
+  std::list<size_t> pending_inputs_ FTL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media

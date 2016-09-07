@@ -6,13 +6,14 @@
 #define APPS_MEDIA_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
 
 #include <limits>
-#include <mutex>
 
 #include "apps/media/cpp/flog.h"
 #include "apps/media/cpp/shared_buffer_set_allocator.h"
-#include "apps/media/cpp/thread_checker.h"
 #include "apps/media/interfaces/logs/media_packet_producer_channel.mojom.h"
 #include "apps/media/interfaces/media_transport.mojom.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/ftl/synchronization/thread_checker.h"
 
 namespace mojo {
 namespace media {
@@ -93,15 +94,16 @@ class MediaPacketProducerBase {
   bool flush_in_progress_ = false;
   uint64_t prev_packet_label_ = 0;
 
-  mutable std::mutex lock_;
-  // Fields below are protected by lock_.
-  MediaPacketDemand demand_;
-  uint32_t packets_outstanding_ = 0;
-  int64_t pts_last_produced_ = std::numeric_limits<int64_t>::min();
-  bool end_of_stream_ = false;
-  // Fields above are protected by lock_.
+  mutable ftl::Mutex mutex_;
+  MediaPacketDemand demand_ FTL_GUARDED_BY(mutex_);
+  uint32_t packets_outstanding_ FTL_GUARDED_BY(mutex_) = 0;
+  int64_t pts_last_produced_ FTL_GUARDED_BY(mutex_) =
+      std::numeric_limits<int64_t>::min();
+  bool end_of_stream_ FTL_GUARDED_BY(mutex_) = false;
 
-  DECLARE_THREAD_CHECKER(thread_checker_);
+#ifndef NDEBUG
+  ftl::ThreadChecker thread_checker_;
+#endif
 
   FLOG_INSTANCE_CHANNEL(logs::MediaPacketProducerChannel, log_channel_);
 };

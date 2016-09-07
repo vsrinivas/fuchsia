@@ -11,6 +11,7 @@
 #include "apps/media/services/framework/models/active_multistream_source.h"
 #include "apps/media/services/framework/stages/stage.h"
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace mojo {
 namespace media {
@@ -52,8 +53,8 @@ class ActiveMultistreamSourceStage : public Stage {
   ActiveMultistreamSource::SupplyCallback supply_function_;
 
   mutable ftl::Mutex mutex_;
-  size_t ended_streams_ = 0;
-  bool packet_request_outstanding_ = false;
+  size_t ended_streams_ FTL_GUARDED_BY(mutex_) = 0;
+  bool packet_request_outstanding_ FTL_GUARDED_BY(mutex_) = false;
 };
 
 }  // namespace media

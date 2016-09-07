@@ -7,15 +7,11 @@
 
 #include "apps/media/cpp/flog.h"
 #include "apps/media/cpp/shared_buffer_set.h"
-#include "apps/media/cpp/thread_checker.h"
 #include "apps/media/interfaces/logs/media_packet_consumer_channel.mojom.h"
 #include "apps/media/interfaces/media_transport.mojom.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/synchronization/thread_checker.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/flog/cpp/flog.h"
-#include "mojo/services/media/common/cpp/shared_buffer_set.h"
-#include "mojo/services/media/common/cpp/thread_checker.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "mojo/services/media/logs/interfaces/media_packet_consumer_channel.mojom.h"
 
 namespace mojo {
 namespace media {
@@ -54,7 +50,9 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     SupplyPacketCallback callback_;
     std::shared_ptr<SuppliedPacketCounter> counter_;
 
-    DECLARE_THREAD_CHECKER(thread_checker_);
+#ifndef NDEBUG
+    ftl::ThreadChecker thread_checker_;
+#endif
 
     // So the constructor can be private.
     friend class MediaPacketConsumerBase;
@@ -128,20 +126,20 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     // Prevents any subsequent calls to the owner.
     void Detach() {
-      CHECK_THREAD(thread_checker_);
+      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
       owner_ = nullptr;
     }
 
     // Records the arrival of a packet.
     void OnPacketArrival() {
-      CHECK_THREAD(thread_checker_);
+      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
       ++packets_outstanding_;
     }
 
     // Records the departure of a packet and returns the current demand update,
     // if any.
     MediaPacketDemandPtr OnPacketDeparture(uint64_t label) {
-      CHECK_THREAD(thread_checker_);
+      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
       --packets_outstanding_;
       return (owner_ == nullptr) ? nullptr
                                  : owner_->GetDemandForPacketDeparture(label);
@@ -149,7 +147,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     // Returns number of packets currently outstanding.
     size_t packets_outstanding() {
-      CHECK_THREAD(thread_checker_);
+      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
       return packets_outstanding_;
     }
 
@@ -161,7 +159,9 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     SharedBufferSet buffer_set_;
     size_t packets_outstanding_ = 0;
 
-    DECLARE_THREAD_CHECKER(thread_checker_);
+#ifndef NDEBUG
+    ftl::ThreadChecker thread_checker_;
+#endif
   };
 
   // Completes a pending PullDemandUpdate if there is one and if there's an
@@ -180,7 +180,9 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   std::shared_ptr<SuppliedPacketCounter> counter_;
   uint64_t prev_packet_label_ = 0;
 
-  DECLARE_THREAD_CHECKER(thread_checker_);
+#ifndef NDEBUG
+  ftl::ThreadChecker thread_checker_;
+#endif
 
   FLOG_INSTANCE_CHANNEL(logs::MediaPacketConsumerChannel, log_channel_);
 };

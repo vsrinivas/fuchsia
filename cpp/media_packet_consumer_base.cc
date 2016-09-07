@@ -41,7 +41,7 @@ MediaPacketConsumerBase::MediaPacketConsumerBase() : binding_(this) {
 }
 
 MediaPacketConsumerBase::~MediaPacketConsumerBase() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   // Prevent the counter from calling us back.
   counter_->Detach();
@@ -53,19 +53,19 @@ MediaPacketConsumerBase::~MediaPacketConsumerBase() {
 
 void MediaPacketConsumerBase::Bind(
     InterfaceRequest<MediaPacketConsumer> request) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   binding_.Bind(request.Pass());
   binding_.set_connection_error_handler([this]() { Reset(); });
 }
 
 bool MediaPacketConsumerBase::is_bound() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   return binding_.is_bound();
 }
 
 void MediaPacketConsumerBase::SetDemand(uint32_t min_packets_outstanding,
                                         int64_t min_pts) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (min_packets_outstanding == demand_.min_packets_outstanding &&
       min_pts == demand_.min_pts) {
     // Demand hasn't changed. Nothing to do.
@@ -82,7 +82,7 @@ void MediaPacketConsumerBase::SetDemand(uint32_t min_packets_outstanding,
 }
 
 void MediaPacketConsumerBase::Reset() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FLOG(log_channel_, Reset());
   if (binding_.is_bound()) {
     binding_.Close();
@@ -100,7 +100,7 @@ void MediaPacketConsumerBase::Reset() {
 }
 
 void MediaPacketConsumerBase::Fail() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FLOG(log_channel_, Failed());
   Reset();
   OnFailure();
@@ -113,12 +113,12 @@ void MediaPacketConsumerBase::OnFlushRequested(const FlushCallback& callback) {
 }
 
 void MediaPacketConsumerBase::OnFailure() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 }
 
 void MediaPacketConsumerBase::PullDemandUpdate(
     const PullDemandUpdateCallback& callback) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!get_demand_update_callback_.is_null()) {
     // There's already a pending request. This isn't harmful, but it indicates
     // that the client doesn't know what it's doing.
@@ -136,7 +136,7 @@ void MediaPacketConsumerBase::PullDemandUpdate(
 void MediaPacketConsumerBase::AddPayloadBuffer(
     uint32_t payload_buffer_id,
     ScopedSharedBufferHandle payload_buffer) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   MOJO_DCHECK(payload_buffer.is_valid());
   FLOG(log_channel_,
        AddPayloadBufferRequested(payload_buffer_id, SizeOf(payload_buffer)));
@@ -146,7 +146,7 @@ void MediaPacketConsumerBase::AddPayloadBuffer(
 }
 
 void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FLOG(log_channel_, RemovePayloadBufferRequested(payload_buffer_id));
   counter_->buffer_set().RemoveBuffer(payload_buffer_id);
 }
@@ -154,7 +154,7 @@ void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
 void MediaPacketConsumerBase::SupplyPacket(
     MediaPacketPtr media_packet,
     const SupplyPacketCallback& callback) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   MOJO_DCHECK(media_packet);
 
   void* payload;
@@ -179,7 +179,7 @@ void MediaPacketConsumerBase::SupplyPacket(
 }
 
 void MediaPacketConsumerBase::Flush(const FlushCallback& callback) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FLOG(log_channel_, FlushRequested());
 
   demand_.min_packets_outstanding = 0;
@@ -192,7 +192,7 @@ void MediaPacketConsumerBase::Flush(const FlushCallback& callback) {
 }
 
 void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   // If we're in the middle of returning a packet, we want to use the
   // SupplyPacket callback for demand updates rather than the PullDemandUpdate
   // callback.
@@ -209,7 +209,7 @@ void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
 
 MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
     uint64_t label) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   FLOG(log_channel_, ReturningPacket(label, counter_->packets_outstanding()));
 
@@ -246,18 +246,18 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
 }
 
 MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   callback_.Run(counter_->OnPacketDeparture(label_));
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
     MediaPacketConsumerBase* owner)
     : owner_(owner) {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {
-  CHECK_THREAD(thread_checker_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 }
 
 }  // namespace media

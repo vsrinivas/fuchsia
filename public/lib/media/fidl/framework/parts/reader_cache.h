@@ -139,14 +139,14 @@ class ReaderCache : public Reader {
     bool can_seek_ = false;
 
     mutable ftl::Mutex mutex_;
-    Result result_ = Result::kOk;
-    SparseByteBuffer sparse_byte_buffer_;
-    SparseByteBuffer::Hole intake_hole_;
-    SparseByteBuffer::Hole read_hole_;
-    SparseByteBuffer::Region read_region_;
-    ReadAtRequest* read_request_ = nullptr;
-    size_t read_request_position_;
-    size_t read_request_remaining_bytes_;
+    Result result_ FTL_GUARDED_BY(mutex_) = Result::kOk;
+    SparseByteBuffer sparse_byte_buffer_ FTL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Hole intake_hole_ FTL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Hole read_hole_ FTL_GUARDED_BY(mutex_);
+    SparseByteBuffer::Region read_region_ FTL_GUARDED_BY(mutex_);
+    ReadAtRequest* read_request_ FTL_GUARDED_BY(mutex_) = nullptr;
+    size_t read_request_position_ FTL_GUARDED_BY(mutex_);
+    size_t read_request_remaining_bytes_ FTL_GUARDED_BY(mutex_);
   };
 
   // Reads from the upstream reader into the store.

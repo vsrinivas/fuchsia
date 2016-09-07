@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace mojo {
 namespace media {
@@ -97,7 +98,7 @@ class ThreadsafeIncident {
   // immediately after this method returns, so there's no guarantee that the
   // result is still valid.
   bool occurred() {
-    ftl::MutexLocker locker(&consequences_mutex_);
+    ftl::MutexLocker locker(&mutex_);
     return occurred_;
   }
 
@@ -112,7 +113,7 @@ class ThreadsafeIncident {
   // and when the consequence is actually run.
   void When(const std::function<void()>& consequence) {
     {
-      ftl::MutexLocker locker(&consequences_mutex_);
+      ftl::MutexLocker locker(&mutex_);
       if (!occurred_) {
         consequences_.push_back(consequence);
         return;
@@ -130,7 +131,7 @@ class ThreadsafeIncident {
   // Resets this ThreadsafeIncident to initial state and clears the list of
   // consequences.
   void Reset() {
-    ftl::MutexLocker locker(&consequences_mutex_);
+    ftl::MutexLocker locker(&mutex_);
     occurred_ = false;
     consequences_.clear();
   }
@@ -140,9 +141,9 @@ class ThreadsafeIncident {
   void Run() { Occur(); }
 
  private:
-  mutable ftl::Mutex consequences_mutex_;
-  bool occurred_ = false;
-  std::vector<std::function<void()>> consequences_;
+  mutable ftl::Mutex mutex_;
+  bool occurred_ FTL_GUARDED_BY(mutex_) = false;
+  std::vector<std::function<void()>> consequences_ FTL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media
