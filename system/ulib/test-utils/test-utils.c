@@ -81,6 +81,26 @@ mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
     return mxr_thread_get_handle(thread);
 }
 
+// N.B. This creates a C11 thread.
+// See, e.g., musl/include/threads.h.
+
+void tu_thread_create_c11(thrd_t* t, thrd_start_t entry, void* arg,
+                          const char* name)
+{
+    int ret = thrd_create_with_name(t, entry, arg, name);
+    if (ret != thrd_success) {
+        // tu_fatal takes mx_status_t values.
+        // The translation doesn't have to be perfect.
+        switch (ret) {
+        case thrd_nomem:
+            tu_fatal(__func__, ERR_NO_MEMORY);
+        default:
+            tu_fatal(__func__, ERR_BAD_STATE);
+        }
+        __UNREACHABLE;
+    }
+}
+
 static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signals,
                            uint32_t num_handles, uint32_t* result_index,
                            mx_time_t deadline,

@@ -14,6 +14,7 @@
 // in one fails.
 
 #include <stddef.h>
+#include <threads.h>
 #include <magenta/types.h>
 #include <magenta/compiler.h>
 
@@ -60,6 +61,11 @@ mx_handle_t tu_launch_mxio_etc(const char* name,
 
 mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
                              const char* name);
+
+// A wrapper on C11 thrd_create.
+
+void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg,
+                          const char* name);
 
 // A wrapper on mx_msgpipe_create.
 // For callers that have separate variables for each side of the pipe, this takes two pointers
