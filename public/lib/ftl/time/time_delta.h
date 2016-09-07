@@ -35,15 +35,19 @@ class TimeDelta {
     return FromMilliseconds(seconds * 1000);
   }
 
-  int64_t ToNanoseconds() const { return delta_; }
-  int64_t ToMicroseconds() const { return ToNanoseconds() / 1000; }
-  int64_t ToMilliseconds() const { return ToMicroseconds() / 1000; }
-  int64_t ToSeconds() const { return ToMilliseconds() / 1000; }
+  constexpr int64_t ToNanoseconds() const { return delta_; }
+  constexpr int64_t ToMicroseconds() const { return ToNanoseconds() / 1000; }
+  constexpr int64_t ToMilliseconds() const { return ToMicroseconds() / 1000; }
+  constexpr int64_t ToSeconds() const { return ToMilliseconds() / 1000; }
 
-  double ToNanosecondsF() const { return delta_; }
-  double ToMicrosecondsF() const { return delta_ / 1000.0; }
-  double ToMillisecondsF() const { return delta_ / (1000.0 * 1000.0); }
-  double ToSecondsF() const { return delta_ / (1000.0 * 1000.0 * 1000.0); }
+  constexpr double ToNanosecondsF() const { return delta_; }
+  constexpr double ToMicrosecondsF() const { return delta_ / 1000.0; }
+  constexpr double ToMillisecondsF() const {
+    return delta_ / (1000.0 * 1000.0);
+  }
+  constexpr double ToSecondsF() const {
+    return delta_ / (1000.0 * 1000.0 * 1000.0);
+  }
 
   constexpr TimeDelta operator-(TimeDelta other) const {
     return TimeDelta::FromNanoseconds(delta_ - other.delta_);

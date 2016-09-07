@@ -15,7 +15,9 @@ namespace ftl {
 // nanoseconds elapsed since an arbitrary point in the past.
 class TimePoint {
  public:
-  TimePoint() = default;
+  // Default TimePoint with internal value 0 (epoch).
+  constexpr TimePoint() = default;
+
   static TimePoint Now();
 
   static constexpr TimePoint Max() {
