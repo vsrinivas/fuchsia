@@ -12,6 +12,7 @@ executable("magma_sys_unit_tests") {
   deps = [
     ":magma_system_tests",
     ":magma_util_tests",
+    "$magma_build_root/tests/mock:platform_buffer",
     "//third_party/gtest",
   ]
 }
@@ -58,16 +59,26 @@ source_set("magma_util_tests") {
   sources = [
     "test_address_space_allocator.cc",
     "test_macros.cc",
-    "test_mmio.cc",
     "test_mutex.cc",
-    "test_platform_buffer.cc",
-    "test_platform_device.cc",
     "test_refcounted.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/sys_driver:platform_buffer",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("magma_platform_tests") {
+  sources = [
+    "test_mmio.cc",
+    "test_platform_buffer.cc",
+    "test_platform_device.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
     "//third_party/gtest",
@@ -83,7 +94,7 @@ source_set("msd_abi_conformance_tests") {
   ]
 
   deps = [
-    "$magma_build_root/src/sys_driver:platform_buffer",
+    "$magma_build_root/src/magma_util/platform",
     "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/gtest",
   ]

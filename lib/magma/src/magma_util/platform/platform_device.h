@@ -5,7 +5,7 @@
 #ifndef PLATFORM_DEVICE_H
 #define PLATFORM_DEVICE_H
 
-#include "dlog.h"
+#include "magma_util/dlog.h"
 #include "platform_mmio.h"
 #include <memory>
 

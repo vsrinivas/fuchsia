@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+source_set("magenta") {
+  sources = [
+    "magenta_platform_buffer.cc",
+    "magenta_platform_device.cc",
+    "magenta_platform_device.h",
+  ]
+
+  deps = [
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+  ]
+}

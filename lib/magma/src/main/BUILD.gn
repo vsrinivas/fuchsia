@@ -18,11 +18,12 @@ source_set("main") {
   deps = [
     "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform/magenta",
   ]
 
   if (unit_test) {
     deps += [
-      "$magma_build_root/tests/unit_tests:magma_util_tests",
+      "$magma_build_root/tests/unit_tests:magma_platform_tests",
       "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
       "//third_party/gtest",
     ]
@@ -34,5 +35,6 @@ source_set("main") {
   libs = [
     "driver",
     "ddk",
+    "magenta",
   ]
 }

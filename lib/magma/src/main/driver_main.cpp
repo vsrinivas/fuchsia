@@ -16,11 +16,10 @@ extern "C" {
 #include <hw/pci.h>
 }
 
+#include "magma.h"
 #include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
-#include <runtime/thread.h>
-
-#include "magma.h"
+#include <thread>
 
 #define INTEL_I915_VID (0x8086)
 #define INTEL_I915_BROADWELL_DID (0x1616)
@@ -196,11 +195,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
     }
 
     // create and add the display (char) device
-    status = device_init(&device->device, drv, "intel_i915_disp", &intel_i915_device_proto);
-    if (status) {
-        free(device);
-        return status;
-    }
+    device_init(&device->device, drv, "intel_i915_disp", &intel_i915_device_proto);
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;
@@ -211,7 +206,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
         di->height = height;
         di->stride = stride;
     } else {
-        di->format = MX_DISPLAY_FORMAT_RGB_565;
+        di->format = MX_PIXEL_FORMAT_RGB_565;
         di->width = 2560 / 2;
         di->height = 1700 / 2;
         di->stride = 2560 / 2;
@@ -226,8 +221,9 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
 
     // TODO remove when the gfxconsole moves to user space
     intel_i915_enable_backlight(device, true);
-    mx_set_framebuffer(device->framebuffer, static_cast<uint32_t>(device->framebuffer_size), format,
-                       width, height, stride);
+    mx_set_framebuffer(get_root_resource(), device->framebuffer,
+                       static_cast<uint32_t>(device->framebuffer_size), format, width, height,
+                       stride);
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &intel_i915_display_proto;
@@ -239,8 +235,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
         device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
     if (MAGMA_START) {
-        mxr_thread_t* magma_thread;
-        mxr_thread_create(magma_hook, device, "magma_hook", &magma_thread);
+        std::thread magma_thread(magma_hook, device);
+        magma_thread.detach();
     }
 
     return NO_ERROR;
@@ -268,6 +264,7 @@ static int magma_hook(void* param)
 
     auto dev = reinterpret_cast<intel_i915_device_t*>(param);
 
+#if !MAGMA_UNIT_TESTS
     // create and add the gpu device
     dev->magma_driver = MagmaDriver::Create();
     if (!dev->magma_driver)
@@ -284,21 +281,22 @@ static int magma_hook(void* param)
     xprintf("running magma tests in 5s\n");
     mx_nanosleep(5000000000);
 
-#if MAGMA_UNIT_TESTS
+#if MAGMA_READBACK_TEST
+    xprintf("running magma readback tests\n");
+    uint32_t device_handle = 0xdeadbeef;
+    test_gpu_readback(device_handle);
+#endif // MAGMA_READBACK_TEST
+
+#else
     xprintf("running magma unit tests\n");
+    xprintf("dev->parent_device: %p\n", dev->parent_device);
     TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(dev->parent_device));
     int argc = 1;
     char* argv[] = {(char*)"driver_main", nullptr};
     testing::InitGoogleTest(&argc, argv);
     xprintf("running all tests\n");
     (void)RUN_ALL_TESTS();
-#endif
-
-#if MAGMA_READBACK_TEST
-    xprintf("running magma readback tests\n");
-    uint32_t device_handle = 0xdeadbeef;
-    test_gpu_readback(device_handle);
-#endif
+#endif // MAGMA_UNIT_TESTS
 
     xprintf("magma_hook finish\n");
 

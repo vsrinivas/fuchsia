@@ -5,10 +5,10 @@
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
 
-#include "dlog.h"
-#include "macros.h"
 #include "magenta_platform_device.h"
-#include "platform_mmio.h"
+#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
+#include "magma_util/platform/platform_mmio.h"
 
 namespace magma {
 
@@ -87,7 +87,8 @@ bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
 {
-    DASSERT(device_handle);
+    if (!device_handle)
+        return DRETP(nullptr, "device_handle is null, cannot create PlatformDevice");
     return std::unique_ptr<PlatformDevice>(
         new MagentaPlatformDevice(reinterpret_cast<mx_device_t*>(device_handle)));
 }

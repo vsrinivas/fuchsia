@@ -24,7 +24,7 @@ echo "fuchsia_root=$fuchsia_root build_dir=$build_dir"
 $tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check
 
 echo "Building magma_service_driver"
-$tools_path/ninja -C $build_dir magma_service_driver magma_tests msd_tests
+$tools_path/ninja -C $build_dir magma_service_driver magma_tests
 
 rm -rf $bootfs_path
 mkdir -p $bootfs_path/bin
@@ -35,7 +35,6 @@ cp $tools_path/sysroot/x86_64-fuchsia/lib/*.so* $bootfs_path/lib
 
 autorun_magma_app_tests=true;
 autorun_magma_sys_tests=true;
-autorun_msd_tests=true;
 
 autorun_path=$bootfs_path/autorun
 
@@ -59,17 +58,7 @@ if $autorun_magma_sys_tests; then
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 fi
 
-if $autorun_msd_tests; then
-	echo "Enabling msd-intel-gen unit tests to autorun"
-
-	test_executable=bin/msd_unit_tests
-	cp $build_dir/msd_unit_tests $bootfs_path/$test_executable
-
-	echo "echo Running MSD unit tests" >> $autorun_path # for sanity
-	echo "/boot/$test_executable" >> $autorun_path # run the tests
-fi
-
-if $autorun_magma_app_tests || $autorun_magma_sys_tests || $autorun_msd_tests; then
+if $autorun_magma_app_tests || $autorun_magma_sys_tests; then
 	echo "msleep 1000" >> $autorun_path # give some time to write out to log listener
 	echo "\`poweroff" >> $autorun_path # rinse and repeat
 fi

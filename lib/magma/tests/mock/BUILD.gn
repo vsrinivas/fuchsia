@@ -40,3 +40,17 @@ source_set("magma_system") {
     "$magma_build_root/src/magma_util:common",
   ]
 }
+
+source_set("platform_buffer") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "mock_platform_buffer.cc",
+    "mock_platform_buffer.h",
+  ]
+}

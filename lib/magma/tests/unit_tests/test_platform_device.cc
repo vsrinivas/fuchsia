@@ -4,7 +4,7 @@
 
 #include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform_device.h"
+#include "magma_util/platform/platform_device.h"
 #include "gtest/gtest.h"
 
 TEST(MagmaUtil, PlatformDevice)

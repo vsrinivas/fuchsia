@@ -7,9 +7,11 @@
 #include "magma_util/refcounted.h"
 #include "msd_platform_buffer.h"
 #include <atomic>
+#include <ddk/driver.h>
 #include <errno.h>
 #include <limits.h> // PAGE_SIZE
-#include <magenta/syscalls-ddk.h>
+#include <magenta/syscalls.h>
+
 #include <vector>
 
 class MagentaPlatformPage {
@@ -123,7 +125,7 @@ bool MagentaPlatformBuffer::PinnedPageCount(uint32_t* count)
 //////////////////////////////////////////////////////////////////////////////
 
 int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint64_t size,
-                              uint64_t* size_out, uint32_t* handle_out)
+                                  uint64_t* size_out, uint32_t* handle_out)
 {
     size = magma::round_up(size, PAGE_SIZE);
     if (size == 0)
@@ -131,7 +133,7 @@ int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint6
 
     void* vaddr;
     mx_paddr_t paddr;
-    mx_status_t status = mx_alloc_device_memory(size, &paddr, &vaddr);
+    mx_status_t status = mx_alloc_device_memory(get_root_resource(), size, &paddr, &vaddr);
     if (status < 0) {
         DLOG("failed to allocate device memory size %lld: %d", size, status);
         return DRET(-ENOMEM);
