@@ -15,10 +15,6 @@ cmake(
 		"LLVM_TARGETS_TO_BUILD='ARM;AArch64;X86'",
 		"LLVM_INSTALL_TOOLCHAIN_ONLY=ON",
 		"LLVM_TOOLCHAIN_TOOLS='llvm-ar;llvm-ranlib;llvm-dwarfdump;llvm-objdump;llvm-readobj;llvm-nm;llvm-size;llvm-symbolizer'",
-		// Don't build 32-bit version of compiler-rt which currently
-		// fails to link because 32-bit version of libc++ is missing.
-		"CAN_TARGET_i386=FALSE",
-		"CAN_TARGET_i686=FALSE",
 	],
 	buildDir = "$OutDir/build-llvm-$HostTriple",
 )
@@ -38,7 +34,7 @@ ninja(
 cmake(
 	name = "compiler-rt_cmake",
 	env = [ "CFLAGS='-fPIC -isystem $SrcDir/magenta/third_party/ulib/musl/include'" ],
-	src = "$SrcDir/third_party/llvm/projects/compiler-rt/lib/builtins",
+	src = "$SrcDir/third_party/llvm/runtimes/compiler-rt/lib/builtins",
 	options = [
 		"CMAKE_C_COMPILER=$OutDir/toolchain/clang+llvm-$HostTriple/bin/clang",
 		"CMAKE_CXX_COMPILER=$OutDir/toolchain/clang+llvm-$HostTriple/bin/clang++",
