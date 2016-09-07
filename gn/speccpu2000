@@ -28,6 +28,10 @@
         {
             "binary": "183.equake",
             "bootfs_path": "benchmarks/183.equake"
+        },
+        {
+            "binary": "186.crafty",
+            "bootfs_path": "benchmarks/186.crafty"
         }
     ],
     "resources": [
@@ -82,6 +86,10 @@
         {
           "file": "third_party/speccpu2000/183.equake/data/ref/input/inp.in",
           "bootfs_path": "benchmarks/data/183.equake/inp.in"
+        },
+        {
+          "file": "third_party/speccpu2000/186.crafty/data/ref/input/crafty.in",
+          "bootfs_path": "benchmarks/data/186.crafty/crafty.in"
         }
 
     ]
