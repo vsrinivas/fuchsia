@@ -103,7 +103,6 @@
 #define SYS_sendmsg 211
 #define SYS_recvmsg 212
 #define SYS_brk 214
-#define SYS_clone 220
 #define SYS_execve 221
 #define SYS_fadvise64 223
 #define SYS_msync 227

@@ -1,16 +1,15 @@
 #define _GNU_SOURCE
-#include "libc.h"
-#include "syscall.h"
-#include <signal.h>
+#include <sys/types.h>
 #include <unistd.h>
 
+#include <errno.h>
+
+#include "libc.h"
+
 pid_t __vfork(void) {
-/* vfork syscall cannot be made from C code */
-#ifdef SYS_fork
-    return syscall(SYS_fork);
-#else
-    return syscall(SYS_clone, SIGCHLD, 0);
-#endif
+    // TODO(kulakowski) Some level of vfork emulation.
+    errno = ENOSYS;
+    return -1;
 }
 
 weak_alias(__vfork, vfork);

@@ -12,7 +12,6 @@
 #define SYS_shmctl 31
 #define SYS_getitimer 36
 #define SYS_setitimer 38
-#define SYS_clone 56
 #define SYS_execve 59
 #define SYS_wait4 61
 #define SYS_kill 62

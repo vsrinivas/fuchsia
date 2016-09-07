@@ -136,7 +136,6 @@ int __posix_spawnx(pid_t* restrict res, const char* restrict path,
                    const posix_spawn_file_actions_t* fa, const posix_spawnattr_t* restrict attr,
                    char* const argv[restrict], char* const envp[restrict]) {
     pid_t pid;
-    char stack[1024];
     int ec = 0, cs;
     struct args args;
 
@@ -153,7 +152,8 @@ int __posix_spawnx(pid_t* restrict res, const char* restrict path,
     args.envp = envp;
     pthread_sigmask(SIG_BLOCK, SIGALL_SET, &args.oldmask);
 
-    pid = __clone(child, stack + sizeof stack, CLONE_VM | CLONE_VFORK | SIGCHLD, &args);
+    // TODO(kulakowski) Launchpad up a process here.
+    pid = -ENOSYS;
     close(args.p[1]);
 
     if (pid > 0) {

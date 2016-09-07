@@ -18,7 +18,6 @@
 #define SYS_setitimer 104
 #define SYS_getitimer 105
 #define SYS_wait4 114
-#define SYS_clone 120
 #define SYS_setdomainname 121
 #define SYS_uname 122
 #define SYS_adjtimex 124

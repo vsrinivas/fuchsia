@@ -119,7 +119,6 @@ static inline pid_t __thread_get_tid(void) {
 // Signal n (or all, for -1) threads on a pthread_cond_t or cnd_t.
 void __private_cond_signal(void* condvar, int n);
 
-int __clone(int (*)(void*), void*, int, void*, ...);
 int __libc_sigaction(int, const struct sigaction*, struct sigaction*);
 int __libc_sigprocmask(int, const sigset_t*, sigset_t*);
 void __unmapself(void*, size_t);
