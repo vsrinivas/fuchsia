@@ -6,50 +6,44 @@
 import argparse
 import os
 import paths
+import platform
 import re
 import subprocess
 import sys
 
 
-def read_build_id(readelf, path):
+def read_build_id(readobj, path):
     buildid_re = re.compile('.*Build ID: ([0-9a-z]+)$')
     if os.path.isfile(path):
         try:
-            readelf_cmd = [readelf, '-n', path]
-            readelf_output = subprocess.check_output(
-                readelf_cmd, stderr=subprocess.STDOUT)
+            readobj_cmd = [readobj, '-elf-output-style=GNU', '-notes', path]
+            readobj_output = subprocess.check_output(
+                readobj_cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             return None
-        for readelf_line in readelf_output.split('\n'):
-            match = buildid_re.match(readelf_line)
+        for readobj_line in readobj_output.split('\n'):
+            match = buildid_re.match(readobj_line)
             if match is not None:
                 return match.group(1)
     return None
 
 
-def readelf_path(target_cpu):
-    if sys.platform.startswith('linux'):
-        platform = 'Linux'
-    else:
-        platform = 'Darwin'
-    target_arch = 'x86_64' if target_cpu == 'x64' else 'aarch64'
-    prebuilt_path = '%s-elf-6.1.0-%s-x86_64' % (target_arch, platform)
-    readelf_bin = '%s-elf-readelf' % target_arch
+def readobj_path():
+    toolchain_name = 'clang+llvm-x86_64-%s' % platform.system().lower()
     return os.path.join(
-        paths.MAGENTA_PREBUILT_DIR, prebuilt_path, 'bin', readelf_bin)
+        paths.TOOLCHAIN_PATH, toolchain_name, 'bin', 'llvm-readobj')
 
 
 def main():
     parser = argparse.ArgumentParser(
         description='Make a bootfs for loading into Magenta')
-    parser.add_argument('--target-cpu', help='GN target_cpu variable')
     parser.add_argument('--output-file', help='Place to put built userfs')
     parser.add_argument(
         '--build-id-map', help='Place to put mapping from build id to paths')
     parser.add_argument('--manifest', help='Location of manifest')
     args = parser.parse_args()
 
-    readelf = readelf_path(args.target_cpu)
+    readobj = readobj_path()
     buildids = []
     with open(args.manifest) as manifest_contents:
         for line in manifest_contents:
@@ -57,7 +51,7 @@ def main():
             if equal_sign == -1:
                 continue
             path = line[equal_sign + 1:].strip()
-            buildid = read_build_id(readelf, path)
+            buildid = read_build_id(readobj, path)
             if buildid:
                 # 'path' will be the path to the stripped binary e.g.:
                 #   /foo/out/debug-x86-64/happy_bunny_test
@@ -73,7 +67,7 @@ def main():
                     unstripped_path = os.path.join(path_dir,
                                                    location,
                                                    path_base)
-                    unstripped_buildid = read_build_id(readelf,
+                    unstripped_buildid = read_build_id(readobj,
                                                        unstripped_path)
                     if unstripped_buildid == buildid:
                         path = unstripped_path

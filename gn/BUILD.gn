@@ -46,8 +46,6 @@ action("mkbootfs") {
   deps = all_binaries
 
   args = [
-    "--target-cpu",
-    target_cpu,
     "--output-file",
     rebase_path(output_file),
     "--build-id-map",
