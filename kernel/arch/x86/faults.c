@@ -20,12 +20,6 @@
 #include <magenta/exception.h>
 #endif
 
-struct arch_exception_context {
-    bool is_page_fault;
-    x86_iframe_t *frame;
-    uint32_t cr2;
-};
-
 extern enum handler_return platform_irq(x86_iframe_t *frame);
 
 static void dump_fault_frame(x86_iframe_t *frame)

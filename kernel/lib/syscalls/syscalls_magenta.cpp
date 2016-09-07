@@ -240,6 +240,17 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
+        case MX_PROP_NUM_STATE_KINDS: {
+            if (size != sizeof(uint32_t))
+                return ERR_BUFFER_TOO_SMALL;
+            auto thread = dispatcher->get_specific<ThreadDispatcher>();
+            if (!thread)
+                return ERR_WRONG_TYPE;
+            uint32_t value = thread->thread()->get_num_state_kinds();
+            if (copy_to_user_u32(_value.reinterpret<uint32_t>(), value) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
+        }
         default:
             return ERR_INVALID_ARGS;
     }

@@ -63,6 +63,7 @@ enum thread_tls_list {
 #define THREAD_FLAG_REAL_TIME                 (1<<3)
 #define THREAD_FLAG_IDLE                      (1<<4)
 #define THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK  (1<<5)
+#define THREAD_FLAG_STOPPED_FOR_EXCEPTION     (1<<6)
 
 #define THREAD_SIGNAL_KILL                    (1<<0)
 
@@ -114,6 +115,9 @@ typedef struct thread {
 
     /* are we allowed to be interrupted on the current thing we're blocked/sleeping on */
     bool interruptable;
+
+    /* non-NULL if stopped in an exception */
+    const struct arch_exception_context *exception_context;
 
     /* architecture stuff */
     struct arch_thread arch;

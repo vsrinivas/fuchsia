@@ -13,6 +13,7 @@
 #include <lib/dpc.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/exception.h>
 #include <magenta/excp_port.h>
 #include <magenta/futex_node.h>
 #include <magenta/state_tracker.h>
@@ -69,8 +70,20 @@ public:
 
     // Note this takes a specific exception port as an argument because there are several:
     // debugger, thread, process, and system.
-    status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report);
+    status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
+                                      const mx_exception_report_t* report,
+                                      const arch_exception_context_t* arch_context);
     status_t MarkExceptionHandled(mx_exception_status_t status);
+
+    // For debugger usage.
+    // TODO(dje): The term "state" here conflicts with "state tracker".
+    uint32_t get_num_state_kinds() const;
+    // TODO(dje): Consider passing an Array<uint8_t> here and in WriteState.
+    status_t ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len);
+    // |priv| = true -> allow setting privileged values, otherwise leave them unchanged
+    // This is useful for, for example, flags registers that consist of both
+    // privileged and unprivileged fields.
+    status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv);
 
     mx_koid_t get_koid() const { return koid_; }
     void set_dispatcher(ThreadDispatcher* dispatcher) { dispatcher_ = dispatcher; }

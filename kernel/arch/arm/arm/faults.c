@@ -17,11 +17,6 @@
 #include <magenta/exception.h>
 #endif
 
-struct arch_exception_context {
-    bool iframe;
-    void *frame;
-};
-
 struct fault_handler_table_entry {
     uint32_t pc;
     uint32_t fault_handler;

@@ -44,6 +44,12 @@ typedef struct x86_32_iframe x86_iframe_t;
 typedef struct x86_64_iframe x86_iframe_t;
 #endif
 
+struct arch_exception_context {
+    bool is_page_fault;
+    x86_iframe_t *frame;
+    uint32_t cr2;
+};
+
 struct x86_32_context_switch_frame {
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
     uint32_t eflags;

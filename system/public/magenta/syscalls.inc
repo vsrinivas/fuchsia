@@ -235,6 +235,10 @@ MAGENTA_SYSCALL_DEF(4, 4, 281, mx_ssize_t, socket_write, mx_handle_t handle, uin
 MAGENTA_SYSCALL_DEF(4, 4, 282, mx_ssize_t, socket_read, mx_handle_t handle, uint32_t flags,
                     mx_size_t size, USER_PTR(void) buffer)
 
+// Debugger calls
+MAGENTA_SYSCALL_DEF(4, 4, 290, mx_status_t, thread_read_state, mx_handle_t handle, uint32_t kind, USER_PTR(void) buffer, USER_PTR(uint32_t) buffer_len)
+MAGENTA_SYSCALL_DEF(4, 4, 291, mx_status_t, thread_write_state, mx_handle_t handle, uint32_t kind, USER_PTR(const void) buffer, uint32_t buffer_len)
+
 // syscall arg passing tests
 MAGENTA_SYSCALL_DEF(0, 0, 20000, int, syscall_test_0, void)
 MAGENTA_SYSCALL_DEF(1, 1, 20001, int, syscall_test_1, int a)

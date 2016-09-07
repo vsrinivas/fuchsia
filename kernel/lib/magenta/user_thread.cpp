@@ -16,11 +16,14 @@
 
 #include <lib/dpc.h>
 
+#include <arch/debugger.h>
+
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 
+#include <magenta/exception.h>
 #include <magenta/excp_port.h>
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/magenta.h>
@@ -296,20 +299,35 @@ mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
     return exception_port_;
 }
 
-status_t UserThread::ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport, const mx_exception_report_t* report) {
+status_t UserThread::ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
+                                              const mx_exception_report_t* report,
+                                              const arch_exception_context_t* arch_context) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
+
+    // So the handler can read/write our general registers.
+    thread_.exception_context = arch_context;
+
+    // So various bits know we're stopped in an exception.
+    thread_.flags |= THREAD_FLAG_STOPPED_FOR_EXCEPTION;
+
     exception_status_ = MX_EXCEPTION_STATUS_WAITING;
+
     // Send message, wait for reply.
     status_t status = eport->SendReport(report);
     if (status != NO_ERROR) {
         LTRACEF("SendReport returned %d\n", status);
         exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
+        thread_.exception_context = NULL;
+        thread_.flags &= ~THREAD_FLAG_STOPPED_FOR_EXCEPTION;
         return status;
     }
     status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME);
     DEBUG_ASSERT(status == NO_ERROR);
     DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
+
+    thread_.exception_context = NULL;
+    thread_.flags &= ~THREAD_FLAG_STOPPED_FOR_EXCEPTION;
     if (exception_status_ != MX_EXCEPTION_STATUS_RESUME)
         return ERR_BAD_STATE;
     return NO_ERROR;
@@ -323,6 +341,46 @@ status_t UserThread::MarkExceptionHandled(mx_exception_status_t status) {
     exception_status_ = status;
     cond_signal(&exception_wait_cond_);
     return NO_ERROR;
+}
+
+uint32_t UserThread::get_num_state_kinds() const {
+    return arch_num_regsets();
+}
+
+// Note: buffer must be sufficiently aligned
+
+status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
+    LTRACE_ENTRY;
+
+    if (thread_.state != THREAD_BLOCKED ||
+        (thread_.flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
+        return ERR_BAD_STATE;
+
+    switch (state_kind)
+    {
+    case MX_THREAD_STATE_REGSET0 ... MX_THREAD_STATE_REGSET9:
+        return arch_get_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len);
+    default:
+        return ERR_INVALID_ARGS;
+    }
+}
+
+// Note: buffer must be sufficiently aligned
+
+status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv) {
+    LTRACE_ENTRY;
+
+    if (thread_.state != THREAD_BLOCKED ||
+        (thread_.flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
+        return ERR_BAD_STATE;
+
+    switch (state_kind)
+    {
+    case MX_THREAD_STATE_REGSET0 ... MX_THREAD_STATE_REGSET9:
+        return arch_set_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len, priv);
+    default:
+        return ERR_INVALID_ARGS;
+    }
 }
 
 const char* StateToString(UserThread::State state) {

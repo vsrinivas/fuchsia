@@ -28,12 +28,16 @@
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 
+#include <mxtl/array.h>
+
 #include "syscalls_priv.h"
 
 #define LOCAL_TRACE 0
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
 constexpr mx_size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
+
+constexpr uint32_t kMaxThreadStateSize = MX_MAX_THREAD_STATE_SIZE;
 
 #if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
@@ -240,4 +244,82 @@ mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t opt
     }
 
     return ktrace_control(action, options);
+}
+
+mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
+                                  user_ptr<void> _buffer_ptr, user_ptr<uint32_t> _buffer_len)
+{
+    LTRACEF("handle %u, state_kind %u\n", handle, state_kind);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // TODO(dje): debug rights
+    mxtl::RefPtr<ThreadDispatcher> thread;
+    mx_status_t status = up->GetDispatcher(handle, &thread, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
+
+    uint32_t buffer_len;
+    if (copy_from_user_u32(&buffer_len, _buffer_len) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    // avoid malloc'ing insane amounts
+    if (buffer_len > kMaxThreadStateSize)
+        return ERR_INVALID_ARGS;
+
+    AllocChecker ac;
+    uint8_t* tmp_buf = new (&ac) uint8_t [buffer_len];
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+    mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
+
+    status = thread->thread()->ReadState(state_kind, bytes.get(), &buffer_len);
+
+    // Always set the actual size so the caller can provide larger buffers.
+    // The value is only usable if the status is NO_ERROR or ERR_BUFFER_TOO_SMALL.
+    if (status == NO_ERROR || status == ERR_BUFFER_TOO_SMALL) {
+        if (copy_to_user_u32(_buffer_len, buffer_len) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+    }
+
+    if (status != NO_ERROR)
+        return status;
+
+    status = copy_to_user(_buffer_ptr.reinterpret<uint8_t>(), bytes.get(), buffer_len);
+    if (status != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
+}
+
+mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
+                                   user_ptr<const void> _buffer_ptr, uint32_t buffer_len)
+{
+    LTRACEF("handle %u, state_kind %u\n", handle, state_kind);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // TODO(dje): debug rights
+    mxtl::RefPtr<ThreadDispatcher> thread;
+    mx_status_t status = up->GetDispatcher(handle, &thread, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
+
+    // avoid malloc'ing insane amounts
+    if (buffer_len > kMaxThreadStateSize)
+        return ERR_INVALID_ARGS;
+
+    AllocChecker ac;
+    uint8_t* tmp_buf = new (&ac) uint8_t [buffer_len];
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+    mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
+
+    status = copy_from_user(bytes.get(), _buffer_ptr.reinterpret<const uint8_t>(), buffer_len);
+    if (status != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    // TODO(dje): Setting privileged values in registers.
+    status = thread->thread()->WriteState(state_kind, bytes.get(), buffer_len, false);
+    return status;
 }

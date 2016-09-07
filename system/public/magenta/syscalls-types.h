@@ -343,6 +343,7 @@ typedef struct mx_waitset_result {
 // Object properties.
 
 #define MX_PROP_BAD_HANDLE_POLICY      1u
+#define MX_PROP_NUM_STATE_KINDS        2u
 
 #define MX_POLICY_BAD_HANDLE_IGNORE    0u
 #define MX_POLICY_BAD_HANDLE_LOG       1u
@@ -352,6 +353,24 @@ typedef struct mx_waitset_result {
 
 #define MX_SOCKET_CONTROL                1u
 #define MX_SOCKET_CONTROL_MAX_LEN     1024u
+
+// mx_thread_read_state, mx_thread_write_state
+// The maximum size of thread state, in bytes, that can be processed by the
+// read_state/write_state syscalls. It exists so code can expect a sane limit
+// on the amount of memory needed to process the request.
+#define MX_MAX_THREAD_STATE_SIZE 4096u
+
+// The "general regs" are by convention in regset 0.
+#define MX_THREAD_STATE_REGSET0 0u
+#define MX_THREAD_STATE_REGSET1 1u
+#define MX_THREAD_STATE_REGSET2 2u
+#define MX_THREAD_STATE_REGSET3 3u
+#define MX_THREAD_STATE_REGSET4 4u
+#define MX_THREAD_STATE_REGSET5 5u
+#define MX_THREAD_STATE_REGSET6 6u
+#define MX_THREAD_STATE_REGSET7 7u
+#define MX_THREAD_STATE_REGSET8 8u
+#define MX_THREAD_STATE_REGSET9 9u
 
 #ifndef DEPRECATE_COMPAT_SYSCALLS
 typedef struct mx_waitset_result mx_wait_set_result_t;

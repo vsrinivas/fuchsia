@@ -89,6 +89,12 @@ struct arm_fault_frame {
     uint32_t spsr;
 };
 
+struct arch_exception_context {
+    bool iframe;
+    // This is either an arm_iframe or an arm_fault_frame.
+    void *frame;
+};
+
 struct arm_mode_regs {
     uint32_t usr_r13, usr_r14;
     uint32_t fiq_r13, fiq_r14;
@@ -97,6 +103,15 @@ struct arm_mode_regs {
     uint32_t abt_r13, abt_r14;
     uint32_t und_r13, und_r14;
     uint32_t sys_r13, sys_r14;
+};
+
+// The "general regs": pc, integer regs, + misc.
+
+struct arch_gen_regs {
+    // Ultimately it'll be useful to break the connection, but for now while
+    // we're bootstrapping the order here follows the order expected by gdb.
+    // TODO(dje): obviously more are needed
+    uint32_t pc;
 };
 
 void arm_save_mode_regs(struct arm_mode_regs *regs);

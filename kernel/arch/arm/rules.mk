@@ -287,6 +287,9 @@ ARCH_OPTFLAGS := -Os
 WITH_LINKER_GC ?= 1
 endif
 
+MODULE_SRCS += \
+	$(LOCAL_DIR)/arm/debugger.c
+
 # try to find toolchain
 include $(LOCAL_DIR)/toolchain.mk
 TOOLCHAIN_PREFIX := $(ARCH_$(ARCH)_TOOLCHAIN_PREFIX)

@@ -70,6 +70,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/arch.c \
 	$(LOCAL_DIR)/cache.c \
 	$(LOCAL_DIR)/cpu_topology.c \
+	$(LOCAL_DIR)/debugger.c \
 	$(LOCAL_DIR)/descriptor.c \
 	$(LOCAL_DIR)/faults.c \
 	$(LOCAL_DIR)/feature.c \

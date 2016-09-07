@@ -56,6 +56,7 @@
 #define X86_FLAGS_VIF                   (1<<19)
 #define X86_FLAGS_VIP                   (1<<20)
 #define X86_FLAGS_ID                    (1<<21)
+#define X86_FLAGS_RESERVED 0xffc0802a
 
 #ifndef ASSEMBLY
 
@@ -110,6 +111,22 @@ void x86_extended_register_restore_state(void *register_state);
 typedef struct thread thread_t;
 void x86_extended_register_context_switch(
         thread_t *old_thread, thread_t *new_thread);
+
+struct arch_gen_regs {
+    // Ultimately it'll be useful to break the connection, but for now while
+    // we're bootstrapping the order here follows the order expected by gdb.
+#if ARCH_X86_32
+    uint32_t eax, ecx, edx, ebx, esp, ebp, esi, edi;
+    uint32_t eip;
+    uint32_t flags;
+#endif
+#if ARCH_X86_64
+    uint64_t rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp;
+    uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+    uint64_t rip;
+    uint32_t flags;
+#endif
+};
 
 __END_CDECLS
 

@@ -20,6 +20,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/arch.c \
 	$(LOCAL_DIR)/asm.S \
 	$(LOCAL_DIR)/cache-ops.S \
+	$(LOCAL_DIR)/debugger.c \
 	$(LOCAL_DIR)/exceptions.S \
 	$(LOCAL_DIR)/exceptions_c.c \
 	$(LOCAL_DIR)/fpu.c \
