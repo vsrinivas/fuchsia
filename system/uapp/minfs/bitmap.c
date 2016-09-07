@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "vfs.h"
+#include "minfs.h"
 
 mx_status_t bitmap_init(bitmap_t* bm, uint32_t max) {
     // check for overflow
@@ -18,7 +19,12 @@ mx_status_t bitmap_init(bitmap_t* bm, uint32_t max) {
     bm->bitcount = max;
     bm->mapcount = (max + 63) / 64;
 
-    if ((bm->map = calloc(bm->mapcount, 64)) == NULL) {
+    // round the allocated buffer size to a fs block size to ensure
+    // that we don't partially write a block out
+    size_t size = 64 * bm->mapcount;
+    size = ((size + MINFS_BLOCK_SIZE - 1) / MINFS_BLOCK_SIZE) * MINFS_BLOCK_SIZE;
+
+    if ((bm->map = calloc(1, size)) == NULL) {
         return ERR_NO_MEMORY;
     }
     bm->end = bm->map + bm->mapcount;

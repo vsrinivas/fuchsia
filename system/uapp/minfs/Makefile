@@ -18,7 +18,7 @@ CFLAGS += -Wstrict-prototypes -Wwrite-strings
 CFLAGS += -I../../ulib/system/include
 CFLAGS += -I../../ulib/magenta/include
 CFLAGS += -I../../ulib/mxio/include
-CFLAGS += -I../../../global/include
+CFLAGS += -I../../public
 
 LFLAGS := -Wl,-wrap,open -Wl,-wrap,unlink -Wl,-wrap,stat -Wl,-wrap,mkdir
 LFLAGS += -Wl,-wrap,close -Wl,-wrap,read -Wl,-wrap,write -Wl,-wrap,fstat

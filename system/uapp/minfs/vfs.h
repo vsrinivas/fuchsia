@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <sys/types.h>
 #include <magenta/types.h>
 #include <mxio/vfs.h>
 
