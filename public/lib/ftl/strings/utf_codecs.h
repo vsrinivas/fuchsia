@@ -10,6 +10,8 @@
 
 #include <string>
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace ftl {
 
 inline bool IsValidCodepoint(uint32_t code_point) {
@@ -29,7 +31,7 @@ inline bool IsValidCharacter(uint32_t code_point) {
           (code_point & 0xFFFEu) != 0xFFFEu);
 }
 
-bool IsStringUTF8(const std::string& str);
+bool IsStringUTF8(ftl::StringView str);
 
 // ReadUnicodeCharacter --------------------------------------------------------
 

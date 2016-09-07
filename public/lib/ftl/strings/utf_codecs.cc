@@ -8,9 +8,9 @@
 
 namespace ftl {
 
-bool IsStringUTF8(const std::string& str) {
+bool IsStringUTF8(ftl::StringView str) {
   const char *src = str.data();
-  int32_t src_len = static_cast<int32_t>(str.length());
+  int32_t src_len = static_cast<int32_t>(str.size());
   int32_t char_index = 0;
 
   while (char_index < src_len) {

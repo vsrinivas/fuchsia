@@ -103,14 +103,14 @@ std::string NumberToString(NumberType number) {
 }
 
 template <typename NumberType>
-bool StringToNumberWithError(const std::string& string, NumberType* number) {
+bool StringToNumberWithError(ftl::StringView string, NumberType* number) {
   FTL_DCHECK(number);
 
   if (string.empty())
     return false;
 
-  const char* s = &string[0];
-  size_t length = string.length();
+  const char* s = string.data();
+  size_t length = string.size();
   NumberType result = 0;
   if (std::is_signed<NumberType>::value && string[0] == '-') {
     if (length < 2)
@@ -137,21 +137,21 @@ template std::string NumberToString<int32_t>(int32_t number);
 template std::string NumberToString<uint32_t>(uint32_t number);
 template std::string NumberToString<int64_t>(int64_t number);
 template std::string NumberToString<uint64_t>(uint64_t number);
-template bool StringToNumberWithError<int8_t>(const std::string& string,
+template bool StringToNumberWithError<int8_t>(ftl::StringView string,
                                               int8_t* number);
-template bool StringToNumberWithError<uint8_t>(const std::string& string,
+template bool StringToNumberWithError<uint8_t>(ftl::StringView string,
                                                uint8_t* number);
-template bool StringToNumberWithError<int16_t>(const std::string& string,
+template bool StringToNumberWithError<int16_t>(ftl::StringView string,
                                                int16_t* number);
-template bool StringToNumberWithError<uint16_t>(const std::string& string,
+template bool StringToNumberWithError<uint16_t>(ftl::StringView string,
                                                 uint16_t* number);
-template bool StringToNumberWithError<int32_t>(const std::string& string,
+template bool StringToNumberWithError<int32_t>(ftl::StringView string,
                                                int32_t* number);
-template bool StringToNumberWithError<uint32_t>(const std::string& string,
+template bool StringToNumberWithError<uint32_t>(ftl::StringView string,
                                                 uint32_t* number);
-template bool StringToNumberWithError<int64_t>(const std::string& string,
+template bool StringToNumberWithError<int64_t>(ftl::StringView string,
                                                int64_t* number);
-template bool StringToNumberWithError<uint64_t>(const std::string& string,
+template bool StringToNumberWithError<uint64_t>(ftl::StringView string,
                                                 uint64_t* number);
 
 }  // namespace ftl

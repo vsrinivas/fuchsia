@@ -10,6 +10,8 @@
 
 #include <string>
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace ftl {
 
 // Converts |number| to a string with a locale-independent decimal
@@ -27,14 +29,14 @@ std::string NumberToString(NumberType number);
 // unsigned types, unary '-' is not allowed. For signed types, "-0", "-00", etc.
 // are also allowed.
 template <typename NumberType>
-bool StringToNumberWithError(const std::string& string, NumberType* number);
+bool StringToNumberWithError(ftl::StringView string, NumberType* number);
 
 // Converts |string| containing a locale-independent decimal representation of a
 // number to a numeric representation of that number. (On error, this returns
 // zero.) This is available for all |NumberType|s (u)intN_t (from <stdint.h>)
 // and also (unsigned) int. (See |StringToNumberWithError()| for more details.)
 template <typename NumberType>
-NumberType StringToNumber(const std::string& string) {
+NumberType StringToNumber(ftl::StringView string) {
   NumberType rv = static_cast<NumberType>(0);
   return StringToNumberWithError(string, &rv) ? rv : static_cast<NumberType>(0);
 }
