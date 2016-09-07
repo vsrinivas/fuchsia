@@ -32,6 +32,10 @@
         {
             "binary": "186.crafty",
             "bootfs_path": "benchmarks/186.crafty"
+        },
+        {
+            "binary": "188.ammp",
+            "bootfs_path": "benchmarks/188.ammp"
         }
     ],
     "resources": [
@@ -90,7 +94,10 @@
         {
           "file": "third_party/speccpu2000/186.crafty/data/ref/input/crafty.in",
           "bootfs_path": "benchmarks/data/186.crafty/crafty.in"
+        },
+        {
+          "file": "third_party/speccpu2000/188.ammp/data/ref/input/ammp.in",
+          "bootfs_path": "benchmarks/data/188.ammp/ammp.in"
         }
-
     ]
 }
