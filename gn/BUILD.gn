@@ -36,16 +36,23 @@ action("mkbootfs") {
                              ],
                              "list lines")
 
-  script = "//buildtools/mkbootfs"
+  script = "make_bootfs.py"
   output_file = "$root_build_dir/user.bootfs"
+  build_id_file = "$root_build_dir/ids.txt"
   outputs = [
     output_file,
+    build_id_file
   ]
   deps = all_binaries
 
   args = [
-    "-o",
+    "--target-cpu",
+    target_cpu,
+    "--output-file",
     rebase_path(output_file),
+    "--build-id-map",
+    rebase_path(build_id_file),
+    "--manifest",
     rebase_path(manifest_file),
   ]
 }
