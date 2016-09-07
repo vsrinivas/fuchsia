@@ -13,6 +13,7 @@ __BEGIN_CDECLS;
 
 typedef struct usb_hci_protocol {
     void (*set_bus_device)(mx_device_t* dev, mx_device_t* busdev);
+    size_t (*get_max_device_count)(mx_device_t* dev);
 
     // Hub support
     mx_status_t (*configure_hub)(mx_device_t* dev, int devaddr, usb_speed_t speed,

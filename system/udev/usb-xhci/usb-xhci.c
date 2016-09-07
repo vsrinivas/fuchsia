@@ -20,6 +20,7 @@
 
 #include "xhci.h"
 #include "xhci-device-manager.h"
+#include "xhci-root-hub.h"
 #include "xhci-util.h"
 
 //#define TRACE 1
@@ -135,9 +136,17 @@ void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
     uxhci->bus_device = busdev;
     if (busdev) {
         device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, (void**)&uxhci->bus_protocol);
+        // wait until bus driver has started before doing this
+        xhci_queue_start_root_hubs(&uxhci->xhci);
     } else {
         uxhci->bus_protocol = NULL;
     }
+}
+
+size_t xhci_get_max_device_count(mx_device_t* device) {
+    usb_xhci_t* uxhci = dev_to_usb_xhci(device);
+    // add one to allow device IDs to be 1-based
+    return uxhci->xhci.max_slots + XHCI_RH_COUNT + 1;
 }
 
 mx_status_t xhci_config_hub(mx_device_t* hci_device, int slot_id, usb_speed_t speed,
@@ -160,6 +169,7 @@ mx_status_t xhci_hub_device_removed(mx_device_t* hci_device, uint32_t hub_addres
 
 usb_hci_protocol_t xhci_hci_protocol = {
     .set_bus_device = xhci_set_bus_device,
+    .get_max_device_count = xhci_get_max_device_count,
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,
@@ -185,6 +195,10 @@ static void xhci_iotxn_callback(mx_status_t result, void* cookie) {
 
 static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+    int rh_index = xhci_get_root_hub_index(xhci, data->device_id);
+    if (rh_index >= 0) {
+        return xhci_rh_iotxn_queue(xhci, txn, rh_index);
+    }
     if (data->device_id > xhci->max_slots) {
          return ERR_INVALID_ARGS;
      }

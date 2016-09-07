@@ -106,7 +106,11 @@ static void usb_hub_port_reset(usb_hub_t* hub, int port) {
 }
 
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
+    xprintf("usb_hub_handle_port_status port: %d status: %04X change: %04X\n", port,
+            status->wPortStatus, status->wPortChange);
+
     if (status->wPortChange & USB_PORT_CONNECTION) {
+        xprintf("USB_PORT_CONNECTION\n");
         usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
         if (status->wPortStatus & USB_PORT_CONNECTION) {
             usb_hub_port_connected(hub, port);
@@ -127,6 +131,7 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
         usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
     }
     if (status->wPortChange & USB_PORT_RESET) {
+        xprintf("USB_PORT_RESET\n");
         usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
         if (!(status->wPortStatus & USB_PORT_RESET)) {
             usb_hub_port_reset(hub, port);

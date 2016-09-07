@@ -210,6 +210,48 @@ typedef volatile struct {
 #define HCCPARAMS2_LEC  (1 << 4)    // Large ESIT Payload Capability
 #define HCCPARAMS2_CIC  (1 << 5)    // Configuration Information Capability
 
+// XHCI Extended Capabilities register
+#define EXT_CAP_CAPABILITY_ID_START     0
+#define EXT_CAP_CAPABILITY_ID_BITS      8
+#define EXT_CAP_NEXT_PTR_START          8
+#define EXT_CAP_NEXT_PTR_BITS           8
+
+// XHCI Extended Capability codes
+#define EXT_CAP_USB_LEGACY_SUPPORT      1
+#define EXT_CAP_SUPPORTED_PROTOCOL      2
+#define EXT_CAP_EXT_POWER_MANAGEMENT    3
+#define EXT_CAP_IO_VIRTUALIZATION       4
+#define EXT_CAP_MESSAGE_INTERRUPT       5
+#define EXT_CAP_LOCAL_MEMORY            6
+#define EXT_CAP_USB_DEBUG_CAPABILITY    10
+#define EXT_CAP_EXT_MESSAGE_INTERRUPT   17
+
+// XHCI Supported Protocol Capability bits (word 0)
+#define EXT_CAP_SP_REV_MINOR_START      16
+#define EXT_CAP_SP_REV_MINOR_BITS       8
+#define EXT_CAP_SP_REV_MAJOR_START      24
+#define EXT_CAP_SP_REV_MAJOR_BITS       8
+
+// XHCI Supported Protocol Capability bits (word 2)
+#define EXT_CAP_SP_COMPAT_PORT_OFFSET_START 0
+#define EXT_CAP_SP_COMPAT_PORT_OFFSET_BITS  8
+#define EXT_CAP_SP_COMPAT_PORT_COUNT_START  8
+#define EXT_CAP_SP_COMPAT_PORT_COUNT_BITS   8
+#define EXT_CAP_SP_PSIC_START               28
+#define EXT_CAP_SP_PSIC_BITS                4
+
+// XHCI Supported Protocol Speed ID (PSI) bits
+#define EXT_CAP_SP_PSIV_START           0
+#define EXT_CAP_SP_PSIV_BITS            4
+#define EXT_CAP_SP_PSIE_START           4
+#define EXT_CAP_SP_PSIE_BITS            2
+#define EXT_CAP_SP_PLT_START            6
+#define EXT_CAP_SP_PLT_BITS             2
+#define EXT_CAP_SP_PFD                  (1 << 8)
+#define EXT_CAP_SP_PLT_START            6
+#define EXT_CAP_SP_PSIM_START           16
+#define EXT_CAP_SP_PSIM_BITS            16
+
 // Command Ring Control Register bits
 #define CRCR_RCS        (1 << 0)
 #define CRCR_CS         (1 << 1)

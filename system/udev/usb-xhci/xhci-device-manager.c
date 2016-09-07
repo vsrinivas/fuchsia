@@ -23,7 +23,7 @@ typedef struct {
     enum {
         ENUMERATE_DEVICE,
         DISCONNECT_DEVICE,
-        RH_PORT_CONNECTED,
+        START_ROOT_HUBS,
     } command;
     list_node_t node;
     uint32_t hub_address;
@@ -54,6 +54,14 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
                                        uint32_t port, usb_speed_t speed) {
     xprintf("xhci_address_device slot_id: %d port: %d hub_address: %d speed: %d\n",
             slot_id, port, hub_address, speed);
+
+    int rh_index = xhci_get_root_hub_index(xhci, hub_address);
+    if (rh_index >= 0) {
+        // For virtual root hub devices, real hub_address is 0
+        hub_address = 0;
+        // convert virtual root hub port number to real port number
+        port = xhci->root_hubs[rh_index].port_map[port - 1] + 1;
+    }
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     if (slot->sc)
@@ -448,6 +456,14 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
     xhci_slot_t* slot = NULL;
     uint32_t slot_id;
 
+    int rh_index = xhci_get_root_hub_index(xhci, hub_address);
+    if (rh_index >= 0) {
+        // For virtual root hub devices, real hub_address is 0
+        hub_address = 0;
+        // convert virtual root hub port number to real port number
+        port = xhci->root_hubs[rh_index].port_map[port - 1] + 1;
+    }
+
     for (slot_id = 1; slot_id <= xhci->max_slots; slot_id++) {
         xhci_slot_t* test_slot = &xhci->slots[slot_id];
         if (test_slot->hub_address == hub_address && test_slot->port == port) {
@@ -548,9 +564,8 @@ static int xhci_device_thread(void* arg) {
         case DISCONNECT_DEVICE:
             xhci_handle_disconnect_device(xhci, command->hub_address, command->port);
             break;
-        case RH_PORT_CONNECTED:
-            xhci_handle_rh_port_connected(xhci, command->port);
-            break;
+        case START_ROOT_HUBS:
+            xhci_start_root_hubs(xhci);
         }
     }
 
@@ -613,12 +628,19 @@ mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_
     return xhci_queue_command(xhci, DISCONNECT_DEVICE, hub_address, port, USB_SPEED_UNDEFINED);
 }
 
-mx_status_t xhci_rh_port_connected(xhci_t* xhci, uint32_t port) {
-    return xhci_queue_command(xhci, RH_PORT_CONNECTED, 0, port, USB_SPEED_UNDEFINED);
+mx_status_t xhci_queue_start_root_hubs(xhci_t* xhci) {
+    return xhci_queue_command(xhci, START_ROOT_HUBS, 0, 0, USB_SPEED_UNDEFINED);
 }
 
-mx_status_t xhci_configure_hub(xhci_t* xhci, int slot_id, usb_speed_t speed, usb_hub_descriptor_t* descriptor) {
+mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
+                               usb_hub_descriptor_t* descriptor) {
     xprintf("xhci_configure_hub slot_id: %d speed: %d\n", slot_id, speed);
+    if (xhci_is_root_hub(xhci, slot_id)) {
+        // nothing to do for root hubs
+        return NO_ERROR;
+    }
+    if (slot_id > xhci->max_slots) return ERR_INVALID_ARGS;
+
     xhci_slot_t* slot = &xhci->slots[slot_id];
     uint8_t* input_context = (uint8_t*)xhci_memalign(xhci, 64, xhci->context_size * 2);
     if (!input_context) {

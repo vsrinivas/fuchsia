@@ -6,18 +6,24 @@
 
 #include <ddk/completion.h>
 #include <magenta/hw/usb.h>
+#include <magenta/hw/usb-hub.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 #include <stdbool.h>
 #include <threads.h>
 
 #include "xhci-hw.h"
+#include "xhci-root-hub.h"
 #include "xhci-trb.h"
 
 #define COMMAND_RING_SIZE 8
 #define EVENT_RING_SIZE 64
 #define TRANSFER_RING_SIZE 64
 #define ERST_ARRAY_SIZE 1
+
+#define XHCI_RH_USB_2 0 // index of USB 2.0 virtual root hub device
+#define XHCI_RH_USB_3 1 // index of USB 2.0 virtual root hub device
+#define XHCI_RH_COUNT 2 // number of virtual root hub devices
 
 typedef struct xhci_slot {
     xhci_slot_context_t* sc;
@@ -62,8 +68,18 @@ struct xhci {
     size_t max_interruptors;
     size_t context_size;
 
-    // Root hub state
+    // total number of ports for the root hub
     uint32_t rh_num_ports;
+
+    // state for virtual root hub devices
+    // one for USB 2.0 and the other for USB 3.0
+    xhci_root_hub_t root_hubs[XHCI_RH_COUNT];
+
+    // Maps root hub port index to the index of their virtual root hub
+    uint8_t* rh_map;
+
+    // Maps root hub port index to index relative to their virtual root hub
+    uint8_t* rh_port_map;
 
     // device thread stuff
     thrd_t device_thread;
@@ -87,6 +103,13 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
                        xhci_command_context_t* context);
 
 uint8_t xhci_endpoint_index(uint8_t ep_address);
+
+// returns index into xhci->root_hubs[], or -1 if not a root hub
+int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id);
+
+inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
+    return xhci_get_root_hub_index(xhci, device_id) >= 0;
+}
 
 // upper layer routines in usb-xhci.c
 void* xhci_malloc(xhci_t* xhci, size_t size);

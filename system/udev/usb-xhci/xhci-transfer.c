@@ -60,7 +60,7 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
     return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
 }
 
-int xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
+mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
                         uint16_t length, int endpoint, int direction,
                         xhci_transfer_context_t* context, list_node_t* txn_node) {
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n",

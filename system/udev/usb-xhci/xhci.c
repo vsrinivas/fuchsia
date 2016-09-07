@@ -26,6 +26,84 @@ uint8_t xhci_endpoint_index(uint8_t ep_address) {
     return index;
 }
 
+// returns index into xhci->root_hubs[], or -1 if not a root hub
+int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id) {
+    // regular devices have IDs 1 through xhci->max_slots
+    // root hub IDs start at xhci->max_slots + 1
+    int index = device_id - (xhci->max_slots + 1);
+    if (index < 0 || index >= XHCI_RH_COUNT) return -1;
+    return index;
+}
+
+static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t* hccparams1) {
+    uint32_t offset = XHCI_GET_BITS32(hccparams1, HCCPARAMS1_EXT_CAP_PTR_START,
+                                      HCCPARAMS1_EXT_CAP_PTR_BITS);
+    if (!offset) return;
+    // offset is 32-bit words from MMIO base
+    uint32_t* cap_ptr = (uint32_t *)(mmio + (offset << 2));
+
+    while (cap_ptr) {
+        uint32_t cap_id = XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START,
+                                          EXT_CAP_CAPABILITY_ID_BITS);
+
+        if (cap_id == EXT_CAP_SUPPORTED_PROTOCOL) {
+            uint32_t rev_major = XHCI_GET_BITS32(cap_ptr, EXT_CAP_SP_REV_MAJOR_START,
+                                                 EXT_CAP_SP_REV_MAJOR_BITS);
+#if (TRACE == 1)
+            uint32_t rev_minor = XHCI_GET_BITS32(cap_ptr, EXT_CAP_SP_REV_MINOR_START,
+                                                 EXT_CAP_SP_REV_MINOR_BITS);
+            printf("EXT_CAP_SUPPORTED_PROTOCOL %d.%d\n", rev_major, rev_minor);
+
+            uint32_t psic = XHCI_GET_BITS32(&cap_ptr[2], EXT_CAP_SP_PSIC_START,
+                                            EXT_CAP_SP_PSIC_BITS);
+#endif
+            // psic = count of PSI registers
+            uint32_t compat_port_offset = XHCI_GET_BITS32(&cap_ptr[2],
+                                                          EXT_CAP_SP_COMPAT_PORT_OFFSET_START,
+                                                          EXT_CAP_SP_COMPAT_PORT_OFFSET_BITS);
+            uint32_t compat_port_count = XHCI_GET_BITS32(&cap_ptr[2],
+                                                         EXT_CAP_SP_COMPAT_PORT_COUNT_START,
+                                                         EXT_CAP_SP_COMPAT_PORT_COUNT_BITS);
+
+            xprintf("compat_port_offset: %d compat_port_count: %d psic: %d\n", compat_port_offset,
+                   compat_port_count, psic);
+
+            int rh_index;
+            if (rev_major == 3) {
+                rh_index = XHCI_RH_USB_3;
+            } else if (rev_major == 2) {
+                rh_index = XHCI_RH_USB_2;
+            } else {
+                printf("unsupported rev_major in XHCI extended capabilities\n");
+                rh_index = -1;
+            }
+            for (off_t i = 0; i < compat_port_count; i++) {
+                off_t index = compat_port_offset + i - 1;
+                if (index >= xhci->rh_num_ports) {
+                    printf("port index out of range in xhci_read_extended_caps\n");
+                    break;
+                }
+                xhci->rh_map[index] = rh_index;
+            }
+
+#if (TRACE == 1)
+            uint32_t* psi = &cap_ptr[4];
+            for (uint32_t i = 0; i < psic; i++, psi++) {
+                uint32_t psiv = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIV_START, EXT_CAP_SP_PSIV_BITS);
+                uint32_t psie = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIE_START, EXT_CAP_SP_PSIE_BITS);
+                uint32_t plt = XHCI_GET_BITS32(psi, EXT_CAP_SP_PLT_START, EXT_CAP_SP_PLT_BITS);
+                uint32_t psim = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIM_START, EXT_CAP_SP_PSIM_BITS);
+                printf("PSI[%d] psiv: %d psie: %d plt: %d psim: %d\n", i, psiv, psie, plt, psim);
+            }
+#endif
+        }
+
+        // offset is 32-bit words from cap_ptr
+        offset = XHCI_GET_BITS32(cap_ptr, EXT_CAP_NEXT_PTR_START, EXT_CAP_NEXT_PTR_BITS);
+        cap_ptr = (offset ? cap_ptr + offset : NULL);
+    }
+}
+
 mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     mx_status_t result = NO_ERROR;
 
@@ -99,9 +177,32 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         goto fail;
     }
 
+    xhci->rh_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
+    if (!xhci->rh_map) {
+        result = ERR_NO_MEMORY;
+        goto fail;
+    }
+    xhci->rh_port_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
+    if (!xhci->rh_port_map) {
+        result = ERR_NO_MEMORY;
+        goto fail;
+    }
+    xhci_read_extended_caps(xhci, mmio, hccparams1);
+
+    // initialize virtual root hub devices
+    for (int i = 0; i < XHCI_RH_COUNT; i++) {
+        result = xhci_root_hub_init(xhci, i);
+        if (result != NO_ERROR) goto fail;
+    }
+
     return NO_ERROR;
 
 fail:
+    for (int i = 0; i < XHCI_RH_COUNT; i++) {
+        xhci_root_hub_free(&xhci->root_hubs[i]);
+    }
+    free(xhci->rh_map);
+    free(xhci->rh_port_map);
     xhci_event_ring_free(xhci, 0);
     xhci_transfer_ring_free(xhci, &xhci->command_ring);
     if (xhci->scratch_pad) {
@@ -230,7 +331,7 @@ static void xhci_handle_events(xhci_t* xhci, int interruptor) {
             xhci_handle_command_complete_event(xhci, er->current);
             break;
         case TRB_EVENT_PORT_STATUS_CHANGE:
-            xhci_handle_port_changed_event(xhci, er->current);
+            // ignore, these are dealt with in xhci_handle_interrupt() below
             break;
         case TRB_EVENT_TRANSFER:
             xhci_handle_transfer_event(xhci, er->current);
@@ -266,5 +367,8 @@ void xhci_handle_interrupt(xhci_t* xhci, bool legacy) {
 
     if (status & USBSTS_EINT) {
         xhci_handle_events(xhci, interruptor);
+    }
+    if (status & USBSTS_PCD) {
+        xhci_handle_root_hub_change(xhci);
     }
 }
