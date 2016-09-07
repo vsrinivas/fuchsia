@@ -4,6 +4,8 @@
 
 source_set("zip") {
   sources = [
+    "create_unzipper.cc",
+    "create_unzipper.h",
     "memory_io.cc",
     "memory_io.h",
     "unique_unzipper.cc",

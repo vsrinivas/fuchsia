@@ -8,17 +8,14 @@
 
 #include <utility>
 
-#include "lib/zip/memory_io.h"
 #include "lib/ftl/logging.h"
+#include "lib/zip/create_unzipper.h"
 #include "third_party/zlib/contrib/minizip/unzip.h"
 
 namespace zip {
 
-Unzipper::Unzipper(std::vector<char> buffer) : buffer_(std::move(buffer)) {
-  zlib_filefunc_def io = internal::kMemoryIO;
-  io.opaque = &buffer_;
-  decoder_.reset(unzOpen2(nullptr, &io));
-}
+Unzipper::Unzipper(std::vector<char> buffer)
+    : buffer_(std::move(buffer)), decoder_(CreateUnzipper(&buffer_)) {}
 
 Unzipper::~Unzipper() {}
 
