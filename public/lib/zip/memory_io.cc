@@ -33,7 +33,8 @@ unsigned long ReadFile(void* opaque,
                        void* buffer,
                        unsigned long size) {
   FileStream* fstream = static_cast<FileStream*>(stream);
-  unsigned long bytes_read = std::min(size, fstream->size() - fstream->offset);
+  unsigned long bytes_read = std::min(
+      size, static_cast<unsigned long>(fstream->size() - fstream->offset));
   memcpy(buffer, fstream->begin() + fstream->offset, bytes_read);
   fstream->offset += bytes_read;
   return bytes_read;
