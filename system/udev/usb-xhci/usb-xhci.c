@@ -111,6 +111,10 @@ static int xhci_irq_thread(void* arg) {
     usb_xhci_t* uxhci = (usb_xhci_t*)arg;
     xprintf("xhci_irq_thread start\n");
 
+    // xhci_start will block, so do this part here instead of in usb_xhci_bind
+    xhci_start(&uxhci->xhci);
+    device_add(&uxhci->device, &uxhci->device);
+
     while (1) {
         mx_status_t wait_res;
 
@@ -272,16 +276,6 @@ static mx_protocol_device_t xhci_device_proto = {
     .release = xhci_release,
 };
 
-static int usb_xhci_start_thread(void* arg) {
-    usb_xhci_t* uxhci = (usb_xhci_t*)arg;
-
-    xhci_start(&uxhci->xhci);
-    device_add(&uxhci->device, &uxhci->device);
-
-    thrd_create_with_name(&uxhci->irq_thread, xhci_irq_thread, uxhci, "xhci_irq_thread");
-    return 0;
-}
-
 static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
     mx_handle_t mmio_handle = MX_HANDLE_INVALID;
@@ -389,9 +383,8 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     uxhci->device.protocol_id = MX_PROTOCOL_USB_HCI;
     uxhci->device.protocol_ops = &xhci_hci_protocol;
 
-    // start driver on a separate thread to avoid unnecessary blocking here
     thrd_t thread;
-    thrd_create_with_name(&thread, usb_xhci_start_thread, uxhci, "usb_xhci_start_thread");
+    thrd_create_with_name(&thread, xhci_irq_thread, uxhci, "xhci_irq_thread");
     thrd_detach(thread);
 
     return NO_ERROR;
