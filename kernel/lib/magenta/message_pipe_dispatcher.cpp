@@ -34,21 +34,24 @@ status_t MessagePipeDispatcher::Create(uint32_t flags,
     LTRACE_ENTRY;
 
     AllocChecker ac;
-    mxtl::RefPtr<MessagePipe> pipe = mxtl::AdoptRef(new (&ac) MessagePipe(GenerateKernelObjectId()));
+    mxtl::RefPtr<MessagePipe> pipe = mxtl::AdoptRef(new (&ac) MessagePipe());
     if (!ac.check()) return ERR_NO_MEMORY;
 
-    Dispatcher* msgp0 = new (&ac) MessagePipeDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, pipe);
+    auto msgp0 = new (&ac) MessagePipeDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, pipe);
     if (!ac.check()) return ERR_NO_MEMORY;
 
-    Dispatcher* msgp1 = new (&ac) MessagePipeDispatcher(flags, 1u, pipe);
+    auto msgp1 = new (&ac) MessagePipeDispatcher(flags, 1u, pipe);
     if (!ac.check()) {
         delete msgp0;
         return ERR_NO_MEMORY;
     }
 
+    msgp0->set_inner_koid(msgp1->get_koid());
+    msgp1->set_inner_koid(msgp0->get_koid());
+
     *rights = kDefaultPipeRights;
-    *dispatcher0 = mxtl::AdoptRef(msgp0);
-    *dispatcher1 = mxtl::AdoptRef(msgp1);
+    *dispatcher0 = mxtl::AdoptRef<Dispatcher>(msgp0);
+    *dispatcher1 = mxtl::AdoptRef<Dispatcher>(msgp1);
     return NO_ERROR;
 }
 

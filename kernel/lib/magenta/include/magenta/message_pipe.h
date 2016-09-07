@@ -36,11 +36,8 @@ struct MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Messag
 
 class MessagePipe : public mxtl::RefCounted<MessagePipe> {
 public:
-    using MessageList = mxtl::DoublyLinkedList<mxtl::unique_ptr<MessagePacket>>;
-    MessagePipe(mx_koid_t koid);
+    MessagePipe();
     ~MessagePipe();
-
-    mx_koid_t get_koid() const { return koid_; }
 
     void OnDispatcherDestruction(size_t side);
 
@@ -52,7 +49,7 @@ public:
                        uint64_t key, mx_signals_t signals);
 
 private:
-    const mx_koid_t koid_;
+    using MessageList = mxtl::DoublyLinkedList<mxtl::unique_ptr<MessagePacket>>;
 
     Mutex lock_;
     bool dispatcher_alive_[2];

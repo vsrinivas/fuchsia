@@ -35,9 +35,8 @@ MessagePacket::~MessagePacket() {
     }
 }
 
-MessagePipe::MessagePipe(mx_koid_t koid)
-    : koid_(koid),
-      dispatcher_alive_{true, true} {
+MessagePipe::MessagePipe()
+    : dispatcher_alive_{true, true} {
     state_tracker_[0].set_initial_signals_state(
             mx_signals_state_t{MX_SIGNAL_WRITABLE,
                                MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
