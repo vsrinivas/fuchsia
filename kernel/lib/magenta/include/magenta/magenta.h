@@ -69,3 +69,8 @@ inline lk_time_t timeout_to_deadline(lk_time_t now, lk_time_t timeout) {
 }
 
 mx_status_t magenta_sleep(mx_time_t nanoseconds);
+
+// Determines if this handle is to a Resource object.
+// Used to provide access to privileged syscalls.
+// Later, Resource objects will be finer-grained.
+mx_status_t validate_resource_handle(mx_handle_t handle);
