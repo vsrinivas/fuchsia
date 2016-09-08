@@ -7,8 +7,9 @@
 #include <algorithm>
 #include <limits>
 
-#include "apps/media/cpp/linear_transform.h"
 #include "apps/media/cpp/timeline.h"
+#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/services/audio/audio_output_manager.h"
 #include "apps/media/services/audio/audio_server_impl.h"
 #include "apps/media/services/audio/audio_track_to_output_link.h"
@@ -210,15 +211,7 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
 
   // Figure out the rate we need to scale by in order to produce our fixed
   // point timestamps.
-  LinearTransform::Ratio frac_scale(1 << PTS_FRACTIONAL_BITS, 1);
-  LinearTransform::Ratio frame_scale(LinearTransform::Ratio(1, 1));
-  bool no_loss = LinearTransform::Ratio::Compose(frac_scale, frame_scale,
-                                                 &frame_to_media_ratio_);
-  if (!no_loss) {
-    FTL_LOG(ERROR) << "Invalid (audio frames:media time ticks) ratio (1/1)";
-    Shutdown();
-    return;
-  }
+  frame_to_media_ratio_ = TimelineRate(1 << PTS_FRACTIONAL_BITS, 1);
 
   // Figure out how many bytes we need to hold the requested number of nSec of
   // audio.
@@ -316,7 +309,7 @@ void AudioTrackImpl::RemoveOutput(AudioTrackToOutputLinkPtr link) {
   }
 }
 
-void AudioTrackImpl::SnapshotRateTrans(LinearTransform* out,
+void AudioTrackImpl::SnapshotRateTrans(TimelineFunction* out,
                                        uint32_t* generation) {
   TimelineFunction timeline_function;
   timeline_control_point_.SnapshotCurrentFunction(
@@ -327,10 +320,10 @@ void AudioTrackImpl::SnapshotRateTrans(LinearTransform* out,
   TimelineRate rate_in_frames_per_ns =
       timeline_function.rate() * frames_per_ns_;
 
-  *out = LinearTransform(timeline_function.reference_time(),
-                         rate_in_frames_per_ns.subject_delta(),
-                         rate_in_frames_per_ns.reference_delta(),
-                         timeline_function.subject_time() * frames_per_ns_);
+  *out = TimelineFunction(timeline_function.reference_time(),
+                          timeline_function.subject_time() * frames_per_ns_,
+                          rate_in_frames_per_ns.reference_delta(),
+                          rate_in_frames_per_ns.subject_delta());
 }
 
 void AudioTrackImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {

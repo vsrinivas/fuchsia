@@ -5,6 +5,7 @@
 #include "apps/media/services/common/timeline_control_point.h"
 
 #include "apps/media/cpp/timeline.h"
+#include "apps/media/cpp/timeline_function.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

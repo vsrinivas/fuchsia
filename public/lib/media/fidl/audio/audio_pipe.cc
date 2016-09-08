@@ -90,15 +90,8 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   if (supplied_packet->packet()->pts != MediaPacket::kNoTimestamp) {
     // The user provided an explicit PTS for this audio.  Transform it into
     // units of fractional frames.
-    LinearTransform tmp(0, owner_->FractionalFrameToMediaTimeRatio(), 0);
-    if (!tmp.DoForwardTransform(supplied_packet->packet()->pts, &start_pts)) {
-      FTL_LOG(ERROR)
-          << "Overflow while transforming explicitly provided PTS ("
-          << supplied_packet->packet()->pts
-          << ") during SendPacket on MediaPipe transporting audio data.";
-      Reset();
-      return;
-    }
+    start_pts = supplied_packet->packet()->pts *
+                owner_->FractionalFrameToMediaTimeRatio();
   } else {
     // No PTS was provided.  Use the end time of the last audio packet, if
     // known.  Otherwise, just assume a media time of 0.

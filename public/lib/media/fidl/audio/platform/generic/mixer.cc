@@ -4,7 +4,7 @@
 
 #include "apps/media/services/audio/platform/generic/mixer.h"
 
-#include "apps/media/cpp/linear_transform.h"
+#include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/services/audio/platform/generic/mixers/linear_sampler.h"
 #include "apps/media/services/audio/platform/generic/mixers/no_op.h"
 #include "apps/media/services/audio/platform/generic/mixers/point_sampler.h"
@@ -39,9 +39,9 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
 
   // If the source sample rate is an integer multiple of the destination sample
   // rate, just use the point sampler.  Otherwise, use the linear re-sampler.
-  LinearTransform::Ratio src_to_dst(src_format->frames_per_second,
-                                    dst_format->frames_per_second);
-  if (src_to_dst.numerator == 1) {
+  TimelineRate src_to_dst(src_format->frames_per_second,
+                          dst_format->frames_per_second);
+  if (src_to_dst.subject_delta() == 1) {
     return mixers::PointSampler::Select(src_format, dst_format);
   } else {
     return mixers::LinearSampler::Select(src_format, dst_format);

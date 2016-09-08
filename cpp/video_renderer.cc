@@ -7,6 +7,7 @@
 #include <limits>
 
 #include "apps/media/cpp/timeline.h"
+#include "apps/media/cpp/timeline_function.h"
 
 namespace mojo {
 namespace media {

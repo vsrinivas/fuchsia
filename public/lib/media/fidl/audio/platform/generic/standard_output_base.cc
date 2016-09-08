@@ -289,11 +289,8 @@ bool StandardOutputBase::ProcessMix(
 
   // Figure out where the first and last sampling points of this job are,
   // expressed in fractional track frames.
-  int64_t first_sample_ftf;
-  bool good = info->out_frames_to_track_frames.DoForwardTransform(
-      cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced,
-      &first_sample_ftf);
-  FTL_DCHECK(good);
+  int64_t first_sample_ftf = info->out_frames_to_track_frames(
+      cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
 
   FTL_DCHECK(frames_left);
   int64_t final_sample_ftf =
@@ -395,15 +392,7 @@ bool StandardOutputBase::SetupTrim(const AudioTrackImplPtr& track,
   // which should be impossible unless the user has defined a playback rate
   // where the ratio between media time ticks and local time ticks is
   // greater than one.
-  //
-  // IOW - this should never happen.  If it does, we just stop processing
-  // payloads.
-  //
-  // TODO(johngro): Log an error?  Communicate this to the user somehow?
-  if (!info->lt_to_track_frames.DoForwardTransform(local_now_ticks,
-                                                   &trim_threshold_)) {
-    return false;
-  }
+  trim_threshold_ = info->lt_to_track_frames(local_now_ticks);
 
   return true;
 }
@@ -424,7 +413,7 @@ bool StandardOutputBase::ProcessTrim(
 
 void StandardOutputBase::TrackBookkeeping::UpdateTrackTrans(
     const AudioTrackImplPtr& track) {
-  LinearTransform tmp;
+  TimelineFunction tmp;
   uint32_t gen;
 
   FTL_DCHECK(track);
@@ -438,15 +427,10 @@ void StandardOutputBase::TrackBookkeeping::UpdateTrackTrans(
 
   // The transformation has changed, re-compute the local time -> track frame
   // transformation.
-  LinearTransform scale(0, track->FractionalFrameToMediaTimeRatio(), 0);
-  bool good;
-
-  lt_to_track_frames.a_zero = tmp.a_zero;
-  good = scale.DoForwardTransform(tmp.b_zero, &lt_to_track_frames.b_zero);
-  FTL_DCHECK(good);
-  good = LinearTransform::Ratio::Compose(scale.scale, tmp.scale,
-                                         &lt_to_track_frames.scale);
-  FTL_DCHECK(good);
+  lt_to_track_frames = TimelineFunction(
+      tmp.reference_time(), tmp.subject_time(),
+      TimelineRate::Product(track->FractionalFrameToMediaTimeRatio(),
+                            tmp.rate()));
 
   // Update the generation, and invalidate the output to track generation.
   lt_to_track_frames_gen = gen;
@@ -478,60 +462,52 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
   // track supplied mapping from local to fraction input frames to produce a
   // transformation which maps from output frames to fractional input frames.
   //
-  // TODO(johngro): Make this composition operation part of the LinearTransform
-  // class instead of doing it by hand here.  Its a more complicated task that
-  // one might initially think, because of the need to deal with the
-  // intermediate offset term, and distributing it to either side of the end of
-  // the transformation with a minimum amt of loss, while avoiding overflow.
+  // TODO(dalesat): Use the Compose operation of TimelineFunction instead of
+  // doing it by hand here.
   //
   // For now, we punt, do it by hand and just assume that everything went well.
-  LinearTransform& dst = out_frames_to_track_frames;
+  TimelineFunction& dst = out_frames_to_track_frames;
 
   // Distribute the intermediate offset entirely to the fractional frame domain
   // for now.  We can do better by extracting portions of the intermedate
   // offset that can be scaled by the ratios on either side of with without
   // loss, but for now this should be close enough.
-  int64_t intermediate =
-      job.local_to_output->a_zero - lt_to_track_frames.a_zero;
+  int64_t intermediate = job.local_to_output->reference_time() -
+                         lt_to_track_frames.reference_time();
   int64_t track_frame_offset;
 
-  // TODO(johngro): add routines to LinearTransform::Ratio which allow us to
-  // scale using just a ratio without needing to create a linear transform with
-  // empty offsets.
-  LinearTransform tmp(0, lt_to_track_frames.scale, 0);
-  bool good = tmp.DoForwardTransform(intermediate, &track_frame_offset);
-  FTL_DCHECK(good);
-
-  dst.a_zero = job.local_to_output->b_zero;
-  dst.b_zero = lt_to_track_frames.b_zero + track_frame_offset;
+  // TODO(dalesat): Use TimelineRate::Scale which allows us to scale using just
+  // just a ratio without needing to create a linear transform with empty
+  // offsets.
+  TimelineFunction tmp(lt_to_track_frames.rate());
+  track_frame_offset = tmp(intermediate);
 
   // TODO(johngro): Add options to allow us to invert one or both of the ratios
   // during composition instead of needing to make a temporary ratio to
   // acomplish the task.
-  LinearTransform::Ratio tmp_ratio(job.local_to_output->scale.denominator,
-                                   job.local_to_output->scale.numerator);
-  good = LinearTransform::Ratio::Compose(tmp_ratio, lt_to_track_frames.scale,
-                                         &dst.scale);
-  FTL_DCHECK(good);
+  TimelineRate tmp_ratio(job.local_to_output->rate().reference_delta(),
+                         job.local_to_output->rate().subject_delta());
+
+  dst = TimelineFunction(
+      job.local_to_output->subject_time(),
+      lt_to_track_frames.subject_time() + track_frame_offset,
+      TimelineRate::Product(tmp_ratio, lt_to_track_frames.rate()));
 
   // Finally, compute the step size in fractional frames.  IOW, every time we
   // move forward one output frame, how many fractional frames of input do we
   // consume.  Don't bother doing the multiplication if we already know that the
   // numerator is zero.
   //
-  // TODO(johngro): same complaint as before... Do this without a temp.  The
-  // special casing should be handled in the routine added to
-  // LinearTransform::Ratio.
-  DCHECK(dst.scale.denominator);
-  if (!dst.scale.numerator) {
+  // TODO(dalesat): As before, use TimelineRate::Scale.
+  FTL_DCHECK(dst.rate().reference_delta());
+  if (!dst.rate().subject_delta()) {
     step_size = 0;
   } else {
-    LinearTransform tmp(0, dst.scale, 0);
+    TimelineFunction tmp(dst.rate());
     int64_t tmp_step_size;
 
-    good = tmp.DoForwardTransform(1, &tmp_step_size);
+    tmp_step_size = tmp(1);
 
-    FTL_DCHECK(good);
     FTL_DCHECK(tmp_step_size >= 0);
     FTL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
 

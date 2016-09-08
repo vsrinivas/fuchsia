@@ -7,7 +7,6 @@
 #include <limits>
 #include <type_traits>
 
-#include "apps/media/cpp/linear_transform.h"
 #include "lib/ftl/logging.h"
 
 namespace mojo {

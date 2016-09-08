@@ -8,13 +8,13 @@
 #include <deque>
 #include <set>
 
-#include "apps/media/cpp/linear_transform.h"
+#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/interfaces/audio_track.mojom.h"
 #include "apps/media/interfaces/media_renderer.mojom.h"
 #include "apps/media/services/audio/audio_pipe.h"
 #include "apps/media/services/audio/fwd_decls.h"
 #include "apps/media/services/common/timeline_control_point.h"
-#include "lib/ftl/synchronization/mutex.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/callback.h"
 
@@ -44,9 +44,9 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
 
   // Accessors used by AudioOutputs during mixing to access parameters which are
   // important for the mixing process.
-  void SnapshotRateTrans(LinearTransform* out, uint32_t* generation = nullptr);
+  void SnapshotRateTrans(TimelineFunction* out, uint32_t* generation = nullptr);
 
-  const LinearTransform::Ratio& FractionalFrameToMediaTimeRatio() const {
+  const TimelineRate& FractionalFrameToMediaTimeRatio() const {
     return frame_to_media_ratio_;
   }
 
@@ -90,7 +90,7 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
   TimelineRate frames_per_ns_;
-  LinearTransform::Ratio frame_to_media_ratio_;
+  TimelineRate frame_to_media_ratio_;
   uint32_t bytes_per_frame_ = 1;
   AudioMediaTypeDetailsPtr format_;
   AudioTrackToOutputLinkSet outputs_;

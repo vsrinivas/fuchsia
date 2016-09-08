@@ -5,8 +5,8 @@
 #ifndef APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_
 #define APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_STANDARD_OUTPUT_BASE_H_
 
-#include "apps/media/cpp/linear_transform.h"
-#include "apps/media/cpp/local_time.h"
+#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/cpp/timeline.h"
 #include "apps/media/interfaces/media_common.mojom.h"
 #include "apps/media/interfaces/media_types.mojom.h"
 #include "apps/media/services/audio/audio_output.h"
@@ -35,7 +35,7 @@ class StandardOutputBase : public AudioOutput {
     int64_t start_pts_of;  // start PTS, expressed in output frames.
     uint32_t local_to_output_gen;
     bool accumulate;
-    const LinearTransform* local_to_output;
+    const TimelineFunction* local_to_output;
 
     // State for the job which is set up for each track during SetupMix
     uint32_t frames_produced;
@@ -45,8 +45,8 @@ class StandardOutputBase : public AudioOutput {
     TrackBookkeeping();
     ~TrackBookkeeping() override;
 
-    LinearTransform lt_to_track_frames;
-    LinearTransform out_frames_to_track_frames;
+    TimelineFunction lt_to_track_frames;
+    TimelineFunction out_frames_to_track_frames;
     uint32_t lt_to_track_frames_gen = 0;
     uint32_t out_frames_to_track_frames_gen = MixJob::kInvalidGeneration;
     uint32_t step_size;

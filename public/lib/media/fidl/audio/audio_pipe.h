@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include "apps/media/cpp/linear_transform.h"
 #include "apps/media/cpp/media_packet_consumer_base.h"
 #include "apps/media/interfaces/timeline_controller.mojom.h"
 #include "apps/media/services/audio/fwd_decls.h"
