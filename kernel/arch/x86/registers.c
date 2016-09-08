@@ -270,8 +270,14 @@ bool x86_extended_register_enable_feature(
             break;
         }
         case X86_EXTENDED_REGISTER_PT: {
-            /* Currently unsupported */
-            return false;
+            if (!xsaves_supported ||
+                !(xss_component_bitmap & X86_XSAVE_STATE_PT)) {
+                return false;
+            }
+
+            uint64_t new_state = read_msr(IA32_XSS_MSR) | X86_XSAVE_STATE_PT;
+            write_msr(IA32_XSS_MSR, new_state);
+            break;
         }
         case X86_EXTENDED_REGISTER_PKRU: {
             /* Currently unsupported */
