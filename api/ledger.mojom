@@ -53,7 +53,7 @@ interface Ledger {
   // Deletes the page with the given id.
   DeletePage(array<uint8, 16> id) => (Status status);
 
-  // Set the |ConflictResolverFactory| to use for resolving conflict on pages.
+  // Set the |ConflictResolverFactory| to use for resolving conflicts on pages.
   // If |factory| is NULL or this method is not called, a global last one wins
   // policy will be used. If a factory is set and later on disconnected without
   // calling this method again, no conflict resolution will be done until this
@@ -112,7 +112,7 @@ interface Page {
   //   commit any pending mutations.
   // - All pending mutations will regularly be bundled together and commited.
   //   They are guaranteed to be persisted as soon as the client receives a
-  //   succesful status.
+  //   successful status.
   // |Put| and |PutWithPriority| can be used for small values that fit inside a
   // mojo message. If the value is bigger, a reference must be first created
   // using |CreateReference| and then |PutReference| can be used.
@@ -210,7 +210,7 @@ struct EntryChange {
 };
 
 struct PageChange {
-  // The timestamp of this change. This represents the number of microsconds
+  // The timestamp of this change. This represents the number of microseconds
   // since Unix epoch (i.e., since "1970-01-01 00:00 UTC", ignoring leap
   // seconds). This value is set by the device that created the change and is
   // not synchronized across devices. In particular, there is no guarantee that
@@ -221,7 +221,7 @@ struct PageChange {
 };
 
 // Interface to watch changes to a page. The initial state is sent
-// immediatetely when the watcher is registered. The client will then receive
+// immediately when the watcher is registered. The client will then receive
 // changes made by other clients or synced from other devices.
 interface PageWatcher {
   OnInitialState(PageSnapshot snapshot) => ();
