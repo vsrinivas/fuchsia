@@ -20,7 +20,6 @@ mojo_sdk_source_set("cpp") {
     "shared_buffer_set.h",
     "shared_buffer_set_allocator.cc",
     "shared_buffer_set_allocator.h",
-    "thread_checker.h",
     "timeline.h",
     "timeline_function.cc",
     "timeline_function.h",
@@ -55,7 +54,8 @@ executable("apptests") {
 
   deps = [
     ":cpp",
-    "//mojo/public/cpp/environment:standalone",
+    "//lib/mtl",
+    "//mojo/public/cpp/environment",
     "//mojo/public/cpp/system",
     "//mojo/system",
     "//third_party/gtest",
