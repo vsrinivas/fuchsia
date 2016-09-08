@@ -5,6 +5,7 @@
 package direntry
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 	"time"
@@ -40,8 +41,8 @@ func checkEntry(t *testing.T, d *Dirent, goldName string, goldCluster uint32, go
 		t.Fatalf("Expected cluster %d, saw %d", goldCluster, d.Cluster)
 	} else if d.GetType() != goldAttr {
 		t.Fatalf("Expected type %d, saw %d", goldAttr, d.GetType())
-	} else if d.Filename != goldName {
-		t.Fatalf("Expected name %s, saw %s", goldName, d.Filename)
+	} else if d.GetName() != goldName {
+		t.Fatalf("Expected name %s, saw %s", goldName, d.GetName())
 	} else if d.Size != goldSize {
 		t.Fatalf("Expected size %d, saw %d", goldSize, d.Size)
 	}
@@ -222,6 +223,26 @@ func TestSerializeAndLoadLong(t *testing.T) {
 	directory = appendFree(directory /* lastFree = */, true)
 	foundDirent := checkedLookup(t, directory, goldName, 0)
 	checkEntry(t, foundDirent, goldName, goldCluster, goldAttr, goldSize)
+}
+
+func TestSerializeAndLoadGenerationNumber(t *testing.T) {
+	// Serialize names (creating generation numbers) and write them to a directory
+	var directory []byte
+	foo1 := ".foobar"
+	goldFoo1Short := []byte("FOOBAR~1   ")
+	directory = appendEmptyFile(directory, foo1) // Index 0, 1. Generation number: 1
+	directory = appendFree(directory /* lastFree = */, true)
+
+	// Load the direntry.
+	entry := checkedLookup(t, directory, ".foobar", 0)
+	if !bytes.Equal(entry.nameDOS, goldFoo1Short) {
+		t.Fatal("Uxpected short name: ", entry.nameDOS)
+	}
+	// Re-serialize the direntry. Show that the generation number is unchanged.
+	checkedSerialize(t, directory, entry, DirentrySize*2)
+	if !bytes.Equal(entry.nameDOS, goldFoo1Short) {
+		t.Fatal("Uxpected short name: ", entry.nameDOS)
+	}
 }
 
 func TestSerializeAndLoadLongAtOffset(t *testing.T) {

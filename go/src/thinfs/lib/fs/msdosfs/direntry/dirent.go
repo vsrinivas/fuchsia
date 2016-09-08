@@ -28,12 +28,13 @@ type GetDirentryCallback func(uint) ([]byte, error)
 // it gets passed back to the user when "fs.Directory.Read()" is called.
 type Dirent struct {
 	Cluster   uint32    // Cluster equals zero if we're opening the root directory
-	Filename  string    // A UTF-8 encoded representation of the filename
+	filename  string    // A UTF-8 encoded representation of the filename
 	Size      uint32    // The size field includes all dirents up to and including the "last free" dirent
 	WriteTime time.Time // The last time the file was modified
 
 	attributes uint8 // Never set to "long"
 	nameDOS    []byte
+	longname   bool
 	free       bool
 	lastFree   bool
 }
@@ -49,7 +50,7 @@ func New(name string, cluster uint32, attr fs.FileType) *Dirent {
 	d := &Dirent{}
 	// Set filename. The "short" or "long"-ness of the name should not matter (yet).
 	// As a consequence, the filename is not actually validated until it is serialized.
-	d.Filename = name
+	d.filename = name
 
 	// Set cluster.
 	d.Cluster = cluster
@@ -87,8 +88,8 @@ func LookupDirent(callback GetDirentryCallback, name string) (*Dirent, uint, err
 			continue
 		}
 
-		glog.V(2).Infof("At index %d, encountered direntry named %s", direntryIndex, d.Filename)
-		if d.Filename == name {
+		glog.V(2).Infof("At index %d, encountered direntry named %s", direntryIndex, d.filename)
+		if d.filename == name {
 			return d, direntryIndex, nil
 		}
 		glog.V(2).Infof("Name not found. Jumping %d slots", numSlots)
@@ -146,10 +147,12 @@ func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint
 		// The direntry is actually with a short filename.
 		return &Dirent{
 			Cluster:    short.cluster(),
-			Filename:   short.name(),
+			filename:   short.name(),
 			Size:       short.size(),
 			WriteTime:  short.lastUpdateTime(),
 			attributes: short.attributes,
+			nameDOS:    short.nameRaw(),
+			longname:   false,
 			free:       short.isFree(),
 			lastFree:   short.isLastFree(),
 		}, 1, nil
@@ -173,10 +176,12 @@ func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint
 	}
 	return &Dirent{
 		Cluster:    short.cluster(),
-		Filename:   unixName,
+		filename:   unixName,
 		Size:       short.size(),
 		WriteTime:  short.lastUpdateTime(),
 		attributes: short.attributes,
+		nameDOS:    short.nameRaw(),
+		longname:   true,
 		free:       short.isFree(),
 		lastFree:   short.isLastFree(),
 	}, uint(numDirentrySlots), nil
@@ -184,7 +189,7 @@ func LoadDirent(callback GetDirentryCallback, direntryIndex uint) (*Dirent, uint
 
 // GetName implements fs.Dirent
 func (d *Dirent) GetName() string {
-	return d.Filename
+	return d.filename
 }
 
 // GetType implements fs.Dirent
@@ -211,28 +216,34 @@ func (d *Dirent) IsLastFree() bool {
 
 // Serialize converts the in-memory "Dirent" to a "disk-ready" byte slice.
 // The result should be a multiple of "DirentrySize" bytes long.
+//
+// The "callback" is used to read the containing directory, and confirm that no other files exist
+// with the same "generation number". After the dirent has been serialized once, the generation
+// number is stored, and the callback will no longer be used (it can be nil).
 func (d *Dirent) Serialize(callback GetDirentryCallback) ([]byte, error) {
 	var result []byte
 
-	// Since we are preparing to put this file in storage, we need to ensure it has a unique
-	// generation number that distinguishes it from other files with the same prefix.
-	nameDOS, longnameNeeded, err := convertUnixToDOS(callback, d.Filename)
-	if err != nil {
-		return nil, err
+	if len(d.nameDOS) == 0 {
+		// Since we are preparing to put this file in storage, we need to ensure it has a unique
+		// generation number that distinguishes it from other files with the same prefix.
+		var err error
+		if d.nameDOS, d.longname, err = convertUnixToDOS(callback, d.filename); err != nil {
+			return nil, err
+		}
 	}
 
 	// Convert Dirent to a short direntry (this is necessary for both short and long names)
 	shortDirent := &shortDirentry{
 		attributes: d.attributes,
 	}
-	shortDirent.setName(nameDOS)
+	shortDirent.setName(d.nameDOS)
 	shortDirent.setCluster(d.Cluster)
 	shortDirent.setLastUpdateTime(d.WriteTime)
 	shortDirent.setSize(d.Size)
 
 	// Prepend all long direntries, if necessary
-	if longnameNeeded {
-		longDirents, err := convertUnixToWin(d.Filename, nameDOS)
+	if d.longname {
+		longDirents, err := convertUnixToWin(d.filename, d.nameDOS)
 		if err != nil {
 			return nil, err
 		}
