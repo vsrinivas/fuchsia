@@ -460,7 +460,7 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {
     bus->max_device_count = hci_protocol->get_max_device_count(device);
     bus->devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
     if (!bus->devices) {
-        printf("Not enough memory for usb_bus_t->devices. max_device_count: %ld\n",
+        printf("Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
                bus->max_device_count);
         free(bus);
         return ERR_NO_MEMORY;
