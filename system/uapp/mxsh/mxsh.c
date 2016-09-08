@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -11,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
@@ -58,6 +60,7 @@ void beep(void) {
 
 #define CTRL_C 3
 #define BACKSPACE 8
+#define TAB 9
 #define NL 10
 #define CTRL_L 12
 #define CR 13
@@ -167,6 +170,120 @@ void settitle(const char* title) {
     cputs(str, n + 1);
 }
 
+static void tab_complete(editstate* es) {
+    size_t token_start = 0;
+    bool in_token = false;
+    bool in_env = false;
+    bool found_command = false;
+    char tmp[2048];
+    const char* path = NULL;
+    char* prefix = NULL;
+    size_t prefix_len;
+    DIR* dir;
+    struct dirent *de;
+    char result[2048];
+    size_t result_count = 0;
+    size_t result_len;
+    struct stat s;
+
+    for (size_t i = 0; i < (size_t)es->pos; i++) {
+        if (es->line[i] == ' ') {
+            token_start = i + 1;
+
+            if (in_token && ! in_env) {
+                found_command = true;
+            }
+
+            in_token = false;
+            in_env = false;
+            continue;
+        }
+
+        in_token = true;
+        in_env = in_env || es->line[i] == '=';
+    }
+
+    if (in_env) {
+        return;
+    }
+
+    strcpy(tmp, es->line + token_start);
+    tmp[es->pos - token_start] = '\0';
+
+    prefix = strrchr(tmp, '/');
+
+    if (prefix) {
+        *(prefix++) = '\0';
+        path = tmp;
+
+        if (!*path) {
+            path = "/";
+        }
+    } else {
+        prefix = tmp;
+
+        if (!found_command) {
+            path = "/boot/bin";
+        } else {
+            path = ".";
+        }
+    }
+
+    prefix_len = strlen(prefix);
+
+    dir = opendir(path);
+
+    if (!dir) {
+        return;
+    }
+
+    while ((de = readdir(dir)) != NULL) {
+        if (strncmp(prefix, de->d_name, prefix_len)) {
+            continue;
+        }
+
+        if (!(result_count++)) {
+            strcpy(result, de->d_name);
+            result_len = strlen(result);
+            continue;
+        }
+
+        for (result_len = 0;
+             de->d_name[result_len] &&
+                 result[result_len] == de->d_name[result_len];
+             result_len++);
+
+        if (result_len <= prefix_len) {
+            return;
+        }
+
+        result[result_len] = '\0';
+    }
+
+    if (result_count == 0) {
+        return;
+    }
+
+    if (result_count == 1
+        && result_len < sizeof(result) - 1
+        && snprintf(tmp, sizeof(tmp), "%s/%s", path, result) < (int)sizeof(tmp)) {
+
+        if (stat(tmp, &s) < 0 || !(s.st_mode & S_IFDIR)) {
+            strcat(result, " ");
+        } else {
+            strcat(result, "/");
+        }
+
+        result_len++;
+    }
+
+    memmove(es->line + es->pos + result_len - prefix_len,
+            es->line + es->pos, es->len - es->pos);
+    memcpy(es->line + es->pos - prefix_len, result, result_len);
+    es->pos += result_len - prefix_len;
+    es->len += result_len - prefix_len;
+}
+
 int readline(editstate* es) {
     int a, b, c;
     es->len = 0;
@@ -208,6 +325,10 @@ again:
             continue;
         }
         switch (c) {
+        case TAB:
+            tab_complete(es);
+            cputs(erase_line, sizeof(erase_line));
+            goto again;
         case CTRL_C:
             es->len = 0;
             es->pos = 0;
@@ -219,7 +340,6 @@ again:
             goto again;
         case BACKSPACE:
         case DELETE:
-        backspace:
             if (es->pos > 0) {
                 es->pos--;
                 es->len--;
