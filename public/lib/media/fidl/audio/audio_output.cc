@@ -84,7 +84,7 @@ MediaResult AudioOutput::InitializeLink(const AudioTrackToOutputLinkPtr& link) {
   return MediaResult::OK;
 }
 
-void AudioOutput::ScheduleCallback(LocalTime when) {
+void AudioOutput::ScheduleCallback(ftl::TimePoint when) {
   ftl::MutexLocker locker(&processing_mutex_);
 
   // If we are in the process of shutting down, then we are no longer permitted
@@ -98,11 +98,9 @@ void AudioOutput::ScheduleCallback(LocalTime when) {
   // TODO(johngro):  Someday, if there is ever a way to schedule delayed tasks
   // with absolute time, or with resolution better than microseconds, do so.
   // Until then figure out the relative time for scheduling the task and do so.
-  LocalTime now = LocalClock::now();
-  base::TimeDelta sched_time =
-      (now > when) ? base::TimeDelta::FromMicroseconds(0)
-                   : base::TimeDelta::FromMicroseconds(
-                         local_time::to_usec<int64_t>(when - now));
+  ftl::TimePoint now = ftl::TimePoint::Now();
+  ftl::TimeDelta sched_time =
+      (now > when) ? ftl::TimeDelta::FromMicroseconds(0) : (when - now);
 
   task_runner_->PostNonNestableDelayedTask(
       FROM_HERE, base::Bind(&ProcessThunk, weak_self_), sched_time);

@@ -4,15 +4,16 @@
 
 #include "apps/media/services/audio/platform/generic/throttle_output.h"
 
-#include "apps/media/cpp/local_time.h"
 #include "apps/media/services/audio/audio_output_manager.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace mojo {
 namespace media {
 namespace audio {
 
-static constexpr LocalDuration TRIM_PERIOD = local_time::from_msec(10);
+static constexpr ftl::TimeDelta TRIM_PERIOD =
+    ftl::TimeDelta::FromMilliseconds(10);
 
 ThrottleOutput::ThrottleOutput(AudioOutputManager* manager)
     : StandardOutputBase(manager) {}
@@ -24,14 +25,14 @@ AudioOutputPtr ThrottleOutput::New(AudioOutputManager* manager) {
 }
 
 MediaResult ThrottleOutput::Init() {
-  last_sched_time_ = LocalClock::now();
+  last_sched_time_ = ftl::TimePoint::Now();
   return MediaResult::OK;
 }
 
-bool ThrottleOutput::StartMixJob(MixJob* job, const LocalTime& process_start) {
+bool ThrottleOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
   // Compute our next callback time, and check to see if we are falling behind
   // in the process.
-  last_sched_time_ += TRIM_PERIOD;
+  last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
   if (process_start > last_sched_time_) {
     // TODO(johngro): We are falling behind on our trimming.  We should
     // probably tell someone.

@@ -9,13 +9,13 @@
 #include <memory>
 #include <set>
 
-#include "apps/media/cpp/local_time.h"
 #include "apps/media/services/audio/audio_pipe.h"
 #include "apps/media/services/audio/audio_track_impl.h"
 #include "apps/media/services/audio/fwd_decls.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace mojo {
 namespace media {
@@ -99,7 +99,7 @@ class AudioOutput {
   //
   // Schedule a processing callback at the specified absolute time on the local
   // clock.
-  void ScheduleCallback(LocalTime when);
+  void ScheduleCallback(ftl::TimePoint when);
 
   // ShutdownSelf
   //

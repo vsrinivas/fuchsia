@@ -9,7 +9,6 @@ mojo_sdk_source_set("cpp") {
   sources = [
     "fifo_allocator.cc",
     "fifo_allocator.h",
-    "local_time.h",
     "mapped_shared_buffer.cc",
     "mapped_shared_buffer.h",
     "media_packet_consumer_base.cc",

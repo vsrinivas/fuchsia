@@ -14,6 +14,7 @@
 #include "apps/media/services/audio/gain.h"
 #include "apps/media/services/audio/platform/generic/mixer.h"
 #include "apps/media/services/audio/platform/generic/output_formatter.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace mojo {
 namespace media {
@@ -25,7 +26,7 @@ class StandardOutputBase : public AudioOutput {
 
  protected:
   struct MixJob {
-    static constexpr uint32_t INVALID_GENERATION = 0;
+    static constexpr uint32_t kInvalidGeneration = 0;
 
     // State for the job set up once by the output implementation and then used
     // by all tracks.
@@ -47,7 +48,7 @@ class StandardOutputBase : public AudioOutput {
     LinearTransform lt_to_track_frames;
     LinearTransform out_frames_to_track_frames;
     uint32_t lt_to_track_frames_gen = 0;
-    uint32_t out_frames_to_track_frames_gen = MixJob::INVALID_GENERATION;
+    uint32_t out_frames_to_track_frames_gen = MixJob::kInvalidGeneration;
     uint32_t step_size;
     Gain::AScale amplitude_scale;
     MixerPtr mixer;
@@ -61,16 +62,16 @@ class StandardOutputBase : public AudioOutput {
   void Process() final;
   MediaResult InitializeLink(const AudioTrackToOutputLinkPtr& link) final;
 
-  void SetNextSchedTime(const LocalTime& next_sched_time) {
+  void SetNextSchedTime(ftl::TimePoint next_sched_time) {
     next_sched_time_ = next_sched_time;
     next_sched_time_known_ = true;
   }
 
-  void SetNextSchedDelay(const LocalDuration& next_sched_delay) {
-    SetNextSchedTime(LocalClock::now() + next_sched_delay);
+  void SetNextSchedDelay(const ftl::TimeDelta& next_sched_delay) {
+    SetNextSchedTime(ftl::TimePoint::Now() + next_sched_delay);
   }
 
-  virtual bool StartMixJob(MixJob* job, const LocalTime& process_start) = 0;
+  virtual bool StartMixJob(MixJob* job, ftl::TimePoint process_start) = 0;
   virtual bool FinishMixJob(const MixJob& job) = 0;
   virtual TrackBookkeeping* AllocBookkeeping();
   void SetupMixBuffer(uint32_t max_mix_frames);
@@ -99,7 +100,7 @@ class StandardOutputBase : public AudioOutput {
                    TrackBookkeeping* info,
                    const AudioPipe::AudioPacketRefPtr& pkt_ref);
 
-  LocalTime next_sched_time_;
+  ftl::TimePoint next_sched_time_;
   bool next_sched_time_known_;
 
   // State for the internal buffer which holds intermediate mix results.

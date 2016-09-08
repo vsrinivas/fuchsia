@@ -5,8 +5,8 @@
 #ifndef APPS_MEDIA_CPP_TIMELINE_H_
 #define APPS_MEDIA_CPP_TIMELINE_H_
 
-#include <chrono>  // NOLINT(build/c++11)
-#include <stdint.h>
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace mojo {
 namespace media {
@@ -16,24 +16,22 @@ class Timeline {
  public:
   // Returns the current local time in nanoseconds since epoch.
   static int64_t local_now() {
-    return std::chrono::steady_clock::now().time_since_epoch().count();
+    return (ftl::TimePoint::Now() - ftl::TimePoint()).ToNanoseconds();
   }
 
   template <typename T>
   static constexpr int64_t ns_from_seconds(T seconds) {
-    return static_cast<int64_t>(seconds * std::nano::den);
+    return ftl::TimeDelta::FromSeconds(seconds).ToNanoseconds();
   }
 
   template <typename T>
   static constexpr int64_t ns_from_ms(T milliseconds) {
-    return static_cast<int64_t>(milliseconds *
-                                (std::nano::den / std::milli::den));
+    return ftl::TimeDelta::FromMilliseconds(milliseconds).ToNanoseconds();
   }
 
   template <typename T>
   static constexpr int64_t ns_from_us(T microseconds) {
-    return static_cast<int64_t>(microseconds *
-                                (std::nano::den / std::micro::den));
+    return ftl::TimeDelta::FromMicroseconds(microseconds).ToNanoseconds();
   }
 };
 

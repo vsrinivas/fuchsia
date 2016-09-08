@@ -5,7 +5,6 @@
 #ifndef APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
 #define APPS_MEDIA_SERVICES_AUDIO_PLATFORM_GENERIC_THROTTLE_OUTPUT_H_
 
-#include "apps/media/cpp/local_time.h"
 #include "apps/media/services/audio/platform/generic/standard_output_base.h"
 
 namespace mojo {
@@ -24,11 +23,11 @@ class ThrottleOutput : public StandardOutputBase {
   MediaResult Init() override;
 
   // StandardOutputBase Implementation
-  bool StartMixJob(MixJob* job, const LocalTime& process_start) override;
+  bool StartMixJob(MixJob* job, ftl::TimePoint process_start) override;
   bool FinishMixJob(const MixJob& job) override;
 
  private:
-  LocalTime last_sched_time_;
+  ftl::TimePoint last_sched_time_;
 };
 
 }  // namespace audio

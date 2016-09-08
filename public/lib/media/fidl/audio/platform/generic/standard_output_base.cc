@@ -10,13 +10,15 @@
 #include "apps/media/services/audio/audio_track_to_output_link.h"
 #include "apps/media/services/audio/platform/generic/mixer.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace mojo {
 namespace media {
 namespace audio {
 
-static constexpr LocalDuration MAX_TRIM_PERIOD = local_time::from_msec(10);
-constexpr uint32_t StandardOutputBase::MixJob::INVALID_GENERATION;
+static constexpr ftl::TimeDelta kMaxTrimPeriod =
+    ftl::TimeDelta::FromMilliseconds(10);
+constexpr uint32_t StandardOutputBase::MixJob::kInvalidGeneration;
 
 StandardOutputBase::TrackBookkeeping::TrackBookkeeping() {}
 StandardOutputBase::TrackBookkeeping::~TrackBookkeeping() {}
@@ -43,7 +45,7 @@ StandardOutputBase::StandardOutputBase(AudioOutputManager* manager)
     return ProcessTrim(track, info, pkt_ref);
   };
 
-  next_sched_time_ = LocalClock::now();
+  next_sched_time_ = ftl::TimePoint::Now();
   next_sched_time_known_ = true;
 }
 
@@ -51,7 +53,7 @@ StandardOutputBase::~StandardOutputBase() {}
 
 void StandardOutputBase::Process() {
   bool mixed = false;
-  LocalTime now = LocalClock::now();
+  ftl::TimePoint now = ftl::TimePoint::Now();
 
   // At this point, we should always know when our implementation would like to
   // be called to do some mixing work next.  If we do not know, then we should
@@ -113,7 +115,7 @@ void StandardOutputBase::Process() {
   // Figure out when we should wake up to do more work again.  No matter how
   // long our implementation wants to wait, we need to make sure to wake up and
   // periodically trim our input queues.
-  LocalTime max_sched_time = now + MAX_TRIM_PERIOD;
+  ftl::TimePoint max_sched_time = now + kMaxTrimPeriod;
   ScheduleCallback((next_sched_time_ > max_sched_time) ? max_sched_time
                                                        : next_sched_time_);
 }
@@ -384,7 +386,8 @@ bool StandardOutputBase::SetupTrim(const AudioTrackImplPtr& track,
   // for us to do so here.
   FTL_DCHECK(info);
 
-  int64_t local_now_ticks = LocalClock::now().time_since_epoch().count();
+  int64_t local_now_ticks =
+      (ftl::TimePoint::Now() - ftl::TimePoint()).ToNanoseconds();
 
   // The behavior of the RateControlBase implementation guarantees that the
   // transformation into the media timeline is never singular.  If the
@@ -447,7 +450,7 @@ void StandardOutputBase::TrackBookkeeping::UpdateTrackTrans(
 
   // Update the generation, and invalidate the output to track generation.
   lt_to_track_frames_gen = gen;
-  out_frames_to_track_frames_gen = MixJob::INVALID_GENERATION;
+  out_frames_to_track_frames_gen = MixJob::kInvalidGeneration;
 }
 
 void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
@@ -456,7 +459,7 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
   // view, this means that we have a job which supplies a valid transformation
   // from local time to output frames.
   FTL_DCHECK(job.local_to_output);
-  FTL_DCHECK(job.local_to_output_gen != MixJob::INVALID_GENERATION);
+  FTL_DCHECK(job.local_to_output_gen != MixJob::kInvalidGeneration);
 
   // If our generations match, we don't need to re-compute anything.  Just use
   // what we have already.
