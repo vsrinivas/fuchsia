@@ -27,9 +27,12 @@
 
 unsigned int gen_ppat_index(CachingType caching_type);
 
-static inline gen_pte_t gen_pte_encode(uint64_t addr, CachingType caching_type)
+static inline gen_pte_t gen_pte_encode(uint64_t addr, CachingType caching_type, bool valid)
 {
-    gen_pte_t pte = addr | PAGE_PRESENT | PAGE_RW;
+    gen_pte_t pte = addr | PAGE_RW;
+
+    if (valid)
+        pte |= PAGE_PRESENT;
 
     unsigned int pat_index = gen_ppat_index(caching_type);
     if (pat_index & (1 << 0))

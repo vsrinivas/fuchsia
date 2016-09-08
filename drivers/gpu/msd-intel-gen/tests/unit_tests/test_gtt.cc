@@ -69,7 +69,7 @@ static void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr
     for (unsigned int i = 0; i < page_count; i++) {
         uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + i];
         EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
-        EXPECT_TRUE(pte & 0x1); // page present
+        EXPECT_FALSE(pte & 0x1); // page should not be present
         EXPECT_TRUE(pte & 0x3); // rw
         EXPECT_EQ(pte & cache_bits(CACHING_LLC), cache_bits(CACHING_LLC));
     }

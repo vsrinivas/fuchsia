@@ -176,7 +176,7 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     if (first_entry + num_entries > max_entries)
         return DRETF(false, "exceeded max_entries");
 
-    gen_pte_t pte = gen_pte_encode(scratch_gpu_addr_, CACHING_LLC);
+    gen_pte_t pte = gen_pte_encode(scratch_gpu_addr_, CACHING_LLC, false);
 
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);
 
@@ -232,13 +232,13 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType cachi
     }
 
     for (unsigned int i = 0; i < num_pages; i++) {
-        auto pte = gen_pte_encode(bus_addr_array[i], caching_type);
+        auto pte = gen_pte_encode(bus_addr_array[i], caching_type, true);
         mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + i * sizeof(gen_pte_t));
     }
 
     uint64_t readback = mmio_->PostingRead64(pte_offset + (num_pages - 1) * sizeof(gen_pte_t));
 #if MAGMA_DEBUG
-    auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], caching_type);
+    auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], caching_type, true);
     if (readback != expected) {
         DLOG("Mismatch posting read: 0x%0llx != 0x%0llx", readback, expected);
         DASSERT(false);
