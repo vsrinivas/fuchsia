@@ -42,7 +42,7 @@ void mxr_once(mxr_once_t* once, void (*func)(void)) {
             case WAITING:;
                 mx_status_t status =
                     _mx_futex_wait(&once->futex, WAITING, MX_TIME_INFINITE);
-                if (status != NO_ERROR && status != ERR_BUSY)
+                if (status != NO_ERROR && status != ERR_BAD_STATE)
                     __builtin_trap();
                 continue;
 

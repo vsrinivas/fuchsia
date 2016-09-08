@@ -358,7 +358,7 @@ pcie_device_state_t* pcie_get_nth_device(uint32_t index);
 void pcie_release_device(pcie_device_state_t* dev);
 
 /*
- * Attaches a driver to a PCI device. Returns ERR_BUSY if the device has already been
+ * Attaches a driver to a PCI device. Returns ERR_NOT_AVAILABLE if the device has already been
  * claimed by another driver.
  */
 status_t pcie_claim_and_start_device(pcie_device_state_t* device,

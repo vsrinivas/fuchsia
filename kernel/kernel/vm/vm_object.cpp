@@ -119,7 +119,7 @@ status_t VmObject::Resize(uint64_t s) {
 
     // there's a max size to keep indexes within range
     if (ROUNDUP_PAGE_SIZE(s) > MAX_SIZE)
-        return ERR_TOO_BIG;
+        return ERR_OUT_OF_RANGE;
 
     AutoLock a(lock_);
 

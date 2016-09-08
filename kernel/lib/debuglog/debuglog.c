@@ -43,7 +43,7 @@ status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     }
 
     if (len > MAX_DATA_SIZE) {
-        return ERR_TOO_BIG;
+        return ERR_OUT_OF_RANGE;
     }
 
     // Keep record headers uint64 aligned

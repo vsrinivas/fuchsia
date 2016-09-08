@@ -100,7 +100,7 @@ static status_t intel_i915_map_reg_window(intel_i915_device_t* dev,
             LTRACEF("Size mismatch when moving i915 register window.  New size "
                     "(%zu) does not match old size (%zu)\n",
                     size, dev->regs_size);
-            return ERR_NOT_VALID;
+            return ERR_INVALID_ARGS;
         }
 
         return vmm_move_region_phys(dev->aspace,
@@ -142,7 +142,7 @@ static status_t intel_i915_map_fb_window(intel_i915_device_t* dev,
             LTRACEF("Size mismatch when moving i915 framebuffer window.  New size "
                     "(%zu) does not match old size (%zu)\n",
                     size, dev->framebuffer_size);
-            return ERR_NOT_VALID;
+            return ERR_INVALID_ARGS;
         }
 
         return vmm_move_region_phys(dev->aspace,

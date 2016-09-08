@@ -43,7 +43,7 @@ size. On failure, a (strictly) negative error value is returned.
 
 **ERR_ACCESS_DENIED**  *producer_handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_BUSY**  *producer_handle* is currently in a two-phase write.
+**ERR_NOT_AVAILABLE**  *producer_handle* is currently in a two-phase write.
 
 **ERR_INVALID_ARGS**  *requested* is not a multiple of the data pipe's element
 size, or *buffer* is an invalid pointer (or NULL).

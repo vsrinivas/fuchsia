@@ -340,7 +340,7 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     }
     if (bar == -1) {
         printf("usb_xhci_bind could not find bar\n");
-        status = ERR_NOT_VALID;
+        status = ERR_INTERNAL;
         goto error_return;
     }
 

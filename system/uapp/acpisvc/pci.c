@@ -264,7 +264,7 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
     uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
     if (table_bytes % sizeof(*table_start) != 0) {
         xprintf("MCFG has unexpected size\n");
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
     int num_entries = table_end - table_start;
     if (num_entries == 0) {

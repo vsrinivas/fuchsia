@@ -129,10 +129,10 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         msg.datalen = 0;
         msg.hcount = 0;
         // specific errors are prioritized over the bad
-        // message case which we represent as ERR_FAULT
+        // message case which we represent as ERR_INTERNAL
         // to differentiate from ERR_IO on the near side
         // TODO: consider a better error code
-        msg.arg = (msg.arg < 0) ? msg.arg : ERR_FAULT;
+        msg.arg = (msg.arg < 0) ? msg.arg : ERR_INTERNAL;
     }
 
     // The kernel requires that a reply pipe endpoint by

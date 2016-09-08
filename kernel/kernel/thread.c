@@ -325,7 +325,7 @@ status_t thread_join(thread_t *t, int *retcode, lk_time_t timeout)
     if (t->flags & THREAD_FLAG_DETACHED) {
         /* the thread is detached, go ahead and exit */
         THREAD_UNLOCK(state);
-        return ERR_THREAD_DETACHED;
+        return ERR_BAD_STATE;
     }
 
     /* wait for the thread to die */
@@ -372,7 +372,7 @@ status_t thread_detach(thread_t *t)
 
     /* if another thread is blocked inside thread_join() on this thread,
      * wake them up with a specific return code */
-    wait_queue_wake_all(&t->retcode_wait_queue, false, ERR_THREAD_DETACHED);
+    wait_queue_wake_all(&t->retcode_wait_queue, false, ERR_BAD_STATE);
 
     /* if it's already dead, then just do what join would have and exit */
     if (t->state == THREAD_DEATH) {
@@ -1435,7 +1435,7 @@ void wait_queue_destroy(wait_queue_t *wait, bool reschedule)
  * @param wait_queue_error  The return value which the new thread will receive
  *   from wait_queue_block().
  *
- * @return ERR_NOT_BLOCKED if thread was not in any wait queue.
+ * @return ERR_BAD_STATE if thread was not in any wait queue.
  */
 status_t thread_unblock_from_wait_queue(thread_t *t, status_t wait_queue_error)
 {
@@ -1444,7 +1444,7 @@ status_t thread_unblock_from_wait_queue(thread_t *t, status_t wait_queue_error)
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (t->state != THREAD_BLOCKED)
-        return ERR_NOT_BLOCKED;
+        return ERR_BAD_STATE;
 
     DEBUG_ASSERT(t->blocking_wait_queue != NULL);
     DEBUG_ASSERT(t->blocking_wait_queue->magic == WAIT_QUEUE_MAGIC);

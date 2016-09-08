@@ -62,7 +62,7 @@ returned.
 
 **ERR_NOT_SUPPORTED**  *flags* has an unknown flag set.
 
-**ERR_BUSY**  *consumer_handle* is currently in a two-phase read.
+**ERR_NOT_AVAILABLE**  *consumer_handle* is currently in a two-phase read.
 
 **ERR_INVALID_ARGS**  *flags* has an invalid combination of flags set,
 *requested* is not a multiple of the data pipe's element size (and query mode is

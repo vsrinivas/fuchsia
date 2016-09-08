@@ -38,12 +38,12 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
 
     UserThread* t = UserThread::GetCurrent();
     if (t->state() == UserThread::State::DYING || t->state() == UserThread::State::DEAD)
-        return ERR_BUSY;
+        return ERR_BAD_STATE;
 
     int value;
     status_t result = magenta_copy_from_user(value_ptr, &value, sizeof(value));
     if (result != NO_ERROR) return result;
-    if (value != current_value) return ERR_BUSY;
+    if (value != current_value) return ERR_BAD_STATE;
 
     node = t->futex_node();
     node->set_hash_key(futex_key);
@@ -175,7 +175,7 @@ status_t FutexContext::FutexRequeue(int* wake_ptr, uint32_t wake_count, int curr
     int value;
     status_t result = magenta_copy_from_user(wake_ptr, &value, sizeof(value));
     if (result != NO_ERROR) return result;
-    if (value != current_value) return ERR_BUSY;
+    if (value != current_value) return ERR_BAD_STATE;
 
     uintptr_t wake_key = reinterpret_cast<uintptr_t>(wake_ptr);
     uintptr_t requeue_key = reinterpret_cast<uintptr_t>(requeue_ptr);

@@ -859,7 +859,7 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<const voi
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr.get());
 
     if (len > DLOG_MAX_ENTRY)
-        return ERR_TOO_BIG;
+        return ERR_OUT_OF_RANGE;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -1305,7 +1305,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     mxtl::unique_ptr<mx_waitset_result_t[]> results;
     if (num_results > 0u) {
         if (num_results > kMaxWaitSetWaitResults)
-            return ERR_TOO_BIG;
+            return ERR_OUT_OF_RANGE;
 
         // TODO(vtl): It kind of sucks that we always have to allocate the indicated maximum size
         // here (namely, |num_results|).

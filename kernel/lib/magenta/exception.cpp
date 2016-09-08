@@ -95,7 +95,7 @@ static status_t try_system_exception_handler(UserThread* thread,
 // If we return NO_ERROR, the caller is expected to resume the thread "as if"
 // nothing happened, the handler is expected to have modified state such that
 // resumption is possible.
-// Otherwise, if we return, the result is ERR_NOT_VALID meaning the thread is
+// Otherwise, if we return, the result is ERR_BAD_STATE meaning the thread is
 // not a magenta thread.
 //
 // TODO(dje): Support unwinding from this exception and introducing a
@@ -109,7 +109,7 @@ status_t magenta_exception_handler(uint exception_type,
     UserThread* thread = UserThread::GetCurrent();
     if (unlikely(!thread)) {
         // we're not in magenta thread context, bail
-        return ERR_NOT_VALID;
+        return ERR_BAD_STATE;
     }
 
     bool processed = false;

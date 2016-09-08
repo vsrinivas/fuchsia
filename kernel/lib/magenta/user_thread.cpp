@@ -311,7 +311,7 @@ status_t UserThread::ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
     DEBUG_ASSERT(status == NO_ERROR);
     DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
     if (exception_status_ != MX_EXCEPTION_STATUS_RESUME)
-        return ERR_BUSY; // TODO(dje): what to use here???
+        return ERR_BAD_STATE;
     return NO_ERROR;
 }
 
@@ -319,7 +319,7 @@ status_t UserThread::MarkExceptionHandled(mx_exception_status_t status) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
     if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
-        return ERR_NOT_BLOCKED;
+        return ERR_BAD_STATE;
     exception_status_ = status;
     cond_signal(&exception_wait_cond_);
     return NO_ERROR;

@@ -263,7 +263,7 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
     int remaining = request->actual - offset;
     if (remaining < 4) {
         printf("usb_ethernet_recv short packet\n");
-        status = ERR_NOT_VALID;
+        status = ERR_INTERNAL;
         list_remove_head(&eth->completed_reads);
         requeue_read_request_locked(eth, request);
         goto out;
@@ -276,7 +276,7 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
 
     if (length1 != length2) {
         printf("invalid header: length1: %d length2: %d offset %zu\n", length1, length2, offset);
-        status = ERR_NOT_VALID;
+        status = ERR_INTERNAL;
         offset = 0;
         list_remove_head(&eth->completed_reads);
         requeue_read_request_locked(eth, request);

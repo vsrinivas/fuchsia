@@ -557,7 +557,7 @@ status_t sm_intc_fiq_enter(void)
 
     if (current_fiq[cpu] != 0x3ff) {
         dprintf(INFO, "more than one fiq active: cpu %d, old %d, new %d\n", cpu, current_fiq[cpu], irq);
-        return ERR_ALREADY_STARTED;
+        return ERR_BAD_STATE;
     }
 
     if (!fiq_enabled) {

@@ -105,31 +105,6 @@
 #define ERR_RECURSE_TOO_DEEP (-53)
 
 
-// Garbage bin
-//////////////////////////////////////
-// TODO: Replace with INVALID_ARGS
-#define ERR_NOT_VALID (-90)
-
-// TODO: Replace with ERR_INVALID_ARGS or ERR_NOT_ENOUGH_BUFFER
-#define ERR_TOO_BIG (-92)
-
-// TODO: This appears to be used as a bool, does it need a distinct code?
-#define ERR_FAULT (-93)
-
-// TODO: These all seem like state errors, should they just be ERR_BAD_STATE?
-#define ERR_ALREADY_STARTED (-95)
-#define ERR_NOT_BLOCKED (-96)
-#define ERR_THREAD_DETACHED (-97)
-
-// TODO: This is a variant of ERR_BAD_STATE
-#define ERR_NOT_MOUNTED (-98)
-
-#define ERR_BUSY (-99)   // REMOVE - kernel/pcie should transition to ERR_NOT_READY/ERR_NOT_AVAILABLE
-                                        // futex should return BAD_STATE
-                                        // io port thing should return NOT_AVAILABLE
-                                        // pcidevicedispatcher should return NOT_AVAILABLE
-                                        // no ERR_BUSY from syscalls
-
 // USER SPECIFIC
 /////////////////////
 #define ERR_USER_BASE (-16384)

@@ -180,9 +180,9 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
         return ERR_INVALID_ARGS;
 
     if (num_bytes > kMaxMessageSize)
-        return ERR_TOO_BIG;
+        return ERR_OUT_OF_RANGE;
     if (num_handles > kMaxMessageHandles)
-        return ERR_TOO_BIG;
+        return ERR_OUT_OF_RANGE;
 
     status_t result;
     mxtl::Array<uint8_t> bytes;

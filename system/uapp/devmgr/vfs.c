@@ -157,7 +157,7 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
     if (sz & 3)
         sz = (sz + 3) & (~3);
     if (sz > delen)
-        return ERR_TOO_BIG;
+        return ERR_INVALID_ARGS;
     de->size = sz;
     de->type = type;
     memcpy(de->name, name, len);

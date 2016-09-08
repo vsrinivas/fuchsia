@@ -30,13 +30,13 @@ int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct time
         deadline += to.tv_nsec;
     }
 
-    // mx_futex_wait will return ERR_BUSY if someone modifying *addr
+    // mx_futex_wait will return ERR_BAD_STATE if someone modifying *addr
     // races with this call. But this is indistinguishable from
     // otherwise being woken up just before someone else changes the
     // value. Therefore this functions returns 0 in that case.
     switch (_mx_futex_wait((void*)addr, val, deadline)) {
     case NO_ERROR:
-    case ERR_BUSY:
+    case ERR_BAD_STATE:
         return 0;
     case ERR_TIMED_OUT:
         return ETIMEDOUT;

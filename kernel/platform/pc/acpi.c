@@ -67,12 +67,12 @@ status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
     uintptr_t records_end = ((uintptr_t)madt) + madt->Header.Length;
     if (records_start >= records_end) {
         TRACEF("MADT wraps around address space\n");
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
     // Shouldn't be too many records
     if (madt->Header.Length > 4096) {
         TRACEF("MADT suspiciously long: %d\n", madt->Header.Length);
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
     *start = records_start;
     *end = records_end;
@@ -127,7 +127,7 @@ status_t platform_enumerate_cpus(
     }
     if (addr != records_end) {
       TRACEF("malformed MADT\n");
-      return ERR_NOT_VALID;
+      return ERR_INTERNAL;
     }
     *num_cpus = count;
     return NO_ERROR;
@@ -181,7 +181,7 @@ status_t platform_enumerate_io_apics(
     }
     if (addr != records_end) {
       TRACEF("malformed MADT\n");
-      return ERR_NOT_VALID;
+      return ERR_INVALID_ARGS;
     }
     *num_io_apics = count;
     return NO_ERROR;
@@ -268,7 +268,7 @@ status_t platform_enumerate_interrupt_source_overrides(
     }
     if (addr != records_end) {
       TRACEF("malformed MADT\n");
-      return ERR_NOT_VALID;
+      return ERR_INVALID_ARGS;
     }
     *num_isos = count;
     return NO_ERROR;
@@ -326,7 +326,7 @@ status_t platform_find_pcie_config(struct acpi_pcie_config *config)
     uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
     if (table_bytes % sizeof(*table_start) != 0) {
         TRACEF("MCFG has unexpected size\n");
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
     int num_entries = table_end - table_start;
     if (num_entries == 0) {

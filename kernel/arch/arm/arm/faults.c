@@ -216,7 +216,7 @@ static status_t arm_shared_page_fault_handler(struct arm_fault_frame *frame, uin
             break;
     }
 
-    return ERR_FAULT;
+    return ERR_INTERNAL;
 }
 
 void arm_data_abort_handler(struct arm_fault_frame *frame)

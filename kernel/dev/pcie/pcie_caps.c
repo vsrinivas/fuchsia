@@ -111,7 +111,7 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
                        dev->bus_id, dev->dev_id, dev->func_id,
                        dev->vendor_id, dev->device_id,
                        devtype);
-                return ERR_NOT_VALID;
+                return ERR_INTERNAL;
             }
             break;
 
@@ -128,7 +128,7 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
                        dev->bus_id, dev->dev_id, dev->func_id,
                        dev->vendor_id, dev->device_id,
                        devtype);
-                return ERR_NOT_VALID;
+                return ERR_INTERNAL;
             }
             break;
 
@@ -138,7 +138,7 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
                    dev->bus_id, dev->dev_id, dev->func_id,
                    dev->vendor_id, dev->device_id,
                    devtype);
-            return ERR_NOT_VALID;
+            return ERR_INTERNAL;
     }
 
     /* Version sanity check and size extraction */
@@ -238,7 +238,7 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
 
 fail:
     memset(&dev->pcie_caps, 0, sizeof(dev->pcie_caps));
-    return ERR_NOT_VALID;
+    return ERR_INTERNAL;
 }
 
 /*
@@ -262,7 +262,7 @@ static status_t pcie_parse_msi_caps(pcie_device_state_t* dev,
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,
                min_size, space_left);
-        return ERR_NOT_VALID;
+        return ERR_INVALID_ARGS;
     }
 
     /* Extract the control field and figure out what sub-type of MSI capability
@@ -285,7 +285,7 @@ static status_t pcie_parse_msi_caps(pcie_device_state_t* dev,
                is64bit ? "supports" : "does not support",
                pvm     ? "supports" : "does not support",
                min_size, space_left);
-        return ERR_NOT_VALID;
+        return ERR_INVALID_ARGS;
     }
 
     /* Sanity check the Multi-Message Capable field */
@@ -297,7 +297,7 @@ static status_t pcie_parse_msi_caps(pcie_device_state_t* dev,
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,
                PCIE_CAP_MSI_CTRL_GET_MMC(ctrl), max_irqs, PCIE_MAX_MSI_IRQS);
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
 
     /* Success!
@@ -348,7 +348,7 @@ static status_t pcie_parse_pci_advanced_features(struct pcie_device_state* dev,
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,
                sizeof(*ecam), space_left);
-        return ERR_NOT_VALID;
+        return ERR_INVALID_ARGS;
     }
 
     uint8_t length = pcie_read8(&ecam->length);
@@ -358,7 +358,7 @@ static status_t pcie_parse_pci_advanced_features(struct pcie_device_state* dev,
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,
                sizeof(*ecam), length);
-        return ERR_NOT_VALID;
+        return ERR_INVALID_ARGS;
     }
 
     /* Read the caps field and sanity check it */
@@ -373,7 +373,7 @@ static status_t pcie_parse_pci_advanced_features(struct pcie_device_state* dev,
                PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps) ? "has" : "does not have",
                PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(caps)    ? "has" : "does not have",
                caps);
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
 
     /* Success, stash our results and we are done */
@@ -423,7 +423,7 @@ static status_t pcie_fetch_standard_cap_hdr(pcie_device_state_t*          dev,
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,
                cptr);
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
 
     /* Read the next header */
@@ -469,7 +469,7 @@ static status_t pcie_fetch_extended_cap_hdr(pcie_device_state_t*          dev,
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,
                cptr);
-        return ERR_NOT_VALID;
+        return ERR_INTERNAL;
     }
 
     /* Read the next header */
@@ -529,7 +529,7 @@ static status_t pcie_do_parse_caps(pcie_device_state_t* dev,
                    dev->bus_id, dev->dev_id, dev->func_id,
                    dev->vendor_id, dev->device_id,
                    dbg_tag, caps_found);
-            return ERR_NOT_VALID;
+            return ERR_INTERNAL;
         }
 
         /* Look through our parse table to find a parse hook */

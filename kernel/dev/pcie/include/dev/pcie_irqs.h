@@ -245,7 +245,7 @@ status_t pcie_query_irq_mode_capabilities(const struct pcie_device_state* dev,
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
  *
- * ++ ERR_NOT_MOUNTED
+ * ++ ERR_NOT_READY
  *    The device has become unplugged and is waiting to be released.
  */
 status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
@@ -273,7 +273,7 @@ status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
  *
- * ++ ERR_NOT_MOUNTED
+ * ++ ERR_NOT_READY
  *    The device has become unplugged and is waiting to be released.
  * ++ ERR_BAD_STATE
  *    The device cannot transition into the selected mode at this point in time
@@ -318,7 +318,7 @@ static inline void pcie_set_irq_mode_disabled(struct pcie_device_state* dev) {
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
  *
- * ++ ERR_NOT_MOUNTED
+ * ++ ERR_NOT_READY
  *    The device has become unplugged and is waiting to be released.
  * ++ ERR_BAD_STATE
  *    The device is in DISABLED IRQ mode.
@@ -340,7 +340,7 @@ status_t pcie_register_irq_handler(struct pcie_device_state* dev,
  * @return A status_t indicating the success or failure of the operation.
  * Status codes may include (but are not limited to)...
  *
- * ++ ERR_NOT_MOUNTED
+ * ++ ERR_NOT_READY
  *    The device has become unplugged and is waiting to be released.
  * ++ ERR_BAD_STATE
  *    Attempting to mask or unmask an IRQ while in the DISABLED mode or with no

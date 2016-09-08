@@ -499,7 +499,7 @@ static ssize_t hexstr_to_val(const char *str, uint8_t **buf)
         uint8_t c = str[pos];
 
         if (!isxdigit(c)) {
-            return ERR_NOT_VALID;
+            return ERR_INVALID_ARGS;
         }
 
         if (c >= '0' && c <= '9')

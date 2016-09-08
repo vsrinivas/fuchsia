@@ -19,7 +19,7 @@ static bool test_futex_wait_value_mismatch() {
     int futex_value = 123;
     mx_status_t rc = mx_futex_wait(&futex_value, futex_value + 1,
                                          MX_TIME_INFINITE);
-    ASSERT_EQ(rc, ERR_BUSY, "Futex wait should have reurned busy");
+    ASSERT_EQ(rc, ERR_BAD_STATE, "Futex wait should have reurned bad state");
     END_TEST;
 }
 
@@ -272,7 +272,7 @@ bool test_futex_requeue_value_mismatch() {
     int futex_value2 = 200;
     mx_status_t rc = mx_futex_requeue(&futex_value1, 1, futex_value1 + 1,
                                             &futex_value2, 1);
-    ASSERT_EQ(rc, ERR_BUSY, "requeue should have returned busy");
+    ASSERT_EQ(rc, ERR_BAD_STATE, "requeue should have returned bad state");
     END_TEST;
 }
 

@@ -46,7 +46,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
             return ERR_INVALID_ARGS;
         }
         if (mp_is_cpu_online(cpu)) {
-            return ERR_ALREADY_STARTED;
+            return ERR_BAD_STATE;
         }
         aps_still_booting |= 1U << cpu;
     }

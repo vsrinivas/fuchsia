@@ -234,7 +234,7 @@ status_t mp_hotplug_cpu(uint cpu_id) {
     mutex_acquire(&mp.hotplug_lock);
 
     if (mp_is_cpu_online(cpu_id)) {
-        status = ERR_ALREADY_STARTED;
+        status = ERR_BAD_STATE;
         goto cleanup_mutex;
     }
 

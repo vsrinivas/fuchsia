@@ -609,7 +609,7 @@ static status_t pcie_allocate_bars(pcie_device_state_t* dev) {
 
     /* Has the device been unplugged already? */
     if (!dev->plugged_in) {
-        ret = ERR_NOT_MOUNTED;
+        ret = ERR_NOT_READY;
         goto finished;
     }
 
@@ -673,8 +673,7 @@ static status_t pcie_claim_device(pcie_device_state_t* dev,
 
     /* Has the device been unplugged? */
     if (!dev->plugged_in) {
-        // TODO(johngro) : It would be nice to have a better error code for this.
-        ret = ERR_NOT_MOUNTED;
+        ret = ERR_NOT_READY;
         goto finished;
     }
 
@@ -850,7 +849,7 @@ pcie_device_state_t* pcie_get_nth_device(uint32_t index) {
 }
 
 /*
- * Attaches a driver to a PCI device. Returns ERR_BUSY if the device has already been
+ * Attaches a driver to a PCI device. Returns ERR_NOT_AVAILABLE if the device has already been
  * claimed by another driver.
  */
 status_t pcie_claim_and_start_device(pcie_device_state_t* dev,
@@ -930,7 +929,7 @@ status_t pcie_do_function_level_reset(pcie_device_state_t* dev) {
     // a long time (more than a second).  We should not hold the device lock for
     // the entire duration of the operation.  This should be re-done so that the
     // device can be placed into a "resetting" state (and other API calls can
-    // fail with ERR_BUSY, or some-such) and the lock can be released while the
+    // fail with ERR_BAD_STATE, or some-such) and the lock can be released while the
     // reset timeouts run.  This way, a spontaneous unplug event can occur and
     // not block the whole world because the device unplugged was in the process
     // of a FLR.
@@ -938,7 +937,7 @@ status_t pcie_do_function_level_reset(pcie_device_state_t* dev) {
 
     // Make certain to check to see if the device is still plugged in.
     if (!dev->plugged_in) {
-        ret = ERR_NOT_MOUNTED;
+        ret = ERR_NOT_READY;
         goto finished;
     }
 
@@ -951,7 +950,7 @@ status_t pcie_do_function_level_reset(pcie_device_state_t* dev) {
     ret = pcie_get_irq_mode_internal(dev, &irq_mode_info);
     DEBUG_ASSERT(NO_ERROR == ret);
     if (irq_mode_info.mode != PCIE_IRQ_MODE_DISABLED) {
-        ret = ERR_BUSY;
+        ret = ERR_BAD_STATE;
         goto finished;
     }
     DEBUG_ASSERT(!irq_mode_info.registered_handlers);
@@ -1163,7 +1162,7 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
 
     if (bus_drv->ecam_windows) {
         TRACEF("Failed to initialize PCIe bus driver; driver already initialized\n");
-        return ERR_ALREADY_STARTED;
+        return ERR_BAD_STATE;
     }
 
     /* Initialize our state */
@@ -1394,7 +1393,7 @@ status_t pcie_modify_cmd(pcie_device_state_t* dev, uint16_t clr_bits, uint16_t s
         pcie_modify_cmd_internal(dev, clr_bits, set_bits);
         ret = NO_ERROR;
     } else {
-        ret = ERR_NOT_MOUNTED;
+        ret = ERR_NOT_READY;
     }
 
     MUTEX_RELEASE(dev, dev_lock);

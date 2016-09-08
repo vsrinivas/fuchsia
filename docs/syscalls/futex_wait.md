@@ -27,7 +27,7 @@ the thread can also be woken up after the timeout argument expires.
 
 **ERR_INVALID_ARGS**  *value_ptr* is not a valid userspace pointer.
 
-**ERR_BUSY**  *current_value* does not match the value at *value_ptr*.
+**ERR_NOT_AVAILABLE**  *current_value* does not match the value at *value_ptr*.
 
 **ERR_TIMED_OUT**  The thread was not woken before *timeout* expired.
 

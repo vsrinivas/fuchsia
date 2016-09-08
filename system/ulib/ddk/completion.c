@@ -27,8 +27,8 @@ mx_status_t completion_wait(completion_t* completion, mx_time_t timeout) {
         switch (mx_futex_wait(futex, current_value, timeout)) {
         case NO_ERROR:
             continue;
-        case ERR_BUSY:
-            // If we get ERR_BUSY, the value of the futex changed between
+        case ERR_BAD_STATE:
+            // If we get ERR_BAD_STATE, the value of the futex changed between
             // our load and the wait. This could only have happened if we
             // were signaled.
             return NO_ERROR;

@@ -20,7 +20,7 @@ enum {
 mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex) {
     int futex_value = UNLOCKED;
     if (!atomic_compare_exchange_strong(&mutex->futex, &futex_value, LOCKED))
-        return ERR_BUSY;
+        return ERR_BAD_STATE;
     return NO_ERROR;
 }
 
@@ -31,7 +31,7 @@ mx_status_t mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t timeout) {
             return NO_ERROR;
         case LOCKED: {
             mx_status_t status = _mx_futex_wait(&mutex->futex, LOCKED, timeout);
-            if (status == ERR_BUSY) {
+            if (status == ERR_BAD_STATE) {
                 continue;
             }
             if (status != NO_ERROR) {

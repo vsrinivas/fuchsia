@@ -79,12 +79,12 @@ mx_status_t tpm_request_use(enum locality loc) {
     }
 
     if (val & TPM_ACCESS_REQUEST_USE) {
-        return ERR_BUSY;
+        return ERR_NOT_AVAILABLE;
     }
 
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
         // We're already the active locality
-        return ERR_ALREADY_STARTED;
+        return ERR_BAD_STATE;
     }
 
     mx_status_t status = tpm_enable_irq_type(loc, IRQ_LOCALITY_CHANGE);
@@ -259,7 +259,7 @@ mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
     }
 
     if (!(*TPM_STS(loc) & TPM_STS_CMD_RDY)) {
-        return ERR_BUSY;
+        return ERR_NOT_READY;
     }
 
     // This procedure is described in section 5.5.2.2.1 of the TCG PC Client

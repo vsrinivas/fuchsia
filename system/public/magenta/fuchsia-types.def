@@ -99,31 +99,6 @@ FUCHSIA_ERROR(NOT_FILE,            52)
 FUCHSIA_ERROR(RECURSE_TOO_DEEP,    53)
 
 
-// Garbage bin
-//////////////////////////////////////
-// TODO: Replace with INVALID_ARGS
-FUCHSIA_ERROR(NOT_VALID,           90)
-
-// TODO: Replace with ERR_INVALID_ARGS or ERR_NOT_ENOUGH_BUFFER
-FUCHSIA_ERROR(TOO_BIG,             92)
-
-// TODO: This appears to be used as a bool, does it need a distinct code?
-FUCHSIA_ERROR(FAULT,               93)
-
-// TODO: These all seem like state errors, should they just be ERR_BAD_STATE?
-FUCHSIA_ERROR(ALREADY_STARTED,     95)
-FUCHSIA_ERROR(NOT_BLOCKED,         96)
-FUCHSIA_ERROR(THREAD_DETACHED,     97)
-
-// TODO: This is a variant of ERR_BAD_STATE
-FUCHSIA_ERROR(NOT_MOUNTED,         98)
-
-FUCHSIA_ERROR(BUSY,                99)   // REMOVE - kernel/pcie should transition to ERR_NOT_READY/ERR_NOT_AVAILABLE
-                                        // futex should return BAD_STATE
-                                        // io port thing should return NOT_AVAILABLE
-                                        // pcidevicedispatcher should return NOT_AVAILABLE
-                                        // no ERR_BUSY from syscalls
-
 // USER SPECIFIC
 /////////////////////
 FUCHSIA_ERROR(USER_BASE,        16384)

@@ -76,7 +76,7 @@ static status_t ptable_write(void)
     ssize_t err = ERR_INTERNAL;
 
     if (!ptable_found_valid())
-        return ERR_NOT_MOUNTED;
+        return ERR_BAD_STATE;
 
     bdev = bio_open(PTABLE_PART_NAME);
     if (!bdev)
@@ -93,7 +93,7 @@ static status_t ptable_write(void)
 
     /* can we fit our partition table in our ptable subdevice? */
     if (total_length > bdev->total_size)
-        BAIL(ERR_TOO_BIG);
+        BAIL(ERR_INTERNAL);
 
     /* allocate a buffer to hold it */
     buf = malloc(total_length);
@@ -321,7 +321,7 @@ static off_t ptable_adjust_request_for_erase_geometry(uint64_t  region_start,
     // Can we fit in the region at all?
     if (*plength > region_len) {
         LTRACEF("Request too large for region (0x%llx > 0x%llx)\n", *plength, region_len);
-        return ERR_TOO_BIG;
+        return ERR_INVALID_ARGS;
     }
 
     // If our block device does not have an erase geometry to obey, then great!
@@ -752,7 +752,7 @@ status_t ptable_remove(const char *name)
     LTRACEF("name %s\n", name);
 
     if (!ptable_found_valid())
-        return ERR_NOT_MOUNTED;
+        return ERR_BAD_STATE;
 
     if (!name)
         return ERR_INVALID_ARGS;
@@ -784,7 +784,7 @@ status_t ptable_add(const char *name, uint64_t min_len, uint32_t flags)
     LTRACEF("name %s min_len 0x%llx flags 0x%x\n", name, min_len, flags);
 
     if (!ptable_found_valid())
-        return ERR_NOT_MOUNTED;
+        return ERR_BAD_STATE;
 
     /* see if the name is valid */
     if (strlen(name) > MAX_FLASH_PTABLE_NAME_LEN - 1) {

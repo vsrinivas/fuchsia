@@ -899,7 +899,7 @@ status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
     MUTEX_ACQUIRE(((pcie_device_state_t*)dev), dev_lock);
     ret = dev->plugged_in
         ? pcie_query_irq_mode_capabilities_internal(dev, mode, out_caps)
-        : ERR_NOT_MOUNTED;
+        : ERR_BAD_STATE;
     MUTEX_RELEASE(((pcie_device_state_t*)dev), dev_lock);
 
     return ret;
@@ -916,7 +916,7 @@ status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
     MUTEX_ACQUIRE(((pcie_device_state_t*)dev), dev_lock);
     ret = dev->plugged_in
         ? pcie_get_irq_mode_internal(dev, out_info)
-        : ERR_NOT_MOUNTED;
+        : ERR_BAD_STATE;
     MUTEX_RELEASE(((pcie_device_state_t*)dev), dev_lock);
 
     return ret;
@@ -931,7 +931,7 @@ status_t pcie_set_irq_mode(pcie_device_state_t*    dev,
     MUTEX_ACQUIRE(dev, dev_lock);
     ret = dev->plugged_in
         ? pcie_set_irq_mode_internal(dev, mode, requested_irqs)
-        : ERR_NOT_MOUNTED;
+        : ERR_BAD_STATE;
     MUTEX_RELEASE(dev, dev_lock);
 
     return ret;
@@ -947,7 +947,7 @@ status_t pcie_register_irq_handler(pcie_device_state_t*  dev,
     MUTEX_ACQUIRE(dev, dev_lock);
     ret = dev->plugged_in
         ? pcie_register_irq_handler_internal(dev, irq_id, handler, ctx)
-        : ERR_NOT_MOUNTED;
+        : ERR_BAD_STATE;
     MUTEX_RELEASE(dev, dev_lock);
 
     return ret;
@@ -962,7 +962,7 @@ status_t pcie_mask_unmask_irq(pcie_device_state_t* dev,
     MUTEX_ACQUIRE(dev, dev_lock);
     ret = dev->plugged_in
         ? pcie_mask_unmask_irq_internal(dev, irq_id, mask)
-        : ERR_NOT_MOUNTED;
+        : ERR_BAD_STATE;
     MUTEX_RELEASE(dev, dev_lock);
 
     return ret;
@@ -1005,7 +1005,7 @@ status_t pcie_init_irqs(pcie_bus_driver_state_t* bus_drv, const pcie_init_info_t
 
     if (bus_drv->legacy_irq_swizzle) {
         TRACEF("Failed to initialize PCIe IRQs; IRQs already initialized\n");
-        return ERR_ALREADY_STARTED;
+        return ERR_BAD_STATE;
     }
 
     if (!init_info->legacy_irq_swizzle) {

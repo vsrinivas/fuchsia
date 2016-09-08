@@ -251,7 +251,7 @@ status_t arch_mp_cpu_unplug(uint cpu_id)
     uint32_t dst_apic_id = ap_percpus[cpu_id - 1].apic_id;
     if (dst_apic_id == INVALID_APIC_ID) {
         /* This is a transient state that can occur during CPU onlining */
-        return ERR_BUSY;
+        return ERR_NOT_READY;
     }
 
     apic_send_ipi(0, dst_apic_id, DELIVERY_MODE_INIT);
@@ -264,7 +264,7 @@ status_t arch_mp_cpu_hotplug(uint cpu_id)
         return ERR_INVALID_ARGS;
     }
     if (mp_is_cpu_online(cpu_id)) {
-        return ERR_ALREADY_STARTED;
+        return ERR_BAD_STATE;
     }
     DEBUG_ASSERT(cpu_id != 0);
     if (cpu_id == 0) {
