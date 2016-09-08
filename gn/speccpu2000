@@ -36,6 +36,10 @@
         {
             "binary": "188.ammp",
             "bootfs_path": "benchmarks/188.ammp"
+        },
+        {
+            "binary": "252.eon",
+            "bootfs_path": "benchmarks/252.eon"
         }
     ],
     "resources": [
@@ -98,6 +102,30 @@
         {
           "file": "third_party/speccpu2000/188.ammp/data/ref/input/ammp.in",
           "bootfs_path": "benchmarks/data/188.ammp/ammp.in"
+        },
+        {
+          "file": "third_party/speccpu2000/252.eon/data/ref/input/chair.camera",
+          "bootfs_path": "benchmarks/data/252.eon/chair.camera"
+        },
+        {
+          "file": "third_party/speccpu2000/252.eon/data/ref/input/chair.control.cook",
+          "bootfs_path": "benchmarks/data/252.eon/chair.control.cook"
+        },
+        {
+          "file": "third_party/speccpu2000/252.eon/data/ref/input/chair.control.kajiya",
+          "bootfs_path": "benchmarks/data/252.eon/chair.control.kajiya"
+        },
+        {
+          "file": "third_party/speccpu2000/252.eon/data/ref/input/chair.control.rushmeier",
+          "bootfs_path": "benchmarks/data/252.eon/chair.control.rushmeier"
+        },
+        {
+          "file": "third_party/speccpu2000/252.eon/data/ref/input/chair.surfaces",
+          "bootfs_path": "benchmarks/data/252.eon/chair.surfaces"
+        },
+        {
+          "file": "third_party/speccpu2000/252.eon/data/ref/input/eon.dat",
+          "bootfs_path": "benchmarks/data/252.eon/eon.dat"
         }
     ]
 }
