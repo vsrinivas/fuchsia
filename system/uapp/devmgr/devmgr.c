@@ -639,9 +639,7 @@ mx_status_t devmgr_driver_add(mx_driver_t* drv) {
     mx_device_t* dev = NULL;
     mx_device_t* temp = NULL;
     list_for_every_entry_safe (&unmatched_device_list, dev, temp, mx_device_t, unode) {
-        if (devmgr_device_probe(dev, drv) == NO_ERROR) {
-            break;
-        }
+        devmgr_device_probe(dev, drv);
     }
     return NO_ERROR;
 }
