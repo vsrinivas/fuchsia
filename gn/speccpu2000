@@ -40,6 +40,10 @@
         {
             "binary": "252.eon",
             "bootfs_path": "benchmarks/252.eon"
+        },
+        {
+            "binary": "255.vortex",
+            "bootfs_path": "benchmarks/255.vortex"
         }
     ],
     "resources": [
@@ -124,8 +128,16 @@
           "bootfs_path": "benchmarks/data/252.eon/chair.surfaces"
         },
         {
-          "file": "third_party/speccpu2000/252.eon/data/ref/input/eon.dat",
-          "bootfs_path": "benchmarks/data/252.eon/eon.dat"
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/lendian1.raw",
+          "bootfs_path": "benchmarks/data/255.vortex/lendian1.raw"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/lendian2.raw",
+          "bootfs_path": "benchmarks/data/255.vortex/lendian2.raw"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/lendian3.raw",
+          "bootfs_path": "benchmarks/data/255.vortex/lendian3.raw"
         }
     ]
 }
