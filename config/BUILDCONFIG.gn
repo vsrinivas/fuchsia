@@ -40,8 +40,11 @@ if (is_debug) {
   _shared_binary_target_configs += [ "//build/config:release" ]
 }
 
-_shared_library_target_configs =
-    _shared_binary_target_configs + [ "//build/config:shared_library_config" ]
+_shared_library_target_configs = _shared_binary_target_configs + [
+                                   "//build/config:no_exceptions",
+                                   "//build/config:shared_library_config",
+                                   "//build/config:symbol_visibility_hidden",
+                                 ]
 _executable_target_configs =
     _shared_binary_target_configs + [ "//build/config:executable_config" ]
 

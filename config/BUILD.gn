@@ -6,7 +6,9 @@ config("compiler") {
   asmflags = []
   cflags = []
   cflags_c = []
-  cflags_cc = []
+  cflags_cc = [ "-fvisibility-inlines-hidden" ]
+  cflags_objc = []
+  cflags_objcc = [ "-fvisibility-inlines-hidden" ]
   ldflags = []
   defines = []
   configs = []
@@ -27,12 +29,20 @@ config("compiler") {
 }
 
 config("debug") {
-  cflags = [ "-g", "-O0" ]
+  cflags = [
+    "-g",
+    "-O0",
+  ]
 }
 
 config("release") {
   cflags = [ "-O2" ]
   defines = [ "NDEBUG=1" ]
+}
+
+config("no_exceptions") {
+  cflags_cc = [ "-fno-exceptions" ]
+  cflags_objcc = cflags_cc
 }
 
 config("default_include_dirs") {
@@ -48,6 +58,10 @@ config("default_warnings") {
     "-Wextra",
     "-Wno-unused-parameter",
   ]
+}
+
+config("symbol_visibility_hidden") {
+  cflags = [ "-fvisibility=hidden" ]
 }
 
 config("shared_library_config") {
