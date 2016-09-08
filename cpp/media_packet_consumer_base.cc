@@ -9,7 +9,7 @@
 namespace mojo {
 namespace media {
 
-#if !defined(NDEBUG)
+#if defined(FLOG_ENABLED)
 
 namespace {
 
@@ -23,7 +23,7 @@ uint64_t SizeOf(const ScopedSharedBufferHandle& handle) {
 
 }  // namespace
 
-#endif // !defined(NDEBUG)
+#endif  // !defined(NDEBUG)
 
 // For checking preconditions when handling mojo requests.
 // Checks the condition, and, if it's false, calls Fail and returns.
