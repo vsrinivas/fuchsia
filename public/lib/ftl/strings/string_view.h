@@ -29,6 +29,8 @@ class StringView {
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using reverse_iterator = const_reverse_iterator;
 
+  constexpr static size_t npos = std::string::npos;
+
   // Constructors.
   constexpr StringView() : data_(""), size_(0u) {}
 
@@ -114,11 +116,19 @@ class StringView {
   std::string ToString() const { return std::string(data_, size_); }
 
   // String operations.
-  constexpr StringView substr(size_t pos = 0,
-                              size_t n = std::string::npos) const {
+  constexpr StringView substr(size_t pos = 0, size_t n = npos) const {
     return StringView(data_ + pos, min(n, size_ - pos));
   }
+
   int compare(StringView other);
+  size_t find(StringView s, size_t pos = 0) const;
+  size_t find(char c, size_t pos = 0) const;
+  size_t rfind(StringView s, size_t pos = npos) const;
+  size_t rfind(char c, size_t pos = npos) const;
+  size_t find_first_of(StringView s, size_t pos = 0) const;
+  size_t find_last_of(StringView s, size_t pos = npos) const;
+  size_t find_first_not_of(StringView s, size_t pos = 0) const;
+  size_t find_last_not_of(StringView s, size_t pos = npos) const;
 
  private:
   constexpr static size_t min(size_t v1, size_t v2) {
