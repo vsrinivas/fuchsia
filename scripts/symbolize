@@ -114,6 +114,7 @@ def main():
     btre = re.compile("^.* U bt#(\d+):")
     bt_with_offsetre = re.compile(
         "^.* U bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
+    bt_end = re.compile("^.* U bt#(\d+): end")
     arch_re = re.compile("^.* U arch: ([\\S]+)$")
     arch = "x86_64"
     build_id_re = re.compile("^.* U dso: id=([0-9a-z]+) base=0x[0-9a-z]+ name=([\\S]+)$")
@@ -155,7 +156,7 @@ def main():
                             "#%s: %s" % (frame_num, addr2line_output))
                         continue
                 processed_lines.append("#%s: (unknown)\n" % frame_num)
-        else:
+        if line.find(" U ") < 0 or bt_end.match(line):
             if len(processed_lines) != 0:
                 print "start of symbolized stack:"
                 sys.stdout.writelines(processed_lines)

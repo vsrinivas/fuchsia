@@ -227,6 +227,7 @@ void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp) {
             break;
         }
     }
+    fprintf(stderr, "bt#%02d: end\n", n);
 
     while (list != NULL) {
         dsoinfo_t* next = list->next;
