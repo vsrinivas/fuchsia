@@ -15,6 +15,7 @@ enum {
     ACPI_CMD_GET_CHILD_HANDLE = 2,
     ACPI_CMD_GET_PCI_INIT_ARG = 3,
     ACPI_CMD_S_STATE_TRANSITION = 4,
+    ACPI_CMD_PS0 = 5,
 };
 
 typedef struct {
@@ -88,3 +89,12 @@ typedef struct {
 typedef struct {
     acpi_rsp_hdr_t hdr;
 } __PACKED acpi_rsp_s_state_transition_t;
+
+typedef struct {
+    acpi_cmd_hdr_t hdr;
+    // name must be NULL terminated
+    char name[1024];
+} __PACKED acpi_cmd_ps0_t;
+typedef struct {
+    acpi_rsp_hdr_t hdr;
+} __PACKED acpi_rsp_ps0_t;
