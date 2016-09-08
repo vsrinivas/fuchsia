@@ -30,14 +30,10 @@ struct mxrio {
     // message pipe handle for rpc
     mx_handle_t h;
 
-    // event handle for device state signals
-    mx_handle_t e;
+    // event handle for device state signals, or socket handle
+    mx_handle_t h2;
 
     uint32_t flags;
-
-    // TODO: replace with reply-pipes to allow
-    // true multithreaded io
-    mtx_t lock;
 };
 
 static const char* _opnames[] = MXRIO_OPNAMES;
@@ -435,9 +431,9 @@ static mx_status_t mxrio_close(mxio_t* io) {
     mx_handle_t h = rio->h;
     rio->h = 0;
     mx_handle_close(h);
-    if (rio->e > 0) {
-        h = rio->e;
-        rio->e = 0;
+    if (rio->h2 > 0) {
+        h = rio->h2;
+        rio->h2 = 0;
         mx_handle_close(h);
     }
 
@@ -520,6 +516,22 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
         }
         break;
     }
+    case MXIO_PROTOCOL_SOCKET: {
+        if (hcount == 1) {
+            io = mxio_socket_create(handles[0], 0);
+        } else if (hcount == 2) {
+            io = mxio_socket_create(handles[0], handles[1]);
+        } else {
+            r = ERR_INVALID_ARGS;
+            break;
+        }
+        if (io == NULL) {
+            r = ERR_NO_RESOURCES;
+        } else {
+            *out = io;
+            return NO_ERROR;
+        }
+    }
     default:
         r = ERR_NOT_SUPPORTED;
     }
@@ -597,12 +609,12 @@ mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types) 
 
 static mx_status_t mxrio_wait(mxio_t* io, uint32_t events, uint32_t* _pending, mx_time_t timeout) {
     mxrio_t* rio = (void*)io;
-    if (rio->e == 0) {
+    if (rio->h2 == 0) {
         return ERR_NOT_SUPPORTED;
     }
     mx_status_t r;
     mx_signals_state_t pending;
-    if ((r = mx_handle_wait_one(rio->e, events & MXIO_EVT_ALL, timeout, &pending)) < 0) {
+    if ((r = mx_handle_wait_one(rio->h2, events & MXIO_EVT_ALL, timeout, &pending)) < 0) {
         return r;
     }
     if (_pending) {
@@ -633,7 +645,94 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
     rio->io.magic = MXIO_MAGIC;
     atomic_init(&rio->io.refcount, 1);
     rio->h = h;
-    rio->e = e;
-    mtx_init(&rio->lock, mtx_plain);
+    rio->h2 = e;
+    return &rio->io;
+}
+
+static ssize_t mxsio_read(mxio_t* io, void* data, size_t len) {
+    mxrio_t* rio = (mxrio_t*)io;
+
+    for (;;) {
+        ssize_t r;
+        if ((r = mx_socket_read(rio->h2, 0, len, (void*)data)) >= 0) {
+            return r;
+        }
+        if (r == ERR_REMOTE_CLOSED) {
+            return 0;
+        } else if (r == ERR_SHOULD_WAIT) {
+            // TODO: follow socket blocking/nonblocking state
+            mx_signals_state_t pending;
+            r = mx_handle_wait_one(rio->h2,
+                                   MX_SIGNAL_READABLE
+                                   | MX_SIGNAL_PEER_CLOSED,
+                                   MX_TIME_INFINITE, &pending);
+            if (r < 0) {
+                return r;
+            }
+            if (pending.satisfied & MX_SIGNAL_READABLE) {
+                continue;
+            }
+            if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
+                return 0;
+            }
+            // impossible
+            return ERR_INTERNAL;
+        }
+        return r;
+    }
+}
+
+static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
+    mxrio_t* rio = (mxrio_t*)io;
+
+    for (;;) {
+        ssize_t r;
+        if ((r = mx_socket_write(rio->h2, 0, len, data)) >= 0) {
+            return r;
+        }
+        if (r == ERR_SHOULD_WAIT) {
+            // TODO: follow socket blocking/nonblocking state
+            mx_signals_state_t pending;
+            r = mx_handle_wait_one(rio->h2,
+                                   MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+                                   MX_TIME_INFINITE, &pending);
+            if (r < 0) {
+                return r;
+            }
+            if (pending.satisfied & MX_SIGNAL_WRITABLE) {
+                continue;
+            }
+            if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
+                return ERR_REMOTE_CLOSED;
+            }
+            // impossible
+            return ERR_INTERNAL;
+        }
+        return r;
+    }
+}
+
+static mxio_ops_t mxio_socket_ops = {
+    .read = mxsio_read,
+    .write = mxsio_write,
+    .seek = mxio_default_seek,
+    .misc = mxrio_misc,
+    .close = mxrio_close,
+    .open = mxrio_open,
+    .clone = mxio_default_clone,
+    .wait = mxrio_wait,
+    .ioctl = mxrio_ioctl,
+};
+
+mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s) {
+    mxrio_t* rio = calloc(1, sizeof(*rio));
+    if (rio == NULL)
+        return NULL;
+    rio->io.ops = &mxio_socket_ops;
+    rio->io.magic = MXIO_MAGIC;
+    rio->io.refcount = 1;
+    rio->io.flags |= MXIO_FLAG_SOCKET;
+    rio->h = h;
+    rio->h2 = s;
     return &rio->io;
 }

@@ -33,7 +33,15 @@ __BEGIN_CDECLS
 #define MXRIO_WRITE_AT     0x0000000d
 #define MXRIO_TRUNCATE     0x0000000e
 #define MXRIO_RENAME       0x0000000f
-#define MXRIO_NUM_OPS      16
+#define MXRIO_CONNECT      0x00000010
+#define MXRIO_BIND         0x00000011
+#define MXRIO_LISTEN       0x00000012
+#define MXRIO_GETSOCKNAME  0x00000013
+#define MXRIO_GETPEERNAME  0x00000014
+#define MXRIO_GETSOCKOPT   0x00000015
+#define MXRIO_SETSOCKOPT   0x00000016
+#define MXRIO_GETADDRINFO  0x00000017
+#define MXRIO_NUM_OPS      24
 
 #define MXRIO_OP(n)        ((n) & 0xFFFF)
 #define MXRIO_REPLY_PIPE   0x01000000
@@ -42,7 +50,9 @@ __BEGIN_CDECLS
     "status", "close", "clone", "open", \
     "misc", "read", "write", "seek", \
     "stat", "readdir", "ioctl", "unlink", \
-    "read_at", "write_at", "truncate", "rename", }
+    "read_at", "write_at", "truncate", "rename", \
+    "connect", "bind", "listen", "getsockname", \
+    "getpeername", "getsockopt", "setsockopt", "getaddrinfo" }
 
 typedef struct mxrio_msg mxrio_msg_t;
 
@@ -88,34 +98,42 @@ struct mxrio_msg {
 // - msg.datalen is the size of data sent or received and must be <= MXIO_CHUNK_SIZE
 // - msg.arg is the return code on replies
 
-// request-------------------------------------    response------------------------------
-// op        arg        arg2     data              arg2        data            handle[]
-// --------- ---------- -------  --------------    ----------- --------------------------
-// CLOSE     0          0        -                 0           -               -
-// CLONE     0          0        -                 objtype     -               handle(s)
-// OPEN      flags      mode     <name>            objtype     -               handle(s)
-// READ      maxread    0        -                 newoffset   <bytes>         -
-// READ_AT   maxread    offset   -                 0           <bytes>         -
-// WRITE     0          0        <bytes>           newoffset   -               -
-// WRITE_AT  0          offset   <bytes>           0           -               -
-// SEEK      whence     offset   -                 offset      -               -
-// STAT      maxreply   0        -                 0           <vnattr_t>      -
-// READDIR   maxreply   0        -                 0           <vndirent_t[]>  -
-// IOCTL     out_len    opcode   <in_bytes>        0           <out_bytes>     -
-// UNLINK    0          0        <name>            0           -               -
-// TRUNCATE  0          offset   -                 0           -               -
-// RENAME    0          0        <name1>0<name2>0  0           -               -
+// request---------------------------------------    response------------------------------
+// op          arg        arg2     data              arg2        data            handle[]
+// ----------- ---------- -------  --------------    ----------- --------------------------
+// CLOSE       0          0        -                 0           -               -
+// CLONE       0          0        -                 objtype     -               handle(s)
+// OPEN        flags      mode     <name>            objtype     -               handle(s)
+// READ        maxread    0        -                 newoffset   <bytes>         -
+// READ_AT     maxread    offset   -                 0           <bytes>         -
+// WRITE       0          0        <bytes>           newoffset   -               -
+// WRITE_AT    0          offset   <bytes>           0           -               -
+// SEEK        whence     offset   -                 offset      -               -
+// STAT        maxreply   0        -                 0           <vnattr_t>      -
+// READDIR     maxreply   0        -                 0           <vndirent_t[]>  -
+// IOCTL       out_len    opcode   <in_bytes>        0           <out_bytes>     -
+// UNLINK      0          0        <name>            0           -               -
+// TRUNCATE    0          offset   -                 0           -               -
+// RENAME      0          0        <name1>0<name2>0  0           -               -
+// CONNECT     0          0        <sockaddr>        0           -               -
+// BIND        0          0        <sockaddr>        0           -               -
+// LISTEN      0          0        <backlog>         0           -               -
+// GETSOCKNAME maxreply   0        -                 0           <sockaddr>      -
+// GETPEERNAME maxreply   0        -                 0           <sockaddr>      -
+// GETSOCKOPT  maxreply   0        <sockopt>         0           <sockopt>       -
+// SETSOCKOPT  0          0        <sockopt>         0           <sockopt>       -
+// GETADDRINFO maxreply   0        <getaddrinfo>     0           <getaddrinfo>   -
 //
 // proposed:
 //
-// LSTAT     maxreply   0        -                 0           <vnattr_t>      -
-// MKDIR     0          0        <name>            0           -               -
-// SYMLINK   namelen    0        <name><path>      0           -               -
-// READLINK  maxreply   0        -                 0           <path>          -
-// MMAP      flags      offset   <uint64:len>      offset      -               vmohandle
-// FLUSH     0          0        -                 0           -               -
-// SYNC      0          0        -                 0           -               -
-// LINK*     0          0        <name>            0           -               -
+// LSTAT       maxreply   0        -                 0           <vnattr_t>      -
+// MKDIR       0          0        <name>            0           -               -
+// SYMLINK     namelen    0        <name><path>      0           -               -
+// READLINK    maxreply   0        -                 0           <path>          -
+// MMAP        flags      offset   <uint64:len>      offset      -               vmohandle
+// FLUSH       0          0        -                 0           -               -
+// SYNC        0          0        -                 0           -               -
+// LINK*       0          0        <name>            0           -               -
 //
 // on response arg32 is always mx_status, and may be positive for read/write calls
 // * handle[0] used to pass reference to target object

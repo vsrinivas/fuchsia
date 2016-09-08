@@ -128,11 +128,6 @@ int rmdir(const char* path) {
 
 // Socket stubbing.
 
-int socket(int domain, int type, int protocol) {
-    errno = ENOSYS;
-    return -1;
-}
-
 int socketpair(int domain, int type, int protocol, int fd[2]) {
     errno = ENOSYS;
     return -1;
@@ -142,30 +137,6 @@ int socketpair(int domain, int type, int protocol, int fd[2]) {
 // indeed fds, and if so, are indeed sockets.
 
 int shutdown(int fd, int how) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int listen(int fd, int backlog) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len, int flags) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
     return checksocket(fd, ENOTSOCK, ENOSYS);
 }
 
@@ -190,14 +161,6 @@ int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int fla
 }
 
 int recvmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags, struct timespec* timeout) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int getsockopt(int fd, int level, int optname, void* restrict optval, socklen_t* restrict optlen) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) {
     return checksocket(fd, ENOTSOCK, ENOSYS);
 }
 

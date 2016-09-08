@@ -107,6 +107,9 @@ mxio_t* mxio_pipe_create(mx_handle_t h);
 // wraps a vmo, offset, length with an mxio_t providing a readonly file
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len);
 
+// wraps a socket with an mxio_t using socket io
+mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s);
+
 // creates a message port and pair of simple io mxio_t's
 int mxio_pipe_pair(mxio_t** a, mxio_t** b);
 

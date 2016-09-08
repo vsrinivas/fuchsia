@@ -24,6 +24,7 @@
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 #include <mxio/vfs.h>
+#include <mxio/socket.h>
 
 #include "private.h"
 #include "unistd.h"
@@ -173,7 +174,7 @@ static mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int 
     return r;
 }
 
-static mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_t mode) {
+mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_t mode) {
     return __mxio_open_at(io, AT_FDCWD, path, flags, mode);
 }
 
@@ -384,7 +385,7 @@ int mxio_stat(mxio_t* io, struct stat* s) {
 }
 
 // TODO: determine complete correct mapping
-static int status_to_errno(mx_status_t status) {
+int mxio_status_to_errno(mx_status_t status) {
     switch (status) {
     case ERR_NOT_FOUND: return ENOENT;
     case ERR_NO_MEMORY: return ENOMEM;
@@ -405,29 +406,6 @@ static int status_to_errno(mx_status_t status) {
     // no translation
     default: return 999;
     }
-}
-
-// set errno to the closest match for error and return -1
-static int ERROR(mx_status_t error) {
-    errno = status_to_errno(error);
-    return -1;
-}
-
-// if status is negative, set errno as appropriate and return -1
-// otherwise return status
-static int STATUS(mx_status_t status) {
-    if (status < 0) {
-        errno = status_to_errno(status);
-        return -1;
-    } else {
-        return status;
-    }
-}
-
-// set errno to e, return -1
-static inline int ERRNO(int e) {
-    errno = e;
-    return -1;
 }
 
 // The functions from here on provide implementations of fd and path
