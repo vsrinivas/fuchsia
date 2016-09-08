@@ -30,7 +30,7 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_DATA_PIPE_PRODUCER; }
     StateTracker* get_state_tracker() final;
 
-    mx_status_t Write(const void* buffer, mx_size_t* requested);
+    mx_status_t Write(const void* buffer, mx_size_t* requested, bool all_or_none);
     mx_ssize_t BeginWrite(mxtl::RefPtr<VmAspace> aspace, void** buffer);
     mx_status_t EndWrite(mx_size_t written);
 

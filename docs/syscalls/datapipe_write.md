@@ -23,11 +23,10 @@ mx_ssize_t mx_datapipe_write(mx_handle_t producer_handle,
 be a multiple of the data pipe's element size. *buffer* is the source of the
 data (and should have *requested* bytes available to read).
 
-Note that this may do a partial write (if the data pipe has insufficient
-available capacity to accomodate the entire requested write), with the amount of
-data written returned.
-
-TODO(vtl): There should be an "all or none" write flag.
+If **MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE** is set in *flags*, this either writes
+the requested amount of data or none at all. Otherwise this may do a partial
+write (if the data pipe has insufficient available capacity to accomodate the
+entire requested write), with the amount of data written returned.
 
 ## RETURN VALUE
 
@@ -42,6 +41,8 @@ size. On failure, a (strictly) negative error value is returned.
 **ERR_WRONG_TYPE**  *producer_handle* is not a handle to a data pipe producer.
 
 **ERR_ACCESS_DENIED**  *producer_handle* does not have **MX_RIGHT_WRITE**.
+
+**ERR_NOT_SUPPORTED**  *flags* has an unknown flag set.
 
 **ERR_ALREADY_BOUND**  *producer_handle* is currently in a two-phase write.
 

@@ -1053,10 +1053,11 @@ mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_si
     if (status != NO_ERROR)
         return status;
 
-    // TODO(vtl): Handle write flags.
+    if (flags & ~MX_DATAPIPE_WRITE_FLAG_MASK)
+        return ERR_NOT_SUPPORTED;
 
     mx_size_t written = requested;
-    status = producer->Write(_buffer, &written);
+    status = producer->Write(_buffer, &written, flags & MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE);
     if (status < 0)
         return status;
 
@@ -1109,7 +1110,9 @@ mx_ssize_t sys_datapipe_begin_write(mx_handle_t producer_handle, uint32_t flags,
     if (status != NO_ERROR)
         return status;
 
-    // TODO(vtl): Handle (disallow) write flags.
+    // Currently, no flags are supported with two-phase write.
+    if (flags)
+        return (flags & ~MX_DATAPIPE_WRITE_FLAG_MASK) ? ERR_NOT_SUPPORTED : ERR_INVALID_ARGS;
 
     uintptr_t user_addr = 0u;
 

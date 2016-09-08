@@ -121,7 +121,9 @@ void DataPipe::UpdateSignalsNoLock() {
     }
 }
 
-mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requested) {
+mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr,
+                                            mx_size_t* requested,
+                                            bool all_or_none) {
     AutoLock al(&lock_);
 
     // |expected| > 0 means there is a pending ProducerWriteBegin().
@@ -142,6 +144,10 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requeste
 
     mx_size_t to_write = mxtl::min(*requested, free_space_no_lock());
     DEBUG_ASSERT(to_write % element_size_ == 0u);
+    // TODO(vtl): Change OUT_OF_RANGE to SHOULD_WAIT when we have write thresholds (also update mojo
+    // to match).
+    if (all_or_none && to_write != *requested)
+        return ERR_OUT_OF_RANGE;
     *requested = to_write;
 
     if (!ptr)
@@ -247,6 +253,8 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr,
 
     mx_size_t to_read = mxtl::min(*requested, available_size_no_lock());
     DEBUG_ASSERT(to_read % element_size_ == 0u);
+    // TODO(vtl): Change OUT_OF_RANGE to SHOULD_WAIT when we have write thresholds (also update mojo
+    // to match).
     if (all_or_none && to_read != *requested)
         return producer_.alive ? ERR_OUT_OF_RANGE : ERR_REMOTE_CLOSED;
     *requested = to_read;

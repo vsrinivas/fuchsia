@@ -506,6 +506,76 @@ static bool element_size_errors(void) {
     END_TEST;
 }
 
+static bool write_all_or_none(void) {
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 1u, 5u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    EXPECT_EQ(mx_datapipe_write(producer, MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE, 3u, "012"), 3,
+              "write failed");
+    // 3 used, 2 free.
+
+    EXPECT_EQ(mx_datapipe_write(producer, MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE, 3u, "abc"),
+              ERR_OUT_OF_RANGE, "unexpected result from write");
+
+    char buffer[100];
+    EXPECT_EQ(mx_datapipe_read(consumer, 0u, 1u, buffer), 1, "read failed");
+    // 2 used, 3 free.
+    EXPECT_EQ(memcmp(buffer, "0", 1u), 0, "incorrect data from read");
+
+    EXPECT_EQ(mx_datapipe_write(producer, MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE, 3u, "ABC"), 3,
+              "write failed");
+    // 5 used, 0 free.
+
+    EXPECT_EQ(mx_datapipe_read(consumer, 0u, 3u, buffer), 3, "read failed");
+    // 2 used, 3 free.
+    EXPECT_EQ(memcmp(buffer, "12A", 3u), 0, "incorrect data from read");
+
+    // For good measure, do a non-all-or-none write.
+    EXPECT_EQ(mx_datapipe_write(producer, 0u, 10u, "0123456789"), 3,
+              "write failed");
+    // 5 used, 0 free.
+
+    EXPECT_EQ(mx_datapipe_read(consumer, 0u, 10u, buffer), 5, "read failed");
+    // 0 used, 5 free.
+    EXPECT_EQ(memcmp(buffer, "BC012", 5u), 0, "incorrect data from read");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+
+    END_TEST;
+}
+
+static bool write_invalid_flags(void) {
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 1u, 0u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    // Unknown flags.
+    EXPECT_EQ(mx_datapipe_write(producer, ~MX_DATAPIPE_WRITE_FLAG_MASK, 1u, "xyz"),
+              ERR_NOT_SUPPORTED, "incorrect write result");
+
+    // Two-phase write currently doesn't support any flags.
+    uintptr_t ptr = 0;
+    EXPECT_EQ(mx_datapipe_begin_write(producer, MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE, &ptr),
+              ERR_INVALID_ARGS, "incorrect begin_write result");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+
+    END_TEST;
+}
+
 static bool write_wrap(void) {
     BEGIN_TEST;
 
@@ -774,6 +844,8 @@ RUN_TEST(loop_begin_write_read)
 RUN_TEST(consumer_signals_when_producer_closed)
 RUN_TEST(nontrivial_element_size);
 RUN_TEST(element_size_errors);
+RUN_TEST(write_all_or_none);
+RUN_TEST(write_invalid_flags);
 RUN_TEST(write_wrap);
 RUN_TEST(query_peek_discard);
 RUN_TEST(read_all_or_none);
