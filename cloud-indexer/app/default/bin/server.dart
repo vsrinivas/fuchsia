@@ -17,8 +17,8 @@ main(List<String> args) {
   useLoggingPackageAdaptor();
   withAppEngineServices(() {
     return ss.fork(() async {
-      final AuthManager authManager =
-          new AuthManager.fromClient(authClientService);
+      final AuthManager authManager = await AuthManager.fromClient(
+          authClientService, Platform.environment['INDEXER_BUCKET_NAME']);
       registerAuthManagerService(authManager);
       final ModuleUploader moduleUploader = new ModuleUploader.fromClient(
           authClientService,

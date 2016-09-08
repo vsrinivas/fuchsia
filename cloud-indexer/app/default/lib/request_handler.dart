@@ -35,8 +35,8 @@ Future<shelf.Response> requestHandler(shelf.Request request,
     return new shelf.Response.notFound(null);
   }
 
-  String contentType = request.headers['Content-Type'];
-  if (!contentType.startsWith('multipart/form-data')) {
+  final String contentType = request.headers['Content-Type'];
+  if (contentType == null || !contentType.startsWith('multipart/form-data')) {
     _logger.info('Invalid content-type received. Bailing out.');
     return new shelf.Response(HttpStatus.BAD_REQUEST);
   }
