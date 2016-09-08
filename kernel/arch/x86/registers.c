@@ -132,7 +132,6 @@ void x86_extended_register_init(void)
         DEBUG_ASSERT(arch_curr_cpu_num() == 0);
 
         read_xsave_state_info();
-        xsaves_supported = false;
         info_initialized = true;
 
         /* We currently assume that if xsave isn't support fxsave is */
