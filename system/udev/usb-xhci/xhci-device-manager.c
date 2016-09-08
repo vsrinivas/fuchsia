@@ -494,6 +494,7 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
             }
             // and any deferred requests
             xhci_process_deferred_txns(xhci, transfer_ring, true);
+            xhci_transfer_ring_free(xhci, transfer_ring);
         }
     }
 

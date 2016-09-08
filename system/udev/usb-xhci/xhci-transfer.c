@@ -242,6 +242,13 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     uint32_t control = XHCI_READ32(&trb->control);
     uint32_t status = XHCI_READ32(&trb->status);
+    uint32_t slot_id = control >> TRB_SLOT_ID_START;
+    xhci_slot_t* slot = &xhci->slots[slot_id];
+    if (!slot->enabled) {
+        // we is shutting down. device manager thread will complete all pending transations
+        return;
+    }
+
     uint32_t cc = (status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
     uint32_t length = (status & XHCI_MASK(EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS)) >> EVT_TRB_XFER_LENGTH_START;
     xhci_transfer_context_t* context = NULL;

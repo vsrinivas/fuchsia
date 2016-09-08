@@ -28,7 +28,10 @@ mx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* ring, in
 }
 
 void xhci_transfer_ring_free(xhci_t* xhci, xhci_transfer_ring_t* ring) {
-    xhci_free(xhci, (void*)ring->start);
+    if (ring->start) {
+        xhci_free(xhci, (void*)ring->start);
+        ring->start = NULL;
+    }
 }
 
 // return the number of free TRBs in the ring
