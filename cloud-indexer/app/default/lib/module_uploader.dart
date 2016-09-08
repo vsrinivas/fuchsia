@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:gcloud/service_scope.dart' as ss;
@@ -65,8 +64,6 @@ TarballException _tarballException(String message) {
 /// 3. Finally, it uses Pub/Sub to invoke an index update.
 class ModuleUploader {
   static const String _manifestPath = 'manifest.yaml';
-  static const String _defaultTopicName =
-      'projects/google.com:modular-cloud-indexer/topics/indexing';
 
   final PubSubTopicWrapper _pubSubTopicWrapper;
   final StorageBucketWrapper _storageBucketWrapper;
@@ -77,11 +74,8 @@ class ModuleUploader {
   ///
   /// Note that the [ModuleUploader] requires that it is instantiated within a
   /// gcloud service scope with access to the Pub/Sub and Storage services.
-  factory ModuleUploader.fromClient(http.Client client,
-      {String topicName: _defaultTopicName, String bucketName}) {
-    // In the case these are not set, we use default values from the service
-    // scope and environment.
-    bucketName ??= Platform.environment['BUCKET_NAME'];
+  factory ModuleUploader.fromClient(
+      http.Client client, String topicName, String bucketName) {
     return new ModuleUploader(new PubSubTopicWrapper(client, topicName),
         new StorageBucketWrapper(client, bucketName));
   }

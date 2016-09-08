@@ -20,8 +20,10 @@ main(List<String> args) {
       final AuthManager authManager =
           new AuthManager.fromClient(authClientService);
       registerAuthManagerService(authManager);
-      final ModuleUploader moduleUploader =
-          new ModuleUploader.fromClient(authClientService);
+      final ModuleUploader moduleUploader = new ModuleUploader.fromClient(
+          authClientService,
+          Platform.environment['TOPIC_NAME'],
+          Platform.environment['MODULE_BUCKET_NAME']);
       registerModuleUploaderService(moduleUploader);
       return runAppEngine((HttpRequest request) {
         return io.handleRequest(request, requestHandler);

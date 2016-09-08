@@ -17,8 +17,12 @@ import shutil
 import subprocess
 import tempfile
 
-DEFAULT_BUCKET_NAME = 'modular-cloud-indexer.google.com.a.appspot.com'
-TARGET_CHOICES = ('default', 'notification-handler', 'queue', 'dispatch')
+DEFAULT_INDEXER_BUCKET_NAME = 'modular-cloud-indexer.google.com.a.appspot.com'
+
+# TODO(victorkwan): Switch this out to 'modular' once we're ready to deploy.
+DEFAULT_MODULE_BUCKET_NAME = 'modular-cloud-indexer.google.com.a.appspot.com'
+DEFAULT_TOPIC_NAME = 'projects/google.com:modular-cloud-indexer/topics/indexing'
+TARGET_CHOICES = ('default', 'notification-handler', 'dispatch')
 
 # We assume that the deployment script is in the root of the cloud-indexer dir.
 SCRIPT_PATH = os.path.abspath(__file__)
@@ -49,11 +53,11 @@ class DeployCommand(object):
   __metaclass__ = abc.ABCMeta
 
   @abc.abstractmethod
-  def setup(self, bucket_name, deploy_path):
+  def setup(self, env_vars, deploy_path):
     """Populates deploy_path with the necessary files for deployment.
 
     Args:
-      bucket_name: The bucket that the cloud-indexer is servicing.
+      env_vars: A dictionary containing environment variables.
       deploy_path: The root of the deploy directory.
 
     Returns:
@@ -81,7 +85,7 @@ class DartManagedVMModuleCommand(DeployCommand):
     self.ignored_files = DartManagedVMModuleCommand.COPYTREE_IGNORES[:]
     self.ignored_files.append(config_name)
 
-  def setup(self, bucket_name, deploy_path):
+  def setup(self, env_vars, deploy_path):
     # We want to reorganize the service such that it can be deployed using the
     # image google/dart-runtime-base. More details can be found at
     # https://hub.docker.com/r/google/dart-runtime-base/.
@@ -111,7 +115,8 @@ class DartManagedVMModuleCommand(DeployCommand):
     with open(config_deploy_path, 'a') as cf:
       cf.write('\n'.join([
           'env_variables:',
-          '  BUCKET_NAME: \'{}\''.format(bucket_name),
+          '\n'.join(['  {}: \'{}\''.format(k, v)
+                     for (k, v) in env_vars.items()]),
           ''
       ]))
 
@@ -197,7 +202,7 @@ class DartManagedVMModuleCommand(DeployCommand):
 class DispatchConfigCommand(DeployCommand):
   """Deploys the dispatch.yaml configuration file."""
 
-  def setup(self, bucket_name, deploy_path):
+  def setup(self, env_vars, deploy_path):
     logging.info('Copying dispatch.yaml')
     dispatch_config_path = os.path.join(CLOUD_INDEXER_PATH, 'app',
                                         'dispatch.yaml')
@@ -212,8 +217,8 @@ class DispatchConfigCommand(DeployCommand):
 class DeployCommandRunner(object):
   """Performs deployment, as specified by the added DeployCommand objects."""
 
-  def __init__(self, bucket_name, deploy_path, dry_run):
-    self.bucket_name = bucket_name
+  def __init__(self, env_vars, deploy_path, dry_run):
+    self.env_vars = env_vars
     self.deploy_path = deploy_path
     self.dry_run = dry_run
     self.commands = []
@@ -233,7 +238,7 @@ class DeployCommandRunner(object):
     """
     args = [GCLOUD_PATH, 'app', 'deploy']
     for command in self.commands:
-      if not command.setup(self.bucket_name, self.deploy_path):
+      if not command.setup(self.env_vars, self.deploy_path):
         logging.error('Setup failed for command: %s', command.config_path)
         return False
 
@@ -265,10 +270,23 @@ def main():
             ' Use with --deploy-dir.'),
       action='store_true')
   parser.add_argument(
-      '--bucket-name',
-      help=('Uses BUCKET_NAME as the serviced bucket. (default: %(default)s)'),
+      '--topic-name',
+      help=('Uses TOPIC_NAME as the topic used to communicate between services.'
+            ' (default: %(default)s)'),
       action='store',
-      default=DEFAULT_BUCKET_NAME)
+      default=DEFAULT_TOPIC_NAME)
+  parser.add_argument(
+      '--indexer-bucket-name',
+      help=('Uses INDEXER_BUCKET_NAME as bucket to retrieve credentials from. '
+            '(default: %(default)s)'),
+      action='store',
+      default=DEFAULT_INDEXER_BUCKET_NAME)
+  parser.add_argument(
+      '--module-bucket-name',
+      help=('Uses MODULE_BUCKET_NAME as bucket to retrieve modules from. '
+            '(default: %(default)s)'),
+      action='store',
+      default=DEFAULT_MODULE_BUCKET_NAME)
   parser.add_argument(
       '--deploy-dir',
       help=('Uses DEPLOY_DIR as the deployment directory.'),
@@ -294,7 +312,12 @@ def main():
     deploy_dir = args.deploy_dir
 
   targets = set(args.targets)
-  runner = DeployCommandRunner(args.bucket_name, deploy_dir, args.dry_run)
+  env_vars = {
+      'INDEXER_BUCKET_NAME': args.indexer_bucket_name,
+      'MODULE_BUCKET_NAME': args.module_bucket_name,
+      'TOPIC_NAME': args.topic_name,
+  }
+  runner = DeployCommandRunner(env_vars, deploy_dir, args.dry_run)
   if 'default' in targets:
     runner.add_command(DartManagedVMModuleCommand('default', 'app.yaml'))
   if 'notification-handler' in targets:
@@ -306,16 +329,12 @@ def main():
   result = 1
   try:
     result = 0 if runner.run() else 1
-  except IOError as e:
-    logging.error('I/O error occurred (%i): %s', e.errno, e.strerror)
-  except (RuntimeError, TypeError, NameError) as e:
-    logging.error('An error occurred: %s', e)
+    sys.exit(result)
   finally:
     if args.deploy_dir is None:
       # We use a finally block to guarantee the temporary folder is deleted.
       logging.info('Deleting the temporary directory')
       shutil.rmtree(deploy_dir)
-    sys.exit(result)
 
 
 if __name__ == '__main__':

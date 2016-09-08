@@ -17,7 +17,8 @@ class MockIndexUpdater extends Mock implements IndexUpdater {}
 
 main() {
   group('requestHandler', () {
-    final Uri testUri = Uri.parse('https://test-notification-handler.io/');
+    final Uri testUri =
+        Uri.parse('https://test-notification-handler.io/$messagePushEndpoint');
     const String testArch = 'test_arch';
     const String testRevision = 'test_revision';
     const String testMessageId = 'test_message_id';

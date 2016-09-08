@@ -13,6 +13,8 @@ import 'package:shelf/shelf.dart' as shelf;
 
 final Logger _logger = new Logger('notification_handler.request_handler');
 
+const String messagePushEndpoint = '_ah/push-handlers/indexing';
+
 /// Handles a Pub/Sub push message.
 ///
 /// Currently, we assume that there is no notion of deleting a module: once a
@@ -26,7 +28,7 @@ Future<shelf.Response> requestHandler(shelf.Request request,
 
   // TODO(victorkwan): Provide authentication checks once these are available
   // on Managed VMs: https://code.google.com/p/cloud-pubsub/issues/detail?id=32
-  if (request.method != 'POST') {
+  if (request.method != 'POST' || request.url.path != messagePushEndpoint) {
     return new shelf.Response.notFound(null);
   }
 

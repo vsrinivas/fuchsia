@@ -12,5 +12,6 @@ dependencies:
   mockito: any
   parser:
     path: ../../../parser
+  path: any
   shelf: any
   test: any

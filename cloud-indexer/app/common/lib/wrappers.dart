@@ -24,6 +24,20 @@ class PubSubTopicWrapper {
 
   PubSubTopicWrapper.fromApi(this._api, this.topicName);
 
+  Future<String> createPushSubscription(
+      String subscriptionName, String pushEndpoint) {
+    final pubsub_api.PushConfig pushConfig = new pubsub_api.PushConfig()
+      ..pushEndpoint = pushEndpoint;
+    return _api.projects.subscriptions
+        .create(
+            new pubsub_api.Subscription()
+              ..topic = topicName
+              ..pushConfig = pushConfig,
+            subscriptionName)
+        .then((pubsub_api.Subscription subscription) =>
+            subscription?.pushConfig?.pushEndpoint);
+  }
+
   Future<String> publish(String data) => _api.projects.topics
       .publish(
           new pubsub_api.PublishRequest()
