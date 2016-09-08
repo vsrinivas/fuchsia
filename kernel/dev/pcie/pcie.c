@@ -663,7 +663,10 @@ static status_t pcie_claim_device(pcie_device_state_t* dev,
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(driver && driver->fn_table);
     DEBUG_ASSERT(is_mutex_held(&dev->start_claim_lock));
-    DEBUG_ASSERT(!dev->driver);
+
+    if (dev->driver) {
+        return ERR_NOT_AVAILABLE;
+    }
 
     status_t ret;
     MUTEX_ACQUIRE(dev, dev_lock);
