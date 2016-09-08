@@ -81,6 +81,10 @@ private:
 
     MsdIntelContext* global_context() { return global_context_.get(); }
 
+    RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }
+
+    AddressSpace* gtt() { return gtt_.get(); }
+
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
