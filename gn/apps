@@ -30,6 +30,22 @@
         {
             "binary": "story-runner",
             "bootfs_path": "apps/story-runner"
+        },
+        {
+            "binary": "story-runner-boot",
+            "bootfs_path": "apps/story-runner-boot"
+        },
+        {
+            "binary": "example-module1",
+            "bootfs_path": "apps/example-module1"
+        },
+        {
+            "binary": "example-module2",
+            "bootfs_path": "apps/example-module2"
+        },
+        {
+            "binary": "example-recipe",
+            "bootfs_path": "apps/example-recipe"
         }
     ]
 }
