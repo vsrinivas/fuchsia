@@ -19,7 +19,7 @@ namespace media {
 
 MojoReader::MojoReader(InterfaceHandle<SeekingReader> seeking_reader)
     : seeking_reader_(SeekingReaderPtr::Create(seeking_reader.Pass())) {
-  task_runner_ = base::MessageLoop::current()->task_runner();
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 
   read_in_progress_ = false;
@@ -57,8 +57,7 @@ void MojoReader::ReadAt(size_t position,
   read_at_callback_ = callback;
 
   // ReadAt may be called on non-mojo threads, so we use the runner.
-  task_runner_->PostTask(FROM_HERE, base::Bind(&MojoReader::ContinueReadAt,
-                                               base::Unretained(this)));
+  task_runner_->PostTask([this]() { ContinueReadAt(); });
 }
 
 void MojoReader::ContinueReadAt() {

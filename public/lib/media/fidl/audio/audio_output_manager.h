@@ -47,8 +47,7 @@ class AudioOutputManager {
   void SelectOutputsForTrack(AudioTrackImplPtr track);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
-  void ScheduleMessageLoopTask(const tracked_objects::Location& from_here,
-                               const base::Closure& task);
+  void ScheduleMessageLoopTask(const ftl::Closure& task);
 
   // Shutdown the specified audio output and remove it from the set of active
   // outputs.
@@ -56,40 +55,6 @@ class AudioOutputManager {
 
  private:
   void CreateAlsaOutputs();
-
-  // TODO(johngro): A SequencedWorkerPool currently seems to be as close to what
-  // we want which we can currently get using the chrome/mojo framework.  Things
-  // which are missing and will eventually need to be addressed include...
-  //
-  // 1) Threads are created on the fly, as needed.  We really want to be able to
-  //    spin up the proper number of threads at pool creation time.  Audio
-  //    mixing is very timing sensitive...  If we are in a situation where we
-  //    have not hit the max number of threads in the pool, and we need to spin
-  //    up a thread in order to mix, we *really* do not want to have to wait to
-  //    create the thread at the OS level before we can mix some audio.  The
-  //    thread needs to already be ready to go.
-  // 2) Threads in the pool are created with default priority.  Audio mixing
-  //    threads will need to be created with elevated priority.
-  // 3) It is currently unclear if explicitly scheduling tasks with delays will
-  //    be sufficient for the audio mixer.  We really would like to be able to
-  //    have tasks fire when some handle abstraction becomes signalled.  This
-  //    will let us implement mixing not only with open loop timing, but also
-  //    with events which can come from device drivers.  Note: this seems to be
-  //    an issue with the TaskRunner architecture in general, not the
-  //    SequencedWorkerPool in specific.
-  // 4) The resolution of posted delayed tasks may hinder the low latency goals
-  //    of the system.  Being able to know the underlying achievable resolution
-  //    of dispatching delayed tasks is a minimum requirement.  From that, we
-  //    can compute our worst case overhead which can be communicated to the
-  //    user and will have an effect on overall latency.  Hitting something on
-  //    the order of 10s of microseconds is what we really should be shooting
-  //    for here.  Single milliseconds is probably too coarse.
-  // 5) Not a requirement, but a sure-would-be-nice-to-have... Scheduling
-  //    delayed tasks using absolute times.  Having to schedule using delta
-  //    times from now means that we need to take the time it takes to schedule
-  //    the task (along with its jitter) into account when scheduling.  This can
-  //    lead to additional, undesirable, latency.
-  scoped_refptr<base::SequencedWorkerPool> thread_pool_;
 
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.

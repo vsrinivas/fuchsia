@@ -8,6 +8,7 @@
 #include <deque>
 #include <memory>
 #include <set>
+#include <thread>
 
 #include "apps/media/services/audio/audio_pipe.h"
 #include "apps/media/services/audio/audio_track_impl.h"
@@ -144,8 +145,7 @@ class AudioOutput {
   // Gives derived classes a chance to set up hardware, then sets up the
   // machinery needed for scheduling processing tasks and schedules the first
   // processing callback immediately in order to get the process running.
-  MediaResult Init(const AudioOutputPtr& self,
-                   scoped_refptr<base::SequencedTaskRunner> task_runner);
+  MediaResult Init(const AudioOutputPtr& self);
 
   // Called from Shutdown (main message loop) and ShutdowSelf (processing
   // context).  Starts the process of shutdown, preventing new processing tasks
@@ -162,10 +162,12 @@ class AudioOutput {
   // cleaning up all resources.
   void Shutdown();
 
-  scoped_refptr<base::SequencedTaskRunner> task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   AudioOutputWeakPtr weak_self_;
+  std::thread worker_thread_;
 
-  // TODO(johngro): Someday, when we expose output enumeration and control from
+  // TODO(johngro): Someday, when we expose output enumeration and control
+  // from
   // the audio service, add the ability to change this value and update the
   // assocated track-to-output-link amplitude scale factors.
   float db_gain_ = 0.0;

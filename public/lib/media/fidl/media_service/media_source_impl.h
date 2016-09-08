@@ -93,16 +93,13 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
     std::shared_ptr<NullSink> null_sink_;
   };
 
-  // Runs a seek callback.
-  static void RunSeekCallback(const SeekCallback& callback);
-
   // Handles the completion of demux initialization.
   void OnDemuxInitialized(Result result);
 
   // Reports a problem via status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  ftl::TaskRunner* task_runner_;
   Array<MediaTypeSetPtr> allowed_media_types_;
   Graph graph_;
   PartRef demux_part_;

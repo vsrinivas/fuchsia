@@ -60,7 +60,7 @@ class MojoReader : public Reader {
   size_t size_ = kUnknownSize;
   bool can_seek_ = false;
   Incident ready_;
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  ftl::TaskRunner* task_runner_;
 
   std::atomic_bool read_in_progress_;
   size_t read_at_position_;

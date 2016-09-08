@@ -45,11 +45,9 @@ class AudioServerImpl : public AudioServer {
       std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet);
 
   // Schedule a closure to run on the server's main message loop.
-  void ScheduleMessageLoopTask(const tracked_objects::Location& from_here,
-                               const base::Closure& task) {
+  void ScheduleMessageLoopTask(const ftl::Closure& task) {
     FTL_DCHECK(task_runner_);
-    bool success = task_runner_->PostTask(from_here, task);
-    FTL_DCHECK(success);
+    task_runner_->PostTask(task);
   }
 
   // Removes a track from the set of active tracks.
@@ -72,7 +70,7 @@ class AudioServerImpl : public AudioServer {
   // A reference to our message loop's task runner.  Allows us to post events to
   // be handled by our main application thread from things like the output
   // manager's thread pool.
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  ftl::TaskRunner* task_runner_;
 
   // State for dealing with outputs.
   AudioOutputManager output_manager_;
@@ -86,7 +84,6 @@ class AudioServerImpl : public AudioServer {
       FTL_GUARDED_BY(cleanup_queue_mutex_);
   bool cleanup_scheduled_ FTL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;
-  base::Closure cleanup_closure_;
 };
 
 }  // namespace audio

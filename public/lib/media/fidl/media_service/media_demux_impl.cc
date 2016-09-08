@@ -29,7 +29,7 @@ MediaDemuxImpl::MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
     : MediaServiceImpl::Product<MediaDemux>(this, request.Pass(), owner) {
   FTL_DCHECK(reader);
 
-  task_runner_ = base::MessageLoop::current()->task_runner();
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 
   status_publisher_.SetCallbackRunner(
@@ -73,9 +73,7 @@ MediaDemuxImpl::MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
   });
 
   demux_->WhenInitialized([this](Result result) {
-    task_runner_->PostTask(FROM_HERE,
-                           base::Bind(&MediaDemuxImpl::OnDemuxInitialized,
-                                      base::Unretained(this), result));
+    task_runner_->PostTask([this, result]() { OnDemuxInitialized(result); });
   });
 }
 
@@ -157,13 +155,8 @@ void MediaDemuxImpl::Seek(int64_t position, const SeekCallback& callback) {
   RCHECK(init_complete_.occurred());
 
   demux_->Seek(position, [this, callback]() {
-    task_runner_->PostTask(FROM_HERE, base::Bind(&RunSeekCallback, callback));
+    task_runner_->PostTask([callback]() { callback.Run(); });
   });
-}
-
-// static
-void MediaDemuxImpl::RunSeekCallback(const SeekCallback& callback) {
-  callback.Run();
 }
 
 MediaDemuxImpl::Stream::Stream(OutputRef output,

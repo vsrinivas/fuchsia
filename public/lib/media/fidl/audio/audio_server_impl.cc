@@ -13,10 +13,7 @@ namespace media {
 namespace audio {
 
 AudioServerImpl::AudioServerImpl()
-    : output_manager_(this), cleanup_queue_(new CleanupQueue) {
-  cleanup_closure_ =
-      base::Bind(&AudioServerImpl::DoPacketCleanup, base::Unretained(this));
-}
+    : output_manager_(this), cleanup_queue_(new CleanupQueue) {}
 
 AudioServerImpl::~AudioServerImpl() {
   Shutdown();
@@ -26,8 +23,8 @@ AudioServerImpl::~AudioServerImpl() {
 
 void AudioServerImpl::Initialize() {
   // Stash a pointer to our task runner.
-  FTL_DCHECK(base::MessageLoop::current());
-  task_runner_ = base::MessageLoop::current()->task_runner();
+  FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 
   // Set up our output manager.
@@ -100,8 +97,8 @@ void AudioServerImpl::SchedulePacketCleanup(
 
   if (!cleanup_scheduled_ && !shutting_down_) {
     FTL_DCHECK(task_runner_);
-    cleanup_scheduled_ = task_runner_->PostTask(FROM_HERE, cleanup_closure_);
-    FTL_DCHECK(cleanup_scheduled_);
+    task_runner_->PostTask([this]() { DoPacketCleanup(); });
+    cleanup_scheduled_ = true;
   }
 }
 

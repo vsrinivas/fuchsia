@@ -83,16 +83,13 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
     std::shared_ptr<MojoPacketProducer> producer_;
   };
 
-  // Runs the seek callback.
-  static void RunSeekCallback(const SeekCallback& callback);
-
   // Handles the completion of demux initialization.
   void OnDemuxInitialized(Result result);
 
   // Reports a problem via status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  ftl::TaskRunner* task_runner_;
   Graph graph_;
   PartRef demux_part_;
   std::shared_ptr<Demux> demux_;

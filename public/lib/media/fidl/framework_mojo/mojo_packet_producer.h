@@ -63,8 +63,7 @@ class MojoPacketProducer : private MediaPacketProducerBase,
   MojoPacketProducer();
 
   // Sends a packet to the consumer.
-  // TODO(dalesat): Don't use a raw pointer, if possible.
-  void SendPacket(Packet* packet_raw_ptr);
+  void SendPacket(PacketPtr packet);
 
   // Shuts down the producer.
   void Reset();
@@ -79,7 +78,7 @@ class MojoPacketProducer : private MediaPacketProducerBase,
   Binding<MediaPacketProducer> binding_;
 
   DemandCallback demand_callback_;
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  ftl::TaskRunner* task_runner_;
 };
 
 }  // namespace media

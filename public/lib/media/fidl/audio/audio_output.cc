@@ -31,6 +31,10 @@ AudioOutput::AudioOutput(AudioOutputManager* manager) : manager_(manager) {
 
 AudioOutput::~AudioOutput() {
   FTL_DCHECK(!task_runner_ && shutting_down_);
+
+  if (worker_thread_.joinable()) {
+    worker_thread_.join();
+  }
 }
 
 MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
@@ -102,8 +106,9 @@ void AudioOutput::ScheduleCallback(ftl::TimePoint when) {
   ftl::TimeDelta sched_time =
       (now > when) ? ftl::TimeDelta::FromMicroseconds(0) : (when - now);
 
-  task_runner_->PostNonNestableDelayedTask(
-      FROM_HERE, base::Bind(&ProcessThunk, weak_self_), sched_time);
+  AudioOutputWeakPtr weak_self = weak_self_;
+  task_runner_->PostDelayedTask([weak_self]() { ProcessThunk(weak_self); },
+                                sched_time);
 }
 
 void AudioOutput::ShutdownSelf() {
@@ -111,8 +116,10 @@ void AudioOutput::ShutdownSelf() {
   // the main message loop telling it to complete the shutdown process.
   if (!BeginShutdown()) {
     FTL_DCHECK(manager_);
+    AudioOutputManager* manager = manager_;
+    AudioOutputWeakPtr weak_self = weak_self_;
     manager_->ScheduleMessageLoopTask(
-        FROM_HERE, base::Bind(&FinishShutdownSelf, manager_, weak_self_));
+        [manager, weak_self]() { FinishShutdownSelf(manager, weak_self); });
   }
 }
 
@@ -131,11 +138,8 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
   }
 }
 
-MediaResult AudioOutput::Init(
-    const AudioOutputPtr& self,
-    scoped_refptr<base::SequencedTaskRunner> task_runner) {
+MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
   FTL_DCHECK(this == self.get());
-  FTL_DCHECK(task_runner);
 
   // If our derived class failed to initialize, don't bother to hold onto the
   // state we will need drive our callback engine.  Begin the process of
@@ -147,12 +151,14 @@ MediaResult AudioOutput::Init(
     return res;
   }
 
+  FTL_DCHECK(worker_thread_.get_id() == std::thread::id());
+  worker_thread_ = mtl::CreateThread(&task_runner_);
+
   // Stash our callback state and schedule an immediate callback to get things
   // running.
-  task_runner_ = task_runner;
   weak_self_ = self;
-  task_runner_->PostNonNestableTask(FROM_HERE,
-                                    base::Bind(&ProcessThunk, weak_self_));
+  AudioOutputWeakPtr weak_self = weak_self_;
+  task_runner_->PostTask([weak_self]() { ProcessThunk(weak_self); });
 
   return MediaResult::OK;
 }
@@ -167,6 +173,9 @@ bool AudioOutput::BeginShutdown() {
   if (shutting_down_) {
     return true;
   }
+
+  // Shut down the thread created for this output.
+  task_runner_->PostTask([]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   shutting_down_ = true;
   task_runner_ = nullptr;

@@ -23,7 +23,7 @@ namespace media {
 
 TimelineControlPoint::TimelineControlPoint()
     : control_point_binding_(this), consumer_binding_(this) {
-  task_runner_ = base::MessageLoop::current()->task_runner();
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 
   ftl::MutexLocker locker(&mutex_);
@@ -86,9 +86,7 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
 
   if (ReachedEndOfStream() && !end_of_stream_published_) {
     end_of_stream_published_ = true;
-    task_runner_->PostTask(
-        FROM_HERE, base::Bind(&MojoPublisher<GetStatusCallback>::SendUpdates,
-                              base::Unretained(&status_publisher_)));
+    task_runner_->PostTask([this]() { status_publisher_.SendUpdates(); });
   }
 }
 
@@ -176,9 +174,7 @@ void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
 
   ++generation_;
 
-  task_runner_->PostTask(
-      FROM_HERE, base::Bind(&MojoPublisher<GetStatusCallback>::SendUpdates,
-                            base::Unretained(&status_publisher_)));
+  task_runner_->PostTask([this]() { status_publisher_.SendUpdates(); });
 }
 
 void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
@@ -187,23 +183,16 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
   if (!set_timeline_transform_callback_.is_null()) {
-    task_runner_->PostTask(
-        FROM_HERE, base::Bind(&TimelineControlPoint::RunCallback,
-                              set_timeline_transform_callback_, completed));
+    SetTimelineTransformCallback callback = set_timeline_transform_callback_;
     set_timeline_transform_callback_.reset();
+    task_runner_->PostTask(
+        [this, callback, completed]() { callback.Run(completed); });
   }
 }
 
 void TimelineControlPoint::PostReset() {
   mutex_.AssertHeld();
-  task_runner_->PostTask(FROM_HERE, base::Bind(&TimelineControlPoint::Reset,
-                                               base::Unretained(this)));
-}
-
-// static
-void TimelineControlPoint::RunCallback(SetTimelineTransformCallback callback,
-                                       bool completed) {
-  callback.Run(completed);
+  task_runner_->PostTask([this]() { Reset(); });
 }
 
 }  // namespace media

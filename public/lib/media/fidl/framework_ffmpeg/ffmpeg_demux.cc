@@ -130,7 +130,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   std::vector<DemuxStream*> streams_;
   Incident init_complete_;
   Result result_;
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  ftl::TaskRunner* task_runner_;
 
   // After Init, only the ffmpeg thread accesses these.
   AvFormatContextPtr format_context_;
@@ -149,7 +149,7 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
 
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
     : reader_(reader) {
-  task_runner_ = base::MessageLoop::current()->task_runner();
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
   ffmpeg_thread_ = std::thread([this]() { Worker(); });
 }
@@ -232,7 +232,7 @@ void FfmpegDemuxImpl::Worker() {
   std::map<std::string, std::string> metadata_map;
 
   CopyMetadata(format_context_->metadata, metadata_map);
-  for (uint i = 0; i < format_context_->nb_streams; i++) {
+  for (uint32_t i = 0; i < format_context_->nb_streams; i++) {
     streams_.push_back(new FfmpegDemuxStream(*format_context_, i));
     CopyMetadata(format_context_->streams[i]->metadata, metadata_map);
   }
@@ -249,8 +249,7 @@ void FfmpegDemuxImpl::Worker() {
   result_ = Result::kOk;
   init_complete_.Occur();
 
-  task_runner_->PostTask(FROM_HERE, base::Bind(&FfmpegDemuxImpl::SendStatus,
-                                               base::Unretained(this)));
+  task_runner_->PostTask([this]() { SendStatus(); });
 
   while (true) {
     bool packet_requested;
@@ -380,8 +379,7 @@ void FfmpegDemuxImpl::ReportProblem(const std::string& type,
     problem_type_ = type;
     problem_details_ = details;
   }
-  task_runner_->PostTask(FROM_HERE, base::Bind(&FfmpegDemuxImpl::SendStatus,
-                                               base::Unretained(this)));
+  task_runner_->PostTask([this]() { SendStatus(); });
 }
 
 FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(

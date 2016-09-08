@@ -4,6 +4,7 @@
 
 #include "apps/media/services/framework_mojo/mojo_packet_producer.h"
 
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -11,7 +12,7 @@ namespace mojo {
 namespace media {
 
 MojoPacketProducer::MojoPacketProducer() : binding_(this) {
-  task_runner_ = base::MessageLoop::current()->task_runner();
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 }
 
@@ -49,9 +50,10 @@ Demand MojoPacketProducer::SupplyPacket(PacketPtr packet) {
     return end_of_stream ? Demand::kNegative : CurrentDemand();
   }
 
-  task_runner_->PostTask(FROM_HERE,
-                         base::Bind(&MojoPacketProducer::SendPacket,
-                                    base::Unretained(this), packet.release()));
+  task_runner_->PostTask(
+      ftl::MakeCopyable([ this, packet = std::move(packet) ]() mutable {
+        SendPacket(std::move(packet));
+      }));
 
   return end_of_stream ? Demand::kNegative : CurrentDemand(1);
 }
@@ -85,16 +87,15 @@ void MojoPacketProducer::OnDemandUpdated(uint32_t min_packets_outstanding,
   demand_callback_(CurrentDemand());
 }
 
-void MojoPacketProducer::SendPacket(Packet* packet_raw_ptr) {
-  FTL_DCHECK(packet_raw_ptr);
+void MojoPacketProducer::SendPacket(PacketPtr packet) {
+  FTL_DCHECK(packet);
 
-  ProducePacket(packet_raw_ptr->payload(), packet_raw_ptr->size(),
-                packet_raw_ptr->pts(), packet_raw_ptr->end_of_stream(),
-                [this, packet_raw_ptr]() {
-                  PacketPtr packet = PacketPtr(packet_raw_ptr);
+  ProducePacket(packet->payload(), packet->size(), packet->pts(),
+                packet->end_of_stream(),
+                ftl::MakeCopyable([ this, packet = std::move(packet) ]() {
                   FTL_DCHECK(demand_callback_);
                   demand_callback_(CurrentDemand());
-                });
+                }));
 }
 
 void MojoPacketProducer::Reset() {
