@@ -56,7 +56,7 @@ static list_node_t clone_list = LIST_INITIAL_VALUE(clone_list); // free list for
 static mtx_t free_list_mutex = MTX_INIT;
 static mtx_t clone_list_mutex = MTX_INIT;
 
-static void iotxn_complete(iotxn_t* txn, mx_status_t status, size_t actual) {
+static void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
     txn->actual = actual;
     txn->status = status;
     if (txn->complete_cb) {

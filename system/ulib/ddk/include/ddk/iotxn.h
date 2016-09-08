@@ -114,7 +114,7 @@ struct iotxn_ops {
     //
     // The iotxn's complete_cb() will be called as the last action of
     // this method.
-    void (*complete)(iotxn_t* txn, mx_status_t status, size_t actual);
+    void (*complete)(iotxn_t* txn, mx_status_t status, mx_off_t actual);
 
 
     // copyfrom() copies data from the iotxn's data buffer
