@@ -18,15 +18,14 @@
 #include <sys/types.h>
 
 #include <mxtl/intrusive_double_list.h>
-#include <mxtl/intrusive_hash_table.h>
+#include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
 class WaitSetDispatcher final : public Dispatcher, public StateObserver {
 public:
-    // A wait set entry. It may be in two linked lists: it is always in a doubly-linked list in the
-    // hash table |entries_| (which owns it) and it is sometimes in the doubly-linked list
-    // |triggered_entries_|.
+    // A wait set entry. It is always in the tree |entries_| (which owns it) and it is sometimes in
+    // the doubly-linked list |triggered_entries_|.
     class Entry final : public StateObserver {
     public:
         // State transitions:
@@ -52,10 +51,10 @@ public:
             }
         };
 
-        using HashPtrType = mxtl::unique_ptr<Entry>;
-        struct HashBucketTraits {
-            static mxtl::DoublyLinkedListNodeState<HashPtrType>& node_state(Entry& obj) {
-                return obj.hash_bucket_node_state_;
+        using WAVLTreePtrType = mxtl::unique_ptr<Entry>;
+        struct WAVLTreeNodeTraits {
+            static mxtl::WAVLTreeNodeState<WAVLTreePtrType>& node_state(Entry& obj) {
+                return obj.wavl_node_state_;
             }
         };
 
@@ -80,9 +79,8 @@ public:
             return triggered_entries_node_state_.InContainer();
         }
 
-        // Hash table support
+        // Used to be in the |entries_| tree.
         uint64_t GetKey() const { return cookie_; }
-        static uint64_t GetHash(uint64_t key) { return key; }
 
     private:
         Entry(mx_signals_t watched_signals, uint64_t cookie);
@@ -115,7 +113,7 @@ public:
         mx_signals_state_t signals_state_ = {0u, 0u};
 
         mxtl::DoublyLinkedListNodeState<Entry*> triggered_entries_node_state_;
-        mxtl::DoublyLinkedListNodeState<HashPtrType> hash_bucket_node_state_;
+        mxtl::WAVLTreeNodeState<WAVLTreePtrType> wavl_node_state_;
     };
 
     static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
@@ -138,8 +136,9 @@ public:
                   uint32_t* max_results);
 
 private:
-    using HashPtrType    = Entry::HashPtrType;
-    using HashBucketType = mxtl::DoublyLinkedList<HashPtrType, Entry::HashBucketTraits>;
+    using WAVLTreePtrType = Entry::WAVLTreePtrType;
+    using WAVLTreeKeyTraits = mxtl::DefaultKeyedObjectTraits<uint64_t, Entry>;
+    using WAVLTreeNodeTraits = Entry::WAVLTreeNodeTraits;
 
     WaitSetDispatcher();
 
@@ -174,7 +173,7 @@ private:
     // complicated accounting, both in Wait() and in OnCancel().
     bool cancelled_ = false;
 
-    mxtl::HashTable<uint64_t, HashPtrType, HashBucketType, uint64_t, 127u> entries_;
+    mxtl::WAVLTree<uint64_t, WAVLTreePtrType, WAVLTreeKeyTraits, WAVLTreeNodeTraits> entries_;
     mxtl::DoublyLinkedList<Entry*, Entry::TriggeredEntriesListTraits> triggered_entries_;
     uint32_t num_triggered_entries_ = 0u;
 };
