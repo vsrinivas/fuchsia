@@ -33,6 +33,9 @@ int main(int argc, char** argv) {
     int r, s, n = 1;
     uint32_t last_seqno = 0;
 
+    // Make stdout line buffered.
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
     appname = argv[0];
 
     memset(&addr, 0, sizeof(addr));
