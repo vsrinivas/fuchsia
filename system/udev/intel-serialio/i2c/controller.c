@@ -6,6 +6,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <hw/pci.h>
 #include <intel-serialio/reg.h>
 #include <intel-serialio/serialio.h>
@@ -20,6 +22,13 @@
 
 #include "controller.h"
 #include "slave.h"
+
+#define DEVIDLE_CONTROL 0x24c
+#define DEVIDLE_CONTROL_CMD_IN_PROGRESS 0
+#define DEVIDLE_CONTROL_DEVIDLE 2
+#define DEVIDLE_CONTROL_RESTORE_REQUIRED 3
+
+#define ACER_I2C_TOUCH INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID
 
 // Implement the functionality of the i2c bus device.
 
@@ -61,32 +70,57 @@ static mx_status_t intel_serialio_i2c_add_slave(
     status = intel_serialio_i2c_find_slave(&slave, device, address);
     if (status == NO_ERROR) {
         status = ERR_ALREADY_EXISTS;
-        goto fail2;
+        goto fail3;
     } else if (status != ERR_NOT_FOUND) {
-        goto fail2;
+        goto fail3;
     }
 
     slave = malloc(sizeof(*slave));
     if (!slave) {
         status = ERR_NO_MEMORY;
-        goto fail1;
+        goto fail2;
     }
 
     status = intel_serialio_i2c_slave_device_init(dev, slave, width, address);
     if (status < 0)
-        goto fail1;
+        goto fail2;
 
     list_add_head(&device->slave_list, &slave->slave_list_node);
+    mtx_unlock(&device->mutex);
+
+    // Temporarily add binding support for the i2c slave. The real way to do
+    // this will involve ACPI/devicetree enumeration, but for now we publish PCI
+    // VID/DID and i2c ADDR as binding properties.
+
+    // Retrieve pci_config (again)
+    pci_protocol_t* pci;
+    status = device_get_protocol(dev->parent, MX_PROTOCOL_PCI, (void**)&pci);
+    if (status < 0)
+        goto fail2;
+
+    const pci_config_t* pci_config;
+    mx_handle_t config_handle = pci->get_config(dev->parent, &pci_config);
+
+    if (config_handle < 0)
+        goto fail2;
+
+    int count = 0;
+    slave->props[count++] = (mx_device_prop_t){ BIND_PCI_VID, 0, pci_config->vendor_id };
+    slave->props[count++] = (mx_device_prop_t){ BIND_PCI_DID, 0, pci_config->device_id };
+    slave->props[count++] = (mx_device_prop_t){ BIND_I2C_ADDR, 0, address };
+    slave->device.props = slave->props;
+    slave->device.prop_count = count;
 
     status = device_add(&slave->device, dev);
     if (status < 0)
         goto fail1;
 
-    mtx_unlock(&device->mutex);
     return NO_ERROR;
 fail1:
-    free(slave);
+    mx_handle_close(config_handle);
 fail2:
+    free(slave);
+fail3:
     mtx_unlock(&device->mutex);
     return status;
 }
@@ -268,9 +302,30 @@ mx_status_t intel_serialio_i2c_reset_controller(
     intel_serialio_i2c_device_t* device) {
     mx_status_t status = NO_ERROR;
 
+    // The register will only return valid values if the ACPI _PS0 has been
+    // evaluated.
+    if (*REG32((void *)device->regs + DEVIDLE_CONTROL) != 0xffffffff) {
+        // Wake up device if it is in DevIdle state
+        RMWREG32((void*)device->regs + DEVIDLE_CONTROL, DEVIDLE_CONTROL_DEVIDLE, 1, 0);
+
+        // Wait for wakeup to finish processing
+        int retry = 10;
+        while (retry-- &&
+                (*REG32((void *)device->regs + DEVIDLE_CONTROL) & (1 << DEVIDLE_CONTROL_CMD_IN_PROGRESS))) {
+            usleep(10);
+        }
+        if (!retry) {
+            printf("i2c-controller: timed out waiting for device idle\n");
+            return ERR_TIMED_OUT;
+        }
+    }
+
     // Reset the device.
     RMWREG32(device->soft_reset, 0, 2, 0x0);
     RMWREG32(device->soft_reset, 0, 2, 0x3);
+
+    // Clear the "Restore Required" flag
+    RMWREG32((void*)device->regs + DEVIDLE_CONTROL, DEVIDLE_CONTROL_RESTORE_REQUIRED, 1, 0);
 
     // Disable the controller.
     RMWREG32(&device->regs->i2c_en, I2C_EN_ENABLE, 1, 0);
@@ -395,6 +450,24 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     device_init(&device->device, drv, name,
                 &intel_serialio_i2c_device_proto);
 
+    // This is a temporary workaround until we have full ACPI device
+    // enumeration. If this is the I2C1 bus, we run _PS0 so the controller is
+    // active.
+    if (pci_config->vendor_id == INTEL_VID &&
+        pci_config->device_id == ACER_I2C_TOUCH) {
+        int dmctlfd = open("/dev/class/misc/dmctl", O_RDWR);
+        if (dmctlfd < 0) {
+            printf("could not open dmctl: %d\n", errno);
+        } else {
+            const char* i2c1 = "acpi-ps0:\\_SB.PCI0.I2C1";
+            ssize_t wr = write(dmctlfd, i2c1, strlen(i2c1));
+            if (wr < 0) {
+                printf("could not run ps0 for %s: %zd\n", i2c1, wr);
+            }
+            close(dmctlfd);
+        }
+    }
+
     // Configure the I2C controller. We don't need to hold the lock because
     // nobody else can see this controller yet.
     status = intel_serialio_i2c_reset_controller(device);
@@ -410,6 +483,14 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
         "reg=%#x regsize=%#x\n",
         device->regs, device->regs_size);
 
+    // Temporarily setup the controller for the Acer12 touch panel. This will
+    // eventually be done by enumerating the device via ACPI, but for now we
+    // hardcode it.
+    if (pci_config->vendor_id == INTEL_VID &&
+        pci_config->device_id == ACER_I2C_TOUCH) {
+        intel_serialio_i2c_set_bus_frequency(&device->device, 400000);
+        intel_serialio_i2c_add_slave(&device->device, I2C_7BIT_ADDRESS, 0x0010);
+    }
     mx_handle_close(config_handle);
     return NO_ERROR;
 
