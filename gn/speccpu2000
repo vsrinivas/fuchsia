@@ -44,6 +44,10 @@
         {
             "binary": "255.vortex",
             "bootfs_path": "benchmarks/255.vortex"
+        },
+        {
+            "binary": "256.bzip2",
+            "bootfs_path": "benchmarks/256.bzip2"
         }
     ],
     "resources": [
@@ -138,6 +142,18 @@
         {
           "file": "third_party/speccpu2000/255.vortex/data/ref/input/lendian3.raw",
           "bootfs_path": "benchmarks/data/255.vortex/lendian3.raw"
+        },
+        {
+          "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.source",
+          "bootfs_path": "benchmarks/data/256.bzip2/inpout.source"
+        },
+        {
+          "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.graphic",
+          "bootfs_path": "benchmarks/data/256.bzip2/inpout.graphic"
+        },
+        {
+          "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.program",
+          "bootfs_path": "benchmarks/data/256.bzip2/inpout.program"
         }
     ]
 }
