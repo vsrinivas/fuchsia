@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <kernel/thread.h>
 #include <arch/x86.h>
+#include <magenta/syscalls-debug.h>
 
 uint arch_num_regsets(void)
 {
@@ -16,8 +17,15 @@ uint arch_num_regsets(void)
     return 1;
 }
 
-static status_t arch_get_general_regs(struct thread* thread, struct arch_gen_regs *gr, uint32_t *buf_size)
+static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
 {
+#if ARCH_X86_32
+    return ERR_NOT_SUPPORTED;
+#endif
+#if ARCH_X86_64
+    mx_x86_64_general_regs_t *gr = grp;
+#endif
+
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*gr);
 
@@ -27,13 +35,8 @@ static status_t arch_get_general_regs(struct thread* thread, struct arch_gen_reg
     if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
         return ERR_BAD_STATE;
 
-#if ARCH_X86_32
-    return ERR_NOT_SUPPORTED;
-#endif
-
 #if ARCH_X86_64
     x86_iframe_t *p = thread->exception_context->frame;
-
     gr->rax = p->rax;
     gr->rbx = p->rbx;
     gr->rcx = p->rcx;
@@ -51,27 +54,29 @@ static status_t arch_get_general_regs(struct thread* thread, struct arch_gen_reg
     gr->r14 = p->r14;
     gr->r15 = p->r15;
     gr->rip = p->ip;
-    gr->flags = p->flags;
+    gr->rflags = p->flags;
+#endif
 
     return NO_ERROR;
-#endif
 }
 
-static status_t arch_set_general_regs(struct thread *thread, const struct arch_gen_regs *gr, uint32_t buf_size)
+static status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
 {
+#if ARCH_X86_32
+    return ERR_NOT_SUPPORTED;
+#endif
+#if ARCH_X86_64
+    const mx_x86_64_general_regs_t *gr = grp;
+#endif
+
     if (buf_size != sizeof(*gr))
         return ERR_INVALID_ARGS;
 
     if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
         return ERR_BAD_STATE;
 
-#if ARCH_X86_32
-    return ERR_NOT_SUPPORTED;
-#endif
-
 #if ARCH_X86_64
     x86_iframe_t *p = thread->exception_context->frame;
-
     p->rax = gr->rax;
     p->rbx = gr->rbx;
     p->rcx = gr->rcx;
@@ -89,11 +94,11 @@ static status_t arch_set_general_regs(struct thread *thread, const struct arch_g
     p->r14 = gr->r14;
     p->r15 = gr->r15;
     p->ip = gr->rip;
-    p->flags = gr->flags;
+    p->flags = gr->rflags;
     p->flags &= ~X86_FLAGS_RESERVED;
+#endif
 
     return NO_ERROR;
-#endif
 }
 
 status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)

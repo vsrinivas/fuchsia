@@ -10,17 +10,10 @@
 #include <launchpad/vmo.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls-debug.h>
 #include <mxio/util.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
-
-// Register numbers we need.
-#ifdef __x86_64__
-#define RSP_REGNO 5
-#define R8_REGNO 8
-#define R9_REGNO 9
-#define EFLAGS_REGNO 17
-#endif
 
 // 0.5 seconds
 #define WATCHDOG_DURATION_TICK ((int64_t) 500 * 1000 * 1000)
@@ -71,60 +64,81 @@ static uint32_t get_uint32_property(mx_handle_t handle, uint32_t prop)
     return value;
 }
 
+typedef struct {
+    const char* name;
+    unsigned offset;
+    unsigned count;
+    unsigned size;
+} regspec_t;
+
 #ifdef __x86_64__
 
-static void dump_amd64_gregs(mx_handle_t thread_handle, void* buf)
-{
-    static const char * const reg_names[] =
-    {
-        // The order here is important, it's the order returned by
-        // mx_thread_read_state. See arch/x86/include/arch/x86/registers.h.
-        "rax",
-        "rbx",
-        "rcx",
-        "rdx",
-        "rsi",
-        "rdi",
-        "rbp",
-        "rsp",
-        "r8",
-        "r9",
-        "r10",
-        "r11",
-        "r12",
-        "r13",
-        "r14",
-        "r15",
-        "rip",
-        "eflags",
-    };
+#define R(reg) { #reg, offsetof(mx_x86_64_general_regs_t, reg), 1, 64 }
 
-    printf("Registers for thread %d\n", thread_handle);
-    for (unsigned i = 0; i < sizeof(reg_names) / sizeof(reg_names[0]); ++i) {
-        uint64_t val;
-        char* value_ptr = (char*) buf + i * 8;
-        if (i == EFLAGS_REGNO)
-            val = get_uint32(value_ptr);
-        else
-            val = get_uint64(value_ptr);
-        printf("  %8s  %24ld  0x%lx\n", reg_names[i], (long) val, (long) val);
-    }
-}
+static const regspec_t general_regs[] =
+{
+    R(rax),
+    R(rbx),
+    R(rcx),
+    R(rdx),
+    R(rsi),
+    R(rdi),
+    R(rbp),
+    R(rsp),
+    R(r8),
+    R(r9),
+    R(r10),
+    R(r11),
+    R(r12),
+    R(r13),
+    R(r14),
+    R(r15),
+    R(rip),
+    R(rflags),
+};
+
+#undef R
 
 #endif
 
+static void dump_gregs(mx_handle_t thread_handle, void* buf)
+{
+#if defined(__x86_64__)
+    printf("Registers for thread %d\n", thread_handle);
+    for (unsigned i = 0; i < sizeof(general_regs) / sizeof(general_regs[0]); ++i) {
+        const regspec_t* r = &general_regs[i];
+        uint64_t val;
+        for (unsigned j = 0; j < r->count; ++j)
+        {
+            if (r->size == 32)
+            {
+                void* value_ptr = (char*) buf + r->offset + j * sizeof(uint32_t);
+                val = get_uint32(value_ptr);
+            }
+            else
+            {
+                void* value_ptr = (char*) buf + r->offset + j * sizeof(uint64_t);
+                val = get_uint64(value_ptr);
+            }
+            if (r->count == 1)
+                printf("  %8s  %24ld  0x%lx\n", r->name, (long) val, (long) val);
+            else
+                printf("  %8s[%u]  %24ld  0x%lx\n", r->name, j, (long) val, (long) val);
+        }
+    }
+#endif
+}
+
 static void dump_arch_regs (mx_handle_t thread_handle, int regset, void* buf)
 {
-#ifdef __x86_64__
     switch (regset)
     {
     case 0:
-        dump_amd64_gregs(thread_handle, buf);
+        dump_gregs(thread_handle, buf);
         break;
     default:
         break;
     }
-#endif
 }
 
 static bool dump_inferior_regs(mx_handle_t thread)
@@ -180,22 +194,22 @@ static void write_inferior_gregs(mx_handle_t thread, const void* buf, unsigned b
 
 // This assumes |regno| is in an array of uint64_t values.
 
-static uint64_t get_uint64_register(mx_handle_t thread, int regno) {
+static uint64_t get_uint64_register(mx_handle_t thread, size_t offset) {
     unsigned greg_buf_size = get_inferior_greg_buf_size(thread);
     char* buf = tu_malloc(greg_buf_size);
     read_inferior_gregs(thread, buf, greg_buf_size);
-    uint64_t value = get_uint64(buf + regno * sizeof(uint64_t));
+    uint64_t value = get_uint64(buf + offset);
     free(buf);
     return value;
 }
 
 // This assumes |regno| is in an array of uint64_t values.
 
-static void set_uint64_register(mx_handle_t thread, int regno, uint64_t value) {
+static void set_uint64_register(mx_handle_t thread, size_t offset, uint64_t value) {
     unsigned greg_buf_size = get_inferior_greg_buf_size(thread);
     char* buf = tu_malloc(greg_buf_size);
     read_inferior_gregs(thread, buf, greg_buf_size);
-    set_uint64(buf + regno * sizeof(uint64_t), value);
+    set_uint64(buf + offset, value);
     write_inferior_gregs(thread, buf, greg_buf_size);
     free(buf);
 }
@@ -207,8 +221,8 @@ static void fix_inferior_segv(mx_handle_t thread)
 #ifdef __x86_64__
     // The segv was because r8 == 0, change it to a usable value.
     // See test_prep_and_segv.
-    uint64_t rsp = get_uint64_register(thread, RSP_REGNO);
-    set_uint64_register(thread, R8_REGNO, rsp);
+    uint64_t rsp = get_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, rsp));
+    set_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, r8), rsp);
 #endif
 }
 
@@ -417,13 +431,14 @@ static bool test_prep_and_segv(void)
     __asm__ ("movq .Lsegv_here@GOTPCREL(%%rip),%0" : "=r" (segv_pc));
     unittest_printf("About to segv, pc 0x%lx\n", (long) segv_pc);
 
+    // r9 is set for debugging purposes
     __asm__ ("\
 	movq %0,%%r9\n\
 	movq $0,%%r8\n\
 .Lsegv_here:\n\
 	movq (%%r8),%%rax\
 "
-        : : "r" (&test_data[0]) : "r9");
+        : : "r" (&test_data[0]) : "rax", "r8", "r9");
 #endif
 
     unittest_printf("Inferior successfully resumed!\n");
