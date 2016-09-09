@@ -48,6 +48,10 @@
         {
             "binary": "256.bzip2",
             "bootfs_path": "benchmarks/256.bzip2"
+        },
+        {
+            "binary": "300.twolf",
+            "bootfs_path": "benchmarks/300.twolf"
         }
     ],
     "resources": [
@@ -154,6 +158,22 @@
         {
           "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.program",
           "bootfs_path": "benchmarks/data/256.bzip2/inpout.program"
+        },
+        {
+          "file": "third_party/speccpu2000/300.twolf/data/ref/input/ref.blk",
+          "bootfs_path": "benchmarks/data/300.twolf/ref.blk"
+        },
+        {
+          "file": "third_party/speccpu2000/300.twolf/data/ref/input/ref.cel",
+          "bootfs_path": "benchmarks/data/300.twolf/ref.cel"
+        },
+        {
+          "file": "third_party/speccpu2000/300.twolf/data/ref/input/ref.net",
+          "bootfs_path": "benchmarks/data/300.twolf/ref.net"
+        },
+        {
+          "file": "third_party/speccpu2000/300.twolf/data/ref/input/ref.par",
+          "bootfs_path": "benchmarks/data/300.twolf/ref.par"
         }
     ]
 }
