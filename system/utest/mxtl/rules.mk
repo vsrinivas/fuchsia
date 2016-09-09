@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 #MODULE_SRCS += \
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/algorithm_tests.cpp \
     $(LOCAL_DIR)/auto_call_tests.cpp \
     $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/intrusive_container_tests.cpp \
