@@ -92,7 +92,10 @@ void FakeWavReader::WriteToProducerHandle() {
       return;
     }
 
-    if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
+    // TODO(dalesat): Remove UNKNOWN when fix lands for
+    // https://fuchsia.atlassian.net/projects/US/issues/US-43.
+    if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION ||
+        result == MOJO_SYSTEM_RESULT_UNKNOWN) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       producer_handle_.reset();
