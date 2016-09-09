@@ -506,6 +506,41 @@ static bool element_size_errors(void) {
     END_TEST;
 }
 
+static bool write_wrap(void) {
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 1u, 10u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    EXPECT_EQ(mx_datapipe_write(producer, 0u, 5u, "01234"), 5, "write failed");
+
+    char buffer[100];
+    EXPECT_EQ(mx_datapipe_read(consumer, 0u, 4u, buffer), 4, "read failed");
+    EXPECT_EQ(memcmp(buffer, "0123", 4u), 0, "incorrect data from read");
+
+    // Two-phase write should only give contiguous space.
+    uintptr_t ptr = 0u;
+    EXPECT_EQ(mx_datapipe_begin_write(producer, 0u, &ptr), 5, "incorrect begin_write result");
+    EXPECT_EQ(mx_datapipe_end_write(producer, 0u), NO_ERROR, "end_write failed");
+
+    EXPECT_EQ(mx_datapipe_write(producer, 0u, 7u, "abcdefg"), 7, "write failed");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, 0u, 7u, buffer), 7, "read failed");
+    EXPECT_EQ(memcmp(buffer, "4abcdef", 7u), 0, "incorrect data from read");
+
+    EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 1,
+              "read (query) failed");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+
+    END_TEST;
+}
+
 static bool query_peek_discard(void) {
     BEGIN_TEST;
 
@@ -653,6 +688,81 @@ static bool read_invalid_flags(void) {
     END_TEST;
 }
 
+static bool read_wrap(void) {
+    BEGIN_TEST;
+
+    {
+        mx_handle_t producer;
+        mx_handle_t consumer;
+
+        producer = mx_datapipe_create(0u, 1u, 10u, &consumer);
+        ASSERT_GT(producer, 0, "could not create data pipe producer");
+        ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+        EXPECT_EQ(mx_datapipe_write(producer, 0u, 10u, "0123456789"), 10, "write failed");
+
+        char buffer[100];
+        EXPECT_EQ(mx_datapipe_read(consumer, 0u, 5u, buffer), 5, "read failed");
+        EXPECT_EQ(memcmp(buffer, "01234", 5u), 0, "incorrect data from read");
+
+        EXPECT_EQ(mx_datapipe_write(producer, 0u, 3u, "abc"), 3, "write failed");
+
+        EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 8,
+                  "read (query) failed");
+
+        EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_PEEK, 10u, buffer), 8,
+                  "read (peek) failed");
+        EXPECT_EQ(memcmp(buffer, "56789abc", 8u), 0, "incorrect data from read (peek)");
+
+        // Two-phase read should only give contiguous data.
+        uintptr_t ptr;
+        ASSERT_EQ(mx_datapipe_begin_read(consumer, 0u, &ptr), 5, "incorrect begin_read result");
+        EXPECT_EQ(memcmp((void*)ptr, "56789", 5u), 0, "incorrect data two-phase read");
+        EXPECT_EQ(mx_datapipe_end_read(consumer, 0u), NO_ERROR, "end_read failed");
+
+        memset(buffer, 0, sizeof(buffer));
+        EXPECT_EQ(mx_datapipe_read(consumer, 0u, 6u, buffer), 6, "read failed");
+        EXPECT_EQ(memcmp(buffer, "56789a", 6u), 0, "incorrect data from read");
+
+        // Contents of the ring buffer: .bc.......
+        EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_QUERY, 0u, NULL), 2,
+                  "read (query) failed");
+
+        EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+        EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+    }
+
+    // Also test discard:
+    {
+        mx_handle_t producer;
+        mx_handle_t consumer;
+
+        producer = mx_datapipe_create(0u, 1u, 10u, &consumer);
+        ASSERT_GT(producer, 0, "could not create data pipe producer");
+        ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+        EXPECT_EQ(mx_datapipe_write(producer, 0u, 10u, "0123456789"), 10, "write failed");
+
+        char buffer[100];
+        EXPECT_EQ(mx_datapipe_read(consumer, 0u, 5u, buffer), 5, "read failed");
+        EXPECT_EQ(memcmp(buffer, "01234", 5u), 0, "incorrect data from read");
+
+        EXPECT_EQ(mx_datapipe_write(producer, 0u, 3u, "abc"), 3, "write failed");
+
+        EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_DISCARD, 7u, NULL), 7,
+                  "read (discard) failed");
+
+        memset(buffer, 0, sizeof(buffer));
+        EXPECT_EQ(mx_datapipe_read(consumer, 0u, 10u, buffer), 1, "read failed");
+        EXPECT_EQ(memcmp(buffer, "c", 1u), 0, "incorrect data from read");
+
+        EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+        EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(data_pipe_tests)
 RUN_TEST(create_destroy_test)
 RUN_TEST(simple_read_write)
@@ -664,9 +774,11 @@ RUN_TEST(loop_begin_write_read)
 RUN_TEST(consumer_signals_when_producer_closed)
 RUN_TEST(nontrivial_element_size);
 RUN_TEST(element_size_errors);
+RUN_TEST(write_wrap);
 RUN_TEST(query_peek_discard);
 RUN_TEST(read_all_or_none);
 RUN_TEST(read_invalid_flags);
+RUN_TEST(read_wrap);
 END_TEST_CASE(data_pipe_tests)
 
 #ifndef BUILD_COMBINED_TESTS

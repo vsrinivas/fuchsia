@@ -20,6 +20,8 @@
 #include <magenta/handle.h>
 #include <magenta/magenta.h>
 
+#include <mxtl/algorithm.h>
+
 const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_USER;
 const auto kDP_Map_Perms_RO = kDP_Map_Perms | ARCH_MMU_FLAG_PERM_READ;
 
@@ -81,11 +83,6 @@ bool DataPipe::Init() {
     return true;
 }
 
-mx_size_t DataPipe::ComputeSize(mx_size_t from, mx_size_t to, mx_size_t requested) const {
-    mx_size_t available = (from >= to) ? capacity_ - from : to - from;
-    return available >= requested ? requested : available;
-}
-
 mx_status_t DataPipe::MapVMOIfNeededNoLock(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace) {
     DEBUG_ASSERT(vmo_);
 
@@ -143,24 +140,33 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requeste
     if (free_space_ == 0u)
         return ERR_SHOULD_WAIT;
 
-    *requested = ComputeSize(producer_.cursor, consumer_.cursor, *requested);
-    DEBUG_ASSERT(*requested % element_size_ == 0u);
+    mx_size_t to_write = mxtl::min(*requested, free_space_no_lock());
+    DEBUG_ASSERT(to_write % element_size_ == 0u);
+    *requested = to_write;
 
     if (!ptr)
         return ERR_INVALID_ARGS;
 
+    mx_size_t to_write_first = mxtl::min(to_write, contiguous_free_space_no_lock());
     size_t written;
-    status_t status = vmo_->WriteUser(ptr, producer_.cursor, *requested, &written);
+    status_t status = vmo_->WriteUser(ptr, producer_.cursor, to_write_first, &written);
     if (status < 0)
         return status;
+    DEBUG_ASSERT(written == to_write_first);
 
-    *requested = written;
+    if (to_write_first < to_write) {
+        const void* ptr2 =
+                reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(ptr) + to_write_first);
+        status = vmo_->WriteUser(ptr2, 0u, to_write - to_write_first, &written);
+        if (status < 0)
+            return status;
+        DEBUG_ASSERT(written == to_write - to_write_first);
+    }
 
-    free_space_ -= written;
-    producer_.cursor += written;
-
-    if (producer_.cursor == capacity_)
-        producer_.cursor = 0u;
+    DEBUG_ASSERT(free_space_ >= to_write);
+    free_space_ -= to_write;
+    // TODO(vtl): This may overflow if mx_size_t is ever 32-bit?
+    producer_.cursor = (producer_.cursor + to_write) % capacity_;
 
     UpdateSignalsNoLock();
 
@@ -184,7 +190,7 @@ mx_ssize_t DataPipe::ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** pt
     if (status < 0)
         return status;
 
-    producer_.expected = ComputeSize(producer_.cursor, consumer_.cursor, capacity_);
+    producer_.expected = contiguous_free_space_no_lock();
     DEBUG_ASSERT(producer_.expected > 0u);
     DEBUG_ASSERT(producer_.expected % element_size_ == 0u);
 
@@ -239,30 +245,39 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr,
     if (free_space_ == capacity_)
         return producer_.alive ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;
 
-    mx_size_t available = ComputeSize(consumer_.cursor, producer_.cursor, *requested);
-    DEBUG_ASSERT(available % element_size_ == 0u);
-    if (all_or_none && available != *requested)
+    mx_size_t to_read = mxtl::min(*requested, available_size_no_lock());
+    DEBUG_ASSERT(to_read % element_size_ == 0u);
+    if (all_or_none && to_read != *requested)
         return producer_.alive ? ERR_OUT_OF_RANGE : ERR_REMOTE_CLOSED;
-    *requested = available;
+    *requested = to_read;
 
     if (!discard) {
         if (!ptr)
             return ERR_INVALID_ARGS;
 
+        mx_size_t to_read_first = mxtl::min(to_read, contiguous_available_size_no_lock());
         size_t read;
-        status_t st = vmo_->ReadUser(ptr, consumer_.cursor, *requested, &read);
+        status_t st = vmo_->ReadUser(ptr, consumer_.cursor, to_read_first, &read);
         if (st != NO_ERROR)
             return st;
-        DEBUG_ASSERT(read == *requested);
+        DEBUG_ASSERT(read == to_read_first);
+
+        if (to_read > to_read_first) {
+            void* ptr2 = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) + to_read_first);
+            status_t st = vmo_->ReadUser(ptr2, 0u, to_read - to_read_first, &read);
+            if (st != NO_ERROR)
+                return st;
+            DEBUG_ASSERT(read == to_read - to_read_first);
+        }
+
         if (peek)
             return NO_ERROR;
     }
 
-    free_space_ += *requested;
-    consumer_.cursor += *requested;
-
-    if (consumer_.cursor == capacity_)
-        consumer_.cursor = 0u;
+    free_space_ += to_read;
+    DEBUG_ASSERT(free_space_ <= capacity_);
+    // TODO(vtl): This may overflow if mx_size_t is ever 32-bit?
+    consumer_.cursor = (consumer_.cursor + to_read) % capacity_;
 
     UpdateSignalsNoLock();
 
@@ -279,7 +294,7 @@ mx_ssize_t DataPipe::ConsumerQuery() {
     if (free_space_ == capacity_)
         return 0;
 
-    mx_size_t available = ComputeSize(consumer_.cursor, producer_.cursor, capacity_);
+    mx_size_t available = available_size_no_lock();
     DEBUG_ASSERT(available % element_size_ == 0u);
     return static_cast<mx_ssize_t>(available);
 }
@@ -298,7 +313,7 @@ mx_ssize_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr
     if (status < 0)
         return status;
 
-    consumer_.expected = ComputeSize(consumer_.cursor, producer_.cursor, capacity_);
+    consumer_.expected = contiguous_available_size_no_lock();
     DEBUG_ASSERT(consumer_.expected > 0u);
     DEBUG_ASSERT(consumer_.expected % element_size_ == 0u);
 

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include <stdint.h>
 
 #include <kernel/mutex.h>
@@ -67,7 +68,22 @@ private:
     DataPipe(mx_size_t element_size, mx_size_t capacity);
     bool Init();
 
-    mx_size_t ComputeSize(mx_size_t from, mx_size_t to, mx_size_t requested) const;
+    mx_size_t available_size_no_lock() const { return capacity_ - free_space_; }
+    // Note: This doesn't work if the data pipe is empty. (In that case, the producer cursor will be
+    // equal to the consumer cursor.)
+    mx_size_t contiguous_available_size_no_lock() const {
+        DEBUG_ASSERT(free_space_ < capacity_);
+        return (producer_.cursor > consumer_.cursor) ? producer_.cursor - consumer_.cursor
+                                                     : capacity_ - consumer_.cursor;
+    }
+
+    mx_size_t free_space_no_lock() const { return free_space_; }
+    // Note: This doesn't work if the data pipe is full.
+    mx_size_t contiguous_free_space_no_lock() const {
+        DEBUG_ASSERT(free_space_ >  0u);
+        return (producer_.cursor >= consumer_.cursor) ? capacity_ - producer_.cursor :
+                                                        consumer_.cursor - producer_.cursor;
+    }
 
     // Must be called under |lock_|:
     mx_status_t MapVMOIfNeededNoLock(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace);
