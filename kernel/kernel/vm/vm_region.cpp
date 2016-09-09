@@ -266,7 +266,10 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
             return ERR_NO_MEMORY;
         }
     }
-
+#if ARCH_ARM64
+    if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)
+        arch_sync_cache_range(va,PAGE_SIZE);
+#endif
     return NO_ERROR;
 }
 
