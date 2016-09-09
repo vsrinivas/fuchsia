@@ -35,7 +35,7 @@ static mx_status_t wait_for_message(
     uint32_t rsp_len = 0;
     uint32_t num_handles_returned = 0;
     status = mx_msgpipe_read(h, NULL, &rsp_len, NULL, &num_handles_returned, 0);
-    if (status != ERR_NOT_ENOUGH_BUFFER) {
+    if (status != ERR_BUFFER_TOO_SMALL) {
         return status;
     }
     if (rsp_len < sizeof(acpi_rsp_hdr_t)) {

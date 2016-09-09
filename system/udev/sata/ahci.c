@@ -291,7 +291,7 @@ static mx_status_t ahci_port_initialize(ahci_port_t* port) {
     uint32_t cmd = ahci_read(&port->regs->cmd);
     if (cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
         xprintf("ahci.%d: port busy\n", port->nr);
-        return ERR_NOT_AVAILABLE;
+        return ERR_UNAVAILABLE;
     }
 
     // allocate memory for the command list, FIS receive area, command table and PRDT

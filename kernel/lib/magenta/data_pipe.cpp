@@ -129,7 +129,7 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr, mx_size_t* requeste
 
     // |expected| > 0 means there is a pending ProducerWriteBegin().
     if (producer_.expected)
-        return ERR_NOT_AVAILABLE;
+        return ERR_ALREADY_BOUND;
 
     if (*requested % element_size_ != 0u)
         return ERR_INVALID_ARGS;
@@ -172,7 +172,7 @@ mx_ssize_t DataPipe::ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** pt
 
     // |expected| > 0 means there is a pending ProducerWriteBegin().
     if (producer_.expected)
-        return ERR_NOT_AVAILABLE;
+        return ERR_ALREADY_BOUND;
 
     if (!consumer_.alive)
         return ERR_REMOTE_CLOSED;
@@ -228,7 +228,7 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr,
 
     // |expected| > 0 means there is a pending ConsumerReadBegin().
     if (consumer_.expected)
-        return ERR_NOT_AVAILABLE;
+        return ERR_ALREADY_BOUND;
 
     if (*requested % element_size_ != 0u)
         return ERR_INVALID_ARGS;
@@ -274,7 +274,7 @@ mx_ssize_t DataPipe::ConsumerQuery() {
 
     // |expected| > 0 means there is a pending ConsumerReadBegin().
     if (consumer_.expected)
-        return ERR_NOT_AVAILABLE;
+        return ERR_ALREADY_BOUND;
 
     if (free_space_ == capacity_)
         return 0;
@@ -289,7 +289,7 @@ mx_ssize_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr
 
     // |expected| > 0 means there is a pending ConsumerReadBegin().
     if (consumer_.expected)
-        return ERR_NOT_AVAILABLE;
+        return ERR_ALREADY_BOUND;
 
     if (free_space_ == capacity_)
         return producer_.alive ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;

@@ -361,7 +361,7 @@ static int status_to_errno(mx_status_t status) {
     case ERR_NOT_FOUND: return ENOENT;
     case ERR_NO_MEMORY: return ENOMEM;
     case ERR_INVALID_ARGS: return EINVAL;
-    case ERR_NOT_ENOUGH_BUFFER: return EINVAL;
+    case ERR_BUFFER_TOO_SMALL: return EINVAL;
     case ERR_TIMED_OUT: return ETIMEDOUT;
     case ERR_ALREADY_EXISTS: return EEXIST;
     case ERR_REMOTE_CLOSED: return ENOTCONN;
@@ -369,7 +369,6 @@ static int status_to_errno(mx_status_t status) {
     case ERR_IO: return EIO;
     case ERR_NOT_DIR: return ENOTDIR;
     case ERR_NOT_SUPPORTED: return ENOTSUP;
-    case ERR_CANCELLED: return ECANCELED;
     case ERR_OUT_OF_RANGE: return EINVAL;
     case ERR_NO_RESOURCES: return ENOMEM;
     case ERR_BAD_HANDLE: return EBADF;

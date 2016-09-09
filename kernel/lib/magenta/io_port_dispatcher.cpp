@@ -57,7 +57,7 @@ void IOP_Packet::Delete(IOP_Packet* packet) {
 
 bool IOP_Packet::CopyToUser(void* data, mx_size_t* size) {
     if (*size < data_size)
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
     *size = data_size;
     return copy_to_user_unsafe(
         data, reinterpret_cast<char*>(this) + sizeof(IOP_Packet), data_size) == NO_ERROR;
@@ -106,7 +106,7 @@ mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
     {
         AutoLock al(&lock_);
         if (no_clients_) {
-            status = ERR_NOT_AVAILABLE;
+            status = ERR_UNAVAILABLE;
         } else {
             packets_.push_back(packet);
             wake_count = event_signal_etc(&event_, false, status);

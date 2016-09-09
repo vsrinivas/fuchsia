@@ -110,7 +110,7 @@ status_t dlog_read_etc(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len
         dlog_record_t* rec = REC(log->data, rdr->tail);
         size_t copylen = rec->datalen + sizeof(dlog_record_t);
         if (copylen > len) {
-            r = ERR_NOT_ENOUGH_BUFFER;
+            r = ERR_BUFFER_TOO_SMALL;
         } else {
             if (user) {
                 r = copy_to_user_unsafe(ptr, rec, copylen);

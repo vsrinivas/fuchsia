@@ -567,7 +567,7 @@ static status_t pcnet_output(struct device *dev, struct pbuf *p)
 
     if (td->own) {
         LTRACEF("TX descriptor ring full\n");
-        res = ERR_NOT_READY; // maybe this should be ERR_NOT_ENOUGH_BUFFER?
+        res = ERR_SHOULD_WAIT;
         goto done;
     }
 

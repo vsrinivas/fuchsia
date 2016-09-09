@@ -217,7 +217,7 @@ mx_status_t usb_ethernet_send(mx_device_t* device, const void* buffer, size_t le
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
-        status = ERR_NOT_ENOUGH_BUFFER;
+        status = ERR_BUFFER_TOO_SMALL;
         goto out;
     }
     iotxn_t* request = containerof(node, iotxn_t, node);
@@ -283,7 +283,7 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
         goto out;
     }
     if (length1 > length) {
-        status = ERR_NOT_ENOUGH_BUFFER;
+        status = ERR_BUFFER_TOO_SMALL;
         goto out;
     }
     request->ops->copyfrom(request, buffer, length1, ETH_HEADER_SIZE);
@@ -359,7 +359,7 @@ static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) 
         return len;
     }
     if (len < usb_ethernet_get_mtu(dev)) {
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
     }
     return usb_ethernet_recv(dev, data, len);
 }

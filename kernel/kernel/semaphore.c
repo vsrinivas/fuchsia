@@ -64,7 +64,7 @@ status_t sem_trywait(semaphore_t *sem)
     THREAD_LOCK(state);
 
     if (unlikely(sem->count <= 0))
-        ret = ERR_NOT_READY;
+        ret = ERR_UNAVAILABLE;
     else
         sem->count--;
 

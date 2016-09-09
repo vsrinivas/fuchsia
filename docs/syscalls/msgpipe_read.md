@@ -58,7 +58,7 @@ invalid pointers.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_NOT_ENOUGH_BUFFER**  The provided *bytes* or *handles* buffers
+**ERR_BUFFER_TOO_SMALL**  The provided *bytes* or *handles* buffers
 are too small (in which case, the minimum sizes necessary to receive
 the message will be written to the uint32_t's pointed at by these
 parameters, provided they are non-NULL).

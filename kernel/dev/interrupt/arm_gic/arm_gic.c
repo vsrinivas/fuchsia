@@ -562,7 +562,7 @@ status_t sm_intc_fiq_enter(void)
 
     if (!fiq_enabled) {
         dprintf(INFO, "got disabled fiq: cpu %d, new %d\n", cpu, irq);
-        return ERR_NOT_READY;
+        return ERR_UNAVAILABLE;
     }
 
     current_fiq[cpu] = irq;

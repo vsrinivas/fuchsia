@@ -68,7 +68,7 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     int64_t timeout = MX_TIME_INFINITE;
     mx_status_t status = mx_handle_wait_one(handle, signals, timeout, &signals_state);
-    if (status == ERR_CANCELLED) {
+    if (status == ERR_HANDLE_CLOSED) {
         *result = WAIT_CANCELLED;
         return true;
     }
@@ -89,7 +89,7 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t signals = MX_SIGNAL_SIGNALED;
     int64_t timeout = MX_TIME_INFINITE;
     mx_status_t status = mx_handle_wait_one(handle, signals, timeout, &signals_state);
-    if (status == ERR_CANCELLED) {
+    if (status == ERR_HANDLE_CLOSED) {
         *result = WAIT_CANCELLED;
         return true;
     }

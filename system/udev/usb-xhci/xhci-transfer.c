@@ -103,7 +103,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
             list_add_tail(&ring->deferred_txns, txn_node);
         }
         mtx_unlock(&ring->mutex);
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
     }
 
     context->transfer_ring = ring;

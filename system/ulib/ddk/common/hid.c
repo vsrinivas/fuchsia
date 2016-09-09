@@ -172,7 +172,7 @@ static mx_status_t hid_get_report(mx_hid_device_t* hid, const void* in_buf, size
 
     input_report_size_t needed = hid_get_report_size_by_id(hid, inp->id, inp->type);
     if (needed == 0) return ERR_INVALID_ARGS;
-    if (out_len < (size_t)needed) return ERR_NOT_ENOUGH_BUFFER;
+    if (out_len < (size_t)needed) return ERR_BUFFER_TOO_SMALL;
 
     return hid->ops->get_report(hid, inp->type, inp->id, out_buf, out_len);
 }
@@ -247,7 +247,7 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
     if (xfer > count) {
         printf("next report: %zd, read count: %zd\n", xfer, count);
         mtx_unlock(&hid->fifo.lock);
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
     }
     ssize_t r = mx_hid_fifo_read(&hid->fifo, buf, xfer);
     left = mx_hid_fifo_size(&hid->fifo);

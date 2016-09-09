@@ -60,7 +60,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
     mx_status_t status = mx_msgpipe_read(h, NULL, &num_bytes, NULL, &num_handles, 0);
     if (status == ERR_BAD_STATE) {
         return ERR_DISPATCHER_NO_WORK;
-    } else if (status != ERR_NOT_ENOUGH_BUFFER ||
+    } else if (status != ERR_BUFFER_TOO_SMALL ||
                num_handles > 0 ||
                num_bytes > ACPI_MAX_REQUEST_SIZE) {
         // Trigger a close on our end

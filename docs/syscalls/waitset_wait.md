@@ -42,8 +42,8 @@ typedef struct mx_waitset_result {
 to **waitset_add**()); each entry yields at most one result. *wait_result* is
 **NO_ERROR** if the watched signals provided to **waitset_add**() were
 satisfied, **ERR_BAD_STATE** if the watched signals became unsatisfiable, or
-**ERR_CANCELLED** if the entry's handle was closed. **signals_state** is set to
-the state of the entry's handle's signals at some point shortly before
+**ERR_HANDLE_CLOSED** if the entry's handle was closed. **signals_state** is set
+to the state of the entry's handle's signals at some point shortly before
 **waitset_wait**() returned. **reserved** is set to zero.
 
 *max_results* is an optional out parameter: its output value is the maximum

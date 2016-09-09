@@ -241,7 +241,7 @@ bool wait_set_wait_single_thread_1_test(void) {
                               MX_SIGNAL_SIGNAL_ALL), "");
     EXPECT_TRUE(check_results(num_results, results, cookie1b, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
-    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_CANCELLED, 0u, 0u), "");
+    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_HANDLE_CLOSED, 0u, 0u), "");
 
     ASSERT_EQ(mx_waitset_remove(ws, cookie1b), NO_ERROR, "");
     num_results = 10u;
@@ -251,7 +251,7 @@ bool wait_set_wait_single_thread_1_test(void) {
                               MX_SIGNAL_SIGNAL_ALL), "");
     EXPECT_TRUE(check_results(num_results, results, cookie1a, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
-    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_CANCELLED, 0u, 0u), "");
+    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_HANDLE_CLOSED, 0u, 0u), "");
 
     // Check that it handles going from satisfied to unsatisfied (but satisfiable and not canceled)
     // properly.
@@ -261,7 +261,7 @@ bool wait_set_wait_single_thread_1_test(void) {
     ASSERT_EQ(num_results, 2u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie1a, NO_ERROR, MX_SIGNAL_SIGNAL0,
                               MX_SIGNAL_SIGNAL_ALL), "");
-    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_CANCELLED, 0u, 0u), "");
+    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_HANDLE_CLOSED, 0u, 0u), "");
 
     EXPECT_EQ(mx_handle_close(ws), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(ev[0]), NO_ERROR, "");
@@ -305,8 +305,8 @@ bool wait_set_wait_single_thread_2_test(void) {
     num_results = 5u;
     EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
     ASSERT_EQ(num_results, 2u, "wrong num_results from mx_waitset_wait()");
-    EXPECT_TRUE(check_results(num_results, results, cookie1, ERR_CANCELLED, 0u, 0u), "");
-    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_CANCELLED, 0u, 0u), "");
+    EXPECT_TRUE(check_results(num_results, results, cookie1, ERR_HANDLE_CLOSED, 0u, 0u), "");
+    EXPECT_TRUE(check_results(num_results, results, cookie2, ERR_HANDLE_CLOSED, 0u, 0u), "");
 
     EXPECT_EQ(mx_handle_close(ws), NO_ERROR, "");
 
@@ -368,7 +368,7 @@ bool wait_set_wait_threaded_test(void) {
     num_results = 5u;
     EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), NO_ERROR, "");
     ASSERT_EQ(num_results, 1u, "wrong num_results from mx_waitset_wait()");
-    EXPECT_TRUE(check_results(num_results, results, cookie, ERR_CANCELLED, 0u, 0u), "");
+    EXPECT_TRUE(check_results(num_results, results, cookie, ERR_HANDLE_CLOSED, 0u, 0u), "");
 
     // Join.
     ASSERT_EQ(mx_handle_wait_one(thread, MX_SIGNAL_SIGNAL0, MX_TIME_INFINITE, NULL), NO_ERROR, "");
@@ -400,7 +400,7 @@ bool wait_set_wait_cancelled_test(void) {
     uint32_t max_results = (uint32_t)-1;
     // There's actually a race here; we could actually get ERR_BAD_HANDLE if we don't start the wait
     // before the thread closes |ws|. But let's hope the thread's sleep is long enough.
-    EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), ERR_CANCELLED,
+    EXPECT_EQ(mx_waitset_wait(ws, MX_TIME_INFINITE, &num_results, results, NULL), ERR_HANDLE_CLOSED,
               "");
     EXPECT_EQ(num_results, 5u, "mx_waitset_wait() modified num_results");
     EXPECT_EQ(max_results, (uint32_t)-1, "mx_waitset_wait() modified max_results");

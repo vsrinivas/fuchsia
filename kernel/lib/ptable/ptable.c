@@ -649,7 +649,7 @@ status_t ptable_scan(const char *bdev_name, uint64_t offset)
 
     if (header.crc32 != crc) {
         LTRACEF("failed crc check at the end (0x%08x != 0x%08x)\n", header.crc32, crc);
-        BAIL(ERR_CHECKSUM_FAIL);
+        BAIL(ERR_IO_DATA_INTEGRITY);
     }
 
     if (!found_ptable) {

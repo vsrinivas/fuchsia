@@ -79,7 +79,7 @@ mx_status_t tpm_request_use(enum locality loc) {
     }
 
     if (val & TPM_ACCESS_REQUEST_USE) {
-        return ERR_NOT_AVAILABLE;
+        return ERR_UNAVAILABLE;
     }
 
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
@@ -219,7 +219,7 @@ static mx_status_t wait_for_data_avail(enum locality loc) {
             // If locality changed, whatever operation we're in the middle of
             // is no longer valid..
             mx_interrupt_complete(irq_handle);
-            return ERR_CANCELLED;
+            return ERR_INTERNAL;
         }
         mx_interrupt_complete(irq_handle);
     }
@@ -259,7 +259,7 @@ mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
     }
 
     if (!(*TPM_STS(loc) & TPM_STS_CMD_RDY)) {
-        return ERR_NOT_READY;
+        return ERR_UNAVAILABLE;
     }
 
     // This procedure is described in section 5.5.2.2.1 of the TCG PC Client

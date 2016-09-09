@@ -83,29 +83,11 @@ not satisfied or the system is unable to complete the operation in its current s
   The system is unable to perform the operation in its current state.  
    Note: FAILED\_PRECONDITION is a reserved alias for this error
 
-**SHOULD\_WAIT**
-  The operation cannot be performed currently but potentially could succeed if the caller waits for
-  a prerequisite to be satisfied, for example waiting for a handle to be readable or writable.  
-  Example: Attempting to read from a message pipe that has no messages waiting but has an open
-  remote will return **SHOULD\_WAIT**. Attempting to read from a message pipe that has no messages
-  waiting and has a closed remote end will return **REMOTE\_CLOSED**.
-
-**UNAVAILABLE**
-  The subject of the operation is currently unable to perform the operation.  
-  Note: This is used when there's no direct way for the caller to observe when the subject will be
-  able to perform the operation and should thus retry.
-
 **NOT\_FOUND**
   The requested entity was not found.
 
 **TIMED\_OUT**
   The time limit for the operation elapsed before the operation completed.
-
-**HANDLE\_CLOSED**
-  A handle being waited on was closed.
-
-**REMOTE\_CLOSED**
-  The operation failed because the remote end of the subject of the operation was closed.
 
 **ALREADY\_EXISTS**
   An object with the specified identifier already exists.  
@@ -115,6 +97,24 @@ not satisfied or the system is unable to complete the operation in its current s
   The operation failed because the named entity is already owned or controlled by another entity.
   The operation could succeed later if the current owner releases the entity.
 
+**HANDLE\_CLOSED**
+  A handle being waited on was closed.
+
+**REMOTE\_CLOSED**
+  The operation failed because the remote end of the subject of the operation was closed.
+
+**UNAVAILABLE**
+  The subject of the operation is currently unable to perform the operation.  
+  Note: This is used when there's no direct way for the caller to observe when the subject will be
+  able to perform the operation and should thus retry.
+
+**SHOULD\_WAIT**
+  The operation cannot be performed currently but potentially could succeed if the caller waits for
+  a prerequisite to be satisfied, for example waiting for a handle to be readable or writable.  
+  Example: Attempting to read from a message pipe that has no messages waiting but has an open
+  remote will return **SHOULD\_WAIT**. Attempting to read from a message pipe that has no messages
+  waiting and has a closed remote end will return **REMOTE\_CLOSED**.
+
 ### Permission errors
 
 **ACCESS\_DENIED**
@@ -123,7 +123,7 @@ not satisfied or the system is unable to complete the operation in its current s
 ### Input/output errors
 
 **IO**
-  Otherwise unspecified error occured during I/O.
+  Otherwise unspecified error occurred during I/O.
 
 **IO\_REFUSED**
   The entity the I/O operation is being performed on rejected the operation.  

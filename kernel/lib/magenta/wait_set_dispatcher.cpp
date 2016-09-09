@@ -326,7 +326,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
 
     // Always prefer to give results over timed out, but prefer "cancelled" over everything.
     if (cancelled_)
-        return ERR_CANCELLED;
+        return ERR_HANDLE_CLOSED;
     if (!num_triggered_entries_) {
         DEBUG_ASSERT(result == ERR_TIMED_OUT);
         return ERR_TIMED_OUT;
@@ -353,7 +353,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
             results[i].signals_state = st;
         } else {
             // Cancelled.
-            results[i].wait_result = ERR_CANCELLED;
+            results[i].wait_result = ERR_HANDLE_CLOSED;
             results[i].signals_state = mx_signals_state_t{0u, 0u};
         }
     }

@@ -52,8 +52,8 @@ invalid pointer.
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
 not be waited upon.
 
-**ERR_CANCELLED**  One or more of the provided *handles* was invalidated (e.g.,
-closed) during the wait.
+**ERR_HANDLE_CLOSED**  One or more of the provided *handles* was invalidated
+(e.g., closed) during the wait.
 
 ## BUGS
 

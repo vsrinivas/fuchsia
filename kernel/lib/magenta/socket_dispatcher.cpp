@@ -253,7 +253,7 @@ mx_ssize_t SocketDispatcher::OOB_WriteSelf(const void* src, mx_size_t len, bool 
     if (oob_len_)
         return ERR_SHOULD_WAIT;
     if (len > sizeof(oob_))
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
 
     if (from_user) {
         if (copy_from_user(oob_, mxtl::user_ptr<const void>(src), len)  != NO_ERROR)
@@ -292,7 +292,7 @@ mx_ssize_t SocketDispatcher::OOB_Read(void* dest, mx_size_t len, bool from_user)
     if (!oob_len_)
         return ERR_SHOULD_WAIT;
     if (oob_len_ > len)
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
 
     if (from_user) {
         if (copy_to_user(mxtl::user_ptr<void>(dest), oob_, oob_len_) != NO_ERROR)

@@ -56,7 +56,7 @@ static status_t validate_bootimage(bootimage_t *bi)
     if (memcmp(hash, be->file.sha256, sizeof(be->file.sha256)) != 0) {
         LTRACEF("bad hash of first section\n");
 
-        return ERR_CHECKSUM_FAIL;
+        return ERR_IO_DATA_INTEGRITY;
     }
 
     /* look at the second entry, which should be a boot info structure */
@@ -119,7 +119,7 @@ static status_t validate_bootimage(bootimage_t *bi)
                 if (memcmp(hash, be[i].file.sha256, sizeof(be[i].file.sha256)) != 0) {
                     LTRACEF("bad hash of file section\n");
 
-                    return ERR_CHECKSUM_FAIL;
+                    return ERR_IO_DATA_INTEGRITY;
                 }
 
                 break;

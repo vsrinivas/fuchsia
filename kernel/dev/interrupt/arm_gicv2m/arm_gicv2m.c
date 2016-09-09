@@ -79,7 +79,7 @@ status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_
     memset(out_info, 0, sizeof(*out_info));
 
     if (!g_reg_frames || !g_reg_frame_count)
-        return ERR_NOT_READY;
+        return ERR_UNAVAILABLE;
 
     if (frame_ndx >= g_reg_frame_count)
         return ERR_NOT_FOUND;

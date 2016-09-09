@@ -73,19 +73,19 @@ static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
     switch (op) {
     case IOCTL_BLOCK_GET_SIZE: {
         uint64_t* size = reply;
-        if (max < sizeof(*size)) return ERR_NOT_ENOUGH_BUFFER;
+        if (max < sizeof(*size)) return ERR_BUFFER_TOO_SMALL;
         *size = getsize(device);
         return sizeof(*size);
     }
     case IOCTL_BLOCK_GET_BLOCKSIZE: {
         uint64_t* blksize = reply;
-        if (max < sizeof(*blksize)) return ERR_NOT_ENOUGH_BUFFER;
+        if (max < sizeof(*blksize)) return ERR_BUFFER_TOO_SMALL;
         *blksize = device->blksize;
         return sizeof(*blksize);
     }
     case IOCTL_BLOCK_GET_GUID: {
         char* guid = reply;
-        if (max < GPT_GUID_STRLEN) return ERR_NOT_ENOUGH_BUFFER;
+        if (max < GPT_GUID_STRLEN) return ERR_BUFFER_TOO_SMALL;
         uint8_to_guid_string(guid, device->gpt_entry.type);
         return GPT_GUID_STRLEN;
     }

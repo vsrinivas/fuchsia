@@ -86,7 +86,7 @@ status_t PciDeviceDispatcher::ClaimDevice() {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
-    if (device_->claimed()) return ERR_NOT_AVAILABLE;  // Are we claimed already?
+    if (device_->claimed()) return ERR_ALREADY_BOUND;  // Are we claimed already?
 
     result = device_->Claim();
     if (result != NO_ERROR)
@@ -238,7 +238,7 @@ PciDeviceDispatcher::PciDeviceWrapper::~PciDeviceWrapper() {
 
 status_t PciDeviceDispatcher::PciDeviceWrapper::Claim() {
     if (claimed_)
-        return ERR_NOT_AVAILABLE;
+        return ERR_ALREADY_BOUND;
 
     status_t result = pcie_claim_and_start_device(device_, &PCIE_DRIVER_REGISTRATION, NULL);
     if (result != NO_ERROR)

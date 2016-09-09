@@ -122,7 +122,7 @@ static int xhci_irq_thread(void* arg) {
         wait_res = mx_handle_wait_one(uxhci->irq_handle,
                                       MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
         if (wait_res != NO_ERROR) {
-            if (wait_res != ERR_CANCELLED)
+            if (wait_res != ERR_HANDLE_CLOSED)
                 printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
             break;
         }
@@ -255,7 +255,7 @@ void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool c
     // this will either add them to the transfer ring or put them back on deferred_txns list
     while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
         mx_status_t status = xhci_do_iotxn_queue(xhci, txn);
-        if (status != NO_ERROR && status != ERR_NOT_ENOUGH_BUFFER) {
+        if (status != NO_ERROR && status != ERR_BUFFER_TOO_SMALL) {
             txn->ops->complete(txn, status, 0);
         }
     }
@@ -266,7 +266,7 @@ static void xhci_iotxn_queue(mx_device_t* hci_device, iotxn_t* txn) {
     xhci_t* xhci = &uxhci->xhci;
 
     mx_status_t status = xhci_do_iotxn_queue(xhci, txn);
-    if (status != NO_ERROR && status != ERR_NOT_ENOUGH_BUFFER) {
+    if (status != NO_ERROR && status != ERR_BUFFER_TOO_SMALL) {
         txn->ops->complete(txn, status, 0);
     }
 }

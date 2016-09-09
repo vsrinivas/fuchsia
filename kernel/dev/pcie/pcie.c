@@ -609,7 +609,7 @@ static status_t pcie_allocate_bars(pcie_device_state_t* dev) {
 
     /* Has the device been unplugged already? */
     if (!dev->plugged_in) {
-        ret = ERR_NOT_READY;
+        ret = ERR_UNAVAILABLE;
         goto finished;
     }
 
@@ -665,7 +665,7 @@ static status_t pcie_claim_device(pcie_device_state_t* dev,
     DEBUG_ASSERT(is_mutex_held(&dev->start_claim_lock));
 
     if (dev->driver) {
-        return ERR_NOT_AVAILABLE;
+        return ERR_ALREADY_BOUND;
     }
 
     status_t ret;
@@ -673,7 +673,7 @@ static status_t pcie_claim_device(pcie_device_state_t* dev,
 
     /* Has the device been unplugged? */
     if (!dev->plugged_in) {
-        ret = ERR_NOT_READY;
+        ret = ERR_UNAVAILABLE;
         goto finished;
     }
 
@@ -849,7 +849,7 @@ pcie_device_state_t* pcie_get_nth_device(uint32_t index) {
 }
 
 /*
- * Attaches a driver to a PCI device. Returns ERR_NOT_AVAILABLE if the device has already been
+ * Attaches a driver to a PCI device. Returns ERR_ALREADY_BOUND if the device has already been
  * claimed by another driver.
  */
 status_t pcie_claim_and_start_device(pcie_device_state_t* dev,
@@ -937,7 +937,7 @@ status_t pcie_do_function_level_reset(pcie_device_state_t* dev) {
 
     // Make certain to check to see if the device is still plugged in.
     if (!dev->plugged_in) {
-        ret = ERR_NOT_READY;
+        ret = ERR_UNAVAILABLE;
         goto finished;
     }
 
@@ -1393,7 +1393,7 @@ status_t pcie_modify_cmd(pcie_device_state_t* dev, uint16_t clr_bits, uint16_t s
         pcie_modify_cmd_internal(dev, clr_bits, set_bits);
         ret = NO_ERROR;
     } else {
-        ret = ERR_NOT_READY;
+        ret = ERR_UNAVAILABLE;
     }
 
     MUTEX_RELEASE(dev, dev_lock);

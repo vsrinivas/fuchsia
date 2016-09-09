@@ -22,7 +22,7 @@ bool handle_info_test(void) {
 
     mx_info_handle_basic_t info = {0};
     ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, 4u),
-              ERR_NOT_ENOUGH_BUFFER, "bad struct size validation");
+              ERR_BUFFER_TOO_SMALL, "bad struct size validation");
 
     ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info)),
               (mx_ssize_t)sizeof(info), "handle should be valid");

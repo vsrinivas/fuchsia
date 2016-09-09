@@ -123,7 +123,7 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
 
     // If the caller provided buffers are too small, abort the read so the caller can try again.
     if (num_bytes < next_message_size || num_handles < next_message_num_handles)
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
 
     // OK, now we can accept the message.
     mxtl::Array<uint8_t> bytes;

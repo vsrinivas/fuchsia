@@ -110,7 +110,7 @@ static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) 
         return len;
     }
     if (len < eth_get_mtu(dev)) {
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
     }
     return eth_recv(dev, data, len);
 }

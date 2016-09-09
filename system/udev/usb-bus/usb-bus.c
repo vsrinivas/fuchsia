@@ -99,33 +99,33 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
     switch (op) {
     case IOCTL_USB_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = dev->device_type;
         return sizeof(*reply);
     }
     case IOCTL_USB_GET_DEVICE_SPEED: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = dev->speed;
         return sizeof(*reply);
     }
     case IOCTL_USB_GET_DEVICE_DESC: {
         usb_device_descriptor_t* descriptor = dev->device_desc;
-        if (out_len < sizeof(*descriptor)) return ERR_NOT_ENOUGH_BUFFER;
+        if (out_len < sizeof(*descriptor)) return ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptor, sizeof(*descriptor));
         return sizeof(*descriptor);
     }
     case IOCTL_USB_GET_CONFIG_DESC_SIZE: {
         usb_configuration_descriptor_t* descriptor = dev->config_descs[0];
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = le16toh(descriptor->wTotalLength);
         return sizeof(*reply);
     }
     case IOCTL_USB_GET_CONFIG_DESC: {
         usb_configuration_descriptor_t* descriptor = dev->config_descs[0];
         size_t desc_length = le16toh(descriptor->wTotalLength);
-        if (out_len < desc_length) return ERR_NOT_ENOUGH_BUFFER;
+        if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptor, desc_length);
         return desc_length;
     }
@@ -138,7 +138,7 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
             desc_length = le16toh(descriptor->wTotalLength);
         }
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_NOT_ENOUGH_BUFFER;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = desc_length;
         return sizeof(*reply);
     }
@@ -153,7 +153,7 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
             descriptors = descriptor;
             desc_length = le16toh(descriptor->wTotalLength);
         }
-        if (out_len < desc_length) return ERR_NOT_ENOUGH_BUFFER;
+        if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptors, desc_length);
         return desc_length;
     }

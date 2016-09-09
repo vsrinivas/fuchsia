@@ -24,7 +24,7 @@ public:
         INTERRUPTED = ERR_INTERRUPTED,
         TIMED_OUT = ERR_TIMED_OUT,
         // Valid for Signal():
-        CANCELLED = ERR_CANCELLED,
+        CANCELLED = ERR_INTERNAL,
         SATISFIED = NO_ERROR,
         UNSATISFIABLE = ERR_BAD_STATE,
     };

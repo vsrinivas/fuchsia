@@ -40,7 +40,7 @@ It is possible to have the call return with a *signals_states* array with values
 different than the values that caused the wait to complete if other threads are
 further modifing the objects behind the *handles*.
 
-If non-null and the return value is **NO_ERROR** or **ERR_CANCELLED**,
+If non-null and the return value is **NO_ERROR** or **ERR_HANDLE_CLOSED**,
 *result_index* set to first handle that satisfied the wait (or was closed,
 respectively).
 
@@ -62,8 +62,8 @@ or *signals_states* were invalid pointers.
 **ERR_ACCESS_DENIED**  One or more of the provided *handles* does not
 have **MX_RIGHT_READ** and may not be waited upon.
 
-**ERR_CANCELLED**  One or more of the provided *handles* was invalidated (e.g.,
-closed) during the wait.
+**ERR_HANDLE_CLOSED**  One or more of the provided *handles* was invalidated
+(e.g., closed) during the wait.
 
 **ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
 

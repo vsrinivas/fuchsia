@@ -538,7 +538,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
     case IOCTL_CONSOLE_GET_DIMENSIONS: {
         ioctl_console_dimensions_t* dims = reply;
         if (max < sizeof(*dims)) {
-            return ERR_NOT_ENOUGH_BUFFER;
+            return ERR_BUFFER_TOO_SMALL;
         }
         dims->width = vc->columns;
         dims->height = vc->rows;
@@ -546,7 +546,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
     }
     case IOCTL_DISPLAY_GET_FB: {
         if (max < sizeof(ioctl_display_get_fb_t)) {
-            return ERR_NOT_ENOUGH_BUFFER;
+            return ERR_BUFFER_TOO_SMALL;
         }
         ioctl_display_get_fb_t* fb = reply;
         fb->info.format = vc->gfx->format;

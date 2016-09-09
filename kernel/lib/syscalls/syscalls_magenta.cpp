@@ -135,7 +135,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
 
             // test that we have at least enough target buffer to support the header and one record
             if (buffer_size < sizeof(mx_info_header_t) + topic_size)
-                return ERR_NOT_ENOUGH_BUFFER;
+                return ERR_BUFFER_TOO_SMALL;
 
             // build the info structure
             mx_info_handle_basic_t info = {};
@@ -186,7 +186,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
 
             // test that we have at least enough target buffer to support the header and one record
             if (buffer_size < sizeof(mx_info_header_t) + topic_size)
-                return ERR_NOT_ENOUGH_BUFFER;
+                return ERR_BUFFER_TOO_SMALL;
 
             // build the info structure
             mx_info_process_t info = {};
@@ -239,7 +239,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
     switch (property) {
         case MX_PROP_BAD_HANDLE_POLICY: {
             if (size != sizeof(uint32_t))
-                return ERR_NOT_ENOUGH_BUFFER;
+                return ERR_BUFFER_TOO_SMALL;
             auto process = dispatcher->get_specific<ProcessDispatcher>();
             if (!process)
                 return ERR_WRONG_TYPE;
@@ -276,7 +276,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     switch (property) {
         case MX_PROP_BAD_HANDLE_POLICY: {
             if (size < sizeof(uint32_t))
-                return ERR_NOT_ENOUGH_BUFFER;
+                return ERR_BUFFER_TOO_SMALL;
             auto process = dispatcher->get_specific<ProcessDispatcher>();
             if (!process)
                 return up->BadHandle(handle_value, ERR_WRONG_TYPE);
@@ -916,7 +916,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_PORT_MAX_PKT_SIZE)
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
 
     if (size < sizeof(mx_packet_header_t))
         return ERR_INVALID_ARGS;

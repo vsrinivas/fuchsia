@@ -251,7 +251,7 @@ status_t arch_mp_cpu_unplug(uint cpu_id)
     uint32_t dst_apic_id = ap_percpus[cpu_id - 1].apic_id;
     if (dst_apic_id == INVALID_APIC_ID) {
         /* This is a transient state that can occur during CPU onlining */
-        return ERR_NOT_READY;
+        return ERR_UNAVAILABLE;
     }
 
     apic_send_ipi(0, dst_apic_id, DELIVERY_MODE_INIT);

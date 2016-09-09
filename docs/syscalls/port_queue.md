@@ -46,7 +46,7 @@ of **mx_packet_header_t**.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_NOT_ENOUGH_BUFFER**  If the packet is too big.
+**ERR_BUFFER_TOO_SMALL**  If the packet is too big.
 
 ## NOTES
 

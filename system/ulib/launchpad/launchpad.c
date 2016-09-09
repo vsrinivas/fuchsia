@@ -302,7 +302,7 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     } msg;
 
     if (len >= sizeof(msg.data))
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
 
     memset(&msg.header, 0, sizeof(msg.header));
     msg.header.opcode = opcode;
@@ -722,7 +722,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     if (size > lp->stack_size / 2) {
         free(msg);
         mx_handle_close(*thread);
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
     }
 
     mx_status_t status = mx_msgpipe_write(to_child, msg, size,

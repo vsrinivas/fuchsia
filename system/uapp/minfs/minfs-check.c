@@ -32,7 +32,7 @@ static mx_status_t get_inode(minfs_t* fs, minfs_inode_t* inode, uint32_t ino) {
     }
     if ((inode->magic != MINFS_MAGIC_FILE) && (inode->magic != MINFS_MAGIC_DIR)) {
         error("check: ino %u has bad magic %#x\n", ino, inode->magic);
-        return ERR_CHECKSUM_FAIL;
+        return ERR_IO_DATA_INTEGRITY;
     }
     return NO_ERROR;
 }
@@ -93,7 +93,7 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
             uint32_t rlen = de->reclen;
             if ((rlen > size) || (rlen & 3)) {
                 error("check: ino#%u: de[%u]: bad dirent reclen\n", ino, eno);
-                return ERR_CHECKSUM_FAIL;
+                return ERR_IO_DATA_INTEGRITY;
             }
             if (de->ino == 0) {
                 if (flags & CD_DUMP) {
@@ -102,7 +102,7 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
             } else {
                 if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
                     error("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
-                    return ERR_CHECKSUM_FAIL;
+                    return ERR_IO_DATA_INTEGRITY;
                 }
                 if ((de->namelen == 1) && (de->name[0] == '.')) {
                     if (dot) {

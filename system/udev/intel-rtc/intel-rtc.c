@@ -65,7 +65,7 @@ static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, mx_off_
         return ERR_INTERNAL;
     }
     if ((unsigned int)n > count) {
-        return ERR_NOT_ENOUGH_BUFFER;
+        return ERR_BUFFER_TOO_SMALL;
     }
     return n;
 }

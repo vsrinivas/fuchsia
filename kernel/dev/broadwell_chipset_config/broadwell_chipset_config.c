@@ -297,7 +297,7 @@ status_t bwcc_hide_device(bwcc_device_id_t which, bool hide) {
     mutex_acquire(&g_lock);
 
     if (!state->rcba_virt) {
-        ret = ERR_NOT_READY;
+        ret = ERR_UNAVAILABLE;
         goto finished;
     }
 
@@ -373,7 +373,7 @@ status_t bwcc_disable_device(bwcc_device_id_t which, bool disable) {
     mutex_acquire(&g_lock);
 
     if (!state->rcba_virt) {
-        ret = ERR_NOT_READY;
+        ret = ERR_UNAVAILABLE;
         goto finished;
     }
 

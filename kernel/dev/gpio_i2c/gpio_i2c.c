@@ -133,7 +133,7 @@ static status_t gpio_i2c_tx_common(gpio_i2c_state_t *s,
                                    size_t cnt)
 {
     const gpio_i2c_info_t *i = s->info;
-    status_t ret = ERR_I2C_NACK;
+    status_t ret = ERR_IO_REFUSED;
 
     DEBUG_ASSERT(buf || !cnt);
 
@@ -164,7 +164,7 @@ static status_t gpio_i2c_rx_common(gpio_i2c_state_t *s,
                                    size_t cnt)
 {
     const gpio_i2c_info_t *i = s->info;
-    status_t ret = ERR_I2C_NACK;
+    status_t ret = ERR_IO_REFUSED;
 
     DEBUG_ASSERT(buf && cnt);
 

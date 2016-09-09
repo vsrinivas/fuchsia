@@ -57,7 +57,7 @@ bool IOPortClient::Signal(mx_signals_t signals, mx_size_t count, const Mutex* mu
         return true;
 
     auto status = SendIOPortPacket(io_port_.get(), key_, count, signals);
-    if (status == ERR_NOT_AVAILABLE) {
+    if (status == ERR_ALREADY_BOUND) {
         // This means that the io_port has no clients but it is held
         // alive by our reference. Release the ref.
         io_port_.reset();
