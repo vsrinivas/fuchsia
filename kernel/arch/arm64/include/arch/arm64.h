@@ -62,15 +62,6 @@ struct arch_exception_context {
     uint32_t esr;
 };
 
-// The "general regs": pc, integer regs, + misc.
-
-struct arch_gen_regs {
-    // Ultimately it'll be useful to break the connection, but for now while
-    // we're bootstrapping the order here follows the order expected by gdb.
-    // TODO(dje): obviously more are needed
-    uint64_t pc;
-};
-
 struct thread;
 extern void arm64_exception_base(void);
 void arm64_el3_to_el1(void);

@@ -34,6 +34,17 @@ typedef struct mx_x86_64_general_regs {
     uint64_t rflags;
 } mx_x86_64_general_regs_t;
 
+// The format of data for r/w of arm64 general regs.
+// By convention this is MX_THREAD_STATE_REGSET0.
+
+typedef struct mx_arm64_general_regs {
+    uint64_t r[30];
+    uint64_t lr;
+    uint64_t sp;
+    uint64_t pc;
+    uint64_t cpsr;
+} mx_arm64_general_regs_t;
+
 #ifdef __cplusplus
 }
 #endif

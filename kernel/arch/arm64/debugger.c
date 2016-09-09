@@ -5,16 +5,18 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <string.h>
 #include <sys/types.h>
 #include <arch/arm64.h>
 #include <kernel/thread.h>
+#include <magenta/syscalls-debug.h>
 
 uint arch_num_regsets(void)
 {
     return 1; // TODO(dje): Just the general regs for now.
 }
 
-static status_t arch_get_general_regs(struct thread *thread, struct arch_gen_regs *gr, uint32_t *buf_size)
+static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_regs_t *gr, uint32_t *buf_size)
 {
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*gr);
@@ -25,10 +27,19 @@ static status_t arch_get_general_regs(struct thread *thread, struct arch_gen_reg
     if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
         return ERR_BAD_STATE;
 
-    return ERR_NOT_SUPPORTED;
+    struct arm64_iframe_long *p = thread->exception_context->frame;
+
+    static_assert(sizeof(p->r) == sizeof(gr->r), "");
+    memcpy(&gr->r[0], &p->r[0], sizeof(p->r));
+    gr->lr = p->lr;
+    gr->sp = p->usp;
+    gr->pc = p->elr;
+    gr->cpsr = p->spsr;
+
+    return NO_ERROR;
 }
 
-static status_t arch_set_general_regs(struct thread *thread, const struct arch_gen_regs *gr, uint32_t buf_size)
+static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_general_regs_t *gr, uint32_t buf_size)
 {
     if (buf_size != sizeof(*gr))
         return ERR_INVALID_ARGS;
@@ -36,7 +47,16 @@ static status_t arch_set_general_regs(struct thread *thread, const struct arch_g
     if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
         return ERR_BAD_STATE;
 
-    return ERR_NOT_SUPPORTED;
+    struct arm64_iframe_long *p = thread->exception_context->frame;
+
+    static_assert(sizeof(p->r) == sizeof(gr->r), "");
+    memcpy(&p->r[0], &gr->r[0], sizeof(p->r));
+    p->lr = gr->lr;
+    p->usp = gr->sp;
+    p->elr = gr->pc;
+    p->spsr = gr->cpsr;
+
+    return NO_ERROR;
 }
 
 status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)

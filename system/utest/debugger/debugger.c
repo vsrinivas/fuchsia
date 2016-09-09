@@ -101,9 +101,26 @@ static const regspec_t general_regs[] =
 
 #endif
 
+#ifdef __aarch64__
+
+#define R(reg) { #reg, offsetof(mx_arm64_general_regs_t, reg), 1, 64 }
+
+static const regspec_t general_regs[] =
+{
+    { "r", offsetof(mx_arm64_general_regs_t, r), 30, 64 },
+    R(lr),
+    R(sp),
+    R(pc),
+    R(cpsr),
+};
+
+#undef R
+
+#endif
+
 static void dump_gregs(mx_handle_t thread_handle, void* buf)
 {
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__aarch64__)
     printf("Registers for thread %d\n", thread_handle);
     for (unsigned i = 0; i < sizeof(general_regs) / sizeof(general_regs[0]); ++i) {
         const regspec_t* r = &general_regs[i];
@@ -121,9 +138,9 @@ static void dump_gregs(mx_handle_t thread_handle, void* buf)
                 val = get_uint64(value_ptr);
             }
             if (r->count == 1)
-                printf("  %8s  %24ld  0x%lx\n", r->name, (long) val, (long) val);
+                printf("  %8s      %24ld  0x%lx\n", r->name, (long) val, (long) val);
             else
-                printf("  %8s[%u]  %24ld  0x%lx\n", r->name, j, (long) val, (long) val);
+                printf("  %8s[%2u]  %24ld  0x%lx\n", r->name, j, (long) val, (long) val);
         }
     }
 #endif
@@ -223,6 +240,13 @@ static void fix_inferior_segv(mx_handle_t thread)
     // See test_prep_and_segv.
     uint64_t rsp = get_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, rsp));
     set_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, r8), rsp);
+#endif
+
+#ifdef __aarch64__
+    // The segv was because r8 == 0, change it to a usable value.
+    // See test_prep_and_segv.
+    uint64_t sp = get_uint64_register(thread, offsetof(mx_arm64_general_regs_t, sp));
+    set_uint64_register(thread, offsetof(mx_arm64_general_regs_t, r[8]), sp);
 #endif
 }
 
@@ -439,6 +463,22 @@ static bool test_prep_and_segv(void)
 	movq (%%r8),%%rax\
 "
         : : "r" (&test_data[0]) : "rax", "r8", "r9");
+#endif
+
+#ifdef __aarch64__
+    void* segv_pc;
+    // Note: Fuchsia is always pic.
+    __asm__ ("mov %0,.Lsegv_here" : "=r" (segv_pc));
+    unittest_printf("About to segv, pc 0x%lx\n", (long) segv_pc);
+
+    // r9 is set for debugging purposes
+    __asm__ ("\
+	mov x9,%0\n\
+	mov x8,0\n\
+.Lsegv_here:\n\
+	ldr x0,[x8]\
+"
+        : : "r" (&test_data[0]) : "x0", "x8", "x9");
 #endif
 
     unittest_printf("Inferior successfully resumed!\n");
