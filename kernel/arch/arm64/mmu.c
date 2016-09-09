@@ -347,10 +347,9 @@ static int arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
             LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
             CF;
-            if (asid == MMU_ARM64_GLOBAL_ASID)
-                ARM64_TLBI(vaae1is, vaddr >> 12);
-            else
-                ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
+            // do a global flush to work around the ASID implementation being non functional
+            // TODO: implement proper ASID and/or remove the global bit (see MG-270)
+            ARM64_TLBI_NOADDR(vmalle1);
         } else {
             LTRACEF("pte %p[0x%lx] already clear\n", page_table, index);
         }
@@ -798,7 +797,7 @@ void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace)
         if (TRACE_CONTEXT_SWITCH)
             TRACEF("ttbr 0x%llx, tcr 0x%llx\n", ttbr, tcr);
         // do a global flush to work around the ASID implementation being non functional
-        // TODO: implement proper ASID and/or remove the global bit
+        // TODO: implement proper ASID and/or remove the global bit (see MG-270)
         ARM64_TLBI_NOADDR(vmalle1);
     } else {
         tcr = MMU_TCR_FLAGS_KERNEL;
