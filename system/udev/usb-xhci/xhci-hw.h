@@ -430,6 +430,16 @@ typedef volatile struct {
 #define XFER_TRB_TRT_START          16          // Transfer type
 #define XFER_TRB_TRT_BITS           2
 
+// Isoch Transfer TRB bits
+#define XFER_TRB_SIA               (1 << 31)    // Schedule packet ASAP
+#define XFER_TRB_FRAME_ID_START    20
+#define XFER_TRB_FRAME_ID_BITS     11
+#define XFER_TRB_TLBPC_START       16
+#define XFER_TRB_TLBPC_BITS        4
+#define XFER_TRB_BEI               (1 << 9)
+#define XFER_TRB_FRAME_TBC_START   7
+#define XFER_TRB_FRAME_TBC_BITS    2
+
 // Preshifted TRT bits
 #define XFER_TRB_TRT_NONE          (0 << XFER_TRB_TRT_START)
 #define XFER_TRB_TRT_OUT           (2 << XFER_TRB_TRT_START)

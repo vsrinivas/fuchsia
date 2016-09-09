@@ -116,6 +116,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     volatile uint32_t* hcsparams1 = &xhci->cap_regs->hcsparams1;
     volatile uint32_t* hcsparams2 = &xhci->cap_regs->hcsparams2;
     volatile uint32_t* hccparams1 = &xhci->cap_regs->hccparams1;
+    volatile uint32_t* hccparams2 = &xhci->cap_regs->hccparams2;
 
     xhci->max_slots = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_SLOTS_START,
                                       HCSPARAMS1_MAX_SLOTS_BITS);
@@ -124,6 +125,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     xhci->rh_num_ports = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_PORTS_START,
                                          HCSPARAMS1_MAX_PORTS_BITS);
     xhci->context_size = (XHCI_READ32(hccparams1) & HCCPARAMS1_CSZ ? 64 : 32);
+    xhci->large_esit = !!(XHCI_READ32(hccparams2) & HCCPARAMS2_LEC);
 
     uint32_t scratch_pad_bufs = XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_HI_START,
                                                 HCSPARAMS2_MAX_SBBUF_HI_BITS);
@@ -154,6 +156,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
             goto fail;
         }
         uint32_t page_size = XHCI_READ32(&xhci->op_regs->pagesize) << 12;
+        xhci->page_size = page_size;
 
         for (uint32_t i = 0; i < scratch_pad_bufs; i++) {
             void* page = xhci_memalign(xhci, page_size, page_size);

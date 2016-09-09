@@ -66,6 +66,10 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n",
             slot_id, setup, endpoint, length);
 
+    if ((setup && endpoint != 0) || (!setup && endpoint == 0)) {
+        return ERR_INVALID_ARGS;
+    }
+
     xhci_slot_t* slot = &xhci->slots[slot_id];
     if (!slot->enabled)
         return ERR_REMOTE_CLOSED;
@@ -89,7 +93,24 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
     }
     if (required_trbs > ring->size) {
         // no way this will ever succeed
+        printf("required_trbs %ld ring->size %ld\n", required_trbs, ring->size);
         return ERR_INVALID_ARGS;
+    }
+
+    uint32_t ep_type = XHCI_GET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS);
+    if (ep_type >= 4) ep_type -= 4;
+    bool isochronous = (ep_type == USB_ENDPOINT_ISOCHRONOUS);
+    if (isochronous) {
+        if (!data || !length) return ERR_INVALID_ARGS;
+        // we currently do not support isoch buffers that span page boundaries
+        // Section 3.2.11 in the XHCI spec describes how to handle this, but since
+        // iotxn buffers are always close to the beginning of a page, this shouldn't be necessary.
+        mx_paddr_t start_page = data & ~(xhci->page_size - 1);
+        mx_paddr_t end_page = (data + length - 1) & ~(xhci->page_size - 1);
+        if (start_page != end_page) {
+            printf("isoch buffer spans page boundary in xhci_queue_transfer\n");
+            return ERR_INVALID_ARGS;
+        }
     }
 
     // FIXME handle zero length packets
@@ -153,6 +174,11 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
                 // use TRB_TRANSFER_DATA for first data packet on setup requests
                 control_bits |= (direction == USB_DIR_IN ? XFER_TRB_DIR_IN : XFER_TRB_DIR_OUT);
                 trb_set_control(trb, TRB_TRANSFER_DATA, control_bits);
+            } else if (isochronous) {
+                // for now set SIA to start ASAP
+                // FIXME support scheduling transfers on a specific frame
+                control_bits |= XFER_TRB_SIA;
+                trb_set_control(trb, TRB_TRANSFER_ISOCH, control_bits);
             } else {
                 trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
             }
@@ -253,16 +279,19 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     uint32_t length = (status & XHCI_MASK(EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS)) >> EVT_TRB_XFER_LENGTH_START;
     xhci_transfer_context_t* context = NULL;
 
-    if (control & EVT_TRB_ED) {
-        context = (xhci_transfer_context_t*)trb_get_ptr(trb);
-    } else {
-        trb = xhci_read_trb_ptr(xhci, trb);
-        for (int i = 0; i < 5 && trb; i++) {
-            if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
-                context = (xhci_transfer_context_t*)trb_get_ptr(trb);
-                break;
+    // TRB pointer is zero in these cases
+    if (cc != TRB_CC_RING_UNDERRUN && cc != TRB_CC_RING_OVERRUN) {
+        if (control & EVT_TRB_ED) {
+            context = (xhci_transfer_context_t*)trb_get_ptr(trb);
+        } else {
+            trb = xhci_read_trb_ptr(xhci, trb);
+            for (int i = 0; i < 5 && trb; i++) {
+                if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
+                    context = (xhci_transfer_context_t*)trb_get_ptr(trb);
+                    break;
+                }
+                trb = xhci_get_next_trb(xhci, trb);
             }
-            trb = xhci_get_next_trb(xhci, trb);
         }
     }
 
@@ -276,6 +305,14 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             // FIXME - better error for stall case?
             result = ERR_BAD_STATE;
             break;
+        case TRB_CC_RING_UNDERRUN:
+            // non-fatal error that happens when no transfers are available for isochronous endpoint
+            xprintf("TRB_CC_RING_UNDERRUN\n");
+            return;
+        case TRB_CC_RING_OVERRUN:
+            // non-fatal error that happens when no transfers are available for isochronous endpoint
+            xprintf("TRB_CC_RING_OVERRUN\n");
+            return;
         case TRB_CC_STOPPED:
         case TRB_CC_STOPPED_LENGTH_INVALID:
         case TRB_CC_STOPPED_SHORT_PACKET:

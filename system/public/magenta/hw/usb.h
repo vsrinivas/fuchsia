@@ -92,6 +92,19 @@ __BEGIN_CDECLS;
 #define USB_ENDPOINT_INTERRUPT             0x03
 #define USB_ENDPOINT_TYPE_MASK             0x03
 
+/* Endpoint synchronization type (bmAttributes) */
+#define USB_ENDPOINT_NO_SYNCHRONIZATION    0x00
+#define USB_ENDPOINT_ASYNCHRONOUS          0x04
+#define USB_ENDPOINT_ADAPTIVE              0x08
+#define USB_ENDPOINT_SYNCHRONOUS           0x0C
+#define USB_ENDPOINT_SYNCHRONIZATION_MASK  0x0C
+
+/* Endpoint usage type (bmAttributes) */
+#define USB_ENDPOINT_DATA                  0x00
+#define USB_ENDPOINT_FEEDBACK              0x10
+#define USB_ENDPOINT_IMPLICIT_FEEDBACK     0x20
+#define USB_ENDPOINT_USAGE_MASK            0x30
+
 #define USB_ENDPOINT_HALT                  0x00
 
 // Values in this enum match those used in XHCI and other parts of the USB specification
@@ -167,7 +180,11 @@ typedef struct {
 } __attribute__ ((packed)) usb_endpoint_descriptor_t;
 #define usb_ep_direction(ep)    ((ep)->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
 #define usb_ep_type(ep)         ((ep)->bmAttributes & USB_ENDPOINT_TYPE_MASK)
-#define usb_ep_max_packet(ep)   (le16toh((ep)->wMaxPacketSize))
+// max packet size is in bits 10..0
+#define usb_ep_max_packet(ep)   (le16toh((ep)->wMaxPacketSize) & 0x07FF)
+// for isochronous endpoints, additional transactions per microframe
+// are in bits 12..11
+#define usb_ep_max_burst(ep) (((le16toh((ep)->wMaxPacketSize) >> 11) & 3) + 1)
 
 typedef struct {
     uint8_t bLength;

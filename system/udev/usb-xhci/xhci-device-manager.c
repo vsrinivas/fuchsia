@@ -493,7 +493,14 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 
         // See Table 65 in XHCI spec
         int cerr = (ep_type == USB_ENDPOINT_ISOCHRONOUS ? 0 : 3);
-        int avg_trb_length = (ep_type == USB_ENDPOINT_INTERRUPT ? 1024 : 3 * 1024);
+        int max_packet_size = usb_ep_max_packet(ep);
+        int max_burst = usb_ep_max_burst(ep);
+        int avg_trb_length = max_packet_size * max_burst;
+        int max_esit_payload = 0;
+        if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
+            // FIXME - more work needed for superspeed here
+            max_esit_payload = max_packet_size * max_burst;
+        }
 
         xhci_endpoint_context_t* epc = (xhci_endpoint_context_t*)&xhci->input_context[(index + 2) * xhci->context_size];
         memset((void*)epc, 0, xhci->context_size);
@@ -506,13 +513,16 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         uint64_t tr_dequeue = xhci_virt_to_phys(xhci, (mx_vaddr_t)tr);
 
         XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS, compute_interval(ep, speed));
+        XHCI_SET_BITS32(&epc->epc0, EP_CTX_MAX_ESIT_PAYLOAD_HI_START, EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS,
+                        max_esit_payload >> EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS);
         XHCI_SET_BITS32(&epc->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, cerr);
         XHCI_SET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS, ep_index);
-        XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, ep->wMaxPacketSize);
+        XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, max_packet_size);
 
         XHCI_WRITE32(&epc->epc2, ((uint32_t)tr_dequeue & EP_CTX_TR_DEQUEUE_LO_MASK) | EP_CTX_DCS);
         XHCI_WRITE32(&epc->tr_dequeue_hi, (uint32_t)(tr_dequeue >> 32));
         XHCI_SET_BITS32(&epc->epc4, EP_CTX_AVG_TRB_LENGTH_START, EP_CTX_AVG_TRB_LENGTH_BITS, avg_trb_length);
+        XHCI_SET_BITS32(&epc->epc4, EP_CTX_MAX_ESIT_PAYLOAD_LO_START, EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS, max_esit_payload);
 
         XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG | XHCI_ICC_EP_FLAG(index));
         XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0));

@@ -64,9 +64,12 @@ struct xhci {
     // One event ring for now, but we will have multiple if we use multiple interruptors
     xhci_event_ring_t event_rings[1];
 
+    size_t page_size;
     size_t max_slots;
     size_t max_interruptors;
     size_t context_size;
+    // true if controller supports large ESIT payloads
+    bool large_esit;
 
     // total number of ports for the root hub
     uint32_t rh_num_ports;
