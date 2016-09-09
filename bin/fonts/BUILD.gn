@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("fonts") {
+  sources = [
+    "font_provider_impl.cc",
+    "font_provider_impl.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/c:system",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/utility",
+    "//mojo/services/ui/fonts/interfaces",
+    "//mojo/system",
+  ]
+
+  libs = [ "magenta" ]
+}
