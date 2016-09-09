@@ -1,0 +1,17 @@
+{
+    "labels": [
+        "//apps/fonts"
+    ],
+    "binaries": [
+        {
+            "binary": "fonts",
+            "bootfs_path": "apps/fonts"
+        }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/fonts/Roboto-Regular.ttf",
+            "file": "apps/fonts/third_party/roboto/Roboto-Regular.ttf"
+        }
+    ]
+}

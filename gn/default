@@ -5,6 +5,7 @@
         "cmdutils",
         "dart",
         "flutter",
+        "fonts",
         "fortune",
         "ftl",
         "ledger",
