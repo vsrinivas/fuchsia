@@ -154,8 +154,9 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
     completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {
+        size_t txn_status = txn->status;
         txn->ops->release(txn);
-        return txn->status;
+        return txn_status;
     }
 
     // if read, get the data
