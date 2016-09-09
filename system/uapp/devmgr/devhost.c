@@ -66,17 +66,21 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* parent) {
     msg.device_id = parent->remote_id;
     msg.protocol_id = dev->protocol_id;
     memcpy(msg.namedata, dev->name, sizeof(dev->name));
+
+    // Ensure we don't miss messages that could be sent us before
+    // the rpc completes.
+    // TODO: move this back inside the NO_ERROR case below once ioports
+    // deal with pending messages at bind.
+    mxio_dispatcher_add(devmgr_rio_dispatcher, h[0], devmgr_rio_handler, ios);
+
     r = devhost_rpc(devhost_handle, &msg, h[1]);
     //printf("devhost_add() %d\n", r);
     if (r == NO_ERROR) {
         //printf("devhost: dev=%p remoted\n", dev);
-
         char tmp[MX_DEVICE_NAME_MAX + 9];
         snprintf(tmp, sizeof(tmp), "device:%s", dev->name);
         track_iostate(ios, tmp);
-
         dev->remote_id = msg.device_id;
-        mxio_dispatcher_add(devmgr_rio_dispatcher, h[0], devmgr_rio_handler, ios);
     } else {
         printf("devhost: dev=%p name='%s' failed remoting %d\n", dev, dev->name, r);
         mx_handle_close(h[0]);
