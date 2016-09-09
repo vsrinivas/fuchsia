@@ -2,6 +2,8 @@ name: cloud_indexer_common
 version: 0.0.0
 description: Utility classes used across Cloud Indexer services.
 dependencies:
+  gcloud: any
   googleapis: any
+  googleapis_auth: any
   mockito: any
   test: any

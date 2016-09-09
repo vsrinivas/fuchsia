@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:appengine/appengine.dart';
+import 'package:cloud_indexer_common/config.dart';
 import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:gcloud/service_scope.dart' as ss;
 import 'package:notification_handler/index_updater.dart';
@@ -13,7 +14,7 @@ import 'package:path/path.dart' as path;
 import 'package:shelf/shelf_io.dart' as io;
 
 initPubSubSubscription() async {
-  final String topicName = Platform.environment['CLOUD_INDEXER_TOPIC_NAME'];
+  final String topicName = configService.topicName;
 
   // We construct a subscription name with respect to the topic name because
   // the topic might not necessarily be within the cloud indexer project.
@@ -28,10 +29,10 @@ initPubSubSubscription() async {
       '${rh.messagePushEndpoint}';
 
   final PubSubTopicWrapper pubSubTopicWrapper =
-      new PubSubTopicWrapper(authClientService, topicName);
+      new PubSubTopicWrapper(configService.cloudPlatformClient, topicName);
   try {
-    await pubSubTopicWrapper.createPushSubscription(
-        subscriptionName, pushEndpoint);
+    await pubSubTopicWrapper.createSubscription(
+        subscriptionName, pushEndpoint: pushEndpoint);
   } on DetailedApiRequestError catch (e) {
     // If we receive 409, this means that the subscription already exists. In
     // this case, we can simply continue.
@@ -45,9 +46,10 @@ main(List<String> args) {
   useLoggingPackageAdaptor();
   withAppEngineServices(() {
     return ss.fork(() async {
+      final Config config = await Config.create();
+      registerConfigService(config);
       await initPubSubSubscription();
-      IndexUpdater indexUpdater = new IndexUpdater.fromClient(
-          authClientService, Platform.environment['MODULE_BUCKET_NAME']);
+      final IndexUpdater indexUpdater = new IndexUpdater.fromServiceScope();
       registerIndexUpdaterService(indexUpdater);
       return runAppEngine((HttpRequest request) {
         return io.handleRequest(request, rh.requestHandler);

@@ -4,9 +4,9 @@
 
 import 'dart:async';
 
+import 'package:cloud_indexer_common/config.dart';
 import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:gcloud/service_scope.dart' as ss;
-import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:parser/manifest.dart';
 import 'package:parser/parse_error.dart';
@@ -74,10 +74,12 @@ class ModuleUploader {
   ///
   /// Note that the [ModuleUploader] requires that it is instantiated within a
   /// gcloud service scope with access to the Pub/Sub and Storage services.
-  factory ModuleUploader.fromClient(
-      http.Client client, String topicName, String bucketName) {
-    return new ModuleUploader(new PubSubTopicWrapper(client, topicName),
-        new StorageBucketWrapper(client, bucketName));
+  factory ModuleUploader.fromServiceScope() {
+    return new ModuleUploader(
+        new PubSubTopicWrapper(
+            configService.cloudPlatformClient, configService.topicName),
+        new StorageBucketWrapper(configService.cloudPlatformClient,
+            configService.indexerBucketName));
   }
 
   static String storageDestinationPath(

@@ -24,19 +24,33 @@ class PubSubTopicWrapper {
 
   PubSubTopicWrapper.fromApi(this._api, this.topicName);
 
-  Future<String> createPushSubscription(
-      String subscriptionName, String pushEndpoint) {
-    final pubsub_api.PushConfig pushConfig = new pubsub_api.PushConfig()
-      ..pushEndpoint = pushEndpoint;
+  Future<Null> createSubscription(String subscriptionName,
+      {String pushEndpoint}) {
+    final pubsub_api.PushConfig pushConfig =
+        pushEndpoint != null ? new pubsub_api.PushConfig() : null;
+    pushConfig?.pushEndpoint = pushEndpoint;
     return _api.projects.subscriptions
         .create(
             new pubsub_api.Subscription()
               ..topic = topicName
               ..pushConfig = pushConfig,
             subscriptionName)
-        .then((pubsub_api.Subscription subscription) =>
-            subscription?.pushConfig?.pushEndpoint);
+        .then((_) => null);
   }
+
+  Future<List<pubsub_api.ReceivedMessage>> pull(
+      String subscriptionName, int maxMessages) {
+    final pubsub_api.PullRequest request = new pubsub_api.PullRequest()
+      ..maxMessages = maxMessages;
+    return _api.projects.subscriptions.pull(request, subscriptionName).then(
+        (pubsub_api.PullResponse response) => response.receivedMessages ?? []);
+  }
+
+  Future<Null> acknowledge(List<String> ackIds, String subscriptionName) =>
+      _api.projects.subscriptions
+          .acknowledge(new pubsub_api.AcknowledgeRequest()..ackIds = ackIds,
+              subscriptionName)
+          .then((_) => null);
 
   Future<String> publish(String data) => _api.projects.topics
       .publish(

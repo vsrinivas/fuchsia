@@ -8,6 +8,7 @@ import 'package:appengine/appengine.dart';
 import 'package:cloud_indexer/auth_manager.dart';
 import 'package:cloud_indexer/module_uploader.dart';
 import 'package:cloud_indexer/request_handler.dart';
+import 'package:cloud_indexer_common/config.dart';
 import 'package:gcloud/service_scope.dart' as ss;
 import 'package:shelf/shelf_io.dart' as io;
 
@@ -17,13 +18,12 @@ main(List<String> args) {
   useLoggingPackageAdaptor();
   withAppEngineServices(() {
     return ss.fork(() async {
-      final AuthManager authManager = await AuthManager.fromClient(
-          authClientService, Platform.environment['INDEXER_BUCKET_NAME']);
+      final Config config = await Config.create();
+      registerConfigService(config);
+      final AuthManager authManager = await AuthManager.fromServiceScope();
       registerAuthManagerService(authManager);
-      final ModuleUploader moduleUploader = new ModuleUploader.fromClient(
-          authClientService,
-          Platform.environment['TOPIC_NAME'],
-          Platform.environment['MODULE_BUCKET_NAME']);
+      final ModuleUploader moduleUploader =
+          new ModuleUploader.fromServiceScope();
       registerModuleUploaderService(moduleUploader);
       return runAppEngine((HttpRequest request) {
         return io.handleRequest(request, requestHandler);

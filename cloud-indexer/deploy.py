@@ -10,6 +10,7 @@ import sys
 import abc
 import argparse
 import distutils.spawn
+import json
 import logging
 import os
 import re
@@ -17,11 +18,7 @@ import shutil
 import subprocess
 import tempfile
 
-DEFAULT_INDEXER_BUCKET_NAME = 'modular-cloud-indexer.google.com.a.appspot.com'
 
-# TODO(victorkwan): Switch this out to 'modular' once we're ready to deploy.
-DEFAULT_MODULE_BUCKET_NAME = 'modular-cloud-indexer.google.com.a.appspot.com'
-DEFAULT_TOPIC_NAME = 'projects/google.com:modular-cloud-indexer/topics/indexing'
 TARGET_CHOICES = ('default', 'notification-handler', 'dispatch')
 
 # We assume that the deployment script is in the root of the cloud-indexer dir.
@@ -270,24 +267,6 @@ def main():
             ' Use with --deploy-dir.'),
       action='store_true')
   parser.add_argument(
-      '--topic-name',
-      help=('Uses TOPIC_NAME as the topic used to communicate between services.'
-            ' (default: %(default)s)'),
-      action='store',
-      default=DEFAULT_TOPIC_NAME)
-  parser.add_argument(
-      '--indexer-bucket-name',
-      help=('Uses INDEXER_BUCKET_NAME as bucket to retrieve credentials from. '
-            '(default: %(default)s)'),
-      action='store',
-      default=DEFAULT_INDEXER_BUCKET_NAME)
-  parser.add_argument(
-      '--module-bucket-name',
-      help=('Uses MODULE_BUCKET_NAME as bucket to retrieve modules from. '
-            '(default: %(default)s)'),
-      action='store',
-      default=DEFAULT_MODULE_BUCKET_NAME)
-  parser.add_argument(
       '--deploy-dir',
       help=('Uses DEPLOY_DIR as the deployment directory.'),
       action='store')
@@ -312,11 +291,14 @@ def main():
     deploy_dir = args.deploy_dir
 
   targets = set(args.targets)
-  env_vars = {
-      'INDEXER_BUCKET_NAME': args.indexer_bucket_name,
-      'MODULE_BUCKET_NAME': args.module_bucket_name,
-      'TOPIC_NAME': args.topic_name,
-  }
+  env_vars = {}
+  with open('config.json') as config_file:
+    config = json.loads(config_file.read())
+    env_vars.update({
+        'INDEXER_BUCKET_NAME': config['production']['indexerBucketName'],
+        'MODULE_BUCKET_NAME': config['production']['moduleBucketName'],
+        'TOPIC_NAME': config['production']['topicName']
+    })
   runner = DeployCommandRunner(env_vars, deploy_dir, args.dry_run)
   if 'default' in targets:
     runner.add_command(DartManagedVMModuleCommand('default', 'app.yaml'))

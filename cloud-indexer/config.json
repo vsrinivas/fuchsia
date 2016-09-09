@@ -1,0 +1,12 @@
+{
+  "testing": {
+    "indexerBucketName": "modular-cloud-indexer.google.com.a.appspot.com",
+    "moduleBucketName": "modular-cloud-indexer.google.com.a.appspot.com",
+    "topicName": "projects/google.com:modular-cloud-indexer/topics/indexing"
+  },
+  "production": {
+    "indexerBucketName": "modular-cloud-indexer.google.com.a.appspot.com",
+    "moduleBucketName": "modular-cloud-indexer.google.com.a.appspot.com",
+    "topicName": "projects/google.com:modular-cloud-indexer/topics/indexing"
+  }
+}

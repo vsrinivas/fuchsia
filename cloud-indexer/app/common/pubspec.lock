@@ -67,6 +67,12 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.13.2"
+  gcloud:
+    description:
+      name: gcloud
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.3.0"
   glob:
     description:
       name: glob
@@ -79,6 +85,18 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.31.0"
+  googleapis_auth:
+    description:
+      name: googleapis_auth
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.2.3+5"
+  googleapis_beta:
+    description:
+      name: googleapis_beta
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.30.1"
   html:
     description:
       name: html

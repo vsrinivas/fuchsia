@@ -6,9 +6,9 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 
+import 'package:cloud_indexer_common/config.dart';
 import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:gcloud/service_scope.dart' as ss;
-import 'package:http/http.dart' as http;
 import 'package:indexer_pipeline/index.dart';
 import 'package:indexer_pipeline/render_html.dart';
 import 'package:indexer_pipeline/render_json.dart';
@@ -106,8 +106,9 @@ class IndexUpdater {
 
   IndexUpdater(this._storageBucketWrapper);
 
-  IndexUpdater.fromClient(http.Client client, String bucketName)
-      : _storageBucketWrapper = new StorageBucketWrapper(client, bucketName);
+  IndexUpdater.fromServiceScope()
+      : _storageBucketWrapper = new StorageBucketWrapper(
+            configService.cloudPlatformClient, configService.moduleBucketName);
 
   static String storageDestinationPath(
           String arch, String modularRevision, String file) =>

@@ -6,12 +6,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_indexer_common/config.dart';
 import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:gcloud/service_scope.dart' as ss;
 import 'package:googleapis/admin/directory_v1.dart' as directory_api;
 import 'package:googleapis/oauth2/v2.dart' as oauth2_api;
 import 'package:googleapis_auth/auth_io.dart' as auth_io;
-import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 
 final Logger _logger = new Logger('cloud_indexer.auth_service');
@@ -28,7 +28,6 @@ class AuthManager {
   static const List<String> authorizedDomains = const ['google.com'];
   static const String authorizedGroup = 'mojodeveloppers@mojoapps.io';
 
-  // TODO(victorkwan): Move these out into configuration.
   static const String _keyPath = 'auth/key.json';
   static const String _mojoAdmin = 'admin@mojoapps.io';
 
@@ -45,10 +44,9 @@ class AuthManager {
   /// perform OAuth2 queries, we need to retrieve our service account
   /// credentials to produce impersonated credentials. Hence, we retrieve
   /// these from Cloud Storage.
-  static Future<AuthManager> fromClient(
-      http.Client client, String bucketName) async {
-    final StorageBucketWrapper storageBucketWrapper =
-        new StorageBucketWrapper(client, bucketName);
+  static Future<AuthManager> fromServiceScope() async {
+    final StorageBucketWrapper storageBucketWrapper = new StorageBucketWrapper(
+        configService.cloudPlatformClient, configService.indexerBucketName);
     auth_io.ServiceAccountCredentials mojoCredentials =
         new auth_io.ServiceAccountCredentials.fromJson(
             await storageBucketWrapper
@@ -61,7 +59,8 @@ class AuthManager {
         mojoCredentials,
         [directory_api.AdminApi.AdminDirectoryGroupMemberReadonlyScope]);
 
-    return new AuthManager(new oauth2_api.Oauth2Api(client),
+    return new AuthManager(
+        new oauth2_api.Oauth2Api(configService.cloudPlatformClient),
         new directory_api.AdminApi(mojoClient));
   }
 
