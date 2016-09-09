@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("modular") {
-  deps = [
-    "story-example:all",
-    "story-manager",
-    "story-runner:all",
+import("//mojo/public/tools/bindings/mojom.gni")
+
+mojom("interfaces") {
+  sources = [
+    "story_runner.mojom",
   ]
 }
+

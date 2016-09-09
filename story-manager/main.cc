@@ -4,8 +4,8 @@
 
 #include <mojo/system/main.h>
 
-#include "mojo/public/cpp/application/run_application.h"
 #include "apps/modular/story-manager/story-manager-app.h"
+#include "mojo/public/cpp/application/run_application.h"
 
 MojoResult MojoMain(MojoHandle application_request) {
   story_manager::StoryManagerApp story_manager_app;

@@ -1,0 +1,68 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  deps = [
+    ":example-module1",
+    ":example-module2",
+    ":example-recipe",
+  ]
+}
+
+source_set("module-app") {
+  sources = [
+    "module_app.h",
+  ]
+
+  deps = [
+    "//apps/modular/mojom_hack:interfaces",
+    "//mojo/public/cpp/application:standalone",
+  ]
+}
+
+executable("example-module1") {
+  sources = [
+    "example-module1.cc",
+  ]
+
+  deps = [
+    ":module-app",
+    "//apps/modular/mojom_hack:interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/system",
+    "//mojo/public/cpp/bindings:utility",
+  ]
+}
+
+executable("example-module2") {
+  sources = [
+    "example-module2.cc",
+  ]
+
+  deps = [
+    ":module-app",
+    "//apps/modular/mojom_hack:interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/system",
+    "//mojo/public/cpp/bindings:utility",
+  ]
+}
+
+executable("example-recipe") {
+  sources = [
+    "example-recipe.cc",
+  ]
+
+  deps = [
+    ":module-app",
+    "//apps/modular/mojom_hack:interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/system",
+    "//mojo/public/cpp/bindings:utility",
+  ]
+}
+
