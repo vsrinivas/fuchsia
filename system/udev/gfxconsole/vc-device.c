@@ -338,7 +338,7 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
         goto fail;
 
     uintptr_t ptr;
-    if (mx_process_map_vm(0, device->gfx_vmo, 0, sz, &ptr,
+    if (mx_process_map_vm(mx_process_self(), device->gfx_vmo, 0, sz, &ptr,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE) < 0) {
         mx_handle_close(device->gfx_vmo);
         goto fail;

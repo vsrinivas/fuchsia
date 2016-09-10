@@ -39,14 +39,14 @@ static void load_child_process(mx_handle_t log, mx_handle_t proc_self,
                                size_t* stack_size) {
     // Examine the bootfs image and find the requested file in it.
     struct bootfs bootfs;
-    bootfs_mount(log, bootfs_vmo, &bootfs);
+    bootfs_mount(proc_self, log, bootfs_vmo, &bootfs);
 
     // This will handle a PT_INTERP by doing a second lookup in bootfs.
     *entry = elf_load_bootfs(log, proc_self, &bootfs, proc,
                              o->value[OPTION_FILENAME], to_child, stack_size);
 
     // All done with bootfs!
-    bootfs_unmount(log, &bootfs);
+    bootfs_unmount(proc_self, log, &bootfs);
 
     // Now load the vDSO into the child, so it has access to system calls.
     *vdso_base = elf_load_vmo(log, proc_self, proc, vdso_vmo);

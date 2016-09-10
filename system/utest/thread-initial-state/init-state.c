@@ -24,10 +24,7 @@ mx_handle_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg
     // preallocated stack to satisfy the thread we create
     static uint8_t stack[1024] __ALIGNED(16);
 
-    // TODO: get current process handle
-    mx_handle_t process_self_handle = 0;
-
-    mx_handle_t handle = mx_thread_create(process_self_handle, "", 0, 0);
+    mx_handle_t handle = mx_thread_create(mx_process_self(), "", 0, 0);
     if (handle < 0)
         return handle;
 

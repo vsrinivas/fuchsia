@@ -1456,9 +1456,6 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 }
 
 dl_start_return_t __dls3(void* start_arg) {
-    // TODO(mcgrathr): Probably can drop this, but not clear yet.
-    __mxr_thread_main();
-
     mx_handle_t bootstrap = (uintptr_t)start_arg;
 
     uint32_t nbytes, nhandles;

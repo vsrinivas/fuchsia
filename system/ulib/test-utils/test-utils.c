@@ -58,9 +58,7 @@ mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
     }
 
     uintptr_t stack = 0u;
-    // TODO(kulakowski) Store process self handle.
-    mx_handle_t self_handle = MX_HANDLE_INVALID;
-    mx_status_t status = mx_process_map_vm(self_handle, thread_stack_vmo, 0, stack_size, &stack, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_status_t status = mx_process_map_vm(mx_process_self(), thread_stack_vmo, 0, stack_size, &stack, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     mx_handle_close(thread_stack_vmo);
     if (status < 0) {
         tu_fatal(__func__, status);

@@ -53,11 +53,9 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
     if (vmo < 0)
         return (mx_status_t)vmo;
 
-    // TODO(kulakowski) Track process handle.
-    mx_handle_t self_handle = 0;
     uintptr_t mapping = 0;
     uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-    mx_status_t status = _mx_process_map_vm(self_handle, vmo, 0, len,
+    mx_status_t status = _mx_process_map_vm(mx_process_self(), vmo, 0, len,
                                             &mapping, flags);
     _mx_handle_close(vmo);
     if (status != NO_ERROR)
@@ -72,10 +70,8 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
 
 static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
     CHECK_THREAD(thread);
-    // TODO(kulakowski) Track process handle.
-    mx_handle_t self_handle = 0;
     uintptr_t mapping = (uintptr_t)thread;
-    return _mx_process_unmap_vm(self_handle, mapping, 0u);
+    return _mx_process_unmap_vm(mx_process_self(), mapping, 0u);
 }
 
 static mx_status_t thread_cleanup(mxr_thread_t* thread, intptr_t* return_value_out) {
@@ -138,13 +134,10 @@ mx_status_t mxr_thread_create(const char* name, mxr_thread_t** thread_out) {
     if (status < 0)
         return status;
 
-    // TODO(kulakowski) Track process handle.
-    mx_handle_t self_handle = 0;
-
     if (name == NULL)
         name = "";
     size_t name_length = local_strlen(name) + 1;
-    mx_handle_t handle = _mx_thread_create(self_handle, name, name_length, 0);
+    mx_handle_t handle = _mx_thread_create(mx_process_self(), name, name_length, 0);
     if (handle < 0) {
         deallocate_thread_page(thread);
         return (mx_status_t)handle;

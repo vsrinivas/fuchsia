@@ -54,7 +54,7 @@ bool vmo_read_write_test(void) {
 
     // map it
     uintptr_t ptr;
-    status = mx_process_map_vm(0, vmo, 0, len, &ptr,
+    status = mx_process_map_vm(mx_process_self(), vmo, 0, len, &ptr,
                                      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     EXPECT_EQ(NO_ERROR, status, "vm_map");
     EXPECT_NEQ(0u, ptr, "vm_map");
@@ -62,7 +62,7 @@ bool vmo_read_write_test(void) {
     // check that it matches what we last wrote into it
     EXPECT_BYTES_EQ((void*)buf, (void*)ptr, sizeof(buf), "mapped buffer");
 
-    status = mx_process_unmap_vm(0, ptr, 0);
+    status = mx_process_unmap_vm(mx_process_self(), ptr, 0);
     EXPECT_EQ(NO_ERROR, status, "vm_unmap");
 
     // close the handle
@@ -85,7 +85,7 @@ bool vmo_read_only_map_test(void) {
 
     // map it
     uintptr_t ptr;
-    status = mx_process_map_vm(0, vmo, 0, len, &ptr,
+    status = mx_process_map_vm(mx_process_self(), vmo, 0, len, &ptr,
                                      MX_VM_FLAG_PERM_READ);
     EXPECT_EQ(NO_ERROR, status, "vm_map");
     EXPECT_NEQ(0u, ptr, "vm_map");
@@ -93,7 +93,7 @@ bool vmo_read_only_map_test(void) {
     status = mx_cprng_draw((void*)ptr, 1);
     EXPECT_LT(status, 0, "write");
 
-    status = mx_process_unmap_vm(0, ptr, 0);
+    status = mx_process_unmap_vm(mx_process_self(), ptr, 0);
     EXPECT_EQ(NO_ERROR, status, "vm_unmap");
 
     // close the handle

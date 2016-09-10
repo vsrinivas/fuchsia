@@ -138,7 +138,7 @@ static unsigned int setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     if (size == 0)
         return 0;
     mx_vaddr_t addr;
-    status = mx_process_map_vm(0, vmo, 0, size, &addr, MX_VM_FLAG_PERM_READ);
+    status = mx_process_map_vm(mx_process_self(), vmo, 0, size, &addr, MX_VM_FLAG_PERM_READ);
     if (status != NO_ERROR) {
         printf("devmgr: failed to map bootfs #%u (%d)\n", n, status);
         return 0;

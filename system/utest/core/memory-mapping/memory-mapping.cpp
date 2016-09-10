@@ -44,7 +44,7 @@ bool address_space_limits_test() {
     // Check that we cannot map a page ending at |noncanon_addr|.
     uintptr_t addr = noncanon_addr - page_size;
     mx_status_t status = mx_process_map_vm(
-        0, vmo, 0, page_size, &addr,
+        mx_process_self(), vmo, 0, page_size, &addr,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
     EXPECT_EQ(ERR_NO_MEMORY, status, "vm_map");
 
@@ -53,7 +53,7 @@ bool address_space_limits_test() {
     // reason.
     addr = noncanon_addr - page_size * 2;
     status = mx_process_map_vm(
-        0, vmo, 0, page_size, &addr,
+        mx_process_self(), vmo, 0, page_size, &addr,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
     EXPECT_EQ(NO_ERROR, status, "vm_map");
 
@@ -61,12 +61,12 @@ bool address_space_limits_test() {
     // Otherwise, the previous mapping could have overwritten
     // something that was in use, which could cause problems later.
     status = mx_process_map_vm(
-        0, vmo, 0, page_size, &addr,
+        mx_process_self(), vmo, 0, page_size, &addr,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
     EXPECT_EQ(ERR_NO_MEMORY, status, "vm_map");
 
     // Clean up.
-    status = mx_process_unmap_vm(0, addr, 0);
+    status = mx_process_unmap_vm(mx_process_self(), addr, 0);
     EXPECT_EQ(NO_ERROR, status, "vm_unmap");
     status = mx_handle_close(vmo);
     EXPECT_EQ(NO_ERROR, status, "handle_close");

@@ -37,7 +37,7 @@ static ssize_t my_pread (int fd, void* buf, size_t nbytes, off_t offset) {
 #define MAX_WINDOW ((size_t)64 << 20)
 
 mx_handle_t launchpad_vmo_from_fd(int fd) {
-    mx_handle_t current_proc_handle = 0; // TODO(mcgrathr): get from somewhere
+    mx_handle_t current_proc_handle = mx_process_self();
 
     struct stat st;
     if (fstat(fd, &st) < 0)

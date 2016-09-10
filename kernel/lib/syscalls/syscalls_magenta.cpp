@@ -65,13 +65,6 @@ namespace {
 mx_status_t get_process(ProcessDispatcher* up,
                         mx_handle_t proc_handle,
                         mxtl::RefPtr<ProcessDispatcher>* proc) {
-    if (proc_handle == 0) {
-        // handle 0 is magic for 'current process'
-        // TODO: remove this hack and switch to requiring user to pass the current process handle
-        proc->reset(up);
-        return NO_ERROR;
-    }
-
     return up->GetDispatcher(proc_handle, proc, MX_RIGHT_WRITE);
 }
 
@@ -292,7 +285,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
 }
 
 mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
-    LTRACEF("flags 0x%x\n", flags);
+    LTRACEF("process handle %u, flags %#x\n", process_handle, flags);
 
     // copy the name to a local buffer
     char buf[MX_MAX_NAME_LEN];
@@ -342,7 +335,7 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const c
 
 mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
                              uintptr_t stack, uintptr_t arg1, uintptr_t arg2) {
-    LTRACEF("handle %#x, entry %#" PRIxPTR ", sp %#" PRIxPTR
+    LTRACEF("handle %u, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
             thread_handle, entry, stack, arg1, arg2);
 
@@ -465,7 +458,7 @@ mx_handle_t sys_process_create(mxtl::user_ptr<const char> name, uint32_t name_le
 }
 
 mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t pc, uintptr_t sp, mx_handle_t arg_handle_value, uintptr_t arg2) {
-    LTRACEF("phandle %#x, thandle %#x, pc %#" PRIxPTR ", sp %#" PRIxPTR
+    LTRACEF("phandle %u, thandle %u, pc %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg_handle %#x, arg2 %#" PRIxPTR "\n",
             process_handle, thread_handle, pc, sp, arg_handle_value, arg2);
 
@@ -519,7 +512,7 @@ static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t right
 }
 
 mx_status_t sys_task_kill(mx_handle_t task_handle) {
-    LTRACEF("handle %#x\n", task_handle);
+    LTRACEF("handle %u\n", task_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
