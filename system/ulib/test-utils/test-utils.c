@@ -18,7 +18,7 @@ void* tu_malloc(size_t size)
     void* result = malloc(size);
     if (result == NULL) {
         // TODO(dje): printf may try to malloc too ...
-        unittest_printf("out of memory trying to allocate %zu bytes\n", size);
+        unittest_printf_critical("out of memory trying to allocate %zu bytes\n", size);
         exit(TU_FAIL_ERRCODE);
     }
     return result;
@@ -35,7 +35,7 @@ char* tu_strdup(const char* s)
 void tu_fatal(const char *what, mx_status_t status)
 {
     const char* reason = mx_strstatus(status);
-    unittest_printf("%s failed, rc %d (%s)\n", what, status, reason);
+    unittest_printf_critical("%s failed, rc %d (%s)\n", what, status, reason);
     exit(TU_FAIL_ERRCODE);
 }
 
@@ -171,7 +171,7 @@ void tu_wait_signaled(mx_handle_t handle)
     if (result != NO_ERROR)
         tu_fatal(__func__, result);
     if ((signals_state.satisfied & MX_SIGNAL_SIGNALED) == 0) {
-        unittest_printf("%s: unexpected return from tu_wait\n", __func__);
+        unittest_printf_critical("%s: unexpected return from tu_wait\n", __func__);
         exit(TU_FAIL_ERRCODE);
     }
 }
@@ -210,7 +210,7 @@ int tu_process_get_return_code(mx_handle_t process)
         tu_fatal("get process info", ret);
     if (ret != sizeof(info)) {
         // Bleah. Kernel/App mismatch?
-        unittest_printf("%s: unexpected result from mx_object_get_info\n", __func__);
+        unittest_printf_critical("%s: unexpected result from mx_object_get_info\n", __func__);
         exit(TU_FAIL_ERRCODE);
     }
     return info.rec.return_code;
