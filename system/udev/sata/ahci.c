@@ -488,6 +488,8 @@ static int ahci_irq_thread(void* arg) {
             }
             is >>= 1;
         }
+
+        mx_interrupt_complete(dev->irq_handle);
     }
     return 0;
 }
