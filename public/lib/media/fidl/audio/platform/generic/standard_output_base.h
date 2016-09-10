@@ -59,7 +59,7 @@ class StandardOutputBase : public AudioOutput {
 
   explicit StandardOutputBase(AudioOutputManager* manager);
 
-  void Process() final;
+  void Process() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) final;
   MediaResult InitializeLink(const AudioTrackToOutputLinkPtr& link) final;
 
   void SetNextSchedTime(ftl::TimePoint next_sched_time) {
@@ -88,7 +88,8 @@ class StandardOutputBase : public AudioOutput {
                          const AudioPipe::AudioPacketRefPtr& pkt_ref)>;
 
   void ForeachTrack(const TrackSetupTask& setup,
-                    const TrackProcessTask& process);
+                    const TrackProcessTask& process)
+      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   bool SetupMix(const AudioTrackImplPtr& track, TrackBookkeeping* info);
   bool ProcessMix(const AudioTrackImplPtr& track,

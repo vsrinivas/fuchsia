@@ -15,8 +15,8 @@ namespace mojo {
 namespace media {
 namespace audio {
 
-// Function used in a base::Closure to defer the final part of a shutdown task
-// to the main event loop.
+// Function used to defer the final part of a shutdown task to the main event
+// loop.
 static void FinishShutdownSelf(AudioOutputManager* manager,
                                AudioOutputWeakPtr weak_output) {
   auto output = weak_output.lock();
@@ -37,7 +37,7 @@ MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
   MediaResult res = InitializeLink(link);
 
   if (res == MediaResult::OK) {
-    ftl::MutexLocker locker(&processing_mutex_);
+    ftl::MutexLocker locker(&mutex_);
 
     // Assert that we are the output in this link.
     FTL_DCHECK(this == link->GetOutput().get());
@@ -58,7 +58,7 @@ MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
 
 MediaResult AudioOutput::RemoveTrackLink(
     const AudioTrackToOutputLinkPtr& link) {
-  ftl::MutexLocker locker(&processing_mutex_);
+  ftl::MutexLocker locker(&mutex_);
 
   if (shutting_down_) {
     return MediaResult::SHUTTING_DOWN;
@@ -85,7 +85,7 @@ MediaResult AudioOutput::InitializeLink(const AudioTrackToOutputLinkPtr& link) {
 }
 
 void AudioOutput::ScheduleCallback(ftl::TimePoint when) {
-  ftl::MutexLocker locker(&processing_mutex_);
+  ftl::MutexLocker locker(&mutex_);
 
   // If we are in the process of shutting down, then we are no longer permitted
   // to schedule callbacks.
@@ -162,7 +162,7 @@ bool AudioOutput::BeginShutdown() {
   // be called from either a processing context, or from the audio output
   // manager.  After it finishes, any pending processing callbacks will have
   // been nerfed, although there may still be callbacks in flight.
-  ftl::MutexLocker locker(&processing_mutex_);
+  ftl::MutexLocker locker(&mutex_);
 
   if (shutting_down_) {
     return true;
