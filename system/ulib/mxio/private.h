@@ -107,8 +107,9 @@ mxio_t* mxio_pipe_create(mx_handle_t h);
 // creates a message port and pair of simple io mxio_t's
 int mxio_pipe_pair(mxio_t** a, mxio_t** b);
 
-// create a mxio (if possible) from type and handles
-mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount, mxio_t** out);
+// create a mxio (if possible) from type, handles and extradata
+mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
+                              void* extra, uint32_t esize, mxio_t** out);
 
 void mxio_free(mxio_t* io);
 

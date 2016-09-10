@@ -165,7 +165,10 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
     return sz;
 }
 
-static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir, mx_handle_t* hnds, uint32_t* ids, const char* trackfn) {
+static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir,
+                                   mx_handle_t* hnds, uint32_t* ids,
+                                   void* extra, uint32_t* esize,
+                                   const char* trackfn) {
     mx_status_t r;
     if (vn->flags & V_FLAG_DEVICE && !as_dir) {
         // opening a device, get devmgr handles
@@ -199,7 +202,8 @@ static volatile int vfs_txn_op;
 
 static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
                              vnode_t* vn, const char* path,
-                             uint32_t flags, uint32_t mode) {
+                             uint32_t flags, uint32_t mode,
+                             void* extra, uint32_t* esize) {
     mx_status_t r;
     mtx_lock(&vfs_lock);
     r = vfs_open(vn, &vn, path, &path, flags, mode);
@@ -219,7 +223,8 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
         return ERR_DISPATCHER_INDIRECT;
     }
     uint32_t ids[VFS_MAX_HANDLES];
-    if ((r = vfs_get_handles(vn, flags & O_DIRECTORY, msg->handle, ids, (const char*)msg->data)) < 0) {
+    if ((r = vfs_get_handles(vn, flags & O_DIRECTORY, msg->handle, ids,
+                             extra, esize, (const char*)msg->data)) < 0) {
         vn->ops->close(vn);
         return r;
     }
@@ -298,7 +303,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         path[len] = 0;
         xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-        return _vfs_open(msg, rh, vn, path, arg, msg->arg2.mode);
+        return _vfs_open(msg, rh, vn, path, arg, msg->arg2.mode, msg->data, &msg->datalen);
     }
     case MXRIO_CLOSE:
         // this will drop the ref on the vn

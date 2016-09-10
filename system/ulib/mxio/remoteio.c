@@ -470,7 +470,8 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* 
     return r;
 }
 
-mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount, mxio_t** out) {
+mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
+                              void* extra, uint32_t esize, mxio_t** out) {
     mx_status_t r;
     mxio_t* io;
 
@@ -511,7 +512,8 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount, m
 
 static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
                                    int32_t flags, uint32_t mode,
-                                   mx_handle_t* handles, uint32_t* type) {
+                                   mx_handle_t* handles, uint32_t* type,
+                                   void* extra, size_t* esize) {
     if (name == NULL) {
         return ERR_INVALID_ARGS;
     }
@@ -533,6 +535,13 @@ static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
     if ((r = mxrio_txn(rio, &msg)) < 0) {
         return r;
     }
+    if (msg.datalen) {
+        if ((extra == NULL) || (*esize < msg.datalen)) {
+            discard_handles(msg.handle, msg.hcount);
+            return ERR_IO;
+        }
+    }
+    *esize = msg.datalen;
     memcpy(handles, msg.handle, msg.hcount * sizeof(mx_handle_t));
     *type = msg.arg2.protocol;
     return (mx_status_t)msg.hcount;
@@ -542,16 +551,18 @@ static mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint3
     mxrio_t* rio = (void*)io;
     mx_handle_t handles[MXIO_MAX_HANDLES];
     uint32_t type;
-    mx_status_t r = mxrio_getobject(rio, MXRIO_OPEN, path, flags, mode, handles, &type);
+    uint8_t extra[16];
+    size_t esize = sizeof(extra);
+    mx_status_t r = mxrio_getobject(rio, MXRIO_OPEN, path, flags, mode, handles, &type, extra, &esize);
     if (r > 0) {
-        r = mxio_from_handles(type, handles, r, out);
+        r = mxio_from_handles(type, handles, r, extra, esize, out);
     }
     return r;
 }
 
 static mx_status_t mxrio_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     mxrio_t* rio = (void*)io;
-    mx_status_t r = mxrio_getobject(rio, MXRIO_CLONE, "", 0, 0, handles, types);
+    mx_status_t r = mxrio_getobject(rio, MXRIO_CLONE, "", 0, 0, handles, types, NULL, NULL);
     for (int i = 0; i < r; i++) {
         types[i] = MX_HND_TYPE_MXIO_REMOTE;
     }
