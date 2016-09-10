@@ -74,3 +74,11 @@ void operator delete[](void *p) {
     return ::free(p);
 }
 
+void operator delete(void *p, size_t s) {
+    return ::free(p);
+}
+
+void operator delete[](void *p, size_t s) {
+    return ::free(p);
+}
+

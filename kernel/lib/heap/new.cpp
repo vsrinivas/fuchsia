@@ -73,3 +73,10 @@ void operator delete[](void *p) {
     return free(p);
 }
 
+void operator delete(void *p, size_t) {
+    return free(p);
+}
+
+void operator delete[](void *p, size_t) {
+    return free(p);
+}

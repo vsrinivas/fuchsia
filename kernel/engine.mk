@@ -84,7 +84,7 @@ GLOBAL_CFLAGS := --std=c11 -Werror-implicit-function-declaration -Wstrict-protot
 # Note: Both -fno-exceptions and -fno-asynchronous-unwind-tables is needed
 # in order to stop gcc from emitting .eh_frame (which is part of the loaded
 # image by default).
-GLOBAL_CPPFLAGS := --std=c++11 -fno-exceptions -fno-asynchronous-unwind-tables -fno-rtti -fno-threadsafe-statics -Wconversion
+GLOBAL_CPPFLAGS := --std=c++14 -fno-exceptions -fno-asynchronous-unwind-tables -fno-rtti -fno-threadsafe-statics -Wconversion
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS := -DASSEMBLY
 GLOBAL_LDFLAGS := -nostdlib $(addprefix -L,$(LKINC))
