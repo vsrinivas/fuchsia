@@ -59,7 +59,7 @@ static void pendsv(struct arm_cm_exception_frame_long *frame)
 
     /* save the iframe the pendsv fired on and hit the preemption code */
     preempt_frame = frame;
-    thread_preempt();
+    thread_preempt(true);
 
     LTRACEF("fell through\n");
 

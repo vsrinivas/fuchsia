@@ -219,6 +219,7 @@ FUNCTION(arm_irq)
 
     /* reschedule if the handler returns nonzero */
     cmp     r0, #0
+    movne   r0, #1
     blne    thread_preempt
 
     restore

@@ -98,7 +98,7 @@ size_t cbuf_write_etc(cbuf_t *cbuf, const void *_buf, size_t len, uint32_t flags
     spin_unlock_irqrestore(&cbuf->lock, state);
 
     if ((flags & CBUF_WRITE_FLAG_CANRESCHEDULE) && (signaled > 0))
-        thread_preempt();
+        thread_preempt(false);
 
     return pos;
 }
@@ -220,7 +220,7 @@ size_t cbuf_write_char(cbuf_t *cbuf, char c, bool canreschedule)
     spin_unlock_irqrestore(&cbuf->lock, state);
 
     if (canreschedule && (signaled > 0))
-        thread_preempt();
+        thread_preempt(false);
 
     return ret;
 }

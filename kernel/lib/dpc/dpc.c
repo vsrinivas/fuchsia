@@ -34,7 +34,7 @@ status_t dpc_queue(dpc_t *dpc, bool reschedule)
 
     // reschedule here if asked to
     if (reschedule)
-        thread_yield();
+        thread_preempt(false);
 
     return NO_ERROR;
 }

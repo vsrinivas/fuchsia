@@ -69,6 +69,8 @@ static thread_t _idle_thread;
 static void thread_resched(void);
 static int idle_thread_routine(void *) __NO_RETURN;
 static void thread_exit_locked(thread_t *current_thread, int retcode) __NO_RETURN;
+static void thread_block(void);
+static void thread_unblock(thread_t *t, bool resched);
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
 /* preemption timer */
@@ -608,7 +610,7 @@ static thread_t *get_top_thread(int cpu)
  * This is probably not the function you're looking for. See
  * thread_yield() instead.
  */
-void thread_resched(void)
+static void thread_resched(void)
 {
     thread_t *oldthread;
     thread_t *newthread;
@@ -777,10 +779,7 @@ void thread_yield(void)
 }
 
 /**
- * @brief  Briefly yield cpu to another thread
- *
- * This function is similar to thread_yield(), except that it will
- * restart more quickly.
+ * @brief Preempt the current thread, usually from an interrupt
  *
  * This function places the current thread at the head of the run
  * queue and then yields the cpu to another thread.
@@ -790,8 +789,12 @@ void thread_yield(void)
  *
  * This function will return at some later time. Possibly immediately if
  * no other threads are waiting to execute.
+ *
+ * @param interrupt for tracing purposes set if the preemption is happening
+ * at interrupt context.
+ *
  */
-void thread_preempt(void)
+void thread_preempt(bool interrupt)
 {
     thread_t *current_thread = get_current_thread();
 
@@ -799,8 +802,14 @@ void thread_preempt(void)
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
 
 #if THREAD_STATS
-    if (!thread_is_idle(current_thread))
-        THREAD_STATS_INC(preempts); /* only track when a meaningful preempt happens */
+    if (!thread_is_idle(current_thread)) {
+        /* only track when a meaningful preempt happens */
+        if (interrupt) {
+            THREAD_STATS_INC(irq_preempts);
+        } else {
+            THREAD_STATS_INC(preempts);
+        }
+    }
 #endif
 
     KEVLOG_THREAD_PREEMPT(current_thread);
@@ -830,7 +839,7 @@ void thread_preempt(void)
  * from other modules, such as mutex, which will presumably set the thread's
  * state to blocked and add it to some queue or another.
  */
-void thread_block(void)
+static void thread_block(void)
 {
     __UNUSED thread_t *current_thread = get_current_thread();
 
@@ -843,7 +852,7 @@ void thread_block(void)
     thread_resched();
 }
 
-void thread_unblock(thread_t *t, bool resched)
+static void thread_unblock(thread_t *t, bool resched)
 {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(t->state == THREAD_BLOCKED);

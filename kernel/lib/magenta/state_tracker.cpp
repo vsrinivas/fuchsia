@@ -50,7 +50,7 @@ mx_status_t StateTrackerImpl<Traits>::AddObserver(StateObserver* observer) {
         awoke_threads = observer->OnInitialize(signals_state_);
     }
     if (awoke_threads)
-        thread_yield();
+        thread_preempt(false);
     return NO_ERROR;
 }
 
@@ -93,7 +93,7 @@ void StateTrackerImpl<Traits>::Cancel(Handle* handle) {
     }
 
     if (awoke_threads)
-        thread_yield();
+        thread_preempt(false);
 }
 
 template <typename Traits>
@@ -105,7 +105,7 @@ void StateTrackerImpl<Traits>::UpdateState(mx_signals_t satisfied_clear_mask,
                             satisfied_set_mask,
                             satisfiable_clear_mask,
                             satisfiable_set_mask)) {
-        thread_yield();
+        thread_preempt(false);
     }
 }
 

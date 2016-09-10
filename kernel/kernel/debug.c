@@ -109,7 +109,9 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         printf("cpu %u LOAD: "
                "%u.%02u%%, "
                "cs %lu, "
+               "ylds %lu, "
                "pmpts %lu, "
+               "irq_pmpts %lu, "
 #if WITH_SMP
                "rs_ipis %lu, "
 #endif
@@ -119,7 +121,9 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
                i,
                busypercent / 100, busypercent % 100,
                thread_stats[i].context_switches - old_stats[i].context_switches,
+               thread_stats[i].yields - old_stats[i].yields,
                thread_stats[i].preempts - old_stats[i].preempts,
+               thread_stats[i].irq_preempts - old_stats[i].irq_preempts,
 #if WITH_SMP
                thread_stats[i].reschedule_ipis - old_stats[i].reschedule_ipis,
 #endif

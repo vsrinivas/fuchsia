@@ -119,7 +119,7 @@ mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
     }
 
     if (wake_count)
-        thread_yield();
+        thread_preempt(false);
 
     return NO_ERROR;
 }
