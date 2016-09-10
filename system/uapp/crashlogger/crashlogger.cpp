@@ -105,6 +105,11 @@ void process_report(const mx_exception_report_t* report) {
     } else if (context.arch_id == ARCH_ID_ARM_64) {
 #if defined(__aarch64__)
         output_frame_arm64(context.arch.u.arm_64);
+
+        // Only output the Fault address register if there's a data fault.
+        if (EXC_FATAL_PAGE_FAULT == context.arch.subtype)
+            printf(" far %#18llx\n", context.arch.u.arm_64.far);
+
         printf("bottom of user stack:\n");
         dump_memory(process, context.arch.u.arm_64.usp, 256u);
         printf("arch: aarch64\n");

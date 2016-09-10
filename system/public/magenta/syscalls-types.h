@@ -51,6 +51,7 @@ typedef struct arm64_exc_frame {
     uint64_t usp;
     uint64_t elr;
     uint64_t spsr;
+    uint64_t far;
 } arm64_exc_frame_t;
 
 #define ARCH_ID_UNKNOWN        0u
