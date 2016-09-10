@@ -12,7 +12,6 @@
 
 #include "apps/media/cpp/mapped_shared_buffer.h"
 #include "mojo/public/cpp/system/buffer.h"
-#include "mojo/services/media/common/cpp/mapped_shared_buffer.h"
 
 namespace mojo {
 namespace media {

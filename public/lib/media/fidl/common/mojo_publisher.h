@@ -8,6 +8,8 @@
 #include <functional>
 #include <vector>
 
+#include "lib/ftl/logging.h"
+
 namespace mojo {
 namespace media {
 

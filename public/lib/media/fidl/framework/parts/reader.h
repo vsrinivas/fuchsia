@@ -6,6 +6,7 @@
 #define APPS_MEDIA_SERVICES_FRAMEWORK_PARTS_READER_H_
 
 #include <limits>
+#include <functional>
 #include <memory>
 
 #include "apps/media/services/framework/result.h"

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 

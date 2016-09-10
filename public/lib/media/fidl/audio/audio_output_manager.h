@@ -11,7 +11,6 @@
 #include "apps/media/interfaces/media_transport.mojom.h"
 #include "apps/media/services/audio/audio_output.h"
 #include "apps/media/services/audio/fwd_decls.h"
-#include "lib/ftl/synchronization/mutex.h"
 
 namespace mojo {
 namespace media {

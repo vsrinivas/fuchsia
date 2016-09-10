@@ -8,7 +8,6 @@
 #include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/interfaces/timelines.mojom.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/bindings/type_converter.h"
 
 namespace mojo {
 namespace media {
