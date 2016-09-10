@@ -32,13 +32,14 @@ struct bootfile {
 
 struct callback_data {
     uint8_t* bootfs;
+    mx_handle_t vmo;
     unsigned int file_count;
 };
 
 static void callback(void* arg, const char* path, size_t off, size_t len) {
     struct callback_data* cd = arg;
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-    bootfs_add_file(path, cd->bootfs + off, len);
+    bootfs_add_file(path, cd->vmo, off, cd->bootfs + off, len);
     ++cd->file_count;
 }
 
@@ -144,6 +145,7 @@ static unsigned int setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     }
     struct callback_data cd = {
         .bootfs = (void*)addr,
+        .vmo = vmo,
     };
     bootfs_parse(cd.bootfs, size, &callback, &cd);
     return cd.file_count;
@@ -156,7 +158,6 @@ static void setup_bootfs(void) {
              MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, n))) != MX_HANDLE_INVALID;
         ++n) {
         unsigned int count = setup_bootfs_vmo(n, vmo);
-        mx_handle_close(vmo);
         if (count > 0)
             printf("devmgr: bootfs #%u contains %u file%s\n",
                    n, count, (count == 1) ? "" : "s");

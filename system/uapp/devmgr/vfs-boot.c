@@ -20,6 +20,8 @@
 typedef struct vnboot vnboot_t;
 struct vnboot {
     vnode_t vn;
+    mx_handle_t vmo;
+    mx_off_t off;
     void* data;
     size_t datalen;
 };
@@ -63,6 +65,17 @@ static mx_status_t vnb_create(vnode_t* vn, vnode_t** out, const char* name, size
     return ERR_NOT_SUPPORTED;
 }
 
+mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len) {
+    vnboot_t* vnb = vn->pdata;
+    mx_handle_t vmo = mx_handle_duplicate(vnb->vmo, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER);
+    xprintf("vmofile: %x (%x) off=%llu len=%zd\n", vmo, vnb->vmo, vnb->off, vnb->datalen);
+    if (vmo > 0) {
+        *off = vnb->off;
+        *len = vnb->datalen;
+    }
+    return vmo;
+}
+
 static vnode_ops_t vn_boot_ops = {
     .release = vnb_release,
     .open = memfs_open,
@@ -96,6 +109,7 @@ static vnboot_t vnb_root = {
 
 static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
                                const char* name, size_t namelen,
+                               mx_handle_t vmo, mx_off_t off,
                                void* data, size_t datalen) {
     if (parent->vn.dnode == NULL) {
         return ERR_NOT_DIR;
@@ -115,6 +129,8 @@ static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
 
     vnb->data = data;
     vnb->datalen = datalen;
+    vnb->vmo = vmo;
+    vnb->off = off;
 
     dnode_t* dn;
     mx_status_t r;
@@ -128,6 +144,10 @@ static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
         // no data means this is a directory,
         // so take ownership of the dnode
         vnb->vn.dnode = dn;
+    }
+
+    if (vmo) {
+        vnb->vn.flags |= V_FLAG_VMOFILE;
     }
 
     // TODO: dups?
@@ -158,10 +178,10 @@ static mx_status_t _vnb_mkdir(vnboot_t* parent, vnboot_t** out, const char* name
     }
 
     // create a new directory
-    return _vnb_create(parent, out, name, namelen, NULL, 0);
+    return _vnb_create(parent, out, name, namelen, 0, 0, NULL, 0);
 }
 
-mx_status_t bootfs_add_file(const char* path, void* data, size_t len) {
+mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len) {
     vnboot_t* vnb = &vnb_root;
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
@@ -171,7 +191,7 @@ mx_status_t bootfs_add_file(const char* path, void* data, size_t len) {
         if (nextpath == NULL) {
             if (path[0] == 0)
                 return ERR_INVALID_ARGS;
-            return _vnb_create(vnb, &vnb, path, strlen(path), data, len);
+            return _vnb_create(vnb, &vnb, path, strlen(path), vmo, off, data, len);
         } else {
             if (nextpath == path)
                 return ERR_INVALID_ARGS;

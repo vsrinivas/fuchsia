@@ -38,7 +38,9 @@ typedef struct vnode_watcher {
 
 #define V_FLAG_DEVICE 1
 #define V_FLAG_REMOTE 2
+#define V_FLAG_VMOFILE 4
 
+mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len);
 
 // helper for filling out dents
 // returns offset to next vdirent_t on success
@@ -61,7 +63,7 @@ mx_status_t devfs_remove(vnode_t* vn);
 
 // boot fs
 vnode_t* bootfs_get_root(void);
-mx_status_t bootfs_add_file(const char* path, void* data, size_t len);
+mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len);
 
 // memory fs
 vnode_t* memfs_get_root(void);

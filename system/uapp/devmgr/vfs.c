@@ -166,17 +166,27 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
 }
 
 static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir,
-                                   mx_handle_t* hnds, uint32_t* ids,
+                                   mx_handle_t* hnds, uint32_t* type,
                                    void* extra, uint32_t* esize,
                                    const char* trackfn) {
     mx_status_t r;
-    if (vn->flags & V_FLAG_DEVICE && !as_dir) {
+    if ((vn->flags & V_FLAG_DEVICE) && !as_dir) {
         // opening a device, get devmgr handles
+        uint32_t ids[VFS_MAX_HANDLES];
         r = devmgr_get_handles((mx_device_t*)vn->pdata, NULL, hnds, ids);
+        // id 0 == hnds[0] is the real server for cloning this
+        // otherwise the type is always rio
+        *type = (ids[0] == 0) ? 0 : MXIO_PROTOCOL_REMOTE;
+    } else if (vn->flags & V_FLAG_VMOFILE) {
+        mx_off_t* args = extra;
+        hnds[0] = vfs_get_vmofile(vn, args + 0, args + 1);
+        *type = MXIO_PROTOCOL_VMOFILE;
+        *esize = sizeof(mx_off_t) * 2;
+        r = 1;
     } else {
         // local vnode or device as a directory, we will create the handles
         hnds[0] = vfs_create_handle(vn, trackfn);
-        ids[0] = MX_HND_TYPE_MXIO_REMOTE;
+        *type = MXIO_PROTOCOL_REMOTE;
         r = 1;
     }
     return r;
@@ -222,13 +232,13 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
         }
         return ERR_DISPATCHER_INDIRECT;
     }
-    uint32_t ids[VFS_MAX_HANDLES];
-    if ((r = vfs_get_handles(vn, flags & O_DIRECTORY, msg->handle, ids,
+    uint32_t type;
+    if ((r = vfs_get_handles(vn, flags & O_DIRECTORY, msg->handle, &type,
                              extra, esize, (const char*)msg->data)) < 0) {
         vn->ops->close(vn);
         return r;
     }
-    if (ids[0] == 0) {
+    if (type == 0) {
         // device is non-local, handle is the server that
         // can clone it for us, redirect the rpc to there
         if ((r = txn_handoff_clone(msg->handle[0], rh)) < 0) {
@@ -243,8 +253,7 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
     // the backend behind get_handles holds the on-going ref
     vn_release(vn);
 
-    // TODO: ensure this is always true:
-    msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
+    msg->arg2.protocol = type;
     msg->hcount = r;
     xprintf("vfs: open: h=%x\n", msg->handle[0]);
     return NO_ERROR;
@@ -303,7 +312,9 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         path[len] = 0;
         xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-        return _vfs_open(msg, rh, vn, path, arg, msg->arg2.mode, msg->data, &msg->datalen);
+        mx_status_t r = _vfs_open(msg, rh, vn, path, arg, msg->arg2.mode, msg->data, &msg->datalen);
+        xprintf("vfs open r=%d dl=%u\n", r, msg->datalen);
+        return r;
     }
     case MXRIO_CLOSE:
         // this will drop the ref on the vn
