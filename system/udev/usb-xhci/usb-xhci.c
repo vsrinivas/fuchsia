@@ -122,11 +122,14 @@ static int xhci_irq_thread(void* arg) {
         wait_res = mx_handle_wait_one(uxhci->irq_handle,
                                       MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
         if (wait_res != NO_ERROR) {
-            if (wait_res != ERR_HANDLE_CLOSED)
+            if (wait_res != ERR_HANDLE_CLOSED) {
                 printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            }
+            mx_interrupt_complete(uxhci->irq_handle);
             break;
         }
         xhci_handle_interrupt(&uxhci->xhci, uxhci->legacy_irq_mode);
+        mx_interrupt_complete(uxhci->irq_handle);
     }
     xprintf("xhci_irq_thread done\n");
     return 0;

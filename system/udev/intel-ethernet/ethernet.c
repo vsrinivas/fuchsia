@@ -44,6 +44,7 @@ static int irq_thread(void* arg) {
         mx_status_t r;
         if ((r = mx_handle_wait_one(edev->irqh, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL)) < 0) {
             printf("eth: irq wait failed? %d\n", r);
+            mx_interrupt_complete(edev->irqh);
             break;
         }
         mtx_lock(&edev->lock);
@@ -51,6 +52,7 @@ static int irq_thread(void* arg) {
             device_state_set(&edev->dev, DEV_STATE_READABLE);
         }
         mtx_unlock(&edev->lock);
+        mx_interrupt_complete(edev->irqh);
     }
     return 0;
 }
