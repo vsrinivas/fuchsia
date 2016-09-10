@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/pipe.c \
+    $(LOCAL_DIR)/vmofile.c \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/socket.c \
     $(LOCAL_DIR)/unistd.c \

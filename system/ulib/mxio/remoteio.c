@@ -474,7 +474,6 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
                               void* extra, uint32_t esize, mxio_t** out) {
     mx_status_t r;
     mxio_t* io;
-
     switch (type) {
     case MXIO_PROTOCOL_REMOTE:
         if (hcount == 1) {
@@ -503,6 +502,17 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
             return NO_ERROR;
         }
         break;
+    case MXIO_PROTOCOL_VMOFILE: {
+        mx_off_t* args = extra;
+        if ((hcount != 1) || (esize != (sizeof(mx_off_t) * 2))) {
+            r = ERR_INVALID_ARGS;
+        } else if ((*out = mxio_vmofile_create(handles[0], args[0], args[1])) == NULL) {
+            r = ERR_NO_RESOURCES;
+        } else {
+            return NO_ERROR;
+        }
+        break;
+    }
     default:
         r = ERR_NOT_SUPPORTED;
     }
@@ -540,8 +550,11 @@ static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
             discard_handles(msg.handle, msg.hcount);
             return ERR_IO;
         }
+        memcpy(extra, msg.data, msg.datalen);
     }
-    *esize = msg.datalen;
+    if (esize) {
+        *esize = msg.datalen;
+    }
     memcpy(handles, msg.handle, msg.hcount * sizeof(mx_handle_t));
     *type = msg.arg2.protocol;
     return (mx_status_t)msg.hcount;

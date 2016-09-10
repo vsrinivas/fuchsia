@@ -22,6 +22,7 @@
 #define MXIO_PROTOCOL_UNDEFINED 0
 #define MXIO_PROTOCOL_PIPE 1
 #define MXIO_PROTOCOL_REMOTE 2
+#define MXIO_PROTOCOL_VMOFILE 3
 
 // maximum handles used in open/clone/create
 #define MXIO_MAX_HANDLES 3
