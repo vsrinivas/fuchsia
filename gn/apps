@@ -11,6 +11,10 @@
             "binary": "dart_content_handler",
             "bootfs_path": "apps/dart_content_handler"
         },
+	{
+            "binary": "device-runner-boot",
+            "bootfs_path": "apps/device-runner-boot"
+        },
         {
             "binary": "hello_dart.dartx",
             "bootfs_path": "apps/hello_dart.dartx"
@@ -30,10 +34,6 @@
         {
             "binary": "story-runner",
             "bootfs_path": "apps/story-runner"
-        },
-        {
-            "binary": "story-runner-boot",
-            "bootfs_path": "apps/story-runner-boot"
         },
         {
             "binary": "example-module1",
