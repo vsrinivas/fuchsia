@@ -4,6 +4,7 @@
 
 group("modular") {
   deps = [
+    "device-runner:device-runner-boot",
     "story-example:all",
     "story-manager",
     "story-runner:all",

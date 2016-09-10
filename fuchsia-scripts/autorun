@@ -1,1 +1,1 @@
-application_manager mojo:story-manager user1 mojo:example_recipe
+application_manager mojo:device-runner-boot user1 mojo:example-recipe

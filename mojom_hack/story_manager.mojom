@@ -1,0 +1,46 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module story_manager;
+
+import "apps/ledger/api/ledger.mojom";
+
+/*
+ * This file contains definitions of interfaces and data structures to access
+ * the Story Manager.
+ */
+
+// Intended for use by Device Shell to launch a new Story Manager per user.
+[ServiceName="story_manager::Launcher"]
+interface Launcher {
+  // Used to launch story-manager for a particular user, identified by
+  // |user_id|. This can only be called once for every instance of
+  // story-manager. Returns false if there is a problem with |user_id| or
+  // |Launch| has already been called.
+  Launch(ledger.Identity user_id) => (bool success);
+};
+
+// Intended for use by SysUi to start a new story by URL or to get a list of
+// previously run stories which can be resumed.
+[ServiceName="story_manager::StoryService"]
+interface StoryProvider {
+  // Starts a new story by running the module at |url|. Returns an interface to
+  // |Story| if the story could be successfully started else return NULL.
+  StartNewStory(string url) => (Story? story);
+  // TODO(alhaad): Add more actions like CurrentStories(), PreviousStories().
+};
+
+struct StoryMetadata {
+  string url;
+  bool is_running;
+  // TODO(alhaad): Add more things like statistics and snapshots.
+};
+
+// Intended for use by SysUi to interact with a single story.
+[ServiceName="story_manager::Story"]
+interface Story {
+  GetMetadata() => (StoryMetadata metadata);
+  // TODO(alhaad): Add more actions like Background(), Foreground(), Stop(),
+  // Resume(), etc.
+};
