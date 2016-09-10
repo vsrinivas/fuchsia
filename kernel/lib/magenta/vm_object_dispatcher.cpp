@@ -14,8 +14,10 @@
 #include <err.h>
 #include <trace.h>
 
+#define LOCAL_TRACE 0
+
 constexpr mx_rights_t kDefaultVmoRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
+    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_MAP;
 
 status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
@@ -67,7 +69,12 @@ mx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
 
 mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
                                     uintptr_t* _ptr, uint32_t flags) {
-    DEBUG_ASSERT(aspace);
+    LTRACEF("vmo_rights 0x%x flags 0x%x\n", vmo_rights, flags);
+
+    // test to see if we should even be able to map this
+    if (!(vmo_rights & MX_RIGHT_MAP)) {
+        return ERR_ACCESS_DENIED;
+    }
 
     // add magenta vm flags, test against rights, and convert to vmm flags
     uint vmm_flags = 0;
@@ -76,7 +83,7 @@ mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_
         vmm_flags |= VMM_FLAG_VALLOC_SPECIFIC;
     }
 
-    // TODO: test the following against rights on the process and vmo handle
+    // convert MX level mapping flags to internal VM flags
     uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER;
     switch (flags & (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE)) {
     case MX_VM_FLAG_PERM_READ:
@@ -91,8 +98,20 @@ mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_
         return ERR_INVALID_ARGS;
     }
 
+    // add the execute bit
     if (flags & MX_VM_FLAG_PERM_EXECUTE) {
         arch_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
+
+    // test against READ/WRITE/EXECUTE rights
+    if ((flags & MX_VM_FLAG_PERM_READ) && !(vmo_rights & MX_RIGHT_READ)) {
+        return ERR_ACCESS_DENIED;
+    }
+    if ((flags & MX_VM_FLAG_PERM_WRITE) && !(vmo_rights & MX_RIGHT_WRITE)) {
+        return ERR_ACCESS_DENIED;
+    }
+    if ((flags & MX_VM_FLAG_PERM_EXECUTE) && !(vmo_rights & MX_RIGHT_EXECUTE)) {
+        return ERR_ACCESS_DENIED;
     }
 
     auto status = aspace->MapObject(vmo_, "unnamed", offset, len, reinterpret_cast<void**>(_ptr), 0,

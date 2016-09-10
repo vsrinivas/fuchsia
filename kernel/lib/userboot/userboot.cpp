@@ -128,7 +128,7 @@ static mx_status_t map_dso_segment(ProcessDispatcher* process,
 
     size_t len = end_offset - start_offset;
 
-    mx_status_t status = process->Map(vmo, MX_RIGHT_READ, start_offset, len,
+    mx_status_t status = process->Map(vmo, MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, start_offset, len,
                                       mapped_address, flags);
 
     if (status != NO_ERROR) {
@@ -353,7 +353,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     // Map the stack anywhere.
     uintptr_t stack_base;
     status = proc->Map(mxtl::move(stack_vmo_dispatcher),
-                       MX_RIGHT_READ | MX_RIGHT_WRITE,
+                       MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP,
                        0, stack_size, &stack_base,
                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     if (status != NO_ERROR)
