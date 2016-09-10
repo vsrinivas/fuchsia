@@ -120,6 +120,59 @@ void process_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels
     }
 }
 
+void process_stylus_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+        ioctl_display_get_fb_t* fb) {
+    acer12_stylus_t* rpt = buf;
+    if (len < sizeof(*rpt)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
+        return;
+    }
+    // Don't draw for out of range or hover with no switches.
+    if (!rpt->status || rpt->status == ACER12_STYLUS_STATUS_INRANGE) return;
+
+    uint32_t x = scale32(rpt->x, fb->info.width, ACER12_STYLUS_X_MAX);
+    uint32_t y = scale32(rpt->y, fb->info.height, ACER12_STYLUS_Y_MAX);
+    // Pressing the clear button requires contact (not just hover).
+    if (acer12_stylus_status_tswitch(rpt->status)) {
+        if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
+            clear_screen(pixels, fb);
+            goto flush;
+        }
+    }
+    uint32_t size, color;
+    size = acer12_stylus_status_tswitch(rpt->status) ? rpt->pressure >> 4 : 4;
+    switch (rpt->status) {
+    case 3: // in_range | tip_switch
+        color = get_color(0);
+        break;
+    case 5: // in_range | barrel_switch
+        color = get_color(1);
+        break;
+    case 7: // in_range | tip_switch | barrel_switch
+        color = get_color(4);
+        break;
+    case 9: // in_range | invert
+        color = get_color(5);
+        break;
+    case 17: // in_range | erase (== tip_switch | invert)
+        color = 0x00ffffff;
+        size = 32;  // fixed size eraser
+        break;
+    default:
+        printf("unknown rpt->status=%u\n", rpt->status);
+        color = get_color(6);
+        break;
+    }
+
+    draw_points(pixels, color, x, y, size, size, fb->info.stride, fb->info.height);
+
+flush: ;
+    ssize_t ret = mxio_ioctl(vcfd, IOCTL_DISPLAY_FLUSH_FB, 0, 0, 0, 0);
+    if (ret < 0) {
+        printf("failed to flush: %zd\n", ret);
+    }
+}
+
 int main(int argc, char* argv[]) {
     int vcfd = open(VIRTUAL_CONSOLE, O_RDWR);
     if (vcfd < 0) {
@@ -237,7 +290,11 @@ int main(int argc, char* argv[]) {
             printf("touchscreen read error: %zd\n", r);
             break;
         }
-        process_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+        if (*(uint8_t*)buf == ACER12_RPT_ID_TOUCH) {
+            process_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+        } else if (*(uint8_t*)buf == ACER12_RPT_ID_STYLUS) {
+            process_stylus_input(buf, r, vcfd, pixels32, &fb);
+        }
     }
 
     free(rpt_desc);
