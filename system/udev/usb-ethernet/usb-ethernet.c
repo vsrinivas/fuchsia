@@ -34,6 +34,7 @@ typedef struct {
     uint8_t mac_addr[6];
     uint8_t status[INTR_REQ_SIZE];
     bool online;
+    bool dead;
 
     // pool of free USB requests
     list_node_t free_read_reqs;
@@ -53,8 +54,10 @@ typedef struct {
 #define get_usb_ethernet(dev) containerof(dev, usb_ethernet_t, device)
 
 static void update_signals_locked(usb_ethernet_t* eth) {
-    // TODO (voydanoff) signal error state here
     mx_signals_t new_signals = 0;
+
+    if (eth->dead)
+        new_signals |= (DEV_STATE_READABLE | DEV_STATE_ERROR);
     if (!list_is_empty(&eth->completed_reads))
         new_signals |= DEV_STATE_READABLE;
     if (!list_is_empty(&eth->free_write_reqs) && eth->online)
@@ -151,6 +154,11 @@ static void queue_interrupt_requests_locked(usb_ethernet_t* eth) {
 static void usb_ethernet_read_complete(iotxn_t* request, void* cookie) {
     usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
 
+    if (request->status == ERR_REMOTE_CLOSED) {
+        request->ops->release(request);
+        return;
+    }
+
     mtx_lock(&eth->mutex);
     if (request->status == NO_ERROR) {
         list_add_tail(&eth->completed_reads, &request->node);
@@ -163,7 +171,12 @@ static void usb_ethernet_read_complete(iotxn_t* request, void* cookie) {
 
 static void usb_ethernet_write_complete(iotxn_t* request, void* cookie) {
     usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
-    // FIXME what to do with error here?
+
+    if (request->status == ERR_REMOTE_CLOSED) {
+        request->ops->release(request);
+        return;
+    }
+
     mtx_lock(&eth->mutex);
     list_add_tail(&eth->free_write_reqs, &request->node);
     update_signals_locked(eth);
@@ -172,6 +185,12 @@ static void usb_ethernet_write_complete(iotxn_t* request, void* cookie) {
 
 static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
     usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
+
+    if (request->status == ERR_REMOTE_CLOSED) {
+        request->ops->release(request);
+        return;
+    }
+
     mtx_lock(&eth->mutex);
     if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
@@ -202,15 +221,18 @@ static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
     }
 
     list_add_head(&eth->free_intr_reqs, &request->node);
-    if (request->status != ERR_REMOTE_CLOSED) {
-        queue_interrupt_requests_locked(eth);
-    }
+    queue_interrupt_requests_locked(eth);
 
     mtx_unlock(&eth->mutex);
 }
 
 mx_status_t usb_ethernet_send(mx_device_t* device, const void* buffer, size_t length) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
+
+    if (eth->dead) {
+        return ERR_REMOTE_CLOSED;
+    }
+
     mx_status_t status = NO_ERROR;
 
     mtx_lock(&eth->mutex);
@@ -249,6 +271,11 @@ out:
 
 mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
+
+    if (eth->dead) {
+        return ERR_REMOTE_CLOSED;
+    }
+
     mx_status_t status = NO_ERROR;
 
     mtx_lock(&eth->mutex);
@@ -331,10 +358,16 @@ static ethernet_protocol_t usb_ethernet_proto = {
 static void usb_ethernet_unbind(mx_device_t* device) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
     device_remove(&eth->device);
+
+    mtx_lock(&eth->mutex);
+    eth->dead = true;
+    update_signals_locked(eth);
+    mtx_unlock(&eth->mutex);
 }
 
 static mx_status_t usb_ethernet_release(mx_device_t* device) {
     usb_ethernet_t* eth = get_usb_ethernet(device);
+
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
         txn->ops->release(txn);
