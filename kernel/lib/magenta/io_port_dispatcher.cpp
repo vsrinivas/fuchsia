@@ -10,7 +10,9 @@
 #include <err.h>
 #include <new.h>
 
+#include <arch/ops.h>
 #include <arch/user_copy.h>
+
 #include <kernel/auto_lock.h>
 #include <lib/user_copy.h>
 
@@ -51,6 +53,8 @@ IOP_Packet* IOP_Packet::MakeFromUser(const void* data, mx_size_t size) {
 }
 
 void IOP_Packet::Delete(IOP_Packet* packet) {
+    if (packet->is_signal)
+        return;
     packet->~IOP_Packet();
     delete [] reinterpret_cast<char*>(packet);
 }
@@ -61,6 +65,12 @@ bool IOP_Packet::CopyToUser(void* data, mx_size_t* size) {
     *size = data_size;
     return copy_to_user_unsafe(
         data, reinterpret_cast<char*>(this) + sizeof(IOP_Packet), data_size) == NO_ERROR;
+}
+
+IOP_Signal::IOP_Signal(uint64_t key, mx_signals_t signal)
+    : IOP_Packet(sizeof(payload), true),
+      payload {{key, MX_PORT_PKT_TYPE_IOSN, 0u}, 0u, 0u, signal, 0u},
+      count(1u) {
 }
 
 mx_status_t IOPortDispatcher::Create(uint32_t options,
@@ -91,6 +101,11 @@ IOPortDispatcher::~IOPortDispatcher() {
 void IOPortDispatcher::FreePackets_NoLock() {
     while (!packets_.is_empty()) {
         IOP_Packet::Delete(packets_.pop_front());
+    }
+    while (!at_zero_.is_empty()) {
+        auto signal = at_zero_.pop_front();
+        signal->is_signal = false;
+        IOP_Packet::Delete(signal);
     }
 }
 
@@ -124,15 +139,64 @@ mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
     return NO_ERROR;
 }
 
+void* IOPortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
+    IOP_Signal* node;
+    int prev_count;
+
+    if (!cookie) {
+        AllocChecker ac;
+        node = new (&ac) IOP_Signal(key, signal);
+        if (!ac.check())
+            return nullptr;
+        prev_count = 0;
+    } else {
+        node = reinterpret_cast<IOP_Signal*>(cookie);
+        prev_count = atomic_add(&node->count, 1);
+        DEBUG_ASSERT(node->payload.signals == signal);
+        DEBUG_ASSERT(node->payload.hdr.key == key);
+    }
+
+    int wake_count = 0;
+    {
+        AutoLock al(&lock_);
+
+        if (prev_count == 0) {
+            if (node->InContainer())
+                at_zero_.erase(*node);
+            packets_.push_back(node);
+        }
+
+        wake_count = event_signal_etc(&event_, false, NO_ERROR);
+    }
+
+    if (wake_count)
+        thread_yield();
+
+    return node;
+}
+
 mx_status_t IOPortDispatcher::Wait(IOP_Packet** packet) {
     while (true) {
         {
             AutoLock al(&lock_);
             if (!packets_.is_empty()) {
-                *packet = packets_.pop_front();
+                auto pk = packets_.pop_front();
+                if (!pk->is_signal) {
+                    *packet = pk;
+                } else {
+                    auto signal = static_cast<IOP_Signal*>(pk);
+                    auto prev = atomic_add(&signal->count, -1);
+                    if (prev == 1)
+                        at_zero_.push_back(signal);
+                    else
+                        packets_.push_back(signal);
+                    *packet = signal;
+                }
                 return NO_ERROR;
             }
+
         }
+
         status_t st = event_wait_timeout(&event_, INFINITE_TIME, true);
         if (st != NO_ERROR)
             return st;

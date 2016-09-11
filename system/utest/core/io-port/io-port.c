@@ -358,7 +358,8 @@ static bool bind_sockets_test(void)
         EXPECT_EQ(status, NO_ERROR, "");
         EXPECT_EQ(report.signals, MX_SIGNAL_READABLE, "");
         EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "");
-        EXPECT_EQ(report.size, 2u, "");
+        // TODO(cpu): No longer we return the size. It seems we can get this back.
+        EXPECT_EQ(report.size, 0u, "");
     }
 
     mx_io_packet_t io_pkt = {0};

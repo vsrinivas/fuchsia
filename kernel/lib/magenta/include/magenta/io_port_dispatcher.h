@@ -6,16 +6,19 @@
 
 #pragma once
 
+#include <new.h>
 #include <kernel/mutex.h>
 #include <kernel/event.h>
 
 #include <magenta/dispatcher.h>
 #include <magenta/types.h>
 
-#include <mxtl/fifo_buffer.h>
+#include <mxtl/intrusive_double_list.h>
+
 #include <sys/types.h>
 
-struct IOP_Packet {
+
+struct IOP_Packet : public mxtl::DoublyLinkedListable<IOP_Packet*> {
     friend struct IOP_PacketListTraits;
 
     static IOP_Packet* Alloc(mx_size_t size);
@@ -23,19 +26,47 @@ struct IOP_Packet {
     static IOP_Packet* MakeFromUser(const void* data, mx_size_t size);
     static void Delete(IOP_Packet* packet);
 
-    IOP_Packet(mx_size_t data_size) : data_size(data_size) {}
+    IOP_Packet(mx_size_t data_size)
+        : is_signal(false), data_size(data_size) {}
+
+    IOP_Packet(mx_size_t data_size, bool is_signal)
+        : is_signal(is_signal), data_size(data_size) {}
+
     bool CopyToUser(void* data, mx_size_t* size);
 
-    mxtl::DoublyLinkedListNodeState<IOP_Packet*> iop_lns_;
+    bool is_signal;
     mx_size_t data_size;
 };
 
-struct IOP_PacketListTraits {
-    inline static mxtl::DoublyLinkedListNodeState<IOP_Packet*>& node_state(
-            IOP_Packet& obj) {
-        return obj.iop_lns_;
-    }
+struct IOP_Signal : public IOP_Packet {
+    mx_io_packet payload;
+    volatile int count;
+
+    IOP_Signal(uint64_t key, mx_signals_t signal);
 };
+
+// IO Port job is to deliver packets to threads waiting in Wait(). There
+// are two types of packets:
+//
+// 1- Manually posted via Queue(), they are allocated in the
+//    heap by the caller and freed in the syscall layer at the bottom
+//    of mx_port_wait(). These Packets are of type IOP_Packet and only
+//    live in the |packets| list.
+//
+// 2- Posted by bound dispatchers via Signal(), they are allocated once
+//    during their first Signal() call and only freed when the IO port
+//    reaches 'zero handles' state. These Packets are of type IOP_Signal
+//    and bounce between the |packets_| list and the |at_zero_| list
+//    depending on the |count| value:
+//
+//                                      +-----------+
+//                                      |           |
+//                                      v           |
+// dispatcher-->observer->Signal()-->packets_-->Wait()-->port_wait()
+//                           |          ^           |
+//                           |          |           |
+//                           +------>at_zero_ <-----+
+//
 
 class IOPortDispatcher final : public Dispatcher {
 public:
@@ -48,6 +79,8 @@ public:
     void on_zero_handles() final;
 
     mx_status_t Queue(IOP_Packet* packet);
+    void* Signal(void* cookie, uint64_t key, mx_signals_t signal);
+
     mx_status_t Wait(IOP_Packet** packet);
 
 private:
@@ -58,7 +91,7 @@ private:
 
     Mutex lock_;
     bool no_clients_;
-    mxtl::DoublyLinkedList<IOP_Packet*, IOP_PacketListTraits> packets_;
-
+    mxtl::DoublyLinkedList<IOP_Packet*> packets_;
+    mxtl::DoublyLinkedList<IOP_Packet*> at_zero_;
     event_t event_;
 };
