@@ -16,7 +16,7 @@
 #include <dev/udisplay.h>
 #include <kernel/vm.h>
 #include <lib/user_copy.h>
-#include <mxtl/user_ptr.h>
+#include <lib/user_copy/user_ptr.h>
 
 #include <magenta/interrupt_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>

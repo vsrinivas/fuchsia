@@ -9,7 +9,7 @@
 #include <arch/user_copy.h>
 #include <magenta/compiler.h>
 #include <err.h>
-#include <mxtl/user_ptr.h>
+#include <lib/user_copy/user_ptr.h>
 
 __BEGIN_CDECLS
 

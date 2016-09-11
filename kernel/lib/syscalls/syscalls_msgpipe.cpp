@@ -91,9 +91,9 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
             return ERR_INVALID_ARGS;
     }
 
-    if (_bytes != 0u && !_num_bytes)
+    if (_bytes && !_num_bytes)
         return ERR_INVALID_ARGS;
-    if (_handles != 0u && !_num_handles)
+    if (_handles && !_num_handles)
         return ERR_INVALID_ARGS;
 
     mxtl::unique_ptr<uint32_t[]> handles;

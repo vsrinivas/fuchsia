@@ -27,6 +27,7 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>
 #include <lib/user_copy.h>
+#include <lib/user_copy/user_ptr.h>
 
 #include <magenta/data_pipe.h>
 #include <magenta/data_pipe_consumer_dispatcher.h>
@@ -47,7 +48,6 @@
 
 #include <mxtl/ref_ptr.h>
 #include <mxtl/string_piece.h>
-#include <mxtl/user_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -646,8 +646,8 @@ mx_handle_t sys_vmo_create(uint64_t size) {
     return hv;
 }
 
-mx_ssize_t sys_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size_t len) {
-    LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
+mx_ssize_t sys_vmo_read(mx_handle_t handle, mxtl::user_ptr<void> data, uint64_t offset, mx_size_t len) {
+    LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -661,8 +661,8 @@ mx_ssize_t sys_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size
     return vmo->Read(data, len, offset);
 }
 
-mx_ssize_t sys_vmo_write(mx_handle_t handle, const void* data, uint64_t offset, mx_size_t len) {
-    LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data, offset, len);
+mx_ssize_t sys_vmo_write(mx_handle_t handle, mxtl::user_ptr<const void> data, uint64_t offset, mx_size_t len) {
+    LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -1043,7 +1043,7 @@ mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_siz
 }
 
 mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_size_t requested,
-                              const void* _buffer) {
+                              mxtl::user_ptr<const void> _buffer) {
     LTRACEF("handle %d\n", producer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1065,7 +1065,7 @@ mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_si
 }
 
 mx_ssize_t sys_datapipe_read(mx_handle_t consumer_handle, uint32_t flags, mx_size_t requested,
-                             void* _buffer) {
+                             mxtl::user_ptr<void> _buffer) {
     LTRACEF("handle %d\n", consumer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1374,7 +1374,7 @@ mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
 }
 
 mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
-                            mx_size_t size, void const* _buffer) {
+                            mx_size_t size, mxtl::user_ptr<const void> _buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!_buffer)
@@ -1388,12 +1388,12 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
         return status;
 
     return flags == MX_SOCKET_CONTROL?
-        socket->OOB_Write(_buffer, size, true) :
-        socket->Write(_buffer, size, true);
+        socket->OOB_Write(_buffer.get(), size, true) :
+        socket->Write(_buffer.get(), size, true);
 }
 
 mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
-                           mx_size_t size, void* _buffer) {
+                           mx_size_t size, mxtl::user_ptr<void> _buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!_buffer)
@@ -1407,6 +1407,6 @@ mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
         return status;
 
     return flags == MX_SOCKET_CONTROL?
-        socket->OOB_Read(_buffer, size, true) :
-        socket->Read(_buffer, size, true);
+        socket->OOB_Read(_buffer.get(), size, true) :
+        socket->Read(_buffer.get(), size, true);
 }

@@ -72,7 +72,6 @@ bool SocketDispatcher::CBuf::empty() const {
 }
 
 mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool from_user) {
-    const char *buf = (const char*)src;
 
     size_t write_len;
     size_t pos = 0;
@@ -89,10 +88,15 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
             break;
         }
 
-        if (from_user)
-            vmo_->WriteUser(buf + pos, head_, write_len, nullptr);
-        else
-            memcpy(buf_ + head_, buf + pos, write_len);
+        const char *ptr = (const char*)src;
+        ptr += pos;
+        if (from_user) {
+            // TODO: find a safer way to do this
+            mxtl::user_ptr<const void> uptr(ptr);
+            vmo_->WriteUser(uptr, head_, write_len, nullptr);
+        } else {
+            memcpy(buf_ + head_, ptr, write_len);
+        }
 
         head_ = INC_POINTER(len_pow2_, head_, write_len);
         pos += write_len;
@@ -101,8 +105,6 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
 }
 
 mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user) {
-    char *buf = (char*)dest;
-
     size_t ret = 0;
 
     if (tail_ != head_) {
@@ -119,10 +121,15 @@ mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user
                 read_len = MIN(valpow2(len_pow2_) - tail_, len - pos);
             }
 
-            if (from_user)
-                vmo_->ReadUser(buf + pos, tail_, read_len, nullptr);
-            else
-                memcpy(buf + pos, buf_ + tail_, read_len);
+            char *ptr = (char*)dest;
+            ptr += pos;
+            if (from_user) {
+                // TODO: find a safer way to do this
+                mxtl::user_ptr<void> uptr(ptr);
+                vmo_->ReadUser(uptr, tail_, read_len, nullptr);
+            } else {
+                memcpy(ptr, buf_ + tail_, read_len);
+            }
 
             tail_ = INC_POINTER(len_pow2_, tail_, read_len);
             pos += read_len;

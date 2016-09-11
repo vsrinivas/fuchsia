@@ -16,10 +16,9 @@
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_region.h>
 
-#include <mxtl/user_ptr.h>
-
 #include <lib/console.h>
 #include <lib/user_copy.h>
+#include <lib/user_copy/user_ptr.h>
 #include <lib/ktrace.h>
 
 #include <lk/init.h>
@@ -182,7 +181,7 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     return dest_hv;
 }
 
-mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t len, void* buffer) {
+mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t len, mxtl::user_ptr<void> buffer) {
     if (!buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugReadBlock)

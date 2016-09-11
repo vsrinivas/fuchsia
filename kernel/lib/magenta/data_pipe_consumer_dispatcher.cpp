@@ -40,7 +40,7 @@ StateTracker* DataPipeConsumerDispatcher::get_state_tracker() {
     return pipe_->get_consumer_state_tracker();
 }
 
-mx_status_t DataPipeConsumerDispatcher::Read(void* buffer,
+mx_status_t DataPipeConsumerDispatcher::Read(mxtl::user_ptr<void> buffer,
                                              mx_size_t* requested,
                                              bool all_or_none,
                                              bool discard,

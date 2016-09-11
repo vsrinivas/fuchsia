@@ -12,6 +12,7 @@
 
 #include <lib/ktrace.h>
 #include <lib/user_copy.h>
+#include <lib/user_copy/user_ptr.h>
 
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
@@ -20,7 +21,6 @@
 #include <magenta/wait_state_observer.h>
 
 #include <mxtl/ref_ptr.h>
-#include <mxtl/user_ptr.h>
 
 #include "syscalls_priv.h"
 

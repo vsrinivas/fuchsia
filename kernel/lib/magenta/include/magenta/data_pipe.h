@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include <kernel/mutex.h>
+#include <lib/user_copy/user_ptr.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <magenta/state_tracker.h>
@@ -38,11 +39,11 @@ public:
     StateTracker* get_producer_state_tracker() { return &producer_.state_tracker; }
     StateTracker* get_consumer_state_tracker() { return &consumer_.state_tracker; }
 
-    mx_status_t ProducerWriteFromUser(const void* ptr, mx_size_t* requested, bool all_or_none);
+    mx_status_t ProducerWriteFromUser(mxtl::user_ptr<const void> ptr, mx_size_t* requested, bool all_or_none);
     mx_ssize_t ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr);
     mx_status_t ProducerWriteEnd(mx_size_t written);
 
-    mx_status_t ConsumerReadFromUser(void* ptr,
+    mx_status_t ConsumerReadFromUser(mxtl::user_ptr<void> ptr,
                                      mx_size_t* requested,
                                      bool all_or_none,
                                      bool discard,

@@ -121,7 +121,7 @@ void DataPipe::UpdateSignalsNoLock() {
     }
 }
 
-mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr,
+mx_status_t DataPipe::ProducerWriteFromUser(mxtl::user_ptr<const void> ptr,
                                             mx_size_t* requested,
                                             bool all_or_none) {
     AutoLock al(&lock_);
@@ -161,8 +161,8 @@ mx_status_t DataPipe::ProducerWriteFromUser(const void* ptr,
     DEBUG_ASSERT(written == to_write_first);
 
     if (to_write_first < to_write) {
-        const void* ptr2 =
-                reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(ptr) + to_write_first);
+        auto ptr2 = ptr + to_write_first;
+        DEBUG_ASSERT(ptr2.is_user_address());
         status = vmo_->WriteUser(ptr2, 0u, to_write - to_write_first, &written);
         if (status < 0)
             return status;
@@ -229,7 +229,7 @@ mx_status_t DataPipe::ProducerWriteEnd(mx_size_t written) {
     return NO_ERROR;
 }
 
-mx_status_t DataPipe::ConsumerReadFromUser(void* ptr,
+mx_status_t DataPipe::ConsumerReadFromUser(mxtl::user_ptr<void> ptr,
                                            mx_size_t* requested,
                                            bool all_or_none,
                                            bool discard,
@@ -271,7 +271,8 @@ mx_status_t DataPipe::ConsumerReadFromUser(void* ptr,
         DEBUG_ASSERT(read == to_read_first);
 
         if (to_read > to_read_first) {
-            void* ptr2 = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) + to_read_first);
+            auto ptr2 = ptr + to_read_first;
+            DEBUG_ASSERT(ptr2.is_user_address());
             status_t st = vmo_->ReadUser(ptr2, 0u, to_read - to_read_first, &read);
             if (st != NO_ERROR)
                 return st;

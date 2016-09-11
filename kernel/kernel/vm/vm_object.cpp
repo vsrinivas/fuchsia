@@ -430,35 +430,33 @@ status_t VmObject::Write(const void* _ptr, uint64_t offset, size_t len, size_t* 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
 
-status_t VmObject::ReadUser(void* _ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+status_t VmObject::ReadUser(mxtl::user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    // test to make sure this is a iuser pointer
-    if (!is_user_address(reinterpret_cast<vaddr_t>(_ptr))) {
-        DEBUG_ASSERT_MSG(0, "non user pointer passed\n");
+
+    // test to make sure this is a user pointer
+    if (!ptr.is_user_address()) {
         return ERR_INVALID_ARGS;
     }
 
     // read routine that uses copy_to_user
-    uint8_t* ptr = reinterpret_cast<uint8_t*>(_ptr);
     auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> status_t {
-        return copy_to_user_unsafe(ptr + offset, src, len);
+        return copy_to_user(ptr + offset, src, len);
     };
 
     return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
 }
 
-status_t VmObject::WriteUser(const void* _ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+status_t VmObject::WriteUser(mxtl::user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    // test to make sure this is a iuser pointer
-    if (!is_user_address(reinterpret_cast<vaddr_t>(_ptr))) {
-        DEBUG_ASSERT_MSG(0, "non user pointer passed\n");
+
+    // test to make sure this is a user pointer
+    if (!ptr.is_user_address()) {
         return ERR_INVALID_ARGS;
     }
 
     // write routine that uses copy_from_user
-    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(_ptr);
     auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> status_t {
-        return copy_from_user_unsafe(dst, ptr + offset, len);
+        return copy_from_user(dst, ptr + offset, len);
     };
 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
