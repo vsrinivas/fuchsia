@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/vmo.c
+    $(LOCAL_DIR)/vmo.cpp
 
 MODULE_NAME := vmo-test
 
