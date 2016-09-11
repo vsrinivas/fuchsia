@@ -45,6 +45,5 @@ PROT_NONE is not yet supported.
 
 ## SEE ALSO
 
-process_map_vm,
-process_unmap_vm
-
+[process_map_vm](process_map_vm.md).
+[process_unmap_vm](process_unmap_vm.md).

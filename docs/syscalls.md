@@ -19,7 +19,10 @@
 
 ## Processes
 + [process_create](syscalls/process_create.md)
++ [process_map_vm](syscalls/process_map_vm.md)
++ [process_protect_vm](syscalls/process_protect_vm.md)
 + [process_start](syscalls/process_start.md)
++ [process_unmap_vm](syscalls/process_unmap_vm.md)
 
 ## Message Pipes
 + [msgpipe_create](syscalls/msgpipe_create.md)
@@ -50,4 +53,3 @@
 ## Cryptographically Secure RNG
 + [cprng_draw](syscalls/cprng_draw.md)
 + [cprng_add_entropy](syscalls/cprng_add_entropy.md)
-
