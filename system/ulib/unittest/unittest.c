@@ -30,7 +30,8 @@ static test_output_func out_func = default_printf;
 static void* out_func_arg = NULL;
 
 // Controls the behavior of unittest_printf.
-int utest_verbosity_level = 1;
+// To override, specify v=N on the command line.
+int utest_verbosity_level = 0;
 
 /**
  * \brief Function called to dump results
