@@ -38,7 +38,16 @@
 void *page_alloc(size_t pages)
 {
 #if WITH_KERNEL_VM
-    void *result = pmm_alloc_kpages(pages, NULL, NULL);
+    struct list_node list = LIST_INITIAL_VALUE(list);
+
+    void *result = pmm_alloc_kpages(pages, &list, NULL);
+
+    // mark all of the allocated page as HEAP
+    vm_page_t *p;
+    list_for_every_entry(&list, p, vm_page_t, free.node) {
+        p->state = VM_PAGE_STATE_HEAP;
+    }
+
     return result;
 #else
     void *result = novm_alloc_pages(pages, NOVM_ARENA_ANY);

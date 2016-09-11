@@ -278,7 +278,7 @@ static status_t intel_hda_setup_command_buffers(intel_hda_device_t* dev) {
     uintptr_t cmd_buf_vaddr;
     uint64_t  cmd_buf_paddr_64;
 
-    vm_page_t* page  = containerof(list_peek_head(&dev->codec_cmd_buf_pages), vm_page_t, node);
+    vm_page_t* page  = containerof(list_peek_head(&dev->codec_cmd_buf_pages), vm_page_t, free.node);
     cmd_buf_paddr    = vm_page_to_paddr(page);
     cmd_buf_vaddr    = (uintptr_t)paddr_to_kvaddr(cmd_buf_paddr);
     cmd_buf_paddr_64 = (uint64_t)cmd_buf_paddr;

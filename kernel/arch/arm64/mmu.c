@@ -248,7 +248,7 @@ static int alloc_page_table(paddr_t *paddrp, uint page_size_shift)
         if (ret != count)
             return ERR_NO_MEMORY;
     } else if (size == PAGE_SIZE) {
-        void *vaddr = pmm_alloc_kpage(paddrp);
+        void *vaddr = pmm_alloc_kpage(paddrp, NULL);
         if (!vaddr)
             return ERR_NO_MEMORY;
     } else {
@@ -804,7 +804,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, 
         aspace->size = size;
 
         paddr_t pa;
-        pte_t *va = pmm_alloc_kpage(&pa);
+        pte_t *va = pmm_alloc_kpage(&pa, NULL);
         if (!va)
             return ERR_NO_MEMORY;
 

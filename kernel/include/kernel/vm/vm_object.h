@@ -102,7 +102,4 @@ private:
 
     // array of page pointers, one per page offset into the object
     mxtl::Array<vm_page_t*> page_array_;
-
-    // list of all allocated pages
-    list_node page_list_ = LIST_INITIAL_VALUE(page_list_);
 };

@@ -62,7 +62,7 @@ extern void arm_reset(void);
 
 static uint8_t * kernel_args;
 
-static pmm_arena_t arena = {
+static pmm_arena_info_t arena = {
     .name = "sdram",
     .base = SDRAM_BASE,
     .size = MEMSIZE,

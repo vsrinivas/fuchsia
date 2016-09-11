@@ -431,10 +431,15 @@ static void unmap_entry(ulong cr3, vaddr_t vaddr, pt_entry_t* pte, bool flush) {
  * @brief Allocating a new page table
  */
 static pt_entry_t* _map_alloc_page(void) {
-    pt_entry_t* page_ptr = static_cast<pt_entry_t*>(pmm_alloc_kpage(nullptr));
-    DEBUG_ASSERT(page_ptr);
+    vm_page_t *p;
 
-    if (page_ptr) arch_zero_page(page_ptr);
+    pt_entry_t* page_ptr = static_cast<pt_entry_t*>(pmm_alloc_kpage(nullptr, &p));
+    DEBUG_ASSERT(page_ptr);
+    if (!page_ptr)
+        return nullptr;
+
+    arch_zero_page(page_ptr);
+    p->state = VM_PAGE_STATE_MMU;
 
     return page_ptr;
 }
@@ -1065,12 +1070,15 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
 #else
         /* allocate a top level page table for the new address space */
         paddr_t pa;
-        aspace->pt_virt = (pt_entry_t*)pmm_alloc_kpage(&pa);
+        vm_page_t *p;
+        aspace->pt_virt = (pt_entry_t*)pmm_alloc_kpage(&pa, &p);
         if (!aspace->pt_virt) {
             TRACEF("error allocating top level page directory\n");
             return ERR_NO_MEMORY;
         }
         aspace->pt_phys = pa;
+
+        p->state = VM_PAGE_STATE_MMU;
 
         /* zero out the user space half of it */
         memset(aspace->pt_virt, 0, sizeof(pt_entry_t) * NO_OF_PT_ENTRIES / 2);

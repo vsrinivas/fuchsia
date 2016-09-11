@@ -129,12 +129,21 @@ static void platform_preserve_ramdisk(void) {
     if (bootloader_ramdisk_base == 0) {
         return;
     }
+    struct list_node list = LIST_INITIAL_VALUE(list);
     size_t pages = (bootloader_ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    size_t actual = pmm_alloc_range(bootloader_ramdisk_base, pages, NULL);
-    if (actual == pages) {
-        ramdisk_base = paddr_to_kvaddr(bootloader_ramdisk_base);
-        ramdisk_size = pages * PAGE_SIZE;
+    size_t actual = pmm_alloc_range(bootloader_ramdisk_base, pages, &list);
+    if (actual != pages) {
+        panic("unable to reserve ramdisk memory range\n");
     }
+
+    // mark all of the pages we allocated as WIRED
+    vm_page_t *p;
+    list_for_every_entry(&list, p, vm_page_t, free.node) {
+        p->state = VM_PAGE_STATE_WIRED;
+    }
+
+    ramdisk_base = paddr_to_kvaddr(bootloader_ramdisk_base);
+    ramdisk_size = pages * PAGE_SIZE;
 }
 
 void* platform_get_ramdisk(size_t *size) {

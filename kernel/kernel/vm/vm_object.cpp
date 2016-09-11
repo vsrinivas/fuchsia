@@ -59,17 +59,11 @@ VmObject::~VmObject() {
         if (p) {
             LTRACEF("freeing page %p (%#" PRIxPTR ")\n", p, vm_page_to_paddr(p));
 
-            // remove it from the object list of pages
-            DEBUG_ASSERT(list_in_list(&p->node));
-            list_delete(&p->node);
-
             // add to the temporary free list
-            list_add_tail(&list, &p->node);
+            list_add_tail(&list, &p->free.node);
             count++;
         }
     }
-
-    DEBUG_ASSERT(list_length(&page_list_) == 0);
 
     __UNUSED auto freed = pmm_free(&list);
     DEBUG_ASSERT(freed == count);
@@ -154,9 +148,6 @@ void VmObject::AddPageToArray(size_t index, vm_page_t* p) {
     DEBUG_ASSERT(!page_array_[index]);
     DEBUG_ASSERT(index < page_array_.size());
     page_array_[index] = p;
-
-    DEBUG_ASSERT(!list_in_list(&p->node));
-    list_add_tail(&page_list_, &p->node);
 }
 
 status_t VmObject::AddPage(vm_page_t* p, uint64_t offset) {
@@ -196,14 +187,22 @@ mxtl::RefPtr<VmObject> VmObject::CreateFromROData(const void* data,
         paddr_t start_paddr = vaddr_to_paddr(data);
         ASSERT(start_paddr != 0);
 
-        for (size_t offset = 0; offset < size; offset += PAGE_SIZE) {
-            vm_page_t *page = paddr_to_vm_page(start_paddr + offset);
+        for (size_t count = 0; count < size / PAGE_SIZE; count++) {
+            paddr_t pa = start_paddr + count * PAGE_SIZE;
+            vm_page_t *page = paddr_to_vm_page(pa);
             ASSERT(page);
 
-            // Make sure the page isn't already attached to another object.
-            ASSERT(!list_in_list(&page->node));
+            if (page->state == VM_PAGE_STATE_WIRED) {
+                // it's wired to the kernel, so we can just use it directly
+            } else if (page->state == VM_PAGE_STATE_FREE) {
+                ASSERT(pmm_alloc_range(pa, 1, nullptr) == 1);
+                page->state = VM_PAGE_STATE_WIRED;
+            } else {
+                panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n",
+                       pa, page->state);
+            }
 
-            vmo->AddPage(page, offset);
+            vmo->AddPage(page, count * PAGE_SIZE);
         }
 
         // TODO(mcgrathr): If the last reference to this VMO were released
@@ -257,6 +256,8 @@ vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
     p = pmm_alloc_page(pmm_alloc_flags_, &pa);
     if (!p)
         return nullptr;
+
+    p->state = VM_PAGE_STATE_OBJECT;
 
     // TODO: remove once pmm returns zeroed pages
     ZeroPage(pa);
@@ -322,8 +323,10 @@ int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
         if (page_array_[index])
             continue;
 
-        vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, node);
+        vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, free.node);
         ASSERT(p);
+
+        p->state = VM_PAGE_STATE_OBJECT;
 
         // TODO: remove once pmm returns zeroed pages
         ZeroPage(p);
@@ -386,8 +389,10 @@ int64_t VmObject::CommitRangeContiguous(uint64_t offset, uint64_t len, uint8_t a
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
         size_t index = OffsetToIndex(o);
 
-        vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, node);
+        vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, free.node);
         ASSERT(p);
+
+        p->state = VM_PAGE_STATE_OBJECT;
 
         // TODO: remove once pmm returns zeroed pages
         ZeroPage(p);

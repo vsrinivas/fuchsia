@@ -16,9 +16,9 @@
 extern multiboot_info_t *_multiboot_info;
 extern void *_zero_page_boot_params;
 
-/* statically allocate an array of pmm_arena_ts to be filled in at boot time */
+/* statically allocate an array of pmm_arena_info_ts to be filled in at boot time */
 #define PMM_ARENAS 16
-static pmm_arena_t mem_arenas[PMM_ARENAS];
+static pmm_arena_info_t mem_arenas[PMM_ARENAS];
 
 struct addr_range {
     uint64_t base;
@@ -126,7 +126,7 @@ static int mem_arena_init(boot_addr_range_t *range)
 #endif
 
         while (size && used < PMM_ARENAS) {
-            pmm_arena_t *arena = &mem_arenas[used];
+            pmm_arena_info_t *arena = &mem_arenas[used];
 
             arena->base = base;
             arena->size = size;

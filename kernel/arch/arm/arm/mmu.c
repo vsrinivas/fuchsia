@@ -524,9 +524,9 @@ static void put_l2_table(arch_aspace_t *aspace, uint32_t l1_index, paddr_t l2_pa
         panic("bad page table paddr %#" PRIxPTR "\n", l2_pa);
 
     /* verify that it is in our page list */
-    DEBUG_ASSERT(list_in_list(&page->node));
+    DEBUG_ASSERT(list_in_list(&page->free.node));
 
-    list_delete(&page->node);
+    list_delete(&page->free.node);
 
     LTRACEF("freeing pagetable at %#" PRIxPTR "\n", l2_pa);
     pmm_free_page(page);
@@ -936,7 +936,7 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t *aspace)
 
     // XXX free all of the pages allocated in aspace->pt_page_list
     vm_page_t *p;
-    while ((p = list_remove_head_type(&aspace->pt_page_list, vm_page_t, node)) != NULL) {
+    while ((p = list_remove_head_type(&aspace->pt_page_list, vm_page_t, free.node)) != NULL) {
         LTRACEF("freeing page %p\n", p);
         pmm_free_page(p);
     }

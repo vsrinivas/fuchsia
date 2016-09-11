@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <kernel/vm/page.h>
 
 __BEGIN_CDECLS
 
@@ -64,20 +65,6 @@ static_assert(sizeof(struct mmu_initial_mapping) == __MMU_INITIAL_MAPPING_SIZE, 
  * for kernel and enough IO space to boot.
  */
 extern struct mmu_initial_mapping mmu_initial_mappings[];
-
-/* core per page structure */
-typedef struct vm_page {
-    struct list_node node;
-
-    uint8_t state;
-    uint8_t flags;
-} vm_page_t;
-
-enum vm_page_state {
-    VM_PAGE_STATE_FREE,
-    VM_PAGE_STATE_ALLOC,
-    VM_PAGE_STATE_MMU, /* allocated to serve arch-specific mmu purposes */
-};
 
 /* kernel address space */
 #ifndef KERNEL_ASPACE_BASE
@@ -109,8 +96,7 @@ static inline bool is_user_address(vaddr_t va) {
 }
 
 /* physical allocator */
-typedef struct pmm_arena {
-    struct list_node node;
+typedef struct pmm_arena_info {
     const char* name;
 
     uint flags;
@@ -118,17 +104,12 @@ typedef struct pmm_arena {
 
     paddr_t base;
     size_t size;
-
-    size_t free_count;
-
-    struct vm_page* page_array;
-    struct list_node free_list;
-} pmm_arena_t;
+} pmm_arena_info_t;
 
 #define PMM_ARENA_FLAG_KMAP (0x1) /* this arena is already mapped and useful for kallocs */
 
 /* Add a pre-filled memory arena to the physical allocator. */
-status_t pmm_add_arena(pmm_arena_t* arena) __NONNULL((1));
+status_t pmm_add_arena(const pmm_arena_info_t* arena) __NONNULL((1));
 
 /* flags for allocation routines below */
 #define PMM_ALLOC_FLAG_ANY (0x0)  /* no restrictions on which arena to allocate from */
@@ -171,7 +152,7 @@ size_t pmm_free_page(vm_page_t* page) __NONNULL((1));
 void* pmm_alloc_kpages(size_t count, struct list_node* list, paddr_t* pa);
 
 /* Same as above but a single page at a time */
-void* pmm_alloc_kpage(paddr_t* pa);
+void* pmm_alloc_kpage(paddr_t* pa, vm_page_t **p);
 
 size_t pmm_free_kpages(void* ptr, size_t count);
 
