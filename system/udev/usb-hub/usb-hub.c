@@ -47,26 +47,61 @@ typedef struct usb_hub {
 static mx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
     mx_status_t result = usb_get_status(hub->usb_device, USB_RECIP_PORT, port, status, sizeof(*status));
     if (result == sizeof(*status)) {
+        if (status->wPortChange & USB_PORT_CONNECTION) {
+            xprintf("USB_PORT_CONNECTION\n");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
+        }
+        if (status->wPortChange & USB_PORT_ENABLE) {
+            xprintf("USB_PORT_ENABLE\n");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port);
+        }
+        if (status->wPortChange & USB_PORT_SUSPEND) {
+            xprintf("USB_PORT_SUSPEND\n");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port);
+        }
+        if (status->wPortChange & USB_PORT_OVER_CURRENT) {
+            xprintf("USB_PORT_OVER_CURRENT\n");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
+        }
+        if (status->wPortChange & USB_PORT_RESET) {
+            xprintf("USB_PORT_RESET\n");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
+        }
+
         return NO_ERROR;
     } else {
         return -1;
     }
 }
 
-static usb_speed_t usb_hub_get_port_speed(usb_hub_t* hub, int port) {
-    if (hub->hub_speed == USB_SPEED_SUPER)
-        return USB_SPEED_SUPER;
+static mx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, usb_port_status_t* status,
+                                         uint16_t status_bits, uint16_t status_mask,
+                                         mx_time_t stable_time) {
+    const mx_time_t timeout = 2 * 1000 * 1000;  // 2 second total timeout
+    const mx_time_t poll_delay = 25 * 1000;     // poll every 25 milliseconds
+    mx_time_t total = 0;
+    mx_time_t stable = 0;
 
-    usb_port_status_t status;
-    if (usb_hub_get_port_status(hub, port, &status) == NO_ERROR) {
-        if (status.wPortStatus & USB_PORT_LOW_SPEED)
-            return USB_SPEED_LOW;
-        if (status.wPortStatus & USB_PORT_HIGH_SPEED)
-            return USB_SPEED_HIGH;
-        return USB_SPEED_FULL;
-    } else {
-        return USB_SPEED_UNDEFINED;
+    while (total < timeout) {
+        usleep(poll_delay);
+        total += poll_delay;
+
+        mx_status_t result = usb_hub_get_port_status(hub, port, status);
+        if (result != NO_ERROR) {
+            return result;
+        }
+
+        if ((status->wPortStatus & status_mask) == status_bits) {
+            stable += poll_delay;
+            if (stable >= stable_time) {
+                return NO_ERROR;
+            }
+        } else {
+            stable = 0;
+        }
     }
+
+    return ERR_TIMED_OUT;
 }
 
 static void usb_hub_interrupt_complete(iotxn_t* txn, void* cookie) {
@@ -81,11 +116,38 @@ static void usb_hub_enable_port(usb_hub_t* hub, int port) {
 }
 
 static void usb_hub_port_connected(usb_hub_t* hub, int port) {
-    // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
-    usleep(100 * 1000);
+    usb_port_status_t status;
 
     xprintf("port %d usb_hub_port_connected\n", port);
+
+    // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
+    if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_CONNECTION, USB_PORT_CONNECTION,
+                              100 * 1000) != NO_ERROR) {
+        printf("usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d\n", port);
+        return;
+    }
+
     usb_set_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port);
+
+    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
+    if (usb_hub_wait_for_port(hub, port, &status, 0, USB_PORT_RESET, 100 * 1000) != NO_ERROR) {
+        printf("usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
+        return;
+    }
+
+    usb_speed_t speed;
+    if (hub->hub_speed == USB_SPEED_SUPER) {
+        speed = USB_SPEED_SUPER;
+    } else if (status.wPortStatus & USB_PORT_LOW_SPEED) {
+        speed = USB_SPEED_LOW;
+    } else if (status.wPortStatus & USB_PORT_HIGH_SPEED) {
+        speed = USB_SPEED_HIGH;
+    } else {
+        speed = USB_SPEED_FULL;
+    }
+
+    xprintf("call hub_device_added for port %d\n", port);
+    hub->bus_protocol->hub_device_added(hub->bus_device, hub->usb_device, port, speed);
 }
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
@@ -93,48 +155,15 @@ static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
     hub->bus_protocol->hub_device_removed(hub->bus_device, hub->usb_device, port);
 }
 
-static void usb_hub_port_reset(usb_hub_t* hub, int port) {
-    // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
-    usleep(100 * 1000);
-
-    xprintf("port %d usb_hub_port_reset\n", port);
-    usb_speed_t speed = usb_hub_get_port_speed(hub, port);
-    if (speed != USB_SPEED_UNDEFINED) {
-        xprintf("calling device_added(%d %d)\n", port, speed);
-        hub->bus_protocol->hub_device_added(hub->bus_device, hub->usb_device, port, speed);
-    }
-}
-
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
     xprintf("usb_hub_handle_port_status port: %d status: %04X change: %04X\n", port,
             status->wPortStatus, status->wPortChange);
 
     if (status->wPortChange & USB_PORT_CONNECTION) {
-        xprintf("USB_PORT_CONNECTION\n");
-        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
         if (status->wPortStatus & USB_PORT_CONNECTION) {
             usb_hub_port_connected(hub, port);
         } else {
             usb_hub_port_disconnected(hub, port);
-        }
-    }
-    if (status->wPortChange & USB_PORT_ENABLE) {
-        xprintf("USB_PORT_ENABLE\n");
-        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port);
-    }
-    if (status->wPortChange & USB_PORT_SUSPEND) {
-        xprintf("USB_PORT_SUSPEND\n");
-        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port);
-    }
-    if (status->wPortChange & USB_PORT_OVER_CURRENT) {
-        xprintf("USB_PORT_OVER_CURRENT\n");
-        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
-    }
-    if (status->wPortChange & USB_PORT_RESET) {
-        xprintf("USB_PORT_RESET\n");
-        usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
-        if (!(status->wPortStatus & USB_PORT_RESET)) {
-            usb_hub_port_reset(hub, port);
         }
     }
 }
