@@ -53,7 +53,7 @@ static off_t vmofile_seek(mxio_t* io, off_t offset, int whence) {
         at = (vf->ptr - vf->off) + offset;
         break;
     case SEEK_END:
-        at = vf->end + offset;
+        at = (vf->end - vf->off) + offset;
         break;
     default:
         mtx_unlock(&vf->lock);
