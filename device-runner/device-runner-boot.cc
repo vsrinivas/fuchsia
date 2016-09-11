@@ -28,6 +28,9 @@ mojo::Array<uint8_t> UserIdentityArray(const std::string& username) {
 }
 
 class DeviceRunnerBoot : public mojo::ApplicationImplBase {
+public:
+  DeviceRunnerBoot() {}
+
   void OnInitialize() override {
     if (args().size() != 3) {
       FTL_DLOG(INFO) << "mojo:device-shell expects 2 additional arguments.\n"
