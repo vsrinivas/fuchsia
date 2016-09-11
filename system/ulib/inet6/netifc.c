@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -171,9 +172,9 @@ int netifc_active(void) {
     return (netfd >= 0);
 }
 
-void netifc_poll(void) {
+int netifc_poll(void) {
     uint8_t buffer[2048];
-    int r;
+    mx_status_t r;
 
     for (;;) {
         while ((r = read(netfd, buffer, sizeof(buffer))) > 0) {
@@ -186,6 +187,9 @@ void netifc_poll(void) {
 #endif
             eth_recv(buffer, r);
         }
+        if (errno == ENOTCONN) {
+            return -1;
+        }
         if (net_timer) {
             mx_time_t now = mx_current_time();
             if (now > net_timer) {
@@ -196,4 +200,5 @@ void netifc_poll(void) {
             mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         }
     }
+    return 0;
 }

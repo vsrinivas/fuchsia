@@ -8,7 +8,7 @@
 int netifc_open(void);
 
 // process inbound packet(s)
-void netifc_poll(void);
+int netifc_poll(void);
 
 // return nonzero if interface exists
 int netifc_active(void);

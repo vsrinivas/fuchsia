@@ -167,40 +167,46 @@ int main(int argc, char** argv) {
     }
 
     printf("netsvc: main()\n");
-    if (netifc_open() != 0) {
-        printf("netsvc: fatal error initialzing network\n");
-        return -1;
-    }
 
-    printf("netsvc: start\n");
     for (;;) {
-        if (pending == 0) {
-            pkt.magic = 0xaeae1123;
-            pkt.seqno = seqno;
-            len = 0;
-            while (len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
-                int r = get_log_line(pkt.data + len);
-                if (r > 0) {
-                    len += r;
-                } else {
-                    break;
+        if (netifc_open() != 0) {
+            printf("netsvc: fatal error initialzing network\n");
+            return -1;
+        }
+
+        printf("netsvc: start\n");
+        for (;;) {
+            if (pending == 0) {
+                pkt.magic = 0xaeae1123;
+                pkt.seqno = seqno;
+                len = 0;
+                while (len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
+                    int r = get_log_line(pkt.data + len);
+                    if (r > 0) {
+                        len += r;
+                    } else {
+                        break;
+                    }
+                }
+                if (len) {
+                    len += 8;
+                    pending = 1;
+                    goto transmit;
                 }
             }
-            if (len) {
-                len += 8;
-                pending = 1;
-                goto transmit;
+            if (netifc_timer_expired()) {
+            transmit:
+                if (pending) {
+                    udp6_send(&pkt, 8 + len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
+                }
             }
+            //TODO: wakeup early for log traffic too
+            netifc_set_timer(100);
+            if (netifc_poll())
+                break;
         }
-        if (netifc_timer_expired()) {
-        transmit:
-            if (pending) {
-                udp6_send(&pkt, 8 + len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
-            }
-        }
-        //TODO: wakeup early for log traffic too
-        netifc_set_timer(100);
-        netifc_poll();
+        netifc_close();
     }
+
     return 0;
 }
