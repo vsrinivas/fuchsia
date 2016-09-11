@@ -276,14 +276,19 @@ static int mxc_runtests(int argc, char** argv) {
         return -1;
     }
 
-    int verbosity = 0;
+    // We want the default to be the same, whether the test is run by us
+    // or run standalone. Do this by leaving the verbosity unspecified unless
+    // provided by the user.
+    int verbosity = -1;
 
     if (argc > 1) {
-        if (strcmp(argv[1], "-v") == 0) {
+        if (strcmp(argv[1], "-q") == 0) {
+            verbosity = 0;
+        } else if (strcmp(argv[1], "-v") == 0) {
             printf("verbose output. enjoy.\n");
             verbosity = 1;
         } else {
-            printf("unknown option. usage: %s [-v]\n", argv[0]);
+            printf("unknown option. usage: %s [-q|-v]\n", argv[0]);
             return -1;
         }
     }
@@ -305,10 +310,11 @@ static int mxc_runtests(int argc, char** argv) {
                 de->d_name);
         }
 
-        char opts[] = {'v','=', verbosity + '0', 0};
+        char verbose_opt[] = {'v','=', verbosity + '0', 0};
+        const char* argv[] = {name, verbose_opt};
+        int argc = verbosity >= 0 ? 2 : 1;
 
-        const char* argv[] = {name, opts};
-        mx_handle_t handle = launchpad_launch_mxio(name, 2, argv);
+        mx_handle_t handle = launchpad_launch_mxio(name, argc, argv);
         if (handle < 0) {
             printf("FAILURE: Failed to launch %s: %d\n", de->d_name, handle);
             mxc_fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);
