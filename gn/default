@@ -15,6 +15,7 @@
         "leveldb",
         "libc-tests",
         "lua",
+        "media",
         "mojo",
         "mtl",
         "re2",
