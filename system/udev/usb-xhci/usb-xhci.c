@@ -128,8 +128,9 @@ static int xhci_irq_thread(void* arg) {
             mx_interrupt_complete(uxhci->irq_handle);
             break;
         }
-        xhci_handle_interrupt(&uxhci->xhci, uxhci->legacy_irq_mode);
+
         mx_interrupt_complete(uxhci->irq_handle);
+        xhci_handle_interrupt(&uxhci->xhci, uxhci->legacy_irq_mode);
     }
     xprintf("xhci_irq_thread done\n");
     return 0;
