@@ -92,6 +92,8 @@ source_set("framework") {
 executable("apptests") {
   output_name = "media_framework_apptests"
 
+  testonly = true
+
   sources = [
     "test/run_all_tests.cc",
     "test/sparse_byte_buffer_test.cc",

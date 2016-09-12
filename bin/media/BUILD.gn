@@ -3,9 +3,28 @@
 # found in the LICENSE file.
 
 group("media") {
+  testonly = true
+
   deps = [
-    "//apps/media/cpp",
-    "//apps/media/interfaces",
-    "//apps/media/services",
+    ":services",
+    ":apptests",
+  ]
+}
+
+group("services") {
+  deps = [
+    "//apps/media/services/audio:audio_server",
+    "//apps/media/services/media_service:media_service",
+  ]
+}
+
+group("apptests") {
+  testonly = true
+
+  deps = [
+    "//apps/media/cpp:apptests",
+    "//apps/media/services/common:apptests",
+    "//apps/media/services/framework:apptests",
+    "//apps/media/services/media_service:apptests",
   ]
 }

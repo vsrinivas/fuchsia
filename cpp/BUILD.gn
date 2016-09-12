@@ -44,6 +44,8 @@ mojo_sdk_source_set("cpp") {
 executable("apptests") {
   output_name = "media_cpp_apptests"
 
+  testonly = true
+
   sources = [
     "test/run_all_tests.cc",
     "test/shared_buffer_set_allocator_test.cc",

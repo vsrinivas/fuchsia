@@ -42,6 +42,8 @@ executable("media_service") {
 executable("apptests") {
   output_name = "media_service_apptests"
 
+  testonly = true
+
   sources = [
     "test/fake_renderer.cc",
     "test/fake_renderer.h",
