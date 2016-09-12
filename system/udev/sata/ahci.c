@@ -480,6 +480,12 @@ static int ahci_irq_thread(void* arg) {
             xprintf("ahci: error %d waiting for interrupt\n", status);
             continue;
         }
+        // mask hba interrupts while interrupts are being handled
+        uint32_t ghc = ahci_read(&dev->regs->ghc);
+        ahci_write(&dev->regs->ghc, ghc & ~AHCI_GHC_IE);
+        mx_interrupt_complete(dev->irq_handle);
+
+        // handle interrupt for each port
         uint32_t is = ahci_read(&dev->regs->is);
         ahci_write(&dev->regs->is, is);
         for (int i = 0; is && i < AHCI_MAX_PORTS; i++) {
@@ -489,7 +495,9 @@ static int ahci_irq_thread(void* arg) {
             is >>= 1;
         }
 
-        mx_interrupt_complete(dev->irq_handle);
+        // unmask hba interrupts
+        ghc = ahci_read(&dev->regs->ghc);
+        ahci_write(&dev->regs->ghc, ghc | AHCI_GHC_IE);
     }
     return 0;
 }
