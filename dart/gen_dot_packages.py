@@ -8,6 +8,25 @@ import os
 import string
 import sys
 
+def parse_dot_packages(dot_packages_path):
+  deps = {}
+  with open(dot_packages_path) as dot_packages:
+      for line in dot_packages:
+        if line.startswith('#'):
+            continue
+        delim = line.find(':file://')
+        if delim == -1:
+            continue
+        name = line[:delim]
+        path = os.path.abspath(line[delim + 8:].strip())
+        if name in deps:
+          raise Exception('%s contains multiple entries for package %s' %
+              (dot_packages_path, name))
+        deps[name] = path
+  return deps
+
+  
+
 
 def main():
   parser = argparse.ArgumentParser(
@@ -32,25 +51,37 @@ def main():
 
   dependent_files = []
 
-  with open(dot_packages_file, "w") as dot_packages:
-    dot_packages.write("%s:file://%s/\n" %
-                       (args.package_name, args.source_dir))
-    for dep in args.deps:
-      if not dep.startswith("//"):
-        print "Error, expected dependency label to start with //"
-        return 1
-      target_base = dep[2:]
-      target_sep = string.rfind(target_base, ":")
-      if target_sep != -1:
-        target_name = target_base[target_sep+1:]
-        target_base = target_base[:target_sep]
+  package_deps = {}
+  package_deps[args.package_name] = args.source_dir
+  for dep in args.deps:
+    if not dep.startswith("//"):
+      print "Error, expected dependency label to start with //"
+      return 1
+    target_base = dep[2:]
+    target_sep = string.rfind(target_base, ":")
+    if target_sep != -1:
+      target_name = target_base[target_sep+1:]
+      target_base = target_base[:target_sep]
+    else:
+      target_name = target_base[target_base.rfind("/")+1:]
+    dep_dot_packages_path = os.path.join(
+        args.root_build_dir, "gen", target_base, "%s.packages" % target_name)
+    dependent_files.append(dep_dot_packages_path)
+    dependent_packages = parse_dot_packages(dep_dot_packages_path)
+    for name, path in dependent_packages.iteritems():
+      if name in package_deps:
+        if path != package_deps[name]:
+          print "Error, conflicting entries for %s: %s and %s from %s" % (name,
+              path, package_deps[name], dep)
+          return 1
       else:
-        target_name = target_base[target_base.rfind("/")+1:]
-      dep_dot_packages_path = os.path.join(
-          args.root_build_dir, "gen", target_base, "%s.packages" % target_name)
-      dependent_files.append(dep_dot_packages_path)
-      with open(dep_dot_packages_path) as dep_dot_packages:
-        dot_packages.write(dep_dot_packages.read())
+        package_deps[name] = path
+
+  with open(dot_packages_file, "w") as dot_packages:
+    names = package_deps.keys()
+    names.sort()
+    for name in names:
+      dot_packages.write('%s:file://%s/\n' % (name, package_deps[name]))
 
   with open(args.depfile, "w") as depfile:
     depfile.write("%s: %s\n" % (args.out, " ".join(dependent_files)))
