@@ -1,0 +1,12 @@
+{
+    "labels": [
+        "//third_party/asio",
+        "//third_party/asio:asio_unittests"
+    ],
+    "binaries": [
+        {
+            "binary": "asio_unittests",
+            "bootfs_path": "test/asio_unittests"
+        }
+    ]
+}
