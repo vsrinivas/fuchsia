@@ -15,3 +15,5 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
                                      size_t interface_desc_length);
 
 void usb_device_remove_interfaces(usb_device_t* device);
+
+uint32_t usb_interface_get_device_id(mx_device_t* device);

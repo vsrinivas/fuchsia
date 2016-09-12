@@ -91,7 +91,7 @@ static mx_driver_t _driver_usb_interface BUILTIN_DRIVER = {
 };
 
 mx_status_t usb_device_add_interface(usb_device_t* device,
-                                     usb_device_descriptor_t* device_descriptor,
+                                     usb_device_descriptor_t* device_desc,
                                      usb_interface_descriptor_t* interface_desc,
                                      size_t interface_desc_length) {
     usb_interface_t* intf = calloc(1, sizeof(usb_interface_t));
@@ -112,11 +112,17 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     int count = 0;
     intf->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
     intf->props[count++] = (mx_device_prop_t){ BIND_USB_DEVICE_TYPE, 0, USB_DEVICE_TYPE_INTERFACE };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_descriptor->idVendor };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_descriptor->idProduct };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, interface_desc->bInterfaceClass };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, interface_desc->bInterfaceSubClass };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, interface_desc->bInterfaceProtocol };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
+    if (device_desc->bDeviceClass != 0) {
+        intf->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, device_desc->bDeviceClass };
+        intf->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, device_desc->bDeviceSubClass };
+        intf->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, device_desc->bDeviceProtocol };
+    } else {
+        intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, interface_desc->bInterfaceClass };
+        intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, interface_desc->bInterfaceSubClass };
+        intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, interface_desc->bInterfaceProtocol };
+    }
     intf->device.props = intf->props;
     intf->device.prop_count = count;
 
@@ -135,4 +141,9 @@ void usb_device_remove_interfaces(usb_device_t* device) {
     while ((intf = list_remove_head_type(&device->children, usb_interface_t, node)) != NULL) {
         device_remove(&intf->device);
     }
+}
+
+uint32_t usb_interface_get_device_id(mx_device_t* device) {
+    usb_interface_t* intf = get_usb_interface(device);
+    return intf->device_id;
 }

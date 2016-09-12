@@ -199,24 +199,17 @@ mx_status_t usb_device_add(mx_device_t* hci_device, mx_device_t* bus_device, uin
     dev->device.props = dev->props;
     dev->device.prop_count = count;
 
-    if (device_descriptor->bDeviceClass == 0) {
-        // For now, do not allow binding to root of a composite device so clients will bind to
-        // the child interfaces instead. We may remove this restriction later if the need arises
-        // and we have a good mechanism for prioritizing which devices a driver binds to.
-        device_set_bindable(&dev->device, false);
-    }
+    // Do not allow binding to root of a composite device.
+    // Clients will bind to the child interfaces instead.
+    device_set_bindable(&dev->device, false);
 
     mx_status_t status = device_add(&dev->device, bus_device);
     if (status == NO_ERROR) {
         *out_device = dev;
     } else {
         free(dev);
+        return status;
     }
 
-    if (status == NO_ERROR && device_descriptor->bDeviceClass == 0) {
-        // add children for composite device interfaces
-        status = usb_device_add_interfaces(dev, device_descriptor, config_descriptors[0]);
-    }
-
-    return status;
+    return usb_device_add_interfaces(dev, device_descriptor, config_descriptors[0]);
 }

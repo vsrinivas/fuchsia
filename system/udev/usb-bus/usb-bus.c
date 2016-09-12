@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "usb-device.h"
+#include "usb-interface.h"
 
 // Represents a USB bus, which manages all devices for a USB host controller
 typedef struct usb_bus {
@@ -69,20 +70,20 @@ static void usb_bus_remove_device(mx_device_t* device, uint32_t device_id) {
 static mx_status_t usb_bus_configure_hub(mx_device_t* device, mx_device_t* hub_device, usb_speed_t speed,
                                          usb_hub_descriptor_t* descriptor) {
     usb_bus_t* bus = get_usb_bus(device);
-    usb_device_t* dev = get_usb_device(hub_device);
-    return bus->hci_protocol->configure_hub(bus->hci_device, dev->device_id, speed, descriptor);
+    uint32_t hub_id = usb_interface_get_device_id(hub_device);
+    return bus->hci_protocol->configure_hub(bus->hci_device, hub_id, speed, descriptor);
 }
 
 static mx_status_t usb_bus_device_added(mx_device_t* device, mx_device_t* hub_device, int port, usb_speed_t speed) {
     usb_bus_t* bus = get_usb_bus(device);
-    usb_device_t* dev = get_usb_device(hub_device);
-    return bus->hci_protocol->hub_device_added(bus->hci_device, dev->device_id, port, speed);
+    uint32_t hub_id = usb_interface_get_device_id(hub_device);
+    return bus->hci_protocol->hub_device_added(bus->hci_device, hub_id, port, speed);
 }
 
 static mx_status_t usb_bus_device_removed(mx_device_t* device, mx_device_t* hub_device, int port) {
     usb_bus_t* bus = get_usb_bus(device);
-    usb_device_t* dev = get_usb_device(hub_device);
-    return bus->hci_protocol->hub_device_removed(bus->hci_device, dev->device_id, port);
+    uint32_t hub_id = usb_interface_get_device_id(hub_device);
+    return bus->hci_protocol->hub_device_removed(bus->hci_device, hub_id, port);
 }
 
 static usb_bus_protocol_t _bus_protocol = {

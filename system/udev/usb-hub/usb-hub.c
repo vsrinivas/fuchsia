@@ -268,9 +268,16 @@ static int usb_hub_thread(void* arg) {
 }
 
 static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
+    // search for the bus device
     mx_device_t* bus_device = device->parent;
-    usb_bus_protocol_t* bus_protocol;
-    if (device_get_protocol(bus_device, MX_PROTOCOL_USB_BUS, (void**)&bus_protocol)) {
+    usb_bus_protocol_t* bus_protocol = NULL;
+    while (bus_device != NULL && bus_protocol == NULL) {
+        if (device_get_protocol(bus_device, MX_PROTOCOL_USB_BUS, (void**)&bus_protocol) == NO_ERROR) {
+            break;
+        }
+        bus_device = bus_device->parent;
+    }
+    if (!bus_device || !bus_protocol) {
         printf("usb_hub_bind could not find bus device\n");
         return ERR_NOT_SUPPORTED;
     }
