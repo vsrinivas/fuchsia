@@ -130,14 +130,17 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     mxtl::Array<Handle*> handle_list;
 
     result = msg_pipe->AcceptRead(&bytes, &handle_list);
+    if (result != NO_ERROR)
+        return result;
 
     if (_bytes) {
-        if (copy_to_user(_bytes.reinterpret<uint8_t>(), bytes.get(), num_bytes) != NO_ERROR) {
+        if (copy_to_user(_bytes.reinterpret<uint8_t>(), bytes.get(), bytes.size()) != NO_ERROR) {
             return ERR_INVALID_ARGS;
         }
     }
 
     if (next_message_num_handles != 0u) {
+        // TODO(vtl): Should probably do one big copy-out, instead of one for each handle.
         for (size_t ix = 0u; ix < next_message_num_handles; ++ix) {
             auto hv = up->MapHandleToValue(handle_list[ix]);
             if (copy_to_user_32_unsafe(&_handles.get()[ix], hv) != NO_ERROR)
