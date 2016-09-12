@@ -23,7 +23,7 @@ AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
 
 AudioOutputManager::~AudioOutputManager() {
   Shutdown();
-  DCHECK_EQ(outputs_.size(), 0u);
+  FTL_DCHECK(outputs_.empty());
 }
 
 MediaResult AudioOutputManager::Init() {

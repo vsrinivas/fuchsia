@@ -40,7 +40,7 @@ class SampleNormalizer<
     typename std::enable_if<std::is_same<SType, uint8_t>::value, void>::type> {
  public:
   static inline int32_t Read(const SType* src) {
-    register SType tmp = *src;
+    SType tmp = *src;
     return (static_cast<int32_t>(tmp) << 8) - 0x8000;
   }
 };

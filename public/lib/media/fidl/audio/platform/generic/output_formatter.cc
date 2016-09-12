@@ -76,7 +76,7 @@ class OutputFormatterImpl : public OutputFormatter {
     DType* dest = static_cast<DType*>(dest_void);
 
     for (size_t i = 0; i < (static_cast<size_t>(frames) * DChCount); ++i) {
-      register int32_t val = source[i];
+      int32_t val = source[i];
       if (val > std::numeric_limits<int16_t>::max()) {
         dest[i] = DC::Convert(std::numeric_limits<int16_t>::max());
       } else if (val < std::numeric_limits<int16_t>::min()) {

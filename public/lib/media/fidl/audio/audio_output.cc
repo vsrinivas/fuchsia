@@ -128,7 +128,7 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
   // lock and dispatch to our derived class's implementation.
   auto output = weak_output.lock();
   if (output) {
-    ftl::MutexLocker locker(&output->processing_mutex_);
+    ftl::MutexLocker locker(&output->mutex_);
 
     // Make sure that we are not in the process of cleaning up before we start
     // processing.

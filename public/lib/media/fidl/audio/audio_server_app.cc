@@ -40,7 +40,6 @@ bool AudioServerApp::OnAcceptConnection(
 }  // namespace mojo
 
 MojoResult MojoMain(MojoHandle app_request) {
-  mojo::ScopedChromiumInit init;
   mojo::media::audio::AudioServerApp audio_server_app;
   return mojo::RunApplication(app_request, &audio_server_app);
 }
