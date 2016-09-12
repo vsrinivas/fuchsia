@@ -114,6 +114,42 @@ TEST(MessageLoop, CanPreloadTasks) {
   EXPECT_TRUE(did_run);
 }
 
+TEST(MessageLoop, AfterTaskCallbacks) {
+  std::vector<std::string> tasks;
+  MessageLoop loop;
+  loop.SetAfterTaskCallback([&tasks] { tasks.push_back("callback"); });
+  loop.task_runner()->PostTask([&tasks] { tasks.push_back("0"); });
+  loop.task_runner()->PostTask([&tasks] { tasks.push_back("1"); });
+  loop.PostQuitTask();
+  loop.task_runner()->PostTask([&tasks] { tasks.push_back("2"); });
+  loop.Run();
+  EXPECT_EQ(4u, tasks.size());
+  EXPECT_EQ("0", tasks[0]);
+  EXPECT_EQ("callback", tasks[1]);
+  EXPECT_EQ("1", tasks[2]);
+  EXPECT_EQ("callback", tasks[3]);
+  // Notice that the callback doesn't run after the quit task because we're
+  // quitting.
+}
+
+TEST(MessageLoop, RemoveAfterTaskCallbacksDuringCallback) {
+  std::vector<std::string> tasks;
+  MessageLoop loop;
+
+  loop.SetAfterTaskCallback([&tasks, &loop]() {
+    tasks.push_back("callback");
+    loop.ClearAfterTaskCallback();
+  });
+  loop.task_runner()->PostTask([&tasks] { tasks.push_back("0"); });
+  loop.task_runner()->PostTask([&tasks] { tasks.push_back("1"); });
+  loop.PostQuitTask();
+  loop.Run();
+  EXPECT_EQ(3u, tasks.size());
+  EXPECT_EQ("0", tasks[0]);
+  EXPECT_EQ("callback", tasks[1]);
+  EXPECT_EQ("1", tasks[2]);
+}
+
 struct DestructorObserver {
   DestructorObserver(bool* destructed) : destructed_(destructed) {
     *destructed_ = false;
@@ -265,6 +301,47 @@ TEST(MessageLoop, HandleReady) {
   EXPECT_FALSE(message_loop.HasHandler(key));
 }
 
+TEST(MessageLoop, AfterHandleReadyCallback) {
+  RemoveOnReadyMessageLoopHandler handler;
+  mojo::MessagePipe pipe;
+  MojoResult result =
+      mojo::WriteMessageRaw(pipe.handle1.get(), nullptr, 0, nullptr, 0, 0);
+  EXPECT_EQ(MOJO_RESULT_OK, result);
+
+  MessageLoop message_loop;
+  handler.set_message_loop(&message_loop);
+  MessageLoop::HandlerKey key = message_loop.AddHandler(
+      &handler, pipe.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
+      ftl::TimeDelta::Max());
+  handler.set_handler_key(key);
+  int after_task_callback_count = 0;
+  message_loop.SetAfterTaskCallback(
+      [&after_task_callback_count] { ++after_task_callback_count; });
+  message_loop.Run();
+  EXPECT_EQ(1, handler.ready_count());
+  EXPECT_EQ(0, handler.error_count());
+  EXPECT_EQ(1, after_task_callback_count);
+  EXPECT_FALSE(message_loop.HasHandler(key));
+}
+
+TEST(MessageLoop, AfterDeadlineExpiredCallback) {
+  TestMessageLoopHandler handler;
+  mojo::MessagePipe pipe;
+
+  MessageLoop message_loop;
+  message_loop.AddHandler(&handler, pipe.handle0.get().value(),
+                          MOJO_HANDLE_SIGNAL_READABLE,
+                          ftl::TimeDelta::FromMicroseconds(10000));
+  message_loop.task_runner()->PostDelayedTask(
+      [&message_loop] { message_loop.QuitNow(); },
+      ftl::TimeDelta::FromMicroseconds(15000));
+  int after_task_callback_count = 0;
+  message_loop.SetAfterTaskCallback(
+      [&after_task_callback_count] { ++after_task_callback_count; });
+  message_loop.Run();
+  EXPECT_EQ(1, after_task_callback_count);
+}
+
 class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
  public:
   QuitOnErrorRunMessageHandler() {}
@@ -396,6 +473,50 @@ TEST(MessageLoop, AddHandlerOnError) {
   }
   EXPECT_EQ(1, handler.error_count());
   EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, handler.last_error_result());
+}
+
+class RemoveHandlerOnErrorHandler : public TestMessageLoopHandler {
+ public:
+  RemoveHandlerOnErrorHandler() {}
+  ~RemoveHandlerOnErrorHandler() override {}
+
+  void set_message_loop(MessageLoop* message_loop) {
+    message_loop_ = message_loop;
+  }
+
+  void set_key_to_remove(MessageLoop::HandlerKey key) { key_to_remove_ = key; }
+
+  void OnHandleError(MojoHandle handle, MojoResult result) override {
+    message_loop_->RemoveHandler(key_to_remove_);
+    TestMessageLoopHandler::OnHandleError(handle, result);
+  }
+
+ private:
+  MessageLoop* message_loop_ = nullptr;
+  MessageLoop::HandlerKey key_to_remove_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(RemoveHandlerOnErrorHandler);
+};
+
+TEST(MessageLoop, AfterPreconditionFailedCallback) {
+  RemoveHandlerOnErrorHandler handler;
+  mojo::MessagePipe pipe;
+
+  MessageLoop message_loop;
+  MessageLoop::HandlerKey key = message_loop.AddHandler(
+      &handler, pipe.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
+      ftl::TimeDelta::Max());
+  handler.set_message_loop(&message_loop);
+  handler.set_key_to_remove(key);
+  message_loop.task_runner()->PostTask([&pipe] { pipe.handle1.reset(); });
+  message_loop.task_runner()->PostDelayedTask(
+      [&message_loop] { message_loop.QuitNow(); },
+      ftl::TimeDelta::FromMicroseconds(10000));
+  int after_task_callback_count = 0;
+  message_loop.SetAfterTaskCallback(
+      [&after_task_callback_count] { ++after_task_callback_count; });
+  message_loop.Run();
+  EXPECT_EQ(2, after_task_callback_count);
 }
 
 }  // namespace

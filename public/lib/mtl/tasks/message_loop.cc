@@ -23,16 +23,12 @@ constexpr MessageLoop::HandlerKey kIgnoredKey = 0;
 }  // namespace
 
 MessageLoop::MessageLoop()
-    : MessageLoop(ftl::MakeRefCounted<internal::IncomingTaskQueue>()) {
-  event_.reset(mx_event_create(0));
-  FTL_CHECK(event_.get() > MX_HANDLE_INVALID);
-}
+    : MessageLoop(ftl::MakeRefCounted<internal::IncomingTaskQueue>()) {}
 
 MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : incoming_tasks_(std::move(incoming_tasks)) {
-  FTL_DCHECK(!g_current)
-      << "At most one message loop per thread.";
+  FTL_DCHECK(!g_current) << "At most one message loop per thread.";
   event_.reset(mx_event_create(0));
   FTL_CHECK(event_.get() > MX_HANDLE_INVALID);
   incoming_tasks_->InitDelegate(this);
@@ -90,6 +86,14 @@ bool MessageLoop::HasHandler(HandlerKey key) const {
   return handler_data_.find(key) != handler_data_.end();
 }
 
+void MessageLoop::SetAfterTaskCallback(ftl::Closure callback) {
+  after_task_callback_ = std::move(callback);
+}
+
+void MessageLoop::ClearAfterTaskCallback() {
+  after_task_callback_ = ftl::Closure();
+}
+
 void MessageLoop::NotifyHandlers(ftl::TimePoint now, MojoResult result) {
   // Make a copy in case someone tries to add/remove new handlers as part of
   // notifying.
@@ -103,6 +107,7 @@ void MessageLoop::NotifyHandlers(ftl::TimePoint now, MojoResult result) {
       continue;
     handler_data_.erase(it->first);
     it->second.handler->OnHandleError(it->second.handle, result);
+    CallAfterTaskCallback();
   }
 }
 
@@ -183,6 +188,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   switch (wait_result) {
     case MOJO_RESULT_OK:
       data.handler->OnHandleReady(handle);
+      CallAfterTaskCallback();
       break;
     case MOJO_SYSTEM_RESULT_INVALID_ARGUMENT:
     case MOJO_SYSTEM_RESULT_CANCELLED:
@@ -195,6 +201,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
       // the handle our iterator isn't invalidated.
       handler_data_.erase(handle);
       handler->OnHandleError(handle, wait_result);
+      CallAfterTaskCallback();
       break;
     default:
       FTL_DCHECK(false) << "Unexpected wait result: " << wait_result;
@@ -236,6 +243,7 @@ ftl::TimePoint MessageLoop::RunReadyTasks(ftl::TimePoint now) {
     queue_.pop();
 
     RunTask(task);
+    CallAfterTaskCallback();
   }
 
   return ftl::TimePoint::Max();
@@ -249,6 +257,12 @@ void MessageLoop::ReloadQueue() {
 void MessageLoop::RunTask(const internal::PendingTask& pending_task) {
   const ftl::Closure& closure = pending_task.closure();
   closure();
+}
+
+void MessageLoop::CallAfterTaskCallback() {
+  if (should_quit_ || !after_task_callback_)
+    return;
+  after_task_callback_();
 }
 
 void MessageLoop::WaitState::Set(size_t i,

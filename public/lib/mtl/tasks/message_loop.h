@@ -26,24 +26,64 @@ class MessageLoop : public internal::TaskQueueDelegate {
  public:
   using HandlerKey = uint64_t;
 
+  // Constructs a message loop with an empty task queue. The message loop is
+  // bound to the current thread.
   MessageLoop();
+
+  // Constructs a message loop that will begin by draining the tasks already
+  // present in the |incoming_tasks| queue. The message loop is bound to the
+  // current thread.
   explicit MessageLoop(ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks);
+
   ~MessageLoop() override;
 
+  // Returns the message loop associated with the current thread, if any.
   static MessageLoop* GetCurrent();
 
+  // Return an interface for posting tasks to this message loop.
   ftl::TaskRunner* task_runner() const { return incoming_tasks_.get(); }
 
+  // Adds a |handler| that the message loop calls when the |handle| triggers one
+  // of the given |handle_signals| or when |timeout| elapses, whichever happens
+  // first.
+  //
+  // The returned key can be used to remove the callback. The returned key will
+  // always be non-zero.
   HandlerKey AddHandler(MessageLoopHandler* handler,
                         MojoHandle handle,
                         MojoHandleSignals handle_signals,
                         ftl::TimeDelta timeout);
+
+  // The message loop will no longer call the handler identified by the key. It
+  // is an error to call this function with a key that doesn't correspond to a
+  // currently registered callback.
   void RemoveHandler(HandlerKey key);
+
+  // Returns whether the message loop has a handler registered with the given
+  // key.
   bool HasHandler(HandlerKey key) const;
 
+  // The message loop will call |callback| after each task that execute and
+  // after each time it signals a handler. If the message loop already has an
+  // after task callback set, this function will replace it with this one.
+  void SetAfterTaskCallback(ftl::Closure callback);
+
+  // The message loop will no longer call the registered after task callback, if
+  // any.
+  void ClearAfterTaskCallback();
+
+  // Causes the message loop to run tasks until |QuitNow| is called. If no tasks
+  // are available, the message loop with block and wait for tasks to be posted
+  // via the |task_runner|.
   void Run();
+
+  // Prevents further tasks from running and returns from |Run|. Must be called
+  // while |Run| is on the stack.
   void QuitNow();
 
+  // Posts a task to the queue that calls |QuitNow|. Useful for gracefully
+  // ending the message loop. Can be called whether or not |Run| is on the
+  // stack.
   void PostQuitTask();
 
  private:
@@ -64,8 +104,11 @@ class MessageLoop : public internal::TaskQueueDelegate {
   ftl::TimePoint Wait(ftl::TimePoint now, ftl::TimePoint next_run_time);
   void RunTask(const internal::PendingTask& pending_task);
   void NotifyHandlers(ftl::TimePoint now, MojoResult result);
+  void CallAfterTaskCallback();
 
   ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks_;
+
+  ftl::Closure after_task_callback_;
 
   bool should_quit_ = false;
   bool is_running_ = false;
