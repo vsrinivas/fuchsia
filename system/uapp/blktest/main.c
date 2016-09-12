@@ -22,6 +22,7 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
         return fd;
     }
 
+    void* buf = NULL;
     // constrain to device size
     int rc;
     uint64_t size;
@@ -54,7 +55,7 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
         }
     }
 
-    void* buf = malloc(count * 2);
+    buf = malloc(count * 2);
     if (!buf) {
         printf("Out of memory!\n");
         goto fail;
@@ -97,6 +98,9 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
         printf("OK\n");
     }
 fail:
+    if (buf) {
+        free(buf);
+    }
     close(fd);
     return rc;
 }
