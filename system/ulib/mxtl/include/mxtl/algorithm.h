@@ -7,17 +7,17 @@
 namespace mxtl {
 
 template<class T>
-const T& min(const T& a, const T& b) {
+constexpr const T& min(const T& a, const T& b) {
     return (b < a) ? b : a;
 }
 
 template<class T>
-const T& max(const T& a, const T& b) {
+constexpr const T& max(const T& a, const T& b) {
     return (a < b) ? b : a;
 }
 
 template<class T>
-const T& clamp(const T& v, const T& lo, const T& hi) {
+constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
     return (v < lo) ? lo : (hi < v) ? hi : v;
 }
 
