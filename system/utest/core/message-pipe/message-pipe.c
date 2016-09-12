@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <magenta/compiler.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/msgpipe.h>
 #include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 #include <stdbool.h>
@@ -39,23 +41,23 @@ mx_handle_t _pipe[4];
 static int reader_thread(void* arg) {
     const unsigned int index = 2;
     mx_handle_t* pipe = &_pipe[index];
-    mx_status_t status;
+    __UNUSED mx_status_t status;
     mx_signals_state_t states[2];
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     unsigned int packets[2] = {0, 0};
     bool closed[2] = {false, false};
     do {
         status = mx_handle_wait_many(2, pipe, &signals, MX_TIME_INFINITE, NULL, states);
-        ASSERT_EQ(status, NO_ERROR, "error from mx_handle_wait_many");
+        assert(status == NO_ERROR);
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
         if (states[0].satisfied & MX_SIGNAL_READABLE) {
-            status = mx_msgpipe_read(pipe[0], &data, &num_bytes, NULL, 0u, 0u);
-            ASSERT_EQ(status, NO_ERROR, "error while reading message");
+            status = mx_msgpipe_read(pipe[0], &data, &num_bytes, NULL, NULL, 0u);
+            assert(status == NO_ERROR);
             packets[0] += 1;
         } else if (states[1].satisfied & MX_SIGNAL_READABLE) {
-            status = mx_msgpipe_read(pipe[1], &data, &num_bytes, NULL, 0u, 0u);
-            ASSERT_EQ(status, NO_ERROR, "error while reading message");
+            status = mx_msgpipe_read(pipe[1], &data, &num_bytes, NULL, NULL, 0u);
+            assert(status == NO_ERROR);
             packets[1] += 1;
         } else {
             if (states[0].satisfied & MX_SIGNAL_PEER_CLOSED)
@@ -71,14 +73,14 @@ static int reader_thread(void* arg) {
 
 static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
     mx_signals_state_t signals_state = {0};
-    mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
+    __UNUSED mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
     assert(status == ERR_BAD_STATE);  // "Unsatisfiable".
     return signals_state.satisfied;
 }
 
 static mx_signals_t get_satisfiable_signals(mx_handle_t handle) {
     mx_signals_state_t signals_state = {0};
-    mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
+    __UNUSED mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
     assert(status == ERR_BAD_STATE);  // "Unsatisfiable".
     return signals_state.satisfiable;
 }
@@ -161,7 +163,7 @@ static bool message_pipe_read_error_test(void) {
     ASSERT_EQ(status, NO_ERROR, "error in message pipe create");
 
     // Read from an empty message pipe.
-    status = mx_msgpipe_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
+    status = mx_msgpipe_read(pipe[0], NULL, NULL, NULL, NULL, 0u);
     ASSERT_EQ(status, ERR_SHOULD_WAIT, "read on empty non-closed pipe produced incorrect error");
 
     char data = 'x';
@@ -173,13 +175,13 @@ static bool message_pipe_read_error_test(void) {
     // Read a message with the peer closed, should yield the message.
     char read_data = '\0';
     uint32_t read_data_size = 1u;
-    status = mx_msgpipe_read(pipe[0], &read_data, &read_data_size, NULL, 0u, 0u);
+    status = mx_msgpipe_read(pipe[0], &read_data, &read_data_size, NULL, NULL, 0u);
     ASSERT_EQ(status, NO_ERROR, "read failed with peer closed but message in the pipe");
     ASSERT_EQ(read_data_size, 1u, "read returned incorrect number of bytes");
     ASSERT_EQ(read_data, 'x', "read returned incorrect data");
 
     // Read from an empty pipe with a closed peer, should yield a channel closed error.
-    status = mx_msgpipe_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
+    status = mx_msgpipe_read(pipe[0], NULL, NULL, NULL, NULL, 0u);
     ASSERT_EQ(status, ERR_REMOTE_CLOSED, "read on empty closed pipe produced incorrect error");
 
     // Waiting for readability should yield a bad state error.
@@ -286,7 +288,7 @@ static int multithread_reader(void* arg) {
     for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
         uint32_t msg = MSG_UNSET;
         uint32_t msg_size = sizeof(msg);
-        if (mx_msgpipe_read(_pipe[0], &msg, &msg_size, NULL, 0, 0) != NO_ERROR) {
+        if (mx_msgpipe_read(_pipe[0], &msg, &msg_size, NULL, NULL, 0u) != NO_ERROR) {
             ((uint32_t*)arg)[i] = MSG_READ_FAILED;
             break;
         }
@@ -365,6 +367,89 @@ static bool message_pipe_multithread_read(void) {
     END_TEST;
 }
 
+// |handle| must be valid (and duplicatable and transferable) if |num_handles > 0|.
+static void write_test_message(mx_handle_t pipe,
+                               mx_handle_t handle,
+                               uint32_t size,
+                               uint32_t num_handles) {
+    static const char data[1000] = {};
+    mx_handle_t handles[10] = {};
+
+    assert(size <= sizeof(data));
+    assert(num_handles <= countof(handles));
+
+    for (uint32_t i = 0; i < num_handles; i++) {
+        handles[i] = mx_handle_duplicate(handle, MX_RIGHT_TRANSFER);
+        assert(handles[i] != MX_HANDLE_INVALID);
+    }
+
+    __UNUSED mx_status_t status = mx_msgpipe_write(pipe, data, size, handles, num_handles, 0u);
+    assert(status == NO_ERROR);
+}
+
+static bool message_pipe_may_discard(void) {
+    BEGIN_TEST;
+
+    mx_handle_t pipe[2];
+    ASSERT_EQ(mx_msgpipe_create(pipe, 0), NO_ERROR, "");
+
+    mx_handle_t event = mx_event_create(0u);
+    ASSERT_GT(event, 0, "failed to create event");
+
+    EXPECT_EQ(mx_handle_wait_one(pipe[1], MX_SIGNAL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+
+    write_test_message(pipe[0], event, 10u, 0u);
+    EXPECT_EQ(mx_msgpipe_read(pipe[1], NULL, NULL, NULL, NULL, MX_MSGPIPE_READ_FLAG_MAY_DISCARD),
+              ERR_BUFFER_TOO_SMALL, "");
+
+    EXPECT_EQ(mx_handle_wait_one(pipe[1], MX_SIGNAL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+
+    char data[1000];
+    uint32_t size;
+
+    write_test_message(pipe[0], event, 100u, 0u);
+    size = 10u;
+    EXPECT_EQ(mx_msgpipe_read(pipe[1], data, &size, NULL, NULL, MX_MSGPIPE_READ_FLAG_MAY_DISCARD),
+              ERR_BUFFER_TOO_SMALL, "");
+    EXPECT_EQ(size, 100u, "wrong size");
+
+    EXPECT_EQ(mx_handle_wait_one(pipe[1], MX_SIGNAL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+
+    mx_handle_t handles[10];
+    uint32_t num_handles;
+
+    write_test_message(pipe[0], event, 0u, 5u);
+    size = 10u;
+    num_handles = 1u;
+    EXPECT_EQ(mx_msgpipe_read(pipe[1], data, &size, handles, &num_handles,
+                              MX_MSGPIPE_READ_FLAG_MAY_DISCARD),
+              ERR_BUFFER_TOO_SMALL, "");
+    EXPECT_EQ(size, 0u, "wrong size");
+    EXPECT_EQ(num_handles, 5u, "wrong number of handles");
+
+    EXPECT_EQ(mx_handle_wait_one(pipe[1], MX_SIGNAL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+
+    write_test_message(pipe[0], event, 100u, 5u);
+    size = 10u;
+    num_handles = 1u;
+    EXPECT_EQ(mx_msgpipe_read(pipe[1], data, &size, handles, &num_handles,
+                              MX_MSGPIPE_READ_FLAG_MAY_DISCARD),
+              ERR_BUFFER_TOO_SMALL, "");
+    EXPECT_EQ(size, 100u, "wrong size");
+    EXPECT_EQ(num_handles, 5u, "wrong number of handles");
+
+    EXPECT_EQ(mx_handle_wait_one(pipe[1], MX_SIGNAL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+
+    mx_status_t close_result = mx_handle_close(event);
+    EXPECT_EQ(close_result, NO_ERROR, "");
+    close_result = mx_handle_close(pipe[0]);
+    EXPECT_EQ(close_result, NO_ERROR, "");
+    close_result = mx_handle_close(pipe[1]);
+    EXPECT_EQ(close_result, NO_ERROR, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(message_pipe_tests)
 RUN_TEST(message_pipe_test)
 RUN_TEST(message_pipe_read_error_test)
@@ -372,6 +457,7 @@ RUN_TEST(message_pipe_close_test)
 RUN_TEST(message_pipe_non_transferable)
 RUN_TEST(message_pipe_duplicate_handles)
 RUN_TEST(message_pipe_multithread_read)
+RUN_TEST(message_pipe_may_discard)
 END_TEST_CASE(message_pipe_tests)
 
 #ifndef BUILD_COMBINED_TESTS

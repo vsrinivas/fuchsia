@@ -61,7 +61,8 @@ invalid pointers.
 **ERR_BUFFER_TOO_SMALL**  The provided *bytes* or *handles* buffers
 are too small (in which case, the minimum sizes necessary to receive
 the message will be written to the uint32_t's pointed at by these
-parameters, provided they are non-NULL).
+parameters, provided they are non-NULL). If *flags* has
+**MX_MSGPIPE_READ_FLAG_MAY_DISCARD** set, then the message is discarded.
 
 ## NOTES
 

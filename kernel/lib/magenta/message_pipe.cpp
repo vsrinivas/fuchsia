@@ -68,7 +68,8 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
 status_t MessagePipe::Read(size_t side,
                            uint32_t* msg_size,
                            uint32_t* msg_handle_count,
-                           mxtl::unique_ptr<MessagePacket>* msg) {
+                           mxtl::unique_ptr<MessagePacket>* msg,
+                           bool may_discard) {
     auto max_size = *msg_size;
     auto max_handle_count = *msg_handle_count;
     auto other = other_side(side);
@@ -82,8 +83,12 @@ status_t MessagePipe::Read(size_t side,
 
     *msg_size = messages_[side].front().data_size();
     *msg_handle_count = messages_[side].front().num_handles();
-    if (*msg_size > max_size || *msg_handle_count > max_handle_count)
-        return ERR_BUFFER_TOO_SMALL;
+    status_t rv = NO_ERROR;
+    if (*msg_size > max_size || *msg_handle_count > max_handle_count) {
+        if (!may_discard)
+            return ERR_BUFFER_TOO_SMALL;
+        rv = ERR_BUFFER_TOO_SMALL;
+    }
 
     *msg = messages_[side].pop_front();
 
@@ -92,7 +97,7 @@ status_t MessagePipe::Read(size_t side,
                                          !other_alive ? MX_SIGNAL_READABLE : 0u, 0u);
     }
 
-    return NO_ERROR;
+    return rv;
 }
 
 status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {

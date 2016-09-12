@@ -35,7 +35,8 @@ public:
     // See MessagePipe::Read() for details.
     status_t Read(uint32_t* msg_size,
                   uint32_t* msg_handle_count,
-                  mxtl::unique_ptr<MessagePacket>* msg);
+                  mxtl::unique_ptr<MessagePacket>* msg,
+                  bool may_disard);
     status_t Write(mxtl::unique_ptr<MessagePacket> msg);
 
 private:

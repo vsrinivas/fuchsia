@@ -68,9 +68,10 @@ StateTracker* MessagePipeDispatcher::get_state_tracker() {
 
 status_t MessagePipeDispatcher::Read(uint32_t* msg_size,
                                      uint32_t* msg_handle_count,
-                                     mxtl::unique_ptr<MessagePacket>* msg) {
+                                     mxtl::unique_ptr<MessagePacket>* msg,
+                                     bool may_discard) {
     LTRACE_ENTRY;
-    return pipe_->Read(side_, msg_size, msg_handle_count, msg);
+    return pipe_->Read(side_, msg_size, msg_handle_count, msg, may_discard);
 }
 
 status_t MessagePipeDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {

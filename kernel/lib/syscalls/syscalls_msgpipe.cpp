@@ -19,6 +19,8 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
+#include <magenta/syscalls/msgpipe.h>
+
 #include <mxtl/algorithm.h>
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
@@ -107,13 +109,17 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     if (_handles && !_num_handles)
         return ERR_INVALID_ARGS;
 
+    if (flags & ~MX_MSGPIPE_READ_FLAG_MASK)
+        return ERR_NOT_SUPPORTED;
+
     mxtl::unique_ptr<MessagePacket> msg;
-    result = msg_pipe->Read(&num_bytes, &num_handles, &msg);
+    result = msg_pipe->Read(&num_bytes, &num_handles, &msg,
+                            flags & MX_MSGPIPE_READ_FLAG_MAY_DISCARD);
     if (result != NO_ERROR && result != ERR_BUFFER_TOO_SMALL)
         return result;
 
     // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
-    // unconsumed).
+    // unconsumed, unless |flags| has MX_MSGPIPE_READ_FLAG_MAY_DISCARD set).
     if (_num_bytes) {
         if (_num_bytes.copy_to_user(num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;

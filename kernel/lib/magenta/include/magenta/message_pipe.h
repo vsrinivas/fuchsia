@@ -28,12 +28,13 @@ public:
 
     // |msg_size| and |msg_handle_count| are in-out parameters. As input, they specify the maximum
     // size and handle count, respectively. On NO_ERROR or ERR_BUFFER_TOO_SMALL, they specify the
-    // actual size and handle count (of the returned message in the former case and of the next
-    // message in the latter).
+    // actual size and handle count of the next message. The next message is returned in |*msg| on
+    // NO_ERROR and also on ERR_BUFFER_TOO_SMALL when |may_discard| is set.
     status_t Read(size_t side,
                   uint32_t* msg_size,
                   uint32_t* msg_handle_count,
-                  mxtl::unique_ptr<MessagePacket>* msg);
+                  mxtl::unique_ptr<MessagePacket>* msg,
+                  bool may_discard);
     status_t Write(size_t side, mxtl::unique_ptr<MessagePacket> msg);
 
     StateTracker* GetStateTracker(size_t side);
