@@ -30,14 +30,6 @@ long __syscall_ret(unsigned long r);
 
 /* fixup legacy 32-bit-vs-lfs64 junk */
 
-#if defined(SYS_newfstatat)
-#undef SYS_fstatat
-#define SYS_fstatat SYS_newfstatat
-#elif defined(SYS_fstatat64)
-#undef SYS_fstatat
-#define SYS_fstatat SYS_fstatat64
-#endif
-
 #ifdef SYS_ugetrlimit
 #undef SYS_getrlimit
 #define SYS_getrlimit SYS_ugetrlimit

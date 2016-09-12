@@ -17,7 +17,6 @@
 #define SYS_fstatfs 100
 #define SYS_setitimer 104
 #define SYS_getitimer 105
-#define SYS_fstat 108
 #define SYS_wait4 114
 #define SYS_clone 120
 #define SYS_setdomainname 121
@@ -102,7 +101,6 @@
 #define SYS_mkdirat 323
 #define SYS_mknodat 324
 #define SYS_fchownat 325
-#define SYS_fstatat64 327
 #define SYS_renameat 329
 #define SYS_linkat 330
 #define SYS_symlinkat 331

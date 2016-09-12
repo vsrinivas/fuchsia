@@ -732,11 +732,9 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/signal/sigwait.c \
     $(LOCAL_DIR)/src/signal/sigwaitinfo.c \
     $(LOCAL_DIR)/src/stat/fchmodat.c \
-    $(LOCAL_DIR)/src/stat/fstatat.c \
     $(LOCAL_DIR)/src/stat/futimens.c \
     $(LOCAL_DIR)/src/stat/futimesat.c \
     $(LOCAL_DIR)/src/stat/lchmod.c \
-    $(LOCAL_DIR)/src/stat/lstat.c \
     $(LOCAL_DIR)/src/stat/mkdirat.c \
     $(LOCAL_DIR)/src/stat/mkfifoat.c \
     $(LOCAL_DIR)/src/stat/mknodat.c \

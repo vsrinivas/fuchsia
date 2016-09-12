@@ -103,11 +103,23 @@ static int stub_fstat(int fd, struct stat* s) {
 }
 weak_alias(stub_fstat, fstat);
 
+static int stub_fstatat(int fd, const char* restrict path, struct stat* restrict buf, int flag) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fstatat, fstatat);
+
 static int stub_stat(const char* fn, struct stat* s) {
     errno = ENOSYS;
     return -1;
 }
 weak_alias(stub_stat, stat);
+
+static int stub_lstat(const char* restrict path, struct stat* restrict buf) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_lstat, lstat);
 
 static int stub_dup(int oldfd) {
     errno = ENOSYS;
