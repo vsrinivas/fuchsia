@@ -27,6 +27,8 @@ mx_status_t usb_get_status(mx_device_t* device, uint8_t request_type, uint16_t i
 
 mx_status_t usb_set_configuration(mx_device_t* device, int config);
 
+mx_status_t usb_set_interface(mx_device_t* device, int interface_number, int alt_setting);
+
 mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
 
 mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int feature, int index);

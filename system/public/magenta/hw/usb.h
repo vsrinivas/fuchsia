@@ -12,6 +12,9 @@
 
 __BEGIN_CDECLS;
 
+// maximum number of endpoints per device
+#define USB_MAX_EPS                     32
+
 /* Request Types */
 #define USB_DIR_OUT                     (0 << 7)
 #define USB_DIR_IN                      (1 << 7)

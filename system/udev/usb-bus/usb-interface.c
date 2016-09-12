@@ -10,22 +10,7 @@
 
 #include "usb-device.h"
 #include "usb-interface.h"
-
-// Represents an inteface within a composite device
-typedef struct {
-    mx_device_t device;
-
-    mx_device_t* hci_device;
-    uint32_t device_id;
-
-    usb_interface_descriptor_t* interface_desc;
-    size_t interface_desc_length;
-
-    mx_device_prop_t props[7];
-
-    list_node_t node;
-} usb_interface_t;
-#define get_usb_interface(dev) containerof(dev, usb_interface_t, device)
+#include "util.h"
 
 static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     usb_interface_t* intf = get_usb_interface(device);
@@ -47,12 +32,6 @@ static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op,
         *reply = USB_DEVICE_TYPE_INTERFACE;
         return sizeof(*reply);
     }
-    case IOCTL_USB_GET_DEVICE_SPEED:
-    case IOCTL_USB_GET_DEVICE_DESC:
-    case IOCTL_USB_GET_CONFIG_DESC_SIZE:
-    case IOCTL_USB_GET_CONFIG_DESC:
-    case IOCTL_USB_GET_STRING_DESC:
-        return device->parent->ops->ioctl(device->parent, op, in_buf, in_len, out_buf, out_len);
     case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
@@ -67,7 +46,8 @@ static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op,
         return desc_length;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        // other ioctls are handled by top level device
+        return device->parent->ops->ioctl(device->parent, op, in_buf, in_len, out_buf, out_len);
     }
 }
 
@@ -99,6 +79,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
         return ERR_NO_MEMORY;
 
     intf->hci_device = device->hci_device;
+    intf->hci_protocol = device->hci_protocol;
     intf->device_id = device->device_id;
     intf->interface_desc = interface_desc;
     intf->interface_desc_length = interface_desc_length;
@@ -126,10 +107,13 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     intf->device.props = intf->props;
     intf->device.prop_count = count;
 
+    usb_interface_set_alt_setting(intf, interface_desc->bInterfaceNumber, 0);
+
+    // need to do this first so usb_device_set_interface() can be called from driver bind
+    list_add_head(&device->children, &intf->node);
     mx_status_t status = device_add(&intf->device, &device->device);
-    if (status == NO_ERROR) {
-        list_add_head(&device->children, &intf->node);
-    } else {
+    if (status != NO_ERROR) {
+        list_delete(&intf->node);
         free(interface_desc);
         free(intf);
     }
@@ -146,4 +130,80 @@ void usb_device_remove_interfaces(usb_device_t* device) {
 uint32_t usb_interface_get_device_id(mx_device_t* device) {
     usb_interface_t* intf = get_usb_interface(device);
     return intf->device_id;
+}
+
+static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
+                                                 usb_endpoint_descriptor_t* ep,
+                                                 bool enable) {
+    mx_status_t status = intf->hci_protocol->enable_endpoint(intf->hci_device, intf->device_id, ep,
+                                                             enable);
+    if (status != NO_ERROR) {
+        printf("usb_interface_enable_endpoint failed\n");
+    }
+    return status;
+}
+
+#define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
+
+bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_id) {
+    usb_descriptor_header_t* header = (usb_descriptor_header_t *)intf->interface_desc;
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->interface_desc_length);
+
+    while (header < end) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
+            if (intf_desc->bInterfaceNumber == interface_id) {
+                return true;
+            }
+        }
+        header = NEXT_DESCRIPTOR(header);
+    }
+    return false;
+}
+
+mx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interface_id,
+                                          uint8_t alt_setting) {
+    usb_endpoint_descriptor_t* new_endpoints[USB_MAX_EPS];
+    memset(new_endpoints, 0, sizeof(new_endpoints));
+    mx_status_t status = NO_ERROR;
+
+    // iterate through our descriptors to find which endpoints should be active
+    usb_descriptor_header_t* header = (usb_descriptor_header_t *)intf->interface_desc;
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->interface_desc_length);
+
+    bool enable_endpoints = false;
+    while (header < end) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
+            enable_endpoints = (intf_desc->bAlternateSetting == alt_setting);
+        } else if (header->bDescriptorType == USB_DT_ENDPOINT && enable_endpoints) {
+            usb_endpoint_descriptor_t* ep = (usb_endpoint_descriptor_t*)header;
+            new_endpoints[get_usb_endpoint_index(ep)] = ep;
+        }
+        header = NEXT_DESCRIPTOR(header);
+    }
+
+    // update to new set of endpoints
+    // FIXME - how do we recover if we fail half way through processing the endpoints?
+    for (size_t i = 0; i < countof(new_endpoints); i++) {
+        usb_endpoint_descriptor_t* old_ep = intf->active_endpoints[i];
+        usb_endpoint_descriptor_t* new_ep = new_endpoints[i];
+        if (old_ep != new_ep) {
+            if (old_ep) {
+                mx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, false);
+                if (ret != NO_ERROR) status = ret;
+            }
+            if (new_ep) {
+                mx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, true);
+                if (ret != NO_ERROR) status = ret;
+            }
+            intf->active_endpoints[i] = new_ep;
+        }
+    }
+
+    mx_status_t ret = usb_device_control(intf->hci_device, intf->device_id,
+                                         USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
+                                         USB_REQ_SET_INTERFACE, alt_setting, interface_id, NULL, 0);
+    if (ret != NO_ERROR) status = ret;
+    return status;
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 #include <stdlib.h>
@@ -25,17 +26,15 @@ typedef struct usb_bus {
 } usb_bus_t;
 #define get_usb_bus(dev) containerof(dev, usb_bus_t, device)
 
-mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, uint32_t hub_id,
-                               usb_speed_t speed, usb_device_descriptor_t* device_descriptor,
-                               usb_configuration_descriptor_t** config_descriptors) {
+static mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, uint32_t hub_id,
+                                      usb_speed_t speed) {
     usb_bus_t* bus = get_usb_bus(device);
 
-    if (!device_descriptor || !config_descriptors) return ERR_INVALID_ARGS;
     if (device_id >= bus->max_device_count) return ERR_INVALID_ARGS;
 
     usb_device_t* usb_device;
-    mx_status_t result = usb_device_add(bus->hci_device, &bus->device, device_id, hub_id, speed,
-                                        device_descriptor, config_descriptors, &usb_device);
+    mx_status_t result = usb_device_add(bus->hci_device, bus->hci_protocol, &bus->device, device_id,
+                                        hub_id, speed, &usb_device);
     if (result == NO_ERROR) {
         bus->devices[device_id] = usb_device;
     }

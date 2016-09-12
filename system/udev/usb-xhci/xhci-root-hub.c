@@ -182,25 +182,17 @@ static mx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
     if (!device_desc) {
         return ERR_NO_MEMORY;
     }
-    usb_configuration_descriptor_t** config_descs = malloc(sizeof(usb_configuration_descriptor_t *));
-    if (!config_descs) {
-        free(device_desc);
-        return ERR_NO_MEMORY;
-    }
-    uint8_t* config_desc = malloc(CONFIG_DESC_SIZE);
+    usb_configuration_descriptor_t* config_desc = (usb_configuration_descriptor_t *)malloc(CONFIG_DESC_SIZE);
     if (!config_desc) {
         free(device_desc);
-        free(config_descs);
         return ERR_NO_MEMORY;
     }
 
-    config_descs[0] = (usb_configuration_descriptor_t *)config_desc;
     memcpy(device_desc, rh->device_desc, sizeof(usb_device_descriptor_t));
     memcpy(config_desc, rh->config_desc, le16toh(rh->config_desc->wTotalLength));
 
     // Notify bus driver that our emulated hub exists
-    return xhci_add_device(xhci, xhci->max_slots + rh_index + 1, 0, xhci_rh_speeds[rh_index],
-                           device_desc, config_descs);
+    return xhci_add_device(xhci, xhci->max_slots + rh_index + 1, 0, xhci_rh_speeds[rh_index]);
 }
 
 mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
@@ -331,6 +323,11 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
             txn->ops->complete(txn, NO_ERROR, length);
             return NO_ERROR;
         }
+    } else if (request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
+               request == USB_REQ_SET_CONFIGURATION && txn->length == 0) {
+        // nothing to do here
+        txn->ops->complete(txn, NO_ERROR, 0);
+        return NO_ERROR;
     }
 
     printf("unsupported root hub control request\n");

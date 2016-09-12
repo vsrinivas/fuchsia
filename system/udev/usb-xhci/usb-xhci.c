@@ -47,9 +47,7 @@ typedef struct usb_xhci {
 #define xhci_to_usb_xhci(dev) containerof(dev, usb_xhci_t, xhci)
 #define dev_to_usb_xhci(dev) containerof(dev, usb_xhci_t, device)
 
-mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed,
-                            usb_device_descriptor_t* device_descriptor,
-                            usb_configuration_descriptor_t** config_descriptors) {
+mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
     usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
     xprintf("xhci_add_new_device\n");
 
@@ -58,8 +56,7 @@ mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
         return ERR_INTERNAL;
     }
 
-    return uxhci->bus_protocol->add_device(uxhci->bus_device, slot_id, hub_address, speed,
-                                           device_descriptor, config_descriptors);
+    return uxhci->bus_protocol->add_device(uxhci->bus_device, slot_id, hub_address, speed);
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
@@ -136,7 +133,7 @@ static int xhci_irq_thread(void* arg) {
     return 0;
 }
 
-void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
+static void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(device);
     uxhci->bus_device = busdev;
     if (busdev) {
@@ -148,16 +145,22 @@ void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
     }
 }
 
-size_t xhci_get_max_device_count(mx_device_t* device) {
+static size_t xhci_get_max_device_count(mx_device_t* device) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(device);
     // add one to allow device IDs to be 1-based
     return uxhci->xhci.max_slots + XHCI_RH_COUNT + 1;
 }
 
-mx_status_t xhci_config_hub(mx_device_t* hci_device, int slot_id, usb_speed_t speed,
+static mx_status_t xhci_enable_ep(mx_device_t* hci_device, uint32_t device_id,
+                                  usb_endpoint_descriptor_t* ep_desc, bool enable) {
+    usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
+    return xhci_enable_endpoint(&uxhci->xhci, device_id, ep_desc, enable);
+}
+
+mx_status_t xhci_config_hub(mx_device_t* hci_device, uint32_t device_id, usb_speed_t speed,
                             usb_hub_descriptor_t* descriptor) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
-    return xhci_configure_hub(&uxhci->xhci, slot_id, speed, descriptor);
+    return xhci_configure_hub(&uxhci->xhci, device_id, speed, descriptor);
 }
 
 mx_status_t xhci_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, int port,
@@ -175,6 +178,7 @@ mx_status_t xhci_hub_device_removed(mx_device_t* hci_device, uint32_t hub_addres
 usb_hci_protocol_t xhci_hci_protocol = {
     .set_bus_device = xhci_set_bus_device,
     .get_max_device_count = xhci_get_max_device_count,
+    .enable_endpoint = xhci_enable_ep,
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,

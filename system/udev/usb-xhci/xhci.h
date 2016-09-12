@@ -93,7 +93,6 @@ struct xhci {
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;
     usb_device_descriptor_t* device_descriptor;
-    usb_configuration_descriptor_t* config_descriptor;
 };
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
@@ -119,8 +118,6 @@ void xhci_free_phys(xhci_t* xhci, mx_paddr_t addr);
 mx_paddr_t xhci_virt_to_phys(xhci_t* xhci, mx_vaddr_t addr);
 mx_vaddr_t xhci_phys_to_virt(xhci_t* xhci, mx_paddr_t addr);
 
-mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed,
-                            usb_device_descriptor_t* device_descriptor,
-                            usb_configuration_descriptor_t** config_descriptors);
+mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
 void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed);

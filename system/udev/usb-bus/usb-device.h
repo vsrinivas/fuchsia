@@ -6,6 +6,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
+#include <ddk/protocol/usb-hci.h>
 #include <magenta/hw/usb.h>
 
 // Represents a USB top-level device
@@ -19,10 +20,10 @@ typedef struct usb_device {
     usb_speed_t speed;
 
     mx_device_t* hci_device;
+    usb_hci_protocol_t* hci_protocol;
 
-    // descriptors for top-level devices
-    usb_device_descriptor_t* device_desc;
-    usb_configuration_descriptor_t** config_descs;
+    usb_device_descriptor_t device_desc;
+    usb_configuration_descriptor_t* config_desc;
 
     mx_device_prop_t props[7];
 
@@ -33,10 +34,8 @@ typedef struct usb_device {
 } usb_device_t;
 #define get_usb_device(dev) containerof(dev, usb_device_t, device)
 
-mx_status_t usb_device_add(mx_device_t* hci_device, mx_device_t* bus_device, uint32_t device_id,
-                           uint32_t hub_id, usb_speed_t speed,
-                           usb_device_descriptor_t* device_descriptor,
-                           usb_configuration_descriptor_t** config_descriptors,
-                           usb_device_t** out_device);
+mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_protocol,
+                           mx_device_t* parent,  uint32_t device_id, uint32_t hub_id,
+                           usb_speed_t speed, usb_device_t** out_device);
 
 void usb_device_remove(usb_device_t* dev);

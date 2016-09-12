@@ -53,4 +53,10 @@ __BEGIN_CDECLS
 // call with in_len = sizeof(int) and out_len = size of buffer to receive string (256 recommended)
 #define IOCTL_USB_GET_STRING_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 7)
 
+// selects an alternate setting for an interface on a USB device
+// called with in_buf pointing to an array of two ints,
+// the first being the interface number and the second the alternate setting,
+// and in_len = 2 * sizeof(int)
+#define IOCTL_USB_SET_INTERFACE         IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 8)
+
 __END_CDECLS

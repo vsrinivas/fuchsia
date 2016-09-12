@@ -12,9 +12,7 @@
 __BEGIN_CDECLS;
 
 typedef struct usb_bus_protocol {
-    mx_status_t (*add_device)(mx_device_t* device, uint32_t device_id, uint32_t hub_id,
-                              usb_speed_t speed, usb_device_descriptor_t* device_descriptor,
-                              usb_configuration_descriptor_t** config_descriptors);
+    mx_status_t (*add_device)(mx_device_t* device, uint32_t device_id, uint32_t hub_id, usb_speed_t speed);
     void (*remove_device)(mx_device_t* device, uint32_t device_id);
 
     // Hub support
