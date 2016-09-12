@@ -246,8 +246,6 @@ int main(int argc, const char** argv) {
                 goto usage;
             }
             device_id = argv[i];
-        } else if (!strcmp(arg, "-d")) {
-            goto usage;
         } else {
             printf("unknown option \"%s\"\n", arg);
             result = -1;
