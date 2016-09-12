@@ -12,8 +12,12 @@
             "bootfs_path": "bin/flutter_wtf_unittests"
         },
         {
+            "binary": "hello_flutter.flx",
+            "bootfs_path": "apps/hello_flutter"
+        },
+        {
             "binary": "spinning_square.flx",
-            "bootfs_path": "apps/spinning_square.flx"
+            "bootfs_path": "apps/spinning_square"
         }
     ]
 }
