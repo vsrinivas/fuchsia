@@ -17,7 +17,6 @@ extern "C" {
 }
 
 #include "magma.h"
-#include <magenta/syscalls-ddk.h>
 #include <magenta/types.h>
 #include <thread>
 
