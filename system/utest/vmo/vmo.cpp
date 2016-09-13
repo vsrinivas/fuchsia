@@ -12,7 +12,7 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
-bool vmo_create_test(void) {
+bool vmo_create_test() {
     BEGIN_TEST;
 
     mx_status_t status;
@@ -32,7 +32,7 @@ bool vmo_create_test(void) {
     END_TEST;
 }
 
-bool vmo_read_write_test(void) {
+bool vmo_read_write_test() {
     BEGIN_TEST;
 
     mx_status_t status;
@@ -72,7 +72,7 @@ bool vmo_read_write_test(void) {
     END_TEST;
 }
 
-bool vmo_read_only_map_test(void) {
+bool vmo_read_only_map_test() {
     BEGIN_TEST;
 
     mx_status_t status;
@@ -103,7 +103,7 @@ bool vmo_read_only_map_test(void) {
     END_TEST;
 }
 
-bool vmo_resize_test(void) {
+bool vmo_resize_test() {
     BEGIN_TEST;
 
     mx_status_t status;
@@ -164,7 +164,7 @@ static bool rights_test_map_helper(mx_handle_t vmo, size_t len, uint32_t flags, 
     return true;
 }
 
-bool vmo_rights_test(void) {
+bool vmo_rights_test() {
     BEGIN_TEST;
 
     char buf[4096];
@@ -272,6 +272,62 @@ bool vmo_rights_test(void) {
     END_TEST;
 }
 
+bool vmo_lookup_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_status_t status;
+
+    const size_t size = 16384;
+    mx_paddr_t buf[size / PAGE_SIZE];
+
+    vmo = mx_vmo_create(size);
+    EXPECT_LT(0, vmo, "vm_object_create");
+
+    // do a lookup (this should fail becase the pages aren't committed)
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size, buf, sizeof(buf));
+    EXPECT_EQ(ERR_NO_MEMORY, status, "lookup on uncommitted vmo");
+
+    // commit the memory
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, 0, size, buf, sizeof(buf));
+    EXPECT_EQ(NO_ERROR, status, "committing memory");
+
+    // do a lookup (should succeed)
+    memset(buf, 0, sizeof(buf));
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size, buf, sizeof(buf));
+    EXPECT_EQ(NO_ERROR, status, "lookup on committed vmo");
+
+    for (auto addr: buf)
+        EXPECT_NEQ(0u, addr, "looked up address");
+
+    // do a lookup with an odd offset and an end pointer that ends up at an odd offset
+    memset(buf, 0, sizeof(buf));
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 1, size - PAGE_SIZE, buf, sizeof(buf));
+    EXPECT_EQ(NO_ERROR, status, "lookup on committed vmo");
+
+    for (auto addr: buf)
+        EXPECT_NEQ(0u, addr, "looked up address");
+
+    // invalid args
+
+    // do a lookup with no size
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, 0, buf, sizeof(buf));
+    EXPECT_EQ(ERR_INVALID_ARGS, status, "zero size on lookup");
+
+    // do a lookup out of range
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, size + 1, 1, buf, sizeof(buf));
+    EXPECT_EQ(ERR_OUT_OF_RANGE, status, "out of range");
+
+    // do a lookup out of range
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size + 1, buf, sizeof(buf));
+    EXPECT_EQ(ERR_OUT_OF_RANGE, status, "out of range");
+
+    // close the handle
+    status = mx_handle_close(vmo);
+    EXPECT_EQ(NO_ERROR, status, "handle_close");
+
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(vmo_tests)
 RUN_TEST(vmo_create_test);
@@ -279,6 +335,7 @@ RUN_TEST(vmo_read_write_test);
 RUN_TEST(vmo_read_only_map_test);
 RUN_TEST(vmo_resize_test);
 RUN_TEST(vmo_rights_test);
+RUN_TEST(vmo_lookup_test);
 END_TEST_CASE(vmo_tests)
 
 int main(int argc, char** argv) {

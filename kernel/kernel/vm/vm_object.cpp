@@ -176,9 +176,8 @@ status_t VmObject::AddPage(vm_page_t* p, uint64_t offset) {
     return NO_ERROR;
 }
 
-vm_page_t* VmObject::GetPage(uint64_t offset) {
+vm_page_t* VmObject::GetPageLocked(uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    AutoLock a(lock_);
 
     if (offset >= size_)
         return nullptr;
@@ -186,6 +185,13 @@ vm_page_t* VmObject::GetPage(uint64_t offset) {
     size_t index = OffsetToIndex(offset);
 
     return page_array_[index];
+}
+
+vm_page_t* VmObject::GetPage(uint64_t offset) {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    AutoLock a(lock_);
+
+    return GetPageLocked(offset);
 }
 
 vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
@@ -461,3 +467,44 @@ status_t VmObject::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t l
 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
+
+status_t VmObject::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer, size_t buffer_size) {
+    DEBUG_ASSERT(magic_ == MAGIC);
+
+    if (unlikely(len == 0))
+        return ERR_INVALID_ARGS;
+
+    AutoLock a(lock_);
+
+    // verify that the range is within the object
+    if (unlikely(!InRange(offset, len, size_)))
+        return ERR_OUT_OF_RANGE;
+
+    uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
+    uint64_t end = offset + len;
+    uint64_t end_page_offset = ROUNDUP(end, PAGE_SIZE);
+
+    // compute the size of the table we'll need and make sure it fits in the user buffer
+    uint64_t table_size = ((end_page_offset - start_page_offset) / PAGE_SIZE) * sizeof(paddr_t);
+    if (unlikely(table_size > buffer_size))
+        return ERR_BUFFER_TOO_SMALL;
+
+    size_t index = 0;
+    for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
+        // grab a pointer to the page only if it's already present
+        vm_page_t* p = GetPageLocked(off);
+        if (unlikely(!p))
+            return ERR_NO_MEMORY;
+
+        // find the physical address
+        paddr_t pa = vm_page_to_paddr(p);
+
+        // copy it out into user space
+        auto status = copy_to_user(buffer + index * sizeof(pa), &pa, sizeof(pa));
+        if (unlikely(status < 0))
+            return status;
+    }
+
+    return NO_ERROR;
+}
+

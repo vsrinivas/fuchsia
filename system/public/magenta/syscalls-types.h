@@ -381,6 +381,14 @@ typedef struct mx_waitset_result mx_wait_set_result_t;
 #define MX_IO_PORT_PKT_TYPE_EXCEPTION MX_PORT_PKT_TYPE_EXCEPTION
 #endif
 
+// VM Object opcodes
+#define MX_VMO_OP_COMMIT                1u
+#define MX_VMO_OP_DECOMMIT              2u
+#define MX_VMO_OP_LOCK                  3u
+#define MX_VMO_OP_UNLOCK                4u
+#define MX_VMO_OP_LOOKUP                5u
+#define MX_VMO_OP_CACHE_SYNC            6u
+
 #ifdef __cplusplus
 }
 #endif

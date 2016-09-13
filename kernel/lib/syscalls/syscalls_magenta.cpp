@@ -724,6 +724,23 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     return vmo->SetSize(size);
 }
 
+mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, uint64_t size,
+                             user_ptr<void> buffer, mx_size_t buffer_size) {
+    LTRACEF("handle %u op %u offset %#llx size %#llx buffer %p buffer_size %lu\n",
+             handle, op, offset, size, buffer.get(), buffer_size);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // lookup the dispatcher from handle
+    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    mx_rights_t vmo_rights;
+    mx_status_t status = up->GetDispatcher(handle, &vmo, &vmo_rights);
+    if (status != NO_ERROR)
+        return status;
+
+    return vmo->RangeOp(op, offset, size, buffer, buffer_size, vmo_rights);
+}
+
 mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
                                uint64_t offset, mx_size_t len, user_ptr<uintptr_t> user_ptr,
                                uint32_t flags) {

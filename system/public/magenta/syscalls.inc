@@ -139,12 +139,14 @@ MAGENTA_SYSCALL_DEF(4, 5, 102, mx_ssize_t, vmo_write, mx_handle_t handle, USER_P
                     uint64_t offset, mx_size_t len)
 MAGENTA_SYSCALL_DEF(2, 4, 103, mx_status_t, vmo_get_size, mx_handle_t handle, USER_PTR(uint64_t) size)
 MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vmo_set_size, mx_handle_t handle, uint64_t size)
+MAGENTA_SYSCALL_DEF(6, 8, 105, mx_status_t, vmo_op_range, mx_handle_t handle, uint32_t op,
+                    uint64_t offset, uint64_t size, USER_PTR(void) buffer, mx_size_t buffer_size)
 
 // temporary syscalls to access port and memory mapped devices
-MAGENTA_SYSCALL_DEF(3, 3, 105, mx_status_t, mmap_device_io, mx_handle_t handle, uint32_t io_addr, uint32_t len)
-MAGENTA_SYSCALL_DEF(5, 5, 106, mx_status_t, mmap_device_memory, mx_handle_t handle, mx_paddr_t paddr,
+MAGENTA_SYSCALL_DEF(3, 3, 110, mx_status_t, mmap_device_io, mx_handle_t handle, uint32_t io_addr, uint32_t len)
+MAGENTA_SYSCALL_DEF(5, 5, 111, mx_status_t, mmap_device_memory, mx_handle_t handle, mx_paddr_t paddr,
                     uint32_t len, mx_cache_policy_t cache_policy, USER_PTR(void *) out_vaddr)
-MAGENTA_SYSCALL_DEF(4, 4, 107, mx_status_t, alloc_device_memory, mx_handle_t handle, uint32_t len,
+MAGENTA_SYSCALL_DEF(4, 4, 112, mx_status_t, alloc_device_memory, mx_handle_t handle, uint32_t len,
                     mx_paddr_t *out_paddr, void **out_vaddr)
 
 MAGENTA_SYSCALL_DEF(2, 2, 160, mx_ssize_t, cprng_draw, USER_PTR(void) buffer, mx_size_t len);

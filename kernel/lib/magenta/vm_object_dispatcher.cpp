@@ -67,6 +67,46 @@ mx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
     return NO_ERROR;
 }
 
+mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
+                                        user_ptr<void> buffer, size_t buffer_size, mx_rights_t rights) {
+    LTRACEF("op %u offset %#llx size %#llx buffer %p buffer_size %zu rights 0x%x\n",
+            op, offset, size, buffer.get(), buffer_size, rights);
+
+    // TODO: test rights
+
+    switch (op) {
+        case MX_VMO_OP_COMMIT: {
+            auto committed = vmo_->CommitRange(offset, size);
+            if (committed < 0)
+                return static_cast<mx_status_t>(committed);
+
+            // TODO: handle partial commits
+            return NO_ERROR;
+        }
+        case MX_VMO_OP_DECOMMIT:
+            // TODO: handle
+            return ERR_NOT_SUPPORTED;
+        case MX_VMO_OP_LOCK:
+        case MX_VMO_OP_UNLOCK:
+            // TODO: handle
+            return ERR_NOT_SUPPORTED;
+        case MX_VMO_OP_LOOKUP:
+            // we will be using the user pointer
+            if (!buffer)
+                return ERR_INVALID_ARGS;
+
+            // make sure that mx_paddr_t doesn't drift from paddr_t, which the VM uses internally
+            static_assert(sizeof(mx_paddr_t) == sizeof(paddr_t));
+
+            return vmo_->Lookup(offset, size, buffer.reinterpret<paddr_t>(), buffer_size);
+        case MX_VMO_OP_CACHE_SYNC:
+            // TODO: handle
+            return ERR_NOT_SUPPORTED;
+        default:
+            return ERR_INVALID_ARGS;
+    }
+}
+
 mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
                                     uintptr_t* _ptr, uint32_t flags) {
     LTRACEF("vmo_rights 0x%x flags 0x%x\n", vmo_rights, flags);

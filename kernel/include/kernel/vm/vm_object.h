@@ -52,6 +52,9 @@ public:
     status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read);
     status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written);
 
+    // translate a range of the vmo to physical addresses and store in the buffer
+    status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t);
+
     void Dump();
 
 private:
@@ -66,8 +69,9 @@ private:
     ~VmObject();
     friend mxtl::RefPtr<VmObject>;
 
-    // fault in a page at a given offset with PF_FLAGS
+    // unlocked versions of the above routines
     vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags);
+    vm_page_t* GetPageLocked(uint64_t offset);
 
     // internal page list routine
     void AddPageToArray(size_t index, vm_page_t* p);
