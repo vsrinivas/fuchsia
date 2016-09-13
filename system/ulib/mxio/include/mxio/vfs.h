@@ -93,6 +93,10 @@ struct vnode_ops {
 
     mx_status_t (*unlink)(vnode_t* vn, const char* name, size_t len);
     // Removes name from directory vn
+
+    mx_status_t (*rename)(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen, const char* newname, size_t newlen);
+    // Renames the path at oldname in olddir to the path at newname in newdir.
+    // Unlinks any prior newname if it already exists.
 };
 
 struct vnattr {

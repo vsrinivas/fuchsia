@@ -599,6 +599,41 @@ static int getdirents(int fd, void* ptr, size_t len) {
     return r;
 }
 
+int rename(const char* oldpath, const char* newpath) {
+    char name[MXIO_CHUNK_SIZE];
+    size_t oldlen = strlen(oldpath);
+    size_t newlen = strlen(newpath);
+    if (oldlen + newlen + 2 > MXIO_CHUNK_SIZE) {
+        return ERRNO(EINVAL);
+    }
+
+    mxio_t* io;
+    if (oldpath[0] == '/' && newpath[0] == '/') {
+        // Both paths are absolute: Rename relative to mxio_root
+        mtx_lock(&mxio_lock);
+        io = mxio_root_handle;
+        mxio_acquire(io);
+        mtx_unlock(&mxio_lock);
+    } else if (oldpath[0] != '/' && newpath[0] != '/') {
+        // Both paths are relative: Rename relative to mxio_cwd
+        mtx_lock(&mxio_lock);
+        io = mxio_cwd_handle;
+        mxio_acquire(io);
+        mtx_unlock(&mxio_lock);
+    } else {
+        // Mixed absolute & relative paths: Unsupported
+        return ERROR(ERR_NOT_SUPPORTED);
+    }
+
+    memcpy(name, oldpath, oldlen);
+    name[oldlen] = '\0';
+    memcpy(name + oldlen + 1, newpath, newlen);
+    name[oldlen + newlen + 1] = '\0';
+    mx_status_t r = io->ops->misc(io, MXRIO_RENAME, 0, (void*)name, oldlen + newlen + 2);
+    mxio_release(io);
+    return STATUS(r);
+}
+
 int unlink(const char* path) {
     const char* name;
     mxio_t* io;

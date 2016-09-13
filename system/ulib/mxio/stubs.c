@@ -124,10 +124,6 @@ int fdatasync(int fd) {
     return checkfd(fd, 0);
 }
 
-int rename(const char* oldpath, const char* newpath) {
-    return checkfile(oldpath, ENOSYS);
-}
-
 // at the moment our unlink works on all fs objects
 int rmdir(const char* path) {
     return unlink(path);
