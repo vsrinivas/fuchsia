@@ -80,7 +80,7 @@ VideoPacketLayout::Extent VideoPacketLayout::PixelFormatInfo::AlignedSize(
       Extent(RoundUpToAlign(unaligned_size.width(), alignment.width()),
              RoundUpToAlign(unaligned_size.height(), alignment.height()));
   FTL_DCHECK((adjusted.width() % alignment.width() == 0) &&
-              (adjusted.height() % alignment.height() == 0));
+             (adjusted.height() % alignment.height() == 0));
   return adjusted;
 }
 

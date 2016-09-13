@@ -55,7 +55,7 @@ MojoResult MappedSharedBuffer::InitInternal(
 
   if (size == 0 || size > MediaPacketConsumer::kMaxBufferLen) {
     FTL_DLOG(ERROR) << "MojoGetBufferInformation returned invalid size "
-                     << size;
+                    << size;
     return MOJO_SYSTEM_RESULT_OUT_OF_RANGE;
   }
 

@@ -12,7 +12,7 @@ namespace mojo {
 namespace media {
 
 void InitFfmpeg() {
-  static bool initialized = [](){
+  static bool initialized = []() {
     av_register_all();
     return true;
   }();

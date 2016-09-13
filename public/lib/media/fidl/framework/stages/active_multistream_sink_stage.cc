@@ -153,7 +153,7 @@ void ActiveMultistreamSinkStage::UpdateDemand(size_t input_index,
     input->demand_ = demand;
     pending_inputs_.push_back(input_index);
   }
-  
+
   RequestUpdate();
 }
 

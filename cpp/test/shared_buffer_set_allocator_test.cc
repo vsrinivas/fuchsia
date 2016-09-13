@@ -158,6 +158,6 @@ TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
   AllocateRegion(&under_test, kSmallAlloc, second_buffer_id);
 }
 
-} // namespace
+}  // namespace
 }  // namespace media
 }  // namespace mojo

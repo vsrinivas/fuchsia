@@ -132,14 +132,12 @@ inline TimelineFunction operator*(const TimelineFunction& bc,
 
 template <>
 struct TypeConverter<TimelineTransformPtr, media::TimelineFunction> {
-  static TimelineTransformPtr Convert(
-      const media::TimelineFunction& input);
+  static TimelineTransformPtr Convert(const media::TimelineFunction& input);
 };
 
 template <>
 struct TypeConverter<media::TimelineFunction, TimelineTransformPtr> {
-  static media::TimelineFunction Convert(
-      const TimelineTransformPtr& input);
+  static media::TimelineFunction Convert(const TimelineTransformPtr& input);
 };
 
 }  // namespace mojo

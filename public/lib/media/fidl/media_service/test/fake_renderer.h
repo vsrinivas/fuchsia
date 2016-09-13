@@ -64,9 +64,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
   }
 
   // Returns true if everything has gone as expected so far.
-  bool expected() {
-    return expected_;
-  }
+  bool expected() { return expected_; }
 
  private:
   // MediaRenderer implementation.

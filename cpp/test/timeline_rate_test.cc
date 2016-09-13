@@ -53,12 +53,10 @@ void VerifyScale(int64_t value,
                  uint32_t reference_delta,
                  int64_t result) {
   // Test the instance method.
-  EXPECT_EQ(result,
-            TimelineRate(subject_delta, reference_delta).Scale(value));
+  EXPECT_EQ(result, TimelineRate(subject_delta, reference_delta).Scale(value));
 
   // Test the static method.
-  EXPECT_EQ(result,
-            TimelineRate::Scale(value, subject_delta, reference_delta));
+  EXPECT_EQ(result, TimelineRate::Scale(value, subject_delta, reference_delta));
 
   // Test the operators.
   EXPECT_EQ(result, value * TimelineRate(subject_delta, reference_delta));

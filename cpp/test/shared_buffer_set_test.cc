@@ -21,9 +21,7 @@ uint32_t CreateNewBuffer(SharedBufferSet* under_test, uint64_t size) {
   return buffer_id;
 }
 
-void AddBuffer(SharedBufferSet* under_test,
-               uint64_t size,
-               uint32_t buffer_id) {
+void AddBuffer(SharedBufferSet* under_test, uint64_t size, uint32_t buffer_id) {
   SharedBuffer buffer(size);
   MojoResult result = under_test->AddBuffer(buffer_id, buffer.handle.Pass());
   EXPECT_EQ(MOJO_RESULT_OK, result);
@@ -39,9 +37,8 @@ void VerifyBuffer(const SharedBufferSet& under_test,
   for (uint64_t offset = 0; offset < size; ++offset) {
     EXPECT_EQ(SharedBufferSet::Locator(buffer_id, offset),
               under_test.LocatorFromPtr(base + offset));
-    EXPECT_EQ(base + offset,
-              under_test.PtrFromLocator(
-                  SharedBufferSet::Locator(buffer_id, offset)));
+    EXPECT_EQ(base + offset, under_test.PtrFromLocator(
+                                 SharedBufferSet::Locator(buffer_id, offset)));
   }
 }
 

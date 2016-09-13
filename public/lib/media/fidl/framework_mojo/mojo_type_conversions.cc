@@ -619,8 +619,9 @@ std::unique_ptr<media::Metadata> TypeConverter<
 Array<media::MediaTypePtr> TypeConverter<
     Array<media::MediaTypePtr>,
     std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>>::
-    Convert(const std::unique_ptr<
-            std::vector<std::unique_ptr<media::StreamType>>>& input) {
+    Convert(
+        const std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>&
+            input) {
   if (input == nullptr) {
     return nullptr;
   }

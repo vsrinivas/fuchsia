@@ -267,8 +267,7 @@ std::ostream& operator<<(std::ostream& os, const TimelineTransformPtr& value) {
   }
 
   os << indent;
-  os << begl << "int64 reference_time: " << value->reference_time
-     << std::endl;
+  os << begl << "int64 reference_time: " << value->reference_time << std::endl;
   os << begl << "int64 subject_time: " << value->subject_time << std::endl;
   os << begl << "uint32 reference_delta: " << value->reference_delta
      << std::endl;

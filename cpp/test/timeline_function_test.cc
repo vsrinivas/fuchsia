@@ -92,10 +92,10 @@ void VerifyApply(int64_t reference_time,
                  int64_t reference_input,
                  int64_t expected_result) {
   // Verify the static method.
-  EXPECT_EQ(expected_result, TimelineFunction::Apply(
-                                 reference_time, subject_time,
-                                 TimelineRate(subject_delta, reference_delta),
-                                 reference_input));
+  EXPECT_EQ(expected_result,
+            TimelineFunction::Apply(
+                reference_time, subject_time,
+                TimelineRate(subject_delta, reference_delta), reference_input));
 
   // Verify the instance method.
   TimelineFunction under_test(reference_time, subject_time, reference_delta,

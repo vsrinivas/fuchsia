@@ -106,8 +106,8 @@ void FakeRenderer::OnPacketSupplied(
   if (dump_packets_) {
     std::cerr << "{ " << supplied_packet->packet()->pts << ", "
               << (supplied_packet->packet()->end_of_stream ? "true" : "false")
-              << ", " << supplied_packet->payload_size()
-              << ", 0x" << std::hex << std::setw(16) << std::setfill('0')
+              << ", " << supplied_packet->payload_size() << ", 0x" << std::hex
+              << std::setw(16) << std::setfill('0')
               << Hash(supplied_packet->payload(),
                       supplied_packet->payload_size())
               << std::dec << " }," << std::endl;

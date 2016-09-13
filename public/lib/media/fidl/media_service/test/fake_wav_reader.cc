@@ -42,7 +42,7 @@ void FakeWavReader::WriteHeader() {
   WriteHeaderUint32(size_ - kMasterChunkHeaderSize - kFormatChunkSize -
                     kChunkSizeDeficit);
   FTL_DCHECK(header_.size() ==
-              kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
+             kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
 }
 
 FakeWavReader::~FakeWavReader() {}

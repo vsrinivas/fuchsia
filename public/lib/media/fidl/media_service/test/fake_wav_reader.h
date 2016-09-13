@@ -25,7 +25,7 @@ class FakeWavReader : public SeekingReader {
 
   void SetSize(uint64_t size) {
     FTL_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize +
-                           kDataChunkHeaderSize);
+                          kDataChunkHeaderSize);
     size_ = size;
     WriteHeader();
   }
