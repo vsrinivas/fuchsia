@@ -225,8 +225,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
         return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
-    // TODO:cpu use 'get-info' rights when avaliable.
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+    if (!magenta_rights_check(rights, MX_RIGHT_GET_PROPERTY))
         return ERR_ACCESS_DENIED;
 
     switch (property) {
@@ -260,8 +259,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
         return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
-    // TODO:cpu use 'set-info' rights when avaliable.
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
+    if (!magenta_rights_check(rights, MX_RIGHT_SET_PROPERTY))
         return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
     mx_status_t status = ERR_INVALID_ARGS;

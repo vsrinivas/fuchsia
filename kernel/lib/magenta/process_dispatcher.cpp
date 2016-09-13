@@ -31,10 +31,9 @@
 #define LOCAL_TRACE 0
 
 
-static constexpr mx_rights_t kDefaultProcessRights = MX_RIGHT_READ  |
-                                                     MX_RIGHT_WRITE |
-                                                     MX_RIGHT_DUPLICATE |
-                                                     MX_RIGHT_TRANSFER;
+static constexpr mx_rights_t kDefaultProcessRights =
+        MX_RIGHT_READ  | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
+        MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
 
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
     MUTEX_INITIAL_VALUE(global_process_list_mutex_);
