@@ -272,6 +272,32 @@ static mx_status_t cb_dir_find(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* a
     }
 }
 
+static mx_status_t can_unlink(vnode_t* vn) {
+    // directories must be empty (dirent_count == 2)
+    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+        if (vn->inode.dirent_count != 2) {
+            // if we have more than "." and "..", not empty, cannot unlink
+            return ERR_BAD_STATE;
+        } else if (vn->refcount > 1) {
+            // if the target directory is open elsewhere, cannot unlink
+            return ERR_BAD_STATE;
+        }
+    }
+    return NO_ERROR;
+}
+
+static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de) {
+    vn->inode.link_count--;
+
+    //TODO: it would be safer to do this *after* we update the directory block
+    vn_release(vn);
+
+    // erase dirent (convert to empty entry), decrement dirent count
+    de->ino = 0;
+    vndir->inode.dirent_count--;
+    return DIR_CB_SAVE_SYNC;
+}
+
 // caller is expected to prevent unlink of "." or ".."
 static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
     if ((de->ino == 0) || (args->len != de->namelen) ||
@@ -285,23 +311,11 @@ static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t*
         return status;
     }
 
-    // directories must be empty (dirent_count == 2)
-    if (vn->inode.magic == MINFS_MAGIC_DIR) {
-        if (vn->inode.dirent_count != 2) {
-            // if we have more than "." and "..", not empty, cannot unlink
-            vn_release(vn);
-            return ERR_BAD_STATE;
-        }
+    if ((status = can_unlink(vn)) < 0) {
+        vn_release(vn);
+        return status;
     }
-    vn->inode.link_count--;
-
-    //TODO: it would be safer to do this *after* we update the directory block
-    vn_release(vn);
-
-    // erase dirent (convert to empty entry), decrement dirent count
-    de->ino = 0;
-    vndir->inode.dirent_count--;
-    return DIR_CB_SAVE_SYNC;
+    return do_unlink(vndir, vn, de);
 }
 
 static mx_status_t cb_dir_append(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {

@@ -25,6 +25,14 @@ void drop_cache(void);
     } \
     ret; })
 
+#define EXPECT_FAIL(func) ({\
+    int ret = (func); \
+    if (ret >= 0) { \
+        printf("%s:%d:expected error from: %s -> %d\n", __FILE__, __LINE__, #func, ret); \
+        exit(1); \
+    } \
+    ret; })
+
 #define FAIL -1
 #define BUSY 0
 #define DONE 1
@@ -267,6 +275,9 @@ int test_basic(void) {
     close(fd1);
     TRY(unlink("::file.txt"));
     TRY(mkdir("::emptydir", 0755));
+    fd1 = TRY(open("::emptydir", O_RDWR, 0644));
+    EXPECT_FAIL(unlink("::emptydir"));
+    close(fd1);
     TRY(unlink("::emptydir"));
     return 0;
 }
