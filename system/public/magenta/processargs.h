@@ -90,6 +90,7 @@ struct mx_proc_args {
 #define MX_HND_TYPE_MXIO_PIPE 0x12
 #define MX_HND_TYPE_MXIO_EVENT 0x13
 #define MX_HND_TYPE_MXIO_LOGGER 0x14
+#define MX_HND_TYPE_MXIO_CWD 0x15
 
 // Handle types used by the device manager and device hosts
 #define MX_HND_TYPE_RESOURCE 0x20

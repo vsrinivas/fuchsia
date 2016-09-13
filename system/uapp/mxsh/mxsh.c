@@ -561,6 +561,12 @@ mx_status_t command(int argc, char** argv, bool runbg) {
         goto done;
     }
 
+    status = launchpad_clone_mxio_cwd(lp);
+    if(status != NO_ERROR) {
+        fprintf(stderr, "could not copy cwd handle: (%d)\n", status);
+        goto done;
+    }
+
     // unclone-able files will end up as /dev/null in the launched process
     launchpad_clone_fd(lp, 0, 0);
     launchpad_clone_fd(lp, (stdout_fd >= 0) ? stdout_fd : 1, 1);

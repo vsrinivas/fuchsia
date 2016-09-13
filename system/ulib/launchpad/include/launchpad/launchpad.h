@@ -42,6 +42,7 @@ mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id);
 mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
                                   const mx_handle_t h[], const uint32_t id[]);
 
+
 // Set the arguments or environment to be passed in the bootstrap
 // message.  All the strings are copied into the launchpad by this
 // call, with no pointers to these argument strings retained.
@@ -53,6 +54,12 @@ mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp);
 // Clone the mxio root handle into the new process.
 // This will allow mxio-based filesystem access to work in the new process.
 mx_status_t launchpad_clone_mxio_root(launchpad_t* lp);
+
+// Clone the mxio current working directory handle into the new process
+// This will allow mxio-based filesystem access to inherit the cwd from the
+// launching process. If mxio root is cloned but not mxio cwd, mxio root is
+// treated as the cwd.
+mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp);
 
 // Attempt to duplicate local descriptor fd into target_fd in the
 // new process.  Returns ERR_BAD_HANDLE if fd is not a valid fd, or

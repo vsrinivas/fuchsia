@@ -41,6 +41,9 @@ mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd) {
 
 mx_status_t launchpad_add_all_mxio(launchpad_t* lp) {
     mx_status_t status = launchpad_clone_mxio_root(lp);
+    if(status == NO_ERROR) {
+      status = launchpad_clone_mxio_cwd(lp);
+    }
     for (int fd = 0; status == NO_ERROR && fd < MAX_MXIO_FD; ++fd) {
         status = launchpad_clone_fd(lp, fd, fd);
         if (status == ERR_BAD_HANDLE)

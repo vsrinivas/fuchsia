@@ -19,6 +19,7 @@ typedef struct mxio mxio_t;
 // Utilities to help assemble handles for a new process
 // may return up to MXIO_MAX_HANDLES
 mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types);
+mx_status_t mxio_clone_cwd(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types);
 
