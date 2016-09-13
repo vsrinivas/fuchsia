@@ -54,6 +54,15 @@ size, or *buffer* is an invalid pointer (or NULL).
 **ERR_SHOULD_WAIT**  The data pipe is currently full and *requested* is nonzero,
 but no data could be written (and the consumer is still open).
 
+**ERR_OUT_OF_RANGE**  *requested* is nonzero and
+**MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE** is set, but the data pipe does not have
+the requested amount of space available (and the consumer is still open).
+
+## BUGS
+
+The **ERR_OUT_OF_RANGE** will be changed to **ERR_SHOULD_WAIT** once write
+thresholds are implemented (and a corresponding Mojo change is made).
+
 ## SEE ALSO
 
 [datapipe_create](datapipe_create.md),

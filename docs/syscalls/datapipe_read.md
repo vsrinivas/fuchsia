@@ -80,6 +80,11 @@ handle is closed.
 **MX_DATAPIPE_READ_FLAG_ALL_OR_NONE** is set, but the data pipe does not have
 the requested amount of data available (and the producer is still open).
 
+## BUGS
+
+The **ERR_OUT_OF_RANGE** will be changed to **ERR_SHOULD_WAIT** once read
+thresholds are implemented (and a corresponding Mojo change is made).
+
 ## SEE ALSO
 
 [datapipe_create](datapipe_create.md),
