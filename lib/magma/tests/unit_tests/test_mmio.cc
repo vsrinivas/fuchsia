@@ -8,7 +8,7 @@
 #include "mock/mock_mmio.h"
 #include "gtest/gtest.h"
 
-static void test_mmio(magma::PlatformMmio* mmio)
+static void test_mock_mmio(magma::PlatformMmio* mmio)
 {
     ASSERT_NE(mmio, nullptr);
 
@@ -38,10 +38,10 @@ static void test_mmio(magma::PlatformMmio* mmio)
 
 TEST(MagmaUtil, MockMmio)
 {
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(8)).get());
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(16)).get());
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(64)).get());
-    test_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(1024)).get());
+    test_mock_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(8)).get());
+    test_mock_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(16)).get());
+    test_mock_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(64)).get());
+    test_mock_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(1024)).get());
 }
 
 TEST(MagmaUtil, PlatformMmio)
@@ -66,20 +66,4 @@ TEST(MagmaUtil, PlatformMmio)
     auto mmio3 =
         platform_device->CpuMapPciMmio(pci_bar, magma::PlatformMmio::CACHE_POLICY_UNCACHED);
     EXPECT_EQ(mmio3, nullptr);
-}
-
-TEST(MagmaUtil, PlatformMmioAccess)
-{
-    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-    if (!platform_device) {
-        printf("No platform device\n");
-        return;
-    }
-
-    test_mmio(platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_CACHED).get());
-    test_mmio(platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED).get());
-    test_mmio(
-        platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE).get());
-    test_mmio(
-        platform_device->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_WRITE_COMBINING).get());
 }
