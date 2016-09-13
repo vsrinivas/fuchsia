@@ -9,7 +9,7 @@
 
 #include <mxtl/arena.h>
 
-static int arena_dtor_count = 0;
+static int arena_dtor_count;
 
 struct ArenaFoo {
   char ff;
@@ -22,6 +22,7 @@ struct ArenaFoo {
 
 static bool arena_test(void* context)
 {
+    arena_dtor_count = 0;
     BEGIN_TEST;
     mxtl::TypedArena<ArenaFoo> arena;
     arena.Init("arena_tests", 1000);
