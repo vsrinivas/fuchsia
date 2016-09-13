@@ -215,6 +215,17 @@ static int mxc_mkdir(int argc, char** argv) {
     return 0;
 }
 
+static int mxc_mv(int argc, char** argv) {
+    if (argc != 3) {
+        fprintf(stderr, "usage: mv <old path> <new path>\n");
+        return -1;
+    }
+    if (rename(argv[1], argv[2])) {
+        fprintf(stderr, "error: failed to rename '%s' to '%s'\n", argv[1], argv[2]);
+    }
+    return 0;
+}
+
 static int mxc_rm(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "usage: rm <filename>\n");
@@ -397,6 +408,7 @@ builtin_t builtins[] = {
     {"list", mxc_list, "display a text file with line numbers"},
     {"ls", mxc_ls, "list directory contents"},
     {"mkdir", mxc_mkdir, "create a directory" },
+    {"mv", mxc_mv, "rename a file or directory" },
     {"rm", mxc_rm, "delete a file"},
     {"runtests", mxc_runtests, "run all test programs"},
     {"msleep", mxc_msleep, "pause for milliseconds"},
