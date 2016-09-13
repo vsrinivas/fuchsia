@@ -266,6 +266,20 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         }
         return r;
     }
+    case MXRIO_RENAME: {
+        if (len < 4) { // At least one byte for src + dst + null terminators
+            return ERR_INVALID_ARGS;
+        }
+        char* data_end = (char*)(msg->data + len - 1);
+        *data_end = '\0';
+        const char* oldpath = (const char*)msg->data;
+        size_t oldlen = strlen(oldpath);
+        const char* newpath = (const char*)msg->data + (oldlen + 1);
+        if (data_end <= newpath) {
+            return ERR_INVALID_ARGS;
+        }
+        return vfs_rename(vn, oldpath, newpath);
+    }
     case MXRIO_UNLINK:
         return vn->ops->unlink(vn, (const char*)msg->data, len);
     default:

@@ -106,6 +106,21 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
     return NO_ERROR;
 }
 
+mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath) {
+    vnode_t* oldparent, *newparent;
+    mx_status_t r;
+    if ((r = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
+        return r;
+    } else if ((r = vfs_walk(vndir, &newparent, newpath, &newpath)) < 0) {
+        vn_release(oldparent);
+        return r;
+    }
+    r = vndir->ops->rename(oldparent, newparent, oldpath, strlen(oldpath), newpath, strlen(newpath));
+    vn_release(oldparent);
+    vn_release(newparent);
+    return r;
+}
+
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type) {
     size_t sz = sizeof(vdirent_t) + len + 1;

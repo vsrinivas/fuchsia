@@ -282,6 +282,29 @@ int test_basic(void) {
     return 0;
 }
 
+int test_rename(void) {
+    EXPECT_FAIL(rename("::alpha", "::bravo")); // Cannot rename when src does not exist
+    TRY(mkdir("::alpha", 0755));
+    EXPECT_FAIL(rename("::alpha", "::alpha")); // Cannot rename to self
+    int fd = TRY(open("::bravo", O_RDWR|O_CREAT|O_EXCL, 0644));
+    close(fd);
+    EXPECT_FAIL(rename("::alpha", "::bravo")); // Cannot rename dir to file
+    TRY(unlink("::bravo"));
+    TRY(rename("::alpha", "::bravo")); // Rename dir (dst does not exist)
+    TRY(mkdir("::alpha", 0755));
+    TRY(rename("::bravo", "::alpha")); // Rename dir (dst does exist)
+    fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
+    TRY(rename("::alpha/charlie", "::alpha/delta")); // Rename file (dst does not exist)
+    close(fd);
+    fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
+    TRY(rename("::alpha/delta", "::alpha/charlie")); // Rename file (dst does not exist)
+    EXPECT_FAIL(rename("::alpha/charlie", "::charlie")); // Cannot rename outside current directory
+    close(fd);
+    TRY(unlink("::alpha/charlie"));
+    TRY(unlink("::alpha"));
+    return 0;
+}
+
 int run_fs_tests(int argc, char** argv) {
     fprintf(stderr, "--- fs tests ---\n");
     if (argc > 0) {
@@ -293,6 +316,9 @@ int run_fs_tests(int argc, char** argv) {
         }
         if (!strcmp(argv[0], "basic")) {
             return test_basic();
+        }
+        if (!strcmp(argv[0], "rename")) {
+            return test_rename();
         }
         fprintf(stderr, "unknown test: %s\n", argv[0]);
         return -1;

@@ -24,6 +24,8 @@ mx_status_t vfs_find(vnode_t* vndir, vnode_t** out,
 
 mx_status_t vfs_close(vnode_t* vn);
 
+mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath);
+
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type);
 

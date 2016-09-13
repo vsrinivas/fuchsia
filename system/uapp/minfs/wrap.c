@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/stat.h>
 
 #include <mxio/vfs.h>
@@ -202,6 +203,13 @@ int FN(unlink)(const char* path) {
         status = vn->ops->unlink(vn, path, strlen(path));
         vfs_close(vn);
     }
+    STATUS(status);
+}
+
+int FL(rename)(const char* oldpath, const char* newpath);
+int FN(rename)(const char* oldpath, const char* newpath) {
+    PATH_WRAP(oldpath, rename, oldpath, newpath);
+    mx_status_t status = vfs_rename(fake_root, oldpath + PREFIX_SIZE, newpath + PREFIX_SIZE);
     STATUS(status);
 }
 

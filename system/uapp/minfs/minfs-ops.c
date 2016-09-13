@@ -318,6 +318,54 @@ static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t*
     return do_unlink(vndir, vn, de);
 }
 
+// same as unlink, but do not validate vnode
+static mx_status_t cb_dir_force_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
+    if ((de->ino == 0) || (args->len != de->namelen) ||
+        memcmp(args->name, de->name, args->len)) {
+        return DIR_CB_NEXT;
+    }
+
+    vnode_t* vn;
+    mx_status_t status;
+    if ((status = minfs_vnode_get(vndir->fs, &vn, de->ino)) < 0) {
+        return status;
+    }
+    return do_unlink(vndir, vn, de);
+}
+
+// since this callback operates on a single name, it actually just does some
+// validation and changes an inode, rather than altering any names
+static mx_status_t cb_dir_rename(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
+    if ((de->ino == 0) || (args->len != de->namelen) ||
+        memcmp(args->name, de->name, args->len)) {
+        return DIR_CB_NEXT;
+    }
+
+    vnode_t* vn;
+    mx_status_t status;
+    if ((status = minfs_vnode_get(vndir->fs, &vn, de->ino)) < 0) {
+        return status;
+    } else if (args->ino == vn->ino) {
+        // cannot rename node to itself
+        vn_release(vn);
+        return ERR_BAD_STATE;
+    } else if (args->type != de->type) {
+        // cannot rename directory to file (or vice versa)
+        vn_release(vn);
+        return ERR_BAD_STATE;
+    } else if ((status = can_unlink(vn)) < 0) {
+        // if we cannot unlink the target, we cannot rename the target
+        vn_release(vn);
+        return status;
+    }
+
+    //TODO: it would be safer to do this *after* we update the directory block
+    vn_release(vn);
+
+    de->ino = args->ino;
+    return DIR_CB_SAVE_SYNC;
+}
+
 static mx_status_t cb_dir_append(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
     if (de->ino == 0) {
         // empty entry, do we fit?
@@ -686,6 +734,74 @@ static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len) {
     return vn_dir_for_each(vn, &args, cb_dir_unlink);
 }
 
+static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
+                             const char* oldname, size_t oldlen,
+                             const char* newname, size_t newlen) {
+    trace(MINFS, "minfs_rename() olddir=%p(#%u) newdir=%p(#%u) oldname='%.*s' newname='%.*s'\n",
+          olddir, olddir->ino, newdir, newdir->ino, (int)oldlen, oldname, (int)newlen, newname);
+
+    // ensure that the vnodes containin oldname and newname are directories
+    if (olddir->inode.magic != MINFS_MAGIC_DIR || newdir->inode.magic != MINFS_MAGIC_DIR)
+        return ERR_NOT_SUPPORTED;
+
+    // rule out any invalid new/old names
+    if ((oldlen == 1) && (oldname[0] == '.'))
+        return ERR_BAD_STATE;
+    if ((oldlen == 2) && (oldname[0] == '.') && (oldname[1] == '.'))
+        return ERR_BAD_STATE;
+    if ((newlen == 1) && (newname[0] == '.'))
+        return ERR_BAD_STATE;
+    if ((newlen == 2) && (newname[0] == '.') && (newname[1] == '.'))
+        return ERR_BAD_STATE;
+
+    // TODO(smklein): Support cross-directory rename.
+    //   - recall that if you're moving a directory, change ".."s
+    //   - iterate from new parent to root -- the oldvn ino shouldn't be seen
+    if (olddir->ino != newdir->ino)
+        return ERR_NOT_SUPPORTED;
+
+    mx_status_t status;
+    vnode_t* oldvn = NULL;
+    // acquire the 'oldname' node (it must exist)
+    dir_args_t args = {
+        .name = oldname,
+        .len = oldlen,
+    };
+    if ((status = vn_dir_for_each(olddir, &args, cb_dir_find)) < 0) {
+        return status;
+    } else if ((status = minfs_vnode_get(olddir->fs, &oldvn, args.ino)) < 0) {
+        return status;
+    }
+
+    // if the entry for 'newname' exists, change the inode to oldvn's inode
+    args.name = newname;
+    args.len = newlen;
+    args.ino = oldvn->ino;
+    args.type = (oldvn->inode.magic == MINFS_MAGIC_DIR) ? MINFS_TYPE_DIR : MINFS_TYPE_FILE;
+    status = vn_dir_for_each(newdir, &args, cb_dir_rename);
+    if (status == ERR_NOT_FOUND) {
+        // if 'newname' does not exist, create it
+        args.reclen = SIZEOF_MINFS_DIRENT(newlen);
+        if ((status = vn_dir_for_each(newdir, &args, cb_dir_append)) < 0) {
+            vn_release(oldvn);
+            return status;
+        }
+    } else if (status != 0) {
+        vn_release(oldvn);
+        return status;
+    }
+    // at this point, the oldvn exists with multiple names (or the same name in
+    // different directories)
+    oldvn->inode.link_count++;
+
+    // finally, remove oldname from its original position
+    args.name = oldname;
+    args.len = oldlen;
+    status = vn_dir_for_each(olddir, &args, cb_dir_force_unlink);
+    vn_release(oldvn);
+    return status;
+}
+
 vnode_ops_t minfs_ops = {
     .release = fs_release,
     .open = fs_open,
@@ -698,5 +814,6 @@ vnode_ops_t minfs_ops = {
     .create = fs_create,
     .ioctl = fs_ioctl,
     .unlink = fs_unlink,
+    .rename = fs_rename,
 };
 

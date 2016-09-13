@@ -207,6 +207,21 @@ static mx_status_t txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
     return mxrio_txn_handoff(srv, rh, &msg);
 }
 
+static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
+                                      const char* oldpath, const char* newpath) {
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    size_t oldlen = strlen(oldpath);
+    size_t newlen = strlen(newpath);
+    msg.op = MXRIO_RENAME;
+    memcpy(msg.data, oldpath, oldlen);
+    msg.data[oldlen] = '\0';
+    memcpy(msg.data + oldlen + 1, newpath, newlen);
+    msg.data[oldlen + newlen + 1] = '\0';
+    msg.datalen = oldlen + newlen + 2;
+    return mxrio_txn_handoff(srv, rh, &msg);
+}
+
 static vnode_t* volatile vfs_txn_vn;
 static volatile int vfs_txn_op;
 
@@ -454,6 +469,32 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
             msg->datalen = r;
         }
         return r;
+    }
+    case MXRIO_RENAME: {
+        if (len < 4) { // At least one byte for src + dst + null terminators
+            return ERR_INVALID_ARGS;
+        }
+        char* data_end = (char*)(msg->data + len - 1);
+        *data_end = '\0';
+        const char* oldpath = (const char*)msg->data;
+        size_t oldlen = strlen(oldpath);
+        const char* newpath = (const char*)msg->data + (oldlen + 1);
+        if (data_end <= newpath) {
+            return ERR_INVALID_ARGS;
+        }
+        vnode_t* oldparent, *newparent;
+        mx_status_t r1, r2;
+        if ((r1 = vfs_walk(vn, &oldparent, oldpath, &oldpath)) < 0) {
+            return r1;
+        } else if ((r2 = vfs_walk(vn, &newparent, newpath, &newpath)) < 0) {
+            return r2;
+        } else if ((r1 != r2) || (r1 == 0) || (r2 == 0)) {
+            // Rename can only be directed to one remote filesystem
+            return ERR_NOT_SUPPORTED;
+        } else if ((r1 = txn_handoff_rename(r1, rh, oldpath, newpath)) < 0) {
+            return r1;
+        }
+        return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_UNLINK:
         return vn->ops->unlink(vn, (const char*)msg->data, len);

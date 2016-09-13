@@ -22,7 +22,7 @@ CFLAGS += -I../../public
 
 LFLAGS := -Wl,-wrap,open -Wl,-wrap,unlink -Wl,-wrap,stat -Wl,-wrap,mkdir
 LFLAGS += -Wl,-wrap,close -Wl,-wrap,read -Wl,-wrap,write -Wl,-wrap,fstat
-LFLAGS += -Wl,-wrap,lseek
+LFLAGS += -Wl,-wrap,lseek -Wl,-wrap,rename
 
 SRCS += main.c wrap.c test.c
 SRCS += bitmap.c bcache.c vfs.c
