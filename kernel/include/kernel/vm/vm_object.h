@@ -49,8 +49,8 @@ public:
     status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written);
 
     // read/write operators against user space pointers only
-    status_t ReadUser(mxtl::user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read);
-    status_t WriteUser(mxtl::user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written);
+    status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read);
+    status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written);
 
     void Dump();
 

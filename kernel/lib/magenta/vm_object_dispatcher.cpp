@@ -37,7 +37,7 @@ VmObjectDispatcher::VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo)
 
 VmObjectDispatcher::~VmObjectDispatcher() {}
 
-mx_ssize_t VmObjectDispatcher::Read(mxtl::user_ptr<void> user_data, mx_size_t length, uint64_t offset) {
+mx_ssize_t VmObjectDispatcher::Read(user_ptr<void> user_data, mx_size_t length, uint64_t offset) {
 
     size_t bytes_read;
     status_t err = vmo_->ReadUser(user_data, offset, length, &bytes_read);
@@ -47,7 +47,7 @@ mx_ssize_t VmObjectDispatcher::Read(mxtl::user_ptr<void> user_data, mx_size_t le
     return bytes_read;
 }
 
-mx_ssize_t VmObjectDispatcher::Write(mxtl::user_ptr<const void> user_data, mx_size_t length, uint64_t offset) {
+mx_ssize_t VmObjectDispatcher::Write(user_ptr<const void> user_data, mx_size_t length, uint64_t offset) {
 
     size_t bytes_written;
     status_t err = vmo_->WriteUser(user_data, offset, length, &bytes_written);

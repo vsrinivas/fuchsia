@@ -31,7 +31,7 @@ constexpr uint32_t kMaxWaitHandleCount = 256u;
 mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
-                                mxtl::user_ptr<mx_signals_state_t> _signals_state) {
+                                user_ptr<mx_signals_state_t> _signals_state) {
     LTRACEF("handle %u\n", handle_value);
 
     WaitEvent event;
@@ -90,8 +90,8 @@ mx_status_t sys_handle_wait_many(uint32_t count,
                                  const mx_handle_t* _handle_values,
                                  const mx_signals_t* _signals,
                                  mx_time_t timeout,
-                                 mxtl::user_ptr<uint32_t> _result_index,
-                                 mxtl::user_ptr<mx_signals_state_t> _signals_states) {
+                                 user_ptr<uint32_t> _result_index,
+                                 user_ptr<mx_signals_state_t> _signals_states) {
     LTRACEF("count %u\n", count);
 
     if (!count) {

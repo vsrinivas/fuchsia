@@ -77,7 +77,7 @@ mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
 
 mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
-                                   mxtl::user_ptr<void*> out_vaddr) {
+                                   user_ptr<void*> out_vaddr) {
 
     LTRACEF("addr 0x%lx len 0x%x\n", paddr, len);
 
@@ -234,7 +234,7 @@ static status_t pcie_irq_swizzle_from_table(const pcie_device_state_t* dev, uint
     return NO_ERROR;
 }
 
-mx_status_t sys_pci_init(mx_handle_t handle, mxtl::user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
+mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
 
     // TODO: finer grained validation
     // TODO(security): Add additional access checks

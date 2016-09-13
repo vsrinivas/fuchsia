@@ -8,8 +8,6 @@
 
 #if __cplusplus
 
-namespace mxtl {
-
 // user_ptr<> wraps a pointer to user memory, to differntiate it from kernel
 // memory.
 template <typename T>
@@ -44,7 +42,5 @@ private:
     // the kernel and user space.
     T* const ptr_;
 };
-
-} // namespace mxtl
 
 #endif // __cplusplus

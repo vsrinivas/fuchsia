@@ -95,7 +95,7 @@ uint64_t sys_current_time() {
 }
 
 mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topic_size,
-                            mxtl::user_ptr<void> _buffer, mx_size_t buffer_size) {
+                            user_ptr<void> _buffer, mx_size_t buffer_size) {
     auto up = ProcessDispatcher::GetCurrent();
 
     LTRACEF("handle %u topic %u topic_size %u buffer %p buffer_size %lu\n",
@@ -214,7 +214,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
 }
 
 mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
-                                    mxtl::user_ptr<void> _value, mx_size_t size) {
+                                    user_ptr<void> _value, mx_size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 
@@ -249,7 +249,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
 }
 
 mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
-                                    mxtl::user_ptr<const void> _value, mx_size_t size) {
+                                    user_ptr<const void> _value, mx_size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 
@@ -284,7 +284,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     return status;
 }
 
-mx_handle_t sys_thread_create(mx_handle_t process_handle, mxtl::user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
+mx_handle_t sys_thread_create(mx_handle_t process_handle, user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
     LTRACEF("process handle %u, flags %#x\n", process_handle, flags);
 
     // copy the name to a local buffer
@@ -361,7 +361,7 @@ uint64_t get_tsc_ticks_per_ms(void);
 };
 
 mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
-                                  mxtl::user_ptr<uintptr_t> value_ptr) {
+                                  user_ptr<uintptr_t> value_ptr) {
     LTRACEF("handle %u operation %u value_ptr %p", handle_value, op, value_ptr.get());
 
     // TODO(cpu) what to do with |handle_value|?
@@ -420,7 +420,7 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
     return NO_ERROR;
 }
 
-mx_handle_t sys_process_create(mxtl::user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
+mx_handle_t sys_process_create(user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
     LTRACEF("name %p, flags 0x%x\n", name.get(), flags);
 
     // copy out the name
@@ -555,7 +555,7 @@ mx_handle_t sys_event_create(uint32_t options) {
     return hv;
 }
 
-mx_status_t sys_eventpair_create(mxtl::user_ptr<mx_handle_t> out_handles /* array of size 2 */,
+mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of size 2 */,
                                  uint32_t flags) {
     LTRACEF("entry out_handles[] %p\n", out_handles.get());
 
@@ -646,7 +646,7 @@ mx_handle_t sys_vmo_create(uint64_t size) {
     return hv;
 }
 
-mx_ssize_t sys_vmo_read(mx_handle_t handle, mxtl::user_ptr<void> data, uint64_t offset, mx_size_t len) {
+mx_ssize_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data, uint64_t offset, mx_size_t len) {
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -661,7 +661,7 @@ mx_ssize_t sys_vmo_read(mx_handle_t handle, mxtl::user_ptr<void> data, uint64_t 
     return vmo->Read(data, len, offset);
 }
 
-mx_ssize_t sys_vmo_write(mx_handle_t handle, mxtl::user_ptr<const void> data, uint64_t offset, mx_size_t len) {
+mx_ssize_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data, uint64_t offset, mx_size_t len) {
     LTRACEF("handle %d, data %p, offset 0x%llx, len 0x%lx\n", handle, data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -676,7 +676,7 @@ mx_ssize_t sys_vmo_write(mx_handle_t handle, mxtl::user_ptr<const void> data, ui
     return vmo->Write(data, len, offset);
 }
 
-mx_status_t sys_vmo_get_size(mx_handle_t handle, mxtl::user_ptr<uint64_t> _size) {
+mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {
     LTRACEF("handle %d, sizep %p\n", handle, _size.get());
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -716,7 +716,7 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
 }
 
 mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
-                               uint64_t offset, mx_size_t len, mxtl::user_ptr<uintptr_t> user_ptr,
+                               uint64_t offset, mx_size_t len, user_ptr<uintptr_t> user_ptr,
                                uint32_t flags) {
 
     LTRACEF("proc handle %d, vmo handle %d, offset 0x%llx, len 0x%lx, user_ptr %p, flags 0x%x\n",
@@ -848,7 +848,7 @@ int sys_log_create(uint32_t flags) {
     return hv;
 }
 
-int sys_log_write(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<const void> ptr, uint32_t flags) {
+int sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const void> ptr, uint32_t flags) {
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr.get());
 
     if (len > DLOG_MAX_ENTRY)
@@ -868,7 +868,7 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<const voi
     return log->Write(buf, len, flags);
 }
 
-int sys_log_read(mx_handle_t log_handle, uint32_t len, mxtl::user_ptr<void> ptr, uint32_t flags) {
+int sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> ptr, uint32_t flags) {
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr.get());
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -905,7 +905,7 @@ mx_handle_t sys_port_create(uint32_t options) {
     return hv;
 }
 
-mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet, mx_size_t size) {
+mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_PORT_MAX_PKT_SIZE)
@@ -930,7 +930,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, mxtl::user_ptr<const void> packet
     return ioport->Queue(iopk);
 }
 
-mx_status_t sys_port_wait(mx_handle_t handle, mxtl::user_ptr<void> packet, mx_size_t size) {
+mx_status_t sys_port_wait(mx_handle_t handle, user_ptr<void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (!packet)
@@ -988,7 +988,7 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key, mx_handle_t source, 
     return source_disp->set_port_client(mxtl::move(client));
 }
 
-// TODO(vtl): _consumer_handle should presumably be an mxtl::user_ptr instead. Also, do we want to
+// TODO(vtl): _consumer_handle should presumably be an user_ptr instead. Also, do we want to
 // provide the producer handle as an out parameter (possibly in the same way as in msgpipe_create,
 // instead of overloading the return value)?
 mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,
@@ -1043,7 +1043,7 @@ mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_siz
 }
 
 mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_size_t requested,
-                              mxtl::user_ptr<const void> _buffer) {
+                              user_ptr<const void> _buffer) {
     LTRACEF("handle %d\n", producer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1065,7 +1065,7 @@ mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_si
 }
 
 mx_ssize_t sys_datapipe_read(mx_handle_t consumer_handle, uint32_t flags, mx_size_t requested,
-                             mxtl::user_ptr<void> _buffer) {
+                             user_ptr<void> _buffer) {
     LTRACEF("handle %d\n", consumer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1184,7 +1184,7 @@ mx_status_t sys_datapipe_end_read(mx_handle_t consumer_handle, mx_size_t read) {
     return consumer->EndRead(read);
 }
 
-mx_ssize_t sys_cprng_draw(mxtl::user_ptr<void> buffer, mx_size_t len) {
+mx_ssize_t sys_cprng_draw(user_ptr<void> buffer, mx_size_t len) {
     if (len > kMaxCPRNGDraw)
         return ERR_INVALID_ARGS;
 
@@ -1202,7 +1202,7 @@ mx_ssize_t sys_cprng_draw(mxtl::user_ptr<void> buffer, mx_size_t len) {
     return len;
 }
 
-mx_status_t sys_cprng_add_entropy(mxtl::user_ptr<void> buffer, mx_size_t len) {
+mx_status_t sys_cprng_add_entropy(user_ptr<void> buffer, mx_size_t len) {
     if (len > kMaxCPRNGSeed)
         return ERR_INVALID_ARGS;
 
@@ -1289,9 +1289,9 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
 
 mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
                              mx_time_t timeout,
-                             mxtl::user_ptr<uint32_t> _num_results,
-                             mxtl::user_ptr<mx_waitset_result_t> _results,
-                             mxtl::user_ptr<uint32_t> _max_results) {
+                             user_ptr<uint32_t> _num_results,
+                             user_ptr<mx_waitset_result_t> _results,
+                             user_ptr<uint32_t> _max_results) {
     LTRACEF("wait set handle %d\n", ws_handle);
 
     uint32_t num_results;
@@ -1364,7 +1364,7 @@ mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (copy_to_user(mxtl::user_ptr<mx_handle_t>(out_handle), hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+    if (copy_to_user(user_ptr<mx_handle_t>(out_handle), hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -1374,7 +1374,7 @@ mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
 }
 
 mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
-                            mx_size_t size, mxtl::user_ptr<const void> _buffer) {
+                            mx_size_t size, user_ptr<const void> _buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!_buffer)
@@ -1393,7 +1393,7 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
 }
 
 mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
-                           mx_size_t size, mxtl::user_ptr<void> _buffer) {
+                           mx_size_t size, user_ptr<void> _buffer) {
     LTRACEF("handle %d\n", handle);
 
     if (!_buffer)

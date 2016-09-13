@@ -21,7 +21,7 @@
 constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 1024u;
 
-mx_status_t sys_msgpipe_create(mxtl::user_ptr<mx_handle_t> out_handle /* array of size 2 */,
+mx_status_t sys_msgpipe_create(user_ptr<mx_handle_t> out_handle /* array of size 2 */,
                                uint32_t flags) {
     LTRACEF("entry out_handle[] %p\n", out_handle.get());
 
@@ -62,10 +62,10 @@ mx_status_t sys_msgpipe_create(mxtl::user_ptr<mx_handle_t> out_handle /* array o
 }
 
 mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
-                             mxtl::user_ptr<void> _bytes,
-                             mxtl::user_ptr<uint32_t> _num_bytes,
-                             mxtl::user_ptr<mx_handle_t> _handles,
-                             mxtl::user_ptr<uint32_t> _num_handles,
+                             user_ptr<void> _bytes,
+                             user_ptr<uint32_t> _num_bytes,
+                             user_ptr<mx_handle_t> _handles,
+                             user_ptr<uint32_t> _num_handles,
                              uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p",
             handle_value, _bytes.get(), _num_bytes.get(), _handles.get(), _num_handles.get());
@@ -161,8 +161,8 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
 }
 
 mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
-                              mxtl::user_ptr<const void> _bytes, uint32_t num_bytes,
-                              mxtl::user_ptr<const mx_handle_t> _handles, uint32_t num_handles,
+                              user_ptr<const void> _bytes, uint32_t num_bytes,
+                              user_ptr<const mx_handle_t> _handles, uint32_t num_handles,
                               uint32_t flags) {
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
             handle_value, _bytes.get(), num_bytes, _handles.get(), num_handles, flags);

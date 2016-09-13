@@ -430,7 +430,7 @@ status_t VmObject::Write(const void* _ptr, uint64_t offset, size_t len, size_t* 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
 
-status_t VmObject::ReadUser(mxtl::user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+status_t VmObject::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
     // test to make sure this is a user pointer
@@ -446,7 +446,7 @@ status_t VmObject::ReadUser(mxtl::user_ptr<void> ptr, uint64_t offset, size_t le
     return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
 }
 
-status_t VmObject::WriteUser(mxtl::user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+status_t VmObject::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
     // test to make sure this is a user pointer

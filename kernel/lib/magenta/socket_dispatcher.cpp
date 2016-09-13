@@ -92,7 +92,7 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
         ptr += pos;
         if (from_user) {
             // TODO: find a safer way to do this
-            mxtl::user_ptr<const void> uptr(ptr);
+            user_ptr<const void> uptr(ptr);
             vmo_->WriteUser(uptr, head_, write_len, nullptr);
         } else {
             memcpy(buf_ + head_, ptr, write_len);
@@ -125,7 +125,7 @@ mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user
             ptr += pos;
             if (from_user) {
                 // TODO: find a safer way to do this
-                mxtl::user_ptr<void> uptr(ptr);
+                user_ptr<void> uptr(ptr);
                 vmo_->ReadUser(uptr, tail_, read_len, nullptr);
             } else {
                 memcpy(ptr, buf_ + tail_, read_len);
@@ -263,7 +263,7 @@ mx_ssize_t SocketDispatcher::OOB_WriteSelf(const void* src, mx_size_t len, bool 
         return ERR_BUFFER_TOO_SMALL;
 
     if (from_user) {
-        if (copy_from_user(oob_, mxtl::user_ptr<const void>(src), len)  != NO_ERROR)
+        if (copy_from_user(oob_, user_ptr<const void>(src), len)  != NO_ERROR)
             return ERR_INVALID_ARGS;
     } else {
         memcpy(oob_, src, len);
@@ -302,7 +302,7 @@ mx_ssize_t SocketDispatcher::OOB_Read(void* dest, mx_size_t len, bool from_user)
         return ERR_BUFFER_TOO_SMALL;
 
     if (from_user) {
-        if (copy_to_user(mxtl::user_ptr<void>(dest), oob_, oob_len_) != NO_ERROR)
+        if (copy_to_user(user_ptr<void>(dest), oob_, oob_len_) != NO_ERROR)
             return ERR_INVALID_ARGS;
     } else {
         memcpy(dest, oob_, oob_len_);
