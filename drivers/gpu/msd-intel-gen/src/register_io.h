@@ -5,7 +5,7 @@
 #ifndef REGISTER_IO_H
 #define REGISTER_IO_H
 
-#include "magma_util/platform_mmio.h"
+#include "magma_util/platform/platform_mmio.h"
 #include <memory>
 
 // RegisterIo wraps mmio access and adds forcewake logic.

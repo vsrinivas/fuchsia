@@ -8,7 +8,7 @@
 #include "engine_command_streamer.h"
 #include "gtt.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform_device.h"
+#include "magma_util/platform/platform_device.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"

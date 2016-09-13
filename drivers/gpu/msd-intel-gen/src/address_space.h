@@ -5,7 +5,7 @@
 #ifndef ADDRESS_SPACE_H
 #define ADDRESS_SPACE_H
 
-#include "magma_util/platform_buffer.h"
+#include "magma_util/platform/platform_buffer.h"
 #include "pagetable.h"
 
 // Base class for various address spaces.

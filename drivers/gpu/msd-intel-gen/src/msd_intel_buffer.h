@@ -7,7 +7,7 @@
 
 #include "address_space.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform_buffer.h"
+#include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
 #include "types.h"
 #include <map>

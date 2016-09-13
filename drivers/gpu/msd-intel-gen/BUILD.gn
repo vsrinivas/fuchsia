@@ -6,6 +6,7 @@ import("//magma/gnbuild/magma.gni")
 
 executable("msd-intel-gen") {
   deps = [
+    ":msd_tests",
     "$magma_build_root/src/main",
     "src",
   ]

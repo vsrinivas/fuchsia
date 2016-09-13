@@ -4,13 +4,13 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("unit_tests") {
+source_set("msd_unit_tests") {
   sources = [
     "test_buffer.cc",
     "test_context.cc",
+    "test_device.cc",
     "test_engine_command_streamer.cc",
     "test_gtt.cc",
-    "test_device.cc",
     "test_hardware_status_page.cc",
     "test_instructions.cc",
     "test_render_init_batch.cc",
@@ -20,29 +20,10 @@ source_set("unit_tests") {
   deps = [
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/tests/mock:mmio",
     "$magma_build_root/tests/helper:platform_device_helper",
+    "$magma_build_root/tests/mock:mmio",
     "$msd_intel_gen_build_root/src",
     "$msd_intel_gen_build_root/tests/mock",
-    "//third_party/gtest",
-  ]
-}
-
-source_set("msd_intel_conformance_tests") {
-  deps = [
-    "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
-    "$msd_intel_gen_build_root/src",
-  ]
-}
-
-executable("msd_unit_tests") {
-  sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    ":msd_intel_conformance_tests",
-    ":unit_tests",
     "//third_party/gtest",
   ]
 }
