@@ -33,6 +33,7 @@
 #define SATA_DEVINFO_MODEL_ID_LEN 40
 
 typedef struct sata_pdata {
+    mx_time_t timeout; // for ahci driver watchdog
     uint64_t lba;   // in blocks
     uint16_t count; // in blocks
     uint8_t cmd;
