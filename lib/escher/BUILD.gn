@@ -7,6 +7,7 @@ config("thread_safety_warning") {
 }
 
 static_library("escher") {
+  deps = [ "//lib/ftl" ]
   sources = [
     "escher/renderer.cc",
     "escher/renderer.h",
@@ -29,7 +30,7 @@ static_library("escher") {
     "escher/geometry/quad.h",
     "escher/geometry/size_i.h",
     "escher/geometry/tessellation.h",
-    "escher/gl/frame_buffer.h",
+    "escher/gl/context.h",
     "escher/gl/texture_cache.h",
     "escher/gl/unique_object.h",
     "escher/gl/texture_spec.h",
@@ -41,11 +42,11 @@ static_library("escher") {
     "escher/gl/unique_frame_buffer.h",
     "escher/gl/gles2/bindings.h",
     "escher/gl/gles2/texture.h",
+    "escher/gl/gles2/context.h",
+    "escher/gl/gles2/context.cc",
     "escher/gl/gles2/unique_object.h",
-    "escher/gl/gles2/frame_buffer.cc",
     "escher/gl/gles2/texture_cache.cc",
     "escher/gl/gles2/unique_program.cc",
-    "escher/gl/gles2/frame_buffer.h",
     "escher/gl/gles2/texture_cache.h",
     "escher/gl/gles2/unique_program.h",
     "escher/gl/gles2/mesh.cc",

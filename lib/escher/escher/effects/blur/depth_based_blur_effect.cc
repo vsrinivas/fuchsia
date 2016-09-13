@@ -26,9 +26,9 @@ constexpr char g_vertex_shader[] = R"GLSL(
 )GLSL";
 
 constexpr char g_fragment_shader[] = R"GLSL(
-  #extension GL_EXT_shader_texture_lod : require
+  #extension GL_ARB_shader_texture_lod : require
 
-  precision mediump float;
+   float;
   uniform sampler2D u_color;
   uniform sampler2D u_depth;
   uniform vec2 u_tap;
@@ -58,7 +58,7 @@ constexpr char g_fragment_shader[] = R"GLSL(
     }
 
     float lod = max(0.0, log2((u_blur_plane_height - sample_height) * 0.3));
-    vec4 result = vec4(texture2DLodEXT(u_color, sample_uv, lod).rgb, 1.0);
+    vec4 result = vec4(texture2DLod(u_color, sample_uv, lod).rgb, 1.0);
     return result * weight;
   }
 

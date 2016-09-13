@@ -24,7 +24,7 @@ constexpr char g_vertex_shader[] = R"GLSL(
 )GLSL";
 
 constexpr char g_fragment_shader[] = R"GLSL(
-  precision mediump float;
+   float;
 
   // Depth information about the scene.
   //

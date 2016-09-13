@@ -24,7 +24,7 @@ void Context::BeginRenderPass(const RenderPassSpec& spec, const char* name) {
   GLbitfield clear_bits = 0;
 
   // Update color attachments.
-  for (int i = 0; i < RenderPassSpec::kNumColorAttachments; ++i) {
+  for (size_t i = 0; i < RenderPassSpec::kNumColorAttachments; ++i) {
     const auto& attachment = spec.color[i];
     const auto& current_attachment = current_spec_.color[i];
 
@@ -74,7 +74,7 @@ void Context::BeginRenderPass(const RenderPassSpec& spec, const char* name) {
     if (attachment.texture) {
       if (ShouldClearAttachment(attachment)) {
         clear_bits |= GL_DEPTH_BUFFER_BIT;
-        glClearDepthf(attachment.clear_depth);
+        glClearDepth(attachment.clear_depth);
       }
 
       if (attachment.texture != current_attachment.texture) {

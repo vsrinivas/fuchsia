@@ -6,15 +6,17 @@
 
 #if defined(__APPLE__)
 #include "TargetConditionals.h"
-#endif  // __APPLE__
 
-#if defined(__APPLE__) && TARGET_OS_IPHONE
-
+#if TARGET_OS_IPHONE
 #include <OpenGLES/ES2/glext.h>
+#else // TARGET_OS_IPHONE
+#include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
+#endif // TARGET_OS_IPHONE
 
-#else  // TARGET_OS_IPHONE
+#else  // __APPLE__
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-#endif  // TARGET_OS_IPHONE
+#endif  // __APPLE__

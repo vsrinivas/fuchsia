@@ -50,7 +50,7 @@ constexpr char g_fragment_shader[] = R"GLSL(
   #extension GL_EXT_frag_depth : require
 #endif
 
-  precision mediump float;
+   float;
 
   const float kPi = 3.14159265359;
 

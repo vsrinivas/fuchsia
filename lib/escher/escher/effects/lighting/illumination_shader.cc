@@ -20,7 +20,7 @@ constexpr char g_vertex_shader[] = R"GLSL(
 )GLSL";
 
 constexpr char g_fragment_shader[] = R"GLSL(
-  precision mediump float;
+   float;
   uniform sampler2D u_color;
   uniform sampler2D u_illumination;
   varying vec2 fragment_uv;
