@@ -334,12 +334,17 @@ typedef struct mx_waitset_result {
 
 // Object properties.
 
-#define MX_PROP_BAD_HANDLE_POLICY      1u
-#define MX_PROP_NUM_STATE_KINDS        2u
+// Argument is MX_POLICY_BAD_HANDLE_... (below, uint32_t).
+#define MX_PROP_BAD_HANDLE_POLICY           1u
+// Argument is a uint32_t.
+#define MX_PROP_NUM_STATE_KINDS             2u
+// Argument is an mx_size_t.
+#define MX_PROP_DATAPIPE_READ_THRESHOLD     3u
 
-#define MX_POLICY_BAD_HANDLE_IGNORE    0u
-#define MX_POLICY_BAD_HANDLE_LOG       1u
-#define MX_POLICY_BAD_HANDLE_EXIT      2u
+// Policies for MX_PROP_BAD_HANDLE_POLICY:
+#define MX_POLICY_BAD_HANDLE_IGNORE         0u
+#define MX_POLICY_BAD_HANDLE_LOG            1u
+#define MX_POLICY_BAD_HANDLE_EXIT           2u
 
 // Socket flags and limits.
 

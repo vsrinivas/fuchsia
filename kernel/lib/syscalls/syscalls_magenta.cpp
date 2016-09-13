@@ -230,7 +230,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
 
     switch (property) {
         case MX_PROP_BAD_HANDLE_POLICY: {
-            if (size != sizeof(uint32_t))
+            if (size < sizeof(uint32_t))
                 return ERR_BUFFER_TOO_SMALL;
             auto process = dispatcher->get_specific<ProcessDispatcher>();
             if (!process)
@@ -248,6 +248,17 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_WRONG_TYPE;
             uint32_t value = thread->thread()->get_num_state_kinds();
             if (copy_to_user_u32(_value.reinterpret<uint32_t>(), value) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
+        }
+        case MX_PROP_DATAPIPE_READ_THRESHOLD: {
+            auto consumer_dispatcher = dispatcher->get_specific<DataPipeConsumerDispatcher>();
+            if (!consumer_dispatcher)
+                return ERR_WRONG_TYPE;
+            if (size < sizeof(mx_size_t))
+                return ERR_BUFFER_TOO_SMALL;
+            mx_size_t threshold = consumer_dispatcher->GetReadThreshold();
+            if (copy_to_user(_value, &threshold, sizeof(threshold)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -286,6 +297,19 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (copy_from_user_u32(&value, _value.reinterpret<const uint32_t>()) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             status = process->set_bad_handle_policy(value);
+            break;
+        }
+        case MX_PROP_DATAPIPE_READ_THRESHOLD: {
+            if (size < sizeof(mx_size_t))
+                return ERR_BUFFER_TOO_SMALL;
+            auto consumer_dispatcher = dispatcher->get_specific<DataPipeConsumerDispatcher>();
+            if (!consumer_dispatcher)
+                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
+            mx_size_t threshold = 0;
+            if (copy_from_user(&threshold, _value.reinterpret<const mx_size_t>(),
+                               sizeof(mx_size_t)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            status = consumer_dispatcher->SetReadThreshold(threshold);
             break;
         }
     }

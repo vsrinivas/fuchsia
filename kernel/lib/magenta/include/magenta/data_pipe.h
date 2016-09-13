@@ -51,6 +51,8 @@ public:
     mx_ssize_t ConsumerQuery();
     mx_ssize_t ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr);
     mx_status_t ConsumerReadEnd(mx_size_t read);
+    mx_size_t ConsumerGetReadThreshold();
+    mx_status_t ConsumerSetReadThreshold(mx_size_t threshold);
 
     void OnProducerDestruction();
     void OnConsumerDestruction();
@@ -86,9 +88,14 @@ private:
                                                         consumer_.cursor - producer_.cursor;
     }
 
+    mx_size_t read_threshold_no_lock() const {
+        return !read_threshold_ ? element_size_ : read_threshold_;
+    }
+
     // Must be called under |lock_|:
     mx_status_t MapVMOIfNeededNoLock(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace);
     void UpdateSignalsNoLock();
+    void UpdateConsumerSignalsNoLock();
 
     const mx_size_t element_size_;
     const mx_size_t capacity_;
@@ -98,4 +105,5 @@ private:
     EndPoint consumer_;
     mxtl::RefPtr<VmObject> vmo_;
     mx_size_t free_space_;
+    mx_size_t read_threshold_;
 };

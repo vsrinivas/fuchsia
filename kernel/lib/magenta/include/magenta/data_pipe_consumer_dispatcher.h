@@ -35,6 +35,8 @@ public:
     mx_ssize_t Query();
     mx_ssize_t BeginRead(mxtl::RefPtr<VmAspace> aspace, void** buffer);
     mx_status_t EndRead(mx_size_t read);
+    mx_size_t GetReadThreshold();
+    mx_status_t SetReadThreshold(mx_size_t threshold);
 
 private:
     DataPipeConsumerDispatcher(mxtl::RefPtr<DataPipe> pipe);

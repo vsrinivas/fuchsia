@@ -12,7 +12,8 @@
 #include <magenta/handle.h>
 #include <magenta/data_pipe.h>
 
-constexpr mx_rights_t kDefaultDataPipeConsumerRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ ;
+constexpr mx_rights_t kDefaultDataPipeConsumerRights =
+        MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
 
 // static
 mx_status_t DataPipeConsumerDispatcher::Create(mxtl::RefPtr<DataPipe> data_pipe,
@@ -58,4 +59,12 @@ mx_ssize_t DataPipeConsumerDispatcher::BeginRead(mxtl::RefPtr<VmAspace> aspace, 
 
 mx_status_t DataPipeConsumerDispatcher::EndRead(mx_size_t read) {
     return pipe_->ConsumerReadEnd(read);
+}
+
+mx_size_t DataPipeConsumerDispatcher::GetReadThreshold() {
+    return pipe_->ConsumerGetReadThreshold();
+}
+
+mx_status_t DataPipeConsumerDispatcher::SetReadThreshold(mx_size_t threshold) {
+    return pipe_->ConsumerSetReadThreshold(threshold);
 }

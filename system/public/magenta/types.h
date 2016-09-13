@@ -42,6 +42,9 @@ typedef uint32_t mx_signals_t;
 #define MX_SIGNAL_SIGNAL4         ((mx_signals_t)1u << 7)
 #define MX_SIGNAL_SIGNAL_ALL      ((mx_signals_t)31u << 3)
 
+#define MX_SIGNAL_READ_THRESHOLD  ((mx_signals_t)1u << 8)
+#define MX_SIGNAL_WRITE_THRESHOLD ((mx_signals_t)1u << 9)
+
 typedef struct {
     mx_signals_t satisfied;
     mx_signals_t satisfiable;
