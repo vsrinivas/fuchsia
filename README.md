@@ -12,4 +12,7 @@ This repository contains documentation for Fuchsia.
 
 # How do I?
 
-+ [How do I use Magenta on my Acer Switch Alpha 12?](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/acer12.md)
++ How do I boot on my...
+  + [Acer Switch Alpha 12?](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/acer12.md)
+  + [Intel NUC?](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/nuc.md)
+  + [Raspberry Pi 3?](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md)
