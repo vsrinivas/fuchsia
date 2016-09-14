@@ -314,6 +314,12 @@ status_t UserThread::ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
     exception_status_ = MX_EXCEPTION_STATUS_WAITING;
 
     // Send message, wait for reply.
+    // Note that there is a "race" that we need handle: We need to send the
+    // exception report before going to sleep, but what if the receiver of the
+    // report gets it and processes it before we are asleep? This is handled by
+    // locking exception_wait_lock_ in places where the handler can see/modify
+    // thread state.
+
     status_t status = eport->SendReport(report);
     if (status != NO_ERROR) {
         LTRACEF("SendReport returned %d\n", status);
@@ -350,7 +356,9 @@ uint32_t UserThread::get_num_state_kinds() const {
 // Note: buffer must be sufficiently aligned
 
 status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
-    LTRACE_ENTRY;
+    LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(exception_wait_lock_);
 
     if (thread_.state != THREAD_BLOCKED ||
         (thread_.flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
@@ -368,7 +376,9 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
 // Note: buffer must be sufficiently aligned
 
 status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv) {
-    LTRACE_ENTRY;
+    LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(exception_wait_lock_);
 
     if (thread_.state != THREAD_BLOCKED ||
         (thread_.flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)

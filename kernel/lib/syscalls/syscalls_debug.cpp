@@ -115,8 +115,14 @@ int sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
 // change to a real root resource handle so only privileged callers may
 // obtain top level processes (and eventually jobs) directly from a koid
 mx_handle_t sys_debug_task_get_child(mx_handle_t handle, uint64_t koid) {
+    // TODO(dje): What rights to use here could depend on whether the task
+    // is a process, thread, etc. Plus if |handle| has extra rights, say
+    // some kind of "debug" rights, then we may want to confer those rights
+    // onto the returned handle. Plus as new rights get added to processes,
+    // threads, etc. we don't want to have to continually update this value.
     const auto kDebugRights =
-        MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
+        MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
+        MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
 
     auto up = ProcessDispatcher::GetCurrent();
 
