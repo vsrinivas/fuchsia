@@ -12,6 +12,7 @@
 #include <platform.h>
 #include <platform/keyboard.h>
 #include <lib/console.h>
+#include <lib/debuglog.h>
 
 void platform_halt(
         platform_halt_action suggested_action,
@@ -48,6 +49,10 @@ void platform_halt(
     }
 
     printf("Halted\n");
+
+#if WITH_LIB_DEBUGLOG
+    dlog_bluescreen();
+#endif
 
 #if ENABLE_PANIC_SHELL
     panic_shell_start();

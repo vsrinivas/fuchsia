@@ -7,6 +7,7 @@
 #include <lib/debuglog.h>
 
 #include <err.h>
+#include <dev/udisplay.h>
 #include <kernel/thread.h>
 #include <lib/user_copy.h>
 #include <lk/init.h>
@@ -38,7 +39,7 @@ static dlog_t DLOG = {
 status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     dlog_t* log = &DLOG;
 
-    if (arch_ints_disabled()) {
+    if (arch_ints_disabled() || log->paused) {
         return ERR_BAD_STATE;
     }
 
@@ -201,6 +202,29 @@ static int debuglog_reader(void* arg) {
         }
     }
     return NO_ERROR;
+}
+
+void dlog_bluescreen(void) {
+    udisplay_bind_gfxconsole();
+
+    DLOG.paused = true;
+
+    uint8_t buffer[DLOG_MAX_ENTRY + 1];
+    dlog_record_t* rec = (dlog_record_t*)buffer;
+    dlog_reader_t reader;
+
+    dlog_reader_init(&reader);
+    while (dlog_read(&reader, 0, rec, DLOG_MAX_ENTRY) > 0) {
+        rec->data[rec->datalen] = 0;
+        if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
+            rec->data[rec->datalen - 1] = 0;
+        }
+        dprintf(INFO, "[%05d.%03d] %c %s\n",
+                (int) (rec->timestamp / 1000000000ULL),
+                (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
+                (rec->flags & DLOG_FLAG_KERNEL) ? 'K' : 'U',
+                rec->data);
+    }
 }
 
 static void dlog_init_hook(uint level) {

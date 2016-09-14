@@ -43,6 +43,7 @@ struct dlog {
     uint32_t size;
     uint32_t head;
     uint32_t tail;
+    bool paused;
     void* data;
 
     struct list_node readers;
@@ -74,5 +75,7 @@ static inline status_t dlog_read_user(dlog_reader_t* rdr, uint32_t flags, void* 
     return dlog_read_etc(rdr, flags, uptr, len, true);
 }
 void dlog_wait(dlog_reader_t* rdr);
+
+void dlog_bluescreen(void);
 
 __END_CDECLS

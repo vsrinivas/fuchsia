@@ -258,6 +258,16 @@ void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb) {
     if (gfx_init_surface_from_display(&hw, info)) {
         return;
     }
+    if (info->flags & DISPLAY_FLAG_CRASH_FRAMEBUFFER) {
+        // "bluescreen" path. no allocations allowed
+        memcpy(&hw_surface, &hw, sizeof(hw));
+        gfxconsole_setup(&hw_surface, &hw_surface);
+        memcpy(&dispinfo, info, sizeof(*info));
+        gfxconsole_clear();
+        register_print_callback(&cb);
+        active = true;
+        return;
+    }
     if ((hw.format == hw_surface.format) && (hw.width == hw_surface.width) &&
         (hw.height == hw_surface.height) && (hw.stride == hw_surface.stride) &&
         (hw.pixelsize == hw_surface.pixelsize)) {
