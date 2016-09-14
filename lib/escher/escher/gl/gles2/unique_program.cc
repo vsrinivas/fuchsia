@@ -4,6 +4,8 @@
 
 #include "escher/gl/gles2/unique_program.h"
 
+#include "escher/gl/gles2/bindings.h"
+
 #include <iostream>
 #include <vector>
 

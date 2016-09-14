@@ -8,8 +8,8 @@ config("glfw_config") {
 
 static_library("glfw") {
   defines = [
-    "_GLFW_BUILD_DLL=0",
-    "__GLFW_USE_HYBRID_HPG=1",
+    "_GLFW_BUILD_DLL",
+    "__GLFW_USE_HYBRID_HPG",
   ]
 
   sources = [
@@ -26,8 +26,8 @@ static_library("glfw") {
 
   if (is_mac) {
     defines += [
-      "_GLFW_COCOA=1",
-      "_GLFW_USE_RETINA=1",
+      "_GLFW_COCOA",
+      "_GLFW_USE_RETINA",
     ]
 
     libs = [
@@ -49,6 +49,9 @@ static_library("glfw") {
       "glfw/src/nsgl_context.m",
     ]
   } else if (is_linux) {
+    defines += [
+      "_GLFW_X11",
+    ]
     sources += [
       "glfw/src/x11_init.c",
       "glfw/src/x11_monitor.c",

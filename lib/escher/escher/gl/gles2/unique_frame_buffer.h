@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "escher/gl/gles2/bindings.h"
 #include "escher/gl/gles2/unique_object.h"
 
 namespace escher {

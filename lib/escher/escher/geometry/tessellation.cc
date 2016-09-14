@@ -4,6 +4,7 @@
 
 #include "escher/geometry/tessellation.h"
 
+#include <algorithm>
 #include <math.h>
 
 #include "ftl/logging.h"

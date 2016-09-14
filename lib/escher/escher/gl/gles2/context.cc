@@ -4,6 +4,7 @@
 
 #include "escher/gl/gles2/context.h"
 
+#include <cstring>
 #include <string>
 
 namespace escher {

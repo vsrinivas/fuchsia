@@ -14,9 +14,13 @@
 #include <OpenGL/glext.h>
 #endif // TARGET_OS_IPHONE
 
-#else  // __APPLE__
+#else // __APPLE__
 
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
+#if !defined(GL_GLEXT_PROTOTYPES)
+#define GL_GLEXT_PROTOTYPES 1
+#endif
 
-#endif  // __APPLE__
+#include <GL/gl.h>
+#include <GL/glext.h>
+
+#endif // __APPLE

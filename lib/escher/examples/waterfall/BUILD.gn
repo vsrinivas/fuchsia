@@ -20,4 +20,21 @@ executable("waterfall") {
     "//lib/escher",
     "third_party:glfw",
   ]
+
+  if (is_linux)  {
+    libs = [
+      "GL",
+      "dl",
+      "X11",
+      "Xrandr",
+      "pthread",
+      "Xinerama",
+      "Xcursor",
+    ]
+    lib_dirs = [
+      "/usr/lib",
+      "/usr/X11R6/lib",
+      "/usr/lib/nvidia-367",
+    ]
+  }
 }
