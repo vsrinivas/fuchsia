@@ -18,16 +18,20 @@ void display_pre_freq_change(void);
 void display_post_freq_change(void);
 
 #define DISPLAY_FORMAT_NONE         (-1)
-#define DISPLAY_FORMAT_RGB_565      (0)
-#define DISPLAY_FORMAT_RGB_332      (1)
-#define DISPLAY_FORMAT_RGB_2220     (2)
-#define DISPLAY_FORMAT_ARGB_8888    (3)
-#define DISPLAY_FORMAT_RGB_x888     (4)
-#define DISPLAY_FORMAT_MONO_1       (5)
-#define DISPLAY_FORMAT_MONO_8       (6)
+#define DISPLAY_FORMAT_RGB_565      (1)
+#define DISPLAY_FORMAT_RGB_332      (2)
+#define DISPLAY_FORMAT_RGB_2220     (3)
+#define DISPLAY_FORMAT_ARGB_8888    (4)
+#define DISPLAY_FORMAT_RGB_x888     (5)
+#define DISPLAY_FORMAT_MONO_1       (6)
+#define DISPLAY_FORMAT_MONO_8       (7)
 
 #define DISPLAY_FLAG_HW_FRAMEBUFFER    (1<<0)
 #define DISPLAY_FLAG_NEEDS_CACHE_FLUSH (1<<1)
+
+// gfxconsole will not allocate a backing buffer
+// or do any other allocations
+#define DISPLAY_FLAG_CRASH_FRAMEBUFFER (1<<2)
 
 struct display_info {
     void *framebuffer;
