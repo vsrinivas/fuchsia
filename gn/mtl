@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//lib/mtl"
+        "//lib/mtl",
+        "//lib/mtl:mtl_unittests"
     ],
     "binaries": [
         {
