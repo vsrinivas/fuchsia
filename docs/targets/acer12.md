@@ -34,7 +34,6 @@ Otherwise you’ll need to enter the password every time you use the BIOS.
 A password is required to modify the secure boot setting, but “disabled” will persist without one.
 11. Select “Exit” from the tabs at the left
 12. Select “Exit Saving Changes”
-13. Each time the machine boots, press ESC to abort the IPV6 netboot and boot from USB (hack)
 
 ## What if you end up in the Windows 10 Setup?
 If you don’t enter the BIOS and haven’t installed another OS, You’ll end up on a blue background “Hi there” screen asking you to select country, language, etc.  
@@ -55,7 +54,11 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 
 ## How to Create a Bootable USB Flash Drive
 1. Check out and build GigaBoot20x6: https://fuchsia.googlesource.com/gigaboot20x6
+  * Note: build without parallelism (no -j flag to make)
 2. Format your USB Flash Drive with a FAT32 partition as the first partition
 3. Copy gigaboot20x6/out/osboot.efi to EFI/BOOT/BOOTX64.EFI on the USB Flash Drive
 4. Copy build-magenta-pc-x86-64/magenta.bin to the root of the USB Flash Drive
 5. Optionally copy an additional bootfs image to ramdisk.bin on the root of the USB Flash Drive
+
+If you need to boot magenta over the network, skip step 4 and/or delete
+magenta.bin from the root of the USB Flash Drive.
