@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//third_party/mojo/src/mojo/public/mojo_application.gni")
+import("//mojo/public/mojo_application.gni")
 
 if (is_android) {
   # TODO(toshik)
@@ -35,7 +35,7 @@ source_set("sources") {
     "network_service_impl.h",
     "upload_element_reader.cc",
     "upload_element_reader.h",
-    "url_loader_impl.cc",
+    #"url_loader_impl.cc",
     "url_loader_impl.h",
   ]
 
@@ -49,15 +49,14 @@ source_set("sources") {
   ]
 
   deps = [
-    "//base",
-    "//mojo/services/network/interfaces",
+    "//apps/network/mojo/services/network/interfaces",
+    "//lib/ftl",
     "//third_party/boringssl:boringssl",
-    "//third_party/mojo/src/mojo/public/cpp/application",
-    "//third_party/mojo/src/mojo/public/cpp/application:standalone",
-    "//third_party/mojo/src/mojo/public/cpp/bindings",
-    "//third_party/mojo/src/mojo/public/cpp/system",
-    "//third_party/mojo/src/mojo/public/cpp/utility",
-    "//third_party/mojo/src/mojo/public/interfaces/network",
-    "//url",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/utility",
+    "//mojo/public/interfaces/network",
   ]
 }

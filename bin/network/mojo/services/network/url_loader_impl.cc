@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-
-#include "mojo/services/network/url_loader_impl.h"
-#include "mojo/services/network/http_client.h"
-#include "mojo/services/network/net_errors.h"
-#include "mojo/services/network/net_adapters.h"
-
-#include "url/gurl.h"
+#include "url_loader_impl.h"
 
 #include <istream>
+#include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
-#include <memory>
+
+#include "apps/network/mojo/services/network/http_client.h"
+#include "apps/network/mojo/services/network/net_adapters.h"
+#include "apps/network/mojo/services/network/net_errors.h"
+#include "lib/ftl/logging.h"
+#include "url/gurl.h"
 
 namespace mojo {
 
@@ -40,7 +39,7 @@ void URLLoaderImpl::Start(URLRequestPtr request,
 
 void URLLoaderImpl::FollowRedirect(
     const Callback<void(URLResponsePtr)>& callback) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
   callback_ = callback;
   SendError(net::ERR_NOT_IMPLEMENTED);
 }
@@ -48,7 +47,7 @@ void URLLoaderImpl::FollowRedirect(
 void URLLoaderImpl::QueryStatus(
     const Callback<void(URLLoaderStatusPtr)>& callback) {
   URLLoaderStatusPtr status(URLLoaderStatus::New());
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
   status->error = MakeNetworkError(net::ERR_NOT_IMPLEMENTED);
   callback.Run(status.Pass());
 }
@@ -97,7 +96,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 
   GURL url(url_str);
   if (!url.is_valid()) {
-    LOG(ERROR) << "url parse error";
+    FTL_LOG(ERROR) << "url parse error";
     SendError(net::ERR_INVALID_ARGUMENT);
     return;
   }
@@ -127,13 +126,13 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
         redirect = true;
         url = GURL(c.redirect_location_);
         if (!url.is_valid()) {
-          LOG(ERROR) << "url parse error";
+          FTL_LOG(ERROR) << "url parse error";
           SendError(net::ERR_INVALID_RESPONSE);
           break;
         }
       }
 #else
-      LOG(INFO) << "https is not built-in. "
+      FTL_LOG(INFO) << "https is not built-in. "
         "please build with NETWORK_SERVICE_USE_HTTPS";
       SendError(net::ERR_INVALID_ARGUMENT);
       break;
@@ -153,14 +152,14 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
         redirect = true;
         url = GURL(c.redirect_location_);
         if (!url.is_valid()) {
-          LOG(ERROR) << "url parse error";
+          FTL_LOG(ERROR) << "url parse error";
           SendError(net::ERR_INVALID_RESPONSE);
           break;
         }
       }
     } else {
       // unknown protocol
-      LOG(ERROR) << "unknown protocol";
+      FTL_LOG(ERROR) << "unknown protocol";
       SendError(net::ERR_INVALID_ARGUMENT);
       break;
     }

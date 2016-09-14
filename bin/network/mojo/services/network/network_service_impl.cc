@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
+#include "network_service_impl.h"
 
-#include "mojo/services/network/network_service_impl.h"
-#include "mojo/services/network/net_errors.h"
-#include "mojo/services/network/net_adapters.h"
-
-#include "mojo/services/network/url_loader_impl.h"
+#include "apps/network/mojo/services/network/net_adapters.h"
+#include "apps/network/mojo/services/network/net_errors.h"
+#include "apps/network/mojo/services/network/network_service_impl.h"
+#include "apps/network/mojo/services/network/url_loader_impl.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 
 namespace mojo {
@@ -21,22 +21,21 @@ NetworkServiceImpl::~NetworkServiceImpl() {
 }
 
 void NetworkServiceImpl::CreateURLLoader(InterfaceRequest<URLLoader> loader) {
-  new URLLoaderImpl(loader.Pass());
 }
 
 void NetworkServiceImpl::GetCookieStore(ScopedMessagePipeHandle cookie_store) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateWebSocket(ScopedMessagePipeHandle socket) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateTCPBoundSocket(
     NetAddressPtr local_address,
     ScopedMessagePipeHandle bound_socket,
     const CreateTCPBoundSocketCallback& callback) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
   callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
 }
 
@@ -46,30 +45,30 @@ void NetworkServiceImpl::CreateTCPConnectedSocket(
     ScopedDataPipeProducerHandle receive_stream,
     ScopedMessagePipeHandle client_socket,
     const CreateTCPConnectedSocketCallback& callback) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
   callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::CreateUDPSocket(ScopedMessagePipeHandle request) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateHttpServer(
     NetAddressPtr local_address,
     ScopedMessagePipeHandle delegate,
     const CreateHttpServerCallback& callback) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
   callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::RegisterURLLoaderInterceptor(
     ScopedMessagePipeHandle factory) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateHostResolver(
     ScopedMessagePipeHandle host_resolver) {
-  NOTIMPLEMENTED();
+  FTL_NOTIMPLEMENTED();
 }
 
 }  // namespace mojo

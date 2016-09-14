@@ -5,10 +5,8 @@
 #ifndef MOJO_SERVICES_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define MOJO_SERVICES_NETWORK_NETWORK_SERVICE_IMPL_H_
 
-//#include "base/compiler_specific.h"
-#include "base/macros.h"
-
-#include "mojo/services/network/interfaces/network_service.mojom.h"
+#include "apps/network/mojo/services/network/interfaces/network_service.mojom.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace mojo {

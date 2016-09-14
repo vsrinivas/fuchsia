@@ -5,7 +5,7 @@
 #ifndef MOJO_SERVICES_NETWORK_UPLOAD_ELEMENT_READER_H_
 #define MOJO_SERVICES_NETWORK_UPLOAD_ELEMENT_READER_H_
 
-#include "base/macros.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 #include <array>
@@ -25,7 +25,7 @@ class UploadElementReader {
   ScopedDataPipeConsumerHandle pipe_;
   std::array<char, BUFSIZE> buf_;
 
-  DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
+  FTL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
 };
 
 }  // namespace mojo

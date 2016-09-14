@@ -1,5 +1,5 @@
-group("root") {
+group("network") {
   deps = [
-    "//mojo/services/network",
+    "//apps/network/mojo/services/network",
   ]
 }

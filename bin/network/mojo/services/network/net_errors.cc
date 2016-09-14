@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
+#include "net_errors.h"
 
-#include "mojo/services/network/net_errors.h"
+#include "lib/ftl/logging.h"
 
 namespace net {
 
@@ -22,10 +22,10 @@ std::string ErrorToShortString(int error) {
   case ERR_ ## label: \
     error_string = # label; \
     break;
-#include "mojo/services/network/net_error_list.h"
+#include "apps/network/mojo/services/network/net_error_list.h"
 #undef NET_ERROR
   default:
-    NOTREACHED();
+    FTL_NOTREACHED();
     error_string = "<unknown>";
   }
   return std::string("ERR_") + error_string;

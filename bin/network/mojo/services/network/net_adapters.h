@@ -5,7 +5,7 @@
 #ifndef MOJO_SERVICES_NETWORK_NET_ADAPTERS_H_
 #define MOJO_SERVICES_NETWORK_NET_ADAPTERS_H_
 
-#include "third_party/mojo/src/mojo/public/interfaces/network/network_error.mojom.h"
+#include "mojo/public/interfaces/network/network_error.mojom.h"
 
 namespace mojo {
 

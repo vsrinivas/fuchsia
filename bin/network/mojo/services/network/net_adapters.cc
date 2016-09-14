@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/services/network/net_adapters.h"
-#include "mojo/services/network/net_errors.h"
+#include "apps/network/mojo/services/network/net_adapters.h"
+#include "apps/network/mojo/services/network/net_errors.h"
 
 namespace mojo {
 

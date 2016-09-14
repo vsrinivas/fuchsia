@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
+#include "upload_element_reader.h"
 
 #include <mojo/system/result.h>
 
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/system/wait.h"
-#include "mojo/services/network/upload_element_reader.h"
 
 namespace mojo {
 
@@ -40,7 +40,7 @@ MojoResult UploadElementReader::ReadAll(std::ostream *os) {
         result = MOJO_RESULT_OK;
         break;
       }
-      LOG(ERROR) << "UploadELementReader: result=" << result;
+      FTL_LOG(ERROR) << "UploadELementReader: result=" << result;
       break;
     }
 
@@ -48,7 +48,7 @@ MojoResult UploadElementReader::ReadAll(std::ostream *os) {
     if (!*os) {
       // TODO(toshik): better result code?
       result = MOJO_SYSTEM_RESULT_RESOURCE_EXHAUSTED;
-      LOG(ERROR) << "UploadElementReader: result=" << result;
+      FTL_LOG(ERROR) << "UploadElementReader: result=" << result;
       break;
     }
   }

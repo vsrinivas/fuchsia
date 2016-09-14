@@ -5,13 +5,12 @@
 #ifndef MOJO_SERVICES_NETWORK_HTTP_CLIENT_H_
 #define MOJO_SERVICES_NETWORK_HTTP_CLIENT_H_
 
-#include "base/logging.h"
-
 #include <mojo/system/result.h>
 
+#include "apps/network/mojo/services/network/net_errors.h"
+#include "apps/network/mojo/services/network/upload_element_reader.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/system/wait.h"
-#include "mojo/services/network/net_errors.h"
-#include "mojo/services/network/upload_element_reader.h"
 
 #include <asio.hpp>
 #include <asio/ssl.hpp>
@@ -137,7 +136,7 @@ MojoResult URLLoaderImpl::HTTPClient<T>::
                   const std::vector<std::unique_ptr<
                       UploadElementReader>>& element_readers) {
   if (!IsMethodAllowed(method)) {
-    LOG(ERROR) << "Method " << method << " is not allowed";
+    FTL_LOG(ERROR) << "Method " << method << " is not allowed";
     return MOJO_SYSTEM_RESULT_INVALID_ARGUMENT;
   }
 
@@ -196,7 +195,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::
                         std::bind(&HTTPClient<ssl_socket_t>::OnConnect, this,
                                   std::placeholders::_1));
   } else {
-    LOG(ERROR) << "Resolve(SSL): " << err.message();
+    FTL_LOG(ERROR) << "Resolve(SSL): " << err.message();
     SendError(net::ERR_NAME_NOT_RESOLVED);
   }
 }
@@ -211,7 +210,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
                                     this,
                                     std::placeholders::_1));
   } else {
-    LOG(ERROR) << "Resolve(NonSSL): " << err.message();
+    FTL_LOG(ERROR) << "Resolve(NonSSL): " << err.message();
     SendError(net::ERR_NAME_NOT_RESOLVED);
   }
 }
@@ -224,7 +223,7 @@ bool URLLoaderImpl::HTTPClient<T>::
   char subject_name[256];
   X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
   X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-  LOG(INFO) << "Verifying " << subject_name;
+  FTL_LOG(INFO) << "Verifying " << subject_name;
 
 #ifdef NETWORK_SERVICE_HTTPS_CERT_HACK
   preverified = true;
@@ -241,7 +240,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::
                                       this,
                                       std::placeholders::_1));
   } else {
-    LOG(ERROR) << "Connect(SSL): " << err.message();
+    FTL_LOG(ERROR) << "Connect(SSL): " << err.message();
     SendError(net::ERR_CONNECTION_FAILED);
   }
 }
@@ -255,7 +254,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::
                                 this,
                                 std::placeholders::_1));
   } else {
-    LOG(ERROR) << "Connect(NonSSL): " << err.message();
+    FTL_LOG(ERROR) << "Connect(NonSSL): " << err.message();
     SendError(net::ERR_CONNECTION_FAILED);
   }
 }
@@ -267,7 +266,7 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
                       std::bind(&HTTPClient<T>::OnWriteRequest, this,
                                 std::placeholders::_1));
   } else {
-    LOG(ERROR) << "HandShake: " << err.message();
+    FTL_LOG(ERROR) << "HandShake: " << err.message();
     SendError(net::ERR_SSL_HANDSHAKE_NOT_COMPLETED);
   }
 }
@@ -282,7 +281,7 @@ void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err) {
                            std::bind(&HTTPClient<T>::OnReadStatusLine, this,
                                      std::placeholders::_1));
   } else {
-    LOG(ERROR) << "WriteRequest: " << err.message();
+    FTL_LOG(ERROR) << "WriteRequest: " << err.message();
     // TODO(toshik): better error code?
     SendError(net::ERR_FAILED);
   }
@@ -298,14 +297,14 @@ void URLLoaderImpl::HTTPClient<T>::
     std::string status_message;
     std::getline(response_stream, status_message_);
     if (!response_stream || http_version_.substr(0, 5) != "HTTP/") {
-      LOG(ERROR) << "ReadStatusLine: Invalid response\n";
+      FTL_LOG(ERROR) << "ReadStatusLine: Invalid response\n";
       SendError(net::ERR_INVALID_RESPONSE);
       return;
     }
     if (!(status_code_ >= 200 && status_code_ <= 299) &&
         status_code_ != 301 && status_code_ != 302) {
       // TODO(toshik): handle more status codes
-      LOG(ERROR) << "ReadStatusLine: Status code " << status_code_;
+      FTL_LOG(ERROR) << "ReadStatusLine: Status code " << status_code_;
       SendError(net::ERR_NOT_IMPLEMENTED);
       return;
     }
@@ -314,7 +313,7 @@ void URLLoaderImpl::HTTPClient<T>::
                            std::bind(&HTTPClient<T>::OnReadHeaders, this,
                                      std::placeholders::_1));
   } else {
-    LOG(ERROR) << "ReadStatusLine: " << err;
+    FTL_LOG(ERROR) << "ReadStatusLine: " << err;
   }
 }
 
@@ -345,7 +344,7 @@ MojoResult URLLoaderImpl::HTTPClient<T>::SendBody() {
         // If the other end closes the data pipe,
         // MOJO_SYSTEM_RESULT_FAILED_PRECONDITION can happen.
         if (result != MOJO_SYSTEM_RESULT_FAILED_PRECONDITION)
-          LOG(ERROR) << "SendBody: result=" << result;
+          FTL_LOG(ERROR) << "SendBody: result=" << result;
         return result;
       }
 
@@ -392,7 +391,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         ParseHeaderField(header, &name, &value);
         if (name == "Location") {
           redirect_location_ = value;
-          LOG(INFO) << "Redirecting to " << redirect_location_;
+          FTL_LOG(INFO) << "Redirecting to " << redirect_location_;
         }
       }
     } else {
@@ -428,7 +427,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
                                  std::placeholders::_1));
     }
   } else {
-    LOG(ERROR) << "ReadHeaders: " << err;
+    FTL_LOG(ERROR) << "ReadHeaders: " << err;
   }
 }
 
@@ -442,7 +441,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadBody(const asio::error_code& err) {
   } else {
     // EOF is handled here.
     // TODO(toshik): print the error code if it is unexpected.
-    // LOG(INFO) << "OnReadBody: " << err.message();
+    // FTL_LOG(INFO) << "OnReadBody: " << err.message();
     response_body_stream_.reset();
   }
 }
@@ -463,7 +462,7 @@ void URLLoaderImpl::HTTPClient<T>::SendError(int error_code) {
 // ASIO doesn't provide this if exception is not enabled
 template <typename Exception>
 void asio::detail::throw_exception(const Exception& e) {
-  LOG(ERROR) << "Exception occurred: " << e.what();
+  FTL_LOG(ERROR) << "Exception occurred: " << e.what();
 }
 #endif
 
