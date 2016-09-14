@@ -11,6 +11,7 @@
 #include <arch/x86/mp.h>
 #include <platform.h>
 #include <platform/keyboard.h>
+#include <lib/console.h>
 
 void platform_halt(
         platform_halt_action suggested_action,
@@ -48,8 +49,9 @@ void platform_halt(
 
     printf("Halted\n");
 
-    // TODO: enter low level kernel debugging mode
-
+#if ENABLE_PANIC_SHELL
+    panic_shell_start();
+#endif
 
     for (;;) {
         x86_hlt();

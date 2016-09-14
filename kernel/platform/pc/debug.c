@@ -89,3 +89,20 @@ int platform_dgetc(char *c, bool wait)
 {
     return cbuf_read_char(&console_input_buf, c, wait);
 }
+
+// panic time polling IO for the panic shell
+void platform_pputc(char c)
+{
+    platform_dputc(c);
+}
+
+int platform_pgetc(char *c, bool wait)
+{
+    if (inp(uart_io_port + 5) & (1<<0)) {
+        *c = inp(uart_io_port + 0);
+        return 0;
+    }
+
+    return -1;
+}
+

@@ -35,6 +35,9 @@ MODULE_DEPS += \
     dev/interrupt \
     dev/pcie \
 
+KERNEL_DEFINES += \
+    PLATFORM_SUPPORTS_PANIC_SHELL=1
+
 LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 
 include make/module.mk
