@@ -434,7 +434,7 @@ static bool test_prep_and_segv(void)
 void test_inferior(void)
 {
     mx_handle_t pipe = mxio_get_startup_handle(MX_HND_TYPE_USER0);
-    unittest_printf("test_inferior: got handle %d", pipe);
+    unittest_printf("test_inferior: got handle %d\n", pipe);
 
     if (!tu_wait_readable(pipe))
         exit(20);
@@ -443,9 +443,9 @@ void test_inferior(void)
     uint32_t buffer_size = sizeof(buffer) - 1;
     memset(buffer, 0, sizeof(buffer));
     tu_message_read(pipe, buffer, &buffer_size, NULL, NULL, 0);
-    unittest_printf("test_inferior: received \"%s\"", buffer);
+    unittest_printf("test_inferior: received \"%s\"\n", buffer);
     if (strcmp (buffer, ping_message) != 0) {
-        unittest_printf("Unexpected ping from debugger");
+        unittest_printf("Unexpected ping from debugger\n");
         exit (21);
     }
 
@@ -476,7 +476,6 @@ END_TEST_CASE(debugger_tests)
 int main(int argc, char **argv)
 {
     if (argc == 2 && strcmp(argv[1], test_inferior_child_name) == 0) {
-        extern void test_inferior(void);
         test_inferior();
         return 0;
     }
