@@ -6,5 +6,5 @@ declare_args() {
   magma_build_root = "//magma"
   mesa_build_root = "//third_party/mesa"
   expat_build_root = "//third_party/expat"
-  msd_intel_gen_build_root = "//msd-intel-gen"
+  msd_intel_gen_build_root = "//driver/msd-intel-gen"
 }
