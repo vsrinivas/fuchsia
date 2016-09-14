@@ -416,6 +416,7 @@ static mx_status_t fs_open(vnode_t** _vn, uint32_t flags) {
 
 static mx_status_t fs_close(vnode_t* vn) {
     trace(MINFS, "minfs_close() vn=%p(#%u)\n", vn, vn->ino);
+    vn_release(vn);
     return NO_ERROR;
 }
 
