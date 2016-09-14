@@ -34,6 +34,8 @@ void dn_delete(dnode_t* dn);
 
 mx_status_t dn_lookup(dnode_t* dn, dnode_t** out, const char* name, size_t len);
 
+mx_status_t dn_move_child(dnode_t* parent, dnode_t* child, const char* name, size_t len);
+
 void dn_add_child(dnode_t* parent, dnode_t* child);
 
 mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len);

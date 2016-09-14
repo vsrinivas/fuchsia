@@ -488,13 +488,22 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
             return r1;
         } else if ((r2 = vfs_walk(vn, &newparent, newpath, &newpath)) < 0) {
             return r2;
-        } else if ((r1 != r2) || (r1 == 0) || (r2 == 0)) {
-            // Rename can only be directed to one remote filesystem
+        } else if (r1 != r2) {
+            // Rename can only be directed to one filesystem
             return ERR_NOT_SUPPORTED;
-        } else if ((r1 = txn_handoff_rename(r1, rh, oldpath, newpath)) < 0) {
-            return r1;
         }
-        return ERR_DISPATCHER_INDIRECT;
+
+        if (r1 == 0) {
+            // Local filesystem
+            return vn->ops->rename(oldparent, newparent, oldpath,
+                                   strlen(oldpath), newpath, strlen(newpath));
+        } else {
+            // Remote filesystem
+            if ((r1 = txn_handoff_rename(r1, rh, oldpath, newpath)) < 0) {
+                return r1;
+            }
+            return ERR_DISPATCHER_INDIRECT;
+        }
     }
     case MXRIO_UNLINK:
         return vn->ops->unlink(vn, (const char*)msg->data, len);
