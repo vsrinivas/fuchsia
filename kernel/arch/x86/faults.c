@@ -372,8 +372,9 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
 {
     mx_context->arch_id = ARCH_ID_X86_64;
 
-    // for now do a direct copy of the exception context frame
-    mx_context->arch.u.x86_64 = *(x86_64_exc_frame_t*)arch_context->frame;
+    mx_context->arch.u.x86_64.vector = arch_context->frame->vector;
+    mx_context->arch.u.x86_64.err_code = arch_context->frame->err_code;
+    mx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
 #endif

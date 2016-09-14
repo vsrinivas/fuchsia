@@ -36,23 +36,15 @@ typedef uint32_t mx_exception_type_t;
 // N.B. "gone" notifications are not responded to.
 #define MX_EXCEPTION_TYPE_GONE 2
 
-typedef struct x86_64_exc_frame {
-    uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;
-    uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+typedef struct x86_64_exc_data {
     uint64_t vector;
     uint64_t err_code;
-    uint64_t ip, cs, flags;
-    uint64_t user_sp, user_ss;
-} x86_64_exc_frame_t;
+    uint64_t cr2;
+} x86_64_exc_data_t;
 
-typedef struct arm64_exc_frame {
-    uint64_t r[30];
-    uint64_t lr;
-    uint64_t usp;
-    uint64_t elr;
-    uint64_t spsr;
+typedef struct arm64_exc_data {
     uint64_t far;
-} arm64_exc_frame_t;
+} arm64_exc_data_t;
 
 #define ARCH_ID_UNKNOWN        0u
 #define ARCH_ID_X86_64         1u
@@ -74,8 +66,8 @@ typedef struct mx_exception_context {
         uint32_t subtype;
         mx_vaddr_t pc;
         union {
-            x86_64_exc_frame_t x86_64;
-            arm64_exc_frame_t  arm_64;
+            x86_64_exc_data_t x86_64;
+            arm64_exc_data_t  arm_64;
         } u;
         // TODO(dje): add more stuff, revisit packing
         // For an example list of things one might add, see linux siginfo.

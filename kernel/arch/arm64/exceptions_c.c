@@ -282,9 +282,6 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
 {
     mx_context->arch_id = ARCH_ID_ARM_64;
 
-    // for now do a direct copy of the exception context frame
-    mx_context->arch.u.arm_64 = *(arm64_exc_frame_t*)arch_context->frame;
-
     // If there was a fatal page fault, fill in the address that caused the fault.
     if (EXC_FATAL_PAGE_FAULT == mx_context->arch.subtype) {
         mx_context->arch.u.arm_64.far = arch_context->far;
