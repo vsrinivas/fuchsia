@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
+#include <magenta/device/device.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <ddk/iotxn.h>
@@ -142,11 +143,10 @@ static inline mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_i
 }
 
 // State change functions
-// Used by driver to indicate if there's data available to read,
-// or room to write, or an error condition.
-#define DEV_STATE_READABLE MX_SIGNAL_SIGNAL0
-#define DEV_STATE_WRITABLE MX_SIGNAL_SIGNAL1
-#define DEV_STATE_ERROR MX_SIGNAL_SIGNAL2
+
+#define DEV_STATE_READABLE DEVICE_SIGNAL_READABLE
+#define DEV_STATE_WRITABLE DEVICE_SIGNAL_WRITABLE
+#define DEV_STATE_ERROR DEVICE_SIGNAL_ERROR
 
 static inline void device_state_set(mx_device_t* dev, mx_signals_t stateflag) {
     mx_object_signal(dev->event, 0, stateflag);

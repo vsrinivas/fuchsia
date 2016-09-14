@@ -174,6 +174,14 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     if (op == IOCTL_DEVICE_BIND) {
         const char* drv = in_len > 0 ? (const char*)in_buf : NULL;
         r = device_bind(dev, drv);
+    } else if (op == IOCTL_DEVICE_GET_EVENT_HANDLE) {
+        if (out_len < sizeof(mx_handle_t)) {
+            r = ERR_BUFFER_TOO_SMALL;
+        } else {
+            mx_handle_t* event = out_buf;
+            *event = mx_handle_duplicate(dev->event, MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ);
+            r = sizeof(mx_handle_t);
+        }
     } else {
         r = dev->ops->ioctl(dev, op, in_buf, in_len, out_buf, out_len);
     }
