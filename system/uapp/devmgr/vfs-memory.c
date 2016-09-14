@@ -121,6 +121,12 @@ static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off)
     return count;
 }
 
+mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir,
+                              const char* oldname, size_t oldlen,
+                              const char* newname, size_t newlen) {
+    return ERR_NOT_SUPPORTED;
+}
+
 ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
@@ -211,6 +217,7 @@ static vnode_ops_t vn_mem_ops = {
     .readdir = memfs_readdir,
     .create = mem_create,
     .unlink = memfs_unlink,
+    .rename = memfs_rename_none,
 };
 
 static vnode_ops_t vn_mem_ops_dir = {
@@ -224,6 +231,7 @@ static vnode_ops_t vn_mem_ops_dir = {
     .readdir = memfs_readdir,
     .create = mem_create,
     .unlink = memfs_unlink,
+    .rename = memfs_rename_none,
 };
 
 static dnode_t mem_root_dn = {

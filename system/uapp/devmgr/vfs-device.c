@@ -64,6 +64,7 @@ static vnode_ops_t vn_device_ops = {
     .create = vnd_create,
     .ioctl = memfs_ioctl,
     .unlink = vnd_unlink,
+    .rename = memfs_rename_none,
 };
 
 static dnode_t vnd_root_dn = {
