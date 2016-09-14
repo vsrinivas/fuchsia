@@ -44,7 +44,7 @@ void tu_handle_close(mx_handle_t handle)
     mx_status_t status = mx_handle_close(handle);
     // TODO(dje): It's still an open question as to whether errors other than ERR_BAD_HANDLE are "advisory".
     if (status < 0) {
-        tu_fatal(__func__, handle);
+        tu_fatal(__func__, status);
     }
 }
 
