@@ -1,5 +1,4 @@
-Fuchsia Open Source Template Repository
-=======================================
+Fuchsia Maxwell
+===============
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+Services to expose ambient and task-related context, suggestions and infrastructure for leveraging MI.
