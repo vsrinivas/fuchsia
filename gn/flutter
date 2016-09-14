@@ -1,4 +1,9 @@
 {
+    "imports": [
+        "fonts",
+        "framebuffer",
+        "mojo"
+    ],
     "labels": [
         "//flutter"
     ],
