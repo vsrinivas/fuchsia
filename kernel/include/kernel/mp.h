@@ -32,6 +32,7 @@ static_assert(SMP_MAX_CPUS <= 31, "");
 typedef enum {
     MP_IPI_GENERIC,
     MP_IPI_RESCHEDULE,
+    MP_IPI_HALT,
 } mp_ipi_t;
 
 #ifdef WITH_SMP

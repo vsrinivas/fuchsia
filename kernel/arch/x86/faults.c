@@ -315,6 +315,11 @@ void x86_exception_handler(x86_iframe_t *frame)
             apic_issue_eoi();
             break;
         }
+        case X86_INT_IPI_HALT: {
+            x86_ipi_halt_handler();
+            /* no return */
+            break;
+        }
 #endif
         /* pass all other non-Intel defined irq vectors to the platform */
         case X86_INT_PLATFORM_BASE  ... X86_INT_PLATFORM_MAX: {

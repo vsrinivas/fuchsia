@@ -36,6 +36,10 @@ __WEAK void platform_halt(platform_halt_action suggested_action,
     for (;;);
 }
 
+__WEAK void platform_halt_cpu(void)
+{
+}
+
 #if WITH_LIB_CONSOLE
 
 #include <lib/console.h>

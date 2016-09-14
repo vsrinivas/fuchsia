@@ -41,6 +41,7 @@ enum x86_interrupt_vector {
     X86_INT_APIC_ERROR,
     X86_INT_IPI_GENERIC,
     X86_INT_IPI_RESCHEDULE,
+    X86_INT_IPI_HALT,
 
     X86_MAX_INT = 0xff,
 };

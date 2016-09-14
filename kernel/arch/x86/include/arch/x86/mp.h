@@ -156,6 +156,7 @@ static inline void x86_set_percpu_kernel_sp(uintptr_t sp)
 
 enum handler_return x86_ipi_generic_handler(void);
 enum handler_return x86_ipi_reschedule_handler(void);
+void x86_ipi_halt_handler(void) __NO_RETURN;
 
 __END_CDECLS
 

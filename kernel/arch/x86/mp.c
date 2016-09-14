@@ -27,6 +27,9 @@
 #include <dev/interrupt.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
+#include <platform.h>
+
+#define LOCAL_TRACE 0
 
 struct x86_percpu bp_percpu = {
     .cpu_num = 0,
@@ -181,6 +184,9 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
         case MP_IPI_RESCHEDULE:
             vector = X86_INT_IPI_RESCHEDULE;
             break;
+        case MP_IPI_HALT:
+            vector = X86_INT_IPI_HALT;
+            break;
         default:
             panic("Unexpected MP IPI value: %d", ipi);
     }
@@ -224,14 +230,26 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
 
 enum handler_return x86_ipi_generic_handler(void)
 {
-    //LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
+    LTRACEF("cpu %u\n", arch_curr_cpu_num());
     return mp_mbx_generic_irq();
 }
 
 enum handler_return x86_ipi_reschedule_handler(void)
 {
-    //TRACEF("rescheduling on cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
+    LTRACEF("cpu %u\n", arch_curr_cpu_num());
     return mp_mbx_reschedule_irq();
+}
+
+void x86_ipi_halt_handler(void)
+{
+    printf("halting cpu %u\n", arch_curr_cpu_num());
+
+    platform_halt_cpu();
+
+    for (;;) {
+        x86_cli();
+        x86_hlt();
+    }
 }
 
 status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
