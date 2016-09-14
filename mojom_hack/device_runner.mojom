@@ -1,0 +1,25 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module device_runner;
+
+/*
+ * This file contains definitions of interfaces and data structures to access
+ * Device Runner.
+ */
+
+// Intended for use by Device Shell UI to provide user information to the
+// Device runner. Device runner will close the pipe and stop the Device Shell
+// after the first call.
+interface DeviceRunner {
+  // Used for passing in the username from the lockscreen.
+  Login(string username);
+};
+
+// This interface is meant to be implemented by a Device Shell so that
+// |DeviceRunner| could be passed to it on startup.
+[ServiceName="device_runner::DeviceShell"]
+interface DeviceShell {
+  SetDeviceRunner(DeviceRunner service);
+};

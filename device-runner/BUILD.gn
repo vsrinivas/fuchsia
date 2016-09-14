@@ -2,9 +2,44 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("all") {
+  deps = [
+    ":device-runner",
+    ":device-runner-boot",
+    ":dummy-device-shell",
+  ]
+}
+
+executable("device-runner") {
+  sources = [
+    "device-runner.cc",
+  ]
+
+  deps = [
+    "//apps/modular/mojom_hack:interfaces",
+    "//lib/ftl",
+    "//mojo/public/c:system",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/bindings",
+    "//mojo/system",
+  ]
+}
+
 executable("device-runner-boot") {
   sources = [
     "device-runner-boot.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/application_manager:application_manager_lib",
+  ]
+}
+
+executable("dummy-device-shell") {
+  sources = [
+    "dummy-device-shell.cc",
   ]
 
   deps = [

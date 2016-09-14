@@ -17,61 +17,21 @@
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
+#include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace story_manager {
 
-class StoryManagerApp : public mojo::ApplicationImplBase,
-                        public Launcher,
-                        public StoryProvider {
+class StoryProviderImpl : public StoryProvider {
  public:
-  StoryManagerApp() : launcher_binding_(this), story_provider_binding_(this) {}
-  ~StoryManagerApp() override {}
+  explicit StoryProviderImpl(mojo::Shell* shell,
+                             mojo::InterfaceHandle<StoryProvider>* service)
+      : shell_(shell), binding_(this) {
+    binding_.Bind(mojo::GetProxy(service));
+  }
+
+  ~StoryProviderImpl() override {}
 
  private:
-  // |ApplicationImplBase| override
-  void OnInitialize() override { FTL_LOG(INFO) << "story-manager init"; }
-
-  // |ApplicationImplBase| override
-  // This is meant to be called only once from device-runner.
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
-    // Register |Launcher| implementation.
-    service_provider_impl->AddService<Launcher>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<Launcher> launcher_request) {
-          launcher_binding_.Bind(launcher_request.Pass());
-        });
-
-    // Register |StoryProvider| implementation.
-    // HACK(alhaad): Eventually |StoryProvider| will not be exposed here but via
-    // a different service provider to SysUI.
-    service_provider_impl->AddService<StoryProvider>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<StoryProvider> story_provider_request) {
-          story_provider_binding_.Bind(story_provider_request.Pass());
-        });
-    return true;
-  }
-
-  // |Launcher| override.
-  void Launch(mojo::StructPtr<ledger::Identity> identity,
-              const LaunchCallback& callback) override {
-    FTL_LOG(INFO) << "story_manager::Launch received.";
-    mojo::ConnectToService(shell(), "mojo:ledger_abax",
-                           GetProxy(&ledger_factory_));
-    ledger_factory_->GetLedger(
-        std::move(identity),
-        [this](ledger::Status s, mojo::InterfaceHandle<ledger::Ledger> l) {
-          if (s == ledger::Status::OK) {
-            FTL_LOG(INFO) << "story-manager successfully connected to ledger.";
-          } else {
-            FTL_LOG(ERROR) << "story-manager's connection to ledger failed.";
-          }
-        });
-    callback.Run(true);
-  }
-
-  // |StoryProvider| override.
   void StartNewStory(const mojo::String& url,
                      const StartNewStoryCallback& callback) override {
     FTL_LOG(INFO) << "Received request for starting application at " << url;
@@ -82,7 +42,12 @@ class StoryManagerApp : public mojo::ApplicationImplBase,
     mojo::InterfacePtr<story::Session> session;
     mojo::InterfacePtr<story::Module> module;
 
-    ConnectToService(shell(), "mojo:story-runner", GetProxy(&runner));
+    mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
+    shell_->ConnectToApplication("mojo:story-runner",
+                                 mojo::GetProxy(&service_provider));
+    service_provider->ConnectToService(
+        story::Runner::Name_, mojo::GetProxy(&runner).PassMessagePipe());
+
     runner->StartStory(GetProxy(&session));
     mojo::InterfaceHandle<story::Link> link;
     session->CreateLink("boot", GetProxy(&link));
@@ -98,10 +63,8 @@ class StoryManagerApp : public mojo::ApplicationImplBase,
     callback.Run(nullptr);
   }
 
-  mojo::Binding<Launcher> launcher_binding_;
-  mojo::Binding<StoryProvider> story_provider_binding_;
-
-  mojo::InterfacePtr<ledger::LedgerFactory> ledger_factory_;
+  mojo::Shell* shell_;
+  mojo::StrongBinding<StoryProvider> binding_;
 
   // A |SessionMap| stores a list of all session IDs, mapping them to the
   // corresponding Runner, Session and (root) Module (which is the recipe).
@@ -111,12 +74,92 @@ class StoryManagerApp : public mojo::ApplicationImplBase,
                                        mojo::InterfacePtr<story::Module>>>;
   SessionMap session_map_;
 
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
+};
+
+class StoryManagerImpl : public StoryManager {
+ public:
+  explicit StoryManagerImpl(mojo::Shell* shell,
+                            mojo::InterfaceRequest<StoryManager> request)
+      : shell_(shell), binding_(this, std::move(request)) {}
+  ~StoryManagerImpl() override {}
+
+ private:
+  void Launch(mojo::StructPtr<ledger::Identity> identity,
+              const LaunchCallback& callback) override {
+    FTL_LOG(INFO) << "story_manager::Launch received.";
+
+    // Establish connection with Ledger.
+    mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
+    shell_->ConnectToApplication("mojo:ledger_abax",
+                                 mojo::GetProxy(&service_provider));
+    service_provider->ConnectToService(
+        ledger::LedgerFactory::Name_,
+        mojo::GetProxy(&ledger_factory_).PassMessagePipe());
+    ledger_factory_->GetLedger(
+        std::move(identity),
+        [this](ledger::Status s, mojo::InterfaceHandle<ledger::Ledger> l) {
+          if (s == ledger::Status::OK) {
+            FTL_LOG(INFO) << "story-manager successfully connected to ledger.";
+          } else {
+            FTL_LOG(ERROR) << "story-manager's connection to ledger failed.";
+          }
+        });
+
+    // TODO(alhaad): Everything below this line should happen only after a
+    // successful Ledger connection. Figure it out when dealing with Ledger
+    // integration.
+    StartUserShell();
+    callback.Run(true);
+  }
+
+  // Run the User shell and provide it the |StoryProvider| interface.
+  void StartUserShell() {
+    mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
+    shell_->ConnectToApplication("mojo:dummy-user-shell",
+                                 mojo::GetProxy(&service_provider));
+    service_provider->ConnectToService(
+        UserShell::Name_, mojo::GetProxy(&user_shell_).PassMessagePipe());
+    mojo::InterfaceHandle<StoryProvider> service;
+    new StoryProviderImpl(shell_, &service);
+    user_shell_->SetStoryProvider(std::move(service));
+  }
+
+  mojo::Shell* shell_;
+  mojo::StrongBinding<StoryManager> binding_;
+
+  mojo::InterfacePtr<UserShell> user_shell_;
+
+  mojo::InterfacePtr<ledger::LedgerFactory> ledger_factory_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryManagerImpl);
+};
+
+class StoryManagerApp : public mojo::ApplicationImplBase {
+ public:
+  StoryManagerApp() {}
+  ~StoryManagerApp() override {}
+
+ private:
+  void OnInitialize() override { FTL_LOG(INFO) << "story-manager init"; }
+
+  bool OnAcceptConnection(
+      mojo::ServiceProviderImpl* service_provider_impl) override {
+    // Register |StoryManager| implementation.
+    service_provider_impl->AddService<StoryManager>(
+        [this](const mojo::ConnectionContext& connection_context,
+               mojo::InterfaceRequest<StoryManager> launcher_request) {
+          new StoryManagerImpl(shell(), std::move(launcher_request));
+        });
+    return true;
+  }
+
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryManagerApp);
 };
 
 }  // namespace story_manager
 
 MojoResult MojoMain(MojoHandle application_request) {
-  story_manager::StoryManagerApp story_manager_app;
-  return mojo::RunApplication(application_request, &story_manager_app);
+  story_manager::StoryManagerApp app;
+  return mojo::RunApplication(application_request, &app);
 }

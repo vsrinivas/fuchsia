@@ -11,19 +11,17 @@ import "apps/ledger/api/ledger.mojom";
  * the Story Manager.
  */
 
-// Intended for use by Device Shell to launch a new Story Manager per user.
-[ServiceName="story_manager::Launcher"]
-interface Launcher {
+// Intended for use by Device Runner to launch a new Story Manager per user.
+[ServiceName="story_manager::StoryManager"]
+interface StoryManager {
   // Used to launch story-manager for a particular user, identified by
-  // |user_id|. This can only be called once for every instance of
-  // story-manager. Returns false if there is a problem with |user_id| or
-  // |Launch| has already been called.
+  // |user_id|. Returns false if there is a problem with |user_id| or |Launch|
+  // has already been called.
   Launch(ledger.Identity user_id) => (bool success);
 };
 
 // Intended for use by SysUi to start a new story by URL or to get a list of
 // previously run stories which can be resumed.
-[ServiceName="story_manager::StoryService"]
 interface StoryProvider {
   // Starts a new story by running the module at |url|. Returns an interface to
   // |Story| if the story could be successfully started else return NULL.
@@ -38,9 +36,15 @@ struct StoryMetadata {
 };
 
 // Intended for use by SysUi to interact with a single story.
-[ServiceName="story_manager::Story"]
 interface Story {
   GetMetadata() => (StoryMetadata metadata);
   // TODO(alhaad): Add more actions like Background(), Foreground(), Stop(),
   // Resume(), etc.
+};
+
+// This interface is meant to be implemented by a User Shell so that
+// |StoryProvider| could be passed to it on startup.
+[ServiceName="story_manager::UserShell"]
+interface UserShell {
+  SetStoryProvider(StoryProvider service);
 };
