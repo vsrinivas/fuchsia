@@ -129,7 +129,7 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
             return r;
         }
         if ((msg->handle[0] = vfs_create_handle(vn)) < 0) {
-            vn->ops->close(vn);
+            vfs_close(vn);
             return msg->handle[0];
         }
 
@@ -150,7 +150,7 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         return NO_ERROR;
     case MXRIO_CLOSE:
         // this will drop the ref on the vn
-        vn->ops->close(vn);
+        vfs_close(vn);
         free(ios);
         return NO_ERROR;
     case MXRIO_READ: {
