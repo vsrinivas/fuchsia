@@ -11,9 +11,21 @@
             "binary": "dart_content_handler",
             "bootfs_path": "apps/dart_content_handler"
         },
-	{
+        {
+            "binary": "device-runner",
+            "bootfs_path": "apps/device-runner"
+        },
+        {
             "binary": "device-runner-boot",
-            "bootfs_path": "apps/device-runner-boot"
+            "bootfs_path": "bin/device-runner-boot"
+        },
+        {
+            "binary": "dummy-device-shell",
+            "bootfs_path": "apps/dummy-device-shell"
+        },
+        {
+            "binary": "dummy-user-shell",
+            "bootfs_path": "apps/dummy-user-shell"
         },
         {
             "binary": "hello_dart.dartx",
