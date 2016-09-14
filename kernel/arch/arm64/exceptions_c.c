@@ -12,6 +12,7 @@
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
 #include <kernel/thread.h>
+#include <platform.h>
 
 #if WITH_LIB_MAGENTA
 #include <lib/user_copy.h>
@@ -212,7 +213,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
     printf("ESR 0x%x: ec 0x%x, il 0x%x, iss 0x%x\n", esr, ec, il, iss);
     dump_iframe(iframe);
 
-    panic("die\n");
+    platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
 void arm64_irq(struct arm64_iframe_long *iframe, uint exception_flags)
@@ -239,7 +240,7 @@ void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int whic
     printf("invalid exception, which 0x%x\n", which);
     dump_iframe(iframe);
 
-    panic("die\n");
+    platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
 #if WITH_LIB_MAGENTA

@@ -13,6 +13,8 @@ void platform_halt(
         platform_halt_action suggested_action,
         platform_halt_reason reason)
 {
+    printf("platform_halt suggested_action %u reason %u\n", suggested_action, reason);
+
     switch (suggested_action) {
         case HALT_ACTION_SHUTDOWN:
             printf("Power off failed, halting\n");

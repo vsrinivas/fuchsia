@@ -13,6 +13,7 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/descriptor.h>
 #include <kernel/thread.h>
+#include <platform.h>
 
 #include <lib/user_copy.h>
 
@@ -73,10 +74,7 @@ static void exception_die(x86_iframe_t *frame, const char *msg)
     }
 #endif
 
-    for (;;) {
-        x86_cli();
-        x86_hlt();
-    }
+    platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
 void x86_syscall_handler(x86_iframe_t *frame)

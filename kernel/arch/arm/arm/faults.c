@@ -97,7 +97,6 @@ static void exception_die(struct arm_fault_frame *frame, const char *msg)
     dump_fault_frame(frame);
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
-    for (;;);
 }
 
 static void exception_die_iframe(struct arm_iframe *frame, const char *msg)
@@ -106,7 +105,6 @@ static void exception_die_iframe(struct arm_iframe *frame, const char *msg)
     dump_iframe(frame);
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
-    for (;;);
 }
 
 __WEAK void arm_syscall_handler(struct arm_fault_frame *frame)
