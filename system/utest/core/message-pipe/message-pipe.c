@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <test-utils/test-utils.h>
+#include <threads.h>
 #include <unistd.h>
 
 mx_handle_t _pipe[4];
@@ -35,7 +35,7 @@ mx_handle_t _pipe[4];
  *  14. Reader wake up with pipe 2 closed, closes both pipes and exit.
  */
 
-static intptr_t reader_thread(void* arg) {
+static int reader_thread(void* arg) {
     const unsigned int index = 2;
     mx_handle_t* pipe = &_pipe[index];
     mx_status_t status;
@@ -65,7 +65,6 @@ static intptr_t reader_thread(void* arg) {
     } while (!closed[0] || !closed[1]);
     assert(packets[0] == 3);
     assert(packets[1] == 2);
-    mx_thread_exit();
     return 0;
 }
 
@@ -114,9 +113,8 @@ static bool message_pipe_test(void) {
     _pipe[1] = h[0];
     _pipe[3] = h[1];
 
-    const char* reader = "reader";
-    mx_handle_t thread = tu_thread_create(reader_thread, NULL, reader);
-    ASSERT_GE(thread, 0, "error in thread create");
+    thrd_t thread;
+    ASSERT_EQ(thrd_create(&thread, reader_thread, NULL), thrd_success, "error in thread create");
 
     status = mx_msgpipe_write(_pipe[1], &write_data, sizeof(uint32_t), NULL, 0u, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
@@ -142,7 +140,7 @@ static bool message_pipe_test(void) {
     usleep(1);
     mx_handle_close(_pipe[0]);
 
-    mx_handle_wait_one(thread, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+    EXPECT_EQ(thrd_join(thread, NULL), thrd_success, "error in thread join");
 
     // Since the the other side of _pipe[3] is closed, and the read thread read everything from it,
     // the only satisfied/satisfiable signals should be "peer closed".
@@ -283,9 +281,7 @@ static const uint32_t multithread_read_num_messages = 5000u;
 #define MSG_WRONG_SIZE  ((uint32_t)-3)
 #define MSG_BAD_DATA    ((uint32_t)-4)
 
-static intptr_t multithread_reader(void* arg) {
-    // Note: Can't use ASSERT_EQ/printf (etc.) on this kind of thread.
-
+static int multithread_reader(void* arg) {
     for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
         uint32_t msg = MSG_UNSET;
         uint32_t msg_size = sizeof(msg);
@@ -304,7 +300,6 @@ static intptr_t multithread_reader(void* arg) {
 
         ((uint32_t*)arg)[i] = msg;
     }
-    mx_thread_exit();
     return 0;
 }
 
@@ -326,17 +321,17 @@ static bool message_pipe_multithread_read(void) {
     ASSERT_TRUE(received0, "malloc failed");
     uint32_t* received1 = malloc(multithread_read_num_messages / 2 * sizeof(uint32_t));
     ASSERT_TRUE(received1, "malloc failed");
-    mx_handle_t reader0 = tu_thread_create(multithread_reader, received0, "reader0");
-    ASSERT_GT(reader0, 0, "tu_thread_create failed");
-    mx_handle_t reader1 = tu_thread_create(multithread_reader, received1, "reader1");
-    ASSERT_GT(reader1, 0, "tu_thread_create failed");
-
-    EXPECT_EQ(mx_handle_wait_one(reader0, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR,
-              "");
-    EXPECT_EQ(mx_handle_wait_one(reader1, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR,
-              "");
+    thrd_t reader0;
+    ASSERT_EQ(thrd_create(&reader0, multithread_reader, received0), thrd_success,
+              "thrd_create failed");
+    thrd_t reader1;
+    ASSERT_EQ(thrd_create(&reader1, multithread_reader, received1), thrd_success,
+              "thrd_create failed");
 
     // Wait for threads.
+    EXPECT_EQ(thrd_join(reader0, NULL), thrd_success, "");
+    EXPECT_EQ(thrd_join(reader1, NULL), thrd_success, "");
+
     EXPECT_EQ(mx_handle_close(pipe[0]), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(pipe[1]), NO_ERROR, "");
 
