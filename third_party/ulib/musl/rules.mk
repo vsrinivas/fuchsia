@@ -63,6 +63,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/magenta/debug.c \
     $(LOCAL_DIR)/magenta/linuxisms.c \
     $(LOCAL_DIR)/magenta/mx_process_self.c \
+    $(LOCAL_DIR)/magenta/thrd_get_mx_handle.c \
     $(LOCAL_DIR)/pthread/pthread_atfork.c \
     $(LOCAL_DIR)/pthread/pthread_attr_destroy.c \
     $(LOCAL_DIR)/pthread/pthread_attr_get.c \
