@@ -94,6 +94,7 @@ static mx_status_t run_txn(
     acpi_handle_t* h,
     void* cmd, size_t cmd_len,
     void** rsp, size_t* rsp_len,
+    mx_handle_t cmd_handle,
     mx_handle_t* rsp_handles, size_t num_rsp_handles) {
 
     if (cmd_len < sizeof(acpi_cmd_hdr_t)) {
@@ -109,8 +110,11 @@ static mx_status_t run_txn(
     acpi_cmd_hdr_t* cmd_hdr = cmd;
     cmd_hdr->request_id = req_id;
 
-    mx_status_t status = mx_msgpipe_write(h->pipe, cmd, cmd_len, NULL, 0, 0);
+    mx_status_t status = mx_msgpipe_write(h->pipe, cmd, cmd_len, &cmd_handle, (cmd_handle > 0) ? 1 : 0, 0);
     if (status != NO_ERROR) {
+        if (cmd_handle) {
+            mx_handle_close(cmd_handle);
+        }
         goto exit;
     }
 
@@ -166,7 +170,7 @@ mx_status_t acpi_list_children(acpi_handle_t* h,
     acpi_rsp_list_children_t* rsp;
     size_t rsp_len;
     mx_status_t status =
-        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, NULL, 0);
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
     if (status != NO_ERROR) {
         return status;
     }
@@ -198,7 +202,7 @@ mx_status_t acpi_get_child_handle(acpi_handle_t* h, const char name[4],
 
     mx_handle_t handles[1] = {0};
     mx_status_t status =
-        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, handles, countof(handles));
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, handles, countof(handles));
     if (status != NO_ERROR) {
         return status;
     }
@@ -223,7 +227,7 @@ mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
     size_t rsp_len;
 
     mx_status_t status =
-        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, NULL, 0);
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
     if (status != NO_ERROR) {
         return status;
     }
@@ -246,7 +250,7 @@ mx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state) {
     acpi_rsp_s_state_transition_t* rsp;
     size_t rsp_len;
     mx_status_t status =
-        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, NULL, 0);
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
     if (status != NO_ERROR) {
         return status;
     }
@@ -268,7 +272,7 @@ mx_status_t acpi_ps0(acpi_handle_t* h, char* path, size_t len) {
     acpi_rsp_ps0_t* rsp;
     size_t rsp_len;
     mx_status_t status =
-        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, NULL, 0);
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
     if (status != NO_ERROR) {
         return status;
     }
@@ -276,3 +280,26 @@ mx_status_t acpi_ps0(acpi_handle_t* h, char* path, size_t len) {
     free(rsp);
     return NO_ERROR;
 }
+
+mx_handle_t acpi_clone_handle(acpi_handle_t* _h) {
+    acpi_cmd_hdr_t cmd = {
+        .version = 0,
+        .cmd = ACPI_CMD_NEW_CONNECTION,
+        .len = sizeof(cmd),
+    };
+
+    mx_handle_t h[2];
+    mx_status_t status;
+    if ((status = mx_msgpipe_create(h, 0)) < 0) {
+        return status;
+    }
+
+    acpi_rsp_hdr_t* rsp;
+    size_t rsp_len;
+    if ((status = run_txn(_h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, h[1], NULL, 0)) < 0) {
+        return status;
+    }
+    free(rsp);
+    return h[0];
+}
+

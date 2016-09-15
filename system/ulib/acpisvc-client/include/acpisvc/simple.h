@@ -33,6 +33,10 @@ static void acpi_handle_close(acpi_handle_t* h) {
     mtx_unlock(&h->lock);
 }
 
+// Obtain an additional acpi service handle
+//
+mx_status_t acpi_clone_handle(acpi_handle_t* h);
+
 // List the children of the ACPI node.
 //
 // *rsp* is a pointer to store the response into.  The response can be released
