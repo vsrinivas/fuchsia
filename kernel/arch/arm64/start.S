@@ -7,6 +7,7 @@
 #include <asm.h>
 #include <arch/arm64/mmu.h>
 #include <arch/asm_macros.h>
+#include <arch/defines.h>
 #include <kernel/vm.h>
 
 /*
@@ -38,6 +39,12 @@ attr                    .req x27
 FUNCTION(_start)
 .globl arm_reset
 arm_reset:
+    adrp    tmp, boot_args
+    add     tmp, tmp, #:lo12:boot_args
+    stp     x2, x3, [tmp]
+    stp     x0, x1, [tmp, #16]
+
+
     bl      arm64_elX_to_el1
     bl      arch_invalidate_cache_all
 
@@ -362,6 +369,11 @@ arm_reset:
     cbnz    tmp2, .L__bss_loop
 .L__bss_loop_done:
 
+    adrp    tmp, boot_args
+    add     tmp, tmp, #:lo12:boot_args
+    ldp     x2, x3, [tmp]
+    ldp     x0, x1, [tmp, #16]
+
     bl  lk_main
     b   .
 
@@ -391,9 +403,11 @@ arm_reset:
 #endif
 
 .ltorg
-
-#if WITH_SMP
 .data
+DATA(boot_args)
+    .align  6
+    .skip   32
+#if WITH_SMP
 DATA(page_tables_not_ready)
     .long       1
 #endif
