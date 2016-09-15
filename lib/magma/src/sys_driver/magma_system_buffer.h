@@ -13,6 +13,11 @@
 
 using msd_buffer_unique_ptr_t = std::unique_ptr<msd_buffer, decltype(&msd_buffer_destroy)>;
 
+static inline msd_buffer_unique_ptr_t MsdBufferUniquePtr(msd_buffer* buffer)
+{
+    return msd_buffer_unique_ptr_t(buffer, &msd_buffer_destroy);
+}
+
 class MagmaSystemBuffer {
 public:
     static std::unique_ptr<MagmaSystemBuffer> Create(uint64_t size);

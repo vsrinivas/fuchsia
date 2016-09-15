@@ -12,7 +12,12 @@
 
 class MagmaSystemConnection;
 
-using msd_context_unique_ptr_t = std::unique_ptr<msd_context, std::function<void(msd_context*)>>;
+using msd_context_unique_ptr_t = std::unique_ptr<msd_context, decltype(&msd_context_destroy)>;
+
+static inline msd_context_unique_ptr_t MsdContextUniquePtr(msd_context* context)
+{
+    return msd_context_unique_ptr_t(context, &msd_context_destroy);
+}
 
 class MagmaSystemContext {
 public:

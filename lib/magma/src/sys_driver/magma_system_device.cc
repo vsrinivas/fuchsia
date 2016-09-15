@@ -14,6 +14,6 @@ std::unique_ptr<MagmaSystemConnection> MagmaSystemDevice::Open(msd_client_id cli
     if (!connection)
         return DRETP(nullptr, "msd_device_open failed");
 
-    return std::unique_ptr<MagmaSystemConnection>(new MagmaSystemConnection(
-        this, msd_connection_unique_ptr_t(connection, &msd_connection_close)));
+    return std::unique_ptr<MagmaSystemConnection>(
+        new MagmaSystemConnection(this, MsdConnectionUniquePtr(connection)));
 }

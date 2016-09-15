@@ -20,7 +20,7 @@ std::unique_ptr<MagmaSystemBuffer> MagmaSystemBuffer::Create(uint64_t size)
     if (!platform_buffer)
         return DRETP(nullptr, "Failed to create PlatformBuffer");
 
-    msd_buffer_unique_ptr_t msd_buf(msd_buffer_import(token), &msd_buffer_destroy);
+    msd_buffer_unique_ptr_t msd_buf = MsdBufferUniquePtr(msd_buffer_import(token));
     if (!msd_buf)
         return DRETP(nullptr,
                      "Failed to import newly allocated buffer into the MSD Implementation");

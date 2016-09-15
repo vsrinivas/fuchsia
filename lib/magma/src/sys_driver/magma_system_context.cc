@@ -14,5 +14,5 @@ std::unique_ptr<MagmaSystemContext> MagmaSystemContext::Create(MagmaSystemConnec
         return DRETP(nullptr, "Failed to create msd context");
 
     return std::unique_ptr<MagmaSystemContext>(
-        new MagmaSystemContext(msd_context_unique_ptr_t(msd_ctx, &msd_context_destroy)));
+        new MagmaSystemContext(MsdContextUniquePtr(msd_ctx)));
 }

@@ -4,13 +4,19 @@
 
 #ifndef _MAGMA_SYSTEM_DEVICE_H_
 #define _MAGMA_SYSTEM_DEVICE_H_
+
 #include "msd.h"
 #include <functional>
 #include <memory>
 
 class MagmaSystemConnection;
 
-using msd_device_unique_ptr_t = std::unique_ptr<msd_device, std::function<void(msd_device*)>>;
+using msd_device_unique_ptr_t = std::unique_ptr<msd_device, decltype(&msd_device_destroy)>;
+
+static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device* msd_dev)
+{
+    return msd_device_unique_ptr_t(msd_dev, &msd_device_destroy);
+}
 
 class MagmaSystemDevice {
 public:

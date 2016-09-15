@@ -39,7 +39,7 @@ TEST(MagmaSystemBuffer, Create)
 
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
+    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
     auto connection = dev.Open(0);
     ASSERT_NE(connection, nullptr);
 

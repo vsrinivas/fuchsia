@@ -13,6 +13,11 @@
 
 using msd_driver_unique_ptr_t = std::unique_ptr<msd_driver, std::function<void(msd_driver*)>>;
 
+static inline msd_driver_unique_ptr_t MsdDriverUniquePtr(msd_driver* driver)
+{
+    return msd_driver_unique_ptr_t(driver, &msd_driver_destroy);
+}
+
 class MagmaDriver {
 public:
     MagmaDriver(msd_driver_unique_ptr_t msd_drv) : msd_drv_(std::move(msd_drv)) {}
@@ -26,7 +31,7 @@ public:
             return DRETP(nullptr, "msd_create_device failed");;
         }
 
-        g_device = new MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
+        g_device = new MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
 
         return g_device;
     }
@@ -39,7 +44,7 @@ public:
             return nullptr;
         }
 
-        auto driver = new MagmaDriver(msd_driver_unique_ptr_t(msd_drv, msd_driver_destroy));
+        auto driver = new MagmaDriver(MsdDriverUniquePtr(msd_drv));
 
         return driver;
     }

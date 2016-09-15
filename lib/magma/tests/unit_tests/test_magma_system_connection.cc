@@ -22,7 +22,7 @@ TEST(MagmaSystemConnection, GetDeviceId)
     uint32_t test_id = 0xdeadbeef;
 
     auto msd_dev = new MsdMockDevice_GetDeviceId(test_id);
-    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
+    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
 
     uint32_t device_id = dev.GetDeviceId();
     // For now device_id is invalid
@@ -33,7 +33,7 @@ TEST(MagmaSystemConnection, BufferManagement)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
+    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
     auto connection = dev.Open(0);
     ASSERT_NE(connection, nullptr);
 
@@ -96,9 +96,8 @@ TEST(MagmaSystemConnection, ContextManagement)
     auto msd_connection = new MsdMockConnection_ContextManagement();
 
     auto msd_dev = new MsdMockDevice();
-    auto dev = MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
-    auto connection = MagmaSystemConnection(
-        &dev, msd_connection_unique_ptr_t(msd_connection, &msd_connection_close));
+    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
+    auto connection = MagmaSystemConnection(&dev, MsdConnectionUniquePtr(msd_connection));
 
     EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
 

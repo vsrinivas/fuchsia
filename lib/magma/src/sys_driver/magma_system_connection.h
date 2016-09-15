@@ -16,7 +16,12 @@
 #include <memory>
 
 using msd_connection_unique_ptr_t =
-    std::unique_ptr<msd_connection, std::function<void(msd_connection*)>>;
+    std::unique_ptr<msd_connection, decltype(&msd_connection_close)>;
+
+static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection* conn)
+{
+    return msd_connection_unique_ptr_t(conn, &msd_connection_close);
+}
 
 class MagmaSystemConnection : public magma_system_connection {
 public:
