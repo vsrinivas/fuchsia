@@ -13,6 +13,11 @@ The kernel commandline is passed from the kernel to the userboot process
 and the device manager, so some of the options described below apply to
 those userspace processes, not the kernel itself.
 
+## crashlogger.disable
+
+If this option is set, the crashlogger is not started. You should leave this
+option off unless you suspect the crashlogger is causing problems.
+
 ## gfxconsole.early=<bool>
 
 This option (enabled by default) requests that the kernel start a graphics
