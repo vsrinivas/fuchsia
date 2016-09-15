@@ -21,6 +21,7 @@
 #include <dev/interrupt.h>
 #include <platform/bcm28xx.h>
 #include <platform/videocore.h>
+#include <platform/atag.h>
 
 #include <libfdt.h>
 #include <arch/arm64.h>
@@ -60,6 +61,8 @@ extern void arm_reset(void);
 
 //static uint8_t * vbuff;
 
+static uint8_t * kernel_args;
+
 static pmm_arena_t arena = {
     .name = "sdram",
     .base = SDRAM_BASE,
@@ -82,6 +85,13 @@ void platform_pcie_init_info(pcie_init_info_t *out)
 
 void platform_early_init(void)
 {
+    atag_t * tag;
+
+    tag = atag_find(RPI_ATAG_ATAG_CMDLINE, RPI_ATAGS_ADDRESS);
+    if (tag) {
+        kernel_args = tag->cmdline;
+    }
+
     uart_init_early();
 
     intc_init();
@@ -141,12 +151,7 @@ void platform_early_init(void)
 
 void platform_init(void)
 {
-    dprintf(SPEW,"pre uart init\n");
-
     uart_init();
-
-    dprintf(SPEW,"post uart init\n");
-
 
 #if 0
 //#if WITH_SMP
