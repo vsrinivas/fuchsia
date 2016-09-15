@@ -254,6 +254,7 @@ static void tab_complete(editstate* es) {
              result_len++);
 
         if (result_len <= prefix_len) {
+            closedir(dir);
             return;
         }
 
@@ -261,6 +262,7 @@ static void tab_complete(editstate* es) {
     }
 
     if (result_count == 0) {
+        closedir(dir);
         return;
     }
 
@@ -282,6 +284,7 @@ static void tab_complete(editstate* es) {
     memcpy(es->line + es->pos - prefix_len, result, result_len);
     es->pos += result_len - prefix_len;
     es->len += result_len - prefix_len;
+    closedir(dir);
 }
 
 int readline(editstate* es) {
