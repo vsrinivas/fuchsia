@@ -98,23 +98,40 @@ public:
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493
-class MultiForceWake {
+class ForceWake {
 public:
+    enum Domain { GEN8, GEN9_RENDER };
+
     static constexpr uint32_t kOffset = 0xA188;
     static constexpr uint32_t kStatusOffset = 0x130044;
 
-    static void reset(RegisterIo* reg_io) { write(reg_io, 0xFFFF, 0); }
+    static constexpr uint32_t kRenderOffset = 0xA278;
+    static constexpr uint32_t kRenderStatusOffset = 0xD84;
 
-    static void write(RegisterIo* reg_io, uint16_t mask, uint16_t val)
+    static void reset(RegisterIo* reg_io, Domain domain) { write(reg_io, domain, 0xFFFF, 0); }
+
+    static void write(RegisterIo* reg_io, Domain domain, uint16_t mask, uint16_t val)
     {
         uint32_t val32 = mask;
         val32 = (val32 << 16) | val;
-        reg_io->Write32(kOffset, val32);
+        switch (domain) {
+        case GEN8:
+            reg_io->Write32(kOffset, val32);
+            break;
+        case GEN9_RENDER:
+            reg_io->Write32(kRenderOffset, val32);
+            break;
+        }
     }
 
-    static uint16_t read_status(RegisterIo* reg_io)
+    static uint16_t read_status(RegisterIo* reg_io, Domain domain)
     {
-        return static_cast<uint16_t>(reg_io->Read32(kStatusOffset));
+        switch (domain) {
+        case GEN8:
+            return static_cast<uint16_t>(reg_io->Read32(kStatusOffset));
+        case GEN9_RENDER:
+            return static_cast<uint16_t>(reg_io->Read32(kRenderStatusOffset));
+        }
     }
 };
 

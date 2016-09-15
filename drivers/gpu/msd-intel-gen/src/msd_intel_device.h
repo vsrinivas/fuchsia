@@ -52,6 +52,9 @@ public:
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
 
+    static bool is_gen8(uint32_t device_id) { return device_id == 0x1616; }
+    static bool is_gen9(uint32_t device_id) { return device_id == 0x1916; }
+
 private:
     MsdIntelDevice();
 

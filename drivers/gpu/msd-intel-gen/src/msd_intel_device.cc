@@ -49,8 +49,15 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
 
-    ForceWake::reset(register_io_.get());
-    ForceWake::request(register_io_.get());
+    if (is_gen8(device_id_)) {
+        ForceWake::reset(register_io_.get(), registers::ForceWake::GEN8);
+        ForceWake::request(register_io_.get(), registers::ForceWake::GEN8);
+    } else if (is_gen9(device_id_)) {
+        ForceWake::reset(register_io_.get(), registers::ForceWake::GEN9_RENDER);
+        ForceWake::request(register_io_.get(), registers::ForceWake::GEN9_RENDER);
+    } else {
+        DASSERT(false);
+    }
 
     // Clear faults
     registers::AllEngineFault::clear(register_io_.get());

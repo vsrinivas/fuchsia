@@ -12,32 +12,35 @@
 
 class ForceWake {
 public:
-    static void reset(RegisterIo* reg_io) { registers::MultiForceWake::reset(reg_io); }
-
-    static void request(RegisterIo* reg_io)
+    static void reset(RegisterIo* reg_io, registers::ForceWake::Domain domain)
     {
-        if (registers::MultiForceWake::read_status(reg_io) & (1 << kThreadShift))
-            return;
-        DLOG("forcewake request");
-        registers::MultiForceWake::write(reg_io, 1 << kThreadShift, 1 << kThreadShift);
-        wait(reg_io, true);
+        registers::ForceWake::reset(reg_io, domain);
     }
 
-    static void release(RegisterIo* reg_io)
+    static void request(RegisterIo* reg_io, registers::ForceWake::Domain domain)
     {
-        if ((registers::MultiForceWake::read_status(reg_io) & (1 << kThreadShift)) == 0)
+        if (registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift))
+            return;
+        DLOG("forcewake request");
+        registers::ForceWake::write(reg_io, domain, 1 << kThreadShift, 1 << kThreadShift);
+        wait(reg_io, domain, true);
+    }
+
+    static void release(RegisterIo* reg_io, registers::ForceWake::Domain domain)
+    {
+        if ((registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift)) == 0)
             return;
         DLOG("forcewake release");
-        registers::MultiForceWake::write(reg_io, 1 << kThreadShift, 0);
-        wait(reg_io, false);
+        registers::ForceWake::write(reg_io, domain, 1 << kThreadShift, 0);
+        wait(reg_io, domain, false);
     }
 
 private:
-    static void wait(RegisterIo* reg_io, bool set)
+    static void wait(RegisterIo* reg_io, registers::ForceWake::Domain domain, bool set)
     {
         uint32_t status;
         for (unsigned int ms = 0; ms < kRetryMaxMs; ms++) {
-            status = registers::MultiForceWake::read_status(reg_io);
+            status = registers::ForceWake::read_status(reg_io, domain);
             if (((status >> kThreadShift) & 1) == (set ? 1 : 0))
                 return;
             magma::msleep(1);
