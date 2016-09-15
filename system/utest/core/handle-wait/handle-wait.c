@@ -8,10 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
 #include <magenta/compiler.h>
@@ -24,9 +24,9 @@ typedef intptr_t (*thread_start_func_t)(void*);
 enum message {
     MSG_EXIT,
     MSG_EXITED,
-    MSG_WAIT_THREAD2,
-    MSG_WAIT_THREAD2_SIGNALLED,
-    MSG_WAIT_THREAD2_CANCELLED,
+    MSG_WAIT_EVENT,
+    MSG_WAIT_EVENT_SIGNALED,
+    MSG_WAIT_EVENT_CANCELLED,
     MSG_PING,
     MSG_PONG,
     MSG_READ_CANCELLED,
@@ -34,7 +34,7 @@ enum message {
 
 enum wait_result {
     WAIT_READABLE,
-    WAIT_SIGNALLED,
+    WAIT_SIGNALED,
     WAIT_CLOSED,
     WAIT_CANCELLED,
 };
@@ -49,17 +49,7 @@ typedef struct thread_data {
 static mx_handle_t thread1_pipe[2];
 static mx_handle_t thread2_pipe[2];
 
-static mx_handle_t thread1_handle;
-static mx_handle_t thread2_handle;
-
-static mx_handle_t thread_create(thread_start_func_t entry, void* arg,
-                                 const char* name) {
-    if (!name)
-        name = "";
-    mx_handle_t handle = tu_thread_create(entry, arg, name);
-    unittest_printf("created thread, handle %d\n", handle);
-    return handle;
-}
+static mx_handle_t event_handle;
 
 // Wait until |handle| is readable or peer is closed (or wait is cancelled).
 
@@ -96,7 +86,7 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     ASSERT_GE(status, 0, "handle wait one failed");
     ASSERT_NEQ(signals_state.satisfied & MX_SIGNAL_SIGNALED, 0u,
                "unexpected return in wait_signaled");
-    *result = WAIT_SIGNALLED;
+    *result = WAIT_SIGNALED;
     return true;
 }
 
@@ -106,11 +96,6 @@ static mx_status_t message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle
     *handle0 = h[0];
     *handle1 = h[1];
     return status;
-}
-
-static mx_handle_t handle_duplicate(mx_handle_t handle) {
-    mx_handle_t h = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS);
-    return h;
 }
 
 static bool send_msg(mx_handle_t handle, enum message msg) {
@@ -158,7 +143,7 @@ static bool msg_loop(mx_handle_t pipe) {
     while (!my_done_tests) {
         enum message msg;
         enum wait_result result;
-        ASSERT_TRUE(recv_msg(pipe, &msg), "Error while recieving msg");
+        ASSERT_TRUE(recv_msg(pipe, &msg), "Error while receiving msg");
         switch (msg) {
         case MSG_EXIT:
             my_done_tests = true;
@@ -166,15 +151,14 @@ static bool msg_loop(mx_handle_t pipe) {
         case MSG_PING:
             send_msg(pipe, MSG_PONG);
             break;
-        case MSG_WAIT_THREAD2:
-            ASSERT_TRUE(wait_signaled(thread2_handle, &result),
-                        "Error during wait signal call");
+        case MSG_WAIT_EVENT:
+            ASSERT_TRUE(wait_signaled(event_handle, &result), "Error during wait signal call");
             switch (result) {
-            case WAIT_SIGNALLED:
-                send_msg(pipe, MSG_WAIT_THREAD2_SIGNALLED);
+            case WAIT_SIGNALED:
+                send_msg(pipe, MSG_WAIT_EVENT_SIGNALED);
                 break;
             case WAIT_CANCELLED:
-                send_msg(pipe, MSG_WAIT_THREAD2_CANCELLED);
+                send_msg(pipe, MSG_WAIT_EVENT_CANCELLED);
                 break;
             default:
                 ASSERT_TRUE(false, "Invalid wait signal");
@@ -188,12 +172,12 @@ static bool msg_loop(mx_handle_t pipe) {
     return true;
 }
 
-static intptr_t worker_thread_func(void* arg) {
+static int worker_thread_func(void* arg) {
     thread_data_t* data = arg;
     msg_loop(data->pipe);
     unittest_printf("thread %d exiting\n", data->thread_num);
     send_msg(data->pipe, MSG_EXITED);
-    mx_thread_exit();
+    return 0;
 }
 
 bool handle_wait_test(void) {
@@ -205,40 +189,47 @@ bool handle_wait_test(void) {
     thread_data_t thread1_data = {1, thread1_pipe[1]};
     thread_data_t thread2_data = {2, thread2_pipe[1]};
 
-    thread1_handle = thread_create(worker_thread_func, (void*)&thread1_data, "thread1");
-    ASSERT_GE(thread1_handle, 0, "thread creation failed");
-    thread2_handle = thread_create(worker_thread_func, (void*)&thread2_data, "thread2");
-    ASSERT_GE(thread2_handle, 0, "thread creation failed");
+    thrd_t thread1;
+    ASSERT_EQ(thrd_create(&thread1, worker_thread_func, &thread1_data), thrd_success,
+              "thread creation failed");
+    thrd_t thread2;
+    ASSERT_EQ(thrd_create(&thread2, worker_thread_func, &thread2_data), thrd_success,
+              "thread creation failed");
     unittest_printf("threads started\n");
+
+    event_handle = mx_event_create(0u);
+    ASSERT_GT(event_handle, 0, "event creation failed");
 
     enum message msg;
     send_msg(thread1_pipe[0], MSG_PING);
-    ASSERT_TRUE(recv_msg(thread1_pipe[0], &msg), "Error while recieving msg");
+    ASSERT_TRUE(recv_msg(thread1_pipe[0], &msg), "Error while receiving msg");
     EXPECT_EQ(msg, (enum message)MSG_PONG, "unexpected reply to ping1");
 
-    send_msg(thread1_pipe[0], MSG_WAIT_THREAD2);
+    send_msg(thread1_pipe[0], MSG_WAIT_EVENT);
 
     send_msg(thread2_pipe[0], MSG_PING);
-    ASSERT_TRUE(recv_msg(thread2_pipe[0], &msg), "Error while recieving msg");
+    ASSERT_TRUE(recv_msg(thread2_pipe[0], &msg), "Error while receiving msg");
     EXPECT_EQ(msg, (enum message)MSG_PONG, "unexpected reply to ping2");
 
     // Verify thread 1 is woken up when we close the handle it's waiting on
     // when there exists a duplicate of the handle.
-    // N.B. We're assuming thread 1 is waiting on thread 2 at this point.
+    // N.B. We're assuming thread 1 is waiting on event_handle at this point.
+    // TODO(vtl): This is a flaky assumption, though the following sleep should help.
+    mx_nanosleep(MX_MSEC(20));
 
-    mx_handle_t thread2_handle_dup = handle_duplicate(thread2_handle);
-    ASSERT_GE(thread2_handle_dup, 0, "hadle_duplicate failed");
-    mx_handle_close(thread2_handle);
+    mx_handle_t event_handle_dup = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS);
+    ASSERT_GE(event_handle_dup, 0, "handle duplication failed");
+    ASSERT_EQ(mx_handle_close(event_handle), NO_ERROR, "handle close failed");
 
-    ASSERT_TRUE(recv_msg(thread1_pipe[0], &msg), "Error while recieving msg");
-    ASSERT_EQ(msg, (enum message)MSG_WAIT_THREAD2_CANCELLED,
-              "unexpected reply from thread1 (wait for thread2)");
+    ASSERT_TRUE(recv_msg(thread1_pipe[0], &msg), "Error while receiving msg");
+    ASSERT_EQ(msg, (enum message)MSG_WAIT_EVENT_CANCELLED,
+              "unexpected reply from thread1 (wait for event)");
 
     send_msg(thread1_pipe[0], MSG_EXIT);
     send_msg(thread2_pipe[0], MSG_EXIT);
-    enum wait_result result;
-    wait_signaled(thread1_handle, &result);
-    wait_signaled(thread2_handle_dup, &result);
+    EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "failed to join thread");
+    EXPECT_EQ(thrd_join(thread2, NULL), thrd_success, "failed to join thread");
+    EXPECT_EQ(mx_handle_close(event_handle_dup), NO_ERROR, "handle close failed");
     END_TEST;
 }
 
