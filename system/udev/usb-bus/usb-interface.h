@@ -28,7 +28,9 @@ typedef struct {
 #define get_usb_interface(dev) containerof(dev, usb_interface_t, device)
 
 // for determining index into active_endpoints[]
-#define get_usb_endpoint_index(ep) (((ep)->bEndpointAddress & 0x0F) | ((ep)->bEndpointAddress >> 7))
+// bEndpointAddress has 4 lower order bits, plus high bit to signify direction
+// shift high bit to bit 4 so index is in range 0 - 31.
+#define get_usb_endpoint_index(ep) (((ep)->bEndpointAddress & 0x0F) | ((ep)->bEndpointAddress >> 3))
 
 typedef struct usb_device usb_device_t;
 

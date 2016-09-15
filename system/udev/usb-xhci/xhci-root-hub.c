@@ -330,7 +330,9 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
         return NO_ERROR;
     }
 
-    printf("unsupported root hub control request\n");
+    printf("unsupported root hub control request type: 0x%02X req: %d value: %d index: %d\n",
+           request_type, request, value, index);
+
     txn->ops->complete(txn, ERR_NOT_SUPPORTED, 0);
     return ERR_NOT_SUPPORTED;
 }
