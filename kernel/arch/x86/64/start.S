@@ -221,6 +221,13 @@ FUNCTION(_entry64)
     /* initialize the default page tables */
     page_table_init
 
+    /*
+     * Set PGE to enable global kernel pages
+     */
+    mov   %cr4, %rax
+    or    $(X86_CR4_PGE), %rax
+    mov   %rax, %cr4
+
     /* load the physical pointer to the top level page table */
     mov  $PHYS(pml4), %rax
     mov  %rax, %cr3
