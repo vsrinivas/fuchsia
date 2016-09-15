@@ -29,15 +29,16 @@ class DummyDeviceShellImpl : public device_runner::DeviceShell {
 
   void SetDeviceRunner(mojo::InterfaceHandle<device_runner::DeviceRunner>
                            device_runner) override {
-    mojo::InterfacePtr<device_runner::DeviceRunner> service =
-        mojo::InterfacePtr<device_runner::DeviceRunner>::Create(
-            device_runner.Pass());
-    service->Login(username_);
+    device_runner_ = mojo::InterfacePtr<device_runner::DeviceRunner>::Create(
+        device_runner.Pass());
+    device_runner_->Login(username_);
   }
 
  private:
   mojo::StrongBinding<device_runner::DeviceShell> binding_;
   std::string username_;
+
+  mojo::InterfacePtr<device_runner::DeviceRunner> device_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceShellImpl);
 };
