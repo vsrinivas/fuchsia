@@ -35,14 +35,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Get handle from devmgr to signal when the ACPI svc is ready and requests
-    // can be sent.
-    mx_handle_t devmgr_signal = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER2, 0));
-    if (devmgr_signal <= 0) {
-        printf("Failed to find devmgr signal handle\n");
-        return 1;
-    }
-
     ACPI_STATUS status = init();
     if (status != NO_ERROR) {
         printf("Failed to initialize ACPI\n");
@@ -57,7 +49,7 @@ int main(int argc, char** argv) {
         printf("Failed to install powerbtn handler\n");
     }
 
-    return begin_processing(acpi_root, devmgr_signal);
+    return begin_processing(acpi_root);
 }
 
 static ACPI_STATUS init(void) {

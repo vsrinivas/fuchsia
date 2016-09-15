@@ -101,7 +101,7 @@ cleanup:
 }
 
 // Launch the main event loop
-mx_status_t begin_processing(mx_handle_t acpi_root, mx_handle_t devmgr_signal) {
+mx_status_t begin_processing(mx_handle_t acpi_root) {
     acpi_handle_ctx_t* root_context = calloc(1, sizeof(acpi_handle_ctx_t));
     if (!root_context) {
         return ERR_NO_MEMORY;
@@ -126,9 +126,6 @@ mx_status_t begin_processing(mx_handle_t acpi_root, mx_handle_t devmgr_signal) {
     if (status != NO_ERROR) {
         goto fail;
     }
-
-    // Let devmgr know we're ready
-    mx_handle_close(devmgr_signal);
 
     mxio_dispatcher_run(dispatcher);
     // mxio_dispatcher_run should not return

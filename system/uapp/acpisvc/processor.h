@@ -6,4 +6,4 @@
 
 #include <magenta/types.h>
 
-mx_status_t begin_processing(mx_handle_t acpi_root, mx_handle_t devmgr_signal);
+mx_status_t begin_processing(mx_handle_t acpi_root);
