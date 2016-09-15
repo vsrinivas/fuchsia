@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
     int status;
 
     cmdline[0] = 0;
-    if (appname == strrchr(argv[0], '/')) {
+    if ((appname = strrchr(argv[0], '/')) != NULL) {
         appname++;
     } else {
         appname = argv[0];
