@@ -378,6 +378,46 @@ static bool bind_sockets_test(void)
     END_TEST;
 }
 
+static bool bind_pipes_playback(void)
+{
+    BEGIN_TEST;
+    mx_status_t status;
+    mx_handle_t port;
+    mx_handle_t h[2];
+
+    port = mx_port_create(0u);
+    EXPECT_GT(port, 0, "");
+
+    status = mx_msgpipe_create(h, 0);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_msgpipe_write(h[0], "abcd", 4, NULL, 0, 0u);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_msgpipe_write(h[0], "def", 3, NULL, 0, 0u);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_port_bind(port, 3ull, h[1], MX_SIGNAL_READABLE);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    mx_io_packet_t io_pkt;
+    for (int ix = 0; ix != 2; ++ix) {
+        status = mx_port_wait(port, &io_pkt, sizeof(io_pkt));
+        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(io_pkt.signals, MX_SIGNAL_READABLE, "");
+    }
+
+    status = mx_handle_close(port);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_handle_close(h[0]);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_handle_close(h[1]);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(io_port_tests)
 RUN_TEST(basic_test)
@@ -386,6 +426,7 @@ RUN_TEST(thread_pool_test)
 RUN_TEST(bind_basic_test)
 //RUN_TEST(bind_pipes_test)
 RUN_TEST(bind_sockets_test)
+RUN_TEST(bind_pipes_playback)
 END_TEST_CASE(io_port_tests)
 
 #ifndef BUILD_COMBINED_TESTS

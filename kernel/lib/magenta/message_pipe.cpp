@@ -128,5 +128,11 @@ status_t MessagePipe::SetIOPort(size_t side, mxtl::unique_ptr<IOPortClient> clie
         return ERR_INVALID_ARGS;
 
     iopc_[side] = mxtl::move(client);
+
+    // Replay the messages that are pending.
+    for (auto& msg : messages_[side]) {
+        iopc_[side]->Signal(MX_SIGNAL_READABLE, msg.data.size(), &lock_);
+    }
+
     return NO_ERROR;
 }
