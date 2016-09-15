@@ -52,6 +52,10 @@
         {
             "binary": "300.twolf",
             "bootfs_path": "benchmarks/300.twolf"
+        },
+        {
+            "binary": "speccpu2000_benchmark",
+            "bootfs_path": "benchmarks/speccpu2000_benchmark"
         }
     ],
     "resources": [
