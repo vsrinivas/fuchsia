@@ -151,6 +151,7 @@ iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size
     txn->protocol = MX_PROTOCOL_USB;
 
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+    memset(data, 0, sizeof(*data));
     data->ep_address = ep_address;
 
     return txn;

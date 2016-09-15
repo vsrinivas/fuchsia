@@ -36,6 +36,11 @@ mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int fea
 // helper function for allocating iotxns for USB transfers
 iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size);
 
+// sets the frame number in a USB iotxn for scheduling an isochronous transfer
+inline void usb_iotxn_set_frame(iotxn_t* txn, uint64_t frame) {
+    ((usb_protocol_data_t *)iotxn_pdata(txn, usb_protocol_data_t))->frame = frame;
+}
+
 // Utilities for iterating through descriptors within a device's USB configuration descriptor
 typedef struct {
     uint8_t* desc;      // start of configuration descriptor

@@ -96,6 +96,13 @@ struct xhci {
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;
     usb_device_descriptor_t* device_descriptor;
+
+    // for xhci_get_current_frame()
+    mtx_t mfindex_mutex;
+    // number of times mfindex has wrapped
+    uint64_t mfindex_wrap_count;
+   // time of last mfindex wrap
+    mx_time_t last_mfindex_wrap;
 };
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
@@ -103,6 +110,9 @@ void xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context);
+
+// returns monotonically increasing frame count
+uint64_t xhci_get_current_frame(xhci_t* xhci);
 
 uint8_t xhci_endpoint_index(uint8_t ep_address);
 

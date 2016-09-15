@@ -4,6 +4,7 @@
 
 #include <hw/reg.h>
 #include <magenta/types.h>
+#include <magenta/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -278,8 +279,8 @@ void xhci_start(xhci_t* xhci) {
     // initialize interruptor (only using one for now)
     xhci_interruptor_init(xhci, 0);
 
-    // start the controller with interrupts enabled
-    uint32_t start_flags = USBCMD_RS | USBCMD_INTE;
+    // start the controller with interrupts and mfindex wrap events enabled
+    uint32_t start_flags = USBCMD_RS | USBCMD_INTE | USBCMD_EWE;
     XHCI_SET32(usbcmd, start_flags, start_flags);
     xhci_wait_bits(usbsts, USBSTS_HCH, 0);
 
@@ -323,6 +324,31 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
     context->callback(context->data, cc, command_trb, event_trb);
 }
 
+static void xhci_handle_mfindex_wrap(xhci_t* xhci) {
+    mtx_lock(&xhci->mfindex_mutex);
+    xhci->mfindex_wrap_count++;
+    xhci->last_mfindex_wrap = mx_current_time();
+    mtx_unlock(&xhci->mfindex_mutex);
+}
+
+uint64_t xhci_get_current_frame(xhci_t* xhci) {
+    mtx_lock(&xhci->mfindex_mutex);
+
+    uint32_t mfindex = XHCI_READ32(&xhci->runtime_regs->mfindex) & ((1 << XHCI_MFINDEX_BITS) - 1);
+    uint64_t wrap_count = xhci->mfindex_wrap_count;
+    // try to detect race condition where mfindex has wrapped but we haven't processed wrap event yet
+    if (mfindex < 500) {
+        if (mx_current_time() - xhci->last_mfindex_wrap > MX_MSEC(1000)) {
+            xprintf("woah, mfindex wrapped before we got the event!\n");
+            wrap_count++;
+        }
+    }
+    mtx_unlock(&xhci->mfindex_mutex);
+
+    // shift three to convert from 125us microframes to 1ms frames
+    return ((wrap_count * (1 << XHCI_MFINDEX_BITS)) + mfindex) >> 3;
+}
+
 static void xhci_handle_events(xhci_t* xhci, int interruptor) {
     xhci_event_ring_t* er = &xhci->event_rings[interruptor];
 
@@ -338,6 +364,9 @@ static void xhci_handle_events(xhci_t* xhci, int interruptor) {
             break;
         case TRB_EVENT_TRANSFER:
             xhci_handle_transfer_event(xhci, er->current);
+            break;
+        case TRB_EVENT_MFINDEX_WRAP:
+            xhci_handle_mfindex_wrap(xhci);
             break;
         default:
             printf("xhci_handle_events: unhandled event type %d\n", type);

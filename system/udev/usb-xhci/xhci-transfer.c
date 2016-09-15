@@ -61,7 +61,7 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
 }
 
 mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
-                        uint16_t length, int endpoint, int direction,
+                        uint16_t length, int endpoint, int direction, uint64_t frame,
                         xhci_transfer_context_t* context, list_node_t* txn_node) {
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n",
             slot_id, setup, endpoint, length);
@@ -109,6 +109,22 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
         mx_paddr_t end_page = (data + length - 1) & ~(xhci->page_size - 1);
         if (start_page != end_page) {
             printf("isoch buffer spans page boundary in xhci_queue_transfer\n");
+            return ERR_INVALID_ARGS;
+        }
+    }
+    if (frame != 0) {
+        if (!isochronous) {
+            printf("frame scheduling only supported for isochronous transfers\n");
+            return ERR_INVALID_ARGS;
+        }
+        uint64_t current_frame = xhci_get_current_frame(xhci);
+        if (frame < current_frame) {
+            printf("can't schedule transfer into the past\n");
+            return ERR_INVALID_ARGS;
+        }
+        if (frame - current_frame >= 895) {
+            // See XHCI spec, section 4.11.2.5
+            printf("can't schedule transfer more than 895ms into the future\n");
             return ERR_INVALID_ARGS;
         }
     }
@@ -175,9 +191,14 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
                 control_bits |= (direction == USB_DIR_IN ? XFER_TRB_DIR_IN : XFER_TRB_DIR_OUT);
                 trb_set_control(trb, TRB_TRANSFER_DATA, control_bits);
             } else if (isochronous) {
-                // for now set SIA to start ASAP
-                // FIXME support scheduling transfers on a specific frame
-                control_bits |= XFER_TRB_SIA;
+                if (frame == 0) {
+                    // set SIA bit to schedule packet ASAP
+                    control_bits |= XFER_TRB_SIA;
+                } else {
+                    // schedule packet for specified frame
+                    control_bits |= (((frame % 2048) << XFER_TRB_FRAME_ID_START) &
+                                     XHCI_MASK(XFER_TRB_FRAME_ID_START, XFER_TRB_FRAME_ID_BITS));
+               }
                 trb_set_control(trb, TRB_TRANSFER_ISOCH, control_bits);
             } else {
                 trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
@@ -246,7 +267,7 @@ int xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_
     xhci_sync_transfer_init(&xfer);
 
     mx_status_t result = xhci_queue_transfer(xhci, slot_id, &setup, data, length, 0,
-                                             request_type & USB_DIR_MASK, &xfer.context, NULL);
+                                             request_type & USB_DIR_MASK, 0, &xfer.context, NULL);
     if (result != NO_ERROR)
         return result;
 

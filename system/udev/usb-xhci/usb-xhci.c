@@ -162,6 +162,11 @@ static mx_status_t xhci_enable_ep(mx_device_t* hci_device, uint32_t device_id,
     return xhci_enable_endpoint(&uxhci->xhci, device_id, ep_desc, enable);
 }
 
+static uint64_t xhci_get_frame(mx_device_t* hci_device) {
+    usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
+    return xhci_get_current_frame(&uxhci->xhci);
+}
+
 mx_status_t xhci_config_hub(mx_device_t* hci_device, uint32_t device_id, usb_speed_t speed,
                             usb_hub_descriptor_t* descriptor) {
     usb_xhci_t* uxhci = dev_to_usb_xhci(hci_device);
@@ -184,6 +189,7 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .set_bus_device = xhci_set_bus_device,
     .get_max_device_count = xhci_get_max_device_count,
     .enable_endpoint = xhci_enable_ep,
+    .get_current_frame = xhci_get_frame,
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,
@@ -239,7 +245,7 @@ static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
         direction = data->ep_address & USB_ENDPOINT_DIR_MASK;
     }
     return xhci_queue_transfer(xhci, data->device_id, setup, phys_addr, txn->length,
-                                 ep_index, direction, context, &txn->node);
+                                 ep_index, direction, data->frame, context, &txn->node);
 }
 
 void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed) {

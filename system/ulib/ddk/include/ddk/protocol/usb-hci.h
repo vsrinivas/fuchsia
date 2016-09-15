@@ -19,6 +19,9 @@ typedef struct usb_hci_protocol {
     mx_status_t (*enable_endpoint)(mx_device_t* hci_device, uint32_t device_id,
                                    usb_endpoint_descriptor_t* ep_desc, bool enable);
 
+    // returns the current frame (in milliseconds), used for isochronous transfers
+    uint64_t (*get_current_frame)(mx_device_t* hci_device);
+
     // Hub support
     mx_status_t (*configure_hub)(mx_device_t* dev, uint32_t device_id, usb_speed_t speed,
                  usb_hub_descriptor_t* descriptor);

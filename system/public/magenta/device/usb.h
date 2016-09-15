@@ -59,4 +59,8 @@ __BEGIN_CDECLS
 // and in_len = 2 * sizeof(int)
 #define IOCTL_USB_SET_INTERFACE         IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 8)
 
+// returns the current frame number for the USB controller (in milliseconds)
+// call with out_len = sizeof(uint64_t)
+#define IOCTL_USB_GET_CURRENT_FRAME     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 9)
+
 __END_CDECLS

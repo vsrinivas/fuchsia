@@ -77,6 +77,7 @@ typedef volatile struct {
     uint32_t    reserved[7];
     xhci_intr_regs_t intr_regs[1024];
 } __PACKED xhci_runtime_regs_t;
+#define XHCI_MFINDEX_BITS   14
 
 // Slot Context
 typedef volatile struct {
