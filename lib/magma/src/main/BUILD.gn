@@ -21,15 +21,20 @@ source_set("main") {
     "$magma_build_root/src/magma_util/platform/magenta",
   ]
 
+  defines = []
+
   if (unit_test) {
     deps += [
       "$magma_build_root/tests/unit_tests:magma_platform_tests",
       "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
       "//third_party/gtest",
     ]
+    defines += [ "MAGMA_UNIT_TESTS=1" ]
   }
+
   if (readback_test) {
     deps += [ "$magma_build_root/tests/gpureadback" ]
+    defines += [ "MAGMA_READBACK_TEST=1" ]
   }
 
   libs = [

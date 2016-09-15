@@ -21,7 +21,12 @@ rm -f $bootfs_output_file
 
 echo "fuchsia_root=$fuchsia_root build_dir=$build_dir"
 
-$tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check
+autorun_readback_test=false;
+autorun_msd_intel_tests=false;
+autorun_magma_app_tests=false;
+autorun_magma_sys_tests=false;
+
+$tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="unit_test=$autorun_msd_intel_tests readback_test=$autorun_readback_test"
 
 echo "Building magma_service_driver"
 $tools_path/ninja -C $build_dir magma_service_driver magma_tests
@@ -32,9 +37,6 @@ cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1616\
 
 mkdir -p $bootfs_path/lib
 cp $tools_path/sysroot/x86_64-fuchsia/lib/*.so* $bootfs_path/lib
-
-autorun_magma_app_tests=true;
-autorun_magma_sys_tests=true;
 
 autorun_path=$bootfs_path/autorun
 
@@ -57,12 +59,6 @@ if $autorun_magma_sys_tests; then
 	echo "echo Running magma system driver unit tests" >> $autorun_path # for sanity
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
 fi
-
-if $autorun_magma_app_tests || $autorun_magma_sys_tests; then
-	echo "msleep 1000" >> $autorun_path # give some time to write out to log listener
-	echo "\`poweroff" >> $autorun_path # rinse and repeat
-fi
-
 
 mkdir -p $bootfs_output_dir
 $tools_path/mkbootfs -v -o $bootfs_output_file @$bootfs_path

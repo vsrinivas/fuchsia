@@ -16,9 +16,24 @@ extern "C" {
 #include <hw/pci.h>
 }
 
-#include "magma.h"
 #include <magenta/types.h>
 #include <thread>
+
+#include "magma_util/sleep.h"
+#include "sys_driver/magma_driver.h"
+
+#if MAGMA_UNIT_TESTS
+#include "helper/platform_device_helper.h"
+#include "gtest/gtest.h"
+#endif
+
+#if MAGMA_READBACK_TEST
+extern "C" {
+#include <gpureadback.h>
+}
+#endif
+
+#define MAGMA_START 1
 
 #define INTEL_I915_VID (0x8086)
 #define INTEL_I915_BROADWELL_DID (0x1616)
@@ -36,6 +51,8 @@ extern "C" {
     do {                                                                                           \
     } while (0)
 #endif
+
+static int magma_hook(void* dev);
 
 typedef struct intel_i915_device {
     mx_device_t device;
@@ -232,6 +249,7 @@ static int magma_hook(void* param)
         return ERR_INTERNAL;
 
     xprintf("Created driver %p\n", dev->magma_driver);
+
     dev->magma_system_device = dev->magma_driver->CreateDevice(dev->parent_device);
     if (!dev->magma_system_device) {
         xprintf("Failed to create device");
@@ -239,8 +257,10 @@ static int magma_hook(void* param)
     }
 
     xprintf("Created device %p\n", dev->magma_system_device);
-    xprintf("running magma tests in 5s\n");
-    mx_nanosleep(5000000000);
+
+    // Temporary: wait for init batch to settle, then dump to check for errors and sequence number.
+    magma::msleep(10);
+    msd_device_dump_status(dev->magma_system_device->msd_dev());
 
 #if MAGMA_READBACK_TEST
     xprintf("running magma readback tests\n");
