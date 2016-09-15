@@ -34,6 +34,8 @@ public:
     mx_status_t Write(user_ptr<const void> buffer, mx_size_t* requested, bool all_or_none);
     mx_ssize_t BeginWrite(mxtl::RefPtr<VmAspace> aspace, void** buffer);
     mx_status_t EndWrite(mx_size_t written);
+    mx_size_t GetWriteThreshold();
+    mx_status_t SetWriteThreshold(mx_size_t threshold);
 
 private:
     DataPipeProducerDispatcher(mxtl::RefPtr<DataPipe> pipe);

@@ -262,6 +262,17 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
+        case MX_PROP_DATAPIPE_WRITE_THRESHOLD: {
+            auto producer_dispatcher = dispatcher->get_specific<DataPipeProducerDispatcher>();
+            if (!producer_dispatcher)
+                return ERR_WRONG_TYPE;
+            if (size < sizeof(mx_size_t))
+                return ERR_BUFFER_TOO_SMALL;
+            mx_size_t threshold = producer_dispatcher->GetWriteThreshold();
+            if (copy_to_user(_value, &threshold, sizeof(threshold)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
+        }
         default:
             return ERR_INVALID_ARGS;
     }
@@ -310,6 +321,19 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
                                sizeof(mx_size_t)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             status = consumer_dispatcher->SetReadThreshold(threshold);
+            break;
+        }
+        case MX_PROP_DATAPIPE_WRITE_THRESHOLD: {
+            if (size < sizeof(mx_size_t))
+                return ERR_BUFFER_TOO_SMALL;
+            auto producer_dispatcher = dispatcher->get_specific<DataPipeProducerDispatcher>();
+            if (!producer_dispatcher)
+                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
+            mx_size_t threshold = 0;
+            if (copy_from_user(&threshold, _value.reinterpret<const mx_size_t>(),
+                               sizeof(mx_size_t)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            status = producer_dispatcher->SetWriteThreshold(threshold);
             break;
         }
     }

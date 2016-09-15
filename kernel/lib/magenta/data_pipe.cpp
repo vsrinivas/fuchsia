@@ -56,9 +56,11 @@ DataPipe::DataPipe(mx_size_t element_size, mx_size_t capacity)
     : element_size_(element_size),
       capacity_(capacity),
       free_space_(0u),
+      write_threshold_(0u),
       read_threshold_(0u) {
     producer_.state_tracker.set_initial_signals_state(
-        mx_signals_state_t{MX_SIGNAL_WRITABLE, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
+        mx_signals_state_t{MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD,
+                           MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_WRITE_THRESHOLD});
     consumer_.state_tracker.set_initial_signals_state(
         mx_signals_state_t{0u,
                            MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD});
@@ -107,17 +109,24 @@ mx_status_t DataPipe::MapVMOIfNeededNoLock(EndPoint* ep, mxtl::RefPtr<VmAspace> 
     return NO_ERROR;
 }
 
-// TODO(vtl): Refactor this (will do when I add write thresholds).
 void DataPipe::UpdateSignalsNoLock() {
-    // TODO(vtl): Should be non-writable during a two-phase write.
-    if (free_space_ == 0u) {
-        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
-    } else if (free_space_ == capacity_) {
-        producer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
-    } else {
-        producer_.state_tracker.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
-    }
+    UpdateProducerSignalsNoLock();
     UpdateConsumerSignalsNoLock();
+}
+
+void DataPipe::UpdateProducerSignalsNoLock() {
+    // TODO(vtl): Should be non-writable during a two-phase write.
+    if (consumer_.alive) {
+        mx_signals_t satisfied = (free_space_no_lock() > 0u) ? MX_SIGNAL_WRITABLE : 0u;
+        if (free_space_no_lock() >= write_threshold_no_lock())
+            satisfied |= MX_SIGNAL_WRITE_THRESHOLD;
+        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD,
+                                                satisfied);
+    } else {
+        producer_.state_tracker.UpdateState(
+                MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD, MX_SIGNAL_PEER_CLOSED,
+                MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD, MX_SIGNAL_PEER_CLOSED);
+    }
 }
 
 void DataPipe::UpdateConsumerSignalsNoLock() {
@@ -241,6 +250,21 @@ mx_status_t DataPipe::ProducerWriteEnd(mx_size_t written) {
 
     UpdateSignalsNoLock();
 
+    return NO_ERROR;
+}
+
+mx_size_t DataPipe::ProducerGetWriteThreshold() {
+    AutoLock al(&lock_);
+    return write_threshold_;
+}
+
+mx_status_t DataPipe::ProducerSetWriteThreshold(mx_size_t threshold) {
+    if (threshold > capacity_ || threshold % element_size_ != 0u)
+        return ERR_INVALID_ARGS;
+
+    AutoLock al(&lock_);
+    write_threshold_ = threshold;
+    UpdateProducerSignalsNoLock();
     return NO_ERROR;
 }
 
@@ -396,13 +420,10 @@ void DataPipe::OnProducerDestruction() {
     }
 
     if (consumer_.alive) {
-        bool is_empty = (free_space_ == capacity_);
-        consumer_.state_tracker.UpdateState(
-                0u, MX_SIGNAL_PEER_CLOSED,
-                is_empty ? MX_SIGNAL_READABLE | MX_SIGNAL_READ_THRESHOLD : 0u, 0u);
+        UpdateConsumerSignalsNoLock();
 
         // We can drop the vmo since future reads are not going to succeed.
-        if (is_empty)
+        if (available_size_no_lock() == 0u)
             vmo_.reset();
     }
 }
@@ -418,8 +439,6 @@ void DataPipe::OnConsumerDestruction() {
         consumer_.aspace.reset();
     }
 
-    if (producer_.alive) {
-        producer_.state_tracker.UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED,
-                                            MX_SIGNAL_WRITABLE, 0u);
-    }
+    if (producer_.alive)
+        UpdateProducerSignalsNoLock();
 }

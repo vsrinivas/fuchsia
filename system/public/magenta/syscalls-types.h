@@ -340,6 +340,8 @@ typedef struct mx_waitset_result {
 #define MX_PROP_NUM_STATE_KINDS             2u
 // Argument is an mx_size_t.
 #define MX_PROP_DATAPIPE_READ_THRESHOLD     3u
+// Argument is an mx_size_t.
+#define MX_PROP_DATAPIPE_WRITE_THRESHOLD    4u
 
 // Policies for MX_PROP_BAD_HANDLE_POLICY:
 #define MX_POLICY_BAD_HANDLE_IGNORE         0u

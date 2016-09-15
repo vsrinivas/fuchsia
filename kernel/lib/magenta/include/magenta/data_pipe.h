@@ -42,6 +42,8 @@ public:
     mx_status_t ProducerWriteFromUser(user_ptr<const void> ptr, mx_size_t* requested, bool all_or_none);
     mx_ssize_t ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr);
     mx_status_t ProducerWriteEnd(mx_size_t written);
+    mx_size_t ProducerGetWriteThreshold();
+    mx_status_t ProducerSetWriteThreshold(mx_size_t threshold);
 
     mx_status_t ConsumerReadFromUser(user_ptr<void> ptr,
                                      mx_size_t* requested,
@@ -88,6 +90,10 @@ private:
                                                         consumer_.cursor - producer_.cursor;
     }
 
+    mx_size_t write_threshold_no_lock() const {
+        return !write_threshold_ ? element_size_ : write_threshold_;
+    }
+
     mx_size_t read_threshold_no_lock() const {
         return !read_threshold_ ? element_size_ : read_threshold_;
     }
@@ -95,6 +101,7 @@ private:
     // Must be called under |lock_|:
     mx_status_t MapVMOIfNeededNoLock(EndPoint* ep, mxtl::RefPtr<VmAspace> aspace);
     void UpdateSignalsNoLock();
+    void UpdateProducerSignalsNoLock();
     void UpdateConsumerSignalsNoLock();
 
     const mx_size_t element_size_;
@@ -105,5 +112,6 @@ private:
     EndPoint consumer_;
     mxtl::RefPtr<VmObject> vmo_;
     mx_size_t free_space_;
+    mx_size_t write_threshold_;
     mx_size_t read_threshold_;
 };
