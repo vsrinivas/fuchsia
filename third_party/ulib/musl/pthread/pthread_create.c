@@ -33,7 +33,7 @@ int __mprotect(void*, size_t, int);
 
 void* __copy_tls(unsigned char*);
 
-static intptr_t start_pthread(void* arg) {
+static void start_pthread(void* arg) {
     pthread_t self = arg;
     // TODO(kulakowski) Signals?
     // if (self->startlock[0]) {
@@ -49,10 +49,9 @@ static intptr_t start_pthread(void* arg) {
     //               SIGPT_SET, 0, _NSIG / 8);
     mxr_tp_set(pthread_to_tp(self));
     pthread_exit(self->start(self->start_arg));
-    return 0;
 }
 
-static intptr_t start_c11(void* arg) {
+static void start_c11(void* arg) {
     pthread_t self = arg;
     mxr_tp_set(pthread_to_tp(self));
     int (*start)(void*) = (int (*)(void*))self->start;
@@ -274,7 +273,7 @@ _Noreturn void pthread_exit(void* result) {
     __do_orphaned_stdio_locks();
     __dl_thread_cleanup();
 
-    mxr_thread_exit(mxr_thread, 0);
+    mxr_thread_exit(mxr_thread);
 }
 
 void __do_cleanup_push(struct __ptcb* cb) {

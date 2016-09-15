@@ -8,11 +8,10 @@
 #include <unittest/unittest.h>
 #include <runtime/thread.h>
 
-static intptr_t test_thread_fn(void* arg) {
+static void test_thread_fn(void* arg) {
     // Note: You shouldn't use C standard library functions from this thread.
     mx_nanosleep(MX_MSEC(100));
     mx_thread_exit();
-    return 0;
 }
 
 bool threads_test(void) {

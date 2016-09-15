@@ -16,8 +16,6 @@
 
 #include <magenta/compiler.h>
 
-typedef intptr_t (*thread_start_func_t)(void*);
-
 #define ASSERT_NOT_REACHED() \
     assert(0)
 

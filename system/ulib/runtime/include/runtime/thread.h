@@ -11,7 +11,7 @@
 
 __BEGIN_CDECLS
 
-typedef intptr_t (*mxr_thread_entry_t)(void*);
+typedef void (*mxr_thread_entry_t)(void*);
 
 typedef struct mxr_thread mxr_thread_t;
 
@@ -37,18 +37,17 @@ mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t 
 // collected until it returns and it is either joined or detached.
 
 // If a thread is joined, the caller of mxr_thread_join blocks until
-// the other thread is finished running. The return value of the
-// joined thread is placed in return_value_out if non-NULL.
-mx_status_t mxr_thread_join(mxr_thread_t* thread, intptr_t* return_value_out);
+// the other thread is finished running.
+mx_status_t mxr_thread_join(mxr_thread_t* thread);
 
 // If a thread is detached, instead of waiting to be joined, it will
 // clean up after itself, and the return value of the thread's
 // entrypoint is ignored.
 mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 
-// Exit from the thread. Equivalent to returning return_value from
-// that thread's entrypoint.
-_Noreturn void mxr_thread_exit(mxr_thread_t* thread, intptr_t return_value);
+// Exit from the thread. Equivalent to returning from that thread's
+// entrypoint.
+_Noreturn void mxr_thread_exit(mxr_thread_t* thread);
 
 // Destroy a created but unstarted thread structure.
 void mxr_thread_destroy(mxr_thread_t* thread);
