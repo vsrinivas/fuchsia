@@ -168,5 +168,5 @@ void msd_device_dump_status(struct msd_device* dev)
 {
     std::string dump;
     MsdIntelDevice::cast(dev)->DumpToString(dump);
-    DLOG("--------------------\n%s\n--------------------\n", dump.c_str());
+    printf("--------------------\n%s\n--------------------\n", dump.c_str());
 }
