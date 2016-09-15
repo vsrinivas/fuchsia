@@ -8,18 +8,14 @@
 
 class TestRenderInitBatch {
 public:
-    void Init()
+    void Init(std::unique_ptr<RenderInitBatch> batch)
     {
-        uint32_t batch_size = RenderInitBatch::Size();
-
-        std::unique_ptr<RenderInitBatch> batch(new RenderInitBatch());
-
         uint64_t base = 0x10000;
         std::unique_ptr<MockAddressSpace> address_space(
-            new MockAddressSpace(base, magma::round_up(batch_size, PAGE_SIZE)));
+            new MockAddressSpace(base, magma::round_up(batch->size(), PAGE_SIZE)));
 
         {
-            std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch_size));
+            std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch->size()));
             ASSERT_TRUE(buffer);
 
             void* addr;
@@ -43,18 +39,18 @@ public:
         auto entry = reinterpret_cast<uint32_t*>(addr);
 
         // Check relocations
-        for (unsigned int i = 0; i < RenderInitBatch::RelocationCount(); i++) {
-            uint32_t index = RenderInitBatch::relocs_[i] >> 2;
+        for (unsigned int i = 0; i < batch->relocation_count_; i++) {
+            uint32_t index = batch->relocs_[i] >> 2;
             uint64_t val = entry[index + 1];
             val = (val << 32) | entry[index];
-            EXPECT_EQ(val, gpu_addr + RenderInitBatch::batch_[index]);
+            EXPECT_EQ(val, gpu_addr + batch->batch_[index]);
             // Remove reloc for following memcmp
-            entry[index] = RenderInitBatch::batch_[index];
-            entry[index + 1] = RenderInitBatch::batch_[index + 1];
+            entry[index] = batch->batch_[index];
+            entry[index + 1] = batch->batch_[index + 1];
         }
 
         // Check everything else
-        EXPECT_EQ(memcmp(addr, RenderInitBatch::batch_, RenderInitBatch::Size()), 0);
+        EXPECT_EQ(memcmp(addr, batch->batch_, batch->size()), 0);
 
         EXPECT_TRUE(batch->buffer()->platform_buffer()->UnmapCpu());
     }
@@ -63,5 +59,6 @@ public:
 TEST(RenderInitBatch, Init)
 {
     TestRenderInitBatch test;
-    test.Init();
+    test.Init(std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8()));
+    test.Init(std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9()));
 }

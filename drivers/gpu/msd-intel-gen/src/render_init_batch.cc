@@ -21,12 +21,11 @@ static inline void write_dst(uint32_t val, void* dest, uint32_t offset, uint32_t
 
 bool RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace* address_space)
 {
-    uint32_t batch_size = Size();
-    DASSERT((batch_size & 0x3) == 0);
+    DASSERT((batch_size_ & 0x3) == 0);
 
-    DLOG("RenderInitBatch size 0x%x", batch_size);
+    DLOG("RenderInitBatch size 0x%x", batch_size_);
 
-    if (buffer->platform_buffer()->size() < batch_size)
+    if (buffer->platform_buffer()->size() < batch_size_)
         return DRETF(false, "buffer too small");
 
     if (!buffer->MapGpu(address_space, PAGE_SIZE))
@@ -42,11 +41,11 @@ bool RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace*
     if (!buffer->platform_buffer()->MapCpu(&dst))
         return DRETF(false, "failed to map buffer");
 
-    memcpy(dst, batch_, batch_size);
+    memcpy(dst, batch_, batch_size_);
 
-    for (unsigned int i = 0; i < RenderInitBatch::RelocationCount(); i++) {
+    for (unsigned int i = 0; i < relocation_count_; i++) {
         uint32_t offset = relocs_[i];
-        uint32_t val = read_src(batch_, offset, batch_size);
+        uint32_t val = read_src(batch_, offset, batch_size_);
         uint64_t reloc = val + gpu_addr;
         DLOG("writing reloc 0x%llx offset 0x%x", reloc, offset);
         write_dst(magma::lower_32_bits(reloc), dst, offset, buffer->platform_buffer()->size());

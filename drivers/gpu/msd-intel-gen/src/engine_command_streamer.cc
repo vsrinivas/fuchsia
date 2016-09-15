@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "engine_command_streamer.h"
+#include "device_id.h"
 #include "instructions.h"
 #include "magma_util/macros.h"
 #include "msd_intel_buffer.h"
@@ -362,13 +363,20 @@ uint64_t EngineCommandStreamer::GetActiveHeadPointer()
 
 std::unique_ptr<RenderEngineCommandStreamer>
 RenderEngineCommandStreamer::Create(EngineCommandStreamer::Owner* owner,
-                                    AddressSpace* address_space)
+                                    AddressSpace* address_space, uint32_t device_id)
 {
-    auto buffer = std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(RenderInitBatch::Size()));
+    std::unique_ptr<RenderInitBatch> batch;
+    if (DeviceId::is_gen8(device_id)) {
+        batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8());
+    } else if (DeviceId::is_gen9(device_id)) {
+        batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
+    } else {
+        return DRETP(nullptr, "unhandled device id");
+    }
+
+    auto buffer = std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(batch->size()));
     if (!buffer)
         return DRETP(nullptr, "failed to allocate render init buffer");
-
-    auto batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatch());
 
     if (!batch->Init(std::move(buffer), address_space))
         return DRETP(nullptr, "batch init failed");

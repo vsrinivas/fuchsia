@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "device_id.h"
 #include "forcewake.h"
 #include "helper/platform_device_helper.h"
 #include "magma_util/platform/platform_mmio.h"
@@ -79,11 +80,11 @@ TEST(ForceWake, Reset)
     uint16_t device_id;
     ASSERT_TRUE(platform_device->ReadPciConfig16(2, &device_id));
 
-    if (MsdIntelDevice::is_gen8(device_id)) {
+    if (DeviceId::is_gen8(device_id)) {
         TestForceWake test(registers::ForceWake::GEN8);
         test.Reset();
     }
-    if (MsdIntelDevice::is_gen9(device_id)) {
+    if (DeviceId::is_gen9(device_id)) {
         TestForceWake test(registers::ForceWake::GEN9_RENDER);
         test.Reset();
     }
@@ -97,11 +98,11 @@ TEST(ForceWake, Request)
     uint16_t device_id;
     ASSERT_TRUE(platform_device->ReadPciConfig16(2, &device_id));
 
-    if (MsdIntelDevice::is_gen8(device_id)) {
+    if (DeviceId::is_gen8(device_id)) {
         TestForceWake test(registers::ForceWake::GEN8);
         test.Request();
     }
-    if (MsdIntelDevice::is_gen9(device_id)) {
+    if (DeviceId::is_gen9(device_id)) {
         TestForceWake test(registers::ForceWake::GEN9_RENDER);
         test.Request();
     }
@@ -115,11 +116,11 @@ TEST(ForceWake, Release)
     uint16_t device_id;
     ASSERT_TRUE(platform_device->ReadPciConfig16(2, &device_id));
 
-    if (MsdIntelDevice::is_gen8(device_id)) {
+    if (DeviceId::is_gen8(device_id)) {
         TestForceWake test(registers::ForceWake::GEN8);
         test.Release();
     }
-    if (MsdIntelDevice::is_gen9(device_id)) {
+    if (DeviceId::is_gen9(device_id)) {
         TestForceWake test(registers::ForceWake::GEN9_RENDER);
         test.Release();
     }

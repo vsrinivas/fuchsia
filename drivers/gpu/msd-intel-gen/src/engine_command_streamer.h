@@ -64,14 +64,16 @@ private:
 class RenderEngineCommandStreamer : public EngineCommandStreamer {
 public:
     // |address_space| used to map the render init batch.
-    static std::unique_ptr<RenderEngineCommandStreamer> Create(EngineCommandStreamer::Owner* owner,
-                                                               AddressSpace* address_space);
+    static std::unique_ptr<RenderEngineCommandStreamer>
+    Create(EngineCommandStreamer::Owner* owner, AddressSpace* address_space, uint32_t device_id);
 
     bool RenderInit(MsdIntelContext* context);
 
 private:
     RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
                                 std::unique_ptr<RenderInitBatch> init_batch);
+
+    RenderInitBatch* init_batch() { return init_batch_.get(); }
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 

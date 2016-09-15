@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_intel_device.h"
+#include "device_id.h"
 #include "forcewake.h"
 #include "global_context.h"
 #include "magma_util/dlog.h"
@@ -49,10 +50,10 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
 
-    if (is_gen8(device_id_)) {
+    if (DeviceId::is_gen8(device_id_)) {
         ForceWake::reset(register_io_.get(), registers::ForceWake::GEN8);
         ForceWake::request(register_io_.get(), registers::ForceWake::GEN8);
-    } else if (is_gen9(device_id_)) {
+    } else if (DeviceId::is_gen9(device_id_)) {
         ForceWake::reset(register_io_.get(), registers::ForceWake::GEN9_RENDER);
         ForceWake::request(register_io_.get(), registers::ForceWake::GEN9_RENDER);
     } else {
@@ -71,7 +72,7 @@ bool MsdIntelDevice::Init(void* device_handle)
     constexpr uint32_t kFirstSequenceNumber = 0x1000;
     sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
-    render_engine_cs_ = RenderEngineCommandStreamer::Create(this, gtt_.get());
+    render_engine_cs_ = RenderEngineCommandStreamer::Create(this, gtt_.get(), device_id_);
 
     auto context = std::unique_ptr<GlobalContext>(new GlobalContext());
 

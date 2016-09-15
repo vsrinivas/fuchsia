@@ -4,13 +4,13 @@
 
 #include "render_init_batch.h"
 
-const uint32_t RenderInitBatch::relocs_[] = {
+const uint32_t RenderInitBatchGen8::relocs_[] = {
     0x00000798, 0x000007a4, 0x000007ac, 0x000007bc,
 };
 
-uint32_t RenderInitBatch::RelocationCount() { return sizeof(relocs_) / sizeof(uint32_t); }
+const uint32_t RenderInitBatchGen8::relocation_count_ = sizeof(relocs_) / sizeof(uint32_t);
 
-const uint32_t RenderInitBatch::batch_[] =
+const uint32_t RenderInitBatchGen8::batch_[] =
     {
         0x7a000004, 0x01000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x69040000, 0x78140000, 0x04000000, 0x7820000a, 0x00000000, 0x00000000,
@@ -175,4 +175,4 @@ const uint32_t RenderInitBatch::batch_[] =
         0x00000000, 0x00000000, 0x00000000, /* state end */
 };
 
-uint32_t RenderInitBatch::Size() { return sizeof(batch_); }
+const uint32_t RenderInitBatchGen8::batch_size_ = sizeof(batch_);

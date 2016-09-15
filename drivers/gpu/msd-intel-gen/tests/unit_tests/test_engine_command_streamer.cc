@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "device_id.h"
 #include "engine_command_streamer.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_mmio.h"
@@ -38,7 +39,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 public:
     static constexpr uint32_t kFirstSequenceNumber = 5;
 
-    TestEngineCommandStreamer()
+    TestEngineCommandStreamer(uint32_t device_id = 0x1916) : device_id_(device_id)
     {
         register_io_ =
             std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(8 * 1024 * 1024)));
@@ -49,7 +50,7 @@ public:
 
         address_space_ = std::unique_ptr<AddressSpace>(new MockAddressSpace(0, PAGE_SIZE * 100));
 
-        engine_cs_ = RenderEngineCommandStreamer::Create(this, address_space_.get());
+        engine_cs_ = RenderEngineCommandStreamer::Create(this, address_space_.get(), device_id);
 
         sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
@@ -147,6 +148,18 @@ public:
     {
         ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
 
+        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+
+        {
+            std::unique_ptr<RenderInitBatch> expected_batch;
+            if (DeviceId::is_gen9(device_id_))
+                expected_batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
+            if (DeviceId::is_gen8(device_id_))
+                expected_batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8());
+            ASSERT_NE(expected_batch, nullptr);
+            EXPECT_EQ(render_cs->init_batch()->size(), expected_batch->size());
+        }
+
         InitContext();
 
         EXPECT_TRUE(context_->Map(address_space_.get(), engine_cs_->id()));
@@ -154,8 +167,6 @@ public:
         auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
         ASSERT_NE(ringbuffer, nullptr);
         EXPECT_EQ(ringbuffer->tail(), 0u);
-
-        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
 
         register_io_->enable_trace(true);
 
@@ -229,6 +240,7 @@ private:
         return mock_status_page_->gpu_addr;
     }
 
+    uint32_t device_id_;
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<AddressSpace> address_space_;
     std::unique_ptr<MsdIntelContext> context_;
@@ -250,7 +262,13 @@ TEST(RenderEngineCommandStreamer, InitHardware)
     test.InitHardware();
 }
 
-TEST(RenderEngineCommandStreamer, RenderInit)
+TEST(RenderEngineCommandStreamer, RenderInitGen8)
+{
+    TestEngineCommandStreamer test(0x1616);
+    test.RenderInit();
+}
+
+TEST(RenderEngineCommandStreamer, RenderInitGen9)
 {
     TestEngineCommandStreamer test;
     test.RenderInit();

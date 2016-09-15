@@ -32,6 +32,7 @@ source_set("src") {
     "render_init_batch.cc",
     "render_init_batch.h",
     "render_init_batch_gen8.cc",
+    "render_init_batch_gen9.cc",
     "ringbuffer.cc",
     "ringbuffer.h",
     "types.h",
