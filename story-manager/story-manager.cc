@@ -21,6 +21,27 @@
 
 namespace story_manager {
 
+class StoryImpl : public Story {
+ public:
+  explicit StoryImpl(const mojo::String& url,
+                     mojo::InterfaceRequest<Story> request)
+      : url_(url), binding_(this, std::move(request)) {}
+
+  ~StoryImpl() override {}
+
+ private:
+  void GetMetadata(const GetMetadataCallback& callback) override {
+    mojo::InlinedStructPtr<StoryMetadata> story_metadata = StoryMetadata::New();
+    story_metadata->url = url_;
+    story_metadata->is_running = true;
+    callback.Run(std::move(story_metadata));
+  }
+
+  mojo::String url_;
+  mojo::StrongBinding<Story> binding_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
+};
+
 class StoryProviderImpl : public StoryProvider {
  public:
   explicit StoryProviderImpl(mojo::Shell* shell,
@@ -60,7 +81,10 @@ class StoryProviderImpl : public StoryProvider {
     auto tuple = std::make_tuple(std::move(runner), std::move(session),
                                  std::move(module));
     session_map_.emplace(std::move(new_session_id), std::move(tuple));
-    callback.Run(nullptr);
+
+    mojo::InterfaceHandle<Story> story;
+    new StoryImpl(url, mojo::GetProxy(&story));
+    callback.Run(story.Pass());
   }
 
   mojo::Shell* shell_;

@@ -15,6 +15,7 @@
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
+#include "mojo/public/cpp/bindings/interface_ptr_set.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace {
@@ -25,7 +26,7 @@ class DummyUserShellImpl : public story_manager::UserShell {
       const std::string& recipe_url,
       mojo::InterfaceRequest<story_manager::UserShell> request)
       : binding_(this, std::move(request)), recipe_url_(recipe_url) {}
-  ~DummyUserShellImpl() override{};
+  ~DummyUserShellImpl() override {};
 
  private:
   void SetStoryProvider(mojo::InterfaceHandle<story_manager::StoryProvider>
@@ -34,10 +35,23 @@ class DummyUserShellImpl : public story_manager::UserShell {
         story_provider.Pass());
     story_provider_->StartNewStory(
         std::move(recipe_url_),
-        [](mojo::InterfaceHandle<story_manager::Story> story) {});
+        [this](mojo::InterfaceHandle<story_manager::Story> story) {
+      FTL_LOG(INFO) << "Received story_manager::Story from provider.";
+      mojo::InterfacePtr<story_manager::Story> story_ptr =
+          mojo::InterfacePtr<story_manager::Story>::Create(story.Pass());
+      story_ptr->GetMetadata(
+          [](mojo::InlinedStructPtr<story_manager::StoryMetadata>
+                  story_metadata) {
+          FTL_LOG(INFO) << "story_manager::Story received with url: "
+                        << story_metadata->url << " is_running: "
+                        << story_metadata->is_running;
+      });
+      story_ptr_set_.AddInterfacePtr(story_ptr.Pass());
+    });
   }
 
   mojo::InterfacePtr<story_manager::StoryProvider> story_provider_;
+  mojo::InterfacePtrSet<story_manager::Story> story_ptr_set_;
 
   mojo::StrongBinding<story_manager::UserShell> binding_;
   std::string recipe_url_;
