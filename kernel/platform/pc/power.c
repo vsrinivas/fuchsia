@@ -12,7 +12,10 @@
 #include <platform.h>
 #include <platform/keyboard.h>
 #include <lib/console.h>
+
+#if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
+#endif
 
 void platform_halt(
         platform_halt_action suggested_action,

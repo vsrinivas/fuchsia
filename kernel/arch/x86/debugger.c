@@ -13,18 +13,18 @@
 
 uint arch_num_regsets(void)
 {
+#if ARCH_X86_64
     // TODO(dje): for now. general regs
     return 1;
+#else
+    return 0;
+#endif
 }
 
 static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
 {
-#if ARCH_X86_32
-    return ERR_NOT_SUPPORTED;
-#endif
 #if ARCH_X86_64
     mx_x86_64_general_regs_t *gr = grp;
-#endif
 
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*gr);
@@ -35,7 +35,6 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
     if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
         return ERR_BAD_STATE;
 
-#if ARCH_X86_64
     x86_iframe_t *p = thread->exception_context->frame;
     gr->rax = p->rax;
     gr->rbx = p->rbx;
@@ -55,19 +54,17 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
     gr->r15 = p->r15;
     gr->rip = p->ip;
     gr->rflags = p->flags;
-#endif
 
     return NO_ERROR;
+#else
+    return ERR_NOT_SUPPORTED;
+#endif
 }
 
 static status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
 {
-#if ARCH_X86_32
-    return ERR_NOT_SUPPORTED;
-#endif
 #if ARCH_X86_64
     const mx_x86_64_general_regs_t *gr = grp;
-#endif
 
     if (buf_size != sizeof(*gr))
         return ERR_INVALID_ARGS;
@@ -75,7 +72,6 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
     if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
         return ERR_BAD_STATE;
 
-#if ARCH_X86_64
     x86_iframe_t *p = thread->exception_context->frame;
     p->rax = gr->rax;
     p->rbx = gr->rbx;
@@ -96,9 +92,11 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
     p->ip = gr->rip;
     p->flags = gr->rflags;
     p->flags &= ~X86_FLAGS_RESERVED;
-#endif
 
     return NO_ERROR;
+#else
+    return ERR_NOT_SUPPORTED;
+#endif
 }
 
 status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)
