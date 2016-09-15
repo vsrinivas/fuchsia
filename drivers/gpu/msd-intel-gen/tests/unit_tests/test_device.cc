@@ -37,9 +37,20 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        // test register read
-        uint32_t value = device->register_io()->Read32(0x44038);
-        EXPECT_EQ(0x1f2u, value);
+        // TODO(MA-78) - replace sleeps everywhere in this file with proper wait
+        magma::msleep(1000);
+
+        // check that the render init batch succeeded.
+        EXPECT_EQ(device->global_context()
+                      ->hardware_status_page(RENDER_COMMAND_STREAMER)
+                      ->read_sequence_number(),
+                  0x1001u);
+
+        // test register access
+        uint32_t expected = 0xabcd1234;
+        device->register_io()->Write32(0x4f100, expected);
+        uint32_t value = device->register_io()->Read32(0x4f100);
+        EXPECT_EQ(expected, value);
     }
 
     void Dump()
@@ -54,13 +65,16 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
+        magma::msleep(1000);
+
         MsdIntelDevice::DumpState dump_state;
         device->Dump(&dump_state);
         EXPECT_EQ(dump_state.render_cs.sequence_number,
                   device->global_context()
                       ->hardware_status_page(RENDER_COMMAND_STREAMER)
                       ->read_sequence_number());
-        EXPECT_EQ(dump_state.render_cs.active_head_pointer, 0u);
+        EXPECT_EQ(dump_state.render_cs.active_head_pointer,
+                  device->render_engine_cs()->GetActiveHeadPointer());
         EXPECT_FALSE(dump_state.fault_present);
 
         uint32_t engine = 0;
@@ -93,13 +107,6 @@ public:
         std::unique_ptr<MsdIntelDevice> device(
             driver->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
-
-        // test register read
-        auto reg_io = device->register_io();
-        ASSERT_NE(reg_io, nullptr);
-
-        uint32_t value = reg_io->Read32(0x44038);
-        EXPECT_EQ(0x1f2u, value);
 
         DLOG("delay post init");
         magma::msleep(100);
