@@ -8,11 +8,9 @@ In order to boot on Raspberry Pi3 you will need an sd card with the following:
 
 2. bootcode.bin and start.elf files. Can be obtainied from [here](https://github.com/raspberrypi/firmware/tree/master/boot)
 
-3. build armstub8.bin from source that can be found [here](https://github.com/raspberrypi/tools/tree/master/armstubs) and copy to sd card
+3. copy the magenta.bin file from you build to the sd card as kernel8.img
 
-4. copy the magenta.bin file from you build to the sd card as kernel8.img
-
-5. serial console is available on the rpi3 header.
+4. serial console is available on the rpi3 header.
   1. Pin 6 - GND
   2. Pin 8 - TXD (output from Pi)
   3. Pin 10 - RXD (input to pi)
