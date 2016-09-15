@@ -13,6 +13,7 @@
 #include <limits.h>
 
 #include <magenta/device/block.h>
+#include <magenta/device/device.h>
 #include <hexdump/hexdump.h>
 
 #define DEV_BLOCK "/dev/class/block"
@@ -58,6 +59,15 @@ static const char* guid_to_type(char* guid) {
     }
 }
 
+typedef struct blkinfo {
+    char path[128];
+    char devname[128];
+    char drvname[128];
+    char guid[40];
+    char label[40];
+    char sizestr[6];
+} blkinfo_t;
+
 static int cmd_list_blk(void) {
     struct dirent* de;
     DIR* dir = opendir(DEV_BLOCK);
@@ -65,42 +75,32 @@ static int cmd_list_blk(void) {
         printf("Error opening %s\n", DEV_BLOCK);
         return -1;
     }
-    char devname[128];
-    char guid[40];
-    char name[40];
-    char sstr[8];
-    const char* type = NULL;
+    blkinfo_t info;
+    const char* type;
     uint64_t size;
     int fd;
-    int rc;
-    printf("%-25s %-4s  %-14s %s\n", "DEVNAME", "SIZE", "TYPE", "NAME");
+    printf("%-3s %-8s %-8s %-4s %-14s %s\n", "ID", "DEV", "DRV", "SIZE", "TYPE", "LABEL");
     while ((de = readdir(dir)) != NULL) {
-        snprintf(devname, sizeof(devname), "%s/%s", DEV_BLOCK, de->d_name);
-        fd = open(devname, O_RDONLY);
+        memset(&info, 0, sizeof(blkinfo_t));
+        type = NULL;
+        snprintf(info.path, sizeof(info.path), "%s/%s", DEV_BLOCK, de->d_name);
+        fd = open(info.path, O_RDONLY);
         if (fd < 0) {
-            printf("Error opening %s\n", devname);
+            printf("Error opening %s\n", info.path);
             goto devdone;
         }
-        rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &size, sizeof(size));
-        if (rc < 0) {
-            strncpy(sstr, "N/A", sizeof(sstr));
-        } else {
-            size_to_cstring(sstr, sizeof(sstr), size);
+        mxio_ioctl(fd, IOCTL_DEVICE_GET_DEVICE_NAME, NULL, 0, info.devname, sizeof(info.devname));
+        mxio_ioctl(fd, IOCTL_DEVICE_GET_DRIVER_NAME, NULL, 0, info.drvname, sizeof(info.drvname));
+        if (mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &size, sizeof(size)) > 0) {
+            size_to_cstring(info.sizestr, sizeof(info.sizestr), size);
         }
-        rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_GUID, NULL, 0, guid, sizeof(guid));
-        if (rc < 0) {
-            type = "N/A";
-        } else {
-            type = guid_to_type(guid);
+        if (mxio_ioctl(fd, IOCTL_BLOCK_GET_GUID, NULL, 0, info.guid, sizeof(info.guid)) == NO_ERROR) {
+            type = guid_to_type(info.guid);
         }
-        memset(name, 0, sizeof(name));
-        rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_NAME, NULL, 0, name, sizeof(name));
-        if (rc < 0) {
-            strncpy(name, "N/A", sizeof(name));
-        }
+        mxio_ioctl(fd, IOCTL_BLOCK_GET_NAME, NULL, 0, info.label, sizeof(info.label));
 devdone:
         close(fd);
-        printf("%-25s %4s  %-14s %s\n", devname, sstr, type, name);
+        printf("%-3s %-8s %-8s %4s %-14s %s\n", de->d_name, info.devname, info.drvname, info.sizestr, type ? type : "", info.label);
     }
 out:
     closedir(dir);

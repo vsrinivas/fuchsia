@@ -171,10 +171,13 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
 
 static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     mx_status_t r;
-    if (op == IOCTL_DEVICE_BIND) {
+    switch (op) {
+    case IOCTL_DEVICE_BIND: {
         const char* drv = in_len > 0 ? (const char*)in_buf : NULL;
         r = device_bind(dev, drv);
-    } else if (op == IOCTL_DEVICE_GET_EVENT_HANDLE) {
+        break;
+    }
+    case IOCTL_DEVICE_GET_EVENT_HANDLE: {
         if (out_len < sizeof(mx_handle_t)) {
             r = ERR_BUFFER_TOO_SMALL;
         } else {
@@ -182,7 +185,37 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
             *event = mx_handle_duplicate(dev->event, MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ);
             r = sizeof(mx_handle_t);
         }
-    } else {
+        break;
+    }
+    case IOCTL_DEVICE_GET_DRIVER_NAME: {
+        if (!dev->driver) {
+            r = ERR_NOT_SUPPORTED;
+        } else if (!out_buf) {
+            r = ERR_INVALID_ARGS;
+        } else {
+            r = strlen(dev->driver->name);
+            if (out_len < (size_t)r) {
+                r = ERR_BUFFER_TOO_SMALL;
+            } else {
+                strncpy(out_buf, dev->driver->name, r);
+            }
+        }
+        break;
+    }
+    case IOCTL_DEVICE_GET_DEVICE_NAME: {
+        if (!out_buf) {
+            r = ERR_INVALID_ARGS;
+        } else {
+            r = strlen(dev->name);
+            if (out_len < (size_t)r) {
+                r = ERR_BUFFER_TOO_SMALL;
+            } else {
+                strncpy(out_buf, dev->name, r);
+            }
+        }
+        break;
+    }
+    default:
         r = dev->ops->ioctl(dev, op, in_buf, in_len, out_buf, out_len);
     }
     return r;
