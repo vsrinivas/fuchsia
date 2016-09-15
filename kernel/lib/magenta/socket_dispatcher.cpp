@@ -212,7 +212,14 @@ status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client
     if ((client->get_trigger_signals() & ~(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) != 0)
         return ERR_INVALID_ARGS;
 
-    iopc_ = mxtl::move(client);
+    {
+        AutoLock lock(&lock_);
+        iopc_ = mxtl::move(client);
+
+        if (!cbuf_.empty())
+            iopc_->Signal(MX_SIGNAL_READABLE, 0u, &lock_);
+    }
+
     return NO_ERROR;
 }
 
