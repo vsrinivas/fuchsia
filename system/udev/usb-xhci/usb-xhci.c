@@ -43,6 +43,9 @@ typedef struct usb_xhci {
     mx_handle_t mmio_handle;
     mx_handle_t cfg_handle;
     thrd_t irq_thread;
+
+    // used by the start thread
+    mx_device_t* parent;
 } usb_xhci_t;
 #define xhci_to_usb_xhci(dev) containerof(dev, usb_xhci_t, xhci)
 #define dev_to_usb_xhci(dev) containerof(dev, usb_xhci_t, device)
@@ -111,7 +114,9 @@ static int xhci_irq_thread(void* arg) {
 
     // xhci_start will block, so do this part here instead of in usb_xhci_bind
     xhci_start(&uxhci->xhci);
-    device_add(&uxhci->device, &uxhci->device);
+
+    device_add(&uxhci->device, uxhci->parent);
+    uxhci->parent = NULL;
 
     while (1) {
         mx_status_t wait_res;
@@ -396,6 +401,9 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     uxhci->mmio_handle = mmio_handle;
     uxhci->cfg_handle = cfg_handle;
     uxhci->pci_proto = pci_proto;
+
+    // stash this here for the startup thread to call device_add() with
+    uxhci->parent = dev;
 
     device_init(&uxhci->device, drv, "usb-xhci", &xhci_device_proto);
 
