@@ -1,6 +1,10 @@
-# Thinfs is Not a File System #
+# Thinfs
 
-thinfs is a lightweight disk management layer.
+Thinfs is a collection of disk managment utilities which can be used to build a
+filesystem.
+
+Thinfs currently includes an implementation of:
+ * FAT16 and FAT32
 
 ## Download Sources ##
 
