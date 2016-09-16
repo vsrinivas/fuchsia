@@ -270,16 +270,19 @@ void platform_init_smp(void)
 
     // Filter out hyperthreads if we've been told not to init them
     bool use_ht = cmdline_get_bool("smp.ht", true);
-    if (!use_ht) {
-        for (uint32_t i = 0; i < num_cpus; ++i) {
-            x86_cpu_topology_t topo;
-            x86_cpu_topology_decode(apic_ids[i], &topo);
 
-            if (topo.smt_id != 0) {
-                // Delete this CPU from the list
-                apic_ids[i] = apic_ids[num_cpus - 1];
-                num_cpus--;
-            }
+    // iterate over all the cores and optionally disable some of them
+    dprintf(INFO, "cpu topology:\n");
+    for (uint32_t i = 0; i < num_cpus; ++i) {
+        x86_cpu_topology_t topo;
+        x86_cpu_topology_decode(apic_ids[i], &topo);
+
+        dprintf(INFO, "\t%u: apic id 0x%x package %u core %u smt %u\n", i, apic_ids[i], topo.package_id, topo.core_id, topo.smt_id);
+
+        if (!use_ht && topo.smt_id != 0) {
+            // Delete this CPU from the list
+            apic_ids[i] = apic_ids[num_cpus - 1];
+            num_cpus--;
         }
     }
 
@@ -290,7 +293,7 @@ void platform_init_smp(void)
         max_cpus = SMP_MAX_CPUS;
     }
 
-    printf("Found %d cpus\n", num_cpus);
+    dprintf(INFO, "Found %d cpus\n", num_cpus);
     if (num_cpus > max_cpus) {
         TRACEF("Clamping number of CPUs to %d\n", max_cpus);
         num_cpus = max_cpus;

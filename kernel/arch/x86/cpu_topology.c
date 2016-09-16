@@ -7,9 +7,13 @@
 #include <arch/ops.h>
 #include <arch/x86/cpu_topology.h>
 #include <arch/x86/feature.h>
+#include <pow2.h>
+#include <bits.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
+
+#define LOCAL_TRACE 0
 
 static uint32_t smt_mask = 0;
 
@@ -23,8 +27,9 @@ static uint32_t package_shift = 0;
 
 static int initialized;
 
-static void modern_topology_init(void);
 static void legacy_topology_init(void);
+static void modern_intel_topology_init(void);
+static void extended_amd_topology_init(void);
 
 void x86_cpu_topology_init(void)
 {
@@ -32,14 +37,16 @@ void x86_cpu_topology_init(void)
         return;
     }
 
-    if (x86_get_cpuid_leaf(X86_CPUID_BASE)->a >= X86_CPUID_TOPOLOGY) {
-        modern_topology_init();
+    if (x86_vendor == X86_VENDOR_INTEL && x86_get_cpuid_leaf(X86_CPUID_BASE)->a >= X86_CPUID_TOPOLOGY) {
+        modern_intel_topology_init();
+    } else if (x86_vendor == X86_VENDOR_AMD) {
+        extended_amd_topology_init();
     } else {
         legacy_topology_init();
     }
 }
 
-static void modern_topology_init(void)
+static void modern_intel_topology_init(void)
 {
     // This is based off of Intel 3A's Example 8-18 "Support Routine for
     // Identifying Package, Core, and Logical Processors from 32-bit x2APIC ID"
@@ -61,6 +68,25 @@ static void modern_topology_init(void)
             break;
         }
     }
+}
+
+static void extended_amd_topology_init(void)
+{
+    // Described in AMD CPUID Specification, version 2.34, section 3.2
+    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(0x80000008);
+
+    // width of the core part of the apic id
+    uint32_t apic_id_core_id_size = BITS_SHIFT(leaf->c, 15, 12);
+    if (apic_id_core_id_size == 0) {
+        legacy_topology_init();
+        return;
+    }
+
+    core_shift = 0;
+    core_mask = (1u << apic_id_core_id_size) - 1;
+
+    package_shift = apic_id_core_id_size;
+    package_mask = ~core_mask;
 }
 
 static void legacy_topology_init(void)
@@ -97,6 +123,9 @@ static void legacy_topology_init(void)
 
 void x86_cpu_topology_decode(uint32_t apic_id, x86_cpu_topology_t *topo) {
     memset(topo, 0, sizeof(*topo));
+
+    LTRACEF("id 0x%x: package_shift %u package_mask 0x%x core_shift %u core_mask 0x%x smt_mask %u\n",
+        apic_id, package_shift, package_mask, core_shift, core_mask, smt_mask);
 
     topo->package_id = (apic_id & package_mask) >> package_shift;
     topo->core_id = (apic_id & core_mask) >> core_shift;
