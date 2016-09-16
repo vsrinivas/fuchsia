@@ -8,6 +8,7 @@
 
 #include <trace.h>
 #include <stdint.h>
+#include <string.h>
 #include <assert.h>
 
 #include <arch/ops.h>
@@ -18,6 +19,8 @@ struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
 struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
 uint32_t max_cpuid = 0;
 uint32_t max_ext_cpuid = 0;
+
+enum x86_vendor_list x86_vendor;
 
 static int initialized = 0;
 
@@ -34,6 +37,23 @@ void x86_feature_init(void)
         max_cpuid = MAX_SUPPORTED_CPUID;
 
     LTRACEF("max cpuid 0x%x\n", max_cpuid);
+
+    /* figure out the vendor */
+    union {
+        uint32_t vendor_id[3];
+        char vendor_string[13];
+    } vu;
+    vu.vendor_id[0] = _cpuid[0].b;
+    vu.vendor_id[1] = _cpuid[0].d;
+    vu.vendor_id[2] = _cpuid[0].c;
+    vu.vendor_string[12] = '\0';
+    if (!strcmp(vu.vendor_string, "GenuineIntel")) {
+        x86_vendor = X86_VENDOR_INTEL;
+    } else if (!strcmp(vu.vendor_string, "AuthenticAMD")) {
+        x86_vendor = X86_VENDOR_AMD;
+    } else {
+        x86_vendor = X86_VENDOR_UNKNOWN;
+    }
 
     /* read in the base cpuids */
     for (uint32_t i = 1; i <= max_cpuid; i++) {
@@ -53,10 +73,6 @@ void x86_feature_init(void)
         uint32_t index = i - X86_CPUID_EXT_BASE;
         cpuid_c(i, 0, &_cpuid_ext[index].a, &_cpuid_ext[index].b, &_cpuid_ext[index].c, &_cpuid_ext[index].d);
     }
-
-#if LK_DEBUGLEVEL > 1
-    x86_feature_debug();
-#endif
 }
 
 bool x86_get_cpuid_subleaf(
@@ -123,10 +139,26 @@ void x86_feature_debug(void)
         { X86_FEATURE_TSC_DEADLINE, "tsc_deadline" },
     };
 
-    printf("Features:");
+    const char *vendor_string;
+    switch (x86_vendor) {
+        default:
+        case X86_VENDOR_UNKNOWN: vendor_string = "unknown"; break;
+        case X86_VENDOR_INTEL: vendor_string = "Intel"; break;
+        case X86_VENDOR_AMD: vendor_string = "AMD"; break;
+    }
+    printf("Vendor: %s\n", vendor_string);
+
+    printf("Features: ");
+    uint col = 0;
     for (uint i = 0; i < countof(features); ++i) {
         if (x86_feature_test(features[i].bit))
-            printf(" %s", features[i].name);
+            col += printf("%s ", features[i].name);
+        if (col >= 80) {
+            printf("\n");
+            col = 0;
+        }
     }
-    printf("\n");
+    if (col > 0)
+        printf("\n");
+
 }

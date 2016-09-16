@@ -42,6 +42,7 @@ struct x86_cpuid_bit {
         (struct x86_cpuid_bit){(enum x86_cpuid_leaf_num)(leaf), (word), (bit)}
 
 void x86_feature_init(void);
+
 static inline const struct cpuid_leaf *x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf)
 {
     extern struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
@@ -141,6 +142,17 @@ static inline uint8_t x86_physical_address_width(void)
     */
     return leaf->a & 0xff;
 }
+
+/* cpu vendors */
+enum x86_vendor_list {
+    X86_VENDOR_UNKNOWN,
+    X86_VENDOR_INTEL,
+    X86_VENDOR_AMD
+};
+
+extern enum x86_vendor_list x86_vendor;
+
+/* topology */
 
 #define X86_TOPOLOGY_INVALID 0
 #define X86_TOPOLOGY_SMT 1
