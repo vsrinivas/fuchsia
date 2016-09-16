@@ -234,7 +234,7 @@ static int gpt_bind_thread(void* arg) {
             goto unbind;
         }
 
-        char name[16];
+        char name[128];
         snprintf(name, sizeof(name), "%sp%u", dev->name, partitions);
         device_init(&device->device, drv, name, &gpt_proto);
 
@@ -242,17 +242,21 @@ static int gpt_bind_thread(void* arg) {
         txn->ops->copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
         if (device->gpt_entry.type[0] == 0) {
             free(device);
-            break;
+            continue;
         }
-
-        device->device.protocol_id = MX_PROTOCOL_BLOCK;
-        device_add(&device->device, dev);
 
         char guid[40];
         uint8_to_guid_string(guid, device->gpt_entry.type);
         char pname[40];
         utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
         xprintf("gpt: partition %u (%s) type=%s name=%s\n", partitions, device->device.name, guid, pname);
+
+        device->device.protocol_id = MX_PROTOCOL_BLOCK;
+        if (device_add(&device->device, dev) != NO_ERROR) {
+            printf("gpt device_add failed\n");
+            free(device);
+            continue;
+        }
     }
 
     txn->ops->release(txn);
