@@ -4,6 +4,7 @@
 
 #include <ddk/completion.h>
 #include <ddk/protocol/usb.h>
+#include <string.h>
 
 #include "usb-device.h"
 #include "util.h"
@@ -21,6 +22,7 @@ mx_status_t usb_device_control(mx_device_t* hci_device, uint32_t device_id,
     if (status != NO_ERROR) return status;
     txn->protocol = MX_PROTOCOL_USB;
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
+    memset(proto_data, 0, sizeof(*proto_data));
 
     // fill in protocol data
     usb_setup_t* setup = &proto_data->setup;
