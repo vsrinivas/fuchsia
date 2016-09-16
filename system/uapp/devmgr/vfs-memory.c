@@ -30,6 +30,7 @@ struct mnode {
 };
 
 mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
+mx_status_t mem_can_unlink(dnode_t* dn);
 
 static void mem_release(vnode_t* vn) {
     printf("memfs: vn %p destroyed\n", vn);
@@ -153,17 +154,15 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
             // Cannot rename node to itself
             return ERR_INVALID_ARGS;
         }
-        bool srcIsFile = (olddn->vnode->dnode != NULL);
-        bool dstIsFile = (newdn->vnode->dnode != NULL);
+        bool srcIsFile = (olddn->vnode->dnode == NULL);
+        bool dstIsFile = (newdn->vnode->dnode == NULL);
         if (srcIsFile != dstIsFile) {
             // Cannot rename files to directories (and vice versa)
             return ERR_INVALID_ARGS;
+        } else if ((r = mem_can_unlink(newdn)) < 0) {
+            return r;
         }
-        if (list_is_empty(&newdn->children)) {
-            dn_delete(newdn);
-        } else {
-            return ERR_BAD_STATE;
-        }
+        dn_delete(newdn);
     } else if (r != ERR_NOT_FOUND) {
         return r;
     }
@@ -240,6 +239,18 @@ ssize_t memfs_ioctl(vnode_t* vn, uint32_t op,
     return ERR_NOT_SUPPORTED;
 }
 
+mx_status_t mem_can_unlink(dnode_t* dn) {
+    bool isDirectory = (dn->vnode->dnode != NULL);
+    if (isDirectory && (dn->vnode->refcount > 1)) {
+        // Cannot unlink an open directory
+        return ERR_BAD_STATE;
+    } else if (!list_is_empty(&dn->children)) {
+        // Cannot unlink non-empty directory
+        return ERR_BAD_STATE;
+    }
+    return NO_ERROR;
+}
+
 mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
     xprintf("memfs_unlink(%p,'%.*s')\n", vn, (int)len, name);
     if (vn->dnode == NULL) {
@@ -250,12 +261,11 @@ mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
     if ((r = dn_lookup(vn->dnode, &dn, name, len)) < 0) {
         return r;
     }
-    if (list_is_empty(&dn->children)) {
-        dn_delete(dn);
-        return NO_ERROR;
-    } else {
-        return ERR_NOT_FILE;
+    if ((r = mem_can_unlink(dn)) < 0) {
+        return r;
     }
+    dn_delete(dn);
+    return NO_ERROR;
 }
 
 static vnode_ops_t vn_mem_ops = {
