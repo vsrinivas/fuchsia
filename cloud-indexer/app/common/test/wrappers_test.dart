@@ -15,71 +15,127 @@ class MockObjectsResourceApi extends Mock
     implements storage_api.ObjectsResourceApi {}
 
 main() {
-  group('StorageBucketWrapper', () {
-    const String testBucketName = 'test-bucket.io';
-    const String testObjectName = 'test_object.html';
-    const String testGeneration = '123-test-456-generation';
-
+  group('ThresholdSink', () {
     const List<int> testBytes1 = const [1, 2, 3];
-    const List<int> testBytes2 = const [10, 11, 12];
-    const List<List<int>> testBytes3 = const [
+    const List<List<int>> testBytes2 = const [
       const [4, 5, 6],
       const [7, 8, 9]
     ];
+    const List<int> testBytes3 = const [10, 11, 12];
 
-    storage_api.StorageApi storageApi;
-    storage_api.ObjectsResourceApi objectsResourceApi;
+    List<int> aboveBuffer;
+    List<int> belowBuffer;
 
     setUp(() {
-      storageApi = new MockStorageApi();
-      objectsResourceApi = new MockObjectsResourceApi();
-      when(storageApi.objects).thenReturn(objectsResourceApi);
+      aboveBuffer = new List<int>();
+      belowBuffer = new List<int>();
     });
 
     tearDown(() {
-      storageApi = null;
-      objectsResourceApi = null;
+      aboveBuffer = null;
+      belowBuffer = null;
     });
 
-    test('Happy route.', () async {
-      when(objectsResourceApi.insert(null, testBucketName,
-              name: testObjectName,
-              ifGenerationMatch: testGeneration,
-              uploadMedia: any,
-              uploadOptions: storage_api.UploadOptions.Resumable))
-          .thenReturn(new Future.value(
-              new storage_api.Object()..generation = testGeneration));
+    List<int> accumulate(List<int> buffer, List<int> bytes) =>
+        buffer..addAll(bytes);
 
-      StorageBucketWrapper storageBucketWrapper =
-          new StorageBucketWrapper.fromApi(storageApi, testBucketName);
-      StreamSink<List<int>> sink = storageBucketWrapper
-          .writeObject(testObjectName, generation: testGeneration);
+    List<int> allTestBytes() => <int>[]
+      ..addAll(testBytes1)
+      ..addAll(testBytes2.expand((i) => i))
+      ..addAll(testBytes3);
 
-      storage_api.Media media = verify(objectsResourceApi.insert(
-              null, testBucketName,
-              name: testObjectName,
-              ifGenerationMatch: testGeneration,
-              uploadMedia: captureAny,
-              uploadOptions: storage_api.UploadOptions.Resumable))
-          .captured
-          .single;
+    test('above, success', () async {
+      StreamSink<List<int>> thresholdSink = new ThresholdSink(
+          11,
+          (Stream<List<int>> stream, _) => stream
+              .fold(aboveBuffer, accumulate)
+              .then((_) => 'above, success'),
+          (Stream<List<int>> stream, _) =>
+              stream.fold(belowBuffer, accumulate));
+      thresholdSink.add(testBytes1);
+      await thresholdSink.addStream(new Stream.fromIterable(testBytes2));
+      thresholdSink.add(testBytes3);
 
-      List<int> result = [];
-      // Set up the subscription, otherwise the stream will never be consumed.
-      media.stream.listen((List<int> data) {
-        result.addAll(data);
-      });
+      expect(await thresholdSink.close(), 'above, success');
+      expect(aboveBuffer, allTestBytes());
+      expect(belowBuffer, []);
+    });
 
-      sink.add(testBytes1);
-      sink.add(testBytes2);
-      await sink.addStream(new Stream.fromIterable(testBytes3));
-      expect(await sink.close(), testGeneration);
+    test('above, error', () async {
+      StreamSink<List<int>> thresholdSink = new ThresholdSink(
+          11,
+          (Stream<List<int>> stream, _) => stream
+              .fold(aboveBuffer, accumulate)
+              .then((_) => throw 'above, error'),
+          (Stream<List<int>> stream, _) =>
+              stream.fold(belowBuffer, accumulate));
+      thresholdSink.add(testBytes1);
+      await thresholdSink.addStream(new Stream.fromIterable(testBytes2));
+      thresholdSink.add(testBytes3);
 
-      List<int> expected = <int>[]
-        ..addAll(testBytes1)
-        ..addAll(testBytes2)
-        ..addAll(testBytes3.expand((i) => i));
-      expect(result, expected);
+      try {
+        await thresholdSink.close();
+      } catch (e) {
+        expect(e, 'above, error');
+      }
+
+      expect(aboveBuffer, allTestBytes());
+      expect(belowBuffer, []);
+    });
+
+    test('below, success', () async {
+      StreamSink<List<int>> thresholdSink = new ThresholdSink(
+          12,
+          (Stream<List<int>> stream, _) => stream.fold(aboveBuffer, accumulate),
+          (Stream<List<int>> stream, _) => stream
+              .fold(belowBuffer, accumulate)
+              .then((_) => 'below, success'));
+      thresholdSink.add(testBytes1);
+      await thresholdSink.addStream(new Stream.fromIterable(testBytes2));
+      thresholdSink.add(testBytes3);
+
+      expect(await thresholdSink.close(), 'below, success');
+      expect(aboveBuffer, []);
+      expect(belowBuffer, allTestBytes());
+    });
+
+    test('below, error', () async {
+      StreamSink<List<int>> thresholdSink = new ThresholdSink(
+          12,
+          (Stream<List<int>> stream, _) => stream.fold(aboveBuffer, accumulate),
+          (Stream<List<int>> stream, _) => stream
+              .fold(belowBuffer, accumulate)
+              .then((_) => throw 'below, error'));
+      thresholdSink.add(testBytes1);
+      await thresholdSink.addStream(new Stream.fromIterable(testBytes2));
+      thresholdSink.add(testBytes3);
+
+      try {
+        await thresholdSink.close();
+      } catch (e) {
+        expect(e, 'below, error');
+      }
+
+      expect(aboveBuffer, []);
+      expect(belowBuffer, allTestBytes());
+    });
+
+    test('error propagation', () async {
+      StreamSink<List<int>> thresholdSink = new ThresholdSink(
+          12,
+          (Stream<List<int>> stream, _) => stream.fold(aboveBuffer, accumulate),
+          (Stream<List<int>> stream, _) =>
+              stream.fold(belowBuffer, accumulate));
+      thresholdSink.add(testBytes1);
+      await thresholdSink.addStream(new Stream.fromIterable(testBytes2));
+      thresholdSink.add(testBytes3);
+      thresholdSink.addError('yikes, an error!');
+
+      try {
+        await thresholdSink.close();
+      } catch (e) {
+        expect(e, 'yikes, an error!');
+      }
     });
   });
 }

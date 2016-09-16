@@ -36,7 +36,7 @@ initPubSubSubscription() async {
   } on DetailedApiRequestError catch (e) {
     // If we receive 409, this means that the subscription already exists. In
     // this case, we can simply continue.
-    if (e != HttpStatus.CONFLICT) throw e;
+    if (e.status != HttpStatus.CONFLICT) throw e;
   }
 }
 

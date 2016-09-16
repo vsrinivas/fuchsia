@@ -62,44 +62,71 @@ class PubSubTopicWrapper {
       .then((pubsub_api.PublishResponse response) => response.messageIds.first);
 }
 
-class _StorageObjectSink implements StreamSink<List<int>> {
-  final StreamController<List<int>> _controller =
-      new StreamController<List<int>>();
-  final Completer _doneCompleter = new Completer();
+/// A [StreamSink] for bytes that provides piping behavior depending on length.
+///
+/// For example, the [ThresholdSink] can be used for file uploads. If the length
+/// is shorter than a given threshold, a normal upload is preferable to a
+/// resumable upload, which would require additional requests.
+class ThresholdSink implements StreamSink<List<int>> {
+  // The backing StreamController that implements the StreamSink interface.
+  final StreamController<List<int>> _inputController =
+      new StreamController<List<int>>(sync: true);
 
-  _StorageObjectSink(
-      storage_api.StorageApi api, String bucketName, String objectName,
-      {String generation}) {
-    api.objects
-        .insert(null, bucketName,
-            name: objectName,
-            ifGenerationMatch: generation,
-            uploadMedia: new storage_api.Media(_controller.stream, null),
-            uploadOptions: storage_api.UploadOptions.Resumable)
-        .then((storage_api.Object object) {
-      _doneCompleter.complete(object.generation);
-    }, onError: (errorEvent, [StackTrace stackTrace]) {
-      _doneCompleter.completeError(errorEvent, stackTrace);
+  // The StreamController that provides a stream to upload.
+  final StreamController<List<int>> _uploadController =
+      new StreamController<List<int>>();
+
+  final Completer _doneCompleter = new Completer();
+  bool _hasActivatedThreshold = false;
+  int _currentLength = 0;
+
+  ThresholdSink(
+      int threshold,
+      Future onThreshold(Stream<List<int>> stream, int currentLength),
+      Future onBelowThreshold(Stream<List<int>> stream, int currentLength)) {
+    _inputController.stream.listen((List<int> data) {
+      _uploadController.add(data);
+      _currentLength += data.length;
+      if (!_hasActivatedThreshold && _currentLength > threshold) {
+        _hasActivatedThreshold = true;
+        onThreshold(_uploadController.stream, _currentLength).then((value) {
+          _doneCompleter.complete(value);
+        }, onError: (error, StackTrace stackTrace) {
+          _doneCompleter.completeError(error, stackTrace);
+        });
+      }
+    }, onError: (error, StackTrace stackTrace) {
+      _uploadController.addError(error, stackTrace);
+    }, onDone: () {
+      if (!_hasActivatedThreshold) {
+        onBelowThreshold(_uploadController.stream, _currentLength).then(
+            (value) {
+          _doneCompleter.complete(value);
+        }, onError: (error, StackTrace stackTrace) {
+          _doneCompleter.completeError(error, stackTrace);
+        });
+      }
     });
   }
 
   void add(List<int> event) {
-    _controller.add(event);
+    _inputController.add(event);
   }
 
   void addError(errorEvent, [StackTrace stackTrace]) {
-    _controller.addError(errorEvent, stackTrace);
+    _inputController.addError(errorEvent, stackTrace);
   }
 
   Future addStream(Stream<List<int>> stream) {
-    return _controller.addStream(stream);
+    return _inputController.addStream(stream);
   }
 
   Future get done => _doneCompleter.future;
 
-  Future close() {
-    _controller.close();
-    return done;
+  Future close() async {
+    await _inputController.close();
+    await _uploadController.close();
+    return await done;
   }
 }
 
@@ -108,6 +135,8 @@ class StorageBucketWrapper {
   static const List<String> scopes = const [
     storage_api.StorageApi.DevstorageReadWriteScope
   ];
+
+  static const int resumableThreshold = 5 * 1024 * 1024;
 
   final storage_api.StorageApi _api;
   final String bucketName;
@@ -131,19 +160,27 @@ class StorageBucketWrapper {
 
   Future<String> writeObjectAsBytes(String objectName, List<int> bytes,
           {String generation}) =>
-      _api.objects
-          .insert(null, bucketName,
-              name: objectName,
-              ifGenerationMatch: generation,
-              uploadMedia: new storage_api.Media(
-                  new Stream.fromIterable([bytes]), bytes.length))
-          .then((storage_api.Object object) => object.generation);
+      new Stream.fromIterable([bytes])
+          .pipe(writeObject(objectName, generation: generation));
 
   /// Returns a [StreamSink] that writes back to [objectName].
-  ///
-  /// This method is best used for files with unknown size or larger files with
-  /// size greater than 5MB.
-  StreamSink<List<int>> writeObject(String objectName, {String generation}) =>
-      new _StorageObjectSink(_api, bucketName, objectName,
-          generation: generation);
+  StreamSink<List<int>> writeObject(String objectName, {String generation}) {
+    Future<String> normalUpload(Stream<List<int>> stream, int currentLength) =>
+        _api.objects
+            .insert(null, bucketName,
+                name: objectName,
+                ifGenerationMatch: generation,
+                uploadMedia: new storage_api.Media(stream, currentLength))
+            .then((storage_api.Object object) => object.generation);
+    Future<String> resumableUpload(
+            Stream<List<int>> stream, int currentLength) =>
+        _api.objects
+            .insert(null, bucketName,
+                name: objectName,
+                ifGenerationMatch: generation,
+                uploadMedia: new storage_api.Media(stream, null),
+                uploadOptions: storage_api.UploadOptions.Resumable)
+            .then((storage_api.Object object) => object.generation);
+    return new ThresholdSink(resumableThreshold, resumableUpload, normalUpload);
+  }
 }

@@ -36,45 +36,6 @@ class MockZip implements Zip {
   }
 }
 
-class FakeSink<T> implements StreamSink<T> {
-  final List<T> events = [];
-  final Completer _doneCompleter = new Completer();
-
-  bool _closed = false;
-  bool _addingStream = false;
-
-  void _validateState() {
-    if (_closed) throw new StateError('Cannot add to closed sink.');
-    if (_addingStream) throw new StateError('Cannot write to busy stream.');
-  }
-
-  void add(T event) {
-    _validateState();
-    events.add(event);
-  }
-
-  void addError(errorEvent, [StackTrace stackTrace]) => _validateState();
-
-  Future addStream(Stream<T> stream) {
-    _validateState();
-    _addingStream = true;
-    Completer completer = new Completer();
-    stream.listen(events.add, onError: addError, onDone: completer.complete);
-    return completer.future.then((_) {
-      _addingStream = false;
-    });
-  }
-
-  Future get done => _doneCompleter.future;
-
-  Future close() {
-    if (_addingStream) throw new StateError('Cannot close when adding stream.');
-    _closed = true;
-    _doneCompleter.complete(events);
-    return done;
-  }
-}
-
 main() {
   group('processZip', () {
     const String testArch = 'linux-x64';
@@ -188,7 +149,8 @@ main() {
     test('Pub/Sub failure.', () async {
       final PubSubTopicWrapper topic = new MockTopicWrapper();
       final StorageBucketWrapper bucket = new MockBucketWrapper();
-      final StreamSink<List<int>> sink = new FakeSink<List<int>>();
+      final StreamController<List<int>> sink =
+          new StreamController<List<int>>();
       when(bucket.writeObject(otherDestinationPath)).thenReturn(sink);
       when(topic.publish(any)).thenAnswer((i) => throw new PubSubException(
           HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
@@ -202,8 +164,7 @@ main() {
         expect(e, isPubSubException);
       } finally {
         verifyNever(bucket.writeObject(manifestDestinationPath));
-        List<List<int>> events = await sink.done;
-        List<int> payload = events
+        List<int> payload = await sink.stream
             .fold([], (List<int> data, List<int> bytes) => data..addAll(bytes));
         expect(payload, validPayload[otherPath].codeUnits);
       }
@@ -212,15 +173,15 @@ main() {
     test('Valid request.', () async {
       final PubSubTopicWrapper topic = new MockTopicWrapper();
       final StorageBucketWrapper bucket = new MockBucketWrapper();
-      final StreamSink<List<int>> sink = new FakeSink<List<int>>();
+      final StreamController<List<int>> sink =
+          new StreamController<List<int>>();
       when(bucket.writeObject(otherDestinationPath)).thenReturn(sink);
 
       final Zip zip = new MockZip(validPayload);
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
       await moduleUploader.processZip(zip);
 
-      List<List<int>> events = await sink.done;
-      List<int> payload = events
+      List<int> payload = await sink.stream
           .fold([], (List<int> data, List<int> bytes) => data..addAll(bytes));
       expect(payload, validPayload[otherPath].codeUnits);
 
