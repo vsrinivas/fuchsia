@@ -57,8 +57,8 @@ mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn);
 
 // device fs
 vnode_t* devfs_get_root(void);
-mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev);
-mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev);
+mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_handle_t hdevice);
+mx_status_t devfs_add_link(vnode_t* parent, const char* name, vnode_t* target);
 mx_status_t devfs_remove(vnode_t* vn);
 
 // boot fs
@@ -85,6 +85,8 @@ ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
 mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len);
 ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len,
                     void* out_data, size_t out_len);
+
+mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
 
 // big vfs lock protects lookup and walk operations
 //TODO: finer grained locking

@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 #include "devmgr.h"
-#include "vfs.h"
+#include "devhost.h"
+#include "device-internal.h"
 
 #include <assert.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <threads.h>
 
 #include <ddk/completion.h>
@@ -25,17 +24,11 @@
 #include <magenta/types.h>
 
 #include <mxio/debug.h>
-#include <mxio/dispatcher.h>
-#include <mxio/remoteio.h>
 #include <mxio/vfs.h>
-
-#include <magenta/listnode.h>
-
-#include "device-internal.h"
 
 #define MXDEBUG 0
 
-static const char* name = "devmgr";
+mxio_dispatcher_t* devmgr_rio_dispatcher;
 
 iostate_t* create_iostate(mx_device_t* dev) {
     iostate_t* ios;
@@ -43,33 +36,16 @@ iostate_t* create_iostate(mx_device_t* dev) {
         return NULL;
     }
     ios->dev = dev;
+    mtx_init(&ios->lock, mtx_plain);
     return ios;
 }
 
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
-// This is called from both the vfs handler thread and console start thread
-// and if not protected by rio_lock, they can step on each other when cloning
-// remoted devices.
-//
-// TODO: eventually this should be integrated with core devmgr locking, but
-//       that will require a bit more work.  This resolves the immediate issue.
-mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path, mx_handle_t* handles, uint32_t* ids) {
+static mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path,
+                                      mx_handle_t* handles, uint32_t* ids) {
     mx_status_t r;
     iostate_t* newios;
-    if (devmgr_is_remote) {
-        name = "devhost";
-    }
-
-    // remote device: clone from remote devhost
-    // TODO: timeout or handoff
-    if (dev->flags & DEV_FLAG_REMOTE) {
-        // notify caller that their OPEN or CLONE
-        // must be routed to a different server
-        handles[0] = dev->remote;
-        ids[0] = 0;
-        return 1;
-    }
 
     if ((newios = create_iostate(dev)) == NULL) {
         return ERR_NO_MEMORY;
@@ -84,7 +60,8 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path, mx_handle_t* 
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
     if ((r = device_openat(dev, &dev, path, 0)) < 0) {
-        printf("%s_get_handles(%p) open %d\n", name, dev, r);
+        printf("devmgr_get_handles(%p:%s) open path='%s', r=%d\n",
+               dev, dev->name, path ? path : "", r);
         goto fail1;
     }
     newios->dev = dev;
@@ -100,10 +77,6 @@ mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path, mx_handle_t* 
     } else {
         r = 1;
     }
-
-    char tmp[MX_DEVICE_NAME_MAX + 9];
-    snprintf(tmp, sizeof(tmp), "device:%s", dev->name);
-    track_iostate(newios, tmp);
 
     mxio_dispatcher_add(devmgr_rio_dispatcher, h[1], devmgr_rio_handler, newios);
     return r;
@@ -221,8 +194,7 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     return r;
 }
 
-mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    iostate_t* ios = cookie;
+static mx_status_t _devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, iostate_t* ios) {
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
@@ -235,7 +207,6 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_CLOSE:
         device_close(dev);
-        untrack_iostate(ios);
         free(ios);
         return NO_ERROR;
     case MXRIO_OPEN:
@@ -248,24 +219,15 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         uint32_t ids[VFS_MAX_HANDLES];
         mx_status_t r;
         if (MXRIO_OP(msg->op) == MXRIO_OPEN) {
-            xprintf("%s_rio_handler() open dev %p name '%s' at '%s'\n",
-                    name, dev, dev->name, (char*) msg->data);
+            xprintf("devmgr_rio_handler() open dev %p name '%s' at '%s'\n",
+                    dev, dev->name, (char*) msg->data);
             r = devmgr_get_handles(dev, (char*) msg->data, msg->handle, ids);
         } else {
-            xprintf("%s_rio_handler() clone dev %p name '%s'\n", name, dev, dev->name);
+            xprintf("devmgr_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
             r = devmgr_get_handles(dev, NULL, msg->handle, ids);
         }
         if (r < 0) {
             return r;
-        }
-        if (ids[0] == 0) {
-            // device is non-local, handle is the server that
-            // can clone it for us, redirect the rpc to there
-            if ((r = txn_handoff_clone(msg->handle[0], rh)) < 0) {
-                printf("txn_handoff_clone() failed %d\n", r);
-                return r;
-            }
-            return ERR_DISPATCHER_INDIRECT;
         }
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
         msg->hcount = r;
@@ -382,3 +344,18 @@ mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         return ERR_NOT_SUPPORTED;
     }
 }
+
+mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
+    iostate_t* ios = cookie;
+    mx_status_t status;
+    mtx_lock(&ios->lock);
+    if (ios->dev != NULL) {
+        status = _devmgr_rio_handler(msg, rh, ios);
+    } else {
+        printf("rpc-device: stale ios %p\n", ios);
+        status = NO_ERROR;
+    }
+    mtx_unlock(&ios->lock);
+    return status;
+}
+

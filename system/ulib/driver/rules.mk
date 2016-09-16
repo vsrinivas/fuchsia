@@ -13,19 +13,21 @@ MODULE_TYPE := userlib
 MODULE_DEFINES += LIBDRIVER=1
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/devmgr.c \
-	$(LOCAL_DIR)/devhost.c \
-	$(LOCAL_DIR)/binding.c \
-	$(LOCAL_DIR)/rpc-device.c \
-	$(LOCAL_DIR)/api.c \
+    $(LOCAL_DIR)/api.c \
+    $(LOCAL_DIR)/binding.c \
+    $(LOCAL_DIR)/devhost.c \
+    $(LOCAL_DIR)/devmgr.c \
+    $(LOCAL_DIR)/dnode.c \
+    $(LOCAL_DIR)/shared.c \
+    $(LOCAL_DIR)/rpc-device.c \
 	system/udev/kpci/kpci.c \
 	system/udev/kpci/protocol.c \
-	$(LOCAL_DIR)/main.c \
 
 MODULE_HEADER_DEPS := ulib/ddk
 
-MODULE_DEPS := ulib/musl ulib/mxio ulib/magenta
+MODULE_DEPS := ulib/mxio ulib/launchpad ulib/magenta ulib/musl
 
 MODULE_EXPORT := driver
 
 include make/module.mk
+

@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <magenta/compiler.h>
 
@@ -74,13 +75,50 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     return NO_ERROR;
 }
 
+void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id,
+                            const char* procname, int argc, char** argv);
+
 static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
     for (uint32_t index = 0;; index++) {
+#if ONLY_ONE_DEVHOST
         mx_device_t* device;
         if (kpci_init_child(drv, &device, index) != NO_ERROR) {
             break;
         }
         device_add(device, parent);
+#else
+        mx_pcie_get_nth_info_t info;
+        mx_handle_t h = mx_pci_get_nth_device(root_resource_handle, index, &info);
+        if (h < 0) {
+            break;
+        }
+        mx_handle_close(h);
+
+        // if there's an external driver for this device, prefer it
+        char binname[64];
+        snprintf(binname, sizeof(binname), "/boot/bin/driver-pci-%04x-%04x",
+                 info.vendor_id, info.device_id);
+        struct stat s;
+        if (stat(binname, &s)) {
+            strcpy(binname, "/boot/bin/devhost");
+        } else {
+            printf("FOUND EXTERNAL DRIVER: %s\n", binname);
+        }
+
+        char name[32];
+        snprintf(name, sizeof(name), "%02x:%02x:%02x",
+                 info.bus_id, info.dev_id, info.func_id);
+
+        char procname[64];
+        snprintf(procname, sizeof(procname), "devhost:pci#%d:%04x:%04x",
+                 index, info.vendor_id, info.device_id);
+
+        char arg1[20];
+        snprintf(arg1, sizeof(arg1), "pci=%d", index);
+
+        const char* args[2] = { binname, arg1 };
+        devhost_launch_devhost(parent, name, MX_PROTOCOL_PCI, procname, 2, (char**)args);
+#endif
     }
 
     return NO_ERROR;

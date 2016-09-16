@@ -9,7 +9,6 @@
 #define DEV_FLAG_DEAD           0x00000001  // being deleted
 #define DEV_FLAG_VERY_DEAD      0x00000002  // safe for ref0 and release()
 #define DEV_FLAG_UNBINDABLE     0x00000004  // nobody may bind to this device
-#define DEV_FLAG_REMOTE         0x00000008  // device lives in a remote devhost
 #define DEV_FLAG_BUSY           0x00000010  // device being created
 #define DEV_FLAG_INSTANCE       0x00000020  // this device was created-on-open
 #define DEV_FLAG_REBIND         0x00000040  // this device is being rebound

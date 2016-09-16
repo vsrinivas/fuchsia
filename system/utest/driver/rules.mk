@@ -23,6 +23,6 @@ MODULE_STATIC_LIBS := \
 		ulib/ddk ulib/driver
 
 MODULE_LIBS := \
-    ulib/mxio ulib/magenta ulib/musl
+    ulib/launchpad ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

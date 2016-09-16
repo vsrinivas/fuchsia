@@ -137,3 +137,7 @@ void devmgr_reboot(void) {
 void devmgr_acpi_ps0(char* arg) {
     acpi_ps0(&acpi_root, arg, strlen(arg));
 }
+
+mx_handle_t devmgr_acpi_clone(void) {
+    return acpi_clone_handle(&acpi_root);
+}

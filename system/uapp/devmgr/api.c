@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devmgr.h"
+#include "devhost.h"
 
 // These are the API entry-points from drivers
 // They must take the devmgr_api_lock before calling devmgr_* internals

@@ -16,6 +16,7 @@
 #include <magenta/listnode.h>
 
 #include <magenta/device/device.h>
+#include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
@@ -135,7 +136,7 @@ static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
         if ((r = vndir->ops->lookup(vndir, &vn, path, len)) < 0) {
             return r;
         }
-        if (vn->remote > 0) {
+        if ((vn->flags & V_FLAG_REMOTE) && (vn->remote > 0)) {
             *pathout = ".";
             return vn->remote;
         }
@@ -169,30 +170,30 @@ static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir,
                                    mx_handle_t* hnds, uint32_t* type,
                                    void* extra, uint32_t* esize,
                                    const char* trackfn) {
-    mx_status_t r;
     if ((vn->flags & V_FLAG_DEVICE) && !as_dir) {
-        // opening a device, get devmgr handles
-        uint32_t ids[VFS_MAX_HANDLES];
-        r = devmgr_get_handles((mx_device_t*)vn->pdata, NULL, hnds, ids);
-        // id 0 == hnds[0] is the real server for cloning this
-        // otherwise the type is always rio
-        *type = (ids[0] == 0) ? 0 : MXIO_PROTOCOL_REMOTE;
+        *type = 0;
+        hnds[0] = vn->remote;
+        return 1;
     } else if (vn->flags & V_FLAG_VMOFILE) {
         mx_off_t* args = extra;
         hnds[0] = vfs_get_vmofile(vn, args + 0, args + 1);
         *type = MXIO_PROTOCOL_VMOFILE;
         *esize = sizeof(mx_off_t) * 2;
-        r = 1;
+        return 1;
     } else {
         // local vnode or device as a directory, we will create the handles
         hnds[0] = vfs_create_handle(vn, trackfn);
         *type = MXIO_PROTOCOL_REMOTE;
-        r = 1;
+        return 1;
     }
-    return r;
 }
 
-mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh);
+mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    msg.op = MXRIO_CLONE;
+    return mxrio_txn_handoff(srv, rh, &msg);
+}
 
 static mx_status_t txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
                                     const char* path, uint32_t flags, uint32_t mode) {
@@ -276,7 +277,8 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh,
 
 static ssize_t do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len,
                         void* out_buf, size_t out_len) {
-    if (op == IOCTL_DEVICE_WATCH_DIR) {
+    switch (op) {
+    case IOCTL_DEVICE_WATCH_DIR: {
         if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
             return ERR_INVALID_ARGS;
         }
@@ -300,7 +302,25 @@ static ssize_t do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_
         mtx_unlock(&vfs_lock);
         xprintf("new watcher vn=%p w=%p\n", vn, watcher);
         return sizeof(mx_handle_t);
-    } else {
+    }
+    case IOCTL_DEVMGR_MOUNT_FS: {
+        if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {
+            return ERR_INVALID_ARGS;
+        }
+        mx_handle_t h[2];
+        mx_status_t status;
+        if ((status = mx_msgpipe_create(h, 0)) < 0) {
+            return status;
+        }
+        if ((status = vfs_install_remote(vn, h[1])) < 0) {
+            mx_handle_close(h[0]);
+            mx_handle_close(h[1]);
+            return status;
+        }
+        memcpy(out_buf, h, sizeof(mx_handle_t));
+        return sizeof(mx_handle_t);
+    }
+    default:
         return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
     }
 }

@@ -17,62 +17,13 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include "acpi.h"
 #include "devmgr.h"
 
 #define VC_COUNT 3
 
 mx_handle_t root_resource_handle;
 
-mx_handle_t get_root_resource(void) {
-    return root_resource_handle;
-}
-
-void devmgr_io_init(void) {
-    // setup stdout
-    uint32_t flags = devmgr_is_remote ? MX_LOG_FLAG_DEVICE : MX_LOG_FLAG_DEVMGR;
-    mx_handle_t h;
-    if ((h = mx_log_create(flags)) < 0) {
-        return;
-    }
-    mxio_t* logger;
-    if ((logger = mxio_logger_create(h)) == NULL) {
-        return;
-    }
-    close(1);
-    mxio_bind_to_fd(logger, 1, 0);
-}
-
-int devicehost(int argc, char** argv) {
-    devhost_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
-    if (devhost_handle <= 0) {
-        printf("devhost: no rpc handle?!\n");
-        return -1;
-    }
-    if (argc != 3) {
-        return -1;
-    }
-    if (!strncmp(argv[1], "pci=", 4)) {
-        uint32_t index = strtoul(argv[1] + 4, NULL, 10);
-
-        printf("devhost: pci host %d\n", index);
-        devmgr_init(true);
-        mx_device_t* pcidev;
-        if (devmgr_create_pcidev(&pcidev, index)) {
-            printf("devhost: cannot create pci device\n");
-            return -1;
-        }
-        device_add(pcidev, devmgr_device_root());
-        devmgr_init_builtin_drivers();
-        devmgr_handle_messages();
-    }
-    printf("devhost: exiting\n");
-    return 0;
-}
-
 #define VC_DEVICE "/dev/class/console/vc"
-
-#if !LIBDRIVER
 
 static const uint8_t minfs_magic[16] = {
     0x21, 0x4d, 0x69, 0x6e, 0x46, 0x53, 0x21, 0x00,
@@ -83,8 +34,6 @@ static const uint8_t gpt_magic[16] = {
     0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54,
     0x00, 0x00, 0x01, 0x00, 0x5c, 0x00, 0x00, 0x00,
 };
-
-
 
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
     uint8_t data[4096];
@@ -121,15 +70,6 @@ static const char* argv_mxsh[] = { "/boot/bin/mxsh" };
 static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun" };
 
 int service_starter(void* arg) {
-#if !_MX_KERNEL_HAS_SHELL
-    // if no kernel shell on serial uart, start a mxsh there
-    printf("devmgr: shell startup\n");
-    int fd;
-    if ((fd = open("/dev/console", O_RDWR)) >= 0) {
-        devmgr_launch("mxsh:console", 1, argv_mxsh, fd);
-    }
-#endif
-
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
         devmgr_launch("netsvc", 1, argv_netsvc, -1);
@@ -142,9 +82,33 @@ int service_starter(void* arg) {
         mxio_watch_directory(dirfd, block_device_added, NULL);
     }
     close(dirfd);
-
     return 0;
 }
+
+#if !_MX_KERNEL_HAS_SHELL
+static int console_starter(void* arg) {
+    // if no kernel shell on serial uart, start a mxsh there
+    printf("devmgr: shell startup\n");
+    for (unsigned n = 0; n < 30; n++) {
+        int fd;
+        if ((fd = open("/dev/console", O_RDWR)) >= 0) {
+            devmgr_launch("mxsh:console", 1, argv_mxsh, fd);
+            break;
+        }
+        mx_nanosleep(MX_MSEC(100));
+    }
+    return 0;
+}
+
+static void start_console_shell(void) {
+    thrd_t t;
+    if ((thrd_create_with_name(&t, console_starter, NULL, "console-starter")) == thrd_success) {
+        thrd_detach(t);
+    }
+}
+#else
+static void start_console_shell(void) {}
+#endif
 
 static mx_status_t console_device_added(int dirfd, const char* name, void* cookie) {
     if (strcmp(name, "vc")) {
@@ -171,20 +135,12 @@ int virtcon_starter(void* arg) {
     close(dirfd);
     return 0;
 }
-#endif
 
 int main(int argc, char** argv) {
     devmgr_io_init();
 
     root_resource_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
 
-    if (argc > 1) {
-        return devicehost(argc, argv);
-    }
-
-#if LIBDRIVER
-    printf("device driver - not a standalone executable\n");
-#else
     printf("devmgr: main()\n");
 
     char** e = environ;
@@ -192,7 +148,7 @@ int main(int argc, char** argv) {
         printf("cmdline: %s\n", *e++);
     }
 
-    devmgr_init(false);
+    devmgr_init();
     devmgr_vfs_init();
 
 #if defined(__x86_64__) || defined(__aarch64__)
@@ -206,17 +162,7 @@ int main(int argc, char** argv) {
     putenv(strdup("LD_DEBUG=1"));
 #endif
 
-    mx_status_t status = devmgr_launch_acpisvc();
-    if (status != NO_ERROR) {
-        return 1;
-    }
-    // Ignore the return value of this; if it fails, it may just be that the
-    // platform doesn't support initing PCIe via ACPI.  If the platform needed
-    // it, it will fail later.
-    devmgr_init_pcie();
-
-    printf("devmgr: load drivers\n");
-    devmgr_init_builtin_drivers();
+    start_console_shell();
 
     thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
@@ -231,6 +177,5 @@ int main(int argc, char** argv) {
 
     devmgr_handle_messages();
     printf("devmgr: message handler returned?!\n");
-#endif
     return 0;
 }

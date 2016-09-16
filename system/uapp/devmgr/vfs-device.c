@@ -25,22 +25,18 @@
 #define MXDEBUG 0
 
 static void vnd_release(vnode_t* vn) {
-    printf("devfs: vn %p destroyed\n", vn);
+    xprintf("devfs: vn %p destroyed\n", vn);
     free(vn);
 }
 
 static mx_status_t vnd_getattr(vnode_t* vn, vnattr_t* attr) {
-    mx_device_t* dev = vn->pdata;
     memset(attr, 0, sizeof(vnattr_t));
-    if ((vn->dnode == NULL) || list_is_empty(&vn->dnode->children)) {
+    if ((vn->remote != 0) && list_is_empty(&vn->dnode->children)) {
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
     }
-    mx_protocol_device_t* ops = vn->pops;
-    if (ops) {
-        attr->size = ops->get_size(dev);
-    }
+    attr->size = 0;
     return NO_ERROR;
 }
 
@@ -86,18 +82,18 @@ vnode_t* devfs_get_root(void) {
     return &vnd_root;
 }
 
-static mx_status_t _devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev) {
+static mx_status_t _devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_handle_t h) {
     if ((parent == NULL) || (name == NULL)) {
         return ERR_INVALID_ARGS;
     }
-    xprintf("devfs_add_node() p=%p name='%s' dev=%p\n", parent, name, dev);
+    xprintf("devfs_add_node() p=%p name='%s'\n", parent, name);
     size_t len = strlen(name);
 
     // check for duplicate
     dnode_t* dn;
     if (dn_lookup(parent->dnode, &dn, name, len) == NO_ERROR) {
         *out = dn->vnode;
-        if ((dev == NULL) && (dn->vnode->pdata == NULL)) {
+        if ((h == 0) && (dn->vnode->remote == 0)) {
             // creating a duplicate directory node simply
             // returns the one that's already there
             return NO_ERROR;
@@ -113,10 +109,9 @@ static mx_status_t _devfs_add_node(vnode_t** out, vnode_t* parent, const char* n
     vn->ops = &vn_device_ops;
     list_initialize(&vn->watch_list);
 
-    if (dev) {
+    if (h) {
         // attach device
-        vn->pdata = dev;
-        vn->pops = dev->ops;
+        vn->remote = h;
         vn->flags = V_FLAG_DEVICE;
     }
     list_initialize(&vn->dn_list);
@@ -135,19 +130,16 @@ static mx_status_t _devfs_add_node(vnode_t** out, vnode_t* parent, const char* n
     vfs_notify_add(parent, name, len);
 
     xprintf("devfs_add_node() vn=%p\n", vn);
-    if (dev) {
-        dev->vnode = vn;
-    }
     *out = vn;
     return NO_ERROR;
 }
 
-static mx_status_t _devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) {
-    if ((parent == NULL) || (dev == NULL) || (dev->vnode == NULL)) {
+static mx_status_t _devfs_add_link(vnode_t* parent, const char* name, vnode_t* target) {
+    if ((parent == NULL) || (target == NULL)) {
         return ERR_INVALID_ARGS;
     }
 
-    xprintf("devfs_add_link() p=%p name='%s' dev=%p\n", parent, name ? name : "###", dev);
+    xprintf("devfs_add_link() p=%p name='%s'\n", parent, name ? name : "###");
     mx_status_t r;
     dnode_t* dn;
 
@@ -174,7 +166,7 @@ static mx_status_t _devfs_add_link(vnode_t* parent, const char* name, mx_device_
         }
     }
 got_name:
-    if ((r = dn_create(&dn, name, len, dev->vnode)) < 0) {
+    if ((r = dn_create(&dn, name, len, target)) < 0) {
         return r;
     }
     dn_add_child(parent->dnode, dn);
@@ -182,18 +174,18 @@ got_name:
     return NO_ERROR;
 }
 
-mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_device_t* dev) {
+mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_handle_t h) {
     mx_status_t r;
     mtx_lock(&vfs_lock);
-    r = _devfs_add_node(out, parent, name, dev);
+    r = _devfs_add_node(out, parent, name, h);
     mtx_unlock(&vfs_lock);
     return r;
 }
 
-mx_status_t devfs_add_link(vnode_t* parent, const char* name, mx_device_t* dev) {
+mx_status_t devfs_add_link(vnode_t* parent, const char* name, vnode_t* target) {
     mx_status_t r;
     mtx_lock(&vfs_lock);
-    r = _devfs_add_link(parent, name, dev);
+    r = _devfs_add_link(parent, name, target);
     mtx_unlock(&vfs_lock);
     return r;
 }
@@ -205,11 +197,7 @@ mx_status_t devfs_remove(vnode_t* vn) {
     vn_acquire(vn);
 
     xprintf("devfs_remove(%p)\n", vn);
-    if (vn->pdata) {
-        mx_device_t* dev = vn->pdata;
-        dev->vnode = NULL;
-        vn->pdata = NULL;
-    }
+    vn->remote = 0;
 
     // if this vnode is a directory, delete its dnode
     if (vn->dnode) {

@@ -23,220 +23,230 @@
 
 #include <magenta/listnode.h>
 
-#define MXDEBUG 0
+#include "vfs.h"
 
-static mx_driver_t proxy_driver = {
-    .name = "proxy",
-};
+// vnodes for root driver and protocols
+static vnode_t* vnroot;
+static vnode_t* vnclass;
 
-static list_node_t devhost_list = LIST_INITIAL_VALUE(devhost_list);
+typedef struct device_ctx {
+    mx_handle_t hdevice;
+    uint32_t protocol_id;
+    vnode_t* vnode;
+    char name[MX_DEVICE_NAME_MAX];
+} device_ctx_t;
 
-typedef struct devhost devhost_t;
-typedef struct proxy proxy_t;
 
-struct proxy {
-    mx_device_t device;
-    list_node_t node;
-};
-
-static mx_status_t proxy_release(mx_device_t* dev) {
-    return ERR_NOT_SUPPORTED;
+#define PNMAX 16
+static const char* proto_name(uint32_t id, char buf[PNMAX]) {
+    switch (id) {
+#define DDK_PROTOCOL_DEF(tag, val, name) case val: return name;
+#include <ddk/protodefs.h>
+    default:
+        snprintf(buf, PNMAX, "proto-%08x", id);
+        return buf;
+    }
 }
 
-static mx_protocol_device_t proxy_device_proto = {
-    .release = proxy_release,
+static const char* proto_names[] = {
+#define DDK_PROTOCOL_DEF(tag, val, name) name,
+#include <ddk/protodefs.h>
+    NULL,
 };
 
-struct devhost {
-    mx_handle_t handle;
-    // message pipe the devhost uses to make requests of devmgr;
-
-    list_node_t devices;
-    // list of remoted devices associated with this devhost
-
-    list_node_t node;
-    // entry in devhost_list
-
-    mx_device_t* root;
-    // the local object that is the root (id 0) object to remote
-};
-
-static mx_device_t* devhost_id_to_dev(devhost_t* dh, uintptr_t id) {
-    proxy_t* proxy;
-    mx_device_t* dev = (mx_device_t*)id;
-    list_for_every_entry (&dh->devices, proxy, proxy_t, node) {
-        if (&proxy->device == dev) {
-            return dev;
-        }
+static void prepopulate_protocol_dirs(void) {
+    const char** namep = proto_names;
+    while (*namep) {
+        vnode_t* vnp;
+        devfs_add_node(&vnp, vnclass, *namep++, 0);
     }
-    return NULL;
 }
 
-static mx_status_t devhost_remote_add(devhost_t* dh, devhost_msg_t* msg, mx_handle_t h) {
-    mx_status_t r = NO_ERROR;
-    mx_device_t* dev;
+void devmgr_publish(device_ctx_t* parent, device_ctx_t* ctx) {
+    if (devfs_add_node(&ctx->vnode, parent->vnode, ctx->name, ctx->hdevice)) {
+        printf("devmgr: could not add '%s' to devfs!\n", ctx->name);
+        return;
+    }
 
-    if (msg->device_id) {
-        dev = devhost_id_to_dev(dh, msg->device_id);
-    } else {
-        dev = dh->root;
-    }
-    //printf("devmgr: remote %p add %p %x: dev=%p\n", dh, (void*)msg->device_id, h, dev);
-    if (dev == NULL) {
-        r = ERR_NOT_FOUND;
-        goto fail0;
-    }
-    proxy_t* proxy;
-    if ((proxy = malloc(sizeof(proxy_t))) == NULL) {
-        r = ERR_NO_MEMORY;
-        goto fail0;
-    }
-    devmgr_device_init(&proxy->device, &proxy_driver,
-                       msg->namedata, &proxy_device_proto);
-    proxy->device.remote = h;
-    proxy->device.flags |= DEV_FLAG_REMOTE;
-    proxy->device.protocol_id = msg->protocol_id;
-    if ((r = devmgr_device_add(&proxy->device, dev)) < 0) {
-        printf("devmgr: remote add failed %d\n", r);
-        goto fail1;
-    }
-    list_add_tail(&dh->devices, &proxy->node);
+    char buf[PNMAX];
+    const char* pname = proto_name(ctx->protocol_id, buf);
 
-    msg->device_id = (uintptr_t)&proxy->device;
-    xprintf("devmgr: remote %p added dev %p name '%s'\n",
-            dh, &proxy->device, proxy->device.name);
+    // find or create a vnode for class/<pname>
+    vnode_t* vnp;
+    mx_status_t status;
+    if ((status = devfs_add_node(&vnp, vnclass, pname, 0)) < 0) {
+        printf("devmgr: could not link to '%s'\n", ctx->name);
+    }
+
+    const char* name = ctx->name;
+    if ((ctx->protocol_id != MX_PROTOCOL_MISC) &&
+        (ctx->protocol_id != MX_PROTOCOL_CONSOLE)) {
+        // request a numeric name
+        name = NULL;
+    }
+
+    if ((status = devfs_add_link(vnp, name, ctx->vnode)) < 0) {
+        printf("devmgr: could not link to '%s'\n", ctx->name);
+    }
+}
+
+mxio_dispatcher_t* devmgr_devhost_dispatcher;
+
+static mx_status_t devhost_remote_create(const char* name, uint32_t protocol_id, device_ctx_t** out,
+                                         mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
+    size_t len = strlen(name);
+    if (len >= MX_DEVICE_NAME_MAX) {
+        return ERR_INVALID_ARGS;
+    }
+    device_ctx_t* ctx;
+    if ((ctx = calloc(1, sizeof(device_ctx_t))) == NULL) {
+        return ERR_NO_MEMORY;
+    }
+
+    mx_handle_t hdevice[2];
+    mx_handle_t hrpc[2];
+    mx_status_t status;
+    if ((status = mx_msgpipe_create(hdevice, 0)) < 0) {
+        free(ctx);
+        return status;
+    }
+    if ((status = mx_msgpipe_create(hrpc, 0)) < 0) {
+        free(ctx);
+        mx_handle_close(hdevice[0]);
+        mx_handle_close(hdevice[1]);
+        return status;
+    }
+
+    memcpy(ctx->name, name, len);
+    ctx->name[len] = 0;
+    ctx->protocol_id = protocol_id;
+    ctx->hdevice = hdevice[1];
+
+    if ((status = mxio_dispatcher_add(devmgr_devhost_dispatcher, hrpc[1], NULL, ctx)) < 0) {
+        mx_handle_close(hdevice[0]);
+        mx_handle_close(hdevice[1]);
+        mx_handle_close(hrpc[0]);
+        mx_handle_close(hrpc[1]);
+        free(ctx);
+        return status;
+    }
+
+    *_hdevice = hdevice[0];
+    *_hrpc = hrpc[0];
+    *out = ctx;
     return NO_ERROR;
-fail1:
-    free(proxy);
-fail0:
-    mx_handle_close(h);
-    return r;
 }
 
-static mx_status_t devhost_remote_remove(devhost_t* dh, devhost_msg_t* msg) {
-    mx_device_t* dev = devhost_id_to_dev(dh, msg->device_id);
-    printf("devmgr: remote %p remove %p: dev=%p\n", dh, (void*)msg->device_id, dev);
-    if (dev == NULL) {
-        return ERR_NOT_FOUND;
+static mx_status_t devhost_remote_add(device_ctx_t* parent, const char* name, uint32_t protocol_id,
+                                      mx_handle_t hdevice, mx_handle_t hrpc) {
+
+    size_t len = strlen(name);
+    if (len >= MX_DEVICE_NAME_MAX) {
+        return ERR_INVALID_ARGS;
+    }
+    device_ctx_t* ctx;
+    if ((ctx = calloc(1, sizeof(device_ctx_t))) == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    memcpy(ctx->name, name, len);
+    ctx->name[len] = 0;
+    ctx->protocol_id = protocol_id;
+    ctx->hdevice = hdevice;
+
+    //printf("devmgr: new ctx %p(%s), parent: %p(%s)\n", ctx, ctx->name, parent, parent->name);
+    mx_status_t status;
+    if ((status = mxio_dispatcher_add(devmgr_devhost_dispatcher, hrpc, NULL, ctx)) < 0) {
+        mx_handle_close(hdevice);
+        mx_handle_close(hrpc);
+        free(ctx);
+        return status;
     }
 
-    proxy_t* proxy = (proxy_t*) dev;
-    list_delete(&proxy->node);
-    return devmgr_device_remove(dev);
+    devmgr_publish(parent, ctx);
+    return NO_ERROR;
 }
 
-static void devhost_remote_died(devhost_t* dh) {
-    printf("devmgr: remote %p died\n", dh);
+static mx_status_t devhost_remote_remove(device_ctx_t* dev, bool clean) {
+    //printf("devmgr: del ctx %p(%s) %s\n", dev, dev->name, clean ? "" : "unexpected!");
+    devfs_remove(dev->vnode);
+    mx_handle_close(dev->hdevice);
+    dev->vnode = NULL;
+    dev->hdevice = 0;
+    free(dev);
+    return NO_ERROR;
 }
 
 // handle devhost_msgs from devhosts
 mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
-    devhost_t* dh = cookie;
+    device_ctx_t* dev = cookie;
     devhost_msg_t msg;
-    mx_handle_t hnd;
-    mx_status_t r;
+    mx_handle_t handles[2];
+    mx_status_t status;
 
     if (h == 0) {
-        devhost_remote_died(dh);
+        devhost_remote_remove(dev, false);
         return NO_ERROR;
     }
 
     uint32_t dsz = sizeof(msg);
-    uint32_t hcount = 1;
-    if ((r = mx_msgpipe_read(h, &msg, &dsz, &hnd, &hcount, 0)) < 0) {
-        if (r == ERR_BAD_STATE) {
+    uint32_t hcount = 2;
+    if ((status = mx_msgpipe_read(h, &msg, &dsz, handles, &hcount, 0)) < 0) {
+        if (status == ERR_BAD_STATE) {
             return ERR_DISPATCHER_NO_WORK;
         }
-        return r;
+        return status;
     }
     if (dsz != sizeof(msg)) {
         goto fail;
     }
     switch (msg.op) {
     case DH_OP_ADD:
-        if (hcount != 1) {
+        if (hcount != 2) {
             goto fail;
         }
-        DM_LOCK();
-        msg.arg = devhost_remote_add(dh, &msg, hnd);
-        DM_UNLOCK();
-        break;
+        devhost_remote_add(dev, msg.name, msg.protocol_id, handles[0], handles[1]);
+        return NO_ERROR;
     case DH_OP_REMOVE:
         if (hcount != 0) {
             goto fail;
         }
-        DM_LOCK();
-        msg.arg = devhost_remote_remove(dh, &msg);
-        DM_UNLOCK();
-        break;
+        devhost_remote_remove(dev, true);
+        // positive return indicates clean shutdown
+        return 1;
     default:
         goto fail;
     }
-    msg.op = DH_OP_STATUS;
-    if ((r = mx_msgpipe_write(h, &msg, sizeof(msg), NULL, 0, 0)) < 0) {
-        return r;
-    }
     return NO_ERROR;
 fail:
-    printf("devmgr_handler: error %d\n", r);
-    if (hcount) {
-        mx_handle_close(hnd);
+    printf("devmgr_handler: error %d\n", status);
+    for (unsigned n = 0; n < hcount; n++) {
+        mx_handle_close(handles[n]);
     }
     return ERR_IO;
 }
 
-mx_status_t devmgr_host_process(mx_device_t* dev, mx_driver_t* drv) {
-    if (devmgr_is_remote) {
-        return ERR_NOT_SUPPORTED;
+void devmgr_init(void) {
+    printf("devmgr: init\n");
+
+    vnroot = devfs_get_root();
+    devfs_add_node(&vnclass, vnroot, "class", 0);
+    prepopulate_protocol_dirs();
+
+    mxio_dispatcher_create(&devmgr_devhost_dispatcher, devmgr_handler);
+}
+
+void devmgr_handle_messages(void) {
+    device_ctx_t* root;
+    mx_status_t status;
+    mx_handle_t hdevice, hrpc;
+    if ((status = devhost_remote_create("root", 0, &root, &hdevice, &hrpc)) < 0) {
+        printf("devmgr: failed to create root rpc node\n");
+        return;
     }
+    root->vnode = vnroot;
+    const char* args[2] = { "/boot/bin/devhost", "root" };
+    devmgr_launch_devhost("devhost:root", 2, (char**)args, hdevice, hrpc);
 
-    // pci drivers get their own host process
-    uint16_t vid, did;
-    int index = devmgr_get_pcidev_index(dev, &vid, &did);
-    if (index < 0) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    char name[64];
-    if (drv == NULL) {
-        // if drv is null, we are probing for an on-disk driver
-        // check for a specific driver binary for this device
-        snprintf(name, sizeof(name), "/boot/bin/driver-pci-%04x-%04x", vid, did);
-        struct stat s;
-        if (stat(name, &s)) {
-            return ERR_NOT_FOUND;
-        }
-    } else {
-        // otherwise it's for a built-in driver, launch a devhost
-        snprintf(name, 64, "devhost:pci#%d:%04x:%04x", index, vid, did);
-    }
-
-    devhost_t* dh = calloc(1, sizeof(devhost_t));
-    if (dh == NULL) {
-        return ERR_NO_MEMORY;
-    }
-
-    mx_handle_t h[2];
-    mx_status_t r;
-    if ((r = mx_msgpipe_create(h, 0)) < 0) {
-        free(dh);
-        return r;
-    }
-
-    dh->root = dev;
-    dh->handle = h[0];
-    list_initialize(&dh->devices);
-    list_add_tail(&devhost_list, &dh->node);
-    mxio_dispatcher_add(devmgr_devhost_dispatcher, h[0], NULL, dh);
-
-    char arg0[32];
-    char arg1[32];
-    snprintf(arg0, sizeof(arg0), "pci=%d", index);
-    snprintf(arg1, sizeof(arg1), "%p", drv);
-
-    printf("devmgr: remote(%p) for '%s'\n", dh, name);
-    devmgr_launch_devhost(name, h[1], arg0, arg1);
-
-    //TODO: make drv ineligible for further probing?
-    return 0;
+    printf("devmgr: root ctx %p\n", root);
+    mxio_dispatcher_run(devmgr_devhost_dispatcher);
 }

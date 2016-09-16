@@ -35,8 +35,7 @@ struct mx_device {
     uint32_t refcount;
 
     mx_handle_t event;
-    mx_handle_t remote;
-    uintptr_t remote_id;
+    mx_handle_t rpc;
 
     // most devices implement a single
     // protocol beyond the base device protocol
@@ -62,12 +61,12 @@ struct mx_device {
     // for list of all unmatched devices, if not bound
     // TODO: use this for general lifecycle tracking
 
-    vnode_t* vnode;
-    // used by devmgr internals
-
     mx_device_prop_t* props;
     uint32_t prop_count;
     // properties for driver binding
+
+    void* ctx;
+    // internal use
 
     char name[MX_DEVICE_NAME_MAX + 1];
 };

@@ -22,7 +22,7 @@ int do_minfs_mount(bcache_t* bc, int argc, char** argv) {
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
-    vfs_rpc_server(vn, "fs:/data");
+    vfs_rpc_server(vn, "/data");
     return 0;
 }
 #else

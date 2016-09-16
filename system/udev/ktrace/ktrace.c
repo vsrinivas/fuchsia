@@ -30,7 +30,6 @@ static mx_protocol_device_t ktrace_device_proto = {
 
 mx_status_t ktrace_init(mx_driver_t* driver) {
     mx_device_t* dev;
-    printf("console_init()\n");
     if (device_create(&dev, driver, "ktrace", &ktrace_device_proto) == NO_ERROR) {
         mx_status_t status;
         if ((status = device_add(dev, NULL)) < 0) {

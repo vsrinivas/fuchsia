@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 #include "acpi.h"
-#include "devmgr.h"
-#include "vfs.h"
+#include "devhost.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -15,7 +14,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <magenta/ktrace.h>
 #include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -35,30 +33,11 @@
 
 #define TRACE_ADD_REMOVE 0
 
-// if true this is a devhost, not the actual devmgr
-// and devhost_handle is the rpc link to the real devmgr
-bool devmgr_is_remote = false;
 bool __dm_locked = false;
-mx_handle_t devhost_handle;
-
 mtx_t __devmgr_api_lock = MTX_INIT;
 
-#if !LIBDRIVER
-// vnodes for root driver and protocols
-static vnode_t* vnroot;
-static vnode_t* vnclass;
-#endif
+static mx_device_t* root_dev;
 
-// The Root Driver
-static mx_driver_t root_driver = {
-    .name = "devmgr",
-};
-
-static mx_driver_t remote_driver = {
-    .name = "devhost",
-};
-
-// The Root Device
 static mx_status_t default_get_protocol(mx_device_t* dev, uint32_t proto_id, void** proto) {
     if (proto_id == MX_PROTOCOL_DEVICE) {
         *proto = dev->ops;
@@ -123,68 +102,10 @@ static ssize_t default_ioctl(mx_device_t* dev, uint32_t op,
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_protocol_device_t root_device_proto = {
-    .get_protocol = default_get_protocol,
-    .open = default_open,
-    .openat = default_openat,
-    .close = default_close,
-    .release = default_release,
-    .read = default_read,
-    .write = default_write,
-    .iotxn_queue = default_iotxn_queue,
-    .get_size = default_get_size,
-    .ioctl = default_ioctl,
-};
-
-static mx_device_t* root_dev = NULL;
-
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
-
-// TODO maybe organize in a tree structure
 static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
-// handler for messages from device host processes
-mxio_dispatcher_t* devmgr_devhost_dispatcher;
-
-// handler for messages to device
-mxio_dispatcher_t* devmgr_rio_dispatcher;
-
 #define device_is_bound(dev) (!!dev->owner)
-
-#define PNMAX 16
-static const char* proto_name(uint32_t id, char buf[PNMAX]) {
-    switch (id) {
-#define DDK_PROTOCOL_DEF(tag, val, name) case val: return name;
-#include <ddk/protodefs.h>
-    default:
-        snprintf(buf, PNMAX, "proto-%08x", id);
-        return buf;
-    }
-}
-
-static mx_status_t devmgr_register_with_protocol(mx_device_t* dev, uint32_t proto_id) {
-#if LIBDRIVER
-    return 0;
-#else
-    char buf[PNMAX];
-    const char* pname = proto_name(proto_id, buf);
-
-    // find or create a vnode for class/<pname>
-    vnode_t* vnp;
-    mx_status_t r;
-    if ((r = devfs_add_node(&vnp, vnclass, pname, NULL)) < 0) {
-        return r;
-    }
-
-    const char* name = dev->name;
-    if ((proto_id != MX_PROTOCOL_MISC) && (proto_id != MX_PROTOCOL_CONSOLE)) {
-        // request a numeric name
-        name = NULL;
-    }
-
-    return devfs_add_link(vnp, name, dev);
-#endif
-}
 
 void dev_ref_release(mx_device_t* dev) {
     dev->refcount--;
@@ -204,10 +125,10 @@ void dev_ref_release(mx_device_t* dev) {
 #endif
 
         if (!(dev->flags & DEV_FLAG_VERY_DEAD)) {
-            printf("device: %p: only mostly dead (this is bad)\n", dev);
+            printf("device: %p(%s): only mostly dead (this is bad)\n", dev, dev->name);
         }
         if (!list_is_empty(&dev->children)) {
-            printf("device: %p: still has children! not good.\n", dev);
+            printf("device: %p(%s): still has children! not good.\n", dev, dev->name);
         }
 
         mx_handle_close(dev->event);
@@ -215,17 +136,6 @@ void dev_ref_release(mx_device_t* dev) {
         dev->ops->release(dev);
         DM_LOCK();
     }
-}
-
-static mx_status_t devmgr_driver_probe(mx_device_t* dev) {
-    mx_status_t status;
-
-    if ((status = devmgr_host_process(dev, NULL)) < 0) {
-        return status;
-    }
-    dev->owner = &remote_driver;
-    dev_ref_acquire(dev);
-    return NO_ERROR;
 }
 
 static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
@@ -244,43 +154,32 @@ static mx_status_t devmgr_device_probe(mx_device_t* dev, mx_driver_t* drv) {
         return ERR_NOT_SUPPORTED;
     }
 
-    // Determine if we should remote-host this driver
-    if ((status = devmgr_host_process(dev, drv)) == ERR_NOT_SUPPORTED) {
-        DM_UNLOCK();
-        status = drv->ops.bind(drv, dev);
-        DM_LOCK();
-        if (status < 0) {
-            return status;
-        }
-        dev->owner = drv;
-        dev_ref_acquire(dev);
-        return NO_ERROR;
-    }
+    DM_UNLOCK();
+    status = drv->ops.bind(drv, dev);
+    DM_LOCK();
     if (status < 0) {
         return status;
     }
+    dev->owner = drv;
+    dev_ref_acquire(dev);
+
+    // remove from unbound list if we succeeded
     if (list_in_list(&dev->unode)) {
         list_delete(&dev->unode);
     }
-    dev->owner = &remote_driver;
-    dev_ref_acquire(dev);
     return NO_ERROR;
 }
 
 static void devmgr_device_probe_all(mx_device_t* dev, bool autobind) {
     if ((dev->flags & DEV_FLAG_UNBINDABLE) == 0) {
         if (!device_is_bound(dev)) {
-            // first, look for a specific driver binary for this device
-            if (devmgr_driver_probe(dev) < 0) {
-                // if not found, probe all built-in drivers
-                mx_driver_t* drv = NULL;
-                list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-                    if (autobind && drv->flags & DRV_FLAG_NO_AUTOBIND) {
-                        continue;
-                    }
-                    if (devmgr_device_probe(dev, drv) == NO_ERROR) {
-                        break;
-                    }
+            mx_driver_t* drv = NULL;
+            list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
+                if (autobind && drv->flags & DRV_FLAG_NO_AUTOBIND) {
+                    continue;
+                }
+                if (devmgr_device_probe(dev, drv) == NO_ERROR) {
+                    break;
                 }
             }
         }
@@ -344,33 +243,21 @@ void devmgr_device_set_bindable(mx_device_t* dev, bool bindable) {
         ops->method = default_##method; \
     }
 
-mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
+static mx_status_t device_validate(mx_device_t* dev) {
     if (dev == NULL) {
         return ERR_INVALID_ARGS;
     }
     if (dev->magic != DEV_MAGIC) {
         return ERR_BAD_STATE;
     }
-    if (parent == NULL) {
-        if (devmgr_is_remote) {
-            //printf("device add: %p(%s): not allowed in devhost\n", dev, dev->name);
-            return ERR_NOT_SUPPORTED;
-        }
-        parent = root_dev;
-    }
-
-    if (parent->flags & DEV_FLAG_DEAD) {
-        printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-        return ERR_BAD_STATE;
-    }
-#if TRACE_ADD_REMOVE
-    printf("%s: device add: %p(%s) parent=%p(%s)\n", devmgr_is_remote ? "devhost" : "devmgr",
-            dev, dev->name, parent, parent->name);
-#endif
-
     if (dev->ops == NULL) {
         printf("device add: %p(%s): NULL ops\n", dev, dev->name);
         return ERR_INVALID_ARGS;
+    }
+    // devices which do not declare a primary protocol
+    // are implied to be misc devices
+    if (dev->protocol_id == 0) {
+        dev->protocol_id = MX_PROTOCOL_MISC;
     }
 
     // install default methods if needed
@@ -385,6 +272,48 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
     DEFAULT_IF_NULL(ops, iotxn_queue);
     DEFAULT_IF_NULL(ops, get_size);
     DEFAULT_IF_NULL(ops, ioctl);
+
+    return NO_ERROR;
+}
+
+mx_status_t devmgr_device_add_root(mx_device_t* dev) {
+    mx_status_t status;
+    if ((status = device_validate(dev)) < 0) {
+        return status;
+    }
+    if (root_dev != NULL) {
+        printf("devmgr: cannot add two root devices\n");
+        panic();
+    }
+    root_dev = dev;
+    dev_ref_acquire(dev);
+
+    if (dev->protocol_id != 0) {
+        list_add_tail(&unmatched_device_list, &dev->unode);
+    }
+    return NO_ERROR;
+}
+
+mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
+    mx_status_t status;
+    if ((status = device_validate(dev)) < 0) {
+        return status;
+    }
+    if (parent == NULL) {
+        if (root_dev == NULL) {
+            printf("device_add: cannot add %p(%s) (no root!)\n", dev, dev->name);
+            return ERR_NOT_SUPPORTED;
+        }
+        parent = root_dev;
+    }
+    if (parent->flags & DEV_FLAG_DEAD) {
+        printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
+        return ERR_BAD_STATE;
+    }
+#if TRACE_ADD_REMOVE
+    printf("devmgr: device add: %p(%s) parent=%p(%s)\n",
+            dev, dev->name, parent, parent->name);
+#endif
 
     // Don't create an event handle if we alredy have one
     if (dev->event == MX_HANDLE_INVALID && (dev->event = mx_event_create(0)) < 0) {
@@ -405,42 +334,17 @@ mx_status_t devmgr_device_add(mx_device_t* dev, mx_device_t* parent) {
         dev->parent = parent;
         list_add_tail(&parent->children, &dev->node);
 
-        if (devmgr_is_remote) {
-            mx_status_t r = devhost_add(dev, parent);
-            if (r < 0) {
-                printf("devhost: remote add failed %d\n", r);
-                dev_ref_release(dev->parent);
-                dev->parent = NULL;
-                dev_ref_release(dev);
-                list_delete(&dev->node);
-                dev->flags &= (~DEV_FLAG_BUSY);
-                return r;
-            }
+        mx_status_t r = devhost_add(parent, dev);
+        if (r < 0) {
+            printf("devhost: %p(%s): remote add failed %d\n", dev, dev->name, r);
+            dev_ref_release(dev->parent);
+            dev->parent = NULL;
+            dev_ref_release(dev);
+            list_delete(&dev->node);
+            dev->flags &= (~DEV_FLAG_BUSY);
+            return r;
         }
     }
-
-    if (dev->flags & DEV_FLAG_REMOTE) {
-        xprintf("dev %p is REMOTE\n", dev);
-        // for now devhost'd devices are openable but not bindable
-        dev->flags |= DEV_FLAG_UNBINDABLE;
-    }
-
-#if !LIBDRIVER
-    // devices which do not declare a primary protocol
-    // are implied to be misc devices
-    if (dev->protocol_id == 0) {
-        dev->protocol_id = MX_PROTOCOL_MISC;
-    }
-
-    // add device to devfs
-    // unless we're remote... or its parent is not in devfs... or it's an instance
-    if (!devmgr_is_remote && (parent->vnode != NULL) && !(dev->flags & DEV_FLAG_INSTANCE)) {
-        vnode_t* vn;
-        if (devfs_add_node(&vn, parent->vnode, dev->name, dev) == NO_ERROR) {
-            devmgr_register_with_protocol(dev, dev->protocol_id);
-        }
-    }
-#endif
 
     // probe the device
     devmgr_device_probe_all(dev, true);
@@ -494,14 +398,9 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
 
     devmgr_unbind_children(dev);
 
-    // remove entry from vfs to avoid any further open() attempts
-#if !LIBDRIVER
-    if (dev->vnode) {
-        xprintf("device: %p: removing vnode\n", dev);
-        devfs_remove(dev->vnode);
-        dev->vnode = NULL;
-    }
-#endif
+    // cause the vfs entry to be unpublished to avoid further open() attempts
+    xprintf("device: %p: devhost->devmgr remove rpc\n", dev);
+    devhost_remove(dev);
 
     // detach from parent, downref parent
     if (dev->parent) {
@@ -520,10 +419,6 @@ mx_status_t devmgr_device_remove(mx_device_t* dev) {
         dev_ref_release(dev);
     }
 
-    if (devmgr_is_remote) {
-        xprintf("device: %p: devhost->devmgr remove rpc\n", dev);
-        devhost_remove(dev);
-    }
     dev->flags |= DEV_FLAG_VERY_DEAD;
 
     // this must be last, since it may result in the device structure being destroyed
@@ -658,199 +553,3 @@ mx_status_t devmgr_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
 
     return NO_ERROR;
 }
-
-#if !LIBDRIVER
-static const char* proto_names[] = {
-#define DDK_PROTOCOL_DEF(tag, val, name) name,
-#include <ddk/protodefs.h>
-    NULL,
-};
-
-static void prepopulate_protocol_dirs(void) {
-    const char** namep = proto_names;
-    while (*namep) {
-        vnode_t* vnp;
-        devfs_add_node(&vnp, vnclass, *namep++, NULL);
-    }
-}
-#endif
-
-void devmgr_init(bool devhost) {
-    xprintf("devmgr: init\n");
-
-    devmgr_is_remote = devhost;
-
-    // init device tree
-    device_create(&root_dev, &root_driver, "root", &root_device_proto);
-    dev_ref_acquire(root_dev);
-
-#if !LIBDRIVER
-    if (!devhost) {
-        // init devfs
-        vnroot = devfs_get_root();
-        root_dev->vnode = vnroot;
-        devfs_add_node(&vnclass, vnroot, "class", NULL);
-        prepopulate_protocol_dirs();
-
-        mxio_dispatcher_create(&devmgr_devhost_dispatcher, devmgr_handler);
-    }
-#endif
-
-    mxio_dispatcher_create(&devmgr_rio_dispatcher, mxrio_handler);
-}
-
-extern mx_driver_t __start_builtin_drivers[] __WEAK;
-extern mx_driver_t __stop_builtin_drivers[] __WEAK;
-
-void devmgr_init_builtin_drivers(void) {
-    mx_driver_t* drv;
-    for (drv = __start_builtin_drivers; drv < __stop_builtin_drivers; drv++) {
-        if (devmgr_is_remote) {
-            if (drv->binding_size == 0) {
-                // root-level devices not loaded on devhost instances
-                continue;
-            }
-        }
-        driver_add(drv);
-    }
-}
-
-static int devhost_dispatcher_thread(void* arg) {
-    mxio_dispatcher_run(devmgr_devhost_dispatcher);
-    return 0;
-}
-
-void devmgr_handle_messages(void) {
-    if (devmgr_devhost_dispatcher) {
-        thrd_t t;
-        thrd_create_with_name(&t, devhost_dispatcher_thread, NULL, "devhost-dispatcher");
-    }
-    mxio_dispatcher_run(devmgr_rio_dispatcher);
-}
-
-mx_device_t* devmgr_device_root(void) {
-    return root_dev;
-}
-
-#if !LIBDRIVER
-static void devmgr_dump_device(unsigned level, mx_device_t* dev) {
-    for (unsigned i = 0; i < level; i++) {
-        printf("  ");
-    }
-    printf("%c %s drv@%p", list_is_empty(&dev->children) ? '|' : '+', dev->name, dev->driver);
-    if (dev->driver)
-        printf(" (%s)", dev->driver->name);
-    if (dev->owner)
-        printf(" owner: %s", dev->owner->name);
-    printf("\n");
-}
-
-static void devmgr_dump_recursive(unsigned level, mx_device_t* _dev) {
-    devmgr_dump_device(level, _dev);
-    mx_device_t* dev = NULL;
-    list_for_every_entry (&_dev->children, dev, mx_device_t, node) {
-        devmgr_dump_recursive(level + 1, dev);
-    }
-}
-
-static void devmgr_dump_protocols(void) {
-// TODO: walk devfs for this
-#if 0
-    //XXX walk proto nodes
-    struct devmgr_protocol_list_node* protocol = NULL;
-    list_for_every_entry (&device_list_by_protocol, protocol, struct devmgr_protocol_list_node, node) {
-        printf("%s:\n", protocol->name);
-        mx_device_t* dev = NULL;
-        list_for_every_entry (&protocol->device_list, dev, mx_device_t, pnode) {
-            printf("  %s drv@%p\n", dev->name, dev->driver);
-        }
-    }
-#endif
-}
-
-void devmgr_dump(void) {
-    mx_device_t* dev = NULL;
-    DM_LOCK();
-    printf("---- Device Tree ----\n");
-    devmgr_dump_recursive(0, root_dev);
-    printf("---- End Device Tree ----\n");
-    printf("\n");
-    printf("---- Protocols ----\n");
-    devmgr_dump_protocols();
-    printf("---- End Protocols ----\n");
-    printf("\n");
-    printf("---- Unmatched Devices -----\n");
-    list_for_every_entry (&unmatched_device_list, dev, mx_device_t, unode) {
-        if (!dev->owner) {
-            devmgr_dump_device(0, dev);
-        }
-    }
-    printf("---- End Unmatched Devices ----\n");
-    printf("\n");
-    mx_driver_t* drv = NULL;
-    printf("---- Driver List ----\n");
-    list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-        printf("%s\n", drv->name);
-    }
-    printf("---- End Driver List ----\n");
-    DM_UNLOCK();
-}
-
-mx_status_t devmgr_control(const char* cmd) {
-    if (!strcmp(cmd, "help")) {
-        printf("dump        - dump device tree\n"
-               "lsof        - list open remoteio files and devices\n"
-               "crash       - crash the device manager\n"
-               "poweroff    - poweroff the system\n"
-               "reboot      - reboot the system\n"
-               "kerneldebug - send a command to the kernel\n"
-               "ktraceoff   - stop kernel tracing\n"
-               "ktraceon    - start kernel tracing\n"
-               "acpi-ps0    - invoke the _PS0 method on an acpi object\n"
-               );
-        return NO_ERROR;
-    }
-    if (!strcmp(cmd, "dump")) {
-        devmgr_dump();
-        return NO_ERROR;
-    }
-    if (!strcmp(cmd, "lsof")) {
-        vfs_dump_handles();
-        return NO_ERROR;
-    }
-    if (!strcmp(cmd, "crash")) {
-        *((int*)0x1234) = 42;
-        return NO_ERROR;
-    }
-    if (!strcmp(cmd, "poweroff")) {
-        devmgr_poweroff();
-        return ERR_NOT_SUPPORTED;
-    }
-    if (!strcmp(cmd, "reboot")) {
-        devmgr_reboot();
-        return ERR_NOT_SUPPORTED;
-    }
-    const char* prefix = "kerneldebug ";
-    if (!strncmp(cmd, prefix, strlen(prefix))) {
-        const char* arg = cmd + strlen(prefix);
-        return mx_debug_send_command(root_resource_handle, arg, strlen(arg));
-    }
-    if (!strcmp(cmd, "ktraceon")) {
-        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_START, GRP_ALL);
-        return NO_ERROR;
-    }
-    if (!strcmp(cmd, "ktraceoff")) {
-        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_STOP, 0);
-        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_REWIND, 0);
-        return NO_ERROR;
-    }
-    const char* ps0prefix = "acpi-ps0:";
-    if (!strncmp(cmd, ps0prefix, strlen(ps0prefix))) {
-        char* arg = (char*)cmd + strlen(ps0prefix);
-        devmgr_acpi_ps0(arg);
-        return NO_ERROR;
-    }
-
-    return ERR_NOT_SUPPORTED;
-}
-#endif

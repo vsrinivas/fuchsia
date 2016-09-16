@@ -382,7 +382,11 @@ vnode_t* vfs_get_root(void) {
     return &vfs_root.vn;
 }
 
-mx_status_t vfs_install_remote(mx_handle_t h) {
+mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
+    if (vn != &vn_data->vn) {
+        //TODO: general solution
+        return ERR_ACCESS_DENIED;
+    }
     mtx_lock(&vfs_lock);
     if (vn_data->vn.remote > 0) {
         mx_handle_close(vn_data->vn.remote);

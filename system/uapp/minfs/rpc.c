@@ -58,19 +58,18 @@ static mx_handle_t vfs_create_handle(vnode_t* vn) {
 
 static mx_handle_t devmgr_connect(const char* where) {
     int fd;
-    if ((fd = open("/dev/class/misc/dmctl", O_RDWR)) < 0) {
-        error("minfs: cannot connect to dmctl\n");
+    if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
+        error("minfs: cannot open '%s'\n", where);
         return -1;
     }
     mx_handle_t h;
-    if (mxio_ioctl(fd, IOCTL_DEVMGR_MOUNT_FS, where, strlen(where) + 1,
-                   &h, sizeof(h)) != sizeof(h)) {
+    if (mxio_ioctl(fd, IOCTL_DEVMGR_MOUNT_FS, NULL, 0, &h, sizeof(h)) != sizeof(h)) {
         close(fd);
-        error("minfs: failed to attach to %s\n", where);
+        error("minfs: failed to attach to '%s'\n", where);
         return -1;
     }
     close(fd);
-    trace(RPC, "minfs: connected to devmgr @ '%s'\n", where);
+    trace(RPC, "minfs: mounted at '%s'\n", where);
     return h;
 }
 
