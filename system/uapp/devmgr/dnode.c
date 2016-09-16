@@ -75,7 +75,7 @@ mx_status_t dn_move_child(dnode_t* parent, dnode_t* child, const char* name, siz
     // Rename the child
     memcpy(child->name, name, len);
     child->name[len] = '\0';
-    child->flags = len;
+    child->flags = DN_TYPE(child->flags) | len;
     // Add child to new parent
     child->parent = parent;
     list_add_tail(&parent->children, &child->dn_entry);
@@ -138,7 +138,7 @@ mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
                 search = false;
             }
         } else {
-            uint32_t vtype = ((dn->flags & DN_TYPE_MASK) == DN_TYPE_DIR) ? V_TYPE_DIR : V_TYPE_FILE;
+            uint32_t vtype = (DN_TYPE(dn->flags) == DN_TYPE_DIR) ? V_TYPE_DIR : V_TYPE_FILE;
             r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
                                 dn->name, DN_NAME_LEN(dn->flags),
                                 VTYPE_TO_DTYPE(vtype));
