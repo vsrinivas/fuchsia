@@ -6,6 +6,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
+# devmgr - core userspace services process
+#
 MODULE_NAME := devmgr
 
 MODULE_TYPE := userapp
@@ -38,14 +40,18 @@ MODULE_CFLAGS += -DDEVMGR=1
 
 include make/module.mk
 
+
+# devhost - container for drivers
+#
+# currently we compile in all the core drivers
+# these will migrate to shared libraries soon
+#
 MODULE := $(LOCAL_DIR)-host
 
 MODULE_NAME := devhost
 
 MODULE_TYPE := userapp
 
-# grab sources for all built-in drivers
-# someday these will become dynamically loadable modules
 LOCAL_SAVEDIR := $(LOCAL_DIR)
 DRIVER_SRCS :=
 DRIVERS := $(patsubst %/rules.mk,%,$(wildcard system/udev/*/driver.mk))
@@ -54,17 +60,11 @@ DRIVERS += $(patsubst %/rules.mk,%,$(wildcard third_party/udev/*/driver.mk))
 LOCAL_DIR := $(LOCAL_SAVEDIR)
 
 MODULE_SRCS := \
-    $(DRIVER_SRCS) \
-
-MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
-    $(LOCAL_DIR)/devhost.c \
-    $(LOCAL_DIR)/devhost-api.c \
-    $(LOCAL_DIR)/devhost-binding.c \
-    $(LOCAL_DIR)/devhost-core.c \
-    $(LOCAL_DIR)/devhost-rpc-server.c \
     $(LOCAL_DIR)/dmctl.c \
     $(LOCAL_DIR)/shared.c \
+    $(LOCAL_DIR)/devhost-main.c \
+    $(DRIVER_SRCS) \
 
 # hexdump, hid, gfx are needed for various drivers
 # TODO: remove when drivers are no longer linked in to devhost
@@ -75,7 +75,7 @@ MODULE_STATIC_LIBS := \
     ulib/hid \
     ulib/gfx
 
-MODULE_LIBS := ulib/mxio ulib/launchpad ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/mxio ulib/launchpad ulib/magenta ulib/musl
 
 include make/module.mk
 

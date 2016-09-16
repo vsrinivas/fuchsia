@@ -36,6 +36,4 @@ typedef struct pci_protocol {
                                 uint32_t requested_irq_count);
 } pci_protocol_t;
 
-extern pci_protocol_t _pci_protocol;
-
 __END_CDECLS;

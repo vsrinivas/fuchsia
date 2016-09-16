@@ -17,11 +17,11 @@
 
 #include "kpci-private.h"
 
+extern mx_handle_t root_resource_handle;
+
+#include "protocol.c"
+
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
-
-static mx_device_t* kpci_root_dev;
-
-extern pci_protocol_t _pci_protocol;
 
 static mx_status_t kpci_release(mx_device_t* dev) {
     kpci_device_t* device = get_kpci_device(dev);
@@ -33,8 +33,6 @@ static mx_status_t kpci_release(mx_device_t* dev) {
 static mx_protocol_device_t kpci_device_proto = {
     .release = kpci_release,
 };
-
-extern mx_handle_t root_resource_handle;
 
 static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t index) {
     mx_pcie_get_nth_info_t info;
@@ -74,6 +72,20 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
 
     return NO_ERROR;
 }
+
+#if LIBDRIVER
+
+static mx_driver_t __driver_kpci = {
+    .name = "pci",
+};
+
+mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index) {
+    return kpci_init_child(&__driver_kpci, out, index);
+}
+
+#else
+
+static mx_device_t* kpci_root_dev;
 
 void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id,
                             const char* procname, int argc, char** argv);
@@ -126,6 +138,7 @@ static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
 
 static mx_status_t kpci_drv_init(mx_driver_t* drv) {
     mx_status_t status;
+    printf("kpci_init()\n");
 
     if ((status = device_create(&kpci_root_dev, drv, "pci", &kpci_device_proto))) {
         return status;
@@ -149,17 +162,4 @@ mx_driver_t _driver_kpci BUILTIN_DRIVER = {
     },
 };
 
-mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index) {
-    return kpci_init_child(&_driver_kpci, out, index);
-}
-
-int devhost_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did) {
-    if (dev->parent == kpci_root_dev) {
-        kpci_device_t* pcidev = get_kpci_device(dev);
-        *vid = pcidev->info.vendor_id;
-        *did = pcidev->info.device_id;
-        return (int)pcidev->index;
-    } else {
-        return -1;
-    }
-}
+#endif

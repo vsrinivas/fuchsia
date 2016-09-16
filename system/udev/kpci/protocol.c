@@ -83,23 +83,23 @@ static mx_handle_t pci_get_config(mx_device_t* dev, const pci_config_t** config)
     return cfg_handle;
 }
 
-mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,
-                                    mx_pci_irq_mode_t mode,
-                                    uint32_t* out_max_irqs) {
+static mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,
+                                           mx_pci_irq_mode_t mode,
+                                           uint32_t* out_max_irqs) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_query_irq_mode_caps(device->handle, mode, out_max_irqs);
 }
 
-mx_status_t pci_set_irq_mode(mx_device_t* dev,
-                             mx_pci_irq_mode_t mode,
-                             uint32_t requested_irq_count) {
+static mx_status_t pci_set_irq_mode(mx_device_t* dev,
+                                    mx_pci_irq_mode_t mode,
+                                    uint32_t requested_irq_count) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_set_irq_mode(device->handle, mode, requested_irq_count);
 }
 
-pci_protocol_t _pci_protocol = {
+static pci_protocol_t _pci_protocol = {
     .claim_device = pci_claim_device,
     .enable_bus_master = pci_enable_bus_master,
     .reset_device = pci_reset_device,

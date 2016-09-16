@@ -10,7 +10,9 @@ MODULE_NAME := driver
 
 MODULE_TYPE := userlib
 
-MODULE_DEFINES += LIBDRIVER=1
+MODULE_SO_NAME := driver
+
+MODULE_DEFINES := LIBDRIVER=1
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/devhost.c \
@@ -18,15 +20,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/devhost-binding.c \
     $(LOCAL_DIR)/devhost-core.c \
     $(LOCAL_DIR)/devhost-rpc-server.c \
-    $(LOCAL_DIR)/shared.c \
     system/udev/kpci/kpci.c \
-    system/udev/kpci/protocol.c \
 
-MODULE_HEADER_DEPS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/acpisvc-client ulib/ddk
 
-MODULE_DEPS := ulib/mxio ulib/launchpad ulib/magenta ulib/musl
-
-MODULE_EXPORT := driver
+MODULE_LIBS := ulib/mxio ulib/launchpad ulib/magenta ulib/musl
 
 include make/module.mk
-

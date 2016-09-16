@@ -5,5 +5,4 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
-    $(LOCAL_DIR)/kpci.c \
-    $(LOCAL_DIR)/protocol.c
+    $(LOCAL_DIR)/kpci.c
