@@ -10,20 +10,24 @@
 #include <stdio.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+#include <lk/init.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <lib/cbuf.h>
 #include <dev/interrupt.h>
+#include <kernel/cmdline.h>
 #include <platform.h>
 #include <platform/pc.h>
 #include <platform/pc/memmap.h>
 #include <platform/console.h>
 #include <platform/debug.h>
+#include <trace.h>
 
 static const int uart_baud_rate = 115200;
 static const int uart_io_port = 0x3f8;
 
 cbuf_t console_input_buf;
+static bool output_enabled = false;
 
 enum handler_return platform_drain_debug_uart_rx(void)
 {
@@ -50,11 +54,14 @@ void platform_init_debug_early(void)
     int divisor = 115200 / uart_baud_rate;
 
     /* get basic config done so that tx functions */
+    outp(uart_io_port + 1, 0); // mask all irqs
     outp(uart_io_port + 3, 0x80); // set up to load divisor latch
     outp(uart_io_port + 0, divisor & 0xff); // lsb
     outp(uart_io_port + 1, divisor >> 8); // msb
     outp(uart_io_port + 3, 3); // 8N1
     outp(uart_io_port + 2, 0x07); // enable FIFO, clear, 14-byte threshold
+
+    output_enabled = true;
 }
 
 void platform_init_debug(void)
@@ -71,6 +78,9 @@ void platform_init_debug(void)
 
 static void debug_uart_putc(char c)
 {
+    if (unlikely(!output_enabled))
+        return;
+
     while ((inp(uart_io_port + 5) & (1<<6)) == 0)
         ;
     outp(uart_io_port + 0, c);
@@ -106,3 +116,21 @@ int platform_pgetc(char *c, bool wait)
     return -1;
 }
 
+// for devices where the uart rx interrupt doesn't seem to work
+static timer_t uart_rx_poll_timer;
+
+static enum handler_return uart_rx_poll(struct timer *t, lk_time_t now, void *arg)
+{
+    return platform_drain_debug_uart_rx();
+}
+
+static void debug_irq_init(uint level)
+{
+    if (cmdline_get_bool("kernel.debug_uart_poll", false) == false)
+        return;
+
+    timer_initialize(&uart_rx_poll_timer);
+    timer_set_periodic(&uart_rx_poll_timer, 10, uart_rx_poll, NULL);
+}
+
+LK_INIT_HOOK(uart_irq, debug_irq_init, LK_INIT_LEVEL_THREADING);
