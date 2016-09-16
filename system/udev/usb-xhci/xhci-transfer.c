@@ -93,7 +93,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
     }
     if (required_trbs > ring->size) {
         // no way this will ever succeed
-        printf("required_trbs %ld ring->size %ld\n", required_trbs, ring->size);
+        printf("required_trbs %zu ring->size %zu\n", required_trbs, ring->size);
         return ERR_INVALID_ARGS;
     }
 
