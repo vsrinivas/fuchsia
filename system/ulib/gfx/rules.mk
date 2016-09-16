@@ -10,7 +10,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_DEPS := \
+MODULE_LIBS := \
     ulib/magenta \
     ulib/musl \
 

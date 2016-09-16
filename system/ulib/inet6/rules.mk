@@ -12,6 +12,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/inet6.c \
     $(LOCAL_DIR)/netifc.c \
 
-MODULE_DEPS += ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS += ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

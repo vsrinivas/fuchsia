@@ -11,7 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/hexdump.c \
 
-MODULE_DEPS += \
+MODULE_LIBS += \
     ulib/musl \
     ulib/magenta
 

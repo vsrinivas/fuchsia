@@ -4,6 +4,11 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+# check for disallowed options
+ifneq ($(MODULE_DEPS),)
+$(error $(MODULE) $(MODULE_TYPE) modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
+endif
+
 # ensure that library deps are short-name style
 $(foreach d,$(MODULE_LIBS),$(call modname-require-short,$(d)))
 $(foreach d,$(MODULE_STATIC_LIBS),$(call modname-require-short,$(d)))
