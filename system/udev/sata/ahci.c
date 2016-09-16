@@ -29,6 +29,9 @@
 #define SUNRISE_AHCI_DID    (0x9d03)
 #define ICH9_AHCI_DID       (0x2922)
 
+#define AMD_AHCI_VID        (0x1022)
+#define AMD_FCH_AHCI_DID    (0x7801)
+
 #define TRACE 1
 
 #if TRACE
@@ -741,11 +744,18 @@ fail:
 
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_GOTO_IF(EQ, BIND_PCI_VID, AMD_AHCI_VID, 1),
+    // intel devices
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_AHCI_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, LYNX_POINT_AHCI_DID), // Simics
     BI_MATCH_IF(EQ, BIND_PCI_DID, WILDCAT_AHCI_DID),    // Pixel2
     BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_AHCI_DID),    // NUC
     BI_MATCH_IF(EQ, BIND_PCI_DID, ICH9_AHCI_DID),       // QEMU
+    BI_ABORT(),
+    // AMD devices
+    BI_LABEL(1),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_FCH_AHCI_DID),
+    BI_ABORT(),
 };
 
 mx_driver_t _driver_ahci BUILTIN_DRIVER = {
