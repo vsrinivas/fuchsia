@@ -443,7 +443,9 @@ static bool debugger_test(void)
     END_TEST;
 }
 
-static bool test_prep_and_segv(void)
+// This function is marked as no-inline to avoid duplicate label in case the
+// function call is being inlined.
+__NO_INLINE static bool test_prep_and_segv(void)
 {
     uint8_t test_data[TEST_MEMORY_SIZE];
     for (unsigned i = 0; i < sizeof(test_data); ++i)
