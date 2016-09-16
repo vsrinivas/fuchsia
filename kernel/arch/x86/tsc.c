@@ -6,6 +6,7 @@
 
 #include <arch/x86.h>
 #include <arch/x86/tsc.h>
+#include <arch/x86/feature.h>
 
 #define X86_MSR_IA32_TIME_STAMP_COUNTER 0x10
 #define X86_MSR_IA32_TSC_ADJUST 0x3B
@@ -14,10 +15,12 @@ uint64_t tsc_adj = 0;
 
 void x86_tsc_adjust(void)
 {
-    write_msr(X86_MSR_IA32_TSC_ADJUST, tsc_adj);
+    if (x86_feature_test(X86_FEATURE_TSC_ADJUST))
+        write_msr(X86_MSR_IA32_TSC_ADJUST, tsc_adj);
 }
 
 void x86_tsc_store_adjustment(void)
 {
-    tsc_adj = read_msr(X86_MSR_IA32_TIME_STAMP_COUNTER);
+    if (x86_feature_test(X86_FEATURE_TSC_ADJUST))
+        tsc_adj = read_msr(X86_MSR_IA32_TIME_STAMP_COUNTER);
 }
