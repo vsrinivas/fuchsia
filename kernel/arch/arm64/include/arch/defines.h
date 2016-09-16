@@ -34,3 +34,13 @@
 #error "define CACHE_LINE for the specific core"
 #endif
 
+#ifndef ASSEMBLY
+#define BM(base, count, val) (((val) & ((1UL << (count)) - 1)) << (base))
+#else
+#define BM(base, count, val) (((val) & ((0x1 << (count)) - 1)) << (base))
+#endif
+
+#define ARM64_MMFR0_ASIDBITS_16     BM(4,4,2)
+#define ARM64_MMFR0_ASIDBITS_8      BM(4,4,0)
+#define ARM64_MMFR0_ASIDBITS_MASK   BM(4,4,15)
+

@@ -254,8 +254,18 @@
                         MMU_TCR_IRGN0(MMU_RGN_WRITE_BACK_ALLOCATE) | \
                         MMU_TCR_T0SZ(64 - MMU_IDENT_SIZE_SHIFT))
 #define MMU_TCR_FLAGS_IDENT (MMU_TCR_IPS_DEFAULT | MMU_TCR_FLAGS1 | MMU_TCR_FLAGS0_IDENT)
-#define MMU_TCR_FLAGS_KERNEL (MMU_TCR_IPS_DEFAULT | MMU_TCR_FLAGS1 | MMU_TCR_FLAGS0 | MMU_TCR_EPD0)
-#define MMU_TCR_FLAGS_USER (MMU_TCR_IPS_DEFAULT | MMU_TCR_FLAGS1 | MMU_TCR_FLAGS0)
+
+#define MMU_TCR_FLAGS_KERNEL (MMU_TCR_IPS_DEFAULT | \
+                              MMU_TCR_FLAGS1 | \
+                              MMU_TCR_FLAGS0 | \
+                              MMU_TCR_EPD0 | \
+                              MMU_TCR_AS | \
+                              MMU_TCR_A1)
+
+#define MMU_TCR_FLAGS_USER (MMU_TCR_IPS_DEFAULT | \
+                            MMU_TCR_FLAGS1 | \
+                            MMU_TCR_FLAGS0 | \
+                            MMU_TCR_AS)
 
 
 #if MMU_IDENT_SIZE_SHIFT > MMU_LX_X(MMU_IDENT_PAGE_SIZE_SHIFT, 2)
@@ -332,6 +342,9 @@ int arm64_mmu_unmap(vaddr_t vaddr, size_t size,
                     vaddr_t vaddr_base, uint top_size_shift,
                     uint top_index_shift, uint page_size_shift,
                     pte_t *top_page_table, uint asid);
+
+#define MMU_ARM64_ASID_BITS     (16U)
+
 
 __END_CDECLS
 #endif /* ASSEMBLY */

@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
 #include <debug.h>
 #include <stdlib.h>
 #include <arch.h>
@@ -32,6 +33,11 @@ static thread_t _init_thread[SMP_MAX_CPUS - 1];
 
 static void arm64_cpu_early_init(void)
 {
+    uint64_t mmfr0 = ARM64_READ_SYSREG(ID_AA64MMFR0_EL1);
+
+    /* check to make sure implementation supports 16 bit asids */
+    ASSERT( (mmfr0 & ARM64_MMFR0_ASIDBITS_MASK) == ARM64_MMFR0_ASIDBITS_16);
+
     /* set the vector base */
     ARM64_WRITE_SYSREG(VBAR_EL1, (uint64_t)&arm64_exception_base);
 

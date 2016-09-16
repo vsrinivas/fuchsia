@@ -7,10 +7,12 @@
 
 
 #include <arch/arm64/mmu.h>
+#include <rand.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
 #include <kernel/vm.h>
+#include <kernel/mutex.h>
 #include <lib/heap.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,10 +27,46 @@ static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 
+static uint64_t asid_pool[  (1 << MMU_ARM64_ASID_BITS) / 64 ];
+static mutex_t asid_lock = MUTEX_INITIAL_VALUE(asid_lock);
+
 /* the main translation table */
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
     __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8)
     __SECTION(".bss.prebss.translation_table");
+
+static status_t arm64_mmu_alloc_asid(uint16_t* asid) {
+
+    uint16_t new_asid;
+    uint32_t retry = 1 << MMU_ARM64_ASID_BITS;
+
+    mutex_acquire(&asid_lock);
+    do {
+        new_asid = rand() & ~(-(1 << MMU_ARM64_ASID_BITS));
+        retry--;
+        if (retry == 0)
+            return ERR_NO_MEMORY;
+    } while ((asid_pool[new_asid >> 6] & (1 << (new_asid % 64))) || (new_asid == 0));
+
+    asid_pool[new_asid >> 6] = asid_pool[new_asid >> 6] | (1 << (new_asid % 64));
+
+    mutex_release(&asid_lock);
+
+    *asid = new_asid;
+
+    return NO_ERROR;
+}
+
+static status_t arm64_mmu_free_asid(uint16_t asid) {
+
+    mutex_acquire(&asid_lock);
+
+    asid_pool[asid >> 6] = asid_pool[asid >> 6] & ~(1 << (asid % 64));
+
+    mutex_release(&asid_lock);
+
+    return NO_ERROR;
+}
 
 static inline bool is_valid_vaddr(arch_aspace_t *aspace, vaddr_t vaddr)
 {
@@ -347,9 +385,10 @@ static int arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
             LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
             CF;
-            // do a global flush to work around the ASID implementation being non functional
-            // TODO: implement proper ASID and/or remove the global bit (see MG-270)
-            ARM64_TLBI_NOADDR(vmalle1);
+            if (asid == MMU_ARM64_GLOBAL_ASID)
+                ARM64_TLBI(vaae1is, vaddr >> 12);
+            else
+                ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
         } else {
             LTRACEF("pte %p[0x%lx] already clear\n", page_table, index);
         }
@@ -425,7 +464,7 @@ static int arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                 pte |= MMU_PTE_L012_DESCRIPTOR_BLOCK;
             else
                 pte |= MMU_PTE_L3_DESCRIPTOR_PAGE;
-
+            pte |= MMU_PTE_ATTR_NON_GLOBAL;
             LTRACEF("pte %p[0x%lx] = 0x%llx\n", page_table, index, pte);
             page_table[index] = pte;
         }
@@ -638,7 +677,7 @@ int arch_mmu_map(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
                          mmu_flags_to_pte_attr(flags),
                          0, MMU_USER_SIZE_SHIFT,
                          MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
-                         aspace->tt_virt, MMU_ARM64_USER_ASID);
+                         aspace->tt_virt, aspace->asid);
     }
 
     return (ret < 0) ? ret : (ret / (int)PAGE_SIZE);
@@ -673,7 +712,7 @@ int arch_mmu_unmap(arch_aspace_t *aspace, vaddr_t vaddr, size_t count)
                            0, MMU_USER_SIZE_SHIFT,
                            MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
                            aspace->tt_virt,
-                           MMU_ARM64_USER_ASID);
+                           aspace->asid);
     }
 
     return (ret < 0) ? ret : (ret / (int)PAGE_SIZE);
@@ -707,7 +746,7 @@ int arch_mmu_protect(arch_aspace_t *aspace, vaddr_t vaddr, size_t count, uint fl
                                 0, MMU_USER_SIZE_SHIFT,
                                 MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
                                 aspace->tt_virt,
-                                MMU_ARM64_USER_ASID);
+                                aspace->asid);
     }
 
     return ret;
@@ -735,9 +774,13 @@ status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, 
         aspace->size = size;
         aspace->tt_virt = arm64_kernel_translation_table;
         aspace->tt_phys = vaddr_to_paddr(aspace->tt_virt);
+        aspace->asid = (uint16_t)MMU_ARM64_GLOBAL_ASID;
     } else {
         //DEBUG_ASSERT(base >= 0);
         DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
+
+        if ( arm64_mmu_alloc_asid( &aspace->asid ) != NO_ERROR)
+            return ERR_NO_MEMORY;
 
         aspace->base = base;
         aspace->size = size;
@@ -774,6 +817,11 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t *aspace)
     DEBUG_ASSERT(page);
     pmm_free_page(page);
 
+    ARM64_TLBI(ASIDE1IS,aspace->asid);
+
+    arm64_mmu_free_asid(aspace->asid);
+    aspace->asid = 0;
+
     aspace->magic = 0;
 
     return NO_ERROR;
@@ -791,14 +839,12 @@ void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace)
         DEBUG_ASSERT((aspace->flags & ARCH_ASPACE_FLAG_KERNEL) == 0);
 
         tcr = MMU_TCR_FLAGS_USER;
-        ttbr = ((uint64_t)MMU_ARM64_USER_ASID << 48) | aspace->tt_phys;
+        ttbr = ((uint64_t)aspace->asid << 48) | aspace->tt_phys;
         ARM64_WRITE_SYSREG(ttbr0_el1, ttbr);
 
         if (TRACE_CONTEXT_SWITCH)
             TRACEF("ttbr 0x%llx, tcr 0x%llx\n", ttbr, tcr);
-        // do a global flush to work around the ASID implementation being non functional
-        // TODO: implement proper ASID and/or remove the global bit (see MG-270)
-        ARM64_TLBI_NOADDR(vmalle1);
+
     } else {
         tcr = MMU_TCR_FLAGS_KERNEL;
 

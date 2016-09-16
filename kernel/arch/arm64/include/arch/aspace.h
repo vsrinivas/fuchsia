@@ -19,6 +19,8 @@ struct arch_aspace {
     /* magic value for use-after-free detection */
     uint32_t magic;
 
+    uint16_t asid;
+
     /* pointer to the translation table */
     paddr_t tt_phys;
     pte_t *tt_virt;
