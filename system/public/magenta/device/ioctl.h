@@ -28,6 +28,7 @@
 #define IOCTL_FAMILY_TPM            0x15
 #define IOCTL_FAMILY_USB            0x16
 #define IOCTL_FAMILY_HID            0x17
+#define IOCTL_FAMILY_BCM            0x18  // ioctls for BCM28xx chipset
 
 // IOCTL constructor
 // --K-FFNN
