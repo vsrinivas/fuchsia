@@ -62,7 +62,7 @@ static void prepopulate_protocol_dirs(void) {
     }
 }
 
-void devmgr_publish(device_ctx_t* parent, device_ctx_t* ctx) {
+void devhost_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     if (devfs_add_node(&ctx->vnode, parent->vnode, ctx->name, ctx->hdevice)) {
         printf("devmgr: could not add '%s' to devfs!\n", ctx->name);
         return;
@@ -90,7 +90,7 @@ void devmgr_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     }
 }
 
-mxio_dispatcher_t* devmgr_devhost_dispatcher;
+mxio_dispatcher_t* devhost_devhost_dispatcher;
 
 static mx_status_t devhost_remote_create(const char* name, uint32_t protocol_id, device_ctx_t** out,
                                          mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
@@ -122,7 +122,7 @@ static mx_status_t devhost_remote_create(const char* name, uint32_t protocol_id,
     ctx->protocol_id = protocol_id;
     ctx->hdevice = hdevice[1];
 
-    if ((status = mxio_dispatcher_add(devmgr_devhost_dispatcher, hrpc[1], NULL, ctx)) < 0) {
+    if ((status = mxio_dispatcher_add(devhost_devhost_dispatcher, hrpc[1], NULL, ctx)) < 0) {
         mx_handle_close(hdevice[0]);
         mx_handle_close(hdevice[1]);
         mx_handle_close(hrpc[0]);
@@ -155,14 +155,14 @@ static mx_status_t devhost_remote_add(device_ctx_t* parent, const char* name, ui
 
     //printf("devmgr: new ctx %p(%s), parent: %p(%s)\n", ctx, ctx->name, parent, parent->name);
     mx_status_t status;
-    if ((status = mxio_dispatcher_add(devmgr_devhost_dispatcher, hrpc, NULL, ctx)) < 0) {
+    if ((status = mxio_dispatcher_add(devhost_devhost_dispatcher, hrpc, NULL, ctx)) < 0) {
         mx_handle_close(hdevice);
         mx_handle_close(hrpc);
         free(ctx);
         return status;
     }
 
-    devmgr_publish(parent, ctx);
+    devhost_publish(parent, ctx);
     return NO_ERROR;
 }
 
@@ -177,7 +177,7 @@ static mx_status_t devhost_remote_remove(device_ctx_t* dev, bool clean) {
 }
 
 // handle devhost_msgs from devhosts
-mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
+mx_status_t devhost_handler(mx_handle_t h, void* cb, void* cookie) {
     device_ctx_t* dev = cookie;
     devhost_msg_t msg;
     mx_handle_t handles[2];
@@ -218,7 +218,7 @@ mx_status_t devmgr_handler(mx_handle_t h, void* cb, void* cookie) {
     }
     return NO_ERROR;
 fail:
-    printf("devmgr_handler: error %d\n", status);
+    printf("devhost_handler: error %d\n", status);
     for (unsigned n = 0; n < hcount; n++) {
         mx_handle_close(handles[n]);
     }
@@ -232,7 +232,7 @@ void devmgr_init(void) {
     devfs_add_node(&vnclass, vnroot, "class", 0);
     prepopulate_protocol_dirs();
 
-    mxio_dispatcher_create(&devmgr_devhost_dispatcher, devmgr_handler);
+    mxio_dispatcher_create(&devhost_devhost_dispatcher, devhost_handler);
 }
 
 void devmgr_handle_messages(void) {
@@ -248,5 +248,5 @@ void devmgr_handle_messages(void) {
     devmgr_launch_devhost("devhost:root", 2, (char**)args, hdevice, hrpc);
 
     printf("devmgr: root ctx %p\n", root);
-    mxio_dispatcher_run(devmgr_devhost_dispatcher);
+    mxio_dispatcher_run(devhost_devhost_dispatcher);
 }

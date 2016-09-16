@@ -24,7 +24,7 @@
 
 
 // shared with rpc-device.c
-extern mxio_dispatcher_t* devmgr_rio_dispatcher;
+extern mxio_dispatcher_t* devhost_rio_dispatcher;
 
 mx_status_t _devhost_add(mx_device_t* parent, const char* name, uint32_t protocol_id,
                         mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
@@ -83,7 +83,7 @@ static mx_status_t devhost_connect(mx_device_t* dev, mx_handle_t hdevice, mx_han
     dev->rpc = hrpc;
     dev->ctx = ios;
     mx_status_t status;
-    if ((status = mxio_dispatcher_add(devmgr_rio_dispatcher, hdevice, devmgr_rio_handler, ios)) < 0) {
+    if ((status = mxio_dispatcher_add(devhost_rio_dispatcher, hdevice, devhost_rio_handler, ios)) < 0) {
         printf("devhost_connect: cannot add to dispatcher: %d\n", status);
         mx_handle_close(hdevice);
         mx_handle_close(hrpc);
@@ -120,7 +120,7 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     msg.op = DH_OP_REMOVE;
     //printf("devhost_remove(%p:%s) ios=%p\n", dev, dev->name, dev->ctx);
 
-    // ensure we don't pull the rug out from under devmgr_rio_handler()
+    // ensure we don't pull the rug out from under devhost_rio_handler()
     iostate_t* ios = dev->ctx;
     mtx_lock(&ios->lock);
     dev->ctx = NULL;
@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "devhost: missing acpi handle\n");
     }
 
-    mxio_dispatcher_create(&devmgr_rio_dispatcher, mxrio_handler);
+    mxio_dispatcher_create(&devhost_rio_dispatcher, mxrio_handler);
 
     mx_device_t* dev;
     mx_status_t status;
@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
         // The pci bus driver launches devhosts for pci devices.
         // Later we'll support other bus driver devhost launching.
         uint32_t index = strtoul(argv[1] + 4, NULL, 10);
-        if ((status = devmgr_create_pcidev(&dev, index)) < 0) {
+        if ((status = devhost_create_pcidev(&dev, index)) < 0) {
             printf("devhost: cannot create pci device: %d\n", status);
             return -1;
         }
@@ -239,7 +239,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    if ((status = devmgr_device_add_root(dev)) < 0) {
+    if ((status = devhost_device_add_root(dev)) < 0) {
         printf("devhost: cannot install root device: %d\n", status);
         return -1;
     }
@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
     }
     init_builtin_drivers(as_root);
 
-    mxio_dispatcher_run(devmgr_rio_dispatcher);
+    mxio_dispatcher_run(devhost_rio_dispatcher);
     printf("devhost: rio dispatcher exited?\n");
     return 0;
 }

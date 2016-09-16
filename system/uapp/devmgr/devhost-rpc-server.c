@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devmgr.h"
 #include "devhost.h"
 #include "device-internal.h"
 
@@ -28,7 +27,7 @@
 
 #define MXDEBUG 0
 
-mxio_dispatcher_t* devmgr_rio_dispatcher;
+mxio_dispatcher_t* devhost_rio_dispatcher;
 
 iostate_t* create_iostate(mx_device_t* dev) {
     iostate_t* ios;
@@ -42,7 +41,7 @@ iostate_t* create_iostate(mx_device_t* dev) {
 
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
-static mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path,
+static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
                                       mx_handle_t* handles, uint32_t* ids) {
     mx_status_t r;
     iostate_t* newios;
@@ -60,7 +59,7 @@ static mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path,
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
     if ((r = device_openat(dev, &dev, path, 0)) < 0) {
-        printf("devmgr_get_handles(%p:%s) open path='%s', r=%d\n",
+        printf("devhost_get_handles(%p:%s) open path='%s', r=%d\n",
                dev, dev->name, path ? path : "", r);
         goto fail1;
     }
@@ -78,7 +77,7 @@ static mx_status_t devmgr_get_handles(mx_device_t* dev, const char* path,
         r = 1;
     }
 
-    mxio_dispatcher_add(devmgr_rio_dispatcher, h[1], devmgr_rio_handler, newios);
+    mxio_dispatcher_add(devhost_rio_dispatcher, h[1], devhost_rio_handler, newios);
     return r;
 
 fail2:
@@ -194,7 +193,7 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     return r;
 }
 
-static mx_status_t _devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, iostate_t* ios) {
+static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, iostate_t* ios) {
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
@@ -219,12 +218,12 @@ static mx_status_t _devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, iostate
         uint32_t ids[VFS_MAX_HANDLES];
         mx_status_t r;
         if (MXRIO_OP(msg->op) == MXRIO_OPEN) {
-            xprintf("devmgr_rio_handler() open dev %p name '%s' at '%s'\n",
+            xprintf("devhost_rio_handler() open dev %p name '%s' at '%s'\n",
                     dev, dev->name, (char*) msg->data);
-            r = devmgr_get_handles(dev, (char*) msg->data, msg->handle, ids);
+            r = devhost_get_handles(dev, (char*) msg->data, msg->handle, ids);
         } else {
-            xprintf("devmgr_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
-            r = devmgr_get_handles(dev, NULL, msg->handle, ids);
+            xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
+            r = devhost_get_handles(dev, NULL, msg->handle, ids);
         }
         if (r < 0) {
             return r;
@@ -345,12 +344,12 @@ static mx_status_t _devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, iostate
     }
 }
 
-mx_status_t devmgr_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
+mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     iostate_t* ios = cookie;
     mx_status_t status;
     mtx_lock(&ios->lock);
     if (ios->dev != NULL) {
-        status = _devmgr_rio_handler(msg, rh, ios);
+        status = _devhost_rio_handler(msg, rh, ios);
     } else {
         printf("rpc-device: stale ios %p\n", ios);
         status = NO_ERROR;

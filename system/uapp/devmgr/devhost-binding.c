@@ -28,7 +28,7 @@ static uint32_t dev_get_prop(mx_device_t* dev, uint32_t id) {
     return 0;
 }
 
-bool devmgr_is_bindable(mx_driver_t* drv, mx_device_t* dev) {
+bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev) {
     const mx_bind_inst_t* ip = drv->binding;
     const mx_bind_inst_t* end = ip + (drv->binding_size / sizeof(mx_bind_inst_t));
     uint32_t flags = 0;

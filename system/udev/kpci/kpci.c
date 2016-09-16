@@ -149,11 +149,11 @@ mx_driver_t _driver_kpci BUILTIN_DRIVER = {
     },
 };
 
-mx_status_t devmgr_create_pcidev(mx_device_t** out, uint32_t index) {
+mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index) {
     return kpci_init_child(&_driver_kpci, out, index);
 }
 
-int devmgr_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did) {
+int devhost_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did) {
     if (dev->parent == kpci_root_dev) {
         kpci_device_t* pcidev = get_kpci_device(dev);
         *vid = pcidev->info.vendor_id;

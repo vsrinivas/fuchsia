@@ -12,9 +12,9 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/dnode.c \
-    $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/mxio.c \
-    $(LOCAL_DIR)/rpc-devhost.c \
+    $(LOCAL_DIR)/devmgr.c \
+    $(LOCAL_DIR)/devmgr-mxio.c \
+    $(LOCAL_DIR)/devmgr-rpc-server.c \
     $(LOCAL_DIR)/shared.c \
     $(LOCAL_DIR)/vfs-boot.c \
     $(LOCAL_DIR)/vfs.c \
@@ -58,14 +58,13 @@ MODULE_SRCS := \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
-    $(LOCAL_DIR)/api.c \
-    $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/devhost.c \
-    $(LOCAL_DIR)/devmgr.c \
+    $(LOCAL_DIR)/devhost-api.c \
+    $(LOCAL_DIR)/devhost-binding.c \
+    $(LOCAL_DIR)/devhost-core.c \
+    $(LOCAL_DIR)/devhost-rpc-server.c \
     $(LOCAL_DIR)/dmctl.c \
-    $(LOCAL_DIR)/dnode.c \
     $(LOCAL_DIR)/shared.c \
-    $(LOCAL_DIR)/rpc-device.c \
 
 # hexdump, hid, gfx are needed for various drivers
 # TODO: remove when drivers are no longer linked in to devhost
