@@ -788,9 +788,9 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
     return status;
 }
 
-mx_status_t launchpad_start_extra(launchpad_t* lp, const char* thread_name,
-                                  mx_handle_t to_child,
-                                  uintptr_t bootstrap_handle_in_child) {
+mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
+                                     mx_handle_t to_child,
+                                     uintptr_t bootstrap_handle_in_child) {
     mx_handle_t thread;
     uintptr_t sp;
     mx_status_t status = prepare_start(lp, thread_name, to_child,

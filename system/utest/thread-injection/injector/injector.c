@@ -85,10 +85,10 @@ int main(void) {
     // (We're reusing the pipe we got helper_data on as the injected
     // program's bootstrap pipe, though the two uses are unrelated.)
     // Launchpad will send the bootstrap messages on our end of the pipe.
-    status = launchpad_start_extra(lp, "injected", h, data.bootstrap);
+    status = launchpad_start_injected(lp, "injected", h, data.bootstrap);
     mx_handle_close(h);
     if (status != NO_ERROR) {
-        fprintf(stderr, "launchpad_start_extra: %d\n", status);
+        fprintf(stderr, "launchpad_start_injected: %d\n", status);
         return 1;
     }
 

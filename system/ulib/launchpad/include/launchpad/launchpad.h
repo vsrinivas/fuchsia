@@ -194,9 +194,9 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 // handle.  The other end of this message pipe must already be
 // present in the target process, with the given handle value in the
 // target process's handle space.
-mx_status_t launchpad_start_extra(launchpad_t* lp, const char* thread_name,
-                                  mx_handle_t to_child,
-                                  uintptr_t bootstrap_handle_in_child);
+mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
+                                     mx_handle_t to_child,
+                                     uintptr_t bootstrap_handle_in_child);
 
 // Convenience interface for launching a process in one call with
 // minimal arguments and handles.  This just calls the functions
