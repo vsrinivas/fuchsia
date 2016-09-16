@@ -29,6 +29,8 @@
 #define IOCTL_FAMILY_USB            0x16
 #define IOCTL_FAMILY_HID            0x17
 #define IOCTL_FAMILY_BCM            0x18  // ioctls for BCM28xx chipset
+#define IOCTL_FAMILY_AUDIO          0x19
+#define IOCTL_FAMILY_MIDI           0x1A
 
 // IOCTL constructor
 // --K-FFNN

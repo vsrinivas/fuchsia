@@ -21,5 +21,7 @@ DDK_PROTOCOL_DEF(USB,            'pUSB', "usb")
 DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci")
 DDK_PROTOCOL_DEF(USB_BUS,        'pUBS', "usb-bus")
 DDK_PROTOCOL_DEF(BLUETOOTH_HCI,  'pBHC', "bt-hci")
+DDK_PROTOCOL_DEF(AUDIO,          'pAUD', "audio")
+DDK_PROTOCOL_DEF(MIDI,           'pMID', "midi")
 #undef DDK_PROTOCOL_DEF
 #endif

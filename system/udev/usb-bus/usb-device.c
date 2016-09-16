@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/common/usb.h>
+#include <magenta/hw/usb-audio.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -147,9 +148,16 @@ static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
             while (next < end) {
                 if (next->bDescriptorType == USB_DT_INTERFACE) {
                     usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)next;
-                    // include alternate interfaces in the current interface
-                    if (test_intf->bAlternateSetting == 0) {
-                        // found next top level interface
+
+                    // Iterate until we find the next top-level interface
+                    if (
+                        // include alternate interfaces in the current interface
+                        (test_intf->bAlternateSetting == 0) &&
+                        // Only Audio Control interface should be considered top-level
+                        (test_intf->bInterfaceClass != USB_CLASS_AUDIO ||
+                            test_intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_CONTROL)
+                        ) {
+                        // found the next top level interface
                         break;
                     }
                 }
