@@ -127,7 +127,7 @@ status_t ProcessDispatcher::Start(mxtl::RefPtr<ThreadDispatcher> thread,
                                   uintptr_t arg1, uintptr_t arg2) {
     LTRACEF("process %p thread %p, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
-            this, thread, pc, sp, arg1, arg2);
+            this, thread.get(), pc, sp, arg1, arg2);
 
     // grab and hold the state lock across this entire routine, since we're
     // effectively transitioning from INITIAL to RUNNING

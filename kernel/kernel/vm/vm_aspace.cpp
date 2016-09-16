@@ -375,7 +375,8 @@ mxtl::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vadd
         // allocate a virtual slot for it
         RegionTree::iterator after;
         vaddr = AllocSpot(size, align_pow2, arch_mmu_flags, &after);
-        LTRACEF_LEVEL(2, "alloc_spot returns 0x%lx, before %p\n", vaddr, after);
+        LTRACEF_LEVEL(2, "alloc_spot returns 0x%lx, before %p\n", vaddr,
+                      (after.IsValid() ? &(*after) : nullptr));
 
         if (vaddr == (vaddr_t)-1) {
             LTRACEF_LEVEL(2, "failed to find spot\n");
