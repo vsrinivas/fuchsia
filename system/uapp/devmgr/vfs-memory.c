@@ -193,6 +193,7 @@ mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_
     dnode_t* dn;
     mx_status_t r = dn_lookup(parent->dnode, &dn, name, len);
     if (r >= 0) {
+        vn_acquire(dn->vnode);
         *out = dn->vnode;
     }
     return r;
@@ -308,7 +309,7 @@ static dnode_t mem_root_dn = {
 static mnode_t mem_root = {
     .vn = {
         .ops = &vn_mem_ops_dir,
-        .refcount = 1,
+        .refcount = 2, // One for 'created', one for 'unlinkable'
         .pdata = &mem_root,
         .dnode = &mem_root_dn,
         .dn_list = LIST_INITIAL_VALUE(mem_root.vn.dn_list),

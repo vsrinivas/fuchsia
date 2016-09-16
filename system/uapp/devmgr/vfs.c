@@ -63,6 +63,7 @@ static vnode_t* vfs_root;
 // or we encounter a vnode that represents a remote filesystem
 static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
                             const char* path, const char** pathout) {
+    vnode_t* oldvn = NULL;
     const char* nextpath;
     mx_status_t r;
     size_t len;
@@ -81,30 +82,41 @@ static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             xprintf("vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
             *out = vn;
             *pathout = path;
+            if (oldvn) {
+                vn_release(oldvn);
+            }
             if (vn->remote > 0) {
                 return vn->remote;
             }
             return ERR_NOT_FOUND;
-        }
-        if ((nextpath = strchr(path, '/')) != NULL) {
+        } else if ((nextpath = strchr(path, '/')) != NULL) {
             // path has at least one additional segment
             // traverse to the next segment
             len = nextpath - path;
             nextpath++;
             xprintf("vfs_walk: vn=%p name='%.*s' nextpath='%s'\n", vn, (int)len, path, nextpath);
-            if ((r = vn->ops->lookup(vn, &vn, path, len))) {
+            r = vn->ops->lookup(vn, &vn, path, len);
+            if (oldvn) {
+                // release the old vnode, even if there was an error
+                vn_release(oldvn);
+            }
+            if (r) {
                 return r;
             }
+            oldvn = vn;
             path = nextpath;
         } else {
             // final path segment, we're done here
             xprintf("vfs_walk: vn=%p name='%s' (local)\n", vn, path);
+            if (oldvn == NULL) {
+                // returning our original vnode, need to upref it
+                vn_acquire(vn);
+            }
             *out = vn;
             *pathout = path;
             return 0;
         }
     }
-    return ERR_NOT_FOUND;
 }
 
 static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
@@ -129,18 +141,29 @@ static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
             if ((r == ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
             }
+            vn_release(vndir);
             return r;
+        } else {
+            vn_release(vndir);
         }
     } else {
     try_open:
-        if ((r = vndir->ops->lookup(vndir, &vn, path, len)) < 0) {
+        r = vndir->ops->lookup(vndir, &vn, path, len);
+        vn_release(vndir);
+        if (r < 0) {
             return r;
         }
         if ((vn->flags & V_FLAG_REMOTE) && (vn->remote > 0)) {
             *pathout = ".";
-            return vn->remote;
+            r = vn->remote;
+            vn_release(vn);
+            return r;
         }
-        if ((r = vn->ops->open(&vn, flags)) < 0) {
+        r = vn->ops->open(&vn, flags);
+        // Open and lookup both incremented the refcount. Release it once for
+        // opening a vnode.
+        vn_release(vn);
+        if (r < 0) {
             xprintf("vn open r = %d", r);
             return r;
         }
@@ -507,23 +530,29 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         if ((r1 = vfs_walk(vn, &oldparent, oldpath, &oldpath)) < 0) {
             return r1;
         } else if ((r2 = vfs_walk(vn, &newparent, newpath, &newpath)) < 0) {
+            vn_release(oldparent);
             return r2;
         } else if (r1 != r2) {
             // Rename can only be directed to one filesystem
+            vn_release(oldparent);
+            vn_release(newparent);
             return ERR_NOT_SUPPORTED;
         }
 
         if (r1 == 0) {
             // Local filesystem
-            return vn->ops->rename(oldparent, newparent, oldpath,
-                                   strlen(oldpath), newpath, strlen(newpath));
+            r1 = vn->ops->rename(oldparent, newparent, oldpath,
+                                 strlen(oldpath), newpath, strlen(newpath));
         } else {
             // Remote filesystem
-            if ((r1 = txn_handoff_rename(r1, rh, oldpath, newpath)) < 0) {
-                return r1;
+            r1 = txn_handoff_rename(r1, rh, oldpath, newpath);
+            if (r1 >= 0) {
+                r1 = ERR_DISPATCHER_INDIRECT;
             }
-            return ERR_DISPATCHER_INDIRECT;
         }
+        vn_release(oldparent);
+        vn_release(newparent);
+        return r1;
     }
     case MXRIO_UNLINK:
         return vn->ops->unlink(vn, (const char*)msg->data, len);
