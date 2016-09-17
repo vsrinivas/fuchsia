@@ -28,7 +28,7 @@ ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
 USER_MANIFEST_LINES += $(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 
-MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/$(notdir $(lib)).mod.o)
+MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 
 $(MODULE_USERAPP_OBJECT): _OBJS := $(USER_CRT1_OBJ) $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
