@@ -21,10 +21,9 @@ MODULE_NAME := driver-test
 #MODULE_NAME := driver-pci-8086-100e #qemu
 #MODULE_NAME := driver-pci-8086-1570 #skylake nuc
 
-MODULE_STATIC_LIBS := \
-		ulib/ddk ulib/driver
+MODULE_STATIC_LIBS := ulib/ddk
 
 MODULE_LIBS := \
-    ulib/launchpad ulib/mxio ulib/magenta ulib/musl
+    ulib/driver ulib/launchpad ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
