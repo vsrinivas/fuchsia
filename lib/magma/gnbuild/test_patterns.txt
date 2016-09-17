@@ -1,0 +1,12 @@
+[  FAILED  ]
+[  PASSED  ]
+[==========]
+[APP START=]
+[SYS START=]
+[DRV START=]
+[APP END===]
+[SYS END===]
+[DRV END===]
+Assertion failed:
+<== fatal exception
+<== fatal page fault

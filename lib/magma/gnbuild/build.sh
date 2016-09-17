@@ -50,6 +50,10 @@ cp $tools_path/sysroot/x86_64-fuchsia/lib/*libunwind.so* $bootfs_path/lib
 
 autorun_path=$bootfs_path/autorun
 
+if $autorun_msd_intel_tests && ($autorun_magma_app_tests || $autorun_magma_sys_tests); then
+	echo "msleep 5000" >> $autorun_path # give some time to write out to log listener
+fi
+
 if $autorun_magma_app_tests; then
 	echo "Enabling magma application driver tests to autorun"
 
@@ -57,7 +61,10 @@ if $autorun_magma_app_tests; then
 	cp $build_dir/magma_app_unit_tests $bootfs_path/$test_executable
 
 	echo "echo Running magma application driver unit tests" >> $autorun_path # for sanity
+	echo "echo [APP START=]" >> $autorun_path
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
+	echo "echo [APP END===]" >> $autorun_path
+	echo "echo [==========]" >> $autorun_path
 fi
 
 if $autorun_magma_sys_tests; then
@@ -67,7 +74,11 @@ if $autorun_magma_sys_tests; then
 	cp $build_dir/magma_sys_unit_tests $bootfs_path/$test_executable
 
 	echo "echo Running magma system driver unit tests" >> $autorun_path # for sanity
+
+	echo "echo [SYS START=]" >> $autorun_path
 	echo "/boot/$test_executable" >> $autorun_path # run the tests
+	echo "echo [SYS END===]" >> $autorun_path
+	echo "echo [==========]" >> $autorun_path
 fi
 
 mkdir -p $bootfs_output_dir
@@ -76,4 +87,8 @@ $tools_path/mkbootfs -v -o $bootfs_output_file @$bootfs_path
 echo "Recommended bootserver command:"
 echo ""
 echo "$tools_path/bootserver $magenta_build_dir/magenta.bin $bootfs_output_file"
+echo ""
+echo "Recommended loglistener command:"
+echo ""
+echo "$tools_path/loglistener | grep --line-buffered -F -f $fuchsia_root/magma/gnbuild/test_patterns.txt"
 echo ""

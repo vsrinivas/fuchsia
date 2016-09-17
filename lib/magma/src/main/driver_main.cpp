@@ -276,7 +276,9 @@ static int magma_hook(void* param)
     char* argv[] = {(char*)"driver_main", nullptr};
     testing::InitGoogleTest(&argc, argv);
     xprintf("running all tests\n");
+    xprintf("[DRV START=]\n");
     (void)RUN_ALL_TESTS();
+    xprintf("[DRV END===]\n[==========]\n");
 #endif // MAGMA_UNIT_TESTS
 
     xprintf("magma_hook finish\n");
