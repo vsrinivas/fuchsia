@@ -62,7 +62,7 @@ public:
     bool InContainer() const { return dll_node_state_.InContainer(); }
 
 private:
-    friend class DefaultDoublyLinkedListTraits<T>;
+    friend struct DefaultDoublyLinkedListTraits<T>;
     DoublyLinkedListNodeState<T> dll_node_state_;
 };
 
@@ -71,8 +71,8 @@ class DoublyLinkedList {
 private:
     // Private fwd decls of the iterator implementation.
     template <typename IterTraits> class iterator_impl;
-    class iterator_traits;
-    class const_iterator_traits;
+    struct iterator_traits;
+    struct const_iterator_traits;
 
 public:
     // Aliases used to reduce verbosity and expose types/traits to tests

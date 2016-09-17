@@ -66,8 +66,8 @@ class HashTable {
 private:
     // Private fwd decls of the iterator implementation.
     template <typename IterTraits> class iterator_impl;
-    class iterator_traits;
-    class const_iterator_traits;
+    struct iterator_traits;
+    struct const_iterator_traits;
 
 public:
     // Pointer types/traits
