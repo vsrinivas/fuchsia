@@ -6,7 +6,9 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userlib
+MODULE_TYPE := driver
+# not really a "driver", but a "driver" is a dso that's not
+# exported via sysroot, which is what userboot is too
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \

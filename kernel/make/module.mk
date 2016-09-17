@@ -22,7 +22,7 @@
 # MODULE_SRCDEPS : extra dependencies that all of this module's files depend on
 # MODULE_EXTRA_OBJS : extra .o files that should be linked with the module
 # MODULE_TYPE : "userapp" for userspace executables, "userlib" for userspace library,
-#               "" for standard LK module
+#               "driver" for Magenta driver, "" for standard LK module
 # MODULE_LIBS : shared libraries for a userapp or userlib to depend on
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
 # MODULE_SO_NAME : linkage name for the shared library
