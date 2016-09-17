@@ -69,6 +69,8 @@ static inline void dev_ref_acquire(mx_device_t* dev) {
     dev->refcount++;
 }
 
+mx_handle_t get_root_resource(void);
+
 // locking and lock debugging
 extern mtx_t __devhost_api_lock;
 extern bool __dm_locked;

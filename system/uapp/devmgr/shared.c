@@ -4,6 +4,7 @@
 
 #include "acpi.h"
 #include "devmgr.h"
+#include "devhost.h"
 
 #include <stdio.h>
 
@@ -16,7 +17,7 @@
 #include <magenta/syscalls.h>
 
 #if DEVMGR
-#include "vfs.h"
+mx_handle_t vfs_create_root_handle(void);
 #define LOG_FLAGS MX_LOG_FLAG_DEVMGR
 #else
 #define LOG_FLAGS MX_LOG_FLAG_DEVICE
@@ -47,7 +48,7 @@ void devmgr_launch_devhost(const char* name, int argc, char** argv,
     ids[2] = MX_HND_TYPE_USER1;
     hnd[2] = hrpc;
     ids[3] = MX_HND_TYPE_RESOURCE;
-    hnd[3] = mx_handle_duplicate(root_resource_handle, MX_RIGHT_SAME_RIGHTS);
+    hnd[3] = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS);
     ids[4] = MX_HND_TYPE_MXIO_ROOT;
 #if DEVMGR
     hnd[4] = vfs_create_root_handle();

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/compiler.h>
+
 #include "devhost.h"
 
 // These are the API entry-points from drivers
@@ -9,26 +11,26 @@
 //
 // Driver code MUST NOT directly call devhost_* APIs
 
-void driver_add(mx_driver_t* drv) {
+__EXPORT void driver_add(mx_driver_t* drv) {
     DM_LOCK();
     devhost_driver_add(drv);
     DM_UNLOCK();
 }
 
-void driver_remove(mx_driver_t* drv) {
+__EXPORT void driver_remove(mx_driver_t* drv) {
     DM_LOCK();
     devhost_driver_remove(drv);
     DM_UNLOCK();
 }
 
-void driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
+__EXPORT void driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     DM_LOCK();
     devhost_driver_unbind(drv, dev);
     DM_UNLOCK();
 }
 
-mx_status_t device_create(mx_device_t** dev, mx_driver_t* drv,
-                          const char* name, mx_protocol_device_t* ops) {
+__EXPORT mx_status_t device_create(mx_device_t** dev, mx_driver_t* drv,
+                                   const char* name, mx_protocol_device_t* ops) {
     mx_status_t r;
     DM_LOCK();
     r = devhost_device_create(dev, drv, name, ops);
@@ -36,14 +38,14 @@ mx_status_t device_create(mx_device_t** dev, mx_driver_t* drv,
     return r;
 }
 
-void device_init(mx_device_t* dev, mx_driver_t* drv,
-                 const char* name, mx_protocol_device_t* ops) {
+__EXPORT void device_init(mx_device_t* dev, mx_driver_t* drv,
+                          const char* name, mx_protocol_device_t* ops) {
     DM_LOCK();
     devhost_device_init(dev, drv, name, ops);
     DM_UNLOCK();
 }
 
-mx_status_t device_add(mx_device_t* dev, mx_device_t* parent) {
+__EXPORT mx_status_t device_add(mx_device_t* dev, mx_device_t* parent) {
     mx_status_t r;
     DM_LOCK();
     r = devhost_device_add(dev, parent);
@@ -51,7 +53,7 @@ mx_status_t device_add(mx_device_t* dev, mx_device_t* parent) {
     return r;
 }
 
-mx_status_t device_add_instance(mx_device_t* dev, mx_device_t* parent) {
+__EXPORT mx_status_t device_add_instance(mx_device_t* dev, mx_device_t* parent) {
     mx_status_t r;
     DM_LOCK();
     if (dev) {
@@ -62,7 +64,7 @@ mx_status_t device_add_instance(mx_device_t* dev, mx_device_t* parent) {
     return r;
 }
 
-mx_status_t device_remove(mx_device_t* dev) {
+__EXPORT mx_status_t device_remove(mx_device_t* dev) {
     mx_status_t r;
     DM_LOCK();
     r = devhost_device_remove(dev);
@@ -70,7 +72,7 @@ mx_status_t device_remove(mx_device_t* dev) {
     return r;
 }
 
-mx_status_t device_rebind(mx_device_t* dev) {
+__EXPORT mx_status_t device_rebind(mx_device_t* dev) {
     mx_status_t r;
     DM_LOCK();
     r = devhost_device_rebind(dev);
@@ -78,7 +80,7 @@ mx_status_t device_rebind(mx_device_t* dev) {
     return r;
 }
 
-void device_set_bindable(mx_device_t* dev, bool bindable) {
+__EXPORT void device_set_bindable(mx_device_t* dev, bool bindable) {
     DM_LOCK();
     devhost_device_set_bindable(dev, bindable);
     DM_UNLOCK();

@@ -21,8 +21,11 @@
 
 #define VC_COUNT 3
 
-mx_handle_t root_resource_handle;
+static mx_handle_t root_resource_handle;
 
+mx_handle_t get_root_resource(void) {
+    return root_resource_handle;
+}
 #define VC_DEVICE "/dev/class/console/vc"
 
 static const uint8_t minfs_magic[16] = {

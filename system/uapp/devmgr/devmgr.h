@@ -27,6 +27,3 @@ struct devhost_msg {
 #define DH_OP_STATUS 0
 #define DH_OP_ADD 1
 #define DH_OP_REMOVE 2
-
-extern mx_handle_t root_resource_handle;
-

@@ -17,8 +17,6 @@
 
 #include "kpci-private.h"
 
-extern mx_handle_t root_resource_handle;
-
 #include "protocol.c"
 
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
@@ -37,7 +35,7 @@ static mx_protocol_device_t kpci_device_proto = {
 static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t index) {
     mx_pcie_get_nth_info_t info;
 
-    mx_handle_t handle = mx_pci_get_nth_device(root_resource_handle, index, &info);
+    mx_handle_t handle = mx_pci_get_nth_device(get_root_resource(), index, &info);
     if (handle < 0) {
         return handle;
     }
@@ -100,7 +98,7 @@ static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
         device_add(device, parent);
 #else
         mx_pcie_get_nth_info_t info;
-        mx_handle_t h = mx_pci_get_nth_device(root_resource_handle, index, &info);
+        mx_handle_t h = mx_pci_get_nth_device(get_root_resource(), index, &info);
         if (h < 0) {
             break;
         }

@@ -14,6 +14,8 @@ MODULE_SO_NAME := driver
 
 MODULE_DEFINES := LIBDRIVER=1
 
+MODULE_COMPILEFLAGS := -fvisibility=hidden
+
 MODULE_SRCS := \
     $(LOCAL_DIR)/devhost.c \
     $(LOCAL_DIR)/devhost-api.c \

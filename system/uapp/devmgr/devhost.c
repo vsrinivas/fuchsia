@@ -15,6 +15,7 @@
 
 #include <launchpad/launchpad.h>
 
+#include <magenta/compiler.h>
 #include <magenta/ktrace.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -39,9 +40,9 @@ static void devhost_io_init(void) {
 // shared with rpc-device.c
 extern mxio_dispatcher_t* devhost_rio_dispatcher;
 
-mx_status_t devhost_add_internal(mx_device_t* parent,
-                                 const char* name, uint32_t protocol_id,
-                                 mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
+__EXPORT mx_status_t devhost_add_internal(mx_device_t* parent,
+                                          const char* name, uint32_t protocol_id,
+                                          mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
 
     size_t len = strlen(name);
     if (len >= MX_DEVICE_NAME_MAX) {
@@ -141,7 +142,7 @@ mx_status_t devhost_remove(mx_device_t* dev) {
 
 mx_handle_t root_resource_handle;
 
-mx_handle_t get_root_resource(void) {
+__EXPORT mx_handle_t get_root_resource(void) {
     return root_resource_handle;
 }
 
@@ -154,7 +155,7 @@ static mx_handle_t hdevice;
 static mx_handle_t hrpc;
 static mx_handle_t hacpi;
 
-int devhost_init(void) {
+__EXPORT int devhost_init(void) {
     devhost_io_init();
 
     root_resource_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
@@ -184,7 +185,7 @@ int devhost_init(void) {
 
 static bool as_root = false;
 
-int devhost_cmdline(int argc, char** argv) {
+__EXPORT int devhost_cmdline(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "devhost: missing command line argument\n");
         return -1;
@@ -225,7 +226,7 @@ int devhost_cmdline(int argc, char** argv) {
     return 0;
 }
 
-int devhost_start(void) {
+__EXPORT int devhost_start(void) {
     mxio_dispatcher_run(devhost_rio_dispatcher);
     printf("devhost: rio dispatcher exited?\n");
     return 0;

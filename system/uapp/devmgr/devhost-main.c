@@ -118,15 +118,15 @@ mx_status_t devmgr_control(const char* cmd) {
     const char* prefix = "kerneldebug ";
     if (!strncmp(cmd, prefix, strlen(prefix))) {
         const char* arg = cmd + strlen(prefix);
-        return mx_debug_send_command(root_resource_handle, arg, strlen(arg));
+        return mx_debug_send_command(get_root_resource(), arg, strlen(arg));
     }
     if (!strcmp(cmd, "ktraceon")) {
-        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_START, GRP_ALL);
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, GRP_ALL);
         return NO_ERROR;
     }
     if (!strcmp(cmd, "ktraceoff")) {
-        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_STOP, 0);
-        mx_ktrace_control(root_resource_handle, KTRACE_ACTION_REWIND, 0);
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0);
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0);
         return NO_ERROR;
     }
     const char* ps0prefix = "acpi-ps0:";

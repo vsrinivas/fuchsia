@@ -13,8 +13,6 @@
 #include <string.h>
 #include <threads.h>
 
-extern mx_handle_t root_resource_handle;
-
 #define FIFOSIZE 256
 #define FIFOMASK (FIFOSIZE - 1)
 
@@ -48,7 +46,7 @@ static int debug_reader(void* arg) {
     mx_device_t* dev = arg;
     uint8_t ch;
     for (;;) {
-        if (mx_debug_read(root_resource_handle, (void*)&ch, 1) == 1) {
+        if (mx_debug_read(get_root_resource(), (void*)&ch, 1) == 1) {
             mtx_lock(&fifo.lock);
             if (fifo.head == fifo.tail) {
                 device_state_set(dev, DEV_STATE_READABLE);

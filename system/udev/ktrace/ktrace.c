@@ -13,14 +13,12 @@
 #include <string.h>
 #include <threads.h>
 
-extern mx_handle_t root_resource_handle;
-
 static ssize_t ktrace_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    return mx_ktrace_read(root_resource_handle, buf, off, count);
+    return mx_ktrace_read(get_root_resource(), buf, off, count);
 }
 
 static mx_off_t ktrace_get_size(mx_device_t* dev) {
-    return mx_ktrace_read(root_resource_handle, NULL, 0, 0);
+    return mx_ktrace_read(get_root_resource(), NULL, 0, 0);
 }
 
 static mx_protocol_device_t ktrace_device_proto = {
