@@ -16,7 +16,6 @@ uint32_t __trace_bits;
 mx_status_t vfs_close(vnode_t* vn) {
     trace(VFS, "vfs_close: vn=%p\n", vn);
     mx_status_t r = vn->ops->close(vn);
-    vn_release(vn);
     return r;
 }
 
@@ -96,8 +95,11 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
         if (r < 0) {
             return r;
         }
-        if ((r = vn->ops->open(&vn, flags)) < 0) {
-            vn_release(vn);
+        r = vn->ops->open(&vn, flags);
+        // Open and lookup both incremented the refcount. Release it once for
+        // opening a vnode.
+        vn_release(vn);
+        if (r < 0) {
             return r;
         }
         if (flags & O_TRUNC) {

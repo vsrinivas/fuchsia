@@ -553,11 +553,13 @@ static void fs_release(vnode_t* vn) {
 static mx_status_t fs_open(vnode_t** _vn, uint32_t flags) {
     vnode_t* vn = *_vn;
     trace(MINFS, "minfs_open() vn=%p(#%u)\n", vn, vn->ino);
+    vn_acquire(vn);
     return NO_ERROR;
 }
 
 static mx_status_t fs_close(vnode_t* vn) {
     trace(MINFS, "minfs_close() vn=%p(#%u)\n", vn, vn->ino);
+    vn_release(vn);
     return NO_ERROR;
 }
 
