@@ -1,0 +1,37 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef KTRACE_DEF
+#error must define KTRACE_DEF
+#endif
+
+KTRACE_DEF(0x000,32B,VERSION,META) // version
+KTRACE_DEF(0x001,32B,TICKS_PER_MS,META) // lo32, hi32
+
+KTRACE_DEF(0x010,32B,CONTEXT_SWITCH,SCHEDULER) // to-tid, (state<<16|cpu), from-kt, to-kt
+KTRACE_DEF(0x011,32B,OBJECT_DELETE,LIFECYCLE) // id
+
+KTRACE_DEF(0x030,32B,THREAD_CREATE,TASKS) // tid, pid
+KTRACE_DEF(0x031,NAME,THREAD_NAME,TASKS) // tid, pid, name[]
+KTRACE_DEF(0x032,32B,THREAD_START,TASKS) // tid
+KTRACE_DEF(0x033,32B,THREAD_EXIT,TASKS)
+
+KTRACE_DEF(0x040,32B,PROC_CREATE,TASKS) // pid
+KTRACE_DEF(0x041,NAME,PROC_NAME,TASKS) // pid, 0, name[]
+KTRACE_DEF(0x042,32B,PROC_START,TASKS) // tid, pid
+KTRACE_DEF(0x043,32B,PROC_EXIT,TASKS) // pid
+
+KTRACE_DEF(0x050,32B,MSGPIPE_CREATE,IPC) // id0, id1, flags
+KTRACE_DEF(0x051,32B,MSGPIPE_WRITE,IPC) // id0, bytes, handles
+KTRACE_DEF(0x052,32B,MSGPIPE_READ,IPC) // id1, bytes, handles
+
+KTRACE_DEF(0x060,32B,PORT_CREATE,IPC) // id
+KTRACE_DEF(0x061,32B,PORT_QUEUE,IPC) // id, size
+KTRACE_DEF(0x062,32B,PORT_WAIT,IPC) // id
+KTRACE_DEF(0x063,32B,PORT_WAIT_DONE,IPC) // id, status
+
+KTRACE_DEF(0x070,32B,WAIT_ONE,IPC) // id, signals, timeoutlo, timeouthi
+KTRACE_DEF(0x071,32B,WAIT_ONE_DONE,IPC) // id, status, pending
+
+#undef KTRACE_DEF

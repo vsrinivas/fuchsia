@@ -376,9 +376,10 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, user_ptr<const char> n
     if (result != NO_ERROR)
         return result;
 
-    uint32_t koid = (uint32_t)thread_dispatcher->get_koid();
-    ktrace(TAG_THREAD_CREATE, koid, (uint32_t)process->get_koid(), 0, 0);
-    ktrace_name(TAG_THREAD_NAME, koid, buf);
+    uint32_t tid = (uint32_t)thread_dispatcher->get_koid();
+    uint32_t pid = (uint32_t)process->get_koid();
+    ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
+    ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
     HandleUniquePtr handle(MakeHandle(mxtl::move(thread_dispatcher), thread_rights));
     if (!handle)
@@ -501,7 +502,7 @@ mx_handle_t sys_process_create(user_ptr<const char> name, uint32_t name_len, uin
 
     uint32_t koid = (uint32_t)dispatcher->get_koid();
     ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
-    ktrace_name(TAG_PROC_NAME, koid, buf);
+    ktrace_name(TAG_PROC_NAME, koid, 0, buf);
 
     HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)

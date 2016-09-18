@@ -85,9 +85,9 @@ status_t ktrace_control(uint32_t action, uint32_t options) {
     ktrace_state_t* ks = &KTRACE_STATE;
     switch (action) {
     case KTRACE_ACTION_START:
-        options = GRP_MASK(options);
+        options = KTRACE_GRP_TO_MASK(options);
         ks->marker = 0;
-        atomic_store(&ks->grpmask, options ? options : GRP_MASK(GRP_ALL));
+        atomic_store(&ks->grpmask, options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
         break;
     case KTRACE_ACTION_STOP: {
         atomic_store(&ks->grpmask, 0);
@@ -131,12 +131,16 @@ void ktrace_init(unsigned level) {
         dprintf(INFO, "ktrace: cannot alloc buffer %d\n", status);
         return;
     }
-    ks->bufsize = mb;
+
+    // The last packet written can overhang the end of the buffer,
+    // so we reduce the reported size by the max size of a record
+    ks->bufsize = mb - 256;
+
     dprintf(INFO, "ktrace: buffer at %p (%u bytes)\n", ks->buffer, mb);
 
     // write metadata to the first two event slots
     uint64_t n = ktrace_ticks_per_ms();
-    ktrace_record_t* rec = (ktrace_record_t*) ks->buffer;
+    ktrace_rec_32b_t* rec = (ktrace_rec_32b_t*) ks->buffer;
     rec[0].tag = TAG_VERSION;
     rec[0].a = KTRACE_VERSION;
     rec[1].tag = TAG_TICKS_PER_MS;
@@ -145,42 +149,48 @@ void ktrace_init(unsigned level) {
 
     // enable tracing
     atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
-    atomic_store(&ks->grpmask, GRP_MASK(grpmask));
+    atomic_store(&ks->grpmask, KTRACE_GRP_TO_MASK(grpmask));
 }
 
-void ktrace_name(uint32_t tag, uint32_t id, const char name[KTRACE_NAMESIZE]) {
+void* ktrace_open(uint32_t tag) {
     ktrace_state_t* ks = &KTRACE_STATE;
-    if (tag & atomic_load(&ks->grpmask)) {
-        int off;
-        if ((off = atomic_add(&ks->offset, KTRACE_RECSIZE)) >= (int)ks->bufsize) {
-            // if we arrive at the end, stop
-            atomic_store(&ks->grpmask, 0);
-            return;
-        }
-        ktrace_record_t* rec = (ktrace_record_t*) (ks->buffer + off);
-        rec->tag = (tag & 0xFFFFFF00);
-        rec->id = id;
-        memcpy(ks->buffer + off + KTRACE_NAMEOFF, name, KTRACE_NAMESIZE);
+    if (!(tag & atomic_load(&ks->grpmask))) {
+        return NULL;
     }
+
+    int off;
+    if ((off = atomic_add(&ks->offset, KTRACE_LEN(tag))) >= (int)ks->bufsize) {
+        // if we arrive at the end, stop
+        atomic_store(&ks->grpmask, 0);
+        return NULL;
+    }
+
+    ktrace_header_t* hdr = (ktrace_header_t*) (ks->buffer + off);
+    hdr->ts = ktrace_timestamp();
+    hdr->tag = tag;
+    hdr->tid = (uint32_t)get_current_thread()->user_tid;
+    return hdr + 1;
 }
 
-void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-    ktrace_state_t* ks = &KTRACE_STATE;
-    if (tag & atomic_load(&ks->grpmask)) {
-        int off;
-        if ((off = atomic_add(&ks->offset, KTRACE_RECSIZE)) >= (int)ks->bufsize) {
-            // if we arrive at the end, stop
-            atomic_store(&ks->grpmask, 0);
-            return;
-        }
-        ktrace_record_t* rec = (ktrace_record_t*) (ks->buffer + off);
-        rec->ts = ktrace_timestamp();
-        rec->tag = (tag & 0xFFFFFF00);
-        rec->id = (uint32_t)get_current_thread()->user_tid;
-        rec->a = a;
-        rec->b = b;
-        rec->c = c;
-        rec->d = d;
+typedef struct {
+    uint32_t id;
+    uint32_t arg;
+    char name[1];
+} namerec_t;
+
+void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name) {
+    uint32_t len = static_cast<uint32_t>(strnlen(name, 31));
+
+    // make size: sizeof(hdr) + sizeof(id) + sizeof(arg) + len + 1,
+    // rounded up to multiple of 8
+    tag = (tag & 0xFFFFFFF0) | ((KTRACE_HDRSIZE + 8 + len + 1 + 7) >> 3);
+
+    namerec_t* rec = (namerec_t*) ktrace_open(tag);
+    if (rec) {
+        rec->id = id;
+        rec->arg = arg;
+        memcpy(rec->name, name, len);
+        rec->name[len] = 0;
     }
 }
 

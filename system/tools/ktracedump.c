@@ -11,6 +11,11 @@
 
 #include <magenta/ktrace.h>
 
+#define KTRACE_DEF(num,type,name,group) EVT_##name = num,
+enum {
+#include <magenta/ktrace-def.h>
+};
+
 // USE_NS 1 means pass time as 000.000 (microseconds) to traceview
 //          internal timestamps in nanoseconds
 
@@ -168,11 +173,14 @@ uint64_t ticks_to_ts(uint64_t ts) {
     }
 }
 
-const char* recname(const ktrace_record_t* rec) {
-    static char name[25];
-    memcpy(name, &rec->ts, 24);
-    name[24] = 0;
-    return name;
+const char* recname(ktrace_rec_name_t* rec) {
+    uint32_t len = KTRACE_LEN(rec->tag);
+    if (len <= (sizeof(ktrace_header_t) + 2 * sizeof(uint32_t))) {
+        return "ERROR";
+    }
+    len -= (sizeof(ktrace_header_t) + 2 * sizeof(uint32_t));
+    rec->name[len - 1] = 0;
+    return rec->name;
 }
 
 uint32_t other_pipe(uint32_t id) {
@@ -211,17 +219,6 @@ typedef struct evtinfo {
 
 void trace_hdr(evt_info_t* ei, uint32_t tag) {
     if (json) {
-        return;
-    }
-    switch (tag) {
-    case TAG_TICKS_PER_MS:
-    case TAG_PROC_NAME:
-    case TAG_THREAD_NAME:
-#if USE_NS
-        printf("                          ");
-#else
-        printf("                       ");
-#endif
         return;
     }
 #if USE_NS
@@ -750,6 +747,13 @@ void dump_stats(stats_t* s) {
 uint32_t visible_pids[MAX_VIS_PIDS];
 uint32_t visible_count;
 
+typedef union {
+    ktrace_header_t hdr;
+    ktrace_rec_32b_t x4;
+    ktrace_rec_name_t name;
+    uint8_t raw[256];
+} ktrace_record_t;
+
 int main(int argc, char** argv) {
     int show_stats = 0;
     stats_t s;
@@ -834,9 +838,17 @@ int main(int argc, char** argv) {
     }
 
     evt_info_t ei;
-    while (read(fd, &rec, sizeof(rec)) == sizeof(rec)) {
-        uint32_t tag = rec.tag & 0xFFFFFF00;
-        offset += 32;
+    while (read(fd, rec.raw, sizeof(ktrace_header_t)) == sizeof(ktrace_header_t)) {
+        uint32_t tag = rec.hdr.tag;
+        uint32_t len = KTRACE_LEN(tag);
+        if (len < sizeof(ktrace_header_t)) {
+            fprintf(stderr, "eof: short record\n");
+        }
+        len -= sizeof(ktrace_header_t);
+        if (read(fd, rec.raw + sizeof(ktrace_header_t), len) != len) {
+            fprintf(stderr, "eof: short payload\n");
+        }
+        offset += (sizeof(ktrace_header_t) + len);
         if (tag == 0) {
             fprintf(stderr, "eof: zero tag at offset %08x\n", offset);
             break;
@@ -844,58 +856,57 @@ int main(int argc, char** argv) {
         if (offset > limit) {
             break;
         }
-        ei.pid = thread_to_process(rec.id);
-        ei.tid = rec.id;
-        if ((tag != TAG_PROC_NAME) && (tag != TAG_THREAD_NAME)) {
-            ei.ts = ticks_to_ts(rec.ts);
-            if (s.ts_first == 0) {
-                s.ts_first = ei.ts;
-            }
-        } else {
-            ei.ts = 0;
+        ei.pid = thread_to_process(rec.hdr.tid);
+        ei.tid = rec.hdr.tid;
+        ei.ts = ticks_to_ts(rec.hdr.ts);
+        if (s.ts_first == 0) {
+            s.ts_first = ei.ts;
         }
         s.events++;
         trace_hdr(&ei, tag);
-        switch (tag) {
-        case TAG_TICKS_PER_MS:
-            ticks_per_ms = ((uint64_t)rec.a) | (((uint64_t)rec.b) << 32);
+        switch (KTRACE_EVENT(tag)) {
+        case EVT_VERSION:
+            trace("VERSION      n=%08x\n", rec.x4.a);
+            break;
+        case EVT_TICKS_PER_MS:
+            ticks_per_ms = ((uint64_t)rec.x4.a) | (((uint64_t)rec.x4.b) << 32);
             trace("TICKS_PER_MS n=%lu\n", ticks_per_ms);
             break;
-        case TAG_CONTEXT_SWITCH:
+        case EVT_CONTEXT_SWITCH:
             s.context_switch++;
             trace("CTXT_SWITCH to=%08x st=%d cpu=%d old=%08x new=%08x\n",
-                  rec.a, rec.b >> 16, rec.b & 0xFFFF, rec.c, rec.d);
-            evt_context_switch(&ei, thread_to_process(rec.a), rec.a,
-                               rec.b >> 16, rec.b & 0xFFFF, rec.c, rec.d);
+                  rec.x4.a, rec.x4.b >> 16, rec.x4.b & 0xFFFF, rec.x4.c, rec.x4.d);
+            evt_context_switch(&ei, thread_to_process(rec.x4.a), rec.x4.a,
+                               rec.x4.b >> 16, rec.x4.b & 0xFFFF, rec.x4.c, rec.x4.d);
             break;
-        case TAG_OBJECT_DELETE:
-            if ((oi = find_object(rec.a, 0)) == 0) {
-                trace("OBJT_DELETE id=%08x\n", rec.a);
+        case EVT_OBJECT_DELETE:
+            if ((oi = find_object(rec.x4.a, 0)) == 0) {
+                trace("OBJT_DELETE id=%08x\n", rec.x4.a);
             } else {
-                trace("%s_DELETE id=%08x\n", kind_string(oi->kind), rec.a);
+                trace("%s_DELETE id=%08x\n", kind_string(oi->kind), rec.x4.a);
                 switch (oi->kind) {
                 case KPIPE:
                     s.msgpipe_del++;
-                    evt_msgpipe_delete(&ei, rec.a);
+                    evt_msgpipe_delete(&ei, rec.x4.a);
                     break;
                 case KTHREAD:
                     s.thread_del++;
-                    evt_thread_delete(&ei, rec.a);
+                    evt_thread_delete(&ei, rec.x4.a);
                     break;
                 case KPROC:
                     s.process_del++;
-                    evt_process_delete(&ei, rec.a);
+                    evt_process_delete(&ei, rec.x4.a);
                     break;
                 case KPORT:
-                    evt_port_delete(&ei, rec.a);
+                    evt_port_delete(&ei, rec.x4.a);
                     break;
                 }
             }
             break;
-        case TAG_PROC_CREATE:
+        case EVT_PROC_CREATE:
             s.process_new++;
-            trace("PROC_CREATE id=%08x\n", rec.a);
-            oi = new_object(rec.a, KPROC, rec.id, 0);
+            trace("PROC_CREATE id=%08x\n", rec.x4.a);
+            oi = new_object(rec.x4.a, KPROC, rec.hdr.tid, 0);
             if (visible_count) {
                 oi->flags |= F_INVISIBLE;
                 for (unsigned n = 0; n < visible_count; n++) {
@@ -905,81 +916,81 @@ int main(int argc, char** argv) {
                     }
                 }
             }
-            evt_process_create(&ei, rec.a);
+            evt_process_create(&ei, rec.x4.a);
             break;
-        case TAG_PROC_NAME:
-            trace("PROC_NAME   id=%08x '%s'\n", rec.id, recname(&rec));
-            evt_process_name(rec.id, recname(&rec), 10);
+        case EVT_PROC_NAME:
+            trace("PROC_NAME   id=%08x '%s'\n", rec.name.id, recname(&rec.name));
+            evt_process_name(rec.name.id, recname(&rec.name), 10);
             break;
-        case TAG_PROC_START:
-            trace("PROC_START  id=%08x tid=%08x\n", rec.b, rec.a);
-            evt_process_start(&ei, rec.b, rec.a);
+        case EVT_PROC_START:
+            trace("PROC_START  id=%08x tid=%08x\n", rec.x4.b, rec.x4.a);
+            evt_process_start(&ei, rec.x4.b, rec.x4.a);
             break;
-        case TAG_THREAD_CREATE:
+        case EVT_THREAD_CREATE:
             s.thread_new++;
-            trace("THRD_CREATE id=%08x pid=%08x\n", rec.a, rec.b);
-            oi = new_object(rec.a, KTHREAD, rec.id, rec.b);
-            oi2 = find_object(rec.b, KPROC);
+            trace("THRD_CREATE id=%08x pid=%08x\n", rec.x4.a, rec.x4.b);
+            oi = new_object(rec.x4.a, KTHREAD, rec.hdr.tid, rec.x4.b);
+            oi2 = find_object(rec.x4.b, KPROC);
             if (oi2 && (oi2->flags & F_INVISIBLE)) {
                 oi->flags |= F_INVISIBLE;
             }
-            evt_thread_create(&ei, rec.a, rec.b);
+            evt_thread_create(&ei, rec.x4.a, rec.x4.b);
             break;
-        case TAG_THREAD_NAME:
-            trace("THRD_NAME   id=%08x '%s'\n", rec.id, recname(&rec));
-            evt_thread_name(ei.pid, rec.id, recname(&rec));
+        case EVT_THREAD_NAME:
+            trace("THRD_NAME   id=%08x '%s'\n", rec.name.id, recname(&rec.name));
+            evt_thread_name(ei.pid, rec.name.id, recname(&rec.name));
             break;
-        case TAG_THREAD_START:
-            trace("THRD_START  id=%08x\n", rec.a);
-            evt_thread_start(&ei, rec.a);
+        case EVT_THREAD_START:
+            trace("THRD_START  id=%08x\n", rec.x4.a);
+            evt_thread_start(&ei, rec.x4.a);
             break;
-        case TAG_MSGPIPE_CREATE:
+        case EVT_MSGPIPE_CREATE:
             s.msgpipe_new += 2;
-            trace("MPIP_CREATE id=%08x other=%08x flags=%x\n", rec.a, rec.b, rec.c);
-            new_object(rec.a, KPIPE, rec.id, rec.b);
-            new_object(rec.b, KPIPE, rec.id, rec.a);
-            evt_msgpipe_create(&ei, rec.a, rec.b);
-            evt_msgpipe_create(&ei, rec.b, rec.a);
+            trace("MPIP_CREATE id=%08x other=%08x flags=%x\n", rec.x4.a, rec.x4.b, rec.x4.c);
+            new_object(rec.x4.a, KPIPE, rec.hdr.tid, rec.x4.b);
+            new_object(rec.x4.b, KPIPE, rec.hdr.tid, rec.x4.a);
+            evt_msgpipe_create(&ei, rec.x4.a, rec.x4.b);
+            evt_msgpipe_create(&ei, rec.x4.b, rec.x4.a);
             break;
-        case TAG_MSGPIPE_WRITE:
+        case EVT_MSGPIPE_WRITE:
             s.msgpipe_write++;
-            n = other_pipe(rec.a);
-            trace("MPIP_WRITE  id=%08x to=%08x bytes=%d handles=%d\n", rec.a, n, rec.b, rec.c);
-            evt_msgpipe_write(&ei, rec.a, n, rec.b, rec.c);
+            n = other_pipe(rec.x4.a);
+            trace("MPIP_WRITE  id=%08x to=%08x bytes=%d handles=%d\n", rec.x4.a, n, rec.x4.b, rec.x4.c);
+            evt_msgpipe_write(&ei, rec.x4.a, n, rec.x4.b, rec.x4.c);
             break;
-        case TAG_MSGPIPE_READ:
+        case EVT_MSGPIPE_READ:
             s.msgpipe_read++;
-            n = other_pipe(rec.a);
-            trace("MPIP_READ   id=%08x fr=%08x bytes=%d handles=%d\n", rec.a, n, rec.b, rec.c);
-            evt_msgpipe_read(&ei, rec.a, n, rec.b, rec.c);
+            n = other_pipe(rec.x4.a);
+            trace("MPIP_READ   id=%08x fr=%08x bytes=%d handles=%d\n", rec.x4.a, n, rec.x4.b, rec.x4.c);
+            evt_msgpipe_read(&ei, rec.x4.a, n, rec.x4.b, rec.x4.c);
             break;
-        case TAG_PORT_CREATE:
-            trace("PORT_CREATE id=%08x\n", rec.a);
-            new_object(rec.a, KPORT, 0, 0);
-            evt_port_create(&ei, rec.a);
+        case EVT_PORT_CREATE:
+            trace("PORT_CREATE id=%08x\n", rec.x4.a);
+            new_object(rec.x4.a, KPORT, 0, 0);
+            evt_port_create(&ei, rec.x4.a);
             break;
-        case TAG_PORT_QUEUE:
-            trace("PORT_QUEUE  id=%08x\n", rec.a);
+        case EVT_PORT_QUEUE:
+            trace("PORT_QUEUE  id=%08x\n", rec.x4.a);
             break;
-        case TAG_PORT_WAIT:
-            trace("PORT_WAIT   id=%08x\n", rec.a);
-            evt_port_wait(&ei, rec.a);
+        case EVT_PORT_WAIT:
+            trace("PORT_WAIT   id=%08x\n", rec.x4.a);
+            evt_port_wait(&ei, rec.x4.a);
             break;
-        case TAG_PORT_WAIT_DONE:
-            trace("PORT_WDONE  id=%08x\n", rec.a);
-            evt_port_wait_done(&ei, rec.a);
+        case EVT_PORT_WAIT_DONE:
+            trace("PORT_WDONE  id=%08x\n", rec.x4.a);
+            evt_port_wait_done(&ei, rec.x4.a);
             break;
-        case TAG_WAIT_ONE:
-            t = ((uint64_t)rec.c) | (((uint64_t)rec.d) << 32);
-            trace("WAIT_ONE    id=%08x signals=%08x timeout=%lu\n", rec.a, rec.b, t);
-            evt_wait_one(&ei, rec.a, rec.b, t);
+        case EVT_WAIT_ONE:
+            t = ((uint64_t)rec.x4.c) | (((uint64_t)rec.x4.d) << 32);
+            trace("WAIT_ONE    id=%08x signals=%08x timeout=%lu\n", rec.x4.a, rec.x4.b, t);
+            evt_wait_one(&ei, rec.x4.a, rec.x4.b, t);
             break;
-        case TAG_WAIT_ONE_DONE:
-            trace("WAIT_DONE   id=%08x pending=%08x result=%08x\n", rec.a, rec.b, rec.c);
-            evt_wait_one_done(&ei, rec.a, rec.b, rec.c);
+        case EVT_WAIT_ONE_DONE:
+            trace("WAIT_DONE   id=%08x pending=%08x result=%08x\n", rec.x4.a, rec.x4.b, rec.x4.c);
+            evt_wait_one_done(&ei, rec.x4.a, rec.x4.b, rec.x4.c);
             break;
         default:
-            trace("UNKNOWN_TAG id=%08x tag=%08x\n", rec.id, tag);
+            trace("UNKNOWN_TAG id=%08x tag=%08x\n", rec.hdr.tid, tag);
             break;
         }
     }

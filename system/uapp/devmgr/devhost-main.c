@@ -121,7 +121,7 @@ mx_status_t devmgr_control(const char* cmd) {
         return mx_debug_send_command(get_root_resource(), arg, strlen(arg));
     }
     if (!strcmp(cmd, "ktraceon")) {
-        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, GRP_ALL);
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL);
         return NO_ERROR;
     }
     if (!strcmp(cmd, "ktraceoff")) {
