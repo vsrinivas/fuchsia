@@ -1225,6 +1225,23 @@ void dump_all_threads(void)
 
 /** @} */
 
+#if WITH_LIB_KTRACE
+// Used by ktrace at the start of a trace to ensure that all
+// the running threads, processes, and their names are known
+void ktrace_report_live_threads(void) {
+    thread_t* t;
+
+    THREAD_LOCK(state);
+    list_for_every_entry(&thread_list, t, thread_t, thread_list_node) {
+        if (t->user_tid) {
+            ktrace_name(TAG_THREAD_NAME, t->user_tid, t->user_pid, t->name);
+        } else {
+            ktrace_name(TAG_KTHREAD_NAME, (uint32_t)(uintptr_t)t, 0, t->name);
+        }
+    }
+    THREAD_UNLOCK(state);
+}
+#endif
 
 /**
  * @defgroup  wait  Wait Queue

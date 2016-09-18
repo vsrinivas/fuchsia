@@ -98,6 +98,7 @@ typedef struct thread {
     void* user_thread;
 #if WITH_LIB_KTRACE
     uint64_t user_tid;
+    uint64_t user_pid;
 #endif
 
     /* accounting information */

@@ -26,6 +26,9 @@ extern "C" uint64_t get_tsc_ticks_per_ms(void);
 #define ktrace_ticks_per_ms() (1000)
 #endif
 
+// implemented by thread.c
+extern "C" void ktrace_report_live_threads(void);
+
 typedef struct ktrace_state {
     // where the next record will be written
     int offset;
@@ -88,6 +91,7 @@ status_t ktrace_control(uint32_t action, uint32_t options) {
         options = KTRACE_GRP_TO_MASK(options);
         ks->marker = 0;
         atomic_store(&ks->grpmask, options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
+        ktrace_report_live_threads();
         break;
     case KTRACE_ACTION_STOP: {
         atomic_store(&ks->grpmask, 0);
@@ -150,6 +154,9 @@ void ktrace_init(unsigned level) {
     // enable tracing
     atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
     atomic_store(&ks->grpmask, KTRACE_GRP_TO_MASK(grpmask));
+
+    // report names of existing threads
+    ktrace_report_live_threads();
 }
 
 void* ktrace_open(uint32_t tag) {

@@ -903,6 +903,9 @@ int main(int argc, char** argv) {
                 }
             }
             break;
+        case EVT_KTHREAD_NAME:
+            trace("KTHRD_NAME  id=%08x '%s'\n", rec.name.id, recname(&rec.name));
+            break;
         case EVT_PROC_CREATE:
             s.process_new++;
             trace("PROC_CREATE id=%08x\n", rec.x4.a);
