@@ -175,11 +175,11 @@ uint64_t ticks_to_ts(uint64_t ts) {
 
 const char* recname(ktrace_rec_name_t* rec) {
     uint32_t len = KTRACE_LEN(rec->tag);
-    if (len <= (sizeof(ktrace_header_t) + 2 * sizeof(uint32_t))) {
+    if (len <= (KTRACE_NAMESIZE + 1)) {
         return "ERROR";
     }
-    len -= (sizeof(ktrace_header_t) + 2 * sizeof(uint32_t));
-    rec->name[len - 1] = 0;
+    len -= (KTRACE_NAMESIZE + 1);
+    rec->name[len] = 0;
     return rec->name;
 }
 
@@ -902,6 +902,9 @@ int main(int argc, char** argv) {
                     break;
                 }
             }
+            break;
+        case EVT_SYSCALL_NAME:
+            trace("SYSCALL_NAM id=%08x '%s'\n", rec.name.id, recname(&rec.name));
             break;
         case EVT_KTHREAD_NAME:
             trace("KTHRD_NAME  id=%08x '%s'\n", rec.name.id, recname(&rec.name));

@@ -21,6 +21,7 @@ __BEGIN_CDECLS
 
 #define KTRACE_TAG(evt,grp,siz)   ((((grp)&0xFFF)<<20)|(((evt)&0xFFF)<<8)|(((siz)>>3)&0x0F))
 
+#define KTRACE_TAG_16B(e,g)       KTRACE_TAG(e,g,16)
 #define KTRACE_TAG_32B(e,g)       KTRACE_TAG(e,g,32)
 #define KTRACE_TAG_NAME(e,g)      KTRACE_TAG(e,g,48)
 
@@ -30,7 +31,7 @@ __BEGIN_CDECLS
 
 #define KTRACE_HDRSIZE            (16)
 #define KTRACE_RECSIZE            (32)
-#define KTRACE_NAMESIZE           (24)
+#define KTRACE_NAMESIZE           (12)
 #define KTRACE_NAMEOFF            (8)
 
 #define KTRACE_VERSION            (0x00020000)
@@ -42,6 +43,7 @@ __BEGIN_CDECLS
 #define KTRACE_GRP_SCHEDULER      0x004
 #define KTRACE_GRP_TASKS          0x008
 #define KTRACE_GRP_IPC            0x010
+#define KTRACE_GRP_IRQ            0x020
 
 #define KTRACE_GRP_TO_MASK(grp)   ((grp) << 20)
 
@@ -66,8 +68,6 @@ typedef struct ktrace_rec_32b {
 
 typedef struct ktrace_rec_name {
     uint32_t tag;
-    uint32_t tid;
-    uint64_t ts;
     uint32_t id;
     uint32_t arg;
     char name[1];

@@ -29,6 +29,15 @@ extern "C" uint64_t get_tsc_ticks_per_ms(void);
 // implemented by thread.c
 extern "C" void ktrace_report_live_threads(void);
 
+void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
+
+#define MAGENTA_SYSCALL_DEF(s64,s32,num,ret,name,attr,args...) \
+    ktrace_name_etc(TAG_SYSCALL_NAME, num, 0, #name, true);
+
+void ktrace_report_syscalls(void) {
+#include <magenta/syscalls.inc>
+}
+
 typedef struct ktrace_state {
     // where the next record will be written
     int offset;
@@ -106,6 +115,7 @@ status_t ktrace_control(uint32_t action, uint32_t options) {
     case KTRACE_ACTION_REWIND:
         // roll back to just after the metadata
         atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
+        ktrace_report_syscalls();
         break;
     default:
         return ERR_INVALID_ARGS;
@@ -153,13 +163,33 @@ void ktrace_init(unsigned level) {
 
     // enable tracing
     atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
+    ktrace_report_syscalls();
     atomic_store(&ks->grpmask, KTRACE_GRP_TO_MASK(grpmask));
 
     // report names of existing threads
     ktrace_report_live_threads();
 }
 
+void ktrace_tiny(uint32_t tag, uint32_t arg) {
+    uint64_t ts = ktrace_timestamp();
+    ktrace_state_t* ks = &KTRACE_STATE;
+    if (tag & atomic_load(&ks->grpmask)) {
+        tag = (tag & 0xFFFFFFF0) | 2;
+        int off;
+        if ((off = atomic_add(&ks->offset, KTRACE_HDRSIZE)) >= (int)ks->bufsize) {
+            // if we arrive at the end, stop
+            atomic_store(&ks->grpmask, 0);
+        } else {
+            ktrace_header_t* hdr = (ktrace_header_t*) (ks->buffer + off);
+            hdr->ts = ts;
+            hdr->tag = tag;
+            hdr->tid = arg;
+        }
+    }
+}
+
 void* ktrace_open(uint32_t tag) {
+    uint64_t ts = ktrace_timestamp();
     ktrace_state_t* ks = &KTRACE_STATE;
     if (!(tag & atomic_load(&ks->grpmask))) {
         return NULL;
@@ -173,32 +203,37 @@ void* ktrace_open(uint32_t tag) {
     }
 
     ktrace_header_t* hdr = (ktrace_header_t*) (ks->buffer + off);
-    hdr->ts = ktrace_timestamp();
+    hdr->ts = ts;
     hdr->tag = tag;
     hdr->tid = (uint32_t)get_current_thread()->user_tid;
     return hdr + 1;
 }
 
-typedef struct {
-    uint32_t id;
-    uint32_t arg;
-    char name[1];
-} namerec_t;
+void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
+    ktrace_state_t* ks = &KTRACE_STATE;
+    if ((tag & atomic_load(&ks->grpmask)) || always) {
+        uint32_t len = static_cast<uint32_t>(strnlen(name, 31));
+
+        // set size to: sizeof(hdr) + len + 1, round up to multiple of 8
+        tag = (tag & 0xFFFFFFF0) | ((KTRACE_NAMESIZE + len + 1 + 7) >> 3);
+
+        int off;
+        if ((off = atomic_add(&ks->offset, KTRACE_LEN(tag))) >= (int)ks->bufsize) {
+            // if we arrive at the end, stop
+            atomic_store(&ks->grpmask, 0);
+        } else {
+            ktrace_rec_name_t* rec = (ktrace_rec_name_t*) (ks->buffer + off);
+            rec->tag = tag;
+            rec->id = id;
+            rec->arg = arg;
+            memcpy(rec->name, name, len);
+            rec->name[len] = 0;
+        }
+    }
+}
 
 void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name) {
-    uint32_t len = static_cast<uint32_t>(strnlen(name, 31));
-
-    // make size: sizeof(hdr) + sizeof(id) + sizeof(arg) + len + 1,
-    // rounded up to multiple of 8
-    tag = (tag & 0xFFFFFFF0) | ((KTRACE_HDRSIZE + 8 + len + 1 + 7) >> 3);
-
-    namerec_t* rec = (namerec_t*) ktrace_open(tag);
-    if (rec) {
-        rec->id = id;
-        rec->arg = arg;
-        memcpy(rec->name, name, len);
-        rec->name[len] = 0;
-    }
+    ktrace_name_etc(tag, id, arg, name, false);
 }
 
 LK_INIT_HOOK(ktrace, ktrace_init, LK_INIT_LEVEL_APPS - 1);

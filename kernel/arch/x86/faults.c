@@ -15,6 +15,7 @@
 #include <kernel/thread.h>
 #include <platform.h>
 
+#include <lib/ktrace.h>
 #include <lib/user_copy.h>
 
 #if WITH_LIB_MAGENTA
@@ -259,6 +260,8 @@ void x86_exception_handler(x86_iframe_t *frame)
 
     // deliver the interrupt
     enum handler_return ret = INT_NO_RESCHEDULE;
+
+    ktrace_tiny(TAG_IRQ_ENTER, (frame->vector << 8) | arch_curr_cpu_num());
 
     switch (frame->vector) {
         case X86_INT_INVALID_OP:
