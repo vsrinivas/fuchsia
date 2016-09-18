@@ -90,23 +90,7 @@ static inline void arch_spinloop_signal(void)
 
 static inline uint32_t arch_cycle_count(void)
 {
-#if ARM_ISA_ARM7M
-#if ENABLE_CYCLE_COUNTER
-#define DWT_CYCCNT (0xE0001004)
-    return *REG32(DWT_CYCCNT);
-#else
-    return 0;
-#endif
-#elif ARM_ISA_ARMV7
-    uint32_t count;
-    __asm__ volatile("mrc       p15, 0, %0, c9, c13, 0"
-                     : "=r" (count)
-                    );
-    return count;
-#else
-//#warning no arch_cycle_count implementation
-    return 0;
-#endif
+    return (uint32_t)ARM64_READ_SYSREG(pmccntr_el0);
 }
 
 /* use the cpu local thread context pointer to store current_thread */

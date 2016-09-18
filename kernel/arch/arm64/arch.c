@@ -48,6 +48,10 @@ static void arm64_cpu_early_init(void)
     }
 
     arch_enable_fiqs();
+
+    /* enable cycle counter */
+    ARM64_WRITE_SYSREG(pmcr_el0, 1);
+    ARM64_WRITE_SYSREG(pmcntenset_el0, (1u << 31));
 }
 
 void arch_early_init(void)
