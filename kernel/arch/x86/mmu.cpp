@@ -434,7 +434,7 @@ static pt_entry_t* _map_alloc_page(void) {
     pt_entry_t* page_ptr = static_cast<pt_entry_t*>(pmm_alloc_kpage(nullptr));
     DEBUG_ASSERT(page_ptr);
 
-    if (page_ptr) memset(page_ptr, 0, PAGE_SIZE);
+    if (page_ptr) arch_zero_page(page_ptr);
 
     return page_ptr;
 }

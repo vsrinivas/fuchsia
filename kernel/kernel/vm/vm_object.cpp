@@ -24,7 +24,7 @@ static void ZeroPage(paddr_t pa) {
     void* ptr = paddr_to_kvaddr(pa);
     DEBUG_ASSERT(ptr);
 
-    memset(ptr, 0, PAGE_SIZE);
+    arch_zero_page(ptr);
 }
 
 static void ZeroPage(vm_page_t* p) {

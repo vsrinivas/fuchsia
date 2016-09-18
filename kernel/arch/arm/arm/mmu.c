@@ -486,7 +486,7 @@ static status_t get_l2_table(arch_aspace_t *aspace, uint32_t l1_index, paddr_t *
     LTRACEF("allocated page table at pa %#" PRIxPTR "\n", pa);
 
     /* wipe it clean to set no access */
-    memset(l2_va, 0, PAGE_SIZE);
+    arch_zero_page(l2_va);
 
     /* get physical address */
     DEBUG_ASSERT(IS_PAGE_ALIGNED((vaddr_t)l2_va));
@@ -912,7 +912,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, 
         if (!va)
             return ERR_NO_MEMORY;
 
-        memset(va, 0, PAGE_SIZE);
+        arch_zero_page(va);
 
         aspace->tt_virt = va;
         aspace->tt_phys = pa;

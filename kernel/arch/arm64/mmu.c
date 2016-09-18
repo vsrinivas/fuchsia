@@ -813,7 +813,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, 
 
         /* zero the top level translation table */
         /* XXX remove when PMM starts returning pre-zeroed pages */
-        memset(aspace->tt_virt, 0, PAGE_SIZE);
+        arch_zero_page(aspace->tt_virt);
     }
 
     LTRACEF("tt_phys %#" PRIxPTR " tt_virt %p\n",
