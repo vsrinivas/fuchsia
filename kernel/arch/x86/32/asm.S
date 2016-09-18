@@ -6,4 +6,19 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/defines.h>
 
+// regular rep stosd version of page zero
+FUNCTION(arch_zero_page)
+    mov     %edi, %edx
+    mov     4(%esp), %edi
+
+    cld
+    mov     $PAGE_SIZE >> 2, %ecx
+    xor     %eax, %eax
+
+    rep     stosl
+
+    mov     %edx, %edi
+
+    ret

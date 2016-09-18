@@ -74,6 +74,9 @@ void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread
 /* overridable syscall handler */
 void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint32_t syscall_imm, uint64_t pc);
 
+/* block size of the dc zva instruction */
+extern uint32_t arm64_zva_shift;
+
 __END_CDECLS
 
 #endif // __ASSEMBLY__

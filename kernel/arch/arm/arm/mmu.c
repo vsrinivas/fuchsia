@@ -941,4 +941,9 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t *aspace)
     return NO_ERROR;
 }
 
+void arch_zero_page(void *ptr)
+{
+    memset(ptr, 0, PAGE_SIZE);
+}
+
 #endif // ARM_WITH_MMU

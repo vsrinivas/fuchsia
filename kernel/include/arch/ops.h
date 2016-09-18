@@ -67,6 +67,9 @@ static void arch_spinloop_pause(void);
  * a spinloop */
 static void arch_spinloop_signal(void);
 
+/* arch optimized version of a page zero routine against a page aligned buffer */
+void arch_zero_page(void *);
+
 /* give the specific arch a chance to override some routines */
 #include <arch/arch_ops.h>
 

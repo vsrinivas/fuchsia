@@ -17,6 +17,7 @@
 #include <kernel/semaphore.h>
 #include <kernel/event.h>
 #include <platform.h>
+#include <arch/ops.h>
 
 const size_t BUFSIZE = (1024*1024);
 const uint ITER = 1024;
@@ -39,7 +40,7 @@ __NO_INLINE static void bench_set_overhead(void)
 
 __NO_INLINE static void bench_memset(void)
 {
-    void *buf = malloc(BUFSIZE);
+    uint8_t *buf = memalign(PAGE_SIZE, BUFSIZE);
 
     uint count = arch_cycle_count();
     for (uint i = 0; i < ITER; i++) {
@@ -49,6 +50,44 @@ __NO_INLINE static void bench_memset(void)
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
     printf("took %u cycles to memset a buffer of size %u %d times (%u bytes), %llu.%03llu bytes/cycle\n",
+           count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
+
+    free(buf);
+}
+
+__NO_INLINE static void bench_memset_per_page(void)
+{
+    uint8_t *buf = memalign(PAGE_SIZE, BUFSIZE);
+
+    uint count = arch_cycle_count();
+    for (uint i = 0; i < ITER; i++) {
+        for (uint j = 0; j < BUFSIZE; j += PAGE_SIZE) {
+            memset(buf + j, 0, PAGE_SIZE);
+        }
+    }
+    count = arch_cycle_count() - count;
+
+    uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
+    printf("took %u cycles to per-page memset a buffer of size %u %d times (%u bytes), %llu.%03llu bytes/cycle\n",
+           count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
+
+    free(buf);
+}
+
+__NO_INLINE static void bench_zero_page(void)
+{
+    uint8_t *buf = memalign(PAGE_SIZE, BUFSIZE);
+
+    uint count = arch_cycle_count();
+    for (uint i = 0; i < ITER; i++) {
+        for (uint j = 0; j < BUFSIZE; j += PAGE_SIZE) {
+            arch_zero_page(buf + j);
+        }
+    }
+    count = arch_cycle_count() - count;
+
+    uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
+    printf("took %u cycles to arch_zero_page a buffer of size %u %d times (%u bytes), %llu.%03llu bytes/cycle\n",
            count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
 
     free(buf);
@@ -217,8 +256,11 @@ __NO_INLINE static void bench_sincos(void)
 void benchmarks(void)
 {
     bench_set_overhead();
-    bench_memset();
     bench_memcpy();
+    bench_memset();
+
+    bench_memset_per_page();
+    bench_zero_page();
 
     bench_cset_uint8_t();
     bench_cset_uint16_t();

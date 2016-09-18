@@ -13,6 +13,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 #include <arch/mp.h>
+#include <bits.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
@@ -57,6 +58,14 @@ static void arm64_cpu_early_init(void)
 void arch_early_init(void)
 {
     arm64_cpu_early_init();
+
+    /* read the block size of DC ZVA */
+    uint32_t dczid = ARM64_READ_SYSREG(dczid_el0);
+    if (BIT(dczid, 4) == 0) {
+        arm64_zva_shift = (ARM64_READ_SYSREG(dczid_el0) & 0xf) + 2;
+    }
+    ASSERT(arm64_zva_shift != 0); /* for now, fail if DC ZVA is unavailable */
+
     platform_init_mmu_mappings();
 }
 

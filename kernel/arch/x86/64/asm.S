@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/defines.h>
 
 /* void x86_64_context_switch(uint64_t *oldsp, uint64_t newsp) */
 FUNCTION(x86_64_context_switch)
@@ -58,3 +59,13 @@ FUNCTION(arch_spin_unlock)
     xchg %rax, (%rdi)
     ret
 #endif // WITH_SMP
+
+/* rep stos version of page zero */
+FUNCTION(arch_zero_page)
+    xor     %rax, %rax
+    mov     $PAGE_SIZE >> 3, %rcx
+    cld
+
+    rep     stosq
+
+    ret
