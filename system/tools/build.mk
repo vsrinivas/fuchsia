@@ -8,12 +8,14 @@ MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
 BOOTSERVER := $(BUILDDIR)/tools/bootserver
 LOGLISTENER := $(BUILDDIR)/tools/loglistener
 NETRUNCMD := $(BUILDDIR)/tools/netruncmd
-NETCP:= $(BUILDDIR)/tools/netcp
-KTRACEDUMP:= $(BUILDDIR)/tools/ktracedump
+NETCP := $(BUILDDIR)/tools/netcp
+KTRACEDUMP := $(BUILDDIR)/tools/ktracedump
+SYSGEN := $(BUILDDIR)/tools/sysgen
 
 TOOLS_CFLAGS := -std=c11 -Wall -Isystem/public -Isystem/private
+TOOLS_CXXFLAGS := -std=c++11 -Wall
 
-ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(KTRACEDUMP)
+ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(KTRACEDUMP) $(SYSGEN)
 
 # phony rule to build just the tools
 .PHONY: tools
@@ -23,6 +25,11 @@ $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
 	@$(MKDIR)
 	$(NOECHO)cc $(TOOLS_CFLAGS) -o $@ $<
+
+$(BUILDDIR)/tools/%: system/tools/%.cpp
+	@echo compiling $@
+	@$(MKDIR)
+	$(NOECHO)c++ $(TOOLS_CXXFLAGS) -o $@ $<
 
 $(BUILDDIR)/tools/netruncmd: system/tools/netruncmd.c system/tools/netprotocol.c
 	@echo compiling $@
