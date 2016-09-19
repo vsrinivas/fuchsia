@@ -4,15 +4,15 @@
 #define SHARED
 
 #ifndef GETFUNCSYM
-#define GETFUNCSYM(fp, sym, got)                                        \
-    do {                                                                \
+#define GETFUNCSYM(fp, sym, got)                                          \
+    do {                                                                  \
         extern stage2_func sym __attribute__((__visibility__("hidden"))); \
-        static stage2_func* static_func_ptr = sym;                      \
-        __asm__ __volatile__(""                                         \
-                             : "+m"(static_func_ptr)                    \
-                             :                                          \
-                             : "memory");                               \
-        *(fp) = static_func_ptr;                                        \
+        static stage2_func* static_func_ptr = sym;                        \
+        __asm__ __volatile__(""                                           \
+                             : "+m"(static_func_ptr)                      \
+                             :                                            \
+                             : "memory");                                 \
+        *(fp) = static_func_ptr;                                          \
     } while (0)
 #endif
 

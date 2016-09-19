@@ -17,15 +17,15 @@ void* __mmap(void*, size_t, int, int, int, off_t);
 void* __expand_heap(size_t* pn) {
     static unsigned mmap_step;
     size_t n = *pn;
-    // TODO(teisenbe): Remove this and the use of MAP_FIXED below when it's
-    // time to do ASLR.  This is present for now to move the heap away from
-    // other allocations
+// TODO(teisenbe): Remove this and the use of MAP_FIXED below when it's
+// time to do ASLR.  This is present for now to move the heap away from
+// other allocations
 #if _LP64
     // Start the heap at 1TB if we're 64-bit
-    static void *next_base = (void*)(1ULL << 40);
+    static void* next_base = (void*)(1ULL << 40);
 #else
     // Start the heap at 512MB if we're 32-bit
-    static void *next_base = (void*)(1ULL << 29);
+    static void* next_base = (void*)(1ULL << 29);
 #endif
 
     if (n > SIZE_MAX / 2 - PAGE_SIZE) {

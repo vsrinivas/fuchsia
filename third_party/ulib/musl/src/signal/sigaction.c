@@ -22,6 +22,11 @@ int __libc_sigaction(int sig, const struct sigaction* restrict sa, struct sigact
             a_or_l(handler_set + (sig - 1) / (8 * sizeof(long)),
                    1UL << (sig - 1) % (8 * sizeof(long)));
 
+// TODO(kulakowski) Signals: We don't have them, but for
+// now it's cheap to keep around notes of where they had
+// to be handled, in case we ever have a mechanism with
+// similar implications for our threading implementation.
+#if 0
             /* If pthread_create has not yet been called,
              * implementation-internal signals might not
              * yet have been unblocked. They must be
@@ -30,11 +35,7 @@ int __libc_sigaction(int sig, const struct sigaction* restrict sa, struct sigact
              * receive an illegal sigset_t (with them
              * blocked) as part of the ucontext_t passed
              * to the signal handler. */
-            // TODO(kulakowski) Signals: We don't have them, but for
-            // now it's cheap to keep around notes of where they had
-            // to be handled, in case we ever have a mechanism with
-            // similar implications for our threading implementation.
-#if 0
+
             static int unmask_done;
             if (!libc.threaded && !unmask_done) {
                 __syscall(SYS_rt_sigprocmask, SIG_UNBLOCK, SIGPT_SET, 0, _NSIG / 8);

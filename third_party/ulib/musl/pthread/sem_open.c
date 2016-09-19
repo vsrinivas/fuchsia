@@ -10,8 +10,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <threads.h>
+#include <time.h>
 #include <unistd.h>
 
 char* __shm_mapname(const char*, char*);

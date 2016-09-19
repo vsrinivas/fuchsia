@@ -69,7 +69,8 @@ typedef struct {
     void* arg;
     void* entry;
 } dl_start_return_t;
-#define DL_START_RETURN(entry, arg) (dl_start_return_t) { (arg), (entry) }
+#define DL_START_RETURN(entry, arg) \
+    (dl_start_return_t) { (arg), (entry) }
 #endif
 
 typedef dl_start_return_t stage2_func(void* start_arg, void* vdso);

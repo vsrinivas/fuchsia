@@ -29,10 +29,10 @@
 //#define REL_TLSDESC     R_ARM_TLS_DESC
 
 // Jump to PC with ARG1 in the first argument register.
-#define CRTJMP(pc, arg1) \
-    __asm__ __volatile__("mov r0,%1 ; bx %0"                    \
-                         :                                      \
-                         : "r"(pc), "r"((unsigned long)(arg1))  \
+#define CRTJMP(pc, arg1)                                       \
+    __asm__ __volatile__("mov r0,%1 ; bx %0"                   \
+                         :                                     \
+                         : "r"(pc), "r"((unsigned long)(arg1)) \
                          : "memory")
 
 // This is how a C return value can be composed so it will
@@ -46,12 +46,12 @@ typedef unsigned long long dl_start_return_t;
 // the argument in the first argument register (r0, where it was placed by
 // the C function's return), clearing the return address and frame pointer
 // registers so the user entry point is the base of the call stack.
-#define DL_START_ASM                            \
-    __asm__(".globl _start\n"                   \
-            ".hidden _start\n"                  \
-            ".type _start,%function\n"          \
-            "_start:\n"                         \
-            "    bl _dl_start\n"                \
-            "    mov fp, #0\n"                  \
-            "    mov lr, #0\n"                  \
+#define DL_START_ASM                   \
+    __asm__(".globl _start\n"          \
+            ".hidden _start\n"         \
+            ".type _start,%function\n" \
+            "_start:\n"                \
+            "    bl _dl_start\n"       \
+            "    mov fp, #0\n"         \
+            "    mov lr, #0\n"         \
             "    bx r1");

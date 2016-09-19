@@ -30,14 +30,14 @@
 // the argument in the first argument register, pushing a zero return
 // address and clearing the frame pointer register so the user entry point
 // is the base of the call stack.
-#define DL_START_ASM                            \
-    __asm__(".globl _start\n"                   \
-            ".hidden _start\n"                  \
-            ".type _start,%function\n"          \
-            "_start:\n"                         \
-            "    call _dl_start\n"              \
-            "    and $-16,%rsp\n"               \
-            "    xor %rbp,%rbp\n"               \
-            "    mov %rax,%rdi\n"               \
-            "    push %rbp\n"                   \
+#define DL_START_ASM                   \
+    __asm__(".globl _start\n"          \
+            ".hidden _start\n"         \
+            ".type _start,%function\n" \
+            "_start:\n"                \
+            "    call _dl_start\n"     \
+            "    and $-16,%rsp\n"      \
+            "    xor %rbp,%rbp\n"      \
+            "    mov %rax,%rdi\n"      \
+            "    push %rbp\n"          \
             "    jmp *%rdx");

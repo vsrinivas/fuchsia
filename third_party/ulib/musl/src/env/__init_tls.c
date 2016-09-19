@@ -26,42 +26,42 @@ void __init_tp(pthread_t thread) {
 static struct builtin_tls {
     char c;
     struct pthread pt;
-    void *space[16];
+    void* space[16];
 } builtin_tls[1];
 #define MIN_TLS_ALIGN offsetof(struct builtin_tls, pt)
 
 static struct tls_module main_tls;
 
-void *__copy_tls(unsigned char *mem) {
+void* __copy_tls(unsigned char* mem) {
     pthread_t td;
-    struct tls_module *p;
+    struct tls_module* p;
     size_t i;
-    void **dtv;
+    void** dtv;
 
 #ifdef TLS_ABOVE_TP
-    dtv = (void **)(mem + libc.tls_size) - (libc.tls_cnt + 1);
+    dtv = (void**)(mem + libc.tls_size) - (libc.tls_cnt + 1);
 
-    mem += -((uintptr_t)mem + sizeof(struct pthread)) & (libc.tls_align-1);
+    mem += -((uintptr_t)mem + sizeof(struct pthread)) & (libc.tls_align - 1);
     td = (pthread_t)mem;
     mem += sizeof(struct pthread);
 
-    for (i=1, p=libc.tls_head; p; i++, p=p->next) {
+    for (i = 1, p = libc.tls_head; p; i++, p = p->next) {
         dtv[i] = mem + p->offset;
         memcpy(dtv[i], p->image, p->len);
     }
 #else
-    dtv = (void **)mem;
+    dtv = (void**)mem;
 
     mem += libc.tls_size - sizeof(struct pthread);
-    mem -= (uintptr_t)mem & (libc.tls_align-1);
+    mem -= (uintptr_t)mem & (libc.tls_align - 1);
     td = (pthread_t)mem;
 
-    for (i=1, p=libc.tls_head; p; i++, p=p->next) {
+    for (i = 1, p = libc.tls_head; p; i++, p = p->next) {
         dtv[i] = mem - p->offset;
         memcpy(dtv[i], p->image, p->len);
     }
 #endif
-    dtv[0] = (void *)libc.tls_cnt;
+    dtv[0] = (void*)libc.tls_cnt;
     td->dtv = td->dtv_copy = dtv;
     return td;
 }
@@ -73,7 +73,7 @@ typedef Elf64_Phdr Phdr;
 #endif
 
 static void static_init_tls(mxr_thread_t* mxr_thread) {
-    void *mem;
+    void* mem;
 
     // TODO(kulakowski) Get base and the tls phdr in the static case.
     // unsigned char *p;
@@ -97,17 +97,15 @@ static void static_init_tls(mxr_thread_t* mxr_thread) {
     //     libc.tls_head = &main_tls;
     // }
 
-    main_tls.size += (-main_tls.size - (uintptr_t)main_tls.image)
-        & (main_tls.align-1);
-    if (main_tls.align < MIN_TLS_ALIGN) main_tls.align = MIN_TLS_ALIGN;
+    main_tls.size += (-main_tls.size - (uintptr_t)main_tls.image) & (main_tls.align - 1);
+    if (main_tls.align < MIN_TLS_ALIGN)
+        main_tls.align = MIN_TLS_ALIGN;
 #ifndef TLS_ABOVE_TP
     main_tls.offset = main_tls.size;
 #endif
 
     libc.tls_align = main_tls.align;
-    libc.tls_size = 2*sizeof(void *) + sizeof(struct pthread)
-        + main_tls.size + main_tls.align
-        + MIN_TLS_ALIGN-1 & -MIN_TLS_ALIGN;
+    libc.tls_size = 2 * sizeof(void*) + sizeof(struct pthread) + main_tls.size + main_tls.align + MIN_TLS_ALIGN - 1 & -MIN_TLS_ALIGN;
 
     if (libc.tls_size > sizeof builtin_tls) {
         mem = mmap(0, libc.tls_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);

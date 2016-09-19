@@ -38,8 +38,16 @@ enum {
 };
 
 #ifdef _ALL_SOURCE
-#define MTX_INIT {{0}}
-#define CND_INIT {{{0}}}
+#define MTX_INIT \
+    {            \
+        { 0 }    \
+    }
+#define CND_INIT  \
+    {             \
+        {         \
+            { 0 } \
+        }         \
+    }
 #endif
 
 #define ONCE_FLAG_INIT 0

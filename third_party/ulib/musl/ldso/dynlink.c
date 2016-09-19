@@ -15,8 +15,8 @@
 #include <magenta/dlfcn.h>
 #include <pthread.h>
 #include <setjmp.h>
-#include <stdatomic.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -494,7 +494,7 @@ static void* choose_load_address(size_t span) {
     _mx_handle_close(vmo);
     if (status < 0) {
         error("failed to reserve %zu bytes of address space: %d\n",
-                span, status);
+              span, status);
         errno = ENOMEM;
         return MAP_FAILED;
     }
@@ -510,7 +510,7 @@ static void* choose_load_address(size_t span) {
     status = _mx_process_unmap_vm(libc.proc, base, 0);
     if (status < 0) {
         error("vm_unmap failed on reservation %#" PRIxPTR "+%zu: %d\n",
-                base, span, status);
+              base, span, status);
         errno = ENOMEM;
         return MAP_FAILED;
     }
@@ -521,7 +521,7 @@ static void* choose_load_address(size_t span) {
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
 // This will go away when we have copy-on-write.
 static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
-                                    off_t *off_start, size_t *map_size) {
+                                    off_t* off_start, size_t* map_size) {
     mx_handle_t copy_vmo = _mx_vmo_create(data_size);
     if (copy_vmo < 0)
         return copy_vmo;
@@ -1392,7 +1392,7 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
         void* initial_tls = calloc(libc.tls_size, 1);
         if (!initial_tls) {
             debugmsg("%s: Error getting %zu bytes thread-local storage: %m\n", argv[0],
-                    libc.tls_size);
+                     libc.tls_size);
             _exit(127);
         }
         __init_tp(__copy_tls(initial_tls));
@@ -1533,7 +1533,6 @@ dl_start_return_t __dls3(void* start_arg) {
 
     return DL_START_RETURN(entry, start_arg);
 }
-
 
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     struct dso* volatile p, *orig_tail, *next;
@@ -1947,7 +1946,8 @@ static int errormsg_vprintf(const char* restrict fmt, va_list ap) {
     FILE f = {
         .lbf = EOF,
         .write = errormsg_write,
-        .buf = (void*)fmt, .buf_size = 0,
+        .buf = (void*)fmt,
+        .buf_size = 0,
         .lock = -1,
     };
     return vfprintf(&f, fmt, ap);

@@ -9,8 +9,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <syslog.h>
-#include <time.h>
 #include <threads.h>
+#include <time.h>
 #include <unistd.h>
 
 static mtx_t lock = MTX_INIT;

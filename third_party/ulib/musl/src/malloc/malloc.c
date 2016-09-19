@@ -524,8 +524,10 @@ void __donate_heap(void* startptr, void* endptr) {
     if (start > end || end - start < SIZE_ALIGN)
         return;
     struct chunk* z = (struct chunk*)end;
-    MEM_TO_CHUNK(start)->psize = 0 | C_INUSE;
-    MEM_TO_CHUNK(start)->csize = z->psize = (end - start + OVERHEAD) | C_INUSE;
+    MEM_TO_CHUNK(start)
+        ->psize = 0 | C_INUSE;
+    MEM_TO_CHUNK(start)
+        ->csize = z->psize = (end - start + OVERHEAD) | C_INUSE;
     z->csize = 0 | C_INUSE;
     internal_free((void*)start);
 }

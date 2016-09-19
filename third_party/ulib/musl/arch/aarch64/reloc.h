@@ -34,12 +34,12 @@
 // the argument in the first argument register (x0, where it was placed by
 // the C function's return), clearing the return address and frame pointer
 // registers so the user entry point is the base of the call stack.
-#define DL_START_ASM                                            \
-    __asm__(".globl _start\n"                                   \
-            ".hidden _start\n"                                  \
-            ".type _start,%function\n"                          \
-            "_start:\n"                                         \
-            "    bl _dl_start\n"                                \
-            "    mov x29, #0\n" /* frame pointer (FP) */        \
-            "    mov x30, #0\n" /* return address (LR) */       \
+#define DL_START_ASM                                      \
+    __asm__(".globl _start\n"                             \
+            ".hidden _start\n"                            \
+            ".type _start,%function\n"                    \
+            "_start:\n"                                   \
+            "    bl _dl_start\n"                          \
+            "    mov x29, #0\n" /* frame pointer (FP) */  \
+            "    mov x30, #0\n" /* return address (LR) */ \
             "    br x1");
