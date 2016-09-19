@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <err.h>
 #include <magenta/compiler.h>
 #include <magenta/ktrace.h>
 
