@@ -8,6 +8,10 @@
     ],
     "binaries": [
         {
+            "binary": "component-manager",
+            "bootfs_path": "apps/component-manager"
+        },
+        {
             "binary": "context_service",
             "bootfs_path": "apps/context_service"
         },
