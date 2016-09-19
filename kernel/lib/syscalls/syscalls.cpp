@@ -92,7 +92,7 @@ using syscall_func = int64_t (*)(uint64_t a, uint64_t b, uint64_t c, uint64_t d,
 extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, uint32_t syscall_imm, uint64_t pc) {
     uint64_t syscall_num = frame->r[16];
 
-    ktrace_tiny(TAG_SYSCALL_ENTER, (syscall_num << 8) | arch_curr_cpu_num());
+    ktrace_tiny(TAG_SYSCALL_ENTER, ((uint32_t)syscall_num << 8) | arch_curr_cpu_num());
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely(syscall_imm != 0xf0f)) {
@@ -137,7 +137,7 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     /* re-disable interrupts on the way out */
     arch_disable_ints();
 
-    ktrace_tiny(TAG_SYSCALL_EXIT, (syscall_num << 8) | arch_curr_cpu_num());
+    ktrace_tiny(TAG_SYSCALL_EXIT, ((uint32_t)syscall_num << 8) | arch_curr_cpu_num());
 }
 
 #endif
