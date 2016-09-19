@@ -72,6 +72,8 @@ status_t PciInterruptDispatcher::Create(
     // Everything seems to have gone well.  Make sure the interrupt is unmasked
     // (if it is maskable) then transfer our dispatcher refererence to the
     // caller.
+    if (maskable)
+        pcie_unmask_irq(device->device(), irq_id);
     *out_interrupt = mxtl::move(dispatcher);
     *out_rights    = kDefaultPciInterruptRights;
     return NO_ERROR;
