@@ -22,7 +22,8 @@
 
 #include <mxtl/algorithm.h>
 
-const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_USER;
+const auto kDP_Map_Perms = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
+                           ARCH_MMU_FLAG_PERM_USER;
 const auto kDP_Map_Perms_RO = kDP_Map_Perms | ARCH_MMU_FLAG_PERM_READ;
 
 mx_status_t DataPipe::Create(mx_size_t element_size,
@@ -115,11 +116,19 @@ void DataPipe::UpdateSignalsNoLock() {
 }
 
 void DataPipe::UpdateProducerSignalsNoLock() {
-    // TODO(vtl): Should be non-writable during a two-phase write.
     if (consumer_.alive) {
-        mx_signals_t satisfied = (free_space_no_lock() > 0u) ? MX_SIGNAL_WRITABLE : 0u;
-        if (free_space_no_lock() >= write_threshold_no_lock())
-            satisfied |= MX_SIGNAL_WRITE_THRESHOLD;
+        mx_signals_t satisfied;
+        if (producer_.expected) {
+            satisfied = 0u; // Not writable during two-phase write.
+        } else {
+            // Note: write_threshold_no_lock() > 0.
+            if (free_space_no_lock() >= write_threshold_no_lock())
+                satisfied = MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD;
+            else if (free_space_no_lock() > 0u)
+                satisfied = MX_SIGNAL_WRITABLE;
+            else
+                satisfied = 0u;
+        }
         producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD,
                                                 satisfied);
     } else {
@@ -130,18 +139,37 @@ void DataPipe::UpdateProducerSignalsNoLock() {
 }
 
 void DataPipe::UpdateConsumerSignalsNoLock() {
-    // TODO(vtl): Should be non-readable during a two-phase read.
-    mx_signals_t satisfied = (available_size_no_lock() > 0u) ? MX_SIGNAL_READABLE : 0u;
-    if (available_size_no_lock() >= read_threshold_no_lock())
-        satisfied |= MX_SIGNAL_READ_THRESHOLD;
+    mx_signals_t satisfied;
+    if (consumer_.expected) {
+        satisfied = 0u; // Not readable during two-phase read.
+    } else {
+        // Note: read_threshold_no_lock() > 0.
+        if (available_size_no_lock() >= read_threshold_no_lock())
+            satisfied = MX_SIGNAL_READABLE | MX_SIGNAL_READ_THRESHOLD;
+        else if (available_size_no_lock() > 0u)
+            satisfied = MX_SIGNAL_READABLE;
+        else
+            satisfied = 0u;
+    }
     if (producer_.alive) {
         consumer_.state_tracker.UpdateSatisfied(MX_SIGNAL_READABLE | MX_SIGNAL_READ_THRESHOLD,
                                                 satisfied);
     } else {
         satisfied |= MX_SIGNAL_PEER_CLOSED;
+
+        // Note: READABLE/READ_THRESHOLD may still be satisfiable even if they're not satisfied, if
+        // the reason for the latter is that we're in a two-phase read.
+        mx_signals_t satisfiable;
+        if (available_size_no_lock() >= read_threshold_no_lock())
+            satisfiable = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD;
+        else if (available_size_no_lock() > 0u)
+            satisfiable = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+        else
+            satisfiable = MX_SIGNAL_PEER_CLOSED;
+
         consumer_.state_tracker.UpdateState(
                 MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD, satisfied,
-                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD, satisfied);
+                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD, satisfiable);
     }
 }
 
@@ -223,6 +251,8 @@ mx_ssize_t DataPipe::ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** pt
     producer_.expected = contiguous_free_space_no_lock();
     DEBUG_ASSERT(producer_.expected > 0u);
     DEBUG_ASSERT(producer_.expected % element_size_ == 0u);
+
+    UpdateProducerSignalsNoLock();
 
     *ptr = producer_.vad_start + producer_.cursor;
     return static_cast<mx_ssize_t>(producer_.expected);
@@ -364,6 +394,8 @@ mx_ssize_t DataPipe::ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr
     consumer_.expected = contiguous_available_size_no_lock();
     DEBUG_ASSERT(consumer_.expected > 0u);
     DEBUG_ASSERT(consumer_.expected % element_size_ == 0u);
+
+    UpdateConsumerSignalsNoLock();
 
     *ptr = consumer_.vad_start + consumer_.cursor;
     return static_cast<mx_ssize_t>(consumer_.expected);
