@@ -4,8 +4,10 @@
 
 #include "helper/platform_device_helper.h"
 #include "magma_util/sleep.h"
+#include "mock/mock_mmio.h"
 #include "msd_intel_device.h"
 #include "msd_intel_driver.h"
+#include "registers.h"
 #include "gtest/gtest.h"
 
 class TestEngineCommandStreamer {
@@ -65,7 +67,7 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        magma::msleep(1000);
+        magma::msleep(100);
 
         MsdIntelDevice::DumpState dump_state;
         device->Dump(&dump_state);
@@ -77,20 +79,33 @@ public:
                   device->render_engine_cs()->GetActiveHeadPointer());
         EXPECT_FALSE(dump_state.fault_present);
 
+        std::string dump_string;
+        device->DumpToString(dump_string);
+        DLOG("%s", dump_string.c_str());
+    }
+
+    void MockDump()
+    {
+        std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(2 * 1024 * 1024)));
+
+        reg_io->Write32(registers::FaultTlbReadData::kOffset0, 0xabcd1234);
+        reg_io->Write32(registers::FaultTlbReadData::kOffset1, 0xf);
+
+        MsdIntelDevice::DumpState dump_state;
+        MsdIntelDevice::DumpFaultAddress(&dump_state, reg_io.get());
+
+        EXPECT_EQ(dump_state.fault_gpu_address, 0xfabcd1234000ull);
+
         uint32_t engine = 0;
         uint32_t src = 0xff;
         uint32_t type = 0x3;
         uint32_t valid = 0x1;
-        device->DumpFault(&dump_state, (engine << 12) | (src << 3) | (type << 1) | valid);
+        MsdIntelDevice::DumpFault(&dump_state, (engine << 12) | (src << 3) | (type << 1) | valid);
 
         EXPECT_EQ(dump_state.fault_present, valid);
         EXPECT_EQ(dump_state.fault_engine, engine);
         EXPECT_EQ(dump_state.fault_src, src);
         EXPECT_EQ(dump_state.fault_type, type);
-
-        std::string dump_string;
-        device->DumpToString(dump_string);
-        DLOG("%s", dump_string.c_str());
     }
 
     void BatchBuffer()
@@ -187,6 +202,12 @@ TEST(MsdIntelDevice, Dump)
 {
     TestMsdIntelDevice test;
     test.Dump();
+}
+
+TEST(MsdIntelDevice, MockDump)
+{
+    TestMsdIntelDevice test;
+    test.MockDump();
 }
 
 TEST(MsdIntelDevice, BatchBuffer)

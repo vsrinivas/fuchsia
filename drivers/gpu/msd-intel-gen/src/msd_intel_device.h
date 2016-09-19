@@ -47,6 +47,7 @@ public:
         uint8_t fault_engine;
         uint8_t fault_src;
         uint8_t fault_type;
+        uint64_t fault_gpu_address;
     };
 
     void Dump(DumpState* dump_state);
@@ -84,7 +85,8 @@ private:
 
     bool ReadGttSize(unsigned int* gtt_size);
 
-    void DumpFault(DumpState* dump_out, uint32_t fault);
+    static void DumpFault(DumpState* dump_out, uint32_t fault);
+    static void DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io);
 
     MsdIntelContext* global_context() { return global_context_.get(); }
 

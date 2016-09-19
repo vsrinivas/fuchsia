@@ -114,6 +114,10 @@ void MsdIntelDevice::Dump(DumpState* dump_out)
     dump_out->render_cs.active_head_pointer = render_engine_cs_->GetActiveHeadPointer();
 
     DumpFault(dump_out, registers::AllEngineFault::read(register_io_.get()));
+
+    dump_out->fault_gpu_address = kInvalidGpuAddr;
+    if (dump_out->fault_present)
+        DumpFaultAddress(dump_out, register_io_.get());
 }
 
 void MsdIntelDevice::DumpFault(DumpState* dump_out, uint32_t fault)
@@ -122,6 +126,11 @@ void MsdIntelDevice::DumpFault(DumpState* dump_out, uint32_t fault)
     dump_out->fault_engine = registers::AllEngineFault::engine(fault);
     dump_out->fault_src = registers::AllEngineFault::src(fault);
     dump_out->fault_type = registers::AllEngineFault::type(fault);
+}
+
+void MsdIntelDevice::DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io)
+{
+    dump_out->fault_gpu_address = registers::FaultTlbReadData::addr(register_io);
 }
 
 void MsdIntelDevice::DumpToString(std::string& dump_out)
@@ -142,9 +151,9 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
 
     if (dump_state.fault_present) {
         fmt = "ENGINE FAULT DETECTED\n"
-              "engine 0x%x src 0x%x type 0x%x\n";
+              "engine 0x%x src 0x%x type 0x%x gpu_address 0x%llx\n";
         size = std::snprintf(nullptr, 0, fmt, dump_state.fault_engine, dump_state.fault_src,
-                             dump_state.fault_type);
+                             dump_state.fault_type, dump_state.fault_gpu_address);
         std::vector<char> buf(size + 1);
         std::snprintf(&buf[0], buf.size(), fmt, dump_state.fault_engine, dump_state.fault_src,
                       dump_state.fault_type);
