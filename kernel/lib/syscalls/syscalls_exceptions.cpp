@@ -31,7 +31,7 @@
 
 #define LOCAL_TRACE 0
 
-mx_status_t object_unbind_exception_port(mx_handle_t obj_handle) {
+static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle) {
     //TODO: check rights once appropriate right is determined
 
     if (obj_handle == MX_HANDLE_INVALID) {
@@ -62,7 +62,7 @@ mx_status_t object_unbind_exception_port(mx_handle_t obj_handle) {
     return ERR_WRONG_TYPE;
 }
 
-mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key) {
+static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key) {
     //TODO: check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
