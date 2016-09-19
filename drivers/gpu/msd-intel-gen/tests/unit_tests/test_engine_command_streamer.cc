@@ -4,6 +4,7 @@
 
 #include "device_id.h"
 #include "engine_command_streamer.h"
+#include "instructions.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_mmio.h"
 #include "registers.h"
@@ -17,6 +18,11 @@ public:
     {
         return context->get_context_buffer(id);
     }
+};
+
+class TestRingbuffer {
+public:
+    static uint32_t* vaddr(Ringbuffer* ringbuffer) { return ringbuffer->vaddr(); }
 };
 
 class MockStatusPageBuffer {
@@ -172,17 +178,44 @@ public:
 
         EXPECT_TRUE(render_cs->RenderInit(context_.get()));
 
-        EXPECT_EQ(ringbuffer->tail(), 0x24u);
+        EXPECT_EQ(ringbuffer->tail(), 15u * 4);
 
-        // Consider validating the content of the ring buffer here.
+        auto ringbuffer_content = TestRingbuffer::vaddr(ringbuffer);
 
-        gpu_addr_t gpu_addr;
-        EXPECT_TRUE(ringbuffer->GetGpuAddress(address_space_->id(), &gpu_addr));
+        // batch buffer start
+        gpu_addr_t init_batch_addr = 0; // first thing to be mapped
+        int i = 0;
+        EXPECT_EQ(ringbuffer_content[i++], MiBatchBufferStart::kCommandType | (3 - 2));
+        EXPECT_EQ(ringbuffer_content[i++], magma::lower_32_bits(init_batch_addr));
+        EXPECT_EQ(ringbuffer_content[i++], magma::upper_32_bits(init_batch_addr));
+
+        EXPECT_EQ(ringbuffer_content[i++], (uint32_t)MiNoop::kCommandType);
+
+        // pipe control
+        EXPECT_EQ(ringbuffer_content[i++], 0x7a000000u | (6 - 2));
+        EXPECT_EQ(ringbuffer_content[i++], MiPipeControl::kCommandStreamerStallEnableBit |
+                                               MiPipeControl::kIndirectStatePointersDisable);
+        EXPECT_EQ(ringbuffer_content[i++], 0u);
+        EXPECT_EQ(ringbuffer_content[i++], 0u);
+        EXPECT_EQ(ringbuffer_content[i++], 0u);
+        EXPECT_EQ(ringbuffer_content[i++], 0u);
+
+        // store sequence number
+        gpu_addr_t seqno_gpu_addr = context_->hardware_status_page(engine_cs_->id())->gpu_addr() +
+                                    HardwareStatusPage::kSequenceNumberOffset;
+
+        EXPECT_EQ(ringbuffer_content[i++], 0x10400000u | (4 - 2));
+        EXPECT_EQ(ringbuffer_content[i++], magma::lower_32_bits(seqno_gpu_addr));
+        EXPECT_EQ(ringbuffer_content[i++], magma::upper_32_bits(seqno_gpu_addr));
+        EXPECT_EQ(ringbuffer_content[i++], (uint32_t)kFirstSequenceNumber);
 
         void* addr;
         EXPECT_TRUE(TestContext::get_context_buffer(context_.get(), engine_cs_->id())
                         ->platform_buffer()
                         ->MapCpu(&addr));
+
+        gpu_addr_t gpu_addr;
+        EXPECT_TRUE(ringbuffer->GetGpuAddress(address_space_->id(), &gpu_addr));
 
         uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
         EXPECT_EQ(state[6], 0x2030ul);

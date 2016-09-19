@@ -42,6 +42,7 @@ protected:
     bool SubmitContext(MsdIntelContext* context);
     bool UpdateContext(MsdIntelContext* context);
     void SubmitExeclists(MsdIntelContext* context);
+    bool PipeControl(MsdIntelContext* context, uint32_t flags);
 
     // from intel-gfx-prm-osrc-bdw-vol03-gpu_overview_3.pdf p.7
     static constexpr uint32_t kRenderEngineMmioBase = 0x2000;

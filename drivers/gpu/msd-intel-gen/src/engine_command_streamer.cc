@@ -465,11 +465,27 @@ bool RenderEngineCommandStreamer::ExecBatch(MsdIntelContext* context, gpu_addr_t
     if (!StartBatchBuffer(context, batch_address, ADDRESS_SPACE_GTT))
         return DRETF(false, "failed to emit batch");
 
+    if (!PipeControl(context, MiPipeControl::kIndirectStatePointersDisable |
+                                  MiPipeControl::kCommandStreamerStallEnableBit))
+        return DRETF(false, "FlushInvalidate failed");
+
     if (!WriteSequenceNumber(context, sequence_number))
         return DRETF(false, "failed to finish batch buffer");
 
     if (!SubmitContext(context))
         return DRETF(false, "SubmitContext failed");
+
+    return true;
+}
+
+bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags)
+{
+    auto ringbuffer = context->get_ringbuffer(id());
+
+    if (!ringbuffer->HasSpace(MiPipeControl::kDwordCount * sizeof(uint32_t)))
+        return DRETF(false, "ringbuffer has insufficient space");
+
+    MiPipeControl::write(ringbuffer, flags);
 
     return true;
 }

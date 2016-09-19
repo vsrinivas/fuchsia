@@ -51,4 +51,28 @@ public:
     }
 };
 
+// intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf pp.1057
+class MiPipeControl {
+public:
+    static constexpr uint32_t kDwordCount = 6;
+    static constexpr uint32_t kCommandType = 0x3 << 29;
+    static constexpr uint32_t kCommandSubType = 0x3 << 27;
+    static constexpr uint32_t k3dCommandOpcode = 0x2 << 24;
+    static constexpr uint32_t k3dCommandSubOpcode = 0 << 16;
+    static constexpr uint32_t kCommandStreamerStallEnableBit = 1 << 20;
+    static constexpr uint32_t kIndirectStatePointersDisable = 1 << 9;
+
+    static void write(Ringbuffer* ringbuffer, uint32_t flags)
+    {
+        DASSERT((flags & ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisable)) == 0);
+        ringbuffer->write_tail(kCommandType | kCommandSubType | k3dCommandOpcode |
+                               k3dCommandSubOpcode | (kDwordCount - 2));
+        ringbuffer->write_tail(flags);
+        ringbuffer->write_tail(0);
+        ringbuffer->write_tail(0);
+        ringbuffer->write_tail(0);
+        ringbuffer->write_tail(0);
+    }
+};
+
 #endif // INSTRUCTIONS_H
