@@ -12,7 +12,8 @@ typedef struct {
     int futex;
 } mxr_once_t;
 
-#define MXR_ONCE_INIT {0}
+#define MXR_ONCE_INIT \
+    { 0 }
 
 #pragma GCC visibility push(hidden)
 

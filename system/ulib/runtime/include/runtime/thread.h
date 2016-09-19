@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

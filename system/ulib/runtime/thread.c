@@ -25,10 +25,11 @@ enum {
 
 #define MXR_THREAD_MAGIC 0x97c40acdb29ee45dULL
 
-#define CHECK_THREAD(thread) do { \
-    if (!thread || thread->magic != MXR_THREAD_MAGIC) \
-        __builtin_trap(); \
-    } while (0);
+#define CHECK_THREAD(thread)                              \
+    do {                                                  \
+        if (!thread || thread->magic != MXR_THREAD_MAGIC) \
+            __builtin_trap();                             \
+    } while (0)
 
 struct mxr_thread {
     mx_handle_t handle;

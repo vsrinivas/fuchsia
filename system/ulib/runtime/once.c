@@ -37,7 +37,7 @@ void mxr_once(mxr_once_t* once, void (*func)(void)) {
                 if (!atomic_compare_exchange_strong(&once->futex,
                                                     &old_state, WAITING))
                     continue;
-                // Fall through.
+            // Fall through.
 
             case WAITING:;
                 mx_status_t status =
@@ -47,7 +47,7 @@ void mxr_once(mxr_once_t* once, void (*func)(void)) {
                 continue;
 
             case UNUSED:
-                // This should have triggered the 'if' branch.
+            // This should have triggered the 'if' branch.
 
             default:
                 __builtin_unreachable();

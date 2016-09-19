@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/prctl.h>
 #include <magenta/syscalls.h>
-#include <magenta/compiler.h>
 
 __BEGIN_CDECLS
 

@@ -7,10 +7,13 @@
 const char* mx_strstatus(mx_status_t status) {
 
     switch (status) {
-#define FUCHSIA_ERROR(status, id) case ERR_##status: return #status;
+#define FUCHSIA_ERROR(status, id) \
+    case ERR_##status:            \
+        return #status;
 #include <magenta/fuchsia-types.def>
 #undef FUCHSIA_ERROR
 
-    default: return "No such mx_status_t";
+    default:
+        return "No such mx_status_t";
     }
 }
