@@ -5,7 +5,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# modules needed to implement user space
-
 MODULES += \
     app/shell
+
+# hard disable building of sysroot in a no userspace build
+ENABLE_BUILD_SYSROOT := false
+
