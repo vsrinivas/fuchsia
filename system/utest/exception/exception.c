@@ -354,7 +354,7 @@ static bool process_handler_test(void)
     mx_handle_t child, our_pipe;
     start_test_child(&child, &our_pipe);
     mx_handle_t eport = tu_io_port_create(0);
-    tu_set_exception_port(child, eport, 0);
+    tu_set_exception_port(child, eport, 0, 0);
 
     finish_basic_test("process", child, eport, our_pipe, MSG_CRASH);
     END_TEST;
@@ -371,7 +371,7 @@ static bool thread_handler_test(void)
     send_msg(our_pipe, MSG_NEW_THREAD);
     mx_handle_t thread;
     recv_msg_new_thread_handle(our_pipe, &thread);
-    tu_set_exception_port(thread, eport, 0);
+    tu_set_exception_port(thread, eport, 0, 0);
 
     finish_basic_test("thread", child, eport, our_pipe, MSG_CRASH_NEW_THREAD);
     END_TEST;
@@ -386,7 +386,7 @@ static bool process_gone_notification_test(void)
     start_test_child(&child, &our_pipe);
 
     mx_handle_t eport = tu_io_port_create(0);
-    tu_set_exception_port(child, eport, 0);
+    tu_set_exception_port(child, eport, 0, 0);
 
     send_msg(our_pipe, MSG_DONE);
     mx_koid_t tid;
@@ -413,7 +413,7 @@ static bool thread_gone_notification_test(void)
     mx_handle_t eport = tu_io_port_create(0);
     mx_handle_t thread =
         tu_thread_create(thread_func, (void*) (uintptr_t) their_pipe, "thread-gone-test-thread");
-    tu_set_exception_port(thread, eport, 0);
+    tu_set_exception_port(thread, eport, 0, 0);
 
     send_msg(our_pipe, MSG_DONE);
     // TODO(dje): The passing of "self" here is wip.

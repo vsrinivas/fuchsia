@@ -237,11 +237,11 @@ void tu_set_system_exception_port(mx_handle_t eport, uint64_t key)
         tu_fatal(__func__, status);
 }
 
-void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key)
+void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key, uint32_t options)
 {
     if (handle == 0)
         handle = mx_process_self();
-    mx_status_t status = mx_object_bind_exception_port(handle, eport, key, 0);
+    mx_status_t status = mx_object_bind_exception_port(handle, eport, key, options);
     if (status < 0)
         tu_fatal(__func__, status);
 }

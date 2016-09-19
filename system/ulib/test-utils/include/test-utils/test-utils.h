@@ -111,7 +111,7 @@ void tu_set_system_exception_port(mx_handle_t eport, uint64_t key);
 
 // Set the exception port for |handle| which is a process or thread.
 
-void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key);
+void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key, uint32_t options);
 
 // Get basic handle info for |handle|.
 
