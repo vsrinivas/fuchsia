@@ -3,7 +3,8 @@
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
         "//apps/logging",
-        "//apps/modular"
+        "//apps/modular",
+        "//apps/maxwell"
     ],
     "binaries": [
         {
@@ -41,6 +42,10 @@
         {
             "binary": "story-runner",
             "bootfs_path": "apps/story-runner"
+        },
+        {
+            "binary": "context_service",
+            "bootfs_path": "apps/context_service"
         },
         {
             "binary": "example-module1",
