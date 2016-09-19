@@ -15,12 +15,15 @@
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 // 0.5 seconds
 #define WATCHDOG_DURATION_TICK ((int64_t) 500 * 1000 * 1000)
 // 5 seconds
 #define WATCHDOG_DURATION_TICKS 10
 
 #define TEST_MEMORY_SIZE 8
+#define TEST_DATA_ADJUST 0x10
 
 // Do the segv recovery test a number of times to stress test the API.
 #define NUM_SEGV_TRIES 4
@@ -121,7 +124,7 @@ static const regspec_t general_regs[] =
 static void dump_gregs(mx_handle_t thread_handle, void* buf)
 {
 #if defined(__x86_64__) || defined(__aarch64__)
-    printf("Registers for thread %d\n", thread_handle);
+    unittest_printf("Registers for thread %d\n", thread_handle);
     for (unsigned i = 0; i < sizeof(general_regs) / sizeof(general_regs[0]); ++i) {
         const regspec_t* r = &general_regs[i];
         uint64_t val;
@@ -138,9 +141,9 @@ static void dump_gregs(mx_handle_t thread_handle, void* buf)
                 val = get_uint64(value_ptr);
             }
             if (r->count == 1)
-                printf("  %8s      %24ld  0x%lx\n", r->name, (long) val, (long) val);
+                unittest_printf("  %8s      %24ld  0x%lx\n", r->name, (long) val, (long) val);
             else
-                printf("  %8s[%2u]  %24ld  0x%lx\n", r->name, j, (long) val, (long) val);
+                unittest_printf("  %8s[%2u]  %24ld  0x%lx\n", r->name, j, (long) val, (long) val);
         }
     }
 #endif
@@ -168,7 +171,7 @@ static bool dump_inferior_regs(mx_handle_t thread)
         uint32_t regset_size = 0;
         status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, NULL, &regset_size);
         ASSERT_EQ(status, ERR_BUFFER_TOO_SMALL, "getting regset size failed");
-        void *buf = tu_malloc(regset_size);
+        void* buf = tu_malloc(regset_size);
         status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, buf, &regset_size);
         ASSERT_EQ(status, NO_ERROR, "getting regset failed");
         dump_arch_regs(thread, i, buf);
@@ -231,6 +234,51 @@ static void set_uint64_register(mx_handle_t thread, size_t offset, uint64_t valu
     free(buf);
 }
 
+static mx_ssize_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, mx_size_t buf_size)
+{
+    mx_ssize_t bytes_read = mx_debug_read_memory(proc, vaddr, buf_size, buf);
+    if (bytes_read < 0)
+        tu_fatal("read_inferior_memory", bytes_read);
+    return bytes_read;
+}
+
+static mx_ssize_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, mx_size_t buf_size)
+{
+    mx_ssize_t bytes_written = mx_debug_write_memory(proc, vaddr, buf_size, buf);
+    if (bytes_written < 0)
+        tu_fatal("write_inferior_memory", bytes_written);
+    return bytes_written;
+}
+
+static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
+{
+    uint64_t test_data_addr = 0;
+    mx_ssize_t ssize;
+    uint8_t test_data[TEST_MEMORY_SIZE];
+
+#ifdef __x86_64__
+    test_data_addr = get_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, r9));
+#endif
+#ifdef __aarch64__
+    test_data_addr = get_uint64_register(thread, offsetof(mx_aarch64_general_regs_t, r9));
+#endif
+
+    ssize = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
+    EXPECT_EQ(ssize, (mx_ssize_t) sizeof(test_data), "read_inferior_memory: short read");
+
+    for (unsigned i = 0; i < sizeof(test_data); ++i) {
+        EXPECT_EQ(test_data[i], i, "test_memory_ops");
+    }
+
+    for (unsigned i = 0; i < sizeof(test_data); ++i)
+        test_data[i] += TEST_DATA_ADJUST;
+
+    ssize = write_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
+    EXPECT_EQ(ssize, (mx_ssize_t) sizeof(test_data), "write_inferior_memory: short write");
+
+    // Note: Verification of the write is done in the inferior.
+}
+
 static void fix_inferior_segv(mx_handle_t thread)
 {
     unittest_printf("Fixing inferior segv\n");
@@ -278,8 +326,10 @@ static bool wait_inferior_thread_worker(void* arg)
         mx_handle_t thread = mx_debug_task_get_child(inferior, tid);
         ASSERT_GT(thread, 0, "mx_debug_task_get_child failed");
 
-        if (i == 0)
-            dump_inferior_regs(thread);
+        dump_inferior_regs(thread);
+
+        // Do some tests that require a suspended inferior.
+        test_memory_ops(inferior, thread);
 
         // Now correct the issue and resume the inferior.
 
@@ -364,14 +414,15 @@ static bool debugger_test(void)
     mx_handle_t pipe1, pipe2;
     tu_message_pipe_create(&pipe1, &pipe2);
 
-    const char* const argv[] = { test_child_path, test_inferior_child_name };
+    const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
+    const char* const argv[] = { test_child_path, test_inferior_child_name, verbosity_string };
     mx_handle_t handles[1] = { pipe2 };
     uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
 
     launchpad_t* lp;
     unittest_printf("Starting process \"%s\"\n", test_inferior_child_name);
-    status = create_inferior(test_inferior_child_name, 2, argv, NULL,
-                             1, handles, handle_ids, &lp);
+    status = create_inferior(test_inferior_child_name, ARRAY_SIZE(argv), argv, NULL,
+                             ARRAY_SIZE(handles), handles, handle_ids, &lp);
     ASSERT_EQ(status, NO_ERROR, "failed to create inferior");
 
     mx_handle_t inferior = launchpad_get_process_handle(lp);
@@ -457,7 +508,8 @@ __NO_INLINE static bool test_prep_and_segv(void)
     __asm__ ("movq .Lsegv_here@GOTPCREL(%%rip),%0" : "=r" (segv_pc));
     unittest_printf("About to segv, pc 0x%lx\n", (long) segv_pc);
 
-    // r9 is set for debugging purposes
+    // Set r9 to point to test_data so we can easily access it
+    // from the parent process.
     __asm__ ("\
 	movq %0,%%r9\n\
 	movq $0,%%r8\n\
@@ -473,7 +525,8 @@ __NO_INLINE static bool test_prep_and_segv(void)
     __asm__ ("mov %0,.Lsegv_here" : "=r" (segv_pc));
     unittest_printf("About to segv, pc 0x%lx\n", (long) segv_pc);
 
-    // r9 is set for debugging purposes
+    // Set r9 to point to test_data so we can easily access it
+    // from the parent process.
     __asm__ ("\
 	mov x9,%0\n\
 	mov x8,0\n\
@@ -482,6 +535,16 @@ __NO_INLINE static bool test_prep_and_segv(void)
 "
         : : "r" (&test_data[0]) : "x0", "x8", "x9");
 #endif
+
+    // On resumption test_data should have had TEST_DATA_ADJUST added to each element.
+    // Note: This is the inferior process, it's not running under the test harness.
+    for (unsigned i = 0; i < sizeof(test_data); ++i) {
+        if (test_data[i] != i + TEST_DATA_ADJUST) {
+            unittest_printf("test_prep_and_segv: bad data on resumption, test_data[%u] = 0x%x\n",
+                            i, test_data[i]);
+            return false;
+        }
+    }
 
     unittest_printf("Inferior successfully resumed!\n");
 
@@ -530,13 +593,26 @@ BEGIN_TEST_CASE(debugger_tests)
 RUN_TEST(debugger_test);
 END_TEST_CASE(debugger_tests)
 
+static void check_verbosity(int argc, char** argv)
+{
+    for (int i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], "v=", 2) == 0) {
+            int verbosity = atoi(argv[i] + 2);
+            unittest_set_verbosity_level(verbosity);
+            break;
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
-    if (argc == 2 && strcmp(argv[1], test_inferior_child_name) == 0) {
+    if (argc >= 2 && strcmp(argv[1], test_inferior_child_name) == 0) {
+        check_verbosity(argc, argv);
         test_inferior();
         return 0;
     }
-    if (argc == 2 && strcmp(argv[1], test_segfault_child_name) == 0) {
+    if (argc >= 2 && strcmp(argv[1], test_segfault_child_name) == 0) {
+        check_verbosity(argc, argv);
         test_segfault();
         return 0;
     }

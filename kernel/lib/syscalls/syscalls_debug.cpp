@@ -36,6 +36,7 @@
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
 constexpr mx_size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
+constexpr mx_size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
 constexpr uint32_t kMaxThreadStateSize = MX_MAX_THREAD_STATE_SIZE;
 
@@ -230,6 +231,46 @@ mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t le
         return st;
 
     return static_cast<mx_ssize_t>(read);
+}
+
+mx_ssize_t sys_debug_write_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t len, user_ptr<const void> buffer) {
+    if (!buffer)
+        return ERR_INVALID_ARGS;
+    if (len == 0 || len > kMaxDebugWriteBlock)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<ProcessDispatcher> process;
+    mx_status_t status = up->GetDispatcher(proc, &process, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
+
+    // Disallow this call on self.
+    if (process.get() == up)
+        return ERR_INVALID_ARGS;
+
+    auto aspace = process->aspace();
+    if (!aspace)
+        return ERR_BAD_STATE;
+
+    auto region = aspace->FindRegion(vaddr);
+    if (!region)
+        return ERR_NO_MEMORY;
+
+    auto vmo = region->vmo();
+    if (!vmo)
+        return ERR_NO_MEMORY;
+
+    uint64_t offset = vaddr - region->base() + region->object_offset();
+    size_t written = 0;
+
+    status_t st = vmo->WriteUser(buffer, offset, len, &written);
+
+    if (st < 0)
+        return st;
+
+    return static_cast<mx_ssize_t>(written);
 }
 
 mx_ssize_t sys_ktrace_read(mx_handle_t handle, void* ptr, uint32_t off, uint32_t len) {
