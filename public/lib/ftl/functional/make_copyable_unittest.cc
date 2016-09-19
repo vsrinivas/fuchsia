@@ -9,7 +9,7 @@
 namespace ftl {
 namespace {
 
-TEST(WrapLambdaTest, Control) {
+TEST(MakeCopyableTest, Control) {
   std::function<void()> void_func = ftl::MakeCopyable([]() {});
   void_func();
 

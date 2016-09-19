@@ -48,9 +48,9 @@ class CopyableLambda {
 //
 // std::unique_ptr<Foo> foo = ...
 // std::function<int()> func =
-//     ftl::WrapLambda([bar = std::move(foo)]() { return bar->count(); });
+//     ftl::MakeCopyable([bar = std::move(foo)]() { return bar->count(); });
 //
-// Notice that the return type of WrapLambda is rarely used directly. Instead,
+// Notice that the return type of MakeCopyable is rarely used directly. Instead,
 // callers typically erase the type by implicitly converting the return value
 // to an std::function.
 template <typename T>
