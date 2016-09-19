@@ -32,6 +32,7 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
     setup->wIndex = index;
     setup->wLength = length;
     proto_data->ep_address = 0;
+    proto_data->frame = 0;
 
     bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
