@@ -55,6 +55,12 @@
 
 module story;
 
+[ServiceName="story.Resolver"]  // Created by component-manager app.
+interface Resolver {
+  // Resolves a query to a module URL.
+  Resolve(string query) => (string module_url);
+};
+
 [ServiceName="story.Runner"]  // Created by story-runner app.
 interface Runner {
   StartStory(Session& session);
@@ -63,7 +69,7 @@ interface Runner {
 // No service name: created by Runner.
 interface Session {
   CreateLink(string schema, Link& link);
-  StartModule(string module_url, Link link) => (Module module_instance);
+  StartModule(string query, Link link) => (Module module_instance);
   // StartModule() invokes Initialize() on the created Module instance,
   // so it must return it and cannot take an interface request.
 };

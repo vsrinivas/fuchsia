@@ -47,6 +47,7 @@ using story::Session;
 using story::Module;
 using story::Link;
 using story::LinkChanged;
+using story::Resolver;
 
 // A Link is a mutable and observable value shared between modules.
 // When a module requests to run more modules using
@@ -116,7 +117,14 @@ class LinkImpl : public Link {
 class SessionImpl : public Session {
  public:
   explicit SessionImpl(Shell* shell, InterfaceRequest<Session> req)
-      : shell_(shell), binding_(this, std::move(req)) {}
+      : shell_(shell), binding_(this, std::move(req)) {
+    InterfacePtr<mojo::ServiceProvider> service_provider;
+    shell_->ConnectToApplication("mojo:component-manager",
+                                 mojo::GetProxy(&service_provider));
+    service_provider->ConnectToService(
+        Resolver::Name_,
+        GetProxy(&resolver_).PassMessagePipe());
+  }
   ~SessionImpl() override {}
 
   void CreateLink(const mojo::String& schema,
@@ -128,31 +136,51 @@ class SessionImpl : public Session {
     FTL_LOG(INFO) << "story-runner create link return";
   }
 
-  void StartModule(const mojo::String& module_url, InterfaceHandle<Link> link,
+  void StartModule(const mojo::String& query, InterfaceHandle<Link> link,
                    const StartModuleCallback& callback) override {
     FTL_LOG(INFO) << "story-runner start module";
+    std::string new_link_id = GenerateId();
+    resolver_->Resolve(
+        query,
+        [this, new_link_id, callback](mojo::String module_url) {
+          InterfacePtr<ServiceProvider> service_provider;
+          shell_->ConnectToApplication(module_url, GetProxy(&service_provider));
 
-    InterfacePtr<ServiceProvider> service_provider;
-    shell_->ConnectToApplication(module_url, GetProxy(&service_provider));
+          InterfacePtr<Module> module;
+          service_provider->ConnectToService(
+              Module::Name_,
+              GetProxy(&module).PassMessagePipe());
 
-    InterfacePtr<Module> module;
-    service_provider->ConnectToService(Module::Name_,
-                                       GetProxy(&module).PassMessagePipe());
+          InterfaceHandle<Session> self;
+          bindings_.AddBinding(this, GetProxy(&self));
 
-    InterfaceHandle<Session> self;
-    bindings_.AddBinding(this, GetProxy(&self));
+          module->Initialize(std::move(self), link_map_[new_link_id].Pass());
+          link_map_.erase(new_link_id);
 
-    module->Initialize(std::move(self), std::move(link));
+          callback.Run(module.PassInterfaceHandle());
 
-    callback.Run(module.PassInterfaceHandle());
+          FTL_LOG(INFO) << "story-runner start module return";
+        });
 
-    FTL_LOG(INFO) << "story-runner start module return";
+    link_map_.emplace(std::move(new_link_id), link.Pass());
   }
 
  private:
+  std::string GenerateId() {
+    std::string id = std::to_string(counter);
+    counter++;
+    return id;
+  }
+
   Shell* const shell_;
+  std::map<std::string, InterfaceHandle<Link>> link_map_;
+  InterfacePtr<Resolver> resolver_;
   StrongBinding<Session> binding_;
   BindingSet<Session> bindings_;
+
+  // We use the counter to generate IDs for the link handles.
+  int counter = 0;
+
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
 };
 
