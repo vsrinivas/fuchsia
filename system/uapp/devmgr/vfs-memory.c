@@ -384,7 +384,8 @@ static mnode_t vfs_root = {
 
 static mnode_t* vn_data;
 
-vnode_t* vfs_get_root(void) {
+// Hardcoded initialization function to access global root directory
+vnode_t* vfs_create_global_root(void) {
     if (vfs_root_dn.vnode == NULL) {
         vfs_root_dn.vnode = &vfs_root.vn;
         //TODO implement fs mount mechanism

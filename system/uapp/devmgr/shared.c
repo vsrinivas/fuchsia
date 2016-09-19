@@ -17,7 +17,7 @@
 #include <magenta/syscalls.h>
 
 #if DEVMGR
-mx_handle_t vfs_create_root_handle(void);
+mx_handle_t vfs_create_global_root_handle(void);
 #define LOG_FLAGS MX_LOG_FLAG_DEVMGR
 #else
 #define LOG_FLAGS MX_LOG_FLAG_DEVICE
@@ -51,7 +51,7 @@ void devmgr_launch_devhost(const char* name, int argc, char** argv,
     hnd[3] = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS);
     ids[4] = MX_HND_TYPE_MXIO_ROOT;
 #if DEVMGR
-    hnd[4] = vfs_create_root_handle();
+    hnd[4] = vfs_create_global_root_handle();
 #else
     hnd[4] = 0;
     uint32_t type;

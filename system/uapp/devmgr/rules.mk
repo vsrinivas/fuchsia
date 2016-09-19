@@ -21,7 +21,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-boot.c \
     $(LOCAL_DIR)/vfs.c \
     $(LOCAL_DIR)/vfs-device.c \
-    $(LOCAL_DIR)/vfs-memory.c
+    $(LOCAL_DIR)/vfs-memory.c \
+    $(LOCAL_DIR)/vfs-rpc.c
 
 # userboot supports loading via the dynamic linker, so libc (ulib/musl)
 # can be linked dynamically.  But it doesn't support any means to look

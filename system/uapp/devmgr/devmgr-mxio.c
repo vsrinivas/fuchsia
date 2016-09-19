@@ -58,7 +58,7 @@ void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd) {
     mx_status_t r;
 
     ids[0] = MX_HND_TYPE_MXIO_ROOT;
-    hnd[0] = vfs_create_root_handle();
+    hnd[0] = vfs_create_global_root_handle();
 
     hnd[n] = launchpad_get_vdso_vmo();
     if (hnd[n] > 0) {
@@ -139,10 +139,10 @@ void devmgr_vfs_init(void) {
 
     setup_bootfs();
 
-    vfs_init(vfs_get_root());
+    vfs_global_init(vfs_create_global_root());
 
     // give our own process access to files in the vfs
-    mx_handle_t h = vfs_create_root_handle();
+    mx_handle_t h = vfs_create_global_root_handle();
     if (h > 0) {
         mxio_install_root(mxio_remote_create(h, 0));
     }

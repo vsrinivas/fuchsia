@@ -6,6 +6,7 @@
 
 #include <ddk/device.h>
 #include <magenta/types.h>
+#include <mxio/remoteio.h>
 #include <mxio/vfs.h>
 #include <magenta/listnode.h>
 #include <threads.h>
@@ -40,6 +41,15 @@ typedef struct vnode_watcher {
 #define V_FLAG_REMOTE 2
 #define V_FLAG_VMOFILE 4
 
+mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
+                     const char** pathout, uint32_t flags, uint32_t mode);
+
+mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
+                       mx_handle_t rh);
+
+ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
+                     size_t in_len, void* out_buf, size_t out_len);
+
 mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len);
 
 // helper for filling out dents
@@ -49,11 +59,11 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
 
 
 void vfs_notify_add(vnode_t* vndir, const char* name, size_t namelen);
-void vfs_init(vnode_t* root);
+void vfs_global_init(vnode_t* root);
 
 // generate mxremoteio handles
-mx_handle_t vfs_create_root_handle(void);
-mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn);
+mx_handle_t vfs_create_global_root_handle(void);
+mx_handle_t vfs_create_root_handle(vnode_t* vn);
 
 // device fs
 vnode_t* devfs_get_root(void);
@@ -68,7 +78,11 @@ mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, voi
 // memory fs
 vnode_t* memfs_get_root(void);
 
-vnode_t* vfs_get_root(void);
+// Create the global root to memfs
+vnode_t* vfs_create_global_root(void);
+
+// Create a generic root to memfs
+vnode_t* vfs_create_root(void);
 
 void vfs_dump_handles(void);
 
