@@ -42,7 +42,7 @@ clang_toolchain(target_cpu) {
   } else {
     assert(false, "Target CPU not supported")
   }
-  strip_binary = "${strip_target_cpu}-elf-6.1.0-${strip_os}-${clang_cpu}/bin/${strip_target_cpu}-elf-strip"
+  strip_binary = "${strip_target_cpu}-elf-6.2.0-${strip_os}-${clang_cpu}/bin/${strip_target_cpu}-elf-strip"
   strip = magenta_prebuilt_downloads_root + strip_binary
 
   toolchain_cpu = target_cpu
