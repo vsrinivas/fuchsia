@@ -101,23 +101,41 @@ static int push_file(int s, const char* dst, const char* src) {
     int r;
     msg in, out;
     size_t dst_len = strlen(dst);
+    const char* ptr;
 
     out.hdr.cmd = NB_OPEN;
     out.hdr.arg = O_WRONLY;
     memcpy(out.data, dst, dst_len);
     out.data[dst_len] = 0;
 
+again:
     r = netboot_txn(s, &in, &out, sizeof(out.hdr) + dst_len + 1);
     if (r < 0) {
+        if (errno == EISDIR) {
+            ptr = strrchr(src, '/');
+            if (!ptr) {
+                ptr = src;
+            } else {
+                ptr += 1;
+            }
+            dst_len = snprintf((char*)out.data, sizeof(out.data), "%s/%s", dst, ptr);
+            if (dst_len >= MAXSIZE) {
+                errno = ENAMETOOLONG;
+                return -1;
+            } else if (dst_len < 0) {
+                return dst_len;
+            }
+            goto again;
+        }
         fprintf(stderr, "%s: error opening remote file %s (%d)\n",
-                appname, dst, errno);
+                appname, out.data, errno);
         return r;
     }
 
     int fd = open(src, O_RDONLY, 0664);
     if (!fd) {
         fprintf(stderr, "%s: cannot open %s for reading: %s\n",
-                appname, dst, strerror(errno));
+                appname, src, strerror(errno));
         return -1;
     }
 
