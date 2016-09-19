@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
@@ -40,6 +41,12 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
     netfile.blocknum = 0;
     netfile.cookie = cookie;
 
+    struct stat st;
+    if (stat(filename, &st) == 0 && S_ISDIR(st.st_mode)) {
+        errno = EISDIR;
+        goto err;
+    }
+
     switch (arg) {
     case O_RDONLY:
         netfile.fd = open(filename, O_RDONLY);
@@ -49,16 +56,18 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
         break;
     default:
         printf("netsvc: open '%s' with invalid mode %d\n", filename, arg);
-        errno = -EINVAL;
+        errno = EINVAL;
     }
     if (netfile.fd < 0) {
-        m.arg = -errno;
-        udp6_send(&m, sizeof(m), saddr, sport, dport);
-        return;
+        goto err;
     } else {
         strlcpy(netfile.filename, filename, sizeof(netfile.filename));
     }
 
+    udp6_send(&m, sizeof(m), saddr, sport, dport);
+    return;
+err:
+    m.arg = -errno;
     udp6_send(&m, sizeof(m), saddr, sport, dport);
 }
 

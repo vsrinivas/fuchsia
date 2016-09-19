@@ -110,7 +110,7 @@ static int push_file(int s, const char* dst, const char* src) {
     r = netboot_txn(s, &in, &out, sizeof(out.hdr) + dst_len + 1);
     if (r < 0) {
         fprintf(stderr, "%s: error opening remote file %s (%d)\n",
-                appname, src, errno);
+                appname, dst, errno);
         return r;
     }
 
