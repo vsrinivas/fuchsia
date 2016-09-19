@@ -89,7 +89,7 @@ def tool_path(arch, tool):
         platform = "Darwin"
     else:
         raise Exception("Unsupported platform!")
-    return ("%s/%s-elf-6.1.0-%s-x86_64/bin/%s-elf-%s" %
+    return ("%s/%s-elf-6.2.0-%s-x86_64/bin/%s-elf-%s" %
             (PREBUILTS_BASE_DIR, arch, platform, arch, tool))
 
 
