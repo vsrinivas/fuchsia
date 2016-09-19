@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  deps = [
+    ":context_service",
+  ]
+}
+
+executable("context_service") {
+  sources = [
+    "context_service.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/system",
+  ]
+}
