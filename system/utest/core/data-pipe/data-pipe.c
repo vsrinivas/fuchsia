@@ -749,6 +749,47 @@ static bool write_threshold_set_invalid(void) {
     END_TEST;
 }
 
+static bool write_two_phase_signals(void) {
+    // Some abbreviations for readability.
+    static const mx_signals_t W = MX_SIGNAL_WRITABLE;
+    static const mx_signals_t WT = MX_SIGNAL_WRITE_THRESHOLD;
+    static const mx_signals_t PC = MX_SIGNAL_PEER_CLOSED;
+
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 2u, 4u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
+
+    uintptr_t ptr = 0u;
+    EXPECT_EQ(mx_datapipe_begin_write(producer, 0u, &ptr), 4, "incorrect begin_write result");
+    EXPECT_EQ(get_satisfied_signals(producer), 0u, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_end_write(producer, 0u), NO_ERROR, "end_write failed");
+    EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_begin_write(producer, 0u, &ptr), 4, "incorrect begin_write result");
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+    EXPECT_EQ(get_satisfied_signals(producer), PC, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(producer), PC, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_end_write(producer, 0u), NO_ERROR, "end_write failed");
+    EXPECT_EQ(get_satisfied_signals(producer), PC, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(producer), PC, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+
+    END_TEST;
+}
+
 static bool query_peek_discard(void) {
     BEGIN_TEST;
 
@@ -1091,6 +1132,68 @@ static bool read_threshold_set_invalid(void) {
     END_TEST;
 }
 
+static bool read_two_phase_signals(void) {
+    // Some abbreviations for readability.
+    static const mx_signals_t R = MX_SIGNAL_READABLE;
+    static const mx_signals_t RT = MX_SIGNAL_READ_THRESHOLD;
+    static const mx_signals_t PC = MX_SIGNAL_PEER_CLOSED;
+
+    BEGIN_TEST;
+
+    mx_handle_t producer;
+    mx_handle_t consumer;
+
+    producer = mx_datapipe_create(0u, 2u, 4u, &consumer);
+    ASSERT_GT(producer, 0, "could not create data pipe producer");
+    ASSERT_GT(consumer, 0, "could not create data pipe consumer");
+
+    ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "AB"), 2, "write failed");
+
+    EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
+
+    uintptr_t ptr;
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, 0u, &ptr), 2, "incorrect begin_read result");
+    EXPECT_EQ(get_satisfied_signals(consumer), 0u, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_end_read(consumer, 0u), NO_ERROR, "end_read failed");
+    EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
+
+    ASSERT_EQ(set_read_threshold(consumer, 4u), NO_ERROR, "incorrect result");
+    EXPECT_EQ(get_satisfied_signals(consumer), R, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, 0u, &ptr), 2, "incorrect begin_read result");
+    EXPECT_EQ(get_satisfied_signals(consumer), 0u, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
+    EXPECT_EQ(get_satisfied_signals(consumer), PC, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_end_read(consumer, 0u), NO_ERROR, "end_read failed");
+    EXPECT_EQ(get_satisfied_signals(consumer), R | PC, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC, "incorrect satisfiable signals");
+
+    ASSERT_EQ(set_read_threshold(consumer, 2u), NO_ERROR, "incorrect result");
+    EXPECT_EQ(get_satisfied_signals(consumer), R | PC | RT, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_begin_read(consumer, 0u, &ptr), 2, "incorrect begin_read result");
+    EXPECT_EQ(get_satisfied_signals(consumer), PC, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_datapipe_end_read(consumer, 2u), NO_ERROR, "end_read failed");
+    EXPECT_EQ(get_satisfied_signals(consumer), PC, "incorrect satisfied signals");
+    EXPECT_EQ(get_satisfiable_signals(consumer), PC, "incorrect satisfiable signals");
+
+    EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(data_pipe_tests)
 RUN_TEST(create_destroy_test)
 RUN_TEST(simple_read_write)
@@ -1107,12 +1210,14 @@ RUN_TEST(write_invalid_flags);
 RUN_TEST(write_wrap);
 RUN_TEST(write_threshold);
 RUN_TEST(write_threshold_set_invalid);
+RUN_TEST(write_two_phase_signals);
 RUN_TEST(query_peek_discard);
 RUN_TEST(read_all_or_none);
 RUN_TEST(read_invalid_flags);
 RUN_TEST(read_wrap);
 RUN_TEST(read_threshold);
 RUN_TEST(read_threshold_set_invalid);
+RUN_TEST(read_two_phase_signals);
 END_TEST_CASE(data_pipe_tests)
 
 #ifndef BUILD_COMBINED_TESTS
