@@ -38,10 +38,10 @@ bool GlobalContext::Unmap(AddressSpace* address_space, EngineCommandStreamerId i
         return DRETF(false, "not mapped");
 
     if (!UnmapGpu(address_space, id))
-        return DRETF(false, "failed to map");
+        return DRETF(false, "failed to unmap gpu address");
 
     if (!get_context_buffer(id)->platform_buffer()->UnmapCpu())
-        return DRETF(false, "failed to get cpu address");
+        return DRETF(false, "failed to unmap cpu address");
 
     status_page_map_.erase(iter);
 
