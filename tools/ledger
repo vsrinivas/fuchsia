@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Helper script for common development tasks."""
+
+import argparse
+import multiprocessing
+import os.path
+import subprocess
+import sys
+
+_LEDGER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+_FUCHSIA_DIR = os.path.abspath(os.path.join(_LEDGER_DIR, '..', '..'))
+_MAGENTA_DIR = os.path.join(_FUCHSIA_DIR, 'magenta')
+
+_RUN_MAGENTA_TOOL = os.path.join(_MAGENTA_DIR, 'scripts', 'run-magenta-x86-64')
+_NETCMD_TOOL = os.path.join(_MAGENTA_DIR, 'scripts', 'netcmd')
+_OUT_DEBUG_DIR = os.path.join(_FUCHSIA_DIR, 'out', 'debug-x86-64')
+_OUT_DEBUG_BOOTFS = os.path.join(_OUT_DEBUG_DIR, 'user.bootfs')
+
+_GN_TOOL = os.path.join(_FUCHSIA_DIR, 'packages/gn/gen.py')
+_TEST_CONFIG = os.path.join(_LEDGER_DIR, 'tools', 'data', 'tests')
+
+
+def gn():
+  gn_args = []
+  goma_dir = os.path.join(os.getenv('HOME', ''), 'goma')
+  use_goma = os.path.exists(goma_dir)
+
+  if use_goma:
+    gn_args.append('--goma')
+
+  subprocess.check_call([_GN_TOOL] + gn_args)
+
+
+def build(out_dir):
+  # Build Magenta.
+  subprocess.check_call(['make', '-j' + str(multiprocessing.cpu_count()),
+                         'magenta-pc-x86-64'], cwd=_MAGENTA_DIR)
+
+  # Build Fuchsia.
+  args_file_path = os.path.join(out_dir, 'args.gn')
+
+  if not os.path.isfile(args_file_path):
+    print 'args.gn file not found at %s, run `ledger gn`' % out_dir
+    return
+
+  with open(args_file_path) as gn_args_file:
+    uses_goma = 'use_goma = true' in gn_args_file.read()
+  parallel_jobs = 2000 if uses_goma else multiprocessing.cpu_count()
+
+  subprocess.check_call(['ninja', '-j' + str(parallel_jobs), '-C', out_dir])
+
+
+def test():
+  config = dict()
+  execfile(_TEST_CONFIG, config)
+  subprocess.check_call([_NETCMD_TOOL, 'echo', 'Running Ledger unittests.'],
+                        cwd=_MAGENTA_DIR)
+  for unittest in config['unittests']:
+    subprocess.check_call([_NETCMD_TOOL, unittest], cwd=_MAGENTA_DIR)
+
+  subprocess.check_call([_NETCMD_TOOL, 'echo', 'Running Ledger apptests.'],
+                        cwd=_MAGENTA_DIR)
+  for apptest in config['apptests']:
+    subprocess.check_call([_NETCMD_TOOL, 'application_manager', apptest],
+                          cwd=_MAGENTA_DIR)
+
+
+def run_fuchsia():
+  try:
+    subprocess.check_call([_RUN_MAGENTA_TOOL,
+                           '-x', _OUT_DEBUG_BOOTFS, '-d', '-N'],
+                          cwd=_MAGENTA_DIR)
+  except subprocess.CalledProcessError as e:
+    print 'Failed to run Fuchsia.'
+    print e
+    print '---'
+
+
+def main():
+  parser = argparse.ArgumentParser(description='Build and test the Ledger.')
+  parser.add_argument('command',
+                      choices=['gn', 'build', 'run_fuchsia', 'test'])
+
+  args = parser.parse_args()
+  if args.command == 'gn':
+    gn()
+  elif args.command == 'build':
+    build(_OUT_DEBUG_DIR)
+  elif args.command == 'run_fuchsia':
+    run_fuchsia()
+  elif args.command == 'test':
+    test()
+  else:
+    raise RuntimeError('Unrecognized command: ' + args.command)
+
+
+if __name__ == '__main__':
+  sys.exit(main())

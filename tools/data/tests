@@ -1,0 +1,9 @@
+# List of unittest binaries.
+unittests = [
+    '/boot/test/convert_unittests',
+]
+
+# List of apptest binaries.
+apptests = [
+    'mojo:ledger_abax_apptests',
+]
