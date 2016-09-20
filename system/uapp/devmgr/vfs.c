@@ -59,6 +59,9 @@ void untrack_iostate(iostate_t* ios) {
 // Starting at vnode vn, walk the tree described by the path string,
 // until either there is only one path segment remaining in the string
 // or we encounter a vnode that represents a remote filesystem
+//
+// If a non-negative status is returned, the vnode at 'out' has been acquired.
+// Otherwise, no net deltas in acquires/releases occur.
 static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
                             const char* path, const char** pathout) {
     vnode_t* oldvn = NULL;
@@ -80,8 +83,9 @@ static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             xprintf("vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
             *out = vn;
             *pathout = path;
-            if (oldvn) {
-                vn_release(oldvn);
+            if (oldvn == NULL) {
+                // returning our original vnode, need to upref it
+                vn_acquire(vn);
             }
             if (vn->remote > 0) {
                 return vn->remote;
@@ -112,7 +116,7 @@ static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             }
             *out = vn;
             *pathout = path;
-            return 0;
+            return NO_ERROR;
         }
     }
 }
@@ -126,6 +130,7 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
     }
     if (r > 0) {
         // remote filesystem, return handle and path through to caller
+        vn_release(vndir);
         *pathout = path;
         return r;
     }
@@ -188,33 +193,34 @@ static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
 mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
                        mx_handle_t rh) {
     vnode_t* oldparent, *newparent;
-    mx_status_t r1, r2;
-    if ((r1 = vfs_walk(vn, &oldparent, oldpath, &oldpath)) < 0) {
-        return r1;
-    } else if ((r2 = vfs_walk(vn, &newparent, newpath, &newpath)) < 0) {
+    mx_status_t r, r_old, r_new;
+    if ((r_old = vfs_walk(vn, &oldparent, oldpath, &oldpath)) < 0) {
+        return r_old;
+    } else if ((r_new = vfs_walk(vn, &newparent, newpath, &newpath)) < 0) {
         vn_release(oldparent);
-        return r2;
-    } else if (r1 != r2) {
+        return r_new;
+    } else if (r_old != r_new) {
         // Rename can only be directed to one filesystem
         vn_release(oldparent);
         vn_release(newparent);
         return ERR_NOT_SUPPORTED;
     }
 
-    if (r1 == 0) {
+    if (r_old == 0) {
         // Local filesystem
-        r1 = vn->ops->rename(oldparent, newparent, oldpath,
-                             strlen(oldpath), newpath, strlen(newpath));
+        r = vn->ops->rename(oldparent, newparent, oldpath, strlen(oldpath),
+                            newpath, strlen(newpath));
     } else {
-        // Remote filesystem
-        r1 = txn_handoff_rename(r1, rh, oldpath, newpath);
-        if (r1 >= 0) {
-            r1 = ERR_DISPATCHER_INDIRECT;
+        // Remote filesystem.
+        r = txn_handoff_rename(r_old, rh, oldpath, newpath);
+        if (r >= 0) {
+            r = ERR_DISPATCHER_INDIRECT;
         }
     }
+
     vn_release(oldparent);
     vn_release(newparent);
-    return r1;
+    return r;
 }
 
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
