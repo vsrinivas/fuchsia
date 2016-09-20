@@ -85,22 +85,6 @@ download_tarball cmake "cmake/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
 download_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
 download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
 
-function download_sysroot() {
-  local arch="${1}"
-  local base_path="${SCRIPT_ROOT}/sysroot/${arch}-fuchsia"
-  local base_url="sysroot/${arch}"
-  local tar_path="${base_path}.tar.bz2"
-
-  download_file_if_needed "${arch} sysroot" "${FUCHSIA_URL_BASE}/${base_url}" "${base_path}" ".tar.bz2"
-  if [[ -f "${tar_path}" ]]; then
-    (cd -- "${SCRIPT_ROOT}" && tar xf ${tar_path} -C "${SCRIPT_ROOT}/sysroot")
-    rm -f -- "${tar_path}"
-  fi
-}
-
-download_sysroot "aarch64"
-download_sysroot "x86_64"
-
 # build_magenta_tool <name>
 function build_magenta_tool() {
   local name="${1}"
