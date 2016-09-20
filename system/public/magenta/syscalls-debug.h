@@ -43,7 +43,7 @@ typedef struct mx_arm64_general_regs {
     uint64_t sp;
     uint64_t pc;
     uint64_t cpsr;
-} mx_arm64_general_regs_t;
+} mx_aarch64_general_regs_t;
 
 #ifdef __cplusplus
 }

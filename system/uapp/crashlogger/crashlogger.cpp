@@ -55,7 +55,7 @@ void output_frame_x86_64(const x86_64_exc_data_t& exc_data,
 }
 
 void output_frame_arm64(const arm64_exc_data_t& exc_data,
-                        const mx_arm64_general_regs_t& regs) {
+                        const mx_aarch64_general_regs_t& regs) {
     printf(" x0  %#18llx x1  %#18llx x2  %#18llx x3  %#18llx\n",
            regs.r[0], regs.r[1], regs.r[2], regs.r[3]);
     printf(" x4  %#18llx x5  %#18llx x6  %#18llx x7  %#18llx\n",
@@ -110,7 +110,7 @@ void process_report(const mx_exception_report_t* report) {
 #if defined(__x86_64__)
     mx_x86_64_general_regs_t regs;
 #elif defined(__aarch64__)
-    mx_arm64_general_regs_t regs;
+    mx_aarch64_general_regs_t regs;
 #else // unsupported arch
     int regs;
 #endif
