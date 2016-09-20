@@ -1005,6 +1005,57 @@ public:
         END_TEST;
     }
 
+    bool IterCopyPointer() {
+        BEGIN_TEST;
+        PtrType ptr;
+        typename ContainerType::iterator iter;
+
+        // A default constructed iterator should give back nullptr when
+        // CopyPointer is called.
+        ptr = iter.CopyPointer();
+        EXPECT_NULL(ptr, "");
+
+        // The begining/end of an emptry container should also return nullptr.
+        ptr = container().begin().CopyPointer();
+        EXPECT_NULL(ptr, "");
+
+        ptr = container().end().CopyPointer();
+        EXPECT_NULL(ptr, "");
+
+        // Populate the container.
+        ASSERT_TRUE(Populate(container(), RefAction::HoldAll), "");
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_EQ(OBJ_COUNT, refs_held(), "");
+
+        // end().CopyPointer should still return nullptr.
+        ptr = container().end().CopyPointer();
+        EXPECT_NULL(ptr, "");
+
+        // begin().CopyPointer() should be non-null.
+        ptr = container().begin().CopyPointer();
+        EXPECT_NONNULL(ptr, "");
+
+        // clear the container and release all internally held references.
+        container().clear();
+        for (size_t i = 0; i < OBJ_COUNT; ++i)
+            ReleaseObject(i);
+
+        // We should not be holding any references, but we should still have a
+        // live object if we are testing a managed pointer type.
+        EXPECT_EQ(0u, refs_held(), "");
+        if (PtrTraits::IsManaged)
+            EXPECT_EQ(1u, ObjType::live_obj_count(), "");
+        else
+            EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+
+        // null out our pointer.  No matter what, our live_obj_count should now
+        // be zero.
+        ptr = nullptr;
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+
+        END_TEST;
+    }
+
     bool EraseIf() {
         BEGIN_TEST;
 

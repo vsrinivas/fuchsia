@@ -34,6 +34,7 @@ struct TestThunks {
     MAKE_TEST_THUNK(RvalueOps);
     MAKE_TEST_THUNK(Scope);
     MAKE_TEST_THUNK(TwoContainer);
+    MAKE_TEST_THUNK(IterCopyPointer);
     MAKE_TEST_THUNK(EraseIf);
     MAKE_TEST_THUNK(FindIf);
 

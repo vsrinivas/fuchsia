@@ -473,7 +473,10 @@ private:
             return ret;
         }
 
-        typename PtrTraits::PtrType CopyPointer() { return PtrTraits::Copy(node_); }
+        typename PtrTraits::PtrType CopyPointer() {
+            return IsValid() ? PtrTraits::Copy(node_) : nullptr;
+        }
+
         typename IterTraits::RefType operator*() const {
             DEBUG_ASSERT(IsValid());
             return *node_;

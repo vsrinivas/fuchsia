@@ -473,6 +473,12 @@ RUN_NAMED_TEST("TwoContainer (unique)",        UPTE::TwoContainerTest)
 #endif
 RUN_NAMED_TEST("TwoContainer (RefPtr)",        RPTE::TwoContainerTest)
 
+RUN_NAMED_TEST("IterCopyPointer (unmanaged)",  UMTE::IterCopyPointerTest)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_NAMED_TEST("IterCopyPointer (unique)",     UPTE::IterCopyPointerTest)
+#endif
+RUN_NAMED_TEST("IterCopyPointer (RefPtr)",     RPTE::IterCopyPointerTest)
+
 RUN_NAMED_TEST("EraseIf (unmanaged)",          UMTE::EraseIfTest)
 RUN_NAMED_TEST("EraseIf (unique)",             UPTE::EraseIfTest)
 RUN_NAMED_TEST("EraseIf (RefPtr)",             RPTE::EraseIfTest)
