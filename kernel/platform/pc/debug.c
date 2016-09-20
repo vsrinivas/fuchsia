@@ -48,6 +48,12 @@ static enum handler_return uart_irq_handler(void *arg)
     return platform_drain_debug_uart_rx();
 }
 
+// for devices where the uart rx interrupt doesn't seem to work
+static enum handler_return uart_rx_poll(struct timer *t, lk_time_t now, void *arg)
+{
+    return platform_drain_debug_uart_rx();
+}
+
 void platform_init_debug_early(void)
 {
     /* configure the uart */
@@ -74,6 +80,13 @@ void platform_init_debug(void)
     unmask_interrupt(irq);
 
     outp(uart_io_port + 1, 0x1); // enable receive data available interrupt
+
+    if (cmdline_get_bool("kernel.debug_uart_poll", false)) {
+        static timer_t uart_rx_poll_timer;
+
+        timer_initialize(&uart_rx_poll_timer);
+        timer_set_periodic(&uart_rx_poll_timer, 10, uart_rx_poll, NULL);
+    }
 }
 
 static void debug_uart_putc(char c)
@@ -115,22 +128,3 @@ int platform_pgetc(char *c, bool wait)
 
     return -1;
 }
-
-// for devices where the uart rx interrupt doesn't seem to work
-static timer_t uart_rx_poll_timer;
-
-static enum handler_return uart_rx_poll(struct timer *t, lk_time_t now, void *arg)
-{
-    return platform_drain_debug_uart_rx();
-}
-
-static void debug_irq_init(uint level)
-{
-    if (cmdline_get_bool("kernel.debug_uart_poll", false) == false)
-        return;
-
-    timer_initialize(&uart_rx_poll_timer);
-    timer_set_periodic(&uart_rx_poll_timer, 10, uart_rx_poll, NULL);
-}
-
-LK_INIT_HOOK(uart_irq, debug_irq_init, LK_INIT_LEVEL_THREADING);
