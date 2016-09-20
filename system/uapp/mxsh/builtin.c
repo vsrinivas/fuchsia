@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -226,19 +227,66 @@ static int mxc_mv(int argc, char** argv) {
     return 0;
 }
 
-static int mxc_rm(int argc, char** argv) {
-    if (argc < 2) {
-        fprintf(stderr, "usage: rm <filename>\n");
+static int mxc_rm_recursive(int atfd, char* path) {
+    struct stat st;
+    if (fstatat(atfd, path, &st, 0)) {
         return -1;
     }
+    if (S_ISDIR(st.st_mode)) {
+        int dfd = openat(atfd, path, 0, O_DIRECTORY | O_RDWR);
+        if (dfd < 0) {
+            return -1;
+        }
+        DIR* dir = fdopendir(dfd);
+        if (!dir) {
+            close(dfd);
+            return -1;
+        }
+        struct dirent* de;
+        while ((de = readdir(dir)) != NULL) {
+            if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
+                continue;
+            }
+            if (mxc_rm_recursive(dfd, de->d_name) < 0) {
+                closedir(dir);
+                return -1;
+            }
+        }
+        closedir(dir);
+    }
+    if (unlinkat(atfd, path, 0)) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+static int mxc_rm(int argc, char** argv) {
+    if (argc < 2) {
+        fprintf(stderr, "usage: rm [-r] <filename>\n");
+        return -1;
+    }
+    bool recursive = false;
     while (argc > 1) {
+        if (!strcmp(argv[0], "-r")) {
+            recursive = true;
+        }
         argc--;
         argv++;
+    }
+    if (recursive) {
+        if (mxc_rm_recursive(AT_FDCWD, argv[0])) {
+            goto err;
+        }
+    } else {
         if (unlink(argv[0])) {
-            fprintf(stderr, "error: failed to delete '%s'\n", argv[0]);
+            goto err;
         }
     }
     return 0;
+err:
+    fprintf(stderr, "error: failed to delete '%s'\n", argv[0]);
+    return -1;
 }
 
 typedef struct failure {
