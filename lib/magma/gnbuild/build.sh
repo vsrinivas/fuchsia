@@ -45,7 +45,8 @@ mkdir -p $bootfs_path/bin
 cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1916
 
 mkdir -p $bootfs_path/lib
-cp $tools_path/sysroot/x86_64-fuchsia/lib/*.so* $bootfs_path/lib
+cp $tools_path/sysroot/x86_64-fuchsia/lib/*libc*.so* $bootfs_path/lib
+cp $tools_path/sysroot/x86_64-fuchsia/lib/*libunwind.so* $bootfs_path/lib
 
 autorun_path=$bootfs_path/autorun
 
