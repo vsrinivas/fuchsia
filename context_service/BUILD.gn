@@ -5,6 +5,7 @@
 group("all") {
   deps = [
     ":context_service",
+    ":maxwell_test",
   ]
 }
 
@@ -14,8 +15,30 @@ executable("context_service") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//apps/maxwell/context_service:interfaces",
     "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/bindings",
     "//mojo/system",
+  ]
+}
+
+executable("maxwell_test") {
+  sources = [
+    "test.cc",
+  ]
+
+  deps = [
+    "//apps/maxwell/context_service:interfaces",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/utility:utility",
+    "//mojo/system",
+  ]
+}
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+mojom("interfaces") {
+  sources = [
+    "context_service.mojom",
   ]
 }
