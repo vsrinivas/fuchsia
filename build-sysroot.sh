@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -100,6 +100,9 @@ build() {
     ${ROOT_DIR}/third_party/llvm/projects/libcxx
   env DESTDIR="${sysroot}" ninja install
   popd
+
+  local stamp="$(LC_ALL=POSIX cat $(find "${sysroot}" -type f | sort) | shasum -a1  | awk '{print $1}')"
+  echo "${stamp}" > "${sysroot}/.stamp"
 }
 
 declare CLEAN="${CLEAN:-false}"
