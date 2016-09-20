@@ -23,6 +23,8 @@ KTRACE_DEF(0x031,16B,IRQ_EXIT,IRQ) // (irqn << 8) | cpu
 KTRACE_DEF(0x032,16B,SYSCALL_ENTER,IRQ) // (n << 8) | cpu
 KTRACE_DEF(0x033,16B,SYSCALL_EXIT,IRQ) // (n << 8) | cpu
 
+KTRACE_DEF(0x034,32B,PAGE_FAULT,IRQ) // virtual_address_hi, virtual_address_lo, flags, cpu
+
 KTRACE_DEF(0x040,32B,CONTEXT_SWITCH,SCHEDULER) // to-tid, (state<<16|cpu), from-kt, to-kt
 
 // events from 0x100 on all share the tag/tid/ts common header
