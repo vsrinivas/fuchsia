@@ -44,6 +44,7 @@ __BEGIN_CDECLS
 #define KTRACE_GRP_TASKS          0x008
 #define KTRACE_GRP_IPC            0x010
 #define KTRACE_GRP_IRQ            0x020
+#define KTRACE_GRP_PROBE          0x040
 
 #define KTRACE_GRP_TO_MASK(grp)   ((grp) << 20)
 
@@ -77,6 +78,9 @@ typedef struct ktrace_rec_name {
 enum {
 #include <magenta/ktrace-def.h>
 };
+
+#define TAG_PROBE_16(n) KTRACE_TAG(((n)|0x800),KTRACE_GRP_PROBE,16)
+#define TAG_PROBE_24(n) KTRACE_TAG(((n)|0x800),KTRACE_GRP_PROBE,24)
 
 // Actions for ktrace control
 #define KTRACE_ACTION_START    1 // options = grpmask, 0 = all

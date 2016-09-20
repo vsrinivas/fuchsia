@@ -942,6 +942,9 @@ int main(int argc, char** argv) {
             }
             evt_thread_create(&ei, rec.x4.a, rec.x4.b);
             break;
+        case EVT_PROBE_NAME:
+            trace("PROBE_NAME  id=%08x '%s'\n", rec.name.id, recname(&rec.name));
+            break;
         case EVT_THREAD_NAME:
             trace("THRD_NAME   id=%08x '%s'\n", rec.name.id, recname(&rec.name));
             evt_thread_name(ei.pid, rec.name.id, recname(&rec.name));

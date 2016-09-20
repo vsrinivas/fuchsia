@@ -38,6 +38,21 @@ void ktrace_report_syscalls(void) {
 #include <magenta/syscalls.inc>
 }
 
+static uint32_t probe_number = 1;
+
+extern ktrace_probe_info_t __start_ktrace_probe[] __WEAK;
+extern ktrace_probe_info_t __stop_ktrace_probe[] __WEAK;
+
+static void ktrace_report_probes(void) {
+    ktrace_probe_info_t *probe;
+    for (probe = __start_ktrace_probe; probe != __stop_ktrace_probe; probe++) {
+        if (probe->num == 0) {
+            probe->num = probe_number++;
+        }
+        ktrace_name_etc(TAG_PROBE_NAME, probe->num, 0, probe->name, true);
+    }
+}
+
 typedef struct ktrace_state {
     // where the next record will be written
     int offset;
@@ -116,6 +131,7 @@ status_t ktrace_control(uint32_t action, uint32_t options) {
         // roll back to just after the metadata
         atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
         ktrace_report_syscalls();
+        ktrace_report_probes();
         break;
     default:
         return ERR_INVALID_ARGS;
@@ -164,6 +180,7 @@ void ktrace_init(unsigned level) {
     // enable tracing
     atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
     ktrace_report_syscalls();
+    ktrace_report_probes();
     atomic_store(&ks->grpmask, KTRACE_GRP_TO_MASK(grpmask));
 
     // report names of existing threads
