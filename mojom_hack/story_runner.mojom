@@ -55,7 +55,11 @@
 
 module story;
 
-[ServiceName="story.Resolver"]  // Created by component-manager app.
+[ServiceName="story.ResolverFactory"]  // Created by component-manager app.
+interface ResolverFactory {
+  GetResolver(Resolver& resolver);
+};
+
 interface Resolver {
   // Resolves a query to a module URL.
   Resolve(string query) => (string module_url);
@@ -63,6 +67,7 @@ interface Resolver {
 
 [ServiceName="story.Runner"]  // Created by story-runner app.
 interface Runner {
+  Initialize(ResolverFactory resolver_factory);
   StartStory(Session& session);
 };
 

@@ -22,11 +22,12 @@ using mojo::StrongBinding;
 
 using story::Link;
 using story::Resolver;
+using story::ResolverFactory;
 
 class ResolverImpl : public Resolver {
  public:
-  explicit ResolverImpl(InterfaceRequest<Resolver> req) :
-      binding_(this, req.Pass()) {}
+  explicit ResolverImpl(InterfaceRequest<Resolver> request)
+      : binding_(this, request.Pass()) {}
 
   ~ResolverImpl() override {}
 
@@ -36,11 +37,27 @@ class ResolverImpl : public Resolver {
     callback.Run(query);
   }
 
-  mojo::StrongBinding<Resolver> binding_;
+  StrongBinding<Resolver> binding_;
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolverImpl);
 };
 
-class ComponentManagerApp : public mojo::ApplicationImplBase {
+class ResolverFactoryImpl : public ResolverFactory {
+ public:
+  explicit ResolverFactoryImpl(InterfaceRequest<ResolverFactory> request)
+      : binding_(this, request.Pass()) {}
+
+  ~ResolverFactoryImpl() override {}
+
+ private:
+  void GetResolver(InterfaceRequest<Resolver> request) override {
+    new ResolverImpl(request.Pass());
+  }
+
+  StrongBinding<ResolverFactory> binding_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(ResolverFactoryImpl);
+};
+
+class ComponentManagerApp : public ApplicationImplBase {
  public:
   ComponentManagerApp() {}
   ~ComponentManagerApp() override {}
@@ -48,13 +65,12 @@ class ComponentManagerApp : public mojo::ApplicationImplBase {
  private:
   void OnInitialize() override { FTL_LOG(INFO) << "component-manager init"; }
 
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
+  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
     // Register |ComponentManager| implementation.
-    service_provider_impl->AddService<Resolver>(
-        [](const mojo::ConnectionContext& connection_context,
-           mojo::InterfaceRequest<Resolver> request) {
-          new ResolverImpl(request.Pass());
+    service_provider_impl->AddService<ResolverFactory>(
+        [](const ConnectionContext& connection_context,
+           InterfaceRequest<ResolverFactory> request) {
+          new ResolverFactoryImpl(request.Pass());
         });
     return true;
   }

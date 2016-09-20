@@ -74,8 +74,12 @@ class StoryImpl : public Story, public StoryState {
   // story-runner.
   // |StoryState| override.
   void RunStory(mojo::InterfacePtr<ledger::Page> session_page) override {
+    mojo::InterfacePtr<story::ResolverFactory> resolver_factory;
+    mojo::ConnectToService(shell_, "mojo:component-manager",
+                           mojo::GetProxy(&resolver_factory));
     mojo::ConnectToService(shell_, "mojo:story-runner",
                            mojo::GetProxy(&runner_));
+    runner_->Initialize(resolver_factory.Pass());
     runner_->StartStory(GetProxy(&session_));
     mojo::InterfaceHandle<story::Link> link;
     session_->CreateLink("boot", GetProxy(&link));

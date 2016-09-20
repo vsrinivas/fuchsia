@@ -47,6 +47,7 @@ using story::Module;
 using story::Link;
 using story::LinkChanged;
 using story::Resolver;
+using story::ResolverFactory;
 
 // A Link is a mutable and observable value shared between modules.
 // When a module requests to run more modules using
@@ -112,14 +113,13 @@ class LinkImpl : public Link {
 };
 
 // The Session is the context in which a story executes. It provides
-// methods to create Link instances, and to run more Modules.
 class SessionImpl : public Session {
  public:
-  explicit SessionImpl(Shell* shell, InterfaceRequest<Session> req)
-      : shell_(shell), binding_(this, std::move(req)) {
-    mojo::ConnectToService(shell_, "mojo:component-manager",
-                           GetProxy(&resolver_));
-  }
+  explicit SessionImpl(Shell* shell, InterfaceHandle<Resolver> resolver,
+                       InterfaceRequest<Session> req)
+      : shell_(shell),
+        resolver_(InterfacePtr<Resolver>::Create(resolver.Pass())),
+        binding_(this, std::move(req)) {}
   ~SessionImpl() override {}
 
   void CreateLink(const mojo::String& schema,
@@ -181,16 +181,23 @@ class RunnerImpl : public Runner {
       : shell_(shell), binding_(this, std::move(req)) {}
   ~RunnerImpl() override {}
 
+  void Initialize(InterfaceHandle<ResolverFactory> resolver_factory) override {
+    resolver_factory_.Bind(resolver_factory.Pass());
+  }
+
   void StartStory(InterfaceRequest<Session> session) override {
     FTL_LOG(INFO) << "story-runner start story";
 
-    new SessionImpl(shell_, std::move(session));
+    InterfaceHandle<Resolver> resolver;
+    resolver_factory_->GetResolver(GetProxy(&resolver));
+    new SessionImpl(shell_, resolver.Pass(), std::move(session));
 
     FTL_LOG(INFO) << "story-runner start story return";
   }
 
  private:
   Shell* const shell_;
+  InterfacePtr<ResolverFactory> resolver_factory_;
   StrongBinding<Runner> binding_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(RunnerImpl);
 };
