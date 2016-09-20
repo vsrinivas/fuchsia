@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// N.B. We can't test the system exception handler here as that would
+// interfere with the global crash logger. A good place to test the
+// system exception handler would be in the "core" tests.
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -132,17 +136,7 @@ static bool test_received_exception(mx_handle_t eport,
 
     EXPECT_EQ(packet.hdr.key, 0u, "bad report key");
 
-    if (strcmp(kind, "system") == 0) {
-        // Test mx_process_debug. System exception handlers don't already have
-        // a handle on the process so this is a good place to test this.
-        mx_handle_t debug_child = mx_debug_task_get_child(MX_HANDLE_INVALID, report->context.pid);
-        if (debug_child < 0)
-            tu_fatal("mx_process_debug", debug_child);
-        mx_info_handle_basic_t process_info;
-        tu_handle_get_basic_info(debug_child, &process_info);
-        ASSERT_EQ(process_info.rec.koid, report->context.pid, "mx_process_debug got pid mismatch");
-        tu_handle_close(debug_child);
-    } else if (strcmp(kind, "process") == 0) {
+    if (strcmp(kind, "process") == 0) {
         mx_handle_t self = mx_process_self();
         mx_handle_t debug_child = mx_debug_task_get_child(self, report->context.pid);
         if (debug_child < 0)
@@ -269,7 +263,6 @@ static void watchdog_thread_func(void* arg)
 }
 
 // This returns "bool" because it uses ASSERT_*.
-// |object| < 0 -> test system handler
 // |object| = 0 -> test process handler (TODO(dje: for now)
 // |object| > 0 -> test thread handler (TODO(dje: for now)
 
@@ -318,13 +311,6 @@ static bool test_set_close_set(const char* kind, mx_handle_t object)
     return true;
 }
 
-static bool system_set_close_set_test(void)
-{
-    BEGIN_TEST;
-    test_set_close_set("system", -1);
-    END_TEST;
-}
-
 static bool process_set_close_set_test(void)
 {
     BEGIN_TEST;
@@ -358,26 +344,6 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
     tu_handle_close(child);
     tu_handle_close(eport);
     tu_handle_close(our_pipe);
-}
-
-static bool system_handler_test(void)
-{
-    BEGIN_TEST;
-    unittest_printf("system exception handler basic test\n");
-
-    mx_handle_t child, our_pipe;
-    start_test_child(&child, &our_pipe);
-    mx_handle_t eport = tu_io_port_create(0);
-    tu_set_system_exception_port(eport, 0);
-
-    finish_basic_test("system", child, eport, our_pipe, MSG_CRASH);
-
-#if 1 // TODO(dje): wip, close doesn't yet reset the exception port
-    mx_status_t status = mx_object_bind_exception_port(0, MX_HANDLE_INVALID, 0, 0);
-    ASSERT_EQ(status, NO_ERROR, "error resetting system exception port");
-#endif
-
-    END_TEST;
 }
 
 static bool process_handler_test(void)
@@ -466,10 +432,8 @@ static bool thread_gone_notification_test(void)
 }
 
 BEGIN_TEST_CASE(exceptions_tests)
-RUN_TEST(system_set_close_set_test);
 RUN_TEST(process_set_close_set_test);
 RUN_TEST(thread_set_close_set_test);
-RUN_TEST(system_handler_test);
 RUN_TEST(process_handler_test);
 RUN_TEST(thread_handler_test);
 RUN_TEST(process_gone_notification_test);
