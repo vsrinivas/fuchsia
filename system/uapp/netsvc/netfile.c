@@ -25,6 +25,30 @@ netfile_state netfile = {
     .fd = -1,
 };
 
+static int netfile_mkdir(const char* filename) {
+    const char* ptr = filename[0] == '/' ? filename + 1 : filename;
+    struct stat st;
+    char tmp[1024];
+    for (;;) {
+        ptr = strchr(ptr, '/');
+        if (!ptr) {
+            return 0;
+        }
+        memcpy(tmp, filename, ptr - filename);
+        tmp[ptr - filename] = '\0';
+        ptr += 1;
+        if (stat(tmp, &st) < 0) {
+            if (errno == ENOENT) {
+                if (mkdir(tmp, 0755) < 0) {
+                    return -1;
+                }
+            } else {
+                return -1;
+            }
+        }
+    }
+}
+
 void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
                   const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
     nbmsg m;
@@ -42,6 +66,7 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
     netfile.cookie = cookie;
 
     struct stat st;
+again: // label here to catch filename=/path/to/new/directory/
     if (stat(filename, &st) == 0 && S_ISDIR(st.st_mode)) {
         errno = EISDIR;
         goto err;
@@ -51,9 +76,15 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
     case O_RDONLY:
         netfile.fd = open(filename, O_RDONLY);
         break;
-    case O_WRONLY:
+    case O_WRONLY: {
         netfile.fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
+        if (netfile.fd < 0 && errno == ENOENT) {
+            if (netfile_mkdir(filename) == 0) {
+                goto again;
+            }
+        }
         break;
+    }
     default:
         printf("netsvc: open '%s' with invalid mode %d\n", filename, arg);
         errno = EINVAL;
