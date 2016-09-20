@@ -110,6 +110,7 @@ void xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context);
+void xhci_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected);
 
 // returns monotonically increasing frame count
 uint64_t xhci_get_current_frame(xhci_t* xhci);
