@@ -12,7 +12,8 @@ learn how to run under qemu:
 
 Having a persistent block device is handy, and you will probably want one.
 
-In your `magenta` directory:
+In your `magenta` directory, create a 512 MiB file to hold your persistent block
+device:
 
 ```sh
 dd if=/dev/zero of=blk.bin bs=1M count=512
@@ -25,28 +26,22 @@ Then, run Fuchsia and:
 > minfs /dev/class/block/000 mount &
 ```
 
-That's it. Only need to do it once, the device will be mounted automatically on
-future boots.
+That's it: you only need to do it once. The device will be mounted automatically
+on future boots.
 
 ### Networking
 
 Networking is handly, and you will definitely want it. Follow [these
 instructions](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md#Enabling-Networking-under-Qemu-x86_64-only).
 
-(need to do this after each host reboot)
+You need to do this after each host reboot.
 
-## Build and run
+## Run and test
 
 We provide a simple `tools/ledger` script that orchestrates basic tasks.
 
-To build Fuchsia:
-
-```sh
-tools/ledger gn
-tools/ledger build
-```
-
-To run Fuchsia (w/ persistent filesystem and networking):
+To run Fuchsia with flags recommended for Ledger development (w/ persistent
+filesystem and networking):
 
 ```sh
 tools/ledger run_fuchsia
