@@ -80,4 +80,6 @@ class LogMessage {
 
 #define FTL_NOTREACHED() FTL_DCHECK(false)
 
+#define FTL_NOTIMPLEMENTED() FTL_LOG(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
+
 #endif  // LIB_FTL_LOGGING_H_
