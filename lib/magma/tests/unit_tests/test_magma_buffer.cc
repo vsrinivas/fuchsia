@@ -129,7 +129,8 @@ public:
         EXPECT_EQ(resource.buffer_handle, buf0->handle);
         EXPECT_EQ(resource.num_relocations, 1u);
         EXPECT_EQ(resource.relocations[0].offset, offset);
-        EXPECT_EQ(resource.relocations[0].target_resource_index, 0u);
+        EXPECT_EQ(resource.relocations[0].target_resource_index,
+                  std::distance(resource_set.begin(), resource_set.find(buf1)));
         EXPECT_EQ(resource.relocations[0].target_offset, target_offset);
         EXPECT_EQ(resource.relocations[0].read_domains_bitfield, read_domains);
         EXPECT_EQ(resource.relocations[0].write_domains_bitfield, write_domain);
