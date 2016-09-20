@@ -247,6 +247,9 @@ mx_status_t mem_can_unlink(dnode_t* dn) {
     } else if (!list_is_empty(&dn->children)) {
         // Cannot unlink non-empty directory
         return ERR_BAD_STATE;
+    } else if (dn->vnode->flags & V_FLAG_REMOTE) {
+        // Cannot unlink mount points
+        return ERR_BAD_STATE;
     }
     return NO_ERROR;
 }
