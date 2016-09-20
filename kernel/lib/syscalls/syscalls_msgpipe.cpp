@@ -102,15 +102,6 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     if (_handles && !_num_handles)
         return ERR_INVALID_ARGS;
 
-    mxtl::unique_ptr<uint32_t[]> handles;
-
-    AllocChecker ac;
-    if (num_handles) {
-        handles.reset(new (&ac) uint32_t[num_handles]());
-        if (!ac.check())
-            return ERR_NO_MEMORY;
-    }
-
     uint32_t next_message_size = 0u;
     uint32_t next_message_num_handles = 0u;
     status_t result = msg_pipe->BeginRead(&next_message_size, &next_message_num_handles);
