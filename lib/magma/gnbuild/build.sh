@@ -33,7 +33,7 @@ $tools_path/ninja -C $build_dir magma_service_driver magma_tests
 
 rm -rf $bootfs_path
 mkdir -p $bootfs_path/bin
-cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1616\
+cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1916
 
 mkdir -p $bootfs_path/lib
 cp $tools_path/sysroot/x86_64-fuchsia/lib/*.so* $bootfs_path/lib
