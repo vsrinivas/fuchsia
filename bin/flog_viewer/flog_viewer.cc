@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "examples/flog_viewer/flog_viewer.h"
+#include "apps/media/tools/flog_viewer/flog_viewer.h"
 
 #include <iomanip>
 #include <iostream>
 
-#include "examples/flog_viewer/formatting.h"
+#include "apps/media/tools/flog_viewer/formatting.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/message.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 // static
 const std::string FlogViewer::kFormatTerse = "terse";
@@ -263,6 +262,5 @@ void FlogViewer::OnChannelDeleted(
   channels_by_channel_id_.erase(iter);
 }
 
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo

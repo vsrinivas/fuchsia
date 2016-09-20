@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/tools/flog_viewer/formatting.h"
+
 #include <chrono>
 #include <iomanip>
 #include <iostream>
 
-#include "examples/flog_viewer/formatting.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.mojom.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 int ostream_indent_index() {
   static int i = std::ios_base::xalloc();
@@ -106,5 +106,5 @@ std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
             << " ";
 }
 
-}  // namespace flog
-}  // namespace mojo
+} // namespace flog
+} // namespace mojo

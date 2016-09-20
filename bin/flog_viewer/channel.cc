@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "examples/flog_viewer/channel.h"
-#include "examples/flog_viewer/formatting.h"
+#include "apps/media/tools/flog_viewer/channel.h"
+
+#include "apps/media/tools/flog_viewer/formatting.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 // static
 std::shared_ptr<Channel> Channel::Create(
@@ -66,6 +66,5 @@ void Channel::PrintAccumulator(std::ostream& os) const {
   accumulator->Print(os);
 }
 
-}  // namespace examples
-}  // namespace flog
-}  // namespace mojo
+} // namespace flog
+} // namespace mojo

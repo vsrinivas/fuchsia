@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/flog_service/flog_reader_impl.h"
+
+#include <unistd.h>
+
 #include <iostream>
 
-#include "base/logging.h"
+#include "lib/ftl/files/eintr_wrapper.h"
 #include "mojo/public/cpp/bindings/lib/array_serialization.h"
 #include "mojo/public/cpp/bindings/lib/string_serialization.h"
-#include "services/flog/flog_reader_impl.h"
 
 namespace mojo {
 namespace flog {

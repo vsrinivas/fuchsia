@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_FLOG_FLOG_READER_IMPL_H_
-#define MOJO_SERVICES_FLOG_FLOG_READER_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_READER_IMPL_H_
+#define APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_READER_IMPL_H_
 
 #include <limits>
 
+#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/services/flog_service/flog_service_impl.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
-#include "services/flog/flog_service_impl.h"
 
 namespace mojo {
 namespace flog {
@@ -90,4 +90,4 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_FLOG_FLOG_READER_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_READER_IMPL_H_

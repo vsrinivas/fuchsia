@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_FLOG_FLOG_LOGGER_IMPL_H_
-#define MOJO_SERVICES_FLOG_FLOG_LOGGER_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_LOGGER_IMPL_H_
+#define APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_LOGGER_IMPL_H_
 
 #include <memory>
 #include <vector>
 
+#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/services/flog_service/flog_directory.h"
+#include "apps/media/services/flog_service/flog_service_impl.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
-#include "services/flog/flog_directory.h"
-#include "services/flog/flog_service_impl.h"
 
 namespace mojo {
 namespace flog {
@@ -71,4 +71,4 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_FLOG_FLOG_LOGGER_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_LOGGER_IMPL_H_

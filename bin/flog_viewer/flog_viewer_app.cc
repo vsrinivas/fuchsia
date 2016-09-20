@@ -6,17 +6,14 @@
 #include <limits>
 #include <vector>
 
-#include "base/bind.h"
-#include "examples/flog_viewer/channel_handler.h"
-#include "examples/flog_viewer/flog_viewer.h"
-#include "mojo/environment/scoped_chromium_init.h"
-#include "mojo/public/c/system/main.h"
+#include "apps/media/tools/flog_viewer/channel_handler.h"
+#include "apps/media/tools/flog_viewer/flog_viewer.h"
+#include "mojo/public/c/include/mojo/system/main.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/run_application.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 class FlogViewerApp : public ApplicationImplBase {
  public:
@@ -173,12 +170,10 @@ class FlogViewerApp : public ApplicationImplBase {
   std::vector<uint32> logs_to_delete_;
 };
 
-}  // namespace examples
-}  // namespace flog
-}  // namespace mojo
+} // namespace flog
+} // namespace mojo
 
 MojoResult MojoMain(MojoHandle application_request) {
-  mojo::ScopedChromiumInit init;
-  mojo::flog::examples::FlogViewerApp flog_viewer_app;
+  mojo::flog::FlogViewerApp flog_viewer_app;
   return mojo::RunApplication(application_request, &flog_viewer_app);
 }

@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "examples/flog_viewer/handlers/media/media_player_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_player_full.h"
 
 #include <iostream>
 
-#include "examples/flog_viewer/flog_viewer.h"
-#include "examples/flog_viewer/handlers/media/media_formatting.h"
-#include "mojo/services/media/logs/interfaces/media_player_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_player_channel.mojom.h"
+#include "apps/media/tools/flog_viewer/flog_viewer.h"
+#include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 namespace handlers {
-namespace media {
 
 MediaPlayerFull::MediaPlayerFull(const std::string& format)
     : terse_(format == FlogViewer::kFormatTerse) {
@@ -89,8 +87,6 @@ void MediaPlayerFull::SettingTimelineTransform(
   std::cout << outdent;
 }
 
-}  // namespace media
 }  // namespace handlers
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo

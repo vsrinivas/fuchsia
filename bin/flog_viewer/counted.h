@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_COUNTED_H_
-#define EXAMPLES_FLOG_VIEWER_COUNTED_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_COUNTED_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_COUNTED_H_
 
 #include <limits>
 
-#include "mojo/public/cpp/bindings/message.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
-
 namespace mojo {
 namespace flog {
-namespace examples {
 
 // Counts things that are added or removed one at a time.
 class Counted {
@@ -46,8 +42,7 @@ class Counted {
   size_t max_outstanding_count_ = 0;
 };
 
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_COUNTED_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_COUNTED_H_

@@ -2,26 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "examples/flog_viewer/channel_handler.h"
+#include "apps/media/tools/flog_viewer/channel_handler.h"
 
-#include "examples/flog_viewer/flog_viewer.h"
-#include "examples/flog_viewer/handlers/default.h"
-#include "examples/flog_viewer/handlers/media/media_decoder_digest.h"
-#include "examples/flog_viewer/handlers/media/media_decoder_full.h"
-#include "examples/flog_viewer/handlers/media/media_demux_digest.h"
-#include "examples/flog_viewer/handlers/media/media_demux_full.h"
-#include "examples/flog_viewer/handlers/media/media_packet_consumer_digest.h"
-#include "examples/flog_viewer/handlers/media/media_packet_consumer_full.h"
-#include "examples/flog_viewer/handlers/media/media_packet_producer_digest.h"
-#include "examples/flog_viewer/handlers/media/media_packet_producer_full.h"
-#include "examples/flog_viewer/handlers/media/media_player_digest.h"
-#include "examples/flog_viewer/handlers/media/media_player_full.h"
-#include "examples/flog_viewer/handlers/media/media_sink_digest.h"
-#include "examples/flog_viewer/handlers/media/media_sink_full.h"
+#include "apps/media/tools/flog_viewer/flog_viewer.h"
+#include "apps/media/tools/flog_viewer/handlers/default.h"
+#include "apps/media/tools/flog_viewer/handlers/media_decoder_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_decoder_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_demux_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_demux_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_producer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_producer_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_player_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_player_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_sink_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_sink_full.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 // static
 std::unique_ptr<ChannelHandler> ChannelHandler::Create(
@@ -112,6 +111,5 @@ std::shared_ptr<Channel> ChannelHandler::AsChannel(uint64_t subject_address) {
   return channel_lookup_callback_(subject_address);
 }
 
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo

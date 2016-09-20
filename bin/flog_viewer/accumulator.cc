@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "examples/flog_viewer/accumulator.h"
+#include "apps/media/tools/flog_viewer/accumulator.h"
 
 #include <iomanip>
 #include <iostream>
 
-#include "examples/flog_viewer/formatting.h"
+#include "apps/media/tools/flog_viewer/formatting.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 std::ostream& operator<<(std::ostream& os, const Accumulator::Problem& value) {
   return os << value.log_id() << "." << std::setw(2) << std::setfill('0')
@@ -46,6 +45,5 @@ Accumulator::Problem::Problem(uint32_t log_id,
 
 Accumulator::Problem::~Problem() {}
 
-}  // namespace examples
-}  // namespace flog
-}  // namespace mojo
+} // namespace flog
+} // namespace mojo

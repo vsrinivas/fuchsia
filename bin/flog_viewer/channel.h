@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_CHANNEL_H_
-#define EXAMPLES_FLOG_VIEWER_CHANNEL_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_
 
-#include "examples/flog_viewer/channel_handler.h"
+#include "apps/media/tools/flog_viewer/channel_handler.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 class Channel {
  public:
@@ -70,8 +69,7 @@ class Channel {
   bool has_parent_ = false;
 };
 
-}  // namespace examples
-}  // namespace flog
-}  // namespace mojo
+} // namespace flog
+} // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_CHANNEL_H_
+#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_

@@ -2,23 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_HANDLERS_MEDIA_MEDIA_FORMATTING_H_
-#define EXAMPLES_FLOG_VIEWER_HANDLERS_MEDIA_MEDIA_FORMATTING_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_FORMATTING_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_FORMATTING_H_
 
 #include <vector>
 
-#include "examples/flog_viewer/formatting.h"
-#include "mojo/services/media/common/interfaces/media_common.mojom.h"
-#include "mojo/services/media/common/interfaces/media_transport.mojom.h"
-#include "mojo/services/media/common/interfaces/media_types.mojom.h"
-#include "mojo/services/media/common/interfaces/timelines.mojom.h"
-#include "mojo/services/media/control/interfaces/media_source.mojom.h"
+#include "apps/media/interfaces/media_common.mojom.h"
+#include "apps/media/interfaces/media_source.mojom.h"
+#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/interfaces/timelines.mojom.h"
+#include "apps/media/tools/flog_viewer/formatting.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 namespace handlers {
-namespace media {
 
 // Mojo defines versions of operator<< for this that produce only numbers.
 const char* StringFromMediaTypeMedium(mojo::media::MediaTypeMedium value);
@@ -107,10 +105,8 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   return os;
 }
 
-}  // namespace media
 }  // namespace handlers
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_HANDLERS_MEDIA_MEDIA_FORMATTING_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_FORMATTING_H_

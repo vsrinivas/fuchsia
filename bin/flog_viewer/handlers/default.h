@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_HANDLERS_DEFAULT_H_
-#define EXAMPLES_FLOG_VIEWER_HANDLERS_DEFAULT_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_DEFAULT_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_DEFAULT_H_
 
-#include "examples/flog_viewer/channel_handler.h"
+#include "apps/media/tools/flog_viewer/channel_handler.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 namespace handlers {
 
 // Handler for otherwise unhandled messages.
@@ -34,8 +33,7 @@ class Default : public ChannelHandler {
 };
 
 }  // namespace handlers
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_HANDLERS_DEFAULT_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_DEFAULT_H_

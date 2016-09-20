@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_TRACKED_H_
-#define EXAMPLES_FLOG_VIEWER_TRACKED_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_
 
 #include <limits>
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 // Tracks a sequence of values that may be added or removed.
 class Tracked {
- public:
+public:
   // Returns the smallest value that was ever added.
   uint64_t min() const { return min_; }
 
@@ -81,7 +80,7 @@ class Tracked {
     outstanding_total_ -= t;
   }
 
- private:
+private:
   uint64_t min_ = std::numeric_limits<uint64_t>::max();
   uint64_t curr_ = uint64_t();
   uint64_t max_ = std::numeric_limits<uint64_t>::min();
@@ -93,8 +92,7 @@ class Tracked {
   uint64_t max_outstanding_total_ = std::numeric_limits<uint64_t>::min();
 };
 
-}  // namespace examples
-}  // namespace flog
-}  // namespace mojo
+} // namespace flog
+} // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_TRACKED_H_
+#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_

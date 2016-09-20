@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_FORMATTING_H_
-#define EXAMPLES_FLOG_VIEWER_FORMATTING_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_FORMATTING_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_FORMATTING_H_
 
 #include <ostream>
 
-#include "examples/flog_viewer/channel.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/tools/flog_viewer/channel.h"
 
 //
 // This file declares a bunch of << operator overloads for formatting stuff.
@@ -28,7 +28,6 @@
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 int ostream_indent_index();
 
@@ -74,11 +73,9 @@ std::ostream& operator<<(std::ostream& os, AsLogLevel value);
 
 std::ostream& operator<<(std::ostream& os, const Channel& value);
 
-}  // namespace examples
-
 std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value);
 
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_FORMATTING_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_FORMATTING_H_

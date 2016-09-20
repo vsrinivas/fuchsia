@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_FLOG_FLOG_DIRECTORY_H_
-#define MOJO_SERVICES_FLOG_FLOG_DIRECTORY_H_
+#ifndef APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_DIRECTORY_H_
+#define APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_DIRECTORY_H_
 
 #include <map>
 
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/services/files/interfaces/directory.mojom.h"
-#include "mojo/services/files/interfaces/file.mojom.h"
-#include "mojo/services/files/interfaces/files.mojom.h"
+#include "lib/ftl/files/unique_fd.h"
 
 namespace mojo {
 namespace flog {
@@ -52,4 +49,4 @@ class FlogDirectory {
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_FLOG_FLOG_DIRECTORY_H_
+#endif  // APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_DIRECTORY_H_

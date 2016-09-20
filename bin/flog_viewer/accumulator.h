@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_ACCUMULATOR_H_
-#define EXAMPLES_FLOG_VIEWER_ACCUMULATOR_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_
 
 #include <limits>
 
+#include "apps/media/interfaces/flog/flog.mojom.h"
 #include "mojo/public/cpp/bindings/message.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 
 // Base class for accumulators produced by handlers that analyze message
 // streams.
@@ -66,8 +65,7 @@ private:
   std::vector<Problem> problems_;
 };
 
-} // namespace examples
 } // namespace flog
 } // namespace mojo
 
-#endif // EXAMPLES_FLOG_VIEWER_ACCUMULATOR_H_
+#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_

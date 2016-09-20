@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_FLOG_VIEWER_H_
-#define EXAMPLES_FLOG_VIEWER_FLOG_VIEWER_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_
 
 #include <map>
 #include <unordered_set>
 
-#include "examples/flog_viewer/channel.h"
-#include "examples/flog_viewer/channel_handler.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/tools/flog_viewer/channel.h"
+#include "apps/media/tools/flog_viewer/channel_handler.h"
 
 namespace mojo {
 
 class Shell;
 
 namespace flog {
-namespace examples {
 
 // Model class for the flog viewer app.
 class FlogViewer {
@@ -90,8 +89,7 @@ class FlogViewer {
   std::map<uint64_t, std::shared_ptr<Channel>> channels_by_subject_address_;
 };
 
-}  // namespace examples
-}  // namespace flog
-}  // namespace mojo
+} // namespace flog
+} // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_FLOG_VIEWER_H_
+#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_

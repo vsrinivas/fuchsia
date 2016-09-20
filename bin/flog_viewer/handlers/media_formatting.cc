@@ -4,13 +4,11 @@
 
 #include <iomanip>
 
-#include "examples/flog_viewer/handlers/media/media_formatting.h"
+#include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 namespace handlers {
-namespace media {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const InterfacePtr<T>& value) {
@@ -366,8 +364,6 @@ const char* StringFromAudioSampleFormat(mojo::media::AudioSampleFormat value) {
   return "UNKNOWN FORMAT";
 }
 
-}  // namespace media
 }  // namespace handlers
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo

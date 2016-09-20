@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_FLOG_VIEWER_HANDLERS_MEDIA_MEDIA_PACKET_PRODUCER_FULL_H_
-#define EXAMPLES_FLOG_VIEWER_HANDLERS_MEDIA_MEDIA_PACKET_PRODUCER_FULL_H_
+#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PACKET_PRODUCER_FULL_H_
+#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PACKET_PRODUCER_FULL_H_
 
-#include "examples/flog_viewer/channel_handler.h"
-#include "mojo/services/media/logs/interfaces/media_packet_producer_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_producer_channel.mojom.h"
+#include "apps/media/tools/flog_viewer/channel_handler.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 namespace handlers {
-namespace media {
 
 // Handler for MediaPacketProducerChannel messages.
 class MediaPacketProducerFull
@@ -59,10 +57,8 @@ class MediaPacketProducerFull
   bool terse_;
 };
 
-}  // namespace media
 }  // namespace handlers
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // EXAMPLES_FLOG_VIEWER_HANDLERS_MEDIA_MEDIA_PACKET_PRODUCER_FULL_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PACKET_PRODUCER_FULL_H_

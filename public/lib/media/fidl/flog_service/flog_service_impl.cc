@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/services/flog_service/flog_service_impl.h"
+
+#include "apps/media/services/flog_service/flog_directory.h"
+#include "apps/media/services/flog_service/flog_logger_impl.h"
+#include "apps/media/services/flog_service/flog_reader_impl.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
-#include "services/flog/flog_directory.h"
-#include "services/flog/flog_logger_impl.h"
-#include "services/flog/flog_reader_impl.h"
-#include "services/flog/flog_service_impl.h"
 
 namespace mojo {
 namespace flog {

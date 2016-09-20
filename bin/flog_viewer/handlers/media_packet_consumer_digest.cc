@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "examples/flog_viewer/handlers/media/media_packet_consumer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_digest.h"
 
 #include <iostream>
 
-#include "examples/flog_viewer/flog_viewer.h"
-#include "examples/flog_viewer/handlers/media/media_formatting.h"
-#include "mojo/services/media/logs/interfaces/media_packet_consumer_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_consumer_channel.mojom.h"
+#include "apps/media/tools/flog_viewer/flog_viewer.h"
+#include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 namespace handlers {
-namespace media {
 
 MediaPacketConsumerDigest::MediaPacketConsumerDigest(const std::string& format)
     : accumulator_(std::make_shared<MediaPacketConsumerAccumulator>()) {
@@ -192,8 +190,6 @@ void MediaPacketConsumerAccumulator::Print(std::ostream& os) {
   os << outdent;
 }
 
-}  // namespace media
 }  // namespace handlers
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo

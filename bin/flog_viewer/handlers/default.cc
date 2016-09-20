@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/media/tools/flog_viewer/handlers/default.h"
+
 #include <iomanip>
 #include <iostream>
 
-#include "examples/flog_viewer/flog_viewer.h"
-#include "examples/flog_viewer/formatting.h"
-#include "examples/flog_viewer/handlers/default.h"
+#include "apps/media/tools/flog_viewer/flog_viewer.h"
+#include "apps/media/tools/flog_viewer/formatting.h"
 
 namespace mojo {
 namespace flog {
-namespace examples {
 namespace handlers {
 
 Default::Default(const std::string& format)
@@ -70,6 +70,5 @@ void Default::PrintData(const uint8_t* data, size_t size) {
 }
 
 }  // namespace handlers
-}  // namespace examples
 }  // namespace flog
 }  // namespace mojo

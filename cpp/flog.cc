@@ -4,8 +4,8 @@
 
 #include <chrono>
 
+#include "apps/media/cpp/flog.h"
 #include "mojo/public/cpp/application/connect.h"
-#include "mojo/services/flog/cpp/flog.h"
 
 namespace mojo {
 namespace flog {

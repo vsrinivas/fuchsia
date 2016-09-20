@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_FLOG_FLOG_SERVICE_IMPL_H_
-#define MOJO_SERVICES_FLOG_FLOG_SERVICE_IMPL_H_
+#ifndef APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_SERVICE_IMPL_H_
+#define APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_SERVICE_IMPL_H_
 
 #include <map>
 #include <memory>
 
+#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/services/common/factory_service_base.h"
+#include "apps/media/services/common/incident.h"
+#include "apps/media/services/flog_service/flog_directory.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/services/flog/interfaces/flog.mojom.h"
-#include "services/flog/flog_directory.h"
-#include "services/util/cpp/factory_service_base.h"
-#include "services/util/cpp/incident.h"
 
 namespace mojo {
 namespace flog {
@@ -53,4 +53,4 @@ class FlogServiceImpl : public util::FactoryServiceBase, public FlogService {
 }  // namespace flog
 }  // namespace mojo
 
-#endif  // MOJO_SERVICES_FLOG_FLOG_SERVICE_IMPL_H_
+#endif  // APPS_MEDIA_SERVICES_FLOG_SERVICE_FLOG_SERVICE_IMPL_H_
