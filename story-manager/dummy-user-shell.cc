@@ -11,6 +11,7 @@
 #include "apps/modular/mojom_hack/story_manager.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/synchronization/sleep.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -26,32 +27,43 @@ class DummyUserShellImpl : public story_manager::UserShell {
       const std::string& recipe_url,
       mojo::InterfaceRequest<story_manager::UserShell> request)
       : binding_(this, std::move(request)), recipe_url_(recipe_url) {}
-  ~DummyUserShellImpl() override {};
+  ~DummyUserShellImpl() override{};
 
  private:
   void SetStoryProvider(mojo::InterfaceHandle<story_manager::StoryProvider>
                             story_provider) override {
-    story_provider_ = mojo::InterfacePtr<story_manager::StoryProvider>::Create(
-        story_provider.Pass());
+    story_provider_.Bind(story_provider.Pass());
+
+    // Check for previous stories.
+    story_provider_->PreviousStories(
+        [this](mojo::InterfaceHandle<story_manager::Story> story) {
+          FTL_DCHECK(!story.is_valid());
+        });
+
+    // Start a new story.
     story_provider_->StartNewStory(
         std::move(recipe_url_),
         [this](mojo::InterfaceHandle<story_manager::Story> story) {
-      FTL_LOG(INFO) << "Received story_manager::Story from provider.";
-      mojo::InterfacePtr<story_manager::Story> story_ptr =
-          mojo::InterfacePtr<story_manager::Story>::Create(story.Pass());
-      story_ptr->GetMetadata(
-          [](mojo::InlinedStructPtr<story_manager::StoryMetadata>
-                  story_metadata) {
-          FTL_LOG(INFO) << "story_manager::Story received with url: "
-                        << story_metadata->url << " is_running: "
-                        << story_metadata->is_running;
-      });
-      story_ptr_set_.AddInterfacePtr(story_ptr.Pass());
-    });
+          FTL_LOG(INFO) << "Received story_manager::Story from provider.";
+          story_ptr_.Bind(story.Pass());
+          story_ptr_->GetInfo([this](
+              mojo::StructPtr<story_manager::StoryInfo> story_info) {
+            FTL_LOG(INFO) << "story_manager::Story received with url: "
+                          << story_info->url
+                          << " is_running: " << story_info->is_running;
+
+            // Let the story run for 500 milli-seconds before stopping.
+            ftl::SleepFor(ftl::TimeDelta::FromMilliseconds(500));
+            story_ptr_->Stop();
+
+            // Resume the stopped story.
+            story_ptr_->Resume();
+          });
+        });
   }
 
   mojo::InterfacePtr<story_manager::StoryProvider> story_provider_;
-  mojo::InterfacePtrSet<story_manager::Story> story_ptr_set_;
+  mojo::InterfacePtr<story_manager::Story> story_ptr_;
 
   mojo::StrongBinding<story_manager::UserShell> binding_;
   std::string recipe_url_;

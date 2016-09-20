@@ -20,26 +20,44 @@ interface StoryManager {
   Launch(ledger.Identity user_id) => (bool success);
 };
 
-// Intended for use by SysUi to start a new story by URL or to get a list of
-// previously run stories which can be resumed.
-interface StoryProvider {
-  // Starts a new story by running the module at |url|. Returns an interface to
-  // |Story| if the story could be successfully started else return NULL.
-  StartNewStory(string url) => (Story? story);
-  // TODO(alhaad): Add more actions like CurrentStories(), PreviousStories().
-};
-
-struct StoryMetadata {
+struct StoryInfo {
+  // URL of the first mojo application run as a part of this story. Typically
+  // this will be the URL of the recipe.
   string url;
+
+  // Whether this story is running on this device.
   bool is_running;
-  // TODO(alhaad): Add more things like statistics and snapshots.
+
+  // Page id on the user's ledger which stores session information. It might be
+  // NULL until the session is being started.
+  array<uint8, 16>? session_page_id;
 };
 
 // Intended for use by SysUi to interact with a single story.
 interface Story {
-  GetMetadata() => (StoryMetadata metadata);
-  // TODO(alhaad): Add more actions like Background(), Foreground(), Stop(),
-  // Resume(), etc.
+  GetInfo() => (StoryInfo info);
+
+  // Stops this |Story| if it is running - committing all story data to Ledger,
+  // else does nothing.
+  Stop();
+
+  // Re-inflates this |Story| if not running, else does nothing.
+  Resume();
+};
+
+// Intended for use by SysUi to start a new story by URL or to get a list of
+// previously run stories which can be resumed.
+// If |StoryProvider| is closed, all associated |Story| objects will have an
+// undefined behavior.
+interface StoryProvider {
+  // Starts a new story by running the module at |url|. Returns an interface to
+  // |Story| if the story could be successfully started else return NULL.
+  StartNewStory(string url) => (Story? story);
+
+  // Returns interfaces to all the previously run stories for the user.
+  // HACK(alhaad): Return only one of the previous stories until
+  // https://github.com/domokit/mojo/issues/818 is fixed.
+  PreviousStories() => (/*array<Story>*/Story? stories);
 };
 
 // This interface is meant to be implemented by a User Shell so that
