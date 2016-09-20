@@ -343,6 +343,8 @@ void x86_exception_handler(x86_iframe_t *frame)
 
     if (ret != INT_NO_RESCHEDULE)
         thread_preempt(true);
+
+    ktrace_tiny(TAG_IRQ_EXIT, (frame->vector << 8) | arch_curr_cpu_num());
 }
 
 __WEAK uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
