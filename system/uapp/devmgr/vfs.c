@@ -173,6 +173,53 @@ static mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
     return NO_ERROR;
 }
 
+static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
+                                      const char* oldpath, const char* newpath) {
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    size_t oldlen = strlen(oldpath);
+    size_t newlen = strlen(newpath);
+    msg.op = MXRIO_RENAME;
+    memcpy(msg.data, oldpath, oldlen);
+    msg.data[oldlen] = '\0';
+    memcpy(msg.data + oldlen + 1, newpath, newlen);
+    msg.data[oldlen + newlen + 1] = '\0';
+    msg.datalen = oldlen + newlen + 2;
+    return mxrio_txn_handoff(srv, rh, &msg);
+}
+
+mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
+                       mx_handle_t rh) {
+    vnode_t* oldparent, *newparent;
+    mx_status_t r1, r2;
+    if ((r1 = vfs_walk(vn, &oldparent, oldpath, &oldpath)) < 0) {
+        return r1;
+    } else if ((r2 = vfs_walk(vn, &newparent, newpath, &newpath)) < 0) {
+        vn_release(oldparent);
+        return r2;
+    } else if (r1 != r2) {
+        // Rename can only be directed to one filesystem
+        vn_release(oldparent);
+        vn_release(newparent);
+        return ERR_NOT_SUPPORTED;
+    }
+
+    if (r1 == 0) {
+        // Local filesystem
+        r1 = vn->ops->rename(oldparent, newparent, oldpath,
+                             strlen(oldpath), newpath, strlen(newpath));
+    } else {
+        // Remote filesystem
+        r1 = txn_handoff_rename(r1, rh, oldpath, newpath);
+        if (r1 >= 0) {
+            r1 = ERR_DISPATCHER_INDIRECT;
+        }
+    }
+    vn_release(oldparent);
+    vn_release(newparent);
+    return r1;
+}
+
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type) {
     size_t sz = sizeof(vdirent_t) + len + 1;
@@ -228,21 +275,6 @@ static mx_status_t txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
     msg.arg2.mode = mode;
     msg.datalen = len + 1;
     memcpy(msg.data, path, len + 1);
-    return mxrio_txn_handoff(srv, rh, &msg);
-}
-
-static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
-                                      const char* oldpath, const char* newpath) {
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
-    size_t oldlen = strlen(oldpath);
-    size_t newlen = strlen(newpath);
-    msg.op = MXRIO_RENAME;
-    memcpy(msg.data, oldpath, oldlen);
-    msg.data[oldlen] = '\0';
-    memcpy(msg.data + oldlen + 1, newpath, newlen);
-    msg.data[oldlen + newlen + 1] = '\0';
-    msg.datalen = oldlen + newlen + 2;
     return mxrio_txn_handoff(srv, rh, &msg);
 }
 
@@ -525,34 +557,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         if (data_end <= newpath) {
             return ERR_INVALID_ARGS;
         }
-        vnode_t* oldparent, *newparent;
-        mx_status_t r1, r2;
-        if ((r1 = vfs_walk(vn, &oldparent, oldpath, &oldpath)) < 0) {
-            return r1;
-        } else if ((r2 = vfs_walk(vn, &newparent, newpath, &newpath)) < 0) {
-            vn_release(oldparent);
-            return r2;
-        } else if (r1 != r2) {
-            // Rename can only be directed to one filesystem
-            vn_release(oldparent);
-            vn_release(newparent);
-            return ERR_NOT_SUPPORTED;
-        }
-
-        if (r1 == 0) {
-            // Local filesystem
-            r1 = vn->ops->rename(oldparent, newparent, oldpath,
-                                 strlen(oldpath), newpath, strlen(newpath));
-        } else {
-            // Remote filesystem
-            r1 = txn_handoff_rename(r1, rh, oldpath, newpath);
-            if (r1 >= 0) {
-                r1 = ERR_DISPATCHER_INDIRECT;
-            }
-        }
-        vn_release(oldparent);
-        vn_release(newparent);
-        return r1;
+        return vfs_rename(vn, oldpath, newpath, rh);
     }
     case MXRIO_UNLINK:
         return vn->ops->unlink(vn, (const char*)msg->data, len);
