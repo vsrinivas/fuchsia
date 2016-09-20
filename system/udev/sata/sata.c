@@ -78,6 +78,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
 
     if (txn->status != NO_ERROR) {
         xprintf("%s: error %d in device identify\n", dev->device.name, txn->status);
+        return txn->status;
     }
     assert(txn->actual == 512);
 
@@ -235,7 +236,11 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
     device->port = port;
 
     // send device identify
-    sata_device_identify(device, dev);
+    mx_status_t status = sata_device_identify(device, dev);
+    if (status < 0) {
+        free(device);
+        return status;
+    }
 
     // add the device
     device->device.protocol_id = MX_PROTOCOL_BLOCK;
