@@ -7,7 +7,7 @@
 #ifndef APPS_MODULAR_STORY_EXAMPLE_MODULE_APP_H_
 #define APPS_MODULAR_STORY_EXAMPLE_MODULE_APP_H_
 
-#include "apps/modular/mojom_hack/story_runner.mojom.h"
+#include "apps/modular/story_runner/story_runner.mojom.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 

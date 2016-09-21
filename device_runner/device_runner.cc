@@ -4,8 +4,8 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/modular/mojom_hack/device_runner.mojom.h"
-#include "apps/modular/mojom_hack/story_manager.mojom.h"
+#include "apps/modular/device_runner/device_runner.mojom.h"
+#include "apps/modular/story_manager/story_manager.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -37,7 +37,7 @@ class DeviceRunnerImpl : public device_runner::DeviceRunner {
 
     // TODO(alhaad): Once we have a better understanding of lifecycle
     // management, revisit this.
-    mojo::ConnectToService(shell_, "mojo:story-manager",
+    mojo::ConnectToService(shell_, "mojo:story_manager",
                            mojo::GetProxy(&launcher_));
     mojo::StructPtr<ledger::Identity> identity = ledger::Identity::New();
     identity->user_id = UserIdentityArray(username);
@@ -65,7 +65,7 @@ class DeviceRunnerApp : public mojo::ApplicationImplBase {
  private:
   void OnInitialize() override {
     FTL_DLOG(INFO) << "Starting device shell.";
-    ConnectToService(shell(), "mojo:dummy-device-shell",
+    ConnectToService(shell(), "mojo:dummy_device_shell",
                      GetProxy(&device_shell_));
     mojo::InterfaceHandle<device_runner::DeviceRunner> service;
     new DeviceRunnerImpl(shell(), &service);

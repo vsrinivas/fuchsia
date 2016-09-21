@@ -12,7 +12,7 @@
 #include <map>
 #include <vector>
 
-#include "apps/modular/mojom_hack/story_runner.mojom.h"
+#include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"

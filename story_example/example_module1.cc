@@ -8,8 +8,8 @@
 #include <string>
 #include <strstream>
 
-#include "apps/modular/mojom_hack/story_runner.mojom.h"
-#include "apps/modular/story-example/module_app.h"
+#include "apps/modular/story_example/module_app.h"
+#include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"

@@ -2,21 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//mojo/public/tools/bindings/mojom.gni")
+
 group("all") {
   deps = [
-    ":dummy-user-shell",
-    ":story-manager",
+    ":dummy_user_shell",
+    ":story_manager",
   ]
 }
 
-executable("story-manager") {
+executable("story_manager") {
   sources = [
-    "story-manager.cc",
+    "story_manager.cc",
   ]
 
   deps = [
+    ":interfaces",
     "//apps/ledger/api",
-    "//apps/modular/mojom_hack:interfaces",
+    "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
@@ -27,17 +30,27 @@ executable("story-manager") {
   ]
 }
 
-executable("dummy-user-shell") {
+executable("dummy_user_shell") {
   sources = [
-    "dummy-user-shell.cc",
+    "dummy_user_shell.cc",
   ]
 
   deps = [
-    "//apps/modular/mojom_hack:interfaces",
+    ":interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
     "//mojo/system",
+  ]
+}
+
+mojom("interfaces") {
+  sources = [
+    "story_manager.mojom",
+  ]
+
+  deps = [
+    "//apps/ledger/api",
   ]
 }

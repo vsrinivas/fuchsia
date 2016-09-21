@@ -9,6 +9,9 @@ set -e
 MODULAR_DIR="$( cd "$( dirname "$( dirname "${BASH_SOURCE[0]}" )" )" && pwd )"
 ROOT_DIR="$( dirname "$(dirname $MODULAR_DIR)" )"
 
+# Build sysroot
+$ROOT_DIR/scripts/build-sysroot.sh -c -t x86_64
+
 # Generate ninja files with modular autorun in bootfs. Modular autorun will
 # launch story-manager.
 $ROOT_DIR/packages/gn/gen.py -m modular-autorun

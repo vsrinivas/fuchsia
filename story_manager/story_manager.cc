@@ -11,8 +11,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "apps/modular/mojom_hack/story_manager.mojom.h"
-#include "apps/modular/mojom_hack/story_runner.mojom.h"
+#include "apps/modular/story_manager/story_manager.mojom.h"
+#include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -75,9 +75,9 @@ class StoryImpl : public Story, public StoryState {
   // |StoryState| override.
   void RunStory(mojo::InterfacePtr<ledger::Page> session_page) override {
     mojo::InterfacePtr<story::ResolverFactory> resolver_factory;
-    mojo::ConnectToService(shell_, "mojo:component-manager",
+    mojo::ConnectToService(shell_, "mojo:component_manager",
                            mojo::GetProxy(&resolver_factory));
-    mojo::ConnectToService(shell_, "mojo:story-runner",
+    mojo::ConnectToService(shell_, "mojo:story_runner",
                            mojo::GetProxy(&runner_));
     runner_->Initialize(resolver_factory.Pass());
     runner_->StartStory(GetProxy(&session_));
@@ -304,7 +304,7 @@ class StoryManagerImpl : public StoryManager {
 
   // Run the User shell and provide it the |StoryProvider| interface.
   void StartUserShell(mojo::InterfaceHandle<ledger::Ledger> ledger) {
-    mojo::ConnectToService(shell_, "mojo:dummy-user-shell",
+    mojo::ConnectToService(shell_, "mojo:dummy_user_shell",
                            mojo::GetProxy(&user_shell_));
     mojo::InterfaceHandle<StoryProvider> service;
     new StoryProviderImpl(

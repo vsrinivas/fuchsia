@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <vector>
 
-#include "apps/modular/mojom_hack/story_runner.mojom.h"
-#include "apps/modular/story-example/module_app.h"
+#include "apps/modular/story_example/module_app.h"
+#include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/bindings/binding.h"
@@ -88,7 +88,7 @@ class RecipeImpl : public Module, public LinkChanged {
     module1_link_->Dup(GetProxy(&module1_link_handle));
 
     FTL_LOG(INFO) << "recipe start module module1";
-    session_->StartModule("mojo:example-module1",
+    session_->StartModule("mojo:example_module1",
                           std::move(module1_link_handle),
                           [this](InterfaceHandle<Module> module) {
                             FTL_LOG(INFO) << "recipe start module module1 done";
@@ -102,7 +102,7 @@ class RecipeImpl : public Module, public LinkChanged {
     module2_link_->Dup(GetProxy(&module2_link_handle));
 
     FTL_LOG(INFO) << "recipe start module module2";
-    session_->StartModule("mojo:example-module2",
+    session_->StartModule("mojo:example_module2",
                           std::move(module2_link_handle),
                           [this](InterfaceHandle<Module> module) {
                             FTL_LOG(INFO) << "recipe start module module2 done";

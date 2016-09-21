@@ -8,7 +8,7 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/modular/mojom_hack/story_manager.mojom.h"
+#include "apps/modular/story_manager/story_manager.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/sleep.h"
@@ -80,7 +80,7 @@ class DummyUserShellApp : public mojo::ApplicationImplBase {
   void OnInitialize() override {
     if (args().size() != 1) {
       FTL_DLOG(INFO) << "dummy-user-runner expects 1 additional argument.\n"
-                     << "Usage: mojo:dummy-user-runner [recipe]";
+                     << "Usage: mojo:dummy_user_runner [recipe]";
       return;
     }
 

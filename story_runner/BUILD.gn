@@ -2,20 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//mojo/public/tools/bindings/mojom.gni")
+
 group("all") {
   deps = [
-    ":component-manager",
-    ":story-runner",
+    ":component_manager",
+    ":story_runner",
   ]
 }
 
-executable("story-runner") {
+executable("story_runner") {
   sources = [
-    "story-runner.cc",
+    "story_runner.cc",
   ]
 
   deps = [
-    "//apps/modular/mojom_hack:interfaces",
+    ":interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
@@ -26,16 +28,22 @@ executable("story-runner") {
   ]
 }
 
-executable("component-manager") {
+executable("component_manager") {
   sources = [
-    "component-manager.cc",
+    "component_manager.cc",
   ]
 
   deps = [
-    "//apps/modular/mojom_hack:interfaces",
+    ":interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
     "//mojo/system",
+  ]
+}
+
+mojom("interfaces") {
+  sources = [
+    "story_runner.mojom",
   ]
 }

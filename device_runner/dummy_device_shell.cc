@@ -8,7 +8,7 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/modular/mojom_hack/device_runner.mojom.h"
+#include "apps/modular/device_runner/device_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -52,7 +52,7 @@ class DummyDeviceShellApp : public mojo::ApplicationImplBase {
   void OnInitialize() override {
     if (args().size() != 1) {
       FTL_DLOG(INFO) << "dummy-device-runner expects 1 additional argument.\n"
-                     << "Usage: mojo:dummy-device-runner [user]";
+                     << "Usage: mojo:dummy_device_runner [user]";
       return;
     }
 

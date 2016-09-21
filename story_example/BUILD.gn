@@ -4,31 +4,31 @@
 
 group("all") {
   deps = [
-    ":example-module1",
-    ":example-module2",
-    ":example-recipe",
+    ":example_module1",
+    ":example_module2",
+    ":example_recipe",
   ]
 }
 
-source_set("module-app") {
+source_set("module_app") {
   sources = [
     "module_app.h",
   ]
 
   deps = [
-    "//apps/modular/mojom_hack:interfaces",
+    "//apps/modular/story_runner:interfaces",
     "//mojo/public/cpp/application:standalone",
   ]
 }
 
-executable("example-module1") {
+executable("example_module1") {
   sources = [
-    "example-module1.cc",
+    "example_module1.cc",
   ]
 
   deps = [
-    ":module-app",
-    "//apps/modular/mojom_hack:interfaces",
+    ":module_app",
+    "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
     "//mojo/system",
@@ -36,14 +36,14 @@ executable("example-module1") {
   ]
 }
 
-executable("example-module2") {
+executable("example_module2") {
   sources = [
-    "example-module2.cc",
+    "example_module2.cc",
   ]
 
   deps = [
-    ":module-app",
-    "//apps/modular/mojom_hack:interfaces",
+    ":module_app",
+    "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
     "//mojo/system",
@@ -51,14 +51,14 @@ executable("example-module2") {
   ]
 }
 
-executable("example-recipe") {
+executable("example_recipe") {
   sources = [
-    "example-recipe.cc",
+    "example_recipe.cc",
   ]
 
   deps = [
-    ":module-app",
-    "//apps/modular/mojom_hack:interfaces",
+    ":module_app",
+    "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
     "//mojo/system",
