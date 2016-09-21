@@ -74,12 +74,8 @@ class StoryImpl : public Story, public StoryState {
   // story-runner.
   // |StoryState| override.
   void RunStory(mojo::InterfacePtr<ledger::Page> session_page) override {
-    mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
-    shell_->ConnectToApplication("mojo:story-runner",
-                                 mojo::GetProxy(&service_provider));
-    service_provider->ConnectToService(
-        story::Runner::Name_, mojo::GetProxy(&runner_).PassMessagePipe());
-
+    mojo::ConnectToService(shell_, "mojo:story-runner",
+                           mojo::GetProxy(&runner_));
     runner_->StartStory(GetProxy(&session_));
     mojo::InterfaceHandle<story::Link> link;
     session_->CreateLink("boot", GetProxy(&link));
@@ -161,7 +157,7 @@ class StoryProviderImpl : public StoryProvider, public StoryProviderState {
     ledger_->GetPage(
         std::move(info->session_page_id),
         [story_state](ledger::Status status,
-            mojo::InterfaceHandle<ledger::Page> session_page) {
+                      mojo::InterfaceHandle<ledger::Page> session_page) {
           story_state->RunStory(mojo::InterfacePtr<ledger::Page>::Create(
               std::move(session_page)));
         });
@@ -286,12 +282,8 @@ class StoryManagerImpl : public StoryManager {
     FTL_LOG(INFO) << "story_manager::Launch received.";
 
     // Establish connection with Ledger.
-    mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
-    shell_->ConnectToApplication("mojo:ledger",
-                                 mojo::GetProxy(&service_provider));
-    service_provider->ConnectToService(
-        ledger::LedgerFactory::Name_,
-        mojo::GetProxy(&ledger_factory_).PassMessagePipe());
+    mojo::ConnectToService(shell_, "mojo:ledger",
+                           mojo::GetProxy(&ledger_factory_));
     ledger_factory_->GetLedger(
         std::move(identity),
         [this, callback](ledger::Status status,
@@ -308,11 +300,8 @@ class StoryManagerImpl : public StoryManager {
 
   // Run the User shell and provide it the |StoryProvider| interface.
   void StartUserShell(mojo::InterfaceHandle<ledger::Ledger> ledger) {
-    mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
-    shell_->ConnectToApplication("mojo:dummy-user-shell",
-                                 mojo::GetProxy(&service_provider));
-    service_provider->ConnectToService(
-        UserShell::Name_, mojo::GetProxy(&user_shell_).PassMessagePipe());
+    mojo::ConnectToService(shell_, "mojo:dummy-user-shell",
+                           mojo::GetProxy(&user_shell_));
     mojo::InterfaceHandle<StoryProvider> service;
     new StoryProviderImpl(
         shell_, mojo::InterfacePtr<ledger::Ledger>::Create(std::move(ledger)),

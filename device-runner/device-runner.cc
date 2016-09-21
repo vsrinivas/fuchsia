@@ -37,12 +37,8 @@ class DeviceRunnerImpl : public device_runner::DeviceRunner {
 
     // TODO(alhaad): Once we have a better understanding of lifecycle
     // management, revisit this.
-    mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
-    shell_->ConnectToApplication("mojo:story-manager",
-                                 mojo::GetProxy(&service_provider));
-    service_provider->ConnectToService(
-        story_manager::StoryManager::Name_,
-        mojo::GetProxy(&launcher_).PassMessagePipe());
+    mojo::ConnectToService(shell_, "mojo:story-manager",
+                           mojo::GetProxy(&launcher_));
     mojo::StructPtr<ledger::Identity> identity = ledger::Identity::New();
     identity->user_id = UserIdentityArray(username);
     launcher_->Launch(std::move(identity), [](bool success) {

@@ -15,6 +15,7 @@
 #include "apps/modular/mojom_hack/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
+#include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/binding.h"
@@ -25,7 +26,6 @@
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/cpp/environment/logging.h"
 #include "mojo/public/cpp/system/macros.h"
-#include "mojo/public/interfaces/application/service_provider.mojom.h"
 #include "mojo/public/interfaces/application/shell.mojom.h"
 
 namespace {
@@ -37,7 +37,6 @@ using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
-using mojo::ServiceProvider;
 using mojo::ServiceProviderImpl;
 using mojo::Shell;
 using mojo::StrongBinding;
@@ -118,12 +117,8 @@ class SessionImpl : public Session {
  public:
   explicit SessionImpl(Shell* shell, InterfaceRequest<Session> req)
       : shell_(shell), binding_(this, std::move(req)) {
-    InterfacePtr<mojo::ServiceProvider> service_provider;
-    shell_->ConnectToApplication("mojo:component-manager",
-                                 mojo::GetProxy(&service_provider));
-    service_provider->ConnectToService(
-        Resolver::Name_,
-        GetProxy(&resolver_).PassMessagePipe());
+    mojo::ConnectToService(shell_, "mojo:component-manager",
+                           GetProxy(&resolver_));
   }
   ~SessionImpl() override {}
 
@@ -141,15 +136,9 @@ class SessionImpl : public Session {
     FTL_LOG(INFO) << "story-runner start module";
     std::string new_link_id = GenerateId();
     resolver_->Resolve(
-        query,
-        [this, new_link_id, callback](mojo::String module_url) {
-          InterfacePtr<ServiceProvider> service_provider;
-          shell_->ConnectToApplication(module_url, GetProxy(&service_provider));
-
+        query, [this, new_link_id, callback](mojo::String module_url) {
           InterfacePtr<Module> module;
-          service_provider->ConnectToService(
-              Module::Name_,
-              GetProxy(&module).PassMessagePipe());
+          mojo::ConnectToService(shell_, module_url, GetProxy(&module));
 
           InterfaceHandle<Session> self;
           bindings_.AddBinding(this, GetProxy(&self));
