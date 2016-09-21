@@ -28,6 +28,10 @@ class PublisherPipeImpl : public PublisherPipe {
                     InterfaceRequest<PublisherPipe> handle)
       : strong_binding_(this, handle.Pass()), whoami_(whoami) {}
 
+  ~PublisherPipeImpl() {
+    MOJO_LOG(INFO) << "context_service publisher " << whoami_ << " terminated";
+  }
+
   void Publish(const mojo::String& label, const mojo::String& value,
                const PublishCallback& callback) override {
     MOJO_LOG(INFO) << "context_service publisher " << whoami_ << " set value "
