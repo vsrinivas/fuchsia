@@ -4,10 +4,16 @@
 # found in the LICENSE file.
 
 import argparse
-import os
-import sys
-import paths
 import json
+import os
+import paths
+import urlparse
+import re
+import sys
+
+def component_url_bootfs_path(url):
+    """Take an URL and generate a local path used by the component manager's fake network service"""
+    return 'fake_network/' + re.sub(r'[:/]+', '/', url)
 
 
 class Amalgamation:
@@ -32,6 +38,31 @@ class Amalgamation:
             file["file"] = os.path.join(paths.FUCHSIA_ROOT, r["file"])
             file["bootfs_path"] = r["bootfs_path"]
             self.files.append(file)
+        for url, manifest_name in config.get("components", {}).items():
+            # See https://fuchsia.googlesource.com/component_manager/ for what a component is.
+            manifest_path = os.path.join(paths.FUCHSIA_ROOT, manifest_name)
+            component_dir = os.path.dirname(manifest_path)
+            manifest = json.load(open(manifest_path))
+            # Add the manifest.
+            self.files.append({
+                "file": manifest_path,
+                "bootfs_path": component_url_bootfs_path(url),
+            })
+            # Add the program.
+            if 'fuchsia:program' in manifest:
+                program_url = urlparse.urljoin(url, manifest['fuchsia:program']['url'])
+                program_name = os.path.basename(urlparse.urlparse(program_url).path)
+                self.files.append({
+                    "file": os.path.join(self.build_root, program_name),
+                    "bootfs_path": component_url_bootfs_path(program_url),
+                })
+            # Add the resources.
+            for resource in manifest.get('fuchsia:resources', []):
+                self.files.append({
+                    "file": os.path.join(component_dir, resource),
+                    "bootfs_path": component_url_bootfs_path(urlparse.urljoin(url, resource)),
+                })
+
 
 
 def resolve_imports(import_queue, build_root):
