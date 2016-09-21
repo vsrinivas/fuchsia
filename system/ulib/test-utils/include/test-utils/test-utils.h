@@ -24,8 +24,6 @@ __BEGIN_CDECLS
 #define TU_WATCHDOG_DURATION_SECONDS 2
 #define TU_WATCHDOG_DURATION_NANOSECONDS ((int64_t) TU_WATCHDOG_DURATION_SECONDS * 1000 * 1000 * 1000)
 
-typedef void (*tu_thread_start_func_t)(void*);
-
 void* tu_malloc(size_t size);
 
 char* tu_strdup(const char* s);
@@ -56,11 +54,6 @@ mx_handle_t tu_launch_mxio_etc(const char* name,
                                const char* const* envp,
                                size_t num_handles, mx_handle_t* handles,
                                uint32_t* handle_ids);
-
-// A wrapper on mx_thread_create.
-
-mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
-                             const char* name);
 
 // A wrapper on C11 thrd_create.
 

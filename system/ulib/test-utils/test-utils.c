@@ -48,37 +48,6 @@ void tu_handle_close(mx_handle_t handle)
     }
 }
 
-mx_handle_t tu_thread_create(tu_thread_start_func_t entry, void* arg,
-                             const char* name)
-{
-    const mx_size_t stack_size = 256u << 10;
-    mx_handle_t thread_stack_vmo = mx_vmo_create(stack_size);
-    if (thread_stack_vmo < 0) {
-        tu_fatal(__func__, thread_stack_vmo);
-    }
-
-    uintptr_t stack = 0u;
-    mx_status_t status = mx_process_map_vm(mx_process_self(), thread_stack_vmo, 0, stack_size, &stack, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-    mx_handle_close(thread_stack_vmo);
-    if (status < 0) {
-        tu_fatal(__func__, status);
-    }
-
-    mxr_thread_t* thread = NULL;
-    status = mxr_thread_create(name, &thread);
-    if (status < 0) {
-        tu_fatal(__func__, status);
-    }
-
-    status = mxr_thread_start(thread, stack, stack_size, entry, arg);
-    if (status < 0) {
-        tu_fatal(__func__, status);
-   }
-
-    // XXX (travisg) leaks a thread structure, and really should return mxr_thread_t
-    return mxr_thread_get_handle(thread);
-}
-
 // N.B. This creates a C11 thread.
 // See, e.g., musl/include/threads.h.
 
