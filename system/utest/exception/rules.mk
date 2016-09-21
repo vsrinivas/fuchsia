@@ -6,7 +6,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := usertest
 
 MODULE_SRCS += $(LOCAL_DIR)/exception.c
 
