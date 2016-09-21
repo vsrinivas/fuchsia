@@ -129,6 +129,11 @@ typedef enum {
 // let any additional exception handlers (eg, system after process) take a shot
 // at it, and if there are no additional handlers, the thread will terminate
 
+// Flags for mx_object_bind_exception_port.
+#define MX_EXCEPTION_PORT_DEBUGGER (1)
+// When binding an exception port to a process, set the process's debugger
+// exception port.
+
 // Valid topics for mx_object_get_info.
 typedef enum {
     MX_INFO_HANDLE_VALID = 1,

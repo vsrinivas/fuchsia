@@ -131,9 +131,10 @@ public:
     status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
 
     // exception handling support
-    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
-    void ResetExceptionPort();
+    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger);
+    void ResetExceptionPort(bool debugger);
     mxtl::RefPtr<ExceptionPort> exception_port();
+    mxtl::RefPtr<ExceptionPort> debugger_exception_port();
 
     // The following two methods can be slow and innacurrate and should only be
     // called from diagnostics code.
@@ -218,6 +219,7 @@ private:
     int retcode_ = 0;
 
     mxtl::RefPtr<ExceptionPort> exception_port_;
+    mxtl::RefPtr<ExceptionPort> debugger_exception_port_;
     Mutex exception_lock_;
 
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;

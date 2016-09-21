@@ -67,6 +67,14 @@ static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport, UserThr
     return status;
 }
 
+static status_t try_debugger_exception_handler(UserThread* thread,
+                                               const mx_exception_report_t* report,
+                                               const arch_exception_context_t* arch_context,
+                                               bool* processed) {
+    LTRACE_ENTRY;
+    return try_exception_handler(thread->process()->debugger_exception_port(), thread, report, arch_context, processed);
+}
+
 static status_t try_thread_exception_handler(UserThread* thread,
                                              const mx_exception_report_t* report,
                                              const arch_exception_context_t* arch_context,
@@ -117,6 +125,10 @@ status_t magenta_exception_handler(uint exception_type,
     status_t status;
     mx_exception_report_t report;
     build_exception_report(&report, thread, exception_type, context, ip);
+
+    status = try_debugger_exception_handler(thread, &report, context, &processed);
+    if (status == NO_ERROR)
+        return NO_ERROR;
 
     status = try_thread_exception_handler(thread, &report, context, &processed);
     if (status == NO_ERROR)

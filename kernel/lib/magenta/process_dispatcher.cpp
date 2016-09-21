@@ -387,27 +387,42 @@ status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t fl
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger) {
     // Lock both |state_lock_| and |exception_lock_| to ensure the process
     // doesn't transition to dead while we're setting the exception handler.
     AutoLock state_lock(&state_lock_);
     AutoLock excp_lock(&exception_lock_);
     if (state_ == State::DEAD)
         return ERR_NOT_FOUND; // TODO(dje): ?
-    if (exception_port_)
-        return ERR_BAD_STATE; // TODO(dje): ?
-    exception_port_ = eport;
+    if (debugger) {
+        if (debugger_exception_port_)
+            return ERR_BAD_STATE; // TODO(dje): ?
+        debugger_exception_port_ = eport;
+    } else {
+        if (exception_port_)
+            return ERR_BAD_STATE; // TODO(dje): ?
+        exception_port_ = eport;
+    }
     return NO_ERROR;
 }
 
-void ProcessDispatcher::ResetExceptionPort() {
+void ProcessDispatcher::ResetExceptionPort(bool debugger) {
     AutoLock lock(&exception_lock_);
-    exception_port_.reset();
+    if (debugger) {
+        debugger_exception_port_.reset();
+    } else {
+        exception_port_.reset();
+    }
 }
 
 mxtl::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
     AutoLock lock(&exception_lock_);
     return exception_port_;
+}
+
+mxtl::RefPtr<ExceptionPort> ProcessDispatcher::debugger_exception_port() {
+    AutoLock lock(&exception_lock_);
+    return debugger_exception_port_;
 }
 
 void ProcessDispatcher::AddProcess(ProcessDispatcher* process) {

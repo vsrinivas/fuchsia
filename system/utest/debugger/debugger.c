@@ -438,9 +438,9 @@ static bool debugger_test(void)
     inferior = mx_handle_duplicate(inferior, MX_RIGHT_SAME_RIGHTS);
     ASSERT_GT(inferior, 0, "mx_handle_duplicate failed");
 
-    // TODO(dje): Set the debug exception port when available.
     mx_handle_t eport = tu_io_port_create(0);
-    status = mx_object_bind_exception_port(inferior, eport, 0, 0);
+    status = mx_object_bind_exception_port(inferior, eport, 0,
+                                           MX_EXCEPTION_PORT_DEBUGGER);
     EXPECT_EQ(status, NO_ERROR, "error setting exception port");
     unittest_printf("Attached to inferior\n");
 
@@ -486,7 +486,8 @@ static bool debugger_test(void)
     unittest_printf("wait-inf thread done\n");
 
     // TODO(dje): detach-on-close
-    status = mx_object_bind_exception_port(inferior, MX_HANDLE_INVALID, 0, 0);
+    status = mx_object_bind_exception_port(inferior, MX_HANDLE_INVALID, 0,
+                                           MX_EXCEPTION_PORT_DEBUGGER);
     EXPECT_EQ(status, NO_ERROR, "error resetting exception port");
     tu_handle_close(eport);
     tu_handle_close(inferior);

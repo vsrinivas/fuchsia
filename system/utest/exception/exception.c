@@ -390,6 +390,20 @@ static bool thread_handler_test(void)
     END_TEST;
 }
 
+static bool debugger_handler_test(void)
+{
+    BEGIN_TEST;
+    unittest_printf("debugger exception handler basic test\n");
+
+    mx_handle_t child, our_pipe;
+    start_test_child(&child, &our_pipe);
+    mx_handle_t eport = tu_io_port_create(0);
+    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+
+    finish_basic_test("debugger", child, eport, our_pipe, MSG_CRASH);
+    END_TEST;
+}
+
 static bool process_gone_notification_test(void)
 {
     BEGIN_TEST;
