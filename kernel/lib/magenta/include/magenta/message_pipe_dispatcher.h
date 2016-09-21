@@ -8,8 +8,6 @@
 
 #include <stdint.h>
 
-#include <kernel/mutex.h>
-
 #include <magenta/dispatcher.h>
 #include <magenta/message_pipe.h>
 #include <magenta/state_tracker.h>
@@ -35,8 +33,10 @@ public:
     bool is_reply_pipe() const { return (flags_ & MX_FLAG_REPLY_PIPE) ? true : false; }
 
     void set_inner_koid(mx_koid_t koid) { inner_koid_ = koid; }
-    status_t BeginRead(uint32_t* message_size, uint32_t* handle_count);
-    status_t AcceptRead(mxtl::Array<uint8_t>* data, mxtl::Array<Handle*>* handles);
+    // See MessagePipe::Read() for details.
+    status_t Read(uint32_t* msg_size,
+                  uint32_t* msg_handle_count,
+                  mxtl::unique_ptr<MessagePacket>* msg);
     status_t Write(mxtl::Array<uint8_t> data, mxtl::Array<Handle*> handles);
 
 private:
@@ -46,7 +46,5 @@ private:
     const uint32_t flags_;
     mx_koid_t inner_koid_;
 
-    Mutex lock_;
     mxtl::RefPtr<MessagePipe> pipe_;
-    mxtl::unique_ptr<MessagePacket> pending_;
 };

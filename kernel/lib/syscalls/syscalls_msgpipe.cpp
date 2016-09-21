@@ -14,6 +14,7 @@
 #include <lib/user_copy.h>
 
 #include <magenta/magenta.h>
+#include <magenta/message_packet.h>
 #include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
@@ -102,58 +103,48 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     if (_handles && !_num_handles)
         return ERR_INVALID_ARGS;
 
-    uint32_t next_message_size = 0u;
-    uint32_t next_message_num_handles = 0u;
-    status_t result = msg_pipe->BeginRead(&next_message_size, &next_message_num_handles);
-    if (result != NO_ERROR)
+    mxtl::unique_ptr<MessagePacket> msg;
+    status_t result = msg_pipe->Read(&num_bytes, &num_handles, &msg);
+    if (result != NO_ERROR && result != ERR_BUFFER_TOO_SMALL)
         return result;
 
-    // Always set the actual size and handle count so the caller can provide larger buffers.
+    // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
+    // unconsumed).
     if (_num_bytes) {
-        if (copy_to_user_u32(_num_bytes, next_message_size) != NO_ERROR)
+        if (copy_to_user_u32(_num_bytes, num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     if (_num_handles) {
-        if (copy_to_user_u32(_num_handles, next_message_num_handles) != NO_ERROR)
+        if (copy_to_user_u32(_num_handles, num_handles) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
-
-    // If the caller provided buffers are too small, abort the read so the caller can try again.
-    if (num_bytes < next_message_size || num_handles < next_message_num_handles)
-        return ERR_BUFFER_TOO_SMALL;
-
-    // OK, now we can accept the message.
-    mxtl::Array<uint8_t> bytes;
-    mxtl::Array<Handle*> handle_list;
-
-    result = msg_pipe->AcceptRead(&bytes, &handle_list);
-    if (result != NO_ERROR)
+    if (result == ERR_BUFFER_TOO_SMALL)
         return result;
 
-    if (_bytes) {
-        if (copy_to_user(_bytes.reinterpret<uint8_t>(), bytes.get(), bytes.size()) != NO_ERROR) {
+    if (num_bytes > 0u) {
+        if (copy_to_user(_bytes.reinterpret<uint8_t>(), msg->data.get(), num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        }
     }
 
-    if (next_message_num_handles != 0u) {
+    if (num_handles > 0u) {
+        mxtl::Array<Handle*> handle_list = mxtl::move(msg->handles);
+
         // TODO(vtl): Should probably do one big copy-out, instead of one for each handle.
-        for (size_t ix = 0u; ix < next_message_num_handles; ++ix) {
+        for (size_t ix = 0u; ix < num_handles; ++ix) {
             auto hv = up->MapHandleToValue(handle_list[ix]);
             if (copy_to_user_32_unsafe(&_handles.get()[ix], hv) != NO_ERROR)
                 return ERR_INVALID_ARGS;
         }
+
+        for (size_t idx = 0u; idx < num_handles; ++idx) {
+            if (handle_list[idx]->dispatcher()->get_state_tracker())
+                handle_list[idx]->dispatcher()->get_state_tracker()->Cancel(handle_list[idx]);
+            HandleUniquePtr handle(handle_list[idx]);
+            up->AddHandle(mxtl::move(handle));
+        }
     }
 
-    for (size_t idx = 0u; idx < next_message_num_handles; ++idx) {
-        if (handle_list[idx]->dispatcher()->get_state_tracker())
-            handle_list[idx]->dispatcher()->get_state_tracker()->Cancel(handle_list[idx]);
-        HandleUniquePtr handle(handle_list[idx]);
-        up->AddHandle(mxtl::move(handle));
-    }
-
-    ktrace(TAG_MSGPIPE_READ, (uint32_t)msg_pipe->get_koid(),
-           next_message_size, next_message_num_handles, 0);
+    ktrace(TAG_MSGPIPE_READ, (uint32_t)msg_pipe->get_koid(), num_bytes, num_handles, 0);
     return result;
 }
 
@@ -174,9 +165,9 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
 
     bool is_reply_pipe = msg_pipe->is_reply_pipe();
 
-    if (num_bytes != 0u && !_bytes)
+    if (num_bytes > 0u && !_bytes)
         return ERR_INVALID_ARGS;
-    if (num_handles != 0u && !_handles)
+    if (num_handles > 0u && !_handles)
         return ERR_INVALID_ARGS;
 
     if (num_bytes > kMaxMessageSize)
@@ -187,7 +178,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     status_t result;
     mxtl::Array<uint8_t> bytes;
 
-    if (num_bytes) {
+    if (num_bytes > 0u) {
         void* copy;
         result = magenta_copy_user_dynamic(_bytes.get(), &copy, num_bytes, kMaxMessageSize);
         if (result != NO_ERROR)
@@ -196,7 +187,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     }
 
     mxtl::unique_ptr<mx_handle_t[], mxtl::free_delete> handles;
-    if (num_handles) {
+    if (num_handles > 0u) {
         void* c_handles;
         status_t status = magenta_copy_user_dynamic(
             _handles.reinterpret<const void>().get(),

@@ -370,8 +370,7 @@ RUN_TEST(message_pipe_read_error_test)
 RUN_TEST(message_pipe_close_test)
 RUN_TEST(message_pipe_non_transferable)
 RUN_TEST(message_pipe_duplicate_handles)
-// TODO(vtl): Re-enable once MG-282 is fixed.
-// RUN_TEST(message_pipe_multithread_read)
+RUN_TEST(message_pipe_multithread_read)
 END_TEST_CASE(message_pipe_tests)
 
 #ifndef BUILD_COMBINED_TESTS

@@ -65,24 +65,34 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
     messages_to_destroy.clear();
 }
 
-status_t MessagePipe::Read(size_t side, mxtl::unique_ptr<MessagePacket>* msg) {
-    bool other_alive;
+status_t MessagePipe::Read(size_t side,
+                           uint32_t* msg_size,
+                           uint32_t* msg_handle_count,
+                           mxtl::unique_ptr<MessagePacket>* msg) {
+    auto max_size = *msg_size;
+    auto max_handle_count = *msg_handle_count;
     auto other = other_side(side);
 
-    {
-        AutoLock lock(&lock_);
-        *msg = messages_[side].pop_front();
-        other_alive = dispatcher_alive_[other];
+    AutoLock lock(&lock_);
 
-        if (messages_[side].is_empty()) {
-            state_tracker_[side].UpdateState(MX_SIGNAL_READABLE, 0u,
-                                             !other_alive ? MX_SIGNAL_READABLE : 0u, 0u);
-        }
+    bool other_alive = dispatcher_alive_[other];
+
+    if (messages_[side].is_empty())
+        return other_alive ? ERR_BAD_STATE : ERR_REMOTE_CLOSED;
+
+    *msg_size = static_cast<uint32_t>(messages_[side].front().data.size());
+    *msg_handle_count = static_cast<uint32_t>(messages_[side].front().handles.size());
+    if (*msg_size > max_size || *msg_handle_count > max_handle_count)
+        return ERR_BUFFER_TOO_SMALL;
+
+    *msg = messages_[side].pop_front();
+
+    if (messages_[side].is_empty()) {
+        state_tracker_[side].UpdateState(MX_SIGNAL_READABLE, 0u,
+                                         !other_alive ? MX_SIGNAL_READABLE : 0u, 0u);
     }
 
-    if (*msg)
-        return NO_ERROR;
-    return other_alive ? ERR_BAD_STATE : ERR_REMOTE_CLOSED;
+    return NO_ERROR;
 }
 
 status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {

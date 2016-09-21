@@ -13,12 +13,9 @@
 #include <new.h>
 #include <trace.h>
 
-#include <kernel/auto_lock.h>
-
 #include <magenta/handle.h>
 #include <magenta/message_packet.h>
 #include <magenta/message_pipe.h>
-#include <magenta/io_port_dispatcher.h>
 #include <magenta/io_port_client.h>
 
 #include <mxtl/type_support.h>
@@ -69,37 +66,11 @@ StateTracker* MessagePipeDispatcher::get_state_tracker() {
     return pipe_->GetStateTracker(side_);
 }
 
-status_t MessagePipeDispatcher::BeginRead(uint32_t* message_size, uint32_t* handle_count) {
+status_t MessagePipeDispatcher::Read(uint32_t* msg_size,
+                                     uint32_t* msg_handle_count,
+                                     mxtl::unique_ptr<MessagePacket>* msg) {
     LTRACE_ENTRY;
-    // Note that a second thread can arrive here before the first thread
-    // calls AcceptRead(). Both threads now race to retrieve this message.
-    status_t result;
-    {
-        AutoLock lock(&lock_);
-        result = pending_ ? NO_ERROR : pipe_->Read(side_, &pending_);
-        if (result == NO_ERROR) {
-            *message_size = static_cast<uint32_t>(pending_->data.size());
-            *handle_count = static_cast<uint32_t>(pending_->handles.size());
-        }
-    }
-    return result;
-}
-
-status_t MessagePipeDispatcher::AcceptRead(mxtl::Array<uint8_t>* data,
-                                           mxtl::Array<Handle*>* handles) {
-    LTRACE_ENTRY;
-
-    mxtl::unique_ptr<MessagePacket> msg;
-    {
-        AutoLock lock(&lock_);
-        msg = mxtl::move(pending_);
-        // if there is no message it means another user thread beat us here.
-        if (!msg) return ERR_BAD_STATE;
-
-        *data = mxtl::move(msg->data);
-        *handles = mxtl::move(msg->handles);
-    }
-    return NO_ERROR;
+    return pipe_->Read(side_, msg_size, msg_handle_count, msg);
 }
 
 status_t MessagePipeDispatcher::Write(mxtl::Array<uint8_t> data, mxtl::Array<Handle*> handles) {
