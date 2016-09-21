@@ -19,7 +19,7 @@ mojo_native_application("input_manager") {
 }
 
 # Library that allows the service code to be included directly into the
-# embedding shell. Used by https://manganese.googlesource.com/.
+# embedding shell.
 source_set("lib") {
   sources = [
     "input_associate.cc",

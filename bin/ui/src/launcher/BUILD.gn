@@ -18,7 +18,7 @@ mojo_native_application("launcher") {
 }
 
 # Library that allows the service code to be included directly into the
-# embedding shell. Used by https://manganese.googlesource.com/.
+# embedding shell.
 source_set("lib") {
   sources = [
     "launch_instance.cc",

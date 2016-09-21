@@ -1,6 +1,7 @@
 # Mozart
 
-A collection of services to support the graphical user interface.
+A collection of services and applications to support the graphical
+user interface.
 
 ## Compositor
 
@@ -24,4 +25,3 @@ system, then launch a view as the root of a new view hierarchy.
 
 This project is intended as scaffolding to bootstrap the user interface
 while we build the rest of the system.
-
