@@ -8,6 +8,10 @@
     ],
     "binaries": [
         {
+            "binary": "acquirers/gps",
+            "bootfs_path": "apps/acquirers/gps"
+        },
+        {
             "binary": "component_manager",
             "bootfs_path": "apps/component_manager"
         },
