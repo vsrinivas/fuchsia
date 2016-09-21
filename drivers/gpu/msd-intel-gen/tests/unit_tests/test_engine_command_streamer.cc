@@ -72,8 +72,11 @@ public:
         EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
 
         buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
-        EXPECT_NE(buffer, nullptr);
+        ASSERT_NE(buffer, nullptr);
         EXPECT_EQ(buffer->platform_buffer()->size(), PAGE_SIZE * 20ul);
+
+        auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
+        ASSERT_NE(ringbuffer, nullptr);
 
         void* addr;
         EXPECT_TRUE(buffer->platform_buffer()->MapCpu(&addr));
@@ -83,7 +86,7 @@ public:
         EXPECT_EQ(state[2], 0x2244ul);
         EXPECT_EQ(state[3], 0x00090009ul);
         EXPECT_EQ(state[4], 0x2034ul);
-        EXPECT_EQ(state[5], 0ul);
+        EXPECT_EQ(state[5], ringbuffer->head());
         EXPECT_EQ(state[6], 0x2030ul);
         EXPECT_EQ(state[7], 0u);
         EXPECT_EQ(state[8], 0x2038ul);
@@ -172,19 +175,20 @@ public:
 
         auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
         ASSERT_NE(ringbuffer, nullptr);
-        EXPECT_EQ(ringbuffer->tail(), 0u);
+
+        uint32_t tail_start = ringbuffer->tail();
 
         register_io_->enable_trace(true);
 
         EXPECT_TRUE(render_cs->RenderInit(context_));
 
-        EXPECT_EQ(ringbuffer->tail(), 9u * 4);
+        EXPECT_EQ(ringbuffer->tail() - tail_start, 9u * 4);
 
         auto ringbuffer_content = TestRingbuffer::vaddr(ringbuffer);
 
         // batch buffer start
         gpu_addr_t init_batch_addr = 0; // first thing to be mapped
-        int i = 0;
+        int i = tail_start / 4;
         EXPECT_EQ(ringbuffer_content[i++], MiBatchBufferStart::kCommandType | (3 - 2));
         EXPECT_EQ(ringbuffer_content[i++], magma::lower_32_bits(init_batch_addr));
         EXPECT_EQ(ringbuffer_content[i++], magma::upper_32_bits(init_batch_addr));

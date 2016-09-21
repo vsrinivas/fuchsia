@@ -53,9 +53,9 @@ private:
     uint32_t* vaddr() { return vaddr_; }
 
     std::unique_ptr<MsdIntelBuffer> buffer_;
-    uint64_t size_{};
-    uint32_t head_{};
-    uint32_t tail_{};
+    uint64_t size_;
+    uint32_t head_;
+    uint32_t tail_;
     uint32_t* vaddr_{}; // mapped virtual address
 
     friend class TestRingbuffer;

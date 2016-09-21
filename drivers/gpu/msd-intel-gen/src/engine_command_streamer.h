@@ -57,7 +57,7 @@ protected:
 private:
     virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
 
-    bool InitContextBuffer(MsdIntelBuffer* context_buffer, uint32_t ringbuffer_size) const;
+    bool InitContextBuffer(MsdIntelBuffer* context_buffer, Ringbuffer* ringbuffer) const;
 
     Owner* owner_;
     EngineCommandStreamerId id_;

@@ -8,6 +8,12 @@ Ringbuffer::Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer) : buffer_(std::mo
 {
     size_ = buffer_->platform_buffer()->size();
     DASSERT(magma::is_page_aligned(size_));
+
+    // Starting position is arbitrary; put it near the top to facilitate wrap testing.
+    constexpr uint32_t kOffsetFromTop = PAGE_SIZE;
+    DASSERT(size_ >= kOffsetFromTop);
+    tail_ = size_ - kOffsetFromTop;
+    head_ = tail_;
 }
 
 bool Ringbuffer::HasSpace(uint32_t bytes)

@@ -31,7 +31,7 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
 
     std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(32 * PAGE_SIZE)));
 
-    if (!InitContextBuffer(context_buffer.get(), ringbuffer->size()))
+    if (!InitContextBuffer(context_buffer.get(), ringbuffer.get()))
         return DRETF(false, "InitContextBuffer failed");
 
     // Transfer ownership of context_buffer
@@ -90,10 +90,10 @@ public:
     }
 
     // RING_BUFFER_HEAD - Ring Buffer Head
-    void write_ring_head_pointer()
+    void write_ring_head_pointer(uint32_t head)
     {
         state_[4] = mmio_base_ + 0x34;
-        state_[5] = 0;
+        state_[5] = head;
     }
 
     // RING_BUFFER_TAIL - Ring Buffer Tail
@@ -254,8 +254,7 @@ private:
     uint32_t* state_;
 };
 
-bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer,
-                                              uint32_t ringbuffer_size) const
+bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer) const
 {
     DASSERT(buffer->write_domain() == MEMORY_DOMAIN_CPU);
 
@@ -269,11 +268,11 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer,
 
     helper.write_load_register_immediate_headers();
     helper.write_context_save_restore_control();
-    helper.write_ring_head_pointer();
+    helper.write_ring_head_pointer(ringbuffer->head());
     // Ring buffer tail and start is patched in later (see UpdateContext).
     helper.write_ring_tail_pointer(0);
     helper.write_ring_buffer_start(~0);
-    helper.write_ring_buffer_control(ringbuffer_size);
+    helper.write_ring_buffer_control(ringbuffer->size());
     helper.write_batch_buffer_upper_head_pointer();
     helper.write_batch_buffer_head_pointer();
     helper.write_batch_buffer_state();

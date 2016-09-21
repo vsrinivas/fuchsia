@@ -98,7 +98,7 @@ public:
         EXPECT_EQ(dump_state.fault_type, type);
     }
 
-    void BatchBuffer()
+    void BatchBuffer(bool should_wrap_ringbuffer)
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
@@ -134,56 +134,65 @@ public:
         static constexpr uint32_t kDwordCount = 4;
         static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
 
-        uint32_t expected_val = 0xdeadbeef;
-        uint32_t target_val;
         uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
 
         // store dword
-        *batch_ptr++ = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt;
-        *batch_ptr++ = magma::lower_32_bits(target_gpu_addr);
-        *batch_ptr++ = magma::upper_32_bits(target_gpu_addr);
-        *batch_ptr++ = expected_val;
+        batch_ptr[0] = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt;
+        batch_ptr[1] = magma::lower_32_bits(target_gpu_addr);
+        batch_ptr[2] = magma::upper_32_bits(target_gpu_addr);
+        batch_ptr[3] = 0; // expected value
 
         // batch end
-        *batch_ptr++ = (0xA << 23);
+        batch_ptr[4] = (0xA << 23);
 
-        auto ringbuffer =
-            device->global_context()->get_ringbuffer(device->render_engine_cs()->id());
+        bool ringbuffer_wrapped = false;
 
-        // Initialize the target
-        *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xdadabcbc;
+        // num_iterations updated after one iteration in case we're wrapping the ringbuffer
+        uint32_t num_iterations = 1;
 
-        uint32_t sequence_number = 0;
-        TestEngineCommandStreamer::ExecBatch(
-            device->render_engine_cs(), std::unique_ptr<SimpleMappedBatch>(new SimpleMappedBatch(
-                                            device->global_context(), batch_buffer)),
-            &sequence_number);
+        for (uint32_t iteration = 0; iteration < num_iterations; iteration++) {
+            // Initialize the target
+            *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xdeadbeef;
 
-        EXPECT_NE(sequence_number, 0u);
-        EXPECT_TRUE(device->render_engine_cs()->WaitRendering(sequence_number));
+            uint32_t expected_val = 0x8000000 + iteration;
+            batch_ptr[3] = expected_val;
 
-        EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
+            auto ringbuffer =
+                device->global_context()->get_ringbuffer(device->render_engine_cs()->id());
 
-        target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
-        EXPECT_EQ(target_val, expected_val);
+            uint32_t tail_start = ringbuffer->tail();
 
-        DLOG("and now do it again");
+            uint32_t sequence_number = 0;
+            TestEngineCommandStreamer::ExecBatch(
+                device->render_engine_cs(),
+                std::unique_ptr<SimpleMappedBatch>(
+                    new SimpleMappedBatch(device->global_context(), batch_buffer)),
+                &sequence_number);
 
-        *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xabcd1234;
+            EXPECT_NE(sequence_number, 0u);
+            EXPECT_TRUE(device->render_engine_cs()->WaitRendering(sequence_number));
 
-        sequence_number = 0;
-        TestEngineCommandStreamer::ExecBatch(
-            device->render_engine_cs(), std::unique_ptr<SimpleMappedBatch>(new SimpleMappedBatch(
-                                            device->global_context(), batch_buffer)),
-            &sequence_number);
+            EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 
-        EXPECT_NE(sequence_number, 0u);
-        EXPECT_TRUE(device->render_engine_cs()->WaitRendering(sequence_number));
+            uint32_t target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
+            EXPECT_EQ(target_val, expected_val);
 
-        EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
+            if (ringbuffer->tail() < tail_start) {
+                DLOG("ringbuffer wrapped tail_start 0x%x tail 0x%x", tail_start,
+                     ringbuffer->tail());
+                ringbuffer_wrapped = true;
+            }
 
-        target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
-        EXPECT_EQ(target_val, expected_val);
+            if (should_wrap_ringbuffer && num_iterations == 1)
+                num_iterations =
+                    (ringbuffer->size() - tail_start) / (ringbuffer->tail() - tail_start) + 10;
+
+            // printf("completed iteration %d num_iterations %d target_val 0x%x\n", iteration,
+            // num_iterations, target_val);
+        }
+
+        if (should_wrap_ringbuffer)
+            EXPECT_TRUE(ringbuffer_wrapped);
     }
 
 private:
@@ -211,5 +220,11 @@ TEST(MsdIntelDevice, MockDump)
 TEST(MsdIntelDevice, BatchBuffer)
 {
     TestMsdIntelDevice test;
-    test.BatchBuffer();
+    test.BatchBuffer(false);
+}
+
+TEST(MsdIntelDevice, WrapRingbuffer)
+{
+    TestMsdIntelDevice test;
+    test.BatchBuffer(true);
 }
