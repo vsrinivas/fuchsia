@@ -5,7 +5,6 @@
 group("all") {
   deps = [
     ":context_service",
-    ":maxwell_test",
   ]
 }
 
@@ -18,19 +17,6 @@ executable("context_service") {
     "//apps/maxwell/context_service:interfaces",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
-    "//mojo/system",
-  ]
-}
-
-executable("maxwell_test") {
-  sources = [
-    "test.cc",
-  ]
-
-  deps = [
-    "//apps/maxwell/context_service:interfaces",
-    "//mojo/public/cpp/application:standalone",
-    "//mojo/public/cpp/utility:utility",
     "//mojo/system",
   ]
 }
