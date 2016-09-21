@@ -29,5 +29,4 @@ TEST(MagmaUtil, Sleep)
     test.Msleep(10);
     test.Msleep(100);
     test.Msleep(1000);
-    test.Msleep(2000);
 }
