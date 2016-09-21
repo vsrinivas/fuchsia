@@ -43,6 +43,10 @@
             "binary": "logging",
             "bootfs_path": "apps/logging"
         },
+	{
+	    "binary": "maxwell_test",
+	    "bootfs_path": "apps/maxwell_test"
+	},
         {
             "binary": "story-manager",
             "bootfs_path": "apps/story-manager"
