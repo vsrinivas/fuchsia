@@ -79,7 +79,8 @@ private:
             batch_buf->relocations = new magma_system_relocation_entry[batch_buf->num_relocations];
             for (uint32_t i = 0; i < batch_buf->num_relocations; i++) {
                 auto relocation = &batch_buf->relocations[i];
-                relocation->offset = i * 2 * sizeof(uint32_t); // every other dword
+                relocation->offset =
+                    kBufferSize - ((i + 1) * 2 * sizeof(uint32_t)); // every other dword
                 relocation->target_resource_index = i;
                 relocation->target_offset = kBufferSize / 2; // just relocate right to the middle
                 relocation->read_domains_bitfield = MAGMA_DOMAIN_CPU;
