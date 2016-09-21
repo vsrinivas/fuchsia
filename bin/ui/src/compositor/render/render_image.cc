@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/compositor/render/render_image.h"
 
-#include "apps/mozart/glue/skia/ganesh_image_factory.h"
+#include "apps/mozart/glue/skia/gl/ganesh_image_factory.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkImage.h"
 

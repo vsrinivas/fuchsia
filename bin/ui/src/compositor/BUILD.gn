@@ -55,6 +55,7 @@ source_set("common") {
     "//apps/mozart/glue/base",
     "//apps/mozart/glue/gl",
     "//apps/mozart/glue/skia",
+    "//apps/mozart/glue/skia/gl",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
     "//lib/ftl",
