@@ -11,6 +11,7 @@ readonly HOST_OS=$(uname | sed 'y/LINUXDARWIN/linuxdarwin/')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
 readonly CMAKE_HOST_TOOLS="\
+  -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
   -DCMAKE_C_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang \
   -DCMAKE_CXX_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang++ \
   -DCMAKE_AR=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/llvm-ar \
