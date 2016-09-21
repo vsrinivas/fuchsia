@@ -6,11 +6,11 @@
 #include "magma_system_device.h"
 #include "magma_util/macros.h"
 
-MagmaSystemConnection::MagmaSystemConnection(MagmaSystemDevice* device,
+MagmaSystemConnection::MagmaSystemConnection(Owner* owner,
                                              msd_connection_unique_ptr_t msd_connection)
-    : device_(device), msd_connection_(std::move(msd_connection))
+    : owner_(owner), msd_connection_(std::move(msd_connection))
 {
-    DASSERT(device_);
+    DASSERT(owner_);
     DASSERT(msd_connection_);
     magic_ = kMagic;
 }

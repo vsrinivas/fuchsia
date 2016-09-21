@@ -4,6 +4,7 @@
 
 #include "mock/mock_msd.h"
 #include "sys_driver/magma_system_connection.h"
+#include "sys_driver/magma_system_device.h"
 #include "gtest/gtest.h"
 
 class MsdMockBufferManager_Create : public MsdMockBufferManager {

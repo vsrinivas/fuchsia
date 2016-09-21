@@ -8,7 +8,6 @@
 #include "magma_system.h"
 #include "magma_system_buffer.h"
 #include "magma_system_context.h"
-#include "magma_system_device.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 
@@ -25,7 +24,12 @@ static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection*
 
 class MagmaSystemConnection : public magma_system_connection, private MagmaSystemContext::Owner {
 public:
-    MagmaSystemConnection(MagmaSystemDevice* device, msd_connection_unique_ptr_t msd_connection);
+    class Owner {
+    public:
+        virtual uint32_t GetDeviceId() = 0;
+    };
+
+    MagmaSystemConnection(Owner* owner, msd_connection_unique_ptr_t msd_connection);
 
     // Allocates a buffer of at least the requested size and adds it to the
     // buffer map. Returns a shared_ptr to the allocated buffer on success
@@ -43,7 +47,7 @@ public:
     bool DestroyContext(uint32_t context_id);
     MagmaSystemContext* LookupContext(uint32_t context_id);
 
-    uint32_t GetDeviceId() { return device_->GetDeviceId(); }
+    uint32_t GetDeviceId() { return owner_->GetDeviceId(); }
 
     msd_connection* msd_connection() { return msd_connection_.get(); }
 
@@ -55,8 +59,7 @@ public:
     }
 
 private:
-    // device is not owned here on the premise that the device outlives all its connections
-    MagmaSystemDevice* device_;
+    Owner* owner_;
     msd_connection_unique_ptr_t msd_connection_;
     std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
     std::map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;

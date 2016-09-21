@@ -5,11 +5,10 @@
 #ifndef _MAGMA_SYSTEM_DEVICE_H_
 #define _MAGMA_SYSTEM_DEVICE_H_
 
+#include "magma_system_connection.h"
 #include "msd.h"
 #include <functional>
 #include <memory>
-
-class MagmaSystemConnection;
 
 using msd_device_unique_ptr_t = std::unique_ptr<msd_device, decltype(&msd_device_destroy)>;
 
@@ -18,7 +17,7 @@ static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device* msd_dev)
     return msd_device_unique_ptr_t(msd_dev, &msd_device_destroy);
 }
 
-class MagmaSystemDevice {
+class MagmaSystemDevice : public MagmaSystemConnection::Owner {
 public:
     MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {}
 
@@ -33,7 +32,7 @@ public:
     msd_device* msd_dev() { return msd_dev_.get(); }
 
     // Returns the device id. 0 is invalid.
-    uint32_t GetDeviceId();
+    uint32_t GetDeviceId() override;
 
 private:
     msd_device_unique_ptr_t msd_dev_;
