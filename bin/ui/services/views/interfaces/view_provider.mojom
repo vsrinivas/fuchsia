@@ -5,8 +5,8 @@
 [DartPackage="mojo_services"]
 module mojo.ui;
 
+import "apps/mozart/services/views/interfaces/views.mojom";
 import "mojo/public/interfaces/application/service_provider.mojom";
-import "apps/views/services/interfaces/views.mojom";
 
 // Provides a View upon request.
 //

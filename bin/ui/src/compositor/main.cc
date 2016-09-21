@@ -4,7 +4,7 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/compositor/src/compositor_app.h"
+#include "apps/mozart/src/compositor/compositor_app.h"
 #include "mojo/public/cpp/application/run_application.h"
 
 MojoResult MojoMain(MojoHandle application_request) {

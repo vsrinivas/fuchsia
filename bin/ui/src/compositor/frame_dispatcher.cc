@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/frame_dispatcher.h"
+#include "apps/mozart/src/compositor/frame_dispatcher.h"
 
 namespace compositor {
 

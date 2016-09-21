@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/render/render_image.h"
+#include "apps/mozart/src/compositor/render/render_image.h"
 
-#include "apps/compositor/glue/skia/ganesh_image_factory.h"
+#include "apps/mozart/glue/skia/ganesh_image_factory.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkImage.h"
 

@@ -5,10 +5,10 @@
 [DartPackage="mojo_services"]
 module mojo.gfx.composition;
 
+import "apps/mozart/services/composition/interfaces/hit_tests.mojom";
+import "apps/mozart/services/composition/interfaces/scene_token.mojom";
+import "apps/mozart/services/composition/interfaces/scheduling.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";
-import "apps/compositor/services/interfaces/hit_tests.mojom";
-import "apps/compositor/services/interfaces/scene_token.mojom";
-import "apps/compositor/services/interfaces/scheduling.mojom";
 
 // The renderer is a service which renders a scene graph to a display.
 //

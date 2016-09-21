@@ -5,10 +5,10 @@
 #ifndef SERVICES_GFX_COMPOSITOR_SCENE_IMPL_H_
 #define SERVICES_GFX_COMPOSITOR_SCENE_IMPL_H_
 
-#include "apps/compositor/services/interfaces/scenes.mojom.h"
-#include "apps/compositor/services/interfaces/scheduling.mojom.h"
-#include "apps/compositor/src/compositor_engine.h"
-#include "apps/compositor/src/scene_state.h"
+#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
+#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
+#include "apps/mozart/src/compositor/compositor_engine.h"
+#include "apps/mozart/src/compositor/scene_state.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"

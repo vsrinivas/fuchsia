@@ -5,8 +5,8 @@
 #ifndef SERVICES_GFX_COMPOSITOR_GRAPH_RESOURCES_H_
 #define SERVICES_GFX_COMPOSITOR_GRAPH_RESOURCES_H_
 
-#include "apps/compositor/services/interfaces/resources.mojom.h"
-#include "apps/compositor/src/render/render_image.h"
+#include "apps/mozart/services/composition/interfaces/resources.mojom.h"
+#include "apps/mozart/src/compositor/render/render_image.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 

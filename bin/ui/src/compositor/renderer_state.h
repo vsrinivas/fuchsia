@@ -8,12 +8,12 @@
 #include <memory>
 #include <string>
 
-#include "apps/compositor/services/cpp/formatting.h"
-#include "apps/compositor/services/interfaces/compositor.mojom.h"
-#include "apps/compositor/src/backend/output.h"
-#include "apps/compositor/src/frame_dispatcher.h"
-#include "apps/compositor/src/graph/snapshot.h"
-#include "apps/compositor/src/scene_state.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/src/compositor/backend/output.h"
+#include "apps/mozart/src/compositor/frame_dispatcher.h"
+#include "apps/mozart/src/compositor/graph/snapshot.h"
+#include "apps/mozart/src/compositor/scene_state.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 

@@ -52,9 +52,11 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//apps/compositor/glue/base",
-    "//apps/compositor/glue/gl",
-    "//apps/compositor/glue/skia",
+    "//apps/mozart/glue/base",
+    "//apps/mozart/glue/gl",
+    "//apps/mozart/glue/skia",
+    "//apps/mozart/services/composition/cpp",
+    "//apps/mozart/services/composition/interfaces",
     "//lib/ftl",
     "//lib/mtl",
     "//mojo/public/c:GLES2",
@@ -63,8 +65,6 @@ source_set("common") {
     "//mojo/public/cpp/bindings:bindings",
     "//mojo/services/geometry/cpp",
     "//mojo/services/geometry/interfaces",
-    "//apps/compositor/services/cpp",
-    "//apps/compositor/services/interfaces",
     "//mojo/services/gpu/interfaces",
     "//mojo/system",
     "//third_party/skia",
@@ -98,7 +98,7 @@ source_set("compositor") {
 #
 #   deps = [
 #     ":common",
-#     "//apps/compositor/services/interfaces:interfaces_sync",
+#     "//apps/mozart/services/composition/interfaces:interfaces_sync",
 #     "//mojo/public/cpp/application:test_support",
 #     "//mojo/services/native_viewport/interfaces",
 #     "//third_party/gtest",

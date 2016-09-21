@@ -8,7 +8,7 @@
 #include <functional>
 #include <vector>
 
-#include "apps/compositor/services/interfaces/scheduling.mojom.h"
+#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
 #include "lib/ftl/macros.h"
 
 namespace compositor {

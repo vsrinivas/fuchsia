@@ -9,9 +9,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "apps/compositor/services/interfaces/hit_tests.mojom.h"
-#include "apps/compositor/services/interfaces/scheduling.mojom.h"
-#include "apps/compositor/src/render/render_frame.h"
+#include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
+#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
+#include "apps/mozart/src/compositor/render/render_frame.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "mojo/services/geometry/interfaces/geometry.mojom.h"

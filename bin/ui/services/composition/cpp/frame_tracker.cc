@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/services/cpp/frame_tracker.h"
+#include "apps/mozart/services/composition/cpp/frame_tracker.h"
 
 #include "lib/ftl/logging.h"
 

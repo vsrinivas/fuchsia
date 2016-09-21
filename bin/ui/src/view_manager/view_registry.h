@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "base/macros.h"
-#include "mojo/services/gfx/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
 #include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
 #include "mojo/services/ui/views/interfaces/view_trees.mojom.h"
 #include "mojo/services/ui/views/interfaces/views.mojom.h"

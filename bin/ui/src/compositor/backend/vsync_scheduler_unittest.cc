@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/backend/vsync_scheduler.h"
+#include "apps/mozart/src/compositor/backend/vsync_scheduler.h"
 
 #include <queue>
 

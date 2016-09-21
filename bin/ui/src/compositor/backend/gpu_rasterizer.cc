@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/backend/gpu_rasterizer.h"
+#include "apps/mozart/src/compositor/backend/gpu_rasterizer.h"
 
 #ifndef GL_GLEXT_PROTOTYPES
 #define GL_GLEXT_PROTOTYPES
@@ -14,9 +14,9 @@
 #include <MGL/mgl_echo.h>
 #include <MGL/mgl_onscreen.h>
 
-#include "apps/compositor/glue/base/logging.h"
-#include "apps/compositor/glue/base/trace_event.h"
-#include "apps/compositor/src/render/render_frame.h"
+#include "apps/mozart/glue/base/logging.h"
+#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/mozart/src/compositor/render/render_frame.h"
 #include "lib/ftl/functional/make_runnable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"

@@ -8,8 +8,8 @@
 #include <deque>
 #include <iosfwd>
 
-#include "apps/compositor/src/graph/scene_label.h"
-#include "apps/compositor/src/graph/snapshot.h"
+#include "apps/mozart/src/compositor/graph/scene_label.h"
+#include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 

@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "apps/compositor/services/interfaces/compositor.mojom.h"
-#include "apps/compositor/src/compositor_engine.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/src/compositor/compositor_engine.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"

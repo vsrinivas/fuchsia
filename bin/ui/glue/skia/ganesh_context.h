@@ -5,7 +5,7 @@
 #ifndef MOJO_SKIA_GANESH_CONTEXT_H_
 #define MOJO_SKIA_GANESH_CONTEXT_H_
 
-#include "apps/compositor/glue/gl/gl_context.h"
+#include "apps/mozart/glue/gl/gl_context.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "third_party/skia/include/core/SkRefCnt.h"

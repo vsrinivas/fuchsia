@@ -1,0 +1,18 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("mozart") {
+  deps = [
+    "//apps/mozart/glue/base",
+    "//apps/mozart/glue/gl",
+    "//apps/mozart/glue/skia",
+    "//apps/mozart/services/composition/cpp",
+    "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/input/interfaces",
+    "//apps/mozart/services/launcher/interfaces",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/src/compositor",
+  ]
+}

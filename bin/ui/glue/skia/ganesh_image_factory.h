@@ -8,7 +8,7 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2extmojo.h>
 
-#include "apps/compositor/glue/skia/ganesh_context.h"
+#include "apps/mozart/glue/skia/ganesh_context.h"
 #include "lib/ftl/functional/closure.h"
 #include "third_party/skia/include/core/SkImageGenerator.h"
 #include "third_party/skia/include/core/SkRefCnt.h"

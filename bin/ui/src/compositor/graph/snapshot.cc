@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/graph/snapshot.h"
+#include "apps/mozart/src/compositor/graph/snapshot.h"
 
-#include "apps/compositor/glue/skia/type_converters.h"
-#include "apps/compositor/services/cpp/formatting.h"
-#include "apps/compositor/src/graph/scene_content.h"
+#include "apps/mozart/glue/skia/type_converters.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/mozart/src/compositor/graph/scene_content.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkMatrix44.h"
 #include "third_party/skia/include/core/SkPictureRecorder.h"

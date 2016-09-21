@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/backend/gpu_output.h"
+#include "apps/mozart/src/compositor/backend/gpu_output.h"
 
 #include <utility>
 
-#include "apps/compositor/glue/base/logging.h"
-#include "apps/compositor/glue/base/trace_event.h"
-#include "apps/compositor/src/render/render_frame.h"
+#include "apps/mozart/glue/base/logging.h"
+#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/mozart/src/compositor/render/render_frame.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"

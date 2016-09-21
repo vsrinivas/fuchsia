@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/backend/vsync_scheduler.h"
+#include "apps/mozart/src/compositor/backend/vsync_scheduler.h"
 
 #include <algorithm>
 
-#include "apps/compositor/glue/base/trace_event.h"
+#include "apps/mozart/glue/base/trace_event.h"
 #include "lib/ftl/logging.h"
 
 namespace compositor {

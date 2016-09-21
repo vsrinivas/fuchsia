@@ -5,12 +5,12 @@
 [DartPackage="mojo_services"]
 module mojo.ui;
 
+import "apps/mozart/services/composition/interfaces/scenes.mojom";
+import "apps/mozart/services/composition/interfaces/scheduling.mojom";
+import "apps/mozart/services/views/interfaces/view_containers.mojom";
+import "apps/mozart/services/views/interfaces/view_properties.mojom";
+import "apps/mozart/services/views/interfaces/view_token.mojom";
 import "mojo/public/interfaces/application/service_provider.mojom";
-import "apps/compositor/services/interfaces/scenes.mojom";
-import "apps/compositor/services/interfaces/scheduling.mojom";
-import "apps/views/services/interfaces/view_containers.mojom";
-import "apps/views/services/interfaces/view_properties.mojom";
-import "apps/views/services/interfaces/view_token.mojom";
 
 // A view is a graphical user interface component which is responsible
 // for drawing and supporting user interactions in the area of the screen

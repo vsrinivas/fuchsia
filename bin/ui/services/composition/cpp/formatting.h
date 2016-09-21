@@ -5,8 +5,8 @@
 #ifndef MOJO_SERVICES_GFX_COMPOSITION_CPP_FORMATTING_H_
 #define MOJO_SERVICES_GFX_COMPOSITION_CPP_FORMATTING_H_
 
-#include "apps/compositor/services/interfaces/compositor.mojom.h"
-#include "apps/compositor/services/interfaces/scheduling.mojom.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
 #include "mojo/public/cpp/bindings/formatting.h"
 #include "mojo/services/geometry/cpp/formatting.h"
 

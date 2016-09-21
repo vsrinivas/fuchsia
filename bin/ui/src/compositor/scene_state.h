@@ -9,10 +9,10 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/compositor/services/cpp/formatting.h"
-#include "apps/compositor/services/interfaces/scenes.mojom.h"
-#include "apps/compositor/src/frame_dispatcher.h"
-#include "apps/compositor/src/graph/scene_def.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
+#include "apps/mozart/src/compositor/frame_dispatcher.h"
+#include "apps/mozart/src/compositor/graph/scene_def.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 

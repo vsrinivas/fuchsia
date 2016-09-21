@@ -7,9 +7,9 @@
 
 #include <memory>
 
-#include "apps/compositor/glue/gl/gl_context.h"
-#include "apps/compositor/glue/skia/ganesh_context.h"
-#include "apps/compositor/glue/skia/ganesh_framebuffer_surface.h"
+#include "apps/mozart/glue/gl/gl_context.h"
+#include "apps/mozart/glue/skia/ganesh_context.h"
+#include "apps/mozart/glue/skia/ganesh_framebuffer_surface.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/weak_ptr.h"

@@ -9,8 +9,8 @@
 [DartPackage="mojo_services"]
 module mojo.gfx.composition;
 
+import "apps/mozart/services/composition/interfaces/hit_tests.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";
-import "apps/compositor/services/interfaces/hit_tests.mojom";
 
 // Nodes express the geometry and content of the scene, such as images and
 // references to embedded scenes.  Nodes are arranged to form a directed

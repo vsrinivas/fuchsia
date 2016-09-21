@@ -5,10 +5,10 @@
 [DartPackage="mojo_services"]
 module mojo.ui;
 
+import "apps/mozart/services/composition/interfaces/renderers.mojom";
+import "apps/mozart/services/views/interfaces/view_containers.mojom";
+import "apps/mozart/services/views/interfaces/view_tree_token.mojom";
 import "mojo/public/interfaces/application/service_provider.mojom";
-import "apps/compositor/services/interfaces/renderers.mojom";
-import "apps/views/services/interfaces/view_containers.mojom";
-import "apps/views/services/interfaces/view_tree_token.mojom";
 
 // A view tree is a top-level container for a hierarchy of views.
 // Each view is intended to operate independently from others and will

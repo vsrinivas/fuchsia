@@ -9,7 +9,7 @@
 #include <limits>
 #include <mutex>
 
-#include "apps/compositor/services/interfaces/scheduling.mojom.h"
+#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 

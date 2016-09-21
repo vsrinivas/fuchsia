@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/compositor_engine.h"
+#include "apps/mozart/src/compositor/compositor_engine.h"
 
 #include <algorithm>
 #include <sstream>
 #include <utility>
 
-#include "apps/compositor/glue/base/logging.h"
-#include "apps/compositor/glue/base/trace_event.h"
-#include "apps/compositor/glue/skia/type_converters.h"
-#include "apps/compositor/services/cpp/formatting.h"
-#include "apps/compositor/src/backend/gpu_output.h"
-#include "apps/compositor/src/graph/snapshot.h"
-#include "apps/compositor/src/render/render_frame.h"
-#include "apps/compositor/src/renderer_impl.h"
-#include "apps/compositor/src/scene_impl.h"
+#include "apps/mozart/glue/base/logging.h"
+#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/mozart/glue/skia/type_converters.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/mozart/src/compositor/backend/gpu_output.h"
+#include "apps/mozart/src/compositor/graph/snapshot.h"
+#include "apps/mozart/src/compositor/render/render_frame.h"
+#include "apps/mozart/src/compositor/renderer_impl.h"
+#include "apps/mozart/src/compositor/scene_impl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/mtl/tasks/message_loop.h"
 

@@ -8,11 +8,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/compositor/services/interfaces/compositor.mojom.h"
-#include "apps/compositor/src/backend/scheduler.h"
-#include "apps/compositor/src/graph/universe.h"
-#include "apps/compositor/src/renderer_state.h"
-#include "apps/compositor/src/scene_state.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/src/compositor/backend/scheduler.h"
+#include "apps/mozart/src/compositor/graph/universe.h"
+#include "apps/mozart/src/compositor/renderer_state.h"
+#include "apps/mozart/src/compositor/scene_state.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 

@@ -5,10 +5,10 @@
 [DartPackage="mojo_services"]
 module mojo.gfx.composition;
 
-import "apps/compositor/services/interfaces/nodes.mojom";
-import "apps/compositor/services/interfaces/resources.mojom";
-import "apps/compositor/services/interfaces/scene_token.mojom";
-import "apps/compositor/services/interfaces/scheduling.mojom";
+import "apps/mozart/services/composition/interfaces/nodes.mojom";
+import "apps/mozart/services/composition/interfaces/resources.mojom";
+import "apps/mozart/services/composition/interfaces/scene_token.mojom";
+import "apps/mozart/services/composition/interfaces/scheduling.mojom";
 
 // The node id which represents the root of a scene.
 //

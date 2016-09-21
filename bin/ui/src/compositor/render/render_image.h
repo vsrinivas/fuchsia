@@ -8,7 +8,7 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2extmojo.h>
 
-#include "apps/compositor/services/interfaces/resources.mojom.h"
+#include "apps/mozart/services/composition/interfaces/resources.mojom.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"

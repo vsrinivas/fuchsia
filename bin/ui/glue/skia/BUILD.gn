@@ -21,7 +21,7 @@ source_set("skia") {
   ]
 
   deps = [
-    "//apps/compositor/glue/gl",
+    "//apps/mozart/glue/gl",
     "//lib/ftl",
     "//mojo/public/c:GLES2",
     "//mojo/public/c:MGL",

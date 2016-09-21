@@ -11,9 +11,9 @@
 #include <queue>
 #include <thread>
 
-#include "apps/compositor/src/backend/gpu_rasterizer.h"
-#include "apps/compositor/src/backend/output.h"
-#include "apps/compositor/src/backend/vsync_scheduler.h"
+#include "apps/mozart/src/compositor/backend/gpu_rasterizer.h"
+#include "apps/mozart/src/compositor/backend/output.h"
+#include "apps/mozart/src/compositor/backend/vsync_scheduler.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"

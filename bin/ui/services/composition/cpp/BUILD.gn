@@ -11,7 +11,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "../interfaces",
+    "//apps/mozart/services/composition/interfaces",
     "//lib/ftl",
     "//mojo/services/geometry/cpp",
   ]

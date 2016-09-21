@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/services/interfaces/compositor.mojom-sync.h"
-#include "apps/compositor/services/interfaces/scheduling.mojom-sync.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom-sync.h"
+#include "apps/mozart/services/composition/interfaces/scheduling.mojom-sync.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/synchronous_interface_ptr.h"

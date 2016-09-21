@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/glue/gl/gl_context.h"
+#include "apps/mozart/glue/gl/gl_context.h"
 
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/interfaces/application/application_connector.mojom.h"

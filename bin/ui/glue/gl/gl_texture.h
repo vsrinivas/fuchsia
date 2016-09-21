@@ -5,7 +5,7 @@
 #ifndef MOJO_GPU_GL_TEXTURE_H_
 #define MOJO_GPU_GL_TEXTURE_H_
 
-#include "apps/compositor/glue/gl/gl_context.h"
+#include "apps/mozart/glue/gl/gl_context.h"
 #include "mojo/services/geometry/interfaces/geometry.mojom.h"
 
 namespace mojo {

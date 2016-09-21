@@ -6,7 +6,7 @@
 module mojo.ui;
 
 // TODO(jeffbrown): Redesign input event representation later.
-import "apps/input/services/interfaces/input_events.mojom";
+import "apps/mozart/services/input/interfaces/input_events.mojom";
 
 // The input dispatcher service allows the component which owns and controls
 // a view tree to dispatch input events to the views that it contains.

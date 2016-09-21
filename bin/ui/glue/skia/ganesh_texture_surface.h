@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/compositor/glue/skia/ganesh_context.h"
+#include "apps/mozart/glue/skia/ganesh_context.h"
 #include "lib/ftl/macros.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/core/SkSurface.h"

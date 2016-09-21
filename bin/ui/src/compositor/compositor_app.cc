@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/compositor_app.h"
+#include "apps/mozart/src/compositor/compositor_app.h"
 
-#include "apps/compositor/src/compositor_impl.h"
+#include "apps/mozart/src/compositor/compositor_impl.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 
 namespace compositor {

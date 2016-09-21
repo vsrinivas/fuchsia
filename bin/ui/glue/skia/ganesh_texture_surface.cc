@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/glue/skia/ganesh_texture_surface.h"
+#include "apps/mozart/glue/skia/ganesh_texture_surface.h"
 
 #include <GLES2/gl2.h>
 
-#include "apps/compositor/glue/gl/gl_texture.h"
+#include "apps/mozart/glue/gl/gl_texture.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/gpu/gl/GrGLTypes.h"

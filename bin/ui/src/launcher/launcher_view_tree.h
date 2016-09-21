@@ -8,7 +8,7 @@
 #include "base/callback.h"
 #include "base/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/gfx/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
 #include "mojo/services/native_viewport/interfaces/native_viewport.mojom.h"
 #include "mojo/services/ui/input/interfaces/input_dispatcher.mojom.h"
 #include "mojo/services/ui/views/interfaces/view_manager.mojom.h"

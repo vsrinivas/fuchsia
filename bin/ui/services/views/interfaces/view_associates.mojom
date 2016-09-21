@@ -5,11 +5,11 @@
 [DartPackage="mojo_services"]
 module mojo.ui;
 
+import "apps/mozart/services/composition/interfaces/hit_tests.mojom";
+import "apps/mozart/services/composition/interfaces/scene_token.mojom";
+import "apps/mozart/services/views/interfaces/view_token.mojom";
+import "apps/mozart/services/views/interfaces/view_tree_token.mojom";
 import "mojo/public/interfaces/application/service_provider.mojom";
-import "apps/compositor/services/interfaces/hit_tests.mojom";
-import "apps/compositor/services/interfaces/scene_token.mojom";
-import "apps/views/services/interfaces/view_token.mojom";
-import "apps/views/services/interfaces/view_tree_token.mojom";
 
 // View associates are trusted components that are attached to a view manager
 // instance with the purpose of offering additional services to views and

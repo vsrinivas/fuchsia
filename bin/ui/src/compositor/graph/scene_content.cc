@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/src/graph/scene_content.h"
+#include "apps/mozart/src/compositor/graph/scene_content.h"
 
 #include <ostream>
 
-#include "apps/compositor/src/graph/scene_def.h"
+#include "apps/mozart/src/compositor/graph/scene_def.h"
 #include "lib/ftl/logging.h"
 
 namespace compositor {

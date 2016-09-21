@@ -7,11 +7,11 @@
 
 #include <iosfwd>
 
+#include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
 #include "mojo/public/cpp/bindings/formatting.h"
 #include "mojo/services/geometry/cpp/formatting.h"
-#include "mojo/services/gfx/composition/cpp/formatting.h"
-#include "apps/views/services/interfaces/view_associates.mojom.h"
-#include "apps/views/services/interfaces/view_manager.mojom.h"
 
 namespace mojo {
 namespace ui {

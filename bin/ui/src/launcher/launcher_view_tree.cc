@@ -6,7 +6,7 @@
 
 #include "base/bind.h"
 #include "mojo/public/cpp/application/connect.h"
-#include "mojo/services/gfx/composition/cpp/formatting.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "mojo/services/ui/views/cpp/formatting.h"
 
 namespace launcher {

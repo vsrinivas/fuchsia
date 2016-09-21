@@ -5,8 +5,8 @@
 #ifndef SERVICES_GFX_COMPOSITOR_COMPOSITOR_IMPL_H_
 #define SERVICES_GFX_COMPOSITOR_COMPOSITOR_IMPL_H_
 
-#include "apps/compositor/services/interfaces/compositor.mojom.h"
-#include "apps/compositor/src/compositor_engine.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/src/compositor/compositor_engine.h"
 #include "lib/ftl/macros.h"
 
 namespace compositor {

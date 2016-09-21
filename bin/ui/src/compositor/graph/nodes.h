@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include "apps/compositor/services/interfaces/nodes.mojom.h"
-#include "apps/compositor/src/graph/snapshot.h"
+#include "apps/mozart/services/composition/interfaces/nodes.mojom.h"
+#include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 

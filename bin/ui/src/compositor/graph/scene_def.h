@@ -12,11 +12,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/compositor/services/interfaces/scenes.mojom.h"
-#include "apps/compositor/src/graph/nodes.h"
-#include "apps/compositor/src/graph/resources.h"
-#include "apps/compositor/src/graph/scene_content.h"
-#include "apps/compositor/src/graph/scene_label.h"
+#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
+#include "apps/mozart/src/compositor/graph/nodes.h"
+#include "apps/mozart/src/compositor/graph/resources.h"
+#include "apps/mozart/src/compositor/graph/scene_content.h"
+#include "apps/mozart/src/compositor/graph/scene_label.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 

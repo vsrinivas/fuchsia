@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/compositor/glue/skia/ganesh_context.h"
+#include "apps/mozart/glue/skia/ganesh_context.h"
 
-#include "apps/compositor/glue/skia/gl_bindings_skia.h"
+#include "apps/mozart/glue/skia/gl_bindings_skia.h"
 #include "mojo/public/c/include/MGL/mgl.h"
 #include "third_party/skia/include/gpu/gl/GrGLInterface.h"
 

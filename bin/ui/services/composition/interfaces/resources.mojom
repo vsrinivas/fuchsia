@@ -5,8 +5,8 @@
 [DartPackage="mojo_services"]
 module mojo.gfx.composition;
 
+import "apps/mozart/services/composition/interfaces/scene_token.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";
-import "apps/compositor/services/interfaces/scene_token.mojom";
 
 // Resources are references to foreign objects which are being imported into
 // the scene graph, such as images and other scenes.  Each resource must be

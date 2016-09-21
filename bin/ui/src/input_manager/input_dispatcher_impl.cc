@@ -8,7 +8,7 @@
 #include "base/logging.h"
 #include "base/message_loop/message_loop.h"
 #include "mojo/services/geometry/cpp/geometry_util.h"
-#include "mojo/services/gfx/composition/cpp/formatting.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "mojo/services/ui/views/cpp/formatting.h"
 #include "services/ui/input_manager/input_associate.h"
 

@@ -10,7 +10,7 @@
 #include <memory>
 #include <mutex>
 
-#include "apps/compositor/src/backend/scheduler.h"
+#include "apps/mozart/src/compositor/backend/scheduler.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/tasks/task_runner.h"

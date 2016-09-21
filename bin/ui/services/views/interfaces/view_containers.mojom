@@ -5,9 +5,9 @@
 [DartPackage="mojo_services"]
 module mojo.ui;
 
-import "apps/compositor/services/interfaces/scene_token.mojom";
-import "apps/views/services/interfaces/view_properties.mojom";
-import "apps/views/services/interfaces/view_token.mojom";
+import "apps/mozart/services/composition/interfaces/scene_token.mojom";
+import "apps/mozart/services/views/interfaces/view_properties.mojom";
+import "apps/mozart/services/views/interfaces/view_token.mojom";
 
 // A view container is an interface exposed by |View| and |ViewTree| to
 // manage their child views.  Although |View| may have any number of children,

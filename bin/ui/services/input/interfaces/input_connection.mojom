@@ -6,7 +6,7 @@
 module mojo.ui;
 
 // TODO(jeffbrown): Redesign input event representation later.
-import "apps/input/services/interfaces/input_events.mojom";
+import "apps/mozart/services/input/interfaces/input_events.mojom";
 
 // The input connection service allows a view to receive input events
 // such as key presses and pointer movements.

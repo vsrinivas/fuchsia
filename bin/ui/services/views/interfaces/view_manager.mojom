@@ -5,9 +5,9 @@
 [DartPackage="mojo_services"]
 module mojo.ui;
 
-import "apps/views/services/interfaces/view_associates.mojom";
-import "apps/views/services/interfaces/view_trees.mojom";
-import "apps/views/services/interfaces/views.mojom";
+import "apps/mozart/services/views/interfaces/view_associates.mojom";
+import "apps/mozart/services/views/interfaces/view_trees.mojom";
+import "apps/mozart/services/views/interfaces/views.mojom";
 
 // Maximum length for a view or view tree label.
 const uint32 kLabelMaxLength = 32;

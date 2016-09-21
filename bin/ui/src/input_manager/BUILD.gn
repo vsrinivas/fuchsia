@@ -33,6 +33,8 @@ source_set("lib") {
   ]
 
   deps = [
+    "//apps/mozart/services/composition/cpp",
+    "//apps/mozart/services/composition/interfaces",
     "//base",
     "//mojo/application",
     "//mojo/common:tracing_impl",
@@ -41,8 +43,6 @@ source_set("lib") {
     "//mojo/public/cpp/bindings:bindings",
     "//mojo/services/geometry/cpp",
     "//mojo/services/geometry/interfaces",
-    "//mojo/services/gfx/composition/cpp",
-    "//mojo/services/gfx/composition/interfaces",
     "//mojo/services/ui/input/interfaces",
     "//mojo/services/ui/views/cpp",
     "//mojo/services/ui/views/interfaces",
