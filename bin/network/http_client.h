@@ -7,8 +7,8 @@
 
 #include <mojo/system/result.h>
 
-#include "apps/network/mojo/services/network/net_errors.h"
-#include "apps/network/mojo/services/network/upload_element_reader.h"
+#include "apps/network/net_errors.h"
+#include "apps/network/upload_element_reader.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/system/wait.h"
 

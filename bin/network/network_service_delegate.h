@@ -5,7 +5,7 @@
 #ifndef MOJO_SERVICES_NETWORK_NETWORK_SERVICE_DELEGATE_H_
 #define MOJO_SERVICES_NETWORK_NETWORK_SERVICE_DELEGATE_H_
 
-#include "apps/network/mojo/services/network/network_service_impl.h"
+#include "apps/network/network_service_impl.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connection_context.h"

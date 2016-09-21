@@ -5,7 +5,7 @@
 #ifndef MOJO_SERVICES_NETWORK_URL_LOADER_IMPL_H_
 #define MOJO_SERVICES_NETWORK_URL_LOADER_IMPL_H_
 
-#include "apps/network/mojo/services/network/interfaces/url_loader.mojom.h"
+#include "apps/network/interfaces/url_loader.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 
 namespace mojo {

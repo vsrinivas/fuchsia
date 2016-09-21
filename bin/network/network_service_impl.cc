@@ -4,10 +4,10 @@
 
 #include "network_service_impl.h"
 
-#include "apps/network/mojo/services/network/net_adapters.h"
-#include "apps/network/mojo/services/network/net_errors.h"
-#include "apps/network/mojo/services/network/network_service_impl.h"
-#include "apps/network/mojo/services/network/url_loader_impl.h"
+#include "apps/network/net_adapters.h"
+#include "apps/network/net_errors.h"
+#include "apps/network/network_service_impl.h"
+#include "apps/network/url_loader_impl.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 

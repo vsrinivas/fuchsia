@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "apps/network/mojo/services/network/http_client.h"
-#include "apps/network/mojo/services/network/net_adapters.h"
-#include "apps/network/mojo/services/network/net_errors.h"
+#include "apps/network/http_client.h"
+#include "apps/network/net_adapters.h"
+#include "apps/network/net_errors.h"
 #include "lib/ftl/logging.h"
 #include "url/gurl.h"
 

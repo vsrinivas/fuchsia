@@ -22,7 +22,7 @@ std::string ErrorToShortString(int error) {
   case ERR_ ## label: \
     error_string = # label; \
     break;
-#include "apps/network/mojo/services/network/net_error_list.h"
+#include "apps/network/net_error_list.h"
 #undef NET_ERROR
   default:
     FTL_NOTREACHED();
