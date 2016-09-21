@@ -24,6 +24,7 @@ readonly CMAKE_SHARED_FLAGS="\
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
   -DCMAKE_INSTALL_PREFIX='' \
+  -DCMAKE_TOOLCHAIN_FILE=${ROOT_DIR}/third_party/llvm/cmake/platforms/Fuchsia.cmake \
   -DLLVM_PATH=${ROOT_DIR}/third_party/llvm \
   -DLLVM_ENABLE_LIBCXX=ON"
 
