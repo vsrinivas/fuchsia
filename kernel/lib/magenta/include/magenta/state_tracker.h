@@ -25,7 +25,7 @@ public:
     virtual mx_status_t AddObserver(StateObserver* observer) = 0;
 
     // Remove an observer (which must have been added).
-    virtual mx_signals_state_t RemoveObserver(StateObserver* observer) = 0;
+    virtual void RemoveObserver(StateObserver* observer) = 0;
 
     // Called when observers of the handle's state (e.g., waits on the handle) should be
     // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being
@@ -110,7 +110,7 @@ public:
     mx_status_t AddObserver(StateObserver* observer) final;
 
     // Remove an observer (which must have been added).
-    mx_signals_state_t RemoveObserver(StateObserver* observer) final;
+    void RemoveObserver(StateObserver* observer) final;
 
     // Called when observers of the handle's state (e.g., waits on the handle) should be
     // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being

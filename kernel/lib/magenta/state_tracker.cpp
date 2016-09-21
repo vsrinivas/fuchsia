@@ -55,11 +55,10 @@ mx_status_t StateTrackerImpl<Traits>::AddObserver(StateObserver* observer) {
 }
 
 template <typename Traits>
-mx_signals_state_t StateTrackerImpl<Traits>::RemoveObserver(StateObserver* observer) {
+void StateTrackerImpl<Traits>::RemoveObserver(StateObserver* observer) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(observer != nullptr);
     observers_.erase(*observer);
-    return signals_state_;
 }
 
 template <typename Traits>

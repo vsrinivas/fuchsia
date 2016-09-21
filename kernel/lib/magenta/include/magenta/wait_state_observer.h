@@ -46,7 +46,7 @@ private:
     WaitEvent* event_ = nullptr;
     Handle* handle_ = nullptr;
     mx_signals_t watched_signals_ = 0u;
+    mx_signals_state_t wakeup_reasons_;
     uint64_t context_ = 0u;
-
     mxtl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
 };
