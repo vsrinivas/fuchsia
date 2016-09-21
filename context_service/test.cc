@@ -32,17 +32,19 @@ class MaxwellTestApp : public ApplicationImplBase {
   void OnInitialize() override {
     ConnectToService(shell(), "mojo:context_service", GetProxy(&cx_));
 
-    PublisherPipePtr pub;
-
     MOJO_LOG(INFO) << "Registering publisher \"test\"";
-    cx_->StartPublishing("test", GetProxy(&pub));
+    cx_->StartPublishing("test", GetProxy(&pub_));
 
     MOJO_LOG(INFO) << "test << foo: \"bar\"";
-    pub->Publish("foo", "\"bar\"", term_);
+    pub_->Publish("foo", "\"bar\"", term_);
   }
 
  private:
   ContextPublisherPtr cx_;
+  // This handle needs to stay alive until the callback has executed. Otherwise,
+  // if it goes out of scope and the pipe is closed, the response message never
+  // gets back to the callback.
+  PublisherPipePtr pub_;
   Terminator term_;
 };
 
