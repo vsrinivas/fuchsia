@@ -91,7 +91,7 @@ public:
     bool operator!=(const TestObj<ContainerTraits>& other) const { return this != &other; }
 
 private:
-    friend class ContainerTraits::OtherContainerTraits;
+    friend typename ContainerTraits::OtherContainerTraits;
 
     size_t val_;
     mutable size_t visited_count_ = 0;
