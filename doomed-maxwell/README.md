@@ -12,24 +12,6 @@ Running
 
 Before running, follow the instructions at [manifest/README.md](https://fuchsia.googlesource.com/manifest/+/master/README.md).
 
-Cheat sheet (assuming fuchsia under ~; aliases might be convenient):
-
-* When file structure changes:
-
-      ~/fuchsia/packages/gn/gen.py --goma
-
-* To build:
-
-      ~/fuchsia/buildtools/ninja -j1000 -C ~/fuchsia/out/debug-x86-64
-
-* To run Fuchsia:
-
-      ~/fuchsia/magenta/scripts/run-magenta-x86-64 -x ~/fuchsia/out/debug-x86-64/user.bootfs
-
-* To exit Fuchsia:
-
-      <ctrl-a x>
-
 To run the Maxwell tests in a running Fuchsia environment:
 
     application_manager mojo:maxwell_test
