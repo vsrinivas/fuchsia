@@ -52,7 +52,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-libunwind-${target}"
   pushd "${outdir}/build-libunwind-${target}"
-  CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/projects/libcxx/include" cmake -GNinja \
+  CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/projects/libcxx/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
@@ -62,12 +62,12 @@ build() {
     -DLIBUNWIND_TARGET_TRIPLE="${target}-fuchsia" \
     -DLIBUNWIND_SYSROOT="${sysroot}" \
     ${ROOT_DIR}/third_party/llvm/projects/libunwind
-  env DESTDIR="${sysroot}" ninja install
+  env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
   popd
 
   mkdir -p -- "${outdir}/build-libcxxabi-${target}"
   pushd "${outdir}/build-libcxxabi-${target}"
-  cmake -GNinja \
+  ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
@@ -79,12 +79,12 @@ build() {
     -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
     -DLIBCXXABI_ENABLE_SHARED=ON \
     ${ROOT_DIR}/third_party/llvm/projects/libcxxabi
-  env DESTDIR="${sysroot}" ninja install
+  env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
   popd
 
   mkdir -p -- "${outdir}/build-libcxx-${target}"
   pushd "${outdir}/build-libcxx-${target}"
-  cmake -GNinja \
+  ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
@@ -98,7 +98,7 @@ build() {
     -DLIBCXX_TARGET_TRIPLE="${target}-fuchsia" \
     -DLIBCXX_SYSROOT="${sysroot}" \
     ${ROOT_DIR}/third_party/llvm/projects/libcxx
-  env DESTDIR="${sysroot}" ninja install
+  env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
   popd
 
   local stamp="$(LC_ALL=POSIX cat $(find "${sysroot}" -type f | sort) | shasum -a1  | awk '{print $1}')"
