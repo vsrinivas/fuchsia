@@ -1,8 +1,0 @@
-name: winner_pick
-dependencies:
-  modular:
-    path: ../../../dart-packages/modular
-modular:
-  targets:
-    - output_name: winner_pick.mojo
-      entry_point: lib/winner_pick_module.dart

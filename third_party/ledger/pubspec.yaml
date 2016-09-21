@@ -1,4 +1,0 @@
-name: ledger
-description: The API for the Ledger
-dependencies:
-  mojo: any

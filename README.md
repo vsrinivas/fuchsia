@@ -11,10 +11,6 @@ specifying goals and semantic data types along side traditional typed
 function inputs and outputs, and letting the system work out how those
 semantic goals are satisfied and what services are employed.
 
-**Setup, build and run** instructions for Linux / Android are in
-[HACKING.md](https://fuchsia.googlesource.com/modular/+/master/HACKING.md).
-
-
 **Setup, build and run** instructions for Fuchsia are
 [here](https://fuchsia.googlesource.com/manifest/+/master/README.md). Once setup
 is done, you can refer to the following cheatsheet for Modular:

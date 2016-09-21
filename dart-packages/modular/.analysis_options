@@ -1,4 +1,0 @@
-analyzer:
-  exclude:
-    - lib/modular/*.mojom.dart
-    - lib/cache/**

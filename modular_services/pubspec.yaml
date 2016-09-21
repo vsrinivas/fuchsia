@@ -1,6 +1,0 @@
-name: modular_services
-description: A collection of Modular's internal mojo services
-dependencies:
-  mojo: any
-  modular:
-    path: ../dart-packages/modular
