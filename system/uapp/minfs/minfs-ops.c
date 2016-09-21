@@ -512,6 +512,9 @@ static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
 
 static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     trace(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", vn, vn->ino, len, off);
+    if (len == 0) {
+        return 0;
+    }
 
     const void* start = data;
     uint32_t n = off / MINFS_BLOCK_SIZE;
@@ -540,11 +543,11 @@ static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     }
 
     len = data - start;
-    if ((off + len) > vn->inode.size) {
+    if ((len != 0) && (off + len) > vn->inode.size) {
         vn->inode.size = off + len;
         minfs_sync_vnode(vn);
     }
-    return data - start;
+    return len;
 }
 
 static mx_status_t fs_lookup(vnode_t* vn, vnode_t** out, const char* name, size_t len) {
