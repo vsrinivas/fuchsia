@@ -356,6 +356,23 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     mtx_lock(&ring->mutex);
 
+    // when transaction errors occur, we sometimes receive multiple events for the same transfer.
+    // here we check to make sure that this event doesn't correspond to a transfer that has already
+    // been completed. In the typical case, the context will be found at the head of pending_requests.
+    bool found_context = false;
+    xhci_transfer_context_t* test;
+    list_for_every_entry(&ring->pending_requests, test, xhci_transfer_context_t, node) {
+        if (test == context) {
+            found_context = true;
+            break;
+        }
+    }
+    if (!found_context) {
+        printf("ignoring transfer event for completed transfer\n");
+        mtx_unlock(&ring->mutex);
+        return;
+    }
+
     // update dequeue_ptr to TRB following this transaction
     ring->dequeue_ptr = context->dequeue_ptr;
 
