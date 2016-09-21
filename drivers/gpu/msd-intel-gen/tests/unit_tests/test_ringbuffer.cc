@@ -23,8 +23,9 @@ public:
         ASSERT_NE(ringbuffer, nullptr);
         EXPECT_EQ(ringbuffer->size(), size);
 
-        EXPECT_TRUE(ringbuffer->HasSpace(size));
-        EXPECT_TRUE(ringbuffer->HasSpace(size - 1));
+        // Can't store full size because head==tail means empty
+        EXPECT_FALSE(ringbuffer->HasSpace(size));
+        EXPECT_TRUE(ringbuffer->HasSpace(size - 4));
 
         auto address_space = std::unique_ptr<AddressSpace>(new MockAddressSpace(0x10000, size));
         EXPECT_TRUE(ringbuffer->Map(address_space.get()));
@@ -32,35 +33,24 @@ public:
         uint32_t* vaddr = ringbuffer->vaddr();
         ASSERT_NE(vaddr, nullptr);
 
-        uint32_t dword = 0xdeadcafe;
-        ringbuffer->write_tail(dword);
-        EXPECT_EQ(vaddr[0], dword);
+        uint32_t start_index = ringbuffer->tail() / 4;
+        uint32_t size_dwords = size / 4;
 
-        EXPECT_FALSE(ringbuffer->HasSpace(size));
-        EXPECT_TRUE(ringbuffer->HasSpace(size - 4));
-
-        // Stuff the ringbuffer
-        uint32_t max_index = (size >> 2) - 1;
-        for (unsigned int i = 1; i < max_index; i++) {
+        // Stuff the ringbuffer - fill to one less
+        for (unsigned int i = 0; i < size_dwords - 1; i++) {
             EXPECT_TRUE(ringbuffer->HasSpace(4));
             ringbuffer->write_tail(i);
-            EXPECT_EQ(vaddr[i], i);
+            EXPECT_EQ(vaddr[(start_index + i) % size_dwords], i);
         }
 
         ringbuffer->update_head(ringbuffer->tail());
 
-        // Write the last dword
-        dword = 0xabcddead;
-        EXPECT_TRUE(ringbuffer->HasSpace(4));
-        ringbuffer->write_tail(dword);
-        EXPECT_EQ(vaddr[max_index], dword);
-
-        // Should have wrapped.
-        EXPECT_EQ(ringbuffer->tail(), 0ul);
-        dword = ~0;
-        EXPECT_TRUE(ringbuffer->HasSpace(4));
-        ringbuffer->write_tail(dword);
-        EXPECT_EQ(vaddr[0], dword);
+        // Do it again
+        for (unsigned int i = 0; i < size_dwords - 1; i++) {
+            EXPECT_TRUE(ringbuffer->HasSpace(4));
+            ringbuffer->write_tail(i);
+            EXPECT_EQ(vaddr[(start_index + i) % size_dwords], i);
+        }
 
         EXPECT_TRUE(ringbuffer->Unmap(address_space.get()));
     }

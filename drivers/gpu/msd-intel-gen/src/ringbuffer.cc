@@ -12,7 +12,8 @@ Ringbuffer::Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer) : buffer_(std::mo
 
 bool Ringbuffer::HasSpace(uint32_t bytes)
 {
-    int32_t space = head_ - tail_;
+    // Can't fill completely such that tail_ == head_
+    int32_t space = head_ - tail_ - 4;
     if (space <= 0)
         space += size_;
     bool ret = static_cast<uint32_t>(space) >= bytes;

@@ -34,19 +34,23 @@ public:
     {          
         ASSERT_EQ((int)MiBatchBufferStart::kDwordCount, 3);
 
-        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get());
+        uint32_t tail_start = ringbuffer_->tail();
+
+        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / 4;
 
         gpu_addr_t gpu_addr = 0xabcd1234cafebeef;
         MiBatchBufferStart::write_ringbuffer(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_PPGTT);
 
-        EXPECT_EQ(ringbuffer_->tail(), MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
+        EXPECT_EQ(ringbuffer_->tail() - tail_start,
+                  MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
         EXPECT_EQ(*vaddr++, MiBatchBufferStart::kCommandType | (MiBatchBufferStart::kDwordCount - 2) | MiBatchBufferStart::kAddressSpacePpgtt);
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
 
         gpu_addr = 0xaa00bb00cc00dd;
         MiBatchBufferStart::write_ringbuffer(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_GTT);
-        EXPECT_EQ(ringbuffer_->tail(), 2 * MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
+        EXPECT_EQ(ringbuffer_->tail() - tail_start,
+                  2 * MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
         EXPECT_EQ(*vaddr++, MiBatchBufferStart::kCommandType | (MiBatchBufferStart::kDwordCount - 2));
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
@@ -56,13 +60,16 @@ public:
     {
         ASSERT_EQ((int)MiStoreDataImmediate::kDwordCount, 4);
 
-        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get());
+        uint32_t tail_start = ringbuffer_->tail();
+
+        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / 4;
 
         gpu_addr_t gpu_addr = 0xabcd1234cafebeef;
         uint32_t val = ~0;
 
         MiStoreDataImmediate::write_ringbuffer(ringbuffer_.get(), val, gpu_addr, ADDRESS_SPACE_GTT);
-        EXPECT_EQ(ringbuffer_->tail(), MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
+        EXPECT_EQ(ringbuffer_->tail() - tail_start,
+                  MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
         EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2) | MiStoreDataImmediate::kAddressSpaceGtt);
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
@@ -73,7 +80,8 @@ public:
 
         MiStoreDataImmediate::write_ringbuffer(ringbuffer_.get(), val, gpu_addr,
                                                ADDRESS_SPACE_PPGTT);
-        EXPECT_EQ(ringbuffer_->tail(), 2 * MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
+        EXPECT_EQ(ringbuffer_->tail() - tail_start,
+                  2 * MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
         EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2));
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
