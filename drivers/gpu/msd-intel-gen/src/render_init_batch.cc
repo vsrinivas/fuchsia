@@ -56,23 +56,7 @@ bool RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace*
         DLOG("failed to unmap buffer");
 
     // Assume ownership.
-    buffer_ = std::move(buffer);
-
-    address_space_id_ = address_space->id();
+    buffer_ = std::shared_ptr<MsdIntelBuffer>(std::move(buffer));
 
     return true;
-}
-
-gpu_addr_t RenderInitBatch::GetGpuAddress()
-{
-    DASSERT(buffer_);
-
-    gpu_addr_t gpu_addr;
-    if (!buffer_->GetGpuAddress(address_space_id_, &gpu_addr)) {
-        // Shouldn't fail.
-        DASSERT(false);
-        return kInvalidGpuAddr;
-    }
-
-    return gpu_addr;
 }

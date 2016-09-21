@@ -5,7 +5,6 @@
 #include "command_buffer.h"
 #include "helper/command_buffer_helper.h"
 #include "helper/platform_device_helper.h"
-#include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
 #include "msd_intel_context.h"
 #include "msd_intel_device.h"
@@ -87,10 +86,11 @@ public:
         auto engine = MsdIntelDevice::cast(helper_->dev()->msd_dev())->render_engine_cs();
         EXPECT_TRUE(cmd_buf_->PrepareForExecution(engine));
 
-        auto ctx = cmd_buf_->context();
+        ClientContext* ctx = static_cast<ClientContext*>(cmd_buf_->GetContext());
+        ASSERT_NE(ctx, nullptr);
 
-        EXPECT_NE(ctx, nullptr);
-        EXPECT_NE(cmd_buf_->batch_buffer_gpu_addr(), kInvalidGpuAddr);
+        gpu_addr_t gpu_addr;
+        EXPECT_TRUE(cmd_buf_->GetGpuAddress(ctx->exec_address_space()->id(), &gpu_addr));
 
         // Check that context is initialized correctly
         EXPECT_TRUE(ctx->IsInitializedForEngine(engine->id()));
@@ -114,7 +114,6 @@ public:
         void* target_cpu_addr;
         gpu_addr_t target_gpu_addr;
 
-        auto device = MsdIntelDevice::cast(helper_->dev()->msd_dev());
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
         auto addr_space = context->exec_address_space();
 
@@ -143,14 +142,6 @@ public:
         *batch_ptr++ = (0xA << 23);
 
         EXPECT_TRUE(helper_->Execute());
-
-        {
-            std::string dump;
-            device->DumpToString(dump);
-            DLOG("dump: %s", dump.c_str());
-        }
-
-        magma::msleep(100);
 
         uint32_t target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
         EXPECT_EQ(target_val, expected_val);

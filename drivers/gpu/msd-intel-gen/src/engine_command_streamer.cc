@@ -394,58 +394,101 @@ RenderEngineCommandStreamer::RenderEngineCommandStreamer(
     DASSERT(init_batch_);
 }
 
-bool RenderEngineCommandStreamer::RenderInit(MsdIntelContext* context)
+bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> context)
 {
     DASSERT(init_batch_);
+    uint32_t sequence_number;
+    std::unique_ptr<SimpleMappedBatch> mapped_batch(
+        new SimpleMappedBatch(context, init_batch_->buffer()));
+    return ExecBatch(std::move(mapped_batch), 0, &sequence_number);
+}
+
+bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_batch,
+                                            uint32_t pipe_control_flags,
+                                            uint32_t* sequence_number_out)
+{
+    MsdIntelContext* context = mapped_batch->GetContext();
+
     uint32_t sequence_number = sequencer()->next_sequence_number();
-    return ExecBatch(context, init_batch_->GetGpuAddress(), sequence_number);
+
+    DLOG("Executing batch with sequence number 0x%x", sequence_number);
+
+    gpu_addr_t gpu_addr;
+    if (!mapped_batch->GetGpuAddress(ADDRESS_SPACE_GTT, &gpu_addr))
+        return DRETF(false, "coudln't get batch gpu address");
+
+    if (!StartBatchBuffer(context, gpu_addr, ADDRESS_SPACE_GTT))
+        return DRETF(false, "failed to emit batch");
+
+    if (!PipeControl(context, pipe_control_flags))
+        return DRETF(false, "FlushInvalidate failed");
+
+    if (!WriteSequenceNumber(context, sequence_number))
+        return DRETF(false, "failed to finish batch buffer");
+
+    if (!SubmitContext(context))
+        return DRETF(false, "SubmitContext failed");
+
+    uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
+
+    inflight_command_sequences_.emplace(
+        InflightCommandSequence(sequence_number, ringbuffer_offset, std::move(mapped_batch)));
+
+    *sequence_number_out = sequence_number;
+
+    return true;
 }
 
 bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
 {
     DLOG("preparing command buffer for execution");
+
     if (!cmd_buf->PrepareForExecution(this))
         return DRETF(false, "Failed to prepare command buffer for execution");
 
-    uint32_t sequence_number = sequencer()->next_sequence_number();
+    uint32_t pipe_control_flags = MiPipeControl::kIndirectStatePointersDisable |
+                                  MiPipeControl::kCommandStreamerStallEnableBit;
+    uint32_t sequence_number;
 
-    DLOG("Executing command buffer batch buffer with sequence number 0x%x", sequence_number);
-    if (!ExecBatch(cmd_buf->context(), cmd_buf->batch_buffer_gpu_addr(), sequence_number))
-        return DRETF(false, "failed to exec command buffer");
+    if (!ExecBatch(std::move(cmd_buf), pipe_control_flags, &sequence_number))
+        return DRETF(false, "ExecBatch failed");
 
-    // keep the command buffer alive until execution completes
-    outstanding_command_buffers_.emplace(
-        OutstandingCommandBuffer{sequence_number, std::move(cmd_buf)});
-
-    // wait synchronously for the GPU because im a terrible person
+    // wait synchronously for the GPU
     return WaitRendering(sequence_number);
 }
 
 bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
 {
     DLOG("WaitRendering on sequence number 0x%x", sequence_number);
-    // Dont wait for something you havent executed
-    DASSERT(!outstanding_command_buffers_.empty());
-    DASSERT(sequence_number <= outstanding_command_buffers_.back().sequence_number);
 
-    // TODO(MA-82): Handle sequence number wrapping
-    if (sequence_number < outstanding_command_buffers_.front().sequence_number)
+    // Dont wait for something you havent executed
+    DASSERT(!inflight_command_sequences_.empty());
+    DASSERT(sequence_number <= inflight_command_sequences_.back().sequence_number());
+
+    // TODO: Handle sequence number wrapping
+    if (sequence_number < inflight_command_sequences_.front().sequence_number())
         return true;
 
-    auto status_page =
-        outstanding_command_buffers_.front().cmd_buf->context()->hardware_status_page(id());
+    HardwareStatusPage* status_page =
+        inflight_command_sequences_.front().GetContext()->hardware_status_page(id());
 
-    while (!outstanding_command_buffers_.empty()) {
+    while (!inflight_command_sequences_.empty()) {
         uint32_t last_completed_sequence = status_page->read_sequence_number();
-
         DLOG("WaitRendering loop last_completed_sequence: 0x%x", last_completed_sequence);
 
         // pop all completed command buffers
-        while (!outstanding_command_buffers_.empty() &&
-               outstanding_command_buffers_.front().sequence_number <= last_completed_sequence) {
-            DLOG("WaitRendering popping command buffer with sequence_number: 0x%x",
-                 outstanding_command_buffers_.front().sequence_number);
-            outstanding_command_buffers_.pop();
+        while (!inflight_command_sequences_.empty() &&
+               inflight_command_sequences_.front().sequence_number() <= last_completed_sequence) {
+
+            InflightCommandSequence& sequence = inflight_command_sequences_.front();
+
+            DLOG("WaitRendering popping inflight command sequence with sequence_number 0x%x "
+                 "ringbuffer_start_offset 0x%x",
+                 sequence.sequence_number(), sequence.ringbuffer_start_offset());
+
+            sequence.GetContext()->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
+
+            inflight_command_sequences_.pop();
         }
 
         if (last_completed_sequence >= sequence_number)
@@ -459,33 +502,16 @@ bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
     return false;
 }
 
-bool RenderEngineCommandStreamer::ExecBatch(MsdIntelContext* context, gpu_addr_t batch_address,
-                                            uint32_t sequence_number)
-{
-    if (!StartBatchBuffer(context, batch_address, ADDRESS_SPACE_GTT))
-        return DRETF(false, "failed to emit batch");
-
-    if (!PipeControl(context, MiPipeControl::kIndirectStatePointersDisable |
-                                  MiPipeControl::kCommandStreamerStallEnableBit))
-        return DRETF(false, "FlushInvalidate failed");
-
-    if (!WriteSequenceNumber(context, sequence_number))
-        return DRETF(false, "failed to finish batch buffer");
-
-    if (!SubmitContext(context))
-        return DRETF(false, "SubmitContext failed");
-
-    return true;
-}
-
 bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags)
 {
-    auto ringbuffer = context->get_ringbuffer(id());
+    if (flags) {
+        auto ringbuffer = context->get_ringbuffer(id());
 
-    if (!ringbuffer->HasSpace(MiPipeControl::kDwordCount * sizeof(uint32_t)))
-        return DRETF(false, "ringbuffer has insufficient space");
+        if (!ringbuffer->HasSpace(MiPipeControl::kDwordCount * sizeof(uint32_t)))
+            return DRETF(false, "ringbuffer has insufficient space");
 
-    MiPipeControl::write(ringbuffer, flags);
+        MiPipeControl::write(ringbuffer, flags);
+    }
 
     return true;
 }

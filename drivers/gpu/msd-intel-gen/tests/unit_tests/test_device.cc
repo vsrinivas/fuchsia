@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "helper/platform_device_helper.h"
-#include "magma_util/sleep.h"
 #include "mock/mock_mmio.h"
 #include "msd_intel_device.h"
 #include "msd_intel_driver.h"
@@ -12,12 +11,10 @@
 
 class TestEngineCommandStreamer {
 public:
-    static void ExecBatch(RenderEngineCommandStreamer* engine, MsdIntelContext* context,
-                          gpu_addr_t batch_gpu_addr, uint32_t sequence_number)
+    static void ExecBatch(RenderEngineCommandStreamer* engine,
+                          std::unique_ptr<MappedBatch> mapped_batch, uint32_t* sequence_number_out)
     {
-        EXPECT_TRUE(engine->StartBatchBuffer(context, batch_gpu_addr, ADDRESS_SPACE_GTT));
-        EXPECT_TRUE(engine->WriteSequenceNumber(context, sequence_number));
-        EXPECT_TRUE(engine->SubmitContext(context));
+        EXPECT_TRUE(engine->ExecBatch(std::move(mapped_batch), 0, sequence_number_out));
     }
 };
 
@@ -36,8 +33,7 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        // TODO(MA-78) - replace sleeps everywhere in this file with proper wait
-        magma::msleep(1000);
+        device->render_engine_cs()->WaitRendering(0x1001);
 
         // check that the render init batch succeeded.
         EXPECT_EQ(device->global_context()
@@ -61,7 +57,7 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        magma::msleep(100);
+        device->render_engine_cs()->WaitRendering(0x1001);
 
         MsdIntelDevice::DumpState dump_state;
         device->Dump(&dump_state);
@@ -114,14 +110,7 @@ public:
             driver->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        DLOG("delay post init");
-        magma::msleep(100);
-
-        {
-            std::string dump;
-            device->DumpToString(dump);
-            DLOG("dump: %s", dump.c_str());
-        }
+        device->render_engine_cs()->WaitRendering(0x1001);
 
         auto target_buffer = MsdIntelBuffer::Create(PAGE_SIZE);
         ASSERT_NE(target_buffer, nullptr);
@@ -132,12 +121,8 @@ public:
         EXPECT_TRUE(target_buffer->platform_buffer()->MapCpu(&target_cpu_addr));
         EXPECT_TRUE(target_buffer->MapGpu(device->gtt(), PAGE_SIZE));
         EXPECT_TRUE(target_buffer->GetGpuAddress(ADDRESS_SPACE_GTT, &target_gpu_addr));
-        *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xdadabcbc;
 
-        DLOG("target_cpu_addr %p", target_cpu_addr);
-        DLOG("got target_gpu_addr 0x%llx", target_gpu_addr);
-
-        auto batch_buffer = MsdIntelBuffer::Create(PAGE_SIZE);
+        auto batch_buffer = std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE));
         ASSERT_NE(batch_buffer, nullptr);
 
         void* batch_cpu_addr;
@@ -146,12 +131,11 @@ public:
         EXPECT_TRUE(batch_buffer->MapGpu(device->gtt(), PAGE_SIZE));
         EXPECT_TRUE(batch_buffer->GetGpuAddress(ADDRESS_SPACE_GTT, &batch_gpu_addr));
 
-        DLOG("got batch_gpu_addr 0x%llx", batch_gpu_addr);
-
         static constexpr uint32_t kDwordCount = 4;
         static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
 
         uint32_t expected_val = 0xdeadbeef;
+        uint32_t target_val;
         uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
 
         // store dword
@@ -163,19 +147,42 @@ public:
         // batch end
         *batch_ptr++ = (0xA << 23);
 
-        TestEngineCommandStreamer::ExecBatch(device->render_engine_cs(), device->global_context(),
-                                             batch_gpu_addr, 0xabcd1234);
+        auto ringbuffer =
+            device->global_context()->get_ringbuffer(device->render_engine_cs()->id());
 
-        magma::msleep(100);
+        // Initialize the target
+        *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xdadabcbc;
 
-        {
-            std::string dump;
-            device->DumpToString(dump);
-            DLOG("dump: %s", dump.c_str());
-        }
+        uint32_t sequence_number = 0;
+        TestEngineCommandStreamer::ExecBatch(
+            device->render_engine_cs(), std::unique_ptr<SimpleMappedBatch>(new SimpleMappedBatch(
+                                            device->global_context(), batch_buffer)),
+            &sequence_number);
 
-        DLOG("target_cpu_addr %p", target_cpu_addr);
-        uint32_t target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
+        EXPECT_NE(sequence_number, 0u);
+        EXPECT_TRUE(device->render_engine_cs()->WaitRendering(sequence_number));
+
+        EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
+
+        target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
+        EXPECT_EQ(target_val, expected_val);
+
+        DLOG("and now do it again");
+
+        *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xabcd1234;
+
+        sequence_number = 0;
+        TestEngineCommandStreamer::ExecBatch(
+            device->render_engine_cs(), std::unique_ptr<SimpleMappedBatch>(new SimpleMappedBatch(
+                                            device->global_context(), batch_buffer)),
+            &sequence_number);
+
+        EXPECT_NE(sequence_number, 0u);
+        EXPECT_TRUE(device->render_engine_cs()->WaitRendering(sequence_number));
+
+        EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
+
+        target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
         EXPECT_EQ(target_val, expected_val);
     }
 

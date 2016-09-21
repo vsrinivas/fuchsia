@@ -76,7 +76,7 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     render_engine_cs_ = RenderEngineCommandStreamer::Create(this, gtt_.get(), device_id_);
 
-    auto context = std::unique_ptr<GlobalContext>(new GlobalContext());
+    auto context = std::shared_ptr<GlobalContext>(new GlobalContext());
 
     // Creates the context backing store.
     if (!render_engine_cs_->InitContext(context.get()))
@@ -87,7 +87,7 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     render_engine_cs_->InitHardware(context->hardware_status_page(render_engine_cs_->id()));
 
-    if (!render_engine_cs_->RenderInit(context.get()))
+    if (!render_engine_cs_->RenderInit(context))
         return DRETF(false, "render_engine_cs failed RenderInit");
 
     global_context_ = std::move(context);

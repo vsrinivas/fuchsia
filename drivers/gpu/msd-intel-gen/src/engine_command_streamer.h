@@ -6,6 +6,7 @@
 #define ENGINE_COMMAND_STREAMER_H
 
 #include "address_space.h"
+#include "mapped_batch.h"
 #include "msd_intel_context.h"
 #include "pagetable.h"
 #include "register_io.h"
@@ -71,9 +72,11 @@ public:
     static std::unique_ptr<RenderEngineCommandStreamer>
     Create(EngineCommandStreamer::Owner* owner, AddressSpace* address_space, uint32_t device_id);
 
-    bool RenderInit(MsdIntelContext* context);
+    bool RenderInit(std::shared_ptr<MsdIntelContext> context);
 
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+
+    bool WaitRendering(uint32_t sequence_number);
 
 private:
     RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
@@ -83,20 +86,37 @@ private:
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 
-    bool ExecBatch(MsdIntelContext* context, gpu_addr_t batch_address, uint32_t sequence_number);
+    bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch, uint32_t pipe_control_flags,
+                   uint32_t* sequence_number_out);
+
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                           AddressSpaceId address_space_id);
     bool WriteSequenceNumber(MsdIntelContext* context, uint32_t sequence_number);
-    bool WaitRendering(uint32_t sequence_number);
 
     std::unique_ptr<RenderInitBatch> init_batch_;
 
-    struct OutstandingCommandBuffer {
-        uint32_t sequence_number;
-        std::unique_ptr<CommandBuffer> cmd_buf;
+    class InflightCommandSequence {
+    public:
+        InflightCommandSequence(uint32_t sequence_number, uint32_t ringbuffer_offset,
+                                std::unique_ptr<MappedBatch> mapped_batch)
+            : sequence_number_(sequence_number), ringbuffer_offset_(ringbuffer_offset),
+              mapped_batch_(std::move(mapped_batch))
+        {
+        }
+
+        uint32_t sequence_number() { return sequence_number_; }
+
+        uint32_t ringbuffer_offset() { return ringbuffer_offset_; }
+
+        MsdIntelContext* GetContext() { return mapped_batch_->GetContext(); }
+
+    private:
+        uint32_t sequence_number_;
+        uint32_t ringbuffer_offset_;
+        std::unique_ptr<MappedBatch> mapped_batch_;
     };
 
-    std::queue<OutstandingCommandBuffer> outstanding_command_buffers_;
+    std::queue<InflightCommandSequence> inflight_command_sequences_;
 
     friend class TestEngineCommandStreamer;
 };

@@ -24,6 +24,21 @@ CommandBuffer::CommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** 
     prepared_to_execute_ = false;
 }
 
+MsdIntelContext* CommandBuffer::GetContext()
+{
+    DASSERT(prepared_to_execute_);
+    return locked_context_.get();
+}
+
+bool CommandBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out)
+{
+    DASSERT(prepared_to_execute_);
+    if (address_space_id != locked_context_->exec_address_space()->id())
+        return DRETF(false, "wrong address space");
+    *gpu_addr_out = batch_buffer_gpu_addr_;
+    return true;
+}
+
 void CommandBuffer::UnmapResourcesGpu(AddressSpace* address_space)
 {
     for (auto buffer : exec_resources_) {

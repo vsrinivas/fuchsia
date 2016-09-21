@@ -50,7 +50,7 @@ public:
         register_io_ =
             std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(8 * 1024 * 1024)));
 
-        context_ = std::unique_ptr<MsdIntelContext>(new ClientContext(this));
+        context_ = std::shared_ptr<MsdIntelContext>(new ClientContext(this));
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 
@@ -176,9 +176,9 @@ public:
 
         register_io_->enable_trace(true);
 
-        EXPECT_TRUE(render_cs->RenderInit(context_.get()));
+        EXPECT_TRUE(render_cs->RenderInit(context_));
 
-        EXPECT_EQ(ringbuffer->tail(), 15u * 4);
+        EXPECT_EQ(ringbuffer->tail(), 9u * 4);
 
         auto ringbuffer_content = TestRingbuffer::vaddr(ringbuffer);
 
@@ -190,15 +190,6 @@ public:
         EXPECT_EQ(ringbuffer_content[i++], magma::upper_32_bits(init_batch_addr));
 
         EXPECT_EQ(ringbuffer_content[i++], (uint32_t)MiNoop::kCommandType);
-
-        // pipe control
-        EXPECT_EQ(ringbuffer_content[i++], 0x7a000000u | (6 - 2));
-        EXPECT_EQ(ringbuffer_content[i++], MiPipeControl::kCommandStreamerStallEnableBit |
-                                               MiPipeControl::kIndirectStatePointersDisable);
-        EXPECT_EQ(ringbuffer_content[i++], 0u);
-        EXPECT_EQ(ringbuffer_content[i++], 0u);
-        EXPECT_EQ(ringbuffer_content[i++], 0u);
-        EXPECT_EQ(ringbuffer_content[i++], 0u);
 
         // store sequence number
         gpu_addr_t seqno_gpu_addr = context_->hardware_status_page(engine_cs_->id())->gpu_addr() +
@@ -288,7 +279,7 @@ private:
     uint32_t device_id_;
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<AddressSpace> address_space_;
-    std::unique_ptr<MsdIntelContext> context_;
+    std::shared_ptr<MsdIntelContext> context_;
     std::unique_ptr<MockStatusPageBuffer> mock_status_page_;
     std::unique_ptr<EngineCommandStreamer> engine_cs_;
     std::unique_ptr<Sequencer> sequencer_;

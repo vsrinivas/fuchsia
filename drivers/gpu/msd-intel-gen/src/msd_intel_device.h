@@ -88,7 +88,7 @@ private:
     static void DumpFault(DumpState* dump_out, uint32_t fault);
     static void DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io);
 
-    MsdIntelContext* global_context() { return global_context_.get(); }
+    std::shared_ptr<MsdIntelContext> global_context() { return global_context_; }
 
     RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }
 
@@ -100,7 +100,7 @@ private:
     std::unique_ptr<RegisterIo> register_io_;
     std::unique_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
-    std::unique_ptr<MsdIntelContext> global_context_;
+    std::shared_ptr<MsdIntelContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
 
     friend class MsdIntelDriver;

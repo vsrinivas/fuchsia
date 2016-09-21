@@ -29,6 +29,8 @@ public:
 
     uint32_t tail() { return tail_; }
 
+    uint32_t head() { return head_; }
+
     void update_head(uint32_t head)
     {
         DASSERT((head & 0x3) == 0);

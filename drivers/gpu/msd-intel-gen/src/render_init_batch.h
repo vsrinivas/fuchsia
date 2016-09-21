@@ -21,14 +21,12 @@ public:
 
     uint32_t size() { return batch_size_; }
 
+    std::shared_ptr<MsdIntelBuffer> buffer() { return buffer_; }
+
     bool Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace* address_space);
 
-    gpu_addr_t GetGpuAddress();
-
 private:
-    MsdIntelBuffer* buffer() { return buffer_.get(); }
-
-    std::unique_ptr<MsdIntelBuffer> buffer_;
+    std::shared_ptr<MsdIntelBuffer> buffer_;
     AddressSpaceId address_space_id_;
 
     const uint32_t batch_size_;

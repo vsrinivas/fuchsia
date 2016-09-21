@@ -5,16 +5,18 @@
 #ifndef COMMAND_BUFFER_H
 #define COMMAND_BUFFER_H
 
+#include "mapped_batch.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
 
 #include <memory>
 #include <vector>
 
+class MsdIntelContext;
 class ClientContext;
 class EngineCommandStreamer;
 
-class CommandBuffer {
+class CommandBuffer : public MappedBatch {
 public:
     // Takes a weak reference on the context which it locks for the duration of its execution
     static std::unique_ptr<CommandBuffer> Create(magma_system_command_buffer* cmd_buf,
@@ -33,17 +35,9 @@ public:
     bool PrepareForExecution(EngineCommandStreamer* engine);
 
     // only valid after PrepareForExecution succeeds
-    ClientContext* context()
-    {
-        DASSERT(prepared_to_execute_);
-        return locked_context_.get();
-    }
+    MsdIntelContext* GetContext() override;
 
-    gpu_addr_t batch_buffer_gpu_addr()
-    {
-        DASSERT(prepared_to_execute_);
-        return batch_buffer_gpu_addr_;
-    }
+    bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override;
 
 private:
     CommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** exec_resources,
