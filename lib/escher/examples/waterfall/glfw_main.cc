@@ -36,7 +36,8 @@ int main(int argc, char **argv) {
   glfwGetVersion(&major, &minor, &rev);
   fprintf(stderr, "OpenGL version recieved: %d.%d.%d", major, minor, rev);
 
-  window = glfwCreateWindow(1024, 1024, "Escher Waterfall Demo", NULL, NULL);
+  window = glfwCreateWindow(
+      1024, 1024, "Escher Waterfall Demo (OpenGL)", NULL, NULL);
   if (!window) {
     glfwTerminate();
     exit(EXIT_FAILURE);

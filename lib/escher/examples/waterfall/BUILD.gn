@@ -2,6 +2,44 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+if (is_linux) {
+  executable("waterfall-vulkan") {
+    sources = [
+      "waterfall_main.cc",
+      "demo.cc",
+      "vulkan_proc_addrs.cc",
+    ]
+    deps = [
+      "//lib/escher",
+      "//lib/ftl",
+      "third_party:glfw",
+    ]
+    libs = [
+      "glslang",
+      #"OGLCompiler",
+      #"OSDependent",
+      #"SPIRV",
+      #"HLSL",
+      "dl",
+      "X11",
+      "Xrandr",
+      "pthread",
+      "Xinerama",
+      "Xcursor",
+      "vulkan",
+    ]
+    lib_dirs = [
+      "$VULKAN_SDK/lib",
+      "$VULKAN_SDK/lib/glslang",
+    ]
+    include_dirs = [
+      "//lib",
+      "$VULKAN_SDK/include",
+      "$VULKAN_SDK/../source/glslang/glslang/Public",
+    ]
+  }
+}
+
 executable("waterfall") {
   sources = [
     "glfw_main.cc",

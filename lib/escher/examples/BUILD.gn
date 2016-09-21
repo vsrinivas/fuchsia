@@ -5,5 +5,5 @@
 group("examples") {
   deps = [
     "//lib/escher/examples/waterfall($host_toolchain)",
-  ]
+    "//lib/escher/examples/waterfall:waterfall-vulkan($host_toolchain)",  ]
 }

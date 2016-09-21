@@ -99,6 +99,7 @@ static_library("escher") {
 
   include_dirs = [
     ".",
+    "./third_party",
     "..",
     "../../third_party/glm",
   ]
