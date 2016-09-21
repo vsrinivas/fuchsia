@@ -8,8 +8,8 @@
     ],
     "binaries": [
         {
-            "binary": "component-manager",
-            "bootfs_path": "apps/component-manager"
+            "binary": "component_manager",
+            "bootfs_path": "apps/component_manager"
         },
         {
             "binary": "context_service",
@@ -20,20 +20,20 @@
             "bootfs_path": "apps/dart_content_handler"
         },
         {
-            "binary": "device-runner",
-            "bootfs_path": "apps/device-runner"
+            "binary": "device_runner",
+            "bootfs_path": "apps/device_runner"
         },
         {
-            "binary": "device-runner-boot",
-            "bootfs_path": "bin/device-runner-boot"
+            "binary": "device_runner_boot",
+            "bootfs_path": "bin/device_runner_boot"
         },
         {
-            "binary": "dummy-device-shell",
-            "bootfs_path": "apps/dummy-device-shell"
+            "binary": "dummy_device_shell",
+            "bootfs_path": "apps/dummy_device_shell"
         },
         {
-            "binary": "dummy-user-shell",
-            "bootfs_path": "apps/dummy-user-shell"
+            "binary": "dummy_user_shell",
+            "bootfs_path": "apps/dummy_user_shell"
         },
         {
             "binary": "hello_dart.dartx",
@@ -48,24 +48,24 @@
 	    "bootfs_path": "apps/maxwell_test"
 	},
         {
-            "binary": "story-manager",
-            "bootfs_path": "apps/story-manager"
+            "binary": "story_manager",
+            "bootfs_path": "apps/story_manager"
         },
         {
-            "binary": "story-runner",
-            "bootfs_path": "apps/story-runner"
+            "binary": "story_runner",
+            "bootfs_path": "apps/story_runner"
         },
         {
-            "binary": "example-module1",
-            "bootfs_path": "apps/example-module1"
+            "binary": "example_module1",
+            "bootfs_path": "apps/example_module1"
         },
         {
-            "binary": "example-module2",
-            "bootfs_path": "apps/example-module2"
+            "binary": "example_module2",
+            "bootfs_path": "apps/example_module2"
         },
         {
-            "binary": "example-recipe",
-            "bootfs_path": "apps/example-recipe"
+            "binary": "example_recipe",
+            "bootfs_path": "apps/example_recipe"
         }
     ]
 }
