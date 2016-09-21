@@ -342,6 +342,28 @@ void apic_io_configure_irq(
     spin_unlock_irqrestore(&lock, state);
 }
 
+status_t apic_io_fetch_irq_config(
+        uint32_t global_irq,
+        enum interrupt_trigger_mode* trig_mode,
+        enum interrupt_polarity* polarity)
+{
+    struct io_apic *io_apic = apic_io_resolve_global_irq(global_irq);
+
+    if (!io_apic)
+        return ERR_INVALID_ARGS;
+
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&lock, state);
+
+    uint64_t reg = apic_io_read_redirection_entry(io_apic, global_irq);
+    if (trig_mode) *trig_mode = IO_APIC_RTE_GET_TRIGGER_MODE(reg);
+    if (polarity)  *polarity  = IO_APIC_RTE_GET_POLARITY(reg);
+
+    spin_unlock_irqrestore(&lock, state);
+
+    return NO_ERROR;
+}
+
 void apic_io_configure_irq_vector(
         uint32_t global_irq,
         uint8_t vector)

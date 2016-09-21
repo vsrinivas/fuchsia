@@ -334,6 +334,19 @@ status_t configure_interrupt(unsigned int vector,
     return NO_ERROR;
 }
 
+status_t get_interrupt_config(unsigned int vector,
+                              enum interrupt_trigger_mode* tm,
+                              enum interrupt_polarity* pol)
+{
+    if (vector >= MAX_INT)
+        return ERR_INVALID_ARGS;
+
+    if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
+    if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
+
+    return NO_ERROR;
+}
+
 unsigned int remap_interrupt(unsigned int vector)
 {
     return vector;

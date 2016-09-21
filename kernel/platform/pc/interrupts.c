@@ -171,6 +171,21 @@ status_t configure_interrupt(unsigned int vector,
     return NO_ERROR;
 }
 
+status_t get_interrupt_config(unsigned int vector,
+                              enum interrupt_trigger_mode* tm,
+                              enum interrupt_polarity* pol)
+{
+    status_t ret;
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&lock, state);
+
+    ret = apic_io_fetch_irq_config(vector, tm, pol);
+
+    spin_unlock_irqrestore(&lock, state);
+
+    return ret;
+}
+
 enum handler_return platform_irq(x86_iframe_t *frame)
 {
     // get the current vector

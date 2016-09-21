@@ -147,13 +147,25 @@ unsigned int remap_interrupt(unsigned int vector) {
     return vector;
 }
 
-/* dummy handler to satiate magenta pci dependencies
- *  TODO - remove once pcie dependencies are resolved (see bug MG-246)
+/*
+ *  TODO(hollande) - Implement!
  */
 status_t configure_interrupt(unsigned int vector,
                              enum interrupt_trigger_mode tm,
                              enum interrupt_polarity pol)
 {
+    return NO_ERROR;
+}
+
+/*
+ *  TODO(hollande) - Implement!
+ */
+status_t get_interrupt_config(unsigned int vector,
+                              enum interrupt_trigger_mode* tm,
+                              enum interrupt_polarity* pol)
+{
+    if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
+    if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
     return NO_ERROR;
 }
 

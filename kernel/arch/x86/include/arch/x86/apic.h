@@ -99,6 +99,10 @@ void apic_io_configure_irq(
         enum apic_interrupt_dst_mode dst_mode,
         uint8_t dst,
         uint8_t vector);
+status_t apic_io_fetch_irq_config(
+        uint32_t global_irq,
+        enum interrupt_trigger_mode* trig_mode,
+        enum interrupt_polarity* polarity);
 void apic_io_configure_irq_vector(
         uint32_t global_irq,
         uint8_t vector);

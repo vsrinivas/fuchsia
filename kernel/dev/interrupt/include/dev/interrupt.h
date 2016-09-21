@@ -31,6 +31,10 @@ status_t configure_interrupt(unsigned int vector,
                              enum interrupt_trigger_mode tm,
                              enum interrupt_polarity pol);
 
+status_t get_interrupt_config(unsigned int vector,
+                              enum interrupt_trigger_mode* tm,
+                              enum interrupt_polarity* pol);
+
 typedef enum handler_return (*int_handler)(void* arg);
 
 void register_int_handler(unsigned int vector, int_handler handler, void* arg);
