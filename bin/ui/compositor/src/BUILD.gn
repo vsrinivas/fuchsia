@@ -1,0 +1,106 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("common") {
+  sources = [
+    "backend/gpu_output.cc",
+    "backend/gpu_output.h",
+    "backend/gpu_rasterizer.cc",
+    "backend/gpu_rasterizer.h",
+    "backend/output.h",
+    "backend/scheduler.cc",
+    "backend/scheduler.h",
+    "backend/vsync_scheduler.cc",
+    "backend/vsync_scheduler.h",
+    "compositor_app.cc",
+    "compositor_app.h",
+    "compositor_engine.cc",
+    "compositor_engine.h",
+    "compositor_impl.cc",
+    "compositor_impl.h",
+    "frame_dispatcher.cc",
+    "frame_dispatcher.h",
+    "graph/nodes.cc",
+    "graph/nodes.h",
+    "graph/resources.cc",
+    "graph/resources.h",
+    "graph/scene_content.cc",
+    "graph/scene_content.h",
+    "graph/scene_def.cc",
+    "graph/scene_def.h",
+    "graph/scene_label.cc",
+    "graph/scene_label.h",
+    "graph/snapshot.cc",
+    "graph/snapshot.h",
+    "graph/transform_pair.cc",
+    "graph/transform_pair.h",
+    "graph/universe.cc",
+    "graph/universe.h",
+    "render/render_frame.cc",
+    "render/render_frame.h",
+    "render/render_image.cc",
+    "render/render_image.h",
+    "renderer_impl.cc",
+    "renderer_impl.h",
+    "renderer_state.cc",
+    "renderer_state.h",
+    "scene_impl.cc",
+    "scene_impl.h",
+    "scene_state.cc",
+    "scene_state.h",
+  ]
+
+  public_deps = [
+    "//apps/compositor/glue/base",
+    "//apps/compositor/glue/gl",
+    "//apps/compositor/glue/skia",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/c:GLES2",
+    "//mojo/public/c:MGL",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings:bindings",
+    "//mojo/services/geometry/cpp",
+    "//mojo/services/geometry/interfaces",
+    "//apps/compositor/services/cpp",
+    "//apps/compositor/services/interfaces",
+    "//mojo/services/gpu/interfaces",
+    "//mojo/system",
+    "//third_party/skia",
+  ]
+}
+
+# TODO(jeffbrown): Change back to executable once GL thunks are available
+# or after refactoring so we don't need them.
+source_set("compositor") {
+  output_name = "compositor"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":common",
+  ]
+}
+
+# TODO(jeffbrown): Reenable these tests once their dependencies are available.
+# executable("apptests") {
+#   output_name = "compositor_apptests"
+#
+#   testonly = true
+#
+#   sources = [
+#     "backend/vsync_scheduler_unittest.cc",
+#     "tests/scheduling_apptest.cc",
+#   ]
+#
+#   deps = [
+#     ":common",
+#     "//apps/compositor/services/interfaces:interfaces_sync",
+#     "//mojo/public/cpp/application:test_support",
+#     "//mojo/services/native_viewport/interfaces",
+#     "//third_party/gtest",
+#   ]
+# }

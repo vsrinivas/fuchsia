@@ -1,0 +1,12 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module launcher;
+
+// Private interface for the shell. Allows the shell to start an ui
+// application.
+[ServiceName="launcher::Launcher"]
+interface Launcher {
+  Launch(string application_url);
+};

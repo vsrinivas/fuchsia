@@ -1,0 +1,23 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+mojom("interfaces") {
+  sources = [
+    "compositor.mojom",
+    "hit_tests.mojom",
+    "nodes.mojom",
+    "renderers.mojom",
+    "resources.mojom",
+    "scene_token.mojom",
+    "scenes.mojom",
+    "scheduling.mojom",
+  ]
+
+  public_deps = [
+    "//mojo/services/geometry/interfaces",
+    "//mojo/services/gpu/interfaces",
+  ]
+}

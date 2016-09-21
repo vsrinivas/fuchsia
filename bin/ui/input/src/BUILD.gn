@@ -1,0 +1,51 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+import("//testing/test.gni")
+
+mojo_native_application("input_manager") {
+  output_name = "input_manager_service"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//mojo/application",
+  ]
+}
+
+# Library that allows the service code to be included directly into the
+# embedding shell. Used by https://manganese.googlesource.com/.
+source_set("lib") {
+  sources = [
+    "input_associate.cc",
+    "input_associate.h",
+    "input_connection_impl.cc",
+    "input_connection_impl.h",
+    "input_dispatcher_impl.cc",
+    "input_dispatcher_impl.h",
+    "input_manager_app.cc",
+    "input_manager_app.h",
+  ]
+
+  deps = [
+    "//base",
+    "//mojo/application",
+    "//mojo/common:tracing_impl",
+    "//mojo/converters/geometry",
+    "//mojo/environment:chromium",
+    "//mojo/public/cpp/bindings:bindings",
+    "//mojo/services/geometry/cpp",
+    "//mojo/services/geometry/interfaces",
+    "//mojo/services/gfx/composition/cpp",
+    "//mojo/services/gfx/composition/interfaces",
+    "//mojo/services/ui/input/interfaces",
+    "//mojo/services/ui/views/cpp",
+    "//mojo/services/ui/views/interfaces",
+    "//mojo/ui/associates",
+  ]
+}

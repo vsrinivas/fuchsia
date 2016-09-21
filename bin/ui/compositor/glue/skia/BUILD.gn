@@ -1,0 +1,43 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("skia") {
+  sources = [
+    "ganesh_context.cc",
+    "ganesh_context.h",
+    "ganesh_framebuffer_surface.cc",
+    "ganesh_framebuffer_surface.h",
+    "ganesh_image_factory.cc",
+    "ganesh_image_factory.h",
+    "ganesh_texture_surface.cc",
+    "ganesh_texture_surface.h",
+    "type_converters.cc",
+    "type_converters.h",
+  ]
+
+  public_deps = [
+    ":gl_bindings",
+  ]
+
+  deps = [
+    "//apps/compositor/glue/gl",
+    "//lib/ftl",
+    "//mojo/public/c:GLES2",
+    "//mojo/public/c:MGL",
+    "//mojo/services/geometry/interfaces",
+    "//third_party/skia",
+  ]
+}
+
+source_set("gl_bindings") {
+  sources = [
+    "gl_bindings_skia.cc",
+    "gl_bindings_skia.h",
+  ]
+
+  public_deps = [
+    "//mojo/public/c:GLES2",
+    "//third_party/skia",
+  ]
+}

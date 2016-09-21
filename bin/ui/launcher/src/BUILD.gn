@@ -1,0 +1,59 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+import("//mojo/public/tools/bindings/mojom.gni")
+import("//testing/test.gni")
+
+mojo_native_application("launcher") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//mojo/application",
+  ]
+}
+
+# Library that allows the service code to be included directly into the
+# embedding shell. Used by https://manganese.googlesource.com/.
+source_set("lib") {
+  sources = [
+    "launch_instance.cc",
+    "launch_instance.h",
+    "launcher_app.cc",
+    "launcher_app.h",
+    "launcher_view_tree.cc",
+    "launcher_view_tree.h",
+  ]
+
+  deps = [
+    ":bindings",
+    "//base",
+    "//mojo/application",
+    "//mojo/common:tracing_impl",
+    "//mojo/environment:chromium",
+    "//mojo/public/cpp/bindings:bindings",
+    "//mojo/services/gfx/composition/cpp",
+    "//mojo/services/gfx/composition/interfaces",
+    "//mojo/services/native_viewport/interfaces",
+    "//mojo/services/ui/input/interfaces",
+    "//mojo/services/ui/views/cpp",
+    "//mojo/services/ui/views/interfaces",
+  ]
+}
+
+mojom("bindings") {
+  sources = [
+    "launcher.mojom",
+  ]
+
+  deps = [
+    "//mojo/services/native_viewport/interfaces",
+    "//mojo/services/ui/views/interfaces",
+  ]
+
+  import_dirs = [ get_path_info("../../../mojo/services", "abspath") ]
+}

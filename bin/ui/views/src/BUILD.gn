@@ -1,0 +1,81 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+import("//testing/test.gni")
+
+source_set("common") {
+  sources = [
+    "view_associate_table.cc",
+    "view_associate_table.h",
+    "view_container_state.cc",
+    "view_container_state.h",
+    "view_impl.cc",
+    "view_impl.h",
+    "view_manager_app.cc",
+    "view_manager_app.h",
+    "view_manager_impl.cc",
+    "view_manager_impl.h",
+    "view_registry.cc",
+    "view_registry.h",
+    "view_state.cc",
+    "view_state.h",
+    "view_stub.cc",
+    "view_stub.h",
+    "view_tree_impl.cc",
+    "view_tree_impl.h",
+    "view_tree_state.cc",
+    "view_tree_state.h",
+  ]
+
+  public_deps = [
+    "//base",
+    "//mojo/application",
+    "//mojo/common:tracing_impl",
+    "//mojo/converters/geometry",
+    "//mojo/public/cpp/bindings:bindings",
+    "//mojo/services/geometry/cpp",
+    "//mojo/services/gfx/composition/cpp",
+    "//mojo/services/gfx/composition/interfaces",
+    "//mojo/services/ui/views/cpp",
+    "//mojo/services/ui/views/interfaces",
+  ]
+}
+
+mojo_native_application("view_manager") {
+  output_name = "view_manager_service"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//mojo/environment:chromium",
+  ]
+}
+
+mojo_native_application("view_manager_apptests") {
+  output_name = "view_manager_apptests"
+
+  testonly = true
+
+  sources = [
+    "tests/mock_view_associate.cc",
+    "tests/mock_view_associate.h",
+    "tests/view_associate_table_test.cc",
+    "tests/view_manager_test.cc",
+    "tests/view_manager_test_base.cc",
+    "tests/view_manager_test_base.h",
+  ]
+
+  deps = [
+    ":common",
+    "//base",
+    "//mojo/application:test_support",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/bindings:bindings",
+    "//mojo/ui/associates:mocks",
+  ]
+}

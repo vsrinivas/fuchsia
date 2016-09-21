@@ -1,0 +1,27 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("gl") {
+  sources = [
+    "gl_context.cc",
+    "gl_context.h",
+    "gl_texture.cc",
+    "gl_texture.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//mojo/public/c:GLES2",
+    "//mojo/public/c:MGL",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/environment",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/utility",
+    "//mojo/public/interfaces/application",
+    "//mojo/services/geometry/cpp",
+    "//mojo/services/geometry/interfaces",
+    "//mojo/services/gpu/interfaces",
+  ]
+}

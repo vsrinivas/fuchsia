@@ -1,0 +1,36 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cpp") {
+  sources = [
+    "formatting.cc",
+    "formatting.h",
+    "frame_tracker.cc",
+    "frame_tracker.h",
+  ]
+
+  public_deps = [
+    "../interfaces",
+    "//lib/ftl",
+    "//mojo/services/geometry/cpp",
+  ]
+}
+
+executable("apptests") {
+  output_name = "compositor_services_apptests"
+
+  testonly = true
+
+  sources = [
+    "frame_tracker_apptest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/application:test_support_standalone",
+    "//mojo/system",
+    "//third_party/gtest",
+  ]
+}
