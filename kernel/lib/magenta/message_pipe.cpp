@@ -16,6 +16,7 @@
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/io_port_client.h>
 #include <magenta/magenta.h>
+#include <magenta/message_packet.h>
 
 namespace {
 
@@ -24,16 +25,6 @@ size_t other_side(size_t side) {
 }
 
 }  // namespace
-
-void MessagePacket::ReturnHandles() {
-    handles.reset();
-}
-
-MessagePacket::~MessagePacket() {
-    for (size_t ix = 0; ix != handles.size(); ++ix) {
-        DeleteHandle(handles[ix]);
-    }
-}
 
 MessagePipe::MessagePipe()
     : dispatcher_alive_{true, true} {

@@ -15,11 +15,11 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
+#include <mxtl/array.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/unique_ptr.h>
 
 class IOPortClient;
-class IOPortDispatcher;
 
 class MessagePipeDispatcher final : public Dispatcher {
 public:

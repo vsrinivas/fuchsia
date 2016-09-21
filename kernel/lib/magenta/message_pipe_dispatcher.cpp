@@ -16,6 +16,7 @@
 #include <kernel/auto_lock.h>
 
 #include <magenta/handle.h>
+#include <magenta/message_packet.h>
 #include <magenta/message_pipe.h>
 #include <magenta/io_port_dispatcher.h>
 #include <magenta/io_port_client.h>

@@ -6,33 +6,19 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <stddef.h>
 
 #include <kernel/mutex.h>
 
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls-types.h>
+#include <magenta/syscalls-types.h>
 
-#include <mxtl/array.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 
-class Handle;
-class IOPortDispatcher;
 class IOPortClient;
-
-struct MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
-    MessagePacket(mxtl::Array<uint8_t>&& _data,
-                  mxtl::Array<Handle*>&& _handles)
-        : data(mxtl::move(_data)),
-          handles(mxtl::move(_handles)) { }
-    ~MessagePacket();
-
-    mxtl::Array<uint8_t> data;
-    mxtl::Array<Handle*> handles;
-
-    void ReturnHandles();
-};
+class MessagePacket;
 
 class MessagePipe : public mxtl::RefCounted<MessagePipe> {
 public:
