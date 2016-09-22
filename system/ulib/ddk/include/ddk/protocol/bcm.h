@@ -5,7 +5,8 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/ioctl.h>
+#include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
 #include <magenta/compiler.h>
 #include <stddef.h>
 #include <sys/types.h>
@@ -14,5 +15,8 @@ __BEGIN_CDECLS;
 
 #define IOCTL_BCM_POWER_ON_USB \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BCM, 0)
+
+// ssize_t ioctl_bcm_power_on_usb(int fd);
+IOCTL_WRAPPER(ioctl_bcm_power_on_usb, IOCTL_BCM_POWER_ON_USB);
 
 __END_CDECLS

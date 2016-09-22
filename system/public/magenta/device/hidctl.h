@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
 
 #define IOCTL_HID_CTL_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_HID, 0)
@@ -19,3 +20,6 @@ typedef struct hid_ioctl_config {
     size_t rpt_desc_len;
     uint8_t rpt_desc[];
 } hid_ioctl_config_t;
+
+// ssize_t ioctl_hid_ctl_config(int fd, const hid_ioctl_config_t* in, size_t in_len);
+IOCTL_WRAPPER_VARIN(ioctl_hid_ctl_config, IOCTL_HID_CTL_CONFIG, hid_ioctl_config_t);

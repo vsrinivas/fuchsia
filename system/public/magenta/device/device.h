@@ -5,6 +5,8 @@
 #pragma once
 
 #include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
+#include <magenta/types.h>
 
 // Bind to a driver
 //   in: driver to bind to (optional)
@@ -41,3 +43,18 @@
 #define DEVICE_SIGNAL_READABLE MX_SIGNAL_SIGNAL0
 #define DEVICE_SIGNAL_WRITABLE MX_SIGNAL_SIGNAL1
 #define DEVICE_SIGNAL_ERROR MX_SIGNAL_SIGNAL2
+
+// ssize_t ioctl_device_bind(int fd, const char* in, size_t in_len);
+IOCTL_WRAPPER_VARIN(ioctl_device_bind, IOCTL_DEVICE_BIND, char);
+
+// ssize_t ioctl_device_watch_dir(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_device_watch_dir, IOCTL_DEVICE_WATCH_DIR, mx_handle_t);
+
+// ssize_t ioctl_device_get_event_handle(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_device_get_event_handle, IOCTL_DEVICE_GET_EVENT_HANDLE, mx_handle_t);
+
+// ssize_t ioctl_device_get_driver_name(int fd, char* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_device_get_driver_name, IOCTL_DEVICE_GET_DRIVER_NAME, char);
+
+// ssize_t ioctl_device_get_device_name(int fd, char* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_device_get_device_name, IOCTL_DEVICE_GET_DEVICE_NAME, char);

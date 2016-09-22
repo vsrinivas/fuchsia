@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
 
 __BEGIN_CDECLS
 
@@ -62,5 +63,20 @@ __BEGIN_CDECLS
 // returns the current frame number for the USB controller (in milliseconds)
 // call with out_len = sizeof(uint64_t)
 #define IOCTL_USB_GET_CURRENT_FRAME     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 9)
+
+IOCTL_WRAPPER_OUT(ioctl_usb_get_device_type, IOCTL_USB_GET_DEVICE_TYPE, int);
+IOCTL_WRAPPER_OUT(ioctl_usb_get_device_speed, IOCTL_USB_GET_DEVICE_SPEED, int);
+IOCTL_WRAPPER_OUT(ioctl_usb_get_device_desc, IOCTL_USB_GET_DEVICE_DESC, usb_device_descriptor_t);
+IOCTL_WRAPPER_OUT(ioctl_usb_get_config_desc_size, IOCTL_USB_GET_CONFIG_DESC_SIZE, int);
+IOCTL_WRAPPER_VAROUT(ioctl_usb_get_config_desc, IOCTL_USB_GET_CONFIG_DESC, void);
+IOCTL_WRAPPER_OUT(ioctl_usb_get_descriptors_size, IOCTL_USB_GET_DESCRIPTORS_SIZE, int);
+IOCTL_WRAPPER_VAROUT(ioctl_usb_get_descriptors, IOCTL_USB_GET_DESCRIPTORS, void);
+IOCTL_WRAPPER_IN_VAROUT(ioctl_usb_get_string_desc, IOCTL_USB_GET_STRING_DESC, int, void);
+
+static inline ssize_t ioctl_usb_set_interface(int fd, const int in[static 2]) {
+    return mxio_ioctl(fd, IOCTL_USB_SET_INTERFACE, in, 2*sizeof(int), NULL, 0);
+}
+
+IOCTL_WRAPPER_OUT(ioctl_usb_get_current_frame, IOCTL_USB_GET_CURRENT_FRAME, uint64_t);
 
 __END_CDECLS

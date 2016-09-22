@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
 #include <magenta/compiler.h>
 
 __BEGIN_CDECLS;
@@ -51,5 +52,18 @@ typedef struct i2c_slave_segment {
     int len;
     uint8_t* buf;
 } i2c_slave_segment_t;
+
+// ssize_t ioctl_i2c_bus_add_slave(int fd, const i2c_ioctl_add_slave_args_t* in);
+IOCTL_WRAPPER_IN(ioctl_i2c_bus_add_slave, IOCTL_I2C_BUS_ADD_SLAVE, i2c_ioctl_add_slave_args_t);
+
+// ssize_t ioctl_i2c_bus_remove_slave(int fd, const i2c_ioctl_remove_slave_args_t* in);
+IOCTL_WRAPPER_IN(ioctl_i2c_bus_remove_slave, IOCTL_I2C_BUS_REMOVE_SLAVE, i2c_ioctl_remove_slave_args_t);
+
+// ssize_t ioctl_i2c_bus_set_frequency(int fd, const i2c_ioctl_set_bus_frequency_args_t* in);
+IOCTL_WRAPPER_IN(ioctl_i2c_bus_set_frequency, IOCTL_I2C_BUS_SET_FREQUENCY, i2c_ioctl_set_bus_frequency_args_t);
+
+// ssize_t ioctl_i2c_slave_transfer(int fd, const i2c_slave_ioctl_segment_t* in, size_t in_len,
+//                                  void* out, size_t out_len);
+IOCTL_WRAPPER_VARIN_VAROUT(ioctl_i2c_slave_transfer, IOCTL_I2C_SLAVE_TRANSFER, i2c_slave_ioctl_segment_t, void);
 
 __END_CDECLS;
