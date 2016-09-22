@@ -115,7 +115,7 @@ void process_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels
             clear_screen(pixels, fb);
         }
     }
-    ssize_t ret = mxio_ioctl(vcfd, IOCTL_DISPLAY_FLUSH_FB, 0, 0, 0, 0);
+    ssize_t ret = ioctl_display_flush_fb(vcfd);
     if (ret < 0) {
         printf("failed to flush: %zd\n", ret);
     }
@@ -168,7 +168,7 @@ void process_stylus_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
     draw_points(pixels, color, x, y, size, size, fb->info.stride, fb->info.height);
 
 flush: ;
-    ssize_t ret = mxio_ioctl(vcfd, IOCTL_DISPLAY_FLUSH_FB, 0, 0, 0, 0);
+    ssize_t ret = ioctl_display_flush_fb(vcfd);
     if (ret < 0) {
         printf("failed to flush: %zd\n", ret);
     }
@@ -182,7 +182,7 @@ int main(int argc, char* argv[]) {
     }
 
     ioctl_display_get_fb_t fb;
-    ssize_t ret = mxio_ioctl(vcfd, IOCTL_DISPLAY_GET_FB, NULL, 0, &fb, sizeof(fb));
+    ssize_t ret = ioctl_display_get_fb(vcfd, &fb);
     if (ret < 0) {
         printf("failed to get FB: %zd\n", ret);
         return -1;
@@ -229,7 +229,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        ret = mxio_ioctl(touchfd, IOCTL_INPUT_GET_REPORT_DESC_SIZE, NULL, 0, &rpt_desc_len, sizeof(rpt_desc_len));
+        ret = ioctl_input_get_report_desc_size(touchfd, &rpt_desc_len);
         if (ret < 0) {
             printf("failed to get report descriptor length for %s: %zd\n", devname, ret);
             touchfd = -1;
@@ -246,7 +246,7 @@ int main(int argc, char* argv[]) {
             printf("no memory!\n");
             return -1;
         }
-        ret = mxio_ioctl(touchfd, IOCTL_INPUT_GET_REPORT_DESC, NULL, 0, rpt_desc, rpt_desc_len);
+        ret = ioctl_input_get_report_desc(touchfd, rpt_desc, rpt_desc_len);
         if (ret < 0) {
             printf("failed to get report descriptor for %s: %zd\n", devname, ret);
             rpt_desc_len = 0;
@@ -271,8 +271,8 @@ int main(int argc, char* argv[]) {
     assert(rpt_desc_len > 0);
     assert(rpt_desc);
 
-    size_t max_rpt_sz = 0;
-    ret = mxio_ioctl(touchfd, IOCTL_INPUT_GET_MAX_REPORTSIZE, NULL, 0, &max_rpt_sz, sizeof(max_rpt_sz));
+    input_report_size_t max_rpt_sz = 0;
+    ret = ioctl_input_get_max_reportsize(touchfd, &max_rpt_sz);
     if (ret < 0) {
         printf("failed to get max report size: %zd\n", ret);
         return -1;
@@ -283,7 +283,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    ret = mxio_ioctl(vcfd, IOCTL_CONSOLE_SET_ACTIVE_VC, NULL, 0, NULL, 0);
+    ret = ioctl_console_set_active_vc(vcfd);
     if (ret < 0) {
         printf("could not set active console: %zd\n", ret);
         // not a fatal error
