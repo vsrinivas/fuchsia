@@ -15,7 +15,7 @@ import sys
 ROOT_PUBSPECS = [
     'lib/flutter/packages/flutter',
     'lib/flutter/packages/flutter_test',
-    'apps/modular/handler',
+    'lib/flutter/packages/flutter_tools',
 ]
 
 
