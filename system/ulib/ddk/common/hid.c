@@ -148,7 +148,7 @@ static mx_status_t hid_get_report_size(mx_hid_device_t* hid, const void* in_buf,
 }
 
 static mx_status_t hid_get_max_reportsize(mx_hid_device_t* hid, void* out_buf, size_t out_len) {
-    if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
+    if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
 
     input_report_size_t* reply = out_buf;
     *reply = 0;
