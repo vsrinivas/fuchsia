@@ -89,8 +89,8 @@ static int cmd_list_blk(void) {
             printf("Error opening %s\n", info.path);
             goto devdone;
         }
-        mxio_ioctl(fd, IOCTL_DEVICE_GET_DEVICE_NAME, NULL, 0, info.devname, sizeof(info.devname));
-        mxio_ioctl(fd, IOCTL_DEVICE_GET_DRIVER_NAME, NULL, 0, info.drvname, sizeof(info.drvname));
+        ioctl_device_get_device_name(fd, info.devname, sizeof(info.devname));
+        ioctl_device_get_driver_name(fd, info.drvname, sizeof(info.drvname));
         if (ioctl_block_get_size(fd, &size) > 0) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr), size);
         }
