@@ -91,13 +91,13 @@ static int cmd_list_blk(void) {
         }
         mxio_ioctl(fd, IOCTL_DEVICE_GET_DEVICE_NAME, NULL, 0, info.devname, sizeof(info.devname));
         mxio_ioctl(fd, IOCTL_DEVICE_GET_DRIVER_NAME, NULL, 0, info.drvname, sizeof(info.drvname));
-        if (mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &size, sizeof(size)) > 0) {
+        if (ioctl_block_get_size(fd, &size) > 0) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr), size);
         }
-        if (mxio_ioctl(fd, IOCTL_BLOCK_GET_GUID, NULL, 0, info.guid, sizeof(info.guid)) == NO_ERROR) {
+        if (ioctl_block_get_guid(fd, info.guid, sizeof(info.guid)) == NO_ERROR) {
             type = guid_to_type(info.guid);
         }
-        mxio_ioctl(fd, IOCTL_BLOCK_GET_NAME, NULL, 0, info.label, sizeof(info.label));
+        ioctl_block_get_name(fd, info.label, sizeof(info.label));
 devdone:
         close(fd);
         printf("%-3s %-8s %-8s %4s %-14s %s\n", de->d_name, info.devname, info.drvname, info.sizestr, type ? type : "", info.label);
@@ -116,7 +116,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
 
     // check that count and offset are aligned to block size
     uint64_t blksize;
-    int rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
+    ssize_t rc = ioctl_block_get_blocksize(fd, &blksize);
     if (rc < 0) {
         printf("Error getting block size for %s\n", dev);
         close(fd);
@@ -138,7 +138,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     if (offset) {
         rc = lseek(fd, offset, SEEK_SET);
         if (rc < 0) {
-            printf("Error %d seeking to offset %lld\n", rc, offset);
+            printf("Error %zd seeking to offset %lld\n", rc, offset);
             goto out2;
         }
     }
