@@ -52,7 +52,7 @@ static inline ssize_t name(int fd, const intype* in, outtype* out, size_t out_le
     return mxio_ioctl(fd, op, in, in ? sizeof(*in) : 0, out, out_len);                        \
 }
 
-#define IOCTL_WRAPPEN_VARIN_VAROUT(name, op, intype, outtype) \
+#define IOCTL_WRAPPER_VARIN_VAROUT(name, op, intype, outtype) \
 static inline ssize_t name(int fd, const intype* in, size_t in_len, outtype* out, size_t out_len) { \
     return mxio_ioctl(fd, op, in, in_len, out, out_len);                                            \
 }
