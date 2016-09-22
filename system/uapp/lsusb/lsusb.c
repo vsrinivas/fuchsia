@@ -23,7 +23,7 @@
 
 static void get_string_desc(int fd, int index, char* buf, int buflen) {
     buf[0] = 0;
-    mxio_ioctl(fd, IOCTL_USB_GET_STRING_DESC, &index, sizeof(index), buf, buflen);
+    ioctl_usb_get_string_desc(fd, &index, buf, buflen);
 }
 
 static const char* usb_speeds[] = {
@@ -41,7 +41,7 @@ static int list_device(const char* device_id, bool verbose) {
     char product[256];
     manufacturer[0] = 0;
     product[0] = 0;
-    int ret = 0;
+    ssize_t ret = 0;
 
     snprintf(devname, sizeof(devname), "%s/%s", DEV_USB, device_id);
     int fd = open(devname, O_RDONLY);
@@ -51,7 +51,7 @@ static int list_device(const char* device_id, bool verbose) {
     }
 
     int device_type;
-    ret = mxio_ioctl(fd, IOCTL_USB_GET_DEVICE_TYPE, NULL, 0, &device_type, sizeof(device_type));
+    ret = ioctl_usb_get_device_type(fd, &device_type);
     if (ret != sizeof(device_type)) {
         printf("IOCTL_USB_GET_DEVICE_TYPE failed for %s\n", devname);
         goto out;
@@ -60,14 +60,14 @@ static int list_device(const char* device_id, bool verbose) {
         goto out;
     }
 
-    ret = mxio_ioctl(fd, IOCTL_USB_GET_DEVICE_DESC, NULL, 0, &device_desc, sizeof(device_desc));
+    ret = ioctl_usb_get_device_desc(fd, &device_desc);
     if (ret != sizeof(device_desc)) {
         printf("IOCTL_USB_GET_DEVICE_DESC failed for %s\n", devname);
         goto out;
     }
 
     int speed;
-    ret = mxio_ioctl(fd, IOCTL_USB_GET_DEVICE_SPEED, NULL, 0, &speed, sizeof(speed));
+    ret = ioctl_usb_get_device_speed(fd, &speed);
     if (ret != sizeof(speed) || speed < 0 || (size_t)speed >= countof(usb_speeds)) {
         printf("IOCTL_USB_GET_DEVICE_SPEED failed for %s\n", devname);
         goto out;
@@ -104,7 +104,7 @@ static int list_device(const char* device_id, bool verbose) {
         printf("  bNumConfigurations              %d\n", device_desc.bNumConfigurations);
 
         int desc_size;
-        ret = mxio_ioctl(fd, IOCTL_USB_GET_CONFIG_DESC_SIZE, NULL, 0, &desc_size, sizeof(desc_size));
+        ret = ioctl_usb_get_config_desc_size(fd, &desc_size);
         if (ret != sizeof(desc_size)) {
             printf("IOCTL_USB_GET_CONFIG_DESC_SIZE failed for %s\n", devname);
             goto out;
@@ -115,7 +115,7 @@ static int list_device(const char* device_id, bool verbose) {
             ret = -1;
             goto out;
         }
-        ret = mxio_ioctl(fd, IOCTL_USB_GET_CONFIG_DESC, NULL, 0, desc, desc_size);
+        ret = ioctl_usb_get_config_desc(fd, desc, desc_size);
         if (ret != desc_size) {
             printf("IOCTL_USB_GET_CONFIG_DESC failed for %s\n", devname);
             goto free_out;
