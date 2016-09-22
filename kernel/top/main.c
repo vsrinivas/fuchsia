@@ -66,6 +66,9 @@ void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3)
     // get us into some sort of thread context
     thread_init_early();
 
+    // deal with any static constructors
+    call_constructors();
+
     // early arch stuff
     lk_primary_cpu_init_level(LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_ARCH_EARLY - 1);
     arch_early_init();
@@ -90,10 +93,6 @@ void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3)
     lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_HEAP - 1);
     dprintf(SPEW, "initializing heap\n");
     heap_init();
-
-    // deal with any static constructors
-    dprintf(SPEW, "calling constructors\n");
-    call_constructors();
 
     // initialize the kernel
     lk_primary_cpu_init_level(LK_INIT_LEVEL_HEAP, LK_INIT_LEVEL_KERNEL - 1);

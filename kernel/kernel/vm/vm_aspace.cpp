@@ -46,11 +46,6 @@ void VmAspace::KernelAspaceInitPreHeap() {
 
     // save a pointer to the singleton kernel address space
     VmAspace::kernel_aspace_ = &_kernel_aspace;
-}
-
-void VmAspace::KernelAspaceInitPostCtors() {
-    // Now that global .ctors are guaranteed to have run, add the singleton
-    // kernel address space to the list of all address spaces.
     aspaces.push_front(kernel_aspace_);
 }
 
