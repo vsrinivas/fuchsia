@@ -70,11 +70,9 @@ int cmd_add_slave(int fd, int argc, const char** argv) {
         .chip_address = address,
     };
 
-    int ret = mxio_ioctl(fd, IOCTL_I2C_BUS_ADD_SLAVE,
-                         &add_slave_args, sizeof(add_slave_args),
-                         NULL, 0);
+    ssize_t ret = ioctl_i2c_bus_add_slave(fd, &add_slave_args);
     if (ret < 0) {
-        printf("Error when adding I2C slave. (%d)\n", ret);
+        printf("Error when adding I2C slave. (%zd)\n", ret);
         return 1;
     }
 
@@ -98,11 +96,9 @@ int cmd_remove_slave(int fd, int argc, const char** argv) {
         .chip_address = address,
     };
 
-    int ret = mxio_ioctl(fd, IOCTL_I2C_BUS_REMOVE_SLAVE,
-                         &remove_slave_args, sizeof(remove_slave_args),
-                         NULL, 0);
+    ssize_t ret = ioctl_i2c_bus_remove_slave(fd, &remove_slave_args);
     if (ret < 0) {
-        printf("Error when removing I2C slave. (%d)\n", ret);
+        printf("Error when removing I2C slave. (%zd)\n", ret);
         return 1;
     }
 
@@ -125,12 +121,9 @@ int cmd_set_bus_frequency(int fd, int argc, const char** argv) {
         .frequency = frequency,
     };
 
-    int ret = mxio_ioctl(fd, IOCTL_I2C_BUS_SET_FREQUENCY,
-                         &set_bus_frequency_args,
-                         sizeof(set_bus_frequency_args),
-                         NULL, 0);
+    ssize_t ret = ioctl_i2c_bus_set_frequency(fd, &set_bus_frequency_args);
     if (ret < 0) {
-        printf("Error when setting bus frequency. (%d)\n", ret);
+        printf("Error when setting bus frequency. (%zd)\n", ret);
         return 1;
     }
 
@@ -304,8 +297,7 @@ int cmd_transfer(int fd, int argc, const char** argv) {
         goto cmd_transfer_finish_1;
     }
 
-    ret = mxio_ioctl(fd, IOCTL_I2C_SLAVE_TRANSFER,
-                     in_buf, in_len, out_buf, out_len);
+    ret = ioctl_i2c_slave_transfer(fd, in_buf, in_len, out_buf, out_len);
     if (ret < 0)
         goto cmd_transfer_finish_1;
 
