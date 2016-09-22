@@ -14,7 +14,9 @@ group("media") {
 group("services") {
   deps = [
     "//apps/media/services/audio:audio_server",
+    "//apps/media/services/flog_service:flog_service",
     "//apps/media/services/media_service:media_service",
+    "//apps/media/tools/flog_viewer:flog_viewer",
   ]
 }
 

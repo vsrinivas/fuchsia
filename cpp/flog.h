@@ -5,10 +5,19 @@
 #ifndef APPS_MEDIA_CPP_FLOG_H_
 #define APPS_MEDIA_CPP_FLOG_H_
 
+#include <atomic>
+#include <memory>
+#include <string>
+
+#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "lib/ftl/logging.h"
+#include "mojo/public/cpp/application/connect.h"
+#include "mojo/public/cpp/bindings/array.h"
+#include "mojo/public/cpp/bindings/message.h"
+#include "mojo/public/cpp/system/time.h"
+
 namespace mojo {
 namespace flog {
-
-// NOTE: This is a temporary version of flog.h that turns flog off.
 
 //
 // FORMATTED LOGGING
@@ -66,12 +75,55 @@ namespace flog {
 // used for identification.
 #define FLOG_ADDRESS(p) reinterpret_cast<uintptr_t>(p)
 
+#if !defined(NDEBUG)
+
+#define FLOG_ENABLED 1
+
+// Initializes flog, connecting to the service and creating a new log. |shell|
+// is the application's shell (for connecting to the service), and |label| is
+// the log label, usually the name of the service or application. Should be
+// called once on startup, usually in the OnInitialize override of the
+// ApplicationImplBase subclass.
+#define FLOG_INITIALIZE(shell, label) mojo::flog::Flog::Initialize(shell, label)
+
+// Destroys the resources created by FLOG_INITIALIZE. Should be called once on
+// shutdown, usually in the destructor of the ApplicationImplBase subclass.
+#define FLOG_DESTROY() mojo::flog::Flog::Destroy()
+
+// Declares a flog channel but does not initialize it. This is useful when the
+// declaration and definition must be separate.
+#define FLOG_CHANNEL_DECL(channel_type, channel_name) \
+  std::unique_ptr<mojo::flog::FlogProxy<channel_type>> channel_name
+
+// Defines a variable with the indicated name (|channel_name|) and the indicated
+// type (|channel_type|, which must be a mojo interface type). |subject_address|
+// is provided to associate an address with the channel. Use FLOG_CHANNEL or
+// FLOG_INSTANCE_CHANNEL instead of this macro unless there is a need to be
+// specific about the subject. A |subject_address| value of 0 indicates there
+// is no subject address for the channel.
+#define FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, subject_address) \
+  FLOG_CHANNEL_DECL(channel_type, channel_name) =                              \
+      mojo::flog::FlogProxy<channel_type>::Create(subject_address)
+
+// Logs a channel message on the specified channel (a name previously declared
+// using FLOG_CHANNEL, FLOG_INSTANCE_CHANNEL, FLOG_CHANNEL_WITH_SUBJECT or
+// FLOG_CHANNEL_DECL). |call| is a valid method call for the channel type. See
+// the example above.
+#define FLOG(channel_name, call) channel_name->call
+
+// Gets the numeric channel id from a channel.
+#define FLOG_ID(channel_name) channel_name->flog_channel()->id()
+
+#else
+
 #define FLOG_INITIALIZE(shell, label) ((void)0)
 #define FLOG_DESTROY() ((void)0)
 #define FLOG_CHANNEL_DECL(channel_type, channel_name)
 #define FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, subject)
 #define FLOG(channel_name, call) ((void)0)
 #define FLOG_ID(channel_name) 0
+
+#endif
 
 // Same as FLOG_CHANNEL_WITH_SUBJECT but supplies the address of |this| as
 // the subject address. This is the preferred form for declaring channels that
@@ -82,6 +134,75 @@ namespace flog {
 // Same as FLOG_CHANNEL_WITH_SUBJECT but supplies a null subject address.
 #define FLOG_CHANNEL(channel_type, channel_name) \
   FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, 0)
+
+// Thread-safe logger for all channels in a given process.
+class Flog {
+ public:
+  static void Initialize(Shell* shell, const std::string& label);
+
+  // Deletes the flog logger singleton.
+  static void Destroy() {
+    FTL_DCHECK(logger_);
+    logger_.reset();
+  }
+
+  // Allocates a unique id for a new channel. Never returns 0.
+  static uint32_t AllocateChannelId() { return ++last_allocated_channel_id_; }
+
+  // Logs the creation of a channel.
+  static void LogChannelCreation(uint32_t channel_id,
+                                 const char* channel_type_name,
+                                 uint64_t subject_address);
+
+  // Logs a channel message.
+  static void LogChannelMessage(uint32_t channel_id, Message* message);
+
+  // Logs the deletion of a channel.
+  static void LogChannelDeletion(uint32_t channel_id);
+
+ private:
+  // Gets the current time in microseconds since epoch.
+  static uint64_t GetTime();
+
+  static std::atomic_ulong last_allocated_channel_id_;
+  static FlogLoggerPtr logger_;
+};
+
+// Channel backing a FlogProxy.
+class FlogChannel : public MessageReceiverWithResponder {
+ public:
+  FlogChannel(const char* channel_type_name, uint64_t subject_address);
+
+  ~FlogChannel() override;
+
+  // Returns the channel id.
+  uint32_t id() const { return id_; }
+
+  // MessageReceiverWithResponder implementation.
+  bool Accept(Message* message) override;
+
+  bool AcceptWithResponder(Message* message,
+                           MessageReceiver* responder) override;
+
+ private:
+  uint32_t id_ = 0;
+};
+
+template <typename T>
+class FlogProxy : public T::Proxy_ {
+ public:
+  static std::unique_ptr<FlogProxy<T>> Create(uint64_t subject_address) {
+    return std::unique_ptr<FlogProxy<T>>(new FlogProxy<T>(subject_address));
+  }
+
+  FlogChannel* flog_channel() {
+    return reinterpret_cast<FlogChannel*>(this->receiver_);
+  }
+
+ private:
+  explicit FlogProxy(uint64_t subject_address)
+      : T::Proxy_(new FlogChannel(T::Name_, subject_address)) {}
+};
 
 }  // namespace flog
 }  // namespace mojo
