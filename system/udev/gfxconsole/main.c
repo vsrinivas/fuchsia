@@ -252,6 +252,28 @@ static void __vc_set_active(vc_device_t* dev, unsigned index) {
     active_vc_index = index;
 }
 
+mx_status_t vc_set_console_to_active(vc_device_t* dev) {
+    if (dev == NULL)
+        return ERR_INVALID_ARGS;
+
+    unsigned i = 0;
+    vc_device_t* device = NULL;
+    mtx_lock(&vc_lock);
+    list_for_every_entry (&vc_list, device, vc_device_t, node) {
+        if (device == dev)
+            break;
+        i++;
+    }
+    if (i == vc_count) {
+        mtx_unlock(&vc_lock);
+        return ERR_INVALID_ARGS;
+    }
+    __vc_set_active(dev, i);
+    mtx_unlock(&vc_lock);
+    vc_device_render(active_vc);
+    return NO_ERROR;
+}
+
 mx_status_t vc_set_active_console(unsigned console) {
     if (console >= vc_count)
         return ERR_INVALID_ARGS;
@@ -549,6 +571,8 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         dims->height = vc->rows;
         return sizeof(*dims);
     }
+    case IOCTL_CONSOLE_SET_ACTIVE_VC:
+        return vc_set_console_to_active(vc);
     case IOCTL_DISPLAY_GET_FB: {
         if (max < sizeof(ioctl_display_get_fb_t)) {
             return ERR_BUFFER_TOO_SMALL;
