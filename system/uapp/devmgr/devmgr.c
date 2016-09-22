@@ -55,7 +55,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
     if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
         printf("devmgr: /dev/class/block/%s: GPT?\n", name);
         // probe for partition table
-        mxio_ioctl(fd, IOCTL_DEVICE_BIND, "gpt", 4, NULL, 0);
+        ioctl_device_bind(fd, "gpt", 4);
     } else if(!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
         char path[MXIO_MAX_FILENAME + 64];
         snprintf(path, sizeof(path), "/dev/class/block/%s", name);

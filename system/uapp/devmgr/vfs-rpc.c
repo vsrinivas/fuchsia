@@ -63,7 +63,7 @@ static mx_handle_t devmgr_connect(const char* where) {
         return -1;
     }
     mx_handle_t h;
-    if (mxio_ioctl(fd, IOCTL_DEVMGR_MOUNT_FS, NULL, 0, &h, sizeof(h)) != sizeof(h)) {
+    if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
         close(fd);
         printf("memfs: failed to attach to '%s'\n", where);
         return -1;
