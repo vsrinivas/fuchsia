@@ -13,6 +13,7 @@ group("ledger") {
     "//apps/ledger/convert",
     "//apps/ledger/fake_network_service",
     "//apps/ledger/firebase",
+    "//apps/ledger/gcs",
     "//apps/ledger/glue",
     "//apps/ledger/storage",
   ]
@@ -23,6 +24,7 @@ group("tests") {
 
   deps = [
     "//apps/ledger/firebase:unittests",
+    "//apps/ledger/gcs:unittests",
     "//apps/ledger/glue:unittests",
   ]
 }
