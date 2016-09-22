@@ -24,9 +24,9 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
 
     void* buf = NULL;
     // constrain to device size
-    int rc;
+    ssize_t rc;
     uint64_t size;
-    rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &size, sizeof(size));
+    rc = ioctl_block_get_size(fd, &size);
     if (rc != sizeof(size)) {
         printf("Error getting size for %s\n", dev);
         goto fail;
@@ -38,7 +38,7 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
 
     // write a multiple of block size
     uint64_t blksize;
-    mxio_ioctl(fd, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
+    rc = ioctl_block_get_blocksize(fd, &blksize);
     if (rc < 0) {
         printf("Error getting block size for %s\n", dev);
         goto fail;
@@ -50,7 +50,7 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
     if (offset) {
         rc = lseek(fd, offset, SEEK_SET);
         if (rc < 0) {
-            printf("Error %d seeking to offset %lld\n", rc, offset);
+            printf("Error %zd seeking to offset %lld\n", rc, offset);
             goto fail;
         }
     }
@@ -79,7 +79,7 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
     // reset offset
     rc = lseek(fd, offset, SEEK_SET);
     if (rc < 0) {
-        printf("Error %d seeking to offset %lld\n", rc, offset);
+        printf("Error %zd seeking to offset %lld\n", rc, offset);
         goto fail;
     }
 
