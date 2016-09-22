@@ -8,8 +8,8 @@ module mojo.gfx.composition;
 import "apps/mozart/services/composition/interfaces/renderers.mojom";
 import "apps/mozart/services/composition/interfaces/scene_token.mojom";
 import "apps/mozart/services/composition/interfaces/scenes.mojom";
+import "mojo/services/framebuffer/interfaces/framebuffer.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";
-import "mojo/services/gpu/interfaces/context_provider.mojom";
 
 // Maximum length for a scene or renderer label.
 const uint32 kLabelMaxLength = 32;
@@ -44,15 +44,16 @@ interface Compositor {
 
   // Creates a scene graph renderer.
   //
-  // The |context_provider| provides the GL Context to which the content
-  // should be rendered.  This will typically be a display.
+  // The |framebuffer| and |framebuffer_info| describe the output
+  // framebuffer device.
   //
   // The |label| is an optional name to associate with the renderer for
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
   //
   // To destroy the renderer, simply close the |renderer| message pipe.
-  CreateRenderer(mojo.ContextProvider context_provider,
+  CreateRenderer(mojo.Framebuffer framebuffer,
+                 mojo.FramebufferInfo framebuffer_info,
                  Renderer& renderer,
                  string? label);
 };

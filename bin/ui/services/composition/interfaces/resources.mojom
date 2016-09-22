@@ -5,6 +5,7 @@
 [DartPackage="mojo_services"]
 module mojo.gfx.composition;
 
+import "apps/mozart/services/composition/interfaces/image.mojom";
 import "apps/mozart/services/composition/interfaces/scene_token.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";
 
@@ -13,7 +14,7 @@ import "mojo/services/geometry/interfaces/geometry.mojom";
 // given a locally unique identifier when it is bound to the scene.
 union Resource {
   SceneResource scene;
-  MailboxTextureResource mailbox_texture;
+  ImageResource image;
 };
 
 // Scene resource declaration.
@@ -27,45 +28,24 @@ struct SceneResource {
   SceneToken scene_token;
 };
 
-// Mailbox texture resource declaration.
+// Image resource declaration.
 //
-// Binds a resource id to a texture transferred via a GL mailbox.
-// Assumes the format is RGBA_8888 and the target is GL_TEXTURE_2D.
+// Binds a resource id to an image.
 //
-// If the texture referenced by the token becomes unavailable, the
-// |Scene.OnResourceUnavailable| event will be sent.
-//
-// TODO(jeffbrown): Replace this with Image and ImagePipe.
-struct MailboxTextureResource {
-  // The origin of the texture.
-  enum Origin {
-    TOP_LEFT,
-    BOTTOM_LEFT,
-  };
+// TODO(jeffbrown): Associate a fence with the image to enable pipelining.
+struct ImageResource {
+  // The image to associate with the resource.
+  Image image;
 
-  // The name of the mailbox, as produced by glGenMailboxCHROMIUM().
-  array<uint8, 64> mailbox_name;
-
-  // The sync point which indicates completion of texture rendering, as
-  // produced by glInsertSyncPointCHROMIUM().
-  uint32 sync_point;
-
-  // The size of the texture in pixels.
-  mojo.Size size;
-
-  // The origin of the texture.
-  Origin origin = Origin.TOP_LEFT;
-
-  // The callback interface to be notified when it is safe to release or
-  // recycle the underlying texture storage once the resource has been
-  // removed from the scene.
-  MailboxTextureCallback callback;
+  // Callbacks for this image resource.
+  ImageResourceCallback? callback;
 };
 
-// Release callback for MailboxTextureResources.
-interface MailboxTextureCallback {
-  // Called some time after a mailbox texture is removed from the scene
-  // to indicate that it is now safe to release or recycle the underlying
-  // texture storage.
-  OnMailboxTextureReleased();
+// Callback for ImageResources.
+interface ImageResourceCallback {
+  // This method is invoked some time after an image resource has been
+  // removed from the scene once the image is no longer needed by the renderer
+  // to indicate that it is now safe for the producer of the image to release
+  // or recycle the underlying image buffer.
+  OnImageReleased();
 };

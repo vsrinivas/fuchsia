@@ -4,6 +4,7 @@
 
 group("mozart") {
   deps = [
+    "//apps/mozart/examples/hello_compositor",
     "//apps/mozart/glue/base",
     "//apps/mozart/glue/gl",
     "//apps/mozart/glue/skia",

@@ -19,13 +19,6 @@
 
 namespace compositor {
 
-namespace {
-// TODO(jeffbrown): Determine and document a more appropriate size limit
-// for transferred images as part of the image pipe abstraction instead.
-const int32_t kMaxTextureWidth = 65536;
-const int32_t kMaxTextureHeight = 65536;
-}  // namespace
-
 SceneDef::SceneDef(const SceneLabel& label) : label_(label) {}
 
 SceneDef::~SceneDef() {}
@@ -170,38 +163,25 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
     return ftl::MakeRefCounted<SceneResource>(scene_token);
   }
 
-  if (resource_decl->is_mailbox_texture()) {
-    auto& mailbox_texture_resource_decl = resource_decl->get_mailbox_texture();
-    FTL_DCHECK(mailbox_texture_resource_decl->mailbox_name.size() ==
-               GL_MAILBOX_SIZE_CHROMIUM);
-    FTL_DCHECK(mailbox_texture_resource_decl->size);
+  if (resource_decl->is_image()) {
+    auto& image_resource_decl = resource_decl->get_image();
+    FTL_DCHECK(image_resource_decl->image);
 
-    const int32_t width = mailbox_texture_resource_decl->size->width;
-    const int32_t height = mailbox_texture_resource_decl->size->height;
-    if (width < 1 || width > kMaxTextureWidth || height < 1 ||
-        height > kMaxTextureHeight) {
-      err << "MailboxTexture resource has invalid size: "
-          << "resource_id=" << resource_id << ", width=" << width
-          << ", height=" << height;
-      return nullptr;
-    }
-    const GLbyte* const mailbox_name = reinterpret_cast<GLbyte*>(
-        mailbox_texture_resource_decl->mailbox_name.data());
-    const GLuint sync_point = mailbox_texture_resource_decl->sync_point;
-    const mojo::gfx::composition::MailboxTextureResource::Origin origin =
-        mailbox_texture_resource_decl->origin;
-
-    ftl::RefPtr<RenderImage> image = RenderImage::CreateFromMailboxTexture(
-        mailbox_name, sync_point, width, height, origin,
+    auto& image_decl = image_resource_decl->image;
+    ftl::RefPtr<RenderImage> image = RenderImage::CreateFromImage(
+        std::move(image_decl),
         ftl::Ref(mtl::MessageLoop::GetCurrent()->task_runner()),
-        ftl::MakeCopyable([callback = std::move(mailbox_texture_resource_decl
-                                                    ->callback)]() mutable {
-          mojo::gfx::composition::MailboxTextureCallbackPtr::Create(
+        ftl::MakeCopyable([callback = std::move(
+                               image_resource_decl->callback)]() mutable {
+          if (!callback)
+            return;
+          mojo::gfx::composition::ImageResourceCallbackPtr::Create(
               std::move(callback))
-              ->OnMailboxTextureReleased();
+              ->OnImageReleased();
         }));
     if (!image) {
-      err << "Could not create MailboxTexture";
+      err << "ImageResource is invalid: resource_id=" << resource_id
+          << ", decl=" << image_decl;
       return nullptr;
     }
     return ftl::MakeRefCounted<ImageResource>(image);

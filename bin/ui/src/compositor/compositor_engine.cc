@@ -12,7 +12,7 @@
 #include "apps/mozart/glue/base/trace_event.h"
 #include "apps/mozart/glue/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
-#include "apps/mozart/src/compositor/backend/gpu_output.h"
+#include "apps/mozart/src/compositor/backend/framebuffer_output.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "apps/mozart/src/compositor/renderer_impl.h"
@@ -107,10 +107,12 @@ void CompositorEngine::DestroyScene(SceneState* scene_state) {
 }
 
 void CompositorEngine::CreateRenderer(
-    mojo::InterfaceHandle<mojo::ContextProvider> context_provider,
+    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+    mojo::FramebufferInfoPtr framebuffer_info,
     mojo::InterfaceRequest<mojo::gfx::composition::Renderer> renderer_request,
     const mojo::String& label) {
-  FTL_DCHECK(context_provider);
+  FTL_DCHECK(framebuffer);
+  FTL_DCHECK(framebuffer_info);
   uint32_t renderer_id = next_renderer_id_++;
   FTL_CHECK(renderer_id);
 
@@ -140,13 +142,14 @@ void CompositorEngine::CreateRenderer(
           weak->OnOutputSnapshotRequest(renderer_state_weak, frame_info);
       });
   std::unique_ptr<Output> output(
-      new GpuOutput(context_provider.Pass(), scheduler_callbacks, [
-        weak = weak_factory_.GetWeakPtr(),
-        renderer_state_weak = renderer_state->GetWeakPtr()
-      ] {
-        if (weak)
-          weak->OnOutputError(renderer_state_weak);
-      }));
+      new FramebufferOutput(std::move(framebuffer), std::move(framebuffer_info),
+                            scheduler_callbacks, [
+                              weak = weak_factory_.GetWeakPtr(),
+                              renderer_state_weak = renderer_state->GetWeakPtr()
+                            ] {
+                              if (weak)
+                                weak->OnOutputError(renderer_state_weak);
+                            }));
   renderer_state->set_output(std::move(output));
 
   // Add to registry.

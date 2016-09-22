@@ -1,0 +1,26 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("hello_compositor") {
+  deps = [
+    "//apps/mozart/services/composition/cpp",
+    "//apps/mozart/services/composition/interfaces",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/c:system",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/utility",
+    "//mojo/services/framebuffer/interfaces",
+    "//mojo/system",
+    "//third_party/skia",
+  ]
+
+  libs = [ "magenta" ]
+
+  sources = [
+    "hello.cc",
+  ]
+}

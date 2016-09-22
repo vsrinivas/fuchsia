@@ -24,7 +24,8 @@ class CompositorImpl : public mojo::gfx::composition::Compositor {
       const mojo::String& label,
       const CreateSceneCallback& callback) override;
   void CreateRenderer(
-      mojo::InterfaceHandle<mojo::ContextProvider> context_provider,
+      mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+      mojo::FramebufferInfoPtr framebuffer_info,
       mojo::InterfaceRequest<mojo::gfx::composition::Renderer> renderer_request,
       const mojo::String& label) override;
 

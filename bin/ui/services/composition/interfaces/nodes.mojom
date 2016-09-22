@@ -216,7 +216,7 @@ struct ImageNodeOp {
   // If null, draws the entire image.
   mojo.RectF? image_rect;
 
-  // The resource id of a valid |MailboxTextureResource| to draw.
+  // The resource id of a valid |ImageResource| to draw.
   // It is an error to specify a resource id that does not refer to an image
   // resource; the compositor will close the connection when the scene
   // is published.

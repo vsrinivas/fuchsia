@@ -85,7 +85,9 @@ class SceneContent : public ftl::RefCountedThreadSafe<SceneContent> {
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(SceneContent);
+  FRIEND_MAKE_REF_COUNTED(SceneContent);
   friend class SceneContentBuilder;
+
   SceneContent(const SceneLabel& label,
                uint32_t version,
                int64_t presentation_time,

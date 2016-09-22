@@ -8,6 +8,7 @@ mojom("interfaces") {
   sources = [
     "compositor.mojom",
     "hit_tests.mojom",
+    "image.mojom",
     "nodes.mojom",
     "renderers.mojom",
     "resources.mojom",

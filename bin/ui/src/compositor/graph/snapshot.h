@@ -84,6 +84,7 @@ class Snapshot : public ftl::RefCountedThreadSafe<Snapshot> {
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Snapshot);
+  FRIEND_MAKE_REF_COUNTED(Snapshot);
   friend class SnapshotBuilder;
 
   Snapshot();

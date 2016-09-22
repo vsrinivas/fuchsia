@@ -32,18 +32,11 @@ class RenderImage : public ftl::RefCountedThreadSafe<RenderImage> {
   RenderImage(const sk_sp<SkImage>& image,
               const ftl::RefPtr<Releaser>& releaser);
 
-  // Creates a new image backed by a mailbox texture.
-  // If |sync_point| is non-zero, inserts a sync point into the command stream
-  // before the image is first drawn.
+  // Creates a new image backed by a shared memory buffer.
   // When the last reference is released, the associated release task is
-  // posted to the task runner.  Returns nullptr if the mailbox texture
-  // is invalid.
-  static ftl::RefPtr<RenderImage> CreateFromMailboxTexture(
-      const GLbyte mailbox_name[GL_MAILBOX_SIZE_CHROMIUM],
-      GLuint sync_point,
-      uint32_t width,
-      uint32_t height,
-      mojo::gfx::composition::MailboxTextureResource::Origin origin,
+  // posted to the task runner.  Returns nullptr if the image is invalid.
+  static ftl::RefPtr<RenderImage> CreateFromImage(
+      mojo::gfx::composition::ImagePtr image,
       const ftl::RefPtr<ftl::TaskRunner>& task_runner,
       const ftl::Closure& release_task);
 

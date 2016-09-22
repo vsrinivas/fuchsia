@@ -4,10 +4,8 @@
 
 source_set("common") {
   sources = [
-    "backend/gpu_output.cc",
-    "backend/gpu_output.h",
-    "backend/gpu_rasterizer.cc",
-    "backend/gpu_rasterizer.h",
+    "backend/framebuffer_output.cc",
+    "backend/framebuffer_output.h",
     "backend/output.h",
     "backend/scheduler.cc",
     "backend/scheduler.h",
@@ -53,9 +51,7 @@ source_set("common") {
 
   public_deps = [
     "//apps/mozart/glue/base",
-    "//apps/mozart/glue/gl",
     "//apps/mozart/glue/skia",
-    "//apps/mozart/glue/skia/gl",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
     "//lib/ftl",
@@ -64,18 +60,16 @@ source_set("common") {
     "//mojo/public/c:MGL",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings:bindings",
+    "//mojo/services/framebuffer/interfaces",
     "//mojo/services/geometry/cpp",
     "//mojo/services/geometry/interfaces",
-    "//mojo/services/gpu/interfaces",
     "//mojo/system",
     "//third_party/skia",
   ]
 }
 
-# TODO(jeffbrown): Change back to executable once GL thunks are available
-# or after refactoring so we don't need them.
-source_set("compositor") {
-  output_name = "compositor"
+executable("compositor") {
+  output_name = "compositor_service"
 
   sources = [
     "main.cc",

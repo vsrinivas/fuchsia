@@ -67,7 +67,7 @@ const SceneContent* Snapshot::GetResolvedSceneContent(
 }
 
 SnapshotBuilder::SnapshotBuilder(std::ostream* block_log)
-    : snapshot_(new Snapshot()), block_log_(block_log) {}
+    : snapshot_(ftl::MakeRefCounted<Snapshot>()), block_log_(block_log) {}
 
 SnapshotBuilder::~SnapshotBuilder() {}
 

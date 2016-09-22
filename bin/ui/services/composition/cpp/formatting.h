@@ -25,12 +25,20 @@ std::ostream& operator<<(std::ostream& os,
                          const mojo::gfx::composition::Resource& value);
 std::ostream& operator<<(std::ostream& os,
                          const mojo::gfx::composition::SceneResource& value);
+std::ostream& operator<<(std::ostream& os,
+                         const mojo::gfx::composition::ImageResource& value);
+
+std::ostream& operator<<(std::ostream& os,
+                         const mojo::gfx::composition::Image& value);
 std::ostream& operator<<(
     std::ostream& os,
-    const mojo::gfx::composition::MailboxTextureResource& value);
+    const mojo::gfx::composition::Image::PixelFormat* value);
 std::ostream& operator<<(
     std::ostream& os,
-    const mojo::gfx::composition::MailboxTextureResource::Origin* value);
+    const mojo::gfx::composition::Image::AlphaFormat* value);
+std::ostream& operator<<(
+    std::ostream& os,
+    const mojo::gfx::composition::Image::ColorSpace* value);
 
 std::ostream& operator<<(std::ostream& os,
                          const mojo::gfx::composition::Node& value);

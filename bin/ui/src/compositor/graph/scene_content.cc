@@ -87,11 +87,11 @@ SceneContentBuilder::SceneContentBuilder(const SceneLabel& label,
                                          size_t max_resources,
                                          size_t max_nodes,
                                          std::ostream& err)
-    : content_(new SceneContent(label,
-                                version,
-                                presentation_time,
-                                max_resources,
-                                max_nodes)),
+    : content_(ftl::MakeRefCounted<SceneContent>(label,
+                                                 version,
+                                                 presentation_time,
+                                                 max_resources,
+                                                 max_nodes)),
       err_(err) {}
 
 SceneContentBuilder::~SceneContentBuilder() {}
