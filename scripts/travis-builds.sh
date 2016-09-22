@@ -18,4 +18,4 @@ echo "Downloading Toolchain"
 cp -f ./prebuilt/config.mk ./prebuilt/configs
 
 echo "Starting build '$PROJECT'"
-make $PROJECT -j16 ENABLE_BUILD_SYSROOT=true
+make $PROJECT -j16
