@@ -44,7 +44,7 @@ void Channel::Resolve(uint32_t log_id,
                       uint32_t channel_id,
                       uint32_t creation_entry_index,
                       std::unique_ptr<ChannelHandler> handler) {
-  MOJO_DCHECK(!resolved());
+  FTL_DCHECK(!resolved());
   log_id_ = log_id;
   channel_id_ = channel_id;
   creation_entry_index_ = creation_entry_index;

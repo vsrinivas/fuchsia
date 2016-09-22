@@ -119,7 +119,7 @@ class FlogViewerApp : public ApplicationImplBase {
   bool MatchOption(const std::string& arg,
                    const std::string& option,
                    std::string* string_out) {
-    MOJO_DCHECK(string_out);
+    FTL_DCHECK(string_out);
 
     if (arg.compare(0, 2, "--") != 0 ||
         arg.compare(2, option.size(), option) != 0 ||
@@ -135,7 +135,7 @@ class FlogViewerApp : public ApplicationImplBase {
   bool MatchOption(const std::string& arg,
                    const std::string& option,
                    std::vector<uint32_t>* vector_of_uint32_out) {
-    MOJO_DCHECK(vector_of_uint32_out);
+    FTL_DCHECK(vector_of_uint32_out);
 
     if (arg.compare(0, 2, "--") != 0 ||
         arg.compare(2, option.size(), option) != 0 ||
@@ -156,7 +156,7 @@ class FlogViewerApp : public ApplicationImplBase {
   }
 
   bool MatchBareArg(const std::string& arg, uint32_t* uint32_out) {
-    MOJO_DCHECK(uint32_out);
+    FTL_DCHECK(uint32_out);
 
     std::istringstream istream(arg);
     return static_cast<bool>(istream >> *uint32_out);

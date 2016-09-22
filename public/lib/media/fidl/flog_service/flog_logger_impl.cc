@@ -42,9 +42,9 @@ FlogLoggerImpl::FlogLoggerImpl(InterfaceRequest<FlogLogger> request,
 FlogLoggerImpl::~FlogLoggerImpl() {}
 
 bool FlogLoggerImpl::Accept(Message* message) {
-  DCHECK(message != nullptr);
-  DCHECK(message->data_num_bytes() > 0);
-  DCHECK(message->data() != nullptr);
+  FTL_DCHECK(message != nullptr);
+  FTL_DCHECK(message->data_num_bytes() > 0);
+  FTL_DCHECK(message->data() != nullptr);
 
   uint32_t message_size = message->data_num_bytes();
 
@@ -56,21 +56,20 @@ bool FlogLoggerImpl::Accept(Message* message) {
 
 bool FlogLoggerImpl::AcceptWithResponder(Message* message,
                                          MessageReceiverWithStatus* responder) {
-  DCHECK(false) << "FlogLogger has no methods with responses";
+  FTL_DCHECK(false) << "FlogLogger has no methods with responses";
   abort();
 }
 
 void FlogLoggerImpl::WriteData(uint32_t data_size, const void* data) {
-  DCHECK(data_size > 0);
-  DCHECK(data != nullptr);
-  DCHECK(file_);
+  FTL_DCHECK(data_size > 0);
+  FTL_DCHECK(data != nullptr);
 
   Array<uint8_t> bytes_to_write = Array<uint8_t>::New(data_size);
   memcpy(bytes_to_write.data(), data, data_size);
   file_->Write(bytes_to_write.Pass(), 0, files::Whence::FROM_CURRENT,
                [data_size](files::Error error, uint32 bytes_written) {
-                 DCHECK(error == files::Error::OK);
-                 DCHECK(bytes_written == data_size);
+                 FTL_DCHECK(error == files::Error::OK);
+                 FTL_DCHECK(bytes_written == data_size);
                  // TODO(dalesat): Handle error.
                });
 }

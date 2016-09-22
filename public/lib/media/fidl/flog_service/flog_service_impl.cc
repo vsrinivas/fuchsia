@@ -22,7 +22,7 @@ void FlogServiceImpl::OnInitialize() {
   directory_->GetExistingFiles([this](
       std::unique_ptr<std::map<uint32_t, std::string>> labels_by_id) {
     log_labels_by_id_ = std::move(labels_by_id);
-    DCHECK(log_labels_by_id_);
+    FTL_DCHECK(log_labels_by_id_);
     for (const std::pair<uint32_t, std::string>& pair : *log_labels_by_id_) {
       if (pair.first > last_allocated_log_id_) {
         last_allocated_log_id_ = pair.first;
@@ -58,7 +58,7 @@ void FlogServiceImpl::CreateLogger(InterfaceRequest<FlogLogger> logger,
 void FlogServiceImpl::GetLogDescriptions(
     const GetLogDescriptionsCallback& callback) {
   ready_.When([this, callback]() {
-    DCHECK(log_labels_by_id_);
+    FTL_DCHECK(log_labels_by_id_);
     // TODO(dalesat): Include open and new logs.
     Array<FlogDescriptionPtr> descriptions =
         Array<FlogDescriptionPtr>::New(log_labels_by_id_->size());
@@ -81,7 +81,7 @@ void FlogServiceImpl::CreateReader(InterfaceRequest<FlogReader> reader,
   // TODO(dalesat): Get rid of this capture hack once we have c++14.
   MessagePipeHandle handle = reader.PassMessagePipe().release();
   ready_.When([this, handle, log_id]() {
-    DCHECK(log_labels_by_id_);
+    FTL_DCHECK(log_labels_by_id_);
     auto iter = log_labels_by_id_->find(log_id);
     AddProduct(FlogReaderImpl::Create(
         InterfaceRequest<FlogReader>(ScopedMessagePipeHandle(handle)), log_id,
@@ -92,7 +92,7 @@ void FlogServiceImpl::CreateReader(InterfaceRequest<FlogReader> reader,
 
 void FlogServiceImpl::DeleteLog(uint32_t log_id) {
   ready_.When([this, log_id]() {
-    DCHECK(log_labels_by_id_);
+    FTL_DCHECK(log_labels_by_id_);
     auto iter = log_labels_by_id_->find(log_id);
     if (iter == log_labels_by_id_->end()) {
       return;
@@ -105,7 +105,7 @@ void FlogServiceImpl::DeleteLog(uint32_t log_id) {
 
 void FlogServiceImpl::DeleteAllLogs() {
   ready_.When([this]() {
-    DCHECK(log_labels_by_id_);
+    FTL_DCHECK(log_labels_by_id_);
 
     for (const std::pair<uint32_t, std::string>& pair : *log_labels_by_id_) {
       directory_->DeleteFile(pair.first, pair.second);

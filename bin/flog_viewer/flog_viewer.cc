@@ -32,7 +32,7 @@ void FlogViewer::Initialize(Shell* shell,
 }
 
 void FlogViewer::ProcessLogs() {
-  MOJO_DCHECK(service_);
+  FTL_DCHECK(service_);
 
   service_->GetLogDescriptions([this](Array<FlogDescriptionPtr> descriptions) {
     std::cout << std::endl;
@@ -52,8 +52,8 @@ void FlogViewer::ProcessLogs() {
 }
 
 void FlogViewer::ProcessLog(uint32_t log_id) {
-  MOJO_DCHECK(log_id != 0);
-  MOJO_DCHECK(service_);
+  FTL_DCHECK(log_id != 0);
+  FTL_DCHECK(service_);
 
   service_->CreateReader(GetProxy(&reader_), log_id);
 
@@ -88,17 +88,17 @@ void FlogViewer::ProcessLastLog(const std::string& label) {
 }
 
 void FlogViewer::DeleteLog(uint32_t log_id) {
-  MOJO_DCHECK(service_);
+  FTL_DCHECK(service_);
   service_->DeleteLog(log_id);
 }
 
 void FlogViewer::DeleteAllLogs() {
-  MOJO_DCHECK(service_);
+  FTL_DCHECK(service_);
   service_->DeleteAllLogs();
 }
 
 void FlogViewer::ProcessEntries(uint32_t start_index) {
-  MOJO_DCHECK(reader_);
+  FTL_DCHECK(reader_);
   reader_->GetEntries(start_index, kGetEntriesMaxCount,
                       [this, start_index](Array<FlogEntryPtr> entries) {
                         uint32_t entry_index = start_index;

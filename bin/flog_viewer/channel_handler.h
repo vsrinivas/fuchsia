@@ -52,17 +52,17 @@ class ChannelHandler {
   virtual void HandleMessage(Message* message) = 0;
 
   std::ostream& ReportProblem() {
-    MOJO_DCHECK(entry_) << "ReportProblem called outside of HandleMessage";
+    FTL_DCHECK(entry_) << "ReportProblem called outside of HandleMessage";
     return GetAccumulator()->ReportProblem(entry_index(), entry());
   }
 
   uint32_t entry_index() {
-    MOJO_DCHECK(entry_) << "entry_index called outside of HandleMessage";
+    FTL_DCHECK(entry_) << "entry_index called outside of HandleMessage";
     return entry_index_;
   }
 
   const FlogEntryPtr& entry() {
-    MOJO_DCHECK(entry_) << "entry called outside of HandleMessage";
+    FTL_DCHECK(entry_) << "entry called outside of HandleMessage";
     return *entry_;
   }
 

@@ -63,7 +63,7 @@ void FlogReaderImpl::GetEntries(uint32_t start_index,
     }
   }
 
-  DCHECK(current_entry_index_ == start_index);
+  FTL_DCHECK(current_entry_index_ == start_index);
 
   Array<FlogEntryPtr> entries = Array<FlogEntryPtr>::New(max_count);
 
@@ -156,12 +156,12 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
 
   // Use the stub to deserialize into entry_.
   stub_.Accept(message.get());
-  DCHECK(entry_);
+  FTL_DCHECK(entry_);
   return entry_.Pass();
 }
 
 size_t FlogReaderImpl::ReadData(size_t data_size, void* data) {
-  DCHECK(data_size != 0);
+  FTL_DCHECK(data_size != 0);
 
   while (read_buffer_bytes_remaining() == 0) {
     if (read_buffer_.size() < kReadBufferSize) {
@@ -191,7 +191,7 @@ size_t FlogReaderImpl::ReadData(size_t data_size, void* data) {
     return initial_data_size;
   }
 
-  DCHECK(read_buffer_bytes_remaining() == 0);
+  FTL_DCHECK(read_buffer_bytes_remaining() == 0);
 
   // Read the remainder.
   return ReadData(data_size - initial_data_size,

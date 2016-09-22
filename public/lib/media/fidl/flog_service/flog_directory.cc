@@ -64,7 +64,7 @@ files::FilePtr FlogDirectory::GetFile(uint32_t id,
           (create ? (files::kOpenFlagWrite | files::kOpenFlagCreate) : 0),
       [this](files::Error error) {
         if (error != files::Error::OK) {
-          DCHECK(false) << "Failed to OpenFile" << error;
+          FTL_DCHECK(false) << "Failed to OpenFile" << error;
           // TODO: Fail.
           return;
         }
@@ -97,8 +97,8 @@ std::string FlogDirectory::LogFileName(uint32_t id, const std::string& label) {
 bool FlogDirectory::ParseLogFileName(const std::string& name,
                                      uint32_t* id_out,
                                      std::string* label_out) {
-  DCHECK(id_out != nullptr);
-  DCHECK(label_out != nullptr);
+  FTL_DCHECK(id_out != nullptr);
+  FTL_DCHECK(label_out != nullptr);
 
   if (name.size() < kLogIdWidth + 2) {
     return false;

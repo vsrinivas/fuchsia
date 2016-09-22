@@ -12,7 +12,7 @@ namespace flog {
 
 // static
 void Flog::Initialize(Shell* shell, const std::string& label) {
-  MOJO_DCHECK(!logger_);
+  FTL_DCHECK(!logger_);
 
   FlogServicePtr flog_service;
   ConnectToService(shell, "mojo:flog", GetProxy(&flog_service));
@@ -85,7 +85,7 @@ bool FlogChannel::Accept(Message* message) {
 
 bool FlogChannel::AcceptWithResponder(Message* message,
                                       MessageReceiver* responder) {
-  MOJO_DCHECK(false) << "Flog doesn't support messages with responses";
+  FTL_DCHECK(false) << "Flog doesn't support messages with responses";
   abort();
 }
 
