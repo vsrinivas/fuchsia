@@ -6,9 +6,18 @@ group("ledger") {
   testonly = true
 
   deps = [
+    ":tests",
     "//apps/ledger/api",
     "//apps/ledger/abax",
     "//apps/ledger/convert",
     "//apps/ledger/glue",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "//apps/ledger/glue:unittests",
   ]
 }
