@@ -11,6 +11,7 @@ group("ledger") {
     "//apps/ledger/abax",
     "//apps/ledger/convert",
     "//apps/ledger/glue",
+    "//apps/ledger/storage",
   ]
 }
 
