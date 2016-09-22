@@ -7,9 +7,11 @@ group("ledger") {
 
   deps = [
     ":tests",
-    "//apps/ledger/api",
     "//apps/ledger/abax",
+    "//apps/ledger/api",
     "//apps/ledger/convert",
+    "//apps/ledger/fake_network_service",
+    "//apps/ledger/firebase",
     "//apps/ledger/glue",
     "//apps/ledger/storage",
   ]
@@ -19,6 +21,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "//apps/ledger/firebase:unittests",
     "//apps/ledger/glue:unittests",
   ]
 }
