@@ -25,7 +25,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     }
 
     ssize_t r;
-    if ((r = mxio_ioctl(dirfd, IOCTL_DEVICE_WATCH_DIR, NULL, 0, &watcher->h, sizeof(mx_handle_t))) < 0) {
+    if ((r = ioctl_device_watch_dir(dirfd, &watcher->h)) < 0) {
         free(watcher);
         return r;
     }
