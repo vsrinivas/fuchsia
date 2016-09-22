@@ -543,7 +543,12 @@ static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     }
 
     len = data - start;
-    if ((len != 0) && (off + len) > vn->inode.size) {
+    if (len == 0) {
+        // If more than zero bytes were requested, but zero bytes were written,
+        // return an error explicitly (rather than zero).
+        return ERR_NO_RESOURCES;
+    }
+    if ((off + len) > vn->inode.size) {
         vn->inode.size = off + len;
         minfs_sync_vnode(vn);
     }
