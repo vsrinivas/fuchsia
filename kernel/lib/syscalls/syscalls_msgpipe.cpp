@@ -19,6 +19,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
+#include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
@@ -27,6 +28,8 @@
 
 constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 1024u;
+
+constexpr size_t kMsgpipeWriteHandlesInlineCount = 8u;
 
 mx_status_t sys_msgpipe_create(user_ptr<mx_handle_t> out_handle /* array of size 2 */,
                                uint32_t flags) {
@@ -80,10 +83,9 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
-    mx_status_t status = up->GetDispatcher(handle_value, &msg_pipe,
-                                           MX_RIGHT_READ);
-    if (status != NO_ERROR)
-        return status;
+    mx_status_t result = up->GetDispatcher(handle_value, &msg_pipe, MX_RIGHT_READ);
+    if (result != NO_ERROR)
+        return result;
 
     uint32_t num_bytes = 0;
     uint32_t num_handles = 0;
@@ -104,7 +106,7 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
         return ERR_INVALID_ARGS;
 
     mxtl::unique_ptr<MessagePacket> msg;
-    status_t result = msg_pipe->Read(&num_bytes, &num_handles, &msg);
+    result = msg_pipe->Read(&num_bytes, &num_handles, &msg);
     if (result != NO_ERROR && result != ERR_BUFFER_TOO_SMALL)
         return result;
 
@@ -158,10 +160,9 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
-    mx_status_t status = up->GetDispatcher(handle_value, &msg_pipe,
-                                           MX_RIGHT_WRITE);
-    if (status != NO_ERROR)
-        return status;
+    mx_status_t result = up->GetDispatcher(handle_value, &msg_pipe, MX_RIGHT_WRITE);
+    if (result != NO_ERROR)
+        return result;
 
     bool is_reply_pipe = msg_pipe->is_reply_pipe();
 
@@ -175,7 +176,6 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     if (num_handles > kMaxMessageHandles)
         return ERR_OUT_OF_RANGE;
 
-    status_t result;
     mxtl::Array<uint8_t> bytes;
 
     if (num_bytes > 0u) {
@@ -186,22 +186,16 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
         bytes.reset(reinterpret_cast<uint8_t*>(copy), num_bytes);
     }
 
-    mxtl::unique_ptr<mx_handle_t[], mxtl::free_delete> handles;
+    AllocChecker ac;
+    mxtl::InlineArray<mx_handle_t, kMsgpipeWriteHandlesInlineCount> handles(&ac, num_handles);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
     if (num_handles > 0u) {
-        void* c_handles;
-        status_t status = magenta_copy_user_dynamic(
-            _handles.reinterpret<const void>().get(),
-            &c_handles,
-            num_handles * sizeof(_handles.get()[0]),
-            kMaxMessageHandles);
-        // |status| can be ERR_NO_MEMORY or ERR_INVALID_ARGS.
-        if (status != NO_ERROR)
-            return status;
-
-        handles.reset(static_cast<mx_handle_t*>(c_handles));
+        result = copy_from_user(handles.get(), _handles, num_handles * sizeof(mx_handle_t));
+        if (result != NO_ERROR)
+            return result;
     }
 
-    AllocChecker ac;
     mxtl::Array<Handle*> handle_list(new (&ac) Handle*[num_handles], num_handles);
     if (!ac.check())
         return ERR_NO_MEMORY;
