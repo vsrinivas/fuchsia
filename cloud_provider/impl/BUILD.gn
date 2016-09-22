@@ -1,0 +1,46 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("impl") {
+  sources = [
+    "cloud_provider_impl.cc",
+    "cloud_provider_impl.h",
+    "encoding.cc",
+    "encoding.h",
+    "timestamp_conversions.cc",
+    "timestamp_conversions.h",
+    "watch_client_impl.cc",
+    "watch_client_impl.h",
+  ]
+
+  deps = [
+    "//apps/ledger/cloud_provider/public",
+    "//apps/ledger/firebase",
+    "//apps/ledger/glue",
+    "//lib/ftl",
+  ]
+}
+
+executable("unittests") {
+  output_name = "cloud_provider_unittests"
+
+  testonly = true
+
+  sources = [
+    "cloud_provider_impl_unittest.cc",
+    "encoding_unittest.cc",
+    "timestamp_conversions_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    "//apps/ledger/cloud_provider/public",
+    "//apps/ledger/firebase",
+    "//apps/ledger/glue/test",
+    "//apps/ledger/test",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}
