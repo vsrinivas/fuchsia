@@ -73,10 +73,10 @@ int main(int argc, char** argv) {
     if ((r = devhost_cmdline(argc, argv)) < 0) {
         return r;
     }
-    init_builtin_drivers(as_root);
     if (as_root) {
         driver_add(&_driver_dmctl);
     }
+    init_builtin_drivers(as_root);
     return devhost_start();
 }
 
