@@ -63,7 +63,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     }
 
     uint64_t blocksize;
-    int rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blocksize, sizeof(blocksize));
+    ssize_t rc = ioctl_block_get_blocksize(fd, &blocksize);
     if (rc < 0) {
         printf("error getting block size\n");
         close(fd);
@@ -71,7 +71,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     }
 
     uint64_t blocks;
-    rc = mxio_ioctl(fd, IOCTL_BLOCK_GET_SIZE, NULL, 0, &blocks, sizeof(blocks));
+    rc = ioctl_block_get_size(fd, &blocks);
     if (rc < 0) {
         printf("error getting device size\n");
         close(fd);
@@ -96,7 +96,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
 static void commit(gpt_device_t* gpt, int fd) {
     printf("commit\n");
     gpt_device_sync(gpt);
-    mxio_ioctl(fd, IOCTL_BLOCK_RR_PART, NULL, 0, NULL, 0);
+    ioctl_block_rr_part(fd);
 }
 
 static void dump_partitions(const char* dev) {
