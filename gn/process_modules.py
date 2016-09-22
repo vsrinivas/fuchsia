@@ -83,7 +83,7 @@ def main():
         elif args.arch == "arm64":
             sysroot_arch_name = "aarch64-fuchsia"
         lib_root = os.path.join(
-            paths.FUCHSIA_ROOT, "buildtools", "sysroot", sysroot_arch_name, "lib")
+            paths.FUCHSIA_ROOT, "out", "sysroot", sysroot_arch_name, "lib")
         for lib in libs:
             manifest.write("lib/%s=%s\n" % (lib, os.path.join(lib_root, lib)))
         for file in amalgamation.files:
