@@ -15,7 +15,7 @@ void Flog::Initialize(Shell* shell, const std::string& label) {
   FTL_DCHECK(!logger_);
 
   FlogServicePtr flog_service;
-  ConnectToService(shell, "mojo:flog", GetProxy(&flog_service));
+  ConnectToService(shell, "mojo:flog_service", GetProxy(&flog_service));
   // TODO(dalesat): Need a thread-safe proxy.
 
   FlogLoggerPtr flog_logger;

@@ -28,7 +28,7 @@ FlogViewer::~FlogViewer() {}
 void FlogViewer::Initialize(Shell* shell,
                             const std::function<void()>& terminate_callback) {
   terminate_callback_ = terminate_callback;
-  ConnectToService(shell, "mojo:flog", GetProxy(&service_));
+  ConnectToService(shell, "mojo:flog_service", GetProxy(&service_));
 }
 
 void FlogViewer::ProcessLogs() {
@@ -62,7 +62,7 @@ void FlogViewer::ProcessLog(uint32_t log_id) {
 }
 
 void FlogViewer::ProcessLastLog(const std::string& label) {
-  MOJO_DCHECK(service_);
+  FTL_DCHECK(service_);
 
   service_->GetLogDescriptions(
       [this, label](Array<FlogDescriptionPtr> descriptions) {

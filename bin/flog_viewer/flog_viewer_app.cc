@@ -167,7 +167,7 @@ class FlogViewerApp : public ApplicationImplBase {
   bool process_last_ = false;
   std::string process_last_label_;
   bool delete_all_logs_ = false;
-  std::vector<uint32> logs_to_delete_;
+  std::vector<uint32_t> logs_to_delete_;
 };
 
 }  // namespace flog

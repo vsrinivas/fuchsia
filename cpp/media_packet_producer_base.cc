@@ -234,7 +234,7 @@ void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
   }
 
   if (updated) {
-    FLOG(log_channel_, DemandUpdated(demand_.Clone()));
+    FLOG(log_channel_, DemandUpdated(demand.Clone()));
     OnDemandUpdated(demand.min_packets_outstanding, demand.min_pts);
   }
 }
