@@ -248,20 +248,26 @@ void platform_early_init(void)
 void platform_init_smp(void)
 {
     uint32_t num_cpus = 0;
+
     status_t status = platform_enumerate_cpus(NULL, 0, &num_cpus);
     if (status != NO_ERROR) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         return;
     }
 
-    uint32_t *apic_ids = malloc(sizeof(*apic_ids) * num_cpus);
+    // allocate 2x the table for temporary work
+    uint32_t *apic_ids = malloc(sizeof(*apic_ids) * num_cpus * 2);
     if (apic_ids == NULL) {
         TRACEF("failed to allocate apic_ids table, disabling SMP\n");
         return;
     }
 
+    // a temporary list used before we filter out hyperthreaded pairs
+    uint32_t *apic_ids_temp = apic_ids + num_cpus;
+
+    // find the list of all cpu apic ids into a temporary list
     uint32_t real_num_cpus;
-    status = platform_enumerate_cpus(apic_ids, num_cpus, &real_num_cpus);
+    status = platform_enumerate_cpus(apic_ids_temp, num_cpus, &real_num_cpus);
     if (status != NO_ERROR || num_cpus != real_num_cpus) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         free(apic_ids);
@@ -271,20 +277,33 @@ void platform_init_smp(void)
     // Filter out hyperthreads if we've been told not to init them
     bool use_ht = cmdline_get_bool("smp.ht", true);
 
+    // we're implicitly running on the BSP
+    uint32_t bsp_apic_id = apic_local_id();
+
     // iterate over all the cores and optionally disable some of them
     dprintf(INFO, "cpu topology:\n");
+    uint32_t using_count = 0;
     for (uint32_t i = 0; i < num_cpus; ++i) {
         x86_cpu_topology_t topo;
-        x86_cpu_topology_decode(apic_ids[i], &topo);
+        x86_cpu_topology_decode(apic_ids_temp[i], &topo);
 
-        dprintf(INFO, "\t%u: apic id 0x%x package %u core %u smt %u\n", i, apic_ids[i], topo.package_id, topo.core_id, topo.smt_id);
+        // filter it out if it's a HT pair that we dont want to use
+        bool keep = true;
+        if (!use_ht && topo.smt_id != 0)
+            keep = false;
 
-        if (!use_ht && topo.smt_id != 0) {
-            // Delete this CPU from the list
-            apic_ids[i] = apic_ids[num_cpus - 1];
-            num_cpus--;
-        }
+        dprintf(INFO, "\t%u: apic id 0x%x package %u core %u smt %u%s%s\n",
+                i, apic_ids_temp[i], topo.package_id, topo.core_id, topo.smt_id,
+                (apic_ids_temp[i] == bsp_apic_id) ? " BSP" : "",
+                keep ? "" : " (not using)");
+
+        if (!keep)
+            continue;
+
+        // save this apic id into the primary list
+        apic_ids[using_count++] = apic_ids_temp[i];
     }
+    num_cpus = using_count;
 
     // Find the CPU count limit
     uint32_t max_cpus = cmdline_get_uint32("smp.maxcpus", SMP_MAX_CPUS);
@@ -299,7 +318,6 @@ void platform_init_smp(void)
         num_cpus = max_cpus;
     }
 
-    uint32_t bsp_apic_id = apic_local_id();
     if (num_cpus == max_cpus || !use_ht) {
         // If we are at the max number of CPUs, or have filtered out
         // hyperthreads, sanity check that the bootstrap processor is in the set.
