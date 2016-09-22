@@ -4,7 +4,7 @@
 
 import("//mojo/public/mojo_application.gni")
 
-source_set("associates") {
+source_set("view_associates_support") {
   sources = [
     "resolved_hits.cc",
     "resolved_hits.h",
@@ -15,13 +15,13 @@ source_set("associates") {
   ]
 
   deps = [
-    "//base",
+    "//apps/mozart/services/composition/cpp",
+    "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/services/views/interfaces",
+    "//lib/ftl",
     "//mojo/public/cpp/bindings",
     "//mojo/services/geometry/interfaces",
-    "//mojo/services/gfx/composition/cpp",
-    "//mojo/services/gfx/composition/interfaces",
-    "//mojo/services/ui/views/cpp",
-    "//mojo/services/ui/views/interfaces",
   ]
 }
 
@@ -34,36 +34,37 @@ source_set("mocks") {
   ]
 
   deps = [
-    ":associates",
-    "//base",
+    ":view_associates_support",
+    "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/views/interfaces",
+    "//lib/ftl",
     "//mojo/public/cpp/bindings",
     "//mojo/services/geometry/interfaces",
-    "//mojo/services/gfx/composition/interfaces",
-    "//mojo/services/ui/views/interfaces",
   ]
 }
 
-mojo_native_application("apptests") {
-  output_name = "ui_associates_apptests"
-
-  testonly = true
-
-  sources = [
-    "test_helpers.h",
-    "view_inspector_client_apptest.cc",
-    "view_tree_hit_tester_client_apptest.cc",
-  ]
-
-  deps = [
-    ":associates",
-    ":mocks",
-    "//base",
-    "//mojo/application",
-    "//mojo/application:test_support",
-    "//mojo/public/cpp/bindings:callback",
-    "//mojo/services/geometry/interfaces",
-    "//mojo/services/gfx/composition/interfaces",
-    "//mojo/services/ui/views/interfaces",
-    "//testing/gtest",
-  ]
-}
+# TODO(jpoichet) re-enable tests
+# mojo_native_application("apptests") {
+#   output_name = "ui_associates_apptests"
+#
+#   testonly = true
+#
+#   sources = [
+#     "test_helpers.h",
+#     "view_inspector_client_apptest.cc",
+#     "view_tree_hit_tester_client_apptest.cc",
+#   ]
+#
+#   deps = [
+#     ":view_associates_support",
+#     ":mocks",
+#     "//lib/ftl",
+#     "//apps/mozart/services/composition/interfaces",
+#     "//apps/mozart/services/views/interfaces",
+#     "//mojo/public/cpp/application",
+#     "//mojo/public/cpp/application:test_support",
+#     "//mojo/public/cpp/bindings:callback",
+#     "//mojo/services/geometry/interfaces",
+#     "//third_party/gtest",
+#   ]
+# }

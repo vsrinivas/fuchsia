@@ -7,8 +7,8 @@
 
 #include <unordered_map>
 
-#include "base/macros.h"
-#include "mojo/services/gfx/composition/interfaces/hit_tests.mojom.h"
+#include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
+#include "lib/ftl/macros.h"
 
 namespace mojo {
 namespace ui {
@@ -30,7 +30,7 @@ class MockHitTester : public mojo::gfx::composition::HitTester {
   mojo::PointFPtr point_;
   mojo::gfx::composition::HitTestResultPtr result_;
 
-  DISALLOW_COPY_AND_ASSIGN(MockHitTester);
+  FTL_DISALLOW_COPY_AND_ASSIGN(MockHitTester);
 };
 
 }  // namespace ui

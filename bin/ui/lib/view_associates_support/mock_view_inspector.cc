@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/ui/associates/mock_view_inspector.h"
+#include "apps/mozart/lib/view_associates_support/mock_view_inspector.h"
 
-#include "base/bind.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace ui {
@@ -19,7 +19,7 @@ MockViewInspector::~MockViewInspector() {
 void MockViewInspector::SetHitTester(
     uint32_t view_tree_token_value,
     mojo::gfx::composition::HitTester* hit_tester) {
-  DCHECK(view_tree_token_value);
+  FTL_DCHECK(view_tree_token_value);
 
   hit_testers_.erase(hit_testers_.find(view_tree_token_value),
                      hit_testers_.end());
@@ -38,7 +38,7 @@ void MockViewInspector::CloseHitTesterBindings() {
 
 void MockViewInspector::SetSceneMapping(uint32_t scene_token_value,
                                         mojo::ui::ViewTokenPtr view_token) {
-  DCHECK(scene_token_value);
+  FTL_DCHECK(scene_token_value);
 
   if (view_token)
     scene_mappings_.emplace(scene_token_value, view_token.Pass());
@@ -52,9 +52,9 @@ void MockViewInspector::GetHitTester(
     mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
         hit_tester_request,
     const GetHitTesterCallback& callback) {
-  DCHECK(view_tree_token);
-  DCHECK(view_tree_token->value);
-  DCHECK(hit_tester_request.is_pending());
+  FTL_DCHECK(view_tree_token);
+  FTL_DCHECK(view_tree_token->value);
+  FTL_DCHECK(hit_tester_request.is_pending());
 
   hit_tester_lookups_++;
 
@@ -71,15 +71,15 @@ void MockViewInspector::GetHitTester(
 void MockViewInspector::ResolveScenes(
     mojo::Array<mojo::gfx::composition::SceneTokenPtr> scene_tokens,
     const ResolveScenesCallback& callback) {
-  DCHECK(!scene_tokens.is_null());
+  FTL_DCHECK(!scene_tokens.is_null());
 
   scene_lookups_++;
 
   mojo::Array<mojo::ui::ViewTokenPtr> view_tokens;
   view_tokens.resize(scene_tokens.size());
   for (size_t i = 0; i < scene_tokens.size(); i++) {
-    DCHECK(scene_tokens[i]);
-    DCHECK(scene_tokens[i]->value);
+    FTL_DCHECK(scene_tokens[i]);
+    FTL_DCHECK(scene_tokens[i]->value);
     auto it = scene_mappings_.find(scene_tokens[i]->value);
     if (it != scene_mappings_.end())
       view_tokens[i] = it->second.Clone();

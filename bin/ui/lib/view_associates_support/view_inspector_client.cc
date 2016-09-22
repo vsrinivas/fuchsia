@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/ui/associates/view_inspector_client.h"
+#include "apps/mozart/lib/view_associates_support/view_inspector_client.h"
 
 #include <algorithm>
 
-#include "base/bind.h"
-#include "base/logging.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace mojo {
 namespace ui {
@@ -16,7 +17,7 @@ ViewInspectorClient::ViewInspectorClient(
     mojo::InterfaceHandle<mojo::ui::ViewInspector> view_inspector)
     : view_inspector_(
           mojo::ui::ViewInspectorPtr::Create(view_inspector.Pass())) {
-  DCHECK(view_inspector_);
+  FTL_DCHECK(view_inspector_);
 }
 
 ViewInspectorClient::~ViewInspectorClient() {}
@@ -24,9 +25,9 @@ ViewInspectorClient::~ViewInspectorClient() {}
 void ViewInspectorClient::ResolveHits(
     mojo::gfx::composition::HitTestResultPtr hit_test_result,
     const ResolvedHitsCallback& callback) {
-  DCHECK(hit_test_result);
+  FTL_DCHECK(hit_test_result);
 
-  scoped_ptr<ResolvedHits> resolved_hits(
+  std::unique_ptr<ResolvedHits> resolved_hits(
       new ResolvedHits(hit_test_result.Pass()));
 
   if (resolved_hits->result()->root) {
@@ -39,27 +40,32 @@ void ViewInspectorClient::ResolveHits(
       mojo::Array<uint32_t> missing_scene_token_values;
       for (const auto& token : missing_scene_tokens.storage())
         missing_scene_token_values.push_back(token->value);
-      view_inspector_->ResolveScenes(
-          missing_scene_tokens.Pass(),
-          base::Bind(&ViewInspectorClient::OnScenesResolved,
-                     base::Unretained(this), base::Passed(resolved_hits.Pass()),
-                     base::Passed(missing_scene_token_values.Pass()),
-                     callback));
+
+      std::function<void(mojo::Array<mojo::ui::ViewTokenPtr>)> resolved_scenes =
+          ftl::MakeCopyable([
+            this, hits = std::move(resolved_hits),
+            token_values = std::move(missing_scene_token_values), callback
+          ](mojo::Array<mojo::ui::ViewTokenPtr> view_tokens) mutable {
+            OnScenesResolved(std::move(hits), std::move(token_values), callback,
+                             view_tokens.Pass());
+          });
+      view_inspector_->ResolveScenes(missing_scene_tokens.Pass(),
+                                     resolved_scenes);
       return;
     }
   }
 
-  callback.Run(resolved_hits.Pass());
+  callback(std::move(resolved_hits));
 }
 
 void ViewInspectorClient::ResolveSceneHit(
     const mojo::gfx::composition::SceneHit* scene_hit,
     ResolvedHits* resolved_hits,
     mojo::Array<mojo::gfx::composition::SceneTokenPtr>* missing_scene_tokens) {
-  DCHECK(scene_hit);
-  DCHECK(scene_hit->scene_token);
-  DCHECK(resolved_hits);
-  DCHECK(missing_scene_tokens);
+  FTL_DCHECK(scene_hit);
+  FTL_DCHECK(scene_hit->scene_token);
+  FTL_DCHECK(resolved_hits);
+  FTL_DCHECK(missing_scene_tokens);
 
   const uint32_t scene_token_value = scene_hit->scene_token->value;
   if (resolved_hits->map().find(scene_token_value) ==
@@ -89,14 +95,14 @@ void ViewInspectorClient::ResolveSceneHit(
 }
 
 void ViewInspectorClient::OnScenesResolved(
-    scoped_ptr<ResolvedHits> resolved_hits,
+    std::unique_ptr<ResolvedHits> resolved_hits,
     mojo::Array<uint32_t> missing_scene_token_values,
     const ResolvedHitsCallback& callback,
     mojo::Array<mojo::ui::ViewTokenPtr> view_tokens) {
-  DCHECK(resolved_hits);
-  DCHECK(missing_scene_token_values);
-  DCHECK(view_tokens);
-  DCHECK(missing_scene_token_values.size() == view_tokens.size());
+  FTL_DCHECK(resolved_hits);
+  FTL_DCHECK(missing_scene_token_values);
+  FTL_DCHECK(view_tokens);
+  FTL_DCHECK(missing_scene_token_values.size() == view_tokens.size());
 
   for (size_t i = 0; i < view_tokens.size(); i++) {
     const uint32_t scene_token_value = missing_scene_token_values[i];
@@ -105,7 +111,7 @@ void ViewInspectorClient::OnScenesResolved(
       resolved_hits->AddMapping(scene_token_value, view_tokens[i].Pass());
   }
 
-  callback.Run(resolved_hits.Pass());
+  callback(std::move(resolved_hits));
 }
 
 }  // namespace ui

@@ -8,17 +8,17 @@
 #include <queue>
 #include <vector>
 
-#include "base/callback.h"
-#include "base/macros.h"
-#include "base/memory/ref_counted.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
-#include "mojo/ui/associates/resolved_hits.h"
+#include "apps/mozart/lib/view_associates_support/resolved_hits.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 namespace mojo {
 namespace ui {
 
 // Provides facilities for using a |ViewInspector|, including caching.
-class ViewInspectorClient : public base::RefCounted<ViewInspectorClient> {
+class ViewInspectorClient
+    : public ftl::RefCountedThreadSafe<ViewInspectorClient> {
  public:
   ViewInspectorClient(
       mojo::InterfaceHandle<mojo::ui::ViewInspector> view_inspector);
@@ -32,14 +32,14 @@ class ViewInspectorClient : public base::RefCounted<ViewInspectorClient> {
                    const ResolvedHitsCallback& callback);
 
  private:
-  friend class base::RefCounted<ViewInspectorClient>;
+  FRIEND_REF_COUNTED_THREAD_SAFE(ViewInspectorClient);
   ~ViewInspectorClient();
 
   void ResolveSceneHit(
       const mojo::gfx::composition::SceneHit* scene_hit,
       ResolvedHits* resolved_hits,
       mojo::Array<mojo::gfx::composition::SceneTokenPtr>* missing_scene_tokens);
-  void OnScenesResolved(scoped_ptr<ResolvedHits> resolved_hits,
+  void OnScenesResolved(std::unique_ptr<ResolvedHits> resolved_hits,
                         mojo::Array<uint32_t> missing_scene_token_values,
                         const ResolvedHitsCallback& callback,
                         mojo::Array<mojo::ui::ViewTokenPtr> view_tokens);
@@ -51,7 +51,7 @@ class ViewInspectorClient : public base::RefCounted<ViewInspectorClient> {
 
   std::queue<ResolvedHitsCallback> resolutions_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewInspectorClient);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewInspectorClient);
 };
 
 }  // namespace ui

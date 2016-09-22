@@ -7,15 +7,15 @@
 
 #include <utility>
 
-#include "base/callback.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "lib/ftl/functional/closure.h"
 
 namespace test {
 
 template <typename T>
-void Capture(const base::Closure& quit, T* out, T value) {
+void Capture(const ftl::Closure& quit, T* out, T value) {
   *out = std::move(value);
-  quit.Run();
+  quit();
 }
 
 inline mojo::PointFPtr MakePointF(float x, float y) {

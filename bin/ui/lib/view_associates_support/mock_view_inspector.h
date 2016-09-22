@@ -7,9 +7,9 @@
 
 #include <unordered_map>
 
-#include "base/macros.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
 
 namespace mojo {
 namespace ui {
@@ -58,7 +58,7 @@ class MockViewInspector : public ViewInspector {
   uint32_t hit_tester_lookups_ = 0u;
   uint32_t scene_lookups_ = 0u;
 
-  DISALLOW_COPY_AND_ASSIGN(MockViewInspector);
+  FTL_DISALLOW_COPY_AND_ASSIGN(MockViewInspector);
 };
 
 }  // namespace ui

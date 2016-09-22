@@ -2,30 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/ui/associates/resolved_hits.h"
+#include "apps/mozart/lib/view_associates_support/resolved_hits.h"
 
-#include "base/bind.h"
-#include "base/logging.h"
-#include "mojo/services/gfx/composition/cpp/formatting.h"
-#include "mojo/services/ui/views/cpp/formatting.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/mozart/services/views/cpp/formatting.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace ui {
 
 ResolvedHits::ResolvedHits(mojo::gfx::composition::HitTestResultPtr result)
     : result_(result.Pass()) {
-  DCHECK(result_);
+  FTL_DCHECK(result_);
 }
 
 ResolvedHits::~ResolvedHits() {}
 
 void ResolvedHits::AddMapping(uint32_t scene_token_value,
                               mojo::ui::ViewTokenPtr view_token) {
-  DCHECK(scene_token_value);
-  DCHECK(view_token);
+  FTL_DCHECK(scene_token_value);
+  FTL_DCHECK(view_token);
 
   auto pair = map_.emplace(scene_token_value, view_token.Pass());
-  DCHECK(pair.second);
+  FTL_DCHECK(pair.second);
 }
 
 std::ostream& operator<<(std::ostream& os,

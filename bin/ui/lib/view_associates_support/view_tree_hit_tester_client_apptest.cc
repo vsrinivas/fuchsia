@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/ui/associates/view_tree_hit_tester_client.h"
+#include "apps/mozart/lib/view_associates_support/view_tree_hit_tester_client.h"
 
 #include <utility>
 
-#include "base/bind.h"
-#include "base/message_loop/message_loop.h"
-#include "base/run_loop.h"
+#include "apps/mozart/lib/view_associates_support/mock_hit_tester.h"
+#include "apps/mozart/lib/view_associates_support/mock_view_inspector.h"
+#include "apps/mozart/lib/view_associates_support/test_helpers.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/ui/associates/mock_hit_tester.h"
-#include "mojo/ui/associates/mock_view_inspector.h"
-#include "mojo/ui/associates/test_helpers.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/gtest/include/gtest/gtest.h"
 
 namespace test {
 
@@ -48,10 +47,10 @@ class ViewTreeHitTesterClientTest : public mojo::test::ApplicationTestBase {
 
   mojo::ui::MockViewInspector view_inspector_;
   mojo::Binding<mojo::ui::ViewInspector> view_inspector_binding_;
-  scoped_refptr<mojo::ui::ViewInspectorClient> view_inspector_client_;
+  ftl::RefPtr<mojo::ui::ViewInspectorClient> view_inspector_client_;
 
   mojo::ui::ViewTreeTokenPtr view_tree_token_;
-  scoped_refptr<mojo::ui::ViewTreeHitTesterClient> view_tree_hit_tester_client_;
+  ftl::RefPtr<mojo::ui::ViewTreeHitTesterClient> view_tree_hit_tester_client_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ViewTreeHitTesterClientTest);

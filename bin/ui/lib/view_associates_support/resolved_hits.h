@@ -9,10 +9,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "base/callback.h"
-#include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "lib/ftl/macros.h"
 
 namespace mojo {
 namespace ui {
@@ -47,14 +45,14 @@ class ResolvedHits {
   mojo::gfx::composition::HitTestResultPtr result_;
   SceneTokenValueToViewTokenMap map_;
 
-  DISALLOW_COPY_AND_ASSIGN(ResolvedHits);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ResolvedHits);
 };
 
 // Provides a resolved description of the hit test results, or null if the
 // hit test could not be performed at all.
 // TODO(jeffbrown): Would prefer to use |std::unique_ptr| here but it doesn't
 // play nice with base::Callback right now.
-using ResolvedHitsCallback = base::Callback<void(scoped_ptr<ResolvedHits>)>;
+using ResolvedHitsCallback = std::function<void(std::unique_ptr<ResolvedHits>)>;
 
 std::ostream& operator<<(std::ostream& os, const mojo::ui::ResolvedHits& value);
 std::ostream& operator<<(std::ostream& os, const mojo::ui::ResolvedHits* value);

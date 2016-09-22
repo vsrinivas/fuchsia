@@ -7,13 +7,14 @@
 
 #include <queue>
 
-#include "base/callback.h"
-#include "base/macros.h"
-#include "base/memory/ref_counted.h"
-#include "base/memory/weak_ptr.h"
-#include "mojo/services/gfx/composition/interfaces/hit_tests.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_trees.mojom.h"
-#include "mojo/ui/associates/view_inspector_client.h"
+#include "apps/mozart/lib/view_associates_support/view_inspector_client.h"
+#include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace mojo {
 namespace ui {
@@ -21,10 +22,10 @@ namespace ui {
 // Holds a hit tester for a view tree and keeps it up to date as the
 // hit tester is invalidated.
 class ViewTreeHitTesterClient
-    : public base::RefCounted<ViewTreeHitTesterClient> {
+    : public ftl::RefCountedThreadSafe<ViewTreeHitTesterClient> {
  public:
   ViewTreeHitTesterClient(
-      const scoped_refptr<ViewInspectorClient>& view_inspector_client,
+      const ftl::RefPtr<ViewInspectorClient>& view_inspector_client,
       mojo::ui::ViewTreeTokenPtr view_tree_token);
 
   // Performs a hit test for the specified point then invokes the callback.
@@ -32,12 +33,12 @@ class ViewTreeHitTesterClient
   void HitTest(mojo::PointFPtr point, const ResolvedHitsCallback& callback);
 
   // Sets a callback to invoke when the hit tester changes.
-  void set_hit_tester_changed_callback(const base::Closure& callback) {
+  void set_hit_tester_changed_callback(const ftl::Closure& callback) {
     hit_tester_changed_callback_ = callback;
   }
 
  private:
-  friend class base::RefCounted<ViewTreeHitTesterClient>;
+  FRIEND_REF_COUNTED_THREAD_SAFE(ViewTreeHitTesterClient);
   ~ViewTreeHitTesterClient();
 
   void OnHitTestResult(mojo::gfx::composition::HitTestResultPtr result);
@@ -47,16 +48,16 @@ class ViewTreeHitTesterClient
   void OnHitTesterInvalidated(bool renderer_changed);
   void OnHitTesterDied();
 
-  scoped_refptr<ViewInspectorClient> view_inspector_client_;
+  ftl::RefPtr<ViewInspectorClient> view_inspector_client_;
   mojo::ui::ViewTreeTokenPtr view_tree_token_;
   mojo::gfx::composition::HitTesterPtr hit_tester_;
 
   std::queue<ResolvedHitsCallback> pending_callbacks_;
-  base::Closure hit_tester_changed_callback_;
+  ftl::Closure hit_tester_changed_callback_;
 
-  base::WeakPtrFactory<ViewTreeHitTesterClient> weak_factory_;
+  ftl::WeakPtrFactory<ViewTreeHitTesterClient> weak_factory_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewTreeHitTesterClient);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewTreeHitTesterClient);
 };
 
 }  // namespace ui
