@@ -25,6 +25,10 @@ static const char* exception_type_to_string(uint type) {
         return "undefined instruction";
     case EXC_GENERAL:
         return "general fault";
+    case EXC_SW_BREAKPOINT:
+        return "software breakpoint";
+    case EXC_HW_BREAKPOINT:
+        return "hardware breakpoint";
     default:
         return "unknown fault";
     }
