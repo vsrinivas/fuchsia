@@ -153,7 +153,7 @@ mx_status_t tpm_init(mx_driver_t* driver) {
     dev->protocol_id = MX_PROTOCOL_TPM;
     dev->protocol_ops = &tpm_proto;
 
-    status = device_add(dev, NULL);
+    status = device_add(dev, driver_get_misc_device());
     if (status != NO_ERROR) {
         free(dev);
         return status;

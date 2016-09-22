@@ -68,6 +68,12 @@ mx_status_t device_add_instance(mx_device_t* device, mx_device_t* parent);
 mx_status_t device_remove(mx_device_t* device);
 mx_status_t device_rebind(mx_device_t* device);
 
+// These are only for the use of core platform drivers and may return
+// NULL for non-approved callers.
+
+mx_device_t* driver_get_root_device(void);
+mx_device_t* driver_get_misc_device(void);
+
 // Devices are bindable by drivers by default.
 // This can be used to prevent a device from being bound by a driver
 void device_set_bindable(mx_device_t* dev, bool bindable);

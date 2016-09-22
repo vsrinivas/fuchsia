@@ -145,7 +145,7 @@ static mx_status_t kpci_drv_init(mx_driver_t* drv) {
     // make the pci root non-bindable
     device_set_bindable(kpci_root_dev, false);
 
-    if (device_add(kpci_root_dev, NULL) < 0) {
+    if (device_add(kpci_root_dev, driver_get_root_device()) < 0) {
         free(kpci_root_dev);
         return NO_ERROR;
     } else {

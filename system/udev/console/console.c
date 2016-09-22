@@ -85,7 +85,7 @@ static mx_protocol_device_t console_device_proto = {
 mx_status_t console_init(mx_driver_t* driver) {
     mx_device_t* dev;
     if (device_create(&dev, driver, "console", &console_device_proto) == NO_ERROR) {
-        if (device_add(dev, NULL) < 0) {
+        if (device_add(dev, driver_get_misc_device()) < 0) {
             printf("console: device_add() failed\n");
             free(dev);
         } else {

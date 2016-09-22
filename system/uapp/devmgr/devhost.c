@@ -155,6 +155,20 @@ static mx_handle_t hdevice;
 static mx_handle_t hrpc;
 static mx_handle_t hacpi;
 
+// Give core builtin drivers some control over where they publish
+// Drivers in the non-root devhost do not have access to this.
+
+static mx_device_t* the_root_device;
+static mx_device_t* the_misc_device;
+
+__EXPORT mx_device_t* driver_get_root_device(void) {
+    return the_root_device;
+}
+
+__EXPORT mx_device_t* driver_get_misc_device(void) {
+    return the_misc_device;
+}
+
 __EXPORT int devhost_init(void) {
     devhost_io_init();
 
@@ -201,6 +215,11 @@ __EXPORT int devhost_cmdline(int argc, char** argv) {
             printf("devhost: cannot create root device: %d\n", status);
             return -1;
         }
+        the_root_device = dev;
+        if ((status = device_create(&the_misc_device, &root_driver, "misc", &root_ops))) {
+            printf("devhost: cannot create misc device: %d\n", status);
+            return -1;
+        }
         as_root = true;
     } else if (!strncmp(argv[1], "pci=", 4)) {
         // The pci bus driver launches devhosts for pci devices.
@@ -222,6 +241,12 @@ __EXPORT int devhost_cmdline(int argc, char** argv) {
     if ((status = devhost_connect(dev, hdevice, hrpc)) < 0) {
         printf("devhost: cannot connect root device: %d\n", status);
         return -1;
+    }
+    if (the_misc_device) {
+        if ((status = device_add(the_misc_device, the_root_device)) < 0) {
+            printf("devhost: cannot install misc device: %d\n", status);
+            return -1;
+        }
     }
     return 0;
 }

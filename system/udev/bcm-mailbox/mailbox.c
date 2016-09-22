@@ -179,7 +179,7 @@ mx_status_t mailbox_init(mx_driver_t* driver) {
     if (status != NO_ERROR)
         return status;
 
-    status = device_add(dev, NULL);
+    status = device_add(dev, driver_get_misc_device());
     if (status != NO_ERROR) {
         free(dev);
         return status;

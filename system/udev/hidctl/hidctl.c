@@ -161,7 +161,7 @@ static mx_protocol_device_t hidctl_device_proto = {
 
 static mx_status_t hidctl_init(mx_driver_t* driver) {
     if (device_create(&hidctl_dev, driver, "hidctl", &hidctl_device_proto) == NO_ERROR) {
-        if (device_add(hidctl_dev, NULL) < 0) {
+        if (device_add(hidctl_dev, driver_get_misc_device()) < 0) {
             free(hidctl_dev);
         }
     }

@@ -94,7 +94,7 @@ static int console_starter(void* arg) {
     printf("devmgr: shell startup\n");
     for (unsigned n = 0; n < 30; n++) {
         int fd;
-        if ((fd = open("/dev/console", O_RDWR)) >= 0) {
+        if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
             devmgr_launch("mxsh:console", 1, argv_mxsh, fd);
             break;
         }

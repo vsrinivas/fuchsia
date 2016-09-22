@@ -436,7 +436,7 @@ static int mxc_dm(int argc, char** argv) {
         printf("usage: dm <command>\n");
         return -1;
     }
-    int fd = open("/dev/dmctl", O_RDWR);
+    int fd = open("/dev/class/misc/dmctl", O_RDWR);
     if (fd >= 0) {
         int r = write(fd, argv[1], strlen(argv[1]));
         if (r < 0) {

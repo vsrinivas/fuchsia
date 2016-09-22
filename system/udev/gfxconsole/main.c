@@ -141,7 +141,7 @@ static int vc_input_thread(void* arg) {
 
                     int fd;
                     // Send the reboot command to devmgr
-                    if ((fd = open("/dev/dmctl", O_WRONLY)) >= 0) {
+                    if ((fd = open("/dev/class/misc/dmctl", O_WRONLY)) >= 0) {
                         write(fd, "reboot", strlen("reboot"));
                         close(fd);
                     }

@@ -30,7 +30,7 @@ mx_status_t ktrace_init(mx_driver_t* driver) {
     mx_device_t* dev;
     if (device_create(&dev, driver, "ktrace", &ktrace_device_proto) == NO_ERROR) {
         mx_status_t status;
-        if ((status = device_add(dev, NULL)) < 0) {
+        if ((status = device_add(dev, driver_get_misc_device())) < 0) {
             free(dev);
             return status;
         }

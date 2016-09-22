@@ -618,7 +618,7 @@ static void send_debug_command(const char* cmd) {
         return;
     }
 
-    int fd = open("/dev/dmctl", O_WRONLY);
+    int fd = open("/dev/class/misc/dmctl", O_WRONLY);
     if (fd < 0) {
         return;
     }

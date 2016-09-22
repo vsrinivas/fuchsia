@@ -663,7 +663,7 @@ static hid_bus_ops_t hid_bus_ops = {
 
 static mx_status_t i8042_dev_init(i8042_device_t* dev) {
     hid_init_device(&dev->hiddev, &hid_bus_ops, dev->type, true, dev->type);
-    mx_status_t status = hid_add_device(&_driver_i8042, &dev->hiddev, NULL);
+    mx_status_t status = hid_add_device(&_driver_i8042, &dev->hiddev, driver_get_misc_device());
     if (status != NO_ERROR) {
         hid_release_device(&dev->hiddev);
         return status;
