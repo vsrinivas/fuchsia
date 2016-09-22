@@ -18,7 +18,7 @@ FlogServiceImpl::FlogServiceImpl() {}
 FlogServiceImpl::~FlogServiceImpl() {}
 
 void FlogServiceImpl::OnInitialize() {
-  directory_ = std::shared_ptr<FlogDirectory>(new FlogDirectory(shell()));
+  directory_ = std::shared_ptr<FlogDirectory>(new FlogDirectory());
   directory_->GetExistingFiles([this](
       std::unique_ptr<std::map<uint32_t, std::string>> labels_by_id) {
     log_labels_by_id_ = std::move(labels_by_id);

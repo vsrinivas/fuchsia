@@ -33,7 +33,7 @@ FlogReaderImpl::FlogReaderImpl(InterfaceRequest<FlogReader> request,
                                FlogServiceImpl* owner)
     : FlogServiceImpl::Product<FlogReader>(this, request.Pass(), owner),
       log_id_(log_id),
-      file_(directory->GetFile(log_id, label, false)) {
+      fd_(directory->GetFile(log_id, label, false)) {
   FillReadBuffer(true);
   stub_.set_sink(this);
 }
@@ -200,21 +200,23 @@ size_t FlogReaderImpl::ReadData(size_t data_size, void* data) {
 }
 
 void FlogReaderImpl::FillReadBuffer(bool restart) {
-  file_->Read(kReadBufferSize, 0,
-              restart ? files::Whence::FROM_START : files::Whence::FROM_CURRENT,
-              [this](files::Error error, Array<uint8_t> bytes_read) {
-                if (error != files::Error::OK) {
-                  std::cerr << "FlogReaderImpl::FillReadBuffer: FAULT: error "
-                            << error << std::endl;
-                  fault_ = true;
-                  read_buffer_.clear();
-                  return;
-                }
+  if (restart) {
+    lseek(fd_.get(), 0, SEEK_SET);
+  }
 
-                bytes_read.Swap(&read_buffer_);
-              });
-  file_.WaitForIncomingResponse();
+  read_buffer_.resize(kReadBufferSize);
   read_buffer_bytes_used_ = 0;
+
+  ssize_t bytes_read =
+      HANDLE_EINTR(read(fd_.get(), read_buffer_.data(), read_buffer_.size()));
+  if (bytes_read < 0) {
+    std::cerr << "FlogReaderImpl::FillReadBuffer failed" << std::endl;
+    fault_ = true;
+    read_buffer_.clear();
+    return;
+  }
+
+  read_buffer_.resize(bytes_read);
 }
 
 FlogEntryPtr FlogReaderImpl::CreateEntry(int64_t time_us, uint32_t channel_id) {

@@ -30,7 +30,7 @@ FlogLoggerImpl::FlogLoggerImpl(InterfaceRequest<FlogLogger> request,
                                std::shared_ptr<FlogDirectory> directory,
                                FlogServiceImpl* owner)
     : FlogServiceImpl::ProductBase(owner),
-      file_(directory->GetFile(log_id, label, true)) {
+      fd_(directory->GetFile(log_id, label, true)) {
   mojo::internal::MessageValidatorList validators;
   router_.reset(new mojo::internal::Router(
       request.PassMessagePipe(), std::move(validators),
@@ -64,14 +64,10 @@ void FlogLoggerImpl::WriteData(uint32_t data_size, const void* data) {
   FTL_DCHECK(data_size > 0);
   FTL_DCHECK(data != nullptr);
 
-  Array<uint8_t> bytes_to_write = Array<uint8_t>::New(data_size);
-  memcpy(bytes_to_write.data(), data, data_size);
-  file_->Write(bytes_to_write.Pass(), 0, files::Whence::FROM_CURRENT,
-               [data_size](files::Error error, uint32 bytes_written) {
-                 FTL_DCHECK(error == files::Error::OK);
-                 FTL_DCHECK(bytes_written == data_size);
-                 // TODO(dalesat): Handle error.
-               });
+  if (!ftl::WriteFileDescriptor(fd_.get(), reinterpret_cast<const char*>(data),
+                                data_size)) {
+    // TODO(dalesat): Handle error.
+  }
 }
 
 }  // namespace flog

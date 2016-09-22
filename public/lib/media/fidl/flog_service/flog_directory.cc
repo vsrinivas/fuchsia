@@ -9,8 +9,13 @@
 #include <sys/stat.h>
 
 #include <ctime>
+#include <functional>
 #include <iomanip>
+#include <map>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <utility>
 
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/eintr_wrapper.h"
@@ -18,87 +23,99 @@
 
 namespace mojo {
 namespace flog {
+namespace {
 
-FlogDirectory::FlogDirectory(Shell* shell) {
-  ConnectToService(shell, "mojo:files", GetProxy(&files_));
-  files_->OpenFileSystem("app_persistent_cache", GetProxy(&file_system_),
-                         [this](files::Error error) {
-                           files_.reset();
-                           if (error != files::Error::OK) {
-                             DCHECK(false) << "Failed to open file system: "
-                                           << error;
-                             delete this;
-                           }
-                         });
+void SafeCloseDir(DIR* dir) {
+  if (dir)
+    closedir(dir);
+}
+
+bool ForEachEntry(const std::string& path,
+                  std::function<bool(const std::string& path)> callback) {
+  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(opendir(path.c_str()),
+                                                    SafeCloseDir);
+  if (!dir.get())
+    return false;
+  for (struct dirent* entry = readdir(dir.get()); entry != nullptr;
+       entry = readdir(dir.get())) {
+    char* name = entry->d_name;
+    if (name[0]) {
+      if (name[0] == '.') {
+        if (!name[1] || (name[1] == '.' && !name[2])) {
+          // . or ..
+          continue;
+        }
+      }
+      if (!callback(path + "/" + name))
+        return false;
+    }
+  }
+  return true;
+}
+
+}  // namespace
+
+// static
+const std::string FlogDirectory::kDirName = "/app_local/flog_viewer";
+
+FlogDirectory::FlogDirectory() {
+  bool result = files::CreateDirectory(kDirName);
+  FTL_DCHECK(result) << "Failed to create directory " << kDirName;
 }
 
 FlogDirectory::~FlogDirectory() {}
 
 void FlogDirectory::GetExistingFiles(GetExistingFilesCallback callback) {
-  file_system_->Read([this, callback](files::Error error,
-                                      Array<files::DirectoryEntryPtr> entries) {
-    std::unique_ptr<std::map<uint32_t, std::string>> labels_by_id =
-        std::unique_ptr<std::map<uint32_t, std::string>>(
-            new std::map<uint32_t, std::string>);
-    for (const files::DirectoryEntryPtr& entry : entries) {
-      if (entry->type == files::FileType::REGULAR_FILE) {
-        uint32_t id;
-        std::string label;
-        if (ParseLogFileName(entry->name, &id, &label)) {
-          labels_by_id->insert(std::pair<uint32_t, std::string>(id, label));
-        }
+  auto labels_by_id = std::unique_ptr<std::map<uint32_t, std::string>>(
+      new std::map<uint32_t, std::string>);
+
+  ForEachEntry(kDirName, [this, &labels_by_id](const std::string& path) {
+    if (!files::IsDirectory(path)) {
+      uint32_t id;
+      std::string label;
+      if (ParseLogFilePath(path, &id, &label)) {
+        labels_by_id->insert(std::pair<uint32_t, std::string>(id, label));
       }
     }
 
-    callback(std::move(labels_by_id));
+    return true;
   });
+
+  callback(std::move(labels_by_id));
 }
 
-files::FilePtr FlogDirectory::GetFile(uint32_t id,
-                                      const std::string& label,
-                                      bool create) {
-  files::FilePtr file;
-  file_system_->OpenFile(
-      LogFileName(id, label), GetProxy(&file),
-      files::kOpenFlagRead |
-          (create ? (files::kOpenFlagWrite | files::kOpenFlagCreate) : 0),
-      [this](files::Error error) {
-        if (error != files::Error::OK) {
-          FTL_DCHECK(false) << "Failed to OpenFile" << error;
-          // TODO: Fail.
-          return;
-        }
-      });
-  file_system_.WaitForIncomingResponse();
-  return file.Pass();
+ftl::UniqueFD FlogDirectory::GetFile(uint32_t id,
+                                     const std::string& label,
+                                     bool create) {
+  std::string path = LogFilePath(id, label);
+  if (create) {
+    return ftl::UniqueFD(HANDLE_EINTR(creat(path.c_str(), 0644)));
+  } else {
+    return ftl::UniqueFD(open(path.c_str(), O_RDONLY));
+  }
 }
 
 void FlogDirectory::DeleteFile(uint32_t id, const std::string& label) {
-  file_system_->Delete(LogFileName(id, label), files::kDeleteFlagFileOnly,
-                       [this](files::Error error) {
-                         if (error != files::Error::OK) {
-                           DCHECK(false) << "Failed to Delete" << error;
-                           // TODO: Fail.
-                           return;
-                         }
-                       });
-  file_system_.WaitForIncomingResponse();
+  files::DeletePath(LogFilePath(id, label), false);
 }
 
-std::string FlogDirectory::LogFileName(uint32_t id, const std::string& label) {
+std::string FlogDirectory::LogFilePath(uint32_t id, const std::string& label) {
   // Format is "<id>_<label>.flog" where <id> is the kLogIdWidth-digit,
   // zero-padded info.id_ and <label> is the label.
-  std::ostringstream file_name_stream;
-  file_name_stream << std::setfill('0') << std::setw(kLogIdWidth) << id << "_"
-                   << label << ".flog";
-  return file_name_stream.str();
+  std::ostringstream file_path_stream;
+  file_path_stream << kDirName << "/" << std::setfill('0')
+                   << std::setw(kLogIdWidth) << id << "_" << label << ".flog";
+  return file_path_stream.str();
 }
 
-bool FlogDirectory::ParseLogFileName(const std::string& name,
+bool FlogDirectory::ParseLogFilePath(const std::string& path,
                                      uint32_t* id_out,
                                      std::string* label_out) {
   FTL_DCHECK(id_out != nullptr);
   FTL_DCHECK(label_out != nullptr);
+
+  size_t separator = path.rfind('/');
+  std::string name = path.substr(separator + 1);
 
   if (name.size() < kLogIdWidth + 2) {
     return false;

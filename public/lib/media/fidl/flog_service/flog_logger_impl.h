@@ -45,7 +45,7 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
                            MessageReceiverWithStatus* responder) override;
 
   std::unique_ptr<mojo::internal::Router> router_;
-  files::FilePtr file_;
+  ftl::UniqueFD fd_;
 };
 
 }  // namespace flog
