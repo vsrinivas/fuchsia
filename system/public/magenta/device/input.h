@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
 
 #define IOCTL_INPUT_GET_PROTOCOL \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INPUT, 0)
@@ -71,3 +72,36 @@ typedef struct boot_mouse_report {
 } __attribute__((packed)) boot_mouse_report_t;
 
 extern const boot_kbd_report_t report_err_rollover;
+
+IOCTL_WRAPPER_EXTERN;
+
+// ssize_t ioctl_input_get_protocol(int fd, int* out);
+IOCTL_WRAPPER_OUT(ioctl_input_get_protocol, IOCTL_INPUT_GET_PROTOCOL, int);
+
+// ssize_t ioctl_input_get_report_desc_size(int fd, size_t* out);
+IOCTL_WRAPPER_OUT(ioctl_input_get_report_desc_size, IOCTL_INPUT_GET_REPORT_DESC_SIZE, size_t);
+
+// ssize_t ioctl_input_get_report_desc(int fd, void* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_input_get_report_desc, IOCTL_INPUT_GET_REPORT_DESC, void);
+
+// ssize_t ioctl_input_get_num_reports(int fd, size_t* out);
+IOCTL_WRAPPER_OUT(ioctl_input_get_num_reports, IOCTL_INPUT_GET_NUM_REPORTS, size_t);
+
+// ssize_t ioctl_input_get_report_ids(int fd, input_report_id_t* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_input_get_report_ids, IOCTL_INPUT_GET_REPORT_IDS, input_report_id_t);
+
+// ssize_t ioctl_input_get_report_size(int fd, const input_get_report_size_t* in,
+//                                     input_report_size_t* out);
+IOCTL_WRAPPER_INOUT(ioctl_input_get_report_size, IOCTL_INPUT_GET_REPORT_SIZE,
+        input_get_report_size_t, input_report_size_t);
+
+// ssize_t ioctl_input_get_max_reportsize(int fd, input_report_size_t* out);
+IOCTL_WRAPPER_OUT(ioctl_input_get_max_reportsize, IOCTL_INPUT_GET_MAX_REPORTSIZE, input_report_size_t);
+
+// ssize_t ioctl_input_get_report(int fd, const input_get_report_t* in,
+//                                void* out, size_t out_len);
+IOCTL_WRAPPER_IN_VAROUT(ioctl_input_get_report, IOCTL_INPUT_GET_REPORT,
+        input_get_report_t, void);
+
+// ssize_t ioctl_input_set_report(int fd, const input_set_report_t* in, size_t in_len);
+IOCTL_WRAPPER_VARIN(ioctl_input_set_report, IOCTL_INPUT_SET_REPORT, input_set_report_t);

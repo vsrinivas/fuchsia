@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
 
 #define MX_DISPLAY_FLAG_HW_FRAMEBUFFER (1 << 0)
 
@@ -37,3 +38,13 @@ typedef struct {
     uint32_t height;
 } ioctl_display_region_t;
 
+IOCTL_WRAPPER_EXTERN;
+
+// ssize_t ioctl_display_get_fb(int fd, ioctl_display_get_fb_t* out);
+IOCTL_WRAPPER_OUT(ioctl_display_get_fb, IOCTL_DISPLAY_GET_FB, ioctl_display_get_fb_t);
+
+// ssize_t ioctl_display_flush_fb(int fd);
+IOCTL_WRAPPER(ioctl_display_flush_fb, IOCTL_DISPLAY_FLUSH_FB);
+
+// ssize_t ioctl_display_flush_fb_region(int fd, const ioctl_display_region_t* in);
+IOCTL_WRAPPER_IN(ioctl_display_flush_fb_region, IOCTL_DISPLAY_FLUSH_FB_REGION, ioctl_display_region_t);
