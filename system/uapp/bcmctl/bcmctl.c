@@ -25,9 +25,9 @@ void print_usage(void) {
 }
 
 int usb_pwr(int fd) {
-    int ret = mxio_ioctl(fd, IOCTL_BCM_POWER_ON_USB, NULL, 0, NULL, 0);
+    ssize_t ret = ioctl_bcm_power_on_usb(fd);
     if (ret < 0) {
-        printf("Error while enabling USB device. ret = %d\n", ret);
+        printf("Error while enabling USB device. ret = %zd\n", ret);
         return 1;
     }
 
