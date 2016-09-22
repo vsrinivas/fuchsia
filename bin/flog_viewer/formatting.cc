@@ -58,8 +58,6 @@ std::ostream& operator<<(std::ostream& os, const Channel& value) {
             << std::setfill('0') << value.channel_id();
 }
 
-}  // namespace examples
-
 int ostream_entry_second_index() {
   static int i = std::ios_base::xalloc();
   return i;
@@ -80,13 +78,12 @@ std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
   // value and print a second header.
   if (os.iword(ostream_entry_second_index()) != second) {
     os.iword(ostream_entry_second_index()) = second;
-    os << examples::AsNiceDateTime(value->time_us) << std::endl;
+    os << AsNiceDateTime(value->time_us) << std::endl;
   }
 
   // Print <microseconds> <log_id>.<channel_id>
-  return os << examples::AsMicroseconds(value->time_us) << " " << value->log_id
-            << "." << std::setw(2) << std::setfill('0') << value->channel_id
-            << " ";
+  return os << AsMicroseconds(value->time_us) << " " << value->log_id << "."
+            << std::setw(2) << std::setfill('0') << value->channel_id << " ";
 }
 
 }  // namespace flog

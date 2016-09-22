@@ -12,7 +12,6 @@
 #include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace mojo {
-namespace media {
 
 // The Incident class provides a facility for executing code as the consequence
 // of some occurrence. This can be useful for building state machines and
@@ -146,7 +145,6 @@ class ThreadsafeIncident {
   std::vector<std::function<void()>> consequences_ FTL_GUARDED_BY(mutex_);
 };
 
-}  // namespace media
 }  // namespace mojo
 
 #endif  // APPS_MEDIA_SERVICES_COMMON_INCIDENT_H_

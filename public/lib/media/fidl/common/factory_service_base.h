@@ -12,7 +12,6 @@
 #include "mojo/public/cpp/application/application_impl_base.h"
 
 namespace mojo {
-namespace media {
 
 class FactoryServiceBase : public ApplicationImplBase {
  public:
@@ -89,7 +88,6 @@ class FactoryServiceBase : public ApplicationImplBase {
     return;                                                           \
   }
 
-}  // namespace media
 }  // namespace mojo
 
 #endif  // APPS_MEDIA_SERVICES_COMMON_FACTORY_SERVICE_BASE_H_

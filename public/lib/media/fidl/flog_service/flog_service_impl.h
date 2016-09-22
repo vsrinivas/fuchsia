@@ -18,7 +18,7 @@ namespace mojo {
 namespace flog {
 
 // FlogService implementation.
-class FlogServiceImpl : public util::FactoryServiceBase, public FlogService {
+class FlogServiceImpl : public FactoryServiceBase, public FlogService {
  public:
   FlogServiceImpl();
 

@@ -7,7 +7,6 @@
 #include "lib/ftl/logging.h"
 
 namespace mojo {
-namespace media {
 
 FactoryServiceBase::ProductBase::ProductBase(FactoryServiceBase* owner)
     : owner_(owner) {
@@ -20,5 +19,4 @@ FactoryServiceBase::FactoryServiceBase() {}
 
 FactoryServiceBase::~FactoryServiceBase() {}
 
-}  // namespace media
 }  // namespace mojo

@@ -5,7 +5,6 @@
 #include "apps/media/services/common/incident.h"
 
 namespace mojo {
-namespace media {
 
 Incident::Incident() {}
 
@@ -50,5 +49,4 @@ void ThreadsafeIncident::Occur() {
   }
 }
 
-}  // namespace media
 }  // namespace mojo
