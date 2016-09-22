@@ -32,11 +32,11 @@ readonly CMAKE_SHARED_FLAGS="\
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-t target] [-o outdir] [-d destdir]\n' "$0" && exit 1
+  printf >&2 '%s: [-c] [-t target] [-o outdir] [-d destdir] [-m magenta buildroot]\n' "$0" && exit 1
 }
 
 build() {
-  local target="$1" outdir="$2" destdir="$3" clean="$4"
+  local target="$1" outdir="$2" destdir="$3" clean="$4" magenta_buildroot="$5"
   local sysroot="${destdir}/${target}-fuchsia"
 
   if [[ "${clean}" = "true" ]]; then
@@ -50,7 +50,8 @@ build() {
   esac
 
   rm -rf -- "${sysroot}" && mkdir -p -- "${sysroot}"
-  cp -r -- "${ROOT_DIR}/magenta/build-${magenta_target}/sysroot/include" "${ROOT_DIR}/magenta/build-${magenta_target}/sysroot/lib" "${sysroot}"
+  cp -r -- "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot/include" \
+    "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot/lib" "${sysroot}"
 
   mkdir -p -- "${outdir}/build-libunwind-${target}"
   pushd "${outdir}/build-libunwind-${target}"
@@ -111,17 +112,19 @@ declare CLEAN="${CLEAN:-false}"
 declare TARGET="${TARGET:-x86_64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare DESTDIR="${DESTDIR:-${OUTDIR}/sysroot}"
+declare MAGENTA_BUILDROOT="${MAGENTA_BUILDROOT:-magenta}"
 
-while getopts "cd:t:o:" opt; do
+while getopts "cd:m:t:o:" opt; do
   case "${opt}" in
     c) CLEAN="true" ;;
     d) DESTDIR="${OPTARG}" ;;
+    m) MAGENTA_BUILDROOT="${OPTARG}" ;;
     o) OUTDIR="${OPTARG}" ;;
     t) TARGET="${OPTARG}" ;;
     *) usage;;
   esac
 done
 
-readonly CLEAN TARGET OUTDIR DESTDIR
+readonly CLEAN TARGET MAGENTA_BUILDROOT OUTDIR DESTDIR
 
-build "${TARGET}" "${OUTDIR}" "${DESTDIR}" "${CLEAN}"
+build "${TARGET}" "${OUTDIR}" "${DESTDIR}" "${CLEAN}" "${MAGENTA_BUILDROOT}"
