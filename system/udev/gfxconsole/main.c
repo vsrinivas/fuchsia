@@ -212,7 +212,7 @@ static mx_status_t vc_input_device_added(int dirfd, const char* fn, void* cookie
 
     // test to see if this is a device we can read
     int proto = INPUT_PROTO_NONE;
-    int rc = mxio_ioctl(fd, IOCTL_INPUT_GET_PROTOCOL, NULL, 0, &proto, sizeof(proto));
+    ssize_t rc = ioctl_input_get_protocol(fd, &proto);
     if (rc > 0 && proto != INPUT_PROTO_KBD) {
         // skip devices that aren't keyboards
         close(fd);
