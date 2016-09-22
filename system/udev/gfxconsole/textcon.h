@@ -65,3 +65,5 @@ void tc_init(textcon_t* tc, int w, int h, void* data, uint8_t fg, uint8_t bg);
 static inline void tc_putc(textcon_t* tc, uint8_t c) {
     tc->putc(tc, c);
 }
+
+void tc_seth(textcon_t* tc, int h);

@@ -19,12 +19,29 @@ typedef struct mx_display_info {
     uint32_t flags;
 } mx_display_info_t;
 
+// Return the framebuffer
+//   in: none
+//   out: ioctl_display_get_fb_t
 #define IOCTL_DISPLAY_GET_FB \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 1)
+
+// Flush the framebuffer
+//   in: none
+//   out: none
 #define IOCTL_DISPLAY_FLUSH_FB \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 2)
+
+// Flush a region in the framebuffer
+//   in: ioctl_display_region_t
+//   out: none
 #define IOCTL_DISPLAY_FLUSH_FB_REGION \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 3)
+
+// Set display fullscreen
+//   in: uint32_t
+//   out: none
+#define IOCTL_DISPLAY_SET_FULLSCREEN \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 4)
 
 typedef struct {
     mx_handle_t vmo;

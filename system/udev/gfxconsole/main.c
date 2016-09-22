@@ -123,13 +123,13 @@ static int vc_input_thread(void* arg) {
                 break;
             case HID_USAGE_KEY_PAGEUP:
                 if (modifiers & MOD_LSHIFT || modifiers & MOD_RSHIFT) {
-                    vc_device_scroll_viewport(active_vc, -(active_vc->rows / 2));
+                    vc_device_scroll_viewport(active_vc, -(vc_device_rows(active_vc) / 2));
                     consumed = 1;
                 }
                 break;
             case HID_USAGE_KEY_PAGEDOWN:
                 if (modifiers & MOD_LSHIFT || modifiers & MOD_RSHIFT) {
-                    vc_device_scroll_viewport(active_vc, active_vc->rows / 2);
+                    vc_device_scroll_viewport(active_vc, vc_device_rows(active_vc) / 2);
                     consumed = 1;
                 }
                 break;
@@ -541,7 +541,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
 static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
     mtx_lock(&vc->lock);
-    vc->invy0 = vc->rows + 1;
+    vc->invy0 = vc_device_rows(vc) + 1;
     vc->invy1 = -1;
     const uint8_t* str = (const uint8_t*)buf;
     for (size_t i = 0; i < count; i++) {
@@ -568,7 +568,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
             return ERR_BUFFER_TOO_SMALL;
         }
         dims->width = vc->columns;
-        dims->height = vc->rows;
+        dims->height = vc_device_rows(vc);
         return sizeof(*dims);
     }
     case IOCTL_CONSOLE_SET_ACTIVE_VC:
@@ -597,6 +597,15 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
             return ERR_INVALID_ARGS;
         }
         vc_gfx_invalidate_region(vc, rect->x, rect->y, rect->width, rect->height);
+        return NO_ERROR;
+    }
+    case IOCTL_DISPLAY_SET_FULLSCREEN: {
+        if (cmdlen < sizeof(uint32_t) || !cmd) {
+            return ERR_INVALID_ARGS;
+        }
+        mtx_lock(&vc->lock);
+        vc_device_set_fullscreen(vc, !!*(uint32_t*)cmd);
+        mtx_unlock(&vc->lock);
         return NO_ERROR;
     }
     default:

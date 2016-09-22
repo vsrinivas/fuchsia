@@ -527,3 +527,37 @@ void tc_init(textcon_t* tc, int w, int h, void* data, uint8_t fg, uint8_t bg) {
     tc->bg = bg;
     tc->putc = putc_plain;
 }
+
+void tc_seth(textcon_t* tc, int h) {
+    // tc->data must be big enough for the new height
+    int y = 0;
+    if (tc->h > h) {
+        vc_char_t* dst = dataxy(tc, 0, tc->scroll_y0);
+        vc_char_t* src = dataxy(tc, 0, tc->scroll_y0 + tc->h - h);
+        vc_char_t* end = dataxy(tc, 0, tc->scroll_y1);
+        do {
+            pushline(tc, y);
+        } while (++y < tc->h - h);
+        memmove(dst, src, (end - dst) * sizeof(vc_char_t));
+        tc->y -= tc->h - h;
+    } else if (tc->h < h) {
+        do {
+            fill(dataxy(tc, 0, tc->scroll_y1 + y), ' ' | ATTR(tc), tc->w);
+        } while (++y < h - tc->h);
+        if (tc->y > h) {
+            tc->y = h;
+        }
+    }
+    // try to fixup the scroll region
+    if (tc->scroll_y0 >= h) {
+        tc->scroll_y0 = 0;
+    }
+    if (tc->scroll_y1 == tc->h) {
+        tc->scroll_y1 = h;
+    } else {
+        tc->scroll_y1 = tc->scroll_y1 >= h ? h : tc->scroll_y1;
+    }
+    tc->h = h;
+    invalidate(tc, 0, 0, tc->w, tc->h);
+    movecursor(tc, tc->x, tc->y);
+}

@@ -93,8 +93,9 @@ typedef struct vc_device {
 
 #define get_vc_device(dev) containerof(dev, vc_device_t, device)
 
-#define VC_FLAG_HASINPUT (1 << 0)
+#define VC_FLAG_HASINPUT    (1 << 0)
 #define VC_FLAG_RESETSCROLL (1 << 1)
+#define VC_FLAG_FULLSCREEN  (1 << 2)
 
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev);
 void vc_device_free(vc_device_t* dev);
@@ -106,6 +107,11 @@ void vc_device_write_status(vc_device_t* dev);
 void vc_device_render(vc_device_t* dev);
 int vc_device_get_scrollback_lines(vc_device_t* dev);
 void vc_device_scroll_viewport(vc_device_t* dev, int dir);
+void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen);
+
+static inline int vc_device_rows(vc_device_t* dev) {
+    return dev->flags & VC_FLAG_FULLSCREEN ? dev->rows : dev->rows - 1;
+}
 
 // drawing:
 

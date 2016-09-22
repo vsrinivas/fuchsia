@@ -17,12 +17,19 @@ void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y) {
 void vc_gfx_invalidate_all(vc_device_t* dev) {
     if (!dev->active)
         return;
-    gfx_copylines(dev->hw_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
-    gfx_copylines(dev->hw_gfx, dev->gfx, 0, dev->st_gfx->height, dev->gfx->height);
+    if (dev->flags & VC_FLAG_FULLSCREEN) {
+        gfx_copylines(dev->hw_gfx, dev->gfx, 0, 0, dev->gfx->height);
+    } else {
+        gfx_copylines(dev->hw_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
+        gfx_copylines(dev->hw_gfx, dev->gfx, 0, dev->st_gfx->height, dev->gfx->height - dev->st_gfx->height);
+    }
     gfx_flush(dev->hw_gfx);
 }
 
 void vc_gfx_invalidate_status(vc_device_t* dev) {
+    if (dev->flags & VC_FLAG_FULLSCREEN) {
+        return;
+    }
     gfx_copylines(dev->hw_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
     gfx_flush_rows(dev->hw_gfx, 0, dev->st_gfx->height);
 }
@@ -30,7 +37,7 @@ void vc_gfx_invalidate_status(vc_device_t* dev) {
 void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     if (!dev->active)
         return;
-    unsigned desty = dev->st_gfx->height + y * dev->charh;
+    unsigned desty = dev->flags & VC_FLAG_FULLSCREEN ? y * dev->charh : dev->st_gfx->height + y * dev->charh;
     if ((x == 0) && (w == dev->columns)) {
         gfx_copylines(dev->hw_gfx, dev->gfx, y * dev->charh, desty, h * dev->charh);
     } else {
@@ -43,7 +50,7 @@ void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, uns
 void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     if (!dev->active)
         return;
-    unsigned desty = dev->st_gfx->height + y;
+    unsigned desty = dev->flags & VC_FLAG_FULLSCREEN ? y : dev->st_gfx->height + y;
     if ((x == 0) && (w == dev->columns)) {
         gfx_copylines(dev->hw_gfx, dev->gfx, y, desty, h);
     } else {

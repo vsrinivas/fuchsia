@@ -36,7 +36,6 @@ static uint32_t default_palette[] = {
 #define DEFAULT_BACK_COLOR 0xf  // white
 
 #define SCROLLBACK_ROWS 1024 // TODO make configurable
-#define TOTAL_ROWS(dev) (dev->rows + dev->scrollback_rows)
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
 
@@ -162,7 +161,7 @@ static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
     }
     vc_device_write_status(dev);
     vc_gfx_invalidate_status(dev);
-    vc_invalidate_lines(dev, 0, dev->rows);
+    vc_invalidate_lines(dev, 0, vc_device_rows(dev));
 }
 
 static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen) {
@@ -200,7 +199,7 @@ static void vc_device_reset(vc_device_t* dev) {
     // reset the viewport position
     dev->vpy = 0;
 
-    tc_init(&dev->textcon, dev->columns, dev->rows, dev->text_buf, dev->front_color, dev->back_color);
+    tc_init(&dev->textcon, dev->columns, vc_device_rows(dev), dev->text_buf, dev->front_color, dev->back_color);
     dev->textcon.cookie = dev;
     dev->textcon.invalidate = vc_tc_invalidate;
     dev->textcon.movecursor = vc_tc_movecursor;
@@ -281,18 +280,36 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
     if (delta == 0)
         return;
     dev->vpy = vpy;
+    unsigned rows = vc_device_rows(dev);
     if (dir > 0) {
         gfx_copyrect(dev->gfx, 0, delta * dev->charh,
-                     dev->gfx->width, (dev->rows - delta) * dev->charh, 0, 0);
-        vc_device_invalidate(dev, 0, vpy + dev->rows - delta, dev->columns, delta);
+                     dev->gfx->width, (rows - delta) * dev->charh, 0, 0);
+        vc_device_invalidate(dev, 0, vpy + rows - delta, dev->columns, delta);
     } else {
         gfx_copyrect(dev->gfx, 0, 0, dev->gfx->width,
-                     (dev->rows - delta) * dev->charh, 0, delta * dev->charh);
+                     (rows - delta) * dev->charh, 0, delta * dev->charh);
         vc_device_invalidate(dev, 0, vpy, dev->columns, delta);
     }
     gfx_flush(dev->gfx);
     vc_device_write_status(dev);
     vc_gfx_invalidate_all(dev);
+}
+
+void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
+    mtx_lock(&dev->lock);
+    unsigned flags;
+    if (fullscreen) {
+        flags = dev->flags | VC_FLAG_FULLSCREEN;
+    } else {
+        flags = dev->flags & ~VC_FLAG_FULLSCREEN;
+    }
+    if (flags != dev->flags) {
+        dev->flags = flags;
+        tc_seth(&dev->textcon, vc_device_rows(dev));
+    }
+    mtx_unlock(&dev->lock);
+    gfx_flush(dev->gfx);
+    vc_device_render(dev);
 }
 
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
@@ -333,7 +350,7 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     if (!device->st_gfx)
         goto fail;
 
-    size_t sz = hw_gfx->pixelsize * hw_gfx->stride * (hw_gfx->height - device->charh);
+    size_t sz = hw_gfx->pixelsize * hw_gfx->stride * hw_gfx->height;
     if ((device->gfx_vmo = mx_vmo_create(sz)) < 0)
         goto fail;
 
@@ -345,7 +362,7 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     }
 
     // init the main surface
-    device->gfx = gfx_create_surface((void*) ptr, hw_gfx->width, hw_gfx->height - device->charh,
+    device->gfx = gfx_create_surface((void*) ptr, hw_gfx->width, hw_gfx->height,
                                      hw_gfx->stride, hw_gfx->format, 0);
     if (!device->gfx)
         goto fail;
