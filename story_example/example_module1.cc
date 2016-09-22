@@ -8,7 +8,7 @@
 #include <string>
 #include <strstream>
 
-#include "apps/modular/story_example/module_app.h"
+#include "apps/modular/application/single_service_application.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -80,6 +80,6 @@ class Module1Impl : public Module, public LinkChanged {
 
 MojoResult MojoMain(MojoHandle request) {
   FTL_LOG(INFO) << "module1 main";
-  story::ModuleApp<Module1Impl> app;
+  modular::SingleServiceApplication<Module, Module1Impl> app;
   return mojo::RunApplication(request, &app);
 }
