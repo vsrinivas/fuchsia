@@ -688,6 +688,12 @@ int open(const char* path, int flags, ...) {
     uint32_t mode = 0;
 
     if (flags & O_CREAT) {
+        if (flags & O_DIRECTORY) {
+            // The behavior of open with O_CREAT | O_DIRECTORY is underspecified
+            // in POSIX. To help avoid programmer error, we explicitly disallow
+            // the combination.
+            return ERRNO(EINVAL);
+        }
         va_list ap;
         va_start(ap, flags);
         mode = va_arg(ap, uint32_t) & 0777;
