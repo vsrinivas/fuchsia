@@ -89,7 +89,7 @@ class FlogViewer {
   std::map<uint64_t, std::shared_ptr<Channel>> channels_by_subject_address_;
 };
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo
 
-#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_

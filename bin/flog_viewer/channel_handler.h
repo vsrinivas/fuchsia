@@ -75,7 +75,7 @@ class ChannelHandler {
   ChannelLookupCallback channel_lookup_callback_;
 };
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo
 
-#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_HANDLER_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_HANDLER_H_

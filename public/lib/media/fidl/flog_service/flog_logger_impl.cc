@@ -82,7 +82,7 @@ bool FlogLoggerImpl::Accept(Message* message) {
   DCHECK(message->data_num_bytes() > 0);
   DCHECK(message->data() != nullptr);
 
-    uint32_t message_size = message->data_num_bytes();
+  uint32_t message_size = message->data_num_bytes();
 
   WriteData(sizeof(message_size), &message_size);
   WriteData(message_size, message->data());

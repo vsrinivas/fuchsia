@@ -106,5 +106,5 @@ std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
             << " ";
 }
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo

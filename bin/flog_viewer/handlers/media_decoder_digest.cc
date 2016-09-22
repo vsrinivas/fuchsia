@@ -69,6 +69,6 @@ void MediaDecoderAccumulator::Print(std::ostream& os) {
   os << outdent;
 }
 
-} // namespace handlers
-} // namespace flog
-} // namespace mojo
+}  // namespace handlers
+}  // namespace flog
+}  // namespace mojo

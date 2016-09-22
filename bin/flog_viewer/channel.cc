@@ -66,5 +66,5 @@ void Channel::PrintAccumulator(std::ostream& os) const {
   accumulator->Print(os);
 }
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo

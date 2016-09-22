@@ -20,13 +20,14 @@ namespace flog {
 // produce an accumulator, which reflects the handler's understanding of the
 // messages that have been handled.
 class Accumulator {
-public:
+ public:
   class Problem {
-  public:
+   public:
     Problem(uint32_t log_id, uint32_t channel_id, uint32_t entry_index);
 
-    Problem(Problem &&other)
-        : log_id_(other.log_id()), channel_id_(other.channel_id()),
+    Problem(Problem&& other)
+        : log_id_(other.log_id()),
+          channel_id_(other.channel_id()),
           entry_index_(other.entry_index()) {
       stream_ << other.message();
     }
@@ -36,10 +37,10 @@ public:
     uint32_t log_id() const { return log_id_; }
     uint32_t channel_id() const { return channel_id_; }
     uint32_t entry_index() const { return entry_index_; }
-    std::ostream &stream() { return stream_; }
+    std::ostream& stream() { return stream_; }
     std::string message() const { return stream_.str(); }
 
-  private:
+   private:
     uint32_t log_id_;
     uint32_t channel_id_;
     uint32_t entry_index_;
@@ -49,23 +50,23 @@ public:
   virtual ~Accumulator();
 
   // Report a problem.
-  std::ostream &ReportProblem(uint32_t entry_index, const FlogEntryPtr &entry);
+  std::ostream& ReportProblem(uint32_t entry_index, const FlogEntryPtr& entry);
 
   // Prints reported problems.
-  void PrintProblems(std::ostream &os);
+  void PrintProblems(std::ostream& os);
 
   // Prints the contents of the accumulator to os. The default implementation
   // calls PrintProblems.
-  virtual void Print(std::ostream &os);
+  virtual void Print(std::ostream& os);
 
-protected:
+ protected:
   Accumulator();
 
-private:
+ private:
   std::vector<Problem> problems_;
 };
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo
 
-#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_

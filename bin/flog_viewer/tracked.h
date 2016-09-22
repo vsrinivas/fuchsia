@@ -12,7 +12,7 @@ namespace flog {
 
 // Tracks a sequence of values that may be added or removed.
 class Tracked {
-public:
+ public:
   // Returns the smallest value that was ever added.
   uint64_t min() const { return min_; }
 
@@ -80,7 +80,7 @@ public:
     outstanding_total_ -= t;
   }
 
-private:
+ private:
   uint64_t min_ = std::numeric_limits<uint64_t>::max();
   uint64_t curr_ = uint64_t();
   uint64_t max_ = std::numeric_limits<uint64_t>::min();
@@ -92,7 +92,7 @@ private:
   uint64_t max_outstanding_total_ = std::numeric_limits<uint64_t>::min();
 };
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo
 
-#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_

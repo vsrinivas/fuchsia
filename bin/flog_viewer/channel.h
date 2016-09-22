@@ -69,7 +69,7 @@ class Channel {
   bool has_parent_ = false;
 };
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo
 
-#endif // APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_
+#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_

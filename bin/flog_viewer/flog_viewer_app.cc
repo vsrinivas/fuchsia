@@ -170,8 +170,8 @@ class FlogViewerApp : public ApplicationImplBase {
   std::vector<uint32> logs_to_delete_;
 };
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo
 
 MojoResult MojoMain(MojoHandle application_request) {
   mojo::flog::FlogViewerApp flog_viewer_app;

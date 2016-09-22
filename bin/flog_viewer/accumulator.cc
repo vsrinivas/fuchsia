@@ -45,5 +45,5 @@ Accumulator::Problem::Problem(uint32_t log_id,
 
 Accumulator::Problem::~Problem() {}
 
-} // namespace flog
-} // namespace mojo
+}  // namespace flog
+}  // namespace mojo
