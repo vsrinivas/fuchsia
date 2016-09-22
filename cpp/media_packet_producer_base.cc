@@ -16,13 +16,17 @@ MediaPacketProducerBase::MediaPacketProducerBase() {
 }
 
 MediaPacketProducerBase::~MediaPacketProducerBase() {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
 }
 
 void MediaPacketProducerBase::Connect(
     MediaPacketConsumerPtr consumer,
     const MediaPacketProducer::ConnectCallback& callback) {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
   FTL_DCHECK(consumer);
 
   FLOG(log_channel_, Connecting());
@@ -35,7 +39,9 @@ void MediaPacketProducerBase::Connect(
 }
 
 void MediaPacketProducerBase::Reset() {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
   FLOG(log_channel_, Resetting());
   Disconnect();
   allocator_.Reset();
@@ -43,7 +49,9 @@ void MediaPacketProducerBase::Reset() {
 
 void MediaPacketProducerBase::FlushConsumer(
     const MediaPacketConsumer::FlushCallback& callback) {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
   FTL_DCHECK(consumer_.is_bound());
 
   FLOG(log_channel_, RequestingFlush());
@@ -87,7 +95,9 @@ void MediaPacketProducerBase::ProducePacket(
     int64_t pts,
     bool end_of_stream,
     const ProducePacketCallback& callback) {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
   FTL_DCHECK(size == 0 || payload != nullptr);
 
   if (!consumer_.is_bound()) {
@@ -134,7 +144,9 @@ void MediaPacketProducerBase::ProducePacket(
   consumer_->SupplyPacket(
       media_packet.Pass(),
       [this, callback, label](MediaPacketDemandPtr demand) {
+#ifndef NDEBUG
         FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
 
         uint32_t packets_outstanding;
 
@@ -175,25 +187,33 @@ bool MediaPacketProducerBase::ShouldProducePacket(
 }
 
 void MediaPacketProducerBase::OnFailure() {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
 }
 
 void MediaPacketProducerBase::HandleDemandUpdate(MediaPacketDemandPtr demand) {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
   if (demand) {
     UpdateDemand(*demand);
   }
 
   if (consumer_.is_bound()) {
     consumer_->PullDemandUpdate([this](MediaPacketDemandPtr demand) {
+#ifndef NDEBUG
       FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
       HandleDemandUpdate(demand.Pass());
     });
   }
 }
 
 void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
+#ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
 
   if (flush_in_progress_) {
     // While flushing, we ignore demand changes, because the consumer may have

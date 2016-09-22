@@ -126,20 +126,26 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     // Prevents any subsequent calls to the owner.
     void Detach() {
+#ifndef NDEBUG
       FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
       owner_ = nullptr;
     }
 
     // Records the arrival of a packet.
     void OnPacketArrival() {
+#ifndef NDEBUG
       FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
       ++packets_outstanding_;
     }
 
     // Records the departure of a packet and returns the current demand update,
     // if any.
     MediaPacketDemandPtr OnPacketDeparture(uint64_t label) {
+#ifndef NDEBUG
       FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
       --packets_outstanding_;
       return (owner_ == nullptr) ? nullptr
                                  : owner_->GetDemandForPacketDeparture(label);
@@ -147,7 +153,9 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     // Returns number of packets currently outstanding.
     size_t packets_outstanding() {
+#ifndef NDEBUG
       FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
       return packets_outstanding_;
     }
 
