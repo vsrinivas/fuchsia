@@ -1,0 +1,69 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+
+source_set("associates") {
+  sources = [
+    "resolved_hits.cc",
+    "resolved_hits.h",
+    "view_inspector_client.cc",
+    "view_inspector_client.h",
+    "view_tree_hit_tester_client.cc",
+    "view_tree_hit_tester_client.h",
+  ]
+
+  deps = [
+    "//base",
+    "//mojo/public/cpp/bindings",
+    "//mojo/services/geometry/interfaces",
+    "//mojo/services/gfx/composition/cpp",
+    "//mojo/services/gfx/composition/interfaces",
+    "//mojo/services/ui/views/cpp",
+    "//mojo/services/ui/views/interfaces",
+  ]
+}
+
+source_set("mocks") {
+  sources = [
+    "mock_hit_tester.cc",
+    "mock_hit_tester.h",
+    "mock_view_inspector.cc",
+    "mock_view_inspector.h",
+  ]
+
+  deps = [
+    ":associates",
+    "//base",
+    "//mojo/public/cpp/bindings",
+    "//mojo/services/geometry/interfaces",
+    "//mojo/services/gfx/composition/interfaces",
+    "//mojo/services/ui/views/interfaces",
+  ]
+}
+
+mojo_native_application("apptests") {
+  output_name = "ui_associates_apptests"
+
+  testonly = true
+
+  sources = [
+    "test_helpers.h",
+    "view_inspector_client_apptest.cc",
+    "view_tree_hit_tester_client_apptest.cc",
+  ]
+
+  deps = [
+    ":associates",
+    ":mocks",
+    "//base",
+    "//mojo/application",
+    "//mojo/application:test_support",
+    "//mojo/public/cpp/bindings:callback",
+    "//mojo/services/geometry/interfaces",
+    "//mojo/services/gfx/composition/interfaces",
+    "//mojo/services/ui/views/interfaces",
+    "//testing/gtest",
+  ]
+}
