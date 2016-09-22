@@ -7,8 +7,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-#define IOCTL_WRAPPER_EXTERN \
-extern ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len)
+extern ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 
 #define IOCTL_WRAPPER(name, op) \
 static inline ssize_t name(int fd) {             \

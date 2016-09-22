@@ -18,8 +18,6 @@ typedef struct {
     uint32_t height;
 } ioctl_console_dimensions_t;
 
-IOCTL_WRAPPER_EXTERN;
-
 // ssize_t ioctl_console_get_dimensions(int fd, ioctl_console_dimensions_t* out);
 IOCTL_WRAPPER_OUT(ioctl_console_get_dimensions, IOCTL_CONSOLE_GET_DIMENSIONS, ioctl_console_dimensions_t);
 

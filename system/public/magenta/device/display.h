@@ -38,8 +38,6 @@ typedef struct {
     uint32_t height;
 } ioctl_display_region_t;
 
-IOCTL_WRAPPER_EXTERN;
-
 // ssize_t ioctl_display_get_fb(int fd, ioctl_display_get_fb_t* out);
 IOCTL_WRAPPER_OUT(ioctl_display_get_fb, IOCTL_DISPLAY_GET_FB, ioctl_display_get_fb_t);
 
