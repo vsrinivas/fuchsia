@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -19,6 +20,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
+#include <magenta/assert.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
@@ -29,135 +31,19 @@
 
 #include <magenta/listnode.h>
 
-#include "mxsh.h"
+#include <linenoise/linenoise.h>
 
-#define LINE_MAX 1024
+#include "mxsh.h"
 
 static bool interactive = false;
 static mx_handle_t job_handle;
 static mx_handle_t app_env_handle;
 
-void cputc(uint8_t ch) {
-    write(1, &ch, 1);
-}
-
-void cputs(const char* s, size_t len) {
+static void cputs(const char* s, size_t len) {
     write(1, s, len);
 }
 
-int cgetc(void) {
-    uint8_t ch;
-    for (;;) {
-        int r = read(0, &ch, 1);
-        if (r < 0) {
-            return r;
-        }
-        if (r == 1) {
-            return ch;
-        }
-    }
-}
-
-void beep(void) {
-}
-
-#define CTRL_C 3
-#define BACKSPACE 8
-#define TAB 9
-#define NL 10
-#define CTRL_L 12
-#define CR 13
-#define ESC 27
-#define DELETE 127
-
-#define EXT_UP 'A'
-#define EXT_DOWN 'B'
-#define EXT_RIGHT 'C'
-#define EXT_LEFT 'D'
-
-typedef struct {
-    list_node_t node;
-    int len;
-    char line[LINE_MAX];
-} hitem;
-
-list_node_t history = LIST_INITIAL_VALUE(history);
-
-static const char nl[2] = {'\r', '\n'};
-static const char erase_line[5] = {ESC, '[', '2', 'K', '\r'};
-static const char cursor_left[3] = {ESC, '[', 'D'};
-static const char cursor_right[3] = {ESC, '[', 'C'};
-
-typedef struct {
-    int pos;
-    int len;
-    int save_len;
-    hitem* item;
-    char save[LINE_MAX];
-    char line[LINE_MAX + 1];
-} editstate;
-
-void history_add(editstate* es) {
-    hitem* item;
-    if (es->len && ((item = malloc(sizeof(hitem))) != NULL)) {
-        item->len = es->len;
-        memset(item->line, 0, sizeof(item->line));
-        memcpy(item->line, es->line, es->len);
-        list_add_tail(&history, &item->node);
-    }
-}
-
-int history_up(editstate* es) {
-    hitem* next;
-    if (es->item) {
-        next = list_prev_type(&history, &es->item->node, hitem, node);
-        if (next != NULL) {
-            es->item = next;
-            memcpy(es->line, es->item->line, es->item->len);
-            es->pos = es->len = es->item->len;
-            cputs(erase_line, sizeof(erase_line));
-            return 1;
-        } else {
-            beep();
-            return 0;
-        }
-    } else {
-        next = list_peek_tail_type(&history, hitem, node);
-        if (next != NULL) {
-            es->item = next;
-            memset(es->save, 0, sizeof(es->save));
-            memcpy(es->save, es->line, es->len);
-            es->save_len = es->len;
-            es->pos = es->len = es->item->len;
-            memcpy(es->line, es->item->line, es->len);
-            cputs(erase_line, sizeof(erase_line));
-            return 1;
-        } else {
-            return 0;
-        }
-    }
-}
-
-int history_down(editstate* es) {
-    if (es->item == NULL) {
-        beep();
-        return 0;
-    }
-    hitem* next = list_next_type(&history, &es->item->node, hitem, node);
-    if (next != NULL) {
-        es->item = next;
-        es->pos = es->len = es->item->len;
-        memcpy(es->line, es->item->line, es->len);
-    } else {
-        memcpy(es->line, es->save, es->save_len);
-        es->pos = es->len = es->save_len;
-        es->item = NULL;
-    }
-    cputs(erase_line, sizeof(erase_line));
-    return 1;
-}
-
-void settitle(const char* title) {
+static void settitle(const char* title) {
     if (!interactive) {
         return;
     }
@@ -173,238 +59,183 @@ void settitle(const char* title) {
     cputs(str, n + 1);
 }
 
-static void tab_complete(editstate* es) {
-    size_t token_start = 0;
+static const char* system_paths[] = {
+    "/system/bin",
+    "/boot/bin",
+    NULL,
+};
+
+typedef struct {
+    // An index into the tokenized string which points at the first
+    // character of the last token (ie space separated component) of
+    // the line.
+    size_t start;
+    // Whether there are multiple non-enviroment components of the
+    // line to tokenize. For example:
+    //     foo          # found_command = false;
+    //     foo bar      # found_command = true;
+    //     FOO=BAR quux # found_command = false;
+    bool found_command;
+    // Whether the end of the line is in a space-free string of the
+    // form 'FOO=BAR', which is the syntax to set an environment
+    // variable.
+    bool in_env;
+} token_t;
+
+static token_t tokenize(const char* line, size_t line_length) {
+    token_t token = {
+        .start = 0u,
+        .found_command = false,
+        .in_env = false,
+    };
     bool in_token = false;
-    bool in_env = false;
-    bool found_command = false;
-    char tmp[2048];
-    const char* path = NULL;
-    char* prefix = NULL;
-    size_t prefix_len;
-    DIR* dir;
-    struct dirent *de;
-    char result[2048];
-    size_t result_count = 0;
-    size_t result_len;
-    struct stat s;
 
-    for (size_t i = 0; i < (size_t)es->pos; i++) {
-        if (es->line[i] == ' ') {
-            token_start = i + 1;
+    for (size_t i = 0; i < line_length; i++) {
+        if (line[i] == ' ') {
+            token.start = i + 1;
 
-            if (in_token && ! in_env) {
-                found_command = true;
+            if (in_token && !token.in_env) {
+                token.found_command = true;
             }
 
             in_token = false;
-            in_env = false;
+            token.in_env = false;
             continue;
         }
 
         in_token = true;
-        in_env = in_env || es->line[i] == '=';
+        token.in_env = token.in_env || line[i] == '=';
     }
 
-    if (in_env) {
-        return;
-    }
-
-    strcpy(tmp, es->line + token_start);
-    tmp[es->pos - token_start] = '\0';
-
-    prefix = strrchr(tmp, '/');
-
-    if (prefix) {
-        *(prefix++) = '\0';
-        path = tmp;
-
-        if (!*path) {
-            path = "/";
-        }
-    } else {
-        prefix = tmp;
-
-        if (!found_command) {
-            path = "/boot/bin";
-        } else {
-            path = ".";
-        }
-    }
-
-    prefix_len = strlen(prefix);
-
-    dir = opendir(path);
-
-    if (!dir) {
-        return;
-    }
-
-    while ((de = readdir(dir)) != NULL) {
-        if (strncmp(prefix, de->d_name, prefix_len)) {
-            continue;
-        }
-
-        if (!(result_count++)) {
-            strcpy(result, de->d_name);
-            result_len = strlen(result);
-            continue;
-        }
-
-        for (result_len = 0;
-             de->d_name[result_len] &&
-                 result[result_len] == de->d_name[result_len];
-             result_len++);
-
-        if (result_len <= prefix_len) {
-            closedir(dir);
-            return;
-        }
-
-        result[result_len] = '\0';
-    }
-
-    if (result_count == 0) {
-        closedir(dir);
-        return;
-    }
-
-    if (result_count == 1
-        && result_len < sizeof(result) - 1
-        && snprintf(tmp, sizeof(tmp), "%s/%s", path, result) < (int)sizeof(tmp)) {
-
-        if (stat(tmp, &s) < 0 || !(s.st_mode & S_IFDIR)) {
-            strcat(result, " ");
-        } else {
-            strcat(result, "/");
-        }
-
-        result_len++;
-    }
-
-    memmove(es->line + es->pos + result_len - prefix_len,
-            es->line + es->pos, es->len - es->pos);
-    memcpy(es->line + es->pos - prefix_len, result, result_len);
-    es->pos += result_len - prefix_len;
-    es->len += result_len - prefix_len;
-    closedir(dir);
+    return token;
 }
 
-int readline(editstate* es) {
-    int a, b, c;
-    es->len = 0;
-    es->pos = 0;
-    es->save_len = 0;
-    es->item = NULL;
-again:
-    cputc('>');
-    cputc(' ');
-    if (es->len) {
-        cputs(es->line, es->len);
-    }
-    if (es->len != es->pos) {
-        char tmp[16];
-        sprintf(tmp, "%c[%dG", ESC, es->pos + 3);
-        cputs(tmp, strlen(tmp));
-    }
-    for (;;) {
-        if ((c = cgetc()) < 0) {
-            es->item = NULL;
-            return c;
-        }
-        if ((c >= ' ') && (c < 127)) {
-            if (es->len < LINE_MAX) {
-                if (es->pos != es->len) {
-                    memmove(es->line + es->pos + 1, es->line + es->pos, es->len - es->pos);
-                    // expensive full redraw of line
-                    es->len++;
-                    es->line[es->pos++] = c;
-                    es->item = NULL;
-                    cputs(erase_line, sizeof(erase_line));
-                    goto again;
-                }
-                es->len++;
-                es->line[es->pos++] = c;
-                cputc(c);
-            }
-            beep();
+typedef struct {
+    const char* line_prefix;
+    const char* line_separator;
+    const char* file_prefix;
+} completion_state_t;
+
+// Generate file name completions. |dir| is the directory to for
+// matching filenames. File names must match |state->file_prefix| in
+// order to be entered into |completions|. |state->line_prefix| and
+// |state->line_separator| begin the line before the file completion.
+static void complete_at_dir(DIR* dir, completion_state_t* state,
+                            linenoiseCompletions* completions) {
+    DEBUG_ASSERT(strchr(state->file_prefix, '/') == NULL);
+    size_t file_prefix_len = strlen(state->file_prefix);
+
+    struct dirent *de;
+    while ((de = readdir(dir)) != NULL) {
+        if (strncmp(state->file_prefix, de->d_name, file_prefix_len)) {
             continue;
         }
-        switch (c) {
-        case TAB:
-            tab_complete(es);
-            cputs(erase_line, sizeof(erase_line));
-            goto again;
-        case CTRL_C:
-            es->len = 0;
-            es->pos = 0;
-            es->item = NULL;
-            cputs(nl, sizeof(nl));
-            goto again;
-        case CTRL_L:
-            cputs(erase_line, sizeof(erase_line));
-            goto again;
-        case BACKSPACE:
-        case DELETE:
-            if (es->pos > 0) {
-                es->pos--;
-                es->len--;
-                memmove(es->line + es->pos, es->line + es->pos + 1, es->len - es->pos);
-                // expensive full redraw of line
-                es->item = NULL;
-                cputs(erase_line, sizeof(erase_line));
-                goto again;
-            } else {
-                beep();
-            }
-            es->item = NULL;
+        if (!strcmp(de->d_name, ".")) {
             continue;
-        case NL:
-        case CR:
-            es->line[es->len] = 0;
-            cputs(nl, sizeof(nl));
-            history_add(es);
-            return 0;
-        case ESC:
-            if ((a = cgetc()) < 0) {
-                return a;
-            }
-            if ((b = cgetc()) < 0) {
-                return b;
-            }
-            if (a != '[') {
-                break;
-            }
-            switch (b) {
-            case EXT_UP:
-                if (history_up(es)) {
-                    goto again;
-                }
-                break;
-            case EXT_DOWN:
-                if (history_down(es)) {
-                    goto again;
-                }
-                break;
-            case EXT_RIGHT:
-                if (es->pos < es->len) {
-                    es->pos++;
-                    cputs(cursor_right, sizeof(cursor_right));
-                } else {
-                    beep();
-                }
-                break;
-            case EXT_LEFT:
-                if (es->pos > 0) {
-                    es->pos--;
-                    cputs(cursor_left, sizeof(cursor_left));
-                } else {
-                    beep();
-                }
-                break;
-            }
         }
-        beep();
+        if (!strcmp(de->d_name, "..")) {
+            continue;
+        }
+
+        char completion[LINE_MAX];
+        strncpy(completion, state->line_prefix, sizeof(completion));
+        completion[sizeof(completion) - 1] = '\0';
+        strncat(completion, state->line_separator, sizeof(completion));
+        strncat(completion, de->d_name, sizeof(completion));
+
+        linenoiseAddCompletion(completions, completion);
+    }
+}
+
+static void tab_complete(const char* line, linenoiseCompletions* completions) {
+    size_t input_line_length = strlen(line);
+
+    token_t token = tokenize(line, input_line_length);
+
+    if (token.in_env) {
+        // We can't tab complete environment variables.
+        return;
+    }
+
+    char buf[LINE_MAX];
+    size_t token_length = input_line_length - token.start;
+    if (token_length >= sizeof(buf)) {
+        return;
+    }
+    strncpy(buf, line, sizeof(buf));
+    char* partial_path = buf + token.start;
+
+    // The following variables are set by the following block of code
+    // in each of three different cases:
+    //
+    // 1. There is no slash in the last token, and we are giving an
+    //    argument to a command. An example:
+    //        foo bar ba
+    //    We are searching the current directory (".") for files
+    //    matching the prefix "ba", to join with a space to the line
+    //    prefix "foo bar".
+    //
+    // 2. There is no slash in the only token. An example:
+    //        fo
+    //    We are searching the system paths (currently "/system/bin"
+    //    and "/boot/bin") for files matching the prefix "fo". There
+    //    is no line prefix or separator in this case.
+    //
+    // 3. There is a slash in the last token. An example:
+    //        foo bar baz/quu
+    //    In this case, we are searching the directory specified by
+    //    the token (up until the final '/', so "baz" in this case)
+    //    for files with the prefix "quu", to join with a slash to the
+    //    line prefix "foo bar baz".
+    completion_state_t completion_state;
+    const char** paths;
+
+    // |paths| for cases 1 and 3 respectively.
+    const char* local_paths[] = { ".", NULL };
+    const char* partial_paths[] = { partial_path, NULL };
+
+    char* file_prefix = strrchr(partial_path, '/');
+    if (file_prefix == NULL) {
+        file_prefix = partial_path;
+        if (token.found_command) {
+            // Case 1.
+            // Because we are in a command, partial_path[-1] is a
+            // space we want to zero out.
+            DEBUG_ASSERT(token.start > 0);
+            DEBUG_ASSERT(partial_path[-1] == ' ');
+            partial_path[-1] = '\0';
+
+            completion_state.line_prefix = buf;
+            completion_state.line_separator = " ";
+            completion_state.file_prefix = file_prefix;
+            paths = local_paths;
+        } else {
+            // Case 2.
+            completion_state.line_prefix = "";
+            completion_state.line_separator = "";
+            completion_state.file_prefix = file_prefix;
+            paths = system_paths;
+        }
+    } else {
+        // Case 3.
+        // Because we are in a multiple component file path,
+        // *file_prefix is a '/' we want to zero out.
+        DEBUG_ASSERT(*file_prefix == '/');
+        *file_prefix = '\0';
+
+        completion_state.line_prefix = buf;
+        completion_state.line_separator = "/";
+        completion_state.file_prefix = file_prefix + 1;
+        paths = partial_paths;
+    }
+
+    for (; *paths != NULL; paths++) {
+        DIR* dir = opendir(*paths);
+        if (dir == NULL) {
+            continue;
+        }
+        complete_at_dir(dir, &completion_state, completions);
+        closedir(dir);
     }
 }
 
@@ -427,7 +258,7 @@ static int split(char* line, char* argv[], int max) {
     return n;
 }
 
-void joinproc(mx_handle_t p) {
+static void joinproc(mx_handle_t p) {
     mx_status_t r;
 
     r = mx_handle_wait_one(p, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
@@ -448,13 +279,12 @@ void joinproc(mx_handle_t p) {
     mx_handle_close(p);
 }
 
-void* joiner(void* arg) {
+static void* joiner(void* arg) {
     joinproc((uintptr_t)arg);
     return NULL;
 }
 
-mx_status_t lp_setup(launchpad_t** lp_out,
-                     mx_handle_t job,
+static mx_status_t lp_setup(launchpad_t** lp_out, mx_handle_t job,
                      int argc, const char* const* argv,
                      const char* const* envp) {
     launchpad_t* lp;
@@ -522,12 +352,7 @@ static mx_status_t dup_app_env(mx_handle_t* dup_handle) {
     return status;
 }
 
-static const char* path[] = {
-    "/system/bin",
-    "/boot/bin",
-};
-
-mx_status_t command(int argc, char** argv, bool runbg) {
+static mx_status_t command(int argc, char** argv, bool runbg) {
     char tmp[LINE_MAX + 32];
     launchpad_t* lp;
     mx_status_t status = NO_ERROR;
@@ -591,8 +416,8 @@ mx_status_t command(int argc, char** argv, bool runbg) {
 
     int fd;
     if (argv[0][0] != '/' && argv[0][0] != '.') {
-        for (unsigned n = 0; n < sizeof(path)/sizeof(path[0]); n++) {
-            snprintf(tmp, sizeof(tmp), "%s/%s", path[n], argv[0]);
+        for (const char** path = system_paths; *path != NULL; path++) {
+            snprintf(tmp, sizeof(tmp), "%s/%s", *path, argv[0]);
             if ((fd = open(tmp, O_RDONLY)) >= 0) {
                 argv[0] = tmp;
                 goto found;
@@ -724,7 +549,7 @@ static void app_launch(const char* url) {
     }
 }
 
-void execline(char* line) {
+static void execline(char* line) {
     bool runbg;
     char* argv[32];
     int argc;
@@ -762,7 +587,7 @@ void execline(char* line) {
     }
 }
 
-void execscript(const char* fn) {
+static void execscript(const char* fn) {
     char line[1024];
     FILE* fp;
     if ((fp = fopen(fn, "r")) == NULL) {
@@ -782,11 +607,19 @@ void greet(void) {
     execline(cmd);
 }
 
-void console(void) {
-    editstate es;
+static void console(void) {
+    linenoiseSetCompletionCallback(tab_complete);
 
-    while (readline(&es) == 0) {
-        execline(es.line);
+    for (;;) {
+        const char* const prompt = "> ";
+        char* line = linenoise(prompt);
+        if (line == NULL) {
+            continue;
+        }
+        puts(line);
+        linenoiseHistoryAdd(line);
+        execline(line);
+        linenoiseFree(line);
     }
 }
 
