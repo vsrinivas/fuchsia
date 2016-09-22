@@ -18,6 +18,8 @@ enum {
     EXC_FATAL_PAGE_FAULT,
     EXC_UNDEFINED_INSTRUCTION,
     EXC_GENERAL,
+    EXC_SW_BREAKPOINT,
+    EXC_HW_BREAKPOINT,
 };
 
 typedef struct arch_exception_context arch_exception_context_t;
