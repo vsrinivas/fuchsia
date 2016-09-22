@@ -6,6 +6,7 @@ group("storage") {
   testonly = true
 
   deps = [
+    "//apps/ledger/storage/impl",
     "//apps/ledger/storage/public",
   ]
 }
