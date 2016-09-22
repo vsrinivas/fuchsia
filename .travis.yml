@@ -1,9 +1,15 @@
 language: c
 script: ./scripts/travis-builds.sh
 env:
+    # full magenta kernel + user space builds
     - PROJECT=magenta-pc-x86-64
     - PROJECT=magenta-qemu-arm64
     - PROJECT=magenta-qemu-arm32
+
+    # kernel only, no-magenta builds
+    - PROJECT=pc-x86-64-test
+    - PROJECT=qemu-virt-a53-test
+    - PROJECT=qemu-virt-a15-test
 
 sudo: required
 dist: trusty
