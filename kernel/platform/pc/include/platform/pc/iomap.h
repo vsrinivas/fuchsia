@@ -21,4 +21,9 @@
 #define CGA_INDEX_REG       0x3D4
 #define CGA_DATA_REG        0x3D5
 
+/* legacy i/o ports */
+#define ISA_IOPORT_SERIAL1_BASE  0x3f8
+#define ISA_IOPORT_SERIAL2_BASE  0x2f8
+#define ISA_IOPORT_PRINTER1_BASE 0x278
+
 #endif
