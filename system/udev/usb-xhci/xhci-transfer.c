@@ -25,6 +25,9 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
 #define print_trb(xhci, ring, trb) do {} while (0)
 #endif
 
+// reads a range of bits from an integer
+#define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
+
 static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
     xprintf("xhci_reset_endpoint %d %d\n", slot_id, endpoint);
 
@@ -36,7 +39,8 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
     // first reset the endpoint
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
-    uint32_t control = (slot_id << TRB_SLOT_ID_START) |( endpoint <<TRB_ENDPOINT_ID_START);
+    // command expects device context index, so increment endpoint by 1
+    uint32_t control = (slot_id << TRB_SLOT_ID_START) | ((endpoint + 1) << TRB_ENDPOINT_ID_START);
     xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
     int cc = xhci_sync_command_wait(&command);
 
@@ -49,7 +53,8 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
     xhci_sync_command_init(&command);
     uint64_t ptr = xhci_virt_to_phys(xhci, (mx_vaddr_t)transfer_ring->current);
     ptr |= transfer_ring->pcs;
-    control = (slot_id << TRB_SLOT_ID_START) |( endpoint <<TRB_ENDPOINT_ID_START);
+    // command expects device context index, so increment endpoint by 1
+    control = (slot_id << TRB_SLOT_ID_START) | ((endpoint + 1) << TRB_ENDPOINT_ID_START);
     xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
     cc = xhci_sync_command_wait(&command);
 
@@ -60,7 +65,7 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
     return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
 }
 
-mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, mx_paddr_t data,
+mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* setup, mx_paddr_t data,
                         uint16_t length, int endpoint, int direction, uint64_t frame,
                         xhci_transfer_context_t* context, list_node_t* txn_node) {
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n",
@@ -69,14 +74,14 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
     if ((setup && endpoint != 0) || (!setup && endpoint == 0)) {
         return ERR_INVALID_ARGS;
     }
+    if (slot_id < 1 || slot_id >= xhci->max_slots) {
+        return ERR_INVALID_ARGS;
+    }
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    if (!slot->enabled)
-        return ERR_REMOTE_CLOSED;
-
     xhci_transfer_ring_t* ring = &slot->transfer_rings[endpoint];
-    if (!ring)
-        return ERR_INVALID_ARGS;
+    if (!ring->enabled)
+        return ERR_REMOTE_CLOSED;
 
     // reset endpoint if it is halted
     xhci_endpoint_context_t* epc = slot->epcs[endpoint];
@@ -143,7 +148,6 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
         return ERR_BUFFER_TOO_SMALL;
     }
 
-    context->transfer_ring = ring;
     list_add_tail(&ring->pending_requests, &context->node);
 
     if (setup) {
@@ -251,7 +255,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, int slot_id, usb_setup_t* setup, m
     return NO_ERROR;
 }
 
-int xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_t request,
+int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, uint8_t request,
                          uint16_t value, uint16_t index, mx_paddr_t data, uint16_t length) {
     xprintf("xhci_control_request slot_id: %d type: 0x%02X req: %d value: %d index: %d length: %d\n",
             slot_id, request_type, request, value, index, length);
@@ -276,7 +280,7 @@ int xhci_control_request(xhci_t* xhci, int slot_id, uint8_t request_type, uint8_
     return result;
 }
 
-mx_status_t xhci_get_descriptor(xhci_t* xhci, int slot_id, uint8_t type, uint16_t value,
+mx_status_t xhci_get_descriptor(xhci_t* xhci, uint32_t slot_id, uint8_t type, uint16_t value,
                                 uint16_t index, void* data, uint16_t length) {
     mx_paddr_t phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)data);
     return xhci_control_request(xhci, slot_id, USB_DIR_IN | type | USB_RECIP_DEVICE,
@@ -289,15 +293,19 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     uint32_t control = XHCI_READ32(&trb->control);
     uint32_t status = XHCI_READ32(&trb->status);
-    uint32_t slot_id = control >> TRB_SLOT_ID_START;
+    uint32_t slot_id = READ_FIELD(control, TRB_SLOT_ID_START, TRB_SLOT_ID_BITS);
+    // ep_index is device context index, so decrement by 1 to get zero based index
+    uint32_t ep_index = READ_FIELD(control, TRB_ENDPOINT_ID_START, TRB_ENDPOINT_ID_BITS) - 1;
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    if (!slot->enabled) {
-        // we is shutting down. device manager thread will complete all pending transations
+    xhci_transfer_ring_t* ring = &slot->transfer_rings[ep_index];
+
+    if (!ring->enabled) {
+        // endpoint shutting down. device manager thread will complete all pending transations
         return;
     }
 
-    uint32_t cc = (status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
-    uint32_t length = (status & XHCI_MASK(EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS)) >> EVT_TRB_XFER_LENGTH_START;
+    uint32_t cc = READ_FIELD(status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
+    uint32_t length = READ_FIELD(status, EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS);
     xhci_transfer_context_t* context = NULL;
 
     // TRB pointer is zero in these cases
@@ -351,8 +359,6 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         printf("unable to find transfer context in xhci_handle_transfer_event\n");
         return;
     }
-
-    xhci_transfer_ring_t* ring = context->transfer_ring;
 
     mtx_lock(&ring->mutex);
 

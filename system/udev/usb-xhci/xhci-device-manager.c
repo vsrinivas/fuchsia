@@ -78,7 +78,8 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
         return ERR_NO_MEMORY;
     }
 
-    mx_status_t status = xhci_transfer_ring_init(xhci, &slot->transfer_rings[0], TRANSFER_RING_SIZE);
+    xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[0];
+    mx_status_t status = xhci_transfer_ring_init(xhci, transfer_ring, TRANSFER_RING_SIZE);
     if (status < 0)
         return status;
 
@@ -122,7 +123,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     XHCI_SET_BITS32(&sc->sc2, SLOT_CTX_TT_PORT_NUM_START, SLOT_CTX_TT_PORT_NUM_BITS, tt_port_number);
 
     // Setup endpoint context for ep0
-    void* tr = (void*)slot->transfer_rings[0].start;
+    void* tr = (void*)transfer_ring->start;
     uint64_t tr_dequeue = xhci_virt_to_phys(xhci, (mx_vaddr_t)tr);
 
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, 3); // ???
@@ -142,6 +143,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
                       (slot_id << TRB_SLOT_ID_START), &command.context);
     int cc = xhci_sync_command_wait(&command);
     if (cc == TRB_CC_SUCCESS) {
+        transfer_ring->enabled = true;
         return NO_ERROR;
     } else {
         printf("xhci_address_device failed cc: %d\n", cc);
@@ -224,7 +226,6 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     if (result != NO_ERROR) {
         goto disable_slot_exit;
     }
-    slot->enabled = true;
 
     // read first 8 bytes of device descriptor to fetch ep0 max packet size
     result = xhci_get_descriptor(xhci, slot_id, USB_TYPE_STANDARD, USB_DT_DEVICE << 8, 0,
@@ -284,25 +285,51 @@ disable_slot_exit:
     return result;
 }
 
-static void xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    uint32_t control = (slot_id << TRB_SLOT_ID_START) | (ep_index << TRB_ENDPOINT_ID_START);
-    xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control, &command.context);
-    xhci_sync_command_wait(&command);
-
+// returns true if endpoint was enabled
+static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[ep_index];
 
-   // complete pending requests
+    if (!transfer_ring->enabled) {
+        return false;
+    }
+
+    xhci_sync_command_t command;
+    xhci_sync_command_init(&command);
+    // command expects device context index, so increment ep_index by 1
+    uint32_t control = (slot_id << TRB_SLOT_ID_START) | ((ep_index + 1) << TRB_ENDPOINT_ID_START);
+    xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control, &command.context);
+    int cc = xhci_sync_command_wait(&command);
+    if (cc != TRB_CC_SUCCESS && cc != TRB_CC_CONTEXT_STATE_ERROR) {
+        // TRB_CC_CONTEXT_STATE_ERROR is normal here in the case of a disconnected device,
+        // since by then the endpoint would already be in error state.
+        printf("TRB_CMD_STOP_ENDPOINT failed cc: %d\n", cc);
+    }
+
+    list_node_t list;
+    list_initialize(&list);
+    list_node_t* node;
+
+    mtx_lock(&transfer_ring->mutex);
+
+    // copy pending requests to a different list so we can complete them outside of the mutex
+    while ((node = list_remove_head(&transfer_ring->pending_requests)) != NULL) {
+        list_add_tail(&list, node);
+    }
+    transfer_ring->enabled = false;
+
+    mtx_unlock(&transfer_ring->mutex);
+
+    // complete pending requests
     xhci_transfer_context_t* context;
-    while ((context = list_remove_head_type(&transfer_ring->pending_requests,
-                                            xhci_transfer_context_t, node)) != NULL) {
+    while ((context = list_remove_head_type(&list, xhci_transfer_context_t, node)) != NULL) {
         context->callback(ERR_REMOTE_CLOSED, context->data);
     }
     // and any deferred requests
     xhci_process_deferred_txns(xhci, transfer_ring, true);
     xhci_transfer_ring_free(xhci, transfer_ring);
+
+    return true;
 }
 
 static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
@@ -330,14 +357,9 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
         return ERR_NOT_FOUND;
     }
 
-    slot->enabled = false;
-    xhci_transfer_ring_t* transfer_rings = slot->transfer_rings;
-
     uint32_t drop_flags = 0;
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
-        xhci_transfer_ring_t* transfer_ring = &transfer_rings[i];
-        if (transfer_ring->start) {
-            xhci_stop_endpoint(xhci, slot_id, i);
+        if (xhci_stop_endpoint(xhci, slot_id, i)) {
             drop_flags |= XHCI_ICC_EP_FLAG(i);
          }
     }
@@ -477,6 +499,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     xhci_slot_t* slot = &xhci->slots[slot_id];
     usb_speed_t speed = slot->speed;
     uint32_t index = xhci_endpoint_index(ep->bEndpointAddress);
+    xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[index];
 
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&xhci->input_context[0 * xhci->context_size];
     xhci_slot_context_t* sc = (xhci_slot_context_t*)&xhci->input_context[1 * xhci->context_size];
@@ -505,7 +528,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         xhci_endpoint_context_t* epc = (xhci_endpoint_context_t*)&xhci->input_context[(index + 2) * xhci->context_size];
         memset((void*)epc, 0, xhci->context_size);
         // allocate a transfer ring for the endpoint
-        mx_status_t status = xhci_transfer_ring_init(xhci, &slot->transfer_rings[index], TRANSFER_RING_SIZE);
+        mx_status_t status = xhci_transfer_ring_init(xhci, transfer_ring, TRANSFER_RING_SIZE);
         if (status < 0)
             return status;
 
@@ -540,6 +563,11 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
                       (slot_id << TRB_SLOT_ID_START), &command.context);
 
     xhci_sync_command_wait(&command);
+
+    // xhci_stop_endpoint() will handle the !enable case
+    if (enable) {
+        transfer_ring->enabled = true;
+    }
 
     return NO_ERROR;
 }

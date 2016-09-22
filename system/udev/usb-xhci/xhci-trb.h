@@ -20,6 +20,7 @@ typedef struct xhci_transfer_ring {
     mtx_t mutex;
     list_node_t pending_requests;   // pending transfers that should be completed when ring is dead
     list_node_t deferred_txns;      // used by upper layer to defer iotxns when ring is full
+    bool enabled;
 } xhci_transfer_ring_t;
 
 typedef struct xhci_event_ring {

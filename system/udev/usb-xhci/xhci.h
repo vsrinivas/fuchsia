@@ -34,7 +34,6 @@ typedef struct xhci_slot {
     uint32_t port;
     uint32_t rh_port;
     usb_speed_t speed;
-    bool enabled;
 } xhci_slot_t;
 
 typedef struct xhci xhci_t;
