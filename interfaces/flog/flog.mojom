@@ -26,14 +26,6 @@ interface FlogService {
 
 // A logger that logs messages regarding multiple channels.
 interface FlogLogger {
-  // Logs a MojoLogger-style message.
-  LogMojoLoggerMessage(
-      int64 time_us,
-      int32 log_level,
-      string? message,
-      string? source_file,
-      uint32 source_line);
-
   // Logs the creation of a channel.
   LogChannelCreation(int64 time_us, uint32 channel_id, string type_name,
       uint64 subject_address);
@@ -77,17 +69,9 @@ struct FlogEntry {
 };
 
 union FlogEntryDetails {
-  FlogMojoLoggerMessageEntryDetails mojo_logger_message;
   FlogChannelCreationEntryDetails channel_creation;
   FlogChannelMessageEntryDetails channel_message;
   FlogChannelDeletionEntryDetails channel_deletion;
-};
-
-struct FlogMojoLoggerMessageEntryDetails {
-  int32 log_level;
-  string? message;
-  string? source_file;
-  uint32 source_line;
 };
 
 struct FlogChannelCreationEntryDetails {

@@ -18,8 +18,7 @@ namespace flog {
 
 // FlogLogger implementation.
 class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
-                       private MessageReceiverWithResponderStatus,
-                       private FlogLogger {
+                       private MessageReceiverWithResponderStatus {
  public:
   static std::shared_ptr<FlogLoggerImpl> Create(
       InterfaceRequest<FlogLogger> request,
@@ -45,27 +44,8 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
   bool AcceptWithResponder(Message* message,
                            MessageReceiverWithStatus* responder) override;
 
-  // FlogLogger implementation (called by stub_).
-  void LogMojoLoggerMessage(int64_t time_us,
-                            int32_t log_level,
-                            const String& message,
-                            const String& source_file,
-                            uint32_t source_line) override;
-
-  void LogChannelCreation(int64_t time_us,
-                          uint32_t channel_id,
-                          const String& type_name,
-                          uint64_t subject_address) override;
-
-  void LogChannelMessage(int64_t time_us,
-                         uint32_t channel_id,
-                         mojo::Array<uint8_t> data) override;
-
-  void LogChannelDeletion(int64_t time_us, uint32_t channel_id) override;
-
   std::unique_ptr<mojo::internal::Router> router_;
   files::FilePtr file_;
-  FlogLoggerStub stub_;
 };
 
 }  // namespace flog

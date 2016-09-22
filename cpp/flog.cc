@@ -21,9 +21,6 @@ void Flog::Initialize(Shell* shell, const std::string& label) {
   FlogLoggerPtr flog_logger;
   flog_service->CreateLogger(GetProxy(&flog_logger), label);
   logger_ = flog_logger.Pass();
-
-  fallback_logger_ = Environment::GetDefaultLogger();
-  Environment::SetDefaultLogger(&kMojoLogger);
 }
 
 // static
@@ -59,35 +56,6 @@ void Flog::LogChannelDeletion(uint32_t channel_id) {
 }
 
 // static
-void Flog::LogMojoLoggerMessage(MojoLogLevel log_level,
-                                const char* source_file,
-                                uint32_t source_line,
-                                const char* message) {
-  if (!logger_ || log_level < GetMinimumMojoLogLevel()) {
-    return;
-  }
-
-  logger_->LogMojoLoggerMessage(GetTime(), log_level, message, source_file,
-                                source_line);
-
-  if (log_level >= MOJO_LOG_LEVEL_FATAL) {
-    abort();
-  }
-}
-
-// static
-MojoLogLevel Flog::GetMinimumMojoLogLevel() {
-  MOJO_DCHECK(fallback_logger_ != nullptr);
-  return fallback_logger_->GetMinimumLogLevel();
-}
-
-// static
-void Flog::SetMinimumMojoLogLevel(MojoLogLevel level) {
-  MOJO_DCHECK(fallback_logger_ != nullptr);
-  fallback_logger_->SetMinimumLogLevel(level);
-}
-
-// static
 uint64_t Flog::GetTime() {
   return std::chrono::duration_cast<std::chrono::microseconds>(
              std::chrono::system_clock::now().time_since_epoch())
@@ -95,17 +63,10 @@ uint64_t Flog::GetTime() {
 }
 
 // static
-const MojoLogger Flog::kMojoLogger = {
-    &LogMojoLoggerMessage, &GetMinimumMojoLogLevel, &SetMinimumMojoLogLevel};
-
-// static
 std::atomic_ulong Flog::last_allocated_channel_id_;
 
 // static
 FlogLoggerPtr Flog::logger_;
-
-// static
-const MojoLogger* Flog::fallback_logger_;
 
 FlogChannel::FlogChannel(const char* channel_type_name,
                          uint64_t subject_address)

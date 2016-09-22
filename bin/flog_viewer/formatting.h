@@ -64,13 +64,6 @@ struct AsMicroseconds {
 
 std::ostream& operator<<(std::ostream& os, AsMicroseconds value);
 
-struct AsLogLevel {
-  explicit AsLogLevel(uint32_t level) : level_(level) {}
-  uint32_t level_;
-};
-
-std::ostream& operator<<(std::ostream& os, AsLogLevel value);
-
 std::ostream& operator<<(std::ostream& os, const Channel& value);
 
 std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value);

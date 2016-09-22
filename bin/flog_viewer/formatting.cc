@@ -49,23 +49,6 @@ std::ostream& operator<<(std::ostream& os, AsMicroseconds value) {
   return os << std::setfill('0') << std::setw(6) << value.time_us_ % 1000000ull;
 }
 
-std::ostream& operator<<(std::ostream& os, AsLogLevel value) {
-  switch (value.level_) {
-    case MOJO_LOG_LEVEL_VERBOSE:
-      return os << "VERBOSE";
-    case MOJO_LOG_LEVEL_INFO:
-      return os << "INFO";
-    case MOJO_LOG_LEVEL_WARNING:
-      return os << "WARNING";
-    case MOJO_LOG_LEVEL_ERROR:
-      return os << "ERROR";
-    case MOJO_LOG_LEVEL_FATAL:
-      return os << "FATAL";
-    default:
-      return os << "UNKNOWN LEVEL " << value.level_;
-  }
-}
-
 std::ostream& operator<<(std::ostream& os, const Channel& value) {
   if (!value.resolved()) {
     return os << "unresolved address " << AsAddress(value.subject_address());

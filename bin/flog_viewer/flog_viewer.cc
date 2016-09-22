@@ -122,12 +122,6 @@ void FlogViewer::ProcessEntry(uint32_t entry_index, const FlogEntryPtr& entry) {
     return;
   }
 
-  if (entry->details->is_mojo_logger_message()) {
-    OnMojoLoggerMessage(entry_index, entry,
-                        entry->details->get_mojo_logger_message());
-    return;
-  }
-
   if (entry->details->is_channel_creation()) {
     OnChannelCreated(entry_index, entry,
                      entry->details->get_channel_creation());
@@ -150,19 +144,6 @@ void FlogViewer::PrintRemainingAccumulators() {
       std::cout << std::endl;
     }
   }
-}
-
-void FlogViewer::OnMojoLoggerMessage(
-    uint32_t entry_index,
-    const FlogEntryPtr& entry,
-    const FlogMojoLoggerMessageEntryDetailsPtr& details) {
-  if (format_ != kFormatTerse && format_ != kFormatFull) {
-    return;
-  }
-
-  std::cout << entry << AsLogLevel(details->log_level) << ":"
-            << details->source_file << "#" << details->source_line << " "
-            << details->message << std::endl;
 }
 
 void FlogViewer::OnChannelCreated(

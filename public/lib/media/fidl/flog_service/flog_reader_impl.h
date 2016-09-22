@@ -17,7 +17,7 @@ namespace flog {
 // FlogReader implementation.
 class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
                        public FlogReader,
-                       private FlogLogger {
+                       public FlogLogger {
  public:
   static std::shared_ptr<FlogReaderImpl> Create(
       InterfaceRequest<FlogReader> request,
@@ -60,12 +60,6 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
   FlogEntryPtr CreateEntry(int64_t time_us, uint32_t channel_id);
 
   // FlogLogger implementation (called by stub_).
-  void LogMojoLoggerMessage(int64_t time_us,
-                            int32_t log_level,
-                            const String& message,
-                            const String& source_file,
-                            uint32_t source_line) override;
-
   void LogChannelCreation(int64_t time_us,
                           uint32_t channel_id,
                           const String& type_name,

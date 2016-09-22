@@ -61,10 +61,6 @@ class FlogViewer {
 
   void PrintRemainingAccumulators();
 
-  void OnMojoLoggerMessage(uint32_t entry_index,
-                           const FlogEntryPtr& entry,
-                           const FlogMojoLoggerMessageEntryDetailsPtr& details);
-
   void OnChannelCreated(uint32_t entry_index,
                         const FlogEntryPtr& entry,
                         const FlogChannelCreationEntryDetailsPtr& details);

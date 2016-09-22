@@ -226,21 +226,6 @@ FlogEntryPtr FlogReaderImpl::CreateEntry(int64_t time_us, uint32_t channel_id) {
   return entry;
 }
 
-void FlogReaderImpl::LogMojoLoggerMessage(int64_t time_us,
-                                          int32_t log_level,
-                                          const String& message,
-                                          const String& source_file,
-                                          uint32_t source_line) {
-  entry_ = CreateEntry(time_us, 0);
-  FlogMojoLoggerMessageEntryDetailsPtr details =
-      FlogMojoLoggerMessageEntryDetails::New();
-  details->log_level = log_level;
-  details->message = message;
-  details->source_file = source_file;
-  details->source_line = source_line;
-  entry_->details->set_mojo_logger_message(details.Pass());
-}
-
 void FlogReaderImpl::LogChannelCreation(int64_t time_us,
                                         uint32_t channel_id,
                                         const String& type_name,
