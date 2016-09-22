@@ -157,7 +157,7 @@ void arm_undefined_handler(struct arm_iframe *frame)
         // let magenta get a shot at it
         struct arch_exception_context context = { .iframe = true, .frame = frame };
         arch_enable_ints();
-        status_t erc = magenta_exception_handler(EXC_UNDEFINED_INSTRUCTION, &context, frame->pc);
+        status_t erc = magenta_exception_handler(MX_EXCP_UNDEFINED_INSTRUCTION, &context, frame->pc);
         arch_disable_ints();
         if (erc == NO_ERROR)
             return;
@@ -243,7 +243,7 @@ void arm_data_abort_handler(struct arm_fault_frame *frame)
         // let magenta get a shot at it
         struct arch_exception_context context = { .iframe = false, .frame = frame };
         arch_enable_ints();
-        status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->pc);
+        status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, frame->pc);
         arch_disable_ints();
         if (erc == NO_ERROR)
             return;
@@ -319,7 +319,7 @@ void arm_prefetch_abort_handler(struct arm_fault_frame *frame)
         // let magenta get a shot at it
         struct arch_exception_context context = { .iframe = false, .frame = frame };
         arch_enable_ints();
-        status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->pc);
+        status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, frame->pc);
         arch_disable_ints();
         if (erc == NO_ERROR)
             return;
@@ -404,9 +404,9 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     }
 }
 
-void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_context_t *mx_context)
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_report_t *report)
 {
-    mx_context->arch_id = ARCH_ID_UNKNOWN;
+    report->context.arch_id = ARCH_ID_UNKNOWN;
 
     // TODO: implement for arm32
 }

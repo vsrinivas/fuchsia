@@ -68,7 +68,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             /* let magenta get a shot at it */
             arch_exception_context_t context = { .frame = iframe, .esr = esr };
             arch_enable_ints();
-            status_t erc = magenta_exception_handler(EXC_UNDEFINED_INSTRUCTION, &context, iframe->elr);
+            status_t erc = magenta_exception_handler(MX_EXCP_UNDEFINED_INSTRUCTION, &context, iframe->elr);
             arch_disable_ints();
             if (erc == NO_ERROR)
                 return;
@@ -122,7 +122,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             if (is_user) {
                 arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
                 arch_enable_ints();
-                status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, iframe->elr);
+                status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, iframe->elr);
                 arch_disable_ints();
                 if (erc == NO_ERROR)
                     return;
@@ -177,7 +177,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             if (is_user) {
                 arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
                 arch_enable_ints();
-                status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, iframe->elr);
+                status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, iframe->elr);
                 arch_disable_ints();
                 if (erc == NO_ERROR)
                     return;
@@ -200,7 +200,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             /* let magenta get a shot at it */
             arch_exception_context_t context = { .frame = iframe, .esr = esr };
             arch_enable_ints();
-            status_t erc = magenta_exception_handler(EXC_GENERAL, &context, iframe->elr);
+            status_t erc = magenta_exception_handler(MX_EXCP_GENERAL, &context, iframe->elr);
             arch_disable_ints();
             if (erc == NO_ERROR)
                 return;
@@ -278,12 +278,14 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     }
 }
 
-void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_context_t *mx_context)
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_report_t *report)
 {
+    mx_exception_context_t* mx_context = &report->context;
+
     mx_context->arch_id = ARCH_ID_ARM_64;
 
     // If there was a fatal page fault, fill in the address that caused the fault.
-    if (EXC_FATAL_PAGE_FAULT == mx_context->arch.subtype) {
+    if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type) {
         mx_context->arch.u.arm_64.far = arch_context->far;
     } else {
         mx_context->arch.u.arm_64.far = 0;

@@ -13,15 +13,6 @@
 
 __BEGIN_CDECLS
 
-// low level to high level exception handler, called at interrupt or exception context
-enum {
-    EXC_FATAL_PAGE_FAULT,
-    EXC_UNDEFINED_INSTRUCTION,
-    EXC_GENERAL,
-    EXC_SW_BREAKPOINT,
-    EXC_HW_BREAKPOINT,
-};
-
 typedef struct arch_exception_context arch_exception_context_t;
 
 status_t magenta_exception_handler(uint exception_type,
@@ -32,6 +23,6 @@ status_t magenta_exception_handler(uint exception_type,
 void arch_dump_exception_context(const arch_exception_context_t *);
 
 // request the arch code fill in the mx_exception_context report with arch specific information
-void arch_fill_in_exception_context(const arch_exception_context_t *, mx_exception_context_t *);
+void arch_fill_in_exception_context(const arch_exception_context_t *, mx_exception_report_t *);
 
 __END_CDECLS

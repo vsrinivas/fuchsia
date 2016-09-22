@@ -8,26 +8,29 @@
 
 #include <hexdump/hexdump.h>
 
+#include <magenta/assert.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-debug.h>
 
 #include "backtrace.h"
 
-enum : uint32_t {
-    EXC_FATAL_PAGE_FAULT,
-    EXC_UNDEFINED_INSTRUCTION,
-    EXC_GENERAL,
-};
-
-const char* exc_type_to_str(uint32_t type) {
+const char* excp_type_to_str(uint32_t type) {
+    DEBUG_ASSERT(MX_EXCP_IS_ARCH(type));
     switch (type) {
-    case EXC_FATAL_PAGE_FAULT:
-        return "fatal page fault";
-    case EXC_UNDEFINED_INSTRUCTION:
-        return "undefined instruction";
-    case EXC_GENERAL:
+    case MX_EXCP_GENERAL:
         return "general fault";
+    case MX_EXCP_FATAL_PAGE_FAULT:
+        return "fatal page fault";
+    case MX_EXCP_UNDEFINED_INSTRUCTION:
+        return "undefined instruction";
+    case MX_EXCP_SW_BREAKPOINT:
+        return "sw breakpoint";
+    case MX_EXCP_HW_BREAKPOINT:
+        return "hw breakpoint";
     default:
+        // Note: To get a compilation failure when a new exception type has
+        // been added without having also updated this function, compile with
+        // -Wswitch-enum.
         return "unknown fault";
     }
 }
@@ -88,12 +91,12 @@ void dump_memory(mx_handle_t proc, uintptr_t start, uint32_t len) {
 }
 
 void process_report(const mx_exception_report_t* report) {
-    if (report->header.type != MX_EXCEPTION_TYPE_ARCH)
+    if (!MX_EXCP_IS_ARCH(report->header.type))
         return;
 
     auto context = report->context;
     printf("<== fatal exception: process [%llu] thread [%llu]\n", context.pid, context.tid);
-    printf("<== %s , PC at 0x%lx\n", exc_type_to_str(context.arch.subtype), context.arch.pc);
+    printf("<== %s , PC at 0x%lx\n", excp_type_to_str(report->header.type), context.arch.pc);
 
     auto process = mx_debug_task_get_child(0, context.pid);
     if (process <= 0) {
@@ -139,7 +142,7 @@ void process_report(const mx_exception_report_t* report) {
         output_frame_arm64(context.arch.u.arm_64, regs);
 
         // Only output the Fault address register if there's a data fault.
-        if (EXC_FATAL_PAGE_FAULT == context.arch.subtype)
+        if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type)
             printf(" far %#18llx\n", context.arch.u.arm_64.far);
 
         printf("bottom of user stack:\n");

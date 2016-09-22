@@ -99,7 +99,7 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
 static void x86_debug_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    if (handle_magenta_exception(frame, EXC_HW_BREAKPOINT))
+    if (handle_magenta_exception(frame, MX_EXCP_HW_BREAKPOINT))
         return;
 #endif
 
@@ -109,7 +109,7 @@ static void x86_debug_handler(x86_iframe_t *frame)
 static void x86_breakpoint_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    if (handle_magenta_exception(frame, EXC_SW_BREAKPOINT))
+    if (handle_magenta_exception(frame, MX_EXCP_SW_BREAKPOINT))
         return;
 #endif
 
@@ -119,7 +119,7 @@ static void x86_breakpoint_handler(x86_iframe_t *frame)
 void x86_gpf_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    if (handle_magenta_exception(frame, EXC_GENERAL))
+    if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
         return;
 #endif
 
@@ -129,7 +129,7 @@ void x86_gpf_handler(x86_iframe_t *frame)
 void x86_invop_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    if (handle_magenta_exception(frame, EXC_UNDEFINED_INSTRUCTION))
+    if (handle_magenta_exception(frame, MX_EXCP_UNDEFINED_INSTRUCTION))
         return;
 #endif
 
@@ -139,7 +139,7 @@ void x86_invop_handler(x86_iframe_t *frame)
 void x86_unhandled_exception(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
-    if (handle_magenta_exception(frame, EXC_GENERAL))
+    if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
         return;
 #endif
 
@@ -250,7 +250,7 @@ void x86_pfe_handler(x86_iframe_t *frame)
         bool from_user = SELECTOR_PL(frame->cs) != 0;
         if (from_user) {
             struct arch_exception_context context = { .frame = frame, .is_page_fault = true, .cr2 = va };
-            status_t erc = magenta_exception_handler(EXC_FATAL_PAGE_FAULT, &context, frame->ip);
+            status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, frame->ip);
             arch_disable_ints();
             if (erc == NO_ERROR)
                 return;
@@ -394,8 +394,10 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     }
 }
 
-void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_context_t *mx_context)
+void arch_fill_in_exception_context(const arch_exception_context_t *arch_context, mx_exception_report_t *report)
 {
+    mx_exception_context_t *mx_context = &report->context;
+
     mx_context->arch_id = ARCH_ID_X86_64;
 
     mx_context->arch.u.x86_64.vector = arch_context->frame->vector;

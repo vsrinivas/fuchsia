@@ -17,31 +17,29 @@
 #define LOCAL_TRACE 0
 #define TRACE_EXCEPTIONS 1
 
-static const char* exception_type_to_string(uint type) {
+static const char* excp_type_to_string(uint type) {
     switch (type) {
-    case EXC_FATAL_PAGE_FAULT:
+    case MX_EXCP_FATAL_PAGE_FAULT:
         return "fatal page fault";
-    case EXC_UNDEFINED_INSTRUCTION:
+    case MX_EXCP_UNDEFINED_INSTRUCTION:
         return "undefined instruction";
-    case EXC_GENERAL:
+    case MX_EXCP_GENERAL:
         return "general fault";
-    case EXC_SW_BREAKPOINT:
+    case MX_EXCP_SW_BREAKPOINT:
         return "software breakpoint";
-    case EXC_HW_BREAKPOINT:
+    case MX_EXCP_HW_BREAKPOINT:
         return "hardware breakpoint";
     default:
         return "unknown fault";
     }
 }
 
-static void build_arch_exception_context(mx_exception_context_t* context,
-                                         uint arch_exception_type,
+static void build_arch_exception_context(mx_exception_report_t* report,
                                          ulong ip,
                                          const arch_exception_context_t* arch_context) {
-    context->arch.subtype = arch_exception_type;
-    context->arch.pc = ip;
+    report->context.arch.pc = ip;
 
-    arch_fill_in_exception_context(arch_context, context);
+    arch_fill_in_exception_context(arch_context, report);
 }
 
 static void build_exception_report(mx_exception_report_t* report,
@@ -52,10 +50,10 @@ static void build_exception_report(mx_exception_report_t* report,
     memset(report, 0, sizeof(*report));
     // TODO(dje): wip, just make all reports the same maximum size for now
     report->header.size = sizeof(*report);
-    report->header.type = MX_EXCEPTION_TYPE_ARCH;
+    report->header.type = exception_type;
     report->context.pid = thread->process()->get_koid();
     report->context.tid = thread->get_koid();
-    build_arch_exception_context(&report->context, exception_type, ip, arch_context);
+    build_arch_exception_context(report, ip, arch_context);
 }
 
 static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport, UserThread* thread,
@@ -153,7 +151,7 @@ status_t magenta_exception_handler(uint exception_type,
         // only print this if an exception handler wasn't involved
         // in handling the exception
         printf("KERN: %s in magenta thread '%s' in process '%s' at IP 0x%lx\n",
-               exception_type_to_string(exception_type), thread->name().data(),
+               excp_type_to_string(exception_type), thread->name().data(),
                process->name().data(), ip);
 
         arch_dump_exception_context(context);

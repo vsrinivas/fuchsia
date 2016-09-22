@@ -313,10 +313,10 @@ static bool wait_inferior_thread_worker(void* arg)
         mx_exception_packet_t packet;
         ASSERT_EQ(mx_port_wait(eport, &packet, sizeof(packet)), NO_ERROR, "mx_io_port_wait failed");
         unittest_printf("wait-inf: finished waiting, got exception 0x%x\n", packet.report.header.type);
-        if (packet.report.header.type == MX_EXCEPTION_TYPE_GONE) {
+        if (packet.report.header.type == MX_EXCP_GONE) {
             unittest_printf("wait-inf: inferior gone\n");
             break;
-        } else if (packet.report.header.type == MX_EXCEPTION_TYPE_ARCH) {
+        } else if (MX_EXCP_IS_ARCH(packet.report.header.type)) {
             unittest_printf("wait-inf: got exception\n");
         } else {
             ASSERT_EQ(false, true, "wait-inf: unexpected exception type");

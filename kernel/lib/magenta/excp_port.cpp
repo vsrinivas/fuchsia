@@ -77,7 +77,7 @@ void ExceptionPort::BuildProcessGoneReport(mx_exception_report_t* report,
                                            mx_koid_t pid) {
     memset(report, 0, sizeof(*report));
     report->header.size = sizeof(*report);
-    report->header.type = MX_EXCEPTION_TYPE_GONE;
+    report->header.type = MX_EXCP_GONE;
     report->context.pid = pid;
     report->context.tid = MX_KOID_INVALID;
 }
@@ -86,7 +86,7 @@ void ExceptionPort::BuildThreadGoneReport(mx_exception_report_t* report,
                                           mx_koid_t pid, mx_koid_t tid) {
     memset(report, 0, sizeof(*report));
     report->header.size = sizeof(*report);
-    report->header.type = MX_EXCEPTION_TYPE_GONE;
+    report->header.type = MX_EXCP_GONE;
     report->context.pid = pid;
     report->context.tid = tid;
 }

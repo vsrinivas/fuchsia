@@ -20,21 +20,31 @@ typedef uint64_t mx_koid_t;
 
 #define MX_KOID_INVALID ((uint64_t) 0)
 
-// The kind of the exception, at a high level.
-typedef uint32_t mx_exception_type_t;
+// The kind of an exception.
+typedef enum {
+    // These are architectural exceptions.
+    // Further information can be found in report.context.arch.
 
-// Types of exceptions.
-// Synthetic exceptions are expanded here instead of having them all under
-// one major type as there aren't that many and we have 16-32 bits to
-// represent all the possibilities (even 8 bits would be enough).
+    // General exception not covered by another value.
+    MX_EXCP_GENERAL = 0,
+    MX_EXCP_FATAL_PAGE_FAULT = 1,
+    MX_EXCP_UNDEFINED_INSTRUCTION = 2,
+    MX_EXCP_SW_BREAKPOINT = 3,
+    MX_EXCP_HW_BREAKPOINT = 4,
 
-// Further specificity is provided in the "context" field.
-#define MX_EXCEPTION_TYPE_ARCH 0
-// A synthetic exception for threads.
-#define MX_EXCEPTION_TYPE_START 1
-// A synthetic exception for threads and processes.
-// N.B. "gone" notifications are not responded to.
-#define MX_EXCEPTION_TYPE_GONE 2
+    MX_EXCP_MAX_ARCH = 99,
+
+    // Synthetic exceptions.
+
+    // A thread has started.
+    MX_EXCP_START = 100,
+
+    // A thread or process has exited or otherwise terminated.
+    // N.B. "gone" notifications are not responded to.
+    MX_EXCP_GONE = 101,
+} mx_excp_type_t;
+
+#define MX_EXCP_IS_ARCH(excp) ((excp) <= MX_EXCP_MAX_ARCH)
 
 typedef struct x86_64_exc_data {
     uint64_t vector;
@@ -62,8 +72,6 @@ typedef struct mx_exception_context {
     mx_koid_t tid;
 
     struct {
-        // The value here depends on exception_type.
-        uint32_t subtype;
         mx_vaddr_t pc;
         union {
             x86_64_exc_data_t x86_64;
@@ -84,8 +92,7 @@ typedef struct mx_exception_header {
     uint32_t size;
 
     // While IWBN to use an enum here, it's still not portable in C.
-    // TODO(dje): Balance generic-ness vs architecture-specific-ness.
-    uint32_t /*mx_exception_type_t*/ type;
+    uint32_t /*mx_excp_type_t*/ type;
 } mx_exception_header_t;
 
 // Data reported to an exception handler for most exceptions.
