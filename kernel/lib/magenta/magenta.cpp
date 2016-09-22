@@ -143,4 +143,11 @@ mx_status_t validate_resource_handle(mx_handle_t handle) {
     return up->GetDispatcher(handle, &resource);
 }
 
+mx_status_t get_process(ProcessDispatcher* up,
+                        mx_handle_t proc_handle,
+                        mxtl::RefPtr<ProcessDispatcher>* proc) {
+    return up->GetDispatcher(proc_handle, proc, MX_RIGHT_WRITE);
+}
+
+
 LK_INIT_HOOK(magenta, magenta_init, LK_INIT_LEVEL_THREADING);

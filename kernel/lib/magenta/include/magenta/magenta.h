@@ -18,6 +18,7 @@
 class Handle;
 class Dispatcher;
 class ExceptionPort;
+class ProcessDispatcher;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
@@ -74,3 +75,8 @@ mx_status_t magenta_sleep(mx_time_t nanoseconds);
 // Used to provide access to privileged syscalls.
 // Later, Resource objects will be finer-grained.
 mx_status_t validate_resource_handle(mx_handle_t handle);
+
+// Convenience function to get go from process handle to process.
+mx_status_t get_process(ProcessDispatcher* up,
+                        mx_handle_t proc_handle,
+                        mxtl::RefPtr<ProcessDispatcher>* proc);

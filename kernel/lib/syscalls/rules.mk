@@ -26,5 +26,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_test.cpp \
     $(LOCAL_DIR)/syscalls_handle_ops.cpp \
     $(LOCAL_DIR)/syscalls_handle_wait.cpp \
+    $(LOCAL_DIR)/syscalls_vmo.cpp \
 
 include make/module.mk
